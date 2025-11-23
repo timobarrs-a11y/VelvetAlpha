@@ -25,7 +25,7 @@ function App() {
   const [showGamesMenu, setShowGamesMenu] = useState(false);
   const [chatMode, setChatMode] = useState<'chat' | 'assistant'>('chat');
 
-  // ADD THIS NEW CODE HERE:
+  // ADD character selection
   const getSelectedCharacter = () => {
     try {
       const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
@@ -38,10 +38,38 @@ function App() {
   const selectedCharacter = getSelectedCharacter();
   const currentMood = 'positive';
 
-  // Then your return statement:
+  // Your existing useEffect
+  useEffect(() => {
+    checkAuthAndOnboarding();
+  }, []);
+
+  // Your existing checkAuthAndOnboarding function
+  const checkAuthAndOnboarding = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
+        if (matchData.userName) {
+          await createUserAccount(matchData);
+        }
+        setIsCheckingAuth(false);
+        return;
+      }
+      // ... rest of your function
+    }
+  };
+
+  // ... rest of your functions ...
+
+  // Your ACTUAL return statement (should already be there):
   return (
     <BrowserRouter>
-      ...
+      <Routes>
+        {/* your actual routes */}
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
   useEffect(() => {
     checkAuthAndOnboarding();
