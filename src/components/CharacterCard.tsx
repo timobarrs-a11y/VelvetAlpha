@@ -1,35 +1,32 @@
 import { useEffect, useState } from 'react';
-import { getTimeOfDay, getCharacterImage, getTimeLabel } from '../utils/imageSelector';
+import { getCharacterMoodImage, getMoodLabel, getMoodGlow, CharacterType, MoodType } from '../utils/imageSelector';
 
-export const CharacterCard = () => {
+interface CharacterCardProps {
+  character: CharacterType;
+  mood: MoodType;
+}
+
+export const CharacterCard = ({ character, mood }: CharacterCardProps) => {
   const [imageSrc, setImageSrc] = useState('');
-  const [timeLabel, setTimeLabel] = useState('');
+  const [moodLabel, setMoodLabel] = useState('');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
-    const updateImage = () => {
-      const timeOfDay = getTimeOfDay();
-      const newImageSrc = getCharacterImage(timeOfDay);
-      const newTimeLabel = getTimeLabel(timeOfDay);
+    const newImageSrc = getCharacterMoodImage(mood, character);
+    const newMoodLabel = getMoodLabel(mood);
 
-      if (imageSrc !== newImageSrc) {
-        setIsTransitioning(true);
-        setTimeout(() => {
-          setImageSrc(newImageSrc);
-          setTimeLabel(newTimeLabel);
-          setIsTransitioning(false);
-        }, 200);
-      } else {
+    if (imageSrc !== newImageSrc) {
+      setIsTransitioning(true);
+      setTimeout(() => {
         setImageSrc(newImageSrc);
-        setTimeLabel(newTimeLabel);
-      }
-    };
-
-    updateImage();
-
-    const interval = setInterval(updateImage, 60000);
-    return () => clearInterval(interval);
-  }, [imageSrc]);
+        setMoodLabel(newMoodLabel);
+        setIsTransitioning(false);
+      }, 200);
+    } else {
+      setImageSrc(newImageSrc);
+      setMoodLabel(newMoodLabel);
+    }
+  }, [character, mood, imageSrc]);
 
   return (
     <div className="bg-gradient-to-br from-primary-500 via-primary-600 to-rose-600 p-7 rounded-b-3xl shadow-soft">
@@ -42,7 +39,7 @@ export const CharacterCard = () => {
           {imageSrc ? (
             <img
               src={imageSrc}
-              alt="Riley"
+              alt={character}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -50,10 +47,10 @@ export const CharacterCard = () => {
           )}
         </div>
         <div className="flex-1">
-          <h1 className="text-3xl font-display font-bold text-white mb-0.5">Riley</h1>
-          <p className="text-white/80 text-sm font-medium">Your Cheerful Companion</p>
-          {timeLabel && (
-            <p className="text-xs text-white/70 mt-2 font-medium bg-white/10 inline-block px-3 py-1 rounded-full backdrop-blur-sm">{timeLabel} Mode</p>
+          <h1 className="text-3xl font-display font-bold text-white mb-0.5">{character.charAt(0).toUpperCase() + character.slice(1)}</h1>
+          <p className="text-white/80 text-sm font-medium">Your Partner</p>
+          {moodLabel && (
+            <p className="text-xs text-white/70 mt-2 font-medium bg-white/10 inline-block px-3 py-1 rounded-full backdrop-blur-sm">{moodLabel}</p>
           )}
           <div className="flex items-center gap-2 mt-3">
             <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse-slow shadow-glow"></div>

@@ -8,15 +8,6 @@ export function MatchRevealPage() {
   const avatarId = matchData.selectedAvatar || 'riley';
   const avatar = getAvatar(avatarId);
 
-  const getCharacterImage = () => {
-    if (avatarId === 'raven') {
-      return '/images/raven-morning.jpg';
-    }
-    if (avatarId === 'jake') {
-      return '/images/tyler-morning.jpg';
-    }
-    return '/images/riley-casual.jpg';
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center p-6">
@@ -40,7 +31,7 @@ export function MatchRevealPage() {
           <div className="relative">
             <div className="aspect-[4/5] max-h-[500px] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
               <img
-                src={getCharacterImage()}
+                src={avatar.imageUrl}
                 alt={avatar.name}
                 className="w-full h-full object-cover"
               />

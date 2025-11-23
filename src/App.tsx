@@ -355,8 +355,8 @@ function App() {
           Reset
         </button>
       </div>
-      <CharacterCard />
-      <ChatContainer messages={messages} />
+      <CharacterCard character={selectedCharacter} mood={currentMood} />
+      <ChatContainer messages={messages} characterName={getCharacterName(selectedCharacter)} />
       <ChatInput
         onSend={handleSendMessage}
         disabled={!canSendMessage() || isTyping}

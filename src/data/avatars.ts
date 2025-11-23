@@ -17,7 +17,8 @@ export const AVATARS: Record<string, Avatar> = {
     location: 'Detroit, MI',
     bio: 'Always down for deep convos or late night adventures 💕',
     personality: ['bubbly', 'flirty', 'bold', 'energetic', 'outgoing'],
-    archetype: 'life_of_the_party'
+    archetype: 'life_of_the_party',
+    imageUrl: '/images/riley-positive.jpg'
   },
   raven: {
     id: 'raven',
@@ -26,7 +27,8 @@ export const AVATARS: Record<string, Avatar> = {
     location: 'Portland, OR',
     bio: "Books, music, and deep thoughts. Let's talk about what matters 🖤",
     personality: ['calm', 'collected', 'reserved', 'mysterious', 'introspective'],
-    archetype: 'mysterious_deep'
+    archetype: 'mysterious_deep',
+    imageUrl: '/images/raven-positive.jpg'
   },
   jake: {
     id: 'jake',
@@ -35,7 +37,8 @@ export const AVATARS: Record<string, Avatar> = {
     location: 'Austin, TX',
     bio: 'Football, fitness, and good vibes. Let\'s make some memories together 💪⚡',
     personality: ['confident', 'athletic', 'energetic', 'charismatic', 'adventurous'],
-    archetype: 'athletic_confident'
+    archetype: 'athletic_confident',
+    imageUrl: '/images/jake-positive.jpg'
   }
 };
 
