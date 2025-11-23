@@ -25,6 +25,24 @@ function App() {
   const [showGamesMenu, setShowGamesMenu] = useState(false);
   const [chatMode, setChatMode] = useState<'chat' | 'assistant'>('chat');
 
+  // ADD THIS NEW CODE HERE:
+  const getSelectedCharacter = () => {
+    try {
+      const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
+      return matchData.selectedAvatar || 'riley';
+    } catch (error) {
+      return 'riley';
+    }
+  };
+  
+  const selectedCharacter = getSelectedCharacter();
+  const currentMood = 'positive';
+
+  // Then your return statement:
+  return (
+    <BrowserRouter>
+      ...
+
   useEffect(() => {
     checkAuthAndOnboarding();
   }, []);
