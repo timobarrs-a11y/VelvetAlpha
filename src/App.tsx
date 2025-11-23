@@ -25,7 +25,6 @@ function App() {
   const [showGamesMenu, setShowGamesMenu] = useState(false);
   const [chatMode, setChatMode] = useState<'chat' | 'assistant'>('chat');
 
-  // ADD character selection
   const getSelectedCharacter = () => {
     try {
       const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
@@ -38,38 +37,14 @@ function App() {
   const selectedCharacter = getSelectedCharacter();
   const currentMood = 'positive';
 
-  // Your existing useEffect
-  useEffect(() => {
-    checkAuthAndOnboarding();
-  }, []);
-
-  // Your existing checkAuthAndOnboarding function
-  const checkAuthAndOnboarding = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
-        if (matchData.userName) {
-          await createUserAccount(matchData);
-        }
-        setIsCheckingAuth(false);
-        return;
-      }
-      // ... rest of your function
-    }
+  const getCharacterName = (character: string) => {
+    const names: Record<string, string> = {
+      riley: 'Riley',
+      raven: 'Raven',
+      jake: 'Jake'
+    };
+    return names[character] || 'Riley';
   };
-
-  // ... rest of your functions ...
-
-  // Your ACTUAL return statement (should already be there):
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* your actual routes */}
-      </Routes>
-    </BrowserRouter>
-  );
-}
 
   useEffect(() => {
     checkAuthAndOnboarding();
@@ -332,7 +307,6 @@ function App() {
     );
   }
 
-
   return (
     <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
       <div className="fixed top-4 right-4 z-50 flex gap-2">
@@ -416,7 +390,7 @@ function App() {
               <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
               <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
             </div>
-            <p className="text-sm text-gray-600 font-medium">Riley is typing</p>
+            <p className="text-sm text-gray-600 font-medium">{getCharacterName(selectedCharacter)} is typing</p>
           </div>
         </div>
       )}
