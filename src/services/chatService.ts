@@ -336,17 +336,17 @@ export class ChatService {
         alternatingMessages.pop();
       }
 
-      const messagesToSend = [
-        ...alternatingMessages,
-        {
-          role: 'user' as const,
-          content: message,
-        },
-      ];
+const messagesToSend = [
+  ...alternatingMessages,
+  {
+    role: 'user' as const,
+    content: message,
+  },
+].filter(msg => msg.content && msg.content.trim().length > 0);
 
-      console.log('Calling chat edge function...');
-      console.log('System prompt length:', contextualSystemPrompt.length);
-      console.log('Number of messages:', messagesToSend.length);
+console.log('Calling chat edge function...');
+console.log('System prompt length:', contextualSystemPrompt.length);
+console.log('Number of messages (filtered):', messagesToSend.length);
 
       const { data: { session } } = await supabase.auth.getSession();
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
