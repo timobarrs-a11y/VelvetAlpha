@@ -11,14 +11,27 @@ export function useSound() {
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isInitializedRef = useRef(false);
 
   useEffect(() => {
-    audioRef.current = new Audio(NOTIFICATION_SOUND);
-    audioRef.current.volume = 0.5;
+    if (!audioRef.current) {
+      const audio = new Audio(NOTIFICATION_SOUND);
+      audio.volume = 0.5;
+      audio.preload = 'auto';
+
+      audio.addEventListener('canplaythrough', () => {
+        isInitializedRef.current = true;
+        console.log('Sound notification ready');
+      });
+
+      audio.load();
+      audioRef.current = audio;
+    }
 
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.src = '';
         audioRef.current = null;
       }
     };
@@ -29,16 +42,42 @@ export function useSound() {
   }, [soundEnabled]);
 
   const playSound = useCallback(() => {
-    if (soundEnabled && audioRef.current) {
+    console.log('playSound called', { soundEnabled, hasAudio: !!audioRef.current });
+
+    if (!soundEnabled) {
+      console.log('Sound is disabled');
+      return;
+    }
+
+    if (!audioRef.current) {
+      console.log('Audio element not initialized');
+      return;
+    }
+
+    try {
       audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(err => {
-        console.error('Error playing sound:', err);
-      });
+      const playPromise = audioRef.current.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('Sound played successfully');
+          })
+          .catch(err => {
+            console.error('Error playing sound:', err);
+          });
+      }
+    } catch (err) {
+      console.error('Exception playing sound:', err);
     }
   }, [soundEnabled]);
 
   const toggleSound = useCallback(() => {
-    setSoundEnabled(prev => !prev);
+    setSoundEnabled(prev => {
+      const newValue = !prev;
+      console.log('Sound toggled:', newValue);
+      return newValue;
+    });
   }, []);
 
   return {
