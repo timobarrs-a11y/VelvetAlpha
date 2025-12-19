@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface QuestionData {
   id: string;
@@ -14,18 +15,18 @@ const BASE_QUESTIONS: QuestionData[] = [
   {
     id: 'name',
     type: 'text',
-    question: 'What Do People Call You?',
+    question: 'First things first... what should I call you? 😊',
     placeholder: 'Enter your name'
   },
   {
     id: 'birthday',
     type: 'date',
-    question: "When's Your Birthday?"
+    question: 'And when were you born? 🎂'
   },
   {
     id: 'relationshipType',
     type: 'choice',
-    question: 'What Are You Looking For?',
+    question: 'So... who are you hoping to meet? 💕',
     options: [
       { text: 'Girlfriend' },
       { text: 'Boyfriend' }
@@ -37,7 +38,7 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'energy',
     type: 'choice',
-    question: 'Is Your Dream Girl...',
+    question: 'Picture your dream girl... is she:',
     options: [
       { text: 'The life Of The Party', score: { riley: 1 } },
       { text: 'Lives In Her Own World', score: { goth: 1 } }
@@ -46,7 +47,7 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'interest',
     type: 'choice',
-    question: 'How Does She Show Interest In You?',
+    question: 'When she likes you, does she:',
     options: [
       { text: 'Flirty & Bold', score: { riley: 1 } },
       { text: 'Reserved & Subtle', score: { goth: 1 } }
@@ -55,7 +56,7 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'vibe',
     type: 'choice',
-    question: 'What Vibe Are You Drawn To?',
+    question: 'What vibe makes your heart skip a beat?',
     options: [
       { text: 'Bright, energetic, always smiling', score: { riley: 1 } },
       { text: 'Mysterious, deep, keeps you guessing', score: { goth: 1 } }
@@ -64,7 +65,7 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'dynamic',
     type: 'choice',
-    question: 'What Dynamic Do You Prefer?',
+    question: 'In a relationship, you prefer:',
     options: [
       { text: 'She takes the lead' },
       { text: 'You both share control equally' },
@@ -74,7 +75,7 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'confrontation',
     type: 'choice',
-    question: 'How Should She Handle Disagreements?',
+    question: 'When things get tense, she should:',
     options: [
       { text: 'Lighten the mood with humor' },
       { text: 'Have a calm, rational discussion' },
@@ -85,7 +86,7 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'availability',
     type: 'choice',
-    question: 'How Available Should She Be?',
+    question: 'How much of her time do you want?',
     options: [
       { text: 'Always There When I Need Her' },
       { text: 'Mostly Available But Has Her Own Life' },
@@ -95,7 +96,7 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'interests',
     type: 'choice',
-    question: 'What Interests Does She have?',
+    question: "What's she passionate about?",
     options: [
       { text: 'Pop culture, Social Media, Trending Topics' },
       { text: 'Books, philosophy, Deep Discussions' },
@@ -109,7 +110,7 @@ const BOYFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'energy',
     type: 'choice',
-    question: 'Is Your Dream Guy...',
+    question: 'Picture your dream guy... is he:',
     options: [
       { text: 'The life Of The Party' },
       { text: 'In His Own World' }
@@ -118,7 +119,7 @@ const BOYFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'interest',
     type: 'choice',
-    question: 'How Does He Show Interest In You?',
+    question: 'When he likes you, does he:',
     options: [
       { text: 'Flirty And Bold' },
       { text: 'Reserved And Subtle' }
@@ -127,7 +128,7 @@ const BOYFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'vibe',
     type: 'choice',
-    question: 'What Vibe Are YOU Drawn To?',
+    question: 'What vibe makes your heart skip a beat?',
     options: [
       { text: 'Bright, energetic, always happy' },
       { text: 'Mysterious, deep, keeps you guessing' }
@@ -136,7 +137,7 @@ const BOYFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'dynamic',
     type: 'choice',
-    question: 'What dynamic Do You Prefer?',
+    question: 'In a relationship, you prefer:',
     options: [
       { text: 'He takes the lead' },
       { text: 'You prefer to lead' }
@@ -150,6 +151,9 @@ export function QuestionnairePage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [avatarScore, setAvatarScore] = useState({ riley: 0, goth: 0 });
   const [textInput, setTextInput] = useState('');
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [milestoneMessage, setMilestoneMessage] = useState<string | null>(null);
+  const [lastMilestone, setLastMilestone] = useState(0);
 
   const getQuestions = (): QuestionData[] => {
     if (!answers.relationshipType) {
@@ -175,6 +179,33 @@ export function QuestionnairePage() {
 
   const totalQuestions = getTotalQuestions();
   const progress = ((currentQuestion + 1) / totalQuestions) * 100;
+
+  useEffect(() => {
+    const currentMilestone = Math.floor(progress / 25) * 25;
+    if (currentMilestone > lastMilestone && currentMilestone >= 25 && currentMilestone <= 75) {
+      const messages = {
+        25: "You're doing great! 🌟",
+        50: "Halfway there! 💫",
+        75: "Almost done! ✨"
+      };
+      setMilestoneMessage(messages[currentMilestone as 25 | 50 | 75]);
+      setLastMilestone(currentMilestone);
+      setTimeout(() => setMilestoneMessage(null), 2000);
+    }
+  }, [progress, lastMilestone]);
+
+  const getProgressGradient = () => {
+    if (progress >= 75) return 'from-pink-600 to-purple-600';
+    if (progress >= 50) return 'from-rose-600 to-pink-600';
+    if (progress >= 25) return 'from-rose-500 to-pink-500';
+    return 'from-rose-400 to-pink-400';
+  };
+
+  const getHelperText = () => {
+    if (progress >= 80) return 'Almost there... getting exciting! ✨';
+    if (progress >= 40) return "You're doing great! Just a few more questions...";
+    return 'Take your time - we want to find your perfect match 💕';
+  };
 
   const handleBack = () => {
     if (currentQuestion > 0) {
@@ -251,6 +282,14 @@ export function QuestionnairePage() {
     }
   };
 
+  const handleChoiceClick = (index: number, answer: string, scoreData?: { riley?: number; goth?: number }) => {
+    setSelectedOption(index);
+    setTimeout(() => {
+      handleAnswer(answer, scoreData);
+      setSelectedOption(null);
+    }, 400);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center p-6">
       <div className="max-w-2xl w-full">
@@ -264,7 +303,19 @@ export function QuestionnairePage() {
           </button>
         )}
 
-        <div className="mb-8">
+        <div className="mb-8 relative">
+          <AnimatePresence>
+            {milestoneMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-lg text-sm font-semibold text-rose-600 whitespace-nowrap"
+              >
+                {milestoneMessage}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-medium text-gray-600">
               Question {currentQuestion + 1} of {totalQuestions}
@@ -275,16 +326,29 @@ export function QuestionnairePage() {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
             <div
-              className="bg-gradient-to-r from-rose-500 to-pink-500 h-2.5 rounded-full transition-all duration-500 ease-out"
+              className={`bg-gradient-to-r ${getProgressGradient()} h-2.5 rounded-full transition-all duration-500 ease-out`}
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-12">
-            {question.question}
-          </h2>
+        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentQuestion}
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -100 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              <motion.h2
+                className="text-4xl md:text-5xl font-bold text-gray-800 text-center mb-12 tracking-tight"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                {question.question}
+              </motion.h2>
 
           {question.type === 'text' && (
             <div className="space-y-4">
@@ -293,14 +357,14 @@ export function QuestionnairePage() {
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 placeholder={question.placeholder}
-                className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-rose-400 focus:outline-none transition-colors"
+                className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-rose-400 focus:outline-none focus:ring-4 focus:ring-rose-100 focus:scale-[1.01] transition-all duration-200"
                 onKeyPress={(e) => e.key === 'Enter' && handleTextSubmit()}
                 autoFocus
               />
               <button
                 onClick={handleTextSubmit}
                 disabled={!textInput.trim()}
-                className="w-full py-4 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 text-white text-xl font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:transform-none"
+                className={`w-full py-4 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 text-white text-xl font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:transform-none ${textInput.trim() ? 'animate-pulse-slow' : ''}`}
               >
                 Next
               </button>
@@ -313,13 +377,13 @@ export function QuestionnairePage() {
                 type="date"
                 onChange={(e) => setTextInput(e.target.value)}
                 value={textInput}
-                className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-rose-400 focus:outline-none transition-colors"
+                className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-rose-400 focus:outline-none focus:ring-4 focus:ring-rose-100 focus:scale-[1.01] transition-all duration-200"
                 autoFocus
               />
               <button
                 onClick={() => handleDateSubmit(textInput)}
                 disabled={!textInput}
-                className="w-full py-4 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 text-white text-xl font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:transform-none"
+                className={`w-full py-4 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 text-white text-xl font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:transform-none ${textInput ? 'animate-pulse-slow' : ''}`}
               >
                 Next
               </button>
@@ -331,19 +395,29 @@ export function QuestionnairePage() {
               {question.options?.map((option, index) => (
                 <button
                   key={index}
-                  onClick={() => handleAnswer(option.text, option.score)}
-                  className="w-full text-left px-6 py-4 rounded-xl border-2 border-gray-200 hover:border-rose-400 hover:bg-rose-50 transition-all duration-200 text-lg font-medium text-gray-700 hover:text-rose-600 hover:shadow-md"
+                  onClick={() => handleChoiceClick(index, option.text, option.score)}
+                  disabled={selectedOption !== null}
+                  className={`w-full text-left px-6 py-4 rounded-xl border-2 transition-all duration-200 text-lg font-medium hover:scale-[1.02] hover:shadow-lg flex items-center justify-between ${
+                    selectedOption === index
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-200 hover:border-rose-400 hover:bg-rose-50 text-gray-700 hover:text-rose-600'
+                  } ${selectedOption !== null && selectedOption !== index ? 'opacity-50' : ''}`}
                 >
-                  {option.text}
+                  <span>{option.text}</span>
+                  {selectedOption === index && (
+                    <Check className="w-6 h-6 text-green-600" />
+                  )}
                 </button>
               ))}
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500">
-            Take your time - there are no wrong answers
+            {getHelperText()}
           </p>
         </div>
       </div>
