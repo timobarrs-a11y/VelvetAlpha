@@ -15,21 +15,21 @@ const BASE_QUESTIONS: QuestionData[] = [
   {
     id: 'name',
     type: 'text',
-    question: 'First things first... what should I call you? 😊',
+    question: 'First Things First... What Should I Call You? 😊',
     placeholder: 'Enter your name'
   },
   {
     id: 'birthday',
     type: 'date',
-    question: 'And when were you born? 🎂'
+    question: 'And When Were You Born? 🎂'
   },
   {
     id: 'relationshipType',
     type: 'choice',
-    question: 'So... who are you hoping to meet? 💕',
+    question: 'Which Companion Are You Interested In?',
     options: [
-      { text: 'Girlfriend' },
-      { text: 'Boyfriend' }
+      { text: 'Female' },
+      { text: 'Male' }
     ]
   }
 ];
@@ -38,16 +38,16 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'energy',
     type: 'choice',
-    question: 'Picture your dream girl... is she:',
+    question: 'Picture Your Dream Girl... Is She:',
     options: [
-      { text: 'The life Of The Party', score: { riley: 1 } },
+      { text: 'The Life Of The Party', score: { riley: 1 } },
       { text: 'Lives In Her Own World', score: { goth: 1 } }
     ]
   },
   {
     id: 'interest',
     type: 'choice',
-    question: 'When she likes you, does she:',
+    question: 'When She Likes You, Does She:',
     options: [
       { text: 'Flirty & Bold', score: { riley: 1 } },
       { text: 'Reserved & Subtle', score: { goth: 1 } }
@@ -56,37 +56,37 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'vibe',
     type: 'choice',
-    question: 'What vibe makes your heart skip a beat?',
+    question: 'What Vibe Makes Your Heart Skip A Beat?',
     options: [
-      { text: 'Bright, energetic, always smiling', score: { riley: 1 } },
-      { text: 'Mysterious, deep, keeps you guessing', score: { goth: 1 } }
+      { text: 'Bright, Energetic, Always Smiling', score: { riley: 1 } },
+      { text: 'Mysterious, Deep, Keeps You Guessing', score: { goth: 1 } }
     ]
   },
   {
     id: 'dynamic',
     type: 'choice',
-    question: 'In a relationship, you prefer:',
+    question: 'In A Relationship, You Prefer:',
     options: [
-      { text: 'She takes the lead' },
-      { text: 'You both share control equally' },
-      { text: 'You prefer to lead' }
+      { text: 'She Takes The Lead' },
+      { text: 'You Both Share Control Equally' },
+      { text: 'You Prefer To Lead' }
     ]
   },
   {
     id: 'confrontation',
     type: 'choice',
-    question: 'When things get tense, she should:',
+    question: 'When Things Get Tense, She Should:',
     options: [
-      { text: 'Lighten the mood with humor' },
-      { text: 'Have a calm, rational discussion' },
-      { text: 'Focus on understanding feelings' },
-      { text: 'Be direct and move forward quickly' }
+      { text: 'Lighten The Mood With Humor' },
+      { text: 'Have A Calm, Rational Discussion' },
+      { text: 'Focus On Understanding Feelings' },
+      { text: 'Be Direct And Move Forward Quickly' }
     ]
   },
   {
     id: 'availability',
     type: 'choice',
-    question: 'How much of her time do you want?',
+    question: 'How Much Of Her Time Do You Want?',
     options: [
       { text: 'Always There When I Need Her' },
       { text: 'Mostly Available But Has Her Own Life' },
@@ -96,11 +96,11 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'interests',
     type: 'choice',
-    question: "What's she passionate about?",
+    question: "What's She Passionate About?",
     options: [
-      { text: 'Pop culture, Social Media, Trending Topics' },
-      { text: 'Books, philosophy, Deep Discussions' },
-      { text: 'Wellness, Self-care, Personal growth' },
+      { text: 'Pop Culture, Social Media, Trending Topics' },
+      { text: 'Books, Philosophy, Deep Discussions' },
+      { text: 'Wellness, Self-Care, Personal Growth' },
       { text: 'Adventure, Travel, New Experiences' }
     ]
   }
@@ -110,16 +110,16 @@ const BOYFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'energy',
     type: 'choice',
-    question: 'Picture your dream guy... is he:',
+    question: 'Picture Your Dream Guy... Is He:',
     options: [
-      { text: 'The life Of The Party' },
+      { text: 'The Life Of The Party' },
       { text: 'In His Own World' }
     ]
   },
   {
     id: 'interest',
     type: 'choice',
-    question: 'When he likes you, does he:',
+    question: 'When He Likes You, Does He:',
     options: [
       { text: 'Flirty And Bold' },
       { text: 'Reserved And Subtle' }
@@ -128,19 +128,19 @@ const BOYFRIEND_QUESTIONS: QuestionData[] = [
   {
     id: 'vibe',
     type: 'choice',
-    question: 'What vibe makes your heart skip a beat?',
+    question: 'What Vibe Makes Your Heart Skip A Beat?',
     options: [
-      { text: 'Bright, energetic, always happy' },
-      { text: 'Mysterious, deep, keeps you guessing' }
+      { text: 'Bright, Energetic, Always Happy' },
+      { text: 'Mysterious, Deep, Keeps You Guessing' }
     ]
   },
   {
     id: 'dynamic',
     type: 'choice',
-    question: 'In a relationship, you prefer:',
+    question: 'In A Relationship, You Prefer:',
     options: [
-      { text: 'He takes the lead' },
-      { text: 'You prefer to lead' }
+      { text: 'He Takes The Lead' },
+      { text: 'You Prefer To Lead' }
     ]
   }
 ];
@@ -160,7 +160,7 @@ export function QuestionnairePage() {
       return BASE_QUESTIONS;
     }
 
-    if (answers.relationshipType === 'Boyfriend') {
+    if (answers.relationshipType === 'Male') {
       return [...BASE_QUESTIONS, ...BOYFRIEND_QUESTIONS];
     }
 
@@ -229,7 +229,7 @@ export function QuestionnairePage() {
     let fullQuestions: QuestionData[];
     if (!newAnswers.relationshipType) {
       fullQuestions = BASE_QUESTIONS;
-    } else if (newAnswers.relationshipType === 'Boyfriend') {
+    } else if (newAnswers.relationshipType === 'Male') {
       fullQuestions = [...BASE_QUESTIONS, ...BOYFRIEND_QUESTIONS];
     } else {
       fullQuestions = [...BASE_QUESTIONS, ...GIRLFRIEND_QUESTIONS];
@@ -238,7 +238,7 @@ export function QuestionnairePage() {
     if (currentQuestion === fullQuestions.length - 1) {
       let selectedAvatar = 'riley';
 
-      if (newAnswers.relationshipType === 'Girlfriend') {
+      if (newAnswers.relationshipType === 'Female') {
         if (avatarScore.goth >= 3) {
           selectedAvatar = 'raven';
         } else if (avatarScore.riley >= 3) {
@@ -246,7 +246,7 @@ export function QuestionnairePage() {
         } else {
           selectedAvatar = Math.random() < 0.5 ? 'riley' : 'raven';
         }
-      } else if (newAnswers.relationshipType === 'Boyfriend') {
+      } else if (newAnswers.relationshipType === 'Male') {
         selectedAvatar = 'jake';
       }
 

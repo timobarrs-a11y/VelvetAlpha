@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { CharacterCard } from './components/CharacterCard';
 import { ChatContainer } from './components/ChatContainer';
 import { ChatInput } from './components/ChatInput';
@@ -14,6 +14,7 @@ import {
   canSendMessage,
 } from './utils/storage';
 import { SubscriptionTier } from './types/subscription';
+import { useSound } from './hooks/useSound';
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -24,6 +25,7 @@ function App() {
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>('free');
   const [showGamesMenu, setShowGamesMenu] = useState(false);
   const [chatMode, setChatMode] = useState<'chat' | 'assistant'>('chat');
+  const { soundEnabled, toggleSound, playSound } = useSound();
 
   const getSelectedCharacter = () => {
     try {
@@ -158,6 +160,7 @@ function App() {
 
       setMessages([aiMessage]);
       addMessage(aiMessage);
+      playSound();
     } catch (error) {
       console.error('Error sending first message:', error);
       setIsTyping(false);
@@ -221,6 +224,7 @@ function App() {
       });
       addMessage(aiMessage);
       setRemainingMessages(getRemainingMessages());
+      playSound();
     } catch (error) {
       console.error('Error sending message:', error);
       setIsTyping(false);
@@ -321,6 +325,17 @@ function App() {
               {chatMode === 'chat' ? 'Chat' : 'Assistant'}
             </div>
           </div>
+        </button>
+        <button
+          onClick={toggleSound}
+          className="bg-white px-3 py-2 rounded-lg shadow-lg border-2 border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all duration-200"
+          title={soundEnabled ? 'Disable sound notifications' : 'Enable sound notifications'}
+        >
+          {soundEnabled ? (
+            <Volume2 size={20} className="text-gray-700" />
+          ) : (
+            <VolumeX size={20} className="text-gray-400" />
+          )}
         </button>
         <div className="relative">
           <button
