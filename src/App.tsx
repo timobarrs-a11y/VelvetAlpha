@@ -25,6 +25,7 @@ function App() {
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>('free');
   const [showGamesMenu, setShowGamesMenu] = useState(false);
   const [chatMode, setChatMode] = useState<'chat' | 'assistant'>('chat');
+  const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
   const { soundEnabled, toggleSound, playSound } = useSound();
 
   const getSelectedCharacter = () => {
@@ -90,6 +91,11 @@ function App() {
   }, [isCheckingAuth]);
 
   const loadMessages = async () => {
+    if (hasLoadedMessages) {
+      console.log('Messages already loaded, skipping');
+      return;
+    }
+
     try {
       const history = await ChatService.getConversationHistory(50);
       const formattedMessages: Message[] = history.map(msg => ({
@@ -100,13 +106,37 @@ function App() {
       }));
       setMessages(formattedMessages);
 
+      console.log('First message check - messages count:', formattedMessages.length);
+
       if (formattedMessages.length === 0) {
-        await sendFirstMessage();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('first_message_sent')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          console.log('First message check - database flag:', profile?.first_message_sent);
+
+          if (!profile?.first_message_sent) {
+            console.log('Sending first message...');
+            setHasLoadedMessages(true);
+            await sendFirstMessage();
+          } else {
+            console.log('First message already sent, skipping');
+            setHasLoadedMessages(true);
+          }
+        }
+      } else {
+        setHasLoadedMessages(true);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
       const data = getConversationData();
       setMessages(data.messages);
+      setHasLoadedMessages(true);
     }
     setRemainingMessages(getRemainingMessages());
   };
@@ -149,6 +179,7 @@ function App() {
 
       await ChatService.saveMessage('assistant', firstMsg);
       await firstMessageService.markFirstMessageSent(user.id);
+      console.log('First message sent and marked in database');
 
       const aiMessage: Message = {
         id: `${Date.now()}-ai`,
