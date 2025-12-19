@@ -4,6 +4,7 @@ import { QuestionnairePage } from './pages/QuestionnairePage';
 import { AnalyzingPage } from './pages/AnalyzingPage';
 import { MatchRevealPage } from './pages/MatchRevealPage';
 import { SplashPage } from './pages/SplashPage';
+import { CompanionLobbyPage } from './pages/CompanionLobbyPage';
 
 export function Router() {
   return (
@@ -12,9 +13,10 @@ export function Router() {
         <Route path="/questionnaire" element={<QuestionnairePage />} />
         <Route path="/analyzing" element={<AnalyzingPage />} />
         <Route path="/match-reveal" element={<MatchRevealPage />} />
+        <Route path="/lobby" element={<CompanionLobbyPage />} />
         <Route path="/splash" element={<SplashPage />} />
         <Route path="/chat" element={<App />} />
-        <Route path="/" element={<Navigate to="/questionnaire" replace />} />
+        <Route path="/" element={<Navigate to="/lobby" replace />} />
       </Routes>
     </BrowserRouter>
   );

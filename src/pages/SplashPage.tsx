@@ -1,8 +1,44 @@
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle, Globe, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../services/supabase';
+import { createCompanion } from '../services/companionService';
 
 export function SplashPage() {
   const navigate = useNavigate();
+  const [isCreatingCompanion, setIsCreatingCompanion] = useState(false);
+
+  useEffect(() => {
+    ensureCompanionExists();
+  }, []);
+
+  const ensureCompanionExists = async () => {
+    const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user || !matchData.selectedAvatar) return;
+
+    const characterType = matchData.selectedAvatar as 'riley' | 'raven' | 'jake';
+    const relationshipType = (matchData.connectionType || 'romantic') as 'friend' | 'romantic';
+
+    const companion = await createCompanion(user.id, characterType, relationshipType);
+
+    if (companion) {
+      localStorage.setItem('currentCompanionId', companion.id);
+    }
+  };
+
+  const handleStartChatting = async () => {
+    setIsCreatingCompanion(true);
+
+    const companionId = localStorage.getItem('currentCompanionId');
+
+    if (companionId) {
+      navigate(`/chat?companion=${companionId}`);
+    } else {
+      navigate('/lobby');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center p-6">
@@ -175,10 +211,11 @@ export function SplashPage() {
               </p>
 
               <button
-                onClick={() => navigate('/chat')}
-                className="w-full py-5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white text-2xl font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                onClick={handleStartChatting}
+                disabled={isCreatingCompanion}
+                className="w-full py-5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 text-white text-2xl font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:transform-none"
               >
-                Start Chatting 💕
+                {isCreatingCompanion ? 'Setting up...' : 'Start Chatting 💕'}
               </button>
             </div>
           </div>

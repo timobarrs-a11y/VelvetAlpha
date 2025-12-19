@@ -31,6 +31,15 @@ const BASE_QUESTIONS: QuestionData[] = [
       { text: 'Female' },
       { text: 'Male' }
     ]
+  },
+  {
+    id: 'connectionType',
+    type: 'choice',
+    question: 'What Kind Of Connection Are You Looking For?',
+    options: [
+      { text: 'Just a friend to talk to 🤝' },
+      { text: 'Something more... 💕' }
+    ]
   }
 ];
 
@@ -250,10 +259,13 @@ export function QuestionnairePage() {
         selectedAvatar = 'jake';
       }
 
+      const connectionType = newAnswers.connectionType?.includes('friend') ? 'friend' : 'romantic';
+
       const matchData = {
         userName: newAnswers.name,
         userBirthday: newAnswers.birthday,
         relationshipType: newAnswers.relationshipType,
+        connectionType,
         selectedAvatar,
         dynamicPreference: newAnswers.dynamic,
         confrontationStyle: newAnswers.confrontation,

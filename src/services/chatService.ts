@@ -215,7 +215,7 @@ export class ChatService {
     }
   }
 
-  static async sendMessage(message: string): Promise<string> {
+  static async sendMessage(message: string, companionId?: string, relationshipType: 'friend' | 'romantic' = 'romantic'): Promise<string> {
     try {
       const userProfile = await this.getUserProfile();
       const defaultProfile = {
@@ -316,7 +316,7 @@ export class ChatService {
       };
 
       const modelType = selectedModel.includes('haiku') ? 'cheap' : 'premium';
-      const optimizedPrompt = getSystemPrompt(modelType, userContext, subscriptionTier);
+      const optimizedPrompt = getSystemPrompt(modelType, userContext, subscriptionTier, relationshipType);
 
       const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date/Time: ${currentDateTime}\nOutfit Context: ${outfitContext}\n\nIMPORTANT: Keep your response under ${maxTokens} tokens.`;
 

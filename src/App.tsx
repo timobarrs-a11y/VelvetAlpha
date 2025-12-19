@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { RotateCcw, Volume2, VolumeX, ArrowLeft } from 'lucide-react';
 import { CharacterCard } from './components/CharacterCard';
 import { ChatContainer } from './components/ChatContainer';
 import { ChatInput } from './components/ChatInput';
@@ -15,8 +16,13 @@ import {
 } from './utils/storage';
 import { SubscriptionTier } from './types/subscription';
 import { useSound } from './hooks/useSound';
+import { getCompanion, updateLastMessageTime, markFirstMessageSent, Companion } from './services/companionService';
 
 function App() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const companionId = searchParams.get('companion');
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [remainingMessages, setRemainingMessages] = useState(50);
   const [isTyping, setIsTyping] = useState(false);
@@ -26,18 +32,10 @@ function App() {
   const [showGamesMenu, setShowGamesMenu] = useState(false);
   const [chatMode, setChatMode] = useState<'chat' | 'assistant'>('chat');
   const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
+  const [companion, setCompanion] = useState<Companion | null>(null);
   const { soundEnabled, toggleSound, playSound } = useSound();
 
-  const getSelectedCharacter = () => {
-    try {
-      const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
-      return matchData.selectedAvatar || 'riley';
-    } catch (error) {
-      return 'riley';
-    }
-  };
-  
-  const selectedCharacter = getSelectedCharacter();
+  const selectedCharacter = companion?.character_type || 'riley';
   const currentMood = 'positive';
 
   const getCharacterName = (character: string) => {
@@ -51,10 +49,15 @@ function App() {
 
   useEffect(() => {
     checkAuthAndOnboarding();
-  }, []);
+  }, [companionId]);
 
   const checkAuthAndOnboarding = async () => {
     try {
+      if (!companionId) {
+        navigate('/lobby');
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
@@ -76,7 +79,14 @@ function App() {
         setCurrentTier(profile.subscription_tier as SubscriptionTier);
       }
 
-      await loadMessages();
+      const companionData = await getCompanion(companionId);
+      if (!companionData) {
+        navigate('/lobby');
+        return;
+      }
+
+      setCompanion(companionData);
+      await loadMessages(companionId, companionData);
     } catch (error) {
       console.error('Error checking auth:', error);
     } finally {
@@ -84,52 +94,47 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    if (!isCheckingAuth) {
-      loadMessages();
-    }
-  }, [isCheckingAuth]);
-
-  const loadMessages = async () => {
+  const loadMessages = async (companionId: string, companionData: Companion) => {
     if (hasLoadedMessages) {
       console.log('Messages already loaded, skipping');
       return;
     }
 
     try {
-      const history = await ChatService.getConversationHistory(50);
-      const formattedMessages: Message[] = history.map(msg => ({
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: messages, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('companion_id', companionId)
+        .is('archived_at', null)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error loading messages:', error);
+        setHasLoadedMessages(true);
+        return;
+      }
+
+      const formattedMessages: Message[] = messages.map(msg => ({
         id: msg.id,
-        content: msg.content,
+        content: msg.message,
         sender: msg.role === 'user' ? 'user' : 'ai',
         timestamp: new Date(msg.created_at).getTime(),
       }));
       setMessages(formattedMessages);
 
       console.log('First message check - messages count:', formattedMessages.length);
+      console.log('First message check - companion flag:', companionData.first_message_sent);
 
-      if (formattedMessages.length === 0) {
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (user) {
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('first_message_sent')
-            .eq('id', user.id)
-            .maybeSingle();
-
-          console.log('First message check - database flag:', profile?.first_message_sent);
-
-          if (!profile?.first_message_sent) {
-            console.log('Sending first message...');
-            setHasLoadedMessages(true);
-            await sendFirstMessage();
-          } else {
-            console.log('First message already sent, skipping');
-            setHasLoadedMessages(true);
-          }
-        }
+      if (formattedMessages.length === 0 && !companionData.first_message_sent) {
+        console.log('Sending first message...');
+        setHasLoadedMessages(true);
+        await sendFirstMessage(companionId, companionData);
       } else {
+        console.log('First message already sent or messages exist, skipping');
         setHasLoadedMessages(true);
       }
     } catch (error) {
@@ -141,18 +146,18 @@ function App() {
     setRemainingMessages(getRemainingMessages());
   };
 
-  const sendFirstMessage = async () => {
+  const sendFirstMessage = async (companionId: string, companionData: Companion) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('character_type, name')
+        .select('name')
         .eq('id', user.id)
         .maybeSingle();
 
-      const characterType = profile?.character_type || 'riley';
+      const characterType = companionData.character_type;
       const userName = profile?.name || 'there';
 
       const userPreferences = JSON.parse(localStorage.getItem('userPreferences') || '{}');
@@ -177,8 +182,17 @@ function App() {
 
       setIsTyping(false);
 
-      await ChatService.saveMessage('assistant', firstMsg);
-      await firstMessageService.markFirstMessageSent(user.id);
+      await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          companion_id: companionId,
+          role: 'assistant',
+          message: firstMsg,
+        });
+
+      await markFirstMessageSent(companionId);
+      await updateLastMessageTime(companionId);
       console.log('First message sent and marked in database');
 
       const aiMessage: Message = {
@@ -203,7 +217,7 @@ function App() {
     console.log('canSendMessage:', canSendMessage());
     console.log('isTyping:', isTyping);
 
-    if (!canSendMessage() || isTyping) {
+    if (!canSendMessage() || isTyping || !companionId || !companion) {
       console.log('Message blocked - canSend:', canSendMessage(), 'isTyping:', isTyping);
       return;
     }
@@ -220,6 +234,24 @@ function App() {
     addMessage(userMessage);
     setRemainingMessages(getRemainingMessages());
 
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          companion_id: companionId,
+          role: 'user',
+          message: content,
+        });
+
+      await updateLastMessageTime(companionId);
+    } catch (error) {
+      console.error('Error saving user message:', error);
+    }
+
     const thinkingDelay = 800 + Math.random() * 1200;
     await new Promise(resolve => setTimeout(resolve, thinkingDelay));
 
@@ -227,7 +259,7 @@ function App() {
 
     try {
       console.log('Calling ChatService.sendMessage...');
-      const response = await ChatService.sendMessage(content);
+      const response = await ChatService.sendMessage(content, companionId, companion.relationship_type);
       console.log('Got response:', response);
       console.log('Response type:', typeof response);
       console.log('Response length:', response?.length);
@@ -247,6 +279,20 @@ function App() {
 
       console.log('Created AI message object:', aiMessage);
       console.log('AI message content:', aiMessage.content);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('conversations')
+          .insert({
+            user_id: user.id,
+            companion_id: companionId,
+            role: 'assistant',
+            message: response,
+          });
+
+        await updateLastMessageTime(companionId);
+      }
 
       setMessages(prev => {
         const updated = [...prev, aiMessage];
@@ -344,6 +390,16 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
+      <div className="fixed top-4 left-4 z-50">
+        <button
+          onClick={() => navigate('/lobby')}
+          className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-lg border-2 border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all duration-200"
+          title="Back to Companion Lobby"
+        >
+          <ArrowLeft size={20} className="text-gray-700" />
+          <span className="font-medium text-gray-700">Lobby</span>
+        </button>
+      </div>
       <div className="fixed top-4 right-4 z-50 flex gap-2">
         <button
           onClick={() => setChatMode(chatMode === 'chat' ? 'assistant' : 'chat')}
