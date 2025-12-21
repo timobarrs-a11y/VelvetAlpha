@@ -17,6 +17,9 @@ import { generateConversationSummary, formatSummaryContext, shouldGenerateSummar
 import { validateResponse, shouldRetryResponse, formatValidationFeedback } from './responseValidationService';
 import { analyzeConversationMetrics, formatConversationMetrics, getConversationGuidance } from './conversationTrackingService';
 import { detectUserMood, formatMoodContext, getMoodBasedMaxTokens } from './moodBasedTuningService';
+import { MemoryService } from './memoryService';
+import { ConversationThreadService } from './conversationThreadService';
+import { EmotionalProfileService } from './emotionalProfileService';
 
 export interface Message {
   id: string;
@@ -455,7 +458,27 @@ export class ChatService {
       console.log('  Engagement level:', conversationMetrics.engagementLevel);
       console.log('  Adjusted max tokens:', adjustedMaxTokens, '(base:', maxTokens, ')');
 
-      const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date/Time: ${currentDateTime}\nOutfit Context: ${outfitContext}${contextReminder}${topicContext}${summaryContext}${metricsContext}${guidanceContext}${moodContext}
+      let memoryContext = '';
+      let threadContext = '';
+      let profileContext = '';
+
+      if (userProfile) {
+        console.log('\n🧠 LOADING INTELLIGENCE LAYERS...');
+
+        const relevantMemories = await MemoryService.getRelevantMemories(userProfile.id, message, 8);
+        memoryContext = MemoryService.formatMemoriesForContext(relevantMemories);
+        console.log('  Loaded memories:', relevantMemories.length);
+
+        const activeThreads = await ConversationThreadService.getActiveThreads(userProfile.id);
+        threadContext = ConversationThreadService.formatThreadsForContext(activeThreads);
+        console.log('  Active threads:', activeThreads.length);
+
+        const emotionalProfile = await EmotionalProfileService.getProfile(userProfile.id);
+        profileContext = EmotionalProfileService.formatProfileForContext(emotionalProfile);
+        console.log('  Emotional profile:', emotionalProfile ? 'loaded' : 'not found');
+      }
+
+      const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date/Time: ${currentDateTime}\nOutfit Context: ${outfitContext}${contextReminder}${topicContext}${summaryContext}${metricsContext}${guidanceContext}${moodContext}${memoryContext}${threadContext}${profileContext}
 
 CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - NEVER ask a question you already asked in this conversation
@@ -542,6 +565,31 @@ console.log('Messages being sent to AI:', messagesToSend.length);
 
       if (userProfile && assistantMessage) {
         await this.saveMessage('assistant', assistantMessage);
+
+        console.log('\n💾 UPDATING INTELLIGENCE LAYERS...');
+
+        await Promise.all([
+          MemoryService.extractAndStoreMemories(
+            userProfile.id,
+            message,
+            assistantMessage,
+            formattedHistory
+          ),
+          ConversationThreadService.detectAndUpdateThreads(
+            userProfile.id,
+            message,
+            assistantMessage,
+            formattedHistory
+          ),
+          EmotionalProfileService.updateProfile(
+            userProfile.id,
+            message,
+            assistantMessage,
+            formattedHistory
+          ),
+        ]);
+
+        console.log('  ✅ Intelligence layers updated');
       }
 
       CostTracker.logStats();
