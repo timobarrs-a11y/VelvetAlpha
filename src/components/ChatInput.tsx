@@ -5,9 +5,10 @@ interface ChatInputProps {
   onSend: (message: string) => void;
   disabled: boolean;
   remainingMessages: number;
+  characterName: string;
 }
 
-export const ChatInput = ({ onSend, disabled, remainingMessages }: ChatInputProps) => {
+export const ChatInput = ({ onSend, disabled, remainingMessages, characterName }: ChatInputProps) => {
   const [input, setInput] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -31,7 +32,7 @@ export const ChatInput = ({ onSend, disabled, remainingMessages }: ChatInputProp
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={
-            disabled ? 'Daily limit reached' : 'Message Riley...'
+            disabled ? 'Daily limit reached' : `Message ${characterName}...`
           }
           disabled={disabled}
           className="flex-1 px-5 py-3.5 rounded-full border-2 border-gray-200 focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200 text-[15px]"

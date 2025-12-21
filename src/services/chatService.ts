@@ -268,7 +268,7 @@ export class ChatService {
       console.log('  User Tier:', profile.subscription_tier);
       console.log('  Selected Model:', getModelDisplayName(selectedModel));
 
-      const conversationHistory = userProfile ? await this.getConversationHistory(30) : [];
+      const conversationHistory = userProfile ? await this.getConversationHistory(50) : [];
 
       const formattedHistory = conversationHistory.map(msg => ({
         role: msg.role as 'user' | 'assistant',
@@ -296,8 +296,8 @@ export class ChatService {
       const subscriptionTier = profile.subscription_tier || 'premium';
       const maxTokens = this.getMaxTokensForTier(subscriptionTier);
 
-      const last10Messages = formattedHistory.slice(-10);
-      const olderMessages = formattedHistory.slice(0, -10);
+      const last20Messages = formattedHistory.slice(-20);
+      const olderMessages = formattedHistory.slice(0, -20);
 
       const recentTopics: string[] = [];
       if (olderMessages.length > 0) {
@@ -318,15 +318,43 @@ export class ChatService {
       const modelType = selectedModel.includes('haiku') ? 'cheap' : 'premium';
       const optimizedPrompt = getSystemPrompt(modelType, userContext, subscriptionTier, relationshipType);
 
-      const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date/Time: ${currentDateTime}\nOutfit Context: ${outfitContext}\n\nIMPORTANT: Keep your response under ${maxTokens} tokens.`;
+      const recentUserMessages = last20Messages
+        .filter(m => m.role === 'user')
+        .slice(-5)
+        .map(m => m.content)
+        .join(' | ');
+
+      const contextReminder = recentUserMessages.length > 0
+        ? `\n\nRECENT USER CONTEXT (last 5 user messages): ${recentUserMessages}\nDO NOT ask about things they just told you.`
+        : '';
+
+      const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date/Time: ${currentDateTime}\nOutfit Context: ${outfitContext}${contextReminder}
+
+CRITICAL MEMORY RULES - READ THIS CAREFULLY:
+- NEVER ask a question you already asked in this conversation
+- Before asking "what are you doing", "how was your day", "what's up", etc. - CHECK if they already answered
+- If they already told you something, reference it instead of asking again
+- Example: If they said "I'm at work", don't ask "what are you up to?" - instead say "how's work going?"
+- Build on information they've shared, don't reset the conversation
+- Remember key facts from this conversation: their mood, their plans, what they're doing, what they told you
+- You have access to the last 20 messages in formattedHistory - USE THEM
+- If you genuinely can't remember something from earlier, acknowledge it naturally: "wait did you tell me this already? sorry babe my brain is scattered today lol"
+- NEVER repeat questions within the same conversation session
+
+IMPORTANT: Keep your response under ${maxTokens} tokens.`;
 
       console.log('\n📝 PROMPT INFO:');
       console.log('  Prompt type:', modelType.toUpperCase());
       console.log('  Prompt length:', contextualSystemPrompt.length, 'chars');
       console.log('  Est. tokens:', Math.ceil(contextualSystemPrompt.length / 4));
 
+      console.log('\n🧠 CONVERSATION CONTEXT DEBUG:');
+      console.log('Total history messages:', conversationHistory.length);
+      console.log('Last 5 user messages:', recentUserMessages);
+      console.log('System prompt length:', contextualSystemPrompt.length, 'chars');
+
       const alternatingMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
-      for (const msg of last10Messages) {
+      for (const msg of last20Messages) {
         if (alternatingMessages.length === 0 || alternatingMessages[alternatingMessages.length - 1].role !== msg.role) {
           alternatingMessages.push(msg);
         }
@@ -347,6 +375,7 @@ const messagesToSend = [
 console.log('Calling chat edge function...');
 console.log('System prompt length:', contextualSystemPrompt.length);
 console.log('Number of messages (filtered):', messagesToSend.length);
+console.log('Messages being sent to AI:', messagesToSend.length);
 
       const { data: { session } } = await supabase.auth.getSession();
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;

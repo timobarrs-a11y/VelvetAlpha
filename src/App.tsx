@@ -453,6 +453,7 @@ function App() {
         onSend={handleSendMessage}
         disabled={!canSendMessage() || isTyping}
         remainingMessages={remainingMessages}
+        characterName={getCharacterName(selectedCharacter)}
       />
       {isTyping && (
         <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 glass-effect px-5 py-3 rounded-full shadow-soft border border-white/20 animate-slide-up">
