@@ -194,7 +194,7 @@ export function PacmanGame() {
             <span>Home</span>
           </button>
 
-          <h1 className="text-4xl font-bold text-white">Fruit Chase</h1>
+          <h1 className="text-4xl font-bold text-white">💰 Money Grab 💰</h1>
 
           <button
             onClick={() => setShowSettings(!showSettings)}
@@ -211,12 +211,13 @@ export function PacmanGame() {
 
           <div className="space-y-4">
             <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4">Controls</h2>
+              <h2 className="text-xl font-bold mb-4">How To Play</h2>
               <div className="space-y-2 text-sm text-gray-600">
                 <p><kbd className="px-2 py-1 bg-gray-200 rounded">↑ ↓ ← →</kbd> or <kbd className="px-2 py-1 bg-gray-200 rounded">WASD</kbd> to move</p>
-                <p className="mt-4"><strong>Collect:</strong> Fruits for points</p>
-                <p><strong>Power-ups:</strong> Eat enemies for bonus points</p>
-                <p><strong>Avoid:</strong> Enemies when not powered up</p>
+                <p className="mt-4"><strong>💵 Collect cash:</strong> $100 per bill</p>
+                <p><strong>💰 Power-ups:</strong> Grab hammers for $500</p>
+                <p><strong>🔨 Avoid hammers:</strong> Lose $200 if hit!</p>
+                <p><strong>❤️ Lives:</strong> Lose a life when hit by hammer</p>
               </div>
             </div>
 
@@ -301,15 +302,15 @@ export function PacmanGame() {
               </h2>
 
               <div className="space-y-3 mb-6">
-                <div className="flex justify-between items-center p-4 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg">
-                  <span className="font-semibold">Your Score:</span>
-                  <span className="text-2xl font-bold">{gameState.player1.score}</span>
+                <div className="flex justify-between items-center p-4 bg-gradient-to-r from-green-100 to-emerald-200 rounded-lg border-2 border-green-400">
+                  <span className="font-semibold">Your Cash:</span>
+                  <span className="text-2xl font-bold text-green-700">${gameState.player1.score}</span>
                 </div>
 
                 {gameState.player2 && (
-                  <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg">
-                    <span className="font-semibold">AI Score:</span>
-                    <span className="text-2xl font-bold">{gameState.player2.score}</span>
+                  <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-100 to-cyan-200 rounded-lg border-2 border-blue-400">
+                    <span className="font-semibold">AI Cash:</span>
+                    <span className="text-2xl font-bold text-blue-700">${gameState.player2.score}</span>
                   </div>
                 )}
               </div>

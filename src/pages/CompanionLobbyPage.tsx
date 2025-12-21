@@ -218,10 +218,10 @@ export function CompanionLobbyPage() {
                 <Cherry className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">
-                Fruit Chase
+                Money Grab
               </h3>
               <p className="text-gray-300 text-sm">
-                Race against AI to collect the most fruits
+                Race to collect cash while dodging hammers
               </p>
             </div>
           </motion.div>

@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckersBoard } from '../components/CheckersBoard';
+import { GameChatBox } from '../components/GameChatBox';
 import { Home, RotateCcw, Settings } from 'lucide-react';
 import type { BoardState, Position, Move, GameStatus } from '../types/checkers';
 import type { TrashTalkPersonality, GameEvent } from '../services/checkersTrashTalk';
+import type { Message } from '../types';
 import {
   createInitialBoard,
   getValidMoves,
@@ -15,7 +17,7 @@ import {
   mustCaptureExists
 } from '../services/checkersGameLogic';
 import { calculateBestMove, type Difficulty } from '../services/checkersAI';
-import { generateTrashTalk } from '../services/checkersTrashTalk';
+import { ChatService } from '../services/chatService';
 import { createGame, updateGame, saveMove, getActiveGame } from '../services/checkersDatabase';
 import { supabase } from '../services/supabase';
 
@@ -32,11 +34,14 @@ export function CheckersGame() {
   const [moveCount, setMoveCount] = useState(0);
   const [aiPersonality, setAiPersonality] = useState<TrashTalkPersonality>('confident');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
-  const [trashTalk, setTrashTalk] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [redPieces, setRedPieces] = useState(12);
   const [blackPieces, setBlackPieces] = useState(12);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [companionId, setCompanionId] = useState<string | null>(null);
+  const [companionName, setCompanionName] = useState('AI');
 
   useEffect(() => {
     initializeGame();
@@ -61,6 +66,25 @@ export function CheckersGame() {
     if (!user) {
       navigate('/');
       return;
+    }
+
+    const { data: companions } = await supabase
+      .from('companions')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (companions) {
+      setCompanionId(companions.id);
+      setCompanionName(companions.custom_name || 'AI');
+
+      const initialMessage: Message = {
+        id: 'initial',
+        content: "hey! ready to play some checkers? let's see what you got 😏",
+        sender: 'ai',
+        timestamp: Date.now()
+      };
+      setMessages([initialMessage]);
     }
 
     const existingGame = await getActiveGame(user.id);
@@ -101,12 +125,53 @@ export function CheckersGame() {
       setSelectedPosition(null);
       setValidMoves([]);
 
-      const talk = await generateTrashTalk(aiPersonality, 'game_start', {
-        playerScore: 12,
-        aiScore: 12,
-        moveCount: 0
-      });
-      setTrashTalk(talk);
+      const startMessage: Message = {
+        id: `start-${Date.now()}`,
+        content: "alright, new game! let's do this 💪",
+        sender: 'ai',
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, startMessage]);
+    }
+  }
+
+  async function handleSendMessage(content: string) {
+    if (!companionId || isTyping) return;
+
+    const userMessage: Message = {
+      id: `${Date.now()}-user`,
+      content,
+      sender: 'user',
+      timestamp: Date.now()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+
+    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+    setIsTyping(true);
+
+    try {
+      const response = await ChatService.sendMessage(
+        `We're playing checkers right now. ${content}`,
+        companionId,
+        'girlfriend'
+      );
+
+      await new Promise(resolve => setTimeout(resolve, Math.min(response.length * 15, 3000)));
+
+      setIsTyping(false);
+
+      const aiMessage: Message = {
+        id: `${Date.now()}-ai`,
+        content: response,
+        sender: 'ai',
+        timestamp: Date.now()
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setIsTyping(false);
     }
   }
 
@@ -178,27 +243,21 @@ export function CheckersGame() {
 
     if (currentTurn === playerColor) {
       if (move.captures.length > 1) {
-        const talk = await generateTrashTalk(aiPersonality, 'player_multi_capture', {
-          playerScore: redPieces,
-          aiScore: blackPieces,
-          moveCount: newMoveCount,
-          wasMultiCapture: true
-        });
-        setTrashTalk(talk);
-      } else if (move.captures.length === 1) {
-        const talk = await generateTrashTalk(aiPersonality, 'player_capture', {
-          playerScore: redPieces,
-          aiScore: blackPieces,
-          moveCount: newMoveCount
-        });
-        setTrashTalk(talk);
+        const comment: Message = {
+          id: `comment-${Date.now()}`,
+          content: "damn! nice combo move 😳",
+          sender: 'ai',
+          timestamp: Date.now()
+        };
+        setMessages(prev => [...prev, comment]);
       } else if (becameKing) {
-        const talk = await generateTrashTalk(aiPersonality, 'player_king', {
-          playerScore: redPieces,
-          aiScore: blackPieces,
-          moveCount: newMoveCount
-        });
-        setTrashTalk(talk);
+        const comment: Message = {
+          id: `comment-${Date.now()}`,
+          content: "oh you got a king now? okay I see you 👑",
+          sender: 'ai',
+          timestamp: Date.now()
+        };
+        setMessages(prev => [...prev, comment]);
       }
     }
 
@@ -222,20 +281,21 @@ export function CheckersGame() {
     await executeMove(bestMove.move);
 
     if (bestMove.move.captures.length > 1) {
-      const talk = await generateTrashTalk(aiPersonality, 'ai_multi_capture', {
-        playerScore: redPieces,
-        aiScore: blackPieces,
-        moveCount: moveCount + 1,
-        wasMultiCapture: true
-      });
-      setTrashTalk(talk);
+      const comment: Message = {
+        id: `ai-comment-${Date.now()}`,
+        content: "haha got you with that combo! 😎",
+        sender: 'ai',
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, comment]);
     } else if (bestMove.move.captures.length === 1) {
-      const talk = await generateTrashTalk(aiPersonality, 'ai_capture', {
-        playerScore: redPieces,
-        aiScore: blackPieces,
-        moveCount: moveCount + 1
-      });
-      setTrashTalk(talk);
+      const comment: Message = {
+        id: `ai-comment-${Date.now()}`,
+        content: "gotcha! 😏",
+        sender: 'ai',
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, comment]);
     }
   }
 
@@ -249,13 +309,15 @@ export function CheckersGame() {
       await updateGame(gameId, { game_status: status });
     }
 
-    const event: GameEvent = playerWon ? 'player_won' : 'ai_won';
-    const talk = await generateTrashTalk(aiPersonality, event, {
-      playerScore: redPieces,
-      aiScore: blackPieces,
-      moveCount
-    });
-    setTrashTalk(talk);
+    const endMessage: Message = {
+      id: `end-${Date.now()}`,
+      content: playerWon
+        ? "wow you actually beat me! good game 😊"
+        : "haha I win! wanna try again? 😏",
+      sender: 'ai',
+      timestamp: Date.now()
+    };
+    setMessages(prev => [...prev, endMessage]);
   }
 
   if (isInitializing) {
@@ -357,16 +419,13 @@ export function CheckersGame() {
               )}
             </div>
 
-            {trashTalk && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg shadow-lg p-4 text-white"
-              >
-                <p className="text-sm font-semibold mb-1">AI says:</p>
-                <p className="italic">"{trashTalk}"</p>
-              </motion.div>
-            )}
+            <GameChatBox
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isTyping={isTyping}
+              disabled={gameStatus !== 'active'}
+              companionName={companionName}
+            />
 
             <button
               onClick={startNewGame}

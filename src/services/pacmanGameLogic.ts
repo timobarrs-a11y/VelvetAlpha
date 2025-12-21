@@ -1,11 +1,12 @@
 import type { GameState, Position, Player, Enemy, CellType } from '../types/pacman';
 
-const MAZE_WIDTH = 19;
-const MAZE_HEIGHT = 15;
+const MAZE_WIDTH = 21;
+const MAZE_HEIGHT = 19;
 const INITIAL_TIME = 180;
-const FRUIT_POINTS = 10;
+const FRUIT_POINTS = 100;
 const POWER_UP_DURATION = 10000;
-const ENEMY_POINTS = 50;
+const ENEMY_POINTS = 500;
+const HAMMER_HIT_PENALTY = 200;
 
 export function createInitialGameState(mode: 'solo' | 'vs-ai' = 'vs-ai'): GameState {
   const maze = generateMaze();
@@ -42,34 +43,34 @@ function generateMaze(): CellType[][] {
     Array(MAZE_WIDTH).fill('empty' as CellType)
   );
 
-  for (let row = 0; row < MAZE_HEIGHT; row++) {
-    for (let col = 0; col < MAZE_WIDTH; col++) {
-      if (row === 0 || row === MAZE_HEIGHT - 1 || col === 0 || col === MAZE_WIDTH - 1) {
-        maze[row][col] = 'wall';
-      }
-    }
-  }
-
-  const wallPatterns = [
-    { r: 2, c: 2, w: 3, h: 3 },
-    { r: 2, c: MAZE_WIDTH - 5, w: 3, h: 3 },
-    { r: MAZE_HEIGHT - 5, c: 2, w: 3, h: 3 },
-    { r: MAZE_HEIGHT - 5, c: MAZE_WIDTH - 5, w: 3, h: 3 },
-    { r: Math.floor(MAZE_HEIGHT / 2) - 1, c: Math.floor(MAZE_WIDTH / 2) - 2, w: 5, h: 3 },
-    { r: 2, c: Math.floor(MAZE_WIDTH / 2) - 1, w: 3, h: 5 },
-    { r: MAZE_HEIGHT - 7, c: Math.floor(MAZE_WIDTH / 2) - 1, w: 3, h: 5 },
-    { r: Math.floor(MAZE_HEIGHT / 2) - 1, c: 6, w: 2, h: 3 },
-    { r: Math.floor(MAZE_HEIGHT / 2) - 1, c: MAZE_WIDTH - 8, w: 2, h: 3 }
+  const layout = [
+    "#####################",
+    "#........#..........#",
+    "#.###.##.#.##.###.#",
+    "#.#.............#.#",
+    "#.#.###.###.###.#.#",
+    "#.......#.#.......#",
+    "#.###.#.#.#.#.###.#",
+    "#...#...#...#...#",
+    "###.###.###.###.###",
+    "#...#...#...#...#",
+    "#.###.#.#.#.#.###.#",
+    "#.......#.#.......#",
+    "#.#.###.###.###.#.#",
+    "#.#.............#.#",
+    "#.###.##.#.##.###.#",
+    "#........#..........#",
+    "###.#####.#####.###",
+    "#.................#",
+    "#####################"
   ];
 
-  for (const pattern of wallPatterns) {
-    for (let r = 0; r < pattern.h; r++) {
-      for (let c = 0; c < pattern.w; c++) {
-        const row = pattern.r + r;
-        const col = pattern.c + c;
-        if (row > 0 && row < MAZE_HEIGHT - 1 && col > 0 && col < MAZE_WIDTH - 1) {
-          maze[row][col] = 'wall';
-        }
+  for (let row = 0; row < MAZE_HEIGHT; row++) {
+    for (let col = 0; col < MAZE_WIDTH; col++) {
+      if (layout[row] && layout[row][col] === '#') {
+        maze[row][col] = 'wall';
+      } else {
+        maze[row][col] = 'empty';
       }
     }
   }
@@ -217,6 +218,7 @@ function checkCollisions(state: GameState, playerNum: 1 | 2): GameState {
         };
         enemy.position = centerPos;
       } else {
+        player.score = Math.max(0, player.score - HAMMER_HIT_PENALTY);
         player.lives -= 1;
         if (player.lives > 0) {
           player.position = playerNum === 1

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import type { GameState, Position } from '../types/pacman';
-import { Ghost, Cherry, Zap, Heart } from 'lucide-react';
+import { Hand, DollarSign, Hammer, Heart } from 'lucide-react';
 
 interface PacmanBoardProps {
   gameState: GameState;
@@ -15,14 +15,13 @@ export function PacmanBoard({ gameState }: PacmanBoardProps) {
         <motion.div
           key="player1"
           initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className={`w-full h-full rounded-full ${
-            player1.powerUpActive
-              ? 'bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 shadow-lg shadow-yellow-400'
-              : 'bg-gradient-to-br from-yellow-400 to-yellow-600'
-          } flex items-center justify-center text-2xl font-bold`}
+          animate={{ scale: 1, rotate: player1.powerUpActive ? [0, -10, 10, -10, 10, 0] : 0 }}
+          transition={{ rotate: { duration: 0.5, repeat: player1.powerUpActive ? Infinity : 0 } }}
+          className="w-full h-full flex items-center justify-center"
         >
-          1
+          <div className={`${player1.powerUpActive ? 'text-green-400' : 'text-yellow-300'}`}>
+            <Hand className="w-6 h-6 drop-shadow-lg" fill="currentColor" strokeWidth={1} />
+          </div>
         </motion.div>
       );
     }
@@ -32,14 +31,13 @@ export function PacmanBoard({ gameState }: PacmanBoardProps) {
         <motion.div
           key="player2"
           initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className={`w-full h-full rounded-full ${
-            player2.powerUpActive
-              ? 'bg-gradient-to-br from-blue-300 via-blue-400 to-cyan-400 shadow-lg shadow-blue-400'
-              : 'bg-gradient-to-br from-blue-400 to-blue-600'
-          } flex items-center justify-center text-2xl font-bold text-white`}
+          animate={{ scale: 1, rotate: player2.powerUpActive ? [0, -10, 10, -10, 10, 0] : 0 }}
+          transition={{ rotate: { duration: 0.5, repeat: player2.powerUpActive ? Infinity : 0 } }}
+          className="w-full h-full flex items-center justify-center"
         >
-          2
+          <div className={`${player2.powerUpActive ? 'text-green-400' : 'text-blue-300'}`}>
+            <Hand className="w-6 h-6 drop-shadow-lg" fill="currentColor" strokeWidth={1} />
+          </div>
         </motion.div>
       );
     }
@@ -47,26 +45,26 @@ export function PacmanBoard({ gameState }: PacmanBoardProps) {
     const enemy = enemies.find(e => e.position.row === row && e.position.col === col);
     if (enemy) {
       const enemyColors = {
-        blinky: 'from-red-500 to-red-700',
-        pinky: 'from-pink-500 to-pink-700',
-        inky: 'from-cyan-500 to-cyan-700',
-        clyde: 'from-orange-500 to-orange-700'
+        blinky: 'text-red-600',
+        pinky: 'text-pink-600',
+        inky: 'text-cyan-600',
+        clyde: 'text-orange-600'
       };
 
       return (
         <motion.div
           key={enemy.id}
           animate={{
-            x: [0, -2, 2, -2, 2, 0],
+            rotate: [0, -15, 15, -15, 15, 0],
           }}
           transition={{
-            duration: 0.5,
+            duration: 0.6,
             repeat: Infinity,
             repeatType: 'loop'
           }}
-          className={`w-full h-full bg-gradient-to-br ${enemyColors[enemy.type]} rounded-t-full flex items-center justify-center`}
+          className="w-full h-full flex items-center justify-center"
         >
-          <Ghost className="w-4 h-4 text-white" />
+          <Hammer className={`w-6 h-6 drop-shadow-lg ${enemyColors[enemy.type]}`} strokeWidth={2.5} />
         </motion.div>
       );
     }
@@ -76,10 +74,11 @@ export function PacmanBoard({ gameState }: PacmanBoardProps) {
       return (
         <motion.div
           initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
+          animate={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
           className="w-full h-full flex items-center justify-center"
         >
-          <Cherry className="w-3 h-3 text-red-500" />
+          <DollarSign className="w-5 h-5 text-green-500 font-bold drop-shadow-md" strokeWidth={3} />
         </motion.div>
       );
     }
@@ -88,11 +87,11 @@ export function PacmanBoard({ gameState }: PacmanBoardProps) {
     if (hasPowerUp) {
       return (
         <motion.div
-          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+          animate={{ rotate: 360, scale: [1, 1.3, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
           className="w-full h-full flex items-center justify-center"
         >
-          <Zap className="w-4 h-4 text-yellow-400" fill="currentColor" />
+          <div className="text-2xl font-bold text-yellow-400 drop-shadow-lg">💰</div>
         </motion.div>
       );
     }
@@ -131,14 +130,12 @@ export function PacmanBoard({ gameState }: PacmanBoardProps) {
         )}
       </div>
 
-      <div className="absolute top-4 left-4 bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg">
+      <div className="absolute top-4 left-4 bg-black bg-opacity-90 text-white px-4 py-2 rounded-lg shadow-xl border-2 border-yellow-400">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-xs font-bold">
-            1
-          </div>
+          <Hand className="w-6 h-6 text-yellow-300" fill="currentColor" />
           <div>
-            <div className="text-xs text-gray-400">Score</div>
-            <div className="text-lg font-bold">{player1.score}</div>
+            <div className="text-xs text-gray-400">Your Cash</div>
+            <div className="text-lg font-bold text-green-400">${player1.score}</div>
           </div>
           <div className="flex gap-1 ml-2">
             {Array.from({ length: player1.lives }).map((_, i) => (
@@ -149,14 +146,12 @@ export function PacmanBoard({ gameState }: PacmanBoardProps) {
       </div>
 
       {player2 && (
-        <div className="absolute top-4 right-4 bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg">
+        <div className="absolute top-4 right-4 bg-black bg-opacity-90 text-white px-4 py-2 rounded-lg shadow-xl border-2 border-blue-400">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-xs font-bold">
-              2
-            </div>
+            <Hand className="w-6 h-6 text-blue-300" fill="currentColor" />
             <div>
-              <div className="text-xs text-gray-400">Score</div>
-              <div className="text-lg font-bold">{player2.score}</div>
+              <div className="text-xs text-gray-400">AI Cash</div>
+              <div className="text-lg font-bold text-green-400">${player2.score}</div>
             </div>
             <div className="flex gap-1 ml-2">
               {Array.from({ length: player2.lives }).map((_, i) => (
