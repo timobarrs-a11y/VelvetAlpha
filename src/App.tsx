@@ -191,7 +191,7 @@ function App() {
           user_id: user.id,
           companion_id: companionId,
           role: 'assistant',
-          message: firstMsg,
+          content: firstMsg,
         })
         .select()
         .maybeSingle();
@@ -259,7 +259,7 @@ function App() {
           user_id: user.id,
           companion_id: companionId,
           role: 'user',
-          message: content,
+          content: content,
         });
 
       await updateLastMessageTime(companionId);
@@ -303,7 +303,7 @@ function App() {
             user_id: user.id,
             companion_id: companionId,
             role: 'assistant',
-            message: response,
+            content: response,
           });
 
         await updateLastMessageTime(companionId);
