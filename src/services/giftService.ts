@@ -80,10 +80,10 @@ const GIFT_TEMPLATES: Record<string, GiftTemplate[]> = {
       triggerDays: [10, 20]
     }
   ],
-  tyler: [
+  jake: [
     {
       type: 'hype_moment',
-      promptTemplate: 'Basketball court at sunset, dramatic lighting, sports photography, {interest} elements, motivational vibe',
+      promptTemplate: 'Football field at sunset, dramatic lighting, sports photography, {interest} elements, motivational vibe',
       messageTemplate: "yooo look at this shot I got today... reminded me of when you were talking about {interest}",
       triggerDays: [3, 14, 28]
     },

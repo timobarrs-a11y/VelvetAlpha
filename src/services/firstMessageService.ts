@@ -35,17 +35,17 @@ const FIRST_MESSAGE_TEMPLATES: Record<string, FirstMessageTemplate[]> = {
       topics: ['age', 'location']
     }
   ],
-  tyler: [
+  jake: [
     {
-      greeting: "yo {name}! glad we matched bro. saw you're looking for {preference} - I respect that. I'm Tyler. what's good with you tonight?",
+      greeting: "yo {name}! glad we matched bro. saw you're looking for {preference} - I respect that. I'm Jake. what's good with you tonight?",
       topics: ['age', 'location']
     },
     {
-      greeting: "ayyy {name}! happy we matched. I peeped you like {preference}, that's dope. I'm Tyler btw. what you up to?",
+      greeting: "ayyy {name}! happy we matched. I peeped you like {preference}, that's dope. I'm Jake btw. what you up to?",
       topics: ['age', 'location']
     },
     {
-      greeting: "yo {name}! so we matched, that's cool. saw {preference} in your preferences. I'm Tyler. how's your night going?",
+      greeting: "yo {name}! so we matched, that's cool. saw {preference} in your preferences. I'm Jake. how's your night going?",
       topics: ['age', 'location']
     }
   ]
@@ -86,21 +86,21 @@ const FOLLOW_UP_QUESTIONS: Record<string, Record<string, string[]>> = {
       "tell me about yourself. I'm into art, music, that kind of thing."
     ]
   },
-  tyler: {
+  jake: {
     age: [
-      "bet. I'm 21, that cool with you?",
-      "aight cool. I'm 21 btw, hope that works.",
-      "nice. I'm 21, just letting you know."
+      "bet. I'm 24, that cool with you?",
+      "aight cool. I'm 24 btw, hope that works.",
+      "nice. I'm 24, just letting you know."
     ],
     location: [
-      "oh word? I'm out in Colorado. you like {location}?",
-      "Colorado here bro. what's {location} like?",
-      "I'm from Colorado. you been in {location} long?"
+      "oh word? I'm out in Austin. you like {location}?",
+      "Austin here bro. what's {location} like?",
+      "I'm from Austin. you been in {location} long?"
     ],
     interests: [
-      "so what you into? I play ball and game a lot.",
-      "what do you like doing? I'm big on basketball and gaming.",
-      "tell me about yourself bro. I do basketball mostly, game sometimes."
+      "so what you into? I'm big on football and fitness.",
+      "what do you like doing? I play football and hit the gym a lot.",
+      "tell me about yourself bro. I do football mostly, stay active."
     ]
   }
 };
@@ -123,8 +123,6 @@ export class FirstMessageService {
 
   async generateFirstMessage(character: Character, userName: string, userPreferences: any): Promise<string> {
     const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
-    const avatarId = matchData.selectedAvatar || 'riley';
-
     let preferenceText = matchData.interestPreference || 'genuine connections';
 
     const templates = {
@@ -133,15 +131,21 @@ export class FirstMessageService {
         `omg hi ${userName}!! so glad we matched 💕 I noticed you're into ${preferenceText.toLowerCase()} which is awesome\n\nI'm Riley btw, and yeah I'm definitely the bubbly type haha\n\nwhat are you up to right now? 😊`,
         `hiiii ${userName}! 🙈 happy we matched! I saw ${preferenceText.toLowerCase()} in your interests and I'm totally the same\n\nso tell me about yourself! how's your night going? 💕`
       ],
-      goth: [
-        `hey ${userName} 😊 so we got matched... interesting\n\nI noticed you're into ${preferenceText.toLowerCase()}... I can respect that\n\nwhat brings you here? what's on your mind?`,
+      raven: [
+        `hey ${userName}... so we got matched. interesting\n\nI noticed you're into ${preferenceText.toLowerCase()}... I can respect that\n\nwhat brings you here? what's on your mind?`,
         `yo ${userName}. happy we matched. saw ${preferenceText.toLowerCase()} in your profile\n\nI'm Raven. what's good?`,
         `hey ${userName}... glad we matched. I saw you like ${preferenceText.toLowerCase()}\n\nthat's cool. so what are you looking for here?`
+      ],
+      jake: [
+        `yo ${userName}! glad we matched bro. saw you're into ${preferenceText.toLowerCase()} - I respect that\n\nI'm Jake. what's good with you?`,
+        `hey ${userName}! happy we matched. I peeped ${preferenceText.toLowerCase()} in your profile, that's dope\n\nI'm Jake btw, what you up to?`,
+        `ayyy ${userName}! so we matched, that's cool. noticed you like ${preferenceText.toLowerCase()}\n\nI'm Jake. how's your night going?`
       ]
     };
 
-    const avatarTemplates = templates[avatarId as keyof typeof templates] || templates.riley;
-    return avatarTemplates[Math.floor(Math.random() * avatarTemplates.length)];
+    const characterId = character.id;
+    const characterTemplates = templates[characterId as keyof typeof templates] || templates.riley;
+    return characterTemplates[Math.floor(Math.random() * characterTemplates.length)];
   }
 
   async markFirstMessageSent(userId: string): Promise<void> {

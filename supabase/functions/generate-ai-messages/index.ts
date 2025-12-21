@@ -97,7 +97,7 @@ const messageTemplates: Record<string, Record<string, MessageTemplate[]>> = {
       ]}
     ]
   },
-  tyler: {
+  jake: {
     morning: [
       { type: 'good_morning', templates: [
         "morning man! ready to crush today?",

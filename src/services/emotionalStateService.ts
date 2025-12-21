@@ -22,7 +22,7 @@ interface MoodProgression {
 const PET_NAMES = {
   riley: ['babe', 'baby', 'hun', 'sweetie'],
   raven: ['babe', 'hun'],
-  tyler: ['bro', 'man', 'dude']
+  jake: ['bro', 'man', 'dude']
 };
 
 const ESCALATION_MESSAGES = {
@@ -48,7 +48,7 @@ const ESCALATION_MESSAGES = {
     frustrated_real: "{name}!",
     hurt_real: "{name}... seriously?"
   },
-  tyler: {
+  jake: {
     neutral_first: "yo",
     neutral_second: "you good?",
     concerned_pet: "bro you there?",

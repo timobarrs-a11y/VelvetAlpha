@@ -1,4 +1,4 @@
-export type CharacterType = 'riley' | 'raven' | 'tyler';
+export type CharacterType = 'riley' | 'raven' | 'jake';
 
 export interface CharacterProfile {
   id: CharacterType;
@@ -129,10 +129,10 @@ export const CHARACTERS: Record<CharacterType, CharacterProfile> = {
       },
     },
   },
-  tyler: {
-    id: 'tyler',
-    name: 'Tyler',
-    age: 20,
+  jake: {
+    id: 'jake',
+    name: 'Jake',
+    age: 24,
     gender: 'male',
     archetype: 'College Athlete',
     description: 'Athletic, confident college athlete. Protective but playful with a charming personality.',

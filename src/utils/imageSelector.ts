@@ -14,7 +14,7 @@ export const getTimeOfDay = (): TimeOfDay => {
   }
 };
 
-export const getCharacterImage = (timeOfDay: TimeOfDay, character: 'riley' | 'raven' | 'tyler' = 'riley'): string => {
+export const getCharacterImage = (timeOfDay: TimeOfDay, character: 'riley' | 'raven' | 'jake' = 'riley'): string => {
   const rileyImages: Record<TimeOfDay, string> = {
     morning: '/images/riley-workout.jpg',
     afternoon: '/images/riley-cheerleader.jpg',
@@ -29,17 +29,17 @@ export const getCharacterImage = (timeOfDay: TimeOfDay, character: 'riley' | 'ra
     night: '/images/raven-night.jpg',
   };
 
-  const tylerImages: Record<TimeOfDay, string> = {
-    morning: '/images/tyler-morning.jpg',
-    afternoon: '/images/tyler-afternoon.jpg',
-    evening: '/images/tyler-evening.jpg',
-    night: '/images/tyler-night.jpg',
+  const jakeImages: Record<TimeOfDay, string> = {
+    morning: '/images/jake-morning.jpg',
+    afternoon: '/images/jake-afternoon.jpg',
+    evening: '/images/jake-evening.jpg',
+    night: '/images/jake-night.jpg',
   };
 
   const imageMap = {
     riley: rileyImages,
     raven: ravenImages,
-    tyler: tylerImages,
+    jake: jakeImages,
   };
 
   return imageMap[character][timeOfDay];
