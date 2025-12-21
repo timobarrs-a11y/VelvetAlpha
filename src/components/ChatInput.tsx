@@ -21,11 +21,6 @@ export const ChatInput = ({ onSend, disabled, remainingMessages, characterName }
 
   return (
     <div className="glass-effect border-t border-gray-100/50 p-5">
-      <div className="mb-3 text-center">
-        <span className="text-xs font-medium text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full">
-          {remainingMessages} messages remaining today
-        </span>
-      </div>
       <form onSubmit={handleSubmit} className="flex gap-3 max-w-4xl mx-auto">
         <input
           type="text"

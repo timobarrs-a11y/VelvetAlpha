@@ -1,7 +1,7 @@
 import { ConversationData, Message } from '../types';
 
 const STORAGE_KEY = 'riley_conversation';
-const DAILY_MESSAGE_LIMIT = 50;
+const DAILY_MESSAGE_LIMIT = 999999;
 
 export const getConversationData = (): ConversationData => {
   try {

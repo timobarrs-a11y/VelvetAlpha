@@ -186,31 +186,42 @@ function App() {
 
       setIsTyping(false);
 
-      await supabase
+      const { data: insertedMessage, error: insertError } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
           companion_id: companionId,
           role: 'assistant',
           message: firstMsg,
-        });
+        })
+        .select()
+        .maybeSingle();
+
+      if (insertError) {
+        console.error('[sendFirstMessage] Error inserting first message:', insertError);
+        throw insertError;
+      }
 
       await markFirstMessageSent(companionId);
       await updateLastMessageTime(companionId);
+
+      const updatedCompanion = await getCompanion(companionId);
+      if (updatedCompanion) {
+        setCompanion(updatedCompanion);
+      }
+
       console.log('[sendFirstMessage] First message sent and marked in database');
 
       const aiMessage: Message = {
-        id: `${Date.now()}-ai`,
+        id: insertedMessage?.id || `${Date.now()}-ai`,
         content: firstMsg,
         sender: 'ai',
-        timestamp: Date.now(),
-        isTyping: true,
+        timestamp: insertedMessage ? new Date(insertedMessage.created_at).getTime() : Date.now(),
       };
 
       setMessages([aiMessage]);
-      addMessage(aiMessage);
       playSound();
-      console.log('[sendFirstMessage] First message added to UI');
+      console.log('[sendFirstMessage] First message from avatar added to UI:', aiMessage);
     } catch (error) {
       console.error('[sendFirstMessage] Error sending first message:', error);
       setIsTyping(false);
