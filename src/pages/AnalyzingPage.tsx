@@ -9,11 +9,11 @@ interface Step {
 }
 
 const STEPS: Step[] = [
-  { id: 1, text: "Processing personality profile", duration: 2000 },
-  { id: 2, text: "Analyzing communication preferences", duration: 1500 },
-  { id: 3, text: "Matching interest compatibility", duration: 2000 },
-  { id: 4, text: "Evaluating lifestyle alignment", duration: 1500 },
-  { id: 5, text: "Finalizing perfect match", duration: 2000 }
+  { id: 1, text: "Processing personality profile", duration: 600 },
+  { id: 2, text: "Analyzing communication preferences", duration: 600 },
+  { id: 3, text: "Matching interest compatibility", duration: 600 },
+  { id: 4, text: "Evaluating lifestyle alignment", duration: 600 },
+  { id: 5, text: "Finalizing perfect match", duration: 600 }
 ];
 
 type StepStatus = 'pending' | 'active' | 'complete';
@@ -37,7 +37,7 @@ export function AnalyzingPage() {
         clearInterval(progressInterval);
         setIsComplete(true);
         setTimeout(() => {
-          navigate('/match-reveal');
+          navigate('/splash');
         }, 1000);
       }
     }, 50);

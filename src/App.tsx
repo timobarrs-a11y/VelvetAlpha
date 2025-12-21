@@ -61,11 +61,7 @@ function App() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
-        if (matchData.userName) {
-          await createUserAccount(matchData);
-        }
-        setIsCheckingAuth(false);
+        navigate('/questionnaire');
         return;
       }
 
@@ -96,13 +92,19 @@ function App() {
 
   const loadMessages = async (companionId: string, companionData: Companion) => {
     if (hasLoadedMessages) {
-      console.log('Messages already loaded, skipping');
+      console.log('[loadMessages] Messages already loaded, skipping');
       return;
     }
 
+    console.log('[loadMessages] Starting to load messages for companion:', companionId);
+    console.log('[loadMessages] Companion first_message_sent flag:', companionData.first_message_sent);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('[loadMessages] No user found, aborting');
+        return;
+      }
 
       const { data: messages, error } = await supabase
         .from('conversations')
@@ -113,10 +115,12 @@ function App() {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('Error loading messages:', error);
+        console.error('[loadMessages] Error loading messages:', error);
         setHasLoadedMessages(true);
         return;
       }
+
+      console.log('[loadMessages] Loaded messages from DB:', messages.length);
 
       const formattedMessages: Message[] = messages.map(msg => ({
         id: msg.id,
@@ -126,30 +130,30 @@ function App() {
       }));
       setMessages(formattedMessages);
 
-      console.log('First message check - messages count:', formattedMessages.length);
-      console.log('First message check - companion flag:', companionData.first_message_sent);
-
       if (formattedMessages.length === 0 && !companionData.first_message_sent) {
-        console.log('Sending first message...');
+        console.log('[loadMessages] No messages and no first message sent - sending first message');
         setHasLoadedMessages(true);
         await sendFirstMessage(companionId, companionData);
       } else {
-        console.log('First message already sent or messages exist, skipping');
+        console.log('[loadMessages] Messages exist or first message already sent - skipping first message');
         setHasLoadedMessages(true);
       }
     } catch (error) {
-      console.error('Error loading messages:', error);
-      const data = getConversationData();
-      setMessages(data.messages);
+      console.error('[loadMessages] Error in loadMessages:', error);
       setHasLoadedMessages(true);
     }
     setRemainingMessages(getRemainingMessages());
   };
 
   const sendFirstMessage = async (companionId: string, companionData: Companion) => {
+    console.log('[sendFirstMessage] Starting to send first message for companion:', companionId);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('[sendFirstMessage] No user found, aborting');
+        return;
+      }
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -193,7 +197,7 @@ function App() {
 
       await markFirstMessageSent(companionId);
       await updateLastMessageTime(companionId);
-      console.log('First message sent and marked in database');
+      console.log('[sendFirstMessage] First message sent and marked in database');
 
       const aiMessage: Message = {
         id: `${Date.now()}-ai`,
@@ -206,8 +210,9 @@ function App() {
       setMessages([aiMessage]);
       addMessage(aiMessage);
       playSound();
+      console.log('[sendFirstMessage] First message added to UI');
     } catch (error) {
-      console.error('Error sending first message:', error);
+      console.error('[sendFirstMessage] Error sending first message:', error);
       setIsTyping(false);
     }
   };
@@ -338,41 +343,6 @@ function App() {
     }
   };
 
-  const createUserAccount = async (matchData: any) => {
-    try {
-      const randomEmail = `user_${Date.now()}@aicompanion.app`;
-      const randomPassword = `pwd_${Math.random().toString(36).slice(2)}${Date.now()}`;
-
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: randomEmail,
-        password: randomPassword,
-        options: {
-          data: {
-            character_type: matchData.selectedAvatar,
-            user_name: matchData.userName,
-          },
-        },
-      });
-
-      if (signUpError) {
-        console.error('Error signing up:', signUpError);
-        return;
-      }
-
-      if (authData.user) {
-        await ChatService.completeOnboarding(matchData.selectedAvatar as any, {});
-
-        await supabase
-          .from('user_profiles')
-          .update({ name: matchData.userName })
-          .eq('id', authData.user.id);
-
-        await loadMessages();
-      }
-    } catch (error) {
-      console.error('Error creating user account:', error);
-    }
-  };
 
   if (isCheckingAuth) {
     return (
