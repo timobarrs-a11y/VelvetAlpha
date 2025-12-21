@@ -27,10 +27,10 @@ export function PacmanGame() {
       }
 
       const { data: profile } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .select('name')
         .eq('id', user.id)
-        .maybeSingle();
+        .single();
 
       if (profile?.name) {
         setPlayerName(profile.name);
@@ -127,10 +127,6 @@ export function PacmanGame() {
             <Home className="w-5 h-5" />
             <span>Back to Chat</span>
           </button>
-
-          <h1 className="text-4xl font-bold text-white">💰 Money Grab 💰</h1>
-
-          <div className="w-32"></div>
         </div>
 
         <MoneyGrabGameEngine
