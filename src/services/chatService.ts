@@ -12,6 +12,11 @@ import {
   ModelType
 } from './modelSelector';
 import { getSystemPrompt, logResponseQuality, UserContext } from '../prompts/systemPrompts';
+import { detectTopic, formatTopicContext } from './topicDetectionService';
+import { generateConversationSummary, formatSummaryContext, shouldGenerateSummary } from './conversationSummaryService';
+import { validateResponse, shouldRetryResponse, formatValidationFeedback } from './responseValidationService';
+import { analyzeConversationMetrics, formatConversationMetrics, getConversationGuidance } from './conversationTrackingService';
+import { detectUserMood, formatMoodContext, getMoodBasedMaxTokens } from './moodBasedTuningService';
 
 export interface Message {
   id: string;
@@ -60,6 +65,103 @@ export class ChatService {
       default:
         return 500;
     }
+  }
+
+  private static async generateResponseWithValidation(
+    apiUrl: string,
+    messagesToSend: Array<{ role: 'user' | 'assistant'; content: string }>,
+    systemPrompt: string,
+    model: string,
+    maxTokens: number,
+    sessionToken: string | undefined,
+    userMessage: string,
+    conversationHistory: Message[],
+    characterName: string,
+    maxRetries: number = 2
+  ): Promise<string> {
+    let attempts = 0;
+    let validationFeedback = '';
+
+    while (attempts < maxRetries) {
+      attempts++;
+
+      const promptWithFeedback = validationFeedback
+        ? `${systemPrompt}\n\n${validationFeedback}`
+        : systemPrompt;
+
+      console.log(`\n🔄 Generation attempt ${attempts}/${maxRetries}`);
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionToken || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: messagesToSend,
+          systemPrompt: promptWithFeedback,
+          apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
+          maxTokens,
+          model,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
+      }
+
+      const data = await response.json();
+
+      let assistantMessage = '';
+
+      if (data.content && Array.isArray(data.content) && data.content.length > 0) {
+        const firstContent = data.content[0];
+        if (firstContent && firstContent.type === 'text' && typeof firstContent.text === 'string') {
+          assistantMessage = firstContent.text;
+        }
+      } else if (typeof data.message === 'string') {
+        assistantMessage = data.message;
+      } else if (typeof data.text === 'string') {
+        assistantMessage = data.text;
+      } else if (typeof data.response === 'string') {
+        assistantMessage = data.response;
+      }
+
+      console.log(`✅ Generated response (attempt ${attempts}):`, assistantMessage.substring(0, 100));
+
+      if (attempts >= maxRetries) {
+        console.log('⏭️ Max retries reached, accepting response');
+        return assistantMessage;
+      }
+
+      console.log('🔍 Validating response quality...');
+      const validation = await validateResponse(
+        userMessage,
+        assistantMessage,
+        conversationHistory.map(m => ({ role: m.role, content: m.content })),
+        characterName
+      );
+
+      console.log(`📊 Validation score: ${validation.score}/100`);
+
+      if (validation.issues.length > 0) {
+        console.log('⚠️ Issues found:');
+        validation.issues.forEach(issue => {
+          console.log(`  - [${issue.severity}] ${issue.type}: ${issue.description}`);
+        });
+      }
+
+      if (!shouldRetryResponse(validation)) {
+        console.log('✅ Response passed validation');
+        return assistantMessage;
+      }
+
+      console.log('🔄 Response failed validation, retrying with feedback...');
+      validationFeedback = formatValidationFeedback(validation);
+    }
+
+    throw new Error('Failed to generate valid response after retries');
   }
 
   private static generateContextSummary(messages: Array<{ role: 'user' | 'assistant'; content: string }>): string {
@@ -328,7 +430,32 @@ export class ChatService {
         ? `\n\nRECENT USER CONTEXT (last 5 user messages): ${recentUserMessages}\nDO NOT ask about things they just told you.`
         : '';
 
-      const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date/Time: ${currentDateTime}\nOutfit Context: ${outfitContext}${contextReminder}
+      const topicInfo = await detectTopic(last20Messages);
+      const topicContext = formatTopicContext(topicInfo);
+
+      let summaryContext = '';
+      if (shouldGenerateSummary(conversationHistory.length)) {
+        console.log('📊 Generating conversation summary...');
+        const summary = await generateConversationSummary(formattedHistory, 15);
+        summaryContext = formatSummaryContext(summary);
+      }
+
+      const conversationMetrics = analyzeConversationMetrics(last20Messages);
+      const metricsContext = formatConversationMetrics(conversationMetrics);
+      const guidanceContext = getConversationGuidance(conversationMetrics);
+
+      const moodAnalysis = detectUserMood(last20Messages);
+      const moodContext = formatMoodContext(moodAnalysis);
+
+      const adjustedMaxTokens = getMoodBasedMaxTokens(moodAnalysis.detectedMood, maxTokens);
+
+      console.log('\n🎭 MOOD & FLOW ANALYSIS:');
+      console.log('  User mood:', moodAnalysis.detectedMood, `(${Math.round(moodAnalysis.confidence * 100)}%)`);
+      console.log('  Conversation pace:', conversationMetrics.conversationPace);
+      console.log('  Engagement level:', conversationMetrics.engagementLevel);
+      console.log('  Adjusted max tokens:', adjustedMaxTokens, '(base:', maxTokens, ')');
+
+      const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date/Time: ${currentDateTime}\nOutfit Context: ${outfitContext}${contextReminder}${topicContext}${summaryContext}${metricsContext}${guidanceContext}${moodContext}
 
 CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - NEVER ask a question you already asked in this conversation
@@ -372,7 +499,7 @@ const messagesToSend = [
   },
 ].filter(msg => msg.content && msg.content.trim().length > 0);
 
-console.log('Calling chat edge function...');
+console.log('Calling chat edge function with validation...');
 console.log('System prompt length:', contextualSystemPrompt.length);
 console.log('Number of messages (filtered):', messagesToSend.length);
 console.log('Messages being sent to AI:', messagesToSend.length);
@@ -380,58 +507,19 @@ console.log('Messages being sent to AI:', messagesToSend.length);
       const { data: { session } } = await supabase.auth.getSession();
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: messagesToSend,
-          systemPrompt: contextualSystemPrompt,
-          apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-          maxTokens,
-          model: selectedModel,
-        }),
-      });
+      const assistantMessage = await this.generateResponseWithValidation(
+        apiUrl,
+        messagesToSend,
+        contextualSystemPrompt,
+        selectedModel,
+        adjustedMaxTokens,
+        session?.access_token,
+        message,
+        conversationHistory,
+        character.name
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get response');
-      }
-
-      const data = await response.json();
-
-      console.log('\n🔍 RAW API RESPONSE DEBUG:');
-      console.log('Full response:', JSON.stringify(data, null, 2));
-      console.log('Response keys:', Object.keys(data));
-      console.log('Has content?', 'content' in data);
-      console.log('Has message?', 'message' in data);
-      console.log('Has text?', 'text' in data);
-      console.log('Has response?', 'response' in data);
-      console.log('data.content:', data.content);
-      console.log('data.message:', data.message);
-      console.log('data.text:', data.text);
-      console.log('data.response:', data.response);
-
-      let assistantMessage = '';
-
-      if (data.content && Array.isArray(data.content) && data.content.length > 0) {
-        const firstContent = data.content[0];
-        if (firstContent && firstContent.type === 'text' && typeof firstContent.text === 'string') {
-          assistantMessage = firstContent.text;
-        }
-      } else if (typeof data.message === 'string') {
-        assistantMessage = data.message;
-      } else if (typeof data.text === 'string') {
-        assistantMessage = data.text;
-      } else if (typeof data.response === 'string') {
-        assistantMessage = data.response;
-      } else if (typeof data === 'string') {
-        assistantMessage = data;
-      }
-
-      console.log('\n✅ EXTRACTED MESSAGE:');
+      console.log('\n✅ FINAL VALIDATED MESSAGE:');
       console.log('Message:', assistantMessage);
       console.log('Length:', assistantMessage.length);
       console.log('Type:', typeof assistantMessage);
