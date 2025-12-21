@@ -123,23 +123,43 @@ export class FirstMessageService {
 
   async generateFirstMessage(character: Character, userName: string, userPreferences: any): Promise<string> {
     const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
-    let preferenceText = matchData.interestPreference || 'genuine connections';
+
+    const hobbies = matchData.hobbies || '';
+    const sports = matchData.sports || '';
+    const interests = matchData.interests || '';
+
+    let personalInterest = '';
+    if (hobbies && hobbies.trim()) {
+      personalInterest = hobbies.split(',')[0].trim();
+    } else if (sports && sports.trim()) {
+      personalInterest = sports.split(',')[0].trim();
+    } else if (interests) {
+      const interestMap: Record<string, string> = {
+        'Pop Culture, Social Media, Trending Topics': 'social media and pop culture',
+        'Books, Philosophy, Deep Discussions': 'deep conversations and philosophy',
+        'Wellness, Self-Care, Personal Growth': 'self-care and personal growth',
+        'Adventure, Travel, New Experiences': 'adventure and travel'
+      };
+      personalInterest = interestMap[interests] || 'meeting new people';
+    } else {
+      personalInterest = 'meeting new people';
+    }
 
     const templates = {
       riley: [
-        `hey ${userName}! 😊 so apparently we're a really good match lol... I saw your profile and you seem pretty cool\n\nI'm really into ${preferenceText.toLowerCase()} too!\n\nwhat's up? how's your day going? 💕`,
-        `omg hi ${userName}!! so glad we matched 💕 I noticed you're into ${preferenceText.toLowerCase()} which is awesome\n\nI'm Riley btw, and yeah I'm definitely the bubbly type haha\n\nwhat are you up to right now? 😊`,
-        `hiiii ${userName}! 🙈 happy we matched! I saw ${preferenceText.toLowerCase()} in your interests and I'm totally the same\n\nso tell me about yourself! how's your night going? 💕`
+        `hey ${userName}! 😊 so apparently we're a really good match lol... I saw you're into ${personalInterest} which is so cool!\n\nwhat's up? how's your day going? 💕`,
+        `omg hi ${userName}!! so glad we matched 💕 I noticed you like ${personalInterest} and honestly that's awesome!\n\nyeah I'm definitely the bubbly type haha... what are you up to right now? 😊`,
+        `hiiii ${userName}! 🙈 happy we matched! I saw ${personalInterest} in your interests and I love that!\n\nso tell me about yourself! how's your night going? 💕`
       ],
       raven: [
-        `hey ${userName}... so we got matched. interesting\n\nI noticed you're into ${preferenceText.toLowerCase()}... I can respect that\n\nwhat brings you here? what's on your mind?`,
-        `yo ${userName}. happy we matched. saw ${preferenceText.toLowerCase()} in your profile\n\nI'm Raven. what's good?`,
-        `hey ${userName}... glad we matched. I saw you like ${preferenceText.toLowerCase()}\n\nthat's cool. so what are you looking for here?`
+        `hey ${userName}... so we got matched. interesting\n\nI noticed you're into ${personalInterest}... I can respect that\n\nwhat brings you here? what's on your mind?`,
+        `yo ${userName}. happy we matched. saw you like ${personalInterest}\n\nwhat's good?`,
+        `hey ${userName}... glad we matched. I saw ${personalInterest} on your profile\n\nthat's cool. so what are you looking for here?`
       ],
       jake: [
-        `yo ${userName}! glad we matched bro. saw you're into ${preferenceText.toLowerCase()} - I respect that\n\nI'm Jake. what's good with you?`,
-        `hey ${userName}! happy we matched. I peeped ${preferenceText.toLowerCase()} in your profile, that's dope\n\nI'm Jake btw, what you up to?`,
-        `ayyy ${userName}! so we matched, that's cool. noticed you like ${preferenceText.toLowerCase()}\n\nI'm Jake. how's your night going?`
+        `yo ${userName}! glad we matched bro. saw you're into ${personalInterest} - I respect that\n\nwhat's good with you?`,
+        `hey ${userName}! happy we matched. I peeped you like ${personalInterest}, that's dope\n\nwhat you up to?`,
+        `ayyy ${userName}! so we matched, that's cool. noticed ${personalInterest} in your profile\n\nhow's your night going?`
       ]
     };
 

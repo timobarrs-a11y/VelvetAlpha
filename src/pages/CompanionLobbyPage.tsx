@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, MessageCircle, Heart, Users, Crown } from 'lucide-react';
+import { Plus, MessageCircle, Heart, Users, Crown, Cherry } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
 
@@ -210,6 +210,26 @@ export function CompanionLobbyPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: (companions.length + 1) * 0.1 }}
+            onClick={() => navigate('/pacman')}
+            className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105 border-2 border-gray-700 hover:border-yellow-400 flex items-center justify-center min-h-[320px]"
+          >
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Cherry className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">
+                Fruit Chase
+              </h3>
+              <p className="text-gray-300 text-sm">
+                Race against AI to collect the most fruits
+              </p>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: (companions.length + 2) * 0.1 }}
             onClick={handleNewCompanion}
             className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105 border-2 border-dashed border-gray-300 hover:border-rose-400 flex items-center justify-center min-h-[320px]"
           >
