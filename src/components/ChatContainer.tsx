@@ -4,9 +4,10 @@ import { Message } from '../types';
 
 interface ChatContainerProps {
   messages: Message[];
+  characterName?: string;
 }
 
-export const ChatContainer = ({ messages }: ChatContainerProps) => {
+export const ChatContainer = ({ messages, characterName = 'your companion' }: ChatContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export const ChatContainer = ({ messages }: ChatContainerProps) => {
           <div className="text-center">
             <p className="text-gray-400 mb-2">No messages yet</p>
             <p className="text-sm text-gray-300">
-              Say hi to Riley to start chatting!
+              Say hi to {characterName} to start chatting!
             </p>
           </div>
         </div>

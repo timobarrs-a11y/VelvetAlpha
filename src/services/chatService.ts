@@ -398,6 +398,26 @@ export class ChatService {
       const timeOfDay = getTimeOfDay();
       const outfitContext = character.outfitContexts[timeOfDay];
 
+      let companionData = null;
+      let characterDisplayName = character.name;
+      let hobbies: string[] = [];
+      let sports: string[] = [];
+
+      if (companionId) {
+        const { data } = await supabase
+          .from('companions')
+          .select('*')
+          .eq('id', companionId)
+          .maybeSingle();
+
+        if (data) {
+          companionData = data;
+          characterDisplayName = data.custom_name || character.name;
+          hobbies = data.hobbies || [];
+          sports = data.sports || [];
+        }
+      }
+
       const subscriptionTier = profile.subscription_tier || 'premium';
       const maxTokens = this.getMaxTokensForTier(subscriptionTier);
 
@@ -417,7 +437,9 @@ export class ChatService {
         name: profile.name,
         interests: profile.interests,
         recentTopics,
-        characterName: character.name,
+        characterName: characterDisplayName,
+        hobbies,
+        sports,
       };
 
       const modelType = selectedModel.includes('haiku') ? 'cheap' : 'premium';

@@ -112,6 +112,24 @@ const GIRLFRIEND_QUESTIONS: QuestionData[] = [
       { text: 'Wellness, Self-Care, Personal Growth' },
       { text: 'Adventure, Travel, New Experiences' }
     ]
+  },
+  {
+    id: 'hobbies',
+    type: 'text',
+    question: 'What Are Your Favorite Hobbies?',
+    placeholder: 'e.g., reading, gaming, cooking, hiking...'
+  },
+  {
+    id: 'sports',
+    type: 'text',
+    question: 'What Are Your Favorite Sports?',
+    placeholder: 'e.g., basketball, soccer, tennis...'
+  },
+  {
+    id: 'companionName',
+    type: 'text',
+    question: 'What Would Be The Perfect Name For That Person?',
+    placeholder: 'Enter a name...'
   }
 ];
 
@@ -151,6 +169,24 @@ const BOYFRIEND_QUESTIONS: QuestionData[] = [
       { text: 'He Takes The Lead' },
       { text: 'You Prefer To Lead' }
     ]
+  },
+  {
+    id: 'hobbies',
+    type: 'text',
+    question: 'What Are Your Favorite Hobbies?',
+    placeholder: 'e.g., reading, gaming, cooking, hiking...'
+  },
+  {
+    id: 'sports',
+    type: 'text',
+    question: 'What Are Your Favorite Sports?',
+    placeholder: 'e.g., basketball, soccer, tennis...'
+  },
+  {
+    id: 'companionName',
+    type: 'text',
+    question: 'What Would Be The Perfect Name For That Person?',
+    placeholder: 'Enter a name...'
   }
 ];
 
@@ -270,7 +306,10 @@ export function QuestionnairePage() {
         dynamicPreference: newAnswers.dynamic,
         confrontationStyle: newAnswers.confrontation,
         availabilityLevel: newAnswers.availability,
-        interestPreference: newAnswers.interests
+        interestPreference: newAnswers.interests,
+        hobbies: newAnswers.hobbies || '',
+        sports: newAnswers.sports || '',
+        companionName: newAnswers.companionName || ''
       };
 
       localStorage.setItem('matchAnswers', JSON.stringify(matchData));

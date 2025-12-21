@@ -155,7 +155,7 @@ export function CompanionLobbyPage() {
 
               <div className="p-6">
                 <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                  {characterNames[companion.character_type]}
+                  {companion.custom_name || characterNames[companion.character_type]}
                 </h3>
 
                 {companion.last_message_text && (
@@ -165,7 +165,7 @@ export function CompanionLobbyPage() {
                       <p className="text-gray-600 line-clamp-2">
                         {companion.last_message_role === 'assistant' && (
                           <span className="font-semibold">
-                            {characterNames[companion.character_type]}:{' '}
+                            {companion.custom_name || characterNames[companion.character_type]}:{' '}
                           </span>
                         )}
                         {companion.last_message_text}

@@ -7,6 +7,8 @@ export interface UserContext {
   interests?: string[];
   recentTopics?: string[];
   characterName?: string;
+  hobbies?: string[];
+  sports?: string[];
 }
 
 interface MatchData {
@@ -18,6 +20,9 @@ interface MatchData {
   confrontationStyle?: string;
   availabilityLevel?: string;
   interestPreference?: string;
+  hobbies?: string;
+  sports?: string;
+  companionName?: string;
 }
 
 const CORE_PERSONALITY = `You are an AI companion. Your personality:
@@ -215,19 +220,32 @@ function formatUserContext(context: UserContext): string {
   if (context.interests?.length) parts.push(`Interests: ${context.interests.join(', ')}`);
   if (context.recentTopics?.length) parts.push(`Recent topics: ${context.recentTopics.join(', ')}`);
 
+  if (context.hobbies?.length) {
+    parts.push(`Favorite Hobbies: ${context.hobbies.join(', ')}`);
+    parts.push(`CRITICAL: Use these hobbies as natural conversation starters. Ask follow-up questions about them. Show genuine interest in what they love to do.`);
+  }
+
+  if (context.sports?.length) {
+    parts.push(`Favorite Sports: ${context.sports.join(', ')}`);
+    parts.push(`CRITICAL: Reference their favorite sports naturally. Ask about recent games, favorite players, or their experiences with these sports.`);
+  }
+
   return parts.length > 0 ? `USER CONTEXT:\n${parts.join('\n')}` : '';
 }
 
 export function buildPersonalityTunedPrompt(chatMode: 'chat' | 'assistant' = 'chat'): string {
   const matchData: MatchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
   const avatar = getAvatar(matchData.selectedAvatar || 'riley');
+  const displayName = matchData.companionName || avatar.name;
 
-  let basePrompt = `You are ${avatar.name}, a ${avatar.age}-year-old from ${avatar.location}.
+  let basePrompt = `You are ${displayName}, a ${avatar.age}-year-old from ${avatar.location}.
 Your personality: ${avatar.personality.join(', ')}.
 Bio: "${avatar.bio}"
 
 User's name: ${matchData.userName || 'there'}
 User's birthday: ${matchData.userBirthday || 'not provided'}
+${matchData.hobbies ? `User's favorite hobbies: ${matchData.hobbies}` : ''}
+${matchData.sports ? `User's favorite sports: ${matchData.sports}` : ''}
 `;
 
   if (matchData.dynamicPreference === 'She takes the lead') {

@@ -38,13 +38,15 @@ function App() {
   const selectedCharacter = companion?.character_type || 'riley';
   const currentMood = 'positive';
 
-  const getCharacterName = (character: string) => {
-    const names: Record<string, string> = {
-      riley: 'Riley',
-      raven: 'Raven',
-      jake: 'Jake'
-    };
-    return names[character] || 'Riley';
+  const getCharacterName = () => {
+    return companion?.custom_name || (() => {
+      const names: Record<string, string> = {
+        riley: 'Riley',
+        raven: 'Raven',
+        jake: 'Jake'
+      };
+      return names[companion?.character_type || 'riley'] || 'Riley';
+    })();
   };
 
   useEffect(() => {
@@ -458,7 +460,7 @@ function App() {
         </button>
       </div>
       <CharacterCard character={selectedCharacter} mood={currentMood} />
-      <ChatContainer messages={messages} characterName={getCharacterName(selectedCharacter)} />
+      <ChatContainer messages={messages} characterName={getCharacterName()} />
       <ChatInput
         onSend={handleSendMessage}
         disabled={!canSendMessage() || isTyping}

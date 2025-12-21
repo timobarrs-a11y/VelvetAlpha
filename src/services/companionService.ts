@@ -9,6 +9,9 @@ export interface Companion {
   last_message_at: string;
   is_active: boolean;
   first_message_sent: boolean;
+  custom_name: string;
+  hobbies: string[];
+  sports: string[];
 }
 
 export interface CompanionWithLastMessage extends Companion {
@@ -20,7 +23,10 @@ export interface CompanionWithLastMessage extends Companion {
 export async function createCompanion(
   userId: string,
   characterType: 'riley' | 'raven' | 'jake',
-  relationshipType: 'friend' | 'romantic'
+  relationshipType: 'friend' | 'romantic',
+  customName: string,
+  hobbies: string[],
+  sports: string[]
 ): Promise<Companion | null> {
   const { data, error } = await supabase
     .from('companions')
@@ -28,6 +34,9 @@ export async function createCompanion(
       user_id: userId,
       character_type: characterType,
       relationship_type: relationshipType,
+      custom_name: customName,
+      hobbies: hobbies,
+      sports: sports,
       first_message_sent: false,
       is_active: true,
       last_message_at: new Date().toISOString()

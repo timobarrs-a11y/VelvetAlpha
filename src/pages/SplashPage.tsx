@@ -60,8 +60,11 @@ export function SplashPage() {
 
       const characterType = matchData.selectedAvatar as 'riley' | 'raven' | 'jake';
       const relationshipType = (matchData.connectionType || 'romantic') as 'friend' | 'romantic';
+      const customName = matchData.companionName || '';
+      const hobbies = matchData.hobbies ? matchData.hobbies.split(',').map((h: string) => h.trim()).filter((h: string) => h) : [];
+      const sports = matchData.sports ? matchData.sports.split(',').map((s: string) => s.trim()).filter((s: string) => s) : [];
 
-      const companion = await createCompanion(user.id, characterType, relationshipType);
+      const companion = await createCompanion(user.id, characterType, relationshipType, customName, hobbies, sports);
 
       if (companion) {
         localStorage.setItem('currentCompanionId', companion.id);
