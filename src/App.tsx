@@ -111,7 +111,6 @@ function App() {
         .select('*')
         .eq('user_id', user.id)
         .eq('companion_id', companionId)
-        .is('archived_at', null)
         .order('created_at', { ascending: true });
 
       if (error) {
@@ -124,7 +123,7 @@ function App() {
 
       const formattedMessages: Message[] = messages.map(msg => ({
         id: msg.id,
-        content: msg.message,
+        content: msg.content,
         sender: msg.role === 'user' ? 'user' : 'ai',
         timestamp: new Date(msg.created_at).getTime(),
       }));

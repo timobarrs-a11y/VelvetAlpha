@@ -60,7 +60,7 @@ export async function getCompanions(userId: string): Promise<CompanionWithLastMe
     companions.map(async (companion) => {
       const { data: lastMessage } = await supabase
         .from('conversations')
-        .select('message, role, created_at')
+        .select('content, role, created_at')
         .eq('companion_id', companion.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -68,7 +68,7 @@ export async function getCompanions(userId: string): Promise<CompanionWithLastMe
 
       return {
         ...companion,
-        last_message_text: lastMessage?.message,
+        last_message_text: lastMessage?.content,
         last_message_role: lastMessage?.role,
         unread_count: 0
       };
