@@ -6,6 +6,7 @@ import { AnalyzingPage } from './pages/AnalyzingPage';
 import { MatchRevealPage } from './pages/MatchRevealPage';
 import { SplashPage } from './pages/SplashPage';
 import { CompanionLobbyPage } from './pages/CompanionLobbyPage';
+import { CheckersGame } from './pages/CheckersGame';
 import { supabase } from './services/supabase';
 import { getCompanions } from './services/companionService';
 
@@ -56,6 +57,7 @@ export function Router() {
         <Route path="/lobby" element={<CompanionLobbyPage />} />
         <Route path="/splash" element={<SplashPage />} />
         <Route path="/chat" element={<App />} />
+        <Route path="/checkers" element={<CheckersGame />} />
         <Route path="/" element={<RootRedirect />} />
       </Routes>
     </BrowserRouter>
