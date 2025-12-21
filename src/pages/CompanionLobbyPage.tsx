@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Plus, MessageCircle, Heart, Users, Crown, Cherry } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, MessageCircle, Heart, Users, Crown, Cherry, X } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
 
@@ -21,6 +21,7 @@ export function CompanionLobbyPage() {
   const navigate = useNavigate();
   const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGameModal, setShowGameModal] = useState(false);
 
   useEffect(() => {
     loadCompanions();
@@ -210,7 +211,7 @@ export function CompanionLobbyPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: (companions.length + 1) * 0.1 }}
-            onClick={() => navigate('/pacman')}
+            onClick={() => setShowGameModal(true)}
             className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105 border-2 border-gray-700 hover:border-yellow-400 flex items-center justify-center min-h-[320px]"
           >
             <div className="text-center p-6">
@@ -247,6 +248,88 @@ export function CompanionLobbyPage() {
           </motion.div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showGameModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowGameModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-800">Choose Your Partner</h2>
+                <button
+                  onClick={() => setShowGameModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <p className="text-gray-600 mb-6">
+                  Select a companion to play Money Grab with:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {companions.map((companion) => (
+                    <motion.div
+                      key={companion.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowGameModal(false);
+                        navigate(`/pacman?companion=${companion.id}`);
+                      }}
+                      className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 cursor-pointer hover:shadow-lg transition-shadow border-2 border-gray-200 hover:border-yellow-400"
+                    >
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={characterImages[companion.character_type]}
+                          alt={characterNames[companion.character_type]}
+                          className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
+                        />
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-gray-800">
+                            {companion.custom_name || characterNames[companion.character_type]}
+                          </h3>
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold mt-1 ${
+                              companion.relationship_type === 'romantic'
+                                ? 'bg-pink-100 text-pink-700'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}
+                          >
+                            {companion.relationship_type === 'romantic' ? (
+                              <>
+                                <Heart className="w-3 h-3" />
+                                Partner
+                              </>
+                            ) : (
+                              <>
+                                <Users className="w-3 h-3" />
+                                Friend
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
