@@ -1,5 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
-
 export interface ConversationSummary {
   keyPoints: string[];
   emotionalTone: string;
@@ -12,10 +10,6 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
-
-const anthropic = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-});
 
 export async function generateConversationSummary(
   messages: Message[],
@@ -32,52 +26,98 @@ export async function generateConversationSummary(
   }
 
   const recentMessages = messages.slice(-windowSize);
+  const userMessages = recentMessages.filter(m => m.role === 'user');
 
-  const prompt = `Analyze this recent conversation and provide a structured summary to help maintain context:
+  const keyPoints: string[] = [];
+  const importantDetails: string[] = [];
+  const pendingTopics: string[] = [];
 
-${recentMessages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n')}
+  const topicKeywords = {
+    work: ['work', 'job', 'career', 'boss', 'office', 'coworker'],
+    relationships: ['relationship', 'partner', 'boyfriend', 'girlfriend', 'dating'],
+    family: ['family', 'mom', 'dad', 'parent', 'sibling'],
+    health: ['health', 'fitness', 'workout', 'sick', 'doctor'],
+    hobbies: ['hobby', 'fun', 'enjoy', 'passion'],
+    plans: ['plan', 'going to', 'future', 'want to'],
+  };
 
-Provide a JSON response with:
-1. keyPoints: Main topics discussed (array of strings, max 5)
-2. emotionalTone: Overall emotional state of the user (string: "happy", "stressed", "sad", "excited", "neutral", "frustrated", etc.)
-3. userNeeds: What the user seems to need right now (array: "support", "advice", "validation", "distraction", "deep conversation", etc.)
-4. importantDetails: Specific facts the user shared that should be remembered (array of strings)
-5. pendingTopics: Topics that were brought up but not fully explored (array of strings)
-
-Return ONLY valid JSON, no other text.`;
-
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 500,
-      temperature: 0.3,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textContent = response.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text content in response');
+  for (const msg of userMessages) {
+    const lower = msg.content.toLowerCase();
+    for (const [topic, keywords] of Object.entries(topicKeywords)) {
+      if (keywords.some(kw => lower.includes(kw))) {
+        if (!keyPoints.includes(topic)) {
+          keyPoints.push(topic);
+        }
+      }
     }
 
-    const result = JSON.parse(textContent.text);
-
-    return {
-      keyPoints: result.keyPoints || [],
-      emotionalTone: result.emotionalTone || 'neutral',
-      userNeeds: result.userNeeds || [],
-      importantDetails: result.importantDetails || [],
-      pendingTopics: result.pendingTopics || [],
-    };
-  } catch (error) {
-    console.error('Conversation summary failed:', error);
-    return {
-      keyPoints: [],
-      emotionalTone: 'neutral',
-      userNeeds: [],
-      importantDetails: [],
-      pendingTopics: [],
-    };
+    if (msg.content.match(/my name is (\w+)/i) ||
+        msg.content.match(/i'?m (\w+)/i) ||
+        msg.content.match(/i work (?:as|at) ([^.,!?]+)/i) ||
+        msg.content.match(/i live in ([^.,!?]+)/i)) {
+      importantDetails.push(msg.content.split(/[.!?]/)[0].trim());
+    }
   }
+
+  const emotionalWords = {
+    happy: ['happy', 'excited', 'great', 'amazing', 'love', 'wonderful', 'perfect', 'best'],
+    stressed: ['stressed', 'overwhelmed', 'busy', 'exhausted', 'tired', 'pressure'],
+    sad: ['sad', 'depressed', 'down', 'hurt', 'upset', 'disappointed'],
+    anxious: ['anxious', 'worried', 'scared', 'nervous', 'afraid'],
+    frustrated: ['frustrated', 'angry', 'annoyed', 'irritated', 'mad'],
+    excited: ['excited', 'pumped', 'can\'t wait', 'looking forward'],
+  };
+
+  let emotionalTone = 'neutral';
+  let maxCount = 0;
+
+  for (const [tone, words] of Object.entries(emotionalWords)) {
+    let count = 0;
+    for (const msg of userMessages) {
+      const lower = msg.content.toLowerCase();
+      count += words.filter(w => lower.includes(w)).length;
+    }
+    if (count > maxCount) {
+      maxCount = count;
+      emotionalTone = tone;
+    }
+  }
+
+  const userNeeds: string[] = [];
+  const lastUserMessage = userMessages[userMessages.length - 1]?.content.toLowerCase() || '';
+
+  if (['help', 'advice', 'should i', 'what do you think'].some(w => lastUserMessage.includes(w))) {
+    userNeeds.push('advice');
+  }
+  if (['feel', 'feeling', 'sad', 'depressed', 'anxious'].some(w => lastUserMessage.includes(w))) {
+    userNeeds.push('support');
+  }
+  if (['?'].some(w => lastUserMessage.includes(w))) {
+    userNeeds.push('conversation');
+  }
+  if (['validate', 'right', 'wrong', 'am i'].some(w => lastUserMessage.includes(w))) {
+    userNeeds.push('validation');
+  }
+
+  const assistantQuestions = recentMessages
+    .filter(m => m.role === 'assistant' && m.content.includes('?'))
+    .map(m => {
+      const sentences = m.content.split(/[.!?]/);
+      return sentences.find(s => s.includes('?'))?.trim();
+    })
+    .filter(Boolean);
+
+  if (assistantQuestions.length > 0) {
+    pendingTopics.push(...assistantQuestions.slice(-2) as string[]);
+  }
+
+  return {
+    keyPoints: keyPoints.slice(0, 5),
+    emotionalTone,
+    userNeeds,
+    importantDetails: importantDetails.slice(0, 3),
+    pendingTopics: pendingTopics.slice(0, 3),
+  };
 }
 
 export function formatSummaryContext(summary: ConversationSummary): string {

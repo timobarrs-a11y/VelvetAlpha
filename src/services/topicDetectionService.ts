@@ -1,5 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
-
 export interface TopicInfo {
   currentTopic: string;
   topicDuration: number;
@@ -13,10 +11,6 @@ interface Message {
   content: string;
 }
 
-const anthropic = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-});
-
 export async function detectTopic(recentMessages: Message[]): Promise<TopicInfo> {
   if (recentMessages.length === 0) {
     return {
@@ -29,56 +23,67 @@ export async function detectTopic(recentMessages: Message[]): Promise<TopicInfo>
   }
 
   const lastFewMessages = recentMessages.slice(-6);
+  const lastUserMessages = lastFewMessages.filter(m => m.role === 'user');
+  const lastAssistantMessage = lastFewMessages.filter(m => m.role === 'assistant').pop();
 
-  const prompt = `Analyze this conversation and extract key information:
+  const hasQuestion = lastAssistantMessage && lastAssistantMessage.content.includes('?');
 
-${lastFewMessages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n')}
+  const topics: string[] = [];
+  const emotionalWords = {
+    support: ['sad', 'depressed', 'anxious', 'worried', 'scared', 'hurt', 'stressed', 'overwhelmed', 'struggling'],
+    deep: ['feel', 'feeling', 'think', 'believe', 'wonder', 'understand', 'meaning', 'purpose', 'life', 'future'],
+    playful: ['haha', 'lol', 'funny', 'fun', 'play', 'game', 'joke', 'tease'],
+    greeting: ['hi', 'hey', 'hello', 'good morning', 'good night', 'what\'s up', 'how are you'],
+  };
 
-Provide a JSON response with:
-1. currentTopic: What is being discussed right now? (1-5 words, e.g., "work stress", "weekend plans", "relationship advice")
-2. topicDuration: How many messages have been about this topic? (count)
-3. isQuestionPending: Did the assistant ask a question that hasn't been answered? (boolean)
-4. recentTopics: List of topics discussed in last few messages (array of 1-3 word strings)
-5. conversationState: Current vibe - "greeting", "casual", "deep", "emotional_support", or "playful"
+  const topicKeywords: Record<string, string[]> = {
+    work: ['work', 'job', 'career', 'boss', 'office', 'coworker', 'meeting', 'project'],
+    relationships: ['relationship', 'partner', 'boyfriend', 'girlfriend', 'dating', 'love'],
+    family: ['family', 'mom', 'dad', 'parent', 'sibling', 'brother', 'sister'],
+    health: ['health', 'fitness', 'workout', 'exercise', 'sick', 'doctor', 'therapy'],
+    hobbies: ['hobby', 'fun', 'enjoy', 'like', 'passion', 'interest'],
+    plans: ['plan', 'going to', 'will', 'future', 'want to', 'hoping'],
+  };
 
-Return ONLY valid JSON, no other text.`;
-
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 300,
-      temperature: 0.3,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textContent = response.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text content in response');
+  for (const msg of lastUserMessages) {
+    const lower = msg.content.toLowerCase();
+    for (const [topic, keywords] of Object.entries(topicKeywords)) {
+      if (keywords.some(kw => lower.includes(kw))) {
+        topics.push(topic);
+      }
     }
-
-    const result = JSON.parse(textContent.text);
-
-    return {
-      currentTopic: result.currentTopic || 'general conversation',
-      topicDuration: result.topicDuration || 1,
-      isQuestionPending: result.isQuestionPending || false,
-      recentTopics: result.recentTopics || [],
-      conversationState: result.conversationState || 'casual',
-    };
-  } catch (error) {
-    console.error('Topic detection failed:', error);
-
-    const lastMessage = recentMessages[recentMessages.length - 1];
-    const hasQuestion = lastMessage.role === 'assistant' && lastMessage.content.includes('?');
-
-    return {
-      currentTopic: 'conversation',
-      topicDuration: 1,
-      isQuestionPending: hasQuestion,
-      recentTopics: [],
-      conversationState: 'casual',
-    };
   }
+
+  let conversationState: TopicInfo['conversationState'] = 'casual';
+  if (lastUserMessages.length > 0) {
+    const lastUserContent = lastUserMessages[lastUserMessages.length - 1].content.toLowerCase();
+
+    if (emotionalWords.greeting.some(w => lastUserContent.includes(w)) && lastUserMessages.length === 1) {
+      conversationState = 'greeting';
+    } else if (emotionalWords.support.some(w => lastUserContent.includes(w))) {
+      conversationState = 'emotional_support';
+    } else if (emotionalWords.deep.some(w => lastUserContent.includes(w))) {
+      conversationState = 'deep';
+    } else if (emotionalWords.playful.some(w => lastUserContent.includes(w))) {
+      conversationState = 'playful';
+    }
+  }
+
+  const currentTopic = topics.length > 0 ? topics[topics.length - 1] : 'general conversation';
+
+  let topicDuration = 1;
+  if (topics.length > 0) {
+    const sameTopic = topics.filter(t => t === currentTopic).length;
+    topicDuration = sameTopic;
+  }
+
+  return {
+    currentTopic,
+    topicDuration,
+    isQuestionPending: !!hasQuestion,
+    recentTopics: [...new Set(topics)].slice(-3),
+    conversationState,
+  };
 }
 
 export function formatTopicContext(topicInfo: TopicInfo): string {

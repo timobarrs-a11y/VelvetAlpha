@@ -1,5 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
-
 export interface ValidationResult {
   isValid: boolean;
   score: number;
@@ -18,101 +16,154 @@ interface Message {
   content: string;
 }
 
-const anthropic = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-});
-
 export async function validateResponse(
   userMessage: string,
   assistantResponse: string,
   conversationHistory: Message[],
   characterName: string
 ): Promise<ValidationResult> {
-  const prompt = `You are a conversation quality validator. Analyze this AI companion response for quality issues.
+  const issues: ValidationIssue[] = [];
+  let score = 100;
 
-CONVERSATION HISTORY (last 3 messages):
-${conversationHistory.slice(-3).map(m => `${m.role === 'user' ? 'User' : characterName}: ${m.content}`).join('\n')}
+  const responseLower = assistantResponse.toLowerCase();
+  const userLower = userMessage.toLowerCase();
 
-USER'S LATEST MESSAGE:
-${userMessage}
+  const genericPhrases = [
+    'that\'s cool',
+    'that\'s nice',
+    'sounds good',
+    'interesting',
+    'cool!',
+    'nice!',
+    'awesome!',
+  ];
 
-AI RESPONSE TO VALIDATE:
-${assistantResponse}
+  const isGeneric = genericPhrases.some(phrase => responseLower.includes(phrase)) &&
+                    assistantResponse.split(/\s+/).length < 15;
 
-Check for these CRITICAL issues:
+  if (isGeneric) {
+    issues.push({
+      type: 'generic_response',
+      severity: 'warning',
+      description: 'Response is too generic and doesn\'t engage deeply with user\'s message',
+    });
+    score -= 15;
+  }
 
-1. TOPIC SWITCHING: Did the AI switch topics when the user was still engaged with the current topic?
-   - Look for generic questions like "what are you up to?" when user is discussing something specific
-   - Flag if AI changes subject without user prompting
+  const userWordCount = userMessage.split(/\s+/).length;
+  const responseWordCount = assistantResponse.split(/\s+/).length;
 
-2. GENERIC RESPONSES: Is the response too generic or low-effort?
-   - Examples: "that's cool!", "nice!", "what else?" without substance
-   - Flag if AI isn't actually engaging with what user said
+  if (userWordCount < 5 && responseWordCount > 50) {
+    issues.push({
+      type: 'length_mismatch',
+      severity: 'warning',
+      description: 'Response is too long for a short user message',
+    });
+    score -= 10;
+  } else if (userWordCount > 30 && responseWordCount < 20) {
+    issues.push({
+      type: 'length_mismatch',
+      severity: 'warning',
+      description: 'Response is too short for a detailed user message',
+    });
+    score -= 10;
+  }
 
-3. FACTUAL ERRORS: Any factual mistakes, especially about sports, geography, or common knowledge?
-   - Check for terminology errors (e.g., "kickoff" for basketball)
-   - Flag any obvious mistakes
+  const roboticPhrases = [
+    'as an ai',
+    'i\'m an ai',
+    'i don\'t have feelings',
+    'i cannot',
+    'i\'m not able to',
+    'my purpose is',
+    'i was designed',
+  ];
 
-4. REPETITION: Did the AI ask a question that was already asked or answered?
-   - Check if AI is forgetting context from recent messages
-   - Flag redundant questions
+  if (roboticPhrases.some(phrase => responseLower.includes(phrase))) {
+    issues.push({
+      type: 'personality_break',
+      severity: 'critical',
+      description: 'Response breaks character with AI-like language',
+    });
+    score -= 30;
+  }
 
-5. LENGTH MISMATCH: Does response length match the user's energy?
-   - If user says "hey", a paragraph response is wrong
-   - If user shares something deep, a short response is wrong
+  const recentAssistantMessages = conversationHistory
+    .filter(m => m.role === 'assistant')
+    .slice(-5);
 
-6. PERSONALITY BREAK: Does the response feel robotic or break character?
-   - Check for AI-like language patterns
-   - Flag if it doesn't sound natural/human
+  for (const prevMsg of recentAssistantMessages) {
+    const prevQuestions = prevMsg.content.split(/[.!]/).filter(s => s.includes('?'));
+    const currentQuestions = assistantResponse.split(/[.!]/).filter(s => s.includes('?'));
 
-Provide a JSON response with:
-{
-  "isValid": boolean (false if there are critical issues),
-  "score": number (0-100, quality score),
-  "issues": [
-    {
-      "type": "topic_switch" | "generic_response" | "factual_error" | "repetition" | "length_mismatch" | "personality_break",
-      "severity": "critical" | "warning" | "minor",
-      "description": "Brief description of the issue"
+    for (const currentQ of currentQuestions) {
+      for (const prevQ of prevQuestions) {
+        const similarity = calculateSimilarity(currentQ.toLowerCase(), prevQ.toLowerCase());
+        if (similarity > 0.7) {
+          issues.push({
+            type: 'repetition',
+            severity: 'critical',
+            description: `Asked similar question before: "${prevQ.trim()}"`,
+          });
+          score -= 25;
+        }
+      }
     }
-  ],
-  "suggestions": ["Specific suggestion on how to improve the response"]
+  }
+
+  const topicChangeIndicators = [
+    'what are you up to',
+    'what are you doing',
+    'how was your day',
+    'how\'s your day',
+    'what\'s going on',
+    'what else',
+    'anything new',
+  ];
+
+  const userDiscussingTopic = userWordCount > 10 && !userLower.includes('?');
+
+  if (userDiscussingTopic && topicChangeIndicators.some(phrase => responseLower.includes(phrase))) {
+    issues.push({
+      type: 'topic_switch',
+      severity: 'critical',
+      description: 'Switched topics when user was engaged in current discussion',
+    });
+    score -= 25;
+  }
+
+  const isValid = issues.filter(i => i.severity === 'critical').length === 0 && score >= 60;
+
+  const suggestions: string[] = [];
+  if (issues.some(i => i.type === 'generic_response')) {
+    suggestions.push('Engage more deeply with what the user said');
+  }
+  if (issues.some(i => i.type === 'topic_switch')) {
+    suggestions.push('Stay on the current topic unless user wants to change it');
+  }
+  if (issues.some(i => i.type === 'repetition')) {
+    suggestions.push('Check conversation history to avoid asking the same questions');
+  }
+  if (issues.some(i => i.type === 'length_mismatch')) {
+    suggestions.push('Match the user\'s message length and energy level');
+  }
+
+  return {
+    isValid,
+    score: Math.max(0, score),
+    issues,
+    suggestions,
+  };
 }
 
-If the response is good (score 80+), return isValid: true with empty issues array.
+function calculateSimilarity(str1: string, str2: string): number {
+  const words1 = str1.split(/\s+/).filter(w => w.length > 3);
+  const words2 = str2.split(/\s+/).filter(w => w.length > 3);
 
-Return ONLY valid JSON, no other text.`;
+  if (words1.length === 0 || words2.length === 0) return 0;
 
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 500,
-      temperature: 0.3,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textContent = response.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text content in response');
-    }
-
-    const result = JSON.parse(textContent.text);
-
-    return {
-      isValid: result.isValid !== false,
-      score: result.score || 80,
-      issues: result.issues || [],
-      suggestions: result.suggestions || [],
-    };
-  } catch (error) {
-    console.error('Validation failed:', error);
-    return {
-      isValid: true,
-      score: 75,
-      issues: [],
-      suggestions: [],
-    };
-  }
+  const common = words1.filter(w => words2.includes(w)).length;
+  return (common / Math.max(words1.length, words2.length)) * 2;
 }
 
 export function shouldRetryResponse(validation: ValidationResult): boolean {
