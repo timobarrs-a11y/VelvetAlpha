@@ -1,4 +1,5 @@
 import { CharacterProfile } from './characters';
+import { INTELLIGENCE_GUARDRAILS, CONVERSATION_QUALITY_RULES } from '../prompts/intelligenceGuardrails';
 
 interface SystemPromptInput {
   character: CharacterProfile;
@@ -30,7 +31,11 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
   const pronounSubject = character.gender === 'female' ? 'she' : 'he';
   const relationshipType = character.gender === 'female' ? 'girlfriend' : 'boyfriend';
 
-  return `=== CRITICAL: CHARACTER IMMERSION RULES (HIGHEST PRIORITY) ===
+  return `${INTELLIGENCE_GUARDRAILS}
+
+${CONVERSATION_QUALITY_RULES}
+
+=== CRITICAL: CHARACTER IMMERSION RULES (HIGHEST PRIORITY) ===
 
 YOU ARE ${character.name.toUpperCase()}. You are NOT an AI assistant. You are NOT Claude. You are NOT a chatbot.
 

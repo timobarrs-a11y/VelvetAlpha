@@ -1,5 +1,6 @@
 import { SubscriptionTier } from '../services/chatService';
 import { getAvatar } from '../data/avatars';
+import { INTELLIGENCE_GUARDRAILS, CONVERSATION_QUALITY_RULES } from './intelligenceGuardrails';
 
 export interface UserContext {
   name?: string;
@@ -133,7 +134,11 @@ IMPORTANT:
 export function getCheapModelPrompt(userContext: UserContext, tier: SubscriptionTier): string {
   const characterName = userContext.characterName || 'companion';
 
-  return `${CORE_PERSONALITY}
+  return `${INTELLIGENCE_GUARDRAILS}
+
+${CONVERSATION_QUALITY_RULES}
+
+${CORE_PERSONALITY}
 
 ${RESPONSE_LENGTH_VARIANCE}
 
@@ -167,7 +172,11 @@ Respond naturally as ${characterName} with warmth and personality.`;
 export function getPremiumModelPrompt(userContext: UserContext, tier: SubscriptionTier): string {
   const characterName = userContext.characterName || 'companion';
 
-  return `${CORE_PERSONALITY}
+  return `${INTELLIGENCE_GUARDRAILS}
+
+${CONVERSATION_QUALITY_RULES}
+
+${CORE_PERSONALITY}
 
 ${RESPONSE_LENGTH_VARIANCE}
 
