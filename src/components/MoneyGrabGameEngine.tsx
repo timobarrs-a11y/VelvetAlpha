@@ -295,6 +295,88 @@ function canMove(maze: number[][], pos: Position, dir: Direction): boolean {
   return !isWall;
 }
 
+function findValidSpawnNear(maze: number[][], targetRow: number, targetCol: number): Position | null {
+  // Check if target position is valid
+  if (targetRow >= 0 && targetRow < MAZE_HEIGHT && targetCol >= 0 && targetCol < MAZE_WIDTH && maze[targetRow][targetCol] === 0) {
+    return { row: targetRow, col: targetCol };
+  }
+
+  // Spiral search outward from target position to find nearest valid tile
+  for (let radius = 1; radius <= 5; radius++) {
+    for (let dr = -radius; dr <= radius; dr++) {
+      for (let dc = -radius; dc <= radius; dc++) {
+        if (Math.abs(dr) === radius || Math.abs(dc) === radius) {
+          const r = targetRow + dr;
+          const c = targetCol + dc;
+          if (r >= 0 && r < MAZE_HEIGHT && c >= 0 && c < MAZE_WIDTH && maze[r][c] === 0) {
+            return { row: r, col: c };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function calculateOppositeSpawns(maze: number[][], playerStart: Position, maxSpawns: number = 8): Position[] {
+  // Calculate mathematical opposite corner from player start
+  const oppositeRow = MAZE_HEIGHT - 1 - playerStart.row;
+  const oppositeCol = MAZE_WIDTH - 1 - playerStart.col;
+
+  console.log(`🎯 Player starts at [${playerStart.row}, ${playerStart.col}]`);
+  console.log(`🎯 Calculated opposite corner: [${oppositeRow}, ${oppositeCol}]`);
+
+  // Find spawn positions near the opposite corner
+  const spawns: Position[] = [];
+
+  // Search in expanding rings around opposite corner
+  const searchPositions: Position[] = [
+    { row: oppositeRow, col: oppositeCol }
+  ];
+
+  // Add positions in a spiral pattern
+  for (let radius = 1; radius <= 4; radius++) {
+    for (let dr = -radius; dr <= radius; dr++) {
+      for (let dc = -radius; dc <= radius; dc++) {
+        if (Math.abs(dr) === radius || Math.abs(dc) === radius) {
+          searchPositions.push({ row: oppositeRow + dr, col: oppositeCol + dc });
+        }
+      }
+    }
+  }
+
+  for (const searchPos of searchPositions) {
+    const validPos = findValidSpawnNear(maze, searchPos.row, searchPos.col);
+    if (validPos && !spawns.some(s => s.row === validPos.row && s.col === validPos.col)) {
+      spawns.push(validPos);
+      console.log(`  ✓ Found enemy spawn at [${validPos.row}, ${validPos.col}]`);
+      if (spawns.length >= maxSpawns) break;
+    }
+  }
+
+  // Fallback: if we couldn't find enough spawns near opposite corner, search the entire opposite quadrant
+  if (spawns.length < maxSpawns) {
+    console.log(`⚠️ Only found ${spawns.length} spawns near opposite corner, searching quadrant...`);
+    const quadrantStartRow = oppositeRow > MAZE_HEIGHT / 2 ? Math.floor(MAZE_HEIGHT * 0.6) : 0;
+    const quadrantEndRow = oppositeRow > MAZE_HEIGHT / 2 ? MAZE_HEIGHT : Math.floor(MAZE_HEIGHT * 0.4);
+    const quadrantStartCol = oppositeCol > MAZE_WIDTH / 2 ? Math.floor(MAZE_WIDTH * 0.6) : 0;
+    const quadrantEndCol = oppositeCol > MAZE_WIDTH / 2 ? MAZE_WIDTH : Math.floor(MAZE_WIDTH * 0.4);
+
+    for (let r = quadrantStartRow; r < quadrantEndRow && spawns.length < maxSpawns; r++) {
+      for (let c = quadrantStartCol; c < quadrantEndCol && spawns.length < maxSpawns; c++) {
+        if (maze[r][c] === 0 && !spawns.some(s => s.row === r && s.col === c)) {
+          spawns.push({ row: r, col: c });
+          console.log(`  ✓ Quadrant spawn at [${r}, ${c}]`);
+        }
+      }
+    }
+  }
+
+  console.log(`✅ Total spawns found: ${spawns.length}`);
+  return spawns;
+}
+
 function placeCash(maze: number[][], exitPos: Position, entrance: Position): Position[] {
   const cash: Position[] = [];
 
@@ -496,17 +578,17 @@ export function MoneyGrabGameEngine({
   const [powerUps, setPowerUps] = useState<Position[]>([]);
 
   const [enemies, setEnemies] = useState<Enemy[]>(() => {
-    // Spawn enemies on OPPOSITE side of map from entrance
-    const entrance = mazeData.entrance;
-    const oppositeRow = MAZE_HEIGHT - 1 - entrance.row;
-    const oppositeCol = MAZE_WIDTH - 1 - entrance.col;
+    // Use mathematical opposite spawn calculation
+    const spawns = calculateOppositeSpawns(maze, mazeData.entrance);
+    const colors = ['#ef4444', '#ec4899', '#06b6d4', '#f97316'];
+    const dirs: Direction[] = ['left', 'right', 'up', 'down'];
 
-    return [
-      { id: '1', gridPos: { row: oppositeRow, col: oppositeCol - 1 }, dir: 'left', color: '#ef4444' },
-      { id: '2', gridPos: { row: oppositeRow, col: oppositeCol + 1 }, dir: 'right', color: '#ec4899' },
-      { id: '3', gridPos: { row: oppositeRow - 1, col: oppositeCol }, dir: 'up', color: '#06b6d4' },
-      { id: '4', gridPos: { row: oppositeRow + 1, col: oppositeCol }, dir: 'down', color: '#f97316' }
-    ];
+    return spawns.slice(0, 4).map((spawn, i) => ({
+      id: `${i + 1}`,
+      gridPos: spawn,
+      dir: dirs[i],
+      color: colors[i]
+    }));
   });
 
   const [gameStatus, setGameStatus] = useState<'playing' | 'paused' | 'gameover' | 'levelcomplete'>('playing');
@@ -574,24 +656,25 @@ export function MoneyGrabGameEngine({
 
     setCash(placeCash(newMazeData.maze, newMazeData.exit.position, newMazeData.entrance));
 
-    // Spawn enemies on OPPOSITE side of map from entrance
-    const entrance = newMazeData.entrance;
-    const oppositeRow = MAZE_HEIGHT - 1 - entrance.row;
-    const oppositeCol = MAZE_WIDTH - 1 - entrance.col;
+    // Use mathematical opposite spawn calculation
+    const spawns = calculateOppositeSpawns(newMazeData.maze, newMazeData.entrance);
+    const colors = ['#ef4444', '#ec4899', '#06b6d4', '#f97316'];
+    const dirs: Direction[] = ['left', 'right', 'up', 'down'];
 
-    const baseEnemies: Enemy[] = [
-      { id: '1', gridPos: { row: oppositeRow, col: oppositeCol - 1 }, dir: 'left', color: '#ef4444' },
-      { id: '2', gridPos: { row: oppositeRow, col: oppositeCol + 1 }, dir: 'right', color: '#ec4899' },
-      { id: '3', gridPos: { row: oppositeRow - 1, col: oppositeCol }, dir: 'up', color: '#06b6d4' },
-      { id: '4', gridPos: { row: oppositeRow + 1, col: oppositeCol }, dir: 'down', color: '#f97316' }
-    ];
+    const baseEnemies: Enemy[] = spawns.slice(0, 4).map((spawn, i) => ({
+      id: `${i + 1}`,
+      gridPos: spawn,
+      dir: dirs[i],
+      color: colors[i]
+    }));
 
+    // Add extra enemies on higher levels (also placed in opposite quadrant)
     const extraEnemies = Math.min(nextLevelNum, 4);
-    for (let i = 0; i < extraEnemies; i++) {
+    for (let i = 0; i < extraEnemies && spawns.length > 4 + i; i++) {
       baseEnemies.push({
         id: `extra-${i}`,
-        gridPos: { row: 5 + i * 2, col: 15 },
-        dir: 'left',
+        gridPos: spawns[4 + i],
+        dir: dirs[i % 4],
         color: '#8b5cf6'
       });
     }
@@ -1051,17 +1134,17 @@ export function MoneyGrabGameEngine({
 
     setCash(placeCash(newMazeData.maze, newMazeData.exit.position, newMazeData.entrance));
 
-    // Spawn enemies on OPPOSITE side of map from entrance
-    const entrance = newMazeData.entrance;
-    const oppositeRow = MAZE_HEIGHT - 1 - entrance.row;
-    const oppositeCol = MAZE_WIDTH - 1 - entrance.col;
+    // Use mathematical opposite spawn calculation
+    const spawns = calculateOppositeSpawns(newMazeData.maze, newMazeData.entrance);
+    const colors = ['#ef4444', '#ec4899', '#06b6d4', '#f97316'];
+    const dirs: Direction[] = ['left', 'right', 'up', 'down'];
 
-    setEnemies([
-      { id: '1', gridPos: { row: oppositeRow, col: oppositeCol - 1 }, dir: 'left', color: '#ef4444' },
-      { id: '2', gridPos: { row: oppositeRow, col: oppositeCol + 1 }, dir: 'right', color: '#ec4899' },
-      { id: '3', gridPos: { row: oppositeRow - 1, col: oppositeCol }, dir: 'up', color: '#06b6d4' },
-      { id: '4', gridPos: { row: oppositeRow + 1, col: oppositeCol }, dir: 'down', color: '#f97316' }
-    ]);
+    setEnemies(spawns.slice(0, 4).map((spawn, i) => ({
+      id: `${i + 1}`,
+      gridPos: spawn,
+      dir: dirs[i],
+      color: colors[i]
+    })));
 
     setShowLevelTransition(false);
     setGameStatus('playing');
