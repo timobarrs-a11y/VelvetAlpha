@@ -42,9 +42,6 @@ interface Enemy {
   gridPos: Position;
   dir: Direction;
   color: string;
-  isLocked: boolean;
-  lockedTarget: 'player' | 'ai' | null;
-  lockMoveCount: number;
 }
 
 interface ExitPoint {
@@ -340,7 +337,6 @@ function getAIDirection(
   if (validDirs.length === 0) return null;
 
   const isBeingChased = enemies.some(e =>
-    e.isLocked && e.lockedTarget === 'ai' &&
     Math.abs(e.gridPos.row - from.row) + Math.abs(e.gridPos.col - from.col) <= 3
   );
 
@@ -467,10 +463,10 @@ export function MoneyGrabGameEngine({
   const [powerUps, setPowerUps] = useState<Position[]>([]);
 
   const [enemies, setEnemies] = useState<Enemy[]>([
-    { id: '1', gridPos: { row: 9, col: 9 }, dir: 'left', color: '#ef4444', isLocked: false, lockedTarget: null, lockMoveCount: 0 },
-    { id: '2', gridPos: { row: 9, col: 11 }, dir: 'right', color: '#ec4899', isLocked: false, lockedTarget: null, lockMoveCount: 0 },
-    { id: '3', gridPos: { row: 8, col: 10 }, dir: 'up', color: '#06b6d4', isLocked: false, lockedTarget: null, lockMoveCount: 0 },
-    { id: '4', gridPos: { row: 10, col: 10 }, dir: 'down', color: '#f97316', isLocked: false, lockedTarget: null, lockMoveCount: 0 }
+    { id: '1', gridPos: { row: 9, col: 9 }, dir: 'left', color: '#ef4444' },
+    { id: '2', gridPos: { row: 9, col: 11 }, dir: 'right', color: '#ec4899' },
+    { id: '3', gridPos: { row: 8, col: 10 }, dir: 'up', color: '#06b6d4' },
+    { id: '4', gridPos: { row: 10, col: 10 }, dir: 'down', color: '#f97316' }
   ]);
 
   const [gameStatus, setGameStatus] = useState<'playing' | 'paused' | 'gameover' | 'levelcomplete'>('playing');
@@ -539,10 +535,10 @@ export function MoneyGrabGameEngine({
     setCash(placeCash(newMazeData.maze, newMazeData.exit.position, newMazeData.entrance));
 
     const baseEnemies: Enemy[] = [
-      { id: '1', gridPos: { row: 9, col: 9 }, dir: 'left', color: '#ef4444', isLocked: false, lockedTarget: null, lockMoveCount: 0 },
-      { id: '2', gridPos: { row: 9, col: 11 }, dir: 'right', color: '#ec4899', isLocked: false, lockedTarget: null, lockMoveCount: 0 },
-      { id: '3', gridPos: { row: 8, col: 10 }, dir: 'up', color: '#06b6d4', isLocked: false, lockedTarget: null, lockMoveCount: 0 },
-      { id: '4', gridPos: { row: 10, col: 10 }, dir: 'down', color: '#f97316', isLocked: false, lockedTarget: null, lockMoveCount: 0 }
+      { id: '1', gridPos: { row: 9, col: 9 }, dir: 'left', color: '#ef4444' },
+      { id: '2', gridPos: { row: 9, col: 11 }, dir: 'right', color: '#ec4899' },
+      { id: '3', gridPos: { row: 8, col: 10 }, dir: 'up', color: '#06b6d4' },
+      { id: '4', gridPos: { row: 10, col: 10 }, dir: 'down', color: '#f97316' }
     ];
 
     const extraEnemies = Math.min(nextLevelNum, 4);
@@ -551,10 +547,7 @@ export function MoneyGrabGameEngine({
         id: `extra-${i}`,
         gridPos: { row: 5 + i * 2, col: 15 },
         dir: 'left',
-        color: '#8b5cf6',
-        isLocked: false,
-        lockedTarget: null,
-        lockMoveCount: 0
+        color: '#8b5cf6'
       });
     }
 
@@ -801,129 +794,67 @@ export function MoneyGrabGameEngine({
                          Math.abs(enemy.gridPos.col - aiPlayer.gridPos.col);
 
             const nearestIsPlayer = dist1 < dist2;
-            const nearestDist = Math.min(dist1, dist2);
-            const targetPlayer = nearestIsPlayer ? player.gridPos : aiPlayer.gridPos;
+            const nearestPlayer = nearestIsPlayer ? player : aiPlayer;
 
-            if (nearestDist <= 2 && !enemy.isLocked) {
-              enemy.isLocked = true;
-              enemy.lockedTarget = nearestIsPlayer ? 'player' : 'ai';
-              enemy.lockMoveCount = 0;
-            }
+            // CHECK IF NEAREST PLAYER HAS HAMMER POWER-UP
+            const shouldFlee = nearestPlayer.powerUpActive;
 
-            if (enemy.isLocked) {
-              const lockedTarget = enemy.lockedTarget === 'player' ? player.gridPos : aiPlayer.gridPos;
+            const dirs: Direction[] = ['up', 'down', 'left', 'right'];
+            const validDirs = dirs.filter(d => canMove(maze, enemy.gridPos, d));
 
-              const lockedDist = Math.abs(enemy.gridPos.row - lockedTarget.row) +
-                                Math.abs(enemy.gridPos.col - lockedTarget.col);
+            if (validDirs.length === 0) return enemy;
 
-              if (lockedDist > 2) {
-                enemy.lockMoveCount++;
+            let bestDir = validDirs[0];
+            let bestDist = shouldFlee ? -Infinity : Infinity;
 
-                if (enemy.lockMoveCount >= 7) {
-                  enemy.isLocked = false;
-                  enemy.lockedTarget = null;
-                  enemy.lockMoveCount = 0;
+            for (const dir of validDirs) {
+              const deltas: Record<Direction, Position> = {
+                up: { row: -1, col: 0 },
+                down: { row: 1, col: 0 },
+                left: { row: 0, col: -1 },
+                right: { row: 0, col: 1 }
+              };
+
+              const delta = deltas[dir];
+              const newPos = {
+                row: enemy.gridPos.row + delta.row,
+                col: enemy.gridPos.col + delta.col
+              };
+
+              const distToTarget = Math.abs(newPos.row - nearestPlayer.gridPos.row) +
+                                  Math.abs(newPos.col - nearestPlayer.gridPos.col);
+
+              if (shouldFlee) {
+                // RUN AWAY - pick direction that INCREASES distance
+                if (distToTarget > bestDist) {
+                  bestDist = distToTarget;
+                  bestDir = dir;
                 }
               } else {
-                enemy.lockMoveCount = 0;
-              }
-
-              const dirs: Direction[] = ['up', 'down', 'left', 'right'];
-              const validDirs = dirs.filter(d => canMove(maze, enemy.gridPos, d));
-
-              if (validDirs.length === 0) return enemy;
-
-              let bestDir = validDirs[0];
-              let bestDist = Infinity;
-
-              for (const dir of validDirs) {
-                const deltas: Record<Direction, Position> = {
-                  up: { row: -1, col: 0 },
-                  down: { row: 1, col: 0 },
-                  left: { row: 0, col: -1 },
-                  right: { row: 0, col: 1 }
-                };
-
-                const delta = deltas[dir];
-                const newPos = {
-                  row: enemy.gridPos.row + delta.row,
-                  col: enemy.gridPos.col + delta.col
-                };
-
-                const distToTarget = Math.abs(newPos.row - lockedTarget.row) +
-                                    Math.abs(newPos.col - lockedTarget.col);
-
+                // CHASE - pick direction that DECREASES distance
                 if (distToTarget < bestDist) {
                   bestDist = distToTarget;
                   bestDir = dir;
                 }
               }
-
-              const deltas: Record<Direction, Position> = {
-                up: { row: -1, col: 0 },
-                down: { row: 1, col: 0 },
-                left: { row: 0, col: -1 },
-                right: { row: 0, col: 1 }
-              };
-
-              const delta = deltas[bestDir];
-              return {
-                ...enemy,
-                dir: bestDir,
-                gridPos: {
-                  row: enemy.gridPos.row + delta.row,
-                  col: enemy.gridPos.col + delta.col
-                }
-              };
-            } else {
-              const dirs: Direction[] = ['up', 'down', 'left', 'right'];
-              const validDirs = dirs.filter(d => canMove(maze, enemy.gridPos, d));
-
-              if (validDirs.length === 0) return enemy;
-
-              let bestDir = validDirs[0];
-              let bestDist = Infinity;
-
-              for (const dir of validDirs) {
-                const deltas: Record<Direction, Position> = {
-                  up: { row: -1, col: 0 },
-                  down: { row: 1, col: 0 },
-                  left: { row: 0, col: -1 },
-                  right: { row: 0, col: 1 }
-                };
-
-                const delta = deltas[dir];
-                const newPos = {
-                  row: enemy.gridPos.row + delta.row,
-                  col: enemy.gridPos.col + delta.col
-                };
-
-                const distToTarget = Math.abs(newPos.row - targetPlayer.row) +
-                                    Math.abs(newPos.col - targetPlayer.col);
-
-                if (distToTarget < bestDist) {
-                  bestDist = distToTarget;
-                  bestDir = dir;
-                }
-              }
-
-              const deltas: Record<Direction, Position> = {
-                up: { row: -1, col: 0 },
-                down: { row: 1, col: 0 },
-                left: { row: 0, col: -1 },
-                right: { row: 0, col: 1 }
-              };
-
-              const delta = deltas[bestDir];
-              return {
-                ...enemy,
-                dir: bestDir,
-                gridPos: {
-                  row: enemy.gridPos.row + delta.row,
-                  col: enemy.gridPos.col + delta.col
-                }
-              };
             }
+
+            const deltas: Record<Direction, Position> = {
+              up: { row: -1, col: 0 },
+              down: { row: 1, col: 0 },
+              left: { row: 0, col: -1 },
+              right: { row: 0, col: 1 }
+            };
+
+            const delta = deltas[bestDir];
+            return {
+              ...enemy,
+              dir: bestDir,
+              gridPos: {
+                row: enemy.gridPos.row + delta.row,
+                col: enemy.gridPos.col + delta.col
+              }
+            };
           }));
         }
 
@@ -933,11 +864,23 @@ export function MoneyGrabGameEngine({
             if (enemy.gridPos.row === newPlayer.gridPos.row &&
                 enemy.gridPos.col === newPlayer.gridPos.col) {
               if (!newPlayer.powerUpActive) {
-                setGameStatus('gameover');
-                return newPlayer;
+                // Lose money and respawn at entrance
+                newPlayer.score = Math.max(0, newPlayer.score - 200);
+                setLevelScore(s => Math.max(0, s - 200));
+                newPlayer.gridPos = mazeData.entrance;
+                newPlayer.pixelPos = gridToPixel(mazeData.entrance);
+                newPlayer.currentDir = null;
+                newPlayer.nextDir = null;
               } else {
+                // Player has hammer - can defeat enemy hammer
                 newPlayer.score += 500;
                 setLevelScore(s => s + 500);
+                // Respawn enemy hammer at center
+                setEnemies(prev => prev.map(e =>
+                  e.id === enemy.id
+                    ? { ...e, gridPos: { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) } }
+                    : e
+                ));
               }
             }
           }
@@ -950,15 +893,56 @@ export function MoneyGrabGameEngine({
             if (enemy.gridPos.row === newAI.gridPos.row &&
                 enemy.gridPos.col === newAI.gridPos.col) {
               if (!newAI.powerUpActive) {
-                setGameStatus('gameover');
-                return newAI;
+                // AI loses money and respawns
+                newAI.score = Math.max(0, newAI.score - 200);
+                newAI.gridPos = { row: mazeData.entrance.row + 1, col: mazeData.entrance.col };
+                newAI.pixelPos = gridToPixel({ row: mazeData.entrance.row + 1, col: mazeData.entrance.col });
+                newAI.currentDir = null;
               } else {
+                // AI has hammer - can defeat enemy hammer
                 newAI.score += 500;
+                // Respawn enemy hammer at center
+                setEnemies(prev => prev.map(e =>
+                  e.id === enemy.id
+                    ? { ...e, gridPos: { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) } }
+                    : e
+                ));
               }
             }
           }
           return newAI;
         });
+
+        // Check player vs player collision (when both have hammers)
+        if (player.gridPos.row === aiPlayer.gridPos.row &&
+            player.gridPos.col === aiPlayer.gridPos.col) {
+
+          if (player.powerUpActive && aiPlayer.powerUpActive) {
+            // Both have hammers - both lose power-up
+            setPlayer(p => ({ ...p, powerUpActive: false, powerUpExpiry: 0 }));
+            setAiPlayer(p => ({ ...p, powerUpActive: false, powerUpExpiry: 0 }));
+          } else if (player.powerUpActive && !aiPlayer.powerUpActive) {
+            // Player has hammer, AI doesn't - AI loses money and respawns
+            setAiPlayer(p => ({
+              ...p,
+              score: Math.max(0, p.score - 200),
+              gridPos: { row: mazeData.entrance.row + 1, col: mazeData.entrance.col },
+              pixelPos: gridToPixel({ row: mazeData.entrance.row + 1, col: mazeData.entrance.col }),
+              currentDir: null
+            }));
+          } else if (!player.powerUpActive && aiPlayer.powerUpActive) {
+            // AI has hammer, player doesn't - player loses money and respawns
+            setPlayer(p => ({
+              ...p,
+              score: Math.max(0, p.score - 200),
+              gridPos: mazeData.entrance,
+              pixelPos: gridToPixel(mazeData.entrance),
+              currentDir: null,
+              nextDir: null
+            }));
+            setLevelScore(s => Math.max(0, s - 200));
+          }
+        }
       }
 
       animationRef.current = requestAnimationFrame(gameLoop);
@@ -1006,10 +990,10 @@ export function MoneyGrabGameEngine({
 
     setCash(placeCash(newMazeData.maze, newMazeData.exit.position, newMazeData.entrance));
     setEnemies([
-      { id: '1', gridPos: { row: 9, col: 9 }, dir: 'left', color: '#ef4444', isLocked: false, lockedTarget: null, lockMoveCount: 0 },
-      { id: '2', gridPos: { row: 9, col: 11 }, dir: 'right', color: '#ec4899', isLocked: false, lockedTarget: null, lockMoveCount: 0 },
-      { id: '3', gridPos: { row: 8, col: 10 }, dir: 'up', color: '#06b6d4', isLocked: false, lockedTarget: null, lockMoveCount: 0 },
-      { id: '4', gridPos: { row: 10, col: 10 }, dir: 'down', color: '#f97316', isLocked: false, lockedTarget: null, lockMoveCount: 0 }
+      { id: '1', gridPos: { row: 9, col: 9 }, dir: 'left', color: '#ef4444' },
+      { id: '2', gridPos: { row: 9, col: 11 }, dir: 'right', color: '#ec4899' },
+      { id: '3', gridPos: { row: 8, col: 10 }, dir: 'up', color: '#06b6d4' },
+      { id: '4', gridPos: { row: 10, col: 10 }, dir: 'down', color: '#f97316' }
     ]);
 
     setShowLevelTransition(false);
@@ -1160,7 +1144,7 @@ export function MoneyGrabGameEngine({
 
                 <g transform={`translate(${player.pixelPos.x}, ${player.pixelPos.y})`}>
                   {player.powerUpActive && (
-                    <circle r="13" fill="#10b981" opacity="0.4">
+                    <circle r="13" fill="#fbbf24" opacity="0.4">
                       <animate attributeName="r" values="13;17;13" dur="0.5s" repeatCount="indefinite"/>
                       <animate attributeName="opacity" values="0.4;0.6;0.4" dur="0.5s" repeatCount="indefinite"/>
                     </circle>
@@ -1169,13 +1153,13 @@ export function MoneyGrabGameEngine({
                     {playerName}
                   </text>
                   <text textAnchor="middle" y="8" fontSize="22">
-                    {player.isGrabbing ? '✊' : '✋'}
+                    {player.powerUpActive ? '🔨' : (player.isGrabbing ? '✊' : '✋')}
                   </text>
                 </g>
 
                 <g transform={`translate(${aiPlayer.pixelPos.x}, ${aiPlayer.pixelPos.y})`}>
                   {aiPlayer.powerUpActive && (
-                    <circle r="13" fill="#10b981" opacity="0.4">
+                    <circle r="13" fill="#3b82f6" opacity="0.4">
                       <animate attributeName="r" values="13;17;13" dur="0.5s" repeatCount="indefinite"/>
                       <animate attributeName="opacity" values="0.4;0.6;0.4" dur="0.5s" repeatCount="indefinite"/>
                     </circle>
@@ -1184,7 +1168,7 @@ export function MoneyGrabGameEngine({
                     {companionName}
                   </text>
                   <text textAnchor="middle" y="8" fontSize="22">
-                    {aiPlayer.isGrabbing ? '👊' : '👋'}
+                    {aiPlayer.powerUpActive ? '🔨' : (aiPlayer.isGrabbing ? '👊' : '👋')}
                   </text>
                 </g>
               </svg>
@@ -1263,10 +1247,11 @@ export function MoneyGrabGameEngine({
                 <p><strong>👋 {companionName}:</strong> Your companion (blue)</p>
                 <p className="text-xs italic">Starts one tile below you</p>
                 <p className="mt-2"><strong>💵 Cash:</strong> $100 per bill</p>
-                <p><strong>💰 Power-up:</strong> $500 + invincibility</p>
-                <p><strong>🔨 Hammers:</strong> Lock on within 2 tiles!</p>
-                <p className="text-xs text-red-600 font-semibold mt-3">⚠️ Evade 7 moves to escape lock!</p>
-                <p className="text-xs text-blue-600 mt-2">💡 Reach the exit 🚪 together!</p>
+                <p><strong>💰 Power-up:</strong> Grab a hammer for 10 seconds!</p>
+                <p><strong>🔨 With Hammer:</strong> Hit enemy hammers, collect bills, invincible!</p>
+                <p><strong>⚡ Hammer Clash:</strong> If both have hammers and collide, both lose them!</p>
+                <p className="text-xs text-red-600 font-semibold mt-3">💸 Get Hit: Lose $200 and respawn at entrance</p>
+                <p className="text-xs text-blue-600 mt-2">💡 Reach the exit 🚪 to advance!</p>
               </div>
             </div>
 
