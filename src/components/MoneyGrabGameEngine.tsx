@@ -42,6 +42,8 @@ interface Enemy {
   gridPos: Position;
   dir: Direction;
   color: string;
+  lastHitTime: number;
+  isPaused: boolean;
 }
 
 interface ExitPoint {
@@ -587,7 +589,9 @@ export function MoneyGrabGameEngine({
       id: `${i + 1}`,
       gridPos: spawn,
       dir: dirs[i],
-      color: colors[i]
+      color: colors[i],
+      lastHitTime: 0,
+      isPaused: false
     }));
   });
 
@@ -665,7 +669,9 @@ export function MoneyGrabGameEngine({
       id: `${i + 1}`,
       gridPos: spawn,
       dir: dirs[i],
-      color: colors[i]
+      color: colors[i],
+      lastHitTime: 0,
+      isPaused: false
     }));
 
     // Add extra enemies on higher levels (also placed in opposite quadrant)
@@ -675,7 +681,9 @@ export function MoneyGrabGameEngine({
         id: `extra-${i}`,
         gridPos: spawns[4 + i],
         dir: dirs[i % 4],
-        color: '#8b5cf6'
+        color: '#8b5cf6',
+        lastHitTime: 0,
+        isPaused: false
       });
     }
 
@@ -932,6 +940,17 @@ export function MoneyGrabGameEngine({
           enemyUpdateRef.current = 0;
 
           setEnemies(prev => prev.map(enemy => {
+            const currentTime = Date.now();
+            const timeSinceHit = currentTime - enemy.lastHitTime;
+
+            // If paused (just hit player), unpause after 1 second
+            if (enemy.isPaused) {
+              if (timeSinceHit > 1000) {
+                return { ...enemy, isPaused: false };
+              }
+              return enemy;
+            }
+
             const dist1 = Math.abs(enemy.gridPos.row - player.gridPos.row) +
                          Math.abs(enemy.gridPos.col - player.gridPos.col);
             const dist2 = Math.abs(enemy.gridPos.row - aiPlayer.gridPos.row) +
@@ -940,8 +959,8 @@ export function MoneyGrabGameEngine({
             const nearestIsPlayer = dist1 < dist2;
             const nearestPlayer = nearestIsPlayer ? player : aiPlayer;
 
-            // CHECK IF NEAREST PLAYER HAS HAMMER POWER-UP
-            const shouldFlee = nearestPlayer.powerUpActive;
+            // Determine behavior: flee if player has hammer OR if on cooldown
+            const shouldFlee = nearestPlayer.powerUpActive || (timeSinceHit < 5000 && timeSinceHit > 0);
 
             const dirs: Direction[] = ['up', 'down', 'left', 'right'];
             const validDirs = dirs.filter(d => canMove(maze, enemy.gridPos, d));
@@ -1004,25 +1023,34 @@ export function MoneyGrabGameEngine({
 
         setPlayer(prev => {
           const newPlayer = { ...prev };
+          const currentTime = Date.now();
+
           for (const enemy of enemies) {
             if (enemy.gridPos.row === newPlayer.gridPos.row &&
                 enemy.gridPos.col === newPlayer.gridPos.col) {
               if (!newPlayer.powerUpActive) {
-                // Lose money and respawn at entrance
-                newPlayer.score = Math.max(0, newPlayer.score - 200);
-                setLevelScore(s => Math.max(0, s - 200));
-                newPlayer.gridPos = mazeData.entrance;
-                newPlayer.pixelPos = gridToPixel(mazeData.entrance);
-                newPlayer.currentDir = null;
-                newPlayer.nextDir = null;
+                // Only hit if enemy isn't on cooldown
+                if (currentTime - enemy.lastHitTime > 5000) {
+                  // Lose money but DON'T stop movement
+                  newPlayer.score = Math.max(0, newPlayer.score - 200);
+                  setLevelScore(s => Math.max(0, s - 200));
+
+                  // Put enemy on cooldown - pause and retreat
+                  setEnemies(prev => prev.map(e =>
+                    e.id === enemy.id
+                      ? { ...e, lastHitTime: currentTime, isPaused: true }
+                      : e
+                  ));
+                }
               } else {
                 // Player has hammer - can defeat enemy hammer
                 newPlayer.score += 500;
                 setLevelScore(s => s + 500);
-                // Respawn enemy hammer at center
+                // Respawn enemy hammer at opposite corner
+                const spawns = calculateOppositeSpawns(maze, mazeData.entrance);
                 setEnemies(prev => prev.map(e =>
                   e.id === enemy.id
-                    ? { ...e, gridPos: { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) } }
+                    ? { ...e, gridPos: spawns[0] || { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) }, lastHitTime: 0, isPaused: false }
                     : e
                 ));
               }
@@ -1033,22 +1061,32 @@ export function MoneyGrabGameEngine({
 
         setAiPlayer(prev => {
           const newAI = { ...prev };
+          const currentTime = Date.now();
+
           for (const enemy of enemies) {
             if (enemy.gridPos.row === newAI.gridPos.row &&
                 enemy.gridPos.col === newAI.gridPos.col) {
               if (!newAI.powerUpActive) {
-                // AI loses money and respawns
-                newAI.score = Math.max(0, newAI.score - 200);
-                newAI.gridPos = { row: mazeData.entrance.row + 1, col: mazeData.entrance.col };
-                newAI.pixelPos = gridToPixel({ row: mazeData.entrance.row + 1, col: mazeData.entrance.col });
-                newAI.currentDir = null;
+                // Only hit if enemy isn't on cooldown
+                if (currentTime - enemy.lastHitTime > 5000) {
+                  // AI loses money but DON'T stop movement
+                  newAI.score = Math.max(0, newAI.score - 200);
+
+                  // Put enemy on cooldown - pause and retreat
+                  setEnemies(prev => prev.map(e =>
+                    e.id === enemy.id
+                      ? { ...e, lastHitTime: currentTime, isPaused: true }
+                      : e
+                  ));
+                }
               } else {
                 // AI has hammer - can defeat enemy hammer
                 newAI.score += 500;
-                // Respawn enemy hammer at center
+                // Respawn enemy hammer at opposite corner
+                const spawns = calculateOppositeSpawns(maze, mazeData.entrance);
                 setEnemies(prev => prev.map(e =>
                   e.id === enemy.id
-                    ? { ...e, gridPos: { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) } }
+                    ? { ...e, gridPos: spawns[0] || { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) }, lastHitTime: 0, isPaused: false }
                     : e
                 ));
               }
@@ -1143,7 +1181,9 @@ export function MoneyGrabGameEngine({
       id: `${i + 1}`,
       gridPos: spawn,
       dir: dirs[i],
-      color: colors[i]
+      color: colors[i],
+      lastHitTime: 0,
+      isPaused: false
     })));
 
     setShowLevelTransition(false);
