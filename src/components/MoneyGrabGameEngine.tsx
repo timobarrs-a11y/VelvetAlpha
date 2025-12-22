@@ -209,20 +209,25 @@ function generateMaze(level: number): { maze: number[][], entrance: Position, ex
     }
   }
 
+  // Clear TWO columns/rows to ensure proper exit paths
   if (exitSide === 'right') {
     for (let r = 1; r < MAZE_HEIGHT - 1; r++) {
       maze[r][MAZE_WIDTH - 2] = 0;
+      maze[r][MAZE_WIDTH - 1] = 0; // Also clear the border
     }
   } else if (exitSide === 'left') {
     for (let r = 1; r < MAZE_HEIGHT - 1; r++) {
+      maze[r][0] = 0; // Clear the border
       maze[r][1] = 0;
     }
   } else if (exitSide === 'up') {
     for (let c = 1; c < MAZE_WIDTH - 1; c++) {
+      maze[0][c] = 0; // Clear the border
       maze[1][c] = 0;
     }
   } else if (exitSide === 'down') {
     for (let c = 1; c < MAZE_WIDTH - 1; c++) {
+      maze[MAZE_HEIGHT - 1][c] = 0; // Clear the border
       maze[MAZE_HEIGHT - 2][c] = 0;
     }
   }
@@ -278,7 +283,14 @@ function canMove(maze: number[][], pos: Position, dir: Direction): boolean {
     return false;
   }
 
-  return maze[newRow][newCol] === 0;
+  const isWall = maze[newRow][newCol] === 1;
+
+  // Debug logging for edge column blocking
+  if (isWall && (newCol === 0 || newCol === MAZE_WIDTH - 1 || newRow === 0 || newRow === MAZE_HEIGHT - 1)) {
+    console.log(`BLOCKED at edge [${newRow}, ${newCol}] from [${pos.row}, ${pos.col}] going ${dir}`);
+  }
+
+  return !isWall;
 }
 
 function placeCash(maze: number[][], exitPos: Position, entrance: Position): Position[] {
@@ -324,40 +336,68 @@ function findNearestTarget(pos: Position, cash: Position[], powerUps: Position[]
   return nearest;
 }
 
+// Track AI position history to prevent loops
+const aiLastPositions = new Map<string, Position[]>();
+
 function getAIDirection(
   maze: number[][],
   from: Position,
   target: Position,
   enemies: Enemy[],
-  playerPos: Position
+  playerPos: Position,
+  playerId: string = 'ai-player'
 ): Direction | null {
   const dirs: Direction[] = ['up', 'down', 'left', 'right'];
   const validDirs = dirs.filter(d => canMove(maze, from, d));
 
   if (validDirs.length === 0) return null;
 
+  // Get position history for this AI
+  if (!aiLastPositions.has(playerId)) {
+    aiLastPositions.set(playerId, []);
+  }
+  const history = aiLastPositions.get(playerId)!;
+
+  // Define deltas once for reuse
+  const deltas: Record<Direction, Position> = {
+    up: { row: -1, col: 0 },
+    down: { row: 1, col: 0 },
+    left: { row: 0, col: -1 },
+    right: { row: 0, col: 1 }
+  };
+
+  // Filter out moves that would return to recent positions (prevent loops)
+  const nonLoopingDirs = validDirs.filter(dir => {
+    const delta = deltas[dir];
+    const nextPos = { row: from.row + delta.row, col: from.col + delta.col };
+
+    // Check if this position was visited in last 3 moves
+    const wasRecentlyVisited = history.some(pos =>
+      pos.row === nextPos.row && pos.col === nextPos.col
+    );
+
+    return !wasRecentlyVisited;
+  });
+
+  // Use non-looping directions if available, otherwise use any valid direction
+  const dirsToConsider = nonLoopingDirs.length > 0 ? nonLoopingDirs : validDirs;
+
   const isBeingChased = enemies.some(e =>
     Math.abs(e.gridPos.row - from.row) + Math.abs(e.gridPos.col - from.col) <= 3
   );
 
-  if (isBeingChased) {
-    let bestDir = validDirs[0];
-    let bestScore = -Infinity;
+  let bestDir = dirsToConsider[0];
+  let bestScore = isBeingChased ? -Infinity : Infinity;
 
-    for (const dir of validDirs) {
-      const deltas: Record<Direction, Position> = {
-        up: { row: -1, col: 0 },
-        down: { row: 1, col: 0 },
-        left: { row: 0, col: -1 },
-        right: { row: 0, col: 1 }
-      };
+  for (const dir of dirsToConsider) {
+    const delta = deltas[dir];
+    const newPos = {
+      row: from.row + delta.row,
+      col: from.col + delta.col
+    };
 
-      const delta = deltas[dir];
-      const newPos = {
-        row: from.row + delta.row,
-        col: from.col + delta.col
-      };
-
+    if (isBeingChased) {
+      // RUN AWAY - maximize distance from enemies
       let minEnemyDist = Infinity;
       for (const enemy of enemies) {
         const dist = Math.abs(newPos.row - enemy.gridPos.row) +
@@ -369,50 +409,41 @@ function getAIDirection(
         bestScore = minEnemyDist;
         bestDir = dir;
       }
-    }
+    } else {
+      // CHASE TARGET - minimize distance to target
+      const distToTarget = Math.abs(newPos.row - target.row) + Math.abs(newPos.col - target.col);
 
-    return bestDir;
+      // Also consider enemy proximity (avoid getting too close)
+      let minEnemyDist = Infinity;
+      for (const enemy of enemies) {
+        const enemyDist = Math.abs(newPos.row - enemy.gridPos.row) +
+                         Math.abs(newPos.col - enemy.gridPos.col);
+        minEnemyDist = Math.min(minEnemyDist, enemyDist);
+      }
+
+      let score = distToTarget;
+
+      // Penalty if getting too close to enemies
+      if (minEnemyDist < 3) {
+        score += (3 - minEnemyDist) * 10;
+      }
+
+      // Small randomness to break ties
+      if (Math.random() < 0.05) {
+        score += Math.random() * 0.5;
+      }
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestDir = dir;
+      }
+    }
   }
 
-  let bestDir = validDirs[0];
-  let bestScore = Infinity;
-
-  for (const dir of validDirs) {
-    const deltas: Record<Direction, Position> = {
-      up: { row: -1, col: 0 },
-      down: { row: 1, col: 0 },
-      left: { row: 0, col: -1 },
-      right: { row: 0, col: 1 }
-    };
-
-    const delta = deltas[dir];
-    const newPos = {
-      row: from.row + delta.row,
-      col: from.col + delta.col
-    };
-
-    const distToTarget = Math.abs(newPos.row - target.row) + Math.abs(newPos.col - target.col);
-
-    let minEnemyDist = Infinity;
-    for (const enemy of enemies) {
-      const enemyDist = Math.abs(newPos.row - enemy.gridPos.row) +
-                       Math.abs(newPos.col - enemy.gridPos.col);
-      minEnemyDist = Math.min(minEnemyDist, enemyDist);
-    }
-
-    let score = distToTarget;
-    if (minEnemyDist < 4) {
-      score += (4 - minEnemyDist) * 5;
-    }
-
-    if (Math.random() < 0.05) {
-      score += Math.random() * 2;
-    }
-
-    if (score < bestScore) {
-      bestScore = score;
-      bestDir = dir;
-    }
+  // Update position history (keep last 3 positions)
+  history.push({ ...from });
+  if (history.length > 3) {
+    history.shift();
   }
 
   return bestDir;
@@ -627,56 +658,64 @@ export function MoneyGrabGameEngine({
             y: newPlayer.pixelPos.y + delta.y
           };
 
-          const newGridPos = pixelToGrid(newPixelPos);
+          // Only update grid position and check collisions when aligned
+          if (isAligned(newPixelPos)) {
+            const newGridPos = pixelToGrid(newPixelPos);
 
-          if (newGridPos.row !== newPlayer.gridPos.row || newGridPos.col !== newPlayer.gridPos.col) {
-            if (!canMove(maze, newPlayer.gridPos, newPlayer.currentDir)) {
-              newPlayer.pixelPos = gridToPixel(newPlayer.gridPos);
-              newPlayer.currentDir = null;
-              return newPlayer;
-            }
+            if (newGridPos.row !== newPlayer.gridPos.row || newGridPos.col !== newPlayer.gridPos.col) {
+              if (!canMove(maze, newPlayer.gridPos, newPlayer.currentDir)) {
+                newPlayer.pixelPos = gridToPixel(newPlayer.gridPos);
+                newPlayer.currentDir = null;
+                return newPlayer;
+              }
 
-            newPlayer.gridPos = newGridPos;
+              newPlayer.gridPos = newGridPos;
 
-            if (newGridPos.row === exitPoint.position.row && newGridPos.col === exitPoint.position.col) {
-              setTotalScore(prev => prev + newPlayer.score);
-              setShowLevelTransition(true);
-              setGameStatus('levelcomplete');
-              setTimeout(loadNextLevel, 500);
-              return newPlayer;
-            }
+              // Check exit
+              if (newGridPos.row === exitPoint.position.row && newGridPos.col === exitPoint.position.col) {
+                setTotalScore(prev => prev + newPlayer.score);
+                setShowLevelTransition(true);
+                setGameStatus('levelcomplete');
+                setTimeout(loadNextLevel, 500);
+                return newPlayer;
+              }
 
-            const cashIdx = cash.findIndex(f =>
-              f.row === newGridPos.row && f.col === newGridPos.col
-            );
-            if (cashIdx !== -1) {
-              setCash(prev => prev.filter((_, i) => i !== cashIdx));
-              newPlayer.score += CASH_POINTS;
-              setLevelScore(prev => prev + CASH_POINTS);
+              // Check cash collection (ONLY when aligned on grid cell)
+              const cashIdx = cash.findIndex(f =>
+                f.row === newGridPos.row && f.col === newGridPos.col
+              );
+              if (cashIdx !== -1) {
+                console.log(`Player collected cash at [${newGridPos.row}, ${newGridPos.col}]`);
+                setCash(prev => prev.filter((_, i) => i !== cashIdx));
+                newPlayer.score += CASH_POINTS;
+                setLevelScore(prev => prev + CASH_POINTS);
 
-              newPlayer.isGrabbing = true;
-              setTimeout(() => {
-                setPlayer(p => ({ ...p, isGrabbing: false }));
-              }, 200);
-            }
+                newPlayer.isGrabbing = true;
+                setTimeout(() => {
+                  setPlayer(p => ({ ...p, isGrabbing: false }));
+                }, 200);
+              }
 
-            const powerUpIdx = powerUps.findIndex(p =>
-              p.row === newGridPos.row && p.col === newGridPos.col
-            );
-            if (powerUpIdx !== -1) {
-              setPowerUps(prev => prev.filter((_, i) => i !== powerUpIdx));
-              newPlayer.powerUpActive = true;
-              newPlayer.powerUpExpiry = Date.now() + 10000;
-              newPlayer.score += POWER_UP_POINTS;
-              setLevelScore(prev => prev + POWER_UP_POINTS);
+              // Check power-up collection
+              const powerUpIdx = powerUps.findIndex(p =>
+                p.row === newGridPos.row && p.col === newGridPos.col
+              );
+              if (powerUpIdx !== -1) {
+                setPowerUps(prev => prev.filter((_, i) => i !== powerUpIdx));
+                newPlayer.powerUpActive = true;
+                newPlayer.powerUpExpiry = Date.now() + 10000;
+                newPlayer.score += POWER_UP_POINTS;
+                setLevelScore(prev => prev + POWER_UP_POINTS);
 
-              newPlayer.isGrabbing = true;
-              setTimeout(() => {
-                setPlayer(p => ({ ...p, isGrabbing: false }));
-              }, 200);
+                newPlayer.isGrabbing = true;
+                setTimeout(() => {
+                  setPlayer(p => ({ ...p, isGrabbing: false }));
+                }, 200);
+              }
             }
           }
 
+          // Always update pixel position for smooth movement
           newPlayer.pixelPos = newPixelPos;
 
           if (newPlayer.powerUpActive && Date.now() > newPlayer.powerUpExpiry) {
@@ -693,13 +732,13 @@ export function MoneyGrabGameEngine({
             const target = findNearestTarget(newAI.gridPos, cash, powerUps);
 
             if (target) {
-              const aiMove = getAIDirection(maze, newAI.gridPos, target, enemies, player.gridPos);
+              const aiMove = getAIDirection(maze, newAI.gridPos, target, enemies, player.gridPos, 'ai-player');
               if (aiMove) {
                 newAI.currentDir = aiMove;
               }
             } else {
               const exitTarget = exitPoint.position;
-              const aiMove = getAIDirection(maze, newAI.gridPos, exitTarget, enemies, player.gridPos);
+              const aiMove = getAIDirection(maze, newAI.gridPos, exitTarget, enemies, player.gridPos, 'ai-player');
               if (aiMove) {
                 newAI.currentDir = aiMove;
               } else if (!newAI.currentDir) {
@@ -727,53 +766,61 @@ export function MoneyGrabGameEngine({
             y: newAI.pixelPos.y + delta.y
           };
 
-          const newGridPos = pixelToGrid(newPixelPos);
+          // Only update grid position and check collisions when aligned
+          if (isAligned(newPixelPos)) {
+            const newGridPos = pixelToGrid(newPixelPos);
 
-          if (newGridPos.row !== newAI.gridPos.row || newGridPos.col !== newAI.gridPos.col) {
-            if (!canMove(maze, newAI.gridPos, newAI.currentDir)) {
-              newAI.pixelPos = gridToPixel(newAI.gridPos);
-              newAI.currentDir = null;
-              return newAI;
-            }
+            if (newGridPos.row !== newAI.gridPos.row || newGridPos.col !== newAI.gridPos.col) {
+              if (!canMove(maze, newAI.gridPos, newAI.currentDir)) {
+                newAI.pixelPos = gridToPixel(newAI.gridPos);
+                newAI.currentDir = null;
+                return newAI;
+              }
 
-            newAI.gridPos = newGridPos;
+              newAI.gridPos = newGridPos;
 
-            if (newGridPos.row === exitPoint.position.row && newGridPos.col === exitPoint.position.col) {
-              setShowLevelTransition(true);
-              setGameStatus('levelcomplete');
-              setTimeout(loadNextLevel, 500);
-              return newAI;
-            }
+              // Check exit
+              if (newGridPos.row === exitPoint.position.row && newGridPos.col === exitPoint.position.col) {
+                setShowLevelTransition(true);
+                setGameStatus('levelcomplete');
+                setTimeout(loadNextLevel, 500);
+                return newAI;
+              }
 
-            const cashIdx = cash.findIndex(f =>
-              f.row === newGridPos.row && f.col === newGridPos.col
-            );
-            if (cashIdx !== -1) {
-              setCash(prev => prev.filter((_, i) => i !== cashIdx));
-              newAI.score += CASH_POINTS;
+              // Check cash collection (ONLY when aligned on grid cell)
+              const cashIdx = cash.findIndex(f =>
+                f.row === newGridPos.row && f.col === newGridPos.col
+              );
+              if (cashIdx !== -1) {
+                console.log(`AI collected cash at [${newGridPos.row}, ${newGridPos.col}]`);
+                setCash(prev => prev.filter((_, i) => i !== cashIdx));
+                newAI.score += CASH_POINTS;
 
-              newAI.isGrabbing = true;
-              setTimeout(() => {
-                setAiPlayer(p => ({ ...p, isGrabbing: false }));
-              }, 200);
-            }
+                newAI.isGrabbing = true;
+                setTimeout(() => {
+                  setAiPlayer(p => ({ ...p, isGrabbing: false }));
+                }, 200);
+              }
 
-            const powerUpIdx = powerUps.findIndex(p =>
-              p.row === newGridPos.row && p.col === newGridPos.col
-            );
-            if (powerUpIdx !== -1) {
-              setPowerUps(prev => prev.filter((_, i) => i !== powerUpIdx));
-              newAI.powerUpActive = true;
-              newAI.powerUpExpiry = Date.now() + 10000;
-              newAI.score += POWER_UP_POINTS;
+              // Check power-up collection
+              const powerUpIdx = powerUps.findIndex(p =>
+                p.row === newGridPos.row && p.col === newGridPos.col
+              );
+              if (powerUpIdx !== -1) {
+                setPowerUps(prev => prev.filter((_, i) => i !== powerUpIdx));
+                newAI.powerUpActive = true;
+                newAI.powerUpExpiry = Date.now() + 10000;
+                newAI.score += POWER_UP_POINTS;
 
-              newAI.isGrabbing = true;
-              setTimeout(() => {
-                setAiPlayer(p => ({ ...p, isGrabbing: false }));
-              }, 200);
+                newAI.isGrabbing = true;
+                setTimeout(() => {
+                  setAiPlayer(p => ({ ...p, isGrabbing: false }));
+                }, 200);
+              }
             }
           }
 
+          // Always update pixel position for smooth movement
           newAI.pixelPos = newPixelPos;
 
           if (newAI.powerUpActive && Date.now() > newAI.powerUpExpiry) {
@@ -1169,6 +1216,35 @@ export function MoneyGrabGameEngine({
                   </text>
                   <text textAnchor="middle" y="8" fontSize="22">
                     {aiPlayer.powerUpActive ? '🔨' : (aiPlayer.isGrabbing ? '👊' : '👋')}
+                  </text>
+                </g>
+
+                {/* DEBUG OVERLAY */}
+                <g>
+                  <rect x="5" y="5" width="280" height="150" fill="black" opacity="0.7" rx="5"/>
+                  <text x="15" y="25" fill="#fbbf24" fontSize="12" fontWeight="bold">
+                    DEBUG INFO
+                  </text>
+                  <text x="15" y="45" fill="white" fontSize="11">
+                    Player Grid: [{player.gridPos.row}, {player.gridPos.col}]
+                  </text>
+                  <text x="15" y="60" fill="white" fontSize="11">
+                    Player Pixel: [{Math.round(player.pixelPos.x)}, {Math.round(player.pixelPos.y)}]
+                  </text>
+                  <text x="15" y="75" fill={isAligned(player.pixelPos) ? '#10b981' : '#ef4444'} fontSize="11">
+                    Player Aligned: {isAligned(player.pixelPos) ? 'YES' : 'NO'}
+                  </text>
+                  <text x="15" y="95" fill="white" fontSize="11">
+                    AI Grid: [{aiPlayer.gridPos.row}, {aiPlayer.gridPos.col}]
+                  </text>
+                  <text x="15" y="110" fill="white" fontSize="11">
+                    AI Pixel: [{Math.round(aiPlayer.pixelPos.x)}, {Math.round(aiPlayer.pixelPos.y)}]
+                  </text>
+                  <text x="15" y="125" fill={isAligned(aiPlayer.pixelPos) ? '#10b981' : '#ef4444'} fontSize="11">
+                    AI Aligned: {isAligned(aiPlayer.pixelPos) ? 'YES' : 'NO'}
+                  </text>
+                  <text x="15" y="145" fill="#10b981" fontSize="11" fontWeight="bold">
+                    Cash Count: {cash.length}
                   </text>
                 </g>
               </svg>
