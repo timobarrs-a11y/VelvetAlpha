@@ -1,6 +1,5 @@
-import React from 'react';
 import { SUBSCRIPTION_PLANS, SubscriptionTier } from '../types/subscription';
-import { redirectToCheckout } from '../services/stripeService';
+import { X } from 'lucide-react';
 
 interface PricingPageProps {
   currentTier: SubscriptionTier;
@@ -8,87 +7,128 @@ interface PricingPageProps {
 }
 
 export function PricingPage({ currentTier, onClose }: PricingPageProps) {
-  const handleUpgrade = async (tier: SubscriptionTier) => {
-    if (tier === 'free') return;
-    await redirectToCheckout(tier);
+  const handleSelectPlan = (stripeLink: string) => {
+    if (stripeLink) {
+      window.location.href = stripeLink;
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b">
-          <div className="flex justify-between items-center">
-            <h2 className="text-3xl font-bold">Choose Your Plan</h2>
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-black to-rose-900 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="max-w-6xl w-full my-8">
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={onClose}
+            className="text-white/60 hover:text-white transition-colors"
+          >
+            <X size={32} />
+          </button>
+        </div>
+
+        <h1 className="text-5xl font-bold text-white text-center mb-4">
+          Choose Your Velvet Experience
+        </h1>
+        <p className="text-gray-300 text-center mb-12 text-lg">
+          Select the tier that fits your needs
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-8 mb-12">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
+            <div className="text-sm text-rose-300 font-semibold mb-2">EVERYDAY COMPANION</div>
+            <h2 className="text-3xl font-bold text-white mb-4">
+              {SUBSCRIPTION_PLANS.unlimited.name}
+            </h2>
+            <p className="text-gray-300 mb-6">
+              Your everyday companion - always ready to talk
+            </p>
+            <div className="text-4xl font-bold text-white mb-6">
+              ${SUBSCRIPTION_PLANS.unlimited.price}
+              <span className="text-lg text-gray-400">/month</span>
+            </div>
+            <ul className="space-y-3 mb-8 text-gray-200">
+              {SUBSCRIPTION_PLANS.unlimited.features.map((feature, i) => (
+                <li key={i} className="flex items-start">
+                  <span className="text-green-400 mr-2">✓</span>
+                  {feature}
+                </li>
+              ))}
+            </ul>
             <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
+              onClick={() => handleSelectPlan(SUBSCRIPTION_PLANS.unlimited.stripeLink)}
+              className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-lg transition"
             >
-              ×
+              {currentTier === 'unlimited' ? 'Current Plan' : 'Subscribe Now'}
             </button>
           </div>
-          <p className="text-gray-600 mt-2">Unlock premium features and unlimited access</p>
-        </div>
 
-        <div className="p-6 grid md:grid-cols-3 gap-6">
-          {Object.values(SUBSCRIPTION_PLANS).map((plan) => {
-            const isCurrent = plan.tier === currentTier;
-            const isUpgrade = plan.price > SUBSCRIPTION_PLANS[currentTier].price;
+          <div className="bg-gradient-to-br from-rose-600/20 to-pink-600/20 backdrop-blur-lg rounded-2xl p-8 border-2 border-rose-500/50 relative">
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-rose-500 text-white px-4 py-1 rounded-full text-sm font-bold">
+              PREMIUM QUALITY
+            </div>
+            <div className="text-sm text-rose-300 font-semibold mb-2">SOPHISTICATED COMPANION</div>
+            <h2 className="text-3xl font-bold text-white mb-4">Velvet Pro</h2>
+            <p className="text-gray-200 mb-6 italic">
+              Your sophisticated companion evolved - deeper understanding, richer conversations. You can feel it.
+            </p>
+            <p className="text-sm text-gray-300 mb-6">
+              Perfect for deep emotional conversations, work support, and complex problem-solving. Messages never expire.
+            </p>
 
-            return (
-              <div
-                key={plan.tier}
-                className={`rounded-xl p-6 border-2 relative ${
-                  plan.tier === 'premium'
-                    ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-sky-50'
-                    : 'border-gray-200'
-                }`}
+            <div className="space-y-3">
+              <button
+                onClick={() => handleSelectPlan(SUBSCRIPTION_PLANS.starter.stripeLink)}
+                className="w-full bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold py-3 rounded-lg transition text-left px-4"
               >
-                {plan.tier === 'premium' && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-sky-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                    Most Popular
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-sm text-gray-300">Starter Pack</div>
+                    <div className="text-xs text-gray-400">Try premium quality</div>
                   </div>
-                )}
-
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold">${plan.price}</span>
-                    {plan.price > 0 && <span className="text-gray-600">/month</span>}
+                  <div className="text-right">
+                    <div className="text-xl font-bold">${SUBSCRIPTION_PLANS.starter.price}</div>
+                    <div className="text-xs text-gray-400">{SUBSCRIPTION_PLANS.starter.messageLimit} messages</div>
                   </div>
                 </div>
+              </button>
 
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-green-500 mt-1">✓</span>
-                      <span className="text-sm text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+              <button
+                onClick={() => handleSelectPlan(SUBSCRIPTION_PLANS.plus.stripeLink)}
+                className="w-full bg-rose-600 hover:bg-rose-700 border-2 border-rose-400 text-white font-bold py-3 rounded-lg transition text-left px-4"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-sm">Plus Pack</div>
+                    <div className="text-xs opacity-90">Most popular ⭐</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold">${SUBSCRIPTION_PLANS.plus.price}</div>
+                    <div className="text-xs opacity-90">{SUBSCRIPTION_PLANS.plus.messageLimit} messages</div>
+                  </div>
+                </div>
+              </button>
 
-                <button
-                  onClick={() => handleUpgrade(plan.tier)}
-                  disabled={isCurrent || !isUpgrade}
-                  className={`w-full py-3 rounded-lg font-semibold transition-colors ${
-                    isCurrent
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : isUpgrade
-                      ? plan.tier === 'premium'
-                        ? 'bg-gradient-to-r from-blue-500 to-sky-500 text-white hover:from-blue-600 hover:to-sky-600'
-                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  {isCurrent ? 'Current Plan' : isUpgrade ? 'Upgrade' : 'Downgrade'}
-                </button>
-              </div>
-            );
-          })}
+              <button
+                onClick={() => handleSelectPlan(SUBSCRIPTION_PLANS.elite.stripeLink)}
+                className="w-full bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold py-3 rounded-lg transition text-left px-4"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-sm text-gray-300">Elite Pack</div>
+                    <div className="text-xs text-gray-400">For deep connections</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold">${SUBSCRIPTION_PLANS.elite.price}</div>
+                    <div className="text-xs text-gray-400">{SUBSCRIPTION_PLANS.elite.messageLimit} messages</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="p-6 bg-gray-50 border-t text-center text-sm text-gray-600">
-          <p>Cancel anytime. No hidden fees. Test mode - use card 4242 4242 4242 4242</p>
-        </div>
+        <p className="text-center text-gray-400 text-sm">
+          All purchases are secure and encrypted. Test mode - use card 4242 4242 4242 4242
+        </p>
       </div>
     </div>
   );

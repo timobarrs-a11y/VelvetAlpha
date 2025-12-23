@@ -1,17 +1,13 @@
-export type SubscriptionTier = 'free' | 'basic' | 'premium';
+export type SubscriptionTier = 'free' | 'unlimited' | 'starter' | 'plus' | 'elite';
 
 export interface SubscriptionPlan {
   tier: SubscriptionTier;
   name: string;
   price: number;
-  priceId: string;
+  stripeLink: string;
   features: string[];
-  limits: {
-    messagesPerDay: number;
-    videosPerDay: number;
-    contextWindow: number;
-    modelAccess: 'cheap' | 'premium' | 'both';
-  };
+  model: 'haiku' | 'sonnet';
+  messageLimit?: number;
 }
 
 export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
@@ -19,58 +15,69 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     tier: 'free',
     name: 'Free',
     price: 0,
-    priceId: '',
+    stripeLink: '',
     features: [
-      'Text + voice conversations',
-      '3-5 AI images per day',
-      '1 video per day',
-      'Basic memory (last 10 messages)',
-      'Cheap AI model for most responses'
+      '50 messages to try it out',
+      'All characters available',
+      'Basic conversations'
     ],
-    limits: {
-      messagesPerDay: 50,
-      videosPerDay: 1,
-      contextWindow: 10,
-      modelAccess: 'cheap'
-    }
+    model: 'haiku',
+    messageLimit: 50
   },
-  basic: {
-    tier: 'basic',
-    name: 'Basic',
-    price: 14.99,
-    priceId: 'price_basic_test',
+  unlimited: {
+    tier: 'unlimited',
+    name: 'Velvet Unlimited',
+    price: 24.99,
+    stripeLink: 'https://buy.stripe.com/test_eVqbJ0fE0g744gocED',
     features: [
-      'Everything in Free',
       'Unlimited messages',
-      '10 videos per day',
-      'Full memory (last 50 messages)',
-      'Mix of cheap + premium AI models'
+      'All characters unlocked',
+      'Fast, responsive conversations',
+      'Perfect for daily check-ins'
     ],
-    limits: {
-      messagesPerDay: -1,
-      videosPerDay: 10,
-      contextWindow: 50,
-      modelAccess: 'both'
-    }
+    model: 'haiku',
+    messageLimit: -1
   },
-  premium: {
-    tier: 'premium',
-    name: 'Premium',
-    price: 29.99,
-    priceId: 'price_premium_test',
+  starter: {
+    tier: 'starter',
+    name: 'Velvet Pro - Starter',
+    price: 9.99,
+    stripeLink: 'https://buy.stripe.com/test_5kQ6oGdvSdYW14c487',
     features: [
-      'Everything in Basic',
-      'Unlimited videos',
-      'Advanced memory (vector search, unlimited)',
-      'Always uses premium AI model',
-      'Priority support',
-      'Early access to new features'
+      '200 premium messages',
+      'Deep emotional conversations',
+      'Sophisticated understanding',
+      'Messages never expire'
     ],
-    limits: {
-      messagesPerDay: -1,
-      videosPerDay: -1,
-      contextWindow: -1,
-      modelAccess: 'premium'
-    }
+    model: 'sonnet',
+    messageLimit: 200
+  },
+  plus: {
+    tier: 'plus',
+    name: 'Velvet Pro - Plus',
+    price: 24.99,
+    stripeLink: 'https://buy.stripe.com/test_eVq3cufE0aMK3ckfQP',
+    features: [
+      '1,000 premium messages',
+      'Richer conversations',
+      'Complex problem-solving',
+      'Messages never expire'
+    ],
+    model: 'sonnet',
+    messageLimit: 1000
+  },
+  elite: {
+    tier: 'elite',
+    name: 'Velvet Pro - Elite',
+    price: 49.99,
+    stripeLink: 'https://buy.stripe.com/test_00w8wOajGaMK28g9sr',
+    features: [
+      '3,000 premium messages',
+      'For deep connections',
+      'Work support included',
+      'Messages never expire'
+    ],
+    model: 'sonnet',
+    messageLimit: 3000
   }
 };

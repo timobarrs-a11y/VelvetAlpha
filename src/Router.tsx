@@ -8,6 +8,7 @@ import { SplashPage } from './pages/SplashPage';
 import { CompanionLobbyPage } from './pages/CompanionLobbyPage';
 import { CheckersGame } from './pages/CheckersGame';
 import { PacmanGame } from './pages/PacmanGame';
+import { SuccessPage } from './pages/SuccessPage';
 import { supabase } from './services/supabase';
 import { getCompanions } from './services/companionService';
 
@@ -60,6 +61,7 @@ export function Router() {
         <Route path="/chat" element={<App />} />
         <Route path="/checkers" element={<CheckersGame />} />
         <Route path="/pacman" element={<PacmanGame />} />
+        <Route path="/success" element={<SuccessPage />} />
         <Route path="/" element={<RootRedirect />} />
       </Routes>
     </BrowserRouter>

@@ -12,12 +12,11 @@ import { supabase } from './services/supabase';
 import {
   getConversationData,
   addMessage,
-  getRemainingMessages,
-  canSendMessage,
 } from './utils/storage';
 import { SubscriptionTier } from './types/subscription';
 import { useSound } from './hooks/useSound';
 import { getCompanion, updateLastMessageTime, markFirstMessageSent, Companion } from './services/companionService';
+import { getMessageTrackingInfo, decrementMessageCount } from './services/messageTrackingService';
 
 function App() {
   const navigate = useNavigate();
@@ -145,7 +144,21 @@ function App() {
       console.error('[loadMessages] Error in loadMessages:', error);
       setHasLoadedMessages(true);
     }
-    setRemainingMessages(getRemainingMessages());
+    await refreshMessageTracking();
+  };
+
+  const refreshMessageTracking = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const trackingInfo = await getMessageTrackingInfo(user.id);
+      if (trackingInfo) {
+        setRemainingMessages(trackingInfo.messagesRemaining === -1 ? 999999 : trackingInfo.messagesRemaining);
+      }
+    } catch (error) {
+      console.error('Error refreshing message tracking:', error);
+    }
   };
 
   const sendFirstMessage = async (companionId: string, companionData: Companion) => {
@@ -233,11 +246,19 @@ function App() {
 
   const handleSendMessage = async (content: string) => {
     console.log('handleSendMessage called with:', content);
-    console.log('canSendMessage:', canSendMessage());
-    console.log('isTyping:', isTyping);
 
-    if (!canSendMessage() || isTyping || !companionId || !companion) {
-      console.log('Message blocked - canSend:', canSendMessage(), 'isTyping:', isTyping);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const trackingInfo = await getMessageTrackingInfo(user.id);
+    if (!trackingInfo || !trackingInfo.canSendMessage) {
+      console.log('Message blocked - no messages remaining');
+      setShowPricing(true);
+      return;
+    }
+
+    if (isTyping || !companionId || !companion) {
+      console.log('Message blocked - isTyping:', isTyping);
       return;
     }
 
@@ -251,7 +272,6 @@ function App() {
     console.log('Adding user message:', userMessage);
     setMessages(prev => [...prev, userMessage]);
     addMessage(userMessage);
-    setRemainingMessages(getRemainingMessages());
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -299,18 +319,20 @@ function App() {
       console.log('Created AI message object:', aiMessage);
       console.log('AI message content:', aiMessage.content);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
         await supabase
           .from('conversations')
           .insert({
-            user_id: user.id,
+            user_id: currentUser.id,
             companion_id: companionId,
             role: 'assistant',
             content: response,
           });
 
         await updateLastMessageTime(companionId);
+        await decrementMessageCount(currentUser.id);
+        await refreshMessageTracking();
       }
 
       setMessages(prev => {
@@ -319,7 +341,7 @@ function App() {
         return updated;
       });
       addMessage(aiMessage);
-      setRemainingMessages(getRemainingMessages());
+
       playSound();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -465,7 +487,7 @@ function App() {
       <ChatContainer messages={messages} characterName={getCharacterName()} />
       <ChatInput
         onSend={handleSendMessage}
-        disabled={!canSendMessage() || isTyping}
+        disabled={isTyping || remainingMessages === 0}
         remainingMessages={remainingMessages}
         characterName={getCharacterName()}
       />
