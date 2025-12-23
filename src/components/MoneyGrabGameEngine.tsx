@@ -264,8 +264,14 @@ function pixelToGrid(pixel: PixelPosition): Position {
 }
 
 function isAligned(pixel: PixelPosition): boolean {
-  const offsetX = (pixel.x - TILE_SIZE / 2) % TILE_SIZE;
-  const offsetY = (pixel.y - TILE_SIZE / 2) % TILE_SIZE;
+  let offsetX = (pixel.x - TILE_SIZE / 2) % TILE_SIZE;
+  let offsetY = (pixel.y - TILE_SIZE / 2) % TILE_SIZE;
+
+  // JavaScript modulo with negative numbers wraps around (e.g., -1 % 30 = 29)
+  // Adjust offsets greater than TILE_SIZE/2 to be negative (e.g., 29 -> -1)
+  if (offsetX > TILE_SIZE / 2) offsetX -= TILE_SIZE;
+  if (offsetY > TILE_SIZE / 2) offsetY -= TILE_SIZE;
+
   // STRICTER alignment check - must be within 1 pixel of center
   // With MOVE_SPEED=3 and TILE_SIZE=30, we hit exact alignment at 15, 45, 75, etc.
   return Math.abs(offsetX) <= 1 && Math.abs(offsetY) <= 1;
@@ -579,13 +585,13 @@ export function MoneyGrabGameEngine({
   const [cash, setCash] = useState<Position[]>(() => placeCash(maze, exitPoint.position, mazeData.entrance));
   const [powerUps, setPowerUps] = useState<Position[]>([]);
 
-  const [enemies, setEnemies] = useState<Enemy[]>(() => {
-    // Use mathematical opposite spawn calculation
-    const spawns = calculateOppositeSpawns(maze, mazeData.entrance);
-    const colors = ['#ef4444', '#ec4899', '#06b6d4', '#f97316'];
-    const dirs: Direction[] = ['left', 'right', 'up', 'down'];
+  const [enemySpawnPoints, setEnemySpawnPoints] = useState<Position[]>(() => calculateOppositeSpawns(maze, mazeData.entrance, 2));
 
-    return spawns.slice(0, 4).map((spawn, i) => ({
+  const [enemies, setEnemies] = useState<Enemy[]>(() => {
+    const colors = ['#ef4444', '#ec4899'];
+    const dirs: Direction[] = ['left', 'right'];
+
+    return enemySpawnPoints.slice(0, 2).map((spawn, i) => ({
       id: `${i + 1}`,
       gridPos: spawn,
       dir: dirs[i],
@@ -597,6 +603,7 @@ export function MoneyGrabGameEngine({
 
   const [gameStatus, setGameStatus] = useState<'playing' | 'paused' | 'gameover' | 'levelcomplete'>('playing');
   const [showLevelTransition, setShowLevelTransition] = useState(false);
+  const [showDebugMenu, setShowDebugMenu] = useState(false);
 
   const animationRef = useRef<number>();
   const lastUpdateRef = useRef<number>(Date.now());
@@ -660,12 +667,14 @@ export function MoneyGrabGameEngine({
 
     setCash(placeCash(newMazeData.maze, newMazeData.exit.position, newMazeData.entrance));
 
-    // Use mathematical opposite spawn calculation
-    const spawns = calculateOppositeSpawns(newMazeData.maze, newMazeData.entrance);
-    const colors = ['#ef4444', '#ec4899', '#06b6d4', '#f97316'];
-    const dirs: Direction[] = ['left', 'right', 'up', 'down'];
+    // Use mathematical opposite spawn calculation - ONLY 2 hammers
+    const spawns = calculateOppositeSpawns(newMazeData.maze, newMazeData.entrance, 2);
+    setEnemySpawnPoints(spawns);
 
-    const baseEnemies: Enemy[] = spawns.slice(0, 4).map((spawn, i) => ({
+    const colors = ['#ef4444', '#ec4899'];
+    const dirs: Direction[] = ['left', 'right'];
+
+    const baseEnemies: Enemy[] = spawns.slice(0, 2).map((spawn, i) => ({
       id: `${i + 1}`,
       gridPos: spawn,
       dir: dirs[i],
@@ -673,19 +682,6 @@ export function MoneyGrabGameEngine({
       lastHitTime: 0,
       isPaused: false
     }));
-
-    // Add extra enemies on higher levels (also placed in opposite quadrant)
-    const extraEnemies = Math.min(nextLevelNum, 4);
-    for (let i = 0; i < extraEnemies && spawns.length > 4 + i; i++) {
-      baseEnemies.push({
-        id: `extra-${i}`,
-        gridPos: spawns[4 + i],
-        dir: dirs[i % 4],
-        color: '#8b5cf6',
-        lastHitTime: 0,
-        isPaused: false
-      });
-    }
 
     setEnemies(baseEnemies);
     setLevelScore(0);
@@ -698,13 +694,22 @@ export function MoneyGrabGameEngine({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle debug menu with 'D' key (Shift+D)
+      if (e.key === 'd' || e.key === 'D') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          setShowDebugMenu(prev => !prev);
+          return;
+        }
+      }
+
       if (gameStatus !== 'playing') return;
 
       const dirMap: Record<string, Direction> = {
-        'ArrowUp': 'up', 'w': 'up',
-        'ArrowDown': 'down', 's': 'down',
-        'ArrowLeft': 'left', 'a': 'left',
-        'ArrowRight': 'right', 'd': 'right'
+        'ArrowUp': 'up', 'w': 'up', 'W': 'up',
+        'ArrowDown': 'down', 's': 'down', 'S': 'down',
+        'ArrowLeft': 'left', 'a': 'left', 'A': 'left',
+        'ArrowRight': 'right', 'd': 'right', 'D': 'right'
       };
 
       const dir = dirMap[e.key];
@@ -1046,11 +1051,12 @@ export function MoneyGrabGameEngine({
                 // Player has hammer - can defeat enemy hammer
                 newPlayer.score += 500;
                 setLevelScore(s => s + 500);
-                // Respawn enemy hammer at opposite corner
-                const spawns = calculateOppositeSpawns(maze, mazeData.entrance);
+                // Respawn enemy hammer at its original spawn point
+                const enemyIndex = parseInt(enemy.id) - 1;
+                const respawnPos = enemySpawnPoints[enemyIndex] || enemySpawnPoints[0] || { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) };
                 setEnemies(prev => prev.map(e =>
                   e.id === enemy.id
-                    ? { ...e, gridPos: spawns[0] || { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) }, lastHitTime: 0, isPaused: false }
+                    ? { ...e, gridPos: respawnPos, lastHitTime: 0, isPaused: false }
                     : e
                 ));
               }
@@ -1082,11 +1088,12 @@ export function MoneyGrabGameEngine({
               } else {
                 // AI has hammer - can defeat enemy hammer
                 newAI.score += 500;
-                // Respawn enemy hammer at opposite corner
-                const spawns = calculateOppositeSpawns(maze, mazeData.entrance);
+                // Respawn enemy hammer at its original spawn point
+                const enemyIndex = parseInt(enemy.id) - 1;
+                const respawnPos = enemySpawnPoints[enemyIndex] || enemySpawnPoints[0] || { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) };
                 setEnemies(prev => prev.map(e =>
                   e.id === enemy.id
-                    ? { ...e, gridPos: spawns[0] || { row: Math.floor(MAZE_HEIGHT / 2), col: Math.floor(MAZE_WIDTH / 2) }, lastHitTime: 0, isPaused: false }
+                    ? { ...e, gridPos: respawnPos, lastHitTime: 0, isPaused: false }
                     : e
                 ));
               }
@@ -1172,12 +1179,14 @@ export function MoneyGrabGameEngine({
 
     setCash(placeCash(newMazeData.maze, newMazeData.exit.position, newMazeData.entrance));
 
-    // Use mathematical opposite spawn calculation
-    const spawns = calculateOppositeSpawns(newMazeData.maze, newMazeData.entrance);
-    const colors = ['#ef4444', '#ec4899', '#06b6d4', '#f97316'];
-    const dirs: Direction[] = ['left', 'right', 'up', 'down'];
+    // Use mathematical opposite spawn calculation - ONLY 2 hammers
+    const spawns = calculateOppositeSpawns(newMazeData.maze, newMazeData.entrance, 2);
+    setEnemySpawnPoints(spawns);
 
-    setEnemies(spawns.slice(0, 4).map((spawn, i) => ({
+    const colors = ['#ef4444', '#ec4899'];
+    const dirs: Direction[] = ['left', 'right'];
+
+    setEnemies(spawns.slice(0, 2).map((spawn, i) => ({
       id: `${i + 1}`,
       gridPos: spawn,
       dir: dirs[i],
@@ -1362,43 +1371,45 @@ export function MoneyGrabGameEngine({
                   </text>
                 </g>
 
-                {/* DEBUG OVERLAY */}
-                <g>
-                  <rect x="5" y="5" width="310" height="190" fill="black" opacity="0.8" rx="5"/>
-                  <text x="15" y="25" fill="#fbbf24" fontSize="12" fontWeight="bold">
-                    DEBUG INFO
-                  </text>
-                  <text x="15" y="45" fill="white" fontSize="10">
-                    Player Grid: [{player.gridPos.row}, {player.gridPos.col}]
-                  </text>
-                  <text x="15" y="60" fill="white" fontSize="10">
-                    Player Pixel: [{Math.round(player.pixelPos.x)}, {Math.round(player.pixelPos.y)}]
-                  </text>
-                  <text x="15" y="75" fill="white" fontSize="10">
-                    Player Offset: X={Math.round((player.pixelPos.x - TILE_SIZE / 2) % TILE_SIZE)} Y={Math.round((player.pixelPos.y - TILE_SIZE / 2) % TILE_SIZE)}
-                  </text>
-                  <text x="15" y="90" fill={isAligned(player.pixelPos) ? '#10b981' : '#ef4444'} fontSize="11" fontWeight="bold">
-                    Player Aligned: {isAligned(player.pixelPos) ? 'YES ✓' : 'NO ✗'}
-                  </text>
-                  <text x="15" y="110" fill="white" fontSize="10">
-                    AI Grid: [{aiPlayer.gridPos.row}, {aiPlayer.gridPos.col}]
-                  </text>
-                  <text x="15" y="125" fill="white" fontSize="10">
-                    AI Pixel: [{Math.round(aiPlayer.pixelPos.x)}, {Math.round(aiPlayer.pixelPos.y)}]
-                  </text>
-                  <text x="15" y="140" fill="white" fontSize="10">
-                    AI Offset: X={Math.round((aiPlayer.pixelPos.x - TILE_SIZE / 2) % TILE_SIZE)} Y={Math.round((aiPlayer.pixelPos.y - TILE_SIZE / 2) % TILE_SIZE)}
-                  </text>
-                  <text x="15" y="155" fill={isAligned(aiPlayer.pixelPos) ? '#10b981' : '#ef4444'} fontSize="11" fontWeight="bold">
-                    AI Aligned: {isAligned(aiPlayer.pixelPos) ? 'YES ✓' : 'NO ✗'}
-                  </text>
-                  <text x="15" y="175" fill="#10b981" fontSize="11" fontWeight="bold">
-                    Cash Count: {cash.length}
-                  </text>
-                  <text x="15" y="190" fill="#fbbf24" fontSize="9">
-                    Alignment threshold: ±1px
-                  </text>
-                </g>
+                {/* DEBUG OVERLAY - Toggle with Shift+D */}
+                {showDebugMenu && (
+                  <g>
+                    <rect x="5" y="5" width="310" height="190" fill="black" opacity="0.8" rx="5"/>
+                    <text x="15" y="25" fill="#fbbf24" fontSize="12" fontWeight="bold">
+                      DEBUG INFO (Shift+D to toggle)
+                    </text>
+                    <text x="15" y="45" fill="white" fontSize="10">
+                      Player Grid: [{player.gridPos.row}, {player.gridPos.col}]
+                    </text>
+                    <text x="15" y="60" fill="white" fontSize="10">
+                      Player Pixel: [{Math.round(player.pixelPos.x)}, {Math.round(player.pixelPos.y)}]
+                    </text>
+                    <text x="15" y="75" fill="white" fontSize="10">
+                      Player Offset: X={Math.round((player.pixelPos.x - TILE_SIZE / 2) % TILE_SIZE)} Y={Math.round((player.pixelPos.y - TILE_SIZE / 2) % TILE_SIZE)}
+                    </text>
+                    <text x="15" y="90" fill={isAligned(player.pixelPos) ? '#10b981' : '#ef4444'} fontSize="11" fontWeight="bold">
+                      Player Aligned: {isAligned(player.pixelPos) ? 'YES ✓' : 'NO ✗'}
+                    </text>
+                    <text x="15" y="110" fill="white" fontSize="10">
+                      AI Grid: [{aiPlayer.gridPos.row}, {aiPlayer.gridPos.col}]
+                    </text>
+                    <text x="15" y="125" fill="white" fontSize="10">
+                      AI Pixel: [{Math.round(aiPlayer.pixelPos.x)}, {Math.round(aiPlayer.pixelPos.y)}]
+                    </text>
+                    <text x="15" y="140" fill="white" fontSize="10">
+                      AI Offset: X={Math.round((aiPlayer.pixelPos.x - TILE_SIZE / 2) % TILE_SIZE)} Y={Math.round((aiPlayer.pixelPos.y - TILE_SIZE / 2) % TILE_SIZE)}
+                    </text>
+                    <text x="15" y="155" fill={isAligned(aiPlayer.pixelPos) ? '#10b981' : '#ef4444'} fontSize="11" fontWeight="bold">
+                      AI Aligned: {isAligned(aiPlayer.pixelPos) ? 'YES ✓' : 'NO ✗'}
+                    </text>
+                    <text x="15" y="175" fill="#10b981" fontSize="11" fontWeight="bold">
+                      Cash Count: {cash.length}
+                    </text>
+                    <text x="15" y="190" fill="#fbbf24" fontSize="9">
+                      Alignment threshold: ±1px
+                    </text>
+                  </g>
+                )}
               </svg>
 
               {showLevelTransition && (
@@ -1470,6 +1481,7 @@ export function MoneyGrabGameEngine({
               <h2 className="text-xl font-bold mb-4">How To Play</h2>
               <div className="space-y-2 text-sm text-gray-600">
                 <p><kbd className="px-2 py-1 bg-gray-200 rounded">↑↓←→</kbd> or <kbd className="px-2 py-1 bg-gray-200 rounded">WASD</kbd></p>
+                <p><kbd className="px-2 py-1 bg-gray-200 rounded">Shift+D</kbd> Toggle Debug</p>
                 <p className="mt-3"><strong>🎯 Mission:</strong> Team up to collect money!</p>
                 <p><strong>✋ {playerName}:</strong> You control (yellow)</p>
                 <p><strong>👋 {companionName}:</strong> Your companion (blue)</p>
