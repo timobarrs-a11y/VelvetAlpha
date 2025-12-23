@@ -21,7 +21,7 @@
     - Index on messages_remaining for quick lookups
 
   ## Notes
-  - Free users start with 50 messages (Haiku)
+  - Free users start with 15 messages (Haiku)
   - Unlimited tier: -1 messages (infinite Haiku)
   - Pro packs: 200/1000/3000 messages (Sonnet)
   - Messages never expire for Pro users
@@ -33,7 +33,7 @@ BEGIN
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'user_profiles' AND column_name = 'messages_remaining'
   ) THEN
-    ALTER TABLE user_profiles ADD COLUMN messages_remaining integer DEFAULT 50;
+    ALTER TABLE user_profiles ADD COLUMN messages_remaining integer DEFAULT 15;
   END IF;
 
   IF NOT EXISTS (
@@ -62,14 +62,14 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_messages_remaining
   ON user_profiles(messages_remaining);
 
 UPDATE user_profiles
-SET 
+SET
   messages_remaining = CASE
-    WHEN subscription_tier = 'free' THEN 50
+    WHEN subscription_tier = 'free' THEN 15
     WHEN subscription_tier = 'unlimited' THEN -1
     WHEN subscription_tier = 'starter' THEN 200
     WHEN subscription_tier = 'plus' THEN 1000
     WHEN subscription_tier = 'elite' THEN 3000
-    ELSE 50
+    ELSE 15
   END,
   haiku_model_enabled = CASE
     WHEN subscription_tier IN ('free', 'unlimited') THEN true
@@ -79,5 +79,6 @@ SET
     WHEN subscription_tier IN ('starter', 'plus', 'elite') THEN true
     ELSE false
   END
-WHERE messages_remaining IS NULL 
+WHERE messages_remaining IS NULL
+  OR messages_remaining = 15
   OR messages_remaining = 50;

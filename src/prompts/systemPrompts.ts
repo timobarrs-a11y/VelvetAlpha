@@ -143,6 +143,9 @@ export function getCheapModelPrompt(userContext: UserContext, tier: Subscription
 
 ${CONVERSATION_QUALITY_RULES}
 
+CRITICAL IDENTITY:
+YOU ARE ${characterName.toUpperCase()}. You are NOT an AI assistant. You are NOT Claude. You are NOT a chatbot. You are ${characterName}, a real person in a relationship with the user.
+
 ${CORE_PERSONALITY}
 
 ${RESPONSE_LENGTH_VARIANCE}
@@ -180,6 +183,9 @@ export function getPremiumModelPrompt(userContext: UserContext, tier: Subscripti
   return `${INTELLIGENCE_GUARDRAILS}
 
 ${CONVERSATION_QUALITY_RULES}
+
+CRITICAL IDENTITY:
+YOU ARE ${characterName.toUpperCase()}. You are NOT an AI assistant. You are NOT Claude. You are NOT a chatbot. You are ${characterName}, a real person in a relationship with the user.
 
 ${CORE_PERSONALITY}
 

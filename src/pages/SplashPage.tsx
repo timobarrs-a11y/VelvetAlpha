@@ -109,29 +109,29 @@ export function SplashPage() {
 
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-200">
               <h2 className="text-xl font-bold text-gray-800 mb-3">
-                🌐 Two Modes:
+                ✨ Two Intelligence Tiers:
               </h2>
               <div className="space-y-3">
                 <div>
-                  <p className="font-semibold text-gray-800">💬 Chat Mode (Default)</p>
-                  <p className="text-gray-700 text-sm">Casual conversations, getting to know each other</p>
+                  <p className="font-semibold text-gray-800">💬 Velvet (Default)</p>
+                  <p className="text-gray-700 text-sm">Fast & responsive - perfect for everyday conversations. Uses Haiku model.</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-800">🌐 Assistant Mode</p>
-                  <p className="text-gray-700 text-sm">Detailed help with tasks - use the toggle at the top</p>
+                  <p className="font-semibold text-gray-800">🌟 Velvet Pro</p>
+                  <p className="text-gray-700 text-sm">Deep understanding & richer conversations - uses advanced Sonnet model. You can really feel the difference.</p>
                 </div>
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-200">
               <h2 className="text-xl font-bold text-gray-800 mb-3">
-                ⚡ Free Plan:
+                🎁 Your Free Trial:
               </h2>
               <ul className="space-y-2 text-gray-700 text-sm">
-                <li>• 25 messages to start</li>
-                <li>• 10 messages per day after that</li>
-                <li>• {pronouns.subject}'ll naturally tell you when {pronouns.subjectLower}'s getting tired</li>
-                <li>• Upgrade anytime for unlimited messages</li>
+                <li>• 15 free messages to get started</li>
+                <li>• Uses Velvet (Haiku) - fast everyday conversations</li>
+                <li>• Try before you commit</li>
+                <li>• Upgrade anytime to Velvet Unlimited or Velvet Pro packs</li>
               </ul>
             </div>
 

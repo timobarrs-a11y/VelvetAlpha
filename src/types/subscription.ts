@@ -17,12 +17,12 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     price: 0,
     stripeLink: '',
     features: [
-      '50 messages to try it out',
+      '15 messages to try it out',
       'All characters available',
       'Basic conversations'
     ],
     model: 'haiku',
-    messageLimit: 50
+    messageLimit: 15
   },
   unlimited: {
     tier: 'unlimited',
