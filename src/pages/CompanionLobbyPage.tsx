@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageCircle, Heart, Users, Crown, Cherry, X } from 'lucide-react';
+import { Plus, MessageCircle, Heart, Users, Crown, Cherry, X, MessageSquare } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
+import FeedbackModal from '../components/FeedbackModal';
 
 const characterNames = {
   riley: 'Riley',
@@ -22,6 +23,7 @@ export function CompanionLobbyPage() {
   const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGameModal, setShowGameModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   useEffect(() => {
     loadCompanions();
@@ -330,6 +332,22 @@ export function CompanionLobbyPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <motion.button
+        initial={{ opacity: 0, scale: 0 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.5 }}
+        onClick={() => setShowFeedbackModal(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40 group"
+        title="Send Feedback"
+      >
+        <MessageSquare className="w-6 h-6 group-hover:scale-110 transition-transform" />
+      </motion.button>
+
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+      />
     </div>
   );
 }

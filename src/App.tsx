@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { RotateCcw, Volume2, VolumeX, ArrowLeft } from 'lucide-react';
+import { RotateCcw, Volume2, VolumeX, ArrowLeft, MessageSquare } from 'lucide-react';
 import { CharacterCard } from './components/CharacterCard';
 import { ChatContainer } from './components/ChatContainer';
 import { ChatInput } from './components/ChatInput';
 import { PricingPage } from './components/PricingPage';
+import FeedbackModal from './components/FeedbackModal';
 import { Message } from './types';
 import { ChatService } from './services/chatService';
 import { supabase } from './services/supabase';
@@ -33,6 +34,7 @@ function App() {
   const [chatMode, setChatMode] = useState<'chat' | 'assistant'>('chat');
   const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
   const [companion, setCompanion] = useState<Companion | null>(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const { soundEnabled, toggleSound, playSound } = useSound();
 
   const selectedCharacter = companion?.character_type || 'riley';
@@ -485,6 +487,17 @@ function App() {
           onClose={() => setShowPricing(false)}
         />
       )}
+      <button
+        onClick={() => setShowFeedbackModal(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40 group"
+        title="Send Feedback"
+      >
+        <MessageSquare className="w-6 h-6 group-hover:scale-110 transition-transform" />
+      </button>
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+      />
     </div>
   );
 }
