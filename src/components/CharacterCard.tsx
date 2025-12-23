@@ -4,9 +4,10 @@ import { getCharacterMoodImage, getMoodLabel, getMoodGlow, CharacterType, MoodTy
 interface CharacterCardProps {
   character: CharacterType;
   mood: MoodType;
+  characterName: string;
 }
 
-export const CharacterCard = ({ character, mood }: CharacterCardProps) => {
+export const CharacterCard = ({ character, mood, characterName }: CharacterCardProps) => {
   const [imageSrc, setImageSrc] = useState('');
   const [moodLabel, setMoodLabel] = useState('');
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -47,7 +48,7 @@ export const CharacterCard = ({ character, mood }: CharacterCardProps) => {
           )}
         </div>
         <div className="flex-1">
-          <h1 className="text-3xl font-display font-bold text-white mb-0.5">{character.charAt(0).toUpperCase() + character.slice(1)}</h1>
+          <h1 className="text-3xl font-display font-bold text-white mb-0.5">{characterName}</h1>
           <p className="text-white/80 text-sm font-medium">Your Partner</p>
           {moodLabel && (
             <p className="text-xs text-white/70 mt-2 font-medium bg-white/10 inline-block px-3 py-1 rounded-full backdrop-blur-sm">{moodLabel}</p>

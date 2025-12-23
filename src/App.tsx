@@ -483,7 +483,7 @@ function App() {
           Reset
         </button>
       </div>
-      <CharacterCard character={selectedCharacter} mood={currentMood} />
+      <CharacterCard character={selectedCharacter} mood={currentMood} characterName={getCharacterName()} />
       <ChatContainer messages={messages} characterName={getCharacterName()} />
       <ChatInput
         onSend={handleSendMessage}
