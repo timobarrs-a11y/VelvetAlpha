@@ -791,12 +791,12 @@ export function MoneyGrabGameEngine({
               }
 
               // Check cash collection (ONLY when aligned on grid cell)
-              const cashIdx = cash.findIndex(f =>
-                f.row === newGridPos.row && f.col === newGridPos.col
-              );
-              if (cashIdx !== -1) {
+              const collectRow = newGridPos.row;
+              const collectCol = newGridPos.col;
+              const hasCash = cash.some(f => f.row === collectRow && f.col === collectCol);
+              if (hasCash) {
                 console.log(`✋ Player collected cash at grid [${newGridPos.row}, ${newGridPos.col}] pixel [${Math.round(newPlayer.pixelPos.x)}, ${Math.round(newPlayer.pixelPos.y)}]`);
-                setCash(prev => prev.filter((_, i) => i !== cashIdx));
+                setCash(prev => prev.filter(f => !(f.row === collectRow && f.col === collectCol)));
                 newPlayer.score += CASH_POINTS;
                 setLevelScore(prev => prev + CASH_POINTS);
 
@@ -807,11 +807,9 @@ export function MoneyGrabGameEngine({
               }
 
               // Check power-up collection
-              const powerUpIdx = powerUps.findIndex(p =>
-                p.row === newGridPos.row && p.col === newGridPos.col
-              );
-              if (powerUpIdx !== -1) {
-                setPowerUps(prev => prev.filter((_, i) => i !== powerUpIdx));
+              const hasPowerUp = powerUps.some(p => p.row === collectRow && p.col === collectCol);
+              if (hasPowerUp) {
+                setPowerUps(prev => prev.filter(p => !(p.row === collectRow && p.col === collectCol)));
                 newPlayer.powerUpActive = true;
                 newPlayer.powerUpExpiry = Date.now() + 10000;
                 newPlayer.score += POWER_UP_POINTS;
@@ -898,12 +896,12 @@ export function MoneyGrabGameEngine({
               }
 
               // Check cash collection (ONLY when aligned on grid cell)
-              const cashIdx = cash.findIndex(f =>
-                f.row === newGridPos.row && f.col === newGridPos.col
-              );
-              if (cashIdx !== -1) {
+              const aiCollectRow = newGridPos.row;
+              const aiCollectCol = newGridPos.col;
+              const aiHasCash = cash.some(f => f.row === aiCollectRow && f.col === aiCollectCol);
+              if (aiHasCash) {
                 console.log(`👋 AI collected cash at grid [${newGridPos.row}, ${newGridPos.col}] pixel [${Math.round(newAI.pixelPos.x)}, ${Math.round(newAI.pixelPos.y)}]`);
-                setCash(prev => prev.filter((_, i) => i !== cashIdx));
+                setCash(prev => prev.filter(f => !(f.row === aiCollectRow && f.col === aiCollectCol)));
                 newAI.score += CASH_POINTS;
 
                 newAI.isGrabbing = true;
@@ -913,11 +911,9 @@ export function MoneyGrabGameEngine({
               }
 
               // Check power-up collection
-              const powerUpIdx = powerUps.findIndex(p =>
-                p.row === newGridPos.row && p.col === newGridPos.col
-              );
-              if (powerUpIdx !== -1) {
-                setPowerUps(prev => prev.filter((_, i) => i !== powerUpIdx));
+              const aiHasPowerUp = powerUps.some(p => p.row === aiCollectRow && p.col === aiCollectCol);
+              if (aiHasPowerUp) {
+                setPowerUps(prev => prev.filter(p => !(p.row === aiCollectRow && p.col === aiCollectCol)));
                 newAI.powerUpActive = true;
                 newAI.powerUpExpiry = Date.now() + 10000;
                 newAI.score += POWER_UP_POINTS;
