@@ -123,6 +123,7 @@ function App() {
       }
 
       console.log('[loadMessages] Loaded messages from DB:', messages.length);
+      console.log('[loadMessages] First message sent flag:', companionData.first_message_sent);
 
       const formattedMessages: Message[] = messages.map(msg => ({
         id: msg.id,
@@ -132,12 +133,12 @@ function App() {
       }));
       setMessages(formattedMessages);
 
-      if (formattedMessages.length === 0 && !companionData.first_message_sent) {
-        console.log('[loadMessages] No messages and no first message sent - sending first message');
+      if (formattedMessages.length === 0) {
+        console.log('[loadMessages] No messages found - sending first message');
         setHasLoadedMessages(true);
         await sendFirstMessage(companionId, companionData);
       } else {
-        console.log('[loadMessages] Messages exist or first message already sent - skipping first message');
+        console.log('[loadMessages] Messages already exist, count:', formattedMessages.length);
         setHasLoadedMessages(true);
       }
     } catch (error) {
@@ -163,13 +164,20 @@ function App() {
 
   const sendFirstMessage = async (companionId: string, companionData: Companion) => {
     console.log('[sendFirstMessage] Starting to send first message for companion:', companionId);
+    console.log('[sendFirstMessage] Companion data:', {
+      id: companionData.id,
+      character_type: companionData.character_type,
+      custom_name: companionData.custom_name
+    });
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.log('[sendFirstMessage] No user found, aborting');
+        console.error('[sendFirstMessage] No user found, aborting');
         return;
       }
+
+      console.log('[sendFirstMessage] User ID:', user.id);
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -180,27 +188,38 @@ function App() {
       const characterType = companionData.character_type;
       const userName = profile?.name || 'there';
 
-      const userPreferences = JSON.parse(localStorage.getItem('userPreferences') || '{}');
+      console.log('[sendFirstMessage] User name:', userName);
+
+      const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
+      console.log('[sendFirstMessage] Match data from localStorage:', matchData);
 
       const { firstMessageService } = await import('./services/firstMessageService');
       const { getCharacter } = await import('./config/characters');
       const character = getCharacter(characterType);
 
+      console.log('[sendFirstMessage] Character loaded:', character.name);
+
       const thinkingDelay = 1000 + Math.random() * 1500;
+      console.log('[sendFirstMessage] Thinking delay:', thinkingDelay);
       await new Promise(resolve => setTimeout(resolve, thinkingDelay));
 
       setIsTyping(true);
+      console.log('[sendFirstMessage] Set typing indicator');
 
       const firstMsg = await firstMessageService.generateFirstMessage(
         character,
         userName,
-        userPreferences
+        matchData
       );
 
+      console.log('[sendFirstMessage] Generated first message:', firstMsg.substring(0, 50) + '...');
+
       const typingDelay = Math.min(firstMsg.length * 15, 3000);
+      console.log('[sendFirstMessage] Typing delay:', typingDelay);
       await new Promise(resolve => setTimeout(resolve, typingDelay));
 
       setIsTyping(false);
+      console.log('[sendFirstMessage] Cleared typing indicator');
 
       const { data: insertedMessage, error: insertError } = await supabase
         .from('conversations')
@@ -218,12 +237,18 @@ function App() {
         throw insertError;
       }
 
+      console.log('[sendFirstMessage] Message inserted successfully, ID:', insertedMessage?.id);
+
       await markFirstMessageSent(companionId);
+      console.log('[sendFirstMessage] Marked first message as sent');
+
       await updateLastMessageTime(companionId);
+      console.log('[sendFirstMessage] Updated last message time');
 
       const updatedCompanion = await getCompanion(companionId);
       if (updatedCompanion) {
         setCompanion(updatedCompanion);
+        console.log('[sendFirstMessage] Updated companion state');
       }
 
       console.log('[sendFirstMessage] First message sent and marked in database');
@@ -235,9 +260,19 @@ function App() {
         timestamp: insertedMessage ? new Date(insertedMessage.created_at).getTime() : Date.now(),
       };
 
+      console.log('[sendFirstMessage] Created AI message object:', {
+        id: aiMessage.id,
+        sender: aiMessage.sender,
+        contentLength: aiMessage.content.length
+      });
+
       setMessages([aiMessage]);
+      console.log('[sendFirstMessage] Set messages state with first message');
+
       playSound();
-      console.log('[sendFirstMessage] First message from avatar added to UI:', aiMessage);
+      console.log('[sendFirstMessage] Played notification sound');
+
+      console.log('[sendFirstMessage] First message process completed successfully');
     } catch (error) {
       console.error('[sendFirstMessage] Error sending first message:', error);
       setIsTyping(false);
