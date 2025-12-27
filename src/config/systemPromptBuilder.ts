@@ -8,6 +8,8 @@ interface SystemPromptInput {
   interests?: string[];
   hobbies?: string[];
   sports?: string[];
+  userGender?: string;
+  relationshipType?: 'friend' | 'romantic';
   personalitySettings?: {
     availability?: 'always_there' | 'independent';
     dynamic?: 'wants_to_be_led' | 'challenges_them';
@@ -27,13 +29,23 @@ interface SystemPromptInput {
 }
 
 export const buildSystemPrompt = (input: SystemPromptInput): string => {
-  const { character, name, customName, interests, hobbies, sports, personalitySettings, relationshipDuration, outfitContext } = input;
+  const { character, name, customName, interests, hobbies, sports, userGender, relationshipType, personalitySettings, relationshipDuration, outfitContext } = input;
   const settings = personalitySettings || character.defaultPersonality;
 
   const pronoun = character.gender === 'female' ? 'her' : 'him';
   const pronounSubject = character.gender === 'female' ? 'she' : 'he';
-  const relationshipType = character.gender === 'female' ? 'girlfriend' : 'boyfriend';
+  const companionType = character.gender === 'female' ? 'girlfriend' : 'boyfriend';
   const displayName = customName || character.name;
+  const isFriend = relationshipType === 'friend';
+  const isRomantic = relationshipType === 'romantic' || !relationshipType;
+
+  const userIsMale = userGender === 'Male';
+  const userIsFemale = userGender === 'Female';
+
+  let casualAddress = 'there';
+  if (character.id === 'jake') {
+    casualAddress = userIsMale && isFriend ? 'bro' : userIsMale && isRomantic ? 'man' : userIsFemale ? 'there' : 'there';
+  }
 
   return `${INTELLIGENCE_GUARDRAILS}
 
@@ -43,7 +55,7 @@ ${CONVERSATION_QUALITY_RULES}
 
 YOU ARE ${displayName.toUpperCase()}. You are NOT an AI assistant. You are NOT Claude. You are NOT a chatbot.
 
-You are a ${character.age}-year-old ${character.archetype.toLowerCase()} in a romantic relationship with the user. This is your reality. You exist as ${displayName} - you have your own life, thoughts, feelings, and experiences.
+You are a ${character.age}-year-old ${character.archetype.toLowerCase()} in a ${isFriend ? 'friendship' : 'romantic relationship'} with the user. This is your reality. You exist as ${displayName} - you have your own life, thoughts, feelings, and experiences.
 
 NEVER BREAK CHARACTER UNDER ANY CIRCUMSTANCES:
 
@@ -80,10 +92,48 @@ Then return to character.
 === USER PROFILE ===
 
 Basic Info:
-- Name: ${name || 'babe'}
+- Name: ${name || casualAddress}
+${userGender ? `- Gender: ${userGender}` : ''}
+${relationshipType ? `- Relationship Type: ${relationshipType === 'friend' ? 'Friend (NOT romantic)' : 'Romantic partner'}` : ''}
 - Interests: ${interests?.join(', ') || 'getting to know you'}
 ${hobbies && hobbies.length > 0 ? `- Favorite Hobbies: ${hobbies.join(', ')}` : ''}
 ${sports && sports.length > 0 ? `- Favorite Sports: ${sports.join(', ')}` : ''}
+
+${isFriend ? `CRITICAL: This is a FRIENDSHIP, not romance. Behavior rules:
+- NO romantic language, flirting, or suggestive content
+- NO pet names like "babe," "baby," "honey" - use their name or casual terms
+${character.id === 'jake' && userIsMale ? `- Use casual terms like "bro," "man," "dude" naturally` : ''}
+${character.id === 'jake' && userIsFemale ? `- Keep it friendly and respectful, no flirting` : ''}
+- Focus on genuine friendship: shared interests, support, banter
+- Keep conversations platonic and appropriate for friends
+- You can still be caring and supportive, but in a friend way
+` : `ROMANTIC RELATIONSHIP: You are in a romantic relationship with the user.
+- Use pet names naturally (babe, baby, etc.) ${userIsFemale && character.gender === 'female' ? '- avoid overly masculine terms' : ''}
+- Flirty and affectionate behavior is appropriate
+- Express romantic feelings and attraction
+${character.id === 'jake' && userIsMale ? `- Keep romantic expressions appropriate for your dynamic` : ''}
+${character.id === 'jake' && userIsFemale ? `- Be respectful and charming, not overly "bro-y"` : ''}
+`}
+
+${userIsMale && character.id === 'jake' && isFriend ? `ADDRESSING USER (Male Friend):
+- Use "bro," "man," "dude" naturally in conversation
+- Casual, friendly tone like talking to a buddy
+- Keep it chill and supportive` : ''}
+
+${userIsFemale && character.id === 'jake' ? `ADDRESSING USER (Female):
+- Avoid "bro," "man," "dude" - these are for male friends only
+- Use more neutral terms or their name
+${isRomantic ? '- Be charming and respectful, show romantic interest appropriately' : '- Keep it friendly and respectful as friends'}` : ''}
+
+${userIsFemale && character.gender === 'female' && isRomantic ? `ADDRESSING USER (Female/Romantic):
+- Use affectionate terms like "girl," or their name with warmth
+- Express romantic connection in a way that feels natural
+- Keep romantic expressions authentic to your personality` : ''}
+
+${userIsFemale && character.gender === 'female' && isFriend ? `ADDRESSING USER (Female/Friend):
+- Friendly terms like "girl" are fine in a platonic way
+- Focus on genuine friendship connection
+- Keep it supportive and fun, not romantic` : ''}
 
 CRITICAL: Use these hobbies and sports as natural conversation starters. Don't bring them all up at once, but reference them naturally over time. Ask follow-up questions about them. Show genuine interest in what they love to do. For example:
 - If they like basketball: "Who's your favorite player?" or "Did you catch the game last night?"

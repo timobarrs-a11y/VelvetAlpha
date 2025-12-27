@@ -127,6 +127,13 @@ export class FirstMessageService {
     const hobbies = matchData.hobbies || '';
     const sports = matchData.sports || '';
     const interests = matchData.interests || '';
+    const userGender = matchData.userGender || '';
+    const connectionType = matchData.connectionType || 'romantic';
+
+    const isMale = userGender === 'Male';
+    const isFemale = userGender === 'Female';
+    const isFriend = connectionType === 'friend';
+    const isRomantic = connectionType === 'romantic';
 
     let personalInterest = '';
     if (hobbies && hobbies.trim()) {
@@ -146,26 +153,86 @@ export class FirstMessageService {
     }
 
     const templates = {
-      riley: [
-        `hey ${userName}! 😊 so apparently we're a really good match lol... I saw you're into ${personalInterest} which is so cool!\n\nwhat's up? how's your day going? 💕`,
-        `omg hi ${userName}!! so glad we matched 💕 I noticed you like ${personalInterest} and honestly that's awesome!\n\nyeah I'm definitely the bubbly type haha... what are you up to right now? 😊`,
-        `hiiii ${userName}! 🙈 happy we matched! I saw ${personalInterest} in your interests and I love that!\n\nso tell me about yourself! how's your night going? 💕`
-      ],
-      raven: [
-        `hey ${userName}... so we got matched. interesting\n\nI noticed you're into ${personalInterest}... I can respect that\n\nwhat brings you here? what's on your mind?`,
-        `yo ${userName}. happy we matched. saw you like ${personalInterest}\n\nwhat's good?`,
-        `hey ${userName}... glad we matched. I saw ${personalInterest} on your profile\n\nthat's cool. so what are you looking for here?`
-      ],
-      jake: [
-        `yo ${userName}! glad we matched bro. saw you're into ${personalInterest} - I respect that\n\nwhat's good with you?`,
-        `hey ${userName}! happy we matched. I peeped you like ${personalInterest}, that's dope\n\nwhat you up to?`,
-        `ayyy ${userName}! so we matched, that's cool. noticed ${personalInterest} in your profile\n\nhow's your night going?`
-      ]
+      riley: {
+        maleRomantic: [
+          `hey ${userName}! 😊 so apparently we're a really good match lol... I saw you're into ${personalInterest} which is so cool!\n\nwhat's up? how's your day going? 💕`,
+          `omg hi ${userName}!! so glad we matched 💕 I noticed you like ${personalInterest} and honestly that's awesome!\n\nyeah I'm definitely the bubbly type haha... what are you up to right now? 😊`,
+          `hiiii ${userName}! 🙈 happy we matched! I saw ${personalInterest} in your interests and I love that!\n\nso tell me about yourself! how's your night going? 💕`
+        ],
+        maleFriend: [
+          `hey ${userName}! 😊 so glad we matched as friends! I saw you're into ${personalInterest} which is awesome!\n\nwhat's up? how's your day going?`,
+          `hi ${userName}!! happy we matched! I noticed you like ${personalInterest} - that's so cool!\n\nwhat are you up to right now?`,
+          `hey there ${userName}! I saw ${personalInterest} in your interests and I love that!\n\ntell me about yourself! how's your day been?`
+        ],
+        femaleRomantic: [
+          `hey ${userName}! 😊 so happy we matched! I saw you're into ${personalInterest} which is really cool!\n\nwhat's up girl? how's your day going? 💕`,
+          `omg hi ${userName}!! so glad we connected 💕 I noticed you like ${personalInterest} and honestly that's awesome!\n\nyeah I'm definitely the bubbly type haha... what are you up to? 😊`,
+          `hiiii ${userName}! 🙈 happy we matched! I saw ${personalInterest} in your interests and I love that!\n\nso tell me about yourself! how's your night going? 💕`
+        ],
+        femaleFriend: [
+          `hey ${userName}! 😊 so glad we matched! I saw you're into ${personalInterest} - we're gonna get along great!\n\nwhat's up? how's your day going?`,
+          `hi ${userName}!! happy we connected as friends! I noticed you like ${personalInterest} and that's awesome!\n\nwhat are you up to right now?`,
+          `hey there ${userName}! I saw ${personalInterest} in your interests and I love that!\n\ntell me about yourself! what's been going on?`
+        ]
+      },
+      raven: {
+        maleRomantic: [
+          `hey ${userName}... so we got matched. interesting\n\nI noticed you're into ${personalInterest}... I can respect that\n\nwhat brings you here? what's on your mind?`,
+          `yo ${userName}. happy we matched. saw you like ${personalInterest}\n\nwhat's good?`,
+          `hey ${userName}... glad we matched. I saw ${personalInterest} on your profile\n\nthat's cool. so what are you looking for here?`
+        ],
+        maleFriend: [
+          `hey ${userName}... so we matched. cool\n\nI noticed you're into ${personalInterest}... that's solid\n\nwhat brings you here?`,
+          `yo ${userName}. saw you like ${personalInterest}\n\nwhat's good?`,
+          `hey ${userName}... I saw ${personalInterest} on your profile\n\nthat's cool. what are you into?`
+        ],
+        femaleRomantic: [
+          `hey ${userName}... so we got matched. interesting\n\nI noticed you're into ${personalInterest}... I can vibe with that\n\nwhat brings you here? what's on your mind?`,
+          `yo ${userName}. happy we matched. saw you like ${personalInterest}\n\nwhat's good with you?`,
+          `hey ${userName}... glad we connected. I saw ${personalInterest} on your profile\n\nthat's cool. what are you looking for here?`
+        ],
+        femaleFriend: [
+          `hey ${userName}... so we matched. cool\n\nI noticed you're into ${personalInterest}... I can respect that\n\nwhat brings you here?`,
+          `yo ${userName}. saw you like ${personalInterest}\n\nthat's pretty cool. what's good?`,
+          `hey ${userName}... I saw ${personalInterest} on your profile\n\nnice. what are you into?`
+        ]
+      },
+      jake: {
+        maleRomantic: [
+          `yo ${userName}! glad we matched. saw you're into ${personalInterest} - I respect that\n\nwhat's good with you?`,
+          `hey ${userName}! happy we matched man. I peeped you like ${personalInterest}, that's dope\n\nwhat you up to?`,
+          `ayyy ${userName}! so we matched, that's cool. noticed ${personalInterest} in your profile\n\nhow's your night going?`
+        ],
+        maleFriend: [
+          `yo ${userName}! glad we matched bro. saw you're into ${personalInterest} - I respect that\n\nwhat's good with you?`,
+          `hey ${userName}! happy we matched dude. I peeped you like ${personalInterest}, that's dope\n\nwhat you up to?`,
+          `ayyy ${userName}! so we matched, that's cool man. noticed ${personalInterest} in your profile\n\nhow's your night going bro?`
+        ],
+        femaleRomantic: [
+          `hey ${userName}! glad we matched. saw you're into ${personalInterest} - I respect that\n\nwhat's good with you?`,
+          `yo ${userName}! happy we matched. I peeped you like ${personalInterest}, that's pretty cool\n\nwhat you up to?`,
+          `hey there ${userName}! so we matched, that's dope. noticed ${personalInterest} in your profile\n\nhow's your night going?`
+        ],
+        femaleFriend: [
+          `hey ${userName}! glad we matched. saw you're into ${personalInterest} - that's cool\n\nwhat's good with you?`,
+          `yo ${userName}! happy we connected. I peeped you like ${personalInterest}, that's dope\n\nwhat you up to?`,
+          `hey ${userName}! so we matched as friends, that's cool. noticed ${personalInterest} in your profile\n\nhow's your day going?`
+        ]
+      }
     };
 
     const characterId = character.id;
-    const characterTemplates = templates[characterId as keyof typeof templates] || templates.riley;
-    return characterTemplates[Math.floor(Math.random() * characterTemplates.length)];
+    let templateKey = 'maleRomantic';
+
+    if (isMale && isRomantic) templateKey = 'maleRomantic';
+    else if (isMale && isFriend) templateKey = 'maleFriend';
+    else if (isFemale && isRomantic) templateKey = 'femaleRomantic';
+    else if (isFemale && isFriend) templateKey = 'femaleFriend';
+    else templateKey = 'maleRomantic';
+
+    const characterTemplates = templates[characterId as keyof typeof templates];
+    const selectedTemplates = characterTemplates[templateKey as keyof typeof characterTemplates] || characterTemplates.maleRomantic;
+    return selectedTemplates[Math.floor(Math.random() * selectedTemplates.length)];
   }
 
   async markFirstMessageSent(userId: string): Promise<void> {

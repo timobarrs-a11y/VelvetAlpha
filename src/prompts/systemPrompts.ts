@@ -9,12 +9,16 @@ export interface UserContext {
   characterName?: string;
   hobbies?: string[];
   sports?: string[];
+  userGender?: string;
+  relationshipType?: 'friend' | 'romantic';
 }
 
 interface MatchData {
   userName?: string;
   userBirthday?: string;
+  userGender?: string;
   relationshipType?: string;
+  connectionType?: string;
   selectedAvatar?: string;
   dynamicPreference?: string;
   confrontationStyle?: string;
@@ -223,6 +227,29 @@ function formatUserContext(context: UserContext): string {
   const parts: string[] = [];
 
   if (context.name) parts.push(`User's name: ${context.name}`);
+
+  if (context.userGender) {
+    parts.push(`User's gender: ${context.userGender}`);
+
+    const matchData: MatchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
+    const characterType = matchData.selectedAvatar || 'riley';
+    const isMale = context.userGender === 'Male';
+    const isFemale = context.userGender === 'Female';
+    const isFriend = context.relationshipType === 'friend';
+
+    if (characterType === 'jake') {
+      if (isMale && isFriend) {
+        parts.push(`ADDRESSING: Use "bro," "man," "dude" naturally. Casual buddy tone.`);
+      } else if (isFemale) {
+        parts.push(`ADDRESSING: NO "bro," "man," "dude" - these are for male friends only. Use their name or neutral terms.`);
+      }
+    }
+
+    if (isFriend) {
+      parts.push(`RELATIONSHIP: FRIENDSHIP ONLY - No romantic language, no flirting, no pet names like "babe." Keep it platonic.`);
+    }
+  }
+
   if (context.interests?.length) parts.push(`Interests: ${context.interests.join(', ')}`);
   if (context.recentTopics?.length) parts.push(`Recent topics: ${context.recentTopics.join(', ')}`);
 

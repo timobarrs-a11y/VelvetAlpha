@@ -24,6 +24,17 @@ const BASE_QUESTIONS: QuestionData[] = [
     question: 'And When Were You Born? 🎂'
   },
   {
+    id: 'gender',
+    type: 'choice',
+    question: 'How Do You Identify?',
+    options: [
+      { text: 'Male' },
+      { text: 'Female' },
+      { text: 'Non-binary' },
+      { text: 'Prefer not to say' }
+    ]
+  },
+  {
     id: 'relationshipType',
     type: 'choice',
     question: 'Which Companion Are You Interested In?',
@@ -300,6 +311,7 @@ export function QuestionnairePage() {
       const matchData = {
         userName: newAnswers.name,
         userBirthday: newAnswers.birthday,
+        userGender: newAnswers.gender,
         relationshipType: newAnswers.relationshipType,
         connectionType,
         selectedAvatar,

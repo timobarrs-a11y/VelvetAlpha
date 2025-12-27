@@ -433,6 +433,10 @@ export class ChatService {
         }
       }
 
+      const matchData = JSON.parse(localStorage.getItem('matchAnswers') || '{}');
+      const userGender = matchData.userGender;
+      const connectionType = matchData.connectionType;
+
       const userContext: UserContext = {
         name: profile.name,
         interests: profile.interests,
@@ -440,6 +444,8 @@ export class ChatService {
         characterName: characterDisplayName,
         hobbies,
         sports,
+        userGender,
+        relationshipType: connectionType === 'friend' ? 'friend' : 'romantic',
       };
 
       const modelType = selectedModel.includes('haiku') ? 'cheap' : 'premium';
