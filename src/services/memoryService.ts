@@ -1,5 +1,148 @@
 import { supabase } from './supabase';
 
+export interface CompanionMemory {
+  id: string;
+  user_id: string;
+  companion_id: string;
+  memory_json: MemoryJson;
+  memory_text: string;
+  messages_processed: number;
+  last_message_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemoryJson {
+  user_facts: {
+    personal: string[];
+    preferences: string[];
+    schedule: string[];
+    relationships: string[];
+  };
+  emotional_landscape: {
+    sensitivities: string[];
+    comfort_sources: string[];
+    love_language: string;
+    current_mood_arc: string;
+  };
+  relationship_with_companion: {
+    nicknames: string[];
+    inside_jokes: string[];
+    milestones: string[];
+    established_dynamics: string[];
+    boundaries_expressed: string[];
+  };
+  key_moments: Array<{
+    summary: string;
+    emotional_weight: 'high' | 'medium';
+  }>;
+  ongoing_threads: Array<{
+    topic: string;
+    last_status: string;
+  }>;
+}
+
+export async function getCompanionMemory(
+  userId: string,
+  companionId: string
+): Promise<CompanionMemory | null> {
+  const { data, error } = await supabase
+    .from('companion_memories')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('companion_id', companionId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as CompanionMemory;
+}
+
+export async function saveCompanionMemory(
+  userId: string,
+  companionId: string,
+  memoryJson: MemoryJson,
+  memoryText: string,
+  messagesProcessed: number,
+  lastMessageId: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('companion_memories')
+    .upsert({
+      user_id: userId,
+      companion_id: companionId,
+      memory_json: memoryJson,
+      memory_text: memoryText,
+      messages_processed: messagesProcessed,
+      last_message_id: lastMessageId,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id,companion_id'
+    });
+
+  return !error;
+}
+
+export async function getUnsummarizedMessages(
+  userId: string,
+  companionId: string,
+  limit: number = 100
+): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('companion_id', companionId)
+    .eq('summarized', false)
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) return [];
+  return data || [];
+}
+
+export async function markMessagesSummarized(
+  messageIds: string[]
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('conversations')
+    .update({ summarized: true })
+    .in('id', messageIds);
+
+  return !error;
+}
+
+export async function needsSummarization(
+  userId: string,
+  companionId: string
+): Promise<boolean> {
+  const { count, error } = await supabase
+    .from('conversations')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('companion_id', companionId)
+    .eq('summarized', false);
+
+  if (error) return false;
+  return (count || 0) >= 75;
+}
+
+export async function getRecentMessages(
+  userId: string,
+  companionId: string,
+  limit: number = 30
+): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('companion_id', companionId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) return [];
+  return (data || []).reverse();
+}
+
 export interface RelationshipMemory {
   id: string;
   user_id: string;
