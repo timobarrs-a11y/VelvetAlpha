@@ -1,0 +1,28 @@
+{
+  "name": "stellar-pursuit",
+  "description": "An AI companion app with games and personalization",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "buildCommand": "npm run build",
+  "startCommand": "npm run preview",
+  "env": {
+    "VITE_SUPABASE_URL": {
+      "description": "Supabase project URL"
+    },
+    "VITE_SUPABASE_ANON_KEY": {
+      "description": "Supabase anonymous key"
+    }
+  },
+  "regions": ["us-east-1"],
+  "buildpacks": [
+    {
+      "url": "buildpacks/nodejs"
+    }
+  ],
+  "healthCheck": {
+    "path": "/",
+    "interval": 300
+  }
+}

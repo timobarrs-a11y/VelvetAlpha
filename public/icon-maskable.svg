@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fb7185"/>
+      <stop offset="50%" style="stop-color:#ec4899"/>
+      <stop offset="100%" style="stop-color:#be185d"/>
+    </linearGradient>
+    <linearGradient id="heart" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#fce7f3;stop-opacity:0.9"/>
+    </linearGradient>
+  </defs>
+  <!-- Full bleed background (maskable icons need edge-to-edge fill) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Content confined to safe zone: 80% of 512 = ~205px radius, centered -->
+  <!-- V letterform scaled to fit within safe zone comfortably -->
+  <path d="M166 172 L256 340 L346 172" fill="none" stroke="url(#heart)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Corner dots -->
+  <circle cx="166" cy="172" r="22" fill="white" opacity="0.95"/>
+  <circle cx="346" cy="172" r="22" fill="white" opacity="0.95"/>
+  <circle cx="256" cy="340" r="22" fill="white" opacity="0.95"/>
+</svg>

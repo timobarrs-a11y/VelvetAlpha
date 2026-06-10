@@ -1,0 +1,69 @@
+import { useState } from 'react';
+import { Send } from 'lucide-react';
+import { Button } from '../shared/ui';
+import { AppNavRadial } from './AppNavRadial';
+
+interface ChatInputProps {
+  onSend: (message: string) => void;
+  disabled: boolean;
+  characterName: string;
+  companionId?: string;
+  lastMessageText?: string;
+  showNavRadial?: boolean;
+}
+
+export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMessageText, showNavRadial = true }: ChatInputProps) => {
+  const [input, setInput] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (input.trim() && !disabled) {
+      onSend(input.trim());
+      setInput('');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3 items-end flex-1">
+      {showNavRadial && (
+        <div className="flex-shrink-0 pb-1">
+          <AppNavRadial
+            companionId={companionId}
+            currentApp="chat"
+            seedText={lastMessageText}
+            theme="light"
+          />
+        </div>
+      )}
+
+      <div className="flex-1 relative">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder={
+            disabled ? 'Upgrade to continue chatting' : `Message ${characterName}...`
+          }
+          disabled={disabled}
+          className={`w-full px-4 sm:px-5 py-2.5 rounded-2xl border-2 transition-all duration-200 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none ${
+            isFocused
+              ? 'border-rose-400 bg-white shadow-lg shadow-rose-100/50 ring-4 ring-rose-50'
+              : 'border-gray-200 bg-white/90 hover:border-gray-300 shadow-sm'
+          } disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:border-gray-200`}
+        />
+      </div>
+
+      <Button
+        type="submit"
+        disabled={disabled || !input.trim()}
+        size="md"
+        className="!p-2.5 !rounded-2xl"
+      >
+        <Send className="w-5 h-5" />
+      </Button>
+    </form>
+  );
+};
