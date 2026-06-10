@@ -157,10 +157,10 @@ export const ChatHeader = ({
 
         <div className="hidden sm:block w-px h-5 bg-gray-200 mx-1" />
 
-        {/* Center: motivational quote */}
+        {/* Quote — left-aligned, fills remaining header space */}
         {quote && (
-          <div className="flex-1 hidden lg:flex items-center justify-center min-w-0 px-4">
-            <p className="text-[11px] font-semibold text-gray-600 italic text-center leading-snug line-clamp-2 max-w-sm">
+          <div className="flex-1 hidden lg:flex items-center min-w-0 px-3">
+            <p className="text-[11px] font-semibold text-gray-600 italic text-left leading-snug line-clamp-1 truncate">
               "{quote.text}"
               {quote.author && <span className="not-italic font-medium text-gray-400"> — {quote.author}</span>}
             </p>
