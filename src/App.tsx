@@ -50,8 +50,8 @@ import { WorkScheduleSetupModal } from './components/WorkScheduleSetupModal';
 import { NaviOnboardingModal } from './components/NaviOnboardingModal';
 import { CustomizationPanel } from './components/CustomizationPanel';
 import type { BriefReadiness } from './services/morningBriefService';
-import { PetProvider, usePet } from './context/PetContext';
-import { PetCompanion, PetLevelToast } from './components/pet';
+import { usePetStore, usePetRefs } from './stores/petStore';
+import { PetCompanion, RadialTools, PetLevelToast } from './components/pet';
 import { CalendarPage } from './pages/CalendarPage';
 import { CoAuthorPage } from './pages/CoAuthorPage';
 import { DailyFeedPage } from './pages/DailyFeedPage';
@@ -1443,24 +1443,28 @@ function AppInner() {
   );
 }
 
-// Consumes PetContext — kept separate so hooks don't run before PetProvider mounts
+// Consumes PetStore — kept separate so hooks don't need PetProvider
 function PetLayer() {
-  const { enabled, released, petName, animalType, actionsRef, catPosRef, stats, handleStats, pendingLevelUp, clearLevelUp } = usePet();
+  const { enabled, name, animalType, stats, handleStats, pendingLevelUp, clearLevelUp } = usePetStore();
+  const { actionsRef, catPosRef } = usePetRefs();
   return (
     <>
       <PetCompanion
         enabled={enabled}
-        released={released}
-        name={petName}
+        name={name}
         animalType={animalType}
         actionsRef={actionsRef}
         catPosRef={catPosRef}
         onStats={handleStats}
         initialStats={stats}
       />
+      <RadialTools
+        catPosRef={catPosRef}
+        onFed={() => actionsRef.current?.fedByDrag()}
+        onStroke={() => actionsRef.current?.brushStroke()}
+      />
       <PetLevelToast
         level={pendingLevelUp}
-        petName={petName}
         onDone={clearLevelUp}
       />
     </>
@@ -1470,13 +1474,20 @@ function PetLayer() {
 function App() {
   const [searchParams] = useSearchParams();
   const companionId = searchParams.get('companion');
+  const { user, loading: authLoading } = useAuth();
+  const init = usePetStore(s => s.init);
+
+  useEffect(() => {
+    if (!authLoading && user && companionId) {
+      init(user.id, companionId);
+    }
+  }, [authLoading, user?.id, companionId]);
 
   return (
-    <PetProvider companionId={companionId}>
+    <>
       <AppInner />
-      {/* PetLayer renders the on-screen animal; paw button is inside the toolbar inside AppInner */}
       <PetLayer />
-    </PetProvider>
+    </>
   );
 }
 
