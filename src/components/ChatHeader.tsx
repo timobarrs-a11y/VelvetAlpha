@@ -159,10 +159,10 @@ export const ChatHeader = ({
 
         {/* Center: motivational quote */}
         {quote && (
-          <div className="flex-1 hidden lg:flex items-center justify-center min-w-0 px-2">
-            <p className="text-[10px] text-gray-400 italic text-center leading-snug line-clamp-2 max-w-xs">
+          <div className="flex-1 hidden lg:flex items-center justify-center min-w-0 px-4">
+            <p className="text-[11px] font-semibold text-gray-600 italic text-center leading-snug line-clamp-2 max-w-sm">
               "{quote.text}"
-              {quote.author && <span className="not-italic font-medium text-gray-300"> — {quote.author}</span>}
+              {quote.author && <span className="not-italic font-medium text-gray-400"> — {quote.author}</span>}
             </p>
           </div>
         )}

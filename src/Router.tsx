@@ -67,13 +67,14 @@ function GlobalEffects() {
   const location = useLocation();
 
   const isGame = GAME_PATHS.some(p => location.pathname.startsWith(p));
-
-  if (!user || isGame) return null;
-
-  const hoverStyle = customization?.button_hover_style ?? 'none';
   const touchOnly = isTouchOnly();
 
+  // Keep components mounted even when !user to avoid remount flicker;
+  // disable effects by passing safe defaults when inactive.
+  const active = !!user && !isGame;
+
   if (touchOnly) {
+    if (!active) return null;
     return (
       <TouchRippleCanvas
         animationStyle={customization?.animation_style ?? 'stars'}
@@ -85,15 +86,15 @@ function GlobalEffects() {
   return (
     <>
       <ButtonHoverCanvas
-        hoverStyle={hoverStyle}
+        hoverStyle={active ? (customization?.button_hover_style ?? 'none') : 'none'}
         particleColors={activeCursorColor.particles}
         previewStyle={previewStyle}
       />
       <MouseTrail
-        pointerSymbol={activePointerDef?.svg}
-        showTrail={customization?.show_trail ?? false}
+        pointerSymbol={active ? activePointerDef?.svg : undefined}
+        showTrail={active ? (customization?.show_trail ?? false) : false}
         trailStyle={customization?.trail_style ?? 'solid'}
-        animationStyle={customization?.animation_style ?? 'stars'}
+        animationStyle={active ? (customization?.animation_style ?? 'stars') : 'none'}
         trailColor={activeCursorColor?.primary}
         particleColors={activeCursorColor?.particles}
       />
