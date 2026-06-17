@@ -20,7 +20,7 @@ import { detectUserMood, formatMoodContext, getMoodBasedMaxTokens } from './mood
 import { MemoryService } from './memoryService';
 import { ConversationThreadService } from './conversationThreadService';
 import { EmotionalProfileService } from './emotionalProfileService';
-import { assembleContext, triggerSummarizationIfNeeded } from './contextAssembler';
+import { assembleContext, triggerSummarizationIfNeeded, type SystemBlock } from './contextAssembler';
 import { getCurrentStatus } from '../utils/statusHelper';
 import {
   getRecentCompanionMemories,
@@ -369,7 +369,8 @@ export class ChatService {
     userMessage: string,
     conversationHistory: Message[],
     characterName: string,
-    maxRetries: number = 1
+    maxRetries: number = 1,
+    systemBlocks?: SystemBlock[]
   ): Promise<string> {
     let attempts = 0;
     let validationFeedback = '';
@@ -390,6 +391,17 @@ export class ChatService {
         throw new Error('Authentication required');
       }
 
+      // When validation feedback is appended, append it to the last dynamic block
+      const blocksWithFeedback: SystemBlock[] | undefined = systemBlocks && validationFeedback
+        ? [
+            ...systemBlocks.slice(0, -1),
+            {
+              ...systemBlocks[systemBlocks.length - 1],
+              text: systemBlocks[systemBlocks.length - 1].text + `\n\n${validationFeedback}`,
+            },
+          ]
+        : systemBlocks;
+
       try {
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -400,6 +412,7 @@ export class ChatService {
           body: JSON.stringify({
             messages: messagesToSend,
             systemPrompt: promptWithFeedback,
+            ...(blocksWithFeedback ? { systemBlocks: blocksWithFeedback } : {}),
             maxTokens,
             model,
           }),
@@ -1115,6 +1128,17 @@ const messagesToSend = [
       const { data: { session } } = await supabase.auth.getSession();
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
+      // Fetch structured system blocks for prompt caching (companion path only)
+      let velvetBlocks: SystemBlock[] | undefined;
+      if (companionId && userProfile) {
+        try {
+          const ctx = await assembleContext(userProfile.id, companionId, contextualSystemPrompt, message);
+          velvetBlocks = ctx.systemBlocks;
+        } catch {
+          // fall back to flat systemPrompt
+        }
+      }
+
       const assistantMessage = await this.generateResponseWithValidation(
         apiUrl,
         messagesToSend,
@@ -1124,7 +1148,9 @@ const messagesToSend = [
         session?.access_token,
         message,
         conversationHistory,
-        companionName
+        companionName,
+        1,
+        velvetBlocks
       );
 
       const estimatedInputTokens = estimateTokens(contextualSystemPrompt + messagesToSend.map(m => m.content).join(' '));

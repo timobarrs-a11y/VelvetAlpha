@@ -8,12 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-// Abuse prevention rate limit (100 requests in 5 minutes)
-const ABUSE_RATE_LIMIT = {
-  count: 100,
-  windowMinutes: 5
-};
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -47,7 +41,6 @@ Deno.serve(async (req: Request) => {
       .eq('id', user.id)
       .maybeSingle();
 
-    // Check if user has messages remaining (skip for test users)
     const isTestUser = profile?.is_test_user === true;
     const messagesRemaining = profile?.messages_remaining ?? 0;
     const tier = profile?.subscription_tier || 'free';
@@ -70,10 +63,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get request body
-    const { messages, systemPrompt, maxTokens, model } = await req.json();
+    const { messages, systemPrompt, systemBlocks, maxTokens, model } = await req.json();
 
-    // Use server-side API key (NEVER send from client)
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
       throw new Error('Server configuration error: API key not set');
@@ -81,7 +72,6 @@ Deno.serve(async (req: Request) => {
 
     const tokenLimit = maxTokens || 1024;
     const selectedModel = model || MODEL_CONFIG.SONNET;
-    const safeSystemPrompt = systemPrompt || '';
 
     console.log('Sending to Anthropic API:');
     console.log('User:', user.id);
@@ -89,7 +79,7 @@ Deno.serve(async (req: Request) => {
     console.log('Messages Remaining:', messagesRemaining);
     console.log('Model:', selectedModel);
     console.log('Max tokens:', tokenLimit);
-    console.log('System prompt length:', safeSystemPrompt.length);
+    console.log('Using systemBlocks:', !!(systemBlocks && Array.isArray(systemBlocks) && systemBlocks.length > 0));
     console.log('Messages count:', messages?.length ?? 0);
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -102,8 +92,11 @@ Deno.serve(async (req: Request) => {
       messages: messages,
     };
 
-    if (safeSystemPrompt) {
-      anthropicBody.system = safeSystemPrompt;
+    // Prefer structured systemBlocks for prompt caching; fall back to flat string
+    if (systemBlocks && Array.isArray(systemBlocks) && systemBlocks.length > 0) {
+      anthropicBody.system = systemBlocks;
+    } else if (systemPrompt) {
+      anthropicBody.system = systemPrompt;
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -112,23 +105,24 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'prompt-caching-2024-07-31',
       },
       body: JSON.stringify(anthropicBody),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Anthropic API error:', errorText);
+      console.error('Anthropic API error:', errorText);
       throw new Error(`Anthropic API error: ${response.status} ${errorText}`);
     }
 
     const data = await response.json();
 
-    console.log('📥 Got response from Anthropic:');
-    console.log('Response keys:', Object.keys(data));
-    console.log('Content array length:', data.content?.length);
+    console.log('Got response from Anthropic');
+    console.log('Cache creation tokens:', data.usage?.cache_creation_input_tokens ?? 0);
+    console.log('Cache read tokens:', data.usage?.cache_read_input_tokens ?? 0);
 
-    // Decrement message count (client-side handles this too, but double-check server-side)
+    // Decrement message count server-side
     if (!isTestUser && messagesRemaining !== -1) {
       const newCount = Math.max(0, messagesRemaining - 1);
       await supabaseAdmin
@@ -136,7 +130,7 @@ Deno.serve(async (req: Request) => {
         .update({ messages_remaining: newCount })
         .eq('id', user.id);
 
-      console.log('💬 Message count decremented:', messagesRemaining, '->', newCount);
+      console.log('Message count decremented:', messagesRemaining, '->', newCount);
     }
 
     return new Response(JSON.stringify(data), {
