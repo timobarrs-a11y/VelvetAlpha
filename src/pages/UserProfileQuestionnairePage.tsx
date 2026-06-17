@@ -356,7 +356,7 @@ export function UserProfileQuestionnairePage() {
           profile.birthday && profile.gender && profile.favorite_color
         );
         if (hasCore) {
-          navigate('/companion-path', { replace: true });
+          navigate('/intent-select', { replace: true });
           return;
         }
       }

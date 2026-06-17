@@ -30,7 +30,7 @@ export function IntentSelectPage() {
       icon: <Sparkles className="w-8 h-8" />,
       description: 'Full personality depth PLUS domain expertise. Your companion helps you grow while still being someone you actually want to talk to.',
       storageValue: 'connection_growth',
-      nextPath: '/companion-path',
+      nextPath: '/expert-selection',
       recommended: true,
     },
     {

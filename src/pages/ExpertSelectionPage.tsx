@@ -97,7 +97,7 @@ export default function ExpertSelectionPage() {
     const onboardingIntent = sessionStorage.getItem('onboardingIntent');
 
     if (onboardingIntent === 'connection_growth') {
-      navigate('/create-companion-avatar', { replace: true });
+      navigate('/companion-path', { replace: true });
     } else if (onboardingIntent === 'expert_only') {
       navigate('/expert-questionnaire', { replace: true });
     } else {
@@ -107,10 +107,14 @@ export default function ExpertSelectionPage() {
   };
 
   const handleSkip = () => {
-    // Clear any selected expert
     sessionStorage.removeItem('selectedExpertId');
     sessionStorage.removeItem('selectedExpertSource');
-    navigate('/create-companion-avatar', { replace: true });
+    const onboardingIntent = sessionStorage.getItem('onboardingIntent');
+    if (onboardingIntent === 'connection_growth') {
+      navigate('/companion-path', { replace: true });
+    } else {
+      navigate('/create-companion-avatar', { replace: true });
+    }
   };
 
   const handleCreateOwn = () => {

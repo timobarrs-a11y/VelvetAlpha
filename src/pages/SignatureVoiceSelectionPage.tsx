@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../shared/supabase/client';
 import { SIGNATURE_VOICES, canUseVoice, SignatureVoice, getVoicesByCategory } from '../config/signatureVoices';
+import { createCompanion } from '../services/companionService';
 import SignatureVoiceTile from '../components/SignatureVoiceTile';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
@@ -20,7 +21,9 @@ export default function SignatureVoiceSelectionPage() {
 
   const loadData = async () => {
     const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || '{}');
-    const gender = matchData.relationshipType === 'Male' ? 'male' : 'female';
+    const expertData = JSON.parse(sessionStorage.getItem('expertMatchAnswers') || '{}');
+    const genderRaw = matchData.relationshipType || expertData.gender || 'Female';
+    const gender = genderRaw === 'Male' ? 'male' : 'female';
     setCompanionGender(gender);
 
     const filtered = SIGNATURE_VOICES.filter(voice =>
@@ -68,9 +71,9 @@ export default function SignatureVoiceSelectionPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const companionId = sessionStorage.getItem('currentCompanionId');
+      const onboardingIntent = sessionStorage.getItem('onboardingIntent');
 
       if (user && companionId) {
-        console.log('[VoiceSelection] Updating companion with voice:', voiceId);
         const { error } = await supabase
           .from('companions')
           .update({ signature_voice: voiceId })
@@ -79,8 +82,45 @@ export default function SignatureVoiceSelectionPage() {
         if (error) {
           console.error('[VoiceSelection] Error updating companion:', error);
         }
-      } else {
-        console.warn('[VoiceSelection] Missing user or companion ID, continuing anyway');
+      } else if (user && onboardingIntent === 'expert_only') {
+        const expertData = JSON.parse(sessionStorage.getItem('expertMatchAnswers') || '{}');
+        const expertId = sessionStorage.getItem('selectedExpertId');
+        const expertSource = sessionStorage.getItem('selectedExpertSource') as 'curated' | 'user' | null;
+
+        const gender: 'male' | 'female' = expertData.gender === 'Male' ? 'male' : 'female';
+        const customName = expertData.customName || 'Mentor';
+
+        const companion = await createCompanion({
+          userId: user.id,
+          gender,
+          relationshipType: 'mentor',
+          customName,
+          hobbies: [],
+          signatureVoice: voiceId,
+          signatureExpert: expertId || undefined,
+          signatureExpertSource: expertSource || undefined,
+          energyPreference: expertData.energyPreference,
+          communicationStyle: expertData.communicationStyle,
+          supportStyle: expertData.supportStyle,
+          conversationDepth: expertData.conversationDepth,
+        });
+
+        if (companion) {
+          sessionStorage.setItem('currentCompanionId', companion.id);
+
+          const matchData = {
+            userName: '',
+            userGender: '',
+            relationshipType: expertData.gender || 'Female',
+            connectionType: 'mentor',
+            companionName: customName,
+            energyPreference: expertData.energyPreference,
+            communicationStyle: expertData.communicationStyle,
+            supportStyle: expertData.supportStyle,
+            conversationDepth: expertData.conversationDepth,
+          };
+          sessionStorage.setItem('matchAnswers', JSON.stringify(matchData));
+        }
       }
     } catch (error) {
       console.error('Error saving voice:', error);

@@ -839,6 +839,8 @@ export function QuestionnairePage() {
         zodiacSign: a.zodiacSign,
         musicGenre: Array.isArray(a.musicGenre) ? a.musicGenre.join(', ') : (a.musicGenre || ''),
         newsCategories: newsTopicsArray,
+        signatureExpert: sessionStorage.getItem('selectedExpertId') || undefined,
+        signatureExpertSource: (sessionStorage.getItem('selectedExpertSource') as 'curated' | 'user') || undefined,
         questionnaireData: {
           userName: a.name,
           userBirthday: a.birthday,
