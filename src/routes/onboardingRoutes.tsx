@@ -13,6 +13,10 @@ const PricingOfferPage = lazy(() => import('../pages/PricingOfferPage').then(m =
 const CreateUserAvatarPage = lazy(() => import('../pages/CreateUserAvatarPage').then(m => ({ default: m.CreateUserAvatarPage })));
 const CreateCompanionAvatarPage = lazy(() => import('../pages/CreateCompanionAvatarPage').then(m => ({ default: m.CreateCompanionAvatarPage })));
 const OnboardingTourPage = lazy(() => import('../pages/OnboardingTourPage').then(m => ({ default: m.OnboardingTourPage })));
+const IntentSelectPage = lazy(() => import('../pages/IntentSelectPage').then(m => ({ default: m.IntentSelectPage })));
+const ExpertSelectionPage = lazy(() => import('../pages/ExpertSelectionPage'));
+const ExpertQuestionnairePage = lazy(() => import('../pages/ExpertQuestionnairePage').then(m => ({ default: m.ExpertQuestionnairePage })));
+const ExpertBuilderPage = lazy(() => import('../pages/ExpertBuilderPage').then(m => ({ default: m.ExpertBuilderPage })));
 
 function wrap(el: React.ReactNode) {
   return (
@@ -25,7 +29,11 @@ function wrap(el: React.ReactNode) {
 export const onboardingRoutes = [
   <Route key="user-questionnaire" path="/user-questionnaire" element={wrap(<UserProfileQuestionnairePage />)} />,
   <Route key="create-user-avatar" path="/create-user-avatar" element={wrap(<CreateUserAvatarPage />)} />,
+  <Route key="intent-select" path="/intent-select" element={wrap(<IntentSelectPage />)} />,
   <Route key="companion-path" path="/companion-path" element={wrap(<CompanionPathSelectPage />)} />,
+  <Route key="expert-selection" path="/expert-selection" element={wrap(<ExpertSelectionPage />)} />,
+  <Route key="expert-questionnaire" path="/expert-questionnaire" element={wrap(<ExpertQuestionnairePage />)} />,
+  <Route key="expert-builder" path="/expert-builder" element={wrap(<ExpertBuilderPage />)} />,
   <Route key="questionnaire" path="/questionnaire" element={wrap(<QuestionnairePage />)} />,
   <Route key="create-additional-companion" path="/create-additional-companion" element={wrap(<CreateAdditionalCompanionPage />)} />,
   <Route key="analyzing" path="/analyzing" element={wrap(<AnalyzingPage />)} />,

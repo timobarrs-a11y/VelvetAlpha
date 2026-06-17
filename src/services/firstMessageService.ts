@@ -136,7 +136,20 @@ export class FirstMessageService {
       }
     }
 
-    const prompt = `You are ${companionName}, starting a conversation with ${userName} for the first time after matching on a dating/friendship app.
+    const relationshipContext = connectionType === 'mentor'
+      ? 'expert/mentor guidance'
+      : connectionType === 'romantic' ? 'romantic connection' : 'friendship';
+
+    const taskGuidance = connectionType === 'mentor'
+      ? `3. Takes a mentor/coach tone - professional yet warm, no romance or flirting
+4. Opens by asking about their goals or current challenges in ${personalInterest}`
+      : connectionType === 'romantic'
+        ? `3. Matches the relationship context (flirty/romantic)
+4. Feels like a real person reaching out, not a template`
+        : `3. Matches the relationship context (friendly)
+4. Feels like a real person reaching out, not a template`;
+
+    const prompt = `You are ${companionName}, starting a conversation with ${userName} for the first time${connectionType === 'mentor' ? ' as their expert/mentor' : ' after matching on a dating/friendship app'}.
 
 CRITICAL PERSONALITY INSTRUCTIONS:
 ${voice.instruction}
@@ -146,14 +159,13 @@ USER CONTEXT:
 ${userAge ? `- Age: ${userAge}` : ''}
 ${userGender ? `- Gender: ${userGender}` : ''}
 - Interest: ${personalInterest}
-- Looking for: ${connectionType === 'romantic' ? 'romantic connection' : 'friendship'}
+- Looking for: ${relationshipContext}
 
 YOUR TASK:
 Write a natural, authentic first message (2-3 sentences) that:
 1. Shows you're ${companionName} and embodies your personality voice
 2. References their interest (${personalInterest}) naturally
-3. Matches the relationship context (${connectionType === 'romantic' ? 'flirty/romantic' : 'friendly'})
-4. Feels like a real person reaching out, not a template
+${taskGuidance}
 5. Keeps it casual and opens the door for conversation
 
 ${voice.examples && voice.examples.length > 0 ? `VOICE EXAMPLES:\n${voice.examples.join('\n')}` : ''}
@@ -226,23 +238,27 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     userName: string,
     userPreferences: any,
     signatureVoice?: string,
-    userBirthday?: string
+    userBirthday?: string,
+    expertDomain?: string
   ): Promise<string> {
-    const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || '{}');
+    const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || sessionStorage.getItem('expertMatchAnswers') || '{}');
 
     const hobbies = matchData.hobbies || '';
     const sports = matchData.sports || '';
     const interests = matchData.interests || '';
-    const userGender = matchData.userGender || '';
+    const userGender = matchData.userGender || matchData.gender || '';
     const connectionType = matchData.connectionType || 'romantic';
 
     const isMale = userGender === 'Male';
     const isFemale = userGender === 'Female';
     const isFriend = connectionType === 'friend';
     const isRomantic = connectionType === 'romantic';
+    const isMentor = connectionType === 'mentor';
 
     let personalInterest = '';
-    if (hobbies && hobbies.trim()) {
+    if (expertDomain) {
+      personalInterest = expertDomain;
+    } else if (hobbies && hobbies.trim()) {
       personalInterest = hobbies.split(',')[0].trim();
     } else if (sports && sports.trim()) {
       personalInterest = sports.split(',')[0].trim();
@@ -267,9 +283,19 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
         personalInterest,
         signatureVoice,
         userBirthday,
-        connectionType,
+        isMentor ? 'mentor' : connectionType,
         userGender
       );
+    }
+
+    // Mentor/expert path fallback templates
+    if (isMentor && expertDomain) {
+      const mentorTemplates = [
+        `hey ${userName}! I'm ${companionName}, and I'm here to help you level up in ${expertDomain}.\n\nwhat's your biggest challenge right now? let's figure out where to start.`,
+        `${userName}, glad we're connected! I'm ${companionName}. I'm focused on helping you grow in ${expertDomain}.\n\nwhat are you working toward right now?`,
+        `hey ${userName}! I'm ${companionName} - your ${expertDomain} expert. I'm here to help you make real progress.\n\nwhat's on your mind? let's dive in.`,
+      ];
+      return mentorTemplates[Math.floor(Math.random() * mentorTemplates.length)];
     }
 
     const maleTemplates = {

@@ -11,7 +11,7 @@ export interface Companion {
   id: string;
   user_id: string;
   gender: 'male' | 'female';
-  relationship_type: 'friend' | 'romantic';
+  relationship_type: 'friend' | 'romantic' | 'mentor';
   font_family?: string | null;
   created_at: string;
   last_message_at: string;
@@ -26,6 +26,8 @@ export interface Companion {
   availability_level?: string;
   interest_preference?: string;
   signature_voice?: string;
+  signature_expert?: string | null;
+  signature_expert_source?: string | null;
   interest_text?: string;
   love_language?: string;
   support_style?: string;
@@ -61,7 +63,7 @@ export interface CompanionWithLastMessage extends Companion {
 export interface CreateCompanionOptions {
   userId: string;
   gender: 'male' | 'female';
-  relationshipType: 'friend' | 'romantic';
+  relationshipType: 'friend' | 'romantic' | 'mentor';
   customName: string;
   hobbies: string[];
   sports?: string[];
@@ -70,6 +72,8 @@ export interface CreateCompanionOptions {
   availabilityLevel?: string;
   interestPreference?: string;
   signatureVoice?: string;
+  signatureExpert?: string;
+  signatureExpertSource?: 'curated' | 'user';
   interestText?: string;
   loveLanguage?: string;
   supportStyle?: string;
@@ -147,6 +151,8 @@ export async function createCompanion(options: CreateCompanionOptions): Promise<
       availability_level: options.availabilityLevel,
       interest_preference: options.interestPreference,
       signature_voice: options.signatureVoice || (options.gender === 'male' ? 'classic_male' : 'classic_female'),
+      signature_expert: options.signatureExpert || null,
+      signature_expert_source: options.signatureExpertSource || null,
       interest_text: options.interestText,
       love_language: options.loveLanguage,
       support_style: options.supportStyle,
@@ -178,6 +184,7 @@ export async function createCompanion(options: CreateCompanionOptions): Promise<
     try {
       const relationshipIntent: RelationshipIntent =
         options.relationshipType === 'friend' ? 'friend' :
+        options.relationshipType === 'mentor' ? 'friend' :
         options.relationshipType === 'romantic' ? 'companion' : 'evolve';
 
       const relationshipStatus: RelationshipStatus = affectionService.getDefaultStatus(relationshipIntent);

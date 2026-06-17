@@ -18,6 +18,7 @@ import { validateResponse, shouldRetryResponse, formatValidationFeedback } from 
 import { analyzeConversationMetrics, formatConversationMetrics, getConversationGuidance } from './conversationTrackingService';
 import { detectUserMood, formatMoodContext, getMoodBasedMaxTokens } from './moodBasedTuningService';
 import { MemoryService } from './memoryService';
+import { resolveExpert } from './expertService';
 import { ConversationThreadService } from './conversationThreadService';
 import { EmotionalProfileService } from './emotionalProfileService';
 import { assembleContext, triggerSummarizationIfNeeded, type SystemBlock } from './contextAssembler';
@@ -858,11 +859,19 @@ export class ChatService {
 
       const signatureVoice = companionData?.signature_voice || (companionGender === 'male' ? 'classic_male' : 'classic_female');
 
+      const expertConfig = await resolveExpert(
+        companionData?.signature_expert,
+        companionData?.signature_expert_source,
+        userId
+      );
+
       const userTimezone = profile.timezone || 'America/New_York';
       const now = new Date();
 
       let temporalContextString: string | undefined;
       let affectionContextString: string | undefined;
+
+      const isMentorCompanion = connectionType === 'mentor';
 
       try {
         await relationshipTrackingService.updateOnUserMessage(
@@ -896,6 +905,7 @@ export class ChatService {
 
           temporalContextString = temporalPromptContext.fullContext;
 
+          if (!isMentorCompanion) {
           const recentUserMessages = await affectionService.getRecentUserMessages(
             userId,
             companionId,
@@ -957,6 +967,7 @@ export class ChatService {
           );
 
           affectionContextString = affectionService.formatAffectionPromptContext(affectionContext);
+          } // end if (!isMentorCompanion)
         }
       } catch {
       }
@@ -974,8 +985,9 @@ export class ChatService {
         favoriteColor: profile.favorite_color || companionData?.favorite_color,
         musicGenre: profile.music_genre || companionData?.music_genre,
         newsTopics: profile.news_categories || companionData?.news_categories,
-        relationshipType: connectionType === 'friend' ? 'friend' : 'romantic',
+        relationshipType: connectionType as 'friend' | 'romantic' | 'mentor',
         signatureVoice,
+        expertConfig,
         relationshipDuration,
         temporalContext: temporalContextString,
         affectionContext: affectionContextString,
