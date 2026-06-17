@@ -504,6 +504,8 @@ export function CreateAdditionalCompanionPage() {
         initiative: allAnswers.initiative || '',
         hobbies: allAnswers.interests ? [allAnswers.interests] : [],
         relationshipType: connectionType,
+        signatureExpert: sessionStorage.getItem('selectedExpertId') || undefined,
+        signatureExpertSource: (sessionStorage.getItem('selectedExpertSource') as 'curated' | 'user') || undefined,
         questionnaireData: {
           relationshipType: allAnswers.relationshipType as 'Male' | 'Female',
           connectionType: connectionType as 'friend' | 'romantic',

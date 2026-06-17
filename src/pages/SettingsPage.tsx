@@ -1,36 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Bell,
-  Shield,
-  Palette,
-  Lock,
-  Download,
-  Trash2,
-  ChevronRight,
-  Check,
-  AlertTriangle,
-  Eye,
-  EyeOff,
-  LogOut,
-  Mail,
-  Smartphone,
-  Moon,
-  Sun,
-  Monitor,
-  Globe,
-  Key,
-  User,
-  Compass,
-  Play,
-} from 'lucide-react';
+import { ArrowLeft, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { gdprService } from '../services/gdprService';
 import { onboardingService } from '../services/onboardingService';
 import { getCompanions } from '../services/companionService';
+import { getUserExperts, deleteUserExpert, UserExpert } from '../services/expertService';
+import { getExpertById, getCuratedExperts, ExpertConfig } from '../config/signatureExperts';
 
-type Tab = 'notifications' | 'privacy' | 'appearance' | 'tour' | 'security' | 'data';
+type Tab = 'notifications' | 'privacy' | 'appearance' | 'experts' | 'tour' | 'security' | 'data';
 
 interface NotificationSettings {
   push_enabled: boolean;
@@ -91,6 +69,10 @@ export function SettingsPage() {
   const [tourProgress, setTourProgress] = useState<{ onboarding_complete: boolean; last_tour_at: string | null; steps_completed: string[] } | null>(null);
   const [tourStarting, setTourStarting] = useState(false);
 
+  const [userExperts, setUserExperts] = useState<UserExpert[]>([]);
+  const [companionsWithExperts, setCompanionsWithExperts] = useState<{ id: string; name: string; expertName: string | null; expertDomain: string | null }[]>([]);
+  const [expertsLoading, setExpertsLoading] = useState(false);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
@@ -106,6 +88,51 @@ export function SettingsPage() {
     });
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'experts') loadExperts();
+  }, [activeTab]);
+
+  const loadExperts = async () => {
+    setExpertsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const [experts, companions] = await Promise.all([
+        getUserExperts(user.id),
+        getCompanions(user.id),
+      ]);
+      setUserExperts(experts);
+
+      const mapped = companions.map(c => {
+        let expertName: string | null = null;
+        let expertDomain: string | null = null;
+        if (c.signature_expert) {
+          if (c.signature_expert_source === 'curated') {
+            const curated = getExpertById(c.signature_expert);
+            expertName = curated?.name ?? null;
+            expertDomain = curated?.domain ?? null;
+          } else {
+            const ue = experts.find(e => e.id === c.signature_expert);
+            expertName = ue?.name ?? null;
+            expertDomain = ue?.domain ?? null;
+          }
+        }
+        return { id: c.id, name: c.custom_name, expertName, expertDomain };
+      });
+      setCompanionsWithExperts(mapped);
+    } finally {
+      setExpertsLoading(false);
+    }
+  };
+
+  const handleDeleteExpert = async (expertId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await deleteUserExpert(user.id, expertId);
+    setUserExperts(prev => prev.filter(e => e.id !== expertId));
+  };
 
   const handleRestartTour = async () => {
     setTourStarting(true);
@@ -223,6 +250,7 @@ export function SettingsPage() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'privacy', label: 'Privacy', icon: Shield },
     { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'experts', label: 'AI Experts', icon: Brain },
     { id: 'tour', label: 'Tour & Help', icon: Compass },
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'data', label: 'My Data', icon: Download },
@@ -548,6 +576,89 @@ export function SettingsPage() {
                       Sign Out
                     </button>
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'experts' && (
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold text-white mb-1">AI Experts</h2>
+                  <p className="text-white/40 text-sm mb-6">Manage your custom experts and see which companions have experts attached.</p>
+
+                  {expertsLoading ? (
+                    <div className="text-white/40 text-sm">Loading...</div>
+                  ) : (
+                    <>
+                      {companionsWithExperts.length > 0 && (
+                        <div className="mb-8">
+                          <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider mb-3">Companion Experts</h3>
+                          <div className="space-y-2">
+                            {companionsWithExperts.map(c => (
+                              <div key={c.id} className="flex items-center justify-between rounded-xl p-4 border border-white/10" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                                <div>
+                                  <p className="text-white font-medium">{c.name}</p>
+                                  {c.expertName ? (
+                                    <p className="text-indigo-400 text-sm">{c.expertName} — {c.expertDomain}</p>
+                                  ) : (
+                                    <p className="text-white/30 text-sm">No expert attached</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mb-4 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Your Custom Experts</h3>
+                        <button
+                          onClick={() => navigate('/expert-builder')}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-400 border border-blue-500/30 hover:bg-blue-500/10 transition"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Create New
+                        </button>
+                      </div>
+
+                      {userExperts.length === 0 ? (
+                        <div className="rounded-xl p-6 border border-white/10 text-center" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                          <Brain className="w-8 h-8 text-white/20 mx-auto mb-3" />
+                          <p className="text-white/40 text-sm">You haven't created any custom experts yet.</p>
+                          <button
+                            onClick={() => navigate('/expert-builder')}
+                            className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition"
+                            style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' }}
+                          >
+                            Create Your First Expert
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {userExperts.map(expert => (
+                            <div key={expert.id} className="flex items-center justify-between rounded-xl p-4 border border-white/10" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-white font-medium">{expert.name}</p>
+                                <p className="text-white/40 text-sm truncate">{expert.domain} — {expert.description}</p>
+                              </div>
+                              <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                                <button
+                                  onClick={() => navigate(`/expert-builder?edit=${expert.id}`)}
+                                  className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteExpert(expert.id)}
+                                  className="p-2 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 

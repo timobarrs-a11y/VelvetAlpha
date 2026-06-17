@@ -53,6 +53,7 @@ import type { BriefReadiness } from './services/morningBriefService';
 import { usePetStore, usePetRefs } from './stores/petStore';
 import { PetCompanion, RadialTools, PetLevelToast } from './components/pet';
 import { CalendarPage } from './pages/CalendarPage';
+import { resolveExpert } from './services/expertService';
 import { CoAuthorPage } from './pages/CoAuthorPage';
 import { DailyFeedPage } from './pages/DailyFeedPage';
 
@@ -92,6 +93,7 @@ function AppInner() {
   const [chatWallpaperUrl, setChatWallpaperUrl] = useState<string | null>(null);
   const [chatBubbleColor, setChatBubbleColor] = useState<string | null>(null);
   const [chatTextColor, setChatTextColor] = useState<string | null>(null);
+  const [expertDomain, setExpertDomain] = useState<string | null>(null);
   const [companionBubbleColor, setCompanionBubbleColor] = useState<string | null>(null);
   const [companionTextColor, setCompanionTextColor] = useState<string | null>(null);
   const [lastCalendarEvent, setLastCalendarEvent] = useState<{ title: string; event_type: string; event_date: string } | null>(null);
@@ -295,6 +297,14 @@ function AppInner() {
       if (!companionData) { navigate('/lobby'); return; }
 
       setCompanion(companionData);
+
+      if (companionData.signature_expert) {
+        resolveExpert(companionData.signature_expert, companionData.signature_expert_source, user.id)
+          .then(expert => setExpertDomain(expert?.domain ?? null))
+          .catch(() => {});
+      } else {
+        setExpertDomain(null);
+      }
 
       // Load all companions for the font picker in CustomizationPanel
       getCompanions(user.id).then(all => setAllCompanions(all)).catch(() => {});
@@ -966,6 +976,7 @@ function AppInner() {
         fontFamily={companion?.font_family}
         companionId={companionId || ''}
         currentTier={currentTier}
+        expertDomain={expertDomain}
         subscriptionInfo={subscriptionInfo || undefined}
         onReset={handleReset}
         onAvatarClick={() => setShowAppearanceModal(true)}

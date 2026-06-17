@@ -1,6 +1,6 @@
 import {
   ArrowLeft, CreditCard, RotateCcw,
-  Sparkles, Volume2, VolumeX, Settings, Calendar, Wand2,
+  Sparkles, Volume2, VolumeX, Settings, Calendar, Wand2, Brain,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from './Avatar';
@@ -22,6 +22,7 @@ interface ChatHeaderProps {
   fontFamily?: string | null;
   companionId: string;
   currentTier: string;
+  expertDomain?: string | null;
   subscriptionInfo?: { tier: string; messagesRemaining: number };
   onReset: () => void;
   onAvatarClick: () => void;
@@ -62,6 +63,7 @@ export const ChatHeader = ({
   fontFamily,
   companionId,
   currentTier,
+  expertDomain,
   subscriptionInfo,
   onReset,
   onAvatarClick,
@@ -146,6 +148,14 @@ export const ChatHeader = ({
             )}
           </div>
         </button>
+
+        {/* Expert domain badge */}
+        {expertDomain && (
+          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 border border-indigo-100 flex-shrink-0">
+            <Brain size={10} className="text-indigo-400 flex-shrink-0" />
+            <span className="text-[10px] text-indigo-600 font-medium truncate max-w-[100px]">{expertDomain}</span>
+          </div>
+        )}
 
         {/* Calendar event chip — today/tomorrow */}
         {todayEventTitle && (

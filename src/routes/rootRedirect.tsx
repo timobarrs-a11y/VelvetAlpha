@@ -115,8 +115,15 @@ export function RootRedirect() {
       if (companions.length === 0) {
         const currentCompanionId = sessionStorage.getItem('currentCompanionId');
         const matchAnswers = sessionStorage.getItem('matchAnswers');
+        const expertMatchAnswers = sessionStorage.getItem('expertMatchAnswers');
+        const onboardingIntent = sessionStorage.getItem('onboardingIntent');
 
         if (currentCompanionId && matchAnswers) {
+          setDestination('/voice-selection');
+          return;
+        }
+
+        if (onboardingIntent === 'expert_only' && expertMatchAnswers) {
           setDestination('/voice-selection');
           return;
         }
