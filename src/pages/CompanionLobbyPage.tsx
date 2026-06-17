@@ -5,8 +5,9 @@ import {
   Plus, MessageCircle, Heart, Users, Crown, Cherry, Zap, Circle,
   Rocket, LogOut, Gamepad2, Lightbulb, FileText, User,
   UsersRound, Calendar, Squirrel, Youtube, Newspaper, Trash2, MessageSquare,
-  Sparkles, Flame, Wand2, Trophy, Volume2, VolumeX, Anchor, Bot, MapPin,
+  Sparkles, Flame, Wand2, Trophy, Volume2, VolumeX, Anchor, Bot, MapPin, Brain,
 } from 'lucide-react';
+import { getExpertById } from '../config/signatureExperts';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { supabase } from '../shared/supabase/client';
@@ -664,13 +665,25 @@ export function CompanionLobbyPage() {
                   <span className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
                     companion.relationship_type === 'romantic'
                       ? 'bg-pink-900/80 text-pink-300'
+                      : companion.relationship_type === 'mentor'
+                      ? 'bg-emerald-900/80 text-emerald-300'
                       : 'bg-sky-900/80 text-sky-300'
                   }`}>
                     {companion.relationship_type === 'romantic'
                       ? <><Heart className="w-2.5 h-2.5" /> Partner</>
+                      : companion.relationship_type === 'mentor'
+                      ? <><Brain className="w-2.5 h-2.5" /> Mentor</>
                       : <><Users className="w-2.5 h-2.5" /> Friend</>
                     }
                   </span>
+                  {companion.signature_expert && (
+                    <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-indigo-900/80 text-indigo-300">
+                      <Brain className="w-2.5 h-2.5" />
+                      {companion.signature_expert_source === 'curated'
+                        ? (getExpertById(companion.signature_expert)?.domain ?? 'Expert')
+                        : 'Expert'}
+                    </span>
+                  )}
                 </div>
                 <div className="p-4">
                   <h3
@@ -876,10 +889,14 @@ export function CompanionLobbyPage() {
                     <span className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
                       companion.relationship_type === 'romantic'
                         ? 'bg-pink-900/60 text-pink-300'
+                        : companion.relationship_type === 'mentor'
+                        ? 'bg-emerald-900/60 text-emerald-300'
                         : 'bg-sky-900/60 text-sky-300'
                     }`}>
                       {companion.relationship_type === 'romantic'
                         ? <><Heart className="w-2.5 h-2.5" /> Partner</>
+                        : companion.relationship_type === 'mentor'
+                        ? <><Brain className="w-2.5 h-2.5" /> Mentor</>
                         : <><Users className="w-2.5 h-2.5" /> Friend</>
                       }
                     </span>
