@@ -18,8 +18,16 @@ export function OnboardingTourPage() {
         return;
       }
 
-      const companions = await getCompanions(user.id);
-      const primary = companions[0];
+      // A brand-new companion can briefly be unreadable right after creation
+      // (replication lag). Retry a few times before falling back to the lobby,
+      // so first-time users reliably land in their companion's chat.
+      let primary;
+      for (let attempt = 0; attempt < 4 && !primary; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 600));
+        const companions = await getCompanions(user.id);
+        primary = companions[0];
+      }
+
       if (primary) {
         navigate(`/chat?companion=${primary.id}&tour=1`, { replace: true });
       } else {

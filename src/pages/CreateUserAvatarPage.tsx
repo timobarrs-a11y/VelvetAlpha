@@ -6,6 +6,7 @@ import { AvatarCreatorV2 } from '../components/AvatarCreatorV2';
 import { AvatarConfigV2, DEFAULT_FEMALE_AVATAR_V2 } from '../types/avatar-v2';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
+import { resolveHomeRoute } from '../utils/homeRoute';
 import { trackOpenCustomizer, trackSaveAvatar, trackSkipAvatar } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
 
@@ -38,10 +39,10 @@ export function CreateUserAvatarPage() {
       console.log('[CreateUserAvatar] User has', companions.length, 'companions');
 
       if (companions.length > 0) {
-        console.log('[CreateUserAvatar] User already has companions, redirecting to lobby');
+        console.log('[CreateUserAvatar] User already has companions, sending to companion chat');
         localStorage.removeItem('currentCompanionId');
         localStorage.removeItem('matchAnswers');
-        navigate('/lobby', { replace: true });
+        navigate(await resolveHomeRoute(user.id), { replace: true });
         return;
       }
 
@@ -94,7 +95,7 @@ export function CreateUserAvatarPage() {
       localStorage.setItem('userAvatarConfig', JSON.stringify(avatarConfig));
       trackSaveAvatar('user');
       const isFirstCompanion = !!sessionStorage.getItem('currentCompanionId');
-      pendingRoute.current = isFirstCompanion ? '/onboarding' : '/lobby';
+      pendingRoute.current = isFirstCompanion ? '/onboarding' : await resolveHomeRoute(user.id);
       setShowReveal(true);
     } catch (error) {
       console.error('Error saving avatar:', error);
@@ -111,7 +112,7 @@ export function CreateUserAvatarPage() {
     }
     trackSkipAvatar('user');
     const isFirstCompanion = !!sessionStorage.getItem('currentCompanionId');
-    navigate(isFirstCompanion ? '/onboarding' : '/lobby');
+    navigate(isFirstCompanion ? '/onboarding' : await resolveHomeRoute(user.id));
   };
 
   const handleRevealContinue = () => {
