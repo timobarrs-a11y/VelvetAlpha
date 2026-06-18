@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, PenLine, ChevronRight, Shuffle, Lock, Star, Zap, Heart, Brain, MessageCircle } from 'lucide-react';
 
-type Phase = 'choose' | 'scanning' | 'reveal';
+type Phase = 'choose' | 'gender' | 'scanning' | 'reveal';
+type Gender = 'Female' | 'Male';
 
 const SCAN_NAMES_FEMALE = [
   'Aria', 'Luna', 'Nova', 'Sage', 'Iris', 'Cleo', 'Mia', 'Zoe', 'Nora', 'Jade',
@@ -24,7 +25,7 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function ScanningScreen({ onReveal }: { onReveal: () => void }) {
+function ScanningScreen({ onReveal, gender }: { onReveal: () => void; gender: Gender }) {
   const [scanIndex, setScanIndex] = useState(0);
   const [traits, setTraits] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
@@ -32,9 +33,10 @@ function ScanningScreen({ onReveal }: { onReveal: () => void }) {
   const [lockedTraits, setLockedTraits] = useState<string[]>([]);
   const [phase, setPhase] = useState<'scanning' | 'locking' | 'done'>('scanning');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const namePool = gender === 'Male' ? SCAN_NAMES_MALE : SCAN_NAMES_FEMALE;
 
   useEffect(() => {
-    const allNames = [...SCAN_NAMES_FEMALE, ...SCAN_NAMES_MALE];
+    const allNames = namePool;
 
     intervalRef.current = setInterval(() => {
       setScanIndex(i => i + 1);
@@ -207,12 +209,18 @@ function RevealScreen({ onContinue }: { onContinue: () => void }) {
 export function CompanionPathSelectPage() {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>('choose');
+  const [selectedGender, setSelectedGender] = useState<Gender>('Female');
 
   const handleBuildOwn = () => {
     navigate('/questionnaire?mode=companion');
   };
 
   const handleVelvet = () => {
+    setPhase('gender');
+  };
+
+  const handleGenderSelect = (g: Gender) => {
+    setSelectedGender(g);
     setPhase('scanning');
   };
 
@@ -323,12 +331,80 @@ export function CompanionPathSelectPage() {
             </motion.div>
           )}
 
+          {phase === 'gender' && (
+            <motion.div
+              key="gender"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="w-full max-w-lg mx-auto"
+            >
+              <div className="text-center mb-10">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.4 }}
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-semibold tracking-widest uppercase mb-5"
+                >
+                  <Zap className="w-3 h-3" />
+                  Velvet Rope
+                </motion.div>
+                <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
+                  Who Are You Looking For?
+                </h2>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+                  We'll match the Velvet Roster to exactly who you have in mind.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {([
+                  { value: 'Female' as Gender, label: 'Female', symbol: '♀' },
+                  { value: 'Male' as Gender, label: 'Male', symbol: '♂' },
+                ] as const).map(({ value, label, symbol }) => (
+                  <motion.button
+                    key={value}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: value === 'Female' ? 0.2 : 0.3 }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleGenderSelect(value)}
+                    className="group relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-500/5 hover:from-amber-500/20 hover:to-orange-500/15 p-8 flex flex-col items-center gap-4 transition-all duration-300 hover:border-amber-400/60 hover:shadow-xl hover:shadow-amber-500/15"
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-amber-500/20 group-hover:bg-amber-500/30 transition-colors flex items-center justify-center">
+                      <span className="text-3xl text-amber-400 font-light leading-none">{symbol}</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-white mb-1">{label}</div>
+                      <div className="text-xs text-amber-400/70 font-medium tracking-wide uppercase">
+                        {value === 'Female' ? 'She / Her' : 'He / Him'}
+                      </div>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500/0 to-transparent group-hover:via-amber-500/60 transition-all duration-300" />
+                  </motion.button>
+                ))}
+              </div>
+
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                onClick={() => setPhase('choose')}
+                className="mt-6 w-full text-center text-sm text-gray-600 hover:text-gray-400 transition-colors py-2"
+              >
+                Back
+              </motion.button>
+            </motion.div>
+          )}
+
           {phase === 'scanning' && (
-            <ScanningScreen onReveal={() => setPhase('reveal')} />
+            <ScanningScreen onReveal={() => setPhase('reveal')} gender={selectedGender} />
           )}
 
           {phase === 'reveal' && (
-            <RevealScreen onContinue={() => navigate('/questionnaire?mode=velvet')} />
+            <RevealScreen onContinue={() => navigate(`/questionnaire?mode=velvet&gender=${selectedGender}`)} />
           )}
         </AnimatePresence>
       </div>

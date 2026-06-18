@@ -608,9 +608,13 @@ export function QuestionnairePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode');
+  const genderParam = searchParams.get('gender') as 'Female' | 'Male' | null;
   const isVelvetMode = mode === 'velvet';
+  const velvetGenderPrefilled = isVelvetMode && (genderParam === 'Female' || genderParam === 'Male');
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>(
+    velvetGenderPrefilled ? { relationshipType: genderParam } : {}
+  );
   const [textInput, setTextInput] = useState('');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [selectedMultiOptions, setSelectedMultiOptions] = useState<number[]>([]);
@@ -623,10 +627,52 @@ export function QuestionnairePage() {
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const velvetFiredRef = useRef(false);
 
   useEffect(() => {
     checkExistingProfile();
   }, []);
+
+  // When velvet mode has a pre-filled gender, skip all questions and fire generation immediately
+  useEffect(() => {
+    if (!velvetGenderPrefilled || isCheckingProfile || velvetFiredRef.current) return;
+    velvetFiredRef.current = true;
+    const gender: 'male' | 'female' = genderParam === 'Male' ? 'male' : 'female';
+    setIsGenerating(true);
+    const randomProfile = generateRandomCompanionProfile(gender, 'romantic');
+    const mergedAnswers: Record<string, string | string[]> = {
+      relationshipType: genderParam!,
+      connectionType: 'romantic',
+      energy: randomProfile.energyPreference,
+      flirtingStyle: randomProfile.flirtingStyle,
+      humorStyle: randomProfile.humorStyle,
+      dynamic: randomProfile.dynamicPreference,
+      confrontation: randomProfile.confrontationStyle,
+      availability: randomProfile.availabilityLevel,
+      interests: randomProfile.interestPreference,
+      loveLanguage: randomProfile.loveLanguage,
+      supportStyle: randomProfile.supportStyle,
+      lifeContext: randomProfile.lifeContext,
+      communication: randomProfile.communicationStyle,
+      emotionalOpenness: randomProfile.emotionalOpenness,
+      conversationDepth: randomProfile.conversationDepth,
+      expressiveness: randomProfile.expressiveness,
+      initiative: randomProfile.initiative,
+      companionName: randomProfile.customName,
+    };
+    setAnswers(mergedAnswers);
+    createCompanionFromAnswers(mergedAnswers).then(() => {
+      const companionId = sessionStorage.getItem('currentCompanionId');
+      if (companionId) {
+        navigate('/create-companion-avatar', { replace: true });
+      } else {
+        toast.error('There was an error creating your companion. Please try again.');
+        setIsGenerating(false);
+        velvetFiredRef.current = false;
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCheckingProfile]);
 
   const checkExistingProfile = async () => {
     try {
@@ -658,7 +704,10 @@ export function QuestionnairePage() {
     const base = COMPANION_BASE_QUESTIONS;
 
     if (isVelvetMode) {
-      return base;
+      // Gender was pre-filled from the path select page — no questions needed here
+      if (velvetGenderPrefilled) return [];
+      // Fallback: show only the gender question (skip connectionType)
+      return [base[0]];
     }
 
     if (!answers.relationshipType) {
@@ -690,7 +739,7 @@ export function QuestionnairePage() {
 
   const getTotalQuestions = () => {
     if (isVelvetMode) {
-      return COMPANION_BASE_QUESTIONS.length;
+      return velvetGenderPrefilled ? 1 : 1;
     }
     if (!answers.relationshipType) {
       return COMPANION_BASE_QUESTIONS.length + GIRLFRIEND_QUESTIONS.length;
@@ -921,6 +970,43 @@ export function QuestionnairePage() {
       return;
     }
 
+    // Velvet fallback: relationshipType was just answered — fire generation immediately (default to romantic)
+    if (isVelvetMode && question.id === 'relationshipType') {
+      const gender: 'male' | 'female' = (answer as string) === 'Male' ? 'male' : 'female';
+      setIsGenerating(true);
+      const randomProfile = generateRandomCompanionProfile(gender, 'romantic');
+      const mergedAnswers: Record<string, string | string[]> = {
+        ...newAnswers,
+        connectionType: 'romantic',
+        energy: randomProfile.energyPreference,
+        flirtingStyle: randomProfile.flirtingStyle,
+        humorStyle: randomProfile.humorStyle,
+        dynamic: randomProfile.dynamicPreference,
+        confrontation: randomProfile.confrontationStyle,
+        availability: randomProfile.availabilityLevel,
+        interests: randomProfile.interestPreference,
+        loveLanguage: randomProfile.loveLanguage,
+        supportStyle: randomProfile.supportStyle,
+        lifeContext: randomProfile.lifeContext,
+        communication: randomProfile.communicationStyle,
+        emotionalOpenness: randomProfile.emotionalOpenness,
+        conversationDepth: randomProfile.conversationDepth,
+        expressiveness: randomProfile.expressiveness,
+        initiative: randomProfile.initiative,
+        companionName: randomProfile.customName,
+      };
+      setAnswers(mergedAnswers);
+      await createCompanionFromAnswers(mergedAnswers);
+      const companionId = sessionStorage.getItem('currentCompanionId');
+      if (companionId) {
+        navigate('/create-companion-avatar', { replace: true });
+      } else {
+        toast.error('There was an error creating your companion. Please try again.');
+        setIsGenerating(false);
+      }
+      return;
+    }
+
     let fullQuestions: QuestionData[];
     if (!newAnswers.relationshipType) {
       fullQuestions = COMPANION_BASE_QUESTIONS;
@@ -1008,7 +1094,7 @@ export function QuestionnairePage() {
     return <VelvetScanningScreen />;
   }
 
-  if (isCheckingProfile) {
+  if (isCheckingProfile || (velvetGenderPrefilled && !isGenerating)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-rose-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-500"></div>
