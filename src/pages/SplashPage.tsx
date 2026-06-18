@@ -65,7 +65,12 @@ export function SplashPage() {
   useEffect(() => {
     const checkUserStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
+        const result = await Promise.race([
+          supabase.auth.getUser().then(r => r.data.user),
+          timeout,
+        ]);
+        const user = result;
         if (user) {
           const companions = await getCompanions(user.id);
           if (companions.length > 0) { navigate('/lobby', { replace: true }); return; }
