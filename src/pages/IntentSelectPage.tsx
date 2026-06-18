@@ -21,7 +21,7 @@ export function IntentSelectPage() {
       id: 'connection',
       title: 'I want connection',
       icon: <Heart className="w-8 h-8" />,
-      description: 'A companion with real personality who actually remembers you — your stories, your moods, your history. No goals, no coaching. Just someone who genuinely gets you.',
+      description: 'Backed by the Velvet Engine, your companion remembers who you are and what you love — getting sharper with every conversation. Always here, zero judgment. Just someone who wants to know the real you.',
       storageValue: 'connection',
       nextPath: '/companion-path',
     },
@@ -29,7 +29,7 @@ export function IntentSelectPage() {
       id: 'connection_growth',
       title: 'Connection + growth',
       icon: <Sparkles className="w-8 h-8" />,
-      description: 'Personality depth plus domain expertise, all powered by memory that never forgets. Your companion grows with you while helping you grow — the full experience.',
+      description: 'Humanized personality depth plus Career AI experts, all powered by the Velvet Engine. Gets sharper every session, remembers your wins and your struggles, and shows up ready to help you grow.',
       storageValue: 'connection_growth',
       nextPath: '/expert-selection',
       recommended: true,
@@ -38,7 +38,7 @@ export function IntentSelectPage() {
       id: 'expert_only',
       title: 'I want to level up',
       icon: <TrendingUp className="w-8 h-8" />,
-      description: 'A sharp expert who remembers every session, tracks your patterns over time, and never lets you repeat the same mistake twice. No fluff — maximum accountability.',
+      description: "Career experts we've built to help you stay on track and focused. Need a fitness coach? Done. Need a co-chef? Done. No fluff — maximum flexibility.",
       storageValue: 'expert_only',
       nextPath: '/expert-selection',
     },
@@ -109,7 +109,7 @@ export function IntentSelectPage() {
             What are you looking for?
           </h1>
           <p className="text-lg text-gray-400">
-            Every path is powered by memory that learns and never forgets
+            Every path is powered by the Velvet Engine — the only AI memory system that gets sharper the more you talk
           </p>
         </motion.div>
 
