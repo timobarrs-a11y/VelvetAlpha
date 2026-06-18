@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import {
   SCENARIO_SCRIPTS,
   CONFLICT_OBJECTIVES,
@@ -12,6 +12,11 @@ import {
   getMemory,
   updateMemory,
 } from "../../services/socialCombatService";
+import {
+  getFieldNotes,
+  recordFieldNote,
+  discoveredCount,
+} from "../../game/social-combat/fieldNotes";
 
 // ==================== DATA ====================
 
@@ -1538,6 +1543,96 @@ function RunVictory({ ascent, finalState, onNewRun, onMainMenu }) {
 
 // ==================== MAIN ====================
 
+const EFF_GLYPH = {
+  super:  { glyph: '✦', color: '#4ADE80', label: 'Super effective' },
+  normal: { glyph: '•', color: '#94A3B8', label: 'Normal' },
+  weak:   { glyph: '·', color: '#F87171', label: 'Not very effective' },
+};
+
+function FieldNotesPanel({ onClose }) {
+  const notes = getFieldNotes();
+  const total = Object.keys(EMOTIONS).length * Object.keys(RESP).length;
+  const found = discoveredCount();
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position:'fixed', inset:0, zIndex:200,
+        background:'rgba(2,6,23,0.82)', backdropFilter:'blur(6px)',
+        display:'flex', alignItems:'center', justifyContent:'center', padding:16,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width:'100%', maxWidth:560, maxHeight:'88vh', overflowY:'auto',
+          background:'linear-gradient(180deg, rgba(30,41,59,0.97), rgba(15,23,42,0.99))',
+          border:'1px solid rgba(255,255,255,0.1)', borderRadius:18,
+          boxShadow:'0 30px 80px rgba(0,0,0,0.7)', padding:'18px 18px 22px',
+        }}
+      >
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
+          <div>
+            <div style={{ color:'white', fontSize:18, fontWeight:800 }}>📓 Field Notes</div>
+            <div style={{ color:'rgba(255,255,255,0.5)', fontSize:12, marginTop:2 }}>
+              What you've learned about reading people. {found} / {total} discovered.
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)',
+              color:'white', borderRadius:8, padding:'4px 10px', cursor:'pointer', fontSize:13,
+            }}
+          >Close</button>
+        </div>
+
+        <div style={{ display:'flex', gap:12, flexWrap:'wrap', margin:'10px 0 14px' }}>
+          {Object.entries(EFF_GLYPH).map(([k, e]) => (
+            <span key={k} style={{ color:'rgba(255,255,255,0.6)', fontSize:11, display:'inline-flex', alignItems:'center', gap:4 }}>
+              <span style={{ color:e.color, fontWeight:800 }}>{e.glyph}</span> {e.label}
+            </span>
+          ))}
+          <span style={{ color:'rgba(255,255,255,0.4)', fontSize:11, display:'inline-flex', alignItems:'center', gap:4 }}>
+            <span style={{ fontWeight:800 }}>?</span> not yet learned
+          </span>
+        </div>
+
+        <div style={{ overflowX:'auto' }}>
+          <div style={{ display:'grid', gridTemplateColumns:`minmax(120px,1.3fr) repeat(${Object.keys(RESP).length}, 1fr)`, gap:4, minWidth:380 }}>
+            <div />
+            {Object.entries(RESP).map(([id, r]) => (
+              <div key={id} title={r.label} style={{ textAlign:'center', fontSize:16 }}>{r.icon}</div>
+            ))}
+            {Object.entries(EMOTIONS).map(([emoId, emo]) => (
+              <Fragment key={emoId}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, color:emo.color, fontSize:12, fontWeight:600 }}>
+                  <span style={{ fontSize:15 }}>{emo.icon}</span> {emo.name}
+                </div>
+                {Object.keys(RESP).map(typeId => {
+                  const eff = notes[`${emoId}:${typeId}`];
+                  const g = eff ? EFF_GLYPH[eff] : null;
+                  return (
+                    <div key={typeId} style={{
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      background: g ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
+                      border:'1px solid rgba(255,255,255,0.05)', borderRadius:6,
+                      minHeight:30, fontSize:16, fontWeight:800,
+                      color: g ? g.color : 'rgba(255,255,255,0.22)',
+                    }}>
+                      {g ? g.glyph : '?'}
+                    </div>
+                  );
+                })}
+              </Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SocialCombatRPG({ onExit = null }) {
   const [screen, setScreen] = useState('select'); // select, mode, tutorial, game, perk, runVictory
   const [char, setChar] = useState(null);
@@ -1554,6 +1649,8 @@ export default function SocialCombatRPG({ onExit = null }) {
   const [hpFlash, setHpFlash] = useState({ plr: false, opp: false });
   const [ultFlash, setUltFlash] = useState(false);
   const [memory, setMemory] = useState(null);
+  const [showNotes, setShowNotes] = useState(false);
+  const [noteToast, setNoteToast] = useState(null);
   const savedRunRef = useRef(false);
   const containerRef = useRef(null);
 
@@ -1779,6 +1876,19 @@ export default function SocialCombatRPG({ onExit = null }) {
     const prevEmo = gs.opponent.emotion;
     const { next, events } = processResp(gs, type, isUltimate);
 
+    // Field Notes: record what this response did against the emotion it was
+    // used on, so the player's hidden knowledge becomes a visible, growing codex.
+    if (!isUltimate) {
+      const eff = getEff(type, prevEmo);
+      const isNewNote = recordFieldNote(prevEmo, type, eff);
+      if (isNewNote && !tut) {
+        const emoName = EMOTIONS[prevEmo]?.name || prevEmo;
+        const effName = eff === 'super' ? 'super effective' : eff === 'weak' ? 'not very effective' : 'a normal hit';
+        setNoteToast(`📓 New field note: ${RESP[type].label} is ${effName} on ${emoName}`);
+        setTimeout(() => setNoteToast(n => (n && n.startsWith('📓') ? null : n)), 2600);
+      }
+    }
+
     // Tutorial safeguard: keep HP full so the fight can't end
     if (tut) {
       next.opponent.hp = 999;
@@ -1852,6 +1962,16 @@ export default function SocialCombatRPG({ onExit = null }) {
     <div style={appBg}>
       <Starfield />
       <CharSelect onSelect={selectChar} onExit={onExit} />
+      <button
+        onClick={() => setShowNotes(true)}
+        style={{
+          position:'absolute', top:16, right:16, zIndex:30,
+          background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)',
+          color:'white', borderRadius:10, padding:'6px 12px', cursor:'pointer',
+          fontSize:13, fontWeight:600, backdropFilter:'blur(4px)',
+        }}
+      >📓 Field Notes</button>
+      {showNotes && <FieldNotesPanel onClose={() => setShowNotes(false)} />}
     </div>
   );
 
@@ -2089,6 +2209,16 @@ export default function SocialCombatRPG({ onExit = null }) {
                 <div style={{ color:'rgba(255,255,255,0.4)', fontSize:10, fontWeight:700, letterSpacing:1.5, textTransform:'uppercase' }}>vs</div>
               </div>
               <Avatar char={gs.opponent} isOpp={true} damaged={hpFlash.opp} />
+              <button
+                onClick={() => setShowNotes(true)}
+                title="Field Notes — what you've learned"
+                style={{
+                  position:'absolute', top:8, right:10, zIndex:30,
+                  background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)',
+                  color:'white', borderRadius:8, padding:'3px 8px', cursor:'pointer', fontSize:13,
+                  lineHeight:1, backdropFilter:'blur(4px)',
+                }}
+              >📓</button>
             </div>
             <DlgLog entries={gs.dialogue} round={gs.round} combo={gs.combo} />
             <RespBar
@@ -2163,7 +2293,22 @@ export default function SocialCombatRPG({ onExit = null }) {
             {notif}
           </div>
         )}
+
+        {noteToast && (
+          <div style={{
+            position:'absolute', left:'50%', bottom:14, transform:'translateX(-50%)',
+            background:'rgba(8,15,40,0.95)', border:'1px solid rgba(74,222,128,0.4)',
+            borderRadius:12, padding:'9px 16px', color:'#D1FAE5', fontWeight:600,
+            zIndex:120, fontSize:12.5, maxWidth:'90%', textAlign:'center',
+            pointerEvents:'none', backdropFilter:'blur(8px)',
+            boxShadow:'0 8px 32px rgba(0,0,0,0.6)', animation:'slideIn 0.3s ease-out',
+          }}>
+            {noteToast}
+          </div>
+        )}
       </div>
+
+      {showNotes && <FieldNotesPanel onClose={() => setShowNotes(false)} />}
     </div>
   );
 }
