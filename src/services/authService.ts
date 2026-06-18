@@ -1,32 +1,29 @@
 import { supabase } from '../shared/supabase/client';
 
 export const authService = {
-  async signUp(email: string, password: string) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+  async signUp(
+    email: string,
+    password: string,
+    consent: { termsVersion: string; termsAcceptedAt: string; ageVerifiedAt: string }
+  ) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
+    if (!data.user) throw new Error('Failed to create account');
 
-    if (!data.user) {
-      throw new Error('Failed to create account');
-    }
-
-    // Create user_profiles row immediately after signup
-    // This is necessary because we can't create triggers on auth.users
     const { error: profileError } = await supabase
       .from('user_profiles')
       .insert({
         id: data.user.id,
         name: 'there',
+        terms_accepted_at: consent.termsAcceptedAt,
+        terms_version: consent.termsVersion,
+        age_verified_at: consent.ageVerifiedAt,
       });
 
-    if (profileError) {
-      // Profile already exists (edge case) or other error - don't fail
-      // Don't throw - the user account was created successfully
+    if (profileError && !profileError.message.includes('duplicate')) {
+      // Non-duplicate errors are logged but not fatal — auth account was created
+      console.error('Profile insert error:', profileError.message);
     }
 
     return data.user;
