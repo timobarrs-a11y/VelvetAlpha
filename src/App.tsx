@@ -4,7 +4,7 @@ import { CalendarPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatContainer } from './components/ChatContainer';
 import { ChatInput } from './components/ChatInput';
-import { ChatStyleBar, ChatStyleTileStrip } from './components/ChatStyleBar';
+import { ChatStyleBar } from './components/ChatStyleBar';
 import FeedbackModal from './components/FeedbackModal';
 import { VideoPlayer } from './components/VideoPlayer';
 import { ChatHeader } from './components/ChatHeader';
@@ -32,7 +32,7 @@ import { CookieConsent } from './components/CookieConsent';
 import { WallpaperPickerModal } from './components/WallpaperPickerModal';
 import { buildWallpaperMeta } from './services/wallpaperService';
 import { BotPromptDrawer, ThreadMode } from './components/thread/ThreadToolbar';
-import { QuickCommand, QuickCommandsStrip } from './components/QuickCommandBar';
+import { QuickCommand, QuickCommandPopover } from './components/QuickCommandBar';
 import { CompanionHubLeftRail } from './components/hub/CompanionHubLeftRail';
 import { CompanionHubRightRail } from './components/hub/CompanionHubRightRail';
 import { CompanionTourOverlay } from './components/hub/CompanionTourOverlay';
@@ -64,6 +64,9 @@ function AppInner() {
 
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
+  const petEnabled = usePetStore(s => s.enabled);
+  const petToggle = usePetStore(s => s.toggle);
+  const petName = usePetStore(s => s.name);
   const { startTour, isOnboarding } = useTutorialDirector();
   const [tourUserName, setTourUserName] = useState('');
   const [tourSnapshot, setTourSnapshot] = useState<Record<string, unknown>>({});
@@ -180,8 +183,12 @@ function AppInner() {
   useEffect(() => {
     if (!authLoading && user) checkAuthAndOnboarding();
     const initNotifications = async () => {
-      const { NotificationService } = await import('./services/notificationService');
-      await NotificationService.initializeNotifications();
+      try {
+        const { NotificationService } = await import('./services/notificationService');
+        await NotificationService.initializeNotifications();
+      } catch (e) {
+        console.warn('[notifications] init failed:', e);
+      }
     };
     initNotifications();
   }, [companionId, authLoading, user?.id]);
@@ -370,18 +377,22 @@ function AppInner() {
 
     const runRitual = async () => {
       ritualFiredRef.current = fireKey;
-      const { DailyRitualService } = await import('./services/dailyRitualService');
-      const ritualResult = await DailyRitualService.checkAndTriggerRituals(userId, companionId, companion.custom_name);
-      if (ritualResult.shouldSendMessage && ritualResult.message) {
-        await sendMessageMutation.mutateAsync({
-          userId, companionId, role: 'assistant', content: ritualResult.message,
-          clientMessageId: crypto.randomUUID(),
-        });
-        conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: ritualResult.message.length });
-        playSound();
+      try {
+        const { DailyRitualService } = await import('./services/dailyRitualService');
+        const ritualResult = await DailyRitualService.checkAndTriggerRituals(userId, companionId, companion.custom_name);
+        if (ritualResult.shouldSendMessage && ritualResult.message) {
+          await sendMessageMutation.mutateAsync({
+            userId, companionId, role: 'assistant', content: ritualResult.message,
+            clientMessageId: crypto.randomUUID(),
+          });
+          conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: ritualResult.message.length });
+          playSound();
+        }
+      } catch (e) {
+        console.error('[ritual] error:', e);
       }
     };
-    runRitual().catch(console.error);
+    runRitual();
   }, [userId, companionId, companion?.id, rawMessages?.length]);
 
   useEffect(() => {
@@ -393,28 +404,32 @@ function AppInner() {
     if (resumptionFiredRef.current === fireKey) return;
 
     const runResumption = async () => {
-      const { DailyRitualService } = await import('./services/dailyRitualService');
-      const ritualResult = await DailyRitualService.checkAndTriggerRituals(userId, companionId, companion.custom_name);
-      if (ritualResult.shouldSendMessage && ritualResult.message) return;
+      try {
+        const { DailyRitualService } = await import('./services/dailyRitualService');
+        const ritualResult = await DailyRitualService.checkAndTriggerRituals(userId, companionId, companion.custom_name);
+        if (ritualResult.shouldSendMessage && ritualResult.message) return;
 
-      resumptionFiredRef.current = fireKey;
-      const { data: profile } = await supabase.from('user_profiles').select('name').eq('id', userId).maybeSingle();
-      const userName = profile?.name || 'there';
+        resumptionFiredRef.current = fireKey;
+        const { data: profile } = await supabase.from('user_profiles').select('name').eq('id', userId).maybeSingle();
+        const userName = profile?.name || 'there';
 
-      const { SessionResumptionService } = await import('./services/sessionResumptionService');
-      const resumptionMessage = await SessionResumptionService.handleSessionResumption(
-        userId, companionId, companion.custom_name, companion.gender, userName, companion.signature_voice
-      );
-      if (resumptionMessage) {
-        await sendMessageMutation.mutateAsync({
-          userId, companionId, role: 'assistant', content: resumptionMessage,
-          clientMessageId: crypto.randomUUID(),
-        });
-        conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: resumptionMessage.length });
-        playSound();
+        const { SessionResumptionService } = await import('./services/sessionResumptionService');
+        const resumptionMessage = await SessionResumptionService.handleSessionResumption(
+          userId, companionId, companion.custom_name, companion.gender, userName, companion.signature_voice
+        );
+        if (resumptionMessage) {
+          await sendMessageMutation.mutateAsync({
+            userId, companionId, role: 'assistant', content: resumptionMessage,
+            clientMessageId: crypto.randomUUID(),
+          });
+          conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: resumptionMessage.length });
+          playSound();
+        }
+      } catch (e) {
+        console.error('[resumption] error:', e);
       }
     };
-    runResumption().catch(console.error);
+    runResumption();
   }, [userId, companionId, companion?.id, rawMessages?.length]);
 
   const fetchBriefContext = useCallback(async (): Promise<{ calendar: string; news: string }> => {
@@ -797,9 +812,13 @@ function AppInner() {
         setTimeout(() => navigate(navigationIntent!.route), 1800);
       }
 
-      await updateLastMessageTime(companionId);
-      await decrementMessageCount(user.id);
-      await refreshSubscription();
+      try {
+        await updateLastMessageTime(companionId);
+        await decrementMessageCount(user.id);
+        await refreshSubscription();
+      } catch (e) {
+        console.warn('[chat] post-message housekeeping failed:', e);
+      }
 
       conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: response.length });
 
@@ -1181,102 +1200,20 @@ function AppInner() {
           : { background: 'rgba(255,255,255,0.80)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderColor: 'rgba(209,213,219,0.50)', boxShadow: '0 -10px 40px -10px rgba(0,0,0,0.10)' }
         }
       >
-        {/* Desktop layout — two columns side by side, content pinned to bottom */}
-        <div className="hidden lg:flex items-end pb-2 pt-1">
+        {/* Desktop layout — evenly distributed single row */}
+        <div className="hidden lg:flex items-center gap-2 px-4 py-2">
 
-          {/* Left column — Quick Commands for all threads */}
-          <div
-            className="flex-shrink-0 flex flex-col justify-end transition-all duration-[220ms]"
-            style={{ width: (customization?.left_rail_collapsed ?? false) ? '32px' : '224px' }}
-          >
-            {activeThread === 'companion' && (
-              <div className="px-3">
-                <p className="text-[9.5px] font-bold text-gray-500 uppercase tracking-widest mb-1">Navi Quick Commands</p>
-                <div className="h-px bg-gray-200 mb-1" />
-                <QuickCommandsStrip
-                  onCommand={handleQuickCommand}
-                  disabled={isTyping || remainingMessages === 0 || isCurrentlyLoading}
-                />
-              </div>
-            )}
-            {(activeThread === 'atlas' || activeThread === 'navi') && (
-              <div className="px-3">
-                <p className="text-[9.5px] font-bold text-gray-500 uppercase tracking-widest mb-1">Quick Commands</p>
-                <div className="h-px bg-gray-200 mb-1" />
-                <QuickCommandsStrip
-                  onCommand={handleQuickCommand}
-                  disabled={naviTyping || atlasTyping}
-                />
-                <div className="h-px bg-gray-200 mt-1.5 mb-1" />
-                <button
-                  onClick={() => setActiveThread('companion')}
-                  className="w-full flex items-center gap-2 px-2 py-1 rounded-lg text-left hover:bg-gray-100 transition-colors"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
-                  <div>
-                    <p className="text-[11px] font-semibold text-gray-600 leading-tight">Back to Chat</p>
-                    <p className="text-[9.5px] text-gray-400 leading-tight">Return to companion</p>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Quick Commands popover trigger */}
+          <QuickCommandPopover
+            onCommand={handleQuickCommand}
+            disabled={
+              activeThread === 'companion'
+                ? (isTyping || remainingMessages === 0 || isCurrentlyLoading)
+                : (naviTyping || atlasTyping)
+            }
+          />
 
-          {/* Center column — style tiles on top, input below, all pinned to bottom */}
-          <div className="flex-1 min-w-0 flex flex-col justify-end gap-1.5 px-2 sm:px-3">
-            {activeThread === 'companion' && (
-              /* pr offsets the send button width (~44px) + gap (8px) so tiles end at the input field edge */
-              <div style={{ paddingRight: '52px' }}>
-                <ChatStyleTileStrip
-                  companionId={companionId}
-                  companionName={getCharacterName()}
-                  currentFontFamily={companion?.font_family}
-                  currentBubbleColor={chatBubbleColor}
-                  currentTextColor={chatTextColor}
-                  currentCompanionBubbleColor={companionBubbleColor}
-                  currentCompanionTextColor={companionTextColor}
-                  customization={customization}
-                  onFontChange={(fontFamily) => setCompanion(prev => prev ? { ...prev, font_family: fontFamily } : prev)}
-                  onBubbleColorChange={setChatBubbleColor}
-                  onTextColorChange={setChatTextColor}
-                  onCompanionBubbleColorChange={setCompanionBubbleColor}
-                  onCompanionTextColorChange={setCompanionTextColor}
-                  onCustomizationUpdate={(prefs) => {
-                    if (prefs.show_trail !== undefined) setShowTrail(prefs.show_trail);
-                    if (prefs.trail_style !== undefined) setTrailStyle(prefs.trail_style);
-                    if (prefs.animation_style !== undefined) setAnimationStyle(prefs.animation_style);
-                  }}
-                  onOpenWallpaper={() => setShowWallpaperModal(true)}
-                />
-              </div>
-            )}
-            <div className="flex gap-2 items-center">
-              <ChatInput
-                onSend={activeThread === 'companion' ? handleSendMessage : handleThreadSend}
-                disabled={
-                  activeThread === 'companion'
-                    ? (isTyping || remainingMessages === 0 || isCurrentlyLoading)
-                    : activeThread === 'atlas' ? atlasTyping
-                    : naviTyping
-                }
-                characterName={
-                  activeThread === 'atlas' ? 'Atlas'
-                  : activeThread === 'navi' ? 'Navi'
-                  : getCharacterName()
-                }
-                companionId={companionId || undefined}
-                lastMessageText={uiMessages.length > 0 ? uiMessages[uiMessages.length - 1].content.slice(0, 120) : undefined}
-                showNavRadial={false}
-              />
-            </div>
-          </div>
-
-          {/* Right column — spacer to balance the left Navi column */}
-          <div className="flex-shrink-0" style={{ width: '240px' }} />
-        </div>
-
-        {/* Mobile layout */}
-        <div className="lg:hidden flex items-center py-2 gap-2 px-3">
+          {/* Chat Input — grows */}
           <div className="flex-1 min-w-0">
             <ChatInput
               onSend={activeThread === 'companion' ? handleSendMessage : handleThreadSend}
@@ -1296,6 +1233,89 @@ function AppInner() {
               showNavRadial={false}
             />
           </div>
+
+          {/* Mochi (pet) toggle */}
+          <button
+            onClick={petToggle}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all duration-200 flex-shrink-0"
+            style={{
+              background: petEnabled ? 'rgba(251,146,60,0.15)' : 'rgba(0,0,0,0.04)',
+              border: `1.5px solid ${petEnabled ? 'rgba(251,146,60,0.45)' : 'rgba(0,0,0,0.08)'}`,
+            }}
+            title={petEnabled ? `${petName} is roaming — click to hide` : `Summon ${petName}`}
+          >
+            <span className={`text-base transition-transform duration-300 ${petEnabled ? 'scale-110' : 'grayscale opacity-50'}`}>
+              🐾
+            </span>
+            <span className={`text-[11px] font-semibold transition-colors ${petEnabled ? 'text-orange-600' : 'text-gray-400'}`}>
+              {petName}
+            </span>
+            <span
+              className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors"
+              style={{ background: petEnabled ? '#22c55e' : '#d1d5db' }}
+            />
+          </button>
+
+          {/* Style bar — compact trigger */}
+          {activeThread === 'companion' && (
+            <ChatStyleBar
+              companionId={companionId}
+              companionName={getCharacterName()}
+              currentFontFamily={companion?.font_family}
+              currentBubbleColor={chatBubbleColor}
+              currentTextColor={chatTextColor}
+              currentCompanionBubbleColor={companionBubbleColor}
+              currentCompanionTextColor={companionTextColor}
+              customization={customization}
+              onFontChange={(fontFamily) => setCompanion(prev => prev ? { ...prev, font_family: fontFamily } : prev)}
+              onBubbleColorChange={setChatBubbleColor}
+              onTextColorChange={setChatTextColor}
+              onCompanionBubbleColorChange={setCompanionBubbleColor}
+              onCompanionTextColorChange={setCompanionTextColor}
+              onCustomizationUpdate={(prefs) => {
+                if (prefs.show_trail !== undefined) setShowTrail(prefs.show_trail);
+                if (prefs.trail_style !== undefined) setTrailStyle(prefs.trail_style);
+                if (prefs.animation_style !== undefined) setAnimationStyle(prefs.animation_style);
+              }}
+              onOpenWallpaper={() => setShowWallpaperModal(true)}
+            />
+          )}
+        </div>
+
+        {/* Mobile layout */}
+        <div className="lg:hidden flex items-center py-2 gap-2 px-3">
+          {/* Mochi toggle — icon only on mobile */}
+          <button
+            onClick={petToggle}
+            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{
+              background: petEnabled ? 'rgba(251,146,60,0.15)' : 'rgba(0,0,0,0.04)',
+              border: `1.5px solid ${petEnabled ? 'rgba(251,146,60,0.45)' : 'rgba(0,0,0,0.08)'}`,
+            }}
+          >
+            <span className={`text-sm ${petEnabled ? '' : 'grayscale opacity-50'}`}>🐾</span>
+          </button>
+
+          <div className="flex-1 min-w-0">
+            <ChatInput
+              onSend={activeThread === 'companion' ? handleSendMessage : handleThreadSend}
+              disabled={
+                activeThread === 'companion'
+                  ? (isTyping || remainingMessages === 0 || isCurrentlyLoading)
+                  : activeThread === 'atlas' ? atlasTyping
+                  : naviTyping
+              }
+              characterName={
+                activeThread === 'atlas' ? 'Atlas'
+                : activeThread === 'navi' ? 'Navi'
+                : getCharacterName()
+              }
+              companionId={companionId || undefined}
+              lastMessageText={uiMessages.length > 0 ? uiMessages[uiMessages.length - 1].content.slice(0, 120) : undefined}
+              showNavRadial={false}
+            />
+          </div>
+
           {activeThread === 'companion' && (
             <div className="flex-shrink-0">
               <ChatStyleBar

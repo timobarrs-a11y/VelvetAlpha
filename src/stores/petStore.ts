@@ -28,6 +28,7 @@ interface PetStoreState {
 
 interface PetStoreActions {
   init: (userId: string, companionId: string) => Promise<void>;
+  toggle: () => void;
   handleStats: (s: PetStats) => void;
   clearLevelUp: () => void;
   setName: (name: string) => Promise<void>;
@@ -58,13 +59,21 @@ export const usePetStore = create<PetStoreState & PetStoreActions>((set, get) =>
         name: state.petName,
         animalType: state.animalType,
         stats: s,
+        enabled: state.petEnabled,
         _lastLevel: state.level,
         _currentStats: { ...s, petName: state.petName, animalType: state.animalType },
       });
     }
-    set({ enabled: true, isLoading: false });
+    set({ isLoading: false });
 
     window.addEventListener('beforeunload', get().flushSave);
+  },
+
+  toggle: () => {
+    const { enabled, _userId, _companionId } = get();
+    const next = !enabled;
+    set({ enabled: next });
+    if (_userId && _companionId) petService.setEnabled(_userId, _companionId, next);
   },
 
   handleStats: (incoming: PetStats) => {

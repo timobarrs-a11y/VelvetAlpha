@@ -11,11 +11,13 @@ export interface PetStats {
 export interface PetState extends PetStats {
   petName:    string;
   animalType: 'cat' | 'bunny';
+  petEnabled: boolean;
 }
 
 export const DEFAULT_PET_STATE: PetState = {
   petName:    'Mochi',
   animalType: 'cat',
+  petEnabled: false,
   hunger:     82,
   mood:       78,
   clean:      90,
@@ -47,6 +49,7 @@ export const petService = {
     return {
       petName:    data.pet_name,
       animalType: data.animal_type as 'cat' | 'bunny',
+      petEnabled: data.pet_enabled ?? false,
       hunger:     data.hunger,
       mood:       data.mood,
       clean:      data.clean,
@@ -63,6 +66,7 @@ export const petService = {
         companion_id: companionId,
         pet_name:     DEFAULT_PET_STATE.petName,
         animal_type:  DEFAULT_PET_STATE.animalType,
+        pet_enabled:  false,
         hunger:       DEFAULT_PET_STATE.hunger,
         mood:         DEFAULT_PET_STATE.mood,
         clean:        DEFAULT_PET_STATE.clean,
@@ -78,6 +82,7 @@ export const petService = {
       return {
         petName:    data.pet_name,
         animalType: data.animal_type as 'cat' | 'bunny',
+        petEnabled: data.pet_enabled ?? false,
         hunger:     data.hunger,
         mood:       data.mood,
         clean:      data.clean,
@@ -114,5 +119,14 @@ export const petService = {
       .eq('user_id', userId)
       .eq('companion_id', companionId);
     if (error) console.error('[petService] rename error', error);
+  },
+
+  async setEnabled(userId: string, companionId: string, enabled: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('pet_state')
+      .update({ pet_enabled: enabled, updated_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('companion_id', companionId);
+    if (error) console.error('[petService] setEnabled error', error);
   },
 };

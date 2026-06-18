@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
@@ -123,6 +123,98 @@ export function QuickCommandsStrip({ onCommand, disabled }: QuickCommandsStripPr
           </motion.button>
         );
       })}
+    </div>
+  );
+}
+
+interface QuickCommandPopoverProps {
+  onCommand: (cmd: QuickCommand) => Promise<void>;
+  disabled?: boolean;
+}
+
+export function QuickCommandPopover({ onCommand, disabled }: QuickCommandPopoverProps) {
+  const [open, setOpen] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const handleClick = async (cmd: QuickCommand) => {
+    if (disabled || loadingId) return;
+    setLoadingId(cmd.id);
+    try {
+      await onCommand(cmd);
+    } finally {
+      setLoadingId(null);
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+        style={{
+          background: open ? 'rgba(251,191,36,0.15)' : 'rgba(0,0,0,0.04)',
+          border: `1.5px solid ${open ? 'rgba(251,191,36,0.45)' : 'rgba(0,0,0,0.08)'}`,
+        }}
+        title="Quick Commands"
+      >
+        <span className="text-base">⚡</span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute bottom-full left-0 mb-2 w-56 rounded-2xl shadow-xl overflow-hidden"
+            style={{
+              background: 'rgba(255,255,255,0.95)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(0,0,0,0.08)',
+            }}
+          >
+            <div className="px-3 pt-3 pb-1.5">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quick Commands</p>
+            </div>
+            <div className="px-1.5 pb-2">
+              {QUICK_COMMANDS.map(cmd => {
+                const styles = ACCENT_STYLES[cmd.accent] ?? ACCENT_STYLES.slate;
+                const isLoading = loadingId === cmd.id;
+                const isDisabled = !!disabled || (loadingId !== null && !isLoading);
+                return (
+                  <button
+                    key={cmd.id}
+                    onClick={() => handleClick(cmd)}
+                    disabled={isDisabled}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all ${
+                      isDisabled ? 'opacity-40 cursor-not-allowed' : `cursor-pointer hover:bg-gray-50`
+                    }`}
+                  >
+                    <span className="text-sm flex-shrink-0">{cmd.iconChar}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-semibold text-gray-700 leading-tight">{cmd.label}</p>
+                      <p className="text-[10px] text-gray-400 leading-tight">{cmd.sublabel}</p>
+                    </div>
+                    {isLoading && <Loader2 className={`w-3 h-3 animate-spin ${styles.text} flex-shrink-0`} />}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
