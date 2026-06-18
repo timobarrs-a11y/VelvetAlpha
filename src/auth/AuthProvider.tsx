@@ -18,16 +18,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 5000);
+
     async function init() {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      if (error) console.error('[AuthProvider] getSession error:', error);
-
-      setSession(data.session ?? null);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (error) console.error('[AuthProvider] getSession error:', error);
+        setSession(data.session ?? null);
+        setUser(data.session?.user ?? null);
+      } catch (e) {
+        console.error('[AuthProvider] getSession failed:', e);
+      } finally {
+        if (mounted) {
+          clearTimeout(timeout);
+          setLoading(false);
+        }
+      }
     }
 
     init();
@@ -40,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(timeout);
       authListener?.subscription.unsubscribe();
     };
   }, []);
