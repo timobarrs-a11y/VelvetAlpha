@@ -830,6 +830,7 @@ function DlgLog({ entries, round, combo }) {
 function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ult, playerId, scenarioId }) {
   const [hov, setHov] = useState(null);
   const ultReady = charge >= 100;
+  const notes = getFieldNotes();
   return (
     <div style={{ padding:'14px 16px 16px', background:'rgba(0,0,0,0.25)' }}>
       <div style={{ textAlign:'center', color:'rgba(255,255,255,0.4)', fontSize:10, marginBottom:10, letterSpacing:1.5, textTransform:'uppercase', fontWeight:600 }}>
@@ -876,6 +877,8 @@ function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ul
           const cfg = RESP[type];
           const isHov = hov === type;
           const preview = previewPlayerLine(scenarioId, playerId, type, '');
+          const learnedEff = notes[`${opponent.emotion}:${type}`];
+          const lg = learnedEff ? EFF_GLYPH[learnedEff] : null;
           return (
             <button
               key={type}
@@ -907,6 +910,16 @@ function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ul
             >
               <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1, filter: `drop-shadow(0 0 6px ${cfg.color}66)` }}>{cfg.icon}</span>
               <span style={{ flex: 1 }}>{preview}</span>
+              {lg && (
+                <span
+                  title={`You've learned: ${lg.label} on ${EMOTIONS[opponent.emotion]?.name || opponent.emotion}`}
+                  style={{
+                    position:'absolute', top:6, right:8, fontSize:14, fontWeight:800,
+                    color: lg.color, lineHeight:1,
+                    textShadow:`0 0 8px ${lg.color}88`, pointerEvents:'none',
+                  }}
+                >{lg.glyph}</span>
+              )}
             </button>
           );
         })}
