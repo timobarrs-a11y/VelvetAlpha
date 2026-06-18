@@ -109,8 +109,8 @@ const ZODIAC_LINES: Record<string, string[]> = {
 
 function getZodiacSign(dateString: string): string {
   const date = new Date(dateString);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
 
   if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return 'Aries';
   if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return 'Taurus';

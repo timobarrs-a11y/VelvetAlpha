@@ -34,8 +34,8 @@ const ZODIAC_LINES: Record<string, string> = {
 
 function getZodiacSign(dateString: string): string {
   const date = new Date(dateString);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
 
   if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return 'Aries';
   if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return 'Taurus';
@@ -49,6 +49,29 @@ function getZodiacSign(dateString: string): string {
   if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return 'Capricorn';
   if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return 'Aquarius';
   return 'Pisces';
+}
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+const MONTH_ZODIAC_OPTIONS: [string, string][] = [
+  ['Capricorn', 'Aquarius'],   // January
+  ['Aquarius', 'Pisces'],      // February
+  ['Pisces', 'Aries'],         // March
+  ['Aries', 'Taurus'],         // April
+  ['Taurus', 'Gemini'],        // May
+  ['Gemini', 'Cancer'],        // June
+  ['Cancer', 'Leo'],           // July
+  ['Leo', 'Virgo'],            // August
+  ['Virgo', 'Libra'],          // September
+  ['Libra', 'Scorpio'],        // October
+  ['Scorpio', 'Sagittarius'],  // November
+  ['Sagittarius', 'Capricorn'],// December
+];
+
+function getZodiacOptionsForBirthday(dateString: string): { monthName: string; options: [string, string] } {
+  const date = new Date(dateString);
+  const monthIndex = date.getUTCMonth();
+  return { monthName: MONTH_NAMES[monthIndex], options: MONTH_ZODIAC_OPTIONS[monthIndex] };
 }
 
 const COLOR_ACCENTS: Record<string, { border: string; glow: string; progress: string; tag: string }> = {
@@ -209,6 +232,17 @@ const QUESTIONS: QuestionData[] = [
       const name = a.name as string;
       return name ? `Hey ${name}! When Were You Born?` : 'When Were You Born?';
     },
+  },
+  {
+    id: 'zodiacSign',
+    type: 'choice',
+    question: (a) => {
+      const birthday = a.birthday as string;
+      if (!birthday) return "What's Your Zodiac Sign?";
+      const { monthName, options } = getZodiacOptionsForBirthday(birthday);
+      return `${monthName}?! Nice! So would that make you a ${options[0]} or a ${options[1]}?`;
+    },
+    options: [], // dynamically set based on birthday
   },
   {
     id: 'gender',
@@ -416,11 +450,6 @@ export function UserProfileQuestionnairePage() {
 
   const handleAnswer = async (answer: string | string[]) => {
     const newAnswers = { ...answers, [question.id]: answer };
-
-    if (question.id === 'birthday') {
-      const sign = getZodiacSign(answer as string);
-      newAnswers.zodiacSign = sign;
-    }
 
     setAnswers(newAnswers);
 
@@ -655,9 +684,15 @@ export function UserProfileQuestionnairePage() {
                 </div>
               )}
 
-              {question.type === 'choice' && (
+              {question.type === 'choice' && (() => {
+                let choiceOptions = question.options || [];
+                if (question.id === 'zodiacSign' && answers.birthday) {
+                  const { options } = getZodiacOptionsForBirthday(answers.birthday as string);
+                  choiceOptions = options.map(sign => ({ text: sign }));
+                }
+                return (
                 <div className="space-y-3">
-                  {question.options?.map((option, index) => (
+                  {choiceOptions.map((option, index) => (
                     <button
                       key={index}
                       onClick={() => handleChoiceClick(index, option.text)}
@@ -673,7 +708,8 @@ export function UserProfileQuestionnairePage() {
                     </button>
                   ))}
                 </div>
-              )}
+                );
+              })()}
 
               {question.type === 'multi-choice' && (() => {
                 const totalSelected = selectedMultiOptions.length + (customEntries[question.id]?.length || 0);
