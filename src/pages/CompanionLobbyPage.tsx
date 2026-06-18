@@ -36,7 +36,8 @@ const GAMES = [
   { id: 'fox-runner',   name: "Luna's Run",      description: 'Side-scrolling platformer across 5 handcrafted worlds',              icon: Squirrel,  iconBg: 'from-emerald-500 to-teal-600',   path: '/fox-runner' },
   { id: 'money-grab',   name: 'Money Grab',      description: 'Race to collect cash while dodging hammers and your companion',      icon: Cherry,    iconBg: 'from-yellow-400 to-orange-500',  requiresCompanion: true },
   { id: 'home-run',     name: 'Home Run Derby',  description: 'Step into the batter\'s box — charge your swing, time the pitch, go yard', icon: Trophy,  iconBg: 'from-green-600 to-emerald-700', path: '/home-run-derby' },
-  { id: 'zelda-ocean',  name: 'Wind & Waves',    description: 'Cel-shaded 3D ocean voyage — sail, dodge enemy ships, collect rupees',      icon: Anchor,  iconBg: 'from-sky-500 to-teal-600',      path: '/zelda-ocean' },
+  { id: 'zelda-ocean',    name: 'Wind & Waves',    description: 'Cel-shaded 3D ocean voyage — sail, dodge enemy ships, collect rupees',      icon: Anchor,  iconBg: 'from-sky-500 to-teal-600',      path: '/zelda-ocean' },
+  { id: 'social-combat',  name: 'Social Combat',   description: 'Read emotions and master the art of conversation',                           icon: Brain,   iconBg: 'from-violet-500 to-indigo-600', path: '/social-combat' },
 ] as const;
 
 const HUB_TILES = [
