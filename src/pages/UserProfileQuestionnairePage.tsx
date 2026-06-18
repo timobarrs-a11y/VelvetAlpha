@@ -452,7 +452,7 @@ export function UserProfileQuestionnairePage() {
         toast.error('Something went wrong saving your profile. Please try again.');
         return;
       }
-      navigate('/companion-path', { replace: true });
+      navigate('/intent-select', { replace: true });
       return;
     }
 
