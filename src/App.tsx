@@ -297,6 +297,7 @@ function AppInner() {
       if (!companionData) { navigate('/lobby'); return; }
 
       setCompanion(companionData);
+      localStorage.setItem('velvet_last_companion', companionData.id);
 
       if (companionData.signature_expert) {
         resolveExpert(companionData.signature_expert, companionData.signature_expert_source, user.id)

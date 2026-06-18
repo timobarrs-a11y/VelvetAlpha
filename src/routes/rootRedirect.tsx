@@ -140,7 +140,13 @@ export function RootRedirect() {
       } else {
         localStorage.removeItem('currentCompanionId');
         localStorage.removeItem('matchAnswers');
-        setPickerCompanions(companions);
+        const lastId = localStorage.getItem('velvet_last_companion');
+        const lastCompanion = lastId ? companions.find(c => c.id === lastId) : null;
+        if (lastCompanion) {
+          setDestination(`/chat?companion=${lastCompanion.id}`);
+        } else {
+          setPickerCompanions(companions);
+        }
       }
     }
 
