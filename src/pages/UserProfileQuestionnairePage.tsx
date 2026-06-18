@@ -96,7 +96,7 @@ const INTRO_SLIDES = [
   {
     icon: '01',
     heading: 'First, tell us about you.',
-    body: 'Before we build what you like, we must understand who you are. We need to ask a few core questions.',
+    body: "Before we know what you like, we must know who YOU are. Here's a couple key questions that create the core experience of Velvet.",
   },
   {
     icon: '02',
@@ -247,10 +247,7 @@ const QUESTIONS: QuestionData[] = [
   {
     id: 'gender',
     type: 'choice',
-    question: (a) => {
-      const name = a.name as string;
-      return name ? `How Do You Identify, ${name}?` : 'How Do You Identify?';
-    },
+    question: 'How Do You Identify?',
     afterNote: (a) => {
       const zodiac = a.zodiacSign as string;
       return zodiac ? ZODIAC_LINES[zodiac] || null : null;
@@ -265,10 +262,7 @@ const QUESTIONS: QuestionData[] = [
   {
     id: 'favoriteColor',
     type: 'choice',
-    question: (a) => {
-      const name = a.name as string;
-      return name ? `Got it, ${name}. What's Your Favorite Color?` : "What's Your Favorite Color?";
-    },
+    question: "What's Your Favorite Color?",
     options: [
       { text: 'Red' }, { text: 'Pink' }, { text: 'Orange' }, { text: 'Yellow' },
       { text: 'Green' }, { text: 'Teal' }, { text: 'Cyan' }, { text: 'Blue' },
@@ -279,10 +273,7 @@ const QUESTIONS: QuestionData[] = [
   {
     id: 'hobbies',
     type: 'multi-choice',
-    question: (a) => {
-      const name = a.name as string;
-      return name ? `Nice, ${name}. What Are Your Favorite Hobbies?` : 'What Are Your Favorite Hobbies?';
-    },
+    question: 'What Are Your Favorite Hobbies?',
     minSelections: 3,
     allowCustom: true,
     options: [
@@ -298,10 +289,7 @@ const QUESTIONS: QuestionData[] = [
   {
     id: 'musicGenre',
     type: 'multi-choice',
-    question: (a) => {
-      const name = a.name as string;
-      return name ? `What's Your Music Vibe, ${name}?` : "What's Your Music Vibe?";
-    },
+    question: "What's Your Music Vibe?",
     minSelections: 1,
     allowCustom: true,
     options: [
@@ -315,10 +303,7 @@ const QUESTIONS: QuestionData[] = [
   {
     id: 'sports',
     type: 'multi-choice',
-    question: (a) => {
-      const name = a.name as string;
-      return name ? `Any Sports You Follow Or Play, ${name}?` : 'Any Sports You Follow Or Play?';
-    },
+    question: 'Any Sports You Follow Or Play?',
     minSelections: 0,
     allowCustom: true,
     options: [
@@ -335,10 +320,7 @@ const QUESTIONS: QuestionData[] = [
   {
     id: 'newsTopics',
     type: 'multi-choice',
-    question: (a) => {
-      const name = a.name as string;
-      return name ? `Last one, ${name}. What News Topics Interest You?` : 'What News Topics Interest You?';
-    },
+    question: 'What News Topics Interest You?',
     minSelections: 0,
     allowCustom: true,
     options: [
