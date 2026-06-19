@@ -12,7 +12,7 @@ export const MODEL_CONFIG = {
    * Primary model for complex tasks requiring advanced reasoning
    * Use for: Main chat, article discussions, complex analysis
    */
-  SONNET: "claude-sonnet-4-5-20250929",
+  SONNET: "claude-sonnet-4-6",
 
   /**
    * Fast, efficient model for simpler tasks

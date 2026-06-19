@@ -728,11 +728,11 @@ function AppInner() {
       await new Promise(resolve => setTimeout(resolve, Math.min(firstMsg.length * 15, 3000)));
       setIsTyping(false);
 
+      await sendMessageMutation.mutateAsync({ userId: user.id, companionId: cid, role: 'assistant', content: firstMsg, clientMessageId: crypto.randomUUID() });
+
       await finalizeFirstMessage(cid);
       const updatedCompanion = await getCompanion(cid);
       if (updatedCompanion) setCompanion(updatedCompanion);
-
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId: cid, role: 'assistant', content: firstMsg, clientMessageId: crypto.randomUUID() });
       await updateLastMessageTime(cid);
       conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: firstMsg.length });
       playSound();
