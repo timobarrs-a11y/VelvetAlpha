@@ -197,7 +197,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
           ],
           systemPrompt: '',
           maxTokens: 300,
-          model: 'claude-sonnet-4-5-20250929',
+          model: 'claude-sonnet-4-6',
         }),
       });
 

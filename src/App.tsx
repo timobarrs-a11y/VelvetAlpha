@@ -51,7 +51,7 @@ import { NaviOnboardingModal } from './components/NaviOnboardingModal';
 import { CustomizationPanel } from './components/CustomizationPanel';
 import type { BriefReadiness } from './services/morningBriefService';
 import { usePetStore, usePetRefs } from './stores/petStore';
-import { PetCompanion, RadialTools, PetLevelToast } from './components/pet';
+import { PetCompanion, PetLevelToast } from './components/pet';
 import { CalendarPage } from './pages/CalendarPage';
 import { resolveExpert } from './services/expertService';
 import { CoAuthorPage } from './pages/CoAuthorPage';
@@ -728,11 +728,11 @@ function AppInner() {
       await new Promise(resolve => setTimeout(resolve, Math.min(firstMsg.length * 15, 3000)));
       setIsTyping(false);
 
+      await sendMessageMutation.mutateAsync({ userId: user.id, companionId: cid, role: 'assistant', content: firstMsg, clientMessageId: crypto.randomUUID() });
+
       await finalizeFirstMessage(cid);
       const updatedCompanion = await getCompanion(cid);
       if (updatedCompanion) setCompanion(updatedCompanion);
-
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId: cid, role: 'assistant', content: firstMsg, clientMessageId: crypto.randomUUID() });
       await updateLastMessageTime(cid);
       conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: firstMsg.length });
       playSound();
@@ -1489,11 +1489,6 @@ function PetLayer() {
         catPosRef={catPosRef}
         onStats={handleStats}
         initialStats={stats}
-      />
-      <RadialTools
-        catPosRef={catPosRef}
-        onFed={() => actionsRef.current?.fedByDrag()}
-        onStroke={() => actionsRef.current?.brushStroke()}
       />
       <PetLevelToast
         level={pendingLevelUp}
