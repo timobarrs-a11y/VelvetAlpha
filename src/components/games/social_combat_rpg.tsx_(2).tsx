@@ -876,7 +876,7 @@ function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ul
         {responses.map(type => {
           const cfg = RESP[type];
           const isHov = hov === type;
-          const preview = previewPlayerLine(scenarioId, playerId, type, '');
+          const preview = previewPlayerLine(scenarioId, playerId, type, PLAYER_DLG[playerId]?.[type] || '');
           const learnedEff = notes[`${opponent.emotion}:${type}`];
           const lg = learnedEff ? EFF_GLYPH[learnedEff] : null;
           return (
@@ -2162,6 +2162,10 @@ export default function SocialCombatRPG({ onExit = null }) {
   const newChallenge = () => { setGs(initState(char, null, { perks: [] })); setParticles([]); setDamageNums([]); };
   const restart = () => { setGs(initState(char, gs.scenario, { perks: gs.player.perks })); setParticles([]); setDamageNums([]); };
   const newGame = () => { setScreen('select'); setChar(null); setGs(null); setAscent(null); setPerkOptions(null); setTut(null); setParticles([]); setDamageNums([]); };
+  const exitGame = () => {
+    if (gs.phase === 'playing' && !window.confirm('Leave this conversation? Your progress in this fight will be lost.')) return;
+    if (onExit) onExit(); else newGame();
+  };
   const ult = ULTIMATES[gs.player.ultimate];
   const currentStage = ascent?.stages[ascent.stage - 1];
   const isBossFight = currentStage?.isBoss;
@@ -2188,6 +2192,19 @@ export default function SocialCombatRPG({ onExit = null }) {
           zIndex:1,
         }}
       >
+        {(gs.phase === 'intro' || gs.phase === 'playing') && (
+          <button
+            onClick={exitGame}
+            title="Leave the conversation"
+            style={{
+              position:'absolute', top:8, left:10, zIndex:40,
+              background:'rgba(0,0,0,0.4)', border:'1px solid rgba(255,255,255,0.14)',
+              color:'rgba(255,255,255,0.85)', borderRadius:8, padding:'4px 10px',
+              cursor:'pointer', fontSize:12, fontWeight:600, lineHeight:1,
+              display:'flex', alignItems:'center', gap:5, backdropFilter:'blur(4px)',
+            }}
+          >← Exit</button>
+        )}
         {ascent && (
           <div style={{
             padding:'8px 12px',
