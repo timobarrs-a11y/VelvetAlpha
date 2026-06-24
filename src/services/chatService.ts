@@ -987,6 +987,7 @@ export class ChatService {
         newsTopics: profile.news_categories || companionData?.news_categories,
         relationshipType: connectionType as 'friend' | 'romantic' | 'mentor',
         signatureVoice,
+        driftCorrection: companionData?.drift_needs_correction === true,
         expertConfig,
         relationshipDuration,
         temporalContext: temporalContextString,

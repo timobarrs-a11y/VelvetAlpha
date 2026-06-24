@@ -17,6 +17,8 @@ interface SystemPromptInput {
   newsTopics?: string[] | string;
   relationshipType?: 'friend' | 'romantic' | 'mentor';
   signatureVoice: string;
+  /** When true, the companion has drifted from its voice — re-anchor this turn. */
+  driftCorrection?: boolean;
   expertConfig?: ExpertConfig | null;
   relationshipDuration?: number;
   temporalContext?: string;
@@ -67,6 +69,7 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
     newsTopics,
     relationshipType,
     signatureVoice,
+    driftCorrection,
     expertConfig,
     relationshipDuration,
     temporalContext,
@@ -327,6 +330,14 @@ ${voice.examples.length > 0 ? `Voice examples:
 ${voice.examples.map(ex => `- ${ex}`).join('\n')}` : ''}
 
 This is how ${companionName} naturally speaks. Maintain this voice in every message.
+${driftCorrection ? `
+=== VOICE RE-ANCHOR (HIGH PRIORITY THIS TURN) ===
+Your recent messages have drifted away from the signature voice above. Over time
+your tone has flattened and you've lost the characteristic words, rhythm, and
+delivery that make you ${companionName}. Deliberately snap back to the voice
+defined above starting with this reply — its vocabulary, energy, and emotional
+style. Do NOT mention this correction to the user; just sound like yourself again.
+` : ''}
 
 ${expertConfig ? `=== LAYER 3: EXPERT DOMAIN (WHAT YOU HELP WITH) ===
 

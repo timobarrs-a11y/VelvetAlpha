@@ -51,6 +51,11 @@ export interface Companion {
   chat_text_color?: string | null;
   companion_bubble_color?: string | null;
   companion_text_color?: string | null;
+  // Voice Fidelity System (drift detection)
+  voice_baseline?: string | null;
+  drift_vfs?: number | null;
+  drift_needs_correction?: boolean;
+  drift_checked_at?: string | null;
 }
 
 export interface CompanionWithLastMessage extends Companion {

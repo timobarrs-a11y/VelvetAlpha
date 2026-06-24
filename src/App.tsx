@@ -25,6 +25,7 @@ import { useMessages, useSendMessage } from './features/chat/hooks';
 import { conversationOrchestrator } from './features/chat/orchestrator';
 import { useAuth } from './auth/AuthProvider';
 import { processEnhancedInsights } from './services/enhancedInsightsService';
+import { inspectVoiceFidelity, clearDriftCorrection } from './services/voiceFidelityService';
 import CBTReflectionDeckModal from './components/CBTReflectionDeckModal';
 import { CompanionAppearanceModal } from './components/CompanionAppearanceModal';
 import { AvatarConfigV2 } from './types/avatar-v2';
@@ -822,6 +823,13 @@ function AppInner() {
 
       conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: response.length });
 
+      // This turn just delivered a re-anchored reply — clear the flag so we don't
+      // keep re-anchoring every turn, and drop it from local state immediately.
+      if (companion.drift_needs_correction) {
+        clearDriftCorrection(companionId).catch(console.error);
+        setCompanion(prev => prev ? { ...prev, drift_needs_correction: false } : prev);
+      }
+
       insightsTurnCountRef.current += 1;
       if (insightsTurnCountRef.current % 5 === 0 && rawMessages) {
         const todayKey = new Date().toISOString().slice(0, 10);
@@ -830,6 +838,23 @@ function AppInner() {
         recentMessages.push({ role: 'user', content });
         recentMessages.push({ role: 'assistant', content: response });
         processEnhancedInsights(insightsConversationId, user.id, companionId, recentMessages).catch(console.error);
+      }
+
+      // Voice fidelity inspection — runs less often than insights (every 10 turns)
+      // to keep cost down. Async; if drift is found, refresh the companion so the
+      // next turn re-anchors via the system prompt.
+      if (insightsTurnCountRef.current % 10 === 0 && rawMessages) {
+        const recentAssistant = [
+          ...rawMessages.filter((m: any) => m.role === 'assistant').map((m: any) => m.content as string),
+          response,
+        ].slice(-15);
+        inspectVoiceFidelity(companion, recentAssistant)
+          .then(result => {
+            if (result && result.overall < 0.75) {
+              return getCompanion(companionId).then(fresh => { if (fresh) setCompanion(fresh); });
+            }
+          })
+          .catch(console.error);
       }
 
       playSound();
