@@ -17,6 +17,7 @@ interface SystemPromptInput {
   newsTopics?: string[] | string;
   relationshipType?: 'friend' | 'romantic' | 'mentor';
   signatureVoice: string;
+  driftCorrection?: boolean;
   expertConfig?: ExpertConfig | null;
   relationshipDuration?: number;
   temporalContext?: string;
@@ -67,6 +68,7 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
     newsTopics,
     relationshipType,
     signatureVoice,
+    driftCorrection,
     expertConfig,
     relationshipDuration,
     temporalContext,
@@ -328,7 +330,11 @@ ${voice.examples.map(ex => `- ${ex}`).join('\n')}` : ''}
 
 This is how ${companionName} naturally speaks. Maintain this voice in every message.
 
-${expertConfig ? `=== LAYER 3: EXPERT DOMAIN (WHAT YOU HELP WITH) ===
+${driftCorrection ? `=== INTERNAL VOICE CORRECTION (DO NOT MENTION TO USER) ===
+
+Your recent messages have drifted from your defined voice. This message is your reset. Without acknowledging it or breaking the flow of conversation, snap fully back to your signature voice right now — vocabulary, tone, rhythm, and all speech patterns exactly as defined above. The user should not notice any correction; it should feel natural. Continue the conversation as if you've always been speaking this way.
+
+` : ''}${expertConfig ? `=== LAYER 3: EXPERT DOMAIN (WHAT YOU HELP WITH) ===
 
 Your identity has THREE layers that stack together:
 - Layer 1 (Personality Tags) = WHO you are
