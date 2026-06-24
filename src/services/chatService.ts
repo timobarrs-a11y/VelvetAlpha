@@ -1008,6 +1008,7 @@ export class ChatService {
           expressiveness: companionData.expressiveness,
           initiative: companionData.initiative,
         } : undefined,
+        driftCorrection: companionData?.drift_needs_correction === true,
       });
 
       const recentUserMessages = last20Messages
