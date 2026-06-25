@@ -18,6 +18,7 @@ export interface VoiceFidelityResult {
 }
 
 const DRIFT_THRESHOLD = 0.75;
+const INSPECTION_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 
 async function resolveVoiceBaseline(companion: Companion): Promise<string> {
   if (companion.voice_baseline) return companion.voice_baseline;
@@ -45,6 +46,11 @@ export async function inspectVoiceFidelity(
   recentAssistantMessages: string[]
 ): Promise<VoiceFidelityResult | null> {
   try {
+    if (companion.drift_checked_at) {
+      const lastCheck = new Date(companion.drift_checked_at).getTime();
+      if (Date.now() - lastCheck < INSPECTION_COOLDOWN_MS) return null;
+    }
+
     const voiceBaseline = await resolveVoiceBaseline(companion);
     const voice = getVoiceById(companion.signature_voice ?? 'classic_female');
 
