@@ -1,5 +1,6 @@
 import { supabase } from '../shared/supabase/client';
 import { createSeedMemory, QuestionnaireData } from './seedMemoryService';
+import { seedVoiceBaseline } from './voiceFidelityService';
 import type { AvatarConfig } from '../types/avatar';
 import { relationshipCalendarService } from './relationshipCalendarService';
 import { affectionService } from './affectionService';
@@ -220,6 +221,14 @@ export async function createCompanion(options: CreateCompanionOptions): Promise<
       );
     } catch {
     }
+  }
+
+  // Seed the voice baseline immediately at creation — this is the "golden
+  // fingerprint" all future drift inspections compare against. Must be set
+  // here, not lazily on first inspection, so the reference is always clean.
+  if (data) {
+    const voiceId = options.signatureVoice || (options.gender === 'male' ? 'classic_male' : 'classic_female');
+    seedVoiceBaseline(data.id, voiceId, options.gender).catch(console.error);
   }
 
   if (data) {

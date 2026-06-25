@@ -3,18 +3,11 @@ import { getVoiceById } from '../config/signatureVoices';
 
 /**
  * Voice Fidelity System (drift detection & governed re-anchoring)
- *
- * Scores a companion's recent messages against its frozen signature-voice
- * baseline ("golden fingerprint"). Runs async, never in the chat hot path.
- *
- * Flow: resolve baseline -> call inspector edge function -> log result ->
- * update the companion's live drift status (read later by the chat to decide
- * whether to re-anchor the system prompt).
  */
 
-// Below this overall Voice Fidelity Score, the companion is re-anchored on its
-// next turn. Tuned conservative — only correct when drift is clearly visible.
 export const DRIFT_THRESHOLD = 0.75;
+// Minimum gap between inspections — prevents concurrent fires on rapid turn bursts.
+const INSPECTION_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 
 export interface VoiceFidelityScores {
   tone: number;
@@ -38,29 +31,43 @@ interface CompanionLike {
   gender?: 'male' | 'female';
   signature_voice?: string | null;
   voice_baseline?: string | null;
+  drift_checked_at?: string | null;
+  drift_needs_correction?: boolean;
 }
 
-/**
- * The baseline is frozen once and reused forever, so the reference itself never
- * drifts. First run derives it from the signature voice and persists it.
- */
 async function resolveBaseline(companion: CompanionLike): Promise<{ instruction: string; examples: string[] }> {
   const voiceId = companion.signature_voice || (companion.gender === 'male' ? 'classic_male' : 'classic_female');
   const voice = getVoiceById(voiceId);
+  // Prefer the seeded baseline (written at creation); fall back to the live voice
+  // definition only for companions created before this system was deployed.
   const instruction = companion.voice_baseline || voice?.instruction || '';
   const examples = voice?.examples ?? [];
-
-  // Freeze the baseline on first inspection so it can never move later.
-  if (!companion.voice_baseline && instruction) {
-    await supabase.from('companions').update({ voice_baseline: instruction }).eq('id', companion.id);
-  }
-
   return { instruction, examples };
 }
 
 /**
+ * Seed the voice baseline at companion creation — call this once immediately
+ * after a companion is created so the golden fingerprint is always set from a
+ * clean onboarding snapshot, never from a potentially-drifted first inspection.
+ */
+export async function seedVoiceBaseline(
+  companionId: string,
+  signatureVoiceId: string,
+  gender: 'male' | 'female'
+): Promise<void> {
+  try {
+    const voiceId = signatureVoiceId || (gender === 'male' ? 'classic_male' : 'classic_female');
+    const voice = getVoiceById(voiceId);
+    if (!voice?.instruction) return;
+    await supabase.from('companions').update({ voice_baseline: voice.instruction }).eq('id', companionId);
+  } catch (error) {
+    console.error('[voiceFidelity] failed to seed baseline:', error);
+  }
+}
+
+/**
  * Run one fidelity inspection for a companion. Safe to call fire-and-forget.
- * Returns the result, or null if it couldn't run (e.g. no auth / no baseline).
+ * Returns the result, or null if it couldn't run or was rate-limited.
  */
 export async function inspectVoiceFidelity(
   companion: CompanionLike,
@@ -68,6 +75,13 @@ export async function inspectVoiceFidelity(
 ): Promise<VoiceFidelityResult | null> {
   try {
     if (!recentAssistantMessages || recentAssistantMessages.length < 5) return null;
+
+    // Rate-guard: skip if an inspection ran within the last hour. Prevents
+    // concurrent fires when a user sends many messages quickly around the 10-turn mark.
+    if (companion.drift_checked_at) {
+      const lastCheck = new Date(companion.drift_checked_at).getTime();
+      if (Date.now() - lastCheck < INSPECTION_COOLDOWN_MS) return null;
+    }
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return null;
