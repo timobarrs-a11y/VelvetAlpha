@@ -51,6 +51,10 @@ export interface Companion {
   chat_text_color?: string | null;
   companion_bubble_color?: string | null;
   companion_text_color?: string | null;
+  voice_baseline?: string | null;
+  drift_vfs?: number | null;
+  drift_needs_correction?: boolean | null;
+  drift_checked_at?: string | null;
 }
 
 export interface CompanionWithLastMessage extends Companion {

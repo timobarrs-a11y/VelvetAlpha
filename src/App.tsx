@@ -54,6 +54,7 @@ import { usePetStore, usePetRefs } from './stores/petStore';
 import { PetCompanion, PetLevelToast } from './components/pet';
 import { CalendarPage } from './pages/CalendarPage';
 import { resolveExpert } from './services/expertService';
+import { inspectVoiceFidelity, clearDriftCorrection } from './services/voiceFidelityService';
 import { CoAuthorPage } from './pages/CoAuthorPage';
 import { DailyFeedPage } from './pages/DailyFeedPage';
 
@@ -134,6 +135,7 @@ function AppInner() {
   const ritualFiredRef = useRef<string | null>(null);
   const resumptionFiredRef = useRef<string | null>(null);
   const insightsTurnCountRef = useRef<number>(0);
+  const driftTurnCountRef = useRef<number>(0);
 
   const { data: rawMessages, isLoading: isLoadingMessages, error: messagesError } = useMessages(userId, companionId);
   const sendMessageMutation = useSendMessage();
@@ -830,6 +832,28 @@ function AppInner() {
         recentMessages.push({ role: 'user', content });
         recentMessages.push({ role: 'assistant', content: response });
         processEnhancedInsights(insightsConversationId, user.id, companionId, recentMessages).catch(console.error);
+      }
+
+      if (companion.drift_needs_correction) {
+        clearDriftCorrection(companion.id).catch(console.error);
+        setCompanion(prev => prev ? { ...prev, drift_needs_correction: false } : prev);
+      }
+
+      driftTurnCountRef.current += 1;
+      if (driftTurnCountRef.current % 10 === 0 && rawMessages) {
+        const last15Assistant = rawMessages
+          .filter((m: any) => m.role === 'assistant')
+          .slice(-15)
+          .map((m: any) => m.content as string);
+        if (last15Assistant.length > 0) {
+          inspectVoiceFidelity(companion, last15Assistant).then(result => {
+            if (result && result.overall < 0.75) {
+              getCompanion(companionId).then(updated => {
+                if (updated) setCompanion(updated);
+              }).catch(console.error);
+            }
+          }).catch(console.error);
+        }
       }
 
       playSound();
