@@ -6,6 +6,7 @@ import { affectionService } from './affectionService';
 import type { RelationshipIntent, RelationshipStatus } from './affectionService';
 import { FONT_OPTIONS, getEligibleFonts } from './customizationService';
 import { getCurrentStatus } from '../utils/statusHelper';
+import { seedVoiceBaseline } from './voiceFidelityService';
 
 export interface Companion {
   id: string;
@@ -219,6 +220,11 @@ export async function createCompanion(options: CreateCompanionOptions): Promise<
       );
     } catch {
     }
+  }
+
+  if (data) {
+    const voiceId = options.signatureVoice || (options.gender === 'male' ? 'classic_male' : 'classic_female');
+    seedVoiceBaseline(data.id, voiceId, options.gender).catch(console.error);
   }
 
   if (data) {

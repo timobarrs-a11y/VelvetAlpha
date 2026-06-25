@@ -21,16 +21,23 @@ const DRIFT_THRESHOLD = 0.75;
 
 async function resolveVoiceBaseline(companion: Companion): Promise<string> {
   if (companion.voice_baseline) return companion.voice_baseline;
-
   const voiceId = companion.signature_voice ?? 'classic_female';
-  const baseline = getVoiceById(voiceId).instruction;
+  return getVoiceById(voiceId).instruction;
+}
 
-  await supabase
-    .from('companions')
-    .update({ voice_baseline: baseline })
-    .eq('id', companion.id);
-
-  return baseline;
+export async function seedVoiceBaseline(
+  companionId: string,
+  signatureVoiceId: string,
+  gender: 'male' | 'female'
+): Promise<void> {
+  try {
+    const voiceId = signatureVoiceId || (gender === 'male' ? 'classic_male' : 'classic_female');
+    const voice = getVoiceById(voiceId);
+    if (!voice?.instruction) return;
+    await supabase.from('companions').update({ voice_baseline: voice.instruction }).eq('id', companionId);
+  } catch (error) {
+    console.error('[voiceFidelity] failed to seed baseline:', error);
+  }
 }
 
 export async function inspectVoiceFidelity(
