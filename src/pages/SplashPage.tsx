@@ -49,8 +49,8 @@ const features = [
     iconGlow: 'rgba(244,114,182,0.22)',
     borderColor: 'rgba(244,114,182,0.3)',
     tag: 'Living world',
-    title: 'A Curated Metaverse',
-    desc: 'Project Velvet isn\'t a chatbot. It\'s your living world, projected. Real-time news and videos delivered based on your interests. Stories, poems, and theses that co-author alongside you. Games — solo or with a companion. A calendar that thinks ahead. Every piece connected, every feature intentional — not because the technology demands it, but because you deserve it.',
+    title: 'A World Built Around You',
+    desc: 'Project Velvet isn\'t a chatbot. It\'s your world, projected. Companions and coaches shaped by you. Expert agents trained on real domain knowledge — not a bot told to act like an IT pro, but one built to actually be one. News, video, and stories curated to your interests. Games and a calendar that thinks ahead. Every piece connected. Your circle, your tools, your world.',
   },
 ];
 
@@ -313,7 +313,7 @@ export function SplashPage() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5, duration: 0.7 }}
               >
-                Your World, Projected.
+                Your world. Your people. Projected.
               </motion.p>
 
               {/* CTA buttons — center of hero */}

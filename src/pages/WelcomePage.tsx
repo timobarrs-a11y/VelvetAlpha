@@ -42,9 +42,9 @@ const FEATURES = [
   },
   {
     icon: Bot,
-    title: 'Atlas',
-    tag: 'Your personal AI agent',
-    description: "Atlas is Project Velvet's superintelligent core. Research, plan, analyze, create — Atlas handles the complexity while you stay in the flow.",
+    title: 'Expert Agents',
+    tag: 'Built to actually know',
+    description: "There's a difference between a bot told to act like an IT networking pro and one trained to actually be one. Project Velvet's expert agents are the latter — domain-trained, always available, and built around the professionals and coaches you need in your corner.",
     accentRgb: '251,191,36',
     iconGlow: 'rgba(251,191,36,0.22)',
     borderColor: 'rgba(251,191,36,0.3)',
@@ -408,7 +408,7 @@ export function WelcomePage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.7 }}
           >
-            Your World, Projected.
+            Your world. Your people. Projected.
           </motion.p>
         </motion.div>
 
@@ -451,8 +451,7 @@ export function WelcomePage() {
             {user ? (
               <>
                 <p className="text-gray-400 text-base mb-2 max-w-md mx-auto leading-relaxed">
-                  We'll ask you a few things to personalize your experience.
-                  It only takes a couple of minutes.
+                  We'll ask you a few things to start building your world — the companions, coaches, and experts you want around you.
                 </p>
                 <p className="text-gray-600 text-sm mb-8">No credit card. No catch. Just you and the velvet.</p>
 
