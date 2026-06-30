@@ -153,7 +153,7 @@ export default function SignUpPage() {
         >
           <div className="text-center mb-7">
             <h2 className="text-2xl font-bold text-white font-display mb-1">Create Account</h2>
-            <p className="text-blue-200/70 text-sm">Start your journey with your AI companion</p>
+            <p className="text-blue-200/70 text-sm">Project the world you want around you</p>
           </div>
 
           <form onSubmit={handleSignUp} className="space-y-5">
