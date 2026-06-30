@@ -23,6 +23,7 @@ import { SWUpdateToast } from './components/SWUpdateToast';
 const GAME_PATHS = [
   '/checkers', '/pacman', '/momentum', '/slime-soccer',
   '/stellar-pursuit', '/fox-runner', '/home-run-derby', '/zelda-ocean',
+  '/social-combat', '/open-world',
 ];
 
 const PATH_TO_SCENE: Record<string, AudioScene> = {

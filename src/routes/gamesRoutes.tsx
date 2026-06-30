@@ -12,6 +12,7 @@ const FoxRunnerGame = lazy(() => import('../pages/FoxRunnerGame').then(m => ({ d
 const HomeRunDerbyGame = lazy(() => import('../pages/HomeRunDerbyGame').then(m => ({ default: m.HomeRunDerbyGame })));
 const ZeldaOceanGame = lazy(() => import('../pages/ZeldaOceanGame').then(m => ({ default: m.ZeldaOceanGame })));
 const SocialCombatRPGGame = lazy(() => import('../pages/SocialCombatRPGGame').then(m => ({ default: m.SocialCombatRPGGame })));
+const OpenWorldGame = lazy(() => import('../pages/OpenWorldGame').then(m => ({ default: m.OpenWorldGame })));
 
 function game(el: React.ReactNode) {
   return (
@@ -31,4 +32,5 @@ export const gamesRoutes = [
   <Route key="home-run-derby" path="/home-run-derby" element={game(<HomeRunDerbyGame />)} />,
   <Route key="zelda-ocean" path="/zelda-ocean" element={game(<ZeldaOceanGame />)} />,
   <Route key="social-combat" path="/social-combat" element={game(<SocialCombatRPGGame />)} />,
+  <Route key="open-world" path="/open-world" element={game(<OpenWorldGame />)} />,
 ];
