@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.70.0";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,7 +42,7 @@ Deno.serve(async (req: Request) => {
       .join("\n");
 
     const response = await anthropic.messages.create({
-      model: "claude-3-5-haiku-20241022",
+      model: MODEL_CONFIG.HAIKU,
       max_tokens: 2000,
       tools: [
         {

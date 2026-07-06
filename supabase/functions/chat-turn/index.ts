@@ -363,7 +363,7 @@ async function detectPostResponseSignals(
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: MODEL_CONFIG.HAIKU,
         max_tokens: 600,
         system: `You analyze a conversation turn and detect two things:
 

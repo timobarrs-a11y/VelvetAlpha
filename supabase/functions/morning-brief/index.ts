@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +43,7 @@ Rules:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: MODEL_CONFIG.HAIKU,
         max_tokens: 600,
         system: systemPrompt,
         messages: [{ role: "user", content: userMessage }],

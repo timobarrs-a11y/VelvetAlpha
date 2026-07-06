@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -126,7 +127,7 @@ Generate the greeting:`;
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
+        model: MODEL_CONFIG.HAIKU,
         max_tokens: 150,
         temperature: 0.9,
         messages: [{ role: 'user', content: prompt }]

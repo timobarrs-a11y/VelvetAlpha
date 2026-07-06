@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -77,7 +78,7 @@ async function classifySearchIntent(message: string, history: Array<{ role: stri
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-haiku-4-5",
+      model: MODEL_CONFIG.HAIKU,
       max_tokens: 150,
       system: `You are a search intent classifier. Analyze the user's message and decide if a real-time web search would meaningfully improve the answer.
 
@@ -154,7 +155,7 @@ async function detectNavigationIntent(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-haiku-4-5",
+      model: MODEL_CONFIG.HAIKU,
       max_tokens: 200,
       system: `Detect if the user wants to navigate to another app section. Valid destinations: atlas, co-author, calendar, daily-feed, insights, lobby, profile, settings.
 Respond ONLY with JSON: {"hasIntent": boolean, "destination": "app name", "route": "/route", "seedText": "brief topic to pass along"} or {"hasIntent": false}`,
@@ -363,7 +364,7 @@ Deno.serve(async (req: Request) => {
       { role: "user" as const, content: userMessageContent },
     ];
 
-    const selectedModel = isPaid || isTestUser ? "claude-sonnet-4-5" : "claude-haiku-4-5";
+    const selectedModel = isPaid || isTestUser ? MODEL_CONFIG.SONNET : MODEL_CONFIG.HAIKU;
 
     const navIntent = await detectNavigationIntent(message, history, anthropicKey);
 

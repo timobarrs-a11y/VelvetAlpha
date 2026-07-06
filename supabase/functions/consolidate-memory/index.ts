@@ -1,14 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
-
-const SONNET = "claude-sonnet-4-5-20250929";
-const HAIKU = "claude-haiku-4-5";
 
 const CONSOLIDATION_SYSTEM = `You are a memory consolidation engine for a companion AI. Your job is to merge session summaries and an existing core memory document into an updated, comprehensive core memory document.
 
@@ -129,7 +127,7 @@ Deno.serve(async (req: Request) => {
       allPinnedFacts.length > 0 ? `\nPINNED FACTS (must preserve verbatim):\n${allPinnedFacts.join("\n")}` : "",
     ].join("");
 
-    const newContent = await callAnthropic(apiKey, SONNET, CONSOLIDATION_SYSTEM, userContent, 1800);
+    const newContent = await callAnthropic(apiKey, MODEL_CONFIG.SONNET, CONSOLIDATION_SYSTEM, userContent, 1800);
 
     // Reject if new doc is >30% shorter than existing
     if (existing?.content && newContent.length < existing.content.length * 0.7) {
@@ -149,7 +147,7 @@ Deno.serve(async (req: Request) => {
     let validationReason = "no pinned facts to check";
 
     if (allPinnedFacts.length > 0) {
-      const validationRaw = await callAnthropic(apiKey, HAIKU, VALIDATION_SYSTEM, validationPrompt, 128);
+      const validationRaw = await callAnthropic(apiKey, MODEL_CONFIG.HAIKU, VALIDATION_SYSTEM, validationPrompt, 128);
       try {
         const result = JSON.parse(validationRaw);
         validationPassed = result.passed === true;

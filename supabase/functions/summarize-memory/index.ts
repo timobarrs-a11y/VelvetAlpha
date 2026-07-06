@@ -164,7 +164,7 @@ Deno.serve(async (req: Request) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: MODEL_CONFIG.HAIKU,
         max_tokens: 1000,
         messages: [
           {

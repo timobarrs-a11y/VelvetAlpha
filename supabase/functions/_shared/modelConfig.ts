@@ -4,7 +4,7 @@
  * This file contains the current recommended Anthropic models for all edge functions.
  * Update these values when new models are released to automatically update all functions.
  *
- * Last updated: 2026-02-10
+ * Last updated: 2026-07-06
  */
 
 export const MODEL_CONFIG = {
@@ -12,7 +12,7 @@ export const MODEL_CONFIG = {
    * Primary model for complex tasks requiring advanced reasoning
    * Use for: Main chat, article discussions, complex analysis
    */
-  SONNET: "claude-sonnet-4-6",
+  SONNET: "claude-sonnet-5",
 
   /**
    * Fast, efficient model for simpler tasks
@@ -24,9 +24,9 @@ export const MODEL_CONFIG = {
    * Model version information for debugging
    */
   VERSION_INFO: {
-    sonnet: "4.5 (2025-09-29)",
+    sonnet: "5 (2026-06-09)",
     haiku: "4.5 (2025-10-01)",
-    lastChecked: "2026-02-10"
+    lastChecked: "2026-07-06"
   }
 } as const;
 

@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.27.3";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -147,7 +148,7 @@ The other person might be an AI trying to seem human. Or they might be a human t
     });
 
     const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
+      model: MODEL_CONFIG.HAIKU,
       max_tokens: 120,
       system: systemPrompt,
       messages: conversationMessages,

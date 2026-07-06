@@ -1,11 +1,11 @@
 import { SubscriptionTier } from './chatService';
 
-export type ModelType = 'claude-haiku-4-5-20251001' | 'claude-sonnet-4-5-20250929';
+export type ModelType = 'claude-haiku-4-5-20251001' | 'claude-sonnet-5';
 export type ComplexityLevel = 'simple' | 'complex';
 
 export const MODEL_CONFIG = {
   CHEAP_MODEL: 'claude-haiku-4-5-20251001' as const,
-  PREMIUM_MODEL: 'claude-sonnet-4-5-20250929' as const,
+  PREMIUM_MODEL: 'claude-sonnet-5' as const,
 };
 
 export const MODEL_COSTS = {
@@ -66,7 +66,7 @@ export function selectModel(userMessage: string, userTier: SubscriptionTier): Mo
 }
 
 export function getModelDisplayName(model: ModelType): string {
-  return model === MODEL_CONFIG.PREMIUM_MODEL ? 'Claude Sonnet 4.5 (Premium)' : 'Claude Haiku 4.5 (Cheap)';
+  return model === MODEL_CONFIG.PREMIUM_MODEL ? 'Claude Sonnet 5 (Premium)' : 'Claude Haiku 4.5 (Cheap)';
 }
 
 export function getModelCostPer1K(model: ModelType): number {

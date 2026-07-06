@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const HAIKU = "claude-haiku-4-5";
 const MIN_MESSAGES = 4;
 
 Deno.serve(async (req: Request) => {
@@ -65,7 +65,7 @@ Deno.serve(async (req: Request) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: HAIKU,
+        model: MODEL_CONFIG.HAIKU,
         max_tokens: 512,
         system: "You summarize conversation sessions for a companion AI memory system. Respond with valid JSON only — no markdown fences.",
         messages: [

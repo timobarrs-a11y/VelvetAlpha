@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -222,7 +223,7 @@ async function classifyLocalIntent(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-haiku-4-5",
+      model: MODEL_CONFIG.HAIKU,
       max_tokens: 1200,
       system: `You are a local search intent classifier. The user's home city is "${locationCity}".
 
@@ -619,7 +620,7 @@ When reading search results, verify each event date is AFTER ${dateCtx.todayISO}
       { role: "user" as const, content: userMessageContent },
     ];
 
-    const selectedModel = isPaid || isTestUser ? "claude-sonnet-4-5" : "claude-haiku-4-5";
+    const selectedModel = isPaid || isTestUser ? MODEL_CONFIG.SONNET : MODEL_CONFIG.HAIKU;
 
     const encoder = new TextEncoder();
     const metaChunk = JSON.stringify({

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,7 +61,7 @@ Deno.serve(async (req: Request) => {
               "anthropic-beta": "messages-2023-06-01",
             },
             body: JSON.stringify({
-              model: "claude-haiku-4-5",
+              model: MODEL_CONFIG.HAIKU,
               max_tokens: 800,
               system: systemPrompt,
               messages,

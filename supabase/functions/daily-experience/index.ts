@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -411,7 +412,7 @@ async function callAnthropicAPI(systemPrompt: string): Promise<GeneratedExperien
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: MODEL_CONFIG.SONNET,
       max_tokens: 1500,
       system: systemPrompt,
       messages: [
