@@ -111,6 +111,7 @@ export default function SignUpPage() {
         termsVersion: TERMS_VERSION,
         termsAcceptedAt: new Date().toISOString(),
         ageVerifiedAt: new Date().toISOString(),
+        birthday: `${birthYear}-${birthMonth}-${birthDay}`,
       });
       navigate('/welcome');
     } catch (err: any) {

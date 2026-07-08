@@ -339,8 +339,10 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
       const now = Date.now();
       const lastFetched = log?.last_fetched_at ? new Date(log.last_fetched_at).getTime() : 0;
       const elapsed = now - lastFetched;
+      const isNewCalendarDay = new Date(now).toDateString() !== new Date(lastFetched).toDateString();
 
-      if (elapsed >= TWELVE_HOURS_MS) {
+      // Always refresh on the first open of a new day, even if it's been under 12 hours since the last fetch.
+      if (isNewCalendarDay || elapsed >= TWELVE_HOURS_MS) {
         setSilentFetching(true);
 
         const result = await newsService.fetchLatestNews(interests);

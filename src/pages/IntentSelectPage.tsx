@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Sparkles, TrendingUp, MessageCircle } from 'lucide-react';
+import { Users, Heart, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface IntentOption {
@@ -9,6 +9,7 @@ interface IntentOption {
   icon: React.ReactNode;
   description: string;
   storageValue: string;
+  relationshipType?: 'friend' | 'romantic';
   nextPath: string;
   recommended?: boolean;
 }
@@ -16,44 +17,47 @@ interface IntentOption {
 export function IntentSelectPage() {
   const navigate = useNavigate();
 
+  // Three distinct paths — kept separate on purpose. Friends and Companions are personality-driven
+  // (the difference is whether romance is on the table); Coaches are skill-anchored and never
+  // get bundled with a Friend/Companion personality, so a fitness coach stays focused on your
+  // goals instead of turning into small talk.
   const options: IntentOption[] = [
     {
-      id: 'connection',
-      title: 'I want connection',
-      icon: <Heart className="w-8 h-8" />,
-      description: 'Backed by the Velvet Engine, your companion remembers who you are and what you love — getting sharper with every conversation. Always here, zero judgment. Just someone who wants to know the real you.',
-      storageValue: 'connection',
+      id: 'friends',
+      title: 'Friends',
+      icon: <Users className="w-8 h-8" />,
+      description: 'Friendly conversation with real personality behind it — witty, warm, always in your corner. Strictly platonic, friend-zoned by design: no romance, no flirting, ever.',
+      storageValue: 'friends',
+      relationshipType: 'friend',
       nextPath: '/companion-path',
     },
     {
-      id: 'connection_growth',
-      title: 'Connection + growth',
-      icon: <Sparkles className="w-8 h-8" />,
-      description: 'Humanized personality depth plus Career AI experts, all powered by the Velvet Engine. Gets sharper every session, remembers your wins and your struggles, and shows up ready to help you grow.',
-      storageValue: 'connection_growth',
-      nextPath: '/expert-selection',
+      id: 'companions',
+      title: 'Companions',
+      icon: <Heart className="w-8 h-8" />,
+      description: "Conversation with real personality and the romantic safeguards off. Not hypersexual by default — just open, warm, and yours to take wherever you want it to go.",
+      storageValue: 'companions',
+      relationshipType: 'romantic',
+      nextPath: '/companion-path',
       recommended: true,
     },
     {
-      id: 'expert_only',
-      title: 'I want to level up',
+      id: 'coaches',
+      title: 'Velvet Coaches',
       icon: <TrendingUp className="w-8 h-8" />,
-      description: "Career experts we've built to help you stay on track and focused. Need a fitness coach? Done. Need a co-chef? Done. No fluff — maximum flexibility.",
-      storageValue: 'expert_only',
+      description: "Anchored by real skills and data, not small talk. A fitness coach isn't there to talk about your day — it's there to make sure you hit the gym, remembers your goals, and tracks your progress. Personality on top, purpose underneath.",
+      storageValue: 'coaches',
       nextPath: '/expert-selection',
-    },
-    {
-      id: 'conversation_only',
-      title: 'Just great conversation',
-      icon: <MessageCircle className="w-8 h-8" />,
-      description: "No labels, no setup. Just witty, intelligent conversation from someone with real personality — who learns how you think and remembers what makes you tick.",
-      storageValue: 'conversation_only',
-      nextPath: '/companion-path',
     },
   ];
 
   const handleSelectIntent = (option: IntentOption) => {
     sessionStorage.setItem('onboardingIntent', option.storageValue);
+    if (option.relationshipType) {
+      sessionStorage.setItem('onboardingRelationshipType', option.relationshipType);
+    } else {
+      sessionStorage.removeItem('onboardingRelationshipType');
+    }
     navigate(option.nextPath);
   };
 
@@ -97,7 +101,7 @@ export function IntentSelectPage() {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
-      <div className="w-full max-w-4xl">
+      <div className="w-full max-w-5xl">
         {/* Header */}
         <motion.div
           variants={headerVariants}
@@ -113,12 +117,12 @@ export function IntentSelectPage() {
           </p>
         </motion.div>
 
-        {/* Cards Grid — 2×2 */}
+        {/* Cards Grid — 3 across */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           {options.map((option) => (
             <motion.button

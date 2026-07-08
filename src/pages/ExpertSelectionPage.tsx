@@ -93,36 +93,14 @@ export default function ExpertSelectionPage() {
     sessionStorage.setItem('selectedExpertId', selectedExpertId);
     sessionStorage.setItem('selectedExpertSource', expert.source);
 
-    // Read onboarding intent and navigate
-    const onboardingIntent = sessionStorage.getItem('onboardingIntent');
-
-    if (onboardingIntent === 'connection_growth') {
-      navigate('/companion-path', { replace: true });
-    } else if (onboardingIntent === 'expert_only') {
-      navigate('/expert-questionnaire', { replace: true });
-    } else {
-      // Default path
-      navigate('/create-companion-avatar', { replace: true });
-    }
-  };
-
-  const handleSkip = () => {
-    sessionStorage.removeItem('selectedExpertId');
-    sessionStorage.removeItem('selectedExpertSource');
-    const onboardingIntent = sessionStorage.getItem('onboardingIntent');
-    if (onboardingIntent === 'connection_growth') {
-      navigate('/companion-path', { replace: true });
-    } else {
-      navigate('/create-companion-avatar', { replace: true });
-    }
+    // Coaches are a fully separate path — never merged back into the Friend/Companion
+    // personality flow. Always continue to the coach's own setup questionnaire.
+    navigate('/expert-questionnaire', { replace: true });
   };
 
   const handleCreateOwn = () => {
     navigate('/expert-builder', { replace: true });
   };
-
-  const onboardingIntent = sessionStorage.getItem('onboardingIntent');
-  const showSkip = onboardingIntent === 'connection_growth';
 
   if (loading || subscriptionLoading) {
     return (
@@ -152,10 +130,10 @@ export default function ExpertSelectionPage() {
           className="text-center mb-12"
         >
           <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Choose Your AI Expert
+            Choose Your Velvet Coach
           </h1>
           <p className="text-xl text-gray-300">
-            Select an expert to guide your growth — or create your own
+            Anchored by real skills and data — select a coach to guide your growth, or build your own
           </p>
         </motion.div>
 
@@ -304,15 +282,6 @@ export default function ExpertSelectionPage() {
           className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 to-transparent pt-6 pb-8 px-6"
         >
           <div className="max-w-6xl mx-auto flex gap-4 justify-center items-center">
-            {showSkip && (
-              <button
-                onClick={handleSkip}
-                className="px-8 py-3 rounded-lg font-semibold text-gray-300 hover:text-white bg-gray-800/50 hover:bg-gray-700/50 transition-all"
-              >
-                Skip
-              </button>
-            )}
-
             <button
               onClick={handleContinue}
               disabled={!selectedExpertId}

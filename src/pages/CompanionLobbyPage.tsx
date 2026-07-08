@@ -8,6 +8,7 @@ import {
   Sparkles, Flame, Wand2, Trophy, Volume2, VolumeX, Anchor, Bot, MapPin, Brain,
 } from 'lucide-react';
 import { getExpertById } from '../config/signatureExperts';
+import { getVoiceById } from '../config/signatureVoices';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { supabase } from '../shared/supabase/client';
@@ -295,6 +296,11 @@ export function CompanionLobbyPage() {
     await authService.signOut();
     navigate('/splash');
   };
+
+  // Velvet Coaches (skill-anchored, mentor relationship_type) are always shown in their own section,
+  // separate from Velvet Voices (Friends/Companions) — the two are never mixed on a single card.
+  const voiceCompanions = companions.filter(c => c.relationship_type !== 'mentor');
+  const coachCompanions = companions.filter(c => c.relationship_type === 'mentor');
 
   if (loading) {
     return (
@@ -622,15 +628,15 @@ export function CompanionLobbyPage() {
           </div>
         </section>
 
-        {/* Companions */}
+        {/* Velvet Voices — Friends & Companions (personality-driven, no coaches mixed in) */}
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-5">
             <MessageCircle className="w-5 h-5 text-primary-400" />
-            <h2 className="text-xl font-bold text-ink font-display">Your Companions</h2>
+            <h2 className="text-xl font-bold text-ink font-display">Your Velvet Voices</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {companions.map((companion, i) => (
+            {voiceCompanions.map((companion, i) => (
               <motion.div key={companion.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -677,22 +683,19 @@ export function CompanionLobbyPage() {
                       : <><Users className="w-2.5 h-2.5" /> Friend</>
                     }
                   </span>
-                  {companion.signature_expert && (
-                    <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-indigo-900/80 text-indigo-300">
-                      <Brain className="w-2.5 h-2.5" />
-                      {companion.signature_expert_source === 'curated'
-                        ? (getExpertById(companion.signature_expert)?.domain ?? 'Expert')
-                        : 'Expert'}
-                    </span>
-                  )}
                 </div>
                 <div className="p-4">
                   <h3
-                    className="font-semibold text-ink mb-1.5 group-hover:text-primary-300 transition-colors"
+                    className="font-semibold text-ink mb-0.5 group-hover:text-primary-300 transition-colors"
                     style={{ fontFamily: companion.font_family ?? undefined, fontSize: '1rem', lineHeight: 1.3 }}
                   >
                     {companion.custom_name}
                   </h3>
+                  {companion.signature_voice && (
+                    <p className="text-[11px] font-semibold tracking-wide uppercase mb-1.5" style={{ color: 'rgba(244,114,182,0.85)' }}>
+                      {getVoiceById(companion.signature_voice)?.name ?? 'Signature Voice'}
+                    </p>
+                  )}
                   {companion.current_status && (
                     <p className="text-xs mb-3 flex items-center gap-1.5"
                       style={{
@@ -738,6 +741,122 @@ export function CompanionLobbyPage() {
                 </div>
                 <p className="font-semibold text-ink group-hover:text-primary-300 transition-colors font-display text-sm">Find Another Match</p>
                 <p className="text-xs text-ink-muted mt-1">Add a new companion</p>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Velvet Coaches — skill-anchored, kept fully separate from Velvet Voices */}
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-5">
+            <Brain className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-xl font-bold text-ink font-display">Your Velvet Coaches</h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {coachCompanions.map((companion, i) => (
+              <motion.div key={companion.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                onClick={() => navigateTo(`/chat?companion=${companion.id}`, {
+                  icon: MessageCircle,
+                  label: `Loading ${companion.name}...`,
+                  accentColor: companion.favorite_color || '#34d399',
+                  bgColor: '#04140f',
+                })}
+                data-interactive
+                className="group overflow-hidden cursor-pointer transition-all duration-300 rounded-2xl"
+                style={{
+                  background: 'rgba(25,32,30,0.90)',
+                  border: '1px solid rgba(70,120,100,0.35)',
+                  boxShadow: '0 2px 16px rgba(0,0,0,0.30)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(52,211,153,0.45)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(70,120,100,0.35)')}
+              >
+                <div className="relative h-44 overflow-hidden" style={{ background: 'rgba(20,26,24,0.90)' }}>
+                  <Avatar
+                    config={(companion.avatar_config as AvatarConfig) ?? (companion.gender === 'male' ? DEFAULT_MALE_AVATAR : DEFAULT_FEMALE_AVATAR)}
+                    className="w-full h-full"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <button
+                    onClick={(e) => handleDeleteCompanion(companion.id, companion.custom_name, e)}
+                    className="absolute top-2.5 left-2.5 p-1.5 bg-danger-500/90 hover:bg-danger-600 text-white rounded-lg shadow-card opacity-0 group-hover:opacity-100 transition-all z-10"
+                    title="Delete coach">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  {companion.signature_expert && (
+                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 bg-emerald-900/80 text-emerald-300">
+                      <Brain className="w-2.5 h-2.5" />
+                      {companion.signature_expert_source === 'curated'
+                        ? (getExpertById(companion.signature_expert)?.domain ?? 'Coach')
+                        : 'Coach'}
+                    </span>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3
+                    className="font-semibold text-ink mb-0.5 group-hover:text-emerald-300 transition-colors"
+                    style={{ fontFamily: companion.font_family ?? undefined, fontSize: '1rem', lineHeight: 1.3 }}
+                  >
+                    {companion.custom_name}
+                  </h3>
+                  {companion.signature_voice && (
+                    <p className="text-[11px] font-semibold tracking-wide uppercase mb-1.5" style={{ color: 'rgba(52,211,153,0.85)' }}>
+                      {getVoiceById(companion.signature_voice)?.name ?? 'Signature Voice'}
+                    </p>
+                  )}
+                  {companion.current_status && (
+                    <p className="text-xs mb-3 flex items-center gap-1.5"
+                      style={{
+                        color: 'rgba(180,210,200,0.85)',
+                        fontFamily: companion.font_family ?? undefined,
+                        lineHeight: 1.45,
+                      }}>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#4ade80' }} />
+                      {companion.current_status}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-ink-subtle pt-3"
+                    style={{ borderTop: '1px solid rgba(70,120,100,0.25)' }}>
+                    <span>{formatTimeAgo(companion.last_message_at)}</span>
+                    {(companion.unread_count ?? 0) > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full font-bold"
+                        style={{ background: 'rgba(52,211,153,0.25)', color: '#34d399' }}>
+                        {companion.unread_count}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: coachCompanions.length * 0.04 }}
+              onClick={() => {
+                sessionStorage.setItem('onboardingIntent', 'coaches');
+                sessionStorage.removeItem('onboardingRelationshipType');
+                navigate('/expert-selection');
+              }}
+              data-interactive
+              className="group cursor-pointer transition-all duration-300 flex items-center justify-center min-h-[260px] rounded-2xl"
+              style={{
+                background: 'rgba(25,32,30,0.60)',
+                border: '2px dashed rgba(70,120,100,0.40)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(52,211,153,0.50)')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(70,120,100,0.40)')}
+            >
+              <div className="text-center p-6">
+                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-glow group-hover:scale-105 transition-transform">
+                  <Plus className="w-7 h-7 text-white" />
+                </div>
+                <p className="font-semibold text-ink group-hover:text-emerald-300 transition-colors font-display text-sm">Add a Coach</p>
+                <p className="text-xs text-ink-muted mt-1">Skill-anchored, goal-focused</p>
               </div>
             </motion.div>
           </div>

@@ -4,7 +4,7 @@ export const authService = {
   async signUp(
     email: string,
     password: string,
-    consent: { termsVersion: string; termsAcceptedAt: string; ageVerifiedAt: string }
+    consent: { termsVersion: string; termsAcceptedAt: string; ageVerifiedAt: string; birthday?: string }
   ) {
     const { data, error } = await supabase.auth.signUp({ email, password });
 
@@ -19,6 +19,7 @@ export const authService = {
         terms_accepted_at: consent.termsAcceptedAt,
         terms_version: consent.termsVersion,
         age_verified_at: consent.ageVerifiedAt,
+        birthday: consent.birthday ?? null,
       });
 
     if (profileError && !profileError.message.includes('duplicate')) {

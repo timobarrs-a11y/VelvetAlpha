@@ -123,7 +123,7 @@ export function RootRedirect() {
           return;
         }
 
-        if (onboardingIntent === 'expert_only' && expertMatchAnswers) {
+        if (onboardingIntent === 'coaches' && expertMatchAnswers) {
           setDestination('/voice-selection');
           return;
         }

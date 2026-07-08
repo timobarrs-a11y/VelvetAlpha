@@ -474,7 +474,7 @@ export function WelcomePage() {
                     whileHover={{ x: '200%' }}
                     transition={{ duration: 0.55, ease: 'easeOut' }}
                   />
-                  <span className="relative z-10">Enter Project Velvet</span>
+                  <span className="relative z-10">Continue to Velvet</span>
                   <motion.div
                     className="relative z-10"
                     animate={{ x: [0, 4, 0] }}
@@ -527,7 +527,7 @@ export function WelcomePage() {
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.09)'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
                   >
-                    Enter Project Velvet
+                    Sign In
                   </motion.button>
                 </div>
                 <p className="text-gray-600 text-xs mt-5">Joined by early members across 40+ countries</p>

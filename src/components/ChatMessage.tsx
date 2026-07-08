@@ -387,11 +387,11 @@ export const ChatMessage = ({
       }
     : {};
 
-  // Companion message style
+  // Companion message style — always applied (even with no custom bubble color) so text color is never left to inherit from ambient context
   const companionBubbleStyle: React.CSSProperties = !isUser
     ? {
         background: companionBubbleColorKey ? getBubbleStyle(companionBubbleColorKey).background : 'white',
-        color: companionTextColorKey ? getTextColorValue(companionTextColorKey) : '#1f2937',
+        color: companionTextColorKey ? getTextColorValue(companionTextColorKey) : '#000000',
         fontFamily: fontFamily ?? undefined,
       }
     : {};
@@ -436,7 +436,7 @@ export const ChatMessage = ({
           className={`rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 relative shadow-md hover:shadow-lg transition-shadow duration-200 ${
             isUser ? 'rounded-br-sm' : `rounded-bl-sm border border-gray-200/80 ${isComposing ? 'cursor-pointer' : ''}`
           }`}
-          style={isUser ? userBubbleStyle : companionBubbleColorKey ? companionBubbleStyle : undefined}
+          style={isUser ? userBubbleStyle : companionBubbleStyle}
         >
           {showContent && (
             <p
