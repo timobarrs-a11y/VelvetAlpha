@@ -345,11 +345,11 @@ export function UserProfileQuestionnairePage() {
   const [milestoneMessage, setMilestoneMessage] = useState<string | null>(null);
   const [lastMilestone, setLastMilestone] = useState(0);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
-  const [knownBirthday, setKnownBirthday] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Birthday is already collected (and age-verified) at signup — don't ask again if we already have it.
-  const QUESTIONS = knownBirthday ? ALL_QUESTIONS.filter(q => q.id !== 'birthday') : ALL_QUESTIONS;
+  // Birthday is asked again here on purpose (even though signup also collects it for age
+  // verification) — this is where it drives the zodiac-sign flow, so it stays in both places.
+  const QUESTIONS = ALL_QUESTIONS;
 
   useEffect(() => {
     const seen = sessionStorage.getItem('userQuestionnaireIntroDone');
@@ -378,10 +378,6 @@ export function UserProfileQuestionnairePage() {
         if (hasCore) {
           navigate('/intent-select', { replace: true });
           return;
-        }
-        if (profile.birthday) {
-          setKnownBirthday(profile.birthday);
-          setAnswers(prev => ({ ...prev, birthday: profile.birthday as string }));
         }
       }
     } catch {
