@@ -90,7 +90,7 @@ export function ExpertBuilderPage() {
       if (intent) {
         sessionStorage.setItem('selectedExpertId', result.id);
         sessionStorage.setItem('selectedExpertSource', 'user');
-        if (intent === 'expert_only') {
+        if (intent === 'coaches') {
           navigate('/expert-questionnaire');
         } else {
           navigate('/create-companion-avatar');

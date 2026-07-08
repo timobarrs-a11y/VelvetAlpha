@@ -1,16 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Sparkles, TrendingUp, MessageCircle } from 'lucide-react';
+import { Users, Heart, Brain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface IntentOption {
   id: string;
   title: string;
+  subtitle: string;
   icon: React.ReactNode;
   description: string;
-  storageValue: string;
+  intent: string;
+  relationshipType: string;
   nextPath: string;
-  recommended?: boolean;
 }
 
 export function IntentSelectPage() {
@@ -18,42 +19,40 @@ export function IntentSelectPage() {
 
   const options: IntentOption[] = [
     {
-      id: 'connection',
-      title: 'I want connection',
+      id: 'friends',
+      title: 'Friends',
+      subtitle: 'Platonic companions',
+      icon: <Users className="w-8 h-8" />,
+      description: 'Companions who know you, remember your stories, and are always there for great conversation — no labels, just real connection.',
+      intent: 'connection',
+      relationshipType: 'friend',
+      nextPath: '/companion-path',
+    },
+    {
+      id: 'companions',
+      title: 'Companions',
+      subtitle: 'Romantic + close bonds',
       icon: <Heart className="w-8 h-8" />,
-      description: 'Backed by the Velvet Engine, your companion remembers who you are and what you love — getting sharper with every conversation. Always here, zero judgment. Just someone who wants to know the real you.',
-      storageValue: 'connection',
+      description: 'Deeper emotional connection with someone who remembers everything — your moods, your dreams, your sense of humor. Built to feel real.',
+      intent: 'connection',
+      relationshipType: 'romantic',
       nextPath: '/companion-path',
     },
     {
-      id: 'connection_growth',
-      title: 'Connection + growth',
-      icon: <Sparkles className="w-8 h-8" />,
-      description: 'Humanized personality depth plus Career AI experts, all powered by the Velvet Engine. Gets sharper every session, remembers your wins and your struggles, and shows up ready to help you grow.',
-      storageValue: 'connection_growth',
+      id: 'coaches',
+      title: 'Coaches',
+      subtitle: 'Expert agents',
+      icon: <Brain className="w-8 h-8" />,
+      description: "AI experts built around your goals — fitness coaches, career mentors, creative partners, life coaches. Sharp, focused, and built to keep you moving forward.",
+      intent: 'coaches',
+      relationshipType: 'mentor',
       nextPath: '/expert-selection',
-      recommended: true,
-    },
-    {
-      id: 'expert_only',
-      title: 'I want to level up',
-      icon: <TrendingUp className="w-8 h-8" />,
-      description: "Career experts we've built to help you stay on track and focused. Need a fitness coach? Done. Need a co-chef? Done. No fluff — maximum flexibility.",
-      storageValue: 'expert_only',
-      nextPath: '/expert-selection',
-    },
-    {
-      id: 'conversation_only',
-      title: 'Just great conversation',
-      icon: <MessageCircle className="w-8 h-8" />,
-      description: "No labels, no setup. Just witty, intelligent conversation from someone with real personality — who learns how you think and remembers what makes you tick.",
-      storageValue: 'conversation_only',
-      nextPath: '/companion-path',
     },
   ];
 
   const handleSelectIntent = (option: IntentOption) => {
-    sessionStorage.setItem('onboardingIntent', option.storageValue);
+    sessionStorage.setItem('onboardingIntent', option.intent);
+    sessionStorage.setItem('onboardingRelationshipType', option.relationshipType);
     navigate(option.nextPath);
   };
 
@@ -69,17 +68,11 @@ export function IntentSelectPage() {
   };
 
   const cardVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-    },
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: {
-        duration: 0.5,
-        ease: 'easeOut',
-      },
+      transition: { duration: 0.5, ease: 'easeOut' },
     },
   };
 
@@ -88,17 +81,13 @@ export function IntentSelectPage() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: {
-        duration: 0.5,
-        ease: 'easeOut',
-      },
+      transition: { duration: 0.5, ease: 'easeOut' },
     },
   };
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
-      <div className="w-full max-w-4xl">
-        {/* Header */}
+      <div className="w-full max-w-5xl">
         <motion.div
           variants={headerVariants}
           initial="hidden"
@@ -113,12 +102,11 @@ export function IntentSelectPage() {
           </p>
         </motion.div>
 
-        {/* Cards Grid — 2×2 */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           {options.map((option) => (
             <motion.button
@@ -127,37 +115,25 @@ export function IntentSelectPage() {
               onClick={() => handleSelectIntent(option)}
               className="relative group text-left"
             >
-              {/* Glow effect */}
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/0 via-purple-500/0 to-purple-500/0 group-hover:from-purple-500/20 group-hover:via-purple-500/30 group-hover:to-purple-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/0 via-blue-500/0 to-blue-500/0 group-hover:from-blue-500/20 group-hover:via-blue-500/30 group-hover:to-blue-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
 
-              {/* Card content */}
-              <div className="relative h-full bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700/50 group-hover:border-purple-500/50 transition duration-300">
-                {/* Recommended Badge */}
-                {option.recommended && (
-                  <div className="absolute -top-3 right-6">
-                    <span className="inline-block bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                      Recommended
-                    </span>
-                  </div>
-                )}
-
-                {/* Icon */}
-                <div className="mb-6 text-purple-400 group-hover:text-purple-300 transition duration-300">
+              <div className="relative h-full bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700/50 group-hover:border-blue-500/50 transition duration-300">
+                <div className="mb-6 text-blue-400 group-hover:text-blue-300 transition duration-300">
                   {option.icon}
                 </div>
 
-                {/* Title */}
-                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-purple-200 transition duration-300">
+                <h3 className="text-xl font-bold text-white mb-1 group-hover:text-blue-200 transition duration-300">
                   {option.title}
                 </h3>
+                <p className="text-xs text-gray-500 mb-4 font-medium uppercase tracking-wide">
+                  {option.subtitle}
+                </p>
 
-                {/* Description */}
                 <p className="text-sm text-gray-300 leading-relaxed">
                   {option.description}
                 </p>
 
-                {/* Bottom accent */}
-                <div className="mt-6 h-1 w-0 bg-gradient-to-r from-purple-500 to-pink-500 group-hover:w-full transition-all duration-300" />
+                <div className="mt-6 h-1 w-0 bg-gradient-to-r from-blue-500 to-cyan-400 group-hover:w-full transition-all duration-300" />
               </div>
             </motion.button>
           ))}

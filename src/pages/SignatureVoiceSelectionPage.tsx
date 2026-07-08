@@ -82,7 +82,7 @@ export default function SignatureVoiceSelectionPage() {
         if (error) {
           console.error('[VoiceSelection] Error updating companion:', error);
         }
-      } else if (user && onboardingIntent === 'expert_only') {
+      } else if (user && onboardingIntent === 'coaches') {
         const expertData = JSON.parse(sessionStorage.getItem('expertMatchAnswers') || '{}');
         const expertId = sessionStorage.getItem('selectedExpertId');
         const expertSource = sessionStorage.getItem('selectedExpertSource') as 'curated' | 'user' | null;

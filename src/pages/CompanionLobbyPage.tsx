@@ -7,6 +7,7 @@ import {
   UsersRound, Calendar, Squirrel, Youtube, Newspaper, Trash2, MessageSquare,
   Sparkles, Flame, Wand2, Trophy, Volume2, VolumeX, Anchor, Bot, MapPin, Brain,
 } from 'lucide-react';
+import { getVoiceById } from '../config/signatureVoices';
 import { getExpertById } from '../config/signatureExperts';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
@@ -276,6 +277,12 @@ export function CompanionLobbyPage() {
 
   const handleNewCompanion = () => {
     navigate(companions.length > 0 ? '/create-additional-companion' : '/companion-path');
+  };
+
+  const handleNewCoach = () => {
+    sessionStorage.setItem('onboardingIntent', 'coaches');
+    sessionStorage.setItem('onboardingRelationshipType', 'mentor');
+    navigate('/expert-selection');
   };
 
   const handleGameClick = (game: typeof GAMES[number]) => {
@@ -622,15 +629,15 @@ export function CompanionLobbyPage() {
           </div>
         </section>
 
-        {/* Companions */}
+        {/* Velvet Voices — non-mentor companions */}
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-5">
             <MessageCircle className="w-5 h-5 text-primary-400" />
-            <h2 className="text-xl font-bold text-ink font-display">Your Companions</h2>
+            <h2 className="text-xl font-bold text-ink font-display">Velvet Voices</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {companions.map((companion, i) => (
+            {companions.filter(c => c.relationship_type !== 'mentor').map((companion, i) => (
               <motion.div key={companion.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -666,23 +673,17 @@ export function CompanionLobbyPage() {
                   <span className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
                     companion.relationship_type === 'romantic'
                       ? 'bg-pink-900/80 text-pink-300'
-                      : companion.relationship_type === 'mentor'
-                      ? 'bg-emerald-900/80 text-emerald-300'
                       : 'bg-sky-900/80 text-sky-300'
                   }`}>
                     {companion.relationship_type === 'romantic'
                       ? <><Heart className="w-2.5 h-2.5" /> Partner</>
-                      : companion.relationship_type === 'mentor'
-                      ? <><Brain className="w-2.5 h-2.5" /> Mentor</>
                       : <><Users className="w-2.5 h-2.5" /> Friend</>
                     }
                   </span>
-                  {companion.signature_expert && (
-                    <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-indigo-900/80 text-indigo-300">
-                      <Brain className="w-2.5 h-2.5" />
-                      {companion.signature_expert_source === 'curated'
-                        ? (getExpertById(companion.signature_expert)?.domain ?? 'Expert')
-                        : 'Expert'}
+                  {companion.signature_voice && (
+                    <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-purple-900/80 text-purple-300">
+                      <Sparkles className="w-2.5 h-2.5" />
+                      {getVoiceById(companion.signature_voice).name}
                     </span>
                   )}
                 </div>
@@ -721,7 +722,7 @@ export function CompanionLobbyPage() {
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: companions.length * 0.04 }}
+              transition={{ delay: companions.filter(c => c.relationship_type !== 'mentor').length * 0.04 }}
               onClick={handleNewCompanion}
               data-interactive
               className="group cursor-pointer transition-all duration-300 flex items-center justify-center min-h-[260px] rounded-2xl"
@@ -738,6 +739,124 @@ export function CompanionLobbyPage() {
                 </div>
                 <p className="font-semibold text-ink group-hover:text-primary-300 transition-colors font-display text-sm">Find Another Match</p>
                 <p className="text-xs text-ink-muted mt-1">Add a new companion</p>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Velvet Coaches — mentor companions */}
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-5">
+            <Brain className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-xl font-bold text-ink font-display">Velvet Coaches</h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {companions.filter(c => c.relationship_type === 'mentor').map((companion, i) => (
+              <motion.div key={companion.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                onClick={() => navigateTo(`/chat?companion=${companion.id}`, {
+                  icon: MessageCircle,
+                  label: `Loading ${companion.name}...`,
+                  accentColor: '#34d399',
+                  bgColor: '#020e08',
+                })}
+                data-interactive
+                className="group overflow-hidden cursor-pointer transition-all duration-300 rounded-2xl"
+                style={{
+                  background: 'rgba(20,35,28,0.90)',
+                  border: '1px solid rgba(52,211,153,0.25)',
+                  boxShadow: '0 2px 16px rgba(0,0,0,0.30)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(52,211,153,0.55)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(52,211,153,0.25)')}
+              >
+                <div className="relative h-44 overflow-hidden" style={{ background: 'rgba(10,25,18,0.90)' }}>
+                  <Avatar
+                    config={(companion.avatar_config as AvatarConfig) ?? (companion.gender === 'male' ? DEFAULT_MALE_AVATAR : DEFAULT_FEMALE_AVATAR)}
+                    className="w-full h-full"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <button
+                    onClick={(e) => handleDeleteCompanion(companion.id, companion.custom_name, e)}
+                    className="absolute top-2.5 left-2.5 p-1.5 bg-danger-500/90 hover:bg-danger-600 text-white rounded-lg shadow-card opacity-0 group-hover:opacity-100 transition-all z-10"
+                    title="Delete coach">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 bg-emerald-900/80 text-emerald-300">
+                    <Brain className="w-2.5 h-2.5" /> Coach
+                  </span>
+                  {companion.signature_voice && (
+                    <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-emerald-900/70 text-emerald-300">
+                      <Sparkles className="w-2.5 h-2.5" />
+                      {getVoiceById(companion.signature_voice).name}
+                    </span>
+                  )}
+                  {companion.signature_expert && (
+                    <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-indigo-900/80 text-indigo-300">
+                      <Brain className="w-2.5 h-2.5" />
+                      {companion.signature_expert_source === 'curated'
+                        ? (getExpertById(companion.signature_expert)?.domain ?? 'Expert')
+                        : 'Expert'}
+                    </span>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3
+                    className="font-semibold text-ink mb-1.5 group-hover:text-emerald-300 transition-colors"
+                    style={{ fontFamily: companion.font_family ?? undefined, fontSize: '1rem', lineHeight: 1.3 }}
+                  >
+                    {companion.custom_name}
+                  </h3>
+                  {companion.current_status && (
+                    <p className="text-xs mb-3 flex items-center gap-1.5"
+                      style={{
+                        color: 'rgba(180,210,200,0.85)',
+                        fontFamily: companion.font_family ?? undefined,
+                        lineHeight: 1.45,
+                      }}>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#4ade80' }} />
+                      {companion.current_status}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-ink-subtle pt-3"
+                    style={{ borderTop: '1px solid rgba(52,211,153,0.15)' }}>
+                    <span>{formatTimeAgo(companion.last_message_at)}</span>
+                    {(companion.unread_count ?? 0) > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full font-bold"
+                        style={{ background: 'rgba(52,211,153,0.20)', color: '#6ee7b7' }}>
+                        {companion.unread_count}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Add a Coach tile */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: companions.filter(c => c.relationship_type === 'mentor').length * 0.04 }}
+              onClick={handleNewCoach}
+              data-interactive
+              className="group cursor-pointer transition-all duration-300 flex items-center justify-center min-h-[260px] rounded-2xl"
+              style={{
+                background: 'rgba(20,35,28,0.50)',
+                border: '2px dashed rgba(52,211,153,0.30)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(52,211,153,0.60)')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(52,211,153,0.30)')}
+            >
+              <div className="text-center p-6">
+                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform"
+                  style={{ boxShadow: '0 0 20px rgba(52,211,153,0.35)' }}>
+                  <Plus className="w-7 h-7 text-white" />
+                </div>
+                <p className="font-semibold text-ink group-hover:text-emerald-300 transition-colors font-display text-sm">Add a Coach</p>
+                <p className="text-xs text-ink-muted mt-1">Find your next expert</p>
               </div>
             </motion.div>
           </div>

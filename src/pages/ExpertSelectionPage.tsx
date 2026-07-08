@@ -96,12 +96,9 @@ export default function ExpertSelectionPage() {
     // Read onboarding intent and navigate
     const onboardingIntent = sessionStorage.getItem('onboardingIntent');
 
-    if (onboardingIntent === 'connection_growth') {
-      navigate('/companion-path', { replace: true });
-    } else if (onboardingIntent === 'expert_only') {
+    if (onboardingIntent === 'coaches') {
       navigate('/expert-questionnaire', { replace: true });
     } else {
-      // Default path
       navigate('/create-companion-avatar', { replace: true });
     }
   };
@@ -109,20 +106,14 @@ export default function ExpertSelectionPage() {
   const handleSkip = () => {
     sessionStorage.removeItem('selectedExpertId');
     sessionStorage.removeItem('selectedExpertSource');
-    const onboardingIntent = sessionStorage.getItem('onboardingIntent');
-    if (onboardingIntent === 'connection_growth') {
-      navigate('/companion-path', { replace: true });
-    } else {
-      navigate('/create-companion-avatar', { replace: true });
-    }
+    navigate('/create-companion-avatar', { replace: true });
   };
 
   const handleCreateOwn = () => {
     navigate('/expert-builder', { replace: true });
   };
 
-  const onboardingIntent = sessionStorage.getItem('onboardingIntent');
-  const showSkip = onboardingIntent === 'connection_growth';
+  const showSkip = sessionStorage.getItem('onboardingIntent') !== 'coaches';
 
   if (loading || subscriptionLoading) {
     return (
