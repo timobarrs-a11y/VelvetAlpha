@@ -171,7 +171,7 @@ Actions make the conversation feel like you're IN the room together, not just re
 `;
 
 interface ChatTurnRequest {
-  userId: string;
+  userId?: string;
   companionId: string;
   message: string;
   mode?: 'chat' | 'video' | 'ritual';
@@ -505,16 +505,28 @@ Deno.serve(async (req: Request) => {
     const body: ChatTurnRequest = await req.json();
     const { userId, companionId, message, mode = 'chat', video } = body;
 
-    if (!userId || !companionId || !message) {
-      throw new Error('Missing required fields: userId, companionId, message');
+    // Identity comes from the verified auth token, not the request body.
+    // If the client sends a userId that doesn't match, reject as impersonation.
+    if (userId && userId !== user.id) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden', message: 'User ID mismatch' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
-    console.log(`[${traceId}] Chat turn request:`, { userId, companionId, mode, messageLength: message.length });
+    if (!companionId || !message) {
+      throw new Error('Missing required fields: companionId, message');
+    }
+
+    console.log(`[${traceId}] Chat turn request:`, { userId: user.id, companionId, mode, messageLength: message.length });
 
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', user.id)
       .maybeSingle();
 
     if (!profile) {
@@ -539,7 +551,7 @@ Deno.serve(async (req: Request) => {
     const { data: conversationData } = await supabaseAdmin
       .from('conversations')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .eq('companion_id', companionId)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -595,7 +607,7 @@ Deno.serve(async (req: Request) => {
             .from('user_experts')
             .select('instruction, domain, name')
             .eq('id', companion.signature_expert)
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .maybeSingle();
 
           if (userExpert) {
@@ -732,7 +744,7 @@ IMPORTANT: Keep your response under ${maxTokens} tokens.`;
     const signalPromise = detectPostResponseSignals(
       supabaseAdmin,
       apiKey,
-      userId,
+      user.id,
       companionId,
       message,
       assistantMessage,
