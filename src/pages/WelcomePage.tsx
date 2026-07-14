@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { useAuth } from '../auth/AuthProvider';
+import { Footer } from '../components/Footer';
 
 const FEATURES = [
   {
@@ -631,6 +632,8 @@ export function WelcomePage() {
           By continuing you agree to our Terms of Service and Privacy Policy.
         </motion.p>
       </div>
+
+      <Footer />
     </div>
   );
 }

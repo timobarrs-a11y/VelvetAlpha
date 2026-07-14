@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, Mail } from 'lucide-react';
+import { Footer } from '../components/Footer';
 
 const SECTIONS = [
   { id: 'introduction', num: '1', title: 'Introduction' },
@@ -556,6 +557,7 @@ export default function PrivacyPolicyPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
