@@ -406,15 +406,16 @@ export default function TermsOfServicePage() {
                   title="Governing Law and Dispute Resolution"
                 />
                 <BodyText>
-                  These Terms are governed by the laws of the State of [STATE], without
-                  regard to its conflict-of-laws rules. Except where prohibited by law,
-                  any dispute arising out of or relating to these Terms or the Service
-                  shall be resolved by binding individual arbitration, and you and
-                  Project Velvet waive the right to a jury trial and to participate in
-                  a class action. You may opt out of arbitration by notifying us in
-                  writing within 30 days of first accepting these Terms. Nothing in
-                  this section prevents either party from seeking injunctive relief for
-                  intellectual-property or unauthorized-use claims.
+                  These Terms are governed by the laws of the State of Michigan,
+                  without regard to its conflict-of-laws rules. Except where prohibited
+                  by law, any dispute arising out of or relating to these Terms or the
+                  Service shall be resolved by binding individual arbitration
+                  administered in Michigan, and you and Project Velvet waive the right
+                  to a jury trial and to participate in a class action. You may opt out
+                  of arbitration by notifying us in writing within 30 days of first
+                  accepting these Terms. Nothing in this section prevents either party
+                  from seeking injunctive relief for intellectual-property or
+                  unauthorized-use claims.
                 </BodyText>
               </section>
 
