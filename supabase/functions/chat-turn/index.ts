@@ -521,6 +521,16 @@ Deno.serve(async (req: Request) => {
       throw new Error('Missing required fields: companionId, message');
     }
 
+    if (typeof message !== 'string' || message.length > 10000) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request', message: 'message exceeds 10,000 characters' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
     console.log(`[${traceId}] Chat turn request:`, { userId: user.id, companionId, mode, messageLength: message.length });
 
     const { data: profile } = await supabaseAdmin
@@ -533,6 +543,24 @@ Deno.serve(async (req: Request) => {
       throw new Error('User profile not found');
     }
 
+    const isTestUser = profile.is_test_user === true;
+    const messagesRemaining = profile.messages_remaining ?? 0;
+
+    if (!isTestUser && messagesRemaining !== -1 && messagesRemaining <= 0) {
+      return new Response(
+        JSON.stringify({
+          error: 'No messages remaining',
+          message: 'You have used all your messages. Please upgrade your subscription to continue.',
+          tier: profile.subscription_tier || 'free',
+          messagesRemaining: 0,
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
     const tier = profile.subscription_tier || 'free';
     const selectedModel = selectModel(message, tier);
 
@@ -542,10 +570,17 @@ Deno.serve(async (req: Request) => {
       .from('companions')
       .select('*')
       .eq('id', companionId)
+      .eq('user_id', user.id)
       .maybeSingle();
 
     if (!companion) {
-      throw new Error('Companion not found');
+      return new Response(
+        JSON.stringify({ error: 'Not found', message: 'Companion not found' }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     const { data: conversationData } = await supabaseAdmin
@@ -722,6 +757,41 @@ IMPORTANT: Keep your response under ${maxTokens} tokens.`;
       throw new Error('Server configuration error: API key not set');
     }
 
+    // --- Rate limiting: 20 calls per 60s per user, fail-open on RPC error ---
+    try {
+      const { data: allowed, error: rateLimitError } = await supabaseAdmin.rpc('check_rate_limit', {
+        p_user_id: user.id,
+        p_endpoint: 'chat-turn',
+        p_limit_count: 20,
+        p_time_window_minutes: 1,
+      });
+
+      if (rateLimitError) {
+        console.error(`[${traceId}] Rate limit check RPC error (fail-open):`, rateLimitError);
+      } else if (allowed === false) {
+        return new Response(
+          JSON.stringify({
+            error: 'Too many requests',
+            message: 'You are sending messages too quickly. Please wait a moment and try again.',
+          }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
+      } else {
+        const { error: recordError } = await supabaseAdmin.rpc('record_rate_limit', {
+          p_user_id: user.id,
+          p_endpoint: 'chat-turn',
+        });
+        if (recordError) {
+          console.error(`[${traceId}] Rate limit record RPC error (continuing):`, recordError);
+        }
+      }
+    } catch (rlErr) {
+      console.error(`[${traceId}] Rate limit check exception (fail-open):`, rlErr);
+    }
+
     console.log(`[${traceId}] Generating response...`);
 
     const assistantMessage = await generateResponseWithValidation(
@@ -738,6 +808,16 @@ IMPORTANT: Keep your response under ${maxTokens} tokens.`;
     const latencyMs = Date.now() - startTime;
 
     console.log(`[${traceId}] Response generated in ${latencyMs}ms`);
+
+    // Decrement message count server-side (ported from chat/index.ts)
+    if (!isTestUser && messagesRemaining !== -1) {
+      const newCount = Math.max(0, messagesRemaining - 1);
+      await supabaseAdmin
+        .from('user_profiles')
+        .update({ messages_remaining: newCount })
+        .eq('id', user.id);
+      console.log(`[${traceId}] Message count decremented:`, messagesRemaining, '->', newCount);
+    }
 
     let signals: PostResponseSignals = { calendarEvent: null, navigationIntent: null };
 
