@@ -8,7 +8,8 @@ import {
   getModelDisplayName,
   estimateTokens,
   calculateCost,
-  ModelType
+  ModelType,
+  MODEL_CONFIG
 } from './modelSelector';
 import { logResponseQuality } from '../prompts/systemPrompts';
 import { buildSystemPrompt } from '../config/systemPromptBuilder';
@@ -791,7 +792,7 @@ export class ChatService {
 
       const selectedModel = selectModel(message, profile.subscription_tier);
       const complexity = analyzeMessageComplexity(message);
-      const modelType = selectedModel === 'claude-sonnet-4-5-20250929' ? 'premium' : 'cheap';
+      const modelType = selectedModel === MODEL_CONFIG.PREMIUM_MODEL ? 'premium' : 'cheap';
 
       const conversationHistory = userProfile ? await this.getConversationHistory(50) : [];
 

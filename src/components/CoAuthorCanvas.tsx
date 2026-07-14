@@ -10,6 +10,7 @@ import { supabase } from '../shared/supabase/client';
 import { AvatarConfig } from '../types/avatar';
 import { buildSystemPrompt } from '../config/systemPromptBuilder';
 import { colorNameToHex } from '../utils/colorMapping';
+import { MODEL_CONFIG } from '../services/modelSelector';
 
 interface CoAuthorCanvasProps {
   sessionId: string;
@@ -224,7 +225,7 @@ DO NOT use the examples above. Generate a unique, natural response specific to t
           messages: [{ role: 'user' as const, content: userPrompt }],
           systemPrompt,
           maxTokens: 150,
-          model: 'claude-sonnet-4-5-20250929',
+          model: MODEL_CONFIG.PREMIUM_MODEL,
         }),
       });
 
@@ -316,7 +317,7 @@ DO NOT use the examples above. Generate a unique, natural response specific to t
           messages: chatMessages,
           systemPrompt,
           maxTokens: 500,
-          model: 'claude-sonnet-4-5-20250929',
+          model: MODEL_CONFIG.PREMIUM_MODEL,
         }),
       });
 
@@ -475,7 +476,7 @@ DO NOT use the examples above. Generate a unique, natural response specific to t
           messages,
           systemPrompt,
           maxTokens: 1000,
-          model: 'claude-sonnet-4-5-20250929',
+          model: MODEL_CONFIG.PREMIUM_MODEL,
         }),
       });
 

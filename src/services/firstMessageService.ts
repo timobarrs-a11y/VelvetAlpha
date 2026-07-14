@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { MODEL_CONFIG } from './modelSelector';
 
 export interface FirstMessageTemplate {
   greeting: string;
@@ -197,7 +198,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
           ],
           systemPrompt: '',
           maxTokens: 300,
-          model: 'claude-sonnet-4-6',
+          model: MODEL_CONFIG.PREMIUM_MODEL,
         }),
       });
 
