@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Heart, ShieldCheck, ChevronDown } from 'lucide-react';
 import { authService } from '../services/authService';
 import { Button, Input } from '../shared/ui';
@@ -289,13 +289,13 @@ export default function SignUpPage() {
                 </div>
                 <span className="text-sm text-blue-100/80 leading-relaxed">
                   I have read and agree to the{' '}
-                  <button
-                    type="button"
-                    onClick={() => window.open('/terms', '_blank')}
+                  <Link
+                    to="/terms"
+                    target="_blank"
                     className="text-pink-400 hover:text-pink-300 underline underline-offset-2 font-medium"
                   >
                     Terms of Service
-                  </button>{' '}
+                  </Link>{' '}
                   (version {TERMS_VERSION})
                 </span>
               </label>
@@ -321,13 +321,13 @@ export default function SignUpPage() {
                 </div>
                 <span className="text-sm text-blue-100/80 leading-relaxed">
                   I have read and agree to the{' '}
-                  <button
-                    type="button"
-                    onClick={() => window.open('/privacy', '_blank')}
+                  <Link
+                    to="/privacy"
+                    target="_blank"
                     className="text-pink-400 hover:text-pink-300 underline underline-offset-2 font-medium"
                   >
                     Privacy Policy
-                  </button>{' '}
+                  </Link>{' '}
                   and consent to data processing as described.
                 </span>
               </label>
