@@ -819,6 +819,12 @@ IMPORTANT: Keep your response under ${maxTokens} tokens.`;
       console.log(`[${traceId}] Message count decremented:`, messagesRemaining, '->', newCount);
     }
 
+    // Referral activation: reward the inviter once this user is genuinely engaged.
+    // Runs for every tier (incl. unlimited) so paid invitees still qualify.
+    if (profile.referred_by && !profile.referral_qualified) {
+      await supabaseAdmin.rpc('track_referral_progress', { p_user_id: user.id });
+    }
+
     let signals: PostResponseSignals = { calendarEvent: null, navigationIntent: null };
 
     const signalPromise = detectPostResponseSignals(

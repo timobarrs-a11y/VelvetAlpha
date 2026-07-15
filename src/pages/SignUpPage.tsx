@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Heart, ShieldCheck, ChevronDown } from 'lucide-react';
 import { authService } from '../services/authService';
+import { referralService } from '../services/referralService';
 import { Button, Input } from '../shared/ui';
 
 const TERMS_VERSION = '2026-01-28';
@@ -77,6 +78,8 @@ export default function SignUpPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => { referralService.captureRefFromUrl(); }, []);
+
   const currentYear = new Date().getFullYear();
   const dayOptions = Array.from({ length: 31 }, (_, i) => {
     const d = (i + 1).toString().padStart(2, '0');
@@ -112,6 +115,7 @@ export default function SignUpPage() {
         termsAcceptedAt: new Date().toISOString(),
         ageVerifiedAt: new Date().toISOString(),
       });
+      await referralService.redeemPendingReferral();
       navigate('/welcome');
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');

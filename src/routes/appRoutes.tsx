@@ -20,6 +20,7 @@ const CoAuthorPage = lazy(() => import('../pages/CoAuthorPage').then(m => ({ def
 const RealOrNotPage = lazy(() => import('../pages/RealOrNotPage').then(m => ({ default: m.RealOrNotPage })));
 const AtlasPage = lazy(() => import('../pages/AtlasPage').then(m => ({ default: m.AtlasPage })));
 const LocalExplorerPage = lazy(() => import('../pages/LocalExplorerPage').then(m => ({ default: m.LocalExplorerPage })));
+const InvitePage = lazy(() => import('../pages/InvitePage').then(m => ({ default: m.InvitePage })));
 
 function P(el: React.ReactNode) {
   return (
@@ -47,4 +48,5 @@ export const appRoutes = [
   <Route key="settings" path="/settings" element={P(<SettingsPage />)} />,
   <Route key="billing" path="/billing" element={P(<BillingPage />)} />,
   <Route key="real-or-not" path="/real-or-not" element={P(<RealOrNotPage />)} />,
+  <Route key="invite" path="/invite" element={P(<InvitePage />)} />,
 ];

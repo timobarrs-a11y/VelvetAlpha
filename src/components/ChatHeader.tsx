@@ -1,5 +1,5 @@
 import {
-  ArrowLeft, CreditCard, RotateCcw,
+  ArrowLeft, CreditCard, RotateCcw, Gift,
   Sparkles, Volume2, VolumeX, Settings, Calendar, Wand2, Brain,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -229,6 +229,14 @@ export const ChatHeader = ({
                         Loyalty Rewards &amp; FX
                       </button>
                     )}
+                    <div className="h-px bg-gray-100 mx-2 my-1" />
+                    <button
+                      onClick={() => { navigate('/invite'); setShowSettings(false); }}
+                      className="w-full text-left px-3.5 py-2 text-sm text-gray-700 hover:bg-pink-50 flex items-center gap-2.5 transition-colors"
+                    >
+                      <Gift size={14} className="text-pink-500" />
+                      Invite friends
+                    </button>
                     <div className="h-px bg-gray-100 mx-2 my-1" />
                     <button
                       onClick={() => { navigate(`/pricing?returnTo=/chat?companion=${companionId}`); setShowSettings(false); }}

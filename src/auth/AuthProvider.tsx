@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../shared/supabase/client';
+import { referralService } from '../services/referralService';
 
 type AuthState = {
   user: User | null;
@@ -45,6 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setLoading(false);
+      if (newSession) {
+        referralService.redeemPendingReferral().catch(() => {});
+      }
     });
 
     return () => {
