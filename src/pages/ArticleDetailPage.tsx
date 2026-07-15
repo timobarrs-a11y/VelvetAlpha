@@ -9,6 +9,12 @@ import { supabase } from '../shared/supabase/client';
 import { Avatar } from '../components/Avatar';
 import { AvatarConfig } from '../types/avatar';
 
+// article-chat now requires a real user token (not the public anon key).
+async function getArticleChatAuthToken(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+}
+
 interface NewsArticle {
   id: string;
   title: string;
@@ -173,7 +179,7 @@ export function ArticleDetailPage() {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${await getArticleChatAuthToken()}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -270,7 +276,7 @@ export function ArticleDetailPage() {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${await getArticleChatAuthToken()}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -330,7 +336,7 @@ export function ArticleDetailPage() {
           {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Authorization': `Bearer ${await getArticleChatAuthToken()}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({

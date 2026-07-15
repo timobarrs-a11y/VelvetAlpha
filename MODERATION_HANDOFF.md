@@ -1,13 +1,29 @@
-# Content Moderation System (v2, combined) — Complete Handoff for Bolt
+# Content Moderation System (v3, full coverage) — Complete Handoff for Bolt
 
 Self-contained deploy instructions for the **full** AI-chat moderation layer:
-local regex screening **plus** a Claude Haiku classifier pass. No git checkout
-required — everything needed is in this file.
+local regex screening **plus** a Claude Haiku classifier pass, across **all 8**
+AI-facing edge functions. No git checkout required.
 
-**This supersedes any earlier MODERATION_HANDOFF.** If you already applied v1:
-the migration (Part 1) is unchanged — skip it. Just replace `moderation.ts`
-with the Part 2 version below and make the three guard blocks match Part 3
-exactly (they now call `moderateInput` instead of `screenText`).
+**This supersedes v1 and v2.** Your review was correct: v2 only covered the 3
+main chat functions. v3 adds Part 3.5 covering the 5 you flagged
+(`atlas-agent`, `article-chat`, `ron-ai-reply`, `local-explorer`,
+`onboarding-atlas`) plus a frontend fix for `article-chat` auth.
+
+Answers to your review questions:
+- **Extend to the 5 uncovered functions?** Yes — exact edits are in Part 3.5.
+  Your recommendation was right.
+- **Classifier model ID valid?** Yes. `claude-haiku-4-5-20251001` is the same ID
+  this project already uses in production as `MODEL_CONFIG.HAIKU`
+  (`supabase/functions/_shared/modelConfig.ts`), so the API key demonstrably
+  has access to it.
+- **`chat-turn` env lookup redundancy** — agreed, intentional and harmless; the
+  guard runs before the function's own `apiKey` is defined.
+- **Frontend ban UX** — agreed it's minor; deferred. The 403 refusal body
+  already carries a human-readable `message` field.
+- **`article-chat` has no auth** — your finding, and it's worse than a
+  moderation gap: it accepts the public anon key, so anyone can spend Anthropic
+  credits through it without an account. Part 3.5b fixes it (require a real user
+  token) and includes the matching frontend change.
 
 **What this does:** every user message to the AI is screened *before* it is
 stored or sent to the model. It blocks the one illegal category — sexual content
@@ -444,6 +460,253 @@ Ensure this follows immediately after it (replacing any v1 `screenText` block):
 
 ---
 
+## PART 3.5 — The 5 additional AI-facing functions
+
+Add this import to the top of **each** of the 5 files (below the `modelConfig` import):
+```ts
+import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
+```
+(`article-chat` also needs `import { createClient } from "npm:@supabase/supabase-js@2";` — it doesn't have it yet.)
+
+### 3.5a `supabase/functions/atlas-agent/index.ts`
+
+**Select + ban check.** Find:
+```ts
+      .select("subscription_tier, atlas_messages_today, atlas_messages_reset_at, is_test_user, display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const isTestUser = profile?.is_test_user === true;
+```
+Replace with:
+```ts
+      .select("subscription_tier, atlas_messages_today, atlas_messages_reset_at, is_test_user, display_name, is_banned")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.is_banned === true) {
+      return new Response(
+        JSON.stringify({ error: "Account suspended", message: "Your account has been suspended for violating our content policy." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const isTestUser = profile?.is_test_user === true;
+```
+
+**Moderation.** Find:
+```ts
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY not configured");
+
+    const braveKey = Deno.env.get("BRAVE_SEARCH_API_KEY");
+```
+Insert between the two statements:
+```ts
+    // Content moderation: screen user input before it reaches the model.
+    const moderationVerdict = await moderateInput(supabaseAdmin, anthropicKey, user.id, message);
+    if (moderationVerdict.action === "block") {
+      console.warn(`Blocked atlas input, category=${moderationVerdict.category}, user=${user.id}`);
+      return new Response(
+        JSON.stringify({ error: "Content policy violation", message: MODERATION_REFUSAL }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+```
+
+### 3.5b `supabase/functions/article-chat/index.ts` + frontend
+
+This function has NO user auth today (the public anon key reaches it). Add auth,
+a ban check, and moderation. Find:
+```ts
+    if (!supabaseUrl || !supabaseKey || !anthropicKey) {
+      throw new Error("Missing environment variables");
+    }
+```
+Add immediately after it:
+```ts
+
+    // Require a real signed-in user (the anon key alone is public and was
+    // previously enough to reach this endpoint and spend API credits).
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Reject banned users and screen input before it reaches the model.
+    const { data: modProfile } = await supabaseAdmin
+      .from("user_profiles")
+      .select("is_banned")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (modProfile?.is_banned === true) {
+      return new Response(
+        JSON.stringify({ error: "Account suspended", message: "Your account has been suspended for violating our content policy." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const moderationVerdict = await moderateInput(supabaseAdmin, anthropicKey, user.id, message);
+    if (moderationVerdict.action === "block") {
+      console.warn(`Blocked article-chat input, category=${moderationVerdict.category}, user=${user.id}`);
+      return new Response(
+        JSON.stringify({ error: "Content policy violation", message: MODERATION_REFUSAL }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+```
+
+**REQUIRED matching frontend change** — `src/pages/ArticleDetailPage.tsx` calls
+this function with the anon key in 3 places; they must send the user's session
+token or article chat breaks with 401s. Below the imports, add:
+```ts
+// article-chat now requires a real user token (not the public anon key).
+async function getArticleChatAuthToken(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+}
+```
+Then replace ALL 3 occurrences of:
+```ts
+'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+```
+with:
+```ts
+'Authorization': `Bearer ${await getArticleChatAuthToken()}`,
+```
+(All 3 are inside async functions, so `await` is fine.)
+
+### 3.5c `supabase/functions/ron-ai-reply/index.ts`
+
+This function receives only a `session_id`; the user's text is read from the DB.
+Screen the latest human message before generating a reply to it. Find:
+```ts
+    const anthropic = new Anthropic({
+      apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
+    });
+```
+Add immediately BEFORE it:
+```ts
+    // Content moderation: screen the latest human message before generating a
+    // reply to it. Strikes are attributed to the session's human participant.
+    const lastHumanMsg = [...(messages || [])].reverse().find(
+      (m: { sender_role: string; content: string }) => m.sender_role === "a",
+    );
+    if (lastHumanMsg) {
+      const verdict = await moderateInput(
+        supabase,
+        Deno.env.get("ANTHROPIC_API_KEY") ?? "",
+        session.participant_a_id,
+        lastHumanMsg.content,
+      );
+      if (verdict.action === "block") {
+        console.warn(`Blocked RoN input, category=${verdict.category}, user=${session.participant_a_id}`);
+        return new Response(
+          JSON.stringify({ error: "Content policy violation", message: MODERATION_REFUSAL }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+```
+
+### 3.5d `supabase/functions/local-explorer/index.ts`
+
+**Select + ban check.** Find:
+```ts
+      .select("subscription_tier, is_test_user, display_name, location_city, timezone")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const isTestUser = profile?.is_test_user === true;
+```
+Replace with:
+```ts
+      .select("subscription_tier, is_test_user, display_name, location_city, timezone, is_banned")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.is_banned === true) {
+      return new Response(
+        JSON.stringify({ error: "Account suspended", message: "Your account has been suspended for violating our content policy." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const isTestUser = profile?.is_test_user === true;
+```
+
+**Moderation.** Find:
+```ts
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY not configured");
+
+    const tavilyKey = Deno.env.get("TAVILY_API_KEY") || null;
+```
+Insert between the two statements:
+```ts
+    // Content moderation: screen user input before it reaches the model.
+    const moderationVerdict = await moderateInput(supabaseAdmin, anthropicKey, user.id, message);
+    if (moderationVerdict.action === "block") {
+      console.warn(`Blocked local-explorer input, category=${moderationVerdict.category}, user=${user.id}`);
+      return new Response(
+        JSON.stringify({ error: "Content policy violation", message: MODERATION_REFUSAL }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+```
+
+### 3.5e `supabase/functions/onboarding-atlas/index.ts`
+
+No profile is loaded in this function, so fetch `is_banned` and moderate in one
+block. Find:
+```ts
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY not configured");
+
+    const messages = [
+```
+Insert between the key check and `const messages = [`:
+```ts
+    // Reject banned users and screen input before it reaches the model.
+    const { data: modProfile } = await supabaseAdmin
+      .from("user_profiles")
+      .select("is_banned")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (modProfile?.is_banned === true) {
+      return new Response(
+        JSON.stringify({ error: "Account suspended", message: "Your account has been suspended for violating our content policy." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const moderationVerdict = await moderateInput(supabaseAdmin, anthropicKey, user.id, message);
+    if (moderationVerdict.action === "block") {
+      console.warn(`Blocked onboarding input, category=${moderationVerdict.category}, user=${user.id}`);
+      return new Response(
+        JSON.stringify({ error: "Content policy violation", message: MODERATION_REFUSAL }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+```
+
+**Redeploy all 8 functions:** `chat`, `chat-turn`, `group-chat`, `atlas-agent`,
+`article-chat`, `ron-ai-reply`, `local-explorer`, `onboarding-atlas` — and ship
+the frontend change (3.5b) in the same deploy, or article chat 401s.
+
+---
+
 ## PART 4 — Verify
 
 Use THROWAWAY test accounts (they will get banned).
@@ -458,6 +721,11 @@ Use THROWAWAY test accounts (they will get banned).
    regex block logs immediately; a classifier block follows a classifier call.
 4. Confirm cost sanity: plain adult messages produce NO extra Anthropic calls
    (only messages with teen/family/age cues trigger the classifier).
+5. **Extended surfaces:** as the banned test account, hit Atlas (`/atlas`),
+   Local Explorer, and article chat — all should 403 "Account suspended".
+6. **article-chat auth:** signed OUT (or with only the anon key), call the
+   `article-chat` function directly → 401. Signed in on the article page,
+   chat works normally.
 
 If step 1 gets blocked → filter copied too broadly. If step 3 is NOT blocked →
 either the module wasn't replaced with the v2 version or `ANTHROPIC_API_KEY`

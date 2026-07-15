@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
+import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -293,9 +294,17 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
-      .select("subscription_tier, atlas_messages_today, atlas_messages_reset_at, is_test_user, display_name")
+      .select("subscription_tier, atlas_messages_today, atlas_messages_reset_at, is_test_user, display_name, is_banned")
       .eq("id", user.id)
       .maybeSingle();
+
+    // Reject users banned for prior content-policy violations.
+    if (profile?.is_banned === true) {
+      return new Response(
+        JSON.stringify({ error: "Account suspended", message: "Your account has been suspended for violating our content policy." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const isTestUser = profile?.is_test_user === true;
     const tier = profile?.subscription_tier || "free";
@@ -323,6 +332,16 @@ Deno.serve(async (req: Request) => {
 
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY not configured");
+
+    // Content moderation: screen user input before it reaches the model.
+    const moderationVerdict = await moderateInput(supabaseAdmin, anthropicKey, user.id, message);
+    if (moderationVerdict.action === "block") {
+      console.warn(`Blocked atlas input, category=${moderationVerdict.category}, user=${user.id}`);
+      return new Response(
+        JSON.stringify({ error: "Content policy violation", message: MODERATION_REFUSAL }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const braveKey = Deno.env.get("BRAVE_SEARCH_API_KEY");
 
