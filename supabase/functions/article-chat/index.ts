@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.70.0";
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,6 +54,46 @@ Deno.serve(async (req: Request) => {
 
     if (!supabaseUrl || !supabaseKey || !anthropicKey) {
       throw new Error("Missing environment variables");
+    }
+
+    // Require a real signed-in user (the anon key alone is public and was
+    // previously enough to reach this endpoint and spend API credits).
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Reject banned users and screen input before it reaches the model.
+    const { data: modProfile } = await supabaseAdmin
+      .from("user_profiles")
+      .select("is_banned")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (modProfile?.is_banned === true) {
+      return new Response(
+        JSON.stringify({ error: "Account suspended", message: "Your account has been suspended for violating our content policy." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const moderationVerdict = await moderateInput(supabaseAdmin, anthropicKey, user.id, message);
+    if (moderationVerdict.action === "block") {
+      console.warn(`Blocked article-chat input, category=${moderationVerdict.category}, user=${user.id}`);
+      return new Response(
+        JSON.stringify({ error: "Content policy violation", message: MODERATION_REFUSAL }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const companionResponse = await fetch(

@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.27.3";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
+import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -141,6 +142,27 @@ The other person might be an AI trying to seem human. Or they might be a human t
       return new Response(JSON.stringify({ message: savedMsg }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Content moderation: screen the latest human message before generating a
+    // reply to it. Strikes are attributed to the session's human participant.
+    const lastHumanMsg = [...(messages || [])].reverse().find(
+      (m: { sender_role: string; content: string }) => m.sender_role === "a",
+    );
+    if (lastHumanMsg) {
+      const verdict = await moderateInput(
+        supabase,
+        Deno.env.get("ANTHROPIC_API_KEY") ?? "",
+        session.participant_a_id,
+        lastHumanMsg.content,
+      );
+      if (verdict.action === "block") {
+        console.warn(`Blocked RoN input, category=${verdict.category}, user=${session.participant_a_id}`);
+        return new Response(
+          JSON.stringify({ error: "Content policy violation", message: MODERATION_REFUSAL }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     const anthropic = new Anthropic({

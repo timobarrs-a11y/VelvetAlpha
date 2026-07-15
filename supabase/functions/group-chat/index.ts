@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
+import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -274,9 +275,16 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('subscription_tier, messages_remaining, is_test_user, name, referred_by, referral_qualified')
+      .select('subscription_tier, messages_remaining, is_test_user, name, referred_by, referral_qualified, is_banned')
       .eq('id', user.id)
       .maybeSingle();
+
+    if (profile?.is_banned === true) {
+      return new Response(
+        JSON.stringify({ error: 'Account suspended', message: 'Your account has been suspended for violating our content policy.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const isTestUser = profile?.is_test_user === true;
     const messagesRemaining = profile?.messages_remaining ?? 0;
@@ -305,6 +313,19 @@ Deno.serve(async (req: Request) => {
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) throw new Error('Server configuration error: API key not set');
+
+    // Content moderation: screen the user's group message before it reaches the model
+    // (local regex tiers + Haiku classifier for minor-adjacent cues).
+    if (userMessage) {
+      const verdict = await moderateInput(supabaseAdmin, apiKey, user.id, userMessage);
+      if (verdict.action === 'block') {
+        console.warn(`Blocked group-chat input, category=${verdict.category}, user=${user.id}`);
+        return new Response(
+          JSON.stringify({ error: 'Content policy violation', message: MODERATION_REFUSAL }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     const userName = profile?.name || 'User';
     const conversationContext = formatGroupHistory(chatHistory);

@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
+import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -533,6 +534,22 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[${traceId}] Chat turn request:`, { userId: user.id, companionId, mode, messageLength: message.length });
 
+    // Content moderation: block disallowed input BEFORE it is stored or sent to the
+    // model (local regex tiers + Haiku classifier for minor-adjacent cues).
+    const moderationVerdict = await moderateInput(
+      supabaseAdmin,
+      Deno.env.get('ANTHROPIC_API_KEY') ?? '',
+      user.id,
+      message,
+    );
+    if (moderationVerdict.action === 'block') {
+      console.warn(`[${traceId}] Blocked input, category=${moderationVerdict.category}, user=${user.id}`);
+      return new Response(
+        JSON.stringify({ error: 'Content policy violation', message: MODERATION_REFUSAL }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
@@ -541,6 +558,13 @@ Deno.serve(async (req: Request) => {
 
     if (!profile) {
       throw new Error('User profile not found');
+    }
+
+    if (profile.is_banned === true) {
+      return new Response(
+        JSON.stringify({ error: 'Account suspended', message: 'Your account has been suspended for violating our content policy.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
 
     const isTestUser = profile.is_test_user === true;
