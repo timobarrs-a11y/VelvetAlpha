@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
-import { screenText, recordModerationStrike, MODERATION_REFUSAL } from "../_shared/moderation.ts";
+import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -315,12 +315,12 @@ Deno.serve(async (req: Request) => {
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) throw new Error('Server configuration error: API key not set');
 
-    // Content moderation: screen the user's group message before it reaches the model.
+    // Content moderation: screen the user's group message before it reaches the model
+    // (local regex tiers + Haiku classifier for minor-adjacent cues).
     if (userMessage) {
-      const inputScreen = screenText(userMessage);
-      if (inputScreen.action === 'block') {
-        console.warn(`Blocked group-chat input, category=${inputScreen.category}, user=${user.id}`);
-        await recordModerationStrike(supabaseAdmin, user.id, inputScreen.category!);
+      const verdict = await moderateInput(supabaseAdmin, apiKey, user.id, userMessage);
+      if (verdict.action === 'block') {
+        console.warn(`Blocked group-chat input, category=${verdict.category}, user=${user.id}`);
         return new Response(
           JSON.stringify({ error: 'Content policy violation', message: MODERATION_REFUSAL }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

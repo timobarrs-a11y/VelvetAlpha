@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
-import { screenText, recordModerationStrike, MODERATION_REFUSAL } from "../_shared/moderation.ts";
+import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -534,11 +534,16 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[${traceId}] Chat turn request:`, { userId: user.id, companionId, mode, messageLength: message.length });
 
-    // Content moderation: block disallowed input BEFORE it is stored or sent to the model.
-    const inputScreen = screenText(message);
-    if (inputScreen.action === 'block') {
-      console.warn(`[${traceId}] Blocked input, category=${inputScreen.category}, user=${user.id}`);
-      await recordModerationStrike(supabaseAdmin, user.id, inputScreen.category!);
+    // Content moderation: block disallowed input BEFORE it is stored or sent to the
+    // model (local regex tiers + Haiku classifier for minor-adjacent cues).
+    const moderationVerdict = await moderateInput(
+      supabaseAdmin,
+      Deno.env.get('ANTHROPIC_API_KEY') ?? '',
+      user.id,
+      message,
+    );
+    if (moderationVerdict.action === 'block') {
+      console.warn(`[${traceId}] Blocked input, category=${moderationVerdict.category}, user=${user.id}`);
       return new Response(
         JSON.stringify({ error: 'Content policy violation', message: MODERATION_REFUSAL }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

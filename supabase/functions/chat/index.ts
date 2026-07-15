@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
-import { screenText, recordModerationStrike, MODERATION_REFUSAL } from "../_shared/moderation.ts";
+import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -132,13 +132,13 @@ Deno.serve(async (req: Request) => {
       return validationError('total message content exceeds 150,000 characters');
     }
 
-    // Content moderation: screen the latest user message before it reaches the model.
+    // Content moderation: screen the latest user message before it reaches the model
+    // (local regex tiers + Haiku classifier for minor-adjacent cues).
     const lastUserMessage = [...validatedMessages].reverse().find((m) => m.role === 'user');
     if (lastUserMessage) {
-      const inputScreen = screenText(lastUserMessage.content);
-      if (inputScreen.action === 'block') {
-        console.warn(`Blocked input, category=${inputScreen.category}, user=${user.id}`);
-        await recordModerationStrike(supabaseAdmin, user.id, inputScreen.category!);
+      const verdict = await moderateInput(supabaseAdmin, apiKey, user.id, lastUserMessage.content);
+      if (verdict.action === 'block') {
+        console.warn(`Blocked input, category=${verdict.category}, user=${user.id}`);
         return new Response(
           JSON.stringify({ error: 'Content policy violation', message: MODERATION_REFUSAL }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
