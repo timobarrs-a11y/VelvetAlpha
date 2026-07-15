@@ -274,7 +274,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('subscription_tier, messages_remaining, is_test_user, name')
+      .select('subscription_tier, messages_remaining, is_test_user, name, referred_by, referral_qualified')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -507,6 +507,11 @@ Deno.serve(async (req: Request) => {
         .from('user_profiles')
         .update({ messages_remaining: newCount })
         .eq('id', user.id);
+    }
+
+    // Referral activation: reward the inviter once this user is genuinely engaged.
+    if (profile?.referred_by && !profile?.referral_qualified) {
+      await supabaseAdmin.rpc('track_referral_progress', { p_user_id: user.id });
     }
 
     return new Response(JSON.stringify({ responses }), {

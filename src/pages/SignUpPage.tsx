@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Heart, ShieldCheck, ChevronDown } from 'lucide-react';
 import { authService } from '../services/authService';
+import { referralService } from '../services/referralService';
 import { Button, Input } from '../shared/ui';
 
 const TERMS_VERSION = '2026-01-28';
@@ -63,6 +64,11 @@ function StyledSelect({ value, onChange, options, placeholder, disabled }: Selec
 export default function SignUpPage() {
   const navigate = useNavigate();
 
+  // Stash any ?ref=CODE from the invite link so we can redeem it after signup.
+  useEffect(() => {
+    referralService.captureRefFromUrl();
+  }, []);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -112,6 +118,9 @@ export default function SignUpPage() {
         termsAcceptedAt: new Date().toISOString(),
         ageVerifiedAt: new Date().toISOString(),
       });
+      // Attach this new user to their inviter (no-op if there's no pending code
+      // or no session yet — it's retried on next app boot).
+      await referralService.redeemPendingReferral();
       navigate('/welcome');
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
