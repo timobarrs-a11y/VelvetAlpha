@@ -66,10 +66,10 @@ Deno.serve(async (req: Request) => {
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
       const tierConfig: Record<string, { messages: number, haiku: boolean, sonnet: boolean }> = {
-        unlimited: { messages: -1, haiku: true, sonnet: false },
-        starter: { messages: 800, haiku: false, sonnet: true },
-        plus: { messages: 2000, haiku: false, sonnet: true },
-        elite: { messages: 5000, haiku: false, sonnet: true }
+        unlimited: { messages: 1500, haiku: true, sonnet: false },
+        starter: { messages: 2000, haiku: false, sonnet: true },
+        plus: { messages: 4000, haiku: false, sonnet: true },
+        elite: { messages: 8000, haiku: false, sonnet: true }
       };
 
       const config = tierConfig[tier];
@@ -88,7 +88,7 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       let newMessageCount = config.messages;
-      if (config.messages !== -1 && currentProfile?.messages_remaining) {
+      if (currentProfile?.messages_remaining) {
         const currentMessages = currentProfile.messages_remaining === -1 ? 0 : currentProfile.messages_remaining;
         newMessageCount = currentMessages + config.messages;
       }

@@ -11,6 +11,7 @@ export function SuccessPage() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [planInfo, setPlanInfo] = useState<{ name: string; price: number; messageLimit: number } | null>(null);
 
   useEffect(() => {
     handleSuccess();
@@ -47,6 +48,7 @@ export function SuccessPage() {
         setError('Failed to update subscription');
       }
 
+      setPlanInfo({ name: plan.name, price: plan.price, messageLimit: plan.messageLimit || 0 });
       setLoading(false);
 
       setTimeout(() => {
@@ -129,10 +131,23 @@ export function SuccessPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="text-xl text-gray-300 mb-8"
+          className="text-xl text-gray-300 mb-4"
         >
           Your payment was successful
         </motion.p>
+
+        {planInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="bg-white/5 rounded-lg p-4 mb-4 space-y-1"
+          >
+            <p className="text-white font-semibold text-lg">{planInfo.name}</p>
+            <p className="text-gray-300">${planInfo.price}/month</p>
+            <p className="text-gray-400 text-sm">{planInfo.messageLimit.toLocaleString()} messages per month</p>
+          </motion.div>
+        )}
 
         <motion.p
           initial={{ opacity: 0 }}
@@ -140,7 +155,7 @@ export function SuccessPage() {
           transition={{ delay: 0.8 }}
           className="text-sm text-gray-400 mb-8"
         >
-          Redirecting you to start chatting...
+          Your subscription renews automatically each month until you cancel. You can cancel anytime from Billing.
         </motion.p>
 
         <motion.button

@@ -228,7 +228,7 @@ export function InvitePage() {
               { step: '1', text: 'Share your invite link with a friend' },
               { step: '2', text: 'They sign up and get 25 bonus messages' },
               { step: '3', text: 'Once they send 20 messages, you both get rewarded' },
-              { step: '4', text: 'You earn 50 bonus messages per activated referral' },
+              { step: '4', text: 'You earn 50 bonus messages per activated referral (max 100 total reward messages)' },
             ].map((item) => (
               <div key={item.step} className="flex items-start gap-3">
                 <div

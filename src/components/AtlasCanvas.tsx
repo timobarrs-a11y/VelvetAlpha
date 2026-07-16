@@ -598,7 +598,11 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
         <div className="px-4 sm:px-6 pb-2">
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm">
-              <span className="text-amber-300/90">Daily free limit reached ({usage.dailyLimit} messages).</span>
+              <span className="text-amber-300/90">
+                {usage.dailyLimit > 0 && usage.messagesUsedToday >= usage.dailyLimit
+                  ? `Daily free limit reached (${usage.dailyLimit} messages).`
+                  : "You've reached this month's message allowance. It refreshes on your next billing cycle, or upgrade for more."}
+              </span>
               <button
                 onClick={() => navigate('/pricing?returnTo=/atlas')}
                 className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-lg text-xs transition-colors flex-shrink-0"

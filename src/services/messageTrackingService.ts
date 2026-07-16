@@ -40,7 +40,7 @@ export async function getMessageTrackingInfo(userId: string): Promise<MessageTra
 
     const tier = normalizeSubscriptionTier(data.subscription_tier);
     const messagesRemaining = data.messages_remaining ?? 0;
-    const canSendMessage = messagesRemaining === -1 || messagesRemaining > 0;
+    const canSendMessage = messagesRemaining > 0;
 
     const model = data.sonnet_model_enabled ? 'sonnet' : 'haiku';
 
@@ -113,11 +113,18 @@ export async function addMessagesToUser(
     };
 
     if (tier === 'unlimited') {
-      updates.messages_remaining = -1;
+      const { data: current } = await supabase
+        .from('user_profiles')
+        .select('messages_remaining')
+        .eq('id', userId)
+        .maybeSingle();
+
+      const currentMessages = current?.messages_remaining || 0;
+      updates.messages_remaining = currentMessages === -1 ? messageCount : currentMessages + messageCount;
       updates.haiku_model_enabled = true;
       updates.sonnet_model_enabled = false;
     } else if (tier === 'trial') {
-      updates.messages_remaining = 5000;
+      updates.messages_remaining = 8000;
       updates.haiku_model_enabled = false;
       updates.sonnet_model_enabled = true;
     } else if (['starter', 'plus', 'elite'].includes(tier)) {

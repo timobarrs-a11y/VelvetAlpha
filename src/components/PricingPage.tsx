@@ -195,6 +195,12 @@ export function PricingPage({ currentTier, onClose }: PricingPageProps) {
           </div>
         </div>
 
+        <div className="text-center max-w-2xl mx-auto mb-6">
+          <p className="text-gray-300 text-sm">
+            Your subscription renews automatically each month until you cancel. You can cancel anytime from Billing; cancellation takes effect at the end of the current period.
+          </p>
+        </div>
+
         <p className="text-center text-gray-400 text-sm">
           All purchases are secure and encrypted. Cancel anytime.
         </p>

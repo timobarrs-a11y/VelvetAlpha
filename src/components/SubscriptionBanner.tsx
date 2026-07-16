@@ -76,8 +76,8 @@ function getTrialDaysRemaining(trialExpiresAt: string | null | undefined): numbe
 export function SubscriptionBanner({ tier, messagesRemaining, compact = false, trialExpiresAt }: SubscriptionBannerProps) {
   const config = TIER_CONFIGS[tier] || TIER_CONFIGS.free;
   const Icon = config.icon;
-  const isUnlimited = messagesRemaining === -1;
-  const isLowOnMessages = !isUnlimited && messagesRemaining < 50;
+  const isTestUser = messagesRemaining === -1;
+  const isLowOnMessages = !isTestUser && messagesRemaining < 50;
   const isPremium = tier !== 'free';
   const trialDaysLeft = tier === 'trial' ? getTrialDaysRemaining(trialExpiresAt) : null;
 
@@ -95,7 +95,7 @@ export function SubscriptionBanner({ tier, messagesRemaining, compact = false, t
           <Icon className={`${config.textColor} w-4 h-4`} />
         </motion.div>
         <span className={`${config.textColor} font-semibold text-sm`}>{config.label}</span>
-        {isUnlimited && (
+        {isTestUser && (
           <motion.div
             animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
@@ -142,7 +142,7 @@ export function SubscriptionBanner({ tier, messagesRemaining, compact = false, t
                     {trialDaysLeft === 0 ? 'Expires today' : `${trialDaysLeft} day${trialDaysLeft !== 1 ? 's' : ''} remaining`}
                   </p>
                 </div>
-              ) : isUnlimited ? (
+              ) : isTestUser ? (
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <motion.div
                     animate={{ scale: [1, 1.1, 1], opacity: [0.7, 1, 0.7] }}
@@ -151,7 +151,7 @@ export function SubscriptionBanner({ tier, messagesRemaining, compact = false, t
                     <Sparkles className="text-gray-600 w-3 h-3" />
                   </motion.div>
                   <p className="text-gray-600 text-sm">
-                    Unlimited conversations
+                    Test account — no message limits
                   </p>
                 </div>
               ) : (
@@ -186,7 +186,7 @@ export function SubscriptionBanner({ tier, messagesRemaining, compact = false, t
               className="mt-3 pt-3 border-t border-gray-200"
             >
               <p className="text-gray-500 text-xs text-center">
-                Upgrade for unlimited messages and advanced AI
+                Upgrade for more messages and advanced AI
               </p>
             </motion.div>
           )}

@@ -43,7 +43,7 @@ const ROLE_CONFIG: Record<UserRole, { label: string; color: string; bg: string; 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   free:      { label: 'Free',      color: 'text-white/50',  bg: 'bg-white/5' },
   trial:     { label: 'Trial',     color: 'text-cyan-400',  bg: 'bg-cyan-500/15' },
-  unlimited: { label: 'Unlimited', color: 'text-sky-400',   bg: 'bg-sky-500/15' },
+  unlimited: { label: 'Essential', color: 'text-sky-400',   bg: 'bg-sky-500/15' },
   starter:   { label: 'Starter',   color: 'text-green-400', bg: 'bg-green-500/15' },
   plus:      { label: 'Plus',      color: 'text-amber-400', bg: 'bg-amber-500/15' },
   elite:     { label: 'Elite',     color: 'text-rose-400',  bg: 'bg-rose-500/15' },

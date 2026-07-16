@@ -13,15 +13,17 @@ const SECTIONS = [
   { id: 'user-content', num: '7', title: 'User Content and License' },
   { id: 'copyright-dmca', num: '8', title: 'Copyright and DMCA' },
   { id: 'subscription', num: '9', title: 'Subscription and Payments' },
-  { id: 'third-party', num: '10', title: 'Third-Party Services' },
-  { id: 'intellectual-property', num: '11', title: 'Intellectual Property' },
-  { id: 'warranties', num: '12', title: 'Disclaimer of Warranties' },
-  { id: 'liability', num: '13', title: 'Limitation of Liability' },
-  { id: 'indemnification', num: '14', title: 'Indemnification' },
-  { id: 'termination', num: '15', title: 'Termination' },
-  { id: 'governing-law', num: '16', title: 'Governing Law and Dispute Resolution' },
-  { id: 'changes', num: '17', title: 'Changes to Terms' },
-  { id: 'contact', num: '18', title: 'Contact Us' },
+  { id: 'fair-use', num: '10', title: 'Fair Use and Anti-Abuse' },
+  { id: 'referral-program', num: '11', title: 'Referral and Invitation Program' },
+  { id: 'third-party', num: '12', title: 'Third-Party Services' },
+  { id: 'intellectual-property', num: '13', title: 'Intellectual Property' },
+  { id: 'warranties', num: '14', title: 'Disclaimer of Warranties' },
+  { id: 'liability', num: '15', title: 'Limitation of Liability' },
+  { id: 'indemnification', num: '16', title: 'Indemnification' },
+  { id: 'termination', num: '17', title: 'Termination' },
+  { id: 'governing-law', num: '18', title: 'Governing Law and Dispute Resolution' },
+  { id: 'changes', num: '19', title: 'Changes to Terms' },
+  { id: 'contact', num: '20', title: 'Contact Us' },
 ];
 
 export default function TermsOfServicePage() {
@@ -110,7 +112,7 @@ export default function TermsOfServicePage() {
             Terms of Service
           </h1>
           <p className="text-blue-200/60 text-sm">
-            Last Updated: January 28, 2026
+            Last Updated: July 16, 2026
           </p>
         </div>
 
@@ -269,7 +271,12 @@ export default function TermsOfServicePage() {
                     'Collect or store personal data about other users;',
                     'Engage in any automated or unauthorized access to the system, including scraping;',
                     'Attempt to bypass, disable, or reverse-engineer any security feature or usage limit;',
-                    'Use outputs of the Service to develop a competing AI product.',
+                    'Use outputs of the Service to develop a competing AI product;',
+                    'Share, sell, rent, or transfer your account or access to the Service, or use a single account on behalf of multiple people;',
+                    'Resell, sublicense, or commercially redistribute the Service or its outputs;',
+                    'Create multiple accounts, or use any method, to circumvent message allowances, free-tier limits, trial restrictions, or a suspension;',
+                    'Abuse, manipulate, or fraudulently obtain rewards from any referral, invitation, promotion, or credit program;',
+                    'Initiate chargebacks or payment disputes for charges you actually authorized, in lieu of using our cancellation and support process.',
                   ]}
                 />
               </section>
@@ -321,11 +328,78 @@ export default function TermsOfServicePage() {
                   We may change our fees with reasonable advance notice; changes apply
                   to subsequent billing periods.
                 </BodyText>
+
+                <h3 className="text-white font-semibold text-base md:text-lg mb-3 mt-6">
+                  Message Allowances and Fair Use
+                </h3>
+                <BodyText>
+                  Each plan includes a monthly message allowance, shown on our
+                  pricing page and at checkout before you purchase. Allowances
+                  refresh at the start of each billing cycle and do not roll over.
+                  Unused messages have no cash value. When you reach your allowance,
+                  message sending pauses until your allowance refreshes or you
+                  upgrade; other account access continues. <strong className="text-white">We do not represent any plan as “unlimited.”</strong> We
+                  may adjust plan allowances or pricing prospectively with
+                  reasonable advance notice; changes apply to subsequent billing
+                  periods, and your continued use after the effective date
+                  constitutes acceptance.
+                </BodyText>
               </section>
 
-              {/* 10. Third-Party Services */}
+              {/* 10. Fair Use and Anti-Abuse */}
+              <section id="fair-use" className="scroll-mt-24">
+                <SectionHeading num="10" title="Fair Use and Anti-Abuse" />
+                <BodyText>
+                  Message allowances are intended for personal, human, interactive
+                  use. To protect the Service and its users, and independent of any
+                  plan allowance, we may investigate, rate-limit, throttle, suspend,
+                  or terminate any account, and may withhold or revoke rewards or
+                  credits, where we reasonably determine that an account is engaged
+                  in:
+                </BodyText>
+                <BulletList
+                  items={[
+                    <><strong className="text-white">(a)</strong> automated, scripted, bot-driven, or programmatic access, or access at a volume or pattern inconsistent with genuine individual human use;</>,
+                    <><strong className="text-white">(b)</strong> account sharing, resale, or commercial redistribution of access or outputs;</>,
+                    <><strong className="text-white">(c)</strong> creating multiple accounts or otherwise circumventing allowances, limits, or a prior suspension;</>,
+                    <><strong className="text-white">(d)</strong> fraud, including payment fraud, chargeback abuse, or manipulation of any referral, invitation, or promotional program;</>,
+                    <><strong className="text-white">(e)</strong> any conduct prohibited by Section 6, including generating or soliciting illegal content such as any sexual content involving minors; or</>,
+                    <><strong className="text-white">(f)</strong> any use that materially degrades, disrupts, or imposes disproportionate cost on the Service or other users.</>,
+                  ]}
+                />
+                <BodyText>
+                  Where practical and not prohibited by law or the nature of the
+                  abuse, we will give notice and an opportunity to cure before
+                  terminating a paid account for a Fair-Use matter; conduct under
+                  (d) and (e) may result in immediate suspension or termination
+                  without prior notice. This section supplements, and does not
+                  limit, our rights under Sections 6, 7, and 18.
+                </BodyText>
+              </section>
+
+              {/* 11. Referral and Invitation Program */}
+              <section id="referral-program" className="scroll-mt-24">
+                <SectionHeading num="11" title="Referral and Invitation Program" />
+                <BodyText>
+                  We may offer programs that reward you for inviting others to the
+                  Service. Rewards (such as bonus messages) are promotional, have no
+                  cash value, are non-transferable, and are not redeemable for
+                  currency. Rewards are earned only when the conditions we publish
+                  are met — which may include that an invited person is a new,
+                  genuine user who becomes active on the Service — and are not
+                  earned merely by signing up. You may not obtain rewards through
+                  self-referral, fake or duplicate accounts, automation, or any
+                  deceptive or manipulative means. We may withhold, revoke, or
+                  reverse rewards obtained in violation of these Terms, and may
+                  modify, suspend, or discontinue any such program at any time. Any
+                  per-account reward caps we apply are part of the program’s
+                  published terms.
+                </BodyText>
+              </section>
+
+              {/* 12. Third-Party Services */}
               <section id="third-party" className="scroll-mt-24">
-                <SectionHeading num="10" title="Third-Party Services" />
+                <SectionHeading num="12" title="Third-Party Services" />
                 <BodyText>
                   The Service relies on third-party providers (including AI model
                   providers, payment processors, and hosting infrastructure) as
@@ -335,9 +409,9 @@ export default function TermsOfServicePage() {
                 </BodyText>
               </section>
 
-              {/* 11. Intellectual Property */}
+              {/* 13. Intellectual Property */}
               <section id="intellectual-property" className="scroll-mt-24">
-                <SectionHeading num="11" title="Intellectual Property" />
+                <SectionHeading num="13" title="Intellectual Property" />
                 <BodyText>
                   All content, features, and functionality of Project Velvet — other
                   than User Content — including software, text, design, trademarks,
@@ -347,9 +421,9 @@ export default function TermsOfServicePage() {
                 </BodyText>
               </section>
 
-              {/* 12. Disclaimer of Warranties */}
+              {/* 14. Disclaimer of Warranties */}
               <section id="warranties" className="scroll-mt-24">
-                <SectionHeading num="12" title="Disclaimer of Warranties" />
+                <SectionHeading num="14" title="Disclaimer of Warranties" />
                 <BodyText>
                   The Service is provided "as is" and "as available" without
                   warranties of any kind, either express or implied, including
@@ -360,9 +434,9 @@ export default function TermsOfServicePage() {
                 </BodyText>
               </section>
 
-              {/* 13. Limitation of Liability */}
+              {/* 15. Limitation of Liability */}
               <section id="liability" className="scroll-mt-24">
-                <SectionHeading num="13" title="Limitation of Liability" />
+                <SectionHeading num="15" title="Limitation of Liability" />
                 <BodyText>
                   To the maximum extent permitted by law, in no event shall Project
                   Velvet be liable for any indirect, incidental, special, consequential,
@@ -375,9 +449,9 @@ export default function TermsOfServicePage() {
                 </BodyText>
               </section>
 
-              {/* 14. Indemnification */}
+              {/* 16. Indemnification */}
               <section id="indemnification" className="scroll-mt-24">
-                <SectionHeading num="14" title="Indemnification" />
+                <SectionHeading num="16" title="Indemnification" />
                 <BodyText>
                   You agree to indemnify and hold harmless Project Velvet and its
                   affiliates from any claims, damages, losses, and expenses (including
@@ -386,24 +460,24 @@ export default function TermsOfServicePage() {
                 </BodyText>
               </section>
 
-              {/* 15. Termination */}
+              {/* 17. Termination */}
               <section id="termination" className="scroll-mt-24">
-                <SectionHeading num="15" title="Termination" />
+                <SectionHeading num="17" title="Termination" />
                 <BodyText>
                   We may terminate or suspend your account at our discretion, with or
                   without notice, for conduct that we believe violates these Terms or
                   is harmful to other users, us, or third parties, or as otherwise
                   permitted by law. Upon termination, your right to use the Service
                   ceases immediately. Sections that by their nature should survive
-                  termination (including Sections 7, 11–14, and 16) will survive. Data
+                  termination (including Sections 7, 13–16, and 18) will survive. Data
                   handling following termination is described in our Privacy Policy.
                 </BodyText>
               </section>
 
-              {/* 16. Governing Law and Dispute Resolution */}
+              {/* 18. Governing Law and Dispute Resolution */}
               <section id="governing-law" className="scroll-mt-24">
                 <SectionHeading
-                  num="16"
+                  num="18"
                   title="Governing Law and Dispute Resolution"
                 />
                 <BodyText>
@@ -420,9 +494,9 @@ export default function TermsOfServicePage() {
                 </BodyText>
               </section>
 
-              {/* 17. Changes to Terms */}
+              {/* 19. Changes to Terms */}
               <section id="changes" className="scroll-mt-24">
-                <SectionHeading num="17" title="Changes to Terms" />
+                <SectionHeading num="19" title="Changes to Terms" />
                 <BodyText>
                   We may modify these Terms at any time. We will notify users of
                   material changes by posting the updated Terms and updating the "Last
@@ -431,9 +505,9 @@ export default function TermsOfServicePage() {
                 </BodyText>
               </section>
 
-              {/* 18. Contact Us */}
+              {/* 20. Contact Us */}
               <section id="contact" className="scroll-mt-24">
-                <SectionHeading num="18" title="Contact Us" />
+                <SectionHeading num="20" title="Contact Us" />
                 <BodyText>
                   If you have any questions about these Terms of Service, please
                   contact us at:

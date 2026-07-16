@@ -53,7 +53,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     ],
     model: 'sonnet',
     marketingLabel: 'Trial',
-    messageLimit: 5000,
+    messageLimit: 8000,
     isTrial: true
   },
   unlimited: {
@@ -63,14 +63,14 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     stripeLink: 'https://buy.stripe.com/3cIaEWds25dSgVS9U54Vy00',
     stripePriceId: 'price_1SrhkAB8CmoO93RgA3U7Liqu',
     features: [
-      '200 messages per month with Velvet V1',
+      'No daily limits — 1,500 messages a month',
       'Fast, responsive AI companion',
       'Ask anything, learn anything, talk about everything',
       'Perfect for everyday chat'
     ],
     model: 'haiku',
     marketingLabel: 'Essential',
-    messageLimit: 200
+    messageLimit: 1500
   },
   starter: {
     tier: 'starter',
@@ -79,14 +79,14 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     stripeLink: 'https://buy.stripe.com/bJe4gy1Jk49O8pmc2d4Vy01',
     stripePriceId: 'price_1SrhszB8CmoO93RgC3iGKI0c',
     features: [
-      'Powered by Velvet V2 - deeper conversation, improved context, pattern insights',
-      'Introducing Signature Voice™ - unique characters you won\'t find anywhere else',
+      'Meet Velvet V2 — our deepest, most emotionally present AI',
+      'Signature Voice™ — unique characters you won\'t find anywhere else',
       'Complex reasoning, creative thinking, real problem-solving',
-      'Access to Insights'
+      'Access to Insights — 2,000 messages a month'
     ],
     model: 'sonnet',
     marketingLabel: 'Plus',
-    messageLimit: 800
+    messageLimit: 2000
   },
   plus: {
     tier: 'plus',
@@ -96,11 +96,12 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     stripePriceId: 'price_1SrhvzB8CmoO93RgrjUVPsvw',
     features: [
       'Everything in Plus (Velvet V2, Insights, Signature Voice™)',
-      'Increased V2 usage - Ask more, learn more, talk more'
+      'Room to go deep every single day — 4,000 messages a month',
+      'All premium features included'
     ],
     model: 'sonnet',
     marketingLabel: 'Pro',
-    messageLimit: 2000
+    messageLimit: 4000
   },
   elite: {
     tier: 'elite',
@@ -109,13 +110,13 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     stripeLink: 'https://buy.stripe.com/eVqeVcds249O4961nz4Vy03',
     stripePriceId: 'price_1SrhxcB8CmoO93Rg9sT3NXxQ',
     features: [
-      'Everything in Pro (Velvet V2, Insights, Signature Voice™)',
-      'Maximum V2 usage (Highest tier)',
+      'The complete Velvet experience — every feature',
+      'An allowance built for real daily life — 8,000 messages a month',
       'Access to VIP Support',
       'Access to new features before release'
     ],
     model: 'sonnet',
     marketingLabel: 'Elite',
-    messageLimit: 5000
+    messageLimit: 8000
   }
 };

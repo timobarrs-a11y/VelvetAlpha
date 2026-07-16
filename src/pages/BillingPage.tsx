@@ -243,7 +243,7 @@ export function BillingPage() {
               <span className="text-white font-medium">
                 {billing?.messages_used?.toLocaleString() || 0} / {
                   billing?.messages_limit === 999999
-                    ? 'Unlimited'
+                    ? (currentPlan?.messageLimit?.toLocaleString() || '?')
                     : (billing?.messages_limit?.toLocaleString() || currentPlan?.messageLimit?.toLocaleString() || '?')
                 }
               </span>
