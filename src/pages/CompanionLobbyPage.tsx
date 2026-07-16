@@ -285,12 +285,6 @@ export function CompanionLobbyPage() {
     navigate('/expert-selection');
   };
 
-  const handleNewFriend = () => {
-    sessionStorage.setItem('onboardingIntent', 'friends');
-    sessionStorage.setItem('onboardingRelationshipType', 'friend');
-    navigate('/companion-path');
-  };
-
   const handleGameClick = (game: typeof GAMES[number]) => {
     if (game.requiresCompanion) {
       setShowGameModal(true);
@@ -635,16 +629,15 @@ export function CompanionLobbyPage() {
           </div>
         </section>
 
-        {/* Velvet Companions — romantic partners */}
-        {companions.some(c => c.relationship_type === 'romantic') && (
+        {/* Velvet Voices — non-mentor companions */}
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-5">
-            <Heart className="w-5 h-5 text-pink-400" />
-            <h2 className="text-xl font-bold text-ink font-display">Velvet Companions</h2>
+            <MessageCircle className="w-5 h-5 text-primary-400" />
+            <h2 className="text-xl font-bold text-ink font-display">Velvet Voices</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {companions.filter(c => c.relationship_type === 'romantic').map((companion, i) => (
+            {companions.filter(c => c.relationship_type !== 'mentor').map((companion, i) => (
               <motion.div key={companion.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -677,8 +670,15 @@ export function CompanionLobbyPage() {
                     title="Delete companion">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 bg-pink-900/80 text-pink-300">
-                    <Heart className="w-2.5 h-2.5" /> Partner
+                  <span className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
+                    companion.relationship_type === 'romantic'
+                      ? 'bg-pink-900/80 text-pink-300'
+                      : 'bg-sky-900/80 text-sky-300'
+                  }`}>
+                    {companion.relationship_type === 'romantic'
+                      ? <><Heart className="w-2.5 h-2.5" /> Partner</>
+                      : <><Users className="w-2.5 h-2.5" /> Friend</>
+                    }
                   </span>
                   {companion.signature_voice && (
                     <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-purple-900/80 text-purple-300">
@@ -722,7 +722,7 @@ export function CompanionLobbyPage() {
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: companions.filter(c => c.relationship_type === 'romantic').length * 0.04 }}
+              transition={{ delay: companions.filter(c => c.relationship_type !== 'mentor').length * 0.04 }}
               onClick={handleNewCompanion}
               data-interactive
               className="group cursor-pointer transition-all duration-300 flex items-center justify-center min-h-[260px] rounded-2xl"
@@ -743,118 +743,6 @@ export function CompanionLobbyPage() {
             </motion.div>
           </div>
         </section>
-        )}
-
-        {/* Velvet Friends — platonic friends */}
-        {companions.some(c => c.relationship_type === 'friend') && (
-        <section className="mb-10">
-          <div className="flex items-center gap-2 mb-5">
-            <Users className="w-5 h-5 text-sky-400" />
-            <h2 className="text-xl font-bold text-ink font-display">Velvet Friends</h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {companions.filter(c => c.relationship_type === 'friend').map((companion, i) => (
-              <motion.div key={companion.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                onClick={() => navigateTo(`/chat?companion=${companion.id}`, {
-                  icon: MessageCircle,
-                  label: `Loading ${companion.name}...`,
-                  accentColor: companion.favorite_color || '#38bdf8',
-                  bgColor: '#0a0410',
-                })}
-                data-interactive
-                className="group overflow-hidden cursor-pointer transition-all duration-300 rounded-2xl"
-                style={{
-                  background: 'rgba(20,28,48,0.90)',
-                  border: '1px solid rgba(56,189,248,0.25)',
-                  boxShadow: '0 2px 16px rgba(0,0,0,0.30)',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(56,189,248,0.50)')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(56,189,248,0.25)')}
-              >
-                <div className="relative h-44 overflow-hidden" style={{ background: 'rgba(15,23,42,0.90)' }}>
-                  <Avatar
-                    config={(companion.avatar_config as AvatarConfig) ?? (companion.gender === 'male' ? DEFAULT_MALE_AVATAR : DEFAULT_FEMALE_AVATAR)}
-                    className="w-full h-full"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <button
-                    onClick={(e) => handleDeleteCompanion(companion.id, companion.custom_name, e)}
-                    className="absolute top-2.5 left-2.5 p-1.5 bg-danger-500/90 hover:bg-danger-600 text-white rounded-lg shadow-card opacity-0 group-hover:opacity-100 transition-all z-10"
-                    title="Delete friend">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 bg-sky-900/80 text-sky-300">
-                    <Users className="w-2.5 h-2.5" /> Friend
-                  </span>
-                  {companion.signature_voice && (
-                    <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-purple-900/80 text-purple-300">
-                      <Sparkles className="w-2.5 h-2.5" />
-                      {getVoiceById(companion.signature_voice).name}
-                    </span>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3
-                    className="font-semibold text-ink mb-1.5 group-hover:text-sky-300 transition-colors"
-                    style={{ fontFamily: companion.font_family ?? undefined, fontSize: '1rem', lineHeight: 1.3 }}
-                  >
-                    {companion.custom_name}
-                  </h3>
-                  {companion.current_status && (
-                    <p className="text-xs mb-3 flex items-center gap-1.5"
-                      style={{
-                        color: 'rgba(180,210,200,0.85)',
-                        fontFamily: companion.font_family ?? undefined,
-                        lineHeight: 1.45,
-                      }}>
-                      <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#4ade80' }} />
-                      {companion.current_status}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between text-xs text-ink-subtle pt-3"
-                    style={{ borderTop: '1px solid rgba(56,189,248,0.15)' }}>
-                    <span>{formatTimeAgo(companion.last_message_at)}</span>
-                    {(companion.unread_count ?? 0) > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-full font-bold"
-                        style={{ background: 'rgba(56,189,248,0.20)', color: '#7dd3fc' }}>
-                        {companion.unread_count}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: companions.filter(c => c.relationship_type === 'friend').length * 0.04 }}
-              onClick={handleNewFriend}
-              data-interactive
-              className="group cursor-pointer transition-all duration-300 flex items-center justify-center min-h-[260px] rounded-2xl"
-              style={{
-                background: 'rgba(20,28,48,0.50)',
-                border: '2px dashed rgba(56,189,248,0.30)',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(56,189,248,0.60)')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(56,189,248,0.30)')}
-            >
-              <div className="text-center p-6">
-                <div className="w-14 h-14 bg-gradient-to-br from-sky-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform"
-                  style={{ boxShadow: '0 0 20px rgba(56,189,248,0.35)' }}>
-                  <Plus className="w-7 h-7 text-white" />
-                </div>
-                <p className="font-semibold text-ink group-hover:text-sky-300 transition-colors font-display text-sm">Find Another Friend</p>
-                <p className="text-xs text-ink-muted mt-1">Add a new friend</p>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-        )}
 
         {/* Velvet Coaches — mentor companions */}
         <section className="mb-10">
