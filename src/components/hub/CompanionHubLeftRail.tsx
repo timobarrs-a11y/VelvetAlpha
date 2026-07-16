@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,9 +16,16 @@ import {
   LayoutGrid,
   PanelLeftClose,
   PanelLeftOpen,
+  Heart,
+  Users,
+  Brain,
 } from 'lucide-react';
 import { TutorialElement } from './TutorialElement';
 import { ONBOARDING_ELEMENT_IDS } from '../../features/onboarding/onboardingPrompt';
+import { getCompanions, type CompanionWithLastMessage } from '../../services/companionService';
+import { Avatar } from '../Avatar';
+import type { AvatarConfig } from '../../types/avatar';
+import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from '../../types/avatar';
 
 
 interface GameDef {
@@ -138,6 +145,7 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
   const [activePanel, setActivePanel] = useState<PanelResult | null>(null);
   const [panelLoading, setPanelLoading] = useState(false);
   const [panelLabel, setPanelLabel] = useState('');
+  const [community, setCommunity] = useState<CompanionWithLastMessage[]>([]);
 
   const handleShortcut = (s: ShortcutDef) => {
     if (s.id === 'games') {
@@ -171,6 +179,13 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
     (acc, s) => { (acc[s.group] ||= []).push(s); return acc; },
     { connect: [], content: [], life: [], play: [], other: [] },
   );
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    getCompanions(userId).then(list => { if (!cancelled) setCommunity(list); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const bgStyle = translucent
     ? { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(209,213,219,0.15)' }
@@ -269,6 +284,52 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
           <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
             className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 flex flex-col gap-3">
+
+            {/* Your Community — switch between companions, friends, and coaches */}
+            {community.length > 1 && (
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[9px] font-bold tracking-widest uppercase text-gray-400/80 px-2 pt-1 pb-1 select-none">
+                  Your Community
+                </p>
+                {community.map(c => {
+                  const isActive = c.id === companionId;
+                  const typeIcon = c.relationship_type === 'mentor' ? <Brain className="w-3 h-3" />
+                    : c.relationship_type === 'friend' ? <Users className="w-3 h-3" />
+                    : <Heart className="w-3 h-3" />;
+                  const typeColor = c.relationship_type === 'mentor' ? 'text-emerald-500'
+                    : c.relationship_type === 'friend' ? 'text-sky-500'
+                    : 'text-pink-500';
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => navigate(`/chat?companion=${c.id}`)}
+                      className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all duration-150 ${
+                        isActive ? 'bg-gray-100' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
+                        <Avatar
+                          config={(c.avatar_config as AvatarConfig) ?? (c.gender === 'male' ? DEFAULT_MALE_AVATAR : DEFAULT_FEMALE_AVATAR)}
+                          className="w-full h-full"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-[11px] font-semibold truncate ${isActive ? 'text-gray-900' : 'text-gray-700 group-hover:text-gray-900'}`}>
+                          {c.custom_name}
+                        </p>
+                      </div>
+                      <span className={`flex-shrink-0 ${typeColor}`}>{typeIcon}</span>
+                      {(c.unread_count ?? 0) > 0 && (
+                        <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white"
+                          style={{ background: c.relationship_type === 'mentor' ? '#10b981' : c.relationship_type === 'friend' ? '#0ea5e9' : '#f43f5e' }}>
+                          {c.unread_count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {(['connect', 'content', 'life', 'play', 'other'] as const).map(groupKey => (
               <div key={groupKey} className="flex flex-col gap-0.5">
