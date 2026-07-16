@@ -126,7 +126,7 @@ function getZodiacSign(dateString: string): string {
   return 'Pisces';
 }
 
-const COMPANION_BASE_QUESTIONS: QuestionData[] = [
+  const COMPANION_BASE_QUESTIONS: QuestionData[] = [
   {
     id: 'relationshipType',
     type: 'choice',
@@ -611,6 +611,10 @@ export function QuestionnairePage() {
   const genderParam = searchParams.get('gender') as 'Female' | 'Male' | null;
   const isVelvetMode = mode === 'velvet';
   const velvetGenderPrefilled = isVelvetMode && (genderParam === 'Female' || genderParam === 'Male');
+
+  const isFriend = sessionStorage.getItem('onboardingRelationshipType') === 'friend';
+  const nounLower = isFriend ? 'friend' : 'companion';
+
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>(
     velvetGenderPrefilled ? { relationshipType: genderParam } : {}
@@ -701,7 +705,11 @@ export function QuestionnairePage() {
   };
 
   const getQuestions = (): QuestionData[] => {
-    const base = COMPANION_BASE_QUESTIONS;
+    const base = COMPANION_BASE_QUESTIONS.map(q =>
+      q.id === 'relationshipType'
+        ? { ...q, question: `Which ${nounLower === 'friend' ? 'Friend' : 'Companion'} Are You Interested In?` }
+        : q
+    );
 
     if (isVelvetMode) {
       // Gender was pre-filled from the path select page — no questions needed here
@@ -774,7 +782,7 @@ export function QuestionnairePage() {
   const getHelperText = () => {
     const userName = answers.name as string | undefined;
     if (userName && currentQuestion === 0) {
-      return `Welcome back, ${userName}! Let's set up your new companion.`;
+      return `Welcome back, ${userName}! Let's set up your new ${nounLower}.`;
     }
     if (progress >= 80) return 'Almost there... getting exciting!';
     if (progress >= 40) return "You're doing great! Just a few more questions...";

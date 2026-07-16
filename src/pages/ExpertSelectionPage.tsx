@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Briefcase, Palette, GraduationCap, Compass, Crown, Plus, ChevronRight, Sparkles } from 'lucide-react';
+import { Heart, Briefcase, Palette, GraduationCap, Compass, Crown, Plus, ChevronRight, Sparkles, ArrowLeft } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { useSubscription } from '../hooks/useSubscription';
 import {
@@ -135,6 +135,14 @@ export default function ExpertSelectionPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-y-auto pb-24">
       <div className="max-w-6xl mx-auto px-6 py-12">
+        <button
+          onClick={() => navigate('/intent-select')}
+          className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft size={18} />
+          <span className="text-sm font-medium">Back</span>
+        </button>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -143,7 +151,7 @@ export default function ExpertSelectionPage() {
           className="text-center mb-12"
         >
           <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Choose Your AI Expert
+            Choose Your Expert
           </h1>
           <p className="text-xl text-gray-300">
             Select an expert to guide your growth — or create your own

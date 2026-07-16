@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Users, Heart, Brain, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, Heart, Brain, ArrowLeft, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface IntentOption {
@@ -16,6 +16,7 @@ interface IntentOption {
 
 export function IntentSelectPage() {
   const navigate = useNavigate();
+  const [transitioning, setTransitioning] = useState<string | null>(null);
 
   const options: IntentOption[] = [
     {
@@ -23,7 +24,7 @@ export function IntentSelectPage() {
       title: 'Friends',
       subtitle: 'Platonic companions',
       icon: <Users className="w-8 h-8" />,
-      description: 'Companions who know you, remember your stories, and are always there for great conversation — no labels, just real connection.',
+      description: 'Friends who know you, remember your stories, and are always there for great conversation — no labels, just real connection.',
       intent: 'connection',
       relationshipType: 'friend',
       nextPath: '/companion-path',
@@ -53,7 +54,8 @@ export function IntentSelectPage() {
   const handleSelectIntent = (option: IntentOption) => {
     sessionStorage.setItem('onboardingIntent', option.intent);
     sessionStorage.setItem('onboardingRelationshipType', option.relationshipType);
-    navigate(option.nextPath);
+    setTransitioning(option.id);
+    setTimeout(() => navigate(option.nextPath), 700);
   };
 
   const containerVariants = {
@@ -96,6 +98,31 @@ export function IntentSelectPage() {
           <span className="text-sm font-medium">Back</span>
         </button>
 
+        <AnimatePresence mode="wait">
+          {transitioning ? (
+            <motion.div
+              key="transitioning"
+              className="flex flex-col items-center justify-center py-32"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.div
+n                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              >
+                <Sparkles className="w-12 h-12 text-blue-400" />
+              </motion.div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="main"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
         <motion.div
           variants={headerVariants}
           initial="hidden"
@@ -146,6 +173,9 @@ export function IntentSelectPage() {
             </motion.button>
           ))}
         </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

@@ -157,7 +157,8 @@ function ScanningScreen({ onReveal, gender }: { onReveal: () => void; gender: Ge
   );
 }
 
-function RevealScreen({ onContinue }: { onContinue: () => void }) {
+function RevealScreen({ onContinue, isFriend }: { onContinue: () => void; isFriend: boolean }) {
+  const noun = isFriend ? 'friend' : 'companion';
   return (
     <motion.div
       className="w-full max-w-lg mx-auto text-center"
@@ -185,7 +186,7 @@ function RevealScreen({ onContinue }: { onContinue: () => void }) {
       >
         <h2 className="text-3xl font-black text-white mb-3">Match Found.</h2>
         <p className="text-gray-400 mb-2 leading-relaxed max-w-sm mx-auto">
-          Your companion has been generated from inside the Velvet Rope — a one-of-a-kind personality crafted just for you.
+          Your {noun} has been generated from inside the Velvet Rope — a one-of-a-kind personality crafted just for you.
         </p>
         <p className="text-gray-600 text-sm mb-8">
           Now it's time to give them a face.
@@ -210,13 +211,23 @@ export function CompanionPathSelectPage() {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>('choose');
   const [selectedGender, setSelectedGender] = useState<Gender>('Female');
+  const [transitioning, setTransitioning] = useState(false);
+
+  const isFriend = sessionStorage.getItem('onboardingRelationshipType') === 'friend';
+  const noun = isFriend ? 'Friend' : 'Companion';
+  const nounLower = isFriend ? 'friend' : 'companion';
 
   const handleBuildOwn = () => {
-    navigate('/questionnaire?mode=companion');
+    setTransitioning(true);
+    setTimeout(() => navigate('/questionnaire?mode=companion'), 700);
   };
 
   const handleVelvet = () => {
-    setPhase('gender');
+    setTransitioning(true);
+    setTimeout(() => {
+      setTransitioning(false);
+      setPhase('gender');
+    }, 700);
   };
 
   const handleGenderSelect = (g: Gender) => {
@@ -237,7 +248,23 @@ export function CompanionPathSelectPage() {
           </button>
         )}
         <AnimatePresence mode="wait">
-          {phase === 'choose' && (
+          {transitioning ? (
+            <motion.div
+              key="transitioning"
+              className="flex flex-col items-center justify-center py-32"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              >
+                <Sparkles className="w-12 h-12 text-rose-400" />
+              </motion.div>
+            </motion.div>
+          ) : phase === 'choose' && (
             <motion.div
               key="choose"
               initial={{ opacity: 0, y: 24 }}
@@ -255,7 +282,7 @@ export function CompanionPathSelectPage() {
                   <Sparkles className="w-7 h-7 text-rose-400" />
                 </motion.div>
                 <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">
-                  Create Your Companion
+                  Create Your {noun}
                 </h1>
                 <p className="text-gray-400 text-base leading-relaxed max-w-sm mx-auto">
                   How do you want to shape who they are?
@@ -280,7 +307,7 @@ export function CompanionPathSelectPage() {
                         <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-rose-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
                       </div>
                       <p className="text-gray-400 text-sm leading-relaxed mb-4">
-                        You're the architect. Choose every dimension of your companion's personality — how they flirt, their humor, how they handle conflict, their passions, and more.
+                        You're the architect. Choose every dimension of your {nounLower}'s personality — how they flirt, their humor, how they handle conflict, their passions, and more.
                       </p>
                       <div className="grid grid-cols-3 gap-2">
                         {[
@@ -413,7 +440,7 @@ export function CompanionPathSelectPage() {
           )}
 
           {phase === 'reveal' && (
-            <RevealScreen onContinue={() => navigate(`/questionnaire?mode=velvet&gender=${selectedGender}`)} />
+            <RevealScreen onContinue={() => navigate(`/questionnaire?mode=velvet&gender=${selectedGender}`)} isFriend={isFriend} />
           )}
         </AnimatePresence>
       </div>
