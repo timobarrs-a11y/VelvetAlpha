@@ -313,7 +313,7 @@ export function SplashPage() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5, duration: 0.7 }}
               >
-                Your world. Your people. Projected.
+                Your World, Projected.
               </motion.p>
 
               {/* CTA buttons — center of hero */}
