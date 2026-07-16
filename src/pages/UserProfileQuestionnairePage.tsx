@@ -94,19 +94,24 @@ const DEFAULT_ACCENT = { border: 'border-rose-500/60', glow: 'shadow-rose-500/20
 
 const INTRO_SLIDES = [
   {
-    icon: '01',
-    heading: 'First, tell us about you.',
-    body: "Before we know what you like, we must know who YOU are. Here's a couple key questions that create the core experience of Velvet.",
+    kicker: 'Welcome',
+    heading: "You're in.",
+    body: "Welcome to Velvet — a space built to sharpen how you think, talk, write, and connect. Let's tune it to you. Takes about 90 seconds.",
   },
   {
-    icon: '02',
-    heading: 'Then, build your companion.',
-    body: 'You\'ll shape their personality, vibe, and name — completely your call.',
+    kicker: 'Step 01',
+    heading: 'It starts with you.',
+    body: 'A few quick questions calibrate Velvet to who you actually are — your voice, your taste, your world. No wrong answers here, just honest ones.',
   },
   {
-    icon: '03',
-    heading: 'The whole platform adapts.',
-    body: 'Your feed, your videos, your conversations — all built around your answers.',
+    kicker: 'Step 02',
+    heading: 'Everything tunes to you.',
+    body: 'Your feed, your writing space, your conversations, your coaches — every corner of Velvet reshapes around your answers. The more it knows, the sharper it gets.',
+  },
+  {
+    kicker: 'Step 03',
+    heading: 'Built to move you forward.',
+    body: "Velvet grows your skills, your confidence, and your relationships. Talk to a companion, or never do — where you take it is entirely yours.",
   },
 ];
 
@@ -175,7 +180,7 @@ function OnboardingPopup({ onConfirm }: { onConfirm: () => void }) {
             >
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs font-semibold tracking-widest uppercase mb-6">
                 <Sparkles className="w-3 h-3" />
-                Step {current.icon}
+                {current.kicker}
               </div>
 
               <h2 className="text-3xl sm:text-4xl font-black text-white mb-4 tracking-tight leading-tight">
@@ -194,7 +199,7 @@ function OnboardingPopup({ onConfirm }: { onConfirm: () => void }) {
             whileTap={{ scale: 0.97 }}
             className="group w-full relative flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-lg shadow-xl shadow-rose-500/30 hover:shadow-rose-500/50 transition-all duration-300"
           >
-            <span>{isLast ? "Let's go" : 'Next'}</span>
+            <span>{isLast ? "Let's begin" : slide === 0 ? 'Get started' : 'Next'}</span>
             <motion.div
               animate={isLast ? { x: [0, 4, 0] } : {}}
               transition={{ duration: 1.2, repeat: Infinity }}
@@ -212,6 +217,10 @@ function OnboardingPopup({ onConfirm }: { onConfirm: () => void }) {
               Skip intro
             </button>
           )}
+
+          <p className="mt-6 text-center text-xs text-gray-600">
+            Your answers stay between you and Velvet.
+          </p>
         </div>
       </motion.div>
     </motion.div>
@@ -802,10 +811,10 @@ export function UserProfileQuestionnairePage() {
         <div className="mt-5 text-center">
           <p className="text-xs text-gray-600">
             {currentQuestion >= QUESTIONS.length - 2
-              ? 'Almost there...'
+              ? 'Almost there — Velvet is nearly tuned to you.'
               : currentQuestion >= Math.floor(QUESTIONS.length / 2)
-                ? "You're doing great! Just a few more questions..."
-                : 'Take your time — this is how we make everything personal'}
+                ? "You're doing great — just a few more."
+                : 'Every answer tunes Velvet a little more to you.'}
           </p>
         </div>
       </motion.div>
