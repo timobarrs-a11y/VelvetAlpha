@@ -141,7 +141,7 @@ export function PricingOfferPage() {
           </h1>
 
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Get unlimited conversations, premium voices, and exclusive features
+            Chat freely every day, with premium voices and exclusive features
           </p>
         </div>
 

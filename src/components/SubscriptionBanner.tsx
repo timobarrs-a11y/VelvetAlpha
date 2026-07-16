@@ -186,7 +186,7 @@ export function SubscriptionBanner({ tier, messagesRemaining, compact = false, t
               className="mt-3 pt-3 border-t border-gray-200"
             >
               <p className="text-gray-500 text-xs text-center">
-                Upgrade for unlimited messages and advanced AI
+                Upgrade for more messages and Velvet V2 — our deepest AI
               </p>
             </motion.div>
           )}

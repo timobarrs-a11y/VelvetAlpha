@@ -13,10 +13,10 @@ type PaidTier = 'unlimited' | 'starter' | 'plus' | 'elite';
 // src/types/subscription.ts (that file is what the UI advertises). The renewal
 // model is RESET: each billing cycle SETS messages_remaining to `messages`.
 const TIER_ENTITLEMENTS: Record<PaidTier, { messages: number; haiku: boolean; sonnet: boolean }> = {
-  unlimited: { messages: 200, haiku: true, sonnet: false },   // "Velvet Essential" $24.99
-  starter:   { messages: 800, haiku: false, sonnet: true },   // "Velvet Plus"      $59
-  plus:      { messages: 2000, haiku: false, sonnet: true },  // "Velvet Pro"       $99
-  elite:     { messages: 5000, haiku: false, sonnet: true },  // "Velvet Elite"     $149
+  unlimited: { messages: 1500, haiku: true, sonnet: false },  // "Velvet Essential" $24.99 (capped Haiku, no longer unlimited)
+  starter:   { messages: 2000, haiku: false, sonnet: true },  // "Velvet Plus"      $59
+  plus:      { messages: 4000, haiku: false, sonnet: true },  // "Velvet Pro"       $99
+  elite:     { messages: 8000, haiku: false, sonnet: true },  // "Velvet Elite"     $149
 };
 
 // What a user drops to when their subscription ends or fails.

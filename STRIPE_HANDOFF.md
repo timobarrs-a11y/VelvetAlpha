@@ -9,21 +9,19 @@ recurring subscriptions. No git checkout required.
    balance to the tier allotment each cycle.
 2. **Cancellations/failures never downgraded** — now `customer.subscription.deleted`
    and `.updated` (canceled/unpaid) drop the user to free.
-3. **`unlimited` tier gave infinite messages** — the webhook granted `-1` but the
-   UI advertises 200 for "Velvet Essential" ($24.99). Now 200. **← CONFIRM THIS
-   NUMBER (see below).**
+3. **`unlimited` tier gave infinite messages** — RESOLVED. The product moved off
+   "unlimited" entirely to honest capped allowances (see the pricing/terms work).
+   "Velvet Essential" is now a capped **1,500** Haiku messages/month.
 4. **No idempotency** — Stripe retries could double-credit. Now every event id is
    recorded and repeats are ignored.
 
 Renewal model chosen by the owner: **RESET** — each cycle SETS messages to the
 tier amount (not additive rollover).
 
-> ⚠️ **CONFIRM before deploying:** is "Velvet Essential" (tier `unlimited`,
-> $24.99) meant to be **200 messages** or truly **unlimited**? The plans file
-> (`src/types/subscription.ts`, `messageLimit: 200`) and the old webhook (`-1`)
-> disagreed. This doc assumes **200** to match what the UI shows. If it should be
-> unlimited, set `unlimited.messages` back to `-1` in the code below AND fix the
-> plans file — but don't ship them disagreeing.
+**Allowance ladder (decided — must match `src/types/subscription.ts` `messageLimit`):**
+Essential 1,500 · Plus 2,000 · Pro 4,000 · Elite 8,000. No tier is "unlimited."
+The frontend copy for these already ships with the build; this webhook is the
+server-side enforcement of the same numbers.
 
 Three parts: (1) migration, (2) replace the webhook, (3) **configure the Stripe
 dashboard** — the code is useless if the events aren't enabled.
@@ -64,10 +62,10 @@ type PaidTier = 'unlimited' | 'starter' | 'plus' | 'elite';
 // Entitlements per paid tier. MUST stay in sync with SUBSCRIPTION_PLANS in
 // src/types/subscription.ts. Renewal model is RESET: each cycle SETS messages.
 const TIER_ENTITLEMENTS: Record<PaidTier, { messages: number; haiku: boolean; sonnet: boolean }> = {
-  unlimited: { messages: 200, haiku: true, sonnet: false },   // "Velvet Essential" $24.99  ← confirm 200
-  starter:   { messages: 800, haiku: false, sonnet: true },   // "Velvet Plus"      $59
-  plus:      { messages: 2000, haiku: false, sonnet: true },  // "Velvet Pro"       $99
-  elite:     { messages: 5000, haiku: false, sonnet: true },  // "Velvet Elite"     $149
+  unlimited: { messages: 1500, haiku: true, sonnet: false },  // "Velvet Essential" $24.99 (capped Haiku)
+  starter:   { messages: 2000, haiku: false, sonnet: true },  // "Velvet Plus"      $59
+  plus:      { messages: 4000, haiku: false, sonnet: true },  // "Velvet Pro"       $99
+  elite:     { messages: 8000, haiku: false, sonnet: true },  // "Velvet Elite"     $149
 };
 
 const FREE_ENTITLEMENT = { tier: 'free', messages: 15, haiku: true, sonnet: false };

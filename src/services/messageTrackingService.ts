@@ -113,7 +113,8 @@ export async function addMessagesToUser(
     };
 
     if (tier === 'unlimited') {
-      updates.messages_remaining = -1;
+      // "Velvet Essential" — capped Haiku allowance (no longer unlimited).
+      updates.messages_remaining = plan.messageLimit ?? 1500;
       updates.haiku_model_enabled = true;
       updates.sonnet_model_enabled = false;
     } else if (tier === 'trial') {
