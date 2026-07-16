@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, PenLine, ChevronRight, Shuffle, Lock, Star, Zap, Heart, Brain, MessageCircle } from 'lucide-react';
+import { Sparkles, PenLine, ChevronRight, Shuffle, Lock, Star, Zap, Heart, Brain, MessageCircle, ArrowLeft } from 'lucide-react';
 
 type Phase = 'choose' | 'gender' | 'scanning' | 'reveal';
 type Gender = 'Female' | 'Male';
@@ -227,6 +227,15 @@ export function CompanionPathSelectPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-gray-900 to-slate-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
+        {phase === 'choose' && (
+          <button
+            onClick={() => navigate('/intent-select')}
+            className="mb-6 flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
+          >
+            <ArrowLeft size={18} />
+            <span className="text-sm font-medium">Back</span>
+          </button>
+        )}
         <AnimatePresence mode="wait">
           {phase === 'choose' && (
             <motion.div

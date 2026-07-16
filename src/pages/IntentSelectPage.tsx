@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, Heart, Brain } from 'lucide-react';
+import { Users, Heart, Brain, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface IntentOption {
@@ -88,6 +88,14 @@ export function IntentSelectPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       <div className="w-full max-w-5xl">
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-6 flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
+        >
+          <ArrowLeft size={18} />
+          <span className="text-sm font-medium">Back</span>
+        </button>
+
         <motion.div
           variants={headerVariants}
           initial="hidden"
