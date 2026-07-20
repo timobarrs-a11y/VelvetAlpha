@@ -15,6 +15,26 @@ const EMOJIS: EmojiSet = {
   casual: ['👀', '💭', '🔥', '☀️', '🌙', '😴']
 };
 
+// Coach (mentor) proactive check-ins — goal-oriented, no romance/pet names.
+// {domain} is replaced with the coach's domain, or a neutral fallback.
+const COACH_MESSAGES: Record<'morning' | 'evening' | 'night', string[]> = {
+  morning: [
+    "Morning. What's the one thing you want to move forward on {domain} today?",
+    "New day — pick your single most important step for {domain} and let's start there. What is it?",
+    "Morning check-in: what's today's focus?",
+  ],
+  evening: [
+    "How'd today go — did you make progress on {domain}?",
+    "End-of-day check-in: what got done, and what's still open?",
+    "Evening recap — any wins on {domain} today, or did something stall?",
+  ],
+  night: [
+    "Before you wrap up: what's the first step you'll tackle tomorrow?",
+    "Winding down? Set tomorrow's one priority for {domain} now, so it's ready when you are.",
+    "Quick one before you log off — what's the next move waiting for you tomorrow?",
+  ],
+};
+
 const DYNAMIC_QUESTIONS = [
   "how's it going?",
   "what's up?",
@@ -119,6 +139,18 @@ export class ProactiveMessageService {
     };
 
     return this.getProactiveMessage(typeMap[timeSlot]);
+  }
+
+  // Coach variant of the scheduled proactive message. Returns a goal-oriented
+  // check-in with no romantic/companion post-processing (no hearts, no "wyd").
+  static getCoachScheduledMessage(
+    timeSlot: 'morning' | 'evening' | 'night',
+    opts?: { domain?: string }
+  ): string {
+    const pool = COACH_MESSAGES[timeSlot] || COACH_MESSAGES.morning;
+    const template = this.getRandomItem(pool);
+    const domain = opts?.domain && opts.domain.trim() ? opts.domain.trim() : "what you're working on";
+    return template.replace(/\{domain\}/g, domain);
   }
 
   static getRandomCheckIn(userProfile?: UserProfile): string {

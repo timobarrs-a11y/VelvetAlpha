@@ -130,7 +130,34 @@ export class DailyRitualService {
       }
     }
 
-    const message = ProactiveMessageService.getScheduledMessage(currentTimeSlot);
+    // Coaches (mentors) get goal-oriented check-ins instead of companion-style
+    // ("miss you" / flirty) proactive messages.
+    const { data: companionRow } = await supabase
+      .from('companions')
+      .select('relationship_type, signature_expert, signature_expert_source')
+      .eq('id', companionId)
+      .maybeSingle();
+
+    let message: string;
+    if (companionRow?.relationship_type === 'mentor') {
+      let domain: string | undefined;
+      try {
+        if (companionRow.signature_expert) {
+          const { resolveExpert } = await import('./expertService');
+          const cfg = await resolveExpert(
+            companionRow.signature_expert,
+            companionRow.signature_expert_source,
+            userId
+          );
+          domain = cfg?.domain;
+        }
+      } catch {
+        // best-effort domain personalization; fall back to a neutral phrasing
+      }
+      message = ProactiveMessageService.getCoachScheduledMessage(currentTimeSlot, { domain });
+    } else {
+      message = ProactiveMessageService.getScheduledMessage(currentTimeSlot);
+    }
 
     await this.markRitualTriggered(userId, companionId, currentTimeSlot);
 

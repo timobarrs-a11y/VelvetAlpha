@@ -178,6 +178,33 @@ static async sendMessage(message: string, companionId?: string,
   relationshipType: 'friend' | 'romantic' | 'mentor' = 'romantic'): Promise<string>
 ```
 
+### 3f. Proactive / scheduled messages (coach variant)
+
+The **live** proactive path is `dailyRitualService.checkAndTriggerRituals` →
+`ProactiveMessageService.getScheduledMessage`, which returned companion-flavored
+templates ("miss you", "sweet dreams babe") regardless of relationship type — so
+coaches sent romantic check-ins.
+
+- `src/services/proactiveMessageService.ts`: add `COACH_MESSAGES`
+  (morning/evening/night, goal-oriented, no romance, `{domain}` slot) and
+  `getCoachScheduledMessage(timeSlot, { domain })`. This variant skips the
+  companion post-processing (no heart emojis, no appended "wyd?").
+- `src/services/dailyRitualService.ts`: before sending, look up the companion's
+  `relationship_type`. If `mentor`, resolve the coach's domain (best-effort) and
+  call `getCoachScheduledMessage`; otherwise keep the existing companion path.
+
+> The `supabase/functions/generate-ai-messages` edge function is **dead legacy**
+> (keyed on the old `character_type` model, zero invocations, its
+> `ai_initiated_messages` output is read nowhere). Leave it as-is or delete it —
+> it is not part of the live proactive path.
+
+### 3g. Drift guard test
+
+`src/services/__tests__/coachExpertParity.test.ts` asserts the edge
+`CURATED_EXPERT_MAP` matches `SIGNATURE_EXPERTS` (ids, domain, check-in style,
+accountability level). If the two catalogs ever drift, this fails the build
+instead of silently dropping a coach's expert layer.
+
 ---
 
 ## 4. What a coach should now sound like
@@ -201,11 +228,13 @@ names, no aimless small talk.
 - Client typecheck (`npm run typecheck`) introduces **no new** errors vs. the
   pre-existing baseline. (The repo does not currently pass `tsc` clean; the fix
   adds none of its own.)
-- Unit smoke tests for `coachFramework` (accountability/check-in rendering,
-  opening guidance, fallback) all pass.
+- Unit tests pass: `coachFramework` rendering (accountability/check-in, opening
+  guidance, fallback), coach proactive messages (domain interpolation, no
+  romance), and the **client↔edge parity** guard.
 - Manual: create a coach → confirm the first message names the coach, restates
   its domain/purpose, and asks exactly one starter question with no flirting.
-  Then confirm ongoing replies stay goal-anchored and end with a next step.
+  Then confirm ongoing replies stay goal-anchored and end with a next step, and
+  that a scheduled/proactive coach message is a goal check-in, not "miss you".
 
 ## 6. Files touched
 
@@ -213,18 +242,38 @@ names, no aimless small talk.
 |------|--------|
 | `src/config/coachFramework.ts` | **NEW** — client coach framework |
 | `supabase/functions/_shared/coachFramework.ts` | **NEW** — edge mirror + full 20-expert catalog |
+| `src/services/__tests__/coachExpertParity.test.ts` | **NEW** — client↔edge drift guard |
 | `src/services/firstMessageService.ts` | Coach-aware first message (restates purpose) |
 | `src/App.tsx` | `sendFirstMessage` passes expert config + relationship type |
 | `supabase/functions/chat-turn/index.ts` | Coach behavioral block on the live path + full curated map + reads dials |
 | `src/config/systemPromptBuilder.ts` | Injects coach framework (fallback path) |
 | `src/services/chatService.ts` | Widen `sendMessage` relationship type to include `mentor` |
+| `src/services/proactiveMessageService.ts` | Coach proactive check-ins (`getCoachScheduledMessage`) |
+| `src/services/dailyRitualService.ts` | Ritual path branches to coach messages for mentors |
 
-## 7. Not in scope (candidate follow-ups)
+## 7. Flag status
 
-- Proactive/scheduled coach messages (`proactiveMessageService`,
-  `generate-ai-messages`) still use companion-flavored templates — give them a
-  coach variant next.
-- Collapse the two prompt builders (client `systemPromptBuilder` vs. edge
-  `chat-turn`) into one shared definition to remove the dead/rich client path.
-- Move curated experts to a shared source (DB table or shared JSON) to kill the
-  client/edge drift permanently.
+**Resolved in this change:**
+
+- ✅ **Coach first message** restates purpose instead of "meeting new people".
+- ✅ **Coach ongoing chat** runs a real coaching loop (live `chat-turn` path).
+- ✅ **Curated-expert drift** — full 20-expert edge catalog + a parity test that
+  fails the build on divergence.
+- ✅ **Proactive/scheduled coach messages** — the live ritual path now sends
+  goal-oriented coach check-ins for mentors.
+
+**Deliberately deferred (with rationale):**
+
+- **Fully collapsing the two prompt builders** (client `systemPromptBuilder` vs.
+  edge `chat-turn`). The correctness concern is already solved — both derive
+  coach behavior from the shared `coachFramework`, and the parity test guards the
+  catalog. A full merge would mean rewriting the large companion prompt text
+  shared by both, which is high-risk for no behavioral gain. Recommend doing it
+  only as part of a broader prompt-architecture refactor, not this change.
+- **Moving curated experts into a DB table / single cross-runtime source.** The
+  parity test already makes drift a build failure, which delivers the safety
+  benefit without a fragile client→`supabase/` import or a schema migration +
+  backfill for existing coaches. Revisit if the catalog grows large or needs to
+  be editable without a deploy.
+- **Deleting the dead `generate-ai-messages` edge function.** Out of scope for a
+  behavior change; safe to remove separately.
