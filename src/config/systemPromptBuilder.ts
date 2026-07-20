@@ -1,6 +1,7 @@
 import { INTELLIGENCE_GUARDRAILS, CONVERSATION_QUALITY_RULES } from '../prompts/intelligenceGuardrails';
 import { getVoiceById } from './signatureVoices';
 import type { ExpertConfig } from './signatureExperts';
+import { buildCoachBehavioralInstructions } from './coachFramework';
 
 interface SystemPromptInput {
   companionName: string;
@@ -358,6 +359,13 @@ ${expertConfig.instruction}
 
 CRITICAL: Your expert role does NOT override your personality or voice. You deliver expertise THROUGH your personality and voice. A "Jock" voice fitness expert talks about gains in bro-speak. A "Therapist" voice career advisor uses reflective language to explore professional growth. The layers combine — they never cancel each other out.
 ` : ''}
+${isMentor ? buildCoachBehavioralInstructions({
+  coachName: companionName,
+  userName: userName,
+  domain: expertConfig?.domain,
+  accountabilityLevel: expertConfig?.accountabilityLevel,
+  checkInStyle: expertConfig?.checkInStyle,
+}) : ''}
 === COMMUNICATION STYLE ===
 
 Tone:

@@ -2,6 +2,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
+import {
+  getCuratedExpert,
+  buildCoachBehavioralInstructions,
+  type AccountabilityLevel,
+  type CheckInStyle,
+} from "../_shared/coachFramework.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -654,17 +660,20 @@ Deno.serve(async (req: Request) => {
       ? `\n\nRECENT USER CONTEXT (last 5 user messages): ${recentUserMessages}\nDO NOT ask about things they just told you.`
       : '';
 
-    // Resolve expert Layer 3 injection
+    // Resolve expert Layer 3 injection + the coach's behavioral dials
+    // (accountability level + check-in style), which drive how the coach feels.
     let expertLayer = '';
+    let expertDomain: string | null = null;
+    let expertAccountability: AccountabilityLevel | null = null;
+    let expertCheckInStyle: CheckInStyle | null = null;
     if (companion.signature_expert) {
       try {
         let expertInstruction: string | null = null;
-        let expertDomain: string | null = null;
 
         if (companion.signature_expert_source === 'user') {
           const { data: userExpert } = await supabaseAdmin
             .from('user_experts')
-            .select('instruction, domain, name')
+            .select('instruction, domain, name, check_in_style, accountability_level')
             .eq('id', companion.signature_expert)
             .eq('user_id', user.id)
             .maybeSingle();
@@ -681,26 +690,17 @@ Deno.serve(async (req: Request) => {
               .slice(0, 4000);
             expertInstruction = sanitized;
             expertDomain = userExpert.domain as string;
+            expertAccountability = (userExpert.accountability_level as AccountabilityLevel) || null;
+            expertCheckInStyle = (userExpert.check_in_style as CheckInStyle) || null;
           }
         } else {
-          // Curated expert — look up from static map
-          const CURATED_EXPERT_MAP: Record<string, { domain: string; instruction: string }> = {
-            fitness_hype: { domain: 'fitness', instruction: `You are a dedicated fitness expert who celebrates effort over perfection. Your role is to help the user build consistent movement habits, track their workouts, and stay motivated through plateaus. Ask about their current fitness routine and goals early on. Check in on workout consistency without guilt-tripping. Celebrate small wins. Offer exercise suggestions when asked, scaled to their level. Help them set realistic weekly targets. When they miss days, normalize it: "Rest is part of the process". ACCOUNTABILITY: Warm and encouraging — "Did you move today?" not "Why didn't you work out?"` },
-            study_partner: { domain: 'academics', instruction: `You are a sharp, organized study partner who helps the user stay focused, break down complex material, and maintain productive study sessions. Help them plan study sessions with clear time blocks. Break large topics into manageable chunks. Quiz them on material when they ask. Encourage active recall over passive re-reading. ACCOUNTABILITY: Direct but supportive — "You said you wanted to cover Chapter 4 today — ready to start?"` },
-            creative_muse: { domain: 'creativity', instruction: `You are a creative collaborator who helps the user unlock ideas, push past creative blocks, and develop their artistic projects. Ask about their current creative projects. Offer brainstorming when they're stuck. Encourage showing up to create even when inspiration is low. Give honest, constructive feedback when they share work. ACCOUNTABILITY: Gentle and inspiring — "What if you tried..." not "You should..."` },
-            fitness_drill: { domain: 'fitness', instruction: `You are a tough-love fitness accountability partner. The user came to you because they want someone who won't let them slack off. Track their stated commitments and hold them to it. Call out excuses directly but without cruelty. Push them to do slightly more than they think they can. When they're genuinely struggling (injury, life crisis), soften immediately. ACCOUNTABILITY: Firm — "You said 5 days this week. It's Thursday and you've done 2. What's the plan for the next 48 hours?"` },
-            finance_mentor: { domain: 'finance', instruction: `You are a practical financial mentor who helps the user build better money habits, understand their spending patterns, and work toward financial goals — without judgment. Help them set concrete financial targets. Check in on spending awareness and savings progress. Break down financial concepts into simple, actionable terms. Celebrate milestones. You are NOT a licensed financial advisor — disclaim for complex situations. ACCOUNTABILITY: Moderate, non-judgmental — "How did spending feel this week?"` },
-            finance_tough: { domain: 'finance', instruction: `You are a blunt, no-nonsense financial accountability partner. Challenge spending excuses. Keep their stated goals front and center. Help them calculate the real cost of decisions. Push toward automation and systems over willpower. ACCOUNTABILITY: Firm — "You said you'd save $500 this month. You just told me about a $120 dinner. Walk me through how that math works."` },
-            career_advisor: { domain: 'career', instruction: `You are a strategic career advisor who helps the user navigate professional growth, job transitions, skill development, and workplace dynamics. Help them articulate career goals and timelines. Break down big career moves into actionable steps. Help prepare for interviews, negotiations, and difficult conversations. ACCOUNTABILITY: Moderate and professional — "You said you'd update your resume by Friday. How's that going?"` },
-            writing_collaborator: { domain: 'writing', instruction: `You are a dedicated writing partner who helps the user maintain a consistent writing practice, develop their craft, and push through resistance. Track their writing goals. Help them work through plot problems, structure issues, or writer's block. Offer craft-level feedback when they share excerpts. Encourage daily writing habits even when it's small. ACCOUNTABILITY: Moderate — "Did you write today? Even a sentence keeps the muscle alive."` },
-            brainstorm_partner: { domain: 'brainstorming', instruction: `You are a high-energy brainstorming partner who helps the user think through problems and find unexpected angles on any challenge. When they bring a problem, generate 3-5 angles. Ask clarifying questions. Challenge their assumptions: "What if the opposite were true?" Help them evaluate options by mapping tradeoffs clearly. ACCOUNTABILITY: Responsive — you show up with energy when they bring something to work on.` },
-            wellness_guide: { domain: 'mental-wellness', instruction: `You are a thoughtful wellness guide who helps the user build sustainable self-care habits, develop emotional awareness, and maintain mental balance. Check in on their emotional state with open-ended questions. Help them identify patterns in mood, energy, and stress. Suggest grounding techniques or reflection prompts. You are NOT a therapist — encourage professional help for clinical concerns. ACCOUNTABILITY: Gentle — "How are you really doing today — not the polished answer, the real one?"` },
-          };
-
-          const curated = CURATED_EXPERT_MAP[companion.signature_expert];
+          // Curated expert — resolve from the shared catalog (all 20 experts).
+          const curated = getCuratedExpert(companion.signature_expert);
           if (curated) {
             expertInstruction = curated.instruction;
             expertDomain = curated.domain;
+            expertAccountability = curated.accountabilityLevel;
+            expertCheckInStyle = curated.checkInStyle;
           }
         }
 
@@ -732,8 +732,20 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     }
 
     const mentorIntro = isMentor
-      ? `You are ${companionName}, a ${companionGender} expert mentor/coach supporting ${profile.name}.`
+      ? `You are ${companionName}, a ${companionGender} expert coach supporting ${profile.name}.`
       : `You are ${companionName}, a ${companionGender} companion having a genuine conversation with ${profile.name}.`;
+
+    // Coaches get a purpose-driven coaching framework in place of the companion
+    // presence/spark block; companions keep BEHAVIORAL_INSTRUCTIONS.
+    const behavioralBlock = isMentor
+      ? buildCoachBehavioralInstructions({
+          coachName: companionName,
+          userName: profile.name,
+          domain: expertDomain,
+          accountabilityLevel: expertAccountability,
+          checkInStyle: expertCheckInStyle,
+        })
+      : BEHAVIORAL_INSTRUCTIONS;
 
     const systemPrompt = `${mentorIntro}
 
@@ -742,7 +754,7 @@ Current Date/Time: ${currentDateTime}
 
 ${contextReminder}
 
-${isMentor ? '' : BEHAVIORAL_INSTRUCTIONS}
+${behavioralBlock}
 ${expertLayer}
 
 CRITICAL MEMORY RULES - READ THIS CAREFULLY:
