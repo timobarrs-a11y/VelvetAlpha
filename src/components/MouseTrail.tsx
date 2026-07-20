@@ -435,7 +435,7 @@ export function MouseTrail({
 
     if (trailStyle === 'dots') {
       return (
-        <svg className="fixed inset-0 pointer-events-none z-50" style={{ width: '100vw', height: '100vh' }}>
+        <svg className="fixed inset-0 pointer-events-none z-[10000]" style={{ width: '100vw', height: '100vh' }}>
           <defs>
             <filter id="dotGlow">
               <feGaussianBlur stdDeviation="2" result="blur" />
@@ -458,7 +458,7 @@ export function MouseTrail({
 
     if (trailStyle === 'dashes') {
       return (
-        <svg className="fixed inset-0 pointer-events-none z-50" style={{ width: '100vw', height: '100vh' }}>
+        <svg className="fixed inset-0 pointer-events-none z-[10000]" style={{ width: '100vw', height: '100vh' }}>
           <defs>
             <filter id="dashGlow">
               <feGaussianBlur stdDeviation="1.5" result="blur" />
@@ -481,7 +481,7 @@ export function MouseTrail({
 
     if (trailStyle === 'neon') {
       return (
-        <svg className="fixed inset-0 pointer-events-none z-50" style={{ width: '100vw', height: '100vh' }}>
+        <svg className="fixed inset-0 pointer-events-none z-[10000]" style={{ width: '100vw', height: '100vh' }}>
           <defs>
             <filter id="neonGlow">
               <feGaussianBlur stdDeviation="4" result="blur" />
@@ -513,7 +513,7 @@ export function MouseTrail({
         });
       }
       return (
-        <svg className="fixed inset-0 pointer-events-none z-50" style={{ width: '100vw', height: '100vh' }}>
+        <svg className="fixed inset-0 pointer-events-none z-[10000]" style={{ width: '100vw', height: '100vh' }}>
           <defs>
             <filter id="rainbowGlow">
               <feGaussianBlur stdDeviation="2" result="blur" />
@@ -536,7 +536,7 @@ export function MouseTrail({
       const t   = Date.now() / 300;
       const w   = 2 + Math.sin(t) * 1.5;
       return (
-        <svg className="fixed inset-0 pointer-events-none z-50" style={{ width: '100vw', height: '100vh' }}>
+        <svg className="fixed inset-0 pointer-events-none z-[10000]" style={{ width: '100vw', height: '100vh' }}>
           <defs>
             <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%"   stopColor={color} stopOpacity="0" />
@@ -560,7 +560,7 @@ export function MouseTrail({
     }
 
     return (
-      <svg className="fixed inset-0 pointer-events-none z-50" style={{ width: '100vw', height: '100vh' }}>
+      <svg className="fixed inset-0 pointer-events-none z-[10000]" style={{ width: '100vw', height: '100vh' }}>
         <defs>
           <linearGradient id="trailGrad" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%"   stopColor={color} stopOpacity="0" />
@@ -605,7 +605,7 @@ export function MouseTrail({
   return (
     <>
       {renderTrail()}
-      <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-40" />
+      <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-[9998]" />
     </>
   );
 }
