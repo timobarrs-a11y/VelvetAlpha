@@ -2,6 +2,25 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../shared/supabase/client';
 import { referralService } from '../services/referralService';
+import { newsService } from '../services/newsService';
+
+const NEWS_REFRESH_THROTTLE_KEY = 'velvet_news_last_refresh';
+
+async function triggerNewsRefresh(_userId: string): Promise<void> {
+  try {
+    const now = Date.now();
+    const last = Number(sessionStorage.getItem(NEWS_REFRESH_THROTTLE_KEY) || 0);
+    const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+    if (now - last < TWELVE_HOURS) return;
+    sessionStorage.setItem(NEWS_REFRESH_THROTTLE_KEY, String(now));
+
+    const interests = await newsService.getUserAllInterests();
+    if (interests.length === 0) return;
+    await newsService.fetchLatestNews(interests);
+  } catch {
+    /* best-effort refresh, never block login */
+  }
+}
 
 type AuthState = {
   user: User | null;
@@ -48,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       if (newSession) {
         referralService.redeemPendingReferral().catch(() => {});
+        triggerNewsRefresh(newSession.user.id).catch(() => {});
       }
     });
 

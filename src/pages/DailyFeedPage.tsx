@@ -6,6 +6,11 @@ import { supabase } from '../shared/supabase/client';
 import { newsService } from '../services/newsService';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function sevenDaysAgoISO(): string {
+  return new Date(Date.now() - SEVEN_DAYS_MS).toISOString();
+}
 
 const BLOCKED_PATTERNS = [
   '.co.uk', '.co.in', '.com.au', '.co.nz', '.co.za', '.com.pk',
@@ -276,6 +281,7 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
         supabase
           .from('news_articles')
           .select('*')
+          .gte('published_at', sevenDaysAgoISO())
           .order('published_at', { ascending: false })
           .limit(150),
         supabase
@@ -341,16 +347,18 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
       const elapsed = now - lastFetched;
       const isNewCalendarDay = new Date(now).toDateString() !== new Date(lastFetched).toDateString();
 
-      if (isNewCalendarDay || elapsed >= TWELVE_HOURS_MS) {
+      const shouldFetch = isNewCalendarDay || elapsed >= TWELVE_HOURS_MS;
+
+      if (shouldFetch) {
         setSilentFetching(true);
 
         const result = await newsService.fetchLatestNews(interests);
 
-        await supabase
-          .from('news_fetch_log')
-          .upsert({ user_id: userId, last_fetched_at: new Date().toISOString() });
-
         if (result.success && (result.articlesAdded ?? 0) > 0) {
+          await supabase
+            .from('news_fetch_log')
+            .upsert({ user_id: userId, last_fetched_at: new Date().toISOString() });
+
           setNewArticlesBadge(result.articlesAdded ?? 0);
           statusTimerRef.current = setTimeout(() => setNewArticlesBadge(0), 8000);
           await reloadArticles(userId, interests);
@@ -368,6 +376,7 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
       supabase
         .from('news_articles')
         .select('*')
+        .gte('published_at', sevenDaysAgoISO())
         .order('published_at', { ascending: false })
         .limit(150),
       supabase
@@ -410,16 +419,16 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
 
       const result = await newsService.fetchLatestNews(interestsToFetch);
 
-      await supabase
-        .from('news_fetch_log')
-        .upsert({ user_id: user.id, last_fetched_at: new Date().toISOString() });
-
-      await reloadArticles(user.id, interestsToFetch);
-
       if (result.success && (result.articlesAdded ?? 0) > 0) {
+        await supabase
+          .from('news_fetch_log')
+          .upsert({ user_id: user.id, last_fetched_at: new Date().toISOString() });
+
         setNewArticlesBadge(result.articlesAdded ?? 0);
         statusTimerRef.current = setTimeout(() => setNewArticlesBadge(0), 8000);
       }
+
+      await reloadArticles(user.id, interestsToFetch);
     } catch (err) {
       console.error('Manual refresh failed:', err);
     } finally {

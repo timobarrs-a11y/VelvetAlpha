@@ -28,9 +28,11 @@ interface CacheEntry {
 class NewsService {
   async getArticlesByCategories(categories: string[], limit: number = 20): Promise<NewsArticle[]> {
     try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('news_articles')
         .select('*')
+        .gte('published_at', sevenDaysAgo)
         .order('published_at', { ascending: false })
         .limit(limit);
 
