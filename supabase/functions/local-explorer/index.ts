@@ -474,7 +474,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
-      .select("subscription_tier, is_test_user, display_name, location_city, timezone, is_banned")
+      .select("subscription_tier, is_super_user, display_name, location_city, timezone, is_banned")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -485,7 +485,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const isTestUser = profile?.is_test_user === true;
+    const isSuperUser = profile?.is_super_user === true;
     const tier = profile?.subscription_tier || "free";
     const isPaid = ["trial", "unlimited", "starter", "plus", "elite"].includes(tier);
 
@@ -638,7 +638,7 @@ When reading search results, verify each event date is AFTER ${dateCtx.todayISO}
       { role: "user" as const, content: userMessageContent },
     ];
 
-    const selectedModel = isPaid || isTestUser ? MODEL_CONFIG.SONNET : MODEL_CONFIG.HAIKU;
+    const selectedModel = isPaid || isSuperUser ? MODEL_CONFIG.SONNET : MODEL_CONFIG.HAIKU;
 
     const encoder = new TextEncoder();
     const metaChunk = JSON.stringify({

@@ -294,7 +294,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
-      .select("subscription_tier, atlas_messages_today, atlas_messages_reset_at, is_test_user, display_name, is_banned")
+      .select("subscription_tier, atlas_messages_today, atlas_messages_reset_at, is_super_user, display_name, is_banned")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -305,11 +305,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const isTestUser = profile?.is_test_user === true;
+    const isSuperUser = profile?.is_super_user === true;
     const tier = profile?.subscription_tier || "free";
     const isPaid = ["trial", "unlimited", "starter", "plus", "elite"].includes(tier);
 
-    if (!isTestUser && !isPaid) {
+    if (!isSuperUser && !isPaid) {
       const ATLAS_DAILY_FREE_LIMIT = 10;
       const resetAt = profile?.atlas_messages_reset_at ? new Date(profile.atlas_messages_reset_at) : null;
       const now = new Date();
@@ -382,7 +382,7 @@ Deno.serve(async (req: Request) => {
       { role: "user" as const, content: userMessageContent },
     ];
 
-    const selectedModel = isPaid || isTestUser ? MODEL_CONFIG.SONNET : MODEL_CONFIG.HAIKU;
+    const selectedModel = isPaid || isSuperUser ? MODEL_CONFIG.SONNET : MODEL_CONFIG.HAIKU;
 
     const navIntent = await detectNavigationIntent(message, history, anthropicKey);
 
@@ -540,7 +540,7 @@ Deno.serve(async (req: Request) => {
         controller.enqueue(encoder.encode(JSON.stringify({ type: "done", model: selectedModel }) + "\n"));
         controller.close();
 
-        if (!isTestUser && !isPaid) {
+        if (!isSuperUser && !isPaid) {
           const resetAt = profile?.atlas_messages_reset_at ? new Date(profile.atlas_messages_reset_at) : null;
           const now = new Date();
           const isSameDay = resetAt ? resetAt.toDateString() === now.toDateString() : false;

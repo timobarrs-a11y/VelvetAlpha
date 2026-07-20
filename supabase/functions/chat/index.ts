@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
     // Get user's subscription and message tracking
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('subscription_tier, messages_remaining, is_test_user, referred_by, referral_qualified, is_banned')
+      .select('subscription_tier, messages_remaining, is_super_user, referred_by, referral_qualified, is_banned')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -62,11 +62,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const isTestUser = profile?.is_test_user === true;
+    const isSuperUser = profile?.is_super_user === true;
     const messagesRemaining = profile?.messages_remaining ?? 0;
     const tier = profile?.subscription_tier || 'free';
 
-    if (!isTestUser && messagesRemaining !== -1 && messagesRemaining <= 0) {
+    if (!isSuperUser && messagesRemaining !== -1 && messagesRemaining <= 0) {
       return new Response(
         JSON.stringify({
           error: 'No messages remaining',
@@ -277,7 +277,7 @@ Deno.serve(async (req: Request) => {
     console.log('Cache read tokens:', data.usage?.cache_read_input_tokens ?? 0);
 
     // Decrement message count server-side
-    if (!isTestUser && messagesRemaining !== -1) {
+    if (!isSuperUser && messagesRemaining !== -1) {
       const newCount = Math.max(0, messagesRemaining - 1);
       await supabaseAdmin
         .from('user_profiles')

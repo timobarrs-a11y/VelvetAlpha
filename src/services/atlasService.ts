@@ -180,13 +180,13 @@ export const atlasService = {
 
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('subscription_tier, atlas_messages_today, atlas_messages_reset_at, is_test_user')
+      .select('subscription_tier, atlas_messages_today, atlas_messages_reset_at, is_super_user')
       .eq('id', user.id)
       .maybeSingle();
 
     if (!profile) return { canSend: false, messagesUsedToday: 0, dailyLimit: ATLAS_DAILY_FREE_LIMIT, isUnlimited: false };
 
-    if (profile.is_test_user) {
+    if (profile.is_super_user) {
       return { canSend: true, messagesUsedToday: 0, dailyLimit: ATLAS_DAILY_FREE_LIMIT, isUnlimited: true };
     }
 

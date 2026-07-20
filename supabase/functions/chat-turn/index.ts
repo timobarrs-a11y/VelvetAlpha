@@ -573,10 +573,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const isTestUser = profile.is_test_user === true;
+    const isSuperUser = profile.is_super_user === true;
     const messagesRemaining = profile.messages_remaining ?? 0;
 
-    if (!isTestUser && messagesRemaining !== -1 && messagesRemaining <= 0) {
+    if (!isSuperUser && messagesRemaining !== -1 && messagesRemaining <= 0) {
       return new Response(
         JSON.stringify({
           error: 'No messages remaining',
@@ -591,7 +591,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const tier = profile.subscription_tier || 'free';
+    const tier = isSuperUser ? 'elite' : (profile.subscription_tier || 'free');
     const selectedModel = selectModel(message, tier);
 
     console.log(`[${traceId}] Model selection:`, { model: selectedModel, tier });
@@ -846,7 +846,7 @@ IMPORTANT: Keep your response under ${maxTokens} tokens.`;
     console.log(`[${traceId}] Response generated in ${latencyMs}ms`);
 
     // Decrement message count server-side (ported from chat/index.ts)
-    if (!isTestUser && messagesRemaining !== -1) {
+    if (!isSuperUser && messagesRemaining !== -1) {
       const newCount = Math.max(0, messagesRemaining - 1);
       await supabaseAdmin
         .from('user_profiles')

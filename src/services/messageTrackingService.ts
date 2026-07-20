@@ -1,5 +1,6 @@
 import { supabase } from '../shared/supabase/client';
 import { SubscriptionTier, SUBSCRIPTION_PLANS, normalizeSubscriptionTier } from '../types/subscription';
+import { getSuperUserStatus } from './superUserService';
 
 export interface MessageTrackingInfo {
   messagesRemaining: number;
@@ -21,7 +22,7 @@ export async function getMessageTrackingInfo(userId: string): Promise<MessageTra
 
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('subscription_tier, messages_remaining, haiku_model_enabled, sonnet_model_enabled, is_test_user')
+      .select('subscription_tier, messages_remaining, haiku_model_enabled, sonnet_model_enabled, is_super_user')
       .eq('id', userId)
       .maybeSingle();
 
@@ -29,12 +30,12 @@ export async function getMessageTrackingInfo(userId: string): Promise<MessageTra
       return null;
     }
 
-    if (data.is_test_user) {
+    if (data.is_super_user) {
       return {
         messagesRemaining: -1,
         canSendMessage: true,
         model: 'sonnet',
-        tier: 'unlimited'
+        tier: 'elite'
       };
     }
 
@@ -63,11 +64,11 @@ export async function decrementMessageCount(userId: string): Promise<boolean> {
 
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('is_test_user')
+      .select('is_super_user')
       .eq('id', userId)
       .maybeSingle();
 
-    if (profile?.is_test_user) {
+    if (profile?.is_super_user) {
       return true;
     }
 

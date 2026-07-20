@@ -275,7 +275,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('subscription_tier, messages_remaining, is_test_user, name, referred_by, referral_qualified, is_banned')
+      .select('subscription_tier, messages_remaining, is_super_user, name, referred_by, referral_qualified, is_banned')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -286,10 +286,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const isTestUser = profile?.is_test_user === true;
+    const isSuperUser = profile?.is_super_user === true;
     const messagesRemaining = profile?.messages_remaining ?? 0;
 
-    if (!isTestUser && messagesRemaining !== -1 && messagesRemaining <= 0) {
+    if (!isSuperUser && messagesRemaining !== -1 && messagesRemaining <= 0) {
       return new Response(
         JSON.stringify({ error: 'No messages remaining' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -522,7 +522,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    if (!isTestUser && messagesRemaining !== -1) {
+    if (!isSuperUser && messagesRemaining !== -1) {
       const newCount = Math.max(0, messagesRemaining - 1);
       await supabaseAdmin
         .from('user_profiles')

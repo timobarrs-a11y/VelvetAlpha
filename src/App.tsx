@@ -293,11 +293,11 @@ function AppInner() {
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('subscription_tier, is_test_user, avatar_config')
+        .select('subscription_tier, is_super_user, avatar_config')
         .eq('id', user.id)
         .maybeSingle();
 
-      if (profile?.is_test_user) setCurrentTier('unlimited');
+      if (profile?.is_super_user) setCurrentTier('elite');
       else if (profile?.subscription_tier) setCurrentTier(profile.subscription_tier as SubscriptionTier);
 
       if (profile?.avatar_config) setUserAvatarConfig(profile.avatar_config as AvatarConfig);
