@@ -718,7 +718,7 @@ export class ChatService {
     };
   }
 
-  static async sendMessage(message: string, companionId?: string, relationshipType: 'friend' | 'romantic' = 'romantic'): Promise<string> {
+  static async sendMessage(message: string, companionId?: string, relationshipType: 'friend' | 'romantic' | 'mentor' = 'romantic'): Promise<string> {
     try {
       const userProfile = await this.getUserProfile();
       const defaultProfile = {

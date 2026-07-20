@@ -1,5 +1,7 @@
 import { supabase } from '../shared/supabase/client';
 import { MODEL_CONFIG } from './modelSelector';
+import type { ExpertConfig } from '../config/signatureExperts';
+import { buildCoachOpeningGuidance, buildCoachOpeningFallback } from '../config/coachFramework';
 
 export interface FirstMessageTemplate {
   greeting: string;
@@ -114,13 +116,23 @@ export class FirstMessageService {
     signatureVoiceId: string,
     userBirthday?: string,
     connectionType: string = 'romantic',
-    userGender?: string
+    userGender?: string,
+    expertConfig?: ExpertConfig | null
   ): Promise<string> {
     const { getVoiceById } = await import('../config/signatureVoices');
     const voice = getVoiceById(signatureVoiceId);
 
+    const isMentor = connectionType === 'mentor';
+
     if (!voice) {
       console.warn('Signature voice not found, falling back to template');
+      if (isMentor) {
+        return buildCoachOpeningFallback({
+          coachName: companionName,
+          userName,
+          domain: expertConfig?.domain || (personalInterest !== 'meeting new people' ? personalInterest : undefined),
+        });
+      }
       return `hey ${userName}! glad we matched. what's up?`;
     }
 
@@ -137,20 +149,37 @@ export class FirstMessageService {
       }
     }
 
-    const relationshipContext = connectionType === 'mentor'
-      ? 'expert/mentor guidance'
-      : connectionType === 'romantic' ? 'romantic connection' : 'friendship';
+    // COACH PATH: the opening reflects the coach's mandate back to the user —
+    // restating its purpose and asking the one question it needs to start —
+    // rather than making companion-style small talk.
+    let prompt: string;
+    if (isMentor) {
+      const openingGuidance = buildCoachOpeningGuidance({
+        coachName: companionName,
+        domain: expertConfig?.domain || (personalInterest !== 'meeting new people' ? personalInterest : undefined),
+        instruction: expertConfig?.instruction,
+      });
 
-    const taskGuidance = connectionType === 'mentor'
-      ? `3. Takes a mentor/coach tone - professional yet warm, no romance or flirting
-4. Opens by asking about their goals or current challenges in ${personalInterest}`
-      : connectionType === 'romantic'
+      prompt = `${openingGuidance}
+
+HOW YOU SPEAK (voice — apply this to HOW you phrase things, never to override the coaching intent above):
+${voice.instruction}
+
+USER CONTEXT:
+- Name: ${userName}
+${userAge ? `- Age: ${userAge}` : ''}
+${userGender ? `- Gender: ${userGender}` : ''}
+
+Write ONLY the message text, no quotation marks, no labels, no explanations.`;
+    } else {
+      const relationshipContext = connectionType === 'romantic' ? 'romantic connection' : 'friendship';
+      const taskGuidance = connectionType === 'romantic'
         ? `3. Matches the relationship context (flirty/romantic)
 4. Feels like a real person reaching out, not a template`
         : `3. Matches the relationship context (friendly)
 4. Feels like a real person reaching out, not a template`;
 
-    const prompt = `You are ${companionName}, starting a conversation with ${userName} for the first time${connectionType === 'mentor' ? ' as their expert/mentor' : ' after matching on a dating/friendship app'}.
+      prompt = `You are ${companionName}, starting a conversation with ${userName} for the first time after matching on a dating/friendship app.
 
 CRITICAL PERSONALITY INSTRUCTIONS:
 ${voice.instruction}
@@ -172,13 +201,22 @@ ${taskGuidance}
 ${voice.examples && voice.examples.length > 0 ? `VOICE EXAMPLES:\n${voice.examples.join('\n')}` : ''}
 
 Write ONLY the message text, no quotation marks, no labels, no explanations.`;
+    }
+
+    const aiFallback = isMentor
+      ? buildCoachOpeningFallback({
+          coachName: companionName,
+          userName,
+          domain: expertConfig?.domain || (personalInterest !== 'meeting new people' ? personalInterest : undefined),
+        })
+      : `hey ${userName}! glad we matched. what's up?`;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token;
 
       if (!authToken) {
-        return `hey ${userName}! glad we matched. what's up?`;
+        return aiFallback;
       }
 
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -205,7 +243,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Failed to generate AI first message:', errorText);
-        return `hey ${userName}! glad we matched. what's up?`;
+        return aiFallback;
       }
 
       const data = await response.json();
@@ -214,7 +252,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
       return generatedMessage;
     } catch (error) {
       console.error('Error generating AI first message:', error);
-      return `hey ${userName}! glad we matched. what's up?`;
+      return aiFallback;
     }
   }
 
@@ -240,7 +278,9 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     userPreferences: any,
     signatureVoice?: string,
     userBirthday?: string,
-    expertDomain?: string
+    expertDomain?: string,
+    expertConfig?: ExpertConfig | null,
+    relationshipTypeOverride?: 'friend' | 'romantic' | 'mentor'
   ): Promise<string> {
     const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || sessionStorage.getItem('expertMatchAnswers') || '{}');
 
@@ -248,7 +288,11 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     const sports = matchData.sports || '';
     const interests = matchData.interests || '';
     const userGender = matchData.userGender || matchData.gender || '';
-    const connectionType = matchData.connectionType || 'romantic';
+    // The companion row is the source of truth for relationship type; only fall
+    // back to sessionStorage when no authoritative value was passed in.
+    const connectionType = relationshipTypeOverride || matchData.connectionType || 'romantic';
+    // Prefer the resolved expert's domain over any loosely-derived interest.
+    const resolvedExpertDomain = expertConfig?.domain || expertDomain;
 
     const isMale = userGender === 'Male';
     const isFemale = userGender === 'Female';
@@ -257,8 +301,8 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     const isMentor = connectionType === 'mentor';
 
     let personalInterest = '';
-    if (expertDomain) {
-      personalInterest = expertDomain;
+    if (resolvedExpertDomain) {
+      personalInterest = resolvedExpertDomain;
     } else if (hobbies && hobbies.trim()) {
       personalInterest = hobbies.split(',')[0].trim();
     } else if (sports && sports.trim()) {
@@ -285,18 +329,19 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
         signatureVoice,
         userBirthday,
         isMentor ? 'mentor' : connectionType,
-        userGender
+        userGender,
+        expertConfig
       );
     }
 
-    // Mentor/expert path fallback templates
-    if (isMentor && expertDomain) {
-      const mentorTemplates = [
-        `hey ${userName}! I'm ${companionName}, and I'm here to help you level up in ${expertDomain}.\n\nwhat's your biggest challenge right now? let's figure out where to start.`,
-        `${userName}, glad we're connected! I'm ${companionName}. I'm focused on helping you grow in ${expertDomain}.\n\nwhat are you working toward right now?`,
-        `hey ${userName}! I'm ${companionName} - your ${expertDomain} expert. I'm here to help you make real progress.\n\nwhat's on your mind? let's dive in.`,
-      ];
-      return mentorTemplates[Math.floor(Math.random() * mentorTemplates.length)];
+    // Coach/mentor path fallback (no signature voice): still restate purpose and
+    // ask a starter question rather than making companion-style small talk.
+    if (isMentor) {
+      return buildCoachOpeningFallback({
+        coachName: companionName,
+        userName,
+        domain: resolvedExpertDomain,
+      });
     }
 
     const maleTemplates = {

@@ -720,12 +720,22 @@ function AppInner() {
       const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || '{}');
       const { firstMessageService } = await import('./services/firstMessageService');
 
+      // Resolve the coach's expert config from the companion row (source of
+      // truth) so a coach's first message can restate its actual purpose
+      // instead of falling back to generic companion small talk.
+      const expertConfig = companionData.signature_expert
+        ? await resolveExpert(companionData.signature_expert, companionData.signature_expert_source, user.id)
+        : null;
+
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1500));
       setIsTyping(true);
 
       const firstMsg = await firstMessageService.generateFirstMessage(
         companionData.custom_name, companionData.gender, userName, matchData,
-        companionData.signature_voice, userBirthday
+        companionData.signature_voice, userBirthday,
+        expertConfig?.domain,
+        expertConfig,
+        companionData.relationship_type
       );
       await new Promise(resolve => setTimeout(resolve, Math.min(firstMsg.length * 15, 3000)));
       setIsTyping(false);
