@@ -27,6 +27,7 @@ import { CustomizationPanel } from '../components/CustomizationPanel';
 import { useCustomization } from '../hooks/useCustomization';
 import { POINTER_SYMBOLS } from '../services/customizationService';
 import { useMotivationalQuote } from '../hooks/useMotivationalQuote';
+import { newsService } from '../services/newsService';
 
 
 const GAMES = [
@@ -207,6 +208,22 @@ export function CompanionLobbyPage() {
 
   useEffect(() => { loadData(); }, []);
 
+  const refreshDailyFeedInBackground = async () => {
+    try {
+      const now = Date.now();
+      const SIX_HOURS = 6 * 60 * 60 * 1000;
+      const last = Number(sessionStorage.getItem('velvet_lobby_news_refresh') || 0);
+      if (now - last < SIX_HOURS) return;
+      sessionStorage.setItem('velvet_lobby_news_refresh', String(now));
+
+      const interests = await newsService.getUserAllInterests();
+      if (interests.length === 0) return;
+      await newsService.fetchLatestNews(interests);
+    } catch {
+      /* best-effort background refresh */
+    }
+  };
+
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate('/create-user-avatar'); return; }
@@ -217,6 +234,7 @@ export function CompanionLobbyPage() {
     setCompanions(companionsList);
     setGroupChats(groupsList);
     setLoading(false);
+    refreshDailyFeedInBackground();
   };
 
   const handleCreateGroupChat = async (name: string, companionIds: string[]) => {
