@@ -49,12 +49,16 @@ export function CreateCompanionAvatarPage() {
             .from('companions')
             .select('id')
             .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
+            .order('created_at', { ascending: false });
 
           if (companions && companions.length > 0) {
             trackSaveAvatar('companion');
-            pendingRoute.current = '/create-user-avatar';
+            const intent = sessionStorage.getItem('onboardingIntent');
+            const newId = sessionStorage.getItem('currentCompanionId') || companions[0].id;
+            const isFirstCompanion = companions.length === 1;
+            pendingRoute.current = intent === 'coaches'
+              ? (isFirstCompanion ? '/onboarding' : `/chat?companion=${newId}`)
+              : '/create-user-avatar';
             setShowReveal(true);
             return;
           }
@@ -73,7 +77,19 @@ export function CreateCompanionAvatarPage() {
       }
 
       trackSaveAvatar('companion');
-      pendingRoute.current = '/create-user-avatar';
+      const intent = sessionStorage.getItem('onboardingIntent');
+      const { data: { user: savedUser } } = await supabase.auth.getUser();
+      let isFirstCompanion = false;
+      if (savedUser) {
+        const { data: allCompanions } = await supabase
+          .from('companions')
+          .select('id')
+          .eq('user_id', savedUser.id);
+        isFirstCompanion = (allCompanions?.length ?? 0) <= 1;
+      }
+      pendingRoute.current = intent === 'coaches'
+        ? (isFirstCompanion ? '/onboarding' : `/chat?companion=${companionId}`)
+        : '/create-user-avatar';
       setShowReveal(true);
     } catch (error) {
       console.error('Error saving companion avatar:', error);
@@ -93,12 +109,16 @@ export function CreateCompanionAvatarPage() {
           .from('companions')
           .select('id')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
+          .order('created_at', { ascending: false });
 
         if (companions && companions.length > 0) {
           trackSkipAvatar('companion');
-          navigate('/create-user-avatar');
+          const intent = sessionStorage.getItem('onboardingIntent');
+          const newId = sessionStorage.getItem('currentCompanionId') || companions[0].id;
+          const isFirstCompanion = companions.length === 1;
+          navigate(intent === 'coaches'
+            ? (isFirstCompanion ? '/onboarding' : `/chat?companion=${newId}`)
+            : '/create-user-avatar');
           return;
         }
       }
@@ -107,7 +127,19 @@ export function CreateCompanionAvatarPage() {
     }
 
     trackSkipAvatar('companion');
-    navigate('/create-user-avatar');
+    const intent = sessionStorage.getItem('onboardingIntent');
+    const { data: { user: savedUser } } = await supabase.auth.getUser();
+    let isFirstCompanion = false;
+    if (savedUser) {
+      const { data: allCompanions } = await supabase
+        .from('companions')
+        .select('id')
+        .eq('user_id', savedUser.id);
+      isFirstCompanion = (allCompanions?.length ?? 0) <= 1;
+    }
+    navigate(intent === 'coaches'
+      ? (isFirstCompanion ? '/onboarding' : `/chat?companion=${companionId}`)
+      : '/create-user-avatar');
   };
 
   const handleRevealContinue = () => {

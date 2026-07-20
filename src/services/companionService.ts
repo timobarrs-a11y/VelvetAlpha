@@ -155,7 +155,9 @@ export async function createCompanion(options: CreateCompanionOptions): Promise<
       confrontation_style: options.confrontationStyle,
       availability_level: options.availabilityLevel,
       interest_preference: options.interestPreference,
-      signature_voice: options.signatureVoice || (options.gender === 'male' ? 'classic_male' : 'classic_female'),
+      signature_voice: options.relationshipType === 'mentor'
+        ? (options.gender === 'male' ? 'classic_male' : 'classic_female')
+        : (options.signatureVoice || (options.gender === 'male' ? 'classic_male' : 'classic_female')),
       signature_expert: options.signatureExpert || null,
       signature_expert_source: options.signatureExpertSource || null,
       interest_text: options.interestText,

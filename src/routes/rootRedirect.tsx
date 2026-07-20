@@ -134,9 +134,13 @@ export function RootRedirect() {
           setDestination('/user-questionnaire');
         }
       } else if (companions.length === 1) {
+        const pendingId = sessionStorage.getItem('currentCompanionId');
+        const targetId = pendingId && companions[0].id === pendingId
+          ? pendingId
+          : companions[0].id;
         localStorage.removeItem('currentCompanionId');
         localStorage.removeItem('matchAnswers');
-        setDestination(`/chat?companion=${companions[0].id}`);
+        setDestination(`/chat?companion=${targetId}`);
       } else {
         localStorage.removeItem('currentCompanionId');
         localStorage.removeItem('matchAnswers');

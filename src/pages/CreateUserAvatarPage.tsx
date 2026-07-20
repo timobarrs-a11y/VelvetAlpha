@@ -40,6 +40,12 @@ export function CreateUserAvatarPage() {
 
       if (companions.length > 0) {
         console.log('[CreateUserAvatar] User already has companions, redirecting');
+        const pendingId = sessionStorage.getItem('currentCompanionId');
+        const intent = sessionStorage.getItem('onboardingIntent');
+        if (pendingId && intent === 'coaches' && companions.some(c => c.id === pendingId)) {
+          navigate(`/chat?companion=${pendingId}`, { replace: true });
+          return;
+        }
         localStorage.removeItem('currentCompanionId');
         localStorage.removeItem('matchAnswers');
         navigate(await resolveHomeRoute(user.id), { replace: true });

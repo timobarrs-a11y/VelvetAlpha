@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../shared/supabase/client';
+import { createCompanion } from '../services/companionService';
 
 interface ExpertAnswer {
   gender?: string;
@@ -84,6 +86,7 @@ export function ExpertQuestionnairePage() {
   const [answers, setAnswers] = useState<ExpertAnswer>({});
   const [textInput, setTextInput] = useState('');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const question = QUESTIONS[currentQuestion];
@@ -138,15 +141,74 @@ export function ExpertQuestionnairePage() {
     }
   };
 
-  const completeQuestionnaire = (finalAnswers: ExpertAnswer) => {
+  const completeQuestionnaire = async (finalAnswers: ExpertAnswer) => {
     sessionStorage.setItem('expertMatchAnswers', JSON.stringify(finalAnswers));
-    navigate('/voice-selection', { replace: true });
+
+    const expertId = sessionStorage.getItem('selectedExpertId');
+    const expertSource = sessionStorage.getItem('selectedExpertSource') as 'curated' | 'user' | null;
+    const gender: 'male' | 'female' = finalAnswers.gender === 'Male' ? 'male' : 'female';
+    const customName = finalAnswers.customName || 'Mentor';
+
+    setCreating(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate('/login', { replace: true });
+        return;
+      }
+
+      const companion = await createCompanion({
+        userId: user.id,
+        gender,
+        relationshipType: 'mentor',
+        customName,
+        hobbies: [],
+        signatureExpert: expertId || undefined,
+        signatureExpertSource: expertSource || undefined,
+        energyPreference: finalAnswers.energyPreference,
+        communicationStyle: finalAnswers.communicationStyle,
+        supportStyle: finalAnswers.supportStyle,
+        conversationDepth: finalAnswers.conversationDepth,
+      });
+
+      if (companion) {
+        sessionStorage.setItem('currentCompanionId', companion.id);
+
+        const matchData = {
+          userName: '',
+          userGender: '',
+          relationshipType: finalAnswers.gender || 'Female',
+          connectionType: 'mentor',
+          companionName: customName,
+          energyPreference: finalAnswers.energyPreference,
+          communicationStyle: finalAnswers.communicationStyle,
+          supportStyle: finalAnswers.supportStyle,
+          conversationDepth: finalAnswers.conversationDepth,
+        };
+        sessionStorage.setItem('matchAnswers', JSON.stringify(matchData));
+
+        navigate('/create-companion-avatar', { replace: true });
+      } else {
+        setCreating(false);
+      }
+    } catch (error) {
+      console.error('[ExpertQuestionnaire] Error creating companion:', error);
+      setCreating(false);
+    }
   };
 
   const isChoiceQuestion = question.type === 'choice';
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6 relative">
+      {creating && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
+            <p className="text-gray-300 font-medium">Creating your coach...</p>
+          </div>
+        </div>
+      )}
       {/* Subtle background gradients */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full bg-purple-600/5 blur-[120px]" />

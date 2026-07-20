@@ -8,6 +8,10 @@ export async function resolveHomeRoute(userId: string): Promise<string> {
   try {
     const companions = await getCompanions(userId);
     if (companions.length > 0) {
+      const pendingId = sessionStorage.getItem('currentCompanionId');
+      if (pendingId && companions.some(c => c.id === pendingId)) {
+        return `/chat?companion=${pendingId}`;
+      }
       const lastId = localStorage.getItem('velvet_last_companion');
       const target = lastId && companions.some(c => c.id === lastId)
         ? lastId

@@ -788,12 +788,6 @@ export function CompanionLobbyPage() {
                   <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 bg-emerald-900/80 text-emerald-300">
                     <Brain className="w-2.5 h-2.5" /> Coach
                   </span>
-                  {companion.signature_voice && (
-                    <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-emerald-900/70 text-emerald-300">
-                      <Sparkles className="w-2.5 h-2.5" />
-                      {getVoiceById(companion.signature_voice).name}
-                    </span>
-                  )}
                   {companion.signature_expert && (
                     <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 bg-indigo-900/80 text-indigo-300">
                       <Brain className="w-2.5 h-2.5" />
