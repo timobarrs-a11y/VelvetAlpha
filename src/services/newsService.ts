@@ -29,28 +29,40 @@ class NewsService {
   async getArticlesByCategories(categories: string[], limit: number = 20): Promise<NewsArticle[]> {
     try {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await supabase
+
+      const filterByCategory = (rows: NewsArticle[] | null): NewsArticle[] =>
+        (rows ?? []).filter((article) => {
+          if (!article.categories || article.categories.length === 0) return true;
+          return article.categories.some((cat: string) =>
+            categories.some((userCat) =>
+              cat.toLowerCase().includes(userCat.toLowerCase()) ||
+              userCat.toLowerCase().includes(cat.toLowerCase())
+            )
+          );
+        });
+
+      const fresh = await supabase
         .from('news_articles')
         .select('*')
         .gte('published_at', sevenDaysAgo)
         .order('published_at', { ascending: false })
         .limit(limit);
 
-      if (error) throw error;
+      if (fresh.error) throw fresh.error;
 
-      if (!data) return [];
+      let filtered = filterByCategory(fresh.data);
 
-      const filteredArticles = data.filter((article) => {
-        if (!article.categories || article.categories.length === 0) return true;
-        return article.categories.some((cat: string) =>
-          categories.some((userCat) =>
-            cat.toLowerCase().includes(userCat.toLowerCase()) ||
-            userCat.toLowerCase().includes(cat.toLowerCase())
-          )
-        );
-      });
+      if (filtered.length === 0) {
+        const fallback = await supabase
+          .from('news_articles')
+          .select('*')
+          .order('published_at', { ascending: false })
+          .limit(limit);
+        if (fallback.error) throw fallback.error;
+        filtered = filterByCategory(fallback.data);
+      }
 
-      return filteredArticles;
+      return filtered;
     } catch (error) {
       return [];
     }

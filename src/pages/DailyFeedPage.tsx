@@ -277,7 +277,7 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
         return;
       }
 
-      const [articlesResult, viewsResult] = await Promise.all([
+      const [freshResult, viewsResult] = await Promise.all([
         supabase
           .from('news_articles')
           .select('*')
@@ -294,9 +294,19 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
         setViewedIds(new Set(viewsResult.data.map((v: any) => v.article_id)));
       }
 
-      if (!articlesResult.error && articlesResult.data) {
+      let articlesData = freshResult.data;
+      if (!freshResult.error && (freshResult.data ?? []).length === 0) {
+        const fallback = await supabase
+          .from('news_articles')
+          .select('*')
+          .order('published_at', { ascending: false })
+          .limit(150);
+        if (!fallback.error) articlesData = fallback.data;
+      }
+
+      if (articlesData) {
         const userInterests = [...new Set([...interests, ...categories])];
-        const filtered = articlesResult.data.filter((article) => {
+        const filtered = articlesData.filter((article) => {
           if (!article.categories || article.categories.length === 0) return false;
           if (article.url && !isAllowedArticle(article.url, article.source || '')) return false;
           return article.categories.some((cat: string) =>
@@ -372,7 +382,7 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
   };
 
   const reloadArticles = async (userId: string, interests: string[]) => {
-    const [articlesResult, viewsResult] = await Promise.all([
+    const [freshResult, viewsResult] = await Promise.all([
       supabase
         .from('news_articles')
         .select('*')
@@ -389,9 +399,19 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
       setViewedIds(new Set(viewsResult.data.map((v: any) => v.article_id)));
     }
 
-    if (!articlesResult.error && articlesResult.data) {
+    let articlesData = freshResult.data;
+    if (!freshResult.error && (freshResult.data ?? []).length === 0) {
+      const fallback = await supabase
+        .from('news_articles')
+        .select('*')
+        .order('published_at', { ascending: false })
+        .limit(150);
+      if (!fallback.error) articlesData = fallback.data;
+    }
+
+    if (articlesData) {
       const allCategories = [...new Set([...interests, ...newsCategories])];
-      const filtered = articlesResult.data.filter((article) => {
+      const filtered = articlesData.filter((article) => {
         if (!article.categories || article.categories.length === 0) return false;
         if (article.url && !isAllowedArticle(article.url, article.source || '')) return false;
         return article.categories.some((cat: string) =>
