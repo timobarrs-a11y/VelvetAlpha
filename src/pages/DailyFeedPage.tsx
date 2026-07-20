@@ -251,6 +251,7 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
   const [newArticlesBadge, setNewArticlesBadge] = useState(0);
   const [activeFilter, setActiveFilter] = useState<string>('All');
   const [refreshing, setRefreshing] = useState(false);
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -304,6 +305,7 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
         if (!fallback.error) articlesData = fallback.data;
       }
 
+      let foundCount = 0;
       if (articlesData) {
         const userInterests = [...new Set([...interests, ...categories])];
         const filtered = articlesData.filter((article) => {
@@ -317,6 +319,7 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
           );
         });
         const finalArticles = filtered.slice(0, 40);
+        foundCount = finalArticles.length;
 
         const imageUrls = finalArticles
           .map(a => a.image_url)
@@ -335,11 +338,20 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
         setArticles(finalArticles);
       }
 
+      // On first visit the table is often empty. Await the auto-fetch so rows
+      // are inserted before we drop the loading state — the user never sees a
+      // false "No articles yet" screen and never has to hit refresh on day 1.
+      const fetchInterests = interests.length > 0 ? interests : categories;
+      if (foundCount === 0 && fetchInterests.length > 0) {
+        await checkAndAutoFetch(user.id, fetchInterests);
+      } else {
+        checkAndAutoFetch(user.id, fetchInterests).catch(() => {});
+      }
+      setInitialFetchDone(true);
       setLoading(false);
-
-      checkAndAutoFetch(user.id, interests.length > 0 ? interests : categories);
     } catch (err) {
       console.error('Error loading feed:', err);
+      setInitialFetchDone(true);
       setLoading(false);
     }
   };
@@ -364,13 +376,18 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
 
         const result = await newsService.fetchLatestNews(interests);
 
-        if (result.success && (result.articlesAdded ?? 0) > 0) {
+        if (result.success) {
           await supabase
             .from('news_fetch_log')
             .upsert({ user_id: userId, last_fetched_at: new Date().toISOString() });
 
-          setNewArticlesBadge(result.articlesAdded ?? 0);
-          statusTimerRef.current = setTimeout(() => setNewArticlesBadge(0), 8000);
+          if ((result.articlesAdded ?? 0) > 0) {
+            setNewArticlesBadge(result.articlesAdded ?? 0);
+            statusTimerRef.current = setTimeout(() => setNewArticlesBadge(0), 8000);
+          }
+          // Always reload after a fetch attempt — another user's fetch may
+          // have populated shared rows, or inserts may not match the strict
+          // interest filter. Let the filter decide what to show.
           await reloadArticles(userId, interests);
         }
         setSilentFetching(false);
@@ -567,20 +584,32 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {filteredArticles.length === 0 ? (
-          <div className="text-center py-24">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5">
-              <Newspaper className="w-8 h-8 text-white/30" />
+          !initialFetchDone ? (
+            <div className="text-center py-24">
+              <div className="relative w-12 h-12 mx-auto mb-5">
+                <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 animate-ping" />
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                  <Newspaper className="w-6 h-6 text-emerald-400" />
+                </div>
+              </div>
+              <p className="text-white/50 text-sm">Fetching your first articles...</p>
             </div>
-            <h3 className="text-white font-semibold mb-2">No articles yet</h3>
-            <p className="text-white/40 text-sm mb-6">Hit refresh to pull fresh news for your interests.</p>
-            <button
-              onClick={handleManualRefresh}
-              disabled={refreshing}
-              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all"
-            >
-              {refreshing ? 'Fetching...' : 'Get Latest News'}
-            </button>
-          </div>
+          ) : (
+            <div className="text-center py-24">
+              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5">
+                <Newspaper className="w-8 h-8 text-white/30" />
+              </div>
+              <h3 className="text-white font-semibold mb-2">No articles yet</h3>
+              <p className="text-white/40 text-sm mb-6">We couldn't find articles for your interests. Try a manual refresh.</p>
+              <button
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all"
+              >
+                {refreshing ? 'Fetching...' : 'Get Latest News'}
+              </button>
+            </div>
+          )
         ) : (
           <div className="space-y-8">
             {topStory && (
