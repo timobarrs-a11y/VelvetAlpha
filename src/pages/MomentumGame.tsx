@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type TouchEvent as ReactTouchEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -16,6 +16,7 @@ const PLATFORM_HEIGHT = 14;
 const MAX_BOOST_FUEL = 100;
 const BOOST_COST = 50;
 const FUEL_REGEN = 35;
+const TOUCH_SENSITIVITY = 1.6;
 
 const themePresets = [
   { name: 'Neon Cityscape', icon: '🌃', hint: 'Cyberpunk rooftops' },
@@ -242,6 +243,8 @@ export function MomentumGame() {
   const pauseTimeRef = useRef(0);
   const lastPlatformYRef = useRef(520); // Track last successful platform landing
   const bounceYRef = useRef<number | null>(null); // Y position at moment of bounce, null when not recently bounced
+  const touchTargetXRef = useRef<number | null>(null);
+  const touchInfoRef = useRef<{ startClientX: number; startBallCenter: number; moved: boolean; startTime: number } | null>(null);
 
   useEffect(() => {
     if (gameMode === 'career') {
@@ -462,6 +465,7 @@ export function MomentumGame() {
     cameraYRef.current = Math.max(0, GAME_HEIGHT / 2.5 - player.y);
     comboRef.current = 0;
     lastPlatformYRef.current = player.y; // Reset last platform Y on respawn
+    touchTargetXRef.current = null;
   };
 
   const saveGameStats = async () => {
@@ -493,6 +497,55 @@ export function MomentumGame() {
         opacity: 0.1 + Math.random() * 0.3
       });
     }
+  };
+
+  const triggerBoost = () => {
+    keysRef.current.boost = true;
+    setTimeout(() => {
+      keysRef.current.boost = false;
+      keysRef.current.boostUsed = false;
+    }, 60);
+  };
+
+  const handleCanvasTouchStart = (e: ReactTouchEvent<HTMLCanvasElement>) => {
+    if (gameState !== 'playing' || isPaused) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchInfoRef.current = {
+      startClientX: touch.clientX,
+      startBallCenter: playerRef.current.x + PLAYER_WIDTH / 2,
+      moved: false,
+      startTime: Date.now(),
+    };
+  };
+
+  const handleCanvasTouchMove = (e: ReactTouchEvent<HTMLCanvasElement>) => {
+    if (gameState !== 'playing' || isPaused) return;
+    const touch = e.touches[0];
+    if (!touch || !touchInfoRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = GAME_WIDTH / rect.width;
+    const touchCanvasX = (touch.clientX - rect.left) * scaleX;
+    const startCanvasX = (touchInfoRef.current.startClientX - rect.left) * scaleX;
+    const dragDelta = touchCanvasX - startCanvasX;
+    if (Math.abs(dragDelta) > 8) {
+      touchInfoRef.current.moved = true;
+    }
+    touchTargetXRef.current = touchInfoRef.current.startBallCenter + dragDelta;
+  };
+
+  const handleCanvasTouchEnd = () => {
+    if (!touchInfoRef.current) return;
+    const info = touchInfoRef.current;
+    const elapsed = Date.now() - info.startTime;
+    // Quick tap (minimal movement, short duration) = boost
+    if (!info.moved && elapsed < 250) {
+      triggerBoost();
+    }
+    touchTargetXRef.current = null;
+    touchInfoRef.current = null;
   };
 
   const gameLoop = useCallback(() => {
@@ -558,14 +611,37 @@ export function MomentumGame() {
 
     player.prevY = player.y;
 
-    if (keys.left) player.vx = -HORIZONTAL_SPEED;
-    else if (keys.right) player.vx = HORIZONTAL_SPEED;
-    else player.vx *= 0.82;
+    // Horizontal intent: touch takes priority over keyboard
+    const touchX = touchTargetXRef.current;
+    if (touchX !== null) {
+      const ballCenter = player.x + PLAYER_WIDTH / 2;
+      const delta = touchX - ballCenter;
+      if (Math.abs(delta) > 4) {
+        player.vx = Math.max(-HORIZONTAL_SPEED, Math.min(HORIZONTAL_SPEED, delta * TOUCH_SENSITIVITY));
+      } else {
+        player.vx *= 0.6;
+      }
+    } else if (keys.left) {
+      player.vx = -HORIZONTAL_SPEED;
+    } else if (keys.right) {
+      player.vx = HORIZONTAL_SPEED;
+    } else {
+      player.vx *= 0.82;
+    }
 
     if (keys.boost && !keys.boostUsed && player.boostFuel >= BOOST_COST && player.vy > -10) {
       player.vy += BOOST_VELOCITY;
-      if (keys.left) player.vx -= BOOST_HORIZONTAL;
-      if (keys.right) player.vx += BOOST_HORIZONTAL;
+      // Apply horizontal kick based on current intent (touch or keyboard)
+      if (touchX !== null) {
+        const ballCenter = player.x + PLAYER_WIDTH / 2;
+        const delta = touchX - ballCenter;
+        if (Math.abs(delta) > 4) {
+          player.vx += Math.sign(delta) * BOOST_HORIZONTAL;
+        }
+      } else {
+        if (keys.left) player.vx -= BOOST_HORIZONTAL;
+        if (keys.right) player.vx += BOOST_HORIZONTAL;
+      }
       player.boostFuel -= BOOST_COST;
       player.isBoosting = true;
       player.boostTimer = 25;
@@ -1316,7 +1392,16 @@ export function MomentumGame() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="relative">
-          <canvas ref={canvasRef} width={GAME_WIDTH} height={GAME_HEIGHT} className="block rounded-lg shadow-2xl" />
+          <canvas
+            ref={canvasRef}
+            width={GAME_WIDTH}
+            height={GAME_HEIGHT}
+            className="block rounded-lg shadow-2xl select-none"
+            style={{ touchAction: 'none' }}
+            onTouchStart={handleCanvasTouchStart}
+            onTouchMove={handleCanvasTouchMove}
+            onTouchEnd={handleCanvasTouchEnd}
+          />
 
           {isPaused && (
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center">
@@ -1384,11 +1469,17 @@ export function MomentumGame() {
             </div>
           )}
 
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 md:hidden">
-            <button onTouchStart={() => keysRef.current.left = true} onTouchEnd={() => keysRef.current.left = false} className="w-16 h-16 rounded-full bg-white/10 active:bg-white/25 text-white text-xl select-none">←</button>
-            <button onTouchStart={() => { keysRef.current.boost = true; }} onTouchEnd={() => { keysRef.current.boost = false; keysRef.current.boostUsed = false; }} className="w-16 h-16 rounded-full bg-cyan-500/20 active:bg-cyan-500/40 text-cyan-300 text-xs select-none">BOOST</button>
-            <button onTouchStart={() => keysRef.current.right = true} onTouchEnd={() => keysRef.current.right = false} className="w-16 h-16 rounded-full bg-white/10 active:bg-white/25 text-white text-xl select-none">→</button>
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center md:hidden pointer-events-none">
+            <button
+              onTouchStart={() => triggerBoost()}
+              className="pointer-events-auto px-10 py-4 rounded-full bg-cyan-500/20 active:bg-cyan-500/40 text-cyan-300 text-sm font-medium tracking-wider border border-cyan-500/30 select-none"
+            >
+              BOOST
+            </button>
           </div>
+          <p className="absolute bottom-20 left-0 right-0 text-center text-white/30 text-xs md:hidden pointer-events-none select-none">
+            Swipe to steer · Tap to boost
+          </p>
         </div>
       </div>
     );
