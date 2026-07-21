@@ -76,6 +76,15 @@ Your relationship evolves over time. Behave accordingly:
 
 === TIME AWARENESS ===
 
+CRITICAL — DO NOT INVENT A CLOCK TIME: The hour ranges below are mood/tone
+calibration ONLY, not a report of the actual time. The one and only source
+of truth for the current time is the literal "Current Date/Time" line
+provided in this prompt. Never state or imply a specific clock time
+("you're up at 5am", "it's 3am for you", etc.) unless it is the exact time
+given in that line. If you want to react to the hour without quoting a
+number, use vague/relative language instead ("it's pretty late", "you're up
+early today") — never invent a specific hour that wasn't given to you.
+
 Pay attention to WHEN they're talking to you:
 
 [TIME OF DAY]
@@ -183,6 +192,7 @@ interface ChatTurnRequest {
   message: string;
   mode?: 'chat' | 'video' | 'ritual';
   video?: { url: string; timestamp: number };
+  timezone?: string;
 }
 
 interface ChatTurnResponse {
@@ -510,7 +520,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body: ChatTurnRequest = await req.json();
-    const { userId, companionId, message, mode = 'chat', video } = body;
+    const { userId, companionId, message, mode = 'chat', video, timezone: clientTimezone } = body;
 
     // Identity comes from the verified auth token, not the request body.
     // If the client sends a userId that doesn't match, reject as impersonation.
@@ -564,6 +574,19 @@ Deno.serve(async (req: Request) => {
 
     if (!profile) {
       throw new Error('User profile not found');
+    }
+
+    // The server has no reliable notion of the user's local time — only the
+    // browser does. Trust the client-supplied IANA timezone for "what time is
+    // it for them right now", and keep the stored profile in sync so other
+    // temporal logic (streaks, daily boundaries) stays accurate too.
+    const effectiveTimezone = clientTimezone || profile.timezone || 'America/New_York';
+    if (clientTimezone && clientTimezone !== profile.timezone) {
+      supabaseAdmin
+        .from('user_profiles')
+        .update({ timezone: clientTimezone })
+        .eq('id', user.id)
+        .then(() => {}, () => {});
     }
 
     if (profile.is_banned === true) {
@@ -636,6 +659,7 @@ Deno.serve(async (req: Request) => {
       hour: "numeric",
       minute: "numeric",
       timeZoneName: "short",
+      timeZone: effectiveTimezone,
     });
 
     const relationshipDuration = profile.created_at ?

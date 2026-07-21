@@ -40,6 +40,14 @@ import { affectionService } from './affectionService';
 
 const USE_SERVER_PROMPT = false;
 
+function getBrowserTimezone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
+
 const BEHAVIORAL_INSTRUCTIONS = `
 
 === CONVERSATIONAL PRESENCE ===
@@ -100,6 +108,15 @@ Your relationship evolves over time. Behave accordingly:
 
 
 === TIME AWARENESS ===
+
+CRITICAL — DO NOT INVENT A CLOCK TIME: The hour ranges below are mood/tone
+calibration ONLY, not a report of the actual time. The one and only source
+of truth for the current time is the literal "Current Date/Time" line
+provided in this prompt. Never state or imply a specific clock time
+("you're up at 5am", "it's 3am for you", etc.) unless it is the exact time
+given in that line. If you want to react to the hour without quoting a
+number, use vague/relative language instead ("it's pretty late", "you're up
+early today") — never invent a specific hour that wasn't given to you.
 
 Pay attention to WHEN they're talking to you:
 
@@ -653,6 +670,7 @@ export class ChatService {
         companionId,
         message,
         mode: 'chat',
+        timezone: getBrowserTimezone(),
       }),
     });
 
@@ -700,7 +718,7 @@ export class ChatService {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat' }),
+      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat', timezone: getBrowserTimezone() }),
     });
 
     if (!response.ok) {
@@ -866,7 +884,15 @@ export class ChatService {
         userId
       );
 
-      const userTimezone = profile.timezone || 'America/New_York';
+      const detectedTimezone = getBrowserTimezone();
+      const userTimezone = detectedTimezone || profile.timezone || 'America/New_York';
+      if (detectedTimezone && detectedTimezone !== profile.timezone) {
+        supabase
+          .from('user_profiles')
+          .update({ timezone: detectedTimezone })
+          .eq('id', userId)
+          .then(() => {}, () => {});
+      }
       const now = new Date();
 
       let temporalContextString: string | undefined;
