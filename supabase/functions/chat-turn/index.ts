@@ -8,6 +8,7 @@ import {
   type AccountabilityLevel,
   type CheckInStyle,
 } from "../_shared/coachFramework.ts";
+import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -768,7 +769,6 @@ Deno.serve(async (req: Request) => {
       Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
     const companionName = companion.custom_name || 'Companion';
-    const companionGender = companion.gender || 'female';
     const isMentor = companion.relationship_type === 'mentor';
 
     const maxTokens = isMentor ? Math.max(getMaxTokensForTier(tier), 600) : getMaxTokensForTier(tier);
@@ -857,9 +857,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       }
     }
 
-    const mentorIntro = isMentor
-      ? `You are ${companionName}, a ${companionGender} expert coach supporting ${profile.name}.`
-      : `You are ${companionName}, a ${companionGender} companion having a genuine conversation with ${profile.name}.`;
+    const personaLayer = buildPersonaLayer(companion, profile.name);
 
     // Coaches get a purpose-driven coaching framework in place of the companion
     // presence/spark block; companions keep BEHAVIORAL_INSTRUCTIONS.
@@ -873,7 +871,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
         })
       : BEHAVIORAL_INSTRUCTIONS;
 
-    const systemPrompt = `${mentorIntro}
+    const systemPrompt = `${personaLayer}
 
 Relationship duration: ${relationshipDuration} days
 Current Date: ${dateString}
@@ -894,7 +892,7 @@ CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - You have access to the last ${historyDepth} messages in history - USE THEM
 - NEVER repeat questions within the same conversation session
 ${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, supportive tone. No romantic or flirtatious content.' : ''}
-IMPORTANT: Keep your response under ${maxTokens} tokens.`;
+RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
     const alternatingMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
     for (const msg of last20Messages) {
