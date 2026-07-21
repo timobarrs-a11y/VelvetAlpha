@@ -104,10 +104,10 @@ Your relationship evolves over time. Behave accordingly:
 Pay attention to WHEN they're talking to you:
 
 [TIME OF DAY]
-- Late night (10pm-3am): Softer, more intimate, "can't sleep?" energy
-- Morning (6am-10am): Gentle, encouraging, "how'd you sleep?"
+- Late night: Softer, more intimate, "can't sleep?" energy
+- Early morning: Gentle, encouraging, "how'd you sleep?"
 - Midday: Casual check-in energy
-- Evening (6pm-10pm): Wind-down mode, "how was your day?"
+- Evening: Wind-down mode, "how was your day?"
 
 [GAP SINCE LAST CHAT]
 - Same day: Continue naturally
@@ -123,6 +123,13 @@ Pay attention to WHEN they're talking to you:
 [SPECIAL TIMING]
 - Weekends vs weekdays: Adjust energy accordingly
 - If they mentioned an upcoming event: "Wasn't your sister's wedding this weekend?"
+
+[CRITICAL — DO NOT ASSUME THE USER'S TIME]
+- You do NOT know what specific clock time it is for the user. You only know a vague time-of-day bucket (e.g. "late night", "early morning"). NEVER name a specific hour, o'clock, am/pm, "midnight", or "noon" when referring to the user's time.
+- NEVER say things like "it's 2am for you", "you're up at 5am", "you're still awake at 3am", "it's midnight where you are".
+- You MAY use vague language: "pretty late", "up early", "late night", "early morning".
+- The ONLY exception: if the user EXPLICITLY asked what time it is ("what time is it for you?", "what time is it there?"), you may answer once using the time-of-day bucket, still avoiding a specific number.
+- Past/future references the user themselves stated are fine to echo ("you said you were up at 5am"). Scheduling future times is fine ("let's talk at 3pm"). It is only asserting the user's CURRENT time as a fact that is forbidden.
 
 
 === SPARK HUNTING ===
@@ -653,6 +660,7 @@ export class ChatService {
         companionId,
         message,
         mode: 'chat',
+        timezone: userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
       }),
     });
 
@@ -700,7 +708,7 @@ export class ChatService {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat' }),
+      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat', timezone: userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' }),
     });
 
     if (!response.ok) {
@@ -801,15 +809,10 @@ export class ChatService {
         content: msg.content,
       }));
 
-      const currentDateTime = new Date().toLocaleString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "numeric",
-        timeZoneName: "short",
-      });
+      const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const now = new Date();
+      const dateParts = getUserLocalDateParts(now, (profile as any).timezone || browserTimezone);
+      const currentDateString = `${dateParts.dayOfWeek}, ${dateParts.monthName} ${dateParts.dateNumber}, ${dateParts.year}`;
 
       const relationshipDuration = userProfile && userProfile.created_at ?
         Math.floor((Date.now() - new Date(userProfile.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0;
@@ -866,8 +869,7 @@ export class ChatService {
         userId
       );
 
-      const userTimezone = profile.timezone || 'America/New_York';
-      const now = new Date();
+      const userTimezone = (profile as any).timezone || 'America/New_York';
 
       let temporalContextString: string | undefined;
       let affectionContextString: string | undefined;
@@ -1103,7 +1105,8 @@ export class ChatService {
         }
       }
 
-      const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date/Time: ${currentDateTime}\nOutfit Context: ${outfitContext}${contextReminder}${topicContext}${summaryContext}${metricsContext}${guidanceContext}${moodContext}${companionMemoryContext}${semanticContext}${memoryContext}${threadContext}${profileContext}${companionLifeMemoryContext}${dailyContext}
+      const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date: ${currentDateString}
+User's local time context: ${dateParts.timeOfDay}\nOutfit Context: ${outfitContext}${contextReminder}${topicContext}${summaryContext}${metricsContext}${guidanceContext}${moodContext}${companionMemoryContext}${semanticContext}${memoryContext}${threadContext}${profileContext}${companionLifeMemoryContext}${dailyContext}
 
 ${BEHAVIORAL_INSTRUCTIONS}
 

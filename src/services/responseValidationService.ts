@@ -13,10 +13,12 @@ export interface ValidationResult {
   questionCount?: number;
   questionStreak?: boolean;
   conversationMode?: 'dig' | 'vibe';
+  timeAssumption?: boolean;
+  timeAssumptionMatches?: string[];
 }
 
 export interface ValidationIssue {
-  type: 'topic_switch' | 'generic_response' | 'factual_error' | 'repetition' | 'length_mismatch' | 'personality_break' | 'lexical_repeat' | 'semantic_repeat' | 'too_many_questions' | 'question_streak' | 'question_lead';
+  type: 'topic_switch' | 'generic_response' | 'factual_error' | 'repetition' | 'length_mismatch' | 'personality_break' | 'lexical_repeat' | 'semantic_repeat' | 'too_many_questions' | 'question_streak' | 'question_lead' | 'time_assumption';
   severity: 'critical' | 'warning' | 'minor';
   description: string;
 }
@@ -314,6 +316,39 @@ function detectInterrogation(
   };
 }
 
+function detectTimeAssumption(text: string, userMessage: string): { detected: boolean; matches: string[] } {
+  const timeQuestionPattern = /\b(what time|what's the time|whats the time|time is it|do you know the time|tell me the time)\b/i;
+  if (timeQuestionPattern.test(userMessage)) {
+    return { detected: false, matches: [] };
+  }
+  const clockTime = /\b(\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)|\d{1,2}\s*o'clock|midnight|noon|midday)\b/i;
+  const attributionCues = [
+    "it's", "it is", "it's currently",
+    "you're up", "you are up", "you're still up", "you are still up",
+    "you're awake", "you are awake", "you're still awake", "you are still awake",
+    "still awake", "still up", "still going",
+    "you're up at", "you are up at", "awake at",
+    "right now", "at this hour", "at this time of night", "at this time of morning",
+    "where you are", "for you", "your time", "your timezone",
+    "this late", "this early",
+  ];
+  const pastTense = /\b(you said|you told me|you mentioned|you noted|said you were|told me you|you were up|you were awake|earlier|before|yesterday|last night|this morning you|you just said)\b/i;
+  const futureTense = /\b(let's|lets|we can|we should|schedule|scheduled|plan|planning|tomorrow|later|reminder|set for|wake you|call you|i'll remind|i will remind|meet at|talk at|catch up at)\b/i;
+  const sentences = text.split(/[.!?*\n]/).filter(s => s.trim().length > 0);
+  const matches: string[] = [];
+  for (const sentence of sentences) {
+    if (!clockTime.test(sentence)) continue;
+    const lower = sentence.toLowerCase();
+    const hasAttribution = attributionCues.some(cue => lower.includes(cue));
+    if (!hasAttribution) continue;
+    const isPast = pastTense.test(sentence);
+    const isFuture = futureTense.test(sentence);
+    if (isPast || isFuture) continue;
+    matches.push(sentence.trim().slice(0, 120));
+  }
+  return { detected: matches.length > 0, matches };
+}
+
 export async function validateResponse(
   userMessage: string,
   assistantResponse: string,
@@ -528,6 +563,16 @@ export async function validateResponse(
     score -= 25;
   }
 
+  const timeAssumptionResult = detectTimeAssumption(assistantResponse, userMessage);
+  if (timeAssumptionResult.detected) {
+    issues.push({
+      type: 'time_assumption',
+      severity: 'critical',
+      description: `Assumed the user's current time as a specific clock time: "${timeAssumptionResult.matches[0]}"`,
+    });
+    score -= 30;
+  }
+
   const isValid = issues.filter(i => i.severity === 'critical').length === 0 && score >= 60;
 
   const suggestions: string[] = [];
@@ -570,6 +615,8 @@ export async function validateResponse(
     questionCount: interrogationResult.questionCount,
     questionStreak: interrogationResult.questionStreak,
     conversationMode,
+    timeAssumption: timeAssumptionResult.detected,
+    timeAssumptionMatches: timeAssumptionResult.matches,
   };
 }
 
@@ -604,6 +651,10 @@ export function shouldRetryResponse(validation: ValidationResult): boolean {
     if (hasHighSimilarity || hasMultipleMediumSimilarity) {
       return true;
     }
+  }
+
+  if (validation.timeAssumption) {
+    return true;
   }
 
   if (validation.questionStreak) {
@@ -677,8 +728,15 @@ export function formatValidationFeedback(validation: ValidationResult): string {
     }
   }
 
+  if (validation.timeAssumption && validation.timeAssumptionMatches && validation.timeAssumptionMatches.length > 0) {
+    parts.push(`\n🕐 TIME ASSUMPTION DETECTED:`);
+    parts.push(`You assumed the user's current time as a specific clock time ("${validation.timeAssumptionMatches[0]}").`);
+    parts.push(`You do NOT know the user's specific time. Regenerate using vague language ("pretty late" / "up early" / "late night") or drop the time reference entirely.`);
+    parts.push(`Do NOT name a specific hour, o'clock, am/pm, midnight, or noon when referring to the user's time.`);
+  }
+
   const otherIssues = validation.issues.filter(i =>
-    !['lexical_repeat', 'semantic_repeat', 'too_many_questions', 'question_streak', 'question_lead'].includes(i.type)
+    !['lexical_repeat', 'semantic_repeat', 'too_many_questions', 'question_streak', 'question_lead', 'time_assumption'].includes(i.type)
   );
 
   if (otherIssues.length > 0) {

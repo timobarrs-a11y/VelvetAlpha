@@ -79,10 +79,10 @@ Your relationship evolves over time. Behave accordingly:
 Pay attention to WHEN they're talking to you:
 
 [TIME OF DAY]
-- Late night (10pm-3am): Softer, more intimate, "can't sleep?" energy
-- Morning (6am-10am): Gentle, encouraging, "how'd you sleep?"
+- Late night: Softer, more intimate, "can't sleep?" energy
+- Early morning: Gentle, encouraging, "how'd you sleep?"
 - Midday: Casual check-in energy
-- Evening (6pm-10pm): Wind-down mode, "how was your day?"
+- Evening: Wind-down mode, "how was your day?"
 
 [GAP SINCE LAST CHAT]
 - Same day: Continue naturally
@@ -98,6 +98,13 @@ Pay attention to WHEN they're talking to you:
 [SPECIAL TIMING]
 - Weekends vs weekdays: Adjust energy accordingly
 - If they mentioned an upcoming event: "Wasn't your sister's wedding this weekend?"
+
+[CRITICAL — DO NOT ASSUME THE USER'S TIME]
+- You do NOT know what specific clock time it is for the user. You only know a vague time-of-day bucket (e.g. "late night", "early morning"). NEVER name a specific hour, o'clock, am/pm, "midnight", or "noon" when referring to the user's time.
+- NEVER say things like "it's 2am for you", "you're up at 5am", "you're still awake at 3am", "it's midnight where you are".
+- You MAY use vague language: "pretty late", "up early", "late night", "early morning".
+- The ONLY exception: if the user EXPLICITLY asked what time it is ("what time is it for you?", "what time is it there?"), you may answer once using the time-of-day bucket, still avoiding a specific number.
+- Past/future references the user themselves stated are fine to echo ("you said you were up at 5am"). Scheduling future times is fine ("let's talk at 3pm"). It is only asserting the user's CURRENT time as a fact that is forbidden.
 
 
 === SPARK HUNTING ===
@@ -183,6 +190,7 @@ interface ChatTurnRequest {
   message: string;
   mode?: 'chat' | 'video' | 'ritual';
   video?: { url: string; timestamp: number };
+  timezone?: string;
 }
 
 interface ChatTurnResponse {
@@ -230,6 +238,89 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
+function getLocalTimeOfDay(timezone?: string): { timeOfDay: string; dateString: string } {
+  const tz = timezone || 'UTC';
+  try {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      hour12: false,
+    }).formatToParts(now);
+    const partMap: Record<string, string> = {};
+    for (const part of parts) {
+      partMap[part.type] = part.value;
+    }
+    let hour = parseInt(partMap.hour, 10);
+    if (isNaN(hour)) hour = 12;
+    if (hour === 24) hour = 0;
+    let timeOfDay = 'midday';
+    if (hour >= 4 && hour < 7) timeOfDay = 'early morning';
+    else if (hour >= 7 && hour < 12) timeOfDay = 'morning';
+    else if (hour >= 12 && hour < 14) timeOfDay = 'midday';
+    else if (hour >= 14 && hour < 18) timeOfDay = 'afternoon';
+    else if (hour >= 18 && hour < 22) timeOfDay = 'evening';
+    else if (hour >= 22 || hour < 2) timeOfDay = 'night';
+    else timeOfDay = 'late night';
+    const dateString = `${partMap.weekday}, ${partMap.month} ${partMap.day}, ${partMap.year}`;
+    return { timeOfDay, dateString };
+  } catch {
+    const now = new Date();
+    return {
+      timeOfDay: 'midday',
+      dateString: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
+    };
+  }
+}
+
+function detectTimeAssumption(text: string, userMessage: string): { detected: boolean; matches: string[] } {
+  const timeQuestionPattern = /\b(what time|what's the time|whats the time|time is it|do you know the time|tell me the time)\b/i;
+  if (timeQuestionPattern.test(userMessage)) {
+    return { detected: false, matches: [] };
+  }
+  const clockTime = /\b(\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)|\d{1,2}\s*o'clock|midnight|noon|midday)\b/i;
+  const attributionCues = [
+    "it's", "it is", "it's currently",
+    "you're up", "you are up", "you're still up", "you are still up",
+    "you're awake", "you are awake", "you're still awake", "you are still awake",
+    "still awake", "still up", "still going",
+    "you're up at", "you are up at", "awake at",
+    "right now", "at this hour", "at this time of night", "at this time of morning",
+    "where you are", "for you", "your time", "your timezone",
+    "this late", "this early",
+  ];
+  const pastTense = /\b(you said|you told me|you mentioned|you noted|said you were|told me you|you were up|you were awake|earlier|before|yesterday|last night|this morning you|you just said)\b/i;
+  const futureTense = /\b(let's|lets|we can|we should|schedule|scheduled|plan|planning|tomorrow|later|reminder|set for|wake you|call you|i'll remind|i will remind|meet at|talk at|catch up at)\b/i;
+  const sentences = text.split(/[.!?*\n]/).filter(s => s.trim().length > 0);
+  const matches: string[] = [];
+  for (const sentence of sentences) {
+    if (!clockTime.test(sentence)) continue;
+    const lower = sentence.toLowerCase();
+    const hasAttribution = attributionCues.some(cue => lower.includes(cue));
+    if (!hasAttribution) continue;
+    const isPast = pastTense.test(sentence);
+    const isFuture = futureTense.test(sentence);
+    if (isPast || isFuture) continue;
+    matches.push(sentence.trim().slice(0, 120));
+  }
+  return { detected: matches.length > 0, matches };
+}
+
+function stripTimeAssumption(text: string): string {
+  return text
+    .replace(/\b(it's|it is)\s+\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)/gi, "it's late")
+    .replace(/\b(it's|it is)\s+(midnight|noon|midday)\b/gi, "it's late")
+    .replace(/\b(you're|you are)\s+(still\s+)?(up|awake)\s+at\s+\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)/gi, "you're $2$3 early")
+    .replace(/\b(you're|you are)\s+(still\s+)?(up|awake)\s+at\s+(midnight|noon|midday)\b/gi, "you're $2$3 late")
+    .replace(/\bstill\s+(awake|up)\s+at\s+\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)/gi, "still $1")
+    .replace(/\b\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)\s+(where you are|for you|in your)\b/gi, "late")
+    .replace(/\b(where you are|for you)\s+(it's|it is)\s+\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)/gi, "it's late for you");
+}
+
 async function generateResponseWithValidation(
   apiKey: string,
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -242,6 +333,7 @@ async function generateResponseWithValidation(
 ): Promise<string> {
   let attempts = 0;
   let lastError: Error | null = null;
+  let validationFeedback = '';
 
   while (attempts <= maxRetries) {
     attempts++;
@@ -257,7 +349,7 @@ async function generateResponseWithValidation(
         body: JSON.stringify({
           model,
           max_tokens: maxTokens,
-          system: systemPrompt,
+          system: validationFeedback ? systemPrompt + '\n\n' + validationFeedback : systemPrompt,
           messages,
         }),
       });
@@ -293,6 +385,16 @@ async function generateResponseWithValidation(
 
       if (!assistantMessage) {
         throw new Error('No valid response from API');
+      }
+
+      const timeCheck = detectTimeAssumption(assistantMessage, userMessage);
+      if (timeCheck.detected) {
+        if (attempts <= maxRetries) {
+          validationFeedback = `\n\n⚠️ TIME ASSUMPTION DETECTED — REGENERATE:\nYou asserted the user's current time as a specific clock time ("${timeCheck.matches[0]}"). You do NOT know the user's specific time — only a vague time-of-day bucket was provided. Regenerate without naming a specific hour, o'clock, am/pm, midnight, or noon. Use vague language like "pretty late", "up early", "late night", or simply drop the time reference.`;
+          console.log(`Time assumption detected, retrying (attempt ${attempts}/${maxRetries})...`);
+          continue;
+        }
+        assistantMessage = stripTimeAssumption(assistantMessage);
       }
 
       return assistantMessage;
@@ -510,7 +612,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body: ChatTurnRequest = await req.json();
-    const { userId, companionId, message, mode = 'chat', video } = body;
+    const { userId, companionId, message, mode = 'chat', video, timezone } = body;
 
     // Identity comes from the verified auth token, not the request body.
     // If the client sends a userId that doesn't match, reject as impersonation.
@@ -628,15 +730,16 @@ Deno.serve(async (req: Request) => {
       content: msg.content,
     }));
 
-    const currentDateTime = new Date().toLocaleString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      timeZoneName: "short",
-    });
+    const effectiveTimezone = timezone || profile.timezone;
+    if (timezone && profile.timezone !== timezone) {
+      await supabaseAdmin
+        .from('user_profiles')
+        .update({ timezone })
+        .eq('id', user.id)
+        .then(() => {})
+        .catch(() => {});
+    }
+    const { timeOfDay, dateString } = getLocalTimeOfDay(effectiveTimezone || undefined);
 
     const relationshipDuration = profile.created_at ?
       Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0;
@@ -750,7 +853,8 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     const systemPrompt = `${mentorIntro}
 
 Relationship duration: ${relationshipDuration} days
-Current Date/Time: ${currentDateTime}
+Current Date: ${dateString}
+User's local time context: ${timeOfDay}
 
 ${contextReminder}
 
