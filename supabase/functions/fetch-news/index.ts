@@ -22,6 +22,7 @@ interface BraveNewsResult {
 interface BraveNewsResponse {
   news?: { results?: BraveNewsResult[] };
   web?: { results?: BraveNewsResult[] };
+  results?: BraveNewsResult[];
 }
 
 interface NewsAPIArticle {
@@ -241,7 +242,8 @@ async function fetchViaBrave(
   }
 
   const data: BraveNewsResponse = await res.json();
-  const results = data.news?.results || [];
+  console.log(`[fetch-news] Brave raw response keys: ${Object.keys(data).join(', ')}, news.results: ${data.news?.results?.length ?? 'undefined'}, top-level results: ${data.results?.length ?? 'undefined'}`);
+  const results = data.news?.results || data.results || [];
 
   return results.map(r => ({
     title: r.title || '',
@@ -344,6 +346,7 @@ Deno.serve(async (req: Request) => {
       : ['World News', 'Science & Technology', 'Entertainment'];
 
     const seen = new Set<string>();
+    let totalRawResults = 0;
 
     for (const interest of activeInterests) {
       if (allInserted.length >= MAX_ARTICLES) break;
@@ -384,6 +387,21 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // If Brave returned zero results (not an error, just empty), try NewsAPI fallback
+      if (rawArticles.length === 0 && braveKey && newsApiKey) {
+        try {
+          const mapping = INTEREST_TO_NEWSAPI[interest];
+          if (mapping) {
+            console.log(`[fetch-news] Brave returned 0 results for "${interest}", falling back to NewsAPI`);
+            rawArticles = await fetchViaNewsAPI(mapping.category, mapping.q, newsApiKey, articlesPerTopic);
+            console.log(`[fetch-news] NewsAPI fallback returned ${rawArticles.length} results for "${interest}"`);
+          }
+        } catch (fallbackErr) {
+          console.error(`[fetch-news] NewsAPI fallback failed for "${interest}":`, fallbackErr);
+        }
+      }
+
+      totalRawResults += rawArticles.length;
       const primaryCategory = INTEREST_TO_CATEGORY[interest] || interest;
       const tags = [...new Set([interest, primaryCategory])];
 
@@ -467,7 +485,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    console.log(`[fetch-news] Done. Added: ${allInserted.length}, URL dups: ${duplicatesSkipped}, title dups: ${titleDupsSkipped}, blocked: ${blockedSkipped}`);
+    console.log(`[fetch-news] Done. Added: ${allInserted.length}, URL dups: ${duplicatesSkipped}, title dups: ${titleDupsSkipped}, blocked: ${blockedSkipped}, totalRaw: ${totalRawResults}`);
+
+    if (totalRawResults === 0 && activeInterests.length > 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          articlesAdded: 0,
+          error: 'All news sources returned zero results',
+          message: 'All news sources returned zero results — possible API format change or key issue',
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
       JSON.stringify({

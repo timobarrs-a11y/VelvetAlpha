@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Newspaper, RefreshCw, Clock, TrendingUp, ChevronRight, Zap } from 'lucide-react';
+import { ArrowLeft, Newspaper, RefreshCw, Clock, TrendingUp, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
 import { userProfileService } from '../services/userProfileService';
 import { supabase } from '../shared/supabase/client';
 import { newsService } from '../services/newsService';
@@ -252,6 +252,7 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
   const [activeFilter, setActiveFilter] = useState<string>('All');
   const [refreshing, setRefreshing] = useState(false);
   const [initialFetchDone, setInitialFetchDone] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -377,6 +378,7 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
         const result = await newsService.fetchLatestNews(interests);
 
         if (result.success) {
+          setFetchError(null);
           await supabase
             .from('news_fetch_log')
             .upsert({ user_id: userId, last_fetched_at: new Date().toISOString() });
@@ -389,6 +391,8 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
           // have populated shared rows, or inserts may not match the strict
           // interest filter. Let the filter decide what to show.
           await reloadArticles(userId, interests);
+        } else if (!result.success && (result.articlesAdded ?? 0) === 0) {
+          setFetchError(result.error || result.message || 'Failed to fetch news');
         }
         setSilentFetching(false);
       }
@@ -457,12 +461,15 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
       const result = await newsService.fetchLatestNews(interestsToFetch);
 
       if (result.success && (result.articlesAdded ?? 0) > 0) {
+        setFetchError(null);
         await supabase
           .from('news_fetch_log')
           .upsert({ user_id: user.id, last_fetched_at: new Date().toISOString() });
 
         setNewArticlesBadge(result.articlesAdded ?? 0);
         statusTimerRef.current = setTimeout(() => setNewArticlesBadge(0), 8000);
+      } else if (!result.success) {
+        setFetchError(result.error || result.message || 'Failed to fetch news');
       }
 
       await reloadArticles(user.id, interestsToFetch);
@@ -596,6 +603,17 @@ export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; ini
             </div>
           ) : (
             <div className="text-center py-24">
+              {fetchError && (
+                <div className="max-w-md mx-auto mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-left">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-amber-200 text-sm font-semibold mb-1">Couldn't fetch news</p>
+                      <p className="text-amber-200/70 text-xs">{fetchError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5">
                 <Newspaper className="w-8 h-8 text-white/30" />
               </div>

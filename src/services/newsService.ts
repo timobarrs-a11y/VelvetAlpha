@@ -146,7 +146,7 @@ class NewsService {
 
   async fetchLatestNews(interests: string[] = []): Promise<{ success: boolean; articlesAdded: number; message?: string; error?: string }> {
     try {
-      const interestsParam = interests.join(',');
+      const interestsParam = interests.map(encodeURIComponent).join(',');
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-news?interests=${interestsParam}&limit=20`;
 
       const headers = {
