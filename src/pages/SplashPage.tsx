@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { Brain, Layers, Sliders, ArrowRight, Sparkles, Heart } from 'lucide-react';
+import {
+  Brain, Layers, Sliders, ArrowRight, Sparkles, Heart, Users, Bot, MapPin,
+  Newspaper, Video, BookOpen, Calendar, Lightbulb, UsersRound, Gamepad2, Zap, Palette,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
@@ -53,6 +56,171 @@ const features = [
     desc: 'Project Velvet isn\'t a chatbot. It\'s your world, projected. Companions and coaches shaped by you. Expert agents trained on real domain knowledge — not a bot told to act like an IT pro, but one built to actually be one. News, video, and stories curated to your interests. Games and a calendar that thinks ahead. Every piece connected. Your circle, your tools, your world.',
   },
 ];
+
+const ROTATING_ROLES = [
+  { word: 'friend', color: '#38bdf8' },
+  { word: 'companion', color: '#f472b6' },
+  { word: 'coach', color: '#34d399' },
+  { word: 'co-author', color: '#60a5fa' },
+  { word: 'concierge', color: '#2dd4bf' },
+  { word: 'arcade rival', color: '#fbbf24' },
+  { word: 'culture curator', color: '#c084fc' },
+];
+
+const circle = [
+  {
+    icon: Users,
+    accentRgb: '56,189,248',
+    tag: 'Platonic',
+    title: 'Friends',
+    desc: 'Friends who know you, remember your stories, and are always up for great conversation — no labels, just real connection. Build one, or build a whole crew.',
+  },
+  {
+    icon: Heart,
+    accentRgb: '244,114,182',
+    tag: 'Close bonds',
+    title: 'Companions',
+    desc: 'Deeper emotional connection with someone who remembers everything — your moods, your dreams, your sense of humor. Shaped by you, and only for you.',
+  },
+  {
+    icon: Brain,
+    accentRgb: '52,211,153',
+    tag: 'Expert agents',
+    title: 'Coaches',
+    desc: 'Experts built around your goals — fitness, career, creative, life. Not a bot told to act like a pro; one built to actually be one. Sharp, focused, and in your corner.',
+  },
+];
+
+const suite = [
+  { icon: Bot,       accentRgb: '148,163,184', title: 'Atlas',              desc: 'Your AI chief of staff. Ask anything, get it handled.' },
+  { icon: MapPin,    accentRgb: '52,211,153',  title: 'Navi',               desc: 'Your local concierge — events, food, and finds near you.' },
+  { icon: Newspaper, accentRgb: '56,189,248',  title: 'Daily Feed',         desc: 'News curated around what you actually care about.' },
+  { icon: Video,     accentRgb: '251,113,133', title: 'Your Lens',          desc: 'A video feed shaped by your interests, not an algorithm\'s.' },
+  { icon: BookOpen,  accentRgb: '96,165,250',  title: 'Co-Author',          desc: 'Write stories, scripts, and worlds together — for real.' },
+  { icon: Calendar,  accentRgb: '251,146,60',  title: 'Calendar',           desc: 'Plans, reminders, and moments your circle thinks ahead on.' },
+  { icon: Lightbulb, accentRgb: '250,204,21',  title: 'Insights',           desc: 'See your patterns, moods, and growth over time.' },
+  { icon: UsersRound,accentRgb: '45,212,191',  title: 'Group Chat',         desc: 'Put your whole circle in one room and watch it come alive.' },
+  { icon: Gamepad2,  accentRgb: '232,121,249', title: 'The Arcade',         desc: 'Nine games and counting — checkers to space rescues, played together.' },
+  { icon: Sparkles,  accentRgb: '192,132,252', title: 'Signature Voices™',  desc: 'Hand-crafted voices as distinct as the personalities behind them.' },
+  { icon: Palette,   accentRgb: '244,114,182', title: 'Made Yours',         desc: 'Bespoke avatars, chat wallpapers, fonts, cursor effects — even a desk pet.' },
+  { icon: Layers,    accentRgb: '52,211,153',  title: 'Cross-Play Memory',  desc: 'One memory across every feature. Tell it once, it travels with you.' },
+];
+
+function SectionDivider({ label, delay = 0 }: { label: string; delay?: number }) {
+  return (
+    <motion.div
+      className="mb-10 flex items-center gap-4"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.5 }}
+    >
+      <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, transparent, rgba(244,63,94,0.3), transparent)' }} />
+      <div className="flex items-center gap-2">
+        <div className="w-px h-3 rounded-full bg-rose-500/60" />
+        <span className="text-[10px] text-gray-500 tracking-[0.28em] uppercase font-semibold">{label}</span>
+        <div className="w-px h-3 rounded-full bg-rose-500/60" />
+      </div>
+      <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, transparent, rgba(244,63,94,0.3), transparent)' }} />
+    </motion.div>
+  );
+}
+
+function GlassCard({
+  icon: Icon, accentRgb, tag, title, desc, compact = false, index = 0,
+}: {
+  icon: typeof Users;
+  accentRgb: string;
+  tag?: string;
+  title: string;
+  desc: string;
+  compact?: boolean;
+  index?: number;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <motion.div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`rounded-2xl flex flex-col cursor-default relative overflow-hidden ${compact ? 'p-4 gap-2' : 'p-5 gap-3'}`}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.5, delay: (index % 4) * 0.07 }}
+      style={{
+        background: hovered ? `rgba(${accentRgb},0.07)` : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${hovered ? `rgba(${accentRgb},0.3)` : 'rgba(255,255,255,0.08)'}`,
+        borderTop: `2px solid rgba(${accentRgb},${hovered ? 0.65 : 0.28})`,
+        boxShadow: hovered ? `0 8px 40px rgba(${accentRgb},0.14), 0 0 0 1px rgba(${accentRgb},0.12)` : 'none',
+        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+        transition: 'all 0.3s ease',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-2 relative z-10">
+        <div
+          className={`rounded-2xl flex items-center justify-center flex-shrink-0 ${compact ? 'w-9 h-9' : 'w-12 h-12'}`}
+          style={{
+            background: `radial-gradient(circle at 35% 35%, rgba(${accentRgb},0.35), rgba(${accentRgb},0.1))`,
+            border: `1px solid rgba(${accentRgb},0.3)`,
+            boxShadow: hovered ? `0 0 20px rgba(${accentRgb},0.25)` : 'none',
+            transition: 'box-shadow 0.3s ease',
+          }}
+        >
+          <Icon className={compact ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: `rgb(${accentRgb})` }} />
+        </div>
+        {tag && (
+          <span
+            className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full whitespace-nowrap"
+            style={{
+              color: `rgb(${accentRgb})`,
+              background: `rgba(${accentRgb},0.1)`,
+              border: `1px solid rgba(${accentRgb},0.2)`,
+            }}
+          >
+            {tag}
+          </span>
+        )}
+      </div>
+      <div className="relative z-10">
+        <h3 className={`text-white font-bold tracking-tight ${compact ? 'text-sm mb-1' : 'text-base mb-1.5'}`}>{title}</h3>
+        <p className={`text-gray-400 leading-relaxed ${compact ? 'text-xs' : 'text-sm'}`}>{desc}</p>
+      </div>
+    </motion.div>
+  );
+}
+
+function RotatingRole() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setIndex(i => (i + 1) % ROTATING_ROLES.length), 2200);
+    return () => clearInterval(timer);
+  }, []);
+
+  const role = ROTATING_ROLES[index];
+
+  return (
+    <span className="inline-flex items-baseline">
+      Your{' '}
+      <span className="relative inline-block text-left ml-2" style={{ minWidth: '9.5ch' }}>
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={role.word}
+            className="inline-block font-semibold"
+            style={{ color: role.color }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.28 }}
+          >
+            {role.word}
+          </motion.span>
+        </AnimatePresence>
+      </span>
+    </span>
+  );
+}
 
 export function SplashPage() {
   const navigate = useNavigate();
@@ -307,13 +475,24 @@ export function SplashPage() {
               </motion.h1>
 
               <motion.p
-                className="text-gray-300 max-w-2xl mx-auto font-light mb-10"
+                className="text-gray-300 max-w-2xl mx-auto font-light mb-4"
                 style={{ fontSize: 'clamp(18px,2.2vw,22px)', lineHeight: 1.6 }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5, duration: 0.7 }}
               >
                 Your World, Projected.
+              </motion.p>
+
+              <motion.p
+                className="text-gray-500 max-w-2xl mx-auto font-light mb-10"
+                style={{ fontSize: 'clamp(15px,1.8vw,18px)', lineHeight: 1.6 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.62, duration: 0.7 }}
+              >
+                <RotatingRole />
+                <span className="text-gray-600">, waiting inside.</span>
               </motion.p>
 
               {/* CTA buttons — center of hero */}
@@ -453,6 +632,122 @@ export function SplashPage() {
               );
             })}
           </div>
+        )}
+
+        {/* ─── Your Circle ─────────────────────────────────────────────── */}
+        {visible && (
+          <>
+            <SectionDivider label="Your Circle" />
+            <motion.p
+              className="text-center text-gray-400 text-sm max-w-2xl mx-auto mb-8 leading-relaxed"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              Velvet isn't a companion app. It's a world with people in it — and you decide who they are.
+            </motion.p>
+            <div className="grid md:grid-cols-3 gap-5 mb-16">
+              {circle.map((c, i) => (
+                <GlassCard key={c.title} {...c} index={i} />
+              ))}
+            </div>
+
+            {/* ─── The Suite ───────────────────────────────────────────── */}
+            <SectionDivider label="The Suite" />
+            <motion.p
+              className="text-center text-gray-400 text-sm max-w-2xl mx-auto mb-8 leading-relaxed"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              Every piece connected. Your circle moves through all of it with you.
+            </motion.p>
+
+            {/* Velvet Rope flagship banner */}
+            <motion.div
+              className="relative rounded-2xl p-6 md:p-7 mb-5 overflow-hidden cursor-default"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.55 }}
+              style={{
+                background: 'linear-gradient(120deg, rgba(74,14,26,0.85) 0%, rgba(128,0,32,0.65) 55%, rgba(74,14,26,0.85) 100%)',
+                border: '1px solid rgba(251,113,133,0.28)',
+                boxShadow: '0 8px 40px rgba(128,0,32,0.25)',
+                backdropFilter: 'blur(12px)',
+              }}
+            >
+              <motion.div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.07) 50%, transparent 65%)' }}
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ duration: 3.2, repeat: Infinity, repeatDelay: 5, ease: 'easeInOut' }}
+              />
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-5">
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'radial-gradient(circle at 35% 35%, rgba(251,113,133,0.35), rgba(251,113,133,0.08))',
+                    border: '1px solid rgba(251,113,133,0.35)',
+                  }}
+                >
+                  <Zap className="w-6 h-6 text-rose-300" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                    <h3 className="text-white font-bold text-xl tracking-tight">The Velvet Rope</h3>
+                    <span
+                      className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full"
+                      style={{ color: '#fda4af', background: 'rgba(251,113,133,0.12)', border: '1px solid rgba(251,113,133,0.25)' }}
+                    >
+                      Flagship Experience
+                    </span>
+                  </div>
+                  <p className="text-rose-100/70 text-sm leading-relaxed max-w-2xl">
+                    Step past the rope into an anonymous social floor where humans and AI share the same room.
+                    Read them. Test them. Call it. Can you tell who's real — and can they tell about you?
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-16">
+              {suite.map((s, i) => (
+                <GlassCard key={s.title} {...s} compact index={i} />
+              ))}
+            </div>
+
+            {/* ─── Closing CTA ─────────────────────────────────────────── */}
+            <motion.div
+              className="text-center mb-16"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <h2
+                className="text-white mb-3"
+                style={{ fontSize: 'clamp(28px,4.5vw,44px)', fontWeight: 800, letterSpacing: '-0.03em' }}
+              >
+                Step inside.
+              </h2>
+              <p className="text-gray-500 text-sm mb-7">Your world is already waiting for you to shape it.</p>
+              <motion.button
+                onClick={() => navigate('/signup')}
+                whileTap={{ scale: 0.97 }}
+                className="group relative inline-flex items-center justify-center gap-2.5 px-10 py-4 rounded-2xl text-white font-bold text-base overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg,#a855f7,#ec4899)',
+                  boxShadow: '0 4px 28px rgba(168,85,247,0.32)',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 40px rgba(168,85,247,0.52)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 28px rgba(168,85,247,0.32)'; }}
+              >
+                <span className="relative z-10">Create Your World</span>
+                <ArrowRight className="w-4 h-4 relative z-10 transition-transform group-hover:translate-x-1" />
+              </motion.button>
+            </motion.div>
+          </>
         )}
 
         <motion.p
