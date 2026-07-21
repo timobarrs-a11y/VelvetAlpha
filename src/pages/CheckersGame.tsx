@@ -50,6 +50,13 @@ export function CheckersGame() {
   const [boardHistory, setBoardHistory] = useState<{ board: BoardState; turn: 'red' | 'black' }[]>([]);
   const [activeAnimations, setActiveAnimations] = useState<PieceAnimation[]>([]);
   const animationQueueRef = useRef<PieceAnimation[]>([]);
+  // Authoritative board reference — always holds the latest committed board so
+  // the AI never reads a stale React closure while an animation is in flight.
+  const boardRef = useRef<BoardState>(board);
+
+  useEffect(() => {
+    boardRef.current = board;
+  }, [board]);
 
   useEffect(() => {
     initializeGame();
@@ -76,15 +83,36 @@ export function CheckersGame() {
       return;
     }
 
-    const { data: companions } = await supabase
-      .from('companions')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // Prefer the companion the game was launched with; otherwise fall back to
+    // the user's most recent companion. Never use .maybeSingle() on the whole
+    // list — it errors the moment a user has more than one companion, which
+    // silently disabled the chat box.
+    const companionParam = searchParams.get('companion');
+    let companionRow: { id: string; custom_name?: string | null } | null = null;
 
-    if (companions) {
-      setCompanionId(companions.id);
-      setCompanionName(companions.custom_name || 'AI');
+    if (companionParam) {
+      const { data } = await supabase
+        .from('companions')
+        .select('*')
+        .eq('id', companionParam)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      companionRow = data;
+    }
+
+    if (!companionRow) {
+      const { data } = await supabase
+        .from('companions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('last_message_at', { ascending: false })
+        .limit(1);
+      companionRow = data?.[0] ?? null;
+    }
+
+    if (companionRow) {
+      setCompanionId(companionRow.id);
+      setCompanionName(companionRow.custom_name || 'AI');
 
       const greeting = CheckersCommentaryService.getComment('game_start');
       const initialMessage: Message = {
@@ -162,11 +190,18 @@ export function CheckersGame() {
     setIsTyping(true);
 
     try {
-      const response = await ChatService.sendMessage(
-        `We're playing checkers right now. ${content}`,
-        companionId,
-        'girlfriend'
-      );
+      // Route through the real chat pipeline so the companion answers in their
+      // own persona/voice (chat-turn). Fall back to the legacy path only if the
+      // profile can't be loaded.
+      const contextualMessage = `[We're in the middle of a checkers game right now — keep it playful and in-character] ${content}`;
+      let response: string;
+      const userProfile = await ChatService.getUserProfile();
+      if (userProfile) {
+        const result = await ChatService.sendMessageWithSignals(contextualMessage, companionId, userProfile);
+        response = result.assistantMessage;
+      } else {
+        response = await ChatService.sendMessage(contextualMessage, companionId, 'romantic');
+      }
 
       await new Promise(resolve => setTimeout(resolve, Math.min(response.length * 15, 3000)));
 
@@ -205,6 +240,9 @@ export function CheckersGame() {
 
   function handleSquareClick(row: number, col: number) {
     if (gameStatus !== 'active' || currentTurn !== playerColor) return;
+    // Ignore clicks while a move is animating — prevents queuing a second move
+    // on top of the one still resolving.
+    if (activeAnimations.length > 0) return;
 
     const piece = board[row][col];
     const clickedColor = getPieceColor(piece);
@@ -247,12 +285,16 @@ export function CheckersGame() {
   }
 
   async function executeMove(move: Move) {
-    const newBoard = applyMove(board, move);
+    // Source from the authoritative ref, not closure state, so an AI move that
+    // fires right after the player's move always builds on the committed board.
+    const sourceBoard = boardRef.current;
+    const mover = currentTurn;
+    const newBoard = applyMove(sourceBoard, move);
     const newMoveCount = moveCount + 1;
     const becameKing = checkIsKing(newBoard[move.to.row][move.to.col]) &&
-                       !checkIsKing(board[move.from.row][move.from.col]);
+                       !checkIsKing(sourceBoard[move.from.row][move.from.col]);
 
-    setBoardHistory(h => [...h, { board: newBoard, turn: currentTurn === 'red' ? 'black' : 'red' }]);
+    setBoardHistory(h => [...h, { board: newBoard, turn: mover === 'red' ? 'black' : 'red' }]);
 
     const newMovesSinceCapture = move.captures.length > 0 ? 0 : movesSinceCapture + 1;
     setMovesSinceCapture(newMovesSinceCapture);
@@ -280,20 +322,11 @@ export function CheckersGame() {
 
     setActiveAnimations(animations);
 
-    // Update board after animations complete
-    setTimeout(() => {
-      setBoard(newBoard);
-      setMoveCount(newMoveCount);
-      setSelectedPosition(null);
-      setValidMoves([]);
-      setActiveAnimations([]);
-    }, Math.max(...animations.map(a => a.duration)) + 200);
-
     if (gameId) {
       await saveMove(
         gameId,
         newMoveCount,
-        currentTurn,
+        mover,
         move.from,
         move.to,
         move.captures,
@@ -302,7 +335,21 @@ export function CheckersGame() {
       );
     }
 
-    if (currentTurn === playerColor) {
+    // Wait for the animation to finish, THEN commit the board and switch turns
+    // together. Committing the ref immediately keeps the next mover in sync even
+    // before React re-renders.
+    await new Promise(resolve =>
+      setTimeout(resolve, Math.max(...animations.map(a => a.duration)) + 200)
+    );
+
+    boardRef.current = newBoard;
+    setBoard(newBoard);
+    setMoveCount(newMoveCount);
+    setSelectedPosition(null);
+    setValidMoves([]);
+    setActiveAnimations([]);
+
+    if (mover === playerColor) {
       const pieceDifference = redPieces - blackPieces;
       const commentEvent = CheckersCommentaryService.analyzePlayerMove(
         move.captures.length,
@@ -330,24 +377,26 @@ export function CheckersGame() {
     }
 
     const winner = checkWinner(newBoard);
-    if (winner) {
+    if (winner && winner !== 'draw') {
       handleGameEnd(winner);
       return;
     }
 
-    setCurrentTurn(currentTurn === 'red' ? 'black' : 'red');
+    setCurrentTurn(mover === 'red' ? 'black' : 'red');
   }
 
   async function makeAIMove() {
-    const bestMove = calculateBestMove(board, aiColor, difficulty);
+    // Read the committed board from the ref — never a stale closure copy.
+    const sourceBoard = boardRef.current;
+    const bestMove = calculateBestMove(sourceBoard, aiColor, difficulty);
 
     if (!bestMove) {
       handleGameEnd(playerColor);
       return;
     }
 
-    const becameKing = checkIsKing(board[bestMove.move.to.row][bestMove.move.to.col]) &&
-                       !checkIsKing(board[bestMove.move.from.row][bestMove.move.from.col]);
+    const becameKing = checkIsKing(sourceBoard[bestMove.move.to.row][bestMove.move.to.col]) &&
+                       !checkIsKing(sourceBoard[bestMove.move.from.row][bestMove.move.from.col]);
 
     await executeMove(bestMove.move);
 

@@ -16,6 +16,9 @@ const PLATFORM_HEIGHT = 14;
 const MAX_BOOST_FUEL = 100;
 const BOOST_COST = 50;
 const FUEL_REGEN = 35;
+// How far the ball travels per pixel of finger drag (in canvas space). >1 makes
+// a short thumb swipe cover more of the board so the whole width is reachable.
+const TOUCH_SENSITIVITY = 1.6;
 
 const themePresets = [
   { name: 'Neon Cityscape', icon: '🌃', hint: 'Cyberpunk rooftops' },
@@ -225,6 +228,10 @@ export function MomentumGame() {
   const platformsRef = useRef<Platform[]>([]);
   const particlesRef = useRef<Particle[]>([]);
   const keysRef = useRef({ left: false, right: false, boost: false, boostUsed: false });
+  // Touch steering: target center-X (canvas space) the ball drifts toward while
+  // a finger is dragging. null = not steering (fall back to keyboard).
+  const touchTargetXRef = useRef<number | null>(null);
+  const touchInfoRef = useRef<{ startClientX: number; startBallCenter: number; moved: boolean; startTime: number } | null>(null);
   const cameraYRef = useRef(0);
   const gameLoopRef = useRef<number>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -558,14 +565,27 @@ export function MomentumGame() {
 
     player.prevY = player.y;
 
-    if (keys.left) player.vx = -HORIZONTAL_SPEED;
-    else if (keys.right) player.vx = HORIZONTAL_SPEED;
-    else player.vx *= 0.82;
+    // Resolve horizontal intent from touch steering first, then keyboard.
+    // Touch: steer toward the finger's target X; ease off inside a small deadzone.
+    let intentLeft = keys.left;
+    let intentRight = keys.right;
+    const steerTarget = touchTargetXRef.current;
+    if (steerTarget !== null) {
+      const ballCenter = player.x + PLAYER_WIDTH / 2;
+      const dx = steerTarget - ballCenter;
+      const deadzone = 4;
+      intentLeft = dx < -deadzone;
+      intentRight = dx > deadzone;
+    }
+
+    if (intentLeft) player.vx = -HORIZONTAL_SPEED;
+    else if (intentRight) player.vx = HORIZONTAL_SPEED;
+    else player.vx *= (steerTarget !== null ? 0.6 : 0.82);
 
     if (keys.boost && !keys.boostUsed && player.boostFuel >= BOOST_COST && player.vy > -10) {
       player.vy += BOOST_VELOCITY;
-      if (keys.left) player.vx -= BOOST_HORIZONTAL;
-      if (keys.right) player.vx += BOOST_HORIZONTAL;
+      if (intentLeft) player.vx -= BOOST_HORIZONTAL;
+      if (intentRight) player.vx += BOOST_HORIZONTAL;
       player.boostFuel -= BOOST_COST;
       player.isBoosting = true;
       player.boostTimer = 25;
@@ -1041,6 +1061,55 @@ export function MomentumGame() {
     };
   }, [gameState, isPaused, gameMode, currentCareerLevel]);
 
+  // Fire a single boost (mirrors a spacebar tap): pulse boost on, then release
+  // it next tick so boostUsed can reset for the following tap.
+  const triggerBoost = () => {
+    keysRef.current.boost = true;
+    keysRef.current.boostUsed = false;
+    setTimeout(() => { keysRef.current.boost = false; }, 60);
+  };
+
+  // Touch steering: drag anywhere on the canvas to move the ball horizontally
+  // (relative to where the drag started, so the ball never jumps), and a quick
+  // stationary tap fires a boost.
+  const handleCanvasTouchStart = (e: React.TouchEvent) => {
+    if (isPaused) return;
+    const t = e.touches[0];
+    if (!t) return;
+    touchInfoRef.current = {
+      startClientX: t.clientX,
+      startBallCenter: playerRef.current.x + PLAYER_WIDTH / 2,
+      moved: false,
+      startTime: Date.now(),
+    };
+  };
+
+  const handleCanvasTouchMove = (e: React.TouchEvent) => {
+    const info = touchInfoRef.current;
+    const canvas = canvasRef.current;
+    const t = e.touches[0];
+    if (!info || !canvas || !t) return;
+    const rect = canvas.getBoundingClientRect();
+    const scale = GAME_WIDTH / rect.width; // canvas is scaled down on mobile
+    const rawDelta = t.clientX - info.startClientX;
+    if (Math.abs(rawDelta) > 8) info.moved = true;
+    const target = info.startBallCenter + rawDelta * scale * TOUCH_SENSITIVITY;
+    touchTargetXRef.current = Math.max(
+      PLAYER_WIDTH / 2,
+      Math.min(GAME_WIDTH - PLAYER_WIDTH / 2, target),
+    );
+  };
+
+  const handleCanvasTouchEnd = () => {
+    const info = touchInfoRef.current;
+    // A brief, stationary touch is a tap → boost.
+    if (info && !info.moved && Date.now() - info.startTime < 250) {
+      triggerBoost();
+    }
+    touchTargetXRef.current = null;
+    touchInfoRef.current = null;
+  };
+
   const selectTheme = (t: string) => {
     setTheme(t);
     setGameState('loading');
@@ -1316,7 +1385,17 @@ export function MomentumGame() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="relative">
-          <canvas ref={canvasRef} width={GAME_WIDTH} height={GAME_HEIGHT} className="block rounded-lg shadow-2xl" />
+          <canvas
+            ref={canvasRef}
+            width={GAME_WIDTH}
+            height={GAME_HEIGHT}
+            onTouchStart={handleCanvasTouchStart}
+            onTouchMove={handleCanvasTouchMove}
+            onTouchEnd={handleCanvasTouchEnd}
+            onTouchCancel={handleCanvasTouchEnd}
+            className="block rounded-lg shadow-2xl select-none"
+            style={{ touchAction: 'none' }}
+          />
 
           {isPaused && (
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center">
@@ -1384,11 +1463,21 @@ export function MomentumGame() {
             </div>
           )}
 
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 md:hidden">
-            <button onTouchStart={() => keysRef.current.left = true} onTouchEnd={() => keysRef.current.left = false} className="w-16 h-16 rounded-full bg-white/10 active:bg-white/25 text-white text-xl select-none">←</button>
-            <button onTouchStart={() => { keysRef.current.boost = true; }} onTouchEnd={() => { keysRef.current.boost = false; keysRef.current.boostUsed = false; }} className="w-16 h-16 rounded-full bg-cyan-500/20 active:bg-cyan-500/40 text-cyan-300 text-xs select-none">BOOST</button>
-            <button onTouchStart={() => keysRef.current.right = true} onTouchEnd={() => keysRef.current.right = false} className="w-16 h-16 rounded-full bg-white/10 active:bg-white/25 text-white text-xl select-none">→</button>
-          </div>
+          {/* Mobile: swipe the board to steer, tap to boost. The wrapper lets
+              swipes pass through to the canvas; only the BOOST button (a
+              fallback for the tap gesture) captures touches. */}
+          {!isPaused && (
+            <div className="absolute inset-x-0 bottom-5 flex flex-col items-center gap-2.5 md:hidden pointer-events-none">
+              <p className="text-white/40 text-[11px] tracking-wide select-none">Swipe to steer · tap to boost</p>
+              <button
+                onTouchStart={(e) => { e.preventDefault(); triggerBoost(); }}
+                className="pointer-events-auto w-20 h-20 rounded-full bg-cyan-500/25 active:bg-cyan-500/45 text-cyan-200 text-sm font-semibold tracking-wide select-none border border-cyan-400/30 backdrop-blur-sm"
+                style={{ touchAction: 'none' }}
+              >
+                BOOST
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
