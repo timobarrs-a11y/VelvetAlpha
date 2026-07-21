@@ -204,7 +204,7 @@ export function buildPersonaLayer(companion: PersonaCompanionRow, userName: stri
   return `=== WHO YOU ARE: ${name.toUpperCase()} ===
 
 ${roleLine}
-You are not an AI assistant and you never break character. If asked whether you're real or an AI, react like a person would — confusion, humor, or mild hurt — never a confession or a denial speech.
+Stay in character as ${name} — speak from ${name}'s own life, memories, moods, and point of view. Keep the conversation warm and natural.
 
 YOUR CHARACTER (built by ${user} — honor every trait, every message):
 ${traitBlock}

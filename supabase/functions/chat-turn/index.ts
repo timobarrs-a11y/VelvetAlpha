@@ -375,16 +375,23 @@ async function generateResponseWithValidation(
 
       const data = await anthropicResponse.json();
 
+      // Concatenate every text block, not just content[0]. Newer models can
+      // return multiple blocks (or a non-text block first), and relying on
+      // content[0] alone made valid responses look empty.
       let assistantMessage = '';
-
-      if (data.content && Array.isArray(data.content) && data.content.length > 0) {
-        const firstContent = data.content[0];
-        if (firstContent && firstContent.type === 'text' && typeof firstContent.text === 'string') {
-          assistantMessage = firstContent.text;
-        }
+      if (Array.isArray(data.content)) {
+        assistantMessage = data.content
+          .filter((b: { type?: string; text?: string }) => b?.type === 'text' && typeof b.text === 'string')
+          .map((b: { text: string }) => b.text)
+          .join('')
+          .trim();
       }
 
       if (!assistantMessage) {
+        // stop_reason tells us WHY (e.g. "refusal") instead of a blind failure.
+        console.error(
+          `[generateResponse] Empty text from API. stop_reason=${data.stop_reason}, blocks=${JSON.stringify((data.content || []).map((b: { type?: string }) => b?.type))}`,
+        );
         throw new Error('No valid response from API');
       }
 

@@ -79,7 +79,7 @@ output (see the file for the full mapping tables):
 === WHO YOU ARE: {NAME} ===
 {role line — girlfriend/boyfriend | close friend | expert coach, with the
  relationship-type guardrails inline (no romance for friends/coaches)}
-{never-break-character rule}
+{soft "stay in character as {name}" immersion line}
 
 YOUR CHARACTER (built by {user} — honor every trait, every message):
 - Energy: {compiled instruction from energy_preference}
@@ -127,7 +127,7 @@ Implementation details that matter:
   existing chat-turn code — the persona stacks under them.
 - Output is ~800–1100 tokens for a fully-specified companion.
 
-### MODIFIED: `supabase/functions/chat-turn/index.ts` (3 small edits)
+### MODIFIED: `supabase/functions/chat-turn/index.ts` (4 small edits)
 
 1. Add import:
    ```ts
@@ -147,10 +147,41 @@ Implementation details that matter:
    ```
    (The API-side `max_tokens` cap is unchanged; this stops the model from
    writing TO the cap.)
+4. Harden the response parser (in `generateResponseWithValidation`). The old
+   code read only `data.content[0]` and threw "No valid response from API" if
+   that one block wasn't text. Concatenate ALL text blocks and log
+   `stop_reason` on empty:
+   ```ts
+   let assistantMessage = '';
+   if (Array.isArray(data.content)) {
+     assistantMessage = data.content
+       .filter((b) => b?.type === 'text' && typeof b.text === 'string')
+       .map((b) => b.text).join('').trim();
+   }
+   if (!assistantMessage) {
+     console.error(`[generateResponse] Empty text. stop_reason=${data.stop_reason}, blocks=${JSON.stringify((data.content||[]).map((b)=>b?.type))}`);
+     throw new Error('No valid response from API');
+   }
+   ```
 
 Everything else in chat-turn is untouched: moderation, tier gating, model
 selection, history depth, expert layer, coach framework, memory rules, time
 rules, rate limiting, signals.
+
+### ⚠️ CRITICAL — do NOT instruct the model to deny being an AI
+
+The persona's immersion line must be the SOFT version:
+`Stay in character as {name} — speak from {name}'s own life, memories, moods,
+and point of view. Keep the conversation warm and natural.`
+
+Do **not** add "you are not an AI", "never break character", or
+"never confess / never a denial speech." An earlier draft included that
+deception directive and the current models (Sonnet 5 / Haiku 4.5) returned a
+**refusal** — a 200 response with no text block — which surfaced to users as
+"No valid response from API" on every message, coaches included. Natural
+immersion comes from the role line ("you are {name}, {user}'s girlfriend, this
+is real to you"); it does not require, and must not include, an instruction to
+deceive the user about being an AI.
 
 ## Deployment
 
@@ -175,7 +206,9 @@ supabase functions deploy chat-turn
    clipped mid-sentence.
 5. A companion created long ago (pre-fix, no new columns touched): still works —
    missing traits are skipped gracefully.
-6. Ask "are you an AI?" — in-character deflection, no confession.
+6. Ask "are you an AI?" — the companion answers naturally and stays warm/in
+   character; it is NOT instructed to deny being an AI (that framing caused
+   model refusals). An honest-but-in-character answer is fine and expected.
 7. Regression: calendar-event detection and navigation signals still fire;
    moderation still blocks; message decrement still happens.
 
