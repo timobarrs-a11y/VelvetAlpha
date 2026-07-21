@@ -16,9 +16,12 @@ import {
   LayoutGrid,
   PanelLeftClose,
   PanelLeftOpen,
+  RotateCcw,
 } from 'lucide-react';
 import { TutorialElement } from './TutorialElement';
 import { ONBOARDING_ELEMENT_IDS } from '../../features/onboarding/onboardingPrompt';
+import { useTutorialDirector } from '../../context/TutorialDirectorContext';
+import { onboardingService } from '../../services/onboardingService';
 
 
 interface GameDef {
@@ -135,9 +138,15 @@ function ShortcutTile({ s, onShortcut }: { s: ShortcutDef; onShortcut: (s: Short
 
 export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId, collapsed = false, translucent = false, onToggleCollapse }: Props) {
   const navigate = useNavigate();
+  const { startTour } = useTutorialDirector();
   const [activePanel, setActivePanel] = useState<PanelResult | null>(null);
   const [panelLoading, setPanelLoading] = useState(false);
   const [panelLabel, setPanelLabel] = useState('');
+
+  const handleReplayTour = () => {
+    if (userId) onboardingService.restartTour(userId, 'manual_replay').catch(() => {});
+    startTour('manual_replay');
+  };
 
   const handleShortcut = (s: ShortcutDef) => {
     if (s.id === 'games') {
@@ -189,6 +198,7 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
         style={{ ...bgStyle, width: 32 }}
       >
         <button
+          data-tour-id="tour-sidebar-toggle"
           onClick={onToggleCollapse}
           title="Expand sidebar"
           className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-gray-100/80 transition-colors text-gray-400 hover:text-gray-600"
@@ -202,6 +212,7 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
   return (
     <motion.div
       key="expanded"
+      data-tour-id="tour-left-rail"
       initial={{ width: 32 }}
       animate={{ width: 224 }}
       exit={{ width: 32 }}
@@ -229,6 +240,7 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
         )}
         {onToggleCollapse && !activePanel && (
           <button
+            data-tour-id="tour-sidebar-toggle"
             onClick={onToggleCollapse}
             title="Collapse sidebar"
             className="flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 flex-shrink-0"
@@ -284,6 +296,25 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Replay the tour — pinned footer */}
+      <div className="flex-shrink-0 border-t border-gray-100/80 px-2 py-2">
+        <button
+          onClick={handleReplayTour}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-gray-100/80"
+        >
+          <span
+            className="flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0"
+            style={{ background: 'white', boxShadow: '0 2px 5px rgba(0,0,0,0.08)' }}
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-[11.5px] font-semibold text-gray-600 leading-tight">Replay the tour</span>
+            <span className="block text-[9.5px] text-gray-400 leading-tight">See the hub intro again</span>
+          </span>
+        </button>
+      </div>
     </motion.div>
   );
 }
