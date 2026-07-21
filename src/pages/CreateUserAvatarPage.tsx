@@ -46,8 +46,9 @@ export function CreateUserAvatarPage() {
           navigate(`/chat?companion=${pendingId}`, { replace: true });
           return;
         }
-        localStorage.removeItem('currentCompanionId');
-        localStorage.removeItem('matchAnswers');
+        localStorage.removeItem('userAvatarConfig');
+        sessionStorage.removeItem('currentCompanionId');
+        sessionStorage.removeItem('matchAnswers');
         navigate(await resolveHomeRoute(user.id), { replace: true });
         return;
       }

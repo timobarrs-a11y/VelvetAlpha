@@ -138,12 +138,12 @@ export function RootRedirect() {
         const targetId = pendingId && companions[0].id === pendingId
           ? pendingId
           : companions[0].id;
-        localStorage.removeItem('currentCompanionId');
-        localStorage.removeItem('matchAnswers');
+        sessionStorage.removeItem('currentCompanionId');
+        sessionStorage.removeItem('matchAnswers');
         setDestination(`/chat?companion=${targetId}`);
       } else {
-        localStorage.removeItem('currentCompanionId');
-        localStorage.removeItem('matchAnswers');
+        sessionStorage.removeItem('currentCompanionId');
+        sessionStorage.removeItem('matchAnswers');
         const lastId = localStorage.getItem('velvet_last_companion');
         const lastCompanion = lastId ? companions.find(c => c.id === lastId) : null;
         if (lastCompanion) {

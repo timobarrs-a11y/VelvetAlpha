@@ -238,6 +238,22 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
+function trimToLastCompleteSentence(text: string): string {
+  const trimmed = text.trimEnd();
+  if (!trimmed) return trimmed;
+  const lastPunct = Math.max(
+    trimmed.lastIndexOf('.'),
+    trimmed.lastIndexOf('!'),
+    trimmed.lastIndexOf('?'),
+  );
+  if (lastPunct === -1) return trimmed;
+  const afterPunct = trimmed.slice(lastPunct + 1).trim();
+  if (afterPunct.length > trimmed.length * 0.4) {
+    return trimmed;
+  }
+  return trimmed.slice(0, lastPunct + 1).trim();
+}
+
 function getLocalTimeOfDay(timezone?: string): { timeOfDay: string; dateString: string } {
   const tz = timezone || 'UTC';
   try {
@@ -385,6 +401,13 @@ async function generateResponseWithValidation(
 
       if (!assistantMessage) {
         throw new Error('No valid response from API');
+      }
+
+      if (data.stop_reason === 'max_tokens') {
+        const trimmed = trimToLastCompleteSentence(assistantMessage);
+        if (trimmed && trimmed.length < assistantMessage.length) {
+          assistantMessage = trimmed;
+        }
       }
 
       const timeCheck = detectTimeAssumption(assistantMessage, userMessage);
@@ -748,7 +771,7 @@ Deno.serve(async (req: Request) => {
     const companionGender = companion.gender || 'female';
     const isMentor = companion.relationship_type === 'mentor';
 
-    const maxTokens = getMaxTokensForTier(tier);
+    const maxTokens = isMentor ? Math.max(getMaxTokensForTier(tier), 600) : getMaxTokensForTier(tier);
     const historyDepth = getHistoryDepthForTier(tier);
 
     const last20Messages = formattedHistory.slice(-historyDepth);

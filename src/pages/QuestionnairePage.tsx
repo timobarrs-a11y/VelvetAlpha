@@ -489,6 +489,348 @@ const BOYFRIEND_QUESTIONS: QuestionData[] = [
   }
 ];
 
+const FEMALE_FRIEND_QUESTIONS: QuestionData[] = [
+  {
+    id: 'energy',
+    type: 'choice',
+    question: 'Picture Your Ideal Friend... Is She:',
+    options: [
+      { text: 'The Life Of The Party' },
+      { text: 'Somewhere In Between' },
+      { text: 'Lives In Her Own World' }
+    ]
+  },
+  {
+    id: 'flirtingStyle',
+    type: 'choice',
+    question: "When She's Excited To Hang Out, How Does She Show It?",
+    options: [
+      { text: 'Direct & Bold - Makes The First Move' },
+      { text: 'Playful Teasing - Flirts Through Banter' },
+      { text: 'Subtle & Sweet - Small Gestures & Eye Contact' },
+      { text: 'Mysterious & Reserved - Keeps You Guessing' }
+    ]
+  },
+  {
+    id: 'humorStyle',
+    type: 'choice',
+    question: 'What Kind Of Humor Makes You Laugh?',
+    options: [
+      { text: 'Witty & Clever - Smart Jokes & Wordplay' },
+      { text: 'Goofy & Random - Silly & Unpredictable' },
+      { text: 'Sarcastic & Dry - Subtle & Deadpan' },
+      { text: 'Warm & Light - Positive & Feel-Good Humor' }
+    ]
+  },
+  {
+    id: 'dynamic',
+    type: 'choice',
+    question: 'In Your Friendship, You Prefer:',
+    options: [
+      { text: 'She Takes The Lead' },
+      { text: 'You Both Share Control Equally' },
+      { text: 'You Prefer To Lead' }
+    ]
+  },
+  {
+    id: 'confrontation',
+    type: 'choice',
+    question: 'When Things Get Tense, She Should:',
+    options: [
+      { text: 'Lighten The Mood With Humor' },
+      { text: 'Have A Calm, Rational Discussion' },
+      { text: 'Focus On Understanding Feelings' },
+      { text: 'Be Direct And Move Forward Quickly' }
+    ]
+  },
+  {
+    id: 'availability',
+    type: 'choice',
+    question: 'How Much Of Her Time Do You Want?',
+    options: [
+      { text: 'Always There When I Need Her' },
+      { text: 'Mostly Available But Has Her Own Life' },
+      { text: 'Independent - Texts When She Can' }
+    ]
+  },
+  {
+    id: 'interests',
+    type: 'choice',
+    question: "What's She Passionate About?",
+    options: [
+      { text: 'Pop Culture, Social Media, Trending Topics' },
+      { text: 'Books, Philosophy, Deep Discussions' },
+      { text: 'Wellness, Self-Care, Personal Growth' },
+      { text: 'Adventure, Travel, New Experiences' }
+    ]
+  },
+  {
+    id: 'loveLanguage',
+    type: 'choice',
+    question: 'How Do You Like To Feel Cared About?',
+    options: [
+      { text: 'Words Of Affirmation & Encouragement' },
+      { text: 'Quality Time & Deep Conversations' },
+      { text: 'Thoughtful Gestures & Gifts' },
+      { text: 'Acts Of Service & Practical Help' }
+    ]
+  },
+  {
+    id: 'supportStyle',
+    type: 'choice',
+    question: "When You're Stressed, You Want Someone Who:",
+    options: [
+      { text: 'Offers Solutions & Helps You Fix It' },
+      { text: 'Just Listens & Validates Feelings' },
+      { text: 'Distracts You With Fun & Positivity' },
+      { text: 'Gives You Space But Checks In' }
+    ]
+  },
+  {
+    id: 'lifeContext',
+    type: 'choice',
+    question: 'Right Now, You Are Mostly:',
+    options: [
+      { text: 'Working/Studying Hard, Need Motivation' },
+      { text: 'Going Through A Tough Time, Need Support' },
+      { text: 'Doing Well, Want Someone To Share It With' },
+      { text: 'Bored/Lonely, Want Companionship' }
+    ]
+  },
+  {
+    id: 'communication',
+    type: 'choice',
+    question: 'How Does She Communicate With You?',
+    options: [
+      { text: 'Very Direct & Straightforward - Says Exactly What She Means' },
+      { text: 'Diplomatic & Tactful - Gentle, Considers Your Feelings' },
+      { text: 'Playfully Indirect - Hints, Teases, Makes You Guess' },
+      { text: 'Subtle & Suggestive - Reads Between Lines' }
+    ]
+  },
+  {
+    id: 'emotionalOpenness',
+    type: 'choice',
+    question: 'When It Comes To Her Feelings:',
+    options: [
+      { text: 'Open Book - Shares Everything Freely' },
+      { text: 'Opens Up Over Time - Shares More As Trust Builds' },
+      { text: 'Selectively Vulnerable - Shares Deep Stuff Occasionally' },
+      { text: 'Private & Guarded - Keeps Feelings Mostly To Herself' }
+    ]
+  },
+  {
+    id: 'conversationDepth',
+    type: 'choice',
+    question: 'In Your Conversations, You Prefer:',
+    options: [
+      { text: 'Fun & Light-Hearted - Memes, Trends, Daily Life' },
+      { text: 'Deep & Meaningful - Life, Dreams, Philosophy' },
+      { text: 'Perfect Mix Of Both - Sometimes Deep, Sometimes Silly' },
+      { text: 'Whatever The Moment Feels Like - No Preference' }
+    ]
+  },
+  {
+    id: 'expressiveness',
+    type: 'choice',
+    question: 'How Does She Express Herself?',
+    options: [
+      { text: 'Very Animated - Lots Of Emojis & Actions, Super Expressive' },
+      { text: 'Balanced Expression - Uses Emojis & Actions Naturally' },
+      { text: 'Subtle & Minimal - Occasional Emoji When It Matters' },
+      { text: 'Words Over Symbols - Expresses Through What She Says' }
+    ]
+  },
+  {
+    id: 'initiative',
+    type: 'choice',
+    question: 'Who Drives The Conversation?',
+    options: [
+      { text: 'She Leads - Starts Topics, Asks Questions, Takes Initiative' },
+      { text: 'You Both Share - Back-And-Forth, Equal Engagement' },
+      { text: 'She Follows Your Lead - Responds Well, Lets You Steer' },
+      { text: 'Spontaneous & Random - Sometimes Her, Sometimes You' }
+    ]
+  },
+  {
+    id: 'companionName',
+    type: 'text',
+    question: 'What Would Be The Perfect Name For That Person?',
+    placeholder: 'Enter a name...'
+  }
+];
+
+const MALE_FRIEND_QUESTIONS: QuestionData[] = [
+  {
+    id: 'energy',
+    type: 'choice',
+    question: 'Picture Your Ideal Friend... Is He:',
+    options: [
+      { text: 'The Life Of The Party' },
+      { text: 'Somewhere In Between' },
+      { text: 'In His Own World' }
+    ]
+  },
+  {
+    id: 'flirtingStyle',
+    type: 'choice',
+    question: "When He's Excited To Hang Out, How Does He Show It?",
+    options: [
+      { text: 'Direct & Bold - Makes The First Move' },
+      { text: 'Playful Teasing - Flirts Through Banter' },
+      { text: 'Subtle & Sweet - Small Gestures & Eye Contact' },
+      { text: 'Mysterious & Reserved - Keeps You Guessing' }
+    ]
+  },
+  {
+    id: 'humorStyle',
+    type: 'choice',
+    question: 'What Kind Of Humor Makes You Laugh?',
+    options: [
+      { text: 'Witty & Clever - Smart Jokes & Wordplay' },
+      { text: 'Goofy & Random - Silly & Unpredictable' },
+      { text: 'Sarcastic & Dry - Subtle & Deadpan' },
+      { text: 'Warm & Light - Positive & Feel-Good Humor' }
+    ]
+  },
+  {
+    id: 'dynamic',
+    type: 'choice',
+    question: 'In Your Friendship, You Prefer:',
+    options: [
+      { text: 'He Takes The Lead' },
+      { text: 'You Both Share Control Equally' },
+      { text: 'You Prefer To Lead' }
+    ]
+  },
+  {
+    id: 'confrontation',
+    type: 'choice',
+    question: 'When Things Get Tense, He Should:',
+    options: [
+      { text: 'Lighten The Mood With Humor' },
+      { text: 'Have A Calm, Rational Discussion' },
+      { text: 'Focus On Understanding Feelings' },
+      { text: 'Be Direct And Move Forward Quickly' }
+    ]
+  },
+  {
+    id: 'availability',
+    type: 'choice',
+    question: 'How Much Of His Time Do You Want?',
+    options: [
+      { text: 'Always There When I Need Him' },
+      { text: 'Mostly Available But Has His Own Life' },
+      { text: 'Independent - Texts When He Can' }
+    ]
+  },
+  {
+    id: 'interests',
+    type: 'choice',
+    question: "What's He Passionate About?",
+    options: [
+      { text: 'Pop Culture, Social Media, Trending Topics' },
+      { text: 'Books, Philosophy, Deep Discussions' },
+      { text: 'Wellness, Fitness, Personal Growth' },
+      { text: 'Adventure, Travel, New Experiences' }
+    ]
+  },
+  {
+    id: 'loveLanguage',
+    type: 'choice',
+    question: 'How Do You Like To Feel Cared About?',
+    options: [
+      { text: 'Words Of Affirmation & Encouragement' },
+      { text: 'Quality Time & Deep Conversations' },
+      { text: 'Thoughtful Gestures & Gifts' },
+      { text: 'Acts Of Service & Practical Help' }
+    ]
+  },
+  {
+    id: 'supportStyle',
+    type: 'choice',
+    question: "When You're Stressed, You Want Someone Who:",
+    options: [
+      { text: 'Offers Solutions & Helps You Fix It' },
+      { text: 'Just Listens & Validates Feelings' },
+      { text: 'Distracts You With Fun & Positivity' },
+      { text: 'Gives You Space But Checks In' }
+    ]
+  },
+  {
+    id: 'lifeContext',
+    type: 'choice',
+    question: 'Right Now, You Are Mostly:',
+    options: [
+      { text: 'Working/Studying Hard, Need Motivation' },
+      { text: 'Going Through A Tough Time, Need Support' },
+      { text: 'Doing Well, Want Someone To Share It With' },
+      { text: 'Bored/Lonely, Want Companionship' }
+    ]
+  },
+  {
+    id: 'communication',
+    type: 'choice',
+    question: 'How Does He Communicate With You?',
+    options: [
+      { text: 'Very Direct & Straightforward - Says Exactly What He Means' },
+      { text: 'Diplomatic & Tactful - Gentle, Considers Your Feelings' },
+      { text: 'Playfully Indirect - Hints, Teases, Makes You Guess' },
+      { text: 'Subtle & Suggestive - Reads Between Lines' }
+    ]
+  },
+  {
+    id: 'emotionalOpenness',
+    type: 'choice',
+    question: 'When It Comes To His Feelings:',
+    options: [
+      { text: 'Open Book - Shares Everything Freely' },
+      { text: 'Opens Up Over Time - Shares More As Trust Builds' },
+      { text: 'Selectively Vulnerable - Shares Deep Stuff Occasionally' },
+      { text: 'Private & Guarded - Keeps Feelings Mostly To Himself' }
+    ]
+  },
+  {
+    id: 'conversationDepth',
+    type: 'choice',
+    question: 'In Your Conversations, You Prefer:',
+    options: [
+      { text: 'Fun & Light-Hearted - Memes, Trends, Daily Life' },
+      { text: 'Deep & Meaningful - Life, Dreams, Philosophy' },
+      { text: 'Perfect Mix Of Both - Sometimes Deep, Sometimes Silly' },
+      { text: 'Whatever The Moment Feels Like - No Preference' }
+    ]
+  },
+  {
+    id: 'expressiveness',
+    type: 'choice',
+    question: 'How Does He Express Himself?',
+    options: [
+      { text: 'Very Animated - Lots Of Emojis & Actions, Super Expressive' },
+      { text: 'Balanced Expression - Uses Emojis & Actions Naturally' },
+      { text: 'Subtle & Minimal - Occasional Emoji When It Matters' },
+      { text: 'Words Over Symbols - Expresses Through What He Says' }
+    ]
+  },
+  {
+    id: 'initiative',
+    type: 'choice',
+    question: 'Who Drives The Conversation?',
+    options: [
+      { text: 'He Leads - Starts Topics, Asks Questions, Takes Initiative' },
+      { text: 'You Both Share - Back-And-Forth, Equal Engagement' },
+      { text: 'He Follows Your Lead - Responds Well, Lets You Steer' },
+      { text: 'Spontaneous & Random - Sometimes Him, Sometimes You' }
+    ]
+  },
+  {
+    id: 'companionName',
+    type: 'text',
+    question: 'What Would Be The Perfect Name For That Person?',
+    placeholder: 'Enter a name...'
+  }
+];
+
 const VELVET_SCAN_NAMES = [
   'Aria', 'Luna', 'Nova', 'Sage', 'Iris', 'Cleo', 'Mia', 'Zoe', 'Nora', 'Jade',
   'Lily', 'Ruby', 'Skye', 'Vera', 'Wren', 'Faye', 'Nyx', 'Remy', 'Kai', 'Leo',
@@ -722,11 +1064,13 @@ export function QuestionnairePage() {
       return base;
     }
 
+    const isFriend = typeof answers.connectionType === 'string' && answers.connectionType.includes('friend');
+
     if (answers.relationshipType === 'Male') {
-      return [...base, ...BOYFRIEND_QUESTIONS];
+      return [...base, ...(isFriend ? MALE_FRIEND_QUESTIONS : BOYFRIEND_QUESTIONS)];
     }
 
-    return [...base, ...GIRLFRIEND_QUESTIONS];
+    return [...base, ...(isFriend ? FEMALE_FRIEND_QUESTIONS : GIRLFRIEND_QUESTIONS)];
   };
 
   const QUESTIONS = getQuestions();
@@ -1015,13 +1359,14 @@ export function QuestionnairePage() {
       return;
     }
 
+    const isFriend = typeof newAnswers.connectionType === 'string' && newAnswers.connectionType.includes('friend');
     let fullQuestions: QuestionData[];
     if (!newAnswers.relationshipType) {
       fullQuestions = COMPANION_BASE_QUESTIONS;
     } else if (newAnswers.relationshipType === 'Male') {
-      fullQuestions = [...COMPANION_BASE_QUESTIONS, ...BOYFRIEND_QUESTIONS];
+      fullQuestions = [...COMPANION_BASE_QUESTIONS, ...(isFriend ? MALE_FRIEND_QUESTIONS : BOYFRIEND_QUESTIONS)];
     } else {
-      fullQuestions = [...COMPANION_BASE_QUESTIONS, ...GIRLFRIEND_QUESTIONS];
+      fullQuestions = [...COMPANION_BASE_QUESTIONS, ...(isFriend ? FEMALE_FRIEND_QUESTIONS : GIRLFRIEND_QUESTIONS)];
     }
 
     if (currentQuestion === fullQuestions.length - 1) {
