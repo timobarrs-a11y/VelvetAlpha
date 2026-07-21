@@ -59,6 +59,13 @@ function buildSteps(companionName: string, petName: string, isReplay: boolean): 
       body: `Your World is your launchpad: Atlas (your chief of staff), Navi for local finds, Daily Feed, Your Lens videos, Co-Author, Calendar, Insights, and the Arcade.`,
     },
     {
+      id: 'velvet_lobby',
+      targetId: 'hub.shortcut.lobby',
+      placement: 'right',
+      title: 'The Velvet Lobby',
+      body: `Your classic home base. The Lobby holds all your companions and coaches, group chats, Loyalty Rewards, and the full games collection — this shortcut takes you there any time.`,
+    },
+    {
       id: 'chat',
       targetId: 'hub.chat_surface',
       placement: 'center',

@@ -6,6 +6,7 @@ import {
   Rocket, LogOut, Gamepad2, Lightbulb, FileText, User,
   UsersRound, Calendar, Squirrel, Youtube, Newspaper, Trash2, MessageSquare,
   Sparkles, Flame, Wand2, Trophy, Volume2, VolumeX, Anchor, Bot, MapPin, Brain,
+  HelpCircle,
 } from 'lucide-react';
 import { getVoiceById } from '../config/signatureVoices';
 import { getExpertById } from '../config/signatureExperts';
@@ -426,6 +427,22 @@ export function CompanionLobbyPage() {
               <Wand2 className="w-4 h-4 text-pink-400" />
               <span className="hidden sm:inline">Loyalty Rewards</span>
             </button>
+            {companions.length > 0 && (
+              <button
+                onClick={() => navigateTo(`/chat?companion=${companions[0].id}&tour=1`, {
+                  icon: MessageCircle,
+                  label: 'Starting the tour...',
+                  accentColor: '#f472b6',
+                  bgColor: '#0a0410',
+                })}
+                title="Replay the welcome tour"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+              >
+                <HelpCircle className="w-4 h-4 text-sky-300" />
+                <span className="hidden sm:inline">Tour</span>
+              </button>
+            )}
             <button
               onClick={() => navigateTo('/profile', NAV_CONFIGS['/profile'])}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white"

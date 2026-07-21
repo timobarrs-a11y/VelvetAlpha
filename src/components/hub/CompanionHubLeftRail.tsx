@@ -16,9 +16,12 @@ import {
   LayoutGrid,
   PanelLeftClose,
   PanelLeftOpen,
+  RotateCcw,
 } from 'lucide-react';
 import { TutorialElement } from './TutorialElement';
 import { ONBOARDING_ELEMENT_IDS } from '../../features/onboarding/onboardingPrompt';
+import { useTutorialDirector } from '../../context/TutorialDirectorContext';
+import { onboardingService } from '../../services/onboardingService';
 
 
 interface GameDef {
@@ -135,6 +138,7 @@ function ShortcutTile({ s, onShortcut }: { s: ShortcutDef; onShortcut: (s: Short
 
 export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId, collapsed = false, translucent = false, onToggleCollapse }: Props) {
   const navigate = useNavigate();
+  const { startTour } = useTutorialDirector();
   const [activePanel, setActivePanel] = useState<PanelResult | null>(null);
   const [panelLoading, setPanelLoading] = useState(false);
   const [panelLabel, setPanelLabel] = useState('');
@@ -164,6 +168,11 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
       ? `${s.route}${s.route.includes('?') ? '&' : '?'}companion=${companionId}`
       : s.route;
     navigate(routeWithCompanion);
+  };
+
+  const handleReplayTour = () => {
+    if (userId) onboardingService.restartTour(userId, 'manual_replay').catch(() => {});
+    startTour('manual_replay');
   };
 
   const shortcuts = buildShortcuts();
@@ -287,6 +296,25 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Replay tour — pinned footer */}
+      <div className="flex-shrink-0 border-t border-gray-100/80 px-2 py-1.5">
+        <button
+          onClick={handleReplayTour}
+          title="Replay the welcome tour"
+          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left hover:bg-white/95 transition-colors group"
+        >
+          <span
+            className="flex items-center justify-center w-6 h-6 rounded-lg bg-white text-rose-500 flex-shrink-0"
+            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.10)' }}
+          >
+            <RotateCcw className="w-3 h-3" />
+          </span>
+          <span className="text-[10.5px] font-semibold text-gray-500 group-hover:text-gray-700 transition-colors">
+            Replay the tour
+          </span>
+        </button>
+      </div>
     </motion.div>
   );
 }
