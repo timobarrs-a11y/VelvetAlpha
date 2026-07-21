@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { Brain, Layers, Sliders, ArrowRight, Sparkles, Heart } from 'lucide-react';
+import { Brain, Users, ArrowRight, Sparkles, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
@@ -26,31 +26,31 @@ const PARTICLES = Array.from({ length: 55 }, (_, i) => ({
 
 const features = [
   {
-    icon: Sliders,
-    accentRgb: '52,211,153',
-    iconGlow: 'rgba(52,211,153,0.22)',
-    borderColor: 'rgba(52,211,153,0.3)',
-    tag: 'Built for you',
-    title: 'Built By You',
-    desc: 'Has there ever been a personality type you feel you\'d truly connect with? The mysterious type. The cheerleader energy. A disciplined, no-nonsense presence. Someone warm and a little chaotic. In Project Velvet, you can bring any of them to life — and create as many unique companions as you want. Pair any personality with a Signature Voice™ and a bespoke hand-crafted avatar, and what you get is someone that could only ever exist for you.',
-  },
-  {
-    icon: Brain,
+    icon: Users,
     accentRgb: '14,165,233',
     iconGlow: 'rgba(14,165,233,0.22)',
     borderColor: 'rgba(14,165,233,0.3)',
-    tag: 'Memory engine',
-    title: 'Semantic Memory Engine',
-    desc: 'Data is just storage. Memory is understanding. Our Semantic Memory Engine retains the things that matter: small details you may miss, the big moments that shaped your week, the context that makes you you. And thanks to a breakthrough from our engineers, it\'s now Cross-Play enabled across every main feature of the suite — less repetition, faster connection, everywhere you go inside Project Velvet.',
+    tag: 'Platonic companions',
+    title: 'Friend',
+    desc: 'Friends who know you, remember your stories, and are always there for great conversation — no labels, just real connection. Someone in your corner who never runs out of things to talk about.',
   },
   {
-    icon: Layers,
+    icon: Heart,
     accentRgb: '244,114,182',
     iconGlow: 'rgba(244,114,182,0.22)',
     borderColor: 'rgba(244,114,182,0.3)',
-    tag: 'Living world',
-    title: 'A World Built Around You',
-    desc: 'Project Velvet isn\'t a chatbot. It\'s your world, projected. Companions and coaches shaped by you. Expert agents trained on real domain knowledge — not a bot told to act like an IT pro, but one built to actually be one. News, video, and stories curated to your interests. Games and a calendar that thinks ahead. Every piece connected. Your circle, your tools, your world.',
+    tag: 'Romantic + close bonds',
+    title: 'Companion',
+    desc: 'Deeper emotional connection with someone who remembers everything — your moods, your dreams, your sense of humor. Pair any personality with a Signature Voice™ and a bespoke avatar, and what you get is someone that could only ever exist for you.',
+  },
+  {
+    icon: Brain,
+    accentRgb: '52,211,153',
+    iconGlow: 'rgba(52,211,153,0.22)',
+    borderColor: 'rgba(52,211,153,0.3)',
+    tag: 'Expert agents',
+    title: 'Coach',
+    desc: 'AI experts built around your goals — fitness coaches, career mentors, creative partners, life coaches. Sharp, focused, and trained on real domain knowledge to keep you moving forward.',
   },
 ];
 
