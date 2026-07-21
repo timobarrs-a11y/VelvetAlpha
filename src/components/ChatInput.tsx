@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '../shared/ui';
 import { AppNavRadial } from './AppNavRadial';
@@ -12,15 +12,36 @@ interface ChatInputProps {
   showNavRadial?: boolean;
 }
 
+const MAX_TEXTAREA_HEIGHT = 120; // px — roughly 5 lines before it scrolls internally
+
 export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMessageText, showNavRadial = true }: ChatInputProps) => {
   const [input, setInput] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+  }, [input]);
+
+  const submit = () => {
     if (input.trim() && !disabled) {
       onSend(input.trim());
       setInput('');
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submit();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submit();
     }
   };
 
@@ -38,21 +59,24 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
       )}
 
       <div className="flex-1 relative">
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={
             disabled ? 'Upgrade to continue chatting' : `Message ${characterName}...`
           }
           disabled={disabled}
-          className={`w-full px-4 sm:px-5 py-2.5 rounded-2xl border-2 transition-all duration-200 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none ${
+          rows={1}
+          className={`w-full px-4 sm:px-5 py-2.5 rounded-2xl border-2 transition-all duration-200 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none resize-none leading-snug ${
             isFocused
               ? 'border-rose-400 bg-white shadow-lg shadow-rose-100/50 ring-4 ring-rose-50'
               : 'border-gray-200 bg-white/90 hover:border-gray-300 shadow-sm'
           } disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:border-gray-200`}
+          style={{ maxHeight: MAX_TEXTAREA_HEIGHT, overflowY: 'auto' }}
         />
       </div>
 

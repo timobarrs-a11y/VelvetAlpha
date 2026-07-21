@@ -1317,7 +1317,7 @@ function AppInner() {
         </div>
 
         {/* Mobile layout */}
-        <div className="lg:hidden flex items-center py-2 gap-2 px-3">
+        <div className="lg:hidden flex items-end py-2 gap-2 px-3">
           {/* Mochi toggle — icon only on mobile */}
           <button
             onClick={petToggle}

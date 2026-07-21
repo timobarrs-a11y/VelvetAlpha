@@ -240,6 +240,29 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
+// Anthropic cut the reply off at max_tokens mid-sentence — trim back to the
+// last complete sentence instead of leaving a response that stops mid-word.
+function trimToLastCompleteSentence(text: string): string {
+  const trimmed = text.trimEnd();
+  let lastEnd = -1;
+  for (let i = trimmed.length - 1; i >= 0; i--) {
+    const ch = trimmed[i];
+    if (ch === '.' || ch === '!' || ch === '?') {
+      lastEnd = i;
+      break;
+    }
+  }
+  if (lastEnd === -1) return trimmed;
+
+  let end = lastEnd + 1;
+  while (end < trimmed.length && /["')\]]/.test(trimmed[end])) end++;
+
+  const cut = trimmed.slice(0, end).trim();
+  // Don't gut the reply if the only sentence break is very early on
+  if (cut.length < trimmed.length * 0.4) return trimmed;
+  return cut;
+}
+
 async function generateResponseWithValidation(
   apiKey: string,
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -303,6 +326,11 @@ async function generateResponseWithValidation(
 
       if (!assistantMessage) {
         throw new Error('No valid response from API');
+      }
+
+      if (data.stop_reason === 'max_tokens') {
+        console.warn(`Response hit max_tokens (${maxTokens}) for ${characterName}, trimming to last complete sentence`);
+        assistantMessage = trimToLastCompleteSentence(assistantMessage);
       }
 
       return assistantMessage;
@@ -669,7 +697,10 @@ Deno.serve(async (req: Request) => {
     const companionGender = companion.gender || 'female';
     const isMentor = companion.relationship_type === 'mentor';
 
-    const maxTokens = getMaxTokensForTier(tier);
+    // Coaches follow a structured ANCHOR/DIAGNOSE/DIRECT/CLOSE loop that runs
+    // longer than casual companion chat — give them a higher floor so they
+    // don't get cut off mid-thought on lower tiers.
+    const maxTokens = isMentor ? Math.max(getMaxTokensForTier(tier), 600) : getMaxTokensForTier(tier);
     const historyDepth = getHistoryDepthForTier(tier);
 
     const last20Messages = formattedHistory.slice(-historyDepth);
