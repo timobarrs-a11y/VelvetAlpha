@@ -191,6 +191,7 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
         <button
           onClick={onToggleCollapse}
           title="Expand sidebar"
+          data-tour-id="tour-sidebar-toggle"
           className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-gray-100/80 transition-colors text-gray-400 hover:text-gray-600"
         >
           <PanelLeftOpen className="w-3.5 h-3.5" />
@@ -206,6 +207,7 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
       animate={{ width: 224 }}
       exit={{ width: 32 }}
       transition={{ duration: 0.22, ease: 'easeInOut' }}
+      data-tour-id="tour-left-rail"
       className="relative flex-shrink-0 h-full border-r border-gray-200/60 flex flex-col overflow-hidden"
       style={{ ...bgStyle, width: 224 }}
     >
@@ -231,6 +233,7 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
           <button
             onClick={onToggleCollapse}
             title="Collapse sidebar"
+            data-tour-id="tour-sidebar-toggle"
             className="flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 flex-shrink-0"
           >
             <PanelLeftClose className="w-3.5 h-3.5" />

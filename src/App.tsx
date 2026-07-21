@@ -35,7 +35,7 @@ import { BotPromptDrawer, ThreadMode } from './components/thread/ThreadToolbar';
 import { QuickCommand, QuickCommandPopover } from './components/QuickCommandBar';
 import { CompanionHubLeftRail } from './components/hub/CompanionHubLeftRail';
 import { CompanionHubRightRail } from './components/hub/CompanionHubRightRail';
-import { CompanionTourOverlay } from './components/hub/CompanionTourOverlay';
+import { GuidedTourOverlay } from './components/hub/GuidedTourOverlay';
 import { ThreadTabBar, ActiveThread } from './components/thread/ThreadTabBar';
 import { TutorialElement } from './components/hub/TutorialElement';
 import { ONBOARDING_ELEMENT_IDS } from './features/onboarding/onboardingPrompt';
@@ -69,8 +69,6 @@ function AppInner() {
   const petToggle = usePetStore(s => s.toggle);
   const petName = usePetStore(s => s.name);
   const { startTour, isOnboarding } = useTutorialDirector();
-  const [tourUserName, setTourUserName] = useState('');
-  const [tourSnapshot, setTourSnapshot] = useState<Record<string, unknown>>({});
   const tourAutoStartedRef = useRef(false);
 
   const [remainingMessages, setRemainingMessages] = useState(50);
@@ -325,17 +323,9 @@ function AppInner() {
       setCompanionBubbleColor((companionData as any).companion_bubble_color ?? null);
       setCompanionTextColor((companionData as any).companion_text_color ?? null);
 
-      const { data: profileWithName } = await supabase
-        .from('user_profiles')
-        .select('name')
-        .eq('id', user.id)
-        .maybeSingle();
-      const resolvedName = profileWithName?.name && profileWithName.name !== 'there' ? profileWithName.name : '';
-      setTourUserName(resolvedName);
       const matchRaw = sessionStorage.getItem('matchAnswers');
       const matchData = matchRaw ? JSON.parse(matchRaw) : {};
       const snapshot = { ...matchData, ...((companionData as any).questionnaire_data || {}) };
-      setTourSnapshot(snapshot);
 
       if (!tourAutoStartedRef.current) {
         const wantsTour = searchParams.get('tour') === '1';
@@ -1180,12 +1170,9 @@ function AppInner() {
       </div>
 
       {userId && companionId && companion && isOnboarding && (
-        <CompanionTourOverlay
+        <GuidedTourOverlay
           userId={userId}
-          companionId={companionId}
           companionName={getCharacterName()}
-          userName={tourUserName}
-          personalitySnapshot={tourSnapshot}
         />
       )}
 
@@ -1271,6 +1258,7 @@ function AppInner() {
           {/* Mochi (pet) toggle */}
           <button
             onClick={petToggle}
+            data-tour-id="tour-pet-toggle"
             className="flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all duration-200 flex-shrink-0"
             style={{
               background: petEnabled ? 'rgba(251,146,60,0.15)' : 'rgba(0,0,0,0.04)',
@@ -1292,6 +1280,7 @@ function AppInner() {
 
           {/* Style bar — compact trigger */}
           {activeThread === 'companion' && (
+            <div data-tour-id="tour-style-bar" className="flex-shrink-0">
             <ChatStyleBar
               companionId={companionId}
               companionName={getCharacterName()}
@@ -1313,6 +1302,7 @@ function AppInner() {
               }}
               onOpenWallpaper={() => setShowWallpaperModal(true)}
             />
+            </div>
           )}
         </div>
 
@@ -1321,6 +1311,7 @@ function AppInner() {
           {/* Mochi toggle — icon only on mobile */}
           <button
             onClick={petToggle}
+            data-tour-id="tour-pet-toggle"
             className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
             style={{
               background: petEnabled ? 'rgba(251,146,60,0.15)' : 'rgba(0,0,0,0.04)',
@@ -1351,7 +1342,7 @@ function AppInner() {
           </div>
 
           {activeThread === 'companion' && (
-            <div className="flex-shrink-0">
+            <div data-tour-id="tour-style-bar" className="flex-shrink-0">
               <ChatStyleBar
                 companionId={companionId}
                 companionName={getCharacterName()}

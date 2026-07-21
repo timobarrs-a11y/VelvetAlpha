@@ -253,6 +253,7 @@ export function CompanionHubRightRail({ userId, initialTab }: Props) {
 
   return (
     <div
+      data-tour-id="tour-right-rail"
       className="relative flex-shrink-0 h-full flex flex-col overflow-hidden w-[240px]"
       style={{
         background: 'rgba(255,255,255,0.72)',
