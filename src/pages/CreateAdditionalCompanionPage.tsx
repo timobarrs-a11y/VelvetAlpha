@@ -819,12 +819,12 @@ export function CreateAdditionalCompanionPage() {
   const createCompanionFromAnswers = async (allAnswers: Record<string, any>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) return null;
 
       const gender: 'male' | 'female' = allAnswers.relationshipType === 'Male' ? 'male' : 'female';
       const connectionType = allAnswers.connectionType?.includes('friend') ? 'friend' : 'romantic';
 
-      await createCompanion({
+      const companion = await createCompanion({
         userId: user.id,
         customName: allAnswers.companionName || 'Companion',
         gender,
@@ -869,8 +869,16 @@ export function CreateAdditionalCompanionPage() {
           companionName: allAnswers.companionName || 'Companion'
         }
       });
+
+      if (companion?.id) {
+        sessionStorage.setItem('currentCompanionId', companion.id);
+        sessionStorage.setItem('onboardingIntent', 'connection');
+      }
+
+      return companion;
     } catch (error) {
       console.error('Error creating companion:', error);
+      return null;
     }
   };
 
@@ -899,8 +907,8 @@ export function CreateAdditionalCompanionPage() {
     }
 
     if (currentQuestion === fullQuestions.length - 1) {
-      await createCompanionFromAnswers(newAnswers);
-      navigate('/voice-selection');
+      const companion = await createCompanionFromAnswers(newAnswers);
+      navigate(companion?.id ? '/voice-selection' : '/lobby');
     } else {
       setCurrentQuestion(currentQuestion + 1);
     }
