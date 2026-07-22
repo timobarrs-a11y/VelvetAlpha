@@ -87,6 +87,27 @@ function AppInner() {
   const [currentStatus, setCurrentStatus] = useState<string>('');
   const [dailyExperience, setDailyExperience] = useState<any>(null);
 
+  // On mobile the left rail overlaps the chat, so start it collapsed on every
+  // load (it eats the chat width otherwise). This is a session-only override —
+  // it never touches the saved left_rail_collapsed preference, so desktop keeps
+  // whatever the user set. Users can still expand it during the session.
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 1024,
+  );
+  const [mobileRailCollapsed, setMobileRailCollapsed] = useState(true);
+  useEffect(() => {
+    const onResize = () => setIsMobileViewport(window.innerWidth < 1024);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const leftRailCollapsed = isMobileViewport
+    ? mobileRailCollapsed
+    : (customization?.left_rail_collapsed ?? false);
+  const toggleLeftRail = () => {
+    if (isMobileViewport) setMobileRailCollapsed(v => !v);
+    else setLeftRailCollapsed(!(customization?.left_rail_collapsed ?? false));
+  };
+
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
   const [showWallpaperModal, setShowWallpaperModal] = useState(false);
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
@@ -1077,9 +1098,9 @@ function AppInner() {
           disabled={isTyping || remainingMessages === 0 || isCurrentlyLoading}
           userId={userId || undefined}
           companionId={companionId || undefined}
-          collapsed={customization?.left_rail_collapsed ?? false}
+          collapsed={leftRailCollapsed}
           translucent={customization?.translucent_ui ?? false}
-          onToggleCollapse={() => setLeftRailCollapsed(!(customization?.left_rail_collapsed ?? false))}
+          onToggleCollapse={toggleLeftRail}
         />
         <TutorialElement elementId={ONBOARDING_ELEMENT_IDS.companionChat} className="flex-1 relative overflow-hidden flex flex-col">
           <ThreadTabBar
