@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { useTutorialDirector } from '../../context/TutorialDirectorContext';
@@ -258,12 +259,16 @@ export function GuidedTourOverlay({ userId, companionName }: Props) {
   const isLast = stepIndex === steps.length - 1;
   const showSpotlight = rect !== null;
 
-  return (
-    <div className="fixed inset-0 z-[100]">
+  // Rendered through a portal to <body> so the overlay escapes every ancestor
+  // stacking context / transformed container in the chat tree — otherwise the
+  // card renders but sits behind chat chrome and can't be tapped. z-index is
+  // above the cursor/trail layers (z-10000).
+  return createPortal(
+    <div className="fixed inset-0" style={{ zIndex: 10050 }}>
       {/* Click shield — keeps the tour focused; dims when no spotlight hole */}
       <div
         className="absolute inset-0"
-        style={{ background: showSpotlight ? 'transparent' : 'rgba(15,23,42,0.55)', transition: 'background 0.25s' }}
+        style={{ background: showSpotlight ? 'transparent' : 'rgba(15,23,42,0.55)', transition: 'background 0.25s', zIndex: 0 }}
       />
 
       {/* Spotlight hole — dim everything except the target */}
@@ -302,6 +307,7 @@ export function GuidedTourOverlay({ userId, companionName }: Props) {
             maxWidth: 'calc(100vw - 24px)',
             top: cardPos?.top ?? -9999,
             left: cardPos?.left ?? -9999,
+            zIndex: 2,
           }}
         >
           <div className="flex items-start justify-between gap-3 mb-1.5">
@@ -358,7 +364,8 @@ export function GuidedTourOverlay({ userId, companionName }: Props) {
           )}
         </motion.div>
       </AnimatePresence>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

@@ -15,6 +15,10 @@ const STORAGE_KEY_MUTED = 'audio_manager_muted';
 const STORAGE_KEY_VOLUME = 'audio_manager_volume';
 const FADE_TIME = 1.5;
 
+// Master switch for the synthesized ambient scene audio. Off — the oscillator
+// drones sounded like buzzing. Set to true to bring ambient audio back.
+const AMBIENT_AUDIO_ENABLED = false;
+
 type LoopNode = {
   oscillators: OscillatorNode[];
   gains: GainNode[];
@@ -65,6 +69,11 @@ class AudioManager {
   }
 
   play(scene: AudioScene) {
+    // Ambient scene audio is disabled globally — the synthesized oscillator
+    // drones read as an unpleasant buzzing. Flip AMBIENT_AUDIO_ENABLED back to
+    // true to restore it; the rest of the manager (mute UI, etc.) is untouched.
+    if (!AMBIENT_AUDIO_ENABLED) return;
+
     if (!this.interacted) {
       this.pendingScene = scene;
       return;

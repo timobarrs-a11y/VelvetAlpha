@@ -66,34 +66,10 @@ export function useSound() {
   }, [soundEnabled]);
 
   const playSound = useCallback(() => {
-    if (!soundEnabled) {
-      return;
-    }
-
-    if (!audioContextRef.current || !audioBufferRef.current) {
-      console.error('Audio not initialized');
-      return;
-    }
-
-    try {
-      if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume();
-      }
-
-      const source = audioContextRef.current.createBufferSource();
-      const gainNode = audioContextRef.current.createGain();
-
-      source.buffer = audioBufferRef.current;
-      gainNode.gain.value = 0.3;
-
-      source.connect(gainNode);
-      gainNode.connect(audioContextRef.current.destination);
-
-      source.start(0);
-    } catch (err) {
-      console.error('Error playing sound:', err);
-    }
-  }, [soundEnabled]);
+    // All in-app sound is disabled (the ambient audio buzzed and the message
+    // chime was cut along with it). To restore the chime, reinstate the
+    // AudioBufferSource playback body here.
+  }, []);
 
   const toggleSound = useCallback(() => {
     setSoundEnabled(prev => {
