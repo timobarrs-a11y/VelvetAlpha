@@ -138,25 +138,41 @@ export class DailyRitualService {
       .eq('id', companionId)
       .maybeSingle();
 
-    let message: string;
-    if (companionRow?.relationship_type === 'mentor') {
-      let domain: string | undefined;
-      try {
-        if (companionRow.signature_expert) {
-          const { resolveExpert } = await import('./expertService');
-          const cfg = await resolveExpert(
-            companionRow.signature_expert,
-            companionRow.signature_expert_source,
-            userId
-          );
-          domain = cfg?.domain;
+    // Prefer a persona-driven check-in generated in the companion's real voice
+    // + character. Fall back to the static templates if it's unavailable.
+    let message: string | null = null;
+    try {
+      const { generateOpener } = await import('./openerService');
+      const situation = ({
+        morning: 'daily_morning',
+        evening: 'daily_evening',
+        night: 'daily_night',
+      } as const)[currentTimeSlot];
+      message = await generateOpener(companionId, situation);
+    } catch {
+      message = null;
+    }
+
+    if (!message) {
+      if (companionRow?.relationship_type === 'mentor') {
+        let domain: string | undefined;
+        try {
+          if (companionRow.signature_expert) {
+            const { resolveExpert } = await import('./expertService');
+            const cfg = await resolveExpert(
+              companionRow.signature_expert,
+              companionRow.signature_expert_source,
+              userId
+            );
+            domain = cfg?.domain;
+          }
+        } catch {
+          // best-effort domain personalization; fall back to a neutral phrasing
         }
-      } catch {
-        // best-effort domain personalization; fall back to a neutral phrasing
+        message = ProactiveMessageService.getCoachScheduledMessage(currentTimeSlot, { domain });
+      } else {
+        message = ProactiveMessageService.getScheduledMessage(currentTimeSlot);
       }
-      message = ProactiveMessageService.getCoachScheduledMessage(currentTimeSlot, { domain });
-    } else {
-      message = ProactiveMessageService.getScheduledMessage(currentTimeSlot);
     }
 
     await this.markRitualTriggered(userId, companionId, currentTimeSlot);
