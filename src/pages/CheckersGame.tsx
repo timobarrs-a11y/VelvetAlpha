@@ -5,7 +5,7 @@ import { CheckersBoard } from '../components/CheckersBoard';
 import { GameChatBox } from '../components/GameChatBox';
 import { Home, RotateCcw, Settings, Undo2 } from 'lucide-react';
 import type { BoardState, Position, Move, GameStatus } from '../types/checkers';
-import type { TrashTalkPersonality } from '../services/checkersTrashTalk';
+
 import type { Message } from '../types';
 import type { PieceAnimation } from '../services/checkersAnimationEngine';
 import {
@@ -36,7 +36,6 @@ export function CheckersGame() {
   const [aiColor, setAiColor] = useState<'red' | 'black'>('black');
   const [gameStatus, setGameStatus] = useState<GameStatus>('active');
   const [moveCount, setMoveCount] = useState(0);
-  const [aiPersonality, setAiPersonality] = useState<TrashTalkPersonality>('confident');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [showSettings, setShowSettings] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -128,7 +127,7 @@ export function CheckersGame() {
       setAiColor(existingGame.ai_color);
       setGameStatus(existingGame.game_status);
       setMoveCount(existingGame.move_count);
-      setAiPersonality(existingGame.ai_personality as TrashTalkPersonality);
+
     } else {
       await startNewGame();
     }
@@ -143,7 +142,7 @@ export function CheckersGame() {
     const newBoard = createInitialBoard();
     const color = Math.random() > 0.5 ? 'red' : 'black';
 
-    const game = await createGame(user.id, color, aiPersonality);
+    const game = await createGame(user.id, color);
 
     if (game) {
       setGameId(game.id);
@@ -623,22 +622,7 @@ export function CheckersGame() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      AI Personality
-                    </label>
-                    <select
-                      value={aiPersonality}
-                      onChange={(e) => setAiPersonality(e.target.value as TrashTalkPersonality)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="confident">Confident</option>
-                      <option value="cocky">Cocky</option>
-                      <option value="friendly">Friendly</option>
-                      <option value="sarcastic">Sarcastic</option>
-                      <option value="silent">Silent</option>
-                    </select>
-                  </div>
+
                 </motion.div>
               )}
             </AnimatePresence>

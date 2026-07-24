@@ -1,12 +1,11 @@
 import { supabase } from '../shared/supabase/client';
-import type { CheckersGame, CheckersMove, BoardState, Position, Move } from '../types/checkers';
+import type { CheckersGame, CheckersMove, BoardState, Position } from '../types/checkers';
 import { createInitialBoard } from './checkersGameLogic';
-import type { TrashTalkPersonality } from './checkersTrashTalk';
+
 
 export async function createGame(
   userId: string,
-  playerColor: 'red' | 'black',
-  aiPersonality: TrashTalkPersonality = 'confident'
+  playerColor: 'red' | 'black'
 ): Promise<CheckersGame | null> {
   const boardState = createInitialBoard();
 
@@ -19,8 +18,7 @@ export async function createGame(
       player_color: playerColor,
       ai_color: playerColor === 'red' ? 'black' : 'red',
       game_status: 'active',
-      move_count: 0,
-      ai_personality: aiPersonality
+      move_count: 0
     })
     .select()
     .single();

@@ -24,7 +24,6 @@ export interface CheckersGame {
   ai_color: 'red' | 'black';
   game_status: GameStatus;
   move_count: number;
-  ai_personality: string;
   created_at: string;
   updated_at: string;
 }
