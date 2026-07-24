@@ -15,7 +15,7 @@ import { supabase } from './shared/supabase/client';
 import { SubscriptionTier } from './types/subscription';
 import { useSound } from './hooks/useSound';
 import { getCompanion, getCompanions, updateLastMessageTime, claimFirstMessage, finalizeFirstMessage, Companion, CompanionWithLastMessage } from './services/companionService';
-import { decrementMessageCount, getMessageTrackingInfo } from './services/messageTrackingService';
+import { getMessageTrackingInfo } from './services/messageTrackingService';
 import { YouTubeService, VideoMetadata } from './services/youtubeService';
 import { videoReactionService } from './services/videoReactionService';
 import { AvatarConfig } from './types/avatar';
@@ -820,7 +820,10 @@ function AppInner() {
 
       try {
         await updateLastMessageTime(companionId);
-        await decrementMessageCount(user.id);
+        // NOTE: message count is decremented server-side by the chat-turn edge
+        // function (single source of truth). We only refresh here so the UI
+        // reflects the new balance — decrementing again on the client would
+        // double-charge the user for every turn.
         await refreshSubscription();
       } catch (e) {
         console.warn('[chat] post-message housekeeping failed:', e);

@@ -19,6 +19,7 @@ import { useAudioScene } from './hooks/useAudioScene';
 import { AudioScene } from './services/audioManager';
 import { InstallPWABanner } from './components/InstallPWABanner';
 import { SWUpdateToast } from './components/SWUpdateToast';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 const GAME_PATHS = [
   '/checkers', '/pacman', '/momentum', '/slime-soccer',
@@ -120,6 +121,8 @@ export function Router() {
               {adminRoutes}
               {gamesRoutes}
               <Route path="/" element={<RootRedirect />} />
+              {/* Catch-all: any unknown URL renders the 404 page instead of a blank screen */}
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </TutorialDirectorProvider>
         </NavigationLoadingProvider>
