@@ -720,13 +720,17 @@ function AppInner() {
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1500));
       setIsTyping(true);
 
-      const firstMsg = await firstMessageService.generateFirstMessage(
-        companionData.custom_name, companionData.gender, userName, matchData,
-        companionData.signature_voice, userBirthday,
-        expertConfig?.domain,
-        expertConfig,
-        companionData.relationship_type
-      );
+      const { generateOpener } = await import('./services/openerService');
+      let firstMsg = await generateOpener(cid, 'first_match');
+      if (!firstMsg) {
+        firstMsg = await firstMessageService.generateFirstMessage(
+          companionData.custom_name, companionData.gender, userName, matchData,
+          companionData.signature_voice, userBirthday,
+          expertConfig?.domain,
+          expertConfig,
+          companionData.relationship_type
+        );
+      }
       await new Promise(resolve => setTimeout(resolve, Math.min(firstMsg.length * 15, 3000)));
       setIsTyping(false);
 

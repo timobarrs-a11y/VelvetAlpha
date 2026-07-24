@@ -138,25 +138,39 @@ export class DailyRitualService {
       .eq('id', companionId)
       .maybeSingle();
 
-    let message: string;
-    if (companionRow?.relationship_type === 'mentor') {
-      let domain: string | undefined;
-      try {
-        if (companionRow.signature_expert) {
-          const { resolveExpert } = await import('./expertService');
-          const cfg = await resolveExpert(
-            companionRow.signature_expert,
-            companionRow.signature_expert_source,
-            userId
-          );
-          domain = cfg?.domain;
+    let message: string | null = null;
+    try {
+      const { generateOpener } = await import('./openerService');
+      const situationMap = {
+        morning: 'daily_morning',
+        evening: 'daily_evening',
+        night: 'daily_night',
+      } as const;
+      message = await generateOpener(companionId, situationMap[currentTimeSlot]);
+    } catch {
+      message = null;
+    }
+
+    if (!message) {
+      if (companionRow?.relationship_type === 'mentor') {
+        let domain: string | undefined;
+        try {
+          if (companionRow.signature_expert) {
+            const { resolveExpert } = await import('./expertService');
+            const cfg = await resolveExpert(
+              companionRow.signature_expert,
+              companionRow.signature_expert_source,
+              userId
+            );
+            domain = cfg?.domain;
+          }
+        } catch {
+          // best-effort domain personalization; fall back to a neutral phrasing
         }
-      } catch {
-        // best-effort domain personalization; fall back to a neutral phrasing
+        message = ProactiveMessageService.getCoachScheduledMessage(currentTimeSlot, { domain });
+      } else {
+        message = ProactiveMessageService.getScheduledMessage(currentTimeSlot);
       }
-      message = ProactiveMessageService.getCoachScheduledMessage(currentTimeSlot, { domain });
-    } else {
-      message = ProactiveMessageService.getScheduledMessage(currentTimeSlot);
     }
 
     await this.markRitualTriggered(userId, companionId, currentTimeSlot);
