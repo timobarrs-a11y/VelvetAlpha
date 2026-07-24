@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3 } from 'lucide-react';
+import { ArrowLeft, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, CreditCard, ExternalLink } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { gdprService } from '../services/gdprService';
 import { onboardingService } from '../services/onboardingService';
@@ -562,6 +562,22 @@ export function SettingsPage() {
                       style={{ background: 'linear-gradient(135deg, #f43f6b, #e11d48)' }}
                     >
                       {pwLoading ? 'Updating...' : 'Update Password'}
+                    </button>
+                  </div>
+
+                  <div className="border-t border-white/10 pt-6 mb-6">
+                    <p className="text-sm font-medium text-white/70 mb-1 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Subscription & Billing
+                    </p>
+                    <p className="text-white/40 text-sm mb-4">Manage your plan, view invoices, upgrade, or cancel your subscription.</p>
+                    <button
+                      onClick={() => navigate('/billing')}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white border border-white/15 hover:bg-white/8 transition"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      Manage Subscription
+                      <ExternalLink className="w-3.5 h-3.5 opacity-50" />
                     </button>
                   </div>
 
