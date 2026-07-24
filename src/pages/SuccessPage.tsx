@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Sparkles } from 'lucide-react';
-import { supabase } from '../shared/supabase/client';
 import { SubscriptionTier, SUBSCRIPTION_PLANS } from '../types/subscription';
-import { addMessagesToUser } from '../services/messageTrackingService';
 
 export function SuccessPage() {
   const navigate = useNavigate();
@@ -14,52 +12,27 @@ export function SuccessPage() {
   const [planInfo, setPlanInfo] = useState<{ name: string; price: number; messageLimit: number } | null>(null);
 
   useEffect(() => {
-    handleSuccess();
-  }, []);
+    const tier = searchParams.get('tier') as SubscriptionTier;
 
-  const handleSuccess = async () => {
-    try {
-      const tier = searchParams.get('tier') as SubscriptionTier;
-      const sessionId = searchParams.get('session_id');
-
-      if (!tier || !sessionId) {
-        setError('Invalid payment session');
-        setLoading(false);
-        return;
-      }
-
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        navigate('/');
-        return;
-      }
-
-      const plan = SUBSCRIPTION_PLANS[tier];
-      if (!plan) {
-        setError('Invalid tier');
-        setLoading(false);
-        return;
-      }
-
-      const success = await addMessagesToUser(user.id, plan.messageLimit || 0, tier);
-
-      if (!success) {
-        setError('Failed to update subscription');
-      }
-
-      setPlanInfo({ name: plan.name, price: plan.price, messageLimit: plan.messageLimit || 0 });
+    if (!tier) {
+      setError('Invalid payment session');
       setLoading(false);
-
-      setTimeout(() => {
-        navigate('/lobby');
-      }, 3000);
-    } catch (err) {
-      console.error('Error processing payment:', err);
-      setError('Something went wrong');
-      setLoading(false);
+      return;
     }
-  };
+
+    const plan = SUBSCRIPTION_PLANS[tier];
+    if (!plan) {
+      setError('Invalid tier');
+      setLoading(false);
+      return;
+    }
+
+    setPlanInfo({ name: plan.name, price: plan.price, messageLimit: plan.messageLimit || 0 });
+    setLoading(false);
+
+    const timer = setTimeout(() => navigate('/lobby'), 3000);
+    return () => clearTimeout(timer);
+  }, [navigate, searchParams]);
 
   if (loading) {
     return (
