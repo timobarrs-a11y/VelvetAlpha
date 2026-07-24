@@ -45,10 +45,61 @@ export function ArticleDetailPage() {
   const [iframeLoading, setIframeLoading] = useState(true);
   const [iframeBlocked, setIframeBlocked] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (articleId) loadArticle();
   }, [articleId]);
+
+  // Server-side embeddability probe. Publishers block in-app framing with
+  // X-Frame-Options / CSP headers the browser hides from us, so we ask the
+  // edge function (which can read those headers) whether this article will
+  // actually render. If not, we show the honest "open in browser" state up
+  // front instead of a spinner that never resolves. A per-article load timeout
+  // is the backstop for anything the header check misses.
+  useEffect(() => {
+    if (!article?.url) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-embeddable`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url: article.url }),
+          },
+        );
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const result = data.results?.[0];
+        if (!cancelled && result && result.embeddable === false) {
+          setIframeBlocked(true);
+          setIframeLoading(false);
+        }
+      } catch {
+        /* fall back to the iframe + load-timeout below */
+      }
+    })();
+
+    loadTimerRef.current = setTimeout(() => {
+      if (!cancelled) {
+        setIframeLoading((stillLoading) => {
+          if (stillLoading) setIframeBlocked(true);
+          return false;
+        });
+      }
+    }, 9000);
+
+    return () => {
+      cancelled = true;
+      if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
+    };
+  }, [article?.url]);
 
   const loadArticle = async () => {
     try {
@@ -79,8 +130,13 @@ export function ArticleDetailPage() {
 
   const handleIframeLoad = () => {
     setIframeLoading(false);
+    if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
     try {
       const iframe = iframeRef.current;
+      // Same-origin only — a real article is always cross-origin, so this
+      // branch only catches our own error/blank pages. A cross-origin read
+      // throws; we swallow it and trust the header probe, rather than
+      // (as before) wrongly clearing the blocked state on every real article.
       if (iframe?.contentDocument?.body) {
         const bodyText = iframe.contentDocument.body.innerText;
         if (!bodyText || bodyText.trim().length < 50) {
@@ -88,12 +144,13 @@ export function ArticleDetailPage() {
         }
       }
     } catch {
-      setIframeBlocked(false);
+      /* cross-origin: expected for real articles — leave probe's verdict intact */
     }
   };
 
   const handleIframeError = () => {
     setIframeLoading(false);
+    if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
     setIframeBlocked(true);
   };
 
@@ -251,6 +308,13 @@ export function ArticleDetailPage() {
               onClick={() => {
                 setIframeLoading(true);
                 setIframeBlocked(false);
+                if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
+                loadTimerRef.current = setTimeout(() => {
+                  setIframeLoading((stillLoading) => {
+                    if (stillLoading) setIframeBlocked(true);
+                    return false;
+                  });
+                }, 9000);
                 if (iframeRef.current) {
                   iframeRef.current.src = article.url;
                 }
