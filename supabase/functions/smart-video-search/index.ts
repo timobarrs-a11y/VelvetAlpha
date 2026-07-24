@@ -38,7 +38,12 @@ async function searchYouTube(query: string): Promise<YouTubeVideo[]> {
   const searchData = await searchResponse.json();
   const videoIds = searchData.items.map((item: any) => item.id.videoId).join(',');
 
-  const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
+  // Request `status` and `contentDetails` so we can drop videos that will never
+  // render in our embedded player — the uploader disabled embedding, the video
+  // isn't public, or it's region-blocked for US viewers. These are exactly the
+  // ones that would show "Video unavailable" inside the iframe with no way for
+  // the client to detect it.
+  const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,status,contentDetails&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
 
   const detailsResponse = await fetch(detailsUrl);
   if (!detailsResponse.ok) {
@@ -47,14 +52,35 @@ async function searchYouTube(query: string): Promise<YouTubeVideo[]> {
 
   const detailsData = await detailsResponse.json();
 
-  return detailsData.items.map((item: any) => ({
+  const isPlayable = (item: any): boolean => {
+    const status = item.status || {};
+    // Uploader turned off embedding — the #1 cause of "won't load" videos.
+    if (status.embeddable === false) return false;
+    // Private / deleted / still-processing uploads won't play either.
+    if (status.privacyStatus && status.privacyStatus === 'private') return false;
+    if (status.uploadStatus && status.uploadStatus !== 'processed') return false;
+    // Region-blocked for US viewers (our audience).
+    const blocked = item.contentDetails?.regionRestriction?.blocked;
+    if (Array.isArray(blocked) && blocked.includes('US')) return false;
+    const allowed = item.contentDetails?.regionRestriction?.allowed;
+    if (Array.isArray(allowed) && !allowed.includes('US')) return false;
+    return true;
+  };
+
+  const total = detailsData.items?.length ?? 0;
+  const playable = (detailsData.items || []).filter(isPlayable);
+  if (total !== playable.length) {
+    console.log(`[smart-video-search] Filtered ${total - playable.length}/${total} non-embeddable videos`);
+  }
+
+  return playable.map((item: any) => ({
     id: item.id,
     title: item.snippet.title,
     description: item.snippet.description,
     thumbnail: item.snippet.thumbnails.high.url,
     channelTitle: item.snippet.channelTitle,
     publishedAt: item.snippet.publishedAt,
-    viewCount: item.statistics.viewCount,
+    viewCount: item.statistics?.viewCount,
   }));
 }
 

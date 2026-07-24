@@ -52,7 +52,17 @@ export function VideoPlayer({
         <div className="absolute inset-0 flex items-center justify-center bg-black/90">
           <div className="text-center text-white px-4">
             <div className="text-red-400 text-lg font-semibold mb-2">Unable to load video</div>
-            <div className="text-gray-400 text-sm">The video player encountered an error</div>
+            <div className="text-gray-400 text-sm mb-4">
+              This video can't be played here — the uploader may have disabled embedding.
+            </div>
+            <a
+              href={`https://www.youtube.com/watch?v=${videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Watch on YouTube
+            </a>
           </div>
         </div>
       )}
