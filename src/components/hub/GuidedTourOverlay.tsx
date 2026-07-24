@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, X, ArrowRight, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 import { useTutorialDirector } from '../../context/TutorialDirectorContext';
@@ -287,8 +288,8 @@ export function GuidedTourOverlay({ userId, companionName }: Props) {
       }
     : undefined;
 
-  return (
-    <div className="fixed inset-0 z-[100]" style={{ pointerEvents: 'auto' }}>
+  return createPortal(
+    <div className="fixed inset-0" style={{ pointerEvents: 'auto', zIndex: 10050 }}>
       <div className="absolute inset-0" style={{ background: 'transparent' }} />
 
       {rect && (
@@ -343,6 +344,7 @@ export function GuidedTourOverlay({ userId, companionName }: Props) {
             width: 312,
             padding: '20px 22px 18px',
             border: '1px solid rgba(0,0,0,0.06)',
+            zIndex: 2,
           }}
         >
           <div className="flex items-start justify-between gap-3 mb-3">
@@ -416,13 +418,14 @@ export function GuidedTourOverlay({ userId, companionName }: Props) {
 
       <div
         className="absolute inset-0"
-        style={{ pointerEvents: 'all', cursor: 'default' }}
+        style={{ pointerEvents: 'all', cursor: 'default', zIndex: 0 }}
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             // don't close on backdrop click — require explicit Next/Skip
           }
         }}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }

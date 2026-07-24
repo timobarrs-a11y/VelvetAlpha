@@ -11,6 +11,7 @@ export type AudioScene =
   | 'zelda-ocean'
   | 'none';
 
+const AMBIENT_AUDIO_ENABLED = false;
 const STORAGE_KEY_MUTED = 'audio_manager_muted';
 const STORAGE_KEY_VOLUME = 'audio_manager_volume';
 const FADE_TIME = 1.5;
@@ -65,6 +66,7 @@ class AudioManager {
   }
 
   play(scene: AudioScene) {
+    if (!AMBIENT_AUDIO_ENABLED) return;
     if (!this.interacted) {
       this.pendingScene = scene;
       return;
