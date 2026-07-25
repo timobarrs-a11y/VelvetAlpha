@@ -5,6 +5,7 @@ import { Message } from '../types';
 import { AvatarConfig } from '../types/avatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
+import { RatingValue } from '../services/ratingService';
 
 type BotSource = 'atlas' | 'navi' | 'companion' | null;
 
@@ -21,9 +22,13 @@ interface ChatContainerProps {
   fontFamily?: string | null;
   companionBubbleColorKey?: string | null;
   companionTextColorKey?: string | null;
+  companionId?: string;
+  ratingsMap?: Record<string, RatingValue>;
+  onRated?: (messageId: string, rating: RatingValue | null) => void;
+  onRegenerate?: (messageId: string) => void;
 }
 
-export const ChatContainer = ({ messages, characterName = 'your companion', compilingLabel, activeThread = 'companion', userAvatarConfig, companionAvatarConfig, favoriteColor, bubbleColorKey, textColorKey, fontFamily, companionBubbleColorKey, companionTextColorKey }: ChatContainerProps) => {
+export const ChatContainer = ({ messages, characterName = 'your companion', compilingLabel, activeThread = 'companion', userAvatarConfig, companionAvatarConfig, favoriteColor, bubbleColorKey, textColorKey, fontFamily, companionBubbleColorKey, companionTextColorKey, companionId = '', ratingsMap = {}, onRated, onRegenerate }: ChatContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
@@ -134,6 +139,10 @@ export const ChatContainer = ({ messages, characterName = 'your companion', comp
                       fontFamily={fontFamily}
                       companionBubbleColorKey={companionBubbleColorKey}
                       companionTextColorKey={companionTextColorKey}
+                      companionId={companionId}
+                      currentRating={ratingsMap[message.id] ?? null}
+                      onRated={onRated}
+                      onRegenerate={onRegenerate}
                     />
                   </div>
                 );

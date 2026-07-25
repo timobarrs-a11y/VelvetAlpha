@@ -274,6 +274,13 @@ export function AdminAnalyticsPage() {
               <MonitorDot className="w-4 h-4" />
               Monitoring
             </button>
+            <button
+              onClick={() => navigate('/admin/response-quality')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-rose-300 border border-rose-500/30 hover:bg-rose-600/20 transition text-sm"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Response Quality
+            </button>
             {isAdmin && (
               <button
                 onClick={() => navigate('/admin/users')}

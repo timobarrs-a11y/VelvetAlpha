@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CalendarPlus } from 'lucide-react';
+import { CalendarPlus, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatContainer } from './components/ChatContainer';
 import { ChatInput } from './components/ChatInput';
@@ -14,7 +14,7 @@ import { setAppBridgeContext } from './services/appBridgeStore';
 import { supabase } from './shared/supabase/client';
 import { SubscriptionTier } from './types/subscription';
 import { useSound } from './hooks/useSound';
-import { getCompanion, getCompanions, updateLastMessageTime, claimFirstMessage, finalizeFirstMessage, Companion, CompanionWithLastMessage } from './services/companionService';
+import { getCompanion, getCompanions, updateLastMessageTime, claimFirstMessage, finalizeFirstMessage, resetFirstMessage, Companion, CompanionWithLastMessage } from './services/companionService';
 import { getMessageTrackingInfo } from './services/messageTrackingService';
 import { YouTubeService, VideoMetadata } from './services/youtubeService';
 import { videoReactionService } from './services/videoReactionService';
@@ -22,6 +22,8 @@ import { AvatarConfig } from './types/avatar';
 import { useSubscription } from './hooks/useSubscription';
 import { getCurrentStatus } from './utils/statusHelper';
 import { useMessages, useSendMessage } from './features/chat/hooks';
+import { messagesKey } from './features/chat/queryKeys';
+import { useQueryClient } from '@tanstack/react-query';
 import { conversationOrchestrator } from './features/chat/orchestrator';
 import { useAuth } from './auth/AuthProvider';
 import { processEnhancedInsights } from './services/enhancedInsightsService';
@@ -57,6 +59,8 @@ import { resolveExpert } from './services/expertService';
 import { inspectVoiceFidelity, clearDriftCorrection } from './services/voiceFidelityService';
 import { CoAuthorPage } from './pages/CoAuthorPage';
 import { DailyFeedPage } from './pages/DailyFeedPage';
+import { MessageRatingControls } from './components/MessageRatingControls';
+import { RatingValue, getRatingsForMessages, clearConversationMessages, markRatingRegenerated } from './services/ratingService';
 
 function AppInner() {
   const navigate = useNavigate();
@@ -80,6 +84,9 @@ function AppInner() {
   const [reflectionOpen, setReflectionOpen] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showStartOverConfirm, setShowStartOverConfirm] = useState(false);
+  const [isStartingOver, setIsStartingOver] = useState(false);
+  const [ratingsMap, setRatingsMap] = useState<Record<string, RatingValue>>({});
   const [userAvatarConfig, setUserAvatarConfig] = useState<AvatarConfig | null>(null);
   const { subscriptionInfo, refreshSubscription } = useSubscription();
   const { playSound } = useSound();
@@ -137,6 +144,7 @@ function AppInner() {
 
   const { data: rawMessages, isLoading: isLoadingMessages, error: messagesError } = useMessages(userId, companionId);
   const sendMessageMutation = useSendMessage();
+  const queryClient = useQueryClient();
 
   const uiMessages: Message[] = (rawMessages ?? []).map((msg: any) => ({
     id: msg.id,
@@ -147,6 +155,19 @@ function AppInner() {
     botSource: msg.bot_source ?? 'companion',
     metadata: msg.metadata ?? undefined,
   }));
+
+  useEffect(() => {
+    if (!userId || uiMessages.length === 0) return;
+    const aiMessageIds = uiMessages.filter(m => m.sender === 'ai').map(m => m.id);
+    if (aiMessageIds.length === 0) return;
+    getRatingsForMessages(aiMessageIds)
+      .then(map => {
+        const simplified: Record<string, RatingValue> = {};
+        for (const [mid, r] of Object.entries(map)) simplified[mid] = r.rating;
+        setRatingsMap(simplified);
+      })
+      .catch(() => {});
+  }, [userId, uiMessages.map(m => m.id).join(',')]);
 
   const getCharacterName = () => companion?.custom_name || 'Companion';
 
@@ -959,6 +980,53 @@ function AppInner() {
     }
   };
 
+  const handleStartOver = () => setShowStartOverConfirm(true);
+  const confirmStartOver = async () => {
+    if (!userId || !companionId || !companion) return;
+    setIsStartingOver(true);
+    try {
+      await clearConversationMessages(userId, companionId);
+      queryClient.setQueryData(messagesKey(userId, companionId), []);
+      setRatingsMap({});
+      setShowStartOverConfirm(false);
+      await resetFirstMessage(companionId);
+      const refreshed = await getCompanion(companionId);
+      if (refreshed) setCompanion(refreshed);
+    } catch (error) {
+      console.error('Start over failed:', error);
+    } finally {
+      setIsStartingOver(false);
+    }
+  };
+
+  const handleRated = (messageId: string, rating: RatingValue | null) => {
+    setRatingsMap(prev => {
+      const next = { ...prev };
+      if (rating === null) delete next[messageId];
+      else next[messageId] = rating;
+      return next;
+    });
+  };
+
+  const handleRegenerate = async (messageId: string) => {
+    if (!companionId || !user || !companion) return;
+    await markRatingRegenerated(messageId);
+    const lastUserMsg = [...uiMessages].reverse().find(m => m.sender === 'user');
+    if (lastUserMsg) {
+      setIsTyping(true);
+      try {
+        const response = await ChatService.sendMessage(lastUserMsg.content, companionId, companion.relationship_type);
+        await new Promise(resolve => setTimeout(resolve, Math.min(response.length * 15, 3000)));
+        setIsTyping(false);
+        await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: response, clientMessageId: crypto.randomUUID() });
+        playSound();
+      } catch (error) {
+        setIsTyping(false);
+        console.error('Regenerate failed:', error);
+      }
+    }
+  };
+
   const isBotMode = activeMode === 'atlas-prompt' || activeMode === 'atlas-full' || activeMode === 'navi-prompt' || activeMode === 'navi-full';
   const showBotPromptDrawer = activeMode === 'atlas-prompt' || activeMode === 'navi-prompt';
   const showBotFullInputHint = activeMode === 'atlas-full' || activeMode === 'navi-full';
@@ -1030,6 +1098,7 @@ function AppInner() {
         onReset={handleReset}
         onAvatarClick={() => setShowAppearanceModal(true)}
         onOpenReflection={() => setReflectionOpen(true)}
+        onStartOver={handleStartOver}
       />
 
       <CBTReflectionDeckModal isOpen={reflectionOpen} onClose={() => setReflectionOpen(false)} />
@@ -1161,6 +1230,10 @@ function AppInner() {
               fontFamily={activeThread === 'companion' ? (companion?.font_family ?? null) : null}
               companionBubbleColorKey={activeThread === 'companion' ? companionBubbleColor : null}
               companionTextColorKey={activeThread === 'companion' ? companionTextColor : null}
+              companionId={companionId || ''}
+              ratingsMap={activeThread === 'companion' ? ratingsMap : {}}
+              onRated={handleRated}
+              onRegenerate={activeThread === 'companion' ? handleRegenerate : undefined}
             />
           </div>
         </TutorialElement>
@@ -1493,6 +1566,28 @@ function AppInner() {
             <div className="flex gap-3 justify-center">
               <button onClick={() => setShowResetConfirm(false)} className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm transition-colors">Cancel</button>
               <button onClick={confirmReset} className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm transition-colors">Reset</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStartOverConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
+            <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-4">
+              <RefreshCw className="w-6 h-6 text-rose-600" />
+            </div>
+            <p className="text-gray-900 font-semibold mb-2">Start over with {getCharacterName()}?</p>
+            <p className="text-gray-500 text-sm mb-6">This clears your message history so you can start a fresh conversation. Your companion, relationship bond, and memories stay intact.</p>
+            <div className="flex gap-3 justify-center">
+              <button onClick={() => setShowStartOverConfirm(false)} disabled={isStartingOver} className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm transition-colors">Cancel</button>
+              <button onClick={confirmStartOver} disabled={isStartingOver} className="px-5 py-2 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white rounded-xl text-sm transition-colors flex items-center gap-2">
+                {isStartingOver ? (
+                  <><RefreshCw className="w-4 h-4 animate-spin" /> Clearing...</>
+                ) : (
+                  <>Start Over</>
+                )}
+              </button>
             </div>
           </div>
         </div>

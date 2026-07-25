@@ -8,6 +8,8 @@ import { calculateComposeDelayMs } from '../features/chat/typing/typingPacer';
 import { ExternalLink, CalendarDays } from 'lucide-react';
 import { AtlasMarkdown } from './AtlasMarkdown';
 import { getBubbleStyle, getTextColorValue } from './ChatStyleBar';
+import { MessageRatingControls } from './MessageRatingControls';
+import { RatingValue } from '../services/ratingService';
 
 const ENABLE_TYPING_REALISM = true;
 
@@ -42,6 +44,11 @@ interface ChatMessageProps {
   // Companion bubble customization
   companionBubbleColorKey?: string | null;
   companionTextColorKey?: string | null;
+  // Rating controls
+  companionId?: string;
+  currentRating?: RatingValue | null;
+  onRated?: (messageId: string, rating: RatingValue | null) => void;
+  onRegenerate?: (messageId: string) => void;
 }
 
 const convertYouTubeLinksToInternal = (text: string, navigate: (path: string) => void): (string | JSX.Element)[] => {
@@ -267,6 +274,10 @@ export const ChatMessage = ({
   fontFamily,
   companionBubbleColorKey,
   companionTextColorKey,
+  companionId = '',
+  currentRating = null,
+  onRated,
+  onRegenerate,
 }: ChatMessageProps) => {
   const navigate = useNavigate();
   const isUser = message.sender === 'user';
@@ -455,6 +466,19 @@ export const ChatMessage = ({
             }`}
           >
             {time}
+          </div>
+        )}
+
+        {!isUser && onRated && message.messageType === 'text' && (
+          <div className="mt-1">
+            <MessageRatingControls
+              messageId={message.id}
+              conversationId={message.id}
+              companionId={companionId}
+              currentRating={currentRating}
+              onRated={(rating) => onRated(message.id, rating)}
+              onRegenerate={onRegenerate ? () => onRegenerate(message.id) : undefined}
+            />
           </div>
         )}
       </div>

@@ -10,6 +10,7 @@ const AdminAnalyticsPage = lazy(() => import('../pages/AdminAnalyticsPage').then
 const UserManagementPage = lazy(() => import('../pages/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
 const SemanticMemoryDebugPage = lazy(() => import('../pages/SemanticMemoryDebugPage'));
 const MonitoringDashboardPage = lazy(() => import('../pages/MonitoringDashboardPage').then(m => ({ default: m.MonitoringDashboardPage })));
+const ResponseQualityPage = lazy(() => import('../pages/ResponseQualityPage').then(m => ({ default: m.ResponseQualityPage })));
 
 function admin(role: string, el: React.ReactNode) {
   return (
@@ -24,6 +25,7 @@ function admin(role: string, el: React.ReactNode) {
 export const adminRoutes = [
   <Route key="admin-analytics" path="/admin/analytics" element={admin('manager_or_above', <AdminAnalyticsPage />)} />,
   <Route key="admin-monitoring" path="/admin/monitoring" element={admin('manager_or_above', <MonitoringDashboardPage />)} />,
+  <Route key="admin-response-quality" path="/admin/response-quality" element={admin('manager_or_above', <ResponseQualityPage />)} />,
   <Route key="admin-users" path="/admin/users" element={admin('admin', <UserManagementPage />)} />,
   <Route key="prompt-debugger" path="/prompt-debugger" element={admin('manager_or_above', <PromptDebuggerPage />)} />,
   <Route key="debug-subscription" path="/debug-subscription" element={admin('manager_or_above', <DebugSubscriptionPage />)} />,

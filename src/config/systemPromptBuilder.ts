@@ -46,6 +46,7 @@ interface SystemPromptInput {
     expressiveness?: string;
     initiative?: string;
   };
+  dislikeFeedback?: string[];
 }
 
 const arrayOrStringToString = (value: string[] | string | undefined): string => {

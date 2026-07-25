@@ -1,6 +1,6 @@
 import {
   ArrowLeft, CreditCard, RotateCcw, Gift,
-  Sparkles, Volume2, VolumeX, Settings, Calendar, Wand2, Brain,
+  Sparkles, Volume2, VolumeX, Settings, Calendar, Wand2, Brain, RefreshCw,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from './Avatar';
@@ -28,6 +28,7 @@ interface ChatHeaderProps {
   onAvatarClick: () => void;
   onOpenReflection?: () => void;
   onOpenLoyaltyRewards?: () => void;
+  onStartOver?: () => void;
 }
 
 function IconBtn({
@@ -69,6 +70,7 @@ export const ChatHeader = ({
   onAvatarClick,
   onOpenReflection,
   onOpenLoyaltyRewards,
+  onStartOver,
 }: ChatHeaderProps) => {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
@@ -188,6 +190,20 @@ export const ChatHeader = ({
                 compact={true}
               />
             </div>
+          )}
+
+          {onStartOver && (
+            <motion.button
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.94 }}
+              onClick={onStartOver}
+              title="Start over — clear messages and get a fresh greeting"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-rose-200/80 bg-rose-50/80 text-rose-600 hover:border-rose-300 hover:bg-rose-100 transition-all text-xs font-medium flex-shrink-0"
+              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}
+            >
+              <RefreshCw size={13} />
+              <span className="hidden sm:inline">Start Over</span>
+            </motion.button>
           )}
 
           <IconBtn onClick={toggleMute} title={muted ? 'Unmute music' : 'Mute music'}>

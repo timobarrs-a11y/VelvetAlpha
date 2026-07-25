@@ -364,6 +364,17 @@ export async function finalizeFirstMessage(companionId: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function resetFirstMessage(companionId: string): Promise<void> {
+  const { error } = await supabase
+    .from('companions')
+    .update({ first_message_sent: false })
+    .eq('id', companionId);
+
+  if (error) {
+    console.error('Failed to reset first_message_sent:', error.message);
+  }
+}
+
 export async function deactivateCompanion(companionId: string): Promise<void> {
   const { error } = await supabase
     .from('companions')

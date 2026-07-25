@@ -25,7 +25,7 @@ class RoleService {
 
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('user_role')
+      .select('user_role, is_super_user')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -33,9 +33,13 @@ class RoleService {
       return 'user';
     }
 
-    this.cachedRole = (data.user_role as UserRole) || 'user';
+    const role = data.is_super_user
+      ? 'admin'
+      : (data.user_role as UserRole) || 'user';
+
+    this.cachedRole = role;
     this.cachedUserId = user.id;
-    return this.cachedRole;
+    return role;
   }
 
   async isAdmin(): Promise<boolean> {
