@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { safeRandomUUID } from '../utils/uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, MapPin, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -80,7 +81,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
 
   const addNaviMessage = useCallback((content: string) => {
     const msg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       role: 'navi',
       content,
     };
@@ -132,7 +133,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
   }, []);
 
   const handleWorkTypeSelect = async (workType: string) => {
-    setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: WORK_TYPE_CHIPS.find(c => c.value === workType)?.label || workType }]);
+    setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: WORK_TYPE_CHIPS.find(c => c.value === workType)?.label || workType }]);
     setSavedData(prev => ({ ...prev, workType }));
 
     if (workType === 'none' || workType === 'freelance') {
@@ -152,13 +153,13 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
   const handleHoursSelect = async (start: number | null, end: number | null, label: string) => {
     if (start === null) {
       // Custom — ask freeform
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: label }]);
+      setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: label }]);
       await naviTypeThen('Sure — just tell me roughly when you start and finish (like "8 to 5" or "10am to 7pm").', 700);
       setStep('schedule_hours');
       return;
     }
 
-    setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: label }]);
+    setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: label }]);
     setSavedData(prev => ({ ...prev, workStart: start, workEnd: end ?? undefined }));
 
     await naviTypeThen('Got it. Any of these apply?', 600);
@@ -172,7 +173,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
     if (hasCommute) parts.push('commute');
     if (hasPickup) parts.push('school pickup');
     const userText = parts.length > 0 ? parts.join(' + ') : 'Neither, just the hours';
-    setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: userText }]);
+    setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: userText }]);
 
     if (userIdRef.current) {
       await upsertSchedule(userIdRef.current, {
@@ -193,7 +194,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
 
   const handleGoalInput = async (text: string) => {
     if (!text.trim()) return;
-    setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: text }]);
+    setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: text }]);
     setInputValue('');
 
     // Parse the goal text into a structured goal
@@ -224,7 +225,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
   };
 
   const handleGoalDone = async () => {
-    setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: "That's it for now" }]);
+    setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: "That's it for now" }]);
     const location = await localExplorerService.getSavedLocation();
     if (!location) {
       await naviTypeThen('One more thing — what city are you in? I use this for local stuff in your brief.', 800);
@@ -237,7 +238,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
   const handleLocationInput = async (text: string) => {
     if (!text.trim()) return;
     const city = text.trim();
-    setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: city }]);
+    setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: city }]);
     setInputValue('');
     setSavedData(prev => ({ ...prev, location: city }));
 
@@ -278,7 +279,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
         const isStartPm = text.toLowerCase().includes('pm') && start < 12 && start !== 12;
         if (isStartPm) start += 12;
         if (end < start && end < 12) end += 12;
-        setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: text }]);
+        setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: text }]);
         setInputValue('');
         setSavedData(prev => ({ ...prev, workStart: start, workEnd: end }));
         naviTypeThen('Got it. Any of these apply?', 600).then(() => setStep('schedule_extras'));
@@ -291,7 +292,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
       handleLocationInput(inputValue);
     } else {
       // Generic fallback
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: inputValue }]);
+      setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: inputValue }]);
       setInputValue('');
     }
   };
@@ -345,7 +346,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
           </button>
           <button
             onClick={() => {
-              setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: 'Add another goal' }]);
+              setMessages(prev => [...prev, { id: safeRandomUUID(), role: 'user', content: 'Add another goal' }]);
               setStep('goals_prompt');
             }}
             className="px-4 py-2 rounded-xl text-sm font-medium bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 transition-all"

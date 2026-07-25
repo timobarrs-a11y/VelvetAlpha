@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { safeRandomUUID } from '../utils/uuid';
 
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 export type HealthStatus = 'healthy' | 'degraded' | 'down';
@@ -37,11 +38,19 @@ class MonitoringService {
   }
 
   private initSessionId(): string {
-    const existing = sessionStorage.getItem('velvet_session_id');
-    if (existing) return existing;
-    const id = crypto.randomUUID();
-    sessionStorage.setItem('velvet_session_id', id);
-    return id;
+    // Guard every step: sessionStorage can throw in some iOS private-browsing
+    // contexts, and crypto.randomUUID is absent on older iOS Safari. Because
+    // this runs at module load (the service is a startup singleton), an
+    // unguarded throw here blanks the whole app.
+    try {
+      const existing = sessionStorage.getItem('velvet_session_id');
+      if (existing) return existing;
+      const id = safeRandomUUID();
+      sessionStorage.setItem('velvet_session_id', id);
+      return id;
+    } catch {
+      return safeRandomUUID();
+    }
   }
 
   private getBrowser(): string {

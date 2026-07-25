@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { safeRandomUUID } from '../utils/uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, MapPin, Loader2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -87,13 +88,13 @@ export function CalendarNaviPanel({ userId, upcomingEvents, onEventAdded }: Prop
     setInputValue('');
 
     const userMsg: NaviMessage = {
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       role: 'user',
       content: text,
     };
     setMessages(prev => [...prev, userMsg]);
 
-    const naviMsgId = crypto.randomUUID();
+    const naviMsgId = safeRandomUUID();
     const naviMsg: NaviMessage = {
       id: naviMsgId,
       role: 'navi',
