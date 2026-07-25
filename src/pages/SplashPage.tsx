@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Brain, Users, ArrowRight, Sparkles, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
@@ -61,6 +61,16 @@ export function SplashPage() {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<number[]>([]);
+
+  const lite = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(pointer: coarse)').matches,
+    []
+  );
+  const orbBlur = (b: number) => (lite ? Math.min(b, 36) : b);
+  const enter = (from: Record<string, number>) => (lite ? false : from);
 
   useEffect(() => {
     const checkUserStatus = async () => {
@@ -138,8 +148,8 @@ export function SplashPage() {
       <div
         className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-6"
         style={{
-          background: 'rgba(7,9,15,0.72)',
-          backdropFilter: 'blur(20px)',
+          background: lite ? 'rgba(7,9,15,0.92)' : 'rgba(7,9,15,0.72)',
+          backdropFilter: lite ? undefined : 'blur(20px)',
           borderBottom: '1px solid rgba(255,255,255,0.055)',
         }}
       >
@@ -152,7 +162,7 @@ export function SplashPage() {
           style={{
             background: 'rgba(255,255,255,0.05)',
             border: '1px solid rgba(255,255,255,0.12)',
-            backdropFilter: 'blur(12px)',
+            backdropFilter: lite ? undefined : 'blur(12px)',
           }}
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.09)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
@@ -165,31 +175,31 @@ export function SplashPage() {
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <motion.div
           className="absolute"
-          animate={{ x: ['0%', '3%', '0%'], y: ['0%', '2%', '0%'] }}
+          animate={lite ? undefined : { x: ['0%', '3%', '0%'], y: ['0%', '2%', '0%'] }}
           transition={{ duration: 28, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <div style={{ position: 'absolute', left: ORBS[0].x, top: ORBS[0].y, width: ORBS[0].w, height: ORBS[0].h, borderRadius: '50%', background: ORBS[0].color, filter: `blur(${ORBS[0].blur}px)` }} />
+          <div style={{ position: 'absolute', left: ORBS[0].x, top: ORBS[0].y, width: ORBS[0].w, height: ORBS[0].h, borderRadius: '50%', background: ORBS[0].color, filter: `blur(${orbBlur(ORBS[0].blur)}px)` }} />
         </motion.div>
         <motion.div
           className="absolute"
-          animate={{ x: ['0%', '-2%', '0%'] }}
+          animate={lite ? undefined : { x: ['0%', '-2%', '0%'] }}
           transition={{ duration: 34, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <div style={{ position: 'absolute', left: ORBS[1].x, top: ORBS[1].y, width: ORBS[1].w, height: ORBS[1].h, borderRadius: '50%', background: ORBS[1].color, filter: `blur(${ORBS[1].blur}px)` }} />
+          <div style={{ position: 'absolute', left: ORBS[1].x, top: ORBS[1].y, width: ORBS[1].w, height: ORBS[1].h, borderRadius: '50%', background: ORBS[1].color, filter: `blur(${orbBlur(ORBS[1].blur)}px)` }} />
         </motion.div>
         <motion.div
           className="absolute"
-          animate={{ x: ['0%', '1.5%', '0%'] }}
+          animate={lite ? undefined : { x: ['0%', '1.5%', '0%'] }}
           transition={{ duration: 40, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <div style={{ position: 'absolute', left: ORBS[2].x, top: ORBS[2].y, width: ORBS[2].w, height: ORBS[2].h, borderRadius: '50%', background: ORBS[2].color, filter: `blur(${ORBS[2].blur}px)` }} />
+          <div style={{ position: 'absolute', left: ORBS[2].x, top: ORBS[2].y, width: ORBS[2].w, height: ORBS[2].h, borderRadius: '50%', background: ORBS[2].color, filter: `blur(${orbBlur(ORBS[2].blur)}px)` }} />
         </motion.div>
-        <div style={{ position: 'absolute', left: ORBS[3].x, top: ORBS[3].y, width: ORBS[3].w, height: ORBS[3].h, borderRadius: '50%', background: ORBS[3].color, filter: `blur(${ORBS[3].blur}px)` }} />
-        <div style={{ position: 'absolute', left: ORBS[4].x, top: ORBS[4].y, width: ORBS[4].w, height: ORBS[4].h, borderRadius: '50%', background: ORBS[4].color, filter: `blur(${ORBS[4].blur}px)` }} />
+        <div style={{ position: 'absolute', left: ORBS[3].x, top: ORBS[3].y, width: ORBS[3].w, height: ORBS[3].h, borderRadius: '50%', background: ORBS[3].color, filter: `blur(${orbBlur(ORBS[3].blur)}px)` }} />
+        <div style={{ position: 'absolute', left: ORBS[4].x, top: ORBS[4].y, width: ORBS[4].w, height: ORBS[4].h, borderRadius: '50%', background: ORBS[4].color, filter: `blur(${orbBlur(ORBS[4].blur)}px)` }} />
       </div>
 
       {/* Particles + shooting stars */}
-      {PARTICLES.map(p =>
+      {!lite && PARTICLES.map(p =>
         p.isShooting ? (
           <motion.div
             key={p.id}
@@ -224,7 +234,7 @@ export function SplashPage() {
           {visible && (
             <motion.div
               className="text-center mb-24"
-              initial={{ opacity: 0, y: 50 }}
+              initial={enter({ opacity: 0, y: 50 })}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, ease: 'easeOut' }}
             >
@@ -234,9 +244,9 @@ export function SplashPage() {
                 style={{
                   background: 'rgba(192,132,252,0.08)',
                   border: '1px solid rgba(192,132,252,0.28)',
-                  backdropFilter: 'blur(16px)',
+                  backdropFilter: lite ? undefined : 'blur(16px)',
                 }}
-                initial={{ opacity: 0, scale: 0.88 }}
+                initial={enter({ opacity: 0, scale: 0.88 })}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.15, duration: 0.5 }}
               >
@@ -245,7 +255,7 @@ export function SplashPage() {
                   style={{
                     background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.14) 50%, transparent 70%)',
                   }}
-                  animate={{ x: ['-100%', '200%'] }}
+                  animate={lite ? undefined : { x: ['-100%', '200%'] }}
                   transition={{ duration: 2.4, delay: 1.2, repeat: Infinity, repeatDelay: 4 }}
                 />
                 <Sparkles className="w-3 h-3" style={{ color: '#c084fc' }} />
@@ -255,7 +265,7 @@ export function SplashPage() {
               {/* Hero headline */}
               <motion.h1
                 className="mb-7 leading-none"
-                initial={{ opacity: 0, y: 24 }}
+                initial={enter({ opacity: 0, y: 24 })}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.28, duration: 0.75 }}
               >
@@ -281,7 +291,7 @@ export function SplashPage() {
                 >
                   <span
                     className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                    style={{ filter: 'blur(60px)', opacity: 0.45 }}
+                    style={{ filter: lite ? 'blur(24px)' : 'blur(60px)', opacity: 0.45 }}
                     aria-hidden
                   >
                     <span
@@ -304,7 +314,7 @@ export function SplashPage() {
                       WebkitTextFillColor: 'transparent',
                       backgroundClip: 'text',
                     }}
-                    animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                    animate={lite ? undefined : { backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
                     transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
                   >
                     Velvet
@@ -315,7 +325,7 @@ export function SplashPage() {
               <motion.p
                 className="text-gray-300 max-w-2xl mx-auto font-light mb-10"
                 style={{ fontSize: 'clamp(18px,2.2vw,22px)', lineHeight: 1.6 }}
-                initial={{ opacity: 0 }}
+                initial={enter({ opacity: 0 })}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5, duration: 0.7 }}
               >
@@ -325,7 +335,7 @@ export function SplashPage() {
               {/* CTA buttons — center of hero */}
               <motion.div
                 className="flex flex-row gap-4 justify-center max-w-lg mx-auto w-full"
-                initial={{ opacity: 0, y: 12 }}
+                initial={enter({ opacity: 0, y: 12 })}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.65, duration: 0.6 }}
               >
@@ -367,7 +377,7 @@ export function SplashPage() {
 
               <motion.p
                 className="text-gray-600 text-xs mt-5"
-                initial={{ opacity: 0 }}
+                initial={enter({ opacity: 0 })}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.85 }}
               >
@@ -381,7 +391,7 @@ export function SplashPage() {
         {visible && (
           <motion.div
             className="mb-10 flex items-center gap-4"
-            initial={{ opacity: 0 }}
+            initial={enter({ opacity: 0 })}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.0 }}
           >
@@ -408,8 +418,8 @@ export function SplashPage() {
                   onMouseEnter={() => setHoveredCard(i)}
                   onMouseLeave={() => setHoveredCard(null)}
                   className="rounded-2xl p-5 flex flex-col gap-3 cursor-default relative overflow-hidden"
-                  initial={{ opacity: 0, y: 28 }}
-                  animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
+                  initial={enter({ opacity: 0, y: 28 })}
+                  animate={(lite || isVisible) ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
                   transition={{ duration: 0.55, delay: i * 0.1 }}
                   style={{
                     background: isHovered ? `rgba(${accentRgb},0.07)` : 'rgba(255,255,255,0.03)',
@@ -418,7 +428,7 @@ export function SplashPage() {
                     boxShadow: isHovered ? `0 8px 40px rgba(${accentRgb},0.14), 0 0 0 1px rgba(${accentRgb},0.12)` : 'none',
                     transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
                     transition: 'all 0.3s ease',
-                    backdropFilter: 'blur(12px)',
+                    backdropFilter: lite ? undefined : 'blur(12px)',
                   }}
                 >
                   <div

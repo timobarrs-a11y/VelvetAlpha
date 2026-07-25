@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { safeRandomUUID } from '../utils/uuid';
 
 export interface BehaviorEvent {
   action_type: 'page_view' | 'feature_used' | 'button_clicked' | 'message_sent' | 'form_submitted' | 'error_occurred' | 'navigation';
@@ -42,7 +43,7 @@ class AnalyticsService {
   }
 
   private generateSessionId(): string {
-    return crypto.randomUUID();
+    return safeRandomUUID();
   }
 
   private getDeviceType(): 'mobile' | 'tablet' | 'desktop' | 'unknown' {

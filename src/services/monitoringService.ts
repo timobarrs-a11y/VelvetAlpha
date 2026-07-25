@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { safeRandomUUID } from '../utils/uuid';
 
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 export type HealthStatus = 'healthy' | 'degraded' | 'down';
@@ -37,11 +38,15 @@ class MonitoringService {
   }
 
   private initSessionId(): string {
-    const existing = sessionStorage.getItem('velvet_session_id');
-    if (existing) return existing;
-    const id = crypto.randomUUID();
-    sessionStorage.setItem('velvet_session_id', id);
-    return id;
+    try {
+      const existing = sessionStorage.getItem('velvet_session_id');
+      if (existing) return existing;
+      const id = safeRandomUUID();
+      sessionStorage.setItem('velvet_session_id', id);
+      return id;
+    } catch {
+      return safeRandomUUID();
+    }
   }
 
   private getBrowser(): string {

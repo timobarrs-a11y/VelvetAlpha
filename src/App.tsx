@@ -61,6 +61,7 @@ import { CoAuthorPage } from './pages/CoAuthorPage';
 import { DailyFeedPage } from './pages/DailyFeedPage';
 import { MessageRatingControls } from './components/MessageRatingControls';
 import { RatingValue, getRatingsForMessages, clearConversationMessages, markRatingRegenerated } from './services/ratingService';
+import { safeRandomUUID } from './utils/uuid';
 
 function AppInner() {
   const navigate = useNavigate();
@@ -245,7 +246,7 @@ function AppInner() {
       setActiveThread(bot);
       if (bot === 'atlas' && atlasMessagesRef.current.length === 0) {
         const greeting: Message = {
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           content: "Hey! Atlas here. What can I help you with — research, writing, strategy, anything?",
           sender: 'ai',
           timestamp: Date.now(),
@@ -257,7 +258,7 @@ function AppInner() {
       }
       if (bot === 'navi' && naviMessagesRef.current.length === 0) {
         const greeting: Message = {
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           content: "Hey, Navi here! Tell me what you're looking for — places, events, things to do nearby?",
           sender: 'ai',
           timestamp: Date.now(),
@@ -396,7 +397,7 @@ function AppInner() {
         if (ritualResult.shouldSendMessage && ritualResult.message) {
           await sendMessageMutation.mutateAsync({
             userId, companionId, role: 'assistant', content: ritualResult.message,
-            clientMessageId: crypto.randomUUID(),
+            clientMessageId: safeRandomUUID(),
           });
           conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: ritualResult.message.length });
           playSound();
@@ -433,7 +434,7 @@ function AppInner() {
         if (resumptionMessage) {
           await sendMessageMutation.mutateAsync({
             userId, companionId, role: 'assistant', content: resumptionMessage,
-            clientMessageId: crypto.randomUUID(),
+            clientMessageId: safeRandomUUID(),
           });
           conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: resumptionMessage.length });
           playSound();
@@ -492,7 +493,7 @@ function AppInner() {
     if (!isAtlasThread && !isNaviThread) return;
 
     const userMsg: Message = {
-      id: crypto.randomUUID(), content, sender: 'user',
+      id: safeRandomUUID(), content, sender: 'user',
       timestamp: Date.now(), messageType: 'text',
     };
     if (isAtlasThread) {
@@ -525,7 +526,7 @@ function AppInner() {
       const replyText = data.response || data.message || data.reply || "I'm having trouble responding right now.";
 
       const aiMsg: Message = {
-        id: crypto.randomUUID(), content: replyText, sender: 'ai',
+        id: safeRandomUUID(), content: replyText, sender: 'ai',
         timestamp: Date.now(), messageType: 'text',
         botSource: isAtlasThread ? 'atlas' : 'navi',
       };
@@ -556,7 +557,7 @@ function AppInner() {
 
     // Also push to local thread state so the UI tab shows the message
     const msg: Message = {
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       content,
       sender: 'ai',
       timestamp: Date.now(),
@@ -662,7 +663,7 @@ function AppInner() {
         companionId,
         role: 'assistant',
         content: response,
-        clientMessageId: crypto.randomUUID(),
+        clientMessageId: safeRandomUUID(),
       });
 
       await updateLastMessageTime(companionId);
@@ -755,7 +756,7 @@ function AppInner() {
       await new Promise(resolve => setTimeout(resolve, Math.min(firstMsg.length * 15, 3000)));
       setIsTyping(false);
 
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId: cid, role: 'assistant', content: firstMsg, clientMessageId: crypto.randomUUID() });
+      await sendMessageMutation.mutateAsync({ userId: user.id, companionId: cid, role: 'assistant', content: firstMsg, clientMessageId: safeRandomUUID() });
 
       await finalizeFirstMessage(cid);
       const updatedCompanion = await getCompanion(cid);
@@ -792,7 +793,7 @@ function AppInner() {
       if (videoId) { await handleVideoWatch(content, videoId); return; }
     }
 
-    const userClientId = crypto.randomUUID();
+    const userClientId = safeRandomUUID();
     setSendError(null);
     conversationOrchestrator.dispatch({ type: 'USER_MESSAGE_SENT', contentLength: content.length });
 
@@ -824,7 +825,7 @@ function AppInner() {
       await new Promise(resolve => setTimeout(resolve, Math.min(response.length * 15, 3000)));
       setIsTyping(false);
 
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: response, clientMessageId: crypto.randomUUID() });
+      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: response, clientMessageId: safeRandomUUID() });
 
       if (calendarEvent) {
         setLastCalendarEvent(calendarEvent);
@@ -902,7 +903,7 @@ function AppInner() {
         else errorContent = error.message;
       }
 
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: errorContent, clientMessageId: crypto.randomUUID() });
+      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: errorContent, clientMessageId: safeRandomUUID() });
     }
   };
 
@@ -926,7 +927,7 @@ function AppInner() {
     const openingMessage = `ooh "${metadata.title}"? let's watch it! 🎬`;
 
     try {
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: openingMessage, clientMessageId: crypto.randomUUID() });
+      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: openingMessage, clientMessageId: safeRandomUUID() });
     } catch (error) { console.error('Error saving AI response:', error); }
 
     setIsTyping(false);
@@ -1018,7 +1019,7 @@ function AppInner() {
         const response = await ChatService.sendMessage(lastUserMsg.content, companionId, companion.relationship_type);
         await new Promise(resolve => setTimeout(resolve, Math.min(response.length * 15, 3000)));
         setIsTyping(false);
-        await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: response, clientMessageId: crypto.randomUUID() });
+        await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: response, clientMessageId: safeRandomUUID() });
         playSound();
       } catch (error) {
         setIsTyping(false);

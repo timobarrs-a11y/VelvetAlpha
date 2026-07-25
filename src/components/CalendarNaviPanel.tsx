@@ -6,6 +6,7 @@ import { localExplorerService } from '../services/localExplorerService';
 import { calendarService, UserEvent } from '../services/calendarService';
 import { getActiveGoals, formatGoalsForBrief } from '../services/goalService';
 import { getSchedule, formatScheduleForBrief } from '../services/userScheduleService';
+import { safeRandomUUID } from '../utils/uuid';
 
 interface NaviMessage {
   id: string;
@@ -87,13 +88,13 @@ export function CalendarNaviPanel({ userId, upcomingEvents, onEventAdded }: Prop
     setInputValue('');
 
     const userMsg: NaviMessage = {
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       role: 'user',
       content: text,
     };
     setMessages(prev => [...prev, userMsg]);
 
-    const naviMsgId = crypto.randomUUID();
+    const naviMsgId = safeRandomUUID();
     const naviMsg: NaviMessage = {
       id: naviMsgId,
       role: 'navi',
