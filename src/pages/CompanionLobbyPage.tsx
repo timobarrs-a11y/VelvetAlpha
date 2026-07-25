@@ -676,7 +676,7 @@ export function CompanionLobbyPage() {
                 transition={{ delay: i * 0.04 }}
                 onClick={() => navigateTo(`/chat?companion=${companion.id}`, {
                   icon: MessageCircle,
-                  label: `Loading ${companion.name}...`,
+                  label: `Loading ${companion.custom_name || 'your companion'}...`,
                   accentColor: companion.favorite_color || '#f472b6',
                   bgColor: '#0a0410',
                 })}
@@ -791,7 +791,7 @@ export function CompanionLobbyPage() {
                 transition={{ delay: i * 0.04 }}
                 onClick={() => navigateTo(`/chat?companion=${companion.id}`, {
                   icon: MessageCircle,
-                  label: `Loading ${companion.name}...`,
+                  label: `Loading ${companion.custom_name || 'your coach'}...`,
                   accentColor: '#34d399',
                   bgColor: '#020e08',
                 })}

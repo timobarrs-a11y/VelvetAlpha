@@ -117,6 +117,21 @@ function AppInner() {
   const [showCalendarPanel, setShowCalendarPanel] = useState(false);
   const [isBotLoading, setIsBotLoading] = useState(false);
 
+  // Auto-minimize the left rail whenever a companion chat opens so the
+  // conversation is the focus. User can still expand it manually mid-session.
+  const [railAutoCollapsed, setRailAutoCollapsed] = useState(true);
+  useEffect(() => { setRailAutoCollapsed(true); }, [companionId]);
+  const isRailCollapsed = railAutoCollapsed || (customization?.left_rail_collapsed ?? false);
+  const toggleRailCollapse = () => {
+    if (railAutoCollapsed) {
+      setRailAutoCollapsed(false);
+      if (!(customization?.left_rail_collapsed ?? false)) setLeftRailCollapsed(true);
+    } else {
+      const next = !(customization?.left_rail_collapsed ?? false);
+      setLeftRailCollapsed(next);
+    }
+  };
+
   // Conversation threads + feature tabs
   const [activeThread, setActiveThread] = useState<ActiveThread>('companion');
   const [openFeatures, setOpenFeatures] = useState<Array<'calendar' | 'co-author' | 'daily-feed' | 'your-lens'>>([]);
@@ -1152,9 +1167,9 @@ function AppInner() {
           disabled={isTyping || remainingMessages === 0 || isCurrentlyLoading}
           userId={userId || undefined}
           companionId={companionId || undefined}
-          collapsed={customization?.left_rail_collapsed ?? false}
+          collapsed={isRailCollapsed}
           translucent={customization?.translucent_ui ?? false}
-          onToggleCollapse={() => setLeftRailCollapsed(!(customization?.left_rail_collapsed ?? false))}
+          onToggleCollapse={toggleRailCollapse}
         />
         <TutorialElement elementId={ONBOARDING_ELEMENT_IDS.companionChat} className="flex-1 relative overflow-hidden flex flex-col">
           <ThreadTabBar

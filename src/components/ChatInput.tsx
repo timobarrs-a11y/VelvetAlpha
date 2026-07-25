@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '../shared/ui';
 import { AppNavRadial } from './AppNavRadial';
+import { getDraft, setDraft, clearDraft } from '../utils/draftCache';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -10,12 +11,14 @@ interface ChatInputProps {
   companionId?: string;
   lastMessageText?: string;
   showNavRadial?: boolean;
+  draftScope?: string;
 }
 
 const MAX_TEXTAREA_HEIGHT = 120;
 
-export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMessageText, showNavRadial = true }: ChatInputProps) => {
-  const [input, setInput] = useState('');
+export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMessageText, showNavRadial = true, draftScope }: ChatInputProps) => {
+  const draftKey = draftScope ?? companionId ?? '';
+  const [input, setInput] = useState(() => (draftKey ? getDraft(draftKey) : ''));
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -28,11 +31,17 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
 
   useEffect(() => { resize(); }, [input]);
 
+  useEffect(() => {
+    if (!draftKey) return;
+    setDraft(draftKey, input);
+  }, [draftKey, input]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && !disabled) {
       onSend(input.trim());
       setInput('');
+      if (draftKey) clearDraft(draftKey);
     }
   };
 
@@ -42,6 +51,7 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
       if (input.trim() && !disabled) {
         onSend(input.trim());
         setInput('');
+        if (draftKey) clearDraft(draftKey);
       }
     }
   };

@@ -98,6 +98,7 @@ export const CoAuthorChatPanel = ({
         disabled={isLoading}
         characterName={companionName}
         lastMessageText={messages.length > 0 ? messages[messages.length - 1].message_content.slice(0, 120) : undefined}
+        draftScope="co-author"
       />
     </div>
   );
