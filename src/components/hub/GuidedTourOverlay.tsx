@@ -416,15 +416,6 @@ export function GuidedTourOverlay({ userId, companionName }: Props) {
         </motion.div>
       </AnimatePresence>
 
-      <div
-        className="absolute inset-0"
-        style={{ pointerEvents: 'all', cursor: 'default', zIndex: 0 }}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            // don't close on backdrop click — require explicit Next/Skip
-          }
-        }}
-      />
     </div>,
     document.body,
   );

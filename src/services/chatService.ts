@@ -975,6 +975,26 @@ export class ChatService {
       } catch {
       }
 
+      const dislikeReasons: string[] = [];
+      if (companionId) {
+        try {
+          const { data: dislikes } = await supabase
+            .from('message_ratings')
+            .select('reason, regenerated, created_at')
+            .eq('companion_id', companionId)
+            .eq('rating', 'dislike')
+            .not('reason', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(10);
+          for (const d of dislikes ?? []) {
+            if (d.reason) {
+              const label = d.regenerated ? `${d.reason} (user regenerated response)` : d.reason;
+              dislikeReasons.push(label);
+            }
+          }
+        } catch { /* non-fatal */ }
+      }
+
       const optimizedPrompt = buildSystemPrompt({
         companionName,
         companionGender,
@@ -1012,6 +1032,7 @@ export class ChatService {
           initiative: companionData.initiative,
         } : undefined,
         driftCorrection: companionData?.drift_needs_correction === true,
+        dislikeFeedback: dislikeReasons.length > 0 ? dislikeReasons : undefined,
       });
 
       const recentUserMessages = last20Messages

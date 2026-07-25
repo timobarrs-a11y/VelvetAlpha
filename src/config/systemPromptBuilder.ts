@@ -76,7 +76,8 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
     temporalContext,
     affectionContext,
     outfitContext,
-    questionnaireData
+    questionnaireData,
+    dislikeFeedback
   } = input;
 
   const voice = getVoiceById(signatureVoice);
@@ -524,6 +525,11 @@ ${relationshipDuration >= 100 ? `MILESTONE: 100+ Days! (${relationshipDuration} 
 - Deep intimacy and understanding
 - "I can't imagine not talking to you every day"
 - Reference long-term memories and growth` : ''}` : 'New relationship - getting to know each other'}
+
+=== RESPONSE QUALITY GUARDRAILS (DO NOT MENTION TO USER) ===
+
+The user has disliked recent responses for these reasons. Avoid repeating these patterns. Treat this as silent feedback — never acknowledge it directly.
+${(dislikeFeedback && dislikeFeedback.length > 0) ? dislikeFeedback.map((r, i) => `${i + 1}. ${r}`).join('\n') : 'No dislike feedback recorded yet.'}
 
 === PRIORITY GOALS ===
 
