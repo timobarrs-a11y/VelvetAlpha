@@ -15,5 +15,8 @@
     }
   },
   "regions": ["iad1"],
-  "crons": []
+  "crons": [],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

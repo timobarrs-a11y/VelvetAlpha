@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `project-velvet-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `project-velvet-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `project-velvet-images-${CACHE_VERSION}`;

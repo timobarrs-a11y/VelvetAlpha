@@ -91,6 +91,7 @@ export function SplashPage() {
   }, [navigate]);
 
   useEffect(() => {
+    if (!visible) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
@@ -104,7 +105,12 @@ export function SplashPage() {
     );
     const cards = featuresRef.current?.querySelectorAll('[data-index]');
     cards?.forEach(card => observer.observe(card));
-    return () => observer.disconnect();
+    const fallback = setTimeout(() => {
+      setVisibleFeatures(prev =>
+        prev.length < features.length ? features.map((_, i) => i) : prev
+      );
+    }, 1200);
+    return () => { observer.disconnect(); clearTimeout(fallback); };
   }, [visible]);
 
   if (isChecking) {
