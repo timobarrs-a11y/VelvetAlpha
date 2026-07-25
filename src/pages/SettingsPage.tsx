@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3 } from 'lucide-react';
+import { ArrowLeft, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Gauge, Users, MessageSquareWarning } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { gdprService } from '../services/gdprService';
 import { onboardingService } from '../services/onboardingService';
 import { getCompanions } from '../services/companionService';
 import { getUserExperts, deleteUserExpert, UserExpert } from '../services/expertService';
 import { getExpertById, getCuratedExperts, ExpertConfig } from '../config/signatureExperts';
+import { useRole } from '../hooks/useRole';
 
 type Tab = 'notifications' | 'privacy' | 'appearance' | 'experts' | 'tour' | 'security' | 'data';
 
@@ -42,6 +43,7 @@ const DEFAULT_PRIVACY: PrivacySettings = {
 
 export function SettingsPage() {
   const navigate = useNavigate();
+  const { isManagerOrAbove } = useRole();
   const [activeTab, setActiveTab] = useState<Tab>('notifications');
   const [notifications, setNotifications] = useState<NotificationSettings>(DEFAULT_NOTIFICATIONS);
   const [privacy, setPrivacy] = useState<PrivacySettings>(DEFAULT_PRIVACY);
@@ -294,6 +296,42 @@ export function SettingsPage() {
                   </button>
                 );
               })}
+
+              {isManagerOrAbove && (
+                <div className="pt-4 border-t border-white/10 mt-4">
+                  <p className="px-4 text-xs font-semibold uppercase tracking-wider text-white/30 mb-2">Admin Console</p>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => navigate('/admin/analytics')}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/50 hover:text-white/90 hover:bg-white/5 transition text-left"
+                    >
+                      <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                      Analytics
+                    </button>
+                    <button
+                      onClick={() => navigate('/admin/response-quality')}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/50 hover:text-white/90 hover:bg-white/5 transition text-left"
+                    >
+                      <MessageSquareWarning className="w-4 h-4 flex-shrink-0" />
+                      Response Quality
+                    </button>
+                    <button
+                      onClick={() => navigate('/admin/monitoring')}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/50 hover:text-white/90 hover:bg-white/5 transition text-left"
+                    >
+                      <Activity className="w-4 h-4 flex-shrink-0" />
+                      Monitoring
+                    </button>
+                    <button
+                      onClick={() => navigate('/admin/users')}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/50 hover:text-white/90 hover:bg-white/5 transition text-left"
+                    >
+                      <Users className="w-4 h-4 flex-shrink-0" />
+                      User Management
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 border-t border-white/10 mt-4">
                 <button
