@@ -8,7 +8,7 @@ import { queryClient } from './shared/queryClient';
 import { AuthProvider } from './auth/AuthProvider';
 import { CustomizationProvider } from './context/CustomizationContext';
 import { monitoringService } from './services/monitoringService';
-import { registerSW } from './services/swRegistration';
+import { registerSW, installChunkErrorRecovery } from './services/swRegistration';
 import './index.css';
 
 window.addEventListener('unhandledrejection', (event) => {
@@ -32,6 +32,10 @@ window.addEventListener('error', (event) => {
     });
   }
 });
+
+// Recover automatically if a stale cached deploy leaves route chunks unloadable
+// (the "worked yesterday, blank/stuck today" failure, common on iOS Safari).
+installChunkErrorRecovery();
 
 registerSW();
 
