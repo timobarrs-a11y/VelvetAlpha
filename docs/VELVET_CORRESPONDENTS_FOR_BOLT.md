@@ -29,52 +29,74 @@ Key product decisions (already settled — do not change):
    correspondent later = one config entry, not new code.
 5. **Correspondents cite their sources in-app.** When a correspondent talks about
    stories, its message carries the source articles as tappable cards that open
-   the full article inside the app (reusing the Daily Feed reader) — never an
-   external site.
+   the full article inside the app (the existing `/article` reader route) —
+   never an external site.
+
+## Two prompt paths (READ THIS FIRST — it's the thing most likely to trip you up)
+
+This app builds chat prompts in **two different places**, and correspondent
+logic must be added to BOTH:
+
+- **Ongoing chat → the `chat-turn` edge function.** The live send path is
+  `App.tsx` → `ChatService.sendMessageWithSignals` → `chat-turn`. The
+  client-side `systemPromptBuilder.ts` is largely dead (gated by
+  `USE_SERVER_PROMPT=false`). So ongoing-chat correspondent behavior + news
+  grounding is added **server-side** in `chat-turn`. This mirrors where the
+  coach framework already lives.
+- **First message → the generic `/functions/v1/chat` passthrough, built
+  CLIENT-SIDE.** `firstMessageService.ts` (line ~224) posts to
+  `/functions/v1/chat`, and builds its guidance client-side
+  (`buildCoachOpeningGuidance`, line ~157). It does NOT go through `chat-turn`,
+  so it never hits the correspondent branch. **The opener must fetch its
+  articles client-side** (via `newsService`) and pass them in the prompt. Do not
+  assume server-side grounding covers the first message — it doesn't.
+
+Because of this split, the article-grounding fetch exists in **two copies** (a
+client-side one for the opener + source cards, and a Deno edge-side one for
+ongoing chat) — exactly the same client/edge duplication the coach framework
+already uses. That's accepted in this codebase.
 
 ## What already exists (reuse, don't rebuild)
 
 - `news_articles` table already stores full article `content` (migration
   `20260210000801`), so in-app reading needs no new data.
-- `src/pages/DailyFeedPage.tsx` already renders article cards and an in-app
-  reader, and tracks reads via the `article_views` table.
-- `article_conversations` table already exists (article_id ↔ companion_id ↔
-  user_id) — the "discuss this article with a companion" loop is pre-scaffolded.
+- **An article reader route already exists**: `/article?id=<uuid>` →
+  `ArticleDetailPage.tsx` (`src/routes/appRoutes.tsx:41`). `DailyFeedPage` cards
+  just `navigate('/article?id=...')`. **There is nothing to "extract"** — a
+  source card just navigates to this route.
+- `article_views` (read tracking, unique index exists) and
+  `article_conversations` (article_id ↔ companion_id ↔ user_id, the
+  "discuss this article with a companion" loop) tables already exist.
 - `src/config/voiceNewsCategories.ts` already maps voices → news
   categories/keywords/sources. `jock` → sports (espn, bleacher-report);
   `homie` → entertainment/celebrity (tmz, complex, buzzfeed). The two seed
   correspondents reuse these two voice configs directly.
-- `src/services/newsService.ts` `getArticlesByCategories()` is the article
-  fetch pattern. `src/services/morningBriefService.ts` `buildBrief()` already
-  fetches per-voice news — model the grounding fetch on it.
+- `src/services/newsService.ts` `getArticlesByCategories()` is the client-side
+  article fetch. `src/services/morningBriefService.ts` `buildBrief()` already
+  fetches per-voice news — model the grounding fetch/format on these.
 - `src/config/coachFramework.ts` + `supabase/functions/_shared/coachFramework.ts`
   are the exact **mirror pattern** to copy for the correspondent framework
   (client source of truth + Deno edge copy kept in sync).
+- `companionService.createCompanion()` (`src/services/companionService.ts:141`)
+  is how a companion row is inserted — reuse it for seeding correspondents.
 
-## The design
+## The briefing loop (behavioral design)
 
-The correspondent behavior is injected **server-side in the edge function**,
-because the live chat path builds its prompt there (`chat-turn` via
-`buildPersonaLayer`), not from the client `systemPromptBuilder.ts` (that path is
-gated off by `USE_SERVER_PROMPT=false`). So, like the coach framework, the
-correspondent framework needs a client source-of-truth file AND a Deno edge
-mirror, and the grounding/news fetch happens inside the edge function.
+The correspondent behavioral block encodes a **briefing loop**, NOT the coaching
+loop:
 
-Flow per correspondent message:
-
-```
-chat-turn receives message for a companion whose relationship_type === 'correspondent'
-  → resolve the correspondent's beat + voice (from the companion row / config)
-  → fetch fresh articles for that beat from news_articles (edge-side query)
-  → inject a RECENT_STORIES block (headlines + summaries + article IDs) into the prompt
-  → inject the correspondent behavioral block (in place of coach/companion blocks)
-  → model responds in-voice, grounded to those stories
-  → chat-turn returns { content, article_ids }  ← the IDs it grounded on
-  → client saves the assistant message WITH article_ids
-  → chat UI renders a <SourceCard> per article_id under the message
-  → tapping a card opens the existing Daily Feed in-app reader (full content),
-    logs an article_view, and offers "talk about this" (article_conversations)
-```
+1. **HOOK** — open with the single most surprising / juicy thing from today's
+   stories.
+2. **RIFF** — give a *take*, not just the fact. Opinion, reaction, personality.
+3. **PULL IN** — end by asking the user what they think. A conversation, not a
+   broadcast.
+4. **GROUND (critical)** — "You may only report facts that appear in the RECENT
+   STORIES provided to you. Never invent news, quotes, scores, names, dates, or
+   outcomes. If you don't have a story on something, say you haven't seen
+   anything on it yet. Attribute claims to the story's source." Anti-hallucination
+   / anti-defamation guardrail — keep it strict.
+5. **NO coaching, NO romance** — no goals for the user, no flirting/pet names.
+   Warm and opinionated, not a partner and not a coach.
 
 ---
 
@@ -82,8 +104,7 @@ chat-turn receives message for a companion whose relationship_type === 'correspo
 
 ### NEW: `src/config/correspondentFramework.ts`
 
-Client source-of-truth for correspondent behavior, mirroring
-`coachFramework.ts`. Beat-parameterized.
+Client source-of-truth, mirroring `coachFramework.ts`. Beat-parameterized.
 
 ```ts
 export type CorrespondentBeat = 'sports' | 'gossip' | 'tech' | 'politics' | 'culture';
@@ -94,50 +115,40 @@ interface CorrespondentFrameworkInput {
   beat: CorrespondentBeat;
 }
 
-// The core behavioral block injected into a correspondent's system prompt.
-// This is the correspondent equivalent of buildCoachBehavioralInstructions.
+// Correspondent equivalent of buildCoachBehavioralInstructions.
 export const buildCorrespondentBehavioralInstructions =
-  (input: CorrespondentFrameworkInput): string => { ... }
+  (input: CorrespondentFrameworkInput): string => { /* briefing loop, beat flavor */ };
+
+// Correspondent equivalent of buildCoachOpeningGuidance — used CLIENT-SIDE by
+// firstMessageService. Takes the already-fetched stories so the opener leads on
+// a real headline.
+export const buildCorrespondentOpeningGuidance =
+  (input: { correspondentName: string; beat: CorrespondentBeat; storiesBlock: string }): string => { ... };
+
+// Deterministic fallback opener (mirror buildCoachOpeningFallback) for when no
+// AI generation / no articles are available.
+export const buildCorrespondentOpeningFallback =
+  (input: { correspondentName: string; beat: CorrespondentBeat }): string => { ... };
 ```
 
-The block must encode the **briefing loop** (NOT the coaching loop):
-
-1. **HOOK** — open with the single most surprising / juicy thing from today's
-   stories.
-2. **RIFF** — give a *take*, not just the fact. Opinion, reaction, personality.
-3. **PULL IN** — end by asking the user what they think. It's a conversation,
-   not a broadcast.
-4. **GROUND (critical)** — "You may only report facts that appear in the
-   RECENT STORIES provided to you. Never invent news, quotes, scores, names,
-   dates, or outcomes. If you don't have a story on something, say you haven't
-   seen anything on it yet. Attribute claims to the story's source." This is the
-   anti-hallucination / anti-defamation guardrail — keep it strict.
-5. **NO coaching, NO romance** — do not set goals for the user, do not flirt or
-   use pet names. Warm and opinionated, not a partner and not a coach.
-
-Add a beat flavor line keyed off `beat` (gossip = playful/breathless;
-sports = hot-take/debate; etc.), analogous to how `coachFramework` varies by
-accountability level.
-
-Also export `buildCorrespondentOpeningGuidance({ correspondentName, beat })` for
-the first message (mirrors `buildCoachOpeningGuidance`) — the correspondent
-opens with a real headline from its beat, not "hi I'm your reporter."
+Add a beat flavor line keyed off `beat` (gossip = playful/breathless; sports =
+hot-take/debate), analogous to how `coachFramework` varies by accountability
+level.
 
 ### NEW: `supabase/functions/_shared/correspondentFramework.ts`
 
-Deno edge mirror of the above (same pattern as
-`supabase/functions/_shared/coachFramework.ts`). Keep the two in sync. This is
-the copy actually used at chat time.
+Deno edge mirror of `buildCorrespondentBehavioralInstructions` (same pattern as
+`supabase/functions/_shared/coachFramework.ts`). Keep the two in sync. This copy
+is used by `chat-turn` for ongoing chat.
 
 ### NEW: `src/config/signatureCorrespondents.ts`
 
-The correspondent roster, modeled on `SIGNATURE_EXPERTS` in
-`signatureExperts.ts`. Each entry maps a character → a beat → an existing voice
-key (so it inherits news routing from `voiceNewsCategories.ts` for free).
+Roster, modeled on `SIGNATURE_EXPERTS`. Each entry maps character → beat →
+existing voice key (inherits news routing from `voiceNewsCategories.ts`).
 
 ```ts
 export interface CorrespondentConfig {
-  id: string;
+  id: string;              // correspondent_id stored on the companion row
   name: string;
   beat: CorrespondentBeat;
   voiceKey: string;        // key into VOICE_NEWS_CATEGORIES + signatureVoices
@@ -147,46 +158,23 @@ export interface CorrespondentConfig {
 }
 
 export const SIGNATURE_CORRESPONDENTS: CorrespondentConfig[] = [
-  {
-    id: 'gossip_insider',
-    name: 'The Insider',
-    beat: 'gossip',
-    voiceKey: 'homie',     // → tmz, complex, buzzfeed (entertainment/general)
-    description: 'Your plugged-in friend with all the pop-culture tea.',
-    premium: false,
-    source: 'curated',
-  },
-  {
-    id: 'sports_sideline',
-    name: 'The Sideline',
-    beat: 'sports',
-    voiceKey: 'jock',      // → espn, bleacher-report (sports)
-    description: 'Hot takes and the day in sports, delivered with attitude.',
-    premium: false,
-    source: 'curated',
-  },
+  { id: 'gossip_insider', name: 'The Insider', beat: 'gossip', voiceKey: 'homie',
+    description: 'Your plugged-in friend with all the pop-culture tea.', premium: false, source: 'curated' },
+  { id: 'sports_sideline', name: 'The Sideline', beat: 'sports', voiceKey: 'jock',
+    description: 'Hot takes and the day in sports, delivered with attitude.', premium: false, source: 'curated' },
 ];
 ```
 
-> Naming note: keep character names original (The Insider / The Sideline). Do
-> NOT name or impersonate real outlets (TMZ/ESPN) in UI copy — those are only
-> the underlying news *sources*, not the character brand.
+> Keep character names original. Do NOT name/impersonate real outlets
+> (TMZ/ESPN) in UI copy — those are only the underlying news *sources*.
 
-### NEW: correspondent news grounding helper
+### NEW: `src/services/correspondentNewsService.ts` (client-side grounding)
 
-Add a helper the edge function calls to fetch the correspondent's fresh
-articles. It resolves the beat's voice config from `VOICE_NEWS_CATEGORIES`
-(categories/keywords), queries `news_articles` for the last ~5–7 days ordered by
-`published_at desc`, limit ~6, and returns `{ articles, block }` where `block`
-is the formatted `RECENT STORIES` text and each article contributes its `id`,
-`title`, `summary/description`, and `source`.
-
-Model the query on `newsService.getArticlesByCategories()` and the block
-formatting on `morningBriefService.buildBrief()`'s news block. Implement the
-fetch **inside the edge function** (Deno supabase client querying
-`news_articles` directly) since correspondent prompts are assembled server-side.
-
-The block format (example):
+Used by the opener and by source-card assembly. Given a `voiceKey`/`beat`:
+resolve the beat's categories from `VOICE_NEWS_CATEGORIES`, call
+`newsService.getArticlesByCategories(categories, 6)`, and return
+`{ articles, storiesBlock }` where each article contributes `id`, `title`,
+`summary`, `source`. Block format:
 
 ```
 === RECENT STORIES (your only source of facts — do not report anything not here) ===
@@ -194,124 +182,173 @@ The block format (example):
 [2] (id: <uuid>) ...
 ```
 
+### NEW: edge-side grounding fetch inside `chat-turn`
+
+Same logic in Deno: query `news_articles` directly (last ~7 days,
+`order by published_at desc`, limit 6) filtered by the correspondent's beat
+categories, build the identical `RECENT STORIES` block, and keep the returned
+article `id`s to send back to the client (see chat-turn edits).
+
 ### MODIFIED: `supabase/functions/chat-turn/index.ts`
 
-Where the function already branches on relationship type / builds the coach
-layer, add a `correspondent` branch:
+Where it already branches on relationship type / builds the coach layer, add a
+`correspondent` branch:
 
 1. Detect `companion.relationship_type === 'correspondent'`.
-2. Resolve beat + voiceKey (store `beat`/`voice_key` on the companion row at
-   creation, or look up by a `correspondent_id` column — see migration).
-3. Fetch the grounded articles (helper above) and inject the `RECENT STORIES`
+2. Resolve `beat` + `voice_key` from the companion row (new columns — see
+   migration).
+3. Fetch grounded articles (edge helper above); inject the `RECENT STORIES`
    block + `buildCorrespondentBehavioralInstructions(...)` **instead of** the
-   coach/companion behavioral blocks. The Signature Voice layer (persona) still
-   stacks underneath, same as coaches.
-4. Return the grounded article IDs to the client:
-   `return { content, article_ids }` (add `article_ids` to the response body;
-   existing callers ignore unknown fields).
+   coach/companion behavioral blocks. The Signature Voice persona still stacks
+   underneath (same as coaches).
+4. **Return the grounded article IDs**: add `article_ids: string[]` to the
+   response body. (Existing callers ignore unknown fields.)
 
-Everything else in chat-turn (moderation, tier gating, model selection, history,
-memory rules, time rules, rate limiting) is untouched.
+Untouched: moderation, tier gating, model selection, history, memory rules, time
+rules, rate limiting.
 
-### MODIFIED: `src/services/firstMessageService.ts`
+### MODIFIED: `src/services/firstMessageService.ts` (CLIENT-SIDE grounding)
 
-When the companion is a correspondent, use
-`buildCorrespondentOpeningGuidance(...)` and the grounded stories so the first
-message opens on a real headline. (Mirrors how it already special-cases coaches.)
+The opener path posts to `/functions/v1/chat`, not `chat-turn`. So for a
+correspondent companion:
 
-### MODIFIED: `src/services/chatService.ts`
+1. Client-side, call `correspondentNewsService` to fetch stories + block.
+2. Build the prompt with `buildCorrespondentOpeningGuidance({ ..., storiesBlock })`
+   (mirrors how it already special-cases coaches with
+   `buildCoachOpeningGuidance`), fall back to `buildCorrespondentOpeningFallback`
+   when no articles/AI.
+3. Return the opener AND the fetched `article_ids` so App.tsx can persist them on
+   the first assistant message (see save path below).
 
-1. Add optional `article_ids?: string[]` to the `Message` interface (line ~212).
-2. `saveMessage(...)` (line ~617) persists `article_ids` for assistant messages.
-3. When calling the edge function, read `article_ids` off the response and attach
-   to the saved assistant message.
+### Persisting `article_ids` — the save path (Hole this replaces the earlier "saveMessage" note)
+
+`ChatService.saveMessage` is NOT the live save path. Ongoing chat saves via a
+mutation. Thread `article_ids` through **all** of these:
+
+1. **`src/services/chatService.ts` — `sendMessageWithSignals` (line ~692):**
+   include `article_ids` in its return type/shape (read from the `chat-turn`
+   response body).
+2. **`src/features/chat/hooks/useSendMessage.ts`:** add `article_ids?: string[]`
+   to `SendMessageInput` and `OptimisticMessage`; pass it into the insert.
+3. **`src/shared/supabase/queries.ts` — `insertMessageByUserAndCompanion`:**
+   accept and insert `article_ids`.
+4. **`src/App.tsx` — the two assistant-message `sendMessageMutation.mutateAsync`
+   sites** fed by `sendMessageWithSignals` (≈ lines 667–676 and 832–843, plus
+   the first-message save ≈ line 774): pass `article_ids` from the result into
+   `mutateAsync`.
+
+(Also add `article_ids?: string[]` to the `Message` interface in
+`chatService.ts` line ~212 so the UI can read it.)
 
 ### NEW: `src/components/SourceCard.tsx` (+ wire into the chat message renderer)
 
 A compact card (headline + thumbnail + outlet) rendered under any assistant
-message that has `article_ids`. Reuse the article card + reader from
-`DailyFeedPage.tsx` (extract the reader into a shared component if it isn't
-already). Tapping a card:
+message that has `article_ids`. Fetch the article rows by id (reuse
+`newsService`), render each as a card, and on tap **`navigate('/article?id=<id>')`**
+— the existing `ArticleDetailPage` reader logs the `article_view` and shows full
+content. No reader extraction needed. Optionally add a "Talk about this" action
+that continues an `article_conversations` thread with the correspondent.
 
-- opens the existing in-app reader with the full `content` (no external nav),
-- logs an `article_view` (dedup index already exists),
-- shows a "Talk about this" action that starts/continues an
-  `article_conversations` thread with that correspondent.
+### MODIFIED: type unions + branches (Hole: unions exclude correspondent)
+
+Extend every relationship-type union to include `'correspondent'` and add a
+correspondent branch wherever `mentor` is special-cased:
+
+- `src/services/companionService.ts:15` — `Companion.relationship_type` union,
+  and `CreateCompanionOptions.relationshipType`.
+- `src/services/chatService.ts:729` — `sendMessage(..., relationshipType)` union
+  (and the cast at line ~1011).
+- `src/config/systemPromptBuilder.ts:19` — `relationshipType` union + the
+  relationship-type label line (~145). (This path is mostly dead but must still
+  type-check and not misroute.)
+
+### MODIFIED: `src/services/companionService.ts` — `createCompanion` (Hole: seeding)
+
+Curated correspondents must become real `companions` rows (config alone does
+nothing). Extend `CreateCompanionOptions` + the insert (line ~146) to accept the
+new fields: `correspondent_id`, `beat`, `voice_key`. Then add a **one-tap "add"
+from the lobby** (see below) that calls `createCompanion` with
+`relationshipType: 'correspondent'` and those fields populated from the chosen
+`CorrespondentConfig`. (This is the correspondent analog of how experts become
+companions via the expert flow.)
 
 ### MODIFIED: `src/pages/CompanionLobbyPage.tsx`
 
-Add a third rail — **"Velvet Correspondents"** — filtering
-`relationship_type === 'correspondent'`, mirroring the existing "Velvet Coaches"
-rail (lines ~779–787). Seed the two curated correspondents into the lobby.
+- Add a third rail — **"Velvet Correspondents"** — filtering
+  `relationship_type === 'correspondent'` (mirror the "Velvet Coaches" rail,
+  ~lines 779–787).
+- Render the two `SIGNATURE_CORRESPONDENTS` as add-able cards; tapping one the
+  user doesn't have yet calls the `createCompanion` add-flow above, then opens
+  the chat.
 
 ---
 
 ## Database migration
 
-New migration (mirror the additive style of existing migrations — guarded
-`ALTER`s, `IF NOT EXISTS`):
+New migration (additive, guarded, mirroring existing style):
 
-1. **Allow the new relationship type.** If `companions.relationship_type` has a
-   `CHECK` constraint or enum restricting values, extend it to include
-   `'correspondent'`. If it's a free-text column, no change needed — verify
-   first.
-2. **Correspondent identity on the companion row.** Add nullable columns so the
-   edge function can resolve the beat/voice without a join:
-   - `correspondent_id text` (e.g. `gossip_insider`)
-   - `beat text`
-   - `voice_key text` (may already be derivable from `signature_voice`)
-3. **Message source citations.** Add `article_ids uuid[]` (nullable) to the chat
+1. **Extend the relationship_type CHECK constraint (required — confirmed hard
+   constraint).** The constraint is named `companions_relationship_type_check`
+   (created in `20251219215016`, last redefined in `20260617201807`). Drop and
+   recreate to include the new value:
+   ```sql
+   ALTER TABLE companions DROP CONSTRAINT IF EXISTS companions_relationship_type_check;
+   ALTER TABLE companions ADD CONSTRAINT companions_relationship_type_check
+     CHECK (relationship_type IN ('friend', 'romantic', 'mentor', 'correspondent'));
+   ```
+2. **Correspondent identity on the companion row** (nullable):
+   `correspondent_id text`, `beat text`, `voice_key text`.
+3. **Message source citations:** add `article_ids uuid[]` (nullable) to the chat
    messages table so assistant messages persist their cited article IDs.
-4. `article_conversations` and `article_views` already exist — no change.
+4. `article_conversations` / `article_views` already exist — no change.
 
-No backfill needed; existing companions are unaffected.
+No backfill; existing companions unaffected.
 
 ## Deployment
 
 ```bash
+# run the migration in Supabase first, then:
 supabase functions deploy chat-turn
-# (and generate-opener / first-message function if first messages are server-side)
+supabase functions deploy chat   # if the opener passthrough needs changes
 ```
 
-`_shared` files deploy with the function automatically. Run the migration in
-Supabase before deploying the function.
+`_shared` files deploy with the function automatically.
 
 ## QA checklist
 
-1. **Grounding is real.** Talk to The Sideline — every score/trade/name it
-   states must appear in an actual `news_articles` row. Ask about a made-up
-   event ("did the Lakers sign a Martian?") — it must say it hasn't seen
-   anything on that, NOT invent a story.
-2. **Voice is distinct.** The Insider (gossip) and The Sideline (sports) read
-   as clearly different personalities, and neither reads like a coach (no goals,
-   no "what's your next step") or a romantic companion (no flirting/pet names).
-3. **Free access.** Both correspondents are usable on the free tier — no paywall
-   prompt on the character.
-4. **Source cards.** A correspondent message about stories shows tappable source
-   cards; tapping opens the full article in-app (never a browser), logs a view,
-   and offers "talk about this."
-5. **First message** opens on a real, current headline from the correspondent's
-   beat.
-6. **Lobby** shows the "Velvet Correspondents" rail with both characters.
-7. **Regression.** Friends, romantic companions, and coaches are unchanged;
-   moderation, tier gating, and message decrement still fire.
+1. **Grounding is real.** The Sideline's scores/trades/names must all exist in
+   `news_articles`. Ask about a made-up event — it must say it hasn't seen
+   anything, NOT invent a story.
+2. **First message is grounded too.** The opener leads on a real current
+   headline (client-side fetch working), and falls back gracefully with no
+   articles.
+3. **Voice distinct, not coach/romantic.** Insider vs Sideline read clearly
+   different; neither sets goals or flirts.
+4. **Free access.** Both usable on free tier — no paywall on the character.
+5. **Source cards + persistence.** A correspondent message shows tappable source
+   cards; `article_ids` survive a reload (persisted through the mutation, not
+   lost). Tapping opens `/article?id=` in-app, logs a view.
+6. **Seeding.** Adding a correspondent from the lobby inserts a `companions` row
+   with `relationship_type='correspondent'` + `correspondent_id`/`beat`/
+   `voice_key`, and does NOT hit the CHECK constraint.
+7. **Lobby** shows the "Velvet Correspondents" rail.
+8. **Regression.** Friends, romantic companions, coaches unchanged; moderation,
+   tier gating, message decrement still fire; type-check passes (all unions
+   extended).
 
 ## Known follow-ups (NOT in this change)
 
-- **Group `daily_debate` (premium).** Two correspondents in a group chat riffing
-  on the same story and reacting to each other — the premium upsell. Applies the
-  same grounding block inside `supabase/functions/group-chat/index.ts` with a new
-  turn type.
-- **More beats.** `tech` (voiceKey `nerd`), `culture` (`artist`), `politics`
-  (`lawyer`). Each is a single `SIGNATURE_CORRESPONDENTS` entry — no new code.
-- **Politics = debate by default.** When the politics beat ships, default it to a
-  two-voice debate format (e.g. `lawyer` evidence-lens vs `shakespearean`
-  principle-lens on the same story) rather than one opinionated pundit — safer
-  and more compelling. Keep the strict grounding rule and wire-service sources.
-- **Proactive daily briefing.** A correspondent variant of the scheduled
-  proactive message (mirror `getCoachScheduledMessage` in
-  `proactiveMessageService.ts`) that fires a real-headline hook on a daily
-  cadence — the daily-sign-in pull.
-- **User-created correspondents.** `source: 'user'` correspondents (pick a beat +
-  voice) once the curated pair is validated.
+- **Group `daily_debate` (premium).** Two correspondents reacting to the same
+  story and to each other — the premium upsell. Same grounding block inside
+  `supabase/functions/group-chat/index.ts` with a new turn type.
+- **More beats.** `tech` (`nerd`), `culture` (`artist`), `politics` (`lawyer`).
+  Each is one `SIGNATURE_CORRESPONDENTS` entry.
+- **Politics = debate by default.** Ship it as a two-voice debate (e.g. `lawyer`
+  evidence-lens vs `shakespearean` principle-lens on the same story), strict
+  grounding, wire-service sources.
+- **Proactive daily briefing.** A correspondent variant of
+  `getCoachScheduledMessage` in `proactiveMessageService.ts` firing a
+  real-headline hook on a daily cadence.
+- **User-created correspondents** (`source: 'user'`) once the curated pair is
+  validated.
 ```
