@@ -663,9 +663,11 @@ function AppInner() {
     try {
       const userProfile = await ChatService.getUserProfile();
       let response: string;
+      let articleIds: string[] | undefined;
       if (userProfile && companionId) {
         const result = await ChatService.sendMessageWithSignals(enrichedPrompt, companionId, userProfile);
         response = result.assistantMessage;
+        articleIds = result.article_ids;
       } else {
         response = await ChatService.sendMessage(enrichedPrompt, companionId, companion.relationship_type);
       }
@@ -679,6 +681,7 @@ function AppInner() {
         role: 'assistant',
         content: response,
         clientMessageId: safeRandomUUID(),
+        ...(articleIds && articleIds.length > 0 ? { metadata: { article_ids: articleIds } } : {}),
       });
 
       await updateLastMessageTime(companionId);
@@ -765,7 +768,8 @@ function AppInner() {
           companionData.signature_voice, userBirthday,
           expertConfig?.domain,
           expertConfig,
-          companionData.relationship_type
+          companionData.relationship_type,
+          companionData.correspondent_id,
         );
       }
       await new Promise(resolve => setTimeout(resolve, Math.min(firstMsg.length * 15, 3000)));
@@ -827,12 +831,14 @@ function AppInner() {
       let response: string;
       let calendarEvent: { title: string; event_type: string; event_date: string } | null = null;
       let navigationIntent: { destination: string; route: string; seedText?: string } | null = null;
+      let articleIds: string[] | undefined;
 
       if (userProfile && companionId) {
         const result = await ChatService.sendMessageWithSignals(content, companionId, userProfile);
         response = result.assistantMessage;
         calendarEvent = result.calendarEvent || null;
         navigationIntent = result.navigationIntent || null;
+        articleIds = result.article_ids;
       } else {
         response = await ChatService.sendMessage(content, companionId, companion.relationship_type);
       }
@@ -840,7 +846,14 @@ function AppInner() {
       await new Promise(resolve => setTimeout(resolve, Math.min(response.length * 15, 3000)));
       setIsTyping(false);
 
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: response, clientMessageId: safeRandomUUID() });
+      await sendMessageMutation.mutateAsync({
+        userId: user.id,
+        companionId,
+        role: 'assistant',
+        content: response,
+        clientMessageId: safeRandomUUID(),
+        ...(articleIds && articleIds.length > 0 ? { metadata: { article_ids: articleIds } } : {}),
+      });
 
       if (calendarEvent) {
         setLastCalendarEvent(calendarEvent);

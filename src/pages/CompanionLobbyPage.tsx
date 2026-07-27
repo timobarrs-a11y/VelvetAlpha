@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { getVoiceById } from '../config/signatureVoices';
 import { getExpertById } from '../config/signatureExperts';
+import { SIGNATURE_CORRESPONDENTS, getCorrespondentById } from '../config/signatureCorrespondents';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { supabase } from '../shared/supabase/client';
@@ -302,6 +303,37 @@ export function CompanionLobbyPage() {
     sessionStorage.setItem('onboardingIntent', 'coaches');
     sessionStorage.setItem('onboardingRelationshipType', 'mentor');
     navigate('/expert-selection');
+  };
+
+  const handleAddCorrespondent = async (correspondentId: string) => {
+    try {
+      const config = getCorrespondentById(correspondentId);
+      if (!config) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { navigate('/login'); return; }
+
+      const { CompanionService } = await import('../services/companionService');
+      const companion = await CompanionService.createCompanion({
+        userId: user.id,
+        gender: config.gender,
+        relationshipType: 'correspondent',
+        customName: config.name,
+        hobbies: [],
+        correspondentId: config.id,
+        beat: config.beat,
+        voiceKey: config.voiceKey,
+        signatureVoice: config.voiceKey,
+      });
+
+      if (companion) {
+        toast.success(`${config.name} added to your dispatches!`);
+        await loadData();
+      } else {
+        toast.error('Could not add this correspondent. Please try again.');
+      }
+    } catch {
+      toast.error('Could not add this correspondent. Please try again.');
+    }
   };
 
   const handleGameClick = (game: typeof GAMES[number]) => {
@@ -669,7 +701,7 @@ export function CompanionLobbyPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {companions.filter(c => c.relationship_type !== 'mentor').map((companion, i) => (
+            {companions.filter(c => c.relationship_type !== 'mentor' && c.relationship_type !== 'correspondent').map((companion, i) => (
               <motion.div key={companion.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -754,7 +786,7 @@ export function CompanionLobbyPage() {
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: companions.filter(c => c.relationship_type !== 'mentor').length * 0.04 }}
+              transition={{ delay: companions.filter(c => c.relationship_type !== 'mentor' && c.relationship_type !== 'correspondent').length * 0.04 }}
               onClick={handleNewCompanion}
               data-interactive
               className="group cursor-pointer transition-all duration-300 flex items-center justify-center min-h-[260px] rounded-2xl"
@@ -885,6 +917,118 @@ export function CompanionLobbyPage() {
                 <p className="text-xs text-ink-muted mt-1">Find your next expert</p>
               </div>
             </motion.div>
+          </div>
+        </section>
+
+        {/* Velvet Correspondents — correspondent companions */}
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-5">
+            <Newspaper className="w-5 h-5 text-amber-400" />
+            <h2 className="text-xl font-bold text-ink font-display">Velvet Correspondents</h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {companions.filter(c => c.relationship_type === 'correspondent').map((companion, i) => (
+              <motion.div key={companion.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                onClick={() => navigateTo(`/chat?companion=${companion.id}`, {
+                  icon: Newspaper,
+                  label: `Loading ${companion.custom_name || 'your correspondent'}...`,
+                  accentColor: '#f59e0b',
+                  bgColor: '#120c00',
+                })}
+                data-interactive
+                className="group overflow-hidden cursor-pointer transition-all duration-300 rounded-2xl"
+                style={{
+                  background: 'rgba(40,30,10,0.90)',
+                  border: '1px solid rgba(245,158,11,0.25)',
+                  boxShadow: '0 2px 16px rgba(0,0,0,0.30)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(245,158,11,0.55)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(245,158,11,0.25)')}
+              >
+                <div className="relative h-44 overflow-hidden" style={{ background: 'rgba(25,18,5,0.90)' }}>
+                  <Avatar
+                    config={(companion.avatar_config as AvatarConfig) ?? (companion.gender === 'male' ? DEFAULT_MALE_AVATAR : DEFAULT_FEMALE_AVATAR)}
+                    className="w-full h-full"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <button
+                    onClick={(e) => handleDeleteCompanion(companion.id, companion.custom_name, e)}
+                    className="absolute top-2.5 left-2.5 p-1.5 bg-danger-500/90 hover:bg-danger-600 text-white rounded-lg shadow-card opacity-0 group-hover:opacity-100 transition-all z-10"
+                    title="Delete correspondent">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 bg-amber-900/80 text-amber-300">
+                    <Newspaper className="w-2.5 h-2.5" /> Correspondent
+                  </span>
+                </div>
+                <div className="p-4">
+                  <h3
+                    className="font-semibold text-ink mb-1.5 group-hover:text-amber-300 transition-colors"
+                    style={{ fontFamily: companion.font_family ?? undefined, fontSize: '1rem', lineHeight: 1.3 }}
+                  >
+                    {companion.custom_name}
+                  </h3>
+                  {companion.current_status && (
+                    <p className="text-xs mb-3 flex items-center gap-1.5"
+                      style={{
+                        color: 'rgba(220,200,160,0.85)',
+                        fontFamily: companion.font_family ?? undefined,
+                        lineHeight: 1.45,
+                      }}>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#f59e0b' }} />
+                      {companion.current_status}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-ink-subtle pt-3"
+                    style={{ borderTop: '1px solid rgba(245,158,11,0.15)' }}>
+                    <span>{formatTimeAgo(companion.last_message_at)}</span>
+                    {(companion.unread_count ?? 0) > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full font-bold"
+                        style={{ background: 'rgba(245,158,11,0.20)', color: '#fbbf24' }}>
+                        {companion.unread_count}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Curated correspondent tiles — not yet added */}
+            {SIGNATURE_CORRESPONDENTS.filter(c =>
+              !companions.some(comp => comp.relationship_type === 'correspondent' && comp.correspondent_id === c.id)
+            ).map((correspondent, i) => (
+              <motion.div key={correspondent.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (companions.filter(c => c.relationship_type === 'correspondent').length + i) * 0.04 }}
+                onClick={() => handleAddCorrespondent(correspondent.id)}
+                data-interactive
+                className="group cursor-pointer transition-all duration-300 overflow-hidden rounded-2xl"
+                style={{
+                  background: 'rgba(40,30,10,0.50)',
+                  border: '2px dashed rgba(245,158,11,0.30)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(245,158,11,0.60)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(245,158,11,0.30)')}
+              >
+                <div className="p-5 flex flex-col items-center text-center min-h-[260px] justify-center">
+                  <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform"
+                    style={{ boxShadow: '0 0 20px rgba(245,158,11,0.35)' }}>
+                    <Newspaper className="w-7 h-7 text-white" />
+                  </div>
+                  <p className="font-semibold text-ink group-hover:text-amber-300 transition-colors font-display text-sm">{correspondent.name}</p>
+                  <p className="text-xs text-ink-muted mt-1.5 leading-relaxed">{correspondent.description}</p>
+                  <span className="mt-3 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide"
+                    style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.25)' }}>
+                    FREE • Tap to add
+                  </span>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </section>
 

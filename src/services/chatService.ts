@@ -214,6 +214,7 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
+  metadata?: Record<string, unknown>;
 }
 
 export type SubscriptionTier = 'free' | 'unlimited' | 'starter' | 'plus' | 'elite';
@@ -697,6 +698,7 @@ export class ChatService {
     assistantMessage: string;
     calendarEvent?: { title: string; event_type: string; event_date: string } | null;
     navigationIntent?: { destination: string; route: string; seedText?: string } | null;
+    article_ids?: string[];
   }> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Authentication required');
@@ -723,10 +725,11 @@ export class ChatService {
       assistantMessage: data.assistantMessage,
       calendarEvent: data.calendarEvent || null,
       navigationIntent: data.navigationIntent || null,
+      ...(Array.isArray(data.article_ids) && data.article_ids.length > 0 ? { article_ids: data.article_ids } : {}),
     };
   }
 
-  static async sendMessage(message: string, companionId?: string, relationshipType: 'friend' | 'romantic' | 'mentor' = 'romantic'): Promise<string> {
+  static async sendMessage(message: string, companionId?: string, relationshipType: 'friend' | 'romantic' | 'mentor' | 'correspondent' = 'romantic'): Promise<string> {
     try {
       const userProfile = await this.getUserProfile();
       const defaultProfile = {
@@ -875,6 +878,7 @@ export class ChatService {
       let affectionContextString: string | undefined;
 
       const isMentorCompanion = connectionType === 'mentor';
+      const isCorrespondentCompanion = connectionType === 'correspondent';
 
       try {
         await relationshipTrackingService.updateOnUserMessage(
@@ -908,7 +912,7 @@ export class ChatService {
 
           temporalContextString = temporalPromptContext.fullContext;
 
-          if (!isMentorCompanion) {
+          if (!isMentorCompanion && !isCorrespondentCompanion) {
           const recentUserMessages = await affectionService.getRecentUserMessages(
             userId,
             companionId,

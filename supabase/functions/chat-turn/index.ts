@@ -8,6 +8,12 @@ import {
   type AccountabilityLevel,
   type CheckInStyle,
 } from "../_shared/coachFramework.ts";
+import {
+  getCuratedCorrespondent,
+  buildCorrespondentBehavioralInstructions,
+  buildRecentStoriesBlock,
+  fetchGroundingStories,
+} from "../_shared/correspondentFramework.ts";
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 
 const corsHeaders = {
@@ -202,6 +208,7 @@ interface ChatTurnResponse {
   latencyMs: number;
   calendarEvent?: CalendarEventDetected | null;
   navigationIntent?: NavigationIntent | null;
+  article_ids?: string[];
 }
 
 function selectModel(_message: string, tier: string): string {
@@ -777,8 +784,9 @@ Deno.serve(async (req: Request) => {
 
     const companionName = companion.custom_name || 'Companion';
     const isMentor = companion.relationship_type === 'mentor';
+    const isCorrespondent = companion.relationship_type === 'correspondent';
 
-    const maxTokens = isMentor ? Math.max(getMaxTokensForTier(tier), 600) : getMaxTokensForTier(tier);
+    const maxTokens = (isMentor || isCorrespondent) ? Math.max(getMaxTokensForTier(tier), 600) : getMaxTokensForTier(tier);
     const historyDepth = getHistoryDepthForTier(tier);
 
     const last20Messages = formattedHistory.slice(-historyDepth);
@@ -866,8 +874,24 @@ Balance this domain expertise naturally with your relationship dynamic — bring
 
     const personaLayer = buildPersonaLayer(companion, profile.name);
 
-    // Coaches get a purpose-driven coaching framework in place of the companion
-    // presence/spark block; companions keep BEHAVIORAL_INSTRUCTIONS.
+    // Correspondent grounding: fetch real news stories for the beat and
+    // resolve the curated correspondent config (beat / voice).
+    let correspondentStoriesBlock = '';
+    let correspondentArticleIds: string[] = [];
+    if (isCorrespondent && companion.correspondent_id) {
+      const correspondent = getCuratedCorrespondent(companion.correspondent_id);
+      if (correspondent) {
+        const { articles, articleIds } = await fetchGroundingStories(
+          supabaseAdmin,
+          correspondent.newsCategories,
+        );
+        correspondentArticleIds = articleIds;
+        correspondentStoriesBlock = buildRecentStoriesBlock(articles);
+      }
+    }
+
+    // Coaches get a purpose-driven coaching framework; correspondents get a
+    // writing-driven correspondent framework; companions keep the presence/spark block.
     const behavioralBlock = isMentor
       ? buildCoachBehavioralInstructions({
           coachName: companionName,
@@ -876,7 +900,19 @@ Balance this domain expertise naturally with your relationship dynamic — bring
           accountabilityLevel: expertAccountability,
           checkInStyle: expertCheckInStyle,
         })
-      : BEHAVIORAL_INSTRUCTIONS;
+      : isCorrespondent && companion.correspondent_id
+        ? buildCorrespondentBehavioralInstructions({
+            correspondentName: companionName,
+            userName: profile.name,
+            beat: companion.beat || getCuratedCorrespondent(companion.correspondent_id)?.beat || 'the story',
+            voiceKey: companion.voice_key || getCuratedCorrespondent(companion.correspondent_id)?.voiceKey || 'classic',
+            voiceDescription: getCuratedCorrespondent(companion.correspondent_id)?.voiceDescription,
+          })
+        : BEHAVIORAL_INSTRUCTIONS;
+
+    const groundingBlock = correspondentStoriesBlock
+      ? `\n\nRECENT STORIES (use these — do NOT invent stories):\n${correspondentStoriesBlock}\n`
+      : '';
 
     const systemPrompt = `${personaLayer}
 
@@ -886,7 +922,7 @@ User's local time context: ${timeOfDay}
 
 ${contextReminder}
 
-${behavioralBlock}
+${behavioralBlock}${groundingBlock}
 ${expertLayer}
 
 CRITICAL MEMORY RULES - READ THIS CAREFULLY:
@@ -898,7 +934,7 @@ CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - Remember key facts from this conversation: their mood, their plans, what they're doing, what they told you
 - You have access to the last ${historyDepth} messages in history - USE THEM
 - NEVER repeat questions within the same conversation session
-${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, supportive tone. No romantic or flirtatious content.' : ''}
+${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, supportive tone. No romantic or flirtatious content.' : ''}${isCorrespondent ? '\nIMPORTANT: You are a correspondent — write a dispatch, not a chat reply. No romantic or flirtatious content. No coaching or self-help.' : ''}
 RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
     const alternatingMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
@@ -1017,6 +1053,7 @@ RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} t
       latencyMs,
       calendarEvent: signals.calendarEvent || null,
       navigationIntent: signals.navigationIntent || null,
+      ...(correspondentArticleIds.length > 0 ? { article_ids: correspondentArticleIds } : {}),
     };
 
     return new Response(

@@ -12,6 +12,7 @@ export type BotSource = 'companion' | 'atlas' | 'navi';
 
 export interface MessageMetadata {
   article_id?: string;
+  article_ids?: string[];
   article_title?: string;
   article_url?: string;
   article_source?: string;

@@ -10,6 +10,7 @@ import { AtlasMarkdown } from './AtlasMarkdown';
 import { getBubbleStyle, getTextColorValue } from './ChatStyleBar';
 import { MessageRatingControls } from './MessageRatingControls';
 import { RatingValue } from '../services/ratingService';
+import { SourceCard } from './SourceCard';
 
 const ENABLE_TYPING_REALISM = true;
 
@@ -467,6 +468,10 @@ export const ChatMessage = ({
           >
             {time}
           </div>
+        )}
+
+        {!isUser && message.metadata?.article_ids && Array.isArray(message.metadata.article_ids) && message.metadata.article_ids.length > 0 && (
+          <SourceCard articleIds={message.metadata.article_ids as string[]} />
         )}
 
         {!isUser && onRated && message.messageType === 'text' && (
