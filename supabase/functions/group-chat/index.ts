@@ -3,6 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
+import { getCuratedCorrespondent, buildCorrespondentBehavioralInstructions, buildRecentStoriesBlock, fetchGroundingStories } from "../_shared/correspondentFramework.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,7 @@ interface CompanionInfo {
   custom_name: string;
   gender: string;
   relationship_type?: string;
+  correspondent_id?: string;
   signature_voice?: string;
   voice_baseline?: string;
   drift_needs_correction?: boolean;
@@ -46,15 +48,19 @@ interface GroupMessage {
   content: string;
 }
 
-function buildGroupSystemPrompt(
+async function buildGroupSystemPrompt(
   companion: CompanionInfo,
   allCompanions: CompanionInfo[],
   userName: string,
-  mode: 'user_reply' | 'autonomous' | 'icebreaker' | 'topic'
-): string {
+  mode: 'user_reply' | 'autonomous' | 'icebreaker' | 'topic',
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userProfile: { sports?: string[]; hobbies?: string[]; interests?: string[] }
+): Promise<string> {
   const otherNames = allCompanions
     .filter(c => c.id !== companion.id)
     .map(c => c.custom_name);
+
+  const isCorrespondent = companion.relationship_type === 'correspondent' && companion.correspondent_id;
 
   let modeInstructions = '';
 
@@ -89,7 +95,60 @@ USER REPLY MODE: ${userName} just sent a message to the group.
 - Be yourself - don't just agree with everyone`;
   }
 
-  const personaLayer = buildPersonaLayer(companion, userName);
+  let personaLayer = buildPersonaLayer(companion, userName);
+
+  // For correspondents, replace the generic persona with correspondent behavioral instructions
+  let groundingBlock = '';
+  if (isCorrespondent && companion.correspondent_id) {
+    const correspondent = getCuratedCorrespondent(companion.correspondent_id);
+    if (correspondent) {
+      personaLayer = buildCorrespondentBehavioralInstructions({
+        correspondentName: companion.custom_name,
+        userName,
+        beat: correspondent.beat,
+        voiceKey: correspondent.voiceKey,
+        voiceDescription: correspondent.voiceDescription,
+      });
+
+      // Fetch grounding stories for this correspondent using user's specific interests
+      const specificTopics = [
+        ...(userProfile.sports || []),
+        ...(userProfile.hobbies || []),
+        ...(userProfile.interests || []),
+      ];
+      const { articles } = await fetchGroundingStories(
+        supabaseAdmin,
+        correspondent.newsCategories,
+        4,
+        specificTopics.length > 0 ? specificTopics : undefined,
+      );
+      const storiesBlock = buildRecentStoriesBlock(articles);
+      if (storiesBlock) {
+        groundingBlock = `\n\n=== RECENT STORIES ===\n${storiesBlock}\n`;
+      }
+    }
+  }
+
+  if (isCorrespondent) {
+    return `${personaLayer}${groundingBlock}
+
+=== GROUP CHAT CONTEXT ===
+You are in a GROUP CHAT with ${userName}${otherNames.length > 0 ? ` and ${otherNames.join(', ')}` : ''}.
+
+ABSOLUTE GROUP RULES:
+- You are ONLY ${companion.custom_name}. NEVER speak as anyone else.
+- Keep responses SHORT: 2-4 sentences. A correspondent can be slightly chattier than a companion, but still concise.
+- You are a writer in a group setting — your voice stays distinctive, but you are conversational, not mid-column.
+- Have STRONG opinions. Disagree with others when you genuinely would.
+- Reference other companions by name when responding to them.
+- You may weave in a story from your RECENT STORIES if it fits naturally. Do NOT force it.
+- NEVER invent a headline, source, or fact that was not given to you.
+- NO romance, flirting, pet names, or coaching. You are a correspondent.
+
+${modeInstructions}
+
+Remember: SHORT responses. Stay in voice. Don't be generic.`;
+  }
 
   return `${personaLayer}
 
@@ -173,7 +232,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('subscription_tier, messages_remaining, is_super_user, name, referred_by, referral_qualified, is_banned')
+      .select('subscription_tier, messages_remaining, is_super_user, name, referred_by, referral_qualified, is_banned, sports, hobbies, interests')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -294,7 +353,7 @@ Deno.serve(async (req: Request) => {
     if (mode === 'icebreaker') {
       const speakers = selectDynamicSpeakers(companions, companions.length);
       for (const companion of speakers) {
-        const systemPrompt = buildGroupSystemPrompt(companion, companions, userName, 'icebreaker');
+        const systemPrompt = await buildGroupSystemPrompt(companion, companions, userName, 'icebreaker', supabaseAdmin, profile || {});
         const otherIntros = responses.map(r => `${r.sender_name}: ${r.content}`).join('\n');
         const prompt = otherIntros
           ? `A new group chat was just created with you, ${companions.filter(c => c.id !== companion.id).map(c => c.custom_name).join(', ')}, and ${userName}.\n\nSo far:\n${otherIntros}\n\nNow introduce yourself and react to the group. Keep it short and fun.`
@@ -316,7 +375,7 @@ Deno.serve(async (req: Request) => {
     } else if (mode === 'topic') {
       const speakers = selectDynamicSpeakers(companions, companions.length);
       for (const companion of speakers) {
-        const systemPrompt = buildGroupSystemPrompt(companion, companions, userName, 'topic');
+        const systemPrompt = await buildGroupSystemPrompt(companion, companions, userName, 'topic', supabaseAdmin, profile || {});
         const prevResponses = responses.map(r => `${r.sender_name}: ${r.content}`).join('\n');
         const contextBlock = conversationContext ? `Recent chat:\n${conversationContext}\n\n` : '';
         const prompt = prevResponses
@@ -359,7 +418,7 @@ Deno.serve(async (req: Request) => {
       }
 
       for (const companion of responders) {
-        const systemPrompt = buildGroupSystemPrompt(companion, companions, userName, 'autonomous');
+        const systemPrompt = await buildGroupSystemPrompt(companion, companions, userName, 'autonomous', supabaseAdmin, profile || {});
         const prevResponses = responses.map(r => `${r.sender_name}: ${r.content}`).join('\n');
         const allContext = prevResponses
           ? `Recent group chat:\n${conversationContext}\n${prevResponses}\n\nContinue the conversation as ${companion.custom_name}. React to what was just said. Keep it short.`
@@ -386,7 +445,7 @@ Deno.serve(async (req: Request) => {
       const responders = selectDynamicSpeakers(companions, respondersCount);
 
       for (const companion of responders) {
-        const systemPrompt = buildGroupSystemPrompt(companion, companions, userName, 'user_reply');
+        const systemPrompt = await buildGroupSystemPrompt(companion, companions, userName, 'user_reply', supabaseAdmin, profile || {});
         const prevResponses = responses.map(r => `${r.sender_name}: ${r.content}`).join('\n');
         const contextBlock = conversationContext ? `Recent group chat:\n${conversationContext}\n\n` : '';
         const prompt = prevResponses

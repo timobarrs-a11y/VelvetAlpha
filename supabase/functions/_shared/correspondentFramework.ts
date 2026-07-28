@@ -16,17 +16,47 @@ export interface CuratedCorrespondent {
 
 // Curated correspondent roster — mirror of src/config/signatureCorrespondents.ts.
 export const CURATED_CORRESPONDENT_MAP: Record<string, CuratedCorrespondent> = {
+  the_sideline: {
+    beat: 'sports, competition, and the games that matter',
+    voiceKey: 'jock',
+    voiceDescription: 'athletic, encouraging, genuine — sees life as a game to be played with heart',
+    newsCategories: ['sports', 'football', 'baseball', 'basketball', 'soccer', 'hockey'],
+  },
   the_insider: {
     beat: "gossip, culture, and the stories everyone's talking about",
     voiceKey: 'homie',
     voiceDescription: 'plugged into pop culture, street culture, music, and social media trends — knows what is going on and has takes',
     newsCategories: ['entertainment', 'general'],
   },
-  the_sideline: {
-    beat: 'sports, competition, and the games that matter',
-    voiceKey: 'jock',
-    voiceDescription: 'athletic, encouraging, genuine — sees life as a game to be played with heart',
-    newsCategories: ['sports'],
+  the_field: {
+    beat: 'politics, power, and the forces shaping our world',
+    voiceKey: 'brooklyn_native',
+    voiceDescription: 'straight-talking, no-BS, calls it like they see it — cuts through political spin with real talk',
+    newsCategories: ['politics', 'general'],
+  },
+  the_signal: {
+    beat: 'science, technology, and the breakthroughs changing what is possible',
+    voiceKey: 'therapist',
+    voiceDescription: 'analytical, precise, quietly excited by discovery — makes complex ideas feel personal',
+    newsCategories: ['science', 'tech', 'technology'],
+  },
+  the_ledger: {
+    beat: 'business, money, and the economy that runs beneath everything',
+    voiceKey: 'classic_male',
+    voiceDescription: 'measured, sharp, sees the story behind the numbers — business news without the jargon',
+    newsCategories: ['business', 'finance'],
+  },
+  the_pulse: {
+    beat: 'health, wellness, and the science of feeling better',
+    voiceKey: 'big_sister',
+    voiceDescription: 'warm, protective, real about health — cuts through wellness fads with genuine care',
+    newsCategories: ['health', 'wellness'],
+  },
+  the_arcade: {
+    beat: 'gaming, esports, and the culture of play',
+    voiceKey: 'playful_trickster',
+    voiceDescription: 'mischievous, clever, deeply embedded in gaming culture — has hot takes and hidden depths',
+    newsCategories: ['gaming'],
   },
 };
 
@@ -89,13 +119,13 @@ You are ${correspondentName}. Make ${userName} look forward to your next dispatc
  * Builds the RECENT STORIES block from fetched news articles, server-side.
  */
 export function buildRecentStoriesBlock(
-  articles: Array<{ title: string; source?: string; summary?: string }>,
+  articles: Array<{ title: string; source?: string; description?: string }>,
 ): string {
   if (!articles.length) return '';
   const lines = articles.slice(0, 6).map((a, i) => {
     const source = a.source ? ` [${a.source}]` : '';
-    const summary = a.summary ? `\n  ${a.summary}` : '';
-    return `${i + 1}. ${a.title}${source}${summary}`;
+    const desc = a.description ? `\n  ${a.description}` : '';
+    return `${i + 1}. ${a.title}${source}${desc}`;
   });
   return lines.join('\n');
 }
@@ -103,6 +133,11 @@ export function buildRecentStoriesBlock(
 /**
  * Fetches recent news articles for a correspondent's beat using the
  * server-side Supabase client. Returns formatted articles + their IDs.
+ *
+ * Uses the `categories` array column (not a `category` text column) and
+ * the `description` text column (not `summary`), with case-insensitive
+ * matching against the array values. Also supports optional per-user
+ * specific-topic filtering for granular interest matching.
  */
 export async function fetchGroundingStories(
   supabaseAdmin: ReturnType<
@@ -110,35 +145,161 @@ export async function fetchGroundingStories(
   >,
   newsCategories: string[],
   limit: number = 6,
-): Promise<{ articles: Array<{ title: string; source: string; summary: string }>; articleIds: string[] }> {
+  specificTopics?: string[],
+): Promise<{ articles: Array<{ title: string; source: string; description: string }>; articleIds: string[] }> {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Build case-insensitive patterns for each category
+  const categoryPatterns = newsCategories.map((c) => c.toLowerCase());
 
   let query = supabaseAdmin
     .from('news_articles')
-    .select('id, title, source, summary')
+    .select('id, title, source, description, categories, specific_topics')
     .gte('published_at', sevenDaysAgo)
     .order('published_at', { ascending: false })
-    .limit(limit * 3);
-
-  if (newsCategories.length === 1) {
-    query = query.eq('category', newsCategories[0]);
-  } else if (newsCategories.length > 1) {
-    query = query.in('category', newsCategories);
-  }
+    .limit(limit * 4);
 
   const { data, error } = await query;
 
-  if (error || !data || data.length === 0) {
+  if (error) {
+    console.error('[correspondentFramework] Grounding query error:', error.message);
     return { articles: [], articleIds: [] };
   }
 
-  const filtered = data.slice(0, limit);
+  if (!data || data.length === 0) {
+    console.warn('[correspondentFramework] No articles found in last 7 days for categories:', newsCategories);
+    return { articles: [], articleIds: [] };
+  }
+
+  // Filter client-side using case-insensitive array overlap on categories
+  let filtered = data.filter((article: { categories?: string[] }) => {
+    const articleCats = (article.categories || []).map((c: string) => c.toLowerCase());
+    return categoryPatterns.some((pat) =>
+      articleCats.some((ac: string) => ac === pat || ac.includes(pat) || pat.includes(ac)),
+    );
+  });
+
+  // If specific topics provided, prefer articles that match those topics
+  if (specificTopics && specificTopics.length > 0) {
+    const topicPatterns = specificTopics.map((t) => t.toLowerCase());
+    const withTopics = filtered.filter((article: { specific_topics?: string[]; title?: string; description?: string }) => {
+      const articleTopics = (article.specific_topics || []).map((t: string) => t.toLowerCase());
+      if (articleTopics.length > 0) {
+        return topicPatterns.some((pat) =>
+          articleTopics.some((at: string) => at === pat || at.includes(pat) || pat.includes(at)),
+        );
+      }
+      // Fallback: check if topic appears in title or description
+      const titleLower = (article.title || '').toLowerCase();
+      const descLower = (article.description || '').toLowerCase();
+      return topicPatterns.some((pat) => titleLower.includes(pat) || descLower.includes(pat));
+    });
+
+    // Use topic-matched articles first, then fill with general beat articles
+    if (withTopics.length > 0) {
+      const topicIds = new Set(withTopics.map((a: { id: string }) => a.id));
+      const remaining = filtered.filter((a: { id: string }) => !topicIds.has(a.id));
+      filtered = [...withTopics, ...remaining];
+    }
+  }
+
+  if (filtered.length === 0) {
+    console.warn('[correspondentFramework] Articles found but none matched categories after filtering:', newsCategories);
+    return { articles: [], articleIds: [] };
+  }
+
+  const result = filtered.slice(0, limit);
   return {
-    articles: filtered.map((a: { title: string; source: string; summary: string }) => ({
+    articles: result.map((a: { title: string; source: string; description: string }) => ({
       title: a.title,
       source: a.source || '',
-      summary: a.summary || '',
+      description: a.description || '',
     })),
-    articleIds: filtered.map((a: { id: string }) => a.id),
+    articleIds: result.map((a: { id: string }) => a.id),
   };
+}
+
+/**
+ * Maps a user's profile interests to the correspondent IDs that should
+ * be auto-provisioned. This is the server-side mapping used by the
+ * auto-provisioning edge function.
+ */
+export function mapInterestsToCorrespondents(profile: {
+  sports?: string[];
+  interests?: string[];
+  hobbies?: string[];
+  news_categories?: string[];
+  political_leaning?: string | null;
+}): string[] {
+  const correspondentIds: string[] = [];
+  const allInterests = [
+    ...(profile.sports || []),
+    ...(profile.interests || []),
+    ...(profile.hobbies || []),
+    ...(profile.news_categories || []),
+  ].map((s) => s.toLowerCase());
+
+  // Sports → The Sideline
+  if (
+    profile.sports && profile.sports.length > 0 ||
+    allInterests.some((i) => ['sports', 'football', 'basketball', 'baseball', 'soccer', 'hockey', 'tennis', 'golf', 'mma', 'boxing', 'nfl', 'nba', 'mlb', 'nhl'].includes(i))
+  ) {
+    correspondentIds.push('the_sideline');
+  }
+
+  // Entertainment/Culture → The Insider
+  if (
+    allInterests.some((i) =>
+      ['entertainment', 'celebrity', 'gossip', 'pop culture', 'music', 'movies', 'film', 'tv', 'television', 'culture', 'social media', 'celebrities'].includes(i),
+    )
+  ) {
+    correspondentIds.push('the_insider');
+  }
+
+  // Politics → The Field
+  if (
+    profile.political_leaning ||
+    allInterests.some((i) => ['politics', 'government', 'election', 'policy', 'news', 'current events'].includes(i))
+  ) {
+    correspondentIds.push('the_field');
+  }
+
+  // Science/Tech → The Signal
+  if (
+    allInterests.some((i) =>
+      ['science', 'technology', 'tech', 'ai', 'space', 'physics', 'biology', 'innovation', 'gadgets', 'computers', 'programming', 'coding', 'engineering'].includes(i),
+    )
+  ) {
+    correspondentIds.push('the_signal');
+  }
+
+  // Business/Finance → The Ledger
+  if (
+    allInterests.some((i) =>
+      ['business', 'finance', 'money', 'economy', 'investing', 'stocks', 'crypto', 'entrepreneurship', 'startups', 'markets'].includes(i),
+    )
+  ) {
+    correspondentIds.push('the_ledger');
+  }
+
+  // Health/Wellness → The Pulse
+  if (
+    allInterests.some((i) =>
+      ['health', 'wellness', 'fitness', 'nutrition', 'mental health', 'meditation', 'yoga', 'running', 'gym', 'diet', 'sleep', 'self-care'].includes(i),
+    )
+  ) {
+    correspondentIds.push('the_pulse');
+  }
+
+  // Gaming → The Arcade
+  if (
+    allInterests.some((i) =>
+      ['gaming', 'video games', 'esports', 'games', 'playstation', 'xbox', 'nintendo', 'pc gaming', 'rpg', 'fps'].includes(i),
+    )
+  ) {
+    correspondentIds.push('the_arcade');
+  }
+
+  // Remove duplicates
+  return [...new Set(correspondentIds)];
 }

@@ -294,6 +294,54 @@ const INTEREST_TO_NEWSAPI: Record<string, { category: string; q?: string }> = {
   'Tech/Gadgets': { category: 'technology' },
 };
 
+/**
+ * Extracts specific topics from an article based on its title, description,
+ * and the search query used to find it. This populates the `specific_topics`
+ * array on each article, which is used for per-user interest matching
+ * (e.g., a basketball fan gets NBA articles, not soccer).
+ */
+function extractSpecificTopics(
+  article: { title?: string; description?: string },
+  searchQuery?: string,
+): string[] {
+  const topics: string[] = [];
+  const text = ` ${article.title || ''} ${article.description || ''} `.toLowerCase();
+
+  if (searchQuery) {
+    topics.push(searchQuery.toLowerCase());
+  }
+
+  const topicMap: Record<string, string[]> = {
+    'nba': ['nba', 'basketball', 'lakers', 'celtics', 'warriors', 'bulls', 'knicks', 'heat', 'nuggets', 'playoffs'],
+    'nfl': ['nfl', 'football', 'chiefs', '49ers', 'cowboys', 'eagles', 'ravens', 'bills', 'super bowl', 'playoffs'],
+    'mlb': ['mlb', 'baseball', 'yankees', 'dodgers', 'astros', 'braves', 'red sox', 'world series'],
+    'nhl': ['nhl', 'hockey', 'rangers', 'bruins', 'maple leafs', 'penguins', 'stanley cup'],
+    'soccer': ['soccer', 'premier league', 'la liga', 'champions league', 'world cup', 'mls', 'messi', 'ronaldo'],
+    'ufc': ['ufc', 'mma', 'dana white', 'octagon'],
+    'golf': ['pga', 'golf', 'masters', 'tiger woods', 'open championship'],
+    'tennis': ['tennis', 'wimbledon', 'french open', 'us open', 'australian open', 'djokovic', 'federer', 'nadal', 'sinner', 'alcaraz'],
+    'ai': ['artificial intelligence', ' ai ', 'openai', 'chatgpt', 'gemini', 'claude', 'machine learning', 'llm'],
+    'space': ['nasa', 'spacex', 'rocket', 'mars', 'moon', 'iss', 'astronaut', 'james webb', 'telescope'],
+    'crypto': ['bitcoin', 'crypto', 'ethereum', 'blockchain', 'nft', 'coinbase'],
+    'stocks': ['stock market', 'dow jones', 'nasdaq', 's&p', 'wall street', 'trading', 'shares'],
+    'startup': ['startup', 'funding round', 'series a', 'series b', 'unicorn', 'venture capital'],
+    'gaming': ['video game', 'gaming', 'playstation', 'xbox', 'nintendo', 'steam', 'twitch', 'esports', 'game release'],
+    'movie': ['movie', 'film', 'box office', 'oscar', 'cinema', 'director', 'trailer'],
+    'music': ['album', 'song', 'artist', 'concert', 'tour', 'spotify', 'billboard', 'grammy', 'rapper', 'singer'],
+    'tv': ['tv show', 'series finale', 'netflix', 'hbo', 'streaming', 'season', 'episode', 'premiere'],
+    'health': ['study', 'research', 'medical', 'health', 'fda', 'clinical', 'wellness', 'mental health'],
+    'election': ['election', 'primary', 'campaign', 'poll', 'vote', 'ballot', 'senate', 'congress', 'house'],
+  };
+
+  for (const [topic, keywords] of Object.entries(topicMap)) {
+    if (keywords.some((kw) => text.includes(kw))) {
+      topics.push(topic);
+    }
+  }
+
+  return [...new Set(topics)];
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -360,14 +408,18 @@ Deno.serve(async (req: Request) => {
         image_url: string | null; source: string; published_at: string;
       }> = [];
 
+      let searchQuery: string | undefined;
+
       try {
         if (braveKey) {
           const query = INTEREST_TO_QUERY[interest] || `${interest} news today United States`;
+          searchQuery = query;
           console.log(`[fetch-news] Brave search: "${query}"`);
           rawArticles = await fetchViaBrave(query, braveKey, articlesPerTopic);
           console.log(`[fetch-news] Brave returned ${rawArticles.length} results for "${interest}"`);
         } else if (newsApiKey) {
           const mapping = INTEREST_TO_NEWSAPI[interest] || { category: 'general' };
+          searchQuery = mapping.q;
           rawArticles = await fetchViaNewsAPI(mapping.category, mapping.q, newsApiKey, articlesPerTopic);
           console.log(`[fetch-news] NewsAPI returned ${rawArticles.length} results for "${interest}"`);
         }
@@ -378,6 +430,7 @@ Deno.serve(async (req: Request) => {
           try {
             const mapping = INTEREST_TO_NEWSAPI[interest];
             if (mapping) {
+              searchQuery = mapping.q;
               console.log(`[fetch-news] Falling back to NewsAPI for "${interest}"`);
               rawArticles = await fetchViaNewsAPI(mapping.category, mapping.q, newsApiKey, articlesPerTopic);
             }
@@ -392,6 +445,7 @@ Deno.serve(async (req: Request) => {
         try {
           const mapping = INTEREST_TO_NEWSAPI[interest];
           if (mapping) {
+            searchQuery = mapping.q;
             console.log(`[fetch-news] Brave returned 0 results for "${interest}", falling back to NewsAPI`);
             rawArticles = await fetchViaNewsAPI(mapping.category, mapping.q, newsApiKey, articlesPerTopic);
             console.log(`[fetch-news] NewsAPI fallback returned ${rawArticles.length} results for "${interest}"`);
@@ -455,6 +509,7 @@ Deno.serve(async (req: Request) => {
           author: null,
           published_at: publishedAt,
           categories: tags,
+          specific_topics: extractSpecificTopics(article, searchQuery),
         };
 
         const { data: inserted, error } = await supabase

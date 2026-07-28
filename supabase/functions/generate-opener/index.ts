@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
+import { getCuratedCorrespondent, buildCorrespondentBehavioralInstructions } from "../_shared/correspondentFramework.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -134,6 +135,7 @@ Deno.serve(async (req: Request) => {
 
     const userName = profile.name && profile.name !== 'there' ? profile.name : '';
     const isMentor = companion.relationship_type === 'mentor';
+    const isCorrespondent = companion.relationship_type === 'correspondent' && companion.correspondent_id;
     const isFirstMatch = situation === 'first_match';
 
     // For non-first-match situations, pull recent history for continuity.
@@ -161,13 +163,32 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const personaLayer = buildPersonaLayer(companion, userName);
+    const personaLayer = isCorrespondent && companion.correspondent_id
+      ? (() => {
+          const corr = getCuratedCorrespondent(companion.correspondent_id);
+          if (!corr) return buildPersonaLayer(companion, userName);
+          return buildCorrespondentBehavioralInstructions({
+            correspondentName: companion.custom_name,
+            userName,
+            beat: corr.beat,
+            voiceKey: corr.voiceKey,
+            voiceDescription: corr.voiceDescription,
+          });
+        })()
+      : buildPersonaLayer(companion, userName);
 
-    const taskLine = isMentor ? MENTOR_TASK_LINES[situation] : TASK_LINES[situation];
+    const taskLine = isCorrespondent
+      ? CORRESPONDENT_TASK_LINES[situation]
+      : isMentor
+        ? MENTOR_TASK_LINES[situation]
+        : TASK_LINES[situation];
 
     // Sonnet for the one-time first message (max first impression);
     // Haiku for recurring daily/reconnect openers (cheap, persona keeps quality).
-    const model = isFirstMatch ? MODEL_CONFIG.SONNET : MODEL_CONFIG.HAIKU;
+    // Correspondents always get Sonnet — writing quality is the whole point.
+    const model = isFirstMatch || isCorrespondent ? MODEL_CONFIG.SONNET : MODEL_CONFIG.HAIKU;
+
+    const maxTokens = isCorrespondent ? 300 : 200;
 
     const systemPrompt = `${personaLayer}${historyBlock}
 
@@ -190,7 +211,7 @@ Write ONLY the message text — no quotation marks, no labels, no narration.`;
       },
       body: JSON.stringify({
         model,
-        max_tokens: 200,
+        max_tokens: maxTokens,
         system: systemPrompt,
         messages: [
           { role: 'user', content: '[Begin now — send your opener.]' },

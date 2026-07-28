@@ -104,13 +104,14 @@ ${recentStoriesBlock ? `\nRECENT STORIES (use these — do NOT invent stories):\
  * function's server-side version.
  */
 export const buildRecentStoriesBlock = (
-  articles: Array<{ title: string; source?: string; summary?: string }>,
+  articles: Array<{ title: string; source?: string; description?: string; summary?: string }>,
 ): string => {
   if (!articles.length) return '';
   const lines = articles.slice(0, 6).map((a, i) => {
     const source = a.source ? ` [${a.source}]` : '';
-    const summary = a.summary ? `\n  ${a.summary}` : '';
-    return `${i + 1}. ${a.title}${source}${summary}`;
+    const desc = a.description || a.summary || '';
+    const descLine = desc ? `\n  ${desc}` : '';
+    return `${i + 1}. ${a.title}${source}${descLine}`;
   });
   return lines.join('\n');
 };

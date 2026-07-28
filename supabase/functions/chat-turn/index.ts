@@ -211,7 +211,12 @@ interface ChatTurnResponse {
   article_ids?: string[];
 }
 
-function selectModel(_message: string, tier: string): string {
+function selectModel(_message: string, tier: string, isCorrespondent: boolean = false): string {
+  // Correspondents always get Sonnet — writing quality is the whole point.
+  // Free-tier correspondents get Sonnet with a tight token cap (shorter dispatches).
+  if (isCorrespondent) {
+    return MODEL_CONFIG.SONNET;
+  }
   if (tier === 'starter' || tier === 'plus' || tier === 'elite' || tier === 'trial') {
     return MODEL_CONFIG.SONNET;
   }
@@ -732,7 +737,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const tier = isSuperUser ? 'elite' : (profile.subscription_tier || 'free');
-    const selectedModel = selectModel(message, tier);
+    const selectedModel = selectModel(message, tier, isCorrespondent);
 
     console.log(`[${traceId}] Model selection:`, { model: selectedModel, tier });
 
@@ -881,9 +886,18 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     if (isCorrespondent && companion.correspondent_id) {
       const correspondent = getCuratedCorrespondent(companion.correspondent_id);
       if (correspondent) {
+        // Pass the user's specific interests for per-user grounding.
+        // A basketball fan's Sideline pulls NBA, not soccer they didn't pick.
+        const specificTopics = [
+          ...(profile.sports || []),
+          ...(profile.hobbies || []),
+          ...(profile.interests || []),
+        ];
         const { articles, articleIds } = await fetchGroundingStories(
           supabaseAdmin,
           correspondent.newsCategories,
+          6,
+          specificTopics.length > 0 ? specificTopics : undefined,
         );
         correspondentArticleIds = articleIds;
         correspondentStoriesBlock = buildRecentStoriesBlock(articles);
@@ -934,7 +948,7 @@ CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - Remember key facts from this conversation: their mood, their plans, what they're doing, what they told you
 - You have access to the last ${historyDepth} messages in history - USE THEM
 - NEVER repeat questions within the same conversation session
-${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, supportive tone. No romantic or flirtatious content.' : ''}${isCorrespondent ? '\nIMPORTANT: You are a correspondent — write a dispatch, not a chat reply. No romantic or flirtatious content. No coaching or self-help.' : ''}
+${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, supportive tone. No romantic or flirtatious content.' : ''}${isCorrespondent ? '\nIMPORTANT: You are a correspondent — write a dispatch, not a chat reply. No romantic or flirtatious content. No coaching or self-help.' : ''}${isCorrespondent && tier === 'free' ? '\nLENGTH: Write a tight, punchy dispatch — 3-4 sentences max. Make every word count. Upgrade to premium for the full column-length experience.' : ''}
 RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
     const alternatingMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];

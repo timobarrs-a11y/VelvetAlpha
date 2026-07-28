@@ -5,12 +5,14 @@ import {
   Plus, MessageCircle, Heart, Users, Crown, Cherry, Zap, Circle,
   Rocket, LogOut, Gamepad2, Lightbulb, FileText, User,
   UsersRound, Calendar, Squirrel, Youtube, Newspaper, Trash2, MessageSquare,
+  Info,
   Sparkles, Flame, Wand2, Trophy, Volume2, VolumeX, Anchor, Bot, MapPin, Brain,
   HelpCircle,
 } from 'lucide-react';
 import { getVoiceById } from '../config/signatureVoices';
 import { getExpertById } from '../config/signatureExperts';
 import { SIGNATURE_CORRESPONDENTS, getCorrespondentById } from '../config/signatureCorrespondents';
+import { correspondentSyncService } from '../services/correspondentSyncService';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { supabase } from '../shared/supabase/client';
@@ -226,6 +228,28 @@ export function CompanionLobbyPage() {
     }
   };
 
+  const syncCorrespondentsInBackground = async () => {
+    try {
+      const now = Date.now();
+      const ONE_HOUR = 60 * 60 * 1000;
+      const last = Number(sessionStorage.getItem('velvet_correspondent_sync') || 0);
+      if (now - last < ONE_HOUR) return;
+      sessionStorage.setItem('velvet_correspondent_sync', String(now));
+
+      const result = await correspondentSyncService.sync();
+      if (result && result.success && (result.created.length > 0 || result.removed.length > 0)) {
+        // Reload companions if correspondents were added or removed
+        await loadData();
+        if (result.created.length > 0) {
+          const names = result.created.map(id => getCorrespondentById(id)?.name || id);
+          toast.success(`${names.join(', ')} ${result.created.length > 1 ? 'are' : 'is'} now writing for you!`);
+        }
+      }
+    } catch {
+      /* best-effort background sync */
+    }
+  };
+
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate('/create-user-avatar'); return; }
@@ -237,6 +261,7 @@ export function CompanionLobbyPage() {
     setGroupChats(groupsList);
     setLoading(false);
     refreshDailyFeedInBackground();
+    syncCorrespondentsInBackground();
   };
 
   const handleCreateGroupChat = async (name: string, companionIds: string[]) => {
@@ -303,37 +328,6 @@ export function CompanionLobbyPage() {
     sessionStorage.setItem('onboardingIntent', 'coaches');
     sessionStorage.setItem('onboardingRelationshipType', 'mentor');
     navigate('/expert-selection');
-  };
-
-  const handleAddCorrespondent = async (correspondentId: string) => {
-    try {
-      const config = getCorrespondentById(correspondentId);
-      if (!config) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
-
-      const { CompanionService } = await import('../services/companionService');
-      const companion = await CompanionService.createCompanion({
-        userId: user.id,
-        gender: config.gender,
-        relationshipType: 'correspondent',
-        customName: config.name,
-        hobbies: [],
-        correspondentId: config.id,
-        beat: config.beat,
-        voiceKey: config.voiceKey,
-        signatureVoice: config.voiceKey,
-      });
-
-      if (companion) {
-        toast.success(`${config.name} added to your dispatches!`);
-        await loadData();
-      } else {
-        toast.error('Could not add this correspondent. Please try again.');
-      }
-    } catch {
-      toast.error('Could not add this correspondent. Please try again.');
-    }
   };
 
   const handleGameClick = (game: typeof GAMES[number]) => {
@@ -997,38 +991,18 @@ export function CompanionLobbyPage() {
               </motion.div>
             ))}
 
-            {/* Curated correspondent tiles — not yet added */}
-            {SIGNATURE_CORRESPONDENTS.filter(c =>
-              !companions.some(comp => comp.relationship_type === 'correspondent' && comp.correspondent_id === c.id)
-            ).map((correspondent, i) => (
-              <motion.div key={correspondent.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (companions.filter(c => c.relationship_type === 'correspondent').length + i) * 0.04 }}
-                onClick={() => handleAddCorrespondent(correspondent.id)}
-                data-interactive
-                className="group cursor-pointer transition-all duration-300 overflow-hidden rounded-2xl"
-                style={{
-                  background: 'rgba(40,30,10,0.50)',
-                  border: '2px dashed rgba(245,158,11,0.30)',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(245,158,11,0.60)')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(245,158,11,0.30)')}
-              >
-                <div className="p-5 flex flex-col items-center text-center min-h-[260px] justify-center">
-                  <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform"
-                    style={{ boxShadow: '0 0 20px rgba(245,158,11,0.35)' }}>
-                    <Newspaper className="w-7 h-7 text-white" />
-                  </div>
-                  <p className="font-semibold text-ink group-hover:text-amber-300 transition-colors font-display text-sm">{correspondent.name}</p>
-                  <p className="text-xs text-ink-muted mt-1.5 leading-relaxed">{correspondent.description}</p>
-                  <span className="mt-3 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide"
-                    style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.25)' }}>
-                    FREE • Tap to add
-                  </span>
+            {/* Auto-provisioned correspondent explainer — no manual add */}
+            {companions.filter(c => c.relationship_type === 'correspondent').length > 0 && (
+              <div className="col-span-full mt-2">
+                <div className="flex items-center gap-3 p-4 rounded-2xl"
+                  style={{ background: 'rgba(40,30,10,0.30)', border: '1px solid rgba(245,158,11,0.20)' }}>
+                  <Info className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <p className="text-xs text-ink-muted leading-relaxed">
+                    Your correspondents are auto-assigned based on your interests. Update your interests in your profile to change which correspondents write for you. Don't want one? Delete it — it won't come back unless your interests match.
+                  </p>
                 </div>
-              </motion.div>
-            ))}
+              </div>
+            )}
           </div>
         </section>
 
