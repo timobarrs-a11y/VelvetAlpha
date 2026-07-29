@@ -140,7 +140,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
       await naviTypeThen('Got it. I\'ll keep the brief flexible — no morning routine assumptions.', 700);
       // Save schedule with no hours
       if (userIdRef.current) {
-        await upsertSchedule(userIdRef.current, { work_type: workType as any }).catch(console.error);
+        await upsertSchedule(userIdRef.current, { work_type: workType as any } as any).catch(console.error);
       }
       await naviTypeThen('Now — what are you working toward right now? Any goals, even small ones?', 800);
       setStep('goals_prompt');
@@ -184,7 +184,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
         has_evening_commute: hasCommute,
         has_school_pickup: hasPickup,
         school_pickup_time: hasPickup ? 'afternoon' : null,
-      }).catch(console.error);
+      } as any).catch(console.error);
     }
 
     await naviTypeThen('Perfect. I\'ve got your schedule locked in.', 600);
@@ -216,7 +216,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
         goal_type,
         status: 'active',
         start_date: new Date().toISOString().split('T')[0],
-      }).catch(console.error);
+      } as any).catch(console.error);
     }
 
     await naviTypeThen(`"${goalText}" — love it. I\'ll keep an eye on that in your briefs.`, 700);

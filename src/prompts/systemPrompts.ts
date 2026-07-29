@@ -301,6 +301,7 @@ ${matchData.sports ? `User's favorite sports: ${matchData.sports}` : ''}
     basePrompt += `\nYour interests align with: ${matchData.interestPreference}`;
   }
 
+  const avatar = (matchData as any).avatar || { personality: ['caring', 'playful'] };
   const modeInstructions = {
     chat: `\n\nMODE: DAY-TO-DAY CONVERSATIONS
 Keep responses SHORT (2-4 sentences).

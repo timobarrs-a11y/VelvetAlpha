@@ -389,7 +389,15 @@ export function StellarPursuitGame() {
         { offsetX: 0, offsetY: 50, angle: 0, cooldown: 0 }
       ],
       name: 'WARDEN-CLASS DESTROYER',
-      entryComplete: false
+      entryComplete: false,
+      state: 'entering',
+      formationPosition: null,
+      entryProgress: 0,
+      entryPathIndex: 0,
+      diveProgress: 0,
+      attackPattern: 'standard',
+      shotsFired: 0,
+      guaranteedShotsStatus: { start: false, mid: false, end: false }
     };
 
     setBoss(newBoss);
@@ -934,7 +942,7 @@ export function StellarPursuitGame() {
 
           // Random shooting with difficulty, elite, and attack pattern multipliers
           const eliteMultiplier = enemy.isElite ? DIVE_CONFIG.eliteShootMultiplier : 1;
-          const patternConfig = ATTACK_PATTERNS[enemy.attackPattern];
+          const patternConfig = ATTACK_PATTERNS[enemy.attackPattern] as { shootMultiplier?: number; weight: number; kamikazeChance?: number; name: string };
           const patternMultiplier = patternConfig.shootMultiplier || 1;
           const shootChance = DIVE_CONFIG.shootChancePerFrame * difficulty.shootMult * eliteMultiplier * patternMultiplier;
 
@@ -1102,7 +1110,7 @@ export function StellarPursuitGame() {
               lastKillTime: Date.now()
             }));
             spawnParticles(bullet.x, bullet.y, 8, 'deflect', ['#00ffff', '#00ffff', '#ffffff']);
-            screenShakeRef.current = SCREEN_SHAKE.deflect;
+            setScreenShake(SCREEN_SHAKE.deflect);
 
             const deflectAngle = Math.atan2(dy, dx);
             const speed = BULLET_SPEED * 1.8;

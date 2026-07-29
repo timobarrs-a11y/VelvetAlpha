@@ -576,7 +576,7 @@ function BodyText({ children }: { children: React.ReactNode }) {
 function BulletList({
   items,
 }: {
-  items: (string | React.ReactNode[])[];
+  items: React.ReactNode[];
 }) {
   return (
     <ul className="space-y-2.5 mb-4">

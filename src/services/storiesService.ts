@@ -216,7 +216,7 @@ class StoriesService {
 
       const messageCount = conversations?.length || 0;
       const moments = await this.getMemoryMoments(userId, companionId);
-      const achievementsToUnlock: Partial<MilestoneAchievement>[] = [];
+      const achievementsToUnlock: any[] = [];
 
       if (messageCount >= 1 && !(await this.hasAchievement(userId, 'first_message'))) {
         achievementsToUnlock.push({

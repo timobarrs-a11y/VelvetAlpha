@@ -88,6 +88,7 @@ export interface Bullet {
   type: WeaponType;
   color: string;
   isDeflected: boolean;
+  isPlayer?: boolean;
 }
 
 export interface Powerup {
@@ -104,6 +105,7 @@ export interface Sector {
   number: number;
   name: string;
   hueStart: string;
+  hueMid?: string;
   hueEnd: string;
   starDensity: number;
   starColors: string[];
@@ -152,7 +154,7 @@ export interface Particle {
   color: string;
   life: number;
   maxLife: number;
-  type: 'explosion' | 'spark' | 'trail' | 'impact';
+  type: 'explosion' | 'spark' | 'trail' | 'impact' | 'deflect';
 }
 
 export interface GameStats {

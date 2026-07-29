@@ -12,6 +12,7 @@ import { useAudioScene } from '../hooks/useAudioScene';
 import { useMotivationalQuote } from '../hooks/useMotivationalQuote';
 import { supabase } from '../shared/supabase/client';
 import { calendarService } from '../services/calendarService';
+import { normalizeSubscriptionTier } from '../types/subscription';
 
 interface ChatHeaderProps {
   characterName: string;
@@ -185,7 +186,7 @@ export const ChatHeader = ({
           {subscriptionInfo && (
             <div className="hidden xl:block mr-1">
               <SubscriptionBanner
-                tier={subscriptionInfo.tier}
+                tier={normalizeSubscriptionTier(subscriptionInfo.tier)}
                 messagesRemaining={subscriptionInfo.messagesRemaining}
                 compact={true}
               />

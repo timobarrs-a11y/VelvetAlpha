@@ -63,7 +63,7 @@ function CompanionPickerModal({
                     className="w-full h-full"
                   />
                 </div>
-                <span className="text-white font-semibold">{c.name}</span>
+                <span className="text-white font-semibold">{c.custom_name}</span>
               </div>
               <ChevronRight className="w-4 h-4 text-blue-200/50 group-hover:text-pink-400 transition-colors" />
             </button>

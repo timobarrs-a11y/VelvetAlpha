@@ -1,8 +1,9 @@
+import { describe, it, beforeEach, vi } from 'vitest';
 import { ChatService } from '../chatService';
 
 describe('ChatService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('sendMessage', () => {

@@ -52,9 +52,10 @@ export function PacmanGame() {
         return;
       }
 
+      const c = companion as typeof companion & { character_type?: string };
       const displayName = companion.custom_name ||
-                         companion.character_type.charAt(0).toUpperCase() +
-                         companion.character_type.slice(1);
+                         (c.character_type || '').charAt(0).toUpperCase() +
+                         (c.character_type || '').slice(1);
 
       setCompanionName(displayName);
 

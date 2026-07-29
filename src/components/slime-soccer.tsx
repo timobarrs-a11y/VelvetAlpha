@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Home, Trophy } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -58,7 +58,7 @@ const SlimeSoccer = () => {
   const [winner, setWinner] = useState<string | null>(null);
   const [matchHistory, setMatchHistory] = useState<MatchRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [powerUpsCollected, setPowerUpsCollected] = useState(0);
+  const [, setPowerUpsCollected] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<any>(null);
   const keysRef = useRef<Record<string, boolean>>({});
@@ -122,13 +122,13 @@ const SlimeSoccer = () => {
   };
 
   useEffect(() => {
-    const handleKeyDown = (e: any) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       keysRef.current[e.code] = true;
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) {
         e.preventDefault();
       }
     };
-    const handleKeyUp = (e) => { keysRef.current[e.code] = false; };
+    const handleKeyUp = (e: KeyboardEvent) => { keysRef.current[e.code] = false; };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     return () => {
@@ -157,10 +157,12 @@ const SlimeSoccer = () => {
     if (gameState !== 'playing') return;
     gameRef.current = initGame();
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    let animationId;
+    if (!ctx) return;
+    let animationId: number;
 
-    const updateAI = (game) => {
+    const updateAI = (game: any) => {
       if (gameMode !== 'single') return;
       const ai = game.slimes[1];
       const ball = game.ball;
@@ -283,7 +285,7 @@ const SlimeSoccer = () => {
       
       ball.trail.unshift({ x: ball.x, y: ball.y, age: 0 });
       if (ball.trail.length > 10) ball.trail.pop();
-      ball.trail.forEach(t => t.age++);
+      ball.trail.forEach((t: any) => t.age++);
 
       if (ball.y >= GROUND_Y - BALL_RADIUS) {
         ball.y = GROUND_Y - BALL_RADIUS;
@@ -298,7 +300,7 @@ const SlimeSoccer = () => {
       }
       if (ball.y < BALL_RADIUS) { ball.y = BALL_RADIUS; ball.vy *= -BOUNCE; }
 
-      const wallBounce = (side) => {
+      const wallBounce = (side: string) => {
         for (let i = 0; i < 8; i++) {
           particles.push({ x: ball.x, y: ball.y, vx: (side === 'left' ? 1 : -1) * Math.random() * 5, vy: (Math.random() - 0.5) * 6, life: 25, color: '#ffffff' });
         }
@@ -416,7 +418,7 @@ const SlimeSoccer = () => {
       }
     };
 
-    const drawNet = (ctx, x, y, width, height, side) => {
+    const drawNet = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, side: string) => {
       const netColor = side === 'left' ? 'rgba(0, 255, 255, 0.6)' : 'rgba(255, 68, 68, 0.6)';
       const netColorDark = side === 'left' ? 'rgba(0, 180, 180, 0.8)' : 'rgba(180, 40, 40, 0.8)';
       const meshSize = 12;
@@ -467,7 +469,7 @@ const SlimeSoccer = () => {
       ctx.restore();
     };
 
-    const render = (game) => {
+    const render = (game: any) => {
       ctx.save();
       if (game.screenShake > 0) {
         ctx.translate((Math.random() - 0.5) * game.screenShake, (Math.random() - 0.5) * game.screenShake);
@@ -504,7 +506,6 @@ const SlimeSoccer = () => {
       ctx.setLineDash([]);
 
       // Draw left goal
-      const leftGoalX = GOAL_WIDTH;
       const goalY = GROUND_Y - GOAL_HEIGHT;
       
       // Left net
@@ -529,7 +530,7 @@ const SlimeSoccer = () => {
         game.goalFlash *= 0.9;
       }
 
-      game.ball.trail.forEach((t, i) => {
+      game.ball.trail.forEach((t: any) => {
         const alpha = (1 - t.age / 10) * 0.3;
         const size = BALL_RADIUS * (1 - t.age / 15);
         ctx.beginPath();
@@ -655,7 +656,7 @@ const SlimeSoccer = () => {
         ctx.shadowBlur = 0;
       });
 
-      game.particles.forEach(p => {
+      game.particles.forEach((p: any) => {
         ctx.globalAlpha = p.life / 30;
         ctx.fillStyle = p.color;
         ctx.beginPath();
@@ -667,7 +668,7 @@ const SlimeSoccer = () => {
       ctx.restore();
     };
 
-    const gameLoop = (timestamp) => {
+    const gameLoop = (timestamp: number) => {
       const targetFPS = 60;
       const frameInterval = 1000 / targetFPS;
       
@@ -729,7 +730,7 @@ const SlimeSoccer = () => {
     setGameState('playing');
   };
 
-  const formatTime = (seconds) => {
+  const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
@@ -851,7 +852,7 @@ const SlimeSoccer = () => {
           <span className="text-red-400">{scores.right}</span>
         </div>
         <p className="text-3xl mb-8">
-          {winner === 'Tie' ? "IT'S A TIE!" : <><span className={winner === 'Cyan' ? 'text-cyan-400' : 'text-red-400'}>{winner.toUpperCase()}</span> WINS!</>}
+          {winner === 'Tie' ? "IT'S A TIE!" : <><span className={winner === 'Cyan' ? 'text-cyan-400' : 'text-red-400'}>{(winner ?? '').toUpperCase()}</span> WINS!</>}
         </p>
         <button
           onClick={() => setGameState('menu')}

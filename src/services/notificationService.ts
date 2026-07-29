@@ -35,9 +35,8 @@ export class NotificationService {
         icon: icon || '/images/riley-positive.jpg',
         badge: '/images/riley-positive.jpg',
         tag: 'velvet-companion',
-        renotify: false,
         requireInteraction: false,
-      });
+      } as any);
     } catch (error) {
       console.error('Error showing notification:', error);
     }

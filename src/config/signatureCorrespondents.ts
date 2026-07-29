@@ -24,7 +24,7 @@ export interface CorrespondentConfig {
   description: string;
   sampleDispatch: string;
   premium: boolean;
-  gender: 'male' | 'female';
+  gender: 'male' | 'female' | 'neutral';
   interestKeywords: string[];
 }
 

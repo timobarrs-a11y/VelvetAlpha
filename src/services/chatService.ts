@@ -217,7 +217,7 @@ export interface Message {
   metadata?: Record<string, unknown>;
 }
 
-export type SubscriptionTier = 'free' | 'unlimited' | 'starter' | 'plus' | 'elite';
+export type SubscriptionTier = 'free' | 'trial' | 'unlimited' | 'starter' | 'plus' | 'elite';
 
 function calculateAge(birthday: string): number | undefined {
   if (!birthday) return undefined;
@@ -578,7 +578,7 @@ export class ChatService {
         interests: [],
         system_prompt: '',
         onboarding_completed: false,
-        subscription_tier: 'premium' as SubscriptionTier,
+        subscription_tier: 'plus' as SubscriptionTier,
       };
 
       const { data: created, error: createError } = await supabase
@@ -735,11 +735,11 @@ export class ChatService {
       const defaultProfile = {
         name: 'babe',
         interests: [] as string[],
-        subscription_tier: 'premium' as SubscriptionTier,
+        subscription_tier: 'plus' as SubscriptionTier,
       };
 
       const profile = userProfile || defaultProfile;
-      const userId = userProfile?.id || profile.id;
+      const userId = userProfile?.id || (profile as any).id;
 
       if (userProfile) {
         await this.saveMessage('user', message, companionId);
@@ -838,8 +838,8 @@ export class ChatService {
         }
       }
 
-      const hobbies: string[] = profile.hobbies || companionData?.hobbies || [];
-      const sports: string[] = profile.sports || companionData?.sports || [];
+      const hobbies: string[] = (profile as any).hobbies || companionData?.hobbies || [];
+      const sports: string[] = (profile as any).sports || companionData?.sports || [];
 
       const timeOfDay = getTimeOfDay();
       const outfitContext = `Currently ${timeOfDay} time`;
@@ -860,9 +860,9 @@ export class ChatService {
         }
       }
 
-      const userGender = profile.gender || '';
+      const userGender = (profile as any).gender || '';
       const connectionType = companionData?.relationship_type || 'romantic';
-      const userAge = profile.birthday ? calculateAge(profile.birthday) : undefined;
+      const userAge = (profile as any).birthday ? calculateAge((profile as any).birthday) : undefined;
 
       const signatureVoice = companionData?.signature_voice || (companionGender === 'male' ? 'classic_male' : 'classic_female');
 
@@ -883,12 +883,12 @@ export class ChatService {
       try {
         await relationshipTrackingService.updateOnUserMessage(
           userId,
-          companionId,
+          companionId!,
           now,
           userTimezone
         );
 
-        const stats = await relationshipTrackingService.getRelationshipStats(userId, companionId);
+        const stats = await relationshipTrackingService.getRelationshipStats(userId, companionId!);
 
         if (stats) {
           const dateParts = getUserLocalDateParts(now, userTimezone);
@@ -915,7 +915,7 @@ export class ChatService {
           if (!isMentorCompanion && !isCorrespondentCompanion) {
           const recentUserMessages = await affectionService.getRecentUserMessages(
             userId,
-            companionId,
+            companionId!,
             5
           );
 
@@ -957,7 +957,7 @@ export class ChatService {
           if (affectionUpdate.shouldUpdate) {
             await affectionService.updateAffectionBase(
               userId,
-              companionId,
+              companionId!,
               affectionUpdate.newAffectionBase
             );
           }
@@ -1005,13 +1005,13 @@ export class ChatService {
         userName: profile.name,
         userGender,
         userAge,
-        userBirthday: profile.birthday,
+        userBirthday: (profile as any).birthday,
         interests: profile.interests,
         hobbies,
         sports,
-        favoriteColor: profile.favorite_color || companionData?.favorite_color,
-        musicGenre: profile.music_genre || companionData?.music_genre,
-        newsTopics: profile.news_categories || companionData?.news_categories,
+        favoriteColor: (profile as any).favorite_color || companionData?.favorite_color,
+        musicGenre: (profile as any).music_genre || companionData?.music_genre,
+        newsTopics: (profile as any).news_categories || companionData?.news_categories,
         relationshipType: connectionType as 'friend' | 'romantic' | 'mentor',
         signatureVoice,
         expertConfig,
