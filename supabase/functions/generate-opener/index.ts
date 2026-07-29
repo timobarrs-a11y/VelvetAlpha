@@ -48,6 +48,19 @@ const MENTOR_TASK_LINES: Record<OpenerSituation, string> = {
     "The user is back after a break. Welcome them back professionally and ask what they want to focus on. No guilt-trip, no romance.",
 };
 
+const CORRESPONDENT_TASK_LINES: Record<OpenerSituation, string> = {
+  first_match:
+    "Your first dispatch to a new reader. Don't front-load with a big intro — lead straight with a live story or angle from your beat and let who you are come through in how you tell it. Drop your name once, like a byline. 2-3 tight sentences, end on a line that makes them want to write back.",
+  daily_morning:
+    "Morning dispatch. Lead with the one thing worth knowing in your beat right now, in your voice — like a personal reporter keeping them abreast. Don't repeat recent history. 2-3 sentences.",
+  daily_evening:
+    "Evening dispatch. Send the story worth their attention tonight, in your voice. Don't repeat recent history. 2-3 sentences.",
+  daily_night:
+    "Late-night dispatch. A quieter read — the story or take worth ending the day on. Don't repeat recent history. 2-3 sentences.",
+  reconnect:
+    "The reader's been away. Skip the guilt-trip — just catch them up with what they missed in your beat, in your voice. 2-3 sentences that pull them back in.",
+};
+
 function buildHistoryBlock(
   recent: Array<{ role: string; content: string }>
 ): string {

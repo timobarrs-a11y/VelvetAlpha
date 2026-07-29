@@ -737,9 +737,6 @@ Deno.serve(async (req: Request) => {
     }
 
     const tier = isSuperUser ? 'elite' : (profile.subscription_tier || 'free');
-    const selectedModel = selectModel(message, tier, isCorrespondent);
-
-    console.log(`[${traceId}] Model selection:`, { model: selectedModel, tier });
 
     const { data: companion } = await supabaseAdmin
       .from('companions')
@@ -790,6 +787,9 @@ Deno.serve(async (req: Request) => {
     const companionName = companion.custom_name || 'Companion';
     const isMentor = companion.relationship_type === 'mentor';
     const isCorrespondent = companion.relationship_type === 'correspondent';
+
+    const selectedModel = selectModel(message, tier, isCorrespondent);
+    console.log(`[${traceId}] Model selection:`, { model: selectedModel, tier });
 
     const maxTokens = (isMentor || isCorrespondent) ? Math.max(getMaxTokensForTier(tier), 600) : getMaxTokensForTier(tier);
     const historyDepth = getHistoryDepthForTier(tier);
