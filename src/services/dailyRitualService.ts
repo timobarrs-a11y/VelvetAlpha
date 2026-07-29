@@ -3,6 +3,15 @@ import { ProactiveMessageService } from './proactiveMessageService';
 
 type RitualType = 'morning' | 'evening' | 'night';
 
+interface DailyRitual {
+  id: string;
+  user_id: string;
+  companion_id: string;
+  ritual_type: RitualType;
+  last_triggered_at: string | null;
+  enabled: boolean;
+}
+
 export class DailyRitualService {
   static getCurrentTimeSlot(): RitualType | null {
     const hour = new Date().getHours();

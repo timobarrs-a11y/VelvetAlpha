@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode, type LucideIcon } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
 

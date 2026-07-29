@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function WorldMapOverlay({ save, islandProgress, onIslandSelect, onClose }: Props) {
-  const progressMap = new globalThis.Map<string, IslandProgress>(islandProgress.map(p => [p.islandId, p]));
+  const progressMap = new Map(islandProgress.map(p => [p.islandId, p]));
 
   function isUnlocked(island: IslandDef): boolean {
     if (!island.requiredItem) return true;

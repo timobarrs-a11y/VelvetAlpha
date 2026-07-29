@@ -54,7 +54,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         transition={{ duration: 0.15 }}
         className={`${base} ${variants[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
         disabled={disabled || isLoading}
-        {...(props as any)}
+        {...props}
       >
         {isLoading ? (
           <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />

@@ -331,7 +331,7 @@ export function CompanionLobbyPage() {
   };
 
   const handleGameClick = (game: typeof GAMES[number]) => {
-    if ((game as any).requiresCompanion) {
+    if (game.requiresCompanion) {
       setShowGameModal(true);
     } else if ('path' in game) {
       const cfg = GAME_CONFIGS[game.path];
@@ -584,8 +584,8 @@ export function CompanionLobbyPage() {
           {/* Bottom row — Calendar, Insights, Co-Author, Group Chat */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {smallTiles.filter(t => t.id !== 'videos' && !('wide' in t && t.wide) && !('paired' in t && t.paired)).map((tile, i) => {
-              const locked = (tile as any).isGroupChat && companions.length < 2;
-              const handleClick = (tile as any).isGroupChat ? handleGroupChatClick : () => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; cfg ? navigateTo(p, cfg) : navigate(p); };
+              const locked = tile.isGroupChat && companions.length < 2;
+              const handleClick = tile.isGroupChat ? handleGroupChatClick : () => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; cfg ? navigateTo(p, cfg) : navigate(p); };
               return (
                 <motion.button
                   key={tile.id}
@@ -604,7 +604,7 @@ export function CompanionLobbyPage() {
                     <h3 className="font-bold text-white font-display text-sm leading-tight">{tile.label}</h3>
                   </div>
                   <p className="text-xs text-white/65 leading-relaxed pl-0.5">{tile.desc}</p>
-                  {(tile as any).isGroupChat && groupChats.length > 0 && (
+                  {tile.isGroupChat && groupChats.length > 0 && (
                     <span className="absolute top-3 right-3 px-1.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
                       {groupChats.length}
                     </span>

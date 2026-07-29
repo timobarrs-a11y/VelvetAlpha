@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, Target, ChevronRight, Zap } from 'lucide-react';
-import type { BriefReadiness, BriefGap } from '../services/morningBriefService';
+import { BriefReadiness, BriefGap } from '../features/thread/useThreadBots';
 
 interface Props {
   readiness: BriefReadiness | null;

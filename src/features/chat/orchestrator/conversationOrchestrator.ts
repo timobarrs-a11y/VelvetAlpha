@@ -49,15 +49,6 @@ export interface SubscriptionUpdatedEvent extends BaseEvent {
   tier: string;
 }
 
-export type DispatchEvent =
-  | Omit<AuthReadyEvent, 'timestamp'>
-  | Omit<CompanionSelectedEvent, 'timestamp'>
-  | Omit<ConversationLoadedEvent, 'timestamp'>
-  | Omit<UserMessageSentEvent, 'timestamp'>
-  | Omit<AiMessageReceivedEvent, 'timestamp'>
-  | Omit<VideoSharedEvent, 'timestamp'>
-  | Omit<SubscriptionUpdatedEvent, 'timestamp'>;
-
 export type ConversationEvent =
   | AuthReadyEvent
   | CompanionSelectedEvent
@@ -77,7 +68,7 @@ class ConversationOrchestrator {
   private eventHistory: ConversationEvent[] = [];
   private maxHistory = 100;
 
-  dispatch(event: DispatchEvent): void {
+  dispatch(event: Omit<ConversationEvent, 'timestamp'>): void {
     const fullEvent = {
       ...event,
       timestamp: new Date(),

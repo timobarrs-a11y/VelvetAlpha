@@ -1,4 +1,4 @@
-import type { GameState, InputState, Player, Platform, Enemy, Collectible, Checkpoint, HazardZone } from './types';
+import type { GameState, InputState, Player, Platform, Enemy, Collectible, Particle, Checkpoint, ScorePopup, HazardZone } from './types';
 import { LEVELS } from './levels';
 import {
   CANVAS_WIDTH, CANVAS_HEIGHT, T,

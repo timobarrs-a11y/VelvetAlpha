@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Heart, Brain, ArrowLeft, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,7 +69,7 @@ export function IntentSelectPage() {
     },
   };
 
-  const cardVariants: Variants = {
+  const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
@@ -78,7 +78,7 @@ export function IntentSelectPage() {
     },
   };
 
-  const headerVariants: Variants = {
+  const headerVariants = {
     hidden: { opacity: 0, y: -10 },
     visible: {
       opacity: 1,
@@ -109,7 +109,7 @@ export function IntentSelectPage() {
               transition={{ duration: 0.3 }}
             >
               <motion.div
-                animate={{ rotate: 360 } as any}
+n                animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
               >
                 <Sparkles className="w-12 h-12 text-blue-400" />

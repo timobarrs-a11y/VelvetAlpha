@@ -904,7 +904,7 @@ export class HomeRunDerbyScene extends Phaser.Scene {
   getScore() { return this.state.score; }
   getRound() { return this.state.round; }
 
-  shutdown() { this.oc?.remove(); (super as any).shutdown?.(); }
+  shutdown() { this.oc?.remove(); super.shutdown(); }
 }
 
 function easeOut(t: number) {

@@ -569,12 +569,12 @@ function RevealView({
             }
           </p>
 
-          {session.is_b_ai && !!seed?.voice_archetype && (
+          {session.is_b_ai && seed?.voice_archetype && (
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-left space-y-2 mt-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">The persona you were talking to</p>
               <p className="text-sm text-gray-300 font-medium">{session.ai_persona_name} · {seed.age as string}</p>
               <p className="text-xs text-gray-500">{seed.voice_archetype as string}</p>
-              {!!seed.background && (
+              {seed.background && (
                 <p className="text-xs text-gray-600 italic">{seed.background as string}</p>
               )}
             </div>
@@ -675,7 +675,7 @@ export function RealOrNotPage() {
   useEffect(() => {
     if (!session) return;
 
-    const thinkingTimeoutRef = { id: 0 as unknown as ReturnType<typeof setTimeout> };
+    const thinkingTimeoutRef = { id: 0 as ReturnType<typeof setTimeout> };
     const opponentRole: 'a' | 'b' = myRole === 'a' ? 'b' : 'a';
 
     const sub = subscribeToMessages(
