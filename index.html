@@ -57,6 +57,20 @@
     <title>Project Velvet</title>
   </head>
   <body>
+    <!-- Theme boot: set data-theme before first paint to avoid a flash. Mirrors
+         src/stores/themeStore.ts (dark is the CSS default; only light is stamped). -->
+    <script>
+    (function() {
+      try {
+        var pref = localStorage.getItem('va-theme') || 'dark';
+        var dark = pref === 'dark'
+          || (pref === 'system' && window.matchMedia
+              && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (!dark) document.documentElement.setAttribute('data-theme', 'light');
+      } catch (e) { /* default dark */ }
+    })();
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 

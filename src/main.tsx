@@ -9,7 +9,11 @@ import { AuthProvider } from './auth/AuthProvider';
 import { CustomizationProvider } from './context/CustomizationContext';
 import { monitoringService } from './services/monitoringService';
 import { registerSW, installChunkErrorRecovery } from './services/swRegistration';
+import { useThemeStore } from './stores/themeStore';
 import './index.css';
+
+// Sync the theme store with the pre-paint boot script and start following the OS.
+useThemeStore.getState().init();
 
 window.addEventListener('unhandledrejection', (event) => {
   monitoringService.trackError({

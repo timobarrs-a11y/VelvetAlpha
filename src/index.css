@@ -11,6 +11,33 @@
     --color-danger:       239 68  68;
     --color-info:         59  130 246;
 
+    /* ─── Themeable semantic palette ──────────────────────────────────────────
+       Values are space-separated RGB triplets so Tailwind can apply opacity via
+       rgb(var(--x) / <alpha-value>). :root holds the DARK theme (identical to
+       the original hard-coded values) so the app looks unchanged if JS never
+       runs. html[data-theme="light"] overrides below. See tailwind.config.js. */
+    --surface-0:   15 14 26;
+    --surface-50:  19 17 31;
+    --surface-100: 28 25 48;
+    --surface-200: 37 34 64;
+    --surface-300: 49 45 85;
+    --surface-400: 64 59 110;
+    --surface-500: 85 79 136;
+
+    --ink:           240 238 255;
+    --ink-secondary: 202 197 240;
+    --ink-muted:     153 144 204;
+    --ink-subtle:    107 100 153;
+    --ink-disabled:  61 56 96;
+
+    --velvet-50:  26 22 50;
+    --velvet-100: 35 30 66;
+    --velvet-200: 46 40 88;
+    --velvet-300: 58 50 112;
+    --velvet-400: 74 64 144;
+
+    --app-bg: 9 12 30;
+
     --radius-sm:  0.5rem;
     --radius-md:  0.75rem;
     --radius-lg:  1rem;
@@ -29,6 +56,36 @@
     --ease-out:      cubic-bezier(0.0, 0.0, 0.2, 1);
   }
 
+  /* ─── Light theme override ─────────────────────────────────────────────────
+     Applied when html[data-theme="light"] is set (see src/stores/themeStore).
+     Only the semantic palette flips; the brand primary scale is intentionally
+     shared across themes. */
+  html[data-theme='light'] {
+    --surface-0:   246 245 251;
+    --surface-50:  241 239 248;
+    --surface-100: 255 255 255;
+    --surface-200: 234 231 244;
+    --surface-300: 220 216 236;
+    --surface-400: 201 195 224;
+    --surface-500: 179 171 208;
+
+    --ink:           26 23 48;
+    --ink-secondary: 61 55 99;
+    --ink-muted:     107 100 153;
+    --ink-subtle:    147 140 191;
+    --ink-disabled:  184 178 214;
+
+    --velvet-50:  243 240 251;
+    --velvet-100: 236 231 248;
+    --velvet-200: 224 217 243;
+    --velvet-300: 208 198 236;
+    --velvet-400: 188 176 226;
+
+    --app-bg: 246 245 251;
+
+    color-scheme: light;
+  }
+
   * {
     -webkit-tap-highlight-color: transparent;
   }
@@ -39,7 +96,8 @@
 
   body {
     @apply font-sans antialiased text-ink;
-    background-color: #090c1e;
+    background-color: rgb(var(--app-bg));
+    transition: background-color var(--duration-base) var(--ease-out);
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -93,9 +151,9 @@
 
   .input-base {
     @apply w-full px-4 py-3 rounded-2xl border-2 transition-all duration-200 placeholder:text-ink-subtle focus:outline-none;
-    background-color: rgba(28, 25, 48, 0.80);
-    border-color: rgba(49, 45, 85, 0.80);
-    color: #f0eeff;
+    background-color: rgb(var(--surface-100) / 0.80);
+    border-color: rgb(var(--surface-300) / 0.80);
+    color: rgb(var(--ink));
   }
 
   .input-default {
@@ -109,8 +167,8 @@
 
   .card-base {
     border-radius: 1rem;
-    border: 1px solid rgba(49, 45, 85, 0.70);
-    background-color: rgba(28, 25, 48, 0.75);
+    border: 1px solid rgb(var(--surface-300) / 0.70);
+    background-color: rgb(var(--surface-100) / 0.75);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     box-shadow: 0 1px 4px rgba(0,0,0,0.30), 0 4px 16px rgba(0,0,0,0.20);
@@ -123,7 +181,7 @@
   }
   .card-interactive:hover {
     box-shadow: 0 4px 20px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.25);
-    border-color: rgba(120, 100, 180, 0.50);
+    border-color: rgb(var(--surface-400) / 0.60);
   }
 
   .page-container {
@@ -209,17 +267,17 @@
   }
 
   .glass-effect {
-    background: rgba(20, 17, 40, 0.82);
+    background: rgb(var(--surface-50) / 0.82);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(80, 70, 130, 0.35);
+    border: 1px solid rgb(var(--surface-300) / 0.35);
   }
 
   .glass-dark {
-    background: rgba(10, 8, 22, 0.88);
+    background: rgb(var(--surface-0) / 0.88);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(60, 50, 100, 0.40);
+    border: 1px solid rgb(var(--surface-300) / 0.40);
   }
 
   .text-gradient {
