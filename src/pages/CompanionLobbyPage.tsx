@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, MessageCircle, Heart, Users, Crown, Cherry, Zap, Circle,
   Rocket, LogOut, Gamepad2, Lightbulb, FileText, User,
-  UsersRound, Calendar, Squirrel, Youtube, Newspaper, Trash2, MessageSquare,
+  UsersRound, Calendar, Youtube, Newspaper, Trash2, MessageSquare,
   Info,
-  Sparkles, Flame, Wand2, Trophy, Volume2, VolumeX, Anchor, Bot, MapPin, Brain,
+  Sparkles, Flame, Wand2, Volume2, VolumeX, Bot, MapPin, Brain,
   HelpCircle,
 } from 'lucide-react';
 import { getVoiceById } from '../config/signatureVoices';
@@ -39,10 +39,7 @@ const GAMES = [
   { id: 'momentum',     name: 'Momentum',        description: 'AI-generated platformer — each run has a unique hand-crafted world', icon: Zap,       iconBg: 'from-cyan-500 to-blue-600',      path: '/momentum' },
   { id: 'slime-soccer', name: 'Slime Soccer',    description: 'Classic physics-based slime soccer showdown',                        icon: Circle,    iconBg: 'from-fuchsia-500 to-pink-600',   path: '/slime-soccer' },
   { id: 'stellar',      name: 'Stellar Pursuit', description: 'Space shooter — navigate 9 sectors to rescue your family',          icon: Rocket,    iconBg: 'from-slate-600 to-slate-900',    path: '/stellar-pursuit' },
-  { id: 'fox-runner',   name: "Luna's Run",      description: 'Side-scrolling platformer across 5 handcrafted worlds',              icon: Squirrel,  iconBg: 'from-emerald-500 to-teal-600',   path: '/fox-runner' },
   { id: 'money-grab',   name: 'Money Grab',      description: 'Race to collect cash while dodging hammers and your companion',      icon: Cherry,    iconBg: 'from-yellow-400 to-orange-500',  requiresCompanion: true },
-  { id: 'home-run',     name: 'Home Run Derby',  description: 'Step into the batter\'s box — charge your swing, time the pitch, go yard', icon: Trophy,  iconBg: 'from-green-600 to-emerald-700', path: '/home-run-derby' },
-  { id: 'zelda-ocean',    name: 'Wind & Waves',    description: 'Cel-shaded 3D ocean voyage — sail, dodge enemy ships, collect rupees',      icon: Anchor,  iconBg: 'from-sky-500 to-teal-600',      path: '/zelda-ocean' },
   { id: 'social-combat',  name: 'Social Combat',   description: 'Read emotions and master the art of conversation',                           icon: Brain,   iconBg: 'from-violet-500 to-indigo-600', path: '/social-combat' },
 ] as const;
 
@@ -176,8 +173,6 @@ const GAME_CONFIGS: Record<string, { icon: typeof Crown; label: string; accentCo
   '/momentum':        { icon: Zap,       label: 'Loading Momentum...',        accentColor: '#22d3ee', bgColor: '#040e14' },
   '/slime-soccer':    { icon: Circle,    label: 'Loading Slime Soccer...',    accentColor: '#e879f9', bgColor: '#110014' },
   '/stellar-pursuit': { icon: Rocket,    label: 'Loading Stellar Pursuit...', accentColor: '#818cf8', bgColor: '#05060f' },
-  '/fox-runner':      { icon: Squirrel,  label: "Loading Luna's Run...",      accentColor: '#34d399', bgColor: '#040f0a' },
-  '/home-run-derby':  { icon: Trophy,    label: 'Loading Home Run Derby...',  accentColor: '#34d399', bgColor: '#020e06' },
 };
 
 export function CompanionLobbyPage() {

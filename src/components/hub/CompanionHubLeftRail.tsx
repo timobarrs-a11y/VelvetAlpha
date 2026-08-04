@@ -33,10 +33,7 @@ const ARCADE_GAMES: GameDef[] = [
   { emoji: '💰', name: 'Money Game',    desc: 'Collect coins',            path: '/pacman' },
   { emoji: '⚡', name: 'Momentum',      desc: 'AI-themed platformer',     path: '/momentum' },
   { emoji: '⚽', name: 'Slime Soccer',  desc: 'Classic slime showdown',   path: '/slime-soccer' },
-  { emoji: '⚾', name: 'Home Run',      desc: 'Charge, swing, go yard',   path: '/home-run-derby' },
   { emoji: '🌟', name: 'Stellar',       desc: 'Trivia across the galaxy', path: '/stellar-pursuit' },
-  { emoji: '🦊', name: 'Fox Runner',    desc: 'Endless runner',           path: '/fox-runner' },
-  { emoji: '🌊', name: 'Wind & Waves',  desc: 'Sail and explore islands', path: '/zelda-ocean' },
   { emoji: '🧠', name: 'Social Combat', desc: 'Master the art of conversation', path: '/social-combat' },
 ];
 

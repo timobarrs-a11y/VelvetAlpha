@@ -5,10 +5,7 @@ export type AudioScene =
   | 'momentum'
   | 'slime-soccer'
   | 'stellar-pursuit'
-  | 'fox-runner'
   | 'money-grab'
-  | 'home-run-derby'
-  | 'zelda-ocean'
   | 'none';
 
 const AMBIENT_AUDIO_ENABLED = false;
@@ -162,10 +159,7 @@ class AudioManager {
       case 'momentum':      return this.buildMomentum(ctx, out);
       case 'slime-soccer':  return this.buildSlimeSoccer(ctx, out);
       case 'stellar-pursuit': return this.buildStellar(ctx, out);
-      case 'fox-runner':    return this.buildFoxRunner(ctx, out);
       case 'money-grab':    return this.buildMoneyGrab(ctx, out);
-      case 'home-run-derby': return this.buildHomeRun(ctx, out);
-      case 'zelda-ocean':   return null;
       default:              return null;
     }
   }
@@ -467,49 +461,6 @@ class AudioManager {
     return loop;
   }
 
-  private buildFoxRunner(ctx: AudioContext, out: AudioNode): LoopNode {
-    const loop = this.makeLoop();
-    const master = ctx.createGain();
-    master.gain.value = 1;
-    master.connect(out);
-    loop.masterGain = master;
-
-    const forest1 = this.osc(ctx, 'sine', 164, loop);
-    const forest1g = this.gain(ctx, 0.06, loop);
-    const forest1f = this.filter(ctx, 'lowpass', 500);
-    forest1.connect(forest1f); forest1f.connect(forest1g); forest1g.connect(master);
-    this.lfo(ctx, 0.1, 3, forest1.frequency, loop);
-    forest1.start();
-
-    const forest2 = this.osc(ctx, 'triangle', 246, loop);
-    const forest2g = this.gain(ctx, 0.04, loop);
-    forest2.connect(forest2g); forest2g.connect(master);
-    this.lfo(ctx, 0.14, 4, forest2.frequency, loop);
-    forest2.start();
-
-    const melody = this.osc(ctx, 'triangle', 392, loop);
-    const melodyr = this.gain(ctx, 0.035, loop);
-    const melodyf = this.filter(ctx, 'lowpass', 1200);
-    melody.connect(melodyf); melodyf.connect(melodyr); melodyr.connect(master);
-    melody.start();
-
-    const melNotes = [392, 440, 494, 523, 494, 440, 392, 349];
-    let mni = 0;
-    const melStep = setInterval(() => {
-      melody.frequency.setValueAtTime(melNotes[mni % melNotes.length], ctx.currentTime);
-      mni++;
-    }, 350);
-    (loop as any)._melInterval = melStep;
-
-    const bird = this.osc(ctx, 'sine', 880, loop);
-    const birdg = this.gain(ctx, 0.015, loop);
-    bird.connect(birdg); birdg.connect(master);
-    this.lfo(ctx, 0.25, 40, bird.frequency, loop);
-    bird.start();
-
-    return loop;
-  }
-
   private buildMoneyGrab(ctx: AudioContext, out: AudioNode): LoopNode {
     const loop = this.makeLoop();
     const master = ctx.createGain();
@@ -550,43 +501,6 @@ class AudioManager {
     this.lfo(ctx, 6, 0.025, frenzyr.gain, loop);
     frenzy.connect(frenzyr); frenzyr.connect(master);
     frenzy.start();
-
-    return loop;
-  }
-
-  private buildHomeRun(ctx: AudioContext, out: AudioNode): LoopNode {
-    const loop = this.makeLoop();
-    const master = ctx.createGain();
-    master.gain.value = 1;
-    master.connect(out);
-    loop.masterGain = master;
-
-    const brass1 = this.osc(ctx, 'sawtooth', 220, loop);
-    const brass1f = this.filter(ctx, 'lowpass', 1200, 2);
-    const brass1g = this.gain(ctx, 0.055, loop);
-    brass1.connect(brass1f); brass1f.connect(brass1g); brass1g.connect(master);
-    brass1.start();
-
-    const brassNotes = [220, 247, 262, 294, 330, 294, 262, 247];
-    let brni = 0;
-    const brassStep = setInterval(() => {
-      brass1.frequency.setValueAtTime(brassNotes[brni % brassNotes.length], ctx.currentTime);
-      brni++;
-    }, 300);
-    (loop as any)._brassInterval = brassStep;
-
-    const pump = this.osc(ctx, 'triangle', 110, loop);
-    const pumpg = this.gain(ctx, 0.06, loop);
-    this.lfo(ctx, 3.33, 0.055, pumpg.gain, loop);
-    pump.connect(pumpg); pumpg.connect(master);
-    pump.start();
-
-    const crowd = this.osc(ctx, 'sawtooth', 880, loop);
-    const crowdf = this.filter(ctx, 'bandpass', 1200, 5);
-    const crowdg = this.gain(ctx, 0.012, loop);
-    this.lfo(ctx, 2.5, 0.01, crowdg.gain, loop);
-    crowd.connect(crowdf); crowdf.connect(crowdg); crowdg.connect(master);
-    crowd.start();
 
     return loop;
   }
