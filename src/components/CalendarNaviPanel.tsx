@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, MapPin, Loader2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Send, MapPin, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { localExplorerService } from '../services/localExplorerService';
-import { calendarService, UserEvent } from '../services/calendarService';
+import { UserEvent } from '../services/calendarService';
 import { getActiveGoals, formatGoalsForBrief } from '../services/goalService';
 import { getSchedule, formatScheduleForBrief } from '../services/userScheduleService';
 import { safeRandomUUID } from '../utils/uuid';

@@ -53,8 +53,8 @@ export function PacmanGame() {
       }
 
       const displayName = companion.custom_name ||
-                         companion.character_type.charAt(0).toUpperCase() +
-                         companion.character_type.slice(1);
+                         (companion.gender || 'companion').charAt(0).toUpperCase() +
+                         (companion.gender || 'companion').slice(1);
 
       setCompanionName(displayName);
 

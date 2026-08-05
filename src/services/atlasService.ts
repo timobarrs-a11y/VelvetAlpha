@@ -63,8 +63,6 @@ Format:
 Mindset: You are already briefed, already thinking ahead, already ready. The user walks in, you're at the desk. What needs to get done?`;
 };
 
-const ATLAS_SYSTEM_PROMPT = buildAtlasSystemPrompt();
-
 export const atlasService = {
   async getConversations(): Promise<AtlasConversation[]> {
     const { data, error } = await supabase
@@ -243,7 +241,7 @@ export const atlasService = {
   },
 
   async sendMessage(
-    conversationId: string,
+    _conversationId: string,
     userMessage: string,
     history: Array<{ role: 'user' | 'assistant'; content: string }>,
     userName?: string,

@@ -148,8 +148,8 @@ export function InvitePage() {
                 onClick={handleCopy}
                 className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
                 style={{
-                  background: copied ? 'rgba(34,197,94,0.2)' : VELVET_THEME.colors.ghost,
-                  border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : VELVET_THEME.colors.ghostBorder}`,
+                  background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.10)'}`,
                 }}
               >
                 {copied ? <Check className="text-green-400" size={18} /> : <Copy className="text-blue-200/80" size={18} />}

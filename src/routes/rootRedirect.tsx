@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
@@ -63,7 +63,7 @@ function CompanionPickerModal({
                     className="w-full h-full"
                   />
                 </div>
-                <span className="text-white font-semibold">{c.name}</span>
+                <span className="text-white font-semibold">{c.custom_name || 'Companion'}</span>
               </div>
               <ChevronRight className="w-4 h-4 text-blue-200/50 group-hover:text-pink-400 transition-colors" />
             </button>

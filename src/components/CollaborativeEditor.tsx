@@ -43,7 +43,7 @@ const EDITOR_COLORS = [
 ];
 
 export const CollaborativeEditor = forwardRef<CollaborativeEditorHandle, CollaborativeEditorProps>(
-  ({ value, onChange, placeholder, disabled = false, aiColor = '#3b82f6', editorStyles, onStyleChange, userFavoriteColor }, ref) => {
+  ({ value, onChange, placeholder, disabled = false, editorStyles, onStyleChange, userFavoriteColor }, ref) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const cursorPositionRef = useRef<number>(value.length);
 
@@ -129,7 +129,6 @@ export const CollaborativeEditor = forwardRef<CollaborativeEditorHandle, Collabo
       }
     };
 
-    const currentFontLabel = FONT_FAMILIES.find(f => f.value === currentStyles.fontFamily)?.label || 'Serif';
     const favHex = userFavoriteColor ? colorNameToHex(userFavoriteColor) : null;
 
     return (

@@ -17,7 +17,6 @@ import {
   RefreshCw,
   ChevronRight,
   Crown,
-  BarChart3,
   Gamepad2,
   Star,
   CheckCircle,
@@ -636,7 +635,7 @@ function KPICard({
     <div className="rounded-2xl border border-white/10 p-5" style={{ background: 'rgba(255,255,255,0.04)' }}>
       <div className="flex items-center gap-3 mb-3">
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconBg}`}>
-          <Icon className={`w-4.5 h-4.5 ${iconColor}`} style={{ width: '18px', height: '18px' }} />
+          <Icon className={`w-[18px] h-[18px] ${iconColor}`} />
         </div>
         <span className="text-white/50 text-xs font-medium uppercase tracking-wide">{label}</span>
       </div>

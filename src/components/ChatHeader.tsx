@@ -60,7 +60,6 @@ export const ChatHeader = ({
   avatarConfig,
   gender,
   currentStatus,
-  favoriteColor,
   fontFamily,
   companionId,
   currentTier,
@@ -185,7 +184,7 @@ export const ChatHeader = ({
           {subscriptionInfo && (
             <div className="hidden xl:block mr-1">
               <SubscriptionBanner
-                tier={subscriptionInfo.tier}
+                tier={subscriptionInfo.tier as 'free' | 'trial' | 'unlimited' | 'starter' | 'plus' | 'elite'}
                 messagesRemaining={subscriptionInfo.messagesRemaining}
                 compact={true}
               />

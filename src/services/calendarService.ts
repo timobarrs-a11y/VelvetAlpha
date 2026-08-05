@@ -135,7 +135,7 @@ class CalendarService {
   }
 
   async generateEventSuggestions(
-    userId: string,
+    _userId: string,
     companionId: string,
     recentConversations: string
   ): Promise<void> {
@@ -238,7 +238,7 @@ class CalendarService {
   }
 
   async generateGiftSuggestions(
-    userId: string,
+    _userId: string,
     companionId: string,
     recipient: string,
     occasion: string,

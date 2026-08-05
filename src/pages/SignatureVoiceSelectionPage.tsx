@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../shared/supabase/client';
-import { SIGNATURE_VOICES, canUseVoice, SignatureVoice, getVoicesByCategory } from '../config/signatureVoices';
+import { SIGNATURE_VOICES, SignatureVoice, getVoicesByCategory } from '../config/signatureVoices';
 import { createCompanion } from '../services/companionService';
 import SignatureVoiceTile from '../components/SignatureVoiceTile';
 import { ArrowRight, Sparkles } from 'lucide-react';
@@ -129,8 +129,6 @@ export default function SignatureVoiceSelectionPage() {
       navigate('/create-companion-avatar', { replace: true });
     }
   };
-
-  const canProceedWithSelected = !!selectedVoice;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-rose-900 text-white overflow-y-auto">

@@ -200,7 +200,6 @@ function AtlasMessage({
   message,
   companionBubbleColorKey,
   companionTextColorKey,
-  fontFamily,
 }: {
   message: Message;
   companionBubbleColorKey?: string | null;
@@ -268,7 +267,6 @@ export const ChatMessage = ({
   userAvatarConfig,
   companionAvatarConfig,
   favoriteColor,
-  isFirstMessage,
   isGrouped = false,
   bubbleColorKey,
   textColorKey,
