@@ -1,0 +1,2 @@
+src/components/games/SocialCombatRPG.tsx(934,29): error TS2538: Type 'undefined' cannot be used as an index type.
+src/components/games/SocialCombatRPG.tsx(1978,55): error TS2353: Object literal may only specify known properties, and 'hp' does not exist in type 'Omit<OpponentState, "emotion" | "hp" | "maxHp">'.

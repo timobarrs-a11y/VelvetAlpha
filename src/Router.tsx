@@ -22,7 +22,7 @@ import { SWUpdateToast } from './components/SWUpdateToast';
 
 const GAME_PATHS = [
   '/checkers', '/pacman', '/momentum', '/slime-soccer',
-  '/stellar-pursuit', '/social-combat',
+  '/stellar-pursuit',
 ];
 
 const PATH_TO_SCENE: Record<string, AudioScene> = {
@@ -33,7 +33,6 @@ const PATH_TO_SCENE: Record<string, AudioScene> = {
   '/momentum':        'momentum',
   '/slime-soccer':    'slime-soccer',
   '/stellar-pursuit': 'stellar-pursuit',
-  '/social-combat':   'social-combat',
 };
 
 function resolveScene(pathname: string): AudioScene {

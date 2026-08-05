@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment, type CSSProperties } from "react";
 import {
   SCENARIO_SCRIPTS,
   CONFLICT_OBJECTIVES,
@@ -6,21 +6,196 @@ import {
   summarize as summarizeObjectives,
   parseConflictId,
   previewPlayerLine,
+  type RespType,
 } from "../../game/social-combat/scripts";
 import {
   recordRun,
   getMemory,
   updateMemory,
+  type CombatMemory,
+  type CombatOutcome,
 } from "../../services/socialCombatService";
 import {
   getFieldNotes,
   recordFieldNote,
   discoveredCount,
+  type Eff,
 } from "../../game/social-combat/fieldNotes";
+
+type EmotionKey = 'confident' | 'vulnerable' | 'grateful' | 'angry' | 'annoyed' | 'lazy' | 'guilty' | 'doubtful' | 'trusting' | 'defensive' | 'hostile' | 'overconfident';
+type CharKey = 'scholar' | 'athlete' | 'artist';
+type UltKey = 'scholar' | 'athlete' | 'artist';
+type PerkId = 'iron_will' | 'silver_tongue' | 'sharp_tongue' | 'steel_nerves' | 'adrenaline' | 'fortune' | 'momentum' | 'second_wind' | 'versatile' | 'combo_master';
+type EffType = 'super' | 'normal' | 'weak' | 'heal' | 'combo';
+
+interface CharDef {
+  id: string;
+  name: string;
+  icon: string;
+  archetype: string;
+  description: string;
+  strongResponses: RespType[];
+  weakResponses: RespType[];
+  baseResponses: RespType[];
+  ultimate: UltKey;
+}
+
+interface PlayerState {
+  id: string;
+  name: string;
+  icon: string;
+  archetype: string;
+  hp: number;
+  maxHp: number;
+  emotion: EmotionKey;
+  responses: RespType[];
+  history: string[];
+  charge: number;
+  perks: PerkId[];
+  ultimate: UltKey;
+  strongResponses: RespType[];
+  weakResponses: RespType[];
+  baseResponses: RespType[];
+  description?: string;
+}
+
+interface OpponentState {
+  id: string;
+  name: string;
+  icon: string;
+  archetype: string;
+  emotion: EmotionKey;
+  hp: number;
+  maxHp: number;
+  specials?: string[];
+  stageHp?: number;
+  bossHp?: number;
+  specialDesc?: string;
+  startingEmotion?: EmotionKey;
+  conflict?: string;
+}
+
+interface Scenario {
+  id: string;
+  conflictId: string;
+  opponent: Omit<OpponentState, 'emotion' | 'hp' | 'maxHp'>;
+  setup: string;
+  startingEmotion: EmotionKey;
+}
+
+interface DialogueEntry {
+  id: string;
+  speaker?: string;
+  text: string;
+  side?: 'plr' | 'opp';
+  emo?: EmotionKey;
+  isSystem?: boolean;
+  isNarrative?: boolean;
+  isCrit?: boolean;
+  isUlt?: boolean;
+  eff?: EffType;
+}
+
+interface GameEvent {
+  kind: 'shake' | 'particles' | 'damage';
+  intensity?: number;
+  color?: string;
+  count?: number;
+  burst?: string;
+  value?: number;
+  target?: 'opp' | 'plr';
+  eff?: EffType;
+  isCrit?: boolean;
+  isUlt?: boolean;
+}
+
+interface GameState {
+  player: PlayerState;
+  opponent: OpponentState;
+  round: number;
+  dialogue: DialogueEntry[];
+  phase: 'intro' | 'playing' | 'gameover';
+  isVictory: boolean;
+  scenario: Scenario;
+  counts: Record<string, number>;
+  combo: number;
+  maxCombo: number;
+  firedBeats: string[];
+}
+
+interface ProcessResult {
+  next: GameState;
+  events: GameEvent[];
+}
+
+interface InitOpts {
+  perks?: PerkId[];
+  carryHp?: number | null;
+}
+
+interface Particle {
+  id: string;
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  size: number;
+  color: string;
+  duration: number;
+}
+
+interface DamageNumber {
+  id: string;
+  x: number;
+  y: number;
+  value: number;
+  eff: EffType;
+  isCrit: boolean;
+  isUlt: boolean;
+}
+
+interface AscentRun {
+  stages: StageDef[];
+  stage: number;
+  perks: PerkId[];
+  totalRounds: number;
+  maxCombo: number;
+}
+
+interface StageDef {
+  id: string;
+  conflictId: string;
+  opponent: Omit<OpponentState, 'emotion' | 'hp' | 'maxHp'>;
+  setup: string;
+  startingEmotion: EmotionKey;
+  stage: number;
+  isBoss?: boolean;
+}
+
+interface PerkOption {
+  id: PerkId;
+  name: string;
+  icon: string;
+  color: string;
+  desc: string;
+}
+
+interface TutorialStep {
+  before: { title: string; body: string };
+  setup: { emotion: EmotionKey; charge?: number } | null;
+  instruct: string;
+  forceResponse: RespType | 'ultimate';
+  after: { title: string; body: string; isFinal?: boolean };
+}
+
+interface TutorialState {
+  step: number;
+  phase: 'before' | 'action' | 'after';
+}
 
 // ==================== DATA ====================
 
-const EMOTIONS = {
+const EMOTIONS: Record<EmotionKey, { name: string; icon: string; color: string; aura: string }> = {
   lazy:          { name: 'Lazy',          icon: '😴', color: '#9CA3AF', aura: 'rgba(156,163,175,0.5)' },
   annoyed:       { name: 'Annoyed',       icon: '😒', color: '#FB923C', aura: 'rgba(251,146,60,0.55)' },
   defensive:     { name: 'Defensive',     icon: '🛡️', color: '#60A5FA', aura: 'rgba(96,165,250,0.55)' },
@@ -35,7 +210,7 @@ const EMOTIONS = {
   overconfident: { name: 'Overconfident', icon: '💪', color: '#FB7185', aura: 'rgba(251,113,133,0.6)' },
 };
 
-const RESP = {
+const RESP: Record<RespType, { label: string; icon: string; color: string; bg: string; particle: string }> = {
   empathy:      { label: 'Empathy',      icon: '💙', color: '#3B82F6', bg: 'linear-gradient(135deg,#3B82F6,#2563EB)', particle: '#60A5FA' },
   logic:        { label: 'Logic',        icon: '🧠', color: '#10B981', bg: 'linear-gradient(135deg,#10B981,#059669)', particle: '#34D399' },
   manipulation: { label: 'Manipulation', icon: '🎭', color: '#8B5CF6', bg: 'linear-gradient(135deg,#8B5CF6,#7C3AED)', particle: '#A78BFA' },
@@ -43,7 +218,7 @@ const RESP = {
   cunning:      { label: 'Cunning',      icon: '🦊', color: '#F97316', bg: 'linear-gradient(135deg,#F97316,#EA580C)', particle: '#FB923C' },
 };
 
-const ULTIMATES = {
+const ULTIMATES: Record<UltKey, { name: string; icon: string; tagline: string; desc: string; color: string; gradient: string; voiceLine: string }> = {
   scholar: {
     name: "Socratic Method", icon: "📖", tagline: "Use their words against them",
     desc: "Base 40 damage + 8 per unique response you've used",
@@ -64,7 +239,7 @@ const ULTIMATES = {
   },
 };
 
-const CHARS = {
+const CHARS: Record<CharKey, CharDef> = {
   scholar: {
     id:'scholar', name:'The Scholar', icon:'🎓', archetype:'Smart & Methodical',
     description:'Thinks through problems logically and understands others well, but less direct.',
@@ -85,7 +260,7 @@ const CHARS = {
   },
 };
 
-const EFF_CHART = {
+const EFF_CHART: Record<RespType, { sup: EmotionKey[]; weak: EmotionKey[] }> = {
   logic:        { sup:['annoyed','overconfident','defensive'], weak:['confident','grateful','trusting'] },
   empathy:      { sup:['guilty','vulnerable','doubtful'],      weak:['angry','hostile','overconfident'] },
   manipulation: { sup:['trusting','confident','lazy'],         weak:['doubtful','defensive','hostile'] },
@@ -93,7 +268,7 @@ const EFF_CHART = {
   cunning:      { sup:['annoyed','guilty','vulnerable'],       weak:['hostile','grateful','overconfident'] },
 };
 
-const EMO_TRANS = {
+const EMO_TRANS: Record<EmotionKey, Record<RespType, EmotionKey>> = {
   lazy:          { logic:'annoyed',   empathy:'guilty',     manipulation:'confident',     aggression:'defensive', cunning:'trusting'  },
   annoyed:       { logic:'defensive', empathy:'guilty',     manipulation:'angry',         aggression:'angry',     cunning:'confident' },
   defensive:     { logic:'doubtful',  empathy:'vulnerable', manipulation:'angry',         aggression:'hostile',   cunning:'doubtful'  },
@@ -108,7 +283,7 @@ const EMO_TRANS = {
   overconfident: { logic:'annoyed',   empathy:'confident',  manipulation:'confident',     aggression:'defensive', cunning:'doubtful'  },
 };
 
-const DIALOGUE = {
+const DIALOGUE: Record<EmotionKey, { base: string; afterLogic: string; afterEmpathy: string; afterManipulation: string; afterAggression: string; afterCunning: string }> = {
   lazy:{ base:"Honestly, I'm just so swamped right now. Can't you handle this one? You're better at it anyway.", afterLogic:"Okay, okay. A lecture on responsibility. Just what I needed today.", afterEmpathy:"I mean... you're right. I guess I've been avoiding it. It's just a lot, you know?", afterManipulation:"You know what? You're totally right. I'll get on it right away!", afterAggression:"Whoa, calm down! No need to get so intense about a simple thing.", afterCunning:"Huh. I never thought of it that way. That's actually pretty clever." },
   annoyed:{ base:"Look, I've had a long day and I don't have patience for this. Tell me what you want and let's get it over with.", afterLogic:"Don't try to reason with me right now. I'm not in the mood for a debate.", afterEmpathy:"Fine. I know I'm being difficult. I'm just... stressed out. Sorry for snapping.", afterManipulation:"Are you trying to trick me? Because I can tell, and it's not working.", afterAggression:"You want a fight? Because I am more than happy to have one right now!", afterCunning:"That's... an interesting point. Let me think about that for a second." },
   guilty:{ base:"You're right. I know I messed up, and there's no excuse for what I did. I feel terrible.", afterLogic:"Logically I know you're correct. It was my responsibility and I dropped the ball.", afterEmpathy:"Thank you for being understanding. It means a lot that you're not just attacking me.", afterManipulation:"You're right, I need to make this right. Just tell me what to do.", afterAggression:"Yelling isn't going to help! I already feel bad enough as it is.", afterCunning:"That's a way out. Are you sure it would work? It feels a bit sneaky to me." },
@@ -123,13 +298,13 @@ const DIALOGUE = {
   overconfident:{ base:"Please, I've done this a thousand times. I could literally do this in my sleep.", afterLogic:"Wait... your logic is actually sound. I may have overlooked a few important details.", afterEmpathy:"Sympathy is for the weak. We just need to focus and execute the plan.", afterManipulation:"Of course! My brilliance combined with your idea? Absolutely unstoppable.", afterAggression:"Are you questioning my ability? You have no idea who you're talking to.", afterCunning:"Clever trick for a lesser mind. My approach is still obviously superior." },
 };
 
-const PLAYER_DLG = {
+const PLAYER_DLG: Record<string, Partial<Record<RespType, string>>> = {
   scholar:{ logic:"Let's approach this systematically. If we map out the variables, we can find the optimal path forward.", empathy:"I can see this is really difficult for you. Let's take a step back and talk about what's going on.", manipulation:"If we frame this correctly, we can make this work for both of us. Think about the long-term benefits.", aggression:"I've analyzed this thoroughly, and this behavior is suboptimal. We need to correct course immediately.", cunning:"There's a clever workaround here that most people miss. What if we approach it from this angle instead?" },
   athlete:{ logic:"Look, let's cut through the talk. What's our objective here and what's our play to win?", empathy:"Hey, team check. Are you okay? You seem like you're not playing at your usual level right now.", aggression:"Stop making excuses and get in the game. We're here to win, not to complain.", manipulation:"Come on, we're the power players here. Let's show everyone what a real team can do.", cunning:"Smart play — there's an angle here nobody sees coming. Let me show you how this wins the game." },
   artist:{ logic:"Let's step back and look at the whole canvas. There's a much bigger picture we're not seeing.", empathy:"I can feel all the tension here. This isn't really about the task, is it? Let's connect on a human level.", manipulation:"Just imagine how amazing it'll feel when we've created something beautiful together.", aggression:"All this negative energy is poisoning our creative process. We need to purify this space.", cunning:"There's a really creative solution hiding here that nobody else would think of. What do you think?" },
 };
 
-const CONFLICTS = [
+const CONFLICTS: { id: string; setup: string }[] = [
   { id:'group_project',       setup:"The deadline for your group project is tomorrow, and your partner {NAME} hasn't contributed anything meaningful. Your grade depends on this collaboration." },
   { id:'roommate_drama',      setup:"{NAME} has been leaving dirty dishes everywhere, playing loud music at night, and bringing strangers over. The lease is in both your names." },
   { id:'workplace_conflict',  setup:"Your coworker {NAME} has been taking credit for your ideas in meetings. A big promotion is coming up and you need to address this — now." },
@@ -137,7 +312,7 @@ const CONFLICTS = [
   { id:'resource_competition',setup:"You and {NAME} both need the last available study room during finals week. You both have legitimate claims and time is running out." },
 ];
 
-const OPPONENTS = [
+const OPPONENTS: { id: string; name: string; archetype: string; icon: string; startingEmotion: EmotionKey }[] = [
   { id:'slacker',       name:"Jake Morrison",    archetype:"The Slacker",        icon:"😎", startingEmotion:"lazy"       },
   { id:'perfectionist', name:"Sarah Chen",        archetype:"The Perfectionist",  icon:"📊", startingEmotion:"confident"  },
   { id:'hothead',       name:"Marcus Rodriguez",  archetype:"The Hothead",        icon:"😤", startingEmotion:"annoyed"    },
@@ -145,7 +320,7 @@ const OPPONENTS = [
   { id:'anxious',       name:"Emma Davis",        archetype:"The Anxious One",    icon:"😰", startingEmotion:"vulnerable" },
 ];
 
-const BOSSES = [
+const BOSSES: { id: string; name: string; archetype: string; icon: string; startingEmotion: EmotionKey; bossHp: number; specials: string[]; specialDesc: string; conflict: string }[] = [
   {
     id:'director_hollis', name:"Director Hollis", archetype:"The Immovable Authority",
     icon:"💼", startingEmotion:"overconfident", bossHp:140,
@@ -166,12 +341,12 @@ const BOSSES = [
   },
 ];
 
-const TUTORIAL_OPPONENT = {
+const TUTORIAL_OPPONENT: { id: string; name: string; archetype: string; icon: string; startingEmotion: EmotionKey } = {
   id:'coach_riley', name:"Coach Riley", archetype:"Your Trainer",
   icon:"🏀", startingEmotion:"lazy",
 };
 
-const TUTORIAL_STEPS = [
+const TUTORIAL_STEPS: TutorialStep[] = [
   {
     before: {
       title: "Welcome to the arena",
@@ -227,7 +402,7 @@ const TUTORIAL_STEPS = [
   },
 ];
 
-const PERKS = {
+const PERKS: Record<PerkId, { name: string; icon: string; color: string; desc: string }> = {
   iron_will:     { name:'Iron Will',     icon:'🛡️', color:'#10B981', desc:'+25 max HP and heal to full between stages' },
   silver_tongue: { name:'Silver Tongue', icon:'💫', color:'#8B5CF6', desc:'Start each fight with 50% charge' },
   sharp_tongue:  { name:'Sharp Tongue',  icon:'🗡️', color:'#EF4444', desc:'Deal 15% more damage on every response' },
@@ -240,7 +415,7 @@ const PERKS = {
   combo_master:  { name:'Combo Master',  icon:'🔥', color:'#F472B6', desc:'Start every fight with combo counter at 1' },
 };
 
-const TIPS = {
+const TIPS: Record<string, string> = {
   empathy:      "💡 Empathy works best with people who feel guilty or vulnerable. Meeting someone where they are emotionally builds trust faster than any argument.",
   logic:        "💡 Logic shines when someone is overconfident or defensive. Calmly presenting facts cuts through emotional noise without escalating.",
   aggression:   "💡 Aggression can force action in passive situations — but escalates with already-hostile people. Use it sparingly.",
@@ -250,24 +425,24 @@ const TIPS = {
 
 // ==================== ENGINE ====================
 
-const rnd = a => a[Math.floor(Math.random() * a.length)];
-const uid = () => Math.random().toString(36).slice(2, 9);
-const hasPerk = (perks, id) => perks?.includes(id) || false;
+const rnd = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
+const uid = (): string => Math.random().toString(36).slice(2, 9);
+const hasPerk = (perks: PerkId[] | undefined, id: PerkId): boolean => perks?.includes(id) || false;
 
-const genScenario = () => {
+const genScenario = (): Scenario => {
   const c = rnd(CONFLICTS), o = rnd(OPPONENTS);
   const id = `${c.id}_${o.id}`;
   const script = SCENARIO_SCRIPTS[id];
   return {
     id,
     conflictId: c.id,
-    opponent:{...o},
+    opponent: { id: o.id, name: o.name, archetype: o.archetype, icon: o.icon, startingEmotion: o.startingEmotion },
     setup: script?.intro || c.setup.replace('{NAME}', o.name),
-    startingEmotion:o.startingEmotion,
+    startingEmotion: o.startingEmotion as EmotionKey,
   };
 };
 
-const genAscentRun = () => {
+const genAscentRun = (): { stages: StageDef[] } => {
   const shuffled = [...OPPONENTS].sort(() => Math.random() - 0.5);
   const [o1, o2] = shuffled.slice(0, 2);
   const boss = rnd(BOSSES);
@@ -276,31 +451,31 @@ const genAscentRun = () => {
   const s2 = SCENARIO_SCRIPTS[`${c2.id}_${o2.id}`];
   return {
     stages: [
-      { id:`${c1.id}_${o1.id}`, conflictId:c1.id, opponent:{...o1, stageHp:85}, setup: s1?.intro || c1.setup.replace('{NAME}', o1.name), startingEmotion:o1.startingEmotion, stage:1 },
-      { id:`${c2.id}_${o2.id}`, conflictId:c2.id, opponent:{...o2, stageHp:105}, setup: s2?.intro || c2.setup.replace('{NAME}', o2.name), startingEmotion:o2.startingEmotion, stage:2 },
-      { id:`boss_${boss.id}`, conflictId:'boss', opponent:{...boss, stageHp:boss.bossHp, specials:boss.specials}, setup:boss.conflict, startingEmotion:boss.startingEmotion, stage:3, isBoss:true },
+      { id:`${c1.id}_${o1.id}`, conflictId:c1.id, opponent: { id: o1.id, name: o1.name, archetype: o1.archetype, icon: o1.icon, startingEmotion: o1.startingEmotion, stageHp: 85 }, setup: s1?.intro || c1.setup.replace('{NAME}', o1.name), startingEmotion: o1.startingEmotion as EmotionKey, stage:1 },
+      { id:`${c2.id}_${o2.id}`, conflictId:c2.id, opponent: { id: o2.id, name: o2.name, archetype: o2.archetype, icon: o2.icon, startingEmotion: o2.startingEmotion, stageHp: 105 }, setup: s2?.intro || c2.setup.replace('{NAME}', o2.name), startingEmotion: o2.startingEmotion as EmotionKey, stage:2 },
+      { id:`boss_${boss.id}`, conflictId:'boss', opponent: { id: boss.id, name: boss.name, archetype: boss.archetype, icon: boss.icon, startingEmotion: boss.startingEmotion, stageHp: boss.bossHp, specials: boss.specials, specialDesc: boss.specialDesc, conflict: boss.conflict }, setup: boss.conflict, startingEmotion: boss.startingEmotion as EmotionKey, stage:3, isBoss:true },
     ],
   };
 };
 
-const pickPerks = (exclude=[]) => {
-  const pool = Object.entries(PERKS).filter(([id]) => !exclude.includes(id));
+const pickPerks = (exclude: PerkId[] = []): PerkOption[] => {
+  const pool = (Object.entries(PERKS) as [PerkId, typeof PERKS[PerkId]][]).filter(([id]) => !exclude.includes(id));
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(3, pool.length)).map(([id, p]) => ({ id, ...p }));
+  return shuffled.slice(0, Math.min(3, pool.length)).map(([id, p]) => ({ id, name: p.name, icon: p.icon, color: p.color, desc: p.desc }));
 };
 
-const getEff = (type, emo) => {
+const getEff = (type: RespType, emo: EmotionKey): EffType => {
   const ch = EFF_CHART[type];
   if (ch.sup.includes(emo)) return 'super';
   if (ch.weak.includes(emo)) return 'weak';
   return 'normal';
 };
 
-const calcDamage = (eff, player, type, combo, isCrit) => {
+const calcDamage = (eff: EffType, player: PlayerState, type: RespType, combo: number, isCrit: boolean): number => {
   const perks = player.perks || [];
   // Versatile: weak → normal damage tier
   const effTier = (eff === 'weak' && hasPerk(perks, 'versatile')) ? 'normal' : eff;
-  const base = { super: 28, normal: 18, weak: 9 }[effTier];
+  const base = { super: 28, normal: 18, weak: 9 }[effTier as 'super' | 'normal' | 'weak'];
   const bonus = player.strongResponses.includes(type) ? 1.2 : player.weakResponses.includes(type) ? 0.8 : 1.0;
   const berserk = player.hp < 30 ? 1.5 : 1.0;
   const comboMult = combo >= 3 ? 1.3 : combo >= 2 ? 1.2 : combo >= 1 ? 1.1 : 1.0;
@@ -309,19 +484,19 @@ const calcDamage = (eff, player, type, combo, isCrit) => {
   return Math.round(base * bonus * berserk * comboMult * crit * sharp);
 };
 
-const plrDmg = (eff, perks) => {
-  const base = { super: -5, normal: 4, weak: 14 }[eff];
+const plrDmg = (eff: EffType, perks: PerkId[]): number => {
+  const base = { super: -5, normal: 4, weak: 14 }[eff as 'super' | 'normal' | 'weak'];
   if (base > 0 && hasPerk(perks, 'steel_nerves')) return Math.round(base * 0.75);
   return base;
 };
 
-const critChance = perks => 0.12 + (hasPerk(perks, 'fortune') ? 0.18 : 0);
-const chargeGain = (eff, perks) => {
-  const base = { super: 22, normal: 14, weak: 8 }[eff];
+const critChance = (perks: PerkId[]): number => 0.12 + (hasPerk(perks, 'fortune') ? 0.18 : 0);
+const chargeGain = (eff: EffType, perks: PerkId[]): number => {
+  const base = { super: 22, normal: 14, weak: 8 }[eff as 'super' | 'normal' | 'weak'];
   return eff === 'super' && hasPerk(perks, 'adrenaline') ? Math.round(base * 1.5) : base;
 };
 
-const getOppDlg = (emo, type, scenarioId) => {
+const getOppDlg = (emo: EmotionKey, type: RespType | null, scenarioId: string): string => {
   const script = scenarioId ? SCENARIO_SCRIPTS[scenarioId] : null;
   if (script) {
     if (type) {
@@ -333,24 +508,24 @@ const getOppDlg = (emo, type, scenarioId) => {
     }
   }
   const d = DIALOGUE[emo]; if (!d) return "...";
-  if (type) { const k = `after${type[0].toUpperCase()}${type.slice(1)}`; if (d[k]) return d[k]; }
+  if (type) { const k = `after${type[0].toUpperCase()}${type.slice(1)}` as keyof typeof d; if (d[k]) return d[k]; }
   return d.base;
 };
 
-const getPlrDlg = (charId, type, scenarioId) => {
+const getPlrDlg = (charId: string, type: RespType, scenarioId: string): string => {
   const script = scenarioId ? SCENARIO_SCRIPTS[scenarioId] : null;
   const override = script?.playerLines?.[charId]?.[type];
   if (override) return override;
-  return PLAYER_DLG[charId]?.[type] || "I need to think carefully about this.";
+  return (PLAYER_DLG as Record<string, Partial<Record<RespType, string>>>)[charId]?.[type] || "I need to think carefully about this.";
 };
 
-const checkUnlocks = (player, round) => {
+const checkUnlocks = (player: PlayerState, round: number): RespType[] => {
   const r = [...player.responses];
   if (player.id === 'scholar' && round >= 5 && player.history.includes('logic') && !r.includes('cunning')) r.push('cunning');
   return r;
 };
 
-const initState = (char, scenario, opts={}) => {
+const initState = (char: CharDef, scenario: Scenario | null, opts: InitOpts = {}): GameState => {
   const { perks = [], carryHp = null } = opts;
   const s = scenario || genScenario();
   const ironBonus = hasPerk(perks, 'iron_will') ? 25 : 0;
@@ -362,29 +537,33 @@ const initState = (char, scenario, opts={}) => {
 
   return {
     player: {
-      ...char, hp, maxHp, emotion:'confident',
-      responses:[...char.baseResponses], history:[], charge:startCharge, perks,
+      id: char.id, name: char.name, icon: char.icon, archetype: char.archetype,
+      hp, maxHp, emotion: 'confident',
+      responses: [...char.baseResponses], history: [], charge: startCharge, perks,
+      ultimate: char.ultimate, strongResponses: char.strongResponses,
+      weakResponses: char.weakResponses, baseResponses: char.baseResponses,
+      description: char.description,
     },
     opponent: {
-      ...s.opponent, hp:oppHp, maxHp:oppHp, emotion:s.startingEmotion,
+      ...s.opponent, hp: oppHp, maxHp: oppHp, emotion: s.startingEmotion,
       specials: s.opponent.specials || [],
     },
-    round:1, dialogue:[], phase:'intro', isVictory:false,
-    scenario:s, counts:{}, combo:startCombo, maxCombo:startCombo,
+    round: 1, dialogue: [], phase: 'intro', isVictory: false,
+    scenario: s, counts: {}, combo: startCombo, maxCombo: startCombo,
     firedBeats: [],
   };
 };
 
-const processResp = (state, type, isUltimate=false) => {
+const processResp = (state: GameState, type: RespType, isUltimate = false): ProcessResult => {
   const { player, opponent, round, dialogue, scenario, counts, combo, maxCombo, firedBeats = [] } = state;
   const perks = player.perks || [];
-  const events = [];
+  const events: GameEvent[] = [];
 
   let oppDmg = 0;
   let playerHpDelta = 0;
-  let eff = 'normal';
+  let eff: EffType = 'normal';
   let isCrit = false;
-  let targetEmotion = opponent.emotion;
+  let targetEmotion: EmotionKey = opponent.emotion;
   let newCombo = combo;
   let playerDlgText = '';
   let oppReactText = '';
@@ -460,10 +639,10 @@ const processResp = (state, type, isUltimate=false) => {
   if (round === 1) dlg.push({ id:uid(), speaker:opponent.name, text:getOppDlg(scenario.startingEmotion, null, scenario.id), side:'opp', emo: scenario.startingEmotion });
   dlg.push({ id:uid(), speaker:player.name, text:playerDlgText, side:'plr', emo: player.emotion });
 
-  let effLabel;
+  let effLabel: string;
   if (isUltimate) effLabel = `💫 ${ULTIMATES[player.ultimate].name.toUpperCase()}! (+${oppDmg})`;
   else if (isCrit) effLabel = `⚡ CRITICAL HIT! (+${oppDmg})`;
-  else effLabel = { super:`✦ Super effective! (+${oppDmg})`, normal:`• Normal hit. (+${oppDmg})`, weak:`· Not very effective... (+${oppDmg})` }[eff];
+  else effLabel = { super:`✦ Super effective! (+${oppDmg})`, normal:`• Normal hit. (+${oppDmg})`, weak:`· Not very effective... (+${oppDmg})` }[eff as 'super' | 'normal' | 'weak'];
 
   dlg.push({ id:uid(), isSystem:true, text:effLabel, eff, isCrit, isUlt: isUltimate });
   if (newCombo >= 2 && !isUltimate) dlg.push({ id:uid(), isSystem:true, text: `🔥 COMBO x${newCombo}!`, eff: 'combo' });
@@ -524,16 +703,16 @@ const processResp = (state, type, isUltimate=false) => {
 
 // ==================== HOOKS ====================
 
-const useShake = () => {
+const useShake = (): [number, (intensity?: number) => void] => {
   const [shake, setShake] = useState(0);
-  const trigger = useCallback((intensity=8) => {
+  const trigger = useCallback((intensity = 8) => {
     setShake(intensity);
     setTimeout(() => setShake(0), 420);
   }, []);
   return [shake, trigger];
 };
 
-const useTypewriter = (text, speed=18) => {
+const useTypewriter = (text: string, speed = 18): [string, boolean] => {
   const [out, setOut] = useState('');
   const [done, setDone] = useState(false);
   useEffect(() => {
@@ -601,7 +780,7 @@ function Starfield() {
   );
 }
 
-function Particles({ particles }) {
+function Particles({ particles }: { particles: Particle[] }) {
   return (
     <div style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex:20 }}>
       {particles.map(p => (
@@ -618,7 +797,7 @@ function Particles({ particles }) {
   );
 }
 
-function FloatingDamage({ numbers }) {
+function FloatingDamage({ numbers }: { numbers: DamageNumber[] }) {
   return (
     <div style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex:30 }}>
       {numbers.map(n => {
@@ -643,7 +822,7 @@ function FloatingDamage({ numbers }) {
   );
 }
 
-function HpBar({ hp, maxHp, gradient, flash }) {
+function HpBar({ hp, maxHp, gradient, flash }: { hp: number; maxHp: number; gradient: string; flash?: boolean }) {
   const pct = Math.max(0, (hp/maxHp)*100);
   const color = pct > 55 ? gradient : pct > 28 ? 'linear-gradient(90deg,#F59E0B,#D97706)' : 'linear-gradient(90deg,#EF4444,#DC2626)';
   return (
@@ -659,7 +838,7 @@ function HpBar({ hp, maxHp, gradient, flash }) {
   );
 }
 
-function ChargeBar({ charge, max=100, ultColor }) {
+function ChargeBar({ charge, max=100, ultColor }: { charge: number; max?: number; ultColor: string }) {
   const pct = (charge / max) * 100;
   const full = charge >= max;
   return (
@@ -687,7 +866,7 @@ function ChargeBar({ charge, max=100, ultColor }) {
   );
 }
 
-function ComboCounter({ combo }) {
+function ComboCounter({ combo }: { combo: number }) {
   if (combo < 2) return null;
   const size = combo >= 4 ? 44 : combo >= 3 ? 38 : 32;
   const color = combo >= 4 ? '#F472B6' : combo >= 3 ? '#FB923C' : '#FBBF24';
@@ -704,8 +883,10 @@ function ComboCounter({ combo }) {
   );
 }
 
-function Avatar({ char, isOpp, damaged }) {
+function Avatar({ char, isOpp, damaged }: { char: PlayerState | OpponentState; isOpp: boolean; damaged?: boolean }) {
   const emo = EMOTIONS[char.emotion] || EMOTIONS.confident;
+  const charge = 'charge' in char ? char.charge : undefined;
+  const ultimate = 'ultimate' in char ? char.ultimate : undefined;
   return (
     <div style={{ position:'relative', width:160 }}>
       <div style={{
@@ -726,8 +907,8 @@ function Avatar({ char, isOpp, damaged }) {
           {char.hp}/{char.maxHp} HP
         </div>
         <HpBar hp={char.hp} maxHp={char.maxHp} gradient={isOpp ? 'linear-gradient(90deg,#EF4444,#DC2626)' : 'linear-gradient(90deg,#10B981,#059669)'} flash={damaged} />
-        {!isOpp && char.charge !== undefined && (
-          <ChargeBar charge={char.charge} ultColor={ULTIMATES[char.ultimate]?.color || '#818CF8'} />
+        {!isOpp && charge !== undefined && (
+          <ChargeBar charge={charge} ultColor={ULTIMATES[ultimate as UltKey]?.color || '#818CF8'} />
         )}
         <div style={{ fontSize:46, margin:'8px 0 4px', filter: `drop-shadow(0 0 14px ${emo.aura})`, transition: 'filter 0.5s' }}>{char.icon}</div>
         <div style={{ color:'white', fontWeight:700, fontSize:12, marginBottom:2, lineHeight:1.2 }}>{char.name}</div>
@@ -746,11 +927,11 @@ function Avatar({ char, isOpp, damaged }) {
   );
 }
 
-function TypewriterBubble({ text, isPlr, speaker, emo, isLatest }) {
+function TypewriterBubble({ text, isPlr, speaker, emo, isLatest }: { text: string; isPlr: boolean; speaker?: string; emo?: EmotionKey; isLatest: boolean }) {
   const [out, done] = useTypewriter(isLatest ? text : text, isLatest ? 14 : 0);
   const displayText = isLatest ? out : text;
   const showCursor = isLatest && !done;
-  const emoColor = EMOTIONS[emo]?.color || (isPlr ? '#60A5FA' : '#F87171');
+  const emoColor = (emo && EMOTIONS[emo]?.color) || (isPlr ? '#60A5FA' : '#F87171');
   const speakerColor = isPlr ? '#93C5FD' : '#FCA5A5';
   return (
     <div style={{ marginBottom:10, textAlign:isPlr?'right':'left', animation: 'slideIn 0.25s ease-out' }}>
@@ -771,10 +952,10 @@ function TypewriterBubble({ text, isPlr, speaker, emo, isLatest }) {
   );
 }
 
-function DlgLog({ entries, round, combo }) {
-  const ref = useRef(null);
+function DlgLog({ entries, round, combo }: { entries: DialogueEntry[]; round: number; combo: number }) {
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [entries]);
-  const effColors = { super:'#4ADE80', normal:'#9CA3AF', weak:'#F87171', combo:'#FBBF24' };
+  const effColors: Record<string, string> = { super:'#4ADE80', normal:'#9CA3AF', weak:'#F87171', combo:'#FBBF24' };
   const lastNonSystemIdx = entries.map((e,i) => e.isSystem ? -1 : i).filter(i => i >= 0).pop();
   return (
     <div style={{ position:'relative' }}>
@@ -812,9 +993,9 @@ function DlgLog({ entries, round, combo }) {
                 textAlign:'center', margin:'8px 0', padding:'4px 10px',
                 fontSize: isCritOrUlt ? 13 : 11,
                 fontWeight: isCritOrUlt ? 800 : 600,
-                color: effColors[e.eff] || '#9CA3AF',
+                color: effColors[e.eff ?? ''] || '#9CA3AF',
                 fontStyle: isCritOrUlt ? 'normal' : 'italic',
-                textShadow: isCritOrUlt ? `0 0 12px ${effColors[e.eff] || '#9CA3AF'}` : undefined,
+                textShadow: isCritOrUlt ? `0 0 12px ${effColors[e.eff ?? ''] || '#9CA3AF'}` : undefined,
                 letterSpacing: isCritOrUlt ? 1.5 : 0.3,
                 animation: 'slideIn 0.3s ease-out',
               }}>{e.text}</div>
@@ -827,8 +1008,18 @@ function DlgLog({ entries, round, combo }) {
   );
 }
 
-function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ult, playerId, scenarioId }) {
-  const [hov, setHov] = useState(null);
+function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ult, playerId, scenarioId }: {
+  responses: RespType[];
+  onResp: (type: RespType) => void;
+  onUltimate: () => void;
+  opponent: OpponentState;
+  disabled: boolean;
+  charge: number;
+  ult: typeof ULTIMATES[UltKey];
+  playerId: string;
+  scenarioId: string;
+}) {
+  const [hov, setHov] = useState<RespType | null>(null);
   const ultReady = charge >= 100;
   const notes = getFieldNotes();
   return (
@@ -876,8 +1067,8 @@ function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ul
         {responses.map(type => {
           const cfg = RESP[type];
           const isHov = hov === type;
-          const preview = previewPlayerLine(scenarioId, playerId, type, PLAYER_DLG[playerId]?.[type] || '');
-          const learnedEff = notes[`${opponent.emotion}:${type}`];
+          const preview = previewPlayerLine(scenarioId, playerId, type, (PLAYER_DLG as Record<string, Partial<Record<RespType, string>>>)[playerId]?.[type] || '');
+          const learnedEff = notes[`${opponent.emotion}:${type}`] as Eff | undefined;
           const lg = learnedEff ? EFF_GLYPH[learnedEff] : null;
           return (
             <button
@@ -928,7 +1119,7 @@ function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ul
   );
 }
 
-function StageIndicator({ currentStage, stages }) {
+function StageIndicator({ currentStage, stages }: { currentStage: number; stages: StageDef[] }) {
   return (
     <div style={{ display:'flex', gap:8, justifyContent:'center', alignItems:'center', padding:'6px 0' }}>
       <span style={{ fontSize:9, color:'rgba(255,255,255,0.4)', fontWeight:700, letterSpacing:1, marginRight:4 }}>ASCENT</span>
@@ -959,12 +1150,12 @@ function StageIndicator({ currentStage, stages }) {
   );
 }
 
-function PerkBadges({ perks, compact=false }) {
+function PerkBadges({ perks, compact=false }: { perks: PerkId[]; compact?: boolean }) {
   if (!perks || perks.length === 0) return null;
   return (
     <div style={{ display:'flex', gap:4, flexWrap:'wrap', justifyContent:'center' }}>
       {perks.map(id => {
-        const p = PERKS[id]; if (!p) return null;
+        const p = PERKS[id as PerkId]; if (!p) return null;
         return (
           <div key={id} title={p.desc} style={{
             padding: compact ? '2px 6px' : '3px 8px',
@@ -981,7 +1172,7 @@ function PerkBadges({ perks, compact=false }) {
   );
 }
 
-function TutorialCoach({ step, total, content, onContinue }) {
+function TutorialCoach({ step, total, content, onContinue }: { step: number; total: number; content: { title: string; body: string; isFinal?: boolean }; onContinue: () => void }) {
   return (
     <div style={{
       position:'absolute', inset:0,
@@ -1037,7 +1228,7 @@ function TutorialCoach({ step, total, content, onContinue }) {
   );
 }
 
-function InstructionBanner({ text }) {
+function InstructionBanner({ text }: { text: string }) {
   return (
     <div style={{
       margin:'0 16px 10px',
@@ -1056,9 +1247,9 @@ function InstructionBanner({ text }) {
   );
 }
 
-function CharSelect({ onSelect, onExit = null }) {
-  const [hov, setHov] = useState(null);
-  const chars = Object.values(CHARS);
+function CharSelect({ onSelect, onExit = null }: { onSelect: (id: string) => void; onExit?: (() => void) | null }) {
+  const [hov, setHov] = useState<string | null>(null);
+  const chars = (Object.values(CHARS) as CharDef[]);
   return (
     <div style={{ maxWidth:820, margin:'0 auto', padding:24, position:'relative', zIndex:2 }}>
       {onExit && (
@@ -1138,8 +1329,14 @@ function CharSelect({ onSelect, onExit = null }) {
   );
 }
 
-function ModeSelect({ char, onTutorial, onSingle, onAscent, onBack }) {
-  const [hov, setHov] = useState(null);
+function ModeSelect({ char, onTutorial, onSingle, onAscent, onBack }: {
+  char: CharDef;
+  onTutorial: () => void;
+  onSingle: () => void;
+  onAscent: () => void;
+  onBack: () => void;
+}) {
+  const [hov, setHov] = useState<string | null>(null);
   const cards = [
     { id:'t', onClick:onTutorial, icon:'🏀', title:'Tutorial', desc:'Learn the ropes with Coach Riley — no stakes, just teaching.', time:'~3 MIN', color:'#FBBF24', timeColor:'#FBBF24' },
     { id:'s', onClick:onSingle, icon:'⚔️', title:'Single Scenario', desc:'One opponent. One conversation. Master it at your pace.', time:'~5 MIN', color:'#6366F1', timeColor:'#818CF8' },
@@ -1197,10 +1394,17 @@ function ModeSelect({ char, onTutorial, onSingle, onAscent, onBack }) {
   );
 }
 
-function PerkSelect({ options, stage, nextStage, currentPerks, onPick, isBoss }) {
-  const [hov, setHov] = useState(null);
-  const [picked, setPicked] = useState(null);
-  const handle = id => {
+function PerkSelect({ options, stage, nextStage, currentPerks, onPick, isBoss }: {
+  options: PerkOption[];
+  stage: number;
+  nextStage: number;
+  currentPerks: PerkId[];
+  onPick: (id: PerkId) => void;
+  isBoss?: boolean;
+}) {
+  const [hov, setHov] = useState<PerkId | null>(null);
+  const [picked, setPicked] = useState<PerkId | null>(null);
+  const handle = (id: PerkId) => {
     if (picked) return;
     setPicked(id);
     setTimeout(() => onPick(id), 500);
@@ -1266,7 +1470,12 @@ function PerkSelect({ options, stage, nextStage, currentPerks, onPick, isBoss })
   );
 }
 
-function ScenarioIntro({ scenario, onStart, isBoss, memory }) {
+function ScenarioIntro({ scenario, onStart, isBoss, memory }: {
+  scenario: Scenario;
+  onStart: () => void;
+  isBoss?: boolean;
+  memory: CombatMemory | null;
+}) {
   const [cd, setCd] = useState(5);
   useEffect(() => {
     if (cd <= 0) { onStart(); return; }
@@ -1343,7 +1552,7 @@ function ScenarioIntro({ scenario, onStart, isBoss, memory }) {
   );
 }
 
-function StageClear({ stage, isBoss }) {
+function StageClear({ stage, isBoss }: { stage: number; isBoss?: boolean }) {
   return (
     <div style={{
       position:'absolute', inset:0,
@@ -1368,10 +1577,18 @@ function StageClear({ stage, isBoss }) {
   );
 }
 
-function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetryStage, onAbandonRun }) {
+function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetryStage, onAbandonRun }: {
+  state: GameState;
+  ascent: AscentRun | null;
+  onRestart: () => void;
+  onNewChallenge: () => void;
+  onNewGame: () => void;
+  onRetryStage: () => void;
+  onAbandonRun: () => void;
+}) {
   const { isVictory, counts, round, player, opponent, maxCombo, scenario } = state;
   const topResp = Object.entries(counts).filter(([k]) => k !== 'ultimate').sort((a,b) => b[1]-a[1])[0]?.[0];
-  const tip = topResp ? TIPS[topResp] : null;
+  const tip = topResp ? (TIPS as Record<string, string>)[topResp] : null;
   const usedUlt = (counts.ultimate || 0) > 0;
   const isAscent = !!ascent;
 
@@ -1380,7 +1597,7 @@ function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetry
   const objectives = conflictId ? (CONFLICT_OBJECTIVES[conflictId] || []) : [];
   const ending = conflictId ? pickEnding(conflictId, summary) : null;
 
-  const bStyle = (bg, border, color) => ({
+  const bStyle = (bg: string, border: string, color: string): CSSProperties => ({
     width:'100%', padding:'12px 0', background:bg, border, borderRadius:10,
     color, fontWeight:700, fontSize:13, cursor:'pointer', letterSpacing:0.5,
     transition:'all 0.15s',
@@ -1432,13 +1649,13 @@ function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetry
           </div>
         )}
         <div style={{ background:'rgba(0,0,0,0.3)', borderRadius:12, padding:12, marginBottom:12, border:'1px solid rgba(255,255,255,0.06)' }}>
-          {[
-            ['Rounds Played', round - 1],
+          {([
+                       ['Rounds Played', String(round - 1)],
             ['Your HP', `${player.hp}/${player.maxHp}`],
             ['Opponent HP', `${opponent.hp}/${opponent.maxHp}`],
             ['Max Combo', `×${maxCombo}`],
             ['Ultimate Used', usedUlt ? '✓' : '✗'],
-          ].map(([l,v]) => (
+          ] as [string, string][]).map(([l,v]) => (
             <div key={l} style={{ display:'flex', justifyContent:'space-between', marginBottom:4, fontSize:11.5 }}>
               <span style={{ color:'rgba(255,255,255,0.45)' }}>{l}</span>
               <span style={{ color:'white', fontWeight:700 }}>{v}</span>
@@ -1478,7 +1695,12 @@ function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetry
   );
 }
 
-function RunVictory({ ascent, finalState, onNewRun, onMainMenu }) {
+function RunVictory({ ascent, finalState, onNewRun, onMainMenu }: {
+  ascent: AscentRun;
+  finalState: GameState;
+  onNewRun: () => void;
+  onMainMenu: () => void;
+}) {
   const totalRounds = ascent.totalRounds + (finalState.round - 1);
   const maxCombo = Math.max(ascent.maxCombo, finalState.maxCombo);
   const bossName = ascent.stages[2].opponent.name;
@@ -1515,13 +1737,13 @@ function RunVictory({ ascent, finalState, onNewRun, onMainMenu }) {
         </p>
         <div style={{ background:'rgba(0,0,0,0.35)', borderRadius:12, padding:14, marginBottom:14, border:'1px solid rgba(251,191,36,0.25)' }}>
           <div style={{ color:'#FBBF24', fontSize:10, fontWeight:800, letterSpacing:1.5, marginBottom:8 }}>RUN STATISTICS</div>
-          {[
-            ['Total Rounds', totalRounds],
+          {([
+            ['Total Rounds', String(totalRounds)],
             ['Max Combo', `×${maxCombo}`],
             ['Final HP', `${finalState.player.hp}/${finalState.player.maxHp}`],
-            ['Perks Collected', ascent.perks.length],
+            ['Perks Collected', String(ascent.perks.length)],
             ['Stages Cleared', '3/3'],
-          ].map(([l,v]) => (
+          ] as [string, string][]).map(([l,v]) => (
             <div key={l} style={{ display:'flex', justifyContent:'space-between', marginBottom:5, fontSize:12 }}>
               <span style={{ color:'rgba(255,255,255,0.5)' }}>{l}</span>
               <span style={{ color:'white', fontWeight:700 }}>{v}</span>
@@ -1556,13 +1778,13 @@ function RunVictory({ ascent, finalState, onNewRun, onMainMenu }) {
 
 // ==================== MAIN ====================
 
-const EFF_GLYPH = {
+const EFF_GLYPH: Record<string, { glyph: string; color: string; label: string }> = {
   super:  { glyph: '✦', color: '#4ADE80', label: 'Super effective' },
   normal: { glyph: '•', color: '#94A3B8', label: 'Normal' },
   weak:   { glyph: '·', color: '#F87171', label: 'Not very effective' },
 };
 
-function FieldNotesPanel({ onClose }) {
+function FieldNotesPanel({ onClose }: { onClose: () => void }) {
   const notes = getFieldNotes();
   const total = Object.keys(EMOTIONS).length * Object.keys(RESP).length;
   const found = discoveredCount();
@@ -1617,7 +1839,7 @@ function FieldNotesPanel({ onClose }) {
             {Object.entries(RESP).map(([id, r]) => (
               <div key={id} title={r.label} style={{ textAlign:'center', fontSize:16 }}>{r.icon}</div>
             ))}
-            {Object.entries(EMOTIONS).map(([emoId, emo]) => (
+            {Object.entries(EMOTIONS).map(([emoId, emo]: [string, { name: string; icon: string; color: string; aura: string }]) => (
               <Fragment key={emoId}>
                 <div style={{ display:'flex', alignItems:'center', gap:6, color:emo.color, fontSize:12, fontWeight:600 }}>
                   <span style={{ fontSize:15 }}>{emo.icon}</span> {emo.name}
@@ -1646,26 +1868,26 @@ function FieldNotesPanel({ onClose }) {
   );
 }
 
-export default function SocialCombatRPG({ onExit = null }) {
-  const [screen, setScreen] = useState('select'); // select, mode, tutorial, game, perk, runVictory
-  const [char, setChar] = useState(null);
-  const [gs, setGs] = useState(null);
-  const [ascent, setAscent] = useState(null);
-  const [perkOptions, setPerkOptions] = useState(null);
-  const [stageCleared, setStageCleared] = useState(null);
-  const [tut, setTut] = useState(null); // { step, phase: 'before'|'action'|'after' }
+export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => void) | null }) {
+  const [screen, setScreen] = useState<'select'|'mode'|'tutorial'|'game'|'perk'|'runVictory'>('select');
+  const [char, setChar] = useState<CharDef | null>(null);
+  const [gs, setGs] = useState<GameState | null>(null);
+  const [ascent, setAscent] = useState<AscentRun | null>(null);
+  const [perkOptions, setPerkOptions] = useState<PerkOption[] | null>(null);
+  const [stageCleared, setStageCleared] = useState<{ stage: number; isBoss: boolean } | null>(null);
+  const [tut, setTut] = useState<TutorialState | null>(null);
   const [busy, setBusy] = useState(false);
-  const [notif, setNotif] = useState(null);
+  const [notif, setNotif] = useState<string | null>(null);
   const [shake, triggerShake] = useShake();
-  const [particles, setParticles] = useState([]);
-  const [damageNums, setDamageNums] = useState([]);
-  const [hpFlash, setHpFlash] = useState({ plr: false, opp: false });
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [damageNums, setDamageNums] = useState<DamageNumber[]>([]);
+  const [hpFlash, setHpFlash] = useState<{ plr: boolean; opp: boolean }>({ plr: false, opp: false });
   const [ultFlash, setUltFlash] = useState(false);
-  const [memory, setMemory] = useState(null);
+  const [memory, setMemory] = useState<CombatMemory | null>(null);
   const [showNotes, setShowNotes] = useState(false);
-  const [noteToast, setNoteToast] = useState(null);
+  const [noteToast, setNoteToast] = useState<string | null>(null);
   const savedRunRef = useRef(false);
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Load cross-run memory for the current opponent on scenario entry.
   useEffect(() => {
@@ -1687,7 +1909,7 @@ export default function SocialCombatRPG({ onExit = null }) {
     const summary = summarizeObjectives(gs);
     const ending = conflictId ? pickEnding(conflictId, summary) : null;
     const mode = ascent ? 'ascent' : 'single';
-    const outcome = ending?.id || (gs.isVictory ? 'win' : 'loss');
+    const outcome = (ending?.id || (gs.isVictory ? 'win' : 'loss')) as CombatOutcome;
     const score = Math.max(0, (gs.isVictory ? 100 : 0) + gs.maxCombo * 10 + Math.max(0, gs.player.hp));
 
     recordRun({
@@ -1721,37 +1943,41 @@ export default function SocialCombatRPG({ onExit = null }) {
     }
   }, [gs?.scenario?.id, gs?.phase]);
 
-  const selectChar = id => { setChar(CHARS[id]); setScreen('mode'); };
+  const selectChar = (id: string) => { setChar(CHARS[id as CharKey]); setScreen('mode'); };
 
   const startSingle = () => {
+    if (!char) return;
     setAscent(null); setTut(null);
     setGs(initState(char, null, { perks: [] }));
     setScreen('game');
   };
 
   const startAscent = () => {
+    if (!char) return;
     setTut(null);
     const run = genAscentRun();
     const firstStage = run.stages[0];
-    const scenario = {
+    const scenario: Scenario = {
       id: firstStage.id,
       conflictId: firstStage.conflictId,
       opponent: firstStage.opponent,
       setup: firstStage.setup,
       startingEmotion: firstStage.startingEmotion,
     };
-    setAscent({ stages:run.stages, stage:1, perks:[], totalRounds:0, maxCombo:0 });
+    setAscent({ stages: run.stages, stage: 1, perks: [], totalRounds: 0, maxCombo: 0 });
     setGs(initState(char, scenario, { perks: [] }));
     setScreen('game');
   };
 
   const startTutorial = () => {
+    if (!char) return;
     setAscent(null);
-    const scenario = {
+    const scenario: Scenario = {
       id:'tutorial',
+      conflictId: 'tutorial',
       opponent: { ...TUTORIAL_OPPONENT, stageHp: 999 },
       setup: "Training session with Coach Riley.",
-      startingEmotion: TUTORIAL_OPPONENT.startingEmotion,
+      startingEmotion: TUTORIAL_OPPONENT.startingEmotion as EmotionKey,
     };
     const s = initState(char, scenario, { perks: [] });
     s.opponent.hp = 999; s.opponent.maxHp = 999;
@@ -1781,6 +2007,7 @@ export default function SocialCombatRPG({ onExit = null }) {
       }
       const next = TUTORIAL_STEPS[nextIdx];
       setGs(g => {
+        if (!g) return g;
         const ng = { ...g };
         ng.opponent = { ...ng.opponent, hp: 999 };
         ng.player = { ...ng.player, hp: ng.player.maxHp };
@@ -1798,17 +2025,19 @@ export default function SocialCombatRPG({ onExit = null }) {
   };
 
   const openPerkSelect = () => {
+    if (!ascent) return;
     const excluded = ascent.perks;
     const opts = pickPerks(excluded);
     setPerkOptions(opts);
     setScreen('perk');
   };
 
-  const pickPerk = (perkId) => {
+  const pickPerk = (perkId: PerkId) => {
+    if (!ascent || !gs || !char) return;
     const newPerks = [...ascent.perks, perkId];
     const nextStageNum = ascent.stage + 1;
     const nextStage = ascent.stages[nextStageNum - 1];
-    const scenario = {
+    const scenario: Scenario = {
       id: nextStage.id,
       conflictId: nextStage.conflictId,
       opponent: nextStage.opponent,
@@ -1816,7 +2045,7 @@ export default function SocialCombatRPG({ onExit = null }) {
       startingEmotion: nextStage.startingEmotion,
     };
     const carryHp = gs.player.hp;
-    const newAscent = {
+    const newAscent: AscentRun = {
       ...ascent,
       stage: nextStageNum,
       perks: newPerks,
@@ -1831,8 +2060,9 @@ export default function SocialCombatRPG({ onExit = null }) {
   };
 
   const retryStage = () => {
+    if (!ascent || !char) return;
     const stage = ascent.stages[ascent.stage - 1];
-    const scenario = {
+    const scenario: Scenario = {
       id: stage.id,
       conflictId: stage.conflictId,
       opponent: stage.opponent,
@@ -1849,7 +2079,7 @@ export default function SocialCombatRPG({ onExit = null }) {
     setScreen('mode');
   };
 
-  const spawnParticles = (color, count, fromOpp=true, isUltimate=false) => {
+  const spawnParticles = (color: string, count: number, fromOpp = true, isUltimate = false) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const baseX = fromOpp ? rect.width * 0.78 : rect.width * 0.22;
@@ -1873,7 +2103,7 @@ export default function SocialCombatRPG({ onExit = null }) {
     setTimeout(() => setParticles(p => p.filter(pt => !newParts.some(np => np.id === pt.id))), maxDur + 100);
   };
 
-  const spawnDamage = (value, target, eff, isCrit=false, isUlt=false) => {
+  const spawnDamage = (value: number, target: 'opp' | 'plr', eff: EffType, isCrit = false, isUlt = false) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const x = target === 'opp' ? rect.width * 0.78 : rect.width * 0.22;
@@ -1883,16 +2113,17 @@ export default function SocialCombatRPG({ onExit = null }) {
     setTimeout(() => setDamageNums(d => d.filter(n => n.id !== id)), 1500);
   };
 
-  const handleResp = (type, isUltimate=false) => {
-    if (busy) return;
+  const handleResp = (type: RespType | 'ultimate', isUltimate = false) => {
+    if (busy || !gs) return;
     setBusy(true);
     const prevEmo = gs.opponent.emotion;
-    const { next, events } = processResp(gs, type, isUltimate);
+    const actualType: RespType = isUltimate ? 'aggression' : type as RespType;
+    const { next, events } = processResp(gs, actualType, isUltimate);
 
     // Field Notes: record what this response did against the emotion it was
     // used on, so the player's hidden knowledge becomes a visible, growing codex.
-    if (!isUltimate) {
-      const eff = getEff(type, prevEmo);
+    if (!isUltimate && type !== 'ultimate') {
+      const eff = getEff(type, prevEmo) as Eff;
       const isNewNote = recordFieldNote(prevEmo, type, eff);
       if (isNewNote && !tut) {
         const emoName = EMOTIONS[prevEmo]?.name || prevEmo;
@@ -1913,9 +2144,9 @@ export default function SocialCombatRPG({ onExit = null }) {
 
     events.forEach(e => {
       if (e.kind === 'shake') triggerShake(e.intensity);
-      if (e.kind === 'particles') spawnParticles(e.color, e.count, true, e.burst === 'ultimate');
+      if (e.kind === 'particles') spawnParticles(e.color || '#fff', e.count || 0, true, e.burst === 'ultimate');
       if (e.kind === 'damage') {
-        spawnDamage(e.value, e.target, e.eff, e.isCrit, e.isUlt);
+        spawnDamage(e.value || 0, e.target || 'opp', e.eff || 'normal', e.isCrit, e.isUlt);
         if (e.eff !== 'heal' && e.target === 'plr') {
           setHpFlash(f => ({ ...f, plr: true }));
           setTimeout(() => setHpFlash(f => ({ ...f, plr: false })), 500);
@@ -1964,7 +2195,7 @@ export default function SocialCombatRPG({ onExit = null }) {
     setTimeout(() => setBusy(false), isUltimate ? 1000 : 700);
   };
 
-  const appBg = {
+  const appBg: CSSProperties = {
     minHeight:'100vh',
     background:'linear-gradient(180deg,#020617,#0F172A,#0F172A)',
     display:'flex', alignItems:'center', justifyContent:'center', padding:16,
@@ -1992,7 +2223,7 @@ export default function SocialCombatRPG({ onExit = null }) {
     <div style={appBg}>
       <Starfield />
       <ModeSelect
-        char={char}
+        char={char!}
         onTutorial={startTutorial}
         onSingle={startSingle}
         onAscent={startAscent}
@@ -2050,7 +2281,7 @@ export default function SocialCombatRPG({ onExit = null }) {
     const curStep = TUTORIAL_STEPS[tut.step];
     const ult = ULTIMATES[gs.player.ultimate];
     const allowedResponses = tut.phase === 'action' && curStep.forceResponse !== 'ultimate'
-      ? [curStep.forceResponse].filter(r => gs.player.responses.includes(r))
+      ? [curStep.forceResponse].filter(r => gs.player.responses.includes(r as RespType))
       : [];
     const canUseUlt = tut.phase === 'action' && curStep.forceResponse === 'ultimate';
     const displayCharge = canUseUlt ? gs.player.charge : Math.min(gs.player.charge, 99);
@@ -2109,7 +2340,7 @@ export default function SocialCombatRPG({ onExit = null }) {
 
           <RespBar
             responses={allowedResponses}
-            onResp={handleResp}
+            onResp={(type: RespType) => handleResp(type)}
             onUltimate={() => handleResp('ultimate', true)}
             opponent={gs.opponent}
             disabled={tut.phase !== 'action' || busy}
@@ -2159,8 +2390,8 @@ export default function SocialCombatRPG({ onExit = null }) {
   }
 
   // ========== Regular game screen ==========
-  const newChallenge = () => { setGs(initState(char, null, { perks: [] })); setParticles([]); setDamageNums([]); };
-  const restart = () => { setGs(initState(char, gs.scenario, { perks: gs.player.perks })); setParticles([]); setDamageNums([]); };
+  const newChallenge = () => { if (char) { setGs(initState(char, null, { perks: [] })); setParticles([]); setDamageNums([]); } };
+  const restart = () => { if (char && gs) { setGs(initState(char, gs.scenario, { perks: gs.player.perks })); setParticles([]); setDamageNums([]); } };
   const newGame = () => { setScreen('select'); setChar(null); setGs(null); setAscent(null); setPerkOptions(null); setTut(null); setParticles([]); setDamageNums([]); };
   const exitGame = () => {
     if (gs.phase === 'playing' && !window.confirm('Leave this conversation? Your progress in this fight will be lost.')) return;
@@ -2221,7 +2452,7 @@ export default function SocialCombatRPG({ onExit = null }) {
         )}
 
         {gs.phase === 'intro' && (
-          <ScenarioIntro scenario={gs.scenario} onStart={() => setGs(s => ({...s, phase:'playing'}))} isBoss={isBossFight} memory={memory} />
+          <ScenarioIntro scenario={gs.scenario} onStart={() => setGs(s => s ? ({...s, phase:'playing'}) : s)} isBoss={isBossFight} memory={memory} />
         )}
 
         {gs.phase === 'playing' && (
@@ -2253,7 +2484,7 @@ export default function SocialCombatRPG({ onExit = null }) {
             <DlgLog entries={gs.dialogue} round={gs.round} combo={gs.combo} />
             <RespBar
               responses={gs.player.responses}
-              onResp={handleResp}
+              onResp={(type: RespType) => handleResp(type)}
               onUltimate={() => handleResp('ultimate', true)}
               opponent={gs.opponent}
               disabled={busy}
