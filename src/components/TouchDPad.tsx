@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
@@ -12,7 +12,6 @@ interface TouchDPadProps {
 export function TouchDPad({ onDirectionPress, onDirectionRelease, visible = true }: TouchDPadProps) {
   const [activeDirection, setActiveDirection] = useState<Direction | null>(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const checkTouchDevice = () => {

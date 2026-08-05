@@ -280,7 +280,7 @@ function appendDynamicQuestion(message: string): string {
   return message;
 }
 
-export function getReactiveResponse(userMessage: string, userProfile?: any): string {
+export function getReactiveResponse(userMessage: string, _userProfile?: unknown): string {
   const category = detectCategory(userMessage);
 
   if (!category) {
@@ -337,6 +337,6 @@ export function testReactiveCache() {
   ];
 
   complexMessages.forEach(msg => {
-    const shouldCache = shouldUseReactiveCache(msg);
+    shouldUseReactiveCache(msg);
   });
 }

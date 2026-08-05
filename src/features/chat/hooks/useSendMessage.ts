@@ -67,7 +67,7 @@ export function useSendMessage() {
       return { previousMessages, optimisticMessage };
     },
 
-    onError: (error, input, context) => {
+    onError: (_error, input, context) => {
       if (context?.previousMessages) {
         queryClient.setQueryData(
           messagesKey(input.userId, input.companionId),
@@ -88,7 +88,7 @@ export function useSendMessage() {
       }
     },
 
-    onSettled: (data, error, input) => {
+    onSettled: (_data, _error, input) => {
       queryClient.invalidateQueries({
         queryKey: messagesKey(input.userId, input.companionId),
         refetchType: 'none',

@@ -78,7 +78,7 @@ export function InsightsPage() {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(getStoredExpandedCards);
   const [period, setPeriod] = useState<'week' | 'month' | 'all'>('week');
   const [companionName, setCompanionName] = useState('Your companion');
-  const [companionId, setCompanionId] = useState<string | null>(null);
+  const [, setCompanionId] = useState<string | null>(null);
   const [cachedUserId, setCachedUserId] = useState<string | null>(null);
   const [cachedCompanionId, setCachedCompanionId] = useState<string | null>(null);
   const [goalsData, setGoalsData] = useState<Array<{ goal: string; status: 'active' | 'completed' | 'abandoned'; progress: number }>>([]);

@@ -51,7 +51,7 @@ export function AnalyzingPage() {
     let accumulatedTime = 0;
     const timers: NodeJS.Timeout[] = [];
 
-    STEPS.forEach((step, index) => {
+    STEPS.forEach((_step, index) => {
       accumulatedTime += index > 0 ? STEPS[index - 1].duration : 0;
       const timer = setTimeout(() => {
         setCurrentStep(index + 1);

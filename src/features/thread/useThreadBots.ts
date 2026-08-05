@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { ThreadMode } from '../../components/thread/ThreadToolbar';
+
 import { atlasService } from '../../services/atlasService';
 import { localExplorerService } from '../../services/localExplorerService';
 import { morningBriefService, scoreBriefReadiness, BriefReadiness } from '../../services/morningBriefService';

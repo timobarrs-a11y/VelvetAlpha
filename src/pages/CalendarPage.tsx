@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, ChevronLeft, ChevronRight, Loader, Sparkles, Calendar, Check, X, CalendarDays } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
 import { calendarService, UserEvent, EventSuggestion } from '../services/calendarService';
 import { relationshipCalendarService } from '../services/relationshipCalendarService';

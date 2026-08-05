@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   SECTORS, GAME_WIDTH, GAME_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_SPEED,
   STARTING_LIVES, BULLET_SPEED, ENEMY_BULLET_SPEED, SHIELD_MAX, SHIELD_REGEN,
   DEFLECT_COST, DEFLECT_COOLDOWN, DEFLECT_DURATION, DEFLECT_RADIUS,
   POWERUP_DURATION, POWERUP_DROP_RATE, WEAPON_CONFIGS, ENEMY_CONFIGS,
-  MOVEMENT_PATTERNS, SCORING, SCREEN_SHAKE, AUTO_FIRE_RATE, MANUAL_FIRE_RATE,
+  SCORING, SCREEN_SHAKE,
   FORMATION, DIVE_CONFIG, getWaveConfig, getSectorForWave, seededRandom, getDifficultyForWave,
-  ATTACK_PATTERNS, DIFFICULTY_SCALING
+  ATTACK_PATTERNS
 } from '../config/stellarPursuitConstants';
 import {
   Player, Enemy, Boss, Bullet, Powerup, Star, Particle, GameState, WeaponType, EnemyType,
@@ -69,7 +69,6 @@ export function StellarPursuitGame() {
   const [weaponPowerupTimer, setWeaponPowerupTimer] = useState(0);
 
   const waveCountRef = useRef(0);
-  const enemySpawnTimerRef = useRef(0);
   const gameStartTimeRef = useRef<number>(0);
   const enemiesDefeatedRef = useRef(0);
   const bossesDefeatedRef = useRef(0);
@@ -285,7 +284,7 @@ export function StellarPursuitGame() {
       }, DEFLECT_DURATION);
 
       setScreenShake(SCREEN_SHAKE.deflect);
-      spawnParticles(p.x, p.y, 8, 'deflect', ['#00ffff', '#00ffff', '#ffffff']);
+      spawnParticles(p.x, p.y, 8, 'spark', ['#00ffff', '#00ffff', '#ffffff']);
     }
   };
 
@@ -382,6 +381,14 @@ export function StellarPursuitGame() {
       variant: 'A',
       patternPhase: 0,
       isElite: false,
+      state: 'entering',
+      formationPosition: null,
+      entryProgress: 0,
+      entryPathIndex: 0,
+      diveProgress: 0,
+      attackPattern: 'standard',
+      shotsFired: 0,
+      guaranteedShotsStatus: { start: false, mid: false, end: false },
       phase: 1,
       turrets: [
         { offsetX: -40, offsetY: 25, angle: 0, cooldown: 0 },
@@ -935,7 +942,7 @@ export function StellarPursuitGame() {
           // Random shooting with difficulty, elite, and attack pattern multipliers
           const eliteMultiplier = enemy.isElite ? DIVE_CONFIG.eliteShootMultiplier : 1;
           const patternConfig = ATTACK_PATTERNS[enemy.attackPattern];
-          const patternMultiplier = patternConfig.shootMultiplier || 1;
+          const patternMultiplier = (patternConfig as { shootMultiplier?: number }).shootMultiplier || 1;
           const shootChance = DIVE_CONFIG.shootChancePerFrame * difficulty.shootMult * eliteMultiplier * patternMultiplier;
 
           if (newShootCooldown === 0 && (shouldShoot || Math.random() < shootChance)) {
@@ -1101,8 +1108,8 @@ export function StellarPursuitGame() {
               comboMultiplier: Math.min(s.comboMultiplier + SCORING.comboMultiplierIncrement, 3),
               lastKillTime: Date.now()
             }));
-            spawnParticles(bullet.x, bullet.y, 8, 'deflect', ['#00ffff', '#00ffff', '#ffffff']);
-            screenShakeRef.current = SCREEN_SHAKE.deflect;
+            spawnParticles(bullet.x, bullet.y, 8, 'spark', ['#00ffff', '#00ffff', '#ffffff']);
+            setScreenShake(SCREEN_SHAKE.deflect);
 
             const deflectAngle = Math.atan2(dy, dx);
             const speed = BULLET_SPEED * 1.8;
@@ -1299,16 +1306,6 @@ export function StellarPursuitGame() {
     });
   };
 
-  const boxCollision = (a: any, b: any): boolean => {
-    return (
-      a.x < b.x + b.width &&
-      a.x + a.width > b.x &&
-      a.y < b.y + b.height &&
-      a.y + a.height > b.y
-    );
-  };
-
-  // Collision detection for bullets (which use center positioning) against boxes (which use top-left)
   const bulletBoxCollision = (bullet: any, box: any): boolean => {
     const bulletLeft = bullet.x - bullet.width / 2;
     const bulletRight = bullet.x + bullet.width / 2;
@@ -1376,7 +1373,7 @@ export function StellarPursuitGame() {
 
     const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
     gradient.addColorStop(0, sector.hueStart);
-    gradient.addColorStop(0.5, sector.hueMid || sector.hueEnd);
+    gradient.addColorStop(0.5, sector.hueEnd);
     gradient.addColorStop(1, sector.hueEnd);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -1805,7 +1802,7 @@ export function StellarPursuitGame() {
       ctx.shadowColor = bullet.color;
 
       // Simple solid bullet
-      if (bullet.isPlayer) {
+      if (bullet.owner === 'player') {
         ctx.fillStyle = bullet.color;
         ctx.fillRect(
           bullet.x - bullet.width / 2,

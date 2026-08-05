@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ThumbsDown, ThumbsUp, TrendingDown, AlertCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, ThumbsDown, TrendingDown, AlertCircle, MessageSquare } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 
 interface DislikeRow {

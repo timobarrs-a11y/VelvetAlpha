@@ -19,8 +19,6 @@ export interface PieceAnimation {
   sound?: string;
 }
 
-const BOARD_SIZE = 8;
-
 class CheckersAnimationEngine {
   generateWalkAnimation(from: Position, to: Position): PieceAnimation {
     const frames: AnimationFrame[] = [];

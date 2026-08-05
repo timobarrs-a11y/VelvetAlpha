@@ -130,7 +130,7 @@ export const morningBriefService = {
 
   async buildBrief(
     userId: string,
-    companionId: string,
+    _companionId: string,
     companionName: string,
     userNewsCategories: string[]
   ): Promise<BriefBlock[]> {

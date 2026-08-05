@@ -140,7 +140,7 @@ IMPORTANT:
 - If they share something bold/spicy, match that energy 😏
 `;
 
-export function getCheapModelPrompt(userContext: UserContext, tier: SubscriptionTier): string {
+export function getCheapModelPrompt(userContext: UserContext, _tier: SubscriptionTier): string {
   const characterName = userContext.characterName || 'companion';
 
   return `${INTELLIGENCE_GUARDRAILS}
@@ -181,7 +181,7 @@ You: "oh nice! how's work going today? 💼"
 Respond naturally as ${characterName} with warmth and personality.`;
 }
 
-export function getPremiumModelPrompt(userContext: UserContext, tier: SubscriptionTier): string {
+export function getPremiumModelPrompt(userContext: UserContext, _tier: SubscriptionTier): string {
   const characterName = userContext.characterName || 'companion';
 
   return `${INTELLIGENCE_GUARDRAILS}
@@ -305,7 +305,6 @@ ${matchData.sports ? `User's favorite sports: ${matchData.sports}` : ''}
     chat: `\n\nMODE: DAY-TO-DAY CONVERSATIONS
 Keep responses SHORT (2-4 sentences).
 Use emojis naturally (2-3 per response).
-Be ${avatar.personality[0]} and ${avatar.personality[1]}.
 Focus on emotional connection.
 NO markdown formatting.
 Use "babe" occasionally (1-2 times per conversation, not every message).`,

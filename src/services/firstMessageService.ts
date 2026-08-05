@@ -15,51 +15,6 @@ export interface FirstMessageTemplate {
   topics: string[];
 }
 
-const FIRST_MESSAGE_TEMPLATES: Record<string, FirstMessageTemplate[]> = {
-  riley: [
-    {
-      greeting: "omg hi {name}!! I'm so glad we matched 😊 I saw you're into {preference} - I love that! how are you doing tonight?",
-      topics: ['age', 'location']
-    },
-    {
-      greeting: "hey {name}! so glad we matched 💕 I noticed you like {preference} which is awesome! what are you up to right now?",
-      topics: ['age', 'location']
-    },
-    {
-      greeting: "hiiii {name}! I'm so happy we matched 🙈 I saw you're looking for {preference} and honestly, that's so me! how's your night going?",
-      topics: ['age', 'location']
-    }
-  ],
-  raven: [
-    {
-      greeting: "hey {name}... glad we matched. saw you're into {preference}. what are you up to tonight?",
-      topics: ['age', 'location']
-    },
-    {
-      greeting: "yo {name}. so we matched... cool. noticed you like {preference}. how's it going?",
-      topics: ['age', 'location']
-    },
-    {
-      greeting: "hey {name}. happy we matched. I saw {preference} on your preferences - I vibe with that. what's good?",
-      topics: ['age', 'location']
-    }
-  ],
-  jake: [
-    {
-      greeting: "yo {name}! glad we matched bro. saw you're looking for {preference} - I respect that. what's good with you tonight?",
-      topics: ['age', 'location']
-    },
-    {
-      greeting: "ayyy {name}! happy we matched. I peeped you like {preference}, that's dope. what you up to?",
-      topics: ['age', 'location']
-    },
-    {
-      greeting: "yo {name}! so we matched, that's cool. saw {preference} in your preferences. how's your night going?",
-      topics: ['age', 'location']
-    }
-  ]
-};
-
 const FOLLOW_UP_QUESTIONS: Record<string, Record<string, string[]>> = {
   riley: {
     age: [
@@ -117,7 +72,7 @@ const FOLLOW_UP_QUESTIONS: Record<string, Record<string, string[]>> = {
 export class FirstMessageService {
   private async generateAIFirstMessage(
     companionName: string,
-    companionGender: 'male' | 'female',
+    _companionGender: 'male' | 'female',
     userName: string,
     personalInterest: string,
     signatureVoiceId: string,
@@ -333,7 +288,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     companionName: string,
     companionGender: 'male' | 'female',
     userName: string,
-    userPreferences: any,
+    _userPreferences: unknown,
     signatureVoice?: string,
     userBirthday?: string,
     expertDomain?: string,
@@ -575,8 +530,6 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     message: string,
     topic: string
   ): Promise<{ key: string; value: any } | null> {
-    const lowerMessage = message.toLowerCase();
-
     if (topic === 'age') {
       const ageMatch = message.match(/\b(\d{1,2})\b/);
       if (ageMatch) {

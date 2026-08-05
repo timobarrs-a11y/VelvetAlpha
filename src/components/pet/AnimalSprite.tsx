@@ -1,5 +1,3 @@
-import React from 'react';
-
 export const W=88,H=76,CX=44,CY=38,BUF=8;
 export const GRAV=0.38,WALK=1.9,CLIMB=1.5,FAST=4.8,VTERM=14;
 export const rand=(a: number,b: number)=>a+Math.random()*(b-a);

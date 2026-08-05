@@ -13,7 +13,6 @@ export function Avatar({ config, className = '' }: AvatarProps) {
   } = config;
 
   const hairColorDark = hairColor + 'dd';
-  const hairColorLight = hairColor + '44';
   const hairHighlight = hairColor + '66';
 
   const renderMaleHair = () => {

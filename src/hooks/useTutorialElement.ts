@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { useTutorialDirector } from '../context/TutorialDirectorContext';
 
 export function useTutorialElement(elementId: string) {

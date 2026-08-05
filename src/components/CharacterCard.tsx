@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getCompanionMoodImage, getMoodLabel, getMoodGlow, MoodType } from '../utils/imageSelector';
+import { getCompanionMoodImage, getMoodLabel, MoodType } from '../utils/imageSelector';
 import { getVoiceById } from '../config/signatureVoices';
 import { Avatar } from './Avatar';
 import { AvatarConfig } from '../types/avatar';

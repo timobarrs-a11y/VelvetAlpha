@@ -15,7 +15,7 @@ export interface DailyExperience {
   created_at?: string;
 }
 
-export async function generateDailyExperience(userId: string, companionId: string): Promise<DailyExperience> {
+export async function generateDailyExperience(_userId: string, companionId: string): Promise<DailyExperience> {
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {

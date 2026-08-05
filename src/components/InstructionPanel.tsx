@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Sparkles, FileText } from 'lucide-react';
+import { Sparkles, FileText } from 'lucide-react';
 import { CoAuthorSession } from '../services/coAuthorService';
 
 interface InstructionPanelProps {

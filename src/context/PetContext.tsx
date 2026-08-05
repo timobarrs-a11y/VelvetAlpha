@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
-import { petService, PetState, PetStats, DEFAULT_PET_STATE, xpToLevel } from '../services/petService';
+import { petService, PetStats, DEFAULT_PET_STATE, xpToLevel } from '../services/petService';
 import { supabase } from '../shared/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

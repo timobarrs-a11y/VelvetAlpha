@@ -1,6 +1,5 @@
 import { supabase } from '../shared/supabase/client';
 import { SubscriptionTier, SUBSCRIPTION_PLANS, normalizeSubscriptionTier } from '../types/subscription';
-import { getSuperUserStatus } from './superUserService';
 
 export interface MessageTrackingInfo {
   messagesRemaining: number;
@@ -107,8 +106,6 @@ export async function addMessagesToUser(
   tier: SubscriptionTier
 ): Promise<boolean> {
   try {
-    const plan = SUBSCRIPTION_PLANS[tier];
-
     const updates: Record<string, any> = {
       subscription_tier: tier
     };

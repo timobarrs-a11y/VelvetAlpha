@@ -4,7 +4,7 @@ import type { AvatarConfig } from '../types/avatar';
 import { relationshipCalendarService } from './relationshipCalendarService';
 import { affectionService } from './affectionService';
 import type { RelationshipIntent, RelationshipStatus } from './affectionService';
-import { FONT_OPTIONS, getEligibleFonts } from './customizationService';
+import { getEligibleFonts } from './customizationService';
 import { getCurrentStatus } from '../utils/statusHelper';
 import { seedVoiceBaseline } from './voiceFidelityService';
 
@@ -209,7 +209,7 @@ export async function createCompanion(options: CreateCompanionOptions): Promise<
       const relationshipStatus: RelationshipStatus = affectionService.getDefaultStatus(relationshipIntent);
       const affectionBase = affectionService.getDefaultBase(relationshipIntent);
 
-      const { error: statsError } = await supabase
+      const { error: _statsError } = await supabase
         .from('relationship_stats')
         .insert({
           user_id: options.userId,

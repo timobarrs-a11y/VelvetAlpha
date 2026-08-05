@@ -58,8 +58,8 @@ export function analyzeMessageComplexity(message: string): ComplexityLevel {
   return 'simple';
 }
 
-export function selectModel(userMessage: string, userTier: SubscriptionTier): ModelType {
-  if (userTier === 'elite' || userTier === 'plus' || userTier === 'starter' || userTier === 'trial') {
+export function selectModel(_userMessage: string, userTier: SubscriptionTier): ModelType {
+  if (userTier === 'elite' || userTier === 'plus' || userTier === 'starter') {
     return MODEL_CONFIG.PREMIUM_MODEL;
   }
   return MODEL_CONFIG.CHEAP_MODEL;

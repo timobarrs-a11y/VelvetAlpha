@@ -20,112 +20,6 @@ interface QuestionData {
   allowCustom?: boolean;
 }
 
-const ZODIAC_LINES: Record<string, string[]> = {
-  Aries: [
-    "An Aries? Bold choice by the universe.",
-    "Aries energy -- you don't wait for permission, do you?",
-    "They say Aries leads from the front. I believe it.",
-    "An Aries huh? That fire is hard to miss.",
-    "Aries -- the one everyone else tries to keep up with."
-  ],
-  Taurus: [
-    "A Taurus -- loyalty runs deep with you, doesn't it?",
-    "Taurus energy is unshakable. That's rare.",
-    "They say Taurus knows exactly what they want. Respect.",
-    "A Taurus? You probably give the best hugs too.",
-    "Taurus -- stubborn in the best way possible."
-  ],
-  Gemini: [
-    "A Gemini! Never a dull moment with you around.",
-    "Gemini energy -- two sides, both interesting.",
-    "They say Geminis can talk to anyone about anything. Facts.",
-    "A Gemini huh? You probably light up every room.",
-    "Gemini -- the one who makes everything more fun."
-  ],
-  Cancer: [
-    "A Cancer -- you feel things deeper than most, don't you?",
-    "Cancer energy is pure heart. That's a superpower.",
-    "They say Cancers remember everything. The love runs deep.",
-    "A Cancer? The world needs more people like you.",
-    "Cancer -- protective, caring, and stronger than you think."
-  ],
-  Leo: [
-    "A Leo! The spotlight finds you whether you want it or not.",
-    "Leo energy -- confidence like that is magnetic.",
-    "They say Leos are born to lead. Hard to argue.",
-    "A Leo huh? That presence is something you can't fake.",
-    "Leo -- the one who makes everyone feel seen."
-  ],
-  Virgo: [
-    "A Virgo -- your attention to detail is a gift.",
-    "Virgo energy is quiet excellence. People notice.",
-    "They say Virgos see what everyone else misses. Powerful.",
-    "A Virgo? You probably hold everything together for everyone.",
-    "Virgo -- underestimated until people really know you."
-  ],
-  Libra: [
-    "A Libra -- balance and beauty, that's your thing.",
-    "Libra energy is magnetic. People just gravitate to you.",
-    "They say Libras bring peace wherever they go. Needed.",
-    "A Libra huh? I hear your charm is second to none.",
-    "Libra -- the one who makes hard things look easy."
-  ],
-  Scorpio: [
-    "A Scorpio? Intense in the best way.",
-    "Scorpio energy -- once you're loyal, it's forever.",
-    "They say Scorpios see right through people. I believe it.",
-    "A Scorpio huh? That depth is rare and real.",
-    "Scorpio -- mysterious, powerful, and unforgettable."
-  ],
-  Sagittarius: [
-    "A Sagittarius -- adventure is literally in your blood.",
-    "Sag energy is contagious. You make people want to live bigger.",
-    "They say Sagittarius never stops exploring. Love that.",
-    "A Sagittarius? Freedom looks good on you.",
-    "Sagittarius -- the one who turns life into a story worth telling."
-  ],
-  Capricorn: [
-    "A Capricorn -- you're building something great, aren't you?",
-    "Capricorn energy is quiet ambition. Deadly combination.",
-    "They say Capricorns play the long game. Smart.",
-    "A Capricorn? Your discipline is honestly inspiring.",
-    "Capricorn -- the one who actually finishes what they start."
-  ],
-  Aquarius: [
-    "An Aquarius -- your mind works different. That's a gift.",
-    "Aquarius energy is ahead of its time. Always.",
-    "They say Aquarius sees the future before everyone else. True.",
-    "An Aquarius? You probably think in ways nobody expects.",
-    "Aquarius -- the one who changes the game without trying."
-  ],
-  Pisces: [
-    "A Pisces -- your empathy is a superpower, you know that?",
-    "Pisces energy is pure soul. People feel safe around you.",
-    "They say Pisces understands people on another level. Facts.",
-    "A Pisces? That creativity runs deep.",
-    "Pisces -- the one who feels everything and turns it into something beautiful."
-  ]
-};
-
-function getZodiacSign(dateString: string): string {
-  const date = new Date(dateString);
-  const month = date.getUTCMonth() + 1;
-  const day = date.getUTCDate();
-
-  if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return 'Aries';
-  if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return 'Taurus';
-  if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return 'Gemini';
-  if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return 'Cancer';
-  if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return 'Leo';
-  if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return 'Virgo';
-  if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return 'Libra';
-  if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return 'Scorpio';
-  if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return 'Sagittarius';
-  if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return 'Capricorn';
-  if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return 'Aquarius';
-  return 'Pisces';
-}
-
   const COMPANION_BASE_QUESTIONS: QuestionData[] = [
   {
     id: 'relationshipType',
@@ -968,8 +862,6 @@ export function QuestionnairePage() {
   const [customInput, setCustomInput] = useState('');
   const [milestoneMessage, setMilestoneMessage] = useState<string | null>(null);
   const [lastMilestone, setLastMilestone] = useState(0);
-  const [zodiacSign, setZodiacSign] = useState<string | null>(null);
-  const [zodiacLine, setZodiacLine] = useState<string | null>(null);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -1033,12 +925,8 @@ export function QuestionnairePage() {
           hobbies: profile.hobbies || [],
           sports: profile.sports || [],
           musicGenre: profile.music_genre || '',
-          zodiacSign: profile.zodiac_sign || '',
           newsTopics: profile.news_categories || [],
         });
-        if (profile.zodiac_sign) {
-          setZodiacSign(profile.zodiac_sign);
-        }
       }
     } catch {
     } finally {
@@ -1137,13 +1025,13 @@ export function QuestionnairePage() {
     if (currentQuestion > 0) {
       setCurrentQuestion(currentQuestion - 1);
       const prevQuestion = QUESTIONS[currentQuestion - 1];
-      setTextInput(answers[prevQuestion.id] || '');
+      setTextInput((answers[prevQuestion.id] as string) || '');
       setCustomInput('');
       setSelectedMultiOptions([]);
     }
   };
 
-  const createCompanionFromAnswers = async (allAnswers: Record<string, string>) => {
+  const createCompanionFromAnswers = async (allAnswers: Record<string, string | string[]>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -1153,7 +1041,7 @@ export function QuestionnairePage() {
         return;
       }
 
-      let mergedAnswers = { ...allAnswers };
+      let mergedAnswers: Record<string, string | string[]> = { ...allAnswers };
 
       if (existingProfile) {
         mergedAnswers = {
@@ -1161,7 +1049,6 @@ export function QuestionnairePage() {
           birthday: existingProfile.birthday || '',
           gender: existingProfile.gender || '',
           favoriteColor: existingProfile.favorite_color || '',
-          zodiacSign: existingProfile.zodiac_sign || '',
           hobbies: existingProfile.hobbies || [],
           sports: existingProfile.sports || [],
           musicGenre: existingProfile.music_genre || '',
@@ -1170,7 +1057,7 @@ export function QuestionnairePage() {
         };
       }
 
-      const a = mergedAnswers;
+      const a = mergedAnswers as Record<string, string>;
 
       const gender: 'male' | 'female' = a.relationshipType === 'Male' ? 'male' : 'female';
       const connectionType = a.connectionType?.includes('friend') ? 'friend' : 'romantic';
@@ -1203,7 +1090,6 @@ export function QuestionnairePage() {
         sports: Array.isArray(a.sports) ? a.sports.join(', ') : (a.sports || ''),
         companionName: customName,
         favoriteColor: a.favoriteColor || '',
-        zodiacSign: a.zodiacSign || '',
         musicGenre: Array.isArray(a.musicGenre) ? a.musicGenre.join(', ') : (a.musicGenre || ''),
         newsTopics: newsTopicsArray
       };
@@ -1237,7 +1123,6 @@ export function QuestionnairePage() {
         expressiveness: a.expressiveness,
         initiative: a.initiative,
         favoriteColor: a.favoriteColor,
-        zodiacSign: a.zodiacSign,
         musicGenre: Array.isArray(a.musicGenre) ? a.musicGenre.join(', ') : (a.musicGenre || ''),
         newsCategories: newsTopicsArray,
         signatureExpert: sessionStorage.getItem('selectedExpertId') || undefined,
@@ -1267,7 +1152,6 @@ export function QuestionnairePage() {
           initiative: a.initiative,
           companionName: customName,
           favoriteColor: a.favoriteColor,
-          zodiacSign: a.zodiacSign,
           musicGenre: Array.isArray(a.musicGenre) ? a.musicGenre.join(', ') : (a.musicGenre || '')
         }
       });
@@ -1506,19 +1390,6 @@ export function QuestionnairePage() {
               exit={{ opacity: 0, x: -100 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
-              {question.id === 'gender' && zodiacLine && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-center mb-6"
-                >
-                  <p className="text-lg text-rose-300 font-medium">
-                    {zodiacLine}
-                  </p>
-                </motion.div>
-              )}
-
               <motion.h2
                 className="text-4xl md:text-5xl font-bold text-white text-center mb-12 tracking-tight"
                 initial={{ opacity: 0, y: 20 }}

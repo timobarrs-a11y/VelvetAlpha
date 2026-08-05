@@ -101,7 +101,6 @@ function minimax(
 
 function evaluateBoard(board: BoardState, aiColor: 'red' | 'black'): number {
   let score = 0;
-  const opponentColor = aiColor === 'red' ? 'black' : 'red';
 
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {

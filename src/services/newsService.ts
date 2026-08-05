@@ -255,7 +255,8 @@ export async function fetchCompanionNews(signatureVoiceId: string): Promise<Comp
 
     if (!response.ok) return [];
 
-    const result = await response.json();
+    const _result = await response.json();
+    void _result;
 
     const { data: articles } = await supabase
       .from('news_articles')

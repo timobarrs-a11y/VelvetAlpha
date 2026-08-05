@@ -197,7 +197,7 @@ export function RadialTools({ catPosRef, onFed, onStroke }: RadialToolsProps) {
         const tx = anchor.x + Math.cos(rad) * t.dist;
         const ty = anchor.y + Math.sin(rad) * t.dist;
 
-        const isF = t.key === 'food', isB = t.key === 'brush';
+        const isF = t.key === 'food';
         const isDrag = isF ? foodDragging : brushDragging;
         const cur = isF ? foodPos : brushPos;
         const near = isF ? foodNear : brushNear;

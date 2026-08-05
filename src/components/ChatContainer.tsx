@@ -7,8 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
 import { RatingValue } from '../services/ratingService';
 
-type BotSource = 'atlas' | 'navi' | 'companion' | null;
-
 interface ChatContainerProps {
   messages: Message[];
   characterName?: string;

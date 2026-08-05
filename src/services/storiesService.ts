@@ -32,6 +32,8 @@ export interface TimelineEvent {
 
 export interface MilestoneAchievement {
   id: string;
+  user_id: string;
+  companion_id: string | null;
   achievement_type: string;
   achievement_name: string;
   achievement_description: string;
@@ -56,7 +58,7 @@ export interface MemoryCollection {
 
 class StoriesService {
   async detectSpecialMoments(
-    userId: string,
+    _userId: string,
     companionId: string,
     messages: Array<{ role: string; content: string; created_at?: string }>
   ): Promise<void> {

@@ -71,7 +71,7 @@ export class EmotionalProfileService {
   private static analyzeAndGenerateUpdates(
     profile: EmotionalProfile,
     userMessage: string,
-    aiResponse: string,
+    _aiResponse: string,
     conversationHistory: Array<{ role: string; content: string }>
   ): Partial<EmotionalProfile> {
     const updates: Partial<EmotionalProfile> = {};

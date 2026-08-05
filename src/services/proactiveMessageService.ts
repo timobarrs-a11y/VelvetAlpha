@@ -109,7 +109,7 @@ export class ProactiveMessageService {
 
   static getProactiveMessage(
     messageType?: ProactiveMessageType,
-    userProfile?: UserProfile
+    _userProfile?: UserProfile
   ): string {
     const timeOfDay = this.getCurrentTimeOfDay();
 

@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, MapPin, Loader2 } from 'lucide-react';
+import { X, Send, MapPin } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
-import { upsertSchedule } from '../services/userScheduleService';
+import { upsertSchedule, WorkType } from '../services/userScheduleService';
 import { upsertGoal } from '../services/goalService';
 import { localExplorerService } from '../services/localExplorerService';
 import { BriefReadiness } from '../services/morningBriefService';
@@ -140,7 +140,18 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
       await naviTypeThen('Got it. I\'ll keep the brief flexible — no morning routine assumptions.', 700);
       // Save schedule with no hours
       if (userIdRef.current) {
-        await upsertSchedule(userIdRef.current, { work_type: workType as any }).catch(console.error);
+        await upsertSchedule(userIdRef.current, {
+          work_type: workType as WorkType,
+          work_start_hour: null,
+          work_end_hour: null,
+          has_morning_commute: false,
+          has_evening_commute: false,
+          has_school_pickup: false,
+          school_pickup_time: null,
+          has_recurring_appointments: false,
+          appointment_notes: null,
+          extra_context: null,
+        }).catch(console.error);
       }
       await naviTypeThen('Now — what are you working toward right now? Any goals, even small ones?', 800);
       setStep('goals_prompt');
@@ -177,13 +188,16 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
 
     if (userIdRef.current) {
       await upsertSchedule(userIdRef.current, {
-        work_type: (savedData.workType ?? 'office') as any,
+        work_type: (savedData.workType ?? 'office') as WorkType,
         work_start_hour: savedData.workStart ?? null,
         work_end_hour: savedData.workEnd ?? null,
         has_morning_commute: hasCommute,
         has_evening_commute: hasCommute,
         has_school_pickup: hasPickup,
         school_pickup_time: hasPickup ? 'afternoon' : null,
+        has_recurring_appointments: false,
+        appointment_notes: null,
+        extra_context: null,
       }).catch(console.error);
     }
 
@@ -214,8 +228,13 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
       await upsertGoal(userIdRef.current, {
         title: goalText,
         goal_type,
-        status: 'active',
+        target_value: null,
+        current_value: null,
+        unit: null,
         start_date: new Date().toISOString().split('T')[0],
+        target_date: null,
+        status: 'active',
+        notes: null,
       }).catch(console.error);
     }
 

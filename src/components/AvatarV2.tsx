@@ -913,7 +913,7 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
       wide:   { rx: 8, ry: 5.5, irisR: 4.8, pupilR: 2.3, hoodOpacity: 0 },
     }[eyeShape] ?? { rx: 7, ry: 5, irisR: 4.5, pupilR: 2.2, hoodOpacity: 0 };
 
-    const { rx, ry, irisR, pupilR, hoodOpacity } = eyeShapeConfigs;
+    const { rx, ry, irisR, hoodOpacity } = eyeShapeConfigs;
 
     return (
       <g filter="url(#glow)">

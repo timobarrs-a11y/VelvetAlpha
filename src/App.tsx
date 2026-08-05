@@ -59,7 +59,6 @@ import { resolveExpert } from './services/expertService';
 import { inspectVoiceFidelity, clearDriftCorrection } from './services/voiceFidelityService';
 import { CoAuthorPage } from './pages/CoAuthorPage';
 import { DailyFeedPage } from './pages/DailyFeedPage';
-import { MessageRatingControls } from './components/MessageRatingControls';
 import { RatingValue, getRatingsForMessages, clearConversationMessages, markRatingRegenerated } from './services/ratingService';
 import { safeRandomUUID } from './utils/uuid';
 
@@ -654,44 +653,6 @@ function AppInner() {
       setNaviTyping(false);
     }
 
-    // legacy fallback path kept for safety — will not be reached for quick commands
-    if (false) {
-      const enrichedPrompt = command.prompt;
-      setIsTyping(true);
-      setSendError(null);
-
-    try {
-      const userProfile = await ChatService.getUserProfile();
-      let response: string;
-      let articleIds: string[] | undefined;
-      if (userProfile && companionId) {
-        const result = await ChatService.sendMessageWithSignals(enrichedPrompt, companionId, userProfile);
-        response = result.assistantMessage;
-        articleIds = result.article_ids;
-      } else {
-        response = await ChatService.sendMessage(enrichedPrompt, companionId, companion.relationship_type);
-      }
-
-      await new Promise(resolve => setTimeout(resolve, Math.min(response.length * 12, 2500)));
-      setIsTyping(false);
-
-      await sendMessageMutation.mutateAsync({
-        userId: user.id,
-        companionId,
-        role: 'assistant',
-        content: response,
-        clientMessageId: safeRandomUUID(),
-        ...(articleIds && articleIds.length > 0 ? { metadata: { article_ids: articleIds } } : {}),
-      });
-
-      await updateLastMessageTime(companionId);
-      conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: response.length });
-      playSound();
-    } catch (error) {
-      setIsTyping(false);
-      console.error('Quick command error:', error);
-    }
-    } // end if (false)
   }, [user, companionId, companion, fetchBriefContext, sendNaviPrompt, playSound]);
 
   const handleModeChange = useCallback(async (mode: ThreadMode) => {
@@ -769,7 +730,7 @@ function AppInner() {
           expertConfig?.domain,
           expertConfig,
           companionData.relationship_type,
-          companionData.correspondent_id,
+          companionData.correspondent_id || undefined,
         );
       }
       await new Promise(resolve => setTimeout(resolve, Math.min(firstMsg.length * 15, 3000)));
@@ -1056,7 +1017,6 @@ function AppInner() {
     }
   };
 
-  const isBotMode = activeMode === 'atlas-prompt' || activeMode === 'atlas-full' || activeMode === 'navi-prompt' || activeMode === 'navi-full';
   const showBotPromptDrawer = activeMode === 'atlas-prompt' || activeMode === 'navi-prompt';
   const showBotFullInputHint = activeMode === 'atlas-full' || activeMode === 'navi-full';
   const isCurrentlyLoading = isAtlasLoading || isNaviLoading || isBotLoading;
@@ -1155,7 +1115,7 @@ function AppInner() {
       {showAppearanceModal && companion && companionId && (
         <CompanionAppearanceModal
           companionId={companionId}
-          companionName={companion.name || 'Companion'}
+          companionName={companion.custom_name || 'Companion'}
           currentConfig={companion.avatar_config as unknown as AvatarConfigV2 | null}
           onClose={() => setShowAppearanceModal(false)}
           onSaved={(newConfig) => setCompanion(prev => prev ? { ...prev, avatar_config: newConfig as any } : prev)}
@@ -1244,7 +1204,7 @@ function AppInner() {
                 : activeThread === 'atlas' && atlasTyping ? 'Atlas is thinking...'
                 : undefined
               }
-              activeThread={activeThread}
+              activeThread={activeThread as 'companion' | 'atlas' | 'navi' | undefined}
               userAvatarConfig={userAvatarConfig}
               companionAvatarConfig={
                 activeThread === 'companion' ? companion?.avatar_config : undefined

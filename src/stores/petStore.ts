@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { useRef } from 'react';
-import { petService, PetState, DEFAULT_PET_STATE } from '../services/petService';
-import { supabase } from '../shared/supabase/client';
-import { getLv, LXP, LUNLOCK } from '../components/pet/AnimalSprite';
+import { petService, DEFAULT_PET_STATE } from '../services/petService';
+import { getLv } from '../components/pet/AnimalSprite';
 
 export interface PetStats {
   hunger: number;
@@ -77,7 +76,7 @@ export const usePetStore = create<PetStoreState & PetStoreActions>((set, get) =>
   },
 
   handleStats: (incoming: PetStats) => {
-    const { _lastLevel, _saveTimer, _userId, _companionId, _currentStats, flushSave } = get();
+    const { _lastLevel, _saveTimer, _currentStats } = get();
     const newLevel = getLv(incoming.xp);
     set({ stats: incoming });
     const next = { ...incoming, petName: _currentStats.petName, animalType: _currentStats.animalType };

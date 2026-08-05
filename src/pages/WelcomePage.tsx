@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
   ChevronRight, Sparkles, Newspaper, Eye, PenLine,
-  Bot, Gamepad2, MessageSquare, CalendarDays, BarChart3, Users, ArrowRight, LogOut,
+  Bot, Gamepad2, CalendarDays, BarChart3, Users, ArrowRight, LogOut,
   Shuffle, MapPin
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';

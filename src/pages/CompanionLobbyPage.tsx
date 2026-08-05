@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { getVoiceById } from '../config/signatureVoices';
 import { getExpertById } from '../config/signatureExperts';
-import { SIGNATURE_CORRESPONDENTS, getCorrespondentById } from '../config/signatureCorrespondents';
+import { getCorrespondentById } from '../config/signatureCorrespondents';
 import { correspondentSyncService } from '../services/correspondentSyncService';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
@@ -34,16 +34,43 @@ import { useMotivationalQuote } from '../hooks/useMotivationalQuote';
 import { newsService } from '../services/newsService';
 
 
-const GAMES = [
+interface GameEntry {
+  id: string;
+  name: string;
+  description: string;
+  icon: typeof Crown;
+  iconBg: string;
+  path?: string;
+  requiresCompanion?: boolean;
+}
+
+const GAMES: GameEntry[] = [
   { id: 'checkers',     name: 'Checkers',        description: 'Challenge an AI opponent with personality and banter',           icon: Crown,     iconBg: 'from-amber-500 to-orange-500',   path: '/checkers' },
   { id: 'momentum',     name: 'Momentum',        description: 'AI-generated platformer — each run has a unique hand-crafted world', icon: Zap,       iconBg: 'from-cyan-500 to-blue-600',      path: '/momentum' },
   { id: 'slime-soccer', name: 'Slime Soccer',    description: 'Classic physics-based slime soccer showdown',                        icon: Circle,    iconBg: 'from-fuchsia-500 to-pink-600',   path: '/slime-soccer' },
   { id: 'stellar',      name: 'Stellar Pursuit', description: 'Space shooter — navigate 9 sectors to rescue your family',          icon: Rocket,    iconBg: 'from-slate-600 to-slate-900',    path: '/stellar-pursuit' },
   { id: 'money-grab',   name: 'Money Grab',      description: 'Race to collect cash while dodging hammers and your companion',      icon: Cherry,    iconBg: 'from-yellow-400 to-orange-500',  requiresCompanion: true },
   { id: 'social-combat',  name: 'Social Combat',   description: 'Read emotions and master the art of conversation',                           icon: Brain,   iconBg: 'from-violet-500 to-indigo-600', path: '/social-combat' },
-] as const;
+];
 
-const HUB_TILES = [
+interface HubTile {
+  id: string;
+  label: string;
+  desc: string;
+  subDesc?: string;
+  icon: typeof Newspaper;
+  solidBg: string;
+  iconBg: string;
+  path: string | null;
+  large: boolean;
+  isGroupChat?: boolean;
+  atlasStyle?: boolean;
+  paired?: boolean;
+  naviStyle?: boolean;
+  wide?: boolean;
+}
+
+const HUB_TILES: HubTile[] = [
   {
     id: 'feed',
     label: 'Daily Feed',
@@ -141,7 +168,7 @@ const HUB_TILES = [
     large: false,
     wide: true,
   },
-] as const;
+];
 
 function formatTimeAgo(timestamp: string) {
   const diffMs = Date.now() - new Date(timestamp).getTime();
@@ -190,8 +217,6 @@ export function CompanionLobbyPage() {
     customization,
     checkedInToday,
     justUnlocked,
-    activePointerDef,
-    activeCursorColor,
     setPointer,
     setShowTrail,
     setTrailStyle,
@@ -325,10 +350,10 @@ export function CompanionLobbyPage() {
     navigate('/expert-selection');
   };
 
-  const handleGameClick = (game: typeof GAMES[number]) => {
+  const handleGameClick = (game: GameEntry) => {
     if (game.requiresCompanion) {
       setShowGameModal(true);
-    } else if ('path' in game) {
+    } else if (game.path) {
       const cfg = GAME_CONFIGS[game.path];
       if (cfg) {
         navigateTo(game.path, cfg);
@@ -528,7 +553,7 @@ export function CompanionLobbyPage() {
                 key={largeTile.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                onClick={() => { const cfg = NAV_CONFIGS[largeTile.path]; cfg ? navigateTo(largeTile.path, cfg) : navigate(largeTile.path); }}
+                onClick={() => { const p = largeTile.path!; const cfg = NAV_CONFIGS[p]; cfg ? navigateTo(p, cfg) : navigate(p); }}
                 className="group text-left rounded-2xl p-6 transition-all duration-300 relative overflow-hidden hover:brightness-110"
                 style={{ background: largeTile.solidBg, minHeight: 140 }}
               >

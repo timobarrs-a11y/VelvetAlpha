@@ -25,14 +25,12 @@ function parseMarkdown(raw: string): string {
   let inCode = false;
   let codeLang = '';
   let codeLines: string[] = [];
-  let inList = false;
   let listItems: string[] = [];
 
   const flushList = () => {
     if (listItems.length > 0) {
       out.push(`<ul class="atlas-ul">${listItems.map(li => `<li>${parseInline(li)}</li>`).join('')}</ul>`);
       listItems = [];
-      inList = false;
     }
   };
 
@@ -70,7 +68,6 @@ function parseMarkdown(raw: string): string {
     }
 
     if (/^[-*+]\s/.test(line)) {
-      inList = true;
       listItems.push(line.slice(2));
       continue;
     }

@@ -176,7 +176,7 @@ class CoAuthorService {
     if (error) throw error;
   }
 
-  async reorderBlocks(sessionId: string, blockIds: string[]): Promise<void> {
+  async reorderBlocks(_sessionId: string, blockIds: string[]): Promise<void> {
     const updates = blockIds.map((blockId, index) => ({
       id: blockId,
       block_order: index,

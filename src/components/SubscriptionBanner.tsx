@@ -77,7 +77,6 @@ export function SubscriptionBanner({ tier, messagesRemaining, compact = false, t
   const config = TIER_CONFIGS[tier] || TIER_CONFIGS.free;
   const Icon = config.icon;
   const isTestUser = messagesRemaining === -1;
-  const isLowOnMessages = !isTestUser && messagesRemaining < 50;
   const isPremium = tier !== 'free';
   const trialDaysLeft = tier === 'trial' ? getTrialDaysRemaining(trialExpiresAt) : null;
 

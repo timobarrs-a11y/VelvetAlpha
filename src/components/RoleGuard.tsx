@@ -11,7 +11,7 @@ interface RoleGuardProps {
 }
 
 export function RoleGuard({ children, requiredRole, fallbackPath }: RoleGuardProps) {
-  const { role, loading, isAdmin, isManagerOrAbove } = useRole();
+  const { loading, isAdmin, isManagerOrAbove } = useRole();
 
   if (loading) {
     return (

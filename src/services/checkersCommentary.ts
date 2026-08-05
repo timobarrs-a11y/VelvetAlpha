@@ -112,7 +112,7 @@ const COMMENTARY: CommentarySet = {
 export class CheckersCommentaryService {
   private static usedComments: Map<string, Set<number>> = new Map();
 
-  static getComment(event: CommentaryEvent, moveCount?: number): string {
+  static getComment(event: CommentaryEvent, _moveCount?: number): string {
     const comments = COMMENTARY[event];
     if (!comments || comments.length === 0) {
       return '';
@@ -179,7 +179,7 @@ export class CheckersCommentaryService {
     return null;
   }
 
-  static getGameEndComment(playerWon: boolean, movesPlayed: number): string {
+  static getGameEndComment(playerWon: boolean, _movesPlayed: number): string {
     const event: CommentaryEvent = playerWon ? 'player_win' : 'ai_win';
     return this.getComment(event);
   }

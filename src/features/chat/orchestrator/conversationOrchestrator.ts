@@ -63,12 +63,14 @@ export interface OrchestratorState {
   currentCompanionId?: string;
 }
 
+type DistributiveOmit<T, K extends keyof T> = T extends any ? Omit<T, K> : never;
+
 class ConversationOrchestrator {
   private state: OrchestratorState = {};
   private eventHistory: ConversationEvent[] = [];
   private maxHistory = 100;
 
-  dispatch(event: Omit<ConversationEvent, 'timestamp'>): void {
+  dispatch(event: DistributiveOmit<ConversationEvent, 'timestamp'>): void {
     const fullEvent = {
       ...event,
       timestamp: new Date(),

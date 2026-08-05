@@ -237,10 +237,6 @@ function detectInterrogation(
   ];
 
   const sentences = candidateText.split(/[.!?]/).filter(s => s.trim().length > 0);
-  const interrogativeSentences = sentences.filter(s => {
-    const lower = s.trim().toLowerCase();
-    return interrogativeOpeners.some(opener => lower.startsWith(opener)) || s.includes('?');
-  });
 
   const last2Messages = recentAssistantMessages.slice(-2);
   const last2HaveQuestions = last2Messages.map(m => (m.content.match(/\?/g) || []).length > 0);
@@ -353,7 +349,7 @@ export async function validateResponse(
   userMessage: string,
   assistantResponse: string,
   conversationHistory: Message[],
-  characterName: string
+  _characterName: string
 ): Promise<ValidationResult> {
   const issues: ValidationIssue[] = [];
   let score = 100;

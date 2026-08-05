@@ -15,7 +15,6 @@ import {
   PointerSymbol,
   AnimationStyle,
   TrailStyle,
-  FontOption,
   ButtonHoverStyle,
   getEligibleFonts,
 } from '../services/customizationService';

@@ -137,7 +137,7 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
   const navigate = useNavigate();
   const { startTour } = useTutorialDirector();
   const [activePanel, setActivePanel] = useState<PanelResult | null>(null);
-  const [panelLoading, setPanelLoading] = useState(false);
+  const [panelLoading] = useState(false);
   const [panelLabel, setPanelLabel] = useState('');
 
   const handleReplayTour = () => {

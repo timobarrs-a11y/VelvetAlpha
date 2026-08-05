@@ -150,7 +150,8 @@ export function VideoHistoryPage() {
     setSearching(true);
     setSearchError(null);
     try {
-      const { data: { session, user } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
       const authToken = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       const response = await fetch(

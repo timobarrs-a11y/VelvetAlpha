@@ -4,11 +4,8 @@ import { shouldUseReactiveCache, getReactiveResponse } from './reactiveCache';
 import { CostTracker } from './costTracker';
 import {
   selectModel,
-  analyzeMessageComplexity,
-  getModelDisplayName,
   estimateTokens,
   calculateCost,
-  ModelType,
   MODEL_CONFIG
 } from './modelSelector';
 import { logResponseQuality } from '../prompts/systemPrompts';
@@ -217,7 +214,7 @@ export interface Message {
   metadata?: Record<string, unknown>;
 }
 
-export type SubscriptionTier = 'free' | 'unlimited' | 'starter' | 'plus' | 'elite';
+export type SubscriptionTier = 'free' | 'unlimited' | 'starter' | 'plus' | 'elite' | 'trial';
 
 function calculateAge(birthday: string): number | undefined {
   if (!birthday) return undefined;
@@ -375,7 +372,7 @@ export class ChatService {
     systemPrompt: string,
     model: string,
     maxTokens: number,
-    sessionToken: string | undefined,
+    _sessionToken: string | undefined,
     userMessage: string,
     conversationHistory: Message[],
     characterName: string,
@@ -501,7 +498,6 @@ export class ChatService {
 
     const factKeywords = ['my name is', 'i am', "i'm", 'i work', 'i study', 'my job', 'i love', 'i like', 'i enjoy', 'my hobby', 'my favorite'];
     const momentKeywords = ['love you', 'miss you', 'thank you', 'appreciate', 'special', 'remember when', 'our first'];
-    const topicKeywords = ['about', 'think about', 'talk about', 'discuss', 'tell me'];
 
     const allText = messages.map(m => m.content.toLowerCase()).join(' ');
 
@@ -729,13 +725,16 @@ export class ChatService {
     };
   }
 
-  static async sendMessage(message: string, companionId?: string, relationshipType: 'friend' | 'romantic' | 'mentor' | 'correspondent' = 'romantic'): Promise<string> {
+  static async sendMessage(message: string, companionId?: string, _relationshipType: 'friend' | 'romantic' | 'mentor' | 'correspondent' = 'romantic'): Promise<string> {
     try {
       const userProfile = await this.getUserProfile();
-      const defaultProfile = {
+      const defaultProfile: UserProfile = {
+        id: 'anonymous',
         name: 'babe',
-        interests: [] as string[],
-        subscription_tier: 'premium' as SubscriptionTier,
+        interests: [],
+        subscription_tier: 'unlimited',
+        created_at: new Date().toISOString(),
+        onboarding_completed: false,
       };
 
       const profile = userProfile || defaultProfile;
@@ -802,7 +801,6 @@ export class ChatService {
       }
 
       const selectedModel = selectModel(message, profile.subscription_tier);
-      const complexity = analyzeMessageComplexity(message);
       const modelType = selectedModel === MODEL_CONFIG.PREMIUM_MODEL ? 'premium' : 'cheap';
 
       const conversationHistory = userProfile ? await this.getConversationHistory(50) : [];
@@ -881,6 +879,7 @@ export class ChatService {
       const isCorrespondentCompanion = connectionType === 'correspondent';
 
       try {
+        if (!companionId) throw new Error('companionId required');
         await relationshipTrackingService.updateOnUserMessage(
           userId,
           companionId,
@@ -1290,7 +1289,7 @@ const messagesToSend = [
     }
   }
 
-  static async completeOnboarding(personality: any): Promise<void> {
+  static async completeOnboarding(_personality: unknown): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 

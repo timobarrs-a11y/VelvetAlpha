@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 export function CookieConsent() {
   const [showConsent, setShowConsent] = useState(false);

@@ -777,7 +777,7 @@ export function MoneyGrabGameEngine({
   onGameComplete
 }: MoneyGrabGameEngineProps) {
   const [currentLevel, setCurrentLevel] = useState(0);
-  const [levelScore, setLevelScore] = useState(0);
+  const [, setLevelScore] = useState(0);
 
   const [mazeData, setMazeData] = useState(() => generateMaze(0));
   const [maze, setMaze] = useState(mazeData.maze);

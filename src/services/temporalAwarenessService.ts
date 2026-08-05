@@ -89,7 +89,7 @@ function getOrdinalSuffix(n: number): string {
 export function calculateGapSinceLastChat(
   lastInteractionAt: Date | string,
   now: Date,
-  timezone?: string
+  _timezone?: string
 ): GapContext {
   const lastDate = typeof lastInteractionAt === 'string'
     ? new Date(lastInteractionAt)
@@ -178,7 +178,7 @@ export function formatTemporalPromptContext(params: {
   longestStreak?: number;
   companionName?: string;
 }): TemporalPromptContext {
-  const { todayContext, gapContext, activeDays, elapsedDays, currentStreak, longestStreak, companionName } = params;
+  const { todayContext, gapContext, activeDays, elapsedDays, currentStreak, longestStreak } = params;
 
   let gapContextStr: string | null = null;
   if (gapContext) {

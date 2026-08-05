@@ -35,7 +35,6 @@ export class NotificationService {
         icon: icon || '/images/riley-positive.jpg',
         badge: '/images/riley-positive.jpg',
         tag: 'velvet-companion',
-        renotify: false,
         requireInteraction: false,
       });
     } catch (error) {
@@ -79,7 +78,7 @@ export class NotificationService {
   }
 
   static async scheduleNudge(
-    userId: string,
+    _userId: string,
     companionId: string,
     companionName: string,
     message: string,

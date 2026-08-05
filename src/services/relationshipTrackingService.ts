@@ -140,7 +140,7 @@ class RelationshipTrackingService {
     companionId: string,
     now: Date,
     currentLocalDate: string,
-    timezone?: string
+    _timezone?: string
   ): Promise<RelationshipStats | null> {
     try {
       const lastInteractionAt = new Date(existing.last_interaction_at);

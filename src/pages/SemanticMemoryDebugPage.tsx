@@ -18,7 +18,7 @@ export default function SemanticMemoryDebugPage() {
   const [testQuery, setTestQuery] = useState('Tell me about my job');
   const [results, setResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [, setUserId] = useState<string | null>(null);
   const [memories, setMemories] = useState<RelationshipMemory[]>([]);
 
   const runDiagnostics = async () => {

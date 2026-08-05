@@ -16,6 +16,13 @@ export interface QuestionnaireData {
   supportStyle?: string;
   lifeContext?: string;
   energyPreference?: string;
+  flirtingStyle?: string;
+  humorStyle?: string;
+  communicationStyle?: string;
+  emotionalOpenness?: string;
+  conversationDepth?: string;
+  expressiveness?: string;
+  initiative?: string;
   companionName: string;
   favoriteColor?: string;
   zodiacSign?: string;
@@ -119,7 +126,7 @@ export async function createSeedMemory(
 
 function generateMemoryTextFromQuestionnaire(
   data: QuestionnaireData,
-  companionGender: 'male' | 'female'
+  _companionGender: 'male' | 'female'
 ): string {
   const parts: string[] = [];
 

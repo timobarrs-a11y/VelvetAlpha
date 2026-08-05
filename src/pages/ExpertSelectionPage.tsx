@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Briefcase, Palette, GraduationCap, Compass, Crown, Plus, ChevronRight, Sparkles, ArrowLeft } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -8,8 +8,6 @@ import {
   ExpertConfig,
   EXPERT_CATEGORIES,
   getCuratedExperts,
-  getFreeExperts,
-  canUseExpert,
 } from '../config/signatureExperts';
 import { getUserExperts, userExpertToConfig } from '../services/expertService';
 
@@ -23,16 +21,13 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 
 export default function ExpertSelectionPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { tier, loading: subscriptionLoading } = useSubscription();
-  const isPremium = tier !== 'free';
+  const { loading: subscriptionLoading } = useSubscription();
 
   const [selectedExpertId, setSelectedExpertId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ExpertConfig['category'] | 'all'>('all');
   const [curatedExperts, setCuratedExperts] = useState<ExpertConfig[]>([]);
   const [userExperts, setUserExperts] = useState<ExpertConfig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadExperts();
@@ -48,7 +43,6 @@ export default function ExpertSelectionPage() {
       // Load user experts if logged in
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUserId(user.id);
         try {
           const userExpertsData = await getUserExperts(user.id);
           const converted = userExpertsData.map(userExpertToConfig);

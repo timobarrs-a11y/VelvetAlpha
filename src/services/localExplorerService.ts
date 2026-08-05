@@ -232,7 +232,7 @@ export const localExplorerService = {
   },
 
   async sendMessage(
-    conversationId: string,
+    _conversationId: string,
     userMessage: string,
     history: Array<{ role: 'user' | 'assistant'; content: string }>,
     location: UserLocation,

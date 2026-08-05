@@ -58,7 +58,6 @@ const arrayOrStringToString = (value: string[] | string | undefined): string => 
 export const buildSystemPrompt = (input: SystemPromptInput): string => {
   const {
     companionName,
-    companionGender,
     userName,
     userGender,
     userAge,
@@ -82,16 +81,10 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
   } = input;
 
   const voice = getVoiceById(signatureVoice);
-  const pronoun = companionGender === 'female' ? 'her' : 'him';
-  const pronounSubject = companionGender === 'female' ? 'she' : 'he';
-  const companionType = companionGender === 'female' ? 'girlfriend' : 'boyfriend';
   const isMentor = relationshipType === 'mentor';
   const isFriend = relationshipType === 'friend';
   const isCorrespondent = relationshipType === 'correspondent';
   const isRomantic = !isMentor && !isFriend && !isCorrespondent;
-
-  const userIsMale = userGender === 'Male';
-  const userIsFemale = userGender === 'Female';
 
   let casualAddress = userName || 'there';
 

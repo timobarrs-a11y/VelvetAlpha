@@ -5,7 +5,6 @@ import {
   CSS_WALLPAPER_PRESETS,
   PHOTO_WALLPAPER_PRESETS,
   LIVE_WALLPAPER_PRESETS,
-  buildWallpaperStyle,
   buildWallpaperMeta,
   saveCompanionWallpaper,
   uploadWallpaperImage,

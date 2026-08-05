@@ -152,7 +152,6 @@ export function AvatarCreatorV2({
     const skinTone = pick(skinTones);
 
     const warmSkins = ['#fde8d7', '#f4c2a0', '#d4a373'];
-    const coolSkins = ['#c68952', '#a86f44', '#6d4428'];
     const isWarmSkin = warmSkins.includes(skinTone);
     const warmLipColors = LIP_COLORS.filter(l =>
       ['#c4917c', '#b07a5e', '#c8857a', '#d88e89', '#e5b8a8', '#f4a6b8', '#e88ba3', '#c73e3a'].includes(l.value)

@@ -21,7 +21,7 @@ export class ConversationThreadService {
     userId: string,
     userMessage: string,
     aiResponse: string,
-    conversationHistory: Array<{ role: string; content: string }>
+    _conversationHistory: Array<{ role: string; content: string }>
   ): Promise<void> {
     const detectedTopics = this.detectTopics(userMessage, aiResponse);
 
@@ -32,7 +32,7 @@ export class ConversationThreadService {
     await this.markDormantThreads(userId);
   }
 
-  private static detectTopics(userMessage: string, aiResponse: string): string[] {
+  private static detectTopics(userMessage: string, _aiResponse: string): string[] {
     const topics: string[] = [];
     const lowerMessage = userMessage.toLowerCase();
 

@@ -33,11 +33,6 @@ export interface UserProfileUpdate {
   profile_completed?: boolean;
 }
 
-const USER_LEVEL_FIELDS = [
-  'name', 'birthday', 'gender', 'favorite_color', 'zodiac_sign',
-  'music_genre', 'hobbies', 'sports', 'news_categories', 'political_leaning'
-] as const;
-
 class UserProfileService {
   async getCurrentProfile(): Promise<UserProfile | null> {
     const { data: { user } } = await supabase.auth.getUser();

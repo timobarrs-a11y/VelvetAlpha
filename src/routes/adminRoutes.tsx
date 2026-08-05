@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { RoleGuard } from '../components/RoleGuard';
+import type { UserRole } from '../services/roleService';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 
 const PromptDebuggerPage = lazy(() => import('../pages/PromptDebuggerPage').then(m => ({ default: m.PromptDebuggerPage })));
@@ -12,7 +13,7 @@ const SemanticMemoryDebugPage = lazy(() => import('../pages/SemanticMemoryDebugP
 const MonitoringDashboardPage = lazy(() => import('../pages/MonitoringDashboardPage').then(m => ({ default: m.MonitoringDashboardPage })));
 const ResponseQualityPage = lazy(() => import('../pages/ResponseQualityPage').then(m => ({ default: m.ResponseQualityPage })));
 
-function admin(role: string, el: React.ReactNode) {
+function admin(role: UserRole | 'manager_or_above', el: React.ReactNode) {
   return (
     <ProtectedRoute>
       <RoleGuard requiredRole={role}>

@@ -13,7 +13,7 @@ export function CreateCompanionAvatarPage() {
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV2>(DEFAULT_FEMALE_AVATAR_V2);
   const [saving, setSaving] = useState(false);
   const [companionName, setCompanionName] = useState('');
-  const [companionGender, setCompanionGender] = useState<'male' | 'female'>('female');
+  const [, setCompanionGender] = useState<'male' | 'female'>('female');
   const [showReveal, setShowReveal] = useState(false);
   const pendingRoute = useRef<string | null>(null);
 

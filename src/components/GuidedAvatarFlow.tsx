@@ -78,11 +78,11 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
         {(['male', 'female'] as Gender[]).map(g => (
           <button key={g}
             onClick={() => update({
+              ...(g === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2),
               gender: g,
               hairStyle: g === 'male' ? 'short' : 'sleek',
               facialHair: 'none',
               eyelashes: 'none',
-              ...(g === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2),
             })}
             className={`py-2 rounded-lg text-sm font-semibold transition-all border ${
               config.gender === g

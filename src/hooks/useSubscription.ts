@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../shared/supabase/client';
-import { SubscriptionTier } from '../types/subscription';
+
 import { MessageTrackingInfo, getMessageTrackingInfo } from '../services/messageTrackingService';
 
 export function useSubscription() {

@@ -9,7 +9,6 @@ import {
 import {
   localExplorerService,
   LocalExplorerConversation,
-  LocalExplorerMessage,
   LocalCalendarEvent,
   LocalMeta,
   UserLocation,

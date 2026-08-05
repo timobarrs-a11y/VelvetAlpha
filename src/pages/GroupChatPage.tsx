@@ -73,7 +73,7 @@ export function GroupChatPage() {
   const [userName, setUserName] = useState('');
   const [userAvatarConfig, setUserAvatarConfig] = useState<AvatarConfig | null>(null);
   const [showTopicMenu, setShowTopicMenu] = useState(false);
-  const [isNewGroup, setIsNewGroup] = useState(false);
+  const [, setIsNewGroup] = useState(false);
   const [autoSpinCount, setAutoSpinCount] = useState<3 | 5 | 10>(5);
   const [autoSpinRemaining, setAutoSpinRemaining] = useState(0);
   const [isAutoSpinning, setIsAutoSpinning] = useState(false);

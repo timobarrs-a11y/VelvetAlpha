@@ -239,7 +239,7 @@ function ListArticleCard({ article, onClick, seen }: { article: NewsArticle; onC
   );
 }
 
-export function DailyFeedPage({ onBack, initialTab }: { onBack?: () => void; initialTab?: 'news' | 'video' } = {}) {
+export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: () => void; initialTab?: 'news' | 'video' } = {}) {
   const navigate = useNavigate();
   const goBack = () => { if (onBack) { onBack(); } else { navigate('/lobby'); } };
   const [loading, setLoading] = useState(true);

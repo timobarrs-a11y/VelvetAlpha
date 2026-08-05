@@ -447,7 +447,7 @@ export function ButtonHoverCanvas({ hoverStyle, particleColors, previewStyle }: 
   function drawAurora(
     ctx: CanvasRenderingContext2D,
     rect: DOMRect,
-    cx: number, cy: number,
+    _cx: number, cy: number,
     elapsed: number,
   ) {
     const chargeRamp = Math.min(1, elapsed / 0.8);
@@ -497,7 +497,7 @@ export function ButtonHoverCanvas({ hoverStyle, particleColors, previewStyle }: 
     rect: DOMRect,
     cx: number, cy: number,
     now: number,
-    colors: string[],
+    _colors: string[],
   ) {
     const elapsed    = (now - hoverStartRef.current) / 1000;
     const chargeRamp = Math.min(1, elapsed / 0.6);
@@ -659,7 +659,7 @@ export function ButtonHoverCanvas({ hoverStyle, particleColors, previewStyle }: 
   function drawEmber(
     ctx: CanvasRenderingContext2D,
     rect: DOMRect,
-    cx: number, cy: number,
+    cx: number, _cy: number,
     now: number,
     elapsed: number,
   ) {

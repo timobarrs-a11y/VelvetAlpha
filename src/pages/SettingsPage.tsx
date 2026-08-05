@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Gauge, Users, MessageSquareWarning } from 'lucide-react';
+import { ArrowLeft, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Users, MessageSquareWarning } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { gdprService } from '../services/gdprService';
 import { onboardingService } from '../services/onboardingService';
 import { getCompanions } from '../services/companionService';
 import { getUserExperts, deleteUserExpert, UserExpert } from '../services/expertService';
-import { getExpertById, getCuratedExperts, ExpertConfig } from '../config/signatureExperts';
+import { getExpertById } from '../config/signatureExperts';
 import { useRole } from '../hooks/useRole';
 
 type Tab = 'notifications' | 'privacy' | 'appearance' | 'experts' | 'tour' | 'security' | 'data';
@@ -51,10 +51,8 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -207,7 +205,6 @@ export function SettingsPage() {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       setPwMessage({ type: 'success', text: 'Password updated successfully.' });
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (e: any) {

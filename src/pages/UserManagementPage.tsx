@@ -12,13 +12,9 @@ import {
   Users,
   AlertTriangle,
   RefreshCw,
-  Mail,
   Calendar,
-  MessageCircle,
-  Filter,
   Download,
   Eye,
-  Ban,
   CheckCircle,
 } from 'lucide-react';
 import { roleService, UserRole, UserWithRole } from '../services/roleService';
@@ -31,7 +27,6 @@ type SortField = 'name' | 'created_at' | 'subscription_tier' | 'user_role';
 interface UserDetail extends UserWithRole {
   message_count?: number;
   last_active?: string;
-  email?: string;
 }
 
 const ROLE_CONFIG: Record<UserRole, { label: string; color: string; bg: string; border: string; icon: typeof Shield }> = {
@@ -543,7 +538,6 @@ function SelectDropdown({
   value,
   options,
   onChange,
-  placeholder,
 }: {
   value: string;
   options: { value: string; label: string }[];
