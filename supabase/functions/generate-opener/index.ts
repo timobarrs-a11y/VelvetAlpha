@@ -48,6 +48,19 @@ const MENTOR_TASK_LINES: Record<OpenerSituation, string> = {
     "The user is back after a break. Welcome them back professionally and ask what they want to focus on. No guilt-trip, no romance.",
 };
 
+const CORRESPONDENT_TASK_LINES: Record<OpenerSituation, string> = {
+  first_match:
+    "This is the first dispatch from a personal correspondent. Introduce your beat and immediately deliver a sharp, topical take. It should feel like a mini-column, not a dating-app opener. No romance, no pet names, no social small talk.",
+  daily_morning:
+    "Morning correspondent dispatch. Send a crisp angle on the beat that gives the user something to think about today. No romance, no pet names, no how-did-you-sleep energy.",
+  daily_evening:
+    "Evening correspondent dispatch. Send a concise recap or provocative angle from the beat. No romance, no pet names, no how-was-your-day small talk.",
+  daily_night:
+    "Late dispatch from the correspondent desk. Keep it thoughtful and topical, not intimate. No romance, no pet names, no 'babe', no 'what is keeping you up'.",
+  reconnect:
+    "The reader is back after a gap. Welcome them back to the dispatch and re-enter with a fresh angle from the beat. No guilt-trip, no romance, no pet names.",
+};
+
 function buildHistoryBlock(
   recent: Array<{ role: string; content: string }>
 ): string {

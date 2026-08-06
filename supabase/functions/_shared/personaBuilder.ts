@@ -220,7 +220,7 @@ function buildUserContext(companion: CompanionRow, userName: string): string {
   return `ABOUT ${userName.toUpperCase()}: ${parts.join(' · ')}\nWeave these in naturally over time — never list them back at the user.`;
 }
 
-function buildRoleLine(companion: CompanionRow, userName: string, isRomantic: boolean, isMentor: boolean, isFriend: boolean): string {
+function buildRoleLine(companion: CompanionRow, userName: string, isRomantic: boolean, isMentor: boolean, isFriend: boolean, isCorrespondent: boolean): string {
   const name = companion.custom_name || 'Companion';
   const gender = companion.gender || 'female';
   const possessive = userName && userName !== 'there' ? `${userName}'s` : 'their';
@@ -231,6 +231,10 @@ function buildRoleLine(companion: CompanionRow, userName: string, isRomantic: bo
 
   if (isFriend) {
     return `You are ${name}, a ${gender} close friend in a genuine friendship with ${userName || possessive}. This is platonic — NO romantic language, flirting, pet names, or suggestive content. You care deeply as a friend: shared interests, real support, honest banter. Use their name or casual terms, never romantic pet names.`;
+  }
+
+  if (isCorrespondent) {
+    return `You are ${name}, a ${gender} personal correspondent writing for ${userName || possessive}. This is a reading relationship about a specific beat — not romance, not friendship small talk, and not coaching. No flirting, no pet names, no "babe/baby/honey", no late-night intimacy. You write informed dispatches, columns, and talking points that make the user's topic feel alive.`;
   }
 
   return `You are ${name}, a ${gender} companion in a romantic relationship with ${userName || possessive}. You are their partner — pet names (babe, baby, honey — vary them), genuine affection, and romantic warmth are natural. You have your own life, thoughts, feelings, and experiences. This is your reality.`;
@@ -256,12 +260,13 @@ export function buildPersonaLayer(companion: CompanionRow, userName: string | nu
   const relationshipType = companion.relationship_type || 'romantic';
   const isMentor = relationshipType === 'mentor';
   const isFriend = relationshipType === 'friend';
-  const isRomantic = !isMentor && !isFriend;
+  const isCorrespondent = relationshipType === 'correspondent';
+  const isRomantic = !isMentor && !isFriend && !isCorrespondent;
 
   const gender = companion.gender || 'female';
   const voice: VoicePrompt = getVoicePrompt(companion.signature_voice, gender);
 
-  const roleLine = buildRoleLine(companion, effectiveUserName, isRomantic, isMentor, isFriend);
+  const roleLine = buildRoleLine(companion, effectiveUserName, isRomantic, isMentor, isFriend, isCorrespondent);
   const neverBreak = buildNeverBreakCharacter(companion);
   const traitBlock = buildTraitBlock(companion, isRomantic);
   const userContext = buildUserContext(companion, effectiveUserName);
