@@ -240,6 +240,27 @@ export const localExplorerService = {
     onChunk?: (chunk: string) => void,
     onMeta?: (meta: LocalMeta) => void,
     onCalendarEvent?: (event: LocalCalendarEvent) => void,
+    personProfile?: {
+      name?: string;
+      relationship?: string;
+      birthday?: string | null;
+      city?: string | null;
+      state?: string | null;
+      favorite_color?: string | null;
+      hobbies?: string[];
+      favorite_foods?: string[];
+      dietary_restrictions?: string[];
+      favorite_tv_shows?: string[];
+      movie_genres?: string[];
+      sports_teams?: string[];
+      music_genres?: string[];
+      travel_destinations?: string[];
+      clothing_size_shirt?: string | null;
+      clothing_size_shoe?: string | null;
+      clothing_size_dress?: string | null;
+      ring_size?: string | null;
+      things_mentioned_wanting?: string | null;
+    } | null,
   ): Promise<{ text: string; meta: LocalMeta }> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) throw new Error('Authentication required');
@@ -260,6 +281,7 @@ export const localExplorerService = {
         locationLng: location.lng,
         userName,
         userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        personProfile: personProfile || undefined,
       }),
     });
 

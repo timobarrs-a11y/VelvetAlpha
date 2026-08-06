@@ -498,11 +498,16 @@ Deno.serve(async (req: Request) => {
       locationLng,
       userName,
       userTimezone,
+      personProfile,
     } = body;
 
     if (!message) throw new Error("Missing required field: message");
 
-    const resolvedCity = locationCity || profile?.location_city || "your area";
+    // If shopping/searching for a real person, use their city as the search area
+    const personCity = personProfile?.city && personProfile?.state
+      ? `${personProfile.city}, ${personProfile.state}`
+      : personProfile?.city || null;
+    const resolvedCity = personCity || locationCity || profile?.location_city || "your area";
     const resolvedTimezone = userTimezone || profile?.timezone || "America/New_York";
 
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
@@ -611,10 +616,40 @@ Deno.serve(async (req: Request) => {
       ? ` (coordinates: ${locationLat.toFixed(4)}, ${locationLng.toFixed(4)})`
       : "";
 
+    // Build person context block if searching for a real person
+    let personContext = "";
+    if (personProfile && personProfile.name) {
+      const parts: string[] = [`\n=== SEARCHING FOR A REAL PERSON ===`];
+      parts.push(`The user is searching for things their ${personProfile.relationship || "friend"} ${personProfile.name} would love.`);
+      if (personCity) parts.push(`${personProfile.name} lives in: ${personCity}.`);
+      if (personProfile.birthday) parts.push(`Birthday: ${personProfile.birthday}.`);
+      if (personProfile.favorite_color) parts.push(`Favorite color: ${personProfile.favorite_color}.`);
+      if (personProfile.hobbies?.length) parts.push(`Hobbies & interests: ${personProfile.hobbies.join(", ")}.`);
+      if (personProfile.favorite_foods?.length) parts.push(`Favorite foods: ${personProfile.favorite_foods.join(", ")}.`);
+      if (personProfile.dietary_restrictions?.length) parts.push(`Dietary restrictions: ${personProfile.dietary_restrictions.join(", ")} — NEVER recommend food that violates these.`);
+      if (personProfile.favorite_tv_shows?.length) parts.push(`TV shows they love: ${personProfile.favorite_tv_shows.join(", ")}.`);
+      if (personProfile.movie_genres?.length) parts.push(`Movie genres: ${personProfile.movie_genres.join(", ")}.`);
+      if (personProfile.sports_teams?.length) parts.push(`Sports teams/interests: ${personProfile.sports_teams.join(", ")}. Search for game tickets, watch parties, and sports experiences.`);
+      if (personProfile.music_genres?.length) parts.push(`Music taste: ${personProfile.music_genres.join(", ")}. Search for concerts and festivals.`);
+      if (personProfile.travel_destinations?.length) parts.push(`Dream travel destinations: ${personProfile.travel_destinations.join(", ")}. Search for flight deals and travel ideas.`);
+      if (personProfile.things_mentioned_wanting) parts.push(`Things they have mentioned wanting: ${personProfile.things_mentioned_wanting}.`);
+      if (personProfile.clothing_size_shirt || personProfile.clothing_size_shoe || personProfile.clothing_size_dress || personProfile.ring_size) {
+        const sizes: string[] = [];
+        if (personProfile.clothing_size_shirt) sizes.push(`Shirt: ${personProfile.clothing_size_shirt}`);
+        if (personProfile.clothing_size_shoe) sizes.push(`Shoe: ${personProfile.clothing_size_shoe}`);
+        if (personProfile.clothing_size_dress) sizes.push(`Dress: ${personProfile.clothing_size_dress}`);
+        if (personProfile.ring_size) sizes.push(`Ring: ${personProfile.ring_size}`);
+        parts.push(`Clothing sizes — ${sizes.join(", ")}.`);
+      }
+      parts.push(`\nCRITICAL: Every recommendation must be tailored to ${personProfile.name}'s interests and location. Search near ${personCity || resolvedCity}. If they like basketball and live in Orlando, search for Orlando Magic tickets. If they love Italian food, find top-rated Italian restaurants near them. Frame gift ideas and experiences around what you know about them.`);
+      parts.push(`=== END PERSON CONTEXT ===\n`);
+      personContext = parts.join("\n") + "\n";
+    }
+
     const systemPrompt = `${LOCAL_EXPLORER_SYSTEM}
 
 ${nameRef}The user's home city is: ${resolvedCity}${coordsNote}.
-The current search area is: ${searchAreaLabel}.
+${personContext}The current search area is: ${searchAreaLabel}.
 
 === EXACT DATE CONTEXT — USE THESE DATES, DO NOT GUESS ===
 Today: ${dateCtx.todayFormatted} (${dateCtx.dayOfWeek})

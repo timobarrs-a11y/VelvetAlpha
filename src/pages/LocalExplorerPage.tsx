@@ -5,6 +5,7 @@ import {
   MapPin, Plus, Trash2, MessageSquare, ArrowLeft, Clock, X,
   Navigation, Search, Calendar, ExternalLink, Loader2,
   Utensils, Ticket, Compass, PanelLeft, Heart, Sparkles, Star,
+  Users, Gift,
 } from 'lucide-react';
 import {
   localExplorerService,
@@ -16,6 +17,8 @@ import {
 } from '../services/localExplorerService';
 import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
 import { useAuth } from '../auth/AuthProvider';
+import { PeoplePanel } from '../components/PeoplePanel';
+import type { RealPerson } from '../services/realPeopleService';
 
 function getWeekendLabel(): string {
   const now = new Date();
@@ -52,6 +55,17 @@ function buildChips() {
 }
 
 const QUICK_CHIPS = buildChips();
+
+function PERSON_CHIPS(person: RealPerson) {
+  const chips = [
+    { label: `Gift ideas for my ${person.relationship} ${person.name} based on their interests`, display: 'Gift ideas', icon: <Gift className="w-3 h-3" /> },
+    { label: `Events near ${person.city || 'me'} this week that ${person.name} would love`, display: 'Events they would love', icon: <Ticket className="w-3 h-3" /> },
+    { label: `Date ideas near ${person.city || 'me'} for me and ${person.name}`, display: 'Date ideas', icon: <Heart className="w-3 h-3" /> },
+    { label: `Best restaurants near ${person.city || 'me'} for someone who loves ${person.favorite_foods?.[0] || 'good food'}`, display: 'Restaurants they would like', icon: <Utensils className="w-3 h-3" /> },
+    { label: `Concerts and live music near ${person.city || 'me'} featuring ${person.music_genres?.[0] || 'music they like'}`, display: 'Concerts for them', icon: <Sparkles className="w-3 h-3" /> },
+  ];
+  return chips;
+}
 
 function LocationBadge({
   location,
@@ -480,12 +494,16 @@ function ExplorerCanvas({
   voice,
   onBack,
   onOpenSidebar,
+  selectedPerson,
+  onClearPerson,
 }: {
   conversationId: string;
   location: UserLocation;
   voice: NaviVoice | null;
   onBack: () => void;
   onOpenSidebar: () => void;
+  selectedPerson: RealPerson | null;
+  onClearPerson: () => void;
 }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -564,6 +582,7 @@ function ExplorerCanvas({
           setCalendarToast(calEvent);
           setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, calendarEvent: calEvent } : m));
         },
+        selectedPerson,
       );
 
       void result;
@@ -594,7 +613,7 @@ function ExplorerCanvas({
       setIsSending(false);
       inputRef.current?.focus();
     }
-  }, [input, isSending, messages, conversationId, location, user, titleSet]);
+  }, [input, isSending, messages, conversationId, location, user, titleSet, selectedPerson]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -644,6 +663,35 @@ function ExplorerCanvas({
         </div>
       </div>
 
+      {/* Person context bar */}
+      {selectedPerson && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/8 border-b border-emerald-500/15 flex-shrink-0">
+          <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
+            selectedPerson.avatar_color === 'emerald' ? 'bg-emerald-500/20' :
+            selectedPerson.avatar_color === 'sky' ? 'bg-sky-500/20' :
+            selectedPerson.avatar_color === 'rose' ? 'bg-rose-500/20' :
+            selectedPerson.avatar_color === 'amber' ? 'bg-amber-500/20' :
+            'bg-emerald-500/20'
+          }`}>
+            <Heart className="w-3 h-3 text-emerald-300" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-emerald-200/90 font-medium truncate">
+              Shopping for {selectedPerson.name}
+            </p>
+            <p className="text-[10px] text-emerald-300/50 truncate capitalize">
+              {selectedPerson.relationship}{selectedPerson.city ? ` \u00b7 ${selectedPerson.city}${selectedPerson.state ? ', ' + selectedPerson.state : ''}` : ''}
+            </p>
+          </div>
+          <button
+            onClick={onClearPerson}
+            className="p-1 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white/70 flex-shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {isLoadingMessages ? (
@@ -660,7 +708,7 @@ function ExplorerCanvas({
               Date night ideas, local events, hidden gems, food spots — all in one place. No more bouncing between apps.
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
-              {QUICK_CHIPS.map(chip => (
+              {(selectedPerson ? PERSON_CHIPS(selectedPerson) : QUICK_CHIPS).map(chip => (
                 <button
                   key={chip.label}
                   onClick={() => handleSend(chip.label)}
@@ -683,7 +731,7 @@ function ExplorerCanvas({
       {/* Quick chips when there are messages */}
       {messages.length > 0 && !isSending && (
         <div className="px-4 pb-2 flex gap-2 overflow-x-auto scrollbar-none flex-shrink-0">
-          {QUICK_CHIPS.slice(0, 4).map(chip => (
+          {(selectedPerson ? PERSON_CHIPS(selectedPerson) : QUICK_CHIPS).slice(0, 5).map(chip => (
             <button
               key={chip.label}
               onClick={() => handleSend(chip.label)}
@@ -704,7 +752,7 @@ function ExplorerCanvas({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Ask about ${currentAreaLabel}…`}
+            placeholder={selectedPerson ? `Find something for ${selectedPerson.name}…` : `Ask about ${currentAreaLabel}…`}
             rows={1}
             className="flex-1 bg-white/5 border border-white/10 focus:border-white/22 rounded-2xl px-4 py-3 text-white text-sm placeholder:text-white/25 focus:outline-none transition-colors resize-none leading-relaxed"
             style={{ minHeight: '44px', maxHeight: '120px' }}
@@ -747,6 +795,8 @@ export function LocalExplorerPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState<'chats' | 'people'>('chats');
+  const [selectedPerson, setSelectedPerson] = useState<RealPerson | null>(null);
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
@@ -1036,8 +1086,42 @@ export function LocalExplorerPage() {
                 </div>
               )}
 
+              {/* Tab buttons */}
+              <div className="px-3 pt-2 flex-shrink-0">
+                <div className="flex gap-1 bg-white/4 rounded-xl p-1 border border-white/6">
+                  <button
+                    onClick={() => setSidebarTab('chats')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      sidebarTab === 'chats'
+                        ? 'bg-white/10 text-white'
+                        : 'text-white/40 hover:text-white/70'
+                    }`}
+                  >
+                    <Compass className="w-3.5 h-3.5" />
+                    Searches
+                  </button>
+                  <button
+                    onClick={() => setSidebarTab('people')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      sidebarTab === 'people'
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : 'text-white/40 hover:text-white/70'
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    People
+                  </button>
+                </div>
+              </div>
+
               <div className="flex-1 overflow-y-auto px-2 pb-4">
-                {conversations.length === 0 ? (
+                {sidebarTab === 'people' ? (
+                  <PeoplePanel
+                    onSelectPerson={(p) => { setSelectedPerson(p); if (p) setSidebarOpen(false); }}
+                    selectedPersonId={selectedPerson?.id ?? null}
+                    onNavigateToProfile={(id) => navigate(`/person/${id}`)}
+                  />
+                ) : conversations.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
                     <Compass className="w-8 h-8 text-white/15 mb-3" />
                     <p className="text-white/35 text-sm">No searches yet</p>
@@ -1109,6 +1193,8 @@ export function LocalExplorerPage() {
               voice={activeVoice}
               onBack={() => navigate('/lobby')}
               onOpenSidebar={() => setSidebarOpen(true)}
+              selectedPerson={selectedPerson}
+              onClearPerson={() => setSelectedPerson(null)}
             />
           ) : (
             <div className="hidden sm:flex flex-col items-center justify-center h-full text-center px-8">

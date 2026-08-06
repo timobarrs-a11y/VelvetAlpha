@@ -11,6 +11,7 @@ const TermsOfServicePage = lazy(() => import('../pages/TermsOfServicePage'));
 const PrivacyPolicyPage = lazy(() => import('../pages/PrivacyPolicyPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'));
+const PersonSurveyPage = lazy(() => import('../pages/PersonSurveyPage'));
 
 function S(el: React.ReactNode) {
   return <Suspense fallback={<RouteFallback />}>{el}</Suspense>;
@@ -26,4 +27,5 @@ export const publicRoutes = [
   <Route key="terms" path="/terms" element={S(<TermsOfServicePage />)} />,
   <Route key="privacy" path="/privacy" element={S(<PrivacyPolicyPage />)} />,
   <Route key="about" path="/about" element={S(<AboutPage />)} />,
+  <Route key="person-survey" path="/survey/:token" element={S(<PersonSurveyPage />)} />,
 ];
