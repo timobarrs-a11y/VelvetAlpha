@@ -9,9 +9,12 @@ import {
   Calendar,
   Check,
   Sparkles,
+  Loader,
+  Gift,
 } from 'lucide-react';
 import { supabase } from '../../shared/supabase/client';
-import { calendarService, UserEvent, EventSuggestion } from '../../services/calendarService';
+import { calendarService, UserEvent, EventSuggestion, GiftSuggestion } from '../../services/calendarService';
+import { getCompanions, CompanionWithLastMessage } from '../../services/companionService';
 import { CalendarGrid } from '../calendar/CalendarGrid';
 import { EventCard } from '../calendar/EventCard';
 import { EventModal } from '../calendar/EventModal';
@@ -37,6 +40,10 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
   const [editingEvent, setEditingEvent] = useState<UserEvent | null>(null);
   const [userId, setUserId] = useState<string>('');
   const [view, setView] = useState<'calendar' | 'upcoming'>('calendar');
+  const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
+  const [selectedCompanionId, setSelectedCompanionId] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [gifts, setGifts] = useState<GiftSuggestion[]>([]);
 
   useEffect(() => {
     loadData();
@@ -55,13 +62,18 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
     if (!user) return;
     setUserId(user.id);
 
-    const [upcoming, sug] = await Promise.all([
+    const [upcoming, sug, companionList, giftList] = await Promise.all([
       calendarService.getUpcomingEvents(user.id, 14),
       calendarService.getEventSuggestions(user.id),
+      getCompanions(user.id),
+      calendarService.getGiftSuggestions(user.id),
     ]);
 
     setUpcomingEvents(upcoming);
     setSuggestions(sug);
+    setCompanions(companionList);
+    if (companionList.length > 0) setSelectedCompanionId(companionList[0].id);
+    setGifts(giftList);
     setIsLoading(false);
   };
 
@@ -110,6 +122,26 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
   const handleDismissSuggestion = async (suggestionId: string) => {
     await calendarService.dismissEventSuggestion(suggestionId);
     setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+  };
+
+  const handleGenerateSuggestions = async () => {
+    if (!userId || !selectedCompanionId) return;
+    setIsGenerating(true);
+    try {
+      const result = await calendarService.generateEventSuggestions(userId, selectedCompanionId);
+      if (result && result.suggested >= 0) {
+        const fresh = await calendarService.getEventSuggestions(userId);
+        setSuggestions(fresh);
+      }
+    } catch {
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGiftReaction = async (giftId: string, reaction: 'loved_it' | 'considering' | 'not_interested' | 'purchased') => {
+    await calendarService.updateGiftReaction(giftId, reaction);
+    setGifts(prev => prev.filter(g => g.id !== giftId));
   };
 
   const selectedDateEvents = selectedDate
@@ -307,12 +339,37 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
                     </div>
                   )}
 
-                  {suggestions.length > 0 && (
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                        <h3 className="text-xs font-bold text-white">AI Suggestions</h3>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <h3 className="text-xs font-bold text-white">AI Suggestions</h3>
+                    </div>
+                    {companions.length > 0 && (
+                      <div className="mb-3 space-y-2">
+                        <select
+                          value={selectedCompanionId}
+                          onChange={(e) => setSelectedCompanionId(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-500/50"
+                        >
+                          {companions.map(c => (
+                            <option key={c.id} value={c.id}>{c.custom_name}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={handleGenerateSuggestions}
+                          disabled={isGenerating || !selectedCompanionId}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-all"
+                        >
+                          {isGenerating ? (
+                            <Loader className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-3.5 h-3.5" />
+                          )}
+                          Generate Event Ideas
+                        </button>
                       </div>
+                    )}
+                    {suggestions.length > 0 ? (
                       <div className="space-y-2">
                         {suggestions.slice(0, 3).map(sug => (
                           <div
@@ -340,8 +397,57 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
                           </div>
                         ))}
                       </div>
+                    ) : (
+                      <p className="text-[10px] text-gray-500 text-center py-3">
+                        No suggestions yet. Generate some from your conversations.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Gift className="w-3.5 h-3.5 text-rose-400" />
+                      <h3 className="text-xs font-bold text-white">Gift Ideas</h3>
                     </div>
-                  )}
+                    {gifts.length > 0 ? (
+                      <div className="space-y-2">
+                        {gifts.slice(0, 3).map(gift => (
+                          <div
+                            key={gift.id}
+                            className="bg-rose-500/5 border border-rose-500/15 rounded-xl p-3"
+                          >
+                            <h4 className="text-xs font-semibold text-white mb-1">{gift.gift_idea}</h4>
+                            <p className="text-[10px] text-gray-400 mb-1 line-clamp-2">{gift.reasoning}</p>
+                            <p className="text-[10px] text-gray-500 mb-2">{gift.where_to_buy}</p>
+                            <div className="flex gap-1.5 flex-wrap">
+                              <button
+                                onClick={() => handleGiftReaction(gift.id, 'loved_it')}
+                                className="px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-lg text-[9px] font-medium transition-colors"
+                              >
+                                Love it
+                              </button>
+                              <button
+                                onClick={() => handleGiftReaction(gift.id, 'purchased')}
+                                className="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-lg text-[9px] font-medium transition-colors"
+                              >
+                                Purchased
+                              </button>
+                              <button
+                                onClick={() => handleGiftReaction(gift.id, 'not_interested')}
+                                className="px-2 py-1 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg text-[9px] font-medium transition-colors"
+                              >
+                                No thanks
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-gray-500 text-center py-3">
+                        No gift ideas yet. Generate some from the full calendar page.
+                      </p>
+                    )}
+                  </div>
 
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
                     <h3 className="text-xs font-bold text-white mb-3">Quick Add</h3>

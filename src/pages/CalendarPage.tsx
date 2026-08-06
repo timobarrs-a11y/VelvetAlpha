@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, ChevronLeft, ChevronRight, Loader, Sparkles, Calendar, Check, X, CalendarDays } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowLeft, Plus, ChevronLeft, ChevronRight, Loader, Sparkles, Calendar, Check, X, CalendarDays, Gift, Wand2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
-import { calendarService, UserEvent, EventSuggestion } from '../services/calendarService';
+import { calendarService, UserEvent, EventSuggestion, GiftSuggestion } from '../services/calendarService';
 import { relationshipCalendarService } from '../services/relationshipCalendarService';
-import { getCompanions } from '../services/companionService';
+import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import { EventCard } from '../components/calendar/EventCard';
 import { EventModal } from '../components/calendar/EventModal';
+
+const PRICE_LABELS: Record<GiftSuggestion['price_range'], string> = {
+  budget: 'Budget',
+  moderate: 'Moderate',
+  premium: 'Premium',
+  luxury: 'Luxury',
+};
+
+const GIFT_OCCASIONS = ['Birthday', 'Anniversary', 'Just because', 'Apology', 'Celebration'] as const;
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -28,6 +37,13 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
   const [editingEvent, setEditingEvent] = useState<UserEvent | null>(null);
   const [userId, setUserId] = useState<string>('');
   const [view, setView] = useState<'calendar' | 'upcoming'>('calendar');
+  const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
+  const [selectedCompanionId, setSelectedCompanionId] = useState<string>('');
+  const [isGeneratingEvents, setIsGeneratingEvents] = useState(false);
+  const [isGeneratingGifts, setIsGeneratingGifts] = useState(false);
+  const [gifts, setGifts] = useState<GiftSuggestion[]>([]);
+  const [giftOccasion, setGiftOccasion] = useState<string>(GIFT_OCCASIONS[0]);
+  const [generateMsg, setGenerateMsg] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -43,8 +59,13 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
 
     setUserId(user.id);
 
-    const companions = await getCompanions(user.id);
-    for (const companion of companions) {
+    const companionList = await getCompanions(user.id);
+    setCompanions(companionList);
+    if (companionList.length > 0 && !selectedCompanionId) {
+      setSelectedCompanionId(companionList[0].id);
+    }
+
+    for (const companion of companionList) {
       try {
         await relationshipCalendarService.backfillRelationshipDays(user.id, companion.id);
       } catch (err) {
@@ -52,13 +73,15 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
       }
     }
 
-    const [upcoming, sug] = await Promise.all([
+    const [upcoming, sug, giftList] = await Promise.all([
       calendarService.getUpcomingEvents(user.id, 14),
       calendarService.getEventSuggestions(user.id),
+      calendarService.getGiftSuggestions(user.id),
     ]);
 
     setUpcomingEvents(upcoming);
     setSuggestions(sug);
+    setGifts(giftList);
     setIsLoading(false);
   };
 
@@ -121,6 +144,59 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
   const handleDismissSuggestion = async (suggestionId: string) => {
     await calendarService.dismissEventSuggestion(suggestionId);
     setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+  };
+
+  const handleGenerateEventSuggestions = async () => {
+    if (!userId || !selectedCompanionId) return;
+    setIsGeneratingEvents(true);
+    setGenerateMsg('');
+    try {
+      const result = await calendarService.generateEventSuggestions(userId, selectedCompanionId);
+      if (result && result.suggested > 0) {
+        const fresh = await calendarService.getEventSuggestions(userId);
+        setSuggestions(fresh);
+        setGenerateMsg(`Generated ${result.suggested} new suggestion${result.suggested !== 1 ? 's' : ''}`);
+      } else if (result && result.suggested === 0) {
+        setGenerateMsg('No suggestions generated — try chatting with your companion first so there is context to work with.');
+      } else {
+        setGenerateMsg('Could not generate suggestions right now. Please try again.');
+      }
+    } catch {
+      setGenerateMsg('Could not generate suggestions right now. Please try again.');
+    } finally {
+      setIsGeneratingEvents(false);
+      setTimeout(() => setGenerateMsg(''), 5000);
+    }
+  };
+
+  const handleGenerateGiftSuggestions = async () => {
+    if (!userId || !selectedCompanionId) return;
+    setIsGeneratingGifts(true);
+    setGenerateMsg('');
+    try {
+      const companion = companions.find(c => c.id === selectedCompanionId);
+      const recipient = companion?.custom_name || 'my partner';
+      const result = await calendarService.generateGiftSuggestions(userId, selectedCompanionId, recipient, giftOccasion);
+      if (result && result.suggested > 0) {
+        const fresh = await calendarService.getGiftSuggestions(userId);
+        setGifts(fresh);
+        setGenerateMsg(`Generated ${result.suggested} new gift idea${result.suggested !== 1 ? 's' : ''}`);
+      } else if (result && result.suggested === 0) {
+        setGenerateMsg('No gift ideas generated — try chatting with your companion first so there is context to work with.');
+      } else {
+        setGenerateMsg('Could not generate gift ideas right now. Please try again.');
+      }
+    } catch {
+      setGenerateMsg('Could not generate gift ideas right now. Please try again.');
+    } finally {
+      setIsGeneratingGifts(false);
+      setTimeout(() => setGenerateMsg(''), 5000);
+    }
+  };
+
+  const handleGiftReaction = async (giftId: string, reaction: 'loved_it' | 'considering' | 'not_interested' | 'purchased') => {
+    await calendarService.updateGiftReaction(giftId, reaction);
+    setGifts(prev => prev.filter(g => g.id !== giftId));
   };
 
   const selectedDateEvents = selectedDate
@@ -317,12 +393,49 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
           </div>
 
           <div className="space-y-5">
-            {suggestions.length > 0 && (
-              <div className="bg-gray-800/40 border border-gray-700/50 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <h3 className="text-sm font-bold text-white">AI Suggestions</h3>
+            <div className="bg-gray-800/40 border border-gray-700/50 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Wand2 className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-white">AI Suggestions</h3>
+              </div>
+              {companions.length > 0 && (
+                <div className="mb-4 space-y-3">
+                  <div>
+                    <label className="text-[11px] text-gray-500 uppercase tracking-wider block mb-1">Companion</label>
+                    <select
+                      value={selectedCompanionId}
+                      onChange={(e) => setSelectedCompanionId(e.target.value)}
+                      className="w-full bg-gray-700/50 border border-gray-600/50 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500/50"
+                    >
+                      {companions.map(c => (
+                        <option key={c.id} value={c.id}>{c.custom_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleGenerateEventSuggestions}
+                      disabled={isGeneratingEvents || !selectedCompanionId}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-all shadow-lg"
+                    >
+                      {isGeneratingEvents ? (
+                        <Loader className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5" />
+                      )}
+                      Generate Event Ideas
+                    </button>
+                  </div>
                 </div>
+              )}
+
+              {generateMsg && (
+                <div className="mb-3 px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg text-[11px] text-blue-300">
+                  {generateMsg}
+                </div>
+              )}
+
+              {suggestions.length > 0 ? (
                 <div className="space-y-3">
                   {suggestions.slice(0, 5).map(sug => (
                     <motion.div
@@ -357,8 +470,102 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
                     </motion.div>
                   ))}
                 </div>
+              ) : (
+                <p className="text-[11px] text-gray-500 text-center py-4">
+                  No suggestions yet. Generate some based on your recent conversations.
+                </p>
+              )}
+            </div>
+
+            <div className="bg-gray-800/40 border border-gray-700/50 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Gift className="w-4 h-4 text-rose-400" />
+                <h3 className="text-sm font-bold text-white">Gift Ideas</h3>
               </div>
-            )}
+              {companions.length > 0 && (
+                <div className="mb-4 space-y-3">
+                  <div>
+                    <label className="text-[11px] text-gray-500 uppercase tracking-wider block mb-1">Occasion</label>
+                    <select
+                      value={giftOccasion}
+                      onChange={(e) => setGiftOccasion(e.target.value)}
+                      className="w-full bg-gray-700/50 border border-gray-600/50 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-rose-500/50"
+                    >
+                      {GIFT_OCCASIONS.map(o => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleGenerateGiftSuggestions}
+                    disabled={isGeneratingGifts || !selectedCompanionId}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-all shadow-lg"
+                  >
+                    {isGeneratingGifts ? (
+                      <Loader className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Gift className="w-3.5 h-3.5" />
+                    )}
+                    Generate Gift Ideas
+                  </button>
+                </div>
+              )}
+
+              {gifts.length > 0 ? (
+                <div className="space-y-3">
+                  <AnimatePresence>
+                    {gifts.slice(0, 5).map(gift => (
+                      <motion.div
+                        key={gift.id}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="bg-rose-500/5 border border-rose-500/15 rounded-xl p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h4 className="text-sm font-semibold text-white">{gift.gift_idea}</h4>
+                          <span className="text-[9px] font-bold text-rose-300/70 bg-rose-500/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+                            {PRICE_LABELS[gift.price_range]}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-400 mb-1 line-clamp-2">{gift.reasoning}</p>
+                        <p className="text-[10px] text-gray-500 mb-2">{gift.where_to_buy}</p>
+                        <div className="flex gap-1.5 flex-wrap">
+                          <button
+                            onClick={() => handleGiftReaction(gift.id, 'loved_it')}
+                            className="px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-lg text-[10px] font-medium transition-colors"
+                          >
+                            Love it
+                          </button>
+                          <button
+                            onClick={() => handleGiftReaction(gift.id, 'considering')}
+                            className="px-2 py-1 bg-gray-700/50 hover:bg-gray-700 text-gray-400 rounded-lg text-[10px] font-medium transition-colors"
+                          >
+                            Considering
+                          </button>
+                          <button
+                            onClick={() => handleGiftReaction(gift.id, 'purchased')}
+                            className="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-lg text-[10px] font-medium transition-colors"
+                          >
+                            Purchased
+                          </button>
+                          <button
+                            onClick={() => handleGiftReaction(gift.id, 'not_interested')}
+                            className="px-2 py-1 bg-gray-700/50 hover:bg-gray-700 text-gray-400 rounded-lg text-[10px] font-medium transition-colors"
+                          >
+                            No thanks
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-500 text-center py-4">
+                  No gift ideas yet. Generate some based on your conversations.
+                </p>
+              )}
+            </div>
 
             <div className="bg-gray-800/40 border border-gray-700/50 rounded-2xl p-5">
               <h3 className="text-sm font-bold text-white mb-3">Quick Add</h3>

@@ -62,13 +62,13 @@ export interface GiftSuggestion {
   created_at: string;
 }
 
-async function callEdgeFunction(path: string, body: Record<string, any>): Promise<void> {
+async function callEdgeFunction(path: string, body: Record<string, any>): Promise<{ suggested: number } | null> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) return null;
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    await fetch(`${supabaseUrl}/functions/v1/${path}`, {
+    const response = await fetch(`${supabaseUrl}/functions/v1/${path}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
@@ -76,8 +76,29 @@ async function callEdgeFunction(path: string, body: Record<string, any>): Promis
       },
       body: JSON.stringify(body),
     });
+
+    if (!response.ok) return null;
+    return await response.json();
   } catch (_error) {
+    return null;
   }
+}
+
+async function fetchRecentConversationText(userId: string, companionId: string, limit: number = 30): Promise<string> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('role, content')
+    .eq('user_id', userId)
+    .eq('companion_id', companionId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error || !data || data.length === 0) return '';
+
+  return data
+    .reverse()
+    .map(m => `${m.role === 'user' ? 'User' : 'Companion'}: ${m.content}`)
+    .join('\n');
 }
 
 class CalendarService {
@@ -135,14 +156,17 @@ class CalendarService {
   }
 
   async generateEventSuggestions(
-    _userId: string,
+    userId: string,
     companionId: string,
-    recentConversations: string
-  ): Promise<void> {
-    await callEdgeFunction('suggest-events-gifts', {
+    recentConversations?: string
+  ): Promise<{ suggested: number } | null> {
+    const conversationText = recentConversations ?? await fetchRecentConversationText(userId, companionId);
+    if (!conversationText.trim()) return { suggested: 0 };
+
+    return callEdgeFunction('suggest-events-gifts', {
       type: 'events',
       companionId,
-      recentConversations,
+      recentConversations: conversationText,
     });
   }
 
@@ -238,18 +262,21 @@ class CalendarService {
   }
 
   async generateGiftSuggestions(
-    _userId: string,
+    userId: string,
     companionId: string,
     recipient: string,
     occasion: string,
-    conversationContext: string
-  ): Promise<void> {
-    await callEdgeFunction('suggest-events-gifts', {
+    conversationContext?: string
+  ): Promise<{ suggested: number } | null> {
+    const contextText = conversationContext ?? await fetchRecentConversationText(userId, companionId);
+    if (!contextText.trim()) return { suggested: 0 };
+
+    return callEdgeFunction('suggest-events-gifts', {
       type: 'gifts',
       companionId,
       recipient,
       occasion,
-      conversationContext,
+      conversationContext: contextText,
     });
   }
 
