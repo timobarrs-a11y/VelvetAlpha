@@ -55,7 +55,7 @@ const FEATURES = [
     icon: Gamepad2,
     title: 'The Arcade',
     tag: 'Play with your companion',
-    description: 'Checkers, Stellar Pursuit, Ocean Explorer, Fox Runner, Slime Soccer, and more — a full arcade where your companion competes, cheers, and trash-talks alongside you.',
+    description: 'Checkers, Stellar Pursuit, Slime Soccer, Momentum, and more — a full arcade where your companion competes, cheers, and trash-talks alongside you.',
     accentRgb: '232,121,249',
     iconGlow: 'rgba(232,121,249,0.22)',
     borderColor: 'rgba(232,121,249,0.3)',
@@ -537,91 +537,105 @@ export function WelcomePage() {
           </div>
         </motion.div>
 
-        {/* Section divider */}
-        <motion.div
-          className="mb-10 flex items-center gap-4"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, transparent, rgba(244,63,94,0.3), transparent)' }} />
-          <div className="flex items-center gap-2">
-            <div className="w-px h-3 rounded-full bg-rose-500/60" />
-            <span className="text-[10px] text-gray-500 tracking-[0.28em] uppercase font-semibold">What Awaits</span>
-            <div className="w-px h-3 rounded-full bg-rose-500/60" />
-          </div>
-          <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, transparent, rgba(244,63,94,0.3), transparent)' }} />
-        </motion.div>
-
-        {/* Feature cards */}
-        <div ref={featuresRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-24">
-          {FEATURES.map((feature, i) => {
-            const Icon = feature.icon;
-            const isVisible = visibleFeatures.includes(i);
-            const isHovered = hoveredCard === i;
-            const colOffset = (i % 3) * 18;
-            return (
+        {/* Three Premium Pillars */}
+        {[
+          { title: 'Companionship', subtitle: 'Real connection with AI that remembers', accent: '244,63,94', indices: [4, 5, 9, 3] },
+          { title: 'Life OS', subtitle: 'Your world, organized and understood', accent: '14,165,233', indices: [0, 6, 9, 7] },
+          { title: 'Play & Create', subtitle: 'Express yourself through games and stories', accent: '232,121,249', indices: [2, 1, 8] },
+        ].map((pillar, pillarIdx) => {
+          const pillarFeatures = pillar.indices.map(i => FEATURES[i]).filter(Boolean);
+          return (
+            <div key={pillar.title} className="mb-16">
+              {/* Pillar header */}
               <motion.div
-                key={i}
-                data-index={i}
-                onMouseEnter={() => setHoveredCard(i)}
-                onMouseLeave={() => setHoveredCard(null)}
-                className="rounded-2xl p-5 flex flex-col gap-3 cursor-default relative overflow-hidden"
-                initial={{ opacity: 0, y: 28 + colOffset }}
-                animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 + colOffset }}
-                transition={{ duration: 0.55, delay: (i % 3) * 0.09 }}
-                style={{
-                  background: isHovered
-                    ? `rgba(${feature.accentRgb},0.07)`
-                    : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${isHovered ? feature.borderColor : 'rgba(255,255,255,0.08)'}`,
-                  borderTop: `2px solid rgba(${feature.accentRgb},${isHovered ? 0.65 : 0.28})`,
-                  boxShadow: isHovered ? `0 8px 40px rgba(${feature.accentRgb},0.14), 0 0 0 1px rgba(${feature.accentRgb},0.12)` : 'none',
-                  transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-                  transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(12px)',
-                }}
+                className="mb-6 flex items-center gap-4"
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
               >
-                {/* Inner noise layer */}
                 <div
-                  className="absolute inset-0 pointer-events-none opacity-[0.018]"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-                    backgroundSize: '120px',
-                  }}
+                  className="w-1 h-8 rounded-full"
+                  style={{ background: `rgba(${pillar.accent},0.6)` }}
                 />
-                <div className="flex items-start justify-between gap-2 relative z-10">
-                  {/* Icon — sculptural circle */}
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                    style={{
-                      background: `radial-gradient(circle at 35% 35%, rgba(${feature.accentRgb},0.35), rgba(${feature.accentRgb},0.1))`,
-                      border: `1px solid rgba(${feature.accentRgb},0.3)`,
-                      boxShadow: isHovered ? `0 0 20px rgba(${feature.accentRgb},0.25)` : 'none',
-                      transition: 'box-shadow 0.3s ease',
-                    }}
-                  >
-                    <Icon className="w-5 h-5" style={{ color: `rgb(${feature.accentRgb})` }} />
-                  </div>
-                  <span
-                    className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full whitespace-nowrap"
-                    style={{
-                      color: `rgb(${feature.accentRgb})`,
-                      background: `rgba(${feature.accentRgb},0.1)`,
-                      border: `1px solid rgba(${feature.accentRgb},0.2)`,
-                    }}
-                  >
-                    {feature.tag}
-                  </span>
+                <div>
+                  <h2 className="text-white text-xl font-bold tracking-tight">{pillar.title}</h2>
+                  <p className="text-gray-500 text-xs">{pillar.subtitle}</p>
                 </div>
-                <div className="relative z-10">
-                  <h3 className="text-white font-bold text-base mb-1.5 tracking-tight">{feature.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
-                </div>
+                <div className="flex-1 h-px ml-2" style={{ background: `linear-gradient(to right, rgba(${pillar.accent},0.2), transparent)` }} />
               </motion.div>
-            );
-          })}
-        </div>
+
+              {/* Pillar features */}
+              <div ref={pillarIdx === 0 ? featuresRef : undefined} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {pillarFeatures.map((feature, i) => {
+                  const Icon = feature.icon;
+                  const globalIdx = pillar.indices[i];
+                  const isVisible = visibleFeatures.includes(globalIdx);
+                  const isHovered = hoveredCard === globalIdx;
+                  const colOffset = (i % 3) * 18;
+                  return (
+                    <motion.div
+                      key={feature.title}
+                      data-index={globalIdx}
+                      onMouseEnter={() => setHoveredCard(globalIdx)}
+                      onMouseLeave={() => setHoveredCard(null)}
+                      className="rounded-2xl p-5 flex flex-col gap-3 cursor-default relative overflow-hidden"
+                      initial={{ opacity: 0, y: 28 + colOffset }}
+                      animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 + colOffset }}
+                      transition={{ duration: 0.55, delay: (i % 3) * 0.09 }}
+                      style={{
+                        background: isHovered
+                          ? `rgba(${feature.accentRgb},0.07)`
+                          : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${isHovered ? feature.borderColor : 'rgba(255,255,255,0.08)'}`,
+                        borderTop: `2px solid rgba(${feature.accentRgb},${isHovered ? 0.65 : 0.28})`,
+                        boxShadow: isHovered ? `0 8px 40px rgba(${feature.accentRgb},0.14), 0 0 0 1px rgba(${feature.accentRgb},0.12)` : 'none',
+                        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+                        transition: 'all 0.3s ease',
+                        backdropFilter: 'blur(12px)',
+                      }}
+                    >
+                      <div
+                        className="absolute inset-0 pointer-events-none opacity-[0.018]"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+                          backgroundSize: '120px',
+                        }}
+                      />
+                      <div className="flex items-start justify-between gap-2 relative z-10">
+                        <div
+                          className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                          style={{
+                            background: `radial-gradient(circle at 35% 35%, rgba(${feature.accentRgb},0.35), rgba(${feature.accentRgb},0.1))`,
+                            border: `1px solid rgba(${feature.accentRgb},0.3)`,
+                            boxShadow: isHovered ? `0 0 20px rgba(${feature.accentRgb},0.25)` : 'none',
+                            transition: 'box-shadow 0.3s ease',
+                          }}
+                        >
+                          <Icon className="w-5 h-5" style={{ color: `rgb(${feature.accentRgb})` }} />
+                        </div>
+                        <span
+                          className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full whitespace-nowrap"
+                          style={{
+                            color: `rgb(${feature.accentRgb})`,
+                            background: `rgba(${feature.accentRgb},0.1)`,
+                            border: `1px solid rgba(${feature.accentRgb},0.2)`,
+                          }}
+                        >
+                          {feature.tag}
+                        </span>
+                      </div>
+                      <div className="relative z-10">
+                        <h3 className="text-white font-bold text-base mb-1.5 tracking-tight">{feature.title}</h3>
+                        <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
 
         <motion.p
           className="text-center text-gray-700 text-xs mb-6"

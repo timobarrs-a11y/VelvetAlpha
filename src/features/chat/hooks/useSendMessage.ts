@@ -9,7 +9,7 @@ interface SendMessageInput {
   content: string;
   clientMessageId?: string;
   messageType?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, any>;
   botSource?: string;
 }
 

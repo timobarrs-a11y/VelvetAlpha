@@ -86,7 +86,7 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
   const isCorrespondent = relationshipType === 'correspondent';
   const isRomantic = !isMentor && !isFriend && !isCorrespondent;
 
-  let casualAddress = userName || 'there';
+  const casualAddress = userName || 'there';
 
   return `${INTELLIGENCE_GUARDRAILS}
 

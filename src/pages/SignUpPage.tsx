@@ -160,6 +160,13 @@ export default function SignUpPage() {
             <p className="text-blue-200/70 text-sm">Project the world you want around you</p>
           </div>
 
+          <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl" style={{ background: "rgba(34,197,94,0.04)", border: "1px solid rgba(34,197,94,0.12)" }}>
+            <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-100/70 leading-relaxed">
+              We use your email to create your account and your date of birth to verify you are 18+. We never share your data with third parties. You can export or delete all your data anytime in Settings.
+            </p>
+          </div>
+
           <form onSubmit={handleSignUp} className="space-y-5">
             {error && (
               <div className="rounded-2xl p-4 flex items-center gap-3"

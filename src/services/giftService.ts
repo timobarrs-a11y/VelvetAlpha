@@ -151,12 +151,12 @@ export class GiftService {
     const interests = userProfile.interests || [];
     const interest = interests.length > 0 ? interests[0] : 'nature';
 
-    let prompt = template.promptTemplate
+    const prompt = template.promptTemplate
       .replace(/{name}/g, name)
       .replace(/{interest}/g, interest)
       .replace(/{companionName}/g, companionName);
 
-    let message = template.messageTemplate
+    const message = template.messageTemplate
       .replace(/{name}/g, name)
       .replace(/{interest}/g, interest)
       .replace(/{companionName}/g, companionName);

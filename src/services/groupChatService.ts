@@ -62,6 +62,7 @@ export async function createGroupChat(
     .insert(members);
 
   if (memberError) {
+    // member insert is best-effort; group creation still succeeds
   }
 
   return group;

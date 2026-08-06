@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 interface TouchRippleCanvasProps {
   animationStyle?: string;
@@ -39,6 +40,7 @@ export function TouchRippleCanvas({
   const idRef = useRef(0);
   const frameRef = useRef<number>(0);
   const colorRef = useRef({ particleColors });
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     colorRef.current = { particleColors };
@@ -101,7 +103,7 @@ export function TouchRippleCanvas({
         const radius = s % 2 === 0 ? r : inner;
         const px = cx + Math.cos(angle) * radius;
         const py = cy + Math.sin(angle) * radius;
-        s === 0 ? ctx!.moveTo(px, py) : ctx!.lineTo(px, py);
+        if (s === 0) { ctx!.moveTo(px, py); } else { ctx!.lineTo(px, py); }
       }
       ctx!.closePath();
       ctx!.fill();
@@ -184,6 +186,8 @@ export function TouchRippleCanvas({
       window.removeEventListener('touchstart', handleTouch);
     };
   }, [animationStyle]);
+
+  if (prefersReducedMotion) return null;
 
   return (
     <canvas

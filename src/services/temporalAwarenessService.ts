@@ -23,7 +23,7 @@ const MONTH_NAMES = [
 function getUserTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch (e) {
+  } catch (_e) {
     return 'UTC';
   }
 }

@@ -12,7 +12,7 @@ export interface PerformanceEntry {
   tokensUsed?: number;
   estimatedCostUsd?: number;
   errorMessage?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, any>;
 }
 
 export interface AlertPayload {
@@ -20,7 +20,7 @@ export interface AlertPayload {
   severity: AlertSeverity;
   title: string;
   message: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, any>;
 }
 
 const THRESHOLDS = {

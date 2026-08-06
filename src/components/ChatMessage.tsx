@@ -311,6 +311,37 @@ export const ChatMessage = ({
 
   const msgType = message.messageType ?? 'text';
 
+  useEffect(() => {
+    const shouldDelayReveal =
+      ENABLE_TYPING_REALISM &&
+      !isUser &&
+      message.isTyping;
+
+    if (!shouldDelayReveal) {
+      setShowContent(true);
+      setIsComposing(false);
+      return;
+    }
+
+    setIsComposing(true);
+    setShowContent(false);
+
+    const delayMs = calculateComposeDelayMs(message.content);
+
+    timeoutRef.current = setTimeout(() => {
+      setShowContent(true);
+      setIsComposing(false);
+      timeoutRef.current = null;
+    }, delayMs);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [message.content, message.isTyping, isUser]);
+
   if (msgType === 'system' || msgType === 'bot-entry' || msgType === 'bot-exit') {
     return <SystemMessage message={message} />;
   }
@@ -342,37 +373,6 @@ export const ChatMessage = ({
   } catch {
     time = '';
   }
-
-  useEffect(() => {
-    const shouldDelayReveal =
-      ENABLE_TYPING_REALISM &&
-      !isUser &&
-      message.isTyping;
-
-    if (!shouldDelayReveal) {
-      setShowContent(true);
-      setIsComposing(false);
-      return;
-    }
-
-    setIsComposing(true);
-    setShowContent(false);
-
-    const delayMs = calculateComposeDelayMs(message.content);
-
-    timeoutRef.current = setTimeout(() => {
-      setShowContent(true);
-      setIsComposing(false);
-      timeoutRef.current = null;
-    }, delayMs);
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-    };
-  }, [message.content, message.isTyping, isUser]);
 
   const handleRevealNow = () => {
     if (isComposing && !showContent) {

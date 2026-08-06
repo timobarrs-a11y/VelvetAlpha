@@ -13,7 +13,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { companionId, prompt, companionName } = await req.json();
+    const { companionId, prompt, _companionName } = await req.json();
 
     if (!prompt || !companionId) {
       return new Response(

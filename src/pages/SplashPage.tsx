@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Brain, Users, ArrowRight, Sparkles, Heart } from 'lucide-react';
+import { Brain, Users, ArrowRight, Sparkles, Heart, ShieldCheck, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
+import { SplashChatPreview } from '../components/SplashChatPreview';
 
 const ORBS = [
   { x: '-5%', y: '-15%', w: 720, h: 720, color: 'rgba(244,63,94,0.18)', blur: 140, dur: 28 },
@@ -387,6 +388,18 @@ export function SplashPage() {
           )}
         </AnimatePresence>
 
+        {/* Product preview mockup */}
+        {visible && (
+          <motion.div
+            className="mb-20"
+            initial={enter({ opacity: 0 })}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9, duration: 0.6 }}
+          >
+            <SplashChatPreview lite={lite} />
+          </motion.div>
+        )}
+
         {/* Section divider */}
         {visible && (
           <motion.div
@@ -469,6 +482,32 @@ export function SplashPage() {
               );
             })}
           </div>
+        )}
+
+        {/* Trust callout */}
+        {visible && (
+          <motion.div
+            className="mb-10 flex items-center gap-4 px-5 py-4 rounded-2xl max-w-2xl mx-auto"
+            initial={enter({ opacity: 0, y: 20 })}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            style={{
+              background: 'rgba(34,197,94,0.04)',
+              border: '1px solid rgba(34,197,94,0.15)',
+            }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)' }}>
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-white text-sm font-semibold mb-0.5">Private by design</p>
+              <p className="text-gray-400 text-xs leading-relaxed">
+                Your conversations are encrypted, your data is yours. Export or delete everything anytime from Settings.
+              </p>
+            </div>
+            <Lock className="w-4 h-4 text-emerald-400/40 flex-shrink-0" />
+          </motion.div>
         )}
 
         <motion.p

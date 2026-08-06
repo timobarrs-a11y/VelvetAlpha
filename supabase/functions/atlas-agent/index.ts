@@ -325,7 +325,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { message, history = [], userName, voice, stream: wantStream = false } = body;
+    const { message, history = [], userName, voice, stream: _wantStream = false } = body;
 
     if (!message) throw new Error("Missing required field: message");
 
@@ -402,7 +402,7 @@ Deno.serve(async (req: Request) => {
           }) + "\n"));
         }
 
-        let fullText = "";
+        let _fullText = "";
         let calendarEventAdded: Record<string, unknown> | null = null;
 
         try {
@@ -434,7 +434,7 @@ Deno.serve(async (req: Request) => {
 
           for (const block of responseData.content || []) {
             if (block.type === "text") {
-              fullText += block.text;
+              _fullText += block.text;
               controller.enqueue(encoder.encode(JSON.stringify({ type: "text", chunk: block.text }) + "\n"));
             } else if (block.type === "tool_use" && block.name === "add_calendar_event") {
               const toolInput = block.input as {
@@ -524,7 +524,7 @@ Deno.serve(async (req: Request) => {
                   const followUpData = await followUpRes.json();
                   for (const followBlock of followUpData.content || []) {
                     if (followBlock.type === "text") {
-                      fullText += followBlock.text;
+                      _fullText += followBlock.text;
                       controller.enqueue(encoder.encode(JSON.stringify({ type: "text", chunk: followBlock.text }) + "\n"));
                     }
                   }

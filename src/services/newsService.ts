@@ -63,7 +63,7 @@ class NewsService {
       }
 
       return filtered;
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   }
@@ -78,7 +78,7 @@ class NewsService {
 
       if (error) throw error;
       return data;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -103,7 +103,7 @@ class NewsService {
 
       if (error) throw error;
       return data?.id || null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -122,7 +122,7 @@ class NewsService {
 
       if (error) throw error;
       return data || [];
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   }
@@ -140,7 +140,7 @@ class NewsService {
         },
         { onConflict: 'article_id,user_id' }
       );
-    } catch (error) {
+    } catch (_error) {
     }
   }
 
@@ -158,7 +158,7 @@ class NewsService {
       const result = await response.json();
 
       return result;
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         articlesAdded: 0,
@@ -200,7 +200,7 @@ class NewsService {
       addToSet(profile.lifestyle_interests);
 
       return Array.from(allInterests);
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   }

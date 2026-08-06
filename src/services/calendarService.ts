@@ -62,7 +62,7 @@ export interface GiftSuggestion {
   created_at: string;
 }
 
-async function callEdgeFunction(path: string, body: Record<string, unknown>): Promise<void> {
+async function callEdgeFunction(path: string, body: Record<string, any>): Promise<void> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -76,7 +76,7 @@ async function callEdgeFunction(path: string, body: Record<string, unknown>): Pr
       },
       body: JSON.stringify(body),
     });
-  } catch (error) {
+  } catch (_error) {
   }
 }
 

@@ -1,6 +1,6 @@
 type UpdateCallback = () => void;
 
-let updateCallbacks: UpdateCallback[] = [];
+const updateCallbacks: UpdateCallback[] = [];
 let registration: ServiceWorkerRegistration | null = null;
 
 let refreshing = false;

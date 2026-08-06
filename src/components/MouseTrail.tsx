@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 interface TrailDot {
   id: number;
@@ -45,6 +46,7 @@ export function MouseTrail({
   trailColor = 'rgba(244,63,107,0.85)',
   particleColors = ['#f43f6b', '#fb7185', '#fda4af', '#e11d48'],
 }: MouseTrailProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [, forceUpdate] = useState(0);
   const canvasRef         = useRef<HTMLCanvasElement>(null);
   const trailIdRef        = useRef(0);
@@ -601,6 +603,8 @@ export function MouseTrail({
       </svg>
     );
   };
+
+  if (prefersReducedMotion || !showTrail) return null;
 
   return (
     <>

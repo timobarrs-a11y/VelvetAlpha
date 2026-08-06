@@ -656,7 +656,7 @@ When reading search results, verify each event date is AFTER ${dateCtx.todayISO}
       async start(controller) {
         controller.enqueue(encoder.encode(metaChunk));
 
-        let fullText = "";
+        let _fullText = "";
         let calendarEventAdded: Record<string, unknown> | null = null;
 
         try {
@@ -686,7 +686,7 @@ When reading search results, verify each event date is AFTER ${dateCtx.todayISO}
 
           for (const block of responseData.content || []) {
             if (block.type === "text") {
-              fullText += block.text;
+              _fullText += block.text;
               controller.enqueue(encoder.encode(JSON.stringify({ type: "text", chunk: block.text }) + "\n"));
             } else if (block.type === "tool_use" && block.name === "add_calendar_event") {
               const toolInput = block.input as {
@@ -774,7 +774,7 @@ When reading search results, verify each event date is AFTER ${dateCtx.todayISO}
                   const followUpData = await followUpRes.json();
                   for (const followBlock of followUpData.content || []) {
                     if (followBlock.type === "text") {
-                      fullText += followBlock.text;
+                      _fullText += followBlock.text;
                       controller.enqueue(encoder.encode(JSON.stringify({ type: "text", chunk: followBlock.text }) + "\n"));
                     }
                   }

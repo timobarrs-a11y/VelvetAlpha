@@ -68,7 +68,7 @@ export function ResponseQualityPage() {
         companionIds.push(row.companion_id);
       }
 
-      let messageMap: Record<string, string> = {};
+      const messageMap: Record<string, string> = {};
       if (messageIds.length > 0) {
         const { data: msgs } = await supabase
           .from('conversations')
@@ -79,7 +79,7 @@ export function ResponseQualityPage() {
         }
       }
 
-      let companionMap: Record<string, string> = {};
+      const companionMap: Record<string, string> = {};
       if (companionIds.length > 0) {
         const { data: comps } = await supabase
           .from('companions')

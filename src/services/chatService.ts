@@ -211,7 +211,7 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, any>;
 }
 
 export type SubscriptionTier = 'free' | 'unlimited' | 'starter' | 'plus' | 'elite' | 'trial';
@@ -1289,7 +1289,7 @@ const messagesToSend = [
     }
   }
 
-  static async completeOnboarding(_personality: unknown): Promise<void> {
+  static async completeOnboarding(_personality: any): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 

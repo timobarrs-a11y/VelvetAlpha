@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 interface ButtonHoverCanvasProps {
   hoverStyle: string;
@@ -92,6 +93,7 @@ const SPARK_COLORS  = ['#ffffff', '#fbbf24', '#f59e0b', '#fcd34d', '#60a5fa', '#
 const EMBER_HUES    = [10, 20, 30, 40, 50, 15, 5];
 
 export function ButtonHoverCanvas({ hoverStyle, particleColors, previewStyle }: ButtonHoverCanvasProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const canvasRef         = useRef<HTMLCanvasElement>(null);
   const rafRef            = useRef<number>(0);
   const hoverElRef        = useRef<HTMLElement | null>(null);
@@ -740,6 +742,8 @@ export function ButtonHoverCanvas({ hoverStyle, particleColors, previewStyle }: 
     emberRef.current = alive;
     ctx.restore();
   }
+
+  if (prefersReducedMotion) return null;
 
   return (
     <canvas

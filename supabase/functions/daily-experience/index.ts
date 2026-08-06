@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-interface DailyExperience {
+interface _DailyExperience {
   id?: string;
   user_id: string;
   companion_id: string;
@@ -432,11 +432,11 @@ async function callAnthropicAPI(systemPrompt: string): Promise<GeneratedExperien
   const data = await response.json();
   const textContent = data.content[0].text;
 
-  let cleanedText = textContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  const cleanedText = textContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
   try {
     return JSON.parse(cleanedText);
-  } catch (parseError) {
+  } catch (_parseError) {
     console.error('Failed to parse Anthropic response:', cleanedText);
     throw new Error('Failed to parse API response');
   }

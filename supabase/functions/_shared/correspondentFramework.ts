@@ -152,7 +152,7 @@ export async function fetchGroundingStories(
   // Build case-insensitive patterns for each category
   const categoryPatterns = newsCategories.map((c) => c.toLowerCase());
 
-  let query = supabaseAdmin
+  const query = supabaseAdmin
     .from('news_articles')
     .select('id, title, source, description, categories, specific_topics')
     .gte('published_at', sevenDaysAgo)

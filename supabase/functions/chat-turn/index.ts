@@ -247,7 +247,7 @@ function getHistoryDepthForTier(tier: string): number {
   }
 }
 
-function estimateTokens(text: string): number {
+function _estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
@@ -655,7 +655,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body: ChatTurnRequest = await req.json();
-    const { userId, companionId, message, mode = 'chat', video, timezone } = body;
+    const { userId, companionId, message, mode = 'chat', _video, timezone } = body;
 
     // Identity comes from the verified auth token, not the request body.
     // If the client sends a userId that doesn't match, reject as impersonation.

@@ -151,7 +151,7 @@ class RelationshipTrackingService {
       const isSameDay = currentLocalDate === lastInteractionDate;
 
       let newActiveDays = existing.active_conversation_days;
-      let newTotalMessages = existing.total_messages + 1;
+      const newTotalMessages = existing.total_messages + 1;
 
       if (!isSameDay) {
         newActiveDays += 1;

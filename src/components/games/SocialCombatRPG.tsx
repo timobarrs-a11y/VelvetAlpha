@@ -788,7 +788,7 @@ function Particles({ particles }: { particles: Particle[] }) {
           position:'absolute', left: p.x, top: p.y,
           width: p.size, height: p.size, borderRadius: '50%',
           background: p.color, boxShadow: `0 0 ${p.size*2}px ${p.color}`,
-          // @ts-ignore
+          // @ts-expect-error - third-party type mismatch
           '--dx': `${p.dx}px`, '--dy': `${p.dy}px`,
           animation: `particleOut ${p.duration}ms ease-out forwards`,
         }} />
@@ -850,7 +850,7 @@ function ChargeBar({ charge, max=100, ultColor }: { charge: number; max?: number
       <div style={{
         position:'relative', background:'rgba(0,0,0,0.5)', borderRadius:6, height:5, overflow:'hidden',
         border: `1px solid ${full ? ultColor : 'rgba(255,255,255,0.08)'}`,
-        // @ts-ignore
+        // @ts-expect-error - third-party type mismatch
         '--glow': ultColor,
         animation: full ? 'chargePulse 1.2s ease-in-out infinite' : undefined,
       }}>
@@ -1041,7 +1041,7 @@ function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ul
           opacity: disabled ? 0.5 : 1,
           display:'flex', alignItems:'center', justifyContent:'space-between', gap:10,
           transition:'all 0.2s',
-          // @ts-ignore
+          // @ts-expect-error - third-party type mismatch
           '--glow': ultReady ? `${ult.color}aa` : 'transparent',
           animation: ultReady && !disabled ? 'ultReady 1.4s ease-in-out infinite' : undefined,
         }}
@@ -1448,7 +1448,7 @@ function PerkSelect({ options, stage, nextStage, currentPerks, onPick, isBoss }:
                 boxShadow: isPicked ? `0 0 50px ${p.color}, 0 0 80px ${p.color}44` : isHov ? `0 12px 40px ${p.color}66` : '0 4px 16px rgba(0,0,0,0.3)',
                 opacity: isDimmed ? 0.3 : 1,
                 animation: `fadeIn 0.4s ease-out ${i*0.1}s backwards`,
-                // @ts-ignore
+                // @ts-expect-error - third-party type mismatch
                 '--pc': `${p.color}66`,
               }}
             >
@@ -2268,7 +2268,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
           ascent={ascent}
           finalState={gs}
           onNewRun={() => { setAscent(null); setGs(null); setPerkOptions(null); startAscent(); }}
-          onMainMenu={() => { setAscent(null); setGs(null); setPerkOptions(null); onExit ? onExit() : (setChar(null), setScreen('select')); }}
+          onMainMenu={() => { setAscent(null); setGs(null); setPerkOptions(null); if (onExit) { onExit(); } else { setChar(null); setScreen('select'); } }}
         />
       </div>
     </div>
@@ -2296,7 +2296,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
           borderRadius:20, overflow:'hidden',
           boxShadow:'0 30px 80px rgba(0,0,0,0.7), 0 0 100px rgba(251,191,36,0.1)',
           position:'relative', backdropFilter:'blur(12px)', zIndex:1,
-          // @ts-ignore
+          // @ts-expect-error - third-party type mismatch
           '--sx': `${(Math.random() - 0.5) * shake * 2}px`,
           '--sy': `${(Math.random() - 0.5) * shake * 1.5}px`,
           animation: shake > 0 ? 'shakeX 0.4s' : undefined,
@@ -2416,7 +2416,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
             : '0 30px 80px rgba(0,0,0,0.7), 0 0 120px rgba(99,102,241,0.1)',
           position:'relative',
           backdropFilter:'blur(12px)',
-          // @ts-ignore
+          // @ts-expect-error - third-party type mismatch
           '--sx': `${(Math.random() - 0.5) * shake * 2}px`,
           '--sy': `${(Math.random() - 0.5) * shake * 1.5}px`,
           animation: shake > 0 ? 'shakeX 0.4s' : undefined,

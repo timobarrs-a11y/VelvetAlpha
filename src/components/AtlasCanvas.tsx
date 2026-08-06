@@ -214,7 +214,7 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
         const greeting = getGreeting(firstName, isFirstEver);
         setGreetingMessage(greeting);
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to load conversation');
     } finally {
       setIsLoading(false);
@@ -304,7 +304,7 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
         setConversation(prev => prev ? { ...prev, title: autoTitle } : prev);
         setTitleInput(autoTitle);
       }
-    } catch (err) {
+    } catch (_err) {
       setStreamingText('');
       setSearchingWeb(false);
       setError(err instanceof Error ? err.message : 'Failed to send message');

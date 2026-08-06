@@ -99,7 +99,7 @@ class ConversationOrchestrator {
     }
   }
 
-  private getEventLogData(event: ConversationEvent): Record<string, unknown> {
+  private getEventLogData(event: ConversationEvent): Record<string, any> {
     const baseData = {
       currentUserId: this.state.currentUserId,
       currentCompanionId: this.state.currentCompanionId,

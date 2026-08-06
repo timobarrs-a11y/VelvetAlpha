@@ -110,7 +110,7 @@ export function PricingPageRoute() {
 
       toast.success('Your 3-day Premium Trial is now active!');
       navigate(returnTo);
-    } catch (err) {
+    } catch (_err) {
       toast.error('Something went wrong. Please try again.');
     } finally {
       setActivatingTrial(false);
@@ -183,7 +183,7 @@ export function PricingPageRoute() {
       } else {
         throw new Error('No checkout URL returned');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error(error instanceof Error ? error.message : 'There was an error processing your request. Please try again.');
     }
   };
@@ -358,9 +358,11 @@ export function PricingPageRoute() {
           </button>
         </div>
 
-        <p className="text-center text-white/30 text-xs mt-8">
-          All plans billed monthly. Cancel anytime.
-        </p>
+        <div className="mt-8 rounded-xl px-5 py-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <p className="text-white/50 text-xs leading-relaxed text-center">
+            All plans billed monthly through Stripe. Cancel anytime from Settings — your access continues until the end of your billing period. The 3-day trial requires no credit card and automatically reverts to the Free plan. Refunds available within 14 days of purchase per our Terms of Service.
+          </p>
+        </div>
       </div>
     </div>
   );

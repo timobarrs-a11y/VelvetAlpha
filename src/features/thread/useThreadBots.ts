@@ -134,7 +134,7 @@ export function useThreadBots({ companionId: _companionId, onBotMessage, onBrief
       setNaviConversationId(null);
       setNaviHistory([]);
 
-      let contextParts: string[] = [];
+      const contextParts: string[] = [];
       if (userId) {
         try {
           const ctx = await morningBriefService.fetchBriefContext(userId, '', userNameRef.current);

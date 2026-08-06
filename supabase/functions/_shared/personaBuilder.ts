@@ -29,7 +29,7 @@ interface CompanionRow {
   zodiac_sign: string | null;
 }
 
-interface UserProfile {
+interface _UserProfile {
   name: string | null;
 }
 

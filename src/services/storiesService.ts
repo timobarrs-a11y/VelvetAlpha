@@ -75,7 +75,7 @@ class StoriesService {
         },
         body: JSON.stringify({ companionId, messages }),
       });
-    } catch (error) {
+    } catch (_error) {
     }
   }
 
@@ -204,7 +204,7 @@ class StoriesService {
         highlighted_moments: momentIds,
         auto_generated: !customData
       });
-    } catch (error) {
+    } catch (_error) {
     }
   }
 
@@ -289,7 +289,7 @@ class StoriesService {
       }
 
       return newAchievements;
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   }
@@ -397,7 +397,7 @@ class StoriesService {
           'monthly_recap'
         );
       }
-    } catch (error) {
+    } catch (_error) {
     }
   }
 }

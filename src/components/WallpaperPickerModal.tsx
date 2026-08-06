@@ -97,7 +97,7 @@ export function WallpaperPickerModal({
       const publicUrl = await uploadWallpaperImage(userId, companionId, uploadFile);
       setSelectedUrl(publicUrl);
       setSelected('custom');
-    } catch (err) {
+    } catch (_err) {
       setError('Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
@@ -114,7 +114,7 @@ export function WallpaperPickerModal({
       setAiResult(url);
       setSelected('custom');
       setSelectedUrl(url);
-    } catch (err) {
+    } catch (_err) {
       setError('Generation failed. Please try a different prompt.');
     } finally {
       setIsGenerating(false);
@@ -131,7 +131,7 @@ export function WallpaperPickerModal({
       await saveCompanionWallpaper(companionId, selected, selectedUrl?.startsWith('https://') ? selectedUrl : null);
       onSaved(selected, selectedUrl?.startsWith('https://') ? selectedUrl : null);
       onClose();
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to save wallpaper. Please try again.');
     } finally {
       setIsSaving(false);

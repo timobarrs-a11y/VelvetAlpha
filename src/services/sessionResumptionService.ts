@@ -71,7 +71,7 @@ export class SessionResumptionService {
 
       const data = await response.json();
       return data.message || null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }

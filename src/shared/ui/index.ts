@@ -11,4 +11,5 @@ export { PageWrapper } from './PageWrapper';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 export { LoadingState } from './LoadingState';
-export { Skeleton, SkeletonCard, SkeletonText } from './Skeleton';
+export { Skeleton, SkeletonCard, SkeletonText, GlassSkeletonCard } from './Skeleton';
+export { ThinkingDots, CompanionThinking } from './ThinkingDots';

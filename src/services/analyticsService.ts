@@ -69,7 +69,7 @@ class AnalyticsService {
       if (user) {
         await this.trackPageView(window.location.pathname);
       }
-    } catch (error) {
+    } catch (_error) {
     }
   }
 
@@ -90,7 +90,7 @@ class AnalyticsService {
         browser: this.getBrowser(),
         metadata: event.metadata || {}
       });
-    } catch (error) {
+    } catch (_error) {
       console.error('Error tracking event:', error);
     }
   }
@@ -146,7 +146,7 @@ class AnalyticsService {
             last_used_at: new Date().toISOString()
           });
       }
-    } catch (error) {
+    } catch (_error) {
       console.error('Error tracking feature use:', error);
     }
   }
@@ -191,7 +191,7 @@ class AnalyticsService {
         time_to_complete_seconds: timeToCompleteSeconds,
         dropped_off: !completed
       });
-    } catch (error) {
+    } catch (_error) {
       console.error('Error tracking funnel step:', error);
     }
   }
@@ -237,7 +237,7 @@ class AnalyticsService {
           ? stats.avg_time.reduce((a: number, b: number) => a + b, 0) / stats.avg_time.length
           : 0
       }));
-    } catch (error) {
+    } catch (_error) {
       console.error('Error getting funnel analytics:', error);
       return null;
     }
@@ -269,7 +269,7 @@ class AnalyticsService {
           severity: error.severity
         }
       });
-    } catch (err) {
+    } catch (_err) {
       console.error('Error logging error:', err);
     }
   }
@@ -279,7 +279,7 @@ class AnalyticsService {
   async recordBusinessMetric(metric: BusinessMetric): Promise<void> {
     try {
       await supabase.from('business_metrics').insert(metric);
-    } catch (error) {
+    } catch (_error) {
       console.error('Error recording business metric:', error);
     }
   }
@@ -300,7 +300,7 @@ class AnalyticsService {
 
       if (error) throw error;
       return data || [];
-    } catch (error) {
+    } catch (_error) {
       console.error('Error fetching business metrics:', error);
       return [];
     }
@@ -330,7 +330,7 @@ class AnalyticsService {
       });
 
       return uniqueUsers.size;
-    } catch (error) {
+    } catch (_error) {
       console.error('Error calculating DAU:', error);
       return 0;
     }
@@ -348,7 +348,7 @@ class AnalyticsService {
 
       if (error) throw error;
       return data || [];
-    } catch (error) {
+    } catch (_error) {
       console.error('Error fetching user feature usage:', error);
       return [];
     }
@@ -375,7 +375,7 @@ class AnalyticsService {
       return Object.entries(featureCounts)
         .map(([feature, count]) => ({ feature, count }))
         .sort((a: any, b: any) => b.count - a.count);
-    } catch (error) {
+    } catch (_error) {
       console.error('Error fetching popular features:', error);
       return [];
     }

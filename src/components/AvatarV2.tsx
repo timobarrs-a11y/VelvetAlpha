@@ -1005,7 +1005,7 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
         <ellipse cx="50" cy={faceCenterY} rx={fRx + 3} ry={fRy + 3} />
       </clipPath>
     </defs>
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   ), [skinTone, fRx, fRy, faceGradientId]);
 
   const neckTopY = neckY - 4;

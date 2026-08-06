@@ -1116,7 +1116,7 @@ function AppInner() {
         <CompanionAppearanceModal
           companionId={companionId}
           companionName={companion.custom_name || 'Companion'}
-          currentConfig={companion.avatar_config as unknown as AvatarConfigV2 | null}
+          currentConfig={companion.avatar_config as any as AvatarConfigV2 | null}
           onClose={() => setShowAppearanceModal(false)}
           onSaved={(newConfig) => setCompanion(prev => prev ? { ...prev, avatar_config: newConfig as any } : prev)}
         />

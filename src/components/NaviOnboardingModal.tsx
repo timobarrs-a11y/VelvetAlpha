@@ -238,7 +238,7 @@ export function NaviOnboardingModal({ readiness, onClose, onComplete }: Props) {
       }).catch(console.error);
     }
 
-    await naviTypeThen(`"${goalText}" — love it. I\'ll keep an eye on that in your briefs.`, 700);
+    await naviTypeThen(`"${goalText}" — love it. I'll keep an eye on that in your briefs.`, 700);
     await naviTypeThen('Anything else you\'re working on? Or should we move on?', 700);
     setStep('goals_collect');
   };

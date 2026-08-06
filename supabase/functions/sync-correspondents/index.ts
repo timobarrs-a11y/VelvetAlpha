@@ -68,11 +68,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const existingIds = new Set((existingCorrespondents || []).map((c: { correspondent_id: string }) => c.correspondent_id));
-    const existingMap = new Map((existingCorrespondents || []).map((c: { correspondent_id: string }) => [c.correspondent_id, c]));
+    const _existingMap = new Map((existingCorrespondents || []).map((c: { correspondent_id: string }) => [c.correspondent_id, c]));
 
     // Determine adds and removals
     const toAdd = desiredCorrespondentIds.filter((id: string) => !existingIds.has(id));
-    const toRemove = desiredCorrespondentIds.length === 0
+    const _toRemove = desiredCorrespondentIds.length === 0
       ? [] // If user has no interests mapped, don't remove existing ones (they may have been manually kept)
       : (existingCorrespondents || [])
         .filter((c: { correspondent_id: string }) => !desiredCorrespondentIds.includes(c.correspondent_id))

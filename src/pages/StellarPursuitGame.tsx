@@ -703,8 +703,8 @@ export function StellarPursuitGame() {
       }
 
       let newWeaponTimer = p.weaponTimer > 0 ? p.weaponTimer - 1 : 0;
-      let newDeflectCooldown = p.deflectCooldown > 0 ? p.deflectCooldown - 1 : 0;
-      let newInvincibilityFrames = p.invincibilityFrames > 0 ? p.invincibilityFrames - 1 : 0;
+      const newDeflectCooldown = p.deflectCooldown > 0 ? p.deflectCooldown - 1 : 0;
+      const newInvincibilityFrames = p.invincibilityFrames > 0 ? p.invincibilityFrames - 1 : 0;
 
       if (newWeaponTimer === 0) {
         const weaponConfig = WEAPON_CONFIGS[p.weapon];
@@ -795,8 +795,8 @@ export function StellarPursuitGame() {
       return updatedEnemies.map(enemy => {
         let newX = enemy.x;
         let newY = enemy.y;
-        let newVx = enemy.vx;
-        let newVy = enemy.vy;
+        const newVx = enemy.vx;
+        const newVy = enemy.vy;
         let newState = enemy.state;
         let newEntryProgress = enemy.entryProgress;
         let newDiveProgress = enemy.diveProgress;

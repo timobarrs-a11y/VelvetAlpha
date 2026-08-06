@@ -288,7 +288,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     companionName: string,
     companionGender: 'male' | 'female',
     userName: string,
-    _userPreferences: unknown,
+    _userPreferences: any,
     signatureVoice?: string,
     userBirthday?: string,
     expertDomain?: string,

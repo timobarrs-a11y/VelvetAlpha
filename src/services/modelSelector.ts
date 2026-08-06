@@ -105,8 +105,8 @@ export function testDualModelSystem() {
     { message: 'cool', tier: 'elite' as SubscriptionTier, expected: 'PREMIUM' },
   ];
 
-  let passed = 0;
-  let failed = 0;
+  const _passed = 0;
+  const _failed = 0;
 
   testCases.forEach((test) => {
     const result = selectModel(test.message, test.tier);

@@ -34,7 +34,7 @@ Deno.serve(async (req: Request) => {
       throw new Error('Invalid authentication token');
     }
 
-    const { type, companion, videoMetadata, videoDurationSeconds, currentTime } = await req.json();
+    const { type, companion, videoMetadata, videoDurationSeconds, _currentTime } = await req.json();
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {

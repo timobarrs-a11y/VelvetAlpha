@@ -553,7 +553,7 @@ export function CompanionLobbyPage() {
                 key={largeTile.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                onClick={() => { const p = largeTile.path!; const cfg = NAV_CONFIGS[p]; cfg ? navigateTo(p, cfg) : navigate(p); }}
+                onClick={() => { const p = largeTile.path!; const cfg = NAV_CONFIGS[p]; if (cfg) { navigateTo(p, cfg); } else { navigate(p); } }}
                 className="group text-left rounded-2xl p-6 transition-all duration-300 relative overflow-hidden hover:brightness-110"
                 style={{ background: largeTile.solidBg, minHeight: 140 }}
               >
@@ -575,7 +575,7 @@ export function CompanionLobbyPage() {
 
             {/* Your Lens tile — large on right */}
             {smallTiles.filter(t => t.id === 'videos').map((tile) => {
-              const handleClick = () => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; cfg ? navigateTo(p, cfg) : navigate(p); };
+              const handleClick = () => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; if (cfg) { navigateTo(p, cfg); } else { navigate(p); } };
               return (
                 <motion.button
                   key={tile.id}
@@ -605,7 +605,7 @@ export function CompanionLobbyPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {smallTiles.filter(t => t.id !== 'videos' && !('wide' in t && t.wide) && !('paired' in t && t.paired)).map((tile, i) => {
               const locked = tile.isGroupChat && companions.length < 2;
-              const handleClick = tile.isGroupChat ? handleGroupChatClick : () => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; cfg ? navigateTo(p, cfg) : navigate(p); };
+              const handleClick = tile.isGroupChat ? handleGroupChatClick : () => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; if (cfg) { navigateTo(p, cfg); } else { navigate(p); } };
               return (
                 <motion.button
                   key={tile.id}
@@ -645,7 +645,7 @@ export function CompanionLobbyPage() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.35 + i * 0.07 }}
-                  onClick={() => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; cfg ? navigateTo(p, cfg) : navigate(p); }}
+                  onClick={() => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; if (cfg) { navigateTo(p, cfg); } else { navigate(p); } }}
                   className="group text-left rounded-2xl p-4 transition-all duration-300 relative overflow-hidden hover:brightness-105"
                   style={{ background: tile.solidBg, minHeight: 100 }}
                 >
@@ -683,7 +683,7 @@ export function CompanionLobbyPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.42 + i * 0.07 }}
-                onClick={() => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; cfg ? navigateTo(p, cfg) : navigate(p); }}
+                onClick={() => { const p = tile.path!; const cfg = NAV_CONFIGS[p]; if (cfg) { navigateTo(p, cfg); } else { navigate(p); } }}
                 className="w-full group text-left rounded-2xl p-5 transition-all duration-300 relative overflow-hidden hover:brightness-105"
                 style={{ background: tile.solidBg, minHeight: 90 }}
               >

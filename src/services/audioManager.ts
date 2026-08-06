@@ -165,7 +165,7 @@ class AudioManager {
   }
 
   private makeLoop(): LoopNode {
-    return { oscillators: [], gains: [], masterGain: null as unknown as GainNode };
+    return { oscillators: [], gains: [], masterGain: null as any as GainNode };
   }
 
   private osc(ctx: AudioContext, type: OscillatorType, freq: number, loop: LoopNode): OscillatorNode {

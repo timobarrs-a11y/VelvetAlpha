@@ -240,7 +240,7 @@ async function processScrapingQueue() {
               .eq("id", item.id);
           }
         }
-      } catch (error) {
+      } catch (_error) {
         await supabase
           .from("article_scrape_queue")
           .update({ processing: false, attempt_count: (item.attempt_count || 0) + 1 })
@@ -252,7 +252,7 @@ async function processScrapingQueue() {
       .from("background_job_log")
       .update({ status: "success", completed_at: new Date().toISOString(), articles_processed: processedCount })
       .eq("id", jobId);
-  } catch (error) {
+  } catch (_error) {
     await supabase
       .from("background_job_log")
       .update({
@@ -277,7 +277,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ success: true, message: "Scraping batch queued" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
-    } catch (error) {
+    } catch (_error) {
       return new Response(
         JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

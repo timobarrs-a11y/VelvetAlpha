@@ -325,7 +325,9 @@ export function testReactiveCache() {
       const response3 = getReactiveResponse(msg, testProfile);
 
       if (response1 === response2 && response2 === response3) {
+        // consistent response
       } else {
+        // inconsistent response
       }
     }
   });

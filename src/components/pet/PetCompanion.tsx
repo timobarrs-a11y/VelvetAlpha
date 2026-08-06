@@ -96,8 +96,8 @@ export function PetCompanion({enabled, name, animalType, actionsRef, catPosRef, 
         if(r.surface==='air'){
           r.vy=Math.min(r.vy+GRAV,VTERM);r.cx+=r.vx;r.cy+=r.vy;
           r.cx=Math.max(LW+BUF,Math.min(RW-BUF,r.cx));
-          r.vy>7?sync('fall_fast'):sync('fall');
-          if(r.cy>=FL){const imp=r.vy;r.cy=FL;r.vy=0;r.vx=0;r.surface='floor';r.speed=WALK;imp>8?(r.pose='thud',r.actTimer=32,sync('thud')):(r.pose='walk',sync('walk'),r.idleCD=rand(200,360));}
+          if(r.vy>7){sync('fall_fast');}else{sync('fall');}
+          if(r.cy>=FL){const imp=r.vy;r.cy=FL;r.vy=0;r.vx=0;r.surface='floor';r.speed=WALK;if(imp>8){r.pose='thud';r.actTimer=32;sync('thud');}else{r.pose='walk';sync('walk');r.idleCD=rand(200,360);}}
           else if(r.cy<=CE){r.cy=CE;r.vy=0;r.vx=0;r.surface='ceiling';r.speed=WALK;sync('walk');}
           else if(r.cx>=RW-BUF){r.cx=RW;r.vx=0;r.surface='wall_r';r.speed=CLIMB;r.cy=Math.max(CE+BUF,Math.min(FL-BUF,r.cy));r.traverse=r.vy<0?1:-1;sync('walk');}
           else if(r.cx<=LW+BUF){r.cx=LW;r.vx=0;r.surface='wall_l';r.speed=CLIMB;r.cy=Math.max(CE+BUF,Math.min(FL-BUF,r.cy));r.traverse=r.vy>0?1:-1;sync('walk');}
