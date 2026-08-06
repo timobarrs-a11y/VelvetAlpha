@@ -22,6 +22,7 @@ const AtlasPage = lazy(() => import('../pages/AtlasPage').then(m => ({ default: 
 const LocalExplorerPage = lazy(() => import('../pages/LocalExplorerPage').then(m => ({ default: m.LocalExplorerPage })));
 const InvitePage = lazy(() => import('../pages/InvitePage').then(m => ({ default: m.InvitePage })));
 const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(m => ({ default: m.PersonProfilePage })));
+const RelationshipBriefPage = lazy(() => import('../pages/RelationshipBriefPage').then(m => ({ default: m.RelationshipBriefPage })));
 
 function P(el: React.ReactNode) {
   return (
@@ -47,6 +48,7 @@ export const appRoutes = [
   <Route key="local-explorer" path="/local-explorer" element={P(<LocalExplorerPage />)} />,
   <Route key="navi" path="/navi" element={P(<LocalExplorerPage />)} />,
   <Route key="person-profile" path="/person/:personId" element={P(<PersonProfilePage />)} />,
+  <Route key="relationship-briefs" path="/relationship-briefs" element={P(<RelationshipBriefPage />)} />,
   <Route key="success" path="/success" element={P(<SuccessPage />)} />,
   <Route key="settings" path="/settings" element={P(<SettingsPage />)} />,
   <Route key="billing" path="/billing" element={P(<BillingPage />)} />,

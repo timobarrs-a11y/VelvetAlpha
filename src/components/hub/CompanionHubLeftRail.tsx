@@ -17,6 +17,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   RotateCcw,
+  Heart,
 } from 'lucide-react';
 import { TutorialElement } from './TutorialElement';
 import { ONBOARDING_ELEMENT_IDS } from '../../features/onboarding/onboardingPrompt';
@@ -70,6 +71,7 @@ function buildShortcuts(): ShortcutDef[] {
     { id: 'co_author',  elementId: ONBOARDING_ELEMENT_IDS.coAuthor,   label: 'Co-Author',  sub: 'Write together',    icon: <BookOpen className="w-3.5 h-3.5" />,   route: 'tab:co-author',   color: 'text-teal-600',    group: 'content' },
     { id: 'calendar',   elementId: ONBOARDING_ELEMENT_IDS.calendar,   label: 'Calendar',   sub: 'Life organized',    icon: <Calendar className="w-3.5 h-3.5" />,   route: 'tab:calendar',    color: 'text-blue-600',    group: 'life' },
     { id: 'insights',   elementId: ONBOARDING_ELEMENT_IDS.insights,   label: 'Insights',   sub: 'Know yourself',     icon: <BarChart2 className="w-3.5 h-3.5" />,  route: 'thread:insights',  color: 'text-emerald-600', group: 'life' },
+    { id: 'briefs',     elementId: '',                                 label: 'Briefs',     sub: 'People you care about', icon: <Heart className="w-3.5 h-3.5" />,  route: '/relationship-briefs', color: 'text-rose-500',   group: 'life' },
     { id: 'games',      elementId: ONBOARDING_ELEMENT_IDS.games,      label: 'The Arcade', sub: 'Play together',     icon: <Gamepad2 className="w-3.5 h-3.5" />,   route: '/lobby#games',    color: 'text-orange-600',  group: 'play' },
     { id: 'velvet_rope',elementId: ONBOARDING_ELEMENT_IDS.velvetRope, label: 'Velvet Rope',sub: 'Real or not?',      icon: <Sparkles className="w-3.5 h-3.5" />,   route: '/real-or-not',    color: 'text-pink-600',    group: 'play' },
     { id: 'lobby',      elementId: ONBOARDING_ELEMENT_IDS.lobby,      label: 'Lobby',      sub: 'Classic hub',       icon: <LayoutGrid className="w-3.5 h-3.5" />, route: '/lobby',          color: 'text-slate-500',   group: 'other' },

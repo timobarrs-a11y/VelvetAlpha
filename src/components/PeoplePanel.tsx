@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, Plus, Trash2, Link as LinkIcon, Check, Loader2,
-  ChevronRight,
+  ChevronRight, Heart,
 } from 'lucide-react';
 import {
   realPeopleService,
@@ -418,6 +418,19 @@ export function PeoplePanel({ onSelectPerson, selectedPersonId, onNavigateToProf
           </div>
         )}
       </div>
+
+      {/* Briefs link */}
+      {people.length > 0 && (
+        <div className="flex-shrink-0 px-3 py-2 border-t border-white/6">
+          <button
+            onClick={() => onNavigateToProfile('__briefs__')}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-500/8 hover:bg-rose-500/15 border border-rose-500/15 hover:border-rose-500/30 rounded-xl text-xs text-rose-300/80 hover:text-rose-300 transition-all"
+          >
+            <Heart className="w-3.5 h-3.5" />
+            Relationship Briefs
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {showAddModal && (

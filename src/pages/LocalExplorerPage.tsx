@@ -1119,7 +1119,10 @@ export function LocalExplorerPage() {
                   <PeoplePanel
                     onSelectPerson={(p) => { setSelectedPerson(p); if (p) setSidebarOpen(false); }}
                     selectedPersonId={selectedPerson?.id ?? null}
-                    onNavigateToProfile={(id) => navigate(`/person/${id}`)}
+                    onNavigateToProfile={(id) => {
+                      if (id === '__briefs__') navigate('/relationship-briefs');
+                      else navigate(`/person/${id}`);
+                    }}
                   />
                 ) : conversations.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
