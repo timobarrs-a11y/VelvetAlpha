@@ -484,6 +484,19 @@ export function SplashPage() {
           </div>
         )}
 
+        {/* Coach disclaimer */}
+        {visible && (
+          <motion.p
+            className="text-center text-gray-600 text-xs mb-6 max-w-lg mx-auto"
+            initial={enter({ opacity: 0 })}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            Coaches are AI companions, not licensed professionals. They provide support and guidance but are not a substitute for medical, mental health, or other professional care.
+          </motion.p>
+        )}
+
         {/* Trust callout */}
         {visible && (
           <motion.div

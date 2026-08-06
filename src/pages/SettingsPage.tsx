@@ -64,6 +64,10 @@ export function SettingsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const [memoryClearConfirm, setMemoryClearConfirm] = useState(false);
+  const [memoryClearLoading, setMemoryClearLoading] = useState(false);
+  const [memoryMessage, setMemoryMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const [userEmail, setUserEmail] = useState('');
 
   const [tourProgress, setTourProgress] = useState<{ onboarding_complete: boolean; last_tour_at: string | null; steps_completed: string[] } | null>(null);
@@ -224,6 +228,30 @@ export function SettingsPage() {
     } catch {
     } finally {
       setExportLoading(false);
+    }
+  };
+
+  const handleClearMemory = async () => {
+    setMemoryClearLoading(true);
+    setMemoryMessage(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const tables = ['companion_memories', 'companion_memory', 'relationship_memories', 'conversation_summaries', 'semantic_memories'];
+      const results = await Promise.allSettled(
+        tables.map(t => supabase.from(t).delete().eq('user_id', user.id))
+      );
+      const failed = results.filter(r => r.status === 'rejected').length;
+      if (failed > 0) {
+        setMemoryMessage({ type: 'error', text: `Cleared most memories, but ${failed} table(s) had issues. Please try again.` });
+      } else {
+        setMemoryMessage({ type: 'success', text: 'Your companion\'s memory has been cleared. It will start fresh from your next conversation.' });
+      }
+      setMemoryClearConfirm(false);
+    } catch (e: any) {
+      setMemoryMessage({ type: 'error', text: e.message || 'Failed to clear memory. Please try again.' });
+    } finally {
+      setMemoryClearLoading(false);
     }
   };
 
@@ -732,6 +760,64 @@ export function SettingsPage() {
                           </button>
                         )}
                       </div>
+                    </div>
+
+                    <div className="rounded-xl p-5 border border-white/10" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                      <div className="flex gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center mt-0.5" style={{ background: 'rgba(168,85,247,0.15)' }}>
+                          <Brain className="w-5 h-5 text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="text-white font-medium mb-1">Clear Companion Memory</p>
+                          <p className="text-white/40 text-sm">Your companion will forget everything it has learned about you — preferences, memories, and conversation summaries. Your account and conversations are not affected. Your companion starts fresh from your next message.</p>
+                        </div>
+                      </div>
+
+                      {memoryMessage && (
+                        <div className={`mt-4 p-3 rounded-lg text-sm ${
+                          memoryMessage.type === 'success'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                          {memoryMessage.text}
+                        </div>
+                      )}
+
+                      {!memoryClearConfirm && !memoryMessage?.type.includes('success') && (
+                        <button
+                          onClick={() => setMemoryClearConfirm(true)}
+                          className="mt-4 px-5 py-2.5 rounded-xl text-sm font-medium text-purple-400 border border-purple-500/20 hover:bg-purple-500/10 transition"
+                        >
+                          Clear Companion Memory
+                        </button>
+                      )}
+
+                      {memoryClearConfirm && (
+                        <div className="mt-4 p-4 rounded-xl border border-purple-500/20" style={{ background: 'rgba(168,85,247,0.08)' }}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <AlertTriangle className="w-4 h-4 text-purple-400" />
+                            <p className="text-purple-300 text-sm font-medium">This will erase all stored memories</p>
+                          </div>
+                          <p className="text-white/50 text-sm mb-4">
+                            Your companion will no longer remember past conversations or personal details. This cannot be undone.
+                          </p>
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => setMemoryClearConfirm(false)}
+                              className="flex-1 px-4 py-2 rounded-lg text-sm text-white/60 border border-white/10 hover:bg-white/5 transition"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleClearMemory}
+                              disabled={memoryClearLoading}
+                              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white transition disabled:opacity-40"
+                            >
+                              {memoryClearLoading ? 'Clearing...' : 'Yes, Clear Memory'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="rounded-xl p-5 border border-white/10" style={{ background: 'rgba(255,255,255,0.04)' }}>
