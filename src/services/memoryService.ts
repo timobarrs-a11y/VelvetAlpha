@@ -163,12 +163,13 @@ export class MemoryService {
     userId: string,
     userMessage: string,
     aiResponse: string,
-    conversationHistory: Array<{ role: string; content: string }>
+    conversationHistory: Array<{ role: string; content: string }>,
+    sourceSurface: 'companion' | 'coach' | 'correspondent' | 'core' = 'companion'
   ): Promise<void> {
     const memories = this.extractMemoriesFromConversation(userMessage, aiResponse, conversationHistory);
 
     for (const memory of memories) {
-      await this.storeMemory(userId, memory);
+      await this.storeMemory(userId, memory, sourceSurface);
     }
   }
 
@@ -328,7 +329,8 @@ export class MemoryService {
 
   private static async storeMemory(
     userId: string,
-    memory: Partial<RelationshipMemory>
+    memory: Partial<RelationshipMemory>,
+    sourceSurface: 'companion' | 'coach' | 'correspondent' | 'core' = 'companion'
   ): Promise<void> {
     try {
       const { data: existing } = await supabase
@@ -361,6 +363,7 @@ export class MemoryService {
             context_tags: memory.context_tags || [],
             related_messages: memory.related_messages || [],
             embedding: embedding,
+            source_surface: sourceSurface,
           });
       }
     } catch (error) {

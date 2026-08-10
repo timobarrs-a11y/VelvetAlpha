@@ -7,7 +7,7 @@ import {
   UsersRound, Calendar, Youtube, Newspaper, Trash2, MessageSquare,
   Info,
   Sparkles, Flame, Wand2, Volume2, VolumeX, Bot, MapPin, Brain,
-  HelpCircle,
+  HelpCircle, Terminal,
 } from 'lucide-react';
 import { getVoiceById } from '../config/signatureVoices';
 import { getExpertById } from '../config/signatureExperts';
@@ -134,6 +134,17 @@ const HUB_TILES: HubTile[] = [
     isGroupChat: true,
   },
   {
+    id: 'core',
+    label: 'Core',
+    desc: 'General assistant that already knows you. Get things done.',
+    icon: Terminal,
+    solidBg: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+    iconBg: 'rgba(255,255,255,0.14)',
+    path: '/core',
+    large: false,
+    paired: true,
+  },
+  {
     id: 'atlas',
     label: 'Atlas',
     desc: 'Your AI chief of staff. Ask anything.',
@@ -190,6 +201,7 @@ const NAV_CONFIGS: Record<string, { icon: typeof Newspaper; label: string; accen
   '/co-author':   { icon: FileText,     label: 'Loading Co-Author...',      accentColor: '#60a5fa', bgColor: '#040c1a' },
   '/real-or-not': { icon: Zap,          label: 'Loading The Velvet Rope...', accentColor: '#fbbf24', bgColor: '#100c00' },
   '/atlas':          { icon: Bot,     label: 'Loading Atlas...',  accentColor: '#94a3b8', bgColor: '#050508' },
+  '/core':           { icon: Terminal, label: 'Loading Core...',  accentColor: '#94a3b8', bgColor: '#0a0c10' },
   '/local-explorer': { icon: MapPin, label: 'Loading Navi...',   accentColor: '#34d399', bgColor: '#050e0a' },
   '/profile':     { icon: User,         label: 'Loading your profile...',   accentColor: '#94a3b8', bgColor: '#0a0a0f' },
   '/lobby':       { icon: Heart,        label: 'Loading lobby...',          accentColor: '#f472b6', bgColor: '#0d1128' },

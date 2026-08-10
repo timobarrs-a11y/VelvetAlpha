@@ -9,6 +9,7 @@ import {
   User,
   X,
   Gamepad2,
+  Terminal,
 } from 'lucide-react';
 import { setAppBridgeContext } from '../services/appBridgeStore';
 
@@ -22,13 +23,14 @@ interface NavItem {
 
 interface AppNavRadialProps {
   companionId?: string;
-  currentApp?: 'chat' | 'atlas' | 'co-author' | 'calendar' | 'feed' | 'insights' | 'local-explorer';
+  currentApp?: 'chat' | 'atlas' | 'core' | 'co-author' | 'calendar' | 'feed' | 'insights' | 'local-explorer';
   seedText?: string;
   theme?: 'light' | 'dark';
 }
 
 const NAV_ITEMS: Omit<NavItem, 'angle'>[] = [
   { label: 'Lobby',      icon: <LayoutGrid className="w-4 h-4" />,   route: '/lobby',      color: 'bg-slate-500 hover:bg-slate-400' },
+  { label: 'Core',       icon: <Terminal className="w-4 h-4" />,     route: '/core',       color: 'bg-slate-700 hover:bg-slate-600' },
   { label: 'Co-Author',  icon: <BookOpen className="w-4 h-4" />,     route: '/co-author',  color: 'bg-teal-600 hover:bg-teal-500' },
   { label: 'Daily Feed', icon: <Newspaper className="w-4 h-4" />,    route: '/daily-feed', color: 'bg-rose-500 hover:bg-rose-400' },
   { label: 'Insights',   icon: <BarChart2 className="w-4 h-4" />,    route: '/insights',   color: 'bg-emerald-600 hover:bg-emerald-500' },
@@ -57,6 +59,7 @@ export function AppNavRadial({ companionId, currentApp, seedText, theme = 'light
   const containerRef = useRef<HTMLDivElement>(null);
 
   const filteredItems = NAV_ITEMS.filter(item => {
+    if (currentApp === 'core' && item.route === '/core') return false;
     if (currentApp === 'co-author' && item.route === '/co-author') return false;
     if (currentApp === 'feed' && item.route === '/daily-feed') return false;
     if (currentApp === 'insights' && item.route === '/insights') return false;
