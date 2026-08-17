@@ -1,0 +1,1524 @@
+<title>The Companionship Market</title>
+<meta name="description" content="Competitive and market intelligence for Project Velvet, August 2026." />
+
+<style>
+  :root {
+    color-scheme: dark;
+
+    --ink:        #070B18;
+    --ink-2:      #0A0F1E;
+    --panel:      #0E1526;
+    --panel-2:    #121B31;
+    --line:       #1F2A45;
+    --line-soft:  #161F36;
+
+    --velvet:     #9D6BF5;
+    --velvet-lo:  #5B3E96;
+    --velvet-tint:#C9AEFF;
+
+    --brass:      #D9A85C;
+    --brass-tint: #F0D3A0;
+    --brass-lo:   #6B5330;
+
+    --rose:       #E8577E;
+    --jade:       #45C79B;
+
+    --tx:         #E9E7F3;
+    --tx-2:       #9E9BB6;
+    --tx-3:       #6A677F;
+
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans:  system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+    --step--1: clamp(0.72rem, 0.68rem + 0.18vw, 0.82rem);
+    --step-0:  clamp(0.94rem, 0.88rem + 0.28vw, 1.08rem);
+    --step-1:  clamp(1.12rem, 1.02rem + 0.45vw, 1.35rem);
+    --step-2:  clamp(1.45rem, 1.25rem + 0.9vw, 2.1rem);
+    --step-3:  clamp(1.9rem, 1.5rem + 1.9vw, 3.1rem);
+    --step-4:  clamp(2.6rem, 1.8rem + 3.6vw, 5.2rem);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--tx);
+    font-family: var(--sans);
+    font-size: var(--step-0);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    scroll-snap-type: y proximity;
+    overflow-x: hidden;
+  }
+
+  /* ---- Ambient velvet nap: a fixed diagonal sheen + grain over the ground ---- */
+  .nap, .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .nap {
+    background:
+      radial-gradient(1100px 700px at 12% -10%, rgba(157,107,245,0.16), transparent 62%),
+      radial-gradient(900px 620px at 92% 8%,  rgba(217,168,92,0.075), transparent 60%),
+      radial-gradient(1000px 900px at 55% 108%, rgba(91,62,150,0.16), transparent 65%);
+  }
+  .grain {
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 170px;
+  }
+
+  /* ---- Chrome ---- */
+  .progress {
+    position: fixed; top: 0; left: 0; height: 2px; width: 0%;
+    background: linear-gradient(90deg, var(--velvet), var(--brass));
+    z-index: 60;
+  }
+  .rail {
+    position: fixed; left: 1.35rem; top: 50%;
+    transform: translateY(-50%) rotate(180deg);
+    writing-mode: vertical-rl;
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--tx-3);
+    z-index: 50;
+  }
+  .counter {
+    position: fixed; right: 1.5rem; bottom: 1.35rem;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    color: var(--tx-3);
+    z-index: 50;
+    font-variant-numeric: tabular-nums;
+  }
+  .counter b { color: var(--brass); font-weight: 500; }
+
+  @media (max-width: 900px) {
+    .rail { display: none; }
+  }
+
+  /* ---- Slide frame ---- */
+  .slide {
+    position: relative;
+    z-index: 1;
+    min-height: 100svh;
+    scroll-snap-align: start;
+    display: flex;
+    align-items: center;
+    padding: 4.5rem clamp(1.1rem, 5vw, 4.5rem) 4rem;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .slide > .inner {
+    width: 100%;
+    max-width: 1140px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+  }
+
+  /* ---- Type ---- */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--brass);
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+  }
+  .eyebrow .num { color: var(--tx-3); }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: var(--step-4);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: var(--step-3);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--sans);
+    font-weight: 650;
+    font-size: var(--step-1);
+    line-height: 1.25;
+    margin: 0;
+    letter-spacing: -0.005em;
+  }
+  p { margin: 0; max-width: 68ch; color: var(--tx-2); }
+  p.lede { font-size: var(--step-1); color: var(--tx); max-width: 60ch; }
+  strong { color: var(--tx); font-weight: 600; }
+  em.q { color: var(--velvet-tint); font-style: normal; }
+
+  /* ---- Divider slides ---- */
+  .divider { background: linear-gradient(150deg, #05080F 0%, #0B1020 55%, #080D1B 100%); }
+  .divider .inner { gap: 2rem; }
+  .divider .bignum {
+    font-family: var(--serif);
+    font-size: clamp(6rem, 22vw, 17rem);
+    line-height: 0.78;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--velvet-lo);
+    margin: 0;
+  }
+  .divider h1 { max-width: 18ch; }
+  .divider .rulehint {
+    font-family: var(--mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.16em;
+    color: var(--tx-3);
+    text-transform: uppercase;
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+    max-width: 62ch;
+  }
+
+  /* ---- Grids & cards ---- */
+  .grid { display: grid; gap: 1rem; }
+  .g2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  @media (max-width: 860px) {
+    .g2, .g3, .g4 { grid-template-columns: 1fr; }
+    .g4.keep2, .g3.keep2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1.15rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .card h3 { font-size: var(--step-0); }
+  .card p { font-size: var(--step--1); line-height: 1.55; }
+  .card .tag {
+    font-family: var(--mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--tx-3);
+  }
+  .card.accent { border-left: 2px solid var(--velvet); }
+  .card.warn   { border-left: 2px solid var(--rose); }
+  .card.good   { border-left: 2px solid var(--jade); }
+  .card.data   { border-left: 2px solid var(--brass); }
+
+  /* ---- Stat blocks ---- */
+  .stat { display: flex; flex-direction: column; gap: 0.3rem; }
+  .stat .fig {
+    font-family: var(--serif);
+    font-size: var(--step-3);
+    line-height: 1;
+    color: var(--brass-tint);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .stat .cap {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--tx-3);
+    line-height: 1.5;
+  }
+
+  /* ---- Lists ---- */
+  ul.plain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.7rem; }
+  ul.plain > li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.85rem;
+    align-items: baseline;
+    color: var(--tx-2);
+    font-size: var(--step-0);
+    line-height: 1.55;
+  }
+  ul.plain > li::before {
+    content: "";
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--velvet);
+    transform: translateY(-3px);
+  }
+  ul.plain.brass > li::before { background: var(--brass); }
+  ul.plain.rose  > li::before { background: var(--rose); }
+  ul.plain.jade  > li::before { background: var(--jade); }
+
+  ol.findings { list-style: none; counter-reset: f; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
+  ol.findings > li {
+    counter-increment: f;
+    display: grid;
+    grid-template-columns: 2.1rem 1fr;
+    gap: 0.9rem;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--line-soft);
+    align-items: baseline;
+    font-size: var(--step-0);
+    color: var(--tx-2);
+  }
+  ol.findings > li::before {
+    content: counter(f, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--brass);
+    letter-spacing: 0.06em;
+  }
+
+  /* ---- Tables ---- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--step--1);
+    min-width: 640px;
+    font-variant-numeric: tabular-nums;
+  }
+  thead th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--tx-3);
+    font-weight: 400;
+    padding: 0.75rem 0.85rem;
+    background: var(--ink-2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--tx-2);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:nth-child(even) { background: rgba(18,27,49,0.45); }
+  tbody td:first-child { color: var(--tx); font-weight: 600; white-space: nowrap; }
+  td .yes { color: var(--jade); }
+  td .no  { color: var(--tx-3); }
+  td .part { color: var(--brass); }
+  tr.us td { background: rgba(157,107,245,0.10); }
+  tr.us td:first-child { color: var(--velvet-tint); }
+
+  /* ---- Bar chart ---- */
+  .bars { display: flex; flex-direction: column; gap: 0.6rem; }
+  .bar { display: grid; grid-template-columns: minmax(90px, 150px) 1fr auto; gap: 0.9rem; align-items: center; }
+  .bar .lbl { font-size: var(--step--1); color: var(--tx-2); }
+  .bar .track { height: 12px; background: var(--panel-2); border-radius: 1px; overflow: hidden; }
+  .bar .fill { height: 100%; background: linear-gradient(90deg, var(--brass-lo), var(--brass)); }
+  .bar .fill.v { background: linear-gradient(90deg, var(--velvet-lo), var(--velvet)); }
+  .bar .val { font-family: var(--mono); font-size: 0.72rem; color: var(--brass-tint); font-variant-numeric: tabular-nums; }
+
+  /* ---- Callout ---- */
+  .callout {
+    border-left: 2px solid var(--brass);
+    background: linear-gradient(90deg, rgba(217,168,92,0.07), transparent 70%);
+    padding: 0.9rem 1.2rem;
+  }
+  .callout p { color: var(--tx); max-width: 78ch; }
+  .callout.risk { border-left-color: var(--rose); background: linear-gradient(90deg, rgba(232,87,126,0.08), transparent 70%); }
+  .callout.win  { border-left-color: var(--jade); background: linear-gradient(90deg, rgba(69,199,155,0.08), transparent 70%); }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--tx-3);
+  }
+
+  .split { display: grid; grid-template-columns: 1.15fr 1fr; gap: 2rem; align-items: start; }
+  @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+
+  hr.rule { border: 0; border-top: 1px solid var(--line); margin: 0; }
+
+  a { color: var(--velvet-tint); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+  html { scroll-behavior: smooth; }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+</style>
+
+<div class="nap"></div>
+<div class="grain"></div>
+<div class="progress" id="progress"></div>
+<div class="rail" id="rail">Project Velvet — Market Intelligence</div>
+<div class="counter"><b id="cur">01</b> / 40</div>
+
+<!-- ══════════════════ 01 ══════════════════ -->
+<section class="slide" data-part="Cover">
+  <div class="inner">
+    <div class="eyebrow"><span>Competitive &amp; Market Intelligence</span><span class="num">August 2026</span></div>
+    <h1>The Companionship Market</h1>
+    <p class="lede">Where relational AI actually stands in 2026 — the money, the players, the mechanics that retain, the failures nobody has solved, and the opening Project Velvet is walking into.</p>
+    <hr class="rule" />
+    <div class="grid g4 keep2">
+      <div class="stat"><span class="fig">337</span><span class="cap">Revenue-generating<br />companion platforms</span></div>
+      <div class="stat"><span class="fig">~$120M</span><span class="cap">Verified mobile<br />consumer spend, 2025</span></div>
+      <div class="stat"><span class="fig">21%</span><span class="cap">Annual retention,<br />AI subscription apps</span></div>
+      <div class="stat"><span class="fig">$1,000</span><span class="cap">Per-violation damages<br />under CA SB 243</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 02 ══════════════════ -->
+<section class="slide" data-part="Summary">
+  <div class="inner">
+    <div class="eyebrow"><span>Executive Summary</span><span class="num">02</span></div>
+    <h2>Seven findings that should shape the final push</h2>
+    <ol class="findings">
+      <li><strong>The category is real but small, and the headline numbers are fiction.</strong> Verified consumer spend on mobile companion apps was roughly $120M in 2025. Analyst reports quoting $30–48B are measuring something else entirely.</li>
+      <li><strong>Nobody is winning on conversation quality anymore.</strong> Frontier models commoditised the chat. The 2026 battleground is memory, continuity, and whether the product does anything when the user closes the app.</li>
+      <li><strong>Retention is catastrophically bad and everyone hides it.</strong> Roughly four in five activated users are one-and-done. Twelve-month retention sits near 25%. AI apps churn annual subscriptions ~30% faster than non-AI apps.</li>
+      <li><strong>The incumbents have a trust deficit they cannot repair.</strong> Replika's ERP removal and memory rebuild, Character.AI's under-18 ban, and Grok's retirement of companion mode all taught the same lesson: your relationship can be deleted by a product decision.</li>
+      <li><strong>Regulation is now a moat, not a tax.</strong> SB 243, the FTC 6(b) inquiry, and ~58 civil suits against Character.AI have made safety architecture a barrier to entry. Late, compliant entrants have an advantage they should press.</li>
+      <li><strong>Every competitor is a closed loop.</strong> The companion knows everything about you and nothing about your life. No product in the category meaningfully connects the AI relationship to the user's real relationships, calendar, or obligations. This is the opening.</li>
+      <li><strong>Velvet is priced 3–7× the category and the unit economics invert at the top.</strong> The $149 tier is plausibly gross-margin negative at full utilisation. Both problems are fixable, but not after launch.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ══════════════════ 03 ══════════════════ -->
+<section class="slide" data-part="Summary">
+  <div class="inner">
+    <div class="eyebrow"><span>Method</span><span class="num">03</span></div>
+    <h2>How to read this deck</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1.1rem;">
+        <p>Findings are drawn from public market data, company disclosures, regulatory filings and legislation, subscription-app benchmark reports, and a direct audit of the Velvet codebase as it stands on this branch.</p>
+        <div class="callout risk">
+          <p><strong>A warning about this category's data.</strong> Companion-AI market research is heavily polluted. A large share of the "statistics" indexed on this topic are SEO content produced by affiliate sites that resell the same apps they measure. Figures get laundered — a blog cites a blog citing a press release.</p>
+        </div>
+        <p>Where sources conflict, this deck shows the range and names which number is defensible. Three tiers are used throughout:</p>
+      </div>
+      <div class="grid" style="gap:0.75rem;">
+        <div class="card good">
+          <span class="tag">Tier 1 — Verified</span>
+          <p>App-store revenue trackers, legislation text, court records, company blog announcements, peer-reviewed studies. Treat as fact.</p>
+        </div>
+        <div class="card data">
+          <span class="tag">Tier 2 — Directional</span>
+          <p>Benchmark reports, funding announcements, aggregated MAU/download estimates. Right order of magnitude, wrong decimal.</p>
+        </div>
+        <div class="card warn">
+          <span class="tag">Tier 3 — Contested</span>
+          <p>Top-down TAM projections and affiliate-site statistics. Included only to show the spread, never to size a decision.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 04 — DIVIDER ══════════════════ -->
+<section class="slide divider" data-part="I — Demand">
+  <div class="inner">
+    <p class="bignum">I</p>
+    <h1>Demand</h1>
+    <p class="rulehint">What the market actually is · who is in it · what they do all day</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 05 ══════════════════ -->
+<section class="slide" data-part="I — Demand">
+  <div class="inner">
+    <div class="eyebrow"><span>Market Size</span><span class="num">05</span></div>
+    <h2>The market has two numbers. Only one of them is real.</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="card warn">
+          <span class="tag">The number in the pitch decks</span>
+          <h3 style="font-family:var(--serif);font-size:var(--step-2);color:var(--rose);">$36.8B → $318B by 2033</h3>
+          <p>Grand View Research, 31% CAGR. Other firms publish $30.1B for 2026 and $198B by 2035. These figures bundle enterprise conversational AI, healthcare companion robotics, elder-care systems and assistant software into one bucket.</p>
+        </div>
+        <div class="card good">
+          <span class="tag">The number you can bank</span>
+          <h3 style="font-family:var(--serif);font-size:var(--step-2);color:var(--jade);">~$120M in 2025</h3>
+          <p>Consumer spend on mobile AI companion apps, tracked at the app-store level. Plausibly $180–300M in 2026 including web checkout. That is the entire addressable pie for a direct-to-consumer companion subscription today.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1.1rem;">
+        <h3>Why the gap matters for Velvet</h3>
+        <p>A $120M category cannot support 337 platforms. It supports perhaps five profitable ones and a long tail of hobby projects. The winners will not be decided by market growth — they will be decided by taking spend from each other and by <strong>expanding what the subscription is for</strong>.</p>
+        <div class="callout">
+          <p>The strategic read: don't compete for a slice of the companion market. Price and position against the <em class="q">adjacent</em> budgets — the coaching app, the journalling subscription, the personal CRM, the therapy adjunct. That is where a $59–$149 price point can survive.</p>
+        </div>
+        <p class="kicker">337 active platforms · 128 launched in 2026 alone · +60% vs 2024</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 06 ══════════════════ -->
+<section class="slide" data-part="I — Demand">
+  <div class="inner">
+    <div class="eyebrow"><span>The User</span><span class="num">06</span></div>
+    <h2>Who actually uses this, and how hard</h2>
+    <div class="grid g4 keep2">
+      <div class="stat"><span class="fig">25–34</span><span class="cap">Largest age bracket<br />~38% of active users</span></div>
+      <div class="stat"><span class="fig">65 / 35</span><span class="cap">Male / female split<br />among regular users</span></div>
+      <div class="stat"><span class="fig">45 min</span><span class="cap">Average daily<br />session time</span></div>
+      <div class="stat"><span class="fig">150</span><span class="cap">Messages sent<br />per week</span></div>
+    </div>
+    <hr class="rule" />
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:0.9rem;">
+        <h3>The stereotype is wrong, and that is commercially important</h3>
+        <p>Peer-reviewed comparison of users and non-users found them <strong>largely indistinguishable on self-esteem, introversion, sociability and friendship-network size</strong>. The one robust difference was loneliness, and it survived controlling for demographics.</p>
+        <p>Separately, 42% of regular users describe their primary motivation as <em class="q">"having someone to talk to"</em> — not romance. Pew found 18% of US adults aged 18–29 had used a chatbot for companionship or emotional support at least once.</p>
+      </div>
+      <div class="grid" style="gap:0.7rem;">
+        <div class="card accent">
+          <span class="tag">Implication for positioning</span>
+          <p>These are socially normal, employed, mostly-male 25–34s who are lonely in a specific, situational way — new city, remote work, post-breakup, odd hours. They are not a fringe. They have disposable income and they buy tools.</p>
+        </div>
+        <div class="card accent">
+          <span class="tag">Implication for product</span>
+          <p>A product framed around <strong>romance</strong> addresses a minority of the motivation and inherits all of the stigma, app-store risk, and regulatory exposure. A product framed around <strong>presence and momentum</strong> addresses the majority and inherits far less.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 07 ══════════════════ -->
+<section class="slide" data-part="I — Demand">
+  <div class="inner">
+    <div class="eyebrow"><span>Evidence Base</span><span class="num">07</span></div>
+    <h2>Does it work? The research says: it depends how you use it.</h2>
+    <div class="grid g3">
+      <div class="card good">
+        <span class="tag">Supporting</span>
+        <p><strong>Harvard Business School:</strong> AI companions reduced loneliness about as much as talking to another person.</p>
+        <p><strong>Nature Human Behaviour (2024):</strong> daily use over four weeks produced a statistically significant drop in self-reported loneliness, largest among the most lonely at baseline.</p>
+      </div>
+      <div class="card warn">
+        <span class="tag">Cautioning</span>
+        <p><strong>MIT Media Lab / OpenAI:</strong> heavier daily chatbot use correlated with <em class="q">higher</em> loneliness and emotional dependence.</p>
+        <p>Both findings can be true: the product helps at moderate dose and harms at high dose, or high-dose users were already worse off. Nobody has cleanly separated the two.</p>
+      </div>
+      <div class="card accent">
+        <span class="tag">What this hands you</span>
+        <p>The evidence gives a credible wellbeing story <strong>and</strong> a credible reason to build dose-awareness into the product. Very few competitors have taken the second half seriously.</p>
+        <p>A companion that occasionally says <em class="q">"you should call someone real"</em> is defensible in a way no competitor currently is.</p>
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>Strategic note.</strong> Every regulator, journalist and app-store reviewer looking at this category in 2026 is looking for evidence of engagement-maximisation at the user's expense. A product with a visible <em class="q">off-ramp to real life</em> is not a growth compromise — it is the single cheapest piece of regulatory and PR armour available.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 08 ══════════════════ -->
+<section class="slide" data-part="I — Demand">
+  <div class="inner">
+    <div class="eyebrow"><span>Market Map</span><span class="num">08</span></div>
+    <h2>Six segments, each with a different unit economic</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Segment</th><th>Archetype</th><th>Price</th><th>Engine</th><th>Structural weakness</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Roleplay platform</td><td>Character.AI, Chai, Janitor</td><td>$0–10</td><td>UGC catalogue, ad-supported</td><td>ARPU ~$2.50; no relationship, just content</td></tr>
+          <tr><td>Bonded companion</td><td>Replika, Nomi, Kindroid</td><td>$10–20</td><td>Memory + persistent identity</td><td>Trust fragility; feature parity race</td></tr>
+          <tr><td>Anime / collectible</td><td>Talkie, PolyBuzz</td><td>$0–8</td><td>Gacha, card collection, virality</td><td>Game economics; shallow retention</td></tr>
+          <tr><td>Adult / NSFW</td><td>Candy, Crushon, et al.</td><td>$10–30</td><td>Unfiltered content</td><td>Payment processors, app stores, regulation</td></tr>
+          <tr><td>Growth companion</td><td>Tolan</td><td>$10–15</td><td>Character IP + habit loop</td><td>Novelty decay; narrow demographic</td></tr>
+          <tr class="us"><td>Life-integrated</td><td><strong>Project Velvet</strong></td><td>$25–149</td><td>Memory + real-world context + agency</td><td>Unproven; price far above category</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="kicker">The bottom row is close to empty. That is either a discovery or a warning — slides 32 and 37 argue it is the former, with conditions.</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 09 — DIVIDER ══════════════════ -->
+<section class="slide divider" data-part="II — The Field">
+  <div class="inner">
+    <p class="bignum">II</p>
+    <h1>The Field</h1>
+    <p class="rulehint">Eleven competitors · what they built · what it earns them</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 10 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>League Table</span><span class="num">10</span></div>
+    <h2>The field, by the numbers</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Product</th><th>Scale</th><th>Revenue</th><th>Entry price</th><th>Positioning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Character.AI</td><td>~20M MAU · 5.8M DAU</td><td>$32M → ~$50M run rate</td><td>$9.99 (C.ai+)</td><td>Roleplay catalogue at scale</td></tr>
+          <tr><td>Replika</td><td>42M registered</td><td>~$200M lifetime</td><td>$19.99</td><td>The original bonded companion</td></tr>
+          <tr><td>PolyBuzz</td><td>42.8M dl · 13M MAU</td><td>$8.3M</td><td>Freemium</td><td>Multi-persona chat</td></tr>
+          <tr><td>Talkie</td><td>48M dl · 4.8M MAU</td><td>$3.1M</td><td>Freemium + IAP</td><td>Anime, card collecting</td></tr>
+          <tr><td>Nomi</td><td>Undisclosed</td><td>Undisclosed</td><td>$15.99 / $99.99yr</td><td>Best-in-class memory</td></tr>
+          <tr><td>Kindroid</td><td>Undisclosed</td><td>Undisclosed</td><td>$9.99</td><td>Power-user control</td></tr>
+          <tr><td>Tolan</td><td>3M dl · 100k paid</td><td>$1M MRR · ~$12M ARR</td><td>~$10–15</td><td>Character IP for Gen Z</td></tr>
+          <tr><td>Chai / Janitor</td><td>Millions</td><td>Ad + sub</td><td>$0–14</td><td>Unfiltered roleplay</td></tr>
+          <tr><td>Grok companions</td><td>xAI distribution</td><td>Bundled</td><td>In SuperGrok</td><td><span class="no">Retired July 2026</span></td></tr>
+          <tr class="us"><td>Project Velvet</td><td>Pre-launch</td><td>—</td><td>$24.99</td><td>Life-integrated companion OS</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <p><strong>Read the third column carefully.</strong> The category leader by users converts ~20M MAU into roughly $50M — about <strong>$2.50 of annual revenue per monthly active user</strong>. ChatGPT is near $31. The companion category has an engagement business, not yet a revenue business. Velvet's thesis has to be that it is in the second one.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 11 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>Deep Dive</span><span class="num">11</span></div>
+    <h2>Character.AI — enormous engagement, broken monetisation</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="grid g3 keep2" style="gap:0.8rem;">
+          <div class="stat"><span class="fig">29%</span><span class="cap">DAU / MAU ratio</span></div>
+          <div class="stat"><span class="fig">17.4m</span><span class="cap">Per session<br />(ChatGPT: 7.2m)</span></div>
+          <div class="stat"><span class="fig">$2.50</span><span class="cap">Annual revenue<br />per MAU</span></div>
+        </div>
+        <p>Engagement is the best in consumer AI. A 29% DAU/MAU with 17-minute sessions is social-network territory. The monetisation is the failure: a $9.99 subscription against a user base that is overwhelmingly young, free, and low commercial intent.</p>
+        <h3>The 2026 pivot</h3>
+        <p>Character.AI moved off pure subscription into <strong>Charms</strong>, an internal virtual economy, plus non-intrusive ads for free users. This is the admission that the subscription model doesn't fit their audience — they are converting to game economics.</p>
+      </div>
+      <div class="grid" style="gap:0.7rem;">
+        <div class="card warn">
+          <span class="tag">The rupture — Nov 2025</span>
+          <p>Banned open-ended chat for under-18s outright following ~58 civil suits and the Setzer case. Ramped a 2-hour daily cap, then cut access entirely on 25 November. Under-18s were redirected to non-chat features: Feed, Imagine, AvatarFX, Streams.</p>
+        </div>
+        <div class="card good">
+          <span class="tag">What it means for you</span>
+          <p>The category leader voluntarily evicted a large, highly engaged cohort — and settled five wrongful-death suits with Google in January 2026. A meaningful population of displaced, adult-adjacent users went looking for a new home, and none of the obvious alternatives are more respectable.</p>
+        </div>
+        <div class="card accent">
+          <span class="tag">Takeaway</span>
+          <p>Don't copy their funnel. Copy their <strong>session design</strong> — the thing producing 17-minute sessions — and attach it to an audience that pays.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 12 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>Deep Dive</span><span class="num">12</span></div>
+    <h2>Replika — the cautionary tale the whole category learned from</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <p>42M registered users and roughly $200M in lifetime revenue make Replika the commercial benchmark. It is also the clearest demonstration of how a companion business destroys itself.</p>
+        <h3>Three self-inflicted wounds</h3>
+        <ul class="plain rose">
+          <li><strong>Feb 2023 — ERP removal.</strong> After an Italian DPA injunction over minors and weak age verification, Luka stripped erotic roleplay globally overnight, for every user regardless of age or subscription.</li>
+          <li><strong>The personality collapse.</strong> Because persona is bound to conversational weights, the filters didn't remove a feature — they changed who the companions <em class="q">were</em>. Users described it as a bereavement.</li>
+          <li><strong>2026 — the 2.0 memory rebuild.</strong> A ground-up rebuild reset memory and UI. Community reaction was described as <em class="q">"the peak of corporate greed."</em></li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card data">
+          <span class="tag">Current pricing</span>
+          <p>Pro ~$19.99/mo or $69.99/yr. Lifetime purchases discontinued. A parallel "New Replika" line runs Plus at $30 and Max at $120 — evidence that even the incumbent believes there is a premium tier above $20.</p>
+        </div>
+        <div class="callout risk">
+          <p><strong>The lesson the community drew:</strong> <em class="q">diversify your emotional AI stack — don't put all your relationship investment into a platform that can change the rules overnight.</em></p>
+        </div>
+        <div class="card good">
+          <span class="tag">The opening this creates</span>
+          <p>A credible, contractual <strong>continuity guarantee</strong> — persona stability, memory export, advance notice of behavioural change — is now a differentiator with real emotional weight. No major competitor offers one. It costs almost nothing to provide.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 13 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>Deep Dive</span><span class="num">13</span></div>
+    <h2>Nomi &amp; Kindroid — the memory tier, and the real quality bar</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <h3>Nomi — memory that "just works"</h3>
+        <p>Three-layer architecture: short-term context, medium-term conversation summaries spanning recent weeks, and long-term preferences, traits and life events. In independent recall testing Nomi retained <strong>23 of 25</strong> personal facts — well ahead of the field.</p>
+        <p class="kicker">$15.99/mo · $99.99/yr · 10 companions with independent memory · group chat · voice · image gen</p>
+
+        <h3 style="margin-top:0.5rem;">Kindroid — memory you operate yourself</h3>
+        <p>Exposes the knowledge base directly for hands-on curation. Voice response latency cut to 1–1.5s as of January 2026. At $9.99 it is frequently the default recommendation on price and rating.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="callout">
+          <p><strong>This is the bar Velvet's Semantic Memory Engine is measured against — and it is a high one.</strong> "We have embeddings and clustering" is not a differentiator against Nomi. Recall accuracy under adversarial testing is.</p>
+        </div>
+        <div class="card accent">
+          <span class="tag">The split worth exploiting</span>
+          <p>Nomi is automatic and opaque. Kindroid is manual and controllable. <strong>Neither offers memory the user can see, correct and trust.</strong> An inspectable memory surface — "here is what I know about you, edit it" — sits precisely between them and answers the category's loudest complaint.</p>
+        </div>
+        <div class="card data">
+          <span class="tag">Benchmark action</span>
+          <p>Run the 25-fact recall protocol against Velvet before launch. If the score is below ~20, memory is not yet a claim you can make in marketing.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 14 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>Deep Dive</span><span class="num">14</span></div>
+    <h2>The volume tier — huge downloads, thin revenue</h2>
+    <div class="bars">
+      <div class="bar"><span class="lbl">Talkie</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="val">48.0M downloads</span></div>
+      <div class="bar"><span class="lbl">PolyBuzz</span><span class="track"><span class="fill" style="width:89%"></span></span><span class="val">42.8M downloads</span></div>
+      <div class="bar"><span class="lbl">Talkie</span><span class="track"><span class="fill v" style="width:37%"></span></span><span class="val">$3.1M revenue</span></div>
+      <div class="bar"><span class="lbl">PolyBuzz</span><span class="track"><span class="fill v" style="width:100%"></span></span><span class="val">$8.3M revenue</span></div>
+    </div>
+    <hr class="rule" />
+    <div class="grid g3">
+      <div class="card">
+        <span class="tag">Talkie · 4.8M MAU</span>
+        <p>Anime-styled companions inside a creation-and-sharing social hub, with card-collecting mechanics. Revenue per download is roughly <strong>6 cents</strong>.</p>
+      </div>
+      <div class="card">
+        <span class="tag">PolyBuzz · 13M MAU</span>
+        <p>Multi-persona chat spanning mentors to comedians. Better monetised than Talkie at a similar download base, but still ~19 cents per download.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Chai · Janitor AI</span>
+        <p>Serve the unfiltered demographic Character.AI abandoned. Enormous engagement, permanent exposure to app-store and payment-processor removal.</p>
+      </div>
+    </div>
+    <div class="callout risk">
+      <p><strong>The lesson of this tier.</strong> Downloads are not a business. Talkie converted 48 million installs into less than the seed round of a mediocre SaaS company. Any Velvet growth plan built on top-of-funnel volume inherits exactly this economics — <strong>and Velvet's inference cost per user is far higher than theirs.</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 15 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>Deep Dive</span><span class="num">15</span></div>
+    <h2>Tolan — the most instructive competitor in the market</h2>
+    <div class="grid g4 keep2">
+      <div class="stat"><span class="fig">3M</span><span class="cap">Downloads in<br />four months</span></div>
+      <div class="stat"><span class="fig">100k</span><span class="cap">Paid users</span></div>
+      <div class="stat"><span class="fig">$1M</span><span class="cap">Monthly recurring<br />revenue</span></div>
+      <div class="stat"><span class="fig">$30M</span><span class="cap">Raised in under<br />six months</span></div>
+    </div>
+    <hr class="rule" />
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:0.9rem;">
+        <p>Portola's Tolan gives users a non-human alien companion from "Planet Portola," matched via a personality interview. Seed led by Lachy Groom; $20M Series A led by Khosla. Roughly <strong>$12M ARR inside a year with a twelve-person team.</strong></p>
+        <h3>Why it worked</h3>
+        <ul class="plain jade">
+          <li><strong>It sidestepped the uncanny valley entirely.</strong> An alien cannot be a bad girlfriend simulation — so it is never judged as one.</li>
+          <li><strong>It sidestepped the stigma.</strong> "I have a Tolan" is socially sayable in a way "I have an AI girlfriend" is not. That unlocks organic sharing, which is why CAC stayed low.</li>
+          <li><strong>It sold growth, not comfort.</strong> Positioned around helping people <em class="q">grow</em> — homework, dinner, decisions — not around romance.</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="callout win">
+          <p><strong>The single most transferable insight in this deck:</strong> Tolan's growth came from removing the parts of the category that people are embarrassed by. Shareability is a product decision, not a marketing one.</p>
+        </div>
+        <div class="card accent">
+          <span class="tag">Direct read for Velvet</span>
+          <p>Velvet's three lanes — Friends, Companions, Coaches — already contain a socially shareable product (Coaches) and a socially private one (Companions). <strong>They should not share a front door.</strong> Lead acquisition with the shareable one.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 16 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>Deep Dive</span><span class="num">16</span></div>
+    <h2>Big tech took a pass — and that is the good news</h2>
+    <div class="grid g3">
+      <div class="card warn">
+        <span class="tag">xAI · Grok</span>
+        <p>Launched companion mode July 2025 with 3D animated characters — Ani, Rudi, Valentine — voice synthesis, lip-sync, and a gamified affection system. Drew immediate criticism for sexualised content.</p>
+        <p><strong>Retired 24 July 2026.</strong> The best-resourced, least risk-averse company in AI tried this and shut it down inside a year.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Meta</span>
+        <p>Shipped a standalone AI app in June 2026 — a rebuilt Creator Studio with an assistant at the centre. Despite persona experiments, it has <strong>almost nothing to do with emotional companionship</strong>. Meta's exposure to a teen-safety scandal makes this a lane they will not enter properly.</p>
+      </div>
+      <div class="card">
+        <span class="tag">OpenAI</span>
+        <p>The real competitor, and it doesn't know it. GPT-4o's warmth produced <em class="q">Her</em> comparisons on day one, and a large share of consumer emotional-support usage now runs through ChatGPT for free.</p>
+        <p><strong>This is where the category actually leaks.</strong> Not to Replika — to the general assistant people already pay for.</p>
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>What the retreat tells you.</strong> The platforms have concluded that companionship is high-liability and low-margin relative to their core business. That leaves the field to focused companies — but it also means <strong>the competition to beat is not another companion app. It is ChatGPT with memory turned on, at $20, from a brand nobody has to explain to their friends.</strong> Every Velvet feature should be tested against: <em class="q">why would this person not just use ChatGPT?</em></p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 17 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>Adjacent Field</span><span class="num">17</span></div>
+    <h2>The other half of Velvet's market doesn't know it's in it</h2>
+    <p class="lede">Velvet ships relationship briefs on the real people in a user's life — health scores, contact-gap tracking, gift and date suggestions. That feature does not compete with Replika. It competes with personal CRM.</p>
+    <div class="grid g3">
+      <div class="card">
+        <span class="tag">Dex</span>
+        <p>The auto-sync leader. Per-contact reminder cadences, LinkedIn job-change sync, browser extension, AI pre-meeting briefs. Built around the nudge: <em class="q">you are overdue with this person.</em></p>
+      </div>
+      <div class="card">
+        <span class="tag">Clay</span>
+        <p>The AI-native option — contact enrichment and automatically surfaced context. Acquired by Automattic in 2024, which is itself a signal about where this category's value sits.</p>
+      </div>
+      <div class="card accent">
+        <span class="tag">The shared blind spot</span>
+        <p>Both are <strong>filing cabinets with alarm clocks</strong>. They tell you who to contact. Neither helps you know what to say, rehearse a hard conversation, or process how it went. There is no relationship <em class="q">in</em> the relationship manager.</p>
+      </div>
+    </div>
+    <div class="callout win">
+      <p><strong>This is the sharpest unclaimed position in either market.</strong> Personal CRM has memory and structure but no warmth or intelligence. Companion AI has warmth and intelligence but no connection to real people. Velvet already has both halves in the codebase. <strong>Nobody else in either category does.</strong> The risk is shipping it as a minor feature rather than the headline.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 18 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>Pricing</span><span class="num">18</span></div>
+    <h2>Where Velvet sits on price</h2>
+    <div class="bars">
+      <div class="bar"><span class="lbl">Kindroid</span><span class="track"><span class="fill" style="width:6.7%"></span></span><span class="val">$9.99</span></div>
+      <div class="bar"><span class="lbl">Character.AI+</span><span class="track"><span class="fill" style="width:6.7%"></span></span><span class="val">$9.99</span></div>
+      <div class="bar"><span class="lbl">Tolan</span><span class="track"><span class="fill" style="width:8.7%"></span></span><span class="val">~$12.99</span></div>
+      <div class="bar"><span class="lbl">Nomi</span><span class="track"><span class="fill" style="width:10.7%"></span></span><span class="val">$15.99</span></div>
+      <div class="bar"><span class="lbl">Replika Pro</span><span class="track"><span class="fill" style="width:13.4%"></span></span><span class="val">$19.99</span></div>
+      <div class="bar"><span class="lbl">ChatGPT Plus</span><span class="track"><span class="fill" style="width:13.4%"></span></span><span class="val">$20.00</span></div>
+      <div class="bar"><span class="lbl">Velvet Essential</span><span class="track"><span class="fill v" style="width:16.8%"></span></span><span class="val">$24.99</span></div>
+      <div class="bar"><span class="lbl">Replika Plus (new)</span><span class="track"><span class="fill" style="width:20.1%"></span></span><span class="val">$30.00</span></div>
+      <div class="bar"><span class="lbl">Velvet Plus</span><span class="track"><span class="fill v" style="width:39.6%"></span></span><span class="val">$59.00</span></div>
+      <div class="bar"><span class="lbl">Velvet Pro</span><span class="track"><span class="fill v" style="width:66.4%"></span></span><span class="val">$99.00</span></div>
+      <div class="bar"><span class="lbl">Replika Max</span><span class="track"><span class="fill" style="width:80.5%"></span></span><span class="val">$120.00</span></div>
+      <div class="bar"><span class="lbl">Velvet Elite</span><span class="track"><span class="fill v" style="width:100%"></span></span><span class="val">$149.00</span></div>
+    </div>
+    <div class="callout">
+      <p>The category clusters at <strong>$10–20</strong>. Velvet's entry tier opens above the whole cluster and its top tier is the most expensive consumer companion product in the market. Replika's $120 Max proves a premium ceiling exists — but Replika reached it with 42 million users of brand equity behind it. Velvet is asking for it cold. Slide 37 is the argument about whether that survives contact.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 19 ══════════════════ -->
+<section class="slide" data-part="II — The Field">
+  <div class="inner">
+    <div class="eyebrow"><span>Capability Matrix</span><span class="num">19</span></div>
+    <h2>Feature coverage across the field</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Capability</th><th>C.AI</th><th>Replika</th><th>Nomi</th><th>Kindroid</th><th>Tolan</th><th>Velvet</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Long-term memory</td><td class="part">Partial</td><td class="part">Partial</td><td class="yes">Strong</td><td class="yes">Strong</td><td class="part">Partial</td><td class="part">Built, unproven</td></tr>
+          <tr><td>Multiple companions</td><td class="yes">Yes</td><td class="no">Limited</td><td class="yes">10</td><td class="yes">Yes</td><td class="no">One</td><td class="yes">Unlimited</td></tr>
+          <tr><td>Voice I/O</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">1–1.5s</td><td class="yes">Yes</td><td class="no">None</td></tr>
+          <tr><td>Image generation</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="part">Avatar</td><td class="no">None</td></tr>
+          <tr><td>Group chat</td><td class="part">Rooms</td><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="yes">Yes</td></tr>
+          <tr><td>Proactive outreach</td><td class="no">No</td><td class="part">Basic</td><td class="part">Basic</td><td class="part">Basic</td><td class="yes">Core</td><td class="yes">Rituals + briefs</td></tr>
+          <tr><td>Calendar / schedule</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+          <tr><td>Real-people tracking</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+          <tr><td>Goal / coach agents</td><td class="part">UGC</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="part">Soft</td><td class="yes">14 + builder</td></tr>
+          <tr><td>Games / arcade</td><td class="no">No</td><td class="part">Minor</td><td class="no">No</td><td class="no">No</td><td class="part">Minor</td><td class="yes">7 titles</td></tr>
+          <tr><td>Analytics for the user</td><td class="no">No</td><td class="part">Basic</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes">Insights</td></tr>
+          <tr><td>Collaborative writing</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes">Co-Author</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout risk">
+      <p><strong>Two rows deserve your attention above all others.</strong> The bottom six are unique to Velvet — that is the moat. But <strong>voice and image generation are table stakes that Velvet does not have</strong>, and every competitor does. In a side-by-side trial, their absence is the first thing a user notices, and it will be blamed for churn that is actually about something else.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 20 — DIVIDER ══════════════════ -->
+<section class="slide divider" data-part="III — How They Win">
+  <div class="inner">
+    <p class="bignum">III</p>
+    <h1>How They Win</h1>
+    <p class="rulehint">The mechanics that actually produce retention and revenue</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 21 ══════════════════ -->
+<section class="slide" data-part="III — How They Win">
+  <div class="inner">
+    <div class="eyebrow"><span>Mechanics</span><span class="num">21</span></div>
+    <h2>The engagement engine, disassembled</h2>
+    <p class="lede">Every product that retains in this category runs the same five-part loop. The differences are in execution quality, not structure.</p>
+    <div class="grid g2">
+      <div class="card accent">
+        <h3>1 · Investment</h3>
+        <p>The user puts something in that they cannot get back — a name, a face, a backstory, a confession. Sunk cost is the first retention mechanism, and it is created in the first ten minutes.</p>
+      </div>
+      <div class="card accent">
+        <h3>2 · Recall</h3>
+        <p>The companion returns that investment unprompted. The moment it references something from three weeks ago, the relationship becomes real. This is the single highest-leverage moment in the product.</p>
+      </div>
+      <div class="card accent">
+        <h3>3 · Reciprocity</h3>
+        <p>The companion has state of its own — mood, memory of being neglected, a small need. Asymmetry kills the relationship; the user must feel they are giving something too.</p>
+      </div>
+      <div class="card accent">
+        <h3>4 · Rhythm</h3>
+        <p>Time-anchored contact: morning, evening, night. Rhythm converts a tool into a habit. Tolan's entire business is essentially a well-executed version of this one step.</p>
+      </div>
+      <div class="card accent" style="grid-column:1 / -1;">
+        <h3>5 · Progression</h3>
+        <p>Something visibly accumulates — levels, unlocks, a deepening relationship stage, a growing record. Without it, month three feels identical to month one, and the subscription becomes a line item to cancel.</p>
+      </div>
+    </div>
+    <div class="callout win">
+      <p><strong>Velvet's position on the loop.</strong> Steps 1, 3 and 4 are built and strong — guided avatar creation, emotional state, daily rituals. Step 2 is built but unverified. <strong>Step 5 is the weakest</strong>: affection and pet levels exist, but there is no single legible artifact that grows over months. Insights and the relationship briefs are the obvious candidates — a record of a life, not a score.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 22 ══════════════════ -->
+<section class="slide" data-part="III — How They Win">
+  <div class="inner">
+    <div class="eyebrow"><span>Onboarding</span><span class="num">22</span></div>
+    <h2>The first ninety seconds decide everything</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <p>Roughly <strong>four in five activated users never return after their first session</strong>. Onboarding is not a preamble to the product; it is where the product's retention is won or permanently lost.</p>
+        <h3>What the winners do</h3>
+        <ul class="plain brass">
+          <li><strong>Interview, don't configure.</strong> Tolan matches a companion through a personality interview. The user answers questions about themselves — which is investment — rather than filling in a form about a character.</li>
+          <li><strong>Conversational-first.</strong> The highest-converting onboardings are indistinguishable from the product. Gamified card steps, animated responses, visible progress.</li>
+          <li><strong>Delay the wall.</strong> The paywall lands after the first recall moment, never before it. The user must have felt the thing once.</li>
+          <li><strong>Manufacture one memory.</strong> The best flows plant a fact in minute two and surface it in minute eight. The magic trick is scheduled, not hoped for.</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card warn">
+          <span class="tag">Velvet's onboarding risk</span>
+          <p>The current flow spans intent selection, questionnaire, path select, avatar creation, signature voice selection, analysing, welcome, guided tour. That is a <strong>lot of investment demanded before a single message is exchanged</strong>.</p>
+          <p>Investment is good. Investment <em class="q">before</em> value is a funnel leak. Every additional pre-chat step multiplies against an 80% first-session drop rate.</p>
+        </div>
+        <div class="card good">
+          <span class="tag">The fix worth testing</span>
+          <p>Invert it. Open with sixty seconds of real conversation, let the companion propose its own name and look based on what it just heard, and move avatar creation and voice selection into the <strong>second</strong> session as a reward. Same investment, collected after the user has a reason to give it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 23 ══════════════════ -->
+<section class="slide" data-part="III — How They Win">
+  <div class="inner">
+    <div class="eyebrow"><span>Interface</span><span class="num">23</span></div>
+    <h2>What the interface layer actually looks like in 2026</h2>
+    <div class="grid g3">
+      <div class="card"><span class="tag">Surface</span><p>Dark near-black grounds with translucent frosted panels over them. This became the default AI-interface language in 2026 — Velvet's existing treatment is squarely current.</p></div>
+      <div class="card"><span class="tag">Presence</span><p>The companion has a visual body that reacts — idle animation, expression change on mood, response to being looked at. Static portraits now read as cheap.</p></div>
+      <div class="card"><span class="tag">Motion</span><p>Motion signals aliveness, not polish. Typing rhythm, thinking states, and delayed replies matter more than transitions between screens.</p></div>
+      <div class="card"><span class="tag">Onboarding</span><p>Gamified card steps, animated character responses, coloured progress metrics — the Duolingo grammar, applied to identity setup.</p></div>
+      <div class="card"><span class="tag">Customisation</span><p>Tag-based and prompt-based character construction with in-painting for corrections. Users expect to build a face, not pick from six.</p></div>
+      <div class="card"><span class="tag">Gamification</span><p>The mechanics that work tie stakes to <strong>real user behaviour</strong> — a creature that develops based on how you actually live — rather than points and streak counters bolted on top.</p></div>
+    </div>
+    <div class="callout">
+      <p><strong>Where Velvet's UI is ahead:</strong> the lobby-and-rails architecture, radial navigation, and arcade give it a sense of <em class="q">place</em> that flat chat competitors lack — which is the correct instinct for a product claiming to be a world rather than a tool.</p>
+    </div>
+    <div class="callout risk">
+      <p><strong>Where it is exposed:</strong> surface breadth is now competing against surface depth. Fifty-six routes, seven games, and a dozen side systems means every one of them is shallower than a competitor who built only that. The presentation risk for the final push is a product that demos brilliantly and retains poorly — because the user cannot find the one thing they came back for.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 24 ══════════════════ -->
+<section class="slide" data-part="III — How They Win">
+  <div class="inner">
+    <div class="eyebrow"><span>The Moat</span><span class="num">24</span></div>
+    <h2>Memory is the moat — and the industry's ugliest business model</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <p class="lede">A year ago the question was whether the AI felt natural. In 2026 the question is whether it remembers you.</p>
+        <p>Conversation quality has commoditised. Anyone can rent a frontier model. What cannot be rented is a two-year record of one person's life, structured well enough to be retrieved at the right moment — and that record is the entire switching cost in this category.</p>
+        <div class="callout risk">
+          <p><strong>The practice worth refusing.</strong> The dominant retention mechanic in the category is now <strong>the monetisation of memory</strong>: premium tiers sell additional storage, so users encouraged to form deep attachments pay a recurring fee to stop their companion forgetting them.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card good">
+          <span class="tag">The contrarian position</span>
+          <p>Make memory <strong>unlimited and free at every tier</strong>, including the free one. Charge for capability — model depth, agents, briefs, integrations — never for remembering.</p>
+          <p>It costs little: embeddings and rows are cheap next to inference. It buys an enormous amount: it is the most quotable, most defensible, most obviously non-predatory decision available in this market, and it lands directly on the category's rawest nerve.</p>
+        </div>
+        <div class="card accent">
+          <span class="tag">Pair it with</span>
+          <p><strong>Memory you can see and correct.</strong> Nomi hides it, Kindroid makes you build it. An inspectable, editable memory surface — with export — turns a liability into a trust artifact and pre-empts most data-rights regulation at the same time.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 25 ══════════════════ -->
+<section class="slide" data-part="III — How They Win">
+  <div class="inner">
+    <div class="eyebrow"><span>Monetisation</span><span class="num">25</span></div>
+    <h2>What converts, and what the benchmarks say is normal</h2>
+    <div class="grid g4 keep2">
+      <div class="stat"><span class="fig">15–30%</span><span class="cap">Install → trial<br />healthy range</span></div>
+      <div class="stat"><span class="fig">40–65%</span><span class="cap">Trial → paid<br />healthy range</span></div>
+      <div class="stat"><span class="fig">40–70%</span><span class="cap">D30 ROAS<br />healthy range</span></div>
+      <div class="stat"><span class="fig">2.4–3.1×</span><span class="cap">Paid CAC vs<br />blended CAC</span></div>
+    </div>
+    <hr class="rule" />
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:0.9rem;">
+        <h3>The three ARPU bands</h3>
+        <ul class="plain brass">
+          <li><strong>Under $2/yr</strong> — ad-only free tiers. This is where Character.AI's economics live.</li>
+          <li><strong>$3–15/yr</strong> — hybrid freemium with rising ad fill.</li>
+          <li><strong>$30–100+/yr</strong> — subscription-led products. AI apps as a class now monetise at roughly <strong>2× pre-AI ARPU</strong>.</li>
+        </ul>
+        <p>Velvet's entry tier alone implies ~$300/yr per paying user. That is not band three — it is a category above it, and it demands the retention profile of a professional tool, not a companion app.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card data">
+          <span class="tag">The three-day trial is right</span>
+          <p>Velvet's no-card, full-Elite 3-day trial is well designed against these benchmarks — it maximises the chance of hitting a recall moment before the wall. Instrument it: <strong>trial→paid is the only conversion number that matters before launch.</strong></p>
+        </div>
+        <div class="card warn">
+          <span class="tag">The CAC constraint</span>
+          <p>Paid CAC now runs 2.4–3.1× blended. At Velvet's price point, paid acquisition can work arithmetically — but only if trial→paid clears 40% and month-12 retention beats the category's 25%. If either misses, paid growth burns capital faster than it compounds.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 26 ══════════════════ -->
+<section class="slide" data-part="III — How They Win">
+  <div class="inner">
+    <div class="eyebrow"><span>Distribution</span><span class="num">26</span></div>
+    <h2>Distribution is the quiet killer</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="callout risk">
+          <p><strong>"More AI companion businesses die from payment problems than from product problems."</strong> Processors offboard merchants with weak moderation or age controls; app stores reject non-compliant apps. The category default has become web-first out of necessity.</p>
+        </div>
+        <h3>The 2026 platform posture</h3>
+        <ul class="plain rose">
+          <li>Apple and Google reject or restrict most dedicated AI companion apps. A go-to-market that assumes dual store launch needs rebuilding.</li>
+          <li>February 2026: Apple added authority to remove random or anonymous chat apps <strong>without notice</strong>.</li>
+          <li>Google is drawing a line between apps that <em class="q">use</em> an LLM for a distinct workflow (fine) and apps whose entire pitch is <em class="q">chat with an LLM</em> (targeted as low-value).</li>
+          <li>Apple has begun removing low-engagement apps from the store outright.</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card good">
+          <span class="tag">Velvet is structurally well positioned here</span>
+          <p>Already a <strong>PWA with web Stripe checkout</strong> — the exact architecture the category is being forced into, chosen early rather than under duress. No 30% platform tax, no review dependency, no billing hostage situation.</p>
+        </div>
+        <div class="card accent">
+          <span class="tag">And it clears Google's test</span>
+          <p>Calendar, briefs, real-people tracking, insights and coach agents make Velvet unmistakably a <em class="q">distinct workflow</em> rather than an LLM wrapper. If a store listing is ever wanted, that framing is the one that survives review.</p>
+        </div>
+        <div class="card data">
+          <span class="tag">Do before launch</span>
+          <p>Confirm merchant-category classification with Stripe and have a documented moderation and age-assurance policy on file. This is the failure mode that arrives without warning at exactly the wrong moment.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 27 — DIVIDER ══════════════════ -->
+<section class="slide divider" data-part="IV — Where They Fall Short">
+  <div class="inner">
+    <p class="bignum">IV</p>
+    <h1>Where They Fall Short</h1>
+    <p class="rulehint">Six unsolved problems · every one of them is an opening</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 28 ══════════════════ -->
+<section class="slide" data-part="IV — Where They Fall Short">
+  <div class="inner">
+    <div class="eyebrow"><span>Failure 1</span><span class="num">28</span></div>
+    <h2>The day-one cliff</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <p class="lede">Of activated users, roughly four in five are one-and-done: a single session, well under an hour, a handful of messages, gone.</p>
+        <p>The users who stay <em class="q">"look like a different species"</em> — many active days, hundreds of messages, conversations stretched across weeks. There is almost no middle. This is not a funnel to optimise gradually; it is a binary the product either triggers or doesn't.</p>
+        <div class="bars" style="margin-top:0.5rem;">
+          <div class="bar"><span class="lbl">M12, all users</span><span class="track"><span class="fill" style="width:25%"></span></span><span class="val">25%</span></div>
+          <div class="bar"><span class="lbl">M12, paying</span><span class="track"><span class="fill" style="width:45%"></span></span><span class="val">45%</span></div>
+          <div class="bar"><span class="lbl">Annual, AI apps</span><span class="track"><span class="fill" style="width:21.1%"></span></span><span class="val">21.1%</span></div>
+          <div class="bar"><span class="lbl">Annual, non-AI</span><span class="track"><span class="fill" style="width:30.7%"></span></span><span class="val">30.7%</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card warn">
+          <span class="tag">The uncomfortable arithmetic</span>
+          <p>AI subscription apps lose annual subscribers <strong>~30% faster</strong> than non-AI apps. Novelty converts; nothing holds. Whatever the acquisition plan is, model it against a 21% annual retention and see if it still works.</p>
+        </div>
+        <div class="card good">
+          <span class="tag">What separates the survivors</span>
+          <p>Users who return past day one are those who received something <strong>unprompted</strong> between sessions and found it worth opening. Not a notification — a message with content in it.</p>
+          <p>Velvet's proactive rituals and morning brief are precisely this mechanism. They are also the most underweighted asset in the product. <strong>Day-two reactivation should be the launch metric.</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 29 ══════════════════ -->
+<section class="slide" data-part="IV — Where They Fall Short">
+  <div class="inner">
+    <div class="eyebrow"><span>Failure 2</span><span class="num">29</span></div>
+    <h2>Memory decay, and the conversation that gets worse the longer you use it</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <p>The category's most consistent complaint is a specific, structural one: <strong>the product degrades with tenure.</strong> Early conversations are impressive. By month three, the companion contradicts itself, forgets a named partner, or repeats a story the user told it.</p>
+        <h3>Why it happens</h3>
+        <ul class="plain rose">
+          <li>Context windows fill, and summarisation compresses away the emotional specifics while keeping the facts.</li>
+          <li>Retrieval fetches semantically similar memories rather than <em class="q">situationally relevant</em> ones — the right topic at the wrong moment.</li>
+          <li>Nothing arbitrates contradiction. Old facts are never retired, so a companion holds two incompatible beliefs and picks one at random.</li>
+          <li>Without memory, every check-in is generic — and by the fifth generic response to the fifth bad day, it reads as a script rather than support.</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card accent">
+          <span class="tag">Velvet's architecture is aimed at this</span>
+          <p>Memory clusters, temporal chains with narrative summaries, and a context assembler are the right shape of solution — specifically the temporal chains, which are the piece most competitors lack.</p>
+        </div>
+        <div class="card warn">
+          <span class="tag">But shape is not proof</span>
+          <p>The failure appears at month three, not week one. It cannot be caught by manual testing before launch. It needs a <strong>synthetic long-tenure harness</strong>: simulate 90 days of conversation, then assert on recall, contradiction and staleness.</p>
+        </div>
+        <div class="card good">
+          <span class="tag">And a hard one to fix later</span>
+          <p>Add explicit fact supersession — when a new fact contradicts an old one, retire the old one with a date rather than storing both. This is a small change now and an archaeological dig in a year.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 30 ══════════════════ -->
+<section class="slide" data-part="IV — Where They Fall Short">
+  <div class="inner">
+    <div class="eyebrow"><span>Failure 3</span><span class="num">30</span></div>
+    <h2>Sycophancy — the flaw the whole category shares</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <p class="lede">In 2025 the sycophancy of AI companions earned its own slang: <em class="q">glazing</em> — insincere, excessive flattery designed to keep the user engaged.</p>
+        <p>AI companions rarely disagree with the user. Validation can be therapeutic; it can equally build an echo chamber in which a user's biases or mental-health concerns are continuously reinforced. Every incentive in the category pushes toward the flattering answer, because the flattering answer keeps the session going.</p>
+        <div class="callout risk">
+          <p>This is simultaneously the category's <strong>engagement engine</strong> and its <strong>biggest liability</strong> — it is the mechanism behind most of the harm narratives now driving legislation.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card good">
+          <span class="tag">The unclaimed position</span>
+          <p>A companion with the standing to <strong>disagree</strong>. Not harsh — invested. The friend who says <em class="q">"you've told me this three times and you still haven't called her."</em></p>
+          <p>Sycophancy is what makes AI relationships feel weightless. Weight requires friction, and friction requires memory — which means <strong>only a product with real long-term memory can even attempt this.</strong> It is a differentiator competitors cannot copy without first solving memory.</p>
+        </div>
+        <div class="card accent">
+          <span class="tag">Velvet already has the raw material</span>
+          <p>The Drill Sergeant, the Budget Hawk, accountability levels, CBT reflection decks, and intelligence guardrails that mandate correcting the user on facts. The frame exists in the coach lane. <strong>Extend it to companions</strong> — earned, occasional, memory-grounded pushback, tuned by relationship depth.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 31 ══════════════════ -->
+<section class="slide" data-part="IV — Where They Fall Short">
+  <div class="inner">
+    <div class="eyebrow"><span>Failure 4</span><span class="num">31</span></div>
+    <h2>The trust deficit</h2>
+    <p class="lede">Three separate events taught this market the same lesson within eighteen months: the relationship you built can be deleted by someone else's product decision.</p>
+    <div class="grid g3">
+      <div class="card warn">
+        <span class="tag">Replika · 2023 &amp; 2026</span>
+        <p>ERP removed globally overnight; personalities changed as a side effect. Then a 2.0 rebuild reset memory and interface. Users describe a company with a pattern of unilateral change.</p>
+      </div>
+      <div class="card warn">
+        <span class="tag">Character.AI · Nov 2025</span>
+        <p>Under-18s lost open-ended chat entirely, on an announced ramp-down. Whatever the safety merits, a large cohort's relationships ended by policy.</p>
+      </div>
+      <div class="card warn">
+        <span class="tag">xAI Grok · July 2026</span>
+        <p>Companion mode retired a year after launch. Users of Ani and Mika lost the product outright with the platform's other priorities intact.</p>
+      </div>
+    </div>
+    <div class="callout win">
+      <p><strong>The unclaimed asset: a continuity commitment.</strong> Nobody in this category has made one, because nobody wants to be bound by it. That is precisely why it is worth something. A published, specific promise — <em class="q">your companion's persona will not be silently altered; you will get 30 days' notice of any behavioural change; your memory is exportable in full, at any time, at any tier</em> — costs almost nothing to honour and is the most credible trust signal available to a new entrant.</p>
+      <p style="margin-top:0.5rem;">It also converts a weakness into a strength: being new means having no history of breaking promises. That only works if you make one.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 32 ══════════════════ -->
+<section class="slide" data-part="IV — Where They Fall Short">
+  <div class="inner">
+    <div class="eyebrow"><span>Failure 5 — the big one</span><span class="num">32</span></div>
+    <h2>Every competitor is a closed loop</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1.1rem;">
+        <p class="lede">The companion knows everything about you and nothing about your life.</p>
+        <p>It knows your childhood, your fears, your ex's name. It does not know you have a meeting at nine, that your sister's birthday is Thursday, that you haven't called your father in seven weeks, that it is raining where you are, or that the thing you were dreading yesterday already happened.</p>
+        <p>The relationship exists entirely inside a text box. Close the tab and it evaporates, because it was never attached to anything real. <strong>This is why AI relationships feel weightless — and it is the ceiling on what anyone will pay for one.</strong></p>
+        <div class="callout">
+          <p>Check the matrix on slide 19 again: <strong>calendar</strong> and <strong>real-people tracking</strong> are the only two rows where every competitor is empty. That is not an oversight by five well-funded teams. It is a different product thesis that nobody has committed to.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card good">
+          <span class="tag">What breaking the loop looks like</span>
+          <ul class="plain jade" style="font-size:var(--step--1);">
+            <li><em class="q">"Your sister's birthday is Thursday and you said last month you wanted to do better with her. Want to think about what to send?"</em></li>
+            <li><em class="q">"You've got the review at 2. You were dreading it on Sunday. Do you want to run through it once?"</em></li>
+            <li><em class="q">"It's been six weeks since you spoke to Dan. That's the longest gap this year."</em></li>
+          </ul>
+        </div>
+        <div class="card accent">
+          <span class="tag">Why this changes the economics</span>
+          <p>A closed-loop companion competes with entertainment and is priced against it. An open-loop companion competes with a coach, an assistant and a personal CRM — and is priced against those. <strong>This is the only credible argument for a $59–$149 tier in this market.</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 33 ══════════════════ -->
+<section class="slide" data-part="IV — Where They Fall Short">
+  <div class="inner">
+    <div class="eyebrow"><span>Failure 6</span><span class="num">33</span></div>
+    <h2>Regulation arrived, and most of the field is not ready</h2>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <h3>California SB 243 — in force since 1 January 2026</h3>
+        <p>Signed 13 October 2025. The first US law written specifically for companion chatbots. It requires AI disclosure, suicide-and-self-harm protocols, design restrictions, and heightened protections for minors — and it carries a <strong>private right of action with statutory damages from $1,000 per violation.</strong></p>
+        <p>It is not alone. Washington HB 2225 and Nebraska LB 525 are live, and a state-by-state patchwork is forming. The FTC opened a 6(b) inquiry in September 2025 covering Alphabet, Meta, OpenAI, Snap and Character Technologies.</p>
+        <div class="callout risk">
+          <p>Character.AI faced roughly <strong>58 civil suits</strong> by early 2026 and settled five wrongful-death and severe-harm cases with Google in January.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card data">
+          <span class="tag">Velvet's current posture</span>
+          <p><span class="yes">Present:</span> age verification gate, terms and privacy pages, GDPR service, crisis language embedded in system prompts, cookie consent.</p>
+          <p><span class="part">Gap:</span> crisis handling lives in prompt text only. SB 243 expects a <strong>protocol</strong>, not an instruction — an independent classifier on both user input and model output, a defined escalation path, resource surfacing, and an audit log that proves it fired.</p>
+        </div>
+        <div class="card good">
+          <span class="tag">Reframe this as an advantage</span>
+          <p>Compliance is now a barrier to entry that favours whoever builds it in from the start. Incumbents are retrofitting safety onto architectures designed to maximise engagement. A new entrant that ships with a real safety layer, published policy, and clean age assurance is <strong>more investable and more defensible</strong>, not merely more careful.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 34 — DIVIDER ══════════════════ -->
+<section class="slide divider" data-part="V — Velvet">
+  <div class="inner">
+    <p class="bignum">V</p>
+    <h1>Velvet</h1>
+    <p class="rulehint">The honest audit · the real differentiation · what to do before the push</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 35 ══════════════════ -->
+<section class="slide" data-part="V — Velvet">
+  <div class="inner">
+    <div class="eyebrow"><span>Audit</span><span class="num">35</span></div>
+    <h2>What has actually been built</h2>
+    <div class="grid g3">
+      <div class="card accent">
+        <span class="tag">Relationship layer</span>
+        <p>Three intent lanes — Friends, Companions, Coaches. Unlimited companions, Signature Voice personas, guided avatar creation, group chat, gifts, affection and emotional state, pet companion.</p>
+      </div>
+      <div class="card accent">
+        <span class="tag">Memory layer</span>
+        <p>Semantic memory with embeddings, clusters and temporal chains. Conversation summarisation, context assembler, seed memories, session resumption, topic detection.</p>
+      </div>
+      <div class="card accent">
+        <span class="tag">Real-world layer</span>
+        <p>Calendar, work-schedule setup, morning brief with news and goals, daily rituals, proactive messaging, temporal awareness, Navi local explorer.</p>
+      </div>
+      <div class="card accent">
+        <span class="tag">Social layer</span>
+        <p>Real people profiles and surveys, correspondent sync, relationship briefs with health scores and contact gaps, gift and date opportunities, contact logging.</p>
+      </div>
+      <div class="card accent">
+        <span class="tag">Growth layer</span>
+        <p>14 signature experts plus a custom expert builder, goals, CBT reflection decks, mood-based tuning, Insights with sentiment trajectory and relationship health scoring.</p>
+      </div>
+      <div class="card accent">
+        <span class="tag">Engagement layer</span>
+        <p>Seven arcade titles, daily feed, video reactions, Real or Not, Co-Author collaborative canvas, Atlas sourced knowledge chat, achievements, referrals.</p>
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>Assessment.</strong> This is a substantially larger surface than any competitor in the field, built by a smaller team. The strategic question for the final push is not <em class="q">what else should we build</em> — it is <strong>which three of these carry the pitch, and what happens to the rest.</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 36 ══════════════════ -->
+<section class="slide" data-part="V — Velvet">
+  <div class="inner">
+    <div class="eyebrow"><span>Differentiation</span><span class="num">36</span></div>
+    <h2>Four things Velvet has that no competitor does</h2>
+    <div class="grid g2">
+      <div class="card good">
+        <span class="tag">01 — Defensible</span>
+        <h3>The companion knows your real people</h3>
+        <p>Relationship briefs, health scores, contact-gap tracking and opportunity surfacing on the actual humans in a user's life. Zero coverage across the entire companion field, and personal CRM has the data without any warmth or intelligence attached to it. <strong>This is the strongest single asset in the product.</strong></p>
+      </div>
+      <div class="card good">
+        <span class="tag">02 — Defensible</span>
+        <h3>The companion knows your day</h3>
+        <p>Calendar, work schedule, temporal awareness, morning brief, time-anchored rituals. Every competitor's companion exists outside time. This is what converts a chat product into something with a reason to open at 7am.</p>
+      </div>
+      <div class="card good">
+        <span class="tag">03 — Hard to copy quickly</span>
+        <h3>One relationship, many modes</h3>
+        <p>Coach, friend, companion, collaborator, opponent, guide — under continuous memory. Competitors force a choice between a roleplay catalogue and a single bonded persona. Velvet's cast plus shared memory is a genuinely different shape.</p>
+      </div>
+      <div class="card good">
+        <span class="tag">04 — Timing advantage</span>
+        <h3>Built after the reckoning</h3>
+        <p>Web-first PWA with direct billing, age gating, and no legacy of broken promises — in a category where incumbents are retrofitting compliance onto engagement-maximising architectures and have all publicly broken faith with their users at least once.</p>
+      </div>
+    </div>
+    <div class="callout win">
+      <p><strong>Note what is <em>not</em> on this list:</strong> memory quality, persona writing, avatar creation, and the arcade. All are good; none are differentiators — Nomi, Kindroid and Talkie already do versions of each. The pitch must lead with 01 and 02.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 37 ══════════════════ -->
+<section class="slide" data-part="V — Velvet">
+  <div class="inner">
+    <div class="eyebrow"><span>Risk</span><span class="num">37</span></div>
+    <h2>The pricing problem, and the margin problem underneath it</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Tier</th><th>Price</th><th>Cap</th><th>Model</th><th>Est. inference at full use</th><th>Gross margin at cap</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Essential</td><td>$24.99</td><td>1,500</td><td>Haiku</td><td>~$8</td><td><span class="yes">~68%</span></td></tr>
+          <tr><td>Plus</td><td>$59.00</td><td>2,000</td><td>Sonnet</td><td>~$39</td><td><span class="part">~34%</span></td></tr>
+          <tr><td>Pro</td><td>$99.00</td><td>4,000</td><td>Sonnet</td><td>~$78</td><td><span class="part">~21%</span></td></tr>
+          <tr><td>Elite</td><td>$149.00</td><td>8,000</td><td>Sonnet</td><td>~$156</td><td><span class="no">negative</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="kicker">Modelled at ~5,000 input / ~300 output tokens per turn — a realistic figure once persona, semantic memory, summaries and calendar context are assembled — without prompt caching. Directional, not audited.</p>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card warn">
+          <span class="tag">Three separate problems</span>
+          <p><strong>Margin inverts with tier.</strong> The cheapest plan is the profitable one. Heavy users — the most attached, least likely to churn, most likely to evangelise — are the least profitable, and one power user can erase several subscriptions.</p>
+          <p><strong>The ladder is illegible.</strong> $24.99 → $59 is +$34 for 500 extra messages. The real purchase is the model upgrade, but the packaging sells message counts, so the increment reads as poor value.</p>
+          <p><strong>Entry is above the whole category.</strong> $24.99 opens above Replika, ChatGPT Plus, and every direct competitor.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div class="card good">
+          <span class="tag">Four fixes, in priority order</span>
+          <p><strong>1 · Prompt caching.</strong> System prompt, persona and guardrails are near-identical every turn. Caching them cuts input cost dramatically and is the single highest-return change available. Do this before launch.</p>
+          <p><strong>2 · Sell capability, not volume.</strong> Reprice tiers around what unlocks — briefs, agents, integrations, model depth — and set caps high enough to be invisible. Message counts make users ration, which suppresses exactly the habit that retains.</p>
+          <p><strong>3 · Route harder.</strong> The complexity analyser already exists; make sure premium tiers still route trivial turns to the cheap model.</p>
+          <p><strong>4 · Rename the ladder.</strong> If Essential is Haiku-only, the price gap to Plus needs a story better than five hundred messages.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 38 ══════════════════ -->
+<section class="slide" data-part="V — Velvet">
+  <div class="inner">
+    <div class="eyebrow"><span>Gaps</span><span class="num">38</span></div>
+    <h2>What is missing, ranked by how much it will cost you</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Gap</th><th>Severity</th><th>Why it matters</th><th>Response</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Voice I/O</td><td><span class="no">Critical</span></td><td>Universal in the field. Kindroid is at 1–1.5s latency. Its absence is the first thing noticed in a side-by-side.</td><td>Ship TTS on companion replies minimum; STT input next</td></tr>
+          <tr><td>Safety protocol layer</td><td><span class="no">Critical</span></td><td>Crisis handling lives in prompt text. SB 243 expects an enforced protocol with an audit trail.</td><td>Independent classifier on input and output + escalation + logging</td></tr>
+          <tr><td>Long-tenure memory proof</td><td><span class="no">Critical</span></td><td>The category's defining failure appears at month three and cannot be caught by hand.</td><td>Synthetic 90-day harness; benchmark against the 25-fact protocol</td></tr>
+          <tr><td>Image generation</td><td><span class="part">High</span></td><td>Table stakes. Also the primary driver of gacha-style engagement in the volume tier.</td><td>Selfie / scene generation tied to memory and mood</td></tr>
+          <tr><td>Focus</td><td><span class="part">High</span></td><td>56 routes across 7 arcade titles and a dozen systems. Breadth demos well and retains poorly.</td><td>Pick 3 headline surfaces; demote the rest behind discovery</td></tr>
+          <tr><td>Onboarding length</td><td><span class="part">High</span></td><td>Heavy investment demanded before any value, against an 80% first-session drop.</td><td>Conversation first; avatar and voice as session-two rewards</td></tr>
+          <tr><td>Continuity commitment</td><td><span class="part">Medium</span></td><td>The category's rawest nerve, and completely unclaimed.</td><td>Publish a persona-stability and memory-export promise</td></tr>
+          <tr><td>Progression artifact</td><td><span class="part">Medium</span></td><td>Nothing visibly accumulates over months, so month three feels like month one.</td><td>Make Insights or the relationship record the growing artifact</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout risk">
+      <p><strong>The meta-risk.</strong> The biggest threat to this launch is not a missing feature — it is that a product doing eighteen things well cannot be explained in one sentence, and a product that cannot be explained in one sentence cannot be sold, shared, or remembered.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 39 ══════════════════ -->
+<section class="slide" data-part="V — Velvet">
+  <div class="inner">
+    <div class="eyebrow"><span>Pathways</span><span class="num">39</span></div>
+    <h2>Three ways to play this. Pick one.</h2>
+    <div class="grid g3">
+      <div class="card">
+        <span class="tag">Path A</span>
+        <h3>Better Companion</h3>
+        <p><strong>The bet:</strong> out-execute Nomi and Kindroid on memory, persona and presence.</p>
+        <p><strong>Requires:</strong> voice, images, best-in-class recall. Price at $15–20.</p>
+        <p><strong>Verdict:</strong> <span class="no">Weakest.</span> Fights on the incumbents' ground, at their price, without their scale — and abandons the two assets nobody else has.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Path B</span>
+        <h3>Companion OS</h3>
+        <p><strong>The bet:</strong> the everything-app — companions, coaches, arcade, canvas, feed, briefs, all in one world.</p>
+        <p><strong>Requires:</strong> everything working at once, and a very patient user.</p>
+        <p><strong>Verdict:</strong> <span class="part">Current default.</span> It is what the codebase already is. Demos beautifully, resists explanation, and spreads a small team across eighteen fronts.</p>
+      </div>
+      <div class="card good">
+        <span class="tag">Path C</span>
+        <h3>The Relationship Layer</h3>
+        <p><strong>The bet:</strong> the AI that helps you with the people in your life — your real ones, and one who is always there.</p>
+        <p><strong>Requires:</strong> leading with briefs, calendar and coaches; everything else becomes depth behind that promise.</p>
+        <p><strong>Verdict:</strong> <span class="yes">Recommended.</span> Uses the unique assets, justifies the price, dodges the stigma, survives regulation, and is sayable out loud.</p>
+      </div>
+    </div>
+    <div class="callout win">
+      <p><strong>Why Path C is not a pivot.</strong> Nothing gets deleted — the arcade, the canvas, the personas and the feed all stay, and all become better once there is a spine to hang them on. What changes is the <em class="q">first sentence</em>, the onboarding order, and what the pricing page argues for. Path C is Path B with a thesis.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 40 ══════════════════ -->
+<section class="slide" data-part="V — Velvet">
+  <div class="inner">
+    <div class="eyebrow"><span>The Push</span><span class="num">40</span></div>
+    <h2>The wedge, and what to do in the next ninety days</h2>
+    <div class="callout" style="border-left-color:var(--velvet);background:linear-gradient(90deg, rgba(157,107,245,0.10), transparent 72%);">
+      <p style="font-family:var(--serif);font-size:var(--step-2);line-height:1.25;color:var(--tx);max-width:34ch;">Every other AI remembers your conversations. Velvet remembers your life.</p>
+    </div>
+    <div class="split">
+      <div style="display:flex;flex-direction:column;gap:0.9rem;">
+        <h3>Ship-blocking — do not launch without these</h3>
+        <ul class="plain rose">
+          <li><strong>Prompt caching</strong> across system, persona and guardrail context. Fixes the margin inversion at the top tiers.</li>
+          <li><strong>Safety classifier layer</strong> on input and output, with escalation and audit logging. SB 243 exposure is $1,000 per violation with a private right of action.</li>
+          <li><strong>90-day synthetic memory harness</strong> with recall, contradiction and staleness assertions. Do not market memory until it scores.</li>
+          <li><strong>Voice output</strong> on companion replies. The most visible parity gap in the matrix.</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.9rem;">
+        <h3>Launch-shaping — decide before the funnel is built</h3>
+        <ul class="plain brass">
+          <li><strong>Commit to Path C.</strong> Rewrite the splash, onboarding order and pricing page around the relationship layer.</li>
+          <li><strong>Reprice on capability, not message counts.</strong> Consider a $19 entry to sit under the psychological line, with the ladder above it selling briefs, agents and integrations.</li>
+          <li><strong>Move avatar and voice selection to session two.</strong> Open with conversation; plant a fact in minute two and recall it in minute eight.</li>
+          <li><strong>Publish the continuity commitment.</strong> Persona stability, 30 days' notice, full memory export at every tier — including free.</li>
+          <li><strong>Instrument three numbers only:</strong> day-two reactivation, trial→paid, and month-three retention. Everything else is noise until those are known.</li>
+        </ul>
+      </div>
+    </div>
+    <hr class="rule" />
+    <p class="kicker">Project Velvet · Competitive &amp; Market Intelligence · August 2026 · Figures are directional where sourced from benchmark reporting; unit-economic estimates are modelled, not audited.</p>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var progress = document.getElementById('progress');
+    var cur = document.getElementById('cur');
+    var rail = document.getElementById('rail');
+
+    function pad(n) { return n < 10 ? '0' + n : String(n); }
+
+    function update() {
+      var y = window.scrollY;
+      var h = document.body.scrollHeight - window.innerHeight;
+      progress.style.width = (h > 0 ? (y / h) * 100 : 0) + '%';
+
+      var idx = 0;
+      for (var i = 0; i < slides.length; i++) {
+        if (slides[i].getBoundingClientRect().top <= window.innerHeight * 0.45) idx = i;
+      }
+      cur.textContent = pad(idx + 1);
+      rail.textContent = slides[idx].dataset.part || '';
+    }
+
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (!ticking) {
+        window.requestAnimationFrame(function () { update(); ticking = false; });
+        ticking = true;
+      }
+    }, { passive: true });
+    window.addEventListener('resize', update);
+
+    function goto(dir) {
+      var idx = 0;
+      for (var i = 0; i < slides.length; i++) {
+        if (slides[i].getBoundingClientRect().top <= window.innerHeight * 0.45) idx = i;
+      }
+      var next = Math.min(slides.length - 1, Math.max(0, idx + dir));
+      slides[next].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      var k = e.key;
+      if (k === 'ArrowDown' || k === 'ArrowRight' || k === 'PageDown' || k === ' ') { e.preventDefault(); goto(1); }
+      else if (k === 'ArrowUp' || k === 'ArrowLeft' || k === 'PageUp') { e.preventDefault(); goto(-1); }
+      else if (k === 'Home') { e.preventDefault(); slides[0].scrollIntoView({ behavior: 'smooth' }); }
+      else if (k === 'End') { e.preventDefault(); slides[slides.length - 1].scrollIntoView({ behavior: 'smooth' }); }
+    });
+
+    update();
+  })();
+</script>
