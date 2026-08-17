@@ -185,8 +185,8 @@
     font-family: var(--mono); font-size: 0.72rem; color: var(--brass); letter-spacing: 0.06em;
   }
 
-  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; }
-  table { width: 100%; border-collapse: collapse; font-size: var(--step--1); min-width: 640px; font-variant-numeric: tabular-nums; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; min-width: 0; max-width: 100%; }
+  table { width: 100%; border-collapse: collapse; font-size: var(--step--1); min-width: 560px; font-variant-numeric: tabular-nums; }
   thead th {
     text-align: left; font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--tx-3); font-weight: 400;
@@ -205,12 +205,12 @@
   tr.us td:first-child { color: var(--velvet-tint); }
 
   .bars { display: flex; flex-direction: column; gap: 0.6rem; }
-  .bar { display: grid; grid-template-columns: minmax(96px, 168px) 1fr auto; gap: 0.9rem; align-items: center; }
-  .bar .lbl { font-size: var(--step--1); color: var(--tx-2); }
-  .bar .track { height: 12px; background: var(--panel-2); border-radius: 1px; overflow: hidden; }
+  .bar { display: grid; grid-template-columns: minmax(88px, 160px) 1fr auto; gap: 0.9rem; align-items: center; }
+  .bar .lbl { font-size: var(--step--1); color: var(--tx-2); min-width: 0; }
+  .bar .track { height: 12px; background: var(--panel-2); border-radius: 1px; overflow: hidden; min-width: 0; }
   .bar .fill { height: 100%; background: linear-gradient(90deg, var(--brass-lo), var(--brass)); }
   .bar .fill.v { background: linear-gradient(90deg, var(--velvet-lo), var(--velvet)); }
-  .bar .val { font-family: var(--mono); font-size: 0.72rem; color: var(--brass-tint); font-variant-numeric: tabular-nums; }
+  .bar .val { font-family: var(--mono); font-size: 0.72rem; color: var(--brass-tint); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   .callout {
     border-left: 2px solid var(--brass);
@@ -225,7 +225,29 @@
   .kicker { font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--tx-3); }
 
   .split { display: grid; grid-template-columns: 1.15fr 1fr; gap: 2rem; align-items: start; }
-  @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+  @media (max-width: 1000px) { .split { grid-template-columns: 1fr; } }
+
+  /*
+    Grid and flex children default to min-width:auto, which refuses to shrink
+    below their content's intrinsic minimum. A wide child (a table with a
+    min-width, a long unbroken string) therefore blows out its own track and
+    squeezes its sibling toward zero — at which point text wraps one character
+    per line and reads vertically. Opting every layout child out of that
+    minimum lets tracks share space evenly and hands overflow to .tablewrap's
+    own horizontal scroller instead.
+  */
+  .split > *,
+  .grid > *,
+  .bar > *,
+  ul.plain > li,
+  ol.findings > li,
+  .card > *,
+  .callout > *,
+  .stat > * { min-width: 0; }
+
+  .slide > .inner > * { min-width: 0; max-width: 100%; }
+  .eyebrow { flex-wrap: wrap; }
+  .stat .fig { white-space: nowrap; }
 
   hr.rule { border: 0; border-top: 1px solid var(--line); margin: 0; }
   a { color: var(--velvet-tint); }
@@ -484,25 +506,22 @@
   <div class="inner">
     <div class="eyebrow"><span>Market · Companions</span><span class="num">11</span></div>
     <h2>Companions: extraordinary engagement, humiliating revenue</h2>
-    <div class="split">
-      <div style="display:flex;flex-direction:column;gap:1rem;">
-        <div class="tablewrap">
-          <table>
-            <thead><tr><th>Player</th><th>Scale</th><th>Revenue</th><th>Price</th></tr></thead>
-            <tbody>
-              <tr><td>Character.AI</td><td>~20M MAU · 5.8M DAU</td><td>$32M → ~$50M</td><td>$9.99</td></tr>
-              <tr><td>Replika</td><td>42M registered</td><td>~$200M lifetime</td><td>$19.99</td></tr>
-              <tr><td>PolyBuzz</td><td>13M MAU · 42.8M dl</td><td>$8.3M</td><td>Freemium</td></tr>
-              <tr><td>Talkie</td><td>4.8M MAU · 48M dl</td><td>$3.1M</td><td>Freemium</td></tr>
-              <tr><td>Nomi</td><td>Undisclosed</td><td>Undisclosed</td><td>$15.99</td></tr>
-              <tr><td>Kindroid</td><td>Undisclosed</td><td>Undisclosed</td><td>$9.99</td></tr>
-              <tr><td>Tolan</td><td>3M dl · 100k paid</td><td>$12M ARR</td><td>~$13</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="kicker">337 revenue-generating platforms · 128 launched in 2026 · total verified spend ~$120M</p>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Player</th><th>Scale</th><th>Revenue</th><th>Price</th><th>Position</th></tr></thead>
+        <tbody>
+          <tr><td>Character.AI</td><td>~20M MAU · 5.8M DAU</td><td>$32M → ~$50M</td><td>$9.99</td><td>Roleplay catalogue at scale</td></tr>
+          <tr><td>Replika</td><td>42M registered</td><td>~$200M lifetime</td><td>$19.99</td><td>The original bonded companion</td></tr>
+          <tr><td>PolyBuzz</td><td>13M MAU · 42.8M dl</td><td>$8.3M</td><td>Freemium</td><td>Multi-persona chat</td></tr>
+          <tr><td>Talkie</td><td>4.8M MAU · 48M dl</td><td>$3.1M</td><td>Freemium</td><td>Anime, card collecting</td></tr>
+          <tr><td>Nomi</td><td>Undisclosed</td><td>Undisclosed</td><td>$15.99</td><td>Best-in-class memory</td></tr>
+          <tr><td>Kindroid</td><td>Undisclosed</td><td>Undisclosed</td><td>$9.99</td><td>Power-user control</td></tr>
+          <tr><td>Tolan</td><td>3M dl · 100k paid</td><td>$12M ARR</td><td>~$13</td><td>Character IP for Gen Z</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="kicker">337 revenue-generating platforms · 128 launched in 2026 · total verified spend ~$120M</p>
+    <div class="grid g2">
         <div class="card warn">
           <span class="tag">The economics are broken</span>
           <p>Character.AI turns 20M monthly actives and best-in-class session time into roughly <strong>$2.50 of annual revenue per user</strong>. ChatGPT is near $31. Talkie converted 48 million downloads into $3.1M — six cents a download.</p>
@@ -513,7 +532,6 @@
           <p><strong>Take:</strong> the memory architecture, the persona craft, the daily rituals, the 85-minute session design.</p>
           <p><strong>Leave:</strong> the audience, the price point, the ad-and-gacha endgame, and the word <em class="q">companion</em> in the headline.</p>
         </div>
-      </div>
     </div>
   </div>
 </section>
@@ -1090,24 +1108,21 @@
   <div class="inner">
     <div class="eyebrow"><span>Monetisation</span><span class="num">33</span></div>
     <h2>What a destination can charge, and against what</h2>
-    <div class="split">
-      <div style="display:flex;flex-direction:column;gap:1rem;">
-        <h3>The comparison set decides the price</h3>
-        <div class="tablewrap">
-          <table>
-            <thead><tr><th>Framed as</th><th>Compared against</th><th>Ceiling</th></tr></thead>
-            <tbody>
-              <tr><td>Companion app</td><td>Replika $19.99, C.AI $9.99</td><td><span class="bad">~$20</span></td></tr>
-              <tr><td>AI assistant</td><td>ChatGPT Plus $20</td><td><span class="bad">~$20</span></td></tr>
-              <tr><td>Entertainment</td><td>Netflix, Game Pass</td><td><span class="part">~$20</span></td></tr>
-              <tr><td>Coaching</td><td>Noom ~$70, BetterUp higher</td><td><span class="yes">$70–150</span></td></tr>
-              <tr><td>Life OS + coach</td><td>The whole stack it replaces</td><td><span class="yes">$50–150</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p>Velvet's current tiers — $24.99, $59, $99, $149 — only make sense in the bottom two rows. <strong>The price is not wrong; the framing that justifies it is missing from the pricing page.</strong></p>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+    <h3>The comparison set decides the price</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Framed as</th><th>Compared against</th><th>Ceiling</th><th>Verdict for Velvet's tiers</th></tr></thead>
+        <tbody>
+          <tr><td>Companion app</td><td>Replika $19.99, C.AI $9.99</td><td><span class="bad">~$20</span></td><td>Every tier looks absurd</td></tr>
+          <tr><td>AI assistant</td><td>ChatGPT Plus $20</td><td><span class="bad">~$20</span></td><td>Entry tier already over the line</td></tr>
+          <tr><td>Entertainment</td><td>Netflix, Game Pass</td><td><span class="part">~$20</span></td><td>Caps out below Essential</td></tr>
+          <tr><td>Coaching</td><td>Noom ~$70, BetterUp higher</td><td><span class="yes">$70–150</span></td><td>Pro and Elite become normal</td></tr>
+          <tr><td>Life OS + coach</td><td>The whole stack it replaces</td><td><span class="yes">$50–150</span></td><td>The full ladder is defensible</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Velvet's current tiers — $24.99, $59, $99, $149 — only make sense in the bottom two rows. <strong>The price is not wrong; the framing that justifies it is missing from the pricing page.</strong></p>
+    <div class="grid g3">
         <div class="card data">
           <span class="tag">Benchmarks to hold yourself to</span>
           <p>Healthy subscription apps convert <strong>15–30% of installs to trial</strong>, <strong>40–65% of trials to paid</strong>, and deliver 40–70% D30 ROAS. Paid CAC runs 2.4–3.1× blended, which at this price point makes organic and referral the only sustainable engines.</p>
@@ -1120,7 +1135,6 @@
           <span class="tag">Stop selling message counts</span>
           <p>Caps make users ration, which suppresses exactly the daily habit the whole thesis depends on. Sell what unlocks — coaches, briefs, integrations, model depth — and set caps high enough to be invisible.</p>
         </div>
-      </div>
     </div>
   </div>
 </section>
@@ -1295,29 +1309,58 @@
 <section class="slide" data-part="VI — Velvet">
   <div class="inner">
     <div class="eyebrow"><span>The Push</span><span class="num">40</span></div>
-    <h2>The wedge, and the next ninety days</h2>
-    <div class="callout key" style="padding:1.3rem 1.5rem;">
+    <h2>Five changes that make this viable and profitable</h2>
+    <div class="callout key" style="padding:1.1rem 1.4rem;">
       <p style="font-family:var(--serif);font-size:var(--step-2);line-height:1.28;color:var(--tx);max-width:40ch;">Everyone else built someone to talk to. Velvet built someone to spend the day with.</p>
     </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>Change</th><th>Why it makes money</th><th>Effort</th><th>Target</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Reprice against coaching. Kill message metering; tiers unlock capability.</td>
+            <td>Moves the price ceiling from ~$20 to $70–150 and stops users rationing the daily habit that retains them. Largest single revenue lever.</td>
+            <td>Low — copy, packaging, Stripe</td>
+            <td>Ladder defensible without caps</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Prompt caching on system, persona and guardrails, plus enforced complexity routing.</td>
+            <td>Turns Elite from negative margin to positive and lifts every tier. Pure cost reduction — no product change, no user-visible tradeoff.</td>
+            <td>Low — days, not weeks</td>
+            <td>&gt;60% gross margin at every tier</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Wire the six surfaces into one memory and context bus.</td>
+            <td>The entire bundle thesis. Without it there is no pricing power — just six shallow apps losing to six specialists.</td>
+            <td>High — the real work</td>
+            <td>Every surface reads and writes shared context</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Collapse onboarding to one verb; lead with shared activity.</td>
+            <td>Attacks the 80% day-one cliff and the CAC problem at once. Shareable framing is the only affordable channel above $25.</td>
+            <td>Medium — reorder, don't rebuild</td>
+            <td>Day-two return above category</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Ship the safety protocol layer and publish a continuity commitment.</td>
+            <td>Viability in the literal sense — SB 243 is $1,000 per violation with a private right of action, and processors kill companion businesses. Converts into a trust asset nobody else has.</td>
+            <td>Medium — classifier + policy</td>
+            <td>Enforced protocol with audit trail</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     <div class="split">
-      <div style="display:flex;flex-direction:column;gap:0.9rem;">
-        <h3>Ship-blocking</h3>
-        <ul class="plain rose">
-          <li><strong>Cross-surface integration audit.</strong> Every surface must read from and write to shared memory and context. This plumbing <em class="q">is</em> the thesis.</li>
-          <li><strong>Safety classifier layer</strong> on input and output, with escalation and audit logging. SB 243 exposure is $1,000 per violation.</li>
-          <li><strong>Prompt caching</strong> across system, persona and guardrails. Fixes the margin inversion.</li>
-          <li><strong>90-day synthetic memory harness.</strong> Do not market memory until it scores against the 25-fact bar.</li>
-        </ul>
+      <div class="callout win">
+        <p><strong>Sequence matters.</strong> 1 and 2 are days of work and fix the economics outright. 4 and 5 are weeks and decide whether anyone arrives and whether you can legally keep them. <strong>3 is the quarter</strong> — and it is the only one that makes the product defensible rather than merely solvent.</p>
       </div>
-      <div style="display:flex;flex-direction:column;gap:0.9rem;">
-        <h3>Launch-shaping</h3>
-        <ul class="plain brass">
-          <li><strong>Commit to Path C.</strong> Rewrite splash, onboarding order and pricing page around the daily destination.</li>
-          <li><strong>Lead with shared activity.</strong> One verb on day one — the companion you play, watch and work with.</li>
-          <li><strong>Price against coaching</strong>, not against companions. Reprice on capability; retire message counts.</li>
-          <li><strong>Publish the continuity commitment</strong> — persona stability, 30 days' notice, full memory export at every tier including free.</li>
-          <li><strong>Watch four numbers only:</strong> DAU/MAU, daily minutes, trial→paid, month-three retention. Target 25%+ and 30+ minutes, or the destination thesis has not landed.</li>
-        </ul>
+      <div class="callout">
+        <p><strong>Watch four numbers, not forty:</strong> DAU/MAU, daily minutes, trial→paid, month-three retention. Below 25% and 30 minutes, the destination thesis has not landed and no amount of repricing rescues it.</p>
       </div>
     </div>
     <hr class="rule" />
