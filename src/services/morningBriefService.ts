@@ -6,7 +6,7 @@ import { getActiveGoals, formatGoalsForBrief } from './goalService';
 import { formatNationalDaysForBrief } from '../data/nationalDays';
 
 export interface BriefBlock {
-  type: 'greeting' | 'calendar' | 'news' | 'navi' | 'goals';
+  type: 'greeting' | 'calendar' | 'news' | 'navi' | 'goals' | 'commitments';
   content: string;
   metadata?: Record<string, unknown>;
 }
@@ -185,6 +185,37 @@ export const morningBriefService = {
       // skip news block on error
     }
 
+    try {
+      const { data: commitments } = await supabase
+        .from('coaching_commitments')
+        .select('description, due_date, status')
+        .eq('user_id', userId)
+        .in('status', ['pending', 'missed'])
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .limit(3);
+
+      if (commitments && commitments.length > 0) {
+        const now = new Date();
+        const lines = commitments.map(c => {
+          let line = `• ${c.description}`;
+          if (c.due_date) {
+            const daysLeft = Math.ceil((new Date(c.due_date).getTime() - now.getTime()) / 86400000);
+            if (daysLeft < 0) line += ` — overdue by ${Math.abs(daysLeft)}d`;
+            else if (daysLeft === 0) line += ` — due today`;
+            else line += ` — due in ${daysLeft}d`;
+          }
+          if (c.status === 'missed') line += ' [missed]';
+          return line;
+        });
+        blocks.push({
+          type: 'commitments',
+          content: `You have open commitments:\n${lines.join('\n')}`,
+        });
+      }
+    } catch {
+      // skip commitments block on error
+    }
+
     return blocks;
   },
 
@@ -203,20 +234,22 @@ export const morningBriefService = {
     _companionName: string
   ): Promise<{
     calendar: string; news: string; schedule: string;
-    goals: string; nationalDay: string; politics: string;
+    goals: string; commitments: string; nationalDay: string; politics: string;
     hasCalendar: boolean; hasNews: boolean; hasSchedule: boolean;
-    hasGoals: boolean; hasNationalDay: boolean; hasPolitics: boolean;
+    hasGoals: boolean; hasCommitments: boolean; hasNationalDay: boolean; hasPolitics: boolean;
   }> {
     let calendarText = '';
     let newsText = '';
     let scheduleText = '';
     let goalsText = '';
+    let commitmentsText = '';
     let nationalDayText = '';
     let politicsText = '';
     let hasCalendar = false;
     let hasNews = false;
     let hasSchedule = false;
     let hasGoals = false;
+    let hasCommitments = false;
     let hasNationalDay = false;
     let hasPolitics = false;
 
@@ -276,6 +309,35 @@ export const morningBriefService = {
       goalsText = '';
     }
 
+    try {
+      const { data: commitments } = await supabase
+        .from('coaching_commitments')
+        .select('description, due_date, status')
+        .eq('user_id', userId)
+        .in('status', ['pending', 'missed'])
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .limit(5);
+
+      if (commitments && commitments.length > 0) {
+        const now = new Date();
+        const lines = commitments.map(c => {
+          let line = `- ${c.description}`;
+          if (c.due_date) {
+            const daysLeft = Math.ceil((new Date(c.due_date).getTime() - now.getTime()) / 86400000);
+            if (daysLeft < 0) line += ` (overdue by ${Math.abs(daysLeft)}d)`;
+            else if (daysLeft === 0) line += ` (due today)`;
+            else line += ` (due in ${daysLeft}d)`;
+          }
+          if (c.status === 'missed') line += ' [MISSED]';
+          return line;
+        });
+        commitmentsText = `The user has these open commitments from coaching sessions:\n${lines.join('\n')}`;
+        hasCommitments = true;
+      }
+    } catch {
+      commitmentsText = '';
+    }
+
     // National days are client-side — no async needed
     const nationalDayStr = formatNationalDaysForBrief(new Date());
     if (nationalDayStr) {
@@ -307,12 +369,14 @@ export const morningBriefService = {
       news: newsText,
       schedule: scheduleText,
       goals: goalsText,
+      commitments: commitmentsText,
       nationalDay: nationalDayText,
       politics: politicsText,
       hasCalendar,
       hasNews,
       hasSchedule,
       hasGoals,
+      hasCommitments,
       hasNationalDay,
       hasPolitics,
     };

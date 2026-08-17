@@ -15,11 +15,14 @@ export interface UserGoal {
   target_date: string | null;
   status: GoalStatus;
   notes: string | null;
+  source_companion_id: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type GoalInput = Omit<UserGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+export type GoalInput = Omit<UserGoal, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'source_companion_id'> & {
+  source_companion_id?: string | null;
+};
 
 export async function getActiveGoals(userId: string): Promise<UserGoal[]> {
   const { data } = await supabase

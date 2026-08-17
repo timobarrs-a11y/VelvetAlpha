@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { getUserContext, contextToPromptBlock } from './memoryBus';
 
 export interface UserEvent {
   id: string;
@@ -163,10 +164,17 @@ class CalendarService {
     const conversationText = recentConversations ?? await fetchRecentConversationText(userId, companionId);
     if (!conversationText.trim()) return { suggested: 0 };
 
+    let memoryContext = '';
+    try {
+      const ctx = await getUserContext(userId, { surface: 'calendar', maxFacts: 5, maxTopics: 4 });
+      memoryContext = contextToPromptBlock(ctx, { includeGoals: true, includeFacts: true, includeTopics: true });
+    } catch { /* best-effort */ }
+
     return callEdgeFunction('suggest-events-gifts', {
       type: 'events',
       companionId,
       recentConversations: conversationText,
+      memoryContext,
     });
   }
 

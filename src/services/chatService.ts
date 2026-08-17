@@ -444,6 +444,14 @@ export class ChatService {
 
         const data = await response.json();
 
+        if (data.usage) {
+          const cacheRead = data.usage.cache_read_input_tokens ?? 0;
+          const cacheCreation = data.usage.cache_creation_input_tokens ?? 0;
+          if (cacheRead > 0 || cacheCreation > 0) {
+            CostTracker.trackCacheUsage(cacheRead, cacheCreation);
+          }
+        }
+
         let assistantMessage = '';
 
         if (data.content && Array.isArray(data.content) && data.content.length > 0) {
@@ -672,6 +680,14 @@ export class ChatService {
       throw new Error('No assistant message in response');
     }
 
+    if (data.usage) {
+      const cacheRead = data.usage.cache_read_input_tokens ?? 0;
+      const cacheCreation = data.usage.cache_creation_input_tokens ?? 0;
+      if (cacheRead > 0 || cacheCreation > 0) {
+        CostTracker.trackCacheUsage(cacheRead, cacheCreation);
+      }
+    }
+
     if (data.latencyMs) {
       import('../services/monitoringService').then(({ monitoringService }) => {
         monitoringService.trackPerformance({
@@ -716,6 +732,14 @@ export class ChatService {
 
     const data = await response.json();
     if (!data.assistantMessage) throw new Error('No assistant message in response');
+
+    if (data.usage) {
+      const cacheRead = data.usage.cache_read_input_tokens ?? 0;
+      const cacheCreation = data.usage.cache_creation_input_tokens ?? 0;
+      if (cacheRead > 0 || cacheCreation > 0) {
+        CostTracker.trackCacheUsage(cacheRead, cacheCreation);
+      }
+    }
 
     return {
       assistantMessage: data.assistantMessage,
@@ -1129,8 +1153,10 @@ export class ChatService {
         }
       }
 
-      const contextualSystemPrompt = `${optimizedPrompt}\n\nCurrent Date: ${currentDateString}
-User's local time context: ${dateParts.timeOfDay}\nOutfit Context: ${outfitContext}${contextReminder}${topicContext}${summaryContext}${metricsContext}${guidanceContext}${moodContext}${companionMemoryContext}${semanticContext}${memoryContext}${threadContext}${profileContext}${companionLifeMemoryContext}${dailyContext}
+      // Split the prompt into frozen (stable for a given companion) and
+      // volatile (changes per-turn) layers so prompt caching actually works.
+      // The frozen layer gets a 1h cache breakpoint in contextAssembler.
+      const frozenPrompt = `${optimizedPrompt}
 
 ${BEHAVIORAL_INSTRUCTIONS}
 
@@ -1146,6 +1172,11 @@ CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - NEVER repeat questions within the same conversation session
 
 IMPORTANT: Keep your response under ${maxTokens} tokens.`;
+
+      const volatileContext = `\n\nCurrent Date: ${currentDateString}
+User's local time context: ${dateParts.timeOfDay}\nOutfit Context: ${outfitContext}${contextReminder}${topicContext}${summaryContext}${metricsContext}${guidanceContext}${moodContext}${companionMemoryContext}${semanticContext}${memoryContext}${threadContext}${profileContext}${companionLifeMemoryContext}${dailyContext}`;
+
+      const contextualSystemPrompt = frozenPrompt + volatileContext;
 
       const alternatingMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
       for (const msg of last20Messages) {
@@ -1173,7 +1204,7 @@ const messagesToSend = [
       let velvetBlocks: SystemBlock[] | undefined;
       if (companionId && userProfile) {
         try {
-          const ctx = await assembleContext(userProfile.id, companionId, contextualSystemPrompt, message);
+          const ctx = await assembleContext(userProfile.id, companionId, frozenPrompt, volatileContext, message);
           velvetBlocks = ctx.systemBlocks;
         } catch {
           // fall back to flat systemPrompt

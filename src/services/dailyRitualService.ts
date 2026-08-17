@@ -145,20 +145,54 @@ export class DailyRitualService {
     if (!message) {
       if (companionRow?.relationship_type === 'mentor') {
         let domain: string | undefined;
+        let coachingContext = '';
         try {
-          if (companionRow.signature_expert) {
-            const { resolveExpert } = await import('./expertService');
-            const cfg = await resolveExpert(
-              companionRow.signature_expert,
-              companionRow.signature_expert_source,
-              userId
-            );
-            domain = cfg?.domain;
+          const { getUserContext } = await import('./memoryBus');
+          const { getGoalDomains } = await import('./memoryBus');
+          const ctx = await getUserContext(userId, {
+            surface: 'daily-rituals',
+            companionId,
+            includeCommitments: true,
+            maxFacts: 5,
+            maxTopics: 4,
+          });
+
+          if (ctx.goals.length > 0) {
+            const goalLines = ctx.goals.slice(0, 3).map(g => {
+              let line = g.title;
+              if (g.current_value != null && g.target_value != null && g.unit) {
+                line += ` (${g.current_value}/${g.target_value} ${g.unit})`;
+              }
+              if (g.target_date) {
+                const daysLeft = Math.ceil((new Date(g.target_date).getTime() - Date.now()) / 86400000);
+                if (daysLeft > 0) line += ` — ${daysLeft}d left`;
+                else if (daysLeft === 0) line += ` — due today`;
+              }
+              return line;
+            });
+            coachingContext += ` Active goals: ${goalLines.join('; ')}.`;
           }
+
+          if (ctx.commitments.length > 0) {
+            const now = new Date();
+            const commitmentLines = ctx.commitments.slice(0, 3).map(c => {
+              let line = c.description;
+              if (c.due_date) {
+                const daysLeft = Math.ceil((new Date(c.due_date).getTime() - now.getTime()) / 86400000);
+                if (daysLeft < 0) line += ` (overdue)`;
+                else if (daysLeft === 0) line += ` (due today)`;
+              }
+              return line;
+            });
+            coachingContext += ` Open commitments: ${commitmentLines.join('; ')}.`;
+          }
+
+          const domains = getGoalDomains(ctx.goals);
+          if (domains.length > 0) domain = domains[0];
         } catch {
-          // best-effort domain personalization; fall back to a neutral phrasing
+          // best-effort context; fall back to generic coach message
         }
-        message = ProactiveMessageService.getCoachScheduledMessage(currentTimeSlot, { domain });
+        message = ProactiveMessageService.getCoachScheduledMessage(currentTimeSlot, { domain, coachingContext });
       } else {
         message = ProactiveMessageService.getScheduledMessage(currentTimeSlot);
       }

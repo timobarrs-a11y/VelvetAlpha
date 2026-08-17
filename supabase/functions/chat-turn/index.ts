@@ -209,18 +209,33 @@ interface ChatTurnResponse {
   calendarEvent?: CalendarEventDetected | null;
   navigationIntent?: NavigationIntent | null;
   article_ids?: string[];
+  usage?: {
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+    input_tokens?: number;
+    output_tokens?: number;
+  };
 }
 
-function selectModel(_message: string, tier: string, isCorrespondent: boolean = false): string {
-  // Correspondents always get Sonnet — writing quality is the whole point.
-  // Free-tier correspondents get Sonnet with a tight token cap (shorter dispatches).
+function selectModel(message: string, tier: string, isCorrespondent: boolean = false): string {
   if (isCorrespondent) {
     return MODEL_CONFIG.SONNET;
   }
   if (tier === 'starter' || tier === 'plus' || tier === 'elite' || tier === 'trial') {
+    if (analyzeMessageComplexity(message) === 'simple') {
+      return MODEL_CONFIG.HAIKU;
+    }
     return MODEL_CONFIG.SONNET;
   }
   return MODEL_CONFIG.HAIKU;
+}
+
+function analyzeMessageComplexity(message: string): 'simple' | 'moderate' | 'complex' {
+  const trimmed = message.trim();
+  const wordCount = trimmed.split(/\s+/).length;
+  if (wordCount <= 5 && !/[?]/.test(trimmed)) return 'simple';
+  if (wordCount <= 12 && !trimmed.includes('\n') && !/[?]{2,}/.test(trimmed)) return 'simple';
+  return 'moderate';
 }
 
 function getMaxTokensForTier(tier: string): number {
@@ -358,16 +373,25 @@ async function generateResponseWithValidation(
   maxTokens: number,
   userMessage: string,
   characterName: string,
-  maxRetries: number = 1
-): Promise<string> {
+  maxRetries: number = 1,
+  systemBlocks?: Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral'; ttl?: '1h' } }>
+): Promise<{ message: string; usage?: ChatTurnResponse['usage'] }> {
   let attempts = 0;
   let lastError: Error | null = null;
   let validationFeedback = '';
+  let lastUsage: ChatTurnResponse['usage'] | undefined;
 
   while (attempts <= maxRetries) {
     attempts++;
 
     try {
+      const systemPayload: Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral'; ttl?: '1h' } }> | string =
+        systemBlocks && systemBlocks.length > 0 && !validationFeedback
+          ? systemBlocks
+          : validationFeedback
+            ? systemPrompt + '\n\n' + validationFeedback
+            : systemPrompt;
+
       const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -378,7 +402,7 @@ async function generateResponseWithValidation(
         body: JSON.stringify({
           model,
           max_tokens: maxTokens,
-          system: validationFeedback ? systemPrompt + '\n\n' + validationFeedback : systemPrompt,
+          system: systemPayload,
           messages,
         }),
       });
@@ -402,6 +426,13 @@ async function generateResponseWithValidation(
       }
 
       const data = await anthropicResponse.json();
+
+      lastUsage = data.usage ? {
+        cache_read_input_tokens: data.usage.cache_read_input_tokens,
+        cache_creation_input_tokens: data.usage.cache_creation_input_tokens,
+        input_tokens: data.usage.input_tokens,
+        output_tokens: data.usage.output_tokens,
+      } : undefined;
 
       // Concatenate every text block, not just content[0]. Newer models can
       // return multiple blocks (or a non-text block first), and relying on
@@ -440,7 +471,7 @@ async function generateResponseWithValidation(
         assistantMessage = stripTimeAssumption(assistantMessage);
       }
 
-      return assistantMessage;
+      return { message: assistantMessage, usage: lastUsage };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error');
 
@@ -470,9 +501,16 @@ interface NavigationIntent {
   seedText?: string;
 }
 
+interface CommitmentDetected {
+  description: string;
+  due_date: string | null;
+  confidence: number;
+}
+
 interface PostResponseSignals {
   calendarEvent: CalendarEventDetected | null;
   navigationIntent: NavigationIntent | null;
+  commitment: CommitmentDetected | null;
 }
 
 const APP_ROUTES: Record<string, string> = {
@@ -502,7 +540,7 @@ async function detectPostResponseSignals(
   assistantMessage: string,
   recentHistory: Array<{ role: string; content: string }>,
 ): Promise<PostResponseSignals> {
-  const result: PostResponseSignals = { calendarEvent: null, navigationIntent: null };
+  const result: PostResponseSignals = { calendarEvent: null, navigationIntent: null, commitment: null };
 
   try {
     const recentContext = recentHistory.slice(-6).map(m => `${m.role}: ${m.content.substring(0, 200)}`).join("\n");
@@ -517,7 +555,7 @@ async function detectPostResponseSignals(
       body: JSON.stringify({
         model: MODEL_CONFIG.HAIKU,
         max_tokens: 600,
-        system: `You analyze a conversation turn and detect two things:
+        system: `You analyze a conversation turn and detect three things:
 
 1. CALENDAR EVENT: Did the user explicitly ask to add/save/schedule something on their calendar? Only flag if the user said something like "add that to my calendar", "remind me", "save that date", "put it on my calendar", or if there's a clearly agreed-upon plan with a specific date.
    - Only flag with high confidence (>0.85) when user EXPLICITLY asked to track it
@@ -525,6 +563,11 @@ async function detectPostResponseSignals(
 
 2. NAVIGATION INTENT: Did the user ask to be taken to another app? Look for: "take me to", "open", "switch to", "send me to", "go to", "open co-author", "open atlas", "open calendar", etc.
    Valid destinations: atlas, co-author, calendar, daily-feed, insights, lobby, profile, settings
+
+3. COMMITMENT: Did the user make a specific commitment to do something by a certain time? Look for statements like "I'll send it by Friday", "I'll finish that chapter this week", "I promise to call them tomorrow", "I'll have the draft done by the 15th". Only flag when:
+   - The user explicitly stated they WILL do something (not "maybe", not "I should")
+   - There is a specific action and ideally a timeframe
+   - Confidence > 0.7 for clear commitments
 
 Respond ONLY with JSON (no other text):
 {
@@ -539,6 +582,11 @@ Respond ONLY with JSON (no other text):
     "destination": "app name",
     "route": "/route-path",
     "seedText": "brief topic context for the destination app"
+  } | null,
+  "commitment": {
+    "description": "what the user committed to do",
+    "due_date": "ISO 8601 date string or null if no specific date",
+    "confidence": 0.0
   } | null
 }
 
@@ -560,6 +608,7 @@ Today's date: ${new Date().toISOString()}`,
     let parsed: {
       calendarEvent: { title: string; event_type: string; event_date: string; description?: string; confidence: number } | null;
       navigationIntent: { destination: string; route: string; seedText?: string } | null;
+      commitment: { description: string; due_date: string | null; confidence: number } | null;
     };
 
     try {
@@ -618,11 +667,134 @@ Today's date: ${new Date().toISOString()}`,
         };
       }
     }
+
+    if (parsed.commitment && parsed.commitment.confidence > 0.7) {
+      const c = parsed.commitment;
+      await supabaseAdmin.from("coaching_commitments").insert({
+        user_id: userId,
+        companion_id: companionId,
+        description: c.description,
+        due_date: c.due_date || null,
+        status: 'pending',
+        extracted_from_message: userMessage.substring(0, 500),
+      }).catch(() => {});
+      result.commitment = {
+        description: c.description,
+        due_date: c.due_date,
+        confidence: c.confidence,
+      };
+    }
   } catch (err) {
     console.error("[chat-turn] Post-response signal detection error:", err);
   }
 
   return result;
+}
+
+async function fetchOpenCommitments(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  companionId: string,
+): Promise<string> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('coaching_commitments')
+      .select('description, due_date, status')
+      .eq('user_id', userId)
+      .eq('companion_id', companionId)
+      .in('status', ['pending', 'missed'])
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(5);
+
+    if (!data || data.length === 0) return '';
+
+    const now = new Date();
+    const lines = data.map(c => {
+      let line = `- ${c.description}`;
+      if (c.due_date) {
+        const due = new Date(c.due_date);
+        const daysLeft = Math.ceil((due.getTime() - now.getTime()) / 86400000);
+        if (daysLeft < 0) line += ` — OVERDUE by ${Math.abs(daysLeft)} day(s)`;
+        else if (daysLeft === 0) line += ` — due TODAY`;
+        else line += ` — due in ${daysLeft} day(s)`;
+      }
+      if (c.status === 'missed') line += ' [MISSED — follow up]';
+      return line;
+    });
+
+    return `\n\n[OPEN COMMITMENTS — reference these specifically. Do NOT invent commitments that are not listed here.]\n${lines.join('\n')}\n[END COMMITMENTS]`;
+  } catch {
+    return '';
+  }
+}
+
+async function fetchActiveGoalsForPrompt(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<string> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('user_goals')
+      .select('title, goal_type, current_value, target_value, unit, target_date, status')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: true })
+      .limit(5);
+
+    if (!data || data.length === 0) return '';
+
+    const now = new Date();
+    const lines = data.map(g => {
+      let line = `- ${g.title}`;
+      if (g.current_value != null && g.target_value != null && g.unit) {
+        line += ` — ${g.current_value} / ${g.target_value} ${g.unit}`;
+      }
+      if (g.target_date) {
+        const daysLeft = Math.ceil((new Date(g.target_date).getTime() - now.getTime()) / 86400000);
+        if (daysLeft > 0) line += ` — ${daysLeft} day(s) remaining`;
+        else if (daysLeft === 0) line += ` — deadline is TODAY`;
+        else line += ` — overdue by ${Math.abs(daysLeft)} day(s)`;
+      }
+      return line;
+    });
+
+    return `\n\n[USER'S ACTIVE GOALS — reference these when relevant]\n${lines.join('\n')}\n[END GOALS]`;
+  } catch {
+    return '';
+  }
+}
+
+async function fetchVerifiedFactsForPrompt(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<string> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('user_insights')
+      .select('facts_learned, confidence_score')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(5);
+
+    if (!data || data.length === 0) return '';
+
+    const factSet = new Set<string>();
+    for (const row of data) {
+      const facts = row.facts_learned as unknown as Array<{ fact: string }>;
+      if (!Array.isArray(facts)) continue;
+      const confidence = row.confidence_score ?? 0.5;
+      if (confidence < 0.4) continue;
+      for (const f of facts) {
+        if (f?.fact) factSet.add(f.fact);
+      }
+    }
+
+    if (factSet.size === 0) return '';
+    const lines = Array.from(factSet).slice(0, 10).map(f => `- [VERIFIED] ${f}`);
+    return `\n\n[VERIFIED USER FACTS — from conversation memory]\n${lines.join('\n')}\n[END FACTS]`;
+  } catch {
+    return '';
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -928,16 +1100,24 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       ? `\n\nRECENT STORIES (use these — do NOT invent stories):\n${correspondentStoriesBlock}\n`
       : '';
 
-    const systemPrompt = `${personaLayer}
+    // Fetch memory bus data: open commitments, active goals, verified facts.
+    // For coaches: inject all three (commitments + goals + facts).
+    // For companions: inject goals + facts only (cross-companion visibility).
+    // For correspondents: inject facts only (for grounding, no coaching).
+    const [commitmentsBlock, goalsBlock, factsBlock] = await Promise.all([
+      isMentor ? fetchOpenCommitments(supabaseAdmin, user.id, companionId) : Promise.resolve(''),
+      (isMentor || companion.relationship_type === 'companion' || companion.relationship_type === 'partner')
+        ? fetchActiveGoalsForPrompt(supabaseAdmin, user.id) : Promise.resolve(''),
+      fetchVerifiedFactsForPrompt(supabaseAdmin, user.id),
+    ]);
 
-Relationship duration: ${relationshipDuration} days
-Current Date: ${dateString}
-User's local time context: ${timeOfDay}
+    const memoryBusBlock = `${commitmentsBlock}${goalsBlock}${factsBlock}`;
 
-${contextReminder}
+    // Split into frozen (stable for a given companion) and volatile (changes
+    // per-turn) layers so Anthropic prompt caching actually works.
+    const frozenPrompt = `${personaLayer}
 
-${behavioralBlock}${groundingBlock}
-${expertLayer}
+${behavioralBlock}${expertLayer}
 
 CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - NEVER ask a question you already asked in this conversation
@@ -950,6 +1130,32 @@ CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - NEVER repeat questions within the same conversation session
 ${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, supportive tone. No romantic or flirtatious content.' : ''}${isCorrespondent ? '\nIMPORTANT: You are a correspondent — write a dispatch, not a chat reply. No romantic or flirtatious content. No coaching or self-help.' : ''}${isCorrespondent && tier === 'free' ? '\nLENGTH: Write a tight, punchy dispatch — 3-4 sentences max. Make every word count. Upgrade to premium for the full column-length experience.' : ''}
 RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
+
+    const hallucinationGuard = isMentor
+      ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference commitments that appear in the [OPEN COMMITMENTS] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [USER'S ACTIVE GOALS] section. Do NOT fabricate goals.\n- Only reference facts tagged [VERIFIED] from the [VERIFIED USER FACTS] section. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.`
+      : '';
+
+    const volatileContext = `\n\nRelationship duration: ${relationshipDuration} days
+Current Date: ${dateString}
+User's local time context: ${timeOfDay}
+
+${contextReminder}
+
+${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
+
+    const systemBlocks = [
+      {
+        type: 'text' as const,
+        text: frozenPrompt,
+        cache_control: { type: 'ephemeral' as const, ttl: '1h' as const },
+      },
+      {
+        type: 'text' as const,
+        text: volatileContext,
+      },
+    ];
+
+    const systemPrompt = frozenPrompt + volatileContext;
 
     const alternatingMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
     for (const msg of last20Messages) {
@@ -1012,7 +1218,7 @@ RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} t
 
     console.log(`[${traceId}] Generating response...`);
 
-    const assistantMessage = await generateResponseWithValidation(
+    const result = await generateResponseWithValidation(
       apiKey,
       messagesToSend,
       systemPrompt,
@@ -1020,8 +1226,12 @@ RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} t
       maxTokens,
       message,
       companionName,
-      1
+      1,
+      systemBlocks
     );
+
+    const assistantMessage = result.message;
+    const apiUsage = result.usage;
 
     const latencyMs = Date.now() - startTime;
 
@@ -1043,7 +1253,7 @@ RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} t
       await supabaseAdmin.rpc('track_referral_progress', { p_user_id: user.id });
     }
 
-    let signals: PostResponseSignals = { calendarEvent: null, navigationIntent: null };
+    let signals: PostResponseSignals = { calendarEvent: null, navigationIntent: null, commitment: null };
 
     const signalPromise = detectPostResponseSignals(
       supabaseAdmin,
@@ -1068,6 +1278,7 @@ RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} t
       calendarEvent: signals.calendarEvent || null,
       navigationIntent: signals.navigationIntent || null,
       ...(correspondentArticleIds.length > 0 ? { article_ids: correspondentArticleIds } : {}),
+      ...(apiUsage ? { usage: apiUsage } : {}),
     };
 
     return new Response(

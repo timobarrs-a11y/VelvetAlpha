@@ -1,10 +1,11 @@
 import { getCompanionMemory, getRecentMessages, needsSummarization } from './memoryService';
 import { supabase } from '../shared/supabase/client';
+import { getUserContext, contextToPromptBlock } from './memoryBus';
 
 export interface SystemBlock {
   type: 'text';
   text: string;
-  cache_control?: { type: 'ephemeral' };
+  cache_control?: { type: 'ephemeral'; ttl?: '1h' };
 }
 
 interface AssembledContext {
@@ -86,43 +87,87 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
+/**
+ * Assemble structured system blocks for Anthropic prompt caching.
+ *
+ * Three layers, ordered by volatility:
+ * 1. Frozen — guardrails + persona + voice (stable for a given companion).
+ *    Gets a 1h cache breakpoint so it survives across scattered sessions.
+ * 2. Semi-stable — rolling companion memory + core memory.
+ *    Changes only after summarization runs, not per-turn. Gets its own
+ *    1h cache breakpoint so the frozen layer can still hit when memory
+ *    updates.
+ * 3. Volatile — date, time-of-day, mood, semantic/episodic recollections,
+ *    thread/profile context. No cache_control; appended after the last
+ *    breakpoint so it never invalidates the cached layers above.
+ */
 export async function assembleContext(
   userId: string,
   companionId: string,
-  companionSystemPrompt: string,
+  frozenPrompt: string,
+  volatileContext: string,
   newUserMessage: string
 ): Promise<AssembledContext> {
-  const [memory, recentMessages, shouldTriggerSummarization, coreMemory, episodicContext] =
+  const [memory, recentMessages, shouldTriggerSummarization, coreMemory, episodicContext, memCtx] =
     await Promise.all([
       getCompanionMemory(userId, companionId),
       getRecentMessages(userId, companionId, 30),
       needsSummarization(userId, companionId),
       getActiveCoreMemory(userId, companionId),
       getEpisodicRecollections(userId, companionId, newUserMessage),
+      getUserContext(userId, { surface: 'chat', companionId, includeCommitments: true, includeSessions: true }),
     ]);
 
-  // Build stable prefix (cached) — persona + rolling memory
-  let stablePrefix = companionSystemPrompt;
-  if (memory?.memory_text) {
-    stablePrefix += `\n\n[COMPANION MEMORY]\n${memory.memory_text}\n[END MEMORY]`;
-  }
-  if (coreMemory) {
-    stablePrefix += `\n\n[CORE MEMORY]\n${coreMemory}\n[END CORE MEMORY]`;
-  }
-
+  // Layer 1: Frozen — guardrails, persona, voice. Never changes for a
+  // given companion. 1h TTL so it survives a user leaving and coming back
+  // later the same day.
   const systemBlocks: SystemBlock[] = [
     {
       type: 'text',
-      text: stablePrefix,
-      cache_control: { type: 'ephemeral' },
+      text: frozenPrompt,
+      cache_control: { type: 'ephemeral', ttl: '1h' },
     },
   ];
 
-  // Dynamic recollections — uncached, appended after cache breakpoint
-  if (episodicContext) {
+  // Layer 2: Semi-stable — rolling + core memory. Changes only after
+  // summarization, not per-turn. Separate 1h breakpoint so layer 1 can
+  // still hit when memory updates.
+  let semiStableText = '';
+  if (memory?.memory_text) {
+    semiStableText += `\n\n[COMPANION MEMORY]\n${memory.memory_text}\n[END MEMORY]`;
+  }
+  if (coreMemory) {
+    semiStableText += `\n\n[CORE MEMORY]\n${coreMemory}\n[END CORE MEMORY]`;
+  }
+  if (semiStableText) {
     systemBlocks.push({
       type: 'text',
-      text: episodicContext,
+      text: semiStableText,
+      cache_control: { type: 'ephemeral', ttl: '1h' },
+    });
+  }
+
+  // Layer 3: Volatile — date, time, mood, recollections, thread/profile.
+  // No cache_control. Appended after the last breakpoint so it never
+  // invalidates the cached layers above.
+  let volatileText = volatileContext;
+  if (episodicContext) {
+    volatileText += episodicContext;
+  }
+  const memBusBlock = contextToPromptBlock(memCtx, {
+    includeGoals: true,
+    includeFacts: true,
+    includeTopics: true,
+    includeCommitments: true,
+    includeSessions: true,
+  });
+  if (memBusBlock) {
+    volatileText += `\n\n[CROSS-SURFACE MEMORY]\n${memBusBlock}\n[END CROSS-SURFACE MEMORY]`;
+  }
+  if (volatileText) {
+    systemBlocks.push({
+      type: 'text',
+      text: volatileText,
     });
   }
 

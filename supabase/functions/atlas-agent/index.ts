@@ -368,7 +368,68 @@ Deno.serve(async (req: Request) => {
     const displayName = userName || profile?.display_name || "";
     const nameRef = displayName ? `The user's name is ${displayName}. ` : "";
     const basePrompt = getAtlasSystemPrompt(voice);
-    const systemPrompt = `${basePrompt}\n\n${nameRef}Today's date is ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}.`;
+
+    // Fetch memory bus context: active goals, verified facts, recent topics
+    let memoryBlock = "";
+    try {
+      const [goalsData, factsData, topicsData] = await Promise.all([
+        supabaseAdmin.from("user_goals").select("title, goal_type, current_value, target_value, unit, target_date, status").eq("user_id", user.id).eq("status", "active").order("created_at", { ascending: true }).limit(5),
+        supabaseAdmin.from("user_insights").select("facts_learned, confidence_score").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(5),
+        supabaseAdmin.from("conversation_insights").select("topics").eq("user_id", user.id).order("conversation_date", { ascending: false }).limit(10),
+      ]);
+
+      const parts: string[] = [];
+
+      if (goalsData.data && goalsData.data.length > 0) {
+        const now = new Date();
+        const goalLines = goalsData.data.map(g => {
+          let line = `- ${g.title}`;
+          if (g.current_value != null && g.target_value != null && g.unit) {
+            line += ` — ${g.current_value} / ${g.target_value} ${g.unit}`;
+          }
+          if (g.target_date) {
+            const daysLeft = Math.ceil((new Date(g.target_date).getTime() - now.getTime()) / 86400000);
+            if (daysLeft > 0) line += ` — ${daysLeft} day(s) remaining`;
+            else if (daysLeft === 0) line += ` — deadline is TODAY`;
+          }
+          return line;
+        });
+        parts.push(`[USER'S ACTIVE GOALS — reference when relevant]\n${goalLines.join("\n")}\n[END GOALS]`);
+      }
+
+      if (factsData.data) {
+        const factSet = new Set<string>();
+        for (const row of factsData.data) {
+          const facts = row.facts_learned as unknown as Array<{ fact: string }>;
+          if (!Array.isArray(facts)) continue;
+          if ((row.confidence_score ?? 0.5) < 0.4) continue;
+          for (const f of facts) { if (f?.fact) factSet.add(f.fact); }
+        }
+        if (factSet.size > 0) {
+          const lines = Array.from(factSet).slice(0, 10).map(f => `- [VERIFIED] ${f}`);
+          parts.push(`[VERIFIED USER FACTS — from conversation memory]\n${lines.join("\n")}\n[END FACTS]`);
+        }
+      }
+
+      if (topicsData.data) {
+        const topicCounts = new Map<string, number>();
+        for (const row of topicsData.data) {
+          const topics = row.topics as unknown as string[];
+          if (!Array.isArray(topics)) continue;
+          for (const t of topics) { if (t) topicCounts.set(t, (topicCounts.get(t) ?? 0) + 1); }
+        }
+        if (topicCounts.size > 0) {
+          const topTopics = Array.from(topicCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([t]) => t);
+          parts.push(`[RECENT TOPICS]\n${topTopics.join(", ")}\n[END TOPICS]`);
+        }
+      }
+
+      memoryBlock = parts.length > 0 ? `\n\n[CROSS-SURFACE MEMORY]\n${parts.join("\n\n")}\n[END CROSS-SURFACE MEMORY]` : "";
+    } catch (memErr) {
+      console.error("[atlas-agent] Memory bus fetch failed:", memErr);
+    }
+
+    const systemPrompt = `${basePrompt}\n\n${nameRef}Today's date is ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}.${memoryBlock}`;
 
     const userMessageContent = searchContext
       ? `${message}\n\n[LIVE SEARCH RESULTS for "${searchQuery}"]\n${searchContext}`

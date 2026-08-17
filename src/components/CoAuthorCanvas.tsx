@@ -11,6 +11,7 @@ import { AvatarConfig } from '../types/avatar';
 import { buildSystemPrompt } from '../config/systemPromptBuilder';
 import { colorNameToHex } from '../utils/colorMapping';
 import { MODEL_CONFIG } from '../services/modelSelector';
+import { getUserContext, contextToPromptBlock } from '../services/memoryBus';
 
 interface CoAuthorCanvasProps {
   sessionId: string;
@@ -45,6 +46,17 @@ export function CoAuthorCanvas({ sessionId }: CoAuthorCanvasProps) {
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
   const stylesSaveTimeoutRef = useRef<NodeJS.Timeout>();
   const isCreatingGreetingRef = useRef(false);
+
+  const fetchMemoryContext = async (): Promise<string> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return '';
+      const ctx = await getUserContext(user.id, { surface: 'co-author', maxFacts: 6, maxTopics: 4 });
+      return contextToPromptBlock(ctx, { includeGoals: false, includeFacts: true, includeTopics: true, includeCommitments: false, includeSessions: false });
+    } catch {
+      return '';
+    }
+  };
 
   const buildQuestionnaireData = (companion: any) => ({
     interestText: companion.interest_text,
@@ -193,7 +205,7 @@ export function CoAuthorCanvas({ sessionId }: CoAuthorCanvasProps) {
         relationshipType: companion.relationship_type || 'friend',
         signatureVoice: companion.signature_voice || 'authentic',
         questionnaireData: buildQuestionnaireData(companion),
-      });
+      }) + await fetchMemoryContext();
 
       let userPrompt = '';
       if (sessionData.session_prompt) {
@@ -290,7 +302,7 @@ DO NOT use the examples above. Generate a unique, natural response specific to t
       setChatMessages(prev => [...prev, userMessage]);
 
       const context = buildChatContext();
-      const systemPrompt = buildChatSystemPrompt() || `You are a helpful co-authoring assistant named ${companionName || 'Assistant'}. Keep responses conversational.`;
+      const systemPrompt = (buildChatSystemPrompt() || `You are a helpful co-authoring assistant named ${companionName || 'Assistant'}. Keep responses conversational.`) + await fetchMemoryContext();
 
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const authToken = authSession?.access_token;

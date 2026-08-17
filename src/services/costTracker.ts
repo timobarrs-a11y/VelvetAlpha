@@ -1,6 +1,9 @@
 interface CostStats {
   date: string;
   cacheHits: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  cacheMissTokens: number;
   cheapModelCalls: number;
   premiumModelCalls: number;
   totalMessages: number;
@@ -28,6 +31,9 @@ export class CostTracker {
     const newStats: CostStats = {
       date: today,
       cacheHits: 0,
+      cacheReadTokens: 0,
+      cacheCreationTokens: 0,
+      cacheMissTokens: 0,
       cheapModelCalls: 0,
       premiumModelCalls: 0,
       totalMessages: 0,
@@ -42,10 +48,13 @@ export class CostTracker {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
   }
 
-  static trackCacheHit(): void {
+  static trackCacheUsage(cacheReadTokens: number, cacheCreationTokens: number): void {
     const stats = this.getStats();
-    stats.cacheHits++;
-    stats.totalMessages++;
+    stats.cacheReadTokens += cacheReadTokens;
+    stats.cacheCreationTokens += cacheCreationTokens;
+    if (cacheReadTokens > 0) {
+      stats.cacheHits++;
+    }
     this.saveStats(stats);
   }
 
@@ -69,6 +78,9 @@ export class CostTracker {
   static getSummary(): {
     totalMessages: number;
     cacheHits: number;
+    cacheReadTokens: number;
+    cacheCreationTokens: number;
+    cacheMissTokens: number;
     cheapModelCalls: number;
     premiumModelCalls: number;
     totalCost: number;
@@ -86,6 +98,9 @@ export class CostTracker {
     return {
       totalMessages: stats.totalMessages,
       cacheHits: stats.cacheHits,
+      cacheReadTokens: stats.cacheReadTokens,
+      cacheCreationTokens: stats.cacheCreationTokens,
+      cacheMissTokens: stats.cacheMissTokens,
       cheapModelCalls: stats.cheapModelCalls,
       premiumModelCalls: stats.premiumModelCalls,
       totalCost: stats.totalCost,
@@ -98,6 +113,9 @@ export class CostTracker {
     const newStats: CostStats = {
       date: this.getTodayString(),
       cacheHits: 0,
+      cacheReadTokens: 0,
+      cacheCreationTokens: 0,
+      cacheMissTokens: 0,
       cheapModelCalls: 0,
       premiumModelCalls: 0,
       totalMessages: 0,

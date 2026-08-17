@@ -145,12 +145,16 @@ export class ProactiveMessageService {
   // check-in with no romantic/companion post-processing (no hearts, no "wyd").
   static getCoachScheduledMessage(
     timeSlot: 'morning' | 'evening' | 'night',
-    opts?: { domain?: string }
+    opts?: { domain?: string; coachingContext?: string }
   ): string {
     const pool = COACH_MESSAGES[timeSlot] || COACH_MESSAGES.morning;
     const template = this.getRandomItem(pool);
     const domain = opts?.domain && opts.domain.trim() ? opts.domain.trim() : "what you're working on";
-    return template.replace(/\{domain\}/g, domain);
+    let message = template.replace(/\{domain\}/g, domain);
+    if (opts?.coachingContext && opts.coachingContext.trim()) {
+      message += opts.coachingContext.trim();
+    }
+    return message;
   }
 
   static getRandomCheckIn(userProfile?: UserProfile): string {
