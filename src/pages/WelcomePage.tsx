@@ -186,7 +186,7 @@ export function WelcomePage() {
       }
     } catch {}
     setTimeout(() => {
-      navigate('/user-questionnaire', { replace: true });
+      navigate('/goal-discovery', { replace: true });
     }, 600);
   };
 

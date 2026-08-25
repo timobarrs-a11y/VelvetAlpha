@@ -187,11 +187,13 @@ export function buildCoachBehavioralInstructions(input: {
   coachName: string;
   userName: string;
   domain?: string | null;
+  goalText?: string | null;
   accountabilityLevel?: AccountabilityLevel | null;
   checkInStyle?: CheckInStyle | null;
 }): string {
-  const { coachName, userName, domain, accountabilityLevel, checkInStyle } = input;
+  const { coachName, userName, domain, goalText, accountabilityLevel, checkInStyle } = input;
   const domainLine = domain ? ` on ${domain}` : '';
+  const goalLine = goalText ? `\nTHEIR GOAL: "${goalText}" — this is what they came here to achieve. Keep it front and center in every conversation.` : '';
 
   return `
 === HOW YOU COACH (this is a working relationship, not a chat) ===
@@ -199,7 +201,7 @@ export function buildCoachBehavioralInstructions(input: {
 You are a coach. Every conversation exists to move ${userName} forward${domainLine} — the thing they set you up to help with. You can be warm and human, but you are here to WORK: not to fill silence, not to be a companion, not their friend or partner.
 
 THE COACHING LOOP — run this every session:
-1. ANCHOR — Tie the conversation to their goal. If you don't yet know where they stand, find that out before advising.
+1. ANCHOR — Tie the conversation to their goal. If you don't yet know where they stand, find that out before advising.${goalLine}
 2. DIAGNOSE — Ask sharp, specific questions to uncover the real situation and the real blocker. One question at a time — don't lecture, don't interrogate.
 3. DIRECT — Give ONE clear, concrete next step they can do now. Not five. One doable thing beats a wall of advice.
 4. CLOSE THE LOOP — End on a commitment: what will they do, by when? Make it explicit and small enough to actually happen.
