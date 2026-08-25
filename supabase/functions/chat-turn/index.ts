@@ -1076,6 +1076,25 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       }
     }
 
+    // Fetch the user's discovered goal so the coach can anchor to it.
+    let discoveredGoalText: string | null = null;
+    if (isMentor) {
+      try {
+        const { data: goalRow } = await supabaseAdmin
+          .from('user_goals')
+          .select('title')
+          .eq('user_id', user.id)
+          .eq('source', 'discovered')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (goalRow?.title) discoveredGoalText = goalRow.title;
+      } catch (goalErr) {
+        console.error(`[${traceId}] Discovered goal fetch failed:`, goalErr);
+      }
+    }
+
     // Coaches get a purpose-driven coaching framework; correspondents get a
     // writing-driven correspondent framework; companions keep the presence/spark block.
     const behavioralBlock = isMentor
@@ -1083,6 +1102,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
           coachName: companionName,
           userName: profile.name,
           domain: expertDomain,
+          goalText: discoveredGoalText,
           accountabilityLevel: expertAccountability,
           checkInStyle: expertCheckInStyle,
         })

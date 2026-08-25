@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Users, Heart, Brain, ArrowLeft, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../shared/supabase/client';
 
 interface IntentOption {
   id: string;
@@ -17,6 +18,25 @@ interface IntentOption {
 export function IntentSelectPage() {
   const navigate = useNavigate();
   const [transitioning, setTransitioning] = useState<string | null>(null);
+  const [hasActiveMentor, setHasActiveMentor] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: existingMentor } = await supabase
+          .from('companions')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('relationship_type', 'mentor')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+        if (existingMentor) setHasActiveMentor(true);
+      } catch { /* non-fatal */ }
+    })();
+  }, []);
 
   const options: IntentOption[] = [
     {
@@ -39,7 +59,7 @@ export function IntentSelectPage() {
       relationshipType: 'romantic',
       nextPath: '/companion-path',
     },
-    {
+    ...(hasActiveMentor ? [] : [{
       id: 'coaches',
       title: 'Coaches',
       subtitle: 'Expert agents',
@@ -48,7 +68,7 @@ export function IntentSelectPage() {
       intent: 'coaches',
       relationshipType: 'mentor',
       nextPath: '/expert-selection',
-    },
+    }]),
   ];
 
   const handleSelectIntent = (option: IntentOption) => {

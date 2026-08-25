@@ -48,6 +48,9 @@ CRITICAL RULES:
 ENDING THE CONVERSATION:
 When you have a clear sense of their goal AND a feel for how they want to be supported, wrap up naturally. Say something warm like: "That's exactly what I needed to hear. Give me one second — I'm finding the right person for you." Then stop. Do NOT ask any more questions after that.
 
+After your wrap-up message, on a NEW line, append exactly: [COMPLETE]
+This marker tells the system the discovery conversation is finished. The user never sees it — it is stripped before display. Always include it when you are done.
+
 TURN LIMIT:
 You must reach a conclusion within ${MAX_TURNS} exchanges. If the conversation is going nowhere after several turns, make your best guess from what they've said and wrap up. Never interrogate.`;
 
@@ -135,7 +138,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const aiData = await response.json();
-    const reply: string = aiData.content?.[0]?.text || "";
+    const rawReply: string = aiData.content?.[0]?.text || "";
+
+    const hasStructuredComplete = rawReply.includes("[COMPLETE]");
+    const cleanReply = rawReply.replace(/\[COMPLETE\]/gi, "").trim();
 
     const completionPhrases = [
       "give me one second",
@@ -146,12 +152,13 @@ Deno.serve(async (req: Request) => {
       "i've got just the person",
       "let me set you up",
     ];
-    const isComplete = turnCount >= 2 && completionPhrases.some(p => reply.toLowerCase().includes(p));
+    const phraseMatch = turnCount >= 2 && completionPhrases.some(p => cleanReply.toLowerCase().includes(p));
+    const isComplete = turnCount >= 2 && (hasStructuredComplete || phraseMatch);
 
     const forceComplete = turnCount >= MAX_TURNS - 1;
 
     return new Response(JSON.stringify({
-      reply,
+      reply: cleanReply,
       turnCount: turnCount + 1,
       isComplete: isComplete || forceComplete,
     }), {

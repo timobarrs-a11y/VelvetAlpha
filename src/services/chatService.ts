@@ -1022,6 +1022,22 @@ export class ChatService {
         } catch { /* non-fatal */ }
       }
 
+      let discoveredGoalText: string | undefined;
+      if (isMentorCompanion && userProfile) {
+        try {
+          const { data: goalRow } = await supabase
+            .from('user_goals')
+            .select('title')
+            .eq('user_id', userProfile.id)
+            .eq('source', 'discovered')
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (goalRow?.title) discoveredGoalText = goalRow.title;
+        } catch { /* non-fatal */ }
+      }
+
       const optimizedPrompt = buildSystemPrompt({
         companionName,
         companionGender,
@@ -1041,6 +1057,7 @@ export class ChatService {
         relationshipDuration,
         temporalContext: temporalContextString,
         affectionContext: affectionContextString,
+        goalText: discoveredGoalText,
         questionnaireData: companionData ? {
           interestText: companionData.interest_text,
           loveLanguage: companionData.love_language,

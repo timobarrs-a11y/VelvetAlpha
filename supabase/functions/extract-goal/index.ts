@@ -133,20 +133,47 @@ Deno.serve(async (req: Request) => {
       extracted.confidence = 0.5;
     }
 
-    const { error: goalError } = await supabaseAdmin
+    const { data: existingGoal } = await supabaseAdmin
       .from("user_goals")
-      .insert({
-        user_id: user.id,
-        title: extracted.goalText,
-        goal_type: extracted.goalType,
-        status: "active",
-        source: "discovered",
-        discovery_transcript: JSON.stringify(transcript),
-        start_date: new Date().toISOString().split("T")[0],
-      });
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("source", "discovered")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (goalError) {
-      console.error("[extract-goal] Failed to insert goal:", goalError);
+    const goalPayload = {
+      user_id: user.id,
+      title: extracted.goalText,
+      goal_type: extracted.goalType,
+      status: "active",
+      source: "discovered",
+      discovery_transcript: JSON.stringify(transcript),
+      start_date: new Date().toISOString().split("T")[0],
+    };
+
+    if (existingGoal?.id) {
+      const { error: goalError } = await supabaseAdmin
+        .from("user_goals")
+        .update({
+          title: extracted.goalText,
+          goal_type: extracted.goalType,
+          discovery_transcript: JSON.stringify(transcript),
+        })
+        .eq("id", existingGoal.id);
+
+      if (goalError) {
+        console.error("[extract-goal] Failed to update goal:", goalError);
+      }
+    } else {
+      const { error: goalError } = await supabaseAdmin
+        .from("user_goals")
+        .insert(goalPayload);
+
+      if (goalError) {
+        console.error("[extract-goal] Failed to insert goal:", goalError);
+      }
     }
 
     return new Response(JSON.stringify({

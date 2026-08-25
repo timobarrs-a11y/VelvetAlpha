@@ -24,6 +24,7 @@ interface SystemPromptInput {
   relationshipDuration?: number;
   temporalContext?: string;
   affectionContext?: string;
+  goalText?: string;
   outfitContext?: {
     outfit: string;
     activity: string;
@@ -75,6 +76,7 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
     relationshipDuration,
     temporalContext,
     affectionContext,
+    goalText,
     outfitContext,
     questionnaireData,
     dislikeFeedback
@@ -367,6 +369,7 @@ ${isMentor ? buildCoachBehavioralInstructions({
   coachName: companionName,
   userName: userName,
   domain: expertConfig?.domain,
+  goalText: goalText,
   accountabilityLevel: expertConfig?.accountabilityLevel,
   checkInStyle: expertConfig?.checkInStyle,
 }) : ''}${isCorrespondent ? buildCorrespondentBehavioralInstructions({
