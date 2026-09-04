@@ -12,7 +12,7 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  const cronSecret = Deno.env.get('CRON_SECRET');
+  const cronSecret = Deno.env.get('CRON_SECRET') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (cronSecret) {
     const provided = req.headers.get('X-Cron-Secret');
     if (provided !== cronSecret) {

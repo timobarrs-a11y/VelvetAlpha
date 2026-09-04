@@ -8,14 +8,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const VALID_GOAL_TYPES = ["health_fitness", "habit", "deadline", "creative", "reading"];
+const VALID_GOAL_TYPES = ["health_fitness", "habit", "deadline", "creative", "reading", "skill", "project"];
 
 const EXTRACTION_PROMPT = `You are an analysis engine. You receive a conversation transcript between Velvet (the host) and a new user. Your job is to extract structured data about the user's goal.
 
 Read the conversation and return a JSON object with exactly these fields:
 
 {
-  "goalType": one of "health_fitness" | "habit" | "deadline" | "creative" | "reading",
+  "goalType": one of "health_fitness" | "habit" | "deadline" | "creative" | "reading" | "skill" | "project",
   "goalText": "the user's goal in their own words, as a short phrase (max 15 words)",
   "accountabilityLevel": "gentle" | "moderate" | "firm",
   "confidence": 0.0 to 1.0

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { CURATED_EXPERT_MAP, getCuratedExpert } from "../_shared/coachFramework.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,58 +10,39 @@ const corsHeaders = {
 
 interface ExpertEntry {
   id: string;
-  name: string;
   domain: string;
-  category: string;
-  description: string;
-  instruction: string;
   goalTypes: string[];
-  checkInStyle: string;
   accountabilityLevel: string;
-  sampleInteraction: string;
   premium: boolean;
-  source: string;
 }
 
-const SIGNATURE_EXPERTS: ExpertEntry[] = [
-  { id: "fitness_hype", name: "The Hype Coach", domain: "fitness", category: "wellness", description: "Supportive fitness partner who celebrates every win.", instruction: "", goalTypes: ["health_fitness", "habit"], checkInStyle: "proactive", accountabilityLevel: "gentle", sampleInteraction: "", premium: false, source: "curated" },
-  { id: "fitness_drill", name: "The Drill Sergeant", domain: "fitness", category: "wellness", description: "No-excuses accountability partner for serious gains.", instruction: "", goalTypes: ["health_fitness", "habit"], checkInStyle: "proactive", accountabilityLevel: "firm", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "wellness_guide", name: "The Wellness Guide", domain: "mental-wellness", category: "wellness", description: "Mindful guide for emotional balance and self-care.", instruction: "", goalTypes: ["habit", "health_fitness"], checkInStyle: "proactive", accountabilityLevel: "gentle", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "sleep_coach", name: "The Sleep Coach", domain: "sleep", category: "wellness", description: "Helps you fix your sleep and actually feel rested.", instruction: "", goalTypes: ["habit", "health_fitness"], checkInStyle: "proactive", accountabilityLevel: "gentle", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "interview_coach", name: "The Interview Coach", domain: "interview prep", category: "professional", description: "Runs mock interviews and sharpens your answers.", instruction: "", goalTypes: ["deadline", "habit"], checkInStyle: "structured", accountabilityLevel: "moderate", sampleInteraction: "", premium: false, source: "curated" },
-  { id: "finance_mentor", name: "The Money Mentor", domain: "finance", category: "professional", description: "Practical financial guide for building better habits.", instruction: "", goalTypes: ["habit", "deadline"], checkInStyle: "structured", accountabilityLevel: "moderate", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "finance_tough", name: "The Budget Hawk", domain: "finance", category: "professional", description: "Blunt financial accountability — no sugarcoating.", instruction: "", goalTypes: ["habit", "deadline"], checkInStyle: "proactive", accountabilityLevel: "firm", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "career_advisor", name: "The Career Strategist", domain: "career", category: "professional", description: "Strategic career guide for growth and transitions.", instruction: "", goalTypes: ["deadline", "habit"], checkInStyle: "structured", accountabilityLevel: "moderate", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "communication_coach", name: "The Communication Coach", domain: "communication", category: "professional", description: "Helps you say the hard thing clearly and land it well.", instruction: "", goalTypes: ["habit", "deadline"], checkInStyle: "responsive", accountabilityLevel: "moderate", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "creative_muse", name: "The Muse", domain: "creativity", category: "creative", description: "Inspiring creative collaborator who sparks ideas.", instruction: "", goalTypes: ["creative", "habit"], checkInStyle: "responsive", accountabilityLevel: "gentle", sampleInteraction: "", premium: false, source: "curated" },
-  { id: "writing_collaborator", name: "The Writing Partner", domain: "writing", category: "creative", description: "Focused writing accountability and craft development.", instruction: "", goalTypes: ["creative", "habit", "deadline"], checkInStyle: "proactive", accountabilityLevel: "moderate", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "brainstorm_partner", name: "The Idea Engine", domain: "brainstorming", category: "creative", description: "High-energy thought partner for any problem or project.", instruction: "", goalTypes: ["creative", "deadline"], checkInStyle: "responsive", accountabilityLevel: "gentle", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "study_partner", name: "The Study Partner", domain: "academics", category: "academic", description: "Focused study companion who keeps you on track.", instruction: "", goalTypes: ["deadline", "habit"], checkInStyle: "structured", accountabilityLevel: "moderate", sampleInteraction: "", premium: false, source: "curated" },
-  { id: "language_tutor", name: "The Language Tutor", domain: "language learning", category: "academic", description: "Practice a new language in real conversation.", instruction: "", goalTypes: ["habit", "reading"], checkInStyle: "proactive", accountabilityLevel: "moderate", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "essay_architect", name: "The Essay Architect", domain: "academic writing", category: "academic", description: "Builds sharper essays, arguments, and papers.", instruction: "", goalTypes: ["deadline", "habit"], checkInStyle: "structured", accountabilityLevel: "moderate", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "stem_tutor", name: "The STEM Tutor", domain: "math & science", category: "academic", description: "Works through math and science step by step.", instruction: "", goalTypes: ["habit", "deadline"], checkInStyle: "responsive", accountabilityLevel: "moderate", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "chef_coach", name: "The Chef", domain: "cooking", category: "lifestyle", description: "Turns what you have into something worth eating.", instruction: "", goalTypes: ["habit", "health_fitness"], checkInStyle: "responsive", accountabilityLevel: "gentle", sampleInteraction: "", premium: false, source: "curated" },
-  { id: "connection_coach", name: "The Connection Coach", domain: "social skills", category: "lifestyle", description: "Sharpens your social, dating, and relationship game.", instruction: "", goalTypes: ["habit", "deadline"], checkInStyle: "responsive", accountabilityLevel: "gentle", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "style_coach", name: "The Style Coach", domain: "personal style", category: "lifestyle", description: "Helps you dress like the best version of you.", instruction: "", goalTypes: ["habit", "creative"], checkInStyle: "responsive", accountabilityLevel: "gentle", sampleInteraction: "", premium: true, source: "curated" },
-  { id: "home_coach", name: "The Home Coach", domain: "home & organization", category: "lifestyle", description: "Declutter, organize, and keep your space calm.", instruction: "", goalTypes: ["habit", "deadline"], checkInStyle: "proactive", accountabilityLevel: "moderate", sampleInteraction: "", premium: true, source: "curated" },
-];
+const EXPERT_INDEX: Record<string, ExpertEntry> = Object.fromEntries(
+  Object.entries(CURATED_EXPERT_MAP).map(([id, e]) => [
+    id,
+    {
+      id,
+      domain: e.domain,
+      goalTypes: e.goalTypes,
+      accountabilityLevel: e.accountabilityLevel,
+      premium: e.premium,
+    },
+  ])
+);
 
-function pickExpert(goalType: string, accountabilityLevel: string): ExpertEntry {
-  const matching = SIGNATURE_EXPERTS.filter(e => e.goalTypes.includes(goalType));
-  if (matching.length === 0) {
-    return SIGNATURE_EXPERTS.find(e => e.id === "fitness_hype") || SIGNATURE_EXPERTS[0];
-  }
-  if (matching.length === 1) return matching[0];
+function pickExpert(goalType: string, accountabilityLevel: string): string {
+  const matching = Object.values(EXPERT_INDEX).filter(e => e.goalTypes.includes(goalType));
+  if (matching.length === 0) return "fitness_hype";
+  if (matching.length === 1) return matching[0].id;
 
   const byAccountability = matching.filter(e => e.accountabilityLevel === accountabilityLevel);
   if (byAccountability.length > 0) {
-    return byAccountability[Math.floor(Math.random() * byAccountability.length)];
+    return byAccountability[Math.floor(Math.random() * byAccountability.length)].id;
   }
   const freeMatches = matching.filter(e => !e.premium);
   if (freeMatches.length > 0) {
-    return freeMatches[Math.floor(Math.random() * freeMatches.length)];
+    return freeMatches[Math.floor(Math.random() * freeMatches.length)].id;
   }
-  return matching[Math.floor(Math.random() * matching.length)];
+  return matching[Math.floor(Math.random() * matching.length)].id;
 }
 
 const COACH_NAMES_MALE = ["Marcus", "Derek", "James", "Andre", "Theo", "Kai", "Victor"];
@@ -130,12 +112,11 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    let expert: ExpertEntry;
-    if (expertId) {
-      expert = SIGNATURE_EXPERTS.find(e => e.id === expertId) || pickExpert(goalType, accountabilityLevel);
-    } else {
-      expert = pickExpert(goalType, accountabilityLevel);
-    }
+    const resolvedExpertId = expertId && getCuratedExpert(expertId)
+      ? expertId
+      : pickExpert(goalType, accountabilityLevel);
+    const expert = getCuratedExpert(resolvedExpertId);
+
     const gender = coachGender === "male" || coachGender === "female" ? coachGender : (Math.random() > 0.5 ? "male" : "female");
     const finalCoachName = coachName || (() => {
       const namePool = gender === "male" ? COACH_NAMES_MALE : COACH_NAMES_FEMALE;
@@ -149,7 +130,7 @@ Deno.serve(async (req: Request) => {
         gender,
         relationship_type: "mentor",
         custom_name: finalCoachName,
-        signature_expert: expert.id,
+        signature_expert: resolvedExpertId,
         hobbies: [],
         sports: [],
         first_message_sent: false,
@@ -182,8 +163,8 @@ Deno.serve(async (req: Request) => {
       success: true,
       coachId: newCoach.id,
       coachName: finalCoachName,
-      expertId: expert.id,
-      expertName: expert.name,
+      expertId: resolvedExpertId,
+      expertDomain: expert?.domain || "",
       alreadyExisted: false,
     }), {
       status: 200,

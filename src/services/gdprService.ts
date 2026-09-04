@@ -41,7 +41,7 @@ class GDPRService {
     ] = await Promise.allSettled([
       supabase.from('user_profiles').select('*').eq('id', uid).maybeSingle(),
       supabase.from('companions').select('id, name, gender, created_at, updated_at, personality_traits, hobbies, sports, music_genre, favorite_color, zodiac_sign').eq('user_id', uid),
-      supabase.from('conversations').select('id, companion_id, created_at').eq('user_id', uid).limit(500),
+      supabase.from('conversations').select('id, companion_id, role, content, created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(2000),
       supabase.from('messages').select('id, role, content, created_at, conversation_id').eq('user_id', uid).order('created_at', { ascending: false }).limit(2000),
       supabase.from('companion_memories').select('memory_text, importance_score, created_at').eq('user_id', uid).limit(500),
       supabase.from('calendar_events').select('title, description, event_date, event_type, created_at').eq('user_id', uid).limit(500),

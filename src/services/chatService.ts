@@ -35,7 +35,7 @@ import {
 } from './temporalAwarenessService';
 import { affectionService } from './affectionService';
 
-const USE_SERVER_PROMPT = false;
+const USE_SERVER_PROMPT = true;
 
 const BEHAVIORAL_INSTRUCTIONS = `
 
@@ -786,31 +786,98 @@ export class ChatService {
       }
 
       if (USE_SERVER_PROMPT && userProfile && companionId) {
+        const now = new Date();
+        const userTimezone = (userProfile as any).timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+        const conversationHistory = await this.getConversationHistory(50);
+        const formattedHistory = conversationHistory.map(msg => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+        }));
+
+        const { data: companionData } = await supabase
+          .from('companions')
+          .select('relationship_type')
+          .eq('id', companionId)
+          .maybeSingle();
+
+        const connectionType = companionData?.relationship_type || 'romantic';
+        const isMentorCompanion = connectionType === 'mentor';
+        const isCorrespondentCompanion = connectionType === 'correspondent';
+
+        if (!isMentorCompanion && !isCorrespondentCompanion) {
+          try {
+            await relationshipTrackingService.updateOnUserMessage(
+              userProfile.id,
+              companionId,
+              now,
+              userTimezone
+            );
+
+            const stats = await relationshipTrackingService.getRelationshipStats(userProfile.id, companionId);
+            if (stats) {
+              const recentUserMessages = await affectionService.getRecentUserMessages(userProfile.id, companionId, 5);
+              const userSignals = affectionService.detectUserSignals(message, recentUserMessages);
+              const relationshipIntent = (stats as any).relationship_intent || 'evolve';
+              const affectionBase = (stats as any).affection_base || (relationshipIntent === 'companion' ? 4 : 3);
+              const affectionLastUpdated = (stats as any).affection_last_updated_at
+                ? new Date((stats as any).affection_last_updated_at)
+                : new Date(stats.created_at);
+              const daysSinceLastUpdate = Math.floor((now.getTime() - affectionLastUpdated.getTime()) / (1000 * 60 * 60 * 24));
+              const affectionUpdate = affectionService.computeAffectionUpdate({
+                intent: relationshipIntent,
+                signals: userSignals,
+                recentSignalsHistory: [],
+                currentAffectionBase: affectionBase,
+                daysSinceLastUpdate,
+                activeDays: stats.active_conversation_days,
+                elapsedDays: stats.elapsed_days_since_creation
+              });
+              if (affectionUpdate.shouldUpdate) {
+                await affectionService.updateAffectionBase(userProfile.id, companionId, affectionUpdate.newAffectionBase);
+              }
+            }
+          } catch { /* non-fatal */ }
+        }
+
         const assistantMessage = await this.sendMessageServerPrompt(message, companionId, userProfile);
 
         if (assistantMessage) {
           await this.saveMessage('assistant', assistantMessage, companionId);
+
+          await supabase
+            .from('companions')
+            .update({ last_message_at: now.toISOString() })
+            .eq('id', companionId);
 
           await Promise.all([
             MemoryService.extractAndStoreMemories(
               userProfile.id,
               message,
               assistantMessage,
-              []
+              formattedHistory
             ),
             ConversationThreadService.detectAndUpdateThreads(
               userProfile.id,
               message,
               assistantMessage,
-              []
+              formattedHistory
             ),
             EmotionalProfileService.updateProfile(
               userProfile.id,
               message,
               assistantMessage,
-              []
+              formattedHistory
             ),
           ]);
+
+          if (formattedHistory.length % 10 === 0) {
+            const { SemanticMemoryService } = await import('./semanticMemoryService');
+            await Promise.all([
+              SemanticMemoryService.clusterMemories(userProfile.id),
+              SemanticMemoryService.buildTemporalChains(userProfile.id),
+            ]);
+          }
 
           if (companionId) {
             const shouldSummarize = await import('./memoryService').then(m =>
