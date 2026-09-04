@@ -10,6 +10,10 @@ export interface GDPRExportData {
   insights: any[];
   featureUsage: any[];
   customization: any;
+  goals: any[];
+  commitments: any[];
+  coachingSessions: any[];
+  userExperts: any[];
   exportedAt: string;
 }
 
@@ -30,6 +34,10 @@ class GDPRService {
       insightsRes,
       featureUsageRes,
       customizationRes,
+      goalsRes,
+      commitmentsRes,
+      coachingSessionsRes,
+      userExpertsRes,
     ] = await Promise.allSettled([
       supabase.from('user_profiles').select('*').eq('id', uid).maybeSingle(),
       supabase.from('companions').select('id, name, gender, created_at, updated_at, personality_traits, hobbies, sports, music_genre, favorite_color, zodiac_sign').eq('user_id', uid),
@@ -40,6 +48,10 @@ class GDPRService {
       supabase.from('conversation_insights').select('insight_type, insight_text, created_at').eq('user_id', uid).limit(200),
       supabase.from('feature_usage_stats').select('feature_name, usage_count, total_time_spent_seconds, last_used_at').eq('user_id', uid),
       supabase.from('user_customization').select('pointer_symbol, cursor_color, animation_style, trail_style, show_trail, show_particles').eq('user_id', uid).maybeSingle(),
+      supabase.from('user_goals').select('title, goal_type, status, target_value, current_value, unit, target_date, created_at').eq('user_id', uid).limit(200),
+      supabase.from('coaching_commitments').select('description, due_date, status, created_at, updated_at').eq('user_id', uid).limit(200),
+      supabase.from('coaching_sessions').select('companion_id, session_start, session_end, summary, created_at').eq('user_id', uid).limit(100),
+      supabase.from('user_experts').select('name, domain, instruction, accountability_level, check_in_style, created_at').eq('user_id', uid).limit(50),
     ]);
 
     const getValue = (res: PromiseSettledResult<any>) =>
@@ -61,6 +73,10 @@ class GDPRService {
       insights: getValue(insightsRes) ?? [],
       featureUsage: getValue(featureUsageRes) ?? [],
       customization: getValue(customizationRes),
+      goals: getValue(goalsRes) ?? [],
+      commitments: getValue(commitmentsRes) ?? [],
+      coachingSessions: getValue(coachingSessionsRes) ?? [],
+      userExperts: getValue(userExpertsRes) ?? [],
       exportedAt: new Date().toISOString(),
     };
   }

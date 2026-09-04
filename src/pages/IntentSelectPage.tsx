@@ -59,16 +59,16 @@ export function IntentSelectPage() {
       relationshipType: 'romantic',
       nextPath: '/companion-path',
     },
-    ...(hasActiveMentor ? [] : [{
+    {
       id: 'coaches',
       title: 'Coaches',
-      subtitle: 'Expert agents',
+      subtitle: hasActiveMentor ? 'Your coach is ready' : 'Expert agents',
       icon: <Brain className="w-8 h-8" />,
       description: "AI experts built around your goals — fitness coaches, career mentors, creative partners, life coaches. Sharp, focused, and built to keep you moving forward.",
       intent: 'coaches',
       relationshipType: 'mentor',
-      nextPath: '/expert-selection',
-    }]),
+      nextPath: hasActiveMentor ? '/lobby' : '/expert-selection',
+    },
   ];
 
   const handleSelectIntent = (option: IntentOption) => {

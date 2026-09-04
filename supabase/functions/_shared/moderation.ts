@@ -145,7 +145,7 @@ export async function classifyWithClaude(apiKey: string, raw: string): Promise<b
     return verdict.startsWith('BLOCK');
   } catch (err) {
     console.warn('[moderation] classifier error — failing open:', err instanceof Error ? err.message : err);
-    return false;
+    return null;
   } finally {
     clearTimeout(timer);
   }
@@ -156,15 +156,22 @@ export async function moderateInput(
   apiKey: string,
   userId: string,
   raw: string,
+  failClosed: boolean = false,
 ): Promise<ModerationResult> {
   const local = screenText(raw);
   if (local.action === 'block') {
     await recordModerationStrike(supabaseAdmin, userId, local.category!);
     return local;
   }
-  if (needsClassifierReview(raw) && await classifyWithClaude(apiKey, raw)) {
-    await recordModerationStrike(supabaseAdmin, userId, 'csae');
-    return { action: 'block', category: 'csae' };
+  if (needsClassifierReview(raw)) {
+    const classified = await classifyWithClaude(apiKey, raw);
+    if (classified === true) {
+      await recordModerationStrike(supabaseAdmin, userId, 'csae');
+      return { action: 'block', category: 'csae' };
+    }
+    if (classified === false && failClosed) {
+      return { action: 'block', category: 'csae' };
+    }
   }
   return { action: 'allow', category: null };
 }

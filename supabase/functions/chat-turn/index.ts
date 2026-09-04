@@ -701,15 +701,23 @@ Today's date: ${new Date().toISOString()}`,
       const cu = parsed.commitmentUpdate;
       const validStatuses = ['completed', 'missed', 'renegotiated'];
       if (validStatuses.includes(cu.new_status)) {
-        await supabaseAdmin
+        const updateData: Record<string, unknown> = {
+          status: cu.new_status,
+          updated_at: new Date().toISOString(),
+        };
+        if (cu.new_status === 'completed') {
+          updateData.completed_at = new Date().toISOString();
+        }
+        const { error: updateErr } = await supabaseAdmin
           .from('coaching_commitments')
-          .update({ status: cu.new_status, updated_at: new Date().toISOString() })
+          .update(updateData)
           .eq('user_id', userId)
           .eq('companion_id', companionId)
           .in('status', ['pending', 'missed'])
-          .ilike('description', `%${cu.matched_description.substring(0, 100)}%`)
-          .limit(1)
-          .catch(() => {});
+          .ilike('description', `%${cu.matched_description.substring(0, 100)}%`);
+        if (updateErr) {
+          console.error(`[${traceId}] Commitment update failed:`, updateErr);
+        }
       }
     }
   } catch (err) {
@@ -723,6 +731,7 @@ async function fetchOpenCommitments(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
   companionId: string,
+  timezone?: string,
 ): Promise<string> {
   try {
     const { data } = await supabaseAdmin
@@ -736,11 +745,13 @@ async function fetchOpenCommitments(
 
     if (!data || data.length === 0) return '';
 
-    const now = new Date();
+    const nowStr = new Date().toLocaleString('en-US', { timeZone: timezone || 'UTC' });
+    const now = new Date(nowStr);
     const lines = data.map(c => {
       let line = `- ${c.description}`;
       if (c.due_date) {
-        const due = new Date(c.due_date);
+        const dueStr = new Date(c.due_date).toLocaleString('en-US', { timeZone: timezone || 'UTC' });
+        const due = new Date(dueStr);
         const daysLeft = Math.ceil((due.getTime() - now.getTime()) / 86400000);
         if (daysLeft < 0) line += ` — OVERDUE by ${Math.abs(daysLeft)} day(s)`;
         else if (daysLeft === 0) line += ` — due TODAY`;
@@ -798,7 +809,7 @@ async function fetchVerifiedFactsForPrompt(
   isMentor: boolean,
 ): Promise<string> {
   try {
-    let query = supabaseAdmin
+    const query = supabaseAdmin
       .from('user_insights')
       .select('facts_learned, confidence_score, companion_id, companions!inner(relationship_type)')
       .eq('user_id', userId)
@@ -827,6 +838,65 @@ async function fetchVerifiedFactsForPrompt(
     if (factSet.size === 0) return '';
     const lines = Array.from(factSet).slice(0, 10).map(f => `- [VERIFIED] ${f}`);
     return `\n\n[VERIFIED USER FACTS — from conversation memory]\n${lines.join('\n')}\n[END FACTS]`;
+  } catch {
+    return '';
+  }
+}
+
+async function ensureCoachingSession(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  companionId: string,
+): Promise<string> {
+  try {
+    const { data: active } = await supabaseAdmin
+      .from('coaching_sessions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('companion_id', companionId)
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (active) return active.id;
+
+    const { data: newSession } = await supabaseAdmin
+      .from('coaching_sessions')
+      .insert({
+        user_id: userId,
+        companion_id: companionId,
+        status: 'open',
+        opened_at: new Date().toISOString(),
+        message_count: 0,
+      })
+      .select('id')
+      .maybeSingle();
+
+    return newSession?.id || '';
+  } catch {
+    return '';
+  }
+}
+
+async function fetchLastSessionSummary(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  companionId: string,
+): Promise<string> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('coaching_sessions')
+      .select('summary')
+      .eq('user_id', userId)
+      .eq('companion_id', companionId)
+      .eq('status', 'closed')
+      .not('summary', 'is', null)
+      .order('closed_at', { ascending: false })
+      .limit(2);
+
+    if (!data || data.length === 0) return '';
+    const summaries = data.map((s: { summary: string }) => s.summary).filter(Boolean);
+    if (summaries.length === 0) return '';
+    return `\n\n[PREVIOUS SESSION SUMMARIES]\n${summaries.map((s: string, i: number) => `Session ${i + 1}: ${s}`).join('\n')}\n[END SUMMARIES]`;
   } catch {
     return '';
   }
@@ -998,7 +1068,8 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[${traceId}] Model selection:`, { model: selectedModel, tier, isCorrespondent });
 
-    const maxTokens = (isMentor || isCorrespondent) ? Math.max(getMaxTokensForTier(tier), 600) : getMaxTokensForTier(tier);
+    const mentorTokenFloor = isMentor ? (message.includes('```') ? 1500 : 1200) : 600;
+    const maxTokens = (isMentor || isCorrespondent) ? Math.max(getMaxTokensForTier(tier), mentorTokenFloor) : getMaxTokensForTier(tier);
     const historyDepth = getHistoryDepthForTier(tier);
 
     const last20Messages = formattedHistory.slice(-historyDepth);
@@ -1047,13 +1118,33 @@ Deno.serve(async (req: Request) => {
             expertCheckInStyle = (userExpert.check_in_style as CheckInStyle) || null;
           }
         } else {
-          // Curated expert — resolve from the shared catalog (all 20 experts).
+          // Curated expert — resolve from the shared catalog.
           const curated = getCuratedExpert(companion.signature_expert);
           if (curated) {
-            expertInstruction = curated.instruction;
-            expertDomain = curated.domain;
-            expertAccountability = curated.accountabilityLevel;
-            expertCheckInStyle = curated.checkInStyle;
+            // Server-side premium gating: free-tier users cannot use premium experts.
+            const isPremiumTier = tier === 'plus' || tier === 'elite' || tier === 'starter' || tier === 'trial' || isSuperUser;
+            if (!isPremiumTier) {
+              const { data: freeExpert } = await supabaseAdmin
+                .from('user_experts')
+                .select('id')
+                .eq('id', companion.signature_expert)
+                .eq('user_id', user.id)
+                .maybeSingle();
+              if (!freeExpert) {
+                console.warn(`[${traceId}] Free-tier user blocked from premium expert: ${companion.signature_expert}`);
+                expertInstruction = null;
+              } else {
+                expertInstruction = curated.instruction;
+                expertDomain = curated.domain;
+                expertAccountability = curated.accountabilityLevel;
+                expertCheckInStyle = curated.checkInStyle;
+              }
+            } else {
+              expertInstruction = curated.instruction;
+              expertDomain = curated.domain;
+              expertAccountability = curated.accountabilityLevel;
+              expertCheckInStyle = curated.checkInStyle;
+            }
           }
         }
 
@@ -1160,13 +1251,20 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     // For companions: inject goals + facts only (cross-companion visibility).
     // For correspondents: inject facts only (for grounding, no coaching).
     const [commitmentsBlock, goalsBlock, factsBlock] = await Promise.all([
-      isMentor ? fetchOpenCommitments(supabaseAdmin, user.id, companionId) : Promise.resolve(''),
+      isMentor ? fetchOpenCommitments(supabaseAdmin, user.id, companionId, effectiveTimezone) : Promise.resolve(''),
       (isMentor || companion.relationship_type === 'companion' || companion.relationship_type === 'partner')
         ? fetchActiveGoalsForPrompt(supabaseAdmin, user.id) : Promise.resolve(''),
       fetchVerifiedFactsForPrompt(supabaseAdmin, user.id, isMentor),
     ]);
 
-    const memoryBusBlock = `${commitmentsBlock}${goalsBlock}${factsBlock}`;
+    // Coaching session lifecycle: ensure an open session and inject prior summaries
+    let sessionBlock = '';
+    if (isMentor) {
+      await ensureCoachingSession(supabaseAdmin, user.id, companionId);
+      sessionBlock = await fetchLastSessionSummary(supabaseAdmin, user.id, companionId);
+    }
+
+    const memoryBusBlock = `${commitmentsBlock}${goalsBlock}${factsBlock}${sessionBlock}`;
 
     // Split into frozen (stable for a given companion) and volatile (changes
     // per-turn) layers so Anthropic prompt caching actually works.
@@ -1292,6 +1390,17 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
 
     console.log(`[${traceId}] Response generated in ${latencyMs}ms`);
 
+    // Increment coaching session message count
+    if (isMentor) {
+      await supabaseAdmin
+        .from('coaching_sessions')
+        .update({ message_count: (await supabaseAdmin.from('coaching_sessions').select('message_count').eq('user_id', user.id).eq('companion_id', companionId).eq('status', 'open').maybeSingle()).data?.[0]?.message_count + 1 })
+        .eq('user_id', user.id)
+        .eq('companion_id', companionId)
+        .eq('status', 'open')
+        .catch(() => {});
+    }
+
     // Decrement message count server-side (ported from chat/index.ts)
     if (!isSuperUser && messagesRemaining !== -1) {
       const newCount = Math.max(0, messagesRemaining - 1);
@@ -1308,8 +1417,6 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       await supabaseAdmin.rpc('track_referral_progress', { p_user_id: user.id });
     }
 
-    let signals: PostResponseSignals = { calendarEvent: null, navigationIntent: null, commitment: null };
-
     const signalPromise = detectPostResponseSignals(
       supabaseAdmin,
       apiKey,
@@ -1319,11 +1426,9 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       assistantMessage,
       last20Messages,
       isMentor,
-    ).then(s => { signals = s; });
+    );
 
     EdgeRuntime.waitUntil(signalPromise);
-
-    await signalPromise;
 
     const response: ChatTurnResponse & { calendarEvent?: CalendarEventDetected | null; navigationIntent?: NavigationIntent | null } = {
       assistantMessage,
@@ -1331,8 +1436,8 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       model: selectedModel,
       maxTokens,
       latencyMs,
-      calendarEvent: signals.calendarEvent || null,
-      navigationIntent: signals.navigationIntent || null,
+      calendarEvent: null,
+      navigationIntent: null,
       ...(correspondentArticleIds.length > 0 ? { article_ids: correspondentArticleIds } : {}),
       ...(apiUsage ? { usage: apiUsage } : {}),
     };

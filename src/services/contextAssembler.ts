@@ -205,31 +205,33 @@ export async function triggerSummarizationIfNeeded(
   if (!shouldTrigger) return;
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return;
 
   fetch(`${supabaseUrl}/functions/v1/summarize-memory`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${supabaseAnonKey}`,
+      Authorization: `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({ user_id: userId, companion_id: companionId }),
   }).catch((err) => console.error('Summarization trigger failed:', err));
 }
 
-export function triggerSessionSummary(
+export async function triggerSessionSummary(
   userId: string,
   companionId: string,
   sessionKey?: string
-): void {
+): Promise<void> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return;
 
   fetch(`${supabaseUrl}/functions/v1/summarize-session`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${supabaseAnonKey}`,
+      Authorization: `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({ user_id: userId, companion_id: companionId, session_key: sessionKey }),
   }).catch((err) => console.error('Session summary trigger failed:', err));

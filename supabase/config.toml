@@ -1,5 +1,4 @@
-[project_id]
-project_ref = ""
+project_id = ""
 
 [functions.analyze-conversation]
 verify_jwt = true
@@ -79,6 +78,9 @@ verify_jwt = true
 [functions.morning-brief]
 verify_jwt = true
 
+[functions.proactive-check-in-scheduler]
+verify_jwt = false
+
 [functions.process-scheduled-callbacks]
 verify_jwt = false
 
@@ -108,6 +110,9 @@ verify_jwt = true
 
 [functions.summarize-session]
 verify_jwt = true
+
+[functions.sweep-overdue-commitments]
+verify_jwt = false
 
 [functions.sync-coach]
 verify_jwt = true

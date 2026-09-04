@@ -158,7 +158,10 @@ async function updateUserInsightsSummary(
 
   const factsLearned = analysis.facts
     .filter(f => f.confidence > 0.6)
-    .map(f => ({ fact: f.fact, category: f.category }));
+    .map(f => ({ fact: f.fact, category: f.category, confidence: f.confidence }));
+  const maxFactConfidence = factsLearned.length > 0
+    ? Math.max(...factsLearned.map(f => f.confidence))
+    : 0.5;
 
   const goalsData = analysis.goals.map(g => ({
     goal: g.goal,
@@ -184,6 +187,7 @@ async function updateUserInsightsSummary(
         top_topics: topTopics,
         sentiment_trend: updatedSentiment,
         facts_learned: uniqueFacts.slice(0, 30),
+        confidence_score: Math.max(maxFactConfidence, (existingInsights.confidence_score as number) ?? 0.5),
         goals_mentioned: goalsData,
         updated_at: new Date().toISOString(),
       })
@@ -202,6 +206,7 @@ async function updateUserInsightsSummary(
         top_topics: topTopics,
         sentiment_trend: [sentimentEntry],
         facts_learned: factsLearned,
+        confidence_score: maxFactConfidence,
         goals_mentioned: goalsData,
       });
   }

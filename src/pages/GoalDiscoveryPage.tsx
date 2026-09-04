@@ -146,6 +146,9 @@ export const GoalDiscoveryPage = () => {
           goalType: extracted.goalType,
           goalText: extracted.goalText,
           accountabilityLevel: extracted.accountabilityLevel,
+          coachName: extracted.coachName,
+          coachGender: extracted.coachGender,
+          expertId: extracted.expertId,
         }),
       });
 

@@ -83,43 +83,59 @@ export default function SignatureVoiceSelectionPage() {
           console.error('[VoiceSelection] Error updating companion:', error);
         }
       } else if (user && onboardingIntent === 'coaches') {
-        const expertData = JSON.parse(sessionStorage.getItem('expertMatchAnswers') || '{}');
-        const expertId = sessionStorage.getItem('selectedExpertId');
-        const expertSource = sessionStorage.getItem('selectedExpertSource') as 'curated' | 'user' | null;
+        const { data: existingMentor } = await supabase
+          .from('companions')
+          .select('id, custom_name')
+          .eq('user_id', user.id)
+          .eq('relationship_type', 'mentor')
+          .eq('is_active', true)
+          .maybeSingle();
 
-        const gender: 'male' | 'female' = expertData.gender === 'Male' ? 'male' : 'female';
-        const customName = expertData.customName || 'Mentor';
+        if (existingMentor) {
+          sessionStorage.setItem('currentCompanionId', existingMentor.id);
+          await supabase
+            .from('companions')
+            .update({ signature_voice: voiceId })
+            .eq('id', existingMentor.id);
+        } else {
+          const expertData = JSON.parse(sessionStorage.getItem('expertMatchAnswers') || '{}');
+          const expertId = sessionStorage.getItem('selectedExpertId');
+          const expertSource = sessionStorage.getItem('selectedExpertSource') as 'curated' | 'user' | null;
 
-        const companion = await createCompanion({
-          userId: user.id,
-          gender,
-          relationshipType: 'mentor',
-          customName,
-          hobbies: [],
-          signatureVoice: voiceId,
-          signatureExpert: expertId || undefined,
-          signatureExpertSource: expertSource || undefined,
-          energyPreference: expertData.energyPreference,
-          communicationStyle: expertData.communicationStyle,
-          supportStyle: expertData.supportStyle,
-          conversationDepth: expertData.conversationDepth,
-        });
+          const gender: 'male' | 'female' = expertData.gender === 'Male' ? 'male' : 'female';
+          const customName = expertData.customName || 'Mentor';
 
-        if (companion) {
-          sessionStorage.setItem('currentCompanionId', companion.id);
-
-          const matchData = {
-            userName: '',
-            userGender: '',
-            relationshipType: expertData.gender || 'Female',
-            connectionType: 'mentor',
-            companionName: customName,
+          const companion = await createCompanion({
+            userId: user.id,
+            gender,
+            relationshipType: 'mentor',
+            customName,
+            hobbies: [],
+            signatureVoice: voiceId,
+            signatureExpert: expertId || undefined,
+            signatureExpertSource: expertSource || undefined,
             energyPreference: expertData.energyPreference,
             communicationStyle: expertData.communicationStyle,
             supportStyle: expertData.supportStyle,
             conversationDepth: expertData.conversationDepth,
-          };
-          sessionStorage.setItem('matchAnswers', JSON.stringify(matchData));
+          });
+
+          if (companion) {
+            sessionStorage.setItem('currentCompanionId', companion.id);
+
+            const matchData = {
+              userName: '',
+              userGender: '',
+              relationshipType: expertData.gender || 'Female',
+              connectionType: 'mentor',
+              companionName: customName,
+              energyPreference: expertData.energyPreference,
+              communicationStyle: expertData.communicationStyle,
+              supportStyle: expertData.supportStyle,
+              conversationDepth: expertData.conversationDepth,
+            };
+            sessionStorage.setItem('matchAnswers', JSON.stringify(matchData));
+          }
         }
       }
     } catch (error) {

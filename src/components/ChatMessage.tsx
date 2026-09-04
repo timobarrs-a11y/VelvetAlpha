@@ -47,6 +47,7 @@ interface ChatMessageProps {
   companionTextColorKey?: string | null;
   // Rating controls
   companionId?: string;
+  isMentor?: boolean;
   currentRating?: RatingValue | null;
   onRated?: (messageId: string, rating: RatingValue | null) => void;
   onRegenerate?: (messageId: string) => void;
@@ -274,6 +275,7 @@ export const ChatMessage = ({
   companionBubbleColorKey,
   companionTextColorKey,
   companionId = '',
+  isMentor = false,
   currentRating = null,
   onRated,
   onRegenerate,
@@ -449,12 +451,14 @@ export const ChatMessage = ({
           style={isUser ? userBubbleStyle : companionBubbleStyle}
         >
           {showContent && (
-            <p
-              className="text-[15px] leading-relaxed font-normal"
-              style={{ lineHeight: '1.65', fontFamily: fontFamily ?? undefined }}
-            >
-              {processedContent}
-            </p>
+            isMentor && !isUser
+              ? <div className="atlas-md" style={{ lineHeight: '1.65', fontFamily: fontFamily ?? undefined }}><AtlasMarkdown content={message.content} /></div>
+              : <p
+                  className="text-[15px] leading-relaxed font-normal"
+                  style={{ lineHeight: '1.65', fontFamily: fontFamily ?? undefined }}
+                >
+                  {processedContent}
+                </p>
           )}
         </motion.div>
 

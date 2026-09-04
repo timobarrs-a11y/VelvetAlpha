@@ -1220,6 +1220,7 @@ function AppInner() {
               companionBubbleColorKey={activeThread === 'companion' ? companionBubbleColor : null}
               companionTextColorKey={activeThread === 'companion' ? companionTextColor : null}
               companionId={companionId || ''}
+              isMentor={companion?.relationship_type === 'mentor'}
               ratingsMap={activeThread === 'companion' ? ratingsMap : {}}
               onRated={handleRated}
               onRegenerate={activeThread === 'companion' ? handleRegenerate : undefined}

@@ -21,12 +21,13 @@ interface ChatContainerProps {
   companionBubbleColorKey?: string | null;
   companionTextColorKey?: string | null;
   companionId?: string;
+  isMentor?: boolean;
   ratingsMap?: Record<string, RatingValue>;
   onRated?: (messageId: string, rating: RatingValue | null) => void;
   onRegenerate?: (messageId: string) => void;
 }
 
-export const ChatContainer = ({ messages, characterName = 'your companion', compilingLabel, activeThread = 'companion', userAvatarConfig, companionAvatarConfig, favoriteColor, bubbleColorKey, textColorKey, fontFamily, companionBubbleColorKey, companionTextColorKey, companionId = '', ratingsMap = {}, onRated, onRegenerate }: ChatContainerProps) => {
+export const ChatContainer = ({ messages, characterName = 'your companion', compilingLabel, activeThread = 'companion', userAvatarConfig, companionAvatarConfig, favoriteColor, bubbleColorKey, textColorKey, fontFamily, companionBubbleColorKey, companionTextColorKey, companionId = '', isMentor = false, ratingsMap = {}, onRated, onRegenerate }: ChatContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
@@ -138,6 +139,7 @@ export const ChatContainer = ({ messages, characterName = 'your companion', comp
                       companionBubbleColorKey={companionBubbleColorKey}
                       companionTextColorKey={companionTextColorKey}
                       companionId={companionId}
+                      isMentor={isMentor}
                       currentRating={ratingsMap[message.id] ?? null}
                       onRated={onRated}
                       onRegenerate={onRegenerate}

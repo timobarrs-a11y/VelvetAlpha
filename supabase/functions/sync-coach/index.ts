@@ -63,7 +63,7 @@ function pickExpert(goalType: string, accountabilityLevel: string): ExpertEntry 
   return matching[Math.floor(Math.random() * matching.length)];
 }
 
-const COACH_NAMES_MALE = ["Marcus", "Derek", "James", "Andre", "Theo", "Kai", "Marcus", "Victor"];
+const COACH_NAMES_MALE = ["Marcus", "Derek", "James", "Andre", "Theo", "Kai", "Victor"];
 const COACH_NAMES_FEMALE = ["Maya", "Sofia", "Nadia", "Elena", "Priya", "Zara", "Dana", "Liv"];
 
 Deno.serve(async (req: Request) => {
@@ -95,8 +95,10 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const goalType: string = body.goalType || "habit";
-    const goalText: string = body.goalText || "Personal growth";
     const accountabilityLevel: string = body.accountabilityLevel || "moderate";
+    const coachName: string | undefined = body.coachName;
+    const coachGender: string | undefined = body.coachGender;
+    const expertId: string | undefined = body.expertId;
 
     const { data: existingCoach } = await supabaseAdmin
       .from("companions")
@@ -128,10 +130,17 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const expert = pickExpert(goalType, accountabilityLevel);
-    const gender = Math.random() > 0.5 ? "male" : "female";
-    const namePool = gender === "male" ? COACH_NAMES_MALE : COACH_NAMES_FEMALE;
-    const coachName = namePool[Math.floor(Math.random() * namePool.length)];
+    let expert: ExpertEntry;
+    if (expertId) {
+      expert = SIGNATURE_EXPERTS.find(e => e.id === expertId) || pickExpert(goalType, accountabilityLevel);
+    } else {
+      expert = pickExpert(goalType, accountabilityLevel);
+    }
+    const gender = coachGender === "male" || coachGender === "female" ? coachGender : (Math.random() > 0.5 ? "male" : "female");
+    const finalCoachName = coachName || (() => {
+      const namePool = gender === "male" ? COACH_NAMES_MALE : COACH_NAMES_FEMALE;
+      return namePool[Math.floor(Math.random() * namePool.length)];
+    })();
 
     const { data: newCoach, error: createError } = await supabaseAdmin
       .from("companions")
@@ -139,7 +148,7 @@ Deno.serve(async (req: Request) => {
         user_id: user.id,
         gender,
         relationship_type: "mentor",
-        custom_name: coachName,
+        custom_name: finalCoachName,
         signature_expert: expert.id,
         hobbies: [],
         sports: [],
@@ -172,7 +181,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({
       success: true,
       coachId: newCoach.id,
-      coachName,
+      coachName: finalCoachName,
       expertId: expert.id,
       expertName: expert.name,
       alreadyExisted: false,
