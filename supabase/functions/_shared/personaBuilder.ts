@@ -245,6 +245,59 @@ function buildNeverBreakCharacter(companion: CompanionRow): string {
   return `Stay in character as ${name} — speak from ${name}'s own life, memories, moods, and point of view. Keep the conversation warm and natural.`;
 }
 
+function buildMentorTraitBlock(companion: CompanionRow): string {
+  const traits: string[] = [];
+
+  const energy = matchTrait(companion.energy_preference, ENERGY_MAP);
+  if (energy) traits.push(`- Energy: ${energy}`);
+
+  const humor = matchTrait(companion.humor_style, HUMOR_MAP);
+  if (humor) traits.push(`- Humor: ${humor}`);
+
+  const conflict = matchTrait(companion.confrontation_style, CONFLICT_MAP);
+  if (conflict) traits.push(`- Conflict: ${conflict}`);
+
+  const support = matchTrait(companion.support_style, SUPPORT_MAP);
+  if (support) traits.push(`- Support style: ${support}`);
+
+  const directness = matchTrait(companion.communication_style, DIRECTNESS_MAP);
+  if (directness) traits.push(`- Directness: ${directness}`);
+
+  const initiative = matchTrait(companion.initiative, INITIATIVE_MAP);
+  if (initiative) traits.push(`- Initiative: ${initiative}`);
+
+  if (companion.interest_text) {
+    traits.push(`- Your expertise: ${companion.interest_text} — draw on this naturally when it's relevant to their goals.`);
+  }
+
+  const lifeContext = matchTrait(companion.life_context, LIFE_CONTEXT_MAP);
+  if (lifeContext) {
+    traits.push(`- Where they are right now: ${lifeContext}`);
+  }
+
+  if (traits.length === 0) {
+    return 'You are warm, focused, and goal-oriented in your coaching style.';
+  }
+
+  return traits.join('\n');
+}
+
+function buildMentorUserContext(companion: CompanionRow, userName: string): string {
+  const parts: string[] = [];
+  const hobbies = arrayToText(companion.hobbies);
+  const sports = arrayToText(companion.sports);
+
+  if (hobbies) parts.push(`Hobbies: ${hobbies}`);
+  if (sports) parts.push(`Sports: ${sports}`);
+
+  if (parts.length === 0) return '';
+  return `\n\nABOUT ${userName.toUpperCase()}: ${parts.join(' · ')}\nReference these when they connect to their goals or progress — never just list them back.`;
+}
+
+function buildMentorTextingRhythm(): string {
+  return `RESPONSE RHYTHM: As long as it needs to be, never longer. Use markdown — lists, headers, and fenced code blocks when they help you explain or correct. Be clear and structured when the topic warrants it (code review, step-by-step plans, corrections). Be brief when the user just needs a nudge or a check-in. Never perform personality — live it.`;
+}
+
 function buildTextingRhythm(): string {
   return `TEXTING RHYTHM: Default SHORT — 1-3 sentences, like a real text. Go longer only when the moment deserves it (support, deep topics). React first, then respond. One question max per message. Imperfect is human — occasional typos, lowercase, fragments. Never perform the personality — live it.`;
 }
@@ -265,17 +318,39 @@ export function buildPersonaLayer(companion: CompanionRow, userName: string | nu
 
   const gender = companion.gender || 'female';
   const voice: VoicePrompt = getVoicePrompt(companion.signature_voice, gender);
+  const driftCorrection = buildDriftCorrection(companion);
+
+  const voiceExamples = voice.examples.length > 0
+    ? `\nVoice examples:\n${voice.examples.map(ex => `- ${ex}`).join('\n')}`
+    : '';
+
+  if (isMentor) {
+    const roleLine = buildRoleLine(companion, effectiveUserName, isRomantic, isMentor, isFriend, isCorrespondent);
+    const traitBlock = buildMentorTraitBlock(companion);
+    const userContext = buildMentorUserContext(companion, effectiveUserName);
+    const textingRhythm = buildMentorTextingRhythm();
+    const userContextBlock = userContext ? `\n\n${userContext}` : '';
+
+    return `=== WHO YOU ARE: ${name.toUpperCase()} ===
+${roleLine}
+
+YOUR COACHING CHARACTER (built by ${effectiveUserName || 'the user'} — honor every trait, every session):
+${traitBlock}
+
+=== YOUR VOICE: ${voice.name} ===
+${voice.instruction}${voiceExamples}
+
+Character is WHAT you do. Voice is HOW you say it. Neither overrides the other — they combine. A "Therapist" voice with a firm accountability style delivers firm expectations using reflective, empathetic language. A "Jock" voice with gentle support delivers encouragement in bro-speak.${userContextBlock}
+
+=== ${textingRhythm}
+${driftCorrection}`;
+  }
 
   const roleLine = buildRoleLine(companion, effectiveUserName, isRomantic, isMentor, isFriend, isCorrespondent);
   const neverBreak = buildNeverBreakCharacter(companion);
   const traitBlock = buildTraitBlock(companion, isRomantic);
   const userContext = buildUserContext(companion, effectiveUserName);
-  const driftCorrection = buildDriftCorrection(companion);
   const textingRhythm = buildTextingRhythm();
-
-  const voiceExamples = voice.examples.length > 0
-    ? `\nVoice examples:\n${voice.examples.map(ex => `- ${ex}`).join('\n')}`
-    : '';
 
   const userContextBlock = userContext ? `\n\n${userContext}` : '';
 

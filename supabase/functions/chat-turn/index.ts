@@ -217,8 +217,8 @@ interface ChatTurnResponse {
   };
 }
 
-function selectModel(message: string, tier: string, isCorrespondent: boolean = false): string {
-  if (isCorrespondent) {
+function selectModel(message: string, tier: string, isCorrespondent: boolean = false, isMentor: boolean = false): string {
+  if (isCorrespondent || isMentor) {
     return MODEL_CONFIG.SONNET;
   }
   if (tier === 'starter' || tier === 'plus' || tier === 'elite' || tier === 'trial') {
@@ -539,6 +539,7 @@ async function detectPostResponseSignals(
   userMessage: string,
   assistantMessage: string,
   recentHistory: Array<{ role: string; content: string }>,
+  isMentor: boolean,
 ): Promise<PostResponseSignals> {
   const result: PostResponseSignals = { calendarEvent: null, navigationIntent: null, commitment: null };
 
@@ -569,6 +570,11 @@ async function detectPostResponseSignals(
    - There is a specific action and ideally a timeframe
    - Confidence > 0.7 for clear commitments
 
+4. COMMITMENT_UPDATE: Did the user report completing or missing a previous commitment? Look for:
+   - Completed: "I did it", "done", "finished that", "I sent it", "completed the workout", "I ran Tuesday"
+   - Missed: "I skipped it", "didn't get to it", "I forgot", "missed Thursday"
+   - Match the update to the most relevant commitment description
+
 Respond ONLY with JSON (no other text):
 {
   "calendarEvent": {
@@ -586,6 +592,11 @@ Respond ONLY with JSON (no other text):
   "commitment": {
     "description": "what the user committed to do",
     "due_date": "ISO 8601 date string or null if no specific date",
+    "confidence": 0.0
+  } | null,
+  "commitmentUpdate": {
+    "matched_description": "the commitment description this update refers to",
+    "new_status": "completed|missed|renegotiated",
     "confidence": 0.0
   } | null
 }
@@ -609,6 +620,7 @@ Today's date: ${new Date().toISOString()}`,
       calendarEvent: { title: string; event_type: string; event_date: string; description?: string; confidence: number } | null;
       navigationIntent: { destination: string; route: string; seedText?: string } | null;
       commitment: { description: string; due_date: string | null; confidence: number } | null;
+      commitmentUpdate: { matched_description: string; new_status: string; confidence: number } | null;
     };
 
     try {
@@ -668,7 +680,7 @@ Today's date: ${new Date().toISOString()}`,
       }
     }
 
-    if (parsed.commitment && parsed.commitment.confidence > 0.7) {
+    if (isMentor && parsed.commitment && parsed.commitment.confidence > 0.7) {
       const c = parsed.commitment;
       await supabaseAdmin.from("coaching_commitments").insert({
         user_id: userId,
@@ -683,6 +695,22 @@ Today's date: ${new Date().toISOString()}`,
         due_date: c.due_date,
         confidence: c.confidence,
       };
+    }
+
+    if (isMentor && parsed.commitmentUpdate && parsed.commitmentUpdate.confidence > 0.65) {
+      const cu = parsed.commitmentUpdate;
+      const validStatuses = ['completed', 'missed', 'renegotiated'];
+      if (validStatuses.includes(cu.new_status)) {
+        await supabaseAdmin
+          .from('coaching_commitments')
+          .update({ status: cu.new_status, updated_at: new Date().toISOString() })
+          .eq('user_id', userId)
+          .eq('companion_id', companionId)
+          .in('status', ['pending', 'missed'])
+          .ilike('description', `%${cu.matched_description.substring(0, 100)}%`)
+          .limit(1)
+          .catch(() => {});
+      }
     }
   } catch (err) {
     console.error("[chat-turn] Post-response signal detection error:", err);
@@ -767,23 +795,30 @@ async function fetchActiveGoalsForPrompt(
 async function fetchVerifiedFactsForPrompt(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
+  isMentor: boolean,
 ): Promise<string> {
   try {
-    const { data } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('user_insights')
-      .select('facts_learned, confidence_score')
+      .select('facts_learned, confidence_score, companion_id, companions!inner(relationship_type)')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
-      .limit(5);
+      .limit(10);
+
+    const { data } = await query;
 
     if (!data || data.length === 0) return '';
 
     const factSet = new Set<string>();
     for (const row of data) {
+      if (isMentor) {
+        const companionType = (row.companions as { relationship_type?: string })?.relationship_type;
+        if (companionType && companionType !== 'mentor') continue;
+      }
       const facts = row.facts_learned as unknown as Array<{ fact: string }>;
       if (!Array.isArray(facts)) continue;
       const confidence = row.confidence_score ?? 0.5;
-      if (confidence < 0.4) continue;
+      if (confidence < 0.6) continue;
       for (const f of facts) {
         if (f?.fact) factSet.add(f.fact);
       }
@@ -959,7 +994,7 @@ Deno.serve(async (req: Request) => {
     const companionName = companion.custom_name || 'Companion';
     const isMentor = companion.relationship_type === 'mentor';
     const isCorrespondent = companion.relationship_type === 'correspondent';
-    const selectedModel = selectModel(message, tier, isCorrespondent);
+    const selectedModel = selectModel(message, tier, isCorrespondent, isMentor);
 
     console.log(`[${traceId}] Model selection:`, { model: selectedModel, tier, isCorrespondent });
 
@@ -1128,7 +1163,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       isMentor ? fetchOpenCommitments(supabaseAdmin, user.id, companionId) : Promise.resolve(''),
       (isMentor || companion.relationship_type === 'companion' || companion.relationship_type === 'partner')
         ? fetchActiveGoalsForPrompt(supabaseAdmin, user.id) : Promise.resolve(''),
-      fetchVerifiedFactsForPrompt(supabaseAdmin, user.id),
+      fetchVerifiedFactsForPrompt(supabaseAdmin, user.id, isMentor),
     ]);
 
     const memoryBusBlock = `${commitmentsBlock}${goalsBlock}${factsBlock}`;
@@ -1149,7 +1184,7 @@ CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - You have access to the last ${historyDepth} messages in history - USE THEM
 - NEVER repeat questions within the same conversation session
 ${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, supportive tone. No romantic or flirtatious content.' : ''}${isCorrespondent ? '\nIMPORTANT: You are a correspondent — write a dispatch, not a chat reply. No romantic or flirtatious content. No coaching or self-help.' : ''}${isCorrespondent && tier === 'free' ? '\nLENGTH: Write a tight, punchy dispatch — 3-4 sentences max. Make every word count. Upgrade to premium for the full column-length experience.' : ''}
-RESPONSE LENGTH: Default short — like a real text. Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
+RESPONSE LENGTH: ${isMentor ? 'As long as the topic warrants — use markdown, lists, and code blocks when they help. Never pad.' : 'Default short — like a real text.'} Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
     const hallucinationGuard = isMentor
       ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference commitments that appear in the [OPEN COMMITMENTS] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [USER'S ACTIVE GOALS] section. Do NOT fabricate goals.\n- Only reference facts tagged [VERIFIED] from the [VERIFIED USER FACTS] section. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.`
@@ -1283,6 +1318,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       message,
       assistantMessage,
       last20Messages,
+      isMentor,
     ).then(s => { signals = s; });
 
     EdgeRuntime.waitUntil(signalPromise);

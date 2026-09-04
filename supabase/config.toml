@@ -1,0 +1,119 @@
+[project_id]
+project_ref = ""
+
+[functions.analyze-conversation]
+verify_jwt = true
+
+[functions.article-refresh-scheduler]
+verify_jwt = false
+
+[functions.atlas-agent]
+verify_jwt = true
+
+[functions.backfill-embeddings]
+verify_jwt = false
+
+[functions.chat]
+verify_jwt = true
+
+[functions.chat-turn]
+verify_jwt = true
+
+[functions.check-embeddable]
+verify_jwt = false
+
+[functions.consolidate-memory]
+verify_jwt = true
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.create-portal-session]
+verify_jwt = true
+
+[functions.daily-experience]
+verify_jwt = true
+
+[functions.detect-moments]
+verify_jwt = true
+
+[functions.embed-session]
+verify_jwt = false
+
+[functions.extract-goal]
+verify_jwt = true
+
+[functions.fetch-news]
+verify_jwt = false
+
+[functions.generate-ai-messages]
+verify_jwt = true
+
+[functions.generate-embedding]
+verify_jwt = true
+
+[functions.generate-momentum-theme]
+verify_jwt = true
+
+[functions.generate-opener]
+verify_jwt = true
+
+[functions.generate-video-reaction]
+verify_jwt = true
+
+[functions.generate-wallpaper]
+verify_jwt = true
+
+[functions.goal-discovery-chat]
+verify_jwt = true
+
+[functions.group-chat]
+verify_jwt = true
+
+[functions.inspect-voice-fidelity]
+verify_jwt = true
+
+[functions.local-explorer]
+verify_jwt = true
+
+[functions.morning-brief]
+verify_jwt = true
+
+[functions.process-scheduled-callbacks]
+verify_jwt = false
+
+[functions.relationship-brief-engine]
+verify_jwt = true
+
+[functions.resume-session]
+verify_jwt = true
+
+[functions.ron-ai-reply]
+verify_jwt = true
+
+[functions.scrape-articles]
+verify_jwt = false
+
+[functions.smart-video-search]
+verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.suggest-events-gifts]
+verify_jwt = true
+
+[functions.summarize-memory]
+verify_jwt = true
+
+[functions.summarize-session]
+verify_jwt = true
+
+[functions.sync-coach]
+verify_jwt = true
+
+[functions.sync-correspondents]
+verify_jwt = true
+
+[functions.uptime-monitor]
+verify_jwt = false

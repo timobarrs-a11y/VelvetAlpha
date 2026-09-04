@@ -98,13 +98,10 @@ Deno.serve(async (req: Request) => {
 
     const turnCount = Math.floor(messages.filter((m: { role: string }) => m.role === "user").length);
 
-    const apiMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...messages.map((m: { role: string; content: string }) => ({
-        role: m.role === "velvet" ? "assistant" : m.role,
-        content: m.content,
-      })),
-    ];
+    const apiMessages = messages.map((m: { role: string; content: string }) => ({
+      role: m.role === "velvet" ? "assistant" : m.role,
+      content: m.content,
+    }));
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) {
@@ -124,6 +121,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: MODEL_CONFIG.HAIKU,
         max_tokens: 300,
+        system: SYSTEM_PROMPT,
         messages: apiMessages,
       }),
     });
