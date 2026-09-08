@@ -30,7 +30,7 @@ export function AppShell({ children, showNav = true, className = '' }: AppShellP
     location.pathname === p || location.pathname.startsWith(p + '/');
 
   return (
-    <div className={`min-h-screen flex flex-col ${className}`} style={{ background: 'linear-gradient(180deg, #0d1128 0%, #090c1e 50%, #060810 100%)' }}>
+    <div className={`ds-page min-h-screen flex flex-col ${className}`}>
       <main className={`flex-1 ${showNav ? 'pb-20 md:pb-0 md:pl-16' : ''}`}>
         {children}
       </main>
@@ -39,7 +39,7 @@ export function AppShell({ children, showNav = true, className = '' }: AppShellP
         <>
           {/* Mobile bottom bar */}
           <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden"
-            style={{ background: 'rgba(10,12,48,0.92)', borderTop: '1px solid rgba(100,120,255,0.25)', backdropFilter: 'blur(20px)' }}>
+            style={{ background: 'var(--ds-header-bg)', borderTop: '1px solid var(--ds-header-border)', backdropFilter: 'blur(20px)' }}>
             <div className="flex items-center justify-around px-2 py-2">
               {NAV_ITEMS.map(item => {
                 const active = isActive(item.path);
@@ -70,7 +70,7 @@ export function AppShell({ children, showNav = true, className = '' }: AppShellP
 
           {/* Desktop sidebar */}
           <nav className="hidden md:flex fixed left-0 top-0 bottom-0 w-16 z-40 flex-col items-center py-6"
-            style={{ background: 'rgba(10,12,48,0.92)', borderRight: '1px solid rgba(100,120,255,0.22)', backdropFilter: 'blur(20px)' }}>
+            style={{ background: 'var(--ds-header-bg)', borderRight: '1px solid var(--ds-header-border)', backdropFilter: 'blur(20px)' }}>
             <div className="flex flex-col items-center gap-1 mt-4">
               {NAV_ITEMS.map(item => {
                 const active = isActive(item.path);
@@ -93,7 +93,7 @@ export function AppShell({ children, showNav = true, className = '' }: AppShellP
                     )}
                     <item.icon className="w-5 h-5 relative z-10" />
                     <span className="absolute left-full ml-2 px-2 py-1 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap"
-                      style={{ background: 'rgba(28,25,48,0.95)', border: '1px solid rgba(80,70,130,0.40)' }}>
+                      style={{ background: 'var(--ds-surface-3)', border: '1px solid var(--ds-border)' }}>
                       {item.label}
                     </span>
                   </Link>

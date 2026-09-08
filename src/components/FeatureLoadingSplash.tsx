@@ -11,12 +11,14 @@ export function FeatureLoadingSplash({
   icon: Icon,
   label,
   accentColor,
-  bgColor = '#0a0a0f',
+  bgColor,
 }: FeatureLoadingSplashProps) {
   return (
     <div
       className="min-h-screen flex items-center justify-center"
-      style={{ background: bgColor }}
+      style={bgColor
+        ? { background: bgColor }
+        : { background: 'var(--ds-bg-page)', backgroundColor: 'var(--ds-bg-base)' }}
     >
       <div className="text-center">
         <div className="relative w-16 h-16 mx-auto mb-5">

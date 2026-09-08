@@ -54,17 +54,17 @@ export const ModalShell = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 16 }}
               transition={{ type: 'spring', duration: 0.35, bounce: 0.18 }}
-              className={`rounded-3xl shadow-modal w-full ${sizeMap[size]} max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto`}
-            style={{ background: 'rgba(20,17,38,0.97)', border: '1px solid rgba(80,70,130,0.45)' }}
+              className={`rounded-3xl w-full ${sizeMap[size]} max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto`}
+              style={{ background: 'var(--ds-surface-3)', border: '1px solid var(--ds-border-strong)', boxShadow: 'var(--ds-shadow-modal)' }}
             >
               {title && (
                 <div className="flex items-center justify-between px-6 py-5 flex-shrink-0"
-                  style={{ borderBottom: '1px solid rgba(80,70,130,0.30)' }}>
+                  style={{ borderBottom: '1px solid var(--ds-border-soft)' }}>
                   <h2 id="modal-title" className="text-xl font-bold text-ink font-display">{title}</h2>
                   <button
                     onClick={onClose}
-                    className="text-ink-subtle hover:text-ink transition-colors p-1.5 rounded-xl focus-ring"
-                    style={{ background: 'rgba(49,45,85,0.50)' }}
+                    className="ds-pill ds-pill--icon ds-pill--sm"
+
                     aria-label="Close"
                   >
                     <X className="w-5 h-5" />
@@ -76,7 +76,7 @@ export const ModalShell = ({
               </div>
               {footer && (
                 <div className="px-6 py-4 flex-shrink-0"
-                  style={{ borderTop: '1px solid rgba(80,70,130,0.30)', background: 'rgba(15,14,26,0.60)' }}>
+                  style={{ borderTop: '1px solid var(--ds-border-soft)', background: 'var(--ds-surface-sunken)' }}>
                   {footer}
                 </div>
               )}

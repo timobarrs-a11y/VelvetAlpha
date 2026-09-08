@@ -31,9 +31,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       primary:
         'bg-gradient-to-br from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white shadow-card hover:shadow-glow focus-visible:ring-primary-500 disabled:from-ink-disabled disabled:to-ink-disabled disabled:shadow-none',
       secondary:
-        'bg-surface-100 border-2 border-surface-200 hover:border-surface-300 text-ink-secondary hover:text-ink shadow-card hover:shadow-card-hover focus-visible:ring-surface-300 disabled:bg-surface-50 disabled:text-ink-disabled disabled:border-surface-200',
+        'bg-[var(--ds-pill-bg)] border border-[var(--ds-pill-border)] hover:bg-[var(--ds-pill-bg-hover)] text-ink-secondary hover:text-ink focus-visible:ring-surface-300 disabled:text-ink-disabled disabled:hover:bg-[var(--ds-pill-bg)]',
       ghost:
-        'bg-transparent hover:bg-surface-100 text-ink-secondary hover:text-ink focus-visible:ring-surface-300 disabled:text-ink-disabled disabled:hover:bg-transparent',
+        'bg-transparent hover:bg-[var(--ds-pill-bg)] text-ink-secondary hover:text-ink focus-visible:ring-surface-300 disabled:text-ink-disabled disabled:hover:bg-transparent',
       danger:
         'bg-gradient-to-br from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white shadow-card focus-visible:ring-danger-500 disabled:from-ink-disabled disabled:to-ink-disabled disabled:shadow-none',
       success:

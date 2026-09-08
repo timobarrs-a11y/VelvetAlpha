@@ -39,7 +39,7 @@
 
   body {
     @apply font-sans antialiased text-ink;
-    background-color: #090c1e;
+    background-color: var(--ds-bg-base, #090c1e);
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -108,12 +108,12 @@
   }
 
   .card-base {
-    border-radius: 1rem;
-    border: 1px solid rgba(49, 45, 85, 0.70);
-    background-color: rgba(28, 25, 48, 0.75);
+    border-radius: var(--ds-radius-card, 1rem);
+    border: 1px solid var(--ds-border, rgba(49, 45, 85, 0.70));
+    background-color: var(--ds-surface-1, rgba(28, 25, 48, 0.75));
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.30), 0 4px 16px rgba(0,0,0,0.20);
+    box-shadow: var(--ds-shadow-card, 0 1px 4px rgba(0,0,0,0.30), 0 4px 16px rgba(0,0,0,0.20));
     transition: box-shadow 200ms ease;
   }
 
@@ -122,8 +122,8 @@
     transition: box-shadow 200ms ease, border-color 200ms ease;
   }
   .card-interactive:hover {
-    box-shadow: 0 4px 20px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.25);
-    border-color: rgba(120, 100, 180, 0.50);
+    box-shadow: var(--ds-shadow-card-hover, 0 4px 20px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.25));
+    border-color: var(--ds-border-strong, rgba(120, 100, 180, 0.50));
   }
 
   .page-container {
