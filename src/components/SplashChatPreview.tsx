@@ -78,7 +78,7 @@ export function SplashChatPreview({ lite }: { lite: boolean }) {
           <div
             className="w-36 h-44 lg:w-40 lg:h-48 rounded-2xl flex flex-col items-center justify-center p-4 relative overflow-hidden"
             style={{
-              background: 'rgba(13,15,55,0.75)',
+              background: 'var(--ds-surface-1)',
               border: '1px solid rgba(192,132,252,0.22)',
               backdropFilter: lite ? undefined : 'blur(16px)',
               boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
@@ -226,7 +226,7 @@ export function SplashChatPreview({ lite }: { lite: boolean }) {
           <div
             className="rounded-2xl p-4 relative overflow-hidden h-28"
             style={{
-              background: 'rgba(13,15,55,0.72)',
+              background: 'var(--ds-surface-1)',
               border: '1px solid rgba(255,255,255,0.08)',
               backdropFilter: lite ? undefined : 'blur(16px)',
             }}

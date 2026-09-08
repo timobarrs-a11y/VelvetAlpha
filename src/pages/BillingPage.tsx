@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Crown,
   Check,
   CreditCard,
@@ -17,6 +16,7 @@ import {
   MessageCircle,
   Sparkles,
 } from 'lucide-react';
+import { PageHeader } from '../shared/ui/PageHeader';
 import { supabase } from '../shared/supabase/client';
 import { createCheckoutSession, createPortalSession } from '../services/stripeService';
 import { SUBSCRIPTION_PLANS, SubscriptionTier } from '../types/subscription';
@@ -163,7 +163,7 @@ export function BillingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(180deg, #0d1128 0%, #090c1e 100%)' }}>
+      <div className="ds-page flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-500 mx-auto mb-4" />
           <p className="text-white/60">Loading billing info...</p>
@@ -173,19 +173,16 @@ export function BillingPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8" style={{ background: 'linear-gradient(180deg, #0d1128 0%, #090c1e 50%, #060810 100%)' }}>
-      <div className="max-w-3xl mx-auto">
-
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <button onClick={() => navigate(-1)} className="text-white/50 hover:text-white transition">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Subscription & Billing</h1>
-            <p className="text-white/40 text-sm">Manage your plan, payments, and usage</p>
-          </div>
-        </div>
+    <div className="ds-page">
+      <PageHeader
+        title="Subscription & Billing"
+        subtitle="Manage your plan, payments, and usage"
+        icon={CreditCard}
+        accent="#f472b6"
+        width="lg"
+        back={() => navigate(-1)}
+      />
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
 
         {errorMsg && (
           <div className="mb-6 p-4 rounded-xl flex items-start gap-3 text-red-400 text-sm" style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.20)' }}>

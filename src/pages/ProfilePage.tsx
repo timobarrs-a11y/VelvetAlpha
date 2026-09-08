@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader, CreditCard as Edit3, Check, X, CreditCard, ExternalLink } from 'lucide-react';
+import { Save, Loader, CreditCard as Edit3, Check, X, CreditCard, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { User as UserIcon } from 'lucide-react';
+import { PageHeader } from '../shared/ui/PageHeader';
 import { userProfileService, UserProfile } from '../services/userProfileService';
 import { colorNameToHex, QUESTIONNAIRE_COLORS } from '../utils/colorMapping';
 import { createPortalSession } from '../services/stripeService';
@@ -106,7 +108,7 @@ function EditableField({ label, value, onSave, type = 'text', options, placehold
 
   if (type === 'color') {
     return (
-      <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
+      <div className="ds-card p-5">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">{label}</span>
         </div>
@@ -136,7 +138,7 @@ function EditableField({ label, value, onSave, type = 'text', options, placehold
 
   if (type === 'multi-choice' && options) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
+      <div className="ds-card p-5">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">{label}</span>
           {!isEditing && (
@@ -205,7 +207,7 @@ function EditableField({ label, value, onSave, type = 'text', options, placehold
 
   if (type === 'choice' && options) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
+      <div className="ds-card p-5">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">{label}</span>
         </div>
@@ -247,7 +249,7 @@ function EditableField({ label, value, onSave, type = 'text', options, placehold
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
+    <div className="ds-card p-5">
       <div className="flex items-center justify-between mb-1">
         <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">{label}</span>
       </div>
@@ -366,7 +368,7 @@ export function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center justify-center">
+      <div className="ds-page flex items-center justify-center">
         <Loader className="w-8 h-8 animate-spin text-rose-400" />
       </div>
     );
@@ -374,8 +376,8 @@ export function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center justify-center">
-        <p className="text-gray-400">Could not load profile.</p>
+      <div className="ds-page flex items-center justify-center">
+        <p className="ds-muted">Could not load profile.</p>
       </div>
     );
   }
@@ -383,41 +385,34 @@ export function ProfilePage() {
   const favoriteColorHex = profile.favorite_color ? colorNameToHex(profile.favorite_color) : '#3182CE';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/lobby')}
-              className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-400" />
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold text-white">My Profile</h1>
-              <p className="text-gray-400 text-sm mt-1">Update your personal info anytime</p>
-            </div>
-          </div>
-          {(isSaving || saveMessage) && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 text-sm"
-            >
-              {isSaving ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin text-gray-400" />
-                  <span className="text-gray-400">Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 text-green-400" />
-                  <span className="text-green-400">{saveMessage}</span>
-                </>
-              )}
-            </motion.div>
-          )}
-        </div>
+    <div className="ds-page">
+      <PageHeader
+        title="My Profile"
+        subtitle="Update your personal info anytime"
+        icon={UserIcon}
+        accent="#94a3b8"
+        width="md"
+        actions={(isSaving || saveMessage) ? (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 text-sm"
+          >
+            {isSaving ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin ds-muted" />
+                <span className="ds-muted">Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 text-green-400" />
+                <span className="text-green-400">{saveMessage}</span>
+              </>
+            )}
+          </motion.div>
+        ) : undefined}
+      />
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
 
         <div
           className="w-full h-2 rounded-full mb-10"
@@ -447,7 +442,7 @@ export function ProfilePage() {
 
           {profile.zodiac_sign && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
-              <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
+              <div className="ds-card p-5">
                 <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">Zodiac Sign</span>
                 <p className="text-lg text-white font-medium mt-1">{profile.zodiac_sign}</p>
               </div>
@@ -551,7 +546,7 @@ export function ProfilePage() {
             transition={{ delay: 0.45 }}
             className="mt-8"
           >
-            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
+            <div className="ds-card p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CreditCard className="w-5 h-5 text-gray-400" />

@@ -954,18 +954,20 @@ export function LocalExplorerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#08090d] text-white flex flex-col" style={{ height: '100dvh' }}>
+    <div className="ds-page text-white flex flex-col" style={{ height: '100dvh' }}>
       {!conversationId && (
-        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-white/8 bg-[#08090d]/95 backdrop-blur-xl flex-shrink-0">
+        <div className="ds-header !static ds-header-row px-4 sm:px-6 py-2 flex-shrink-0">
           <button
             onClick={() => navigate('/lobby')}
-            className="p-2 hover:bg-white/8 rounded-lg transition-colors text-white/60 hover:text-white"
+            className="ds-pill ds-pill--icon ds-pill--quiet -ml-2"
+            aria-label="Back to lobby"
+            title="Back to lobby"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
-            <MapPin className="w-4 h-4 text-emerald-400" />
-          </div>
+          <span className="ds-chip w-9 h-9" style={{ '--ds-tone': '#34d399' } as React.CSSProperties}>
+            <MapPin className="w-[18px] h-[18px]" />
+          </span>
           <div>
             <span className="font-bold text-white text-lg tracking-tight">Navi</span>
             <div className="flex items-center gap-1.5 -mt-0.5">
@@ -978,7 +980,7 @@ export function LocalExplorerPage() {
           <button
             onClick={handleNewConversationClick}
             disabled={isCreating}
-            className="flex items-center gap-2 px-4 py-2 bg-white/8 hover:bg-white/12 border border-white/12 rounded-lg text-sm font-medium text-white/80 hover:text-white transition-all disabled:opacity-50"
+            className="ds-pill disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             New chat

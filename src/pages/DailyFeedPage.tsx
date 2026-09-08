@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Newspaper, RefreshCw, Clock, TrendingUp, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
+import { Newspaper, RefreshCw, Clock, TrendingUp, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
+import { PageHeader, Pill, Badge } from '../shared/ui';
 import { userProfileService } from '../services/userProfileService';
 import { supabase } from '../shared/supabase/client';
 import { newsService } from '../services/newsService';
@@ -499,7 +500,7 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4">
+      <div className="ds-page flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <div className="relative w-16 h-16 mx-auto mb-5">
             <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 animate-ping" />
@@ -515,7 +516,7 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
 
   if (newsCategories.length === 0 && allInterests.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4">
+      <div className="ds-page flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-5">
             <Newspaper className="w-8 h-8 text-emerald-400" />
@@ -534,60 +535,38 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      <div className="sticky top-0 z-30 bg-[#0a0a0f]/90 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={goBack}
-              className="p-2 hover:bg-white/8 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-white/70" />
-            </button>
-            <TrendingUp className="w-5 h-5 text-emerald-400" />
-            <span className="font-bold text-white text-lg">Daily Feed</span>
-          </div>
-
-          <div className="flex items-center gap-2">
+    <div className="ds-page text-white">
+      <PageHeader
+        title="Daily Feed"
+        icon={TrendingUp}
+        accent="#34d399"
+        back={goBack}
+        progress={silentFetching}
+        actions={
+          <>
             {newArticlesBadge > 0 && (
-              <span className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-semibold rounded-full">
-                <Zap className="w-3 h-3" />
-                {newArticlesBadge} new
-              </span>
+              <Badge tone="#34d399" icon={<Zap className="w-3 h-3" />}>{newArticlesBadge} new</Badge>
             )}
-            <button
+            <Pill
               onClick={handleManualRefresh}
               disabled={refreshing || silentFetching}
-              className="p-2 hover:bg-white/8 rounded-lg transition-colors text-white/60 hover:text-white disabled:opacity-40"
               title="Fetch latest news"
-            >
-              <RefreshCw className={`w-4 h-4 ${(refreshing || silentFetching) ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-
-        {silentFetching && (
-          <div className="h-0.5 bg-emerald-500/40" />
-        )}
-
+              aria-label="Fetch latest news"
+              icon={<RefreshCw className={`w-4 h-4 ${(refreshing || silentFetching) ? 'animate-spin' : ''}`} />}
+            />
+          </>
+        }
+      >
         {categoryTabs.length > 1 && (
-          <div className="max-w-6xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {categoryTabs.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveFilter(tab)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
-                  activeFilter === tab
-                    ? 'bg-white text-slate-900 border-white'
-                    : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'
-                }`}
-              >
+              <Pill key={tab} size="sm" active={activeFilter === tab} onClick={() => setActiveFilter(tab)}>
                 {tab}
-              </button>
+              </Pill>
             ))}
           </div>
         )}
-      </div>
+      </PageHeader>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {filteredArticles.length === 0 ? (

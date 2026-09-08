@@ -29,7 +29,7 @@ function StyledSelect({ value, onChange, options, placeholder }: {
         className="w-full appearance-none rounded-xl px-4 py-3 pr-10 text-sm font-medium transition-all outline-none"
         style={{
           background: value ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.05)',
-          border: `1px solid ${value ? 'rgba(100,120,255,0.50)' : 'rgba(255,255,255,0.12)'}`,
+          border: `1px solid ${value ? 'var(--ds-border-strong)' : 'rgba(255,255,255,0.12)'}`,
           color: value ? 'white' : 'rgba(180,190,255,0.55)',
         }}
       >
@@ -83,7 +83,7 @@ export function AgeVerificationModal({ onVerified }: AgeVerificationModalProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'linear-gradient(175deg, #1e2a7a 0%, #141a55 40%, #0d0f3c 100%)' }}>
+      style={{ background: 'var(--ds-bg-page)' }}>
       <div
         className="absolute inset-0"
         style={{
@@ -95,8 +95,8 @@ export function AgeVerificationModal({ onVerified }: AgeVerificationModalProps) 
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="relative w-full max-w-sm rounded-3xl p-8"
         style={{
-          background: 'rgba(13,15,55,0.90)',
-          border: '1px solid rgba(100,120,255,0.30)',
+          background: 'var(--ds-surface-3)',
+          border: '1px solid var(--ds-border-strong)',
           backdropFilter: 'blur(24px)',
           boxShadow: '0 32px 80px rgba(0,0,0,0.60)',
         }}
@@ -104,7 +104,7 @@ export function AgeVerificationModal({ onVerified }: AgeVerificationModalProps) 
         <div className="flex flex-col items-center mb-6">
           <div
             className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: 'rgba(100,120,255,0.15)', border: '1px solid rgba(100,120,255,0.30)' }}
+            style={{ background: 'var(--ds-violet-soft)', border: '1px solid var(--ds-border-strong)' }}
           >
             <ShieldCheck className="w-7 h-7 text-blue-300" />
           </div>

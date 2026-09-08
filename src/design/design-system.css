@@ -135,6 +135,7 @@
   background-color: var(--ds-bg-base);
   color: var(--ds-ink);
   position: relative;
+  isolation: isolate;
 }
 .ds-page::before {
   content: '';
@@ -142,9 +143,8 @@
   inset: 0;
   pointer-events: none;
   background-image: var(--ds-bg-glow);
-  z-index: 0;
+  z-index: -1;
 }
-.ds-page > * { position: relative; z-index: 1; }
 
 /* Sticky glass header */
 .ds-header {

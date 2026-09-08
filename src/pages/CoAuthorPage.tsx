@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, FileText, Clock, Trash2, ArrowLeft, BookOpen, X, AlertCircle } from 'lucide-react';
+import { Plus, FileText, Clock, Trash2, BookOpen, X, AlertCircle } from 'lucide-react';
+import { PageHeader, Pill } from '../shared/ui';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
 import { CoAuthorCanvas } from '../components/CoAuthorCanvas';
@@ -125,28 +126,18 @@ export function CoAuthorPage({ onBack }: { onBack?: () => void } = {}) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      <div className="sticky top-0 z-30 bg-[#0a0a0f]/90 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={goBack}
-              className="p-2 hover:bg-white/8 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-white/70" />
-            </button>
-            <BookOpen className="w-5 h-5 text-violet-400" />
-            <span className="font-bold text-white text-lg">Co-Author</span>
-          </div>
-          <button
-            onClick={() => setShowNewSessionModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-lg transition-all shadow-lg shadow-violet-900/30"
-          >
-            <Plus className="w-4 h-4" />
+    <div className="ds-page text-white">
+      <PageHeader
+        title="Co-Author"
+        icon={BookOpen}
+        accent="#a78bfa"
+        back={goBack}
+        actions={
+          <Pill tone="#a78bfa" icon={<Plus className="w-4 h-4" />} onClick={() => setShowNewSessionModal(true)} hideLabelOnMobile>
             New Session
-          </button>
-        </div>
-      </div>
+          </Pill>
+        }
+      />
 
       {/* Sessions Grid */}
       <div className="max-w-6xl mx-auto px-6 py-8">

@@ -63,7 +63,7 @@ export default function TermsOfServicePage() {
     <div
       className="min-h-screen"
       style={{
-        background: 'linear-gradient(175deg, #1e2a7a 0%, #141a55 40%, #0d0f3c 100%)',
+        background: 'var(--ds-bg-page)',
       }}
     >
       {/* Ambient glow */}
@@ -89,8 +89,8 @@ export default function TermsOfServicePage() {
         <div
           className="rounded-3xl p-8 md:p-12 mb-8"
           style={{
-            background: 'rgba(13,15,55,0.82)',
-            border: '1px solid rgba(100,120,255,0.28)',
+            background: 'var(--ds-surface-3)',
+            border: '1px solid rgba(150,140,220,0.28)',
             boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
           }}
         >
@@ -98,7 +98,7 @@ export default function TermsOfServicePage() {
             <div
               className="w-12 h-12 rounded-2xl flex items-center justify-center"
               style={{
-                background: 'linear-gradient(135deg, #3b5bdb 0%, #4c6ef5 100%)',
+                background: 'linear-gradient(135deg, #f43f6b 0%, #e11d48 100%)',
                 boxShadow: '0 4px 24px rgba(66,99,235,0.40)',
               }}
             >
@@ -142,7 +142,7 @@ export default function TermsOfServicePage() {
                     }`}
                     style={
                       activeSection === id
-                        ? { background: 'rgba(100,120,255,0.15)' }
+                        ? { background: 'var(--ds-violet-soft)' }
                         : undefined
                     }
                   >
@@ -160,8 +160,8 @@ export default function TermsOfServicePage() {
           <div
             className="flex-1 rounded-3xl p-6 md:p-10 lg:p-12"
             style={{
-              background: 'rgba(13,15,55,0.82)',
-              border: '1px solid rgba(100,120,255,0.28)',
+              background: 'var(--ds-surface-3)',
+              border: '1px solid rgba(150,140,220,0.28)',
               boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
             }}
           >
@@ -522,7 +522,7 @@ export default function TermsOfServicePage() {
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: 'linear-gradient(135deg, #3b5bdb 0%, #4c6ef5 100%)',
+                      background: 'linear-gradient(135deg, #f43f6b 0%, #e11d48 100%)',
                       boxShadow: '0 4px 16px rgba(66,99,235,0.30)',
                     }}
                   >

@@ -57,7 +57,7 @@ export function InvitePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: VELVET_THEME.bg }}>
-        <Loader className="animate-spin text-blue-300/60" size={32} />
+        <Loader className="animate-spin text-ink-subtle" size={32} />
       </div>
     );
   }
@@ -78,7 +78,7 @@ export function InvitePage() {
             className="p-2 rounded-xl transition-colors hover:bg-white/10"
             style={{ border: `1px solid ${VELVET_THEME.colors.glassBorder}` }}
           >
-            <ArrowLeft className="text-blue-200/70" size={20} />
+            <ArrowLeft className="text-ink-secondary" size={20} />
           </button>
           <h1 className="text-2xl font-bold text-white tracking-tight">Invite Friends</h1>
         </div>
@@ -109,10 +109,10 @@ export function InvitePage() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-white">Give 25, Get 50</h2>
-                <p className="text-sm text-blue-200/60">When your friend sends 20 messages</p>
+                <p className="text-sm text-ink-muted">When your friend sends 20 messages</p>
               </div>
             </div>
-            <p className="text-blue-200/70 text-sm leading-relaxed mt-3">
+            <p className="text-ink-secondary text-sm leading-relaxed mt-3">
               Share your invite link with a friend. They get 25 bonus messages when they sign up,
               and you get 50 bonus messages once they've sent 20 messages. Everyone wins.
             </p>
@@ -131,7 +131,7 @@ export function InvitePage() {
               border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
             }}
           >
-            <label className="text-xs font-medium text-blue-200/50 uppercase tracking-wider">
+            <label className="text-xs font-medium text-ink-muted uppercase tracking-wider">
               Your invite link
             </label>
             <div className="flex items-center gap-2 mt-2 mb-4">
@@ -152,14 +152,14 @@ export function InvitePage() {
                   border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.10)'}`,
                 }}
               >
-                {copied ? <Check className="text-green-400" size={18} /> : <Copy className="text-blue-200/80" size={18} />}
+                {copied ? <Check className="text-green-400" size={18} /> : <Copy className="text-ink-secondary" size={18} />}
               </button>
             </div>
             <button
               onClick={handleShare}
               className="w-full rounded-xl py-3 text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
               style={{
-                background: 'linear-gradient(135deg, #3b5bdb 0%, #4c6ef5 100%)',
+                background: 'linear-gradient(135deg, #f43f6b 0%, #e11d48 100%)',
                 boxShadow: '0 4px 24px rgba(66,99,235,0.35)',
               }}
             >
@@ -177,7 +177,7 @@ export function InvitePage() {
               border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
             }}
           >
-            <p className="text-blue-200/60 text-sm">No referral code available. Please try again later.</p>
+            <p className="text-ink-muted text-sm">No referral code available. Please try again later.</p>
           </motion.div>
         )}
 
@@ -206,7 +206,7 @@ export function InvitePage() {
                 <stat.icon size={16} style={{ color: stat.color }} />
               </div>
               <div className="text-2xl font-bold text-white">{stat.value}</div>
-              <div className="text-xs text-blue-200/50 mt-0.5">{stat.label}</div>
+              <div className="text-xs text-ink-muted mt-0.5">{stat.label}</div>
             </motion.div>
           ))}
         </div>
@@ -233,11 +233,11 @@ export function InvitePage() {
               <div key={item.step} className="flex items-start gap-3">
                 <div
                   className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                  style={{ background: 'linear-gradient(135deg, #3b5bdb 0%, #4c6ef5 100%)' }}
+                  style={{ background: 'linear-gradient(135deg, #f43f6b 0%, #e11d48 100%)' }}
                 >
                   {item.step}
                 </div>
-                <p className="text-sm text-blue-200/70 leading-relaxed pt-0.5">{item.text}</p>
+                <p className="text-sm text-ink-secondary leading-relaxed pt-0.5">{item.text}</p>
               </div>
             ))}
           </div>

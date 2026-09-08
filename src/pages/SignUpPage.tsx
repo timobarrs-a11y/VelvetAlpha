@@ -6,7 +6,7 @@ import { referralService } from '../services/referralService';
 import { Button, Input } from '../shared/ui';
 
 const TERMS_VERSION = '2026-01-28';
-const VELVET_BG = 'linear-gradient(175deg, #1e2a7a 0%, #141a55 40%, #0d0f3c 100%)';
+const VELVET_BG = 'var(--ds-bg-page)';
 const VELVET_RADIAL = `radial-gradient(ellipse 90% 50% at 50% -5%, rgba(80,100,255,0.30) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 20% 110%, rgba(244,63,107,0.12) 0%, transparent 50%)`;
 
 const MONTHS = [
@@ -47,13 +47,13 @@ function StyledSelect({ value, onChange, options, placeholder, disabled }: Selec
         className="w-full appearance-none rounded-xl px-4 py-3 pr-10 text-sm font-medium transition-all outline-none"
         style={{
           background: value ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.05)',
-          border: `1px solid ${value ? 'rgba(100,120,255,0.50)' : 'rgba(255,255,255,0.12)'}`,
+          border: `1px solid ${value ? 'var(--ds-border-strong)' : 'rgba(255,255,255,0.12)'}`,
           color: value ? 'white' : 'rgba(180,190,255,0.55)',
         }}
       >
-        <option value="" disabled style={{ background: '#141a55', color: 'rgba(180,190,255,0.55)' }}>{placeholder}</option>
+        <option value="" disabled style={{ background: '#1c1930', color: 'rgba(202,197,240,0.55)' }}>{placeholder}</option>
         {options.map(o => (
-          <option key={o.value} value={o.value} style={{ background: '#141a55', color: 'white' }}>{o.label}</option>
+          <option key={o.value} value={o.value} style={{ background: '#1c1930', color: 'white' }}>{o.label}</option>
         ))}
       </select>
       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgba(180,190,255,0.50)' }} />
@@ -149,20 +149,20 @@ export default function SignUpPage() {
         <div
           className="rounded-3xl p-8"
           style={{
-            background: 'rgba(13,15,55,0.82)',
-            border: '1px solid rgba(100,120,255,0.28)',
+            background: 'var(--ds-surface-3)',
+            border: '1px solid var(--ds-border-strong)',
             backdropFilter: 'blur(20px)',
             boxShadow: '0 24px 64px rgba(0,0,0,0.50)',
           }}
         >
           <div className="text-center mb-7">
             <h2 className="text-2xl font-bold text-white font-display mb-1">Create Account</h2>
-            <p className="text-blue-200/70 text-sm">Project the world you want around you</p>
+            <p className="text-ink-secondary text-sm">Project the world you want around you</p>
           </div>
 
           <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl" style={{ background: "rgba(34,197,94,0.04)", border: "1px solid rgba(34,197,94,0.12)" }}>
             <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-100/70 leading-relaxed">
+            <p className="text-xs text-ink-secondary leading-relaxed">
               We use your email to create your account and your date of birth to verify you are 18+. We never share your data with third parties. You can export or delete all your data anytime in Settings.
             </p>
           </div>
@@ -230,11 +230,11 @@ export default function SignUpPage() {
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }}
             >
               <div className="flex items-center gap-2 mb-1">
-                <ShieldCheck className="w-4 h-4 text-blue-300" />
-                <span className="text-sm font-semibold text-blue-200">Age Verification</span>
-                <span className="text-xs text-blue-200/50 ml-auto">18+ only</span>
+                <ShieldCheck className="w-4 h-4 text-ink-secondary" />
+                <span className="text-sm font-semibold text-ink-secondary">Age Verification</span>
+                <span className="text-xs text-ink-muted ml-auto">18+ only</span>
               </div>
-              <p className="text-xs text-blue-200/50 leading-relaxed">
+              <p className="text-xs text-ink-muted leading-relaxed">
                 Project Velvet contains mature content. You must be 18 or older to create an account. Your date of birth is used solely to verify eligibility.
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -298,7 +298,7 @@ export default function SignUpPage() {
                     {termsAccepted && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                   </div>
                 </div>
-                <span className="text-sm text-blue-100/80 leading-relaxed">
+                <span className="text-sm text-ink-secondary leading-relaxed">
                   I have read and agree to the{' '}
                   <Link
                     to="/terms"
@@ -330,7 +330,7 @@ export default function SignUpPage() {
                     {privacyAccepted && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                   </div>
                 </div>
-                <span className="text-sm text-blue-100/80 leading-relaxed">
+                <span className="text-sm text-ink-secondary leading-relaxed">
                   I have read and agree to the{' '}
                   <Link
                     to="/privacy"
@@ -354,13 +354,13 @@ export default function SignUpPage() {
               Create Account
             </Button>
 
-            <p className="text-center text-xs text-blue-200/40 leading-relaxed px-2">
+            <p className="text-center text-xs text-ink-subtle leading-relaxed px-2">
               By creating an account, you confirm you are 18 or older and consent to our Terms of Service and Privacy Policy. Your age verification is recorded.
             </p>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-blue-200/70 text-sm">
+            <p className="text-ink-secondary text-sm">
               Already have an account?{' '}
               <button
                 onClick={() => navigate('/login')}

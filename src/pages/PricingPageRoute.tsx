@@ -195,20 +195,20 @@ export function PricingPageRoute() {
   const hasUsedTrial = isOnTrial || isOnPaid;
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-black to-slate-900 z-50 overflow-y-auto">
+    <div className="ds-page fixed inset-0 z-50 overflow-y-auto">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-gradient-to-b from-slate-900/95 to-transparent backdrop-blur-sm p-4">
+      <div className="sticky top-0 z-10 backdrop-blur-sm p-4" style={{ background: 'linear-gradient(to bottom, var(--ds-header-bg), transparent)' }}>
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <button
             onClick={handleClose}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all text-white font-medium"
+            className="ds-pill"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
           <button
             onClick={handleClose}
-            className="p-2.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all"
+            className="ds-pill ds-pill--icon"
             aria-label="Close"
           >
             <X className="w-5 h-5 text-white" />
