@@ -654,18 +654,20 @@ Today's date: ${new Date().toISOString()}`,
         };
       }
 
-      await supabaseAdmin.from("event_suggestions").insert({
-        user_id: userId,
-        companion_id: companionId,
-        suggested_title: e.title,
-        suggested_description: e.description || "",
-        suggested_type: e.event_type,
-        suggested_date: e.event_date || null,
-        reasoning: "Detected from companion conversation",
-        confidence_score: e.confidence,
-        accepted: true,
-        dismissed: false,
-      }).catch(() => {});
+      try {
+        await supabaseAdmin.from("event_suggestions").insert({
+          user_id: userId,
+          companion_id: companionId,
+          suggested_title: e.title,
+          suggested_description: e.description || "",
+          suggested_type: e.event_type,
+          suggested_date: e.event_date || null,
+          reasoning: "Detected from companion conversation",
+          confidence_score: e.confidence,
+          accepted: true,
+          dismissed: false,
+        });
+      } catch {}
     }
 
     if (parsed.navigationIntent) {
@@ -682,14 +684,16 @@ Today's date: ${new Date().toISOString()}`,
 
     if (isMentor && parsed.commitment && parsed.commitment.confidence > 0.7) {
       const c = parsed.commitment;
-      await supabaseAdmin.from("coaching_commitments").insert({
-        user_id: userId,
-        companion_id: companionId,
-        description: c.description,
-        due_date: c.due_date || null,
-        status: 'pending',
-        extracted_from_message: userMessage.substring(0, 500),
-      }).catch(() => {});
+      try {
+        await supabaseAdmin.from("coaching_commitments").insert({
+          user_id: userId,
+          companion_id: companionId,
+          description: c.description,
+          due_date: c.due_date || null,
+          status: 'pending',
+          extracted_from_message: userMessage.substring(0, 500),
+        });
+      } catch {}
       result.commitment = {
         description: c.description,
         due_date: c.due_date,
@@ -1049,12 +1053,12 @@ Deno.serve(async (req: Request) => {
 
     const effectiveTimezone = timezone || profile.timezone;
     if (timezone && profile.timezone !== timezone) {
-      await supabaseAdmin
-        .from('user_profiles')
-        .update({ timezone })
-        .eq('id', user.id)
-        .then(() => {})
-        .catch(() => {});
+      try {
+        await supabaseAdmin
+          .from('user_profiles')
+          .update({ timezone })
+          .eq('id', user.id);
+      } catch {}
     }
     const { timeOfDay, dateString } = getLocalTimeOfDay(effectiveTimezone || undefined);
 
@@ -1392,13 +1396,22 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
 
     // Increment coaching session message count
     if (isMentor) {
-      await supabaseAdmin
-        .from('coaching_sessions')
-        .update({ message_count: (await supabaseAdmin.from('coaching_sessions').select('message_count').eq('user_id', user.id).eq('companion_id', companionId).eq('status', 'open').maybeSingle()).data?.[0]?.message_count + 1 })
-        .eq('user_id', user.id)
-        .eq('companion_id', companionId)
-        .eq('status', 'open')
-        .catch(() => {});
+      try {
+        const { data: session } = await supabaseAdmin
+          .from('coaching_sessions')
+          .select('message_count')
+          .eq('user_id', user.id)
+          .eq('companion_id', companionId)
+          .eq('status', 'open')
+          .maybeSingle();
+        const currentCount = session?.message_count ?? 0;
+        await supabaseAdmin
+          .from('coaching_sessions')
+          .update({ message_count: currentCount + 1 })
+          .eq('user_id', user.id)
+          .eq('companion_id', companionId)
+          .eq('status', 'open');
+      } catch {}
     }
 
     // Decrement message count server-side (ported from chat/index.ts)
