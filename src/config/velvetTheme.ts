@@ -1,24 +1,29 @@
+/**
+ * Legacy theme object used by the entry/onboarding pages (Login, Sign Up, Invite,
+ * Goal Discovery). The values now resolve from the design-system tokens in
+ * `src/design/design-system.css`, so these pages follow the active A/B variant
+ * and the locked dark-purple palette instead of the old cobalt-blue scheme.
+ *
+ * Prefer the `.ds-*` classes / `<PageShell>` for new screens.
+ */
 export const VELVET_THEME = {
-  bg: 'linear-gradient(175deg, #1e2a7a 0%, #141a55 40%, #0d0f3c 100%)',
-  radial: [
-    'radial-gradient(ellipse 90% 50% at 50% -5%, rgba(80,100,255,0.30) 0%, transparent 60%)',
-    'radial-gradient(ellipse 60% 40% at 20% 110%, rgba(244,63,107,0.12) 0%, transparent 50%)',
-  ].join(', '),
+  bg: 'var(--ds-bg-page)',
+  radial: 'var(--ds-bg-glow)',
 
   colors: {
-    cobaltTop:    '#1e2a7a',
-    cobaltMid:    '#141a55',
-    navyBottom:   '#0d0f3c',
-    glassCard:    'rgba(13,15,55,0.82)',
-    glassBorder:  'rgba(100,120,255,0.28)',
-    glassPanel:   'rgba(255,255,255,0.07)',
-    panelBorder:  'rgba(255,255,255,0.12)',
-    navBg:        'rgba(10,12,48,0.92)',
-    navBorder:    'rgba(100,120,255,0.22)',
+    cobaltTop:    '#16132b',
+    cobaltMid:    '#0f0e1a',
+    navyBottom:   '#0a0914',
+    glassCard:    'var(--ds-surface-3)',
+    glassBorder:  'var(--ds-border-strong)',
+    glassPanel:   'var(--ds-pill-bg)',
+    panelBorder:  'var(--ds-pill-border)',
+    navBg:        'var(--ds-header-bg)',
+    navBorder:    'var(--ds-header-border)',
   },
 
   logo: {
-    gradient:     'linear-gradient(135deg, #f472b6 0%, #c084fc 45%, #818cf8 100%)',
+    gradient:     'var(--ds-title-gradient)',
     glowFilter:   'drop-shadow(0 4px 16px rgba(192,132,252,0.55))',
     heartGlow:    'drop-shadow(0 0 18px rgba(244,114,182,0.80))',
     heartSmGlow:  'drop-shadow(0 0 10px rgba(244,114,182,0.75))',
@@ -26,18 +31,18 @@ export const VELVET_THEME = {
   },
 
   text: {
-    body:         'text-blue-200/75',
-    muted:        'text-blue-200/60',
-    subtle:       'text-blue-300/60',
+    body:         'text-ink-secondary',
+    muted:        'text-ink-muted',
+    subtle:       'text-ink-subtle',
     heading:      'text-white',
   },
 
   button: {
-    primary:      'linear-gradient(135deg, #3b5bdb 0%, #4c6ef5 100%)',
-    primaryGlow:  '0 4px 24px rgba(66,99,235,0.40)',
-    ghost:        'rgba(255,255,255,0.10)',
-    ghostBorder:  'rgba(255,255,255,0.25)',
-    nav:          'rgba(255,255,255,0.08)',
-    navBorder:    'rgba(255,255,255,0.15)',
+    primary:      'linear-gradient(135deg, #f43f6b 0%, #e11d48 100%)',
+    primaryGlow:  '0 4px 24px rgba(244,63,107,0.40)',
+    ghost:        'var(--ds-pill-bg)',
+    ghostBorder:  'var(--ds-pill-border)',
+    nav:          'var(--ds-pill-bg)',
+    navBorder:    'var(--ds-pill-border)',
   },
 } as const;

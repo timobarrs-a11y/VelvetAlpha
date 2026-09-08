@@ -66,7 +66,7 @@ export function GlassSkeletonCard({ className = '' }: { className?: string }) {
     <div
       className={`p-6 rounded-2xl space-y-4 ${className}`}
       style={{
-        background: 'rgba(13,15,55,0.4)',
+        background: 'var(--ds-surface-sunken)',
         border: '1px solid rgba(255,255,255,0.08)',
         backdropFilter: 'blur(12px)',
       }}

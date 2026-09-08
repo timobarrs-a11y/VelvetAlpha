@@ -156,7 +156,7 @@ export function ArticleDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="ds-page flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-emerald-400 animate-spin mx-auto mb-3" />
           <p className="text-white/50 text-sm">Loading article...</p>
@@ -167,7 +167,7 @@ export function ArticleDetailPage() {
 
   if (!article) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="ds-page flex items-center justify-center">
         <div className="text-center">
           <p className="text-white/50 text-sm mb-4">Article not found</p>
           <button
@@ -184,15 +184,17 @@ export function ArticleDetailPage() {
   const primaryCat = article.categories?.[0];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
+    <div className="ds-page flex flex-col">
       {/* Top bar */}
-      <div className="sticky top-0 z-30 bg-[#0a0a0f]/95 backdrop-blur-xl border-b border-white/8">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div className="ds-header">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 ds-header-row">
           <button
             onClick={() => navigate('/daily-feed')}
-            className="p-2 hover:bg-white/8 rounded-lg transition-colors flex-shrink-0"
+            className="ds-pill ds-pill--icon ds-pill--quiet -ml-2 flex-shrink-0"
+            aria-label="Back to feed"
+            title="Back to feed"
           >
-            <ArrowLeft className="w-5 h-5 text-white/70" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
 
           <div className="flex-1 min-w-0">

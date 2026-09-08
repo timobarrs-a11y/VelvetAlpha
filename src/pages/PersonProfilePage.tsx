@@ -91,7 +91,7 @@ export function PersonProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#08090d] flex items-center justify-center">
+      <div className="ds-page flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
       </div>
     );
@@ -99,7 +99,7 @@ export function PersonProfilePage() {
 
   if (!person) {
     return (
-      <div className="min-h-screen bg-[#08090d] flex flex-col items-center justify-center px-6 text-center">
+      <div className="ds-page flex flex-col items-center justify-center px-6 text-center">
         <p className="text-white/40 text-sm">Person not found.</p>
         <button onClick={() => navigate('/navi')} className="mt-4 text-emerald-400 text-sm">
           Back to Navi
@@ -111,12 +111,14 @@ export function PersonProfilePage() {
   const style = getAvatarStyle(person.avatar_color);
 
   return (
-    <div className="min-h-screen bg-[#08090d] text-white">
+    <div className="ds-page text-white">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-white/8 bg-[#08090d]/95 backdrop-blur-xl sticky top-0 z-10">
+      <div className="ds-header ds-header-row px-4 sm:px-6 py-2">
         <button
           onClick={() => navigate('/navi')}
-          className="p-2 hover:bg-white/8 rounded-lg transition-colors text-white/60 hover:text-white"
+          className="ds-pill ds-pill--icon ds-pill--quiet -ml-2"
+          aria-label="Back to Navi"
+          title="Back to Navi"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>

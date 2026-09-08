@@ -25,8 +25,8 @@ function CompanionPickerModal({
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         className="relative w-full max-w-sm rounded-3xl p-6"
         style={{
-          background: 'rgba(13,15,55,0.96)',
-          border: '1px solid rgba(100,120,255,0.30)',
+          background: 'var(--ds-surface-3)',
+          border: '1px solid var(--ds-border-strong)',
           backdropFilter: 'blur(24px)',
           boxShadow: '0 32px 80px rgba(0,0,0,0.60)',
         }}
@@ -35,7 +35,7 @@ function CompanionPickerModal({
           <Heart className="w-6 h-6 text-pink-400" fill="currentColor" />
         </div>
         <h2 className="text-xl font-bold text-white text-center mb-1">Who would you like to chat with?</h2>
-        <p className="text-blue-200/60 text-sm text-center mb-6">Choose a companion to open their chat.</p>
+        <p className="text-ink-muted text-sm text-center mb-6">Choose a companion to open their chat.</p>
 
         <div className="space-y-2">
           {companions.map((c) => (
@@ -65,7 +65,7 @@ function CompanionPickerModal({
                 </div>
                 <span className="text-white font-semibold">{c.custom_name || 'Companion'}</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-blue-200/50 group-hover:text-pink-400 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-ink-muted group-hover:text-pink-400 transition-colors" />
             </button>
           ))}
         </div>
@@ -165,7 +165,7 @@ export function RootRedirect() {
 
   if (pickerCompanions.length > 0) {
     return (
-      <div className="min-h-screen" style={{ background: 'linear-gradient(175deg, #1e2a7a 0%, #141a55 40%, #0d0f3c 100%)' }}>
+      <div className="min-h-screen" style={{ background: 'var(--ds-bg-page)' }}>
         <AnimatePresence>
           <CompanionPickerModal companions={pickerCompanions} onSelect={handlePickerSelect} />
         </AnimatePresence>

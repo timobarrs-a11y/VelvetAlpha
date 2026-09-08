@@ -193,7 +193,7 @@ export function WelcomePage() {
   const userInitial = user?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
-    <div ref={containerRef} className="relative min-h-screen overflow-x-hidden" style={{ background: 'linear-gradient(160deg, #060d1f 0%, #09142e 40%, #0a1628 70%, #071020 100%)' }}>
+    <div ref={containerRef} className="relative min-h-screen overflow-x-hidden" style={{ background: 'var(--ds-bg-page)', backgroundColor: 'var(--ds-bg-base)' }}>
 
       {/* Grain texture overlay */}
       <div

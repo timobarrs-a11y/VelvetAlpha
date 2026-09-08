@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar } from '../components/Avatar';
 import { AvatarConfig, DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from '../types/avatar';
 
-const VELVET_BG = 'linear-gradient(175deg, #1e2a7a 0%, #141a55 40%, #0d0f3c 100%)';
+const VELVET_BG = 'var(--ds-bg-page)';
 const VELVET_RADIAL = `radial-gradient(ellipse 90% 50% at 50% -5%, rgba(80,100,255,0.30) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 20% 110%, rgba(244,63,107,0.12) 0%, transparent 50%)`;
 
 interface CompanionChoice {
@@ -33,8 +33,8 @@ function CompanionPickerModal({
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         className="relative w-full max-w-sm rounded-3xl p-6"
         style={{
-          background: 'rgba(13,15,55,0.96)',
-          border: '1px solid rgba(100,120,255,0.30)',
+          background: 'var(--ds-surface-3)',
+          border: '1px solid var(--ds-border-strong)',
           backdropFilter: 'blur(24px)',
           boxShadow: '0 32px 80px rgba(0,0,0,0.60)',
         }}
@@ -43,7 +43,7 @@ function CompanionPickerModal({
           <Heart className="w-6 h-6 text-pink-400" fill="currentColor" />
         </div>
         <h2 className="text-xl font-bold text-white text-center mb-1">Who would you like to chat with?</h2>
-        <p className="text-blue-200/60 text-sm text-center mb-6">Choose a companion to open their chat.</p>
+        <p className="text-ink-muted text-sm text-center mb-6">Choose a companion to open their chat.</p>
 
         <div className="space-y-2">
           {companions.map((c) => (
@@ -73,7 +73,7 @@ function CompanionPickerModal({
                 </div>
                 <span className="text-white font-semibold">{c.name}</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-blue-200/50 group-hover:text-pink-400 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-ink-muted group-hover:text-pink-400 transition-colors" />
             </button>
           ))}
         </div>
@@ -147,15 +147,15 @@ export default function LoginPage() {
         <div
           className="rounded-3xl p-8"
           style={{
-            background: 'rgba(13,15,55,0.82)',
-            border: '1px solid rgba(100,120,255,0.28)',
+            background: 'var(--ds-surface-3)',
+            border: '1px solid var(--ds-border-strong)',
             backdropFilter: 'blur(20px)',
             boxShadow: '0 24px 64px rgba(0,0,0,0.50)',
           }}
         >
           <div className="text-center mb-7">
             <h2 className="text-2xl font-bold text-white font-display mb-1">Welcome Back</h2>
-            <p className="text-blue-200/70 text-sm">Sign in to continue your journey</p>
+            <p className="text-ink-secondary text-sm">Sign in to continue your journey</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
@@ -179,7 +179,7 @@ export default function LoginPage() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-blue-200/80">Password</label>
+                <label className="block text-sm font-medium text-ink-secondary">Password</label>
                 <button
                   type="button"
                   onClick={() => navigate('/forgot-password')}
@@ -204,7 +204,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-blue-200/70 text-sm">
+            <p className="text-ink-secondary text-sm">
               Don&apos;t have an account?{' '}
               <button
                 onClick={() => navigate('/signup')}

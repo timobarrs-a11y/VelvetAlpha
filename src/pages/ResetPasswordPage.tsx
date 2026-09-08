@@ -131,7 +131,7 @@ export default function ResetPasswordPage() {
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">Reset Password</h1>
-            <p className="text-blue-200">Enter your new password</p>
+            <p className="text-ink-secondary">Enter your new password</p>
           </div>
 
           <form onSubmit={handleResetPassword} className="space-y-6">
@@ -147,7 +147,7 @@ export default function ResetPasswordPage() {
                 New Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-300" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-ink-secondary" />
                 <input
                   type="password"
                   value={password}
@@ -166,7 +166,7 @@ export default function ResetPasswordPage() {
                 Confirm Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-300" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-ink-secondary" />
                 <input
                   type="password"
                   value={confirmPassword}

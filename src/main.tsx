@@ -10,6 +10,8 @@ import { CustomizationProvider } from './context/CustomizationContext';
 import { monitoringService } from './services/monitoringService';
 import { registerSW, installChunkErrorRecovery } from './services/swRegistration';
 import './index.css';
+import './design/design-system.css';
+import { initDesignVariant } from './design/designSystem';
 
 window.addEventListener('unhandledrejection', (event) => {
   monitoringService.trackError({
@@ -33,6 +35,7 @@ window.addEventListener('error', (event) => {
   }
 });
 
+initDesignVariant();
 installChunkErrorRecovery();
 registerSW();
 

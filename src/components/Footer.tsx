@@ -35,7 +35,7 @@ export function Footer() {
       role="contentinfo"
       className="relative z-10 border-t mt-16"
       style={{
-        background: 'rgba(6,13,31,0.92)',
+        background: 'var(--ds-header-bg)',
         borderTopColor: 'rgba(255,255,255,0.07)',
         backdropFilter: 'blur(20px)',
       }}

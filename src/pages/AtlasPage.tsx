@@ -257,13 +257,15 @@ export function AtlasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#08090d] text-white flex flex-col" style={{ height: '100dvh' }}>
+    <div className="ds-page text-white flex flex-col" style={{ height: '100dvh' }}>
       {/* Top bar — visible only when no conversation is open on mobile */}
       {!conversationId && (
-        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-white/8 bg-[#08090d]/95 backdrop-blur-xl flex-shrink-0">
+        <div className="ds-header !static ds-header-row px-4 sm:px-6 py-2 flex-shrink-0">
           <button
             onClick={() => navigate('/lobby')}
-            className="p-2 hover:bg-white/8 rounded-lg transition-colors text-white/60 hover:text-white"
+            className="ds-pill ds-pill--icon ds-pill--quiet -ml-2"
+            aria-label="Back to lobby"
+            title="Back to lobby"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -279,7 +281,7 @@ export function AtlasPage() {
           <button
             onClick={handleNewConversationClick}
             disabled={isCreating}
-            className="flex items-center gap-2 px-4 py-2 bg-white/8 hover:bg-white/12 border border-white/12 rounded-lg text-sm font-medium text-white/80 hover:text-white transition-all disabled:opacity-50"
+            className="ds-pill disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             New chat

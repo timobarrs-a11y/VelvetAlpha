@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Users, MessageSquareWarning } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Users, MessageSquareWarning } from 'lucide-react';
+import { PageHeader, DesignVariantSwitch } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { gdprService } from '../services/gdprService';
 import { onboardingService } from '../services/onboardingService';
@@ -284,20 +285,16 @@ export function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, #0d1128 0%, #090c1e 50%, #060810 100%)' }}>
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-white/60 hover:text-white transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Settings</h1>
-            <p className="text-white/40 text-sm">{userEmail}</p>
-          </div>
-        </div>
+    <div className="ds-page">
+      <PageHeader
+        title="Settings"
+        subtitle={userEmail}
+        icon={SettingsIcon}
+        accent="#c084fc"
+        width="lg"
+        back={() => navigate(-1)}
+      />
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
 
         <div className="flex flex-col md:flex-row gap-6">
           <aside className="md:w-52 flex-shrink-0">
@@ -311,8 +308,8 @@ export function SettingsPage() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition text-left ${
                       active
-                        ? 'bg-white/10 text-white'
-                        : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                        ? 'bg-[var(--ds-accent-soft)] text-ink border border-[var(--ds-accent-line)]'
+                        : 'text-white/50 hover:text-white/80 hover:bg-[var(--ds-pill-bg)] border border-transparent'
                     }`}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
@@ -371,7 +368,7 @@ export function SettingsPage() {
           </aside>
 
           <div className="flex-1 min-w-0">
-            <div className="rounded-2xl border border-white/10 overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <div className="ds-card overflow-hidden">
 
               {activeTab === 'notifications' && (
                 <div className="p-6">
@@ -500,6 +497,12 @@ export function SettingsPage() {
                       })}
                     </div>
                     <p className="text-white/30 text-xs mt-3">Full theme support coming soon. Velvet currently uses dark mode.</p>
+                  </div>
+
+                  <div className="mb-6">
+                    <p className="text-sm font-medium text-white/70 mb-1">Design System (A/B)</p>
+                    <p className="text-white/40 text-sm mb-3">Compare the current look with the unified Velvet design. Applies instantly across the app and is remembered on this device.</p>
+                    <DesignVariantSwitch mode="full" />
                   </div>
 
                   <div className="rounded-xl p-4 border border-white/10" style={{ background: 'rgba(255,255,255,0.03)' }}>

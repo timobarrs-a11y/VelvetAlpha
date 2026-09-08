@@ -22,7 +22,7 @@ export function RouteFallback() {
   return (
     <div
       className="min-h-screen flex items-center justify-center"
-      style={{ background: 'linear-gradient(160deg, #060d1f 0%, #09142e 40%, #0a1628 70%, #071020 100%)' }}
+      style={{ background: 'var(--ds-bg-page)', backgroundColor: 'var(--ds-bg-base)' }}
     >
       <div className="text-center">
         <div className="relative w-16 h-16 mx-auto mb-6">

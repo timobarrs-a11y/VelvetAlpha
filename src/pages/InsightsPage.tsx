@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, TrendingUp, MessageCircle, Calendar, Heart, Target, Lightbulb,
+  TrendingUp, MessageCircle, Calendar, Heart, Target, Lightbulb,
   Clock, Flame, BarChart3, Sparkles, CheckCircle2, Circle, ChevronDown,
   ChevronUp, FlaskConical, PenLine, Activity, Info, TrendingDown, Minus,
   Brain, Shield, Users, Star
 } from 'lucide-react';
+import { PageHeader, Pill, Segmented } from '../shared/ui';
 import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
 import { supabase } from '../shared/supabase/client';
 import { useSubscription } from '../hooks/useSubscription';
@@ -418,58 +419,35 @@ export function InsightsPage() {
   const hasCommunicationPatterns = communicationPatterns !== null;
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] relative">
+    <div className="ds-page">
       <CBTReflectionModal
         open={reflectionOpen}
         onClose={() => setReflectionOpen(false)}
         onSaved={loadInsights}
       />
 
-      <div className="border-b border-white/5 bg-[#0d1424]/90 backdrop-blur-xl sticky top-0 z-10">
-        {refreshing && (
-          <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden">
-            <div className="h-full bg-sky-500/70" style={{ width: '40%', animation: 'shimmer 1s ease-in-out infinite' }} />
-          </div>
-        )}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/lobby')}
-              className="p-2 hover:bg-white/8 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-white/70" />
-            </button>
-            <BarChart3 className="w-5 h-5 text-sky-400" />
-            <span className="font-bold text-white text-lg">Insights</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setReflectionOpen(true)}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 hover:border-amber-500/40 transition-all text-xs font-medium"
-            >
-              <PenLine className="w-3.5 h-3.5" />
+      <PageHeader
+        title="Insights"
+        icon={BarChart3}
+        accent="#38bdf8"
+        progress={refreshing}
+        actions={
+          <>
+            <Pill size="sm" tone="#fbbf24" icon={<PenLine className="w-3.5 h-3.5" />} onClick={() => setReflectionOpen(true)} hideLabelOnMobile>
               Log Reflection
-            </button>
-
-            <div className="flex gap-1 bg-white/5 rounded-lg p-1">
-              {(['week', 'month', 'all'] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    period === p
-                      ? 'bg-sky-500 text-white shadow-sm'
-                      : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  {p === 'week' ? 'This Week' : p === 'month' ? 'This Month' : 'All Time'}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+            </Pill>
+            <Segmented
+              value={period}
+              onChange={setPeriod}
+              options={[
+                { value: 'week',  label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+                { value: 'all',   label: 'All Time' },
+              ]}
+            />
+          </>
+        }
+      />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-8">

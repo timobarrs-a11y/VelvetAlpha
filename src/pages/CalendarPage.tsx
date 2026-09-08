@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, ChevronLeft, ChevronRight, Loader, Sparkles, Calendar, Check, X, CalendarDays, Gift, Wand2 } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Loader, Sparkles, Calendar, Check, X, CalendarDays, Gift, Wand2 } from 'lucide-react';
+import { PageHeader, Pill } from '../shared/ui';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
 import { calendarService, UserEvent, EventSuggestion, GiftSuggestion } from '../services/calendarService';
@@ -216,47 +217,38 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center justify-center">
+      <div className="ds-page flex items-center justify-center">
         <Loader className="w-8 h-8 animate-spin text-amber-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
-      <div className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={goBack}
-              className="p-2 hover:bg-white/8 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-white/70" />
-            </button>
-            <CalendarDays className="w-5 h-5 text-amber-400" />
-            <span className="font-bold text-white text-lg">Calendar</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={goToToday}
-              className="px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg transition-colors"
-            >
-              Today
-            </button>
-            <button
+    <div className="ds-page">
+      <PageHeader
+        title="Calendar"
+        icon={CalendarDays}
+        accent="#fb923c"
+        back={goBack}
+        width="lg"
+        actions={
+          <>
+            <Pill size="sm" onClick={goToToday}>Today</Pill>
+            <Pill
+              size="sm"
+              tone="#fb923c"
+              icon={<Plus className="w-3.5 h-3.5" />}
               onClick={() => {
                 setShowEventModal(true);
                 setEditingEvent(null);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-semibold rounded-lg transition-all shadow-lg"
+              hideLabelOnMobile
             >
-              <Plus className="w-3.5 h-3.5" />
               New Event
-            </button>
-          </div>
-        </div>
-      </div>
+            </Pill>
+          </>
+        }
+      />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
 

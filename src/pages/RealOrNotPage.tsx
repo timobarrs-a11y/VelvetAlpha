@@ -53,10 +53,10 @@ function LobbyView({ onStart, isLoading }: { onStart: (gender: RoNGenderFilter) 
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#060a0f] text-white flex flex-col items-center justify-center px-6">
+    <div className="ds-page text-white flex flex-col items-center justify-center px-6">
       <button
         onClick={() => navigate('/lobby')}
-        className="absolute top-6 left-6 flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors text-sm"
+        className="ds-pill ds-pill--sm ds-pill--quiet absolute top-6 left-6"
       >
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
@@ -150,10 +150,10 @@ function MatchingView({ onCancel }: { onCancel: () => void }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#060a0f] text-white flex flex-col items-center justify-center px-6">
+    <div className="ds-page text-white flex flex-col items-center justify-center px-6">
       <button
         onClick={onCancel}
-        className="absolute top-6 left-6 flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors text-sm"
+        className="ds-pill ds-pill--sm ds-pill--quiet absolute top-6 left-6"
       >
         <ArrowLeft className="w-4 h-4" /> Cancel
       </button>
@@ -315,14 +315,16 @@ function ChatView({
 
   return (
     <div className="h-screen flex flex-col bg-[#060a0f] text-white">
-      <div className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-xl border-b border-white/5 flex-shrink-0">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+      <div className="ds-header flex-shrink-0">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 ds-header-row justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowLeaveConfirm(true)}
-              className="p-2 hover:bg-white/8 rounded-lg transition-colors"
+              className="ds-pill ds-pill--icon ds-pill--quiet -ml-2"
+              aria-label="Leave"
+              title="Leave"
             >
-              <ArrowLeft className="w-5 h-5 text-white/70" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <Zap className="w-5 h-5" style={{ color: '#b8476b' }} />
             <div>
@@ -529,10 +531,10 @@ function RevealView({
   const opponentVerdict = opponentVerdictRaw as RoNVerdict;
 
   return (
-    <div className="min-h-screen bg-[#060a0f] text-white flex flex-col items-center justify-center px-6">
+    <div className="ds-page text-white flex flex-col items-center justify-center px-6">
       <button
         onClick={() => navigate('/lobby')}
-        className="absolute top-6 left-6 flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors text-sm"
+        className="ds-pill ds-pill--sm ds-pill--quiet absolute top-6 left-6"
       >
         <ArrowLeft className="w-4 h-4" /> Lobby
       </button>

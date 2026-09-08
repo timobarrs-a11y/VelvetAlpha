@@ -362,7 +362,7 @@ export function GroupChatPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center justify-center">
+      <div className="ds-page flex items-center justify-center">
         <div className="text-center">
           <Loader className="w-8 h-8 animate-spin text-teal-400 mx-auto mb-3" />
           <p className="text-gray-400 text-sm">Loading group chat...</p>
@@ -372,17 +372,21 @@ export function GroupChatPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
-      <div className="flex-shrink-0 border-b border-white/5 bg-gray-950/90 backdrop-blur-xl z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+    <div className="ds-page h-screen flex flex-col">
+      <div className="ds-header !static flex-shrink-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2 ds-header-row">
           <button
             onClick={() => navigate('/lobby')}
-            className="p-2 hover:bg-white/8 rounded-lg transition-colors flex-shrink-0"
+            className="ds-pill ds-pill--icon ds-pill--quiet -ml-2 flex-shrink-0"
+            aria-label="Back to lobby"
+            title="Back to lobby"
           >
-            <ArrowLeft className="w-5 h-5 text-white/70" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
 
-          <Users className="w-5 h-5 text-teal-400 flex-shrink-0" />
+          <span className="ds-chip w-9 h-9 flex-shrink-0" style={{ '--ds-tone': '#2dd4bf' } as React.CSSProperties}>
+            <Users className="w-[18px] h-[18px]" />
+          </span>
 
           <div className="flex-1 min-w-0 flex items-center gap-3">
             <span className="font-bold text-white text-base truncate">{groupName || 'Group Chat'}</span>

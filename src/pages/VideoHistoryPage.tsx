@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Youtube, Play, Search, Sparkles, X, Loader2, TrendingUp, Heart, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { Youtube, Play, Search, Sparkles, X, Loader2, TrendingUp, Heart, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { PageHeader, Pill, Segmented } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { VideoPreferencesModal } from '../components/VideoPreferencesModal';
@@ -54,7 +55,6 @@ async function getActiveTags(userId: string): Promise<string[]> {
 }
 
 export function VideoHistoryPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'interest-based' | 'search'>('interest-based');
   const [interestBasedVideos, setInterestBasedVideos] = useState<SearchedVideo[]>([]);
@@ -267,59 +267,33 @@ export function VideoHistoryPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#080810] text-white">
-      <div className="sticky top-0 z-30 bg-[#080810]/90 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/lobby')}
-              className="p-2 hover:bg-white/8 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-white/60" />
-            </button>
-            <Youtube className="w-5 h-5 text-red-400" />
-            <span className="font-bold text-white text-lg tracking-tight">Your Lens</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab('interest-based')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
-                activeTab === 'interest-based'
-                  ? 'bg-white text-black'
-                  : 'bg-white/8 text-white/50 hover:text-white hover:bg-white/12'
-              }`}
-            >
-              <Heart className="w-3.5 h-3.5" />
-              For You
-            </button>
-            <button
-              onClick={() => setActiveTab('search')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
-                activeTab === 'search'
-                  ? 'bg-white text-black'
-                  : 'bg-white/8 text-white/50 hover:text-white hover:bg-white/12'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Smart Search
-            </button>
-            <button
-              onClick={() => setShowPreferences(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium bg-white/8 text-white/50 hover:text-white hover:bg-white/12 transition-all"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
+    <div className="ds-page text-white">
+      <PageHeader
+        title="Your Lens"
+        icon={Youtube}
+        accent="#fb7185"
+        width="2xl"
+        actions={
+          <>
+            <Segmented
+              value={activeTab}
+              onChange={setActiveTab}
+              options={[
+                { value: 'interest-based', label: 'For You',      icon: <Heart className="w-3.5 h-3.5" /> },
+                { value: 'search',         label: 'Smart Search', icon: <Sparkles className="w-3.5 h-3.5" /> },
+              ]}
+            />
+            <Pill size="sm" onClick={() => setShowPreferences(true)} icon={<SlidersHorizontal className="w-3.5 h-3.5" />} hideLabelOnMobile>
               Preferences
               {activeTagCount > 0 && (
-                <span className="ml-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 inline-flex items-center justify-center align-middle">
                   {activeTagCount > 9 ? '9+' : activeTagCount}
                 </span>
               )}
-            </button>
-          </div>
-        </div>
-      </div>
-
+            </Pill>
+          </>
+        }
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <AnimatePresence mode="wait">
           {activeTab === 'interest-based' && (

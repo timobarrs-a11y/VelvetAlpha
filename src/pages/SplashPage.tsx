@@ -126,14 +126,14 @@ export function SplashPage() {
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#07090f]">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--ds-bg-base)]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-500" />
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden" style={{ background: 'linear-gradient(160deg, #060d1f 0%, #09142e 40%, #0a1628 70%, #071020 100%)' }}>
+    <div className="relative min-h-screen overflow-x-hidden" style={{ background: 'var(--ds-bg-page)', backgroundColor: 'var(--ds-bg-base)' }}>
 
       {/* Grain texture overlay */}
       <div

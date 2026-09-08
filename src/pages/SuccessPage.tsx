@@ -36,7 +36,7 @@ export function SuccessPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-rose-900 flex items-center justify-center">
+      <div className="ds-page flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-rose-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-white text-lg">Processing your payment...</p>
@@ -47,7 +47,7 @@ export function SuccessPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-rose-900 flex items-center justify-center p-4">
+      <div className="ds-page flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
             <span className="text-4xl">⚠️</span>
@@ -66,7 +66,7 @@ export function SuccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-rose-900 flex items-center justify-center p-4">
+    <div className="ds-page flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}

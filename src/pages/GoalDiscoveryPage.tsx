@@ -184,7 +184,7 @@ export const GoalDiscoveryPage = () => {
 
     const phaseContent: Record<string, { icon: React.ReactNode; title: string; subtitle: string }> = {
       extracting: {
-        icon: <Sparkles className="w-7 h-7 text-blue-300 animate-pulse" />,
+        icon: <Sparkles className="w-7 h-7 text-ink-secondary animate-pulse" />,
         title: 'Understanding your goal...',
         subtitle: 'I\'m making sense of what you told me.',
       },
@@ -229,7 +229,7 @@ export const GoalDiscoveryPage = () => {
             </div>
           </div>
           <h2 className="text-2xl font-bold text-white mb-3">{content.title}</h2>
-          <p className="text-blue-200/70 text-base mb-8">{content.subtitle}</p>
+          <p className="text-ink-secondary text-base mb-8">{content.subtitle}</p>
 
           {phase === 'complete' && (
             <motion.button
@@ -302,11 +302,11 @@ export const GoalDiscoveryPage = () => {
                 border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
               }}
             >
-              <Sparkles className="w-6 h-6 text-blue-300" />
+              <Sparkles className="w-6 h-6 text-ink-secondary" />
             </div>
           </div>
           <h1 className="text-xl font-bold text-white">Velvet</h1>
-          <p className="text-blue-200/50 text-sm mt-1">Let's find what you're working toward</p>
+          <p className="text-ink-muted text-sm mt-1">Let's find what you're working toward</p>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-3 mb-4 min-h-0">
@@ -384,7 +384,7 @@ export const GoalDiscoveryPage = () => {
                 placeholder="Type your answer..."
                 rows={1}
                 disabled={isThinking}
-                className="flex-1 px-4 py-3 rounded-2xl border text-[15px] text-white placeholder:text-blue-200/40 focus:outline-none resize-none overflow-hidden transition-all"
+                className="flex-1 px-4 py-3 rounded-2xl border text-[15px] text-white placeholder:text-ink-subtle focus:outline-none resize-none overflow-hidden transition-all"
                 style={{
                   background: VELVET_THEME.colors.glassCard,
                   borderColor: VELVET_THEME.colors.glassBorder,
