@@ -18,4 +18,4 @@ export { PageHeader } from './PageHeader';
 export { Pill, Segmented } from './Pill';
 export { SectionHeader } from './SectionHeader';
 export { Badge } from './Badge';
-export { DesignVariantSwitch } from './DesignVariantSwitch';
+export { HomeLayoutSwitch } from './HomeLayoutSwitch';

@@ -24,13 +24,13 @@ import { CreateGroupChatModal } from '../components/CreateGroupChatModal';
 import { getGroupChats, createGroupChat, deleteGroupChat, GroupChatWithMembers } from '../services/groupChatService';
 import {
   Button, ModalShell, LoadingState, EmptyState,
-  PageShell, Pill, SectionHeader, Badge, DesignVariantSwitch,
+  PageShell, Pill, SectionHeader, Badge, HomeLayoutSwitch,
 } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
 import { CustomizationPanel } from '../components/CustomizationPanel';
 import { useCustomization } from '../hooks/useCustomization';
 import { POINTER_SYMBOLS } from '../services/customizationService';
-import { useMotivationalQuote } from '../hooks/useMotivationalQuote';
+
 import { newsService } from '../services/newsService';
 import {
   HubTile, CompanionCard, AddCompanionCard, GroupChatCard, GameCard,
@@ -168,7 +168,7 @@ export function CompanionLobbyPage() {
     dismissUnlockNotice,
   } = useCustomization();
 
-  const dailyQuote = useMotivationalQuote();
+
   const { muted, toggleMute } = useAudioScene();
 
   useEffect(() => { loadData(); }, []);
@@ -423,7 +423,7 @@ export function CompanionLobbyPage() {
           <h1 className="ds-title-gradient text-3xl md:text-4xl font-bold font-display truncate">Velvet Lobby</h1>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-          <DesignVariantSwitch mode="compact" className="hidden md:inline-flex" />
+          <HomeLayoutSwitch mode="compact" className="hidden md:inline-flex" />
           <Pill
             onClick={toggleMute}
             title={muted ? 'Unmute music' : 'Mute music'}
@@ -466,26 +466,7 @@ export function CompanionLobbyPage() {
         </div>
       </header>
 
-      {dailyQuote && (
-        <div className="mb-6 text-center px-4">
-          <p className="text-sm md:text-base italic leading-relaxed max-w-2xl mx-auto" style={{ color: 'var(--ds-quote-fg)' }}>
-            &ldquo;{dailyQuote.text}&rdquo;
-            {dailyQuote.author && dailyQuote.author !== 'Velvet' && (
-              <span className="not-italic text-xs ml-2" style={{ color: 'var(--ds-quote-by)' }}>— {dailyQuote.author}</span>
-            )}
-          </p>
-          <div className="flex items-center justify-center gap-3 mt-2">
-            {customization && customization.current_streak > 0 && (
-              <Badge tone="#fbbf24" icon={<Flame className="w-3 h-3" />}>{customization.current_streak}d streak</Badge>
-            )}
-            {checkedInToday && customization && customization.current_streak === 0 && (
-              <Badge tone="#4ade80">Checked in</Badge>
-            )}
-          </div>
-        </div>
-      )}
-
-      {!dailyQuote && (customization?.current_streak ?? 0) > 0 && (
+      {(customization?.current_streak ?? 0) > 0 && (
         <div className="mb-6 flex justify-center">
           <Badge tone="#fbbf24" icon={<Flame className="w-3 h-3" />}>{customization!.current_streak}d streak</Badge>
         </div>
@@ -626,7 +607,7 @@ export function CompanionLobbyPage() {
         <SectionHeader
           icon={Gamepad2}
           title={<span id="games-title">Games &amp; Activities</span>}
-          badge={<Badge tone="#f59e0b" className="ml-1 tracking-wide">Under Development</Badge>}
+
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {GAMES.map((game, i) => (

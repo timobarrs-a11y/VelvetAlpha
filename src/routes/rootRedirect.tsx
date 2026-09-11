@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
+import { getHomeLayout } from '../hooks/useHomeLayout';
 import { AuthSpinner } from '../components/auth/AuthSpinner';
 import { supabase } from '../shared/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -112,6 +113,8 @@ export function RootRedirect() {
 
       const companions = await getCompanions(user.id);
 
+      const homeLayout = getHomeLayout();
+
       if (companions.length === 0) {
         const currentCompanionId = sessionStorage.getItem('currentCompanionId');
         const matchAnswers = sessionStorage.getItem('matchAnswers');
@@ -133,6 +136,10 @@ export function RootRedirect() {
         } else {
           setDestination('/user-questionnaire');
         }
+      } else if (homeLayout === 'new') {
+        sessionStorage.removeItem('currentCompanionId');
+        sessionStorage.removeItem('matchAnswers');
+        setDestination('/daily-feed');
       } else if (companions.length === 1) {
         const pendingId = sessionStorage.getItem('currentCompanionId');
         const targetId = pendingId && companions[0].id === pendingId

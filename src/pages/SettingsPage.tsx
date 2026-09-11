@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings as SettingsIcon, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Users, MessageSquareWarning } from 'lucide-react';
-import { PageHeader, DesignVariantSwitch } from '../shared/ui';
+import { PageHeader, HomeLayoutSwitch } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { gdprService } from '../services/gdprService';
 import { onboardingService } from '../services/onboardingService';
@@ -500,9 +500,9 @@ export function SettingsPage() {
                   </div>
 
                   <div className="mb-6">
-                    <p className="text-sm font-medium text-white/70 mb-1">Design System (A/B)</p>
-                    <p className="text-white/40 text-sm mb-3">Compare the current look with the unified Velvet design. Applies instantly across the app and is remembered on this device.</p>
-                    <DesignVariantSwitch mode="full" />
+                    <p className="text-sm font-medium text-white/70 mb-1">Home Layout</p>
+                    <p className="text-white/40 text-sm mb-3">Switch between the classic lobby and the new daily-feed home. Applies instantly and is remembered on this device.</p>
+                    <HomeLayoutSwitch mode="full" />
                   </div>
 
                   <div className="rounded-xl p-4 border border-white/10" style={{ background: 'rgba(255,255,255,0.03)' }}>

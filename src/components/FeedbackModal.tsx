@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Send, CheckCircle } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { ModalShell, Input, Textarea, Button } from '../shared/ui';
+import { getHomeLayout } from '../hooks/useHomeLayout';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -40,7 +41,8 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
           feedback_type: feedbackType,
           message: message.trim(),
           page_url: window.location.href,
-          status: 'new'
+          status: 'new',
+          home_layout_preference: getHomeLayout()
         });
 
       if (insertError) throw insertError;
