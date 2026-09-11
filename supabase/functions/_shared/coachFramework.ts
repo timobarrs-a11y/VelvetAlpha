@@ -242,3 +242,99 @@ ${checkInLine(checkInStyle)}
 
 You are ${coachName}. Make them trust your judgment and leave every conversation one concrete step closer to what they came here for.`;
 }
+
+// ============================================================================
+// BACKGROUND ACCOUNTABILITY NUDGES
+//
+// The two coaching cron jobs (sweep-overdue-commitments, proactive-check-in-
+// scheduler) used to send one generic, always-gentle message no matter what
+// accountability dial a coach was configured with — so a "Drill Sergeant"
+// (firm) coach sounded identical to "The Hype Coach" (gentle) when following
+// up. These builders keep that background messaging in the same voice as the
+// live system prompt above, driven by the same two dials.
+// ============================================================================
+
+/**
+ * A coach only pings the user on its own initiative if its check-in style
+ * says so. A 'responsive' coach explicitly "follows their lead on timing and
+ * never piles on unsolicited pressure" in the live prompt — background jobs
+ * must honor that, or the coach contradicts its own stated behavior.
+ */
+export function coachSelfInitiates(checkInStyle: CheckInStyle | null | undefined): boolean {
+  return checkInStyle === 'proactive' || checkInStyle === 'structured';
+}
+
+/**
+ * How long a coach lets a conversation go quiet before it follows up on its
+ * own. Firm coaches show up sooner — that's the point of "firm".
+ */
+export function checkInStalenessHours(accountabilityLevel: AccountabilityLevel | null | undefined): number {
+  switch (accountabilityLevel) {
+    case 'firm':
+      return 18;
+    case 'gentle':
+      return 30;
+    case 'moderate':
+    default:
+      return 24;
+  }
+}
+
+/**
+ * Background message sent when a commitment's due date has passed. Mirrors
+ * the tone of `accountabilityLine` above — a firm coach asks what happened
+ * and what the plan is now; a gentle coach stays supportive and low-pressure.
+ */
+export function buildOverdueCommitmentNudge(input: {
+  description: string;
+  accountabilityLevel: AccountabilityLevel | null | undefined;
+}): string {
+  const { description, accountabilityLevel } = input;
+  switch (accountabilityLevel) {
+    case 'firm':
+      return `You said you'd do "${description}" — that due date passed and it's still open. What happened, and what's the plan to get it done now?`;
+    case 'moderate':
+      return `Circling back on "${description}" — the due date passed. How'd it go, and if it didn't happen, what got in the way?`;
+    case 'gentle':
+    default:
+      return `Following up on your commitment to "${description}" — it looks like the due date passed. How did it go? No judgment, just want to help you get back on track.`;
+  }
+}
+
+/**
+ * Background daily-style check-in message, only ever sent to coaches whose
+ * check-in style makes that appropriate (see `coachSelfInitiates`). If there
+ * is an open commitment, it directly asks whether it got done — a firm coach
+ * asks "if not, why"; if there is none, it's a general progress nudge on the
+ * coach's domain.
+ */
+export function buildDailyCheckInNudge(input: {
+  domain: string | null;
+  accountabilityLevel: AccountabilityLevel | null | undefined;
+  commitmentDescription?: string | null;
+}): string {
+  const { domain, accountabilityLevel, commitmentDescription } = input;
+  const focus = domain || 'your goal';
+
+  if (commitmentDescription) {
+    switch (accountabilityLevel) {
+      case 'firm':
+        return `Check-in: did you do "${commitmentDescription}"? If not, why — and what's the new plan?`;
+      case 'moderate':
+        return `Quick check-in — did you get to "${commitmentDescription}"? Where's that at?`;
+      case 'gentle':
+      default:
+        return `Hey — how'd "${commitmentDescription}" go? No pressure, just want to know where things stand.`;
+    }
+  }
+
+  switch (accountabilityLevel) {
+    case 'firm':
+      return `Daily check-in: what did you get done on ${focus} today, and what's blocking the rest?`;
+    case 'moderate':
+      return `Checking in on ${focus} — what's the update since we last talked?`;
+    case 'gentle':
+    default:
+      return `Hey, just checking in — how are things going with ${focus}?`;
+  }
+}

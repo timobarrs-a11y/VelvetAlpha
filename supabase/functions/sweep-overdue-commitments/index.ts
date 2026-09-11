@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { buildOverdueCommitmentNudge } from '../_shared/coachFramework.ts';
+import { resolveCoachDials } from '../_shared/resolveCoachDials.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,13 +62,26 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (conversation) {
+        const { data: companion } = await supabase
+          .from('companions')
+          .select('signature_expert, signature_expert_source')
+          .eq('id', commitment.companion_id)
+          .maybeSingle();
+
+        const dials = companion
+          ? await resolveCoachDials(supabase, commitment.user_id, companion)
+          : { domain: null, accountabilityLevel: 'moderate' as const, checkInStyle: 'responsive' as const };
+
         await supabase
           .from('conversations')
           .insert({
             user_id: commitment.user_id,
             companion_id: commitment.companion_id,
             role: 'assistant',
-            content: `Following up on your commitment to "${commitment.description}" — it looks like the due date passed. How did it go? No judgment, just want to help you get back on track.`,
+            content: buildOverdueCommitmentNudge({
+              description: commitment.description,
+              accountabilityLevel: dials.accountabilityLevel,
+            }),
             metadata: { type: 'commitment_follow_up', commitment_id: commitment.id },
             client_message_id: `commitment_${commitment.id}_${Date.now()}`,
           });

@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { buildDailyCheckInNudge, coachSelfInitiates, checkInStalenessHours } from '../_shared/coachFramework.ts';
+import { resolveCoachDials } from '../_shared/resolveCoachDials.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,20 +22,26 @@ Deno.serve(async (req: Request) => {
 
     const now = new Date();
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    // Loosest candidate window across all accountability levels (firm coaches
+    // follow up soonest, at 18h). Exact per-coach staleness is checked below,
+    // once we know that coach's actual dials.
+    const loosestCandidateWindow = new Date(now.getTime() - 18 * 60 * 60 * 1000).toISOString();
 
-    // Find mentor companions whose last message was > 24h ago
-    const { data: staleCoaches, error: fetchError } = await supabase
+    // Find candidate mentor companions that MIGHT be stale — narrowed exactly
+    // per-coach below, since how long a coach waits before following up
+    // depends on its accountability level.
+    const { data: candidateCoaches, error: fetchError } = await supabase
       .from('companions')
-      .select('id, user_id, custom_name, last_message_at')
+      .select('id, user_id, custom_name, last_message_at, signature_expert, signature_expert_source')
       .eq('relationship_type', 'mentor')
       .eq('is_active', true)
-      .or(`last_message_at.is.null,last_message_at.lt.${twentyFourHoursAgo}`);
+      .or(`last_message_at.is.null,last_message_at.lt.${loosestCandidateWindow}`);
 
     if (fetchError) {
       throw new Error(`Failed to fetch stale coaches: ${fetchError.message}`);
     }
 
-    if (!staleCoaches || staleCoaches.length === 0) {
+    if (!candidateCoaches || candidateCoaches.length === 0) {
       return new Response(
         JSON.stringify({ processed: 0, message: 'No stale coaches' }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -41,7 +49,19 @@ Deno.serve(async (req: Request) => {
     }
 
     let processed = 0;
-    for (const coach of staleCoaches) {
+    for (const coach of candidateCoaches) {
+      const dials = await resolveCoachDials(supabase, coach.user_id, coach);
+
+      // A 'responsive' coach never self-initiates — it "follows their lead
+      // on timing" per its own system prompt. Background jobs must honor
+      // that, not just the live chat prompt.
+      if (!coachSelfInitiates(dials.checkInStyle)) continue;
+
+      // Per-coach staleness: firm coaches follow up sooner than gentle ones.
+      const staleAfterMs = checkInStalenessHours(dials.accountabilityLevel) * 60 * 60 * 1000;
+      const lastMessageAt = coach.last_message_at ? new Date(coach.last_message_at).getTime() : 0;
+      if (now.getTime() - lastMessageAt < staleAfterMs) continue;
+
       // Check if there's already a proactive message in the last 24h
       const { data: recentProactive } = await supabase
         .from('conversations')
@@ -54,7 +74,7 @@ Deno.serve(async (req: Request) => {
 
       if (recentProactive && recentProactive.length > 0) continue;
 
-      // Fetch open commitments for a personalized check-in
+      // Fetch open commitments for a personalized, accountability-aware check-in
       const { data: openCommitments } = await supabase
         .from('coaching_commitments')
         .select('description, due_date')
@@ -64,18 +84,11 @@ Deno.serve(async (req: Request) => {
         .order('due_date', { ascending: true })
         .limit(1);
 
-      let checkInText: string;
-      if (openCommitments && openCommitments.length > 0) {
-        const c = openCommitments[0];
-        checkInText = `Hey — checking in on your commitment to "${c.description}". How's it going?`;
-      } else {
-        const greetings = [
-          "Hey, haven't heard from you in a bit. How are things going with your goals?",
-          "Checking in! What's been on your mind lately?",
-          "Just wanted to see how you're doing. Any progress you want to talk through?",
-        ];
-        checkInText = greetings[Math.floor(Math.random() * greetings.length)];
-      }
+      const checkInText = buildDailyCheckInNudge({
+        domain: dials.domain,
+        accountabilityLevel: dials.accountabilityLevel,
+        commitmentDescription: openCommitments && openCommitments.length > 0 ? openCommitments[0].description : null,
+      });
 
       await supabase
         .from('conversations')
@@ -98,7 +111,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ processed, total: staleCoaches.length }),
+      JSON.stringify({ processed, total: candidateCoaches.length }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
