@@ -1,42 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, Heart, Users, Crown, Cherry, Zap, Circle,
   Rocket, LogOut, Gamepad2, Lightbulb, FileText, User,
-  UsersRound, Calendar, Youtube, Newspaper, MessageSquare,
+  UsersRound, Calendar, Youtube, Newspaper,
   Info, Plus,
   Sparkles, Flame, Wand2, Volume2, VolumeX, Bot, MapPin, Brain,
   HelpCircle,
 } from 'lucide-react';
-import { getCorrespondentById } from '../config/signatureCorrespondents';
-import { correspondentSyncService } from '../services/correspondentSyncService';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
-import { supabase } from '../shared/supabase/client';
-import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
-import { authService } from '../services/authService';
-import FeedbackModal from '../components/FeedbackModal';
-import { Avatar } from '../components/Avatar';
-import { SubscriptionBanner } from '../components/SubscriptionBanner';
-import { useSubscription } from '../hooks/useSubscription';
-import { CreateGroupChatModal } from '../components/CreateGroupChatModal';
-import { getGroupChats, createGroupChat, deleteGroupChat, GroupChatWithMembers } from '../services/groupChatService';
 import {
   Button, ModalShell, LoadingState, EmptyState,
   PageShell, Pill, SectionHeader, Badge, HomeLayoutSwitch,
 } from '../shared/ui';
-import { toast } from '../shared/ui/Toast';
+import { SubscriptionBanner } from '../components/SubscriptionBanner';
+import { useSubscription } from '../hooks/useSubscription';
+import { CreateGroupChatModal } from '../components/CreateGroupChatModal';
 import { CustomizationPanel } from '../components/CustomizationPanel';
 import { useCustomization } from '../hooks/useCustomization';
 import { POINTER_SYMBOLS } from '../services/customizationService';
-
-import { newsService } from '../services/newsService';
+import FeedbackModal from '../components/FeedbackModal';
+import { Avatar } from '../components/Avatar';
 import {
   HubTile, CompanionCard, AddCompanionCard, GroupChatCard, GameCard,
   TONE_COLOR, GROUP_TONE, companionAvatarConfig,
 } from '../components/lobby';
 import type { HubTileSize } from '../components/lobby';
+import { useLobbyData, GAMES, NAV_CONFIGS, GAME_CONFIGS } from '../hooks/useLobbyData';
 
 interface GameEntry {
   id: string;
@@ -48,21 +40,6 @@ interface GameEntry {
   requiresCompanion?: boolean;
 }
 
-const GAMES: GameEntry[] = [
-  { id: 'checkers',     name: 'Checkers',        description: 'Challenge an AI opponent with personality and banter',           icon: Crown,     iconBg: 'from-amber-500 to-orange-500',   path: '/checkers' },
-  { id: 'momentum',     name: 'Momentum',        description: 'AI-generated platformer — each run has a unique hand-crafted world', icon: Zap,       iconBg: 'from-cyan-500 to-blue-600',      path: '/momentum' },
-  { id: 'slime-soccer', name: 'Slime Soccer',    description: 'Classic physics-based slime soccer showdown',                        icon: Circle,    iconBg: 'from-fuchsia-500 to-pink-600',   path: '/slime-soccer' },
-  { id: 'stellar',      name: 'Stellar Pursuit', description: 'Space shooter — navigate 9 sectors to rescue your family',          icon: Rocket,    iconBg: 'from-slate-600 to-slate-900',    path: '/stellar-pursuit' },
-  { id: 'money-grab',   name: 'Money Grab',      description: 'Race to collect cash while dodging hammers and your companion',      icon: Cherry,    iconBg: 'from-yellow-400 to-orange-500',  requiresCompanion: true },
-  { id: 'social-combat',  name: 'Social Combat',   description: 'Read emotions and master the art of conversation',                           icon: Brain,   iconBg: 'from-violet-500 to-indigo-600', path: '/social-combat' },
-];
-
-/**
- * Hub feature tiles.
- *  - `accent`  drives variant B tint + the navigation splash colour.
- *  - `solidBg` is the variant-A (current design) solid background.
- *  - `slot`    places the tile in the hub layout.
- */
 interface HubTileDef {
   id: string;
   label: string;
@@ -123,40 +100,16 @@ const HUB_TILES: HubTileDef[] = [
   },
 ];
 
-const NAV_CONFIGS: Record<string, { icon: typeof Newspaper; label: string; accentColor: string; bgColor: string }> = {
-  '/daily-feed':  { icon: Newspaper,    label: 'Loading your feed...',      accentColor: '#34d399', bgColor: '#061412' },
-  '/videos':      { icon: Youtube,      label: 'Loading Your Lens...',      accentColor: '#f43f5e', bgColor: '#120008' },
-  '/calendar':    { icon: Calendar,     label: 'Loading your calendar...',  accentColor: '#fb923c', bgColor: '#120800' },
-  '/insights':    { icon: Lightbulb,    label: 'Loading your insights...',  accentColor: '#38bdf8', bgColor: '#040d18' },
-  '/co-author':   { icon: FileText,     label: 'Loading Co-Author...',      accentColor: '#60a5fa', bgColor: '#040c1a' },
-  '/real-or-not': { icon: Zap,          label: 'Loading The Velvet Rope...', accentColor: '#fbbf24', bgColor: '#100c00' },
-  '/atlas':          { icon: Bot,     label: 'Loading Atlas...',  accentColor: '#94a3b8', bgColor: '#050508' },
-  '/local-explorer': { icon: MapPin, label: 'Loading Navi...',   accentColor: '#34d399', bgColor: '#050e0a' },
-  '/profile':     { icon: User,         label: 'Loading your profile...',   accentColor: '#94a3b8', bgColor: '#0a0a0f' },
-  '/lobby':       { icon: Heart,        label: 'Loading lobby...',          accentColor: '#f472b6', bgColor: '#0d1128' },
-};
-
-const GAME_CONFIGS: Record<string, { icon: typeof Crown; label: string; accentColor: string; bgColor: string }> = {
-  '/checkers':        { icon: Crown,     label: 'Loading Checkers...',        accentColor: '#f59e0b', bgColor: '#120900' },
-  '/momentum':        { icon: Zap,       label: 'Loading Momentum...',        accentColor: '#22d3ee', bgColor: '#040e14' },
-  '/slime-soccer':    { icon: Circle,    label: 'Loading Slime Soccer...',    accentColor: '#e879f9', bgColor: '#110014' },
-  '/stellar-pursuit': { icon: Rocket,    label: 'Loading Stellar Pursuit...', accentColor: '#818cf8', bgColor: '#05060f' },
-};
-
 export function CompanionLobbyPage() {
   const navigate = useNavigate();
   const { navigateTo } = useNavigationLoading();
-  const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showGameModal, setShowGameModal] = useState(false);
+  const lobby = useLobbyData();
+  const { muted, toggleMute } = useAudioScene();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
-  const [groupChats, setGroupChats] = useState<GroupChatWithMembers[]>([]);
-  const { subscriptionInfo } = useSubscription();
   const {
     customization,
-    checkedInToday,
+    checkedInToday: _checkedInToday,
     justUnlocked,
     setPointer,
     setShowTrail,
@@ -167,170 +120,20 @@ export function CompanionLobbyPage() {
     setTranslucentUI,
     dismissUnlockNotice,
   } = useCustomization();
+  const { subscriptionInfo } = useSubscription();
 
-
-  const { muted, toggleMute } = useAudioScene();
-
-  useEffect(() => { loadData(); }, []);
-
-  const refreshDailyFeedInBackground = async () => {
-    try {
-      const now = Date.now();
-      const SIX_HOURS = 6 * 60 * 60 * 1000;
-      const last = Number(sessionStorage.getItem('velvet_lobby_news_refresh') || 0);
-      if (now - last < SIX_HOURS) return;
-      sessionStorage.setItem('velvet_lobby_news_refresh', String(now));
-
-      const interests = await newsService.getUserAllInterests();
-      if (interests.length === 0) return;
-      await newsService.fetchLatestNews(interests);
-    } catch {
-      /* best-effort background refresh */
-    }
-  };
-
-  const syncCorrespondentsInBackground = async () => {
-    try {
-      const now = Date.now();
-      const ONE_HOUR = 60 * 60 * 1000;
-      const last = Number(sessionStorage.getItem('velvet_correspondent_sync') || 0);
-      if (now - last < ONE_HOUR) return;
-      sessionStorage.setItem('velvet_correspondent_sync', String(now));
-
-      const result = await correspondentSyncService.sync();
-      if (result && result.success && (result.created.length > 0 || result.removed.length > 0)) {
-        // Reload companions if correspondents were added or removed
-        await loadData();
-        if (result.created.length > 0) {
-          const names = result.created.map(id => getCorrespondentById(id)?.name || id);
-          toast.success(`${names.join(', ')} ${result.created.length > 1 ? 'are' : 'is'} now writing for you!`);
-        }
-      }
-    } catch {
-      /* best-effort background sync */
-    }
-  };
-
-  const loadData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { navigate('/create-user-avatar'); return; }
-    const [companionsList, groupsList] = await Promise.all([
-      getCompanions(user.id),
-      getGroupChats(),
-    ]);
-    setCompanions(companionsList);
-    setGroupChats(groupsList);
-    setLoading(false);
-    refreshDailyFeedInBackground();
-    syncCorrespondentsInBackground();
-  };
-
-  const handleCreateGroupChat = async (name: string, companionIds: string[]) => {
-    const group = await createGroupChat(name, companionIds);
-    if (group) navigateTo(`/group-chat?group=${group.id}`, {
-      icon: UsersRound,
-      label: 'Loading group chat...',
-      accentColor: '#2dd4bf',
-      bgColor: '#040e0c',
-    });
-  };
-
-  const [confirmModal, setConfirmModal] = useState<{
-    title: string;
-    message: string;
-    onConfirm: () => Promise<void>;
-  } | null>(null);
-
-  const handleDeleteGroupChat = async (groupId: string, groupName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setConfirmModal({
-      title: 'Delete Group Chat',
-      message: `Delete "${groupName}"? This will remove all messages.`,
-      onConfirm: async () => {
-        const ok = await deleteGroupChat(groupId);
-        if (ok) setGroupChats(prev => prev.filter(g => g.id !== groupId));
-        setConfirmModal(null);
-      },
-    });
-  };
-
-  const handleGroupChatClick = () => {
-    if (companions.length < 2) {
-      toast.error('Create at least 2 companions to start a group chat!');
-    } else {
-      setShowCreateGroupModal(true);
-    }
-  };
-
-  const handleDeleteCompanion = async (companionId: string, companionName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setConfirmModal({
-      title: 'Delete Companion',
-      message: `Delete ${companionName}? This will remove all conversation history.`,
-      onConfirm: async () => {
-        try {
-          const { error } = await supabase.from('companions').delete().eq('id', companionId);
-          if (error) throw error;
-          setConfirmModal(null);
-          await loadData();
-        } catch {
-          setConfirmModal(null);
-          toast.error('Failed to delete companion. Please try again.');
-        }
-      },
-    });
-  };
-
-  const handleNewCompanion = () => {
-    navigate(companions.length > 0 ? '/create-additional-companion' : '/companion-path');
-  };
-
-  const handleNewCoach = () => {
-    sessionStorage.setItem('onboardingIntent', 'coaches');
-    sessionStorage.setItem('onboardingRelationshipType', 'mentor');
-    navigate('/expert-selection');
-  };
-
-  const handleGameClick = (game: GameEntry) => {
-    if (game.requiresCompanion) {
-      setShowGameModal(true);
-    } else if (game.path) {
-      const cfg = GAME_CONFIGS[game.path];
-      if (cfg) {
-        navigateTo(game.path, cfg);
-      } else {
-        navigate(game.path);
-      }
-    }
-  };
-
-  const handleSignOut = async () => {
-    await authService.signOut();
-    navigate('/splash');
-  };
-
-
-  const openHubPath = (p: string) => {
-    const cfg = NAV_CONFIGS[p];
-    if (cfg) navigateTo(p, cfg); else navigate(p);
-  };
+  const {
+    companions,
+    groupChats,
+    loading,
+    showGameModal,
+    showCreateGroupModal,
+    confirmModal,
+  } = lobby;
 
   const handleTileClick = (tile: HubTileDef) => {
-    if (tile.isGroupChat) { handleGroupChatClick(); return; }
-    if (tile.path) openHubPath(tile.path);
-  };
-
-  const openCompanion = (companion: CompanionWithLastMessage) => {
-    const tone = companion.relationship_type === 'mentor'
-      ? { icon: MessageCircle, label: `Loading ${companion.custom_name || 'your coach'}...`, accentColor: TONE_COLOR.coach, bgColor: '#020e08' }
-      : companion.relationship_type === 'correspondent'
-        ? { icon: Newspaper, label: `Loading ${companion.custom_name || 'your correspondent'}...`, accentColor: '#f59e0b', bgColor: '#120c00' }
-        : { icon: MessageCircle, label: `Loading ${companion.custom_name || 'your companion'}...`, accentColor: companion.favorite_color || TONE_COLOR.voice, bgColor: '#0a0410' };
-    navigateTo(`/chat?companion=${companion.id}`, tone);
-  };
-
-  const openGroup = (groupId: string) => {
-    navigateTo(`/group-chat?group=${groupId}`, { icon: UsersRound, label: 'Loading group chat...', accentColor: GROUP_TONE, bgColor: '#040e0c' });
+    if (tile.isGroupChat) { lobby.handleGroupChatClick(); return; }
+    if (tile.path) lobby.openHubPath(tile.path);
   };
 
   if (loading) {
@@ -356,7 +159,7 @@ export function CompanionLobbyPage() {
           <p className="text-ink-muted text-sm mb-8 leading-relaxed">
             Answer a few quick questions and we will match you with the perfect companion.
           </p>
-          <Button fullWidth size="lg" onClick={handleNewCompanion}>Get Started</Button>
+          <Button fullWidth size="lg" onClick={lobby.handleNewCompanion}>Get Started</Button>
         </motion.div>
       </PageShell>
     );
@@ -458,7 +261,7 @@ export function CompanionLobbyPage() {
           </Pill>
           <Pill
             variant="quiet"
-            onClick={handleSignOut}
+            onClick={lobby.handleSignOut}
             title="Sign out"
             aria-label="Sign out"
             icon={<LogOut className="w-4 h-4" />}
@@ -507,8 +310,8 @@ export function CompanionLobbyPage() {
               companion={companion}
               tone="voice"
               delay={i * 0.04}
-              onOpen={() => openCompanion(companion)}
-              onDelete={(e) => handleDeleteCompanion(companion.id, companion.custom_name, e)}
+              onOpen={() => lobby.openCompanion(companion)}
+              onDelete={(e) => lobby.handleDeleteCompanion(companion.id, companion.custom_name, e)}
             />
           ))}
           <AddCompanionCard
@@ -516,7 +319,7 @@ export function CompanionLobbyPage() {
             subtitle="Add a new companion"
             tone="voice"
             delay={voices.length * 0.04}
-            onClick={handleNewCompanion}
+            onClick={lobby.handleNewCompanion}
           />
         </div>
       </section>
@@ -531,8 +334,8 @@ export function CompanionLobbyPage() {
               companion={companion}
               tone="coach"
               delay={i * 0.04}
-              onOpen={() => openCompanion(companion)}
-              onDelete={(e) => handleDeleteCompanion(companion.id, companion.custom_name, e)}
+              onOpen={() => lobby.openCompanion(companion)}
+              onDelete={(e) => lobby.handleDeleteCompanion(companion.id, companion.custom_name, e)}
             />
           ))}
           <AddCompanionCard
@@ -540,7 +343,7 @@ export function CompanionLobbyPage() {
             subtitle="Find your next expert"
             tone="coach"
             delay={coaches.length * 0.04}
-            onClick={handleNewCoach}
+            onClick={lobby.handleNewCoach}
           />
         </div>
       </section>
@@ -555,12 +358,11 @@ export function CompanionLobbyPage() {
               companion={companion}
               tone="correspondent"
               delay={i * 0.04}
-              onOpen={() => openCompanion(companion)}
-              onDelete={(e) => handleDeleteCompanion(companion.id, companion.custom_name, e)}
+              onOpen={() => lobby.openCompanion(companion)}
+              onDelete={(e) => lobby.handleDeleteCompanion(companion.id, companion.custom_name, e)}
             />
           ))}
 
-          {/* Auto-provisioned correspondent explainer — no manual add */}
           {correspondents.length > 0 && (
             <div className="col-span-full mt-2">
               <div className="ds-card ds-card--sunken flex items-center gap-3 p-4"
@@ -583,7 +385,7 @@ export function CompanionLobbyPage() {
             tone={GROUP_TONE}
             title={<span id="groups-title">Group Chats</span>}
             action={
-              <Pill size="sm" tone={GROUP_TONE} icon={<Plus className="w-3.5 h-3.5" />} onClick={handleGroupChatClick}>
+              <Pill size="sm" tone={GROUP_TONE} icon={<Plus className="w-3.5 h-3.5" />} onClick={lobby.handleGroupChatClick}>
                 New Group
               </Pill>
             }
@@ -594,8 +396,8 @@ export function CompanionLobbyPage() {
                 key={group.id}
                 group={group}
                 delay={i * 0.04}
-                onOpen={() => openGroup(group.id)}
-                onDelete={(e) => handleDeleteGroupChat(group.id, group.name, e)}
+                onOpen={() => lobby.openGroup(group.id)}
+                onDelete={(e) => lobby.handleDeleteGroupChat(group.id, group.name, e)}
               />
             ))}
           </div>
@@ -607,7 +409,6 @@ export function CompanionLobbyPage() {
         <SectionHeader
           icon={Gamepad2}
           title={<span id="games-title">Games &amp; Activities</span>}
-
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {GAMES.map((game, i) => (
@@ -618,14 +419,14 @@ export function CompanionLobbyPage() {
               icon={game.icon}
               iconBg={game.iconBg}
               delay={i * 0.04}
-              onClick={() => handleGameClick(game)}
+              onClick={() => lobby.handleGameClick(game)}
             />
           ))}
         </div>
       </section>
 
       {/* Game partner modal */}
-      <ModalShell isOpen={showGameModal} onClose={() => setShowGameModal(false)} title="Choose Your Partner" size="md">
+      <ModalShell isOpen={showGameModal} onClose={() => lobby.setShowGameModal(false)} title="Choose Your Partner" size="md">
         <p className="text-sm text-ink-muted mb-5">Select a companion to play with:</p>
         {companions.length === 0 ? (
           <EmptyState icon={<Users className="w-8 h-8" />} title="No companions yet" description="Create a companion first to play games together." />
@@ -635,7 +436,7 @@ export function CompanionLobbyPage() {
               <motion.button key={companion.id}
                 whileHover={{ scale: 1.015 }}
                 whileTap={{ scale: 0.985 }}
-                onClick={() => { setShowGameModal(false); navigateTo(`/pacman?companion=${companion.id}`, { icon: Gamepad2, label: 'Loading game...', accentColor: '#facc15', bgColor: '#0a0900' }); }}
+                onClick={() => { lobby.setShowGameModal(false); navigateTo(`/pacman?companion=${companion.id}`, { icon: Gamepad2, label: 'Loading game...', accentColor: '#facc15', bgColor: '#0a0900' }); }}
                 className="ds-card ds-card--interactive p-4 text-left"
                 style={{ background: 'var(--ds-surface-2)' }}>
                 <div className="flex items-center gap-3">
@@ -668,21 +469,21 @@ export function CompanionLobbyPage() {
         className="fixed bottom-6 right-6 w-13 h-13 bg-gradient-to-br from-primary-500 to-pink-500 hover:from-primary-600 hover:to-pink-600 text-white rounded-full shadow-glow hover:shadow-glow-lg transition-all duration-200 flex items-center justify-center z-40 group"
         title="Send Feedback"
         aria-label="Send Feedback">
-        <MessageSquare className="w-5 h-5 group-hover:scale-110 transition-transform" />
+        <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
       </motion.button>
 
       <FeedbackModal isOpen={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
       <CreateGroupChatModal
         isOpen={showCreateGroupModal}
-        onClose={() => setShowCreateGroupModal(false)}
+        onClose={() => lobby.setShowCreateGroupModal(false)}
         companions={companions}
-        onCreateGroup={handleCreateGroupChat}
+        onCreateGroup={lobby.handleCreateGroupChat}
       />
 
-      <ModalShell isOpen={!!confirmModal} onClose={() => setConfirmModal(null)} title={confirmModal?.title ?? ''} size="sm">
+      <ModalShell isOpen={!!confirmModal} onClose={() => lobby.setConfirmModal(null)} title={confirmModal?.title ?? ''} size="sm">
         <p className="text-sm text-ink-muted mb-6">{confirmModal?.message}</p>
         <div className="flex gap-3 justify-end">
-          <Button variant="ghost" size="sm" onClick={() => setConfirmModal(null)}>Cancel</Button>
+          <Button variant="ghost" size="sm" onClick={() => lobby.setConfirmModal(null)}>Cancel</Button>
           <Button variant="danger" size="sm" onClick={() => confirmModal?.onConfirm()}>Delete</Button>
         </div>
       </ModalShell>
@@ -701,7 +502,7 @@ export function CompanionLobbyPage() {
           onSetButtonHoverStyle={setButtonHoverStyle}
           onSetTranslucentUI={setTranslucentUI}
           onCompanionFontUpdated={(companionId, fontFamily) => {
-            setCompanions(prev =>
+            lobby.setCompanionsList(prev =>
               prev.map(c => c.id === companionId ? { ...c, font_family: fontFamily } : c)
             );
           }}

@@ -139,7 +139,7 @@ export function RootRedirect() {
       } else if (homeLayout === 'new') {
         sessionStorage.removeItem('currentCompanionId');
         sessionStorage.removeItem('matchAnswers');
-        setDestination('/daily-feed');
+        setDestination('/lobby');
       } else if (companions.length === 1) {
         const pendingId = sessionStorage.getItem('currentCompanionId');
         const targetId = pendingId && companions[0].id === pendingId

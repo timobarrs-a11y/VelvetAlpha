@@ -4,7 +4,7 @@ import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 
 const App = lazy(() => import('../App'));
-const CompanionLobbyPage = lazy(() => import('../pages/CompanionLobbyPage').then(m => ({ default: m.CompanionLobbyPage })));
+const HomeSwitcher = lazy(() => import('../pages/HomeSwitcher').then(m => ({ default: m.HomeSwitcher })));
 const ProfilePage = lazy(() => import('../pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const InsightsPage = lazy(() => import('../pages/InsightsPage').then(m => ({ default: m.InsightsPage })));
 const GroupChatPage = lazy(() => import('../pages/GroupChatPage').then(m => ({ default: m.GroupChatPage })));
@@ -33,7 +33,7 @@ function P(el: React.ReactNode) {
 }
 
 export const appRoutes = [
-  <Route key="lobby" path="/lobby" element={P(<CompanionLobbyPage />)} />,
+  <Route key="lobby" path="/lobby" element={P(<HomeSwitcher />)} />,
   <Route key="profile" path="/profile" element={P(<ProfilePage />)} />,
   <Route key="insights" path="/insights" element={P(<InsightsPage />)} />,
   <Route key="chat" path="/chat" element={P(<App />)} />,
