@@ -6,7 +6,7 @@ import { supabase } from '../shared/supabase/client';
 import { createCompanion } from '../services/companionService';
 import { userProfileService } from '../services/userProfileService';
 import { toast } from '../shared/ui/Toast';
-import { generateRandomCompanionProfile } from '../utils/companionRandomizer';
+import { generateRandomCompanionProfile, deriveUserInterests } from '../utils/companionRandomizer';
 import { ambientProfileService } from '../services/ambientProfileService';
 
 interface QuestionData {
@@ -899,7 +899,9 @@ export function QuestionnairePage() {
       companionName: randomProfile.customName,
     };
     setAnswers(mergedAnswers);
-    createCompanionFromAnswers(mergedAnswers).then(() => {
+    const { hobbies, news_categories } = deriveUserInterests(randomProfile.interestPreference);
+    userProfileService.updateProfile({ hobbies, news_categories }).then(() =>
+    createCompanionFromAnswers(mergedAnswers)).then(() => {
       const companionId = sessionStorage.getItem('currentCompanionId');
       if (companionId) {
         navigate('/create-companion-avatar', { replace: true });

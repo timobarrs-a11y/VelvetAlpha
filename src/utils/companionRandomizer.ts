@@ -26,6 +26,33 @@ export interface RandomCompanionProfile {
   initiative: string;
 }
 
+const INTEREST_TO_PROFILE: Record<string, { hobbies: string[]; news_categories: string[] }> = {
+  'Pop Culture/Social Media': {
+    hobbies: ['Movies/TV Shows', 'Music (Playing/Listening)', 'Fashion/Shopping', 'Gaming'],
+    news_categories: ['entertainment', 'general'],
+  },
+  'Books/Philosophy': {
+    hobbies: ['Reading', 'Writing', 'Board Games/Puzzles'],
+    news_categories: ['general', 'science'],
+  },
+  'Wellness/Self-Care': {
+    hobbies: ['Yoga/Meditation', 'Cooking', 'Gardening'],
+    news_categories: ['health', 'entertainment'],
+  },
+  'Wellness/Fitness': {
+    hobbies: ['Fitness/Working Out', 'Hiking', 'Yoga/Meditation'],
+    news_categories: ['health', 'sports'],
+  },
+  'Adventure/Travel': {
+    hobbies: ['Travel/Exploring', 'Hiking', 'Photography'],
+    news_categories: ['general', 'science', 'entertainment'],
+  },
+};
+
+export function deriveUserInterests(interestPreference: string): { hobbies: string[]; news_categories: string[] } {
+  return INTEREST_TO_PROFILE[interestPreference] ?? INTEREST_TO_PROFILE['Pop Culture/Social Media'];
+}
+
 export function generateRandomCompanionProfile(
   gender: 'male' | 'female',
   relationshipType: 'friend' | 'romantic'
