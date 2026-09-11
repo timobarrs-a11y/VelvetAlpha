@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion';
-import { Plus, Heart, Brain, Newspaper, Users, MessageCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Heart, Brain, Newspaper, Users, MessageCircle, Trash2 } from 'lucide-react';
 import { Avatar } from '../Avatar';
 import { companionAvatarConfig, TONE_COLOR } from './lobbyUtils';
 import type { CompanionWithLastMessage } from '../../services/companionService';
@@ -9,6 +10,7 @@ interface Props {
   onOpen: (companion: CompanionWithLastMessage) => void;
   onAddCompanion: () => void;
   onAddCoach: () => void;
+  onDelete?: (companion: CompanionWithLastMessage) => void;
 }
 
 function typeIcon(rel: string | null | undefined) {
@@ -25,7 +27,14 @@ function typeColor(rel: string | null | undefined) {
   return '#38bdf8';
 }
 
-export function CompanionStrip({ companions, onOpen, onAddCompanion, onAddCoach }: Props) {
+const LONG_PRESS_MS = 500;
+
+export function CompanionStrip({ companions, onOpen, onAddCompanion, onAddCoach, onDelete }: Props) {
+  const [contextCompanion, setContextCompanion] = useState<CompanionWithLastMessage | null>(null);
+  const [contextPos, setContextPos] = useState<{ x: number; y: number } | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+
   const sorted = [...companions].sort((a, b) => {
     const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
     const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
@@ -34,8 +43,63 @@ export function CompanionStrip({ companions, onOpen, onAddCompanion, onAddCoach 
 
   const hasCoach = companions.some(c => c.relationship_type === 'mentor');
 
+  const clearLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleTouchStart = (companion: CompanionWithLastMessage, e: React.TouchEvent) => {
+    longPressed.current = false;
+    const touch = e.touches[0];
+    const x = touch.clientX;
+    const y = touch.clientY;
+    longPressTimer.current = setTimeout(() => {
+      longPressed.current = true;
+      if (onDelete) {
+        setContextCompanion(companion);
+        setContextPos({ x, y });
+      }
+    }, LONG_PRESS_MS);
+  };
+
+  const handleTouchEnd = () => {
+    clearLongPress();
+  };
+
+  const handleContextMenu = (companion: CompanionWithLastMessage, e: React.MouseEvent) => {
+    if (!onDelete) return;
+    e.preventDefault();
+    setContextCompanion(companion);
+    setContextPos({ x: e.clientX, y: e.clientY });
+  };
+
+  useEffect(() => {
+    const handleClickAway = () => {
+      setContextCompanion(null);
+      setContextPos(null);
+    };
+    if (contextCompanion) {
+      window.addEventListener('click', handleClickAway);
+      window.addEventListener('scroll', handleClickAway, true);
+      return () => {
+        window.removeEventListener('click', handleClickAway);
+        window.removeEventListener('scroll', handleClickAway, true);
+      };
+    }
+  }, [contextCompanion]);
+
+  const handleDeleteClick = () => {
+    if (contextCompanion && onDelete) {
+      onDelete(contextCompanion);
+    }
+    setContextCompanion(null);
+    setContextPos(null);
+  };
+
   return (
-    <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-hide px-1 py-1">
+    <div className="relative flex items-center gap-2.5 overflow-x-auto scrollbar-hide px-1 py-1">
       {sorted.map((companion, i) => {
         const color = typeColor(companion.relationship_type);
         return (
@@ -44,7 +108,14 @@ export function CompanionStrip({ companions, onOpen, onAddCompanion, onAddCoach 
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.03, type: 'spring', stiffness: 260, damping: 20 }}
-            onClick={() => onOpen(companion)}
+            onClick={() => {
+              if (longPressed.current) { longPressed.current = false; return; }
+              onOpen(companion);
+            }}
+            onContextMenu={(e) => handleContextMenu(companion, e)}
+            onTouchStart={(e) => handleTouchStart(companion, e)}
+            onTouchEnd={handleTouchEnd}
+            onTouchMove={clearLongPress}
             className="group flex flex-col items-center gap-1 flex-shrink-0"
             title={companion.custom_name}
           >
@@ -117,6 +188,35 @@ export function CompanionStrip({ companions, onOpen, onAddCompanion, onAddCoach 
           </span>
         </motion.button>
       )}
+
+      {/* Long-press / right-click context menu */}
+      <AnimatePresence>
+        {contextCompanion && contextPos && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.12 }}
+            className="fixed z-50 rounded-xl overflow-hidden shadow-xl"
+            style={{
+              left: Math.min(contextPos.x, window.innerWidth - 160),
+              top: Math.min(contextPos.y, window.innerHeight - 50),
+              background: 'rgba(20, 20, 35, 0.95)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.12)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={handleDeleteClick}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-300 hover:bg-red-500/15 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete {contextCompanion.custom_name}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

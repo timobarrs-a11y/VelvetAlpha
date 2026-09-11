@@ -30,7 +30,10 @@ const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default:
 const CalendarPage = lazy(() => import('./CalendarPage').then(m => ({ default: m.CalendarPage })));
 const CoAuthorPage = lazy(() => import('./CoAuthorPage').then(m => ({ default: m.CoAuthorPage })));
 
-type ContentTab = 'feed' | 'calendar' | 'co-author' | 'insights';
+import { EmbeddedChat } from '../components/hub/EmbeddedChat';
+import { InsightsTeaser } from '../components/hub/InsightsTeaser';
+
+type ContentTab = 'feed' | 'calendar' | 'co-author' | 'insights' | 'chat';
 
 interface SidebarItem {
   id: string;
@@ -56,6 +59,7 @@ export function HomeShellPage() {
   const { muted, toggleMute } = useAudioScene();
 
   const [activeTab, setActiveTab] = useState<ContentTab>('feed');
+  const [activeCompanionId, setActiveCompanionId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
@@ -125,7 +129,7 @@ export function HomeShellPage() {
     {
       id: 'insights', label: 'Insights', sub: 'Know yourself',
       icon: <Lightbulb className="w-3.5 h-3.5" />, color: 'text-amber-400',
-      group: 'life', action: () => navigateTo('/insights', NAV_CONFIGS['/insights']),
+      group: 'life', action: () => setActiveTab('insights'),
     },
     {
       id: 'videos', label: 'Your Lens', sub: 'Picked videos',
@@ -225,9 +229,13 @@ export function HomeShellPage() {
       <div className="px-4 py-2.5 border-b border-white/8 flex-shrink-0">
         <CompanionStrip
           companions={companions}
-          onOpen={lobby.openCompanion}
+          onOpen={(c) => {
+            setActiveCompanionId(c.id);
+            setActiveTab('chat');
+          }}
           onAddCompanion={lobby.handleNewCompanion}
           onAddCoach={lobby.handleNewCoach}
+          onDelete={(c) => lobby.handleDeleteCompanion(c.id, c.custom_name, { stopPropagation: () => {} } as React.MouseEvent)}
         />
       </div>
 
@@ -354,6 +362,10 @@ export function HomeShellPage() {
                 {activeTab === 'feed' && <DailyFeedPage onBack={undefined} />}
                 {activeTab === 'calendar' && <CalendarPage onBack={() => setActiveTab('feed')} />}
                 {activeTab === 'co-author' && <CoAuthorPage onBack={() => setActiveTab('feed')} />}
+                {activeTab === 'insights' && <InsightsTeaser />}
+                {activeTab === 'chat' && activeCompanionId && (
+                  <EmbeddedChat companionId={activeCompanionId} onBack={() => setActiveTab('feed')} />
+                )}
               </motion.div>
             </AnimatePresence>
           </Suspense>
