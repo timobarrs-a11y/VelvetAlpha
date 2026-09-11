@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Newspaper, Calendar, FileText, Lightbulb, Video,
-  Bot, MapPin, Zap, UsersRound, Gamepad2, Heart,
+  Bot, MapPin, Zap, UsersRound, Users, Gamepad2, Heart,
   Volume2, VolumeX, Wand2, User, LogOut, HelpCircle,
   Flame, Sparkles, MessageCircle, Info, ChevronRight,
   PanelLeftClose, PanelLeftOpen, Brain,
