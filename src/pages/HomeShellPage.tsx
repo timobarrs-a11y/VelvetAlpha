@@ -2,7 +2,7 @@ import { useState, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Newspaper, Calendar, FileText, Lightbulb, Video,
+  Newspaper, Calendar, FileText, Lightbulb, Video, PlayCircle,
   Bot, MapPin, Zap, UsersRound, Users, Gamepad2, Heart,
   Volume2, VolumeX, Wand2, User, LogOut, HelpCircle,
   Flame, Sparkles, MessageCircle, Info, ChevronRight,
@@ -13,27 +13,29 @@ import { useAudioScene } from '../hooks/useAudioScene';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import {
   Button, ModalShell, EmptyState, LoadingState,
-  PageShell, Pill, Badge, HomeLayoutSwitch,
+  PageShell, Pill, Badge, HomeLayoutSwitch, Segmented,
 } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
 import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { CustomizationPanel } from '../components/CustomizationPanel';
 import { CreateGroupChatModal } from '../components/CreateGroupChatModal';
 import FeedbackModal from '../components/FeedbackModal';
-import { CompanionStrip } from '../components/lobby/CompanionStrip';
+import { CompanionTabs } from '../components/lobby/CompanionTabs';
 import { TONE_COLOR, companionAvatarConfig } from '../components/lobby';
 import { POINTER_SYMBOLS } from '../services/customizationService';
 import { Avatar } from '../components/Avatar';
 import type { CompanionWithLastMessage } from '../services/companionService';
 
 const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default: m.DailyFeedPage })));
+const VideoHistoryPage = lazy(() => import('./VideoHistoryPage').then(m => ({ default: m.VideoHistoryPage })));
 const CalendarPage = lazy(() => import('./CalendarPage').then(m => ({ default: m.CalendarPage })));
 const CoAuthorPage = lazy(() => import('./CoAuthorPage').then(m => ({ default: m.CoAuthorPage })));
 
 import { EmbeddedChat } from '../components/hub/EmbeddedChat';
 import { InsightsTeaser } from '../components/hub/InsightsTeaser';
 
-type ContentTab = 'feed' | 'calendar' | 'co-author' | 'insights' | 'chat';
+type ContentTab = 'feed' | 'videos' | 'calendar' | 'co-author' | 'insights' | 'chat';
+type FeedTab = 'feed' | 'videos';
 
 interface SidebarItem {
   id: string;
@@ -59,6 +61,7 @@ export function HomeShellPage() {
   const { muted, toggleMute } = useAudioScene();
 
   const [activeTab, setActiveTab] = useState<ContentTab>('feed');
+  const [feedTab, setFeedTab] = useState<FeedTab>('feed');
   const [activeCompanionId, setActiveCompanionId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -112,7 +115,7 @@ export function HomeShellPage() {
 
   const sidebarItems: SidebarItem[] = [
     {
-      id: 'feed', label: 'Daily Feed', sub: 'Curated stories',
+      id: 'feed', label: 'Today', sub: 'Feed & videos',
       icon: <Newspaper className="w-3.5 h-3.5" />, color: 'text-emerald-400',
       group: 'content', action: () => setActiveTab('feed'),
     },
@@ -130,11 +133,6 @@ export function HomeShellPage() {
       id: 'insights', label: 'Insights', sub: 'Know yourself',
       icon: <Lightbulb className="w-3.5 h-3.5" />, color: 'text-amber-400',
       group: 'life', action: () => setActiveTab('insights'),
-    },
-    {
-      id: 'videos', label: 'Your Lens', sub: 'Picked videos',
-      icon: <Video className="w-3.5 h-3.5" />, color: 'text-rose-400',
-      group: 'content', action: () => navigateTo('/videos', NAV_CONFIGS['/videos']),
     },
     {
       id: 'atlas', label: 'Atlas', sub: 'Chief of staff',
@@ -225,9 +223,9 @@ export function HomeShellPage() {
         </div>
       </header>
 
-      {/* ─── Companion strip ─── */}
-      <div className="px-4 py-2.5 border-b border-white/8 flex-shrink-0">
-        <CompanionStrip
+      {/* ─── Companion tabs (Three C's) ─── */}
+      <div className="px-4 py-2 border-b border-white/8 flex-shrink-0">
+        <CompanionTabs
           companions={companions}
           onOpen={(c) => {
             setActiveCompanionId(c.id);
@@ -329,7 +327,7 @@ export function HomeShellPage() {
                       <button
                         key={item.id}
                         onClick={item.action}
-                        className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors duration-150 hover:bg-white/8 ${activeTab === item.id ? 'bg-white/10' : ''}`}
+                        className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors duration-150 hover:bg-white/8 ${(activeTab === item.id || (item.id === 'feed' && (activeTab === 'feed' || activeTab === 'videos'))) ? 'bg-white/10' : ''}`}
                       >
                         <span className={`flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0 ${item.color}`} style={{ background: 'rgba(255,255,255,0.06)' }}>
                           {item.icon}
@@ -349,10 +347,24 @@ export function HomeShellPage() {
 
         {/* Content area */}
         <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Feed / Your Lens visual toggle */}
+          {(activeTab === 'feed' || activeTab === 'videos') && (
+            <div className="flex items-center justify-center px-4 py-2 flex-shrink-0 border-b border-white/8">
+              <Segmented
+                value={feedTab}
+                onChange={(v) => { setFeedTab(v); setActiveTab(v); }}
+                size="md"
+                options={[
+                  { value: 'feed', label: 'Feed', icon: <Newspaper className="w-3.5 h-3.5" /> },
+                  { value: 'videos', label: 'Your Lens', icon: <PlayCircle className="w-3.5 h-3.5" /> },
+                ]}
+              />
+            </div>
+          )}
           <Suspense fallback={<LoadingState label="Loading..." />}>
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeTab}
+                key={activeTab + feedTab}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -360,6 +372,7 @@ export function HomeShellPage() {
                 className="flex-1 overflow-y-auto"
               >
                 {activeTab === 'feed' && <DailyFeedPage onBack={undefined} />}
+                {activeTab === 'videos' && <VideoHistoryPage />}
                 {activeTab === 'calendar' && <CalendarPage onBack={() => setActiveTab('feed')} />}
                 {activeTab === 'co-author' && <CoAuthorPage onBack={() => setActiveTab('feed')} />}
                 {activeTab === 'insights' && <InsightsTeaser />}
