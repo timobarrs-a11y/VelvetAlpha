@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '../shared/ui';
 import { AppNavRadial } from './AppNavRadial';
+import { LanguageInputToolbar } from './LanguageInputToolbar';
 import { getDraft, setDraft, clearDraft } from '../utils/draftCache';
 
 interface ChatInputProps {
@@ -12,11 +13,12 @@ interface ChatInputProps {
   lastMessageText?: string;
   showNavRadial?: boolean;
   draftScope?: string;
+  showLanguageToolbar?: boolean;
 }
 
 const MAX_TEXTAREA_HEIGHT = 120;
 
-export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMessageText, showNavRadial = true, draftScope }: ChatInputProps) => {
+export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMessageText, showNavRadial = true, draftScope, showLanguageToolbar = false }: ChatInputProps) => {
   const draftKey = draftScope ?? companionId ?? '';
   const [input, setInput] = useState(() => (draftKey ? getDraft(draftKey) : ''));
   const [isFocused, setIsFocused] = useState(false);
@@ -56,6 +58,23 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
     }
   };
 
+  const insertChar = useCallback((char: string) => {
+    const el = textareaRef.current;
+    if (!el) {
+      setInput(prev => prev + char);
+      return;
+    }
+    const start = el.selectionStart ?? input.length;
+    const end = el.selectionEnd ?? input.length;
+    const next = input.slice(0, start) + char + input.slice(end);
+    setInput(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + char.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }, [input]);
+
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3 items-end flex-1">
       {showNavRadial && (
@@ -70,6 +89,9 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
       )}
 
       <div className="flex-1 relative">
+        {showLanguageToolbar && companionId && (
+          <LanguageInputToolbar companionId={companionId} onInsert={insertChar} />
+        )}
         <textarea
           ref={textareaRef}
           value={input}

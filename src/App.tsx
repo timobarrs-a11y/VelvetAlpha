@@ -1317,6 +1317,7 @@ function AppInner() {
               companionId={companionId || undefined}
               lastMessageText={uiMessages.length > 0 ? uiMessages[uiMessages.length - 1].content.slice(0, 120) : undefined}
               showNavRadial={false}
+              showLanguageToolbar={activeThread === 'companion' && companion?.relationship_type === 'mentor' && (companion?.signature_expert === 'language_tutor' || (expertDomain ?? '').includes('language'))}
             />
           </div>
 
@@ -1403,6 +1404,7 @@ function AppInner() {
               companionId={companionId || undefined}
               lastMessageText={uiMessages.length > 0 ? uiMessages[uiMessages.length - 1].content.slice(0, 120) : undefined}
               showNavRadial={false}
+              showLanguageToolbar={activeThread === 'companion' && companion?.relationship_type === 'mentor' && (companion?.signature_expert === 'language_tutor' || (expertDomain ?? '').includes('language'))}
             />
           </div>
 
