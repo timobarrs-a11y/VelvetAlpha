@@ -10,6 +10,9 @@ import { getCompanions, type CompanionWithLastMessage } from '../services/compan
 import { getArticleOpeners, type ArticleOpenerMatch } from '../services/articleOpenerService';
 import { RelevanceBadge, OpenerStrip, DiscussWithAffordance } from '../components/RelevanceBadge';
 import { ArticleDiscussPanel } from '../components/ArticleDiscussPanel';
+import { TimeAwareSlot, getBucketTintClass, type TimeOfDayBucket } from '../components/TimeAwareSlot';
+import { getUserLocalDateParts } from '../services/temporalAwarenessService';
+import { calendarService, type UserEvent } from '../services/calendarService';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -301,6 +304,12 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
   const [initialFetchDone, setInitialFetchDone] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
+  const [todaysEvents, setTodaysEvents] = useState<UserEvent[]>([]);
+  const [tomorrowsEvents, setTomorrowsEvents] = useState<UserEvent[]>([]);
+  const [companionNarrative, setCompanionNarrative] = useState<string | null>(null);
+  const [activeCompanion, setActiveCompanion] = useState<CompanionWithLastMessage | null>(null);
+  const dateParts = useMemo(() => getUserLocalDateParts(new Date()), []);
+  const bucket: TimeOfDayBucket = dateParts.timeOfDay;
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -322,7 +331,33 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
       const interests = await newsService.getUserAllInterests();
       setAllInterests(interests);
 
-      getCompanions(user.id).then(setCompanions).catch(() => {});
+      getCompanions(user.id).then(fetchedCompanions => {
+        setCompanions(fetchedCompanions);
+        const withActivity = fetchedCompanions.find(c => c.last_message_text);
+        if (withActivity) {
+          setActiveCompanion(withActivity);
+          const isEvening = ['evening', 'night', 'late night'].includes(bucket);
+          if (isEvening) {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            supabase
+              .from('daily_experiences')
+              .select('narrative')
+              .eq('user_id', user.id)
+              .eq('companion_id', withActivity.id)
+              .eq('date', todayStr)
+              .maybeSingle()
+              .then(({ data }) => {
+                if (data?.narrative) setCompanionNarrative(data.narrative);
+              })
+              .catch(() => {});
+          }
+        }
+      }).catch(() => {});
+
+      calendarService.getUpcomingEvents(user.id, 2).then(events => {
+        setTodaysEvents(events);
+        setTomorrowsEvents(events);
+      }).catch(() => {});
 
       if (interests.length === 0 && categories.length === 0) {
         setLoading(false);
@@ -637,7 +672,15 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
         )}
       </PageHeader>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className={`max-w-6xl mx-auto px-4 py-6 ${getBucketTintClass(bucket)}`}>
+        <div className="relative z-10">
+        <TimeAwareSlot
+          bucket={bucket}
+          todaysEvents={todaysEvents}
+          tomorrowsEvents={tomorrowsEvents}
+          companion={activeCompanion}
+          companionNarrative={companionNarrative}
+        />
         {filteredArticles.length === 0 ? (
           !initialFetchDone ? (
             <div className="text-center py-24">
@@ -753,6 +796,7 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
             </div>
           </div>
         )}
+      </div>
       </div>
 
       <ArticleDiscussPanel
