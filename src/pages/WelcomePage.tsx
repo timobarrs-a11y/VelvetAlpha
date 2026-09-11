@@ -186,7 +186,7 @@ export function WelcomePage() {
       }
     } catch {}
     setTimeout(() => {
-      navigate('/goal-discovery', { replace: true });
+      navigate('/atlas-onboarding', { replace: true });
     }, 600);
   };
 

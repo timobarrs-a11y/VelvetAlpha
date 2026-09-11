@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.atlas-agent]
 verify_jwt = true
 
+[functions.atlas-onboarding]
+verify_jwt = true
+
 [functions.backfill-embeddings]
 verify_jwt = false
 

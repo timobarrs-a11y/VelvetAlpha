@@ -132,9 +132,9 @@ export function RootRedirect() {
         }
 
         if (!profile?.welcome_seen) {
-          setDestination('/welcome');
+          setDestination('/atlas-onboarding');
         } else {
-          setDestination('/user-questionnaire');
+          setDestination('/atlas-onboarding');
         }
       } else if (homeLayout === 'new') {
         sessionStorage.removeItem('currentCompanionId');
