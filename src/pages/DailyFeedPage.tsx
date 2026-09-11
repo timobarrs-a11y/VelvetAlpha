@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Newspaper, RefreshCw, Clock, TrendingUp, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
 import { PageHeader, Pill, Badge } from '../shared/ui';
@@ -6,6 +6,9 @@ import { userProfileService } from '../services/userProfileService';
 import { supabase } from '../shared/supabase/client';
 import { newsService } from '../services/newsService';
 import { getCategoryColor } from '../config/articleCategoryColors';
+import { getCompanions, type CompanionWithLastMessage } from '../services/companionService';
+import { getArticleOpeners, type ArticleOpenerMatch } from '../services/articleOpenerService';
+import { RelevanceBadge, OpenerStrip, DiscussWithAffordance } from '../components/RelevanceBadge';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -84,8 +87,16 @@ function ArticleImage({ src, alt, className, eager }: { src: string; alt: string
   );
 }
 
-function HeroCard({ article, onClick, isNew }: { article: NewsArticle; onClick: () => void; isNew?: boolean }) {
+function HeroCard({ article, onClick, isNew, openers, companions, onTalkTo }: {
+  article: NewsArticle;
+  onClick: () => void;
+  isNew?: boolean;
+  openers: ArticleOpenerMatch[];
+  companions: CompanionWithLastMessage[];
+  onTalkTo: (c: CompanionWithLastMessage) => void;
+}) {
   const primaryCat = article.categories?.[0];
+  const [expanded, setExpanded] = useState(false);
   return (
     <div
       onClick={onClick}
@@ -104,6 +115,12 @@ function HeroCard({ article, onClick, isNew }: { article: NewsArticle; onClick: 
         </>
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
+      )}
+
+      {openers.length > 0 && (
+        <div className="absolute top-4 right-4 z-10">
+          <RelevanceBadge matches={openers} expanded={expanded} onToggle={() => setExpanded(e => !e)} />
+        </div>
       )}
 
       <div className="relative h-full flex flex-col justify-end p-8" style={{ minHeight: 420 }}>
@@ -131,18 +148,35 @@ function HeroCard({ article, onClick, isNew }: { article: NewsArticle; onClick: 
 
         <div className="flex items-center justify-between">
           <span className="text-white/50 text-sm font-medium">{article.source}</span>
-          <span className="flex items-center gap-1.5 text-white/60 text-sm">
-            Read story
-            <ChevronRight className="w-4 h-4" />
-          </span>
+          <div className="flex items-center gap-3">
+            <DiscussWithAffordance companions={companions} onPick={onTalkTo} />
+            <span className="flex items-center gap-1.5 text-white/60 text-sm">
+              Read story
+              <ChevronRight className="w-4 h-4" />
+            </span>
+          </div>
         </div>
       </div>
+
+      {expanded && openers.length > 0 && (
+        <div className="relative bg-black/70 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
+          <OpenerStrip matches={openers} onTalkTo={onTalkTo} />
+        </div>
+      )}
     </div>
   );
 }
 
-function ArticleCard({ article, onClick, seen }: { article: NewsArticle; onClick: () => void; seen?: boolean }) {
+function ArticleCard({ article, onClick, seen, openers, companions, onTalkTo }: {
+  article: NewsArticle;
+  onClick: () => void;
+  seen?: boolean;
+  openers: ArticleOpenerMatch[];
+  companions: CompanionWithLastMessage[];
+  onTalkTo: (c: CompanionWithLastMessage) => void;
+}) {
   const primaryCat = article.categories?.[0];
+  const [expanded, setExpanded] = useState(false);
   return (
     <div
       onClick={onClick}
@@ -152,7 +186,7 @@ function ArticleCard({ article, onClick, seen }: { article: NewsArticle; onClick
           : 'bg-white/5 hover:bg-white/8 border-white/10 hover:border-white/20 transition-colors'
       }`}
     >
-      <div className="w-full h-44 overflow-hidden bg-slate-800 flex-shrink-0">
+      <div className="w-full h-44 overflow-hidden bg-slate-800 flex-shrink-0 relative">
         {article.image_url ? (
           <ArticleImage
             src={article.image_url}
@@ -161,6 +195,11 @@ function ArticleCard({ article, onClick, seen }: { article: NewsArticle; onClick
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-800" />
+        )}
+        {openers.length > 0 && (
+          <div className="absolute top-2 right-2">
+            <RelevanceBadge matches={openers} expanded={expanded} onToggle={() => setExpanded(e => !e)} />
+          </div>
         )}
       </div>
 
@@ -177,18 +216,35 @@ function ArticleCard({ article, onClick, seen }: { article: NewsArticle; onClick
 
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
           <span className="text-white/40 text-xs">{article.source}</span>
-          <span className="text-white/40 text-xs flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {formatTimeAgo(article.published_at)}
-          </span>
+          <div className="flex items-center gap-2">
+            <DiscussWithAffordance companions={companions} onPick={onTalkTo} />
+            <span className="text-white/40 text-xs flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {formatTimeAgo(article.published_at)}
+            </span>
+          </div>
         </div>
       </div>
+
+      {expanded && openers.length > 0 && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <OpenerStrip matches={openers} onTalkTo={onTalkTo} />
+        </div>
+      )}
     </div>
   );
 }
 
-function ListArticleCard({ article, onClick, seen }: { article: NewsArticle; onClick: () => void; seen?: boolean }) {
+function ListArticleCard({ article, onClick, seen, openers, companions, onTalkTo }: {
+  article: NewsArticle;
+  onClick: () => void;
+  seen?: boolean;
+  openers: ArticleOpenerMatch[];
+  companions: CompanionWithLastMessage[];
+  onTalkTo: (c: CompanionWithLastMessage) => void;
+}) {
   const primaryCat = article.categories?.[0];
+  const [expanded, setExpanded] = useState(false);
   return (
     <div
       onClick={onClick}
@@ -196,21 +252,17 @@ function ListArticleCard({ article, onClick, seen }: { article: NewsArticle; onC
         seen ? 'opacity-40 hover:opacity-60' : ''
       }`}
     >
-      {article.image_url && (
-        <div className="w-20 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800">
-          <ArticleImage
-            src={article.image_url}
-            alt={article.title}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
       <div className="flex-1 min-w-0">
-        {primaryCat && (
-          <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold mb-1.5 ${getCategoryColor(primaryCat)}`}>
-            {primaryCat}
-          </span>
-        )}
+        <div className="flex items-center gap-2 mb-1.5">
+          {primaryCat && (
+            <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${getCategoryColor(primaryCat)}`}>
+              {primaryCat}
+            </span>
+          )}
+          {openers.length > 0 && (
+            <RelevanceBadge matches={openers} expanded={expanded} onToggle={() => setExpanded(e => !e)} />
+          )}
+        </div>
         <h4 className="text-white/90 font-medium text-sm leading-snug line-clamp-2">
           {article.title}
         </h4>
@@ -219,8 +271,16 @@ function ListArticleCard({ article, onClick, seen }: { article: NewsArticle; onC
           <span>·</span>
           <span>{formatTimeAgo(article.published_at)}</span>
         </div>
+        {expanded && openers.length > 0 && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <OpenerStrip matches={openers} onTalkTo={onTalkTo} />
+          </div>
+        )}
       </div>
-      <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0 self-center" />
+      <div className="flex flex-col items-end justify-between gap-2 flex-shrink-0">
+        <DiscussWithAffordance companions={companions} onPick={onTalkTo} />
+        <ChevronRight className="w-4 h-4 text-white/20 self-center" />
+      </div>
     </div>
   );
 }
@@ -239,6 +299,7 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
   const [refreshing, setRefreshing] = useState(false);
   const [initialFetchDone, setInitialFetchDone] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -259,6 +320,8 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
 
       const interests = await newsService.getUserAllInterests();
       setAllInterests(interests);
+
+      getCompanions(user.id).then(setCompanions).catch(() => {});
 
       if (interests.length === 0 && categories.length === 0) {
         setLoading(false);
@@ -483,6 +546,18 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
   const gridArticles = remainingUnread.slice(0, 6);
   const listArticles = remainingUnread.slice(6);
 
+  const openerMap = useMemo(() => {
+    const map = new Map<string, ArticleOpenerMatch[]>();
+    for (const article of articles) {
+      map.set(article.id, getArticleOpeners({ categories: article.categories }, companions));
+    }
+    return map;
+  }, [articles, companions]);
+
+  const handleTalkTo = (companion: CompanionWithLastMessage) => {
+    navigate(`/chat?companion=${companion.id}`);
+  };
+
   if (loading) {
     return (
       <div className="ds-page flex items-center justify-center px-4">
@@ -603,6 +678,9 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
                 <HeroCard
                   article={topStory}
                   isNew={!viewedIds.has(topStory.id)}
+                  openers={openerMap.get(topStory.id) ?? []}
+                  companions={companions}
+                  onTalkTo={handleTalkTo}
                   onClick={() => navigate(`/article?id=${topStory.id}`)}
                 />
               </div>
@@ -620,6 +698,9 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
                       key={article.id}
                       article={article}
                       seen={viewedIds.has(article.id)}
+                      openers={openerMap.get(article.id) ?? []}
+                      companions={companions}
+                      onTalkTo={handleTalkTo}
                       onClick={() => navigate(`/article?id=${article.id}`)}
                     />
                   ))}
@@ -639,6 +720,9 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
                       key={article.id}
                       article={article}
                       seen={viewedIds.has(article.id)}
+                      openers={openerMap.get(article.id) ?? []}
+                      companions={companions}
+                      onTalkTo={handleTalkTo}
                       onClick={() => navigate(`/article?id=${article.id}`)}
                     />
                   ))}
