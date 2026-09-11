@@ -44,11 +44,12 @@ interface SidebarItem {
   sub: string;
   icon: React.ReactNode;
   color: string;
-  group: 'content' | 'life' | 'connect' | 'play';
+  group: 'content' | 'life' | 'connect' | 'play' | 'core';
   action: () => void;
 }
 
 const GROUP_LABELS: Record<SidebarItem['group'], string> = {
+  core: 'Core',
   connect: 'Connect',
   content: 'Content',
   life: 'Life',
@@ -70,6 +71,7 @@ export function HomeShellPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
+  const [showArcadeModal, setShowArcadeModal] = useState(false);
 
   const {
     companions,
@@ -141,17 +143,17 @@ export function HomeShellPage() {
     {
       id: 'companions', label: 'Companions', sub: `${companions.filter(c => !c.relationship_type || c.relationship_type === 'romantic' || c.relationship_type === 'friend').length} people`,
       icon: <Heart className="w-3.5 h-3.5" />, color: 'text-pink-400',
-      group: 'connect', action: () => { setCompanionCategory('companions'); setActiveTab('companion-list'); },
+      group: 'core', action: () => { setCompanionCategory('companions'); setActiveTab('companion-list'); },
     },
     {
       id: 'coaching', label: 'Coaching', sub: `${companions.filter(c => c.relationship_type === 'mentor').length} mentors`,
       icon: <Brain className="w-3.5 h-3.5" />, color: 'text-emerald-400',
-      group: 'connect', action: () => { setCompanionCategory('coaching'); setActiveTab('companion-list'); },
+      group: 'core', action: () => { setCompanionCategory('coaching'); setActiveTab('companion-list'); },
     },
     {
       id: 'correspondents', label: 'Correspondents', sub: `${companions.filter(c => c.relationship_type === 'correspondent').length} writers`,
       icon: <NewspaperIcon className="w-3.5 h-3.5" />, color: 'text-amber-400',
-      group: 'connect', action: () => { setCompanionCategory('correspondents'); setActiveTab('companion-list'); },
+      group: 'core', action: () => { setCompanionCategory('correspondents'); setActiveTab('companion-list'); },
     },
     {
       id: 'atlas', label: 'Atlas', sub: 'Chief of staff',
@@ -176,7 +178,7 @@ export function HomeShellPage() {
     {
       id: 'arcade', label: 'The Arcade', sub: 'Play together',
       icon: <Gamepad2 className="w-3.5 h-3.5" />, color: 'text-orange-400',
-      group: 'play', action: () => lobby.handleGameClick(GAMES[0]),
+      group: 'play', action: () => setShowArcadeModal(true),
     },
     {
       id: 'profile', label: 'Profile', sub: 'Your settings',
@@ -187,7 +189,7 @@ export function HomeShellPage() {
 
   const grouped = sidebarItems.reduce<Record<SidebarItem['group'], SidebarItem[]>>(
     (acc, item) => { (acc[item.group] ||= []).push(item); return acc; },
-    { connect: [], content: [], life: [], play: [] },
+    { core: [], connect: [], content: [], life: [], play: [] },
   );
 
   const bgStyle = {
@@ -316,7 +318,7 @@ export function HomeShellPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 flex flex-col gap-3">
-                {(['connect', 'content', 'life', 'play'] as const).map(groupKey => (
+                {(['core', 'connect', 'content', 'life', 'play'] as const).map(groupKey => (
                   <div key={groupKey} className="flex flex-col gap-0.5">
                     <p className="text-[9px] font-bold tracking-widest uppercase text-white/30 px-2 pt-1 pb-1 select-none">
                       {GROUP_LABELS[groupKey]}
@@ -397,6 +399,37 @@ export function HomeShellPage() {
       </div>
 
       {/* ─── Modals ─── */}
+      {/* Arcade game picker modal */}
+      <ModalShell isOpen={showArcadeModal} onClose={() => setShowArcadeModal(false)} title="The Arcade" size="md">
+        <p className="text-sm text-ink-muted mb-5">Pick a game to play:</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {GAMES.map(game => {
+            const Icon = game.icon;
+            return (
+              <motion.button key={game.id}
+                whileHover={{ scale: 1.015 }}
+                whileTap={{ scale: 0.985 }}
+                onClick={() => {
+                  setShowArcadeModal(false);
+                  lobby.handleGameClick(game);
+                }}
+                className="ds-card ds-card--interactive p-4 text-left"
+                style={{ background: 'var(--ds-surface-2)' }}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${game.iconBg} flex items-center justify-center flex-shrink-0`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink font-display text-sm">{game.name}</p>
+                    <p className="text-xs text-ink-muted truncate mt-0.5">{game.description}</p>
+                  </div>
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+      </ModalShell>
+
       {/* Game partner modal */}
       <ModalShell isOpen={showGameModal} onClose={() => lobby.setShowGameModal(false)} title="Choose Your Partner" size="md">
         <p className="text-sm text-ink-muted mb-5">Select a companion to play with:</p>

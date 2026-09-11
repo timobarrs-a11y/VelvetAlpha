@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ExternalLink, Palette, Type } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Palette, Type, PawPrint } from 'lucide-react';
 import { ChatContainer } from '../ChatContainer';
 import { ChatInput } from '../ChatInput';
 import { Message } from '../../types';
@@ -17,6 +17,9 @@ import { buildWallpaperMeta } from '../../services/wallpaperService';
 import { WallpaperPickerModal } from '../WallpaperPickerModal';
 import { FONT_OPTIONS, getEligibleFonts } from '../../services/customizationService';
 import { updateCompanionFont } from '../../services/companionService';
+import { usePetStore, usePetRefs } from '../../stores/petStore';
+import { PetCompanion, PetLevelToast } from '../pet';
+import type { PetStats } from '../pet/PetCompanion';
 
 interface EmbeddedChatProps {
   companionId: string;
@@ -29,6 +32,17 @@ export function EmbeddedChat({ companionId, onBack }: EmbeddedChatProps) {
   const userId = user?.id ?? null;
   const { playSound } = useSound();
   const { refreshSubscription } = useSubscription();
+
+  const petEnabled = usePetStore(s => s.enabled);
+  const petToggle = usePetStore(s => s.toggle);
+  const petName = usePetStore(s => s.name);
+  const animalType = usePetStore(s => s.animalType);
+  const petStats = usePetStore(s => s.stats);
+  const petPendingLevelUp = usePetStore(s => s.pendingLevelUp);
+  const petClearLevelUp = usePetStore(s => s.clearLevelUp);
+  const petHandleStats = usePetStore(s => s.handleStats);
+  const petInit = usePetStore(s => s.init);
+  const { actionsRef: petActionsRef, catPosRef: petCatPosRef } = usePetRefs();
 
   const [companion, setCompanion] = useState<Companion | null>(null);
   const [isTyping, setIsTyping] = useState(false);
@@ -57,6 +71,10 @@ export function EmbeddedChat({ companionId, onBack }: EmbeddedChatProps) {
       setWallpaperUrl(c.chat_wallpaper_url ?? null);
     }).catch(() => {});
   }, [companionId]);
+
+  useEffect(() => {
+    if (userId && companionId) petInit(userId, companionId);
+  }, [userId, companionId, petInit]);
 
   const handleSend = async (content: string) => {
     if (isTyping || !userId || !companion) return;
@@ -174,6 +192,14 @@ export function EmbeddedChat({ companionId, onBack }: EmbeddedChatProps) {
               {isTyping ? 'typing...' : 'embedded chat'}
             </p>
           </div>
+          {/* Mochi pet toggle */}
+          <button
+            onClick={petToggle}
+            className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/10 transition-colors text-white/50 hover:text-white"
+            title={petEnabled ? `${petName} is roaming — click to hide` : `Summon ${petName}`}
+          >
+            <PawPrint className="w-4 h-4" style={petEnabled ? { color: '#86efac' } : undefined} />
+          </button>
           {/* Wallpaper picker */}
           <button
             onClick={() => setShowWallpaperPicker(true)}
@@ -313,6 +339,18 @@ export function EmbeddedChat({ companionId, onBack }: EmbeddedChatProps) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Mochi pet */}
+      <PetCompanion
+        enabled={petEnabled}
+        name={petName}
+        animalType={animalType}
+        actionsRef={petActionsRef}
+        catPosRef={petCatPosRef}
+        onStats={(s: PetStats) => petHandleStats(s)}
+        initialStats={petStats}
+      />
+      <PetLevelToast level={petPendingLevelUp} onDone={petClearLevelUp} />
     </div>
   );
 }
