@@ -537,7 +537,7 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
   return (
     <div className="ds-page text-white">
       <PageHeader
-        title="Daily Feed"
+        title="Daily News"
         icon={TrendingUp}
         accent="#34d399"
         back={goBack}

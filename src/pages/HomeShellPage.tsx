@@ -6,7 +6,8 @@ import {
   Bot, MapPin, Zap, UsersRound, Users, Gamepad2, Heart,
   Volume2, VolumeX, Wand2, User, LogOut, HelpCircle,
   Flame, Sparkles, MessageCircle, Info, ChevronRight,
-  PanelLeftClose, PanelLeftOpen, Brain,
+  PanelLeftClose, PanelLeftOpen, Brain, Newspaper as NewspaperIcon,
+  Plus, Trash2,
 } from 'lucide-react';
 import { useLobbyData, NAV_CONFIGS, GAMES } from '../hooks/useLobbyData';
 import { useAudioScene } from '../hooks/useAudioScene';
@@ -20,7 +21,6 @@ import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { CustomizationPanel } from '../components/CustomizationPanel';
 import { CreateGroupChatModal } from '../components/CreateGroupChatModal';
 import FeedbackModal from '../components/FeedbackModal';
-import { CompanionTabs } from '../components/lobby/CompanionTabs';
 import { TONE_COLOR, companionAvatarConfig } from '../components/lobby';
 import { POINTER_SYMBOLS } from '../services/customizationService';
 import { Avatar } from '../components/Avatar';
@@ -34,8 +34,9 @@ const CoAuthorPage = lazy(() => import('./CoAuthorPage').then(m => ({ default: m
 import { EmbeddedChat } from '../components/hub/EmbeddedChat';
 import { InsightsTeaser } from '../components/hub/InsightsTeaser';
 
-type ContentTab = 'feed' | 'videos' | 'calendar' | 'co-author' | 'insights' | 'chat';
+type ContentTab = 'feed' | 'videos' | 'calendar' | 'co-author' | 'insights' | 'chat' | 'companion-list';
 type FeedTab = 'feed' | 'videos';
+type CompanionCategory = 'companions' | 'coaching' | 'correspondents';
 
 interface SidebarItem {
   id: string;
@@ -63,6 +64,9 @@ export function HomeShellPage() {
   const [activeTab, setActiveTab] = useState<ContentTab>('feed');
   const [feedTab, setFeedTab] = useState<FeedTab>('feed');
   const [activeCompanionId, setActiveCompanionId] = useState<string | null>(null);
+  const [companionCategory, setCompanionCategory] = useState<CompanionCategory>('companions');
+  const [contextCompanion, setContextCompanion] = useState<CompanionWithLastMessage | null>(null);
+  const [contextPos, setContextPos] = useState<{ x: number; y: number } | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
@@ -115,7 +119,7 @@ export function HomeShellPage() {
 
   const sidebarItems: SidebarItem[] = [
     {
-      id: 'feed', label: 'Today', sub: 'Feed & videos',
+      id: 'feed', label: 'Daily News', sub: 'News & videos',
       icon: <Newspaper className="w-3.5 h-3.5" />, color: 'text-emerald-400',
       group: 'content', action: () => setActiveTab('feed'),
     },
@@ -133,6 +137,21 @@ export function HomeShellPage() {
       id: 'insights', label: 'Insights', sub: 'Know yourself',
       icon: <Lightbulb className="w-3.5 h-3.5" />, color: 'text-amber-400',
       group: 'life', action: () => setActiveTab('insights'),
+    },
+    {
+      id: 'companions', label: 'Companions', sub: `${companions.filter(c => !c.relationship_type || c.relationship_type === 'romantic' || c.relationship_type === 'friend').length} people`,
+      icon: <Heart className="w-3.5 h-3.5" />, color: 'text-pink-400',
+      group: 'connect', action: () => { setCompanionCategory('companions'); setActiveTab('companion-list'); },
+    },
+    {
+      id: 'coaching', label: 'Coaching', sub: `${companions.filter(c => c.relationship_type === 'mentor').length} mentors`,
+      icon: <Brain className="w-3.5 h-3.5" />, color: 'text-emerald-400',
+      group: 'connect', action: () => { setCompanionCategory('coaching'); setActiveTab('companion-list'); },
+    },
+    {
+      id: 'correspondents', label: 'Correspondents', sub: `${companions.filter(c => c.relationship_type === 'correspondent').length} writers`,
+      icon: <NewspaperIcon className="w-3.5 h-3.5" />, color: 'text-amber-400',
+      group: 'connect', action: () => { setCompanionCategory('correspondents'); setActiveTab('companion-list'); },
     },
     {
       id: 'atlas', label: 'Atlas', sub: 'Chief of staff',
@@ -184,6 +203,9 @@ export function HomeShellPage() {
         <div className="flex items-center gap-3 min-w-0">
           <Heart className="w-5 h-5 text-pink-400 flex-shrink-0" fill="currentColor" style={{ filter: 'drop-shadow(0 0 6px rgba(244,114,182,0.70))' }} />
           <h1 className="ds-title-gradient text-xl font-bold font-display truncate hidden sm:block">Velvet</h1>
+          {subscriptionInfo && (
+            <SubscriptionBanner tier={subscriptionInfo.tier} messagesRemaining={subscriptionInfo.messagesRemaining} compact />
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -222,30 +244,6 @@ export function HomeShellPage() {
           />
         </div>
       </header>
-
-      {/* ─── Companion tabs (Three C's) ─── */}
-      <div className="px-4 py-2 border-b border-white/8 flex-shrink-0">
-        <CompanionTabs
-          companions={companions}
-          onOpen={(c) => {
-            setActiveCompanionId(c.id);
-            setActiveTab('chat');
-          }}
-          onAddCompanion={lobby.handleNewCompanion}
-          onAddCoach={lobby.handleNewCoach}
-          onDelete={(c) => lobby.handleDeleteCompanion(c.id, c.custom_name, { stopPropagation: () => {} } as React.MouseEvent)}
-        />
-      </div>
-
-      {/* Streak + subscription */}
-      <div className="flex items-center justify-center gap-3 px-4 py-1.5 flex-shrink-0">
-        {(customization?.current_streak ?? 0) > 0 && (
-          <Badge tone="#fbbf24" icon={<Flame className="w-3 h-3" />}>{customization!.current_streak}d streak</Badge>
-        )}
-        {subscriptionInfo && (
-          <SubscriptionBanner tier={subscriptionInfo.tier} messagesRemaining={subscriptionInfo.messagesRemaining} />
-        )}
-      </div>
 
       {/* Unlock notice */}
       <AnimatePresence>
@@ -327,7 +325,7 @@ export function HomeShellPage() {
                       <button
                         key={item.id}
                         onClick={item.action}
-                        className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors duration-150 hover:bg-white/8 ${(activeTab === item.id || (item.id === 'feed' && (activeTab === 'feed' || activeTab === 'videos'))) ? 'bg-white/10' : ''}`}
+                        className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors duration-150 hover:bg-white/8 ${(activeTab === item.id || (item.id === 'feed' && (activeTab === 'feed' || activeTab === 'videos')) || (item.id === companionCategory && activeTab === 'companion-list')) ? 'bg-white/10' : ''}`}
                       >
                         <span className={`flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0 ${item.color}`} style={{ background: 'rgba(255,255,255,0.06)' }}>
                           {item.icon}
@@ -376,8 +374,21 @@ export function HomeShellPage() {
                 {activeTab === 'calendar' && <CalendarPage onBack={() => setActiveTab('feed')} />}
                 {activeTab === 'co-author' && <CoAuthorPage onBack={() => setActiveTab('feed')} />}
                 {activeTab === 'insights' && <InsightsTeaser />}
+                {activeTab === 'companion-list' && (
+                  <CompanionList
+                    companions={companions}
+                    category={companionCategory}
+                    onOpen={(c) => { setActiveCompanionId(c.id); setActiveTab('chat'); }}
+                    onAdd={companionCategory === 'coaching' ? lobby.handleNewCoach : lobby.handleNewCompanion}
+                    onDelete={(c) => lobby.handleDeleteCompanion(c.id, c.custom_name, { stopPropagation: () => {} } as React.MouseEvent)}
+                    contextCompanion={contextCompanion}
+                    setContextCompanion={setContextCompanion}
+                    contextPos={contextPos}
+                    setContextPos={setContextPos}
+                  />
+                )}
                 {activeTab === 'chat' && activeCompanionId && (
-                  <EmbeddedChat companionId={activeCompanionId} onBack={() => setActiveTab('feed')} />
+                  <EmbeddedChat companionId={activeCompanionId} onBack={() => setActiveTab(companionCategory)} />
                 )}
               </motion.div>
             </AnimatePresence>
@@ -477,6 +488,149 @@ export function HomeShellPage() {
       </motion.button>
 
       <FeedbackModal isOpen={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
+    </div>
+  );
+}
+
+const CATEGORY_CONFIG: Record<CompanionCategory, { label: string; color: string; matchTypes: string[]; addLabel: string }> = {
+  companions:     { label: 'Companions',    color: '#f472b6', matchTypes: ['romantic', 'friend', ''], addLabel: 'Add companion' },
+  coaching:       { label: 'Coaching',      color: '#34d399', matchTypes: ['mentor'],                 addLabel: 'Add coach' },
+  correspondents: { label: 'Correspondents', color: '#fbbf24', matchTypes: ['correspondent'],         addLabel: 'Add correspondent' },
+};
+
+function CompanionList({
+  companions, category, onOpen, onAdd, onDelete,
+  contextCompanion, setContextCompanion, contextPos, setContextPos,
+}: {
+  companions: CompanionWithLastMessage[];
+  category: CompanionCategory;
+  onOpen: (c: CompanionWithLastMessage) => void;
+  onAdd: () => void;
+  onDelete: (c: CompanionWithLastMessage) => void;
+  contextCompanion: CompanionWithLastMessage | null;
+  setContextCompanion: (c: CompanionWithLastMessage | null) => void;
+  contextPos: { x: number; y: number } | null;
+  setContextPos: (p: { x: number; y: number } | null) => void;
+}) {
+  const cfg = CATEGORY_CONFIG[category];
+  const filtered = companions.filter(c => cfg.matchTypes.includes(c.relationship_type ?? ''));
+  const sorted = [...filtered].sort((a, b) => {
+    const aT = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+    const bT = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+    return bT - aT;
+  });
+
+  const handleContext = (c: CompanionWithLastMessage, e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextCompanion(c);
+    setContextPos({ x: e.clientX, y: e.clientY });
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/8 flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: cfg.color }} />
+          <h2 className="text-lg font-bold text-white">{cfg.label}</h2>
+          <span className="text-xs text-white/40">{sorted.length}</span>
+        </div>
+        <button
+          onClick={onAdd}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          {cfg.addLabel}
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        {sorted.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center"
+              style={{ background: `${cfg.color}15`, border: `2px dashed ${cfg.color}40` }}
+            >
+              <Plus className="w-7 h-7" style={{ color: `${cfg.color}80` }} />
+            </div>
+            <div>
+              <p className="text-white/60 text-sm font-medium mb-1">No {cfg.label.toLowerCase()} yet</p>
+              <button
+                onClick={onAdd}
+                className="text-xs font-semibold transition-colors hover:opacity-80"
+                style={{ color: cfg.color }}
+              >
+                {cfg.addLabel}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1.5 max-w-md mx-auto">
+            {sorted.map((c, i) => (
+              <motion.button
+                key={c.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.03 }}
+                onClick={() => onOpen(c)}
+                onContextMenu={(e) => handleContext(c, e)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/8 transition-colors text-left group"
+              >
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: cfg.color, opacity: (c.unread_count ?? 0) > 0 ? 1 : 0.4 }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors"
+                    style={{ fontFamily: c.font_family ?? undefined }}
+                  >
+                    {c.custom_name}
+                  </p>
+                  <p className="text-xs text-white/40 truncate">
+                    {(c.unread_count ?? 0) > 0 ? `${c.unread_count} unread` : c.last_message_at ? new Date(c.last_message_at).toLocaleDateString() : 'No messages yet'}
+                  </p>
+                </div>
+                {(c.unread_count ?? 0) > 0 && (
+                  <span
+                    className="text-[10px] font-bold text-white rounded-full px-1.5 py-0.5 flex-shrink-0"
+                    style={{ background: cfg.color }}
+                  >
+                    {c.unread_count}
+                  </span>
+                )}
+              </motion.button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {contextCompanion && contextPos && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.12 }}
+            className="fixed z-50 rounded-xl overflow-hidden shadow-xl"
+            style={{
+              left: Math.min(contextPos.x, window.innerWidth - 160),
+              top: Math.min(contextPos.y, window.innerHeight - 50),
+              background: 'rgba(20, 20, 35, 0.95)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.12)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => { onDelete(contextCompanion); setContextCompanion(null); setContextPos(null); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-300 hover:bg-red-500/15 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete {contextCompanion.custom_name}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -291,7 +291,7 @@ const DEFAULT_CUSTOMIZATION: UserCustomization = {
   trail_style:                 'solid',
   animation_style:             'stars',
   cursor_color:                'rose',
-  font_customization_unlocked: false,
+  font_customization_unlocked: true,
   button_hover_style:          'none',
   translucent_ui:              false,
   left_rail_collapsed:         false,
@@ -329,7 +329,7 @@ export async function getDailyCheckinStatus(userId: string): Promise<{
         trail_style:                 customRow.trail_style ?? 'solid',
         animation_style:             customRow.animation_style ?? 'stars',
         cursor_color:                customRow.cursor_color ?? 'rose',
-        font_customization_unlocked: customRow.font_customization_unlocked ?? false,
+        font_customization_unlocked: customRow.font_customization_unlocked ?? true,
         button_hover_style:          customRow.button_hover_style ?? 'none',
         translucent_ui:              customRow.translucent_ui ?? false,
         left_rail_collapsed:         customRow.left_rail_collapsed ?? false,
@@ -368,7 +368,7 @@ export async function performDailyCheckin(userId: string): Promise<UserCustomiza
   const newLongest  = Math.max(existing?.longest_streak ?? 0, newStreak);
   const newTotal    = (existing?.total_checkins ?? 0) + 1;
   const newUnlocked = computeUnlocks(newStreak, existing?.unlocked_pointers ?? ['star']);
-  const fontUnlocked = newStreak >= 20 ? true : (existing?.font_customization_unlocked ?? false);
+  const fontUnlocked = true;
 
   const updates = {
     user_id:                     userId,
@@ -405,7 +405,7 @@ export async function performDailyCheckin(userId: string): Promise<UserCustomiza
     trail_style:                 existing?.trail_style           ?? 'solid',
     animation_style:             existing?.animation_style       ?? 'stars',
     cursor_color:                existing?.cursor_color          ?? 'rose',
-    font_customization_unlocked: fontUnlocked,
+    font_customization_unlocked: true,
     button_hover_style:          existing?.button_hover_style    ?? 'none',
     translucent_ui:              existing?.translucent_ui        ?? false,
     left_rail_collapsed:         existing?.left_rail_collapsed   ?? false,

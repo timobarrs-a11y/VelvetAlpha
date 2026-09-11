@@ -315,7 +315,7 @@ export function CustomizationPanel({
                   <>
                     <Type className="w-3 h-3" />
                     Fonts
-                    {!fontUnlocked && <Lock className="w-2.5 h-2.5 opacity-70" />}
+                    {false && <Lock className="w-2.5 h-2.5 opacity-70" />}
                   </>
                 )
               }
@@ -334,7 +334,7 @@ export function CustomizationPanel({
 
               <div className="grid grid-cols-5 gap-3">
                 {POINTER_SYMBOLS.map(sym => {
-                  const unlocked = customization.unlocked_pointers.includes(sym.key);
+                  const unlocked = true;
                   const active   = customization.active_pointer === sym.key;
                   return (
                     <button key={sym.key} disabled={!unlocked}
@@ -491,7 +491,7 @@ export function CustomizationPanel({
                   <p className="text-xs font-semibold text-ink-secondary mb-3">Trail style</p>
                   <div className="grid grid-cols-3 gap-2">
                     {TRAIL_STYLES.map(ts => {
-                      const unlocked = ts.unlockDay === 0 || streak >= ts.unlockDay;
+                      const unlocked = true;
                       const active   = customization.trail_style === ts.key;
                       return (
                         <TrailStyleBtn key={ts.key} ts={ts} active={active} unlocked={unlocked}
@@ -508,7 +508,7 @@ export function CustomizationPanel({
                   <p className="text-xs font-semibold text-ink-secondary mb-3">Particle style</p>
                   <div className="grid grid-cols-3 gap-2">
                     {ANIMATION_STYLES.filter(a => a.key !== 'none').map(anim => {
-                      const unlocked = anim.unlockDay === 0 || streak >= anim.unlockDay;
+                      const unlocked = true;
                       const active   = customization.animation_style === anim.key;
                       return (
                         <button key={anim.key}
@@ -579,71 +579,44 @@ export function CustomizationPanel({
               exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
               className="space-y-4"
             >
-              {!fontUnlocked ? (
-                <div className="rounded-2xl p-6 text-center space-y-3"
-                  style={{ background: 'rgba(28,25,48,0.60)', border: '1px solid rgba(60,55,100,0.40)' }}>
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto"
-                    style={{ background: 'rgba(60,55,100,0.50)' }}>
-                    <Lock className="w-6 h-6 text-ink-disabled" />
-                  </div>
-                  <p className="text-sm font-semibold text-ink-secondary">Companion Fonts</p>
-                  <p className="text-xs text-ink-muted leading-relaxed">
-                    Give each companion their own unique font — unlocks at a <span className="text-warning-400 font-semibold">20-day streak</span>.
-                  </p>
-                  <div className="rounded-xl px-4 py-3 mt-2"
-                    style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.20)' }}>
-                    <div className="flex items-center justify-between text-xs mb-2">
-                      <span className="text-ink-muted">Current streak</span>
-                      <span className="font-bold text-warning-400">{streak} / 20 days</span>
-                    </div>
-                    <div className="w-full rounded-full h-1.5" style={{ background: 'rgba(60,55,100,0.50)' }}>
-                      <div
-                        className="h-1.5 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, (streak / 20) * 100)}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs text-ink-muted">Each companion has their own font identity. Tap Edit to change one.</p>
-                  {localCompanions.length === 0 ? (
-                    <p className="text-xs text-ink-subtle text-center py-4">No companions yet.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {localCompanions.map(companion => {
-                        const currentFont = FONT_OPTIONS.find(f => f.fontFamily === companion.font_family);
-                        return (
-                          <div key={companion.id}
-                            className="flex items-center justify-between px-4 py-3 rounded-xl"
-                            style={{ background: 'rgba(40,36,68,0.80)', border: '1px solid rgba(60,55,100,0.50)' }}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-ink truncate"
-                                style={{ fontFamily: companion.font_family ?? undefined }}>
-                                {companion.custom_name}
-                              </p>
-                              <p className="text-xs text-ink-muted mt-0.5">
-                                {currentFont ? (
-                                  <span style={{ fontFamily: companion.font_family ?? undefined }}>
-                                    {currentFont.label}
-                                  </span>
-                                ) : 'No font assigned'}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => setEditingCompanion(companion)}
-                              className="flex items-center gap-1 text-xs font-medium text-primary-400 hover:text-primary-300 transition-colors flex-shrink-0 ml-3"
-                            >
-                              Edit <ChevronRight className="w-3 h-3" />
-                            </button>
+              <>
+                <p className="text-xs text-ink-muted">Each companion has their own font identity. Tap Edit to change one.</p>
+                {localCompanions.length === 0 ? (
+                  <p className="text-xs text-ink-subtle text-center py-4">No companions yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {localCompanions.map(companion => {
+                      const currentFont = FONT_OPTIONS.find(f => f.fontFamily === companion.font_family);
+                      return (
+                        <div key={companion.id}
+                          className="flex items-center justify-between px-4 py-3 rounded-xl"
+                          style={{ background: 'rgba(40,36,68,0.80)', border: '1px solid rgba(60,55,100,0.50)' }}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-ink truncate"
+                              style={{ fontFamily: companion.font_family ?? undefined }}>
+                              {companion.custom_name}
+                            </p>
+                            <p className="text-xs text-ink-muted mt-0.5">
+                              {currentFont ? (
+                                <span style={{ fontFamily: companion.font_family ?? undefined }}>
+                                  {currentFont.label}
+                                </span>
+                              ) : 'No font assigned'}
+                            </p>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
+                          <button
+                            onClick={() => setEditingCompanion(companion)}
+                            className="flex items-center gap-1 text-xs font-medium text-primary-400 hover:text-primary-300 transition-colors flex-shrink-0 ml-3"
+                          >
+                            Edit <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             </motion.div>
           )}
         </AnimatePresence>
