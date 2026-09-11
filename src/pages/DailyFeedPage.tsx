@@ -9,6 +9,7 @@ import { getCategoryColor } from '../config/articleCategoryColors';
 import { getCompanions, type CompanionWithLastMessage } from '../services/companionService';
 import { getArticleOpeners, type ArticleOpenerMatch } from '../services/articleOpenerService';
 import { RelevanceBadge, OpenerStrip, DiscussWithAffordance } from '../components/RelevanceBadge';
+import { ArticleDiscussPanel } from '../components/ArticleDiscussPanel';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -87,13 +88,13 @@ function ArticleImage({ src, alt, className, eager }: { src: string; alt: string
   );
 }
 
-function HeroCard({ article, onClick, isNew, openers, companions, onTalkTo }: {
+function HeroCard({ article, onClick, isNew, openers, companions, onDiscuss }: {
   article: NewsArticle;
   onClick: () => void;
   isNew?: boolean;
   openers: ArticleOpenerMatch[];
   companions: CompanionWithLastMessage[];
-  onTalkTo: (c: CompanionWithLastMessage) => void;
+  onDiscuss: (article: NewsArticle, c: CompanionWithLastMessage) => void;
 }) {
   const primaryCat = article.categories?.[0];
   const [expanded, setExpanded] = useState(false);
@@ -149,7 +150,7 @@ function HeroCard({ article, onClick, isNew, openers, companions, onTalkTo }: {
         <div className="flex items-center justify-between">
           <span className="text-white/50 text-sm font-medium">{article.source}</span>
           <div className="flex items-center gap-3">
-            <DiscussWithAffordance companions={companions} onPick={onTalkTo} />
+            <DiscussWithAffordance companions={companions} onPick={(c) => onDiscuss(article, c)} />
             <span className="flex items-center gap-1.5 text-white/60 text-sm">
               Read story
               <ChevronRight className="w-4 h-4" />
@@ -160,20 +161,20 @@ function HeroCard({ article, onClick, isNew, openers, companions, onTalkTo }: {
 
       {expanded && openers.length > 0 && (
         <div className="relative bg-black/70 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
-          <OpenerStrip matches={openers} onTalkTo={onTalkTo} />
+          <OpenerStrip matches={openers} onTalkTo={(c) => onDiscuss(article, c)} />
         </div>
       )}
     </div>
   );
 }
 
-function ArticleCard({ article, onClick, seen, openers, companions, onTalkTo }: {
+function ArticleCard({ article, onClick, seen, openers, companions, onDiscuss }: {
   article: NewsArticle;
   onClick: () => void;
   seen?: boolean;
   openers: ArticleOpenerMatch[];
   companions: CompanionWithLastMessage[];
-  onTalkTo: (c: CompanionWithLastMessage) => void;
+  onDiscuss: (article: NewsArticle, c: CompanionWithLastMessage) => void;
 }) {
   const primaryCat = article.categories?.[0];
   const [expanded, setExpanded] = useState(false);
@@ -217,7 +218,7 @@ function ArticleCard({ article, onClick, seen, openers, companions, onTalkTo }: 
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
           <span className="text-white/40 text-xs">{article.source}</span>
           <div className="flex items-center gap-2">
-            <DiscussWithAffordance companions={companions} onPick={onTalkTo} />
+            <DiscussWithAffordance companions={companions} onPick={(c) => onDiscuss(article, c)} />
             <span className="text-white/40 text-xs flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {formatTimeAgo(article.published_at)}
@@ -228,20 +229,20 @@ function ArticleCard({ article, onClick, seen, openers, companions, onTalkTo }: 
 
       {expanded && openers.length > 0 && (
         <div onClick={(e) => e.stopPropagation()}>
-          <OpenerStrip matches={openers} onTalkTo={onTalkTo} />
+          <OpenerStrip matches={openers} onTalkTo={(c) => onDiscuss(article, c)} />
         </div>
       )}
     </div>
   );
 }
 
-function ListArticleCard({ article, onClick, seen, openers, companions, onTalkTo }: {
+function ListArticleCard({ article, onClick, seen, openers, companions, onDiscuss }: {
   article: NewsArticle;
   onClick: () => void;
   seen?: boolean;
   openers: ArticleOpenerMatch[];
   companions: CompanionWithLastMessage[];
-  onTalkTo: (c: CompanionWithLastMessage) => void;
+  onDiscuss: (article: NewsArticle, c: CompanionWithLastMessage) => void;
 }) {
   const primaryCat = article.categories?.[0];
   const [expanded, setExpanded] = useState(false);
@@ -273,12 +274,12 @@ function ListArticleCard({ article, onClick, seen, openers, companions, onTalkTo
         </div>
         {expanded && openers.length > 0 && (
           <div onClick={(e) => e.stopPropagation()}>
-            <OpenerStrip matches={openers} onTalkTo={onTalkTo} />
+            <OpenerStrip matches={openers} onTalkTo={(c) => onDiscuss(article, c)} />
           </div>
         )}
       </div>
       <div className="flex flex-col items-end justify-between gap-2 flex-shrink-0">
-        <DiscussWithAffordance companions={companions} onPick={onTalkTo} />
+        <DiscussWithAffordance companions={companions} onPick={(c) => onDiscuss(article, c)} />
         <ChevronRight className="w-4 h-4 text-white/20 self-center" />
       </div>
     </div>
@@ -554,8 +555,16 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
     return map;
   }, [articles, companions]);
 
-  const handleTalkTo = (companion: CompanionWithLastMessage) => {
-    navigate(`/chat?companion=${companion.id}`);
+  const [discussOpen, setDiscussOpen] = useState(false);
+  const [discussCompanion, setDiscussCompanion] = useState<CompanionWithLastMessage | null>(null);
+  const [discussArticleId, setDiscussArticleId] = useState<string | null>(null);
+  const [discussArticleTitle, setDiscussArticleTitle] = useState<string | undefined>(undefined);
+
+  const handleDiscussArticle = (article: NewsArticle, companion: CompanionWithLastMessage) => {
+    setDiscussArticleId(article.id);
+    setDiscussArticleTitle(article.title);
+    setDiscussCompanion(companion);
+    setDiscussOpen(true);
   };
 
   if (loading) {
@@ -680,7 +689,7 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
                   isNew={!viewedIds.has(topStory.id)}
                   openers={openerMap.get(topStory.id) ?? []}
                   companions={companions}
-                  onTalkTo={handleTalkTo}
+                  onDiscuss={handleDiscussArticle}
                   onClick={() => navigate(`/article?id=${topStory.id}`)}
                 />
               </div>
@@ -700,7 +709,7 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
                       seen={viewedIds.has(article.id)}
                       openers={openerMap.get(article.id) ?? []}
                       companions={companions}
-                      onTalkTo={handleTalkTo}
+                      onDiscuss={handleDiscussArticle}
                       onClick={() => navigate(`/article?id=${article.id}`)}
                     />
                   ))}
@@ -722,7 +731,7 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
                       seen={viewedIds.has(article.id)}
                       openers={openerMap.get(article.id) ?? []}
                       companions={companions}
-                      onTalkTo={handleTalkTo}
+                      onDiscuss={handleDiscussArticle}
                       onClick={() => navigate(`/article?id=${article.id}`)}
                     />
                   ))}
@@ -745,6 +754,14 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
           </div>
         )}
       </div>
+
+      <ArticleDiscussPanel
+        open={discussOpen}
+        articleId={discussArticleId}
+        companion={discussCompanion}
+        articleTitle={discussArticleTitle}
+        onClose={() => setDiscussOpen(false)}
+      />
     </div>
   );
 }

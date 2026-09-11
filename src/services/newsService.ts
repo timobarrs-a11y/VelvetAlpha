@@ -20,6 +20,16 @@ export interface CompanionNewsArticle {
   source: string;
 }
 
+export interface ArticleConversationTurn {
+  id: string;
+  article_id: string;
+  user_id: string;
+  companion_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
 interface CacheEntry {
   data: CompanionNewsArticle[];
   timestamp: number;
@@ -124,6 +134,85 @@ class NewsService {
       return data || [];
     } catch (_error) {
       return [];
+    }
+  }
+
+  async getArticleConversationForCompanion(articleId: string, companionId: string): Promise<ArticleConversationTurn[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('article_conversations')
+        .select('*')
+        .eq('article_id', articleId)
+        .eq('user_id', user.id)
+        .eq('companion_id', companionId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return (data || []) as ArticleConversationTurn[];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  async saveArticleConversationTurn(
+    articleId: string,
+    companionId: string,
+    role: 'user' | 'assistant',
+    content: string,
+  ): Promise<ArticleConversationTurn | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from('article_conversations')
+        .insert({
+          article_id: articleId,
+          user_id: user.id,
+          companion_id: companionId,
+          role,
+          content,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as ArticleConversationTurn;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  async callArticleDiscuss(
+    articleId: string | null,
+    companionId: string,
+    pastedText: string,
+    priorTurns: { role: string; content: string }[] = [],
+  ): Promise<{ reply: string; truncated: boolean } | null> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/article-discuss`;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ articleId, companionId, pastedText, priorTurns }),
+      });
+
+      if (!resp.ok) return null;
+
+      const data = await resp.json();
+      if (data.error) return null;
+      return { reply: data.reply ?? '', truncated: data.truncated ?? false };
+    } catch (_error) {
+      return null;
     }
   }
 

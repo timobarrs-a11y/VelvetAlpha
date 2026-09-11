@@ -3,6 +3,9 @@ project_id = ""
 [functions.analyze-conversation]
 verify_jwt = true
 
+[functions.article-discuss]
+verify_jwt = true
+
 [functions.article-refresh-scheduler]
 verify_jwt = false
 
