@@ -132,7 +132,7 @@ export function RootRedirect() {
         }
 
         if (!profile?.welcome_seen) {
-          setDestination('/atlas-onboarding');
+          setDestination('/welcome');
         } else {
           setDestination('/atlas-onboarding');
         }

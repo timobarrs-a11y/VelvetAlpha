@@ -4,7 +4,6 @@ import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 import {
   CURATED_EXPERT_MAP,
   getCuratedExpert,
-  buildCoachBehavioralInstructions,
   type AccountabilityLevel,
 } from "../_shared/coachFramework.ts";
 
@@ -16,56 +15,8 @@ const corsHeaders = {
 
 const MAX_TURNS = 10;
 
-// Keyword buckets for matching free-text goals to curated experts.
-// Each entry maps a curated expert ID to the keywords that indicate it.
-const EXPERT_KEYWORDS: Record<string, string[]> = {
-  fitness_hype: ["lose weight", "get fit", "workout", "exercise", "gym", "run", "running", "strength", "muscle", "fitness", "walk", "move", "active", "cardio", "marathon", "weight loss", "get in shape", "health habit"],
-  fitness_drill: ["push me", "no excuses", "drill", "discipline", "strict", "hardcore", "bootcamp", "tough"],
-  wellness_guide: ["mental health", "anxiety", "stress", "mindfulness", "meditation", "self-care", "wellness", "emotional", "balance", "burnout", "overwhelm"],
-  sleep_coach: ["sleep", "insomnia", "rest", "tired", "bedtime", "can't sleep"],
-  interview_coach: ["interview", "job interview", "mock interview", "interview prep", "star method"],
-  finance_mentor: ["budget", "save money", "savings", "finance", "financial", "money", "spending", "debt", "invest"],
-  finance_tough: ["tough love finance", "stop spending", "blunt finance", "budget hawk", "no more excuses money"],
-  career_advisor: ["career", "promotion", "job change", "job search", "resume", "linkedin", "workplace", "boss", "negotiate salary", "career transition", "quit my job"],
-  communication_coach: ["communication", "difficult conversation", "hard email", "confrontation", "assertive", "speak up", "presentation", "public speaking", "negotiation"],
-  creative_muse: ["creative", "art", "paint", "draw", "music", "song", "create", "inspiration", "creative block", "art project"],
-  writing_collaborator: ["write", "writing", "novel", "book", "blog", "screenplay", "poetry", "story", "draft", "writer's block", "word count"],
-  brainstorm_partner: ["brainstorm", "idea", "ideas", "startup idea", "product idea", "think through", "explore options"],
-  study_partner: ["study", "exam", "test prep", "flashcards", "finals", "midterm", "study session", "focus", "procrastinate"],
-  language_tutor: ["language", "spanish", "french", "german", "italian", "portuguese", "japanese", "chinese", "korean", "learn a language", "esl", "fluent"],
-  essay_architect: ["essay", "thesis", "paper", "academic writing", "dissertation", "research paper", "argument", "term paper"],
-  stem_tutor: ["math", "calculus", "algebra", "physics", "chemistry", "biology", "science", "statistics", "equation", "homework", "stem"],
-  code_mentor: ["code", "coding", "programming", "python", "javascript", "react", "java", "software", "developer", "app", "bug", "debug", "learn to code"],
-  data_coach: ["data science", "data analysis", "machine learning", "ml", "ai", "data", "analytics", "sql", "pandas", "visualization"],
-  chef_coach: ["cook", "cooking", "recipe", "meal", "meal prep", "kitchen", "chef", "food", "baking", "dinner"],
-  connection_coach: ["friends", "make friends", "dating", "social", "social skills", "lonely", "connection", "relationship", "social life", "conversation with people"],
-  style_coach: ["style", "fashion", "wardrobe", "outfit", "clothes", "look good", "dress", "grooming"],
-  home_coach: ["organize", "declutter", "clean", "home", "house", "tidy", "minimalism", "clutter", "space"],
-};
-
-function matchExpertToGoal(goalText: string): { expertId: string; isCurated: true } | { expertId: null; isCurated: false } {
-  const lower = goalText.toLowerCase();
-  let bestMatch: string | null = null;
-  let bestScore = 0;
-
-  for (const [expertId, keywords] of Object.entries(EXPERT_KEYWORDS)) {
-    let score = 0;
-    for (const kw of keywords) {
-      if (lower.includes(kw)) {
-        score += kw.length > 6 ? 3 : 2;
-      }
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = expertId;
-    }
-  }
-
-  if (bestMatch && bestScore >= 4 && getCuratedExpert(bestMatch)) {
-    return { expertId: bestMatch, isCurated: true };
-  }
-  return { expertId: null, isCurated: false };
-}
+// The list of curated expert IDs, sent to the AI for classification.
+const CURATED_EXPERT_IDS = Object.keys(CURATED_EXPERT_MAP);
 
 const COACH_NAMES_MALE = ["Marcus", "Derek", "James", "Andre", "Theo", "Kai", "Victor", "Sam", "Cole", "Ezra"];
 const COACH_NAMES_FEMALE = ["Maya", "Sofia", "Nadia", "Elena", "Priya", "Zara", "Dana", "Liv", "Iris", "Nora"];
@@ -115,41 +66,6 @@ This marker tells the system to move to the next phase. The user never sees it. 
 TURN LIMIT:
 Reach a conclusion within ${MAX_TURNS} exchanges. If going nowhere, make your best guess and wrap up.`;
 
-// ─── Phase 3 system prompt: persona collection ───────────────────────────
-
-const PERSONA_PHASE_PROMPT = `You are Atlas — the host of Velvet. The user has just been matched with their coach and now you need to learn about THEM as a person, so you can personalize their experience.
-
-YOUR PERSONALITY:
-- Warm, conversational, brief (1-3 sentences).
-- You ask ONE question at a time and listen to the answer.
-- Never sound like a survey or form.
-
-YOUR JOB:
-Collect the following profile information through natural conversation. Ask one question at a time. When you have an answer, acknowledge it briefly and move to the next.
-
-Collect these fields IN THIS ORDER:
-1. Name — "What should I call you?"
-2. Birthday — "When's your birthday?" (month and day is fine)
-3. Gender — "And how do you identify? Male, female, non-binary, or prefer not to say?"
-4. Favorite color — "Quick one — what's your favorite color? Pick from: red, orange, yellow, green, teal, blue, indigo, purple, pink, black, white, gray, brown."
-5. Hobbies — "What do you like to do for fun? Name a few — or pick from: reading, gaming, cooking, music, sports, art, travel, movies, tech, fitness, nature, photography, fashion."
-6. Music — "What kind of music do you listen to?"
-
-CRITICAL RULES:
-- ONE question at a time. Never list multiple questions.
-- Never use bullet points or numbered lists.
-- If they give a vague answer, that's fine — don't push. Move on.
-- Keep your reactions short: "Love it." "Got it." "Nice." Then ask the next thing.
-
-ENDING THE PERSONA PHASE:
-After you've collected all 6 fields, wrap up warmly: "That's everything I need for now. Let me get you set up." Then stop.
-
-After your wrap-up message, on a NEW line, append exactly: [PERSONA_COMPLETE]
-The user never sees this marker. Always include it when you're done.
-
-TURN LIMIT:
-Collect all 6 fields within ${MAX_TURNS} exchanges. If the user is being very terse, you can ask for two related things at once ("What's your birthday, and how do you identify?") after the first few questions.`;
-
 // ─── Edge function handler ──────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -180,7 +96,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const phase: "goal" | "provisioning" | "persona" | "companion_offer" | "done" = body.phase || "goal";
+    const phase: "goal" | "provisioning" = body.phase || "goal";
     const messages: Array<{ role: string; content: string }> = body.messages || [];
 
     // ── Phase: goal discovery chat ──────────────────────────────────────
@@ -266,7 +182,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ── Phase: provisioning (extract + create coach) ────────────────────
+    // ── Phase: provisioning (extract goal + classify expert + create coach) ─
 
     if (phase === "provisioning") {
       const transcript: Array<{ role: string; content: string }> = body.transcript || [];
@@ -282,20 +198,53 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // Extract goal + infer expert from transcript
-      const extractionPrompt = `You are an analysis engine. Read this conversation transcript and extract the user's goal.
+      // ── Combined extraction + expert classification in one AI call ────
+      //
+      // Instead of the old keyword `includes()` approach (which missed
+      // paraphrases like "better public speaker" → communication_coach),
+      // we ask the AI to read the full transcript and pick the best
+      // curated expert ID directly, or return null for a custom expert.
+      const expertIdList = CURATED_EXPERT_IDS.join(", ");
+      const extractionPrompt = `You are an analysis engine. Read this conversation transcript and extract the user's goal, then classify it to the best curated expert.
+
+Here are the curated expert IDs and their domains:
+${expertIdList}
+
+For reference, the expert domains are:
+- fitness_hype / fitness_drill: fitness, exercise, working out, weight loss
+- wellness_guide: mental health, stress, mindfulness, self-care, burnout
+- sleep_coach: sleep, insomnia, rest, tired
+- interview_coach: interview prep, mock interviews, STAR method
+- finance_mentor / finance_tough: budget, savings, money, spending, debt
+- career_advisor: career, promotion, job change, resume, salary negotiation
+- communication_coach: communication, difficult conversations, presentations, public speaking, negotiation
+- creative_muse: creative work, art, painting, music, creative block
+- writing_collaborator: writing, novel, book, blog, screenplay, writer's block
+- brainstorm_partner: brainstorming, idea generation, startup ideas, product ideas
+- study_partner: study, exam prep, flashcards, finals, focus
+- language_tutor: language learning, Spanish, French, Japanese, ESL
+- essay_architect: essays, thesis, academic writing, research papers
+- stem_tutor: math, calculus, physics, chemistry, biology, statistics, homework
+- code_mentor: coding, programming, Python, JavaScript, React, software development
+- data_coach: data science, data analysis, machine learning, analytics, SQL
+- chef_coach: cooking, recipes, meal prep, kitchen, baking
+- connection_coach: friends, dating, social skills, loneliness, connection
+- style_coach: style, fashion, wardrobe, outfits, grooming
+- home_coach: organizing, decluttering, cleaning, home, tidy
 
 Return a JSON object with exactly these fields:
 {
   "goalText": "the user's goal in their own words, max 15 words",
   "accountabilityLevel": "gentle" | "moderate" | "firm",
-  "coachGenderHint": "male" | "female" | null
+  "coachGenderHint": "male" | "female" | null,
+  "expertId": one of the curated expert IDs above, or null if none fit well
 }
 
 Guidelines:
 - goalText: Use the user's own words. "Lose 20 pounds" not "weight loss goal".
 - accountabilityLevel: If they want to be pushed/challenged → "firm". If they want patience → "gentle". Default "moderate".
 - coachGenderHint: Only if they expressed a preference. Otherwise null.
+- expertId: Pick the BEST matching curated expert from the list. If the goal doesn't clearly match any, return null (we'll create a custom expert). Choose the closest match, not just an exact keyword match — "better public speaker" should map to communication_coach, "get stronger" should map to fitness_hype, etc.
 
 Return ONLY the JSON object. No commentary, no markdown.`;
 
@@ -308,7 +257,7 @@ Return ONLY the JSON object. No commentary, no markdown.`;
         },
         body: JSON.stringify({
           model: MODEL_CONFIG.HAIKU,
-          max_tokens: 200,
+          max_tokens: 300,
           messages: [{
             role: "user",
             content: `${extractionPrompt}\n\n--- TRANSCRIPT ---\n${transcriptText}\n--- END ---\n\nReturn the JSON object now.`,
@@ -319,6 +268,7 @@ Return ONLY the JSON object. No commentary, no markdown.`;
       let goalText = "Personal growth";
       let accountabilityLevel: AccountabilityLevel = "moderate";
       let coachGenderHint: string | null = null;
+      let aiExpertId: string | null = null;
 
       if (extractResponse.ok) {
         const extractData = await extractResponse.json();
@@ -329,13 +279,14 @@ Return ONLY the JSON object. No commentary, no markdown.`;
           goalText = parsed.goalText || goalText;
           accountabilityLevel = parsed.accountabilityLevel || accountabilityLevel;
           coachGenderHint = parsed.coachGenderHint || null;
+          aiExpertId = parsed.expertId || null;
         } catch {
           console.error("[atlas-onboarding] Failed to parse extraction:", rawExtract);
         }
       }
 
-      // Match to curated expert, or create a custom expert
-      const match = matchExpertToGoal(goalText);
+      // Validate the AI-chosen expert ID against the actual map
+      const isCuratedMatch = aiExpertId && getCuratedExpert(aiExpertId) !== null;
       const { name: coachName, gender } = pickCoachName(coachGenderHint);
 
       // Save goal to user_goals
@@ -387,8 +338,8 @@ Return ONLY the JSON object. No commentary, no markdown.`;
         expertId = existingCoach.signature_expert || "";
         const curated = getCuratedExpert(expertId);
         expertDomain = curated?.domain || "custom";
-      } else if (match.isCurated && match.expertId) {
-        // Create coach with curated expert
+      } else if (isCuratedMatch && aiExpertId) {
+        // Create coach with AI-classified curated expert
         const { data: newCoach, error: createError } = await supabaseAdmin
           .from("companions")
           .insert({
@@ -396,7 +347,7 @@ Return ONLY the JSON object. No commentary, no markdown.`;
             gender,
             relationship_type: "mentor",
             custom_name: coachName,
-            signature_expert: match.expertId,
+            signature_expert: aiExpertId,
             hobbies: [],
             sports: [],
             first_message_sent: false,
@@ -415,7 +366,7 @@ Return ONLY the JSON object. No commentary, no markdown.`;
         }
 
         coachId = newCoach.id;
-        expertId = match.expertId;
+        expertId = aiExpertId;
         expertDomain = getCuratedExpert(expertId)?.domain || "";
       } else {
         // No curated match — create a custom user_expert + coach
@@ -519,9 +470,6 @@ Return ONLY the instruction text. No JSON, no markdown.`;
         .is("source_companion_id", null);
 
       const curatedExpert = getCuratedExpert(expertId);
-      const expertName = curatedExpert
-        ? Object.keys(CURATED_EXPERT_MAP).find(k => k === expertId) ? expertId : "custom"
-        : "custom";
 
       return new Response(JSON.stringify({
         success: true,
@@ -532,169 +480,6 @@ Return ONLY the instruction text. No JSON, no markdown.`;
         expertName: curatedExpert?.domain || expertDomain,
         isCustomExpert,
         phase: "provisioning",
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // ── Phase: persona collection chat ──────────────────────────────────
-
-    if (phase === "persona") {
-      if (messages.length === 0) {
-        const greeting = `Great — your coach is all set up. Now let me learn a bit about you so I can personalize everything. What should I call you?`;
-        return new Response(JSON.stringify({
-          reply: greeting,
-          turnCount: 0,
-          isComplete: false,
-          phase: "persona",
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const turnCount = Math.floor(messages.filter(m => m.role === "user").length);
-      const apiMessages = messages.map(m => ({
-        role: m.role === "atlas" ? "assistant" : m.role,
-        content: m.content,
-      }));
-
-      const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!apiKey) {
-        return new Response(JSON.stringify({ error: "AI service not configured" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: MODEL_CONFIG.HAIKU,
-          max_tokens: 300,
-          system: PERSONA_PHASE_PROMPT,
-          messages: apiMessages,
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("[atlas-onboarding] persona phase API error:", response.status, errText);
-        return new Response(JSON.stringify({ error: "AI service error" }), {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const aiData = await response.json();
-      const rawReply: string = aiData.content?.[0]?.text || "";
-
-      const hasMarker = rawReply.includes("[PERSONA_COMPLETE]");
-      const cleanReply = rawReply.replace(/\[PERSONA_COMPLETE\]/gi, "").trim();
-
-      const isComplete = turnCount >= 4 && hasMarker;
-      const forceComplete = turnCount >= MAX_TURNS - 1;
-
-      return new Response(JSON.stringify({
-        reply: cleanReply,
-        turnCount: turnCount + 1,
-        isComplete: isComplete || forceComplete,
-        phase: "persona",
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // ── Phase: save persona data ─────────────────────────────────────────
-
-    if (phase === "save_persona") {
-      const personaData = body.personaData || {};
-      const coachId = body.coachId;
-
-      // Extract profile fields from the persona conversation
-      const extractionPrompt = `You are an extraction engine. Read this conversation transcript between Atlas and a user. Extract the user's profile information.
-
-Return a JSON object with exactly these fields (use null if not mentioned):
-{
-  "name": string | null,
-  "birthday": string | null (format: YYYY-MM-DD or MM-DD if no year given),
-  "gender": "male" | "female" | "non-binary" | "prefer not to say" | null,
-  "favoriteColor": string | null,
-  "hobbies": string[] | null,
-  "musicGenre": string[] | null
-}
-
-Return ONLY the JSON object.`;
-
-      const transcript: Array<{ role: string; content: string }> = body.transcript || [];
-      const transcriptText = transcript
-        .map(m => `${m.role === "atlas" ? "Atlas" : "User"}: ${m.content}`)
-        .join("\n\n");
-
-      const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!apiKey) {
-        return new Response(JSON.stringify({ error: "AI service not configured" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const extractResponse = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: MODEL_CONFIG.HAIKU,
-          max_tokens: 200,
-          messages: [{
-            role: "user",
-            content: `${extractionPrompt}\n\n--- TRANSCRIPT ---\n${transcriptText}\n--- END ---\n\nReturn the JSON object now.`,
-          }],
-        }),
-      });
-
-      let extracted: Record<string, unknown> = {};
-      if (extractResponse.ok) {
-        const extractData = await extractResponse.json();
-        const rawExtract: string = extractData.content?.[0]?.text || "";
-        try {
-          const cleaned = rawExtract.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          extracted = JSON.parse(cleaned);
-        } catch {
-          console.error("[atlas-onboarding] Failed to parse persona extraction:", rawExtract);
-        }
-      }
-
-      // Save to user_profiles
-      const profileUpdate: Record<string, unknown> = {};
-      if (extracted.name) profileUpdate.name = extracted.name;
-      if (extracted.birthday) profileUpdate.birthday = extracted.birthday;
-      if (extracted.gender) profileUpdate.gender = extracted.gender;
-      if (extracted.favoriteColor) profileUpdate.favorite_color = extracted.favoriteColor;
-      if (Array.isArray(extracted.hobbies) && extracted.hobbies.length > 0) profileUpdate.hobbies = extracted.hobbies;
-      if (Array.isArray(extracted.musicGenre) && extracted.musicGenre.length > 0) profileUpdate.music_genre = extracted.musicGenre;
-
-      if (Object.keys(profileUpdate).length > 0) {
-        await supabaseAdmin
-          .from("user_profiles")
-          .update(profileUpdate)
-          .eq("user_id", user.id);
-      }
-
-      return new Response(JSON.stringify({
-        success: true,
-        coachId,
-        phase: "done",
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, Check, Compass, UserCircle, Heart } from 'lucide-react';
+import { Send, Sparkles, Compass } from 'lucide-react';
 import { VELVET_THEME } from '../config/velvetTheme';
 import { supabase } from '../shared/supabase/client';
+import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
 
 interface ChatMessage {
   role: 'atlas' | 'user';
   content: string;
 }
 
-type Phase = 'goal' | 'provisioning' | 'persona' | 'companion_offer' | 'complete';
+type Phase = 'goal' | 'provisioning' | 'transitioning';
 
 const FUNCTION_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
@@ -24,6 +25,7 @@ export const AtlasConciergePage = () => {
   const [coachId, setCoachId] = useState('');
   const [expertDomain, setExpertDomain] = useState('');
   const [error, setError] = useState('');
+  const [showTransition, setShowTransition] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const transcriptRef = useRef<ChatMessage[]>([]);
@@ -83,7 +85,7 @@ export const AtlasConciergePage = () => {
   const handleSend = async () => {
     const text = input.trim();
     if (!text || isThinking) return;
-    if (phase === 'provisioning' || phase === 'complete') return;
+    if (phase === 'provisioning' || phase === 'transitioning') return;
 
     setInput('');
 
@@ -118,12 +120,8 @@ export const AtlasConciergePage = () => {
       transcriptRef.current = [...updatedTranscript, atlasMsg];
       setMessages(prev => [...prev, atlasMsg]);
 
-      if (data.isComplete) {
-        if (currentPhase === 'goal') {
-          await handleGoalComplete(updatedTranscript, atlasMsg);
-        } else if (currentPhase === 'persona') {
-          await handlePersonaComplete(updatedTranscript, atlasMsg);
-        }
+      if (data.isComplete && currentPhase === 'goal') {
+        await handleGoalComplete(updatedTranscript, atlasMsg);
       }
     } catch {
       setError('Connection issue. Please try sending your message again.');
@@ -132,7 +130,7 @@ export const AtlasConciergePage = () => {
     }
   };
 
-  // ── Goal phase complete → provision coach → start persona phase ────────
+  // ── Goal phase complete → provision coach → transition to questionnaire ─
 
   const handleGoalComplete = async (finalTranscript: ChatMessage[], lastAtlasMsg: ChatMessage) => {
     updatePhase('provisioning');
@@ -165,11 +163,15 @@ export const AtlasConciergePage = () => {
       setCoachId(data.coachId || '');
       setExpertDomain(data.expertDomain || '');
 
-      // Transition to persona phase
-      updatePhase('persona');
-      transcriptRef.current = [];
-      setMessages(prev => [...prev, { role: 'atlas', content: `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Now, let me learn a bit about you so I can personalize everything. What should I call you?` }]);
-      transcriptRef.current = [{ role: 'atlas', content: `What should I call you?` }];
+      // Show Atlas transition message in chat, then reveal the overlay
+      const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Now let me learn a bit about you so I can personalize everything. This'll take about 90 seconds.`;
+      setMessages(prev => [...prev, { role: 'atlas', content: transitionMsg }]);
+
+      setTimeout(() => {
+        updatePhase('transitioning');
+        setShowTransition(true);
+        setIsThinking(false);
+      }, 2000);
     } catch {
       setError('Something went wrong setting up your coach. You can continue and we\'ll retry later.');
       setTimeout(() => {
@@ -177,58 +179,6 @@ export const AtlasConciergePage = () => {
       }, 2500);
     } finally {
       setIsThinking(false);
-    }
-  };
-
-  // ── Persona phase complete → save persona → companion offer ───────────
-
-  const handlePersonaComplete = async (finalTranscript: ChatMessage[], lastAtlasMsg: ChatMessage) => {
-    setIsThinking(true);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const fullTranscript = [...finalTranscript, lastAtlasMsg].filter(
-        m => m.role === 'user' || (m.role === 'atlas' && m.content)
-      );
-
-      await fetch(`${FUNCTION_BASE}/atlas-onboarding`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          phase: 'save_persona',
-          transcript: fullTranscript,
-          coachId,
-        }),
-      });
-
-      // Move to companion offer
-      updatePhase('companion_offer');
-      setMessages(prev => [...prev, { role: 'atlas', content: 'That\'s everything I need for now. One more thing — would you also like to create a friend or companion to talk about life with? You can always do this later, but you can set one up now if you\' like.' }]);
-    } catch {
-      // Non-fatal — still proceed to companion offer
-      updatePhase('companion_offer');
-      setMessages(prev => [...prev, { role: 'atlas', content: 'Got it. One more thing — would you also like to create a friend or companion to talk about life with? You can always do this later.' }]);
-    } finally {
-      setIsThinking(false);
-    }
-  };
-
-  // ── Companion offer: yes/no choice buttons ─────────────────────────────
-
-  const handleCompanionChoice = (wantsCompanion: boolean) => {
-    if (wantsCompanion) {
-      sessionStorage.setItem('onboardingIntent', 'connection');
-      sessionStorage.setItem('onboardingRelationshipType', 'friend');
-      navigate('/companion-path', { replace: true });
-    } else {
-      // Skip companion — go to avatar creation for the coach
-      sessionStorage.setItem('currentCompanionId', coachId);
-      navigate('/create-companion-avatar', { replace: true });
     }
   };
 
@@ -242,19 +192,15 @@ export const AtlasConciergePage = () => {
   // ── Render ─────────────────────────────────────────────────────────────
 
   const phaseLabels: Record<Phase, string> = {
-    goal: 'Step 1 of 3 — What are you working toward?',
+    goal: 'Step 1 of 2 — What are you working toward?',
     provisioning: 'Setting up your coach...',
-    persona: 'Step 2 of 3 — Tell me about you',
-    companion_offer: 'Step 3 of 3 — One more thing',
-    complete: 'All set!',
+    transitioning: 'Getting ready for the next step...',
   };
 
   const phaseIcons: Record<Phase, React.ReactNode> = {
     goal: <Compass className="w-4 h-4" />,
     provisioning: <Sparkles className="w-4 h-4 animate-pulse" />,
-    persona: <UserCircle className="w-4 h-4" />,
-    companion_offer: <Heart className="w-4 h-4" />,
-    complete: <Check className="w-4 h-4" />,
+    transitioning: <Sparkles className="w-4 h-4 animate-pulse" />,
   };
 
   if (error && messages.length === 0) {
@@ -273,6 +219,11 @@ export const AtlasConciergePage = () => {
       </div>
     );
   }
+
+  const transitionMessage = coachName
+    ? `Your coach ${coachName} is ready${expertDomain ? ` to help you with ${expertDomain}` : ''}.`
+    : 'Your coach is ready.';
+  const transitionSubMessage = 'Now I need to know about you. A few quick questions to personalize everything — takes about 90 seconds.';
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: VELVET_THEME.bg }}>
@@ -293,7 +244,10 @@ export const AtlasConciergePage = () => {
             </div>
           </div>
           <h1 className="text-xl font-bold text-white">Atlas</h1>
-          <p className="text-ink-muted text-sm mt-1">{phaseLabels[phase]}</p>
+          <p className="text-ink-muted text-sm mt-1 flex items-center justify-center gap-1.5">
+            {phaseIcons[phase]}
+            {phaseLabels[phase]}
+          </p>
         </div>
 
         {/* Messages */}
@@ -361,35 +315,8 @@ export const AtlasConciergePage = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Companion offer buttons */}
-        {phase === 'companion_offer' && !isThinking && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex gap-3 pb-3 flex-shrink-0"
-          >
-            <button
-              onClick={() => handleCompanionChoice(true)}
-              className="flex-1 py-3 rounded-2xl text-white font-semibold text-sm transition-all hover:scale-[1.02] active:scale-95"
-              style={{ background: VELVET_THEME.button.primary, boxShadow: VELVET_THEME.button.primaryGlow }}
-            >
-              Yes, set up a companion
-            </button>
-            <button
-              onClick={() => handleCompanionChoice(false)}
-              className="flex-1 py-3 rounded-2xl text-white/80 font-semibold text-sm transition-all hover:scale-[1.02] active:scale-95"
-              style={{
-                background: VELVET_THEME.colors.glassCard,
-                border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
-              }}
-            >
-              Maybe later
-            </button>
-          </motion.div>
-        )}
-
-        {/* Chat input */}
-        {(phase === 'goal' || phase === 'persona') && (
+        {/* Chat input — only during goal phase */}
+        {phase === 'goal' && (
           <div className="flex-shrink-0 pb-2">
             <div className="flex gap-2 items-end">
               <textarea
@@ -464,6 +391,18 @@ export const AtlasConciergePage = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Atlas transition overlay → navigates to questionnaire */}
+      <AtlasTransitionOverlay
+        message={transitionMessage}
+        subMessage={transitionSubMessage}
+        destination="/user-questionnaire"
+        visible={showTransition}
+        autoAdvanceMs={3000}
+        onAdvance={() => {
+          if (coachId) sessionStorage.setItem('atlasCoachId', coachId);
+        }}
+      />
     </div>
   );
 };

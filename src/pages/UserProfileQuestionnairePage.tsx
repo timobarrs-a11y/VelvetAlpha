@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Plus, X, Sparkles, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { userProfileService } from '../services/userProfileService';
 import { toast } from '../shared/ui/Toast';
+import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
 
 interface QuestionData {
   id: string;
@@ -335,6 +336,7 @@ export function UserProfileQuestionnairePage() {
   const [milestoneMessage, setMilestoneMessage] = useState<string | null>(null);
   const [lastMilestone, setLastMilestone] = useState(0);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
+  const [showAtlasTransition, setShowAtlasTransition] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -362,7 +364,7 @@ export function UserProfileQuestionnairePage() {
           profile.birthday && profile.gender && profile.favorite_color
         );
         if (hasCore) {
-          navigate('/intent-select', { replace: true });
+          setShowAtlasTransition(true);
           return;
         }
       }
@@ -442,7 +444,7 @@ export function UserProfileQuestionnairePage() {
         toast.error('Something went wrong saving your profile. Please try again.');
         return;
       }
-      navigate('/intent-select', { replace: true });
+      setShowAtlasTransition(true);
       return;
     }
 
@@ -799,6 +801,14 @@ export function UserProfileQuestionnairePage() {
           </p>
         </div>
       </motion.div>
+
+      <AtlasTransitionOverlay
+        message="Got everything I need."
+        subMessage="One more thing — do you also want a friend or companion to talk about life with? You can set one up now or anytime later."
+        destination="/intent-select"
+        visible={showAtlasTransition}
+        autoAdvanceMs={2500}
+      />
     </div>
   );
 }
