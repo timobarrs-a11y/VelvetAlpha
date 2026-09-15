@@ -43,14 +43,8 @@ The `shared/` directory contains:
 4. Keep features as independent as possible
 5. Shared code goes in `shared/`, not duplicated across features
 
-## Migration Status
+## Current State
 
-Currently in Phase 1: Structure creation
-- Placeholder files created
-- No behavior changes
-- Existing code unchanged
+The feature-sliced architecture is partially realized. The `chat/` and `insights/` features contain working, production code — hooks, orchestrators, generators, and query layers that are actively imported by the app. Other directories (`onboarding/`, `subscription/`, `rituals/`, `video/`) currently export only lightweight adapters or index re-exports.
 
-Next steps:
-- Move components into features
-- Extract services into features
-- Refactor App.tsx to use feature modules
+The broader services and components live in `src/services/` and `src/components/` and have not been moved into feature modules. `App.tsx` remains a large file that wires much of the app directly.

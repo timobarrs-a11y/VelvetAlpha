@@ -9,7 +9,7 @@
   "dir": "ltr",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
-  "background_color": "#fdf2f8",
+  "background_color": "#0a0914",
   "theme_color": "#ec4899",
   "orientation": "any",
   "prefer_related_applications": false,
@@ -69,20 +69,5 @@
     }
   ],
   "related_applications": [],
-  "screenshots": [
-    {
-      "src": "/screenshots/mobile-lobby.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Companion Lobby"
-    },
-    {
-      "src": "/screenshots/desktop-lobby.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Desktop Lobby"
-    }
-  ]
+
 }

@@ -68,7 +68,7 @@ export function AnalyzingPage() {
       let { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        const randomEmail = `user_${Date.now()}@aicompanion.app`;
+        const randomEmail = `user_${Date.now()}@chavertoo.local`;
         const randomPassword = `pwd_${Math.random().toString(36).slice(2)}${Date.now()}`;
 
         const { data: authData, error: signUpError } = await supabase.auth.signUp({

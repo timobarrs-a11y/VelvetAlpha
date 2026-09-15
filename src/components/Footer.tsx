@@ -18,14 +18,6 @@ const LEGAL_LINKS = [
   { label: 'Privacy Policy', to: '/privacy', icon: Shield },
 ];
 
-// TODO: replace href with real profile URL or remove
-const SOCIAL_LINKS = [
-  { label: 'X', href: '#' },
-  { label: 'Instagram', href: '#' },
-  { label: 'Discord', href: '#' },
-  { label: 'TikTok', href: '#' },
-];
-
 const linkBase =
   'flex items-center gap-2 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded';
 
@@ -42,7 +34,7 @@ export function Footer() {
     >
       <div className="max-w-5xl mx-auto px-6 py-12">
         {/* Link grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 mb-10">
           {/* Product */}
           <div>
             <h3 className="text-[11px] font-bold tracking-[0.2em] uppercase text-gray-500 mb-4">
@@ -113,37 +105,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Connect */}
-          <div>
-            <h3 className="text-[11px] font-bold tracking-[0.2em] uppercase text-gray-500 mb-4">
-              Connect
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {SOCIAL_LINKS.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 transition-all duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.16)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
-                  }}
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Brand wordmark */}
