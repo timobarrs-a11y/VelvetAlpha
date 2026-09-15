@@ -32,8 +32,8 @@ export class NotificationService {
     try {
       new Notification(title, {
         body,
-        icon: icon || '/images/riley-positive.jpg',
-        badge: '/images/riley-positive.jpg',
+        icon: icon || '/icon.svg',
+        badge: '/icon.svg',
         tag: 'velvet-companion',
         requireInteraction: false,
       });

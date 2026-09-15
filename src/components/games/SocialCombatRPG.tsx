@@ -342,7 +342,7 @@ const BOSSES: { id: string; name: string; archetype: string; icon: string; start
 ];
 
 const TUTORIAL_OPPONENT: { id: string; name: string; archetype: string; icon: string; startingEmotion: EmotionKey } = {
-  id:'coach_riley', name:"Coach Riley", archetype:"Your Trainer",
+  id:'coach_morgan', name:"Coach Morgan", archetype:"Your Trainer",
   icon:"🏀", startingEmotion:"lazy",
 };
 
@@ -1196,7 +1196,7 @@ function TutorialCoach({ step, total, content, onContinue }: { step: number; tot
             flexShrink:0,
           }}>🏀</div>
           <div style={{ textAlign:'left', flex:1 }}>
-            <div style={{ color:'#FBBF24', fontSize:10, fontWeight:800, letterSpacing:1.5 }}>COACH RILEY</div>
+            <div style={{ color:'#FBBF24', fontSize:10, fontWeight:800, letterSpacing:1.5 }}>COACH MORGAN</div>
             <div style={{ color:'rgba(255,255,255,0.4)', fontSize:10, fontWeight:600, letterSpacing:0.5, marginTop:2 }}>
               LESSON {step} OF {total}
             </div>
@@ -1338,7 +1338,7 @@ function ModeSelect({ char, onTutorial, onSingle, onAscent, onBack }: {
 }) {
   const [hov, setHov] = useState<string | null>(null);
   const cards = [
-    { id:'t', onClick:onTutorial, icon:'🏀', title:'Tutorial', desc:'Learn the ropes with Coach Riley — no stakes, just teaching.', time:'~3 MIN', color:'#FBBF24', timeColor:'#FBBF24' },
+    { id:'t', onClick:onTutorial, icon:'🏀', title:'Tutorial', desc:'Learn the ropes with Coach Morgan — no stakes, just teaching.', time:'~3 MIN', color:'#FBBF24', timeColor:'#FBBF24' },
     { id:'s', onClick:onSingle, icon:'⚔️', title:'Single Scenario', desc:'One opponent. One conversation. Master it at your pace.', time:'~5 MIN', color:'#6366F1', timeColor:'#818CF8' },
     { id:'a', onClick:onAscent, icon:'🏔️', title:'Ascent Mode', desc:'Three escalating conflicts. Earn perks. Face a boss.', time:'~15 MIN • HARDCORE', color:'#EC4899', timeColor:'#F472B6', badge:'NEW' },
   ];
@@ -1976,7 +1976,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
       id:'tutorial',
       conflictId: 'tutorial',
       opponent: { ...TUTORIAL_OPPONENT, stageHp: 999 },
-      setup: "Training session with Coach Riley.",
+      setup: "Training session with Coach Morgan.",
       startingEmotion: TUTORIAL_OPPONENT.startingEmotion as EmotionKey,
     };
     const s = initState(char, scenario, { perks: [] });

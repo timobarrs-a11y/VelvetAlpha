@@ -64,7 +64,7 @@ export const MOOD_CONFIGS: Record<MoodType, MoodConfig> = {
 
 export const getCompanionMoodImage = (
   mood: MoodType,
-  avatarId: string = 'riley'
+  avatarId: string = 'raven'
 ): string => {
   return `/images/${avatarId}-${mood}.jpg`;
 };

@@ -13,8 +13,8 @@ interface CreateGroupChatModalProps {
 }
 
 const DEFAULT_AVATAR_IMAGES: Record<string, string> = {
-  female: '/images/riley-positive.jpg',
-  male: '/images/jake-positive.jpg',
+  female: '/images/raven-positive.jpg',
+  male: '/images/raven-positive.jpg',
 };
 
 export function CreateGroupChatModal({ isOpen, onClose, companions, onCreateGroup }: CreateGroupChatModalProps) {

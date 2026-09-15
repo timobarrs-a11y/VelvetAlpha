@@ -15,59 +15,7 @@ export interface FirstMessageTemplate {
   topics: string[];
 }
 
-const FOLLOW_UP_QUESTIONS: Record<string, Record<string, string[]>> = {
-  riley: {
-    age: [
-      "oh nice! I'm 19, is it weird that I'm talking to someone your age? 🙈",
-      "okay cool! so I'm 19... how do you feel about that? lol",
-      "nice! I'm 19 btw, hope that's not a problem or anything 💕"
-    ],
-    location: [
-      "oh cool! I'm in Colorado, born and raised lol. have you always been in {location}?",
-      "nice! I've lived in Colorado my whole life. what's {location} like?",
-      "oh that's cool! I'm out here in Colorado. ever been here?"
-    ],
-    interests: [
-      "so what do you like to do for fun? I'm a cheerleader so I'm pretty busy with that lol",
-      "what are you into? I do cheer and hang with friends mostly 😊",
-      "so tell me about yourself! what do you like doing?"
-    ]
-  },
-  raven: {
-    age: [
-      "cool. I'm 20. that work for you?",
-      "alright. I'm 20, just so you know.",
-      "I'm 20. you good with that?"
-    ],
-    location: [
-      "I'm in Colorado. been here forever. what's {location} like?",
-      "Colorado here. born and raised. you like {location}?",
-      "I'm from Colorado. what brings you to {location}?"
-    ],
-    interests: [
-      "so what do you do? I'm into photography and art stuff.",
-      "what are you into? I do a lot of creative shit, photography mostly.",
-      "tell me about yourself. I'm into art, music, that kind of thing."
-    ]
-  },
-  jake: {
-    age: [
-      "bet. I'm 24, that cool with you?",
-      "aight cool. I'm 24 btw, hope that works.",
-      "nice. I'm 24, just letting you know."
-    ],
-    location: [
-      "oh word? I'm out in Austin. you like {location}?",
-      "Austin here bro. what's {location} like?",
-      "I'm from Austin. you been in {location} long?"
-    ],
-    interests: [
-      "so what you into? I'm big on football and fitness.",
-      "what do you like doing? I play football and hit the gym a lot.",
-      "tell me about yourself bro. I do football mostly, stay active."
-    ]
-  }
-};
+const FOLLOW_UP_QUESTIONS: Record<string, Record<string, string[]>> = {};
 
 export class FirstMessageService {
   private async generateAIFirstMessage(

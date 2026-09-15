@@ -106,8 +106,8 @@ export function SplashChatPreview({ lite }: { lite: boolean }) {
                 ✨
               </motion.div>
             </div>
-            <p className="text-white text-sm font-bold relative z-10">Riley</p>
-            <p className="text-gray-400 text-[10px] relative z-10 mt-0.5">Your companion</p>
+            <p className="text-white text-sm font-bold relative z-10">Your companion</p>
+            <p className="text-gray-400 text-[10px] relative z-10 mt-0.5">Always here for you</p>
             <div className="flex items-center gap-1.5 mt-2 relative z-10">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               <span className="text-emerald-400/80 text-[9px] font-medium">Online</span>
@@ -136,7 +136,7 @@ export function SplashChatPreview({ lite }: { lite: boolean }) {
             <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <div className="w-8 h-8 rounded-full" style={{ background: 'linear-gradient(135deg, rgba(192,132,252,0.4), rgba(244,114,182,0.3))' }} />
               <div className="flex-1">
-                <p className="text-white text-xs font-semibold">Riley</p>
+                <p className="text-white text-xs font-semibold">Your companion</p>
                 <p className="text-emerald-400/70 text-[9px]">Active now</p>
               </div>
               <Sparkles className="w-3.5 h-3.5 text-purple-400/50" />

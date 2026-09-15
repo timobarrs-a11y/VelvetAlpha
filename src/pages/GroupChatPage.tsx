@@ -14,8 +14,8 @@ import {
 } from '../services/groupChatService';
 
 const DEFAULT_AVATAR_IMAGES: Record<string, string> = {
-  female: '/images/riley-positive.jpg',
-  male: '/images/jake-positive.jpg',
+  female: '/images/raven-positive.jpg',
+  male: '/images/raven-positive.jpg',
 };
 
 const COMPANION_TEXT_COLORS = [
