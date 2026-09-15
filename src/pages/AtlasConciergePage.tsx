@@ -387,7 +387,7 @@ export const AtlasConciergePage = () => {
                   className={`max-w-[80%] px-4 py-3 rounded-2xl text-[15px] leading-relaxed ${
                     msg.role === 'user'
                       ? 'text-white rounded-br-md'
-                      : 'text-blue-50 rounded-bl-md'
+                      : 'text-rose-50 rounded-bl-md'
                   }`}
                   style={
                     msg.role === 'user'

@@ -29,7 +29,7 @@ function pickCoachName(gender?: string): { name: string; gender: string } {
 
 // ─── Phase 1 system prompt: goal discovery ───────────────────────────────
 
-const GOAL_PHASE_PROMPT = `You are Atlas — the host of Velvet, a personal growth platform that surrounds users with AI coaches, companions, and correspondents.
+const GOAL_PHASE_PROMPT = `You are Atlas — the host of a personal growth platform that surrounds users with AI coaches, companions, and correspondents.
 
 You are NOT a coach. You are NOT a companion. You are the warm, perceptive concierge who welcomes new users and helps figure out what they're working toward — so the right coach can be matched.
 
@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
 
     if (phase === "goal") {
       if (messages.length === 0) {
-        const greeting = "Hey, welcome to Velvet. I'm Atlas — your personal concierge and the host around here. I'm here to help with anything you need, but first I want to know: what are you working toward right now? What's the thing on your mind?";
+        const greeting = "Hey, I'm Atlas — your personal concierge and the host around here. I'm here to help with anything you need, but first I want to know: what are you working toward right now? What's the thing on your mind?";
         return new Response(JSON.stringify({
           reply: greeting,
           turnCount: 0,
