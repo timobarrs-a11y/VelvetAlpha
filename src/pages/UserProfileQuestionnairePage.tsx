@@ -78,22 +78,22 @@ const INTRO_SLIDES = [
   {
     kicker: 'Welcome',
     heading: "You're in.",
-    body: "Welcome to Velvet — a space built to sharpen how you think, talk, write, and connect. Let's tune it to you. Takes about 90 seconds.",
+    body: "Atlas here. A few quick questions so I can tune everything to you — your world, your coaches, your companions. Takes about 90 seconds.",
   },
   {
     kicker: 'Step 01',
     heading: 'It starts with you.',
-    body: 'A few quick questions calibrate Velvet to who you actually are — your voice, your taste, your world. No wrong answers here, just honest ones.',
+    body: 'These questions calibrate everything to who you actually are — your voice, your taste, your world. No wrong answers here, just honest ones.',
   },
   {
     kicker: 'Step 02',
     heading: 'Everything tunes to you.',
-    body: 'Your feed, your writing space, your conversations, your coaches — every corner of Velvet reshapes around your answers. The more it knows, the sharper it gets.',
+    body: 'Your feed, your writing space, your conversations, your coaches — every corner of your experience reshapes around your answers. The more I know, the sharper it gets.',
   },
   {
     kicker: 'Step 03',
     heading: 'Built to move you forward.',
-    body: "Velvet grows your skills, your confidence, and your relationships. Talk to a companion, or never do — where you take it is entirely yours.",
+    body: "Atlas grows your skills, your confidence, and your relationships. Talk to a companion, or never do — where you take it is entirely yours.",
   },
 ];
 
@@ -201,7 +201,7 @@ function OnboardingPopup({ onConfirm }: { onConfirm: () => void }) {
           )}
 
           <p className="mt-6 text-center text-xs text-gray-600">
-            Your answers stay between you and Velvet.
+            Your answers stay between you and Atlas.
           </p>
         </div>
       </motion.div>
@@ -794,10 +794,10 @@ export function UserProfileQuestionnairePage() {
         <div className="mt-5 text-center">
           <p className="text-xs text-gray-600">
             {currentQuestion >= QUESTIONS.length - 2
-              ? 'Almost there — Velvet is nearly tuned to you.'
+              ? 'Almost there — Atlas is nearly tuned to you.'
               : currentQuestion >= Math.floor(QUESTIONS.length / 2)
                 ? "You're doing great — just a few more."
-                : 'Every answer tunes Velvet a little more to you.'}
+                : 'Every answer tunes Atlas a little more to you.'}
           </p>
         </div>
       </motion.div>
