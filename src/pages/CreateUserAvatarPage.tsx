@@ -8,6 +8,7 @@ import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
 import { trackOpenCustomizer, trackSaveAvatar, trackSkipAvatar } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
+import { resolveHomeRoute } from '../utils/homeRoute';
 
 export function CreateUserAvatarPage() {
   const navigate = useNavigate();
@@ -38,26 +39,9 @@ export function CreateUserAvatarPage() {
       console.log('[CreateUserAvatar] User has', companions.length, 'companions');
 
       if (companions.length > 0) {
-        console.log('[CreateUserAvatar] User already has companions, redirecting');
-        const pendingId = sessionStorage.getItem('currentCompanionId');
-        const intent = sessionStorage.getItem('onboardingIntent');
-        if (pendingId && intent === 'coaches' && companions.some(c => c.id === pendingId)) {
-          navigate(`/chat?companion=${pendingId}`, { replace: true });
-          return;
-        }
-        localStorage.removeItem('userAvatarConfig');
-        sessionStorage.removeItem('currentCompanionId');
-        sessionStorage.removeItem('matchAnswers');
-        navigate('/atlas-onboarding', { replace: true });
-        return;
-      }
-
-      const currentCompanionId = sessionStorage.getItem('currentCompanionId');
-      const matchAnswers = sessionStorage.getItem('matchAnswers');
-      if (currentCompanionId && matchAnswers) {
-        console.log('[CreateUserAvatar] User is mid-onboarding, proceeding to companion avatar');
-        navigate('/create-companion-avatar', { replace: true });
-        return;
+        pendingRoute.current = await resolveHomeRoute(user.id);
+      } else {
+        pendingRoute.current = '/atlas-onboarding';
       }
 
       trackOpenCustomizer('user');
@@ -100,7 +84,6 @@ export function CreateUserAvatarPage() {
 
       localStorage.setItem('userAvatarConfig', JSON.stringify(avatarConfig));
       trackSaveAvatar('user');
-      pendingRoute.current = '/atlas-onboarding';
       setShowReveal(true);
     } catch (error) {
       console.error('Error saving avatar:', error);
@@ -116,7 +99,7 @@ export function CreateUserAvatarPage() {
       return;
     }
     trackSkipAvatar('user');
-    navigate('/atlas-onboarding');
+    navigate(pendingRoute.current || '/atlas-onboarding');
   };
 
   const handleRevealContinue = () => {
