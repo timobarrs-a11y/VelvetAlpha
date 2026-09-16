@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, Compass } from 'lucide-react';
+import { Send, Sparkles, Compass, Check, RotateCcw } from 'lucide-react';
 import { VELVET_THEME } from '../config/velvetTheme';
 import { supabase } from '../shared/supabase/client';
 import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
@@ -11,9 +11,21 @@ interface ChatMessage {
   role: 'atlas' | 'user';
   content: string;
   id: number;
+  isRecommendation?: boolean;
 }
 
-type Phase = 'goal' | 'provisioning' | 'transitioning';
+type Phase = 'goal' | 'confirm' | 'provisioning' | 'transitioning';
+
+interface CoachRecommendation {
+  coachName: string;
+  coachGender: string;
+  expertDomain: string;
+  expertId: string | null;
+  isCustomExpert: boolean;
+  accountabilityLevel: string;
+  goalText: string;
+  recommendationText: string;
+}
 
 const FUNCTION_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
@@ -106,6 +118,8 @@ export const AtlasConciergePage = () => {
   const [error, setError] = useState('');
   const [showTransition, setShowTransition] = useState(false);
   const [latestAtlasId, setLatestAtlasId] = useState(-1);
+  const [recommendation, setRecommendation] = useState<CoachRecommendation | null>(null);
+  const [pendingTranscript, setPendingTranscript] = useState<ChatMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const transcriptRef = useRef<ChatMessage[]>([]);
@@ -165,7 +179,7 @@ export const AtlasConciergePage = () => {
   const handleSend = async () => {
     const text = input.trim();
     if (!text || isThinking) return;
-    if (phase === 'provisioning' || phase === 'transitioning') return;
+    if (phase !== 'goal') return;
 
     setInput('');
 
@@ -214,7 +228,7 @@ export const AtlasConciergePage = () => {
   };
 
   const handleGoalComplete = async (finalTranscript: ChatMessage[], lastAtlasMsg: ChatMessage) => {
-    updatePhase('provisioning');
+    updatePhase('confirm');
     setIsThinking(true);
 
     try {
@@ -225,7 +239,53 @@ export const AtlasConciergePage = () => {
         m => m.role === 'user' || (m.role === 'atlas' && m.content)
       );
 
-      const provisionStart = Date.now();
+      setPendingTranscript(fullTranscript);
+
+      const response = await fetch(`${FUNCTION_BASE}/atlas-onboarding`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          phase: 'confirm',
+          transcript: fullTranscript,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Classification failed');
+      const data = await response.json();
+
+      if (data.recommendation) {
+        const rec = data.recommendation as CoachRecommendation;
+        setRecommendation(rec);
+
+        const recId = ++msgIdCounter;
+        const recMsg: ChatMessage = {
+          role: 'atlas',
+          content: rec.recommendationText,
+          id: recId,
+          isRecommendation: true,
+        };
+        transcriptRef.current = [...transcriptRef.current, recMsg];
+        setMessages(prev => [...prev, recMsg]);
+        setLatestAtlasId(recId);
+      }
+    } catch {
+      setError('Something went wrong finding your coach. Please try again.');
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const handleAcceptCoach = async () => {
+    if (!recommendation) return;
+    updatePhase('provisioning');
+    setIsThinking(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
       const response = await fetch(`${FUNCTION_BASE}/atlas-onboarding`, {
         method: 'POST',
@@ -235,38 +295,51 @@ export const AtlasConciergePage = () => {
         },
         body: JSON.stringify({
           phase: 'provisioning',
-          transcript: fullTranscript,
+          transcript: pendingTranscript,
+          recommendation,
         }),
       });
 
       if (!response.ok) throw new Error('Provisioning failed');
       const data = await response.json();
 
-      setCoachName(data.coachName || 'your coach');
+      setCoachName(data.coachName || recommendation.coachName);
       setCoachId(data.coachId || '');
-      setExpertDomain(data.expertDomain || '');
+      setExpertDomain(data.expertDomain || recommendation.expertDomain);
 
-      const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Now let me learn a bit about you so I can personalize everything. This'll take about 90 seconds.`;
+      const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Now — what kind of people do you want in your corner? Friends, companions, or are we good with just the coach for now?`;
       const transId = ++msgIdCounter;
       setMessages(prev => [...prev, { role: 'atlas', content: transitionMsg, id: transId }]);
       setLatestAtlasId(transId);
-
-      const elapsed = Date.now() - provisionStart;
-      const minDelay = Math.max(0, 3000 - elapsed);
 
       setTimeout(() => {
         updatePhase('transitioning');
         setShowTransition(true);
         setIsThinking(false);
-      }, minDelay + 2000);
+      }, 2500);
     } catch {
       setError('Something went wrong setting up your coach. You can continue and we\'ll retry later.');
       setTimeout(() => {
-        navigate('/user-questionnaire', { replace: true });
+        navigate('/intent-select', { replace: true });
       }, 2500);
     } finally {
       setIsThinking(false);
     }
+  };
+
+  const handleRefineCoach = () => {
+    setRecommendation(null);
+    updatePhase('goal');
+
+    const refineId = ++msgIdCounter;
+    const refineMsg: ChatMessage = {
+      role: 'atlas',
+      content: "No problem — let's dig a bit deeper. What specifically would you want to adjust about the goal or the kind of support you're looking for?",
+      id: refineId,
+    };
+    transcriptRef.current = [...transcriptRef.current, refineMsg];
+    setMessages(prev => [...prev, refineMsg]);
+    setLatestAtlasId(refineId);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -277,9 +350,10 @@ export const AtlasConciergePage = () => {
   };
 
   const phaseLabels: Record<Phase, string> = {
-    goal: 'Step 1 of 2 — What are you working toward?',
-    provisioning: 'Finding your coach...',
-    transitioning: 'Getting ready for the next step...',
+    goal: 'What are you working toward?',
+    confirm: 'Your coach match',
+    provisioning: 'Setting up your coach...',
+    transitioning: 'Almost there...',
   };
 
   if (error && messages.length === 0) {
@@ -302,7 +376,7 @@ export const AtlasConciergePage = () => {
   const transitionMessage = coachName
     ? `Your coach ${coachName} is ready${expertDomain ? ` to help you with ${expertDomain}` : ''}.`
     : 'Your coach is ready.';
-  const transitionSubMessage = 'Now I need to know about you. A few quick questions to personalize everything — takes about 90 seconds.';
+  const transitionSubMessage = 'Now — what kind of people do you want in your corner? Friends, companions, or are we good with just the coach for now?';
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: VELVET_THEME.bg }}>
@@ -353,7 +427,6 @@ export const AtlasConciergePage = () => {
                 border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
               }}
             >
-              {/* Compass glow pulse */}
               <motion.div
                 className="absolute inset-0 rounded-2xl"
                 style={{
@@ -408,6 +481,41 @@ export const AtlasConciergePage = () => {
                     />
                   ) : (
                     msg.content
+                  )}
+
+                  {/* Confirm buttons on recommendation message */}
+                  {msg.isRecommendation && phase === 'confirm' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      className="flex gap-3 mt-4"
+                    >
+                      <button
+                        onClick={handleAcceptCoach}
+                        disabled={isThinking}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-semibold text-sm transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                          background: 'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)',
+                          boxShadow: '0 2px 12px rgba(244,63,94,0.25)',
+                        }}
+                      >
+                        <Check className="w-4 h-4" />
+                        Yes, set me up
+                      </button>
+                      <button
+                        onClick={handleRefineCoach}
+                        disabled={isThinking}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-semibold text-sm transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                          background: 'rgba(255,255,255,0.08)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                        }}
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Not quite, let me refine
+                      </button>
+                    </motion.div>
                   )}
                 </div>
               </motion.div>
@@ -465,7 +573,6 @@ export const AtlasConciergePage = () => {
               className="fixed inset-0 z-50 flex items-center justify-center"
               style={{ background: 'rgba(7,9,15,0.92)', backdropFilter: 'blur(16px)' }}
             >
-              {/* Overlay ambient orbs */}
               {AMBIENT_ORBS.map((orb, i) => (
                 <motion.div
                   key={i}
@@ -493,7 +600,6 @@ export const AtlasConciergePage = () => {
                 transition={{ type: 'spring', stiffness: 200, damping: 18 }}
                 className="relative text-center px-8 max-w-md"
               >
-                {/* Rotating compass */}
                 <div className="flex justify-center mb-6">
                   <div
                     className="w-20 h-20 rounded-3xl flex items-center justify-center relative"
@@ -518,8 +624,8 @@ export const AtlasConciergePage = () => {
                     </motion.div>
                   </div>
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-3">Finding your coach...</h2>
-                <p className="text-ink-secondary text-base mb-8">Matching you with someone who can help.</p>
+                <h2 className="text-2xl font-bold text-white mb-3">Setting up your coach...</h2>
+                <p className="text-ink-secondary text-base mb-8">Getting everything ready.</p>
                 <div className="flex justify-center gap-1.5">
                   {[0, 1, 2].map(i => (
                     <motion.div
@@ -537,11 +643,11 @@ export const AtlasConciergePage = () => {
         </AnimatePresence>
       </div>
 
-      {/* Atlas transition overlay -> navigates to questionnaire */}
+      {/* Atlas transition overlay -> navigates to intent-select */}
       <AtlasTransitionOverlay
         message={transitionMessage}
         subMessage={transitionSubMessage}
-        destination="/user-questionnaire"
+        destination="/intent-select"
         visible={showTransition}
         autoAdvanceMs={3000}
         onAdvance={() => {
