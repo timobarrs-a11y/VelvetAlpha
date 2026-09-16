@@ -98,7 +98,7 @@ export default function LoginPage() {
       const { companions: found } = await authService.signIn(email, password);
 
       if (found.length === 0) {
-        navigate('/create-user-avatar');
+        navigate('/');
       } else if (found.length === 1) {
         navigate(`/chat?companion=${found[0].id}`);
       } else {
