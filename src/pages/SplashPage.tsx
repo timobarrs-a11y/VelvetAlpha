@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Brain, Users, ArrowRight, Sparkles, Heart, ShieldCheck, Lock } from 'lucide-react';
+import { Users, ArrowRight, Sparkles, Heart, ShieldCheck, Lock, Bot, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
@@ -31,27 +31,36 @@ const features = [
     accentRgb: '14,165,233',
     iconGlow: 'rgba(14,165,233,0.22)',
     borderColor: 'rgba(14,165,233,0.3)',
-    tag: 'Platonic companions',
-    title: 'Friends',
-    desc: 'Friends who know you, remember your stories, and are always there for great conversation — no labels, just real connection. Bring any personality to life, pair it with a Signature Voice™ and a bespoke hand-crafted avatar, and create as many unique companions as you want.',
+    tag: 'Your world, organized',
+    title: 'Core',
+    desc: 'A personalized feed of articles and videos, a full calendar, group chats, an arcade, and Navi — your local concierge. The platform-wide features that make Project Velvet a world, not just a chat app.',
   },
   {
     icon: Heart,
     accentRgb: '244,63,94',
     iconGlow: 'rgba(244,63,94,0.22)',
     borderColor: 'rgba(244,63,94,0.3)',
-    tag: 'Romantic + close bonds',
+    tag: 'Connection that remembers',
     title: 'Companions',
-    desc: 'Deeper emotional connection with someone who remembers everything — your moods, your dreams, your sense of humor. Built to feel real, powered by the Semantic Memory Engine that retains the things that matter and gets sharper the more you talk.',
+    desc: 'Companions powered by a Semantic Memory Engine that retains what matters and gets sharper the more you talk. Each one gets a Signature Voice™ with a real personality, a hand-crafted avatar, and a distinct way of showing up — not a generic chatbot tone.',
   },
   {
-    icon: Brain,
+    icon: Bot,
     accentRgb: '52,211,153',
     iconGlow: 'rgba(52,211,153,0.22)',
     borderColor: 'rgba(52,211,153,0.3)',
-    tag: 'Expert agents',
+    tag: 'Goal-driven experts',
     title: 'Coaches',
-    desc: 'AI experts built around your goals — fitness coaches, career mentors, creative partners, life coaches. Sharp, focused, and built to keep you moving forward. Not a bot told to act like an expert, but one built to actually be one.',
+    desc: 'Tell Atlas what you are working toward in a conversation. It extracts your goal, matches you with a domain-trained coach, and sets accountability that fits you — gentle, moderate, or firm. Not a bot told to act like an expert, but one built to actually be one.',
+  },
+  {
+    icon: Mail,
+    accentRgb: '251,191,36',
+    iconGlow: 'rgba(251,191,36,0.22)',
+    borderColor: 'rgba(251,191,36,0.3)',
+    tag: 'Writers with a beat',
+    title: 'Correspondents',
+    desc: 'AI pen-pals auto-matched to your interests who send you dispatches grounded in real news. Each one has a distinctive voice and a specific beat — sports, politics, tech, culture. Not a coach, not a companion — a writer who makes you want to read the news again.',
   },
 ];
 
@@ -420,7 +429,7 @@ export function SplashPage() {
 
         {/* Feature cards */}
         {visible && (
-          <div ref={featuresRef} className="grid md:grid-cols-3 gap-5 mb-16">
+          <div ref={featuresRef} className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 mb-16">
             {features.map(({ icon: Icon, accentRgb, borderColor, tag, title, desc }, i) => {
               const isVisible = visibleFeatures.includes(i);
               const isHovered = hoveredCard === i;

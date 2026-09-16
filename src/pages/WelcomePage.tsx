@@ -1,16 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
   ChevronRight, Sparkles, Newspaper, Eye, PenLine,
   Bot, Gamepad2, CalendarDays, BarChart3, Users, ArrowRight, LogOut,
-  Shuffle, MapPin
+  Shuffle, MapPin, Brain, Mic, Palette, Target, Wrench, Mail,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { useAuth } from '../auth/AuthProvider';
 import { Footer } from '../components/Footer';
 
-const FEATURES = [
+type FeatureCategory = 'core' | 'companion' | 'coach' | 'correspondent';
+
+interface Feature {
+  icon: typeof Newspaper;
+  title: string;
+  tag: string;
+  description: string;
+  accentRgb: string;
+  iconGlow: string;
+  borderColor: string;
+  category: FeatureCategory;
+}
+
+const FEATURES: Feature[] = [
   {
     icon: Newspaper,
     title: 'Daily Feed',
@@ -19,7 +32,7 @@ const FEATURES = [
     accentRgb: '14,165,233',
     iconGlow: 'rgba(14,165,233,0.22)',
     borderColor: 'rgba(14,165,233,0.3)',
-    featured: false,
+    category: 'core',
   },
   {
     icon: Eye,
@@ -29,37 +42,27 @@ const FEATURES = [
     accentRgb: '251,113,133',
     iconGlow: 'rgba(251,113,133,0.22)',
     borderColor: 'rgba(251,113,133,0.3)',
-    featured: false,
+    category: 'core',
   },
   {
     icon: PenLine,
     title: 'Co-Author',
     tag: 'Write together',
-    description: 'A collaborative canvas where you and your companion co-write stories, scripts, and worlds in real time. Your creative partner never runs dry.',
+    description: 'A collaborative canvas where you and your AI co-write stories, scripts, and worlds in real time. Your creative partner never runs dry.',
     accentRgb: '52,211,153',
     iconGlow: 'rgba(52,211,153,0.22)',
     borderColor: 'rgba(52,211,153,0.3)',
-    featured: false,
-  },
-  {
-    icon: Bot,
-    title: 'Expert Agents',
-    tag: 'Built to actually know',
-    description: "There's a difference between a bot told to act like an IT networking pro and one trained to actually be one. Project Velvet's expert agents are the latter — domain-trained, always available, and built around the professionals and coaches you need in your corner.",
-    accentRgb: '251,191,36',
-    iconGlow: 'rgba(251,191,36,0.22)',
-    borderColor: 'rgba(251,191,36,0.3)',
-    featured: false,
+    category: 'core',
   },
   {
     icon: Gamepad2,
     title: 'The Arcade',
-    tag: 'Play with your companion',
-    description: 'Checkers, Stellar Pursuit, Slime Soccer, Momentum, and more — a full arcade where your companion competes, cheers, and trash-talks alongside you.',
+    tag: 'Play with your AI',
+    description: 'Checkers, Stellar Pursuit, Slime Soccer, Momentum, and more — a full arcade where your companions compete, cheer, and trash-talk alongside you.',
     accentRgb: '232,121,249',
     iconGlow: 'rgba(232,121,249,0.22)',
     borderColor: 'rgba(232,121,249,0.3)',
-    featured: false,
+    category: 'core',
   },
   {
     icon: Users,
@@ -69,27 +72,27 @@ const FEATURES = [
     accentRgb: '34,211,238',
     iconGlow: 'rgba(34,211,238,0.22)',
     borderColor: 'rgba(34,211,238,0.3)',
-    featured: false,
+    category: 'core',
   },
   {
     icon: CalendarDays,
     title: 'Calendar',
     tag: 'Your life, organized',
-    description: 'A full-featured personal calendar where you manage your real life — events, reminders, goals. Your companions and Atlas can add things to it too.',
+    description: 'A full-featured personal calendar where you manage your real life — events, reminders, goals. Atlas and your companions can add things to it too.',
     accentRgb: '45,212,191',
     iconGlow: 'rgba(45,212,191,0.22)',
     borderColor: 'rgba(45,212,191,0.3)',
-    featured: false,
+    category: 'core',
   },
   {
     icon: BarChart3,
     title: 'Insights',
     tag: 'Know yourself deeper',
-    description: 'Pattern recognition built from your conversations. Emotional trends, behavioral loops, thought intensity — your companion helps you understand you.',
+    description: 'Pattern recognition built from your conversations. Emotional trends, behavioral loops, thought intensity — your AI helps you understand you.',
     accentRgb: '250,204,21',
     iconGlow: 'rgba(250,204,21,0.22)',
     borderColor: 'rgba(250,204,21,0.3)',
-    featured: false,
+    category: 'core',
   },
   {
     icon: Shuffle,
@@ -99,7 +102,7 @@ const FEATURES = [
     accentRgb: '239,68,68',
     iconGlow: 'rgba(239,68,68,0.22)',
     borderColor: 'rgba(239,68,68,0.3)',
-    featured: false,
+    category: 'core',
   },
   {
     icon: MapPin,
@@ -109,8 +112,108 @@ const FEATURES = [
     accentRgb: '20,184,166',
     iconGlow: 'rgba(20,184,166,0.22)',
     borderColor: 'rgba(20,184,166,0.3)',
-    featured: false,
+    category: 'core',
   },
+  // --- COMPANION ---
+  {
+    icon: Brain,
+    title: 'Semantic Memory',
+    tag: 'Remembers what matters',
+    description: 'A memory engine that retains the things that matter across every conversation — your stories, your preferences, your running jokes. It gets sharper the more you talk, so you never have to repeat yourself.',
+    accentRgb: '168,85,247',
+    iconGlow: 'rgba(168,85,247,0.22)',
+    borderColor: 'rgba(168,85,247,0.3)',
+    category: 'companion',
+  },
+  {
+    icon: Mic,
+    title: 'Signature Voices',
+    tag: 'A voice all their own',
+    description: 'Every companion gets a distinctive voice personality — The Jock, The Therapist, The Brooklyn Native, The French Romantic, and more. Not a generic chatbot tone, but a voice with a worldview, a rhythm, and a way of showing up.',
+    accentRgb: '236,72,153',
+    iconGlow: 'rgba(236,72,153,0.22)',
+    borderColor: 'rgba(236,72,153,0.3)',
+    category: 'companion',
+  },
+  {
+    icon: Palette,
+    title: 'Hand-Crafted Avatars',
+    tag: 'Built from scratch',
+    description: 'A full avatar creator with dozens of customization axes — face shape, hair, eyes, skin tone, accessories, and more. Randomize for surprise or fine-tune every detail. Your companion looks exactly how you want.',
+    accentRgb: '244,114,182',
+    iconGlow: 'rgba(244,114,182,0.22)',
+    borderColor: 'rgba(244,114,182,0.3)',
+    category: 'companion',
+  },
+  // --- COACH ---
+  {
+    icon: Bot,
+    title: 'Expert Agents',
+    tag: 'Built to actually know',
+    description: "There's a difference between a bot told to act like an IT networking pro and one trained to actually be one. Project Velvet's expert agents are the latter — domain-trained, always available, and built around the professionals and coaches you need in your corner.",
+    accentRgb: '251,191,36',
+    iconGlow: 'rgba(251,191,36,0.22)',
+    borderColor: 'rgba(251,191,36,0.3)',
+    category: 'coach',
+  },
+  {
+    icon: Target,
+    title: 'Goal Discovery',
+    tag: 'From chat to coach',
+    description: "Tell Atlas what you're working toward in a casual conversation. It extracts your goal, figures out the accountability level that fits you, and automatically matches you with a coach built to keep you moving forward.",
+    accentRgb: '52,211,153',
+    iconGlow: 'rgba(52,211,153,0.22)',
+    borderColor: 'rgba(52,211,153,0.3)',
+    category: 'coach',
+  },
+  {
+    icon: Wrench,
+    title: 'Custom Experts',
+    tag: 'Build your own coach',
+    description: 'Design a coach from the ground up — pick a domain, write custom instructions, and set the check-in style (proactive, responsive, or structured) and accountability level (gentle, moderate, or firm). Or browse curated experts and start immediately.',
+    accentRgb: '34,211,238',
+    iconGlow: 'rgba(34,211,238,0.22)',
+    borderColor: 'rgba(34,211,238,0.3)',
+    category: 'coach',
+  },
+  // --- CORRESPONDENT ---
+  {
+    icon: Mail,
+    title: 'Auto-Provisioned Dispatches',
+    tag: 'Assigned from your interests',
+    description: 'Correspondents are automatically matched to you based on your interests during onboarding — no manual setup. Into sports, tech, and politics? You get a sports writer, a science writer, and a politics writer without lifting a finger.',
+    accentRgb: '251,113,133',
+    iconGlow: 'rgba(251,113,133,0.22)',
+    borderColor: 'rgba(251,113,133,0.3)',
+    category: 'correspondent',
+  },
+  {
+    icon: Mic,
+    title: 'Distinctive Voices',
+    tag: 'A writer with a beat',
+    description: 'Each correspondent has a unique voice personality and a specific beat they cover. The Sideline writes sports with heart. The Field cuts through political spin. The Ledger reads the numbers so you don\'t have to. Seven correspondents, seven perspectives.',
+    accentRgb: '251,191,36',
+    iconGlow: 'rgba(251,191,36,0.22)',
+    borderColor: 'rgba(251,191,36,0.3)',
+    category: 'correspondent',
+  },
+  {
+    icon: Newspaper,
+    title: 'Real News, Real Takes',
+    tag: 'Grounded in actual events',
+    description: 'Dispatches are grounded in real news articles filtered to your interests — not generated filler. Your correspondent reads what\'s happening, forms a take, and writes it in a voice that makes you actually want to read the news again.',
+    accentRgb: '14,165,233',
+    iconGlow: 'rgba(14,165,233,0.22)',
+    borderColor: 'rgba(14,165,233,0.3)',
+    category: 'correspondent',
+  },
+];
+
+const CATEGORY_TABS: { id: FeatureCategory; label: string; accent: string }[] = [
+  { id: 'core', label: 'Core', accent: '192,132,252' },
+  { id: 'companion', label: 'Companion', accent: '168,85,247' },
+  { id: 'coach', label: 'Coach', accent: '52,211,153' },
+  { id: 'correspondent', label: 'Correspondent', accent: '251,113,133' },
 ];
 
 const PARTICLES = Array.from({ length: 55 }, (_, i) => ({
@@ -138,6 +241,7 @@ export function WelcomePage() {
   const [isEntering, setIsEntering] = useState(false);
   const [visibleFeatures, setVisibleFeatures] = useState<number[]>([]);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const [activeCategory, setActiveCategory] = useState<FeatureCategory>('core');
   const featuresRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -145,6 +249,11 @@ export function WelcomePage() {
   const orb0Y = useTransform(scrollY, [0, 1000], [0, -120]);
   const orb1Y = useTransform(scrollY, [0, 1000], [0, -80]);
   const orb2Y = useTransform(scrollY, [0, 1000], [0, 60]);
+
+  const filteredFeatures = useMemo(
+    () => FEATURES.filter(f => f.category === activeCategory),
+    [activeCategory],
+  );
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -158,6 +267,10 @@ export function WelcomePage() {
   }, [user, loading, navigate]);
 
   useEffect(() => {
+    setVisibleFeatures([]);
+  }, [activeCategory]);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
@@ -167,12 +280,12 @@ export function WelcomePage() {
           }
         });
       },
-      { threshold: 0.08 }
+      { threshold: 0.08 },
     );
     const cards = featuresRef.current?.querySelectorAll('[data-index]');
     cards?.forEach(card => observer.observe(card));
     return () => observer.disconnect();
-  }, []);
+  }, [activeCategory, filteredFeatures]);
 
   const handleEnter = async () => {
     setIsEntering(true);
@@ -451,10 +564,9 @@ export function WelcomePage() {
 
             {user ? (
               <>
-                <p className="text-gray-400 text-base mb-2 max-w-md mx-auto leading-relaxed">
-                  We'll ask you a few things to start building your world — the companions, coaches, and experts you want around you.
+                <p className="text-gray-400 text-base mb-8 max-w-md mx-auto leading-relaxed">
+                  Atlas will walk you through a quick setup to learn who you are and what you care about — then build your world around you.
                 </p>
-                <p className="text-gray-600 text-sm mb-8">No credit card. No catch. Just you and the velvet.</p>
 
                 <motion.button
                   onClick={handleEnter}
@@ -537,105 +649,124 @@ export function WelcomePage() {
           </div>
         </motion.div>
 
-        {/* Three Premium Pillars */}
-        {[
-          { title: 'Companionship', subtitle: 'Real connection with AI that remembers', accent: '244,63,94', indices: [4, 5, 9, 3] },
-          { title: 'Life OS', subtitle: 'Your world, organized and understood', accent: '14,165,233', indices: [0, 6, 9, 7] },
-          { title: 'Play & Create', subtitle: 'Express yourself through games and stories', accent: '232,121,249', indices: [2, 1, 8] },
-        ].map((pillar, pillarIdx) => {
-          const pillarFeatures = pillar.indices.map(i => FEATURES[i]).filter(Boolean);
-          return (
-            <div key={pillar.title} className="mb-16">
-              {/* Pillar header */}
-              <motion.div
-                className="mb-6 flex items-center gap-4"
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-              >
-                <div
-                  className="w-1 h-8 rounded-full"
-                  style={{ background: `rgba(${pillar.accent},0.6)` }}
-                />
-                <div>
-                  <h2 className="text-white text-xl font-bold tracking-tight">{pillar.title}</h2>
-                  <p className="text-gray-500 text-xs">{pillar.subtitle}</p>
-                </div>
-                <div className="flex-1 h-px ml-2" style={{ background: `linear-gradient(to right, rgba(${pillar.accent},0.2), transparent)` }} />
-              </motion.div>
+        {/* Features section — segmented control + filtered grid */}
+        <div className="mb-16">
+          {/* Section header */}
+          <motion.div
+            className="mb-6 flex items-center gap-4"
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <div className="w-1 h-8 rounded-full" style={{ background: 'rgba(192,132,252,0.6)' }} />
+            <div>
+              <h2 className="text-white text-xl font-bold tracking-tight">What's Inside</h2>
+              <p className="text-gray-500 text-xs">Explore by relationship type</p>
+            </div>
+            <div className="flex-1 h-px ml-2" style={{ background: 'linear-gradient(to right, rgba(192,132,252,0.2), transparent)' }} />
+          </motion.div>
 
-              {/* Pillar features */}
-              <div ref={pillarIdx === 0 ? featuresRef : undefined} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pillarFeatures.map((feature, i) => {
-                  const Icon = feature.icon;
-                  const globalIdx = pillar.indices[i];
-                  const isVisible = visibleFeatures.includes(globalIdx);
-                  const isHovered = hoveredCard === globalIdx;
-                  const colOffset = (i % 3) * 18;
-                  return (
-                    <motion.div
-                      key={feature.title}
-                      data-index={globalIdx}
-                      onMouseEnter={() => setHoveredCard(globalIdx)}
-                      onMouseLeave={() => setHoveredCard(null)}
-                      className="rounded-2xl p-5 flex flex-col gap-3 cursor-default relative overflow-hidden"
-                      initial={{ opacity: 0, y: 28 + colOffset }}
-                      animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 + colOffset }}
-                      transition={{ duration: 0.55, delay: (i % 3) * 0.09 }}
+          {/* Segmented control */}
+          <div className="flex flex-wrap gap-2 mb-8">
+            {CATEGORY_TABS.map(tab => {
+              const isActive = activeCategory === tab.id;
+              const count = FEATURES.filter(f => f.category === tab.id).length;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveCategory(tab.id)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2"
+                  style={{
+                    background: isActive ? `rgba(${tab.accent},0.12)` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${isActive ? `rgba(${tab.accent},0.35)` : 'rgba(255,255,255,0.08)'}`,
+                    color: isActive ? `rgb(${tab.accent})` : 'rgb(156,163,175)',
+                    boxShadow: isActive ? `0 0 20px rgba(${tab.accent},0.1)` : 'none',
+                  }}
+                >
+                  {tab.label}
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: isActive ? `rgba(${tab.accent},0.2)` : 'rgba(255,255,255,0.06)',
+                      color: isActive ? `rgb(${tab.accent})` : 'rgb(107,114,128)',
+                    }}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Feature grid */}
+          <div ref={featuresRef} key={activeCategory} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredFeatures.map((feature, i) => {
+              const Icon = feature.icon;
+              const isVisible = visibleFeatures.includes(i);
+              const isHovered = hoveredCard === i;
+              const colOffset = (i % 3) * 18;
+              return (
+                <motion.div
+                  key={feature.title}
+                  data-index={i}
+                  onMouseEnter={() => setHoveredCard(i)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                  className="rounded-2xl p-5 flex flex-col gap-3 cursor-default relative overflow-hidden"
+                  initial={{ opacity: 0, y: 28 + colOffset }}
+                  animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 + colOffset }}
+                  transition={{ duration: 0.55, delay: (i % 3) * 0.09 }}
+                  style={{
+                    background: isHovered
+                      ? `rgba(${feature.accentRgb},0.07)`
+                      : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${isHovered ? feature.borderColor : 'rgba(255,255,255,0.08)'}`,
+                    borderTop: `2px solid rgba(${feature.accentRgb},${isHovered ? 0.65 : 0.28})`,
+                    boxShadow: isHovered ? `0 8px 40px rgba(${feature.accentRgb},0.14), 0 0 0 1px rgba(${feature.accentRgb},0.12)` : 'none',
+                    transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+                    transition: 'all 0.3s ease',
+                    backdropFilter: 'blur(12px)',
+                  }}
+                >
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.018]"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+                      backgroundSize: '120px',
+                    }}
+                  />
+                  <div className="flex items-start justify-between gap-2 relative z-10">
+                    <div
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
                       style={{
-                        background: isHovered
-                          ? `rgba(${feature.accentRgb},0.07)`
-                          : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${isHovered ? feature.borderColor : 'rgba(255,255,255,0.08)'}`,
-                        borderTop: `2px solid rgba(${feature.accentRgb},${isHovered ? 0.65 : 0.28})`,
-                        boxShadow: isHovered ? `0 8px 40px rgba(${feature.accentRgb},0.14), 0 0 0 1px rgba(${feature.accentRgb},0.12)` : 'none',
-                        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-                        transition: 'all 0.3s ease',
-                        backdropFilter: 'blur(12px)',
+                        background: `radial-gradient(circle at 35% 35%, rgba(${feature.accentRgb},0.35), rgba(${feature.accentRgb},0.1))`,
+                        border: `1px solid rgba(${feature.accentRgb},0.3)`,
+                        boxShadow: isHovered ? `0 0 20px rgba(${feature.accentRgb},0.25)` : 'none',
+                        transition: 'box-shadow 0.3s ease',
                       }}
                     >
-                      <div
-                        className="absolute inset-0 pointer-events-none opacity-[0.018]"
-                        style={{
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-                          backgroundSize: '120px',
-                        }}
-                      />
-                      <div className="flex items-start justify-between gap-2 relative z-10">
-                        <div
-                          className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                          style={{
-                            background: `radial-gradient(circle at 35% 35%, rgba(${feature.accentRgb},0.35), rgba(${feature.accentRgb},0.1))`,
-                            border: `1px solid rgba(${feature.accentRgb},0.3)`,
-                            boxShadow: isHovered ? `0 0 20px rgba(${feature.accentRgb},0.25)` : 'none',
-                            transition: 'box-shadow 0.3s ease',
-                          }}
-                        >
-                          <Icon className="w-5 h-5" style={{ color: `rgb(${feature.accentRgb})` }} />
-                        </div>
-                        <span
-                          className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full whitespace-nowrap"
-                          style={{
-                            color: `rgb(${feature.accentRgb})`,
-                            background: `rgba(${feature.accentRgb},0.1)`,
-                            border: `1px solid rgba(${feature.accentRgb},0.2)`,
-                          }}
-                        >
-                          {feature.tag}
-                        </span>
-                      </div>
-                      <div className="relative z-10">
-                        <h3 className="text-white font-bold text-base mb-1.5 tracking-tight">{feature.title}</h3>
-                        <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+                      <Icon className="w-5 h-5" style={{ color: `rgb(${feature.accentRgb})` }} />
+                    </div>
+                    <span
+                      className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full whitespace-nowrap"
+                      style={{
+                        color: `rgb(${feature.accentRgb})`,
+                        background: `rgba(${feature.accentRgb},0.1)`,
+                        border: `1px solid rgba(${feature.accentRgb},0.2)`,
+                      }}
+                    >
+                      {feature.tag}
+                    </span>
+                  </div>
+                  <div className="relative z-10">
+                    <h3 className="text-white font-bold text-base mb-1.5 tracking-tight">{feature.title}</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
 
         <motion.p
           className="text-center text-gray-700 text-xs mb-6"
