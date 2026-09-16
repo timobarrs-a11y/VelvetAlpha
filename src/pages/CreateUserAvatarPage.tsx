@@ -8,7 +8,6 @@ import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
 import { trackOpenCustomizer, trackSaveAvatar, trackSkipAvatar } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
-import { resolveHomeRoute } from '../utils/homeRoute';
 
 export function CreateUserAvatarPage() {
   const navigate = useNavigate();
@@ -49,7 +48,7 @@ export function CreateUserAvatarPage() {
         localStorage.removeItem('userAvatarConfig');
         sessionStorage.removeItem('currentCompanionId');
         sessionStorage.removeItem('matchAnswers');
-        navigate(await resolveHomeRoute(user.id), { replace: true });
+        navigate('/atlas-onboarding', { replace: true });
         return;
       }
 
@@ -101,8 +100,7 @@ export function CreateUserAvatarPage() {
 
       localStorage.setItem('userAvatarConfig', JSON.stringify(avatarConfig));
       trackSaveAvatar('user');
-      const isFirstCompanion = !!sessionStorage.getItem('currentCompanionId');
-      pendingRoute.current = isFirstCompanion ? '/onboarding' : await resolveHomeRoute(user.id);
+      pendingRoute.current = '/atlas-onboarding';
       setShowReveal(true);
     } catch (error) {
       console.error('Error saving avatar:', error);
@@ -118,8 +116,7 @@ export function CreateUserAvatarPage() {
       return;
     }
     trackSkipAvatar('user');
-    const isFirstCompanion = !!sessionStorage.getItem('currentCompanionId');
-    navigate(isFirstCompanion ? '/onboarding' : await resolveHomeRoute(user.id));
+    navigate('/atlas-onboarding');
   };
 
   const handleRevealContinue = () => {
