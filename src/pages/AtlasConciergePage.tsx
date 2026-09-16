@@ -309,6 +309,8 @@ export const AtlasConciergePage = () => {
       setExpertDomain(data.expertDomain || recommendation.expertDomain);
 
       if (data.goalText) sessionStorage.setItem('atlasGoalText', data.goalText);
+      if (recommendation.coachGender) sessionStorage.setItem('atlasCoachGender', recommendation.coachGender);
+      sessionStorage.setItem('atlasCoachName', data.coachName || recommendation.coachName);
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -316,7 +318,9 @@ export const AtlasConciergePage = () => {
         .eq('id', session.user.id)
         .maybeSingle();
       const questionnaireDone = !!(profile?.name && profile.name !== 'babe' && (profile?.hobbies || profile?.sports));
-      setTransitionDestination(questionnaireDone ? '/intent-select' : '/user-questionnaire');
+      const nextAfterAvatar = questionnaireDone ? '/intent-select' : '/user-questionnaire';
+      sessionStorage.setItem('atlasNextDestination', nextAfterAvatar);
+      setTransitionDestination('/coach-avatar');
 
       const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Now — what kind of people do you want in your corner? Friends, companions, or are we good with just the coach for now?`;
       const transId = ++msgIdCounter;
@@ -664,6 +668,7 @@ export const AtlasConciergePage = () => {
         onAdvance={() => {
           if (coachId) sessionStorage.setItem('atlasCoachId', coachId);
           if (recommendation?.goalText) sessionStorage.setItem('atlasGoalText', recommendation.goalText);
+          if (recommendation?.coachGender) sessionStorage.setItem('atlasCoachGender', recommendation.coachGender);
         }}
       />
     </div>
