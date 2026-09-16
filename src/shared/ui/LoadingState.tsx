@@ -1,10 +1,7 @@
-import { useEffect, useState } from 'react';
-
 interface LoadingStateProps {
   label?: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
-  contextual?: boolean;
 }
 
 const sizeMap: Record<string, string> = {
@@ -13,26 +10,9 @@ const sizeMap: Record<string, string> = {
   lg: 'w-16 h-16',
 };
 
-const CONTEXT_PHRASES = [
-  'Warming up your world...',
-  'Loading your companions...',
-  'Finding today\'s thread...',
-  'Gathering your memories...',
-];
 
-export function LoadingState({ label, className = '', size = 'md', contextual = false }: LoadingStateProps) {
-  const [phraseIdx, setPhraseIdx] = useState(0);
 
-  useEffect(() => {
-    if (!contextual) return;
-    const interval = setInterval(() => {
-      setPhraseIdx(prev => (prev + 1) % CONTEXT_PHRASES.length);
-    }, 2200);
-    return () => clearInterval(interval);
-  }, [contextual]);
-
-  const displayLabel = contextual ? CONTEXT_PHRASES[phraseIdx] : label;
-
+export function LoadingState({ label, className = '', size = 'md' }: LoadingStateProps) {
   return (
     <div className={`flex flex-col items-center justify-center py-16 px-6 gap-4 ${className}`}>
       <div className="relative">
@@ -53,20 +33,12 @@ export function LoadingState({ label, className = '', size = 'md', contextual = 
         />
         <div className={sizeMap[size]} />
       </div>
-      {displayLabel && (
-        <p
-          className="text-sm text-white/50 font-medium transition-opacity duration-500"
-          style={contextual ? { animation: 'fadeInOut 2.2s ease-in-out infinite' } : undefined}
-          key={contextual ? phraseIdx : undefined}
-        >
-          {displayLabel}
+      {label && (
+        <p className="text-sm text-white/50 font-medium">
+          {label}
         </p>
       )}
       <style>{`
-        @keyframes fadeInOut {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 1; }
-        }
         @keyframes spin {
           to { transform: rotate(360deg); }
         }

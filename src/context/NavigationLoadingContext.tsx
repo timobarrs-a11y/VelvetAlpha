@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
+import { useNavigate } from 'react-router-dom';
 
 export interface TransitionConfig {
   icon: LucideIcon;
@@ -19,49 +18,16 @@ const NavigationLoadingContext = createContext<NavigationLoadingContextValue | n
 
 export function NavigationLoadingProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [config, setConfig] = useState<TransitionConfig | null>(null);
-  const [visible, setVisible] = useState(false);
 
-  const navigateTo = useCallback((path: string, cfg: TransitionConfig) => {
-    setConfig(cfg);
-    setVisible(true);
-    requestAnimationFrame(() => {
-      navigate(path);
-    });
+  const navigateTo = useCallback((path: string, _cfg: TransitionConfig) => {
+    navigate(path);
   }, [navigate]);
 
-  const clearTransition = useCallback(() => {
-    setVisible(false);
-    setTimeout(() => setConfig(null), 200);
-  }, []);
-
-  useEffect(() => {
-    if (visible) {
-      const id = setTimeout(() => {
-        setVisible(false);
-        setTimeout(() => setConfig(null), 200);
-      }, 3500);
-      return () => clearTimeout(id);
-    }
-  }, [visible, location.pathname]);
+  const clearTransition = useCallback(() => {}, []);
 
   return (
     <NavigationLoadingContext.Provider value={{ navigateTo, clearTransition }}>
       {children}
-      {config && (
-        <div
-          className="fixed inset-0 z-[9999] transition-opacity duration-200"
-          style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? 'all' : 'none' }}
-        >
-          <FeatureLoadingSplash
-            icon={config.icon}
-            label={config.label}
-            accentColor={config.accentColor}
-            bgColor={config.bgColor}
-          />
-        </div>
-      )}
     </NavigationLoadingContext.Provider>
   );
 }
