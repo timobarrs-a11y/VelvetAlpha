@@ -804,8 +804,8 @@ export function UserProfileQuestionnairePage() {
 
       <AtlasTransitionOverlay
         message="Got everything I need."
-        subMessage="One more thing — do you also want a friend or companion to talk about life with? You can set one up now or anytime later."
-        destination="/intent-select"
+        subMessage="Now let's create your avatar — this is how you'll appear in conversations."
+        destination="/create-user-avatar"
         visible={showAtlasTransition}
         autoAdvanceMs={2500}
       />

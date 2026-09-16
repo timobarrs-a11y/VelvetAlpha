@@ -476,7 +476,7 @@ export function WelcomePage() {
       }
     } catch {}
     setTimeout(() => {
-      navigate('/atlas-onboarding', { replace: true });
+      navigate('/user-questionnaire', { replace: true });
     }, 600);
   };
 
@@ -741,7 +741,7 @@ export function WelcomePage() {
             {user ? (
               <>
                 <p className="text-gray-400 text-base mb-8 max-w-md mx-auto leading-relaxed">
-                  Atlas will walk you through a quick setup to learn who you are and what you care about — then build your world around you.
+                  First, a few quick questions so we can personalize everything. Then Atlas will learn what you're working toward and build your world around you.
                 </p>
 
                 <motion.button
