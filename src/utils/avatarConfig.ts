@@ -3,9 +3,10 @@ import {
   AVATAR_CONFIG_VERSION,
   DEFAULT_MALE_AVATAR_V2,
   DEFAULT_FEMALE_AVATAR_V2,
+  HairTexture,
 } from '../types/avatar-v2';
 
-const V2_OPTIONAL_DEFAULTS: Required<Pick<
+const V3_OPTIONAL_DEFAULTS: Required<Pick<
   AvatarConfigV2,
   '_version' | 'hairLength' | 'makeupIntensity' | 'eyeShadow' | 'eyeliner' | 'skinDetail'
 >> = {
@@ -19,20 +20,36 @@ const V2_OPTIONAL_DEFAULTS: Required<Pick<
 
 export function migrateAvatarConfig(raw: unknown): AvatarConfigV2 {
   if (!raw || typeof raw !== 'object') {
-    return { ...DEFAULT_FEMALE_AVATAR_V2, ...V2_OPTIONAL_DEFAULTS };
+    return { ...DEFAULT_FEMALE_AVATAR_V2, ...V3_OPTIONAL_DEFAULTS };
   }
 
   const partial = raw as Record<string, unknown>;
   const gender = partial.gender === 'male' ? 'male' : 'female';
   const base = gender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2;
 
-  return {
+  const merged: AvatarConfigV2 = {
     ...base,
-    ...V2_OPTIONAL_DEFAULTS,
+    ...V3_OPTIONAL_DEFAULTS,
     ...(partial as Partial<AvatarConfigV2>),
     gender,
     _version: AVATAR_CONFIG_VERSION,
   };
+
+  if (!merged.hairTexture) {
+    merged.hairTexture = inferTextureFromStyle(merged.hairStyle);
+  }
+
+  return merged;
+}
+
+function inferTextureFromStyle(style: string): HairTexture {
+  if (style === 'afro' || style === 'locs' || style === 'braids' || style === 'curly') {
+    return 'coily';
+  }
+  if (style === 'wavy') {
+    return 'wavy';
+  }
+  return 'straight';
 }
 
 export function loadDraftConfig(draftKey: string): AvatarConfigV2 | null {

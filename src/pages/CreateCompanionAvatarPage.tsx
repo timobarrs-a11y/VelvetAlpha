@@ -1,21 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Heart } from 'lucide-react';
-import { AvatarCreatorV2 } from '../components/AvatarCreatorV2';
+import { ArrowRight, Heart, Shuffle, Check } from 'lucide-react';
+import { AvatarCreatorV2, coherentRandomize } from '../components/AvatarCreatorV2';
 import { AvatarConfigV2, DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2 } from '../types/avatar-v2';
 import { supabase } from '../shared/supabase/client';
-import { trackOpenCustomizer, trackSaveAvatar, trackSkipAvatar } from '../services/avatarAnalytics';
+import { trackSaveAvatar, trackRandomize } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
+import { getRandomName } from '../data/companionNames';
 
 export function CreateCompanionAvatarPage() {
   const navigate = useNavigate();
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV2>(DEFAULT_FEMALE_AVATAR_V2);
   const [saving, setSaving] = useState(false);
   const [companionName, setCompanionName] = useState('');
-  const [, setCompanionGender] = useState<'male' | 'female'>('female');
+  const [companionGender, setCompanionGender] = useState<'male' | 'female'>('female');
   const [showReveal, setShowReveal] = useState(false);
   const pendingRoute = useRef<string | null>(null);
+  const hasRandomized = useRef(false);
 
   useEffect(() => {
     const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || '{}');
@@ -23,24 +25,31 @@ export function CreateCompanionAvatarPage() {
     const name = matchData.companionName || '';
     const companionId = sessionStorage.getItem('currentCompanionId');
 
-    console.log('[CompanionAvatar] Loaded match data:', matchData);
-    console.log('[CompanionAvatar] Companion ID:', companionId);
-    console.log('[CompanionAvatar] Companion name:', name);
-
     setCompanionName(name);
     setCompanionGender(selectedGender);
     setAvatarConfig(
       selectedGender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2
     );
-
-    trackOpenCustomizer('companion');
   }, []);
+
+  const handleRandomize = () => {
+    trackRandomize();
+    const randomized = coherentRandomize();
+    setAvatarConfig(randomized);
+    if (!companionName) {
+      setCompanionName(getRandomName(randomized.gender));
+    }
+    hasRandomized.current = true;
+  };
+
+  const handleNameChange = (name: string) => {
+    setCompanionName(name);
+  };
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const companionId = sessionStorage.getItem('currentCompanionId');
-      console.log('[CompanionAvatar] Saving avatar, companionId:', companionId);
 
       if (!companionId) {
         const { data: { user } } = await supabase.auth.getUser();
@@ -69,7 +78,7 @@ export function CreateCompanionAvatarPage() {
 
       const { error } = await supabase
         .from('companions')
-        .update({ avatar_config: avatarConfig })
+        .update({ avatar_config: avatarConfig, name: companionName || undefined })
         .eq('id', companionId);
 
       if (error) {
@@ -97,49 +106,6 @@ export function CreateCompanionAvatarPage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleSkip = async () => {
-    const companionId = sessionStorage.getItem('currentCompanionId');
-
-    if (!companionId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: companions } = await supabase
-          .from('companions')
-          .select('id')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (companions && companions.length > 0) {
-          trackSkipAvatar('companion');
-          const intent = sessionStorage.getItem('onboardingIntent');
-          const newId = sessionStorage.getItem('currentCompanionId') || companions[0].id;
-          const isFirstCompanion = companions.length === 1;
-          navigate(intent === 'coaches'
-            ? (isFirstCompanion ? '/onboarding' : `/chat?companion=${newId}`)
-            : '/create-user-avatar');
-          return;
-        }
-      }
-      navigate('/lobby');
-      return;
-    }
-
-    trackSkipAvatar('companion');
-    const intent = sessionStorage.getItem('onboardingIntent');
-    const { data: { user: savedUser } } = await supabase.auth.getUser();
-    let isFirstCompanion = false;
-    if (savedUser) {
-      const { data: allCompanions } = await supabase
-        .from('companions')
-        .select('id')
-        .eq('user_id', savedUser.id);
-      isFirstCompanion = (allCompanions?.length ?? 0) <= 1;
-    }
-    navigate(intent === 'coaches'
-      ? (isFirstCompanion ? '/onboarding' : `/chat?companion=${companionId}`)
-      : '/create-user-avatar');
   };
 
   const handleRevealContinue = () => {
@@ -178,7 +144,7 @@ export function CreateCompanionAvatarPage() {
           </h1>
 
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Now give {companionName || 'them'} a unique look. Customize their appearance to match the personality you've created.
+            Give {companionName || 'them'} a unique look. Customize every detail, or hit Randomize to get a complete face instantly.
           </p>
         </motion.div>
 
@@ -192,6 +158,11 @@ export function CreateCompanionAvatarPage() {
             initialConfig={avatarConfig}
             onChange={setAvatarConfig}
             draftKey="companion-avatar-draft"
+            onRandomize={(cfg) => {
+              if (!companionName) {
+                setCompanionName(getRandomName(cfg.gender));
+              }
+            }}
           />
         </motion.div>
 
@@ -199,24 +170,52 @@ export function CreateCompanionAvatarPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center"
+          className="flex flex-col gap-4 justify-center items-center"
         >
-          <button
-            onClick={handleSkip}
-            disabled={saving}
-            className="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all"
-          >
-            Use Default Look
-          </button>
+          <div className="flex items-center gap-3 w-full max-w-md">
+            <input
+              type="text"
+              value={companionName}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="Companion name"
+              className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg
+                text-white placeholder-gray-500 focus:outline-none focus:border-sky-500
+                transition-colors"
+            />
+            <button
+              onClick={() => {
+                setCompanionName(getRandomName(companionGender));
+              }}
+              title="Randomize name"
+              className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all flex-shrink-0"
+            >
+              <Shuffle className="w-5 h-5" />
+            </button>
+          </div>
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-8 py-3 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 rounded-lg font-semibold transition-all inline-flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Finish & Continue'}
-            <ArrowRight className="w-5 h-5" />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md">
+            <button
+              onClick={handleRandomize}
+              disabled={saving}
+              className="flex-1 px-6 py-3 bg-sky-600/20 border border-sky-500/30 text-sky-400
+                hover:bg-sky-600/30 hover:text-sky-300 rounded-lg font-semibold transition-all
+                inline-flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Shuffle className="w-5 h-5" />
+              Randomize Face
+            </button>
+
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-500
+                hover:from-rose-600 hover:to-pink-600 rounded-lg font-semibold transition-all
+                inline-flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Accept & Continue'}
+              <Check className="w-5 h-5" />
+            </button>
+          </div>
         </motion.div>
       </div>
     </div>

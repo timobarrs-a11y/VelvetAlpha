@@ -1,13 +1,21 @@
 import { useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutGrid, Shuffle } from 'lucide-react';
 import { AvatarV2 } from './AvatarV2';
-import { AvatarConfigV2, Gender, SKIN_TONES, EYE_COLORS, LIP_COLORS, HAIR_COLORS, MALE_HAIRSTYLES, FEMALE_HAIRSTYLES, DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2, EyeShape, EyebrowShape, NoseShape, FaceShape, LipShape, FacialHair, Eyelashes, Freckles, Blush, BodyType, Tattoo, Glasses, Earrings, NosePiercing, LipPiercing, Necklace, NECKLACE_COLORS } from '../types/avatar-v2';
+import { coherentRandomize } from './AvatarCreatorV2';
+import {
+  AvatarConfigV2, Gender, HairTexture,
+  SKIN_TONES, EYE_COLORS, LIP_COLORS, HAIR_COLORS, MALE_HAIRSTYLES, FEMALE_HAIRSTYLES,
+  HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
+  DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2,
+  LipShape, EyebrowShape, FacialHair, Eyelashes, Freckles, Blush, BodyType, Tattoo,
+  Glasses, Earrings, NosePiercing, LipPiercing, Necklace, Eyeliner, NECKLACE_COLORS,
+} from '../types/avatar-v2';
 
 type GuidedStep = 'face' | 'hair' | 'body' | 'accessories';
 
 const STEPS: Array<{ id: GuidedStep; label: string; description: string }> = [
   { id: 'face', label: 'Face', description: 'Skin, eyes, lips and facial features' },
-  { id: 'hair', label: 'Hair', description: 'Style, color and highlights' },
+  { id: 'hair', label: 'Hair', description: 'Style, texture, color and facial hair' },
   { id: 'body', label: 'Body', description: 'Body type and tattoos' },
   { id: 'accessories', label: 'Accessories', description: 'Glasses, piercings and jewelry' },
 ];
@@ -67,6 +75,10 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
     onChange({ ...config, ...partial });
   }, [config, onChange]);
 
+  const randomize = useCallback(() => {
+    onChange(coherentRandomize());
+  }, [onChange]);
+
   const hairstyles = config.gender === 'male' ? MALE_HAIRSTYLES : FEMALE_HAIRSTYLES;
 
   const canGoBack = stepIndex > 0;
@@ -115,9 +127,9 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
 
       <Sect label="Eye Shape">
         <div className="grid grid-cols-4 gap-2">
-          {(['almond', 'round', 'hooded', 'wide'] as EyeShape[]).map(v => (
-            <OptionBtn key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
-              selected={config.eyeShape === v} onClick={() => update({ eyeShape: v })} />
+          {EYE_SHAPES.map(v => (
+            <OptionBtn key={v.value} label={v.label}
+              selected={config.eyeShape === v.value} onClick={() => update({ eyeShape: v.value })} />
           ))}
         </div>
       </Sect>
@@ -133,18 +145,18 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
 
       <Sect label="Nose Shape">
         <div className="grid grid-cols-4 gap-2">
-          {(['button', 'straight', 'broad', 'upturned'] as NoseShape[]).map(v => (
-            <OptionBtn key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
-              selected={config.noseShape === v} onClick={() => update({ noseShape: v })} />
+          {NOSE_SHAPES.map(v => (
+            <OptionBtn key={v.value} label={v.label}
+              selected={config.noseShape === v.value} onClick={() => update({ noseShape: v.value })} />
           ))}
         </div>
       </Sect>
 
       <Sect label="Face Shape">
-        <div className="grid grid-cols-4 gap-2">
-          {(['oval', 'round', 'square', 'heart'] as FaceShape[]).map(v => (
-            <OptionBtn key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
-              selected={config.faceShape === v} onClick={() => update({ faceShape: v })} />
+        <div className="grid grid-cols-3 gap-2">
+          {FACE_SHAPES.map(v => (
+            <OptionBtn key={v.value} label={v.label}
+              selected={config.faceShape === v.value} onClick={() => update({ faceShape: v.value })} />
           ))}
         </div>
       </Sect>
@@ -178,6 +190,19 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
         </Sect>
       )}
 
+      <Sect label="Eyeliner">
+        <div className="grid grid-cols-4 gap-2">
+          {([
+            { value: 'none', label: 'None' }, { value: 'thin', label: 'Thin' },
+            { value: 'winged', label: 'Winged' }, { value: 'bold', label: 'Bold' },
+          ] as Array<{ value: Eyeliner; label: string }>).map(o => (
+            <OptionBtn key={o.value} label={o.label}
+              selected={(config.eyeliner ?? 'none') === o.value}
+              onClick={() => update({ eyeliner: o.value })} />
+          ))}
+        </div>
+      </Sect>
+
       <Sect label="Blush">
         <div className="grid grid-cols-3 gap-2">
           {(['none', 'soft', 'bold'] as Blush[]).map(v => (
@@ -208,6 +233,16 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
           ))}
         </div>
       </Sect>
+
+      <Sect label="Hair Texture">
+        <div className="grid grid-cols-3 gap-2">
+          {HAIR_TEXTURES.map(v => (
+            <OptionBtn key={v.value} label={v.label}
+              selected={config.hairTexture === v.value} onClick={() => update({ hairTexture: v.value })} />
+          ))}
+        </div>
+      </Sect>
+
       <Sect label="Hair Color">
         <div className="flex flex-wrap gap-2">
           {HAIR_COLORS.map(c => (
@@ -216,6 +251,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
           ))}
         </div>
       </Sect>
+
       {config.gender === 'male' && (
         <Sect label="Facial Hair">
           <div className="grid grid-cols-3 gap-2">
@@ -260,6 +296,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
           ))}
         </div>
       </Sect>
+
       <Sect label="Earrings">
         <div className="grid grid-cols-3 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'studs', label: 'Studs' }, { value: 'hoops', label: 'Hoops' }, { value: 'dangles', label: 'Dangles' }, { value: 'gauges', label: 'Gauges' }] as Array<{ value: Earrings; label: string }>).map(o => (
@@ -268,6 +305,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
           ))}
         </div>
       </Sect>
+
       <Sect label="Nose Piercing">
         <div className="grid grid-cols-3 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'nostril_stud', label: 'Nostril Stud' }, { value: 'nose_ring', label: 'Nose Ring' }] as Array<{ value: NosePiercing; label: string }>).map(o => (
@@ -276,6 +314,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
           ))}
         </div>
       </Sect>
+
       <Sect label="Lip Piercing">
         <div className="grid grid-cols-2 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'labret', label: 'Labret' }, { value: 'lip_ring', label: 'Lip Ring' }, { value: 'snake_bites', label: 'Snake Bites' }] as Array<{ value: LipPiercing; label: string }>).map(o => (
@@ -284,6 +323,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
           ))}
         </div>
       </Sect>
+
       <Sect label="Necklace">
         <div className="grid grid-cols-3 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'chain', label: 'Chain' }, { value: 'choker', label: 'Choker' }, { value: 'pendant', label: 'Pendant' }, { value: 'pearls', label: 'Pearls' }] as Array<{ value: Necklace; label: string }>).map(o => (
@@ -292,6 +332,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
           ))}
         </div>
       </Sect>
+
       {config.necklace !== 'none' && (
         <Sect label="Necklace Color">
           <div className="flex flex-wrap gap-2">
@@ -343,7 +384,15 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
             ))}
           </div>
 
-          <p className="text-xs text-gray-500 text-center mb-4">{currentStep.description}</p>
+          <button
+            onClick={randomize}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg
+              text-sm font-semibold bg-sky-600/20 border border-sky-500/30 text-sky-400
+              hover:bg-sky-600/30 hover:text-sky-300 transition-all mb-3"
+          >
+            <Shuffle className="w-4 h-4" />
+            Randomize Face
+          </button>
 
           <button
             onClick={onSwitchToAdvanced}

@@ -2,13 +2,15 @@ import { useState, useCallback, useRef } from 'react';
 import { Shuffle, Undo2, Redo2, RotateCcw, Bookmark, BookmarkCheck, X, Sparkles } from 'lucide-react';
 import { AvatarV2 } from './AvatarV2';
 import {
-  AvatarConfigV2, Gender,
+  AvatarConfigV2, Gender, HairTexture,
   SKIN_TONES, EYE_COLORS, HAIR_COLORS, LIP_COLORS, NECKLACE_COLORS,
   MALE_HAIRSTYLES, FEMALE_HAIRSTYLES,
+  HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
   DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2,
   LipShape, EyebrowShape, FacialHair, Eyelashes, Freckles, Glasses,
   Earrings, NosePiercing, LipPiercing, Necklace,
   EyeShape, NoseShape, FaceShape, BodyType, Tattoo, Blush, Eyeliner,
+  getSkinUndertone,
 } from '../types/avatar-v2';
 import { AVATAR_PRESETS } from '../data/avatarPresets';
 import { useAvatarFavorites } from '../hooks/useAvatarFavorites';
@@ -23,6 +25,7 @@ interface AvatarCreatorV2Props {
   onChange?: (config: AvatarConfigV2) => void;
   draftKey?: string;
   favoritesNamespace?: string;
+  onRandomize?: (config: AvatarConfigV2) => void;
 }
 
 function ColorSwatch({
@@ -72,17 +75,86 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
+const WARM_LIP_VALUES = ['#c4917c', '#b07a5e', '#c8857a', '#d88e89', '#e5b8a8', '#f4a6b8', '#e88ba3', '#c73e3a'];
+const COOL_LIP_VALUES = ['#b0726a', '#a0604a', '#c75f7e', '#8b4876'];
+
+function coherentRandomize(): AvatarConfigV2 {
+  const g: Gender = Math.random() > 0.5 ? 'male' : 'female';
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+  const skinTone = pick(SKIN_TONES).value;
+  const undertone = getSkinUndertone(skinTone);
+
+  const lipColorPool = Math.random() < 0.65
+    ? (undertone === 'warm' ? WARM_LIP_VALUES : undertone === 'cool' ? COOL_LIP_VALUES : WARM_LIP_VALUES)
+    : LIP_COLORS.map(l => l.value);
+
+  const textures: HairTexture[] = ['straight', 'wavy', 'coily'];
+  const hairTexture = pick(textures);
+
+  const compatibleStyles = hairTexture === 'coily'
+    ? (g === 'male' ? ['afro', 'locs', 'fade', 'short'] : ['afro', 'locs', 'braids', 'curly'])
+    : hairTexture === 'wavy'
+    ? (g === 'male' ? ['wavy', 'short', 'sleek'] : ['wavy', 'sleek', 'curly', 'ponytail'])
+    : (g === 'male' ? ['buzz', 'short', 'sleek', 'fade'] : ['sleek', 'ponytail', 'bun', 'wavy']);
+
+  const hairStyle = pick(compatibleStyles) as AvatarConfigV2['hairStyle'];
+
+  const eyeShapes: EyeShape[] = EYE_SHAPES.map(s => s.value);
+  const noseShapes: NoseShape[] = NOSE_SHAPES.map(s => s.value);
+  const faceShapes: FaceShape[] = FACE_SHAPES.map(s => s.value);
+  const bodyTypes: BodyType[] = ['slim', 'average', 'athletic', 'curvy'];
+  const tattoos: Tattoo[] = ['none', 'none', 'none', 'none', 'neck', 'forearm', 'collarbone'];
+  const blushOpts: Blush[] = ['none', 'none', 'soft', 'bold'];
+  const freckleOpts: Freckles[] = ['none', 'none', 'light', 'heavy', 'beauty_mark'];
+  const glassesOpts: Glasses[] = ['none', 'none', 'none', 'none', 'round', 'square', 'cat-eye', 'aviator'];
+  const earringOpts: Earrings[] = ['none', 'none', 'studs', 'hoops', 'dangles'];
+  const nosePiercingOpts: NosePiercing[] = ['none', 'none', 'none', 'nostril_stud'];
+  const lipPiercingOpts: LipPiercing[] = ['none', 'none', 'none', 'labret'];
+  const necklaceOpts: Necklace[] = ['none', 'none', 'chain', 'choker', 'pendant'];
+  const eyelinerOpts: Eyeliner[] = ['none', 'none', 'none', 'thin', 'winged'];
+
+  return {
+    gender: g,
+    skinTone,
+    eyeColor: pick(EYE_COLORS).value,
+    hairColor: pick(HAIR_COLORS).value,
+    hairStyle,
+    hairTexture,
+    lipShape: pick(['natural', 'full', 'thin', 'heart'] as LipShape[]),
+    lipColor: pick(lipColorPool),
+    eyebrowShape: pick(['natural', 'arched', 'straight', 'thick', 'thin'] as EyebrowShape[]),
+    eyeShape: pick(eyeShapes),
+    noseShape: pick(noseShapes),
+    faceShape: pick(faceShapes),
+    bodyType: pick(bodyTypes),
+    facialHair: g === 'male' ? pick(['none', 'none', 'none', 'stubble', 'beard', 'goatee'] as FacialHair[]) : 'none',
+    eyelashes: g === 'female' ? pick(['none', 'dramatic'] as Eyelashes[]) : 'none',
+    freckles: pick(freckleOpts),
+    blush: g === 'female' ? pick(blushOpts) : 'none',
+    glasses: pick(glassesOpts),
+    earrings: pick(earringOpts),
+    nosePiercing: pick(nosePiercingOpts),
+    lipPiercing: pick(lipPiercingOpts),
+    necklace: pick(necklaceOpts),
+    necklaceColor: pick(NECKLACE_COLORS).value,
+    tattoo: pick(tattoos),
+    eyeliner: g === 'female' ? pick(eyelinerOpts) : 'none',
+  };
+}
+
 export function AvatarCreatorV2({
   initialConfig,
   onChange,
   draftKey,
   favoritesNamespace = 'default',
+  onRandomize,
 }: AvatarCreatorV2Props) {
   const getInitial = (): AvatarConfigV2 => {
     if (draftKey) {
       try {
         const stored = localStorage.getItem(draftKey);
-        if (stored) return JSON.parse(stored) as AvatarConfigV2;
+        if (stored) return { ...DEFAULT_MALE_AVATAR_V2, ...JSON.parse(stored) } as AvatarConfigV2;
       } catch {}
     }
     return initialConfig ?? DEFAULT_MALE_AVATAR_V2;
@@ -140,70 +212,9 @@ export function AvatarCreatorV2({
 
   const randomize = () => {
     trackRandomize();
-    const g: Gender = Math.random() > 0.5 ? 'male' : 'female';
-    const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
-
-    const skinTones = SKIN_TONES.map(s => s.value);
-    const eyeColors = EYE_COLORS.map(e => e.value);
-    const hairColors = HAIR_COLORS.map(h => h.value);
-    const maleHairStyles = MALE_HAIRSTYLES.map(h => h.value);
-    const femaleHairStyles = FEMALE_HAIRSTYLES.map(h => h.value);
-
-    const skinTone = pick(skinTones);
-
-    const warmSkins = ['#fde8d7', '#f4c2a0', '#d4a373'];
-    const isWarmSkin = warmSkins.includes(skinTone);
-    const warmLipColors = LIP_COLORS.filter(l =>
-      ['#c4917c', '#b07a5e', '#c8857a', '#d88e89', '#e5b8a8', '#f4a6b8', '#e88ba3', '#c73e3a'].includes(l.value)
-    ).map(l => l.value);
-    const coolLipColors = LIP_COLORS.filter(l =>
-      ['#b0726a', '#a0604a', '#c75f7e', '#8b4876'].includes(l.value)
-    ).map(l => l.value);
-    const allLipColors = LIP_COLORS.map(l => l.value);
-    const lipColorPool = Math.random() < 0.65
-      ? (isWarmSkin ? warmLipColors : coolLipColors)
-      : allLipColors;
-
-    const eyeShapes: EyeShape[] = ['almond', 'round', 'hooded', 'wide'];
-    const noseShapes: NoseShape[] = ['button', 'straight', 'broad', 'upturned'];
-    const faceShapes: FaceShape[] = ['oval', 'round', 'square', 'heart'];
-    const bodyTypes: BodyType[] = ['slim', 'average', 'athletic', 'curvy'];
-    const tattoos: Tattoo[] = ['none', 'none', 'none', 'neck', 'forearm', 'collarbone'];
-    const blushOpts: Blush[] = ['none', 'soft', 'bold'];
-    const freckleOpts: Freckles[] = ['none', 'none', 'light', 'heavy', 'beauty_mark'];
-    const glassesOpts: Glasses[] = ['none', 'none', 'none', 'round', 'square', 'cat-eye', 'aviator'];
-    const earringOpts: Earrings[] = ['none', 'none', 'studs', 'hoops', 'dangles', 'gauges'];
-    const nosePiercingOpts: NosePiercing[] = ['none', 'none', 'none', 'nostril_stud', 'nose_ring'];
-    const lipPiercingOpts: LipPiercing[] = ['none', 'none', 'none', 'labret', 'lip_ring', 'snake_bites'];
-    const necklaceOpts: Necklace[] = ['none', 'none', 'chain', 'choker', 'pendant', 'pearls'];
-    const eyelinerOpts: Eyeliner[] = ['none', 'none', 'none', 'thin', 'winged', 'bold'];
-
-    push({
-      gender: g,
-      skinTone,
-      eyeColor: pick(eyeColors),
-      hairColor: pick(hairColors),
-      hairStyle: g === 'male' ? pick(maleHairStyles) : pick(femaleHairStyles),
-      lipShape: pick(['natural', 'full', 'thin', 'heart'] as LipShape[]),
-      lipColor: pick(lipColorPool),
-      eyebrowShape: pick(['natural', 'arched', 'straight', 'thick', 'thin'] as EyebrowShape[]),
-      eyeShape: pick(eyeShapes),
-      noseShape: pick(noseShapes),
-      faceShape: pick(faceShapes),
-      bodyType: pick(bodyTypes),
-      facialHair: g === 'male' ? pick(['none', 'none', 'stubble', 'beard', 'goatee', 'mustache'] as FacialHair[]) : 'none',
-      eyelashes: g === 'female' ? pick(['none', 'dramatic'] as Eyelashes[]) : 'none',
-      freckles: pick(freckleOpts),
-      blush: pick(blushOpts),
-      glasses: pick(glassesOpts),
-      earrings: pick(earringOpts),
-      nosePiercing: pick(nosePiercingOpts),
-      lipPiercing: pick(lipPiercingOpts),
-      necklace: pick(necklaceOpts),
-      necklaceColor: pick(NECKLACE_COLORS).value,
-      tattoo: pick(tattoos),
-      eyeliner: g === 'female' ? pick(eyelinerOpts) : 'none',
-    });
+    const randomized = coherentRandomize();
+    push(randomized);
+    onRandomize?.(randomized);
   };
 
   const hairstyles = config.gender === 'male' ? MALE_HAIRSTYLES : FEMALE_HAIRSTYLES;
@@ -226,7 +237,7 @@ export function AvatarCreatorV2({
           <button
             key={preset.id}
             onClick={() => {
-              update(preset.config);
+              update({ ...preset.config, hairTexture: preset.config.hairTexture ?? 'straight' });
               trackApplyPreset(preset.id, preset.name);
             }}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-left
@@ -271,9 +282,9 @@ export function AvatarCreatorV2({
 
       <Section label="Eye Shape">
         <div className="grid grid-cols-4 gap-2">
-          {(['almond', 'round', 'hooded', 'wide'] as EyeShape[]).map(v => (
-            <OptionButton key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
-              selected={config.eyeShape === v} onClick={() => update({ eyeShape: v })} />
+          {EYE_SHAPES.map(v => (
+            <OptionButton key={v.value} label={v.label}
+              selected={config.eyeShape === v.value} onClick={() => update({ eyeShape: v.value })} />
           ))}
         </div>
       </Section>
@@ -289,18 +300,18 @@ export function AvatarCreatorV2({
 
       <Section label="Nose Shape">
         <div className="grid grid-cols-4 gap-2">
-          {(['button', 'straight', 'broad', 'upturned'] as NoseShape[]).map(v => (
-            <OptionButton key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
-              selected={config.noseShape === v} onClick={() => update({ noseShape: v })} />
+          {NOSE_SHAPES.map(v => (
+            <OptionButton key={v.value} label={v.label}
+              selected={config.noseShape === v.value} onClick={() => update({ noseShape: v.value })} />
           ))}
         </div>
       </Section>
 
       <Section label="Face Shape">
-        <div className="grid grid-cols-4 gap-2">
-          {(['oval', 'round', 'square', 'heart'] as FaceShape[]).map(v => (
-            <OptionButton key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
-              selected={config.faceShape === v} onClick={() => update({ faceShape: v })} />
+        <div className="grid grid-cols-3 gap-2">
+          {FACE_SHAPES.map(v => (
+            <OptionButton key={v.value} label={v.label}
+              selected={config.faceShape === v.value} onClick={() => update({ faceShape: v.value })} />
           ))}
         </div>
       </Section>
@@ -385,6 +396,15 @@ export function AvatarCreatorV2({
         </div>
       </Section>
 
+      <Section label="Hair Texture">
+        <div className="grid grid-cols-3 gap-2">
+          {HAIR_TEXTURES.map(v => (
+            <OptionButton key={v.value} label={v.label}
+              selected={config.hairTexture === v.value} onClick={() => update({ hairTexture: v.value })} />
+          ))}
+        </div>
+      </Section>
+
       <Section label="Hair Color">
         <div className="flex flex-wrap gap-2">
           {HAIR_COLORS.map(c => (
@@ -393,7 +413,6 @@ export function AvatarCreatorV2({
           ))}
         </div>
       </Section>
-
 
       {config.gender === 'male' && (
         <Section label="Facial Hair">
@@ -575,7 +594,7 @@ export function AvatarCreatorV2({
 
           <div className="grid grid-cols-4 gap-2">
             <button onClick={randomize} title="Randomize"
-              className="flex items-center justify-center py-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white transition-all">
+              className="flex items-center justify-center py-2 rounded-lg bg-sky-600/20 border border-sky-500/30 text-sky-400 hover:bg-sky-600/30 hover:text-sky-300 transition-all">
               <Shuffle className="w-4 h-4" />
             </button>
             <button onClick={undo} title="Undo"
@@ -687,3 +706,5 @@ export function AvatarCreatorV2({
     </div>
   );
 }
+
+export { coherentRandomize };

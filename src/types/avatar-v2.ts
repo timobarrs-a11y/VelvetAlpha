@@ -15,20 +15,21 @@ export type NosePiercing = 'none' | 'nostril_stud' | 'nose_ring';
 export type LipPiercing = 'none' | 'labret' | 'lip_ring' | 'snake_bites';
 export type Necklace = 'none' | 'chain' | 'choker' | 'pendant' | 'pearls';
 
-export type EyeShape = 'almond' | 'round' | 'hooded' | 'wide';
-export type NoseShape = 'button' | 'straight' | 'broad' | 'upturned';
-export type FaceShape = 'oval' | 'round' | 'square' | 'heart';
+export type EyeShape = 'almond' | 'round' | 'hooded' | 'wide' | 'monolid' | 'deepset' | 'upturned';
+export type NoseShape = 'button' | 'straight' | 'broad' | 'upturned' | 'aquiline' | 'hawk' | 'flat';
+export type FaceShape = 'oval' | 'round' | 'square' | 'heart' | 'diamond' | 'oblong';
 export type BodyType = 'slim' | 'average' | 'athletic' | 'curvy';
 export type Tattoo = 'none' | 'neck' | 'forearm' | 'collarbone';
 export type Blush = 'none' | 'soft' | 'bold';
 
+export type HairTexture = 'straight' | 'wavy' | 'coily';
 export type HairLength = 'short' | 'medium' | 'long';
 export type MakeupIntensity = 'none' | 'subtle' | 'glam';
 export type EyeShadow = 'none' | 'smoky' | 'natural' | 'colorful';
 export type Eyeliner = 'none' | 'thin' | 'winged' | 'bold';
 export type SkinDetail = 'none' | 'smooth' | 'textured';
 
-export const AVATAR_CONFIG_VERSION = 2 as const;
+export const AVATAR_CONFIG_VERSION = 3 as const;
 export type AvatarConfigVersion = typeof AVATAR_CONFIG_VERSION;
 
 export interface AvatarConfigV2 {
@@ -38,6 +39,7 @@ export interface AvatarConfigV2 {
   eyeColor: string;
   hairColor: string;
   hairStyle: HairStyle;
+  hairTexture: HairTexture;
   lipShape: LipShape;
   lipColor: string;
   eyebrowShape: EyebrowShape;
@@ -63,7 +65,10 @@ export interface AvatarConfigV2 {
   skinDetail?: SkinDetail;
 }
 
+const V3_REQUIRED: Pick<AvatarConfigV2, 'hairTexture'> = { hairTexture: 'straight' };
+
 export const DEFAULT_MALE_AVATAR_V2: AvatarConfigV2 = {
+  ...V3_REQUIRED,
   gender: 'male',
   skinTone: '#f4c2a0',
   eyeColor: '#6b4423',
@@ -90,6 +95,7 @@ export const DEFAULT_MALE_AVATAR_V2: AvatarConfigV2 = {
 };
 
 export const DEFAULT_FEMALE_AVATAR_V2: AvatarConfigV2 = {
+  ...V3_REQUIRED,
   gender: 'female',
   skinTone: '#f4c2a0',
   eyeColor: '#6b4423',
@@ -115,16 +121,47 @@ export const DEFAULT_FEMALE_AVATAR_V2: AvatarConfigV2 = {
   tattoo: 'none',
 };
 
-export const SKIN_TONES = [
-  { name: 'Fair', value: '#fde8d7' },
+interface Swatch { name: string; value: string; }
+
+export const SKIN_TONES: Swatch[] = [
+  { name: 'Porcelain', value: '#fde8d7' },
+  { name: 'Ivory', value: '#f5d6c0' },
   { name: 'Light', value: '#f4c2a0' },
-  { name: 'Medium', value: '#d4a373' },
+  { name: 'Beige', value: '#e8b890' },
+  { name: 'Olive', value: '#d4a373' },
+  { name: 'Golden', value: '#c69b6e' },
   { name: 'Tan', value: '#c68952' },
-  { name: 'Brown', value: '#a86f44' },
-  { name: 'Dark', value: '#6d4428' },
+  { name: 'Bronze', value: '#b07a4e' },
+  { name: 'Honey', value: '#a86f44' },
+  { name: 'Caramel', value:'#9c6334' },
+  { name: 'Brown', value: '#7d4a2e' },
+  { name: 'Mahogany', value: '#6d4428' },
+  { name: 'Espresso', value: '#4a2c1a' },
+  { name: 'Ebony', value: '#3a2010' },
 ];
 
-export const EYE_COLORS = [
+export const SKIN_UNDERTONES: Record<string, 'warm' | 'cool' | 'neutral'> = {
+  '#fde8d7': 'cool',
+  '#f5d6c0': 'cool',
+  '#f4c2a0': 'warm',
+  '#e8b890': 'warm',
+  '#d4a373': 'neutral',
+  '#c69b6e': 'warm',
+  '#c68952': 'warm',
+  '#b07a4e': 'warm',
+  '#a86f44': 'warm',
+  '#9c6334': 'warm',
+  '#7d4a2e': 'cool',
+  '#6d4428': 'cool',
+  '#4a2c1a': 'cool',
+  '#3a2010': 'cool',
+};
+
+export function getSkinUndertone(tone: string): 'warm' | 'cool' | 'neutral' {
+  return SKIN_UNDERTONES[tone] ?? 'neutral';
+}
+
+export const EYE_COLORS: Swatch[] = [
   { name: 'Brown', value: '#6b4423' },
   { name: 'Blue', value: '#4a8ccc' },
   { name: 'Green', value: '#5c9964' },
@@ -133,7 +170,7 @@ export const EYE_COLORS = [
   { name: 'Amber', value: '#cc8800' },
 ];
 
-export const HAIR_COLORS = [
+export const HAIR_COLORS: Swatch[] = [
   { name: 'Black', value: '#2a1f1a' },
   { name: 'Dark Brown', value: '#3d2817' },
   { name: 'Brown', value: '#5c3a21' },
@@ -146,7 +183,7 @@ export const HAIR_COLORS = [
   { name: 'White', value: '#e0e0e0' },
 ];
 
-export const LIP_COLORS = [
+export const LIP_COLORS: Swatch[] = [
   { name: 'Warm Nude', value: '#c4917c' },
   { name: 'Tan Nude', value: '#b07a5e' },
   { name: 'Dusty Rose', value: '#c8857a' },
@@ -161,7 +198,7 @@ export const LIP_COLORS = [
   { name: 'Red', value: '#c73e3a' },
 ];
 
-export const NECKLACE_COLORS = [
+export const NECKLACE_COLORS: Swatch[] = [
   { name: 'Silver', value: '#C0C0C0' },
   { name: 'Gold', value: '#D4AF37' },
   { name: 'Rose Gold', value: '#E0BFB8' },
@@ -170,6 +207,11 @@ export const NECKLACE_COLORS = [
   { name: 'Bronze', value: '#CD7F32' },
 ];
 
+export const HAIR_TEXTURES: Array<{ value: HairTexture; label: string }> = [
+  { value: 'straight', label: 'Straight' },
+  { value: 'wavy', label: 'Wavy' },
+  { value: 'coily', label: 'Coily' },
+];
 
 export const MALE_HAIRSTYLES: Array<{ value: MaleHairStyle; label: string }> = [
   { value: 'buzz', label: 'Buzz Cut' },
@@ -190,4 +232,33 @@ export const FEMALE_HAIRSTYLES: Array<{ value: FemaleHairStyle; label: string }>
   { value: 'afro', label: 'Afro' },
   { value: 'locs', label: 'Locs' },
   { value: 'bun', label: 'Bun' },
+];
+
+export const EYE_SHAPES: Array<{ value: EyeShape; label: string }> = [
+  { value: 'almond', label: 'Almond' },
+  { value: 'round', label: 'Round' },
+  { value: 'hooded', label: 'Hooded' },
+  { value: 'wide', label: 'Wide' },
+  { value: 'monolid', label: 'Monolid' },
+  { value: 'deepset', label: 'Deep Set' },
+  { value: 'upturned', label: 'Upturned' },
+];
+
+export const NOSE_SHAPES: Array<{ value: NoseShape; label: string }> = [
+  { value: 'button', label: 'Button' },
+  { value: 'straight', label: 'Straight' },
+  { value: 'broad', label: 'Broad' },
+  { value: 'upturned', label: 'Upturned' },
+  { value: 'aquiline', label: 'Aquiline' },
+  { value: 'hawk', label: 'Hawk' },
+  { value: 'flat', label: 'Flat' },
+];
+
+export const FACE_SHAPES: Array<{ value: FaceShape; label: string }> = [
+  { value: 'oval', label: 'Oval' },
+  { value: 'round', label: 'Round' },
+  { value: 'square', label: 'Square' },
+  { value: 'heart', label: 'Heart' },
+  { value: 'diamond', label: 'Diamond' },
+  { value: 'oblong', label: 'Oblong' },
 ];

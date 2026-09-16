@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import { AvatarConfigV2 } from '../types/avatar-v2';
+import { renderMaleHair, renderFemaleHair } from '../renderers/hairRenderer';
 
 interface AvatarV2Props {
   config: AvatarConfigV2;
@@ -8,10 +9,11 @@ interface AvatarV2Props {
 
 function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   const {
-    gender, skinTone, eyeColor, hairColor, hairStyle,
+    gender, skinTone, eyeColor, hairColor, hairStyle, hairTexture,
     lipShape, lipColor, eyebrowShape, eyeShape, noseShape, faceShape,
     bodyType, facialHair, eyelashes, freckles, blush, glasses, earrings,
     nosePiercing, lipPiercing, necklace, necklaceColor, tattoo, eyeliner,
+    eyeShadow, makeupIntensity, skinDetail,
   } = config;
 
   const hairColorDark = hairColor + 'cc';
@@ -19,11 +21,13 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   const hairColorMid = hairColor + 'aa';
 
   const faceParams = {
-    oval:   { rx: 28, ry: 34, neckY: 82 },
-    round:  { rx: 30, ry: 30, neckY: 80 },
-    square: { rx: 28, ry: 32, neckY: 82 },
-    heart:  { rx: 30, ry: 32, neckY: 82 },
-  }[faceShape] ?? { rx: 28, ry: 34, neckY: 82 };
+    oval:    { rx: 28, ry: 34, chinW: 20, jawY: 78 },
+    round:   { rx: 30, ry: 30, chinW: 26, jawY: 76 },
+    square:  { rx: 28, ry: 32, chinW: 24, jawY: 80 },
+    heart:   { rx: 30, ry: 32, chinW: 16, jawY: 78 },
+    diamond: { rx: 27, ry: 35, chinW: 15, jawY: 80 },
+    oblong:  { rx: 25, ry: 37, chinW: 18, jawY: 82 },
+  }[faceShape] ?? { rx: 28, ry: 34, chinW: 20, jawY: 78 };
 
   const bodyParams = {
     slim:     { shoulderRx: 26, torsoScaleX: 0.82 },
@@ -32,420 +36,102 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
     curvy:    { shoulderRx: 30, torsoScaleX: 1.14 },
   }[bodyType] ?? { shoulderRx: 30, torsoScaleX: 1.0 };
 
-  const { rx: fRx, ry: fRy, neckY } = faceParams;
+  const { rx: fRx, ry: fRy, chinW } = faceParams;
   const faceCenterY = 52;
   const faceTop = faceCenterY - fRy;
   const faceBottom = faceCenterY + fRy;
 
-  const renderMaleHair = () => {
-    switch (hairStyle) {
-      case 'buzz':
+  const renderFaceShape = () => {
+    switch (faceShape) {
+      case 'square':
         return (
           <g>
-            <ellipse cx="50" cy={faceTop + 6} rx={fRx + 1} ry="10" fill={hairColor} />
-            <ellipse cx="50" cy={faceTop + 2} rx={fRx - 4} ry="8" fill={hairColor} />
-            {Array.from({ length: 320 }, (_, i) => {
-              const col = i % 40;
-              const row = Math.floor(i / 40);
-              const angle = (col / 40) * Math.PI;
-              const rx = fRx - 2 + row * 0.6;
-              const ry = 8 + row * 0.3;
-              const x = 50 + Math.cos(angle) * rx + (((i * 7919) % 7) - 3) * 0.2;
-              const y = faceTop + 4 + Math.sin(angle) * ry * 0.6 + (((i * 6271) % 5) - 2) * 0.3;
-              if (y < faceTop - 2 || y > faceTop + 14) return null;
-              return (
-                <line key={i}
-                  x1={x} y1={y} x2={x + (((i * 3571) % 5) - 2) * 0.3} y2={y - 1.2 - (i % 3) * 0.2}
-                  stroke={i % 5 === 0 ? hairColorLight : hairColorDark}
-                  strokeWidth={0.6} opacity={0.55 + (i % 4) * 0.08} strokeLinecap="round" />
-              );
-            })}
-            <ellipse cx={50 - fRx + 1} cy={faceCenterY - 4} rx="5" ry="10" fill={hairColor} opacity="0.85" />
-            <ellipse cx={50 + fRx - 1} cy={faceCenterY - 4} rx="5" ry="10" fill={hairColor} opacity="0.85" />
+            <path d={`M${50 - fRx},${faceTop + 6} L${50 - fRx},${faceBottom - 6} Q${50 - chinW/2},${faceBottom + 4} 50,${faceBottom + 6} Q${50 + chinW/2},${faceBottom + 4} ${50 + fRx},${faceBottom - 6} L${50 + fRx},${faceTop + 6} Q50,${faceTop - 2} ${50 - fRx},${faceTop + 6} Z`}
+              fill={`url(#${faceGradientId})`} />
           </g>
         );
-
-      case 'short':
+      case 'heart':
         return (
           <g>
-            <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="16" fill={hairColor} />
-            <ellipse cx="50" cy={faceTop + 2} rx={fRx - 2} ry="12" fill={hairColorDark} opacity="0.4" />
-            {Array.from({ length: 48 }, (_, i) => {
-              const t = (i / 48) * Math.PI;
-              const bx = 50 + Math.cos(t) * (fRx + 1);
-              const by = faceTop + 8 + Math.sin(t) * 12;
-              const len = 5 + Math.sin(i * 1.3) * 2;
-              const angle = -Math.PI * 0.5 + (i / 48) * Math.PI * 0.6 - 0.3;
-              return (
-                <path key={i}
-                  d={`M${bx},${by} Q${bx + Math.cos(angle) * len * 0.5 + Math.sin(i) * 1.5},${by + Math.sin(angle) * len * 0.5} ${bx + Math.cos(angle) * len},${by + Math.sin(angle) * len}`}
-                  stroke={i % 7 === 0 ? hairColorLight : hairColor}
-                  strokeWidth={1.4} fill="none" opacity={0.8} strokeLinecap="round" />
-              );
-            })}
-            <ellipse cx={50 - fRx + 1} cy={faceCenterY - 2} rx="5" ry="12" fill={hairColorDark} opacity="0.75" />
-            <ellipse cx={50 + fRx - 1} cy={faceCenterY - 2} rx="5" ry="12" fill={hairColorDark} opacity="0.75" />
+            <path d={`M${50 - fRx},${faceTop + 4} Q50,${faceTop - 2} ${50 + fRx},${faceTop + 4} L${50 + fRx},${faceBottom - 8} Q${50 + fRx - 4},${faceBottom + 2} 50,${faceBottom + 6} Q${50 - fRx + 4},${faceBottom + 2} ${50 - fRx},${faceBottom - 8} Z`}
+              fill={`url(#${faceGradientId})`} />
           </g>
         );
-
-      case 'wavy': {
-        const wavePaths = Array.from({ length: 14 }, (_, i) => {
-          const x0 = 22 + i * 4;
-          const phase = (i % 3) * 1.1;
-          const amp = 3.5 + (i % 2) * 1.5;
-          const segments = [];
-          for (let s = 0; s < 3; s++) {
-            const y0 = faceTop + 4 + s * 12;
-            const y1 = y0 + 6;
-            const y2 = y0 + 12;
-            const cx1 = x0 + Math.sin(phase + s) * amp;
-            const cx2 = x0 - Math.sin(phase + s + 1) * amp;
-            segments.push(`Q${cx1},${y1} ${x0},${y2} Q${cx2},${y2 + 6} ${x0},${y2 + 12}`);
-          }
-          return (
-            <path key={i}
-              d={`M${x0},${faceTop + 4} ${segments.join(' ')}`}
-              stroke={i % 5 === 0 ? hairColorLight : hairColor}
-              strokeWidth={2.5 + (i % 3) * 0.5} fill="none" opacity={0.85} strokeLinecap="round" />
-          );
-        });
+      case 'diamond':
         return (
           <g>
-            <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-            {wavePaths}
-            <ellipse cx={50 - fRx + 1} cy={faceCenterY} rx="6" ry="14" fill={hairColorDark} opacity="0.7" />
-            <ellipse cx={50 + fRx - 1} cy={faceCenterY} rx="6" ry="14" fill={hairColorDark} opacity="0.7" />
+            <path d={`M${50 - fRx + 4},${faceTop + 6} Q50,${faceTop - 2} ${50 + fRx - 4},${faceTop + 6} L${50 + fRx},${faceBottom - 10} Q${50 + chinW/2},${faceBottom + 3} 50,${faceBottom + 6} Q${50 - chinW/2},${faceBottom + 3} ${50 - fRx},${faceBottom - 10} Z`}
+              fill={`url(#${faceGradientId})`} />
           </g>
         );
-      }
-
-      case 'sleek':
+      case 'oblong':
         return (
           <g>
-            <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-            <path d={`M${50 - fRx + 2},${faceTop + 8} Q${50 - fRx - 2},${faceTop + 20} ${50 - fRx},${faceTop + 35} L${50 - fRx + 4},${faceTop + 35} Q${50 - fRx + 2},${faceTop + 20} ${50 - fRx + 5},${faceTop + 8} Z`} fill={hairColor} />
-            <path d={`M${50 + fRx - 2},${faceTop + 8} Q${50 + fRx + 2},${faceTop + 20} ${50 + fRx},${faceTop + 35} L${50 + fRx - 4},${faceTop + 35} Q${50 + fRx - 2},${faceTop + 20} ${50 + fRx - 5},${faceTop + 8} Z`} fill={hairColor} />
-            {Array.from({ length: 18 }, (_, i) => {
-              const x = 22 + i * 3.4;
-              return (
-                <path key={i}
-                  d={`M${x},${faceTop + 4} L${x - 1},${faceTop + 22}`}
-                  stroke={i % 4 === 0 ? hairColorLight : hairColorMid}
-                  strokeWidth={1.8} opacity={0.35} strokeLinecap="round" />
-              );
-            })}
-            <ellipse cx={50 - fRx + 1} cy={faceCenterY - 4} rx="5.5" ry="13" fill={hairColor} opacity="0.9" />
-            <ellipse cx={50 + fRx - 1} cy={faceCenterY - 4} rx="5.5" ry="13" fill={hairColor} opacity="0.9" />
+            <path d={`M${50 - fRx},${faceTop + 8} Q50,${faceTop - 1} ${50 + fRx},${faceTop + 8} L${50 + fRx},${faceBottom - 8} Q${50 + chinW/2},${faceBottom + 4} 50,${faceBottom + 7} Q${50 - chinW/2},${faceBottom + 4} ${50 - fRx},${faceBottom - 8} Z`}
+              fill={`url(#${faceGradientId})`} />
           </g>
         );
-
-      case 'afro':
+      default:
         return (
           <g>
-            <ellipse cx="50" cy={faceCenterY - 18} rx={fRx + 14} ry={fRy - 2} fill={hairColor} opacity="0.9" />
-            {Array.from({ length: 260 }, (_, i) => {
-              const angle = (i / 260) * Math.PI * 2;
-              const layer = Math.floor(i / 52);
-              const r = 10 + layer * 4.5;
-              const x = 50 + Math.cos(angle) * r * 1.4 + (((i * 4373) % 7) - 3) * 0.9;
-              const y = faceCenterY - 18 + Math.sin(angle) * r + (((i * 6113) % 5) - 2) * 0.8;
-              const dist = Math.sqrt(Math.pow((x - 50) / 1.4, 2) + Math.pow(y - (faceCenterY - 18), 2));
-              if (dist > fRy + 2) return null;
-              return (
-                <circle key={i} cx={x} cy={y} r={1.5 + (i % 3) * 0.4}
-                  fill={i % 9 === 0 ? hairColorLight : hairColor}
-                  opacity={0.6 + (i % 4) * 0.08} />
-              );
-            })}
+            <ellipse cx="50" cy={faceCenterY} rx={fRx} ry={fRy} fill={`url(#${faceGradientId})`} />
           </g>
         );
-
-      case 'locs':
-        return (
-          <g>
-            <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-            {Array.from({ length: 9 }, (_, i) => {
-              const x = 22 + i * 6.5;
-              const curveMod = (i - 4) * 3;
-              const len = 70;
-              return (
-                <g key={i}>
-                  <path d={`M${x},${faceTop + 10} Q${x + curveMod * 0.5},${faceTop + 10 + len * 0.4} ${x + curveMod * 0.7},${faceTop + 10 + len * 0.7} Q${x + curveMod},${faceTop + 10 + len} ${x + curveMod * 0.8},${faceTop + 10 + len * 1.3}`}
-                    stroke={hairColor} strokeWidth={6.5} fill="none" strokeLinecap="round" opacity="0.95" />
-                  {Array.from({ length: 9 }, (_, j) => {
-                    const t = j / 9;
-                    const sx = x + curveMod * t * 0.7;
-                    const sy = faceTop + 10 + len * t;
-                    return (
-                      <ellipse key={j} cx={sx} cy={sy} rx="2.8" ry="1.2"
-                        fill={hairColorDark} opacity="0.5"
-                        transform={`rotate(${(curveMod > 0 ? 1 : -1) * 15 * t}, ${sx}, ${sy})`} />
-                    );
-                  })}
-                </g>
-              );
-            })}
-          </g>
-        );
-
-      case 'fade':
-        return (
-          <g>
-            <ellipse cx="50" cy={faceTop + 10} rx={fRx - 4} ry="16" fill={hairColor} />
-            {Array.from({ length: 8 }, (_, i) => {
-              const opacity = 0.15 + (i / 8) * 0.75;
-              const ry = 4 + i * 1.8;
-              const rx2 = fRx - 4 - i * 0.5;
-              return (
-                <ellipse key={i} cx="50" cy={faceBottom - 2 - i * 3}
-                  rx={rx2} ry={ry}
-                  fill={hairColor} opacity={opacity} />
-              );
-            })}
-            {Array.from({ length: 36 }, (_, i) => {
-              const t = (i / 36) * Math.PI;
-              const bx = 50 + Math.cos(t) * (fRx - 5);
-              const by = faceTop + 10 + Math.sin(t) * 10;
-              const len = 4 + Math.sin(i * 1.7) * 1.5;
-              return (
-                <path key={`top-${i}`}
-                  d={`M${bx},${by} Q${bx + Math.sin(i) * 1.2},${by - len * 0.5} ${bx + Math.sin(i + 1) * 0.8},${by - len}`}
-                  stroke={i % 6 === 0 ? hairColorLight : hairColor}
-                  strokeWidth={1.3} fill="none" opacity={0.85} strokeLinecap="round" />
-              );
-            })}
-            <ellipse cx={50 - fRx + 3} cy={faceCenterY + 2} rx="4" ry="10" fill={hairColor} opacity="0.45" />
-            <ellipse cx={50 + fRx - 3} cy={faceCenterY + 2} rx="4" ry="10" fill={hairColor} opacity="0.45" />
-          </g>
-        );
-
-      default: return null;
     }
   };
 
-  const renderFemaleHair = () => {
-    switch (hairStyle) {
-      case 'sleek':
-        return (
-          <g>
-            <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-            {Array.from({ length: 22 }, (_, i) => {
-              const x = 18 + i * 3;
-              const side = x < 50 ? -1 : 1;
-              const fallY = faceBottom + 20 + Math.abs(x - 50) * 0.4;
-              return (
-                <path key={i}
-                  d={`M${x},${faceTop + 8} C${x + side * 0.5},${faceCenterY} ${x + side * 1.5},${faceBottom} ${x + side * 2},${fallY}`}
-                  stroke={i % 5 === 0 ? hairColorLight : hairColor}
-                  strokeWidth={2.8} fill="none" opacity={0.88} strokeLinecap="round" />
-              );
-            })}
-            {Array.from({ length: 8 }, (_, i) => {
-              const x = 20 + i * 3.5;
-              return (
-                <path key={`shine-${i}`}
-                  d={`M${x},${faceTop + 6} L${x - 0.5},${faceTop + 22}`}
-                  stroke={hairColorLight} strokeWidth={1} opacity={0.2} strokeLinecap="round" />
-              );
-            })}
-            <ellipse cx={50 - fRx - 2} cy={faceCenterY + 4} rx="7.5" ry="20" fill={hairColor} opacity="0.92" />
-            <ellipse cx={50 + fRx + 2} cy={faceCenterY + 4} rx="7.5" ry="20" fill={hairColor} opacity="0.92" />
-          </g>
-        );
+  const renderFaceShading = () => {
+    const shadeColor = skinTone + '30';
+    return (
+      <g opacity="0.25" clipPath="url(#faceClipV2)">
+        <ellipse cx={50 - fRx + 6} cy={faceCenterY + 8} rx="5" ry="8" fill={shadeColor} style={{ filter: 'blur(3px)' }} />
+        <ellipse cx={50 + fRx - 6} cy={faceCenterY + 8} rx="5" ry="8" fill={shadeColor} style={{ filter: 'blur(3px)' }} />
+        <ellipse cx="50" cy={faceCenterY + fRy - 6} rx={fRx - 8} ry="4" fill={shadeColor} style={{ filter: 'blur(2px)' }} />
+        <path d={`M50,${faceCenterY - 6} Q52,${faceCenterY + 4} 50,${faceCenterY + 12}`} stroke="#ffffff" strokeWidth="3" fill="none" opacity="0.15" style={{ filter: 'blur(1px)' }} />
+      </g>
+    );
+  };
 
-      case 'wavy': {
-        const strandPaths = Array.from({ length: 16 }, (_, i) => {
-          const x0 = 16 + i * 4.5;
-          const side = x0 < 50 ? -1 : 1;
-          const phase = i * 0.8;
-          const amp = 4 + (i % 3) * 2;
-          const yStart = faceTop + 6;
-          const segments: string[] = [];
-          for (let s = 0; s < 5; s++) {
-            const y = yStart + s * 16;
-            const yn = y + 8;
-            const yn2 = y + 16;
-            const cx1 = x0 + Math.sin(phase + s * 1.4) * amp * side;
-            const cx2 = x0 - Math.sin(phase + s * 1.4 + 0.7) * amp * side;
-            segments.push(`Q${cx1},${yn} ${x0},${yn2}`);
-            if (s < 4) segments.push(`Q${cx2},${yn2 + 8} ${x0},${yn2 + 16}`);
-          }
-          return (
-            <path key={i}
-              d={`M${x0},${yStart} ${segments.join(' ')}`}
-              stroke={i % 4 === 0 ? hairColorLight : hairColor}
-              strokeWidth={3 + (i % 3) * 0.5} fill="none" opacity={0.87} strokeLinecap="round" />
-          );
-        });
-        return (
-          <g>
-            <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-            {strandPaths}
-            <ellipse cx={50 - fRx - 2} cy={faceCenterY + 8} rx="8" ry="22" fill={hairColorDark} opacity="0.65" />
-            <ellipse cx={50 + fRx + 2} cy={faceCenterY + 8} rx="8" ry="22" fill={hairColorDark} opacity="0.65" />
-          </g>
-        );
-      }
+  const renderNeckShadow = () => {
+    return (
+      <path d={`M${50 - 9},${faceBottom - 2} Q50,${faceBottom + 2} ${50 + 9},${faceBottom - 2}`}
+        stroke={skinTone + '40'} strokeWidth="4" fill="none" opacity="0.5" style={{ filter: 'blur(2px)' }} />
+    );
+  };
 
-      case 'curly':
-        return (
-          <g>
-            <ellipse cx="50" cy={faceTop + 8} rx={fRx + 2} ry="16" fill={hairColor} />
-            <path d={`M${50 - fRx - 2},${faceTop + 12} Q${50 - fRx - 6},${faceCenterY} ${50 - fRx - 2},${faceBottom + 16} L${50 - fRx + 4},${faceBottom + 18} Q${50 - fRx + 2},${faceCenterY + 2} ${50 - fRx + 6},${faceTop + 14} Z`} fill={hairColor} opacity="0.88" />
-            <path d={`M${50 + fRx + 2},${faceTop + 12} Q${50 + fRx + 6},${faceCenterY} ${50 + fRx + 2},${faceBottom + 16} L${50 + fRx - 4},${faceBottom + 18} Q${50 + fRx - 2},${faceCenterY + 2} ${50 + fRx - 6},${faceTop + 14} Z`} fill={hairColor} opacity="0.88" />
-            {Array.from({ length: 90 }, (_, i) => {
-              const col = i % 10;
-              const row = Math.floor(i / 10);
-              const x = 20 + col * 6.5 + (((i * 3137) % 7) - 3) * 0.8;
-              const y = faceTop + 6 + row * 8 + (((i * 5987) % 5) - 2) * 0.7;
-              const r = 2.2 + (i % 4) * 0.5;
-              if (x < 16 || x > 84 || y > faceBottom + 18 || y < faceTop) return null;
-              return (
-                <circle key={i} cx={x} cy={y} r={r}
-                  fill="none" stroke={i % 6 === 0 ? hairColorLight : hairColorDark}
-                  strokeWidth={1.1} opacity={0.65} />
-              );
-            })}
-          </g>
-        );
+  const renderSkinDetail = () => {
+    if (!skinDetail || skinDetail === 'none') return null;
+    if (skinDetail === 'smooth') return null;
+    return (
+      <g clipPath="url(#faceClipV2)" opacity="0.12">
+        {Array.from({ length: 20 }, (_, i) => {
+          const angle = (i / 20) * Math.PI * 2;
+          const r = 6 + (i % 4) * 5;
+          const x = 50 + Math.cos(angle) * r + (((i * 7193) % 5) - 2);
+          const y = faceCenterY + Math.sin(angle) * r * 0.8 + (((i * 3347) % 3) - 1);
+          return <circle key={i} cx={x} cy={y} r="0.4" fill="#000" opacity="0.3" />;
+        })}
+      </g>
+    );
+  };
 
-      case 'braids':
-        return (
-          <g>
-            <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-            {Array.from({ length: 10 }, (_, i) => {
-              const x = 18 + i * 6.5;
-              const curveMod = (i - 4.5) * 3;
-              const yEnd = faceBottom + 60;
-              return (
-                <g key={i}>
-                  <path d={`M${x},${faceTop + 10} Q${x + curveMod * 0.5},${faceCenterY + 20} ${x + curveMod * 0.8},${faceBottom + 30} Q${x + curveMod * 1.1},${yEnd - 5} ${x + curveMod * 0.7},${yEnd}`}
-                    stroke={hairColor} strokeWidth={7} fill="none" strokeLinecap="round" opacity="0.95" />
-                  {Array.from({ length: 12 }, (_, j) => {
-                    const t = j / 12;
-                    const bx = x + curveMod * t * 0.8;
-                    const by = faceTop + 10 + (faceBottom + 30 - faceTop - 10) * t;
-                    const offset = j % 2 === 0 ? -3.2 : 3.2;
-                    return (
-                      <g key={j}>
-                        <path d={`M${bx + offset},${by} Q${bx},${by + 2.5} ${bx - offset},${by + 5}`}
-                          stroke={hairColorDark} strokeWidth={2.2} fill="none" opacity={0.85} strokeLinecap="round" />
-                        <path d={`M${bx + offset * 0.6},${by + 1} L${bx - offset * 0.6},${by + 4}`}
-                          stroke={hairColorLight} strokeWidth={0.8} opacity={0.6} strokeLinecap="round" />
-                      </g>
-                    );
-                  })}
-                </g>
-              );
-            })}
-          </g>
-        );
-
-      case 'ponytail':
-        return (
-          <g>
-            <ellipse cx="50" cy={faceTop + 10} rx={fRx + 1} ry="16" fill={hairColor} />
-            <path d={`M${50 - fRx + 2},${faceTop + 12} Q${50 - fRx - 2},${faceCenterY + 4} ${50 - fRx},${faceBottom + 4} L${50 - fRx + 5},${faceBottom + 6} Q${50 - fRx + 3},${faceCenterY + 6} ${50 - fRx + 6},${faceTop + 14} Z`} fill={hairColorDark} opacity="0.7" />
-            <ellipse cx="80" cy={faceCenterY} rx="5" ry="7" fill="#111" opacity="0.55" />
-            <path d={`M80,${faceCenterY - 6} Q${fRx + 50},${faceCenterY + 20} ${fRx + 56},${faceCenterY + 52} Q${fRx + 58},${faceCenterY + 72} ${fRx + 46},${faceCenterY + 88}`}
-              stroke={hairColor} strokeWidth={18} fill="none" strokeLinecap="round" opacity="0.9" />
-            {Array.from({ length: 40 }, (_, i) => {
-              const t = i / 40;
-              const px = (fRx + 50) + t * 8;
-              const py = faceCenterY + 18 + t * 68;
-              const wave = Math.sin(t * Math.PI * 3 + i * 0.5) * 3;
-              return (
-                <path key={i}
-                  d={`M${px + wave},${py} Q${px + wave + 2},${py + 5} ${px + wave},${py + 10}`}
-                  stroke={i % 6 === 0 ? hairColorLight : hairColor}
-                  strokeWidth={1.6} fill="none" opacity={0.75} strokeLinecap="round" />
-              );
-            })}
-          </g>
-        );
-
-      case 'afro':
-        return (
-          <g>
-            <ellipse cx="50" cy={faceCenterY - 18} rx={fRx + 16} ry={fRy + 2} fill={hairColor} opacity="0.88" />
-            {Array.from({ length: 300 }, (_, i) => {
-              const angle = (i / 300) * Math.PI * 2;
-              const layer = Math.floor(i / 60);
-              const r = 12 + layer * 5;
-              const x = 50 + Math.cos(angle) * r * 1.45 + (((i * 4373) % 7) - 3) * 1.0;
-              const y = faceCenterY - 18 + Math.sin(angle) * r + (((i * 6113) % 5) - 2) * 0.9;
-              const dist = Math.sqrt(Math.pow((x - 50) / 1.45, 2) + Math.pow(y - (faceCenterY - 18), 2));
-              if (dist > fRy + 4) return null;
-              return (
-                <circle key={i} cx={x} cy={y} r={1.6 + (i % 3) * 0.4}
-                  fill={i % 9 === 0 ? hairColorLight : hairColor}
-                  opacity={0.6 + (i % 4) * 0.08} />
-              );
-            })}
-          </g>
-        );
-
-      case 'locs':
-        return (
-          <g>
-            <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-            {Array.from({ length: 11 }, (_, i) => {
-              const x = 16 + i * 6.5;
-              const curveMod = (i - 5) * 3.5;
-              const len = 90;
-              return (
-                <g key={i}>
-                  <path d={`M${x},${faceTop + 10} Q${x + curveMod * 0.5},${faceTop + 10 + len * 0.4} ${x + curveMod * 0.7},${faceTop + 10 + len * 0.7} Q${x + curveMod},${faceTop + 10 + len} ${x + curveMod * 0.8},${faceTop + 10 + len * 1.3}`}
-                    stroke={hairColor} strokeWidth={7.5} fill="none" strokeLinecap="round" opacity="0.95" />
-                  {Array.from({ length: 11 }, (_, j) => {
-                    const t = j / 11;
-                    const sx = x + curveMod * t * 0.7;
-                    const sy = faceTop + 10 + len * t;
-                    return (
-                      <ellipse key={j} cx={sx} cy={sy} rx="3.2" ry="1.4"
-                        fill={hairColorDark} opacity="0.45"
-                        transform={`rotate(${(curveMod > 0 ? 1 : -1) * 18 * t}, ${sx}, ${sy})`} />
-                    );
-                  })}
-                </g>
-              );
-            })}
-          </g>
-        );
-
-      case 'bun':
-        return (
-          <g>
-            <ellipse cx="50" cy={faceTop + 10} rx={fRx + 1} ry="16" fill={hairColor} />
-            <path d={`M${50 - fRx + 2},${faceTop + 12} Q${50 - fRx},${faceCenterY} ${50 - fRx + 1},${faceBottom + 2} L${50 - fRx + 6},${faceBottom + 4} Q${50 - fRx + 4},${faceCenterY + 2} ${50 - fRx + 7},${faceTop + 14} Z`} fill={hairColorDark} opacity="0.65" />
-            <ellipse cx="50" cy={faceTop - 14} rx="17" ry="15" fill={hairColor} opacity="0.92" />
-            <ellipse cx="50" cy={faceTop - 14} rx="12" ry="10" fill={hairColorDark} opacity="0.35" />
-            {Array.from({ length: 100 }, (_, i) => {
-              const angle = (i / 100) * Math.PI * 6;
-              const layer = Math.floor(i / 20);
-              const r = 3 + layer * 2.2;
-              const bx = 50 + Math.cos(angle) * r;
-              const by = faceTop - 14 + Math.sin(angle) * r * 0.85;
-              if (r > 14) return null;
-              return (
-                <path key={i}
-                  d={`M50,${faceTop - 14} L${bx},${by}`}
-                  stroke={i % 8 === 0 ? hairColorLight : hairColorMid}
-                  strokeWidth={0.8} opacity={0.5} strokeLinecap="round" />
-              );
-            })}
-            <ellipse cx={50 - fRx - 1} cy={faceCenterY - 2} rx="5.5" ry="15" fill={hairColorDark} opacity="0.65" />
-            <ellipse cx={50 + fRx + 1} cy={faceCenterY - 2} rx="5.5" ry="15" fill={hairColorDark} opacity="0.65" />
-          </g>
-        );
-
-      default: return null;
-    }
+  const renderEyeShadow = () => {
+    if (!eyeShadow || eyeShadow === 'none') return null;
+    const colors = { smoky: '#3a3a4a', natural: '#c4917c', colorful: '#7c4a8a' };
+    const c = colors[eyeShadow] ?? '#3a3a4a';
+    const opacity = makeupIntensity === 'glam' ? 0.5 : makeupIntensity === 'subtle' ? 0.25 : 0.35;
+    return (
+      <g opacity={opacity}>
+        <ellipse cx="38" cy="46" rx="7" ry="3" fill={c} style={{ filter: 'blur(2px)' }} />
+        <ellipse cx="62" cy="46" rx="7" ry="3" fill={c} style={{ filter: 'blur(2px)' }} />
+      </g>
+    );
   };
 
   const renderBlush = () => {
     if (!blush || blush === 'none') return null;
-    const opacity = blush === 'soft' ? 0.16 : 0.32;
+    const intensity = makeupIntensity === 'glam' ? 1.3 : makeupIntensity === 'subtle' ? 0.7 : 1.0;
+    const opacity = (blush === 'soft' ? 0.16 : 0.32) * intensity;
     const cheekY = faceCenterY + 8;
     const cheekInset = fRx - 10;
     return (
@@ -595,9 +281,9 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   const renderFreckles = () => {
     if (!freckles || freckles === 'none') return null;
     if (freckles === 'beauty_mark') {
-      return <circle cx="61" cy="67" r="1.4" fill={`${skinTone}00`} style={{ filter: 'none' }}>
+      return (
         <circle cx="61" cy="67" r="1.4" fill="#5a3a2a" opacity="0.55" />
-      </circle>;
+      );
     }
     const count = freckles === 'light' ? 14 : 28;
     const seed = 9371;
@@ -861,6 +547,9 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
       round:  { rx: 6, ry: 6 },
       hooded: { rx: 7, ry: 4.5 },
       wide:   { rx: 8, ry: 5.5 },
+      monolid: { rx: 7, ry: 4 },
+      deepset: { rx: 7, ry: 4.5 },
+      upturned: { rx: 7, ry: 5 },
     }[eyeShape] ?? { rx: 7, ry: 5 };
     const { rx } = eyeShapeConfigs;
     const cy = 50;
@@ -907,33 +596,43 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
 
   const renderEyes = () => {
     const eyeShapeConfigs = {
-      almond: { rx: 7, ry: 5, irisR: 4.5, pupilR: 2.2, hoodOpacity: 0 },
-      round:  { rx: 6, ry: 6, irisR: 4.8, pupilR: 2.4, hoodOpacity: 0 },
-      hooded: { rx: 7, ry: 4.5, irisR: 4.0, pupilR: 1.9, hoodOpacity: 0.6 },
-      wide:   { rx: 8, ry: 5.5, irisR: 4.8, pupilR: 2.3, hoodOpacity: 0 },
-    }[eyeShape] ?? { rx: 7, ry: 5, irisR: 4.5, pupilR: 2.2, hoodOpacity: 0 };
+      almond:   { rx: 7, ry: 5, irisR: 4.5, hoodOpacity: 0 },
+      round:    { rx: 6, ry: 6, irisR: 4.8, hoodOpacity: 0 },
+      hooded:   { rx: 7, ry: 4.5, irisR: 4.0, hoodOpacity: 0.6 },
+      wide:     { rx: 8, ry: 5.5, irisR: 4.8, hoodOpacity: 0 },
+      monolid:  { rx: 7, ry: 3.5, irisR: 3.5, hoodOpacity: 0.85 },
+      deepset:  { rx: 7, ry: 4, irisR: 4.0, hoodOpacity: 0.45 },
+      upturned: { rx: 7, ry: 5, irisR: 4.5, hoodOpacity: 0 },
+    }[eyeShape] ?? { rx: 7, ry: 5, irisR: 4.5, hoodOpacity: 0 };
 
     const { rx, ry, irisR, hoodOpacity } = eyeShapeConfigs;
+    const upturnedLift = eyeShape === 'upturned' ? 2 : 0;
 
     return (
       <g filter="url(#glow)">
-        <ellipse cx="38" cy="50" rx={rx} ry={ry} fill="white" />
-        <ellipse cx="62" cy="50" rx={rx} ry={ry} fill="white" />
-        <circle cx="38" cy="50" r={irisR} fill={eyeColor} />
-        <circle cx="62" cy="50" r={irisR} fill={eyeColor} />
-        <circle cx="38" cy="50" r={irisR * 0.55} fill="#0a0a0a" />
-        <circle cx="62" cy="50" r={irisR * 0.55} fill="#0a0a0a" />
-        <circle cx="36.5" cy="48.5" r="1.3" fill="white" opacity="0.9" />
-        <circle cx="60.5" cy="48.5" r="1.3" fill="white" opacity="0.9" />
+        <ellipse cx="38" cy={50 - upturnedLift} rx={rx} ry={ry} fill="white" />
+        <ellipse cx="62" cy={50 - upturnedLift} rx={rx} ry={ry} fill="white" />
+        <circle cx="38" cy={50 - upturnedLift} r={irisR} fill={eyeColor} />
+        <circle cx="62" cy={50 - upturnedLift} r={irisR} fill={eyeColor} />
+        <circle cx="38" cy={50 - upturnedLift} r={irisR * 0.55} fill="#0a0a0a" />
+        <circle cx="62" cy={50 - upturnedLift} r={irisR * 0.55} fill="#0a0a0a" />
+        <circle cx="36.5" cy={48.5 - upturnedLift} r="1.3" fill="white" opacity="0.9" />
+        <circle cx="60.5" cy={48.5 - upturnedLift} r="1.3" fill="white" opacity="0.9" />
+        {upturnedLift > 0 && (
+          <>
+            <path d={`M${38 - rx},${50 - upturnedLift + 1} L${38 + rx},${50 - upturnedLift - 1}`} stroke={skinTone} strokeWidth="1" opacity="0.6" />
+            <path d={`M${62 - rx},${50 - upturnedLift + 1} L${62 + rx},${50 - upturnedLift - 1}`} stroke={skinTone} strokeWidth="1" opacity="0.6" />
+          </>
+        )}
         {hoodOpacity > 0 && (
           <>
-            <path d={`M${38 - rx},50 Q38,${50 - ry - 1} ${38 + rx},50`}
+            <path d={`M${38 - rx},${50 - upturnedLift} Q38,${50 - upturnedLift - ry - 1} ${38 + rx},${50 - upturnedLift}`}
               fill={skinTone} opacity={hoodOpacity} />
-            <path d={`M${62 - rx},50 Q62,${50 - ry - 1} ${62 + rx},50`}
+            <path d={`M${62 - rx},${50 - upturnedLift} Q62,${50 - upturnedLift - ry - 1} ${62 + rx},${50 - upturnedLift}`}
               fill={skinTone} opacity={hoodOpacity} />
-            <path d={`M${38 - rx + 1},50 Q38,${50 - ry + 2} ${38 + rx - 1},50`}
+            <path d={`M${38 - rx + 1},${50 - upturnedLift} Q38,${50 - upturnedLift - ry + 2} ${38 + rx - 1},${50 - upturnedLift}`}
               fill={skinTone} opacity={hoodOpacity * 0.5} />
-            <path d={`M${62 - rx + 1},50 Q62,${50 - ry + 2} ${62 + rx - 1},50`}
+            <path d={`M${62 - rx + 1},${50 - upturnedLift} Q62,${50 - upturnedLift - ry + 2} ${62 + rx - 1},${50 - upturnedLift}`}
               fill={skinTone} opacity={hoodOpacity * 0.5} />
           </>
         )}
@@ -942,12 +641,13 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   };
 
   const renderNose = () => {
+    const opacityBase = '15';
     switch (noseShape) {
       case 'button':
         return (
           <g>
-            <path d="M50 55 Q52 60 50 65" stroke="#00000020" strokeWidth="1.5" fill="none" />
-            <ellipse cx="47" cy="66" rx="3" ry="1.8" fill="#00000012" />
+            <path d="M50 55 Q52 60 50 65" stroke={`#000000${opacityBase}`} strokeWidth="1.5" fill="none" />
+            <ellipse cx="47" cy="66" rx="3" ry="1.8" fill={`#000000${opacityBase === '15' ? '12' : '15'}`} />
             <ellipse cx="53" cy="66" rx="3" ry="1.8" fill="#00000012" />
             <path d="M45 66 Q50 69 55 66" stroke="#00000015" strokeWidth="1" fill="none" />
           </g>
@@ -979,6 +679,33 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
             <path d="M44 65 Q50 67 56 65" stroke="#00000015" strokeWidth="1" fill="none" />
           </g>
         );
+      case 'aquiline':
+        return (
+          <g>
+            <path d="M50 54 Q53 58 52 62 Q51 66 50 68" stroke="#00000025" strokeWidth="2" fill="none" />
+            <ellipse cx="46" cy="68" rx="3.5" ry="2.2" fill="#00000012" />
+            <ellipse cx="54" cy="68" rx="3.5" ry="2.2" fill="#00000012" />
+            <path d="M44 68 Q50 72 56 68" stroke="#00000018" strokeWidth="1.2" fill="none" />
+          </g>
+        );
+      case 'hawk':
+        return (
+          <g>
+            <path d="M50 54 Q54 59 53 64 Q52 67 50 69" stroke="#00000028" strokeWidth="2.5" fill="none" />
+            <ellipse cx="45" cy="69" rx="3.8" ry="2.4" fill="#00000014" />
+            <ellipse cx="55" cy="69" rx="3.8" ry="2.4" fill="#00000014" />
+            <path d="M43 69 Q50 73 57 69" stroke="#00000018" strokeWidth="1.3" fill="none" />
+          </g>
+        );
+      case 'flat':
+        return (
+          <g>
+            <path d="M50 58 Q51 61 50 63" stroke="#00000018" strokeWidth="1.5" fill="none" />
+            <ellipse cx="44" cy="64" rx="5.5" ry="3" fill="#00000015" />
+            <ellipse cx="56" cy="64" rx="5.5" ry="3" fill="#00000015" />
+            <path d="M41 64 Q50 68 59 64" stroke="#00000015" strokeWidth="1.2" fill="none" />
+          </g>
+        );
       default: return null;
     }
   };
@@ -986,6 +713,7 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   const lips = lipShapes[lipShape] || lipShapes.natural;
   const faceGradientId = `facev2-${skinTone.replace('#', '')}`;
   const { shoulderRx, torsoScaleX } = bodyParams;
+  const neckY = faceParams.jawY ?? 78;
 
   const svgDefs = useMemo(() => (
     <defs>
@@ -1005,17 +733,22 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
         <ellipse cx="50" cy={faceCenterY} rx={fRx + 3} ry={fRy + 3} />
       </clipPath>
     </defs>
-   
-  ), [skinTone, fRx, fRy, faceGradientId]);
+  ), [skinTone, fRx, fRy, faceGradientId, faceCenterY]);
 
   const neckTopY = neckY - 4;
   const neckWidth = 11;
+
+  const hairParams = {
+    hairColor, hairColorDark, hairColorLight, hairColorMid,
+    hairStyle, hairTexture,
+    fRx, fRy, faceTop, faceBottom, faceCenterY,
+  };
 
   return (
     <svg viewBox="0 0 100 130" className={className}>
       {svgDefs}
 
-      {gender === 'male' ? renderMaleHair() : renderFemaleHair()}
+      {gender === 'male' ? renderMaleHair(hairParams) : renderFemaleHair(hairParams)}
 
       <g transform={`translate(50,0) scale(${torsoScaleX},1) translate(-50,0)`}>
         <path d={`M50 ${neckY + 12} Q${50 - shoulderRx} ${neckY + 16} ${50 - shoulderRx - 10} ${neckY + 36} Q${50 - shoulderRx - 14} ${neckY + 53} ${50 - shoulderRx - 14} ${neckY + 73} L${50 + shoulderRx + 14} ${neckY + 73} Q${50 + shoulderRx + 14} ${neckY + 53} ${50 + shoulderRx + 10} ${neckY + 36} Q${50 + shoulderRx} ${neckY + 16} 50 ${neckY + 12} Z`}
@@ -1030,12 +763,16 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
       {renderNecklace()}
       {renderTattoo()}
 
-      <ellipse cx="50" cy={faceCenterY} rx={fRx} ry={fRy} fill={`url(#${faceGradientId})`} />
+      {renderFaceShape()}
+      {renderNeckShadow()}
+      {renderFaceShading()}
+      {renderSkinDetail()}
 
       <ellipse cx={50 - fRx + 3} cy={faceCenterY + 2} rx="4" ry="7" fill={skinTone} />
       <ellipse cx={50 + fRx - 3} cy={faceCenterY + 2} rx="4" ry="7" fill={skinTone} />
 
       {renderEarrings()}
+      {renderEyeShadow()}
       {renderBlush()}
       {renderEyes()}
       {renderEyeliner()}
