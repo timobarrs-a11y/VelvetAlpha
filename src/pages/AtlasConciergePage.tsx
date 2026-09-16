@@ -154,6 +154,23 @@ export const AtlasConciergePage = () => {
           return;
         }
 
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('profile_completed, name, birthday, gender')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        const profileComplete = !!(
+          profile?.profile_completed ||
+          (profile?.name && profile.name !== 'babe' && profile.name !== 'there' &&
+           profile?.birthday && profile?.gender)
+        );
+
+        if (!profileComplete) {
+          navigate('/user-questionnaire', { replace: true });
+          return;
+        }
+
         const response = await fetch(`${FUNCTION_BASE}/atlas-onboarding`, {
           method: 'POST',
           headers: {

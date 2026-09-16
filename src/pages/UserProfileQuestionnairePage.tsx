@@ -360,10 +360,10 @@ export function UserProfileQuestionnairePage() {
       const profile = await userProfileService.getCurrentProfile();
       if (profile) {
         const hasCore = !!(
-          profile.name && profile.name !== 'babe' &&
+          profile.name && profile.name !== 'babe' && profile.name !== 'there' &&
           profile.birthday && profile.gender && profile.favorite_color
         );
-        if (hasCore) {
+        if (hasCore || profile.profile_completed) {
           setShowAtlasTransition(true);
           return;
         }

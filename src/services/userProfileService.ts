@@ -79,6 +79,7 @@ class UserProfileService {
     const hasCore = !!(
       profile.name &&
       profile.name !== 'babe' &&
+      profile.name !== 'there' &&
       profile.birthday &&
       profile.gender
     );

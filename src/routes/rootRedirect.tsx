@@ -101,7 +101,7 @@ export function RootRedirect() {
 
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('welcome_seen')
+        .select('welcome_seen, profile_completed, name, birthday, gender')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -131,10 +131,18 @@ export function RootRedirect() {
           return;
         }
 
+        const profileComplete = !!(
+          profile.profile_completed ||
+          (profile.name && profile.name !== 'babe' && profile.name !== 'there' &&
+           profile.birthday && profile.gender)
+        );
+
         if (!profile?.welcome_seen) {
           setDestination('/welcome');
-        } else {
+        } else if (!profileComplete) {
           setDestination('/user-questionnaire');
+        } else {
+          setDestination('/atlas-onboarding');
         }
       } else if (homeLayout === 'new') {
         sessionStorage.removeItem('currentCompanionId');
