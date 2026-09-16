@@ -117,6 +117,7 @@ export const AtlasConciergePage = () => {
   const [expertDomain, setExpertDomain] = useState('');
   const [error, setError] = useState('');
   const [showTransition, setShowTransition] = useState(false);
+  const [transitionDestination, setTransitionDestination] = useState('/intent-select');
   const [latestAtlasId, setLatestAtlasId] = useState(-1);
   const [recommendation, setRecommendation] = useState<CoachRecommendation | null>(null);
   const [pendingTranscript, setPendingTranscript] = useState<ChatMessage[]>([]);
@@ -306,6 +307,16 @@ export const AtlasConciergePage = () => {
       setCoachName(data.coachName || recommendation.coachName);
       setCoachId(data.coachId || '');
       setExpertDomain(data.expertDomain || recommendation.expertDomain);
+
+      if (data.goalText) sessionStorage.setItem('atlasGoalText', data.goalText);
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('name, hobbies, sports')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      const questionnaireDone = !!(profile?.name && profile.name !== 'babe' && (profile?.hobbies || profile?.sports));
+      setTransitionDestination(questionnaireDone ? '/intent-select' : '/user-questionnaire');
 
       const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Now — what kind of people do you want in your corner? Friends, companions, or are we good with just the coach for now?`;
       const transId = ++msgIdCounter;
@@ -647,11 +658,12 @@ export const AtlasConciergePage = () => {
       <AtlasTransitionOverlay
         message={transitionMessage}
         subMessage={transitionSubMessage}
-        destination="/intent-select"
+        destination={transitionDestination}
         visible={showTransition}
         autoAdvanceMs={3000}
         onAdvance={() => {
           if (coachId) sessionStorage.setItem('atlasCoachId', coachId);
+          if (recommendation?.goalText) sessionStorage.setItem('atlasGoalText', recommendation.goalText);
         }}
       />
     </div>

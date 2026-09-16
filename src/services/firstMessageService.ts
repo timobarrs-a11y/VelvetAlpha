@@ -38,10 +38,12 @@ export class FirstMessageService {
     if (!voice) {
       console.warn('Signature voice not found, falling back to template');
       if (isMentor) {
+        const atlasGoalText = sessionStorage.getItem('atlasGoalText') || undefined;
         return buildCoachOpeningFallback({
           coachName: companionName,
           userName,
           domain: expertConfig?.domain || (personalInterest !== 'meeting new people' ? personalInterest : undefined),
+          goalText: atlasGoalText,
         });
       }
       if (isCorrespondent) {
@@ -109,10 +111,12 @@ ${userGender ? `- Gender: ${userGender}` : ''}
 
 Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     } else if (isMentor) {
+      const atlasGoalText = sessionStorage.getItem('atlasGoalText') || undefined;
       const openingGuidance = buildCoachOpeningGuidance({
         coachName: companionName,
         domain: expertConfig?.domain || (personalInterest !== 'meeting new people' ? personalInterest : undefined),
         instruction: expertConfig?.instruction,
+        goalText: atlasGoalText,
       });
 
       prompt = `${openingGuidance}
@@ -158,11 +162,13 @@ ${voice.examples && voice.examples.length > 0 ? `VOICE EXAMPLES:\n${voice.exampl
 Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     }
 
+    const atlasGoalTextFallback = sessionStorage.getItem('atlasGoalText') || undefined;
     const aiFallback = isMentor
       ? buildCoachOpeningFallback({
           coachName: companionName,
           userName,
           domain: expertConfig?.domain || (personalInterest !== 'meeting new people' ? personalInterest : undefined),
+          goalText: atlasGoalTextFallback,
         })
       : isCorrespondent
         ? buildCorrespondentOpeningFallback({
@@ -313,10 +319,12 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     // Coach/mentor path fallback (no signature voice): still restate purpose and
     // ask a starter question rather than making companion-style small talk.
     if (isMentor) {
+      const atlasGoalText = sessionStorage.getItem('atlasGoalText') || undefined;
       return buildCoachOpeningFallback({
         coachName: companionName,
         userName,
         domain: resolvedExpertDomain,
+        goalText: atlasGoalText,
       });
     }
 

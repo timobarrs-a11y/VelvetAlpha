@@ -426,6 +426,10 @@ Return ONLY the JSON object. No commentary, no markdown.`;
       if (existingCoach) {
         coachId = existingCoach.id;
         expertId = existingCoach.signature_expert || "";
+        await supabaseAdmin
+          .from("companions")
+          .update({ atlas_goal_text: goalText })
+          .eq("id", coachId);
       } else if (aiExpertId && !isCustomExpert) {
         const { data: newCoach, error: createError } = await supabaseAdmin
           .from("companions")
@@ -440,6 +444,7 @@ Return ONLY the JSON object. No commentary, no markdown.`;
             first_message_sent: false,
             is_active: true,
             last_message_at: new Date().toISOString(),
+            atlas_goal_text: goalText,
           })
           .select()
           .maybeSingle();
@@ -529,6 +534,7 @@ Return ONLY the instruction text. No JSON, no markdown.`;
             first_message_sent: false,
             is_active: true,
             last_message_at: new Date().toISOString(),
+            atlas_goal_text: goalText,
           })
           .select()
           .maybeSingle();
@@ -558,6 +564,7 @@ Return ONLY the instruction text. No JSON, no markdown.`;
         coachName,
         expertId,
         expertDomain,
+        goalText,
         phase: "provisioning",
       }), {
         status: 200,

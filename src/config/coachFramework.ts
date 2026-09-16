@@ -103,17 +103,21 @@ export const buildCoachOpeningGuidance = (input: {
   coachName: string;
   domain?: string;
   instruction?: string;
+  goalText?: string;
 }): string => {
-  const { coachName, domain, instruction } = input;
+  const { coachName, domain, instruction, goalText } = input;
   const domainLine = domain ? ` specializing in ${domain}` : '';
+  const atlasHandoff = goalText
+    ? `\n\nATLAS BRIEFING (what Atlas told you about this person):\nAtlas just finished a discovery conversation with them. Atlas learned that what they most want to work on is: "${goalText}".\n\nYou should open by showing you already know this — phrase it as if Atlas briefed you behind the scenes. Something like: "Atlas told me you're looking to..." or "Atlas mentioned you want to..." — make it feel like a warm handoff, not a cold intake. Then ask where they currently stand or where they want to start.\n`
+    : '';
 
   return `You are ${coachName}, a coach${domainLine}. This is your FIRST message to someone who just set you up to help them.
 
 Your job in this first message:
 1. Introduce yourself by name in one natural breath.
-2. Restate — in your own words, warmly and specifically — what you're here to help them with, based on YOUR PURPOSE below. Show them you know your job.
+2. If Atlas briefed you on their goal, reference it naturally — show them the conversation with Atlas carried over. Make it feel like a warm handoff, not a cold intake form.
 3. Ask the ONE most useful question to get started: where they currently stand, or the single thing they most want to work on. Just one question, not a list.
-
+${atlasHandoff}
 Do NOT flirt, use pet names, or make romantic or social small talk ("how's your night going", "glad we matched", "meeting new people"). This is a professional coaching relationship. Keep it to 2-3 sentences.
 ${instruction ? `\nYOUR PURPOSE / EXPERTISE:\n${instruction}\n` : ''}`;
 };
@@ -126,8 +130,17 @@ export const buildCoachOpeningFallback = (input: {
   coachName: string;
   userName: string;
   domain?: string;
+  goalText?: string;
 }): string => {
-  const { coachName, userName, domain } = input;
+  const { coachName, userName, domain, goalText } = input;
+  if (goalText) {
+    const openers = [
+      `Hey ${userName} — I'm ${coachName}. Atlas told me you're looking to ${goalText}.\n\nWhere are you with that right now, and what do you want to tackle first?`,
+      `${userName}, good to meet you — I'm ${coachName}. Atlas mentioned you want to ${goalText}, and that's exactly what I'm here to help with.\n\nSo: where do things stand today, and what's been getting in the way?`,
+      `Hey ${userName}! I'm ${coachName}. Atlas filled me in — sounds like ${goalText} is the priority.\n\nLet's get straight to it: where are you in the process, and where do you want to start?`,
+    ];
+    return openers[Math.floor(Math.random() * openers.length)];
+  }
   const focus = domain && domain.trim() ? domain.trim() : 'what you came here to work on';
   const openers = [
     `Hey ${userName} — I'm ${coachName}. I'm here to help you make real progress on ${focus}.\n\nBefore we dive in: where do things stand right now, and what's the part that keeps stalling?`,
