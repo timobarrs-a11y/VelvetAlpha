@@ -9,6 +9,13 @@ import { getCompanions } from '../services/companionService';
 import { trackOpenCustomizer, trackSaveAvatar, trackSkipAvatar } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
 import { resolveHomeRoute } from '../utils/homeRoute';
+import { VELVET_THEME } from '../config/velvetTheme';
+
+const AMBIENT_ORBS = [
+  { x: '-8%', y: '10%', w: 520, h: 520, color: 'rgba(244,114,182,0.07)', blur: 120, dur: 30 },
+  { x: '65%', y: '60%', w: 440, h: 440, color: 'rgba(192,132,252,0.06)', blur: 110, dur: 36 },
+  { x: '30%', y: '-10%', w: 380, h: 380, color: 'rgba(244,63,94,0.05)', blur: 100, dur: 42 },
+];
 
 export function CreateUserAvatarPage() {
   const navigate = useNavigate();
@@ -28,7 +35,6 @@ export function CreateUserAvatarPage() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        console.error('[CreateUserAvatar] No authenticated user found');
         setAuthError('Authentication required. Please sign in.');
         setIsAuthenticating(false);
         navigate('/login', { replace: true });
@@ -36,7 +42,6 @@ export function CreateUserAvatarPage() {
       }
 
       const companions = await getCompanions(user.id);
-      console.log('[CreateUserAvatar] User has', companions.length, 'companions');
 
       if (companions.length > 0) {
         pendingRoute.current = await resolveHomeRoute(user.id);
@@ -46,8 +51,7 @@ export function CreateUserAvatarPage() {
 
       trackOpenCustomizer('user');
       setIsAuthenticating(false);
-    } catch (error) {
-      console.error('[CreateUserAvatar] Error in initializeAuth:', error);
+    } catch {
       setAuthError('Failed to initialize. Please refresh the page.');
       setIsAuthenticating(false);
     }
@@ -59,13 +63,10 @@ export function CreateUserAvatarPage() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        console.error('[CreateUserAvatar] No user found when saving');
         setAuthError('Authentication failed. Please refresh the page.');
         setSaving(false);
         return;
       }
-
-      console.log('[CreateUserAvatar] Saving avatar for user:', user.id);
 
       const { error: updateError } = await supabase
         .from('user_profiles')
@@ -78,15 +79,13 @@ export function CreateUserAvatarPage() {
         });
 
       if (updateError) {
-        console.error('[CreateUserAvatar] Error updating profile:', updateError);
         throw updateError;
       }
 
       localStorage.setItem('userAvatarConfig', JSON.stringify(avatarConfig));
       trackSaveAvatar('user');
       setShowReveal(true);
-    } catch (error) {
-      console.error('Error saving avatar:', error);
+    } catch {
       setSaving(false);
     }
   };
@@ -94,7 +93,6 @@ export function CreateUserAvatarPage() {
   const handleSkip = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.error('[CreateUserAvatar] No user found when skipping');
       setAuthError('Authentication failed. Please refresh the page.');
       return;
     }
@@ -111,17 +109,17 @@ export function CreateUserAvatarPage() {
 
   if (isAuthenticating) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: VELVET_THEME.bg }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"></div>
-          <p className="text-gray-300 font-medium">Setting things up...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-400 mx-auto mb-4"></div>
+          <p className="text-ink-secondary font-medium">Setting things up...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen flex flex-col" style={{ background: VELVET_THEME.bg }}>
       {showReveal && (
         <AvatarSaveReveal
           config={avatarConfig}
@@ -131,10 +129,46 @@ export function CreateUserAvatarPage() {
         />
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: VELVET_THEME.radial }} />
+
+      {/* Grain texture overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none z-[1] opacity-[0.024]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '160px',
+        }}
+      />
+
+      {/* Ambient orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {AMBIENT_ORBS.map((orb, i) => (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{
+              left: orb.x,
+              top: orb.y,
+              width: orb.w,
+              height: orb.h,
+              borderRadius: '50%',
+              background: orb.color,
+              filter: `blur(${orb.blur}px)`,
+            }}
+            animate={{
+              x: ['0%', i % 2 === 0 ? '3%' : '-2%', '0%'],
+              y: ['0%', i % 2 === 0 ? '2%' : '-1.5%', '0%'],
+            }}
+            transition={{ duration: orb.dur, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 flex-1 flex flex-col">
         {authError && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg text-center">
-            <p className="text-red-300">{authError}</p>
+          <div className="mb-6 p-4 rounded-xl border text-center" style={{ background: 'rgba(244,63,107,0.12)', borderColor: 'rgba(244,63,107,0.3)' }}>
+            <p className="text-rose-300">{authError}</p>
           </div>
         )}
 
@@ -143,15 +177,23 @@ export function CreateUserAvatarPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 mb-6">
-            <User className="w-8 h-8" />
+          <div className="flex justify-center mb-6">
+            <div
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl"
+              style={{
+                background: VELVET_THEME.colors.glassCard,
+                border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
+              }}
+            >
+              <User className="w-8 h-8 text-rose-300" />
+            </div>
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Create Your Avatar
           </h1>
 
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+          <p className="text-xl text-ink-secondary max-w-2xl mx-auto">
             Let's start by creating your digital look. This helps your companion recognize you in conversations.
           </p>
         </motion.div>
@@ -160,7 +202,11 @@ export function CreateUserAvatarPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gray-800/50 border border-gray-700 rounded-2xl p-8 mb-8"
+          className="rounded-2xl p-8 mb-8"
+          style={{
+            background: VELVET_THEME.colors.glassCard,
+            border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
+          }}
         >
           <AvatarCreatorV2
             initialConfig={avatarConfig}
@@ -178,7 +224,12 @@ export function CreateUserAvatarPage() {
           <button
             onClick={handleSkip}
             disabled={saving || isAuthenticating}
-            className="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all disabled:opacity-50"
+            className="px-8 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 hover:scale-[1.02]"
+            style={{
+              background: VELVET_THEME.colors.glassCard,
+              border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
+              color: 'text-ink-secondary',
+            }}
           >
             Skip For Now
           </button>
@@ -186,7 +237,12 @@ export function CreateUserAvatarPage() {
           <button
             onClick={handleSave}
             disabled={saving || isAuthenticating}
-            className="px-8 py-3 bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 rounded-lg font-semibold transition-all inline-flex items-center justify-center gap-2 disabled:opacity-50"
+            className="px-8 py-3 rounded-xl font-semibold transition-all inline-flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02]"
+            style={{
+              background: VELVET_THEME.button.primary,
+              boxShadow: VELVET_THEME.button.primaryGlow,
+              color: '#fff',
+            }}
           >
             {saving ? 'Saving...' : 'Continue'}
             <ArrowRight className="w-5 h-5" />

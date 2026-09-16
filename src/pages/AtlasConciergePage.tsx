@@ -312,17 +312,10 @@ export const AtlasConciergePage = () => {
       if (recommendation.coachGender) sessionStorage.setItem('atlasCoachGender', recommendation.coachGender);
       sessionStorage.setItem('atlasCoachName', data.coachName || recommendation.coachName);
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('name, hobbies, sports')
-        .eq('id', session.user.id)
-        .maybeSingle();
-      const questionnaireDone = !!(profile?.name && profile.name !== 'babe' && (profile?.hobbies || profile?.sports));
-      const nextAfterAvatar = questionnaireDone ? '/intent-select' : '/user-questionnaire';
-      sessionStorage.setItem('atlasNextDestination', nextAfterAvatar);
+      sessionStorage.setItem('atlasNextDestination', '/intent-select');
       setTransitionDestination('/coach-avatar');
 
-      const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Now — what kind of people do you want in your corner? Friends, companions, or are we good with just the coach for now?`;
+      const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Let's give them a face — customize every detail or randomize for an instant look.`;
       const transId = ++msgIdCounter;
       setMessages(prev => [...prev, { role: 'atlas', content: transitionMsg, id: transId }]);
       setLatestAtlasId(transId);
@@ -391,7 +384,7 @@ export const AtlasConciergePage = () => {
   const transitionMessage = coachName
     ? `Your coach ${coachName} is ready${expertDomain ? ` to help you with ${expertDomain}` : ''}.`
     : 'Your coach is ready.';
-  const transitionSubMessage = 'Now — what kind of people do you want in your corner? Friends, companions, or are we good with just the coach for now?';
+  const transitionSubMessage = 'Design their avatar next — pick a look, hit randomize, or skip and keep the default.';
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: VELVET_THEME.bg }}>

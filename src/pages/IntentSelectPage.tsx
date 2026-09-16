@@ -3,6 +3,7 @@ import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Users, Heart, Brain, ArrowLeft, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../shared/supabase/client';
+import { VELVET_THEME } from '../config/velvetTheme';
 
 interface IntentOption {
   id: string;
@@ -14,6 +15,12 @@ interface IntentOption {
   relationshipType: string;
   nextPath: string;
 }
+
+const AMBIENT_ORBS = [
+  { x: '-8%', y: '10%', w: 520, h: 520, color: 'rgba(244,114,182,0.07)', blur: 120, dur: 30 },
+  { x: '65%', y: '60%', w: 440, h: 440, color: 'rgba(192,132,252,0.06)', blur: 110, dur: 36 },
+  { x: '30%', y: '-10%', w: 380, h: 380, color: 'rgba(244,63,94,0.05)', blur: 100, dur: 42 },
+];
 
 export function IntentSelectPage() {
   const navigate = useNavigate();
@@ -108,11 +115,47 @@ export function IntentSelectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-6">
-      <div className="w-full max-w-5xl">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: VELVET_THEME.bg }}>
+      <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: VELVET_THEME.radial }} />
+
+      {/* Grain texture overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none z-[1] opacity-[0.024]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '160px',
+        }}
+      />
+
+      {/* Ambient orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {AMBIENT_ORBS.map((orb, i) => (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{
+              left: orb.x,
+              top: orb.y,
+              width: orb.w,
+              height: orb.h,
+              borderRadius: '50%',
+              background: orb.color,
+              filter: `blur(${orb.blur}px)`,
+            }}
+            animate={{
+              x: ['0%', i % 2 === 0 ? '3%' : '-2%', '0%'],
+              y: ['0%', i % 2 === 0 ? '2%' : '-1.5%', '0%'],
+            }}
+            transition={{ duration: orb.dur, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10 w-full max-w-5xl">
         <button
           onClick={() => navigate(-1)}
-          className="mb-6 flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
+          className="mb-6 flex items-center gap-2 text-ink-muted hover:text-white transition-colors"
         >
           <ArrowLeft size={18} />
           <span className="text-sm font-medium">Back</span>
@@ -132,7 +175,7 @@ export function IntentSelectPage() {
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
               >
-                <Sparkles className="w-12 h-12 text-blue-400" />
+                <Sparkles className="w-12 h-12 text-rose-300" />
               </motion.div>
             </motion.div>
           ) : (
@@ -152,7 +195,7 @@ export function IntentSelectPage() {
           <h1 className="text-5xl font-bold text-white mb-4">
             What are you looking for?
           </h1>
-          <p className="text-lg text-gray-400">
+          <p className="text-lg text-ink-muted">
             Every path is powered by the Velvet Engine — the only AI memory system that gets sharper the more you talk
           </p>
         </motion.div>
@@ -170,25 +213,31 @@ export function IntentSelectPage() {
               onClick={() => handleSelectIntent(option)}
               className="relative group text-left"
             >
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/0 via-blue-500/0 to-blue-500/0 group-hover:from-blue-500/20 group-hover:via-blue-500/30 group-hover:to-blue-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500/0 via-rose-500/0 to-rose-500/0 group-hover:from-rose-500/20 group-hover:via-rose-500/30 group-hover:to-rose-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
 
-              <div className="relative h-full bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700/50 group-hover:border-blue-500/50 transition duration-300">
-                <div className="mb-6 text-blue-400 group-hover:text-blue-300 transition duration-300">
+              <div
+                className="relative h-full rounded-2xl p-8 group-hover:border-rose-500/50 transition duration-300"
+                style={{
+                  background: VELVET_THEME.colors.glassCard,
+                  border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
+                }}
+              >
+                <div className="mb-6 text-rose-300 group-hover:text-rose-200 transition duration-300">
                   {option.icon}
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-1 group-hover:text-blue-200 transition duration-300">
+                <h3 className="text-xl font-bold text-white mb-1 group-hover:text-rose-100 transition duration-300">
                   {option.title}
                 </h3>
-                <p className="text-xs text-gray-500 mb-4 font-medium uppercase tracking-wide">
+                <p className="text-xs text-ink-subtle mb-4 font-medium uppercase tracking-wide">
                   {option.subtitle}
                 </p>
 
-                <p className="text-sm text-gray-300 leading-relaxed">
+                <p className="text-sm text-ink-secondary leading-relaxed">
                   {option.description}
                 </p>
 
-                <div className="mt-6 h-1 w-0 bg-gradient-to-r from-blue-500 to-cyan-400 group-hover:w-full transition-all duration-300" />
+                <div className="mt-6 h-1 w-0 bg-gradient-to-r from-rose-500 to-pink-400 group-hover:w-full transition-all duration-300" />
               </div>
             </motion.button>
           ))}
