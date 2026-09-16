@@ -15,7 +15,6 @@ const corsHeaders = {
 
 const MAX_TURNS = 10;
 
-// The list of curated expert IDs, sent to the AI for classification.
 const CURATED_EXPERT_IDS = Object.keys(CURATED_EXPERT_MAP);
 
 const COACH_NAMES_MALE = ["Marcus", "Derek", "James", "Andre", "Theo", "Kai", "Victor", "Sam", "Cole", "Ezra"];
@@ -27,11 +26,62 @@ function pickCoachName(gender?: string): { name: string; gender: string } {
   return { name: pool[Math.floor(Math.random() * pool.length)], gender: g };
 }
 
-// ─── Phase 1 system prompt: goal discovery ───────────────────────────────
+interface UserProfile {
+  name: string | null;
+  hobbies: string | null;
+  sports: string | null;
+  music_genre: string | null;
+  gender: string | null;
+  zodiac_sign: string | null;
+  favorite_color: string | null;
+}
 
-const GOAL_PHASE_PROMPT = `You are Atlas — the host of a personal growth platform that surrounds users with AI coaches, companions, and correspondents.
+async function fetchUserProfile(supabaseAdmin: ReturnType<typeof createClient>, userId: string): Promise<UserProfile> {
+  const { data } = await supabaseAdmin
+    .from("user_profiles")
+    .select("name, hobbies, sports, music_genre, gender, zodiac_sign, favorite_color")
+    .eq("id", userId)
+    .maybeSingle();
 
-You are NOT a coach. You are NOT a companion. You are the warm, perceptive concierge who welcomes new users and helps figure out what they're working toward — so the right coach can be matched.
+  return {
+    name: data?.name ?? null,
+    hobbies: data?.hobbies ?? null,
+    sports: data?.sports ?? null,
+    music_genre: data?.music_genre ?? null,
+    gender: data?.gender ?? null,
+    zodiac_sign: data?.zodiac_sign ?? null,
+    favorite_color: data?.favorite_color ?? null,
+  };
+}
+
+function buildPersonalizedGreeting(profile: UserProfile): string {
+  const name = profile.name && profile.name !== "babe" && profile.name !== "there"
+    ? profile.name
+    : null;
+
+  const greeting = name
+    ? `Hey ${name}.\n\nThanks for filling that out. Velvet is about accelerating ways to be productive — personally or professionally — while leaning on the things you love most to keep you engaged. With your personal interests out of the way, now I want to focus on the professional side.\n\nWhat are you working on right now? If you're not working on anything, that's okay — here's your opportunity to get into something you've always wanted to. Have you ever wanted to learn a new language? Learn to code? Maybe you want to be a NASCAR driver? Martial arts? More importantly, choose something you actually want to see done.`
+    : `Hey.\n\nThanks for filling that out. Velvet is about accelerating ways to be productive — personally or professionally — while leaning on the things you love most to keep you engaged. With your personal interests out of the way, now I want to focus on the professional side.\n\nWhat are you working on right now? If you're not working on anything, that's okay — here's your opportunity to get into something you've always wanted to. Have you ever wanted to learn a new language? Learn to code? Maybe you want to be a NASCAR driver? Martial arts? More importantly, choose something you actually want to see done.`;
+
+  return greeting;
+}
+
+function buildGoalPhasePrompt(profile: UserProfile): string {
+  const interests: string[] = [];
+  if (profile.hobbies) interests.push(`hobbies: ${profile.hobbies}`);
+  if (profile.sports) interests.push(`sports: ${profile.sports}`);
+  if (profile.music_genre) interests.push(`music taste: ${profile.music_genre}`);
+  const interestsLine = interests.length > 0
+    ? `\n\nWHAT YOU KNOW ABOUT THIS USER (from their questionnaire — use naturally, never force it):\n${interests.join("\n")}`
+    : "";
+
+  const nameLine = profile.name && profile.name !== "babe" && profile.name !== "there"
+    ? `\nThe user's name is ${profile.name}. Use it naturally — not every message, just when it lands.`
+    : "";
+
+  return `You are Atlas — the host of Velvet, a personal growth platform that surrounds users with AI coaches, companions, and correspondents.
+
+You are NOT a coach. You are NOT a companion. You are the jetpack to their ideas, the extra wind on their back to get them to the finish line. Your job right now is to find out what they're working toward — so the right coach can be matched.${nameLine}${interestsLine}
 
 YOUR PERSONALITY:
 - Warm but not saccharine. You sound like a smart friend who genuinely cares.
@@ -41,18 +91,19 @@ YOUR PERSONALITY:
 - Subtle sense of wonder — when someone tells you something, find the interesting thread and pull it.
 
 YOUR JOB RIGHT NOW:
-Find out what this person is working toward. What's their goal? It could be anything — fitness, career, learning a language, writing a book, managing money, cooking, being more social, organizing their home, or something entirely unique.
+The user just answered a questionnaire about their personal interests. Now you're pivoting to the professional/productive side. Find out what they're working toward. It could be anything — fitness, career, learning a language, writing a book, managing money, cooking, being more social, organizing their home, or something entirely unique.
 
 HOW TO HAVE THIS CONVERSATION:
-1. Start by asking what they're working toward right now. What's on their mind?
+1. The greeting already asked what they're working on. Let them answer.
 2. If they give a clear answer, acknowledge it warmly and ask ONE follow-up — why now? what's made this feel important? how do they want to be supported?
 3. If they're vague ("I don't know" / "nothing really"), don't push. Ask what they spend time thinking about, or what they wish was different.
 4. Listen for how they want to be supported. "I need someone to push me" vs "I need someone to be patient."
 5. Adapt to their energy — terse, expressive, funny, serious.
+6. You can use their interests to make follow-up questions more specific and warm, but never shoehorn them in. If they listed "writing" as a hobby and mention wanting to write a book, that's a natural connection. If there's no natural connection, don't force one.
 
 CRITICAL RULES:
 - ONE question at a time. Never list multiple questions.
-- NEVER ask about name, birthday, gender, hobbies, music, or other profile info — that's handled later.
+- NEVER ask about name, birthday, gender, hobbies, music, or other profile info — you already have it.
 - Never use bullet points or numbered lists. You're having a conversation.
 - If the user says something off-topic, gently redirect: "That's interesting — but what I'm really curious about is what you're working toward."
 - Stay under 3 sentences almost always. Brevity is warmth.
@@ -65,6 +116,7 @@ This marker tells the system to move to the next phase. The user never sees it. 
 
 TURN LIMIT:
 Reach a conclusion within ${MAX_TURNS} exchanges. If going nowhere, make your best guess and wrap up.`;
+}
 
 // ─── Edge function handler ──────────────────────────────────────────────
 
@@ -96,14 +148,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const phase: "goal" | "provisioning" = body.phase || "goal";
+    const phase: "goal" | "provisioning" | "confirm" = body.phase || "goal";
     const messages: Array<{ role: string; content: string }> = body.messages || [];
 
     // ── Phase: goal discovery chat ──────────────────────────────────────
 
     if (phase === "goal") {
+      const profile = await fetchUserProfile(supabaseAdmin, user.id);
+      const goalPrompt = buildGoalPhasePrompt(profile);
+
       if (messages.length === 0) {
-        const greeting = "Hey, I'm Atlas — your personal concierge and the host around here. I'm here to help with anything you need, but first I want to know: what are you working toward right now? What's the thing on your mind?";
+        const greeting = buildPersonalizedGreeting(profile);
         return new Response(JSON.stringify({
           reply: greeting,
           turnCount: 0,
@@ -139,7 +194,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           model: MODEL_CONFIG.HAIKU,
           max_tokens: 300,
-          system: GOAL_PHASE_PROMPT,
+          system: goalPrompt,
           messages: apiMessages,
         }),
       });
@@ -182,9 +237,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ── Phase: provisioning (extract goal + classify expert + create coach) ─
+    // ── Phase: confirm (classify goal + recommend expert WITHOUT creating) ─
 
-    if (phase === "provisioning") {
+    if (phase === "confirm") {
       const transcript: Array<{ role: string; content: string }> = body.transcript || [];
       const transcriptText = transcript
         .map(m => `${m.role === "atlas" ? "Atlas" : "User"}: ${m.content}`)
@@ -198,12 +253,6 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // ── Combined extraction + expert classification in one AI call ────
-      //
-      // Instead of the old keyword `includes()` approach (which missed
-      // paraphrases like "better public speaker" → communication_coach),
-      // we ask the AI to read the full transcript and pick the best
-      // curated expert ID directly, or return null for a custom expert.
       const expertIdList = CURATED_EXPERT_IDS.join(", ");
       const extractionPrompt = `You are an analysis engine. Read this conversation transcript and extract the user's goal, then classify it to the best curated expert.
 
@@ -237,7 +286,8 @@ Return a JSON object with exactly these fields:
   "goalText": "the user's goal in their own words, max 15 words",
   "accountabilityLevel": "gentle" | "moderate" | "firm",
   "coachGenderHint": "male" | "female" | null,
-  "expertId": one of the curated expert IDs above, or null if none fit well
+  "expertId": one of the curated expert IDs above, or null if none fit well,
+  "expertDomainLabel": "a short human-readable label for the domain, e.g. 'fitness', 'career strategy', 'language learning'"
 }
 
 Guidelines:
@@ -245,6 +295,7 @@ Guidelines:
 - accountabilityLevel: If they want to be pushed/challenged → "firm". If they want patience → "gentle". Default "moderate".
 - coachGenderHint: Only if they expressed a preference. Otherwise null.
 - expertId: Pick the BEST matching curated expert from the list. If the goal doesn't clearly match any, return null (we'll create a custom expert). Choose the closest match, not just an exact keyword match — "better public speaker" should map to communication_coach, "get stronger" should map to fitness_hype, etc.
+- expertDomainLabel: A short, friendly label describing what the coach will help with.
 
 Return ONLY the JSON object. No commentary, no markdown.`;
 
@@ -269,6 +320,7 @@ Return ONLY the JSON object. No commentary, no markdown.`;
       let accountabilityLevel: AccountabilityLevel = "moderate";
       let coachGenderHint: string | null = null;
       let aiExpertId: string | null = null;
+      let expertDomainLabel = "personal growth";
 
       if (extractResponse.ok) {
         const extractData = await extractResponse.json();
@@ -280,14 +332,54 @@ Return ONLY the JSON object. No commentary, no markdown.`;
           accountabilityLevel = parsed.accountabilityLevel || accountabilityLevel;
           coachGenderHint = parsed.coachGenderHint || null;
           aiExpertId = parsed.expertId || null;
+          expertDomainLabel = parsed.expertDomainLabel || expertDomainLabel;
         } catch {
           console.error("[atlas-onboarding] Failed to parse extraction:", rawExtract);
         }
       }
 
-      // Validate the AI-chosen expert ID against the actual map
       const isCuratedMatch = aiExpertId && getCuratedExpert(aiExpertId) !== null;
       const { name: coachName, gender } = pickCoachName(coachGenderHint);
+
+      const accountabilityLabel = accountabilityLevel === "firm"
+        ? "firm"
+        : accountabilityLevel === "gentle"
+          ? "gentle"
+          : "moderate";
+
+      const recommendationText = `Based on what you told me, I think **${coachName}** would be a great fit. They specialize in **${expertDomainLabel}** and will hold you accountable at a **${accountabilityLabel}** level. Want me to set you up with them?`;
+
+      return new Response(JSON.stringify({
+        success: true,
+        phase: "confirm",
+        recommendation: {
+          coachName,
+          coachGender: gender,
+          expertDomain: expertDomainLabel,
+          expertId: isCuratedMatch ? aiExpertId : null,
+          isCustomExpert: !isCuratedMatch,
+          accountabilityLevel,
+          goalText,
+          recommendationText,
+        },
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Phase: provisioning (user confirmed → create coach + goal) ───────
+
+    if (phase === "provisioning") {
+      const transcript: Array<{ role: string; content: string }> = body.transcript || [];
+      const recommendation = body.recommendation || {};
+      const goalText = recommendation.goalText || "Personal growth";
+      const accountabilityLevel: AccountabilityLevel = recommendation.accountabilityLevel || "moderate";
+      const coachGenderHint = recommendation.coachGender || null;
+      const aiExpertId = recommendation.expertId || null;
+      const isCustomExpert = recommendation.isCustomExpert ?? true;
+      const coachName = recommendation.coachName || pickCoachName(coachGenderHint).name;
+      const expertDomain = recommendation.expertDomain || "personal growth";
 
       // Save goal to user_goals
       const { data: existingGoal } = await supabaseAdmin
@@ -330,21 +422,16 @@ Return ONLY the JSON object. No commentary, no markdown.`;
 
       let coachId: string;
       let expertId: string;
-      let expertDomain: string;
-      let isCustomExpert = false;
 
       if (existingCoach) {
         coachId = existingCoach.id;
         expertId = existingCoach.signature_expert || "";
-        const curated = getCuratedExpert(expertId);
-        expertDomain = curated?.domain || "custom";
-      } else if (isCuratedMatch && aiExpertId) {
-        // Create coach with AI-classified curated expert
+      } else if (aiExpertId && !isCustomExpert) {
         const { data: newCoach, error: createError } = await supabaseAdmin
           .from("companions")
           .insert({
             user_id: user.id,
-            gender,
+            gender: coachGenderHint,
             relationship_type: "mentor",
             custom_name: coachName,
             signature_expert: aiExpertId,
@@ -367,13 +454,14 @@ Return ONLY the JSON object. No commentary, no markdown.`;
 
         coachId = newCoach.id;
         expertId = aiExpertId;
-        expertDomain = getCuratedExpert(expertId)?.domain || "";
       } else {
-        // No curated match — create a custom user_expert + coach
-        isCustomExpert = true;
+        // Custom expert path
+        const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
 
-        // Generate a custom expert instruction using the AI
-        const customExpertPrompt = `You are creating a coaching instruction for a custom AI coach. The user wants help with: "${goalText}".
+        let customInstruction = `You are a dedicated coach helping the user with: ${goalText}. Ask about their current situation and goals early. Give one concrete next step per conversation. Check in on progress without guilt-tripping. You are NOT a medical professional — redirect clinical questions.`;
+
+        if (apiKey) {
+          const customExpertPrompt = `You are creating a coaching instruction for a custom AI coach. The user wants help with: "${goalText}".
 
 Write a 2-3 sentence coaching instruction for this coach. It should describe:
 - What the coach helps with (based on the goal)
@@ -382,31 +470,29 @@ Write a 2-3 sentence coaching instruction for this coach. It should describe:
 
 Return ONLY the instruction text. No JSON, no markdown.`;
 
-        let customInstruction = `You are a dedicated coach helping the user with: ${goalText}. Ask about their current situation and goals early. Give one concrete next step per conversation. Check in on progress without guilt-tripping. You are NOT a medical professional — redirect clinical questions.`;
+          const customResponse = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify({
+              model: MODEL_CONFIG.HAIKU,
+              max_tokens: 200,
+              messages: [{ role: "user", content: customExpertPrompt }],
+            }),
+          });
 
-        const customResponse = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: MODEL_CONFIG.HAIKU,
-            max_tokens: 200,
-            messages: [{ role: "user", content: customExpertPrompt }],
-          }),
-        });
-
-        if (customResponse.ok) {
-          const customData = await customResponse.json();
-          const generatedInstruction = customData.content?.[0]?.text?.trim();
-          if (generatedInstruction && generatedInstruction.length > 20) {
-            customInstruction = generatedInstruction;
+          if (customResponse.ok) {
+            const customData = await customResponse.json();
+            const generatedInstruction = customData.content?.[0]?.text?.trim();
+            if (generatedInstruction && generatedInstruction.length > 20) {
+              customInstruction = generatedInstruction;
+            }
           }
         }
 
-        // Insert custom expert
         const { data: customExpert, error: expertError } = await supabaseAdmin
           .from("user_experts")
           .insert({
@@ -425,19 +511,16 @@ Return ONLY the instruction text. No JSON, no markdown.`;
 
         if (expertError || !customExpert) {
           console.error("[atlas-onboarding] Failed to create custom expert:", expertError);
-          // Fall back to a generic curated expert
           expertId = "wellness_guide";
-          expertDomain = "mental-wellness";
         } else {
           expertId = customExpert.id;
-          expertDomain = goalText.slice(0, 50);
         }
 
         const { data: newCoach, error: createError } = await supabaseAdmin
           .from("companions")
           .insert({
             user_id: user.id,
-            gender,
+            gender: coachGenderHint,
             relationship_type: "mentor",
             custom_name: coachName,
             signature_expert: expertId,
@@ -469,16 +552,12 @@ Return ONLY the instruction text. No JSON, no markdown.`;
         .eq("status", "active")
         .is("source_companion_id", null);
 
-      const curatedExpert = getCuratedExpert(expertId);
-
       return new Response(JSON.stringify({
         success: true,
         coachId,
         coachName,
         expertId,
         expertDomain,
-        expertName: curatedExpert?.domain || expertDomain,
-        isCustomExpert,
         phase: "provisioning",
       }), {
         status: 200,
