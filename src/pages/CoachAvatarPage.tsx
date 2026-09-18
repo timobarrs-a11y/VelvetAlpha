@@ -96,7 +96,8 @@ export function CoachAvatarPage() {
 
   const handleRevealContinue = () => {
     setShowReveal(false);
-    navigate(pendingRoute.current);
+    sessionStorage.setItem('envSetupNextRoute', pendingRoute.current);
+    navigate('/environment-setup');
   };
 
   return (

@@ -21,6 +21,7 @@ const ExpertSelectionPage = lazy(() => import('../pages/ExpertSelectionPage'));
 const ExpertQuestionnairePage = lazy(() => import('../pages/ExpertQuestionnairePage').then(m => ({ default: m.ExpertQuestionnairePage })));
 const ExpertBuilderPage = lazy(() => import('../pages/ExpertBuilderPage').then(m => ({ default: m.ExpertBuilderPage })));
 const AtlasRoutingPage = lazy(() => import('../pages/AtlasRoutingPage').then(m => ({ default: m.AtlasRoutingPage })));
+const EnvironmentSetupPage = lazy(() => import('../pages/EnvironmentSetupPage').then(m => ({ default: m.EnvironmentSetupPage })));
 
 function wrap(el: React.ReactNode) {
   return (
@@ -49,4 +50,5 @@ export const onboardingRoutes = [
   <Route key="pricing-offer" path="/pricing-offer" element={wrap(<PricingOfferPage />)} />,
   <Route key="onboarding" path="/onboarding" element={wrap(<OnboardingTourPage />)} />,
   <Route key="atlas-routing" path="/atlas-routing" element={wrap(<AtlasRoutingPage />)} />,
+  <Route key="environment-setup" path="/environment-setup" element={wrap(<EnvironmentSetupPage />)} />,
 ];

@@ -136,6 +136,8 @@ export async function updateCompanionChatStyle(companionId: string, style: {
   companion_bubble_color?: string | null;
   companion_text_color?: string | null;
   font_family?: string | null;
+  chat_wallpaper?: string | null;
+  chat_wallpaper_url?: string | null;
 }): Promise<void> {
   const { error } = await supabase
     .from('companions')

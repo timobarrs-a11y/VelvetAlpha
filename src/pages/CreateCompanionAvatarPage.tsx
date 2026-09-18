@@ -106,9 +106,8 @@ export function CreateCompanionAvatarPage() {
 
   const handleRevealContinue = () => {
     setShowReveal(false);
-    if (pendingRoute.current) {
-      navigate(pendingRoute.current);
-    }
+    sessionStorage.setItem('envSetupNextRoute', pendingRoute.current || '/atlas-routing');
+    navigate('/environment-setup');
   };
 
   const revealConfig = avatarConfig;
