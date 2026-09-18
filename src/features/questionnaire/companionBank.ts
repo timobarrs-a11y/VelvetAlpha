@@ -6,9 +6,9 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 20,
   chapters: [
     { id: 'connection', label: 'How you connect', questionIds: ['relationshipType', 'connectionType'] },
-    { id: 'energy', label: 'Who {she} is', questionIds: ['energy', 'voice'] },
+    { id: 'energy', label: 'Who {she} is', questionIds: ['energy', 'voice', 'beat1'] },
     { id: 'warmth', label: 'How {she} loves', questionIds: ['warmth', 'interests'] },
-    { id: 'depth', label: 'The bond', questionIds: ['whenItsHard', 'loveLanguage', 'companionName'] },
+    { id: 'depth', label: 'The bond', questionIds: ['whenItsHard', 'loveLanguage', 'companionName', 'beat2'] },
   ],
   questions: [
     {
@@ -222,30 +222,6 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
     },
   ],
 };
-
-export function getCompanionQuestions(
-  gender: string,
-  connectionType: string,
-  userName?: string
-): Question[] {
-  const ctx: QuestionContext = {
-    answers: {},
-    pronouns: gender === 'Male'
-      ? { she: 'he', her: 'him', hers: 'his', herself: 'himself' }
-      : { she: 'she', her: 'her', hers: 'hers', herself: 'herself' },
-    subject: connectionType === 'friend' ? 'friend' : 'companion',
-    userName,
-  };
-
-  return COMPANION_QUESTIONNAIRE.questions.filter(q => {
-    if (q.id === 'relationshipType') return true;
-    if (q.id === 'connectionType') return true;
-    return true;
-  }).map(q => ({
-    ...q,
-    question: typeof q.question === 'function' ? q.question(ctx) : q.question,
-  }));
-}
 
 export function resolveQuestionText(q: Question, ctx: QuestionContext): string {
   if (typeof q.question === 'function') return q.question(ctx);

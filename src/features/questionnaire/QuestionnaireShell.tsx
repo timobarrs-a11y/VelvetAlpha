@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Check, Plus, X, Heart,
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
-  Film, Dumbbell, Sprout, Compass, ShoppingBag, Cpu, Puzzle,
+  Film, Dumbbell, Sprout, Compass, ShoppingBag, Cpu, Puzzle, Wrench,
   TrendingUp, Trophy, Tv, Wine, Building, Moon, Car, Home, Sunrise,
 } from 'lucide-react';
 import type {
@@ -22,7 +22,7 @@ import { tpl } from './pronouns';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
-  Film, Dumbbell, Heart, Sprout, Compass, ShoppingBag, Cpu, Puzzle,
+  Film, Dumbbell, Heart, Sprout, Compass, ShoppingBag, Cpu, Puzzle, Wrench,
   TrendingUp, Trophy, Tv, Wine, Building, Moon, Car, Home, Sunrise,
 };
 
@@ -34,12 +34,9 @@ interface QuestionnaireShellProps {
   definition: QuestionnaireDefinition;
   context: QuestionContext;
   onComplete: (answers: Record<string, string | string[]>) => void;
+  onAnswer?: (questionId: string, answer: string | string[], allAnswers: Record<string, string | string[]>) => void;
   onBack?: () => void;
   showOrb?: boolean;
-  orbTraitChips?: string[];
-  orbHue?: string;
-  orbEnergy?: number;
-  orbLabel?: string;
   renderOrb?: () => ReactNode;
 }
 
@@ -47,9 +44,9 @@ export function QuestionnaireShell({
   definition,
   context,
   onComplete,
+  onAnswer,
   onBack,
   showOrb = false,
-  orbTraitChips = [],
   renderOrb,
 }: QuestionnaireShellProps) {
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -66,6 +63,7 @@ export function QuestionnaireShell({
   const [beatVisible, setBeatVisible] = useState(false);
   const dragStartRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const scrubTrackRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const questions = definition.questions;
@@ -86,12 +84,32 @@ export function QuestionnaireShell({
 
   useEffect(() => {
     if (question?.archetype === 'scrub') {
-      setScrubValue((question as ScrubQuestion).config.default);
+      const scrubQ = question as ScrubQuestion;
+      const existing = answers[question.id] as string | undefined;
+      const existingIdx = existing ? scrubQ.config.valueLabels.indexOf(existing) : -1;
+      setScrubValue(existingIdx >= 0 ? existingIdx : scrubQ.config.default);
     }
     if (question?.archetype === 'grid') {
-      setSelectedGridOptions([]);
-      setCustomEntries([]);
+      const gridQ = question as GridQuestion;
+      const existing = answers[question.id];
+      if (Array.isArray(existing)) {
+        const presetValues = gridQ.options.map(o => o.value);
+        const indices = existing
+          .map(v => presetValues.indexOf(v))
+          .filter(i => i >= 0);
+        const customs = existing.filter(v => !presetValues.includes(v));
+        setSelectedGridOptions(indices);
+        setCustomEntries(customs);
+      } else {
+        setSelectedGridOptions([]);
+        setCustomEntries([]);
+      }
       setCustomInput('');
+    }
+    if (question?.archetype === 'tap' && !(question as TapQuestion).options) {
+      const existing = answers[question.id] as string | undefined;
+      if (existing) setTextInput(existing);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
     if (question?.archetype === 'beat') {
       setBeatVisible(true);
@@ -102,9 +120,7 @@ export function QuestionnaireShell({
         advance();
       }, duration);
     }
-    if (question?.archetype === 'tap' && !(question as TapQuestion).options) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx]);
 
   const advance = useCallback(() => {
@@ -123,14 +139,23 @@ export function QuestionnaireShell({
   const handleAnswer = (answer: string | string[]) => {
     const newAnswers = { ...answers, [question.id]: answer };
     setAnswers(newAnswers);
+    onAnswer?.(question.id, answer, newAnswers);
     setTimeout(() => advance(), question.archetype === 'tap' ? 350 : 100);
   };
 
   const handleBack = () => {
     if (currentIdx > 0) {
-      setCurrentIdx(currentIdx - 1);
-      setTextInput('');
+      const prevIdx = currentIdx - 1;
+      const prevQuestion = questions[prevIdx];
+      const prevAnswer = answers[prevQuestion.id];
+
+      if (prevQuestion.archetype === 'tap' && !(prevQuestion as TapQuestion).options && prevAnswer) {
+        setTextInput(prevAnswer as string);
+      } else {
+        setTextInput('');
+      }
       setSelectedOption(null);
+      setCurrentIdx(prevIdx);
     } else if (onBack) {
       onBack();
     }
@@ -320,6 +345,7 @@ export function QuestionnaireShell({
                   value={scrubValue}
                   onChange={handleScrubChange}
                   onSubmit={handleScrubSubmit}
+                  trackRef={scrubTrackRef}
                 />
               )}
 
@@ -633,11 +659,13 @@ function ScrubRenderer({
   value,
   onChange,
   onSubmit,
+  trackRef,
 }: {
   question: ScrubQuestion;
   value: number;
   onChange: (v: number) => void;
   onSubmit: () => void;
+  trackRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const { config } = question;
   return (
@@ -658,7 +686,7 @@ function ScrubRenderer({
           <span>{config.leftLabel}</span>
           <span>{config.rightLabel}</span>
         </div>
-        <div className="relative h-2 bg-white/10 rounded-full">
+        <div ref={trackRef} className="relative h-2 bg-white/10 rounded-full">
           <div
             className="absolute h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all"
             style={{ width: `${(value / config.max) * 100}%` }}
@@ -670,7 +698,7 @@ function ScrubRenderer({
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0}
             onDrag={(_, info) => {
-              const trackWidth = cardRef.current?.parentElement?.offsetWidth || 300;
+              const trackWidth = trackRef.current?.offsetWidth || 300;
               const newValue = Math.round(Math.max(0, Math.min(config.max, value + (info.delta.x / trackWidth) * config.max)));
               onChange(newValue);
             }}

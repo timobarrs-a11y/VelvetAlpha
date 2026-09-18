@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { QuestionnaireShell, HonestBridge, PresenceOrb, COMPANION_QUESTIONNAIRE, makeContext, tpl } from '../features/questionnaire';
 import { supabase } from '../shared/supabase/client';
 import { createCompanion } from '../services/companionService';
@@ -40,7 +40,6 @@ function buildCompanionBridgeLines(answers: Record<string, string | string[]>): 
 
 export function QuestionnairePageV2() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [showBridge, setShowBridge] = useState(false);
   const [bridgeAnswers, setBridgeAnswers] = useState<Record<string, string | string[]>>({});
   const [liveAnswers, setLiveAnswers] = useState<Record<string, string | string[]>>({});
@@ -83,6 +82,10 @@ export function QuestionnairePageV2() {
   const handleComplete = useCallback(async (answers: Record<string, string | string[]>) => {
     setBridgeAnswers(answers);
     setShowBridge(true);
+  }, []);
+
+  const handleAnswer = useCallback((questionId: string, _answer: string | string[], allAnswers: Record<string, string | string[]>) => {
+    setLiveAnswers(allAnswers);
   }, []);
 
   const handleBridgeComplete = useCallback(async () => {
@@ -195,6 +198,7 @@ export function QuestionnairePageV2() {
       definition={COMPANION_QUESTIONNAIRE}
       context={ctx}
       onComplete={handleComplete}
+      onAnswer={handleAnswer}
       showOrb={true}
       renderOrb={renderOrb}
     />

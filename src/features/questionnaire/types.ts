@@ -67,7 +67,7 @@ export interface BaseQuestion {
 
 export interface TapQuestion extends BaseQuestion {
   archetype: 'tap';
-  options: TapOption[] | ((ctx: QuestionContext) => TapOption[]);
+  options?: TapOption[] | ((ctx: QuestionContext) => TapOption[]);
   autoAdvance?: boolean;
 }
 

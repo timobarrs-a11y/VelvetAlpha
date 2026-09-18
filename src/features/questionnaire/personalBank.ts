@@ -3,9 +3,9 @@ import type { Question, QuestionnaireDefinition } from './types';
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 20,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['name', 'birthday', 'favoriteColor'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['name', 'birthday', 'favoriteColor', 'beat1'] },
     { id: 'taste', label: 'Your taste', questionIds: ['gender', 'hobbies', 'musicGenre'] },
-    { id: 'signals', label: 'Your vibe', questionIds: ['tasteDeck'] },
+    { id: 'signals', label: 'Your vibe', questionIds: ['tasteDeck', 'beat2'] },
   ],
   questions: [
     {
