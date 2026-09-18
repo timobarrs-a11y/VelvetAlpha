@@ -174,7 +174,7 @@ export function AtlasTransitionOverlay({
                     className="inline-block w-[2px] h-[0.9em] ml-0.5 align-text-bottom rounded-full"
                     style={{ background: 'rgba(244,114,182,0.6)' }}
                     animate={{ opacity: [1, 0, 1] }}
-                    transition={{ duration: 0.8, repeat: Infinity, ease: 'steps(2)' }}
+                    transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
                   />
                 )}
               </h2>

@@ -47,7 +47,7 @@ function StreamingAtlasMessage({ content, isLatest }: { content: string; isLates
           className="inline-block w-[2px] h-[1.1em] ml-0.5 align-text-bottom rounded-full"
           style={{ background: 'rgba(244,114,182,0.7)' }}
           animate={{ opacity: [1, 0, 1] }}
-          transition={{ duration: 0.8, repeat: Infinity, ease: 'steps(2)' }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
         />
       )}
     </span>
