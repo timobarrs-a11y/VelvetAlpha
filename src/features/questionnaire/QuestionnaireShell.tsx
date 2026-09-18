@@ -92,14 +92,18 @@ export function QuestionnaireShell({
     if (question?.archetype === 'grid') {
       const gridQ = question as GridQuestion;
       const existing = answers[question.id];
+      const presetValues = gridQ.options.map(o => o.value);
       if (Array.isArray(existing)) {
-        const presetValues = gridQ.options.map(o => o.value);
         const indices = existing
           .map(v => presetValues.indexOf(v))
           .filter(i => i >= 0);
         const customs = existing.filter(v => !presetValues.includes(v));
         setSelectedGridOptions(indices);
         setCustomEntries(customs);
+      } else if (typeof existing === 'string' && existing) {
+        const idx = presetValues.indexOf(existing);
+        setSelectedGridOptions(idx >= 0 ? [idx] : []);
+        setCustomEntries([]);
       } else {
         setSelectedGridOptions([]);
         setCustomEntries([]);
@@ -145,7 +149,10 @@ export function QuestionnaireShell({
 
   const handleBack = () => {
     if (currentIdx > 0) {
-      const prevIdx = currentIdx - 1;
+      let prevIdx = currentIdx - 1;
+      while (prevIdx > 0 && questions[prevIdx].archetype === 'beat') {
+        prevIdx--;
+      }
       const prevQuestion = questions[prevIdx];
       const prevAnswer = answers[prevQuestion.id];
 
@@ -170,6 +177,11 @@ export function QuestionnaireShell({
   };
 
   const handleGridToggle = (index: number) => {
+    const gridQ = question as GridQuestion;
+    if (!gridQ.multiSelect) {
+      setSelectedGridOptions(prev => prev.includes(index) ? [] : [index]);
+      return;
+    }
     setSelectedGridOptions(prev =>
       prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
     );
@@ -180,7 +192,11 @@ export function QuestionnaireShell({
     const selectedValues = selectedGridOptions
       .map(i => gridQ.options[i]?.value)
       .filter(Boolean) as string[];
-    handleAnswer([...selectedValues, ...customEntries]);
+    if (!gridQ.multiSelect) {
+      handleAnswer(selectedValues[0] ?? '');
+    } else {
+      handleAnswer([...selectedValues, ...customEntries]);
+    }
     setSelectedGridOptions([]);
     setCustomEntries([]);
   };
@@ -334,6 +350,7 @@ export function QuestionnaireShell({
                   customInput={customInput}
                   setCustomInput={setCustomInput}
                   onSubmit={handleGridSubmit}
+                  autoSubmit={!(question as GridQuestion).multiSelect}
                 />
               )}
 
@@ -511,6 +528,7 @@ function GridRenderer({
   customInput,
   setCustomInput,
   onSubmit,
+  autoSubmit = false,
 }: {
   question: GridQuestion;
   selectedOptions: number[];
@@ -520,6 +538,7 @@ function GridRenderer({
   customInput: string;
   setCustomInput: (v: string) => void;
   onSubmit: () => void;
+  autoSubmit?: boolean;
 }) {
   const totalSelected = selectedOptions.length + customEntries.length;
   const minSel = question.minSelections ?? 0;
@@ -527,6 +546,13 @@ function GridRenderer({
   const canSkip = minSel === 0 && totalSelected === 0;
   const cols = question.columns ?? 3;
   const gridClass = cols === 4 ? 'grid grid-cols-2 sm:grid-cols-4' : cols === 2 ? 'grid grid-cols-2' : 'grid grid-cols-2 sm:grid-cols-3';
+
+  useEffect(() => {
+    if (autoSubmit && selectedOptions.length === 1) {
+      const timer = setTimeout(() => onSubmit(), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [autoSubmit, selectedOptions, onSubmit]);
 
   return (
     <div className="space-y-4">
@@ -615,19 +641,21 @@ function GridRenderer({
         </div>
       )}
 
-      <button
-        onClick={onSubmit}
-        disabled={!meetsMin && !canSkip}
-        className={`w-full py-4 text-white text-lg font-bold rounded-full shadow-lg transition-all duration-200 transform ${
-          meetsMin
-            ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 hover:scale-[1.01]'
-            : canSkip
-              ? 'bg-white/10 hover:bg-white/15 hover:scale-[1.01]'
-              : 'bg-white/5 cursor-not-allowed opacity-50'
-        }`}
-      >
-        {canSkip ? 'Skip' : meetsMin ? 'Continue' : `Select ${minSel - totalSelected} more`}
-      </button>
+      {!autoSubmit && (
+        <button
+          onClick={onSubmit}
+          disabled={!meetsMin && !canSkip}
+          className={`w-full py-4 text-white text-lg font-bold rounded-full shadow-lg transition-all duration-200 transform ${
+            meetsMin
+              ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 hover:scale-[1.01]'
+              : canSkip
+                ? 'bg-white/10 hover:bg-white/15 hover:scale-[1.01]'
+                : 'bg-white/5 cursor-not-allowed opacity-50'
+          }`}
+        >
+          {canSkip ? 'Skip' : meetsMin ? 'Continue' : `Select ${minSel - totalSelected} more`}
+        </button>
+      )}
     </div>
   );
 }
