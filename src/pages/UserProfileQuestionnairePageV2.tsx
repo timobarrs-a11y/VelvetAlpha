@@ -1,28 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QuestionnaireShell, HonestBridge, PERSONAL_QUESTIONNAIRE, makeContext } from '../features/questionnaire';
+import { QuestionnaireShell, HonestBridge, PERSONAL_QUESTIONNAIRE, makeContext, deriveZodiac } from '../features/questionnaire';
 import { userProfileService } from '../services/userProfileService';
 import { toast } from '../shared/ui/Toast';
 import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
-
-function deriveZodiac(birthday: string): string | null {
-  if (!birthday) return null;
-  const date = new Date(birthday);
-  const month = date.getUTCMonth() + 1;
-  const day = date.getUTCDate();
-  const zodiacRanges: [number, number, string][] = [
-    [3, 21, 'Aries'], [4, 20, 'Taurus'], [5, 21, 'Gemini'],
-    [6, 21, 'Cancer'], [7, 23, 'Leo'], [8, 23, 'Virgo'],
-    [9, 23, 'Libra'], [10, 23, 'Scorpio'], [11, 22, 'Sagittarius'],
-    [12, 22, 'Capricorn'], [1, 20, 'Aquarius'], [2, 19, 'Pisces'],
-  ];
-  for (const [m, d, sign] of zodiacRanges) {
-    if (month === m && day >= d) return sign;
-    const nextM = m === 12 ? 1 : m + 1;
-    if (month === nextM && day < d) return sign;
-  }
-  return null;
-}
 
 function buildBridgeLines(answers: Record<string, string | string[]>): { text: string }[] {
   const lines: { text: string }[] = [];

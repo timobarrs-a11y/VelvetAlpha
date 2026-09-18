@@ -54,6 +54,8 @@ export interface PreviewBubble {
 export interface BeatConfig {
   template: (ctx: QuestionContext) => string;
   durationMs?: number;
+  confirmLabel?: string;
+  accentColor?: string;
 }
 
 export interface BaseQuestion {

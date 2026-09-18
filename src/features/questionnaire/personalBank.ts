@@ -1,9 +1,39 @@
 import type { Question, QuestionnaireDefinition } from './types';
 
+const COLOR_HEX_MAP: Record<string, string> = {
+  Red: '#ef4444', Pink: '#ec4899', Orange: '#f97316', Yellow: '#eab308',
+  Green: '#22c55e', Teal: '#14b8a6', Cyan: '#06b6d4', Blue: '#3b82f6',
+  Purple: '#8b5cf6', Magenta: '#d946ef', White: '#f8fafc', Black: '#1e293b',
+};
+
+export function getColorHex(colorName: string): string | undefined {
+  return COLOR_HEX_MAP[colorName];
+}
+
+const ZODIAC_RANGES: [number, number, string][] = [
+  [3, 21, 'Aries'], [4, 20, 'Taurus'], [5, 21, 'Gemini'],
+  [6, 21, 'Cancer'], [7, 23, 'Leo'], [8, 23, 'Virgo'],
+  [9, 23, 'Libra'], [10, 23, 'Scorpio'], [11, 22, 'Sagittarius'],
+  [12, 22, 'Capricorn'], [1, 20, 'Aquarius'], [2, 19, 'Pisces'],
+];
+
+export function deriveZodiac(birthday: string): string | null {
+  if (!birthday) return null;
+  const date = new Date(birthday);
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
+  for (const [m, d, sign] of ZODIAC_RANGES) {
+    if (month === m && day >= d) return sign;
+    const nextM = m === 12 ? 1 : m + 1;
+    if (month === nextM && day < d) return sign;
+  }
+  return null;
+}
+
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 20,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['name', 'nickname', 'birthday', 'favoriteColor', 'beat1'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['name', 'nickname', 'favoriteColor', 'birthday', 'beat1'] },
     { id: 'taste', label: 'Your taste', questionIds: ['gender', 'hobbies', 'musicGenre'] },
     { id: 'signals', label: 'Your vibe', questionIds: ['tasteDeck', 'beat2'] },
     { id: 'wavelength', label: 'Your wavelength', questionIds: ['recharge', 'conflictResponse', 'structure', 'connection', 'beat3'] },
@@ -32,17 +62,6 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       skipLabel: 'Skip',
     },
     {
-      id: 'birthday',
-      archetype: 'tap',
-      chapter: 'identity',
-      question: (ctx) => {
-        const name = ctx.userName;
-        return name ? `Hey ${name}! When were you born?` : 'When were you born?';
-      },
-      confidence: 'confirmed',
-      placeholder: 'Select your birthday',
-    },
-    {
       id: 'favoriteColor',
       archetype: 'grid',
       chapter: 'identity',
@@ -65,20 +84,44 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       ],
     },
     {
+      id: 'birthday',
+      archetype: 'tap',
+      chapter: 'identity',
+      question: (ctx) => {
+        const name = ctx.answers.name as string;
+        return name ? `When were you born, ${name}?` : 'When were you born?';
+      },
+      confidence: 'confirmed',
+      placeholder: 'Select your birthday',
+    },
+    {
       id: 'beat1',
       archetype: 'beat',
       chapter: 'identity',
       beat: {
         template: (ctx) => {
+          const birthday = ctx.answers.birthday as string;
+          const zodiac = deriveZodiac(birthday);
           const name = ctx.answers.name as string;
           const nickname = ctx.answers.nickname as string;
-          const color = ctx.answers.favoriteColor as string;
-          if (name && nickname && nickname.trim() && color) return `${name}. But your people call you ${nickname}. A ${color} person. Got it.`;
-          if (name && color) return `${name}. A ${color} person. Got it.`;
-          if (name) return `${name}. Noted.`;
-          return 'Got it.';
+          if (zodiac && name && nickname && nickname.trim()) {
+            return `A ${zodiac}! That explains a lot. ${name}, or should I say ${nickname} -- that's Chapter 1 locked in. Next up: your taste.`;
+          }
+          if (zodiac && name) {
+            return `A ${zodiac}! That explains a lot, ${name}. That's Chapter 1 locked in. Next up: your taste.`;
+          }
+          if (zodiac) {
+            return `A ${zodiac}! That explains a lot. That's Chapter 1 locked in. Next up: your taste.`;
+          }
+          if (name && nickname && nickname.trim()) {
+            return `${name}, or should I say ${nickname} -- that's Chapter 1 locked in. Next up: your taste.`;
+          }
+          if (name) {
+            return `${name}, that's Chapter 1 locked in. Next up: your taste.`;
+          }
+          return "That's Chapter 1 locked in. Next up: your taste.";
         },
-        durationMs: 1500,
+        confirmLabel: 'On to my taste',
       },
     },
     {
