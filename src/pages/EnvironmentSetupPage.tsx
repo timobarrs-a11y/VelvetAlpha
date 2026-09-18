@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowRight, ArrowLeft, Check, Image as ImageIcon, Type, Palette,
+  ArrowRight, Check, Image as ImageIcon, Type, Palette,
   Sparkles, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -12,7 +12,6 @@ import {
   PHOTO_WALLPAPER_PRESETS,
   LIVE_WALLPAPER_PRESETS,
   ALL_PRESETS,
-  buildWallpaperStyle,
   buildWallpaperMeta,
 } from '../services/wallpaperService';
 import {
@@ -21,7 +20,7 @@ import {
   getBubbleStyle,
   getTextColorValue,
 } from '../components/ChatStyleBar';
-import { getEligibleFonts, FONT_OPTIONS } from '../services/customizationService';
+import { getEligibleFonts } from '../services/customizationService';
 import { VELVET_THEME } from '../config/velvetTheme';
 
 type Tab = 'presets' | 'wallpaper' | 'font' | 'colors';
@@ -123,9 +122,8 @@ export function EnvironmentSetupPage() {
   useEffect(() => {
     const id = sessionStorage.getItem('currentCompanionId') || sessionStorage.getItem('atlasCoachId');
     const storedNext = sessionStorage.getItem('envSetupNextRoute') || '/lobby';
-    const name = sessionStorage.getItem('atlasCoachName') || sessionStorage.getItem('currentCompanionName') || 'Companion';
+    const name = sessionStorage.getItem('atlasCoachName') || 'Companion';
     const gender = (sessionStorage.getItem('atlasCoachGender') as 'male' | 'female') || 'female';
-    const storedWallpaper = sessionStorage.getItem('envSetupWallpaper') || null;
 
     if (id) {
       setCompanionId(id);

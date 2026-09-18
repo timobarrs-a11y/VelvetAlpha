@@ -76,7 +76,7 @@ export function CreateCompanionAvatarPage() {
 
       const { error } = await supabase
         .from('companions')
-        .update({ avatar_config: avatarConfig, name: companionName || undefined })
+        .update({ avatar_config: avatarConfig, custom_name: companionName || undefined })
         .eq('id', companionId);
 
       if (error) {
