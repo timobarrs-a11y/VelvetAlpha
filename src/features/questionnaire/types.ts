@@ -32,7 +32,6 @@ export interface GridOption {
 export interface SwipeCard {
   left: { label: string; icon?: string };
   right: { label: string; icon?: string };
-  prompt: string;
 }
 
 export interface ScrubConfig {

@@ -854,7 +854,7 @@ function SwipeRenderer({
     <div className="flex flex-col items-center gap-6">
       <motion.div
         ref={cardRef}
-        className="w-full max-w-sm min-h-[20rem] rounded-3xl border border-white/10 bg-white/[0.04] shadow-2xl flex flex-col items-center justify-between p-8 cursor-grab active:cursor-grabbing"
+        className="w-full max-w-sm min-h-[22rem] rounded-3xl border border-white/10 bg-white/[0.04] shadow-2xl flex flex-col items-center justify-center p-8 cursor-grab active:cursor-grabbing"
         style={{
           x: dragX,
           rotate: rotation,
@@ -868,30 +868,28 @@ function SwipeRenderer({
         onDragEnd={() => onDragEnd()}
         whileTap={{ scale: 0.98 }}
       >
-        <p className="text-lg text-white text-center font-medium pt-4">{card.prompt}</p>
-
-        <div className="flex gap-6 w-full justify-center items-stretch">
+        <div className="flex gap-4 w-full justify-center items-stretch">
           <button
             onClick={(e) => { e.stopPropagation(); onSwipe('left'); }}
-            className="flex flex-col items-center gap-2 px-5 py-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
+            className="flex-1 flex flex-col items-center justify-center gap-3 px-5 py-8 rounded-2xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-all min-h-[12rem]"
           >
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 flex items-center justify-center">
-              <LeftIcon className="w-5 h-5 text-rose-400" />
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/15 flex items-center justify-center">
+              <LeftIcon className="w-6 h-6 text-rose-400" />
             </div>
-            <span className="text-xs text-gray-400 font-medium">{card.left.label}</span>
+            <span className="text-sm text-gray-300 font-medium text-center leading-snug">{card.left.label}</span>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onSwipe('right'); }}
-            className="flex flex-col items-center gap-2 px-5 py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
+            className="flex-1 flex flex-col items-center justify-center gap-3 px-5 py-8 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all min-h-[12rem]"
           >
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 flex items-center justify-center">
-              <RightIcon className="w-5 h-5 text-emerald-400" />
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center">
+              <RightIcon className="w-6 h-6 text-emerald-400" />
             </div>
-            <span className="text-xs text-gray-400 font-medium">{card.right.label}</span>
+            <span className="text-sm text-gray-300 font-medium text-center leading-snug">{card.right.label}</span>
           </button>
         </div>
 
-        <p className="text-xs text-gray-600 pb-2">Swipe or tap a side</p>
+        <p className="text-xs text-gray-600 mt-6">Swipe or tap a side</p>
       </motion.div>
 
       <div className="text-xs text-gray-600">

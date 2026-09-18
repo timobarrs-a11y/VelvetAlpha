@@ -17,7 +17,7 @@ export interface UserProfile {
   profile_completed: boolean;
   subscription_tier: string | null;
   avatar_config: any;
-  communication_profile: { recharge: string; conflict: string; structure: string; connection: string } | null;
+  communication_profile: { conflict: string; connection: string; decisionStyle: string; motivation: string } | null;
   created_at: string;
 }
 
@@ -34,7 +34,7 @@ export interface UserProfileUpdate {
   news_categories?: string[];
   political_leaning?: 'democrat' | 'republican' | 'independent' | null;
   profile_completed?: boolean;
-  communication_profile?: { recharge: string; conflict: string; structure: string; connection: string } | null;
+  communication_profile?: { conflict: string; connection: string; decisionStyle: string; motivation: string } | null;
 }
 
 class UserProfileService {
@@ -132,10 +132,10 @@ class UserProfileService {
   }
 
   async saveCommunicationProfile(profile: {
-    recharge: string;
     conflict: string;
-    structure: string;
     connection: string;
+    decisionStyle: string;
+    motivation: string;
   }): Promise<UserProfile> {
     return this.updateProfile({ communication_profile: profile });
   }

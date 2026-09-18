@@ -63,8 +63,8 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   chapters: [
     { id: 'identity', label: 'Who you are', questionIds: ['name', 'nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'beat1'] },
     { id: 'taste', label: 'Your taste', questionIds: ['gender', 'hobbies', 'musicGenre'] },
+    { id: 'wavelength', label: 'Your wavelength', questionIds: ['conflictResponse', 'connection', 'decisionStyle', 'motivation', 'beat3'] },
     { id: 'signals', label: 'Your vibe', questionIds: ['tasteDeck', 'beat2'] },
-    { id: 'wavelength', label: 'Your wavelength', questionIds: ['recharge', 'conflictResponse', 'structure', 'connection', 'beat3'] },
   ],
   questions: [
     {
@@ -245,32 +245,26 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       confidence: 'play',
       cards: [
         {
-          prompt: 'Late night gaming session',
           left: { label: 'Gaming night', icon: 'Gamepad2' },
           right: { label: 'Sunrise hike', icon: 'Sunrise' },
         },
         {
-          prompt: 'Home-cooked dinner',
           left: { label: 'Cook at home', icon: 'Utensils' },
           right: { label: 'Try a new restaurant', icon: 'MapPin' },
         },
         {
-          prompt: 'Weekend plan',
           left: { label: 'Road trip', icon: 'Car' },
           right: { label: 'Stay in & recharge', icon: 'Home' },
         },
         {
-          prompt: 'How you watch sports',
           left: { label: 'Live at the game', icon: 'Trophy' },
           right: { label: 'On the couch', icon: 'Tv' },
         },
         {
-          prompt: 'Night out',
           left: { label: 'Dive bar', icon: 'Wine' },
           right: { label: 'Rooftop spot', icon: 'Building' },
         },
         {
-          prompt: 'Morning routine',
           left: { label: 'Gym at 6am', icon: 'Dumbbell' },
           right: { label: 'Sleep in', icon: 'Moon' },
         },
@@ -289,18 +283,6 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       },
     },
     {
-      id: 'recharge',
-      archetype: 'tap',
-      chapter: 'wavelength',
-      question: 'After a long week, you\'d rather...',
-      confidence: 'confirmed',
-      autoAdvance: true,
-      options: [
-        { text: 'Recharge alone -- quiet time, good music, maybe a show', value: 'alone' },
-        { text: 'Be around people -- friends, energy, going out', value: 'people' },
-      ],
-    },
-    {
       id: 'conflictResponse',
       archetype: 'tap',
       chapter: 'wavelength',
@@ -310,18 +292,6 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       options: [
         { text: 'Logical solutions -- help me figure it out', value: 'solutions' },
         { text: 'Emotional understanding -- hear me out first', value: 'empathy' },
-      ],
-    },
-    {
-      id: 'structure',
-      archetype: 'tap',
-      chapter: 'wavelength',
-      question: 'You prefer your days...',
-      confidence: 'confirmed',
-      autoAdvance: true,
-      options: [
-        { text: 'Planned out -- I like knowing what\'s next', value: 'planned' },
-        { text: 'Spontaneous -- I like seeing where the day goes', value: 'spontaneous' },
       ],
     },
     {
@@ -337,13 +307,37 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       ],
     },
     {
+      id: 'decisionStyle',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'When facing a big decision, you trust...',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Your gut -- you know the right call when you feel it', value: 'intuitive' },
+        { text: 'Research -- you want to weigh every option first', value: 'analytical' },
+      ],
+    },
+    {
+      id: 'motivation',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'What gets you moving on something hard?',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Internal drive -- I do it because I want to', value: 'internal' },
+        { text: 'External accountability -- someone else counting on me', value: 'external' },
+      ],
+    },
+    {
       id: 'beat3',
       archetype: 'beat',
       chapter: 'wavelength',
       beat: {
         template: (ctx) => {
           const name = ctx.answers.name as string;
-          return name ? `Got your wavelength, ${name}. I'll tune to it.` : 'Got your wavelength. I\'ll tune to it.';
+          return name ? `Got your wavelength, ${name}. I'll tune to it.` : "Got your wavelength. I'll tune to it.";
         },
         durationMs: 1500,
       },

@@ -51,10 +51,10 @@ interface SystemPromptInput {
   };
   dislikeFeedback?: string[];
   communicationProfile?: {
-    recharge: string;
     conflict: string;
-    structure: string;
     connection: string;
+    decisionStyle: string;
+    motivation: string;
   } | null;
 }
 
@@ -395,13 +395,13 @@ ${communicationProfile ? `=== USER COMMUNICATION PROFILE (HOW TO TALK TO THEM) =
 
 The user answered four calibration questions during onboarding. Use these to shape HOW you communicate with them — not what you talk about, but the style and energy of your responses.
 
-RECHARGE: ${communicationProfile.recharge === 'alone' ? 'They recharge alone. They\'re more introverted — keep messages concise, don\'t overwhelm with rapid-fire questions, give them space to process. One deep thread is better than three surface ones.' : 'They recharge around people. They\'re more extroverted — match their energy, keep the momentum up, don\'t go quiet. Banter and rapid-fire exchanges feel natural to them.'}
-
 CONFLICT RESPONSE: ${communicationProfile.conflict === 'solutions' ? 'When they\'re upset, lead with the fix. Empathy is fine but brief — they want actionable help, not just validation. "Okay, here\'s what we can do about that."' : 'When they\'re upset, lead with empathy. Hold space for their feelings before offering any solutions. "That sounds really hard. I hear you." Solutions can come later, only after they feel understood.'}
 
-STRUCTURE: ${communicationProfile.structure === 'planned' ? 'They like structure. When suggesting things, be concrete — specific times, clear plans, defined options. "How about Thursday at 7?" not "We should hang out sometime."' : 'They like spontaneity. Keep suggestions open-ended and flexible. "Let\'s see where the day takes us" feels more natural than a rigid schedule. Don\'t box them in.'}
-
 CONNECTION: ${communicationProfile.connection === 'deep' ? 'They connect through deep one-on-one conversation. Go beneath the surface — ask about feelings, motivations, the why behind things. They want substance over banter.' : 'They connect through lively back-and-forth banter. Keep it playful, quick, fun. Light teasing and rapid exchanges build the bond — don\'t get too heavy too fast.'}
+
+DECISION STYLE: ${communicationProfile.decisionStyle === 'intuitive' ? 'They trust their gut. When they\'re weighing something, don\'t overload them with data — validate their instincts and help them feel confident in their intuition. "What does your gut tell you?"' : 'They research before deciding. When they\'re weighing something, give them specifics — options, trade-offs, concrete details. Don\'t rush them to a decision before they\'ve had time to think it through.'}
+
+MOTIVATION: ${communicationProfile.motivation === 'internal' ? 'They\'re self-driven. Don\'t lean on external pressure or guilt — appeal to their own reasons for wanting to do it. "You said this matters to you — what\'s stopping you?"' : 'They respond to accountability. Someone else counting on them is what gets them moving. Set check-ins, follow up on commitments, be the person they don\'t want to let down. "You said you\'d have this done by Friday — I\'m checking in."'}
 
 ` : ''}=== COMMUNICATION STYLE ===
 

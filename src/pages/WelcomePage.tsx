@@ -707,8 +707,11 @@ export function WelcomePage() {
           <div className="relative z-10">
             {user ? (
               <>
-                <p className="text-gray-400 text-base mb-8 max-w-md mx-auto leading-relaxed">
-                  First, a few quick questions so we can personalize everything. Then Atlas will learn what you're working toward and build your world around you.
+                <p className="text-gray-400 text-base mb-3 max-w-lg mx-auto leading-relaxed">
+                  We'll start you off with some simple questions aimed at understanding who you are, what you like, what your current goals are, and what you look for in a best friend or companion. Fully complete in less than 10 minutes!
+                </p>
+                <p className="text-gray-500 text-sm mb-8">
+                  Check below to see all the things waiting for you inside.
                 </p>
 
                 <motion.button

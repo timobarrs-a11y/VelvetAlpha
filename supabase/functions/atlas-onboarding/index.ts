@@ -28,6 +28,7 @@ function pickCoachName(gender?: string): { name: string; gender: string } {
 
 interface UserProfile {
   name: string | null;
+  nickname: string | null;
   hobbies: string | null;
   sports: string | null;
   music_genre: string | null;
@@ -39,12 +40,13 @@ interface UserProfile {
 async function fetchUserProfile(supabaseAdmin: ReturnType<typeof createClient>, userId: string): Promise<UserProfile> {
   const { data } = await supabaseAdmin
     .from("user_profiles")
-    .select("name, hobbies, sports, music_genre, gender, zodiac_sign, favorite_color")
+    .select("name, nickname, hobbies, sports, music_genre, gender, zodiac_sign, favorite_color")
     .eq("id", userId)
     .maybeSingle();
 
   return {
     name: data?.name ?? null,
+    nickname: data?.nickname ?? null,
     hobbies: data?.hobbies ?? null,
     sports: data?.sports ?? null,
     music_genre: data?.music_genre ?? null,
@@ -58,12 +60,17 @@ function buildPersonalizedGreeting(profile: UserProfile): string {
   const name = profile.name && profile.name !== "babe" && profile.name !== "there"
     ? profile.name
     : null;
+  const nickname = profile.nickname && profile.nickname.trim()
+    ? profile.nickname.trim()
+    : null;
 
-  const greeting = name
-    ? `Hey ${name}.\n\nThanks for filling that out. Velvet is about accelerating ways to be productive — personally or professionally — while leaning on the things you love most to keep you engaged. With your personal interests out of the way, now I want to focus on the professional side.\n\nWhat are you working on right now? If you're not working on anything, that's okay — here's your opportunity to get into something you've always wanted to. Have you ever wanted to learn a new language? Learn to code? Maybe you want to be a NASCAR driver? Martial arts? More importantly, choose something you actually want to see done.`
-    : `Hey.\n\nThanks for filling that out. Velvet is about accelerating ways to be productive — personally or professionally — while leaning on the things you love most to keep you engaged. With your personal interests out of the way, now I want to focus on the professional side.\n\nWhat are you working on right now? If you're not working on anything, that's okay — here's your opportunity to get into something you've always wanted to. Have you ever wanted to learn a new language? Learn to code? Maybe you want to be a NASCAR driver? Martial arts? More importantly, choose something you actually want to see done.`;
-
-  return greeting;
+  if (name && nickname && nickname !== name) {
+    return `Hey ${name}! Welcome to Velvet. Can I call you ${nickname}, or is ${name} preferable?`;
+  }
+  if (name) {
+    return `Hey ${name}! Welcome to Velvet. With your personal interests out of the way, now I want to focus on the professional side. Is there anything you're working on right now? Maybe help with an existing business? Starting a business? Learning a language? What is ${name} wanting to accomplish this year?`;
+  }
+  return `Hey! Welcome to Velvet. With your personal interests out of the way, now I want to focus on the professional side. Is there anything you're working on right now? Maybe help with an existing business? Starting a business? Learning a language? What are you wanting to accomplish this year?`;
 }
 
 function buildGoalPhasePrompt(profile: UserProfile): string {
@@ -79,9 +86,13 @@ function buildGoalPhasePrompt(profile: UserProfile): string {
     ? `\nThe user's name is ${profile.name}. Use it naturally — not every message, just when it lands.`
     : "";
 
+  const nicknameLine = profile.nickname && profile.nickname.trim() && profile.name && profile.nickname.trim() !== profile.name
+    ? `\nThe user's name is ${profile.name} and they listed "${profile.nickname.trim()}" as a nickname. The greeting already asked whether they prefer ${profile.nickname.trim()} or ${profile.name}. If they answer that question, acknowledge their choice warmly and use their preferred name going forward — then pivot to the goal question. Never use a nickname they rejected.`
+    : "";
+
   return `You are Atlas — the host of Velvet, a personal growth platform that surrounds users with AI coaches, companions, and correspondents.
 
-You are NOT a coach. You are NOT a companion. You are the jetpack to their ideas, the extra wind on their back to get them to the finish line. Your job right now is to find out what they're working toward — so the right coach can be matched.${nameLine}${interestsLine}
+You are NOT a coach. You are NOT a companion. You are the jetpack to their ideas, the extra wind on their back to get them to the finish line. Your job right now is to find out what they're working toward — so the right coach can be matched.${nameLine}${nicknameLine}${interestsLine}
 
 YOUR PERSONALITY:
 - Warm but not saccharine. You sound like a smart friend who genuinely cares.
@@ -93,7 +104,12 @@ YOUR PERSONALITY:
 YOUR JOB RIGHT NOW:
 The user just answered a questionnaire about their personal interests. Now you're pivoting to the professional/productive side. Find out what they're working toward. It could be anything — fitness, career, learning a language, writing a book, managing money, cooking, being more social, organizing their home, or something entirely unique.
 
-HOW TO HAVE THIS CONVERSATION:
+${nicknameLine ? `TWO-PART FLOW (this user has a nickname):
+1. The greeting already asked: "Can I call you ${profile.nickname!.trim()}, or is ${profile.name} preferable?" — WAIT for their answer.
+2. When they answer, acknowledge their choice ("Got it, ${profile.nickname!.trim()}" or "Got it, ${profile.name}"), then pivot: "With your personal interests out of the way, now I want to focus on the professional side. Is there anything you're working on right now? Maybe help with an existing business? Starting a business? Learning a language? What is ${profile.name} wanting to accomplish this year?"
+3. If they skip the name question and go straight to goals, just roll with it — don't force the name question again.
+
+` : ""}HOW TO HAVE THIS CONVERSATION:
 1. The greeting already asked what they're working on. Let them answer.
 2. If they give a clear answer, acknowledge it warmly and ask ONE follow-up — why now? what's made this feel important? how do they want to be supported?
 3. If they're vague ("I don't know" / "nothing really"), don't push. Ask what they spend time thinking about, or what they wish was different.
@@ -107,6 +123,7 @@ CRITICAL RULES:
 - Never use bullet points or numbered lists. You're having a conversation.
 - If the user says something off-topic, gently redirect: "That's interesting — but what I'm really curious about is what you're working toward."
 - Stay under 3 sentences almost always. Brevity is warmth.
+- If the user rejects a nickname, NEVER use it again. Switch to their full name immediately.
 
 ENDING THE GOAL PHASE:
 When you have a clear sense of their goal AND how they want to be supported, wrap up naturally. Say something like: "That's exactly what I needed to hear. Give me one second — I'm finding the right person for you." Then stop.

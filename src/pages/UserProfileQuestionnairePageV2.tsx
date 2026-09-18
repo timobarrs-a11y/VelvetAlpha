@@ -53,12 +53,12 @@ export function UserProfileQuestionnairePageV2() {
       });
 
       const commProfile = {
-        recharge: String(finalAnswers.recharge || ''),
         conflict: String(finalAnswers.conflictResponse || ''),
-        structure: String(finalAnswers.structure || ''),
         connection: String(finalAnswers.connection || ''),
+        decisionStyle: String(finalAnswers.decisionStyle || ''),
+        motivation: String(finalAnswers.motivation || ''),
       };
-      if (commProfile.recharge && commProfile.conflict && commProfile.structure && commProfile.connection) {
+      if (commProfile.conflict && commProfile.connection && commProfile.decisionStyle && commProfile.motivation) {
         await userProfileService.saveCommunicationProfile(commProfile);
       }
     } catch {
