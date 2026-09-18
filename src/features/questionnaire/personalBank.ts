@@ -6,6 +6,7 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
     { id: 'identity', label: 'Who you are', questionIds: ['name', 'nickname', 'birthday', 'favoriteColor', 'beat1'] },
     { id: 'taste', label: 'Your taste', questionIds: ['gender', 'hobbies', 'musicGenre'] },
     { id: 'signals', label: 'Your vibe', questionIds: ['tasteDeck', 'beat2'] },
+    { id: 'wavelength', label: 'Your wavelength', questionIds: ['recharge', 'conflictResponse', 'structure', 'connection', 'beat3'] },
   ],
   questions: [
     {
@@ -197,6 +198,66 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
         template: (ctx) => {
           const name = ctx.answers.name as string;
           return name ? `That's a lot to work with, ${name}.` : "That's a lot to work with.";
+        },
+        durationMs: 1500,
+      },
+    },
+    {
+      id: 'recharge',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'After a long week, you\'d rather...',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Recharge alone -- quiet time, good music, maybe a show', value: 'alone' },
+        { text: 'Be around people -- friends, energy, going out', value: 'people' },
+      ],
+    },
+    {
+      id: 'conflictResponse',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'When you\'re upset, what helps you more?',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Logical solutions -- help me figure it out', value: 'solutions' },
+        { text: 'Emotional understanding -- hear me out first', value: 'empathy' },
+      ],
+    },
+    {
+      id: 'structure',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'You prefer your days...',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Planned out -- I like knowing what\'s next', value: 'planned' },
+        { text: 'Spontaneous -- I like seeing where the day goes', value: 'spontaneous' },
+      ],
+    },
+    {
+      id: 'connection',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'You connect best through...',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Deep one-on-one conversation', value: 'deep' },
+        { text: 'Lively back-and-forth banter', value: 'lively' },
+      ],
+    },
+    {
+      id: 'beat3',
+      archetype: 'beat',
+      chapter: 'wavelength',
+      beat: {
+        template: (ctx) => {
+          const name = ctx.answers.name as string;
+          return name ? `Got your wavelength, ${name}. I'll tune to it.` : 'Got your wavelength. I\'ll tune to it.';
         },
         durationMs: 1500,
       },

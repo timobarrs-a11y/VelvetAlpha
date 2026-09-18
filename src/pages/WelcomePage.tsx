@@ -632,74 +632,48 @@ export function WelcomePage() {
 
           {/* Hero headline */}
           <motion.h1
-            className="mb-7 leading-none"
+            className="mb-10 relative leading-none"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.28, duration: 0.75 }}
           >
             <span
-              className="block text-white"
-              style={{
-                fontSize: 'clamp(64px, 10vw, 108px)',
-                fontWeight: 900,
-                letterSpacing: '-0.04em',
-                lineHeight: 1,
-              }}
-            >
-              Project
-            </span>
-            <span
-              className="block relative"
-              style={{
-                fontSize: 'clamp(64px, 10vw, 108px)',
-                fontWeight: 200,
-                letterSpacing: '0.12em',
-                lineHeight: 1.05,
-              }}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              style={{ filter: 'blur(60px)', opacity: 0.45 }}
+              aria-hidden
             >
               <span
-                className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                style={{ filter: 'blur(60px)', opacity: 0.45 }}
-                aria-hidden
-              >
-                <span
-                  className="text-transparent bg-clip-text"
-                  style={{
-                    fontSize: 'clamp(64px, 10vw, 108px)',
-                    fontWeight: 200,
-                    letterSpacing: '0.12em',
-                    background: 'linear-gradient(135deg,#c084fc,#f472b6,#c084fc)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  Velvet
-                </span>
-              </span>
-              <motion.span
+                className="text-transparent bg-clip-text"
                 style={{
-                  background: 'linear-gradient(135deg,#c084fc 0%,#f472b6 50%,#c084fc 100%)',
+                  fontSize: 'clamp(48px, 8vw, 84px)',
+                  fontWeight: 800,
+                  letterSpacing: '-0.03em',
+                  background: 'linear-gradient(135deg,#c084fc,#f472b6,#c084fc)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
                 }}
-                animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
               >
-                Velvet
-              </motion.span>
+                Your world starts now.
+              </span>
             </span>
+            <motion.span
+              className="block relative"
+              style={{
+                fontSize: 'clamp(48px, 8vw, 84px)',
+                fontWeight: 800,
+                letterSpacing: '-0.03em',
+                lineHeight: 1.05,
+                background: 'linear-gradient(135deg,#c084fc 0%,#f472b6 50%,#c084fc 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+              animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              Your world starts now.
+            </motion.span>
           </motion.h1>
-
-          <motion.p
-            className="text-gray-300 max-w-2xl mx-auto font-light mb-10"
-            style={{ fontSize: 'clamp(18px,2.2vw,22px)', lineHeight: 1.6 }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.7 }}
-          >
-            Your World, Projected.
-          </motion.p>
         </motion.div>
 
         {/* CTA Stage */}
@@ -731,13 +705,6 @@ export function WelcomePage() {
           <div className="absolute inset-0 bg-gradient-to-br from-rose-500/[0.04] via-transparent to-sky-500/[0.04] pointer-events-none rounded-3xl" />
 
           <div className="relative z-10">
-            <div
-              className="font-black text-white mb-4 tracking-tight"
-              style={{ fontSize: 'clamp(32px, 5vw, 50px)', lineHeight: 1.1 }}
-            >
-              Your world starts now.
-            </div>
-
             {user ? (
               <>
                 <p className="text-gray-400 text-base mb-8 max-w-md mx-auto leading-relaxed">

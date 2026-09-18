@@ -1145,6 +1145,7 @@ export class ChatService {
         } : undefined,
         driftCorrection: companionData?.drift_needs_correction === true,
         dislikeFeedback: dislikeReasons.length > 0 ? dislikeReasons : undefined,
+        communicationProfile: profile.communication_profile ?? null,
       });
 
       const recentUserMessages = last20Messages

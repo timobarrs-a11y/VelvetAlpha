@@ -70,6 +70,16 @@ export function UserProfileQuestionnairePageV2() {
         musicGenre: Array.isArray(finalAnswers.musicGenre) ? finalAnswers.musicGenre.join(', ') : String(finalAnswers.musicGenre || ''),
         newsTopics: [],
       });
+
+      const commProfile = {
+        recharge: String(finalAnswers.recharge || ''),
+        conflict: String(finalAnswers.conflictResponse || ''),
+        structure: String(finalAnswers.structure || ''),
+        connection: String(finalAnswers.connection || ''),
+      };
+      if (commProfile.recharge && commProfile.conflict && commProfile.structure && commProfile.connection) {
+        await userProfileService.saveCommunicationProfile(commProfile);
+      }
     } catch {
       toast.error('Something went wrong saving your profile. Please try again.');
       return;

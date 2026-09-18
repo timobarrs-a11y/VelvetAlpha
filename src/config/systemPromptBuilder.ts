@@ -50,6 +50,12 @@ interface SystemPromptInput {
     initiative?: string;
   };
   dislikeFeedback?: string[];
+  communicationProfile?: {
+    recharge: string;
+    conflict: string;
+    structure: string;
+    connection: string;
+  } | null;
 }
 
 const arrayOrStringToString = (value: string[] | string | undefined): string => {
@@ -81,7 +87,8 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
     goalText,
     outfitContext,
     questionnaireData,
-    dislikeFeedback
+    dislikeFeedback,
+    communicationProfile,
   } = input;
 
   const voice = getVoiceById(signatureVoice);
@@ -384,7 +391,19 @@ ${isMentor ? buildCoachBehavioralInstructions({
   beat: '',
   voiceKey: signatureVoice,
 }) : ''}
-=== COMMUNICATION STYLE ===
+${communicationProfile ? `=== USER COMMUNICATION PROFILE (HOW TO TALK TO THEM) ===
+
+The user answered four calibration questions during onboarding. Use these to shape HOW you communicate with them — not what you talk about, but the style and energy of your responses.
+
+RECHARGE: ${communicationProfile.recharge === 'alone' ? 'They recharge alone. They\'re more introverted — keep messages concise, don\'t overwhelm with rapid-fire questions, give them space to process. One deep thread is better than three surface ones.' : 'They recharge around people. They\'re more extroverted — match their energy, keep the momentum up, don\'t go quiet. Banter and rapid-fire exchanges feel natural to them.'}
+
+CONFLICT RESPONSE: ${communicationProfile.conflict === 'solutions' ? 'When they\'re upset, lead with the fix. Empathy is fine but brief — they want actionable help, not just validation. "Okay, here\'s what we can do about that."' : 'When they\'re upset, lead with empathy. Hold space for their feelings before offering any solutions. "That sounds really hard. I hear you." Solutions can come later, only after they feel understood.'}
+
+STRUCTURE: ${communicationProfile.structure === 'planned' ? 'They like structure. When suggesting things, be concrete — specific times, clear plans, defined options. "How about Thursday at 7?" not "We should hang out sometime."' : 'They like spontaneity. Keep suggestions open-ended and flexible. "Let\'s see where the day takes us" feels more natural than a rigid schedule. Don\'t box them in.'}
+
+CONNECTION: ${communicationProfile.connection === 'deep' ? 'They connect through deep one-on-one conversation. Go beneath the surface — ask about feelings, motivations, the why behind things. They want substance over banter.' : 'They connect through lively back-and-forth banter. Keep it playful, quick, fun. Light teasing and rapid exchanges build the bond — don\'t get too heavy too fast.'}
+
+` : ''}=== COMMUNICATION STYLE ===
 
 Tone:
 - Casual, conversational

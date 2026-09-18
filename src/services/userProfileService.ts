@@ -17,6 +17,7 @@ export interface UserProfile {
   profile_completed: boolean;
   subscription_tier: string | null;
   avatar_config: any;
+  communication_profile: { recharge: string; conflict: string; structure: string; connection: string } | null;
   created_at: string;
 }
 
@@ -33,6 +34,7 @@ export interface UserProfileUpdate {
   news_categories?: string[];
   political_leaning?: 'democrat' | 'republican' | 'independent' | null;
   profile_completed?: boolean;
+  communication_profile?: { recharge: string; conflict: string; structure: string; connection: string } | null;
 }
 
 class UserProfileService {
@@ -124,6 +126,15 @@ class UserProfileService {
       news_categories: newsCategoriesArray,
       profile_completed: true,
     });
+  }
+
+  async saveCommunicationProfile(profile: {
+    recharge: string;
+    conflict: string;
+    structure: string;
+    connection: string;
+  }): Promise<UserProfile | null> {
+    return this.updateProfile({ communication_profile: profile });
   }
 
   async backfillFromCompanion(): Promise<void> {
