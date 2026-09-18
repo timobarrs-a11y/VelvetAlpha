@@ -234,8 +234,6 @@ export function QuestionnaireShell({
     dragStartRef.current = null;
   };
 
-  const questionText = resolveQuestionText(question, ctx);
-
   if (question.archetype === 'beat') {
     const beatQ = question as BeatQuestion;
     const beatText = tpl(beatQ.beat.template(ctx), ctx);
@@ -248,6 +246,8 @@ export function QuestionnaireShell({
       />
     );
   }
+
+  const questionText = resolveQuestionText(question, ctx);
 
   return (
     <div className="min-h-screen bg-[#080b14] flex flex-col items-center justify-center p-6 relative">
@@ -452,14 +452,14 @@ function TapTextRenderer({
         <button
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="flex-1 py-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 disabled:from-gray-700 disabled:to-gray-800 text-white text-lg font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:transform-none disabled:text-gray-500"
+          className="flex-1 py-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 disabled:from-gray-700 disabled:to-gray-800 text-white text-lg font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:transform-none disabled:text-gray-500"
         >
           Next
         </button>
         {onSkip && (
           <button
             onClick={onSkip}
-            className="px-6 py-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-base font-medium rounded-2xl border border-white/10 transition-all duration-200"
+            className="px-6 py-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-base font-medium rounded-full border border-white/10 transition-all duration-200"
           >
             {question.skipLabel || 'Skip'}
           </button>
@@ -618,7 +618,7 @@ function GridRenderer({
       <button
         onClick={onSubmit}
         disabled={!meetsMin && !canSkip}
-        className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-all duration-200 transform ${
+        className={`w-full py-4 text-white text-lg font-bold rounded-full shadow-lg transition-all duration-200 transform ${
           meetsMin
             ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 hover:scale-[1.01]'
             : canSkip
@@ -743,7 +743,7 @@ function ScrubRenderer({
 
       <button
         onClick={onSubmit}
-        className="w-full py-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white text-lg font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.01]"
+        className="w-full py-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white text-lg font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.01]"
       >
         Next
       </button>
