@@ -118,6 +118,56 @@ TURN LIMIT:
 Reach a conclusion within ${MAX_TURNS} exchanges. If going nowhere, make your best guess and wrap up.`;
 }
 
+function buildRoutingPhasePrompt(setupState: { hasCoach: boolean; hasCompanion: boolean }, userName: string | null): string {
+  const nameLine = userName ? `\nThe user's name is ${userName}. Use it naturally.` : "";
+  const statusLine = `\n\nSETUP STATUS:\n- Has a coach: ${setupState.hasCoach ? "yes" : "no"}\n- Has a companion: ${setupState.hasCompanion ? "yes" : "no"}`;
+
+  const options: string[] = [];
+  if (setupState.hasCoach) options.push("start talking to their coach ([NAV:coach])");
+  if (!setupState.hasCompanion) options.push("create a companion or best friend ([NAV:companion])");
+  if (setupState.hasCompanion) options.push("start talking to their companion ([NAV:companion_chat])");
+  if (!setupState.hasCoach) options.push("set up a coach ([NAV:coach_setup])");
+  options.push("head to the lobby to explore ([NAV:lobby])");
+
+  return `You are Atlas — the host of Velvet, a personal growth platform. You are the showrunner. Your job right now is to help the user decide what to do next in their setup journey.${nameLine}${statusLine}
+
+YOUR PERSONALITY:
+- Warm, direct, never sycophantic. You sound like a smart friend who runs the show.
+- Brief: 1-3 sentences. Never monologue.
+- You acknowledge what just happened naturally, then ask what's next.
+
+YOUR JOB:
+The user just finished setting something up. Acknowledge it briefly in character ("Got your coach set up" or similar), then ask what they want to do next. Be natural about it — don't list options like a menu. Frame it as a question.
+
+AVAILABLE DESTINATIONS (pick based on setup status):
+${options.join("\n")}
+
+CRITICAL RULES:
+- ONE question at a time. Never list multiple options as bullets.
+- When the user tells you what they want, respond naturally ("Sure, taking you there now" or similar), then append the nav marker on a new line.
+- If the user asks about something else, answer naturally, then guide back to what's next.
+- Never read back a list of facts about the user. You're directing, not summarizing.
+- Stay under 3 sentences almost always.
+
+NAVIGATION:
+When you detect the user wants to go somewhere, wrap up naturally and append [NAV:destination] on a new line. The marker is stripped from the visible message. Use the exact keys shown above.`;
+}
+
+function buildRoutingGreeting(setupState: { hasCoach: boolean; hasCompanion: boolean }, userName: string | null): string {
+  const name = userName ? `, ${userName}` : "";
+
+  if (setupState.hasCoach && !setupState.hasCompanion) {
+    return `Got your coach set up${name}. Want to start talking to ${"him"} now, or would you rather set up a companion or best friend first?`;
+  }
+  if (!setupState.hasCoach && setupState.hasCompanion) {
+    return `Your companion is ready${name}. Want to start chatting, or should we get a coach set up for you too?`;
+  }
+  if (setupState.hasCoach && setupState.hasCompanion) {
+    return `All set${name}. Want to start talking to your coach, your companion, or head to the lobby?`;
+  }
+  return `Alright${name}. What do you want to do first — set up a coach, or create a companion?`;
+}
+
 // ─── Edge function handler ──────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -148,7 +198,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const phase: "goal" | "provisioning" | "confirm" = body.phase || "goal";
+    const phase: "goal" | "provisioning" | "confirm" | "routing" = body.phase || "goal";
     const messages: Array<{ role: string; content: string }> = body.messages || [];
 
     // ── Phase: goal discovery chat ──────────────────────────────────────
@@ -566,6 +616,99 @@ Return ONLY the instruction text. No JSON, no markdown.`;
         expertDomain,
         goalText,
         phase: "provisioning",
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Phase: routing (showrunner between onboarding flows) ───────────
+
+    if (phase === "routing") {
+      const messages: Array<{ role: string; content: string }> = body.messages || [];
+      const setupState = body.setupState || { hasCoach: false, hasCompanion: false };
+      const userName = body.userName || null;
+
+      const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!apiKey) {
+        return new Response(JSON.stringify({ error: "AI service not configured" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const routingPrompt = buildRoutingPhasePrompt(setupState, userName);
+
+      if (messages.length === 0) {
+        const greeting = buildRoutingGreeting(setupState, userName);
+        return new Response(JSON.stringify({
+          reply: greeting,
+          isComplete: false,
+          navigationIntent: null,
+          phase: "routing",
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const apiMessages = messages.map(m => ({
+        role: m.role === "atlas" ? "assistant" : "user",
+        content: m.content,
+      }));
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: MODEL_CONFIG.HAIKU,
+          max_tokens: 300,
+          system: routingPrompt,
+          messages: apiMessages,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("[atlas-onboarding] routing phase API error:", response.status, errText);
+        return new Response(JSON.stringify({ error: "AI service error" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const aiData = await response.json();
+      const rawReply: string = aiData.content?.[0]?.text || "";
+
+      const hasNavMarker = rawReply.includes("[NAV:");
+      let navigationIntent: { destination: string; route: string } | null = null;
+      let cleanReply = rawReply;
+
+      if (hasNavMarker) {
+        const navMatch = rawReply.match(/\[NAV:\s*(\w+)\s*\]/);
+        if (navMatch) {
+          const navKey = navMatch[1].toLowerCase();
+          const navMap: Record<string, { destination: string; route: string }> = {
+            coach: { destination: "coach chat", route: "/chat" },
+            companion: { destination: "companion setup", route: "/companion-path" },
+            companion_chat: { destination: "companion chat", route: "/chat" },
+            coach_setup: { destination: "coach setup", route: "/atlas-onboarding" },
+            lobby: { destination: "the lobby", route: "/lobby" },
+          };
+          navigationIntent = navMap[navKey] || null;
+        }
+        cleanReply = rawReply.replace(/\[NAV:\s*\w+\s*\]/gi, "").trim();
+      }
+
+      return new Response(JSON.stringify({
+        reply: cleanReply,
+        isComplete: !!navigationIntent,
+        navigationIntent,
+        phase: "routing",
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

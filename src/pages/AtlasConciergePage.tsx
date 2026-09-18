@@ -117,7 +117,7 @@ export const AtlasConciergePage = () => {
   const [expertDomain, setExpertDomain] = useState('');
   const [error, setError] = useState('');
   const [showTransition, setShowTransition] = useState(false);
-  const [transitionDestination, setTransitionDestination] = useState('/intent-select');
+  const [transitionDestination, setTransitionDestination] = useState('/atlas-routing');
   const [latestAtlasId, setLatestAtlasId] = useState(-1);
   const [recommendation, setRecommendation] = useState<CoachRecommendation | null>(null);
   const [pendingTranscript, setPendingTranscript] = useState<ChatMessage[]>([]);
@@ -329,7 +329,7 @@ export const AtlasConciergePage = () => {
       if (recommendation.coachGender) sessionStorage.setItem('atlasCoachGender', recommendation.coachGender);
       sessionStorage.setItem('atlasCoachName', data.coachName || recommendation.coachName);
 
-      sessionStorage.setItem('atlasNextDestination', '/intent-select');
+      sessionStorage.setItem('atlasNextDestination', '/atlas-routing');
       setTransitionDestination('/coach-avatar');
 
       const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Let's give them a face — customize every detail or randomize for an instant look.`;
@@ -345,7 +345,7 @@ export const AtlasConciergePage = () => {
     } catch {
       setError('Something went wrong setting up your coach. You can continue and we\'ll retry later.');
       setTimeout(() => {
-        navigate('/intent-select', { replace: true });
+        navigate('/atlas-routing', { replace: true });
       }, 2500);
     } finally {
       setIsThinking(false);

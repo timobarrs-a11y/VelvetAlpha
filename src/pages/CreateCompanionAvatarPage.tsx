@@ -65,9 +65,7 @@ export function CreateCompanionAvatarPage() {
             const intent = sessionStorage.getItem('onboardingIntent');
             const newId = sessionStorage.getItem('currentCompanionId') || companions[0].id;
             const isFirstCompanion = companions.length === 1;
-            pendingRoute.current = intent === 'coaches'
-              ? (isFirstCompanion ? '/onboarding' : `/chat?companion=${newId}`)
-              : '/create-user-avatar';
+            pendingRoute.current = '/atlas-routing';
             setShowReveal(true);
             return;
           }
@@ -96,9 +94,7 @@ export function CreateCompanionAvatarPage() {
           .eq('user_id', savedUser.id);
         isFirstCompanion = (allCompanions?.length ?? 0) <= 1;
       }
-      pendingRoute.current = intent === 'coaches'
-        ? (isFirstCompanion ? '/onboarding' : `/chat?companion=${companionId}`)
-        : '/create-user-avatar';
+      pendingRoute.current = '/atlas-routing';
       setShowReveal(true);
     } catch (error) {
       console.error('Error saving companion avatar:', error);

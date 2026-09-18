@@ -3,8 +3,8 @@ import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 
-const QuestionnairePage = lazy(() => import('../pages/QuestionnairePage').then(m => ({ default: m.QuestionnairePage })));
-const UserProfileQuestionnairePage = lazy(() => import('../pages/UserProfileQuestionnairePage').then(m => ({ default: m.UserProfileQuestionnairePage })));
+const QuestionnairePage = lazy(() => import('../pages/QuestionnairePageV2').then(m => ({ default: m.QuestionnairePageV2 })));
+const UserProfileQuestionnairePage = lazy(() => import('../pages/UserProfileQuestionnairePageV2').then(m => ({ default: m.UserProfileQuestionnairePageV2 })));
 const CompanionPathSelectPage = lazy(() => import('../pages/CompanionPathSelectPage').then(m => ({ default: m.CompanionPathSelectPage })));
 const CreateAdditionalCompanionPage = lazy(() => import('../pages/CreateAdditionalCompanionPage').then(m => ({ default: m.CreateAdditionalCompanionPage })));
 const AnalyzingPage = lazy(() => import('../pages/AnalyzingPage').then(m => ({ default: m.AnalyzingPage })));
@@ -20,6 +20,7 @@ const IntentSelectPage = lazy(() => import('../pages/IntentSelectPage').then(m =
 const ExpertSelectionPage = lazy(() => import('../pages/ExpertSelectionPage'));
 const ExpertQuestionnairePage = lazy(() => import('../pages/ExpertQuestionnairePage').then(m => ({ default: m.ExpertQuestionnairePage })));
 const ExpertBuilderPage = lazy(() => import('../pages/ExpertBuilderPage').then(m => ({ default: m.ExpertBuilderPage })));
+const AtlasRoutingPage = lazy(() => import('../pages/AtlasRoutingPage').then(m => ({ default: m.AtlasRoutingPage })));
 
 function wrap(el: React.ReactNode) {
   return (
@@ -47,4 +48,5 @@ export const onboardingRoutes = [
   <Route key="create-companion-avatar" path="/create-companion-avatar" element={wrap(<CreateCompanionAvatarPage />)} />,
   <Route key="pricing-offer" path="/pricing-offer" element={wrap(<PricingOfferPage />)} />,
   <Route key="onboarding" path="/onboarding" element={wrap(<OnboardingTourPage />)} />,
+  <Route key="atlas-routing" path="/atlas-routing" element={wrap(<AtlasRoutingPage />)} />,
 ];
