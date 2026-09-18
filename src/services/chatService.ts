@@ -1109,6 +1109,7 @@ export class ChatService {
         companionName,
         companionGender,
         userName: profile.name,
+        userNickname: profile.nickname || undefined,
         userGender,
         userAge,
         userBirthday: profile.birthday,

@@ -3,7 +3,7 @@ import type { Question, QuestionnaireDefinition } from './types';
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 20,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['name', 'birthday', 'favoriteColor', 'beat1'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['name', 'nickname', 'birthday', 'favoriteColor', 'beat1'] },
     { id: 'taste', label: 'Your taste', questionIds: ['gender', 'hobbies', 'musicGenre'] },
     { id: 'signals', label: 'Your vibe', questionIds: ['tasteDeck', 'beat2'] },
   ],
@@ -15,6 +15,20 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       question: 'First things first -- what should I call you?',
       confidence: 'confirmed',
       placeholder: 'Enter your name',
+      minLength: 3,
+    },
+    {
+      id: 'nickname',
+      archetype: 'tap',
+      chapter: 'identity',
+      question: (ctx) => {
+        const name = ctx.answers.name as string;
+        return name ? `Nice to meet you, ${name}. What do your friends call you?` : 'What do your friends call you?';
+      },
+      confidence: 'confirmed',
+      placeholder: 'Enter a nickname (or skip)',
+      optional: true,
+      skipLabel: 'Skip',
     },
     {
       id: 'birthday',
@@ -56,7 +70,9 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       beat: {
         template: (ctx) => {
           const name = ctx.answers.name as string;
+          const nickname = ctx.answers.nickname as string;
           const color = ctx.answers.favoriteColor as string;
+          if (name && nickname && nickname.trim() && color) return `${name}. But your people call you ${nickname}. A ${color} person. Got it.`;
           if (name && color) return `${name}. A ${color} person. Got it.`;
           if (name) return `${name}. Noted.`;
           return 'Got it.';

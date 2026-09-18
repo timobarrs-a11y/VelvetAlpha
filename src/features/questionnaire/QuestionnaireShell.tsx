@@ -305,7 +305,12 @@ export function QuestionnaireShell({
                   question={question as TapQuestion}
                   textInput={textInput}
                   setTextInput={setTextInput}
-                  onSubmit={() => textInput.trim() && handleAnswer(textInput.trim())}
+                  onSubmit={() => {
+                    const minLen = (question as TapQuestion).minLength;
+                    if (minLen && textInput.trim().length < minLen) return;
+                    handleAnswer(textInput.trim());
+                  }}
+                  onSkip={(question as TapQuestion).optional ? () => handleAnswer('') : undefined}
                   inputRef={inputRef}
                 />
               )}
@@ -410,15 +415,22 @@ function TapTextRenderer({
   textInput,
   setTextInput,
   onSubmit,
+  onSkip,
   inputRef,
 }: {
   question: TapQuestion;
   textInput: string;
   setTextInput: (v: string) => void;
   onSubmit: () => void;
+  onSkip?: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const isDate = question.id === 'birthday';
+  const minLen = question.minLength;
+  const trimmed = textInput.trim();
+  const tooShort = minLen ? trimmed.length > 0 && trimmed.length < minLen : false;
+  const canSubmit = isDate ? !!textInput : trimmed.length >= (minLen ?? 1);
+
   return (
     <div className="space-y-4">
       <input
@@ -426,18 +438,33 @@ function TapTextRenderer({
         type={isDate ? 'date' : 'text'}
         value={textInput}
         onChange={(e) => setTextInput(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
+        onKeyDown={(e) => e.key === 'Enter' && canSubmit && onSubmit()}
         placeholder={question.placeholder}
         className="w-full px-6 py-4 text-xl bg-white/5 border-2 border-white/10 text-white placeholder-gray-600 rounded-2xl focus:border-rose-400/60 focus:outline-none focus:ring-4 focus:ring-rose-500/15 transition-all duration-200"
         autoFocus
       />
-      <button
-        onClick={onSubmit}
-        disabled={!textInput.trim() && !isDate}
-        className="w-full py-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 disabled:from-gray-700 disabled:to-gray-800 text-white text-lg font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:transform-none disabled:text-gray-500"
-      >
-        Next
-      </button>
+      {tooShort && (
+        <p className="text-sm text-rose-400/80 text-center">
+          {minLen} letters minimum
+        </p>
+      )}
+      <div className={onSkip ? 'flex gap-3' : ''}>
+        <button
+          onClick={onSubmit}
+          disabled={!canSubmit}
+          className="flex-1 py-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 disabled:from-gray-700 disabled:to-gray-800 text-white text-lg font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:transform-none disabled:text-gray-500"
+        >
+          Next
+        </button>
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            className="px-6 py-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-base font-medium rounded-2xl border border-white/10 transition-all duration-200"
+          >
+            {question.skipLabel || 'Skip'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -60,6 +60,7 @@ export function UserProfileQuestionnairePageV2() {
     try {
       await userProfileService.saveUserLevelAnswers({
         name: String(finalAnswers.name || ''),
+        nickname: String(finalAnswers.nickname || '').trim() || undefined,
         birthday: String(finalAnswers.birthday || ''),
         gender: String(finalAnswers.gender || ''),
         favoriteColor: String(finalAnswers.favoriteColor || ''),

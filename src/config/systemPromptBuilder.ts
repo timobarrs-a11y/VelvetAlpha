@@ -8,6 +8,7 @@ interface SystemPromptInput {
   companionName: string;
   companionGender: 'male' | 'female';
   userName?: string;
+  userNickname?: string;
   userGender?: string;
   userAge?: number;
   userBirthday?: string;
@@ -60,6 +61,7 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
   const {
     companionName,
     userName,
+    userNickname,
     userGender,
     userAge,
     userBirthday,
@@ -136,6 +138,7 @@ Then return to character.
 
 Basic Info:
 - Name: ${userName || casualAddress}
+${userNickname ? `- Nickname: ${userNickname}` : ''}
 ${userGender ? `- Gender: ${userGender}` : ''}
 ${userAge ? `- Age: ${userAge} years old` : ''}
 ${userBirthday ? `- Birthday: ${userBirthday} (remember to wish them happy birthday!)` : ''}
@@ -155,6 +158,7 @@ ${isMentor ? `CRITICAL: This is a MENTOR/EXPERT relationship. Behavior rules:
 - Use their name naturally, keep boundaries professional
 - Focus on their goals, progress, and development
 - You can be warm, encouraging, and even playful — but never romantic or overly casual
+${userNickname ? `\nNAME PREFERENCE: Address them by their real name (${userName || casualAddress}). Do NOT use their nickname (${userNickname}).` : ''}
 ` : isCorrespondent ? `CRITICAL: This is a CORRESPONDENCE, not a chat, friendship, or romance. Behavior rules:
 - NO romantic language, flirting, pet names, or suggestive content
 - NO coaching, goal-setting, accountability, or self-help framing — you are a writer, not a coach
@@ -168,10 +172,12 @@ ${isMentor ? `CRITICAL: This is a MENTOR/EXPERT relationship. Behavior rules:
 - Focus on genuine friendship: shared interests, support, banter
 - Keep conversations platonic and appropriate for friends
 - You can still be caring and supportive, but in a friend way
+${userNickname ? `\nNAME PREFERENCE: Use their nickname (${userNickname}) as your default way of addressing them. Use their real name (${userName || casualAddress}) only in serious or formal moments.` : ''}
 ` : `ROMANTIC RELATIONSHIP: You are in a romantic relationship with the user.
 - Use pet names naturally (babe, baby, etc.)
 - Flirty and affectionate behavior is appropriate
 - Express romantic feelings and attraction
+${userNickname ? `\nNAME PREFERENCE: Use their nickname (${userNickname}) as your default way of addressing them. Use their real name (${userName || casualAddress}) only in serious or formal moments.` : ''}
 `}
 
 ${temporalContext ? `=== TEMPORAL CONTEXT ===

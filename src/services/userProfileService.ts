@@ -3,6 +3,7 @@ import { supabase } from '../shared/supabase/client';
 export interface UserProfile {
   id: string;
   name: string;
+  nickname: string | null;
   birthday: string | null;
   gender: string | null;
   favorite_color: string | null;
@@ -21,6 +22,7 @@ export interface UserProfile {
 
 export interface UserProfileUpdate {
   name?: string;
+  nickname?: string | null;
   birthday?: string | null;
   gender?: string | null;
   favorite_color?: string | null;
@@ -89,6 +91,7 @@ class UserProfileService {
 
   async saveUserLevelAnswers(answers: {
     name: string;
+    nickname?: string;
     birthday: string;
     gender: string;
     favoriteColor: string;
@@ -110,6 +113,7 @@ class UserProfileService {
 
     return this.updateProfile({
       name: answers.name,
+      nickname: answers.nickname || null,
       birthday: answers.birthday || null,
       gender: answers.gender || null,
       favorite_color: answers.favoriteColor || null,

@@ -431,6 +431,15 @@ export function ProfilePage() {
             />
           </motion.div>
 
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.075 }}>
+            <EditableField
+              label="Nickname"
+              value={profile.nickname || ''}
+              onSave={(v) => handleFieldSave('nickname', v)}
+              placeholder="What your friends call you"
+            />
+          </motion.div>
+
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <EditableField
               label="Birthday"

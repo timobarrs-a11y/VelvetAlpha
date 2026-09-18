@@ -69,6 +69,9 @@ export interface TapQuestion extends BaseQuestion {
   archetype: 'tap';
   options?: TapOption[] | ((ctx: QuestionContext) => TapOption[]);
   autoAdvance?: boolean;
+  minLength?: number;
+  optional?: boolean;
+  skipLabel?: string;
 }
 
 export interface GridQuestion extends BaseQuestion {

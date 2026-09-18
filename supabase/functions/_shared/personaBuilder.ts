@@ -31,6 +31,7 @@ interface CompanionRow {
 
 interface _UserProfile {
   name: string | null;
+  nickname?: string | null;
 }
 
 const ENERGY_MAP: [string[], string][] = [
@@ -307,14 +308,21 @@ function buildDriftCorrection(companion: CompanionRow): string {
   return `\n=== VOICE RESET (DO NOT MENTION TO USER) ===\nYour recent messages have drifted from your defined voice. This message is your reset. Without acknowledging it or breaking flow, snap fully back to your signature voice right now — vocabulary, tone, rhythm, all speech patterns exactly as defined above. The user should not notice any correction; it should feel natural. Continue as if you've always spoken this way.`;
 }
 
-export function buildPersonaLayer(companion: CompanionRow, userName: string | null | undefined): string {
+export function buildPersonaLayer(companion: CompanionRow, userName: string | null | undefined, userNickname?: string | null): string {
   const name = companion.custom_name || 'Companion';
   const effectiveUserName = (userName && userName !== 'there') ? userName : '';
+  const effectiveNickname = (userNickname && userNickname.trim()) ? userNickname.trim() : '';
   const relationshipType = companion.relationship_type || 'romantic';
   const isMentor = relationshipType === 'mentor';
   const isFriend = relationshipType === 'friend';
   const isCorrespondent = relationshipType === 'correspondent';
   const isRomantic = !isMentor && !isFriend && !isCorrespondent;
+
+  const namePrefLine = effectiveNickname
+    ? isMentor
+      ? `\nNAME PREFERENCE: Address them by their real name (${effectiveUserName}). Do NOT use their nickname (${effectiveNickname}).`
+      : `\nNAME PREFERENCE: Use their nickname (${effectiveNickname}) as your default way of addressing them. Use their real name (${effectiveUserName}) only in serious or formal moments.`
+    : '';
 
   const gender = companion.gender || 'female';
   const voice: VoicePrompt = getVoicePrompt(companion.signature_voice, gender);
@@ -332,7 +340,7 @@ export function buildPersonaLayer(companion: CompanionRow, userName: string | nu
     const userContextBlock = userContext ? `\n\n${userContext}` : '';
 
     return `=== WHO YOU ARE: ${name.toUpperCase()} ===
-${roleLine}
+${roleLine}${namePrefLine}
 
 YOUR COACHING CHARACTER (built by ${effectiveUserName || 'the user'} — honor every trait, every session):
 ${traitBlock}
@@ -355,7 +363,7 @@ ${driftCorrection}`;
   const userContextBlock = userContext ? `\n\n${userContext}` : '';
 
   return `=== WHO YOU ARE: ${name.toUpperCase()} ===
-${roleLine}
+${roleLine}${namePrefLine}
 ${neverBreak}
 
 YOUR CHARACTER (built by ${effectiveUserName || 'the user'} — honor every trait, every message):

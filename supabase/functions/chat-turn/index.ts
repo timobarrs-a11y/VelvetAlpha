@@ -1179,7 +1179,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       }
     }
 
-    const personaLayer = buildPersonaLayer(companion, profile.name);
+    const personaLayer = buildPersonaLayer(companion, profile.name, profile.nickname);
 
     // Correspondent grounding: fetch real news stories for the beat and
     // resolve the curated correspondent config (beat / voice).
