@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QuestionnaireShell, HonestBridge, PresenceOrb, COMPANION_QUESTIONNAIRE, makeContext, tpl } from '../features/questionnaire';
 import { supabase } from '../shared/supabase/client';
@@ -43,10 +43,17 @@ export function QuestionnairePageV2() {
   const [showBridge, setShowBridge] = useState(false);
   const [bridgeAnswers, setBridgeAnswers] = useState<Record<string, string | string[]>>({});
   const [liveAnswers, setLiveAnswers] = useState<Record<string, string | string[]>>({});
+  const [profileName, setProfileName] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    userProfileService.getCurrentProfile()
+      .then(p => { if (p?.name) setProfileName(p.name); })
+      .catch(() => {});
+  }, []);
 
   const gender = (liveAnswers.relationshipType as string) || '';
   const connectionType = (liveAnswers.connectionType as string) || '';
-  const userName = (liveAnswers.userName as string) || undefined;
+  const userName = profileName || undefined;
 
   const ctx = useMemo(
     () => makeContext(liveAnswers, gender, connectionType === 'friend' ? 'friend' : 'companion', userName),

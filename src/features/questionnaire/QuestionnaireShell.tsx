@@ -191,7 +191,8 @@ export function QuestionnaireShell({
 
   const handleScrubSubmit = () => {
     const scrubQ = question as ScrubQuestion;
-    handleAnswer(scrubQ.config.valueLabels[scrubValue] || String(scrubValue));
+    const label = tpl(scrubQ.config.valueLabels[scrubValue] || String(scrubValue), ctx);
+    handleAnswer(label);
   };
 
   const handleSwipeComplete = (direction: 'left' | 'right') => {
@@ -201,10 +202,11 @@ export function QuestionnaireShell({
     const existing = (answers[question.id] as string[]) || [];
     const newAnswers = { ...answers, [question.id]: [...existing, value] };
     setAnswers(newAnswers);
+    onAnswer?.(question.id, newAnswers[question.id] as string[], newAnswers);
     setSwipeDirection(direction);
     setTimeout(() => {
       if (swipeIdx + 1 >= swipeQ.cards.length) {
-        onComplete(newAnswers);
+        advance();
       } else {
         setSwipeIdx(swipeIdx + 1);
         setSwipeDirection(null);
@@ -346,6 +348,7 @@ export function QuestionnaireShell({
                   onChange={handleScrubChange}
                   onSubmit={handleScrubSubmit}
                   trackRef={scrubTrackRef}
+                  ctx={ctx}
                 />
               )}
 
@@ -660,14 +663,19 @@ function ScrubRenderer({
   onChange,
   onSubmit,
   trackRef,
+  ctx,
 }: {
   question: ScrubQuestion;
   value: number;
   onChange: (v: number) => void;
   onSubmit: () => void;
   trackRef: React.RefObject<HTMLDivElement | null>;
+  ctx: QuestionContext;
 }) {
   const { config } = question;
+  const leftLabel = tpl(config.leftLabel, ctx);
+  const rightLabel = tpl(config.rightLabel, ctx);
+  const valueLabels = config.valueLabels.map(l => tpl(l, ctx));
   return (
     <div className="space-y-8 py-4">
       <div className="text-center">
@@ -677,14 +685,14 @@ function ScrubRenderer({
           animate={{ opacity: 1, y: 0 }}
           className="text-2xl font-bold text-white"
         >
-          {config.valueLabels[value]}
+          {valueLabels[value]}
         </motion.div>
       </div>
 
       <div className="relative px-4">
         <div className="flex justify-between text-xs text-gray-500 mb-3">
-          <span>{config.leftLabel}</span>
-          <span>{config.rightLabel}</span>
+          <span>{leftLabel}</span>
+          <span>{rightLabel}</span>
         </div>
         <div ref={trackRef} className="relative h-2 bg-white/10 rounded-full">
           <div
