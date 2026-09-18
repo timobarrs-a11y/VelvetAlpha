@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QuestionnaireShell, HonestBridge, PERSONAL_QUESTIONNAIRE, makeContext, deriveZodiac } from '../features/questionnaire';
+import { QuestionnaireShell, HonestBridge, PERSONAL_QUESTIONNAIRE, makeContext, resolveZodiac } from '../features/questionnaire';
 import { userProfileService } from '../services/userProfileService';
 import { toast } from '../shared/ui/Toast';
 import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
@@ -35,7 +35,7 @@ export function UserProfileQuestionnairePageV2() {
   const ctx = makeContext({}, '', 'user');
 
   const handleComplete = useCallback(async (answers: Record<string, string | string[]>) => {
-    const zodiac = deriveZodiac(answers.birthday as string);
+    const zodiac = resolveZodiac(answers);
     const finalAnswers = zodiac ? { ...answers, zodiacSign: zodiac } : answers;
 
     try {
@@ -70,14 +70,16 @@ export function UserProfileQuestionnairePageV2() {
     setShowBridge(true);
   }, []);
 
+  const handleBridgeComplete = useCallback(() => {
+    setShowBridge(false);
+    navigate('/atlas-onboarding');
+  }, [navigate]);
+
   if (showBridge) {
     return (
       <HonestBridge
         lines={buildBridgeLines(bridgeAnswers)}
-        onComplete={() => {
-          setShowBridge(false);
-          navigate('/atlas-onboarding');
-        }}
+        onComplete={handleBridgeComplete}
         durationMs={3500}
       />
     );

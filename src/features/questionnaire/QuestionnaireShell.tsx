@@ -19,7 +19,7 @@ import type {
 } from './types';
 import { resolveQuestionText } from './companionBank';
 import { tpl } from './pronouns';
-import { getColorHex } from './personalBank';
+import { getColorHex, getCuspSigns } from './personalBank';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
@@ -122,6 +122,14 @@ export function QuestionnaireShell({
     if (question?.archetype === 'beat') {
       setBeatVisible(true);
     }
+    if (question?.id === 'zodiacCusp') {
+      const birthday = answers.birthday as string;
+      const cusp = getCuspSigns(birthday);
+      if (!cusp) {
+        const timer = setTimeout(() => advance(), 50);
+        return () => clearTimeout(timer);
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx]);
 
@@ -148,7 +156,7 @@ export function QuestionnaireShell({
   const handleBack = () => {
     if (currentIdx > 0) {
       let prevIdx = currentIdx - 1;
-      while (prevIdx > 0 && questions[prevIdx].archetype === 'beat') {
+      while (prevIdx > 0 && (questions[prevIdx].archetype === 'beat' || questions[prevIdx].id === 'zodiacCusp')) {
         prevIdx--;
       }
       const prevQuestion = questions[prevIdx];

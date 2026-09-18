@@ -56,9 +56,9 @@ class UserProfileService {
     return data;
   }
 
-  async updateProfile(updates: UserProfileUpdate): Promise<UserProfile | null> {
+  async updateProfile(updates: UserProfileUpdate): Promise<UserProfile> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    if (!user) throw new Error('No authenticated user');
 
     const { data, error } = await supabase
       .from('user_profiles')
@@ -68,8 +68,11 @@ class UserProfileService {
       .maybeSingle();
 
     if (error) {
-      console.error('Error updating user profile:', error);
-      return null;
+      throw new Error(`Failed to update profile: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Profile update returned no data');
     }
 
     return data;
@@ -102,7 +105,7 @@ class UserProfileService {
     sports: string;
     musicGenre: string;
     newsTopics?: string[] | string;
-  }): Promise<UserProfile | null> {
+  }): Promise<UserProfile> {
     const hobbiesArray = answers.hobbies
       ? answers.hobbies.split(',').map(h => h.trim()).filter(h => h)
       : [];
@@ -133,7 +136,7 @@ class UserProfileService {
     conflict: string;
     structure: string;
     connection: string;
-  }): Promise<UserProfile | null> {
+  }): Promise<UserProfile> {
     return this.updateProfile({ communication_profile: profile });
   }
 

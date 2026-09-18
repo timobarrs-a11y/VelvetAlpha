@@ -30,10 +30,38 @@ export function deriveZodiac(birthday: string): string | null {
   return null;
 }
 
+const CUSP_DAYS: Record<string, [string, string]> = {
+  '3-19': ['Pisces', 'Aries'], '3-20': ['Pisces', 'Aries'], '3-21': ['Pisces', 'Aries'],
+  '4-18': ['Aries', 'Taurus'], '4-19': ['Aries', 'Taurus'], '4-20': ['Aries', 'Taurus'],
+  '5-19': ['Taurus', 'Gemini'], '5-20': ['Taurus', 'Gemini'], '5-21': ['Taurus', 'Gemini'],
+  '6-19': ['Gemini', 'Cancer'], '6-20': ['Gemini', 'Cancer'], '6-21': ['Gemini', 'Cancer'],
+  '7-22': ['Cancer', 'Leo'], '7-23': ['Cancer', 'Leo'], '7-24': ['Cancer', 'Leo'],
+  '8-21': ['Leo', 'Virgo'], '8-22': ['Leo', 'Virgo'], '8-23': ['Leo', 'Virgo'],
+  '9-22': ['Virgo', 'Libra'], '9-23': ['Virgo', 'Libra'], '9-24': ['Virgo', 'Libra'],
+  '10-22': ['Libra', 'Scorpio'], '10-23': ['Libra', 'Scorpio'], '10-24': ['Libra', 'Scorpio'],
+  '11-20': ['Scorpio', 'Sagittarius'], '11-21': ['Scorpio', 'Sagittarius'], '11-22': ['Scorpio', 'Sagittarius'],
+  '12-20': ['Sagittarius', 'Capricorn'], '12-21': ['Sagittarius', 'Capricorn'], '12-22': ['Sagittarius', 'Capricorn'],
+  '1-18': ['Capricorn', 'Aquarius'], '1-19': ['Capricorn', 'Aquarius'], '1-20': ['Capricorn', 'Aquarius'],
+  '2-17': ['Aquarius', 'Pisces'], '2-18': ['Aquarius', 'Pisces'], '2-19': ['Aquarius', 'Pisces'],
+};
+
+export function getCuspSigns(birthday: string): [string, string] | null {
+  if (!birthday) return null;
+  const date = new Date(birthday);
+  const key = `${date.getUTCMonth() + 1}-${date.getUTCDate()}`;
+  return CUSP_DAYS[key] || null;
+}
+
+export function resolveZodiac(answers: Record<string, string | string[]>): string | null {
+  const userSelected = answers.zodiacSign as string;
+  if (userSelected && userSelected.trim()) return userSelected;
+  return deriveZodiac(answers.birthday as string);
+}
+
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 20,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['name', 'nickname', 'favoriteColor', 'birthday', 'beat1'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['name', 'nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'beat1'] },
     { id: 'taste', label: 'Your taste', questionIds: ['gender', 'hobbies', 'musicGenre'] },
     { id: 'signals', label: 'Your vibe', questionIds: ['tasteDeck', 'beat2'] },
     { id: 'wavelength', label: 'Your wavelength', questionIds: ['recharge', 'conflictResponse', 'structure', 'connection', 'beat3'] },
@@ -95,13 +123,28 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       placeholder: 'Select your birthday',
     },
     {
+      id: 'zodiacCusp',
+      archetype: 'tap',
+      chapter: 'identity',
+      question: 'Interesting -- you\'re born on a cusp. Which sign feels more you?',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: (ctx) => {
+        const cusp = getCuspSigns(ctx.answers.birthday as string);
+        if (!cusp) return [];
+        return [
+          { text: cusp[0], value: cusp[0] },
+          { text: cusp[1], value: cusp[1] },
+        ];
+      },
+    },
+    {
       id: 'beat1',
       archetype: 'beat',
       chapter: 'identity',
       beat: {
         template: (ctx) => {
-          const birthday = ctx.answers.birthday as string;
-          const zodiac = deriveZodiac(birthday);
+          const zodiac = resolveZodiac(ctx.answers);
           const name = ctx.answers.name as string;
           const nickname = ctx.answers.nickname as string;
           if (zodiac && name && nickname && nickname.trim()) {
