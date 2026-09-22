@@ -96,12 +96,19 @@ function AtlasAvatar({ isThinking = false, size = 'md' }: { isThinking?: boolean
   const textSize = size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-xl' : 'text-xs';
   return (
     <div className={`${dims} relative flex-shrink-0`}>
-      <div className={`${dims} rounded-lg bg-[#0f1117] border border-white/20 flex items-center justify-center overflow-hidden`}>
-        <span className={`font-bold ${textSize} text-white/90 tracking-widest select-none`}>A</span>
+      <div
+        className={`${dims} rounded-lg flex items-center justify-center overflow-hidden`}
+        style={{ background: 'var(--shell-surface, #0f1117)', border: '1px solid var(--shell-border-strong, rgba(255,255,255,0.20))' }}
+      >
+        <span
+          className={`font-bold ${textSize} tracking-widest select-none`}
+          style={{ color: 'var(--shell-accent, rgba(255,255,255,0.90))', fontFamily: 'var(--shell-display-font)' }}
+        >A</span>
       </div>
       {isThinking && (
         <motion.div
-          className="absolute inset-0 rounded-lg border border-white/40"
+          className="absolute inset-0 rounded-lg"
+          style={{ border: '1px solid var(--shell-border-strong, rgba(255,255,255,0.40))' }}
           animate={{ opacity: [0.2, 0.7, 0.2] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -352,7 +359,7 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--shell-text-muted, rgba(255,255,255,0.30))' }} />
       </div>
     );
   }
@@ -365,10 +372,14 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-white/8 bg-[#0a0a0f]/95 backdrop-blur-xl flex-shrink-0">
+      <div
+        className="flex items-center gap-3 px-4 sm:px-6 py-3 backdrop-blur-xl flex-shrink-0"
+        style={{ borderBottom: '1px solid var(--shell-border, rgba(255,255,255,0.08))', background: 'var(--shell-surface, rgba(10,10,15,0.95))' }}
+      >
         <button
           onClick={onBack}
-          className="p-2 hover:bg-white/8 rounded-lg transition-colors text-white/60 hover:text-white"
+          className="p-2 rounded-lg transition-colors"
+          style={{ color: 'var(--shell-text-secondary, rgba(255,255,255,0.60))' }}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -398,26 +409,27 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
                 onClick={() => setEditingTitle(true)}
                 className="group flex items-center gap-1.5 text-left max-w-full"
               >
-                <span className="font-semibold text-white text-sm truncate">{conversation?.title || 'New Conversation'}</span>
+                <span className="font-semibold text-sm truncate" style={{ color: 'var(--shell-text-primary, #fff)' }}>{conversation?.title || 'New Conversation'}</span>
                 <Edit2 className="w-3 h-3 text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0" />
               </button>
             )}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/70" />
-            <span className="text-[10px] text-white/35 font-medium tracking-wide uppercase">Active</span>
+            <span className="text-[10px] font-medium tracking-wide uppercase" style={{ color: 'var(--shell-text-muted, rgba(255,255,255,0.35))' }}>Active</span>
           </div>
         </div>
 
         {remaining !== null && (
-          <span className="text-xs text-white/35 flex-shrink-0">
+          <span className="text-xs flex-shrink-0" style={{ color: 'var(--shell-text-muted, rgba(255,255,255,0.35))' }}>
             {remaining} / {usage?.dailyLimit} free
           </span>
         )}
 
         <button
           onClick={onNewConversation}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/8 hover:bg-white/12 border border-white/12 rounded-lg text-xs font-medium text-white/70 hover:text-white transition-all flex-shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0"
+          style={{ background: 'var(--shell-surface-hover, rgba(255,255,255,0.08))', border: '1px solid var(--shell-border, rgba(255,255,255,0.12))', color: 'var(--shell-text-secondary, rgba(255,255,255,0.70))' }}
         >
           <Plus className="w-3.5 h-3.5" />
           New
@@ -438,19 +450,20 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
               >
                 <AtlasAvatar size="lg" />
                 <div className="mt-5 mb-2">
-                  <span className="text-[10px] font-semibold tracking-[0.2em] text-white/30 uppercase">Atlas</span>
+                  <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--shell-accent, rgba(255,255,255,0.30))' }}>Atlas</span>
                 </div>
                 {greetingMessage ? (
                   <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.15, duration: 0.5 }}
-                    className="text-white/80 text-base font-medium max-w-sm leading-relaxed"
+                    className="text-base font-medium max-w-sm leading-relaxed"
+                    style={{ color: 'var(--shell-text-primary, rgba(255,255,255,0.80))' }}
                   >
                     {greetingMessage}
                   </motion.p>
                 ) : (
-                  <p className="text-white/60 text-base font-medium max-w-sm leading-relaxed">
+                  <p className="text-base font-medium max-w-sm leading-relaxed" style={{ color: 'var(--shell-text-secondary, rgba(255,255,255,0.60))' }}>
                     What are we working on today?
                   </p>
                 )}
@@ -466,7 +479,8 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
                   <button
                     key={i}
                     onClick={() => { setInput(suggestion); inputRef.current?.focus(); }}
-                    className="text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-white/18 text-sm text-white/50 hover:text-white/80 transition-all leading-relaxed"
+                    className="text-left px-4 py-3 rounded-xl text-sm transition-all leading-relaxed"
+                    style={{ background: 'var(--shell-surface, rgba(255,255,255,0.05))', border: '1px solid var(--shell-border, rgba(255,255,255,0.08))', color: 'var(--shell-text-secondary, rgba(255,255,255,0.50))' }}
                   >
                     {suggestion}
                   </button>
@@ -483,9 +497,9 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
                 animate={{ opacity: 1 }}
                 className="flex items-center gap-3 py-1"
               >
-                <div className="flex-1 h-px bg-white/8" />
-                <span className="text-xs text-white/25 font-medium whitespace-nowrap">{lastSeenLabel}</span>
-                <div className="flex-1 h-px bg-white/8" />
+                <div className="flex-1 h-px" style={{ background: 'var(--shell-border, rgba(255,255,255,0.08))' }} />
+                <span className="text-xs font-medium whitespace-nowrap" style={{ color: 'var(--shell-text-muted, rgba(255,255,255,0.25))' }}>{lastSeenLabel}</span>
+                <div className="flex-1 h-px" style={{ background: 'var(--shell-border, rgba(255,255,255,0.08))' }} />
               </motion.div>
             )}
 
@@ -502,11 +516,11 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
                 )}
                 <div className={`flex-1 min-w-0 ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
                   {msg.role === 'user' ? (
-                    <div className="inline-block max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tr-sm bg-white/10 border border-white/12 text-white text-sm leading-relaxed">
+                    <div className="inline-block max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed" style={{ background: 'var(--shell-user-bubble, rgba(255,255,255,0.10))', border: '1px solid var(--shell-border, rgba(255,255,255,0.12))', color: 'var(--shell-user-bubble-text, #fff)' }}>
                       {msg.content}
                     </div>
                   ) : (
-                    <div className="text-white/90 text-sm leading-relaxed">
+                    <div className="text-sm leading-relaxed" style={{ color: 'var(--shell-agent-bubble-text, rgba(255,255,255,0.90))' }}>
                       <AtlasMarkdown content={msg.content} />
                     </div>
                   )}
@@ -523,16 +537,17 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
                 <AtlasAvatar size="sm" isThinking={!streamingText} />
                 <div className="flex-1 min-w-0">
                   {streamingText ? (
-                    <div className="text-white/90 text-sm leading-relaxed">
+                    <div className="text-sm leading-relaxed" style={{ color: 'var(--shell-agent-bubble-text, rgba(255,255,255,0.90))' }}>
                       <AtlasMarkdown content={streamingText} />
                       <motion.span
-                        className="inline-block w-0.5 h-4 bg-white/60 ml-0.5 align-middle"
+                        className="inline-block w-0.5 h-4 ml-0.5 align-middle"
+                        style={{ background: 'var(--shell-accent, rgba(255,255,255,0.60))' }}
                         animate={{ opacity: [1, 0, 1] }}
                         transition={{ duration: 0.8, repeat: Infinity }}
                       />
                     </div>
                   ) : searchingWeb ? (
-                    <div className="flex items-center gap-2 py-2 text-white/40 text-sm">
+                    <div className="flex items-center gap-2 py-2 text-sm" style={{ color: 'var(--shell-text-muted, rgba(255,255,255,0.40))' }}>
                       <Globe className="w-3.5 h-3.5 animate-pulse" />
                       <span>Searching the web...</span>
                     </div>
@@ -541,7 +556,8 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
                       {[0, 1, 2].map(j => (
                         <motion.div
                           key={j}
-                          className="w-1.5 h-1.5 rounded-full bg-white/40"
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: 'var(--shell-text-muted, rgba(255,255,255,0.40))' }}
                           animate={{ opacity: [0.3, 1, 0.3] }}
                           transition={{ duration: 1.2, delay: j * 0.2, repeat: Infinity }}
                         />
@@ -557,7 +573,7 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-1.5 text-xs text-white/25 pl-10"
+                className="flex items-center gap-1.5 text-xs pl-10" style={{ color: 'var(--shell-text-muted, rgba(255,255,255,0.25))' }}
               >
                 <Globe className="w-3 h-3" />
                 <span>Searched: {lastSearchQuery}</span>
@@ -674,22 +690,23 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
               placeholder={userName ? `Ask Atlas something, ${userName}...` : 'Ask Atlas anything...'}
               disabled={isSending || (usage ? (!usage.isUnlimited && !usage.canSend) : false)}
               rows={1}
-              className="flex-1 bg-transparent text-white text-sm placeholder:text-white/25 px-2 py-3.5 outline-none resize-none leading-relaxed"
-              style={{ minHeight: '50px', maxHeight: '160px' }}
+              className="flex-1 bg-transparent text-sm px-2 py-3.5 outline-none resize-none leading-relaxed"
+              style={{ color: 'var(--shell-text-primary, #fff)', minHeight: '50px', maxHeight: '160px' }}
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || isSending || (usage ? (!usage.isUnlimited && !usage.canSend) : false)}
-              className="m-2 w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30 bg-white/10 hover:bg-white/18 disabled:cursor-not-allowed"
+              className="m-2 w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ background: 'var(--shell-surface-hover, rgba(255,255,255,0.10))' }}
             >
               {isSending ? (
-                <Loader2 className="w-4 h-4 text-white animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--shell-text-primary, #fff)' }} />
               ) : (
-                <Send className="w-4 h-4 text-white" />
+                <Send className="w-4 h-4" style={{ color: 'var(--shell-text-primary, #fff)' }} />
               )}
             </button>
           </div>
-          <p className="text-center text-white/20 text-xs mt-2">
+          <p className="text-center text-xs mt-2" style={{ color: 'var(--shell-text-muted, rgba(255,255,255,0.20))' }}>
             Shift+Enter for new line · Enter to send
           </p>
         </div>

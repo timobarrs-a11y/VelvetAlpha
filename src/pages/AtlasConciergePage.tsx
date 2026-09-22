@@ -832,7 +832,7 @@ function AtlasConciergeInner() {
 
 export const AtlasConciergePage = () => {
   return (
-    <ShellProvider agentId="atlas" forceDark>
+    <ShellProvider agentId="atlas">
       <AtlasConciergeInner />
     </ShellProvider>
   );

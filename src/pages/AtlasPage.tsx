@@ -8,6 +8,7 @@ import { atlasService, AtlasConversation } from '../services/atlasService';
 import { AtlasCanvas } from '../components/AtlasCanvas';
 import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
 import { PageHeader } from '../shared/ui/PageHeader';
+import { ShellProvider, isShellsEnabled } from '../shells';
 
 type AtlasVoice = 'masculine' | 'feminine';
 
@@ -15,13 +16,19 @@ function AtlasMonogram({ size = 'md', voice }: { size?: 'sm' | 'md' | 'lg'; voic
   const dims = size === 'sm' ? 'w-7 h-7' : size === 'lg' ? 'w-20 h-20' : 'w-8 h-8';
   const text = size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-2xl' : 'text-xs';
   const feminine = voice === 'feminine';
+  const shellActive = isShellsEnabled();
+  const bg = shellActive ? 'var(--shell-surface)' : feminine ? '#1a0f1e' : '#0f1117';
+  const borderColor = shellActive ? 'var(--shell-border-strong)' : feminine ? 'rgba(244,63,94,0.30)' : 'rgba(255,255,255,0.20)';
+  const textColor = shellActive ? 'var(--shell-accent)' : feminine ? 'rgba(251,113,133,0.90)' : 'rgba(255,255,255,0.90)';
   return (
-    <div className={`${dims} rounded-lg flex items-center justify-center flex-shrink-0 ${
-      feminine
-        ? 'bg-[#1a0f1e] border border-rose-500/30'
-        : 'bg-[#0f1117] border border-white/20'
-    }`}>
-      <span className={`font-bold ${text} tracking-widest select-none ${feminine ? 'text-rose-300/90' : 'text-white/90'}`}>A</span>
+    <div
+      className={`${dims} rounded-lg flex items-center justify-center flex-shrink-0`}
+      style={{ background: bg, border: `1px solid ${borderColor}` }}
+    >
+      <span
+        className={`font-bold ${text} tracking-widest select-none`}
+        style={{ color: textColor, fontFamily: shellActive ? 'var(--shell-display-font)' : undefined }}
+      >A</span>
     </div>
   );
 }
@@ -258,7 +265,8 @@ export function AtlasPage() {
   }
 
   return (
-    <div className="ds-page text-white flex flex-col" style={{ height: '100dvh' }}>
+    <ShellProvider agentId="atlas">
+    <div className="ds-page flex flex-col" style={{ height: '100dvh', background: 'var(--shell-bg, #050508)', color: 'var(--shell-text-primary, #fff)' }}>
       {/* Top bar — visible only when no conversation is open on mobile */}
       {!conversationId && (
         <PageHeader
@@ -290,9 +298,10 @@ export function AtlasPage() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -320, opacity: 0 }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className={`flex-shrink-0 border-r border-white/8 bg-[#08090d] flex flex-col overflow-hidden
+              className={`flex-shrink-0 flex flex-col overflow-hidden
                 ${conversationId ? 'absolute inset-y-0 left-0 z-20 w-72 sm:w-80 shadow-2xl sm:relative sm:shadow-none' : 'w-full sm:w-72 lg:w-80'}
               `}
+              style={{ borderRight: '1px solid var(--shell-border, rgba(255,255,255,0.08))', background: 'var(--shell-surface, #08090d)' }}
             >
               {conversationId && (
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8 flex-shrink-0">
@@ -464,15 +473,16 @@ export function AtlasPage() {
           ) : (
             <div className="hidden sm:flex flex-col items-center justify-center h-full text-center px-8">
               <AtlasMonogram size="lg" />
-              <h2 className="text-2xl font-bold text-white mt-6 mb-2 tracking-tight">Atlas</h2>
-              <p className="text-[10px] font-semibold tracking-[0.2em] text-white/30 uppercase mb-5">Your personal chief of staff</p>
-              <p className="text-white/40 max-w-xs leading-relaxed mb-8">
+              <h2 className="text-2xl font-bold mt-6 mb-2 tracking-tight" style={{ color: 'var(--shell-text-primary, #fff)', fontFamily: 'var(--shell-display-font)' }}>Atlas</h2>
+              <p className="text-[10px] font-semibold tracking-[0.2em] uppercase mb-5" style={{ color: 'var(--shell-accent, rgba(255,255,255,0.30))' }}>Your personal chief of staff</p>
+              <p className="max-w-xs leading-relaxed mb-8" style={{ color: 'var(--shell-text-secondary, rgba(255,255,255,0.40))' }}>
                 Writing, research, coding, analysis, strategy — whatever the mission, let's get it done.
               </p>
               <button
                 onClick={handleNewConversationClick}
                 disabled={isCreating}
-                className="flex items-center gap-2 px-6 py-3 bg-white/8 hover:bg-white/12 border border-white/15 rounded-2xl text-white font-medium transition-all text-sm disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl font-medium transition-all text-sm disabled:opacity-50"
+                style={{ background: 'var(--shell-surface-hover, rgba(255,255,255,0.08))', border: '1px solid var(--shell-border-strong, rgba(255,255,255,0.15))', color: 'var(--shell-text-primary, #fff)' }}
               >
                 <Plus className="w-4 h-4" />
                 Start a conversation
@@ -528,5 +538,6 @@ export function AtlasPage() {
         )}
       </AnimatePresence>
     </div>
+    </ShellProvider>
   );
 }
