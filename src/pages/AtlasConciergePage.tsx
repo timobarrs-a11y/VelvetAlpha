@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpRight, Lightbulb, Send, Sparkles } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Lightbulb, Send, Sparkles } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
 import { useTypingEffect, useWritingIndicator } from '../hooks/useTypingEffect';
@@ -102,6 +102,22 @@ const STARTER_PROMPTS = [
   'Something in my life feels stuck',
 ];
 
+interface CoachShortcut {
+  goalLabel: string;
+  coachType: string;
+  benefit: string;
+  prefill: string;
+}
+
+const COACH_SHORTCUTS: CoachShortcut[] = [
+  { goalLabel: 'Improve my fitness', coachType: 'Fitness coach', benefit: 'Build a routine and stay consistent', prefill: 'I want to get in better shape and build a consistent fitness routine.' },
+  { goalLabel: 'Feel calmer and more balanced', coachType: 'Wellness coach', benefit: 'Manage stress and build self-care habits', prefill: 'I want to feel calmer, less stressed, and take better care of myself mentally.' },
+  { goalLabel: 'Prepare for a job interview', coachType: 'Interview coach', benefit: 'Practice answers and sharpen your story', prefill: 'I have a job interview coming up and I want to be fully prepared.' },
+  { goalLabel: 'Make progress in my career', coachType: 'Career coach', benefit: 'Plan your next move and act on it', prefill: 'I want to grow my career but I am not sure what the next step should be.' },
+  { goalLabel: 'Get better with money', coachType: 'Finance coach', benefit: 'Build better spending and saving habits', prefill: 'I want to get my finances under control and build better money habits.' },
+  { goalLabel: 'Make space for a creative project', coachType: 'Creative coach', benefit: 'Show up consistently and finish what you start', prefill: 'I have a creative project I keep putting off and I want to finally make time for it.' },
+];
+
 interface AtlasWelcomePanelProps {
   showPrompts: boolean;
   onPromptSelect: (prompt: string) => void;
@@ -113,7 +129,7 @@ function AtlasWelcomePanel({ showPrompts, onPromptSelect }: AtlasWelcomePanelPro
       initial={{ opacity: 0, x: -16 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-      className="hidden lg:flex lg:flex-col lg:justify-between lg:min-h-[520px] lg:pt-8"
+      className="hidden lg:flex lg:flex-col lg:justify-start lg:pt-8"
     >
       <div>
         <div className="flex items-center gap-2 mb-6" style={{ color: 'var(--shell-accent-text)' }}>
@@ -192,6 +208,7 @@ function AtlasConciergeInner() {
   const [latestAtlasId, setLatestAtlasId] = useState(-1);
   const [recommendation, setRecommendation] = useState<CoachRecommendation | null>(null);
   const [pendingTranscript, setPendingTranscript] = useState<ChatMessage[]>([]);
+  const [showCoachShortcuts, setShowCoachShortcuts] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const transcriptRef = useRef<ChatMessage[]>([]);
@@ -486,6 +503,12 @@ function AtlasConciergeInner() {
     window.setTimeout(() => textareaRef.current?.focus(), 0);
   };
 
+  const handleShortcutSelect = (shortcut: CoachShortcut) => {
+    setInput(shortcut.prefill);
+    setShowCoachShortcuts(false);
+    window.setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
   if (error && messages.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--shell-bg)' }}>
@@ -513,7 +536,7 @@ function AtlasConciergeInner() {
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(240px,0.78fr)_minmax(0,1.22fr)] gap-8 lg:gap-12 items-start">
           <AtlasWelcomePanel showPrompts={showStarterPrompts} onPromptSelect={handlePromptSelect} />
 
-          <main className="w-full max-w-2xl lg:max-w-none mx-auto flex flex-col min-h-[520px]">
+          <main className="w-full max-w-2xl lg:max-w-none mx-auto flex flex-col">
             <div
               className="flex-1 rounded-[1.75rem] p-4 sm:p-6 overflow-y-auto space-y-3"
               style={{
@@ -609,6 +632,62 @@ function AtlasConciergeInner() {
                     <ArrowUpRight className="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ color: 'var(--shell-accent)' }} />
                   </button>
                 ))}
+              </div>
+            )}
+
+            {phase === 'goal' && !isThinking && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCoachShortcuts(prev => !prev)}
+                  className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:opacity-80"
+                  style={{ color: 'var(--shell-accent-text)' }}
+                >
+                  <ChevronDown
+                    className="w-3.5 h-3.5 transition-transform"
+                    style={{ transform: showCoachShortcuts ? 'rotate(180deg)' : 'none' }}
+                  />
+                  <span>Don&apos;t have a specific goal? Start with one of our prebuilt coaches.</span>
+                </button>
+
+                <AnimatePresence>
+                  {showCoachShortcuts && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 space-y-2">
+                        <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--shell-text-muted)' }}>
+                          Choose a starting point and Atlas will help you shape the goal.
+                        </p>
+                        {COACH_SHORTCUTS.map(shortcut => (
+                          <button
+                            key={shortcut.goalLabel}
+                            type="button"
+                            onClick={() => handleShortcutSelect(shortcut)}
+                            className="group w-full flex items-start justify-between gap-3 rounded-xl px-3.5 py-3 text-left transition-all hover:-translate-y-0.5"
+                            style={{
+                              background: 'var(--shell-accent-soft)',
+                              border: '1px solid var(--shell-border)',
+                              color: 'var(--shell-text-primary)',
+                            }}
+                          >
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium">{shortcut.goalLabel}</div>
+                              <div className="text-xs mt-0.5" style={{ color: 'var(--shell-text-muted)' }}>
+                                {shortcut.coachType} · {shortcut.benefit}
+                              </div>
+                            </div>
+                            <ArrowUpRight className="w-4 h-4 shrink-0 mt-0.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ color: 'var(--shell-accent)' }} />
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 
