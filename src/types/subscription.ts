@@ -84,7 +84,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     name: 'Velvet Essential',
     price: 19,
     stripeLink: '',
-    stripePriceId: '',
+    stripePriceId: 'price_1SrhkAB8CmoO93RgA3U7Liqu',
     features: [
       '1 AI coach with full Sonnet intelligence',
       '1,500 messages per month',
@@ -105,7 +105,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     name: 'Velvet Plus',
     price: 49,
     stripeLink: '',
-    stripePriceId: '',
+    stripePriceId: 'price_1SrhszB8CmoO93RgC3iGKI0c',
     features: [
       'Up to 3 AI coaches',
       '3,000 messages per month',
@@ -127,7 +127,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     name: 'Velvet Elite',
     price: 99,
     stripeLink: '',
-    stripePriceId: '',
+    stripePriceId: 'price_1SrhvzB8CmoO93RgrjUVPsvw',
     features: [
       'Unlimited AI coaches',
       '4,000 messages per month',

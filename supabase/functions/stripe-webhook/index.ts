@@ -12,15 +12,17 @@ const TIER_CONFIG: Record<string, { messages: number; haiku: boolean; sonnet: bo
   essential: { messages: 1500, haiku: true,  sonnet: true  },
   plus:      { messages: 3000, haiku: true,  sonnet: true  },
   elite:     { messages: 4000, haiku: true,  sonnet: true  },
+  // Legacy tier names still in the DB — mapped so old subscriptions don't break
+  unlimited: { messages: 1500, haiku: true,  sonnet: true  },
+  starter:   { messages: 3000, haiku: true,  sonnet: true  },
 };
 
 // Must match stripePriceId values in src/types/subscription.ts
-// Updated for new 3-tier structure (no legacy subscribers)
+// Reuses existing Stripe price IDs — same dollar amounts, remapped to new tier names
 const PRICE_TO_TIER: Record<string, string> = {
-  // New price IDs will be set when Stripe products are created
-  // 'price_essential': 'essential',
-  // 'price_plus': 'plus',
-  // 'price_elite': 'elite',
+  'price_1SrhkAB8CmoO93RgA3U7Liqu': 'essential',  // $19/mo (was unlimited)
+  'price_1SrhszB8CmoO93RgC3iGKI0c': 'plus',       // $49/mo (was starter)
+  'price_1SrhvzB8CmoO93RgrjUVPsvw': 'elite',      // $99/mo (was plus)
 };
 
 type SupabaseClient = ReturnType<typeof createClient>;
@@ -188,8 +190,9 @@ async function handleSubscriptionUpdated(
       .from('user_profiles')
       .update({
         subscription_tier: 'free',
-        haiku_model_enabled: false,
-        sonnet_model_enabled: false,
+        messages_remaining: 30,
+        haiku_model_enabled: true,
+        sonnet_model_enabled: true,
         stripe_subscription_id: null,
       })
       .eq('id', userId);
@@ -251,9 +254,9 @@ async function handleSubscriptionDeleted(
     .from('user_profiles')
     .update({
       subscription_tier: 'free',
-      messages_remaining: 0,
-      haiku_model_enabled: false,
-      sonnet_model_enabled: false,
+      messages_remaining: 30,
+      haiku_model_enabled: true,
+      sonnet_model_enabled: true,
       stripe_subscription_id: null,
     })
     .eq('id', userId);
