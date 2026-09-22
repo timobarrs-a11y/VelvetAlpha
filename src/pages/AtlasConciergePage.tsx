@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpRight, ChevronDown, Lightbulb, Send, Sparkles } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Lightbulb, Send } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
 import { useTypingEffect, useWritingIndicator } from '../hooks/useTypingEffect';
@@ -117,85 +117,6 @@ const COACH_SHORTCUTS: CoachShortcut[] = [
   { goalLabel: 'Get better with money', coachType: 'Finance coach', benefit: 'Build better spending and saving habits', prefill: 'I want to get my finances under control and build better money habits.' },
   { goalLabel: 'Make space for a creative project', coachType: 'Creative coach', benefit: 'Show up consistently and finish what you start', prefill: 'I have a creative project I keep putting off and I want to finally make time for it.' },
 ];
-
-interface AtlasWelcomePanelProps {
-  showPrompts: boolean;
-  onPromptSelect: (prompt: string) => void;
-}
-
-function AtlasWelcomePanel({ showPrompts, onPromptSelect }: AtlasWelcomePanelProps) {
-  return (
-    <motion.aside
-      initial={{ opacity: 0, x: -16 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-      className="hidden lg:flex lg:flex-col lg:justify-start lg:pt-8"
-    >
-      <div>
-        <div className="flex items-center gap-2 mb-6" style={{ color: 'var(--shell-accent-text)' }}>
-          <Sparkles className="w-4 h-4" />
-          <span className="text-[11px] font-semibold tracking-[0.18em] uppercase">Your private briefing</span>
-        </div>
-        <h2
-          className="text-4xl xl:text-5xl font-semibold leading-[1.08] mb-5"
-          style={{
-            fontFamily: 'var(--shell-display-font)',
-            background: 'linear-gradient(135deg, #f43f6b 0%, #e11d48 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}
-        >
-          Your next step starts here.
-        </h2>
-        <p className="text-base leading-relaxed max-w-sm" style={{ color: 'var(--shell-text-secondary)' }}>
-          Atlas helps you turn what is on your mind into a direction you can actually move toward. Start wherever you are.
-        </p>
-      </div>
-
-      <div className="space-y-3 mt-8">
-        {[
-          ['01', 'Tell Atlas what matters right now'],
-          ['02', 'Shape it into something actionable'],
-          ['03', 'Meet the coach built for the journey'],
-        ].map(([num, label]) => (
-          <div key={num} className="flex items-center gap-3 text-sm" style={{ color: 'var(--shell-text-secondary)' }}>
-            <span className="text-[10px] font-semibold tracking-widest" style={{ color: 'var(--shell-accent-text)' }}>{num}</span>
-            <span>{label}</span>
-          </div>
-        ))}
-        <div className="h-px w-16 mt-6" style={{ background: 'var(--shell-accent)' }} />
-        <p className="text-xs leading-relaxed max-w-xs" style={{ color: 'var(--shell-text-muted)' }}>
-          Nothing needs to be perfectly worded. Atlas will help you find the shape of it.
-        </p>
-      </div>
-
-      {showPrompts && (
-        <div className="mt-8 space-y-2">
-          <p className="text-[11px] font-semibold tracking-[0.16em] uppercase" style={{ color: 'var(--shell-text-muted)' }}>
-            If it helps, begin with one of these
-          </p>
-          {STARTER_PROMPTS.map(prompt => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => onPromptSelect(prompt)}
-              className="group w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-left text-sm transition-all hover:-translate-y-0.5"
-              style={{
-                background: 'var(--shell-accent-soft)',
-                border: '1px solid var(--shell-border)',
-                color: 'var(--shell-text-primary)',
-              }}
-            >
-              <span>{prompt}</span>
-              <ArrowUpRight className="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ color: 'var(--shell-accent)' }} />
-            </button>
-          ))}
-        </div>
-      )}
-    </motion.aside>
-  );
-}
 
 function AtlasConciergeInner() {
   const navigate = useNavigate();
@@ -536,13 +457,29 @@ function AtlasConciergeInner() {
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--shell-bg)' }}>
       <AtlasBackgroundScene />
 
-      <div className="relative z-10 flex-1 flex flex-col max-w-5xl w-full mx-auto px-4 sm:px-6 pt-8 pb-6 min-h-screen">
+      <div className="relative z-10 flex-1 flex flex-col max-w-2xl w-full mx-auto px-4 sm:px-6 pt-8 pb-6 min-h-screen">
         <AtlasCrestHeader subtitle={phaseLabels[phase]} />
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(240px,0.78fr)_minmax(0,1.22fr)] gap-8 lg:gap-12 items-start">
-          <AtlasWelcomePanel showPrompts={showStarterPrompts} onPromptSelect={handlePromptSelect} />
+        <div className="text-center mb-6 mt-4">
+          <h1
+            className="text-3xl sm:text-4xl xl:text-5xl font-semibold leading-[1.08]"
+            style={{
+              fontFamily: 'var(--shell-display-font)',
+              background: 'linear-gradient(135deg, #f472b6 0%, #c084fc 45%, #818cf8 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            Your next step starts here.
+          </h1>
+          <p className="text-sm sm:text-base leading-relaxed mt-3 max-w-md mx-auto" style={{ color: 'var(--shell-text-secondary)' }}>
+            Atlas helps you turn what is on your mind into a direction you can actually move toward.
+          </p>
+        </div>
 
-          <main className="w-full max-w-2xl lg:max-w-none mx-auto flex flex-col">
+        <div className="flex-1 flex flex-col items-start">
+          <main className="w-full flex flex-col">
             <div
               className="rounded-[1.75rem] overflow-hidden flex flex-col"
               style={{
