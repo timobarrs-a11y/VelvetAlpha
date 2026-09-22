@@ -9,18 +9,18 @@ const corsHeaders = {
 
 // Mirrors SUBSCRIPTION_PLANS in src/types/subscription.ts
 const TIER_CONFIG: Record<string, { messages: number; haiku: boolean; sonnet: boolean }> = {
-  unlimited: { messages: 1500, haiku: true,  sonnet: false },
-  starter:   { messages: 2000, haiku: false, sonnet: true  },
-  plus:      { messages: 4000, haiku: false, sonnet: true  },
-  elite:     { messages: 8000, haiku: false, sonnet: true  },
+  essential: { messages: 1500, haiku: true,  sonnet: true  },
+  plus:      { messages: 3000, haiku: true,  sonnet: true  },
+  elite:     { messages: 4000, haiku: true,  sonnet: true  },
 };
 
 // Must match stripePriceId values in src/types/subscription.ts
+// Updated for new 3-tier structure (no legacy subscribers)
 const PRICE_TO_TIER: Record<string, string> = {
-  'price_1SrhkAB8CmoO93RgA3U7Liqu': 'unlimited',
-  'price_1SrhszB8CmoO93RgC3iGKI0c': 'starter',
-  'price_1SrhvzB8CmoO93RgrjUVPsvw': 'plus',
-  'price_1SrhxcB8CmoO93Rg9sT3NXxQ': 'elite',
+  // New price IDs will be set when Stripe products are created
+  // 'price_essential': 'essential',
+  // 'price_plus': 'plus',
+  // 'price_elite': 'elite',
 };
 
 type SupabaseClient = ReturnType<typeof createClient>;

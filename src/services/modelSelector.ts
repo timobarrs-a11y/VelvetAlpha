@@ -1,4 +1,5 @@
 import { SubscriptionTier } from './chatService';
+import { isPremiumTier } from '../types/subscription';
 
 export type ModelType = 'claude-haiku-4-5-20251001' | 'claude-sonnet-5';
 export type ComplexityLevel = 'simple' | 'complex';
@@ -59,7 +60,7 @@ export function analyzeMessageComplexity(message: string): ComplexityLevel {
 }
 
 export function selectModel(userMessage: string, userTier: SubscriptionTier): ModelType {
-  if (userTier === 'elite' || userTier === 'plus' || userTier === 'starter' || userTier === 'trial') {
+  if (isPremiumTier(userTier) || userTier === 'essential') {
     const complexity = analyzeMessageComplexity(userMessage);
     if (complexity === 'simple') {
       return MODEL_CONFIG.CHEAP_MODEL;
@@ -70,7 +71,7 @@ export function selectModel(userMessage: string, userTier: SubscriptionTier): Mo
 }
 
 export function getModelDisplayName(model: ModelType): string {
-  return model === MODEL_CONFIG.PREMIUM_MODEL ? 'Claude Sonnet 5 (Premium)' : 'Claude Haiku 4.5 (Cheap)';
+  return model === MODEL_CONFIG.PREMIUM_MODEL ? 'Claude Sonnet 5 (Premium)' : 'Claude Haiku 4.5 (Fast)';
 }
 
 export function getModelCostPer1K(model: ModelType): number {
@@ -86,46 +87,4 @@ export function estimateTokens(text: string): number {
 export function calculateCost(model: ModelType, tokens: number): number {
   const costPer1K = getModelCostPer1K(model);
   return (tokens / 1000) * costPer1K;
-}
-
-export function testDualModelSystem() {
-  const testCases = [
-    { message: 'hey', tier: 'free' as SubscriptionTier, expected: 'CHEAP' },
-    { message: 'what are you doing?', tier: 'free' as SubscriptionTier, expected: 'CHEAP' },
-    { message: "I'm tired", tier: 'unlimited' as SubscriptionTier, expected: 'CHEAP' },
-    { message: 'cool', tier: 'free' as SubscriptionTier, expected: 'CHEAP' },
-    { message: 'at work rn', tier: 'free' as SubscriptionTier, expected: 'CHEAP' },
-    { message: 'good morning', tier: 'unlimited' as SubscriptionTier, expected: 'CHEAP' },
-
-    { message: "I'm feeling really depressed and don't know what to do with my life", tier: 'free' as SubscriptionTier, expected: 'PREMIUM' },
-    { message: 'what do you think I should do about my relationship?', tier: 'unlimited' as SubscriptionTier, expected: 'PREMIUM' },
-    { message: 'today was the worst day ever. my boss yelled at me, I got in a fight with my partner, and I just feel so alone', tier: 'free' as SubscriptionTier, expected: 'PREMIUM' },
-    { message: "do you believe in love? like real, lasting love? what's the point of it all?", tier: 'unlimited' as SubscriptionTier, expected: 'PREMIUM' },
-    { message: 'I miss my ex so much it hurts. should I reach out to them?', tier: 'free' as SubscriptionTier, expected: 'PREMIUM' },
-    { message: 'help me understand why I always feel anxious around people', tier: 'unlimited' as SubscriptionTier, expected: 'PREMIUM' },
-
-    { message: 'hey', tier: 'elite' as SubscriptionTier, expected: 'PREMIUM' },
-    { message: "what's up", tier: 'elite' as SubscriptionTier, expected: 'PREMIUM' },
-    { message: 'cool', tier: 'elite' as SubscriptionTier, expected: 'PREMIUM' },
-  ];
-
-  const _passed = 0;
-  const _failed = 0;
-
-  testCases.forEach((test) => {
-    const result = selectModel(test.message, test.tier);
-    const modelUsed = result === MODEL_CONFIG.PREMIUM_MODEL ? 'PREMIUM' : 'CHEAP';
-    const pass = modelUsed === test.expected;
-
-    if (pass) {
-      passed++;
-    } else {
-      failed++;
-    }
-  });
-
-  const premiumCost = calculateCost(MODEL_CONFIG.PREMIUM_MODEL, 1000);
-  const cheapCost = calculateCost(MODEL_CONFIG.CHEAP_MODEL, 1000);
-  const savings = ((premiumCost - cheapCost) / premiumCost * 100);
-  void savings;
 }

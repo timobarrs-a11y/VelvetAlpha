@@ -184,7 +184,7 @@ export const ChatHeader = ({
           {subscriptionInfo && (
             <div className="hidden xl:block mr-1">
               <SubscriptionBanner
-                tier={subscriptionInfo.tier as 'free' | 'trial' | 'unlimited' | 'starter' | 'plus' | 'elite'}
+                tier={subscriptionInfo.tier as 'free' | 'trial' | 'essential' | 'plus' | 'elite'}
                 messagesRemaining={subscriptionInfo.messagesRemaining}
                 compact={true}
               />

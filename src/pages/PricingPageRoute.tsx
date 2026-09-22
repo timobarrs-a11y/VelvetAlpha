@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../shared/supabase/client';
-import { SUBSCRIPTION_PLANS, SubscriptionTier } from '../types/subscription';
+import { SUBSCRIPTION_PLANS, SubscriptionTier, PAID_TIERS } from '../types/subscription';
 import { X, ArrowLeft, Sparkles, Clock, CheckCircle2, Zap, Shield, Star, Crown } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 import { toast } from '../shared/ui/Toast';
@@ -10,40 +10,34 @@ import { motion } from 'framer-motion';
 const TIER_ICONS: Record<string, React.ElementType> = {
   free: Star,
   trial: Sparkles,
-  unlimited: Zap,
-  starter: Shield,
-  plus: Crown,
+  essential: Zap,
+  plus: Shield,
   elite: Crown,
 };
 
 const TIER_ACCENT: Record<string, string> = {
   free: 'from-slate-500 to-slate-600',
   trial: 'from-amber-400 to-orange-500',
-  unlimited: 'from-teal-500 to-cyan-500',
-  starter: 'from-blue-500 to-sky-500',
-  plus: 'from-emerald-500 to-teal-500',
-  elite: 'from-rose-500 to-pink-500',
+  essential: 'from-teal-500 to-cyan-500',
+  plus: 'from-blue-500 to-indigo-500',
+  elite: 'from-amber-500 to-orange-500',
 };
 
 const TIER_BORDER: Record<string, string> = {
   free: 'border-slate-600/50',
   trial: 'border-amber-400/60',
-  unlimited: 'border-teal-500/50',
-  starter: 'border-blue-500/50',
-  plus: 'border-emerald-500/50',
-  elite: 'border-rose-500/60',
+  essential: 'border-teal-500/50',
+  plus: 'border-blue-500/50',
+  elite: 'border-amber-500/60',
 };
 
 const TIER_BG: Record<string, string> = {
   free: 'bg-slate-800/40',
   trial: 'bg-amber-900/20',
-  unlimited: 'bg-teal-900/20',
-  starter: 'bg-blue-900/20',
-  plus: 'bg-emerald-900/20',
-  elite: 'bg-rose-900/20',
+  essential: 'bg-teal-900/20',
+  plus: 'bg-blue-900/20',
+  elite: 'bg-amber-900/20',
 };
-
-const PAID_TIERS: SubscriptionTier[] = ['unlimited', 'starter', 'plus', 'elite'];
 
 export function PricingPageRoute() {
   const navigate = useNavigate();
@@ -97,8 +91,8 @@ export function PricingPageRoute() {
           subscription_tier: 'trial',
           trial_expires_at: expiresAt.toISOString(),
           trial_used: true,
-          messages_remaining: 5000,
-          haiku_model_enabled: false,
+          messages_remaining: 8000,
+          haiku_model_enabled: true,
           sonnet_model_enabled: true,
         })
         .eq('id', user.id);
@@ -223,7 +217,7 @@ export function PricingPageRoute() {
             Choose Your Experience
           </h1>
           <p className="text-lg text-white/60 max-w-xl mx-auto">
-            Unlock deeper connections, premium AI, and exclusive features.
+            Unlock deeper coaching, premium AI, and exclusive features.
           </p>
         </div>
 
@@ -251,7 +245,7 @@ export function PricingPageRoute() {
                     Get full Elite-level access for 3 days. No credit card required. Automatically reverts to Free after your trial ends.
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    {['Velvet V2 AI', 'Signature Voice™', 'Insights & Calendar', '5,000 messages'].map((f) => (
+                    {['Sonnet AI', 'Insights & Calendar', 'Expert Builder', '8,000 messages'].map((f) => (
                       <div key={f} className="flex items-center gap-1.5 text-amber-200 text-sm">
                         <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
                         {f}
@@ -280,12 +274,12 @@ export function PricingPageRoute() {
         {/* Paid Plans */}
         <div className="mb-6">
           <h2 className="text-white/50 text-sm font-semibold uppercase tracking-widest mb-6 text-center">Subscription Plans</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {PAID_TIERS.map((tier, i) => {
               const plan = SUBSCRIPTION_PLANS[tier];
               const Icon = TIER_ICONS[tier] || Star;
               const isCurrent = currentTier === tier;
-              const isPopular = tier === 'elite';
+              const isPopular = tier === 'essential';
 
               return (
                 <motion.div
@@ -297,8 +291,8 @@ export function PricingPageRoute() {
                 >
                   {isPopular && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
-                        Most Popular
+                      <span className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
+                        Start Here
                       </span>
                     </div>
                   )}
@@ -348,7 +342,7 @@ export function PricingPageRoute() {
         <div className="mt-10 rounded-2xl border border-white/10 bg-white/5 px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <h3 className="text-white font-semibold mb-0.5">Free Plan</h3>
-            <p className="text-white/50 text-sm">15 messages to explore the Velvet experience. No commitment.</p>
+            <p className="text-white/50 text-sm">30 messages with full Sonnet intelligence. Experience memory and goal tracking before you commit.</p>
           </div>
           <button
             onClick={() => navigate(returnTo)}

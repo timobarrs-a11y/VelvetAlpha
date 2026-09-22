@@ -28,8 +28,8 @@ const TIER_CONFIGS = {
     badgeColor: 'bg-amber-300/20',
     borderColor: 'border-amber-300/40'
   },
-  unlimited: {
-    label: 'Velvet Essential',
+  essential: {
+    label: 'Essential',
     icon: Zap,
     gradient: 'from-teal-400 to-cyan-500',
     glowColor: 'rgba(20, 184, 166, 0.3)',
@@ -37,8 +37,8 @@ const TIER_CONFIGS = {
     badgeColor: 'bg-teal-300/20',
     borderColor: 'border-teal-300/40'
   },
-  starter: {
-    label: 'Velvet Plus',
+  plus: {
+    label: 'Plus',
     icon: Sparkles,
     gradient: 'from-blue-400 to-indigo-500',
     glowColor: 'rgba(96, 165, 250, 0.3)',
@@ -46,17 +46,8 @@ const TIER_CONFIGS = {
     badgeColor: 'bg-blue-300/20',
     borderColor: 'border-blue-300/40'
   },
-  plus: {
-    label: 'Velvet Pro',
-    icon: Flame,
-    gradient: 'from-emerald-400 to-teal-500',
-    glowColor: 'rgba(52, 211, 153, 0.3)',
-    textColor: 'text-emerald-50',
-    badgeColor: 'bg-emerald-300/20',
-    borderColor: 'border-emerald-300/40'
-  },
   elite: {
-    label: 'Velvet Elite',
+    label: 'Elite',
     icon: Crown,
     gradient: 'from-amber-400 via-yellow-400 to-amber-500',
     glowColor: 'rgba(251, 191, 36, 0.35)',

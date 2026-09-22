@@ -91,8 +91,8 @@ export function InsightsPage() {
 
   useEffect(() => {
     if (subLoading) return;
-    if (tier !== 'trial' && tier !== 'unlimited' && tier !== 'starter' && tier !== 'plus' && tier !== 'elite' && tier !== 'free') {
-      navigate('/lobby');
+    if (tier === 'free' || tier === 'essential') {
+      navigate('/pricing');
       return;
     }
     loadInsights();

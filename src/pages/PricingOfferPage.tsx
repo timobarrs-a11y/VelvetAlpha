@@ -115,7 +115,7 @@ export function PricingOfferPage() {
     }
   };
 
-  const premiumPlan = SUBSCRIPTION_PLANS.plus;
+  const premiumPlan = SUBSCRIPTION_PLANS.essential;
   const freePlan = SUBSCRIPTION_PLANS.free;
 
   return (

@@ -56,7 +56,7 @@ export function InsightsTeaser() {
 
   useEffect(() => {
     if (subLoading) return;
-    if (tier !== 'trial' && tier !== 'unlimited' && tier !== 'starter' && tier !== 'plus' && tier !== 'elite' && tier !== 'free') return;
+    if (tier !== 'trial' && tier !== 'plus' && tier !== 'elite') return;
     loadTeaser();
   }, [tier, subLoading]);
 

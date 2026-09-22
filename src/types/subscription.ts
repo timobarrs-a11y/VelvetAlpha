@@ -1,9 +1,17 @@
-export type SubscriptionTier = 'free' | 'trial' | 'unlimited' | 'starter' | 'plus' | 'elite';
+export type SubscriptionTier = 'free' | 'trial' | 'essential' | 'plus' | 'elite';
 
 export function normalizeSubscriptionTier(tier: string | null | undefined): SubscriptionTier {
   if (!tier) return 'free';
 
-  const validTiers: SubscriptionTier[] = ['free', 'trial', 'unlimited', 'starter', 'plus', 'elite'];
+  // Map legacy tier names to new structure
+  const legacyMap: Record<string, SubscriptionTier> = {
+    unlimited: 'essential',
+    starter: 'plus',
+  };
+
+  if (legacyMap[tier]) return legacyMap[tier];
+
+  const validTiers: SubscriptionTier[] = ['free', 'trial', 'essential', 'plus', 'elite'];
   if (validTiers.includes(tier as SubscriptionTier)) {
     return tier as SubscriptionTier;
   }
@@ -23,6 +31,10 @@ export interface SubscriptionPlan {
   messageLimit?: number;
   marketingLabel?: string;
   isTrial?: boolean;
+  maxCoaches: number;
+  hasInsights: boolean;
+  hasExpertBuilder: boolean;
+  memoryDepthDays: number;
 }
 
 export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
@@ -32,12 +44,19 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     price: 0,
     stripeLink: '',
     features: [
-      'Explore the Velvet experience',
-      'Limited messaging',
-      'See what AI companionship feels like'
+      '1 AI coach with full memory',
+      '30 messages per month',
+      'Goal discovery and tracking',
+      'Daily proactive check-ins',
+      'Experience the coaching relationship',
     ],
-    model: 'haiku',
-    messageLimit: 15
+    model: 'sonnet',
+    messageLimit: 30,
+    marketingLabel: 'Free',
+    maxCoaches: 1,
+    hasInsights: false,
+    hasExpertBuilder: false,
+    memoryDepthDays: 7,
   },
   trial: {
     tier: 'trial',
@@ -46,77 +65,97 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     stripeLink: '',
     features: [
       'Full Elite-level access for 3 days',
-      'Velvet V2 — deepest AI available',
-      'Signature Voice™ characters',
+      'Unlimited coaches and AI experts',
       'Insights, calendar, and all premium features',
-      'No credit card required'
+      'Deep memory and proactive check-ins',
+      'No credit card required',
     ],
     model: 'sonnet',
     marketingLabel: 'Trial',
     messageLimit: 8000,
-    isTrial: true
+    isTrial: true,
+    maxCoaches: 99,
+    hasInsights: true,
+    hasExpertBuilder: true,
+    memoryDepthDays: 30,
   },
-  unlimited: {
-    tier: 'unlimited',
+  essential: {
+    tier: 'essential',
     name: 'Velvet Essential',
-    price: 24.99,
-    stripeLink: 'https://buy.stripe.com/3cIaEWds25dSgVS9U54Vy00',
-    stripePriceId: 'price_1SrhkAB8CmoO93RgA3U7Liqu',
+    price: 19,
+    stripeLink: '',
+    stripePriceId: '',
     features: [
-      'No daily limits — 1,500 messages a month',
-      'Fast, responsive AI companion',
-      'Ask anything, learn anything, talk about everything',
-      'Perfect for everyday chat'
-    ],
-    model: 'haiku',
-    marketingLabel: 'Essential',
-    messageLimit: 1500
-  },
-  starter: {
-    tier: 'starter',
-    name: 'Velvet Plus',
-    price: 59,
-    stripeLink: 'https://buy.stripe.com/bJe4gy1Jk49O8pmc2d4Vy01',
-    stripePriceId: 'price_1SrhszB8CmoO93RgC3iGKI0c',
-    features: [
-      'Meet Velvet V2 — our deepest, most emotionally present AI',
-      'Signature Voice™ — unique characters you won\'t find anywhere else',
-      'Complex reasoning, creative thinking, real problem-solving',
-      'Access to Insights — 2,000 messages a month'
+      '1 AI coach with full Sonnet intelligence',
+      '1,500 messages per month',
+      'Goal tracking and proactive check-ins',
+      '7-day conversation memory',
+      'Signature Voice characters',
     ],
     model: 'sonnet',
-    marketingLabel: 'Plus',
-    messageLimit: 2000
+    marketingLabel: 'Essential',
+    messageLimit: 1500,
+    maxCoaches: 1,
+    hasInsights: false,
+    hasExpertBuilder: false,
+    memoryDepthDays: 7,
   },
   plus: {
     tier: 'plus',
-    name: 'Velvet Pro',
-    price: 99,
-    stripeLink: 'https://buy.stripe.com/8x2aEW9bM35KbBy8Q14Vy02',
-    stripePriceId: 'price_1SrhvzB8CmoO93RgrjUVPsvw',
+    name: 'Velvet Plus',
+    price: 49,
+    stripeLink: '',
+    stripePriceId: '',
     features: [
-      'Everything in Plus (Velvet V2, Insights, Signature Voice™)',
-      'Room to go deep every single day — 4,000 messages a month',
-      'All premium features included'
+      'Up to 3 AI coaches',
+      '3,000 messages per month',
+      'Insights — pattern detection and reflection tools',
+      'Calendar integration with smart event detection',
+      '14-day conversation memory',
+      'Signature Voice characters',
     ],
     model: 'sonnet',
-    marketingLabel: 'Pro',
-    messageLimit: 4000
+    marketingLabel: 'Plus',
+    messageLimit: 3000,
+    maxCoaches: 3,
+    hasInsights: true,
+    hasExpertBuilder: false,
+    memoryDepthDays: 14,
   },
   elite: {
     tier: 'elite',
     name: 'Velvet Elite',
-    price: 149,
-    stripeLink: 'https://buy.stripe.com/eVqeVcds249O4961nz4Vy03',
-    stripePriceId: 'price_1SrhxcB8CmoO93Rg9sT3NXxQ',
+    price: 99,
+    stripeLink: '',
+    stripePriceId: '',
     features: [
-      'The complete Velvet experience — every feature',
-      'An allowance built for real daily life — 8,000 messages a month',
-      'Access to VIP Support',
-      'Access to new features before release'
+      'Unlimited AI coaches',
+      '4,000 messages per month',
+      'Custom Expert Builder — design your own specialist',
+      'Advanced Insights with deep pattern analysis',
+      '30-day conversation memory with semantic search',
+      'Early access to new features',
     ],
     model: 'sonnet',
     marketingLabel: 'Elite',
-    messageLimit: 8000
-  }
+    messageLimit: 4000,
+    maxCoaches: 99,
+    hasInsights: true,
+    hasExpertBuilder: true,
+    memoryDepthDays: 30,
+  },
 };
+
+export const PAID_TIERS: SubscriptionTier[] = ['essential', 'plus', 'elite'];
+
+export function isPaidTier(tier: SubscriptionTier): boolean {
+  return tier === 'essential' || tier === 'plus' || tier === 'elite';
+}
+
+export function isPremiumTier(tier: SubscriptionTier): boolean {
+  return tier === 'plus' || tier === 'elite' || tier === 'trial';
+}
+
+export function isEliteTier(tier: SubscriptionTier): boolean {
+  return tier === 'elite' || tier === 'trial';
+}

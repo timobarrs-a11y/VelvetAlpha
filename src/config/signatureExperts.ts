@@ -644,9 +644,12 @@ export function canUseExpert(expertId: string, isPremium: boolean): boolean {
 
 export function getInstructionCharLimit(tier: string): number {
   switch (tier) {
-    case 'plus':
     case 'elite':
+    case 'trial':
       return 4000;
+    case 'plus':
+      return 2000;
+    // Legacy tier names
     case 'starter':
       return 2000;
     default:

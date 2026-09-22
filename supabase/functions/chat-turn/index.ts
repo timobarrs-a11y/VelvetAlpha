@@ -221,7 +221,15 @@ function selectModel(message: string, tier: string, isCorrespondent: boolean = f
   if (isCorrespondent || isMentor) {
     return MODEL_CONFIG.SONNET;
   }
-  if (tier === 'starter' || tier === 'plus' || tier === 'elite' || tier === 'trial') {
+  // Essential, Plus, Elite, and Trial all get Sonnet for complex messages
+  if (tier === 'essential' || tier === 'plus' || tier === 'elite' || tier === 'trial') {
+    if (analyzeMessageComplexity(message) === 'simple') {
+      return MODEL_CONFIG.HAIKU;
+    }
+    return MODEL_CONFIG.SONNET;
+  }
+  // Free tier uses Sonnet too now (30 message limit controls cost)
+  if (tier === 'free') {
     if (analyzeMessageComplexity(message) === 'simple') {
       return MODEL_CONFIG.HAIKU;
     }
@@ -240,24 +248,28 @@ function analyzeMessageComplexity(message: string): 'simple' | 'moderate' | 'com
 
 function getMaxTokensForTier(tier: string): number {
   switch (tier) {
-    case 'free': return 100;
-    case 'unlimited': return 300;
-    case 'starter': return 600;
+    case 'free': return 300;
+    case 'essential': return 600;
     case 'plus': return 900;
     case 'elite': return 1200;
     case 'trial': return 1200;
+    // Legacy tier names — map to new equivalents
+    case 'unlimited': return 600;
+    case 'starter': return 900;
     default: return 300;
   }
 }
 
 function getHistoryDepthForTier(tier: string): number {
   switch (tier) {
-    case 'free': return 10;
-    case 'unlimited': return 15;
-    case 'starter': return 20;
+    case 'free': return 15;
+    case 'essential': return 20;
     case 'plus': return 30;
     case 'elite': return 40;
     case 'trial': return 40;
+    // Legacy tier names
+    case 'unlimited': return 20;
+    case 'starter': return 30;
     default: return 15;
   }
 }
@@ -1126,7 +1138,7 @@ Deno.serve(async (req: Request) => {
           const curated = getCuratedExpert(companion.signature_expert);
           if (curated) {
             // Server-side premium gating: free-tier users cannot use premium experts.
-            const isPremiumTier = tier === 'plus' || tier === 'elite' || tier === 'starter' || tier === 'trial' || isSuperUser;
+            const isPremiumTier = tier === 'plus' || tier === 'elite' || tier === 'essential' || tier === 'trial' || isSuperUser;
             if (!isPremiumTier) {
               const { data: freeExpert } = await supabaseAdmin
                 .from('user_experts')

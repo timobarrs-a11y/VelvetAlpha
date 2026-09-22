@@ -214,7 +214,7 @@ export interface Message {
   metadata?: Record<string, any>;
 }
 
-export type SubscriptionTier = 'free' | 'unlimited' | 'starter' | 'plus' | 'elite' | 'trial';
+export type SubscriptionTier = 'free' | 'trial' | 'essential' | 'plus' | 'elite';
 
 function calculateAge(birthday: string): number | undefined {
   if (!birthday) return undefined;
@@ -255,10 +255,8 @@ export class ChatService {
   private static getMaxTokensForTier(tier: SubscriptionTier): number {
     switch (tier) {
       case 'free':
-        return 100;
-      case 'unlimited':
         return 300;
-      case 'starter':
+      case 'essential':
         return 600;
       case 'plus':
         return 900;
@@ -274,10 +272,8 @@ export class ChatService {
   private static getHistoryDepthForTier(tier: SubscriptionTier): number {
     switch (tier) {
       case 'free':
-        return 10;
-      case 'unlimited':
         return 15;
-      case 'starter':
+      case 'essential':
         return 20;
       case 'plus':
         return 30;
@@ -582,7 +578,7 @@ export class ChatService {
         interests: [],
         system_prompt: '',
         onboarding_completed: false,
-        subscription_tier: 'premium' as SubscriptionTier,
+        subscription_tier: 'elite' as SubscriptionTier,
       };
 
       const { data: created, error: createError } = await supabase

@@ -1,5 +1,5 @@
 import { supabase } from '../shared/supabase/client';
-import { SubscriptionTier, SUBSCRIPTION_PLANS, normalizeSubscriptionTier } from '../types/subscription';
+import { SubscriptionTier, SUBSCRIPTION_PLANS, normalizeSubscriptionTier, isPaidTier } from '../types/subscription';
 
 export interface MessageTrackingInfo {
   messagesRemaining: number;
@@ -110,7 +110,7 @@ export async function addMessagesToUser(
       subscription_tier: tier
     };
 
-    if (tier === 'unlimited') {
+    if (tier === 'essential') {
       const { data: current } = await supabase
         .from('user_profiles')
         .select('messages_remaining')
@@ -120,12 +120,12 @@ export async function addMessagesToUser(
       const currentMessages = current?.messages_remaining || 0;
       updates.messages_remaining = currentMessages === -1 ? messageCount : currentMessages + messageCount;
       updates.haiku_model_enabled = true;
-      updates.sonnet_model_enabled = false;
+      updates.sonnet_model_enabled = true;
     } else if (tier === 'trial') {
       updates.messages_remaining = 8000;
-      updates.haiku_model_enabled = false;
+      updates.haiku_model_enabled = true;
       updates.sonnet_model_enabled = true;
-    } else if (['starter', 'plus', 'elite'].includes(tier)) {
+    } else if (['plus', 'elite'].includes(tier)) {
       const { data: current } = await supabase
         .from('user_profiles')
         .select('messages_remaining')
@@ -136,7 +136,7 @@ export async function addMessagesToUser(
       const newTotal = currentMessages === -1 ? messageCount : currentMessages + messageCount;
 
       updates.messages_remaining = newTotal;
-      updates.haiku_model_enabled = false;
+      updates.haiku_model_enabled = true;
       updates.sonnet_model_enabled = true;
     }
 

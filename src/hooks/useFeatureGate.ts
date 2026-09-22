@@ -1,4 +1,4 @@
-import { SUBSCRIPTION_PLANS, SubscriptionTier } from '../types/subscription';
+import { SUBSCRIPTION_PLANS, SubscriptionTier, isPaidTier, isPremiumTier, isEliteTier } from '../types/subscription';
 
 export function useFeatureGate(userTier: SubscriptionTier) {
   const plan = SUBSCRIPTION_PLANS[userTier];
@@ -9,21 +9,21 @@ export function useFeatureGate(userTier: SubscriptionTier) {
     return remaining > 0;
   };
 
-  const isPaidTier = userTier !== 'free';
-
-  const isHighTier = userTier === 'trial' || userTier === 'starter' || userTier === 'plus' || userTier === 'elite';
-
   const showUpgradePrompt = (feature: string) => {
-    if (userTier === 'free') return `Upgrade to unlock ${feature}`;
+    if (!isPaidTier(userTier)) return `Upgrade to unlock ${feature}`;
     return `Upgrade to a higher plan to unlock ${feature}`;
   };
 
   return {
     canSendMessage,
-    isPaidTier,
-    isHighTier,
+    isPaidTier: isPaidTier(userTier),
+    isPremiumTier: isPremiumTier(userTier),
+    isEliteTier: isEliteTier(userTier),
     showUpgradePrompt,
     currentPlan: plan,
     messageLimit,
+    maxCoaches: plan.maxCoaches,
+    hasInsights: plan.hasInsights,
+    hasExpertBuilder: plan.hasExpertBuilder,
   };
 }

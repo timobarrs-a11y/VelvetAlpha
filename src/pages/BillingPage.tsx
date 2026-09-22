@@ -31,15 +31,14 @@ interface BillingInfo {
   messages_reset_at: string | null;
 }
 
-const TIER_ORDER: SubscriptionTier[] = ['free', 'trial', 'unlimited', 'starter', 'plus', 'elite'];
+const TIER_ORDER: SubscriptionTier[] = ['free', 'trial', 'essential', 'plus', 'elite'];
 
 const TIER_STYLE: Record<string, { gradient: string; border: string; badge: string }> = {
   free:      { gradient: 'from-slate-600 to-slate-700',       border: 'border-white/20',      badge: 'bg-white/10 text-white/60' },
   trial:     { gradient: 'from-cyan-600 to-teal-700',         border: 'border-cyan-500/40',   badge: 'bg-cyan-500/20 text-cyan-300' },
-  unlimited: { gradient: 'from-sky-600 to-blue-700',          border: 'border-sky-500/40',    badge: 'bg-sky-500/20 text-sky-300' },
-  starter:   { gradient: 'from-green-600 to-emerald-700',     border: 'border-green-500/40',  badge: 'bg-green-500/20 text-green-300' },
-  plus:      { gradient: 'from-amber-500 to-orange-600',      border: 'border-amber-500/40',  badge: 'bg-amber-500/20 text-amber-300' },
-  elite:     { gradient: 'from-rose-500 to-pink-600',         border: 'border-rose-500/40',   badge: 'bg-rose-500/20 text-rose-300' },
+  essential: { gradient: 'from-sky-600 to-blue-700',          border: 'border-sky-500/40',    badge: 'bg-sky-500/20 text-sky-300' },
+  plus:      { gradient: 'from-green-600 to-emerald-700',     border: 'border-green-500/40',  badge: 'bg-green-500/20 text-green-300' },
+  elite:     { gradient: 'from-amber-500 to-orange-600',      border: 'border-amber-500/40',  badge: 'bg-amber-500/20 text-amber-300' },
 };
 
 export function BillingPage() {
