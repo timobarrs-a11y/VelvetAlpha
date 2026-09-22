@@ -138,9 +138,15 @@ function AtlasWelcomePanel({ showPrompts, onPromptSelect }: AtlasWelcomePanelPro
         </div>
         <h2
           className="text-4xl xl:text-5xl font-semibold leading-[1.08] mb-5"
-          style={{ fontFamily: 'var(--shell-display-font)', color: 'var(--shell-text-primary)' }}
+          style={{
+            fontFamily: 'var(--shell-display-font)',
+            background: 'linear-gradient(135deg, #f43f6b 0%, #e11d48 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
         >
-          A clearer next step starts here.
+          Your next step starts here.
         </h2>
         <p className="text-base leading-relaxed max-w-sm" style={{ color: 'var(--shell-text-secondary)' }}>
           Atlas helps you turn what is on your mind into a direction you can actually move toward. Start wherever you are.
@@ -538,7 +544,7 @@ function AtlasConciergeInner() {
 
           <main className="w-full max-w-2xl lg:max-w-none mx-auto flex flex-col">
             <div
-              className="flex-1 rounded-[1.75rem] p-4 sm:p-6 overflow-y-auto space-y-3"
+              className="rounded-[1.75rem] overflow-hidden flex flex-col"
               style={{
                 background: 'rgba(10, 14, 31, 0.28)',
                 border: '1px solid var(--shell-border)',
@@ -546,161 +552,162 @@ function AtlasConciergeInner() {
                 backdropFilter: 'blur(10px)',
               }}
             >
-              <div className="flex items-center gap-2 mb-5 px-1">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--shell-accent)' }} />
-                <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--shell-text-muted)' }}>
-                  Atlas is listening
-                </span>
-              </div>
-
-              <AnimatePresence>
-                {messages.map((msg) => {
-                  const isUser = msg.role === 'user';
-                  const isRecommendation = msg.isRecommendation;
-
-                  if (isRecommendation) {
-                    return (
-                      <div key={msg.id} className="flex justify-start">
-                        <AtlasBriefCard
-                          onAccept={handleAcceptCoach}
-                          onRefine={handleRefineCoach}
-                          acceptLabel="Yes, set me up"
-                          refineLabel="Not quite, let me refine"
-                          disabled={isThinking}
-                        >
-                          <StreamingAtlasMessage
-                            content={msg.content}
-                            isLatest={msg.id === latestAtlasId}
-                          />
-                        </AtlasBriefCard>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: durBase, ease }}
-                      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[88%] px-4 sm:px-5 py-4 rounded-2xl text-[15px] leading-relaxed ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}`}
-                        style={{
-                          background: isUser ? 'var(--shell-user-bubble)' : 'var(--shell-agent-bubble)',
-                          color: isUser ? 'var(--shell-user-bubble-text)' : 'var(--shell-agent-bubble-text)',
-                          border: isUser ? 'none' : '1px solid var(--shell-border)',
-                          backdropFilter: isUser ? 'none' : 'blur(12px)',
-                          boxShadow: isUser ? '0 8px 24px rgba(0,0,0,0.12)' : 'none',
-                        }}
-                      >
-                        {isUser ? msg.content : (
-                          <StreamingAtlasMessage content={msg.content} isLatest={msg.id === latestAtlasId} />
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-
-              <AnimatePresence>
-                {isThinking && <AtlasFadeTyping label={writingLabel} />}
-              </AnimatePresence>
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {showStarterPrompts && (
-              <div className="lg:hidden mt-3 space-y-2">
-                <p className="text-[11px] font-semibold tracking-[0.16em] uppercase px-1" style={{ color: 'var(--shell-text-muted)' }}>
-                  Begin with one of these
-                </p>
-                {STARTER_PROMPTS.map(prompt => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => handlePromptSelect(prompt)}
-                    className="group w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-left text-sm transition-all hover:-translate-y-0.5"
-                    style={{
-                      background: 'var(--shell-accent-soft)',
-                      border: '1px solid var(--shell-border)',
-                      color: 'var(--shell-text-primary)',
-                    }}
-                  >
-                    <span>{prompt}</span>
-                    <ArrowUpRight className="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ color: 'var(--shell-accent)' }} />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {phase === 'goal' && !isThinking && (
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCoachShortcuts(prev => !prev)}
-                  className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:opacity-80"
-                  style={{ color: 'var(--shell-accent-text)' }}
-                >
-                  <ChevronDown
-                    className="w-3.5 h-3.5 transition-transform"
-                    style={{ transform: showCoachShortcuts ? 'rotate(180deg)' : 'none' }}
-                  />
-                  <span>Don&apos;t have a specific goal? Start with one of our prebuilt coaches.</span>
-                </button>
+              {/* Messages region */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3" style={{ maxHeight: 'calc(100vh - 340px)' }}>
+                <div className="flex items-center gap-2 mb-5 px-1">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--shell-accent)' }} />
+                  <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--shell-text-muted)' }}>
+                    Atlas is listening
+                  </span>
+                </div>
 
                 <AnimatePresence>
-                  {showCoachShortcuts && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                      className="overflow-hidden"
-                    >
-                      <div className="mt-3 space-y-2">
-                        <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--shell-text-muted)' }}>
-                          Choose a starting point and Atlas will help you shape the goal.
-                        </p>
-                        {COACH_SHORTCUTS.map(shortcut => (
-                          <button
-                            key={shortcut.goalLabel}
-                            type="button"
-                            onClick={() => handleShortcutSelect(shortcut)}
-                            className="group w-full flex items-start justify-between gap-3 rounded-xl px-3.5 py-3 text-left transition-all hover:-translate-y-0.5"
-                            style={{
-                              background: 'var(--shell-accent-soft)',
-                              border: '1px solid var(--shell-border)',
-                              color: 'var(--shell-text-primary)',
-                            }}
-                          >
-                            <div className="min-w-0">
-                              <div className="text-sm font-medium">{shortcut.goalLabel}</div>
-                              <div className="text-xs mt-0.5" style={{ color: 'var(--shell-text-muted)' }}>
-                                {shortcut.coachType} · {shortcut.benefit}
-                              </div>
-                            </div>
-                            <ArrowUpRight className="w-4 h-4 shrink-0 mt-0.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ color: 'var(--shell-accent)' }} />
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
+                  {messages.map((msg) => {
+                    const isUser = msg.role === 'user';
+                    const isRecommendation = msg.isRecommendation;
 
-            {phase === 'goal' && (
-              <div className="mt-4">
+                    if (isRecommendation) {
+                      return (
+                        <div key={msg.id} className="flex justify-start">
+                          <AtlasBriefCard
+                            onAccept={handleAcceptCoach}
+                            onRefine={handleRefineCoach}
+                            acceptLabel="Yes, set me up"
+                            refineLabel="Not quite, let me refine"
+                            disabled={isThinking}
+                          >
+                            <StreamingAtlasMessage
+                              content={msg.content}
+                              isLatest={msg.id === latestAtlasId}
+                            />
+                          </AtlasBriefCard>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: durBase, ease }}
+                        className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[88%] px-4 sm:px-5 py-4 rounded-2xl text-[15px] leading-relaxed ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}`}
+                          style={{
+                            background: isUser ? 'var(--shell-user-bubble)' : 'var(--shell-agent-bubble)',
+                            color: isUser ? 'var(--shell-user-bubble-text)' : 'var(--shell-agent-bubble-text)',
+                            border: isUser ? 'none' : '1px solid var(--shell-border)',
+                            backdropFilter: isUser ? 'none' : 'blur(12px)',
+                            boxShadow: isUser ? '0 8px 24px rgba(0,0,0,0.12)' : 'none',
+                          }}
+                        >
+                          {isUser ? msg.content : (
+                            <StreamingAtlasMessage content={msg.content} isLatest={msg.id === latestAtlasId} />
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                  {isThinking && <AtlasFadeTyping label={writingLabel} />}
+                </AnimatePresence>
+
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Mobile starter prompts inside the card */}
+              {showStarterPrompts && (
+                <div className="lg:hidden px-4 sm:px-6 pb-3 space-y-2">
+                  <p className="text-[11px] font-semibold tracking-[0.16em] uppercase px-1" style={{ color: 'var(--shell-text-muted)' }}>
+                    Begin with one of these
+                  </p>
+                  {STARTER_PROMPTS.map(prompt => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      onClick={() => handlePromptSelect(prompt)}
+                      className="group w-full flex items-center justify-between gap-3 rounded-xl px-3.5 py-3 text-left text-sm transition-all hover:-translate-y-0.5"
+                      style={{
+                        background: 'var(--shell-accent-soft)',
+                        border: '1px solid var(--shell-border)',
+                        color: 'var(--shell-text-primary)',
+                      }}
+                    >
+                      <span>{prompt}</span>
+                      <ArrowUpRight className="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ color: 'var(--shell-accent)' }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Coach shortcuts inside the card */}
+              {phase === 'goal' && !isThinking && (
+                <div className="px-4 sm:px-6 pb-2">
+                  <div className="pt-3" style={{ borderTop: '1px solid var(--shell-border)' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCoachShortcuts(prev => !prev)}
+                      className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:opacity-80"
+                      style={{ color: 'var(--shell-accent-text)' }}
+                    >
+                      <ChevronDown
+                        className="w-3.5 h-3.5 transition-transform"
+                        style={{ transform: showCoachShortcuts ? 'rotate(180deg)' : 'none' }}
+                      />
+                      <span>Need a starting point? Browse prebuilt coaches.</span>
+                    </button>
+
+                    <AnimatePresence>
+                      {showCoachShortcuts && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-3 space-y-2">
+                            <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--shell-text-muted)' }}>
+                              Choose a starting point and Atlas will help you shape the goal.
+                            </p>
+                            {COACH_SHORTCUTS.map(shortcut => (
+                              <button
+                                key={shortcut.goalLabel}
+                                type="button"
+                                onClick={() => handleShortcutSelect(shortcut)}
+                                className="group w-full flex items-start justify-between gap-3 rounded-xl px-3.5 py-3 text-left transition-all hover:-translate-y-0.5"
+                                style={{
+                                  background: 'var(--shell-accent-soft)',
+                                  border: '1px solid var(--shell-border)',
+                                  color: 'var(--shell-text-primary)',
+                                }}
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-sm font-medium">{shortcut.goalLabel}</div>
+                                  <div className="text-xs mt-0.5" style={{ color: 'var(--shell-text-muted)' }}>
+                                    {shortcut.coachType} · {shortcut.benefit}
+                                  </div>
+                                </div>
+                                <ArrowUpRight className="w-4 h-4 shrink-0 mt-0.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ color: 'var(--shell-accent)' }} />
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
+
+              {/* Input region inside the card */}
+              {phase === 'goal' && (
                 <div
-                  className="rounded-2xl p-2 transition-all"
-                  style={{
-                    background: 'var(--shell-surface)',
-                    border: '1px solid var(--shell-border-strong)',
-                    boxShadow: 'var(--shell-shadow)',
-                    backdropFilter: 'blur(16px)',
-                  }}
+                  className="p-3 sm:p-4"
+                  style={{ borderTop: '1px solid var(--shell-border)' }}
                 >
                   <div className="flex items-end gap-2">
                     <div className="flex-1 flex items-start gap-3 px-3 py-2">
@@ -732,8 +739,8 @@ function AtlasConciergeInner() {
                     <span className="hidden sm:inline">Enter to continue · Shift + Enter for a new line</span>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </main>
         </div>
 
