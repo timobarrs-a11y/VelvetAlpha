@@ -32,12 +32,11 @@ export function VideoPreferencesModal({ onClose, onSaved }: VideoPreferencesModa
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [companionResult, prefsResult] = await Promise.all([
+      const [profileResult, prefsResult] = await Promise.all([
         supabase
-          .from('companions')
-          .select('hobbies, sports, sports_interests, entertainment_interests, tech_interests, lifestyle_interests, music_genre, interest_text, zodiac_sign, news_categories')
-          .eq('user_id', user.id)
-          .limit(1)
+          .from('user_profiles')
+          .select('hobbies, sports, sports_interests, entertainment_interests, tech_interests, lifestyle_interests, music_genre, zodiac_sign, news_categories')
+          .eq('id', user.id)
           .maybeSingle(),
         supabase
           .from('user_video_preferences')
@@ -46,22 +45,21 @@ export function VideoPreferencesModal({ onClose, onSaved }: VideoPreferencesModa
           .maybeSingle(),
       ]);
 
-      const c = companionResult.data;
-      if (c) {
+      const p = profileResult.data;
+      if (p) {
         const tags: SourceTag[] = [];
         const addArr = (arr: string[] | null, source: string) => {
           (arr || []).forEach(v => v && tags.push({ label: v, source }));
         };
-        addArr(c.hobbies, 'Hobbies');
-        addArr(c.sports, 'Sports');
-        addArr(c.sports_interests, 'Sports Interests');
-        addArr(c.entertainment_interests, 'Entertainment');
-        addArr(c.tech_interests, 'Tech Interests');
-        addArr(c.lifestyle_interests, 'Lifestyle');
-        addArr(c.news_categories, 'News Topics');
-        if (c.music_genre) tags.push({ label: c.music_genre, source: 'Music' });
-        if (c.interest_text) tags.push({ label: c.interest_text, source: 'Your Interests' });
-        if (c.zodiac_sign) tags.push({ label: c.zodiac_sign, source: 'Zodiac' });
+        addArr(p.hobbies, 'Hobbies');
+        addArr(p.sports, 'Sports');
+        addArr(p.sports_interests, 'Sports Interests');
+        addArr(p.entertainment_interests, 'Entertainment');
+        addArr(p.tech_interests, 'Tech Interests');
+        addArr(p.lifestyle_interests, 'Lifestyle');
+        addArr(p.news_categories, 'News Topics');
+        if (p.music_genre) tags.push({ label: p.music_genre, source: 'Music' });
+        if (p.zodiac_sign) tags.push({ label: p.zodiac_sign, source: 'Zodiac' });
         setSourceTags(tags);
       }
 

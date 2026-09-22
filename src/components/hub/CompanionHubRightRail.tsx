@@ -63,12 +63,11 @@ async function fetchVideos(userId?: string | null): Promise<VideoResult[]> {
 
   let tags: string[] = [];
   if (userId) {
-    const [compResult, prefsResult] = await Promise.all([
+    const [profileResult, prefsResult] = await Promise.all([
       supabase
-        .from('companions')
-        .select('hobbies, sports, sports_interests, entertainment_interests, tech_interests, lifestyle_interests, music_genre, interest_text')
-        .eq('user_id', userId)
-        .limit(1)
+        .from('user_profiles')
+        .select('hobbies, sports, sports_interests, entertainment_interests, tech_interests, lifestyle_interests, music_genre, zodiac_sign, news_categories')
+        .eq('id', userId)
         .maybeSingle(),
       supabase
         .from('user_video_preferences')
@@ -76,19 +75,20 @@ async function fetchVideos(userId?: string | null): Promise<VideoResult[]> {
         .eq('user_id', userId)
         .maybeSingle(),
     ]);
-    const c = compResult.data;
-    const p = prefsResult.data;
-    const disabled = new Set<string>(p?.disabled_tags || []);
+    const p = profileResult.data;
+    const prefs = prefsResult.data;
+    const disabled = new Set<string>(prefs?.disabled_tags || []);
     const all: string[] = [
-      ...(c?.hobbies || []),
-      ...(c?.sports || []),
-      ...(c?.sports_interests || []),
-      ...(c?.entertainment_interests || []),
-      ...(c?.tech_interests || []),
-      ...(c?.lifestyle_interests || []),
-      c?.music_genre,
-      c?.interest_text,
-      ...(p?.custom_tags || []),
+      ...(p?.hobbies || []),
+      ...(p?.sports || []),
+      ...(p?.sports_interests || []),
+      ...(p?.entertainment_interests || []),
+      ...(p?.tech_interests || []),
+      ...(p?.lifestyle_interests || []),
+      ...(p?.news_categories || []),
+      p?.music_genre,
+      p?.zodiac_sign,
+      ...(prefs?.custom_tags || []),
     ].filter(Boolean) as string[];
     tags = [...new Set(all)].filter(t => !disabled.has(t));
   }

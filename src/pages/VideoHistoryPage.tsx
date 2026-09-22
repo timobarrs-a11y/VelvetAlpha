@@ -18,12 +18,11 @@ interface SearchedVideo {
 }
 
 async function getActiveTags(userId: string): Promise<string[]> {
-  const [companionResult, prefsResult] = await Promise.all([
+  const [profileResult, prefsResult] = await Promise.all([
     supabase
-      .from('companions')
-      .select('hobbies, sports, sports_interests, entertainment_interests, tech_interests, lifestyle_interests, music_genre, interest_text, zodiac_sign')
-      .eq('user_id', userId)
-      .limit(1)
+      .from('user_profiles')
+      .select('hobbies, sports, sports_interests, entertainment_interests, tech_interests, lifestyle_interests, music_genre, zodiac_sign, news_categories')
+      .eq('id', userId)
       .maybeSingle(),
     supabase
       .from('user_video_preferences')
@@ -32,23 +31,23 @@ async function getActiveTags(userId: string): Promise<string[]> {
       .maybeSingle(),
   ]);
 
-  const c = companionResult.data;
-  const p = prefsResult.data;
-  const disabled = new Set<string>(p?.disabled_tags || []);
+  const p = profileResult.data;
+  const prefs = prefsResult.data;
+  const disabled = new Set<string>(prefs?.disabled_tags || []);
 
   const questionnaire: string[] = [
-    ...(c?.hobbies || []),
-    ...(c?.sports || []),
-    ...(c?.sports_interests || []),
-    ...(c?.entertainment_interests || []),
-    ...(c?.tech_interests || []),
-    ...(c?.lifestyle_interests || []),
-    c?.music_genre,
-    c?.interest_text,
-    c?.zodiac_sign,
+    ...(p?.hobbies || []),
+    ...(p?.sports || []),
+    ...(p?.sports_interests || []),
+    ...(p?.entertainment_interests || []),
+    ...(p?.tech_interests || []),
+    ...(p?.lifestyle_interests || []),
+    ...(p?.news_categories || []),
+    p?.music_genre,
+    p?.zodiac_sign,
   ].filter(Boolean) as string[];
 
-  const custom: string[] = (p?.custom_tags || []);
+  const custom: string[] = (prefs?.custom_tags || []);
 
   const all = [...questionnaire, ...custom].filter(t => !disabled.has(t));
   return [...new Set(all)];
