@@ -50,6 +50,10 @@ export function UserProfileQuestionnairePageV2() {
         sports: Array.isArray(finalAnswers.tasteDeck) ? finalAnswers.tasteDeck.join(',') : '',
         musicGenre: Array.isArray(finalAnswers.musicGenre) ? finalAnswers.musicGenre.join(', ') : String(finalAnswers.musicGenre || ''),
         newsTopics: [],
+        entertainmentInterests: Array.isArray(finalAnswers.entertainmentInterests) ? finalAnswers.entertainmentInterests as string[] : [],
+        techInterests: Array.isArray(finalAnswers.techInterests) ? finalAnswers.techInterests as string[] : [],
+        lifestyleInterests: Array.isArray(finalAnswers.lifestyleInterests) ? finalAnswers.lifestyleInterests as string[] : [],
+        sportsInterests: Array.isArray(finalAnswers.sportsInterests) ? finalAnswers.sportsInterests as string[] : [],
       });
 
       const commProfile = {

@@ -12,6 +12,10 @@ export interface UserProfile {
   hobbies: string[];
   sports: string[];
   interests: string[];
+  sports_interests: string[];
+  entertainment_interests: string[];
+  tech_interests: string[];
+  lifestyle_interests: string[];
   news_categories: string[];
   political_leaning: 'democrat' | 'republican' | 'independent' | null;
   profile_completed: boolean;
@@ -31,6 +35,10 @@ export interface UserProfileUpdate {
   music_genre?: string | null;
   hobbies?: string[];
   sports?: string[];
+  sports_interests?: string[];
+  entertainment_interests?: string[];
+  tech_interests?: string[];
+  lifestyle_interests?: string[];
   news_categories?: string[];
   political_leaning?: 'democrat' | 'republican' | 'independent' | null;
   profile_completed?: boolean;
@@ -105,6 +113,10 @@ class UserProfileService {
     sports: string;
     musicGenre: string;
     newsTopics?: string[] | string;
+    entertainmentInterests?: string[];
+    techInterests?: string[];
+    lifestyleInterests?: string[];
+    sportsInterests?: string[];
   }): Promise<UserProfile> {
     const hobbiesArray = answers.hobbies
       ? answers.hobbies.split(',').map(h => h.trim()).filter(h => h)
@@ -126,6 +138,10 @@ class UserProfileService {
       music_genre: answers.musicGenre || null,
       hobbies: hobbiesArray,
       sports: sportsArray,
+      sports_interests: answers.sportsInterests || [],
+      entertainment_interests: answers.entertainmentInterests || [],
+      tech_interests: answers.techInterests || [],
+      lifestyle_interests: answers.lifestyleInterests || [],
       news_categories: newsCategoriesArray,
       profile_completed: true,
     });
