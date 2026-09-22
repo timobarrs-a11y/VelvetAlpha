@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const STATIC_CACHE = `project-velvet-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `project-velvet-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `project-velvet-images-${CACHE_VERSION}`;
@@ -18,7 +18,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
       return cache.addAll(STATIC_ASSETS).catch(() => {});
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 

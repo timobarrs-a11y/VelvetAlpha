@@ -43,6 +43,7 @@ export function installChunkErrorRecovery(): void {
     );
 
   const recover = () => {
+    if (window.location.pathname.startsWith('/atlas')) return;
     let last = 0;
     try { last = Number(sessionStorage.getItem(STAMP_KEY) || 0); } catch {}
     if (Date.now() - last < COOLDOWN_MS) return;
@@ -68,6 +69,9 @@ export async function registerSW() {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing) return;
     refreshing = true;
+    if (window.location.pathname.startsWith('/atlas')) {
+      return;
+    }
     window.location.reload();
   });
 

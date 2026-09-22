@@ -28,6 +28,41 @@ interface CoachRecommendation {
 }
 
 const FUNCTION_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+const ATLAS_STATE_KEY = 'atlas_concierge_state';
+
+interface SavedState {
+  messages: ChatMessage[];
+  phase: Phase;
+  transcript: ChatMessage[];
+  recommendation: CoachRecommendation | null;
+  pendingTranscript: ChatMessage[];
+  latestAtlasId: number;
+  msgIdCounter: number;
+}
+
+function saveAtlasState(state: SavedState) {
+  try {
+    sessionStorage.setItem(ATLAS_STATE_KEY, JSON.stringify(state));
+  } catch {}
+}
+
+function loadAtlasState(): SavedState | null {
+  try {
+    const raw = sessionStorage.getItem(ATLAS_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SavedState;
+    if (!parsed.messages || !Array.isArray(parsed.messages) || parsed.messages.length === 0) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearAtlasState() {
+  try {
+    sessionStorage.removeItem(ATLAS_STATE_KEY);
+  } catch {}
+}
 
 const AMBIENT_ORBS = [
   { x: '-8%', y: '10%', w: 520, h: 520, color: 'rgba(244,114,182,0.07)', blur: 120, dur: 30 },
@@ -146,6 +181,18 @@ export const AtlasConciergePage = () => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
+    const saved = loadAtlasState();
+    if (saved) {
+      msgIdCounter = saved.msgIdCounter;
+      transcriptRef.current = saved.transcript;
+      setMessages(saved.messages);
+      setLatestAtlasId(saved.latestAtlasId);
+      updatePhase(saved.phase);
+      setRecommendation(saved.recommendation);
+      setPendingTranscript(saved.pendingTranscript);
+      return;
+    }
+
     (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -193,6 +240,20 @@ export const AtlasConciergePage = () => {
       }
     })();
   }, [navigate]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveAtlasState({
+        messages,
+        phase,
+        transcript: transcriptRef.current,
+        recommendation,
+        pendingTranscript,
+        latestAtlasId,
+        msgIdCounter,
+      });
+    }
+  }, [messages, phase, recommendation, pendingTranscript, latestAtlasId]);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -679,6 +740,7 @@ export const AtlasConciergePage = () => {
           if (coachId) sessionStorage.setItem('atlasCoachId', coachId);
           if (recommendation?.goalText) sessionStorage.setItem('atlasGoalText', recommendation.goalText);
           if (recommendation?.coachGender) sessionStorage.setItem('atlasCoachGender', recommendation.coachGender);
+          clearAtlasState();
         }}
       />
     </div>
