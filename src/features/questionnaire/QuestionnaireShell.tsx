@@ -5,6 +5,8 @@ import {
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
   Film, Dumbbell, Sprout, Compass, ShoppingBag, Cpu, Puzzle, Wrench,
   TrendingUp, Trophy, Tv, Wine, Building, Moon, Car, Home, Sunrise,
+  Clapperboard, Laugh, Drama, Mic, Youtube, Code, Coins, Rocket, Atom,
+  Newspaper, Leaf, Cat,
 } from 'lucide-react';
 import type {
   Question,
@@ -25,6 +27,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: 
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
   Film, Dumbbell, Heart, Sprout, Compass, ShoppingBag, Cpu, Puzzle, Wrench,
   TrendingUp, Trophy, Tv, Wine, Building, Moon, Car, Home, Sunrise,
+  Sparkles, Clapperboard, Laugh, Drama, Mic, Youtube, Code, Coins, Rocket,
+  Atom, Newspaper, Leaf, Cat,
 };
 
 function loadIcon(name: string): React.ComponentType<{ className?: string; size?: number }> | null {
