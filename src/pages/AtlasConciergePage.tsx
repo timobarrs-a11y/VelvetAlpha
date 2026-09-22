@@ -467,16 +467,8 @@ function AtlasConciergeInner() {
       />
 
       <div className="relative z-10 flex-1 flex flex-col max-w-2xl w-full mx-auto px-4 sm:px-6 pt-6 pb-6 min-h-screen">
-        {/* Intro hero — fades out once the user starts chatting */}
-        <AnimatePresence>
-          {!hasUserMessage && phase === 'goal' && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
-              transition={{ duration: 0.4, ease }}
-              className="overflow-hidden text-center mb-6"
-            >
+        {/* Intro hero — permanently visible */}
+        <div className="text-center mb-6">
               <div className="flex items-center justify-center gap-1.5 mb-3">
                 <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--shell-accent)' }} />
                 <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--shell-text-muted)' }}>
@@ -537,9 +529,7 @@ function AtlasConciergeInner() {
               <p className="text-[12px] italic" style={{ color: 'var(--shell-text-muted)' }}>
                 Nothing needs to be perfectly worded. Just start typing.
               </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </div>
 
         {showStarterPrompts && (
           <div className="mb-4 space-y-2">
@@ -622,9 +612,9 @@ function AtlasConciergeInner() {
                           style={{
                             background: isUser ? 'var(--shell-user-bubble)' : 'var(--shell-agent-bubble)',
                             color: isUser ? 'var(--shell-user-bubble-text)' : 'var(--shell-agent-bubble-text)',
-                            border: isUser ? 'none' : '1px solid var(--shell-border)',
+                            border: isUser ? 'none' : '1px solid var(--shell-border-strong)',
                             backdropFilter: isUser ? 'none' : 'blur(12px)',
-                            boxShadow: isUser ? '0 8px 24px rgba(0,0,0,0.12)' : 'none',
+                            boxShadow: isUser ? '0 8px 24px rgba(0,0,0,0.12)' : '0 4px 16px rgba(201, 169, 97, 0.08)',
                           }}
                         >
                           {isUser ? msg.content : (

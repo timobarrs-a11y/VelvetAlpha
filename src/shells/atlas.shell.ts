@@ -31,7 +31,7 @@ export const atlasShell: ShellManifest = {
       textMuted: 'rgba(232, 228, 217, 0.38)',
       userBubble: 'linear-gradient(135deg, #1a2848 0%, #243660 100%)',
       userBubbleText: '#e8e4d9',
-      agentBubble: 'rgba(16, 24, 48, 0.75)',
+      agentBubble: 'linear-gradient(135deg, rgba(201, 169, 97, 0.18) 0%, rgba(201, 169, 97, 0.08) 100%)',
       agentBubbleText: '#e8e4d9',
     },
     light: {
@@ -48,7 +48,7 @@ export const atlasShell: ShellManifest = {
       textMuted: 'rgba(26, 32, 48, 0.40)',
       userBubble: 'linear-gradient(135deg, #e8dfc8 0%, #d9cca8 100%)',
       userBubbleText: '#1a2030',
-      agentBubble: 'rgba(255, 252, 245, 0.90)',
+      agentBubble: 'linear-gradient(135deg, rgba(154, 123, 63, 0.12) 0%, rgba(154, 123, 63, 0.05) 100%)',
       agentBubbleText: '#1a2030',
     },
   },
