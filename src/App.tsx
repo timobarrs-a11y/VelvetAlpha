@@ -17,7 +17,6 @@ import { useSound } from './hooks/useSound';
 import { getCompanion, getCompanions, updateLastMessageTime, claimFirstMessage, finalizeFirstMessage, resetFirstMessage, Companion, CompanionWithLastMessage } from './services/companionService';
 import { getMessageTrackingInfo } from './services/messageTrackingService';
 import { YouTubeService, VideoMetadata } from './services/youtubeService';
-import { videoReactionService } from './services/videoReactionService';
 import { AvatarConfig } from './types/avatar';
 import { useSubscription } from './hooks/useSubscription';
 import { getCurrentStatus } from './utils/statusHelper';
@@ -110,7 +109,6 @@ function AppInner() {
 
   const [currentVideo, setCurrentVideo] = useState<{ videoId: string; metadata: VideoMetadata; watchedVideoId: string } | null>(null);
   const [isWatchingVideo, setIsWatchingVideo] = useState(false);
-  const lastReactionTimeRef = useRef<number>(0);
 
   const [activeMode, setActiveMode] = useState<ThreadMode>('chat');
   const [showCalendarPanel, setShowCalendarPanel] = useState(false);
@@ -899,60 +897,18 @@ function AppInner() {
   sendMessageRef.current = handleSendMessage;
 
   const handleVideoWatch = async (videoUrl: string, videoId: string) => {
-    if (!companion || !companionId || !user) return;
+    if (!companionId || !user) return;
 
     try {
       await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'user', content: videoUrl });
     } catch (error) { console.error('Error saving video message:', error); }
 
-    setIsTyping(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     const metadata = await YouTubeService.fetchVideoMetadata(videoId);
     const watchedVideoId = await YouTubeService.saveWatchedVideo(user.id, companionId, videoUrl, metadata);
-    if (!watchedVideoId) { setIsTyping(false); return; }
+    if (!watchedVideoId) return;
 
-    await videoReactionService.planReactions(watchedVideoId, companion, metadata, 180);
-    const openingMessage = `ooh "${metadata.title}"? let's watch it! 🎬`;
-
-    try {
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: openingMessage, clientMessageId: safeRandomUUID() });
-    } catch (error) { console.error('Error saving AI response:', error); }
-
-    setIsTyping(false);
-    conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: openingMessage.length });
-    playSound();
     setCurrentVideo({ videoId, metadata, watchedVideoId });
     setIsWatchingVideo(true);
-  };
-
-  const handleVideoTimeUpdate = async (currentTime: number) => {
-    if (!currentVideo || !companion) return;
-    if (currentTime - lastReactionTimeRef.current < 5) return;
-    const reaction = videoReactionService.checkForReaction(currentVideo.watchedVideoId, currentTime);
-    if (reaction) {
-      lastReactionTimeRef.current = currentTime;
-      await sendCompanionMessage(reaction.reaction);
-      await videoReactionService.saveReaction(currentVideo.watchedVideoId, companion.id, Math.floor(currentTime), reaction.reaction, 'proactive');
-    }
-  };
-
-  const handleVideoEnded = async () => {
-    if (!currentVideo || !companion || !companionId) return;
-    const endReaction = await videoReactionService.generateEndOfVideoReaction(companion, currentVideo.metadata);
-    await sendCompanionMessage(endReaction);
-    await videoReactionService.saveReaction(currentVideo.watchedVideoId, companion.id, 0, endReaction, 'end_of_video');
-    await YouTubeService.markVideoCompleted(currentVideo.watchedVideoId);
-    videoReactionService.clearReactions(currentVideo.watchedVideoId);
-  };
-
-  const sendCompanionMessage = async (content: string) => {
-    if (!companionId || !user) return;
-    try {
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content });
-    } catch (error) { console.error('Error saving companion message:', error); }
-    conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: content.length });
-    playSound();
   };
 
   const handleReset = () => setShowResetConfirm(true);
@@ -1539,8 +1495,6 @@ function AppInner() {
         <VideoPlayer
           videoId={currentVideo.videoId}
           onClose={() => setIsWatchingVideo(false)}
-          onTimeUpdate={handleVideoTimeUpdate}
-          onEnded={handleVideoEnded}
         />
       )}
 

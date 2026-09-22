@@ -4,8 +4,6 @@ interface VideoPlayerProps {
   videoId: string;
   onClose?: () => void;
   onPlay?: () => void;
-  onTimeUpdate?: (currentTime: number) => Promise<void>;
-  onEnded?: () => Promise<void>;
 }
 
 export function VideoPlayer({
