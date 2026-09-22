@@ -562,10 +562,9 @@ function AtlasConciergeInner() {
             <div
               className="rounded-[1.75rem] overflow-hidden flex flex-col"
               style={{
-                background: 'rgba(10, 14, 31, 0.28)',
+                background: 'transparent',
                 border: '1px solid var(--shell-border)',
                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)',
-                backdropFilter: 'blur(10px)',
               }}
             >
               {/* Messages region */}
