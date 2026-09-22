@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, ExternalLink, Loader2, Globe, RefreshCw
+  ExternalLink, Loader2, Globe, RefreshCw, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
 import { getCategoryColor } from '../config/articleCategoryColors';
+import { PageHeader } from '../shared/ui/PageHeader';
 
 interface NewsArticle {
   id: string;
@@ -170,32 +171,13 @@ export function ArticleDetailPage() {
 
   return (
     <div className="ds-page flex flex-col">
-      {/* Top bar */}
-      <div className="ds-header">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 ds-header-row">
-          <button
-            onClick={() => navigate('/daily-feed')}
-            className="ds-pill ds-pill--icon ds-pill--quiet -ml-2 flex-shrink-0"
-            aria-label="Back to feed"
-            title="Back to feed"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              {primaryCat && (
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${getCategoryColor(primaryCat)}`}>
-                  {primaryCat}
-                </span>
-              )}
-              <span className="text-white/30 text-[10px] font-medium">{article.source}</span>
-            </div>
-            <p className="text-white text-sm font-semibold leading-tight line-clamp-1">
-              {article.title}
-            </p>
-          </div>
-
+      <PageHeader
+        title={article.title}
+        subtitle={article.source}
+        icon={FileText}
+        accent="#34d399"
+        back="/daily-feed"
+        actions={
           <a
             href={article.url}
             target="_blank"
@@ -205,8 +187,8 @@ export function ArticleDetailPage() {
           >
             <ExternalLink className="w-4 h-4 text-white/50" />
           </a>
-        </div>
-      </div>
+        }
+      />
 
       {/* Article content */}
       <div className="flex-1 flex flex-col">

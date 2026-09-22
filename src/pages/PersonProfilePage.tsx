@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Check, Plus, X, Gift, Heart,
+  Check, Plus, X, Gift, Heart, User,
   Link as LinkIcon, Loader2, Trash2, MapPin, Cake,
 } from 'lucide-react';
 import {
@@ -10,6 +10,7 @@ import {
   RealPerson,
 } from '../services/realPeopleService';
 import { getAvatarStyle, getInitials } from '../components/PeoplePanel';
+import { PageHeader } from '../shared/ui/PageHeader';
 
 const RELATIONSHIPS = [
   'girlfriend', 'boyfriend', 'partner', 'wife', 'husband',
@@ -112,53 +113,47 @@ export function PersonProfilePage() {
 
   return (
     <div className="ds-page text-white">
-      {/* Header */}
-      <div className="ds-header ds-header-row px-4 sm:px-6 py-2">
-        <button
-          onClick={() => navigate('/navi')}
-          className="ds-pill ds-pill--icon ds-pill--quiet -ml-2"
-          aria-label="Back to Navi"
-          title="Back to Navi"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <h1 className="font-bold text-white text-lg tracking-tight">{person.name}</h1>
-          <p className="text-[10px] text-white/35 capitalize">{person.relationship}</p>
-        </div>
-        {isEditing ? (
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600/80 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all disabled:opacity-50"
-          >
-            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            Save
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
+      <PageHeader
+        title={person.name}
+        subtitle={person.relationship}
+        icon={User}
+        accent="#34d399"
+        back="/navi"
+        actions={
+          isEditing ? (
             <button
-              onClick={() => setShowShareModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/8 hover:bg-white/12 border border-white/12 rounded-lg text-sm font-medium text-white/80 hover:text-white transition-all"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600/80 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all disabled:opacity-50"
             >
-              <LinkIcon className="w-3.5 h-3.5" />
-              Survey link
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Save
             </button>
-            <button
-              onClick={() => { setEditForm(person); setIsEditing(true); }}
-              className="px-3 py-2 bg-white/8 hover:bg-white/12 border border-white/12 rounded-lg text-sm font-medium text-white/80 hover:text-white transition-all"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="p-2 bg-white/4 hover:bg-red-500/10 border border-white/8 hover:border-red-500/30 rounded-lg text-white/40 hover:text-red-400 transition-all"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white/8 hover:bg-white/12 border border-white/12 rounded-lg text-sm font-medium text-white/80 hover:text-white transition-all"
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
+                Survey link
+              </button>
+              <button
+                onClick={() => { setEditForm(person); setIsEditing(true); }}
+                className="px-3 py-2 bg-white/8 hover:bg-white/12 border border-white/12 rounded-lg text-sm font-medium text-white/80 hover:text-white transition-all"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-2 bg-white/4 hover:bg-red-500/10 border border-white/8 hover:border-red-500/30 rounded-lg text-white/40 hover:text-red-400 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )
+        }
+      />
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-20">
         {/* Avatar + summary */}

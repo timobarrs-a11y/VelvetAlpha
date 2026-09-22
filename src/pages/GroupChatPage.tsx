@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Send, Loader, Users, Sparkles, MessageCircle, Eye, Square } from 'lucide-react';
+import { Send, Loader, Users, Sparkles, MessageCircle, Eye, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
 import { Avatar } from '../components/Avatar';
 import { AvatarConfig } from '../types/avatar';
+import { PageHeader } from '../shared/ui/PageHeader';
 import {
   getGroupChatMessages,
   getGroupChatMembers,
@@ -373,55 +374,18 @@ export function GroupChatPage() {
 
   return (
     <div className="ds-page h-screen flex flex-col">
-      <div className="ds-header !static flex-shrink-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2 ds-header-row">
-          <button
-            onClick={() => navigate('/lobby')}
-            className="ds-pill ds-pill--icon ds-pill--quiet -ml-2 flex-shrink-0"
-            aria-label="Back to lobby"
-            title="Back to lobby"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          <span className="ds-chip w-9 h-9 flex-shrink-0" style={{ '--ds-tone': '#2dd4bf' } as React.CSSProperties}>
-            <Users className="w-[18px] h-[18px]" />
-          </span>
-
-          <div className="flex-1 min-w-0 flex items-center gap-3">
-            <span className="font-bold text-white text-base truncate">{groupName || 'Group Chat'}</span>
-
-            <div className="flex -space-x-2 flex-shrink-0">
-              {members.slice(0, 4).map((member, i) => {
-                const companion = member.companion;
-                if (!companion) return null;
-                return (
-                  <div
-                    key={member.id}
-                    className="w-7 h-7 rounded-full border-2 border-gray-950 overflow-hidden bg-gray-700"
-                    style={{ zIndex: members.length - i }}
-                  >
-                    {companion.avatar_config ? (
-                      <Avatar config={companion.avatar_config as AvatarConfig} className="w-full h-full" />
-                    ) : (
-                      <img
-                        src={DEFAULT_AVATAR_IMAGES[companion.gender]}
-                        alt={companion.custom_name}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
+      <PageHeader
+        title={groupName || 'Group Chat'}
+        icon={Users}
+        accent="#2dd4bf"
+        back="/lobby"
+        actions={
           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/10 rounded-full flex-shrink-0">
             <Users className="w-3 h-3 text-white/40" />
             <span className="text-xs font-medium text-white/60">{members.length + 1}</span>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-4 space-y-3">

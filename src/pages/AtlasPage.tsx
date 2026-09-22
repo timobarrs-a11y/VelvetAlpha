@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Plus, Trash2, MessageSquare, ArrowLeft, Clock, X,
+  Plus, Trash2, MessageSquare, ArrowLeft, Clock, X, Compass,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { atlasService, AtlasConversation } from '../services/atlasService';
 import { AtlasCanvas } from '../components/AtlasCanvas';
 import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
+import { PageHeader } from '../shared/ui/PageHeader';
 
 type AtlasVoice = 'masculine' | 'feminine';
 
@@ -260,33 +261,23 @@ export function AtlasPage() {
     <div className="ds-page text-white flex flex-col" style={{ height: '100dvh' }}>
       {/* Top bar — visible only when no conversation is open on mobile */}
       {!conversationId && (
-        <div className="ds-header !static ds-header-row px-4 sm:px-6 py-2 flex-shrink-0">
-          <button
-            onClick={() => navigate('/lobby')}
-            className="ds-pill ds-pill--icon ds-pill--quiet -ml-2"
-            aria-label="Back to lobby"
-            title="Back to lobby"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <AtlasMonogram size="md" />
-          <div>
-            <span className="font-bold text-white text-lg tracking-tight">Atlas</span>
-            <div className="flex items-center gap-1.5 -mt-0.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/70" />
-              <span className="text-[10px] text-white/35 font-medium tracking-wide uppercase">Ready</span>
-            </div>
-          </div>
-          <div className="flex-1" />
-          <button
-            onClick={handleNewConversationClick}
-            disabled={isCreating}
-            className="ds-pill disabled:opacity-50"
-          >
-            <Plus className="w-4 h-4" />
-            New chat
-          </button>
-        </div>
+        <PageHeader
+          title="Atlas"
+          subtitle="Ready"
+          icon={Compass}
+          accent="#c9a961"
+          back="/lobby"
+          actions={
+            <button
+              onClick={handleNewConversationClick}
+              disabled={isCreating}
+              className="ds-pill disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              New chat
+            </button>
+          }
+        />
       )}
 
       <div className="flex flex-1 overflow-hidden">

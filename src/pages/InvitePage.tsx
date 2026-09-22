@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Gift, Copy, Check, Share2, Users, Sparkles, MessageCircle, Loader } from 'lucide-react';
+import { Gift, Copy, Check, Share2, Users, Sparkles, MessageCircle, Loader } from 'lucide-react';
 import { referralService, ReferralSummary } from '../services/referralService';
 import { toast } from '../shared/ui/Toast';
 import { VELVET_THEME } from '../config/velvetTheme';
+import { PageHeader } from '../shared/ui/PageHeader';
 
 export function InvitePage() {
-  const navigate = useNavigate();
   const [summary, setSummary] = useState<ReferralSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -70,18 +69,14 @@ export function InvitePage() {
         backgroundImage: VELVET_THEME.radial,
       }}
     >
+      <PageHeader
+        title="Invite Friends"
+        icon={Gift}
+        accent="#f472b6"
+        back="/lobby"
+      />
+
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 rounded-xl transition-colors hover:bg-white/10"
-            style={{ border: `1px solid ${VELVET_THEME.colors.glassBorder}` }}
-          >
-            <ArrowLeft className="text-ink-secondary" size={20} />
-          </button>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Invite Friends</h1>
-        </div>
 
         {/* Hero card */}
         <motion.div

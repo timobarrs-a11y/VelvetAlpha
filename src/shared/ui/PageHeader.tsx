@@ -28,6 +28,7 @@ interface PageHeaderProps {
   actions?: ReactNode;
   /** Second row (tabs / filters) rendered under the title row. */
   children?: ReactNode;
+  /** Controls the max-width of the content area below the header. */
   width?: Width;
   sticky?: boolean;
   /** Optional slim progress bar under the header (e.g. while refreshing). */
@@ -36,8 +37,10 @@ interface PageHeaderProps {
 }
 
 /**
- * The one header used by every non-companion screen.
- * Sticky glass bar · back control · icon chip · title · optional subtitle · actions · optional second row.
+ * Universal full-width top navigation bar.
+ * Spans the entire viewport edge-to-edge. Back button at the far left,
+ * title left-justified next to it, actions at the far right.
+ * The `width` prop only constrains the children (second row), not the bar itself.
  */
 export function PageHeader({
   title,
@@ -66,13 +69,14 @@ export function PageHeader({
 
   return (
     <header className={`ds-header ${sticky ? '' : '!static'} ${className}`}>
-      <div className={`w-full ${WIDTH[width]} mx-auto px-4 sm:px-6`}>
+      {/* Full-width row — no max-width wrapper, content pinned to screen edges */}
+      <div className="w-full px-4 sm:px-6">
         <div className="ds-header-row py-2">
           {back !== false && (
             <button
               type="button"
               onClick={handleBack}
-              className="ds-pill ds-pill--icon ds-pill--quiet -ml-2"
+              className="ds-pill ds-pill--icon ds-pill--quiet flex-shrink-0"
               aria-label={backLabel}
               title={backLabel}
             >
@@ -81,20 +85,24 @@ export function PageHeader({
           )}
 
           {leading ?? (Icon && (
-            <span className="ds-chip w-9 h-9" style={toneStyle}>
+            <span className="ds-chip w-9 h-9 flex-shrink-0" style={toneStyle}>
               <Icon className="w-[18px] h-[18px]" />
             </span>
           ))}
 
-          <div className="min-w-0 flex-1">
-            <h1 className="font-display font-bold text-lg sm:text-xl leading-tight text-ink truncate">{title}</h1>
-            {subtitle && <p className="text-xs sm:text-sm ds-muted truncate leading-snug">{subtitle}</p>}
+          <div className="min-w-0 flex-1 text-left">
+            <h1 className="font-display font-bold text-lg sm:text-xl leading-tight text-ink truncate text-left">{title}</h1>
+            {subtitle && <p className="text-xs sm:text-sm ds-muted truncate leading-snug text-left">{subtitle}</p>}
           </div>
 
           {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
         </div>
 
-        {children && <div className="pb-3 -mt-1">{children}</div>}
+        {children && (
+          <div className={`pb-3 -mt-1 ${WIDTH[width]} mx-auto`}>
+            {children}
+          </div>
+        )}
       </div>
 
       {progress && (

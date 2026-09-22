@@ -16,6 +16,7 @@ import {
   NaviVoice,
 } from '../services/localExplorerService';
 import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
+import { PageHeader } from '../shared/ui/PageHeader';
 import { useAuth } from '../auth/AuthProvider';
 import { PeoplePanel } from '../components/PeoplePanel';
 import type { RealPerson } from '../services/realPeopleService';
@@ -956,36 +957,26 @@ export function LocalExplorerPage() {
   return (
     <div className="ds-page text-white flex flex-col" style={{ height: '100dvh' }}>
       {!conversationId && (
-        <div className="ds-header !static ds-header-row px-4 sm:px-6 py-2 flex-shrink-0">
-          <button
-            onClick={() => navigate('/lobby')}
-            className="ds-pill ds-pill--icon ds-pill--quiet -ml-2"
-            aria-label="Back to lobby"
-            title="Back to lobby"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <span className="ds-chip w-9 h-9" style={{ '--ds-tone': '#34d399' } as React.CSSProperties}>
-            <MapPin className="w-[18px] h-[18px]" />
-          </span>
-          <div>
-            <span className="font-bold text-white text-lg tracking-tight">Navi</span>
-            <div className="flex items-center gap-1.5 -mt-0.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/70" />
-              <span className="text-[10px] text-white/35 font-medium tracking-wide uppercase">Live search</span>
+        <PageHeader
+          title="Navi"
+          subtitle="Live search"
+          icon={MapPin}
+          accent="#34d399"
+          back="/lobby"
+          actions={
+            <div className="flex items-center gap-2">
+              <LocationBadge location={location} onChangeLocation={() => setShowLocationModal(true)} />
+              <button
+                onClick={handleNewConversationClick}
+                disabled={isCreating}
+                className="ds-pill disabled:opacity-50"
+              >
+                <Plus className="w-4 h-4" />
+                New chat
+              </button>
             </div>
-          </div>
-          <div className="flex-1" />
-          <LocationBadge location={location} onChangeLocation={() => setShowLocationModal(true)} />
-          <button
-            onClick={handleNewConversationClick}
-            disabled={isCreating}
-            className="ds-pill disabled:opacity-50"
-          >
-            <Plus className="w-4 h-4" />
-            New chat
-          </button>
-        </div>
+          }
+        />
       )}
 
       <div className="flex flex-1 overflow-hidden">
