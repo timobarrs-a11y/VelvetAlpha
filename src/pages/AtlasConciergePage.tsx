@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpRight, ChevronDown, Lightbulb, Send, Compass } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Lightbulb, Send, Compass, Sparkles } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
 import { useTypingEffect, useWritingIndicator } from '../hooks/useTypingEffect';
@@ -467,6 +467,80 @@ function AtlasConciergeInner() {
       />
 
       <div className="relative z-10 flex-1 flex flex-col max-w-2xl w-full mx-auto px-4 sm:px-6 pt-6 pb-6 min-h-screen">
+        {/* Intro hero — fades out once the user starts chatting */}
+        <AnimatePresence>
+          {!hasUserMessage && phase === 'goal' && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
+              transition={{ duration: 0.4, ease }}
+              className="overflow-hidden text-center mb-6"
+            >
+              <div className="flex items-center justify-center gap-1.5 mb-3">
+                <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--shell-accent)' }} />
+                <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--shell-text-muted)' }}>
+                  Your private briefing
+                </span>
+              </div>
+
+              <h2
+                className="text-2xl sm:text-3xl font-bold mb-3 leading-tight"
+                style={{
+                  fontFamily: 'var(--shell-display-font)',
+                  color: 'var(--shell-text-primary)',
+                  background: 'linear-gradient(135deg, var(--shell-text-primary) 0%, var(--shell-accent) 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Your next step starts here.
+              </h2>
+
+              <p
+                className="text-sm leading-relaxed max-w-md mx-auto mb-5"
+                style={{ color: 'var(--shell-text-secondary)' }}
+              >
+                Atlas helps you turn vague intentions into a clear plan. Tell it what you're working toward in your own words, and it'll match you with the right coach to get you there.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto mb-5">
+                {[
+                  { num: '01', label: 'Share your goal', desc: 'Say it however feels natural' },
+                  { num: '02', label: 'Atlas listens', desc: 'It asks the right follow-ups' },
+                  { num: '03', label: 'Meet your coach', desc: 'A match tailored to your goal' },
+                ].map(step => (
+                  <div key={step.num} className="flex-1 text-left">
+                    <span
+                      className="text-[11px] font-bold tracking-widest"
+                      style={{ color: 'var(--shell-accent)' }}
+                    >
+                      {step.num}
+                    </span>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--shell-text-primary)' }}>
+                      {step.label}
+                    </p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--shell-text-muted)' }}>
+                      {step.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3 max-w-xs mx-auto mb-4">
+                <div className="flex-1 h-px" style={{ background: 'var(--shell-border-strong)' }} />
+                <div className="w-1 h-1 rounded-full" style={{ background: 'var(--shell-accent)' }} />
+                <div className="flex-1 h-px" style={{ background: 'var(--shell-border-strong)' }} />
+              </div>
+
+              <p className="text-[12px] italic" style={{ color: 'var(--shell-text-muted)' }}>
+                Nothing needs to be perfectly worded. Just start typing.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {showStarterPrompts && (
           <div className="mb-4 space-y-2">
             <p className="text-[11px] font-semibold tracking-[0.16em] uppercase" style={{ color: 'var(--shell-text-muted)' }}>
