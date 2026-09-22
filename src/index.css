@@ -612,4 +612,9 @@
     from { transform: rotate(18deg);  }
     to   { transform: rotate(-18deg); }
   }
+
+  /* ─── Shell system ──────────────────────────────────────────────────────── */
+  .shell-display {
+    font-family: var(--shell-display-font, 'Space Grotesk', sans-serif);
+  }
 }

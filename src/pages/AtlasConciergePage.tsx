@@ -1,11 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, Compass, Check, RotateCcw } from 'lucide-react';
-import { VELVET_THEME } from '../config/velvetTheme';
+import { Send } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
 import { useTypingEffect, useWritingIndicator } from '../hooks/useTypingEffect';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+import { ShellProvider, useShell } from '../shells/ShellProvider';
+import { AtlasCrestHeader } from '../shells/slots/AtlasCrestHeader';
+import { AtlasFadeTyping } from '../shells/slots/AtlasFadeTyping';
+import { AtlasBackgroundScene } from '../shells/slots/AtlasBackgroundScene';
+import { AtlasBriefCard } from '../shells/slots/AtlasBriefCard';
 
 interface ChatMessage {
   role: 'atlas' | 'user';
@@ -43,7 +48,7 @@ interface SavedState {
 function saveAtlasState(state: SavedState) {
   try {
     sessionStorage.setItem(ATLAS_STATE_KEY, JSON.stringify(state));
-  } catch {}
+  } catch { /* ignore quota errors */ }
 }
 
 function loadAtlasState(): SavedState | null {
@@ -61,88 +66,40 @@ function loadAtlasState(): SavedState | null {
 function clearAtlasState() {
   try {
     sessionStorage.removeItem(ATLAS_STATE_KEY);
-  } catch {}
+  } catch { /* ignore */ }
 }
-
-const AMBIENT_ORBS = [
-  { x: '-8%', y: '10%', w: 520, h: 520, color: 'rgba(244,114,182,0.07)', blur: 120, dur: 30 },
-  { x: '65%', y: '60%', w: 440, h: 440, color: 'rgba(192,132,252,0.06)', blur: 110, dur: 36 },
-  { x: '30%', y: '-10%', w: 380, h: 380, color: 'rgba(244,63,94,0.05)', blur: 100, dur: 42 },
-];
 
 let msgIdCounter = 0;
 
 function StreamingAtlasMessage({ content, isLatest }: { content: string; isLatest: boolean }) {
   const { displayedText, showCursor } = useTypingEffect(content, isLatest, { speed: 45 });
+
   return (
     <span>
       {displayedText}
       {showCursor && (
         <motion.span
           className="inline-block w-[2px] h-[1.1em] ml-0.5 align-text-bottom rounded-full"
-          style={{ background: 'rgba(244,114,182,0.7)' }}
+          style={{ background: 'var(--shell-accent)' }}
           animate={{ opacity: [1, 0, 1] }}
-          transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+          transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
         />
       )}
     </span>
   );
 }
 
-function AtlasThinkingIndicator({ label }: { label: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      className="flex justify-start"
-    >
-      <div className="flex flex-col gap-2">
-        <div
-          className="px-5 py-4 rounded-2xl rounded-bl-md"
-          style={{
-            background: VELVET_THEME.colors.glassCard,
-            border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1">
-              {[0, 1, 2].map(i => (
-                <motion.div
-                  key={i}
-                  className="w-[6px] h-[6px] rounded-full"
-                  style={{ background: 'rgba(244,114,182,0.6)' }}
-                  animate={{
-                    y: [0, -6, 0],
-                    opacity: [0.4, 1, 0.4],
-                  }}
-                  transition={{
-                    duration: 1.4,
-                    repeat: Infinity,
-                    delay: i * 0.18,
-                    ease: [0.45, 0, 0.55, 1],
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-        <motion.p
-          className="text-[11px] ml-1"
-          style={{ color: 'rgba(244,114,182,0.5)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-        >
-          {label}
-        </motion.p>
-      </div>
-    </motion.div>
-  );
-}
+const phaseLabels: Record<Phase, string> = {
+  goal: 'What are you working toward?',
+  confirm: 'Your coach match',
+  provisioning: 'Setting up your coach\u2026',
+  transitioning: 'Almost there\u2026',
+};
 
-export const AtlasConciergePage = () => {
+function AtlasConciergeInner() {
   const navigate = useNavigate();
+  const { manifest } = useShell();
+  const reduced = usePrefersReducedMotion();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -162,7 +119,7 @@ export const AtlasConciergePage = () => {
   const hasInitialized = useRef(false);
   const phaseRef = useRef<Phase>('goal');
 
-  const writingLabel = useWritingIndicator(isThinking);
+  const writingLabel = useWritingIndicator(isThinking, 4000);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -393,7 +350,7 @@ export const AtlasConciergePage = () => {
       sessionStorage.setItem('atlasNextDestination', '/atlas-routing');
       setTransitionDestination('/coach-avatar');
 
-      const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` — they'll help you with ${data.expertDomain}` : ''}. Let's give them a face — customize every detail or randomize for an instant look.`;
+      const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` \u2014 they'll help you with ${data.expertDomain}` : ''}. Let's give them a face \u2014 customize every detail or randomize for an instant look.`;
       const transId = ++msgIdCounter;
       setMessages(prev => [...prev, { role: 'atlas', content: transitionMsg, id: transId }]);
       setLatestAtlasId(transId);
@@ -420,7 +377,7 @@ export const AtlasConciergePage = () => {
     const refineId = ++msgIdCounter;
     const refineMsg: ChatMessage = {
       role: 'atlas',
-      content: "No problem — let's dig a bit deeper. What specifically would you want to adjust about the goal or the kind of support you're looking for?",
+      content: "No problem \u2014 let's dig a bit deeper. What specifically would you want to adjust about the goal or the kind of support you're looking for?",
       id: refineId,
     };
     transcriptRef.current = [...transcriptRef.current, refineMsg];
@@ -435,22 +392,23 @@ export const AtlasConciergePage = () => {
     }
   };
 
-  const phaseLabels: Record<Phase, string> = {
-    goal: 'What are you working toward?',
-    confirm: 'Your coach match',
-    provisioning: 'Setting up your coach...',
-    transitioning: 'Almost there...',
-  };
+  const transitionMessage = coachName
+    ? `Your coach ${coachName} is ready${expertDomain ? ` to help you with ${expertDomain}` : ''}.`
+    : 'Your coach is ready.';
+  const transitionSubMessage = 'Design their avatar next \u2014 pick a look, hit randomize, or skip and keep the default.';
+
+  const ease = manifest.motion.ease;
+  const durBase = manifest.motion.durationBase / 1000;
 
   if (error && messages.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: VELVET_THEME.bg }}>
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--shell-bg)' }}>
         <div className="text-center max-w-md">
-          <p className="text-white/80 text-lg mb-6">{error}</p>
+          <p className="text-lg mb-6" style={{ color: 'var(--shell-text-primary)' }}>{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-3 rounded-xl text-white font-semibold"
-            style={{ background: VELVET_THEME.button.primary }}
+            className="px-6 py-3 rounded-xl font-semibold"
+            style={{ background: 'var(--shell-accent)', color: 'var(--shell-bg)' }}
           >
             Try again
           </button>
@@ -459,165 +417,80 @@ export const AtlasConciergePage = () => {
     );
   }
 
-  const transitionMessage = coachName
-    ? `Your coach ${coachName} is ready${expertDomain ? ` to help you with ${expertDomain}` : ''}.`
-    : 'Your coach is ready.';
-  const transitionSubMessage = 'Design their avatar next — pick a look, hit randomize, or skip and keep the default.';
-
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: VELVET_THEME.bg }}>
-      <div className="fixed inset-0 pointer-events-none" style={{ backgroundImage: VELVET_THEME.radial }} />
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--shell-bg)' }}>
+      <AtlasBackgroundScene />
 
-      {/* Grain texture overlay */}
-      <div
-        className="fixed inset-0 pointer-events-none z-[1] opacity-[0.024]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '160px',
-        }}
-      />
-
-      {/* Ambient orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {AMBIENT_ORBS.map((orb, i) => (
-          <motion.div
-            key={i}
-            className="absolute"
-            style={{
-              left: orb.x,
-              top: orb.y,
-              width: orb.w,
-              height: orb.h,
-              borderRadius: '50%',
-              background: orb.color,
-              filter: `blur(${orb.blur}px)`,
-            }}
-            animate={{
-              x: ['0%', i % 2 === 0 ? '3%' : '-2%', '0%'],
-              y: ['0%', i % 2 === 0 ? '2%' : '-1.5%', '0%'],
-            }}
-            transition={{ duration: orb.dur, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        ))}
-      </div>
-
-      <div className="relative z-10 flex-1 flex flex-col max-w-2xl w-full mx-auto px-4 pt-8 pb-4">
-        {/* Header */}
-        <div className="text-center mb-6 flex-shrink-0">
-          <div className="flex justify-center mb-3">
-            <motion.div
-              className="relative w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{
-                background: VELVET_THEME.colors.glassCard,
-                border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
-              }}
-            >
-              <motion.div
-                className="absolute inset-0 rounded-2xl"
-                style={{
-                  background: 'radial-gradient(circle, rgba(244,114,182,0.15) 0%, transparent 70%)',
-                }}
-                animate={{ opacity: [0.4, 0.8, 0.4], scale: [0.9, 1.1, 0.9] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              <Compass className="w-6 h-6 text-ink-secondary relative z-10" />
-            </motion.div>
-          </div>
-          <h1 className="text-xl font-bold text-white">Atlas</h1>
-          <p className="text-ink-muted text-sm mt-1 flex items-center justify-center gap-1.5">
-            {phase === 'goal' ? <Compass className="w-4 h-4" /> : <Sparkles className="w-4 h-4 animate-pulse" />}
-            {phaseLabels[phase]}
-          </p>
-        </div>
+      <div className="relative z-10 flex-1 flex flex-col max-w-2xl w-full mx-auto px-4 pt-8 pb-4 min-h-screen">
+        <AtlasCrestHeader subtitle={phaseLabels[phase]} />
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto space-y-3 mb-4 min-h-0">
           <AnimatePresence>
-            {messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] px-4 py-3 rounded-2xl text-[15px] leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'text-white rounded-br-md'
-                      : 'text-rose-50 rounded-bl-md'
-                  }`}
-                  style={
-                    msg.role === 'user'
-                      ? {
-                          background: 'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)',
-                          boxShadow: '0 2px 12px rgba(244,63,94,0.25)',
-                        }
-                      : {
-                          background: VELVET_THEME.colors.glassCard,
-                          border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
-                        }
-                  }
-                >
-                  {msg.role === 'atlas' ? (
-                    <StreamingAtlasMessage
-                      content={msg.content}
-                      isLatest={msg.id === latestAtlasId}
-                    />
-                  ) : (
-                    msg.content
-                  )}
+            {messages.map((msg) => {
+              const isUser = msg.role === 'user';
+              const isRecommendation = msg.isRecommendation;
 
-                  {/* Confirm buttons on recommendation message */}
-                  {msg.isRecommendation && phase === 'confirm' && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 }}
-                      className="flex gap-3 mt-4"
+              if (isRecommendation) {
+                return (
+                  <div key={msg.id} className="flex justify-start">
+                    <AtlasBriefCard
+                      onAccept={handleAcceptCoach}
+                      onRefine={handleRefineCoach}
+                      acceptLabel="Yes, set me up"
+                      refineLabel="Not quite, let me refine"
+                      disabled={isThinking}
                     >
-                      <button
-                        onClick={handleAcceptCoach}
-                        disabled={isThinking}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-semibold text-sm transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{
-                          background: 'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)',
-                          boxShadow: '0 2px 12px rgba(244,63,94,0.25)',
-                        }}
-                      >
-                        <Check className="w-4 h-4" />
-                        Yes, set me up
-                      </button>
-                      <button
-                        onClick={handleRefineCoach}
-                        disabled={isThinking}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-semibold text-sm transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{
-                          background: 'rgba(255,255,255,0.08)',
-                          border: '1px solid rgba(255,255,255,0.15)',
-                        }}
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        Not quite, let me refine
-                      </button>
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                      <StreamingAtlasMessage
+                        content={msg.content}
+                        isLatest={msg.id === latestAtlasId}
+                      />
+                    </AtlasBriefCard>
+                  </div>
+                );
+              }
+
+              return (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: durBase, ease }}
+                  className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] px-4 py-3 rounded-2xl text-[15px] leading-relaxed ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}`}
+                    style={{
+                      background: isUser ? 'var(--shell-user-bubble)' : 'var(--shell-agent-bubble)',
+                      color: isUser ? 'var(--shell-user-bubble-text)' : 'var(--shell-agent-bubble-text)',
+                      border: isUser ? 'none' : '1px solid var(--shell-border)',
+                      backdropFilter: isUser ? 'none' : 'blur(12px)',
+                    }}
+                  >
+                    {isUser ? (
+                      msg.content
+                    ) : (
+                      <StreamingAtlasMessage
+                        content={msg.content}
+                        isLatest={msg.id === latestAtlasId}
+                      />
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
 
           <AnimatePresence>
             {isThinking && (
-              <AtlasThinkingIndicator label={writingLabel} />
+              <AtlasFadeTyping label={writingLabel} />
             )}
           </AnimatePresence>
 
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Chat input — only during goal phase */}
+        {/* Chat input -- only during goal phase */}
         {phase === 'goal' && (
           <div className="flex-shrink-0 pb-2">
             <div className="flex gap-2 items-end">
@@ -626,22 +499,33 @@ export const AtlasConciergePage = () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your answer..."
+                placeholder={manifest.copy.inputPlaceholder}
                 rows={1}
                 disabled={isThinking}
-                className="flex-1 px-4 py-3 rounded-2xl border text-[15px] text-white placeholder:text-ink-subtle focus:outline-none resize-none overflow-hidden transition-all"
+                className="flex-1 px-4 py-3 rounded-2xl border text-[15px] resize-none overflow-hidden transition-all focus:outline-none"
                 style={{
-                  background: VELVET_THEME.colors.glassCard,
-                  borderColor: VELVET_THEME.colors.glassBorder,
+                  background: 'var(--shell-surface)',
+                  borderColor: 'var(--shell-border)',
+                  color: 'var(--shell-text-primary)',
                   minHeight: '48px',
                   maxHeight: '100px',
+                  backdropFilter: 'blur(12px)',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = 'var(--shell-border-strong)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'var(--shell-border)';
                 }}
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isThinking}
-                className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{ background: VELVET_THEME.button.primary }}
+                className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{
+                  background: 'var(--shell-accent)',
+                  color: 'var(--shell-bg)',
+                }}
               >
                 <Send className="w-5 h-5" />
               </button>
@@ -659,67 +543,65 @@ export const AtlasConciergePage = () => {
               className="fixed inset-0 z-50 flex items-center justify-center"
               style={{ background: 'rgba(7,9,15,0.92)', backdropFilter: 'blur(16px)' }}
             >
-              {AMBIENT_ORBS.map((orb, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: orb.x,
-                    top: orb.y,
-                    width: orb.w * 0.7,
-                    height: orb.h * 0.7,
-                    borderRadius: '50%',
-                    background: orb.color,
-                    filter: `blur(${orb.blur}px)`,
-                  }}
-                  animate={{
-                    x: ['0%', i % 2 === 0 ? '4%' : '-3%', '0%'],
-                    y: ['0%', '2%', '0%'],
-                  }}
-                  transition={{ duration: orb.dur, repeat: Infinity, ease: 'easeInOut' }}
-                />
-              ))}
-
               <motion.div
                 initial={{ scale: 0.85, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+                transition={
+                  reduced
+                    ? { duration: 0.3 }
+                    : { type: 'spring', stiffness: 200, damping: 18 }
+                }
                 className="relative text-center px-8 max-w-md"
               >
                 <div className="flex justify-center mb-6">
                   <div
                     className="w-20 h-20 rounded-3xl flex items-center justify-center relative"
                     style={{
-                      background: VELVET_THEME.colors.glassCard,
-                      border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
+                      background: 'var(--shell-surface)',
+                      border: '1px solid var(--shell-border-strong)',
+                      backdropFilter: 'blur(12px)',
                     }}
                   >
                     <motion.div
                       className="absolute inset-0 rounded-3xl"
                       style={{
-                        background: 'radial-gradient(circle, rgba(244,114,182,0.2) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, var(--shell-accent-soft) 0%, transparent 70%)',
                       }}
-                      animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.85, 1.15, 0.85] }}
+                      animate={reduced ? undefined : { opacity: [0.3, 0.7, 0.3], scale: [0.85, 1.15, 0.85] }}
                       transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                     />
                     <motion.div
-                      animate={{ rotate: [0, 360] }}
+                      animate={reduced ? undefined : { rotate: [0, 360] }}
                       transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
                     >
-                      <Compass className="w-7 h-7 text-rose-300" />
+                      <img
+                        src={`data:image/svg+xml,${encodeURIComponent(manifest.crestSvg ?? '')}`}
+                        alt="Atlas"
+                        className="w-8 h-8 relative z-10"
+                      />
                     </motion.div>
                   </div>
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-3">Setting up your coach...</h2>
-                <p className="text-ink-secondary text-base mb-8">Getting everything ready.</p>
+                <h2
+                  className="text-2xl font-bold mb-3"
+                  style={{
+                    fontFamily: 'var(--shell-display-font)',
+                    color: 'var(--shell-text-primary)',
+                  }}
+                >
+                  Setting up your coach\u2026
+                </h2>
+                <p className="text-base mb-8" style={{ color: 'var(--shell-text-secondary)' }}>
+                  Getting everything ready.
+                </p>
                 <div className="flex justify-center gap-1.5">
                   {[0, 1, 2].map(i => (
                     <motion.div
                       key={i}
                       className="w-2 h-2 rounded-full"
-                      style={{ background: 'rgba(244,114,182,0.5)' }}
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+                      style={{ background: 'var(--shell-accent)' }}
+                      animate={reduced ? undefined : { opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.25, ease: 'easeInOut' }}
                     />
                   ))}
                 </div>
@@ -729,7 +611,6 @@ export const AtlasConciergePage = () => {
         </AnimatePresence>
       </div>
 
-      {/* Atlas transition overlay -> navigates to intent-select */}
       <AtlasTransitionOverlay
         message={transitionMessage}
         subMessage={transitionSubMessage}
@@ -744,5 +625,13 @@ export const AtlasConciergePage = () => {
         }}
       />
     </div>
+  );
+}
+
+export const AtlasConciergePage = () => {
+  return (
+    <ShellProvider agentId="atlas" forceDark>
+      <AtlasConciergeInner />
+    </ShellProvider>
   );
 };
