@@ -846,41 +846,12 @@ export class ChatService {
             .update({ last_message_at: now.toISOString() })
             .eq('id', companionId);
 
-          await Promise.all([
-            MemoryService.extractAndStoreMemories(
-              userProfile.id,
-              message,
-              assistantMessage,
-              formattedHistory
-            ),
-            ConversationThreadService.detectAndUpdateThreads(
-              userProfile.id,
-              message,
-              assistantMessage,
-              formattedHistory
-            ),
-            EmotionalProfileService.updateProfile(
-              userProfile.id,
-              message,
-              assistantMessage,
-              formattedHistory
-            ),
-          ]);
-
-          if (formattedHistory.length % 10 === 0) {
-            const { SemanticMemoryService } = await import('./semanticMemoryService');
-            await Promise.all([
-              SemanticMemoryService.clusterMemories(userProfile.id),
-              SemanticMemoryService.buildTemporalChains(userProfile.id),
-            ]);
-          }
-
-          if (companionId) {
-            const shouldSummarize = await import('./memoryService').then(m =>
-              m.needsSummarization(userProfile.id, companionId)
-            );
-            await triggerSummarizationIfNeeded(userProfile.id, companionId, shouldSummarize);
-          }
+          // Memory extraction (extractAndStoreMemories, detectAndUpdateThreads,
+          // EmotionalProfile, clustering, temporal chains, summarization) has
+          // been removed from the client-side path. These were write-only on
+          // the live server-prompt path — chat-turn never read any of it.
+          // Extraction should run server-side in chat-turn's post-response
+          // hook instead, which is a separate task.
         }
 
         CostTracker.logStats();
