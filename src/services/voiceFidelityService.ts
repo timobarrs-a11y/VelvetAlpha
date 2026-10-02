@@ -35,7 +35,10 @@ export async function seedVoiceBaseline(
     const voiceId = signatureVoiceId || (gender === 'male' ? 'classic_male' : 'classic_female');
     const voice = getVoiceById(voiceId);
     if (!voice?.instruction) return;
-    await supabase.from('companions').update({ voice_baseline: voice.instruction }).eq('id', companionId);
+    await supabase.rpc('refresh_voice_baseline', {
+      p_companion_id: companionId,
+      p_new_baseline: voice.instruction,
+    });
   } catch (error) {
     console.error('[voiceFidelity] failed to seed baseline:', error);
   }
@@ -75,30 +78,19 @@ export async function inspectVoiceFidelity(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return result;
 
-    await Promise.all([
-      supabase.from('companion_drift_log').insert({
-        companion_id: companion.id,
-        user_id: user.id,
-        vfs_overall: result.overall,
-        vfs_tone: result.scores.tone,
-        vfs_vocabulary: result.scores.vocabulary,
-        vfs_emotional: result.scores.emotional,
-        vfs_energy: result.scores.energy,
-        vfs_boundary: result.scores.boundary,
-        drift_detected: result.drift_detected,
-        correction_applied: false,
-        messages_sampled: recentAssistantMessages.length,
-        notes: result.notes,
-      }),
-      supabase
-        .from('companions')
-        .update({
-          drift_vfs: result.overall,
-          drift_needs_correction: result.overall < DRIFT_THRESHOLD,
-          drift_checked_at: new Date().toISOString(),
-        })
-        .eq('id', companion.id),
-    ]);
+    await supabase.rpc('record_voice_drift', {
+      p_companion_id: companion.id,
+      p_vfs_overall: result.overall,
+      p_drift_detected: result.drift_detected,
+      p_needs_correction: result.overall < DRIFT_THRESHOLD,
+      p_vfs_tone: result.scores.tone,
+      p_vfs_vocabulary: result.scores.vocabulary,
+      p_vfs_emotional: result.scores.emotional,
+      p_vfs_energy: result.scores.energy,
+      p_vfs_boundary: result.scores.boundary,
+      p_messages_sampled: recentAssistantMessages.length,
+      p_notes: result.notes,
+    });
 
     return result;
   } catch (error) {
@@ -108,8 +100,5 @@ export async function inspectVoiceFidelity(
 }
 
 export async function clearDriftCorrection(companionId: string): Promise<void> {
-  await supabase
-    .from('companions')
-    .update({ drift_needs_correction: false })
-    .eq('id', companionId);
+  await supabase.rpc('clear_drift_correction', { p_companion_id: companionId });
 }
