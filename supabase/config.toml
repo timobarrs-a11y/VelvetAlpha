@@ -131,3 +131,12 @@ verify_jwt = false
 
 [functions.memory-mutate]
 verify_jwt = true
+
+[functions.dream-hygiene]
+verify_jwt = false
+
+[functions.memory-proposals-admin]
+verify_jwt = true
+
+[functions.dream-fleet]
+verify_jwt = false

@@ -12,6 +12,7 @@ const UserManagementPage = lazy(() => import('../pages/UserManagementPage').then
 const SemanticMemoryDebugPage = lazy(() => import('../pages/SemanticMemoryDebugPage'));
 const MonitoringDashboardPage = lazy(() => import('../pages/MonitoringDashboardPage').then(m => ({ default: m.MonitoringDashboardPage })));
 const ResponseQualityPage = lazy(() => import('../pages/ResponseQualityPage').then(m => ({ default: m.ResponseQualityPage })));
+const MemoryProposalsPage = lazy(() => import('../pages/MemoryProposalsPage').then(m => ({ default: m.MemoryProposalsPage })));
 
 function admin(role: UserRole | 'manager_or_above', el: React.ReactNode) {
   return (
@@ -31,4 +32,5 @@ export const adminRoutes = [
   <Route key="prompt-debugger" path="/prompt-debugger" element={admin('manager_or_above', <PromptDebuggerPage />)} />,
   <Route key="debug-subscription" path="/debug-subscription" element={admin('manager_or_above', <DebugSubscriptionPage />)} />,
   <Route key="debug-semantic" path="/debug-semantic" element={admin('manager_or_above', <SemanticMemoryDebugPage />)} />,
+  <Route key="admin-memory-proposals" path="/admin/memory-proposals" element={admin('manager_or_above', <MemoryProposalsPage />)} />,
 ];

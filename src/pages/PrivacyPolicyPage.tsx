@@ -8,6 +8,7 @@ const SECTIONS = [
   { id: 'information-we-collect', num: '2', title: 'Information We Collect' },
   { id: 'how-we-use', num: '3', title: 'How We Use Your Information' },
   { id: 'automated-analysis', num: '4', title: 'Automated Analysis and Profiling' },
+  { id: 'fleet-quality', num: '4.1', title: 'Fleet-Level Quality Improvement' },
   { id: 'ai-models', num: '5', title: 'AI Models and Your Content' },
   { id: 'information-sharing', num: '6', title: 'Information Sharing and Disclosure' },
   { id: 'data-security', num: '7', title: 'Data Security' },
@@ -281,6 +282,30 @@ export default function PrivacyPolicyPage() {
                   or insurance). You can limit this processing by not using the
                   relevant features or by deleting your data.
                 </BodyText>
+
+                <div id="fleet-quality" className="scroll-mt-24">
+                <SubHeading num="4.1" title="Fleet-Level Quality Improvement" />
+                <BodyText>
+                  To improve the quality, safety, and consistency of the Service for all
+                  users, we periodically run automated &quot;fleet review&quot; analyses across
+                  aggregated, de-identified interaction data. These analyses look for
+                  systemic patterns — such as recurring corrections, disliked response
+                  types, or voice drift — and propose changes to system-level
+                  configuration only (such as prompt templates, extraction rules, and
+                  opener rules). Fleet review never targets an individual user&apos;s
+                  memories or personal data. All proposed changes are reviewed and
+                  approved by a human operator before they take effect.
+                </BodyText>
+                <BodyText>
+                  Participation in fleet review is opt-in. You can enable or disable it
+                  at any time in your account settings. When enabled, only redacted
+                  excerpts of your interactions are used — personal names, contact
+                  information, addresses, and numbers are replaced with typed
+                  placeholders before any analysis. Users under 18, accounts flagged for
+                  moderation violations, and deleted accounts are automatically excluded
+                  from fleet review regardless of the consent setting.
+                </BodyText>
+                </div>
               </section>
 
               {/* 5. AI Models and Your Content */}
