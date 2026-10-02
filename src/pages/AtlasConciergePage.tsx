@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpRight, ChevronDown, Lightbulb, Send, Compass, Sparkles } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Lightbulb, Send, Compass } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
 import { useTypingEffect, useWritingIndicator } from '../hooks/useTypingEffect';
@@ -468,15 +468,8 @@ function AtlasConciergeInner() {
       {/* Full-width briefing section — sits directly below the top bar */}
       <div className="relative z-10 w-full px-4 sm:px-6 pt-6 pb-6">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-1.5 mb-3">
-            <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--shell-accent)' }} />
-            <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--shell-text-muted)' }}>
-              Your private briefing
-            </span>
-          </div>
-
           <h2
-            className="text-2xl sm:text-3xl font-bold mb-3 leading-tight text-left"
+            className="text-2xl sm:text-3xl font-bold mb-3 leading-tight text-center"
             style={{
               fontFamily: 'var(--shell-display-font)',
               color: 'var(--shell-text-primary)',
@@ -486,7 +479,7 @@ function AtlasConciergeInner() {
               backgroundClip: 'text',
             }}
           >
-            Your next step starts here.
+            Improvement starts here.
           </h2>
 
           <p
@@ -498,7 +491,7 @@ function AtlasConciergeInner() {
 
           <div className="flex flex-col sm:flex-row gap-3 mb-5 max-w-2xl">
             {[
-              { num: '01', label: 'Share your goal', desc: 'Say it however feels natural' },
+              { num: '01', label: 'Share your goal', desc: "Tell us what you're already working on" },
               { num: '02', label: 'Atlas listens', desc: 'It asks the right follow-ups' },
               { num: '03', label: 'Meet your coach', desc: 'A match tailored to your goal' },
             ].map(step => (
@@ -519,15 +512,11 @@ function AtlasConciergeInner() {
             ))}
           </div>
 
-          <div className="flex items-center gap-3 max-w-2xl mb-4">
+          <div className="flex items-center gap-3 max-w-2xl">
             <div className="flex-1 h-px" style={{ background: 'var(--shell-border-strong)' }} />
             <div className="w-1 h-1 rounded-full" style={{ background: 'var(--shell-accent)' }} />
             <div className="flex-1 h-px" style={{ background: 'var(--shell-border-strong)' }} />
           </div>
-
-          <p className="text-[12px] italic text-left" style={{ color: 'var(--shell-text-muted)' }}>
-            Nothing needs to be perfectly worded. Just start typing.
-          </p>
         </div>
       </div>
 
@@ -831,7 +820,7 @@ function AtlasConciergeInner() {
 
 export const AtlasConciergePage = () => {
   return (
-    <ShellProvider agentId="atlas">
+    <ShellProvider agentId="atlas" forceDark>
       <AtlasConciergeInner />
     </ShellProvider>
   );

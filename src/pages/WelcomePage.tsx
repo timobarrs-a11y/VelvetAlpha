@@ -653,7 +653,7 @@ export function WelcomePage() {
                   WebkitTextFillColor: 'transparent',
                 }}
               >
-                Your world starts now.
+                Time to accelerate your life.
               </span>
             </span>
             <motion.span
@@ -671,7 +671,7 @@ export function WelcomePage() {
               animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
               transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
             >
-              Your world starts now.
+              Time to accelerate your life.
             </motion.span>
           </motion.h1>
         </motion.div>
@@ -707,11 +707,8 @@ export function WelcomePage() {
           <div className="relative z-10">
             {user ? (
               <>
-                <p className="text-gray-400 text-base mb-3 max-w-lg mx-auto leading-relaxed">
+                <p className="text-gray-400 text-base mb-8 max-w-lg mx-auto leading-relaxed">
                   We'll start you off with some simple questions aimed at understanding who you are, what you like, what your current goals are, and what you look for in a best friend or companion. Fully complete in less than 10 minutes!
-                </p>
-                <p className="text-gray-500 text-sm mb-8">
-                  Check below to see all the things waiting for you inside.
                 </p>
 
                 <motion.button

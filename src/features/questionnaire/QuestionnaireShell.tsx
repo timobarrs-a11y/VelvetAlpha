@@ -31,6 +31,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: 
   Atom, Newspaper, Leaf, Cat,
 };
 
+const NEXT_BUTTON_CLASS = 'inline-flex items-center justify-center h-12 w-48 max-w-full px-8 text-white text-base font-bold rounded-full shadow-lg transition-all duration-200';
+
 function loadIcon(name: string): React.ComponentType<{ className?: string; size?: number }> | null {
   return ICON_MAP[name] || null;
 }
@@ -503,11 +505,11 @@ function TapTextRenderer({
           {minLen} letters minimum
         </p>
       )}
-      <div className={onSkip ? 'flex gap-3' : ''}>
+      <div className="flex items-center justify-center gap-3">
         <button
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="flex-1 py-4 text-white text-lg font-bold rounded-full shadow-lg transition-all duration-200 transform disabled:cursor-not-allowed disabled:transform-none"
+          className={`${NEXT_BUTTON_CLASS} disabled:cursor-not-allowed`}
           style={!canSubmit
             ? { background: 'rgb(55 65 81)' }
             : { background: accentColor ? `linear-gradient(to right, ${accentColor}, ${accentColor}dd)` : 'linear-gradient(to right, rgb(244 63 94), rgb(219 39 119))' }}
@@ -517,7 +519,7 @@ function TapTextRenderer({
         {onSkip && (
           <button
             onClick={onSkip}
-            className="px-6 py-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-base font-medium rounded-full border border-white/10 transition-all duration-200"
+            className="h-12 px-6 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-base font-medium rounded-full border border-white/10 transition-all duration-200"
           >
             {question.skipLabel || 'Skip'}
           </button>
@@ -690,10 +692,11 @@ function GridRenderer({
       )}
 
       {!autoSubmit && (
+        <div className="flex justify-center">
         <button
           onClick={onSubmit}
           disabled={!meetsMin && !canSkip}
-          className="w-full py-4 text-white text-lg font-bold rounded-full shadow-lg transition-all duration-200 transform disabled:cursor-not-allowed"
+          className={`${NEXT_BUTTON_CLASS} whitespace-nowrap disabled:cursor-not-allowed`}
           style={!meetsMin && !canSkip
             ? { background: 'rgb(255 255 255 / 0.05)', opacity: 0.5 }
             : canSkip
@@ -702,6 +705,7 @@ function GridRenderer({
         >
           {canSkip ? 'Skip' : meetsMin ? 'Continue' : `Select ${minSel - totalSelected} more`}
         </button>
+        </div>
       )}
     </div>
   );
@@ -816,12 +820,14 @@ function ScrubRenderer({
         </div>
       </div>
 
-      <button
-        onClick={onSubmit}
-        className="w-full py-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white text-lg font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.01]"
-      >
-        Next
-      </button>
+      <div className="flex justify-center">
+        <button
+          onClick={onSubmit}
+          className={`${NEXT_BUTTON_CLASS} bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 hover:shadow-xl`}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }
@@ -998,7 +1004,7 @@ function BeatRenderer({
 
               <motion.button
                 onClick={onConfirm}
-                className="mt-8 px-8 py-4 text-white text-lg font-bold rounded-full shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
+                className={`mt-8 ${NEXT_BUTTON_CLASS} hover:scale-[1.02]`}
                 style={{
                   background: accentColor
                     ? `linear-gradient(to right, ${accentColor}, ${accentColor}dd)`
