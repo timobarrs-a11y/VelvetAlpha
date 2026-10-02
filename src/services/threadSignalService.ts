@@ -39,7 +39,8 @@ async function extractSignals(
       },
       body: JSON.stringify({
         messages: [{ role: 'user', content: userMessages }],
-        system: systemPrompt,
+        systemPrompt,
+        promptType: 'signal_extract',
         maxTokens: 300,
         model: 'haiku',
       }),

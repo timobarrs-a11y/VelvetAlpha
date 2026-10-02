@@ -236,6 +236,7 @@ DO NOT use the examples above. Generate a unique, natural response specific to t
         body: JSON.stringify({
           messages: [{ role: 'user' as const, content: userPrompt }],
           systemPrompt,
+          promptType: 'coauthor_greeting',
           maxTokens: 150,
           model: MODEL_CONFIG.PREMIUM_MODEL,
         }),
@@ -328,6 +329,7 @@ DO NOT use the examples above. Generate a unique, natural response specific to t
         body: JSON.stringify({
           messages: chatMessages,
           systemPrompt,
+          promptType: 'coauthor_chat',
           maxTokens: 500,
           model: MODEL_CONFIG.PREMIUM_MODEL,
         }),
@@ -487,6 +489,7 @@ DO NOT use the examples above. Generate a unique, natural response specific to t
         body: JSON.stringify({
           messages,
           systemPrompt,
+          promptType: 'coauthor_canvas',
           maxTokens: 1000,
           model: MODEL_CONFIG.PREMIUM_MODEL,
         }),

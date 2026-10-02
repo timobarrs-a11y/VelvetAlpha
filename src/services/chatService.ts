@@ -415,6 +415,7 @@ export class ChatService {
           body: JSON.stringify({
             messages: messagesToSend,
             systemPrompt: promptWithFeedback,
+            promptType: 'companion',
             ...(blocksWithFeedback ? { systemBlocks: blocksWithFeedback } : {}),
             maxTokens,
             model,

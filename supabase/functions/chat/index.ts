@@ -84,7 +84,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { messages, systemPrompt, systemBlocks, maxTokens, model } = await req.json();
+    const { messages, systemPrompt, systemBlocks, maxTokens, model, promptType } = await req.json();
+
+    // System prompts are only accepted from callers that declare a known prompt type.
+    // This prevents arbitrary user-injected system prompts from reaching the model.
+    const ALLOWED_PROMPT_TYPES = new Set([
+      'companion',          // chatService legacy companion path
+      'coauthor_greeting',  // CoAuthorCanvas initial greeting
+      'coauthor_chat',      // CoAuthorCanvas chat sidebar
+      'coauthor_canvas',    // CoAuthorCanvas document generation
+      'signal_extract',     // threadSignalService interest extraction
+    ]);
+    const hasSystemPrompt = (typeof systemPrompt === 'string' && systemPrompt.length > 0) ||
+                           (Array.isArray(systemBlocks) && systemBlocks.length > 0);
+    if (hasSystemPrompt && (!promptType || !ALLOWED_PROMPT_TYPES.has(promptType))) {
+      return new Response(
+        JSON.stringify({ error: 'System prompts require a valid promptType' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
@@ -145,7 +163,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Validate systemPrompt if present
+    // Validate systemPrompt if present (gate already enforced above via promptType)
     if (systemPrompt !== undefined && systemPrompt !== null) {
       if (typeof systemPrompt !== 'string') {
         return validationError('systemPrompt must be a string');
