@@ -743,6 +743,194 @@ Today's date: ${new Date().toISOString()}`,
   return result;
 }
 
+async function extractMemoryServerSide(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  apiKey: string,
+  userId: string,
+  companionId: string,
+  userMessage: string,
+  assistantMessage: string,
+  recentHistory: Array<{ role: string; content: string }>,
+): Promise<void> {
+  try {
+    const recentContext = recentHistory.slice(-4).map(m => `${m.role}: ${m.content.substring(0, 200)}`).join("\n");
+
+    const extractRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: MODEL_CONFIG.HAIKU,
+        max_tokens: 800,
+        system: `You are a memory extraction engine. Analyze the conversation turn and extract durable facts and conversation threads.
+
+Return ONLY valid JSON:
+{
+  "facts": [{"fact": "concise factual statement about the user", "category": "personal|preference|schedule|relationship|goal"}],
+  "threads": [{"topic": "short topic label", "context_summary": "1-2 sentence summary", "unresolved_questions": ["question?"], "key_points": ["point"], "emotional_tone": "positive|neutral|negative|excited|anxious|reflective", "status": "active|resolved"}]
+}
+
+Rules:
+- Only extract facts that are durable (would matter in future conversations): name, job, hobbies, preferences, relationships, schedule, goals.
+- Skip small talk, greetings, filler.
+- A thread is a topic the user is actively discussing or left unresolved.
+- If nothing extractable, return {"facts": [], "threads": []}.`,
+        messages: [
+          {
+            role: "user",
+            content: `Recent conversation:\n${recentContext}\n\nLatest user message: "${userMessage.substring(0, 500)}"\nCompanion reply: "${assistantMessage.substring(0, 400)}"`,
+          },
+        ],
+      }),
+    });
+
+    if (!extractRes.ok) return;
+
+    const extractData = await extractRes.json();
+    const raw = extractData.content?.[0]?.text || "";
+
+    let parsed: { facts: Array<{ fact: string; category: string }>; threads: Array<{ topic: string; context_summary: string; unresolved_questions: string[]; key_points: string[]; emotional_tone: string; status: string }> };
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    } catch {
+      return;
+    }
+
+    // Upsert facts into user_insights (one row per companion per period)
+    if (parsed.facts && parsed.facts.length > 0) {
+      try {
+        const today = new Date();
+        const periodStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const { data: existing } = await supabaseAdmin
+          .from('user_insights')
+          .select('id, facts_learned')
+          .eq('user_id', userId)
+          .eq('companion_id', companionId)
+          .eq('period_start', periodStart)
+          .maybeSingle();
+
+        const newFacts = parsed.facts.map(f => ({ fact: f.fact, category: f.category, extracted_at: new Date().toISOString() }));
+
+        if (existing) {
+          const existingFacts = (existing.facts_learned as unknown as Array<{ fact: string; category: string; extracted_at: string }>) || [];
+          const factTexts = new Set(existingFacts.map(f => f.fact.toLowerCase()));
+          const deduped = newFacts.filter(f => !factTexts.has(f.fact.toLowerCase()));
+          if (deduped.length > 0) {
+            await supabaseAdmin
+              .from('user_insights')
+              .update({
+                facts_learned: [...existingFacts, ...deduped] as unknown as never,
+                updated_at: new Date().toISOString(),
+                total_messages: ((await supabaseAdmin.from('user_insights').select('total_messages').eq('id', existing.id).maybeSingle()).data?.total_messages ?? 0) + 1,
+              })
+              .eq('id', existing.id);
+          }
+        } else {
+          await supabaseAdmin.from('user_insights').insert({
+            user_id: userId,
+            companion_id: companionId,
+            period_start: periodStart,
+            period_end: periodEnd,
+            total_conversations: 1,
+            total_messages: 1,
+            avg_conversation_length: 1,
+            top_topics: {},
+            sentiment_trend: {},
+            facts_learned: newFacts as unknown as never,
+            goals_mentioned: {},
+            confidence_score: 0.7,
+          });
+        }
+      } catch (err) {
+        console.error('[chat-turn] Fact extraction upsert error:', err);
+      }
+    }
+
+    // Upsert conversation threads
+    if (parsed.threads && parsed.threads.length > 0) {
+      for (const thread of parsed.threads) {
+        try {
+          // Check if an active thread with the same topic exists
+          const { data: existingThread } = await supabaseAdmin
+            .from('conversation_threads')
+            .select('id, key_points, unresolved_questions')
+            .eq('user_id', userId)
+            .eq('topic', thread.topic)
+            .eq('status', 'active')
+            .maybeSingle();
+
+          if (existingThread) {
+            const existingKeyPoints = (existingThread.key_points as string[]) || [];
+            const existingQuestions = (existingThread.unresolved_questions as string[]) || [];
+            const mergedKeyPoints = [...new Set([...existingKeyPoints, ...(thread.key_points || [])])];
+            const mergedQuestions = [...new Set([...existingQuestions, ...(thread.unresolved_questions || [])])];
+
+            await supabaseAdmin
+              .from('conversation_threads')
+              .update({
+                context_summary: thread.context_summary,
+                key_points: mergedKeyPoints as unknown as never,
+                unresolved_questions: mergedQuestions as unknown as never,
+                emotional_tone: thread.emotional_tone,
+                last_active: new Date().toISOString(),
+                status: thread.status === 'resolved' ? 'resolved' : 'active',
+                resolved_at: thread.status === 'resolved' ? new Date().toISOString() : null,
+              })
+              .eq('id', existingThread.id);
+          } else {
+            await supabaseAdmin.from('conversation_threads').insert({
+              user_id: userId,
+              topic: thread.topic,
+              status: thread.status || 'active',
+              context_summary: thread.context_summary,
+              emotional_tone: thread.emotional_tone,
+              unresolved_questions: (thread.unresolved_questions || []) as unknown as never,
+              key_points: (thread.key_points || []) as unknown as never,
+              started_at: new Date().toISOString(),
+              last_active: new Date().toISOString(),
+            });
+          }
+        } catch (err) {
+          console.error('[chat-turn] Thread upsert error:', err);
+        }
+      }
+    }
+
+    // Check if enough unsummarized messages have accumulated to trigger summarization
+    try {
+      const { count } = await supabaseAdmin
+        .from('conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('companion_id', companionId)
+        .eq('summarized', false);
+
+      if (count && count >= 50) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+        await fetch(`${supabaseUrl}/functions/v1/summarize-memory`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ user_id: userId, companion_id: companionId }),
+        });
+      }
+    } catch (err) {
+      console.error('[chat-turn] Summarization trigger error:', err);
+    }
+  } catch (err) {
+    console.error('[chat-turn] Memory extraction error:', err);
+  }
+}
+
 async function fetchOpenCommitments(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
@@ -1560,7 +1748,17 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       isMentor,
     );
 
-    EdgeRuntime.waitUntil(signalPromise);
+    const memoryPromise = extractMemoryServerSide(
+      supabaseAdmin,
+      apiKey,
+      user.id,
+      companionId,
+      message,
+      assistantMessage,
+      last20Messages,
+    );
+
+    EdgeRuntime.waitUntil(Promise.allSettled([signalPromise, memoryPromise]));
 
     const response: ChatTurnResponse & { calendarEvent?: CalendarEventDetected | null; navigationIntent?: NavigationIntent | null } = {
       assistantMessage,
