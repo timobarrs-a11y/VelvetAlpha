@@ -6,6 +6,8 @@ export interface GDPRExportData {
   conversations: any[];
   messages: any[];
   memories: any[];
+  memoryItems: any[];
+  memoryHistory: any[];
   calendarEvents: any[];
   insights: any[];
   featureUsage: any[];
@@ -30,6 +32,8 @@ class GDPRService {
       conversationsRes,
       messagesRes,
       memoriesRes,
+      memoryItemsRes,
+      memoryHistoryRes,
       calendarRes,
       insightsRes,
       featureUsageRes,
@@ -44,6 +48,8 @@ class GDPRService {
       supabase.from('conversations').select('id, companion_id, role, content, created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(2000),
       supabase.from('messages').select('id, role, content, created_at, conversation_id').eq('user_id', uid).order('created_at', { ascending: false }).limit(2000),
       supabase.from('companion_memories').select('memory_text, importance_score, created_at').eq('user_id', uid).limit(500),
+      supabase.from('memory_items').select('id, companion_id, scope, kind, content, status, confidence, importance, source, version, created_at, updated_at').eq('user_id', uid).limit(1000),
+      supabase.from('memory_history').select('memory_id, version, op, before, after, actor_type, created_at').order('created_at', { ascending: false }).limit(500),
       supabase.from('calendar_events').select('title, description, event_date, event_type, created_at').eq('user_id', uid).limit(500),
       supabase.from('conversation_insights').select('insight_type, insight_text, created_at').eq('user_id', uid).limit(200),
       supabase.from('feature_usage_stats').select('feature_name, usage_count, total_time_spent_seconds, last_used_at').eq('user_id', uid),
@@ -69,6 +75,8 @@ class GDPRService {
       conversations: getValue(conversationsRes) ?? [],
       messages: getValue(messagesRes) ?? [],
       memories: getValue(memoriesRes) ?? [],
+      memoryItems: getValue(memoryItemsRes) ?? [],
+      memoryHistory: getValue(memoryHistoryRes) ?? [],
       calendarEvents: getValue(calendarRes) ?? [],
       insights: getValue(insightsRes) ?? [],
       featureUsage: getValue(featureUsageRes) ?? [],

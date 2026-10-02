@@ -128,3 +128,6 @@ verify_jwt = true
 
 [functions.uptime-monitor]
 verify_jwt = false
+
+[functions.memory-mutate]
+verify_jwt = true

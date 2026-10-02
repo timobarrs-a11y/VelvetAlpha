@@ -174,6 +174,24 @@ Deno.serve(async (req: Request) => {
         const hoursSince = (Date.now() - new Date(lastCreatedAt).getTime()) / (1000 * 60 * 60);
         historyBlock += buildGapNote(hoursSince);
       }
+
+      // Fetch due, unresolved, companion-scoped threads (at most one)
+      const { data: dueThreads } = await supabaseAdmin
+        .from('memory_items')
+        .select('content, due_at')
+        .eq('user_id', user.id)
+        .eq('companion_id', companionId)
+        .eq('kind', 'thread')
+        .eq('status', 'active')
+        .not('due_at', 'is', null)
+        .lte('due_at', new Date().toISOString())
+        .order('due_at', { ascending: true })
+        .limit(1);
+
+      if (dueThreads && dueThreads.length > 0) {
+        const threadTopic = dueThreads[0].content.split(' — ')[0] || dueThreads[0].content;
+        historyBlock += `\n\nOPEN THREAD (pick this up naturally if it fits — don't force it):\n- ${threadTopic}`;
+      }
     }
 
     const personaLayer = isCorrespondent && companion.correspondent_id

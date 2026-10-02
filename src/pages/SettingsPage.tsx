@@ -6,6 +6,7 @@ import { supabase } from '../shared/supabase/client';
 import { gdprService } from '../services/gdprService';
 import { onboardingService } from '../services/onboardingService';
 import { getCompanions } from '../services/companionService';
+import { MemoryPanel } from '../components/MemoryPanel';
 import { getUserExperts, deleteUserExpert, UserExpert } from '../services/expertService';
 import { getExpertById } from '../config/signatureExperts';
 import { useRole } from '../hooks/useRole';
@@ -239,6 +240,8 @@ export function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const tables = ['companion_memories', 'companion_memory', 'relationship_memories', 'conversation_summaries', 'semantic_memories'];
+      // Also retire all memory_items for this user
+      await supabase.from('memory_items').update({ status: 'retired', content: '[cleared by user]' }).eq('user_id', user.id).eq('status', 'active').then(() => {}).catch(() => {});
       const results = await Promise.allSettled(
         tables.map(t => supabase.from(t).delete().eq('user_id', user.id))
       );
@@ -734,6 +737,8 @@ export function SettingsPage() {
                   <p className="text-white/40 text-sm mb-6">Export or delete your personal data. This is your right under GDPR and similar privacy laws.</p>
 
                   <div className="space-y-4 mb-8">
+                    <MemoryPanel />
+
                     <div className="rounded-xl p-5 border border-white/10" style={{ background: 'rgba(255,255,255,0.04)' }}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex gap-3">

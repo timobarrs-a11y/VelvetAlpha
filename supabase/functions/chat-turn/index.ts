@@ -519,10 +519,26 @@ interface CommitmentDetected {
   confidence: number;
 }
 
+interface MemoryCorrection {
+  memory_item_id: string | null;
+  old_content: string | null;
+  corrected_content: string | null;
+  confidence: number;
+}
+
+interface MemoryReference {
+  memory_item_id: string | null;
+  engagement: 'engaged' | 'deflected' | 'denied';
+  confidence: number;
+}
+
 interface PostResponseSignals {
   calendarEvent: CalendarEventDetected | null;
   navigationIntent: NavigationIntent | null;
   commitment: CommitmentDetected | null;
+  memoryCorrection: MemoryCorrection | null;
+  memoryReference: MemoryReference | null;
+  threadClosed: { memory_item_id: string; confidence: number } | null;
 }
 
 const APP_ROUTES: Record<string, string> = {
@@ -552,8 +568,10 @@ async function detectPostResponseSignals(
   assistantMessage: string,
   recentHistory: Array<{ role: string; content: string }>,
   isMentor: boolean,
+  injectedMemoryIds: string[] = [],
+  openThreadContents: Array<{ id: string; content: string }> = [],
 ): Promise<PostResponseSignals> {
-  const result: PostResponseSignals = { calendarEvent: null, navigationIntent: null, commitment: null };
+  const result: PostResponseSignals = { calendarEvent: null, navigationIntent: null, commitment: null, memoryCorrection: null, memoryReference: null, threadClosed: null };
 
   try {
     const recentContext = recentHistory.slice(-6).map(m => `${m.role}: ${m.content.substring(0, 200)}`).join("\n");
@@ -587,6 +605,32 @@ async function detectPostResponseSignals(
    - Missed: "I skipped it", "didn't get to it", "I forgot", "missed Thursday"
    - Match the update to the most relevant commitment description
 
+5. MEMORY_CORRECTION: Did the user correct something the companion remembered or stated? Look for:
+   - "No, I actually...", "that's not right", "I never said that", "it's not X, it's Y"
+   - "I don't work there anymore", "we broke up", "I changed jobs"
+   - Extract: which fact was wrong (old_content), what's correct now (corrected_content), and match to injectedMemoryIds if possible
+   - Confidence > 0.7 for clear corrections
+
+6. MEMORY_REFERENCE: Did the companion use a remembered fact in its reply, and how did the user respond?
+   - engaged: user responded to the referenced memory naturally ("yeah, about my job...")
+   - deflected: user ignored the reference and changed topic
+   - denied: user said the memory is wrong ("I never told you that")
+   - Only flag if the companion's reply clearly referenced a past fact/user detail
+   - Confidence > 0.6
+
+7. THREAD_CLOSED: Did the user resolve or close a previously open thread? Look for:
+   - The user answering a question that was left open
+   - "Yeah, that happened" / "it went well" / "we talked about it" / "I did it"
+   - The user explicitly closing a topic: "don't worry about that" / "we can drop that"
+   - Match to one of the open thread IDs below if possible
+   - Confidence > 0.7
+
+The companion reply may reference facts from past conversations. Here are the memory IDs that were injected: ${injectedMemoryIds.join(', ') || 'none'}
+If a correction or reference maps to one of these IDs, include it in memory_item_id. Otherwise use null.
+
+Open threads (match THREAD_CLOSED to one of these IDs if possible):
+${openThreadContents.map(t => `- ${t.id}: ${t.content.substring(0, 120)}`).join('\n') || 'none'}
+
 Respond ONLY with JSON (no other text):
 {
   "calendarEvent": {
@@ -609,6 +653,21 @@ Respond ONLY with JSON (no other text):
   "commitmentUpdate": {
     "matched_description": "the commitment description this update refers to",
     "new_status": "completed|missed|renegotiated",
+    "confidence": 0.0
+  } | null,
+  "memoryCorrection": {
+    "memory_item_id": "uuid or null",
+    "old_content": "what the companion remembered that was wrong",
+    "corrected_content": "what the user says is actually true",
+    "confidence": 0.0
+  } | null,
+  "memoryReference": {
+    "memory_item_id": "uuid or null",
+    "engagement": "engaged|deflected|denied",
+    "confidence": 0.0
+  } | null,
+  "threadClosed": {
+    "memory_item_id": "uuid",
     "confidence": 0.0
   } | null
 }
@@ -633,6 +692,9 @@ Today's date: ${new Date().toISOString()}`,
       navigationIntent: { destination: string; route: string; seedText?: string } | null;
       commitment: { description: string; due_date: string | null; confidence: number } | null;
       commitmentUpdate: { matched_description: string; new_status: string; confidence: number } | null;
+      memoryCorrection: { memory_item_id: string | null; old_content: string | null; corrected_content: string | null; confidence: number } | null;
+      memoryReference: { memory_item_id: string | null; engagement: string; confidence: number } | null;
+      threadClosed: { memory_item_id: string; confidence: number } | null;
     };
 
     try {
@@ -733,6 +795,115 @@ Today's date: ${new Date().toISOString()}`,
           .ilike('description', `%${cu.matched_description.substring(0, 100)}%`);
         if (updateErr) {
           console.error(`[${traceId}] Commitment update failed:`, updateErr);
+        }
+      }
+    }
+    // Process memory correction: supersede the item in-band, don't wait for dreaming
+    if (parsed.memoryCorrection && parsed.memoryCorrection.confidence > 0.7) {
+      const mc = parsed.memoryCorrection;
+      result.memoryCorrection = {
+        memory_item_id: mc.memory_item_id || null,
+        old_content: mc.old_content || null,
+        corrected_content: mc.corrected_content || null,
+        confidence: mc.confidence,
+      };
+
+      // Log the correction event
+      try {
+        await supabaseAdmin.from('memory_events').insert({
+          user_id: userId,
+          companion_id: companionId,
+          memory_item_id: mc.memory_item_id || null,
+          event_type: 'correction',
+          payload: { old_content: mc.old_content, corrected_content: mc.corrected_content, confidence: mc.confidence },
+        });
+      } catch (evtErr) {
+        console.error('[chat-turn] Memory event insert (correction) error:', evtErr);
+      }
+
+      // Supersede the item in-band via the optimistic update RPC
+      if (mc.memory_item_id && mc.corrected_content) {
+        try {
+          // Read current version first
+          const { data: itemRow } = await supabaseAdmin
+            .from('memory_items')
+            .select('id, version, content')
+            .eq('id', mc.memory_item_id)
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (itemRow) {
+            const { error: supersedeErr } = await supabaseAdmin.rpc('update_memory_item', {
+              p_id: mc.memory_item_id,
+              p_base_version: itemRow.version,
+              p_patch: { content: mc.corrected_content, source: 'user_edited' },
+              p_actor_type: 'user',
+            });
+            if (supersedeErr) {
+              console.error('[chat-turn] In-band supersede error:', supersedeErr);
+            }
+          }
+        } catch (supersedeErr) {
+          console.error('[chat-turn] In-band supersede exception:', supersedeErr);
+        }
+      }
+    }
+
+    // Process thread closure: retire the thread in-band
+    if (parsed.threadClosed && parsed.threadClosed.confidence > 0.7 && parsed.threadClosed.memory_item_id) {
+      const tc = parsed.threadClosed;
+      result.threadClosed = { memory_item_id: tc.memory_item_id, confidence: tc.confidence };
+
+      try {
+        const { data: itemRow } = await supabaseAdmin
+          .from('memory_items')
+          .select('id, version')
+          .eq('id', tc.memory_item_id)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (itemRow) {
+          await supabaseAdmin.rpc('update_memory_item', {
+            p_id: tc.memory_item_id,
+            p_base_version: itemRow.version,
+            p_patch: { status: 'retired' },
+            p_actor_type: 'extractor',
+          });
+
+          await supabaseAdmin.from('memory_events').insert({
+            user_id: userId,
+            companion_id: companionId,
+            memory_item_id: tc.memory_item_id,
+            event_type: 'thread_closed',
+            payload: { confidence: tc.confidence },
+          });
+        }
+      } catch (threadErr) {
+        console.error('[chat-turn] Thread closure error:', threadErr);
+      }
+    }
+
+    // Process memory reference event
+    if (parsed.memoryReference && parsed.memoryReference.confidence > 0.6) {
+      const mr = parsed.memoryReference;
+      const validEngagements = ['engaged', 'deflected', 'denied'];
+      if (validEngagements.includes(mr.engagement)) {
+        result.memoryReference = {
+          memory_item_id: mr.memory_item_id || null,
+          engagement: mr.engagement as 'engaged' | 'deflected' | 'denied',
+          confidence: mr.confidence,
+        };
+
+        try {
+          await supabaseAdmin.from('memory_events').insert({
+            user_id: userId,
+            companion_id: companionId,
+            memory_item_id: mr.memory_item_id || null,
+            event_type: 'reference',
+            payload: { engagement: mr.engagement, confidence: mr.confidence },
+          });
+        } catch (evtErr) {
+          console.error('[chat-turn] Memory event insert (reference) error:', evtErr);
         }
       }
     }
@@ -1019,13 +1190,23 @@ interface ScopedMemoryRow {
   companion_id: string | null;
 }
 
+interface ScopedMemoriesResult {
+  factsBlock: string;
+  companionMemoryText: string;
+  openThreadsBlock: string;
+  injectedMemoryIds: string[];
+  memoryTokenEstimate: number;
+  openThreadContents: Array<{ id: string; content: string }>;
+}
+
 async function fetchScopedMemories(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
   companionId: string,
   relationshipType: string,
   userMessage: string,
-): Promise<{ factsBlock: string; companionMemoryText: string; openThreadsBlock: string }> {
+): Promise<ScopedMemoriesResult> {
+  const empty: ScopedMemoriesResult = { factsBlock: '', companionMemoryText: '', openThreadsBlock: '', injectedMemoryIds: [], memoryTokenEstimate: 0, openThreadContents: [] };
   try {
     const { data, error } = await supabaseAdmin.rpc('fetch_memories_for_turn', {
       p_user_id: userId,
@@ -1035,7 +1216,7 @@ async function fetchScopedMemories(
     });
 
     if (error || !data || data.length === 0) {
-      return { factsBlock: '', companionMemoryText: '', openThreadsBlock: '' };
+      return empty;
     }
 
     const rows = data as ScopedMemoryRow[];
@@ -1060,16 +1241,27 @@ async function fetchScopedMemories(
       tokenEstimate += factTokens;
     }
 
+    // Collect all injected memory IDs (facts + threads + moments) for trace
+    const injectedMemoryIds: string[] = [
+      ...selectedFacts.map(s => s.id),
+      ...threads.map(t => t.id),
+      ...moments.map(m => m.id),
+    ];
+
     // Update recall metadata for injected fact IDs via RPC
-    if (selectedFacts.length > 0) {
-      const injectedIds = selectedFacts.map(s => s.id);
+    if (injectedMemoryIds.length > 0) {
       EdgeRuntime.waitUntil(
         supabaseAdmin
-          .rpc('update_memory_recall', { p_ids: injectedIds, p_actor_type: 'extractor' })
+          .rpc('update_memory_recall', { p_ids: injectedMemoryIds, p_actor_type: 'extractor' })
           .then(() => {})
           .catch(() => {})
       );
     }
+
+    // Add thread + moment tokens to the estimate
+    const threadTokens = threads.reduce((sum, t) => sum + Math.ceil(t.content.length / 4) + 4, 0);
+    const momentTokens = moments.reduce((sum, m) => sum + Math.ceil(m.content.length / 4) + 4, 0);
+    const memoryTokenEstimate = tokenEstimate + threadTokens + momentTokens;
 
     const factsBlock = selectedFacts.length > 0
       ? `<memory>\n[REMEMBERED USER FACTS — from past conversations. These may be outdated. If the user contradicts any of these, trust the user, not the memory.]\n${selectedFacts.map(s => `- ${s.fact}`).join('\n')}\n[END MEMORY]\n</memory>`
@@ -1088,9 +1280,9 @@ async function fetchScopedMemories(
       ? `<memory>\n[OPEN THREADS — topics the user left unresolved in past conversations. Reference these naturally if relevant, but don't force them.]\n${threads.map(t => `- ${t.content}`).join('\n')}\n[END MEMORY]\n</memory>`
       : '';
 
-    return { factsBlock, companionMemoryText, openThreadsBlock };
+    return { factsBlock, companionMemoryText, openThreadsBlock, injectedMemoryIds, memoryTokenEstimate, openThreadContents: threads.map(t => ({ id: t.id, content: t.content })) };
   } catch {
-    return { factsBlock: '', companionMemoryText: '', openThreadsBlock: '' };
+    return empty;
   }
 }
 
@@ -1509,7 +1701,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
         ? fetchActiveGoalsForPrompt(supabaseAdmin, user.id) : Promise.resolve(''),
       fetchScopedMemories(supabaseAdmin, user.id, companionId, companion.relationship_type, message),
     ]);
-    const { factsBlock, companionMemoryText, openThreadsBlock } = scopedMemories;
+    const { factsBlock, companionMemoryText, openThreadsBlock, injectedMemoryIds, memoryTokenEstimate, openThreadContents } = scopedMemories;
 
     // Coaching session lifecycle: ensure an open session and inject prior summaries
     let sessionBlock = '';
@@ -1703,7 +1895,25 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       assistantMessage,
       last20Messages,
       isMentor,
+      injectedMemoryIds,
+      openThreadContents,
     );
+
+    // Write the memory turn trace (which memory IDs were injected + token count)
+    if (injectedMemoryIds.length > 0 || memoryTokenEstimate > 0) {
+      EdgeRuntime.waitUntil(
+        supabaseAdmin
+          .from('memory_turn_trace')
+          .insert({
+            user_id: user.id,
+            companion_id: companionId,
+            injected_memory_ids: injectedMemoryIds,
+            token_count: memoryTokenEstimate,
+          })
+          .then(() => {})
+          .catch((err: unknown) => console.error('[chat-turn] Memory trace insert error:', err))
+      );
+    }
 
     const memoryPromise = extractMemoryServerSide(
       supabaseAdmin,
