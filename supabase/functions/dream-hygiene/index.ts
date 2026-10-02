@@ -314,6 +314,7 @@ Return ONLY a JSON array. No other text.`,
             rationale: p.rationale || "",
             risk: p.risk || "medium",
             base_version: baseVersion,
+            eval_delta: null,
             status: "pending" as const,
           };
 

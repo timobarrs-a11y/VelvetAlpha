@@ -438,8 +438,11 @@ If no proposals meet the prevalence threshold, return [].`;
       );
     }
 
-    // Step 7: Store proposals (all as pending — human approval required for Pass B)
+    // Step 7: Score proposals against eval dataset, store with eval_delta, auto-reject regressions
     let storedProposals = 0;
+    let autoRejected = 0;
+    const evalUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/eval-train`;
+
     for (const p of proposals) {
       if (!p.target || !p.target_id || !p.action) continue;
 
@@ -448,6 +451,51 @@ If no proposals meet the prevalence threshold, return [].`;
         sampled: Number(p.sampled ?? signals.length),
         rate: Number(p.occurrences ?? 0) / Math.max(Number(p.sampled ?? signals.length), 1),
       };
+
+      // Score the proposal against ground-truth eval cases
+      let evalDelta: { recall: number | null; false_memory: number | null } | null = null;
+      let autoReject = false;
+
+      if (p.after && p.target !== "memory_item") {
+        try {
+          const evalRes = await fetch(evalUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+            },
+            body: JSON.stringify({
+              action: "eval-batch",
+              proposal_text: p.after,
+              proposal_action: p.action,
+            }),
+          });
+
+          if (evalRes.ok) {
+            const evalResult = await evalRes.json() as {
+              recall: number | null;
+              false_memory_rate: number | null;
+              overall: number | null;
+              case_count: number;
+            };
+
+            if (evalResult.case_count > 0 && evalResult.recall !== null) {
+              evalDelta = {
+                recall: evalResult.recall,
+                false_memory: evalResult.false_memory_rate,
+              };
+
+              // Auto-reject if the proposal makes recall worse or false memories significantly worse
+              if (evalResult.recall < 0.3 || (evalResult.false_memory_rate ?? 0) > 0.5) {
+                autoReject = true;
+              }
+            }
+          }
+        } catch (evalErr) {
+          console.warn("[dream-fleet] Eval scoring failed for proposal:", evalErr);
+        }
+      }
 
       const proposalRow = {
         proposal_id: crypto.randomUUID(),
@@ -464,9 +512,14 @@ If no proposals meet the prevalence threshold, return [].`;
         rationale: (p.rationale as string) ?? null,
         risk: ((p.risk as string) ?? "medium") === "low" ? "medium" : (p.risk as string),
         base_version: null,
-        eval_delta: null,
-        status: "pending" as const,
+        eval_delta: evalDelta,
+        status: autoReject ? "rejected" as const : "pending" as const,
       };
+
+      if (autoReject) {
+        proposalRow.rationale = `[AUTO-REJECTED BY EVAL: recall=${evalDelta?.recall}, false_memory=${evalDelta?.false_memory}] ${proposalRow.rationale ?? ""}`;
+        autoRejected++;
+      }
 
       await supabaseAdmin.from("memory_proposals").insert(proposalRow);
       storedProposals++;
@@ -478,7 +531,8 @@ If no proposals meet the prevalence threshold, return [].`;
         totalSignals: signals.length,
         findings: allFindings.length,
         proposals: storedProposals,
-        message: "Fleet analysis complete — all proposals pending human review",
+        autoRejected,
+        message: "Fleet analysis complete — all proposals pending human review (regressions auto-rejected by eval)",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
