@@ -452,8 +452,14 @@ If no proposals meet the prevalence threshold, return [].`;
         rate: Number(p.occurrences ?? 0) / Math.max(Number(p.sampled ?? signals.length), 1),
       };
 
-      // Score the proposal against ground-truth eval cases
-      let evalDelta: { recall: number | null; false_memory: number | null } | null = null;
+      // Score the proposal: run both baseline (current rules) and proposed (with change) extractions
+      // against ground-truth eval cases, then compare. Auto-reject only if the proposed change
+      // scores WORSE than the baseline — a regression, not just a low absolute score.
+      let evalDelta: {
+        baseline: { recall: number; false_memory_rate: number } | null;
+        proposed: { recall: number; false_memory_rate: number } | null;
+        delta: { recall: number; false_memory: number; overall: number } | null;
+      } | null = null;
       let autoReject = false;
 
       if (p.after && p.target !== "memory_item") {
@@ -474,20 +480,26 @@ If no proposals meet the prevalence threshold, return [].`;
 
           if (evalRes.ok) {
             const evalResult = await evalRes.json() as {
-              recall: number | null;
-              false_memory_rate: number | null;
-              overall: number | null;
+              baseline: { recall: number; false_memory_rate: number } | null;
+              proposed: { recall: number; false_memory_rate: number } | null;
+              delta: { recall: number; false_memory: number; overall: number } | null;
               case_count: number;
             };
 
-            if (evalResult.case_count > 0 && evalResult.recall !== null) {
+            if (evalResult.case_count > 0 && evalResult.delta) {
               evalDelta = {
-                recall: evalResult.recall,
-                false_memory: evalResult.false_memory_rate,
+                baseline: evalResult.baseline,
+                proposed: evalResult.proposed,
+                delta: evalResult.delta,
               };
 
-              // Auto-reject if the proposal makes recall worse or false memories significantly worse
-              if (evalResult.recall < 0.3 || (evalResult.false_memory_rate ?? 0) > 0.5) {
+              // Auto-reject if the proposal regresses relative to baseline:
+              // recall drops OR false memory increases OR overall score worsens
+              if (
+                evalResult.delta.recall < -0.05 ||
+                evalResult.delta.false_memory > 0.05 ||
+                evalResult.delta.overall < -0.05
+              ) {
                 autoReject = true;
               }
             }
@@ -517,7 +529,8 @@ If no proposals meet the prevalence threshold, return [].`;
       };
 
       if (autoReject) {
-        proposalRow.rationale = `[AUTO-REJECTED BY EVAL: recall=${evalDelta?.recall}, false_memory=${evalDelta?.false_memory}] ${proposalRow.rationale ?? ""}`;
+        const d = evalDelta?.delta;
+        proposalRow.rationale = `[AUTO-REJECTED BY EVAL: Δrecall=${d?.recall?.toFixed(2)}, Δfalse_memory=${d?.false_memory?.toFixed(2)}, Δoverall=${d?.overall?.toFixed(2)} — baseline recall=${evalDelta?.baseline?.recall?.toFixed(2)}, proposed recall=${evalDelta?.proposed?.recall?.toFixed(2)}] ${proposalRow.rationale ?? ""}`;
         autoRejected++;
       }
 
@@ -532,7 +545,7 @@ If no proposals meet the prevalence threshold, return [].`;
         findings: allFindings.length,
         proposals: storedProposals,
         autoRejected,
-        message: "Fleet analysis complete — all proposals pending human review (regressions auto-rejected by eval)",
+        message: "Fleet analysis complete — regressions auto-rejected by relative eval delta",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
