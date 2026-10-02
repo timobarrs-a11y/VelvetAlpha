@@ -67,12 +67,21 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (authError || !user || user.id !== user_id) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+    const token = authHeader.replace("Bearer ", "");
+    const isServiceRoleCall = token === supabaseServiceKey;
+
+    if (isServiceRoleCall) {
+      // Internal call from chat-turn's post-response hook using the service-role key.
+      // Skip user JWT validation — the caller is already authenticated server-side.
+    } else {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user || user.id !== user_id) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const { data: messages } = await supabase
