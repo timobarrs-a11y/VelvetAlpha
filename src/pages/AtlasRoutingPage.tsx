@@ -201,7 +201,7 @@ export function AtlasRoutingPage({ setupState: initialSetupState, onComplete }: 
 
 function MessageBubble({ message, isLatest }: { message: ChatMessage; isLatest: boolean }) {
   const isAtlas = message.role === 'atlas';
-  const typedContent = useTypingEffect(isAtlas && isLatest ? message.content : '', isAtlas && isLatest, { speed: 35 });
+  const { displayedText: typedContent, showCursor } = useTypingEffect(isAtlas && isLatest ? message.content : '', isAtlas && isLatest, { speed: 35 });
   const displayContent = isAtlas && isLatest ? typedContent : message.content;
 
   return (
@@ -219,7 +219,7 @@ function MessageBubble({ message, isLatest }: { message: ChatMessage; isLatest: 
         }`}
       >
         {displayContent}
-        {isAtlas && isLatest && typedContent.length < message.content.length && (
+        {isAtlas && isLatest && showCursor && (
           <motion.span
             className="inline-block w-0.5 h-4 bg-rose-400 ml-0.5"
             animate={{ opacity: [1, 0] }}
