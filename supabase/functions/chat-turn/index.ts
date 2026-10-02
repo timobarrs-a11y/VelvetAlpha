@@ -1909,6 +1909,8 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
             companion_id: companionId,
             injected_memory_ids: injectedMemoryIds,
             token_count: memoryTokenEstimate,
+            model_id: selectedModel,
+            prompt_version: MODEL_CONFIG.VERSION_INFO.lastChecked,
           })
           .then(() => {})
           .catch((err: unknown) => console.error('[chat-turn] Memory trace insert error:', err))

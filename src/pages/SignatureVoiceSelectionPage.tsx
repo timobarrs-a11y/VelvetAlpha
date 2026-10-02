@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../shared/supabase/client';
 import { SIGNATURE_VOICES, SignatureVoice, getVoicesByCategory } from '../config/signatureVoices';
 import { createCompanion } from '../services/companionService';
+import { seedVoiceBaseline } from '../services/voiceFidelityService';
 import SignatureVoiceTile from '../components/SignatureVoiceTile';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
@@ -81,6 +82,10 @@ export default function SignatureVoiceSelectionPage() {
 
         if (error) {
           console.error('[VoiceSelection] Error updating companion:', error);
+        } else {
+          await seedVoiceBaseline(companionId, voiceId, companionGender).catch(err =>
+            console.error('[VoiceSelection] Failed to seed voice baseline:', err)
+          );
         }
       } else if (user && onboardingIntent === 'coaches') {
         const { data: existingMentor } = await supabase
@@ -97,6 +102,9 @@ export default function SignatureVoiceSelectionPage() {
             .from('companions')
             .update({ signature_voice: voiceId })
             .eq('id', existingMentor.id);
+          await seedVoiceBaseline(existingMentor.id, voiceId, companionGender).catch(err =>
+            console.error('[VoiceSelection] Failed to seed voice baseline:', err)
+          );
         } else {
           const expertData = JSON.parse(sessionStorage.getItem('expertMatchAnswers') || '{}');
           const expertId = sessionStorage.getItem('selectedExpertId');
