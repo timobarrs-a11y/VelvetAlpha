@@ -802,24 +802,13 @@ Rules:
       return;
     }
 
-    // Insert facts into memory_items (deduped by content)
+    // Insert facts into memory_items via versioned write RPC (atomic dedup)
     if (parsed.facts && parsed.facts.length > 0) {
       try {
         for (const f of parsed.facts) {
           if (!f.fact || f.fact.length < 3) continue;
-          // Check for existing fact with same content
-          const { data: existing } = await supabaseAdmin
-            .from('memory_items')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('companion_id', companionId)
-            .eq('kind', 'fact')
-            .eq('content', f.fact)
-            .eq('status', 'active')
-            .maybeSingle();
-
-          if (!existing) {
-            await supabaseAdmin.from('memory_items').insert({
+          await supabaseAdmin.rpc('upsert_memory_item', {
+            p_payload: {
               user_id: userId,
               companion_id: companionId,
               scope: 'companion',
@@ -828,41 +817,22 @@ Rules:
               status: 'active',
               confidence: 0.7,
               source: 'inferred',
-            });
-          }
+              actor_type: 'extractor',
+            },
+          });
         }
       } catch (err) {
-        console.error('[chat-turn] Fact extraction insert error:', err);
+        console.error('[chat-turn] Fact extraction upsert error:', err);
       }
     }
 
-    // Upsert threads into memory_items
+    // Upsert threads into memory_items via versioned write RPC
     if (parsed.threads && parsed.threads.length > 0) {
       for (const thread of parsed.threads) {
         try {
           const threadContent = `${thread.topic} — ${thread.context_summary}`;
-          // Check if an active thread with the same topic exists
-          const { data: existingThread } = await supabaseAdmin
-            .from('memory_items')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('companion_id', companionId)
-            .eq('kind', 'thread')
-            .eq('status', 'active')
-            .like('content', `${thread.topic}%`)
-            .maybeSingle();
-
-          if (existingThread) {
-            await supabaseAdmin
-              .from('memory_items')
-              .update({
-                content: threadContent,
-                updated_at: new Date().toISOString(),
-                status: thread.status === 'resolved' ? 'retired' : 'active',
-              })
-              .eq('id', existingThread.id);
-          } else {
-            await supabaseAdmin.from('memory_items').insert({
+          await supabaseAdmin.rpc('upsert_memory_item', {
+            p_payload: {
               user_id: userId,
               companion_id: companionId,
               scope: 'companion',
@@ -871,8 +841,9 @@ Rules:
               status: thread.status === 'resolved' ? 'retired' : 'active',
               source: 'inferred',
               due_at: new Date(Date.now() + 21 * 86400000).toISOString(),
-            });
-          }
+              actor_type: 'extractor',
+            },
+          });
         } catch (err) {
           console.error('[chat-turn] Thread upsert error:', err);
         }
@@ -1046,13 +1017,11 @@ async function fetchRelevantFactsForPrompt(
 
     if (selected.length === 0) return '';
 
-    // Update recall metadata for injected items
+    // Update recall metadata for injected items via RPC (sets actor context)
     const injectedIds = selected.map(s => s.id);
     EdgeRuntime.waitUntil(
       supabaseAdmin
-        .from('memory_items')
-        .update({ last_recalled_at: new Date().toISOString() })
-        .in('id', injectedIds)
+        .rpc('update_memory_recall', { p_ids: injectedIds, p_actor_type: 'extractor' })
         .then(() => {})
         .catch(() => {})
     );
