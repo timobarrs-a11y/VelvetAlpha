@@ -126,9 +126,10 @@ Score how well the recent messages match the voice instruction across the five d
 
     const toolUse = response.content.find((c) => c.type === "tool_use");
     if (!toolUse || toolUse.type !== "tool_use") {
-      return new Response(JSON.stringify(NEUTRAL_SCORE), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ ...NEUTRAL_SCORE, error: "judge_returned_no_tool_use" }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(JSON.stringify(toolUse.input), {
@@ -136,8 +137,9 @@ Score how well the recent messages match the voice instruction across the five d
     });
   } catch (error) {
     console.error("Error in inspect-voice-fidelity:", error);
-    return new Response(JSON.stringify(NEUTRAL_SCORE), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ ...NEUTRAL_SCORE, error: "judge_failed", detail: error instanceof Error ? error.message : "unknown" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });
