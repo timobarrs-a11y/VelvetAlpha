@@ -21,6 +21,7 @@ const RealOrNotPage = lazy(() => import('../pages/RealOrNotPage').then(m => ({ d
 const AtlasPage = lazy(() => import('../pages/AtlasPage').then(m => ({ default: m.AtlasPage })));
 const LocalExplorerPage = lazy(() => import('../pages/LocalExplorerPage').then(m => ({ default: m.LocalExplorerPage })));
 const InvitePage = lazy(() => import('../pages/InvitePage').then(m => ({ default: m.InvitePage })));
+const MemoryTrainingPage = lazy(() => import('../pages/MemoryTrainingPage').then(m => ({ default: m.MemoryTrainingPage })));
 const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(m => ({ default: m.PersonProfilePage })));
 const RelationshipBriefPage = lazy(() => import('../pages/RelationshipBriefPage').then(m => ({ default: m.RelationshipBriefPage })));
 
@@ -54,4 +55,5 @@ export const appRoutes = [
   <Route key="billing" path="/billing" element={P(<BillingPage />)} />,
   <Route key="real-or-not" path="/real-or-not" element={P(<RealOrNotPage />)} />,
   <Route key="invite" path="/invite" element={P(<InvitePage />)} />,
+  <Route key="memory-training" path="/memory-training" element={P(<MemoryTrainingPage />)} />,
 ];
