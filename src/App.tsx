@@ -38,6 +38,7 @@ import { QuickCommand, QuickCommandPopover } from './components/QuickCommandBar'
 import { CompanionHubLeftRail } from './components/hub/CompanionHubLeftRail';
 import { CompanionHubRightRail } from './components/hub/CompanionHubRightRail';
 import { GuidedTourOverlay } from './components/hub/GuidedTourOverlay';
+import { SharedMemoryConsentModal } from './components/SharedMemoryConsentModal';
 import { ThreadTabBar, ActiveThread } from './components/thread/ThreadTabBar';
 import { TutorialElement } from './components/hub/TutorialElement';
 import { ONBOARDING_ELEMENT_IDS } from './features/onboarding/onboardingPrompt';
@@ -1240,6 +1241,8 @@ function AppInner() {
       {userId && companionId && companion && isOnboarding && (
         <GuidedTourOverlay userId={userId} companionName={getCharacterName()} />
       )}
+
+      {userId && <SharedMemoryConsentModal userId={userId} />}
 
       <AnimatePresence>
         {showBotFullInputHint && (

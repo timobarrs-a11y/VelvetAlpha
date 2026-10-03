@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Users, MessageSquareWarning } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Users, MessageSquareWarning, Sparkles } from 'lucide-react';
 import { PageHeader, HomeLayoutSwitch } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { gdprService } from '../services/gdprService';
@@ -78,6 +78,7 @@ export function SettingsPage() {
   const [userExperts, setUserExperts] = useState<UserExpert[]>([]);
   const [companionsWithExperts, setCompanionsWithExperts] = useState<{ id: string; name: string; expertName: string | null; expertDomain: string | null }[]>([]);
   const [expertsLoading, setExpertsLoading] = useState(false);
+  const [sharedMemoryEnabled, setSharedMemoryEnabled] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -171,6 +172,14 @@ export function SettingsPage() {
         if (data.notification_settings) setNotifications({ ...DEFAULT_NOTIFICATIONS, ...data.notification_settings });
         if (data.privacy_settings) setPrivacy({ ...DEFAULT_PRIVACY, ...data.privacy_settings });
         if (data.theme_mode) setThemeMode(data.theme_mode);
+      }
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('shared_memory_consent')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (profile?.shared_memory_consent !== null && profile?.shared_memory_consent !== undefined) {
+        setSharedMemoryEnabled(profile.shared_memory_consent);
       }
     } catch {
     }
@@ -454,6 +463,33 @@ export function SettingsPage() {
                       value={privacy.personalization}
                       onChange={v => setPrivacy(p => ({ ...p, personalization: v }))}
                     />
+                  </div>
+
+                  <div className="rounded-xl p-5 mb-6 border border-white/10" style={{ background: 'rgba(168,85,247,0.06)' }}>
+                    <div className="flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm font-semibold text-white">Shared Memory</p>
+                          <button
+                            onClick={async () => {
+                              const newVal = !sharedMemoryEnabled;
+                              setSharedMemoryEnabled(newVal);
+                              try {
+                                const { data: { user } } = await supabase.auth.getUser();
+                                if (user) await supabase.from('user_profiles').update({ shared_memory_consent: newVal }).eq('id', user.id);
+                              } catch { /* best-effort */ }
+                            }}
+                            className={`relative w-11 h-6 rounded-full transition-colors ${sharedMemoryEnabled ? 'bg-purple-500' : 'bg-white/15'}`}
+                          >
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${sharedMemoryEnabled ? 'translate-x-5' : ''}`} />
+                          </button>
+                        </div>
+                        <p className="text-white/50 text-xs leading-relaxed">
+                          When on, life news you tell one AI (like your mom being sick) is shared with all your AI people, so you never repeat yourself. Anything you say should stay private stays private. Turn this off to keep everyone separate.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="rounded-xl p-4 mb-6" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>

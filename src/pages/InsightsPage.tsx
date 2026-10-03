@@ -7,7 +7,7 @@ import {
   Brain, Shield, Users, Star
 } from 'lucide-react';
 import { PageHeader, Pill, Segmented } from '../shared/ui';
-import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
+import { LoadingState } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { useSubscription } from '../hooks/useSubscription';
 import { generateInsights } from '../features/insights/engine';
@@ -402,12 +402,7 @@ export function InsightsPage() {
 
   if (initialLoading) {
     return (
-      <FeatureLoadingSplash
-        icon={Lightbulb}
-        label="Loading your insights..."
-        accentColor="#38bdf8"
-        bgColor="#040d18"
-      />
+      <LoadingState label="Loading your insights..." />
     );
   }
 

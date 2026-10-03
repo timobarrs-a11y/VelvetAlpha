@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  MessageCircle, Heart, Users, Crown, Cherry, Zap, Circle,
-  Rocket, Brain, Newspaper, UsersRound, MapPin, Bot,
+  Crown, Cherry, Zap, Circle,
+  Rocket, Brain, UsersRound,
 } from 'lucide-react';
 import { getCorrespondentById } from '../config/signatureCorrespondents';
 import { correspondentSyncService } from '../services/correspondentSyncService';
-import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
 import { authService } from '../services/authService';
@@ -15,7 +14,6 @@ import { useCustomization } from './useCustomization';
 import { toast } from '../shared/ui/Toast';
 import { newsService } from '../services/newsService';
 import { getGroupChats, createGroupChat, deleteGroupChat, GroupChatWithMembers } from '../services/groupChatService';
-import { TONE_COLOR, GROUP_TONE } from '../components/lobby';
 import {
   SOMEONE_NEW_ROUTE, getSetupProgress, isCompanionSetupPending, prepareResume,
 } from '../services/setupProgressService';
@@ -39,26 +37,6 @@ export const GAMES: GameEntry[] = [
   { id: 'social-combat',  name: 'Social Combat',   description: 'Read emotions and master the art of conversation',                           icon: Brain,   iconBg: 'from-violet-500 to-indigo-600', path: '/social-combat' },
 ];
 
-export const NAV_CONFIGS: Record<string, { icon: typeof Newspaper; label: string; accentColor: string; bgColor: string }> = {
-  '/daily-feed':  { icon: Newspaper,    label: 'Loading your feed...',      accentColor: '#34d399', bgColor: '#061412' },
-  '/videos':      { icon: Newspaper,    label: 'Loading Your Lens...',      accentColor: '#f43f5e', bgColor: '#120008' },
-  '/calendar':    { icon: Newspaper,    label: 'Loading your calendar...',  accentColor: '#fb923c', bgColor: '#120800' },
-  '/insights':    { icon: Newspaper,    label: 'Loading your insights...',  accentColor: '#38bdf8', bgColor: '#040d18' },
-  '/co-author':   { icon: Newspaper,    label: 'Loading Co-Author...',      accentColor: '#60a5fa', bgColor: '#040c1a' },
-  '/real-or-not': { icon: Newspaper,    label: 'Loading The Velvet Rope...', accentColor: '#fbbf24', bgColor: '#100c00' },
-  '/atlas':       { icon: Bot,          label: 'Loading Atlas...',           accentColor: '#94a3b8', bgColor: '#050508' },
-  '/local-explorer': { icon: MapPin,    label: 'Loading Navi...',            accentColor: '#34d399', bgColor: '#050e0a' },
-  '/profile':     { icon: Newspaper,    label: 'Loading your profile...',    accentColor: '#94a3b8', bgColor: '#0a0a0f' },
-  '/lobby':       { icon: Heart,        label: 'Loading lobby...',           accentColor: '#f472b6', bgColor: '#0d1128' },
-};
-
-export const GAME_CONFIGS: Record<string, { icon: typeof Crown; label: string; accentColor: string; bgColor: string }> = {
-  '/checkers':        { icon: Crown,  label: 'Loading Checkers...',        accentColor: '#f59e0b', bgColor: '#120900' },
-  '/momentum':        { icon: Zap,    label: 'Loading Momentum...',        accentColor: '#22d3ee', bgColor: '#040e14' },
-  '/slime-soccer':    { icon: Circle, label: 'Loading Slime Soccer...',    accentColor: '#e879f9', bgColor: '#110014' },
-  '/stellar-pursuit': { icon: Rocket, label: 'Loading Stellar Pursuit...', accentColor: '#818cf8', bgColor: '#05060f' },
-};
-
 export interface ConfirmModal {
   title: string;
   message: string;
@@ -67,7 +45,6 @@ export interface ConfirmModal {
 
 export function useLobbyData() {
   const navigate = useNavigate();
-  const { navigateTo } = useNavigationLoading();
   const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGameModal, setShowGameModal] = useState(false);
@@ -202,11 +179,9 @@ export function useLobbyData() {
     if (game.requiresCompanion) {
       setShowGameModal(true);
     } else if (game.path) {
-      const cfg = GAME_CONFIGS[game.path];
-      if (cfg) navigateTo(game.path, cfg);
-      else navigate(game.path);
+      navigate(game.path);
     }
-  }, [navigateTo, navigate]);
+  }, [navigate]);
 
   const handleSignOut = useCallback(async () => {
     await authService.signOut();
@@ -214,23 +189,16 @@ export function useLobbyData() {
   }, [navigate]);
 
   const openHubPath = useCallback((p: string) => {
-    const cfg = NAV_CONFIGS[p];
-    if (cfg) navigateTo(p, cfg);
-    else navigate(p);
-  }, [navigateTo, navigate]);
+    navigate(p);
+  }, [navigate]);
 
   const openCompanion = useCallback((companion: CompanionWithLastMessage) => {
-    const tone = companion.relationship_type === 'mentor'
-      ? { icon: MessageCircle, label: `Loading ${companion.custom_name || 'your coach'}...`, accentColor: TONE_COLOR.coach, bgColor: '#020e08' }
-      : companion.relationship_type === 'correspondent'
-        ? { icon: Newspaper, label: `Loading ${companion.custom_name || 'your correspondent'}...`, accentColor: '#f59e0b', bgColor: '#120c00' }
-        : { icon: MessageCircle, label: `Loading ${companion.custom_name || 'your companion'}...`, accentColor: companion.favorite_color || TONE_COLOR.voice, bgColor: '#0a0410' };
-    navigateTo(`/chat?companion=${companion.id}`, tone);
-  }, [navigateTo]);
+    navigate(`/chat?companion=${companion.id}`);
+  }, [navigate]);
 
   const openGroup = useCallback((groupId: string) => {
-    navigateTo(`/group-chat?group=${groupId}`, { icon: UsersRound, label: 'Loading group chat...', accentColor: GROUP_TONE, bgColor: '#040e0c' });
-  }, [navigateTo]);
+    navigate(`/group-chat?group=${groupId}`);
+  }, [navigate]);
 
   return {
     companions,

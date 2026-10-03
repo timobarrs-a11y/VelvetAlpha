@@ -9,9 +9,8 @@ import {
   PanelLeftClose, PanelLeftOpen, Brain, Newspaper as NewspaperIcon,
   Plus, Trash2,
 } from 'lucide-react';
-import { useLobbyData, NAV_CONFIGS, GAMES } from '../hooks/useLobbyData';
+import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { useAudioScene } from '../hooks/useAudioScene';
-import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import {
   Button, ModalShell, EmptyState, LoadingState,
   PageShell, Pill, Badge, HomeLayoutSwitch, Segmented,
@@ -58,7 +57,6 @@ const GROUP_LABELS: Record<SidebarItem['group'], string> = {
 
 export function HomeShellPage() {
   const navigate = useNavigate();
-  const { navigateTo } = useNavigationLoading();
   const lobby = useLobbyData();
   const { muted, toggleMute } = useAudioScene();
 
@@ -115,13 +113,12 @@ export function HomeShellPage() {
   }
 
   const handleGameNav = (path: string) => {
-    const cfg = NAV_CONFIGS[path] || lobby.openHubPath;
-    navigateTo(path, cfg);
+    navigate(path);
   };
 
   const sidebarItems: SidebarItem[] = [
     {
-      id: 'feed', label: 'Daily News', sub: 'News & videos',
+      id: 'feed', label: 'Daily Feed', sub: 'News & videos',
       icon: <Newspaper className="w-3.5 h-3.5" />, color: 'text-emerald-400',
       group: 'content', action: () => setActiveTab('feed'),
     },
@@ -158,12 +155,12 @@ export function HomeShellPage() {
     {
       id: 'atlas', label: 'Atlas', sub: 'Chief of staff',
       icon: <Bot className="w-3.5 h-3.5" />, color: 'text-slate-300',
-      group: 'connect', action: () => navigateTo('/atlas', NAV_CONFIGS['/atlas']),
+      group: 'connect', action: () => navigate('/atlas'),
     },
     {
       id: 'navi', label: 'Navi', sub: 'Local concierge',
       icon: <MapPin className="w-3.5 h-3.5" />, color: 'text-emerald-400',
-      group: 'connect', action: () => navigateTo('/local-explorer', NAV_CONFIGS['/local-explorer']),
+      group: 'connect', action: () => navigate('/local-explorer'),
     },
     {
       id: 'group-chat', label: 'Group Chat', sub: 'Companions together',
@@ -173,7 +170,7 @@ export function HomeShellPage() {
     {
       id: 'velvet-rope', label: 'Velvet Rope', sub: 'Real or not?',
       icon: <Zap className="w-3.5 h-3.5" />, color: 'text-pink-400',
-      group: 'play', action: () => navigateTo('/real-or-not', NAV_CONFIGS['/real-or-not']),
+      group: 'play', action: () => navigate('/real-or-not'),
     },
     {
       id: 'arcade', label: 'The Arcade', sub: 'Play together',
@@ -183,7 +180,7 @@ export function HomeShellPage() {
     {
       id: 'profile', label: 'Profile', sub: 'Your settings',
       icon: <User className="w-3.5 h-3.5" />, color: 'text-slate-300',
-      group: 'life', action: () => navigateTo('/profile', NAV_CONFIGS['/profile']),
+      group: 'life', action: () => navigate('/profile'),
     },
   ];
 
@@ -227,10 +224,7 @@ export function HomeShellPage() {
           </Pill>
           {companions.length > 0 && (
             <Pill
-              onClick={() => navigateTo(`/chat?companion=${companions[0].id}&tour=1`, {
-                icon: MessageCircle, label: 'Starting the tour...',
-                accentColor: '#f472b6', bgColor: '#0a0410',
-              })}
+              onClick={() => navigate(`/chat?companion=${companions[0].id}&tour=1`)}
               icon={<HelpCircle className="w-4 h-4 text-sky-300" />}
               hideLabelOnMobile
             >
@@ -448,7 +442,7 @@ export function HomeShellPage() {
                 whileTap={{ scale: 0.985 }}
                 onClick={() => {
                   lobby.setShowGameModal(false);
-                  navigateTo(`/pacman?companion=${companion.id}`, { icon: Gamepad2, label: 'Loading game...', accentColor: '#facc15', bgColor: '#0a0900' });
+                  navigate(`/pacman?companion=${companion.id}`);
                 }}
                 className="ds-card ds-card--interactive p-4 text-left"
                 style={{ background: 'var(--ds-surface-2)' }}>

@@ -10,7 +10,6 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useAudioScene } from '../hooks/useAudioScene';
-import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import {
   Button, ModalShell, LoadingState, EmptyState,
   PageShell, Pill, SectionHeader, Badge, HomeLayoutSwitch,
@@ -28,7 +27,7 @@ import {
   TONE_COLOR, GROUP_TONE, companionAvatarConfig,
 } from '../components/lobby';
 import type { HubTileSize } from '../components/lobby';
-import { useLobbyData, GAMES, NAV_CONFIGS, GAME_CONFIGS } from '../hooks/useLobbyData';
+import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 
 interface GameEntry {
   id: string;
@@ -102,7 +101,6 @@ const HUB_TILES: HubTileDef[] = [
 
 export function CompanionLobbyPage() {
   const navigate = useNavigate();
-  const { navigateTo } = useNavigationLoading();
   const lobby = useLobbyData();
   const { muted, toggleMute } = useAudioScene();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -242,19 +240,14 @@ export function CompanionLobbyPage() {
           </Pill>
           {companions.length > 0 && (
             <Pill
-              onClick={() => navigateTo(`/chat?companion=${companions[0].id}&tour=1`, {
-                icon: MessageCircle, label: 'Starting the tour...',
-                accentColor: '#f472b6', bgColor: '#0a0410',
-              })}
-              icon={<HelpCircle className="w-4 h-4 text-sky-300" />}
+              onClick={() => navigate(`/chat?companion=${companions[0].id}&tour=1`)}              icon={<HelpCircle className="w-4 h-4 text-sky-300" />}
               hideLabelOnMobile
             >
               Tour
             </Pill>
           )}
           <Pill
-            onClick={() => navigateTo('/profile', NAV_CONFIGS['/profile'])}
-            icon={<User className="w-4 h-4" />}
+            onClick={() => navigate('/profile')}            icon={<User className="w-4 h-4" />}
             hideLabelOnMobile
           >
             Profile
@@ -443,7 +436,7 @@ export function CompanionLobbyPage() {
               <motion.button key={companion.id}
                 whileHover={{ scale: 1.015 }}
                 whileTap={{ scale: 0.985 }}
-                onClick={() => { lobby.setShowGameModal(false); navigateTo(`/pacman?companion=${companion.id}`, { icon: Gamepad2, label: 'Loading game...', accentColor: '#facc15', bgColor: '#0a0900' }); }}
+                onClick={() => { lobby.setShowGameModal(false); navigate(`/pacman?companion=${companion.id}`); }}
                 className="ds-card ds-card--interactive p-4 text-left"
                 style={{ background: 'var(--ds-surface-2)' }}>
                 <div className="flex items-center gap-3">

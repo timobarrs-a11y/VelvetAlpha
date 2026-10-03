@@ -1,10 +1,11 @@
-import { LayoutGrid, Newspaper } from 'lucide-react';
+import { LayoutGrid, Newspaper, Sparkles } from 'lucide-react';
 import { useHomeLayout, type HomeLayout, setHomeLayout as _set } from '../../hooks/useHomeLayout';
 import { analyticsService } from '../../services/analyticsService';
 
 const OPTIONS: { id: HomeLayout; label: string; shortLabel: string; description: string; icon: typeof LayoutGrid }[] = [
   { id: 'classic', label: 'Classic Lobby', shortLabel: 'Classic', description: 'The companion lobby with tiles, games, and group chats.', icon: LayoutGrid },
   { id: 'new',     label: 'New Home',      shortLabel: 'New',     description: 'A daily-feed centered home with news, rituals, and quick-start cards.', icon: Newspaper },
+  { id: 'v3',      label: 'V3 Home',       shortLabel: 'V3',      description: 'Reality-first feed with your people alongside. Memory-aware check-ins and moments.', icon: Sparkles },
 ];
 
 function track(to: HomeLayout) {
@@ -56,7 +57,7 @@ export function HomeLayoutSwitch({ mode = 'compact', className = '' }: Props) {
   }
 
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${className}`} role="radiogroup" aria-label="Home layout">
+    <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 ${className}`} role="radiogroup" aria-label="Home layout">
       {OPTIONS.map(o => {
         const active = layout === o.id;
         const Icon = o.icon;

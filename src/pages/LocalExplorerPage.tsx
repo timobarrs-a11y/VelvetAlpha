@@ -15,7 +15,7 @@ import {
   UserLocation,
   NaviVoice,
 } from '../services/localExplorerService';
-import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
+import { LoadingState } from '../shared/ui';
 import { PageHeader } from '../shared/ui/PageHeader';
 import { useAuth } from '../auth/AuthProvider';
 import { PeoplePanel } from '../components/PeoplePanel';
@@ -945,12 +945,7 @@ export function LocalExplorerPage() {
 
   if (isLoading) {
     return (
-      <FeatureLoadingSplash
-        icon={MapPin}
-        label="Loading Local Explorer..."
-        accentColor="#34d399"
-        bgColor="#050508"
-      />
+      <LoadingState label="Loading Local Explorer..." />
     );
   }
 

@@ -6,7 +6,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { atlasService, AtlasConversation } from '../services/atlasService';
 import { AtlasCanvas } from '../components/AtlasCanvas';
-import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
+import { LoadingState } from '../shared/ui';
 import { PageHeader } from '../shared/ui/PageHeader';
 import { ShellProvider, isShellsEnabled } from '../shells';
 
@@ -255,12 +255,7 @@ export function AtlasPage() {
 
   if (isLoading) {
     return (
-      <FeatureLoadingSplash
-        icon={MessageSquare}
-        label="Loading Atlas..."
-        accentColor="#94a3b8"
-        bgColor="#050508"
-      />
+      <LoadingState label="Loading Atlas..." />
     );
   }
 

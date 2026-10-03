@@ -13,7 +13,6 @@ import { MouseTrail } from './components/MouseTrail';
 import { TouchRippleCanvas } from './components/TouchRippleCanvas';
 import { useAuth } from './auth/AuthProvider';
 import { ButtonHoverPreviewProvider, useButtonHoverPreview } from './context/ButtonHoverPreviewContext';
-import { NavigationLoadingProvider } from './context/NavigationLoadingContext';
 import { TutorialDirectorProvider } from './context/TutorialDirectorContext';
 import { useAudioScene } from './hooks/useAudioScene';
 import { AudioScene } from './services/audioManager';
@@ -103,7 +102,6 @@ export function Router() {
   return (
     <BrowserRouter>
       <ButtonHoverPreviewProvider>
-        <NavigationLoadingProvider>
           <TutorialDirectorProvider>
             <ToastContainer />
             <SWUpdateToast />
@@ -119,7 +117,6 @@ export function Router() {
               <Route path="/" element={<RootRedirect />} />
             </Routes>
           </TutorialDirectorProvider>
-        </NavigationLoadingProvider>
       </ButtonHoverPreviewProvider>
     </BrowserRouter>
   );

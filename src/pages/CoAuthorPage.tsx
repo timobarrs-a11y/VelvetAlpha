@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, FileText, Clock, Trash2, BookOpen, X, AlertCircle } from 'lucide-react';
 import { PageHeader, Pill } from '../shared/ui';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FeatureLoadingSplash } from '../components/FeatureLoadingSplash';
+import { LoadingState } from '../shared/ui';
 import { CoAuthorCanvas } from '../components/CoAuthorCanvas';
 import { coAuthorService, CoAuthorSession } from '../services/coAuthorService';
 import { getUserDefaultCompanion } from '../services/companionService';
@@ -116,12 +116,7 @@ export function CoAuthorPage({ onBack }: { onBack?: () => void } = {}) {
 
   if (isLoading) {
     return (
-      <FeatureLoadingSplash
-        icon={FileText}
-        label="Loading Co-Author..."
-        accentColor="#60a5fa"
-        bgColor="#040c1a"
-      />
+      <LoadingState label="Loading Co-Author..." />
     );
   }
 
