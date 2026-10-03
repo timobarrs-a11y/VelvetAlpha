@@ -143,3 +143,9 @@ verify_jwt = false
 
 [functions.eval-train]
 verify_jwt = true
+
+[functions.create-donation-session]
+verify_jwt = false
+
+[functions.verify-donation]
+verify_jwt = false

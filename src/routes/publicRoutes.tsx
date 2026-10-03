@@ -12,6 +12,7 @@ const PrivacyPolicyPage = lazy(() => import('../pages/PrivacyPolicyPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'));
 const PersonSurveyPage = lazy(() => import('../pages/PersonSurveyPage'));
+const DonationPage = lazy(() => import('../pages/DonationPage').then(m => ({ default: m.DonationPage })));
 
 function S(el: React.ReactNode) {
   return <Suspense fallback={<RouteFallback />}>{el}</Suspense>;
@@ -28,4 +29,5 @@ export const publicRoutes = [
   <Route key="privacy" path="/privacy" element={S(<PrivacyPolicyPage />)} />,
   <Route key="about" path="/about" element={S(<AboutPage />)} />,
   <Route key="person-survey" path="/survey/:token" element={S(<PersonSurveyPage />)} />,
+  <Route key="support" path="/support" element={S(<DonationPage />)} />,
 ];

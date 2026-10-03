@@ -24,6 +24,7 @@ const InvitePage = lazy(() => import('../pages/InvitePage').then(m => ({ default
 const MemoryTrainingPage = lazy(() => import('../pages/MemoryTrainingPage').then(m => ({ default: m.MemoryTrainingPage })));
 const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(m => ({ default: m.PersonProfilePage })));
 const RelationshipBriefPage = lazy(() => import('../pages/RelationshipBriefPage').then(m => ({ default: m.RelationshipBriefPage })));
+const DonationPage = lazy(() => import('../pages/DonationPage').then(m => ({ default: m.DonationPage })));
 
 function P(el: React.ReactNode) {
   return (
@@ -56,4 +57,5 @@ export const appRoutes = [
   <Route key="real-or-not" path="/real-or-not" element={P(<RealOrNotPage />)} />,
   <Route key="invite" path="/invite" element={P(<InvitePage />)} />,
   <Route key="memory-training" path="/memory-training" element={P(<MemoryTrainingPage />)} />,
+  <Route key="support-app" path="/support" element={P(<DonationPage />)} />,
 ];
