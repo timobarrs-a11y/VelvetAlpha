@@ -240,7 +240,7 @@ export function CompanionPathSelectPage() {
       <div className="w-full max-w-lg">
         {phase === 'choose' && (
           <button
-            onClick={() => navigate('/intent-select')}
+            onClick={() => navigate(-1)}
             className="mb-6 flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
           >
             <ArrowLeft size={18} />

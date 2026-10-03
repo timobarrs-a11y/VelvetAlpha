@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Users, Heart, Brain, ArrowLeft, Sparkles } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../shared/supabase/client';
 import { VELVET_THEME } from '../config/velvetTheme';
 
@@ -24,6 +24,8 @@ const AMBIENT_ORBS = [
 
 export function IntentSelectPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const peopleOnly = searchParams.get('people') === '1';
   const [transitioning, setTransitioning] = useState<string | null>(null);
   const [hasActiveMentor, setHasActiveMentor] = useState(false);
 
@@ -77,7 +79,7 @@ export function IntentSelectPage() {
       nextPath: hasActiveMentor ? '/lobby' : '/expert-selection',
     },
   ];
-
+  const visibleOptions = peopleOnly ? options.filter(o => o.id !== 'coaches') : options;
   const handleSelectIntent = (option: IntentOption) => {
     sessionStorage.setItem('onboardingIntent', option.intent);
     sessionStorage.setItem('onboardingRelationshipType', option.relationshipType);
@@ -192,11 +194,13 @@ export function IntentSelectPage() {
           animate="visible"
           className="text-center mb-12"
         >
-          <h1 className="text-5xl font-bold text-white mb-4">
-            What are you looking for?
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            {peopleOnly ? 'Add someone new' : 'What are you looking for?'}
           </h1>
           <p className="text-lg text-ink-muted">
-            Every path is powered by the Velvet Engine — the only AI memory system that gets sharper the more you talk
+            {peopleOnly
+              ? 'A friend or a companion. Pick the kind of bond you want, and we will build them together.'
+              : 'Every path is powered by the Velvet Engine — the only AI memory system that gets sharper the more you talk'}
           </p>
         </motion.div>
 
@@ -204,9 +208,9 @@ export function IntentSelectPage() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          className={`grid grid-cols-1 gap-6 ${peopleOnly ? 'md:grid-cols-2 max-w-3xl mx-auto' : 'md:grid-cols-3'}`}
         >
-          {options.map((option) => (
+          {visibleOptions.map((option) => (
             <motion.button
               key={option.id}
               variants={cardVariants}

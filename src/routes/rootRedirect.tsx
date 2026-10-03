@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, ChevronRight } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 import { AvatarConfig, DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from '../types/avatar';
+import { getSetupProgress, prepareResume } from '../services/setupProgressService';
 
 function CompanionPickerModal({
   companions,
@@ -114,6 +115,14 @@ export function RootRedirect() {
       const companions = await getCompanions(user.id);
 
       const homeLayout = getHomeLayout();
+
+      if (companions.length > 0) {
+        const resumeRoute = prepareResume(await getSetupProgress(user.id), companions);
+        if (resumeRoute) {
+          setDestination(resumeRoute);
+          return;
+        }
+      }
 
       if (companions.length === 0) {
         const currentCompanionId = sessionStorage.getItem('currentCompanionId');

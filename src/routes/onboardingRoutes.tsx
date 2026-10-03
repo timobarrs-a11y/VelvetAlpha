@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Route } from 'react-router-dom';
+import { Navigate, Route } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 
@@ -20,7 +20,8 @@ const IntentSelectPage = lazy(() => import('../pages/IntentSelectPage').then(m =
 const ExpertSelectionPage = lazy(() => import('../pages/ExpertSelectionPage'));
 const ExpertQuestionnairePage = lazy(() => import('../pages/ExpertQuestionnairePage').then(m => ({ default: m.ExpertQuestionnairePage })));
 const ExpertBuilderPage = lazy(() => import('../pages/ExpertBuilderPage').then(m => ({ default: m.ExpertBuilderPage })));
-const AtlasRoutingPage = lazy(() => import('../pages/AtlasRoutingPage').then(m => ({ default: m.AtlasRoutingPage })));
+const CoachReadyPage = lazy(() => import('../pages/CoachReadyPage').then(m => ({ default: m.CoachReadyPage })));
+const WhoToTalkPage = lazy(() => import('../pages/WhoToTalkPage').then(m => ({ default: m.WhoToTalkPage })));
 const EnvironmentSetupPage = lazy(() => import('../pages/EnvironmentSetupPage').then(m => ({ default: m.EnvironmentSetupPage })));
 
 function wrap(el: React.ReactNode) {
@@ -49,6 +50,8 @@ export const onboardingRoutes = [
   <Route key="create-companion-avatar" path="/create-companion-avatar" element={wrap(<CreateCompanionAvatarPage />)} />,
   <Route key="pricing-offer" path="/pricing-offer" element={wrap(<PricingOfferPage />)} />,
   <Route key="onboarding" path="/onboarding" element={wrap(<OnboardingTourPage />)} />,
-  <Route key="atlas-routing" path="/atlas-routing" element={wrap(<AtlasRoutingPage />)} />,
+  <Route key="atlas-routing" path="/atlas-routing" element={<Navigate to="/" replace />} />,
+  <Route key="coach-ready" path="/coach-ready" element={wrap(<CoachReadyPage />)} />,
+  <Route key="who-to-talk" path="/who-to-talk" element={wrap(<WhoToTalkPage />)} />,
   <Route key="environment-setup" path="/environment-setup" element={wrap(<EnvironmentSetupPage />)} />,
 ];

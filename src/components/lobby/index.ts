@@ -2,6 +2,7 @@ export { HubTile } from './HubTile';
 export type { HubTileProps, HubTileSize } from './HubTile';
 export { CompanionCard, AddCompanionCard } from './CompanionCard';
 export { CompanionStrip } from './CompanionStrip';
+export { FinishSetupCard } from './FinishSetupCard';
 export { TONE_COLOR, formatTimeAgo, companionAvatarConfig } from './lobbyUtils';
 export type { CompanionTone } from './lobbyUtils';
 export { GroupChatCard, GROUP_TONE } from './GroupChatCard';

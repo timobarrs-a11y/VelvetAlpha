@@ -9,8 +9,10 @@ import {
   User,
   X,
   Gamepad2,
+  UserPlus,
 } from 'lucide-react';
 import { setAppBridgeContext } from '../services/appBridgeStore';
+import { SOMEONE_NEW_ROUTE } from '../services/setupProgressService';
 
 interface NavItem {
   label: string;
@@ -18,6 +20,7 @@ interface NavItem {
   route: string;
   color: string;
   angle: number;
+  tooltip?: string;
 }
 
 interface AppNavRadialProps {
@@ -34,6 +37,7 @@ const NAV_ITEMS: Omit<NavItem, 'angle'>[] = [
   { label: 'Insights',   icon: <BarChart2 className="w-4 h-4" />,    route: '/insights',   color: 'bg-emerald-600 hover:bg-emerald-500' },
   { label: 'Games',      icon: <Gamepad2 className="w-4 h-4" />,     route: '/lobby#games',color: 'bg-orange-500 hover:bg-orange-400' },
   { label: 'Profile',    icon: <User className="w-4 h-4" />,         route: '/profile',    color: 'bg-gray-500 hover:bg-gray-400' },
+  { label: 'Someone New', icon: <UserPlus className="w-4 h-4" />,    route: SOMEONE_NEW_ROUTE, color: 'bg-pink-500 hover:bg-pink-400', tooltip: 'Add someone new: a friend or companion' },
 ];
 
 const RADIUS = 108;
@@ -131,7 +135,7 @@ export function AppNavRadial({ companionId, currentApp, seedText, theme = 'light
                       className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap"
                     >
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/80 text-white backdrop-blur-sm">
-                        {item.label}
+                        {item.tooltip ?? item.label}
                       </span>
                     </motion.div>
                   )}
@@ -140,6 +144,7 @@ export function AppNavRadial({ companionId, currentApp, seedText, theme = 'light
                   onClick={() => handleNavigate(item)}
                   onMouseEnter={() => setHoveredIndex(i)}
                   onMouseLeave={() => setHoveredIndex(null)}
+                  aria-label={item.tooltip ?? item.label}
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-150 ${item.color} ${isHovered ? 'scale-110' : 'scale-100'}`}
                 >
                   {item.icon}

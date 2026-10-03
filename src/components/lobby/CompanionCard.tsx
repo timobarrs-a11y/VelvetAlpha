@@ -111,10 +111,11 @@ interface AddCardProps {
   tone: CompanionTone;
   onClick: () => void;
   delay?: number;
+  highlight?: boolean;
 }
 
 /** Dashed "add another" tile that closes out each companion grid. */
-export function AddCompanionCard({ title, subtitle, tone, onClick, delay = 0 }: AddCardProps) {
+export function AddCompanionCard({ title, subtitle, tone, onClick, delay = 0, highlight = false }: AddCardProps) {
   const accent = TONE_COLOR[tone];
   return (
     <motion.button
@@ -124,10 +125,23 @@ export function AddCompanionCard({ title, subtitle, tone, onClick, delay = 0 }: 
       transition={{ delay }}
       onClick={onClick}
       data-interactive
-      className="ds-card ds-card--dashed ds-focus group flex items-center justify-center min-h-[260px] w-full"
-      style={{ '--ds-tone': accent, '--ds-card-hover-border': accent } as React.CSSProperties}
+      className="ds-card ds-card--dashed ds-focus group relative flex items-center justify-center min-h-[260px] w-full"
+      style={{
+        '--ds-tone': accent,
+        '--ds-card-hover-border': accent,
+        ...(highlight ? { borderColor: `color-mix(in srgb, ${accent} 55%, transparent)` } : {}),
+      } as React.CSSProperties}
     >
-      <div className="text-center p-6">
+      {highlight && (
+        <motion.span
+          aria-hidden="true"
+          className="absolute inset-0 rounded-[inherit] pointer-events-none"
+          style={{ boxShadow: `0 0 32px color-mix(in srgb, ${accent} 30%, transparent)` }}
+          animate={{ opacity: [0.45, 1, 0.45] }}
+          transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
+      <div className="relative text-center p-6">
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform"
           style={{

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Shuffle, Check, Briefcase } from 'lucide-react';
+import { Shuffle, Check, Briefcase, RotateCcw } from 'lucide-react';
 import { AvatarCreatorV2, coherentRandomize } from '../components/AvatarCreatorV2';
 import { AvatarConfigV2, DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2 } from '../types/avatar-v2';
 import { supabase } from '../shared/supabase/client';
@@ -9,47 +9,67 @@ import { trackSaveAvatar, trackRandomize } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
 import { getRandomName } from '../data/companionNames';
 import { VELVET_THEME } from '../config/velvetTheme';
+import { useAuth } from '../auth/AuthProvider';
+import { updateSetupProgress } from '../services/setupProgressService';
+
+async function resolveCoachId(userId: string | undefined): Promise<string | null> {
+  const stored = sessionStorage.getItem('atlasCoachId');
+  if (stored || !userId) return stored;
+
+  const { data } = await supabase
+    .from('companions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('relationship_type', 'mentor')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (data?.id) sessionStorage.setItem('atlasCoachId', data.id);
+  return data?.id ?? null;
+}
 
 export function CoachAvatarPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV2>(DEFAULT_FEMALE_AVATAR_V2);
   const [saving, setSaving] = useState(false);
   const [coachName, setCoachName] = useState('');
   const [coachGender, setCoachGender] = useState<'male' | 'female'>('female');
   const [showReveal, setShowReveal] = useState(false);
-  const pendingRoute = useRef<string>('/intent-select');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const hasRandomized = useRef(false);
 
   useEffect(() => {
-    const coachId = sessionStorage.getItem('atlasCoachId');
     const storedGender = sessionStorage.getItem('atlasCoachGender') as 'male' | 'female' | null;
     const storedName = sessionStorage.getItem('atlasCoachName') || '';
-    const nextDestination = sessionStorage.getItem('atlasNextDestination') || '/intent-select';
-
-    pendingRoute.current = nextDestination;
 
     const gender: 'male' | 'female' = storedGender === 'male' ? 'male' : 'female';
     setCoachGender(gender);
     setCoachName(storedName);
     setAvatarConfig(gender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2);
 
-    if (coachId) {
-      (async () => {
-        const { data } = await supabase
-          .from('companions')
-          .select('avatar_config, custom_name')
-          .eq('id', coachId)
-          .maybeSingle();
+    (async () => {
+      const coachId = await resolveCoachId(user?.id);
+      if (!coachId) return;
+      const { data } = await supabase
+        .from('companions')
+        .select('avatar_config, custom_name, gender')
+        .eq('id', coachId)
+        .maybeSingle();
 
-        if (data?.avatar_config) {
-          setAvatarConfig(data.avatar_config as AvatarConfigV2);
-        }
-        if (data?.custom_name && !storedName) {
-          setCoachName(data.custom_name);
-        }
-      })();
-    }
-  }, []);
+      if (data?.avatar_config) {
+        setAvatarConfig(data.avatar_config as AvatarConfigV2);
+      }
+      if (data?.custom_name && !storedName) {
+        setCoachName(data.custom_name);
+      }
+      if (!storedGender && (data?.gender === 'male' || data?.gender === 'female')) {
+        setCoachGender(data.gender);
+      }
+    })();
+  }, [user?.id]);
 
   const handleRandomize = () => {
     trackRandomize();
@@ -64,10 +84,11 @@ export function CoachAvatarPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
-      const coachId = sessionStorage.getItem('atlasCoachId');
+      const coachId = await resolveCoachId(user?.id);
       if (!coachId) {
-        navigate(pendingRoute.current);
+        setSaveError("We couldn't find your coach. Please try again.");
         return;
       }
 
@@ -82,21 +103,27 @@ export function CoachAvatarPage() {
 
       if (error) {
         console.error('[CoachAvatar] Error updating coach avatar:', error);
+        setSaveError("We couldn't save your coach's look. Please try again.");
+        return;
       }
 
       trackSaveAvatar('companion');
       setShowReveal(true);
     } catch (error) {
       console.error('Error saving coach avatar:', error);
-      navigate(pendingRoute.current);
+      setSaveError('Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleRevealContinue = () => {
+  const handleRevealContinue = async () => {
     setShowReveal(false);
-    sessionStorage.setItem('envSetupNextRoute', pendingRoute.current);
+    if (coachName) sessionStorage.setItem('atlasCoachName', coachName);
+    sessionStorage.removeItem('currentCompanionId');
+    sessionStorage.setItem('envSetupNextRoute', '/coach-ready');
+    sessionStorage.setItem('envSetupBackRoute', '/coach-avatar');
+    if (user) await updateSetupProgress(user.id, { step: 'coach_environment' });
     navigate('/environment-setup');
   };
 
@@ -194,6 +221,22 @@ export function CoachAvatarPage() {
               <Shuffle className="w-5 h-5 text-ink-secondary" />
             </button>
           </div>
+
+          {saveError && (
+            <div
+              role="alert"
+              className="w-full max-w-md flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-200 text-sm"
+            >
+              <span>{saveError}</span>
+              <button
+                onClick={handleSave}
+                className="inline-flex items-center gap-1.5 font-semibold text-red-100 hover:text-white transition-colors flex-shrink-0"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Try again
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md">
             <button

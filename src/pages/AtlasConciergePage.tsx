@@ -11,6 +11,7 @@ import { PageHeader } from '../shared/ui';
 import { AtlasFadeTyping } from '../shells/slots/AtlasFadeTyping';
 import { AtlasBackgroundScene } from '../shells/slots/AtlasBackgroundScene';
 import { AtlasBriefCard } from '../shells/slots/AtlasBriefCard';
+import { updateSetupProgress } from '../services/setupProgressService';
 
 interface ChatMessage {
   role: 'atlas' | 'user';
@@ -131,7 +132,7 @@ function AtlasConciergeInner() {
   const [expertDomain, setExpertDomain] = useState('');
   const [error, setError] = useState('');
   const [showTransition, setShowTransition] = useState(false);
-  const [transitionDestination, setTransitionDestination] = useState('/atlas-routing');
+  const [transitionDestination, setTransitionDestination] = useState('/coach-avatar');
   const [latestAtlasId, setLatestAtlasId] = useState(-1);
   const [recommendation, setRecommendation] = useState<CoachRecommendation | null>(null);
   const [pendingTranscript, setPendingTranscript] = useState<ChatMessage[]>([]);
@@ -341,10 +342,11 @@ function AtlasConciergeInner() {
     if (!recommendation) return;
     updatePhase('provisioning');
     setIsThinking(true);
+    setError('');
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) throw new Error('No session');
 
       const response = await fetch(`${FUNCTION_BASE}/atlas-onboarding`, {
         method: 'POST',
@@ -361,6 +363,7 @@ function AtlasConciergeInner() {
 
       if (!response.ok) throw new Error('Provisioning failed');
       const data = await response.json();
+      if (!data?.coachId) throw new Error('Provisioning returned no coach');
 
       setCoachName(data.coachName || recommendation.coachName);
       setCoachId(data.coachId || '');
@@ -370,7 +373,8 @@ function AtlasConciergeInner() {
       if (recommendation.coachGender) sessionStorage.setItem('atlasCoachGender', recommendation.coachGender);
       sessionStorage.setItem('atlasCoachName', data.coachName || recommendation.coachName);
 
-      sessionStorage.setItem('atlasNextDestination', '/atlas-routing');
+      sessionStorage.setItem('atlasCoachId', data.coachId);
+      await updateSetupProgress(session.user.id, { step: 'coach_avatar' });
       setTransitionDestination('/coach-avatar');
 
       const transitionMsg = `Your coach ${data.coachName} is ready${data.expertDomain ? ` \u2014 they'll help you with ${data.expertDomain}` : ''}. Let's give them a face \u2014 customize every detail or randomize for an instant look.`;
@@ -384,10 +388,8 @@ function AtlasConciergeInner() {
         setIsThinking(false);
       }, 2500);
     } catch {
-      setError('Something went wrong setting up your coach. You can continue and we\'ll retry later.');
-      setTimeout(() => {
-        navigate('/atlas-routing', { replace: true });
-      }, 2500);
+      setError('Something went wrong setting up your coach. Tap "Yes, set me up" to try again.');
+      updatePhase('confirm');
     } finally {
       setIsThinking(false);
     }
@@ -619,6 +621,20 @@ function AtlasConciergeInner() {
                 <AnimatePresence>
                   {isThinking && <AtlasFadeTyping label={writingLabel} />}
                 </AnimatePresence>
+
+                {error && !isThinking && (
+                  <div
+                    role="alert"
+                    className="px-4 py-3 rounded-xl text-sm leading-relaxed"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      border: '1px solid rgba(239, 68, 68, 0.35)',
+                      color: 'var(--shell-text-primary)',
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
 
                 <div ref={messagesEndRef} />
               </div>

@@ -1,13 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Heart, Shuffle, Check } from 'lucide-react';
+import { Heart, Shuffle, Check, RotateCcw } from 'lucide-react';
 import { AvatarCreatorV2, coherentRandomize } from '../components/AvatarCreatorV2';
 import { AvatarConfigV2, DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2 } from '../types/avatar-v2';
 import { supabase } from '../shared/supabase/client';
 import { trackSaveAvatar, trackRandomize } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
 import { getRandomName } from '../data/companionNames';
+
+async function resolveCompanionId(): Promise<string | null> {
+  const stored = sessionStorage.getItem('currentCompanionId');
+  if (stored) return stored;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from('companions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .neq('relationship_type', 'mentor')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (data?.id) sessionStorage.setItem('currentCompanionId', data.id);
+  return data?.id ?? null;
+}
 
 export function CreateCompanionAvatarPage() {
   const navigate = useNavigate();
@@ -16,20 +37,35 @@ export function CreateCompanionAvatarPage() {
   const [companionName, setCompanionName] = useState('');
   const [companionGender, setCompanionGender] = useState<'male' | 'female'>('female');
   const [showReveal, setShowReveal] = useState(false);
-  const pendingRoute = useRef<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const hasRandomized = useRef(false);
 
   useEffect(() => {
     const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || '{}');
     const selectedGender = matchData.relationshipType === 'Male' ? 'male' : 'female';
     const name = matchData.companionName || '';
-    const companionId = sessionStorage.getItem('currentCompanionId');
 
     setCompanionName(name);
     setCompanionGender(selectedGender);
     setAvatarConfig(
       selectedGender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2
     );
+
+    (async () => {
+      const companionId = await resolveCompanionId();
+      if (!companionId) return;
+      const { data } = await supabase
+        .from('companions')
+        .select('custom_name, gender, avatar_config')
+        .eq('id', companionId)
+        .maybeSingle();
+      if (!data) return;
+      if (!name && data.custom_name) setCompanionName(data.custom_name);
+      if (data.gender === 'male' || data.gender === 'female') setCompanionGender(data.gender);
+      if (data.avatar_config && !matchData.relationshipType) {
+        setAvatarConfig(data.avatar_config as AvatarConfigV2);
+      }
+    })();
   }, []);
 
   const handleRandomize = () => {
@@ -48,29 +84,11 @@ export function CreateCompanionAvatarPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
-      const companionId = sessionStorage.getItem('currentCompanionId');
-
+      const companionId = await resolveCompanionId();
       if (!companionId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: companions } = await supabase
-            .from('companions')
-            .select('id')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-
-          if (companions && companions.length > 0) {
-            trackSaveAvatar('companion');
-            const intent = sessionStorage.getItem('onboardingIntent');
-            const newId = sessionStorage.getItem('currentCompanionId') || companions[0].id;
-            const isFirstCompanion = companions.length === 1;
-            pendingRoute.current = '/atlas-routing';
-            setShowReveal(true);
-            return;
-          }
-        }
-        navigate('/lobby');
+        setSaveError("We couldn't find the person you're creating. Please try again.");
         return;
       }
 
@@ -81,24 +99,15 @@ export function CreateCompanionAvatarPage() {
 
       if (error) {
         console.error('[CompanionAvatar] Error updating avatar:', error);
+        setSaveError("We couldn't save this look. Please try again.");
+        return;
       }
 
       trackSaveAvatar('companion');
-      const intent = sessionStorage.getItem('onboardingIntent');
-      const { data: { user: savedUser } } = await supabase.auth.getUser();
-      let isFirstCompanion = false;
-      if (savedUser) {
-        const { data: allCompanions } = await supabase
-          .from('companions')
-          .select('id')
-          .eq('user_id', savedUser.id);
-        isFirstCompanion = (allCompanions?.length ?? 0) <= 1;
-      }
-      pendingRoute.current = '/atlas-routing';
       setShowReveal(true);
     } catch (error) {
       console.error('Error saving companion avatar:', error);
-      navigate('/lobby');
+      setSaveError('Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -106,7 +115,8 @@ export function CreateCompanionAvatarPage() {
 
   const handleRevealContinue = () => {
     setShowReveal(false);
-    sessionStorage.setItem('envSetupNextRoute', pendingRoute.current || '/atlas-routing');
+    sessionStorage.setItem('envSetupNextRoute', '/who-to-talk');
+    sessionStorage.setItem('envSetupBackRoute', '/create-companion-avatar');
     navigate('/environment-setup');
   };
 
@@ -187,6 +197,22 @@ export function CreateCompanionAvatarPage() {
               <Shuffle className="w-5 h-5" />
             </button>
           </div>
+
+          {saveError && (
+            <div
+              role="alert"
+              className="w-full max-w-md flex items-center justify-between gap-3 px-4 py-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 text-sm"
+            >
+              <span>{saveError}</span>
+              <button
+                onClick={handleSave}
+                className="inline-flex items-center gap-1.5 font-semibold text-red-100 hover:text-white transition-colors flex-shrink-0"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Try again
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md">
             <button

@@ -21,7 +21,7 @@ import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { CustomizationPanel } from '../components/CustomizationPanel';
 import { CreateGroupChatModal } from '../components/CreateGroupChatModal';
 import FeedbackModal from '../components/FeedbackModal';
-import { TONE_COLOR, companionAvatarConfig } from '../components/lobby';
+import { TONE_COLOR, companionAvatarConfig, FinishSetupCard } from '../components/lobby';
 import { POINTER_SYMBOLS } from '../services/customizationService';
 import { Avatar } from '../components/Avatar';
 import type { CompanionWithLastMessage } from '../services/companionService';
@@ -347,6 +347,11 @@ export function HomeShellPage() {
 
         {/* Content area */}
         <div className="flex-1 overflow-hidden flex flex-col">
+          {lobby.setupResumeRoute && (
+            <div className="px-4 pt-3 flex-shrink-0">
+              <FinishSetupCard onResume={lobby.resumeSetup} />
+            </div>
+          )}
           {/* Feed / Your Lens visual toggle */}
           {(activeTab === 'feed' || activeTab === 'videos') && (
             <div className="flex items-center justify-center px-4 py-2 flex-shrink-0 border-b border-white/8">
@@ -526,7 +531,7 @@ export function HomeShellPage() {
 }
 
 const CATEGORY_CONFIG: Record<CompanionCategory, { label: string; color: string; matchTypes: string[]; addLabel: string }> = {
-  companions:     { label: 'Companions',    color: '#f472b6', matchTypes: ['romantic', 'friend', ''], addLabel: 'Add companion' },
+  companions:     { label: 'Companions',    color: '#f472b6', matchTypes: ['romantic', 'friend', ''], addLabel: 'Someone New' },
   coaching:       { label: 'Coaching',      color: '#34d399', matchTypes: ['mentor'],                 addLabel: 'Add coach' },
   correspondents: { label: 'Correspondents', color: '#fbbf24', matchTypes: ['correspondent'],         addLabel: 'Add correspondent' },
 };

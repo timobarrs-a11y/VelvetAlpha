@@ -16,6 +16,9 @@ import { toast } from '../shared/ui/Toast';
 import { newsService } from '../services/newsService';
 import { getGroupChats, createGroupChat, deleteGroupChat, GroupChatWithMembers } from '../services/groupChatService';
 import { TONE_COLOR, GROUP_TONE } from '../components/lobby';
+import {
+  SOMEONE_NEW_ROUTE, getSetupProgress, isCompanionSetupPending, prepareResume,
+} from '../services/setupProgressService';
 
 export interface GameEntry {
   id: string;
@@ -71,6 +74,7 @@ export function useLobbyData() {
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [groupChats, setGroupChats] = useState<GroupChatWithMembers[]>([]);
   const [confirmModal, setConfirmModal] = useState<ConfirmModal | null>(null);
+  const [setupResumeRoute, setSetupResumeRoute] = useState<string | null>(null);
   const { subscriptionInfo } = useSubscription();
   const customizationHook = useCustomization();
 
@@ -79,10 +83,17 @@ export function useLobbyData() {
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate('/create-user-avatar'); return; }
-    const [companionsList, groupsList] = await Promise.all([
+    const [companionsList, groupsList, progress] = await Promise.all([
       getCompanions(user.id),
       getGroupChats(),
+      getSetupProgress(user.id),
     ]);
+    const resumeRoute = prepareResume(progress, companionsList);
+    if (resumeRoute && isCompanionSetupPending(progress)) {
+      navigate(resumeRoute, { replace: true });
+      return;
+    }
+    setSetupResumeRoute(resumeRoute);
     setCompanions(companionsList);
     setGroupChats(groupsList);
     setLoading(false);
@@ -174,8 +185,12 @@ export function useLobbyData() {
   }, [loadData]);
 
   const handleNewCompanion = useCallback(() => {
-    navigate(companions.length > 0 ? '/create-additional-companion' : '/companion-path');
-  }, [navigate, companions.length]);
+    navigate(SOMEONE_NEW_ROUTE);
+  }, [navigate]);
+
+  const resumeSetup = useCallback(() => {
+    if (setupResumeRoute) navigate(setupResumeRoute);
+  }, [navigate, setupResumeRoute]);
 
   const handleNewCoach = useCallback(() => {
     sessionStorage.setItem('onboardingIntent', 'coaches');
@@ -237,6 +252,8 @@ export function useLobbyData() {
     handleGroupChatClick,
     handleDeleteCompanion,
     handleNewCompanion,
+    setupResumeRoute,
+    resumeSetup,
     handleNewCoach,
     handleGameClick,
     handleSignOut,

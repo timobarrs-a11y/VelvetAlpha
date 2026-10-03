@@ -2,11 +2,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowRight, Check, Image as ImageIcon, Type, Palette,
-  Sparkles, ChevronDown, ChevronUp,
+  ArrowRight, ArrowLeft, Check, Image as ImageIcon, Type, Palette,
+  Sparkles, ChevronDown, ChevronUp, RotateCcw,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { updateCompanionChatStyle } from '../services/companionService';
+import { useAuth } from '../auth/AuthProvider';
+import { advanceSetupStepIf } from '../services/setupProgressService';
 import {
   CSS_WALLPAPER_PRESETS,
   PHOTO_WALLPAPER_PRESETS,
@@ -92,12 +94,17 @@ const PRESETS: Preset[] = [
 
 export function EnvironmentSetupPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [companionId, setCompanionId] = useState<string | null>(null);
   const [companionName, setCompanionName] = useState('Companion');
   const [companionGender, setCompanionGender] = useState<'male' | 'female'>('female');
   const [nextRoute, setNextRoute] = useState<string>('/lobby');
+  const [backRoute, setBackRoute] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
 
   const [activeTab, setActiveTab] = useState<Tab>('presets');
@@ -125,34 +132,45 @@ export function EnvironmentSetupPage() {
     const name = sessionStorage.getItem('atlasCoachName') || 'Companion';
     const gender = (sessionStorage.getItem('atlasCoachGender') as 'male' | 'female') || 'female';
 
-    if (id) {
-      setCompanionId(id);
-      (async () => {
-        const { data } = await supabase
-          .from('companions')
-          .select('custom_name, gender, chat_wallpaper, chat_wallpaper_url, font_family, chat_bubble_color, chat_text_color, companion_bubble_color, companion_text_color')
-          .eq('id', id)
-          .maybeSingle();
+    setNextRoute(storedNext);
+    setBackRoute(sessionStorage.getItem('envSetupBackRoute'));
+    setLoadError(false);
+    setLoading(true);
 
-        if (data) {
-          setCompanionName(data.custom_name || name);
-          setCompanionGender(data.gender || gender);
-          if (data.font_family) setFontFamily(data.font_family);
-          if (data.chat_bubble_color) setBubbleColor(data.chat_bubble_color);
-          if (data.chat_text_color) setTextColor(data.chat_text_color);
-          if (data.companion_bubble_color) setCompanionBubbleColor(data.companion_bubble_color);
-          if (data.companion_text_color) setCompanionTextColor(data.companion_text_color);
-          if (data.chat_wallpaper) setWallpaperId(data.chat_wallpaper);
-          if (data.chat_wallpaper_url) setWallpaperUrl(data.chat_wallpaper_url);
-        }
-        setNextRoute(storedNext);
-        setLoading(false);
-      })();
-    } else {
-      setNextRoute(storedNext);
+    if (!id) {
       setLoading(false);
+      return;
     }
-  }, []);
+
+    setCompanionId(id);
+    (async () => {
+      const { data, error } = await supabase
+        .from('companions')
+        .select('custom_name, gender, chat_wallpaper, chat_wallpaper_url, font_family, chat_bubble_color, chat_text_color, companion_bubble_color, companion_text_color')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading environment preferences:', error);
+        setLoadError(true);
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
+        setCompanionName(data.custom_name || name);
+        setCompanionGender(data.gender || gender);
+        if (data.font_family) setFontFamily(data.font_family);
+        if (data.chat_bubble_color) setBubbleColor(data.chat_bubble_color);
+        if (data.chat_text_color) setTextColor(data.chat_text_color);
+        if (data.companion_bubble_color) setCompanionBubbleColor(data.companion_bubble_color);
+        if (data.companion_text_color) setCompanionTextColor(data.companion_text_color);
+        if (data.chat_wallpaper) setWallpaperId(data.chat_wallpaper);
+        if (data.chat_wallpaper_url) setWallpaperUrl(data.chat_wallpaper_url);
+      }
+      setLoading(false);
+    })();
+  }, [reloadKey]);
 
   const wallpaperMeta = useMemo(
     () => buildWallpaperMeta(wallpaperId, wallpaperUrl),
@@ -179,13 +197,27 @@ export function EnvironmentSetupPage() {
     setCompanionTextColor(p.companionTextColor);
   }, []);
 
+  const proceed = async () => {
+    if (user) {
+      if (nextRoute === '/coach-ready') {
+        await advanceSetupStepIf(user.id, ['coach_avatar', 'coach_environment'], 'coach_ready');
+      } else if (nextRoute === '/who-to-talk') {
+        await advanceSetupStepIf(user.id, ['companion_in_progress'], 'choose_conversation');
+      }
+    }
+    sessionStorage.removeItem('envSetupNextRoute');
+    sessionStorage.removeItem('envSetupBackRoute');
+    navigate(nextRoute);
+  };
+
   const handleSave = async () => {
     if (!companionId) {
-      navigate(nextRoute);
+      await proceed();
       return;
     }
 
     setSaving(true);
+    setSaveError(false);
     try {
       await updateCompanionChatStyle(companionId, {
         chat_wallpaper: wallpaperId,
@@ -196,24 +228,42 @@ export function EnvironmentSetupPage() {
         companion_bubble_color: companionBubbleColor,
         companion_text_color: companionTextColor,
       });
+      await proceed();
     } catch (e) {
       console.error('Error saving environment preferences:', e);
+      setSaveError(true);
     } finally {
       setSaving(false);
-      sessionStorage.removeItem('envSetupNextRoute');
-      navigate(nextRoute);
     }
   };
 
   const handleSkip = () => {
-    sessionStorage.removeItem('envSetupNextRoute');
-    navigate(nextRoute);
+    proceed();
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: VELVET_THEME.bg }}>
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-rose-400" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ background: VELVET_THEME.bg }}>
+        <div className="text-center max-w-sm">
+          <p className="text-lg font-semibold text-white mb-2">We couldn't load this step</p>
+          <p className="text-sm text-ink-secondary mb-6">Check your connection and try again. Your progress is saved.</p>
+          <button
+            onClick={() => setReloadKey(k => k + 1)}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-transform hover:scale-[1.02]"
+            style={{ background: 'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)' }}
+          >
+            <RotateCcw className="w-4 h-4" />
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
@@ -228,6 +278,15 @@ export function EnvironmentSetupPage() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: VELVET_THEME.bg }}>
       <div className="max-w-3xl mx-auto w-full px-5 py-8 flex-1 flex flex-col">
+        {backRoute && (
+          <button
+            onClick={() => navigate(backRoute)}
+            className="self-start mb-4 inline-flex items-center gap-2 text-sm font-medium text-ink-secondary hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+        )}
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -632,6 +691,21 @@ export function EnvironmentSetupPage() {
         </div>
 
         {/* Footer Buttons */}
+        {saveError && (
+          <div
+            role="alert"
+            className="mb-3 flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-200 text-sm"
+          >
+            <span>We couldn't save this look. Try again, or skip and style it later.</span>
+            <button
+              onClick={handleSave}
+              className="inline-flex items-center gap-1.5 font-semibold text-red-100 hover:text-white transition-colors flex-shrink-0"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Try again
+            </button>
+          </div>
+        )}
         <div className="flex gap-3">
           <button
             onClick={handleSkip}

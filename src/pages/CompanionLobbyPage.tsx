@@ -24,7 +24,7 @@ import { POINTER_SYMBOLS } from '../services/customizationService';
 import FeedbackModal from '../components/FeedbackModal';
 import { Avatar } from '../components/Avatar';
 import {
-  HubTile, CompanionCard, AddCompanionCard, GroupChatCard, GameCard,
+  HubTile, CompanionCard, AddCompanionCard, GroupChatCard, GameCard, FinishSetupCard,
   TONE_COLOR, GROUP_TONE, companionAvatarConfig,
 } from '../components/lobby';
 import type { HubTileSize } from '../components/lobby';
@@ -269,6 +269,12 @@ export function CompanionLobbyPage() {
         </div>
       </header>
 
+      {lobby.setupResumeRoute && (
+        <div className="mb-6">
+          <FinishSetupCard onResume={lobby.resumeSetup} />
+        </div>
+      )}
+
       {(customization?.current_streak ?? 0) > 0 && (
         <div className="mb-6 flex justify-center">
           <Badge tone="#fbbf24" icon={<Flame className="w-3 h-3" />}>{customization!.current_streak}d streak</Badge>
@@ -315,10 +321,11 @@ export function CompanionLobbyPage() {
             />
           ))}
           <AddCompanionCard
-            title="Find Another Match"
-            subtitle="Add a new companion"
+            title="Someone New"
+            subtitle="Add a friend or companion"
             tone="voice"
             delay={voices.length * 0.04}
+            highlight={voices.length === 0}
             onClick={lobby.handleNewCompanion}
           />
         </div>
