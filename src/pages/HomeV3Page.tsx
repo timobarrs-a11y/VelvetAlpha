@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Newspaper, Calendar, FileText, Lightbulb, Bot, MapPin,
-  Gamepad2, Heart, Brain, Users, LogOut, Volume2, VolumeX,
-  Plus, Sparkles, ArrowRight, Zap,
+  Heart, LogOut, Volume2, VolumeX,
+  Plus, Sparkles, ArrowRight,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { useAudioScene } from '../hooks/useAudioScene';
@@ -15,6 +15,7 @@ import {
 import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { companionAvatarConfig, TONE_COLOR, FinishSetupCard } from '../components/lobby';
 import { Avatar } from '../components/Avatar';
+import { colorNameToHex } from '../utils/colorMapping';
 import type { CompanionWithLastMessage } from '../services/companionService';
 
 const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default: m.DailyFeedPage })));
@@ -30,7 +31,6 @@ export function HomeV3Page() {
   const lobby = useLobbyData();
   const { muted, toggleMute } = useAudioScene();
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
-  const [activeCompanionId, setActiveCompanionId] = useState<string | null>(null);
 
   const {
     companions,
@@ -128,7 +128,8 @@ export function HomeV3Page() {
       <button
         key={c.id}
         onClick={() => navigate(`/chat?companion=${c.id}`)}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors hover:bg-white/8 ${hasCheckIn ? 'bg-white/5' : ''}`}
+        className={`v3-person-row w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${hasCheckIn ? 'bg-white/5' : ''}`}
+        style={{ '--v3-person-color': colorNameToHex(c.favorite_color ?? '') } as React.CSSProperties}
       >
         <div className={`relative ${isCoach ? 'w-11 h-11' : 'w-9 h-9'} rounded-full overflow-hidden flex-shrink-0`}>
           <Avatar config={companionAvatarConfig(c)} className="w-full h-full" />
@@ -158,13 +159,12 @@ export function HomeV3Page() {
   const sidebarStyle = {
     background: 'rgba(255,255,255,0.04)',
     backdropFilter: 'blur(12px)' as const,
-    borderRight: '1px solid rgba(255,255,255,0.06)',
   };
 
   return (
     <div className="ds-page flex flex-col h-screen overflow-hidden text-white">
       {/* Header */}
-      <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/8 flex-shrink-0">
+      <header className="flex items-center justify-between gap-3 px-4 py-3 flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <Heart className="w-5 h-5 text-pink-400 flex-shrink-0" fill="currentColor" style={{ filter: 'drop-shadow(0 0 6px rgba(244,114,182,0.70))' }} />
           <h1 className="ds-title-gradient text-xl font-bold font-display truncate hidden sm:block">Velvet</h1>
@@ -199,7 +199,7 @@ export function HomeV3Page() {
       <div className="flex-1 flex flex-row overflow-hidden">
         {/* Sidebar — list of people */}
         <aside className="w-64 flex-shrink-0 flex flex-col overflow-hidden hidden sm:flex" style={sidebarStyle}>
-          <div className="px-3 pt-3 pb-2 border-b border-white/6 flex-shrink-0">
+          <div className="px-3 pt-3 pb-2 flex-shrink-0">
             <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 select-none">Your People</p>
           </div>
 
@@ -232,7 +232,7 @@ export function HomeV3Page() {
           </div>
 
           {/* Tools */}
-          <div className="border-t border-white/6 px-2 py-2 flex-shrink-0">
+          <div className="px-2 py-2 flex-shrink-0">
             <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 px-2 pt-1 pb-1 select-none">Tools</p>
             {[
               { label: 'Daily Feed', icon: Newspaper, color: 'text-emerald-400', path: '/daily-feed' },
@@ -256,7 +256,7 @@ export function HomeV3Page() {
           </div>
 
           {/* Games */}
-          <div className="border-t border-white/6 px-2 py-2 flex-shrink-0">
+          <div className="px-2 py-2 flex-shrink-0">
             <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 px-2 pt-1 pb-1 select-none">Games</p>
             {GAMES.slice(0, 4).map(game => (
               <button
@@ -282,7 +282,7 @@ export function HomeV3Page() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="px-4 py-2.5 flex-shrink-0 border-b border-white/6"
+                className="px-4 py-2.5 flex-shrink-0"
                 style={{ background: 'rgba(52, 211, 153, 0.06)' }}
               >
                 <button
@@ -298,7 +298,7 @@ export function HomeV3Page() {
           </AnimatePresence>
 
           {/* Mobile person strip */}
-          <div className="sm:hidden flex items-center gap-2 px-3 py-2 overflow-x-auto scrollbar-hide border-b border-white/6 flex-shrink-0">
+          <div className="sm:hidden flex items-center gap-2 px-3 py-2 overflow-x-auto scrollbar-hide flex-shrink-0">
             {coach && (
               <button
                 onClick={() => navigate(`/chat?companion=${coach.id}`)}
