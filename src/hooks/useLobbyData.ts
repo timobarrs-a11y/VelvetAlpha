@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Crown, Cherry, Zap, Circle,
-  Rocket, Brain, UsersRound,
+  Rocket, Brain,
 } from 'lucide-react';
 import { getCorrespondentById } from '../config/signatureCorrespondents';
 import { correspondentSyncService } from '../services/correspondentSyncService';
@@ -113,13 +113,8 @@ export function useLobbyData() {
 
   const handleCreateGroupChat = useCallback(async (name: string, companionIds: string[]) => {
     const group = await createGroupChat(name, companionIds);
-    if (group) navigateTo(`/group-chat?group=${group.id}`, {
-      icon: UsersRound,
-      label: 'Loading group chat...',
-      accentColor: '#2dd4bf',
-      bgColor: '#040e0c',
-    });
-  }, [navigateTo]);
+    if (group) navigate(`/group-chat?group=${group.id}`);
+  }, [navigate]);
 
   const handleDeleteGroupChat = useCallback((groupId: string, groupName: string, e: React.MouseEvent) => {
     e.stopPropagation();
