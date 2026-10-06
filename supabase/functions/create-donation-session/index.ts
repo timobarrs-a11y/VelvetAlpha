@@ -105,7 +105,9 @@ Deno.serve(async (req: Request) => {
         amountCents: String(amountCents),
         message: trimmedMessage ?? '',
       },
-      customer_email: !customerId ? userEmail ?? undefined : undefined,
+      // Pre-fill email for guests whose Stripe customer has no email on file.
+      // For signed-in users, the customer already has their email.
+      customer_email: !userEmail ? undefined : userEmail,
     });
 
     return new Response(
