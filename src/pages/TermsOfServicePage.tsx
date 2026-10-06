@@ -330,6 +330,19 @@ export default function TermsOfServicePage() {
                 </BodyText>
 
                 <h3 className="text-white font-semibold text-base md:text-lg mb-3 mt-6">
+                  Voluntary Donations
+                </h3>
+                <BodyText>
+                  The Service may accept voluntary one-time donations. Donations are
+                  not payment for any good or service, do not create a recurring billing
+                  relationship, and are non-refundable except where required by law. A
+                  donation does not grant any additional features, access, or benefits
+                  beyond what your subscription plan already provides. You acknowledge
+                  that donations are voluntary gifts to support the ongoing development
+                  of the Service.
+                </BodyText>
+
+                <h3 className="text-white font-semibold text-base md:text-lg mb-3 mt-6">
                   Message Allowances and Fair Use
                 </h3>
                 <BodyText>

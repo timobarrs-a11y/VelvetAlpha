@@ -369,6 +369,16 @@ export function SettingsPage() {
 
               <div className="pt-4 border-t border-white/10 mt-4">
                 <button
+                  onClick={() => navigate('/support')}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-amber-300/70 hover:text-amber-300 hover:bg-amber-500/10 transition text-left"
+                >
+                  <Sparkles className="w-4 h-4 flex-shrink-0" />
+                  Support Velvet
+                </button>
+              </div>
+
+              <div className="pt-4 border-t border-white/10 mt-4">
+                <button
                   onClick={handleSignOut}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition text-left"
                 >

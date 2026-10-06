@@ -98,6 +98,18 @@ export async function fetchUserDonations(): Promise<DonationStar[]> {
   return data ?? [];
 }
 
+export async function claimGuestDonations(userId: string, email: string): Promise<number> {
+  const { data, error } = await supabase.rpc('claim_guest_donations', {
+    p_user_id: userId,
+    p_email: email,
+  });
+  if (error) {
+    console.error('Error claiming guest donations:', error);
+    return 0;
+  }
+  return (data as number) ?? 0;
+}
+
 export async function fetchGuestDonations(email: string): Promise<DonationStar[]> {
   const { data, error } = await supabase.rpc('get_guest_donations', { p_email: email });
 
