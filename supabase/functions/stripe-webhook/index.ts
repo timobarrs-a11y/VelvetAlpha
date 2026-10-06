@@ -69,11 +69,111 @@ async function resolveUserId(
 // Event handlers
 // ---------------------------------------------------------------------------
 
+function seededPosition(seed: string): { x: number; y: number } {
+  let hashX = 0;
+  let hashY = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hashX = ((hashX << 5) - hashX + seed.charCodeAt(i)) | 0;
+    hashY = ((hashY << 7) - hashY + seed.charCodeAt(i) * 31) | 0;
+  }
+  const x = Math.abs(hashX % 10000) / 10000;
+  const y = Math.abs(hashY % 10000) / 10000;
+  return { x, y };
+}
+
+function starProperties(amountCents: number): { size: number; brightness: number } {
+  const dollars = amountCents / 100;
+  const t = Math.min(1, Math.max(0, (dollars - 5) / 95));
+  const size = 0.7 + t * 1.5;
+  const brightness = 0.5 + t * 0.4;
+  return { size, brightness };
+}
+
+async function handleDonationCheckout(
+  supabase: SupabaseClient,
+  session: Stripe.Checkout.Session,
+): Promise<Response> {
+  const metadata = session.metadata ?? {};
+
+  if (session.payment_status !== 'paid') {
+    return json({ received: true });
+  }
+
+  const paymentIntentId = typeof session.payment_intent === 'string'
+    ? session.payment_intent
+    : session.payment_intent?.id ?? null;
+
+  if (!paymentIntentId) {
+    console.error('[donation checkout] Could not resolve payment intent');
+    return json({ error: 'Could not resolve payment intent' }, 500);
+  }
+
+  const { data: existing } = await supabase
+    .from('donations')
+    .select('id')
+    .eq('stripe_payment_intent_id', paymentIntentId)
+    .maybeSingle();
+
+  if (existing) {
+    return json({ received: true });
+  }
+
+  const userId = metadata.userId && metadata.userId !== 'guest' ? metadata.userId : null;
+  const amountCents = parseInt(metadata.amountCents || String(session.amount_total ?? 0), 10);
+  const message = metadata.message || null;
+
+  const customerId = typeof session.customer === 'string'
+    ? session.customer
+    : session.customer?.id ?? null;
+
+  const customerEmail = typeof session.customer === 'object' && session.customer
+    ? (session.customer as Stripe.Customer).email
+    : (session.customer_details?.email ?? null);
+
+  if (!customerEmail) {
+    console.error('[donation checkout] Could not determine donor email');
+    return json({ error: 'Could not determine donor email' }, 500);
+  }
+
+  const { x, y } = seededPosition(paymentIntentId);
+  const { size, brightness } = starProperties(amountCents);
+
+  const { error: insertError } = await supabase
+    .from('donations')
+    .insert({
+      user_id: userId,
+      stripe_customer_id: customerId,
+      stripe_payment_intent_id: paymentIntentId,
+      stripe_checkout_session_id: session.id,
+      email: customerEmail,
+      amount_cents: amountCents,
+      message,
+      star_x: x,
+      star_y: y,
+      star_size: size,
+      star_brightness: brightness,
+    });
+
+  if (insertError && !insertError.message.includes('duplicate')) {
+    console.error('[donation checkout] Failed to insert donation:', insertError);
+    return json({ error: 'Failed to record donation' }, 500);
+  }
+
+  console.log(`[donation checkout] Recorded donation ${(amountCents / 100).toFixed(0)} from ${customerEmail}`);
+  return json({ received: true });
+}
+
 async function handleCheckoutCompleted(
   supabase: SupabaseClient,
   session: Stripe.Checkout.Session,
 ): Promise<Response> {
   const metadata = session.metadata;
+
+  // Donation checkout sessions have type: 'donation' in metadata
+  if (metadata?.type === 'donation') {
+    return await handleDonationCheckout(supabase, session);
+  }
+
   if (!metadata?.userId || !metadata?.tier) {
     console.error('[checkout.session.completed] Missing metadata:', metadata);
     return json({ error: 'Missing userId or tier in metadata' }, 400);
