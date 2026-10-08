@@ -6,6 +6,12 @@ export interface EditorPreferences {
   font_color: string;
 }
 
+export interface OutlineSection {
+  id: string;
+  title: string;
+  status: 'pending' | 'in-progress' | 'completed';
+}
+
 export interface CoAuthorSession {
   id: string;
   user_id: string;
@@ -15,6 +21,9 @@ export interface CoAuthorSession {
   length_preference: '1-2 sentences' | '3-4 sentences' | '1 paragraph' | '2-3 paragraphs';
   session_prompt: string | null;
   editor_preferences: EditorPreferences | null;
+  template_id: string | null;
+  outline: OutlineSection[] | null;
+  outline_completed: boolean;
   created_at: string;
   last_accessed_at: string;
 }
@@ -43,7 +52,8 @@ class CoAuthorService {
     title: string = 'Untitled Session',
     purpose: 'Writing' | 'Research' = 'Writing',
     sessionPrompt: string = '',
-    lengthPreference: '1-2 sentences' | '3-4 sentences' | '1 paragraph' | '2-3 paragraphs' = '1-2 sentences'
+    lengthPreference: '1-2 sentences' | '3-4 sentences' | '1 paragraph' | '2-3 paragraphs' = '1-2 sentences',
+    templateId: string | null = null,
   ): Promise<CoAuthorSession> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -57,6 +67,7 @@ class CoAuthorService {
         purpose,
         length_preference: lengthPreference,
         session_prompt: sessionPrompt || null,
+        template_id: templateId,
       })
       .select()
       .single();
@@ -92,7 +103,7 @@ class CoAuthorService {
 
   async updateSession(
     sessionId: string,
-    updates: Partial<Pick<CoAuthorSession, 'title' | 'purpose' | 'length_preference' | 'session_prompt'>>
+    updates: Partial<Pick<CoAuthorSession, 'title' | 'purpose' | 'length_preference' | 'session_prompt' | 'outline' | 'outline_completed'>>
   ): Promise<CoAuthorSession> {
     const { data, error } = await supabase
       .from('co_author_sessions')
@@ -262,6 +273,21 @@ class CoAuthorService {
     });
 
     return exportText;
+  }
+
+  async exportAsMarkdown(sessionId: string): Promise<string> {
+    const session = await this.getSession(sessionId);
+    if (!session) throw new Error('Session not found');
+
+    const blocks = await this.getSessionBlocks(sessionId);
+    const content = blocks.map(b => b.content).join('\n\n');
+
+    let md = `# ${session.title}\n\n`;
+    if (session.session_prompt) {
+      md += `> ${session.session_prompt}\n\n`;
+    }
+    md += content;
+    return md;
   }
 }
 

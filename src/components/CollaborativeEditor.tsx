@@ -1,5 +1,5 @@
-import { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Type, Palette, ALargeSmall, RotateCcw } from 'lucide-react';
+import { useRef, useEffect, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
+import { Type, Palette, ALargeSmall, RotateCcw, Wand2, Loader } from 'lucide-react';
 import { colorNameToHex, QUESTIONNAIRE_COLORS } from '../utils/colorMapping';
 
 export interface EditorStyles {
@@ -7,6 +7,8 @@ export interface EditorStyles {
   fontSize: string;
   fontColor: string;
 }
+
+export type InlineAction = 'rewrite_concise' | 'rewrite_expand' | 'rewrite_funny' | 'rewrite_formal' | 'fix_grammar' | 'continue';
 
 interface CollaborativeEditorProps {
   value: string;
@@ -17,12 +19,16 @@ interface CollaborativeEditorProps {
   editorStyles?: EditorStyles;
   onStyleChange?: (styles: EditorStyles) => void;
   userFavoriteColor?: string;
+  onInlineAction?: (action: InlineAction, selectedText: string, selectionStart: number, selectionEnd: number) => void;
+  isActionLoading?: boolean;
 }
 
 export interface CollaborativeEditorHandle {
   insertAtCursor: (text: string) => void;
   getCursorPosition: () => number;
   focus: () => void;
+  replaceRange: (start: number, end: number, text: string) => void;
+  getSelectedText: () => { text: string; start: number; end: number } | null;
 }
 
 const FONT_FAMILIES = [
@@ -42,10 +48,20 @@ const EDITOR_COLORS = [
   })),
 ];
 
+const INLINE_ACTIONS: { action: InlineAction; label: string }[] = [
+  { action: 'rewrite_concise', label: 'Concise' },
+  { action: 'rewrite_expand', label: 'Expand' },
+  { action: 'rewrite_funny', label: 'Funnier' },
+  { action: 'rewrite_formal', label: 'More Formal' },
+  { action: 'fix_grammar', label: 'Fix Grammar' },
+  { action: 'continue', label: 'Continue' },
+];
+
 export const CollaborativeEditor = forwardRef<CollaborativeEditorHandle, CollaborativeEditorProps>(
-  ({ value, onChange, placeholder, disabled = false, editorStyles, onStyleChange, userFavoriteColor }, ref) => {
+  ({ value, onChange, placeholder, disabled = false, editorStyles, onStyleChange, userFavoriteColor, onInlineAction, isActionLoading }, ref) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const cursorPositionRef = useRef<number>(value.length);
+    const [selection, setSelection] = useState<{ start: number; end: number; text: string } | null>(null);
 
     const currentStyles: EditorStyles = editorStyles || {
       fontFamily: FONT_FAMILIES[0].value,
@@ -60,36 +76,48 @@ export const CollaborativeEditor = forwardRef<CollaborativeEditorHandle, Collabo
       }
     }, [value]);
 
+    const checkSelection = useCallback(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      if (start !== end) {
+        setSelection({ start, end, text: textarea.value.substring(start, end) });
+      } else {
+        setSelection(null);
+      }
+      cursorPositionRef.current = start;
+    }, []);
+
     useEffect(() => {
       const textarea = textareaRef.current;
-      if (textarea) {
-        const handleSelect = () => {
-          cursorPositionRef.current = textarea.selectionStart;
-        };
-        textarea.addEventListener('select', handleSelect);
-        textarea.addEventListener('click', handleSelect);
-        textarea.addEventListener('keyup', handleSelect);
+      if (!textarea) return;
 
-        return () => {
-          textarea.removeEventListener('select', handleSelect);
-          textarea.removeEventListener('click', handleSelect);
-          textarea.removeEventListener('keyup', handleSelect);
-        };
-      }
-    }, []);
+      const handleSelect = () => checkSelection();
+      const handleMouseUp = () => setTimeout(checkSelection, 10);
+
+      textarea.addEventListener('select', handleSelect);
+      textarea.addEventListener('click', handleSelect);
+      textarea.addEventListener('keyup', handleSelect);
+      textarea.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+        textarea.removeEventListener('select', handleSelect);
+        textarea.removeEventListener('click', handleSelect);
+        textarea.removeEventListener('keyup', handleSelect);
+        textarea.removeEventListener('mouseup', handleMouseUp);
+      };
+    }, [checkSelection]);
 
     useImperativeHandle(ref, () => ({
       insertAtCursor: (text: string) => {
         if (!textareaRef.current) return;
-
         const textarea = textareaRef.current;
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const currentValue = textarea.value;
-
         const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
         onChange(newValue);
-
         setTimeout(() => {
           const newCursorPos = start + text.length;
           textarea.selectionStart = newCursorPos;
@@ -104,6 +132,26 @@ export const CollaborativeEditor = forwardRef<CollaborativeEditorHandle, Collabo
       focus: () => {
         textareaRef.current?.focus();
       },
+      replaceRange: (start: number, end: number, text: string) => {
+        const currentValue = textareaRef.current?.value ?? value;
+        const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+        onChange(newValue);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.selectionStart = start + text.length;
+            textareaRef.current.selectionEnd = start + text.length;
+            textareaRef.current.focus();
+          }
+        }, 0);
+      },
+      getSelectedText: () => {
+        const textarea = textareaRef.current;
+        if (!textarea) return null;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        if (start === end) return null;
+        return { text: textarea.value.substring(start, end), start, end };
+      },
     }));
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -113,7 +161,6 @@ export const CollaborativeEditor = forwardRef<CollaborativeEditorHandle, Collabo
         const end = e.currentTarget.selectionEnd;
         const newValue = value.substring(0, start) + '  ' + value.substring(end);
         onChange(newValue);
-
         setTimeout(() => {
           if (textareaRef.current) {
             textareaRef.current.selectionStart = start + 2;
@@ -129,12 +176,17 @@ export const CollaborativeEditor = forwardRef<CollaborativeEditorHandle, Collabo
       }
     };
 
+    const handleInlineAction = (action: InlineAction) => {
+      if (!onInlineAction || !selection) return;
+      onInlineAction(action, selection.text, selection.start, selection.end);
+    };
+
     const favHex = userFavoriteColor ? colorNameToHex(userFavoriteColor) : null;
 
     return (
       <div className="relative w-full h-full flex flex-col">
         {onStyleChange && (
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-200 rounded-t-xl border-b-0">
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-200 rounded-t-xl border-b-0 flex-wrap">
             <div className="flex items-center gap-1.5">
               <Type className="w-3.5 h-3.5 text-gray-400" />
               <select
@@ -206,16 +258,42 @@ export const CollaborativeEditor = forwardRef<CollaborativeEditorHandle, Collabo
             </div>
           </div>
         )}
+
+        {/* Inline AI Actions Toolbar — appears when text is selected */}
+        {selection && selection.text.trim().length > 0 && onInlineAction && (
+          <div className="flex items-center gap-1 px-3 py-1.5 bg-violet-50 border border-violet-200 border-b-0 rounded-t-lg flex-wrap animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="flex items-center gap-1 text-violet-600 mr-1">
+              <Wand2 className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">AI:</span>
+            </div>
+            {INLINE_ACTIONS.map(({ action, label }) => (
+              <button
+                key={action}
+                onClick={() => handleInlineAction(action)}
+                disabled={isActionLoading}
+                className="px-2.5 py-1 text-xs font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {label}
+              </button>
+            ))}
+            {isActionLoading && (
+              <Loader className="w-3.5 h-3.5 animate-spin text-violet-500" />
+            )}
+          </div>
+        )}
+
         <textarea
           ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onSelect={checkSelection}
+          onMouseUp={() => setTimeout(checkSelection, 10)}
           disabled={disabled}
           placeholder={placeholder}
           className={`w-full h-full min-h-[500px] p-8 bg-white shadow-sm border border-gray-200 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed ${
             onStyleChange ? 'rounded-b-xl rounded-t-none' : 'rounded-xl'
-          }`}
+          } ${selection && selection.text.trim().length > 0 && onInlineAction ? 'rounded-t-none' : ''}`}
           style={{
             fontFamily: currentStyles.fontFamily,
             fontSize: currentStyles.fontSize,
