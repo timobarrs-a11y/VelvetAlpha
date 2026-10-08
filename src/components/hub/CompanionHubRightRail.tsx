@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../shared/supabase/client';
 import { newsService } from '../../services/newsService';
-import { morningBriefService } from '../../services/morningBriefService';
 import type { QuickCommand } from '../QuickCommandBar';
 
 interface NewsArticle {
@@ -51,8 +50,8 @@ function timeAgo(dateString?: string): string {
 }
 
 async function fetchNews(userId?: string | null): Promise<NewsArticle[]> {
-  const categories = userId ? await morningBriefService.getUserNewsCategories(userId) : ['general'];
-  const cats = categories.length > 0 ? categories : ['general'];
+  const interests = userId ? await newsService.getUserAllInterests() : ['general'];
+  const cats = interests.length > 0 ? interests : ['general'];
   const articles = await newsService.getArticlesByCategories(cats, 20);
   return articles.filter(a => isAllowed(a.url, a.source)).slice(0, 6);
 }
