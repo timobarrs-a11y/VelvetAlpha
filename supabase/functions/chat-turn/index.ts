@@ -539,6 +539,7 @@ interface PostResponseSignals {
   memoryCorrection: MemoryCorrection | null;
   memoryReference: MemoryReference | null;
   threadClosed: { memory_item_id: string; confidence: number } | null;
+  confidenceCheck: { score: number; goal_id: string | null; confidence: number } | null;
 }
 
 const APP_ROUTES: Record<string, string> = {
@@ -571,7 +572,7 @@ async function detectPostResponseSignals(
   injectedMemoryIds: string[] = [],
   openThreadContents: Array<{ id: string; content: string }> = [],
 ): Promise<PostResponseSignals> {
-  const result: PostResponseSignals = { calendarEvent: null, navigationIntent: null, commitment: null, memoryCorrection: null, memoryReference: null, threadClosed: null };
+  const result: PostResponseSignals = { calendarEvent: null, navigationIntent: null, commitment: null, memoryCorrection: null, memoryReference: null, threadClosed: null, confidenceCheck: null };
 
   try {
     const recentContext = recentHistory.slice(-6).map(m => `${m.role}: ${m.content.substring(0, 200)}`).join("\n");
@@ -625,6 +626,12 @@ async function detectPostResponseSignals(
    - Match to one of the open thread IDs below if possible
    - Confidence > 0.7
 
+8. CONFIDENCE_CHECK: Did the companion ask the user to rate their confidence (1-10) on a goal or task, and did the user respond with a number? Look for:
+   - The companion asked something like "how confident are you feeling about..." or "rate your confidence 1-10"
+   - The user responded with a number 1-10, possibly with context like "I'd say a 7" or "maybe 4 out of 10"
+   - Extract: the score (integer 1-10) and the goal_id if the confidence question was about a specific goal
+   - Confidence > 0.65 for clear confidence ratings
+
 The companion reply may reference facts from past conversations. Here are the memory IDs that were injected: ${injectedMemoryIds.join(', ') || 'none'}
 If a correction or reference maps to one of these IDs, include it in memory_item_id. Otherwise use null.
 
@@ -669,6 +676,11 @@ Respond ONLY with JSON (no other text):
   "threadClosed": {
     "memory_item_id": "uuid",
     "confidence": 0.0
+  } | null,
+  "confidenceCheck": {
+    "score": 0,
+    "goal_id": "uuid or null",
+    "confidence": 0.0
   } | null
 }
 
@@ -695,6 +707,7 @@ Today's date: ${new Date().toISOString()}`,
       memoryCorrection: { memory_item_id: string | null; old_content: string | null; corrected_content: string | null; confidence: number } | null;
       memoryReference: { memory_item_id: string | null; engagement: string; confidence: number } | null;
       threadClosed: { memory_item_id: string; confidence: number } | null;
+      confidenceCheck: { score: number; goal_id: string | null; confidence: number } | null;
     };
 
     try {
@@ -944,6 +957,51 @@ Today's date: ${new Date().toISOString()}`,
           });
         } catch (evtErr) {
           console.error('[chat-turn] Memory event insert (reference) error:', evtErr);
+        }
+      }
+    }
+
+    // Process confidence check: the coach asked for a 1-10 confidence rating and the user responded
+    if (isMentor && parsed.confidenceCheck && parsed.confidenceCheck.confidence > 0.65) {
+      const cc = parsed.confidenceCheck;
+      const score = Math.round(cc.score);
+      if (score >= 1 && score <= 10) {
+        // If the LLM provided a goal_id, validate it belongs to this user; otherwise link to the most recent active goal
+        let goalId: string | null = cc.goal_id || null;
+
+        if (goalId) {
+          const { data: goalCheck } = await supabaseAdmin
+            .from('user_goals')
+            .select('id')
+            .eq('id', goalId)
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (!goalCheck) goalId = null;
+        }
+
+        if (!goalId) {
+          const { data: activeGoal } = await supabaseAdmin
+            .from('user_goals')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          goalId = activeGoal?.id ?? null;
+        }
+
+        try {
+          await supabaseAdmin.from('confidence_checks').insert({
+            user_id: userId,
+            companion_id: companionId,
+            goal_id: goalId,
+            score,
+            asked_during_session: true,
+          });
+          result.confidenceCheck = { score, goal_id: goalId, confidence: cc.confidence };
+        } catch (ccErr) {
+          console.error('[chat-turn] Confidence check insert error:', ccErr);
         }
       }
     }

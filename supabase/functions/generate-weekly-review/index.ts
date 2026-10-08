@@ -80,7 +80,23 @@ Deno.serve(async (req: Request) => {
 
     let processed = 0;
 
+    // Fetch subscription tiers for all active users in one query
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, subscription_tier, is_super_user')
+        .in('id', Array.from(userIds));
+
+      const tierMap = new Map<string, string>();
+      for (const p of profiles ?? []) {
+        const tier = p.is_super_user ? 'elite' : (p.subscription_tier || 'free');
+        tierMap.set(p.id, tier);
+      }
+
     for (const userId of userIds) {
+      // Skip free-tier users — weekly review is a paid feature
+      const userTier = tierMap.get(userId) || 'free';
+      if (userTier === 'free') continue;
+
       // Check if a review already exists for this week
       const weekStart = new Date(now);
       weekStart.setDate(now.getDate() - now.getDay()); // Sunday start

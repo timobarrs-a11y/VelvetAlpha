@@ -184,6 +184,19 @@ Deno.serve(async (req: Request) => {
       byUser.get(c.user_id)!.push(c);
     }
 
+    // Fetch subscription tiers for all users with stale companions
+    const allUserIds = Array.from(byUser.keys());
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('id, subscription_tier, is_super_user')
+      .in('id', allUserIds);
+
+    const tierMap = new Map<string, string>();
+    for (const p of profiles ?? []) {
+      const tier = p.is_super_user ? 'elite' : (p.subscription_tier || 'free');
+      tierMap.set(p.id, tier);
+    }
+
     let processed = 0;
     for (const [_userId, userCompanions] of byUser) {
       // Pick the stalest companion for this user
@@ -192,6 +205,11 @@ Deno.serve(async (req: Request) => {
         const bT = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return aT - bT;
       })[0];
+
+      // Free-tier users only get check-ins from non-mentor companions (friends).
+      // Coach/mentor check-ins are a paid feature.
+      const userTier = tierMap.get(companion.user_id) || 'free';
+      if (userTier === 'free' && companion.relationship_type === 'mentor') continue;
 
       // Check if there's already a proactive message in the last 24h
       const { data: recentProactive } = await supabase
