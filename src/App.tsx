@@ -887,10 +887,8 @@ function AppInner() {
       let errorContent = "I'm having trouble connecting right now. Please try again in a moment.";
       if (error instanceof Error) {
         if (error.message.includes('Too many requests')) errorContent = "Whoa, slow down! Give me a sec to catch up before sending another message.";
-        else if (error.message.includes('temporarily unavailable')) errorContent = error.message;
         else if (error.message.includes('429') || error.message.includes('rate limit')) errorContent = "Let's take a quick breather - I need a moment before I can respond again.";
-        else if (error.message.includes('Chat error:')) errorContent = error.message.replace('Chat error: ', '');
-        else errorContent = error.message;
+        else if (error.message.includes('No messages remaining')) errorContent = "You've used all your messages! Check out the plans page to get more.";
       }
 
       await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: errorContent, clientMessageId: safeRandomUUID() });

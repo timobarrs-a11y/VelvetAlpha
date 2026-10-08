@@ -1,12 +1,12 @@
 import { SubscriptionTier } from './chatService';
 import { isPremiumTier } from '../types/subscription';
 
-export type ModelType = 'claude-haiku-4-5-20251001' | 'claude-sonnet-5';
+export type ModelType = 'claude-haiku-4-5' | 'claude-sonnet-5-5';
 export type ComplexityLevel = 'simple' | 'complex';
 
 export const MODEL_CONFIG = {
-  CHEAP_MODEL: 'claude-haiku-4-5-20251001' as const,
-  PREMIUM_MODEL: 'claude-sonnet-5' as const,
+  CHEAP_MODEL: 'claude-haiku-4-5' as const,
+  PREMIUM_MODEL: 'claude-sonnet-5-5' as const,
 };
 
 export const MODEL_COSTS = {

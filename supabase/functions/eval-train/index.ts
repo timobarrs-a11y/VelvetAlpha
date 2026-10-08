@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+const HAIKU_MODEL = "claude-haiku-4-5";
 const CONCURRENCY = 5;
 
 const EXTRACTION_SYSTEM = `You are a memory extraction engine. You analyze a conversation between a user and their AI companion and extract the essential information the companion should remember.
