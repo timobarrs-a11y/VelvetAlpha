@@ -2013,7 +2013,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
     const alternatingMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
     for (const msg of last20Messages) {
       if (alternatingMessages.length === 0 || alternatingMessages[alternatingMessages.length - 1].role !== msg.role) {
-        alternatingMessages.push(msg);
+        alternatingMessages.push({ role: msg.role, content: msg.content });
       }
     }
 
