@@ -7,7 +7,7 @@ import {
   Volume2, VolumeX, Wand2, User, LogOut, HelpCircle,
   Flame, Sparkles, MessageCircle, Info, ChevronRight,
   PanelLeftClose, PanelLeftOpen, Brain, Newspaper as NewspaperIcon,
-  Plus, Trash2,
+  Plus, Trash2, Target,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { useAudioScene } from '../hooks/useAudioScene';
@@ -146,6 +146,11 @@ export function HomeShellPage() {
       id: 'coaching', label: 'Coaching', sub: `${companions.filter(c => c.relationship_type === 'mentor').length} mentors`,
       icon: <Brain className="w-3.5 h-3.5" />, color: 'text-emerald-400',
       group: 'core', action: () => { setCompanionCategory('coaching'); setActiveTab('companion-list'); },
+    },
+    {
+      id: 'progress', label: 'Progress', sub: 'Goals & commitments',
+      icon: <Target className="w-3.5 h-3.5" />, color: 'text-emerald-400',
+      group: 'core', action: () => navigate('/coaching-progress'),
     },
     {
       id: 'correspondents', label: 'Correspondents', sub: `${companions.filter(c => c.relationship_type === 'correspondent').length} writers`,

@@ -120,6 +120,9 @@ verify_jwt = true
 [functions.sweep-overdue-commitments]
 verify_jwt = false
 
+[functions.generate-weekly-review]
+verify_jwt = false
+
 [functions.sync-coach]
 verify_jwt = true
 

@@ -1,18 +1,29 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, Check } from 'lucide-react';
+import { Send, Sparkles, Check, RefreshCw, ArrowRight, AlertTriangle } from 'lucide-react';
 import { VELVET_THEME } from '../config/velvetTheme';
 import { supabase } from '../shared/supabase/client';
+import { supabase as supabaseClient } from '../shared/supabase/client';
 
 interface ChatMessage {
   role: 'velvet' | 'user';
   content: string;
 }
 
-type Phase = 'conversing' | 'extracting' | 'provisioning' | 'complete';
+type Phase = 'conversing' | 'extracting' | 'provisioning' | 'complete' | 'error';
 
 const FUNCTION_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+
+const GOAL_TYPE_OPTIONS = [
+  { value: 'health_fitness', label: 'Health & Fitness' },
+  { value: 'reading', label: 'Reading' },
+  { value: 'creative', label: 'Creative' },
+  { value: 'habit', label: 'Habit' },
+  { value: 'deadline', label: 'Deadline' },
+  { value: 'skill', label: 'Skill' },
+  { value: 'project', label: 'Project' },
+];
 
 export const GoalDiscoveryPage = () => {
   const navigate = useNavigate();
@@ -23,10 +34,18 @@ export const GoalDiscoveryPage = () => {
   const [coachName, setCoachName] = useState('');
   const [expertName, setExpertName] = useState('');
   const [error, setError] = useState('');
+  const [retryState, setRetryState] = useState<{ kind: 'init' | 'send' | 'extract' | 'provision'; transcript?: ChatMessage[]; lastVelvet?: ChatMessage } | null>(null);
+  const [showManualEntry, setShowManualEntry] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const transcriptRef = useRef<ChatMessage[]>([]);
   const hasInitialized = useRef(false);
+
+  // Manual goal entry form state
+  const [manualGoal, setManualGoal] = useState({
+    goalType: 'health_fitness',
+    goalText: '',
+  });
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -36,43 +55,49 @@ export const GoalDiscoveryPage = () => {
     scrollToBottom();
   }, [messages, isThinking, scrollToBottom]);
 
+  const initConversation = useCallback(async () => {
+    setError('');
+    setRetryState(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/splash', { replace: true });
+        return;
+      }
+
+      const response = await fetch(`${FUNCTION_BASE}/goal-discovery-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ messages: [] }),
+      });
+
+      if (!response.ok) throw new Error(`Failed to start conversation (${response.status})`);
+      const data = await response.json();
+
+      transcriptRef.current = [{ role: 'velvet', content: data.reply }];
+      setMessages([{ role: 'velvet', content: data.reply }]);
+    } catch {
+      setError('Something went wrong starting the conversation.');
+      setRetryState({ kind: 'init' });
+    }
+  }, [navigate]);
+
   useEffect(() => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
-
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          navigate('/splash', { replace: true });
-          return;
-        }
-
-        const response = await fetch(`${FUNCTION_BASE}/goal-discovery-chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ messages: [] }),
-        });
-
-        if (!response.ok) throw new Error('Failed to start conversation');
-        const data = await response.json();
-
-        transcriptRef.current = [{ role: 'velvet', content: data.reply }];
-        setMessages([{ role: 'velvet', content: data.reply }]);
-      } catch {
-        setError('Something went wrong starting the conversation. Please refresh.');
-      }
-    })();
-  }, [navigate]);
+    initConversation();
+  }, [initConversation]);
 
   const handleSend = async () => {
     const text = input.trim();
     if (!text || isThinking || phase !== 'conversing') return;
 
     setInput('');
+    setError('');
+    setRetryState(null);
 
     const userMsg: ChatMessage = { role: 'user', content: text };
     const updatedTranscript = [...transcriptRef.current, userMsg];
@@ -93,7 +118,7 @@ export const GoalDiscoveryPage = () => {
         body: JSON.stringify({ messages: updatedTranscript }),
       });
 
-      if (!response.ok) throw new Error('Failed to get response');
+      if (!response.ok) throw new Error(`Failed to get response (${response.status})`);
       const data = await response.json();
 
       const velvetMsg: ChatMessage = { role: 'velvet', content: data.reply };
@@ -104,15 +129,24 @@ export const GoalDiscoveryPage = () => {
         await handleCompletion(updatedTranscript, velvetMsg);
       }
     } catch {
-      setError('Connection issue. Please try sending your message again.');
+      // Roll back the optimistic user message so the transcript stays clean on retry
+      transcriptRef.current = transcriptRef.current.filter(m => m !== userMsg);
+      setMessages(prev => prev.filter(m => m !== userMsg));
+      setError('Connection issue. Your message wasn\'t sent — please try again.');
     } finally {
       setIsThinking(false);
     }
   };
 
   const handleCompletion = async (finalTranscript: ChatMessage[], lastVelvetMsg: ChatMessage) => {
+    await runExtractionAndProvisioning(finalTranscript, lastVelvetMsg);
+  };
+
+  const runExtractionAndProvisioning = async (finalTranscript: ChatMessage[], lastVelvetMsg: ChatMessage) => {
     setPhase('extracting');
     setIsThinking(true);
+    setError('');
+    setRetryState(null);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -131,7 +165,7 @@ export const GoalDiscoveryPage = () => {
         body: JSON.stringify({ transcript: fullTranscript }),
       });
 
-      if (!extractResponse.ok) throw new Error('Extraction failed');
+      if (!extractResponse.ok) throw new Error(`Extraction failed (${extractResponse.status})`);
       const extracted = await extractResponse.json();
 
       setPhase('provisioning');
@@ -152,17 +186,90 @@ export const GoalDiscoveryPage = () => {
         }),
       });
 
-      if (!coachResponse.ok) throw new Error('Coach provisioning failed');
+      if (!coachResponse.ok) throw new Error(`Coach provisioning failed (${coachResponse.status})`);
       const coachData = await coachResponse.json();
 
       setCoachName(coachData.coachName || 'your coach');
       setExpertName(coachData.expertName || '');
       setPhase('complete');
-    } catch {
-      setError('Something went wrong setting up your coach. You can continue and we\'ll retry later.');
-      setTimeout(() => {
-        navigate('/user-questionnaire', { replace: true });
-      }, 2500);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong.';
+      const isProvision = msg.includes('provisioning') || phase === 'provisioning';
+      setError(msg);
+      setRetryState({
+        kind: isProvision ? 'provision' : 'extract',
+        transcript: finalTranscript,
+        lastVelvet: lastVelvetMsg,
+      });
+      setPhase('error');
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!retryState) return;
+    if (retryState.kind === 'init') {
+      await initConversation();
+    } else if (retryState.kind === 'extract' || retryState.kind === 'provision') {
+      if (retryState.transcript && retryState.lastVelvet) {
+        await runExtractionAndProvisioning(retryState.transcript, retryState.lastVelvet);
+      }
+    }
+  };
+
+  const handleManualGoalSubmit = async () => {
+    if (!manualGoal.goalText.trim()) return;
+    setPhase('provisioning');
+    setIsThinking(true);
+    setError('');
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Insert goal directly via Supabase client
+      const { data: goalData, error: goalErr } = await supabaseClient
+        .from('user_goals')
+        .insert({
+          title: manualGoal.goalText.trim(),
+          goal_type: manualGoal.goalType,
+          status: 'active',
+          source: 'manual_entry',
+        })
+        .select('id')
+        .maybeSingle();
+
+      if (goalErr || !goalData) {
+        throw new Error('Could not save your goal. Please try again.');
+      }
+
+      // Try to provision a coach with the manual goal info
+      const coachResponse = await fetch(`${FUNCTION_BASE}/sync-coach`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          goalType: manualGoal.goalType,
+          goalText: manualGoal.goalText,
+          accountabilityLevel: 'moderate',
+        }),
+      });
+
+      let coachData: { coachName?: string; expertName?: string } = {};
+      if (coachResponse.ok) {
+        coachData = await coachResponse.json();
+      }
+
+      setCoachName(coachData.coachName || 'your coach');
+      setExpertName(coachData.expertName || '');
+      setPhase('complete');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      setPhase('error');
+      setRetryState({ kind: 'provision' });
     } finally {
       setIsThinking(false);
     }
@@ -181,6 +288,65 @@ export const GoalDiscoveryPage = () => {
 
   const renderPhaseOverlay = () => {
     if (phase === 'conversing') return null;
+
+    if (phase === 'error') {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(13,15,60,0.88)', backdropFilter: 'blur(12px)' }}
+        >
+          <motion.div
+            initial={{ scale: 0.85, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+            className="text-center px-8 max-w-md"
+          >
+            <div className="flex justify-center mb-6">
+              <div
+                className="w-20 h-20 rounded-3xl flex items-center justify-center"
+                style={{
+                  background: VELVET_THEME.colors.glassCard,
+                  border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
+                }}
+              >
+                <AlertTriangle className="w-7 h-7 text-amber-400" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">Something went wrong</h2>
+            <p className="text-ink-secondary text-sm mb-6">{error || 'An unexpected error occurred.'}</p>
+
+            <div className="flex flex-col gap-3 items-center">
+              <button
+                onClick={handleRetry}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold text-sm transition-all"
+                style={{ background: VELVET_THEME.button.primary, boxShadow: VELVET_THEME.button.primaryGlow }}
+              >
+                <RefreshCw className="w-4 h-4" /> Try again
+              </button>
+
+              {retryState && (retryState.kind === 'extract' || retryState.kind === 'provision') && (
+                <button
+                  onClick={() => setShowManualEntry(true)}
+                  className="text-ink-secondary text-sm hover:text-white transition-colors underline underline-offset-4"
+                >
+                  Skip and enter my goal manually
+                </button>
+              )}
+
+              <button
+                onClick={handleContinue}
+                className="text-ink-muted text-xs hover:text-white/70 transition-colors"
+              >
+                Skip for now
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      );
+    }
 
     const phaseContent: Record<string, { icon: React.ReactNode; title: string; subtitle: string }> = {
       extracting: {
@@ -265,21 +431,38 @@ export const GoalDiscoveryPage = () => {
     );
   };
 
-  if (error && messages.length === 0) {
+  if (error && messages.length === 0 && retryState?.kind === 'init') {
     return (
       <div
         className="min-h-screen flex items-center justify-center p-6"
         style={{ background: VELVET_THEME.bg }}
       >
         <div className="text-center max-w-md">
-          <p className="text-white/80 text-lg mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 rounded-xl text-white font-semibold"
-            style={{ background: VELVET_THEME.button.primary }}
-          >
-            Try again
-          </button>
+          <div className="flex justify-center mb-4">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: VELVET_THEME.colors.glassCard, border: `1px solid ${VELVET_THEME.colors.glassBorder}` }}
+            >
+              <AlertTriangle className="w-6 h-6 text-amber-400" />
+            </div>
+          </div>
+          <p className="text-white/80 text-lg mb-2">{error}</p>
+          <p className="text-ink-muted text-sm mb-6">We couldn't start the conversation. Please try again.</p>
+          <div className="flex flex-col gap-3 items-center">
+            <button
+              onClick={() => initConversation()}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-semibold"
+              style={{ background: VELVET_THEME.button.primary }}
+            >
+              <RefreshCw className="w-4 h-4" /> Try again
+            </button>
+            <button
+              onClick={() => setShowManualEntry(true)}
+              className="text-ink-secondary text-sm hover:text-white transition-colors underline underline-offset-4"
+            >
+              Enter my goal manually instead
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -410,6 +593,84 @@ export const GoalDiscoveryPage = () => {
           </div>
         )}
       </div>
+
+      {/* Manual goal entry modal */}
+      <AnimatePresence>
+        {showManualEntry && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(13,15,60,0.88)', backdropFilter: 'blur(12px)' }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+              className="w-full max-w-md rounded-2xl p-6"
+              style={{ background: VELVET_THEME.colors.glassCard, border: `1px solid ${VELVET_THEME.colors.glassBorder}` }}
+            >
+              <h2 className="text-xl font-bold text-white mb-2">What are you working toward?</h2>
+              <p className="text-ink-muted text-sm mb-5">Tell us your goal and we'll match you with a coach.</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
+                    Goal type
+                  </label>
+                  <select
+                    value={manualGoal.goalType}
+                    onChange={(e) => setManualGoal(prev => ({ ...prev, goalType: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl text-sm text-white border focus:outline-none"
+                    style={{ background: 'rgba(0,0,0,0.2)', borderColor: VELVET_THEME.colors.glassBorder }}
+                  >
+                    {GOAL_TYPE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value} className="bg-slate-900">{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
+                    Describe your goal
+                  </label>
+                  <textarea
+                    value={manualGoal.goalText}
+                    onChange={(e) => setManualGoal(prev => ({ ...prev, goalText: e.target.value }))}
+                    placeholder="e.g., I want to run a 5K by spring, or I want to write 500 words every day"
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder:text-ink-subtle border focus:outline-none resize-none"
+                    style={{ background: 'rgba(0,0,0,0.2)', borderColor: VELVET_THEME.colors.glassBorder }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => { setShowManualEntry(false); setPhase('conversing'); }}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-ink-muted hover:text-white transition-colors"
+                >
+                  Back to chat
+                </button>
+                <button
+                  onClick={handleManualGoalSubmit}
+                  disabled={!manualGoal.goalText.trim() || isThinking}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50"
+                  style={{ background: VELVET_THEME.button.primary, boxShadow: VELVET_THEME.button.primaryGlow }}
+                >
+                  {isThinking ? (
+                    <><RefreshCw className="w-4 h-4 animate-spin" /> Setting up...</>
+                  ) : (
+                    <>Continue <ArrowRight className="w-4 h-4" /></>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>{renderPhaseOverlay()}</AnimatePresence>
     </div>

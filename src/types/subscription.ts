@@ -35,6 +35,10 @@ export interface SubscriptionPlan {
   hasInsights: boolean;
   hasExpertBuilder: boolean;
   memoryDepthDays: number;
+  maxGoals: number;
+  maxCommitments: number;
+  hasWeeklyReview: boolean;
+  hasConfidenceTracking: boolean;
 }
 
 export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
@@ -47,7 +51,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
       '1 AI coach with full memory',
       '30 messages per month',
       'Goal discovery and tracking',
-      'Daily proactive check-ins',
+      '1 active goal and 3 commitments',
       'Experience the coaching relationship',
     ],
     model: 'sonnet',
@@ -57,6 +61,10 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     hasInsights: false,
     hasExpertBuilder: false,
     memoryDepthDays: 7,
+    maxGoals: 1,
+    maxCommitments: 3,
+    hasWeeklyReview: false,
+    hasConfidenceTracking: false,
   },
   trial: {
     tier: 'trial',
@@ -78,6 +86,10 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     hasInsights: true,
     hasExpertBuilder: true,
     memoryDepthDays: 30,
+    maxGoals: 99,
+    maxCommitments: 99,
+    hasWeeklyReview: true,
+    hasConfidenceTracking: true,
   },
   essential: {
     tier: 'essential',
@@ -89,6 +101,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
       '1 AI coach with full Sonnet intelligence',
       '1,500 messages per month',
       'Goal tracking and proactive check-ins',
+      'Weekly review and confidence tracking',
       '7-day conversation memory',
       'Signature Voice characters',
     ],
@@ -99,6 +112,10 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     hasInsights: false,
     hasExpertBuilder: false,
     memoryDepthDays: 7,
+    maxGoals: 5,
+    maxCommitments: 20,
+    hasWeeklyReview: true,
+    hasConfidenceTracking: true,
   },
   plus: {
     tier: 'plus',
@@ -121,6 +138,10 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     hasInsights: true,
     hasExpertBuilder: false,
     memoryDepthDays: 14,
+    maxGoals: 10,
+    maxCommitments: 50,
+    hasWeeklyReview: true,
+    hasConfidenceTracking: true,
   },
   elite: {
     tier: 'elite',
@@ -143,6 +164,10 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     hasInsights: true,
     hasExpertBuilder: true,
     memoryDepthDays: 30,
+    maxGoals: 99,
+    maxCommitments: 99,
+    hasWeeklyReview: true,
+    hasConfidenceTracking: true,
   },
 };
 

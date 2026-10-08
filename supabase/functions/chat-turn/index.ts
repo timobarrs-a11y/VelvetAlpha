@@ -786,6 +786,17 @@ Today's date: ${new Date().toISOString()}`,
         if (cu.new_status === 'completed') {
           updateData.completed_at = new Date().toISOString();
         }
+
+        // Find the matching commitment to check if it's linked to a goal
+        const { data: matchedCommitments } = await supabaseAdmin
+          .from('coaching_commitments')
+          .select('id, goal_id')
+          .eq('user_id', userId)
+          .eq('companion_id', companionId)
+          .in('status', ['pending', 'missed'])
+          .ilike('description', `%${cu.matched_description.substring(0, 100)}%`)
+          .limit(1);
+
         const { error: updateErr } = await supabaseAdmin
           .from('coaching_commitments')
           .update(updateData)
@@ -793,8 +804,37 @@ Today's date: ${new Date().toISOString()}`,
           .eq('companion_id', companionId)
           .in('status', ['pending', 'missed'])
           .ilike('description', `%${cu.matched_description.substring(0, 100)}%`);
+
         if (updateErr) {
           console.error(`[${traceId}] Commitment update failed:`, updateErr);
+        }
+
+        // Auto-update goal progress when a linked commitment is completed
+        if (cu.new_status === 'completed' && matchedCommitments && matchedCommitments.length > 0) {
+          const goalId = matchedCommitments[0].goal_id;
+          if (goalId) {
+            try {
+              const { data: goal } = await supabaseAdmin
+                .from('user_goals')
+                .select('current_value, target_value')
+                .eq('id', goalId)
+                .maybeSingle();
+
+              if (goal) {
+                const newValue = (Number(goal.current_value) || 0) + 1;
+                const patch: Record<string, unknown> = {
+                  current_value: newValue,
+                  updated_at: new Date().toISOString(),
+                };
+                if (goal.target_value && newValue >= Number(goal.target_value)) {
+                  patch.status = 'completed';
+                }
+                await supabaseAdmin.from('user_goals').update(patch).eq('id', goalId);
+              }
+            } catch (goalErr) {
+              console.error('[chat-turn] Goal progress auto-update error:', goalErr);
+            }
+          }
         }
       }
     }
@@ -1322,14 +1362,39 @@ async function ensureCoachingSession(
   try {
     const { data: active } = await supabaseAdmin
       .from('coaching_sessions')
-      .select('id')
+      .select('id, opened_at, message_count')
       .eq('user_id', userId)
       .eq('companion_id', companionId)
       .eq('status', 'open')
       .maybeSingle();
 
-    if (active) return active.id;
+    if (active) {
+      // Check if the session has been idle for 2+ hours — if so, close it,
+      // summarize in the background, and open a fresh session.
+      const { data: lastMsg } = await supabaseAdmin
+        .from('conversations')
+        .select('created_at')
+        .eq('user_id', userId)
+        .eq('companion_id', companionId)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
+      const lastTime = lastMsg && lastMsg.length > 0
+        ? new Date(lastMsg[0].created_at).getTime()
+        : new Date(active.opened_at).getTime();
+      const idleMs = Date.now() - lastTime;
+
+      if (idleMs >= 2 * 60 * 60 * 1000 && active.message_count >= 4) {
+        // Close the stale session and summarize in the background
+        EdgeRuntime.waitUntil(
+          closeAndSummarizeSession(supabaseAdmin, active.id, userId, companionId)
+        );
+      } else {
+        return active.id;
+      }
+    }
+
+    // Open a new session (either no active session existed, or we just closed a stale one)
     const { data: newSession } = await supabaseAdmin
       .from('coaching_sessions')
       .insert({
@@ -1345,6 +1410,95 @@ async function ensureCoachingSession(
     return newSession?.id || '';
   } catch {
     return '';
+  }
+}
+
+async function closeAndSummarizeSession(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  sessionId: string,
+  userId: string,
+  companionId: string,
+): Promise<void> {
+  try {
+    // Fetch messages from the session window
+    const since = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+    const { data: messages } = await supabaseAdmin
+      .from('conversations')
+      .select('role, content')
+      .eq('user_id', userId)
+      .eq('companion_id', companionId)
+      .gte('created_at', since)
+      .order('created_at', { ascending: true });
+
+    if (!messages || messages.length < 4) {
+      // Not enough to summarize — just close
+      await supabaseAdmin
+        .from('coaching_sessions')
+        .update({ status: 'closed', closed_at: new Date().toISOString() })
+        .eq('id', sessionId);
+      return;
+    }
+
+    const transcript = messages
+      .map((m: { role: string; content: string }) =>
+        `${m.role === 'user' ? 'User' : 'Coach'}: ${m.content}`)
+      .join('\n');
+
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!apiKey) {
+      await supabaseAdmin
+        .from('coaching_sessions')
+        .update({ status: 'closed', closed_at: new Date().toISOString() })
+        .eq('id', sessionId);
+      return;
+    }
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: MODEL_CONFIG.HAIKU,
+        max_tokens: 300,
+        system: 'You summarize coaching sessions. Return valid JSON only — no markdown fences.',
+        messages: [{
+          role: 'user',
+          content: `Summarize this coaching session in 1-2 sentences. What was discussed, what commitment was made, and what the next step is. Return JSON: {"summary": "...", "commitment_made": "..."}\n\nTranscript:\n${transcript.slice(0, 8000)}`,
+        }],
+      }),
+    });
+
+    let summary = 'Coaching session — no summary available.';
+    if (res.ok) {
+      const data = await res.json();
+      try {
+        const parsed = JSON.parse(data.content?.[0]?.text ?? '{}');
+        if (parsed.summary) summary = parsed.summary as string;
+      } catch {
+        summary = data.content?.[0]?.text ?? summary;
+      }
+    }
+
+    await supabaseAdmin
+      .from('coaching_sessions')
+      .update({
+        status: 'closed',
+        closed_at: new Date().toISOString(),
+        summary,
+      })
+      .eq('id', sessionId);
+  } catch (err) {
+    console.error('[chat-turn] closeAndSummarizeSession error:', err);
+    // Fallback: just close without summary
+    try {
+      await supabaseAdmin
+        .from('coaching_sessions')
+        .update({ status: 'closed', closed_at: new Date().toISOString() })
+        .eq('id', sessionId);
+    } catch {}
   }
 }
 
