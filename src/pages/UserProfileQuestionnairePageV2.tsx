@@ -75,8 +75,7 @@ export function UserProfileQuestionnairePageV2() {
   }, []);
 
   const handleBridgeComplete = useCallback(() => {
-    setShowBridge(false);
-    navigate('/atlas-onboarding');
+    navigate('/atlas-onboarding', { replace: true });
   }, [navigate]);
 
   if (showBridge) {

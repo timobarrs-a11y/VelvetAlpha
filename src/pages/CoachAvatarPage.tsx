@@ -92,6 +92,11 @@ export function CoachAvatarPage() {
         return;
       }
 
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.warn('[CoachAvatar] Session refresh warning:', refreshError);
+      }
+
       const { error } = await supabase
         .from('companions')
         .update({
@@ -103,7 +108,12 @@ export function CoachAvatarPage() {
 
       if (error) {
         console.error('[CoachAvatar] Error updating coach avatar:', error);
-        setSaveError("We couldn't save your coach's look. Please try again.");
+        const hint = error.code === '42501'
+          ? " We couldn't verify your session — please refresh the page and try again."
+          : error.message
+            ? ` ${error.message}`
+            : '';
+        setSaveError(`We couldn't save your coach's look.${hint}`);
         return;
       }
 

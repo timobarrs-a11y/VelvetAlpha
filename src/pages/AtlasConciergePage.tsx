@@ -470,28 +470,14 @@ function AtlasConciergeInner() {
       {/* Full-width briefing section — sits directly below the top bar */}
       <div className="relative z-10 w-full px-4 sm:px-6 pt-6 pb-6">
         <div className="max-w-4xl mx-auto">
-          <h2
-            className="text-2xl sm:text-3xl font-bold mb-3 leading-tight text-center"
-            style={{
-              fontFamily: 'var(--shell-display-font)',
-              color: 'var(--shell-text-primary)',
-              background: 'linear-gradient(135deg, var(--shell-text-primary) 0%, var(--shell-accent) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            Improvement starts here.
-          </h2>
-
           <p
-            className="text-sm leading-relaxed mb-5 max-w-2xl"
+            className="text-sm leading-relaxed mb-5 max-w-2xl mx-auto text-center"
             style={{ color: 'var(--shell-text-secondary)' }}
           >
             Atlas helps you turn vague intentions into a clear plan. Tell it what you're working toward in your own words, and it'll match you with the right coach to get you there.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 mb-5 max-w-2xl">
+          <div className="flex flex-col sm:flex-row gap-3 mb-5 max-w-2xl mx-auto">
             {[
               { num: '01', label: 'Share your goal', desc: "Tell us what you're already working on" },
               { num: '02', label: 'Atlas listens', desc: 'It asks the right follow-ups' },

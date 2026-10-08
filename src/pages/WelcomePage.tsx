@@ -653,7 +653,7 @@ export function WelcomePage() {
                   WebkitTextFillColor: 'transparent',
                 }}
               >
-                Time to accelerate your life.
+                Accelerate your life today!
               </span>
             </span>
             <motion.span
@@ -671,7 +671,7 @@ export function WelcomePage() {
               animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
               transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
             >
-              Time to accelerate your life.
+              Accelerate your life today!
             </motion.span>
           </motion.h1>
         </motion.div>
@@ -708,7 +708,7 @@ export function WelcomePage() {
             {user ? (
               <>
                 <p className="text-gray-400 text-base mb-8 max-w-lg mx-auto leading-relaxed">
-                  We'll start you off with some simple questions aimed at understanding who you are, what you like, what your current goals are, and what you look for in a best friend or companion. Fully complete in less than 10 minutes!
+                  Welcome! We'll start you off here with some simple questions aimed at understanding who YOU are, what your current goals are, and connect you with a coach to get you going TODAY! Also, if interested we can also create a companion/best friend to accompany you on your journey. Fully complete in less than 10 minutes!
                 </p>
 
                 <motion.button
