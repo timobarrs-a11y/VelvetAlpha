@@ -9,7 +9,6 @@ import {
   createDonationSession,
   verifyDonation,
   fetchUserDonations,
-  fetchGuestDonations,
   type DonationStar,
 } from '../services/donationService';
 import { supabase } from '../shared/supabase/client';
@@ -42,14 +41,6 @@ export function DonationPage() {
         const userStars = await fetchUserDonations();
         setStars(userStars);
         setTotalDonated(userStars.reduce((sum, s) => sum + s.amount_cents, 0));
-      } else {
-        const guestEmail = searchParams.get('email');
-        if (guestEmail) {
-          setUserEmail(guestEmail);
-          const guestStars = await fetchGuestDonations(guestEmail);
-          setStars(guestStars);
-          setTotalDonated(guestStars.reduce((sum, s) => sum + s.amount_cents, 0));
-        }
       }
     } catch (err) {
       console.error('Error loading stars:', err);

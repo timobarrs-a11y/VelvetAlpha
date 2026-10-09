@@ -212,32 +212,8 @@ export const atlasService = {
   },
 
   async incrementUsage(): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('atlas_messages_today, atlas_messages_reset_at')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (!profile) return;
-
-    const resetAt = profile.atlas_messages_reset_at ? new Date(profile.atlas_messages_reset_at) : null;
-    const now = new Date();
-    const isSameDay = resetAt ? resetAt.toDateString() === now.toDateString() : false;
-
-    if (!isSameDay) {
-      await supabase
-        .from('user_profiles')
-        .update({ atlas_messages_today: 1, atlas_messages_reset_at: now.toISOString() })
-        .eq('id', user.id);
-    } else {
-      await supabase
-        .from('user_profiles')
-        .update({ atlas_messages_today: (profile.atlas_messages_today || 0) + 1 })
-        .eq('id', user.id);
-    }
+    // The daily allowance is counted and enforced server side by the atlas-agent
+    // function; the browser must not be able to write the counter.
   },
 
   async sendMessage(

@@ -73,13 +73,12 @@ class RoleService {
   }
 
   async updateUserRole(targetUserId: string, newRole: UserRole): Promise<boolean> {
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({ user_role: newRole })
-      .eq('id', targetUserId);
+    const { data, error } = await supabase.rpc('admin_set_user_role', {
+      p_target_user_id: targetUserId,
+      p_role: newRole,
+    });
 
-    if (error) {
-      console.error('Error updating user role:', error);
+    if (error || data !== true) {
       return false;
     }
 

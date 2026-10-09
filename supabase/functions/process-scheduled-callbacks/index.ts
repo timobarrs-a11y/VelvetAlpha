@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { requireCronAuth } from "../_shared/cronAuth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +15,9 @@ Deno.serve(async (req: Request) => {
       headers: corsHeaders,
     });
   }
+
+  const unauthorized = requireCronAuth(req, corsHeaders);
+  if (unauthorized) return unauthorized;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

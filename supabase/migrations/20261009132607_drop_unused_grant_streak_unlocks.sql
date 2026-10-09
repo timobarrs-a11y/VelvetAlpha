@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.grant_streak_unlocks(text[]);

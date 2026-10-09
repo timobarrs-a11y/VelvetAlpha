@@ -72,7 +72,7 @@ export default function ResetPasswordPage() {
         navigate('/login');
       }, 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to reset password. Please try again.');
+      setError('Failed to reset password. Please try again.');
     } finally {
       setIsLoading(false);
     }

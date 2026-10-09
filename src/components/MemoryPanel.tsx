@@ -61,7 +61,7 @@ export function MemoryPanel() {
       const data = await memoryPanelService.list(selectedCompanionId || undefined);
       setItems(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load memories');
+      setError('Failed to load memories. Please try again.');
     } finally {
       setLoading(false);
     }

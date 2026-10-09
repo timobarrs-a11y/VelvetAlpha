@@ -7,6 +7,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+// The tier a customer receives is decided by the price they are actually charged,
+// never by a value supplied in the request body.
+const PRICE_TO_TIER: Record<string, string> = {
+  'price_1SrhkAB8CmoO93RgA3U7Liqu': 'essential',
+  'price_1SrhszB8CmoO93RgC3iGKI0c': 'plus',
+  'price_1SrhvzB8CmoO93RgrjUVPsvw': 'elite',
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -51,11 +59,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { tier, priceId } = await req.json();
+    const { priceId } = await req.json();
 
-    if (!tier || !priceId) {
+    if (!priceId || typeof priceId !== 'string') {
       return new Response(
-        JSON.stringify({ error: 'Missing tier or priceId' }),
+        JSON.stringify({ error: 'Missing priceId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const tier = PRICE_TO_TIER[priceId];
+
+    if (!tier) {
+      return new Response(
+        JSON.stringify({ error: 'Unknown plan' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -119,7 +136,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error('Error creating checkout session:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Unable to start checkout. Please try again.' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

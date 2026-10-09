@@ -1,5 +1,27 @@
 import { supabase } from '../shared/supabase/client';
 
+// Authentication failures are reported with a fixed message so the response does not
+// reveal whether an email address already has an account. Only rate limiting and
+// password-strength feedback, which say nothing about account existence, pass through.
+function authFailureMessage(raw: string | undefined): string {
+  const message = (raw || '').toLowerCase();
+
+  if (message.includes('rate limit') || message.includes('too many')) {
+    return 'Too many attempts. Please wait a moment and try again.';
+  }
+  if (message.includes('password') && (message.includes('short') || message.includes('least') || message.includes('weak') || message.includes('characters'))) {
+    return 'Please choose a longer, stronger password.';
+  }
+  if (message.includes('valid email') || message.includes('invalid email') || message.includes('email address is invalid')) {
+    return 'Please enter a valid email address.';
+  }
+  if (message.includes('email not confirmed')) {
+    return 'Please confirm your email address before signing in.';
+  }
+
+  return 'We could not complete that request. Please check your details and try again.';
+}
+
 export const authService = {
   async signUp(
     email: string,
@@ -8,8 +30,8 @@ export const authService = {
   ) {
     const { data, error } = await supabase.auth.signUp({ email, password });
 
-    if (error) throw new Error(error.message);
-    if (!data.user) throw new Error('Failed to create account');
+    if (error) throw new Error(authFailureMessage(error.message));
+    if (!data.user) throw new Error(authFailureMessage(undefined));
 
     const { error: profileError } = await supabase
       .from('user_profiles')
@@ -36,11 +58,11 @@ export const authService = {
     });
 
     if (error) {
-      throw new Error(error.message);
+      throw new Error(authFailureMessage(error.message));
     }
 
     if (!data.user) {
-      throw new Error('Failed to sign in');
+      throw new Error(authFailureMessage(undefined));
     }
 
     // Ensure user_profiles row exists (handles legacy users)

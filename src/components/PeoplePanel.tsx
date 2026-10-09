@@ -142,7 +142,7 @@ function ShareLinkModal({
           setToken(newToken);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to generate link');
+        setError('Failed to generate link. Please try again.');
       } finally {
         setLoading(false);
       }

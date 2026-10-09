@@ -120,11 +120,11 @@ export function UserManagementPage() {
     } else {
       setChangingTier(userId);
       try {
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({ subscription_tier: next })
-          .eq('id', userId);
-        if (error) throw error;
+        const { data, error } = await supabase.rpc('admin_set_subscription_tier', {
+          p_target_user_id: userId,
+          p_tier: next,
+        });
+        if (error || data !== true) throw error ?? new Error('not updated');
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, subscription_tier: next } : u));
         showStatus('success', `Subscription tier updated to ${next}.`);
       } catch {

@@ -339,60 +339,22 @@ export async function getDailyCheckinStatus(userId: string): Promise<{
   return { alreadyCheckedIn: !!checkin, customization };
 }
 
-function computeUnlocks(streak: number, existing: string[]): string[] {
-  const newUnlocked = [...existing];
-  for (const sym of POINTER_SYMBOLS) {
-    if (sym.unlockDay > 0 && streak >= sym.unlockDay && !newUnlocked.includes(sym.key)) {
-      newUnlocked.push(sym.key);
-    }
-  }
-  return newUnlocked;
-}
-
 export async function performDailyCheckin(userId: string): Promise<UserCustomization> {
-  const today     = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  // Streaks, totals and unlocks are computed and written server side so they cannot be
+  // set from the browser.
+  const { error } = await supabase.rpc('perform_daily_checkin');
+  if (error) throw error;
 
-  await supabase
-    .from('user_daily_checkins')
-    .insert({ user_id: userId, checkin_date: today })
-    .throwOnError();
+  const { data: existing } = await supabase
+    .from('user_customization')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
 
-  const [{ data: yesterdayRow }, { data: existing }] = await Promise.all([
-    supabase.from('user_daily_checkins').select('id').eq('user_id', userId).eq('checkin_date', yesterday).maybeSingle(),
-    supabase.from('user_customization').select('*').eq('user_id', userId).maybeSingle(),
-  ]);
-
-  const prevStreak  = existing?.current_streak ?? 0;
-  const newStreak   = yesterdayRow ? prevStreak + 1 : 1;
-  const newLongest  = Math.max(existing?.longest_streak ?? 0, newStreak);
-  const newTotal    = (existing?.total_checkins ?? 0) + 1;
-  const newUnlocked = computeUnlocks(newStreak, existing?.unlocked_pointers ?? ['star']);
-  const fontUnlocked = true;
-
-  const updates = {
-    user_id:                     userId,
-    current_streak:              newStreak,
-    longest_streak:              newLongest,
-    total_checkins:              newTotal,
-    unlocked_pointers:           newUnlocked,
-    font_customization_unlocked: fontUnlocked,
-    updated_at:                  new Date().toISOString(),
-  };
-
-  if (existing) {
-    await supabase.from('user_customization').update(updates).eq('user_id', userId).throwOnError();
-  } else {
-    await supabase.from('user_customization').insert({
-      ...updates,
-      active_pointer:  'star',
-      tile_colors:     {},
-      show_trail:      false,
-      trail_style:     'solid',
-      animation_style: 'stars',
-      cursor_color:    'rose',
-    }).throwOnError();
-  }
+  const newStreak  = existing?.current_streak ?? 1;
+  const newLongest = existing?.longest_streak ?? newStreak;
+  const newTotal   = existing?.total_checkins ?? 1;
+  const newUnlocked = existing?.unlocked_pointers ?? ['star'];
 
   return {
     active_pointer:              existing?.active_pointer       ?? 'star',

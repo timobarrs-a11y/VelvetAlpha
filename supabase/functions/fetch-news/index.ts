@@ -347,6 +347,36 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
+  // This function spends paid third-party news API quota, so it must not be
+  // callable with just the public anon key. Require either a real signed-in
+  // user's token, or the service role / cron secret for scheduled runs.
+  {
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+
+    let authorized = token.length > 0 &&
+      ((serviceKey.length > 0 && token === serviceKey) ||
+        (cronSecret.length > 0 && token === cronSecret));
+
+    if (!authorized && token.length > 0) {
+      const authClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+      );
+      const { data } = await authClient.auth.getUser(token);
+      authorized = Boolean(data?.user);
+    }
+
+    if (!authorized) {
+      return new Response(
+        JSON.stringify({ success: false, articlesAdded: 0, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+  }
+
   try {
     const braveKey = Deno.env.get("BRAVE_SEARCH_API_KEY");
     const newsApiKey = Deno.env.get("NEWS_API_KEY");

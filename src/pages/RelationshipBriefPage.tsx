@@ -90,7 +90,7 @@ export function RelationshipBriefPage() {
       }
       setActionsMap(actions);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load briefs');
+      setError('Failed to load briefs. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export function RelationshipBriefPage() {
       await relationshipBriefService.generateBriefs();
       await loadBriefs();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generation failed');
+      setError('Generation failed. Please try again.');
     } finally {
       setGenerating(false);
     }

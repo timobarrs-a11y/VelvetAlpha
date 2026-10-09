@@ -7,16 +7,37 @@ function escapeHtml(str: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Only ordinary web and mail links may become an href. Anything else (javascript:,
+// data:, vbscript:, protocol-relative, or a broken URL) is rendered as plain text.
+function safeHref(raw: string): string | null {
+  const candidate = raw.trim();
+  if (!candidate || /[\s"'<>`]/.test(candidate)) return null;
+  if (candidate.startsWith('//')) return null;
+  if (/^(https?:\/\/|mailto:)/i.test(candidate)) return candidate;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(candidate)) return null;
+  // Relative paths are safe but must not be a scheme in disguise.
+  if (candidate.startsWith('/') || candidate.startsWith('#')) return candidate;
+  return null;
 }
 
 function parseInline(text: string): string {
-  return text
+  // The source text is model output and may contain anything, so escape first and
+  // only then introduce our own markup.
+  return escapeHtml(text)
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code class="atlas-inline-code">$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="atlas-link">$1</a>');
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, href: string) => {
+      // The href was escaped above; &amp; must go back to & before it is used.
+      const url = safeHref(href.replace(/&amp;/g, '&'));
+      if (!url) return label;
+      return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="atlas-link">${label}</a>`;
+    });
 }
 
 function parseMarkdown(raw: string): string {
@@ -44,7 +65,7 @@ function parseMarkdown(raw: string): string {
         codeLang = line.slice(3).trim();
         codeLines = [];
       } else {
-        const langClass = codeLang ? ` class="language-${codeLang}"` : '';
+        const langClass = codeLang ? ` class="language-${escapeHtml(codeLang.replace(/[^a-zA-Z0-9_-]/g, ''))}"` : '';
         out.push(`<div class="atlas-code-block"><div class="atlas-code-lang">${escapeHtml(codeLang || 'code')}</div><pre><code${langClass}>${escapeHtml(codeLines.join('\n'))}</code></pre></div>`);
         inCode = false;
         codeLines = [];

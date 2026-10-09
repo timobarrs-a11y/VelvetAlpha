@@ -94,7 +94,7 @@ export function MemoryProposalsPage() {
       const data = await res.json();
       setProposals(data.proposals ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load proposals');
+      setError('Failed to load proposals. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -166,6 +166,7 @@ async function handleDonationCheckout(
 async function handleCheckoutCompleted(
   supabase: SupabaseClient,
   session: Stripe.Checkout.Session,
+  stripe: Stripe,
 ): Promise<Response> {
   const metadata = session.metadata;
 
@@ -180,7 +181,28 @@ async function handleCheckoutCompleted(
   }
 
   const userId = metadata.userId;
-  const tier = metadata.tier;
+
+  // Derive the tier from the price that was actually charged. Session metadata
+  // originates from a client request and must not decide what the buyer receives.
+  let tier: string | null = null;
+  try {
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 10 });
+    for (const item of lineItems.data) {
+      const priceId = typeof item.price === 'string' ? item.price : item.price?.id;
+      if (priceId && PRICE_TO_TIER[priceId]) {
+        tier = PRICE_TO_TIER[priceId];
+        break;
+      }
+    }
+  } catch (err) {
+    console.error('[checkout.session.completed] Failed to read line items:', err);
+  }
+
+  if (!tier) {
+    console.error('[checkout.session.completed] Could not resolve tier from price');
+    return json({ error: 'Unrecognised price' }, 400);
+  }
+
   const config = TIER_CONFIG[tier];
 
   if (!config) {
@@ -414,7 +436,7 @@ Deno.serve(async (req: Request) => {
   try {
     switch (event.type) {
       case 'checkout.session.completed':
-        return await handleCheckoutCompleted(supabase, event.data.object as Stripe.Checkout.Session);
+        return await handleCheckoutCompleted(supabase, event.data.object as Stripe.Checkout.Session, stripe);
 
       case 'invoice.paid':
         return await handleInvoicePaid(supabase, event.data.object as Stripe.Invoice);

@@ -66,39 +66,21 @@ export function PricingPageRoute() {
         return;
       }
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('trial_used, subscription_tier')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profile?.trial_used) {
-        toast.error('You have already used your free trial.');
-        return;
-      }
-
-      if (profile?.subscription_tier && PAID_TIERS.includes(profile.subscription_tier as SubscriptionTier)) {
-        toast.error('You already have an active subscription.');
-        return;
-      }
-
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 3);
-
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          subscription_tier: 'trial',
-          trial_expires_at: expiresAt.toISOString(),
-          trial_used: true,
-          messages_remaining: 8000,
-          haiku_model_enabled: true,
-          sonnet_model_enabled: true,
-        })
-        .eq('id', user.id);
+      const { data: result, error } = await supabase.rpc('start_trial');
 
       if (error) {
         toast.error('Failed to activate trial. Please try again.');
+        return;
+      }
+
+      if (!result?.success) {
+        if (result?.reason === 'trial_already_used') {
+          toast.error('You have already used your free trial.');
+        } else if (result?.reason === 'already_subscribed') {
+          toast.error('You already have an active subscription.');
+        } else {
+          toast.error('Failed to activate trial. Please try again.');
+        }
         return;
       }
 

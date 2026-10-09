@@ -238,8 +238,13 @@ class NewsService {
       const interestsParam = interests.map(encodeURIComponent).join(',');
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-news?interests=${interestsParam}&limit=20`;
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        return { success: false, articlesAdded: 0, error: 'Not signed in' };
+      }
+
       const headers = {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       };
 
@@ -251,7 +256,7 @@ class NewsService {
       return {
         success: false,
         articlesAdded: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Unable to refresh news right now.',
       };
     }
   }
