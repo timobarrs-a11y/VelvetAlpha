@@ -4,15 +4,19 @@ import {
   TrendingUp, MessageCircle, Calendar, Heart, Target, Lightbulb,
   Clock, Flame, BarChart3, Sparkles, CheckCircle2, Circle, ChevronDown,
   ChevronUp, FlaskConical, PenLine, Activity, Info, TrendingDown, Minus,
-  Brain, Shield, Users, Star
+  Brain, Shield, Users, Star, Compass, Layers, Music, Dumbbell, Cpu
 } from 'lucide-react';
 import { PageHeader, Pill, Segmented } from '../shared/ui';
 import { LoadingState } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { useSubscription } from '../hooks/useSubscription';
-import { generateInsights } from '../features/insights/engine';
+import { generateInsights, generateInsightsWithProfile } from '../features/insights/engine';
 import type { InsightCard, InsightConfidence, ReflectionAtom } from '../features/insights/types';
 import { INSIGHT_TEMPLATE_DESCRIPTIONS } from '../features/insights/templates';
+import { buildProfileSnapshot, type ProfileSnapshot } from '../features/insights/profileInsights';
+import { userProfileService } from '../services/userProfileService';
+import type { UserProfile } from '../services/userProfileService';
+import { getCompanionMemory } from '../services/memoryService';
 import { CBTReflectionModal } from '../components/CBTReflectionModal';
 import {
   getRelationshipHealthScore,
@@ -84,6 +88,7 @@ export function InsightsPage() {
   const [cachedCompanionId, setCachedCompanionId] = useState<string | null>(null);
   const [goalsData, setGoalsData] = useState<Array<{ goal: string; status: 'active' | 'completed' | 'abandoned'; progress: number }>>([]);
   const [communicationPatterns, setCommunicationPatterns] = useState<AIAnalysisResult['communicationPatterns'] | null>(null);
+  const [profileSnapshot, setProfileSnapshot] = useState<ProfileSnapshot | null>(null);
   const [reflectionOpen, setReflectionOpen] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -181,7 +186,31 @@ export function InsightsPage() {
         tags: r.tags ?? undefined,
       }));
 
-      setInsights(processInsights(conversationInsightsResult.data || [], atoms));
+      const profile = await userProfileService.getCurrentProfile();
+      const profileForInsights = profile ? {
+        name: profile.name, nickname: profile.nickname, favorite_color: profile.favorite_color,
+        zodiac_sign: profile.zodiac_sign, birthday: profile.birthday, gender: profile.gender,
+        music_genre: profile.music_genre, hobbies: profile.hobbies || [], sports: profile.sports || [],
+        sports_interests: profile.sports_interests || [], entertainment_interests: profile.entertainment_interests || [],
+        tech_interests: profile.tech_interests || [], lifestyle_interests: profile.lifestyle_interests || [],
+        communication_profile: profile.communication_profile,
+      } : null;
+
+      if (profileForInsights) {
+        setProfileSnapshot(buildProfileSnapshot(profileForInsights));
+      }
+
+      const companionMemory = cid ? await getCompanionMemory(uid, cid) : null;
+      const memoryFacts: string[] = [];
+      if (companionMemory?.memory_json?.user_facts) {
+        const uf = companionMemory.memory_json.user_facts;
+        if (uf.personal) memoryFacts.push(...uf.personal);
+        if (uf.preferences) memoryFacts.push(...uf.preferences);
+        if (uf.schedule) memoryFacts.push(...uf.schedule);
+        if (uf.relationships) memoryFacts.push(...uf.relationships);
+      }
+
+      setInsights(processInsights(conversationInsightsResult.data || [], atoms, profileForInsights, memoryFacts));
 
       if (cid) {
         const [health, piInsights, goals, commPatterns] = await Promise.all([
@@ -200,7 +229,8 @@ export function InsightsPage() {
       isFirstLoad.current = false;
     } catch (error) {
       console.error('Error loading insights:', error);
-      setInsights(emptyInsights());
+      const fallbackProfile = await userProfileService.getCurrentProfile();
+      setInsights(emptyInsights(fallbackProfile));
     } finally {
       setInitialLoading(false);
       setRefreshing(false);
@@ -215,20 +245,30 @@ export function InsightsPage() {
     return now.toISOString();
   };
 
-  const emptyInsights = (): InsightsData => ({
-    totalConversations: 0,
-    totalMessages: 0,
-    avgConversationLength: 0,
-    topTopics: [],
-    sentimentTrend: [],
-    factsLearned: [],
-    goalsMentioned: [],
-    mostActiveDay: 'N/A',
-    streak: 0,
-    insightCards: generateInsights([]),
-  });
+  const emptyInsights = (profile: UserProfile | null): InsightsData => {
+    const profileForInsights = profile ? {
+      name: profile.name, nickname: profile.nickname, favorite_color: profile.favorite_color,
+      zodiac_sign: profile.zodiac_sign, birthday: profile.birthday, gender: profile.gender,
+      music_genre: profile.music_genre, hobbies: profile.hobbies || [], sports: profile.sports || [],
+      sports_interests: profile.sports_interests || [], entertainment_interests: profile.entertainment_interests || [],
+      tech_interests: profile.tech_interests || [], lifestyle_interests: profile.lifestyle_interests || [],
+      communication_profile: profile.communication_profile,
+    } : null;
+    return {
+      totalConversations: 0,
+      totalMessages: 0,
+      avgConversationLength: 0,
+      topTopics: [],
+      sentimentTrend: [],
+      factsLearned: [],
+      goalsMentioned: [],
+      mostActiveDay: 'N/A',
+      streak: 0,
+      insightCards: generateInsightsWithProfile([], profileForInsights),
+    };
+  };
 
-  const processInsights = (data: any[], atoms: ReflectionAtom[]): InsightsData => {
+  const processInsights = (data: any[], atoms: ReflectionAtom[], profileForInsights: any, memoryFacts: string[] = []): InsightsData => {
     const totalConversations = data.length;
     const totalMessages = data.reduce((sum, item) => sum + (item.message_count || 0), 0);
     const avgConversationLength = totalConversations > 0 ? Math.round(totalMessages / totalConversations) : 0;
@@ -272,7 +312,7 @@ export function InsightsPage() {
     )];
     const streak = calculateStreak(uniqueDateStrings);
 
-    const insightCards = generateInsights(atoms);
+    const insightCards = generateInsightsWithProfile(atoms, profileForInsights);
 
     return {
       totalConversations,
@@ -280,7 +320,7 @@ export function InsightsPage() {
       avgConversationLength,
       topTopics,
       sentimentTrend,
-      factsLearned: [...new Set(allFacts)].slice(0, 20),
+      factsLearned: [...new Set([...allFacts, ...memoryFacts])].slice(0, 20),
       goalsMentioned: [],
       mostActiveDay,
       streak,
@@ -410,6 +450,7 @@ export function InsightsPage() {
   const hasHealthData = healthScore && healthScore.score > 0;
   const hasPersonalizedInsights = personalizedInsights.length > 0;
   const hasNoReflections = !insights || insights.insightCards.every(c => c.confidence === 'starter' && c.id.startsWith('starter-'));
+  const hasProfileCards = insights?.insightCards.some(c => c.id.startsWith('profile-')) ?? false;
   const hasGoals = goalsData.length > 0;
   const hasCommunicationPatterns = communicationPatterns !== null;
 
@@ -475,6 +516,83 @@ export function InsightsPage() {
             </div>
           ))}
         </div>
+
+        {/* Who You Are — Profile Snapshot */}
+        {profileSnapshot && profileSnapshot.totalDataPoints > 0 && (
+          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] p-6 mb-4">
+            <div className="flex items-center gap-2 mb-5">
+              <Compass className="w-4 h-4 text-emerald-400" />
+              <h2 className="text-sm font-semibold text-white">Who You Are</h2>
+              <span className="ml-auto text-xs text-emerald-400/60 bg-emerald-500/10 border border-emerald-500/15 px-2 py-0.5 rounded-full">
+                {profileSnapshot.totalDataPoints} data points from setup
+              </span>
+            </div>
+
+            {/* Quick Facts Row */}
+            {profileSnapshot.quickFacts.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-5">
+                {profileSnapshot.quickFacts.map((fact) => (
+                  <div key={fact.label} className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/8 flex items-center gap-2">
+                    <span className="text-white/30 text-xs">{fact.label}</span>
+                    <span className="text-white/80 text-xs font-medium">{fact.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Interest Map */}
+              {profileSnapshot.interests.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Layers className="w-3.5 h-3.5 text-emerald-400/70" />
+                    <p className="text-white/50 text-xs uppercase tracking-wider">Your Interest Map</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {profileSnapshot.interests.map((interest, i) => {
+                      const categoryColors: Record<string, string> = {
+                        Hobbies: 'bg-sky-500/10 border-sky-500/20 text-sky-300',
+                        Entertainment: 'bg-rose-500/10 border-rose-500/20 text-rose-300',
+                        Tech: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300',
+                        Lifestyle: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300',
+                        Sports: 'bg-orange-500/10 border-orange-500/20 text-orange-300',
+                      };
+                      return (
+                        <span
+                          key={i}
+                          className={`text-xs px-2.5 py-1 rounded-lg border ${categoryColors[interest.category] || 'bg-white/5 border-white/10 text-white/60'}`}
+                        >
+                          {interest.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Communication Style */}
+              {profileSnapshot.communicationStyle.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <MessageCircle className="w-3.5 h-3.5 text-blue-400/70" />
+                    <p className="text-white/50 text-xs uppercase tracking-wider">Communication Style</p>
+                  </div>
+                  <div className="space-y-2">
+                    {profileSnapshot.communicationStyle.map((style, i) => (
+                      <div key={i} className="bg-white/[0.04] border border-white/8 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-white/40 text-xs">{style.dimension}</span>
+                          <span className="text-blue-300 text-xs font-medium">{style.label}</span>
+                        </div>
+                        <p className="text-white/55 text-xs leading-relaxed">{style.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Relationship Health Score */}
         <div className="rounded-xl border border-white/5 bg-white/[0.03] p-6 mb-4">
@@ -699,9 +817,11 @@ export function InsightsPage() {
                 Add entry
               </button>
             </div>
-            <p className="text-white/30 text-xs mb-4 ml-6">Based on your CBT reflections</p>
+            <p className="text-white/30 text-xs mb-4 ml-6">
+              {hasProfileCards ? 'From your setup, reflections, and conversations' : 'Based on your CBT reflections'}
+            </p>
 
-            {hasNoReflections && (
+            {hasNoReflections && !hasProfileCards && (
               <div className="mb-4 rounded-xl border border-amber-500/15 bg-amber-500/[0.06] px-4 py-3.5 flex items-start gap-3">
                 <PenLine className="w-4 h-4 text-amber-400/70 mt-0.5 shrink-0" />
                 <div className="flex-1">
@@ -901,7 +1021,7 @@ export function InsightsPage() {
               <Target className="w-4 h-4 text-sky-400" />
               <h2 className="text-sm font-semibold text-white">{companionName} Remembers</h2>
             </div>
-            {hasData && insights.factsLearned.length > 0 ? (
+            {insights.factsLearned.length > 0 ? (
               <div
                 className="space-y-2 max-h-80 overflow-y-auto pr-1"
                 style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}
