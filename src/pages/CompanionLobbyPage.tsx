@@ -436,7 +436,11 @@ export function CompanionLobbyPage() {
               <motion.button key={companion.id}
                 whileHover={{ scale: 1.015 }}
                 whileTap={{ scale: 0.985 }}
-                onClick={() => { lobby.setShowGameModal(false); navigate(`/pacman?companion=${companion.id}`); }}
+                onClick={() => {
+                  const path = lobby.selectedGame?.path || '/pacman';
+                  lobby.setShowGameModal(false);
+                  navigate(`${path}?companion=${companion.id}`);
+                }}
                 className="ds-card ds-card--interactive p-4 text-left"
                 style={{ background: 'var(--ds-surface-2)' }}>
                 <div className="flex items-center gap-3">

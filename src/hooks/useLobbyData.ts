@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Crown, Cherry, Zap, Circle,
-  Rocket, Brain,
+  Rocket, Brain, Home,
 } from 'lucide-react';
 import { getCorrespondentById } from '../config/signatureCorrespondents';
 import { correspondentSyncService } from '../services/correspondentSyncService';
@@ -35,6 +35,7 @@ export const GAMES: GameEntry[] = [
   { id: 'stellar',      name: 'Stellar Pursuit', description: 'Space shooter — navigate 9 sectors to rescue your family',          icon: Rocket,    iconBg: 'from-slate-600 to-slate-900',    path: '/stellar-pursuit' },
   { id: 'money-grab',   name: 'Money Grab',      description: 'Race to collect cash while dodging hammers and your companion',      icon: Cherry,    iconBg: 'from-yellow-400 to-orange-500',  requiresCompanion: true },
   { id: 'social-combat',  name: 'Social Combat',   description: 'Read emotions and master the art of conversation',                           icon: Brain,   iconBg: 'from-violet-500 to-indigo-600', path: '/social-combat' },
+  { id: 'velvet-house',    name: 'Velvet House',    description: 'An interactive story where your companion comes alive in a cozy mystery',     icon: Home,    iconBg: 'from-rose-500 to-pink-700',      path: '/velvet-house', requiresCompanion: true },
 ];
 
 export interface ConfirmModal {
@@ -49,6 +50,7 @@ export function useLobbyData() {
   const [loading, setLoading] = useState(true);
   const [showGameModal, setShowGameModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<GameEntry | null>(null);
   const [groupChats, setGroupChats] = useState<GroupChatWithMembers[]>([]);
   const [confirmModal, setConfirmModal] = useState<ConfirmModal | null>(null);
   const [setupResumeRoute, setSetupResumeRoute] = useState<string | null>(null);
@@ -172,6 +174,7 @@ export function useLobbyData() {
 
   const handleGameClick = useCallback((game: GameEntry) => {
     if (game.requiresCompanion) {
+      setSelectedGame(game);
       setShowGameModal(true);
     } else if (game.path) {
       navigate(game.path);
@@ -205,6 +208,7 @@ export function useLobbyData() {
     subscriptionInfo,
     customization: customizationHook.customization,
     customizationHook,
+    selectedGame,
     setCompanionsList: setCompanions,
     setShowGameModal,
     setShowCreateGroupModal,

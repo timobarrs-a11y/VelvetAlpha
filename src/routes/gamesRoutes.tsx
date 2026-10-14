@@ -9,6 +9,7 @@ const MomentumGame = lazy(() => import('../pages/MomentumGame').then(m => ({ def
 const SlimeSoccer = lazy(() => import('../components/slime-soccer'));
 const StellarPursuitGame = lazy(() => import('../pages/StellarPursuitGame').then(m => ({ default: m.StellarPursuitGame })));
 const SocialCombatRPGGame = lazy(() => import('../pages/SocialCombatRPGGame').then(m => ({ default: m.SocialCombatRPGGame })));
+const VelvetHouseGame = lazy(() => import('../pages/VelvetHouseGame').then(m => ({ default: m.VelvetHouseGame })));
 
 function game(el: React.ReactNode) {
   return (
@@ -25,4 +26,5 @@ export const gamesRoutes = [
   <Route key="slime-soccer" path="/slime-soccer" element={game(<SlimeSoccer />)} />,
   <Route key="stellar-pursuit" path="/stellar-pursuit" element={game(<StellarPursuitGame />)} />,
   <Route key="social-combat" path="/social-combat" element={game(<SocialCombatRPGGame />)} />,
+  <Route key="velvet-house" path="/velvet-house" element={game(<VelvetHouseGame />)} />,
 ];
