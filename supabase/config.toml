@@ -158,3 +158,6 @@ verify_jwt = true
 
 [functions.velvet-game-turn]
 verify_jwt = true
+
+[functions.resource-finder]
+verify_jwt = true

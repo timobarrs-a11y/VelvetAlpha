@@ -381,3 +381,245 @@ export function confidenceTrend(checks: ConfidenceCheck[]): { direction: 'up' | 
 
   return { direction, avg: Math.round(avg * 10) / 10, recent, delta };
 }
+
+// =====================================================
+// Coach Plans
+// =====================================================
+
+export type PlanStatus = 'active' | 'completed' | 'paused';
+export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
+
+export interface CoachPlanStep {
+  id: string;
+  plan_id: string;
+  commitment_id: string | null;
+  title: string;
+  description: string | null;
+  order_index: number;
+  status: StepStatus;
+  resource_url: string | null;
+  resource_note: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoachPlan {
+  id: string;
+  companion_id: string | null;
+  title: string;
+  description: string | null;
+  status: PlanStatus;
+  cadence: string | null;
+  created_at: string;
+  updated_at: string;
+  companion_name?: string;
+  steps?: CoachPlanStep[];
+}
+
+export async function getPlans(
+  userId: string,
+  companionId?: string | null,
+): Promise<CoachPlan[]> {
+  let query = supabase
+    .from('coach_plans')
+    .select('id, companion_id, title, description, status, cadence, created_at, updated_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (companionId) {
+    query = query.eq('companion_id', companionId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('[coachingService] getPlans error:', error);
+    return [];
+  }
+
+  const plans = (data ?? []) as CoachPlan[];
+  if (plans.length === 0) return plans;
+
+  const companionIds = [...new Set(plans.map(p => p.companion_id).filter(Boolean))] as string[];
+  if (companionIds.length > 0) {
+    const { data: companions } = await supabase
+      .from('companions')
+      .select('id, custom_name')
+      .in('id', companionIds);
+    const nameMap = new Map((companions ?? []).map(c => [c.id, c.custom_name]));
+    plans.forEach(p => {
+      if (p.companion_id) p.companion_name = nameMap.get(p.companion_id) ?? 'Coach';
+    });
+  }
+
+  const planIds = plans.map(p => p.id);
+  const { data: steps } = await supabase
+    .from('coach_plan_steps')
+    .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, created_at, updated_at')
+    .in('plan_id', planIds)
+    .order('order_index', { ascending: true });
+
+  const stepsByPlan = new Map<string, CoachPlanStep[]>();
+  for (const step of (steps ?? []) as CoachPlanStep[]) {
+    const arr = stepsByPlan.get(step.plan_id) ?? [];
+    arr.push(step);
+    stepsByPlan.set(step.plan_id, arr);
+  }
+  plans.forEach(p => { p.steps = stepsByPlan.get(p.id) ?? []; });
+
+  return plans;
+}
+
+export async function createPlan(
+  userId: string,
+  params: {
+    title: string;
+    description?: string | null;
+    companionId?: string | null;
+    cadence?: string | null;
+    steps?: { title: string; description?: string | null }[];
+  },
+): Promise<CoachPlan | null> {
+  const { data: planData, error: planError } = await supabase
+    .from('coach_plans')
+    .insert({
+      user_id: userId,
+      companion_id: params.companionId ?? null,
+      title: params.title,
+      description: params.description ?? null,
+      cadence: params.cadence ?? null,
+      status: 'active',
+    })
+    .select('id, companion_id, title, description, status, cadence, created_at, updated_at')
+    .maybeSingle();
+
+  if (planError || !planData) {
+    console.error('[coachingService] createPlan error:', planError);
+    return null;
+  }
+
+  const plan = planData as CoachPlan;
+  plan.steps = [];
+
+  if (params.steps && params.steps.length > 0) {
+    const stepRows = params.steps.map((s, i) => ({
+      plan_id: plan.id,
+      title: s.title,
+      description: s.description ?? null,
+      order_index: i,
+      status: 'pending' as StepStatus,
+    }));
+    const { data: insertedSteps } = await supabase
+      .from('coach_plan_steps')
+      .insert(stepRows)
+      .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, created_at, updated_at');
+    plan.steps = (insertedSteps ?? []) as CoachPlanStep[];
+  }
+
+  return plan;
+}
+
+export async function updatePlanStatus(planId: string, status: PlanStatus): Promise<void> {
+  await supabase
+    .from('coach_plans')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', planId);
+}
+
+export async function updatePlanStepStatus(
+  stepId: string,
+  status: StepStatus,
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    status,
+    updated_at: new Date().toISOString(),
+  };
+  if (status === 'completed') {
+    patch.completed_at = new Date().toISOString();
+  }
+  await supabase
+    .from('coach_plan_steps')
+    .update(patch)
+    .eq('id', stepId);
+}
+
+export async function deletePlan(planId: string): Promise<void> {
+  await supabase.from('coach_plans').delete().eq('id', planId);
+}
+
+export function planProgressPercent(plan: CoachPlan): number {
+  if (!plan.steps || plan.steps.length === 0) return 0;
+  const done = plan.steps.filter(s => s.status === 'completed').length;
+  return Math.round((done / plan.steps.length) * 100);
+}
+
+// =====================================================
+// Resource Cache
+// =====================================================
+
+export interface CachedResource {
+  id: string;
+  video_id: string;
+  title: string;
+  channel: string;
+  thumbnail: string;
+  url: string;
+  duration?: string;
+}
+
+export interface ResourceCacheEntry {
+  id: string;
+  cache_key: string;
+  source: string;
+  query: string;
+  results: CachedResource[];
+  created_at: string;
+  expires_at: string;
+}
+
+export async function getCachedResources(
+  userId: string,
+  cacheKey: string,
+): Promise<ResourceCacheEntry | null> {
+  const { data, error } = await supabase
+    .from('resource_cache')
+    .select('id, cache_key, source, query, results, created_at, expires_at')
+    .eq('user_id', userId)
+    .eq('cache_key', cacheKey)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[coachingService] getCachedResources error:', error);
+    return null;
+  }
+
+  if (!data) return null;
+
+  const entry = data as ResourceCacheEntry;
+  if (new Date(entry.expires_at) < new Date()) return null;
+
+  return entry;
+}
+
+export async function cacheResources(
+  userId: string,
+  cacheKey: string,
+  query: string,
+  source: string,
+  results: CachedResource[],
+): Promise<void> {
+  await supabase
+    .from('resource_cache')
+    .upsert(
+      {
+        user_id: userId,
+        cache_key: cacheKey,
+        source,
+        query,
+        results,
+        expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+      },
+      { onConflict: 'user_id,cache_key' },
+    );
+}

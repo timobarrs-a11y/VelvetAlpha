@@ -123,6 +123,34 @@ ${instruction ? `\nYOUR PURPOSE / EXPERTISE:\n${instruction}\n` : ''}`;
 };
 
 /**
+ * Plan standard block — injected into a coach's system prompt so it knows
+ * what cadence and format to expect from the user. Different coach types
+ * have different plan standards baked in.
+ */
+export function buildPlanStandardBlock(domain?: string | null): string {
+  const domainLower = (domain ?? '').toLowerCase();
+
+  // Domain-specific plan standards
+  const standards: Record<string, string> = {
+    fitness: `PLAN STANDARD — FITNESS: If you and the user agree on a plan, it should include daily or near-daily movement commitments (reps, minutes, sessions). Break plans into weekly blocks. Each step is a concrete activity ("30-min run", "3 sets of 10 push-ups"). Track consistency, not just completion.`,
+    'language learning': `PLAN STANDARD — LANGUAGE: If you and the user agree on a plan, it should include a daily lesson commitment (15-20 minutes) and a weekly review or quiz. Each step is a specific practice task ("review present tense conjugation", "write 5 sentences about your day"). Mix vocabulary, grammar, and conversation practice.`,
+    academics: `PLAN STANDARD — ACADEMIC: If you and the user agree on a plan, break the subject into weekly study blocks. Each step is a specific study task ("read chapter 3", "complete problem set 2", "review flashcards"). Include active recall and quiz steps. Track which topics are covered vs. still open.`,
+    writing: `PLAN STANDARD — WRITING: If you and the user agree on a plan, it should include a daily or near-daily writing commitment (word count or time block). Each step is a specific writing task ("draft the opening scene", "revise chapter 2 dialogue", "outline the essay structure"). Separate creating from editing.`,
+    career: `PLAN STANDARD — CAREER: If you and the user agree on a plan, each step is a concrete career action ("update resume bullet for Q3 results", "send 3 networking messages", "prep 2 STAR-method stories"). Weekly cadence with specific deliverables, not vague goals.`,
+    finance: `PLAN STANDARD — FINANCE: If you and the user agree on a plan, each step is a specific money action ("review last week's spending", "set up automatic transfer of $50", "categorize 3 months of transactions"). Weekly cadence with measurable progress.`,
+    communication: `PLAN STANDARD — COMMUNICATION: If you and the user agree on a plan, each step is a practice task ("draft the difficult email", "rehearse the pitch 3 times", "role-play the salary conversation"). Real-world application steps between sessions.`,
+    cooking: `PLAN STANDARD — COOKING: If you and the user agree on a plan, each step is a specific cooking task ("cook one new recipe this week", "prep ingredients for 3 meals on Sunday", "practice knife cuts for 15 minutes"). Hands-on, not theoretical.`,
+    creativity: `PLAN STANDARD — CREATIVE: If you and the user agree on a plan, each step is a specific creative action ("spend 20 minutes brainstorming", "sketch 3 thumbnails", "write one scene"). Low-pressure cadence that prioritizes showing up.`,
+  };
+
+  const matched = standards[domainLower];
+  if (matched) return matched;
+
+  // Generic fallback
+  return `PLAN STANDARD: If you and the user agree on a plan, break it into concrete, ordered steps. Each step is a specific action the user can do and check off — not a vague goal. Set a realistic cadence. Track progress across sessions and adjust the plan when steps are missed or completed faster than expected.`;
+}
+
+/**
  * Deterministic fallback opener used when no AI generation is available.
  * Still restates purpose and asks a starter question.
  */

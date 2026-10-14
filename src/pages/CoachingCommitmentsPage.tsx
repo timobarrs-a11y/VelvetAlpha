@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, CheckCircle2, Circle, AlertCircle, Trophy,
   Calendar, Plus, X, MessageCircle, Trash2, Loader2,
-  Clock, PlayCircle, RotateCcw, Sparkles,
+  Clock, PlayCircle, RotateCcw, Sparkles, Layers, ChevronDown, ChevronRight,
+  ListChecks, ExternalLink,
 } from 'lucide-react';
 import { PageHeader, PageShell, LoadingState, Badge, EmptyState, Card, Button } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
@@ -12,7 +13,9 @@ import { supabase } from '../shared/supabase/client';
 import {
   getCommitments, updateCommitmentStatus, createCommitment, updateProgressNote, deleteCommitment,
   getWeeklyStats, commitmentDueLabel, commitmentStatusColor,
+  getPlans, createPlan, updatePlanStepStatus, deletePlan, planProgressPercent,
   type CoachingCommitment, type CommitmentStatus,
+  type CoachPlan, type CoachPlanStep, type PlanStatus, type StepStatus,
 } from '../services/coachingService';
 
 type Filter = 'active' | 'completed' | 'all';
@@ -30,6 +33,10 @@ export function CoachingCommitmentsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [progressDraft, setProgressDraft] = useState('');
+  const [plans, setPlans] = useState<CoachPlan[]>([]);
+  const [view, setView] = useState<'tasks' | 'plans'>('tasks');
+  const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
+  const [showCreatePlan, setShowCreatePlan] = useState(false);
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -37,8 +44,12 @@ export function CoachingCommitmentsPage() {
       navigate('/splash', { replace: true });
       return;
     }
-    const comms = await getCommitments(user.id, companionId);
+    const [comms, planData] = await Promise.all([
+      getCommitments(user.id, companionId),
+      getPlans(user.id, companionId),
+    ]);
     setCommitments(comms);
+    setPlans(planData);
   }, [navigate, companionId]);
 
   useEffect(() => {
@@ -147,6 +158,47 @@ export function CoachingCommitmentsPage() {
     setShowCreate(false);
   };
 
+  const handleCreatePlan = async (title: string, cadence: string | null, steps: { title: string; description?: string | null }[]) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const created = await createPlan(user.id, {
+      title,
+      companionId: companionId ?? null,
+      cadence,
+      steps,
+    });
+    if (created) {
+      setPlans(prev => [{ ...created, companion_name: companionName ?? 'You' }, ...prev]);
+      toast.success('Plan created.');
+    } else {
+      toast.error('Could not create plan. Please try again.');
+    }
+    setShowCreatePlan(false);
+  };
+
+  const handleStepToggle = async (stepId: string, current: StepStatus) => {
+    setUpdatingId(stepId);
+    const next: StepStatus = current === 'completed' ? 'pending' : 'completed';
+    await updatePlanStepStatus(stepId, next);
+    setPlans(prev => prev.map(p => ({
+      ...p,
+      steps: (p.steps ?? []).map(s =>
+        s.id === stepId
+          ? { ...s, status: next, completed_at: next === 'completed' ? new Date().toISOString() : null }
+          : s,
+      ),
+    })));
+    setUpdatingId(null);
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    setUpdatingId(planId);
+    await deletePlan(planId);
+    setPlans(prev => prev.filter(p => p.id !== planId));
+    toast.info('Plan deleted.');
+    setUpdatingId(null);
+  };
+
   if (loading) {
     return (
       <PageShell center>
@@ -156,6 +208,8 @@ export function CoachingCommitmentsPage() {
   }
 
   const hasCompanionContext = !!companionId;
+  const activePlans = plans.filter(p => p.status === 'active');
+  const completedPlans = plans.filter(p => p.status === 'completed');
 
   return (
     <PageShell
@@ -188,6 +242,51 @@ export function CoachingCommitmentsPage() {
         />
       }
     >
+      {/* View toggle: Tasks / Plans */}
+      <div className="flex items-center gap-1 mb-6 p-1 rounded-xl bg-white/[0.03] border border-white/8 w-fit">
+        <button
+          onClick={() => setView('tasks')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            view === 'tasks' ? 'bg-white/10 text-ink' : 'text-ink-muted hover:text-ink'
+          }`}
+        >
+          <ListChecks className="w-4 h-4" />
+          Tasks
+        </button>
+        <button
+          onClick={() => setView('plans')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            view === 'plans' ? 'bg-white/10 text-ink' : 'text-ink-muted hover:text-ink'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          Plans
+          {activePlans.length > 0 && (
+            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-ink-muted">{activePlans.length}</span>
+          )}
+        </button>
+      </div>
+
+      {view === 'plans' ? (
+        <PlansView
+          plans={plans}
+          activePlans={activePlans}
+          completedPlans={completedPlans}
+          expandedPlanId={expandedPlanId}
+          setExpandedPlanId={setExpandedPlanId}
+          onStepToggle={handleStepToggle}
+          onDeletePlan={handleDeletePlan}
+          updatingId={updatingId}
+          hasCompanionContext={hasCompanionContext}
+          companionName={companionName}
+          companionId={companionId}
+          navigate={navigate}
+          showCreatePlan={showCreatePlan}
+          setShowCreatePlan={setShowCreatePlan}
+          onCreatePlan={handleCreatePlan}
+        />
+      ) : (
+        <>
       {/* Stats strip */}
       <div className="grid grid-cols-4 gap-3 mb-6">
         <MiniStat icon={<CheckCircle2 className="w-4 h-4" />} label="Kept" value={stats.kept} tone="var(--ds-success, #10b981)" />
@@ -380,6 +479,8 @@ export function CoachingCommitmentsPage() {
         onCreate={handleCreate}
         defaultCompanionName={companionName}
       />
+        </>
+      )}
     </PageShell>
   );
 }
@@ -726,6 +827,359 @@ function CreateTaskModal({
               disabled={!description.trim()}
             >
               Create Task
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// =====================================================
+// Plans View
+// =====================================================
+
+function PlansView({
+  plans, activePlans, completedPlans, expandedPlanId, setExpandedPlanId,
+  onStepToggle, onDeletePlan, updatingId, hasCompanionContext, companionName,
+  companionId, navigate, showCreatePlan, setShowCreatePlan, onCreatePlan,
+}: {
+  plans: CoachPlan[];
+  activePlans: CoachPlan[];
+  completedPlans: CoachPlan[];
+  expandedPlanId: string | null;
+  setExpandedPlanId: (id: string | null) => void;
+  onStepToggle: (stepId: string, current: StepStatus) => void;
+  onDeletePlan: (planId: string) => void;
+  updatingId: string | null;
+  hasCompanionContext: boolean;
+  companionName: string | null;
+  companionId: string | null;
+  navigate: ReturnType<typeof useNavigate>;
+  showCreatePlan: boolean;
+  setShowCreatePlan: (v: boolean) => void;
+  onCreatePlan: (title: string, cadence: string | null, steps: { title: string; description?: string | null }[]) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      {/* Create plan CTA */}
+      <div>
+        <button
+          onClick={() => setShowCreatePlan(true)}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/15 hover:border-white/25 text-white/50 hover:text-white/80 transition-all text-sm font-medium"
+        >
+          <Plus className="w-4 h-4" />
+          Create a plan
+        </button>
+      </div>
+
+      {plans.length === 0 ? (
+        <EmptyState
+          icon={<Layers className="w-7 h-7 text-ink-muted" />}
+          title="No plans yet"
+          description="Plans break a big goal into ordered steps your coach can track. Create one above, or ask your coach to build one during a chat."
+          action={hasCompanionContext
+            ? { label: `Chat with ${companionName ?? 'coach'}`, onClick: () => navigate(`/chat?companion=${companionId}`), variant: 'primary' }
+            : { label: 'Go to lobby', onClick: () => navigate('/lobby'), variant: 'primary' }
+          }
+        />
+      ) : (
+        <>
+          {activePlans.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-ink-muted uppercase tracking-wider px-1">Active</h3>
+              {activePlans.map(plan => (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  expanded={expandedPlanId === plan.id}
+                  onToggleExpand={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
+                  onStepToggle={onStepToggle}
+                  onDelete={() => onDeletePlan(plan.id)}
+                  updatingId={updatingId}
+                />
+              ))}
+            </div>
+          )}
+          {completedPlans.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-ink-muted uppercase tracking-wider px-1">Completed</h3>
+              {completedPlans.map(plan => (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  expanded={expandedPlanId === plan.id}
+                  onToggleExpand={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
+                  onStepToggle={onStepToggle}
+                  onDelete={() => onDeletePlan(plan.id)}
+                  updatingId={updatingId}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <CreatePlanModal
+        isOpen={showCreatePlan}
+        onClose={() => setShowCreatePlan(false)}
+        onCreate={onCreatePlan}
+        defaultCompanionName={companionName}
+      />
+    </div>
+  );
+}
+
+function PlanCard({
+  plan, expanded, onToggleExpand, onStepToggle, onDelete, updatingId,
+}: {
+  plan: CoachPlan;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onStepToggle: (stepId: string, current: StepStatus) => void;
+  onDelete: () => void;
+  updatingId: string | null;
+}) {
+  const steps = plan.steps ?? [];
+  const progress = planProgressPercent(plan);
+  const doneCount = steps.filter(s => s.status === 'completed').length;
+
+  return (
+    <Card className="overflow-hidden">
+      <button
+        onClick={onToggleExpand}
+        className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Layers className="w-4 h-4 text-sky-400 shrink-0" />
+            <h4 className="text-sm font-semibold text-ink truncate">{plan.title}</h4>
+            {plan.cadence && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 text-ink-muted shrink-0">{plan.cadence}</span>
+            )}
+          </div>
+          {plan.description && (
+            <p className="text-xs text-ink-muted line-clamp-2 mb-2">{plan.description}</p>
+          )}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 rounded-full bg-white/8 overflow-hidden">
+              <div
+                className="h-full bg-sky-400/70 transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-[11px] text-ink-muted tabular-nums">{doneCount}/{steps.length}</span>
+          </div>
+        </div>
+        {expanded
+          ? <ChevronDown className="w-4 h-4 text-ink-muted shrink-0 mt-1" />
+          : <ChevronRight className="w-4 h-4 text-ink-muted shrink-0 mt-1" />
+        }
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 pt-1 border-t border-white/5 space-y-2">
+              {steps.length === 0 ? (
+                <p className="text-xs text-ink-muted py-2">No steps yet. Chat with your coach to add steps to this plan.</p>
+              ) : (
+                steps.map((step, i) => {
+                  const isDone = step.status === 'completed';
+                  const isUpdating = updatingId === step.id;
+                  return (
+                    <div key={step.id} className="flex items-start gap-2.5 py-1.5">
+                      <button
+                        onClick={() => onStepToggle(step.id, step.status)}
+                        disabled={isUpdating}
+                        className="mt-0.5 shrink-0 transition-colors"
+                      >
+                        {isUpdating ? (
+                          <Loader2 className="w-4 h-4 text-ink-muted animate-spin" />
+                        ) : isDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-ink-muted hover:text-ink transition-colors" />
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs leading-relaxed ${isDone ? 'text-ink-muted line-through' : 'text-ink'}`}>
+                          <span className="text-ink-muted mr-1.5 tabular-nums">{i + 1}.</span>
+                          {step.title}
+                        </p>
+                        {step.description && (
+                          <p className="text-[11px] text-ink-muted mt-0.5 leading-relaxed">{step.description}</p>
+                        )}
+                        {step.resource_url && (
+                          <a
+                            href={step.resource_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 mt-1 text-[11px] text-sky-400 hover:text-sky-300 transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Resource
+                          </a>
+                        )}
+                        {step.resource_note && (
+                          <p className="text-[11px] text-ink-muted/70 italic mt-0.5">{step.resource_note}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <button
+                onClick={onDelete}
+                className="mt-2 flex items-center gap-1 text-xs text-red-400/60 hover:text-red-400 transition-colors"
+              >
+                <Trash2 className="w-3 h-3" />
+                Delete plan
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Card>
+  );
+}
+
+function CreatePlanModal({
+  isOpen, onClose, onCreate, defaultCompanionName,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (title: string, cadence: string | null, steps: { title: string; description?: string | null }[]) => void;
+  defaultCompanionName?: string | null;
+}) {
+  const [title, setTitle] = useState('');
+  const [cadence, setCadence] = useState('');
+  const [steps, setSteps] = useState<string[]>(['', '']);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setTitle('');
+      setCadence('');
+      setSteps(['', '']);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = () => {
+    const cleanTitle = title.trim();
+    if (!cleanTitle) return;
+    const cleanSteps = steps
+      .map(s => s.trim())
+      .filter(s => s.length > 0)
+      .map(s => ({ title: s, description: null }));
+    onCreate(cleanTitle, cadence.trim() || null, cleanSteps);
+  };
+
+  const updateStep = (idx: number, val: string) => {
+    setSteps(prev => prev.map((s, i) => i === idx ? val : s));
+  };
+  const addStep = () => setSteps(prev => [...prev, '']);
+  const removeStep = (idx: number) => setSteps(prev => prev.filter((_, i) => i !== idx));
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-[#0d1424] border border-white/10 rounded-2xl max-w-md w-full p-6 max-h-[85vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-bold text-ink font-display">New Plan</h2>
+          <button onClick={onClose} className="text-ink-muted hover:text-ink transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-ink-muted mb-1.5 block">Plan title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. 4-week running progression"
+              className="w-full bg-white/[0.04] border border-white/10 rounded-xl p-3 text-ink text-sm placeholder:text-ink-muted/50 focus:outline-none focus:border-white/20 transition-all"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-ink-muted mb-1.5 block">Cadence (optional)</label>
+            <select
+              value={cadence}
+              onChange={(e) => setCadence(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/10 rounded-xl p-2.5 text-ink text-sm focus:outline-none focus:border-white/20 transition-all"
+            >
+              <option value="">None</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Biweekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-ink-muted mb-1.5 block">Steps</label>
+            <div className="space-y-2">
+              {steps.map((step, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-xs text-ink-muted tabular-nums w-5 shrink-0">{idx + 1}.</span>
+                  <input
+                    type="text"
+                    value={step}
+                    onChange={(e) => updateStep(idx, e.target.value)}
+                    placeholder={`Step ${idx + 1}`}
+                    className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg p-2.5 text-ink text-sm placeholder:text-ink-muted/50 focus:outline-none focus:border-white/20 transition-all"
+                  />
+                  {steps.length > 1 && (
+                    <button
+                      onClick={() => removeStep(idx)}
+                      className="text-ink-muted hover:text-red-400 transition-colors shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={addStep}
+              className="mt-2 flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add step
+            </button>
+          </div>
+
+          {defaultCompanionName && (
+            <p className="text-xs text-ink-muted">
+              Linked to <span className="text-ink font-medium">{defaultCompanionName}</span>
+            </p>
+          )}
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSubmit}
+              disabled={!title.trim()}
+            >
+              Create Plan
             </Button>
           </div>
         </div>

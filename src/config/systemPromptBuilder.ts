@@ -1,7 +1,7 @@
 import { INTELLIGENCE_GUARDRAILS, CONVERSATION_QUALITY_RULES } from '../prompts/intelligenceGuardrails';
 import { getVoiceById } from './signatureVoices';
 import type { ExpertConfig } from './signatureExperts';
-import { buildCoachBehavioralInstructions } from './coachFramework';
+import { buildCoachBehavioralInstructions, buildPlanStandardBlock } from './coachFramework';
 import { buildCorrespondentBehavioralInstructions } from './correspondentFramework';
 
 interface SystemPromptInput {
@@ -385,7 +385,7 @@ ${isMentor ? buildCoachBehavioralInstructions({
   goalText: goalText,
   accountabilityLevel: expertConfig?.accountabilityLevel,
   checkInStyle: expertConfig?.checkInStyle,
-}) : ''}${isCorrespondent ? buildCorrespondentBehavioralInstructions({
+}) : ''}${isMentor ? '\n' + buildPlanStandardBlock(expertConfig?.domain) : ''}${isCorrespondent ? buildCorrespondentBehavioralInstructions({
   correspondentName: companionName,
   userName: userName,
   beat: '',

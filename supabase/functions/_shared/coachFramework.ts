@@ -163,6 +163,31 @@ export const CURATED_EXPERT_MAP: Record<string, CuratedExpert> = {
   },
 };
 
+/**
+ * Plan standard block — mirrors the client version. Injected into a coach's
+ * system prompt so it knows what cadence and format to expect.
+ */
+export function buildPlanStandardBlock(domain?: string | null): string {
+  const d = (domain ?? '').toLowerCase();
+
+  const standards: Record<string, string> = {
+    fitness: `PLAN STANDARD — FITNESS: If you and the user agree on a plan, include daily or near-daily movement commitments. Break into weekly blocks. Each step is a concrete activity ("30-min run", "3 sets of 10 push-ups"). Track consistency.`,
+    'language learning': `PLAN STANDARD — LANGUAGE: If you and the user agree on a plan, include a daily lesson (15-20 min) and a weekly review. Each step is a specific practice task ("review present tense", "write 5 sentences"). Mix vocabulary, grammar, conversation.`,
+    academics: `PLAN STANDARD — ACADEMIC: If you and the user agree on a plan, break the subject into weekly study blocks. Each step is specific ("read chapter 3", "complete problem set 2"). Include active recall and quiz steps.`,
+    writing: `PLAN STANDARD — WRITING: If you and the user agree on a plan, include a daily writing commitment (word count or time). Each step is specific ("draft opening scene", "revise chapter 2"). Separate creating from editing.`,
+    career: `PLAN STANDARD — CAREER: If you and the user agree on a plan, each step is a concrete career action ("update resume bullet", "send 3 networking messages"). Weekly cadence with deliverables.`,
+    finance: `PLAN STANDARD — FINANCE: If you and the user agree on a plan, each step is a specific money action ("review last week's spending", "set up auto-transfer of $50"). Weekly cadence with measurable progress.`,
+    communication: `PLAN STANDARD — COMMUNICATION: If you and the user agree on a plan, each step is a practice task ("draft the email", "rehearse the pitch 3 times"). Real-world application between sessions.`,
+    cooking: `PLAN STANDARD — COOKING: If you and the user agree on a plan, each step is a specific cooking task ("cook one new recipe", "prep ingredients for 3 meals"). Hands-on, not theoretical.`,
+    creativity: `PLAN STANDARD — CREATIVE: If you and the user agree on a plan, each step is a specific creative action ("spend 20 minutes brainstorming", "sketch 3 thumbnails"). Low-pressure cadence, prioritize showing up.`,
+  };
+
+  const matched = standards[d];
+  if (matched) return matched;
+
+  return `PLAN STANDARD: If you and the user agree on a plan, break it into concrete, ordered steps. Each step is a specific action — not a vague goal. Set a realistic cadence. Track progress and adjust when steps are missed.`;
+}
+
 export function getCuratedExpert(id: string): CuratedExpert | null {
   return CURATED_EXPERT_MAP[id] || null;
 }
