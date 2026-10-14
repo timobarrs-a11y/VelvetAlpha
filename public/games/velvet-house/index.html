@@ -7,10 +7,11 @@
 <style>
 /* Layout: a studio bench. The live house sits on the left with its floor bar, RPG text box and shop; household, controls and the day's log sit on the right; everything stacks on phones. */
 :root{
-  --bg:#F3EFF2; --surface:#FFFFFF; --ink:#221A23; --muted:#6C616E; --line:#E2DAE0;
-  --accent:#8A2D54; --accent-ink:#FFFFFF; --stage:#E7E0E5;
-  --good:#2F8F5B; --warn:#B9831A; --bad:#C2413A; --money:#2F7A52;
-  --box:#FFFDF8; --box-ink:#241B25; --box-edge:#241B25;
+  --bg:#F6F0EE; --surface:#FFFBF7; --ink:#2A1E1C; --muted:#7A6A60; --line:#E8DAD0;
+  --accent:#A04030; --accent-ink:#FFF8F2; --stage:#F0E6DC;
+  --good:#3D8B5E; --warn:#C4901E; --bad:#C2413A; --money:#2F7A52;
+  --warm:#D9822B; --warm-soft:#F4E3D0;
+  --box:#FFFDF8; --box-ink:#241B18; --box-edge:#3A2A22;
   --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
   --body:"Instrument Sans","Helvetica Neue",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
@@ -18,17 +19,19 @@
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#141015; --surface:#1D171F; --ink:#F0E9EF; --muted:#A397A5; --line:#33293A;
-    --accent:#E07AA2; --accent-ink:#1A0E14; --stage:#1B151D;
+    --bg:#1A1310; --surface:#241B17; --ink:#F4EDE4; --muted:#A89588; --line:#3A2D24;
+    --accent:#E8907A; --accent-ink:#1A0E0A; --stage:#221A16;
     --good:#5CC48A; --warn:#E3B04B; --bad:#EE6B62; --money:#6FD39A;
-    --box:#211A24; --box-ink:#F4EDF3; --box-edge:#E9DFE8; color-scheme:dark;
+    --warm:#E8907A; --warm-soft:#3A2A20;
+    --box:#2A211C; --box-ink:#F4EDF3; --box-edge:#C9B8A8; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#141015; --surface:#1D171F; --ink:#F0E9EF; --muted:#A397A5; --line:#33293A;
-  --accent:#E07AA2; --accent-ink:#1A0E14; --stage:#1B151D;
+  --bg:#1A1310; --surface:#241B17; --ink:#F4EDE4; --muted:#A89588; --line:#3A2D24;
+  --accent:#E8907A; --accent-ink:#1A0E0A; --stage:#221A16;
   --good:#5CC48A; --warn:#E3B04B; --bad:#EE6B62; --money:#6FD39A;
-  --box:#211A24; --box-ink:#F4EDF3; --box-edge:#E9DFE8; color-scheme:dark;
+  --warm:#E8907A; --warm-soft:#3A2A20;
+  --box:#2A211C; --box-ink:#F4EDF3; --box-edge:#C9B8A8; color-scheme:dark;
 }
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
 .wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 44px;display:grid;gap:22px}
@@ -213,6 +216,36 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
 .pickrow[hidden]{display:none}
 .goal{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:4px}
 .goal i{display:block;height:100%;background:var(--money)}
+
+/* Contextual interaction tray */
+.itray{position:absolute;left:50%;bottom:64px;transform:translateX(-50%) translateY(8px);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;display:flex;gap:4px;flex-direction:column;z-index:4;min-width:160px;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+.itray.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.itray .itray-title{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:4px 8px 2px;border-bottom:1px solid var(--line)}
+.itray button{font:inherit;font-size:14px;font-weight:600;border:0;background:transparent;color:var(--ink);border-radius:8px;padding:7px 12px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;transition:background .12s}
+.itray button:hover{background:var(--warm-soft)}
+.itray button .itray-icon{color:var(--accent);flex:none}
+.itray button:disabled{opacity:.4;cursor:default}
+@media (max-width:640px){.itray{left:10px;right:10px;transform:translateY(8px);min-width:0}.itray.open{transform:translateY(0)}}
+
+/* Discovery / moment card */
+.dcard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.92);background:var(--box);color:var(--box-ink);border:3px solid var(--box-edge);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28),inset 0 0 0 3px var(--box),inset 0 0 0 5px color-mix(in srgb,var(--box-edge) 30%,transparent);padding:20px 22px 18px;max-width:360px;z-index:5;opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;display:grid;gap:10px}
+.dcard.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dcard .dcard-eyebrow{font-family:var(--pixel);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--warm);margin:0}
+.dcard .dcard-title{font-family:var(--display);font-weight:700;font-size:22px;line-height:1.15;letter-spacing:-.01em;margin:0}
+.dcard .dcard-body{font-family:var(--pixel);font-weight:500;font-size:15px;line-height:1.4;margin:0;color:color-mix(in srgb,var(--box-ink) 88%,transparent)}
+.dcard .dcard-btn{font-family:var(--pixel);font-weight:600;font-size:15px;border:2px solid var(--box-edge);background:var(--box-edge);color:var(--box);border-radius:8px;padding:6px 18px;cursor:pointer;justify-self:start}
+.dcard .dcard-btn:hover{background:color-mix(in srgb,var(--box-edge) 80%,var(--box))}
+@media (max-width:640px){.dcard{left:10px;right:10px;max-width:none;transform:translateY(8px) scale(.96)}.dcard.open{transform:translateY(0) scale(1)}}
+
+/* Collapsible quick actions drawer */
+.qdrawer{display:grid;gap:0}
+.qdrawer > summary{cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:6px;user-select:none;padding:2px 0}
+.qdrawer > summary::-webkit-details-marker{display:none}
+.qdrawer > summary::after{content:'▾';margin-left:auto;transition:transform .2s;font-size:11px}
+.qdrawer[open] > summary::after{transform:rotate(180deg)}
+.qdrawer > summary > span{color:var(--ink);font-weight:500}
+.qdrawer-body{display:grid;gap:8px;padding-top:6px}
+@media (prefers-reduced-motion:reduce){.itray,.dcard{transition:none}.qdrawer > summary::after{transition:none}}
 </style>
 
 <div class="setup" id="setup" hidden>
@@ -285,6 +318,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
           </form>
           <p class="hint" id="hint">Conversations here stay inside the game.</p>
         </div>
+        <div class="itray" id="itray" role="menu" aria-label="Interactions"></div>
+        <div class="dcard" id="dcard" role="dialog" aria-live="polite"></div>
         <div class="floorbar" role="group" aria-label="Floors">
           <span class="lbl">Floor</span>
           <button type="button" data-level="3" aria-pressed="false">Yard</button>
@@ -348,28 +383,41 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
           <button class="mini" type="button" data-speed="3" aria-pressed="false">3x</button>
           <button class="mini" type="button" data-speed="8" aria-pressed="false">8x</button>
         </div>
-        <h3>At home</h3>
+        <details class="qdrawer" open>
+        <summary><span>Daily &amp; fun</span></summary>
+        <div class="qdrawer-body">
+        <h3>Daily</h3>
         <div class="actions" id="actions">
           <button class="act talk" type="button" id="talkBtn">Talk to Maya</button>
           <button class="act" type="button" data-act="sleep" aria-pressed="false">Sleep</button>
           <button class="act" type="button" data-act="cookeat" aria-pressed="false">Cook &amp; eat</button>
           <button class="act" type="button" data-act="coffee" aria-pressed="false">Make coffee</button>
           <button class="act" type="button" data-act="shower" aria-pressed="false">Shower</button>
+          <button class="act" type="button" data-act="putaway" aria-pressed="false">Put groceries away</button>
+        </div>
+        <h3>Fun</h3>
+        <div class="actions">
           <button class="act" type="button" data-act="tv" aria-pressed="false">Watch TV</button>
           <button class="act" type="button" data-act="workout" aria-pressed="false">Work out</button>
           <button class="act" type="button" data-act="dance" aria-pressed="false">Dance</button>
           <button class="act" type="button" data-act="read" aria-pressed="false">Read</button>
-          <button class="act" type="button" data-act="clean" aria-pressed="false">Do the dishes</button>
-          <button class="act" type="button" data-act="scrub" aria-pressed="false">Scrub floors &amp; walls</button>
-          <button class="act" type="button" data-act="laundry" aria-pressed="false">Do laundry</button>
           <button class="act" type="button" id="inviteBtn">Have friends over ($25)</button>
-          <button class="act" type="button" data-act="putaway" aria-pressed="false">Put groceries away</button>
           <button class="act" type="button" data-act="records" aria-pressed="false" hidden>Play records</button>
           <button class="act" type="button" data-act="arcade" aria-pressed="false" hidden>Play arcade</button>
         </div>
+        <h3>Chores</h3>
+        <div class="actions">
+          <button class="act" type="button" data-act="clean" aria-pressed="false">Do the dishes</button>
+          <button class="act" type="button" data-act="scrub" aria-pressed="false">Scrub floors &amp; walls</button>
+          <button class="act" type="button" data-act="laundry" aria-pressed="false">Do laundry</button>
+        </div>
         <h3 id="hobbyHead" hidden>Hobbies</h3>
         <div class="actions" id="hobbyActs" hidden></div>
-        <h3>Out back</h3>
+        </div>
+        </details>
+        <details class="qdrawer" open>
+        <summary><span>Out back</span></summary>
+        <div class="qdrawer-body">
         <div class="actions">
           <button class="act" type="button" data-act="mow" aria-pressed="false">Mow the lawn</button>
           <button class="act" type="button" data-act="sprinkle" aria-pressed="false">Water the lawn</button>
@@ -378,15 +426,21 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
           <button class="act" type="button" data-act="rake" aria-pressed="false">Rake leaves</button>
           <button class="act" type="button" data-act="snowman" aria-pressed="false">Build a snowman</button>
         </div>
+        </div>
+        </details>
         <h3>Watch something</h3>
         <form class="watch" id="watchForm" autocomplete="off"><input id="vidUrl" type="text" placeholder="Paste a YouTube link or search..." aria-label="YouTube link or search"><button type="submit" class="act">Play</button><button type="button" class="act" id="vidStop">Stop</button></form>
         <div class="vidsearch" id="vidSearch" hidden></div>
         <p class="quiet" id="vidNote">Plays on the TV, or the projector if you have one. Maya may join you.</p>
-        <h3>Out the door</h3>
+        <details class="qdrawer" open>
+        <summary><span>Out the door</span></summary>
+        <div class="qdrawer-body">
         <div class="actions">
           <button class="act" type="button" data-errand="market">Grocery run</button>
           <button class="act" type="button" data-errand="friends">See friends</button>
         </div>
+        </div>
+        </details>
       </section>
 
       <section class="group" aria-labelledby="h-pets" id="petsGroup" hidden>
@@ -3329,7 +3383,19 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     { id: 'mom', when: () => day >= 6 && hour() >= 12 && hour() < 17 && canTalk(), run: () => { spawnGuest(MOM, 120); log(P("Maya's mom dropped by with a casserole and opinions about the curtains.")); fridge.fresh += 2; maya.mood = 'happy'; remember(P("Maya's mom visited the new house.")); } },
     { id: 'dog', when: () => day >= 4 && hour() >= 9 && hour() < 18, run: () => log("The neighbor's dog got into the backyard, ran one lap and left. Rude.") },
     { id: 'storm', when: () => day >= 9 && hour() >= 19, run: () => { YARD.rainAt = absMin(); YARD.rainUntil = absMin() + 240; YARD.rainLogged = true; log(P('A thunderstorm rolled in. The lights flickered and Maya grabbed your arm.')); bond = Math.min(100, bond + 2); } },
-    { id: 'month', when: () => day >= 29, run: () => { log(P('One month in the house. Maya made a scrapbook page out of the receipts.')); remember(P('They have lived in the house for a month.')); } }
+    { id: 'month', when: () => day >= 29, run: () => { log(P('One month in the house. Maya made a scrapbook page out of the receipts.')); remember(P('They have lived in the house for a month.')); } },
+    // ---- relationship discovery ----
+    { id: 'firstfight', when: () => bond < 40 && day >= 5 && !flags.events.includes('firstfight'), run: () => { showDiscovery({ eyebrow: 'Relationship', title: 'The first real argument', body: 'Maya said what she had been holding in. It was not about the dishes. It was never about the dishes. You talked it through, and something loosened between you both.' }); bond = Math.min(100, bond + 5); remember('They had their first real argument, and it brought them closer.'); } },
+    // ---- skill discovery (cooking ≥ 4, ability-gated) ----
+    { id: 'chefsblood', when: () => jordan.skills.cooking >= 4 && !flags.events.includes('chefsblood'), run: () => { showDiscovery({ eyebrow: 'Skill unlocked', title: 'You cook like you grew up in this kitchen', body: 'Four meals in a row, not one burned. Maya watched from the doorway and said, quietly, that you could open a restaurant. You filed that away.' }); remember(`${simName} reached a cooking skill of 4 and Maya noticed.`); } },
+    // ---- household discovery ----
+    { id: 'spotlessday', when: () => flags.spotless >= 1 && !flags.events.includes('spotlessday'), run: () => { showDiscovery({ eyebrow: 'Household', title: 'A house that sparkles', body: 'Every floor mopped, every dish washed, not a single mess anywhere. Maya walked through barefoot just to feel the clean floor under her feet. You did that.' }); bond = Math.min(100, bond + 2); } },
+    // ---- situational discovery ----
+    { id: 'blackout', when: () => !power && !flags.events.includes('blackout'), run: () => { showDiscovery({ eyebrow: 'Situational', title: 'Lights out, candles lit', body: 'The power is off and the house is dark, but Maya found the candles and a deck of cards. She is dealing on the living room floor. This might be the most fun you have had in the dark.' }); bond = Math.min(100, bond + 1); } },
+    // ---- companion-preference discovery ----
+    { id: 'mayaTaste', when: () => flags.styledSet.length >= 2 && !flags.events.includes('mayaTaste'), run: () => { showDiscovery({ eyebrow: 'Her say', title: 'You are learning what she loves', body: 'Two rooms done your way, and Maya keeps touching the walls when she walks through. You are starting to know her taste without asking. She has not said it, but she noticed you noticing.' }); bond = Math.min(100, bond + 2); } },
+    // ---- milestone discovery ----
+    { id: 'inlove', when: () => bond >= 80 && !flags.events.includes('inlove'), run: () => { showDiscovery({ eyebrow: 'Milestone', title: 'In love', body: 'It snuck up on both of you. Not one big moment, just a hundred small ones, and now the word fits. Maya said it first, over coffee, like it was the most ordinary thing in the world.' }); remember('They reached "in love." Maya said it over morning coffee.'); } }
   ];
   function momentsTick() { MOMENTS.forEach(m => { if (!flags.events.includes(m.id) && m.when()) { flags.events.push(m.id); m.run(); velvetOut('moment', { id: m.id, text: P(logEl.firstChild ? logEl.firstChild.querySelector('span').textContent : m.id) }); } }); }
 
@@ -4028,9 +4094,63 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     }
     if (overMaya(x, y)) { openChat(); return; }
     const ob = objectAt(x, y); if (ob && ob.type === 'pbox') { unpackOrder(ob); return; }
-    if (ob && T_OF(ob).spots && !T_OF(ob).rug) { const tg = Object.values(T_OF(ob).spots)[0].tag, an = TAG_ACT[tg]; if (an && ACT[an] && !['seat', 'water'].includes(tg)) { order(an); return; } }
+    if (ob && T_OF(ob).spots && !T_OF(ob).rug) {
+      const t = T_OF(ob);
+      const acts = [];
+      Object.values(t.spots).forEach(s => {
+        const an = TAG_ACT[s.tag];
+        if (an && ACT[an] && !['seat', 'water'].includes(s.tag)) {
+          const a = ACT[an];
+          const ok = !a.require || a.require(jordan);
+          if (acts.findIndex(x => x.act === an) < 0) acts.push({ act: an, tag: s.tag, ok, label: a.verb });
+        }
+      });
+      if (acts.length === 1) { if (acts[0].ok) order(acts[0].act); return; }
+      if (acts.length > 1) { showTray(acts, t); return; }
+    }
     if (viewLevel !== 3) { const [fx, fy] = unIso(x, y); if (fx > 0 && fy > 0 && fx < WX && fy < WY) { const rm = LEVELS[viewLevel].rooms.find(r => fx >= r.r[0] && fx <= r.r[2] && fy >= r.r[1] && fy <= r.r[3]); if (rm) { tapFocus = { level: viewLevel, r: rm.r, at: performance.now() }; if (['Paint', 'Wallpaper', 'Floors'].includes(tab) && lookRoom !== rm.n) { lookRoom = rm.n; renderShop(); } } } }
   });
+  // ======================================================================
+  // contextual interaction tray + discovery cards
+  // ======================================================================
+  const itrayEl = $('itray'), dcardEl = $('dcard');
+  let trayCloseTimer = null;
+  const ACT_ICON = {
+    piano: '♪', easel: '✦', aquarium: '~', stargaze: '★', boxing: '✊', bike: '⊙', massage: '✿', hammock: '≈',
+    grill: '♨', birds: '♬', guitar: '♫', stretch: '◯', mixDrinks: '◈', fire: '☀', jukebox: '♪', read: '☰',
+    plants: '✿', clean: '✦', cook: '♨', coffee: '☕', workout: '✦', dance: '♪', records: '♪', arcade: '▣',
+    tend: '✿', mow: '✦', sprinkle: '≈', weed: '✿', rake: '✦', snowman: '❄', bath: '≈', swim: '≈', grill2: '♨'
+  };
+  function showTray(acts, type) {
+    clearTimeout(trayCloseTimer);
+    itrayEl.innerHTML = '';
+    const title = document.createElement('div'); title.className = 'itray-title'; title.textContent = (type.name || 'Interact').toLowerCase(); itrayEl.appendChild(title);
+    acts.forEach(a => {
+      const btn = document.createElement('button'); btn.type = 'button';
+      const ic = document.createElement('span'); ic.className = 'itray-icon'; ic.textContent = ACT_ICON[a.act] || '•'; btn.appendChild(ic);
+      const label = document.createElement('span'); label.textContent = a.label.toLowerCase().replace(/^./, c => c.toUpperCase()); btn.appendChild(label);
+      if (!a.ok) btn.disabled = true;
+      btn.addEventListener('click', () => { hideTray(); if (a.ok) order(a.act); });
+      itrayEl.appendChild(btn);
+    });
+    itrayEl.classList.add('open');
+    trayCloseTimer = setTimeout(hideTray, 6000);
+  }
+  function hideTray() { itrayEl.classList.remove('open'); clearTimeout(trayCloseTimer); }
+  itrayEl.addEventListener('mouseenter', () => clearTimeout(trayCloseTimer));
+  itrayEl.addEventListener('mouseleave', () => { trayCloseTimer = setTimeout(hideTray, 2000); });
+  document.addEventListener('click', (e) => { if (!itrayEl.contains(e.target) && e.target !== cv) return; if (e.target === cv && itrayEl.classList.contains('open')) hideTray(); });
+
+  function showDiscovery(card) {
+    dcardEl.innerHTML = '';
+    const eyebrow = document.createElement('p'); eyebrow.className = 'dcard-eyebrow'; eyebrow.textContent = card.eyebrow || 'Discovery'; dcardEl.appendChild(eyebrow);
+    const title = document.createElement('h3'); title.className = 'dcard-title'; title.textContent = P(card.title); dcardEl.appendChild(title);
+    const body = document.createElement('p'); body.className = 'dcard-body'; body.textContent = P(card.body); dcardEl.appendChild(body);
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'dcard-btn'; btn.textContent = 'Nice'; btn.addEventListener('click', hideDiscovery); dcardEl.appendChild(btn);
+    dcardEl.classList.add('open');
+  }
+  function hideDiscovery() { dcardEl.classList.remove('open'); }
+
   cv.addEventListener('mousemove', (e) => {
     const [x, y] = canvasPoint(e);
     if (arranging) { if (arr.wHold) { moveWallHeld(x, y); cv.style.cursor = 'grabbing'; return; } if (arr.hold) moveHeld(x, y); else arr.hover = objectAt(x, y) || wallObjAt(x, y); cv.style.cursor = arr.hold ? 'grabbing' : arr.hover ? 'grab' : 'default'; return; }
@@ -4247,7 +4367,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     row.appendChild(b); row.hidden = false;
   }
   // ---- hobbies you own show up as things to do ----
-  const TAG_ACT = { piano: 'piano', easel: 'easel', aquarium: 'aquarium', stars: 'stargaze', boxbag: 'boxing', bike: 'bike', massage: 'massage', hammock: 'hammock', grill: 'grill', birds: 'birds', guitar: 'guitar', stretch: 'stretch', bar: 'mixDrinks', fireside: 'fire', jukebox: 'jukebox', seat: 'read', water: 'plants' };
+  const TAG_ACT = { piano: 'piano', easel: 'easel', aquarium: 'aquarium', stars: 'stargaze', boxbag: 'boxing', bike: 'bike', massage: 'massage', hammock: 'hammock', grill: 'grill', birds: 'birds', guitar: 'guitar', stretch: 'stretch', bar: 'mixDrinks', fireside: 'fire', jukebox: 'jukebox', seat: 'read', water: 'plants', clear: 'clean' };
   function renderHobbies() {
     const el = $('hobbyActs'); if (!el) return; el.innerHTML = '';
     const seen = new Set();
