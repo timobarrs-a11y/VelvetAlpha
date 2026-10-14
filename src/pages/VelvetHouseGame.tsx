@@ -1,14 +1,121 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { supabase } from '../shared/supabase/client';
 import { getCompanion, type Companion } from '../services/companionService';
-import { getCompanionMemory, type CompanionMemory } from '../services/memoryService';
 import { loadVelvetHouseSave, saveVelvetHouseProgress } from '../services/velvetHouseDatabase';
-import { saveCompanionMemory } from '../services/memoryService';
 
 const GAME_PATH = '/games/velvet-house/index.html';
 const SAVE_KEY = 'velvet-house-v1';
 const SYNC_INTERVAL_MS = 30_000;
+const GAME_TURN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/velvet-game-turn`;
+
+type GameLook = { skin?: string; hair?: string; hairColor?: string; top?: string };
+type GameError = Error & { code?: string };
+
+interface PlayerProfile {
+  name: string | null;
+  nickname: string | null;
+  avatar_config: Record<string, unknown> | null;
+  favorite_color: string | null;
+}
+
+const COLOR_HEX: Record<string, string> = {
+  red: '#A63A2C', burgundy: '#8A2D54', maroon: '#8A2D54', pink: '#D97A9B', orange: '#D9763A',
+  yellow: '#E0A43A', gold: '#E0A43A', green: '#4F7A4A', teal: '#3D6B73', blue: '#4A5DA8',
+  navy: '#2E3D6B', purple: '#6B4A8A', lavender: '#9A86B8', brown: '#7A4E31', black: '#2B2B30',
+  white: '#F2EEE8', gray: '#6B6F86', grey: '#6B6F86',
+};
+
+const isHex = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+
+function colorToHex(color: string | null | undefined): string | undefined {
+  if (!color) return undefined;
+  if (/^#[0-9a-f]{6}$/i.test(color)) return color;
+  const key = color.toLowerCase().split(/\W+/).find((w: string) => COLOR_HEX[w]);
+  return key ? COLOR_HEX[key] : undefined;
+}
+
+function hairFor(style: unknown, length: unknown): string {
+  if (style === 'afro') return 'afro';
+  if (style === 'bun' || style === 'ponytail') return 'bun';
+  if (style === 'buzz' || style === 'fade' || style === 'short' || length === 'short') return 'short';
+  if (length === 'long') return 'long';
+  return ['curly', 'braids', 'locs'].includes(String(style)) ? 'long' : 'short';
+}
+
+function toGameLook(avatar: Record<string, unknown> | null | undefined, favoriteColor?: string | null): GameLook | undefined {
+  if (!avatar || typeof avatar !== 'object') return undefined;
+  const female = avatar.gender === 'female';
+  const length = avatar.hairLength ?? (female ? 'long' : 'short');
+  return {
+    skin: isHex(avatar.skinTone) ? avatar.skinTone : undefined,
+    hairColor: isHex(avatar.hairColor) ? avatar.hairColor : undefined,
+    hair: hairFor(avatar.hairStyle, length),
+    top: colorToHex(favoriteColor),
+  };
+}
+
+function buildProfile(player: PlayerProfile | null, companion: Companion, includeLooks: boolean) {
+  const personality = [companion.communication_style, companion.humor_style, companion.signature_voice]
+    .filter(Boolean)
+    .join('. ');
+  const likes = [...(companion.hobbies || []), companion.interest_text, companion.favorite_color]
+    .filter(Boolean) as string[];
+
+  return {
+    type: 'velvet:profile',
+    player: {
+      name: (player?.nickname || player?.name || '').trim().slice(0, 16),
+      look: includeLooks ? toGameLook(player?.avatar_config, player?.favorite_color) : undefined,
+    },
+    companion: {
+      name: companion.custom_name,
+      pronoun: companion.gender === 'male' ? 'he' : 'she',
+      personality: personality || 'warm, curious, playful',
+      look: includeLooks
+        ? toGameLook(companion.avatar_config as Record<string, unknown> | undefined, companion.favorite_color)
+        : undefined,
+      memories: [],
+      likes,
+      dislikes: [],
+    },
+  };
+}
+
+function gameError(code: string): GameError {
+  const err = new Error(code) as GameError;
+  err.code = code;
+  return err;
+}
+
+async function sampleGameTurn(companionId: string, input: unknown, signal?: AbortSignal): Promise<{ text: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw gameError('unavailable');
+
+  let res: Response;
+  try {
+    res = await fetch(GAME_TURN_URL, {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ companionId, input }),
+    });
+  } catch (e) {
+    if ((e as Error)?.name === 'AbortError') throw gameError('cancelled');
+    throw gameError('unavailable');
+  }
+
+  const data = await res.json().catch(() => null);
+  if (res.status === 429 || data?.error === 'rate_limited') throw gameError('rate_limited');
+  if (data?.error === 'refused') throw gameError('refused');
+  if (!res.ok || typeof data?.text !== 'string') throw gameError('unavailable');
+  return { text: data.text };
+}
 
 export function VelvetHouseGame() {
   const navigate = useNavigate();
@@ -16,176 +123,49 @@ export function VelvetHouseGame() {
   const companionId = searchParams.get('companion');
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const companionIdRef = useRef<string | null>(companionId);
-  const syncTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  const [saveReady, setSaveReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const handleExit = useCallback(() => {
-    if (companionId) {
-      navigate(`/chat?companion=${companionId}`);
-    } else {
-      navigate('/lobby');
-    }
-  }, [companionId, navigate]);
-
-  // Sync localStorage save → Supabase
   const syncToSupabase = useCallback(async () => {
-    const cid = companionIdRef.current;
-    if (!cid) return;
+    if (!companionId) return;
     try {
       const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return;
-      const saveData = JSON.parse(raw);
-      await saveVelvetHouseProgress(cid, saveData);
+      if (raw) await saveVelvetHouseProgress(companionId, JSON.parse(raw));
     } catch {
-      // best-effort
+      // next interval retries
     }
-  }, []);
+  }, [companionId]);
 
-  // Inject companion profile into the game via postMessage
-  const sendProfile = useCallback(async () => {
-    const iframe = iframeRef.current;
-    if (!iframe || !iframe.contentWindow) return;
-    const cid = companionIdRef.current;
-    if (!cid) return;
+  const handleExit = useCallback(() => {
+    syncToSupabase();
+    navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
+  }, [companionId, navigate, syncToSupabase]);
 
-    try {
-      const { data: { user } } = await import('../shared/supabase/client').then(m => m.supabase.auth.getUser());
-      if (!user) return;
+  const connectGame = useCallback(async (needsProfile: boolean) => {
+    const win = iframeRef.current?.contentWindow as (Window & { __velvet?: { setSample?: (f: unknown) => void } }) | null;
+    if (!win || !companionId) return;
 
-      const [companion, memory] = await Promise.all([
-        getCompanion(cid),
-        getCompanionMemory(user.id, cid),
-      ]);
+    win.__velvet?.setSample?.((input: unknown, opts?: { signal?: AbortSignal }) =>
+      sampleGameTurn(companionId, input, opts?.signal));
 
-      if (!companion) return;
-
-      const profile = buildProfilePayload(companion, memory);
-      iframe.contentWindow.postMessage(
-        { type: 'velvet:profile', ...profile },
-        window.location.origin,
-      );
-    } catch {
-      // best-effort
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const [{ data: player }, companion] = await Promise.all([
+      supabase
+        .from('user_profiles')
+        .select('name, nickname, avatar_config, favorite_color')
+        .eq('id', user.id)
+        .maybeSingle(),
+      getCompanion(companionId),
+    ]);
+    if (!companion) {
+      setError("We couldn't find this companion. Head back to the lobby and pick one.");
+      return;
     }
-  }, []);
+    win.postMessage(buildProfile(player as PlayerProfile | null, companion, needsProfile), window.location.origin);
+  }, [companionId]);
 
-  // Inject the voice shim via the game's setSample hook
-  const injectVoiceShim = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (!iframe || !iframe.contentWindow) return;
-    const cid = companionIdRef.current;
-    if (!cid) return;
-
-    const gameWindow = iframe.contentWindow as any;
-
-    // The game exposes window.__velvet.setSample(fn) as an injection point
-    if (gameWindow.__velvet && typeof gameWindow.__velvet.setSample === 'function') {
-      gameWindow.__velvet.setSample(async (input: any, _opts: any) => {
-        try {
-          const lastUser = Array.isArray(input)
-            ? [...input].reverse().find((m: any) => m.role === 'user')
-            : null;
-          const message = lastUser?.content ?? '';
-
-          const supa = await import('../shared/supabase/client');
-          const { data: { session } } = await supa.supabase.auth.getSession();
-          const token = session?.access_token;
-          if (!token) return { text: 'I need you to sign in first.' };
-
-          const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-turn`;
-          const res = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            },
-            body: JSON.stringify({
-              companionId: cid,
-              message,
-              mode: 'chat',
-            }),
-          });
-
-          if (!res.ok) {
-            return { text: '...hm, connection issue. Try again?' };
-          }
-
-          const data: any = await res.json();
-          return { text: data.assistantMessage ?? '' };
-        } catch {
-          return { text: '...something went wrong. Try again?' };
-        }
-      });
-    }
-  }, []);
-
-  // Handle postMessages from the game
-  const handleMessage = useCallback(async (event: MessageEvent) => {
-    if (event.origin !== window.location.origin) return;
-    const msg = event.data;
-    if (!msg || typeof msg.type !== 'string') return;
-
-    switch (msg.type) {
-      case 'velvet:ready': {
-        // Game is loaded and requesting a profile
-        setLoading(false);
-        await sendProfile();
-        injectVoiceShim();
-        break;
-      }
-      case 'velvet:profileApplied': {
-        // Profile was accepted by the game
-        break;
-      }
-      case 'velvet:memory': {
-        // Game produced a memory moment — persist to companion memory
-        if (msg.text && companionIdRef.current) {
-          await persistMemory(msg.text);
-        }
-        break;
-      }
-      case 'velvet:moment': {
-        // Game produced a moment — log for potential insights integration
-        break;
-      }
-    }
-  }, [sendProfile, injectVoiceShim]);
-
-  // Persist an in-game memory to the companion's memory table
-  const persistMemory = useCallback(async (text: string) => {
-    const cid = companionIdRef.current;
-    if (!cid) return;
-    try {
-      const supa = await import('../shared/supabase/client');
-      const { data: { user } } = await supa.supabase.auth.getUser();
-      if (!user) return;
-
-      const existing = await getCompanionMemory(user.id, cid);
-      if (existing) {
-        const updatedJson = { ...existing.memory_json };
-        updatedJson.key_moments = [
-          ...(updatedJson.key_moments || []),
-          { summary: text, emotional_weight: 'medium' as const },
-        ].slice(-20);
-        await saveCompanionMemory(
-          user.id,
-          cid,
-          updatedJson,
-          existing.memory_text,
-          existing.messages_processed,
-          existing.last_message_id ?? '',
-        );
-      }
-    } catch {
-      // best-effort
-    }
-  }, []);
-
-  // On mount: load save from Supabase → localStorage, set up listeners
   useEffect(() => {
     if (!companionId) {
       setError('No companion selected. Choose a companion from the lobby to play Velvet House.');
@@ -193,50 +173,48 @@ export function VelvetHouseGame() {
       return;
     }
 
-    companionIdRef.current = companionId;
+    let cancelled = false;
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== iframeRef.current?.contentWindow) return;
+      const msg = event.data;
+      if (!msg || typeof msg !== 'object') return;
+      if (msg.type === 'velvet:ready') {
+        setLoading(false);
+        connectGame(msg.needsProfile === true).catch(() => {});
+      }
+    };
+    const onUnload = () => { syncToSupabase(); };
+
+    window.addEventListener('message', onMessage);
+    window.addEventListener('beforeunload', onUnload);
+    const timer = setInterval(syncToSupabase, SYNC_INTERVAL_MS);
 
     (async () => {
-      // Load save from Supabase and write to localStorage for the game to pick up
-      const save = await loadVelvetHouseSave(companionId);
-      if (save) {
-        try {
-          localStorage.setItem(SAVE_KEY, JSON.stringify(save));
-        } catch {
-          // localStorage might be full or unavailable
-        }
+      try {
+        const save = await loadVelvetHouseSave(companionId);
+        if (save) localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+      } catch {
+        // falls back to whatever is already stored on this device
       }
-
-      // Set up postMessage listener
-      window.addEventListener('message', handleMessage);
-
-      // Set up periodic save sync
-      syncTimerRef.current = setInterval(syncToSupabase, SYNC_INTERVAL_MS);
-
-      // Sync on page exit
-      const onBeforeUnload = () => { syncToSupabase(); };
-      window.addEventListener('beforeunload', onBeforeUnload);
-      setLoading(false);
-
-      return () => {
-        window.removeEventListener('message', handleMessage);
-        window.removeEventListener('beforeunload', onBeforeUnload);
-        if (syncTimerRef.current) clearInterval(syncTimerRef.current);
-      };
+      if (!cancelled) setSaveReady(true);
     })();
 
     return () => {
-      window.removeEventListener('message', handleMessage);
-      if (syncTimerRef.current) clearInterval(syncTimerRef.current);
+      cancelled = true;
+      window.removeEventListener('message', onMessage);
+      window.removeEventListener('beforeunload', onUnload);
+      clearInterval(timer);
+      syncToSupabase();
     };
-  }, [companionId, handleMessage, syncToSupabase]);
+  }, [companionId, connectGame, syncToSupabase]);
 
   if (error) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-[#0a0a0f] z-50">
         <div className="text-center max-w-sm px-6">
-          <p className="text-ink-muted text-sm mb-4">{error}</p>
+          <p className="text-white/60 text-sm mb-4">{error}</p>
           <button
-            onClick={handleExit}
+            onClick={() => navigate('/lobby')}
             className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-sm font-medium hover:bg-white/20 transition-colors"
           >
             Back to Lobby
@@ -248,7 +226,6 @@ export function VelvetHouseGame() {
 
   return (
     <div className="fixed inset-0 bg-[#0a0a0f] z-50 flex flex-col">
-      {/* Exit bar */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 border-b border-white/10 flex-shrink-0">
         <button
           onClick={handleExit}
@@ -261,7 +238,6 @@ export function VelvetHouseGame() {
         <div className="w-16" />
       </div>
 
-      {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 top-12 flex items-center justify-center bg-[#0a0a0f] z-10">
           <div className="flex flex-col items-center gap-3">
@@ -271,68 +247,16 @@ export function VelvetHouseGame() {
         </div>
       )}
 
-      {/* Game iframe */}
-      <iframe
-        ref={iframeRef}
-        src={GAME_PATH}
-        title="Velvet House"
-        className="flex-1 w-full border-0"
-        allow="autoplay; fullscreen"
-        onLoad={() => {
-          // Try injecting voice shim after iframe loads
-          setTimeout(injectVoiceShim, 500);
-        }}
-      />
+      {saveReady && (
+        <iframe
+          ref={iframeRef}
+          src={GAME_PATH}
+          title="Velvet House"
+          className="flex-1 w-full border-0"
+          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          onLoad={() => setLoading(false)}
+        />
+      )}
     </div>
   );
-}
-
-function buildProfilePayload(
-  companion: Companion,
-  memory: CompanionMemory | null,
-) {
-  const personality = [
-    companion.communication_style,
-    companion.humor_style,
-    companion.signature_voice,
-  ].filter(Boolean).join('. ');
-
-  const likes = [
-    ...(companion.hobbies || []),
-    companion.interest_text,
-  ].filter(Boolean) as string[];
-
-  const memories: string[] = [];
-  if (memory) {
-    const mj = memory.memory_json;
-    if (mj.key_moments) {
-      memories.push(...mj.key_moments.map(km => km.summary));
-    }
-    if (mj.relationship_with_companion?.inside_jokes) {
-      memories.push(...mj.relationship_with_companion.inside_jokes);
-    }
-    if (mj.relationship_with_companion?.nicknames) {
-      memories.push(...mj.relationship_with_companion.nicknames);
-    }
-  }
-
-  const look = companion.avatar_config
-    ? JSON.stringify(companion.avatar_config)
-    : companion.favorite_color ?? '';
-
-  return {
-    player: {
-      name: 'You',
-      look: '',
-    },
-    companion: {
-      name: companion.custom_name,
-      pronoun: companion.gender === 'male' ? 'he' : 'she',
-      personality: personality || 'warm, curious, playful',
-      look,
-      memories: memories.slice(0, 10),
-      likes,
-      dislikes: [],
-    },
-  };
 }

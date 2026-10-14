@@ -23,7 +23,6 @@ import {
   XCircle,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
-import { analyticsService } from '../services/analyticsService';
 import { useRole } from '../hooks/useRole';
 
 interface DashboardStats {
@@ -36,6 +35,8 @@ interface DashboardStats {
   errorCount: number;
   avgSessionDuration: number;
   newUsersToday: number;
+  newUsersYesterday: number;
+  signupsInPeriod: number;
   totalCompanions: number;
   messagesPerUser: number;
   conversionRate: number;
@@ -56,6 +57,7 @@ interface TierBreakdown {
 interface RecentSignup {
   id: string;
   name: string;
+  email?: string;
   subscription_tier: string;
   created_at: string;
 }
@@ -86,7 +88,7 @@ export function AdminAnalyticsPage() {
   const [stats, setStats] = useState<DashboardStats>({
     dau: 0, totalUsers: 0, premiumUsers: 0, freeUsers: 0, trialUsers: 0,
     totalMessages: 0, errorCount: 0, avgSessionDuration: 0,
-    newUsersToday: 0, totalCompanions: 0, messagesPerUser: 0, conversionRate: 0,
+    newUsersToday: 0, newUsersYesterday: 0, signupsInPeriod: 0, totalCompanions: 0, messagesPerUser: 0, conversionRate: 0,
   });
   const [popularFeatures, setPopularFeatures] = useState<PopularFeature[]>([]);
   const [recentErrors, setRecentErrors] = useState<any[]>([]);
@@ -95,11 +97,14 @@ export function AdminAnalyticsPage() {
   const [recentSignups, setRecentSignups] = useState<RecentSignup[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month'>('week');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [signupsByDay, setSignupsByDay] = useState<{ day: string; count: number }[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadAnalytics = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
+      setLoadError(null);
 
       const now = new Date();
       const startDate = new Date();
@@ -109,97 +114,60 @@ export function AdminAnalyticsPage() {
 
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
+      const yesterdayStart = new Date(todayStart);
+      yesterdayStart.setDate(todayStart.getDate() - 1);
 
-      const [
-        { count: totalUsers },
-        { count: premiumUsers },
-        { count: freeUsers },
-        { count: trialUsers },
-        { count: totalMessages },
-        { count: errorCount },
-        { count: newUsersToday },
-        { count: totalCompanions },
-        { data: activeUsersData },
-        { data: tierData },
-        { data: recentSignupsData },
-      ] = await Promise.all([
-        supabase.from('user_profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('user_profiles').select('*', { count: 'exact', head: true }).in('subscription_tier', ['unlimited', 'starter', 'plus', 'elite']),
-        supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('subscription_tier', 'free'),
-        supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('subscription_tier', 'trial'),
-        supabase.from('conversations').select('*', { count: 'exact', head: true }).gte('created_at', startDate.toISOString()),
-        supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', startDate.toISOString()),
-        supabase.from('user_profiles').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
-        supabase.from('companions').select('*', { count: 'exact', head: true }),
-        supabase.from('user_behavior_analytics').select('user_id').gte('created_at', startDate.toISOString()).not('user_id', 'is', null),
-        supabase.from('user_profiles').select('subscription_tier').not('subscription_tier', 'is', null),
-        supabase.from('user_profiles').select('id, name, subscription_tier, created_at').order('created_at', { ascending: false }).limit(8),
-      ]);
-
-      const uniqueActiveUsers = new Set(activeUsersData?.map((d: any) => d.user_id) || []).size;
-      const total = totalUsers || 0;
-      const premium = premiumUsers || 0;
-
-      const tierCounts: Record<string, number> = {};
-      (tierData || []).forEach((row: any) => {
-        const t = row.subscription_tier || 'free';
-        tierCounts[t] = (tierCounts[t] || 0) + 1;
+      const { data, error } = await supabase.rpc('admin_dashboard_summary', {
+        p_start: startDate.toISOString(),
+        p_today_start: todayStart.toISOString(),
+        p_yesterday_start: yesterdayStart.toISOString(),
+        p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
       });
 
-      const breakdown: TierBreakdown[] = Object.entries(TIER_CONFIG).map(([tier, cfg]) => ({
-        tier,
-        count: tierCounts[tier] || 0,
-        color: cfg.color,
-        label: cfg.label,
-      })).filter(t => t.count > 0);
+      if (error || !data || typeof data !== 'object') {
+        setLoadError(error?.message?.includes('forbidden') ? 'Only the owner account can view analytics.' : 'Could not load analytics. Try refreshing.');
+        return;
+      }
 
-      const { data: sessions } = await supabase
-        .from('user_behavior_analytics')
-        .select('metadata')
-        .eq('action_type', 'navigation')
-        .eq('action_target', 'session_end')
-        .gte('created_at', startDate.toISOString());
-
-      const durations = sessions?.filter((s: any) => s.metadata?.session_duration).map((s: any) => s.metadata.session_duration) || [];
-      const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a: number, b: number) => a + b, 0) / durations.length) : 0;
+      const d = data as Record<string, any>;
+      const num = (v: unknown) => Number(v) || 0;
+      const total = num(d.total_users);
+      const premium = num(d.premium_users);
+      const active = num(d.active_users);
+      const messages = num(d.total_messages);
+      const tierCounts: Record<string, number> = d.tier_counts || {};
 
       setStats({
-        dau: uniqueActiveUsers,
+        dau: active,
         totalUsers: total,
         premiumUsers: premium,
-        freeUsers: freeUsers || 0,
-        trialUsers: trialUsers || 0,
-        totalMessages: totalMessages || 0,
-        errorCount: errorCount || 0,
-        avgSessionDuration: avgDuration,
-        newUsersToday: newUsersToday || 0,
-        totalCompanions: totalCompanions || 0,
-        messagesPerUser: uniqueActiveUsers > 0 ? Math.round((totalMessages || 0) / uniqueActiveUsers) : 0,
+        freeUsers: num(d.free_users),
+        trialUsers: num(d.trial_users),
+        totalMessages: messages,
+        errorCount: num(d.error_count),
+        avgSessionDuration: num(d.avg_session_seconds),
+        newUsersToday: num(d.signups_today),
+        newUsersYesterday: num(d.signups_yesterday),
+        signupsInPeriod: num(d.signups_in_period),
+        totalCompanions: num(d.total_companions),
+        messagesPerUser: active > 0 ? Math.round(messages / active) : 0,
         conversionRate: total > 0 ? Math.round((premium / total) * 100) : 0,
       });
 
-      setTierBreakdown(breakdown);
-      setRecentSignups((recentSignupsData || []) as RecentSignup[]);
-
-      const features = await analyticsService.getMostPopularFeatures(8);
-      setPopularFeatures(features);
-
-      const { data: errors } = await supabase
-        .from('error_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(8);
-      setRecentErrors(errors || []);
-
-      const [onboardingFunnel, upgradeFunnel] = await Promise.all([
-        analyticsService.getFunnelAnalytics('onboarding'),
-        analyticsService.getFunnelAnalytics('upgrade'),
-      ]);
-      setConversionFunnels({ onboarding: onboardingFunnel, upgrade: upgradeFunnel });
-
+      setTierBreakdown(
+        Object.entries(TIER_CONFIG)
+          .map(([tier, cfg]) => ({ tier, count: num(tierCounts[tier]), color: cfg.color, label: cfg.label }))
+          .filter(t => t.count > 0)
+      );
+      setSignupsByDay(Array.isArray(d.signups_by_day) ? d.signups_by_day.map((r: any) => ({ day: String(r.day), count: num(r.count) })) : []);
+      setRecentSignups(Array.isArray(d.recent_signups) ? d.recent_signups : []);
+      setPopularFeatures(Array.isArray(d.popular_features) ? d.popular_features : []);
+      setRecentErrors(Array.isArray(d.recent_errors) ? d.recent_errors : []);
+      setConversionFunnels(d.funnels || {});
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Analytics load error:', err);
+      setLoadError('Could not load analytics. Try refreshing.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -305,6 +273,13 @@ export function AdminAnalyticsPage() {
           </div>
         </div>
 
+        {loadError && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {loadError}
+          </div>
+        )}
+
         {/* Primary KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <KPICard
@@ -313,7 +288,7 @@ export function AdminAnalyticsPage() {
             iconBg="bg-blue-500/15"
             label="Total Users"
             value={stats.totalUsers.toLocaleString()}
-            sub={`+${stats.newUsersToday} today`}
+            sub={`+${stats.newUsersToday} today, +${stats.newUsersYesterday} yesterday`}
             trend="up"
           />
           <KPICard
@@ -379,6 +354,13 @@ export function AdminAnalyticsPage() {
             sub="in trial period"
           />
         </div>
+
+        <SignupsChart
+          data={signupsByDay}
+          today={stats.newUsersToday}
+          yesterday={stats.newUsersYesterday}
+          inPeriod={stats.signupsInPeriod}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Tier Breakdown */}
@@ -474,13 +456,14 @@ export function AdminAnalyticsPage() {
                   const cfg = TIER_CONFIG[user.subscription_tier] || TIER_CONFIG.free;
                   return (
                     <div key={user.id} className="flex items-center justify-between gap-3 py-2 border-b border-white/5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white/70 text-sm font-medium" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-white/70 text-sm font-medium" style={{ background: 'rgba(255,255,255,0.08)' }}>
                           {(user.name || '?')[0].toUpperCase()}
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">{user.name || 'Unnamed'}</p>
-                          <p className="text-white/30 text-xs">{new Date(user.created_at).toLocaleDateString()}</p>
+                          {user.email && <p className="text-white/40 text-xs truncate max-w-[180px] sm:max-w-[260px]">{user.email}</p>}
+                          <p className="text-white/30 text-xs">{new Date(user.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
                         </div>
                       </div>
                       <span className={`text-xs px-2 py-1 rounded-lg ${cfg.bg} ${cfg.color}`}>
@@ -646,6 +629,50 @@ function KPICard({
           {trend === 'down' && <TrendingDown className="w-3 h-3 text-red-400" />}
           <span className={trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : ''}>{sub}</span>
         </div>
+      )}
+    </div>
+  );
+}
+
+function SignupsChart({ data, today, yesterday, inPeriod }: {
+  data: { day: string; count: number }[];
+  today: number;
+  yesterday: number;
+  inPeriod: number;
+}) {
+  const max = Math.max(1, ...data.map(d => d.count));
+  const label = (day: string) => new Date(`${day}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return (
+    <div className="rounded-2xl border border-white/10 p-6 mb-6" style={{ background: 'rgba(255,255,255,0.04)' }}>
+      <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-emerald-400" />
+          <h2 className="text-lg font-semibold text-white">Signups, last 14 days</h2>
+        </div>
+        <div className="flex gap-6 text-sm">
+          <div><span className="text-white/40">Today </span><span className="text-white font-semibold">{today}</span></div>
+          <div><span className="text-white/40">Yesterday </span><span className="text-white font-semibold">{yesterday}</span></div>
+          <div><span className="text-white/40">This period </span><span className="text-white font-semibold">{inPeriod}</span></div>
+        </div>
+      </div>
+      {data.length > 0 ? (
+        <div className="flex items-end gap-1.5 sm:gap-2 h-40">
+          {data.map(d => (
+            <div key={d.day} className="group flex-1 flex flex-col items-center justify-end h-full min-w-0">
+              <span className={`text-xs mb-1 transition-opacity ${d.count > 0 ? 'text-white/70' : 'text-white/20 opacity-0 group-hover:opacity-100'}`}>{d.count}</span>
+              <div
+                className="w-full rounded-t-md transition-all duration-700 group-hover:brightness-125"
+                style={{
+                  height: `${Math.max(4, (d.count / max) * 100)}%`,
+                  background: d.count > 0 ? 'linear-gradient(180deg, #34d399, #0ea5e9)' : 'rgba(255,255,255,0.06)',
+                }}
+              />
+              <span className="text-[10px] text-white/30 mt-2 truncate w-full text-center hidden sm:block">{label(d.day)}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-white/30 text-sm">No signup data yet</p>
       )}
     </div>
   );

@@ -271,7 +271,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
             <button type="submit" id="sendBtn">Send</button>
             <button type="button" class="ghost" id="byeBtn">Bye</button>
           </form>
-          <p class="hint" id="hint">Replies come from Claude and use your own Claude usage.</p>
+          <p class="hint" id="hint">Conversations here stay inside the game.</p>
         </div>
         <div class="floorbar" role="group" aria-label="Floors">
           <span class="lbl">Floor</span>
@@ -3948,7 +3948,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     if (chat.count) log(`${simName} and Maya talked for a while.`);
     if (chat.ctx && !chat.acted) settle(chat.ctx, true); chat.ctx = null;
   }
-  function markUnavailable() { chat.dead = true; setBusy(false); hintEl.textContent = 'Maya can only talk when this page is open in Claude with access allowed.'; }
+  function markUnavailable() { chat.dead = true; setBusy(false); hintEl.textContent = 'Maya can only talk when the game is opened from the Velvet app.'; }
   function send(msg) { return talk(`${simName}: ${msg}`, `${simName}: ${msg}`); }
   const decorExtra = (line) => (DECOR_RX.test(line) || chat.decor ? decorBrief(line) : '');
   async function talk(promptLine, userLine) {
@@ -3966,10 +3966,10 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
       maya.thinking = false; chat.turns.pop();
       const code = e && e.code;
       if (code === 'cancelled') setLine(visible(e.text || '') || '...', true);
-      else if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(code)) { markUnavailable(); setLine("(Maya can't talk here: access to Claude wasn't allowed for this page.)", true); }
+      else if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(code)) { markUnavailable(); setLine("(Maya can't talk here: open the game from the Velvet app to chat.)", true); }
       else if (code === 'rate_limited') setLine('(Too many messages too fast. Give it a minute, then try again.)', true);
       else if (code === 'refused') setLine('(Maya let that one go. Try saying it differently.)', true);
-      else if (code === 'session_expired') setLine('(Sign in to Claude again to keep talking.)', true);
+      else if (code === 'session_expired') setLine('(Sign in again to keep talking.)', true);
       else setLine(e && e.text ? visible(e.text) + ' ...' : '(The connection dropped. Send it again.)', true);
     } finally { chat.ctl = null; setBusy(false); if (!chat.dead && chat.open) sayInput.focus(); }
   }
