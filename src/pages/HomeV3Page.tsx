@@ -2,15 +2,17 @@ import { useState, lazy, Suspense, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Newspaper, Calendar, FileText, Lightbulb, Bot, MapPin,
+  Newspaper, PlayCircle, Calendar, FileText, Lightbulb, Bot, MapPin,
   Heart, LogOut, Volume2, VolumeX,
   Plus, Sparkles, ArrowRight,
+  Target, CheckCircle2, UsersRound,
+  ChevronDown, Sunrise, Zap, User,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { supabase } from '../shared/supabase/client';
 import {
-  LoadingState, PageShell, Pill, HomeLayoutSwitch, Badge,
+  LoadingState, PageShell, Pill, HomeLayoutSwitch, Badge, Segmented,
 } from '../shared/ui';
 import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { companionAvatarConfig, TONE_COLOR, FinishSetupCard } from '../components/lobby';
@@ -19,6 +21,9 @@ import { colorNameToHex } from '../utils/colorMapping';
 import type { CompanionWithLastMessage } from '../services/companionService';
 
 const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default: m.DailyFeedPage })));
+const VideoHistoryPage = lazy(() => import('./VideoHistoryPage').then(m => ({ default: m.VideoHistoryPage })));
+
+type FeedTab = 'feed' | 'videos';
 
 interface CheckIn {
   companion_id: string;
@@ -31,6 +36,8 @@ export function HomeV3Page() {
   const lobby = useLobbyData();
   const { muted, toggleMute } = useAudioScene();
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+  const [feedTab, setFeedTab] = useState<FeedTab>('feed');
+  const [coachExpanded, setCoachExpanded] = useState(false);
 
   const {
     companions,
@@ -156,10 +163,38 @@ export function HomeV3Page() {
     );
   };
 
+  const renderToolRow = (label: string, icon: React.ReactNode, color: string, path: string) => (
+    <button
+      onClick={() => navigate(path)}
+      className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
+    >
+      <span className={`flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0 ${color}`} style={{ background: 'rgba(255,255,255,0.05)' }}>
+        {icon}
+      </span>
+      <span className="text-[11.5px] font-semibold text-white/70">{label}</span>
+    </button>
+  );
+
+  const renderSubRow = (label: string, icon: React.ReactNode, path: string) => (
+    <button
+      onClick={() => navigate(path)}
+      className="w-full flex items-center gap-2 pl-8 pr-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
+    >
+      <span className="flex items-center justify-center w-6 h-6 rounded-lg flex-shrink-0 text-white/40" style={{ background: 'rgba(255,255,255,0.03)' }}>
+        {icon}
+      </span>
+      <span className="text-[11px] font-medium text-white/60">{label}</span>
+    </button>
+  );
+
   const sidebarStyle = {
     background: 'rgba(255,255,255,0.04)',
     backdropFilter: 'blur(12px)' as const,
   };
+
+  const GroupLabel = ({ children }: { children: React.ReactNode }) => (
+    <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 select-none px-2 pt-1 pb-1">{children}</p>
+  );
 
   return (
     <div className="ds-page flex flex-col h-screen overflow-hidden text-white">
@@ -197,83 +232,105 @@ export function HomeV3Page() {
       )}
 
       <div className="flex-1 flex flex-row overflow-hidden">
-        {/* Sidebar — list of people */}
+        {/* Sidebar — restructured into Coach, Companion, Core, Connect */}
         <aside className="w-64 flex-shrink-0 flex flex-col overflow-hidden hidden sm:flex" style={sidebarStyle}>
           <div className="px-3 pt-3 pb-2 flex-shrink-0">
-            <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 select-none">Your People</p>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 select-none">Navigate</p>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-0.5">
-            {coach && (
-              <div className="mb-1">
-                {renderPersonRow(coach, true)}
-              </div>
-            )}
+          <div className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-3">
+            {/* ── Coach ── */}
+            <div className="flex flex-col gap-0.5">
+              <GroupLabel>Coach</GroupLabel>
+              {coach ? (
+                <>
+                  {renderPersonRow(coach, true)}
+                  <button
+                    onClick={() => setCoachExpanded(v => !v)}
+                    className="w-full flex items-center gap-1 px-3 py-1 text-[10px] text-white/40 hover:text-white/60 transition-colors"
+                  >
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${coachExpanded ? 'rotate-180' : ''}`} />
+                    {coachExpanded ? 'Hide options' : 'More'}
+                  </button>
+                  <AnimatePresence>
+                    {coachExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden flex flex-col gap-0.5"
+                      >
+                        {renderSubRow('Progress', <Target className="w-3.5 h-3.5" />, '/coaching-progress')}
+                        {renderSubRow('Commitments', <CheckCircle2 className="w-3.5 h-3.5" />, '/coaching-commitments')}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              ) : (
+                <button
+                  onClick={lobby.handleNewCoach}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add a coach
+                </button>
+              )}
+            </div>
 
-            {voices.length > 0 && (
-              <div className="mb-1">
-                {voices.map(c => renderPersonRow(c))}
-              </div>
-            )}
-
-            {correspondents.length > 0 && (
-              <div className="mb-1">
-                {correspondents.map(c => renderPersonRow(c))}
-              </div>
-            )}
-
-            <button
-              onClick={lobby.handleNewCompanion}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors mt-1"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Someone new
-            </button>
-          </div>
-
-          {/* Tools */}
-          <div className="px-2 py-2 flex-shrink-0">
-            <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 px-2 pt-1 pb-1 select-none">Tools</p>
-            {[
-              { label: 'Daily Feed', icon: Newspaper, color: 'text-emerald-400', path: '/daily-feed' },
-              { label: 'Calendar', icon: Calendar, color: 'text-orange-400', path: '/calendar' },
-              { label: 'Co-Author', icon: FileText, color: 'text-blue-400', path: '/co-author' },
-              { label: 'Insights', icon: Lightbulb, color: 'text-amber-400', path: '/insights' },
-              { label: 'Atlas', icon: Bot, color: 'text-slate-300', path: '/atlas' },
-              { label: 'Navi', icon: MapPin, color: 'text-emerald-400', path: '/local-explorer' },
-            ].map(tool => (
+            {/* ── Companion ── */}
+            <div className="flex flex-col gap-0.5">
+              <GroupLabel>Companion</GroupLabel>
+              {voices.map(c => renderPersonRow(c))}
+              {correspondents.map(c => renderPersonRow(c))}
               <button
-                key={tool.label}
-                onClick={() => navigate(tool.path)}
-                className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
+                onClick={lobby.handleNewCompanion}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors mt-1"
               >
-                <span className={`flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0 ${tool.color}`} style={{ background: 'rgba(255,255,255,0.05)' }}>
-                  <tool.icon className="w-3.5 h-3.5" />
-                </span>
-                <span className="text-[11.5px] font-semibold text-white/70">{tool.label}</span>
+                <Plus className="w-3.5 h-3.5" />
+                Someone new
               </button>
-            ))}
-          </div>
+            </div>
 
-          {/* Games */}
-          <div className="px-2 py-2 flex-shrink-0">
-            <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 px-2 pt-1 pb-1 select-none">Games</p>
-            {GAMES.slice(0, 4).map(game => (
-              <button
-                key={game.id}
-                onClick={() => lobby.handleGameClick(game)}
-                className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
-              >
-                <span className={`flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0 bg-gradient-to-br ${game.iconBg}`}>
-                  <game.icon className="w-3.5 h-3.5 text-white" />
-                </span>
-                <span className="text-[11.5px] font-semibold text-white/60">{game.name}</span>
-              </button>
-            ))}
+            {/* ── Core ── */}
+            <div className="flex flex-col gap-0.5">
+              <GroupLabel>Core</GroupLabel>
+              {renderToolRow('Daily Feed', <Newspaper className="w-3.5 h-3.5" />, 'text-emerald-400', '/daily-feed')}
+              {renderToolRow('Calendar', <Calendar className="w-3.5 h-3.5" />, 'text-orange-400', '/calendar')}
+              {renderToolRow('Co-Author', <FileText className="w-3.5 h-3.5" />, 'text-blue-400', '/co-author')}
+              {renderToolRow('Insights', <Lightbulb className="w-3.5 h-3.5" />, 'text-amber-400', '/insights')}
+              {renderToolRow('Morning Journal', <Sunrise className="w-3.5 h-3.5" />, 'text-amber-400', '/morning-journal')}
+              {renderToolRow('Profile', <User className="w-3.5 h-3.5" />, 'text-slate-300', '/profile')}
+            </div>
+
+            {/* ── Connect ── */}
+            <div className="flex flex-col gap-0.5">
+              <GroupLabel>Connect</GroupLabel>
+              {renderToolRow('Atlas', <Bot className="w-3.5 h-3.5" />, 'text-slate-300', '/atlas')}
+              {renderToolRow('Navi', <MapPin className="w-3.5 h-3.5" />, 'text-emerald-400', '/local-explorer')}
+              {renderToolRow('Group Chat', <UsersRound className="w-3.5 h-3.5" />, 'text-teal-400', '/group-chat')}
+              {renderToolRow('Velvet Rope', <Zap className="w-3.5 h-3.5" />, 'text-pink-400', '/real-or-not')}
+              {/* Games */}
+              <div className="mt-1">
+                <p className="text-[9px] font-bold tracking-widest uppercase text-white/30 px-2 pt-1 pb-1 select-none">Games</p>
+                {GAMES.slice(0, 4).map(game => (
+                  <button
+                    key={game.id}
+                    onClick={() => lobby.handleGameClick(game)}
+                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
+                  >
+                    <span className={`flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0 bg-gradient-to-br ${game.iconBg}`}>
+                      <game.icon className="w-3.5 h-3.5 text-white" />
+                    </span>
+                    <span className="text-[11.5px] font-semibold text-white/60">{game.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </aside>
 
-        {/* Main content — the feed */}
+        {/* Main content — the feed or videos */}
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Quiet check-in note at top of feed */}
           <AnimatePresence>
@@ -296,6 +353,19 @@ export function HomeV3Page() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Feed / Your Lens toggle */}
+          <div className="flex items-center justify-center px-4 py-2 flex-shrink-0 border-b border-white/8">
+            <Segmented
+              value={feedTab}
+              onChange={(v) => setFeedTab(v)}
+              size="md"
+              options={[
+                { value: 'feed', label: 'Feed', icon: <Newspaper className="w-3.5 h-3.5" /> },
+                { value: 'videos', label: 'Your Lens', icon: <PlayCircle className="w-3.5 h-3.5" /> },
+              ]}
+            />
+          </div>
 
           {/* Mobile person strip */}
           <div className="sm:hidden flex items-center gap-2 px-3 py-2 overflow-x-auto scrollbar-hide flex-shrink-0">
@@ -324,9 +394,9 @@ export function HomeV3Page() {
             ))}
           </div>
 
-          <Suspense fallback={<LoadingState label="Loading your feed..." />}>
+          <Suspense fallback={<LoadingState label={`Loading your ${feedTab === 'feed' ? 'feed' : 'lens'}...`} />}>
             <div className="flex-1 overflow-y-auto">
-              <DailyFeedPage onBack={undefined} />
+              {feedTab === 'feed' ? <DailyFeedPage onBack={undefined} /> : <VideoHistoryPage />}
             </div>
           </Suspense>
         </div>

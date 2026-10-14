@@ -18,6 +18,7 @@ const SettingsPage = lazy(() => import('../pages/SettingsPage').then(m => ({ def
 const BillingPage = lazy(() => import('../pages/BillingPage').then(m => ({ default: m.BillingPage })));
 const CoAuthorPage = lazy(() => import('../pages/CoAuthorPage').then(m => ({ default: m.CoAuthorPage })));
 const CoachingProgressPage = lazy(() => import('../pages/CoachingProgressPage').then(m => ({ default: m.CoachingProgressPage })));
+const CoachingCommitmentsPage = lazy(() => import('../pages/CoachingCommitmentsPage').then(m => ({ default: m.CoachingCommitmentsPage })));
 const RealOrNotPage = lazy(() => import('../pages/RealOrNotPage').then(m => ({ default: m.RealOrNotPage })));
 const AtlasPage = lazy(() => import('../pages/AtlasPage').then(m => ({ default: m.AtlasPage })));
 const LocalExplorerPage = lazy(() => import('../pages/LocalExplorerPage').then(m => ({ default: m.LocalExplorerPage })));
@@ -46,6 +47,7 @@ export const appRoutes = [
   <Route key="videos" path="/videos" element={P(<VideoHistoryPage />)} />,
   <Route key="pricing" path="/pricing" element={P(<PricingPageRoute />)} />,
   <Route key="coaching-progress" path="/coaching-progress" element={P(<CoachingProgressPage />)} />,
+  <Route key="coaching-commitments" path="/coaching-commitments" element={P(<CoachingCommitmentsPage />)} />,
   <Route key="co-author" path="/co-author" element={P(<CoAuthorPage />)} />,
   <Route key="atlas" path="/atlas" element={P(<AtlasPage />)} />,
   <Route key="local-explorer" path="/local-explorer" element={P(<LocalExplorerPage />)} />,
