@@ -62,7 +62,9 @@ export function CoachingProgressPage() {
 
   const stats = getWeeklyStats(commitments);
 
-  const activeCommitments = commitments.filter(c => c.status === 'pending' || c.status === 'missed');
+  const activeCommitments = commitments.filter(c =>
+    c.status === 'pending' || c.status === 'in_progress' || c.status === 'missed'
+  );
   const completedCommitments = commitments.filter(c => c.status === 'completed');
   const filteredCommitments = filter === 'active'
     ? activeCommitments

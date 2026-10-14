@@ -37,9 +37,9 @@ export function CoachingCommitmentsPage() {
       navigate('/splash', { replace: true });
       return;
     }
-    const comms = await getCommitments(user.id);
+    const comms = await getCommitments(user.id, companionId);
     setCommitments(comms);
-  }, [navigate]);
+  }, [navigate, companionId]);
 
   useEffect(() => {
     loadData().finally(() => setLoading(false));
@@ -177,11 +177,11 @@ export function CoachingCommitmentsPage() {
                 </button>
               )}
               <button
-                onClick={() => navigate('/coaching-progress')}
+                onClick={() => navigate(hasCompanionContext ? '/lobby' : '/coaching-progress')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                Progress
+                {hasCompanionContext ? 'Lobby' : 'Progress'}
               </button>
             </div>
           }
@@ -257,7 +257,6 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
-                  companionId={companionId}
                 />
               )}
               {dueToday.length > 0 && (
@@ -276,7 +275,6 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
-                  companionId={companionId}
                 />
               )}
               {dueThisWeek.length > 0 && (
@@ -295,7 +293,6 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
-                  companionId={companionId}
                 />
               )}
               {noDeadline.length > 0 && (
@@ -314,7 +311,6 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
-                  companionId={companionId}
                 />
               )}
               {missedCommitments.length > 0 && (
@@ -333,7 +329,6 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
-                  companionId={companionId}
                 />
               )}
               {activeCommitments.length === 0 && (
@@ -363,7 +358,6 @@ export function CoachingCommitmentsPage() {
                     onDelete={() => handleDelete(commitment.id)}
                     onSaveProgress={() => handleSaveProgress(commitment.id)}
                     updating={updatingId === commitment.id}
-                    companionId={companionId}
                   />
                 ))}
               </AnimatePresence>
@@ -404,7 +398,7 @@ function MiniStat({ icon, label, value, tone }: { icon: React.ReactNode; label: 
 
 function CommitmentSection({
   title, icon, tone, commitments, expandedId, progressDraft, setProgressDraft,
-  onExpand, onComplete, onStart, onRenegotiate, onDelete, onSaveProgress, updatingId, companionId,
+  onExpand, onComplete, onStart, onRenegotiate, onDelete, onSaveProgress, updatingId,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -420,7 +414,6 @@ function CommitmentSection({
   onDelete: (id: string) => void;
   onSaveProgress: (id: string) => void;
   updatingId: string | null;
-  companionId: string | null;
 }) {
   return (
     <div>
@@ -445,7 +438,6 @@ function CommitmentSection({
               onDelete={() => onDelete(commitment.id)}
               onSaveProgress={() => onSaveProgress(commitment.id)}
               updating={updatingId === commitment.id}
-              companionId={companionId}
             />
           ))}
         </AnimatePresence>
@@ -456,7 +448,7 @@ function CommitmentSection({
 
 function CommitmentRow({
   commitment, expanded, progressDraft, setProgressDraft, onExpand,
-  onComplete, onStart, onRenegotiate, onDelete, onSaveProgress, updating, companionId,
+  onComplete, onStart, onRenegotiate, onDelete, onSaveProgress, updating,
 }: {
   commitment: CoachingCommitment;
   expanded: boolean;
@@ -469,7 +461,6 @@ function CommitmentRow({
   onDelete: () => void;
   onSaveProgress: () => void;
   updating: boolean;
-  companionId: string | null;
 }) {
   const isDone = commitment.status === 'completed';
   const isMissed = commitment.status === 'missed';
@@ -588,7 +579,6 @@ function CommitmentRow({
               {/* Progress note */}
               <div className="mb-3">
                 <label className="text-xs text-ink-muted mb-1.5 block">Progress Note</label>
-                {commitment.progress_note && !expanded ? null : null}
                 <textarea
                   value={expanded ? progressDraft || commitment.progress_note || '' : commitment.progress_note || ''}
                   onChange={(e) => setProgressDraft(e.target.value)}

@@ -16,6 +16,7 @@ export interface CoachingCommitment {
   progress_note?: string | null;
   is_user_created?: boolean;
   category?: string | null;
+  extracted_from_message?: string | null;
 }
 
 export interface CoachingGoal {
@@ -39,8 +40,8 @@ export interface WeeklyStats {
   streak: number;
 }
 
-export async function getCommitments(userId: string): Promise<CoachingCommitment[]> {
-  const { data, error } = await supabase
+export async function getCommitments(userId: string, companionId?: string | null): Promise<CoachingCommitment[]> {
+  let query = supabase
     .from('coaching_commitments')
     .select(`
       id,
@@ -53,10 +54,17 @@ export async function getCommitments(userId: string): Promise<CoachingCommitment
       created_at,
       progress_note,
       is_user_created,
-      category
+      category,
+      extracted_from_message
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
+
+  if (companionId) {
+    query = query.eq('companion_id', companionId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('[coachingService] getCommitments error:', error);
@@ -188,7 +196,7 @@ export function getWeeklyStats(commitments: CoachingCommitment[]): WeeklyStats {
   const thisWeek = commitments.filter(c => new Date(c.created_at) >= weekAgo);
   const kept = thisWeek.filter(c => c.status === 'completed').length;
   const missed = thisWeek.filter(c => c.status === 'missed').length;
-  const pending = thisWeek.filter(c => c.status === 'pending').length;
+  const pending = thisWeek.filter(c => c.status === 'pending' || c.status === 'in_progress').length;
 
   const streak = calculateStreak(commitments);
 
