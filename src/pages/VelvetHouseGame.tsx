@@ -10,7 +10,7 @@ const SAVE_KEY = 'velvet-house-v1';
 const SYNC_INTERVAL_MS = 30_000;
 const GAME_TURN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/velvet-game-turn`;
 
-type GameLook = { skin?: string; hair?: string; hairColor?: string; top?: string };
+type GameLook = { skin?: string; hair?: string; hairColor?: string; top?: string; eyeColor?: string; facialHair?: string; glasses?: string };
 type GameError = Error & { code?: string };
 
 interface PlayerProfile {
@@ -38,10 +38,16 @@ function colorToHex(color: string | null | undefined): string | undefined {
 
 function hairFor(style: unknown, length: unknown): string {
   if (style === 'afro') return 'afro';
-  if (style === 'bun' || style === 'ponytail') return 'bun';
-  if (style === 'buzz' || style === 'fade' || style === 'short' || length === 'short') return 'short';
+  if (style === 'bun') return 'bun';
+  if (style === 'ponytail') return 'ponytail';
+  if (style === 'braids') return 'braids';
+  if (style === 'locs') return 'locs';
+  if (style === 'wavy') return 'wavy';
+  if (style === 'buzz') return 'buzz';
+  if (style === 'fade') return 'fade';
+  if (style === 'short' || length === 'short') return 'short';
   if (length === 'long') return 'long';
-  return ['curly', 'braids', 'locs'].includes(String(style)) ? 'long' : 'short';
+  return 'short';
 }
 
 function toGameLook(avatar: Record<string, unknown> | null | undefined, favoriteColor?: string | null): GameLook | undefined {
@@ -53,6 +59,9 @@ function toGameLook(avatar: Record<string, unknown> | null | undefined, favorite
     hairColor: isHex(avatar.hairColor) ? avatar.hairColor : undefined,
     hair: hairFor(avatar.hairStyle, length),
     top: colorToHex(favoriteColor),
+    eyeColor: isHex(avatar.eyeColor) ? avatar.eyeColor : undefined,
+    facialHair: typeof avatar.facialHair === 'string' ? avatar.facialHair : undefined,
+    glasses: typeof avatar.glasses === 'string' ? avatar.glasses : undefined,
   };
 }
 
@@ -181,6 +190,28 @@ export function VelvetHouseGame() {
       if (msg.type === 'velvet:ready') {
         setLoading(false);
         connectGame(msg.needsProfile === true).catch(() => {});
+      }
+      if (msg.type === 'velvet:vidSearch' && typeof msg.query === 'string') {
+        const seq = msg.seq;
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-video-search`;
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+          body: JSON.stringify({ query: msg.query, userContext: 'Velvet House in-game TV' }),
+        })
+          .then(r => r.json())
+          .then(data => {
+            iframeRef.current?.contentWindow?.postMessage(
+              { type: 'velvet:vidResults', seq, videos: data.videos || [] },
+              window.location.origin,
+            );
+          })
+          .catch(() => {
+            iframeRef.current?.contentWindow?.postMessage(
+              { type: 'velvet:vidResults', seq, videos: [] },
+              window.location.origin,
+            );
+          });
       }
     };
     const onUnload = () => { syncToSupabase(); };

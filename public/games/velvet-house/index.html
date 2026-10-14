@@ -118,6 +118,18 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:640/440}
 .thbar{display:flex;gap:8px}
 .watch{display:flex;gap:8px;flex-wrap:wrap}
 .watch input[type=text]{flex:1 1 180px;max-width:none}
+.vidsearch{display:grid;gap:6px;max-height:240px;overflow-y:auto;padding:2px}
+.vidsearch[hidden]{display:none}
+.vidresult{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);cursor:pointer;transition:border-color .15s}
+.vidresult:hover{border-color:var(--accent)}
+.vidresult img{width:80px;height:45px;object-fit:cover;border-radius:4px;flex-shrink:0;background:#000}
+.vidresult .vr-info{min-width:0;flex:1}
+.vidresult .vr-title{font-size:13px;font-weight:600;line-height:1.3;margin:0 0 2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vidresult .vr-chan{font-size:11.5px;color:var(--muted);margin:0}
+.vidsearch .vr-empty{font-size:13px;color:var(--muted);padding:8px 4px}
+.vidsearch .vr-loading{font-size:13px;color:var(--muted);padding:8px 4px;display:flex;align-items:center;gap:6px}
+.vidsearch .vr-spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:vrspin .6s linear infinite}
+@keyframes vrspin{to{transform:rotate(360deg)}}
 select{font:inherit;font-size:13.5px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:4px 8px;max-width:100%;min-width:0}
 .chgs{display:grid;gap:6px}
 .chg{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px}
@@ -367,7 +379,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
           <button class="act" type="button" data-act="snowman" aria-pressed="false">Build a snowman</button>
         </div>
         <h3>Watch something</h3>
-        <form class="watch" id="watchForm" autocomplete="off"><input id="vidUrl" type="text" placeholder="Paste a YouTube link" aria-label="YouTube link"><button type="submit" class="act">Play</button><button type="button" class="act" id="vidStop">Stop</button></form>
+        <form class="watch" id="watchForm" autocomplete="off"><input id="vidUrl" type="text" placeholder="Paste a YouTube link or search..." aria-label="YouTube link or search"><button type="submit" class="act">Play</button><button type="button" class="act" id="vidStop">Stop</button></form>
+        <div class="vidsearch" id="vidSearch" hidden></div>
         <p class="quiet" id="vidNote">Plays on the TV, or the projector if you have one. Maya may join you.</p>
         <h3>Out the door</h3>
         <div class="actions">
@@ -453,7 +466,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   // character looks
   // ======================================================================
   const SKINS = ['#F2D3B5', '#E1B38C', '#C68E62', '#9E6B45', '#7A4E31', '#4F3220'];
-  const HAIRS = [{ label: 'Short', value: 'short' }, { label: 'Afro', value: 'afro' }, { label: 'Long', value: 'long' }, { label: 'Bun', value: 'bun' }];
+  const HAIRS = [{ label: 'Short', value: 'short' }, { label: 'Afro', value: 'afro' }, { label: 'Long', value: 'long' }, { label: 'Bun', value: 'bun' }, { label: 'Wavy', value: 'wavy' }, { label: 'Braids', value: 'braids' }, { label: 'Ponytail', value: 'ponytail' }, { label: 'Locs', value: 'locs' }, { label: 'Buzz', value: 'buzz' }, { label: 'Fade', value: 'fade' }];
   const HAIR_COLORS = ['#1E1612', '#4A2E1E', '#8C5A2B', '#C9A24A', '#A63A2C', '#6B6F86'];
   const TOPS = ['#8A2D54', '#3D6B73', '#E0A43A', '#4A5DA8', '#F2EEE8', '#2B2B30'];
   const look = { skin: '#9E6B45', hair: 'afro', hairColor: '#1E1612', top: '#4A5DA8' };
@@ -1408,17 +1421,34 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     else if (h === 'bucket') { ctx.beginPath(); ctx.ellipse(hx, hy - 4, 7.8, 6.4, 0, Math.PI, Math.PI * 2); ctx.fillStyle = hc; ctx.fill(); ell(hx, hy - 3.6, 11, 2.6, shade(hc, -0.12)); }
     else if (h === 'sunhat') { ell(hx, hy - 3.6, 15, 3.6, hc); ctx.beginPath(); ctx.ellipse(hx, hy - 4.5, 7.4, 6, 0, Math.PI, Math.PI * 2); ctx.fillStyle = hc; ctx.fill(); rr(hx - 7.4, hy - 6.4, 14.8, 1.8, 0.8, '#C2413A'); }
   }
-  function hairBack(hx, hy) { const c = L.hairColor; if (L.hair === 'afro') circle(hx, hy - 1.5, 11.8, c); if (L.hair === 'long') rr(hx - 8.8, hy - 4, 17.6, 17, 6, c); if (L.hair === 'bun') circle(hx - 1, hy - 10.5, 4.6, c); }
+  function hairBack(hx, hy) { const c = L.hairColor; const s = L.hair; if (s === 'afro') circle(hx, hy - 1.5, 11.8, c); if (s === 'long' || s === 'wavy') { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(hx, hy + 4, 9, 11, 0, 0, Math.PI * 2); ctx.fill(); } if (s === 'bun') { circle(hx, hy - 10.5, 4.6, c); ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(hx, hy + 3, 8, 8, 0, 0, Math.PI * 2); ctx.fill(); } if (s === 'braids') { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(hx, hy + 2, 8, 9, 0, 0, Math.PI * 2); ctx.fill(); for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(hx - 6, hy + 6 + i * 4, 2.5, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(hx + 6, hy + 6 + i * 4, 2.5, 3, 0, 0, Math.PI * 2); ctx.fill(); } } if (s === 'ponytail') { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(hx + 6, hy + 4, 3, 8, 0.3, 0, Math.PI * 2); ctx.fill(); } if (s === 'locs') { ctx.fillStyle = c; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(hx + i * 3.5, hy + 5, 2, 7, 0, 0, Math.PI * 2); ctx.fill(); } } if (s === 'buzz' || s === 'fade') { /* minimal back hair */ } }
+  function drawHairFront(hx, hy) { const c = L.hairColor; const s = L.hair; if (s === 'afro') { ctx.beginPath(); ctx.ellipse(hx, hy - 3.8, 9.6, 5.6, 0, Math.PI, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); } else if (s === 'buzz' || s === 'fade') { ctx.beginPath(); ctx.ellipse(hx, hy - 1.8, 8.2, 4.2, 0, Math.PI, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); } else if (s === 'wavy') { ctx.beginPath(); ctx.moveTo(hx - 8.5, hy - 1); ctx.quadraticCurveTo(hx - 7, hy - 8, hx - 3, hy - 6); ctx.quadraticCurveTo(hx, hy - 9, hx + 3, hy - 6); ctx.quadraticCurveTo(hx + 7, hy - 8, hx + 8.5, hy - 1); ctx.fillStyle = c; ctx.fill(); } else if (s === 'braids' || s === 'locs') { ctx.beginPath(); ctx.ellipse(hx, hy - 2.8, 8.5, 5.8, 0, Math.PI, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); } else if (s === 'ponytail') { ctx.beginPath(); ctx.ellipse(hx, hy - 2.4, 8.7, 6.6, 0, Math.PI, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); } else { ctx.beginPath(); ctx.ellipse(hx, hy - 2.4, 8.7, 6.6, 0, Math.PI, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); ell(hx + 3, hy - 4.4, 4.4, 2.6, c); } }
   function drawHead(hx, hy, front, mouthOpen) {
     const c = L.hairColor; hairBack(hx, hy); circle(hx, hy, 8, L.skin);
-    if (!front) { circle(hx, hy - 0.6, 8.4, c); hatAndGlasses(hx, hy, false); return; }
-    if (L.hair === 'afro') { ctx.beginPath(); ctx.ellipse(hx, hy - 3.8, 9.6, 5.6, 0, Math.PI, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); }
-    else { ctx.beginPath(); ctx.ellipse(hx, hy - 2.4, 8.7, 6.6, 0, Math.PI, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); ell(hx + 3, hy - 4.4, 4.4, 2.6, c); }
+    // soft face shading
+    ctx.save(); ctx.beginPath(); ctx.arc(hx + 3, hy + 2, 6, 0, Math.PI * 2); ctx.clip(); ctx.fillStyle = shade(L.skin, -0.12); ctx.globalAlpha = 0.3; ctx.beginPath(); ctx.arc(hx + 4, hy + 3, 5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    if (!front) { drawHairFront(hx, hy); hatAndGlasses(hx, hy, false); return; }
+    drawHairFront(hx, hy);
     const fo = 1.6;
-    circle(hx + fo - 3.1, hy + 0.8, 1.15, '#241C22'); circle(hx + fo + 2.7, hy + 0.8, 1.15, '#241C22');
-    circle(hx + fo - 4.6, hy + 3.2, 1.8, 'rgba(220,100,110,.18)'); circle(hx + fo + 4.4, hy + 3.2, 1.8, 'rgba(220,100,110,.18)');
+    // eyes with iris highlight
+    const ey = hy + 0.8, blink = (Math.sin(performance.now() / 3000 + hx) > 0.97) ? 0.15 : 1;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(hx + fo - 3.1, ey, 1.8, 1.4 * blink, 0, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(hx + fo + 2.7, ey, 1.8, 1.4 * blink, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = L.eyeColor || '#3A2A1A'; ctx.beginPath(); ctx.arc(hx + fo - 3.1, ey, 1.1 * blink, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(hx + fo + 2.7, ey, 1.1 * blink, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#0a0a0a'; ctx.beginPath(); ctx.arc(hx + fo - 3.1, ey, 0.55 * blink, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(hx + fo + 2.7, ey, 0.55 * blink, 0, Math.PI * 2); ctx.fill();
+    if (blink > 0.5) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(hx + fo - 3.6, ey - 0.4, 0.4, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(hx + fo + 2.2, ey - 0.4, 0.4, 0, Math.PI * 2); ctx.fill(); }
+    // eyebrows
+    ctx.strokeStyle = c; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+    const mood = S && S.mood ? S.mood : (S && S.emote === 'happy' ? 'happy' : S && S.emote === 'sad' ? 'sad' : null);
+    const browY = mood === 'sad' ? hy - 0.5 : hy - 1.2;
+    ctx.beginPath(); ctx.moveTo(hx + fo - 4.5, browY); ctx.quadraticCurveTo(hx + fo - 3.1, browY - 0.8, hx + fo - 1.8, browY - 0.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx + fo + 1.4, browY - 0.3); ctx.quadraticCurveTo(hx + fo + 2.7, browY - 0.8, hx + fo + 4.2, browY); ctx.stroke();
+    // cheeks (subtle blush)
+    ctx.fillStyle = 'rgba(220,100,110,.12)'; ctx.beginPath(); ctx.arc(hx + fo - 4.6, hy + 3.2, 1.8, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(hx + fo + 4.4, hy + 3.2, 1.8, 0, Math.PI * 2); ctx.fill();
+    // mouth — mood-based
     if (mouthOpen) ell(hx + fo - 0.2, hy + 4.4, 1.6, 1.3, '#5A2A2A');
-    else { ctx.strokeStyle = '#5A2A2A'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx + fo - 0.2, hy + 3.4, 1.9, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke(); }
+    else { ctx.strokeStyle = '#5A2A2A'; ctx.lineWidth = 1; ctx.beginPath(); if (mood === 'happy') ctx.arc(hx + fo - 0.2, hy + 3.2, 2.2, 0.15 * Math.PI, 0.85 * Math.PI); else if (mood === 'sad') ctx.arc(hx + fo - 0.2, hy + 4.6, 2.2, 1.15 * Math.PI, 1.85 * Math.PI); else ctx.arc(hx + fo - 0.2, hy + 3.4, 1.9, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke(); }
+    // facial hair
+    if (L.facialHair === 'stubble') { ctx.fillStyle = c; ctx.globalAlpha = 0.25; for (let i = 0; i < 40; i++) { const a = (i / 40) * Math.PI * 2; ctx.beginPath(); ctx.arc(hx + fo + Math.cos(a) * 5, hy + 4 + Math.sin(a) * 3, 0.5, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; } else if (L.facialHair === 'beard') { ctx.fillStyle = c; ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.ellipse(hx + fo - 0.2, hy + 5, 6, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
     hatAndGlasses(hx, hy, true);
   }
   const talking = (t) => S.speaking && Math.sin(t * 18) > 0;
@@ -1506,7 +1536,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     const br = Math.sin(t * 1.6 + (S === maya ? 2 : 0)) * 0.6;
     rr(6, -7 - br * 0.4, 36, 14 + br * 0.8, 6.5, L.top); limb(38, -2.5, 50, -2.5, legCol(), 5.5); limb(38, 2.5, 50, 2.5, legCol(), 5.5);
     const c = L.hairColor;
-    if (L.hair === 'afro') circle(-4, 0, 11, c); else if (L.hair === 'long') rr(-14, -9, 13, 18, 6, c); else if (L.hair === 'bun') circle(-11, 0, 4.4, c);
+    if (L.hair === 'afro') circle(-4, 0, 11, c); else if (L.hair === 'long' || L.hair === 'wavy') rr(-14, -9, 13, 18, 6, c); else if (L.hair === 'bun') circle(-11, 0, 4.4, c); else if (L.hair === 'braids' || L.hair === 'locs') { circle(-4, 0, 8, c); rr(-12, -2, 4, 12, 2, c); rr(0, -2, 4, 12, 2, c); } else if (L.hair === 'ponytail') circle(-4, 0, 8, c);
     circle(0, 0, 7.6, L.skin); ctx.beginPath(); ctx.ellipse(-3, 0, 5.4, 8, 0, Math.PI * 0.5, Math.PI * 1.5); ctx.fillStyle = c; ctx.fill();
     ctx.strokeStyle = '#241C22'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(1.6, -2.8, 1.4, 0.1, Math.PI - 0.1); ctx.stroke(); ctx.beginPath(); ctx.arc(1.6, 2.8, 1.4, 0.1, Math.PI - 0.1); ctx.stroke();
   }
@@ -3218,7 +3248,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   function drawCouch() {
     const c2 = $('couchCv'), g = c2.getContext('2d'), prev = ctx; ctx = g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 320, 70);
     rr(40, 34, 240, 40, 12, '#2E3F42'); rr(30, 44, 30, 30, 8, '#26363A'); rr(260, 44, 30, 30, 8, '#26363A');
-    const head = (x, lk, lean) => { const c = lk.hairColor; if (lk.hair === 'afro') circle(x, 30, 17, c); else if (lk.hair === 'long') { rr(x - 14, 22, 28, 34, 10, c); circle(x, 28, 14, c); } else if (lk.hair === 'bun') { circle(x, 28, 13, c); circle(x, 12, 6, c); } else circle(x, 29, 13.5, c); rr(x - 16, 42, 32, 26, 10, lean); };
+    const head = (x, lk, lean) => { const c = lk.hairColor; if (lk.hair === 'afro') circle(x, 30, 17, c); else if (lk.hair === 'long' || lk.hair === 'wavy') { rr(x - 14, 22, 28, 34, 10, c); circle(x, 28, 14, c); } else if (lk.hair === 'bun') { circle(x, 28, 13, c); circle(x, 12, 6, c); } else if (lk.hair === 'braids' || lk.hair === 'locs') { circle(x, 28, 13, c); rr(x - 10, 30, 6, 20, 3, c); rr(x + 4, 30, 6, 20, 3, c); } else if (lk.hair === 'ponytail') { circle(x, 28, 13, c); rr(x + 8, 26, 5, 16, 2, c); } else circle(x, 29, 13.5, c); rr(x - 16, 42, 32, 26, 10, lean); };
     if (doing(maya, 'movie')) head(196, maya.look, maya.look.top);
     head(doing(maya, 'movie') ? 128 : 160, look, look.top);
     ctx = prev;
@@ -4014,8 +4044,14 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   });
   $('arrangeBtn').addEventListener('click', () => setArranging(!arranging));
   $('inviteBtn').addEventListener('click', inviteOrder);
-  $('watchForm').addEventListener('submit', (e) => { e.preventDefault(); const id = ytId($('vidUrl').value); if (!id) { $('vidNote').textContent = "That doesn't look like a YouTube link. Try one like youtube.com/watch?v=... or youtu.be/..."; return; } playVideo(id); });
+  let vidSearchTimer = null, vidSearchSeq = 0;
+  function showVidSearchLoading() { const el = $('vidSearch'); el.hidden = false; el.innerHTML = '<div class="vr-loading"><span class="vr-spin"></span>Searching YouTube...</div>'; }
+  function renderVidResults(videos) { const el = $('vidSearch'); if (!videos || !videos.length) { el.innerHTML = '<p class="vr-empty">No results. Try a different search.</p>'; return; } el.hidden = false; el.innerHTML = ''; videos.forEach(v => { const r = document.createElement('div'); r.className = 'vidresult'; r.innerHTML = `<img src="${v.thumbnail || ''}" alt="" loading="lazy"><div class="vr-info"><p class="vr-title">${(v.title || '').replace(/</g,'&lt;')}</p><p class="vr-chan">${(v.channelTitle || '').replace(/</g,'&lt;')}</p></div>`; r.addEventListener('click', () => { $('vidUrl').value = ''; el.hidden = true; el.innerHTML = ''; playVideo(v.id); }); el.appendChild(r); }); }
+  function doVidSearch(q) { vidSearchSeq++; const seq = vidSearchSeq; showVidSearchLoading(); try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'velvet:vidSearch', game: 'velvet-house', query: q, seq }, '*'); } catch (e) {} const timeout = setTimeout(() => { if (vidSearchSeq === seq) { const el = $('vidSearch'); el.innerHTML = '<p class="vr-empty">Search timed out. Paste a YouTube link directly instead.</p>'; } }, 12000); }
+  $('vidUrl').addEventListener('input', () => { const v = $('vidUrl').value.trim(); clearTimeout(vidSearchTimer); const el = $('vidSearch'); if (!v) { el.hidden = true; el.innerHTML = ''; return; } if (ytId(v)) { el.hidden = true; el.innerHTML = ''; return; } vidSearchTimer = setTimeout(() => doVidSearch(v), 600); });
+  $('watchForm').addEventListener('submit', (e) => { e.preventDefault(); const v = $('vidUrl').value.trim(); const id = ytId(v); if (id) { $('vidSearch').hidden = true; playVideo(id); return; } if (v) { doVidSearch(v); } else { $('vidNote').textContent = "Paste a YouTube link or type something to search."; } });
   $('vidStop').addEventListener('click', stopVideo); $('thStop').addEventListener('click', stopVideo);
+  window.addEventListener('message', (e) => { const d = e.data; if (!d || typeof d !== 'object' || d.type !== 'velvet:vidResults') return; if (d.seq !== vidSearchSeq) return; renderVidResults(d.videos || []); });
   $('thBack').addEventListener('click', () => { video.theater = false; setView(video.screen === 'proj' ? 0 : 1); follow = false; $('follow').checked = false; });
   const WALL_LABEL = { cut: 'Walls: cutaway', up: 'Walls: up', down: 'Walls: down' };
   function rotateView(dir) { VR = (VR + dir + 4) % 4; setOrigin(); buildAll(); viewFade = 0.6; Object.keys(wallH).forEach(k => delete wallH[k]); }
@@ -4450,7 +4486,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   function wordsToStyle(list, sign) { (Array.isArray(list) ? list : String(list || '').split(/[,;]/)).forEach(w => String(w).toLowerCase().split(/\W+/).forEach(x => { const k = STYLE.includes(x) ? x : STYLE_WORDS[x]; if (k) mayaStyle[k] = Math.max(-1, Math.min(1.2, (mayaStyle[k] || 0) + sign * 0.6)); })); }
   const clip = (v, n) => String(v || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
   const okColor = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
-  function applyLookFrom(src, dst) { if (!src || typeof src !== 'object') return; ['skin', 'hairColor', 'top'].forEach(k => { if (okColor(src[k])) dst[k] = src[k]; }); if (HAIRS.some(h => h.value === src.hair)) dst.hair = src.hair; }
+  function applyLookFrom(src, dst) { if (!src || typeof src !== 'object') return; ['skin', 'hairColor', 'top', 'eyeColor'].forEach(k => { if (okColor(src[k])) dst[k] = src[k]; }); if (HAIRS.some(h => h.value === src.hair)) dst.hair = src.hair; if (['none', 'stubble', 'beard', 'goatee', 'mustache'].includes(src.facialHair)) dst.facialHair = src.facialHair; if (['none', 'round', 'square', 'cat-eye', 'aviator', 'shades'].includes(src.glasses)) dst.glasses = src.glasses; }
   function applyVelvetProfile(d) {
     const pl = d.player || {}, cp = d.companion || {};
     const pn = clip(pl.name, 16), cn = clip(cp.name, 16);

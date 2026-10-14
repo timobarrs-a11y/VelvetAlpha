@@ -313,7 +313,7 @@ export function HomeV3Page() {
               {/* Games */}
               <div className="mt-1">
                 <p className="text-[9px] font-bold tracking-widest uppercase text-white/30 px-2 pt-1 pb-1 select-none">Games</p>
-                {GAMES.slice(0, 4).map(game => (
+                {GAMES.map(game => (
                   <button
                     key={game.id}
                     onClick={() => lobby.handleGameClick(game)}
