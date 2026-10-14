@@ -1,11 +1,11 @@
 import { supabase } from '../shared/supabase/client';
 
-export type CommitmentStatus = 'pending' | 'completed' | 'missed' | 'renegotiated';
+export type CommitmentStatus = 'pending' | 'in_progress' | 'completed' | 'missed' | 'renegotiated';
 export type GoalStatus = 'active' | 'completed' | 'paused' | 'abandoned';
 
 export interface CoachingCommitment {
   id: string;
-  companion_id: string;
+  companion_id: string | null;
   goal_id: string | null;
   description: string;
   due_date: string | null;
@@ -13,6 +13,9 @@ export interface CoachingCommitment {
   completed_at: string | null;
   created_at: string;
   companion_name?: string;
+  progress_note?: string | null;
+  is_user_created?: boolean;
+  category?: string | null;
 }
 
 export interface CoachingGoal {
@@ -47,7 +50,10 @@ export async function getCommitments(userId: string): Promise<CoachingCommitment
       due_date,
       status,
       completed_at,
-      created_at
+      created_at,
+      progress_note,
+      is_user_created,
+      category
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
@@ -61,7 +67,11 @@ export async function getCommitments(userId: string): Promise<CoachingCommitment
 
   if (commitments.length === 0) return commitments;
 
-  const companionIds = [...new Set(commitments.map(c => c.companion_id))];
+  const companionIds = [...new Set(commitments.map(c => c.companion_id).filter(Boolean))] as string[];
+  if (companionIds.length === 0) {
+    return commitments.map(c => ({ ...c, companion_name: c.is_user_created ? 'You' : 'Coach' }));
+  }
+
   const { data: companions } = await supabase
     .from('companions')
     .select('id, custom_name')
@@ -70,7 +80,7 @@ export async function getCommitments(userId: string): Promise<CoachingCommitment
   const nameMap = new Map((companions ?? []).map(c => [c.id, c.custom_name]));
   return commitments.map(c => ({
     ...c,
-    companion_name: nameMap.get(c.companion_id) ?? 'Coach',
+    companion_name: c.companion_id ? (nameMap.get(c.companion_id) ?? 'Coach') : 'You',
   }));
 }
 
@@ -101,6 +111,54 @@ export async function updateCommitmentStatus(
     patch.completed_at = new Date().toISOString();
   }
   await supabase.from('coaching_commitments').update(patch).eq('id', commitmentId);
+}
+
+export async function createCommitment(
+  userId: string,
+  params: {
+    description: string;
+    dueDate?: string | null;
+    companionId?: string | null;
+    category?: string | null;
+  },
+): Promise<CoachingCommitment | null> {
+  const { data, error } = await supabase
+    .from('coaching_commitments')
+    .insert({
+      user_id: userId,
+      companion_id: params.companionId ?? null,
+      description: params.description,
+      due_date: params.dueDate ?? null,
+      status: 'pending',
+      is_user_created: true,
+      category: params.category ?? null,
+    })
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    console.error('[coachingService] createCommitment error:', error);
+    return null;
+  }
+
+  return (data as CoachingCommitment) ?? null;
+}
+
+export async function updateProgressNote(
+  commitmentId: string,
+  note: string,
+): Promise<void> {
+  await supabase
+    .from('coaching_commitments')
+    .update({ progress_note: note, updated_at: new Date().toISOString() })
+    .eq('id', commitmentId);
+}
+
+export async function deleteCommitment(commitmentId: string): Promise<void> {
+  await supabase
+    .from('coaching_commitments')
+    .delete()
+    .eq('id', commitmentId);
 }
 
 export async function updateGoalProgress(
@@ -188,6 +246,8 @@ export function commitmentStatusColor(status: CommitmentStatus): string {
       return 'var(--ds-error, #ef4444)';
     case 'renegotiated':
       return 'var(--ds-warning, #f59e0b)';
+    case 'in_progress':
+      return 'var(--ds-accent, #3b82f6)';
     case 'pending':
     default:
       return 'var(--ds-accent, #3b82f6)';

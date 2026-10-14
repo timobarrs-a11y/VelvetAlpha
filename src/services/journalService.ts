@@ -128,18 +128,43 @@ class JournalService {
     sessionId: string,
     ratings: { mood: number; energy: number; focus: number }
   ): Promise<void> {
+    const payload = {
+      mood_rating: ratings.mood,
+      energy_rating: ratings.energy,
+      focus_rating: ratings.focus,
+      phase: 'revealed' as const,
+      updated_at: new Date().toISOString(),
+    };
+
     const { error } = await supabase
       .from('journal_sessions')
-      .update({
-        mood_rating: ratings.mood,
-        energy_rating: ratings.energy,
-        focus_rating: ratings.focus,
-        phase: 'revealed',
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', sessionId);
 
-    if (error) throw new Error(`Failed to save ratings: ${error.message}`);
+    if (error) {
+      console.error('[journalService] saveRatings error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+
+      const { error: retryError } = await supabase
+        .from('journal_sessions')
+        .update({
+          mood_rating: ratings.mood,
+          energy_rating: ratings.energy,
+          focus_rating: ratings.focus,
+          phase: 'revealed',
+        })
+        .eq('id', sessionId);
+
+      if (retryError) {
+        throw new Error(
+          `Could not save your ratings. Please try again. (${error.message || 'unknown error'})`
+        );
+      }
+    }
   }
 
   async saveJournalEntry(sessionId: string, entry: string): Promise<void> {

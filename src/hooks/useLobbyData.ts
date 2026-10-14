@@ -191,7 +191,11 @@ export function useLobbyData() {
   }, [navigate]);
 
   const openCompanion = useCallback((companion: CompanionWithLastMessage) => {
-    navigate(`/chat?companion=${companion.id}`);
+    if (companion.relationship_type === 'mentor') {
+      navigate(`/coaching-commitments?companion=${companion.id}&name=${encodeURIComponent(companion.custom_name)}`);
+    } else {
+      navigate(`/chat?companion=${companion.id}`);
+    }
   }, [navigate]);
 
   const openGroup = useCallback((groupId: string) => {
