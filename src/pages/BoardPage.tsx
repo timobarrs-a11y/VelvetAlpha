@@ -12,7 +12,6 @@ import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { CreatePostModal, ReportModal } from '../components/community/CommunityComponents';
 import { SmilieText } from '../components/community/SmilieText';
-import { firstYouTubeVideoId, YouTubeCardThumbnail } from '../components/community/YouTubeEmbed';
 import { smilieUrl } from '../config/smilieRegistry';
 import {
   fetchBoard, fetchPosts, deletePost, fetchReadPostIds,
@@ -270,17 +269,19 @@ export default function BoardPage() {
                   <div className="flex items-start gap-3 p-4">
                     <div className="w-2 h-2 rounded-full flex-shrink-0 mt-2.5 self-start" style={{ background: isUnread ? '#3b82f6' : 'transparent' }} />
 
-                    <div className="w-12 h-12 rounded-lg bg-white/[0.04] border border-white/8 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="w-14 h-14 rounded-lg bg-white/[0.04] border border-white/8 flex-shrink-0 overflow-hidden flex items-start justify-start">
                       {post.post_smilie && smilieUrl(post.post_smilie) ? (
                         <img
                           src={smilieUrl(post.post_smilie)!}
                           alt={`:${post.post_smilie}:`}
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-cover object-top"
                           loading="lazy"
                         />
                       ) : (
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-rose-400/50 to-violet-400/50 flex items-center justify-center text-[10px] font-bold text-white">
-                          {initials}
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-400/50 to-violet-400/50 flex items-center justify-center text-[10px] font-bold text-white">
+                            {initials}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -303,7 +304,6 @@ export default function BoardPage() {
                       <p className="text-sm text-white/50 mt-1 line-clamp-2 leading-relaxed">
                         <SmilieText text={post.body} smilieSize={16} />
                       </p>
-                      {(() => { const ytId = firstYouTubeVideoId(post.body); return ytId ? <YouTubeCardThumbnail videoId={ytId} onClick={() => navigate(`/community/post/${post.id}`)} /> : null; })()}
                       {post.edited_at && (
                         <span className="text-[10px] text-white/25 italic mt-1 inline-block">
                           (edited)

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { YouTubeService } from '../../services/youtubeService';
-import { Play, Youtube, ExternalLink } from 'lucide-react';
+import { Play, Youtube } from 'lucide-react';
 
 /**
  * Extracts YouTube URLs from text and returns segments so the caller can
@@ -42,14 +42,6 @@ export function extractYouTubeSegments(text: string): TextSegment[] {
 export function hasYouTubeUrl(text: string): boolean {
   YOUTUBE_REGEX.lastIndex = 0;
   return YOUTUBE_REGEX.test(text);
-}
-
-/** Return the first YouTube video id found in the text, if any. */
-export function firstYouTubeVideoId(text: string): string | null {
-  YOUTUBE_REGEX.lastIndex = 0;
-  const m = YOUTUBE_REGEX.exec(text);
-  if (!m) return null;
-  return YouTubeService.extractVideoId(m[0]) ?? m[4];
 }
 
 /**
@@ -98,53 +90,6 @@ export function InlineYouTubePlayer({ videoId }: { videoId: string }) {
       <div className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded bg-black/60 backdrop-blur-sm">
         <Youtube className="w-3.5 h-3.5 text-red-500" />
         <span className="text-[10px] text-white/80 font-medium">YouTube</span>
-      </div>
-    </button>
-  );
-}
-
-/**
- * Compact thumbnail card shown on post list cards. Clicking navigates to the
- * post detail where the full player lives.
- */
-export function YouTubeCardThumbnail({
-  videoId,
-  onClick,
-}: {
-  videoId: string;
-  onClick: () => void;
-}) {
-  const thumb = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      className="relative block w-full mt-2 rounded-lg overflow-hidden border border-white/10 group"
-    >
-      <div className="relative pt-[52%]">
-        <img
-          src={thumb}
-          alt="YouTube video thumbnail"
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/10" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-600/90 group-hover:bg-red-500 group-hover:scale-110 transition-all shadow-lg">
-            <Play className="w-4 h-4 text-white fill-white" />
-          </div>
-        </div>
-        <div className="absolute bottom-1.5 left-2 flex items-center gap-1">
-          <Youtube className="w-3.5 h-3.5 text-red-500" />
-          <span className="text-[10px] text-white/90 font-medium">Watch</span>
-        </div>
-        <div className="absolute bottom-1.5 right-2">
-          <ExternalLink className="w-3 h-3 text-white/50" />
-        </div>
       </div>
     </button>
   );
