@@ -13,6 +13,7 @@ import { useAudioScene } from '../hooks/useAudioScene';
 import { supabase } from '../shared/supabase/client';
 import {
   LoadingState, PageShell, Pill, HomeLayoutSwitch, Badge, Segmented,
+  ModalShell, EmptyState,
 } from '../shared/ui';
 import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { companionAvatarConfig, TONE_COLOR, FinishSetupCard } from '../components/lobby';
@@ -454,6 +455,46 @@ export function HomeV3Page() {
           </Suspense>
         </div>
       </div>
+
+      {/* Game partner modal */}
+      <ModalShell isOpen={lobby.showGameModal} onClose={() => lobby.setShowGameModal(false)} title="Choose Your Partner" size="md">
+        <p className="text-sm text-ink-muted mb-5">Select a companion to play with:</p>
+        {companions.length === 0 ? (
+          <EmptyState icon={<Heart className="w-8 h-8" />} title="No companions yet" description="Create a companion first to play games together." />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {companions.map(companion => (
+              <motion.button key={companion.id}
+                whileHover={{ scale: 1.015 }}
+                whileTap={{ scale: 0.985 }}
+                onClick={() => {
+                  const path = lobby.selectedGame?.path || '/pacman';
+                  lobby.setShowGameModal(false);
+                  navigate(`${path}?companion=${companion.id}`);
+                }}
+                className="ds-card ds-card--interactive p-4 text-left"
+                style={{ background: 'var(--ds-surface-2)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0" style={{ background: 'var(--ds-surface-sunken)' }}>
+                    <Avatar config={companionAvatarConfig(companion)} className="w-full h-full" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-ink font-display text-sm">{companion.custom_name}</p>
+                    <span className="mt-1 inline-flex">
+                      {companion.relationship_type === 'romantic'
+                        ? <Badge tone="#f472b6" icon={<Heart className="w-2.5 h-2.5" />}>Partner</Badge>
+                        : companion.relationship_type === 'mentor'
+                        ? <Badge tone={TONE_COLOR.coach} icon={<Target className="w-2.5 h-2.5" />}>Mentor</Badge>
+                        : <Badge tone="#38bdf8" icon={<UsersRound className="w-2.5 h-2.5" />}>Friend</Badge>
+                      }
+                    </span>
+                  </div>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        )}
+      </ModalShell>
     </div>
   );
 }
