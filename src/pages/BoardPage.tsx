@@ -265,7 +265,7 @@ export default function BoardPage() {
                       <img
                         src={smilieUrl(post.post_smilie)!}
                         alt={`:${post.post_smilie}:`}
-                        className="absolute inset-0 w-full h-full object-cover object-top"
+                        className="absolute inset-0 w-full h-full object-contain object-center p-1"
                         loading="lazy"
                       />
                     ) : (
