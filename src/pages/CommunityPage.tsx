@@ -6,7 +6,7 @@ import {
   ShieldCheck, Users, MessageCircle, Sparkles, ArrowRight, Search,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { CommunityIndexHeader } from '../components/community/CommunityHeroHeader';
+import { CommunityIndexHeader, HeaderStat } from '../components/community/CommunityHeroHeader';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { CreateBoardModal } from '../components/community/CommunityComponents';
@@ -141,14 +141,8 @@ export default function CommunityPage() {
           stats={
             !loading && approvedBoards.length > 0 ? (
               <>
-                <span className="flex items-center gap-1.5 text-xs text-white/40">
-                  <Users className="w-3.5 h-3.5" />
-                  <span className="font-semibold text-white/70 tabular-nums">{approvedBoards.length}</span> boards
-                </span>
-                <span className="flex items-center gap-1.5 text-xs text-white/40">
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span className="font-semibold text-white/70 tabular-nums">{totalPosts}</span> posts
-                </span>
+                <HeaderStat icon={Users} accent="#a78bfa" value={approvedBoards.length} label="Boards" />
+                <HeaderStat icon={MessageCircle} accent="#38bdf8" value={totalPosts} label="Posts" />
               </>
             ) : undefined
           }
