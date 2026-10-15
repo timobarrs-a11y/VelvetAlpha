@@ -6,7 +6,7 @@ import {
   ChevronRight, Flame, ArrowUpDown,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { BoardHeader, HeaderStat } from '../components/community/CommunityHeroHeader';
+import { BoardHeader, HeaderStat, LivePill } from '../components/community/CommunityHeroHeader';
 import { Button } from '../shared/ui/Button';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -123,6 +123,7 @@ export default function BoardPage() {
     (latest, p) => (!latest || p.created_at > latest ? p.created_at : latest),
     null,
   );
+  const isLive = latestActivity !== null && Date.now() - new Date(latestActivity).getTime() < 24 * 60 * 60 * 1000;
 
   return (
     <PageShell
@@ -152,6 +153,7 @@ export default function BoardPage() {
           }
           meta={
             <div className="flex items-center gap-2 flex-wrap">
+              {isLive && <LivePill accent={accent}>Active today</LivePill>}
               {board?.is_locked && (
                 <span className="flex items-center gap-1 text-xs text-amber-400/80">
                   <Lock className="w-3 h-3" />
