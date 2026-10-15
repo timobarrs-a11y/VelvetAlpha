@@ -251,7 +251,7 @@ export default function BoardPage() {
                 className="group"
               >
                 <div
-                  className={`rounded-xl border bg-white/[0.02] transition-all hover:bg-white/[0.04] hover:border-white/15 ${
+                  className={`flex overflow-hidden rounded-xl border bg-white/[0.02] transition-all hover:bg-white/[0.04] hover:border-white/15 ${
                     post.is_pinned
                       ? 'border-amber-500/20'
                       : isUnread
@@ -259,6 +259,27 @@ export default function BoardPage() {
                         : 'border-white/8'
                   }`}
                 >
+                  <div className="relative w-24 sm:w-32 flex-shrink-0 self-stretch bg-white/[0.04] border-r border-white/8 overflow-hidden">
+                    {post.post_smilie && smilieUrl(post.post_smilie) ? (
+                      <img
+                        src={smilieUrl(post.post_smilie)!}
+                        alt={`:${post.post_smilie}:`}
+                        className="absolute inset-0 w-full h-full object-cover object-top"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-400/50 to-violet-400/50 flex items-center justify-center text-xs font-bold text-white">
+                          {initials}
+                        </div>
+                      </div>
+                    )}
+                    {isUnread && (
+                      <span className="absolute top-2 left-2 w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-black/40" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
                   {post.is_pinned && (
                     <div className="flex items-center gap-1.5 px-4 pt-2.5 text-xs text-amber-400/70">
                       <Pin className="w-3 h-3" fill="currentColor" />
@@ -267,25 +288,6 @@ export default function BoardPage() {
                   )}
 
                   <div className="flex items-start gap-3 p-4">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0 mt-2.5 self-start" style={{ background: isUnread ? '#3b82f6' : 'transparent' }} />
-
-                    <div className="w-14 h-14 rounded-lg bg-white/[0.04] border border-white/8 flex-shrink-0 overflow-hidden flex items-start justify-start">
-                      {post.post_smilie && smilieUrl(post.post_smilie) ? (
-                        <img
-                          src={smilieUrl(post.post_smilie)!}
-                          alt={`:${post.post_smilie}:`}
-                          className="w-full h-full object-cover object-top"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-400/50 to-violet-400/50 flex items-center justify-center text-[10px] font-bold text-white">
-                            {initials}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
                     <button
                       onClick={() => navigate(`/community/post/${post.id}`)}
                       className="flex-1 min-w-0 text-left"
@@ -366,6 +368,7 @@ export default function BoardPage() {
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
+                  </div>
                   </div>
                 </div>
               </motion.div>
