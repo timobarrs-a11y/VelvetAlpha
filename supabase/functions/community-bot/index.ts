@@ -41,6 +41,13 @@ const MOOD_SMILIES: Record<string, string> = {
 };
 const MOOD_KEYS = Object.keys(MOOD_SMILIES);
 
+// Cost controls. The bot makes at most this many Claude calls in any rolling
+// 24h window (override with the BOT_MAX_DAILY_CALLS function secret), and it
+// leaves a board alone while real people have posted there recently.
+const DAILY_CALL_CAP = Number(Deno.env.get("BOT_MAX_DAILY_CALLS") ?? 40);
+const HUMAN_ACTIVITY_QUIET_HOURS = 24;
+let remainingCalls = 0;
+
 interface BoardRow {
   id: string;
   name: string;
@@ -225,6 +232,20 @@ async function runPosterBot(
       if (elapsed < s.post_frequency_hours) continue;
     }
 
+    if (remainingCalls <= 0) {
+      console.log("[community-bot] Daily Claude call cap reached, skipping remaining posts");
+      break;
+    }
+
+    // Leave the board alone while real people are posting in it
+    const { count: humanPosts } = await supabase
+      .from("community_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("board_id", s.board_id)
+      .eq("is_ai_generated", false)
+      .gte("created_at", new Date(now.getTime() - HUMAN_ACTIVITY_QUIET_HOURS * 60 * 60 * 1000).toISOString());
+    if ((humanPosts ?? 0) > 0) continue;
+
     // Fetch the board
     const { data: board } = await supabase
       .from("community_boards")
@@ -246,6 +267,7 @@ async function runPosterBot(
     const existingTitles = (existingPosts ?? []).map((p) => p.title);
 
     // Generate a post
+    remainingCalls--;
     const generated = await generatePost(anthropic, board);
     if (!generated) {
       await logRun(supabase, {
@@ -362,6 +384,10 @@ async function runResponderBot(
     if (alreadyReplied.has(post.id)) continue;
     if (recentlyProcessed.has(post.id)) continue;
     if (boardsRespondedThisRun.has(post.board_id)) continue;
+    if (remainingCalls <= 0) {
+      console.log("[community-bot] Daily Claude call cap reached, skipping remaining replies");
+      break;
+    }
 
     // Fetch board name
     const { data: board } = await supabase
@@ -372,6 +398,7 @@ async function runResponderBot(
 
     const boardName = board?.name ?? "the board";
 
+    remainingCalls--;
     const comment = await generateComment(anthropic, { title: post.title, body: post.body }, boardName);
     if (!comment) {
       await logRun(supabase, {
@@ -433,7 +460,14 @@ Deno.serve(async (req: Request) => {
       apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
     });
 
-    console.log("[community-bot] Starting bot run...");
+    // Each community_bot_runs row is one Claude call, so this is rolling 24h usage.
+    const { count: callsLast24h } = await supabase
+      .from("community_bot_runs")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    remainingCalls = DAILY_CALL_CAP - (callsLast24h ?? 0);
+
+    console.log(`[community-bot] Starting bot run (${remainingCalls} Claude calls left in daily cap)...`);
 
     await runPosterBot(supabase, anthropic);
     await runResponderBot(supabase, anthropic);
