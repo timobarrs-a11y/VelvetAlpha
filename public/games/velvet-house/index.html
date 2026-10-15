@@ -523,8 +523,11 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   const HAIRS = [{ label: 'Short', value: 'short' }, { label: 'Afro', value: 'afro' }, { label: 'Long', value: 'long' }, { label: 'Bun', value: 'bun' }, { label: 'Wavy', value: 'wavy' }, { label: 'Braids', value: 'braids' }, { label: 'Ponytail', value: 'ponytail' }, { label: 'Locs', value: 'locs' }, { label: 'Buzz', value: 'buzz' }, { label: 'Fade', value: 'fade' }];
   const HAIR_COLORS = ['#1E1612', '#4A2E1E', '#8C5A2B', '#C9A24A', '#A63A2C', '#6B6F86'];
   const TOPS = ['#8A2D54', '#3D6B73', '#E0A43A', '#4A5DA8', '#F2EEE8', '#2B2B30'];
-  const look = { skin: '#9E6B45', hair: 'afro', hairColor: '#1E1612', top: '#4A5DA8' };
-  try { const s = JSON.parse(localStorage.getItem('velvet-look') || 'null'); if (s) ['skin', 'hair', 'hairColor', 'top'].forEach(k => { if (s[k]) look[k] = s[k]; }); } catch (e) {}
+  const MALE_HAIRS = ['short', 'afro', 'braids', 'locs', 'buzz', 'fade', 'wavy'];
+  const FEMALE_HAIRS = ['short', 'afro', 'long', 'bun', 'wavy', 'braids', 'ponytail', 'locs'];
+  const genderedHair = (g, h) => (g === 'male' ? MALE_HAIRS : FEMALE_HAIRS).includes(h) ? h : (g === 'male' ? 'short' : 'long');
+  const look = { skin: '#9E6B45', hair: 'afro', hairColor: '#1E1612', top: '#4A5DA8', gender: 'male' };
+  try { const s = JSON.parse(localStorage.getItem('velvet-look') || 'null'); if (s) ['skin', 'hair', 'hairColor', 'top', 'gender'].forEach(k => { if (s[k]) look[k] = s[k]; }); if (look.hair) look.hair = genderedHair(look.gender || 'male', look.hair); } catch (e) {}
   const saveLook = () => { try { localStorage.setItem('velvet-look', JSON.stringify(look)); } catch (e) {} };
   let simName = 'Jordan';
 
@@ -1501,8 +1504,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     // mouth — mood-based
     if (mouthOpen) ell(hx + fo - 0.2, hy + 4.4, 1.6, 1.3, '#5A2A2A');
     else { ctx.strokeStyle = '#5A2A2A'; ctx.lineWidth = 1; ctx.beginPath(); if (mood === 'happy') ctx.arc(hx + fo - 0.2, hy + 3.2, 2.2, 0.15 * Math.PI, 0.85 * Math.PI); else if (mood === 'sad') ctx.arc(hx + fo - 0.2, hy + 4.6, 2.2, 1.15 * Math.PI, 1.85 * Math.PI); else ctx.arc(hx + fo - 0.2, hy + 3.4, 1.9, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke(); }
-    // facial hair
-    if (L.facialHair === 'stubble') { ctx.fillStyle = c; ctx.globalAlpha = 0.25; for (let i = 0; i < 40; i++) { const a = (i / 40) * Math.PI * 2; ctx.beginPath(); ctx.arc(hx + fo + Math.cos(a) * 5, hy + 4 + Math.sin(a) * 3, 0.5, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; } else if (L.facialHair === 'beard') { ctx.fillStyle = c; ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.ellipse(hx + fo - 0.2, hy + 5, 6, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+    // facial hair (male only)
+    if (L.gender === 'male' && L.facialHair === 'stubble') { ctx.fillStyle = c; ctx.globalAlpha = 0.25; for (let i = 0; i < 40; i++) { const a = (i / 40) * Math.PI * 2; ctx.beginPath(); ctx.arc(hx + fo + Math.cos(a) * 5, hy + 4 + Math.sin(a) * 3, 0.5, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; } else if (L.gender === 'male' && L.facialHair === 'beard') { ctx.fillStyle = c; ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.ellipse(hx + fo - 0.2, hy + 5, 6, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
     hatAndGlasses(hx, hy, true);
   }
   const talking = (t) => S.speaking && Math.sin(t * 18) > 0;
@@ -1542,7 +1545,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     if (L.bottom === 'shorts' && L.topStyle !== 'dress') { limb(-3, -20 + bob, (-3 + lf[0]) / 2, (-20 + bob + lf[1]) / 2, L.pants || PANTS, 6); limb(3, -20 + bob, (3 + rf[0]) / 2, (-20 + bob + rf[1]) / 2, L.pants || PANTS, 6); }
     ell(lf[0] + 1.2, lf[1] + 0.4, 3.4, 1.9, shoeCol()); ell(rf[0] + 1.2, rf[1] + 0.4, 3.4, 1.9, shoeCol());
     skirtShape(-22, bob);
-    const torso = () => { topShape(-7.5, -37 + bob, 15, 19, 5); rr(2.5, -36 + bob, 4.5, 17, 2.5, 'rgba(0,0,0,.08)'); };
+    const torso = () => { topShape(-7.5, -37 + bob, 15, 19, 5); if (L.gender === 'female') { ctx.fillStyle = shade(L.top, -0.06); ctx.beginPath(); ctx.ellipse(-3, -31 + bob, 3.2, 2.8, 0, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(3, -31 + bob, 3.2, 2.8, 0, 0, Math.PI * 2); ctx.fill(); } rr(2.5, -36 + bob, 4.5, 17, 2.5, 'rgba(0,0,0,.08)'); };
     const arms = () => { arm(-6.5, -34 + bob, lh[0], lh[1] + bob); arm(6.5, -34 + bob, rh[0], rh[1] + bob); };
     const front = S.front && p !== 'cook' && p !== 'switch' && p !== 'arcade';
     if (front || ['dance', 'shower', 'stretch', 'lift', 'run', 'listen', 'mop', 'wipe', 'pet', 'play', 'roll', 'mow'].includes(p)) { torso(); arms(); } else { arms(); torso(); }
@@ -1777,7 +1780,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   // ======================================================================
   function makeAgent(o) { return Object.assign({ level: 2, x: 0, y: 0, z: 0, alpha: 1, pose: 'stand', front: true, flip: 1, route: [], task: null, queue: [], idle: 1, emote: null, emoteT: 0, thinking: false, speaking: false, chatPip: false, carry: null, away: null, workedDay: 0 }, o); }
   const jordan = makeAgent({ look, needs: { energy: 45, food: 55, hygiene: 50, fun: 50, comfort: 70, social: 55 }, skills: { cooking: 1, fitness: 0 }, sched: { wake: 6.5, bed: 23, work: { leave: 7.75, start: 8, end: 15, wage: 20, job: 'the office' } } });
-  const maya = makeAgent({ look: { skin: '#7A4E31', hair: 'long', hairColor: '#2A1A12', top: '#E0A43A' }, needs: { energy: 35, food: 60, hygiene: 55, fun: 55, comfort: 70, social: 60 }, skills: { cooking: 3, fitness: 2 }, mood: 'sleepy', sched: { wake: 8.5, bed: 0.5, work: { leave: 10.5, start: 11, end: 17.5, wage: 18, job: 'the design studio' } } });
+  const maya = makeAgent({ look: { skin: '#7A4E31', hair: 'long', hairColor: '#2A1A12', top: '#E0A43A', gender: 'female' }, needs: { energy: 35, food: 60, hygiene: 55, fun: 55, comfort: 70, social: 60 }, skills: { cooking: 3, fitness: 2 }, mood: 'sleepy', sched: { wake: 8.5, bed: 0.5, work: { leave: 10.5, start: 11, end: 17.5, wage: 18, job: 'the design studio' } } });
   buildAll();
   function tuckIn(ch, sid) { const s = SLOTS[sid]; ch.level = s.level; ch.x = s.pos[0]; ch.y = s.pos[1]; ch.z = s.pos[2]; ch.pose = 'sleep'; ch.task = { name: 'sleep', phase: 'do', time: 0, slot: sid, dur: Infinity }; reserved[sid] = ch; }
   tuckIn(jordan, 'bed:b'); tuckIn(maya, 'bed:a');
@@ -2132,12 +2135,11 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   function placeCatalog(it) {
     const t = TYPES[it.type], lv = t.out ? 3 : viewLevel === 3 ? 1 : viewLevel;
     flags.furniture++;
-    const o = addObject(it.type, lv, startSpot(t, lv)); if (!o) { log(`No room for the ${t.name.toLowerCase()} on the ${LEVEL_NAMES[lv].toLowerCase()}.`); return null; }
-    if (t.cols) o.col = t.cols[it.selCol || 0];
-    o.flash = absMin() + 120;
-    log(`${t.name} is on the ${LEVEL_NAMES[lv].toLowerCase()}. Use Arrange to move it${t.cols ? ' or change its color' : ''}.`);
-    if (lv !== viewLevel && !arranging) setView(lv);
-    renderHobbies(); return o;
+    const contains = { type: it.type, level: lv, x: startSpot(t, lv)[0], y: startSpot(t, lv)[1], rot: 0 };
+    if (t.cols) contains.col = t.cols[it.selCol || 0];
+    queueDelivery(contains, (BOX_LABEL[it.type.toUpperCase()] || t.name.toUpperCase()), false);
+    log(`Ordered ${t.name.toLowerCase()}. The mover will bring it as a box — tap to unpack when it arrives.`);
+    return { id: 'pending-' + Date.now() };
   }
   // Maya's sense of style: a few tags she loves or can't stand, rolled fresh each game (or handed in from Velvet)
   const STYLE = ['warm', 'cool', 'bold', 'soft', 'natural', 'modern', 'vintage', 'playful', 'luxe', 'industrial', 'cozy', 'minimal'];
@@ -2168,7 +2170,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     if (!placementOk(o)) { const spot = autoPlace(o); if (!spot) { OBJS.pop(); return null; } }
     buildAll(); return o;
   }
-  function placeExtra(type, name) { flags.furniture++; const o = addObject(type, viewLevel, [4.6, 3.6]); if (!o) { log(`No room for a ${name.toLowerCase()} on this floor.`); return false; } log(`${name} set up on the ${LEVEL_NAMES[o.level].toLowerCase()}. Use Arrange to move it.`); return true; }
+  function placeExtra(type, name) { flags.furniture++; queueDelivery({ type, level: viewLevel, x: 4.6, y: 3.6, rot: 0 }, name.toUpperCase(), false); log(`Ordered ${name.toLowerCase()}. The mover will bring it as a box.`); return true; }
   function autoPlace(o) {
     const sx = o.x, sy = o.y, cands = [];
     for (let x = 0.15; x < WX - 0.3; x += 0.25) for (let y = 0.12; y < WY - 0.3; y += 0.25) cands.push([x, y, Math.hypot(x - sx, y - sy)]);
@@ -2189,7 +2191,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     if (item.pet) { const pt = adoptPet(item.pet); log(`${simName} brought home ${pt.name}, a ${pt.coat.n} ${pt.kind}. Bowls and a bed are on the main floor${pt.litter ? ', the litter box is in the basement' : ''}.`); if (mayaAround()) log(`Maya scooped up ${pt.name} and has not put ${pt.kind === 'cat' ? 'the cat' : 'the dog'} down since.`); renderPets(); }
     let placed = null;
     if (item.place) flags.furniture++;
-    if (item.place) { const o = placed = addObject(item.place.type, item.place.level, item.place.at, item.place.rot || 0); if (o) log(`${item.name} is set up on the ${LEVEL_NAMES[o.level].toLowerCase()}. Use Arrange to move it.`); }
+    if (item.place) { queueDelivery({ type: item.place.type, level: item.place.level, x: item.place.at[0], y: item.place.at[1], rot: item.place.rot || 0 }, (BOX_LABEL[item.place.type.toUpperCase()] || item.name.toUpperCase()), false); log(`Ordered ${item.name.toLowerCase()}. The mover will bring it as a box.`); }
     if (item.id === 'projector') { const o = addObject('sofa', 0, [6.0, 3.0], 2); if (o) log('The movie couch is set up facing the screen in the rec room.'); }
     if (item.id === 'records') document.querySelector('[data-act="records"]').hidden = false;
     if (item.id === 'arcade') document.querySelector('[data-act="arcade"]').hidden = false;
@@ -3323,7 +3325,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     calm: { label: 'Calm and thoughtful', text: 'Calm, thoughtful and quietly funny. Notices small things, gives honest advice, loves books, rainy days and long walks, and hates loud surprises.' },
     bubbly: { label: 'Bubbly and chaotic', text: 'Bubbly, affectionate and a little chaotic. Talks fast, gets excited about everything, loves dancing, snacks and reality TV, and hates sitting still.' },
     dry: { label: 'Dry and witty', text: 'Dry, witty and a little guarded. Shows love by teasing and doing small favors instead of saying it, loves movies and cooking, and hates small talk.' } };
-  const companion = { source: 'game', preset: 'warm', pronoun: 'she', bio: '', memories: [] };
+  const companion = { source: 'game', preset: 'warm', pronoun: 'she', gender: 'female', bio: '', memories: [] };
   const HER_OBJ = new Set(['to', 'and', 'up', 'down', 'out', 'off', 'on', 'in', 'a', 'an', 'the', 'about', 'back', 'for', 'with', 'at', 'from', 'over', 'into', 'some', 'it', 'that', 'this', 'what', 'how', 'when', 'so', 'too', 'again', 'alone', 'before', 'after', 'first', 'once', 'while', 'if', 'today', 'tonight', 'now', 'more', 'than', 'or', 'but', 'feel', 'know', 'go', 'get', 'come', 'down', 'laugh', 'smile', 'cry', 'think', 'want', 'look', 'pick']);
   function heSwap(s) {
     return s.replace(/\b(She|she)'s\b/g, (m, w) => (w === 'She' ? "He's" : "he's")).replace(/\bShe\b/g, 'He').replace(/\bshe\b/g, 'he').replace(/\bherself\b/g, 'himself').replace(/\bhers\b/g, 'his')
@@ -3456,7 +3458,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   function updateGuide() { const t = guideTarget(); if (t === guideEl) return; if (guideEl) guideEl.classList.remove('guide'); guideEl = t; if (t) t.classList.add('guide'); }
   function goalsTick() {
     if (!settleDone && !flags.openedTalk && day === 1 && minutes >= 9 * 60 + 2 && canTalk() && !chat.open && !arranging) {
-      flags.openedTalk = true; noticed = { topic: "it is move-in day. The truck just left, the house is full of boxes and every wall is primer white. Maya is excited and a little stressed about money, and wants to plan where to start making this place theirs (the couch first, then food, then one room they paint together)", until: absMin() + 240, line: "Okay. We actually live here now. Where do we even start?", ctx: null };
+      flags.openedTalk = true; noticed = { topic: "it is move-in day. The house is empty and full of possibility. Maya is excited about making this place theirs and wants to plan where to start (the couch first, then food, then one room they paint together)", until: absMin() + 240, line: "Okay. We actually live here now. Where do we even start?", ctx: null };
       interrupt(maya); maya.queue = []; startAct(maya, 'approach'); renderMayaActs(); log(P('Maya wants to talk about the new place.'));
     }
     updateGuide();
@@ -3493,19 +3495,76 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     const cr = document.createElement('p'); cr.className = 'quiet'; cr.textContent = `Job: ${CAREER[career.level].t} · $${CAREER[career.level].w}/hr${career.level < CAREER.length - 1 ? ` · next review ${Math.min(99, Math.round(career.perf / promoNeed() * 100))}%` : ' · top of the ladder'}`; el.appendChild(cr);
   }
 
-  // ---- move-in day ----
+  // ---- move-in day: staged box delivery via mover NPC ----
   const PACK = ['sofa', 'lamp1', 'plant1', 'desk', 'dresser', 'night', 'plant2', 'tread', 'gym', 'lamp0', 'bench', 'boxes'];
   const BOX_LABEL = { sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
+  const MOVER_LOOK = { skin: '#C68E62', hair: 'fade', hairColor: '#1E1612', top: '#3B3A3F', gender: 'male' };
+  let mover = null, moverQueue = [], moverTimer = 0, moverDelivering = false;
   function packItem(o, at) { const i = OBJS.indexOf(o); if (i < 0) return; OBJS.splice(i, 1); const b = { id: 'box-' + o.id, type: 'pbox', level: 1, x: at[0], y: at[1], rot: 0, contains: JSON.parse(JSON.stringify(o)) }; OBJS.push(b); if (!placementOk(b) && !autoPlace(b)) { OBJS.pop(); OBJS.push(o); } }
+  function spawnMover() {
+    if (mover) return;
+    mover = makeAgent({ look: MOVER_LOOK, needs: { energy: 100, food: 100, hygiene: 100, fun: 100, comfort: 100, social: 100 }, skills: { cooking: 0, fitness: 0 }, guest: true, fid: 'mover', gname: 'Mover', level: 1, x: DOOR[0], y: DOOR[1], leaveAt: 0, idle: 0.2 });
+    mover.flip = 1; mover.front = true;
+  }
+  function despawnMover() {
+    if (!mover) return;
+    if (mover.task && mover.task.slot) { const sl = SLOTS[mover.task.slot]; if (sl && reserved[resKey(sl)] === mover) delete reserved[resKey(sl)]; }
+    mover = null;
+  }
+  function deliverNextBox() {
+    if (moverDelivering || !moverQueue.length) return;
+    const job = moverQueue.shift();
+    moverDelivering = true;
+    spawnMover();
+    mover.carry = 'box';
+    mover.boxJob = job;
+    mover.level = 1; mover.x = DOOR[0]; mover.y = DOOR[1]; mover.z = 0; mover.alpha = 1; mover.route = [];
+    mover.goal = { level: 1, x: PARCEL.stand[0], y: PARCEL.stand[1] };
+    mover.route = planRoute(mover, 1, PARCEL.stand[0], PARCEL.stand[1]);
+    mover.pose = 'walk'; mover.task = { name: 'deliverBox', phase: 'walk', time: 0, dur: Infinity };
+    log(job.first ? 'The mover arrived with the first box. Tap the box to unpack it.' : 'The mover brought another box to the door.');
+    if (!running) setRunning(true);
+  }
+  function moverTick(dt, gm, walkMul) {
+    if (!mover) { if (moverQueue.length && !moverDelivering) { moverTimer -= dt; if (moverTimer <= 0) { moverTimer = 2; deliverNextBox(); } } return; }
+    if (mover.emoteT > 0) { mover.emoteT -= dt; if (mover.emoteT <= 0) mover.emote = null; }
+    const t = mover.task;
+    if (!t) { if (mover.idle > 0) { mover.idle -= dt; return; } despawnMover(); return; }
+    if (t.phase === 'walk') {
+      if (moveAlong(mover, dt, walkMul)) {
+        mover.x = PARCEL.stand[0]; mover.y = PARCEL.stand[1];
+        mover.pose = 'stand'; mover.front = true;
+        const job = mover.boxJob;
+        if (job) {
+          const b = { id: 'box-' + (job.contains.id || job.contains.type) + '-' + Date.now().toString(36), type: 'pbox', level: 1, x: PARCEL.box[0], y: PARCEL.box[1], rot: 0, contains: JSON.parse(JSON.stringify(job.contains)) };
+          if (job.contains.col) b.contains.col = job.contains.col;
+          OBJS.push(b); if (!placementOk(b) && !autoPlace(b)) { /* keep it, player can move things */ }
+          buildAll();
+          sparkles.push({ level: 1, pt: [PARCEL.box[0], PARCEL.box[1], 0.5], t: 0 });
+          log(`The mover set down a box: ${job.label}. Tap it to unpack.`);
+          renderGoals();
+        }
+        mover.carry = null; mover.boxJob = null;
+        mover.flip = -1; mover.route = planRoute(mover, 1, DOOR[0], DOOR[1]); mover.goal = { level: 1, x: DOOR[0], y: DOOR[1] }; mover.pose = 'walk';
+        t.phase = 'leave';
+      }
+    } else if (t.phase === 'leave') {
+      if (moveAlong(mover, dt, walkMul)) { despawnMover(); moverDelivering = false; if (moverQueue.length) moverTimer = 3; }
+    }
+  }
+  function queueDelivery(contains, label, first) {
+    moverQueue.push({ contains, label, first: !!first });
+    if (!moverDelivering && !mover) moverTimer = 1.5;
+  }
   function startMoveIn() {
     freeWill = false; { const fb = $('freeWill'); fb.setAttribute('aria-pressed', 'false'); fb.textContent = 'Free will off'; } flags.openedTalk = false;
     flags.settleSeen = []; flags.styledSet = []; flags.styled = false; flags.arranged = false; flags.stocked = false; flags.talked = false;
     day = 1; minutes = 9 * 60; money = 600; earnedToday = 0; spentToday = 0; bond = 58;
     ['paint-sand'].forEach(id => owned.delete(id)); owned.add('paint-primer');
     [1, 2].forEach(l => { LOOKS[l].paint = '#EEEBE6'; LOOKS[l].paper = null; }); ROOMLOOK.forEach(r => Object.keys(r).forEach(k => delete r[k]));
-    const spots = [[2.0, 5.0], [2.8, 5.0], [3.6, 5.0], [2.0, 5.8], [2.8, 5.8], [3.6, 5.8], [5.4, 5.2], [6.2, 5.2], [7.0, 5.2], [5.4, 6.0], [6.2, 6.0], [7.0, 6.0], [7.8, 5.6]];
-    PACK.forEach((id, k) => { const o = OBJS.find(q => q.id === id); if (o) packItem(o, spots[k % spots.length]); });
-    const rugBox = { id: 'box-rug', type: 'pbox', level: 1, x: 7.8, y: 6.4, rot: 0, contains: { id: 'rug', type: 'rug' } }; OBJS.push(rugBox); if (!placementOk(rugBox) && !autoPlace(rugBox)) OBJS.pop();
+    moverQueue = []; mover = null; moverDelivering = false; moverTimer = 2;
+    PACK.forEach((id) => { const o = OBJS.find(q => q.id === id); if (o) { const idx = OBJS.indexOf(o); OBJS.splice(idx, 1); queueDelivery(o, BOX_LABEL[(o.type || o.id).toUpperCase()] || 'BOX', id === 'sofa'); } });
+    queueDelivery({ id: 'rug', type: 'rug' }, 'RUG', false);
     flags.rugPacked = true;
     YARD.tiles.forEach(t => { t.len = 0.55 + Math.random() * 0.15; if (t.seed > 0.7) t.weed = 0.5; });
     Object.keys(reserved).forEach(k => delete reserved[k]);
@@ -3513,7 +3572,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     Object.assign(jordan, { x: 1.4, y: 5.6, needs: Object.assign(jordan.needs, { energy: 80, food: 70, hygiene: 70, fun: 60 }) }); Object.assign(maya, { x: 1.8, y: 6.4, mood: 'happy', needs: Object.assign(maya.needs, { energy: 80, food: 70, hygiene: 70 }) });
     buildAll(); renderShop();
     logEl.innerHTML = '';
-    log(P(`Move-in day. The truck just left. ${simName} and Maya have $600, a pile of boxes and a bill due Monday.`));
+    log(P(`Move-in day. ${simName} and ${partnerName} just got the keys. The house is empty and full of possibility. A mover is on the way with the first box.`));
   }
   function unpackBox(b, by) {
     const i = OBJS.indexOf(b); if (i < 0) return;
@@ -3720,7 +3779,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     tickAgent(jordan, dt, gm, walkMul);
     tickAgent(maya, dt, gm, walkMul);
     if (follow && !jordan.away && jordan.level !== prevLevel && !arranging) setView(jordan.level);
-    billTick(); deliveryTick(); laundryPile = Math.min(6, laundryPile + gm / 480); dirtTick(gm); PETS.forEach(p => petTick(p, dt, gm, walkMul)); guestsTick(dt, gm, walkMul); markOccupancy(); reactTick(gm); planTick(); projectTick();
+    billTick(); deliveryTick(); laundryPile = Math.min(6, laundryPile + gm / 480); dirtTick(gm); PETS.forEach(p => petTick(p, dt, gm, walkMul)); guestsTick(dt, gm, walkMul); moverTick(dt, gm, walkMul); markOccupancy(); reactTick(gm); planTick(); projectTick();
     partyF += ((party ? 1 : 0) - partyF) * Math.min(1, dt * 3);
     const tvOn = power && [jordan, maya].some(c => doing(c, 'tv') || (doing(c, 'movie') && video.screen === 'tv'));
     tvF += ((tvOn ? 1 : 0) - tvF) * Math.min(1, dt * 4);
@@ -3837,7 +3896,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
-    charItem(jordan, items, t); charItem(maya, items, t); GUESTS.forEach(g => charItem(g, items, t)); PETS.forEach(p => petItem(p, items));
+    charItem(jordan, items, t); charItem(maya, items, t); if (mover) charItem(mover, items, t); GUESTS.forEach(g => charItem(g, items, t)); PETS.forEach(p => petItem(p, items));
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     drawSparkles(lv); drawFlashes(lv);
@@ -4606,17 +4665,17 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   function wordsToStyle(list, sign) { (Array.isArray(list) ? list : String(list || '').split(/[,;]/)).forEach(w => String(w).toLowerCase().split(/\W+/).forEach(x => { const k = STYLE.includes(x) ? x : STYLE_WORDS[x]; if (k) mayaStyle[k] = Math.max(-1, Math.min(1.2, (mayaStyle[k] || 0) + sign * 0.6)); })); }
   const clip = (v, n) => String(v || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
   const okColor = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
-  function applyLookFrom(src, dst) { if (!src || typeof src !== 'object') return; ['skin', 'hairColor', 'top', 'eyeColor'].forEach(k => { if (okColor(src[k])) dst[k] = src[k]; }); if (HAIRS.some(h => h.value === src.hair)) dst.hair = src.hair; if (['none', 'stubble', 'beard', 'goatee', 'mustache'].includes(src.facialHair)) dst.facialHair = src.facialHair; if (['none', 'round', 'square', 'cat-eye', 'aviator', 'shades'].includes(src.glasses)) dst.glasses = src.glasses; }
+  function applyLookFrom(src, dst) { if (!src || typeof src !== 'object') return; if (src.gender === 'male' || src.gender === 'female') dst.gender = src.gender; ['skin', 'hairColor', 'top', 'eyeColor'].forEach(k => { if (okColor(src[k])) dst[k] = src[k]; }); if (HAIRS.some(h => h.value === src.hair)) dst.hair = genderedHair(dst.gender || 'female', src.hair); if (dst.gender === 'male' && ['none', 'stubble', 'beard', 'goatee', 'mustache'].includes(src.facialHair)) dst.facialHair = src.facialHair; if (['none', 'round', 'square', 'cat-eye', 'aviator', 'shades'].includes(src.glasses)) dst.glasses = src.glasses; }
   function applyVelvetProfile(d) {
     const pl = d.player || {}, cp = d.companion || {};
     const pn = clip(pl.name, 16), cn = clip(cp.name, 16);
     if (pn) { simName = pn; $('suName').value = pn; $('simName').value = pn; }
     if (cn) { partnerName = cn; $('suPartner').value = cn; }
     applyLookFrom(pl.look, look); saveLook(); applyLookFrom(cp.look, maya.look);
-    const fresh = companion.source !== 'velvet';
-    companion.source = 'velvet'; companion.bio = clip(cp.personality || cp.bio, 900); companion.pronoun = ['she', 'he', 'they'].includes(cp.pronoun) ? cp.pronoun : companion.pronoun;
+    if (cp.gender === 'male' || cp.gender === 'female') companion.gender = cp.gender;
+    companion.source = 'velvet'; companion.bio = clip(cp.personality || cp.bio, 900); companion.pronoun = ['she', 'he'].includes(cp.pronoun) ? cp.pronoun : companion.pronoun;
     companion.memories = (Array.isArray(cp.memories) ? cp.memories : []).slice(0, 8).map(m => clip(m, 220)).filter(Boolean);
-    if (fresh && (cp.likes || cp.dislikes)) { wordsToStyle(cp.likes, 1); wordsToStyle(cp.dislikes, -1); }
+    if ((cp.likes || cp.dislikes)) { wordsToStyle(cp.likes, 1); wordsToStyle(cp.dislikes, -1); }
     $('suName').readOnly = !!pn; $('suPartner').readOnly = !!cn; $('buildPartner').hidden = true;
     const note = $('velvetNote'); note.hidden = false; note.textContent = `Playing as ${simName}, with ${partnerName} from Velvet.`;
     swatches('suSkin', 'skin', SKINS); swatches('suHair', 'hair', HAIRS, true);
@@ -4626,7 +4685,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   window.addEventListener('message', (e) => { const d = e.data; if (!d || typeof d !== 'object' || d.type !== 'velvet:profile') return; if (VELVET_ORIGINS.length && !VELVET_ORIGINS.includes(e.origin)) return; applyVelvetProfile(d); });
   try { const q = new URLSearchParams(location.search).get('velvet'); if (q) applyVelvetProfile(Object.assign({ type: 'velvet:profile' }, JSON.parse(decodeURIComponent(escape(atob(q)))))); } catch (e) {}
   if (window.VELVET_PROFILE) try { applyVelvetProfile(window.VELVET_PROFILE); } catch (e) {}
-  velvetOut('ready', { needsProfile: companion.source !== 'velvet' });
+  velvetOut('ready', { needsProfile: true });
   if (pendingRestart) {
     const r = pendingRestart; if (r.name) $('suName').value = r.name; if (r.partner) $('suPartner').value = r.partner; if (r.pron) $('suPron').value = r.pron; if (r.preset) $('suPreset').value = r.preset;
     if (r.look) Object.assign(look, r.look); if (r.mlook) Object.assign(maya.look, r.mlook); if (r.companion) { Object.assign(companion, r.companion); if (r.style) mayaStyle = r.style; $('buildPartner').hidden = true; }

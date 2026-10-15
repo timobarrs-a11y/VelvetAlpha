@@ -10,7 +10,8 @@ const SAVE_KEY = 'velvet-house-v1';
 const SYNC_INTERVAL_MS = 30_000;
 const GAME_TURN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/velvet-game-turn`;
 
-type GameLook = { skin?: string; hair?: string; hairColor?: string; top?: string; eyeColor?: string; facialHair?: string; glasses?: string };
+type GameLook = { skin?: string; hair?: string; hairColor?: string; top?: string; eyeColor?: string; facialHair?: string; glasses?: string; gender?: 'male' | 'female' };
+type GameGender = 'male' | 'female';
 type GameError = Error & { code?: string };
 
 interface PlayerProfile {
@@ -54,6 +55,7 @@ function toGameLook(avatar: Record<string, unknown> | null | undefined, favorite
   if (!avatar || typeof avatar !== 'object') return undefined;
   const female = avatar.gender === 'female';
   const length = avatar.hairLength ?? (female ? 'long' : 'short');
+  const gender: GameGender = avatar.gender === 'female' ? 'female' : 'male';
   return {
     skin: isHex(avatar.skinTone) ? avatar.skinTone : undefined,
     hairColor: isHex(avatar.hairColor) ? avatar.hairColor : undefined,
@@ -62,6 +64,7 @@ function toGameLook(avatar: Record<string, unknown> | null | undefined, favorite
     eyeColor: isHex(avatar.eyeColor) ? avatar.eyeColor : undefined,
     facialHair: typeof avatar.facialHair === 'string' ? avatar.facialHair : undefined,
     glasses: typeof avatar.glasses === 'string' ? avatar.glasses : undefined,
+    gender,
   };
 }
 
@@ -81,6 +84,7 @@ function buildProfile(player: PlayerProfile | null, companion: Companion, includ
     companion: {
       name: companion.custom_name,
       pronoun: companion.gender === 'male' ? 'he' : 'she',
+      gender: companion.gender,
       personality: personality || 'warm, curious, playful',
       look: includeLooks
         ? toGameLook(companion.avatar_config as Record<string, unknown> | undefined, companion.favorite_color)
