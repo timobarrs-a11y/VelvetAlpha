@@ -260,7 +260,7 @@ export default function BoardPage() {
                   }`}
                 >
                   <div className="flex">
-                  <div className="relative w-24 sm:w-32 flex-shrink-0 self-stretch bg-white/[0.04] border-r border-white/8 overflow-hidden">
+                  <div className="relative w-24 sm:w-32 flex-shrink-0 self-stretch bg-white/[0.04] overflow-hidden">
                     {post.post_smilie && smilieUrl(post.post_smilie) ? (
                       <img
                         src={smilieUrl(post.post_smilie)!}
