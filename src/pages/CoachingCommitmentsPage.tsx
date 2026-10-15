@@ -34,7 +34,7 @@ export function CoachingCommitmentsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [progressDraft, setProgressDraft] = useState('');
   const [plans, setPlans] = useState<CoachPlan[]>([]);
-  const [view, setView] = useState<'tasks' | 'plans'>('tasks');
+  const [view, setView] = useState<'tasks' | 'plans'>(searchParams.get('view') === 'plans' ? 'plans' : 'tasks');
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
 

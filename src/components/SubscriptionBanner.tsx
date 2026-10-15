@@ -76,7 +76,7 @@ export function SubscriptionBanner({ tier, messagesRemaining, compact = false, t
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${config.gradient} shadow-md`}
+        className={`relative inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r ${config.gradient} shadow-md flex-shrink-0`}
       >
         <motion.div
           animate={isPremium ? { rotate: [0, 5, -5, 0] } : {}}
@@ -84,7 +84,7 @@ export function SubscriptionBanner({ tier, messagesRemaining, compact = false, t
         >
           <Icon className={`${config.textColor} w-4 h-4`} />
         </motion.div>
-        <span className={`${config.textColor} font-semibold text-sm`}>{config.label}</span>
+        <span className={`${config.textColor} font-semibold text-sm hidden xs:inline sm:inline`}>{config.label}</span>
         {isTestUser && (
           <motion.div
             animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
