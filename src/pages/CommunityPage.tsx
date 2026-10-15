@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { MessageSquare, Plus, Users, Pin, Info } from 'lucide-react';
+import { MessageSquare, Plus, Pin, Users, Info, Activity } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
 import { PageHeader } from '../shared/ui/PageHeader';
 import { Button } from '../shared/ui/Button';
@@ -75,49 +74,66 @@ export default function CommunityPage() {
             action={{ label: 'Create a board', onClick: () => setShowCreate(true) }}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {boards.map((board, i) => {
-              const color = COLOR_MAP[board.color] ?? '#64748b';
-              return (
-                <motion.button
-                  key={board.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04, duration: 0.25 }}
-                  onClick={() => navigate(`/community/board/${board.id}`)}
-                  className="card-interactive p-5 text-left rounded-2xl"
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${color}20`, border: `1px solid ${color}40` }}
-                    >
-                      <MessageSquare className="w-5 h-5" style={{ color }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="text-sm font-bold text-white truncate">{board.name}</h3>
-                        {board.is_pinned && <Pin className="w-3 h-3 text-amber-400 flex-shrink-0" fill="currentColor" />}
+          <div className="rounded-xl border border-white/8 overflow-hidden">
+            {/* Table header */}
+            <div className="hidden md:flex items-center px-4 py-2.5 bg-white/[0.03] border-b border-white/8 text-[11px] font-bold tracking-wider uppercase text-white/30">
+              <div className="flex-1 min-w-0">Board</div>
+              <div className="w-20 text-center shrink-0">Posts</div>
+              <div className="w-24 text-right shrink-0">Owner</div>
+            </div>
+
+            {/* Board rows */}
+            <div className="divide-y divide-white/[0.06]">
+              {boards.map((board) => {
+                const color = COLOR_MAP[board.color] ?? '#64748b';
+                return (
+                  <button
+                    key={board.id}
+                    onClick={() => navigate(`/community/board/${board.id}`)}
+                    className="w-full flex items-center px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/40"
+                  >
+                    {/* Icon + name + description */}
+                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: `${color}1a`, border: `1px solid ${color}33` }}
+                      >
+                        <MessageSquare className="w-4 h-4" style={{ color }} />
                       </div>
-                      {board.description && (
-                        <p className="text-xs text-white/50 mt-1 line-clamp-2 leading-relaxed">{board.description}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-3">
-                        <span className="flex items-center gap-1 text-xs text-white/40">
-                          <MessageSquare className="w-3 h-3" />
-                          {board.post_count} posts
-                        </span>
-                        {board.is_owner && (
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-white/60">
-                            Owner
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold text-white truncate hover:text-sky-300 transition-colors">
+                            {board.name}
                           </span>
+                          {board.is_pinned && (
+                            <Pin className="w-3 h-3 text-amber-400 flex-shrink-0" fill="currentColor" />
+                          )}
+                        </div>
+                        {board.description && (
+                          <p className="text-xs text-white/40 mt-0.5 truncate leading-relaxed">
+                            {board.description}
+                          </p>
                         )}
                       </div>
                     </div>
-                  </div>
-                </motion.button>
-              );
-            })}
+
+                    {/* Post count */}
+                    <div className="hidden md:flex w-20 shrink-0 justify-center">
+                      <span className="text-sm text-white/50 tabular-nums">{board.post_count}</span>
+                    </div>
+
+                    {/* Owner badge */}
+                    <div className="hidden md:flex w-24 shrink-0 justify-end">
+                      {board.is_owner && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-white/50">
+                          Owner
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 

@@ -70,7 +70,7 @@ export async function fetchPosts(
 ): Promise<{ posts: PostWithAuthor[]; nextCursor: string | null }> {
   let query = supabase
     .from('community_posts')
-    .select('*, author_name:user_profiles!community_posts_author_id_fkey(name)')
+    .select('*, author_name:user_profiles!community_posts_author_profile_fkey(name)')
     .eq('board_id', boardId)
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false })
@@ -126,7 +126,7 @@ export async function fetchPosts(
 export async function fetchPost(postId: string): Promise<PostWithAuthor | null> {
   const { data, error } = await supabase
     .from('community_posts')
-    .select('*, author_name:user_profiles!community_posts_author_id_fkey(name)')
+    .select('*, author_name:user_profiles!community_posts_author_profile_fkey(name)')
     .eq('id', postId)
     .maybeSingle();
 
@@ -181,7 +181,7 @@ export async function deletePost(postId: string): Promise<boolean> {
 export async function fetchComments(postId: string): Promise<CommentWithAuthor[]> {
   const { data, error } = await supabase
     .from('community_comments')
-    .select('*, author_name:user_profiles!community_comments_author_id_fkey(name)')
+    .select('*, author_name:user_profiles!community_comments_author_profile_fkey(name)')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
 
