@@ -15,7 +15,8 @@ import {
   fetchGroundingStories,
 } from "../_shared/correspondentFramework.ts";
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
-import { loadCoachingState, formatCoachingStateBlock, acknowledgeTickEvents } from "../_shared/coachingState.ts";
+import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
+import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult } from "../_shared/coachTools.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -379,6 +380,19 @@ function stripTimeAssumption(text: string): string {
     .replace(/\b(where you are|for you)\s+(it's|it is)\s+\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)/gi, "it's late for you");
 }
 
+/**
+ * Lets the model call coach tools mid-reply. The runner executes each call and
+ * returns a result the model sees before it writes its final text, so the coach
+ * only claims what actually happened.
+ */
+interface CoachToolRunner {
+  tools: unknown[];
+  run: (name: string, input: Record<string, unknown>) => Promise<{ result: Record<string, unknown>; isError: boolean }>;
+  maxCalls: number;
+  /** Set true once any tool has executed, so a regenerate never re-runs side effects. */
+  executed: boolean;
+}
+
 async function generateResponseWithValidation(
   apiKey: string,
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -388,7 +402,8 @@ async function generateResponseWithValidation(
   userMessage: string,
   characterName: string,
   maxRetries: number = 1,
-  systemBlocks?: Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral'; ttl?: '1h' } }>
+  systemBlocks?: Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral'; ttl?: '1h' } }>,
+  toolRunner?: CoachToolRunner
 ): Promise<{ message: string; usage?: ChatTurnResponse['usage'] }> {
   let attempts = 0;
   let lastError: Error | null = null;
@@ -406,20 +421,58 @@ async function generateResponseWithValidation(
             ? systemPrompt + '\n\n' + validationFeedback
             : systemPrompt;
 
-      const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: maxTokens,
-          system: systemPayload,
-          messages,
-        }),
-      });
+      // Tool rounds: the model may call coach tools, see the results, then write its reply.
+      const convo: Array<{ role: 'user' | 'assistant'; content: unknown }> = [...messages];
+      let collectedText = '';
+      let toolCalls = 0;
+      let anthropicResponse!: Response;
+      let data: any;
+
+      for (let round = 0; round < 4; round++) {
+        anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: maxTokens,
+            system: systemPayload,
+            messages: convo,
+            ...(toolRunner ? { tools: toolRunner.tools } : {}),
+            // Final round: force a plain-text reply so the loop always ends with words for the user.
+            ...(toolRunner && round === 3 ? { tool_choice: { type: 'none' } } : {}),
+          }),
+        });
+        if (!anthropicResponse.ok) break;
+
+        data = await anthropicResponse.json();
+        const blocks: Array<{ type?: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }> =
+          Array.isArray(data.content) ? data.content : [];
+
+        if (!toolRunner || data.stop_reason !== 'tool_use') break;
+
+        const pendingCalls = blocks.filter(b => b.type === 'tool_use');
+        if (pendingCalls.length === 0) break;
+
+        collectedText += blocks.filter(b => b.type === 'text' && typeof b.text === 'string').map(b => b.text).join('') + ' ';
+        const results: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }> = [];
+        for (const call of pendingCalls) {
+          if (toolCalls >= toolRunner.maxCalls) {
+            results.push({ type: 'tool_result', tool_use_id: call.id as string, content: JSON.stringify({ error: 'tool call limit reached for this reply' }), is_error: true });
+            continue;
+          }
+          toolCalls++;
+          toolRunner.executed = true;
+          const out = await toolRunner.run(call.name as string, call.input ?? {});
+          results.push({ type: 'tool_result', tool_use_id: call.id as string, content: JSON.stringify(out.result), ...(out.isError ? { is_error: true } : {}) });
+        }
+        convo.push({ role: 'assistant', content: data.content });
+        convo.push({ role: 'user', content: results });
+        data = undefined;
+      }
 
       if (!anthropicResponse.ok) {
         const errorData = await anthropicResponse.json().catch(() => ({ error: anthropicResponse.statusText }));
@@ -439,7 +492,7 @@ async function generateResponseWithValidation(
         throw new Error(errorData.error?.message || `Request failed with status ${anthropicResponse.status}`);
       }
 
-      const data = await anthropicResponse.json();
+      if (!data) throw new Error('No valid response from API');
 
       lastUsage = data.usage ? {
         cache_read_input_tokens: data.usage.cache_read_input_tokens,
@@ -453,10 +506,10 @@ async function generateResponseWithValidation(
       // content[0] alone made valid responses look empty.
       let assistantMessage = '';
       if (Array.isArray(data.content)) {
-        assistantMessage = data.content
+        assistantMessage = (collectedText + data.content
           .filter((b: { type?: string; text?: string }) => b?.type === 'text' && typeof b.text === 'string')
           .map((b: { text: string }) => b.text)
-          .join('')
+          .join(''))
           .trim();
       }
 
@@ -477,7 +530,7 @@ async function generateResponseWithValidation(
 
       const timeCheck = detectTimeAssumption(assistantMessage, userMessage);
       if (timeCheck.detected) {
-        if (attempts <= maxRetries) {
+        if (attempts <= maxRetries && !toolRunner?.executed) {
           validationFeedback = `\n\n⚠️ TIME ASSUMPTION DETECTED — REGENERATE:\nYou asserted the user's current time as a specific clock time ("${timeCheck.matches[0]}"). You do NOT know the user's specific time — only a vague time-of-day bucket was provided. Regenerate without naming a specific hour, o'clock, am/pm, midnight, or noon. Use vague language like "pretty late", "up early", "late night", or simply drop the time reference.`;
           console.log(`Time assumption detected, retrying (attempt ${attempts}/${maxRetries})...`);
           continue;
@@ -1937,10 +1990,10 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     // Companion memory goes into the semi-stable system block (between
     // frozen and volatile) so it benefits from prompt caching.
     // Threads, commitments, goals, and facts go into the volatile block.
-    const [coachingStateBlock, goalsBlock, scopedMemories] = await Promise.all([
+    const [coachingState, goalsBlock, scopedMemories] = await Promise.all([
       isMentor
-        ? loadCoachingState(supabaseAdmin, user.id, companionId).then(state => formatCoachingStateBlock(state))
-        : Promise.resolve(''),
+        ? buildCoachingStateBlock(supabaseAdmin, user.id, companionId)
+        : Promise.resolve({ block: '', raised: [] as string[] }),
       (isMentor || companion.relationship_type === 'companion' || companion.relationship_type === 'partner')
         ? fetchActiveGoalsForPrompt(supabaseAdmin, user.id) : Promise.resolve(''),
       fetchScopedMemories(supabaseAdmin, user.id, companionId, companion.relationship_type, message),
@@ -1954,6 +2007,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       sessionBlock = await fetchLastSessionSummary(supabaseAdmin, user.id, companionId);
     }
 
+    const coachingStateBlock = coachingState.block;
     const memoryBusBlock = `${coachingStateBlock}${goalsBlock}${factsBlock}${openThreadsBlock}${sessionBlock}`;
 
     // Split into frozen (stable for a given companion) and volatile (changes
@@ -1975,7 +2029,7 @@ ${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, s
 RESPONSE LENGTH: ${isMentor ? 'As long as the topic warrants — use markdown, lists, and code blocks when they help. Never pad.' : 'Default short — like a real text.'} Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
     const hallucinationGuard = isMentor
-      ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference plans, steps, and commitments that appear in the [COACHING STATE] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [COACHING STATE] or [USER'S ACTIVE GOALS] sections. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.\n- COACH TOOLS: You can create plans, steps, commitments, and artifacts by emitting a JSON tool block in your reply. Format: [COACH_TOOL]{"action":"create_plan","title":"...","steps":[{"title":"...","coach_minimum":"..."}]}[/COACH_TOOL] or [COACH_TOOL]{"action":"create_commitment","description":"...","dueDate":"2024-01-15"}[/COACH_TOOL] or [COACH_TOOL]{"action":"create_artifact","artifactType":"reading_material","title":"...","content":{...}}[/COACH_TOOL]. Place these at the end of your reply after your natural response. The system will process them and the user will see them appear.\n- PROPOSE, DON'T IMPOSE: When creating a plan or step, you are proposing. The user can edit the title, the quantity, or the cadence. Respect edits above your coach minimum. If they go below the minimum, respond in chat explaining why that won't be enough.\n- ADJUSTMENT SIGNALS: If the [COACHING STATE] includes ADJUSTMENT SIGNALS, act on them this session. When a step is missed, confidence drops, or the user goes quiet, don't just ask what happened — propose a concrete adjustment. Use [COACH_TOOL] to create a revised plan, a smaller step, or a new artifact (reading material, routine, practice set) to help them rebuild momentum. Lead with empathy, then act.`
+      ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference plans, steps, and commitments that appear in the [COACHING STATE] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [COACHING STATE] or [USER'S ACTIVE GOALS] sections. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.\n- COACH TOOLS: You have tools to propose plans (create_plan, add_step), respond to edits and revise steps (adjust_step), record commitments (create_commitment), and save things the user keeps (create_artifact: reading_material, routine, practice_set, worksheet, checklist, resource_pick, progress_report). Call a tool BEFORE you tell the user it is done, and read the tool result: if it reports an error, say so plainly and do not claim success. Never invent ids — use the plan_id / step_id / commitment_id values shown in [COACHING STATE]. Check [COACHING STATE] first: do not create a second plan when one already exists, and do not repeat a commitment or artifact you already made.\n- PROPOSE, DON'T IMPOSE: plans and steps you create are proposals the user can accept and edit. Give every step a concrete quantity and, where a real floor exists, a minimum (minimum_value). A real coach knows what will not work: if the user edits a step below your minimum, do not simply go along with it. Decide: adjust_step hold (keep your number and explain why it matters), revise (a middle ground), or accept (lower your minimum and say why). Respect edits at or above your minimum.\n- ADJUSTMENT SIGNALS: If [COACHING STATE] lists ADJUSTMENT SIGNALS, act on each once this session. Do not only ask what happened — propose a concrete change (a smaller step via adjust_step revise, a new commitment, or a new artifact) and lead with empathy. Do not repeat a signal you already addressed.`
       : '';
 
     const volatileContext = `\n\nRelationship duration: ${relationshipDuration} days
@@ -2075,6 +2129,23 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
 
     console.log(`[${traceId}] Generating response...`);
 
+    // Coaches can call tools mid-reply (plans, steps, commitments, artifacts). Every call is
+    // verified against this user and this coach inside executeCoachTool.
+    const createdArtifacts: CoachArtifactResult[] = [];
+    const toolRunner: CoachToolRunner | undefined = isMentor
+      ? {
+          tools: COACH_TOOLS,
+          maxCalls: 6,
+          executed: false,
+          run: async (name, input) => {
+            const outcome = await executeCoachTool(supabaseAdmin, user.id, companionId, name, input);
+            if (outcome.isError) console.error(`[${traceId}] Coach tool ${name} failed:`, outcome.result);
+            if (outcome.artifact && !createdArtifacts.some(a => a.id === outcome.artifact!.id)) createdArtifacts.push(outcome.artifact);
+            return { result: outcome.result, isError: outcome.isError };
+          },
+        }
+      : undefined;
+
     const result = await generateResponseWithValidation(
       apiKey,
       messagesToSend,
@@ -2084,59 +2155,12 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       message,
       companionName,
       1,
-      systemBlocks
+      systemBlocks,
+      toolRunner
     );
 
     let assistantMessage = result.message;
     const apiUsage = result.usage;
-
-    // Extract [COACH_TOOL]...[/COACH_TOOL] blocks, strip from visible message,
-    // and process them via the coach-tools function in the background.
-    const createdArtifacts: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }> = [];
-    if (isMentor) {
-      const toolRegex = /\[COACH_TOOL\](\{[\s\S]*?\})\[\/COACH_TOOL\]/g;
-      const toolBlocks: string[] = [];
-      let match;
-      while ((match = toolRegex.exec(assistantMessage)) !== null) {
-        toolBlocks.push(match[1]);
-      }
-      assistantMessage = assistantMessage.replace(toolRegex, '').trim();
-
-      if (toolBlocks.length > 0) {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-        for (const block of toolBlocks) {
-          try {
-            const parsed = JSON.parse(block);
-            const toolResponse = await fetch(`${supabaseUrl}/functions/v1/coach-tools`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                action: parsed.action,
-                companionId,
-                payload: parsed,
-              }),
-            });
-            if (parsed.action === 'create_artifact' && toolResponse.ok) {
-              const toolResult = await toolResponse.json();
-              if (toolResult.artifact) {
-                createdArtifacts.push({
-                  id: toolResult.artifact.id,
-                  artifactType: toolResult.artifact.artifact_type,
-                  title: toolResult.artifact.title,
-                  content: toolResult.artifact.content,
-                });
-              }
-            }
-          } catch (err) {
-            console.error('[chat-turn] Coach tool processing error:', err);
-          }
-        }
-      }
-    }
 
     const latencyMs = Date.now() - startTime;
 
@@ -2220,7 +2244,10 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
     );
 
     if (isMentor) {
-      EdgeRuntime.waitUntil(acknowledgeTickEvents(supabaseAdmin, user.id, companionId));
+      EdgeRuntime.waitUntil(Promise.allSettled([
+        acknowledgeTickEvents(supabaseAdmin, user.id, companionId),
+        markSignalsRaised(supabaseAdmin, user.id, companionId, coachingState.raised),
+      ]));
     }
 
     EdgeRuntime.waitUntil(Promise.allSettled([signalPromise, memoryPromise]));
