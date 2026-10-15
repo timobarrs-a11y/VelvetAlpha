@@ -38,7 +38,7 @@ export interface CommunityComment {
   updated_at: string;
 }
 
-export type ReactionType = 'like' | 'support' | 'relate';
+export type ReactionType = string;
 export type ReactionTarget = 'post' | 'comment';
 
 export interface CommunityReaction {
@@ -50,13 +50,21 @@ export interface CommunityReaction {
   created_at: string;
 }
 
+export interface SmilieReactionAggregate {
+  reaction_type: string;
+  count: number;
+}
+
 export interface PostWithAuthor extends CommunityPost {
   author_name: string;
   user_reaction?: ReactionType | null;
+  reaction_aggregates?: SmilieReactionAggregate[];
 }
 
 export interface CommentWithAuthor extends CommunityComment {
   author_name: string;
+  user_reaction?: ReactionType | null;
+  reaction_aggregates?: SmilieReactionAggregate[];
 }
 
 export interface BoardWithCounts extends CommunityBoard {

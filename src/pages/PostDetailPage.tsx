@@ -2,16 +2,18 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send, MessageCircle, Info, Pin, Heart, HandHeart, UserRound, Clock,
-  ChevronRight,
+  Send, MessageCircle, Info, Pin, Clock, ChevronRight,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { PageHeader } from '../shared/ui/PageHeader';
+import { CommunityHeroHeader } from '../components/community/CommunityHeroHeader';
 import { Button } from '../shared/ui/Button';
 import { Textarea } from '../shared/ui';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { toast } from '../shared/ui';
 import { ReportModal } from '../components/community/CommunityComponents';
+import { SmilieText } from '../components/community/SmilieText';
+import { SmiliePicker, SmilieReactionPicker } from '../components/community/SmiliePicker';
+import { smilieUrl } from '../config/smilieRegistry';
 import {
   fetchPost,
   fetchComments,
@@ -19,8 +21,9 @@ import {
   deleteComment,
   deletePost,
   toggleReaction,
+  fetchReactionAggregates,
 } from '../services/communityService';
-import type { PostWithAuthor, CommentWithAuthor, ReactionType } from '../types/community';
+import type { PostWithAuthor, CommentWithAuthor, SmilieReactionAggregate } from '../types/community';
 
 function timeAgo(dateStr: string): string {
   const date = new Date(dateStr);
@@ -36,11 +39,41 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const REACTIONS: { type: ReactionType; label: string; icon: typeof Heart; color: string }[] = [
-  { type: 'like', label: 'Like', icon: Heart, color: 'text-rose-400' },
-  { type: 'support', label: 'Support', icon: HandHeart, color: 'text-emerald-400' },
-  { type: 'relate', label: 'Relate', icon: UserRound, color: 'text-sky-400' },
-];
+function ReactionRow({
+  aggregates,
+  userReaction,
+  onReact,
+}: {
+  aggregates: SmilieReactionAggregate[];
+  userReaction: string | null;
+  onReact: (code: string) => void;
+}) {
+  if (aggregates.length === 0) return null;
+  return (
+    <div className="flex items-center flex-wrap gap-1.5">
+      {aggregates.map((agg) => {
+        const url = smilieUrl(agg.reaction_type);
+        if (!url) return null;
+        const isMine = userReaction === agg.reaction_type;
+        return (
+          <button
+            key={agg.reaction_type}
+            onClick={() => onReact(agg.reaction_type)}
+            className={`flex items-center gap-1 px-1.5 py-1 rounded-lg text-xs transition-all ${
+              isMine
+                ? 'bg-white/10 ring-1 ring-white/20'
+                : 'bg-white/[0.03] hover:bg-white/8'
+            }`}
+            title={isMine ? 'Click to remove your reaction' : 'Click to react'}
+          >
+            <img src={url} alt={`:${agg.reaction_type}:`} style={{ height: 18, width: 'auto' }} loading="lazy" />
+            <span className="tabular-nums text-white/60 font-medium">{agg.count}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function PostDetailPage() {
   const { postId } = useParams<{ postId: string }>();
@@ -54,19 +87,14 @@ export default function PostDetailPage() {
   const [boardId, setBoardId] = useState<string | null>(null);
   const [boardName, setBoardName] = useState<string>('');
   const [boardColor, setBoardColor] = useState<string>('#3b82f6');
-  const [optimisticReaction, setOptimisticReaction] = useState<ReactionType | null>(null);
-  const [optimisticCount, setOptimisticCount] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const loadPost = useCallback(async () => {
     if (!postId) return;
     const p = await fetchPost(postId);
     setPost(p);
-    if (p) {
-      setBoardId(p.board_id);
-      setOptimisticReaction(p.user_reaction ?? null);
-      setOptimisticCount(p.reaction_count);
-    }
+    if (p) setBoardId(p.board_id);
   }, [postId]);
 
   const loadComments = useCallback(async () => {
@@ -99,17 +127,47 @@ export default function PostDetailPage() {
     })();
   }, [boardId]);
 
-  const handleReact = async (type: ReactionType) => {
+  const handlePostReact = async (code: string) => {
     if (!postId) return;
-    const wasActive = optimisticReaction === type;
-    setOptimisticReaction(wasActive ? null : type);
-    setOptimisticCount((c) => c + (wasActive ? -1 : 1));
+    const wasActive = post?.user_reaction === code;
+    setPost((prev) =>
+      prev
+        ? {
+            ...prev,
+            user_reaction: wasActive ? null : code,
+            reaction_count: prev.reaction_count + (wasActive ? -1 : 1),
+            reaction_aggregates: updateAggregates(prev.reaction_aggregates, prev.user_reaction, wasActive ? null : code),
+          }
+        : prev,
+    );
     try {
-      await toggleReaction(postId, 'post', type);
+      await toggleReaction(postId, 'post', code);
       await loadPost();
     } catch {
-      setOptimisticReaction(post?.user_reaction ?? null);
-      setOptimisticCount(post?.reaction_count ?? 0);
+      await loadPost();
+    }
+  };
+
+  const handleCommentReact = async (commentId: string, code: string) => {
+    const comment = comments.find((c) => c.id === commentId);
+    if (!comment) return;
+    const wasActive = comment.user_reaction === code;
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === commentId
+          ? {
+              ...c,
+              user_reaction: wasActive ? null : code,
+              reaction_aggregates: updateAggregates(c.reaction_aggregates, c.user_reaction, wasActive ? null : code),
+            }
+          : c,
+      ),
+    );
+    try {
+      await toggleReaction(commentId, 'comment', code);
+      await loadComments();
+    } catch {
+      await loadComments();
     }
   };
 
@@ -149,9 +207,26 @@ export default function PostDetailPage() {
     }
   };
 
+  const insertSmilieAtCursor = (code: string) => {
+    const textarea = replyTextareaRef.current;
+    if (!textarea) {
+      setCommentBody((prev) => `${prev}:${code}: `);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newText = `${commentBody.slice(0, start)}:${code}: ${commentBody.slice(end)}`;
+    setCommentBody(newText);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const cursorPos = start + code.length + 3;
+      textarea.setSelectionRange(cursorPos, cursorPos);
+    });
+  };
+
   if (loading) {
     return (
-      <PageShell width="lg" header={<PageHeader title="Loading..." back="/community" />}>
+      <PageShell width="lg" header={<CommunityHeroHeader title="Loading..." accent="#3b82f6" back="/community" />}>
         <LoadingState label="Loading post..." />
       </PageShell>
     );
@@ -159,7 +234,7 @@ export default function PostDetailPage() {
 
   if (!post) {
     return (
-      <PageShell width="lg" header={<PageHeader title="Post not found" back="/community" />}>
+      <PageShell width="lg" header={<CommunityHeroHeader title="Post not found" accent="#3b82f6" back="/community" />}>
         <div className="text-center py-16 text-white/50">
           <p>This post may have been deleted.</p>
           <Button variant="secondary" size="sm" className="mt-4" onClick={() => navigate('/community')}>
@@ -177,19 +252,20 @@ export default function PostDetailPage() {
     <PageShell
       width="lg"
       header={
-        <PageHeader
-          title="Thread"
+        <CommunityHeroHeader
+          title={post.title}
           subtitle={boardName || undefined}
+          accent={boardColor}
+          icon={MessageCircle}
           back={boardId ? `/community/board/${boardId}` : '/community'}
           backLabel={boardName || 'Board'}
-        >
-          <div className="flex items-center gap-2 px-1 py-1.5">
-            <div className="flex items-center gap-1.5 text-xs text-white/40">
-              <Info className="w-3.5 h-3.5" />
+          meta={
+            <div className="flex items-center gap-1.5 text-[11px] text-white/25">
+              <Info className="w-3 h-3" />
               <span>Some content may be AI-generated.</span>
             </div>
-          </div>
-        </PageHeader>
+          }
+        />
       }
     >
       <div className="flex flex-col gap-5 pb-8">
@@ -241,31 +317,19 @@ export default function PostDetailPage() {
           >
             <div className="p-5">
               <h1 className="text-lg font-bold text-white leading-tight">{post.title}</h1>
-              <p className="text-sm text-white/75 mt-3 leading-relaxed whitespace-pre-wrap">{post.body}</p>
+              <div className="text-sm text-white/75 mt-3 leading-relaxed whitespace-pre-wrap">
+                <SmilieText text={post.body} />
+              </div>
             </div>
 
             {/* Reaction bar */}
-            <div className="flex items-center gap-1.5 px-5 py-3 border-t border-white/[0.06] bg-white/[0.01]">
-              {REACTIONS.map(({ type, label, icon: Icon, color }) => {
-                const active = optimisticReaction === type;
-                return (
-                  <button
-                    key={type}
-                    onClick={() => handleReact(type)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      active
-                        ? `${color} bg-white/8`
-                        : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-                    }`}
-                    aria-label={label}
-                    aria-pressed={active}
-                  >
-                    <Icon className={`w-4 h-4 ${active ? 'fill-current' : ''}`} />
-                    <span>{label}</span>
-                  </button>
-                );
-              })}
-              <span className="text-xs text-white/30 ml-1 tabular-nums">{optimisticCount}</span>
+            <div className="flex items-center flex-wrap gap-2 px-5 py-3 border-t border-white/[0.06] bg-white/[0.01]">
+              <SmilieReactionPicker onReact={handlePostReact} />
+              <ReactionRow
+                aggregates={post.reaction_aggregates ?? []}
+                userReaction={post.user_reaction ?? null}
+                onReact={handlePostReact}
+              />
               <div className="flex-1" />
               <span className="flex items-center gap-1 text-xs text-white/30">
                 <MessageCircle className="w-3.5 h-3.5" />
@@ -313,14 +377,26 @@ export default function PostDetailPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="rounded-xl border border-white/[0.06] bg-white/[0.01] p-4">
-                      <p className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap">{comment.body}</p>
+                      <div className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap">
+                        <SmilieText text={comment.body} />
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteComment(comment.id)}
-                      className="text-[10px] text-white/20 hover:text-red-400 transition-colors mt-1.5 opacity-0 group-hover:opacity-100"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <SmilieReactionPicker
+                        onReact={(code) => handleCommentReact(comment.id, code)}
+                      />
+                      <ReactionRow
+                        aggregates={comment.reaction_aggregates ?? []}
+                        userReaction={comment.user_reaction ?? null}
+                        onReact={(code) => handleCommentReact(comment.id, code)}
+                      />
+                      <button
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="text-[10px] text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 ml-auto"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -352,9 +428,12 @@ export default function PostDetailPage() {
                 }}
               />
               <div className="flex items-center justify-between px-3 pb-2.5">
-                <span className="text-[10px] text-white/25">
-                  Cmd+Enter to send
-                </span>
+                <div className="flex items-center gap-1">
+                  <SmiliePicker onInsert={insertSmilieAtCursor} />
+                  <span className="text-[10px] text-white/25">
+                    Cmd+Enter to send
+                  </span>
+                </div>
                 <Button
                   size="sm"
                   isLoading={submitting}
@@ -383,4 +462,26 @@ export default function PostDetailPage() {
       />
     </PageShell>
   );
+}
+
+function updateAggregates(
+  aggregates: SmilieReactionAggregate[] | undefined,
+  oldReaction: string | null,
+  newReaction: string | null,
+): SmilieReactionAggregate[] {
+  const map = new Map<string, number>();
+  for (const a of aggregates ?? []) {
+    map.set(a.reaction_type, a.count);
+  }
+  if (oldReaction) {
+    const c = map.get(oldReaction);
+    if (c !== undefined) {
+      if (c <= 1) map.delete(oldReaction);
+      else map.set(oldReaction, c - 1);
+    }
+  }
+  if (newReaction) {
+    map.set(newReaction, (map.get(newReaction) ?? 0) + 1);
+  }
+  return Array.from(map.entries()).map(([reaction_type, count]) => ({ reaction_type, count }));
 }

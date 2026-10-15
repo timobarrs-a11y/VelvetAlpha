@@ -6,11 +6,13 @@ import {
   ChevronRight, Users,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { PageHeader } from '../shared/ui/PageHeader';
+import { CommunityHeroHeader } from '../components/community/CommunityHeroHeader';
 import { Button } from '../shared/ui/Button';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { CreatePostModal, ReportModal } from '../components/community/CommunityComponents';
+import { SmilieText } from '../components/community/SmilieText';
+import { smilieUrl } from '../config/smilieRegistry';
 import { fetchBoard, fetchPosts, deletePost } from '../services/communityService';
 import type { BoardWithCounts, PostWithAuthor } from '../types/community';
 
@@ -94,12 +96,13 @@ export default function BoardPage() {
     <PageShell
       width="xl"
       header={
-        <PageHeader
+        <CommunityHeroHeader
           title={board?.name ?? 'Board'}
           subtitle={board?.description ?? undefined}
+          accent={accent}
+          icon={MessageSquare}
           back="/community"
           backLabel="Community"
-          accent={accent}
           actions={
             canPost && (
               <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
@@ -107,32 +110,36 @@ export default function BoardPage() {
               </Button>
             )
           }
-        >
-          <div className="flex items-center gap-3 px-1 py-1.5">
-            <div className="flex items-center gap-1.5 text-xs text-white/40">
-              <Info className="w-3.5 h-3.5" />
-              <span>Some content may be AI-generated.</span>
+          stats={
+            !loading && posts.length > 0 ? (
+              <span className="flex items-center gap-1.5 text-xs text-white/40">
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span className="font-semibold text-white/70 tabular-nums">{posts.length}</span>
+                {posts.length === 1 ? ' thread' : ' threads'}
+              </span>
+            ) : undefined
+          }
+          meta={
+            <div className="flex items-center gap-3 flex-wrap">
+              {board?.is_locked && (
+                <span className="flex items-center gap-1 text-xs text-amber-400/80">
+                  <Lock className="w-3 h-3" />
+                  Locked
+                </span>
+              )}
+              {!board?.is_approved && board && (
+                <span className="flex items-center gap-1 text-xs text-amber-400/80">
+                  <Clock className="w-3 h-3" />
+                  Pending approval
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-[11px] text-white/25">
+                <Info className="w-3 h-3" />
+                <span>Some content may be AI-generated.</span>
+              </span>
             </div>
-            {board?.is_locked && (
-              <span className="flex items-center gap-1 text-xs text-amber-400/80">
-                <Lock className="w-3 h-3" />
-                Locked
-              </span>
-            )}
-            {!board?.is_approved && board && (
-              <span className="flex items-center gap-1 text-xs text-amber-400/80">
-                <Clock className="w-3 h-3" />
-                Pending approval
-              </span>
-            )}
-            {!loading && posts.length > 0 && (
-              <span className="flex items-center gap-1 text-xs text-white/30 ml-auto">
-                <MessageCircle className="w-3 h-3" />
-                {posts.length} {posts.length === 1 ? 'thread' : 'threads'}
-              </span>
-            )}
-          </div>
-        </PageHeader>
+          }
+        />
       }
     >
       {loading ? (
@@ -193,7 +200,7 @@ export default function BoardPage() {
                         {post.title}
                       </h3>
                       <p className="text-sm text-white/50 mt-1 line-clamp-2 leading-relaxed">
-                        {post.body}
+                        <SmilieText text={post.body} smilieSize={16} />
                       </p>
                     </button>
 
@@ -204,10 +211,18 @@ export default function BoardPage() {
                           <MessageCircle className="w-3 h-3" />
                           <span className="tabular-nums">{post.comment_count}</span>
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3" />
-                          <span className="tabular-nums">{post.reaction_count}</span>
-                        </span>
+                        {post.reaction_count > 0 && (
+                          <span className="flex items-center gap-0.5">
+                            {(post.reaction_aggregates ?? []).slice(0, 3).map((a) => {
+                              const url = smilieUrl(a.reaction_type);
+                              if (!url) return null;
+                              return (
+                                <img key={a.reaction_type} src={url} alt={`:${a.reaction_type}:`} style={{ height: 14, width: 'auto' }} loading="lazy" />
+                              );
+                            })}
+                            <span className="tabular-nums ml-0.5">{post.reaction_count}</span>
+                          </span>
+                        )}
                       </div>
                       <span className="text-[10px] text-white/25 flex items-center gap-0.5">
                         <Clock className="w-2.5 h-2.5" />

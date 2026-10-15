@@ -6,7 +6,7 @@ import {
   ShieldCheck, Users, MessageCircle, Sparkles,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { PageHeader } from '../shared/ui/PageHeader';
+import { CommunityHeroHeader } from '../components/community/CommunityHeroHeader';
 import { Button } from '../shared/ui/Button';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -95,37 +95,39 @@ export default function CommunityPage() {
     <PageShell
       width="xl"
       header={
-        <PageHeader
+        <CommunityHeroHeader
           title="Community"
           subtitle="Boards, conversations, and connection"
-          icon={MessageSquare}
           accent="#3b82f6"
+          icon={MessageSquare}
           back="/lobby"
+          backLabel="Lobby"
           actions={
             <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
               New Board
             </Button>
           }
-        >
-          <div className="flex items-center gap-3 px-1 py-1.5">
-            <div className="flex items-center gap-1.5 text-xs text-white/40">
-              <Info className="w-3.5 h-3.5" />
+          stats={
+            !loading && approvedBoards.length > 0 ? (
+              <>
+                <span className="flex items-center gap-1.5 text-xs text-white/40">
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="font-semibold text-white/70 tabular-nums">{approvedBoards.length}</span> boards
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-white/40">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span className="font-semibold text-white/70 tabular-nums">{totalPosts}</span> posts
+                </span>
+              </>
+            ) : undefined
+          }
+          meta={
+            <div className="flex items-center gap-1.5 text-[11px] text-white/25">
+              <Info className="w-3 h-3" />
               <span>Some content may be AI-generated.</span>
             </div>
-            {!loading && approvedBoards.length > 0 && (
-              <div className="flex items-center gap-3 text-xs text-white/30 ml-auto">
-                <span className="flex items-center gap-1">
-                  <Users className="w-3 h-3" />
-                  {approvedBoards.length} boards
-                </span>
-                <span className="flex items-center gap-1">
-                  <MessageCircle className="w-3 h-3" />
-                  {totalPosts} posts
-                </span>
-              </div>
-            )}
-          </div>
-        </PageHeader>
+          }
+        />
       }
     >
       {loading ? (

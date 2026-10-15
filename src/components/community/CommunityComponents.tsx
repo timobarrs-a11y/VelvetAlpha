@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ModalShell } from '../../shared/ui/ModalShell';
 import { Input, Textarea } from '../../shared/ui';
 import { Button } from '../../shared/ui/Button';
 import { toast } from '../../shared/ui';
 import { reportContent } from '../../services/communityService';
+import { SmiliePicker } from './SmiliePicker';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -67,6 +68,24 @@ export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreateP
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertSmilieAtCursor = (code: string) => {
+    const textarea = bodyRef.current;
+    if (!textarea) {
+      setBody((prev) => `${prev}:${code}: `);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newText = `${body.slice(0, start)}:${code}: ${body.slice(end)}`;
+    setBody(newText);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const cursorPos = start + code.length + 3;
+      textarea.setSelectionRange(cursorPos, cursorPos);
+    });
+  };
 
   const handleSubmit = async () => {
     if (!title.trim() || !body.trim()) return;
@@ -108,14 +127,21 @@ export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreateP
           onChange={(e) => setTitle(e.target.value)}
           maxLength={120}
         />
-        <Textarea
-          label="Body"
-          placeholder="Share your thoughts..."
-          rows={6}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          maxLength={5000}
-        />
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="label-base">Body</label>
+            <SmiliePicker onInsert={insertSmilieAtCursor} />
+          </div>
+          <textarea
+            ref={bodyRef}
+            className="ds-input min-h-[120px] max-h-64 resize-none w-full rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-sm text-white/80 placeholder-white/30 outline-none focus:border-white/15 transition-colors"
+            placeholder="Share your thoughts... type :name: to insert a smilie"
+            rows={6}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            maxLength={5000}
+          />
+        </div>
       </div>
     </ModalShell>
   );

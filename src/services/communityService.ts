@@ -8,6 +8,7 @@ import type {
   CommentWithAuthor,
   BoardWithCounts,
   ReactionType,
+  SmilieReactionAggregate,
 } from '../types/community';
 
 const PAGE_SIZE = 10;
@@ -118,31 +119,37 @@ export async function fetchPosts(
 
   if (userId && rows.length > 0) {
     const postIds = rows.map((r) => r.id);
-    const { data: reactions } = await supabase
-      .from('community_reactions')
-      .select('target_id, reaction_type')
-      .eq('user_id', userId)
-      .eq('target_type', 'post')
-      .in('target_id', postIds);
+    const [reactionsRes, aggMap] = await Promise.all([
+      supabase
+        .from('community_reactions')
+        .select('target_id, reaction_type')
+        .eq('user_id', userId)
+        .eq('target_type', 'post')
+        .in('target_id', postIds),
+      fetchReactionAggregates('post', postIds),
+    ]);
 
     const reactionMap = new Map<string, ReactionType>();
-    (reactions ?? []).forEach((r) => reactionMap.set(r.target_id, r.reaction_type as ReactionType));
+    (reactionsRes.data ?? []).forEach((r) => reactionMap.set(r.target_id, r.reaction_type as ReactionType));
 
     return {
       posts: rows.map((r) => ({
         ...r,
         author_name: (r.author_name as unknown as { name: string })?.name ?? 'Unknown',
         user_reaction: reactionMap.get(r.id) ?? null,
+        reaction_aggregates: aggMap.get(r.id) ?? [],
       })),
       nextCursor,
     };
   }
 
+  const aggMap2 = await fetchReactionAggregates('post', rows.map((r) => r.id));
   return {
     posts: rows.map((r) => ({
       ...r,
       author_name: (r.author_name as unknown as { name: string })?.name ?? 'Unknown',
       user_reaction: null,
+      reaction_aggregates: aggMap2.get(r.id) ?? [],
     })),
     nextCursor,
   };
@@ -171,10 +178,14 @@ export async function fetchPost(postId: string): Promise<PostWithAuthor | null> 
     userReaction = (reaction?.reaction_type as ReactionType) ?? null;
   }
 
+  const aggMap = await fetchReactionAggregates('post', [postId]);
+  const aggregates = aggMap.get(postId) ?? [];
+
   return {
     ...data,
     author_name: (data.author_name as unknown as { name: string })?.name ?? 'Unknown',
     user_reaction: userReaction,
+    reaction_aggregates: aggregates,
   };
 }
 
@@ -212,9 +223,30 @@ export async function fetchComments(postId: string): Promise<CommentWithAuthor[]
 
   if (error || !data) return [];
 
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  const commentIds = data.map((r) => r.id);
+
+  const [aggMap, userReactions] = await Promise.all([
+    fetchReactionAggregates('comment', commentIds),
+    userId
+      ? supabase
+          .from('community_reactions')
+          .select('target_id, reaction_type')
+          .eq('user_id', userId)
+          .eq('target_type', 'comment')
+          .in('target_id', commentIds)
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const userReactionMap = new Map<string, string>();
+  (userReactions.data ?? []).forEach((r) => userReactionMap.set(r.target_id, r.reaction_type));
+
   return data.map((r) => ({
     ...r,
     author_name: (r.author_name as unknown as { name: string })?.name ?? 'Unknown',
+    user_reaction: userReactionMap.get(r.id) ?? null,
+    reaction_aggregates: aggMap.get(r.id) ?? [],
   }));
 }
 
@@ -248,14 +280,20 @@ export async function toggleReaction(
 ): Promise<void> {
   const { data: existing } = await supabase
     .from('community_reactions')
-    .select('id')
+    .select('id, reaction_type')
     .eq('target_id', targetId)
     .eq('target_type', targetType)
-    .eq('reaction_type', reactionType)
     .maybeSingle();
 
   if (existing) {
-    await supabase.from('community_reactions').delete().eq('id', existing.id);
+    if (existing.reaction_type === reactionType) {
+      await supabase.from('community_reactions').delete().eq('id', existing.id);
+    } else {
+      await supabase
+        .from('community_reactions')
+        .update({ reaction_type })
+        .eq('id', existing.id);
+    }
   } else {
     await supabase.from('community_reactions').insert({
       target_id: targetId,
@@ -263,6 +301,34 @@ export async function toggleReaction(
       reaction_type: reactionType,
     });
   }
+}
+
+export async function fetchReactionAggregates(
+  targetType: 'post' | 'comment',
+  targetIds: string[],
+): Promise<Map<string, SmilieReactionAggregate[]>> {
+  if (targetIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('community_reactions')
+    .select('target_id, reaction_type')
+    .eq('target_type', targetType)
+    .in('target_id', targetIds);
+
+  if (error || !data) return new Map();
+
+  const map = new Map<string, SmilieReactionAggregate[]>();
+  for (const row of data) {
+    const list = map.get(row.target_id) ?? [];
+    const existing = list.find((a) => a.reaction_type === row.reaction_type);
+    if (existing) {
+      existing.count++;
+    } else {
+      list.push({ reaction_type: row.reaction_type, count: 1 });
+    }
+    map.set(row.target_id, list);
+  }
+  return map;
 }
 
 export async function reportContent(input: {
