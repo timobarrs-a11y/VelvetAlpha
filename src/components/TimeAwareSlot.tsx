@@ -1,5 +1,6 @@
 import { Calendar, Clock, MapPin, Sun, Sunrise, Moon, Sunset } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import type { LocalDateParts } from '../services/temporalAwarenessService';
 import type { UserEvent } from '../services/calendarService';
 import type { CompanionWithLastMessage } from '../services/companionService';
@@ -100,14 +101,16 @@ function EventSlot({ event, label, isTomorrow }: { event: UserEvent; label: stri
 }
 
 function CompanionNarrativeSlot({ companion, narrative }: { companion: CompanionWithLastMessage; narrative: string }) {
+  const navigate = useNavigate();
   const excerpt = narrative.length > 240 ? narrative.slice(0, 240).trimEnd() + '...' : narrative;
   return (
-    <motion.div
+    <motion.button
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.3 }}
-      className="ds-card rounded-xl p-4 flex items-start gap-4"
+      onClick={() => navigate(`/chat?companion=${companion.id}`)}
+      className="ds-card rounded-xl p-4 flex items-start gap-4 w-full text-left hover:bg-white/5 transition-colors"
     >
       <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-violet-500/10 border border-violet-400/20 flex-shrink-0">
         <Moon className="w-5 h-5 text-violet-300 mb-0.5" />
@@ -118,7 +121,7 @@ function CompanionNarrativeSlot({ companion, narrative }: { companion: Companion
         </p>
         <p className="text-white/80 text-sm leading-relaxed italic">{excerpt}</p>
       </div>
-    </motion.div>
+    </motion.button>
   );
 }
 

@@ -178,6 +178,11 @@ export function HomeShellPage() {
       group: 'play', action: () => navigate('/real-or-not'),
     },
     {
+      id: 'community', label: 'Community', sub: 'Boards & posts',
+      icon: <MessageCircle className="w-3.5 h-3.5" />, color: 'text-blue-400',
+      group: 'connect', action: () => navigate('/community'),
+    },
+    {
       id: 'arcade', label: 'The Arcade', sub: 'Play together',
       icon: <Gamepad2 className="w-3.5 h-3.5" />, color: 'text-orange-400',
       group: 'play', action: () => setShowArcadeModal(true),
@@ -446,8 +451,9 @@ export function HomeShellPage() {
                 whileHover={{ scale: 1.015 }}
                 whileTap={{ scale: 0.985 }}
                 onClick={() => {
+                  const path = lobby.selectedGame?.path || '/pacman';
                   lobby.setShowGameModal(false);
-                  navigate(`/pacman?companion=${companion.id}`);
+                  navigate(`${path}?companion=${companion.id}`);
                 }}
                 className="ds-card ds-card--interactive p-4 text-left"
                 style={{ background: 'var(--ds-surface-2)' }}>

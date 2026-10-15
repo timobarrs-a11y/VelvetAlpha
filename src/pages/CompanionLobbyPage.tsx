@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, Heart, Users, Crown, Cherry, Zap, Circle,
   Rocket, LogOut, Gamepad2, Lightbulb, FileText, User,
-  UsersRound, Calendar, Youtube, Newspaper,
+  UsersRound, Calendar, Youtube, Newspaper, MessageSquare,
   Info, Plus,
   Sparkles, Flame, Wand2, Volume2, VolumeX, Bot, MapPin, Brain,
   HelpCircle,
@@ -96,6 +96,10 @@ const HUB_TILES: HubTileDef[] = [
     id: 'real-or-not', label: 'The Velvet Rope',
     desc: 'Step inside. Humans and AI share the same space — can you tell them apart?',
     icon: Zap, accent: '#f43f6b', solidBg: 'linear-gradient(135deg, #4a0e1a 0%, #800020 100%)', path: '/real-or-not', slot: 'wide', size: 'wide',
+  },
+  {
+    id: 'community', label: 'Community', desc: 'Boards, posts, and discussions.',
+    icon: MessageSquare, accent: '#60a5fa', solidBg: '#1565c0', path: '/community', slot: 'wide', size: 'wide',
   },
 ];
 
