@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MessageSquare, PenLine, Gamepad2, CreditCard, Info, Mail, FileText, Shield } from 'lucide-react';
+import { MessageSquare, PenLine, Gamepad2, CreditCard, Info, Mail, FileText, Shield, GitCommit } from 'lucide-react';
 
 const PRODUCT_LINKS = [
   { label: 'Chat', to: '/chat', icon: MessageSquare },
@@ -10,6 +10,7 @@ const PRODUCT_LINKS = [
 
 const COMPANY_LINKS = [
   { label: 'About', to: '/about', icon: Info },
+  { label: 'Changelog', to: '/changelog', icon: GitCommit },
   { label: 'Contact', href: 'mailto:hello@projectvelvet.com', icon: Mail },
 ];
 
