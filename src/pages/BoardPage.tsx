@@ -14,6 +14,7 @@ import { CreatePostModal, ReportModal } from '../components/community/CommunityC
 import { SmilieText } from '../components/community/SmilieText';
 import { smilieUrl } from '../config/smilieRegistry';
 import { fetchBoard, fetchPosts, deletePost } from '../services/communityService';
+import { supabase } from '../shared/supabase/client';
 import type { BoardWithCounts, PostWithAuthor } from '../types/community';
 
 const COLOR_MAP: Record<string, string> = {
@@ -51,6 +52,11 @@ export default function BoardPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [reportPostId, setReportPostId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
 
   const loadBoard = useCallback(async () => {
     if (!boardId) return;
@@ -161,7 +167,7 @@ export default function BoardPage() {
         <div className="flex flex-col gap-2.5">
           {posts.map((post, i) => {
             const initials = post.author_name.slice(0, 2).toUpperCase();
-            const canDelete = board?.is_owner || post.author_id === board?.owner_id;
+            const canDelete = board?.is_owner || post.author_id === currentUserId;
             return (
               <motion.div
                 key={post.id}

@@ -27,6 +27,7 @@ export async function fetchBoards(): Promise<BoardWithCounts[]> {
     .from('community_boards')
     .select('*')
     .order('is_pinned', { ascending: false })
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
 
   if (error || !boards) return [];

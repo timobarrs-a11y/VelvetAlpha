@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   MessageSquare, Plus, Pin, Info, Check, X, Clock,
-  ShieldCheck, Users, MessageCircle, Sparkles,
+  ShieldCheck, Users, MessageCircle, Sparkles, ArrowRight,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
 import { CommunityHeroHeader } from '../components/community/CommunityHeroHeader';
-import { Button } from '../shared/ui/Button';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { CreateBoardModal } from '../components/community/CommunityComponents';
@@ -102,11 +101,6 @@ export default function CommunityPage() {
           icon={MessageSquare}
           back="/lobby"
           backLabel="Lobby"
-          actions={
-            <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
-              New Board
-            </Button>
-          }
           stats={
             !loading && approvedBoards.length > 0 ? (
               <>
@@ -140,7 +134,7 @@ export default function CommunityPage() {
           action={{ label: 'Create a board', onClick: () => setShowCreate(true) }}
         />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-7">
           {/* Pending approval section (super user only) */}
           {superUser && pendingBoards.length > 0 && (
             <motion.div
@@ -212,7 +206,7 @@ export default function CommunityPage() {
           {/* Featured / pinned boards */}
           {featuredBoards.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3.5">
                 <Sparkles className="w-4 h-4 text-amber-400" />
                 <h2 className="text-sm font-bold tracking-wide text-white/70 uppercase">Featured</h2>
               </div>
@@ -272,7 +266,7 @@ export default function CommunityPage() {
           {/* All boards */}
           {regularBoards.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3.5">
                 <h2 className="text-sm font-bold tracking-wide text-white/70 uppercase">All Boards</h2>
                 <div className="h-px flex-1 bg-white/8" />
               </div>
@@ -284,7 +278,7 @@ export default function CommunityPage() {
                       key={board.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: i * 0.03 }}
+                      transition={{ delay: Math.min(i * 0.03, 0.4) }}
                       onClick={() => navigate(`/community/board/${board.id}`)}
                       className="w-full flex items-center gap-3 px-4 py-3.5 text-left border-b border-white/[0.06] last:border-b-0 transition-all hover:bg-white/[0.03] group"
                     >
@@ -326,6 +320,18 @@ export default function CommunityPage() {
               </div>
             </div>
           )}
+
+          {/* Start a board — inline, contextual, not floating */}
+          <div className="flex justify-center pt-1">
+            <button
+              onClick={() => setShowCreate(true)}
+              className="group flex items-center gap-2 px-5 py-2.5 rounded-full text-sm text-white/50 hover:text-white/90 border border-white/8 hover:border-white/15 hover:bg-white/[0.02] transition-all"
+            >
+              <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
+              <span>Start a new board</span>
+              <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 -ml-1 transition-all" />
+            </button>
+          </div>
         </div>
       )}
 

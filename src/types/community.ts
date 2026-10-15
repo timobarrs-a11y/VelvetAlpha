@@ -9,6 +9,7 @@ export interface CommunityBoard {
   is_pinned: boolean;
   is_approved: boolean;
   post_count: number;
+  sort_order: number;
   created_at: string;
 }
 

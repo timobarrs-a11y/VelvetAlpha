@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send, MessageCircle, Info, Pin, Clock, ChevronRight,
+  Send, MessageCircle, Info, Pin, Clock, ChevronRight, Trash2,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
 import { CommunityHeroHeader } from '../components/community/CommunityHeroHeader';
@@ -11,6 +11,7 @@ import { Textarea } from '../shared/ui';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { toast } from '../shared/ui';
 import { ReportModal } from '../components/community/CommunityComponents';
+import { supabase } from '../shared/supabase/client';
 import { SmilieText } from '../components/community/SmilieText';
 import { SmiliePicker, SmilieReactionPicker } from '../components/community/SmiliePicker';
 import { smilieUrl } from '../config/smilieRegistry';
@@ -84,11 +85,16 @@ export default function PostDetailPage() {
   const [commentBody, setCommentBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [boardId, setBoardId] = useState<string | null>(null);
   const [boardName, setBoardName] = useState<string>('');
   const [boardColor, setBoardColor] = useState<string>('#3b82f6');
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
 
   const loadPost = useCallback(async () => {
     if (!postId) return;
@@ -331,6 +337,21 @@ export default function PostDetailPage() {
                 onReact={handlePostReact}
               />
               <div className="flex-1" />
+              {post.author_id === currentUserId && (
+                <button
+                  onClick={handleDeletePost}
+                  className="flex items-center gap-1 text-xs text-white/25 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-white/5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
+                </button>
+              )}
+              <button
+                onClick={() => setShowReport(true)}
+                className="flex items-center gap-1 text-xs text-white/25 hover:text-amber-400 transition-colors px-2 py-1 rounded hover:bg-white/5"
+              >
+                Report
+              </button>
               <span className="flex items-center gap-1 text-xs text-white/30">
                 <MessageCircle className="w-3.5 h-3.5" />
                 {post.comment_count}
@@ -390,12 +411,14 @@ export default function PostDetailPage() {
                         userReaction={comment.user_reaction ?? null}
                         onReact={(code) => handleCommentReact(comment.id, code)}
                       />
-                      <button
-                        onClick={() => handleDeleteComment(comment.id)}
-                        className="text-[10px] text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 ml-auto"
-                      >
-                        Delete
-                      </button>
+                      {comment.author_id === currentUserId && (
+                        <button
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="text-[10px] text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 ml-auto"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>
