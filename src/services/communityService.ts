@@ -9,6 +9,10 @@ import type {
   BoardWithCounts,
   ReactionType,
   SmilieReactionAggregate,
+  NotificationWithActor,
+  CommunityPoll,
+  PollVoteResult,
+  CommunityBadge,
 } from '../types/community';
 
 const PAGE_SIZE = 10;
@@ -422,6 +426,158 @@ export async function searchCommunity(query: string, limit = 20): Promise<Search
 
   if (error || !data) return [];
   return data as SearchResult[];
+}
+
+/* ===== Notifications ===== */
+
+export async function fetchNotifications(
+  limit = 20,
+  cursor?: string,
+): Promise<{ notifications: NotificationWithActor[]; nextCursor: string | null }> {
+  let query = supabase
+    .from('community_notifications')
+    .select('*, actor_name:user_profiles!community_notifications_actor_id_fkey(name)')
+    .order('created_at', { ascending: false })
+    .limit(limit + 1);
+
+  if (cursor) {
+    query = query.lt('created_at', cursor);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) return { notifications: [], nextCursor: null };
+
+  const hasMore = data.length > limit;
+  const rows = hasMore ? data.slice(0, limit) : data;
+  const nextCursor = hasMore ? rows[rows.length - 1].created_at : null;
+
+  return {
+    notifications: rows.map((r) => ({
+      ...r,
+      actor_name: (r.actor_name as unknown as { name: string } | null)?.name ?? null,
+    })),
+    nextCursor,
+  };
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const { data, error } = await supabase.rpc('get_unread_notification_count');
+  if (error || data === null) return 0;
+  return data as number;
+}
+
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  await supabase
+    .from('community_notifications')
+    .update({ read: true })
+    .eq('id', notificationId);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+  await supabase
+    .from('community_notifications')
+    .update({ read: true })
+    .eq('user_id', userData.user.id)
+    .eq('read', false);
+}
+
+export async function deleteNotification(notificationId: string): Promise<void> {
+  await supabase.from('community_notifications').delete().eq('id', notificationId);
+}
+
+/* ===== Polls ===== */
+
+export async function fetchPoll(postId: string): Promise<CommunityPoll | null> {
+  const { data, error } = await supabase
+    .from('community_polls')
+    .select('*')
+    .eq('post_id', postId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as CommunityPoll;
+}
+
+export async function createPoll(input: {
+  post_id: string;
+  question: string;
+  options: string[];
+  expires_at?: string | null;
+}): Promise<CommunityPoll | null> {
+  const { data, error } = await supabase
+    .from('community_polls')
+    .insert({
+      post_id: input.post_id,
+      question: input.question,
+      options: input.options,
+      expires_at: input.expires_at ?? null,
+    })
+    .select()
+    .maybeSingle();
+  if (error) return null;
+  return data as CommunityPoll;
+}
+
+export async function fetchPollResults(pollId: string): Promise<PollVoteResult[]> {
+  const { data, error } = await supabase.rpc('get_poll_results', { p_poll_id: pollId });
+  if (error || !data) return [];
+  return data as PollVoteResult[];
+}
+
+export async function fetchUserPollVote(pollId: string): Promise<number | null> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return null;
+  const { data, error } = await supabase
+    .from('community_poll_votes')
+    .select('option_index')
+    .eq('poll_id', pollId)
+    .eq('user_id', userData.user.id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.option_index as number;
+}
+
+export async function votePoll(pollId: string, optionIndex: number): Promise<boolean> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return false;
+  const { error } = await supabase
+    .from('community_poll_votes')
+    .upsert(
+      { poll_id: pollId, user_id: userData.user.id, option_index: optionIndex },
+      { onConflict: 'poll_id,user_id' },
+    );
+  return !error;
+}
+
+/* ===== Badges ===== */
+
+export async function fetchBadges(userId: string): Promise<CommunityBadge[]> {
+  const { data, error } = await supabase.rpc('get_community_badges', { p_user_id: userId });
+  if (error || !data) return [];
+  return data as CommunityBadge[];
+}
+
+/* ===== Weekly Threads ===== */
+
+export interface WeeklyThreadTemplate {
+  id: string;
+  board_id: string;
+  title_pattern: string;
+  body_pattern: string;
+  day_of_week: number;
+  is_active: boolean;
+  last_run_at: string | null;
+  created_at: string;
+}
+
+export async function fetchWeeklyTemplates(): Promise<WeeklyThreadTemplate[]> {
+  const { data, error } = await supabase
+    .from('community_weekly_threads')
+    .select('*')
+    .order('day_of_week', { ascending: true });
+  if (error || !data) return [];
+  return data as WeeklyThreadTemplate[];
 }
 
 export { PAGE_SIZE };

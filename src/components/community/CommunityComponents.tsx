@@ -5,6 +5,7 @@ import { Button } from '../../shared/ui/Button';
 import { toast } from '../../shared/ui';
 import { reportContent } from '../../services/communityService';
 import { SmiliePicker } from './SmiliePicker';
+import { PollCreator } from './PollCreator';
 import { SMILIES, smilieUrl } from '../../config/smilieRegistry';
 
 interface ReportModalProps {
@@ -72,6 +73,7 @@ export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreateP
   const [showSmilieGrid, setShowSmilieGrid] = useState(false);
   const [smilieFilter, setSmilieFilter] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [pollData, setPollData] = useState<{ question: string; options: string[] } | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   const insertSmilieAtCursor = (code: string) => {
@@ -98,10 +100,15 @@ export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreateP
     const post = await createPost({ board_id: boardId, title: title.trim(), body: body.trim(), post_smilie: postSmilie });
     setSubmitting(false);
     if (post) {
+      if (pollData && pollData.options.length >= 2) {
+        const { createPoll } = await import('../../services/communityService');
+        await createPoll({ post_id: post.id, question: pollData.question, options: pollData.options });
+      }
       toast.success('Post published!');
       setTitle('');
       setBody('');
       setPostSmilie(null);
+      setPollData(null);
       onCreated();
       onClose();
     } else {
@@ -220,6 +227,7 @@ export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreateP
             maxLength={5000}
           />
         </div>
+        <PollCreator onPollChange={setPollData} />
       </div>
     </ModalShell>
   );

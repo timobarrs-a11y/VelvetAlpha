@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, MessageCircle, Pin, Clock, ChevronRight, Trash2, Bot, Edit3, Quote,
+  Share2, Check,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
 import { PostDetailHeader } from '../components/community/CommunityHeroHeader';
@@ -11,6 +12,8 @@ import { Textarea } from '../shared/ui';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { toast } from '../shared/ui';
 import { ReportModal } from '../components/community/CommunityComponents';
+import { PollDisplay } from '../components/community/PollDisplay';
+import { BadgeRow } from '../components/community/BadgeDisplay';
 import { supabase } from '../shared/supabase/client';
 import { SmilieText } from '../components/community/SmilieText';
 import { SmiliePicker, SmilieReactionPicker } from '../components/community/SmiliePicker';
@@ -94,6 +97,7 @@ export default function PostDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [copied, setCopied] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const markedReadRef = useRef(false);
@@ -269,6 +273,17 @@ export default function PostDetailPage() {
     });
   };
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/community/post/${postId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Could not copy link.');
+    }
+  };
+
   if (loading) {
     return (
       <PageShell width="lg" header={<PostDetailHeader back="/community" backLabel="Community" />}>
@@ -320,6 +335,7 @@ export default function PostDetailPage() {
             <span className="text-xs font-semibold text-white/85 text-center break-all leading-tight">
               {post.author_name}
             </span>
+            <BadgeRow userId={post.author_id} compact />
             <span className="text-[10px] text-white/30 flex items-center gap-0.5">
               <Clock className="w-2.5 h-2.5" />
               {timeAgo(post.created_at)}
@@ -385,6 +401,8 @@ export default function PostDetailPage() {
               )}
             </div>
 
+            <PollDisplay postId={post.id} canVote={post.author_id !== currentUserId} />
+
             {/* Reaction bar */}
             <div className="flex items-center flex-wrap gap-2 px-5 py-3 border-t border-white/[0.06] bg-white/[0.01]">
               <SmilieReactionPicker onReact={handlePostReact} />
@@ -417,6 +435,13 @@ export default function PostDetailPage() {
                 className="flex items-center gap-1 text-xs text-white/25 hover:text-amber-400 transition-colors px-2 py-1 rounded hover:bg-white/5"
               >
                 Report
+              </button>
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-1 text-xs text-white/25 hover:text-sky-400 transition-colors px-2 py-1 rounded hover:bg-white/5"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+                {copied ? 'Copied!' : 'Share'}
               </button>
               <span className="flex items-center gap-1 text-xs text-white/30">
                 <MessageCircle className="w-3.5 h-3.5" />
