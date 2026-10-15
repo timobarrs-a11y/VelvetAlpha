@@ -12,6 +12,7 @@ import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { CreatePostModal, ReportModal } from '../components/community/CommunityComponents';
 import { SmilieText } from '../components/community/SmilieText';
+import { firstYouTubeVideoId, YouTubeCardThumbnail } from '../components/community/YouTubeEmbed';
 import { smilieUrl } from '../config/smilieRegistry';
 import {
   fetchBoard, fetchPosts, deletePost, fetchReadPostIds,
@@ -274,7 +275,7 @@ export default function BoardPage() {
                         <img
                           src={smilieUrl(post.post_smilie)!}
                           alt={`:${post.post_smilie}:`}
-                          style={{ height: 36, width: 'auto' }}
+                          className="w-full h-full object-contain"
                           loading="lazy"
                         />
                       ) : (
@@ -302,6 +303,7 @@ export default function BoardPage() {
                       <p className="text-sm text-white/50 mt-1 line-clamp-2 leading-relaxed">
                         <SmilieText text={post.body} smilieSize={16} />
                       </p>
+                      {(() => { const ytId = firstYouTubeVideoId(post.body); return ytId ? <YouTubeCardThumbnail videoId={ytId} onClick={() => navigate(`/community/post/${post.id}`)} /> : null; })()}
                       {post.edited_at && (
                         <span className="text-[10px] text-white/25 italic mt-1 inline-block">
                           (edited)

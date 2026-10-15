@@ -374,7 +374,7 @@ export default function PostDetailPage() {
               ) : (
                 <>
                   <div className="text-sm text-white/75 mt-3 leading-relaxed whitespace-pre-wrap">
-                    <SmilieText text={post.body} />
+                    <SmilieText text={post.body} enableYouTube />
                   </div>
                   {post.edited_at && (
                     <span className="text-[10px] text-white/25 italic mt-2 inline-block">
@@ -599,12 +599,12 @@ function CommentBody({ text }: { text: string }) {
         <blockquote className="border-l-2 border-sky-400/30 pl-3 mb-2 text-xs text-white/40 italic">
           <SmilieText text={quoteText} />
         </blockquote>
-        <SmilieText text={bodyText} />
+        <SmilieText text={bodyText} enableYouTube />
       </>
     );
   }
 
-  return <SmilieText text={text} />;
+  return <SmilieText text={text} enableYouTube />;
 }
 
 function updateAggregates(

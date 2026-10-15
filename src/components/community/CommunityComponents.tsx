@@ -213,7 +213,7 @@ export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreateP
           <textarea
             ref={bodyRef}
             className="ds-input min-h-[120px] max-h-64 resize-none w-full rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-sm text-white/80 placeholder-white/30 outline-none focus:border-white/15 transition-colors"
-            placeholder="Share your thoughts... type :name: to insert a smilie"
+            placeholder="Share your thoughts... type :name: to insert a smilie, or paste a YouTube link to embed a video"
             rows={6}
             value={body}
             onChange={(e) => setBody(e.target.value)}
