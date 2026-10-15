@@ -7,6 +7,7 @@ export interface CommunityBoard {
   owner_id: string;
   is_locked: boolean;
   is_pinned: boolean;
+  is_approved: boolean;
   post_count: number;
   created_at: string;
 }

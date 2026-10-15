@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, MessageCircle, Info, Pin, Heart, HandHeart, UserRound, Clock } from 'lucide-react';
+import {
+  Send, MessageCircle, Info, Pin, Heart, HandHeart, UserRound, Clock,
+  ChevronRight,
+} from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
 import { PageHeader } from '../shared/ui/PageHeader';
 import { Button } from '../shared/ui/Button';
@@ -50,6 +53,7 @@ export default function PostDetailPage() {
   const [showReport, setShowReport] = useState(false);
   const [boardId, setBoardId] = useState<string | null>(null);
   const [boardName, setBoardName] = useState<string>('');
+  const [boardColor, setBoardColor] = useState<string>('#3b82f6');
   const [optimisticReaction, setOptimisticReaction] = useState<ReactionType | null>(null);
   const [optimisticCount, setOptimisticCount] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -84,7 +88,14 @@ export default function PostDetailPage() {
     (async () => {
       const { fetchBoard } = await import('../services/communityService');
       const b = await fetchBoard(boardId);
-      if (b) setBoardName(b.name);
+      if (b) {
+        setBoardName(b.name);
+        const COLORS: Record<string, string> = {
+          blue: '#3b82f6', rose: '#f43f5e', emerald: '#10b981', amber: '#f59e0b',
+          violet: '#8b5cf6', slate: '#64748b', teal: '#14b8a6', pink: '#ec4899',
+        };
+        setBoardColor(COLORS[b.color] ?? '#64748b');
+      }
     })();
   }, [boardId]);
 
@@ -140,7 +151,7 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <PageShell width="md" header={<PageHeader title="Loading..." back="/community" />}>
+      <PageShell width="lg" header={<PageHeader title="Loading..." back="/community" />}>
         <LoadingState label="Loading post..." />
       </PageShell>
     );
@@ -148,7 +159,7 @@ export default function PostDetailPage() {
 
   if (!post) {
     return (
-      <PageShell width="md" header={<PageHeader title="Post not found" back="/community" />}>
+      <PageShell width="lg" header={<PageHeader title="Post not found" back="/community" />}>
         <div className="text-center py-16 text-white/50">
           <p>This post may have been deleted.</p>
           <Button variant="secondary" size="sm" className="mt-4" onClick={() => navigate('/community')}>
@@ -160,10 +171,11 @@ export default function PostDetailPage() {
   }
 
   const postInitials = post.author_name.slice(0, 2).toUpperCase();
+  const accentSoft = `${boardColor}1a`;
 
   return (
     <PageShell
-      width="md"
+      width="lg"
       header={
         <PageHeader
           title="Thread"
@@ -171,7 +183,7 @@ export default function PostDetailPage() {
           back={boardId ? `/community/board/${boardId}` : '/community'}
           backLabel={boardName || 'Board'}
         >
-          <div className="flex items-center gap-2 px-1 py-2">
+          <div className="flex items-center gap-2 px-1 py-1.5">
             <div className="flex items-center gap-1.5 text-xs text-white/40">
               <Info className="w-3.5 h-3.5" />
               <span>Some content may be AI-generated.</span>
@@ -180,15 +192,34 @@ export default function PostDetailPage() {
         </PageHeader>
       }
     >
-      <div className="flex flex-col gap-4 pb-8">
+      <div className="flex flex-col gap-5 pb-8">
+        {/* Board context pill */}
+        {boardName && (
+          <button
+            onClick={() => navigate(boardId ? `/community/board/${boardId}` : '/community')}
+            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors self-start"
+          >
+            <span
+              className="w-5 h-5 rounded flex items-center justify-center"
+              style={{ background: accentSoft }}
+            >
+              <MessageCircle className="w-3 h-3" style={{ color: boardColor }} />
+            </span>
+            <span>{boardName}</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        )}
+
         {/* Original post -- forum style with left author sidebar */}
         <div className="flex gap-4">
           {/* Author sidebar */}
-          <div className="w-28 flex-shrink-0 flex flex-col items-center gap-1 pt-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-rose-400/60 to-violet-400/60 flex items-center justify-center text-sm font-bold text-white">
+          <div className="w-32 flex-shrink-0 flex flex-col items-center gap-2 pt-4">
+            <div
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-rose-400/60 to-violet-400/60 flex items-center justify-center text-sm font-bold text-white ring-2 ring-white/10"
+            >
               {postInitials}
             </div>
-            <span className="text-xs font-semibold text-white/80 text-center break-all leading-tight">
+            <span className="text-xs font-semibold text-white/85 text-center break-all leading-tight">
               {post.author_name}
             </span>
             <span className="text-[10px] text-white/30 flex items-center gap-0.5">
@@ -196,24 +227,32 @@ export default function PostDetailPage() {
               {timeAgo(post.created_at)}
             </span>
             {post.is_pinned && (
-              <Pin className="w-3 h-3 text-amber-400 mt-1" fill="currentColor" />
+              <span className="flex items-center gap-1 text-[10px] text-amber-400/80 mt-0.5">
+                <Pin className="w-3 h-3" fill="currentColor" />
+                Pinned
+              </span>
             )}
           </div>
 
           {/* Post body */}
-          <div className="flex-1 min-w-0 rounded-lg border border-white/8 bg-white/[0.02] p-4">
-            <h1 className="text-base font-bold text-white leading-tight">{post.title}</h1>
-            <p className="text-sm text-white/70 mt-2 leading-relaxed whitespace-pre-wrap">{post.body}</p>
+          <div
+            className="flex-1 min-w-0 rounded-xl border border-white/8 bg-white/[0.02] overflow-hidden"
+            style={{ borderTopColor: `${boardColor}40` }}
+          >
+            <div className="p-5">
+              <h1 className="text-lg font-bold text-white leading-tight">{post.title}</h1>
+              <p className="text-sm text-white/75 mt-3 leading-relaxed whitespace-pre-wrap">{post.body}</p>
+            </div>
 
             {/* Reaction bar */}
-            <div className="flex items-center gap-1 mt-4 pt-3 border-t border-white/[0.06]">
+            <div className="flex items-center gap-1.5 px-5 py-3 border-t border-white/[0.06] bg-white/[0.01]">
               {REACTIONS.map(({ type, label, icon: Icon, color }) => {
                 const active = optimisticReaction === type;
                 return (
                   <button
                     key={type}
                     onClick={() => handleReact(type)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       active
                         ? `${color} bg-white/8`
                         : 'text-white/40 hover:text-white/70 hover:bg-white/5'
@@ -221,7 +260,7 @@ export default function PostDetailPage() {
                     aria-label={label}
                     aria-pressed={active}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${active ? 'fill-current' : ''}`} />
+                    <Icon className={`w-4 h-4 ${active ? 'fill-current' : ''}`} />
                     <span>{label}</span>
                   </button>
                 );
@@ -237,14 +276,17 @@ export default function PostDetailPage() {
         </div>
 
         {/* Comments header */}
-        <div className="flex items-center gap-2 px-1 pt-2">
-          <MessageCircle className="w-4 h-4 text-white/40" />
-          <h2 className="text-sm font-semibold text-white/60">
-            {comments.length} {comments.length === 1 ? 'reply' : 'replies'}
-          </h2>
+        <div className="flex items-center gap-2 px-1 pt-1">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-white/40" />
+            <h2 className="text-sm font-bold text-white/60">
+              {comments.length} {comments.length === 1 ? 'reply' : 'replies'}
+            </h2>
+          </div>
+          <div className="h-px flex-1 bg-white/8" />
         </div>
 
-        {/* Comment list -- same sidebar layout */}
+        {/* Comment list */}
         <div className="flex flex-col gap-3">
           <AnimatePresence>
             {comments.map((comment) => {
@@ -257,8 +299,8 @@ export default function PostDetailPage() {
                   exit={{ opacity: 0, y: -8 }}
                   className="flex gap-4 group"
                 >
-                  <div className="w-28 flex-shrink-0 flex flex-col items-center gap-1 pt-2">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400/50 to-emerald-400/50 flex items-center justify-center text-xs font-bold text-white">
+                  <div className="w-32 flex-shrink-0 flex flex-col items-center gap-1.5 pt-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-400/50 to-emerald-400/50 flex items-center justify-center text-xs font-bold text-white">
                       {initials}
                     </div>
                     <span className="text-xs font-semibold text-white/80 text-center break-all leading-tight">
@@ -270,12 +312,12 @@ export default function PostDetailPage() {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="rounded-lg border border-white/[0.06] bg-white/[0.01] p-3">
-                      <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">{comment.body}</p>
+                    <div className="rounded-xl border border-white/[0.06] bg-white/[0.01] p-4">
+                      <p className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap">{comment.body}</p>
                     </div>
                     <button
                       onClick={() => handleDeleteComment(comment.id)}
-                      className="text-[10px] text-white/20 hover:text-red-400 transition-colors mt-1 opacity-0 group-hover:opacity-100"
+                      className="text-[10px] text-white/20 hover:text-red-400 transition-colors mt-1.5 opacity-0 group-hover:opacity-100"
                     >
                       Delete
                     </button>
@@ -285,23 +327,23 @@ export default function PostDetailPage() {
             })}
           </AnimatePresence>
           {comments.length === 0 && (
-            <p className="text-sm text-white/30 text-center py-6">
-              No replies yet. Be the first to respond.
-            </p>
+            <div className="text-center py-8 rounded-xl border border-dashed border-white/8">
+              <p className="text-sm text-white/30">No replies yet. Be the first to respond.</p>
+            </div>
           )}
           <div ref={commentsEndRef} />
         </div>
 
         {/* Reply input */}
         {!post.is_locked && (
-          <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-[var(--ds-surface-2)]/80 backdrop-blur-md border-t border-white/8">
-            <div className="flex items-end gap-2">
+          <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 bg-[var(--ds-surface-2)]/80 backdrop-blur-md border-t border-white/8">
+            <div className="rounded-xl border border-white/8 bg-white/[0.02] focus-within:border-white/15 transition-colors">
               <Textarea
                 placeholder="Write a reply..."
-                rows={1}
+                rows={2}
                 value={commentBody}
                 onChange={(e) => setCommentBody(e.target.value)}
-                className="min-h-[40px] max-h-32"
+                className="min-h-[44px] max-h-32 border-0 bg-transparent focus:ring-0 resize-none"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                     e.preventDefault();
@@ -309,16 +351,21 @@ export default function PostDetailPage() {
                   }
                 }}
               />
-              <Button
-                size="sm"
-                isLoading={submitting}
-                disabled={!commentBody.trim()}
-                onClick={handleSubmitComment}
-                leftIcon={<Send className="w-3.5 h-3.5" />}
-                className="flex-shrink-0"
-              >
-                Reply
-              </Button>
+              <div className="flex items-center justify-between px-3 pb-2.5">
+                <span className="text-[10px] text-white/25">
+                  Cmd+Enter to send
+                </span>
+                <Button
+                  size="sm"
+                  isLoading={submitting}
+                  disabled={!commentBody.trim()}
+                  onClick={handleSubmitComment}
+                  leftIcon={<Send className="w-3.5 h-3.5" />}
+                  className="flex-shrink-0"
+                >
+                  Reply
+                </Button>
+              </div>
             </div>
           </div>
         )}

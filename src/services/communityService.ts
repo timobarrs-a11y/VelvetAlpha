@@ -12,6 +12,15 @@ import type {
 
 const PAGE_SIZE = 10;
 
+export async function isSuperUser(): Promise<boolean> {
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('is_super_user')
+    .eq('id', (await supabase.auth.getUser()).user?.id ?? '')
+    .maybeSingle();
+  return profile?.is_super_user ?? false;
+}
+
 export async function fetchBoards(): Promise<BoardWithCounts[]> {
   const { data: boards, error } = await supabase
     .from('community_boards')
@@ -41,6 +50,22 @@ export async function fetchBoard(boardId: string): Promise<BoardWithCounts | nul
 
   const { data: profile } = await supabase.auth.getUser();
   return { ...data, is_owner: data.owner_id === profile.user?.id };
+}
+
+export async function approveBoard(boardId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('community_boards')
+    .update({ is_approved: true })
+    .eq('id', boardId);
+  return !error;
+}
+
+export async function rejectBoard(boardId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('community_boards')
+    .delete()
+    .eq('id', boardId);
+  return !error;
 }
 
 export async function createBoard(input: {
