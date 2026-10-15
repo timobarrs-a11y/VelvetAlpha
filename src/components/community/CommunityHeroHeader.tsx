@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft, MessageSquare, type LucideIcon,
   ChevronRight,
@@ -123,6 +124,8 @@ export function HeaderStat({
   );
 }
 
+const EASE = [0.22, 1, 0.36, 1] as const;
+
 export function BoardHeader({
   title,
   subtitle,
@@ -135,6 +138,16 @@ export function BoardHeader({
   meta,
 }: BoardHeaderProps) {
   const navigate = useNavigate();
+  const reduce = useReducedMotion();
+  // Staggered rise-in; collapses to a static render when the user prefers reduced motion.
+  const rise = (delay: number) =>
+    reduce
+      ? {}
+      : {
+          initial: { opacity: 0, y: 14 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.55, delay, ease: EASE },
+        };
 
   return (
     <header className="relative w-full overflow-hidden border-b border-white/10">
@@ -146,9 +159,11 @@ export function BoardHeader({
         }}
       />
       {/* Glow pooled behind the icon tile */}
-      <div
+      <motion.div
         className="absolute -left-24 top-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full pointer-events-none"
         style={{ background: `radial-gradient(circle, ${accent}40 0%, transparent 65%)`, filter: 'blur(60px)' }}
+        animate={reduce ? undefined : { opacity: [0.7, 1, 0.7], scale: [1, 1.08, 1] }}
+        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
       />
       {/* Dot grid, masked so it fades toward the right */}
       <div
@@ -161,12 +176,24 @@ export function BoardHeader({
         }}
       />
       {/* Oversized watermark icon fills the right side */}
-      <Icon
+      <motion.div
         aria-hidden
-        className="absolute right-8 lg:right-[8%] top-1/2 w-[220px] h-[220px] pointer-events-none hidden md:block"
-        strokeWidth={1}
-        style={{ color: accent, opacity: 0.16, transform: 'translateY(-60%) rotate(-8deg)' }}
-      />
+        className="absolute right-8 lg:right-[8%] top-1/2 pointer-events-none hidden md:block"
+        style={{ color: accent, y: '-60%' }}
+        initial={reduce ? false : { opacity: 0, rotate: -20, scale: 0.85 }}
+        animate={reduce ? { opacity: 0.16, rotate: -8 } : { opacity: 0.16, rotate: [-8, -5, -8], scale: 1 }}
+        transition={
+          reduce
+            ? undefined
+            : {
+                opacity: { duration: 1.2, delay: 0.2 },
+                scale: { duration: 1.2, delay: 0.2, ease: EASE },
+                rotate: { duration: 14, repeat: Infinity, ease: 'easeInOut' },
+              }
+        }
+      >
+        <Icon className="w-[220px] h-[220px]" strokeWidth={1} />
+      </motion.div>
       {/* Bottom accent edge */}
       <div
         className="absolute bottom-0 left-0 right-0 h-px"
@@ -175,19 +202,23 @@ export function BoardHeader({
 
       <div className="relative px-4 sm:px-6 pt-5 pb-7 sm:pb-8 max-w-6xl mx-auto">
         {/* Breadcrumb */}
-        <button
+        <motion.button
           type="button"
           onClick={() => navigate(back)}
           className="group inline-flex items-center gap-1.5 text-xs font-medium text-white/50 hover:text-white transition-colors"
+          {...rise(0)}
         >
           <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
           <span>{backLabel}</span>
-        </button>
+        </motion.button>
 
         <div className="mt-5">
           <div className="flex items-start gap-4 sm:gap-5 flex-1 min-w-0">
-            <div
+            <motion.div
               className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-2xl flex items-center justify-center flex-shrink-0"
+              initial={reduce ? false : { opacity: 0, scale: 0.7, rotate: -8 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.1 }}
               style={{
                 background: `linear-gradient(135deg, ${accent}55, ${accent}1f)`,
                 border: `1px solid ${accent}66`,
@@ -195,16 +226,19 @@ export function BoardHeader({
               }}
             >
               <Icon className="w-7 h-7 sm:w-9 sm:h-9 text-white" />
-            </div>
+            </motion.div>
             <div className="min-w-0">
-              <h1
+              <motion.h1
                 className="font-display font-black leading-[1.02] text-white"
                 style={{ fontSize: 'clamp(30px, 5vw, 48px)', letterSpacing: '-0.035em', textShadow: `0 2px 24px ${accent}66` }}
+                {...rise(0.15)}
               >
                 {title}
-              </h1>
+              </motion.h1>
               {subtitle && (
-                <p className="text-sm sm:text-[15px] text-white/65 mt-2 leading-relaxed max-w-xl">{subtitle}</p>
+                <motion.p className="text-sm sm:text-[15px] text-white/65 mt-2 leading-relaxed max-w-xl" {...rise(0.25)}>
+                  {subtitle}
+                </motion.p>
               )}
               {meta && <div className="mt-2.5">{meta}</div>}
             </div>
@@ -213,10 +247,10 @@ export function BoardHeader({
         </div>
 
         {(stats || actions) && (
-          <div className="mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-3">
+          <motion.div className="mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-3" {...rise(0.35)}>
             {stats}
             {actions && <div className="flex items-center gap-2 sm:ml-auto relative z-10">{actions}</div>}
-          </div>
+          </motion.div>
         )}
       </div>
     </header>
