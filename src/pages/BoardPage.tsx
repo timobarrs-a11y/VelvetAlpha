@@ -251,7 +251,7 @@ export default function BoardPage() {
                 className="group"
               >
                 <div
-                  className={`flex overflow-hidden rounded-xl border bg-white/[0.02] transition-all hover:bg-white/[0.04] hover:border-white/15 ${
+                  className={`overflow-hidden rounded-xl border bg-white/[0.02] transition-all hover:bg-white/[0.04] hover:border-white/15 ${
                     post.is_pinned
                       ? 'border-amber-500/20'
                       : isUnread
@@ -259,6 +259,7 @@ export default function BoardPage() {
                         : 'border-white/8'
                   }`}
                 >
+                  <div className="flex">
                   <div className="relative w-24 sm:w-32 flex-shrink-0 self-stretch bg-white/[0.04] border-r border-white/8 overflow-hidden">
                     {post.post_smilie && smilieUrl(post.post_smilie) ? (
                       <img
@@ -338,6 +339,8 @@ export default function BoardPage() {
                       </span>
                     </div>
                   </div>
+                  </div>
+                  </div>
 
                   <div className="flex items-center justify-between px-4 pb-3 pt-1">
                     <span className="text-xs text-white/40 truncate">
@@ -368,7 +371,6 @@ export default function BoardPage() {
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  </div>
                   </div>
                 </div>
               </motion.div>
