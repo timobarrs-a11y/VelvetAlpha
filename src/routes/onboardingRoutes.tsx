@@ -13,7 +13,6 @@ const PricingOfferPage = lazy(() => import('../pages/PricingOfferPage').then(m =
 const CreateUserAvatarPage = lazy(() => import('../pages/CreateUserAvatarPage').then(m => ({ default: m.CreateUserAvatarPage })));
 const CreateCompanionAvatarPage = lazy(() => import('../pages/CreateCompanionAvatarPage').then(m => ({ default: m.CreateCompanionAvatarPage })));
 const OnboardingTourPage = lazy(() => import('../pages/OnboardingTourPage').then(m => ({ default: m.OnboardingTourPage })));
-const GoalDiscoveryPage = lazy(() => import('../pages/GoalDiscoveryPage').then(m => ({ default: m.GoalDiscoveryPage })));
 const AtlasConciergePage = lazy(() => import('../pages/AtlasConciergePage').then(m => ({ default: m.AtlasConciergePage })));
 const CoachAvatarPage = lazy(() => import('../pages/CoachAvatarPage').then(m => ({ default: m.CoachAvatarPage })));
 const IntentSelectPage = lazy(() => import('../pages/IntentSelectPage').then(m => ({ default: m.IntentSelectPage })));
@@ -35,7 +34,6 @@ function wrap(el: React.ReactNode) {
 export const onboardingRoutes = [
   <Route key="atlas-onboarding" path="/atlas-onboarding" element={wrap(<AtlasConciergePage />)} />,
   <Route key="coach-avatar" path="/coach-avatar" element={wrap(<CoachAvatarPage />)} />,
-  <Route key="goal-discovery" path="/goal-discovery" element={wrap(<GoalDiscoveryPage />)} />,
   <Route key="user-questionnaire" path="/user-questionnaire" element={wrap(<UserProfileQuestionnairePage />)} />,
   <Route key="create-user-avatar" path="/create-user-avatar" element={wrap(<CreateUserAvatarPage />)} />,
   <Route key="intent-select" path="/intent-select" element={wrap(<IntentSelectPage />)} />,

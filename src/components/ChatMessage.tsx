@@ -5,7 +5,7 @@ import { Avatar } from './Avatar';
 import { AvatarConfig } from '../types/avatar';
 import { motion } from 'framer-motion';
 import { calculateComposeDelayMs } from '../features/chat/typing/typingPacer';
-import { ExternalLink, CalendarDays } from 'lucide-react';
+import { ExternalLink, CalendarDays, BookOpen, FileText, Dumbbell, ClipboardList, CheckCircle2, Lightbulb, Video, TrendingUp } from 'lucide-react';
 import { AtlasMarkdown } from './AtlasMarkdown';
 import { getBubbleStyle, getTextColorValue } from './ChatStyleBar';
 import { MessageRatingControls } from './MessageRatingControls';
@@ -88,6 +88,57 @@ const convertYouTubeLinksToInternal = (text: string, navigate: (path: string) =>
 
   return parts.length > 0 ? parts : [text];
 };
+
+function CoachArtifactCard({ artifact }: { artifact: { id: string; artifactType: string; title: string; content: Record<string, unknown> } }) {
+  const icons: Record<string, React.ReactNode> = {
+    reading_material: <BookOpen className="w-4 h-4" />,
+    plan: <ClipboardList className="w-4 h-4" />,
+    routine: <Dumbbell className="w-4 h-4" />,
+    practice_set: <FileText className="w-4 h-4" />,
+    worksheet: <FileText className="w-4 h-4" />,
+    resource_pick: <Video className="w-4 h-4" />,
+    checklist: <CheckCircle2 className="w-4 h-4" />,
+    progress_report: <TrendingUp className="w-4 h-4" />,
+  };
+  const labels: Record<string, string> = {
+    reading_material: 'Reading Material',
+    plan: 'Plan',
+    routine: 'Routine',
+    practice_set: 'Practice Set',
+    worksheet: 'Worksheet',
+    resource_pick: 'Resource Pick',
+    checklist: 'Checklist',
+    progress_report: 'Progress Report',
+  };
+  const icon = icons[artifact.artifactType] ?? <Lightbulb className="w-4 h-4" />;
+  const label = labels[artifact.artifactType] ?? artifact.artifactType;
+  const content = artifact.content || {};
+  const hasText = content.text && typeof content.text === 'string' && (content.text as string).trim().length > 0;
+  const hasItems = content.items && Array.isArray(content.items) && (content.items as unknown[]).length > 0;
+  const hasUrl = content.url && typeof content.url === 'string';
+  const preview = hasText
+    ? (content.text as string).slice(0, 120) + ((content.text as string).length > 120 ? '...' : '')
+    : hasItems
+      ? `${(content.items as unknown[]).length} items`
+      : hasUrl
+        ? content.url as string
+        : '';
+
+  return (
+    <div className="rounded-xl border border-sky-200/60 bg-sky-50/40 overflow-hidden">
+      <div className="flex items-start gap-2.5 p-3">
+        <div className="flex-shrink-0 mt-0.5 text-sky-600">{icon}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[10px] font-semibold text-sky-600 uppercase tracking-wide">{label}</span>
+          </div>
+          <p className="text-sm font-semibold text-gray-900 truncate">{artifact.title}</p>
+          {preview && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{preview}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function SystemMessage({ message }: { message: Message }) {
   const isEntry = message.messageType === 'bot-entry';
@@ -474,6 +525,14 @@ export const ChatMessage = ({
 
         {!isUser && message.metadata?.article_ids && Array.isArray(message.metadata.article_ids) && message.metadata.article_ids.length > 0 && (
           <SourceCard articleIds={message.metadata.article_ids as string[]} />
+        )}
+
+        {!isUser && message.metadata?.coach_artifacts && Array.isArray(message.metadata.coach_artifacts) && message.metadata.coach_artifacts.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {message.metadata.coach_artifacts.map((artifact) => (
+              <CoachArtifactCard key={artifact.id} artifact={artifact} />
+            ))}
+          </div>
         )}
 
         {!isUser && onRated && message.messageType === 'text' && (

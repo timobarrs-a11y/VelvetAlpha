@@ -6,7 +6,7 @@ import {
   Heart, LogOut, Volume2, VolumeX,
   Plus, Sparkles, ArrowRight,
   Target, CheckCircle2, UsersRound, Layers,
-  Sunrise, Zap, User, Menu, X, MessageSquare,
+  Sunrise, Zap, User, Menu, X, MessageSquare, BookOpen,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { useAudioScene } from '../hooks/useAudioScene';
@@ -218,6 +218,7 @@ export function HomeV3Page() {
               {renderSubRow('Progress', <Target className="w-3.5 h-3.5" />, '/coaching-progress')}
               {renderSubRow('Commitments', <CheckCircle2 className="w-3.5 h-3.5" />, '/coaching-commitments')}
               {renderSubRow('Plans', <Layers className="w-3.5 h-3.5" />, '/coaching-commitments?view=plans')}
+              {renderSubRow('Library', <BookOpen className="w-3.5 h-3.5" />, '/coaching-library')}
             </>
           ) : (
             <button

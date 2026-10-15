@@ -459,10 +459,23 @@ Return ONLY the JSON object. No commentary, no markdown.`;
         .limit(1)
         .maybeSingle();
 
+      // Infer goal_type from the matched expert's domain, falling back to "habit"
+      const EXPERT_GOAL_TYPE: Record<string, string> = {
+        fitness_hype: 'health_fitness', fitness_drill: 'health_fitness',
+        wellness_guide: 'habit', sleep_coach: 'habit',
+        interview_coach: 'skill', finance_mentor: 'habit', finance_tough: 'habit',
+        career_advisor: 'skill', communication_coach: 'skill',
+        creative_muse: 'creative', writing_collaborator: 'creative', brainstorm_partner: 'creative',
+        study_partner: 'skill', language_tutor: 'skill', essay_architect: 'creative',
+        stem_tutor: 'skill', code_mentor: 'skill', data_coach: 'skill',
+        chef_coach: 'habit', connection_coach: 'habit', style_coach: 'habit', home_coach: 'habit',
+      };
+      const goalType = (aiExpertId && EXPERT_GOAL_TYPE[aiExpertId]) || 'habit';
+
       const goalPayload = {
         user_id: user.id,
         title: goalText,
-        goal_type: "habit",
+        goal_type: goalType,
         status: "active",
         source: "discovered",
         discovery_transcript: JSON.stringify(transcript),
