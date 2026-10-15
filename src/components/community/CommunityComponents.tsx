@@ -5,6 +5,7 @@ import { Button } from '../../shared/ui/Button';
 import { toast } from '../../shared/ui';
 import { reportContent } from '../../services/communityService';
 import { SmiliePicker } from './SmiliePicker';
+import { SMILIES, smilieUrl } from '../../config/smilieRegistry';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -67,6 +68,9 @@ interface CreatePostModalProps {
 export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreatePostModalProps) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [postSmilie, setPostSmilie] = useState<string | null>(null);
+  const [showSmilieGrid, setShowSmilieGrid] = useState(false);
+  const [smilieFilter, setSmilieFilter] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -91,12 +95,13 @@ export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreateP
     if (!title.trim() || !body.trim()) return;
     setSubmitting(true);
     const { createPost } = await import('../../services/communityService');
-    const post = await createPost({ board_id: boardId, title: title.trim(), body: body.trim() });
+    const post = await createPost({ board_id: boardId, title: title.trim(), body: body.trim(), post_smilie: postSmilie });
     setSubmitting(false);
     if (post) {
       toast.success('Post published!');
       setTitle('');
       setBody('');
+      setPostSmilie(null);
       onCreated();
       onClose();
     } else {
@@ -127,6 +132,79 @@ export function CreatePostModal({ isOpen, onClose, boardId, onCreated }: CreateP
           onChange={(e) => setTitle(e.target.value)}
           maxLength={120}
         />
+        {/* Post smilie / mood selector */}
+        <div>
+          <label className="label-base mb-1.5 block">Post mood (optional)</label>
+          <div className="flex items-center gap-2">
+            {postSmilie && (
+              <div className="relative flex-shrink-0">
+                <img
+                  src={smilieUrl(postSmilie) ?? undefined}
+                  alt={`:${postSmilie}:`}
+                  style={{ height: 28, width: 'auto' }}
+                  className="rounded"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPostSmilie(null)}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 text-[10px]"
+                >
+                  x
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowSmilieGrid((v) => !v)}
+              className="text-xs text-white/50 hover:text-white/80 px-3 py-1.5 rounded-lg border border-white/8 hover:border-white/15 transition-colors"
+            >
+              {postSmilie ? 'Change mood' : 'Pick a mood smilie'}
+            </button>
+          </div>
+          {showSmilieGrid && (
+            <div className="mt-2 rounded-xl border border-white/8 bg-white/[0.02] overflow-hidden">
+              <div className="px-3 py-2 border-b border-white/8">
+                <input
+                  type="text"
+                  value={smilieFilter}
+                  onChange={(e) => setSmilieFilter(e.target.value)}
+                  placeholder="Search smilies..."
+                  className="w-full bg-transparent text-sm text-white/80 placeholder-white/30 outline-none"
+                  autoFocus
+                />
+              </div>
+              <div className="overflow-y-auto p-2" style={{ maxHeight: 200 }}>
+                <div className="grid grid-cols-8 gap-1">
+                  {(smilieFilter.trim()
+                    ? SMILIES.filter((s) => s.code.includes(smilieFilter.toLowerCase()) || s.label.toLowerCase().includes(smilieFilter.toLowerCase()))
+                    : SMILIES
+                  ).map((s) => (
+                    <button
+                      key={s.code}
+                      type="button"
+                      onClick={() => {
+                        setPostSmilie(s.code);
+                        setShowSmilieGrid(false);
+                        setSmilieFilter('');
+                      }}
+                      className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all ${
+                        postSmilie === s.code ? 'bg-white/15 ring-1 ring-white/30' : 'hover:bg-white/8'
+                      }`}
+                      title={`:${s.code}:`}
+                    >
+                      <img
+                        src={`/smilies/${s.file}`}
+                        alt={`:${s.code}:`}
+                        style={{ height: 22, width: 'auto' }}
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="label-base">Body</label>

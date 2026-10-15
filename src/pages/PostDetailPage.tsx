@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send, MessageCircle, Info, Pin, Clock, ChevronRight, Trash2,
+  Send, MessageCircle, Pin, Clock, ChevronRight, Trash2, Bot, Edit3, Quote,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { CommunityHeroHeader } from '../components/community/CommunityHeroHeader';
+import { PostDetailHeader } from '../components/community/CommunityHeroHeader';
 import { Button } from '../shared/ui/Button';
 import { Textarea } from '../shared/ui';
 import { LoadingState } from '../shared/ui/LoadingState';
@@ -23,6 +23,8 @@ import {
   deletePost,
   toggleReaction,
   fetchReactionAggregates,
+  editPost,
+  markPostRead,
 } from '../services/communityService';
 import type { PostWithAuthor, CommentWithAuthor, SmilieReactionAggregate } from '../types/community';
 
@@ -89,8 +91,12 @@ export default function PostDetailPage() {
   const [boardId, setBoardId] = useState<string | null>(null);
   const [boardName, setBoardName] = useState<string>('');
   const [boardColor, setBoardColor] = useState<string>('#3b82f6');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBody, setEditBody] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const markedReadRef = useRef(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
@@ -116,6 +122,14 @@ export default function PostDetailPage() {
       setLoading(false);
     })();
   }, [loadPost, loadComments]);
+
+  // Mark post as read when viewed
+  useEffect(() => {
+    if (postId && !markedReadRef.current && !loading) {
+      markedReadRef.current = true;
+      markPostRead(postId);
+    }
+  }, [postId, loading]);
 
   useEffect(() => {
     if (!boardId) return;
@@ -213,6 +227,31 @@ export default function PostDetailPage() {
     }
   };
 
+  const handleSaveEdit = async () => {
+    if (!postId || !editBody.trim()) return;
+    setSavingEdit(true);
+    const ok = await editPost(postId, editBody.trim());
+    setSavingEdit(false);
+    if (ok) {
+      toast.success('Post edited.');
+      setIsEditing(false);
+      await loadPost();
+    } else {
+      toast.error('Could not edit post.');
+    }
+  };
+
+  const handleQuote = (comment: CommentWithAuthor) => {
+    const quotedText = comment.body.slice(0, 200);
+    const quoteBlock = `> ${quotedText.replace(/\n/g, '\n> ')}\n\n@${comment.author_name} said:\n\n`;
+    setCommentBody((prev) => prev + quoteBlock);
+    requestAnimationFrame(() => {
+      replyTextareaRef.current?.focus();
+      const len = commentBody.length + quoteBlock.length;
+      replyTextareaRef.current?.setSelectionRange(len, len);
+    });
+  };
+
   const insertSmilieAtCursor = (code: string) => {
     const textarea = replyTextareaRef.current;
     if (!textarea) {
@@ -232,7 +271,7 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <PageShell width="lg" header={<CommunityHeroHeader title="Loading..." accent="#3b82f6" back="/community" />}>
+      <PageShell width="lg" header={<PostDetailHeader back="/community" backLabel="Community" />}>
         <LoadingState label="Loading post..." />
       </PageShell>
     );
@@ -240,7 +279,7 @@ export default function PostDetailPage() {
 
   if (!post) {
     return (
-      <PageShell width="lg" header={<CommunityHeroHeader title="Post not found" accent="#3b82f6" back="/community" />}>
+      <PageShell width="lg" header={<PostDetailHeader back="/community" backLabel="Community" />}>
         <div className="text-center py-16 text-white/50">
           <p>This post may have been deleted.</p>
           <Button variant="secondary" size="sm" className="mt-4" onClick={() => navigate('/community')}>
@@ -253,45 +292,22 @@ export default function PostDetailPage() {
 
   const postInitials = post.author_name.slice(0, 2).toUpperCase();
   const accentSoft = `${boardColor}1a`;
+  const canEdit = post.author_id === currentUserId;
 
   return (
     <PageShell
       width="lg"
       header={
-        <CommunityHeroHeader
-          title={post.title}
-          subtitle={boardName || undefined}
+        <PostDetailHeader
+          boardName={boardName || undefined}
+          boardId={boardId}
           accent={boardColor}
-          icon={MessageCircle}
           back={boardId ? `/community/board/${boardId}` : '/community'}
           backLabel={boardName || 'Board'}
-          meta={
-            <div className="flex items-center gap-1.5 text-[11px] text-white/25">
-              <Info className="w-3 h-3" />
-              <span>Some content may be AI-generated.</span>
-            </div>
-          }
         />
       }
     >
       <div className="flex flex-col gap-5 pb-8">
-        {/* Board context pill */}
-        {boardName && (
-          <button
-            onClick={() => navigate(boardId ? `/community/board/${boardId}` : '/community')}
-            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors self-start"
-          >
-            <span
-              className="w-5 h-5 rounded flex items-center justify-center"
-              style={{ background: accentSoft }}
-            >
-              <MessageCircle className="w-3 h-3" style={{ color: boardColor }} />
-            </span>
-            <span>{boardName}</span>
-            <ChevronRight className="w-3 h-3" />
-          </button>
-        )}
-
         {/* Original post -- forum style with left author sidebar */}
         <div className="flex gap-4">
           {/* Author sidebar */}
@@ -322,10 +338,51 @@ export default function PostDetailPage() {
             style={{ borderTopColor: `${boardColor}40` }}
           >
             <div className="p-5">
-              <h1 className="text-lg font-bold text-white leading-tight">{post.title}</h1>
-              <div className="text-sm text-white/75 mt-3 leading-relaxed whitespace-pre-wrap">
-                <SmilieText text={post.body} />
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h1 className="text-lg font-bold text-white leading-tight flex items-center gap-2">
+                  {post.post_smilie && smilieUrl(post.post_smilie) && (
+                    <img
+                      src={smilieUrl(post.post_smilie)!}
+                      alt={`:${post.post_smilie}:`}
+                      style={{ height: 24, width: 'auto', flexShrink: 0 }}
+                    />
+                  )}
+                  {post.title}
+                </h1>
               </div>
+              {post.is_ai_generated && (
+                <div className="inline-flex items-center gap-1.5 mb-3 px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-400/20 text-[11px] font-medium text-violet-300/80">
+                  <Bot className="w-3 h-3" />
+                  AI-generated
+                </div>
+              )}
+
+              {isEditing ? (
+                <div className="mt-2">
+                  <Textarea
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
+                    rows={6}
+                    className="resize-none"
+                    autoFocus
+                  />
+                  <div className="flex items-center gap-2 mt-2">
+                    <Button size="sm" isLoading={savingEdit} onClick={handleSaveEdit}>Save</Button>
+                    <Button size="sm" variant="secondary" onClick={() => { setIsEditing(false); setEditBody(''); }}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="text-sm text-white/75 mt-3 leading-relaxed whitespace-pre-wrap">
+                    <SmilieText text={post.body} />
+                  </div>
+                  {post.edited_at && (
+                    <span className="text-[10px] text-white/25 italic mt-2 inline-block">
+                      (edited {timeAgo(post.edited_at)})
+                    </span>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Reaction bar */}
@@ -337,6 +394,15 @@ export default function PostDetailPage() {
                 onReact={handlePostReact}
               />
               <div className="flex-1" />
+              {canEdit && !isEditing && (
+                <button
+                  onClick={() => { setIsEditing(true); setEditBody(post.body); }}
+                  className="flex items-center gap-1 text-xs text-white/25 hover:text-sky-400 transition-colors px-2 py-1 rounded hover:bg-white/5"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+              )}
               {post.author_id === currentUserId && (
                 <button
                   onClick={handleDeletePost}
@@ -398,8 +464,9 @@ export default function PostDetailPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="rounded-xl border border-white/[0.06] bg-white/[0.01] p-4">
+                      {/* Render quoted text as blockquote if present */}
                       <div className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap">
-                        <SmilieText text={comment.body} />
+                        <CommentBody text={comment.body} />
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
@@ -411,6 +478,19 @@ export default function PostDetailPage() {
                         userReaction={comment.user_reaction ?? null}
                         onReact={(code) => handleCommentReact(comment.id, code)}
                       />
+                      <button
+                        onClick={() => handleQuote(comment)}
+                        className="text-[10px] text-white/20 hover:text-sky-400 transition-colors flex items-center gap-1"
+                      >
+                        <Quote className="w-3 h-3" />
+                        Quote
+                      </button>
+                      {comment.is_ai_generated && (
+                        <span className="text-[10px] text-violet-400/50 flex items-center gap-0.5">
+                          <Bot className="w-2.5 h-2.5" />
+                          AI
+                        </span>
+                      )}
                       {comment.author_id === currentUserId && (
                         <button
                           onClick={() => handleDeleteComment(comment.id)}
@@ -438,6 +518,7 @@ export default function PostDetailPage() {
           <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 bg-[var(--ds-surface-2)]/80 backdrop-blur-md border-t border-white/8">
             <div className="rounded-xl border border-white/8 bg-white/[0.02] focus-within:border-white/15 transition-colors">
               <Textarea
+                ref={replyTextareaRef}
                 placeholder="Write a reply..."
                 rows={2}
                 value={commentBody}
@@ -485,6 +566,45 @@ export default function PostDetailPage() {
       />
     </PageShell>
   );
+}
+
+/* Renders comment body, converting > quoted lines into styled blockquotes */
+function CommentBody({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const quoteLines: string[] = [];
+  const bodyLines: string[] = [];
+  let inQuote = false;
+
+  for (const line of lines) {
+    if (line.startsWith('> ')) {
+      inQuote = true;
+      quoteLines.push(line.slice(2));
+    } else {
+      if (inQuote && line.trim() === '') {
+        inQuote = false;
+        continue;
+      }
+      if (inQuote) {
+        inQuote = false;
+      }
+      bodyLines.push(line);
+    }
+  }
+
+  if (quoteLines.length > 0 && bodyLines.length > 0) {
+    const quoteText = quoteLines.join('\n');
+    const bodyText = bodyLines.join('\n').trim();
+    return (
+      <>
+        <blockquote className="border-l-2 border-sky-400/30 pl-3 mb-2 text-xs text-white/40 italic">
+          <SmilieText text={quoteText} />
+        </blockquote>
+        <SmilieText text={bodyText} />
+      </>
+    );
+  }
+
+  return <SmilieText text={text} />;
 }
 
 function updateAggregates(

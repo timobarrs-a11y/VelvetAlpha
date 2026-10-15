@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Smile, X, Search } from 'lucide-react';
-import { SMILIES } from '../../config/smilieRegistry';
+import { SMILIES, REACTION_SMILIES } from '../../config/smilieRegistry';
 
 interface SmiliePickerProps {
   onInsert: (code: string) => void;
@@ -151,29 +151,25 @@ export function SmilieReactionPicker({ onReact, className }: SmilieReactionPicke
           style={{ width: 'auto' }}
         >
           <div className="flex flex-wrap gap-1 max-w-[280px]">
-            {REACTION_SMILIE_CODES.map((code) => {
-              const entry = SMILIES.find((s) => s.code === code);
-              if (!entry) return null;
-              return (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => {
-                    onReact(code);
-                    setOpen(false);
-                  }}
-                  className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-white/10 hover:scale-110 transition-all"
-                  title={`:${code}: — ${entry.label}`}
-                >
-                  <img
-                    src={`/smilies/${entry.file}`}
-                    alt={`:${code}:`}
-                    style={{ height: 22, width: 'auto' }}
-                    loading="lazy"
-                  />
-                </button>
-              );
-            })}
+            {REACTION_SMILIES.map((entry) => (
+              <button
+                key={entry.code}
+                type="button"
+                onClick={() => {
+                  onReact(entry.code);
+                  setOpen(false);
+                }}
+                className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-white/10 hover:scale-110 transition-all"
+                title={`:${entry.code}: — ${entry.label}`}
+              >
+                <img
+                  src={`/smilies/${entry.file}`}
+                  alt={`:${entry.code}:`}
+                  style={{ height: 22, width: 'auto' }}
+                  loading="lazy"
+                />
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -181,9 +177,4 @@ export function SmilieReactionPicker({ onReact, className }: SmilieReactionPicke
   );
 }
 
-const REACTION_SMILIE_CODES = [
-  'rofl', 'dead', 'facepalm', 'salty', 'wtf', 'confused', 'cool', 'nice',
-  'laughing', 'rolllaugh', 'sadsmiley', 'angry', 'omfg', 'hah',
-  'dealwithit', 'whatever', 'gtfo', 'dwadecrying', 'dwighthowardshocked',
-  'smugrussell', 'floydthinking', 'kanyehappy', 'raydisgusted', 'timmydscream',
-];
+

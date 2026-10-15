@@ -91,17 +91,26 @@ export async function createBoard(input: {
   return data;
 }
 
+export type SortMode = 'latest' | 'replies' | 'reactions';
+
 export async function fetchPosts(
   boardId: string,
-  cursor?: string
+  cursor?: string,
+  sortMode: SortMode = 'latest'
 ): Promise<{ posts: PostWithAuthor[]; nextCursor: string | null }> {
   let query = supabase
     .from('community_posts')
     .select('*, author_name:user_profiles!community_posts_author_profile_fkey(name)')
     .eq('board_id', boardId)
-    .order('is_pinned', { ascending: false })
-    .order('created_at', { ascending: false })
     .limit(PAGE_SIZE + 1);
+
+  if (sortMode === 'replies') {
+    query = query.order('is_pinned', { ascending: false }).order('comment_count', { ascending: false }).order('created_at', { ascending: false });
+  } else if (sortMode === 'reactions') {
+    query = query.order('is_pinned', { ascending: false }).order('reaction_count', { ascending: false }).order('created_at', { ascending: false });
+  } else {
+    query = query.order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
+  }
 
   if (cursor) {
     query = query.lt('created_at', cursor);
@@ -194,6 +203,7 @@ export async function createPost(input: {
   board_id: string;
   title: string;
   body: string;
+  post_smilie?: string | null;
 }): Promise<CommunityPost | null> {
   const { data, error } = await supabase
     .from('community_posts')
@@ -201,6 +211,7 @@ export async function createPost(input: {
       board_id: input.board_id,
       title: input.title,
       body: input.body,
+      post_smilie: input.post_smilie ?? null,
       is_ai_generated: false,
     })
     .select()
@@ -208,6 +219,14 @@ export async function createPost(input: {
 
   if (error) return null;
   return data;
+}
+
+export async function editPost(postId: string, body: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('community_posts')
+    .update({ body, edited_at: new Date().toISOString() })
+    .eq('id', postId);
+  return !error;
 }
 
 export async function deletePost(postId: string): Promise<boolean> {
@@ -343,6 +362,66 @@ export async function reportContent(input: {
     reason: input.reason,
   });
   return !error;
+}
+
+/* ===== Read tracking ===== */
+
+export async function markPostRead(postId: string): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+  await supabase
+    .from('community_post_reads')
+    .upsert({ user_id: userData.user.id, post_id: postId, read_at: new Date().toISOString() }, { onConflict: 'user_id,post_id' });
+}
+
+export async function fetchReadPostIds(postIds: string[]): Promise<Set<string>> {
+  if (postIds.length === 0) return new Set();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return new Set();
+  const { data, error } = await supabase
+    .from('community_post_reads')
+    .select('post_id')
+    .eq('user_id', userData.user.id)
+    .in('post_id', postIds);
+  if (error || !data) return new Set();
+  return new Set(data.map((r) => r.post_id));
+}
+
+/* ===== Board latest activity ===== */
+
+export async function fetchBoardLatestActivity(boardId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('community_posts')
+    .select('created_at')
+    .eq('board_id', boardId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.created_at;
+}
+
+export interface SearchResult {
+  result_type: 'post' | 'board';
+  id: string;
+  title: string;
+  body: string | null;
+  board_id: string | null;
+  board_name: string | null;
+  author_name: string | null;
+  comment_count: number;
+  created_at: string;
+  rank: number;
+}
+
+export async function searchCommunity(query: string, limit = 20): Promise<SearchResult[]> {
+  const { data, error } = await supabase.rpc('community_search', {
+    p_query: query,
+    p_limit: limit,
+  });
+
+  if (error || !data) return [];
+  return data as SearchResult[];
 }
 
 export { PAGE_SIZE };

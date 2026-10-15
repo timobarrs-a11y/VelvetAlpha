@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   MessageSquare, Plus, Pin, Info, Check, X, Clock,
-  ShieldCheck, Users, MessageCircle, Sparkles, ArrowRight,
+  ShieldCheck, Users, MessageCircle, Sparkles, ArrowRight, Search,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { CommunityHeroHeader } from '../components/community/CommunityHeroHeader';
+import { CommunityIndexHeader } from '../components/community/CommunityHeroHeader';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { CreateBoardModal } from '../components/community/CommunityComponents';
-import { fetchBoards, approveBoard, rejectBoard, isSuperUser } from '../services/communityService';
+import { fetchBoards, approveBoard, rejectBoard, isSuperUser, fetchBoardLatestActivity } from '../services/communityService';
 import { toast } from '../shared/ui';
 import type { BoardWithCounts } from '../types/community';
 
@@ -23,6 +23,26 @@ const COLOR_MAP: Record<string, { hex: string; soft: string }> = {
   slate:   { hex: '#64748b', soft: 'rgba(100,116,139,0.12)' },
   teal:    { hex: '#14b8a6', soft: 'rgba(20,184,166,0.12)' },
   pink:    { hex: '#ec4899', soft: 'rgba(236,72,153,0.12)' },
+};
+
+const CATEGORY_ORDER = [
+  'Community Hub',
+  'Life & Relationships',
+  'Family',
+  'Interests & Hobbies',
+  'Self-Improvement',
+  'Companion Corner',
+  'General',
+];
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'Community Hub': '💬',
+  'Life & Relationships': '❤️',
+  'Family': '👨‍👩‍👧',
+  'Interests & Hobbies': '🎮',
+  'Self-Improvement': '📈',
+  'Companion Corner': '🤝',
+  'General': '📋',
 };
 
 function timeAgo(dateStr: string): string {
@@ -39,9 +59,13 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+interface BoardWithActivity extends BoardWithCounts {
+  latestActivity?: string | null;
+}
+
 export default function CommunityPage() {
   const navigate = useNavigate();
-  const [boards, setBoards] = useState<BoardWithCounts[]>([]);
+  const [boards, setBoards] = useState<BoardWithActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [superUser, setSuperUser] = useState(false);
@@ -51,7 +75,13 @@ export default function CommunityPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const [data, su] = await Promise.all([fetchBoards(), isSuperUser()]);
-    setBoards(data);
+    const boardsWithActivity = await Promise.all(
+      data.map(async (b) => {
+        const latestActivity = b.post_count > 0 ? await fetchBoardLatestActivity(b.id) : null;
+        return { ...b, latestActivity };
+      })
+    );
+    setBoards(boardsWithActivity);
     setSuperUser(su);
     setLoading(false);
   }, []);
@@ -90,14 +120,21 @@ export default function CommunityPage() {
   const regularBoards = approvedBoards.filter((b) => !b.is_pinned);
   const totalPosts = approvedBoards.reduce((sum, b) => sum + b.post_count, 0);
 
+  // Group regular boards by category
+  const boardsByCategory = CATEGORY_ORDER
+    .map((cat) => ({
+      category: cat,
+      boards: regularBoards.filter((b) => (b.category || 'General') === cat),
+    }))
+    .filter((g) => g.boards.length > 0);
+
   return (
     <PageShell
       width="xl"
       header={
-        <CommunityHeroHeader
+        <CommunityIndexHeader
           title="Community"
           subtitle="Boards, conversations, and connection"
-          accent="#3b82f6"
           icon={MessageSquare}
           back="/lobby"
           backLabel="Lobby"
@@ -115,15 +152,20 @@ export default function CommunityPage() {
               </>
             ) : undefined
           }
-          meta={
-            <div className="flex items-center gap-1.5 text-[11px] text-white/25">
-              <Info className="w-3 h-3" />
-              <span>Some content may be AI-generated.</span>
-            </div>
-          }
         />
       }
     >
+      {/* Search bar */}
+      <div className="mb-5">
+        <button
+          onClick={() => navigate('/community/search')}
+          className="w-full flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/15 px-4 py-3 text-sm text-white/30 hover:text-white/50 transition-all group"
+        >
+          <Search className="w-4 h-4 flex-shrink-0" />
+          <span>Search posts and boards...</span>
+        </button>
+      </div>
+
       {loading ? (
         <LoadingState label="Loading boards..." />
       ) : boards.length === 0 ? (
@@ -250,6 +292,12 @@ export default function CommunityPage() {
                           <MessageCircle className="w-3 h-3" />
                           {board.post_count} {board.post_count === 1 ? 'post' : 'posts'}
                         </span>
+                        {board.latestActivity && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {timeAgo(board.latestActivity)}
+                          </span>
+                        )}
                         {board.is_owner && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">
                             Owner
@@ -263,15 +311,17 @@ export default function CommunityPage() {
             </div>
           )}
 
-          {/* All boards */}
-          {regularBoards.length > 0 && (
-            <div>
+          {/* Boards grouped by category */}
+          {boardsByCategory.map((group) => (
+            <div key={group.category}>
               <div className="flex items-center gap-2 mb-3.5">
-                <h2 className="text-sm font-bold tracking-wide text-white/70 uppercase">All Boards</h2>
+                <span className="text-base">{CATEGORY_ICONS[group.category] ?? '📋'}</span>
+                <h2 className="text-sm font-bold tracking-wide text-white/70 uppercase">{group.category}</h2>
+                <span className="text-xs text-white/30 tabular-nums">{group.boards.length}</span>
                 <div className="h-px flex-1 bg-white/8" />
               </div>
               <div className="rounded-2xl border border-white/8 overflow-hidden">
-                {regularBoards.map((board, i) => {
+                {group.boards.map((board, i) => {
                   const color = COLOR_MAP[board.color] ?? COLOR_MAP.slate;
                   return (
                     <motion.button
@@ -310,16 +360,19 @@ export default function CommunityPage() {
                           <MessageCircle className="w-3 h-3" />
                           <span className="tabular-nums">{board.post_count}</span>
                         </div>
-                        <span className="text-[10px] text-white/25 hidden sm:inline tabular-nums">
-                          {timeAgo(board.created_at)}
-                        </span>
+                        {board.latestActivity && (
+                          <span className="text-[10px] text-white/25 hidden sm:inline flex items-center gap-0.5">
+                            <Clock className="w-2.5 h-2.5" />
+                            {timeAgo(board.latestActivity)}
+                          </span>
+                        )}
                       </div>
                     </motion.button>
                   );
                 })}
               </div>
             </div>
-          )}
+          ))}
 
           {/* Start a board — inline, contextual, not floating */}
           <div className="flex justify-center pt-1">

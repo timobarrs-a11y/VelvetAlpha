@@ -10,6 +10,7 @@ export interface CommunityBoard {
   is_approved: boolean;
   post_count: number;
   sort_order: number;
+  category: string;
   created_at: string;
 }
 
@@ -20,6 +21,7 @@ export interface CommunityPost {
   title: string;
   body: string;
   image_url: string | null;
+  post_smilie: string | null;
   is_ai_generated: boolean;
   is_pinned: boolean;
   is_locked: boolean;
@@ -27,6 +29,7 @@ export interface CommunityPost {
   reaction_count: number;
   created_at: string;
   updated_at: string;
+  edited_at: string | null;
 }
 
 export interface CommunityComment {

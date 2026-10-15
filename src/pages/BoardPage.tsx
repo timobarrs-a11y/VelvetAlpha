@@ -2,18 +2,21 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  MessageSquare, Plus, Info, Lock, Pin, MessageCircle, Heart, Clock,
-  ChevronRight, Users,
+  MessageSquare, Plus, Lock, Pin, MessageCircle, Clock,
+  ChevronRight, Flame, ArrowUpDown,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { CommunityHeroHeader } from '../components/community/CommunityHeroHeader';
+import { BoardHeader } from '../components/community/CommunityHeroHeader';
 import { Button } from '../shared/ui/Button';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { CreatePostModal, ReportModal } from '../components/community/CommunityComponents';
 import { SmilieText } from '../components/community/SmilieText';
 import { smilieUrl } from '../config/smilieRegistry';
-import { fetchBoard, fetchPosts, deletePost } from '../services/communityService';
+import {
+  fetchBoard, fetchPosts, deletePost, fetchReadPostIds,
+  type SortMode,
+} from '../services/communityService';
 import { supabase } from '../shared/supabase/client';
 import type { BoardWithCounts, PostWithAuthor } from '../types/community';
 
@@ -27,6 +30,8 @@ const COLOR_MAP: Record<string, string> = {
   teal: '#14b8a6',
   pink: '#ec4899',
 };
+
+const HOT_THRESHOLD = 20;
 
 function timeAgo(dateStr: string): string {
   const date = new Date(dateStr);
@@ -42,6 +47,12 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+const SORT_OPTIONS: { key: SortMode; label: string }[] = [
+  { key: 'latest', label: 'Latest' },
+  { key: 'replies', label: 'Most Replies' },
+  { key: 'reactions', label: 'Most Reactions' },
+];
+
 export default function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
@@ -53,6 +64,8 @@ export default function BoardPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [reportPostId, setReportPostId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>('latest');
+  const [readPostIds, setReadPostIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
@@ -67,11 +80,17 @@ export default function BoardPage() {
   const loadPosts = useCallback(async () => {
     if (!boardId) return;
     setLoading(true);
-    const { posts: initialPosts, nextCursor: nc } = await fetchPosts(boardId);
+    const { posts: initialPosts, nextCursor: nc } = await fetchPosts(boardId, undefined, sortMode);
     setPosts(initialPosts);
     setNextCursor(nc);
     setLoading(false);
-  }, [boardId]);
+
+    // Fetch read status
+    if (initialPosts.length > 0) {
+      const readIds = await fetchReadPostIds(initialPosts.map((p) => p.id));
+      setReadPostIds(readIds);
+    }
+  }, [boardId, sortMode]);
 
   useEffect(() => {
     loadBoard();
@@ -81,10 +100,14 @@ export default function BoardPage() {
   const handleLoadMore = async () => {
     if (!boardId || !nextCursor) return;
     setLoadingMore(true);
-    const { posts: morePosts, nextCursor: nc } = await fetchPosts(boardId, nextCursor);
+    const { posts: morePosts, nextCursor: nc } = await fetchPosts(boardId, nextCursor, sortMode);
     setPosts((prev) => [...prev, ...morePosts]);
     setNextCursor(nc);
     setLoadingMore(false);
+    if (morePosts.length > 0) {
+      const moreReadIds = await fetchReadPostIds(morePosts.map((p) => p.id));
+      setReadPostIds((prev) => new Set([...prev, ...moreReadIds]));
+    }
   };
 
   const handleDelete = async (postId: string) => {
@@ -95,14 +118,13 @@ export default function BoardPage() {
   };
 
   const accent = board ? COLOR_MAP[board.color] ?? '#64748b' : '#3b82f6';
-  const accentSoft = `${accent}1a`;
   const canPost = !board?.is_locked && board?.is_approved;
 
   return (
     <PageShell
       width="xl"
       header={
-        <CommunityHeroHeader
+        <BoardHeader
           title={board?.name ?? 'Board'}
           subtitle={board?.description ?? undefined}
           accent={accent}
@@ -139,15 +161,33 @@ export default function BoardPage() {
                   Pending approval
                 </span>
               )}
-              <span className="flex items-center gap-1 text-[11px] text-white/25">
-                <Info className="w-3 h-3" />
-                <span>Some content may be AI-generated.</span>
-              </span>
             </div>
           }
         />
       }
     >
+      {/* Sort bar */}
+      {!loading && posts.length > 0 && (
+        <div className="flex items-center gap-2 mb-4">
+          <ArrowUpDown className="w-3.5 h-3.5 text-white/30" />
+          <div className="flex items-center gap-1 rounded-lg border border-white/8 bg-white/[0.02] p-0.5">
+            {SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setSortMode(opt.key)}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  sortMode === opt.key
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/40 hover:text-white/70'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <LoadingState label="Loading posts..." />
       ) : posts.length === 0 ? (
@@ -168,6 +208,8 @@ export default function BoardPage() {
           {posts.map((post, i) => {
             const initials = post.author_name.slice(0, 2).toUpperCase();
             const canDelete = board?.is_owner || post.author_id === currentUserId;
+            const isHot = post.comment_count >= HOT_THRESHOLD;
+            const isUnread = !readPostIds.has(post.id);
             return (
               <motion.div
                 key={post.id}
@@ -180,7 +222,9 @@ export default function BoardPage() {
                   className={`rounded-xl border bg-white/[0.02] transition-all hover:bg-white/[0.04] hover:border-white/15 ${
                     post.is_pinned
                       ? 'border-amber-500/20'
-                      : 'border-white/8'
+                      : isUnread
+                        ? 'border-sky-500/15'
+                        : 'border-white/8'
                   }`}
                 >
                   {/* Pinned indicator bar */}
@@ -192,6 +236,9 @@ export default function BoardPage() {
                   )}
 
                   <div className="flex items-start gap-3 p-4">
+                    {/* Unread dot */}
+                    <div className="w-2 h-2 rounded-full flex-shrink-0 mt-2.5 self-start" style={{ background: isUnread ? '#3b82f6' : 'transparent' }} />
+
                     {/* Author avatar */}
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-rose-400/50 to-violet-400/50 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                       {initials}
@@ -202,12 +249,33 @@ export default function BoardPage() {
                       onClick={() => navigate(`/community/post/${post.id}`)}
                       className="flex-1 min-w-0 text-left"
                     >
-                      <h3 className="text-[15px] font-bold text-white leading-snug group-hover:text-sky-300 transition-colors line-clamp-1">
-                        {post.title}
-                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {post.post_smilie && smilieUrl(post.post_smilie) && (
+                          <img
+                            src={smilieUrl(post.post_smilie)!}
+                            alt={`:${post.post_smilie}:`}
+                            style={{ height: 18, width: 'auto', flexShrink: 0 }}
+                            loading="lazy"
+                          />
+                        )}
+                        <h3 className={`text-[15px] font-bold leading-snug group-hover:text-sky-300 transition-colors line-clamp-1 ${isUnread ? 'text-white' : 'text-white/70'}`}>
+                          {post.title}
+                        </h3>
+                        {isHot && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/15 text-orange-400 text-[10px] font-bold flex-shrink-0">
+                            <Flame className="w-2.5 h-2.5" />
+                            Hot
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-white/50 mt-1 line-clamp-2 leading-relaxed">
                         <SmilieText text={post.body} smilieSize={16} />
                       </p>
+                      {post.edited_at && (
+                        <span className="text-[10px] text-white/25 italic mt-1 inline-block">
+                          (edited)
+                        </span>
+                      )}
                     </button>
 
                     {/* Stats column */}
@@ -241,6 +309,9 @@ export default function BoardPage() {
                   <div className="flex items-center justify-between px-4 pb-3 pt-1">
                     <span className="text-xs text-white/40 truncate">
                       by <span className="text-white/60 font-medium">{post.author_name}</span>
+                      {post.is_ai_generated && (
+                        <span className="ml-1.5 text-[10px] text-violet-400/60">AI</span>
+                      )}
                     </span>
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       {canDelete && (

@@ -12,6 +12,35 @@ const corsHeaders = {
 const MAYA_ID = "b0b00000-0000-0000-0000-000000000001";
 const JORDAN_ID = "b0b00000-0000-0000-0000-000000000002";
 
+// Curated mood smilies the bot can assign to generated posts.
+// Each maps a tone category to a smilie code from the registry.
+const MOOD_SMILIES: Record<string, string> = {
+  funny: "0rofl",
+  happy: "7mt",
+  love: "8zs",
+  excited: "2ygxuhx",
+  confused: "69915069",
+  sad: "bmr8pzw",
+  angry: "ovo4rdl",
+  thinking: "vr55yvg",
+  cool: "fqowtn6",
+  shocked: "2ake3ir",
+  sleepy: "15np24jjpg",
+  celebratory: "8x5p",
+  supportive: "7giv",
+  grateful: "7luf",
+  nostalgic: "87dk",
+  frustrated: "4j9f",
+  curious: "4jih",
+  proud: "2ksd",
+  relieved: "18ub",
+  mischievous: "194g",
+  overwhelmed: "909s",
+  determined: "93wr",
+  peaceful: "5fg96a",
+};
+const MOOD_KEYS = Object.keys(MOOD_SMILIES);
+
 interface BoardRow {
   id: string;
   name: string;
@@ -88,7 +117,7 @@ function logRun(
 async function generatePost(
   anthropic: Anthropic,
   board: BoardRow,
-): Promise<{ title: string; body: string } | null> {
+): Promise<{ title: string; body: string; post_smilie: string } | null> {
   const systemPrompt = `You are Maya, a warm, curious community member on a small online message board. You start conversations that make people want to chime in — questions, relatable observations, light debates, personal stories that invite others to share theirs.
 
 Voice rules:
@@ -104,7 +133,7 @@ ${board.description ? `Board description: ${board.description}` : ""}
 
 Write a forum post that would start a real conversation. IMPORTANT: vary your approach from post to post. Sometimes ask a question, sometimes share a brief personal anecdote, sometimes float a mild opinion, sometimes share a relatable observation. Do NOT start every post with "Does anyone else" — that gets repetitive. Mix up your openings and structure.
 
-Return JSON with "title" and "body" fields. Title max 120 chars, body max 600 chars.`;
+Return JSON with "title", "body", and "mood" fields. Title max 120 chars, body max 600 chars. The "mood" field must be one of these exact values: ${MOOD_KEYS.join(", ")}. Pick the mood that best matches the tone of your post.`;
 
   try {
     const response = await anthropic.messages.create({
@@ -119,9 +148,13 @@ Return JSON with "title" and "body" fields. Title max 120 chars, body max 600 ch
     if (!jsonMatch) return null;
     const parsed = JSON.parse(jsonMatch[0]);
     if (!parsed.title || !parsed.body) return null;
+    const moodRaw = String(parsed.mood ?? "").toLowerCase().trim();
+    const moodKey = MOOD_KEYS.find((k) => k === moodRaw);
+    const postSmilie = moodKey ? MOOD_SMILIES[moodKey] : MOOD_SMILIES["thinking"];
     return {
       title: String(parsed.title).trim().slice(0, 300),
       body: String(parsed.body).trim().slice(0, 5000),
+      post_smilie: postSmilie,
     };
   } catch (err) {
     console.error("[community-bot] generatePost error:", err);
@@ -240,6 +273,7 @@ async function runPosterBot(
       p_author_id: MAYA_ID,
       p_title: generated.title,
       p_body: generated.body,
+      p_post_smilie: generated.post_smilie,
     });
 
     if (error || !postId) {

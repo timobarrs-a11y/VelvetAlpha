@@ -30,6 +30,7 @@ const RelationshipBriefPage = lazy(() => import('../pages/RelationshipBriefPage'
 const CommunityPage = lazy(() => import('../pages/CommunityPage'));
 const BoardPage = lazy(() => import('../pages/BoardPage'));
 const PostDetailPage = lazy(() => import('../pages/PostDetailPage'));
+const CommunitySearchPage = lazy(() => import('../pages/CommunitySearchPage'));
 function P(el: React.ReactNode) {
   return (
     <ProtectedRoute>
@@ -67,4 +68,5 @@ export const appRoutes = [
   <Route key="community" path="/community" element={P(<CommunityPage />)} />,
   <Route key="community-board" path="/community/board/:boardId" element={P(<BoardPage />)} />,
   <Route key="community-post" path="/community/post/:postId" element={P(<PostDetailPage />)} />,
+  <Route key="community-search" path="/community/search" element={P(<CommunitySearchPage />)} />,
 ];
