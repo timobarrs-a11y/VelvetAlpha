@@ -27,9 +27,9 @@ const MemoryTrainingPage = lazy(() => import('../pages/MemoryTrainingPage').then
 const MorningJournalPage = lazy(() => import('../pages/MorningJournalPage').then(m => ({ default: m.MorningJournalPage })));
 const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(m => ({ default: m.PersonProfilePage })));
 const RelationshipBriefPage = lazy(() => import('../pages/RelationshipBriefPage').then(m => ({ default: m.RelationshipBriefPage })));
-const CommunityPage = lazy(() => import('../pages/CommunityPage').then(m => ({ default: m.CommunityPage })));
-const BoardPage = lazy(() => import('../pages/BoardPage').then(m => ({ default: m.BoardPage })));
-const PostDetailPage = lazy(() => import('../pages/PostDetailPage').then(m => ({ default: m.PostDetailPage })));
+const CommunityPage = lazy(() => import('../pages/CommunityPage'));
+const BoardPage = lazy(() => import('../pages/BoardPage'));
+const PostDetailPage = lazy(() => import('../pages/PostDetailPage'));
 function P(el: React.ReactNode) {
   return (
     <ProtectedRoute>
