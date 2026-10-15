@@ -708,6 +708,7 @@ export class ChatService {
     calendarEvent?: { title: string; event_type: string; event_date: string } | null;
     navigationIntent?: { destination: string; route: string; seedText?: string } | null;
     article_ids?: string[];
+    coachArtifacts?: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }>;
   }> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Authentication required');
@@ -743,6 +744,7 @@ export class ChatService {
       calendarEvent: data.calendarEvent || null,
       navigationIntent: data.navigationIntent || null,
       ...(Array.isArray(data.article_ids) && data.article_ids.length > 0 ? { article_ids: data.article_ids } : {}),
+      ...(Array.isArray(data.coachArtifacts) && data.coachArtifacts.length > 0 ? { coachArtifacts: data.coachArtifacts } : {}),
     };
   }
 

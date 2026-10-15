@@ -17,6 +17,7 @@ export interface CoachingCommitment {
   is_user_created?: boolean;
   category?: string | null;
   extracted_from_message?: string | null;
+  plan_step_id?: string | null;
 }
 
 export interface CoachingGoal {
@@ -55,7 +56,8 @@ export async function getCommitments(userId: string, companionId?: string | null
       progress_note,
       is_user_created,
       category,
-      extracted_from_message
+      extracted_from_message,
+      plan_step_id
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
@@ -402,6 +404,10 @@ export interface CoachPlanStep {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  coach_proposed_title: string | null;
+  user_set_title: string | null;
+  coach_minimum: string | null;
+  is_below_floor: boolean;
 }
 
 export interface CoachPlan {
@@ -456,7 +462,7 @@ export async function getPlans(
   const planIds = plans.map(p => p.id);
   const { data: steps } = await supabase
     .from('coach_plan_steps')
-    .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, created_at, updated_at')
+    .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, coach_proposed_title, user_set_title, coach_minimum, is_below_floor, created_at, updated_at')
     .in('plan_id', planIds)
     .order('order_index', { ascending: true });
 
@@ -513,7 +519,7 @@ export async function createPlan(
     const { data: insertedSteps } = await supabase
       .from('coach_plan_steps')
       .insert(stepRows)
-      .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, created_at, updated_at');
+      .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, coach_proposed_title, user_set_title, coach_minimum, is_below_floor, created_at, updated_at');
     plan.steps = (insertedSteps ?? []) as CoachPlanStep[];
   }
 
@@ -542,6 +548,69 @@ export async function updatePlanStepStatus(
     .from('coach_plan_steps')
     .update(patch)
     .eq('id', stepId);
+
+  // If completing a step with a linked commitment, also complete the commitment
+  if (status === 'completed') {
+    const { data: step } = await supabase
+      .from('coach_plan_steps')
+      .select('commitment_id')
+      .eq('id', stepId)
+      .maybeSingle();
+    if (step?.commitment_id) {
+      await supabase
+        .from('coaching_commitments')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', step.commitment_id);
+    }
+  }
+}
+
+export async function updatePlanStepTitle(
+  stepId: string,
+  newTitle: string,
+  companionId?: string | null,
+): Promise<void> {
+  await supabase
+    .from('coach_plan_steps')
+    .update({
+      user_set_title: newTitle,
+      is_below_floor: false, // will be checked server-side
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', stepId);
+
+  // Write a tick event so the coach sees the edit
+  await supabase.from('coaching_tick_events').insert({
+    companion_id: companionId ?? null,
+    event_type: 'step_edited',
+    target_type: 'plan_step',
+    target_id: stepId,
+    details: { to: newTitle },
+  });
+}
+
+export async function createTickEvent(
+  userId: string,
+  params: {
+    eventType: string;
+    targetType: string;
+    targetId: string;
+    companionId?: string | null;
+    details?: Record<string, unknown>;
+  },
+): Promise<void> {
+  await supabase.from('coaching_tick_events').insert({
+    user_id: userId,
+    companion_id: params.companionId ?? null,
+    event_type: params.eventType,
+    target_type: params.targetType,
+    target_id: params.targetId,
+    details: params.details ?? {},
+  });
 }
 
 export async function deletePlan(planId: string): Promise<void> {
@@ -553,6 +622,102 @@ export function planProgressPercent(plan: CoachPlan): number {
   const done = plan.steps.filter(s => s.status === 'completed').length;
   return Math.round((done / plan.steps.length) * 100);
 }
+
+// =====================================================
+// Coach Artifacts
+// =====================================================
+
+export type ArtifactType = 'reading_material' | 'plan' | 'routine' | 'practice_set' | 'worksheet' | 'resource_pick' | 'checklist' | 'progress_report';
+export type ArtifactStatus = 'proposed' | 'accepted' | 'archived';
+
+export interface CoachArtifact {
+  id: string;
+  companion_id: string | null;
+  goal_id: string | null;
+  plan_id: string | null;
+  artifact_type: string;
+  title: string;
+  content: Record<string, unknown>;
+  status: string;
+  version: number;
+  parent_artifact_id: string | null;
+  created_at: string;
+  updated_at: string;
+  companion_name?: string;
+}
+
+export async function getArtifacts(
+  userId: string,
+  companionId?: string | null,
+  status?: ArtifactStatus | 'all',
+): Promise<CoachArtifact[]> {
+  let query = supabase
+    .from('coach_artifacts')
+    .select('id, companion_id, goal_id, plan_id, artifact_type, title, content, status, version, parent_artifact_id, created_at, updated_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (companionId) query = query.eq('companion_id', companionId);
+  if (status && status !== 'all') query = query.eq('status', status);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('[coachingService] getArtifacts error:', error);
+    return [];
+  }
+
+  const artifacts = (data ?? []) as CoachArtifact[];
+  if (artifacts.length === 0) return artifacts;
+
+  const companionIds = [...new Set(artifacts.map(a => a.companion_id).filter(Boolean))] as string[];
+  if (companionIds.length > 0) {
+    const { data: companions } = await supabase
+      .from('companions')
+      .select('id, custom_name')
+      .in('id', companionIds);
+    const nameMap = new Map((companions ?? []).map(c => [c.id, c.custom_name]));
+    artifacts.forEach(a => {
+      if (a.companion_id) a.companion_name = nameMap.get(a.companion_id) ?? 'Coach';
+    });
+  }
+  return artifacts;
+}
+
+export async function updateArtifactStatus(
+  artifactId: string,
+  status: ArtifactStatus,
+): Promise<void> {
+  await supabase
+    .from('coach_artifacts')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', artifactId);
+}
+
+export async function updateArtifactContent(
+  artifactId: string,
+  title: string,
+  content: Record<string, unknown>,
+): Promise<void> {
+  await supabase
+    .from('coach_artifacts')
+    .update({ title, content, updated_at: new Date().toISOString() })
+    .eq('id', artifactId);
+}
+
+export async function deleteArtifact(artifactId: string): Promise<void> {
+  await supabase.from('coach_artifacts').delete().eq('id', artifactId);
+}
+
+export const ARTIFACT_TYPE_LABELS: Record<string, string> = {
+  reading_material: 'Reading Material',
+  plan: 'Plan',
+  routine: 'Routine / Schedule',
+  practice_set: 'Practice Set',
+  worksheet: 'Worksheet',
+  resource_pick: 'Resource Pick',
+  checklist: 'Checklist',
+  progress_report: 'Progress Report',
+};
 
 // =====================================================
 // Resource Cache

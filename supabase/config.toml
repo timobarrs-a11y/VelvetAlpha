@@ -69,9 +69,6 @@ verify_jwt = true
 [functions.generate-wallpaper]
 verify_jwt = true
 
-[functions.goal-discovery-chat]
-verify_jwt = true
-
 [functions.group-chat]
 verify_jwt = true
 
@@ -164,3 +161,6 @@ verify_jwt = true
 
 [functions.community-bot]
 verify_jwt = false
+
+[functions.coach-tools]
+verify_jwt = true

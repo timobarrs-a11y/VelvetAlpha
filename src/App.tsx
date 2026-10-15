@@ -794,6 +794,7 @@ function AppInner() {
       let calendarEvent: { title: string; event_type: string; event_date: string } | null = null;
       let navigationIntent: { destination: string; route: string; seedText?: string } | null = null;
       let articleIds: string[] | undefined;
+      let coachArtifacts: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }> | undefined;
 
       if (userProfile && companionId) {
         const result = await ChatService.sendMessageWithSignals(content, companionId, userProfile);
@@ -801,6 +802,7 @@ function AppInner() {
         calendarEvent = result.calendarEvent || null;
         navigationIntent = result.navigationIntent || null;
         articleIds = result.article_ids;
+        coachArtifacts = result.coachArtifacts;
       } else {
         response = await ChatService.sendMessage(content, companionId, companion.relationship_type);
       }
@@ -815,6 +817,7 @@ function AppInner() {
         content: response,
         clientMessageId: safeRandomUUID(),
         ...(articleIds && articleIds.length > 0 ? { metadata: { article_ids: articleIds } } : {}),
+        ...(coachArtifacts && coachArtifacts.length > 0 ? { metadata: { ...(articleIds && articleIds.length > 0 ? { article_ids: articleIds } : {}), coach_artifacts: coachArtifacts } } : {}),
       });
 
       if (calendarEvent) {

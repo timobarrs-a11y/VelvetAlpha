@@ -14,6 +14,7 @@ import {
   getCommitments, updateCommitmentStatus, createCommitment, updateProgressNote, deleteCommitment,
   getWeeklyStats, commitmentDueLabel, commitmentStatusColor,
   getPlans, createPlan, updatePlanStepStatus, deletePlan, planProgressPercent,
+  createTickEvent, updatePlanStepTitle,
   type CoachingCommitment, type CommitmentStatus,
   type CoachPlan, type CoachPlanStep, type PlanStatus, type StepStatus,
 } from '../services/coachingService';
@@ -89,9 +90,32 @@ export function CoachingCommitmentsPage() {
       ? completedCommitments
       : commitments;
 
-  const handleMarkCompleted = async (commitmentId: string) => {
+  const handleMarkCompleted = async (commitmentId: string, description: string) => {
     setUpdatingId(commitmentId);
     await updateCommitmentStatus(commitmentId, 'completed');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await createTickEvent(user.id, {
+        eventType: 'commitment_completed',
+        targetType: 'commitment',
+        targetId: commitmentId,
+        companionId: companionId ?? null,
+        details: { description },
+      });
+    }
+    // If this commitment is linked to a plan step, also complete the step
+    const commitment = commitments.find(c => c.id === commitmentId);
+    if (commitment?.plan_step_id) {
+      await updatePlanStepStatus(commitment.plan_step_id, 'completed');
+      setPlans(prev => prev.map(p => ({
+        ...p,
+        steps: (p.steps ?? []).map(s =>
+          s.id === commitment.plan_step_id
+            ? { ...s, status: 'completed' as StepStatus, completed_at: new Date().toISOString() }
+            : s,
+        ),
+      })));
+    }
     setCommitments(prev =>
       prev.map(c => c.id === commitmentId
         ? { ...c, status: 'completed' as CommitmentStatus, completed_at: new Date().toISOString() }
@@ -129,9 +153,19 @@ export function CoachingCommitmentsPage() {
     setUpdatingId(null);
   };
 
-  const handleSaveProgress = async (commitmentId: string) => {
+  const handleSaveProgress = async (commitmentId: string, description: string) => {
     setUpdatingId(commitmentId);
     await updateProgressNote(commitmentId, progressDraft);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await createTickEvent(user.id, {
+        eventType: 'commitment_progress',
+        targetType: 'commitment',
+        targetId: commitmentId,
+        companionId: companionId ?? null,
+        details: { description, note: progressDraft },
+      });
+    }
     setCommitments(prev =>
       prev.map(c => c.id === commitmentId ? { ...c, progress_note: progressDraft } : c),
     );
@@ -176,10 +210,22 @@ export function CoachingCommitmentsPage() {
     setShowCreatePlan(false);
   };
 
-  const handleStepToggle = async (stepId: string, current: StepStatus) => {
+  const handleStepToggle = async (stepId: string, current: StepStatus, stepTitle: string) => {
     setUpdatingId(stepId);
     const next: StepStatus = current === 'completed' ? 'pending' : 'completed';
     await updatePlanStepStatus(stepId, next);
+    if (next === 'completed') {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await createTickEvent(user.id, {
+          eventType: 'step_completed',
+          targetType: 'plan_step',
+          targetId: stepId,
+          companionId: companionId ?? null,
+          details: { title: stepTitle },
+        });
+      }
+    }
     setPlans(prev => prev.map(p => ({
       ...p,
       steps: (p.steps ?? []).map(s =>
@@ -451,11 +497,11 @@ export function CoachingCommitmentsPage() {
                     progressDraft={progressDraft}
                     setProgressDraft={setProgressDraft}
                     onExpand={setExpandedId}
-                    onComplete={() => handleMarkCompleted(commitment.id)}
+                    onComplete={() => handleMarkCompleted(commitment.id, commitment.description)}
                     onStart={() => handleStartProgress(commitment.id)}
                     onRenegotiate={() => handleRenegotiate(commitment.id)}
                     onDelete={() => handleDelete(commitment.id)}
-                    onSaveProgress={() => handleSaveProgress(commitment.id)}
+                    onSaveProgress={() => handleSaveProgress(commitment.id, commitment.description)}
                     updating={updatingId === commitment.id}
                   />
                 ))}
@@ -509,11 +555,11 @@ function CommitmentSection({
   progressDraft: string;
   setProgressDraft: (s: string) => void;
   onExpand: (id: string | null) => void;
-  onComplete: (id: string) => void;
+  onComplete: (id: string, description: string) => void;
   onStart: (id: string) => void;
   onRenegotiate: (id: string) => void;
   onDelete: (id: string) => void;
-  onSaveProgress: (id: string) => void;
+  onSaveProgress: (id: string, description: string) => void;
   updatingId: string | null;
 }) {
   return (
@@ -533,11 +579,11 @@ function CommitmentSection({
               progressDraft={progressDraft}
               setProgressDraft={setProgressDraft}
               onExpand={onExpand}
-              onComplete={() => onComplete(commitment.id)}
+              onComplete={() => onComplete(commitment.id, commitment.description)}
               onStart={() => onStart(commitment.id)}
               onRenegotiate={() => onRenegotiate(commitment.id)}
               onDelete={() => onDelete(commitment.id)}
-              onSaveProgress={() => onSaveProgress(commitment.id)}
+              onSaveProgress={() => onSaveProgress(commitment.id, commitment.description)}
               updating={updatingId === commitment.id}
             />
           ))}
@@ -849,7 +895,7 @@ function PlansView({
   completedPlans: CoachPlan[];
   expandedPlanId: string | null;
   setExpandedPlanId: (id: string | null) => void;
-  onStepToggle: (stepId: string, current: StepStatus) => void;
+  onStepToggle: (stepId: string, current: StepStatus, stepTitle: string) => void;
   onDeletePlan: (planId: string) => void;
   updatingId: string | null;
   hasCompanionContext: boolean;
@@ -936,7 +982,7 @@ function PlanCard({
   plan: CoachPlan;
   expanded: boolean;
   onToggleExpand: () => void;
-  onStepToggle: (stepId: string, current: StepStatus) => void;
+  onStepToggle: (stepId: string, current: StepStatus, stepTitle: string) => void;
   onDelete: () => void;
   updatingId: string | null;
 }) {
@@ -993,10 +1039,13 @@ function PlanCard({
                 steps.map((step, i) => {
                   const isDone = step.status === 'completed';
                   const isUpdating = updatingId === step.id;
+                  const displayTitle = step.user_set_title || step.title;
+                  const wasEdited = step.coach_proposed_title && step.user_set_title && step.coach_proposed_title !== step.user_set_title;
+                  const isBelowFloor = step.is_below_floor;
                   return (
                     <div key={step.id} className="flex items-start gap-2.5 py-1.5">
                       <button
-                        onClick={() => onStepToggle(step.id, step.status)}
+                        onClick={() => onStepToggle(step.id, step.status, displayTitle)}
                         disabled={isUpdating}
                         className="mt-0.5 shrink-0 transition-colors"
                       >
@@ -1011,8 +1060,18 @@ function PlanCard({
                       <div className="flex-1 min-w-0">
                         <p className={`text-xs leading-relaxed ${isDone ? 'text-ink-muted line-through' : 'text-ink'}`}>
                           <span className="text-ink-muted mr-1.5 tabular-nums">{i + 1}.</span>
-                          {step.title}
+                          {displayTitle}
                         </p>
+                        {wasEdited && (
+                          <p className="text-[10px] text-ink-muted/60 italic mt-0.5">
+                            Coach proposed: "{step.coach_proposed_title}"
+                          </p>
+                        )}
+                        {isBelowFloor && step.coach_minimum && (
+                          <p className="text-[10px] text-amber-400/80 mt-0.5">
+                            Below coach minimum: {step.coach_minimum}
+                          </p>
+                        )}
                         {step.description && (
                           <p className="text-[11px] text-ink-muted mt-0.5 leading-relaxed">{step.description}</p>
                         )}

@@ -15,6 +15,7 @@ import {
   fetchGroundingStories,
 } from "../_shared/correspondentFramework.ts";
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
+import { loadCoachingState, formatCoachingStateBlock, acknowledgeTickEvents } from "../_shared/coachingState.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -209,6 +210,7 @@ interface ChatTurnResponse {
   calendarEvent?: CalendarEventDetected | null;
   navigationIntent?: NavigationIntent | null;
   article_ids?: string[];
+  coachArtifacts?: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }>;
   usage?: {
     cache_read_input_tokens?: number;
     cache_creation_input_tokens?: number;
@@ -1935,8 +1937,10 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     // Companion memory goes into the semi-stable system block (between
     // frozen and volatile) so it benefits from prompt caching.
     // Threads, commitments, goals, and facts go into the volatile block.
-    const [commitmentsBlock, goalsBlock, scopedMemories] = await Promise.all([
-      isMentor ? fetchOpenCommitments(supabaseAdmin, user.id, companionId, effectiveTimezone) : Promise.resolve(''),
+    const [coachingStateBlock, goalsBlock, scopedMemories] = await Promise.all([
+      isMentor
+        ? loadCoachingState(supabaseAdmin, user.id, companionId).then(state => formatCoachingStateBlock(state))
+        : Promise.resolve(''),
       (isMentor || companion.relationship_type === 'companion' || companion.relationship_type === 'partner')
         ? fetchActiveGoalsForPrompt(supabaseAdmin, user.id) : Promise.resolve(''),
       fetchScopedMemories(supabaseAdmin, user.id, companionId, companion.relationship_type, message),
@@ -1950,7 +1954,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       sessionBlock = await fetchLastSessionSummary(supabaseAdmin, user.id, companionId);
     }
 
-    const memoryBusBlock = `${commitmentsBlock}${goalsBlock}${factsBlock}${openThreadsBlock}${sessionBlock}`;
+    const memoryBusBlock = `${coachingStateBlock}${goalsBlock}${factsBlock}${openThreadsBlock}${sessionBlock}`;
 
     // Split into frozen (stable for a given companion) and volatile (changes
     // per-turn) layers so Anthropic prompt caching actually works.
@@ -1971,7 +1975,7 @@ ${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, s
 RESPONSE LENGTH: ${isMentor ? 'As long as the topic warrants — use markdown, lists, and code blocks when they help. Never pad.' : 'Default short — like a real text.'} Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
     const hallucinationGuard = isMentor
-      ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference commitments that appear in the [OPEN COMMITMENTS] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [USER'S ACTIVE GOALS] section. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.`
+      ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference plans, steps, and commitments that appear in the [COACHING STATE] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [COACHING STATE] or [USER'S ACTIVE GOALS] sections. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.\n- COACH TOOLS: You can create plans, steps, commitments, and artifacts by emitting a JSON tool block in your reply. Format: [COACH_TOOL]{"action":"create_plan","title":"...","steps":[{"title":"...","coach_minimum":"..."}]}[/COACH_TOOL] or [COACH_TOOL]{"action":"create_commitment","description":"...","dueDate":"2024-01-15"}[/COACH_TOOL] or [COACH_TOOL]{"action":"create_artifact","artifactType":"reading_material","title":"...","content":{...}}[/COACH_TOOL]. Place these at the end of your reply after your natural response. The system will process them and the user will see them appear.\n- PROPOSE, DON'T IMPOSE: When creating a plan or step, you are proposing. The user can edit the title, the quantity, or the cadence. Respect edits above your coach minimum. If they go below the minimum, respond in chat explaining why that won't be enough.\n- ADJUSTMENT SIGNALS: If the [COACHING STATE] includes ADJUSTMENT SIGNALS, act on them this session. When a step is missed, confidence drops, or the user goes quiet, don't just ask what happened — propose a concrete adjustment. Use [COACH_TOOL] to create a revised plan, a smaller step, or a new artifact (reading material, routine, practice set) to help them rebuild momentum. Lead with empathy, then act.`
       : '';
 
     const volatileContext = `\n\nRelationship duration: ${relationshipDuration} days
@@ -2083,8 +2087,56 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       systemBlocks
     );
 
-    const assistantMessage = result.message;
+    let assistantMessage = result.message;
     const apiUsage = result.usage;
+
+    // Extract [COACH_TOOL]...[/COACH_TOOL] blocks, strip from visible message,
+    // and process them via the coach-tools function in the background.
+    const createdArtifacts: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }> = [];
+    if (isMentor) {
+      const toolRegex = /\[COACH_TOOL\](\{[\s\S]*?\})\[\/COACH_TOOL\]/g;
+      const toolBlocks: string[] = [];
+      let match;
+      while ((match = toolRegex.exec(assistantMessage)) !== null) {
+        toolBlocks.push(match[1]);
+      }
+      assistantMessage = assistantMessage.replace(toolRegex, '').trim();
+
+      if (toolBlocks.length > 0) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+        for (const block of toolBlocks) {
+          try {
+            const parsed = JSON.parse(block);
+            const toolResponse = await fetch(`${supabaseUrl}/functions/v1/coach-tools`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                action: parsed.action,
+                companionId,
+                payload: parsed,
+              }),
+            });
+            if (parsed.action === 'create_artifact' && toolResponse.ok) {
+              const toolResult = await toolResponse.json();
+              if (toolResult.artifact) {
+                createdArtifacts.push({
+                  id: toolResult.artifact.id,
+                  artifactType: toolResult.artifact.artifact_type,
+                  title: toolResult.artifact.title,
+                  content: toolResult.artifact.content,
+                });
+              }
+            }
+          } catch (err) {
+            console.error('[chat-turn] Coach tool processing error:', err);
+          }
+        }
+      }
+    }
 
     const latencyMs = Date.now() - startTime;
 
@@ -2167,6 +2219,10 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       last20Messages.map(m => ({ role: m.role, content: m.content, id: m.id })),
     );
 
+    if (isMentor) {
+      EdgeRuntime.waitUntil(acknowledgeTickEvents(supabaseAdmin, user.id, companionId));
+    }
+
     EdgeRuntime.waitUntil(Promise.allSettled([signalPromise, memoryPromise]));
 
     const response: ChatTurnResponse & { calendarEvent?: CalendarEventDetected | null; navigationIntent?: NavigationIntent | null } = {
@@ -2178,6 +2234,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       calendarEvent: null,
       navigationIntent: null,
       ...(correspondentArticleIds.length > 0 ? { article_ids: correspondentArticleIds } : {}),
+      ...(createdArtifacts.length > 0 ? { coachArtifacts: createdArtifacts } : {}),
       ...(apiUsage ? { usage: apiUsage } : {}),
     };
 

@@ -20,6 +20,7 @@ export interface MessageMetadata {
   event_id?: string;
   event_ids?: string[];
   navi_results?: unknown[];
+  coach_artifacts?: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }>;
   [key: string]: unknown;
 }
 
