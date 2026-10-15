@@ -6,7 +6,7 @@ import {
   Heart, LogOut, Volume2, VolumeX,
   Plus, Sparkles, ArrowRight,
   Target, CheckCircle2, UsersRound, Layers,
-  Sunrise, Zap, User, Menu, X,
+  Sunrise, Zap, User, Menu, X, MessageSquare,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { useAudioScene } from '../hooks/useAudioScene';
@@ -261,6 +261,7 @@ export function HomeV3Page() {
           {renderToolRow('Navi', <MapPin className="w-3.5 h-3.5" />, 'text-emerald-400', '/local-explorer')}
           {renderToolRow('Group Chat', <UsersRound className="w-3.5 h-3.5" />, 'text-teal-400', '/group-chat')}
           {renderToolRow('Velvet Rope', <Zap className="w-3.5 h-3.5" />, 'text-pink-400', '/real-or-not')}
+          {renderToolRow('Community', <MessageSquare className="w-3.5 h-3.5" />, 'text-blue-400', '/community')}
           {/* Games */}
           <div className="mt-1">
             <p className="text-[9px] font-bold tracking-widest uppercase text-white/30 px-2 pt-1 pb-1 select-none">Games</p>

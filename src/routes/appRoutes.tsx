@@ -27,6 +27,9 @@ const MemoryTrainingPage = lazy(() => import('../pages/MemoryTrainingPage').then
 const MorningJournalPage = lazy(() => import('../pages/MorningJournalPage').then(m => ({ default: m.MorningJournalPage })));
 const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(m => ({ default: m.PersonProfilePage })));
 const RelationshipBriefPage = lazy(() => import('../pages/RelationshipBriefPage').then(m => ({ default: m.RelationshipBriefPage })));
+const CommunityPage = lazy(() => import('../pages/CommunityPage').then(m => ({ default: m.CommunityPage })));
+const BoardPage = lazy(() => import('../pages/BoardPage').then(m => ({ default: m.BoardPage })));
+const PostDetailPage = lazy(() => import('../pages/PostDetailPage').then(m => ({ default: m.PostDetailPage })));
 function P(el: React.ReactNode) {
   return (
     <ProtectedRoute>
@@ -61,4 +64,7 @@ export const appRoutes = [
   <Route key="invite" path="/invite" element={P(<InvitePage />)} />,
   <Route key="memory-training" path="/memory-training" element={P(<MemoryTrainingPage />)} />,
   <Route key="morning-journal" path="/morning-journal" element={P(<MorningJournalPage />)} />,
+  <Route key="community" path="/community" element={P(<CommunityPage />)} />,
+  <Route key="community-board" path="/community/board/:boardId" element={P(<BoardPage />)} />,
+  <Route key="community-post" path="/community/post/:postId" element={P(<PostDetailPage />)} />,
 ];

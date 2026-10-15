@@ -1,0 +1,63 @@
+export interface CommunityBoard {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  icon: string;
+  owner_id: string;
+  is_locked: boolean;
+  is_pinned: boolean;
+  post_count: number;
+  created_at: string;
+}
+
+export interface CommunityPost {
+  id: string;
+  board_id: string;
+  author_id: string;
+  title: string;
+  body: string;
+  image_url: string | null;
+  is_ai_generated: boolean;
+  is_pinned: boolean;
+  is_locked: boolean;
+  comment_count: number;
+  reaction_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommunityComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  body: string;
+  is_ai_generated: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ReactionType = 'like' | 'support' | 'relate';
+export type ReactionTarget = 'post' | 'comment';
+
+export interface CommunityReaction {
+  id: string;
+  user_id: string;
+  target_type: ReactionTarget;
+  target_id: string;
+  reaction_type: ReactionType;
+  created_at: string;
+}
+
+export interface PostWithAuthor extends CommunityPost {
+  author_name: string;
+  user_reaction?: ReactionType | null;
+}
+
+export interface CommentWithAuthor extends CommunityComment {
+  author_name: string;
+}
+
+export interface BoardWithCounts extends CommunityBoard {
+  is_owner: boolean;
+}
