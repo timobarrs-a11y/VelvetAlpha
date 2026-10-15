@@ -92,6 +92,13 @@ export default function BoardPage() {
   }, [boardId, sortMode]);
 
   useEffect(() => {
+    setBoard(null);
+    setPosts([]);
+    setReadPostIds(new Set());
+    setNextCursor(null);
+  }, [boardId]);
+
+  useEffect(() => {
     loadBoard();
     loadPosts();
   }, [loadBoard, loadPosts]);
@@ -262,8 +269,19 @@ export default function BoardPage() {
                   <div className="flex items-start gap-3 p-4">
                     <div className="w-2 h-2 rounded-full flex-shrink-0 mt-2.5 self-start" style={{ background: isUnread ? '#3b82f6' : 'transparent' }} />
 
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-rose-400/50 to-violet-400/50 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                      {initials}
+                    <div className="w-12 h-12 rounded-lg bg-white/[0.04] border border-white/8 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {post.post_smilie && smilieUrl(post.post_smilie) ? (
+                        <img
+                          src={smilieUrl(post.post_smilie)!}
+                          alt={`:${post.post_smilie}:`}
+                          style={{ height: 36, width: 'auto' }}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-rose-400/50 to-violet-400/50 flex items-center justify-center text-[10px] font-bold text-white">
+                          {initials}
+                        </div>
+                      )}
                     </div>
 
                     <button
@@ -271,14 +289,6 @@ export default function BoardPage() {
                       className="flex-1 min-w-0 text-left"
                     >
                       <div className="flex items-center gap-2 flex-wrap">
-                        {post.post_smilie && smilieUrl(post.post_smilie) && (
-                          <img
-                            src={smilieUrl(post.post_smilie)!}
-                            alt={`:${post.post_smilie}:`}
-                            style={{ height: 18, width: 'auto', flexShrink: 0 }}
-                            loading="lazy"
-                          />
-                        )}
                         <h3 className={`text-[15px] font-bold leading-snug group-hover:text-sky-300 transition-colors line-clamp-1 ${isUnread ? 'text-white' : 'text-white/70'}`}>
                           {post.title}
                         </h3>
