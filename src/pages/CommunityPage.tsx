@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  MessageSquare, Plus, Pin, Info, Check, X, Clock,
+  MessageSquare, Plus, Pin, Check, X, Clock,
   ShieldCheck, Users, MessageCircle, Sparkles, ArrowRight, Search,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';

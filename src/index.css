@@ -44,7 +44,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     touch-action: pan-x pan-y;
-    cursor: auto;
+    cursor: auto !important;
+  }
+
+  /* Ensure fixed-position overlay layers never hide the native cursor */
+  .fixed.inset-0[style*="pointer-events: none"],
+  .fixed.inset-0.pointer-events-none {
+    cursor: auto !important;
   }
 
   button, a {

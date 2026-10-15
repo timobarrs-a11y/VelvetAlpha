@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, MessageSquare, type LucideIcon,
-  Lock, Clock, MessageCircle, Users, Pin, ChevronRight,
+  ChevronRight,
 } from 'lucide-react';
 
 interface BaseProps {
@@ -87,8 +87,9 @@ export function CommunityIndexHeader({
 }
 
 /* ============================================================
- * 2. BOARD HEADER — banner-style with accent color, description
- *    Distinct: left accent bar, colored glow matching board color
+ * 2. BOARD HEADER — single compact inline bar
+ *    Back link, icon, title, stats, and meta all in one row.
+ *    No floating action slot. No empty top row. Content-aligned.
  * ============================================================ */
 interface BoardHeaderProps extends BaseProps {
   title: string;
@@ -106,62 +107,61 @@ export function BoardHeader({
   icon: Icon = MessageSquare,
   back,
   backLabel = 'Back',
-  actions,
   stats,
   meta,
 }: BoardHeaderProps) {
   const navigate = useNavigate();
 
   return (
-    <header className="relative w-full overflow-hidden border-b border-white/8">
-      {/* Accent-colored glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="absolute -top-32 left-1/4 w-[400px] h-[400px] rounded-full opacity-40"
-          style={{ background: `radial-gradient(circle, ${accent}14 0%, transparent 65%)`, filter: 'blur(80px)' }}
-        />
-        <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${accent}08 0%, transparent 60%)` }} />
-      </div>
-      {/* Left accent bar */}
+    <header className="sticky top-0 z-30 border-b border-white/8 bg-[var(--ds-surface-2)]/60 backdrop-blur-xl">
+      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(to right, ${accent}55, transparent 70%)` }} />
       <div className="absolute top-0 bottom-0 left-0 w-[3px]" style={{ background: `linear-gradient(to bottom, ${accent}, transparent 80%)` }} />
 
-      <div className="relative px-4 sm:px-6 pt-4 pb-5 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
+      <div className="relative px-4 sm:px-6 py-3 max-w-6xl mx-auto">
+        <div className="flex items-center gap-3">
+          {/* Back link — inline, same row as title */}
           <button
             type="button"
             onClick={() => navigate(back)}
-            className="flex items-center gap-1.5 text-xs font-medium text-white/40 hover:text-white/80 transition-colors"
+            className="flex items-center gap-1 text-xs font-medium text-white/40 hover:text-white/80 transition-colors flex-shrink-0"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>{backLabel}</span>
+            <span className="hidden sm:inline">{backLabel}</span>
           </button>
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
-        </div>
 
-        <div className="flex items-start gap-4">
+          <ChevronRight className="w-3.5 h-3.5 text-white/15 flex-shrink-0" />
+
+          {/* Board icon — small, inline */}
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: `${accent}18`, border: `1px solid ${accent}40` }}
+            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ background: `${accent}18`, border: `1px solid ${accent}33` }}
           >
-            <Icon className="w-6 h-6" style={{ color: accent }} />
+            <Icon className="w-4.5 h-4.5" style={{ color: accent }} />
           </div>
+
+          {/* Title + subtitle */}
           <div className="flex-1 min-w-0">
             <h1
-              className="font-display font-bold leading-tight text-white"
-              style={{ fontSize: 'clamp(22px, 3.5vw, 30px)', letterSpacing: '-0.02em' }}
+              className="font-display font-bold leading-tight text-white truncate"
+              style={{ fontSize: 'clamp(18px, 2.5vw, 22px)', letterSpacing: '-0.02em' }}
             >
               {title}
             </h1>
             {subtitle && (
-              <p className="text-sm text-white/45 mt-1 leading-relaxed max-w-2xl">{subtitle}</p>
-            )}
-            {stats && (
-              <div className="flex items-center gap-4 mt-2.5">{stats}</div>
+              <p className="text-xs text-white/40 leading-relaxed truncate">{subtitle}</p>
             )}
           </div>
-        </div>
 
-        {meta && <div className="mt-3">{meta}</div>}
+          {/* Stats — inline, right-aligned */}
+          {stats && (
+            <div className="flex items-center gap-3 flex-shrink-0">{stats}</div>
+          )}
+
+          {/* Meta badges — inline */}
+          {meta && (
+            <div className="flex items-center gap-2 flex-shrink-0">{meta}</div>
+          )}
+        </div>
       </div>
     </header>
   );

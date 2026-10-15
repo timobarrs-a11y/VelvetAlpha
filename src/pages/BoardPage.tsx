@@ -131,13 +131,6 @@ export default function BoardPage() {
           icon={MessageSquare}
           back="/community"
           backLabel="Community"
-          actions={
-            canPost && (
-              <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
-                New Post
-              </Button>
-            )
-          }
           stats={
             !loading && posts.length > 0 ? (
               <span className="flex items-center gap-1.5 text-xs text-white/40">
@@ -148,7 +141,7 @@ export default function BoardPage() {
             ) : undefined
           }
           meta={
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               {board?.is_locked && (
                 <span className="flex items-center gap-1 text-xs text-amber-400/80">
                   <Lock className="w-3 h-3" />
@@ -158,7 +151,7 @@ export default function BoardPage() {
               {!board?.is_approved && board && (
                 <span className="flex items-center gap-1 text-xs text-amber-400/80">
                   <Clock className="w-3 h-3" />
-                  Pending approval
+                  Pending
                 </span>
               )}
             </div>
@@ -166,27 +159,37 @@ export default function BoardPage() {
         />
       }
     >
-      {/* Sort bar */}
-      {!loading && posts.length > 0 && (
-        <div className="flex items-center gap-2 mb-4">
-          <ArrowUpDown className="w-3.5 h-3.5 text-white/30" />
-          <div className="flex items-center gap-1 rounded-lg border border-white/8 bg-white/[0.02] p-0.5">
-            {SORT_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                onClick={() => setSortMode(opt.key)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  sortMode === opt.key
-                    ? 'bg-white/10 text-white'
-                    : 'text-white/40 hover:text-white/70'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+      {/* Inline toolbar: sort controls + New Post button on same row */}
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        {!loading && posts.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="w-3.5 h-3.5 text-white/30" />
+            <div className="flex items-center gap-1 rounded-lg border border-white/8 bg-white/[0.02] p-0.5">
+              {SORT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setSortMode(opt.key)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    sortMode === opt.key
+                      ? 'bg-white/10 text-white'
+                      : 'text-white/40 hover:text-white/70'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div />
+        )}
+
+        {canPost && (
+          <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
+            New Post
+          </Button>
+        )}
+      </div>
 
       {loading ? (
         <LoadingState label="Loading posts..." />
