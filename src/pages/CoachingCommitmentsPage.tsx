@@ -5,7 +5,7 @@ import {
   ArrowLeft, CheckCircle2, Circle, AlertCircle, Trophy,
   Calendar, Plus, X, MessageCircle, Trash2, Loader2,
   Clock, PlayCircle, RotateCcw, Sparkles, Layers, ChevronDown, ChevronRight,
-  ListChecks, ExternalLink,
+  ListChecks, ExternalLink, Pencil, Check,
 } from 'lucide-react';
 import { PageHeader, PageShell, LoadingState, Badge, EmptyState, Card, Button } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
@@ -14,9 +14,9 @@ import {
   getCommitments, updateCommitmentStatus, createCommitment, updateProgressNote, deleteCommitment,
   getWeeklyStats, commitmentDueLabel, commitmentStatusColor,
   getPlans, createPlan, updatePlanStepStatus, deletePlan, planProgressPercent,
-  createTickEvent, updatePlanStepTitle,
+  createTickEvent, updatePlanStepTitle, respondToPlan,
   type CoachingCommitment, type CommitmentStatus,
-  type CoachPlan, type CoachPlanStep, type PlanStatus, type StepStatus,
+  type CoachPlan, type StepStatus,
 } from '../services/coachingService';
 
 type Filter = 'active' | 'completed' | 'all';
@@ -106,7 +106,7 @@ export function CoachingCommitmentsPage() {
     // If this commitment is linked to a plan step, also complete the step
     const commitment = commitments.find(c => c.id === commitmentId);
     if (commitment?.plan_step_id) {
-      await updatePlanStepStatus(commitment.plan_step_id, 'completed');
+      // The database trigger completes the linked step; mirror it locally for instant feedback.
       setPlans(prev => prev.map(p => ({
         ...p,
         steps: (p.steps ?? []).map(s =>
@@ -124,6 +124,7 @@ export function CoachingCommitmentsPage() {
     );
     toast.success('Marked complete. Nice work.');
     setUpdatingId(null);
+    void loadData();
   };
 
   const handleStartProgress = async (commitmentId: string) => {
@@ -213,7 +214,13 @@ export function CoachingCommitmentsPage() {
   const handleStepToggle = async (stepId: string, current: StepStatus, stepTitle: string) => {
     setUpdatingId(stepId);
     const next: StepStatus = current === 'completed' ? 'pending' : 'completed';
-    await updatePlanStepStatus(stepId, next);
+    try {
+      await updatePlanStepStatus(stepId, next);
+    } catch {
+      toast.error('Could not update that step. Please try again.');
+      setUpdatingId(null);
+      return;
+    }
     if (next === 'completed') {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -235,6 +242,38 @@ export function CoachingCommitmentsPage() {
       ),
     })));
     setUpdatingId(null);
+    // A linked commitment (and the plan's own status) change in the database; reload to show them.
+    void loadData();
+  };
+
+  const handleEditStep = async (stepId: string, newTitle: string): Promise<boolean> => {
+    try {
+      const res = await updatePlanStepTitle(stepId, newTitle);
+      if (res.is_below_floor) {
+        toast.warning(`That's below your coach's minimum${res.minimum_text ? ` (${res.minimum_text})` : ''}. Saved, but expect them to weigh in.`);
+      } else {
+        toast.success('Step updated. Your coach will see the change.');
+      }
+      await loadData();
+      return true;
+    } catch {
+      toast.error('Could not save that edit. Please try again.');
+      return false;
+    }
+  };
+
+  const handleRespondToPlan = async (plan: CoachPlan, accept: boolean) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setUpdatingId(plan.id);
+    try {
+      await respondToPlan(user.id, { id: plan.id, title: plan.title, companion_id: plan.companion_id }, accept);
+      toast.success(accept ? 'Plan accepted. Your coach will build on it.' : 'Plan declined. Tell your coach what you would change.');
+      await loadData();
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    }
+    setUpdatingId(null);
   };
 
   const handleDeletePlan = async (planId: string) => {
@@ -254,7 +293,8 @@ export function CoachingCommitmentsPage() {
   }
 
   const hasCompanionContext = !!companionId;
-  const activePlans = plans.filter(p => p.status === 'active');
+  const proposedPlans = plans.filter(p => p.status === 'proposed');
+  const activePlans = plans.filter(p => p.status === 'active' || p.status === 'paused');
   const completedPlans = plans.filter(p => p.status === 'completed');
 
   return (
@@ -316,7 +356,10 @@ export function CoachingCommitmentsPage() {
       {view === 'plans' ? (
         <PlansView
           plans={plans}
+          proposedPlans={proposedPlans}
           activePlans={activePlans}
+          onEditStep={handleEditStep}
+          onRespondToPlan={handleRespondToPlan}
           completedPlans={completedPlans}
           expandedPlanId={expandedPlanId}
           setExpandedPlanId={setExpandedPlanId}
@@ -886,11 +929,14 @@ function CreateTaskModal({
 // =====================================================
 
 function PlansView({
-  plans, activePlans, completedPlans, expandedPlanId, setExpandedPlanId,
-  onStepToggle, onDeletePlan, updatingId, hasCompanionContext, companionName,
+  plans, proposedPlans, activePlans, completedPlans, expandedPlanId, setExpandedPlanId,
+  onStepToggle, onEditStep, onRespondToPlan, onDeletePlan, updatingId, hasCompanionContext, companionName,
   companionId, navigate, showCreatePlan, setShowCreatePlan, onCreatePlan,
 }: {
   plans: CoachPlan[];
+  proposedPlans: CoachPlan[];
+  onEditStep: (stepId: string, newTitle: string) => Promise<boolean>;
+  onRespondToPlan: (plan: CoachPlan, accept: boolean) => void;
   activePlans: CoachPlan[];
   completedPlans: CoachPlan[];
   expandedPlanId: string | null;
@@ -931,6 +977,29 @@ function PlansView({
         />
       ) : (
         <>
+          {proposedPlans.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-amber-400/90 uppercase tracking-wider px-1">Proposed by your coach</h3>
+              {proposedPlans.map(plan => (
+                <div key={plan.id} className="rounded-2xl border border-amber-400/25">
+                  <PlanCard
+                    plan={plan}
+                    expanded={expandedPlanId === plan.id || expandedPlanId === null}
+                    onToggleExpand={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
+                    onStepToggle={onStepToggle}
+                    onEditStep={onEditStep}
+                    onDelete={() => onRespondToPlan(plan, false)}
+                    updatingId={updatingId}
+                  />
+                  <div className="flex items-center gap-2 px-4 pb-3">
+                    <p className="flex-1 text-[11px] text-ink-muted">Edit any step to make it yours. Your coach sees your changes.</p>
+                    <Button variant="secondary" onClick={() => onRespondToPlan(plan, false)} disabled={updatingId === plan.id}>Decline</Button>
+                    <Button variant="primary" onClick={() => onRespondToPlan(plan, true)} disabled={updatingId === plan.id}>Accept plan</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           {activePlans.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-ink-muted uppercase tracking-wider px-1">Active</h3>
@@ -941,6 +1010,7 @@ function PlansView({
                   expanded={expandedPlanId === plan.id}
                   onToggleExpand={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
                   onStepToggle={onStepToggle}
+                  onEditStep={onEditStep}
                   onDelete={() => onDeletePlan(plan.id)}
                   updatingId={updatingId}
                 />
@@ -957,6 +1027,7 @@ function PlansView({
                   expanded={expandedPlanId === plan.id}
                   onToggleExpand={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
                   onStepToggle={onStepToggle}
+                  onEditStep={onEditStep}
                   onDelete={() => onDeletePlan(plan.id)}
                   updatingId={updatingId}
                 />
@@ -977,18 +1048,35 @@ function PlansView({
 }
 
 function PlanCard({
-  plan, expanded, onToggleExpand, onStepToggle, onDelete, updatingId,
+  plan, expanded, onToggleExpand, onStepToggle, onEditStep, onDelete, updatingId,
 }: {
   plan: CoachPlan;
   expanded: boolean;
   onToggleExpand: () => void;
   onStepToggle: (stepId: string, current: StepStatus, stepTitle: string) => void;
+  onEditStep: (stepId: string, newTitle: string) => Promise<boolean>;
   onDelete: () => void;
   updatingId: string | null;
 }) {
   const steps = plan.steps ?? [];
   const progress = planProgressPercent(plan);
   const doneCount = steps.filter(s => s.status === 'completed').length;
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const startEdit = (stepId: string, current: string) => {
+    setEditingStepId(stepId);
+    setEditDraft(current);
+  };
+  const saveEdit = async (stepId: string) => {
+    const text = editDraft.trim();
+    if (!text) return;
+    setSavingEdit(true);
+    const saved = await onEditStep(stepId, text);
+    setSavingEdit(false);
+    if (saved) setEditingStepId(null);
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -1058,20 +1146,59 @@ function PlanCard({
                         )}
                       </button>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-xs leading-relaxed ${isDone ? 'text-ink-muted line-through' : 'text-ink'}`}>
-                          <span className="text-ink-muted mr-1.5 tabular-nums">{i + 1}.</span>
-                          {displayTitle}
-                        </p>
+                        {editingStepId === step.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              autoFocus
+                              value={editDraft}
+                              maxLength={300}
+                              onChange={e => setEditDraft(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') void saveEdit(step.id);
+                                if (e.key === 'Escape') setEditingStepId(null);
+                              }}
+                              className="flex-1 min-w-0 bg-white/5 border border-white/15 rounded-md px-2 py-1 text-xs text-ink focus:outline-none focus:border-white/30"
+                              aria-label="Edit step"
+                            />
+                            <button
+                              onClick={() => void saveEdit(step.id)}
+                              disabled={savingEdit || !editDraft.trim()}
+                              className="p-1 text-emerald-400 hover:text-emerald-300 disabled:opacity-40"
+                              aria-label="Save step"
+                            >
+                              {savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                            </button>
+                            <button onClick={() => setEditingStepId(null)} className="p-1 text-ink-muted hover:text-ink" aria-label="Cancel edit">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className={`group text-xs leading-relaxed ${isDone ? 'text-ink-muted line-through' : 'text-ink'}`}>
+                            <span className="text-ink-muted mr-1.5 tabular-nums">{i + 1}.</span>
+                            {displayTitle}
+                            {!isDone && (
+                              <button
+                                onClick={() => startEdit(step.id, displayTitle)}
+                                className="ml-1.5 align-middle text-ink-muted/60 hover:text-ink transition-colors"
+                                aria-label="Edit step"
+                              >
+                                <Pencil className="w-3 h-3 inline" />
+                              </button>
+                            )}
+                          </p>
+                        )}
                         {wasEdited && (
                           <p className="text-[10px] text-ink-muted/60 italic mt-0.5">
                             Coach proposed: "{step.coach_proposed_title}"
                           </p>
                         )}
-                        {isBelowFloor && step.coach_minimum && (
+                        {isBelowFloor ? (
                           <p className="text-[10px] text-amber-400/80 mt-0.5">
-                            Below coach minimum: {step.coach_minimum}
+                            Below your coach's minimum{step.coach_minimum ? ` (${step.coach_minimum})` : ''}. Expect them to weigh in.
                           </p>
-                        )}
+                        ) : step.coach_minimum && !isDone ? (
+                          <p className="text-[10px] text-ink-muted/60 mt-0.5">Coach minimum: {step.coach_minimum}</p>
+                        ) : null}
                         {step.description && (
                           <p className="text-[11px] text-ink-muted mt-0.5 leading-relaxed">{step.description}</p>
                         )}

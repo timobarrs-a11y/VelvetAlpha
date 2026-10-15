@@ -388,7 +388,7 @@ export function confidenceTrend(checks: ConfidenceCheck[]): { direction: 'up' | 
 // Coach Plans
 // =====================================================
 
-export type PlanStatus = 'active' | 'completed' | 'paused';
+export type PlanStatus = 'proposed' | 'active' | 'completed' | 'paused';
 export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
 
 export interface CoachPlanStep {
@@ -408,6 +408,9 @@ export interface CoachPlanStep {
   user_set_title: string | null;
   coach_minimum: string | null;
   is_below_floor: boolean;
+  minimum_value?: number | null;
+  target_unit?: string | null;
+  user_target_value?: number | null;
 }
 
 export interface CoachPlan {
@@ -462,7 +465,7 @@ export async function getPlans(
   const planIds = plans.map(p => p.id);
   const { data: steps } = await supabase
     .from('coach_plan_steps')
-    .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, coach_proposed_title, user_set_title, coach_minimum, is_below_floor, created_at, updated_at')
+    .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, coach_proposed_title, user_set_title, coach_minimum, is_below_floor, minimum_value, target_unit, user_target_value, created_at, updated_at')
     .in('plan_id', planIds)
     .order('order_index', { ascending: true });
 
@@ -519,7 +522,7 @@ export async function createPlan(
     const { data: insertedSteps } = await supabase
       .from('coach_plan_steps')
       .insert(stepRows)
-      .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, coach_proposed_title, user_set_title, coach_minimum, is_below_floor, created_at, updated_at');
+      .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, coach_proposed_title, user_set_title, coach_minimum, is_below_floor, minimum_value, target_unit, user_target_value, created_at, updated_at');
     plan.steps = (insertedSteps ?? []) as CoachPlanStep[];
   }
 
@@ -537,59 +540,63 @@ export async function updatePlanStepStatus(
   stepId: string,
   status: StepStatus,
 ): Promise<void> {
-  const patch: Record<string, unknown> = {
-    status,
-    updated_at: new Date().toISOString(),
-  };
-  if (status === 'completed') {
-    patch.completed_at = new Date().toISOString();
-  }
-  await supabase
-    .from('coach_plan_steps')
-    .update(patch)
-    .eq('id', stepId);
-
-  // If completing a step with a linked commitment, also complete the commitment
-  if (status === 'completed') {
-    const { data: step } = await supabase
-      .from('coach_plan_steps')
-      .select('commitment_id')
-      .eq('id', stepId)
-      .maybeSingle();
-    if (step?.commitment_id) {
-      await supabase
-        .from('coaching_commitments')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', step.commitment_id);
-    }
-  }
-}
-
-export async function updatePlanStepTitle(
-  stepId: string,
-  newTitle: string,
-  companionId?: string | null,
-): Promise<void> {
-  await supabase
+  // The linked commitment (and the plan's own status) are kept in sync by database triggers,
+  // in both directions, so this is the only write the client needs.
+  const { error } = await supabase
     .from('coach_plan_steps')
     .update({
-      user_set_title: newTitle,
-      is_below_floor: false, // will be checked server-side
+      status,
+      completed_at: status === 'completed' ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', stepId);
+  if (error) throw new Error(error.message);
+}
 
-  // Write a tick event so the coach sees the edit
-  await supabase.from('coaching_tick_events').insert({
-    companion_id: companionId ?? null,
-    event_type: 'step_edited',
-    target_type: 'plan_step',
-    target_id: stepId,
-    details: { to: newTitle },
+export interface StepEditResult {
+  is_below_floor: boolean;
+  minimum_value: number | null;
+  minimum_text: string | null;
+}
+
+/**
+ * Edit a step. The server compares the new quantity with the coach's minimum, records the
+ * change in the step history, and tells the coach on their next message.
+ */
+export async function updatePlanStepTitle(
+  stepId: string,
+  newTitle: string,
+): Promise<StepEditResult> {
+  const { data, error } = await supabase.rpc('edit_plan_step', {
+    p_step_id: stepId,
+    p_title: newTitle,
+  });
+  if (error) throw new Error(error.message);
+  return data as StepEditResult;
+}
+
+/** Accept or decline a plan the coach proposed. The coach is told on their next message. */
+export async function respondToPlan(
+  userId: string,
+  plan: { id: string; title: string; companion_id: string | null },
+  accept: boolean,
+): Promise<void> {
+  if (accept) {
+    const { error } = await supabase
+      .from('coach_plans')
+      .update({ status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', plan.id);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase.from('coach_plans').delete().eq('id', plan.id);
+    if (error) throw new Error(error.message);
+  }
+  await createTickEvent(userId, {
+    eventType: accept ? 'plan_accepted' : 'plan_declined',
+    targetType: 'plan',
+    targetId: plan.id,
+    companionId: plan.companion_id,
+    details: { title: plan.title },
   });
 }
 
