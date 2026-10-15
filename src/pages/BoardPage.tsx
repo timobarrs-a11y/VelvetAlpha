@@ -6,7 +6,7 @@ import {
   ChevronRight, Flame, ArrowUpDown,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { BoardHeader } from '../components/community/CommunityHeroHeader';
+import { BoardHeader, HeaderStat } from '../components/community/CommunityHeroHeader';
 import { Button } from '../shared/ui/Button';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -119,6 +119,10 @@ export default function BoardPage() {
 
   const accent = board ? COLOR_MAP[board.color] ?? '#64748b' : '#3b82f6';
   const canPost = !board?.is_locked && board?.is_approved;
+  const latestActivity = posts.reduce<string | null>(
+    (latest, p) => (!latest || p.created_at > latest ? p.created_at : latest),
+    null,
+  );
 
   return (
     <PageShell
@@ -131,13 +135,19 @@ export default function BoardPage() {
           icon={MessageSquare}
           back="/community"
           backLabel="Community"
+          actions={
+            canPost ? (
+              <Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
+                New Post
+              </Button>
+            ) : undefined
+          }
           stats={
-            !loading && posts.length > 0 ? (
-              <span className="flex items-center gap-1.5 text-xs text-white/40">
-                <MessageCircle className="w-3.5 h-3.5" />
-                <span className="font-semibold text-white/70 tabular-nums">{posts.length}</span>
-                {posts.length === 1 ? ' thread' : ' threads'}
-              </span>
+            board ? (
+              <>
+                <HeaderStat icon={MessageCircle} accent={accent} value={board.post_count ?? posts.length} label={(board.post_count ?? posts.length) === 1 ? 'Thread' : 'Threads'} />
+                {latestActivity && <HeaderStat icon={Clock} accent={accent} value={timeAgo(latestActivity)} label="Last post" />}
+              </>
             ) : undefined
           }
           meta={
@@ -159,7 +169,7 @@ export default function BoardPage() {
         />
       }
     >
-      {/* Inline toolbar: sort controls + New Post button on same row */}
+      {/* Sort controls */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         {!loading && posts.length > 0 ? (
           <div className="flex items-center gap-2">
@@ -184,11 +194,6 @@ export default function BoardPage() {
           <div />
         )}
 
-        {canPost && (
-          <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
-            New Post
-          </Button>
-        )}
       </div>
 
       {loading ? (

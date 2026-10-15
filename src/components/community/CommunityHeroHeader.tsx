@@ -87,9 +87,9 @@ export function CommunityIndexHeader({
 }
 
 /* ============================================================
- * 2. BOARD HEADER — single compact inline bar
- *    Back link, icon, title, stats, and meta all in one row.
- *    No floating action slot. No empty top row. Content-aligned.
+ * 2. BOARD HEADER — accent-tinted hero band
+ *    Big display title, watermark icon, stat tiles, primary action.
+ *    The board's accent color drives the whole composition.
  * ============================================================ */
 interface BoardHeaderProps extends BaseProps {
   title: string;
@@ -100,6 +100,29 @@ interface BoardHeaderProps extends BaseProps {
   meta?: React.ReactNode;
 }
 
+/** Big-number / small-label tile for the board header stat row. */
+export function HeaderStat({
+  value,
+  label,
+  icon: Icon,
+  accent,
+}: {
+  value: React.ReactNode;
+  label: string;
+  icon?: LucideIcon;
+  accent?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-black/20 backdrop-blur-sm px-3.5 py-2">
+      {Icon && <Icon className="w-4 h-4 flex-shrink-0" style={{ color: accent ?? 'rgba(255,255,255,0.5)' }} />}
+      <div className="leading-none">
+        <div className="font-display font-bold text-lg text-white tabular-nums">{value}</div>
+        <div className="text-[10px] uppercase tracking-[0.12em] text-white/45 mt-1">{label}</div>
+      </div>
+    </div>
+  );
+}
+
 export function BoardHeader({
   title,
   subtitle,
@@ -107,61 +130,94 @@ export function BoardHeader({
   icon: Icon = MessageSquare,
   back,
   backLabel = 'Back',
+  actions,
   stats,
   meta,
 }: BoardHeaderProps) {
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/8 bg-[var(--ds-surface-2)]/60 backdrop-blur-xl">
-      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(to right, ${accent}55, transparent 70%)` }} />
-      <div className="absolute top-0 bottom-0 left-0 w-[3px]" style={{ background: `linear-gradient(to bottom, ${accent}, transparent 80%)` }} />
+    <header className="relative w-full overflow-hidden border-b border-white/10">
+      {/* Accent wash: strongest top-left, fading across and down */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `linear-gradient(115deg, ${accent}38 0%, ${accent}12 45%, transparent 80%)`,
+        }}
+      />
+      {/* Glow pooled behind the icon tile */}
+      <div
+        className="absolute -left-24 top-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full pointer-events-none"
+        style={{ background: `radial-gradient(circle, ${accent}40 0%, transparent 65%)`, filter: 'blur(60px)' }}
+      />
+      {/* Dot grid, masked so it fades toward the right */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.35]"
+        style={{
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.22) 1px, transparent 1px)',
+          backgroundSize: '22px 22px',
+          WebkitMaskImage: 'linear-gradient(100deg, black 0%, transparent 65%)',
+          maskImage: 'linear-gradient(100deg, black 0%, transparent 65%)',
+        }}
+      />
+      {/* Oversized watermark icon fills the right side */}
+      <Icon
+        aria-hidden
+        className="absolute right-8 lg:right-[8%] top-1/2 w-[220px] h-[220px] pointer-events-none hidden md:block"
+        strokeWidth={1}
+        style={{ color: accent, opacity: 0.16, transform: 'translateY(-60%) rotate(-8deg)' }}
+      />
+      {/* Bottom accent edge */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-px"
+        style={{ background: `linear-gradient(to right, ${accent}, ${accent}00 75%)` }}
+      />
 
-      <div className="relative px-4 sm:px-6 py-3 max-w-6xl mx-auto">
-        <div className="flex items-center gap-3">
-          {/* Back link — inline, same row as title */}
-          <button
-            type="button"
-            onClick={() => navigate(back)}
-            className="flex items-center gap-1 text-xs font-medium text-white/40 hover:text-white/80 transition-colors flex-shrink-0"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{backLabel}</span>
-          </button>
+      <div className="relative px-4 sm:px-6 pt-5 pb-7 sm:pb-8 max-w-6xl mx-auto">
+        {/* Breadcrumb */}
+        <button
+          type="button"
+          onClick={() => navigate(back)}
+          className="group inline-flex items-center gap-1.5 text-xs font-medium text-white/50 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
+          <span>{backLabel}</span>
+        </button>
 
-          <ChevronRight className="w-3.5 h-3.5 text-white/15 flex-shrink-0" />
-
-          {/* Board icon — small, inline */}
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: `${accent}18`, border: `1px solid ${accent}33` }}
-          >
-            <Icon className="w-4.5 h-4.5" style={{ color: accent }} />
-          </div>
-
-          {/* Title + subtitle */}
-          <div className="flex-1 min-w-0">
-            <h1
-              className="font-display font-bold leading-tight text-white truncate"
-              style={{ fontSize: 'clamp(18px, 2.5vw, 22px)', letterSpacing: '-0.02em' }}
+        <div className="mt-5">
+          <div className="flex items-start gap-4 sm:gap-5 flex-1 min-w-0">
+            <div
+              className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${accent}55, ${accent}1f)`,
+                border: `1px solid ${accent}66`,
+                boxShadow: `0 8px 32px ${accent}44, inset 0 1px 0 rgba(255,255,255,0.18)`,
+              }}
             >
-              {title}
-            </h1>
-            {subtitle && (
-              <p className="text-xs text-white/40 leading-relaxed truncate">{subtitle}</p>
-            )}
+              <Icon className="w-7 h-7 sm:w-9 sm:h-9 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1
+                className="font-display font-black leading-[1.02] text-white"
+                style={{ fontSize: 'clamp(30px, 5vw, 48px)', letterSpacing: '-0.035em', textShadow: `0 2px 24px ${accent}66` }}
+              >
+                {title}
+              </h1>
+              {subtitle && (
+                <p className="text-sm sm:text-[15px] text-white/65 mt-2 leading-relaxed max-w-xl">{subtitle}</p>
+              )}
+              {meta && <div className="mt-2.5">{meta}</div>}
+            </div>
           </div>
 
-          {/* Stats — inline, right-aligned */}
-          {stats && (
-            <div className="flex items-center gap-3 flex-shrink-0">{stats}</div>
-          )}
-
-          {/* Meta badges — inline */}
-          {meta && (
-            <div className="flex items-center gap-2 flex-shrink-0">{meta}</div>
-          )}
         </div>
+
+        {(stats || actions) && (
+          <div className="mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-3">
+            {stats}
+            {actions && <div className="flex items-center gap-2 sm:ml-auto relative z-10">{actions}</div>}
+          </div>
+        )}
       </div>
     </header>
   );
