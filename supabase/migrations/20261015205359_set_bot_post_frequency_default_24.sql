@@ -1,0 +1,1 @@
+ALTER TABLE community_board_bot_settings ALTER COLUMN post_frequency_hours SET DEFAULT 24;
