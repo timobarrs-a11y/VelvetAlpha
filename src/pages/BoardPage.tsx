@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -6,7 +6,7 @@ import {
   ChevronRight, Flame, ArrowUpDown,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
-import { BoardHeader } from '../components/community/CommunityHeroHeader';
+import { BoardHeader, HeaderStat, LivePill } from '../components/community/CommunityHeroHeader';
 import { Button } from '../shared/ui/Button';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -85,7 +85,6 @@ export default function BoardPage() {
     setNextCursor(nc);
     setLoading(false);
 
-    // Fetch read status
     if (initialPosts.length > 0) {
       const readIds = await fetchReadPostIds(initialPosts.map((p) => p.id));
       setReadPostIds(readIds);
@@ -120,6 +119,20 @@ export default function BoardPage() {
   const accent = board ? COLOR_MAP[board.color] ?? '#64748b' : '#3b82f6';
   const canPost = !board?.is_locked && board?.is_approved;
 
+  // latest activity = newest created_at among loaded posts
+  const latestActivity = useMemo(() => {
+    if (posts.length === 0) return null;
+    return posts.reduce((latest, p) =>
+      p.created_at > latest ? p.created_at : latest, posts[0].created_at);
+  }, [posts]);
+
+  const isNewToday = useMemo(() => {
+    if (!latestActivity) return false;
+    return (Date.now() - new Date(latestActivity).getTime()) < 24 * 60 * 60 * 1000;
+  }, [latestActivity]);
+
+  const threadCount = board?.post_count ?? posts.length;
+
   return (
     <PageShell
       width="xl"
@@ -131,17 +144,36 @@ export default function BoardPage() {
           icon={MessageSquare}
           back="/community"
           backLabel="Community"
+          actions={
+            canPost ? (
+              <Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
+                New Post
+              </Button>
+            ) : undefined
+          }
           stats={
-            !loading && posts.length > 0 ? (
-              <span className="flex items-center gap-1.5 text-xs text-white/40">
-                <MessageCircle className="w-3.5 h-3.5" />
-                <span className="font-semibold text-white/70 tabular-nums">{posts.length}</span>
-                {posts.length === 1 ? ' thread' : ' threads'}
-              </span>
+            !loading && board ? (
+              <>
+                <HeaderStat
+                  icon={MessageCircle}
+                  accent={accent}
+                  value={threadCount}
+                  label={threadCount === 1 ? 'Thread' : 'Threads'}
+                />
+                {latestActivity && (
+                  <HeaderStat
+                    icon={Clock}
+                    accent={accent}
+                    value={timeAgo(latestActivity)}
+                    label="Last post"
+                  />
+                )}
+              </>
             ) : undefined
           }
           meta={
             <div className="flex items-center gap-2 flex-wrap">
+              {isNewToday && <LivePill accent={accent}>Active today</LivePill>}
               {board?.is_locked && (
                 <span className="flex items-center gap-1 text-xs text-amber-400/80">
                   <Lock className="w-3 h-3" />
@@ -159,37 +191,27 @@ export default function BoardPage() {
         />
       }
     >
-      {/* Inline toolbar: sort controls + New Post button on same row */}
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        {!loading && posts.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <ArrowUpDown className="w-3.5 h-3.5 text-white/30" />
-            <div className="flex items-center gap-1 rounded-lg border border-white/8 bg-white/[0.02] p-0.5">
-              {SORT_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  onClick={() => setSortMode(opt.key)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    sortMode === opt.key
-                      ? 'bg-white/10 text-white'
-                      : 'text-white/40 hover:text-white/70'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+      {/* Sort controls only — New Post button is now in the header */}
+      {!loading && posts.length > 0 && (
+        <div className="flex items-center gap-2 mb-4">
+          <ArrowUpDown className="w-3.5 h-3.5 text-white/30" />
+          <div className="flex items-center gap-1 rounded-lg border border-white/8 bg-white/[0.02] p-0.5">
+            {SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setSortMode(opt.key)}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  sortMode === opt.key
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/40 hover:text-white/70'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
-        ) : (
-          <div />
-        )}
-
-        {canPost && (
-          <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
-            New Post
-          </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {loading ? (
         <LoadingState label="Loading posts..." />
@@ -230,7 +252,6 @@ export default function BoardPage() {
                         : 'border-white/8'
                   }`}
                 >
-                  {/* Pinned indicator bar */}
                   {post.is_pinned && (
                     <div className="flex items-center gap-1.5 px-4 pt-2.5 text-xs text-amber-400/70">
                       <Pin className="w-3 h-3" fill="currentColor" />
@@ -239,15 +260,12 @@ export default function BoardPage() {
                   )}
 
                   <div className="flex items-start gap-3 p-4">
-                    {/* Unread dot */}
                     <div className="w-2 h-2 rounded-full flex-shrink-0 mt-2.5 self-start" style={{ background: isUnread ? '#3b82f6' : 'transparent' }} />
 
-                    {/* Author avatar */}
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-rose-400/50 to-violet-400/50 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                       {initials}
                     </div>
 
-                    {/* Main content */}
                     <button
                       onClick={() => navigate(`/community/post/${post.id}`)}
                       className="flex-1 min-w-0 text-left"
@@ -281,7 +299,6 @@ export default function BoardPage() {
                       )}
                     </button>
 
-                    {/* Stats column */}
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                       <div className="flex items-center gap-3 text-xs text-white/35">
                         <span className="flex items-center gap-1">
@@ -308,7 +325,6 @@ export default function BoardPage() {
                     </div>
                   </div>
 
-                  {/* Footer bar */}
                   <div className="flex items-center justify-between px-4 pb-3 pt-1">
                     <span className="text-xs text-white/40 truncate">
                       by <span className="text-white/60 font-medium">{post.author_name}</span>
