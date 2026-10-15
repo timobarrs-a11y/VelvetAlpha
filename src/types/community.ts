@@ -74,3 +74,39 @@ export interface CommentWithAuthor extends CommunityComment {
 export interface BoardWithCounts extends CommunityBoard {
   is_owner: boolean;
 }
+
+export interface CommunityNotification {
+  id: string;
+  user_id: string;
+  type: 'reply' | 'reaction' | 'badge' | 'weekly';
+  actor_id: string | null;
+  target_type: 'post' | 'comment' | null;
+  target_id: string | null;
+  post_id: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+export interface NotificationWithActor extends CommunityNotification {
+  actor_name: string | null;
+}
+
+export interface CommunityPoll {
+  id: string;
+  post_id: string;
+  question: string;
+  options: string[];
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface PollVoteResult {
+  option_index: number;
+  vote_count: number;
+}
+
+export interface CommunityBadge {
+  key: string;
+  label: string;
+  description: string;
+}

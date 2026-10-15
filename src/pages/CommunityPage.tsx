@@ -10,6 +10,7 @@ import { CommunityIndexHeader, HeaderStat } from '../components/community/Commun
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { CreateBoardModal } from '../components/community/CommunityComponents';
+import { NotificationBell } from '../components/community/NotificationBell';
 import { fetchBoards, approveBoard, rejectBoard, isSuperUser, fetchBoardLatestActivity } from '../services/communityService';
 import { toast } from '../shared/ui';
 import type { BoardWithCounts } from '../types/community';
@@ -138,6 +139,7 @@ export default function CommunityPage() {
           icon={MessageSquare}
           back="/lobby"
           backLabel="Lobby"
+          actions={<NotificationBell />}
           stats={
             !loading && approvedBoards.length > 0 ? (
               <>
