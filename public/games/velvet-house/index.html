@@ -3745,9 +3745,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     buildAll();
     OBJS.filter(o => keep.has(o.type)).forEach(o => { const others = levelBlocks(o.level, o); if (objBlocks(o).some(m => others.some(r => rectsOverlap(m, r)))) { if (o.type === 'sprinkler') { o.x = 8.4; o.y = 6.4; } else autoPlace(o); } });
     buildAll();
-    const spots = [[2.0, 5.0], [2.8, 5.0], [3.6, 5.0], [2.0, 5.8], [2.8, 5.8], [3.6, 5.8], [5.4, 5.2], [6.2, 5.2], [7.0, 5.2], [5.4, 6.0], [6.2, 6.0], [7.0, 6.0], [7.8, 5.6], [7.8, 6.4], [5.4, 6.8], [6.2, 6.8]];
-    movable.forEach((o, k) => { const b = { id: 'box-' + o.id, type: 'pbox', level: 1, x: spots[k % spots.length][0], y: spots[k % spots.length][1], rot: 0, contains: JSON.parse(JSON.stringify(o)) }; OBJS.push(b); if (!placementOk(b) && !autoPlace(b)) { OBJS.pop(); if (T_OF(o).store) { flags.storage = flags.storage || []; flags.storage.push({ type: o.type, col: o.col, art: o.art }); return; } OBJS.push(o); if (!placementOk(o)) autoPlace(o); } });
-    if ((flags.storage || []).length) log(`Some furniture didn't fit in the moving boxes. It's waiting in storage in the shop.`);
+    movable.forEach((o) => { if (T_OF(o).store) { flags.storage = flags.storage || []; flags.storage.push({ type: o.type, col: o.col, art: o.art }); return; } queueDelivery(JSON.parse(JSON.stringify(o)), BOX_LABEL[(o.type || o.id).toUpperCase()] || 'BOX', false); });
+    if ((flags.storage || []).length) log(`Some furniture is going straight to storage. It's waiting in the shop.`);
     hs.looks.forEach((lk, i) => Object.assign(LOOKS[i], lk)); ROOMLOOK.forEach(r => Object.keys(r).forEach(k => delete r[k]));
     WALLOBJS.splice(0).forEach(w => { flags.storage = flags.storage || []; flags.storage.push({ wtype: w.type, col: w.col }); });
     owned.add('projector'); if (!OBJS.some(o => o.type === 'sofa' && o.level === 0)) { const c = addObject('sofa', 0, [6.0, 3.0], 2); if (c) c.id = 'theater-couch'; }
@@ -3758,7 +3757,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     buildAll(); renderShop(); renderGoals();
     if (quiet) return;
     bond = Math.min(100, bond + 5); maya.mood = 'happy'; maya.emote = 'hug'; maya.emoteT = 5;
-    log(P(`Moving day. ${simName} and Maya got the keys to ${hs.name}: a fireplace, a guest room, a basement theater with a bar, and a pool out back. Everything you own is in boxes again.`));
+    log(P(`Moving day. ${simName} and Maya got the keys to ${hs.name}: a fireplace, a guest room, a basement theater with a bar, and a pool out back. The mover is on the way with your furniture, one box at a time.`));
     remember(P(`${simName} and Maya bought and moved into ${hs.name}, their second home.`));
   }
 
@@ -4036,8 +4035,8 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   }
   function companionWho() {
     const base = `In this game Maya ${companion.source === 'velvet' ? '' : 'is 27 and '}works as a graphic designer at a design studio from 11 AM to 5:30 PM on weekdays, with freelance jobs on the side.`;
-    if (companion.source === 'velvet' && companion.bio) return `Who Maya is: Maya is ${simName}'s companion from the Velvet app, the same person ${simName} talks to there, now living with ${simName} in this game. Stay exactly that person: ${companion.bio} ${base}${companion.memories.length ? ` Things Maya and ${simName} share from Velvet: ${companion.memories.join(' ')}` : ''}${companion.pronoun === 'they' ? ' Maya uses they/them pronouns.' : companion.pronoun === 'he' ? ' Maya is a man and uses he/him pronouns.' : ''}`;
-    return `Who Maya is: ${companion.preset === 'warm' ? 'grew up in Detroit. ' : ''}${(PRESETS[companion.preset] || PRESETS.warm).text} ${base}${companion.pronoun === 'they' ? ' Maya uses they/them pronouns.' : companion.pronoun === 'he' ? ' Maya is a man and uses he/him pronouns.' : ''}`;
+    if (companion.source === 'velvet' && companion.bio) return `Who Maya is: Maya is ${simName}'s companion from the Velvet app, the same person ${simName} talks to there, now living with ${simName} in this game. Stay exactly that person: ${companion.bio} ${base}${companion.memories.length ? ` Things Maya and ${simName} share from Velvet: ${companion.memories.join(' ')}` : ''}${companion.pronoun === 'he' ? ' Maya is a man and uses he/him pronouns.' : ''}`;
+    return `Who Maya is: ${companion.preset === 'warm' ? 'grew up in Detroit. ' : ''}${(PRESETS[companion.preset] || PRESETS.warm).text} ${base}${companion.pronoun === 'he' ? ' Maya is a man and uses he/him pronouns.' : ''}`;
   }
   const DECOR_RX = /\b(paint|color|colour|wall|walls|wallpaper|floor|floors|rug|couch|sofa|chair|furniture|decor|decorat\w*|redo|room|lamp|plant|table|shelf|style|look|piano|aquarium|hammock|grill)\b/i;
   function decorBrief(msg) {
@@ -4651,7 +4650,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     if (companion.source !== 'velvet') { companion.pronoun = $('suPron').value; companion.preset = $('suPreset').value; velvetOut('companionCreated', { player: { name: simName, look: Object.assign({}, look) }, companion: { name: partnerName, pronoun: companion.pronoun, personality: PRESETS[companion.preset].text, look: Object.assign({}, maya.look) } }); }
     lifeGoal = $('lgSet').hidden ? null : (document.querySelector('input[name="lg"]:checked') || {}).value || 'career'; setupDone = true; settleDone = false;
     const house = (document.querySelector('input[name="hs"]:checked') || {}).value || 'starter';
-    startMoveIn(); if (house === 'craftsman') { moveHouse('craftsman', true); logEl.innerHTML = ''; log(P(`Move-in day at ${HOUSES.craftsman.name}. The truck just left. ${simName} and Maya have $600, a pile of boxes and a bill due Monday.`)); }
+    startMoveIn(); if (house === 'craftsman') { moveHouse('craftsman', true); logEl.innerHTML = ''; log(P(`Move-in day at ${HOUSES.craftsman.name}. ${simName} and Maya have $600 and a bill due Monday. The mover is on the way with the first box.`)); }
     renameDom(); $('setup').hidden = true; setView(1); renderGoals(); renderStory(); renderMayaActs(); setRunning(true); saveGame();
   });
   // ======================================================================

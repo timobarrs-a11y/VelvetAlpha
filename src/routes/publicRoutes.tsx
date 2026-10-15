@@ -13,6 +13,7 @@ const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'));
 const PersonSurveyPage = lazy(() => import('../pages/PersonSurveyPage'));
 const DonationPage = lazy(() => import('../pages/DonationPage').then(m => ({ default: m.DonationPage })));
+const ChangelogPage = lazy(() => import('../pages/ChangelogPage'));
 
 function S(el: React.ReactNode) {
   return <Suspense fallback={<RouteFallback />}>{el}</Suspense>;
@@ -30,4 +31,5 @@ export const publicRoutes = [
   <Route key="about" path="/about" element={S(<AboutPage />)} />,
   <Route key="person-survey" path="/survey/:token" element={S(<PersonSurveyPage />)} />,
   <Route key="support" path="/support" element={S(<DonationPage />)} />,
+  <Route key="changelog" path="/changelog" element={S(<ChangelogPage />)} />,
 ];
