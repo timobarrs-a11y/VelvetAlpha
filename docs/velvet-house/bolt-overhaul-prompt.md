@@ -87,7 +87,7 @@ Vitest + jsdom.
   - A second house: "The Craftsman on Elm".
 - **Objects:** ~90 types in `TYPES`, each with `parts` and `spots`.
   Instances live in `OBJS`, and use slots are in `SLOTS`.
-- **Action engine:** `ACT` table (~60 activities, each with tags, pose,
+- **Action engine:** `ACT` table (~70 activities, each with tags, pose,
   duration, need effects, callbacks), plus `startAct`, `tickAgent`, free
   will, queues and joint activities.
 - **Economy and world:**
