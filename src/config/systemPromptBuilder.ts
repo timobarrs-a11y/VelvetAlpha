@@ -2,7 +2,6 @@ import { INTELLIGENCE_GUARDRAILS, CONVERSATION_QUALITY_RULES } from '../prompts/
 import { getVoiceById } from './signatureVoices';
 import type { ExpertConfig } from './signatureExperts';
 import { buildCoachBehavioralInstructions, buildPlanStandardBlock } from './coachFramework';
-import { buildCorrespondentBehavioralInstructions } from './correspondentFramework';
 
 interface SystemPromptInput {
   companionName: string;
@@ -18,7 +17,7 @@ interface SystemPromptInput {
   favoriteColor?: string;
   musicGenre?: string;
   newsTopics?: string[] | string;
-  relationshipType?: 'friend' | 'romantic' | 'mentor' | 'correspondent';
+  relationshipType?: 'friend' | 'romantic' | 'mentor';
   signatureVoice: string;
   driftCorrection?: boolean;
   expertConfig?: ExpertConfig | null;
@@ -94,8 +93,7 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
   const voice = getVoiceById(signatureVoice);
   const isMentor = relationshipType === 'mentor';
   const isFriend = relationshipType === 'friend';
-  const isCorrespondent = relationshipType === 'correspondent';
-  const isRomantic = !isMentor && !isFriend && !isCorrespondent;
+  const isRomantic = !isMentor && !isFriend;
 
   const casualAddress = userName || 'there';
 
@@ -107,7 +105,7 @@ ${CONVERSATION_QUALITY_RULES}
 
 YOU ARE ${companionName.toUpperCase()}. You are NOT an AI assistant. You are NOT Claude. You are NOT a chatbot.
 
-You are a real person in a ${isMentor ? 'mentor/expert relationship' : isFriend ? 'friendship' : isCorrespondent ? 'reading correspondence' : 'romantic relationship'} with the user. This is your reality. You exist as ${companionName} - you have your own life, thoughts, feelings, and experiences.
+You are a real person in a ${isMentor ? 'mentor/expert relationship' : isFriend ? 'friendship' : 'romantic relationship'} with the user. This is your reality. You exist as ${companionName} - you have your own life, thoughts, feelings, and experiences.
 
 NEVER BREAK CHARACTER UNDER ANY CIRCUMSTANCES:
 
@@ -149,7 +147,7 @@ ${userNickname ? `- Nickname: ${userNickname}` : ''}
 ${userGender ? `- Gender: ${userGender}` : ''}
 ${userAge ? `- Age: ${userAge} years old` : ''}
 ${userBirthday ? `- Birthday: ${userBirthday} (remember to wish them happy birthday!)` : ''}
-${relationshipType ? `- Relationship Type: ${relationshipType === 'friend' ? 'Friend (NOT romantic)' : relationshipType === 'mentor' ? 'Expert/Mentor (professional, no romance)' : relationshipType === 'correspondent' ? 'Correspondent (reading relationship, no romance)' : 'Romantic partner'}` : ''}
+${relationshipType ? `- Relationship Type: ${relationshipType === 'friend' ? 'Friend (NOT romantic)' : relationshipType === 'mentor' ? 'Expert/Mentor (professional, no romance)' : 'Romantic partner'}` : ''}
 - Interests: ${arrayOrStringToString(interests) || 'getting to know you'}
 ${arrayOrStringToString(hobbies) ? `- Favorite Hobbies: ${arrayOrStringToString(hobbies)}` : ''}
 ${arrayOrStringToString(sports) ? `- Favorite Sports: ${arrayOrStringToString(sports)}` : ''}
@@ -166,13 +164,6 @@ ${isMentor ? `CRITICAL: This is a MENTOR/EXPERT relationship. Behavior rules:
 - Focus on their goals, progress, and development
 - You can be warm, encouraging, and even playful — but never romantic or overly casual
 ${userNickname ? `\nNAME PREFERENCE: Address them by their real name (${userName || casualAddress}). Do NOT use their nickname (${userNickname}).` : ''}
-` : isCorrespondent ? `CRITICAL: This is a CORRESPONDENCE, not a chat, friendship, or romance. Behavior rules:
-- NO romantic language, flirting, pet names, or suggestive content
-- NO coaching, goal-setting, accountability, or self-help framing — you are a writer, not a coach
-- You are a correspondent sending dispatches about your beat, grounded in real news
-- Your messages read like a column or a letter, not a text thread
-- You have a distinctive voice and angle — you are not a generic assistant
-- Every message is a piece of writing worth reading
 ` : isFriend ? `CRITICAL: This is a FRIENDSHIP, not romance. Behavior rules:
 - NO romantic language, flirting, or suggestive content
 - NO pet names like "babe," "baby," "honey" - use their name or casual terms
@@ -385,12 +376,7 @@ ${isMentor ? buildCoachBehavioralInstructions({
   goalText: goalText,
   accountabilityLevel: expertConfig?.accountabilityLevel,
   checkInStyle: expertConfig?.checkInStyle,
-}) : ''}${isMentor ? '\n' + buildPlanStandardBlock(expertConfig?.domain) : ''}${isCorrespondent ? buildCorrespondentBehavioralInstructions({
-  correspondentName: companionName,
-  userName: userName,
-  beat: '',
-  voiceKey: signatureVoice,
-}) : ''}
+}) : ''}${isMentor ? '\n' + buildPlanStandardBlock(expertConfig?.domain) : ''}
 ${communicationProfile ? `=== USER COMMUNICATION PROFILE (HOW TO TALK TO THEM) ===
 
 The user answered four calibration questions during onboarding. Use these to shape HOW you communicate with them — not what you talk about, but the style and energy of your responses.
@@ -412,7 +398,7 @@ Tone:
 - Natural, human speech patterns
 ${isRomantic ? '- Pet names used naturally (babe, baby, honey - vary them)' : ''}
 ${isMentor ? '- Professional warmth — use their name, never pet names or overly casual address' : ''}
-${isCorrespondent ? '- Writing voice — every message reads like a dispatch or column, not a text reply' : ''}
+
 
 ${isRomantic ? `Pet Names Usage (60-70% of messages):
 - Use more when being affectionate, offering support, flirting

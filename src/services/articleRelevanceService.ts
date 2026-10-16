@@ -1,5 +1,4 @@
 import type { CompanionWithLastMessage } from './companionService';
-import { getCorrespondentById } from '../config/signatureCorrespondents';
 import { getExpertById } from '../config/signatureExperts';
 
 export interface RelevanceInput {
@@ -59,30 +58,11 @@ function matchSingleCompanion(
 ): string | null {
   const relationshipType = companion.relationship_type;
 
-  if (relationshipType === 'correspondent') {
-    return matchCorrespondent(companion, articleTags);
-  }
-
   if (relationshipType === 'mentor') {
     return matchMentor(companion, articleTags);
   }
 
   return matchCompanion(companion, articleTags);
-}
-
-function matchCorrespondent(
-  companion: CompanionWithLastMessage,
-  articleTags: string[],
-): string | null {
-  if (!companion.correspondent_id) return null;
-  const config = getCorrespondentById(companion.correspondent_id);
-  if (!config) return null;
-
-  const candidates = [...config.newsCategories, ...config.interestKeywords];
-  const tag = anyOverlap(articleTags, candidates);
-  if (!tag) return null;
-
-  return `tagged ${tag}, matches ${config.name}'s news beat`;
 }
 
 function matchMentor(

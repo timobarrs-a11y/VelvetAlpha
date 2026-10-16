@@ -153,7 +153,7 @@ export function RootRedirect() {
         } else {
           setDestination('/atlas-onboarding');
         }
-      } else if (homeLayout === 'new') {
+      } else if (homeLayout === 'classic') {
         sessionStorage.removeItem('currentCompanionId');
         sessionStorage.removeItem('matchAnswers');
         setDestination('/lobby');

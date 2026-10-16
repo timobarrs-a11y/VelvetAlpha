@@ -1,15 +1,15 @@
 import { useSyncExternalStore } from 'react';
 
-export type HomeLayout = 'classic' | 'new' | 'v3';
+export type HomeLayout = 'classic' | 'v3';
 
 const STORAGE_KEY = 'velvet.home_layout';
-const DEFAULT: HomeLayout = 'new';
+const DEFAULT: HomeLayout = 'classic';
 
 const listeners = new Set<() => void>();
 let current: HomeLayout = DEFAULT;
 
 function isLayout(v: unknown): v is HomeLayout {
-  return v === 'classic' || v === 'new' || v === 'v3';
+  return v === 'classic' || v === 'v3';
 }
 
 function resolve(): HomeLayout {

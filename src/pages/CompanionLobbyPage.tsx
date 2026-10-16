@@ -172,9 +172,8 @@ export function CompanionLobbyPage() {
   const pairedTiles = HUB_TILES.filter(t => t.slot === 'paired');
   const wideTiles   = HUB_TILES.filter(t => t.slot === 'wide');
 
-  const voices         = companions.filter(c => c.relationship_type !== 'mentor' && c.relationship_type !== 'correspondent');
+  const voices         = companions.filter(c => c.relationship_type !== 'mentor');
   const coaches        = companions.filter(c => c.relationship_type === 'mentor');
-  const correspondents = companions.filter(c => c.relationship_type === 'correspondent');
 
   const renderTile = (tile: HubTileDef, delay: number) => (
     <HubTile
@@ -349,35 +348,6 @@ export function CompanionLobbyPage() {
             delay={coaches.length * 0.04}
             onClick={lobby.handleNewCoach}
           />
-        </div>
-      </section>
-
-      {/* Velvet Correspondents — correspondent companions */}
-      <section className="mb-10" aria-labelledby="correspondents-title">
-        <SectionHeader icon={Newspaper} tone={TONE_COLOR.correspondent} title={<span id="correspondents-title">Velvet Correspondents</span>} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {correspondents.map((companion, i) => (
-            <CompanionCard
-              key={companion.id}
-              companion={companion}
-              tone="correspondent"
-              delay={i * 0.04}
-              onOpen={() => lobby.openCompanion(companion)}
-              onDelete={(e) => lobby.handleDeleteCompanion(companion.id, companion.custom_name, e)}
-            />
-          ))}
-
-          {correspondents.length > 0 && (
-            <div className="col-span-full mt-2">
-              <div className="ds-card ds-card--sunken flex items-center gap-3 p-4"
-                style={{ borderColor: 'color-mix(in srgb, #fbbf24 25%, transparent)' }}>
-                <Info className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                <p className="text-xs text-ink-muted leading-relaxed">
-                  Your correspondents are auto-assigned based on your interests. Update your interests in your profile to change which correspondents write for you. Don't want one? Delete it — it won't come back unless your interests match.
-                </p>
-              </div>
-            </div>
-          )}
         </div>
       </section>
 

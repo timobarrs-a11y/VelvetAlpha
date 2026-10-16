@@ -748,7 +748,7 @@ export class ChatService {
     };
   }
 
-  static async sendMessage(message: string, companionId?: string, _relationshipType: 'friend' | 'romantic' | 'mentor' | 'correspondent' = 'romantic'): Promise<string> {
+  static async sendMessage(message: string, companionId?: string, _relationshipType: 'friend' | 'romantic' | 'mentor' = 'romantic'): Promise<string> {
     try {
       const userProfile = await this.getUserProfile();
       const defaultProfile: UserProfile = {
@@ -802,9 +802,8 @@ export class ChatService {
 
         const connectionType = companionData?.relationship_type || 'romantic';
         const isMentorCompanion = connectionType === 'mentor';
-        const isCorrespondentCompanion = connectionType === 'correspondent';
 
-        if (!isMentorCompanion && !isCorrespondentCompanion) {
+        if (!isMentorCompanion) {
           try {
             await relationshipTrackingService.updateOnUserMessage(
               userProfile.id,
@@ -937,7 +936,6 @@ export class ChatService {
       let affectionContextString: string | undefined;
 
       const isMentorCompanion = connectionType === 'mentor';
-      const isCorrespondentCompanion = connectionType === 'correspondent';
 
       try {
         if (!companionId) throw new Error('companionId required');
@@ -972,7 +970,7 @@ export class ChatService {
 
           temporalContextString = temporalPromptContext.fullContext;
 
-          if (!isMentorCompanion && !isCorrespondentCompanion) {
+          if (!isMentorCompanion) {
           const recentUserMessages = await affectionService.getRecentUserMessages(
             userId,
             companionId,

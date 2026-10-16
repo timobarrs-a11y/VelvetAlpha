@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Users, ArrowRight, Sparkles, Heart, ShieldCheck, Lock, Bot, Mail } from 'lucide-react';
+import { Users, ArrowRight, Sparkles, Heart, ShieldCheck, Lock, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
@@ -52,15 +52,6 @@ const features = [
     tag: 'Goal-driven experts',
     title: 'Coaches',
     desc: 'Tell Atlas what you are working toward in a conversation. It extracts your goal, matches you with a domain-trained coach, and sets accountability that fits you — gentle, moderate, or firm. Not a bot told to act like an expert, but one built to actually be one.',
-  },
-  {
-    icon: Mail,
-    accentRgb: '251,191,36',
-    iconGlow: 'rgba(251,191,36,0.22)',
-    borderColor: 'rgba(251,191,36,0.3)',
-    tag: 'Writers with a beat',
-    title: 'Correspondents',
-    desc: 'AI pen-pals auto-matched to your interests who send you dispatches grounded in real news. Each one has a distinctive voice and a specific beat — sports, politics, tech, culture. Not a coach, not a companion — a writer who makes you want to read the news again.',
   },
 ];
 

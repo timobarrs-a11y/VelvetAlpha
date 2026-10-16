@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Brain, Newspaper, Plus, Trash2, Users } from 'lucide-react';
+import { Heart, Brain, Plus, Trash2, Users } from 'lucide-react';
 import { Avatar } from '../Avatar';
 import { companionAvatarConfig } from './lobbyUtils';
 import type { CompanionWithLastMessage } from '../../services/companionService';
 
-type Category = 'companions' | 'coaching' | 'correspondents';
+type Category = 'companions' | 'coaching';
 
 interface CategoryConfig {
   key: Category;
@@ -18,7 +18,6 @@ interface CategoryConfig {
 const CATEGORIES: CategoryConfig[] = [
   { key: 'companions',    label: 'Companions',    icon: <Heart className="w-3 h-3" />,      color: '#f472b6', matchTypes: ['romantic', 'friend', null] },
   { key: 'coaching',      label: 'Coaching',      icon: <Brain className="w-3 h-3" />,       color: '#34d399', matchTypes: ['mentor'] },
-  { key: 'correspondents', label: 'Correspondents', icon: <Newspaper className="w-3 h-3" />, color: '#fbbf24', matchTypes: ['correspondent'] },
 ];
 
 interface Props {
@@ -262,7 +261,7 @@ export function CompanionTabs({ companions, onOpen, onAddCompanion, onAddCoach, 
 
 function EmptyCategory({ category, color, onAdd, hasCoach }: { category: Category; color: string; onAdd: () => void; hasCoach: boolean }) {
   if (category === 'coaching' && hasCoach) return null;
-  const label = category === 'coaching' ? 'coach' : category === 'correspondents' ? 'correspondent' : 'companion';
+  const label = category === 'coaching' ? 'coach' : 'companion';
   return (
     <button
       onClick={onAdd}

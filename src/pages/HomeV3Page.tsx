@@ -50,8 +50,7 @@ export function HomeV3Page() {
 
   const coaches = companions.filter(c => c.relationship_type === 'mentor');
   const coach = coaches[0];
-  const voices = companions.filter(c => c.relationship_type !== 'mentor' && c.relationship_type !== 'correspondent');
-  const correspondents = companions.filter(c => c.relationship_type === 'correspondent');
+  const voices = companions.filter(c => c.relationship_type !== 'mentor');
 
   const loadCheckIns = useCallback(async () => {
     if (companions.length === 0) return;
@@ -89,8 +88,10 @@ export function HomeV3Page() {
   useEffect(() => {
     if (!loading && companions.length > 0) {
       loadCheckIns();
-      const { data: { user } } = supabase.auth.getUser();
-      user?.id && ensureCoachColors(user.id).catch(() => {});
+      (async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) ensureCoachColors(user.id).catch(() => {});
+      })();
     }
   }, [loading, companions, loadCheckIns]);
 
@@ -257,7 +258,6 @@ export function HomeV3Page() {
         <div className="flex flex-col gap-0.5">
           <GroupLabel>Companion</GroupLabel>
           {voices.map(c => renderPersonRow(c))}
-          {correspondents.map(c => renderPersonRow(c))}
           <button
             onClick={() => { lobby.handleNewCompanion(); setDrawerOpen(false); }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors mt-1"

@@ -1,18 +1,16 @@
 import { AvatarConfig, DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from '../../types/avatar';
 
-export type CompanionTone = 'voice' | 'coach' | 'correspondent';
+export type CompanionTone = 'voice' | 'coach';
 
 /** Accent colour per lobby section. Shared by cards, section headers and add-tiles. */
 export const TONE_COLOR: Record<CompanionTone, string> = {
   voice:         '#f472b6',
   coach:         '#34d399',
-  correspondent: '#fbbf24',
 };
 
 export const STATUS_DOT: Record<CompanionTone, string> = {
   voice:         '#4ade80',
   coach:         '#4ade80',
-  correspondent: '#f59e0b',
 };
 
 export function formatTimeAgo(timestamp: string) {
