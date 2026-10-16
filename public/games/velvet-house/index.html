@@ -3248,7 +3248,8 @@ body{margin:0;overflow:hidden}
   // ======================================================================
   // saving: the house keeps going while you're gone
   // ======================================================================
-  const SAVE_KEY = 'velvet-house-v1';
+  const VELVET_COMPANION_ID = (() => { try { return new URLSearchParams(location.search).get('companion') || ''; } catch (e) { return ''; } })();
+  const SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
   let loadedSave = false;
   function snapshot() {
     const pos = (c) => ({ needs: c.needs, skills: c.skills, mood: c.mood, workedDay: c.workedDay, friendsDay: c.friendsDay });
@@ -4809,7 +4810,7 @@ ${memoryBrief()}` : ''}`);
   }
   const loaded = loadGame();
   if (!loaded) { setupDone = false; setRunning(false); $('setup').hidden = false; }
-  let pendingRestart = null; try { pendingRestart = !loaded && JSON.parse(localStorage.getItem('velvet-newgame') || 'null'); localStorage.removeItem('velvet-newgame'); } catch (e) {}
+  const _ngKey = VELVET_COMPANION_ID ? `velvet-newgame:${VELVET_COMPANION_ID}` : 'velvet-newgame'; let pendingRestart = null; try { pendingRestart = !loaded && JSON.parse(localStorage.getItem(_ngKey) || 'null'); localStorage.removeItem(_ngKey); } catch (e) {}
   if (loaded) {
     logEl.innerHTML = ''; log(`Welcome back. It's ${DAYS[weekday()]}, ${clockText()}.`);
     const hrs = (Date.now() - loaded.savedAt) / 3.6e6;
@@ -4898,7 +4899,7 @@ ${memoryBrief()}` : ''}`);
     e.preventDefault();
     if (restartMode) { // start over: remember the choices, wipe the save, reload into the new game
       const prefs = { town: $('suTown').value.trim(), name: $('suName').value.trim(), partner: $('suPartner').value.trim(), pron: $('suPron').value, preset: $('suPreset').value, lg: lifeGoal ? (document.querySelector('input[name="lg"]:checked') || {}).value : null, house: (document.querySelector('input[name="hs"]:checked') || {}).value, look: Object.assign({}, look), mlook: Object.assign({}, maya.look), companion: companion.source === 'velvet' ? Object.assign({}, companion) : null, style: companion.source === 'velvet' ? mayaStyle : null };
-      try { localStorage.setItem('velvet-newgame', JSON.stringify(prefs)); localStorage.removeItem(SAVE_KEY); } catch (err) {} saveBlocked = true; location.reload(); return;
+      const ngKey = VELVET_COMPANION_ID ? `velvet-newgame:${VELVET_COMPANION_ID}` : 'velvet-newgame'; try { localStorage.setItem(ngKey, JSON.stringify(prefs)); localStorage.removeItem(SAVE_KEY); } catch (err) {} saveBlocked = true; location.reload(); return;
     }
     simName = $('suName').value.trim() || 'Jordan'; partnerName = $('suPartner').value.trim() || 'Maya'; $('simName').value = simName; townName = $('suTown').value.trim() || TOWN_DEFAULT; renderTown();
     if (companion.source !== 'velvet') { companion.pronoun = $('suPron').value; companion.preset = $('suPreset').value; velvetOut('companionCreated', { player: { name: simName, look: Object.assign({}, look) }, companion: { name: partnerName, pronoun: companion.pronoun, personality: PRESETS[companion.preset].text, look: Object.assign({}, maya.look) } }); }
@@ -4912,8 +4913,9 @@ ${memoryBrief()}` : ''}`);
   // ======================================================================
   // Messages in:  { type: 'velvet:profile', player: { name, look }, companion: { name, pronoun, personality, look, memories, likes, dislikes } }
   // Messages out: velvet:ready, velvet:profileApplied, velvet:companionCreated. Memories and moments never leave the game.
-  const VELVET_ORIGINS = [];   // the host can list its origins here; empty accepts any parent while prototyping
-  function velvetOut(type, data) { try { if (window.parent && window.parent !== window) window.parent.postMessage(Object.assign({ type: 'velvet:' + type, game: 'velvet-house', day }, data || {}), '*'); } catch (e) {} }
+  const VELVET_PARENT_ORIGIN = (() => { try { return new URL(document.referrer).origin; } catch (e) { return ''; } })();
+  const VELVET_ORIGINS = VELVET_PARENT_ORIGIN ? [VELVET_PARENT_ORIGIN] : [];
+  function velvetOut(type, data) { try { if (window.parent && window.parent !== window) window.parent.postMessage(Object.assign({ type: 'velvet:' + type, game: 'velvet-house', day }, data || {}), VELVET_PARENT_ORIGIN || '*'); } catch (e) {} }
   const STYLE_WORDS = { plants: 'natural', plant: 'natural', nature: 'natural', green: 'natural', wood: 'natural', boho: 'natural', vintage: 'vintage', retro: 'vintage', antique: 'vintage', thrift: 'vintage', minimal: 'minimal', minimalist: 'minimal', clean: 'minimal', modern: 'modern', sleek: 'modern', cozy: 'cozy', comfy: 'cozy', soft: 'soft', pastel: 'soft', pink: 'soft', colorful: 'playful', fun: 'playful', quirky: 'playful', bright: 'bold', bold: 'bold', dark: 'bold', moody: 'luxe', fancy: 'luxe', luxury: 'luxe', gold: 'luxe', velvet: 'luxe', industrial: 'industrial', concrete: 'industrial', metal: 'industrial', warm: 'warm', earthy: 'warm', cool: 'cool', blue: 'cool' };
   function wordsToStyle(list, sign) { (Array.isArray(list) ? list : String(list || '').split(/[,;]/)).forEach(w => String(w).toLowerCase().split(/\W+/).forEach(x => { const k = STYLE.includes(x) ? x : STYLE_WORDS[x]; if (k) mayaStyle[k] = Math.max(-1, Math.min(1.2, (mayaStyle[k] || 0) + sign * 0.6)); })); }
   const clip = (v, n) => String(v || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);

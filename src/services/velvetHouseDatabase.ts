@@ -43,3 +43,53 @@ export async function saveVelvetHouseProgress(companionId: string, saveData: Rec
     console.error('Failed to save Velvet House progress:', error.message);
   }
 }
+
+export async function saveVelvetHouseHistory(companionId: string, saveData: Record<string, unknown>): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const day = typeof saveData.day === 'number' ? saveData.day : 0;
+
+  await supabase
+    .from('velvet_house_save_history')
+    .insert({
+      user_id: user.id,
+      companion_id: companionId,
+      save_data: saveData,
+      day,
+    });
+
+  // Keep only the 10 most recent rows per (user, companion).
+  // Delete older rows in a single call.
+  const { data: oldRows } = await supabase
+    .from('velvet_house_save_history')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('companion_id', companionId)
+    .order('saved_at', { ascending: false })
+    .range(10, 100);
+
+  if (oldRows && oldRows.length > 0) {
+    const ids = oldRows.map((r: { id: string }) => r.id);
+    await supabase
+      .from('velvet_house_save_history')
+      .delete()
+      .in('id', ids);
+  }
+}
+
+export async function loadVelvetHouseHistory(companionId: string): Promise<Array<{ id: string; day: number; saved_at: string; save_data: Record<string, unknown> }>> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('velvet_house_save_history')
+    .select('id, day, saved_at, save_data')
+    .eq('user_id', user.id)
+    .eq('companion_id', companionId)
+    .order('saved_at', { ascending: false })
+    .limit(10);
+
+  if (error || !data) return [];
+  return data as Array<{ id: string; day: number; saved_at: string; save_data: Record<string, unknown> }>;
+}

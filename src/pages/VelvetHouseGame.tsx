@@ -3,11 +3,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanion, type Companion } from '../services/companionService';
-import { loadVelvetHouseSave, saveVelvetHouseProgress } from '../services/velvetHouseDatabase';
+import { loadVelvetHouseSave, saveVelvetHouseProgress, saveVelvetHouseHistory } from '../services/velvetHouseDatabase';
 
 const GAME_PATH = '/games/velvet-house/index.html';
-const SAVE_KEY = 'velvet-house-v1';
+const SAVE_KEY_PREFIX = 'velvet-house-v1';
 const SYNC_INTERVAL_MS = 30_000;
+
+function saveKeyFor(companionId: string) {
+  return `${SAVE_KEY_PREFIX}:${companionId}`;
+}
 const GAME_TURN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/velvet-game-turn`;
 
 type GameLook = { skin?: string; hair?: string; hairColor?: string; top?: string; eyeColor?: string; facialHair?: string; glasses?: string; gender?: 'male' | 'female' };
@@ -143,7 +147,7 @@ export function VelvetHouseGame() {
   const syncToSupabase = useCallback(async () => {
     if (!companionId) return;
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(saveKeyFor(companionId));
       if (raw) await saveVelvetHouseProgress(companionId, JSON.parse(raw));
     } catch {
       // next interval retries
@@ -225,11 +229,24 @@ export function VelvetHouseGame() {
     const timer = setInterval(syncToSupabase, SYNC_INTERVAL_MS);
 
     (async () => {
+      const key = saveKeyFor(companionId);
       try {
         const save = await loadVelvetHouseSave(companionId);
-        if (save) localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+        if (save) {
+          // Cloud save exists — write it to the per-companion key.
+          // Before overwriting, stash the previous local save into history for recovery.
+          const prev = localStorage.getItem(key);
+          if (prev) {
+            try { await saveVelvetHouseHistory(companionId, JSON.parse(prev)); } catch { /* non-fatal */ }
+          }
+          localStorage.setItem(key, JSON.stringify(save));
+        } else {
+          // No cloud save for this companion — clear any stale local key
+          // so we don't load another companion's house (the bleed bug).
+          localStorage.removeItem(key);
+        }
       } catch {
-        // falls back to whatever is already stored on this device
+        // Cloud unreachable — keep whatever local key exists for this companion.
       }
       if (!cancelled) setSaveReady(true);
     })();
@@ -285,7 +302,7 @@ export function VelvetHouseGame() {
       {saveReady && (
         <iframe
           ref={iframeRef}
-          src={GAME_PATH}
+          src={`${GAME_PATH}?companion=${encodeURIComponent(companionId)}`}
           title="Velvet House"
           className="flex-1 w-full border-0"
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
