@@ -113,6 +113,10 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:640/440}
 .item.locked{opacity:.8}
 .newb{font-family:var(--mono);font-size:10px;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 6px;margin-left:6px;vertical-align:middle}
 .hud{z-index:3}
+.townsign{position:absolute;left:12px;top:0;z-index:2;pointer-events:none;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:color-mix(in srgb,var(--surface) 78%,transparent);border:1px solid var(--line);border-radius:999px;padding:3px 10px;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.townsign b{font-weight:600}
+@media (max-width:480px){.townsign{font-size:10px;padding:2px 8px;left:8px}}
+.townsign::before{content:'\2302  ';color:var(--muted)}
 .vid{position:absolute;left:0;top:0;width:320px;height:180px;transform-origin:0 0;z-index:2}
 .vid[hidden],.theater[hidden]{display:none}
 .vid iframe{width:100%;height:100%;border:0;display:block;background:#000}
@@ -246,6 +250,57 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
 .qdrawer > summary > span{color:var(--ink);font-weight:500}
 .qdrawer-body{display:grid;gap:8px;padding-top:6px}
 @media (prefers-reduced-motion:reduce){.itray,.dcard{transition:none}.qdrawer > summary::after{transition:none}}
+/* ---- game-first layout: the house fills the window; everything else lives in a drawer opened from the dock ---- */
+html,body{height:100%}
+body{margin:0;overflow:hidden}
+.wrap{max-width:none;margin:0;padding:0;display:block;height:100dvh}
+.bench{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:0;height:100%;align-items:stretch}
+.stagecol{display:flex;flex-direction:column;gap:0;min-width:0;min-height:0;background:var(--stage)}
+.screen{position:relative;flex:1;min-height:0;display:grid;place-items:center;container-type:size;overflow:hidden}
+.screen > .townsign{top:auto;bottom:10px}
+.drawer #h-shop,.drawer #h-goals,.drawer #h-maya,.drawer #h-log{display:none}
+.tracker{position:absolute;top:10px;right:10px;z-index:3;display:grid;gap:5px;width:min(260px,40%);text-align:left;font:inherit;color:var(--ink);background:color-mix(in srgb,var(--surface) 90%,transparent);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;padding:9px 12px 10px;box-shadow:0 6px 18px rgba(0,0,0,.08);cursor:pointer;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.tracker:hover{border-color:color-mix(in srgb,var(--accent) 40%,var(--line));border-left-color:var(--accent)}
+.tk-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.tk-text{font-size:13.5px;font-weight:600;line-height:1.3}
+.tk-bar{height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+.tk-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.tracker.in{animation:tkIn .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes tkIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.tracker.done{border-left-color:var(--good);animation:tkDone .6s cubic-bezier(.2,.8,.2,1)}
+.tracker.done .tk-eyebrow{color:var(--good)}
+.tracker.done .tk-text::before{content:'\2713  ';color:var(--good)}
+.tracker.done .tk-bar i{background:var(--good)}
+@keyframes tkDone{0%{transform:scale(1)}35%{transform:scale(1.05)}100%{transform:scale(1)}}
+.screen > .hud{right:calc(min(260px,40%) + 20px)}
+@media (max-width:760px){.screen > .hud{right:10px}.tracker{top:auto;bottom:10px;right:8px;width:auto;max-width:52%;padding:6px 10px 7px;gap:3px}.tk-text{font-size:12px}.tk-eyebrow{font-size:9.5px}.screen > .townsign{max-width:42%}}
+@media (prefers-reduced-motion:reduce){.tracker.in,.tracker.done{animation:none}.tk-bar i{transition:none}}
+.stage{border-radius:0;width:min(100cqw,calc(100cqh * 640 / 440))}
+.arrangehint{padding-top:0}
+.dialog,.recap{bottom:14px}
+.itray{bottom:18px}
+.drawer{width:380px;min-height:0;border-left:1px solid var(--line);background:var(--bg);display:flex;flex-direction:column}
+.drawer[hidden]{display:none}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+.drawer-head b{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:-.01em}
+.drawer .panel{flex:1;min-height:0;overflow-y:auto;padding:12px;align-content:start}
+.drawer [data-page]{display:none}
+.drawer[data-open="shop"] [data-page="shop"],.drawer[data-open="goals"] [data-page="goals"],.drawer[data-open="do"] [data-page="do"],.drawer[data-open="partner"] [data-page="partner"],.drawer[data-open="you"] [data-page="you"],.drawer[data-open="home"] [data-page="home"],.drawer[data-open="log"] [data-page="log"]{display:grid}
+.dock{display:flex;flex-direction:column;gap:4px;width:72px;padding:10px 6px;background:var(--surface);border-left:1px solid var(--line);overflow-y:auto}
+.dock button{display:grid;justify-items:center;gap:3px;min-width:0;font-family:var(--mono);font-size:10.5px;color:var(--muted);background:transparent;border:0;border-radius:10px;padding:9px 2px;cursor:pointer}
+.dock button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock button i{font-style:normal;font-size:19px;line-height:1;color:var(--ink)}
+.dock button:hover,.dock button[aria-pressed="true"]{background:var(--warm-soft);color:var(--ink)}
+@media (max-width:760px){
+  .bench{display:flex;flex-direction:column;box-sizing:border-box;padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+  .stagecol{flex:1}
+  .bench.open .stagecol,.bench.open .screen{flex:none}
+  .bench.open .screen{container-type:normal}
+  .drawer{width:auto;flex:1;border-left:0;border-top:1px solid var(--line)}
+  .dock{position:fixed;left:0;right:0;bottom:0;z-index:20;flex-direction:row;width:auto;height:calc(60px + env(safe-area-inset-bottom));padding:4px 6px env(safe-area-inset-bottom);border-left:0;border-top:1px solid var(--line);overflow:hidden}
+  .dock button{flex:1;padding:6px 0}
+  .dialog{position:fixed;left:8px;right:8px;bottom:calc(68px + env(safe-area-inset-bottom));margin:0;z-index:21}
+}
 </style>
 
 <div class="setup" id="setup" hidden>
@@ -253,6 +308,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     <p class="eyebrow">Velvet · a new place</p>
     <h2>Welcome home.</h2>
     <p class="quiet">You and your partner just got the keys. Everything you own is in boxes, the walls are primer white and rent is due Monday.</p>
+    <div class="srow"><label for="suTown">Your new town</label><input id="suTown" type="text" maxlength="24" value="Honeysuckle Hollow"></div>
     <div class="srow"><label for="suName">Your name</label><input id="suName" type="text" maxlength="16" value="Jordan"></div>
     <div class="srow"><span>Skin</span><div class="sw" id="suSkin"></div></div>
     <div class="srow"><span>Hair</span><div class="sw" id="suHair"></div></div>
@@ -280,18 +336,12 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   </form>
 </div>
 <div class="wrap">
-  <header>
-    <p class="eyebrow">Velvet · art study 09</p>
-    <h1>A life that keeps unfolding</h1>
-    <p class="lede">Move in and make it yours, room by room: 25 paints, 35+ wallpapers, 29 floors, 60 pieces of furniture, a dozen things to hang on the walls, and a closet for both of you. Today's picks change every morning. Not sure? Ask Maya. Turn the camera with ⟲ ⟳.</p>
-  </header>
 
   <div class="bench">
     <div class="stagecol">
-      <div class="stage">
-        <canvas id="room" width="640" height="440" aria-label="An isometric view of one floor of a three-floor house and its backyard, where two people go about their day"></canvas>
-        <div class="theater" id="theater" hidden><canvas id="couchCv" width="320" height="70" aria-hidden="true"></canvas><div class="thbar"><button type="button" class="mini" id="thBack">Back to the house</button><button type="button" class="mini" id="thStop">Stop video</button></div></div>
-        <div class="vid" id="vidWrap" hidden><iframe id="vidFrame" title="Video playing in the game" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+      <div class="screen">
+        <button type="button" class="tracker" id="tracker" aria-label="Current goal. Open goals" hidden><span class="tk-eyebrow" id="tkEyebrow"></span><span class="tk-text" id="tkText"></span><span class="tk-bar"><i id="tkBar"></i></span></button>
+        <div class="townsign" id="townSign" aria-label="Town"><b id="townText">Honeysuckle Hollow</b></div>
         <div class="hud">
           <span class="chip" id="clock">Fri · 6:20 AM</span>
           <span class="chip wallet" id="cashChip">$70</span>
@@ -304,6 +354,10 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
           <button class="who" type="button" id="mTag"><i style="background:#E0A43A"></i><b id="mTagText">Maya · Bedroom · Asleep</b></button>
           <span id="petTags" style="display:contents"></span>
         </div>
+      <div class="stage">
+        <canvas id="room" width="640" height="440" aria-label="An isometric view of one floor of a three-floor house and its backyard, where two people go about their day"></canvas>
+        <div class="theater" id="theater" hidden><canvas id="couchCv" width="320" height="70" aria-hidden="true"></canvas><div class="thbar"><button type="button" class="mini" id="thBack">Back to the house</button><button type="button" class="mini" id="thStop">Stop video</button></div></div>
+        <div class="vid" id="vidWrap" hidden><iframe id="vidFrame" title="Video playing in the game" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
         <div class="recap" id="recap" hidden><b id="recapTitle">While you were out</b><ul id="recapList"></ul><div><button type="button" class="mini" id="recapOk">Got it</button></div></div>
         <div class="dialog" id="dialog" hidden>
           <span class="speaker">Maya</span>
@@ -320,6 +374,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         </div>
         <div class="itray" id="itray" role="menu" aria-label="Interactions"></div>
         <div class="dcard" id="dcard" role="dialog" aria-live="polite"></div>
+      </div>
+      </div>
         <div class="floorbar" role="group" aria-label="Floors">
           <span class="lbl">Floor</span>
           <button type="button" data-level="3" aria-pressed="false">Yard</button>
@@ -331,15 +387,19 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
           <button type="button" id="rotL" aria-label="Turn the view left">⟲</button>
           <button type="button" id="rotR" aria-label="Turn the view right">⟳</button>
           <button type="button" id="wallBtn">Walls: cutaway</button>
+          <button type="button" id="camBtn" aria-pressed="true">Camera: auto</button>
           <button type="button" class="arr" id="arrangeBtn" aria-pressed="false">Arrange</button>
           <button type="button" id="rotateBtn" hidden>Rotate</button>
           <button type="button" id="colorBtn" hidden>Color</button>
           <button type="button" id="storeBtn" hidden>Put away</button>
         </div>
         <div class="arrangehint" id="arrangeHint" hidden>Arrange mode pauses time. Click a piece of furniture to pick it up, move it, press Rotate or R, then click to set it down. Green means it fits. Esc puts it back.</div>
-      </div>
+    </div>
 
-      <section class="shop" aria-labelledby="h-shop">
+    <aside class="drawer" id="drawer" aria-label="Menu" hidden>
+      <div class="drawer-head"><b id="drawerTitle"></b><button type="button" class="mini" id="drawerClose" aria-label="Close menu">✕</button></div>
+    <div class="panel">
+      <section class="shop" aria-labelledby="h-shop" data-page="shop">
         <div class="shop-head">
           <h2 id="h-shop">Shop</h2>
           <p id="shopNote">Deliveries arrive at the front door in about half an hour.</p>
@@ -347,14 +407,12 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         <div class="tabs" role="tablist" id="tabs"></div>
         <div class="items" id="items"></div>
       </section>
-    </div>
 
-    <div class="panel">
-      <section class="group" aria-labelledby="h-goals">
+      <section class="group" aria-labelledby="h-goals" data-page="goals">
         <h2 id="h-goals">Goals</h2>
         <div id="goalsBody" style="display:grid;gap:8px"></div>
       </section>
-      <section class="group" aria-labelledby="h-house">
+      <section class="group" aria-labelledby="h-house" data-page="home">
         <h2 id="h-house">Household <button class="mini" id="newGame" type="button">New game</button></h2>
         <div class="cashbig" id="cash">$70</div>
         <div class="ledger">
@@ -371,7 +429,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         </div>
       </section>
 
-      <section class="group" aria-labelledby="h-do">
+      <section class="group" aria-labelledby="h-do" data-page="do">
         <h2 id="h-do">Give an order
           <span style="display:flex;gap:6px">
             <button class="mini" id="freeWill" type="button" aria-pressed="true">Free will on</button>
@@ -443,12 +501,12 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         </details>
       </section>
 
-      <section class="group" aria-labelledby="h-pets" id="petsGroup" hidden>
+      <section class="group" aria-labelledby="h-pets" data-page="home" id="petsGroup" hidden>
         <h2 id="h-pets">Pets</h2>
         <div id="petsBody" style="display:grid;gap:16px"></div>
       </section>
 
-      <section class="group" aria-labelledby="h-maya">
+      <section class="group" aria-labelledby="h-maya" data-page="partner">
         <h2 id="h-maya">Maya</h2>
         <div class="need"><span>Bond</span><div class="bar bond" role="meter" aria-label="Bond with Maya" aria-valuemin="0" aria-valuemax="100" id="bondMeter"><i id="bondBar"></i></div><span class="val" id="bondVal">62</span></div>
         <div class="meta"><span>Status <b id="bondStage">Dating</b></span><span>Mood <b id="mayaMood">Sleepy</b></span></div>
@@ -464,14 +522,14 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         <div id="mayaChanges" class="chgs"></div>
       </section>
 
-      <section class="group" aria-labelledby="h-needs">
+      <section class="group" aria-labelledby="h-needs" data-page="you">
         <h2 id="h-needs">Your needs</h2>
         <div id="needs" style="display:grid;gap:8px"></div>
         <div class="meta"><span>Cooking <b id="cookVal">1</b></span><span>Fitness <b id="fitVal">0</b></span></div>
         <p class="quiet" id="jordanSched"></p>
       </section>
 
-      <section class="group" aria-labelledby="h-look">
+      <section class="group" aria-labelledby="h-look" data-page="you">
         <h2 id="h-look">Your look</h2>
         <div class="row"><label for="simName">Name</label><input type="text" id="simName" value="Jordan" maxlength="16"></div>
         <div class="row"><span>Skin</span><div class="sw" id="swSkin"></div></div>
@@ -480,11 +538,21 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         <div class="row"><span>Top</span><div class="sw" id="swTop"></div></div>
       </section>
 
-      <section class="group" aria-labelledby="h-log">
+      <section class="group" aria-labelledby="h-log" data-page="log">
         <h2 id="h-log">Today</h2>
         <ul class="log" id="log"></ul>
       </section>
     </div>
+    </aside>
+    <nav class="dock" id="dock" aria-label="Menus">
+      <button type="button" data-open="shop" aria-pressed="false"><i aria-hidden="true">◈</i><span>Shop</span></button>
+      <button type="button" data-open="goals" aria-pressed="false"><i aria-hidden="true">★</i><span>Goals</span></button>
+      <button type="button" data-open="do" aria-pressed="false"><i aria-hidden="true">▶</i><span>Do</span></button>
+      <button type="button" data-open="partner" aria-pressed="false"><i aria-hidden="true">♥</i><span>Maya</span></button>
+      <button type="button" data-open="you" aria-pressed="false"><i aria-hidden="true">☺</i><span>You</span></button>
+      <button type="button" data-open="home" aria-pressed="false"><i aria-hidden="true">⌂</i><span>Home</span></button>
+      <button type="button" data-open="log" aria-pressed="false"><i aria-hidden="true">☰</i><span>Log</span></button>
+    </nav>
   </div>
 </div>
 
@@ -497,8 +565,13 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   const ctx0 = cv.getContext('2d');
   let ctx = ctx0;
   const W = 640, H = 440;
-  function fit() { const dpr = Math.min(window.devicePixelRatio || 1, 2); cv.width = W * dpr; cv.height = H * dpr; ctx0.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  function fit() { const sc = Math.min(4, Math.max(1, (cv.clientWidth || W) / W) * Math.min(window.devicePixelRatio || 1, 2)), w = Math.round(W * sc); if (cv.width !== w) { cv.width = w; cv.height = Math.round(H * sc); } ctx0.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0); }
   fit(); window.addEventListener('resize', fit);
+  // watch camera: eases in on your sim while they do something, and back out when they're done
+  const cam = { z: 1, x: W / 2, y: H / 2 };
+  let camMode = 'auto'; try { camMode = localStorage.getItem('velvet-cam') || 'auto'; } catch (e) {}
+  const WATCH_SKIP = ['errand', 'wander', 'approach', 'tv', 'movie', 'hangout'];
+  const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const WX = 10, WY = 8, TW = 32, TH = 16, ZH = 34, WH = 2.6, IW = 0.55;
   let OX = 288, OY = 128;
   const ANG = Math.atan2(TH, TW);
@@ -530,6 +603,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   try { const s = JSON.parse(localStorage.getItem('velvet-look') || 'null'); if (s) ['skin', 'hair', 'hairColor', 'top', 'gender'].forEach(k => { if (s[k]) look[k] = s[k]; }); if (look.hair) look.hair = genderedHair(look.gender || 'male', look.hair); } catch (e) {}
   const saveLook = () => { try { localStorage.setItem('velvet-look', JSON.stringify(look)); } catch (e) {} };
   let simName = 'Jordan';
+  const TOWN_DEFAULT = 'Honeysuckle Hollow';
+  let townName = TOWN_DEFAULT;
 
   // ======================================================================
   // drawing helpers
@@ -1509,7 +1584,74 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     hatAndGlasses(hx, hy, true);
   }
   const talking = (t) => S.speaking && Math.sin(t * 18) > 0;
+  // ---- jointed poses: knees and elbows, keyframed and eased (run, dumbbells, yoga) ----
+  // a rig is in the body's own frame: +x is the way they face, feet at y 0, hips at -20, shoulders at -34.
+  // arms are given relative to each shoulder in world space, so they hang right when the torso leans.
+  const RIGGED = { run: 1, lift: 1, stretch: 1 };
+  const smooth = (u) => u * u * (3 - 2 * u);
+  const mixRig = (a, b, u) => { const o = {}; for (const k in a) o[k] = Array.isArray(a[k]) ? a[k].map((v, i) => v + (b[k][i] - v) * u) : a[k] + (b[k] - a[k]) * u; return o; };
+  function flow(keys, t, hold, move) {   // cycle through key poses: hold each, then ease to the next
+    const per = hold + move, n = keys.length, ph = ((t % (per * n)) + per * n) % (per * n), i = Math.floor(ph / per), f = ph - i * per;
+    return f < hold ? keys[i] : mixRig(keys[i], keys[(i + 1) % n], smooth((f - hold) / move));
+  }
+  const YOGA = [
+    { bob: 0, lean: 0, lf: [-2, 0], rf: [2, 0], lk: [-2, -10], rk: [2, -10], le: [-4, -11], re: [4, -11], lh: [-5, -24], rh: [5, -24] },        // arms up
+    { bob: 0, lean: -0.24, lf: [-2, 0], rf: [2, 0], lk: [-2, -10], rk: [2, -10], le: [-5, -10], re: [-3, -12], lh: [-11, -21], rh: [-8, -24] },   // side bend
+    { bob: 1, lean: 1.15, lf: [-2, 0], rf: [2, 0], lk: [-1, -10], rk: [3, -10], le: [2, 9], re: [3, 9], lh: [3, 18], rh: [4, 18] },                // forward fold
+    { bob: 3, lean: 0.05, lf: [-10, 0], rf: [9, 0], lk: [-6, -10], rk: [10, -9], le: [-9, -1], re: [9, -1], lh: [-18, -2], rh: [18, -2] },        // warrior II
+    { bob: 0, lean: 0, lf: [-1, 0], rf: [2, -11], lk: [-1, -10], rk: [8, -14], le: [-5, -10], re: [5, -10], lh: [-3, -23], rh: [3, -23] }           // tree
+  ];
+  function rigFor(p, t) {
+    if (p === 'run') {
+      const a = t * 14, sn = Math.sin(a), cs = Math.cos(a), lift = (v) => Math.max(0, v) * 4.5;
+      const leg = (sg) => { const fx = sg * sn * 7.5, fy = -lift(-sg * cs); return { f: [fx, fy], k: [fx * 0.45 + 3.5 + Math.max(0, sg * sn) * 1.5, -11 + fy * 0.4 - Math.max(0, sg * sn) * 2] }; };
+      const L1 = leg(1), R1 = leg(-1);
+      return { bob: -Math.abs(cs) * 2.2, lean: 0.14, lf: L1.f, rf: R1.f, lk: L1.k, rk: R1.k, le: [-sn * 5, 8], re: [sn * 5, 8], lh: [-sn * 5 + 5, 3], rh: [sn * 5 + 5, 3] };
+    }
+    if (p === 'lift') {   // a set of curls, then a set of overhead presses
+      const set = Math.floor(t / 7) % 2, rep = (1 - Math.cos((t % 7) * Math.PI * 2 / 1.4)) / 2, u = smooth(Math.min(1, rep * 1.15));
+      const base = { bob: u * 0.6, lean: 0, lf: [-5, 0], rf: [5, 0], lk: [-5, -10], rk: [5, -10] };
+      if (set === 0) return Object.assign(base, { le: [-2, 8], re: [2, 8], lh: [-1 + u * 4, 17 - u * 13], rh: [1 + u * 4, 17 - u * 13] });
+      return Object.assign(base, { le: [-5, 1 - u * 9], re: [5, 1 - u * 9], lh: [-4, -6 - u * 13], rh: [4, -6 - u * 13] });
+    }
+    if (p === 'stretch') return flow(YOGA, t, 2.6, 0.9);
+    return null;
+  }
+  function arm3(sx, sy, ex, ey, hx, hy) {
+    const ts = L.topStyle; limb3(sx, sy, ex, ey, hx, hy, L.skin, 4.2);
+    if (ts === 'tank' || ts === 'dress') return;
+    const longSleeve = ['hoodie', 'sweater', 'flannel', 'blazer', 'denim', 'puffer'].includes(ts), w = ts === 'puffer' ? 6.4 : 5.2;
+    if (longSleeve) limb3(sx, sy, ex, ey, ex + (hx - ex) * 0.85, ey + (hy - ey) * 0.85, L.top, w);
+    else limb(sx, sy, sx + (ex - sx) * 0.7, sy + (ey - sy) * 0.7, L.top, w);
+  }
+  function drawRig(r, p, t) {
+    // facing the camera, a forward bend can't tip sideways: it folds the torso toward the viewer instead
+    const fold = S.front ? Math.max(0, Math.min(1, (r.lean - 0.3) / 0.85)) : 0, lean = S.front ? Math.max(-0.3, Math.min(0.3, r.lean)) : r.lean, sq = 1 - 0.45 * fold;
+    const bob = r.bob + fold * 4, hip = [0, -20 + bob], cl = Math.cos(lean), sl = Math.sin(lean);
+    const sh = (bx) => [hip[0] + bx * cl + 14 * sq * sl, hip[1] + bx * sl - 14 * sq * cl];   // a shoulder after the lean
+    const hips = [[-2.8, hip[1]], [2.8, hip[1]]], legs = [[r.lk, r.lf], [r.rk, r.rf]];
+    legs.forEach(([k, f], i) => {
+      const h = hips[i], kn = [k[0], k[1] + bob * 0.5];
+      limb3(h[0], h[1], kn[0], kn[1], f[0], f[1] - 1, legCol(), 5.4);
+      if (L.bottom === 'shorts' && L.topStyle !== 'dress') limb(h[0], h[1], h[0] + (kn[0] - h[0]) * 0.6, h[1] + (kn[1] - h[1]) * 0.6, L.pants || PANTS, 6);
+      ell(f[0] + 1.2, f[1] - 0.6, 3.4, 1.9, shoeCol());
+    });
+    skirtShape(-22, bob);
+    const ls = sh(-4.5), rs = sh(4.5), arms = [[ls, r.le, r.lh], [rs, r.re, r.rh]];
+    const drawArm = ([s0, e, h]) => { arm3(s0[0], s0[1], s0[0] + e[0], s0[1] + e[1], s0[0] + h[0], s0[1] + h[1]); if (p === 'lift') { const hx = s0[0] + h[0], hy = s0[1] + h[1]; limb(hx - 4, hy, hx + 4, hy, '#3A3340', 1.6); rr(hx - 5.5, hy - 2.6, 2.4, 5.2, 0.8, '#1F1D22'); rr(hx + 3.1, hy - 2.6, 2.4, 5.2, 0.8, '#1F1D22'); } };
+    const overhead = (a) => a[2][1] < -12;   // raised arms go behind the head
+    drawArm(arms[0]); if (overhead(arms[1])) drawArm(arms[1]);
+    ctx.save(); ctx.translate(hip[0], hip[1]); ctx.rotate(lean);
+    ctx.save(); ctx.scale(1, sq); ctx.translate(-hip[0], -hip[1]);
+    topShape(-7.5, -37 + bob, 15, 19, 5); rr(2.5, -36 + bob, 4.5, 17, 2.5, 'rgba(0,0,0,.08)');
+    limb(0, -37 + bob, 0, -39.5 + bob, L.skin, 4.2);
+    ctx.restore();
+    drawHead(0, -25.5 * sq, S.front, p === 'run' || (p === 'lift' && Math.sin(t * 4.5) > 0.6));
+    ctx.restore();
+    if (!overhead(arms[1])) drawArm(arms[1]);
+  }
   function drawStanding(p, t) {
+    if (RIGGED[p]) { const rg = rigFor(p, t); if (rg) { drawRig(rg, p, t); return; } }
     let bob = 0, sw = 0, amp = 4, lh = [-7, -22], rh = [7, -22];
     if (S.emote === 'dance' && p === 'stand') p = 'dance';
     if (p === 'walk') { sw = Math.sin(t * 9); bob = -Math.abs(Math.cos(t * 9)) * 1.2; lh = [-6 - sw * 3.5, -22]; rh = [6 + sw * 3.5, -22]; }
@@ -2353,8 +2495,42 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     tv: { label: 'Watch TV with Maya', chain: 'tv', ttl: 150, words: 'to watch something together', memory: () => `${simName} curled up with Maya to watch TV when she asked.` }
   };
   let wish = null, noticed = null, sparkClock = 0, tvShared = 0, tvCounted = false;
-  const memories = [], events = [], fired = {};
-  function remember(m) { memories.push(m); while (memories.length > 8) memories.shift(); velvetOut('memory', { text: P(m) }); }
+  // ---- memory: lives only in this save, never leaves the game ----
+  // three tiers keep it growing without outgrowing the prompt:
+  //   coreMem  things a partner should never forget (family, health, big news, promises), kept for good
+  //   memories recent everyday things; once full, the oldest are condensed into one pastMem summary
+  //   pastMem  condensed summaries of older stretches; once full, the two oldest merge into one
+  const RECENT_CAP = 30, CORE_CAP = 24, PAST_CAP = 8, MEM_CLIP = 220, MEM_BUDGET = 8000;
+  const memories = [], coreMem = [], pastMem = [], events = [], fired = {};
+  let compacting = false;
+  function remember(m, important) {
+    const t = String(m || '').trim().slice(0, MEM_CLIP); if (!t) return;
+    if (coreMem.includes(t) || memories.includes(t)) return;
+    (important ? coreMem : memories).push(t); compactMemory();
+  }
+  async function condense(lines, max) {   // falls back to a plain join when Claude is unavailable
+    const plain = () => lines.join(' ').slice(0, max);
+    if (!sample) return plain();
+    try {
+      const { text } = await sample([{ role: 'user', content: P(`You keep Maya's memory in a life-sim game. Condense these memories into one short paragraph under ${max} characters, in third person, oldest first. Keep names, people, health, family, dates, promises, feelings and anything a partner should not forget. Drop routine details. Reply with the paragraph only.`) }, { role: 'user', content: lines.join('\n') }], { modelTier: 'quick', cache: false });
+      const out = String(text || '').replace(/\[[^\]]*mood[^\]]*\]/gi, '').trim();
+      return out ? out.slice(0, max) : plain();
+    } catch (e) { return plain(); }
+  }
+  async function compactMemory() {
+    if (compacting) return; compacting = true;
+    try {
+      while (memories.length > RECENT_CAP) { const old = memories.splice(0, 12); pastMem.push(await condense(old, 400)); }
+      while (coreMem.length > CORE_CAP) { const old = coreMem.splice(0, 8); const merged = (await condense(old, MEM_CLIP * 2)).match(/[^.!?]+[.!?]*/g) || []; coreMem.unshift(...merged.map(x => x.trim()).filter(Boolean).slice(0, 3)); }
+      while (pastMem.length > PAST_CAP) { const old = pastMem.splice(0, 2); pastMem.unshift(await condense(old, 500)); }
+    } finally { compacting = false; }
+  }
+  function memoryBrief() {   // what goes in Maya's prompt, held to a fixed budget: core first, then the newest of the rest
+    let left = MEM_BUDGET;
+    const take = (list) => { const out = []; for (let i = list.length - 1; i >= 0; i--) { if (list[i].length + 1 > left) break; out.unshift(list[i]); left -= list[i].length + 1; } return out; };
+    const core = take(coreMem), recent = take(memories), past = take(pastMem);
+    return [core.length ? `Things Maya will never forget: ${core.join(' ')}` : '', past.length ? `Earlier in the house: ${past.join(' ')}` : '', recent.length ? `Lately: ${recent.join(' ')}` : ''].filter(Boolean).join('\n');
+  }
   // hobbies: things you own decide what there is to do
   const HOBBY = { piano: { j: 1, m: 1.2, label: 'Play piano' }, easel: { j: 0.8, m: 1.5, label: 'Paint' }, aquarium: { j: 1, m: 1, label: 'Watch the fish' }, stargaze: { j: 1.1, m: 1, label: 'Stargaze' }, boxing: { j: 1.3, m: 0.7, label: 'Hit the heavy bag' }, bike: { j: 1, m: 1, label: 'Ride the bike' },
     massage: { j: 1, m: 1.1, label: 'Massage chair' }, hammock: { j: 1, m: 1.1, label: 'Lie in the hammock' }, grill: { j: 1.3, m: 0.6, label: 'Grill out back' }, birds: { j: 0.8, m: 1.3, label: 'Watch the birds' }, guitar: { j: 1.2, m: 0.9, label: 'Play guitar' }, jukebox: { j: 1, m: 1.3, label: 'Play the jukebox' }, stretch: { j: 0.7, m: 1, label: 'Yoga' }, mixDrinks: { j: 1, m: 1, label: 'Mix drinks' }, fire: { j: 1, m: 1, label: 'Sit by the fire' } };
@@ -3076,11 +3252,11 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   let loadedSave = false;
   function snapshot() {
     const pos = (c) => ({ needs: c.needs, skills: c.skills, mood: c.mood, workedDay: c.workedDay, friendsDay: c.friendsDay });
-    return { v: 1, basementV: 2, houseV: 3, setupDone, partnerName, lifeGoal, settleDone, flags, career, mcareer, pboxes: true, wallMode, yard: { t: YARD.tiles.map(t => [+t.len.toFixed(3), +t.water.toFixed(3), +t.weed.toFixed(3), +t.burn.toFixed(3), Math.round(t.mowedAt)]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck }, laundryPile, savedAt: Date.now(), minutes, day, money, earnedToday, spentToday, power, fridge, bill, nextBillAt, owned: [...owned], LOOKS, ROOMLOOK, WALLOBJS, bond, support, together, memories, dishes, petFood, petSeq, dirtId, changeSeq, simName,
+    return { v: 1, basementV: 2, houseV: 3, setupDone, partnerName, lifeGoal, settleDone, flags, career, mcareer, pboxes: true, wallMode, yard: { t: YARD.tiles.map(t => [+t.len.toFixed(3), +t.water.toFixed(3), +t.weed.toFixed(3), +t.burn.toFixed(3), Math.round(t.mowedAt)]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck }, laundryPile, savedAt: Date.now(), minutes, day, money, earnedToday, spentToday, power, fridge, bill, nextBillAt, owned: [...owned], LOOKS, ROOMLOOK, WALLOBJS, bond, support, together, memories, coreMem, pastMem, townName, dishes, petFood, petSeq, dirtId, changeSeq, simName,
       autonomy, mayaCap, mayaSpent, TASTE, style: mayaStyle, look: Object.assign({}, look), companion, mayaLook: maya.look, CHANGES: CHANGES.map(c => ({ id: c.id, at: c.at, text: c.text, undo: c.undo, undone: c.undone, seen: c.seen })), projectAt,
       objs: OBJS.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, pet: o.pet, pot: o.pot, attach: o.attach, home: o.home, grudge: o.grudge, movedAt: o.movedAt, mine: o.mine, grow: o.grow, wet: o.wet, contains: o.contains, col: o.col, art: o.art })),
       pets: PETS.map(p => ({ id: p.id, kind: p.kind, name: p.name, coat: p.coat, level: p.level, x: p.x, y: p.y, needs: p.needs, bowlFood: p.bowlFood, litterUses: p.litterUses, litterT: p.litterT, seed: p.seed, bowl: p.bowl && p.bowl.id, bed: p.bed && p.bed.id, litter: p.litter && p.litter.id })),
-      dirt: DIRT.map(d => Object.assign({}, d, { claim: null })), jordan: pos(jordan), maya: pos(maya) };
+      dirt: DIRT.map(d => Object.assign({}, d, { claim: null })), jordan: pos(jordan), maya: pos(maya), turns: chat.turns.slice(-16) };
   }
   function saveGame() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot())); } catch (e) {} }
   function loadGame() {
@@ -3090,9 +3266,10 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
       if (s.flags && s.flags.house) { flags.house = s.flags.house; applyHouseData(s.flags.house); }
       minutes = s.minutes; day = s.day; money = s.money; earnedToday = s.earnedToday; spentToday = s.spentToday; power = s.power; Object.assign(fridge, s.fridge); bill = s.bill; nextBillAt = s.nextBillAt;
       owned.clear(); s.owned.forEach(i => owned.add(i)); s.LOOKS.forEach((lk, i) => Object.assign(LOOKS[i], lk)); ROOMLOOK.forEach((r, i) => { Object.keys(r).forEach(k => delete r[k]); Object.assign(r, (s.ROOMLOOK || [])[i] || {}); }); WALLOBJS.length = 0; (s.WALLOBJS || []).forEach(w => { if (WTYPES[w.type]) WALLOBJS.push(w); });
-      bond = s.bond; support = s.support; together = s.together; memories.length = 0; s.memories.forEach(m => memories.push(m)); dishes = s.dishes; petFood = s.petFood; petSeq = s.petSeq; dirtId = s.dirtId; changeSeq = s.changeSeq;
+      bond = s.bond; support = s.support; together = s.together; memories.length = 0; (s.memories || []).forEach(m => memories.push(m)); coreMem.length = 0; (s.coreMem || []).forEach(m => coreMem.push(m)); pastMem.length = 0; (s.pastMem || []).forEach(m => pastMem.push(m)); townName = s.townName || TOWN_DEFAULT; dishes = s.dishes; petFood = s.petFood; petSeq = s.petSeq; dirtId = s.dirtId; changeSeq = s.changeSeq;
       simName = s.simName || 'Jordan'; autonomy = s.autonomy || 'free'; mayaCap = s.mayaCap || 80; mayaSpent = s.mayaSpent || { day: 0, amt: 0 }; Object.assign(TASTE, s.TASTE || {}); projectAt = s.projectAt; if (s.style) mayaStyle = s.style; if (s.companion) Object.assign(companion, s.companion); if (s.mayaLook) Object.assign(maya.look, s.mayaLook); if (s.look) Object.assign(look, s.look);
       CHANGES.length = 0; (s.CHANGES || []).forEach(c => CHANGES.push(c));
+      if (Array.isArray(s.turns)) chat.turns = s.turns.filter(t => t && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string').slice(-16);
       OBJS.length = 0; s.objs.forEach(o => { if (TYPES[o.type]) OBJS.push(o); });
       if (s.basementV !== 2) { DEFAULT_OBJS.filter(d => ['waterheater', 'furnace', 'laundry', 'shelves', 'boxes'].includes(d.type) && !OBJS.some(o => o.id === d.id)).forEach(d => { const o = JSON.parse(JSON.stringify(d)); OBJS.push(o); buildAll(); if (!placementOk(o) && !autoPlace(o)) OBJS.pop(); }); if (LOOKS[0].paper === null) LOOKS[0].paper = 'block'; owned.add('paper-block'); }
       if (typeof s.laundryPile === 'number') laundryPile = s.laundryPile;
@@ -3298,8 +3475,9 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     }
     th.hidden = true;
     const q = screenQuad(); if (viewLevel !== q.level || arranging || !BACK[VR].includes('B')) { wrap.hidden = true; return; }
-    const p0 = iso(q.u[0], 0.012, q.z[1]), p1 = iso(q.u[1], 0.012, q.z[1]), p3 = iso(q.u[0], 0.012, q.z[0]);
-    wrap.hidden = false; wrap.style.transform = `matrix(${(p1[0] - p0[0]) * s / 320},${(p1[1] - p0[1]) * s / 320},${(p3[0] - p0[0]) * s / 180},${(p3[1] - p0[1]) * s / 180},${p0[0] * s},${p0[1] * s})`;
+    const cs = (pt) => [((pt[0] - cam.x) * cam.z + W / 2) * s, ((pt[1] - cam.y) * cam.z + H / 2) * s];
+    const p0 = cs(iso(q.u[0], 0.012, q.z[1])), p1 = cs(iso(q.u[1], 0.012, q.z[1])), p3 = cs(iso(q.u[0], 0.012, q.z[0]));
+    wrap.hidden = false; wrap.style.transform = `matrix(${(p1[0] - p0[0]) / 320},${(p1[1] - p0[1]) / 320},${(p3[0] - p0[0]) / 180},${(p3[1] - p0[1]) / 180},${p0[0]},${p0[1]})`;
   }
   function drawCouch() {
     const c2 = $('couchCv'), g = c2.getContext('2d'), prev = ctx; ctx = g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 320, 70);
@@ -3399,7 +3577,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     // ---- milestone discovery ----
     { id: 'inlove', when: () => bond >= 80 && !flags.events.includes('inlove'), run: () => { showDiscovery({ eyebrow: 'Milestone', title: 'In love', body: 'It snuck up on both of you. Not one big moment, just a hundred small ones, and now the word fits. Maya said it first, over coffee, like it was the most ordinary thing in the world.' }); remember('They reached "in love." Maya said it over morning coffee.'); } }
   ];
-  function momentsTick() { MOMENTS.forEach(m => { if (!flags.events.includes(m.id) && m.when()) { flags.events.push(m.id); m.run(); velvetOut('moment', { id: m.id, text: P(logEl.firstChild ? logEl.firstChild.querySelector('span').textContent : m.id) }); } }); }
+  function momentsTick() { MOMENTS.forEach(m => { if (!flags.events.includes(m.id) && m.when()) { flags.events.push(m.id); m.run(); } }); }
 
   // ---- goals ----
   const SETTLE = [
@@ -3455,7 +3633,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     return null;
   }
   let guideEl = null;
-  function updateGuide() { const t = guideTarget(); if (t === guideEl) return; if (guideEl) guideEl.classList.remove('guide'); guideEl = t; if (t) t.classList.add('guide'); }
+  function dockGuide(t) { const sec = t && !t.offsetParent && t.closest('[data-page]'), pg = sec ? sec.dataset.page : null; document.querySelectorAll('#dock [data-open]').forEach(b => b.classList.toggle('guide', b.dataset.open === pg)); }
+  function updateGuide() { const t = guideTarget(); dockGuide(t); if (t === guideEl) return; if (guideEl) guideEl.classList.remove('guide'); guideEl = t; if (t) t.classList.add('guide'); }
   function goalsTick() {
     if (!settleDone && !flags.openedTalk && day === 1 && minutes >= 9 * 60 + 2 && canTalk() && !chat.open && !arranging) {
       flags.openedTalk = true; noticed = { topic: "it is move-in day. The house is empty and full of possibility. Maya is excited about making this place theirs and wants to plan where to start (the couch first, then food, then one room they paint together)", until: absMin() + 240, line: "Okay. We actually live here now. Where do we even start?", ctx: null };
@@ -3887,9 +4066,24 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     }
     ctx.restore();
   }
+  function camTarget() {
+    if (camMode !== 'auto' || arranging || !$('follow').checked) return null;
+    const j = jordan, tk = j.task;
+    if (j.away || j.level !== viewLevel || onStairs(j)) return null;
+    if (chat.open && !maya.away && maya.level === j.level) { const a = iso(j.x, j.y, j.z), b = iso(maya.x, maya.y, maya.z); const boxOver = !matchMedia('(max-width:760px)').matches; return { z: 1.8, x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2 + (boxOver ? 26 : -12) }; }   // when the chat box covers the scene, frame them above it
+    if (!tk || tk.phase !== 'do' || WATCH_SKIP.includes(tk.name)) return null;
+    const pt = iso(j.x, j.y, j.z); return { z: tk.name === 'sleep' || tk.name === 'nap' ? 1.5 : 2, x: pt[0], y: pt[1] - 30 };
+  }
+  function camTick(dt) {
+    const tg = camTarget() || { z: 1, x: W / 2, y: H / 2 }, k = reduceMotion() ? 1 : 1 - Math.exp(-dt * (tg.z > cam.z ? 2 : 3.2));
+    cam.z += (tg.z - cam.z) * k; cam.x += (tg.x - cam.x) * k; cam.y += (tg.y - cam.y) * k;
+    if (Math.abs(cam.z - 1) < 0.002 && tg.z === 1) cam.z = 1;
+    const hw = W / 2 / cam.z, hh = H / 2 / cam.z; cam.x = Math.max(hw, Math.min(W - hw, cam.x)); cam.y = Math.max(hh, Math.min(H - hh, cam.y));
+  }
   function render() {
     const t = animT, lv = viewLevel;
     ctx.clearRect(0, 0, W, H);
+    ctx.save(); if (cam.z !== 1) { ctx.translate(W / 2, H / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y); }
     const lights = activeLights(lv);
     drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv);
     const items = [];
@@ -3902,6 +4096,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     lighting(lv, lights);
     if (lv === 3) drawRain();
     if (arranging) drawArrangeOverlay(t);
+    ctx.restore();
     if (viewFade > 0) { ctx.fillStyle = `rgba(10,8,20,${viewFade * 0.55})`; ctx.fillRect(0, 0, W, H); viewFade = Math.max(0, viewFade - rdt * 3.5); }
     ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
   }
@@ -4009,7 +4204,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     return pick(["Hey you. What's up?", 'Oh, hey. Perfect timing, I was getting bored.', 'There you are.']);
   }
   function persona() {
-    return P(`You are playing Maya, a character in Velvet, a cozy life-sim game. The player controls ${simName}, Maya's partner. They live together in a three-floor house (basement gym and rec room, main floor kitchen and living room, upstairs bedroom, bathroom and office) and share a household budget.
+    return P(`You are playing Maya, a character in Velvet, a cozy life-sim game. The player controls ${simName}, Maya's partner. They just moved to the small town of ${townName} and live together in a three-floor house (basement gym and rec room, main floor kitchen and living room, upstairs bedroom, bathroom and office) and share a household budget.
 
 ${companionWho()} She has her own opinions, plans and moods, and she is not a pushover. She has opinions about money and decorating. ${simName} works at an office from 8 AM to 3 PM on weekdays.
 
@@ -4031,7 +4226,10 @@ mood is how Maya feels now. bond is how this exchange changes how close she feel
 
 Things Maya has opened up to ${simName} about (she can bring these up): ${flags.story.map(i => STORY[i].fact).join(' ')}` : ''}
 
-${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working toward being a ${LIFE[lifeGoal].name.toLowerCase()}` : ''}.`);
+${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working toward being a ${LIFE[lifeGoal].name.toLowerCase()}` : ''}.${memoryBrief() ? `
+
+What Maya remembers from life together in this house. Bring these up the way a partner would, when they fit:
+${memoryBrief()}` : ''}`);
   }
   function companionWho() {
     const base = `In this game Maya ${companion.source === 'velvet' ? '' : 'is 27 and '}works as a graphic designer at a design studio from 11 AM to 5:30 PM on weekdays, with freelance jobs on the side.`;
@@ -4049,14 +4247,13 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     const low = Object.keys(jordan.needs).filter(k => jordan.needs[k] < 35).map(k => ({ energy: 'tired', food: 'hungry', hygiene: 'in need of a shower', fun: 'bored', comfort: 'uncomfortable', social: 'lonely' }[k]));
     const recent = [...logEl.children].slice(0, 4).map(li => li.querySelector('span').textContent).reverse().join(' ');
     const wants = wish ? ` Maya is currently hoping for ${WISHES[wish.kind].words}.` : '';
-    const mem = memories.length ? ` Maya remembers: ${memories.join(' ')}` : '';
     const dish = dishes >= 2 ? ` There are ${dishes} dirty plates on the table.` : '';
     const money$ = ` Household money: $${money}. Fridge: ${servings()} meals.${bill ? ` A $${bill.amount} bill is ${bill.overdue ? 'overdue and the power is cut' : 'due ' + whenText(bill.due)}.` : ''}`;
     const guests = GUESTS.length ? ` Guests over right now: ${GUESTS.map(g => g.gname).join(', ')}.` : '';
     const cal = upcoming().filter(e => e.d - day <= 2 && /anniversary|birthday/.test(e.t)).map(e => `${e.t} is ${e.d === day ? 'today' : e.d === day + 1 ? 'tomorrow' : 'in two days'}.`).join(' ');
     const pets = PETS.length ? ` Pets: ${PETS.map(p => `${p.name} the ${p.kind} (${petMood(p)}, ${petActivity(p).toLowerCase()})`).join('; ')}.` : '';
     const house = `${video.id && [jordan, maya].some(c => doing(c, 'movie')) ? ` They are watching a YouTube video on the ${video.screen === 'proj' ? 'projector in the basement' : 'TV'}${doing(maya, 'movie') ? ' together' : ''}.` : ''} The lawn is ${lawnStats().label.toLowerCase()}${raining() ? ' and it is raining' : ''}. The house is ${messLabel(messOf()).toLowerCase()}.${CHANGES.length ? ` Things Maya changed recently: ${CHANGES.slice(0, 3).map(c => c.text + (c.undone ? ` (${simName} undid it)` : '')).join(' ')}` : ''}${autonomy === 'off' ? ' (Maya has agreed not to change the house herself right now, so act must be none.)' : ''}`;
-    return P(`[Game state: day ${day} in the new house, ${season()},${guests}${cal ? ' ' + cal : ''} ${DAYS[weekday()]}, ${clockText()} (${part}).${OBJS.some(o => o.type === 'pbox') ? ` There are still ${OBJS.filter(o => o.type === 'pbox').length} moving boxes to unpack.` : ''}${pets}${house} Maya is in the ${placeOf(maya).toLowerCase()}, ${mDoing}. ${simName} is in the ${placeOf(jordan).toLowerCase()}. Maya's mood: ${maya.mood}. Bond: ${Math.round(bond)}/100 (${bondStage().toLowerCase()}). Things ${simName} has done for Maya: ${support}.${wants}${dish}${money$} ${simName} seems ${low.length ? low.join(', ') : 'fine'}. Recently: ${recent}${mem}]`);
+    return P(`[Game state: day ${day} in the new house, ${season()},${guests}${cal ? ' ' + cal : ''} ${DAYS[weekday()]}, ${clockText()} (${part}).${OBJS.some(o => o.type === 'pbox') ? ` There are still ${OBJS.filter(o => o.type === 'pbox').length} moving boxes to unpack.` : ''}${pets}${house} Maya is in the ${placeOf(maya).toLowerCase()}, ${mDoing}. ${simName} is in the ${placeOf(jordan).toLowerCase()}. Maya's mood: ${maya.mood}. Bond: ${Math.round(bond)}/100 (${bondStage().toLowerCase()}). Things ${simName} has done for Maya: ${support}.${wants}${dish}${money$} ${simName} seems ${low.length ? low.join(', ') : 'fine'}. Recently: ${recent}]`);
   }
   function parseTag(full) { const all = [...full.matchAll(/\[([^\[\]]*mood\s*=[^\[\]]*)\]/gi)]; if (!all.length) return null; const out = {}; all[all.length - 1][1].split(';').forEach(kv => { const i = kv.indexOf('='); if (i > 0) out[kv.slice(0, i).trim().toLowerCase()] = kv.slice(i + 1).trim().toLowerCase(); }); return out; }
   function applyTag(full) {
@@ -4079,7 +4276,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
       return;
     }
     if (!chat.open) {
-      chat.open = true; chat.count = 0; flags.talked = true;
+      chat.open = true; chat.count = 0; flags.talked = true; chat.turns = chat.turns.slice(-16); chat.start = chat.turns.length;
       const keepMaya = maya.task && maya.task.name === 'approach';
       interrupt(jordan); jordan.queue = [];
       if (!keepMaya && maya.task && maya.task.phase === 'walk' && !onStairs(maya)) finishAct(maya, true);
@@ -4099,8 +4296,18 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     chat.open = false; dialogEl.hidden = true; maya.thinking = false; maya.speaking = false; showPick(null);
     if (jordan.task && jordan.task.name === 'chat') finishAct(jordan);
     if (maya.task && maya.task.name === 'approach') finishAct(maya, true);
-    if (chat.count) log(`${simName} and Maya talked for a while.`);
+    if (chat.count) { log(`${simName} and Maya talked for a while.`); rememberChat(chat.turns.slice(chat.start)); }
     if (chat.ctx && !chat.acted) settle(chat.ctx, true); chat.ctx = null;
+  }
+  async function rememberChat(turns) {   // what Maya takes away from a conversation, kept in this save only
+    if (!sample || turns.length < 2) return;
+    const transcript = turns.map(t => t.role === 'assistant' ? `Maya: ${visible(t.content)}` : t.content.replace(/^\(.*\)$/s, '')).filter(Boolean).join('\n').slice(-3500);
+    const ask = P(`You keep Maya's memory in a life-sim game. Read this conversation between ${simName} and Maya. Write what Maya would still remember days later: things ${simName} shared about themselves, their life, people they care about, plans, promises, worries and feelings, plus anything Maya opened up about. Write up to 3 lines, each a short third-person sentence starting with "- ". Start the line with "! " instead if it is something a partner should never forget: family, health, the people in ${simName}'s life, big news, dreams, fears or promises. Skip small talk and anything already obvious from the house. If nothing is worth remembering, write only "- none".`);
+    try {
+      const { text } = await sample([{ role: 'user', content: ask }, { role: 'user', content: transcript }], { modelTier: 'quick', cache: false });
+      String(text || '').split('\n').map(l => l.trim()).filter(l => /^[-•*!]/.test(l)).map(l => ({ imp: l.startsWith('!'), t: l.replace(/^[-•*!]+\s*/, '').trim() })).filter(l => l.t && !/^none\.?$/i.test(l.t) && !/\[mood/i.test(l.t)).slice(0, 3).forEach(l => remember(l.t, l.imp));
+      saveGame();
+    } catch (e) { /* the conversation still happened; it just isn't summarized */ }
   }
   function markUnavailable() { chat.dead = true; setBusy(false); hintEl.textContent = 'Maya can only talk when the game is opened from the Velvet app.'; }
   function send(msg) { return talk(`${simName}: ${msg}`, `${simName}: ${msg}`); }
@@ -4135,7 +4342,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   // ======================================================================
   // canvas input: talk to Maya, or arrange furniture
   // ======================================================================
-  function canvasPoint(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; }
+  function canvasPoint(e) { const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) * W / r.width, sy = (e.clientY - r.top) * H / r.height; return [(sx - W / 2) / cam.z + cam.x, (sy - H / 2) / cam.z + cam.y]; }
   function overMaya(x, y) { if (maya.away || maya.level !== viewLevel) return false; const [fx, fy] = iso(maya.x, maya.y, maya.z); const top = SITTING.includes(maya.pose) ? 42 : maya.pose === 'sleep' ? 20 : 66; return Math.abs(x - fx) < 20 && y > fy - top - 18 && y < fy + 10; }
   cv.addEventListener('click', (e) => {
     const [x, y] = canvasPoint(e);
@@ -4475,7 +4682,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     for (const k in jordan.needs) { const v = Math.round(jordan.needs[k]), r = needRows[k]; r.bar.style.width = v + '%'; r.bar.style.backgroundColor = v > 55 ? 'var(--good)' : v > 25 ? 'var(--warn)' : 'var(--bad)'; r.val.textContent = v; r.meter.setAttribute('aria-valuenow', v); }
     const b = Math.round(bond); $('bondBar').style.width = b + '%'; $('bondVal').textContent = b; $('bondMeter').setAttribute('aria-valuenow', b);
     $('bondStage').textContent = bondStage(); $('mayaMood').textContent = cap(maya.mood);
-    $('supportVal').textContent = support; $('togetherVal').textContent = together; $('memVal').textContent = memories.length;
+    $('supportVal').textContent = support; $('togetherVal').textContent = together; $('memVal').textContent = memories.length + coreMem.length + pastMem.length;
     $('cookVal').textContent = Math.floor(jordan.skills.cooking); $('fitVal').textContent = Math.floor(jordan.skills.fitness);
     $('jordanSched').textContent = schedText(jordan, simName); $('mayaSched').textContent = P(schedText(maya, 'She'));
     $('wageVal').textContent = `${simName} $${jordan.sched.work.wage}/hr · Maya $${maya.sched.work.wage}/hr`;
@@ -4594,9 +4801,10 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     if (running && !arranging) update(dt); else animT += arranging ? dt * 0.3 : 0;
     if (shown < target.length) { shown = Math.min(target.length, shown + dt * 60); lineEl.textContent = target.slice(0, Math.floor(shown)); maya.speaking = true; }
     else { if (!typingDone && !chat.busy) { typingDone = true; srLine.textContent = target; } if (maya.thinking) lineEl.textContent = '.'.repeat(1 + Math.floor(performance.now() / 350) % 3); else if (lineEl.textContent !== target) lineEl.textContent = target; maya.speaking = false; }
+    camTick(dt);
     render();
     placeVideo();
-    uiTimer -= dt; if (uiTimer <= 0) { refreshUI(); uiTimer = 0.25; }
+    uiTimer -= dt; if (uiTimer <= 0) { refreshUI(); renderTracker(); uiTimer = 0.25; }
     requestAnimationFrame(frame);
   }
   const loaded = loadGame();
@@ -4607,6 +4815,52 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     const hrs = (Date.now() - loaded.savedAt) / 3.6e6;
     if (hrs > 0.33) { const extra = offlineCatchup(hrs); showRecap(`While you were away (${hrs < 36 ? Math.max(1, Math.round(hrs)) + ' hours' : Math.round(hrs / 24) + ' days'})`, extra); }
   }
+  function renderTown() { $('townText').textContent = townName; $('townSign').title = townName; }
+  try { new ResizeObserver(() => { fit(); renderTown(); }).observe(cv); } catch (e) { window.addEventListener('resize', renderTown); }
+  renderTown();
+  const drawerEl = $('drawer'), benchEl = document.querySelector('.bench');
+  const PAGE_TITLES = { shop: 'Shop', goals: 'Goals', do: 'Give an order', partner: 'Maya', you: 'You', home: 'Household', log: 'Today' };
+  function openPage(pg) {   // one menu at a time; tapping the open one closes it
+    const close = !pg || (!drawerEl.hidden && drawerEl.dataset.open === pg);
+    drawerEl.hidden = close; drawerEl.dataset.open = close ? '' : pg; benchEl.classList.toggle('open', !close);
+    $('drawerTitle').textContent = close ? '' : P(PAGE_TITLES[pg]);
+    document.querySelectorAll('#dock [data-open]').forEach(b => b.setAttribute('aria-pressed', String(!close && b.dataset.open === pg)));
+    try { localStorage.setItem('velvet-drawer', close ? '' : pg); } catch (e) {}
+    guideEl && guideEl.classList.remove('guide'); guideEl = null; updateGuide();
+  }
+  document.querySelectorAll('#dock [data-open]').forEach(b => b.addEventListener('click', () => openPage(b.dataset.open)));
+  $('drawerClose').addEventListener('click', () => openPage(''));
+  { let first = null; try { first = localStorage.getItem('velvet-drawer'); } catch (e) {} if (first === null) first = matchMedia('(max-width:760px)').matches ? '' : 'goals'; openPage(first); }
+  let trackKey = '', trackHold = 0;
+  function currentObjective() {
+    if (!setupDone) return null;
+    if (!settleDone) {
+      const list = SETTLE.filter(g => g.id !== 'unpack'), next = list.find(g => !flags.settleSeen.includes(g.id));
+      if (next) return { id: 's:' + next.id, eyebrow: 'Moving in', text: P(next.text), n: list.filter(g => flags.settleSeen.includes(g.id)).length, of: list.length };
+    }
+    if (!lifeGoal) return { id: 'pick', eyebrow: 'Next up', text: 'Pick a life goal', n: 0, of: 0 };
+    const tr = LIFE[lifeGoal], st = tr.steps[flags.lifeStep];
+    return st ? { id: 'l:' + lifeGoal + ':' + flags.lifeStep, eyebrow: tr.name, text: P(st.text), n: flags.lifeStep, of: tr.steps.length } : null;
+  }
+  function renderTracker() {   // runs with the UI refresh; a finished goal gets a check and a beat before the next one slides in
+    if (performance.now() < trackHold) return;
+    const el = $('tracker'), o = currentObjective(), key = o ? `${o.id}|${o.text}|${o.n}` : '';
+    if (key === trackKey) return;
+    const prevId = trackKey.split('|')[0], finished = !!prevId && (!o || o.id !== prevId) && !el.hidden;
+    trackKey = key;
+    if (finished) {
+      $('tkEyebrow').textContent = 'Done'; $('tkBar').style.width = o && o.of ? `${Math.round(o.n / o.of * 100)}%` : '100%';
+      el.classList.remove('in', 'done'); void el.offsetWidth; el.classList.add('done');
+      trackHold = performance.now() + 1700; trackKey = ''; return;
+    }
+    el.classList.remove('done'); el.hidden = !o; if (!o) return;
+    $('tkEyebrow').textContent = o.eyebrow + (o.of ? ` · ${o.n}/${o.of}` : ''); $('tkText').textContent = o.text;
+    $('tkBar').parentElement.hidden = !o.of; $('tkBar').style.width = o.of ? `${Math.round(o.n / o.of * 100)}%` : '0';
+    el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+  }
+  $('tracker').addEventListener('click', () => { if (drawerEl.hidden || drawerEl.dataset.open !== 'goals') openPage('goals'); });
+  function setCam(m) { camMode = m; const b = $('camBtn'); b.textContent = m === 'auto' ? 'Camera: auto' : 'Camera: wide'; b.setAttribute('aria-pressed', String(m === 'auto')); try { localStorage.setItem('velvet-cam', m); } catch (e) {} }
+  $('camBtn').addEventListener('click', () => setCam(camMode === 'auto' ? 'wide' : 'auto')); setCam(camMode);
   setWallMode(wallMode);
   $('autoSel').value = autonomy; $('capSel').value = String(mayaCap);
   $('autoSel').addEventListener('change', (e) => { autonomy = e.target.value; if (autonomy !== 'ask') { if (proposal && autonomy === 'free') startPlan(proposal); proposal = null; } if (autonomy === 'off') mayaQueue.length = 0; log(autonomy === 'free' ? 'Maya can change things around the house on her own.' : autonomy === 'ask' ? 'Maya will ask before she changes anything.' : 'Maya will comment on changes but leave the house alone.'); renderMayaActs(); saveGame(); });
@@ -4617,7 +4871,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   $('newGame').addEventListener('click', () => {
     // opens the move-in card with everything you picked last time filled in; change what you want and move in again
     restartMode = true; if (chat.open) closeChat(); wasRunning = running; setRunning(false);
-    $('suName').value = simName; $('suPartner').value = partnerName; $('suPron').value = companion.pronoun; $('suPreset').value = companion.preset || 'warm';
+    $('suTown').value = townName; $('suName').value = simName; $('suPartner').value = partnerName; $('suPron').value = companion.pronoun; $('suPreset').value = companion.preset || 'warm';
     const lgIn = document.querySelector(`input[name="lg"][value="${lifeGoal || 'career'}"]`); if (lgIn) lgIn.checked = true;
     swatches('suSkin', 'skin', SKINS); swatches('suHair', 'hair', HAIRS, true); swatches('suMSkin', 'skin', SKINS, false, maya.look, () => {}); swatches('suMHair', 'hair', HAIRS, true, maya.look, () => {});
     document.querySelector('#setup h2').textContent = 'Start over?'; document.querySelector('#setup .quiet').textContent = 'A new game from move-in day. Your current house, money and progress are wiped. Everything below is filled in from this game, so you can just hit Move in.';
@@ -4643,10 +4897,10 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   $('setupForm').addEventListener('submit', (e) => {
     e.preventDefault();
     if (restartMode) { // start over: remember the choices, wipe the save, reload into the new game
-      const prefs = { name: $('suName').value.trim(), partner: $('suPartner').value.trim(), pron: $('suPron').value, preset: $('suPreset').value, lg: lifeGoal ? (document.querySelector('input[name="lg"]:checked') || {}).value : null, house: (document.querySelector('input[name="hs"]:checked') || {}).value, look: Object.assign({}, look), mlook: Object.assign({}, maya.look), companion: companion.source === 'velvet' ? Object.assign({}, companion) : null, style: companion.source === 'velvet' ? mayaStyle : null };
+      const prefs = { town: $('suTown').value.trim(), name: $('suName').value.trim(), partner: $('suPartner').value.trim(), pron: $('suPron').value, preset: $('suPreset').value, lg: lifeGoal ? (document.querySelector('input[name="lg"]:checked') || {}).value : null, house: (document.querySelector('input[name="hs"]:checked') || {}).value, look: Object.assign({}, look), mlook: Object.assign({}, maya.look), companion: companion.source === 'velvet' ? Object.assign({}, companion) : null, style: companion.source === 'velvet' ? mayaStyle : null };
       try { localStorage.setItem('velvet-newgame', JSON.stringify(prefs)); localStorage.removeItem(SAVE_KEY); } catch (err) {} saveBlocked = true; location.reload(); return;
     }
-    simName = $('suName').value.trim() || 'Jordan'; partnerName = $('suPartner').value.trim() || 'Maya'; $('simName').value = simName;
+    simName = $('suName').value.trim() || 'Jordan'; partnerName = $('suPartner').value.trim() || 'Maya'; $('simName').value = simName; townName = $('suTown').value.trim() || TOWN_DEFAULT; renderTown();
     if (companion.source !== 'velvet') { companion.pronoun = $('suPron').value; companion.preset = $('suPreset').value; velvetOut('companionCreated', { player: { name: simName, look: Object.assign({}, look) }, companion: { name: partnerName, pronoun: companion.pronoun, personality: PRESETS[companion.preset].text, look: Object.assign({}, maya.look) } }); }
     lifeGoal = $('lgSet').hidden ? null : (document.querySelector('input[name="lg"]:checked') || {}).value || 'career'; setupDone = true; settleDone = false;
     const house = (document.querySelector('input[name="hs"]:checked') || {}).value || 'starter';
@@ -4657,7 +4911,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   // Velvet bridge: the host app hands in who you are and who your companion is, and hears back what happened
   // ======================================================================
   // Messages in:  { type: 'velvet:profile', player: { name, look }, companion: { name, pronoun, personality, look, memories, likes, dislikes } }
-  // Messages out: velvet:ready, velvet:profileApplied, velvet:companionCreated, velvet:memory { text }, velvet:moment { text }
+  // Messages out: velvet:ready, velvet:profileApplied, velvet:companionCreated. Memories and moments never leave the game.
   const VELVET_ORIGINS = [];   // the host can list its origins here; empty accepts any parent while prototyping
   function velvetOut(type, data) { try { if (window.parent && window.parent !== window) window.parent.postMessage(Object.assign({ type: 'velvet:' + type, game: 'velvet-house', day }, data || {}), '*'); } catch (e) {} }
   const STYLE_WORDS = { plants: 'natural', plant: 'natural', nature: 'natural', green: 'natural', wood: 'natural', boho: 'natural', vintage: 'vintage', retro: 'vintage', antique: 'vintage', thrift: 'vintage', minimal: 'minimal', minimalist: 'minimal', clean: 'minimal', modern: 'modern', sleek: 'modern', cozy: 'cozy', comfy: 'cozy', soft: 'soft', pastel: 'soft', pink: 'soft', colorful: 'playful', fun: 'playful', quirky: 'playful', bright: 'bold', bold: 'bold', dark: 'bold', moody: 'luxe', fancy: 'luxe', luxury: 'luxe', gold: 'luxe', velvet: 'luxe', industrial: 'industrial', concrete: 'industrial', metal: 'industrial', warm: 'warm', earthy: 'warm', cool: 'cool', blue: 'cool' };
@@ -4673,7 +4927,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     applyLookFrom(pl.look, look); saveLook(); applyLookFrom(cp.look, maya.look);
     if (cp.gender === 'male' || cp.gender === 'female') companion.gender = cp.gender;
     companion.source = 'velvet'; companion.bio = clip(cp.personality || cp.bio, 900); companion.pronoun = ['she', 'he'].includes(cp.pronoun) ? cp.pronoun : companion.pronoun;
-    companion.memories = (Array.isArray(cp.memories) ? cp.memories : []).slice(0, 8).map(m => clip(m, 220)).filter(Boolean);
+    companion.memories = [];   // the companion here knows only what happens in this game
     if ((cp.likes || cp.dislikes)) { wordsToStyle(cp.likes, 1); wordsToStyle(cp.dislikes, -1); }
     $('suName').readOnly = !!pn; $('suPartner').readOnly = !!cn; $('buildPartner').hidden = true;
     const note = $('velvetNote'); note.hidden = false; note.textContent = `Playing as ${simName}, with ${partnerName} from Velvet.`;
@@ -4686,13 +4940,13 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   if (window.VELVET_PROFILE) try { applyVelvetProfile(window.VELVET_PROFILE); } catch (e) {}
   velvetOut('ready', { needsProfile: true });
   if (pendingRestart) {
-    const r = pendingRestart; if (r.name) $('suName').value = r.name; if (r.partner) $('suPartner').value = r.partner; if (r.pron) $('suPron').value = r.pron; if (r.preset) $('suPreset').value = r.preset;
+    const r = pendingRestart; if (r.town) $('suTown').value = r.town; if (r.name) $('suName').value = r.name; if (r.partner) $('suPartner').value = r.partner; if (r.pron) $('suPron').value = r.pron; if (r.preset) $('suPreset').value = r.preset;
     if (r.look) Object.assign(look, r.look); if (r.mlook) Object.assign(maya.look, r.mlook); if (r.companion) { Object.assign(companion, r.companion); if (r.style) mayaStyle = r.style; $('buildPartner').hidden = true; }
     $('lgSet').hidden = !r.lg; $('hsSet').hidden = false; const lgIn = document.querySelector(`input[name="lg"][value="${r.lg || 'career'}"]`); if (lgIn) lgIn.checked = true; const hsIn = document.querySelector(`input[name="hs"][value="${r.house || 'starter'}"]`); if (hsIn) hsIn.checked = true;
     $('setupForm').requestSubmit();
   }
   setView(jordan.level); refreshUI(); renderMayaActs(); renderShop(); renderHobbies();
-  window.__velvet = { WALLOBJS, WTYPES, ROOMLOOK, lookAt, todaysPicks, priceOf, buyClothes, wearOn, closet, setDressFor: (k) => { dressFor = k; }, setLookRoom: (r) => { lookRoom = r; renderShop(); }, wallObjAt, screenToWall, look, applyVelvetProfile, companion, tasteOf, styleWords, askMaya, putAway, placeStored, restyle, showPick, persona: () => persona(), CATALOG, PAPERS, FLOORS, TYPES, get mayaStyle() { return mayaStyle; }, LOOKS, applyLook: (id) => applyLook(CATALOG.find(i => i.id === id)), P, renderShop, setTab: (t) => { tab = t; renderShop(); }, jordan, maya, ACT, OBJS, SLOTS: () => SLOTS, order, interrupt, startChain, startErrand, fridge, owned, buy: (id) => buy(CATALOG.find(i => i.id === id)), payBill, setView, setArranging, placementOk, buildAll, dbgSlots: (lv) => { const reach = reachableSet(lv); return SLOT_LIST.filter(s => s.level === lv).map(s => { const [i, j] = cellOf(s.stand[0], s.stand[1]); return [s.id, s.stand.map(v => +v.toFixed(2)), FREE[lv][i][j], reach.has(i * NY + j)]; }); },
+  window.__velvet = { WALLOBJS, WTYPES, ROOMLOOK, lookAt, todaysPicks, priceOf, buyClothes, wearOn, closet, setDressFor: (k) => { dressFor = k; }, setLookRoom: (r) => { lookRoom = r; renderShop(); }, wallObjAt, screenToWall, look, applyVelvetProfile, companion, tasteOf, styleWords, askMaya, putAway, placeStored, restyle, showPick, persona: () => persona(), remember, CATALOG, PAPERS, FLOORS, TYPES, get mayaStyle() { return mayaStyle; }, LOOKS, applyLook: (id) => applyLook(CATALOG.find(i => i.id === id)), P, renderShop, setTab: (t) => { tab = t; renderShop(); }, jordan, maya, ACT, OBJS, SLOTS: () => SLOTS, order, interrupt, startChain, startErrand, fridge, owned, buy: (id) => buy(CATALOG.find(i => i.id === id)), payBill, setView, setArranging, placementOk, buildAll, dbgSlots: (lv) => { const reach = reachableSet(lv); return SLOT_LIST.filter(s => s.level === lv).map(s => { const [i, j] = cellOf(s.stand[0], s.stand[1]); return [s.id, s.stand.map(v => +v.toFixed(2)), FREE[lv][i][j], reach.has(i * NY + j)]; }); },
     get minutes() { return minutes; }, set minutes(v) { minutes = v; }, get day() { return day; }, set day(v) { day = v; }, get money() { return money; }, set money(v) { money = v; },
     get power() { return power; }, setSpeed: (v) => { speedSel = v; }, arr, objectAt, objHull, DIRT, PETS, adoptPet: (k) => { const p = adoptPet(k); renderPets(); return p; }, messOf, LA, lightsOn: (lv) => activeLights(lv).length, get petFood() { return petFood; }, set petFood(v) { petFood = v; }, scrubTarget, addDirt, petOrder, rotateView, GUESTS, inviteGuests, spawnGuest, FRIENDS, mcareer, upcoming, giveGift, get season() { return season(); }, moveHouse, get money2() { return money; }, get VR() { return VR; }, flags, career, get lifeGoal() { return lifeGoal; }, startMoveIn, unpackOrder, lockOf, CATALOG, YARD, lawnStats, playVideo, stopVideo, video, setWallMode, get wallMode() { return wallMode; }, wallH, pendingEv, CHANGES, noteMove, requestAct, saveGame, loadGame, offlineCatchup, showRecap, undoChange, mayaQueue, get autonomy() { return autonomy; }, set autonomy(v) { autonomy = v; }, get proposal() { return proposal; }, get noticed() { return noticed; }, chat: () => chat, closeChat, openChat, get bond() { return bond; }, LOOKS, setSample: (f) => { sample = f; sampleChecked = true; chat.dead = false; } };
   requestAnimationFrame(frame);
