@@ -46,14 +46,15 @@ async function capture(page: Page, name: string) {
 // Missing golden screenshots: night variants for basement/upstairs/backyard,
 // rain rendering, treadmill rig, second house
 
-test.describe('Missing golden screenshots', () => {
+test.describe('Missing golden screenshots — desktop', () => {
+  test.skip(() => test.info().project.name !== 'desktop', 'desktop-only');
   test.setTimeout(120_000);
 
   test('basement — night', async ({ page }) => {
     await loadGame(page);
     await setupNewGame(page);
     await setFloor(page, 0);
-    await setMinutes(page, 1320); // 10 PM
+    await setMinutes(page, 1320);
     await page.waitForTimeout(800);
     await capture(page, 'desktop-basement-night');
   });
@@ -93,10 +94,9 @@ test.describe('Missing golden screenshots', () => {
   test('treadmill rig', async ({ page }) => {
     await loadGame(page);
     await setupNewGame(page);
-    await setFloor(page, 0); // basement has the treadmill
+    await setFloor(page, 0);
     await page.evaluate(() => {
       const v = (window as any).__velvet;
-      // Force Jordan to use the treadmill
       if (v.jordan) { v.jordan.task = { name: 'treadmill', act: 'treadmill' }; }
     });
     await page.waitForTimeout(1000);
@@ -116,10 +116,13 @@ test.describe('Missing golden screenshots', () => {
     await page.waitForTimeout(800);
     await capture(page, 'desktop-second-house');
   });
+});
 
-  // Pixel 8 additional shots
+test.describe('Missing golden screenshots — Pixel 8', () => {
+  test.skip(() => test.info().project.name !== 'pixel-8', 'pixel-8-only');
+  test.setTimeout(120_000);
+
   test('Pixel 8 — arrange mode', async ({ page }) => {
-    await page.setViewportSize({ width: 412, height: 915 });
     await loadGame(page);
     await setupNewGame(page);
     await setFloor(page, 1);
@@ -129,7 +132,6 @@ test.describe('Missing golden screenshots', () => {
   });
 
   test('Pixel 8 — main floor night', async ({ page }) => {
-    await page.setViewportSize({ width: 412, height: 915 });
     await loadGame(page);
     await setupNewGame(page);
     await setFloor(page, 1);

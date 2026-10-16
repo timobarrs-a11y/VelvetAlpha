@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, devices } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -7,16 +7,42 @@ const initScript = readFileSync(join(process.cwd(), 'e2e/velvet-house/determinis
   .replace(/^\/\*\*[\s\S]*?\*\//, '')
   .replace(/^import.*$/gm, '');
 
-// Capture frame-time traces on desktop, iPhone 12, and Pixel 8 viewports.
-// Also records canvas dimensions so slowdowns can be correlated with canvas size.
+// Emulated device configs using Playwright's built-in device presets.
+// Real-device numbers must come from an actual phone — these are emulated.
+const EMULATED_DEVICES = [
+  { name: 'desktop', viewport: { width: 1280, height: 800 }, device: null as null },
+  { name: 'iphone-12', viewport: { width: 390, height: 664 }, device: devices['iPhone 12'] },
+  { name: 'pixel-7', viewport: { width: 412, height: 839 }, device: devices['Pixel 7'] },
+];
 
-async function captureFrameTrace(page: Page, viewport: { width: number; height: number }, deviceName: string, scene: 'day' | 'night') {
-  await page.setViewportSize(viewport);
+async function captureFrameTrace(
+  page: Page,
+  deviceConfig: typeof EMULATED_DEVICES[number],
+  scene: 'day' | 'night',
+): Promise<Record<string, unknown>> {
+  // Apply full device emulation (DPR, touch, user agent, viewport)
+  if (deviceConfig.device) {
+    await page.context().clearCookies();
+    const client = await page.context().newCDPSession(page);
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: deviceConfig.viewport.width,
+      height: deviceConfig.viewport.height,
+      deviceScaleFactor: deviceConfig.device.deviceScaleFactor ?? 1,
+      mobile: true,
+      screenWidth: deviceConfig.viewport.width,
+      screenHeight: deviceConfig.viewport.height,
+    });
+    await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  } else {
+    const client = await page.context().newCDPSession(page);
+    await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  }
+
+  await page.setViewportSize(deviceConfig.viewport);
   await page.addInitScript(initScript);
   await page.goto('file://' + GAME_PATH + '?companion=test-trace');
   await page.waitForFunction(() => !!(window as any).__velvet, { timeout: 15_000 });
 
-  // Set up to a stable game state
   await page.evaluate(() => {
     const form = document.getElementById('setupForm') as HTMLFormElement;
     const suName = document.getElementById('suName') as HTMLInputElement;
@@ -26,10 +52,8 @@ async function captureFrameTrace(page: Page, viewport: { width: number; height: 
   });
   await page.waitForTimeout(2000);
   await page.evaluate((m) => { (window as any).__velvet.minutes = m; }, scene === 'night' ? 1320 : 600);
-  // let the sharpness governor settle so the trace reflects steady-state play
   await page.waitForTimeout(8000);
 
-  // Record canvas dimensions for diagnostics
   const canvasInfo = await page.evaluate(() => {
     const cv = document.getElementById('room') as HTMLCanvasElement;
     return {
@@ -42,18 +66,17 @@ async function captureFrameTrace(page: Page, viewport: { width: number; height: 
     };
   });
 
-  // Collect frame times for 3 seconds
   const trace = await page.evaluate(() => {
     return new Promise<number[]>((resolve) => {
       const times: number[] = [];
       let last = performance.now();
       let frames = 0;
-      const maxFrames = 180; // ~3 seconds at 60fps
+      const maxFrames = 180;
       const tick = () => {
         const now = performance.now();
         const dt = now - last;
         last = now;
-        if (frames > 5) times.push(dt); // skip first few warmup frames
+        if (frames > 5) times.push(dt);
         frames++;
         if (frames < maxFrames) {
           requestAnimationFrame(tick);
@@ -71,10 +94,13 @@ async function captureFrameTrace(page: Page, viewport: { width: number; height: 
   const p95 = trace.sort((a, b) => a - b)[Math.floor(trace.length * 0.95)];
   const fps = 1000 / avg;
 
-  const result = {
-    device: deviceName,
+  return {
+    device: deviceConfig.name,
     scene,
-    viewport,
+    emulated: true,
+    viewport: deviceConfig.viewport,
+    dpr: deviceConfig.device?.deviceScaleFactor ?? 1,
+    cpuThrottling: '4x',
     samples: trace.length,
     avgFrameMs: Math.round(avg * 100) / 100,
     minFrameMs: Math.round(min * 100) / 100,
@@ -83,27 +109,25 @@ async function captureFrameTrace(page: Page, viewport: { width: number; height: 
     avgFps: Math.round(fps * 10) / 10,
     canvas: canvasInfo,
   };
-
-  return result;
 }
 
-test.describe('Baseline frame-time traces', () => {
+test.describe('Baseline frame-time traces (emulated)', () => {
+  test.skip(() => test.info().project.name !== 'desktop', 'desktop-only — handles all devices internally');
   test.setTimeout(240_000);
 
-  test('desktop, iPhone 12, Pixel 8', async ({ page }) => {
-    const results: any[] = [];
+  test('desktop, iPhone 12 (emulated), Pixel 7 (emulated) — 4× CPU throttle', async ({ page }) => {
+    const results: Record<string, unknown>[] = [];
 
     for (const scene of ['day', 'night'] as const) {
-      results.push(await captureFrameTrace(page, { width: 1280, height: 800 }, 'desktop', scene));
-      results.push(await captureFrameTrace(page, { width: 390, height: 844 }, 'iphone-12', scene));
-      results.push(await captureFrameTrace(page, { width: 412, height: 915 }, 'pixel-8', scene));
+      for (const dev of EMULATED_DEVICES) {
+        results.push(await captureFrameTrace(page, dev, scene));
+      }
     }
 
     const dir = join(process.cwd(), 'e2e/velvet-house');
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'frame-time-traces.json'), JSON.stringify(results, null, 2));
 
-    // Verify traces were captured
     expect(results.length).toBe(6);
     for (const r of results) {
       expect(r.samples).toBeGreaterThan(100);

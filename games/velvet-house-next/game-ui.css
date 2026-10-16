@@ -1,0 +1,278 @@
+/* Velvet House game UI — drawer, dialogue, tray, discovery cards */
+
+/* Drawer */
+.vh-drawer {
+  position: absolute;
+  top: 0; right: 0;
+  width: 380px; height: 100%;
+  background: rgba(23,21,29,.92);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(255,255,255,.08);
+  display: flex; flex-direction: column;
+  z-index: 20;
+  font: 400 13px/1.5 Inter, system-ui, sans-serif;
+  color: #E9E4EC;
+}
+.vh-drawer[hidden] { display: none; }
+.vh-drawer-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.06);
+  flex-shrink: 0;
+}
+.vh-drawer-head strong { font-size: 15px; font-weight: 700; }
+.vh-drawer-close {
+  appearance: none; border: 0; background: none; color: #A9A1AE;
+  font-size: 22px; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+}
+.vh-drawer-close:hover { background: rgba(255,255,255,.08); color: #E9E4EC; }
+.vh-drawer-body { flex: 1; overflow-y: auto; padding: 12px; }
+.vh-drawer-body section { display: none; }
+.vh-drawer[data-open="shop"] [data-page="shop"],
+.vh-drawer[data-open="goals"] [data-page="goals"],
+.vh-drawer[data-open="do"] [data-page="do"],
+.vh-drawer[data-open="partner"] [data-page="partner"],
+.vh-drawer[data-open="you"] [data-page="you"],
+.vh-drawer[data-open="home"] [data-page="home"],
+.vh-drawer[data-open="log"] [data-page="log"] { display: block; }
+
+/* Dock */
+.vh-dock {
+  position: absolute;
+  right: 0; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 4px; border-radius: 14px 0 0 14px;
+  background: rgba(23,21,29,.82); backdrop-filter: blur(8px);
+  box-shadow: -4px 0 16px rgba(0,0,0,.2);
+  z-index: 19;
+}
+.vh-dock button {
+  appearance: none; border: 0; border-radius: 10px;
+  padding: 8px 12px; min-height: 36px;
+  font: 600 12px/1.2 Inter, system-ui, sans-serif;
+  color: #A9A1AE; background: transparent; cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+.vh-dock button:hover { background: rgba(255,255,255,.08); color: #E9E4EC; }
+.vh-dock button[aria-pressed="true"] { background: #F2EEE8; color: #241B25; }
+
+/* Shop */
+.vh-shop-tabs {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px;
+}
+.vh-shop-tabs button {
+  appearance: none; border: 0; border-radius: 8px;
+  padding: 6px 10px; font: 600 11px/1.2 Inter, system-ui, sans-serif;
+  color: #A9A1AE; background: rgba(255,255,255,.06); cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.vh-shop-tabs button:hover { background: rgba(255,255,255,.12); color: #E9E4EC; }
+.vh-shop-tabs button.vh-active { background: #E0A43A; color: #241B25; }
+.vh-shop-list { display: flex; flex-direction: column; gap: 8px; }
+.vh-shop-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px; border-radius: 12px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
+  transition: border-color .18s ease;
+}
+.vh-shop-card:hover { border-color: rgba(255,255,255,.14); }
+.vh-shop-card.vh-locked { opacity: .5; }
+.vh-shop-card.vh-owned { opacity: .4; }
+.vh-shop-card.vh-poor button[data-buy] { opacity: .5; }
+.vh-shop-icon { width: 44px; height: 44px; border-radius: 8px; background: rgba(255,255,255,.06); flex-shrink: 0; }
+.vh-shop-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.vh-shop-info strong { font-size: 13px; font-weight: 700; color: #F2EEE8; }
+.vh-shop-desc { font-size: 11px; color: #A9A1AE; }
+.vh-swatches { display: flex; gap: 4px; margin-top: 4px; }
+.vh-swatch { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,.15); }
+.vh-swatch:hover { transform: scale(1.15); }
+.vh-lock { font-size: 10px; color: #D0544A; }
+.vh-shop-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.vh-price { font: 700 13px/1 Inter, system-ui, sans-serif; color: #5BAE7C; }
+.vh-shop-actions button {
+  appearance: none; border: 0; border-radius: 8px;
+  padding: 6px 14px; font: 700 12px/1.2 Inter, system-ui, sans-serif;
+  background: #E0A43A; color: #241B25; cursor: pointer;
+  transition: background .15s ease, transform .12s ease;
+}
+.vh-shop-actions button:hover { background: #E8B547; }
+.vh-shop-actions button:active { transform: scale(.96); }
+.vh-shop-actions button:disabled { background: rgba(255,255,255,.1); color: #6B6570; cursor: default; }
+
+/* Goals */
+.vh-goals h4 { font: 700 14px/1.2 Inter, system-ui, sans-serif; margin: 0 0 8px; color: #F2EEE8; }
+.vh-checklist { list-style: none; padding: 0; margin: 0 0 16px; }
+.vh-checklist li { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; }
+.vh-check .vh-checklist li.vh-done { color: #5BAE7C; }
+.vh-check { width: 18px; text-align: center; flex-shrink: 0; }
+.vh-life-goal { border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px; }
+.vh-life-goal h4 { font: 700 13px/1.2 Inter, system-ui, sans-serif; margin: 0 0 8px; color: #F2EEE8; }
+.vh-life-goal ol { padding-left: 20px; margin: 0; }
+.vh-life-goal ol li { padding: 4px 0; font-size: 12px; }
+.vh-life-goal ol li.vh-done { color: #5BAE7C; }
+
+/* Do */
+.vh-do p { margin: 0 0 12px; color: #A9A1AE; }
+.vh-order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vh-order-btn {
+  appearance: none; border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px; padding: 12px; font: 600 13px/1.3 Inter, system-ui, sans-serif;
+  color: #E9E4EC; background: rgba(255,255,255,.04); cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.vh-order-btn:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
+.vh-order-btn:active { transform: scale(.97); }
+
+/* Partner */
+.vh-bond-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.vh-bond-bar span { font-size: 12px; color: #A9A1AE; }
+.vh-bond-bar .vh-bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+.vh-bond-bar .vh-bar i { display: block; height: 100%; border-radius: 3px; background: #D24A7A; transition: width .4s ease; }
+.vh-bond-bar strong { font: 700 14px/1 Inter, system-ui, sans-serif; color: #F2EEE8; }
+.vh-status { font-size: 13px; color: #A9A1AE; margin: 0 0 12px; }
+.vh-talk-btn {
+  appearance: none; border: 0; border-radius: 10px;
+  padding: 12px 20px; font: 700 14px/1.2 Inter, system-ui, sans-serif;
+  background: #D24A7A; color: #fff; cursor: pointer; width: 100%;
+  transition: background .15s ease, transform .12s ease;
+}
+.vh-talk-btn:hover { background: #E05A8A; }
+.vh-talk-btn:active { transform: scale(.97); }
+
+/* You */
+.vh-you h4 { font: 700 16px/1.2 Inter, system-ui, sans-serif; margin: 0 0 8px; color: #F2EEE8; }
+.vh-you p { margin: 4px 0; font-size: 13px; color: #A9A1AE; }
+
+/* Home */
+.vh-home-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.vh-home-row span { font-size: 13px; color: #A9A1AE; }
+.vh-home-row strong { font: 700 13px/1 Inter, system-ui, sans-serif; color: #F2EEE8; }
+.vh-home-row.vh-bill strong { color: #D0544A; }
+.vh-home-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.vh-home-actions button {
+  appearance: none; border: 1px solid rgba(255,255,255,.1); border-radius: 8px;
+  padding: 10px 16px; font: 600 13px/1.2 Inter, system-ui, sans-serif;
+  color: #E9E4EC; background: rgba(255,255,255,.04); cursor: pointer;
+  transition: background .15s ease;
+}
+.vh-home-actions button:hover { background: rgba(255,255,255,.1); }
+.vh-home-actions button:disabled { opacity: .4; cursor: default; }
+
+/* Log */
+.vh-log-list { list-style: none; padding: 0; margin: 0; }
+.vh-log-list li { padding: 6px 0; font-size: 12px; color: #A9A1AE; border-bottom: 1px solid rgba(255,255,255,.03); }
+
+/* Dialogue */
+.vh-dialogue {
+  position: absolute; inset: 0; z-index: 30;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0,0,0,.25);
+  padding: 20px;
+}
+.vh-dialogue[hidden] { display: none; }
+.vh-dialogue-box {
+  background: rgba(255,253,248,.96);
+  border-radius: 16px; padding: 20px 24px;
+  max-width: 560px; width: 100%;
+  box-shadow: 0 8px 32px rgba(0,0,0,.3);
+  color: #241B25;
+  font: 400 15px/1.5 Inter, system-ui, sans-serif;
+}
+.vh-dialogue-name {
+  font: 700 14px/1.2 Inter, system-ui, sans-serif;
+  color: #8A2D54; margin-bottom: 8px;
+}
+.vh-dialogue-text { min-height: 24px; margin-bottom: 8px; }
+.vh-dialogue-input { display: flex; gap: 8px; margin-top: 12px; }
+.vh-dialogue-input input {
+  flex: 1; border: 1px solid rgba(0,0,0,.12); border-radius: 10px;
+  padding: 10px 14px; font: 400 14px/1.4 Inter, system-ui, sans-serif;
+  color: #241B25; background: #fff; outline: none;
+}
+.vh-dialogue-input input:focus { border-color: #E0A43A; }
+.vh-dialogue-input button {
+  appearance: none; border: 0; border-radius: 10px;
+  padding: 10px 20px; font: 700 14px/1.2 Inter, system-ui, sans-serif;
+  background: #E0A43A; color: #241B25; cursor: pointer;
+  transition: background .15s ease;
+}
+.vh-dialogue-input button:hover { background: #E8B547; }
+.vh-dialogue-input button:disabled { opacity: .5; cursor: default; }
+.vh-dialogue-hint { text-align: center; font-size: 12px; color: rgba(36,27,37,.4); margin-top: 4px; }
+
+/* Tray */
+.vh-tray {
+  position: absolute; z-index: 25;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 6px; border-radius: 12px;
+  background: rgba(23,21,29,.92); backdrop-filter: blur(8px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.3);
+  transform: translate(-50%, -100%);
+}
+.vh-tray[hidden] { display: none; }
+.vh-tray button {
+  appearance: none; border: 0; border-radius: 8px;
+  padding: 8px 14px; font: 600 13px/1.2 Inter, system-ui, sans-serif;
+  color: #E9E4EC; background: transparent; cursor: pointer;
+  transition: background .15s ease; white-space: nowrap;
+}
+.vh-tray button:hover { background: rgba(255,255,255,.1); }
+.vh-tray button:active { transform: scale(.96); }
+
+/* Discovery card */
+.vh-dcard {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.5); padding: 20px;
+}
+.vh-dcard-inner {
+  background: rgba(255,253,248,.96); border-radius: 16px;
+  padding: 32px 28px; max-width: 420px; width: 100%;
+  text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.3);
+  color: #241B25; font: 400 14px/1.5 Inter, system-ui, sans-serif;
+}
+.vh-dcard-eyebrow {
+  font: 700 11px/1 Inter, system-ui, sans-serif;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: #E0A43A; margin-bottom: 12px;
+}
+.vh-dcard-inner h3 { font: 800 20px/1.2 Inter, system-ui, sans-serif; margin: 0 0 12px; }
+.vh-dcard-inner p { margin: 0 0 20px; color: #4A434B; }
+.vh-dcard-inner button {
+  appearance: none; border: 0; border-radius: 10px;
+  padding: 12px 28px; font: 700 14px/1.2 Inter, system-ui, sans-serif;
+  background: #241B25; color: #F2EEE8; cursor: pointer;
+  transition: background .15s ease, transform .12s ease;
+}
+.vh-dcard-inner button:hover { background: #3A3340; }
+.vh-dcard-inner button:active { transform: scale(.96); }
+
+/* Town sign */
+.vh-town-sign {
+  position: absolute; bottom: 16px; left: 16px;
+  padding: 6px 14px; border-radius: 999px;
+  background: rgba(23,21,29,.72); backdrop-filter: blur(6px);
+  color: #E9E4EC; font: 600 12px/1.2 Inter, system-ui, sans-serif;
+  pointer-events: none; z-index: 10;
+}
+
+/* Empty state */
+.vh-empty { color: #6B6570; font-size: 13px; text-align: center; padding: 20px; }
+
+/* Responsive: drawer becomes bottom sheet on phone */
+@media (max-width: 560px) {
+  .vh-drawer {
+    width: 100%; height: 60%; top: auto; bottom: 0;
+    border-left: 0; border-top: 1px solid rgba(255,255,255,.08);
+    border-radius: 16px 16px 0 0;
+  }
+  .vh-dock {
+    right: auto; left: 50%; top: auto; bottom: 0;
+    transform: translateX(-50%);
+    flex-direction: row; gap: 2px;
+    border-radius: 14px 14px 0 0;
+    max-width: calc(100% - 16px); overflow-x: auto;
+  }
+  .vh-dock button { padding: 8px 10px; font-size: 11px; }
+  .vh-shop-tabs button { padding: 6px 8px; font-size: 10px; }
+  .vh-order-grid { grid-template-columns: 1fr; }
+}

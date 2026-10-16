@@ -2,13 +2,18 @@
  * Quality-tier manager: auto-detects Low/Medium/High from frame times.
  * The player can override in settings. DPR steps down under load and
  * steps back up when headroom returns.
+ *
+ * Important: a steady 30 fps (e.g. iPhone Low Power Mode caps the display
+ * at 30 Hz) is NOT treated as a slow condition. Only irregular frame times
+ * or frames below the display's own refresh rate trigger a downgrade.
  */
 
 export type QualityTier = 'low' | 'medium' | 'high';
 
 const FRAME_TIME_WINDOW = 60;
-const LOW_THRESHOLD_MS = 33;   // < 30 fps → low
+const LOW_THRESHOLD_MS = 33;   // < 30 fps → low (irregular or genuinely slow)
 const HIGH_THRESHOLD_MS = 20;  // > 50 fps → high
+const STEADY_TOLERANCE = 0.4;  // frame time jitter fraction for "steady" classification
 
 class QualityManager {
   private tier: QualityTier = 'high';
@@ -26,7 +31,18 @@ class QualityManager {
 
     const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
 
-    if (avg > LOW_THRESHOLD_MS) {
+    // Determine whether the frame times are steady (low jitter) or irregular.
+    // A display capped at 30 Hz produces consistent ~33.3 ms frames — that's
+    // steady and should NOT trigger a downgrade.
+    const variance = this.frameTimes.reduce((sum, t) => sum + (t - avg) ** 2, 0) / this.frameTimes.length;
+    const stddev = Math.sqrt(variance);
+    const isIrregular = stddev > avg * STEADY_TOLERANCE;
+
+    // "Genuinely slow" = average is well below 30 fps AND irregular
+    // (steady 33 ms is fine — it's a 30 Hz display, not a performance problem)
+    const isSlow = avg > LOW_THRESHOLD_MS && isIrregular;
+
+    if (isSlow) {
       this.lowFrames++;
       this.highFrames = 0;
     } else if (avg < HIGH_THRESHOLD_MS) {
@@ -37,7 +53,7 @@ class QualityManager {
       this.highFrames = 0;
     }
 
-    // Auto-adjust DPR: step down after sustained low frames, step up after sustained high
+    // Auto-adjust DPR: step down after sustained slow frames, step up after sustained high
     if (this.lowFrames > 30 && this.dprStep > 1) {
       this.dprStep--;
       this.lowFrames = 0;
@@ -48,7 +64,7 @@ class QualityManager {
 
     // Auto-detect tier (only if no player override)
     if (!this.playerOverride) {
-      if (avg > LOW_THRESHOLD_MS) this.tier = 'low';
+      if (isSlow) this.tier = 'low';
       else if (avg < HIGH_THRESHOLD_MS) this.tier = 'high';
       else this.tier = 'medium';
     }

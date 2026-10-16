@@ -112,6 +112,12 @@ export function isVidSearchMessage(data: unknown): data is VidSearchMessage {
   return m.type === 'velvet:vidSearch' && typeof m.query === 'string';
 }
 
+export function isVidResultsMessage(data: unknown): data is VidResultsMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:vidResults' && typeof m.seq === 'number';
+}
+
 export function isRestartedMessage(data: unknown): data is RestartedMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;

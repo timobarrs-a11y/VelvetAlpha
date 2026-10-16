@@ -12,6 +12,7 @@ const initScript = readFileSync(join(process.cwd(), 'e2e/velvet-house/determinis
 // Captures all 7 bridge message types including companionCreated.
 
 test.describe('Bridge message contract — full recording', () => {
+  test.skip(() => test.info().project.name !== 'desktop', 'desktop-only');
   test.setTimeout(60_000);
 
   test('capture all 7 message types', async ({ page }) => {

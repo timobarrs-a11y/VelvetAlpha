@@ -32,6 +32,12 @@ export interface HouseArt {
   render(frame: HouseFrame): void;
   /** Restores paint, wallpaper, floors, wall decor, yard and household details from an original save. */
   applySave(save: unknown): void;
+  /** Sets the paint color for a floor level. */
+  applyPaint(level: number, color: string): void;
+  /** Sets the wallpaper pattern for a floor level. */
+  applyWallpaper(level: number, pattern: string): void;
+  /** Sets the floor type for a floor level. */
+  applyFloor(level: number, floor: string): void;
   TYPES: Record<string, unknown>;
   WTYPES: Record<string, unknown>;
 }

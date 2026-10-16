@@ -57,15 +57,18 @@ async function profile(page: Page, viewport: { width: number; height: number }, 
   }));
 }
 
-test('per-step render cost', async ({ page }) => {
+test.describe('Profile — per-step render cost', () => {
+  test.skip(() => test.info().project.name !== 'desktop', 'desktop-only');
   test.setTimeout(120_000);
-  const game = instrument(readFileSync(GAME_PATH, 'utf-8'));
-  await page.route('https://localhost/velvet-house/index.html**', (r) => r.fulfill({ body: game, contentType: 'text/html' }));
-  const results: Record<string, unknown>[] = [];
-  for (const [vp, name] of [[{ width: 1280, height: 800 }, 'desktop'], [{ width: 390, height: 844 }, 'iphone-12']] as const) {
-    results.push({ device: name, scene: 'main day', ...(await profile(page, vp, name, 1, 600)) });
-    results.push({ device: name, scene: 'main night', ...(await profile(page, vp, name, 1, 1320)) });
-  }
-  writeFileSync(join(process.cwd(), 'e2e/velvet-house/profile-results.json'), JSON.stringify(results, null, 2));
-  console.log(JSON.stringify(results, null, 1));
+  test('per-step render cost', async ({ page }) => {
+    const game = instrument(readFileSync(GAME_PATH, 'utf-8'));
+    await page.route('https://localhost/velvet-house/index.html**', (r) => r.fulfill({ body: game, contentType: 'text/html' }));
+    const results: Record<string, unknown>[] = [];
+    for (const [vp, name] of [[{ width: 1280, height: 800 }, 'desktop'], [{ width: 390, height: 844 }, 'iphone-12']] as const) {
+      results.push({ device: name, scene: 'main day', ...(await profile(page, vp, name, 1, 600)) });
+      results.push({ device: name, scene: 'main night', ...(await profile(page, vp, name, 1, 1320)) });
+    }
+    writeFileSync(join(process.cwd(), 'e2e/velvet-house/profile-results.json'), JSON.stringify(results, null, 2));
+    console.log(JSON.stringify(results, null, 1));
+  });
 });

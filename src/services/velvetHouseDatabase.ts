@@ -30,7 +30,7 @@ export function compareSaveProgress(
  * Strip v2-only fields to produce a v1-compatible save for the save_data column.
  * This keeps save_data always holding a valid v1 save so we can roll back.
  */
-function toV1Compatible(saveData: Record<string, unknown>): Record<string, unknown> {
+export function toV1Compatible(saveData: Record<string, unknown>): Record<string, unknown> {
   const v1: Record<string, unknown> = {};
   // Copy all v1-known fields, skip v2-only extensions
   const V2_ONLY_KEYS = new Set(['v', 'rngSeed', 'player', 'partner', 'ext']);
@@ -39,20 +39,39 @@ function toV1Compatible(saveData: Record<string, unknown>): Record<string, unkno
       v1[key] = value;
     }
   }
-  // Extract grouped player/partner back to v1 flat fields if present
+  // The legacy game requires v === 1 to load a save
+  v1.v = 1;
+
+  // Extract grouped player/partner back to v1 flat fields if present.
+  // Merge needs, skills and mood into the existing jordan/maya objects
+  // instead of replacing them with only the needs object.
   const player = saveData.player as Record<string, unknown> | undefined;
   const partner = saveData.partner as Record<string, unknown> | undefined;
   if (player) {
     if (player.name) v1.simName = player.name;
     if (player.look) v1.look = player.look;
-    if (player.needs) v1.jordan = player.needs;
+    if (player.needs || player.skills || player.mood) {
+      const existing = (v1.jordan && typeof v1.jordan === 'object' ? v1.jordan : {}) as Record<string, unknown>;
+      v1.jordan = { ...existing, ...filterUndef({ needs: player.needs, skills: player.skills, mood: player.mood }) };
+    }
   }
   if (partner) {
     if (partner.name) v1.partnerName = partner.name;
     if (partner.look) v1.mayaLook = partner.look;
-    if (partner.needs) v1.maya = partner.needs;
+    if (partner.needs || partner.skills || partner.mood) {
+      const existing = (v1.maya && typeof v1.maya === 'object' ? v1.maya : {}) as Record<string, unknown>;
+      v1.maya = { ...existing, ...filterUndef({ needs: partner.needs, skills: partner.skills, mood: partner.mood }) };
+    }
   }
   return v1;
+}
+
+function filterUndef(obj: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
 }
 
 export async function loadVelvetHouseSave(companionId: string): Promise<Record<string, unknown> | null> {

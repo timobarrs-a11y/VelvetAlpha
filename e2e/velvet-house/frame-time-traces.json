@@ -2,40 +2,46 @@
   {
     "device": "desktop",
     "scene": "day",
+    "emulated": true,
     "viewport": {
       "width": 1280,
       "height": 800
     },
+    "dpr": 1,
+    "cpuThrottling": "4x",
     "samples": 174,
-    "avgFrameMs": 17.43,
-    "minFrameMs": 6.6,
-    "maxFrameMs": 85.4,
-    "p95FrameMs": 18.9,
-    "avgFps": 57.4,
+    "avgFrameMs": 45.39,
+    "minFrameMs": 8,
+    "maxFrameMs": 178.5,
+    "p95FrameMs": 74.3,
+    "avgFps": 22,
     "canvas": {
       "dpr": 1,
       "clientWidth": 814,
       "clientHeight": 560,
-      "canvasWidth": 653,
-      "canvasHeight": 449,
-      "canvasPixels": 293197
+      "canvasWidth": 640,
+      "canvasHeight": 440,
+      "canvasPixels": 281600
     }
   },
   {
     "device": "iphone-12",
     "scene": "day",
+    "emulated": true,
     "viewport": {
       "width": 390,
-      "height": 844
+      "height": 664
     },
+    "dpr": 3,
+    "cpuThrottling": "4x",
     "samples": 174,
-    "avgFrameMs": 16.67,
-    "minFrameMs": 11.6,
-    "maxFrameMs": 21.6,
-    "p95FrameMs": 17.9,
-    "avgFps": 60,
+    "avgFrameMs": 40.27,
+    "minFrameMs": 17,
+    "maxFrameMs": 99.5,
+    "p95FrameMs": 69.2,
+    "avgFps": 24.8,
     "canvas": {
-      "dpr": 1,
+      "dpr": 3,
       "clientWidth": 390,
       "clientHeight": 268,
       "canvasWidth": 640,
@@ -44,20 +50,23 @@
     }
   },
   {
-    "device": "pixel-8",
+    "device": "pixel-7",
     "scene": "day",
+    "emulated": true,
     "viewport": {
       "width": 412,
-      "height": 915
+      "height": 839
     },
+    "dpr": 2.625,
+    "cpuThrottling": "4x",
     "samples": 174,
-    "avgFrameMs": 16.66,
-    "minFrameMs": 12.5,
-    "maxFrameMs": 21.3,
-    "p95FrameMs": 17.7,
-    "avgFps": 60,
+    "avgFrameMs": 37.73,
+    "minFrameMs": 20.1,
+    "maxFrameMs": 70.5,
+    "p95FrameMs": 63.1,
+    "avgFps": 26.5,
     "canvas": {
-      "dpr": 1,
+      "dpr": 2.625,
       "clientWidth": 412,
       "clientHeight": 283,
       "canvasWidth": 640,
@@ -68,20 +77,23 @@
   {
     "device": "desktop",
     "scene": "night",
+    "emulated": true,
     "viewport": {
       "width": 1280,
       "height": 800
     },
+    "dpr": 1,
+    "cpuThrottling": "4x",
     "samples": 174,
-    "avgFrameMs": 17.81,
-    "minFrameMs": 7.1,
-    "maxFrameMs": 60.6,
-    "p95FrameMs": 31.8,
-    "avgFps": 56.1,
+    "avgFrameMs": 49.34,
+    "minFrameMs": 23.5,
+    "maxFrameMs": 81.2,
+    "p95FrameMs": 72.1,
+    "avgFps": 20.3,
     "canvas": {
-      "dpr": 1,
-      "clientWidth": 814,
-      "clientHeight": 560,
+      "dpr": 2.625,
+      "clientWidth": 412,
+      "clientHeight": 283,
       "canvasWidth": 640,
       "canvasHeight": 440,
       "canvasPixels": 281600
@@ -90,18 +102,21 @@
   {
     "device": "iphone-12",
     "scene": "night",
+    "emulated": true,
     "viewport": {
       "width": 390,
-      "height": 844
+      "height": 664
     },
+    "dpr": 3,
+    "cpuThrottling": "4x",
     "samples": 174,
-    "avgFrameMs": 16.76,
-    "minFrameMs": 7.2,
-    "maxFrameMs": 43.3,
-    "p95FrameMs": 20.7,
-    "avgFps": 59.7,
+    "avgFrameMs": 55.62,
+    "minFrameMs": 28.7,
+    "maxFrameMs": 99,
+    "p95FrameMs": 86.1,
+    "avgFps": 18,
     "canvas": {
-      "dpr": 1,
+      "dpr": 3,
       "clientWidth": 390,
       "clientHeight": 268,
       "canvasWidth": 640,
@@ -110,20 +125,23 @@
     }
   },
   {
-    "device": "pixel-8",
+    "device": "pixel-7",
     "scene": "night",
+    "emulated": true,
     "viewport": {
       "width": 412,
-      "height": 915
+      "height": 839
     },
+    "dpr": 2.625,
+    "cpuThrottling": "4x",
     "samples": 174,
-    "avgFrameMs": 16.76,
-    "minFrameMs": 8.2,
-    "maxFrameMs": 39,
-    "p95FrameMs": 18.5,
-    "avgFps": 59.6,
+    "avgFrameMs": 53.18,
+    "minFrameMs": 19.3,
+    "maxFrameMs": 97.8,
+    "p95FrameMs": 81.6,
+    "avgFps": 18.8,
     "canvas": {
-      "dpr": 1,
+      "dpr": 2.625,
       "clientWidth": 412,
       "clientHeight": 283,
       "canvasWidth": 640,

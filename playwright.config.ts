@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e/velvet-house',
@@ -26,11 +26,19 @@ export default defineConfig({
     },
     {
       name: 'iphone-12',
-      use: { viewport: { width: 390, height: 844 } },
+      use: {
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      },
     },
     {
       name: 'pixel-8',
-      use: { viewport: { width: 412, height: 915 } },
+      use: {
+        viewport: { width: 412, height: 915 },
+        isMobile: true,
+        hasTouch: true,
+      },
     },
   ],
 });

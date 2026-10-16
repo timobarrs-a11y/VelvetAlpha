@@ -65,6 +65,7 @@ async function capture(page: Page, name: string) {
 // ─── Desktop golden screenshots ──────────────────────────────────────
 
 test.describe('Golden screenshots — desktop', () => {
+  test.skip(() => test.info().project.name !== 'desktop', 'desktop-only golden');
   test.setTimeout(120_000);
 
   test('main floor — day', async ({ page }) => {
@@ -170,6 +171,7 @@ test.describe('Golden screenshots — desktop', () => {
 // ─── Phone screenshots (iPhone 12) ───────────────────────────────────
 
 test.describe('Golden screenshots — iPhone 12', () => {
+  test.skip(() => test.info().project.name !== 'iphone-12', 'iphone-12-only golden');
   test.setTimeout(120_000);
 
   test('main floor — day', async ({ page }) => {
@@ -203,6 +205,7 @@ test.describe('Golden screenshots — iPhone 12', () => {
 // ─── Phone screenshots (Pixel 8) ─────────────────────────────────────
 
 test.describe('Golden screenshots — Pixel 8', () => {
+  test.skip(() => test.info().project.name !== 'pixel-8', 'pixel-8-only golden');
   test.setTimeout(120_000);
 
   test('main floor — day', async ({ page }) => {
@@ -227,6 +230,7 @@ test.describe('Golden screenshots — Pixel 8', () => {
 // ─── Save fixture capture ────────────────────────────────────────────
 
 test.describe('Save fixtures', () => {
+  test.skip(() => test.info().project.name !== 'desktop', 'desktop-only fixture capture');
   test.setTimeout(120_000);
 
   test('capture save at key progression points', async ({ page }) => {
@@ -295,15 +299,23 @@ test.describe('Save fixtures', () => {
     await page.waitForTimeout(300);
     const fullMemory = await snap('full-memory');
 
-    // Write all fixtures to disk
+    // Write all fixtures to disk — only if they don't already exist.
+    // Set FORCE_FIXTURES=1 to regenerate. This prevents drift from
+    // nondeterministic timing between test runs.
     const fixtures = [
       day1, postMoveIn, day7, withPets, postRain, secondHouse, fullMemory,
     ];
-    const { writeFileSync, mkdirSync } = await import('node:fs');
+    const { writeFileSync, mkdirSync, existsSync } = await import('node:fs');
     const dir = join(process.cwd(), 'e2e/velvet-house/fixtures');
     mkdirSync(dir, { recursive: true });
+    const force = !!process.env.FORCE_FIXTURES;
+    let written = 0;
     for (const f of fixtures) {
-      writeFileSync(join(dir, `${f.name}.json`), JSON.stringify(f.save, null, 2));
+      const fp = join(dir, `${f.name}.json`);
+      if (force || !existsSync(fp)) {
+        writeFileSync(fp, JSON.stringify(f.save, null, 2));
+        written++;
+      }
     }
     expect(fixtures.length).toBe(7);
   });
@@ -312,6 +324,7 @@ test.describe('Save fixtures', () => {
 // ─── Bridge message contract recording ───────────────────────────────
 
 test.describe('Bridge message contract', () => {
+  test.skip(() => test.info().project.name !== 'desktop', 'desktop-only bridge contract');
   test('record all messages the game sends and receives', async ({ page }) => {
     // Intercept the HTML and inject a bridge logger before the game script runs.
     // The game's postToParent checks `window.parent !== window` and skips

@@ -1156,5 +1156,9 @@ export function createHouseArt(ctx0) {
     ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
   }
 
-  return { render, applySave, TYPES, WTYPES };
+  function applyPaint(level, color) { if (LOOKS[level]) LOOKS[level].paint = color; }
+  function applyWallpaper(level, pattern) { if (LOOKS[level]) LOOKS[level].paper = pattern; }
+  function applyFloor(level, floor) { if (LOOKS[level]) LOOKS[level].floor = floor; }
+
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, TYPES, WTYPES };
 }

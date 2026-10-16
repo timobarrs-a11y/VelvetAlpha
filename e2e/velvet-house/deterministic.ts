@@ -39,7 +39,10 @@
   };
 
   Object.defineProperty(performance, 'now', { value: () => perfNow, writable: true });
-  Object.defineProperty(Date, 'now', { value: () => 1700000000000 + perfNow, writable: true });
+  // Freeze Date.now to a fixed value — do NOT advance it with perfNow,
+  // otherwise the number of RAF ticks before game boot varies between runs,
+  // producing different Date.now()-based RNG seeds and diverging fixtures.
+  Object.defineProperty(Date, 'now', { value: () => 1700000000000, writable: true });
 
   // Prevent localStorage bleed between test scenarios
   window.__clearVelvetSaves = () => {
