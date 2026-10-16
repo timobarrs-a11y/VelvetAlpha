@@ -1,13 +1,13 @@
-import { RNG } from './state/rng';
 import { migrateSave } from './state/saveMigration';
 import { postToParent, isProfileMessage, isValidOrigin } from './bridge/protocol';
 import { INITIAL_OBJS, type ObjectInstance } from './state/objects';
-import { initYard } from './state/yard';
 import { DAYS, weekday, clockText, season } from './state/time';
 import { LEVEL_NAMES } from './state/house';
-import { Projection, VIEW_W, VIEW_H } from './engine/projection';
-import { renderScene } from './engine/scene';
+import { createHouseArt, type WallMode } from './art/houseArt.js';
 import { startLoop, advanceClock } from './engine/loop';
+
+const VIEW_W = 640;
+const VIEW_H = 440;
 
 const VELVET_COMPANION_ID = (() => {
   try {
@@ -19,32 +19,37 @@ const VELVET_COMPANION_ID = (() => {
 
 const SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
 const SPEEDS = [1, 3, 10];
+const WALL_MODES: { mode: WallMode; label: string }[] = [
+  { mode: 'cut', label: 'Cutaway' },
+  { mode: 'up', label: 'Walls up' },
+  { mode: 'down', label: 'Walls down' },
+];
 
 interface World {
   day: number;
   minutes: number;
   objs: ObjectInstance[];
-  rng: RNG;
+  save: unknown;
 }
 
 function loadWorld(): World {
-  let seed = Date.now() >>> 0;
   let day = 1;
   let minutes = 6 * 60 + 20;
   let objs: ObjectInstance[] = INITIAL_OBJS.map((o) => ({ ...o }));
+  let save: unknown = null;
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    const save = raw ? migrateSave(JSON.parse(raw)) : null;
-    if (save) {
-      seed = save.rngSeed;
-      if (typeof save.day === 'number') day = save.day;
-      if (typeof save.minutes === 'number') minutes = save.minutes;
-      if (Array.isArray(save.objs) && save.objs.length) objs = save.objs as unknown as ObjectInstance[];
+    const s = raw ? migrateSave(JSON.parse(raw)) : null;
+    if (s) {
+      save = s;
+      if (typeof s.day === 'number') day = s.day;
+      if (typeof s.minutes === 'number') minutes = s.minutes;
+      if (Array.isArray(s.objs) && s.objs.length) objs = s.objs as unknown as ObjectInstance[];
     }
   } catch {
     // unreadable save: start fresh
   }
-  return { day, minutes, objs, rng: new RNG(seed) };
+  return { day, minutes, objs, save };
 }
 
 function boot(): void {
@@ -64,7 +69,7 @@ function boot(): void {
         </div>
         <div class="vh-tools">
           <button data-act="rotate" title="Turn the house (R)" aria-label="Turn the house">&#8635;</button>
-          <button data-act="walls" title="Walls up or down (W)" aria-pressed="false">Walls</button>
+          <button data-act="walls" title="Change how walls show (W)">Cutaway</button>
           <button data-act="speed" title="Game speed">1x</button>
           <button data-act="pause" title="Pause (Space)" aria-pressed="false">Pause</button>
         </div>
@@ -81,15 +86,23 @@ function boot(): void {
   const btn = (act: string) => app.querySelector<HTMLButtonElement>(`[data-act="${act}"]`)!;
 
   const world = loadWorld();
-  const yard = initYard(world.rng);
-  const proj = new Projection(0);
-  const view = { level: 1, wallsUp: false, speedIdx: 0, paused: false, t: 0 };
+  const art = createHouseArt(ctx);
+  art.applySave(world.save);
+  const savedMode = (world.save as { wallMode?: string } | null)?.wallMode;
+  const view = {
+    level: 1,
+    rot: 0,
+    wallIdx: Math.max(0, WALL_MODES.findIndex((w) => w.mode === savedMode)),
+    speedIdx: 0,
+    paused: false,
+    t: 0,
+  };
 
   const fit = (): void => {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     const box = canvas.getBoundingClientRect();
     const w = Math.max(1, Math.round(box.width * ratio));
-    const h = Math.max(1, Math.round(box.height * ratio));
+    const h = Math.max(1, Math.round((w * VIEW_H) / VIEW_W));
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
@@ -103,8 +116,7 @@ function boot(): void {
     app.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((b) => {
       b.setAttribute('aria-selected', String(Number(b.dataset.level) === view.level));
     });
-    btn('walls').setAttribute('aria-pressed', String(view.wallsUp));
-    btn('walls').textContent = view.wallsUp ? 'Walls up' : 'Walls down';
+    btn('walls').textContent = WALL_MODES[view.wallIdx].label;
     btn('speed').textContent = `${SPEEDS[view.speedIdx]}x`;
     btn('pause').setAttribute('aria-pressed', String(view.paused));
     btn('pause').textContent = view.paused ? 'Play' : 'Pause';
@@ -114,9 +126,11 @@ function boot(): void {
     view.level = lv;
     syncControls();
   };
-  const rotate = (): void => proj.setRotation(proj.rot + 1);
-  const toggleWalls = (): void => {
-    view.wallsUp = !view.wallsUp;
+  const rotate = (): void => {
+    view.rot = (view.rot + 1) % 4;
+  };
+  const cycleWalls = (): void => {
+    view.wallIdx = (view.wallIdx + 1) % WALL_MODES.length;
     syncControls();
   };
   const togglePause = (): void => {
@@ -128,7 +142,7 @@ function boot(): void {
     b.addEventListener('click', () => setLevel(Number(b.dataset.level)));
   });
   btn('rotate').addEventListener('click', rotate);
-  btn('walls').addEventListener('click', toggleWalls);
+  btn('walls').addEventListener('click', cycleWalls);
   btn('pause').addEventListener('click', togglePause);
   btn('speed').addEventListener('click', () => {
     view.speedIdx = (view.speedIdx + 1) % SPEEDS.length;
@@ -138,7 +152,7 @@ function boot(): void {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     if (e.key >= '1' && e.key <= '4') setLevel(Number(e.key) - 1);
     else if (e.key === 'r' || e.key === 'R') rotate();
-    else if (e.key === 'w' || e.key === 'W') toggleWalls();
+    else if (e.key === 'w' || e.key === 'W') cycleWalls();
     else if (e.key === ' ') {
       e.preventDefault();
       togglePause();
@@ -150,14 +164,15 @@ function boot(): void {
   startLoop((dt) => {
     view.t += dt;
     if (!view.paused) Object.assign(world, advanceClock(world.day, world.minutes, dt, SPEEDS[view.speedIdx]));
-    renderScene(ctx, proj, {
+    art.render({
       level: view.level,
-      day: world.day,
+      rot: view.rot,
       minutes: world.minutes,
-      objs: world.objs,
-      yardTiles: yard.tiles,
-      wallsUp: view.wallsUp,
+      day: world.day,
       t: view.t,
+      dt,
+      objs: world.objs,
+      wallMode: WALL_MODES[view.wallIdx].mode,
     });
     hudTimer -= dt;
     if (hudTimer <= 0) {
