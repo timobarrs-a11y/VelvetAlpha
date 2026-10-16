@@ -259,6 +259,22 @@ body{margin:0;overflow:hidden}
 .screen{position:relative;flex:1;min-height:0;display:grid;place-items:center;container-type:size;overflow:hidden}
 .screen > .townsign{top:auto;bottom:10px}
 .drawer #h-shop,.drawer #h-goals,.drawer #h-maya,.drawer #h-log{display:none}
+.tracker{position:absolute;top:10px;right:10px;z-index:3;display:grid;gap:5px;width:min(260px,40%);text-align:left;font:inherit;color:var(--ink);background:color-mix(in srgb,var(--surface) 90%,transparent);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;padding:9px 12px 10px;box-shadow:0 6px 18px rgba(0,0,0,.08);cursor:pointer;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.tracker:hover{border-color:color-mix(in srgb,var(--accent) 40%,var(--line));border-left-color:var(--accent)}
+.tk-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.tk-text{font-size:13.5px;font-weight:600;line-height:1.3}
+.tk-bar{height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+.tk-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.tracker.in{animation:tkIn .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes tkIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.tracker.done{border-left-color:var(--good);animation:tkDone .6s cubic-bezier(.2,.8,.2,1)}
+.tracker.done .tk-eyebrow{color:var(--good)}
+.tracker.done .tk-text::before{content:'\2713  ';color:var(--good)}
+.tracker.done .tk-bar i{background:var(--good)}
+@keyframes tkDone{0%{transform:scale(1)}35%{transform:scale(1.05)}100%{transform:scale(1)}}
+.screen > .hud{right:calc(min(260px,40%) + 20px)}
+@media (max-width:760px){.screen > .hud{right:10px}.tracker{top:auto;bottom:10px;right:8px;width:auto;max-width:52%;padding:6px 10px 7px;gap:3px}.tk-text{font-size:12px}.tk-eyebrow{font-size:9.5px}.screen > .townsign{max-width:42%}}
+@media (prefers-reduced-motion:reduce){.tracker.in,.tracker.done{animation:none}.tk-bar i{transition:none}}
 .stage{border-radius:0;width:min(100cqw,calc(100cqh * 640 / 440))}
 .arrangehint{padding-top:0}
 .dialog,.recap{bottom:14px}
@@ -324,6 +340,7 @@ body{margin:0;overflow:hidden}
   <div class="bench">
     <div class="stagecol">
       <div class="screen">
+        <button type="button" class="tracker" id="tracker" aria-label="Current goal. Open goals" hidden><span class="tk-eyebrow" id="tkEyebrow"></span><span class="tk-text" id="tkText"></span><span class="tk-bar"><i id="tkBar"></i></span></button>
         <div class="townsign" id="townSign" aria-label="Town"><b id="townText">Honeysuckle Hollow</b></div>
         <div class="hud">
           <span class="chip" id="clock">Fri · 6:20 AM</span>
@@ -4696,7 +4713,7 @@ ${memoryBrief()}` : ''}`);
     else { if (!typingDone && !chat.busy) { typingDone = true; srLine.textContent = target; } if (maya.thinking) lineEl.textContent = '.'.repeat(1 + Math.floor(performance.now() / 350) % 3); else if (lineEl.textContent !== target) lineEl.textContent = target; maya.speaking = false; }
     render();
     placeVideo();
-    uiTimer -= dt; if (uiTimer <= 0) { refreshUI(); uiTimer = 0.25; }
+    uiTimer -= dt; if (uiTimer <= 0) { refreshUI(); renderTracker(); uiTimer = 0.25; }
     requestAnimationFrame(frame);
   }
   const loaded = loadGame();
@@ -4723,6 +4740,34 @@ ${memoryBrief()}` : ''}`);
   document.querySelectorAll('#dock [data-open]').forEach(b => b.addEventListener('click', () => openPage(b.dataset.open)));
   $('drawerClose').addEventListener('click', () => openPage(''));
   { let first = null; try { first = localStorage.getItem('velvet-drawer'); } catch (e) {} if (first === null) first = matchMedia('(max-width:760px)').matches ? '' : 'goals'; openPage(first); }
+  let trackKey = '', trackHold = 0;
+  function currentObjective() {
+    if (!setupDone) return null;
+    if (!settleDone) {
+      const list = SETTLE.filter(g => g.id !== 'unpack'), next = list.find(g => !flags.settleSeen.includes(g.id));
+      if (next) return { id: 's:' + next.id, eyebrow: 'Moving in', text: P(next.text), n: list.filter(g => flags.settleSeen.includes(g.id)).length, of: list.length };
+    }
+    if (!lifeGoal) return { id: 'pick', eyebrow: 'Next up', text: 'Pick a life goal', n: 0, of: 0 };
+    const tr = LIFE[lifeGoal], st = tr.steps[flags.lifeStep];
+    return st ? { id: 'l:' + lifeGoal + ':' + flags.lifeStep, eyebrow: tr.name, text: P(st.text), n: flags.lifeStep, of: tr.steps.length } : null;
+  }
+  function renderTracker() {   // runs with the UI refresh; a finished goal gets a check and a beat before the next one slides in
+    if (performance.now() < trackHold) return;
+    const el = $('tracker'), o = currentObjective(), key = o ? `${o.id}|${o.text}|${o.n}` : '';
+    if (key === trackKey) return;
+    const prevId = trackKey.split('|')[0], finished = !!prevId && (!o || o.id !== prevId) && !el.hidden;
+    trackKey = key;
+    if (finished) {
+      $('tkEyebrow').textContent = 'Done'; $('tkBar').style.width = o && o.of ? `${Math.round(o.n / o.of * 100)}%` : '100%';
+      el.classList.remove('in', 'done'); void el.offsetWidth; el.classList.add('done');
+      trackHold = performance.now() + 1700; trackKey = ''; return;
+    }
+    el.classList.remove('done'); el.hidden = !o; if (!o) return;
+    $('tkEyebrow').textContent = o.eyebrow + (o.of ? ` · ${o.n}/${o.of}` : ''); $('tkText').textContent = o.text;
+    $('tkBar').parentElement.hidden = !o.of; $('tkBar').style.width = o.of ? `${Math.round(o.n / o.of * 100)}%` : '0';
+    el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+  }
+  $('tracker').addEventListener('click', () => { if (drawerEl.hidden || drawerEl.dataset.open !== 'goals') openPage('goals'); });
   setWallMode(wallMode);
   $('autoSel').value = autonomy; $('capSel').value = String(mayaCap);
   $('autoSel').addEventListener('change', (e) => { autonomy = e.target.value; if (autonomy !== 'ask') { if (proposal && autonomy === 'free') startPlan(proposal); proposal = null; } if (autonomy === 'off') mayaQueue.length = 0; log(autonomy === 'free' ? 'Maya can change things around the house on her own.' : autonomy === 'ask' ? 'Maya will ask before she changes anything.' : 'Maya will comment on changes but leave the house alone.'); renderMayaActs(); saveGame(); });
