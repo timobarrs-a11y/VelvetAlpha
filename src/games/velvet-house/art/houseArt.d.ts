@@ -39,6 +39,7 @@ export interface HouseArt {
   applyWallpaper(level: number, pattern: string): void;
   /** Sets the floor type for a floor level. */
   applyFloor(level: number, floor: string): void;
+  toggleObjectLight(id: string): boolean;
   TYPES: Record<string, unknown>;
   WTYPES: Record<string, unknown>;
 }

@@ -2,6 +2,7 @@
 // Ported verbatim from the original Velvet House renderer. Live game state is copied in by `render()` each frame.
 export function createHouseArt(ctx0, opts = {}) {
   let ctx = ctx0;
+  const objectLights = new Map();
   const W = 640, H = 440;
   const cam = { z: 1, x: W / 2, y: H / 2 };
   let minutes = 380, day = 1, viewLevel = 1, animT = 0;
@@ -867,7 +868,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function activeLights(level) {
     const out = [];
     WALL_LIGHTS.forEach((L, i) => { if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const s = ease('w' + i, wantLight(level, roomFor(L.room), L.night, L.amb)); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r, s, col: L.col }); });
-    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const s = ease(o.id, wantLight(level, roomName(level, x, y))); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2]], pool: [x, y, 0], r: lt.r, s, col: lt.col }); });
+    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2]], pool: [x, y, 0], r: lt.r, s, col: lt.col }); });
     return out;
   }
   function drawWallLights(level) {
@@ -1174,6 +1175,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function applyPaint(level, color) { if (LOOKS[level]) LOOKS[level].paint = color; }
   function applyWallpaper(level, pattern) { if (LOOKS[level]) LOOKS[level].paper = pattern; }
   function applyFloor(level, floor) { if (LOOKS[level]) LOOKS[level].floor = floor; }
+  function toggleObjectLight(id) { const next = objectLights.get(id) !== true; objectLights.set(id, next); return next; }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, TYPES, WTYPES };
 }

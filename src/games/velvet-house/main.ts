@@ -486,7 +486,9 @@ function boot(): void {
 
   function showObjectActions(obj: ObjectInstance, x: number, y: number): void {
     const spots = TYPES[obj.type]?.spots;
+    const isLight = Boolean(TYPES[obj.type]?.light);
     const acts: TrayAction[] = [];
+    if (isLight) acts.push({ act: 'toggleLight', label: 'Turn light on/off', icon: '' });
     if (spots) {
       const tags = Object.values(spots).map(s => s.tag);
       const seen = new Set<string>();
@@ -519,7 +521,12 @@ function boot(): void {
     return labels[tag] ?? null;
   }
 
-  function handleObjectAction(_obj: ObjectInstance, tag: string): void {
+  function handleObjectAction(obj: ObjectInstance, tag: string): void {
+    if (tag === 'toggleLight') {
+      const on = art.toggleObjectLight(obj.id);
+      log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);
+      return;
+    }
     const chainMap: Record<string, string> = {
       stove: 'cookeat', coffee: 'coffee', shower: 'shower', tub: 'bath',
       seat: 'tv', bedA: 'sleep', bedB: 'sleep', dine1: 'cookeat', dine2: 'cookeat',
