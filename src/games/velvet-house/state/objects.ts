@@ -1,0 +1,281 @@
+export interface Vec3 { x?: number; y?: number; z?: number; }
+export type Dir2 = [number, number];
+
+export interface SpotDef {
+  stand: [number, number];
+  pos?: [number, number, number];
+  dir?: Dir2;
+  lie?: Dir2;
+  tag: string;
+  base?: string;
+  group?: string;
+}
+
+export interface LightDef {
+  at: [number, number, number];
+  r: number;
+  col?: string;
+}
+
+export type BlockRect = [number, number, number, number];
+
+export interface ObjectTypeDef {
+  W: number;
+  D: number;
+  h: number;
+  name: string;
+  store?: boolean;
+  fixed?: boolean;
+  rug?: boolean;
+  wall?: boolean;
+  out?: boolean;
+  blocks?: BlockRect[];
+  cols?: string[];
+  light?: LightDef;
+  spots?: Record<string, SpotDef>;
+}
+
+export const TYPES: Record<string, ObjectTypeDef> = {
+  sofa: { W: 2.4, D: 1.0, h: 0.95, name: 'Couch',
+    spots: { s1: { stand: [0.85, 1.6], pos: [0.85, 0.6, 0.48], dir: [0, 1], tag: 'seat', base: 'base' }, s2: { stand: [1.6, 1.6], pos: [1.6, 0.6, 0.48], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  bed: { W: 2.5, D: 1.6, h: 1.0, name: 'Bed',
+    spots: { a: { stand: [1.3, 2.05], pos: [0.52, 0.42, 0.56], lie: [1, 0], tag: 'bedA', base: 'mattress' }, b: { stand: [1.9, 2.05], pos: [0.52, 1.18, 0.56], lie: [1, 0], tag: 'bedB', base: 'mattress' } } },
+  dining: { W: 1.3, D: 2.5, h: 1.1, name: 'Dining set', light: { at: [0.65, 1.24, 1.8], r: 130 },
+    spots: { c1: { stand: [0.65, -0.45], pos: [0.65, 0.3, 0.49], dir: [0, 1], tag: 'dine1', base: 'seat1' }, c2: { stand: [0.65, 2.95], pos: [0.65, 2.18, 0.49], dir: [0, -1], tag: 'dine2', base: 'seat2' }, clear: { stand: [1.75, 1.24], dir: [-1, 0], tag: 'clear' } } },
+  lamp: { W: 0.4, D: 0.4, h: 1.75, name: 'Floor lamp', store: true, light: { at: [0.2, 0.2, 1.5], r: 140 } },
+  plant: { W: 0.5, D: 0.5, h: 1.1, name: 'Plant',
+    spots: { w: { stand: [0.25, 1.05], dir: [0, -1], tag: 'water' } } },
+  bookshelf: { W: 1.4, D: 0.38, h: 1.6, name: 'Bookshelf' },
+  records: { W: 0.85, D: 0.45, h: 0.7, name: 'Record player',
+    spots: { r: { stand: [0.42, 1.05], dir: [0, -1], tag: 'records' } } },
+  arcade: { W: 0.56, D: 0.5, h: 1.3, name: 'Arcade cabinet',
+    spots: { a: { stand: [0.28, 1.05], dir: [0, -1], tag: 'arcade' } } },
+  tread: { W: 1.35, D: 0.62, h: 1.2, name: 'Treadmill',
+    spots: { t: { stand: [-0.45, 0.31], pos: [0.6, 0.31, 0.18], dir: [1, 0], tag: 'tread', base: 'deck' } } },
+  gym: { W: 1.45, D: 1.0, h: 0.6, name: 'Weights and mat', blocks: [[1.1, 0.1, 1.45, 0.9]],
+    spots: { l: { stand: [0.55, 0.5], dir: [0, 1], tag: 'lift', group: 'mat' }, s: { stand: [0.55, 0.5], dir: [0, 1], tag: 'stretch', group: 'mat' } } },
+  desk: { W: 1.2, D: 1.25, h: 1.2, name: 'Desk', light: { at: [1.06, 0.18, 1.02], r: 95 },
+    spots: { d: { stand: [0.6, 1.75], pos: [0.6, 0.98, 0.49], dir: [0, -1], tag: 'desk', base: 'seat' } } },
+  dresser: { W: 1.2, D: 0.5, h: 0.85, name: 'Dresser' },
+  nightstand: { W: 0.45, D: 0.45, h: 0.75, name: 'Nightstand', light: { at: [0.22, 0.22, 0.8], r: 100 } },
+  counter: { W: 2.8, D: 0.8, h: 1.1, fixed: true,
+    spots: { sink: { stand: [0.65, 1.23], dir: [0, -1], tag: 'sink', group: 'counterL' }, window: { stand: [0.95, 1.23], dir: [0, -1], tag: 'window', group: 'counterL' }, stove: { stand: [1.65, 1.23], dir: [0, -1], tag: 'stove' }, coffee: { stand: [2.45, 1.23], dir: [0, -1], tag: 'coffee' } } },
+  fridge: { W: 0.9, D: 0.85, h: 1.95, fixed: true,
+    spots: { f: { stand: [0.45, 1.45], dir: [0, -1], tag: 'fridge' } } },
+  tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true },
+  shower: { W: 1.18, D: 1.18, h: 2.1, fixed: true,
+    spots: { s: { stand: [0.6, 1.7], pos: [0.6, 0.6, 0.1], dir: [0, 1], tag: 'shower', base: 'tray' } } },
+  toilet: { W: 0.42, D: 0.62, h: 0.8, fixed: true },
+  vanity: { W: 1.0, D: 0.5, h: 0.95, fixed: true },
+  flightY: { W: 1, D: 3.16, h: 2.7, fixed: true },
+  flightX: { W: 3.16, D: 1, h: 2.7, fixed: true },
+  holeY: { W: 1, D: 2.0, h: 1.0, fixed: true },
+  holeX: { W: 2.0, D: 1, h: 1.0, fixed: true },
+  waterheater: { W: 0.7, D: 0.7, h: 1.7, fixed: true, name: 'Water heater' },
+  furnace: { W: 0.85, D: 1.0, h: 1.75, fixed: true, name: 'Furnace' },
+  laundry: { W: 1.5, D: 0.75, h: 1.05, fixed: true, name: 'Washer and dryer',
+    spots: { w: { stand: [0.37, 1.25], dir: [0, -1], tag: 'washer' } } },
+  shelves: { W: 1.6, D: 0.5, h: 1.85, name: 'Storage shelves',
+    spots: { r: { stand: [0.8, 1.0], dir: [0, -1], tag: 'rummage' } } },
+  boxes: { W: 0.9, D: 0.6, h: 0.9, name: 'Moving boxes' },
+  pbox: { W: 0.62, D: 0.52, h: 0.62, name: 'Moving box' },
+  tree: { W: 1.4, D: 1.4, h: 4, fixed: true, name: 'Maple tree', blocks: [[0.5, 0.5, 0.9, 0.9]] },
+  garden: { W: 2.0, D: 1.0, h: 0.7, name: 'Garden bed',
+    spots: { t: { stand: [1.0, 1.5], dir: [0, -1], tag: 'garden' } } },
+  sprinkler: { W: 0.4, D: 0.4, h: 0.3, name: 'Sprinkler',
+    spots: { s: { stand: [0.2, 0.9], dir: [0, -1], tag: 'sprinkler' } } },
+  fireplace: { W: 1.3, D: 0.55, h: 2.6, fixed: true, name: 'Fireplace', light: { at: [0.65, 0.6, 0.5], r: 160, col: '255,150,70' },
+    spots: { f: { stand: [0.65, 1.25], dir: [0, -1], tag: 'fireside' } } },
+  bathtub: { W: 1.6, D: 0.8, h: 0.7, fixed: true, name: 'Clawfoot tub',
+    spots: { b: { stand: [0.8, 1.3], pos: [0.8, 0.4, 0.35], dir: [0, 1], tag: 'tub', base: 'basin' } } },
+  bar: { W: 1.8, D: 0.6, h: 1.2, fixed: true, name: 'Basement bar',
+    spots: { s: { stand: [0.9, 1.15], dir: [0, -1], tag: 'bar' } } },
+  pool: { W: 3.2, D: 2.0, h: 0.2, fixed: true, name: 'Pool',
+    spots: { w: { stand: [1.6, 2.45], pos: [1.6, 1.0, 0.0], dir: [0, 1], tag: 'swim', base: 'water' } } },
+  daybed: { W: 1.9, D: 0.9, h: 0.8, name: 'Guest daybed', store: true },
+  snowman: { W: 0.6, D: 0.6, h: 1.4, name: 'Snowman' },
+  bench: { W: 1.6, D: 0.6, h: 0.9, name: 'Garden bench', store: true,
+    spots: { s1: { stand: [0.45, 1.05], pos: [0.45, 0.32, 0.48], dir: [0, 1], tag: 'seat', base: 'seat' }, s2: { stand: [1.15, 1.05], pos: [1.15, 0.32, 0.48], dir: [0, 1], tag: 'seat', base: 'seat' } } },
+  bowl: { W: 0.5, D: 0.4, h: 0.2, name: 'Pet bowls',
+    spots: { fill: { stand: [0.25, 0.9], dir: [0, -1], tag: 'bowl' } } },
+  petbed: { W: 0.8, D: 0.7, h: 0.3, name: 'Pet bed',
+    spots: { rest: { stand: [0.4, 1.1], dir: [0, -1], tag: 'petbed' } } },
+  litter: { W: 0.7, D: 0.55, h: 0.35, name: 'Litter box',
+    spots: { scoop: { stand: [0.35, 1.0], dir: [0, -1], tag: 'litter' } } },
+  arclamp: { W: 1.2, D: 0.5, h: 1.9, name: 'Arc lamp', store: true, blocks: [[0, 0.05, 0.45, 0.45]], light: { at: [1.04, 0.25, 1.45], r: 150 } },
+  armchair: { W: 0.95, D: 0.9, h: 0.95, name: 'Armchair', store: true, cols: ['#4F6F74', '#B5476E', '#C9A24A', '#8E9C96', '#3A3340', '#E8DCC8', '#A65D3F'],
+    spots: { s: { stand: [0.48, 1.45], pos: [0.48, 0.52, 0.5], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  loveseat: { W: 1.7, D: 0.92, h: 0.95, name: 'Loveseat', store: true, cols: ['#8E5468', '#4A5DA8', '#5E8187', '#C9B79C', '#3F5B4C', '#D9A84A'],
+    spots: { s1: { stand: [0.5, 1.5], pos: [0.5, 0.56, 0.48], dir: [0, 1], tag: 'seat', base: 'base' }, s2: { stand: [1.2, 1.5], pos: [1.2, 0.56, 0.48], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  beanbag: { W: 0.85, D: 0.85, h: 0.6, name: 'Bean bag', store: true, cols: ['#D24A7A', '#E0A43A', '#3D6B73', '#7FB069', '#2B2B30', '#F2EEE8'],
+    spots: { s: { stand: [0.42, 1.4], pos: [0.42, 0.5, 0.3], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  rocker: { W: 0.8, D: 0.95, h: 1.15, name: 'Rocking chair', store: true, cols: ['#8A5E3B', '#3A2E2A', '#F2EEE8', '#3F5B4C'],
+    spots: { s: { stand: [0.4, 1.5], pos: [0.4, 0.55, 0.52], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  accent: { W: 0.72, D: 0.72, h: 0.9, name: 'Accent chair', store: true, cols: ['#E0A43A', '#B5476E', '#5E8187', '#F2EEE8', '#2B2B30'],
+    spots: { s: { stand: [0.36, 1.25], pos: [0.36, 0.42, 0.5], dir: [0, 1], tag: 'seat', base: 'seat' } } },
+  ottoman: { W: 0.6, D: 0.6, h: 0.42, name: 'Ottoman', store: true, cols: ['#C9A24A', '#8E5468', '#4F6F74', '#E8DCC8', '#3A3340'] },
+  coffeetable: { W: 1.2, D: 0.65, h: 0.45, name: 'Coffee table', store: true, cols: ['#9C6B45', '#3A2E2A', '#E4DDD2', '#B98A6A'] },
+  sidetable: { W: 0.5, D: 0.5, h: 0.62, name: 'Side table', store: true, cols: ['#B98A6A', '#3A2E2A', '#F2EEE8', '#3F5B4C'] },
+  console: { wall: true, W: 1.3, D: 0.38, h: 0.85, name: 'Console table', store: true, cols: ['#3A2E2A', '#9C6B45', '#E4DDD2', '#C9A24A'] },
+  cabinet: { wall: true, W: 1.0, D: 0.45, h: 1.05, name: 'Cabinet', store: true, cols: ['#B98A6A', '#3F5B4C', '#2E3B57', '#F2EEE8', '#8E5468'] },
+  wardrobe: { wall: true, W: 1.2, D: 0.6, h: 2.05, name: 'Wardrobe', store: true, cols: ['#E4DDD2', '#9C6B45', '#3A2E2A', '#8E9C96'] },
+  cubeshelf: { wall: true, W: 1.0, D: 0.35, h: 1.0, name: 'Cube shelf', store: true, cols: ['#F2EEE8', '#2B2B30', '#B98A6A'] },
+  rugrect: { W: 2.4, D: 1.6, h: 0.02, name: 'Area rug', store: true, rug: true, blocks: [], cols: ['#B5476E', '#3D6B73', '#C9A24A', '#E8DCC8', '#2E3B57', '#7FB069'] },
+  rugrunner: { W: 2.8, D: 0.8, h: 0.02, name: 'Runner rug', store: true, rug: true, blocks: [], cols: ['#A63A2C', '#4A5DA8', '#D8C9AE', '#3F5B4C'] },
+  ruground: { W: 1.8, D: 1.8, h: 0.02, name: 'Round rug', store: true, rug: true, blocks: [], cols: ['#E8DCC8', '#D24A7A', '#8E9C96', '#2B2B30', '#E0A43A'] },
+  floormirror: { wall: true, W: 0.7, D: 0.18, h: 1.8, name: 'Floor mirror', store: true, cols: ['#C9A24A', '#2B2B30', '#F2EEE8', '#9C6B45'] },
+  gclock: { wall: true, W: 0.55, D: 0.38, h: 2.1, name: 'Grandfather clock', store: true, cols: ['#5A3E2E', '#2B2B30', '#E4DDD2'] },
+  pampas: { W: 0.42, D: 0.42, h: 1.4, name: 'Pampas vase', store: true, cols: ['#E8DCC8', '#2B2B30', '#C27A5A', '#9EC1C9'] },
+  lantern: { W: 0.36, D: 0.36, h: 0.65, name: 'Floor lantern', store: true, cols: ['#2B2B30', '#C9A24A', '#F2EEE8'], light: { at: [0.18, 0.18, 0.3], r: 95 } },
+  fern: { W: 0.55, D: 0.55, h: 1.0, name: 'Fern', store: true, cols: ['#C26B4A', '#E4DDD2', '#2B2B30', '#7FA7C9'],
+    spots: { w: { stand: [0.27, 1.05], dir: [0, -1], tag: 'water' } } },
+  cactus: { W: 0.45, D: 0.45, h: 1.3, name: 'Cactus', store: true, cols: ['#E8C9A0', '#C26B4A', '#F2EEE8'],
+    spots: { w: { stand: [0.22, 0.95], dir: [0, -1], tag: 'water' } } },
+  fiddle: { W: 0.6, D: 0.6, h: 1.9, name: 'Fiddle leaf fig', store: true, cols: ['#F2EEE8', '#C26B4A', '#2B2B30', '#C9A24A'],
+    spots: { w: { stand: [0.3, 1.1], dir: [0, -1], tag: 'water' } } },
+  snake: { W: 0.45, D: 0.45, h: 1.1, name: 'Snake plant', store: true, cols: ['#2B2B30', '#F2EEE8', '#C26B4A', '#9EC1C9'],
+    spots: { w: { stand: [0.22, 0.95], dir: [0, -1], tag: 'water' } } },
+  palm: { W: 0.7, D: 0.7, h: 1.9, name: 'Parlor palm', store: true, cols: ['#E8C9A0', '#C26B4A', '#2B2B30'],
+    spots: { w: { stand: [0.35, 1.2], dir: [0, -1], tag: 'water' } } },
+  aquarium: { wall: true, W: 1.2, D: 0.45, h: 1.35, name: 'Aquarium', store: true, cols: ['#2B2B30', '#9C6B45', '#F2EEE8'], light: { at: [0.6, 0.22, 1.0], r: 70, col: '120,190,255' },
+    spots: { a: { stand: [0.6, 1.0], dir: [0, -1], tag: 'aquarium' } } },
+  piano: { wall: true, W: 1.5, D: 1.1, h: 1.25, name: 'Upright piano', store: true, cols: ['#1B1A1F', '#5A3E2E', '#F2EEE8'],
+    spots: { p: { stand: [0.75, 1.6], pos: [0.75, 0.95, 0.45], dir: [0, -1], tag: 'piano', base: 'bench' } } },
+  easel: { W: 0.8, D: 0.6, h: 1.75, name: 'Art easel', store: true, cols: ['#B98A6A', '#2B2B30', '#F2EEE8'],
+    spots: { e: { stand: [0.4, 1.15], dir: [0, -1], tag: 'easel' } } },
+  telescope: { W: 0.6, D: 0.6, h: 1.45, name: 'Telescope', store: true, cols: ['#F2EEE8', '#2B2B30', '#C9A24A'],
+    spots: { s: { stand: [0.3, 1.1], dir: [0, -1], tag: 'stars' } } },
+  punchbag: { W: 0.8, D: 0.8, h: 2.1, name: 'Heavy bag', store: true, cols: ['#C2413A', '#2B2B30', '#4A5DA8'],
+    spots: { b: { stand: [0.4, 1.25], dir: [0, -1], tag: 'boxbag' } } },
+  bike: { W: 1.3, D: 0.55, h: 1.15, name: 'Exercise bike', store: true, cols: ['#2B2B30', '#F2EEE8', '#C2413A'],
+    spots: { r: { stand: [-0.4, 0.28], pos: [0.45, 0.27, 0.62], dir: [1, 0], tag: 'bike', base: 'seat' } } },
+  yogamat: { W: 1.8, D: 0.7, h: 0.02, name: 'Yoga mat', store: true, rug: true, blocks: [], cols: ['#8E5468', '#7FB069', '#4A88B8', '#E0A43A', '#2B2B30'],
+    spots: { y: { stand: [0.9, 0.35], dir: [0, 1], tag: 'stretch' } } },
+  massage: { W: 0.95, D: 1.15, h: 1.15, name: 'Massage chair', store: true, cols: ['#2B2B30', '#E8DCC8', '#6E3C50'],
+    spots: { m: { stand: [0.47, 1.7], pos: [0.47, 0.6, 0.52], dir: [0, 1], tag: 'massage', base: 'base' } } },
+  barcart: { W: 0.9, D: 0.5, h: 0.95, name: 'Bar cart', store: true, cols: ['#C9A24A', '#2B2B30', '#C9CED6'],
+    spots: { b: { stand: [0.45, 1.0], dir: [0, -1], tag: 'bar' } } },
+  guitar: { W: 0.5, D: 0.4, h: 1.1, name: 'Guitar on a stand', store: true, cols: ['#C27A4A', '#1B1A1F', '#C2413A', '#F2EEE8'],
+    spots: { g: { stand: [0.25, 0.95], dir: [0, -1], tag: 'guitar' } } },
+  cattree: { W: 0.8, D: 0.8, h: 1.7, name: 'Cat tree', store: true, cols: ['#D8C9AE', '#8E9C96', '#6E3C50'] },
+  hammock: { W: 2.4, D: 1.0, h: 1.3, name: 'Hammock', store: true, out: true, cols: ['#E0A43A', '#3D6B73', '#D24A7A', '#F2EEE8'],
+    spots: { h: { stand: [1.2, 1.5], pos: [0.65, 0.5, 0.62], lie: [1, 0], tag: 'hammock', base: 'bed' } } },
+  firepit: { W: 1.2, D: 1.2, h: 0.4, name: 'Fire pit', store: true, out: true, cols: ['#8C8884', '#A85A40', '#3A3A3F'], light: { at: [0.6, 0.6, 0.4], r: 150, col: '255,150,70' },
+    spots: { f: { stand: [0.6, 1.7], dir: [0, -1], tag: 'fireside' } } },
+  grill: { W: 0.9, D: 0.6, h: 1.1, name: 'Charcoal grill', store: true, out: true, cols: ['#1B1A1F', '#C2413A', '#3D6B73'],
+    spots: { g: { stand: [0.45, 1.1], dir: [0, -1], tag: 'grill' } } },
+  patio: { W: 1.8, D: 1.3, h: 0.95, name: 'Patio set', store: true, out: true, cols: ['#F2EEE8', '#2B2B30', '#3F5B4C', '#C27A5A'],
+    spots: { s1: { stand: [0.28, 1.6], pos: [0.3, 0.65, 0.42], dir: [1, 0], tag: 'seat', base: 'seatA' }, s2: { stand: [1.52, 1.6], pos: [1.5, 0.65, 0.42], dir: [-1, 0], tag: 'seat', base: 'seatB' } } },
+  birdfeeder: { W: 0.5, D: 0.5, h: 1.7, name: 'Bird feeder', store: true, out: true, cols: ['#9C6B45', '#F2EEE8', '#3F5B4C'],
+    spots: { b: { stand: [0.25, 1.15], dir: [0, -1], tag: 'birds' } } },
+  xmastree: { W: 0.95, D: 0.95, h: 2.1, name: 'Holiday tree', store: true, cols: ['#2F6B40', '#F2EEE8'], light: { at: [0.47, 0.47, 1.0], r: 120, col: '255,210,140' } },
+  pumpkins: { W: 0.85, D: 0.6, h: 0.5, name: 'Pumpkin trio', store: true, cols: ['#E07A2B', '#F2EEE8'], light: { at: [0.55, 0.32, 0.2], r: 55, col: '255,170,80' } },
+  beachchair: { W: 0.7, D: 1.3, h: 0.8, name: 'Beach chair', store: true, out: true, cols: ['#5FB8D6', '#E0A43A', '#D24A7A'],
+    spots: { s: { stand: [0.35, 1.75], pos: [0.35, 0.6, 0.3], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  blossomvase: { W: 0.45, D: 0.45, h: 1.6, name: 'Cherry blossom branches', store: true, cols: ['#F2EEE8', '#2B2B30', '#9EC1C9'] },
+  jukebox: { W: 0.8, D: 0.5, h: 1.45, name: 'Jukebox', store: true, cols: ['#C2413A', '#4A5DA8', '#E0A43A'], light: { at: [0.4, 0.5, 1.0], r: 70, col: '255,140,200' },
+    spots: { j: { stand: [0.4, 1.0], dir: [0, -1], tag: 'jukebox' } } },
+  eggchair: { W: 1.0, D: 1.0, h: 2.0, name: 'Hanging egg chair', store: true, cols: ['#E8DCC8', '#2B2B30', '#C27A5A'],
+    spots: { s: { stand: [0.5, 1.45], pos: [0.5, 0.55, 0.62], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  lavalamp: { W: 0.3, D: 0.3, h: 0.65, name: 'Lava lamp', store: true, cols: ['#FF7A3A', '#7A5CFF', '#38D39F'], light: { at: [0.15, 0.15, 0.35], r: 70 } },
+  chesterfield: { W: 2.0, D: 0.95, h: 0.9, name: 'Chesterfield sofa', store: true, cols: ['#5A2E1E', '#2E3B57', '#3F5B4C', '#6E3C50'],
+    spots: { s1: { stand: [0.6, 1.5], pos: [0.6, 0.58, 0.5], dir: [0, 1], tag: 'seat', base: 'base' }, s2: { stand: [1.4, 1.5], pos: [1.4, 0.58, 0.5], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  globe: { W: 0.5, D: 0.5, h: 1.15, name: 'Antique globe', store: true, cols: ['#9C6B45', '#2B2B30'] },
+};
+
+export interface ObjectInstance {
+  id: string;
+  type: string;
+  level: number;
+  x: number;
+  y: number;
+  rot: number;
+  col?: string;
+  pot?: string;
+  pet?: string;
+  grow?: number;
+  wet?: number;
+  art?: number;
+  runUntil?: number;
+  flash?: number;
+}
+
+export const INITIAL_OBJS: ObjectInstance[] = [
+  { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
+  { id: 'tread', type: 'tread', level: 0, x: 1.2, y: 1.2, rot: 0 },
+  { id: 'gym', type: 'gym', level: 0, x: 1.2, y: 3.4, rot: 0 },
+  { id: 'lamp0', type: 'lamp', level: 0, x: 8.2, y: 0.3, rot: 0 },
+  { id: 'heater', type: 'waterheater', level: 0, x: 0.18, y: 4.8, rot: 0 },
+  { id: 'furnace', type: 'furnace', level: 0, x: 0.15, y: 5.75, rot: 0 },
+  { id: 'laundry', type: 'laundry', level: 0, x: 1.4, y: 4.72, rot: 0 },
+  { id: 'shelves', type: 'shelves', level: 0, x: 4.5, y: 5.4, rot: 1 },
+  { id: 'boxes', type: 'boxes', level: 0, x: 2.4, y: 7.0, rot: 0 },
+  { id: 'tree', type: 'tree', level: 3, x: 7.6, y: 0.5, rot: 0 },
+  { id: 'garden', type: 'garden', level: 3, x: 3.6, y: 0.35, rot: 0, grow: 0.35, wet: 0.6 },
+  { id: 'sprinkler', type: 'sprinkler', level: 3, x: 5.6, y: 4.4, rot: 0 },
+  { id: 'bench', type: 'bench', level: 3, x: 0.8, y: 6.2, rot: 0 },
+  { id: 'open01', type: 'holeY', level: 1, x: 9.0, y: 1.2, rot: 0 },
+  { id: 'stair12', type: 'flightX', level: 1, x: 0, y: 7.0, rot: 0 },
+  { id: 'counter', type: 'counter', level: 1, x: 0.4, y: 0.12, rot: 0 },
+  { id: 'fridge', type: 'fridge', level: 1, x: 3.35, y: 0.12, rot: 0 },
+  { id: 'dining', type: 'dining', level: 1, x: 1.0, y: 1.9, rot: 1 },
+  { id: 'tvunit', type: 'tvunit', level: 1, x: 6.0, y: 0.12, rot: 0 },
+  { id: 'sofa', type: 'sofa', level: 1, x: 5.6, y: 3.3, rot: 2 },
+  { id: 'plant1', type: 'plant', level: 1, x: 4.95, y: 0.15, rot: 0 },
+  { id: 'lamp1', type: 'lamp', level: 1, x: 5.1, y: 3.4, rot: 0 },
+  { id: 'open12', type: 'holeX', level: 2, x: 1.2, y: 7.0, rot: 0 },
+  { id: 'bed', type: 'bed', level: 2, x: 0.12, y: 1.0, rot: 0 },
+  { id: 'night', type: 'nightstand', level: 2, x: 0.15, y: 0.35, rot: 0 },
+  { id: 'dresser', type: 'dresser', level: 2, x: 3.0, y: 0.12, rot: 0 },
+  { id: 'shower', type: 'shower', level: 2, x: 8.6, y: 0.12, rot: 0 },
+  { id: 'toilet', type: 'toilet', level: 2, x: 6.1, y: 0.15, rot: 0 },
+  { id: 'vanity', type: 'vanity', level: 2, x: 6.8, y: 0.12, rot: 0 },
+  { id: 'desk', type: 'desk', level: 2, x: 7.0, y: 5.6, rot: 0 },
+  { id: 'plant2', type: 'plant', level: 2, x: 9.2, y: 7.3, rot: 2, pot: '#E4DDD2' },
+];
+
+export function footprint(o: ObjectInstance): [number, number] {
+  const t = TYPES[o.type];
+  return o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
+}
+
+export function isFixed(type: string): boolean {
+  return !!TYPES[type]?.fixed;
+}
+
+export function isRug(type: string): boolean {
+  return !!TYPES[type]?.rug;
+}
+
+export function isWall(type: string): boolean {
+  return !!TYPES[type]?.wall;
+}
+
+export function isOutdoor(type: string): boolean {
+  return !!TYPES[type]?.out;
+}
+
+export function isStoreItem(type: string): boolean {
+  return !!TYPES[type]?.store;
+}
+
+export function typeOf(type: string): ObjectTypeDef | undefined {
+  return TYPES[type];
+}
+
+export function storeItems(): string[] {
+  return Object.keys(TYPES).filter((k) => TYPES[k].store);
+}
+
+export function allSpots(type: string): Record<string, SpotDef> | undefined {
+  return TYPES[type]?.spots;
+}
+
+export function lightOf(type: string): LightDef | undefined {
+  return TYPES[type]?.light;
+}
+
+export function blocksOf(type: string): BlockRect[] {
+  const t = TYPES[type];
+  return t?.blocks || (t ? [[0, 0, t.W, t.D]] : []);
+}
