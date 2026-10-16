@@ -731,7 +731,7 @@ function AppInner() {
           expertConfig?.domain,
           expertConfig,
           companionData.relationship_type,
-          companionData.correspondent_id || undefined,
+          undefined,
         );
       }
       await new Promise(resolve => setTimeout(resolve, Math.min(firstMsg.length * 15, 3000)));

@@ -1,10 +1,9 @@
-import { LayoutGrid, Newspaper, Sparkles } from 'lucide-react';
+import { LayoutGrid, Sparkles } from 'lucide-react';
 import { useHomeLayout, type HomeLayout, setHomeLayout as _set } from '../../hooks/useHomeLayout';
 import { analyticsService } from '../../services/analyticsService';
 
 const OPTIONS: { id: HomeLayout; label: string; shortLabel: string; description: string; icon: typeof LayoutGrid }[] = [
   { id: 'classic', label: 'Classic Lobby', shortLabel: 'Classic', description: 'The companion lobby with tiles, games, and group chats.', icon: LayoutGrid },
-  { id: 'new',     label: 'New Home',      shortLabel: 'New',     description: 'A daily-feed centered home with news, rituals, and quick-start cards.', icon: Newspaper },
   { id: 'v3',      label: 'V3 Home',       shortLabel: 'V3',      description: 'Reality-first feed with your people alongside. Memory-aware check-ins and moments.', icon: Sparkles },
 ];
 

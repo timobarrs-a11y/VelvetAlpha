@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, Heart, Users, Brain, Newspaper, Sparkles } from 'lucide-react';
+import { Trash2, Heart, Users, Brain, Sparkles } from 'lucide-react';
 import { Avatar } from '../Avatar';
 import { Badge } from '../../shared/ui/Badge';
 import type { CompanionWithLastMessage } from '../../services/companionService';
@@ -20,18 +20,15 @@ function RoleBadge({ companion, tone }: { companion: CompanionWithLastMessage; t
   if (tone === 'coach') {
     return <Badge overlay tone={TONE_COLOR.coach} icon={<Brain className="w-2.5 h-2.5" />}>Coach</Badge>;
   }
-  if (tone === 'correspondent') {
-    return <Badge overlay tone={TONE_COLOR.correspondent} icon={<Newspaper className="w-2.5 h-2.5" />}>Correspondent</Badge>;
-  }
   return companion.relationship_type === 'romantic'
     ? <Badge overlay tone="#f472b6" icon={<Heart className="w-2.5 h-2.5" />}>Partner</Badge>
     : <Badge overlay tone="#38bdf8" icon={<Users className="w-2.5 h-2.5" />}>Friend</Badge>;
 }
 
-/** Unified companion card for Velvet Voices / Coaches / Correspondents. */
+/** Unified companion card for Velvet Voices / Coaches. */
 export function CompanionCard({ companion, tone, onOpen, onDelete, delay = 0 }: CompanionCardProps) {
   const accent = TONE_COLOR[tone];
-  const deleteTitle = tone === 'coach' ? 'Delete coach' : tone === 'correspondent' ? 'Delete correspondent' : 'Delete companion';
+  const deleteTitle = tone === 'coach' ? 'Delete coach' : 'Delete companion';
 
   let secondaryBadge: ReactNode = null;
   if (tone === 'voice' && companion.signature_voice) {

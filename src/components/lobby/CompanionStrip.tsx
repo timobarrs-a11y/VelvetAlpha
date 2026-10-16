@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Heart, Brain, Newspaper, Users, MessageCircle, Trash2 } from 'lucide-react';
+import { Plus, Heart, Brain, Users, Trash2 } from 'lucide-react';
 import { Avatar } from '../Avatar';
 import { companionAvatarConfig, TONE_COLOR } from './lobbyUtils';
 import type { CompanionWithLastMessage } from '../../services/companionService';
@@ -15,14 +15,12 @@ interface Props {
 
 function typeIcon(rel: string | null | undefined) {
   if (rel === 'mentor') return <Brain className="w-2.5 h-2.5" />;
-  if (rel === 'correspondent') return <Newspaper className="w-2.5 h-2.5" />;
   if (rel === 'romantic') return <Heart className="w-2.5 h-2.5" />;
   return <Users className="w-2.5 h-2.5" />;
 }
 
 function typeColor(rel: string | null | undefined) {
   if (rel === 'mentor') return TONE_COLOR.coach;
-  if (rel === 'correspondent') return TONE_COLOR.correspondent;
   if (rel === 'romantic') return '#f472b6';
   return '#38bdf8';
 }

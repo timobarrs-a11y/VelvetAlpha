@@ -4,8 +4,6 @@ import {
   Crown, Cherry, Zap, Circle,
   Rocket, Brain, Home,
 } from 'lucide-react';
-import { getCorrespondentById } from '../config/signatureCorrespondents';
-import { correspondentSyncService } from '../services/correspondentSyncService';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
 import { authService } from '../services/authService';
@@ -77,7 +75,6 @@ export function useLobbyData() {
     setGroupChats(groupsList);
     setLoading(false);
     refreshDailyFeedInBackground();
-    syncCorrespondentsInBackground();
   }, [navigate]);
 
   const refreshDailyFeedInBackground = useCallback(async () => {
@@ -93,25 +90,6 @@ export function useLobbyData() {
       await newsService.fetchLatestNews(interests);
     } catch { /* best-effort */ }
   }, []);
-
-  const syncCorrespondentsInBackground = useCallback(async () => {
-    try {
-      const now = Date.now();
-      const ONE_HOUR = 60 * 60 * 1000;
-      const last = Number(sessionStorage.getItem('velvet_correspondent_sync') || 0);
-      if (now - last < ONE_HOUR) return;
-      sessionStorage.setItem('velvet_correspondent_sync', String(now));
-
-      const result = await correspondentSyncService.sync();
-      if (result && result.success && (result.created.length > 0 || result.removed.length > 0)) {
-        await loadData();
-        if (result.created.length > 0) {
-          const names = result.created.map(id => getCorrespondentById(id)?.name || id);
-          toast.success(`${names.join(', ')} ${result.created.length > 1 ? 'are' : 'is'} now writing for you!`);
-        }
-      }
-    } catch { /* best-effort */ }
-  }, [loadData]);
 
   const handleCreateGroupChat = useCallback(async (name: string, companionIds: string[]) => {
     const group = await createGroupChat(name, companionIds);

@@ -6,7 +6,7 @@ import {
   Bot, MapPin, Zap, UsersRound, Users, Gamepad2, Heart,
   Volume2, VolumeX, Wand2, User, LogOut, HelpCircle,
   Flame, Sparkles, MessageCircle, Info, ChevronRight,
-  PanelLeftClose, PanelLeftOpen, Brain, Newspaper as NewspaperIcon,
+  PanelLeftClose, PanelLeftOpen, Brain,
   Plus, Trash2, Target,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
@@ -35,7 +35,7 @@ import { InsightsTeaser } from '../components/hub/InsightsTeaser';
 
 type ContentTab = 'feed' | 'videos' | 'calendar' | 'co-author' | 'insights' | 'chat' | 'companion-list';
 type FeedTab = 'feed' | 'videos';
-type CompanionCategory = 'companions' | 'coaching' | 'correspondents';
+type CompanionCategory = 'companions' | 'coaching';
 
 interface SidebarItem {
   id: string;
@@ -151,11 +151,6 @@ export function HomeShellPage() {
       id: 'progress', label: 'Progress', sub: 'Goals & commitments',
       icon: <Target className="w-3.5 h-3.5" />, color: 'text-emerald-400',
       group: 'core', action: () => navigate('/coaching-progress'),
-    },
-    {
-      id: 'correspondents', label: 'Correspondents', sub: `${companions.filter(c => c.relationship_type === 'correspondent').length} writers`,
-      icon: <NewspaperIcon className="w-3.5 h-3.5" />, color: 'text-amber-400',
-      group: 'core', action: () => { setCompanionCategory('correspondents'); setActiveTab('companion-list'); },
     },
     {
       id: 'atlas', label: 'Atlas', sub: 'Chief of staff',
@@ -538,7 +533,6 @@ export function HomeShellPage() {
 const CATEGORY_CONFIG: Record<CompanionCategory, { label: string; color: string; matchTypes: string[]; addLabel: string }> = {
   companions:     { label: 'Companions',    color: '#f472b6', matchTypes: ['romantic', 'friend', ''], addLabel: 'Someone New' },
   coaching:       { label: 'Coaching',      color: '#34d399', matchTypes: ['mentor'],                 addLabel: 'Add coach' },
-  correspondents: { label: 'Correspondents', color: '#fbbf24', matchTypes: ['correspondent'],         addLabel: 'Add correspondent' },
 };
 
 function CompanionList({

@@ -2,13 +2,6 @@ import { supabase } from '../shared/supabase/client';
 import { MODEL_CONFIG } from './modelSelector';
 import type { ExpertConfig } from '../config/signatureExperts';
 import { buildCoachOpeningGuidance, buildCoachOpeningFallback } from '../config/coachFramework';
-import {
-  buildCorrespondentOpeningGuidance,
-  buildCorrespondentOpeningFallback,
-  buildRecentStoriesBlock,
-} from '../config/correspondentFramework';
-import { getCorrespondentById } from '../config/signatureCorrespondents';
-import { newsService } from './newsService';
 
 export interface FirstMessageTemplate {
   greeting: string;
@@ -33,7 +26,6 @@ export class FirstMessageService {
     const voice = getVoiceById(signatureVoiceId);
 
     const isMentor = connectionType === 'mentor';
-    const isCorrespondent = connectionType === 'correspondent';
 
     if (!voice) {
       console.warn('Signature voice not found, falling back to template');
@@ -44,13 +36,6 @@ export class FirstMessageService {
           userName,
           domain: expertConfig?.domain || (personalInterest !== 'meeting new people' ? personalInterest : undefined),
           goalText: atlasGoalText,
-        });
-      }
-      if (isCorrespondent) {
-        return buildCorrespondentOpeningFallback({
-          correspondentName: companionName,
-          userName,
-          beat: personalInterest,
         });
       }
       return `hey ${userName}! glad we matched. what's up?`;
@@ -69,48 +54,8 @@ export class FirstMessageService {
       }
     }
 
-    // CORRESPONDENT PATH: fetch real news stories client-side (first messages
-    // go through the /chat function, not /chat-turn, so grounding must happen
-    // here). The opener references a real headline in the correspondent's voice.
     let prompt: string;
-    if (isCorrespondent) {
-      const correspondentId = (this as any)._correspondentId || '';
-      const correspondent = correspondentId ? getCorrespondentById(correspondentId) : null;
-      const beat = correspondent?.beat || personalInterest;
-      const voiceDescription = correspondent?.voiceDescription || voice.description;
-
-      let recentStoriesBlock = '';
-      try {
-        const categories = correspondent?.newsCategories || [];
-        if (categories.length > 0) {
-          const articles = await newsService.getArticlesByCategories(categories, 6);
-          recentStoriesBlock = buildRecentStoriesBlock(
-            articles.map(a => ({ title: a.title, source: a.source, summary: a.description })),
-          );
-        }
-      } catch {
-        // grounding is best-effort; proceed without stories
-      }
-
-      const openingGuidance = buildCorrespondentOpeningGuidance({
-        correspondentName: companionName,
-        beat,
-        voiceDescription,
-        recentStoriesBlock,
-      });
-
-      prompt = `${openingGuidance}
-
-HOW YOU SPEAK (voice — apply this to HOW you phrase things, never to override the writing intent above):
-${voice.instruction}
-
-USER CONTEXT:
-- Name: ${userName}
-${userAge ? `- Age: ${userAge}` : ''}
-${userGender ? `- Gender: ${userGender}` : ''}
-
-Write ONLY the message text, no quotation marks, no labels, no explanations.`;
-    } else if (isMentor) {
+    if (isMentor) {
       const atlasGoalText = sessionStorage.getItem('atlasGoalText') || undefined;
       const openingGuidance = buildCoachOpeningGuidance({
         coachName: companionName,
@@ -170,13 +115,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
           domain: expertConfig?.domain || (personalInterest !== 'meeting new people' ? personalInterest : undefined),
           goalText: atlasGoalTextFallback,
         })
-      : isCorrespondent
-        ? buildCorrespondentOpeningFallback({
-            correspondentName: companionName,
-            userName,
-            beat: personalInterest,
-          })
-        : `hey ${userName}! glad we matched. what's up?`;
+      : `hey ${userName}! glad we matched. what's up?`;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -247,8 +186,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     userBirthday?: string,
     expertDomain?: string,
     expertConfig?: ExpertConfig | null,
-    relationshipTypeOverride?: 'friend' | 'romantic' | 'mentor' | 'correspondent',
-    correspondentId?: string,
+    relationshipTypeOverride?: 'friend' | 'romantic' | 'mentor',
   ): Promise<string> {
     const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || sessionStorage.getItem('expertMatchAnswers') || '{}');
 
@@ -267,11 +205,6 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     const isFriend = connectionType === 'friend';
     const isRomantic = connectionType === 'romantic';
     const isMentor = connectionType === 'mentor';
-    const isCorrespondent = connectionType === 'correspondent';
-
-    if (isCorrespondent && correspondentId) {
-      (this as any)._correspondentId = correspondentId;
-    }
 
     let personalInterest = '';
     if (resolvedExpertDomain) {
@@ -305,15 +238,6 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
         userGender,
         expertConfig
       );
-    }
-
-    // Correspondent path fallback (no signature voice): still deliver a dispatch
-    if (isCorrespondent) {
-      return buildCorrespondentOpeningFallback({
-        correspondentName: companionName,
-        userName,
-        beat: resolvedExpertDomain || personalInterest,
-      });
     }
 
     // Coach/mentor path fallback (no signature voice): still restate purpose and

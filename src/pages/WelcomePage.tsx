@@ -4,16 +4,15 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import {
   ChevronRight, Sparkles, Newspaper, Eye, PenLine,
   Bot, Gamepad2, CalendarDays, BarChart3, Users, ArrowRight, LogOut,
-  Shuffle, MapPin, Brain, Mic, Palette, Target, Wrench, Mail,
+  Shuffle, MapPin, Brain, Mic, Palette, Target, Wrench,
   Compass, Heart, Flame, Bell, RotateCcw, Layers, Shield,
   FileText, Clock, ClipboardCheck, TrendingUp, Briefcase, Sun,
-  MessageSquare, Type, Filter,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { useAuth } from '../auth/AuthProvider';
 import { Footer } from '../components/Footer';
 
-type FeatureCategory = 'core' | 'companion' | 'coach' | 'correspondent';
+type FeatureCategory = 'core' | 'companion' | 'coach';
 
 interface Feature {
   icon: typeof Newspaper;
@@ -311,83 +310,12 @@ const FEATURES: Feature[] = [
     category: 'coach',
   },
   // ===== CORRESPONDENT =====
-  {
-    icon: Mail,
-    title: 'Auto-Provisioned Dispatches',
-    tag: 'Assigned from your interests',
-    description: 'Correspondents are automatically matched to you based on your interests during onboarding — no manual setup. Into sports, tech, and politics? You get a sports writer, a science writer, and a politics writer without lifting a finger. They sync and reconcile as your interests change.',
-    accentRgb: '251,113,133',
-    iconGlow: 'rgba(251,113,133,0.22)',
-    borderColor: 'rgba(251,113,133,0.3)',
-    category: 'correspondent',
-  },
-  {
-    icon: Mic,
-    title: 'Distinctive Voices',
-    tag: 'A writer with a beat',
-    description: 'Seven correspondents, each with a unique voice personality and a specific beat. The Sideline writes sports with heart. The Field cuts through political spin. The Signal decodes science. The Ledger reads the numbers. The Pulse covers health. The Insider works pop culture. The Arcade lives gaming.',
-    accentRgb: '251,191,36',
-    iconGlow: 'rgba(251,191,36,0.22)',
-    borderColor: 'rgba(251,191,36,0.3)',
-    category: 'correspondent',
-  },
-  {
-    icon: Newspaper,
-    title: 'Real News, Real Takes',
-    tag: 'Grounded in actual events',
-    description: 'Dispatches are grounded in real scraped articles filtered to your interests — not generated filler. Each correspondent reads what\'s actually happening, forms a take, and writes it in a voice that makes you want to read the news again.',
-    accentRgb: '14,165,233',
-    iconGlow: 'rgba(14,165,233,0.22)',
-    borderColor: 'rgba(14,165,233,0.3)',
-    category: 'correspondent',
-  },
-  {
-    icon: MessageSquare,
-    title: 'Article Discussion',
-    tag: 'Talk about what you read',
-    description: 'Paste any article and discuss it with your correspondent in their voice. Grounding guardrails prevent hallucinated headlines or fabricated sources — the conversation stays anchored to the actual text you shared.',
-    accentRgb: '34,211,238',
-    iconGlow: 'rgba(34,211,238,0.22)',
-    borderColor: 'rgba(34,211,238,0.3)',
-    category: 'correspondent',
-  },
-  {
-    icon: Type,
-    title: 'Writing Craft',
-    tag: 'Not generated at you',
-    description: 'Every dispatch follows a structured writing loop — hook, riff, pull-in, ground — that makes the news feel like it was written for you specifically. Anti-hallucination rules ensure your correspondent never invents headlines, quotes, or statistics.',
-    accentRgb: '232,121,249',
-    iconGlow: 'rgba(232,121,249,0.22)',
-    borderColor: 'rgba(232,121,249,0.3)',
-    category: 'correspondent',
-  },
-  {
-    icon: Filter,
-    title: 'Voice-Scoped Categories',
-    tag: 'Persona shapes the take',
-    description: 'Eight voice archetypes are mapped to news topics, keywords, and preferred sources — so a sports correspondent engages with sports news differently than a science correspondent engages with science. The personality filter shapes how each persona processes the news it\'s given.',
-    accentRgb: '168,85,247',
-    iconGlow: 'rgba(168,85,247,0.22)',
-    borderColor: 'rgba(168,85,247,0.3)',
-    category: 'correspondent',
-  },
-  {
-    icon: Sun,
-    title: 'Morning Brief Integration',
-    tag: 'News comes to you',
-    description: 'Your correspondents\' latest dispatches surface in your daily morning brief alongside your calendar and goals — so the news comes to you instead of you chasing it across a dozen tabs.',
-    accentRgb: '251,191,36',
-    iconGlow: 'rgba(251,191,36,0.22)',
-    borderColor: 'rgba(251,191,36,0.3)',
-    category: 'correspondent',
-  },
 ];
 
 const CATEGORY_TABS: { id: FeatureCategory; label: string; accent: string }[] = [
   { id: 'core', label: 'Core', accent: '192,132,252' },
   { id: 'companion', label: 'Companion', accent: '168,85,247' },
   { id: 'coach', label: 'Coach', accent: '52,211,153' },
-  { id: 'correspondent', label: 'Correspondent', accent: '251,113,133' },
 ];
 
 const PARTICLES = Array.from({ length: 55 }, (_, i) => ({
