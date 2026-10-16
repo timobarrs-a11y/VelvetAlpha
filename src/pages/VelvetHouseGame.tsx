@@ -8,10 +8,14 @@ import { isRestartedMessage } from '../games/velvet-house/bridge/protocol';
 
 const GAME_PATH = '/games/velvet-house/index.html';
 const SAVE_KEY_PREFIX = 'velvet-house-v1';
+const RESTART_KEY_PREFIX = 'velvet-house-restart-pending';
 const SYNC_INTERVAL_MS = 30_000;
 
 function saveKeyFor(companionId: string) {
   return `${SAVE_KEY_PREFIX}:${companionId}`;
+}
+function restartKeyFor(companionId: string) {
+  return `${RESTART_KEY_PREFIX}:${companionId}`;
 }
 const GAME_TURN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/velvet-game-turn`;
 
@@ -29,7 +33,7 @@ interface PlayerProfile {
 const COLOR_HEX: Record<string, string> = {
   red: '#A63A2C', burgundy: '#8A2D54', maroon: '#8A2D54', pink: '#D97A9B', orange: '#D9763A',
   yellow: '#E0A43A', gold: '#E0A43A', green: '#4F7A4A', teal: '#3D6B73', blue: '#4A5DA8',
-  navy: '#2E3D6B', purple: '#6B4A8A', lavender: '#9A86B8', brown: '#7A4E31', black: '#2B2B30',
+  navy: '#2E3D67', purple: '#6B4A8A', lavender: '#9A86B8', brown: '#7A4E31', black: '#2B2B30',
   white: '#F2EEE8', gray: '#6B6F86', grey: '#6B6F86',
 };
 
@@ -147,12 +151,34 @@ export function VelvetHouseGame() {
 
   const syncToSupabase = useCallback(async () => {
     if (!companionId) return;
+    const key = saveKeyFor(companionId);
+    const restartKey = restartKeyFor(companionId);
+    const restartPending = localStorage.getItem(restartKey) === '1';
     try {
-      const raw = localStorage.getItem(saveKeyFor(companionId));
+      const raw = localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw);
-        await saveVelvetHouseProgress(companionId, parsed);
-        await maybeSnapshotHistory(companionId, parsed);
+
+        if (restartPending) {
+          // The game was restarted — the local save is a fresh day-1 game.
+          // Before overwriting the cloud, back up the old cloud save to history
+          // so the previous house is still recoverable.
+          try {
+            const oldCloud = await loadVelvetHouseSave(companionId);
+            if (oldCloud) {
+              await saveVelvetHouseHistory(companionId, oldCloud);
+            }
+          } catch { /* best-effort backup */ }
+
+          // Force-upload the fresh save, bypassing the rollback guard
+          // (which would reject a lower day number).
+          await saveVelvetHouseProgress(companionId, parsed, true);
+          await maybeSnapshotHistory(companionId, parsed);
+          localStorage.removeItem(restartKey);
+        } else {
+          await saveVelvetHouseProgress(companionId, parsed);
+          await maybeSnapshotHistory(companionId, parsed);
+        }
       }
     } catch {
       // next interval retries
@@ -227,15 +253,12 @@ export function VelvetHouseGame() {
           });
       }
       if (isRestartedMessage(msg)) {
-        const key = saveKeyFor(companionId);
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            saveVelvetHouseProgress(companionId, parsed, true).catch(() => {});
-            maybeSnapshotHistory(companionId, parsed).catch(() => {});
-          }
-        } catch { /* non-fatal */ }
+        // Remember the restart so the next sync force-uploads the fresh save.
+        // The flag survives reload/tab close so we don't lose the restart intent.
+        localStorage.setItem(restartKeyFor(companionId), '1');
+
+        // Try an immediate upload in case the local save already has the fresh game.
+        syncToSupabase().catch(() => {});
       }
     };
     const onUnload = () => { syncToSupabase(); };
@@ -246,20 +269,39 @@ export function VelvetHouseGame() {
 
     (async () => {
       const key = saveKeyFor(companionId);
+      const restartKey = restartKeyFor(companionId);
+      const restartPending = localStorage.getItem(restartKey) === '1';
+
       try {
-        const save = await loadVelvetHouseSave(companionId);
-        if (save) {
-          // Cloud save exists — write it to the per-companion key.
-          // Before overwriting, stash the previous local save into history for recovery.
-          const prev = localStorage.getItem(key);
-          if (prev) {
-            try { await saveVelvetHouseHistory(companionId, JSON.parse(prev)); } catch { /* non-fatal */ }
+        if (restartPending) {
+          // The player restarted last session but the fresh save never got
+          // uploaded. Keep the local save (the fresh game) instead of
+          // overwriting it with the old cloud save.
+          // If there's no local save at all, fall through to load from cloud.
+          const localRaw = localStorage.getItem(key);
+          if (!localRaw) {
+            const save = await loadVelvetHouseSave(companionId);
+            if (save) {
+              localStorage.setItem(key, JSON.stringify(save));
+            } else {
+              localStorage.removeItem(key);
+            }
           }
-          localStorage.setItem(key, JSON.stringify(save));
         } else {
-          // No cloud save for this companion — clear any stale local key
-          // so we don't load another companion's house (the bleed bug).
-          localStorage.removeItem(key);
+          const save = await loadVelvetHouseSave(companionId);
+          if (save) {
+            // Cloud save exists — write it to the per-companion key.
+            // Before overwriting, stash the previous local save into history for recovery.
+            const prev = localStorage.getItem(key);
+            if (prev) {
+              try { await saveVelvetHouseHistory(companionId, JSON.parse(prev)); } catch { /* non-fatal */ }
+            }
+            localStorage.setItem(key, JSON.stringify(save));
+          } else {
+            // No cloud save for this companion — clear any stale local key
+            // so we don't load another companion's house (the bleed bug).
+            localStorage.removeItem(key);
+          }
         }
       } catch {
         // Cloud unreachable — keep whatever local key exists for this companion.
