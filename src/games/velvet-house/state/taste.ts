@@ -73,9 +73,9 @@ export function styleWords(style: StyleProfile): StyleSummary {
 }
 
 export const TASTE_LINE: Record<number, string> = {
-  2: 'she loves it',
-  1: 'she likes it',
-  0: 'she is lukewarm on it',
-  '-1': 'it is not really her taste',
-  '-2': 'she can not stand it',
+  2: 'they love it',
+  1: 'they like it',
+  0: 'they are lukewarm on it',
+  '-1': 'it is not really their taste',
+  '-2': 'they can not stand it',
 };

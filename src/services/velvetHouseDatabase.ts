@@ -5,6 +5,7 @@ export interface VelvetHouseSave {
   user_id: string;
   companion_id: string;
   save_data: Record<string, unknown>;
+  save_data_v2?: Record<string, unknown> | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -15,13 +16,14 @@ export async function loadVelvetHouseSave(companionId: string): Promise<Record<s
 
   const { data, error } = await supabase
     .from('velvet_house_saves')
-    .select('save_data')
+    .select('save_data, save_data_v2')
     .eq('user_id', user.id)
     .eq('companion_id', companionId)
     .maybeSingle();
 
   if (error || !data) return null;
-  return data.save_data as Record<string, unknown>;
+  // Prefer v2 if available, fall back to v1
+  return (data.save_data_v2 as Record<string, unknown> | null) ?? (data.save_data as Record<string, unknown>);
 }
 
 export async function saveVelvetHouseProgress(companionId: string, saveData: Record<string, unknown>, force = false): Promise<void> {
@@ -49,14 +51,21 @@ export async function saveVelvetHouseProgress(companionId: string, saveData: Rec
     }
   }
 
+  // Dual-write: v1 in save_data, v2 in save_data_v2 (rollback safety)
+  const isV2 = saveData.v === 2;
+  const upsertPayload: Record<string, unknown> = {
+    user_id: user.id,
+    companion_id: companionId,
+    save_data: saveData,
+    updated_at: new Date().toISOString(),
+  };
+  if (isV2) {
+    upsertPayload.save_data_v2 = saveData;
+  }
+
   const { error } = await supabase
     .from('velvet_house_saves')
-    .upsert({
-      user_id: user.id,
-      companion_id: companionId,
-      save_data: saveData,
-      updated_at: new Date().toISOString(),
-    }, {
+    .upsert(upsertPayload, {
       onConflict: 'user_id,companion_id',
     });
 
@@ -100,8 +109,8 @@ export async function saveVelvetHouseHistory(companionId: string, saveData: Reco
       day,
     });
 
-  // Keep only the 10 most recent rows per (user, companion).
-  // Delete older rows in a single call.
+  // Belt-and-suspenders: the server trigger also caps at 10, but this
+  // client-side cleanup handles any rows that slipped through before the trigger.
   const { data: oldRows } = await supabase
     .from('velvet_house_save_history')
     .select('id')

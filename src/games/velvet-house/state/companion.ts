@@ -1,7 +1,7 @@
 export interface CompanionState {
   source: 'game' | 'velvet';
   preset: string;
-  pronoun: 'she' | 'he';
+  pronoun: 'she' | 'he' | 'they';
   gender: 'female' | 'male';
   bio: string;
   memories: string[];
@@ -58,6 +58,23 @@ export function replaceName(s: string, from: string, to: string): string {
   return s.replace(new RegExp(`\\b${from}\\b`, 'g'), to);
 }
 
+export function theySwap(s: string): string {
+  return s
+    .replace(/\b(She|she)'s\b/g, (_m, w) => (w === 'She' ? "They're" : "they're"))
+    .replace(/\bShe\b/g, 'They')
+    .replace(/\bshe\b/g, 'they')
+    .replace(/\bHerself\b/g, 'Themself')
+    .replace(/\bherself\b/g, 'themself')
+    .replace(/\bHers\b/g, 'Theirs')
+    .replace(/\bhers\b/g, 'theirs')
+    .replace(/\b(H|h)er\b(\s*)([A-Za-z]*)/g, (_m, H, sp, nx) => {
+      const obj = !nx || HER_OBJ.has(nx.toLowerCase());
+      return (H === 'H' ? (obj ? 'Them' : 'Their') : (obj ? 'them' : 'their')) + sp + nx;
+    })
+    .replace(/\bshe's\b/gi, "they're")
+    .replace(/\bis\b(\s+)(she|he)\b/gi, (_m, sp, _p) => 'are' + sp + 'they');
+}
+
 export function pronounSwap(
   s: string,
   partnerName: string,
@@ -67,6 +84,7 @@ export function pronounSwap(
   let out = s;
   if (partnerName !== 'Maya') out = replaceName(out, 'Maya', partnerName);
   if (companion.pronoun === 'he') out = heSwap(out);
+  else if (companion.pronoun === 'they') out = theySwap(out);
   return out;
 }
 

@@ -12,6 +12,9 @@ import {
 import type { CharacterLook, CharacterNeeds } from './state/types';
 import { createHouseArt, type WallMode, type PersonFrame } from './art/houseArt.js';
 import { startLoop, advanceClock } from './engine/loop';
+import { startFixedLoop } from './engine/fixedLoop';
+import { qualityManager } from './engine/qualityTier';
+import { LayerCache } from './engine/layerCache';
 import {
   createHousehold, billTick, deliveryTick, dirtTick, laundryTick, newDayReset,
   servings, type HouseholdState,
@@ -190,15 +193,40 @@ function boot(): void {
   };
 
   const fit = (): void => {
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const ratio = qualityManager.resolveDpr(window.devicePixelRatio || 1);
     const box = canvas.getBoundingClientRect();
-    const w = Math.max(1, Math.round(box.width * ratio));
-    const h = Math.max(1, Math.round((w * VIEW_H) / VIEW_W));
+    const isNarrow = box.width < 560;
+    let w: number, h: number;
+    if (isNarrow) {
+      // Phone framing: fit to room height, let width overflow (pan follows action)
+      h = Math.max(1, Math.round(box.height * ratio));
+      w = Math.max(1, Math.round((h * VIEW_W) / VIEW_H));
+    } else {
+      // Desktop: fit to width
+      w = Math.max(1, Math.round(box.width * ratio));
+      h = Math.max(1, Math.round((w * VIEW_H) / VIEW_W));
+    }
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
     }
-    ctx.setTransform(w / VIEW_W, 0, 0, h / VIEW_H, 0, 0);
+    // Pan offset centers the view on phone; 0 on desktop (canvas matches viewport)
+    const panX = isNarrow ? (w - Math.round(box.width * ratio)) / 2 : 0;
+    ctx.setTransform(w / VIEW_W, 0, 0, h / VIEW_H, -panX * (w / VIEW_W) / w, 0);
+  };
+  let panTarget = 0;
+  const updatePan = (): void => {
+    const box = canvas.getBoundingClientRect();
+    if (box.width >= 560) return;
+    // Pan toward the followed character's x position
+    const followed = view.follow && people.find((p) => p.id === view.follow);
+    if (followed) {
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const screenW = box.width * ratio;
+      const gameW = (box.height * ratio * VIEW_W) / VIEW_H;
+      const maxPan = Math.max(0, gameW - screenW);
+      panTarget = Math.max(0, Math.min(maxPan, (followed.x / 100) * maxPan));
+    }
   };
   new ResizeObserver(fit).observe(canvas);
   fit();
@@ -284,10 +312,34 @@ function boot(): void {
     });
   };
 
+  // Dev-only test hooks — not exposed in production builds
+  const isDev = import.meta.env.DEV;
+  if (isDev) {
+    (window as unknown as { __velvet?: Record<string, unknown> }).__velvet = {
+      setView: (lv: number) => setLevel(lv),
+      setMinutes: (m: number) => { world.minutes = m; },
+      get minutes() { return world.minutes; },
+      set minutes(v: number) { world.minutes = v; },
+      get day() { return world.day; },
+      set day(v: number) { world.day = v; },
+      saveGame: () => {
+        try {
+          localStorage.setItem(SAVE_KEY, JSON.stringify({ ...world.save, day: world.day, minutes: world.minutes, v: 2 }));
+        } catch { /* non-fatal */ }
+      },
+      get money() { return world.household.money; },
+      set money(v: number) { world.household.money = v; },
+    };
+  }
+
   let hudTimer = 0;
-  startLoop((dt) => {
-    view.t += dt;
-    if (!view.paused) {
+  const layerCache = new LayerCache();
+  let simCache = { day: world.day, minutes: world.minutes, objs: [...world.objs], chars: people.map(toFrame) };
+
+  startFixedLoop(
+    (dt) => {
+      if (view.paused) return;
+      view.t += dt;
       const speed = SPEEDS[view.speedIdx];
       const before = world.minutes + world.day * 1440;
       Object.assign(world, advanceClock(world.day, world.minutes, dt, speed));
@@ -305,30 +357,49 @@ function boot(): void {
       tickAgent(house, people[1], people[0], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
       const followed = view.follow && people.find((p) => p.id === view.follow);
       if (followed && !followed.onStairs && followed.level !== view.level) setLevel(followed.level, true);
-    }
-    art.render({
-      level: view.level,
-      rot: view.rot,
-      minutes: world.minutes,
-      day: world.day,
-      t: view.t,
-      dt,
-      objs: world.objs,
-      wallMode: WALL_MODES[view.wallIdx].mode,
-      chars: people.map(toFrame),
-    });
-    hudTimer -= dt;
-    if (hudTimer <= 0) {
-      hudTimer = 0.25;
-      el('when').textContent = `${DAYS[weekday(world.day)]} · Day ${world.day}`;
-      el('clock').textContent = clockText(world.minutes);
-      el('season').textContent = season(world.day);
-      el('money').textContent = `${world.household.money}`;
-      const sv = servings(world.household);
-      el('fridge').textContent = sv === 0 ? 'Fridge empty' : `${sv} meals`;
-      refreshPeople();
-    }
-  });
+    },
+    (alpha, frameDt) => {
+      // Store previous state for interpolation
+      const prevSim = simCache;
+      simCache = { day: world.day, minutes: world.minutes, objs: [...world.objs], chars: people.map(toFrame) };
+
+      // Interpolate minutes for smooth time display
+      const interpMinutes = prevSim.minutes + (simCache.minutes - prevSim.minutes) * alpha;
+
+      // Check if static layers need redraw
+      const cacheKey = { level: view.level, rot: view.rot, wallMode: WALL_MODES[view.wallIdx].mode, zoomBucket: Math.floor(canvas.width / 400) };
+      if (layerCache.keyChanged(cacheKey)) {
+        fit();
+      }
+
+      art.render({
+        level: view.level,
+        rot: view.rot,
+        minutes: interpMinutes,
+        day: world.day,
+        t: view.t,
+        dt: frameDt,
+        objs: world.objs,
+        wallMode: WALL_MODES[view.wallIdx].mode,
+        chars: people.map(toFrame),
+      });
+
+      qualityManager.recordFrame(frameDt * 1000);
+
+      hudTimer -= frameDt;
+      if (hudTimer <= 0) {
+        hudTimer = 0.25;
+        el('when').textContent = `${DAYS[weekday(world.day)]} · Day ${world.day}`;
+        el('clock').textContent = clockText(world.minutes);
+        el('season').textContent = season(world.day);
+        el('money').textContent = `${world.household.money}`;
+        const sv = servings(world.household);
+        el('fridge').textContent = sv === 0 ? 'Fridge empty' : `${sv} meals`;
+        refreshPeople();
+        updatePan();
+      }
+    },
+  );
 
   postToParent({ type: 'velvet:ready', game: 'velvet-house', day: world.day, needsProfile: true });
 

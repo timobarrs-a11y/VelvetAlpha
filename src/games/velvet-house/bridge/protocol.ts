@@ -44,7 +44,7 @@ export interface ProfileMessage extends BridgeMessage {
   };
   companion: {
     name: string;
-    pronoun: 'she' | 'he';
+    pronoun: 'she' | 'he' | 'they';
     gender: 'male' | 'female';
     personality: string;
     look?: GameLook | undefined;
@@ -139,10 +139,34 @@ export function postToParent(msg: BridgeMessage): void {
 }
 
 /**
+ * Strip unknown fields from a message, keeping only whitelisted keys per type.
+ * Prevents unexpected data from reaching the game or host.
+ */
+const FIELD_WHITELISTS: Record<string, string[]> = {
+  'velvet:ready': ['type', 'game', 'day', 'needsProfile'],
+  'velvet:profile': ['type', 'player', 'companion'],
+  'velvet:profileApplied': ['type', 'game', 'day', 'player', 'companion'],
+  'velvet:companionCreated': ['type', 'game'],
+  'velvet:vidSearch': ['type', 'game', 'query', 'seq'],
+  'velvet:vidResults': ['type', 'seq', 'videos'],
+  'velvet:restarted': ['type', 'game', 'day'],
+};
+
+export function sanitizeMessage(msg: Record<string, unknown>): Record<string, unknown> {
+  const allowed = FIELD_WHITELISTS[msg.type as string];
+  if (!allowed) return { type: msg.type };
+  const out: Record<string, unknown> = {};
+  for (const key of allowed) {
+    if (key in msg) out[key] = msg[key];
+  }
+  return out;
+}
+
+/**
  * Validate incoming message origin against expected parent origins.
  * Returns true if the message should be accepted.
  */
 export function isValidOrigin(eventOrigin: string, allowedOrigins: string[]): boolean {
-  if (allowedOrigins.length === 0) return true; // prototyping mode
+  if (allowedOrigins.length === 0) return false;
   return allowedOrigins.includes(eventOrigin);
 }

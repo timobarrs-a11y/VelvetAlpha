@@ -27,6 +27,9 @@ export const gamesRoutes = [
   <Route key="slime-soccer" path="/slime-soccer" element={game(<SlimeSoccer />)} />,
   <Route key="stellar-pursuit" path="/stellar-pursuit" element={game(<StellarPursuitGame />)} />,
   <Route key="social-combat" path="/social-combat" element={game(<SocialCombatRPGGame />)} />,
-  <Route key="velvet-house" path="/velvet-house" element={game(<VelvetHouseGame />)} />,
+  // Phase 1B: the live game now loads the typed/bundled engine (velvet-house-next entry)
+  <Route key="velvet-house" path="/velvet-house" element={game(<VelvetHouseNextGame />)} />,
   <Route key="velvet-house-next" path="/velvet-house-next" element={game(<VelvetHouseNextGame />)} />,
+  // Legacy route kept for any existing bookmarks — redirects to the typed game
+  <Route key="velvet-house-legacy" path="/velvet-house-legacy" element={game(<VelvetHouseGame />)} />,
 ];

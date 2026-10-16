@@ -4,7 +4,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanion, type Companion } from '../services/companionService';
 import { loadVelvetHouseSave, saveVelvetHouseProgress, saveVelvetHouseHistory, maybeSnapshotHistory } from '../services/velvetHouseDatabase';
-import { isRestartedMessage } from '../games/velvet-house/bridge/protocol';
+import { isRestartedMessage, isReadyMessage, isVidSearchMessage, sanitizeMessage } from '../games/velvet-house/bridge/protocol';
 
 const GAME_PATH = '/games/velvet-house/index.html';
 const SAVE_KEY_PREFIX = 'velvet-house-v1';
@@ -226,17 +226,18 @@ export function VelvetHouseGame() {
       if (event.source !== iframeRef.current?.contentWindow) return;
       const msg = event.data;
       if (!msg || typeof msg !== 'object') return;
-      if (msg.type === 'velvet:ready') {
+      const clean = sanitizeMessage(msg as Record<string, unknown>);
+      if (isReadyMessage(clean)) {
         setLoading(false);
-        connectGame(msg.needsProfile === true).catch(() => {});
+        connectGame(clean.needsProfile === true).catch(() => {});
       }
-      if (msg.type === 'velvet:vidSearch' && typeof msg.query === 'string') {
-        const seq = msg.seq;
+      if (isVidSearchMessage(clean)) {
+        const seq = clean.seq;
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-video-search`;
         fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
-          body: JSON.stringify({ query: msg.query, userContext: 'Velvet House in-game TV' }),
+          body: JSON.stringify({ query: clean.query, userContext: 'Velvet House in-game TV' }),
         })
           .then(r => r.json())
           .then(data => {
@@ -252,7 +253,7 @@ export function VelvetHouseGame() {
             );
           });
       }
-      if (isRestartedMessage(msg)) {
+      if (isRestartedMessage(clean)) {
         // Remember the restart so the next sync force-uploads the fresh save.
         // The flag survives reload/tab close so we don't lose the restart intent.
         localStorage.setItem(restartKeyFor(companionId), '1');

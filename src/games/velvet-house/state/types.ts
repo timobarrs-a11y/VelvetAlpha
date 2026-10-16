@@ -240,6 +240,20 @@ export interface CareerState {
 }
 
 /**
+ * Grouped character data for v2 saves.
+ * Renames hard-coded names to player/partner with grouped fields.
+ */
+export interface CharacterSaveGroup {
+  name: string;
+  look: CharacterLook;
+  needs?: CharacterNeeds;
+  skills?: CharacterSkills;
+  mood?: CharacterMood;
+  workedDay?: boolean;
+  friendsDay?: boolean;
+}
+
+/**
  * The v1 save schema — exactly what snapshot() produces today.
  * Used for loading existing saves during migration.
  */
@@ -309,12 +323,20 @@ export interface SaveDataV1 {
 }
 
 /**
- * The v2 save schema — same data, typed, with a seeded RNG value stored.
- * Migration from v1 is additive: no fields removed, `rngSeed` added.
+ * The v2 save schema — grouped fields, player/partner naming,
+ * forward-compatible extension bag, seeded RNG.
+ * All v1 fields are preserved for backward compatibility;
+ * grouped fields are additive aliases.
  */
 export interface SaveDataV2 extends Omit<SaveDataV1, 'v'> {
   v: 2;
   rngSeed: number;
+  /** Grouped player data (migrated from simName/look/jordan) */
+  player?: CharacterSaveGroup;
+  /** Grouped partner data (migrated from partnerName/mayaLook/maya) */
+  partner?: CharacterSaveGroup;
+  /** Forward-compatible extension bag for future schema additions */
+  ext: Record<string, unknown>;
 }
 
 export type SaveData = SaveDataV1 | SaveDataV2;
