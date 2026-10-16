@@ -250,6 +250,41 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
 .qdrawer > summary > span{color:var(--ink);font-weight:500}
 .qdrawer-body{display:grid;gap:8px;padding-top:6px}
 @media (prefers-reduced-motion:reduce){.itray,.dcard{transition:none}.qdrawer > summary::after{transition:none}}
+/* ---- game-first layout: the house fills the window; everything else lives in a drawer opened from the dock ---- */
+html,body{height:100%}
+body{margin:0;overflow:hidden}
+.wrap{max-width:none;margin:0;padding:0;display:block;height:100dvh}
+.bench{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:0;height:100%;align-items:stretch}
+.stagecol{display:flex;flex-direction:column;gap:0;min-width:0;min-height:0;background:var(--stage)}
+.screen{position:relative;flex:1;min-height:0;display:grid;place-items:center;container-type:size;overflow:hidden}
+.screen > .townsign{top:auto;bottom:10px}
+.drawer #h-shop,.drawer #h-goals,.drawer #h-maya,.drawer #h-log{display:none}
+.stage{border-radius:0;width:min(100cqw,calc(100cqh * 640 / 440))}
+.arrangehint{padding-top:0}
+.dialog,.recap{bottom:14px}
+.itray{bottom:18px}
+.drawer{width:380px;min-height:0;border-left:1px solid var(--line);background:var(--bg);display:flex;flex-direction:column}
+.drawer[hidden]{display:none}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+.drawer-head b{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:-.01em}
+.drawer .panel{flex:1;min-height:0;overflow-y:auto;padding:12px;align-content:start}
+.drawer [data-page]{display:none}
+.drawer[data-open="shop"] [data-page="shop"],.drawer[data-open="goals"] [data-page="goals"],.drawer[data-open="do"] [data-page="do"],.drawer[data-open="partner"] [data-page="partner"],.drawer[data-open="you"] [data-page="you"],.drawer[data-open="home"] [data-page="home"],.drawer[data-open="log"] [data-page="log"]{display:grid}
+.dock{display:flex;flex-direction:column;gap:4px;width:72px;padding:10px 6px;background:var(--surface);border-left:1px solid var(--line);overflow-y:auto}
+.dock button{display:grid;justify-items:center;gap:3px;min-width:0;font-family:var(--mono);font-size:10.5px;color:var(--muted);background:transparent;border:0;border-radius:10px;padding:9px 2px;cursor:pointer}
+.dock button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock button i{font-style:normal;font-size:19px;line-height:1;color:var(--ink)}
+.dock button:hover,.dock button[aria-pressed="true"]{background:var(--warm-soft);color:var(--ink)}
+@media (max-width:760px){
+  .bench{display:flex;flex-direction:column;box-sizing:border-box;padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+  .stagecol{flex:1}
+  .bench.open .stagecol,.bench.open .screen{flex:none}
+  .bench.open .screen{container-type:normal}
+  .drawer{width:auto;flex:1;border-left:0;border-top:1px solid var(--line)}
+  .dock{position:fixed;left:0;right:0;bottom:0;z-index:20;flex-direction:row;width:auto;height:calc(60px + env(safe-area-inset-bottom));padding:4px 6px env(safe-area-inset-bottom);border-left:0;border-top:1px solid var(--line);overflow:hidden}
+  .dock button{flex:1;padding:6px 0}
+  .dialog{position:fixed;left:8px;right:8px;bottom:calc(68px + env(safe-area-inset-bottom));margin:0;z-index:21}
+}
 </style>
 
 <div class="setup" id="setup" hidden>
@@ -285,18 +320,10 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   </form>
 </div>
 <div class="wrap">
-  <header>
-    <p class="eyebrow">Velvet · art study 09</p>
-    <h1>A life that keeps unfolding</h1>
-    <p class="lede">Move in and make it yours, room by room: 25 paints, 35+ wallpapers, 29 floors, 60 pieces of furniture, a dozen things to hang on the walls, and a closet for both of you. Today's picks change every morning. Not sure? Ask Maya. Turn the camera with ⟲ ⟳.</p>
-  </header>
 
   <div class="bench">
     <div class="stagecol">
-      <div class="stage">
-        <canvas id="room" width="640" height="440" aria-label="An isometric view of one floor of a three-floor house and its backyard, where two people go about their day"></canvas>
-        <div class="theater" id="theater" hidden><canvas id="couchCv" width="320" height="70" aria-hidden="true"></canvas><div class="thbar"><button type="button" class="mini" id="thBack">Back to the house</button><button type="button" class="mini" id="thStop">Stop video</button></div></div>
-        <div class="vid" id="vidWrap" hidden><iframe id="vidFrame" title="Video playing in the game" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+      <div class="screen">
         <div class="townsign" id="townSign" aria-label="Town"><b id="townText">Honeysuckle Hollow</b></div>
         <div class="hud">
           <span class="chip" id="clock">Fri · 6:20 AM</span>
@@ -310,6 +337,10 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
           <button class="who" type="button" id="mTag"><i style="background:#E0A43A"></i><b id="mTagText">Maya · Bedroom · Asleep</b></button>
           <span id="petTags" style="display:contents"></span>
         </div>
+      <div class="stage">
+        <canvas id="room" width="640" height="440" aria-label="An isometric view of one floor of a three-floor house and its backyard, where two people go about their day"></canvas>
+        <div class="theater" id="theater" hidden><canvas id="couchCv" width="320" height="70" aria-hidden="true"></canvas><div class="thbar"><button type="button" class="mini" id="thBack">Back to the house</button><button type="button" class="mini" id="thStop">Stop video</button></div></div>
+        <div class="vid" id="vidWrap" hidden><iframe id="vidFrame" title="Video playing in the game" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
         <div class="recap" id="recap" hidden><b id="recapTitle">While you were out</b><ul id="recapList"></ul><div><button type="button" class="mini" id="recapOk">Got it</button></div></div>
         <div class="dialog" id="dialog" hidden>
           <span class="speaker">Maya</span>
@@ -326,6 +357,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         </div>
         <div class="itray" id="itray" role="menu" aria-label="Interactions"></div>
         <div class="dcard" id="dcard" role="dialog" aria-live="polite"></div>
+      </div>
+      </div>
         <div class="floorbar" role="group" aria-label="Floors">
           <span class="lbl">Floor</span>
           <button type="button" data-level="3" aria-pressed="false">Yard</button>
@@ -343,9 +376,12 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
           <button type="button" id="storeBtn" hidden>Put away</button>
         </div>
         <div class="arrangehint" id="arrangeHint" hidden>Arrange mode pauses time. Click a piece of furniture to pick it up, move it, press Rotate or R, then click to set it down. Green means it fits. Esc puts it back.</div>
-      </div>
+    </div>
 
-      <section class="shop" aria-labelledby="h-shop">
+    <aside class="drawer" id="drawer" aria-label="Menu" hidden>
+      <div class="drawer-head"><b id="drawerTitle"></b><button type="button" class="mini" id="drawerClose" aria-label="Close menu">✕</button></div>
+    <div class="panel">
+      <section class="shop" aria-labelledby="h-shop" data-page="shop">
         <div class="shop-head">
           <h2 id="h-shop">Shop</h2>
           <p id="shopNote">Deliveries arrive at the front door in about half an hour.</p>
@@ -353,14 +389,12 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         <div class="tabs" role="tablist" id="tabs"></div>
         <div class="items" id="items"></div>
       </section>
-    </div>
 
-    <div class="panel">
-      <section class="group" aria-labelledby="h-goals">
+      <section class="group" aria-labelledby="h-goals" data-page="goals">
         <h2 id="h-goals">Goals</h2>
         <div id="goalsBody" style="display:grid;gap:8px"></div>
       </section>
-      <section class="group" aria-labelledby="h-house">
+      <section class="group" aria-labelledby="h-house" data-page="home">
         <h2 id="h-house">Household <button class="mini" id="newGame" type="button">New game</button></h2>
         <div class="cashbig" id="cash">$70</div>
         <div class="ledger">
@@ -377,7 +411,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         </div>
       </section>
 
-      <section class="group" aria-labelledby="h-do">
+      <section class="group" aria-labelledby="h-do" data-page="do">
         <h2 id="h-do">Give an order
           <span style="display:flex;gap:6px">
             <button class="mini" id="freeWill" type="button" aria-pressed="true">Free will on</button>
@@ -449,12 +483,12 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         </details>
       </section>
 
-      <section class="group" aria-labelledby="h-pets" id="petsGroup" hidden>
+      <section class="group" aria-labelledby="h-pets" data-page="home" id="petsGroup" hidden>
         <h2 id="h-pets">Pets</h2>
         <div id="petsBody" style="display:grid;gap:16px"></div>
       </section>
 
-      <section class="group" aria-labelledby="h-maya">
+      <section class="group" aria-labelledby="h-maya" data-page="partner">
         <h2 id="h-maya">Maya</h2>
         <div class="need"><span>Bond</span><div class="bar bond" role="meter" aria-label="Bond with Maya" aria-valuemin="0" aria-valuemax="100" id="bondMeter"><i id="bondBar"></i></div><span class="val" id="bondVal">62</span></div>
         <div class="meta"><span>Status <b id="bondStage">Dating</b></span><span>Mood <b id="mayaMood">Sleepy</b></span></div>
@@ -470,14 +504,14 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         <div id="mayaChanges" class="chgs"></div>
       </section>
 
-      <section class="group" aria-labelledby="h-needs">
+      <section class="group" aria-labelledby="h-needs" data-page="you">
         <h2 id="h-needs">Your needs</h2>
         <div id="needs" style="display:grid;gap:8px"></div>
         <div class="meta"><span>Cooking <b id="cookVal">1</b></span><span>Fitness <b id="fitVal">0</b></span></div>
         <p class="quiet" id="jordanSched"></p>
       </section>
 
-      <section class="group" aria-labelledby="h-look">
+      <section class="group" aria-labelledby="h-look" data-page="you">
         <h2 id="h-look">Your look</h2>
         <div class="row"><label for="simName">Name</label><input type="text" id="simName" value="Jordan" maxlength="16"></div>
         <div class="row"><span>Skin</span><div class="sw" id="swSkin"></div></div>
@@ -486,11 +520,21 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         <div class="row"><span>Top</span><div class="sw" id="swTop"></div></div>
       </section>
 
-      <section class="group" aria-labelledby="h-log">
+      <section class="group" aria-labelledby="h-log" data-page="log">
         <h2 id="h-log">Today</h2>
         <ul class="log" id="log"></ul>
       </section>
     </div>
+    </aside>
+    <nav class="dock" id="dock" aria-label="Menus">
+      <button type="button" data-open="shop" aria-pressed="false"><i aria-hidden="true">◈</i><span>Shop</span></button>
+      <button type="button" data-open="goals" aria-pressed="false"><i aria-hidden="true">★</i><span>Goals</span></button>
+      <button type="button" data-open="do" aria-pressed="false"><i aria-hidden="true">▶</i><span>Do</span></button>
+      <button type="button" data-open="partner" aria-pressed="false"><i aria-hidden="true">♥</i><span>Maya</span></button>
+      <button type="button" data-open="you" aria-pressed="false"><i aria-hidden="true">☺</i><span>You</span></button>
+      <button type="button" data-open="home" aria-pressed="false"><i aria-hidden="true">⌂</i><span>Home</span></button>
+      <button type="button" data-open="log" aria-pressed="false"><i aria-hidden="true">☰</i><span>Log</span></button>
+    </nav>
   </div>
 </div>
 
@@ -503,7 +547,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   const ctx0 = cv.getContext('2d');
   let ctx = ctx0;
   const W = 640, H = 440;
-  function fit() { const dpr = Math.min(window.devicePixelRatio || 1, 2); cv.width = W * dpr; cv.height = H * dpr; ctx0.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  function fit() { const sc = Math.min(4, Math.max(1, (cv.clientWidth || W) / W) * Math.min(window.devicePixelRatio || 1, 2)), w = Math.round(W * sc); if (cv.width !== w) { cv.width = w; cv.height = Math.round(H * sc); } ctx0.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0); }
   fit(); window.addEventListener('resize', fit);
   const WX = 10, WY = 8, TW = 32, TH = 16, ZH = 34, WH = 2.6, IW = 0.55;
   let OX = 288, OY = 128;
@@ -3498,7 +3542,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     return null;
   }
   let guideEl = null;
-  function updateGuide() { const t = guideTarget(); if (t === guideEl) return; if (guideEl) guideEl.classList.remove('guide'); guideEl = t; if (t) t.classList.add('guide'); }
+  function dockGuide(t) { const sec = t && !t.offsetParent && t.closest('[data-page]'), pg = sec ? sec.dataset.page : null; document.querySelectorAll('#dock [data-open]').forEach(b => b.classList.toggle('guide', b.dataset.open === pg)); }
+  function updateGuide() { const t = guideTarget(); dockGuide(t); if (t === guideEl) return; if (guideEl) guideEl.classList.remove('guide'); guideEl = t; if (t) t.classList.add('guide'); }
   function goalsTick() {
     if (!settleDone && !flags.openedTalk && day === 1 && minutes >= 9 * 60 + 2 && canTalk() && !chat.open && !arranging) {
       flags.openedTalk = true; noticed = { topic: "it is move-in day. The house is empty and full of possibility. Maya is excited about making this place theirs and wants to plan where to start (the couch first, then food, then one room they paint together)", until: absMin() + 240, line: "Okay. We actually live here now. Where do we even start?", ctx: null };
@@ -4662,9 +4707,22 @@ ${memoryBrief()}` : ''}`);
     const hrs = (Date.now() - loaded.savedAt) / 3.6e6;
     if (hrs > 0.33) { const extra = offlineCatchup(hrs); showRecap(`While you were away (${hrs < 36 ? Math.max(1, Math.round(hrs)) + ' hours' : Math.round(hrs / 24) + ' days'})`, extra); }
   }
-  function renderTown() { $('townText').textContent = townName; const sg = $('townSign'); sg.title = townName; sg.style.top = (cv.offsetTop + cv.offsetHeight - sg.offsetHeight - 10) + 'px'; }
-  try { new ResizeObserver(renderTown).observe(cv); } catch (e) { window.addEventListener('resize', renderTown); }
+  function renderTown() { $('townText').textContent = townName; $('townSign').title = townName; }
+  try { new ResizeObserver(() => { fit(); renderTown(); }).observe(cv); } catch (e) { window.addEventListener('resize', renderTown); }
   renderTown();
+  const drawerEl = $('drawer'), benchEl = document.querySelector('.bench');
+  const PAGE_TITLES = { shop: 'Shop', goals: 'Goals', do: 'Give an order', partner: 'Maya', you: 'You', home: 'Household', log: 'Today' };
+  function openPage(pg) {   // one menu at a time; tapping the open one closes it
+    const close = !pg || (!drawerEl.hidden && drawerEl.dataset.open === pg);
+    drawerEl.hidden = close; drawerEl.dataset.open = close ? '' : pg; benchEl.classList.toggle('open', !close);
+    $('drawerTitle').textContent = close ? '' : P(PAGE_TITLES[pg]);
+    document.querySelectorAll('#dock [data-open]').forEach(b => b.setAttribute('aria-pressed', String(!close && b.dataset.open === pg)));
+    try { localStorage.setItem('velvet-drawer', close ? '' : pg); } catch (e) {}
+    guideEl && guideEl.classList.remove('guide'); guideEl = null; updateGuide();
+  }
+  document.querySelectorAll('#dock [data-open]').forEach(b => b.addEventListener('click', () => openPage(b.dataset.open)));
+  $('drawerClose').addEventListener('click', () => openPage(''));
+  { let first = null; try { first = localStorage.getItem('velvet-drawer'); } catch (e) {} if (first === null) first = matchMedia('(max-width:760px)').matches ? '' : 'goals'; openPage(first); }
   setWallMode(wallMode);
   $('autoSel').value = autonomy; $('capSel').value = String(mayaCap);
   $('autoSel').addEventListener('change', (e) => { autonomy = e.target.value; if (autonomy !== 'ask') { if (proposal && autonomy === 'free') startPlan(proposal); proposal = null; } if (autonomy === 'off') mayaQueue.length = 0; log(autonomy === 'free' ? 'Maya can change things around the house on her own.' : autonomy === 'ask' ? 'Maya will ask before she changes anything.' : 'Maya will comment on changes but leave the house alone.'); renderMayaActs(); saveGame(); });
