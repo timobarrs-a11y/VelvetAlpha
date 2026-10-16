@@ -1,7 +1,8 @@
 {
-  "captured": 6,
+  "captured": 7,
   "allTypes": [
     "velvet:ready",
+    "velvet:companionCreated",
     "velvet:profile",
     "velvet:profileApplied",
     "velvet:vidSearch",
@@ -17,6 +18,17 @@
         "game",
         "day",
         "needsProfile"
+      ]
+    },
+    {
+      "direction": "outbound",
+      "type": "velvet:companionCreated",
+      "fields": [
+        "type",
+        "game",
+        "day",
+        "player",
+        "companion"
       ]
     },
     {
@@ -76,6 +88,13 @@
       "game",
       "day",
       "needsProfile"
+    ],
+    "velvet:companionCreated": [
+      "type",
+      "game",
+      "day",
+      "player",
+      "companion"
     ],
     "velvet:profile": [
       "type",

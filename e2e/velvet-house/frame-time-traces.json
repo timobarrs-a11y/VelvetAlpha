@@ -6,11 +6,19 @@
       "height": 800
     },
     "samples": 174,
-    "avgFrameMs": 28.15,
-    "minFrameMs": 11.2,
-    "maxFrameMs": 95.8,
-    "p95FrameMs": 66.6,
-    "avgFps": 35.5
+    "avgFrameMs": 21.64,
+    "minFrameMs": 10.3,
+    "maxFrameMs": 76.6,
+    "p95FrameMs": 52.3,
+    "avgFps": 46.2,
+    "canvas": {
+      "dpr": 1,
+      "clientWidth": 814,
+      "clientHeight": 560,
+      "canvasWidth": 814,
+      "canvasHeight": 560,
+      "canvasPixels": 455840
+    }
   },
   {
     "device": "iphone-12",
@@ -20,10 +28,18 @@
     },
     "samples": 174,
     "avgFrameMs": 16.85,
-    "minFrameMs": 7.2,
-    "maxFrameMs": 58.8,
-    "p95FrameMs": 22,
-    "avgFps": 59.3
+    "minFrameMs": 6.6,
+    "maxFrameMs": 48.1,
+    "p95FrameMs": 18.9,
+    "avgFps": 59.3,
+    "canvas": {
+      "dpr": 1,
+      "clientWidth": 390,
+      "clientHeight": 268,
+      "canvasWidth": 640,
+      "canvasHeight": 440,
+      "canvasPixels": 281600
+    }
   },
   {
     "device": "pixel-8",
@@ -32,10 +48,18 @@
       "height": 915
     },
     "samples": 174,
-    "avgFrameMs": 16.66,
-    "minFrameMs": 6.7,
-    "maxFrameMs": 38.6,
-    "p95FrameMs": 23.4,
-    "avgFps": 60
+    "avgFrameMs": 16.76,
+    "minFrameMs": 8.6,
+    "maxFrameMs": 42.4,
+    "p95FrameMs": 18,
+    "avgFps": 59.7,
+    "canvas": {
+      "dpr": 1,
+      "clientWidth": 412,
+      "clientHeight": 283,
+      "canvasWidth": 640,
+      "canvasHeight": 440,
+      "canvasPixels": 281600
+    }
   }
 ]

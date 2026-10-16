@@ -9,6 +9,7 @@ const initScript = readFileSync(join(process.cwd(), 'e2e/velvet-house/determinis
 
 // The old game only calls window.parent.postMessage when window.parent !== window.
 // Serve both host and game from the same origin so postMessage works.
+// Captures all 7 bridge message types including companionCreated.
 
 test.describe('Bridge message contract — full recording', () => {
   test.setTimeout(60_000);
@@ -44,9 +45,26 @@ window.__sendToGame = function(msg) {
     });
 
     await page.goto('https://localhost/bridge-host.html');
+    // Wait for the game iframe to boot and send ready
     await page.waitForFunction(() => (window as any).__bridgeLog?.some((m: any) => m.type === 'velvet:ready'), { timeout: 15_000 });
 
-    // Send a profile message to trigger profileApplied
+    // Step 1: Submit the setup form to trigger companionCreated.
+    // This only fires when companion.source !== 'velvet', so we must NOT send
+    // a velvet:profile message first — the game starts with companion.source = 'game'.
+    await page.evaluate(() => {
+      const iframe = document.getElementById('gameFrame') as HTMLIFrameElement;
+      const iframeDoc = iframe.contentDocument;
+      if (!iframeDoc) return;
+      const form = iframeDoc.getElementById('setupForm') as HTMLFormElement;
+      const suName = iframeDoc.getElementById('suName') as HTMLInputElement;
+      const suPartner = iframeDoc.getElementById('suPartner') as HTMLInputElement;
+      if (suName) suName.value = 'Sam';
+      if (suPartner) suPartner.value = 'Riley';
+      if (form) form.requestSubmit();
+    });
+    await page.waitForTimeout(2000);
+
+    // Step 2: Now send a profile message to trigger profileApplied
     await page.evaluate(() => {
       (window as any).__sendToGame({
         type: 'velvet:profile',
@@ -61,19 +79,19 @@ window.__sendToGame = function(msg) {
     });
     await page.waitForTimeout(1500);
 
-    // Trigger a vidSearch
+    // Step 3: Trigger a vidSearch
     await page.evaluate(() => {
       (window as any).__sendToGame({ type: 'velvet:vidSearch', game: 'velvet-house', query: 'test', seq: 1 });
     });
     await page.waitForTimeout(500);
 
-    // Send vidResults back
+    // Step 4: Send vidResults back
     await page.evaluate(() => {
       (window as any).__sendToGame({ type: 'velvet:vidResults', seq: 1, videos: [] });
     });
     await page.waitForTimeout(300);
 
-    // Trigger a restart message
+    // Step 5: Trigger a restart message
     await page.evaluate(() => {
       (window as any).__sendToGame({ type: 'velvet:restarted', game: 'velvet-house', day: 1 });
     });
@@ -96,8 +114,15 @@ window.__sendToGame = function(msg) {
     };
     writeFileSync(join(dir, 'bridge-contract.json'), JSON.stringify(contract, null, 2));
 
+    // Verify all 7 message types were captured
     const types = log.map((m: any) => m.type);
     expect(types).toContain('velvet:ready');
-    expect(log.length).toBeGreaterThanOrEqual(1);
+    expect(types).toContain('velvet:companionCreated');
+    expect(types).toContain('velvet:profileApplied');
+    expect(types).toContain('velvet:profile');
+    expect(types).toContain('velvet:vidSearch');
+    expect(types).toContain('velvet:vidResults');
+    expect(types).toContain('velvet:restarted');
+    expect(log.length).toBeGreaterThanOrEqual(7);
   });
 });

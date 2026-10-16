@@ -2,24 +2,22 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const GAME_URL = 'file://' + join(process.cwd(), 'public/games/velvet-house/index.html');
-
+const GAME_PATH = join(process.cwd(), 'public/games/velvet-house/index.html');
 const initScript = readFileSync(join(process.cwd(), 'e2e/velvet-house/deterministic.ts'), 'utf-8')
   .replace(/^\/\*\*[\s\S]*?\*\//, '')
   .replace(/^import.*$/gm, '');
 
 // Capture frame-time traces on desktop, iPhone 12, and Pixel 8 viewports.
-// Measures time between rAF callbacks to get real frame intervals.
+// Also records canvas dimensions so slowdowns can be correlated with canvas size.
 
 async function captureFrameTrace(page: Page, viewport: { width: number; height: number }, deviceName: string) {
   await page.setViewportSize(viewport);
   await page.addInitScript(initScript);
-  await page.goto(`${GAME_URL}?companion=test-trace`);
+  await page.goto('file://' + GAME_PATH + '?companion=test-trace');
   await page.waitForFunction(() => !!(window as any).__velvet, { timeout: 15_000 });
 
   // Set up to a stable game state
   await page.evaluate(() => {
-    const v = (window as any).__velvet;
     const form = document.getElementById('setupForm') as HTMLFormElement;
     const suName = document.getElementById('suName') as HTMLInputElement;
     if (suName) suName.value = 'Sam';
@@ -27,6 +25,19 @@ async function captureFrameTrace(page: Page, viewport: { width: number; height: 
     if (form2) form2.requestSubmit();
   });
   await page.waitForTimeout(2000);
+
+  // Record canvas dimensions for diagnostics
+  const canvasInfo = await page.evaluate(() => {
+    const cv = document.getElementById('room') as HTMLCanvasElement;
+    return {
+      dpr: window.devicePixelRatio || 1,
+      clientWidth: cv.clientWidth,
+      clientHeight: cv.clientHeight,
+      canvasWidth: cv.width,
+      canvasHeight: cv.height,
+      canvasPixels: cv.width * cv.height,
+    };
+  });
 
   // Collect frame times for 3 seconds
   const trace = await page.evaluate(() => {
@@ -66,6 +77,7 @@ async function captureFrameTrace(page: Page, viewport: { width: number; height: 
     maxFrameMs: Math.round(max * 100) / 100,
     p95FrameMs: Math.round(p95 * 100) / 100,
     avgFps: Math.round(fps * 10) / 10,
+    canvas: canvasInfo,
   };
 
   return result;
