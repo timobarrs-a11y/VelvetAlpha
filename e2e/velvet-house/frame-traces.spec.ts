@@ -10,7 +10,7 @@ const initScript = readFileSync(join(process.cwd(), 'e2e/velvet-house/determinis
 // Capture frame-time traces on desktop, iPhone 12, and Pixel 8 viewports.
 // Also records canvas dimensions so slowdowns can be correlated with canvas size.
 
-async function captureFrameTrace(page: Page, viewport: { width: number; height: number }, deviceName: string) {
+async function captureFrameTrace(page: Page, viewport: { width: number; height: number }, deviceName: string, scene: 'day' | 'night') {
   await page.setViewportSize(viewport);
   await page.addInitScript(initScript);
   await page.goto('file://' + GAME_PATH + '?companion=test-trace');
@@ -25,6 +25,9 @@ async function captureFrameTrace(page: Page, viewport: { width: number; height: 
     if (form2) form2.requestSubmit();
   });
   await page.waitForTimeout(2000);
+  await page.evaluate((m) => { (window as any).__velvet.minutes = m; }, scene === 'night' ? 1320 : 600);
+  // let the sharpness governor settle so the trace reflects steady-state play
+  await page.waitForTimeout(8000);
 
   // Record canvas dimensions for diagnostics
   const canvasInfo = await page.evaluate(() => {
@@ -70,6 +73,7 @@ async function captureFrameTrace(page: Page, viewport: { width: number; height: 
 
   const result = {
     device: deviceName,
+    scene,
     viewport,
     samples: trace.length,
     avgFrameMs: Math.round(avg * 100) / 100,
@@ -84,21 +88,23 @@ async function captureFrameTrace(page: Page, viewport: { width: number; height: 
 }
 
 test.describe('Baseline frame-time traces', () => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
 
   test('desktop, iPhone 12, Pixel 8', async ({ page }) => {
     const results: any[] = [];
 
-    results.push(await captureFrameTrace(page, { width: 1280, height: 800 }, 'desktop'));
-    results.push(await captureFrameTrace(page, { width: 390, height: 844 }, 'iphone-12'));
-    results.push(await captureFrameTrace(page, { width: 412, height: 915 }, 'pixel-8'));
+    for (const scene of ['day', 'night'] as const) {
+      results.push(await captureFrameTrace(page, { width: 1280, height: 800 }, 'desktop', scene));
+      results.push(await captureFrameTrace(page, { width: 390, height: 844 }, 'iphone-12', scene));
+      results.push(await captureFrameTrace(page, { width: 412, height: 915 }, 'pixel-8', scene));
+    }
 
     const dir = join(process.cwd(), 'e2e/velvet-house');
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'frame-time-traces.json'), JSON.stringify(results, null, 2));
 
     // Verify traces were captured
-    expect(results.length).toBe(3);
+    expect(results.length).toBe(6);
     for (const r of results) {
       expect(r.samples).toBeGreaterThan(100);
       expect(r.avgFps).toBeGreaterThan(0);

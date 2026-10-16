@@ -1,0 +1,58 @@
+[
+  {
+    "device": "desktop",
+    "scene": "main day",
+    "update": 0.21,
+    "walls+floor": 2.86,
+    "objects+chars": 5.59,
+    "frontWalls": 0.31,
+    "lighting": 0.16,
+    "render": 9.3,
+    "ui": 0.09,
+    "fps": 55.1,
+    "canvasW": 653,
+    "canvasH": 449
+  },
+  {
+    "device": "desktop",
+    "scene": "main night",
+    "update": 0.19,
+    "walls+floor": 3.99,
+    "objects+chars": 4.3,
+    "frontWalls": 0.33,
+    "lighting": 2.97,
+    "render": 11.83,
+    "ui": 0.09,
+    "fps": 55.5,
+    "canvasW": 653,
+    "canvasH": 449
+  },
+  {
+    "device": "iphone-12",
+    "scene": "main day",
+    "update": 0.19,
+    "walls+floor": 1.65,
+    "objects+chars": 2.8,
+    "frontWalls": 0.22,
+    "lighting": 0.16,
+    "render": 5.15,
+    "ui": 0.09,
+    "fps": 60.2,
+    "canvasW": 640,
+    "canvasH": 440
+  },
+  {
+    "device": "iphone-12",
+    "scene": "main night",
+    "update": 0.19,
+    "walls+floor": 1.57,
+    "objects+chars": 3.36,
+    "frontWalls": 0.22,
+    "lighting": 3.48,
+    "render": 8.84,
+    "ui": 0.1,
+    "fps": 52.2,
+    "canvasW": 640,
+    "canvasH": 440
+  }
+]

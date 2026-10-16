@@ -636,13 +636,13 @@
         -9999
       ]
     ],
-    "rainAt": 12124.051000000001,
-    "rainUntil": 12364.051000000001,
+    "rainAt": 12121.883600000001,
+    "rainUntil": 12361.883600000001,
     "rainCheck": -1
   },
-  "laundryPile": 2.034930208333353,
-  "savedAt": 1792133606808,
-  "minutes": 614.4167000000007,
+  "laundryPile": 2.014862083333348,
+  "savedAt": 1792167875945,
+  "minutes": 604.7672000000003,
   "day": 10,
   "money": 600,
   "earnedToday": 0,
@@ -696,7 +696,7 @@
     {}
   ],
   "WALLOBJS": [],
-  "bond": 61,
+  "bond": 58,
   "support": 0,
   "together": 0,
   "memories": [
@@ -733,46 +733,46 @@
   "autonomy": "free",
   "mayaCap": 80,
   "mayaSpent": {
-    "day": 2,
+    "day": 0,
     "amt": 0
   },
   "TASTE": {
     "paint-sand": 0,
-    "paint-sage": 2,
+    "paint-sage": 1,
     "paint-blush": 2,
     "paint-sky": 1,
-    "paint-plum": 0,
-    "paint-forest": -1,
+    "paint-plum": -1,
+    "paint-forest": 0,
     "paint-concrete": 0,
-    "paper-none": 0,
-    "paper-block": -1,
-    "paper-dots": 2,
+    "paper-none": -1,
+    "paper-block": 0,
+    "paper-dots": 0,
     "paper-stripes": 0,
     "paper-botanical": 2,
-    "paper-brick": -2,
+    "paper-brick": -1,
     "paper-deco": 1,
     "floor-wood": 0,
     "floor-concrete": -1,
     "floor-carpet": 1,
-    "floor-tile": 1,
-    "floor-checker": -1,
+    "floor-tile": 0,
+    "floor-checker": -2,
     "floor-walnut": 1,
-    "floor-terrazzo": 1
+    "floor-terrazzo": 2
   },
   "style": {
-    "seed": 171086,
-    "warm": -0.17,
-    "cool": 0.47,
-    "bold": 0.37,
-    "soft": 1,
-    "natural": 1.05,
-    "modern": 0.3,
-    "vintage": 0.3,
-    "playful": -0.04,
-    "luxe": -0.2,
-    "industrial": -0.65,
-    "cozy": 0.96,
-    "minimal": 0.24
+    "seed": 152834,
+    "warm": 0.61,
+    "cool": -0.37,
+    "bold": 0.36,
+    "soft": -0.12,
+    "natural": 0.77,
+    "modern": -0.07,
+    "vintage": 0.46,
+    "playful": -0.17,
+    "luxe": 0.21,
+    "industrial": -0.9,
+    "cozy": 0.94,
+    "minimal": -0.39
   },
   "look": {
     "skin": "#9E6B45",
@@ -797,7 +797,7 @@
     "gender": "female"
   },
   "CHANGES": [],
-  "projectAt": 15413.04270293739,
+  "projectAt": 17072.48531069753,
   "objs": [
     {
       "id": "stair01",
@@ -1042,7 +1042,7 @@
       }
     },
     {
-      "id": "box-sofa-mvam2ru8",
+      "id": "box-sofa-mvb6h9yj",
       "type": "pbox",
       "level": 1,
       "x": 0.65,
@@ -1065,7 +1065,7 @@
       }
     },
     {
-      "id": "bowlmvam2s9b6",
+      "id": "bowlmvb6hafi60",
       "type": "bowl",
       "level": 1,
       "x": 4.1,
@@ -1074,7 +1074,7 @@
       "pet": "pet1"
     },
     {
-      "id": "petbedmvam2s9c12",
+      "id": "petbedmvb6hafj19",
       "type": "petbed",
       "level": 1,
       "x": 9,
@@ -1083,7 +1083,7 @@
       "pet": "pet1"
     },
     {
-      "id": "littermvam2s9d60",
+      "id": "littermvb6hafj41",
       "type": "litter",
       "level": 0,
       "x": 5.4,
@@ -1092,7 +1092,7 @@
       "pet": "pet1"
     },
     {
-      "id": "bowlmvam2s9f13",
+      "id": "bowlmvb6hafm83",
       "type": "bowl",
       "level": 1,
       "x": 4.15,
@@ -1101,7 +1101,7 @@
       "pet": "pet2"
     },
     {
-      "id": "petbedmvam2s9o8",
+      "id": "petbedmvb6hafx84",
       "type": "petbed",
       "level": 1,
       "x": 8.15,
@@ -1197,7 +1197,7 @@
     {
       "id": "pet1",
       "kind": "cat",
-      "name": "Pepper",
+      "name": "Nori",
       "coat": {
         "n": "black",
         "c": "#2F2C34",
@@ -1208,17 +1208,17 @@
       "x": 1.7999999999999998,
       "y": 5.35,
       "needs": {
-        "food": 74.06110666666662,
-        "play": 59.06110666666662,
-        "love": 49.29582999999993
+        "food": 74.70440666666667,
+        "play": 59.704406666666635,
+        "love": 49.858384999999984
       },
       "bowlFood": 2,
       "litterUses": 0,
-      "litterT": 14.083399999999994,
-      "seed": 5.156995262609644,
-      "bowl": "bowlmvam2s9b6",
-      "bed": "petbedmvam2s9c12",
-      "litter": "littermvam2s9d60"
+      "litterT": 4.4338999999999995,
+      "seed": 1.4194656989340586,
+      "bowl": "bowlmvb6hafi60",
+      "bed": "petbedmvb6hafj19",
+      "litter": "littermvb6hafj41"
     },
     {
       "id": "pet2",
@@ -1234,28 +1234,28 @@
       "x": 1.7999999999999998,
       "y": 5.35,
       "needs": {
-        "food": 73.82638333333341,
-        "play": 53.709021666666644,
-        "love": 49.178468333333406,
-        "bladder": 83.35693666666681
+        "food": 74.63050833333337,
+        "play": 54.593559166666594,
+        "love": 49.74135583333336,
+        "bladder": 84.48271166666672
       },
       "bowlFood": 2,
       "litterUses": 0,
       "litterT": 0,
-      "seed": 2.691810179253152,
-      "bowl": "bowlmvam2s9f13",
-      "bed": "petbedmvam2s9o8"
+      "seed": 4.938770936187737,
+      "bowl": "bowlmvb6hafm83",
+      "bed": "petbedmvb6hafx84"
     }
   ],
   "dirt": [],
   "jordan": {
     "needs": {
-      "energy": 78.65723333333271,
-      "food": 68.99834999999955,
-      "hygiene": 69.08001249999948,
-      "fun": 58.77335000000021,
-      "comfort": 69.16167500000104,
-      "social": 54.55723333333316
+      "energy": 79.45995999999948,
+      "food": 69.47997999999959,
+      "hygiene": 69.56164499999952,
+      "fun": 59.415526666666786,
+      "comfort": 69.64331000000077,
+      "social": 54.71777333333325
     },
     "skills": {
       "cooking": 1,
@@ -1265,18 +1265,18 @@
   },
   "maya": {
     "needs": {
-      "energy": 78.79902499999989,
-      "food": 68.97329999999955,
-      "hygiene": 69.06748749999949,
-      "fun": 53.75665000000021,
-      "comfort": 69.16167500000104,
-      "social": 59.53218333333316
+      "energy": 79.35853199999997,
+      "food": 69.28661999999963,
+      "hygiene": 69.46496499999957,
+      "fun": 57.132486666666814,
+      "comfort": 69.64331000000077,
+      "social": 59.95129333333318
     },
     "skills": {
       "cooking": 3,
       "fitness": 2
     },
-    "mood": "happy",
+    "mood": "annoyed",
     "workedDay": 0
   },
   "turns": []

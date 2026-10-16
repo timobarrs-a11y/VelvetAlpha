@@ -565,7 +565,8 @@ body{margin:0;overflow:hidden}
   const ctx0 = cv.getContext('2d');
   let ctx = ctx0;
   const W = 640, H = 440;
-  function fit() { const sc = Math.min(4, Math.max(1, (cv.clientWidth || W) / W) * Math.min(window.devicePixelRatio || 1, 2)), w = Math.round(W * sc); if (cv.width !== w) { cv.width = w; cv.height = Math.round(H * sc); } ctx0.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0); }
+  let resCap = 4;
+  function fit() { const sc = Math.min(resCap, 4, Math.max(1, (cv.clientWidth || W) * Math.min(window.devicePixelRatio || 1, 2) / W)), w = Math.round(W * sc); if (cv.width !== w) { cv.width = w; cv.height = Math.round(H * sc); } ctx0.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0); }
   fit(); window.addEventListener('resize', fit);
   // watch camera: eases in on your sim while they do something, and back out when they're done
   const cam = { z: 1, x: W / 2, y: H / 2 };
@@ -2717,7 +2718,7 @@ body{margin:0;overflow:hidden}
   const LA = {}, occ = {}, occLevel = {};
   let rdt = 0.016;
   const isLit = (key) => (LA[key] || 0) > 0.35;
-  const lightCv = document.createElement('canvas'), lctx = lightCv.getContext('2d');
+  const lightCv = document.createElement('canvas'), lctx = lightCv.getContext('2d'), LIGHT_RES = 0.5;   // the light mask is all soft gradients, so it is drawn at half size and stretched
   function markOccupancy() { const now = absMin(); [jordan, maya].forEach(c => { if (c.away || isAsleep(c)) return; occ[c.level + ':' + roomName(c.level, c.x, c.y)] = now; occLevel[c.level] = now; }); }
   function levelDark(level) { return Math.min(level === 0 ? 0.7 : 0.62, darkness() + (level === 0 ? 0.32 : 0) + (!power && level !== 3 ? 0.1 : 0) + (level === 3 && raining() ? 0.08 : 0)); }
   function wantLight(level, room, night, amb) {
@@ -4031,19 +4032,19 @@ body{margin:0;overflow:hidden}
     const a = levelDark(level);
     ctx.save(); roomPath(); ctx.clip();
     if (a > 0.01) {
-      if (lightCv.width !== cv.width || lightCv.height !== cv.height) { lightCv.width = cv.width; lightCv.height = cv.height; }
-      const dpr = cv.width / W;
+      const dpr = Math.min(cv.width / W, LIGHT_RES * (cam.z > 1.4 ? 2 : 1)), lw = Math.ceil(W * dpr), lh = Math.ceil(H * dpr);
+      if (lightCv.width !== lw || lightCv.height !== lh) { lightCv.width = lw; lightCv.height = lh; }
       lctx.setTransform(dpr, 0, 0, dpr, 0, 0); lctx.globalCompositeOperation = 'source-over'; lctx.clearRect(0, 0, W, H);
       lctx.fillStyle = level === 0 ? `rgba(8,14,30,${a})` : `rgba(16,13,46,${a})`; lctx.fillRect(0, 0, W, H);
       lctx.globalCompositeOperation = 'destination-out';
       lights.forEach(l => {
         const [sx, sy] = iso(...l.src), [px, py] = iso(...l.pool);
-        let g = lctx.createRadialGradient(sx, sy, 2, sx, sy, l.r * 0.5); g.addColorStop(0, `rgba(0,0,0,${0.92 * l.s})`); g.addColorStop(1, 'rgba(0,0,0,0)'); lctx.fillStyle = g; lctx.fillRect(0, 0, W, H);
-        lctx.save(); lctx.translate(px, py); lctx.scale(1, 0.52); g = lctx.createRadialGradient(0, 0, 4, 0, 0, l.r); g.addColorStop(0, `rgba(0,0,0,${0.85 * l.s})`); g.addColorStop(0.55, `rgba(0,0,0,${0.45 * l.s})`); g.addColorStop(1, 'rgba(0,0,0,0)'); lctx.fillStyle = g; lctx.fillRect(-W, -H * 2, W * 2, H * 4); lctx.restore();
+        let g = lctx.createRadialGradient(sx, sy, 2, sx, sy, l.r * 0.5); g.addColorStop(0, `rgba(0,0,0,${0.92 * l.s})`); g.addColorStop(1, 'rgba(0,0,0,0)'); lctx.fillStyle = g; lctx.fillRect(sx - l.r * 0.5, sy - l.r * 0.5, l.r, l.r);
+        lctx.save(); lctx.translate(px, py); lctx.scale(1, 0.52); g = lctx.createRadialGradient(0, 0, 4, 0, 0, l.r); g.addColorStop(0, `rgba(0,0,0,${0.85 * l.s})`); g.addColorStop(0.55, `rgba(0,0,0,${0.45 * l.s})`); g.addColorStop(1, 'rgba(0,0,0,0)'); lctx.fillStyle = g; lctx.fillRect(-l.r, -l.r, l.r * 2, l.r * 2); lctx.restore();
       });
       ctx.drawImage(lightCv, 0, 0, W, H);
       ctx.globalCompositeOperation = 'lighter';
-      lights.forEach(l => { const [sx, sy] = iso(...l.src), col = l.col || '255,190,120', g = ctx.createRadialGradient(sx, sy, 1, sx, sy, l.r * 0.55); g.addColorStop(0, `rgba(${col},${0.3 * l.s * Math.min(1, a / 0.35)})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); });
+      lights.forEach(l => { const [sx, sy] = iso(...l.src), col = l.col || '255,190,120', g = ctx.createRadialGradient(sx, sy, 1, sx, sy, l.r * 0.55); g.addColorStop(0, `rgba(${col},${0.3 * l.s * Math.min(1, a / 0.35)})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.fillRect(sx - l.r * 0.55, sy - l.r * 0.55, l.r * 1.1, l.r * 1.1); });
       ctx.globalCompositeOperation = 'source-over';
     }
     if (level === 0) {
@@ -4052,13 +4053,13 @@ body{margin:0;overflow:hidden}
       ctx.globalCompositeOperation = 'source-over';
       drawMotes(lights);
     }
-    if (level === 1 && tvF > 0.02) { ctx.globalCompositeOperation = 'lighter'; const [tx, ty] = iso(6.8, 0.3, 1.25), hue = (animT * 25) % 360, g = ctx.createRadialGradient(tx, ty, 6, tx, ty, has('bigtv') ? 190 : 150); g.addColorStop(0, `hsla(${hue},70%,65%,${(0.12 + a * 0.5) * tvF})`); g.addColorStop(1, 'hsla(0,0%,0%,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
+    if (level === 1 && tvF > 0.02) { ctx.globalCompositeOperation = 'lighter'; const [tx, ty] = iso(6.8, 0.3, 1.25), hue = (animT * 25) % 360, tr = has('bigtv') ? 190 : 150, g = ctx.createRadialGradient(tx, ty, 6, tx, ty, tr); g.addColorStop(0, `hsla(${hue},70%,65%,${(0.12 + a * 0.5) * tvF})`); g.addColorStop(1, 'hsla(0,0%,0%,0)'); ctx.fillStyle = g; ctx.fillRect(tx - tr, ty - tr, tr * 2, tr * 2); ctx.globalCompositeOperation = 'source-over'; }
     if (level === 1 && partyF > 0.02) {
       const t = animT, [rx1, ry1, rx2, ry2] = LEVELS[1].rug, cx = (rx1 + rx2) / 2, cy = (ry1 + ry2) / 2;
       ctx.fillStyle = `rgba(18,8,40,${0.45 * partyF})`; ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 6; i++) { const ang = t * 0.9 + i * 1.05, [sx, sy] = iso(cx + Math.cos(ang) * 1.7, cy + Math.sin(ang * 1.3) * 1.3, 0), hue = (t * 70 + i * 60) % 360, g = ctx.createRadialGradient(sx, sy, 2, sx, sy, 55); g.addColorStop(0, `hsla(${hue},95%,60%,${0.45 * partyF})`); g.addColorStop(1, 'hsla(0,0%,0%,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
-      for (let i = 0; i < 4; i++) { const u = (t * 0.25 + i / 4) % 1, [wx, wy] = iso(5 + u * 4.8, 0, 1.6 + Math.cos(t * 2 + i) * 0.4), hue = (t * 90 + i * 90) % 360, g = ctx.createRadialGradient(wx, wy, 1, wx, wy, 26); g.addColorStop(0, `hsla(${hue},95%,65%,${0.5 * partyF})`); g.addColorStop(1, 'hsla(0,0%,0%,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+      for (let i = 0; i < 6; i++) { const ang = t * 0.9 + i * 1.05, [sx, sy] = iso(cx + Math.cos(ang) * 1.7, cy + Math.sin(ang * 1.3) * 1.3, 0), hue = (t * 70 + i * 60) % 360, g = ctx.createRadialGradient(sx, sy, 2, sx, sy, 55); g.addColorStop(0, `hsla(${hue},95%,60%,${0.45 * partyF})`); g.addColorStop(1, 'hsla(0,0%,0%,0)'); ctx.fillStyle = g; ctx.fillRect(sx - 55, sy - 55, 110, 110); }
+      for (let i = 0; i < 4; i++) { const u = (t * 0.25 + i / 4) % 1, [wx, wy] = iso(5 + u * 4.8, 0, 1.6 + Math.cos(t * 2 + i) * 0.4), hue = (t * 90 + i * 90) % 360, g = ctx.createRadialGradient(wx, wy, 1, wx, wy, 26); g.addColorStop(0, `hsla(${hue},95%,65%,${0.5 * partyF})`); g.addColorStop(1, 'hsla(0,0%,0%,0)'); ctx.fillStyle = g; ctx.fillRect(wx - 26, wy - 26, 52, 52); }
       ctx.globalCompositeOperation = 'source-over';
       const [bx, by] = iso(cx, cy, 2.75), [cx2, cy2] = iso(cx, cy, 3.4);
       ctx.globalAlpha = partyF; limb(cx2, cy2, bx, by - 6, 'rgba(200,200,210,.6)', 1); circle(bx, by, 7, '#C9CED6');
@@ -4796,8 +4797,18 @@ ${memoryBrief()}` : ''}`);
   // ======================================================================
   // loop
   // ======================================================================
+  // Sharpness governor: drop canvas resolution a step after sustained slow frames, retry higher after a long stable stretch, never below 1x.
+  const gov = { sum: 0, n: 0, slow: 0, good: 0, blocked: new Set() }, r2 = (v) => Math.round(v * 100) / 100;
+  function govern(ms) {
+    if (document.hidden || ms > 250) return;
+    gov.sum += ms; if (++gov.n < 30) return;
+    const avg = gov.sum / gov.n, cur = r2(cv.width / W); gov.sum = 0; gov.n = 0;
+    if (avg > 18.5) { gov.good = 0; if (++gov.slow >= 2 && cur > 1.01) { gov.blocked.add(cur); resCap = Math.max(1, r2(cur - 0.25)); gov.slow = 0; fit(); } return; }
+    gov.slow = 0; if (avg < 17.6 && ++gov.good >= 20) { gov.good = 0; const nat = r2(Math.min(4, Math.max(1, (cv.clientWidth || W) * Math.min(window.devicePixelRatio || 1, 2) / W))), next = Math.min(nat, r2(resCap + 0.25)); if (next > cur + 0.01 && !gov.blocked.has(next)) { resCap = next; fit(); } }
+  }
   let last = performance.now(), uiTimer = 0;
   function frame(now) {
+    govern(now - last);
     const dt = Math.min(0.05, (now - last) / 1000); last = now; rdt = dt;
     if (running && !arranging) update(dt); else animT += arranging ? dt * 0.3 : 0;
     if (shown < target.length) { shown = Math.min(target.length, shown + dt * 60); lineEl.textContent = target.slice(0, Math.floor(shown)); maya.speaking = true; }
