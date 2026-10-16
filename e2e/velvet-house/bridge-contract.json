@@ -1,0 +1,14 @@
+{
+  "outbound": [
+    {
+      "direction": "outbound",
+      "type": "velvet:ready",
+      "fields": [
+        "type",
+        "game",
+        "day",
+        "needsProfile"
+      ]
+    }
+  ]
+}

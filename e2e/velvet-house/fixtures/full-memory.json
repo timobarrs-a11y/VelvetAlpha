@@ -1,0 +1,1283 @@
+{
+  "v": 1,
+  "basementV": 2,
+  "houseV": 3,
+  "setupDone": true,
+  "partnerName": "Maya",
+  "lifeGoal": null,
+  "settleDone": false,
+  "flags": {
+    "arranged": false,
+    "stocked": false,
+    "styled": false,
+    "talked": false,
+    "danced": false,
+    "watched": false,
+    "dinners": 0,
+    "harvests": 0,
+    "mowed": false,
+    "tvVideo": false,
+    "furniture": 0,
+    "spotless": 0,
+    "styledSet": [],
+    "settleSeen": [
+      "unpack"
+    ],
+    "lifeStep": 0,
+    "unlockedSeen": [
+      "stringlights",
+      "f-easel",
+      "paper-botanical",
+      "f-hammock",
+      "paper-brick",
+      "floor-walnut",
+      "arcade",
+      "adopt-cat",
+      "adopt-dog",
+      "espresso",
+      "gift-flowers",
+      "gift-sketch",
+      "gift-spa",
+      "gift-tickets",
+      "paper-jungle-night",
+      "paper-sunset-mural",
+      "floor-herring",
+      "floor-herringgray",
+      "f-gclock",
+      "f-aquarium",
+      "f-telescope",
+      "f-bike",
+      "f-firepit"
+    ],
+    "story": [],
+    "events": [
+      "dog",
+      "blackout"
+    ],
+    "firstPay": false,
+    "billPaid": false,
+    "openedTalk": false,
+    "rugPacked": true,
+    "house": "craftsman"
+  },
+  "career": {
+    "level": 0,
+    "perf": 0
+  },
+  "mcareer": {
+    "level": 0,
+    "perf": 0,
+    "studio": false,
+    "offerDay": null,
+    "offer": false
+  },
+  "pboxes": true,
+  "wallMode": "cut",
+  "yard": {
+    "t": [
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ],
+      [
+        0.3,
+        0.8,
+        0,
+        0,
+        -9999
+      ]
+    ],
+    "rainAt": 12124.051000000001,
+    "rainUntil": 12364.051000000001,
+    "rainCheck": -1
+  },
+  "laundryPile": 2.034930208333353,
+  "savedAt": 1792133606808,
+  "minutes": 614.4167000000007,
+  "day": 10,
+  "money": 600,
+  "earnedToday": 0,
+  "spentToday": 0,
+  "power": false,
+  "fridge": {
+    "basic": 4,
+    "fresh": 0
+  },
+  "bill": {
+    "amount": 180,
+    "due": 4860,
+    "overdue": true
+  },
+  "nextBillAt": null,
+  "owned": [
+    "paint-concrete",
+    "paper-none",
+    "paper-block",
+    "floor-wood",
+    "floor-concrete",
+    "paint-primer",
+    "projector"
+  ],
+  "LOOKS": [
+    {
+      "paint": "#6E4A5E",
+      "paper": null,
+      "floor": "carpet"
+    },
+    {
+      "paint": "#C8D7D1",
+      "paper": null,
+      "floor": "walnut"
+    },
+    {
+      "paint": "#E9DCCB",
+      "paper": null,
+      "floor": "walnut"
+    },
+    {
+      "paint": "#D9CDBD",
+      "paper": null,
+      "floor": "wood"
+    }
+  ],
+  "ROOMLOOK": [
+    {},
+    {},
+    {},
+    {}
+  ],
+  "WALLOBJS": [],
+  "bond": 61,
+  "support": 0,
+  "together": 0,
+  "memories": [
+    "Memory event 0: something memorable happened.",
+    "Memory event 1: something memorable happened.",
+    "Memory event 2: something memorable happened.",
+    "Memory event 3: something memorable happened.",
+    "Memory event 4: something memorable happened.",
+    "Memory event 5: something memorable happened.",
+    "Memory event 6: something memorable happened.",
+    "Memory event 7: something memorable happened.",
+    "Memory event 8: something memorable happened.",
+    "Memory event 9: something memorable happened.",
+    "Memory event 10: something memorable happened.",
+    "Memory event 11: something memorable happened.",
+    "Memory event 12: something memorable happened.",
+    "Memory event 13: something memorable happened.",
+    "Memory event 14: something memorable happened.",
+    "Memory event 15: something memorable happened.",
+    "Memory event 16: something memorable happened.",
+    "Memory event 17: something memorable happened.",
+    "Memory event 18: something memorable happened.",
+    "Memory event 19: something memorable happened."
+  ],
+  "coreMem": [],
+  "pastMem": [],
+  "townName": "Honeysuckle Hollow",
+  "dishes": 1,
+  "petFood": 12,
+  "petSeq": 2,
+  "dirtId": 0,
+  "changeSeq": 0,
+  "simName": "Sam",
+  "autonomy": "free",
+  "mayaCap": 80,
+  "mayaSpent": {
+    "day": 2,
+    "amt": 0
+  },
+  "TASTE": {
+    "paint-sand": 0,
+    "paint-sage": 2,
+    "paint-blush": 2,
+    "paint-sky": 1,
+    "paint-plum": 0,
+    "paint-forest": -1,
+    "paint-concrete": 0,
+    "paper-none": 0,
+    "paper-block": -1,
+    "paper-dots": 2,
+    "paper-stripes": 0,
+    "paper-botanical": 2,
+    "paper-brick": -2,
+    "paper-deco": 1,
+    "floor-wood": 0,
+    "floor-concrete": -1,
+    "floor-carpet": 1,
+    "floor-tile": 1,
+    "floor-checker": -1,
+    "floor-walnut": 1,
+    "floor-terrazzo": 1
+  },
+  "style": {
+    "seed": 171086,
+    "warm": -0.17,
+    "cool": 0.47,
+    "bold": 0.37,
+    "soft": 1,
+    "natural": 1.05,
+    "modern": 0.3,
+    "vintage": 0.3,
+    "playful": -0.04,
+    "luxe": -0.2,
+    "industrial": -0.65,
+    "cozy": 0.96,
+    "minimal": 0.24
+  },
+  "look": {
+    "skin": "#9E6B45",
+    "hair": "afro",
+    "hairColor": "#1E1612",
+    "top": "#4A5DA8",
+    "gender": "male"
+  },
+  "companion": {
+    "source": "game",
+    "preset": "warm",
+    "pronoun": "she",
+    "gender": "female",
+    "bio": "",
+    "memories": []
+  },
+  "mayaLook": {
+    "skin": "#7A4E31",
+    "hair": "long",
+    "hairColor": "#2A1A12",
+    "top": "#E0A43A",
+    "gender": "female"
+  },
+  "CHANGES": [],
+  "projectAt": 15413.04270293739,
+  "objs": [
+    {
+      "id": "stair01",
+      "type": "flightY",
+      "level": 0,
+      "x": 9,
+      "y": 0,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 0,
+        "x": 9,
+        "y": 0,
+        "rot": 0
+      }
+    },
+    {
+      "id": "heater",
+      "type": "waterheater",
+      "level": 0,
+      "x": 0.18,
+      "y": 4.8,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 0,
+        "x": 0.18,
+        "y": 4.8,
+        "rot": 0
+      }
+    },
+    {
+      "id": "furnace",
+      "type": "furnace",
+      "level": 0,
+      "x": 0.15,
+      "y": 5.75,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 0,
+        "x": 0.15,
+        "y": 5.75,
+        "rot": 0
+      }
+    },
+    {
+      "id": "laundry",
+      "type": "laundry",
+      "level": 0,
+      "x": 1.4,
+      "y": 4.72,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 0,
+        "x": 1.4,
+        "y": 4.72,
+        "rot": 0
+      }
+    },
+    {
+      "id": "tree",
+      "type": "tree",
+      "level": 3,
+      "x": 7.6,
+      "y": 0.5,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 3,
+        "x": 7.6,
+        "y": 0.5,
+        "rot": 0
+      }
+    },
+    {
+      "id": "garden",
+      "type": "garden",
+      "level": 3,
+      "x": 3.6,
+      "y": 0.35,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 3,
+        "x": 3.6,
+        "y": 0.35,
+        "rot": 0
+      },
+      "grow": 0.35,
+      "wet": 0.6
+    },
+    {
+      "id": "sprinkler",
+      "type": "sprinkler",
+      "level": 3,
+      "x": 8.4,
+      "y": 6.4,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 3,
+        "x": 5.6,
+        "y": 4.4,
+        "rot": 0
+      }
+    },
+    {
+      "id": "open01",
+      "type": "holeY",
+      "level": 1,
+      "x": 9,
+      "y": 1.2,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 1,
+        "x": 9,
+        "y": 1.2,
+        "rot": 0
+      }
+    },
+    {
+      "id": "stair12",
+      "type": "flightX",
+      "level": 1,
+      "x": 0,
+      "y": 7,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 1,
+        "x": 0,
+        "y": 7,
+        "rot": 0
+      }
+    },
+    {
+      "id": "counter",
+      "type": "counter",
+      "level": 1,
+      "x": 0.4,
+      "y": 0.12,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 1,
+        "x": 0.4,
+        "y": 0.12,
+        "rot": 0
+      }
+    },
+    {
+      "id": "fridge",
+      "type": "fridge",
+      "level": 1,
+      "x": 3.35,
+      "y": 0.12,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 1,
+        "x": 3.35,
+        "y": 0.12,
+        "rot": 0
+      }
+    },
+    {
+      "id": "tvunit",
+      "type": "tvunit",
+      "level": 1,
+      "x": 6,
+      "y": 0.12,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 1,
+        "x": 6,
+        "y": 0.12,
+        "rot": 0
+      }
+    },
+    {
+      "id": "open12",
+      "type": "holeX",
+      "level": 2,
+      "x": 1.2,
+      "y": 7,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 2,
+        "x": 1.2,
+        "y": 7,
+        "rot": 0
+      }
+    },
+    {
+      "id": "shower",
+      "type": "shower",
+      "level": 2,
+      "x": 8.6,
+      "y": 0.12,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 2,
+        "x": 8.6,
+        "y": 0.12,
+        "rot": 0
+      }
+    },
+    {
+      "id": "toilet",
+      "type": "toilet",
+      "level": 2,
+      "x": 6.1,
+      "y": 0.15,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 2,
+        "x": 6.1,
+        "y": 0.15,
+        "rot": 0
+      }
+    },
+    {
+      "id": "vanity",
+      "type": "vanity",
+      "level": 2,
+      "x": 6.8,
+      "y": 0.12,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 2,
+        "x": 6.8,
+        "y": 0.12,
+        "rot": 0
+      }
+    },
+    {
+      "id": "box-sofa-mvam2ru8",
+      "type": "pbox",
+      "level": 1,
+      "x": 0.65,
+      "y": 5.37,
+      "rot": 0,
+      "contains": {
+        "id": "sofa",
+        "type": "sofa",
+        "level": 1,
+        "x": 5.6,
+        "y": 3.3,
+        "rot": 2,
+        "attach": 0.45,
+        "home": {
+          "level": 1,
+          "x": 5.6,
+          "y": 3.3,
+          "rot": 2
+        }
+      }
+    },
+    {
+      "id": "bowlmvam2s9b6",
+      "type": "bowl",
+      "level": 1,
+      "x": 4.1,
+      "y": 1.2,
+      "rot": 0,
+      "pet": "pet1"
+    },
+    {
+      "id": "petbedmvam2s9c12",
+      "type": "petbed",
+      "level": 1,
+      "x": 9,
+      "y": 4.6,
+      "rot": 0,
+      "pet": "pet1"
+    },
+    {
+      "id": "littermvam2s9d60",
+      "type": "litter",
+      "level": 0,
+      "x": 5.4,
+      "y": 0.15,
+      "rot": 0,
+      "pet": "pet1"
+    },
+    {
+      "id": "bowlmvam2s9f13",
+      "type": "bowl",
+      "level": 1,
+      "x": 4.15,
+      "y": 2.62,
+      "rot": 0,
+      "pet": "pet2"
+    },
+    {
+      "id": "petbedmvam2s9o8",
+      "type": "petbed",
+      "level": 1,
+      "x": 8.15,
+      "y": 5.62,
+      "rot": 0,
+      "pet": "pet2"
+    },
+    {
+      "id": "fireplace",
+      "type": "fireplace",
+      "level": 1,
+      "x": 0.05,
+      "y": 5.6,
+      "rot": 3,
+      "attach": 0.1,
+      "home": {
+        "level": 1,
+        "x": 0.05,
+        "y": 5.6,
+        "rot": 3
+      }
+    },
+    {
+      "id": "tub",
+      "type": "bathtub",
+      "level": 2,
+      "x": 8.3,
+      "y": 2.6,
+      "rot": 2,
+      "attach": 0.1,
+      "home": {
+        "level": 2,
+        "x": 8.3,
+        "y": 2.6,
+        "rot": 2
+      }
+    },
+    {
+      "id": "bar",
+      "type": "bar",
+      "level": 0,
+      "x": 5.5,
+      "y": 6.6,
+      "rot": 2,
+      "attach": 0.1,
+      "home": {
+        "level": 0,
+        "x": 5.5,
+        "y": 6.6,
+        "rot": 2
+      }
+    },
+    {
+      "id": "pool",
+      "type": "pool",
+      "level": 3,
+      "x": 4.8,
+      "y": 3.4,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 3,
+        "x": 4.8,
+        "y": 3.4,
+        "rot": 0
+      }
+    },
+    {
+      "id": "daybed",
+      "type": "daybed",
+      "level": 2,
+      "x": 0.3,
+      "y": 4,
+      "rot": 0,
+      "attach": 0.1,
+      "home": {
+        "level": 2,
+        "x": 0.3,
+        "y": 4,
+        "rot": 0
+      }
+    },
+    {
+      "id": "theater-couch",
+      "type": "sofa",
+      "level": 0,
+      "x": 6,
+      "y": 3,
+      "rot": 2
+    }
+  ],
+  "pets": [
+    {
+      "id": "pet1",
+      "kind": "cat",
+      "name": "Pepper",
+      "coat": {
+        "n": "black",
+        "c": "#2F2C34",
+        "d": "#1E1C22",
+        "rgb": "60,56,64"
+      },
+      "level": 1,
+      "x": 1.7999999999999998,
+      "y": 5.35,
+      "needs": {
+        "food": 74.06110666666662,
+        "play": 59.06110666666662,
+        "love": 49.29582999999993
+      },
+      "bowlFood": 2,
+      "litterUses": 0,
+      "litterT": 14.083399999999994,
+      "seed": 5.156995262609644,
+      "bowl": "bowlmvam2s9b6",
+      "bed": "petbedmvam2s9c12",
+      "litter": "littermvam2s9d60"
+    },
+    {
+      "id": "pet2",
+      "kind": "dog",
+      "name": "Pudding",
+      "coat": {
+        "n": "black and white",
+        "c": "#2F2C34",
+        "d": "#F2EEE8",
+        "rgb": "60,56,64"
+      },
+      "level": 1,
+      "x": 1.7999999999999998,
+      "y": 5.35,
+      "needs": {
+        "food": 73.82638333333341,
+        "play": 53.709021666666644,
+        "love": 49.178468333333406,
+        "bladder": 83.35693666666681
+      },
+      "bowlFood": 2,
+      "litterUses": 0,
+      "litterT": 0,
+      "seed": 2.691810179253152,
+      "bowl": "bowlmvam2s9f13",
+      "bed": "petbedmvam2s9o8"
+    }
+  ],
+  "dirt": [],
+  "jordan": {
+    "needs": {
+      "energy": 78.65723333333271,
+      "food": 68.99834999999955,
+      "hygiene": 69.08001249999948,
+      "fun": 58.77335000000021,
+      "comfort": 69.16167500000104,
+      "social": 54.55723333333316
+    },
+    "skills": {
+      "cooking": 1,
+      "fitness": 0
+    },
+    "workedDay": 8
+  },
+  "maya": {
+    "needs": {
+      "energy": 78.79902499999989,
+      "food": 68.97329999999955,
+      "hygiene": 69.06748749999949,
+      "fun": 53.75665000000021,
+      "comfort": 69.16167500000104,
+      "social": 59.53218333333316
+    },
+    "skills": {
+      "cooking": 3,
+      "fitness": 2
+    },
+    "mood": "happy",
+    "workedDay": 0
+  },
+  "turns": []
+}
