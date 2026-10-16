@@ -59,6 +59,7 @@ export interface Companion {
   drift_vfs?: number | null;
   drift_needs_correction?: boolean | null;
   drift_checked_at?: string | null;
+  coach_color?: string | null;
 }
 
 export interface CompanionWithLastMessage extends Companion {
@@ -415,4 +416,38 @@ export async function getUserDefaultCompanion(userId: string): Promise<Companion
   }
 
   return data;
+}
+
+export async function updateCoachColor(companionId: string, color: string): Promise<void> {
+  await supabase
+    .from('companions')
+    .update({ coach_color: color })
+    .eq('id', companionId);
+}
+
+export async function ensureCoachColors(userId: string): Promise<void> {
+  const { data: coaches } = await supabase
+    .from('companions')
+    .select('id, coach_color')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .eq('relationship_type', 'mentor');
+
+  if (!coaches || coaches.length === 0) return;
+
+  const taken = (coaches as Array<{ id: string; coach_color: string | null }>)
+    .filter(c => c.coach_color)
+    .map(c => c.coach_color as string);
+
+  const { assignCoachColor } = await import('../utils/coachColors');
+  for (const coach of coaches as Array<{ id: string; coach_color: string | null }>) {
+    if (!coach.coach_color) {
+      const color = assignCoachColor(taken);
+      taken.push(color);
+      await supabase
+        .from('companions')
+        .update({ coach_color: color })
+        .eq('id', coach.id);
+    }
+  }
 }

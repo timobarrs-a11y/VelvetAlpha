@@ -20,6 +20,7 @@ import {
   type CoachingCommitment, type CoachingGoal, type CommitmentStatus,
   type WeeklyReview, type ConfidenceCheck,
 } from '../services/coachingService';
+import { getCoachColor, formatDeadline, daysToDeadline } from '../utils/coachColors';
 
 export function CoachingProgressPage() {
   const navigate = useNavigate();
@@ -214,6 +215,7 @@ export function CoachingProgressPage() {
                   key={goal.id}
                   goal={goal}
                   onPause={() => handlePauseGoal(goal.id)}
+                  onOpen={() => navigate(`/goal/${goal.id}`)}
                 />
               ))}
             </div>
@@ -601,20 +603,29 @@ function StatCard({ icon, label, value, tone }: { icon: React.ReactNode; label: 
   );
 }
 
-function GoalCard({ goal, onPause }: { goal: CoachingGoal; onPause: () => void }) {
+function GoalCard({ goal, onPause, onOpen }: { goal: CoachingGoal; onPause: () => void; onOpen: () => void }) {
   const pct = goalProgressPercent(goal);
-  const daysLeft = goalDaysRemaining(goal);
+  const daysLeft = daysToDeadline(goal.target_date, goal.deadline_precision);
   const typeLabel = GOAL_TYPE_LABELS[goal.goal_type] ?? goal.goal_type;
+  const coachColor = getCoachColor(goal.companion_color);
 
   return (
-    <Card padding="md" interactive>
+    <Card padding="md" interactive onClick={onOpen} className="cursor-pointer" style={{ borderLeft: `3px solid ${coachColor.base}` }}>
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-ink text-sm truncate">{goal.title}</h3>
-          <p className="text-xs text-ink-muted mt-0.5">{typeLabel}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-xs text-ink-muted">{typeLabel}</p>
+            {goal.companion_name && (
+              <>
+                <span className="text-xs text-ink-muted">·</span>
+                <span className="text-xs" style={{ color: coachColor.text }}>{goal.companion_name}</span>
+              </>
+            )}
+          </div>
         </div>
         <button
-          onClick={onPause}
+          onClick={(e) => { e.stopPropagation(); onPause(); }}
           className="text-xs text-ink-muted hover:text-ink transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
         >
           Pause
@@ -632,7 +643,7 @@ function GoalCard({ goal, onPause }: { goal: CoachingGoal; onPause: () => void }
           <div className="h-2 rounded-full bg-white/8 overflow-hidden">
             <motion.div
               className="h-full rounded-full"
-              style={{ background: 'var(--ds-success, #10b981)' }}
+              style={{ background: coachColor.base }}
               initial={{ width: 0 }}
               animate={{ width: `${pct}%` }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -645,7 +656,10 @@ function GoalCard({ goal, onPause }: { goal: CoachingGoal; onPause: () => void }
         {daysLeft !== null && (
           <span className="flex items-center gap-1">
             <Calendar className="w-3 h-3" />
-            {daysLeft > 0 ? `${daysLeft}d left` : daysLeft === 0 ? 'Due today' : `${Math.abs(daysLeft)}d overdue`}
+            {formatDeadline(goal.target_date, goal.deadline_precision)}
+            <span className="opacity-70 ml-1">
+              {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`}
+            </span>
           </span>
         )}
         {goal.goal_type === 'habit' && (
@@ -654,6 +668,7 @@ function GoalCard({ goal, onPause }: { goal: CoachingGoal; onPause: () => void }
             Day {Math.floor((Date.now() - new Date(goal.start_date).getTime()) / 86400000) + 1}
           </span>
         )}
+        <ChevronRight className="w-3 h-3 ml-auto text-ink-muted" />
       </div>
     </Card>
   );

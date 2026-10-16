@@ -15,6 +15,7 @@ import {
   type CoachArtifact,
   type ArtifactStatus,
 } from '../services/coachingService';
+import { getCoachColor } from '../utils/coachColors';
 
 const ARTIFACT_ICONS: Record<string, React.ReactNode> = {
   reading_material: <BookOpen className="w-4 h-4" />,
@@ -186,9 +187,10 @@ function ArtifactCard({
   const tone = ARTIFACT_TONES[artifact.artifact_type] ?? 'var(--ds-accent, #3b82f6)';
   const isProposed = artifact.status === 'proposed';
   const content = artifact.content || {};
+  const coachColor = getCoachColor(artifact.companion_color);
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden" style={{ borderLeft: `3px solid ${coachColor.base}` }}>
       <button
         onClick={onToggleExpand}
         className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/[0.02] transition-colors"

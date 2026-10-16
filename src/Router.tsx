@@ -18,6 +18,7 @@ import { useAudioScene } from './hooks/useAudioScene';
 import { AudioScene } from './services/audioManager';
 import { InstallPWABanner } from './components/InstallPWABanner';
 import { SWUpdateToast } from './components/SWUpdateToast';
+import { FloatingChatMount } from './components/FloatingChatMount';
 
 const GAME_PATHS = [
   '/checkers', '/pacman', '/momentum', '/slime-soccer',
@@ -108,6 +109,7 @@ export function Router() {
             <InstallPWABanner />
             <AudioSceneSync />
             <GlobalEffects />
+            <FloatingChatMount />
             <Routes>
               {publicRoutes}
               {onboardingRoutes}

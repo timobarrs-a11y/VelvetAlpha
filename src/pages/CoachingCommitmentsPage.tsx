@@ -18,6 +18,7 @@ import {
   type CoachingCommitment, type CommitmentStatus,
   type CoachPlan, type StepStatus,
 } from '../services/coachingService';
+import { getCoachColor } from '../utils/coachColors';
 
 type Filter = 'active' | 'completed' | 'all';
 
@@ -659,6 +660,7 @@ function CommitmentRow({
   const isPending = commitment.status === 'pending';
   const showActions = isPending || isMissed || isInProgress;
   const tone = commitmentStatusColor(commitment.status);
+  const coachColor = getCoachColor(commitment.companion_color);
 
   return (
     <motion.div
@@ -668,6 +670,7 @@ function CommitmentRow({
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.2 }}
       className="rounded-xl border border-white/8 bg-white/[0.03] overflow-hidden"
+      style={{ borderLeft: `3px solid ${coachColor.base}` }}
     >
       <div className="flex items-center gap-3 p-4">
         <button
@@ -690,7 +693,7 @@ function CommitmentRow({
             {commitment.description}
           </p>
           <div className="flex items-center gap-2 mt-1 text-xs text-ink-muted flex-wrap">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" style={{ color: coachColor.text }}>
               {commitment.is_user_created && <Sparkles className="w-3 h-3" />}
               {commitment.companion_name ?? 'You'}
             </span>

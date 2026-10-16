@@ -19,6 +19,8 @@ import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { companionAvatarConfig, TONE_COLOR, FinishSetupCard } from '../components/lobby';
 import { Avatar } from '../components/Avatar';
 import { colorNameToHex } from '../utils/colorMapping';
+import { getCoachColor } from '../utils/coachColors';
+import { ensureCoachColors } from '../services/companionService';
 import type { CompanionWithLastMessage } from '../services/companionService';
 
 const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default: m.DailyFeedPage })));
@@ -46,7 +48,8 @@ export function HomeV3Page() {
     subscriptionInfo,
   } = lobby;
 
-  const coach = companions.find(c => c.relationship_type === 'mentor');
+  const coaches = companions.filter(c => c.relationship_type === 'mentor');
+  const coach = coaches[0];
   const voices = companions.filter(c => c.relationship_type !== 'mentor' && c.relationship_type !== 'correspondent');
   const correspondents = companions.filter(c => c.relationship_type === 'correspondent');
 
@@ -84,7 +87,11 @@ export function HomeV3Page() {
   }, [companions]);
 
   useEffect(() => {
-    if (!loading && companions.length > 0) loadCheckIns();
+    if (!loading && companions.length > 0) {
+      loadCheckIns();
+      const { data: { user } } = supabase.auth.getUser();
+      user?.id && ensureCoachColors(user.id).catch(() => {});
+    }
   }, [loading, companions, loadCheckIns]);
 
   if (loading) {
@@ -132,12 +139,16 @@ export function HomeV3Page() {
   const renderPersonRow = (c: CompanionWithLastMessage, isCoach = false) => {
     const line = getCompanionLine(c);
     const hasCheckIn = checkInMap.has(c.id);
+    const coachColor = isCoach ? getCoachColor(c.coach_color) : null;
     return (
       <button
         key={c.id}
         onClick={() => handleNavigate(`/chat?companion=${c.id}`)}
         className={`v3-person-row w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${hasCheckIn ? 'bg-white/5' : ''}`}
-        style={{ '--v3-person-color': colorNameToHex(c.favorite_color ?? '') } as React.CSSProperties}
+        style={{
+          '--v3-person-color': colorNameToHex(c.favorite_color ?? ''),
+          ...(coachColor ? { borderLeft: `2px solid ${coachColor.base}` } : {}),
+        } as React.CSSProperties}
       >
         <div className={`relative ${isCoach ? 'w-11 h-11' : 'w-9 h-9'} rounded-full overflow-hidden flex-shrink-0`}>
           <Avatar config={companionAvatarConfig(c)} className="w-full h-full" />
@@ -150,7 +161,9 @@ export function HomeV3Page() {
             <p className="text-sm font-semibold text-white/90 truncate" style={{ fontFamily: c.font_family ?? undefined }}>
               {c.custom_name}
             </p>
-            {isCoach && <Badge size="xs" tone={TONE_COLOR.coach}>Coach</Badge>}
+            {isCoach && (
+              <Badge size="xs" tone={coachColor?.base ?? TONE_COLOR.coach}>Coach</Badge>
+            )}
           </div>
           {line ? (
             <p className="text-xs text-white/50 truncate leading-tight mt-0.5">{line}</p>
@@ -212,13 +225,22 @@ export function HomeV3Page() {
         {/* ── Coaching ── */}
         <div className="flex flex-col gap-0.5">
           <GroupLabel>Coaching</GroupLabel>
-          {coach ? (
+          {coaches.length > 0 ? (
             <>
-              {renderPersonRow(coach, true)}
+              {coaches.map(c => renderPersonRow(c, true))}
               {renderSubRow('Progress', <Target className="w-3.5 h-3.5" />, '/coaching-progress')}
               {renderSubRow('Commitments', <CheckCircle2 className="w-3.5 h-3.5" />, '/coaching-commitments')}
               {renderSubRow('Plans', <Layers className="w-3.5 h-3.5" />, '/coaching-commitments?view=plans')}
               {renderSubRow('Library', <BookOpen className="w-3.5 h-3.5" />, '/coaching-library')}
+              <button
+                onClick={() => handleNavigate('/expert-selection')}
+                className="w-full flex items-center gap-2 pl-8 pr-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
+              >
+                <span className="flex items-center justify-center w-6 h-6 rounded-lg flex-shrink-0 text-white/40" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <Plus className="w-3.5 h-3.5" />
+                </span>
+                <span className="text-[11px] font-medium text-white/40">Add another coach</span>
+              </button>
             </>
           ) : (
             <button
@@ -409,17 +431,19 @@ export function HomeV3Page() {
 
           {/* Mobile person strip + coaching shortcuts */}
           <div className="sm:hidden flex items-center gap-2 px-3 py-2 overflow-x-auto scrollbar-hide flex-shrink-0">
-            {coach && (
+            {coaches.map(c => (
               <button
-                onClick={() => navigate(`/chat?companion=${coach.id}`)}
+                key={c.id}
+                onClick={() => navigate(`/chat?companion=${c.id}`)}
                 className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 flex-shrink-0"
+                style={{ borderLeft: `2px solid ${getCoachColor(c.coach_color).base}` }}
               >
                 <div className="w-7 h-7 rounded-full overflow-hidden">
-                  <Avatar config={companionAvatarConfig(coach)} className="w-full h-full" />
+                  <Avatar config={companionAvatarConfig(c)} className="w-full h-full" />
                 </div>
-                <span className="text-xs font-semibold text-white/80">{coach.custom_name}</span>
+                <span className="text-xs font-semibold text-white/80">{c.custom_name}</span>
               </button>
-            )}
+            ))}
             {voices.map(c => (
               <button
                 key={c.id}

@@ -18,6 +18,7 @@ export interface CoachingCommitment {
   category?: string | null;
   extracted_from_message?: string | null;
   plan_step_id?: string | null;
+  companion_color?: string | null;
 }
 
 export interface CoachingGoal {
@@ -32,6 +33,10 @@ export interface CoachingGoal {
   status: GoalStatus;
   notes: string | null;
   created_at: string;
+  deadline_precision?: string | null;
+  source_companion_id?: string | null;
+  companion_name?: string;
+  companion_color?: string | null;
 }
 
 export interface WeeklyStats {
@@ -84,13 +89,14 @@ export async function getCommitments(userId: string, companionId?: string | null
 
   const { data: companions } = await supabase
     .from('companions')
-    .select('id, custom_name')
+    .select('id, custom_name, coach_color')
     .in('id', companionIds);
 
-  const nameMap = new Map((companions ?? []).map(c => [c.id, c.custom_name]));
+  const infoMap = new Map((companions ?? []).map(c => [c.id, { name: c.custom_name, color: (c as Record<string, unknown>).coach_color as string | null }]));
   return commitments.map(c => ({
     ...c,
-    companion_name: c.companion_id ? (nameMap.get(c.companion_id) ?? 'Coach') : 'You',
+    companion_name: c.companion_id ? (infoMap.get(c.companion_id)?.name ?? 'Coach') : 'You',
+    companion_color: c.companion_id ? (infoMap.get(c.companion_id)?.color ?? null) : null,
   }));
 }
 
@@ -106,7 +112,66 @@ export async function getGoals(userId: string): Promise<CoachingGoal[]> {
     return [];
   }
 
-  return (data ?? []) as CoachingGoal[];
+  const goals = (data ?? []) as CoachingGoal[];
+  if (goals.length === 0) return goals;
+
+  const companionIds = [...new Set(goals.map(g => g.source_companion_id).filter(Boolean))] as string[];
+  if (companionIds.length > 0) {
+    const { data: companions } = await supabase
+      .from('companions')
+      .select('id, custom_name, coach_color')
+      .in('id', companionIds);
+    const infoMap = new Map((companions ?? []).map(c => [c.id, { name: c.custom_name, color: (c as Record<string, unknown>).coach_color as string | null }]));
+    goals.forEach(g => {
+      if (g.source_companion_id && infoMap.has(g.source_companion_id)) {
+        const info = infoMap.get(g.source_companion_id)!;
+        g.companion_name = info.name;
+        g.companion_color = info.color;
+      }
+    });
+  }
+
+  return goals;
+}
+
+export async function getGoalById(userId: string, goalId: string): Promise<CoachingGoal | null> {
+  const { data, error } = await supabase
+    .from('user_goals')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('id', goalId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const goal = data as CoachingGoal;
+  if (goal.source_companion_id) {
+    const { data: companion } = await supabase
+      .from('companions')
+      .select('id, custom_name, coach_color')
+      .eq('id', goal.source_companion_id)
+      .maybeSingle();
+    if (companion) {
+      goal.companion_name = (companion as Record<string, unknown>).custom_name as string;
+      goal.companion_color = (companion as Record<string, unknown>).coach_color as string | null;
+    }
+  }
+  return goal;
+}
+
+export async function updateGoalDeadline(
+  goalId: string,
+  targetDate: string | null,
+  deadlinePrecision: string,
+): Promise<void> {
+  await supabase
+    .from('user_goals')
+    .update({
+      target_date: targetDate,
+      deadline_precision: deadlinePrecision,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', goalId);
 }
 
 export async function updateCommitmentStatus(
@@ -424,6 +489,7 @@ export interface CoachPlan {
   updated_at: string;
   companion_name?: string;
   steps?: CoachPlanStep[];
+  companion_color?: string | null;
 }
 
 export async function getPlans(
@@ -454,11 +520,15 @@ export async function getPlans(
   if (companionIds.length > 0) {
     const { data: companions } = await supabase
       .from('companions')
-      .select('id, custom_name')
+      .select('id, custom_name, coach_color')
       .in('id', companionIds);
-    const nameMap = new Map((companions ?? []).map(c => [c.id, c.custom_name]));
+    const infoMap = new Map((companions ?? []).map(c => [c.id, { name: c.custom_name, color: (c as Record<string, unknown>).coach_color as string | null }]));
     plans.forEach(p => {
-      if (p.companion_id) p.companion_name = nameMap.get(p.companion_id) ?? 'Coach';
+      if (p.companion_id) {
+        const info = infoMap.get(p.companion_id);
+        p.companion_name = info?.name ?? 'Coach';
+        p.companion_color = info?.color ?? null;
+      }
     });
   }
 
@@ -651,6 +721,7 @@ export interface CoachArtifact {
   created_at: string;
   updated_at: string;
   companion_name?: string;
+  companion_color?: string | null;
 }
 
 export async function getArtifacts(
@@ -680,11 +751,15 @@ export async function getArtifacts(
   if (companionIds.length > 0) {
     const { data: companions } = await supabase
       .from('companions')
-      .select('id, custom_name')
+      .select('id, custom_name, coach_color')
       .in('id', companionIds);
-    const nameMap = new Map((companions ?? []).map(c => [c.id, c.custom_name]));
+    const infoMap = new Map((companions ?? []).map(c => [c.id, { name: c.custom_name, color: (c as Record<string, unknown>).coach_color as string | null }]));
     artifacts.forEach(a => {
-      if (a.companion_id) a.companion_name = nameMap.get(a.companion_id) ?? 'Coach';
+      if (a.companion_id) {
+        const info = infoMap.get(a.companion_id);
+        a.companion_name = info?.name ?? 'Coach';
+        a.companion_color = info?.color ?? null;
+      }
     });
   }
   return artifacts;
