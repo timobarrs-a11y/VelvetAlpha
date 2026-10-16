@@ -115,7 +115,7 @@ export function CreateGroupChatModal({ isOpen, onClose, companions, onCreateGrou
                         </div>
                         <div className="flex-1 text-left">
                           <h3 className="text-white font-semibold">{companion.custom_name}</h3>
-                          <span className="text-xs text-gray-400 capitalize">{companion.relationship_type}</span>
+                          <span className="text-xs text-gray-400 capitalize">{companion.relationship_type === 'romantic' ? 'partner' : companion.relationship_type === 'mentor' ? 'mentor' : 'friend'}</span>
                         </div>
                         <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                           isSelected

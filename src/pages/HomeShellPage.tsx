@@ -531,7 +531,7 @@ export function HomeShellPage() {
 }
 
 const CATEGORY_CONFIG: Record<CompanionCategory, { label: string; color: string; matchTypes: string[]; addLabel: string }> = {
-  companions:     { label: 'Companions',    color: '#f472b6', matchTypes: ['romantic', 'friend', ''], addLabel: 'Someone New' },
+  companions:     { label: 'Companions',    color: '#f472b6', matchTypes: ['romantic', 'friend', 'correspondent', ''], addLabel: 'Someone New' },
   coaching:       { label: 'Coaching',      color: '#34d399', matchTypes: ['mentor'],                 addLabel: 'Add coach' },
 };
 
