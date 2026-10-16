@@ -4,6 +4,8 @@ import { NEED_KEYS, tickNeeds, weight, type NeedKey } from './needs';
 import { buildGrid, planRoute, randomFree, type Block, type Grid, type RouteLeg } from './pathfinding';
 import { LEVELS, STAIRS, WX, WY } from './house';
 import type { CharacterNeeds } from './types';
+import type { HouseholdState } from './household';
+import { consumeMeal, washDishes, scrubDirt, worstDirt } from './household';
 
 export type AgentId = 'jordan' | 'maya';
 
@@ -317,6 +319,7 @@ export function statusText(ch: Agent): string {
 export function tickAgent(
   world: HouseWorld, ch: Agent, other: Agent | null,
   dt: number, gameMin: number, walkMul: number, hourF: number, rng: () => number,
+  household?: HouseholdState,
 ): void {
   const t = ch.task;
   const doingAct = t && t.phase === 'do' ? ACTIVITIES[t.act] : null;
@@ -338,6 +341,9 @@ export function tickAgent(
     return;
   }
   t.time += gameMin;
+  if (household && t.act === 'eat' && t.time >= 0.1 && t.time < gameMin + 0.1) consumeMeal(household);
+  if (household && t.act === 'wash' && t.time >= 0.1 && t.time < gameMin + 0.1) washDishes(household, 99);
+  if (household && t.act === 'scrub' && t.slot == null && t.time >= 0.1) { const d = worstDirt(household); if (d) scrubDirt(household, d); }
   const done = t.act === 'sleep'
     ? ch.needs.energy >= 99 || (hourF >= 6.5 && hourF < 22 && ch.needs.energy >= 85)
     : t.time >= t.dur;

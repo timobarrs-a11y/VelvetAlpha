@@ -12,6 +12,10 @@ import {
 import type { CharacterLook, CharacterNeeds } from './state/types';
 import { createHouseArt, type WallMode, type PersonFrame } from './art/houseArt.js';
 import { startLoop, advanceClock } from './engine/loop';
+import {
+  createHousehold, billTick, deliveryTick, dirtTick, laundryTick, newDayReset,
+  servings, type HouseholdState,
+} from './state/household';
 
 const VIEW_W = 640;
 const VIEW_H = 440;
@@ -46,6 +50,7 @@ interface World {
   minutes: number;
   objs: ObjectInstance[];
   save: Record<string, unknown> | null;
+  household: HouseholdState;
 }
 
 function loadWorld(): World {
@@ -65,7 +70,19 @@ function loadWorld(): World {
   } catch {
     // unreadable save: start fresh
   }
-  return { day, minutes, objs, save };
+  const household = createHousehold();
+  if (save) {
+    if (typeof save.money === 'number') household.money = save.money;
+    if (typeof save.power === 'boolean') household.power = save.power;
+    if (typeof save.dishes === 'number') household.dishes = save.dishes;
+    if (typeof save.laundryPile === 'number') household.laundryPile = save.laundryPile;
+    if (save.fridge && typeof save.fridge === 'object') {
+      const f = save.fridge as { basic?: number; fresh?: number };
+      if (typeof f.basic === 'number') household.fridge.basic = f.basic;
+      if (typeof f.fresh === 'number') household.fridge.fresh = f.fresh;
+    }
+  }
+  return { day, minutes, objs, save, household };
 }
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -101,6 +118,15 @@ function boot(): void {
   ];
   const house = buildWorld(world.objs);
   const rng = new RNG(typeof save?.rngSeed === 'number' ? save.rngSeed : Date.now() & 0xffffffff);
+  const logEl = document.createElement('ul');
+  logEl.className = 'vh-log';
+  const log = (msg: string): void => {
+    if (!msg) return;
+    const li = document.createElement('li');
+    li.textContent = msg;
+    logEl.prepend(li);
+    while (logEl.children.length > 8) logEl.lastChild!.remove();
+  };
 
   const card = (p: Agent): string => `
     <button class="vh-person" data-person="${p.id}" aria-pressed="false" title="Follow ${escapeHtml(p.name)}">
@@ -121,8 +147,11 @@ function boot(): void {
       <div class="vh-hud">
         <div class="vh-chip"><span data-el="when"></span><strong data-el="clock"></strong></div>
         <div class="vh-chip vh-season" data-el="season"></div>
+        <div class="vh-chip vh-money" data-el="money"></div>
+        <div class="vh-chip vh-fridge" data-el="fridge"></div>
       </div>
       <div class="vh-people" aria-label="Who is home">${people.map(card).join('')}</div>
+      <ul class="vh-log" aria-live="polite"></ul>
       <div class="vh-controls">
         <div class="vh-floors" role="tablist" aria-label="Floors">
           ${LEVEL_NAMES.map((n, i) => `<button role="tab" data-level="${i}">${n}</button>`).join('')}
@@ -137,6 +166,7 @@ function boot(): void {
     </div>`;
 
   const canvas = app.querySelector<HTMLCanvasElement>('.vh-canvas')!;
+  app.querySelector('.vh-log')!.replaceWith(logEl);
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     app.textContent = 'Your browser could not start the game display.';
@@ -264,8 +294,15 @@ function boot(): void {
       const gameMin = world.minutes + world.day * 1440 - before;
       const hourF = world.minutes / 60;
       const walkMul = Math.min(speed, 6);
-      tickAgent(house, people[0], people[1], dt, gameMin, walkMul, hourF, () => rng.next());
-      tickAgent(house, people[1], people[0], dt, gameMin, walkMul, hourF, () => rng.next());
+      const absMin = world.minutes + world.day * 1440;
+      const prevDay = world.day;
+      billTick(world.household, absMin, log);
+      deliveryTick(world.household, absMin, log);
+      dirtTick(world.household, gameMin);
+      laundryTick(world.household, gameMin);
+      if (world.day !== prevDay) newDayReset(world.household, log);
+      tickAgent(house, people[0], people[1], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
+      tickAgent(house, people[1], people[0], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
       const followed = view.follow && people.find((p) => p.id === view.follow);
       if (followed && !followed.onStairs && followed.level !== view.level) setLevel(followed.level, true);
     }
@@ -286,6 +323,9 @@ function boot(): void {
       el('when').textContent = `${DAYS[weekday(world.day)]} · Day ${world.day}`;
       el('clock').textContent = clockText(world.minutes);
       el('season').textContent = season(world.day);
+      el('money').textContent = `${world.household.money}`;
+      const sv = servings(world.household);
+      el('fridge').textContent = sv === 0 ? 'Fridge empty' : `${sv} meals`;
       refreshPeople();
     }
   });
