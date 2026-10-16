@@ -24,6 +24,24 @@
     .vh-controls button:focus-visible { outline: 2px solid #E0A43A; outline-offset: 1px; }
     .vh-controls button[aria-selected="true"], .vh-controls button[aria-pressed="true"] { background: #F2EEE8; color: #241B25; }
     @media (max-width: 560px) { .vh-controls button { padding: 8px 9px; font-size: 12px; } .vh-hud { top: 8px; left: 8px; } }
+    .vh-people { position: absolute; top: 16px; right: 16px; display: flex; flex-direction: column; gap: 8px; width: 216px; }
+    .vh-person { appearance: none; border: 1px solid rgba(255,255,255,.06); text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: rgba(23,21,29,.84); backdrop-filter: blur(8px); color: #E9E4EC; font: 400 12px/1.5 Inter, system-ui, sans-serif; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.3); transition: border-color .18s ease, transform .18s ease, background .18s ease; }
+    .vh-person:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.18); }
+    .vh-person:focus-visible { outline: 2px solid #E0A43A; outline-offset: 2px; }
+    .vh-person[aria-pressed="true"] { border-color: #E0A43A; background: rgba(38,32,30,.9); }
+    .vh-person-head { display: flex; align-items: center; gap: 8px; }
+    .vh-person-head strong { font-size: 14px; font-weight: 700; line-height: 1.2; }
+    .vh-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
+    .vh-where { margin-left: auto; font-size: 11px; color: #A9A1AE; }
+    .vh-status { color: #F2EEE8; min-height: 18px; }
+    .vh-needs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+    .vh-need { display: flex; flex-direction: column; gap: 2px; }
+    .vh-need-label { font-size: 10px; color: #A9A1AE; letter-spacing: .02em; }
+    .vh-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .vh-bar i { display: block; height: 100%; border-radius: 2px; background: #5BAE7C; transition: width .4s ease, background-color .4s ease; }
+    .vh-bar i[data-tone="mid"] { background: #E0A43A; }
+    .vh-bar i[data-tone="low"] { background: #D0544A; }
+    @media (max-width: 760px) { .vh-people { top: auto; bottom: 120px; right: 8px; left: 8px; width: auto; flex-direction: row; } .vh-person { flex: 1; padding: 8px; gap: 4px; } .vh-needs { display: none; } }
   </style>
 </head>
 <body>
