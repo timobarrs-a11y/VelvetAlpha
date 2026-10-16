@@ -387,6 +387,7 @@ body{margin:0;overflow:hidden}
           <button type="button" id="rotL" aria-label="Turn the view left">⟲</button>
           <button type="button" id="rotR" aria-label="Turn the view right">⟳</button>
           <button type="button" id="wallBtn">Walls: cutaway</button>
+          <button type="button" id="camBtn" aria-pressed="true">Camera: auto</button>
           <button type="button" class="arr" id="arrangeBtn" aria-pressed="false">Arrange</button>
           <button type="button" id="rotateBtn" hidden>Rotate</button>
           <button type="button" id="colorBtn" hidden>Color</button>
@@ -566,6 +567,11 @@ body{margin:0;overflow:hidden}
   const W = 640, H = 440;
   function fit() { const sc = Math.min(4, Math.max(1, (cv.clientWidth || W) / W) * Math.min(window.devicePixelRatio || 1, 2)), w = Math.round(W * sc); if (cv.width !== w) { cv.width = w; cv.height = Math.round(H * sc); } ctx0.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0); }
   fit(); window.addEventListener('resize', fit);
+  // watch camera: eases in on your sim while they do something, and back out when they're done
+  const cam = { z: 1, x: W / 2, y: H / 2 };
+  let camMode = 'auto'; try { camMode = localStorage.getItem('velvet-cam') || 'auto'; } catch (e) {}
+  const WATCH_SKIP = ['errand', 'wander', 'approach', 'tv', 'movie', 'hangout'];
+  const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const WX = 10, WY = 8, TW = 32, TH = 16, ZH = 34, WH = 2.6, IW = 0.55;
   let OX = 288, OY = 128;
   const ANG = Math.atan2(TH, TW);
@@ -1578,7 +1584,74 @@ body{margin:0;overflow:hidden}
     hatAndGlasses(hx, hy, true);
   }
   const talking = (t) => S.speaking && Math.sin(t * 18) > 0;
+  // ---- jointed poses: knees and elbows, keyframed and eased (run, dumbbells, yoga) ----
+  // a rig is in the body's own frame: +x is the way they face, feet at y 0, hips at -20, shoulders at -34.
+  // arms are given relative to each shoulder in world space, so they hang right when the torso leans.
+  const RIGGED = { run: 1, lift: 1, stretch: 1 };
+  const smooth = (u) => u * u * (3 - 2 * u);
+  const mixRig = (a, b, u) => { const o = {}; for (const k in a) o[k] = Array.isArray(a[k]) ? a[k].map((v, i) => v + (b[k][i] - v) * u) : a[k] + (b[k] - a[k]) * u; return o; };
+  function flow(keys, t, hold, move) {   // cycle through key poses: hold each, then ease to the next
+    const per = hold + move, n = keys.length, ph = ((t % (per * n)) + per * n) % (per * n), i = Math.floor(ph / per), f = ph - i * per;
+    return f < hold ? keys[i] : mixRig(keys[i], keys[(i + 1) % n], smooth((f - hold) / move));
+  }
+  const YOGA = [
+    { bob: 0, lean: 0, lf: [-2, 0], rf: [2, 0], lk: [-2, -10], rk: [2, -10], le: [-4, -11], re: [4, -11], lh: [-5, -24], rh: [5, -24] },        // arms up
+    { bob: 0, lean: -0.24, lf: [-2, 0], rf: [2, 0], lk: [-2, -10], rk: [2, -10], le: [-5, -10], re: [-3, -12], lh: [-11, -21], rh: [-8, -24] },   // side bend
+    { bob: 1, lean: 1.15, lf: [-2, 0], rf: [2, 0], lk: [-1, -10], rk: [3, -10], le: [2, 9], re: [3, 9], lh: [3, 18], rh: [4, 18] },                // forward fold
+    { bob: 3, lean: 0.05, lf: [-10, 0], rf: [9, 0], lk: [-6, -10], rk: [10, -9], le: [-9, -1], re: [9, -1], lh: [-18, -2], rh: [18, -2] },        // warrior II
+    { bob: 0, lean: 0, lf: [-1, 0], rf: [2, -11], lk: [-1, -10], rk: [8, -14], le: [-5, -10], re: [5, -10], lh: [-3, -23], rh: [3, -23] }           // tree
+  ];
+  function rigFor(p, t) {
+    if (p === 'run') {
+      const a = t * 14, sn = Math.sin(a), cs = Math.cos(a), lift = (v) => Math.max(0, v) * 4.5;
+      const leg = (sg) => { const fx = sg * sn * 7.5, fy = -lift(-sg * cs); return { f: [fx, fy], k: [fx * 0.45 + 3.5 + Math.max(0, sg * sn) * 1.5, -11 + fy * 0.4 - Math.max(0, sg * sn) * 2] }; };
+      const L1 = leg(1), R1 = leg(-1);
+      return { bob: -Math.abs(cs) * 2.2, lean: 0.14, lf: L1.f, rf: R1.f, lk: L1.k, rk: R1.k, le: [-sn * 5, 8], re: [sn * 5, 8], lh: [-sn * 5 + 5, 3], rh: [sn * 5 + 5, 3] };
+    }
+    if (p === 'lift') {   // a set of curls, then a set of overhead presses
+      const set = Math.floor(t / 7) % 2, rep = (1 - Math.cos((t % 7) * Math.PI * 2 / 1.4)) / 2, u = smooth(Math.min(1, rep * 1.15));
+      const base = { bob: u * 0.6, lean: 0, lf: [-5, 0], rf: [5, 0], lk: [-5, -10], rk: [5, -10] };
+      if (set === 0) return Object.assign(base, { le: [-2, 8], re: [2, 8], lh: [-1 + u * 4, 17 - u * 13], rh: [1 + u * 4, 17 - u * 13] });
+      return Object.assign(base, { le: [-5, 1 - u * 9], re: [5, 1 - u * 9], lh: [-4, -6 - u * 13], rh: [4, -6 - u * 13] });
+    }
+    if (p === 'stretch') return flow(YOGA, t, 2.6, 0.9);
+    return null;
+  }
+  function arm3(sx, sy, ex, ey, hx, hy) {
+    const ts = L.topStyle; limb3(sx, sy, ex, ey, hx, hy, L.skin, 4.2);
+    if (ts === 'tank' || ts === 'dress') return;
+    const longSleeve = ['hoodie', 'sweater', 'flannel', 'blazer', 'denim', 'puffer'].includes(ts), w = ts === 'puffer' ? 6.4 : 5.2;
+    if (longSleeve) limb3(sx, sy, ex, ey, ex + (hx - ex) * 0.85, ey + (hy - ey) * 0.85, L.top, w);
+    else limb(sx, sy, sx + (ex - sx) * 0.7, sy + (ey - sy) * 0.7, L.top, w);
+  }
+  function drawRig(r, p, t) {
+    // facing the camera, a forward bend can't tip sideways: it folds the torso toward the viewer instead
+    const fold = S.front ? Math.max(0, Math.min(1, (r.lean - 0.3) / 0.85)) : 0, lean = S.front ? Math.max(-0.3, Math.min(0.3, r.lean)) : r.lean, sq = 1 - 0.45 * fold;
+    const bob = r.bob + fold * 4, hip = [0, -20 + bob], cl = Math.cos(lean), sl = Math.sin(lean);
+    const sh = (bx) => [hip[0] + bx * cl + 14 * sq * sl, hip[1] + bx * sl - 14 * sq * cl];   // a shoulder after the lean
+    const hips = [[-2.8, hip[1]], [2.8, hip[1]]], legs = [[r.lk, r.lf], [r.rk, r.rf]];
+    legs.forEach(([k, f], i) => {
+      const h = hips[i], kn = [k[0], k[1] + bob * 0.5];
+      limb3(h[0], h[1], kn[0], kn[1], f[0], f[1] - 1, legCol(), 5.4);
+      if (L.bottom === 'shorts' && L.topStyle !== 'dress') limb(h[0], h[1], h[0] + (kn[0] - h[0]) * 0.6, h[1] + (kn[1] - h[1]) * 0.6, L.pants || PANTS, 6);
+      ell(f[0] + 1.2, f[1] - 0.6, 3.4, 1.9, shoeCol());
+    });
+    skirtShape(-22, bob);
+    const ls = sh(-4.5), rs = sh(4.5), arms = [[ls, r.le, r.lh], [rs, r.re, r.rh]];
+    const drawArm = ([s0, e, h]) => { arm3(s0[0], s0[1], s0[0] + e[0], s0[1] + e[1], s0[0] + h[0], s0[1] + h[1]); if (p === 'lift') { const hx = s0[0] + h[0], hy = s0[1] + h[1]; limb(hx - 4, hy, hx + 4, hy, '#3A3340', 1.6); rr(hx - 5.5, hy - 2.6, 2.4, 5.2, 0.8, '#1F1D22'); rr(hx + 3.1, hy - 2.6, 2.4, 5.2, 0.8, '#1F1D22'); } };
+    const overhead = (a) => a[2][1] < -12;   // raised arms go behind the head
+    drawArm(arms[0]); if (overhead(arms[1])) drawArm(arms[1]);
+    ctx.save(); ctx.translate(hip[0], hip[1]); ctx.rotate(lean);
+    ctx.save(); ctx.scale(1, sq); ctx.translate(-hip[0], -hip[1]);
+    topShape(-7.5, -37 + bob, 15, 19, 5); rr(2.5, -36 + bob, 4.5, 17, 2.5, 'rgba(0,0,0,.08)');
+    limb(0, -37 + bob, 0, -39.5 + bob, L.skin, 4.2);
+    ctx.restore();
+    drawHead(0, -25.5 * sq, S.front, p === 'run' || (p === 'lift' && Math.sin(t * 4.5) > 0.6));
+    ctx.restore();
+    if (!overhead(arms[1])) drawArm(arms[1]);
+  }
   function drawStanding(p, t) {
+    if (RIGGED[p]) { const rg = rigFor(p, t); if (rg) { drawRig(rg, p, t); return; } }
     let bob = 0, sw = 0, amp = 4, lh = [-7, -22], rh = [7, -22];
     if (S.emote === 'dance' && p === 'stand') p = 'dance';
     if (p === 'walk') { sw = Math.sin(t * 9); bob = -Math.abs(Math.cos(t * 9)) * 1.2; lh = [-6 - sw * 3.5, -22]; rh = [6 + sw * 3.5, -22]; }
@@ -3402,8 +3475,9 @@ body{margin:0;overflow:hidden}
     }
     th.hidden = true;
     const q = screenQuad(); if (viewLevel !== q.level || arranging || !BACK[VR].includes('B')) { wrap.hidden = true; return; }
-    const p0 = iso(q.u[0], 0.012, q.z[1]), p1 = iso(q.u[1], 0.012, q.z[1]), p3 = iso(q.u[0], 0.012, q.z[0]);
-    wrap.hidden = false; wrap.style.transform = `matrix(${(p1[0] - p0[0]) * s / 320},${(p1[1] - p0[1]) * s / 320},${(p3[0] - p0[0]) * s / 180},${(p3[1] - p0[1]) * s / 180},${p0[0] * s},${p0[1] * s})`;
+    const cs = (pt) => [((pt[0] - cam.x) * cam.z + W / 2) * s, ((pt[1] - cam.y) * cam.z + H / 2) * s];
+    const p0 = cs(iso(q.u[0], 0.012, q.z[1])), p1 = cs(iso(q.u[1], 0.012, q.z[1])), p3 = cs(iso(q.u[0], 0.012, q.z[0]));
+    wrap.hidden = false; wrap.style.transform = `matrix(${(p1[0] - p0[0]) / 320},${(p1[1] - p0[1]) / 320},${(p3[0] - p0[0]) / 180},${(p3[1] - p0[1]) / 180},${p0[0]},${p0[1]})`;
   }
   function drawCouch() {
     const c2 = $('couchCv'), g = c2.getContext('2d'), prev = ctx; ctx = g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 320, 70);
@@ -3992,9 +4066,24 @@ body{margin:0;overflow:hidden}
     }
     ctx.restore();
   }
+  function camTarget() {
+    if (camMode !== 'auto' || arranging || !$('follow').checked) return null;
+    const j = jordan, tk = j.task;
+    if (j.away || j.level !== viewLevel || onStairs(j)) return null;
+    if (chat.open && !maya.away && maya.level === j.level) { const a = iso(j.x, j.y, j.z), b = iso(maya.x, maya.y, maya.z); const boxOver = !matchMedia('(max-width:760px)').matches; return { z: 1.8, x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2 + (boxOver ? 26 : -12) }; }   // when the chat box covers the scene, frame them above it
+    if (!tk || tk.phase !== 'do' || WATCH_SKIP.includes(tk.name)) return null;
+    const pt = iso(j.x, j.y, j.z); return { z: tk.name === 'sleep' || tk.name === 'nap' ? 1.5 : 2, x: pt[0], y: pt[1] - 30 };
+  }
+  function camTick(dt) {
+    const tg = camTarget() || { z: 1, x: W / 2, y: H / 2 }, k = reduceMotion() ? 1 : 1 - Math.exp(-dt * (tg.z > cam.z ? 2 : 3.2));
+    cam.z += (tg.z - cam.z) * k; cam.x += (tg.x - cam.x) * k; cam.y += (tg.y - cam.y) * k;
+    if (Math.abs(cam.z - 1) < 0.002 && tg.z === 1) cam.z = 1;
+    const hw = W / 2 / cam.z, hh = H / 2 / cam.z; cam.x = Math.max(hw, Math.min(W - hw, cam.x)); cam.y = Math.max(hh, Math.min(H - hh, cam.y));
+  }
   function render() {
     const t = animT, lv = viewLevel;
     ctx.clearRect(0, 0, W, H);
+    ctx.save(); if (cam.z !== 1) { ctx.translate(W / 2, H / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y); }
     const lights = activeLights(lv);
     drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv);
     const items = [];
@@ -4007,6 +4096,7 @@ body{margin:0;overflow:hidden}
     lighting(lv, lights);
     if (lv === 3) drawRain();
     if (arranging) drawArrangeOverlay(t);
+    ctx.restore();
     if (viewFade > 0) { ctx.fillStyle = `rgba(10,8,20,${viewFade * 0.55})`; ctx.fillRect(0, 0, W, H); viewFade = Math.max(0, viewFade - rdt * 3.5); }
     ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
   }
@@ -4252,7 +4342,7 @@ ${memoryBrief()}` : ''}`);
   // ======================================================================
   // canvas input: talk to Maya, or arrange furniture
   // ======================================================================
-  function canvasPoint(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; }
+  function canvasPoint(e) { const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) * W / r.width, sy = (e.clientY - r.top) * H / r.height; return [(sx - W / 2) / cam.z + cam.x, (sy - H / 2) / cam.z + cam.y]; }
   function overMaya(x, y) { if (maya.away || maya.level !== viewLevel) return false; const [fx, fy] = iso(maya.x, maya.y, maya.z); const top = SITTING.includes(maya.pose) ? 42 : maya.pose === 'sleep' ? 20 : 66; return Math.abs(x - fx) < 20 && y > fy - top - 18 && y < fy + 10; }
   cv.addEventListener('click', (e) => {
     const [x, y] = canvasPoint(e);
@@ -4711,6 +4801,7 @@ ${memoryBrief()}` : ''}`);
     if (running && !arranging) update(dt); else animT += arranging ? dt * 0.3 : 0;
     if (shown < target.length) { shown = Math.min(target.length, shown + dt * 60); lineEl.textContent = target.slice(0, Math.floor(shown)); maya.speaking = true; }
     else { if (!typingDone && !chat.busy) { typingDone = true; srLine.textContent = target; } if (maya.thinking) lineEl.textContent = '.'.repeat(1 + Math.floor(performance.now() / 350) % 3); else if (lineEl.textContent !== target) lineEl.textContent = target; maya.speaking = false; }
+    camTick(dt);
     render();
     placeVideo();
     uiTimer -= dt; if (uiTimer <= 0) { refreshUI(); renderTracker(); uiTimer = 0.25; }
@@ -4768,6 +4859,8 @@ ${memoryBrief()}` : ''}`);
     el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
   }
   $('tracker').addEventListener('click', () => { if (drawerEl.hidden || drawerEl.dataset.open !== 'goals') openPage('goals'); });
+  function setCam(m) { camMode = m; const b = $('camBtn'); b.textContent = m === 'auto' ? 'Camera: auto' : 'Camera: wide'; b.setAttribute('aria-pressed', String(m === 'auto')); try { localStorage.setItem('velvet-cam', m); } catch (e) {} }
+  $('camBtn').addEventListener('click', () => setCam(camMode === 'auto' ? 'wide' : 'auto')); setCam(camMode);
   setWallMode(wallMode);
   $('autoSel').value = autonomy; $('capSel').value = String(mayaCap);
   $('autoSel').addEventListener('change', (e) => { autonomy = e.target.value; if (autonomy !== 'ask') { if (proposal && autonomy === 'free') startPlan(proposal); proposal = null; } if (autonomy === 'off') mayaQueue.length = 0; log(autonomy === 'free' ? 'Maya can change things around the house on her own.' : autonomy === 'ask' ? 'Maya will ask before she changes anything.' : 'Maya will comment on changes but leave the house alone.'); renderMayaActs(); saveGame(); });
