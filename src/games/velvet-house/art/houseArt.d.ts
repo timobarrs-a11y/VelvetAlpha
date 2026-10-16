@@ -1,4 +1,5 @@
 import type { ObjectInstance } from '../state/objects';
+import type { GpuLights } from '../engine/gpuLights';
 
 export type WallMode = 'cut' | 'up' | 'down';
 
@@ -42,4 +43,9 @@ export interface HouseArt {
   WTYPES: Record<string, unknown>;
 }
 
-export function createHouseArt(ctx: CanvasRenderingContext2D): HouseArt;
+export interface HouseArtOptions {
+  /** Returns the GPU light layer to use this frame, or null to draw lights on the 2D canvas. */
+  gpuLights?: () => GpuLights | null;
+}
+
+export function createHouseArt(ctx: CanvasRenderingContext2D, opts?: HouseArtOptions): HouseArt;

@@ -15,6 +15,7 @@ import { advanceClock } from './engine/loop';
 import { startFixedLoop } from './engine/fixedLoop';
 import { qualityManager } from './engine/qualityTier';
 import { LayerCache } from './engine/layerCache';
+import { createGpuLights } from './engine/gpuLights';
 import {
   createHousehold, billTick, deliveryTick, dirtTick, laundryTick, newDayReset,
   servings, spend, earn, payBill, orderGroceries, orderTakeout,
@@ -237,7 +238,10 @@ function boot(): void {
   const btn = (act: string) => app.querySelector<HTMLButtonElement>(`[data-act="${act}"]`)!;
   const personEl = (id: AgentId) => app.querySelector<HTMLButtonElement>(`[data-person="${id}"]`)!;
 
-  const art = createHouseArt(ctx);
+  const gpuLights = createGpuLights();
+  const art = createHouseArt(ctx, {
+    gpuLights: () => (gpuLights && qualityManager.getTier() !== 'low' ? gpuLights : null),
+  });
   art.applySave(save);
   const savedMode = (save as { wallMode?: string })?.wallMode;
   const view = {

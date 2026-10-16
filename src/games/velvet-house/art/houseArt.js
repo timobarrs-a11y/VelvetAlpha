@@ -1,6 +1,6 @@
 /* eslint-disable */
 // Ported verbatim from the original Velvet House renderer. Live game state is copied in by `render()` each frame.
-export function createHouseArt(ctx0) {
+export function createHouseArt(ctx0, opts = {}) {
   let ctx = ctx0;
   const W = 640, H = 440;
   const cam = { z: 1, x: W / 2, y: H / 2 };
@@ -1036,10 +1036,25 @@ export function createHouseArt(ctx0) {
     idx.forEach(visit);
     return out;
   }
+  function gpuLighting(level, lights, a) {
+    const gpu = opts.gpuLights && opts.gpuLights();
+    if (!gpu) return false;
+    const frame = {
+      width: W, height: H, scale: cv.width / W, alpha: a, glow: Math.min(1, a / 0.35), t: animT,
+      dark: level === 0 ? [8, 14, 30] : [16, 13, 46],
+      lights: lights.map(l => { const [sx, sy] = iso(...l.src), [px, py] = iso(...l.pool); return { sx, sy, px, py, r: l.r, s: l.s, col: l.col }; }),
+    };
+    const darkCv = gpu.render(frame, 'dark');
+    if (!darkCv) return false;
+    ctx.drawImage(darkCv, 0, 0, W, H);
+    const glowCv = gpu.render(frame, 'glow');
+    if (glowCv) { ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowCv, 0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
+    return true;
+  }
   function lighting(level, lights) {
     const a = levelDark(level);
     ctx.save(); roomPath(); ctx.clip();
-    if (a > 0.01) {
+    if (a > 0.01 && !gpuLighting(level, lights, a)) {
       if (lightCv.width !== cv.width || lightCv.height !== cv.height) { lightCv.width = cv.width; lightCv.height = cv.height; }
       const dpr = cv.width / W;
       lctx.setTransform(dpr, 0, 0, dpr, 0, 0); lctx.globalCompositeOperation = 'source-over'; lctx.clearRect(0, 0, W, H);
