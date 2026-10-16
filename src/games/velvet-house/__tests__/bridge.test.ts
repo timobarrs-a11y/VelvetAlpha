@@ -4,6 +4,7 @@ import {
   isProfileMessage,
   isReadyMessage,
   isVidSearchMessage,
+  isRestartedMessage,
   isValidOrigin,
 } from '../bridge/protocol';
 
@@ -54,6 +55,20 @@ describe('bridge protocol', () => {
 
     it('rejects missing query', () => {
       expect(isVidSearchMessage({ type: 'velvet:vidSearch', game: 'velvet-house', seq: 1 })).toBe(false);
+    });
+  });
+
+  describe('isRestartedMessage', () => {
+    it('accepts a valid restarted message', () => {
+      expect(isRestartedMessage({ type: 'velvet:restarted', game: 'velvet-house', day: 1 })).toBe(true);
+    });
+
+    it('rejects missing day', () => {
+      expect(isRestartedMessage({ type: 'velvet:restarted', game: 'velvet-house' })).toBe(false);
+    });
+
+    it('rejects wrong type', () => {
+      expect(isRestartedMessage({ type: 'velvet:ready', game: 'velvet-house', day: 1 })).toBe(false);
     });
   });
 

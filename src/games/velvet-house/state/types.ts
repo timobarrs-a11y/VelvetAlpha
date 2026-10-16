@@ -24,12 +24,12 @@ export interface CharacterLook {
 }
 
 export interface CharacterNeeds {
-  hunger: number;
   energy: number;
-  fun: number;
-  social: number;
+  food: number;
   hygiene: number;
-  bladder: number;
+  fun: number;
+  comfort: number;
+  social: number;
 }
 
 export interface CharacterSkills {
@@ -208,32 +208,35 @@ export interface TasteAxes {
 }
 
 export interface Flags {
-  arranged: boolean;
-  stocked: boolean;
-  styled: boolean;
-  talked: boolean;
-  danced: boolean;
-  watched: boolean;
-  dinners: number;
-  harvests: number;
-  mowed: boolean;
-  tvVideo: boolean;
-  furniture: number;
-  spotless: number;
-  styledSet: string[];
-  settleSeen: string[];
-  lifeStep: number;
-  unlockedSeen: string[];
-  story: unknown[];
-  events: unknown[];
-  firstPay: boolean;
-  billPaid: boolean;
+  arranged?: boolean;
+  stocked?: boolean;
+  styled?: boolean;
+  talked?: boolean;
+  danced?: boolean;
+  watched?: boolean;
+  dinners?: number;
+  harvests?: number;
+  mowed?: boolean;
+  tvVideo?: boolean;
+  furniture?: number;
+  spotless?: number;
+  styledSet?: string[];
+  settleSeen?: string[];
+  lifeStep?: number;
+  unlockedSeen?: string[];
+  story?: unknown[];
+  events?: unknown[];
+  firstPay?: boolean;
+  billPaid?: boolean;
   house?: string;
 }
 
 export interface CareerState {
   level: number;
   perf: number;
+  studio?: boolean;
+  offerDay?: number | null;
+  offer?: boolean;
 }
 
 /**

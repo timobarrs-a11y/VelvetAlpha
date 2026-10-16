@@ -52,7 +52,7 @@ export function computeTasteNorm(items: CatalogItem[], style: StyleProfile): Tas
 export function tasteOf(
   item: CatalogItem,
   style: StyleProfile,
-  norm: TasteNorm
+  norm: TasteNormal
 ): number {
   if (!item.tags) return 0;
   const z = (rawTaste(item, style) - norm.mean) / norm.sd;

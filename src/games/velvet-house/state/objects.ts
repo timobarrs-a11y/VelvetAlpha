@@ -23,7 +23,7 @@ export interface ObjectTypeDef {
   W: number;
   D: number;
   h: number;
-  name: string;
+  name?: string;
   store?: boolean;
   fixed?: boolean;
   rug?: boolean;
@@ -58,19 +58,19 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { d: { stand: [0.6, 1.75], pos: [0.6, 0.98, 0.49], dir: [0, -1], tag: 'desk', base: 'seat' } } },
   dresser: { W: 1.2, D: 0.5, h: 0.85, name: 'Dresser' },
   nightstand: { W: 0.45, D: 0.45, h: 0.75, name: 'Nightstand', light: { at: [0.22, 0.22, 0.8], r: 100 } },
-  counter: { W: 2.8, D: 0.8, h: 1.1, fixed: true,
+  counter: { W: 2.8, D: 0.8, h: 1.1, fixed: true, name: 'Kitchen counter',
     spots: { sink: { stand: [0.65, 1.23], dir: [0, -1], tag: 'sink', group: 'counterL' }, window: { stand: [0.95, 1.23], dir: [0, -1], tag: 'window', group: 'counterL' }, stove: { stand: [1.65, 1.23], dir: [0, -1], tag: 'stove' }, coffee: { stand: [2.45, 1.23], dir: [0, -1], tag: 'coffee' } } },
-  fridge: { W: 0.9, D: 0.85, h: 1.95, fixed: true,
+  fridge: { W: 0.9, D: 0.85, h: 1.95, fixed: true, name: 'Fridge',
     spots: { f: { stand: [0.45, 1.45], dir: [0, -1], tag: 'fridge' } } },
-  tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true },
-  shower: { W: 1.18, D: 1.18, h: 2.1, fixed: true,
+  tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true, name: 'TV unit' },
+  shower: { W: 1.18, D: 1.18, h: 2.1, fixed: true, name: 'Shower',
     spots: { s: { stand: [0.6, 1.7], pos: [0.6, 0.6, 0.1], dir: [0, 1], tag: 'shower', base: 'tray' } } },
-  toilet: { W: 0.42, D: 0.62, h: 0.8, fixed: true },
-  vanity: { W: 1.0, D: 0.5, h: 0.95, fixed: true },
-  flightY: { W: 1, D: 3.16, h: 2.7, fixed: true },
-  flightX: { W: 3.16, D: 1, h: 2.7, fixed: true },
-  holeY: { W: 1, D: 2.0, h: 1.0, fixed: true },
-  holeX: { W: 2.0, D: 1, h: 1.0, fixed: true },
+  toilet: { W: 0.42, D: 0.62, h: 0.8, fixed: true, name: 'Toilet' },
+  vanity: { W: 1.0, D: 0.5, h: 0.95, fixed: true, name: 'Vanity' },
+  flightY: { W: 1, D: 3.16, h: 2.7, fixed: true, name: 'Stairs' },
+  flightX: { W: 3.16, D: 1, h: 2.7, fixed: true, name: 'Stairs' },
+  holeY: { W: 1, D: 2.0, h: 1.0, fixed: true, name: 'Floor opening' },
+  holeX: { W: 2.0, D: 1, h: 1.0, fixed: true, name: 'Floor opening' },
   waterheater: { W: 0.7, D: 0.7, h: 1.7, fixed: true, name: 'Water heater' },
   furnace: { W: 0.85, D: 1.0, h: 1.75, fixed: true, name: 'Furnace' },
   laundry: { W: 1.5, D: 0.75, h: 1.05, fixed: true, name: 'Washer and dryer',

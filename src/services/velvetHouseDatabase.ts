@@ -37,10 +37,14 @@ export async function saveVelvetHouseProgress(companionId: string, saveData: Rec
       .maybeSingle();
 
     if (existing?.save_data) {
-      const cloudDay = (existing.save_data as Record<string, unknown>).day;
+      const cloud = existing.save_data as Record<string, unknown>;
+      const cloudDay = cloud.day;
+      const cloudMinutes = cloud.minutes;
       const localDay = saveData.day;
-      if (typeof cloudDay === 'number' && typeof localDay === 'number' && cloudDay > localDay) {
-        return;
+      const localMinutes = saveData.minutes;
+      if (typeof cloudDay === 'number' && typeof localDay === 'number') {
+        if (cloudDay > localDay) return;
+        if (cloudDay === localDay && typeof cloudMinutes === 'number' && typeof localMinutes === 'number' && cloudMinutes > localMinutes) return;
       }
     }
   }

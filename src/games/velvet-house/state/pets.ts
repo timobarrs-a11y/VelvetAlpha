@@ -1,5 +1,3 @@
-import type { RNG } from './rng';
-
 export type PetKind = 'cat' | 'dog';
 export type PetState = 'idle' | 'walk' | 'sleep' | 'eat' | 'sit' | 'beg' | 'door' | 'potty' | 'litter' | 'groom' | 'wait' | 'happy';
 export type PetPose = 'stand' | 'walk' | 'run' | 'sit' | 'sleep' | 'eat' | 'crouch' | 'groom' | 'play' | 'happy';

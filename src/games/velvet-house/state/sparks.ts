@@ -1,4 +1,4 @@
-import type { WishKind, WishState } from './wishes';
+import type { WishKind } from './wishes';
 
 export interface SparkContext {
   hour: number;

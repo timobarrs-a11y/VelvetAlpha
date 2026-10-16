@@ -40,7 +40,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
-          'velvet-house': resolve(__dirname, 'games/velvet-house/index.html'),
+          'velvet-house-next': resolve(__dirname, 'games/velvet-house-next/index.html'),
         },
         output: {
           manualChunks: {

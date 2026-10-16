@@ -1,4 +1,4 @@
-import type { Character, Task, GameObject, Pet, DirtSpot, YardTile, Flags, CareerState, ChatTurn, CompanionInfo } from './types';
+import type { Character, Pet, DirtSpot, YardTile, Flags, CareerState, ChatTurn, CompanionInfo } from './types';
 import type { ObjectInstance } from './objects';
 import type { RNG } from './rng';
 
@@ -166,8 +166,8 @@ export function createInitialState(seed: number, jordan: Character, maya: Charac
     events: [],
     fired: {},
     warned: {},
-    flags: {},
-    mcareer: { studio: false, level: 0, xp: 0, jobs: 0 },
+    flags: {} as Flags,
+    mcareer: { level: 0, perf: 0, studio: false, offerDay: null, offer: false } as CareerState,
     chat: { open: false },
     chatLog: [],
     companion: null,

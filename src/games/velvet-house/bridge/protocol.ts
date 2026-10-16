@@ -9,7 +9,8 @@ export type BridgeMessageType =
   | 'velvet:profileApplied'
   | 'velvet:companionCreated'
   | 'velvet:vidSearch'
-  | 'velvet:vidResults';
+  | 'velvet:vidResults'
+  | 'velvet:restarted';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -74,6 +75,12 @@ export interface VidResultsMessage extends BridgeMessage {
   videos: unknown[];
 }
 
+export interface RestartedMessage extends BridgeMessage {
+  type: 'velvet:restarted';
+  game: 'velvet-house';
+  day: number;
+}
+
 export function isBridgeMessage(data: unknown): data is BridgeMessage {
   return (
     typeof data === 'object' &&
@@ -103,6 +110,12 @@ export function isVidSearchMessage(data: unknown): data is VidSearchMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;
   return m.type === 'velvet:vidSearch' && typeof m.query === 'string';
+}
+
+export function isRestartedMessage(data: unknown): data is RestartedMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:restarted' && typeof m.day === 'number';
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { CharacterNeeds, CharacterSkills } from './types';
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 export type NeedKey = 'energy' | 'food' | 'hygiene' | 'fun' | 'comfort' | 'social';
 

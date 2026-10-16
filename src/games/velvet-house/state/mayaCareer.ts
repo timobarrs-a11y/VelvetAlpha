@@ -77,7 +77,7 @@ export function shouldOfferStudio(state: MayaCareerState, input: StudioCheckInpu
   return true;
 }
 
-export function acceptStudio(state: MayaCareerState, day: number): void {
+export function acceptStudio(state: MayaCareerState, _day: number): void {
   state.studio = true;
   state.offer = false;
   state.offerDay = null;

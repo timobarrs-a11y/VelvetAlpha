@@ -260,8 +260,8 @@ export function planRoute(
   gy: number,
   gridFor: (level: number) => Grid,
   stairs: StairDef[],
-  worldW: number,
-  worldH: number,
+  _worldW: number,
+  _worldH: number,
 ): RouteLeg[] {
   const legs: RouteLeg[] = [];
   let lv = ch.level;

@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanion, type Companion } from '../services/companionService';
 import { loadVelvetHouseSave, saveVelvetHouseProgress, saveVelvetHouseHistory, maybeSnapshotHistory } from '../services/velvetHouseDatabase';
+import { isRestartedMessage } from '../games/velvet-house/bridge/protocol';
 
 const GAME_PATH = '/games/velvet-house/index.html';
 const SAVE_KEY_PREFIX = 'velvet-house-v1';
@@ -224,6 +225,17 @@ export function VelvetHouseGame() {
               window.location.origin,
             );
           });
+      }
+      if (isRestartedMessage(msg)) {
+        const key = saveKeyFor(companionId);
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            saveVelvetHouseProgress(companionId, parsed, true).catch(() => {});
+            maybeSnapshotHistory(companionId, parsed).catch(() => {});
+          }
+        } catch { /* non-fatal */ }
       }
     };
     const onUnload = () => { syncToSupabase(); };

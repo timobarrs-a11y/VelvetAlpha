@@ -4899,7 +4899,7 @@ ${memoryBrief()}` : ''}`);
     e.preventDefault();
     if (restartMode) { // start over: remember the choices, wipe the save, reload into the new game
       const prefs = { town: $('suTown').value.trim(), name: $('suName').value.trim(), partner: $('suPartner').value.trim(), pron: $('suPron').value, preset: $('suPreset').value, lg: lifeGoal ? (document.querySelector('input[name="lg"]:checked') || {}).value : null, house: (document.querySelector('input[name="hs"]:checked') || {}).value, look: Object.assign({}, look), mlook: Object.assign({}, maya.look), companion: companion.source === 'velvet' ? Object.assign({}, companion) : null, style: companion.source === 'velvet' ? mayaStyle : null };
-      const ngKey = VELVET_COMPANION_ID ? `velvet-newgame:${VELVET_COMPANION_ID}` : 'velvet-newgame'; try { localStorage.setItem(ngKey, JSON.stringify(prefs)); localStorage.removeItem(SAVE_KEY); } catch (err) {} saveBlocked = true; location.reload(); return;
+      const ngKey = VELVET_COMPANION_ID ? `velvet-newgame:${VELVET_COMPANION_ID}` : 'velvet-newgame'; try { localStorage.setItem(ngKey, JSON.stringify(prefs)); localStorage.removeItem(SAVE_KEY); } catch (err) {} saveBlocked = true; velvetOut('restarted', { day: 1 }); location.reload(); return;
     }
     simName = $('suName').value.trim() || 'Jordan'; partnerName = $('suPartner').value.trim() || 'Maya'; $('simName').value = simName; townName = $('suTown').value.trim() || TOWN_DEFAULT; renderTown();
     if (companion.source !== 'velvet') { companion.pronoun = $('suPron').value; companion.preset = $('suPreset').value; velvetOut('companionCreated', { player: { name: simName, look: Object.assign({}, look) }, companion: { name: partnerName, pronoun: companion.pronoun, personality: PRESETS[companion.preset].text, look: Object.assign({}, maya.look) } }); }
@@ -4912,7 +4912,7 @@ ${memoryBrief()}` : ''}`);
   // Velvet bridge: the host app hands in who you are and who your companion is, and hears back what happened
   // ======================================================================
   // Messages in:  { type: 'velvet:profile', player: { name, look }, companion: { name, pronoun, personality, look, memories, likes, dislikes } }
-  // Messages out: velvet:ready, velvet:profileApplied, velvet:companionCreated. Memories and moments never leave the game.
+  // Messages out: velvet:ready, velvet:profileApplied, velvet:companionCreated, velvet:restarted. Memories and moments never leave the game.
   const VELVET_PARENT_ORIGIN = (() => { try { return new URL(document.referrer).origin; } catch (e) { return ''; } })();
   const VELVET_ORIGINS = VELVET_PARENT_ORIGIN ? [VELVET_PARENT_ORIGIN] : [];
   function velvetOut(type, data) { try { if (window.parent && window.parent !== window) window.parent.postMessage(Object.assign({ type: 'velvet:' + type, game: 'velvet-house', day }, data || {}), VELVET_PARENT_ORIGIN || '*'); } catch (e) {} }
