@@ -3,6 +3,7 @@
 export function createHouseArt(ctx0, opts = {}) {
   let ctx = ctx0;
   const objectLights = new Map();
+  const wallLightOverrides = new Map();
   const W = 640, H = 440;
   const cam = { z: 1, x: W / 2, y: H / 2 };
   let minutes = 380, day = 1, viewLevel = 1, animT = 0;
@@ -867,14 +868,14 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   function activeLights(level) {
     const out = [];
-    WALL_LIGHTS.forEach((L, i) => { if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const s = ease('w' + i, wantLight(level, roomFor(L.room), L.night, L.amb)); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r, s, col: L.col }); });
+    WALL_LIGHTS.forEach((L, i) => { if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const manual = wallLightOverrides.get(i); const target = manual === true ? 1 : manual === false ? 0 : wantLight(level, roomFor(L.room), L.night, L.amb); const s = ease('w' + i, target); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r, s, col: L.col }); });
     OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2]], pool: [x, y, 0], r: lt.r, s, col: lt.col }); });
     return out;
   }
   function drawWallLights(level) {
     WALL_LIGHTS.forEach((L, i) => {
       if (L.level !== level || (L.need && !has(L.need)) || !BACK[VR].includes(L.p) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return;
-      const on = isLit('w' + i), um = (L.u[0] + L.u[1]) / 2, P = (u, z, off = 0) => iso(...(L.p === 'B' ? [u, off, z] : [off, u, z]));
+      const on = wallLightOverrides.get(i) === true || (wallLightOverrides.get(i) !== false && isLit('w' + i)), um = (L.u[0] + L.u[1]) / 2, P = (u, z, off = 0) => iso(...(L.p === 'B' ? [u, off, z] : [off, u, z]));
       if (L.k === 'sconce') { const [bx, by] = P(um, L.z - 0.12); rr(bx - 2.5, by - 6, 5, 9, 1.5, '#5A4A40'); const [sx, sy] = P(um, L.z + 0.06, 0.12); ctx.beginPath(); ctx.moveTo(sx - 7, sy + 4); ctx.lineTo(sx - 4, sy - 7); ctx.lineTo(sx + 4, sy - 7); ctx.lineTo(sx + 7, sy + 4); ctx.closePath(); ctx.fillStyle = on ? '#FFF0C4' : '#E7DCC8'; ctx.fill(); ctx.strokeStyle = 'rgba(60,40,30,.35)'; ctx.lineWidth = 0.8; ctx.stroke(); }
       else if (L.k === 'strip' || L.k === 'bar') { const a = P(L.u[0], L.z, 0.04), b = P(L.u[1], L.z, 0.04); limb(a[0], a[1], b[0], b[1], '#5A4A40', 5); limb(a[0], a[1] + 0.5, b[0], b[1] + 0.5, on ? '#FFF6D8' : '#D8D2C8', 2.4); }
       else if (L.k === 'string') { let prev = null; for (let k = 0; k <= 16; k++) { const u = L.u[0] + (L.u[1] - L.u[0]) * k / 16, sag = Math.sin(Math.PI * ((k % 8) / 8)) * 0.12, q = P(u, L.z - sag, 0.02); if (prev) limb(prev[0], prev[1], q[0], q[1], '#3A3340', 0.8); if (k % 2) circle(q[0], q[1] + 2, 2, on ? ['#FFD27A', '#FF9EC2', '#9EE0FF'][k % 3] : '#B9B0A6'); prev = q; } }
@@ -1176,6 +1177,22 @@ export function createHouseArt(ctx0, opts = {}) {
   function applyWallpaper(level, pattern) { if (LOOKS[level]) LOOKS[level].paper = pattern; }
   function applyFloor(level, floor) { if (LOOKS[level]) LOOKS[level].floor = floor; }
   function toggleObjectLight(id) { const next = objectLights.get(id) !== true; objectLights.set(id, next); return next; }
+  function toggleLightAt(level, sx, sy) {
+    let best = null, bestDist = 34;
+    WALL_LIGHTS.forEach((L, i) => {
+      if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return;
+      const um = (L.u[0] + L.u[1]) / 2, p = L.p === 'B' ? [um, 0.2, L.z] : [0.2, um, L.z], q = iso(...p), d = Math.hypot(sx - q[0], sy - q[1]);
+      if (d < bestDist) { bestDist = d; best = { kind: 'wall', index: i }; }
+    });
+    OBJS.forEach(o => {
+      const lt = T_OF(o).light; if (!lt || o.level !== level) return;
+      const [x, y] = xf(o, lt.at[0], lt.at[1]), q = iso(x, y, lt.at[2]), d = Math.hypot(sx - q[0], sy - q[1]);
+      if (d < bestDist) { bestDist = d; best = { kind: 'object', id: o.id }; }
+    });
+    if (!best) return null;
+    if (best.kind === 'wall') { const next = wallLightOverrides.get(best.index) !== true; wallLightOverrides.set(best.index, next); return next; }
+    return toggleObjectLight(best.id);
+  }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, TYPES, WTYPES };
 }

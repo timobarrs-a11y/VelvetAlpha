@@ -451,6 +451,8 @@ function boot(): void {
       if (Math.hypot(sx - jx, sy - jy) < 30) { toggleFollow('jordan'); return; }
     }
     // Try clicking on objects
+    const lightState = art.toggleLightAt(view.level, sx, sy);
+    if (lightState !== null) { log(`Light turned ${lightState ? 'on' : 'off'}.`); return; }
     const obj = findObjectAt(sx, sy);
     if (obj) { showObjectActions(obj, e.clientX, e.clientY); return; }
   });
