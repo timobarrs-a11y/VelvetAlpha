@@ -835,7 +835,6 @@ function boot(): void {
   // Rendering loop
   let hudTimer = 0;
   const layerCache = new LayerCache();
-  let simCache = { day: world.day, minutes: world.minutes, objs: [...world.objs], chars: people.map(toFrame) };
 
   const seeds: Record<AgentId, number> = { jordan: 0.3, maya: 2.1 };
   function toFrame(p: Agent): PersonFrame {
@@ -846,6 +845,8 @@ function boot(): void {
       seed: seeds[p.id], look: p.look,
     };
   }
+
+  let simCache = { day: world.day, minutes: world.minutes, objs: [...world.objs], chars: people.map(toFrame) };
 
   let goalsTimer = 0;
   startFixedLoop(
