@@ -309,7 +309,6 @@ const FEATURES: Feature[] = [
     borderColor: 'rgba(251,191,36,0.3)',
     category: 'coach',
   },
-  // ===== CORRESPONDENT =====
 ];
 
 const CATEGORY_TABS: { id: FeatureCategory; label: string; accent: string }[] = [

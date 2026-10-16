@@ -13,7 +13,6 @@ export interface Companion {
   user_id: string;
   gender: 'male' | 'female';
   relationship_type: 'friend' | 'romantic' | 'mentor';
-  voice_key?: string | null;
   font_family?: string | null;
   created_at: string;
   last_message_at: string;
@@ -73,7 +72,6 @@ export interface CreateCompanionOptions {
   relationshipType: 'friend' | 'romantic' | 'mentor';
   customName: string;
   hobbies: string[];
-  voiceKey?: string;
   sports?: string[];
   dynamicPreference?: string;
   confrontationStyle?: string;
@@ -165,7 +163,6 @@ export async function createCompanion(options: CreateCompanionOptions): Promise<
         : (options.signatureVoice || (options.gender === 'male' ? 'classic_male' : 'classic_female')),
       signature_expert: options.signatureExpert || null,
       signature_expert_source: options.signatureExpertSource || null,
-      voice_key: options.voiceKey || null,
       interest_text: options.interestText,
       love_language: options.loveLanguage,
       support_style: options.supportStyle,
