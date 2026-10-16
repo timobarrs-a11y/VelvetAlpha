@@ -6,7 +6,7 @@
 
 ## The setting
 
-**Honeysuckle Hollow** is a small Southern town, and the new house sits on
+**The player names the town** in the setup screen ("Your new town"). The default is **Honeysuckle Hollow**, a small Southern town, and the new house sits on
 Maple Street. Everyone knows everyone, and nearly everyone is related to
 the Duprees.
 
@@ -69,8 +69,11 @@ relationship is the product.
 | Main companion chat | Never reads `velvet_house_saves`. Only the game page does |
 | Memories from the app | Ignored. The game always starts the companion with no outside memories |
 | Memories and moments going out | Removed. The game no longer posts them to the host page |
-| What you say in a chat | When a chat closes, the AI summarizes up to 3 things worth remembering (what the player shared, plans, promises, feelings) and stores them as in-game memories |
-| Memory budget | 40 memories (was 8), placed in the companion's system prompt so they're never cut off |
+| What you say in a chat | When a chat closes, the AI picks up to 3 things worth remembering and marks the ones a partner should never forget (family, health, the people in the player's life, big news, dreams, fears, promises) |
+| Never-forget memories | Kept for good. Up to 24; past that, the oldest few are condensed into 1–3 sentences, so nothing important is dropped |
+| Everyday memories | The latest 30. Past that, the oldest 12 are condensed into one summary of that stretch |
+| Older summaries | Up to 8; past that, the two oldest merge into one, so the whole history fits in a fixed space |
+| Prompt size | The memory block is capped at 8,000 characters (never-forget first, then the newest of the rest), so it scales with no limit on play time |
 | The conversation itself | The last 16 messages are saved with the game, so a reload picks up where you left off |
 
 ---
@@ -109,8 +112,13 @@ Dez walks in empty-handed with a clipboard. His intro text (as written):
 > **Dez:** *(checks the clipboard)* "Now, this paper here says your names are {player} and {partner}." ▼
 > **Dez:** "I've got some boxes in the truck with your names on 'em, so I'm gonna start bringing them in. Time to get 'er done!" ▼
 
-`{town}` = Honeysuckle Hollow. `{player}` and `{partner}` are the names from
-the setup screen.
+`{town}`, `{player}` and `{partner}` are all picked by the player on the setup
+screen. The town defaults to Honeysuckle Hollow.
+
+**Town sign:** the town name is always shown in a small sign in the
+bottom-left corner of the game view, opposite the floor label. Taps pass
+through it, so it never blocks the game. The companion also knows the town
+name and can bring it up in chat.
 
 Dez heads back out and returns carrying the first box (**COUCH**). He sets it
 down with a thud and leaves again.

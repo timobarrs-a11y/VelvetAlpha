@@ -113,6 +113,10 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:640/440}
 .item.locked{opacity:.8}
 .newb{font-family:var(--mono);font-size:10px;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 6px;margin-left:6px;vertical-align:middle}
 .hud{z-index:3}
+.townsign{position:absolute;left:12px;top:0;z-index:2;pointer-events:none;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:color-mix(in srgb,var(--surface) 78%,transparent);border:1px solid var(--line);border-radius:999px;padding:3px 10px;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.townsign b{font-weight:600}
+@media (max-width:480px){.townsign{font-size:10px;padding:2px 8px;left:8px}}
+.townsign::before{content:'\2302  ';color:var(--muted)}
 .vid{position:absolute;left:0;top:0;width:320px;height:180px;transform-origin:0 0;z-index:2}
 .vid[hidden],.theater[hidden]{display:none}
 .vid iframe{width:100%;height:100%;border:0;display:block;background:#000}
@@ -253,6 +257,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     <p class="eyebrow">Velvet · a new place</p>
     <h2>Welcome home.</h2>
     <p class="quiet">You and your partner just got the keys. Everything you own is in boxes, the walls are primer white and rent is due Monday.</p>
+    <div class="srow"><label for="suTown">Your new town</label><input id="suTown" type="text" maxlength="24" value="Honeysuckle Hollow"></div>
     <div class="srow"><label for="suName">Your name</label><input id="suName" type="text" maxlength="16" value="Jordan"></div>
     <div class="srow"><span>Skin</span><div class="sw" id="suSkin"></div></div>
     <div class="srow"><span>Hair</span><div class="sw" id="suHair"></div></div>
@@ -292,6 +297,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
         <canvas id="room" width="640" height="440" aria-label="An isometric view of one floor of a three-floor house and its backyard, where two people go about their day"></canvas>
         <div class="theater" id="theater" hidden><canvas id="couchCv" width="320" height="70" aria-hidden="true"></canvas><div class="thbar"><button type="button" class="mini" id="thBack">Back to the house</button><button type="button" class="mini" id="thStop">Stop video</button></div></div>
         <div class="vid" id="vidWrap" hidden><iframe id="vidFrame" title="Video playing in the game" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+        <div class="townsign" id="townSign" aria-label="Town"><b id="townText">Honeysuckle Hollow</b></div>
         <div class="hud">
           <span class="chip" id="clock">Fri · 6:20 AM</span>
           <span class="chip wallet" id="cashChip">$70</span>
@@ -530,6 +536,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   try { const s = JSON.parse(localStorage.getItem('velvet-look') || 'null'); if (s) ['skin', 'hair', 'hairColor', 'top', 'gender'].forEach(k => { if (s[k]) look[k] = s[k]; }); if (look.hair) look.hair = genderedHair(look.gender || 'male', look.hair); } catch (e) {}
   const saveLook = () => { try { localStorage.setItem('velvet-look', JSON.stringify(look)); } catch (e) {} };
   let simName = 'Jordan';
+  const TOWN_DEFAULT = 'Honeysuckle Hollow';
+  let townName = TOWN_DEFAULT;
 
   // ======================================================================
   // drawing helpers
@@ -2353,8 +2361,42 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     tv: { label: 'Watch TV with Maya', chain: 'tv', ttl: 150, words: 'to watch something together', memory: () => `${simName} curled up with Maya to watch TV when she asked.` }
   };
   let wish = null, noticed = null, sparkClock = 0, tvShared = 0, tvCounted = false;
-  const MEMORY_CAP = 40, memories = [], events = [], fired = {};
-  function remember(m) { memories.push(m); while (memories.length > MEMORY_CAP) memories.shift(); }   // memory lives only in this save; it never leaves the game
+  // ---- memory: lives only in this save, never leaves the game ----
+  // three tiers keep it growing without outgrowing the prompt:
+  //   coreMem  things a partner should never forget (family, health, big news, promises), kept for good
+  //   memories recent everyday things; once full, the oldest are condensed into one pastMem summary
+  //   pastMem  condensed summaries of older stretches; once full, the two oldest merge into one
+  const RECENT_CAP = 30, CORE_CAP = 24, PAST_CAP = 8, MEM_CLIP = 220, MEM_BUDGET = 8000;
+  const memories = [], coreMem = [], pastMem = [], events = [], fired = {};
+  let compacting = false;
+  function remember(m, important) {
+    const t = String(m || '').trim().slice(0, MEM_CLIP); if (!t) return;
+    if (coreMem.includes(t) || memories.includes(t)) return;
+    (important ? coreMem : memories).push(t); compactMemory();
+  }
+  async function condense(lines, max) {   // falls back to a plain join when Claude is unavailable
+    const plain = () => lines.join(' ').slice(0, max);
+    if (!sample) return plain();
+    try {
+      const { text } = await sample([{ role: 'user', content: P(`You keep Maya's memory in a life-sim game. Condense these memories into one short paragraph under ${max} characters, in third person, oldest first. Keep names, people, health, family, dates, promises, feelings and anything a partner should not forget. Drop routine details. Reply with the paragraph only.`) }, { role: 'user', content: lines.join('\n') }], { modelTier: 'quick', cache: false });
+      const out = String(text || '').replace(/\[[^\]]*mood[^\]]*\]/gi, '').trim();
+      return out ? out.slice(0, max) : plain();
+    } catch (e) { return plain(); }
+  }
+  async function compactMemory() {
+    if (compacting) return; compacting = true;
+    try {
+      while (memories.length > RECENT_CAP) { const old = memories.splice(0, 12); pastMem.push(await condense(old, 400)); }
+      while (coreMem.length > CORE_CAP) { const old = coreMem.splice(0, 8); const merged = (await condense(old, MEM_CLIP * 2)).match(/[^.!?]+[.!?]*/g) || []; coreMem.unshift(...merged.map(x => x.trim()).filter(Boolean).slice(0, 3)); }
+      while (pastMem.length > PAST_CAP) { const old = pastMem.splice(0, 2); pastMem.unshift(await condense(old, 500)); }
+    } finally { compacting = false; }
+  }
+  function memoryBrief() {   // what goes in Maya's prompt, held to a fixed budget: core first, then the newest of the rest
+    let left = MEM_BUDGET;
+    const take = (list) => { const out = []; for (let i = list.length - 1; i >= 0; i--) { if (list[i].length + 1 > left) break; out.unshift(list[i]); left -= list[i].length + 1; } return out; };
+    const core = take(coreMem), recent = take(memories), past = take(pastMem);
+    return [core.length ? `Things Maya will never forget: ${core.join(' ')}` : '', past.length ? `Earlier in the house: ${past.join(' ')}` : '', recent.length ? `Lately: ${recent.join(' ')}` : ''].filter(Boolean).join('\n');
+  }
   // hobbies: things you own decide what there is to do
   const HOBBY = { piano: { j: 1, m: 1.2, label: 'Play piano' }, easel: { j: 0.8, m: 1.5, label: 'Paint' }, aquarium: { j: 1, m: 1, label: 'Watch the fish' }, stargaze: { j: 1.1, m: 1, label: 'Stargaze' }, boxing: { j: 1.3, m: 0.7, label: 'Hit the heavy bag' }, bike: { j: 1, m: 1, label: 'Ride the bike' },
     massage: { j: 1, m: 1.1, label: 'Massage chair' }, hammock: { j: 1, m: 1.1, label: 'Lie in the hammock' }, grill: { j: 1.3, m: 0.6, label: 'Grill out back' }, birds: { j: 0.8, m: 1.3, label: 'Watch the birds' }, guitar: { j: 1.2, m: 0.9, label: 'Play guitar' }, jukebox: { j: 1, m: 1.3, label: 'Play the jukebox' }, stretch: { j: 0.7, m: 1, label: 'Yoga' }, mixDrinks: { j: 1, m: 1, label: 'Mix drinks' }, fire: { j: 1, m: 1, label: 'Sit by the fire' } };
@@ -3076,7 +3118,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
   let loadedSave = false;
   function snapshot() {
     const pos = (c) => ({ needs: c.needs, skills: c.skills, mood: c.mood, workedDay: c.workedDay, friendsDay: c.friendsDay });
-    return { v: 1, basementV: 2, houseV: 3, setupDone, partnerName, lifeGoal, settleDone, flags, career, mcareer, pboxes: true, wallMode, yard: { t: YARD.tiles.map(t => [+t.len.toFixed(3), +t.water.toFixed(3), +t.weed.toFixed(3), +t.burn.toFixed(3), Math.round(t.mowedAt)]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck }, laundryPile, savedAt: Date.now(), minutes, day, money, earnedToday, spentToday, power, fridge, bill, nextBillAt, owned: [...owned], LOOKS, ROOMLOOK, WALLOBJS, bond, support, together, memories, dishes, petFood, petSeq, dirtId, changeSeq, simName,
+    return { v: 1, basementV: 2, houseV: 3, setupDone, partnerName, lifeGoal, settleDone, flags, career, mcareer, pboxes: true, wallMode, yard: { t: YARD.tiles.map(t => [+t.len.toFixed(3), +t.water.toFixed(3), +t.weed.toFixed(3), +t.burn.toFixed(3), Math.round(t.mowedAt)]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck }, laundryPile, savedAt: Date.now(), minutes, day, money, earnedToday, spentToday, power, fridge, bill, nextBillAt, owned: [...owned], LOOKS, ROOMLOOK, WALLOBJS, bond, support, together, memories, coreMem, pastMem, townName, dishes, petFood, petSeq, dirtId, changeSeq, simName,
       autonomy, mayaCap, mayaSpent, TASTE, style: mayaStyle, look: Object.assign({}, look), companion, mayaLook: maya.look, CHANGES: CHANGES.map(c => ({ id: c.id, at: c.at, text: c.text, undo: c.undo, undone: c.undone, seen: c.seen })), projectAt,
       objs: OBJS.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, pet: o.pet, pot: o.pot, attach: o.attach, home: o.home, grudge: o.grudge, movedAt: o.movedAt, mine: o.mine, grow: o.grow, wet: o.wet, contains: o.contains, col: o.col, art: o.art })),
       pets: PETS.map(p => ({ id: p.id, kind: p.kind, name: p.name, coat: p.coat, level: p.level, x: p.x, y: p.y, needs: p.needs, bowlFood: p.bowlFood, litterUses: p.litterUses, litterT: p.litterT, seed: p.seed, bowl: p.bowl && p.bowl.id, bed: p.bed && p.bed.id, litter: p.litter && p.litter.id })),
@@ -3090,7 +3132,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
       if (s.flags && s.flags.house) { flags.house = s.flags.house; applyHouseData(s.flags.house); }
       minutes = s.minutes; day = s.day; money = s.money; earnedToday = s.earnedToday; spentToday = s.spentToday; power = s.power; Object.assign(fridge, s.fridge); bill = s.bill; nextBillAt = s.nextBillAt;
       owned.clear(); s.owned.forEach(i => owned.add(i)); s.LOOKS.forEach((lk, i) => Object.assign(LOOKS[i], lk)); ROOMLOOK.forEach((r, i) => { Object.keys(r).forEach(k => delete r[k]); Object.assign(r, (s.ROOMLOOK || [])[i] || {}); }); WALLOBJS.length = 0; (s.WALLOBJS || []).forEach(w => { if (WTYPES[w.type]) WALLOBJS.push(w); });
-      bond = s.bond; support = s.support; together = s.together; memories.length = 0; s.memories.forEach(m => memories.push(m)); dishes = s.dishes; petFood = s.petFood; petSeq = s.petSeq; dirtId = s.dirtId; changeSeq = s.changeSeq;
+      bond = s.bond; support = s.support; together = s.together; memories.length = 0; (s.memories || []).forEach(m => memories.push(m)); coreMem.length = 0; (s.coreMem || []).forEach(m => coreMem.push(m)); pastMem.length = 0; (s.pastMem || []).forEach(m => pastMem.push(m)); townName = s.townName || TOWN_DEFAULT; dishes = s.dishes; petFood = s.petFood; petSeq = s.petSeq; dirtId = s.dirtId; changeSeq = s.changeSeq;
       simName = s.simName || 'Jordan'; autonomy = s.autonomy || 'free'; mayaCap = s.mayaCap || 80; mayaSpent = s.mayaSpent || { day: 0, amt: 0 }; Object.assign(TASTE, s.TASTE || {}); projectAt = s.projectAt; if (s.style) mayaStyle = s.style; if (s.companion) Object.assign(companion, s.companion); if (s.mayaLook) Object.assign(maya.look, s.mayaLook); if (s.look) Object.assign(look, s.look);
       CHANGES.length = 0; (s.CHANGES || []).forEach(c => CHANGES.push(c));
       if (Array.isArray(s.turns)) chat.turns = s.turns.filter(t => t && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string').slice(-16);
@@ -4010,7 +4052,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     return pick(["Hey you. What's up?", 'Oh, hey. Perfect timing, I was getting bored.', 'There you are.']);
   }
   function persona() {
-    return P(`You are playing Maya, a character in Velvet, a cozy life-sim game. The player controls ${simName}, Maya's partner. They live together in a three-floor house (basement gym and rec room, main floor kitchen and living room, upstairs bedroom, bathroom and office) and share a household budget.
+    return P(`You are playing Maya, a character in Velvet, a cozy life-sim game. The player controls ${simName}, Maya's partner. They just moved to the small town of ${townName} and live together in a three-floor house (basement gym and rec room, main floor kitchen and living room, upstairs bedroom, bathroom and office) and share a household budget.
 
 ${companionWho()} She has her own opinions, plans and moods, and she is not a pushover. She has opinions about money and decorating. ${simName} works at an office from 8 AM to 3 PM on weekdays.
 
@@ -4032,9 +4074,10 @@ mood is how Maya feels now. bond is how this exchange changes how close she feel
 
 Things Maya has opened up to ${simName} about (she can bring these up): ${flags.story.map(i => STORY[i].fact).join(' ')}` : ''}
 
-${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working toward being a ${LIFE[lifeGoal].name.toLowerCase()}` : ''}.${memories.length ? `
+${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working toward being a ${LIFE[lifeGoal].name.toLowerCase()}` : ''}.${memoryBrief() ? `
 
-What Maya remembers from your life together in this house, oldest first. Bring these up the way a partner would, when they fit: ${memories.join(' ')}` : ''}`);
+What Maya remembers from life together in this house. Bring these up the way a partner would, when they fit:
+${memoryBrief()}` : ''}`);
   }
   function companionWho() {
     const base = `In this game Maya ${companion.source === 'velvet' ? '' : 'is 27 and '}works as a graphic designer at a design studio from 11 AM to 5:30 PM on weekdays, with freelance jobs on the side.`;
@@ -4107,10 +4150,10 @@ What Maya remembers from your life together in this house, oldest first. Bring t
   async function rememberChat(turns) {   // what Maya takes away from a conversation, kept in this save only
     if (!sample || turns.length < 2) return;
     const transcript = turns.map(t => t.role === 'assistant' ? `Maya: ${visible(t.content)}` : t.content.replace(/^\(.*\)$/s, '')).filter(Boolean).join('\n').slice(-3500);
-    const ask = P(`You keep Maya's memory in a life-sim game. Read this conversation between ${simName} and Maya. Write what Maya would still remember days later: things ${simName} shared about themselves, their life, people they care about, plans, promises, worries and feelings, plus anything Maya opened up about. Write up to 3 lines, each a short third-person sentence starting with "- ". Skip small talk and anything already obvious from the house. If nothing is worth remembering, write only "- none".`);
+    const ask = P(`You keep Maya's memory in a life-sim game. Read this conversation between ${simName} and Maya. Write what Maya would still remember days later: things ${simName} shared about themselves, their life, people they care about, plans, promises, worries and feelings, plus anything Maya opened up about. Write up to 3 lines, each a short third-person sentence starting with "- ". Start the line with "! " instead if it is something a partner should never forget: family, health, the people in ${simName}'s life, big news, dreams, fears or promises. Skip small talk and anything already obvious from the house. If nothing is worth remembering, write only "- none".`);
     try {
       const { text } = await sample([{ role: 'user', content: ask }, { role: 'user', content: transcript }], { modelTier: 'quick', cache: false });
-      String(text || '').split('\n').map(l => l.replace(/^\s*[-•*]\s*/, '').trim()).filter(l => l && !/^none\.?$/i.test(l) && !/\[mood/i.test(l)).slice(0, 3).forEach(l => remember(l.slice(0, 220)));
+      String(text || '').split('\n').map(l => l.trim()).filter(l => /^[-•*!]/.test(l)).map(l => ({ imp: l.startsWith('!'), t: l.replace(/^[-•*!]+\s*/, '').trim() })).filter(l => l.t && !/^none\.?$/i.test(l.t) && !/\[mood/i.test(l.t)).slice(0, 3).forEach(l => remember(l.t, l.imp));
       saveGame();
     } catch (e) { /* the conversation still happened; it just isn't summarized */ }
   }
@@ -4487,7 +4530,7 @@ What Maya remembers from your life together in this house, oldest first. Bring t
     for (const k in jordan.needs) { const v = Math.round(jordan.needs[k]), r = needRows[k]; r.bar.style.width = v + '%'; r.bar.style.backgroundColor = v > 55 ? 'var(--good)' : v > 25 ? 'var(--warn)' : 'var(--bad)'; r.val.textContent = v; r.meter.setAttribute('aria-valuenow', v); }
     const b = Math.round(bond); $('bondBar').style.width = b + '%'; $('bondVal').textContent = b; $('bondMeter').setAttribute('aria-valuenow', b);
     $('bondStage').textContent = bondStage(); $('mayaMood').textContent = cap(maya.mood);
-    $('supportVal').textContent = support; $('togetherVal').textContent = together; $('memVal').textContent = memories.length;
+    $('supportVal').textContent = support; $('togetherVal').textContent = together; $('memVal').textContent = memories.length + coreMem.length + pastMem.length;
     $('cookVal').textContent = Math.floor(jordan.skills.cooking); $('fitVal').textContent = Math.floor(jordan.skills.fitness);
     $('jordanSched').textContent = schedText(jordan, simName); $('mayaSched').textContent = P(schedText(maya, 'She'));
     $('wageVal').textContent = `${simName} $${jordan.sched.work.wage}/hr · Maya $${maya.sched.work.wage}/hr`;
@@ -4619,6 +4662,9 @@ What Maya remembers from your life together in this house, oldest first. Bring t
     const hrs = (Date.now() - loaded.savedAt) / 3.6e6;
     if (hrs > 0.33) { const extra = offlineCatchup(hrs); showRecap(`While you were away (${hrs < 36 ? Math.max(1, Math.round(hrs)) + ' hours' : Math.round(hrs / 24) + ' days'})`, extra); }
   }
+  function renderTown() { $('townText').textContent = townName; const sg = $('townSign'); sg.title = townName; sg.style.top = (cv.offsetTop + cv.offsetHeight - sg.offsetHeight - 10) + 'px'; }
+  try { new ResizeObserver(renderTown).observe(cv); } catch (e) { window.addEventListener('resize', renderTown); }
+  renderTown();
   setWallMode(wallMode);
   $('autoSel').value = autonomy; $('capSel').value = String(mayaCap);
   $('autoSel').addEventListener('change', (e) => { autonomy = e.target.value; if (autonomy !== 'ask') { if (proposal && autonomy === 'free') startPlan(proposal); proposal = null; } if (autonomy === 'off') mayaQueue.length = 0; log(autonomy === 'free' ? 'Maya can change things around the house on her own.' : autonomy === 'ask' ? 'Maya will ask before she changes anything.' : 'Maya will comment on changes but leave the house alone.'); renderMayaActs(); saveGame(); });
@@ -4629,7 +4675,7 @@ What Maya remembers from your life together in this house, oldest first. Bring t
   $('newGame').addEventListener('click', () => {
     // opens the move-in card with everything you picked last time filled in; change what you want and move in again
     restartMode = true; if (chat.open) closeChat(); wasRunning = running; setRunning(false);
-    $('suName').value = simName; $('suPartner').value = partnerName; $('suPron').value = companion.pronoun; $('suPreset').value = companion.preset || 'warm';
+    $('suTown').value = townName; $('suName').value = simName; $('suPartner').value = partnerName; $('suPron').value = companion.pronoun; $('suPreset').value = companion.preset || 'warm';
     const lgIn = document.querySelector(`input[name="lg"][value="${lifeGoal || 'career'}"]`); if (lgIn) lgIn.checked = true;
     swatches('suSkin', 'skin', SKINS); swatches('suHair', 'hair', HAIRS, true); swatches('suMSkin', 'skin', SKINS, false, maya.look, () => {}); swatches('suMHair', 'hair', HAIRS, true, maya.look, () => {});
     document.querySelector('#setup h2').textContent = 'Start over?'; document.querySelector('#setup .quiet').textContent = 'A new game from move-in day. Your current house, money and progress are wiped. Everything below is filled in from this game, so you can just hit Move in.';
@@ -4655,10 +4701,10 @@ What Maya remembers from your life together in this house, oldest first. Bring t
   $('setupForm').addEventListener('submit', (e) => {
     e.preventDefault();
     if (restartMode) { // start over: remember the choices, wipe the save, reload into the new game
-      const prefs = { name: $('suName').value.trim(), partner: $('suPartner').value.trim(), pron: $('suPron').value, preset: $('suPreset').value, lg: lifeGoal ? (document.querySelector('input[name="lg"]:checked') || {}).value : null, house: (document.querySelector('input[name="hs"]:checked') || {}).value, look: Object.assign({}, look), mlook: Object.assign({}, maya.look), companion: companion.source === 'velvet' ? Object.assign({}, companion) : null, style: companion.source === 'velvet' ? mayaStyle : null };
+      const prefs = { town: $('suTown').value.trim(), name: $('suName').value.trim(), partner: $('suPartner').value.trim(), pron: $('suPron').value, preset: $('suPreset').value, lg: lifeGoal ? (document.querySelector('input[name="lg"]:checked') || {}).value : null, house: (document.querySelector('input[name="hs"]:checked') || {}).value, look: Object.assign({}, look), mlook: Object.assign({}, maya.look), companion: companion.source === 'velvet' ? Object.assign({}, companion) : null, style: companion.source === 'velvet' ? mayaStyle : null };
       try { localStorage.setItem('velvet-newgame', JSON.stringify(prefs)); localStorage.removeItem(SAVE_KEY); } catch (err) {} saveBlocked = true; location.reload(); return;
     }
-    simName = $('suName').value.trim() || 'Jordan'; partnerName = $('suPartner').value.trim() || 'Maya'; $('simName').value = simName;
+    simName = $('suName').value.trim() || 'Jordan'; partnerName = $('suPartner').value.trim() || 'Maya'; $('simName').value = simName; townName = $('suTown').value.trim() || TOWN_DEFAULT; renderTown();
     if (companion.source !== 'velvet') { companion.pronoun = $('suPron').value; companion.preset = $('suPreset').value; velvetOut('companionCreated', { player: { name: simName, look: Object.assign({}, look) }, companion: { name: partnerName, pronoun: companion.pronoun, personality: PRESETS[companion.preset].text, look: Object.assign({}, maya.look) } }); }
     lifeGoal = $('lgSet').hidden ? null : (document.querySelector('input[name="lg"]:checked') || {}).value || 'career'; setupDone = true; settleDone = false;
     const house = (document.querySelector('input[name="hs"]:checked') || {}).value || 'starter';
@@ -4698,13 +4744,13 @@ What Maya remembers from your life together in this house, oldest first. Bring t
   if (window.VELVET_PROFILE) try { applyVelvetProfile(window.VELVET_PROFILE); } catch (e) {}
   velvetOut('ready', { needsProfile: true });
   if (pendingRestart) {
-    const r = pendingRestart; if (r.name) $('suName').value = r.name; if (r.partner) $('suPartner').value = r.partner; if (r.pron) $('suPron').value = r.pron; if (r.preset) $('suPreset').value = r.preset;
+    const r = pendingRestart; if (r.town) $('suTown').value = r.town; if (r.name) $('suName').value = r.name; if (r.partner) $('suPartner').value = r.partner; if (r.pron) $('suPron').value = r.pron; if (r.preset) $('suPreset').value = r.preset;
     if (r.look) Object.assign(look, r.look); if (r.mlook) Object.assign(maya.look, r.mlook); if (r.companion) { Object.assign(companion, r.companion); if (r.style) mayaStyle = r.style; $('buildPartner').hidden = true; }
     $('lgSet').hidden = !r.lg; $('hsSet').hidden = false; const lgIn = document.querySelector(`input[name="lg"][value="${r.lg || 'career'}"]`); if (lgIn) lgIn.checked = true; const hsIn = document.querySelector(`input[name="hs"][value="${r.house || 'starter'}"]`); if (hsIn) hsIn.checked = true;
     $('setupForm').requestSubmit();
   }
   setView(jordan.level); refreshUI(); renderMayaActs(); renderShop(); renderHobbies();
-  window.__velvet = { WALLOBJS, WTYPES, ROOMLOOK, lookAt, todaysPicks, priceOf, buyClothes, wearOn, closet, setDressFor: (k) => { dressFor = k; }, setLookRoom: (r) => { lookRoom = r; renderShop(); }, wallObjAt, screenToWall, look, applyVelvetProfile, companion, tasteOf, styleWords, askMaya, putAway, placeStored, restyle, showPick, persona: () => persona(), CATALOG, PAPERS, FLOORS, TYPES, get mayaStyle() { return mayaStyle; }, LOOKS, applyLook: (id) => applyLook(CATALOG.find(i => i.id === id)), P, renderShop, setTab: (t) => { tab = t; renderShop(); }, jordan, maya, ACT, OBJS, SLOTS: () => SLOTS, order, interrupt, startChain, startErrand, fridge, owned, buy: (id) => buy(CATALOG.find(i => i.id === id)), payBill, setView, setArranging, placementOk, buildAll, dbgSlots: (lv) => { const reach = reachableSet(lv); return SLOT_LIST.filter(s => s.level === lv).map(s => { const [i, j] = cellOf(s.stand[0], s.stand[1]); return [s.id, s.stand.map(v => +v.toFixed(2)), FREE[lv][i][j], reach.has(i * NY + j)]; }); },
+  window.__velvet = { WALLOBJS, WTYPES, ROOMLOOK, lookAt, todaysPicks, priceOf, buyClothes, wearOn, closet, setDressFor: (k) => { dressFor = k; }, setLookRoom: (r) => { lookRoom = r; renderShop(); }, wallObjAt, screenToWall, look, applyVelvetProfile, companion, tasteOf, styleWords, askMaya, putAway, placeStored, restyle, showPick, persona: () => persona(), remember, CATALOG, PAPERS, FLOORS, TYPES, get mayaStyle() { return mayaStyle; }, LOOKS, applyLook: (id) => applyLook(CATALOG.find(i => i.id === id)), P, renderShop, setTab: (t) => { tab = t; renderShop(); }, jordan, maya, ACT, OBJS, SLOTS: () => SLOTS, order, interrupt, startChain, startErrand, fridge, owned, buy: (id) => buy(CATALOG.find(i => i.id === id)), payBill, setView, setArranging, placementOk, buildAll, dbgSlots: (lv) => { const reach = reachableSet(lv); return SLOT_LIST.filter(s => s.level === lv).map(s => { const [i, j] = cellOf(s.stand[0], s.stand[1]); return [s.id, s.stand.map(v => +v.toFixed(2)), FREE[lv][i][j], reach.has(i * NY + j)]; }); },
     get minutes() { return minutes; }, set minutes(v) { minutes = v; }, get day() { return day; }, set day(v) { day = v; }, get money() { return money; }, set money(v) { money = v; },
     get power() { return power; }, setSpeed: (v) => { speedSel = v; }, arr, objectAt, objHull, DIRT, PETS, adoptPet: (k) => { const p = adoptPet(k); renderPets(); return p; }, messOf, LA, lightsOn: (lv) => activeLights(lv).length, get petFood() { return petFood; }, set petFood(v) { petFood = v; }, scrubTarget, addDirt, petOrder, rotateView, GUESTS, inviteGuests, spawnGuest, FRIENDS, mcareer, upcoming, giveGift, get season() { return season(); }, moveHouse, get money2() { return money; }, get VR() { return VR; }, flags, career, get lifeGoal() { return lifeGoal; }, startMoveIn, unpackOrder, lockOf, CATALOG, YARD, lawnStats, playVideo, stopVideo, video, setWallMode, get wallMode() { return wallMode; }, wallH, pendingEv, CHANGES, noteMove, requestAct, saveGame, loadGame, offlineCatchup, showRecap, undoChange, mayaQueue, get autonomy() { return autonomy; }, set autonomy(v) { autonomy = v; }, get proposal() { return proposal; }, get noticed() { return noticed; }, chat: () => chat, closeChat, openChat, get bond() { return bond; }, LOOKS, setSample: (f) => { sample = f; sampleChecked = true; chat.dead = false; } };
   requestAnimationFrame(frame);
