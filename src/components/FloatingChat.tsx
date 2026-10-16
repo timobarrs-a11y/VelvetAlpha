@@ -53,8 +53,8 @@ export function FloatingChat() {
   useEffect(() => {
     if (companions.length === 0) return;
 
-    const { data: { user } } = supabase.auth.getUser();
-    user?.then(({ data: ud }) => {
+    (async () => {
+      const { data: { user: ud } } = await supabase.auth.getUser();
       if (!ud) return;
       if (channelRef.current) supabase.removeChannel(channelRef.current);
 
@@ -81,7 +81,7 @@ export function FloatingChat() {
         .subscribe();
 
       channelRef.current = channel;
-    });
+    })();
 
     return () => {
       if (channelRef.current) {
