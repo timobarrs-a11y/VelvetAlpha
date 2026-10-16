@@ -33,7 +33,7 @@ interface PlayerProfile {
 const COLOR_HEX: Record<string, string> = {
   red: '#A63A2C', burgundy: '#8A2D54', maroon: '#8A2D54', pink: '#D97A9B', orange: '#D9763A',
   yellow: '#E0A43A', gold: '#E0A43A', green: '#4F7A4A', teal: '#3D6B73', blue: '#4A5DA8',
-  navy: '#2E3D67', purple: '#6B4A8A', lavender: '#9A86B8', brown: '#7A4E31', black: '#2B2B30',
+  navy: '#2E3D6B', purple: '#6B4A8A', lavender: '#9A86B8', brown: '#7A4E31', black: '#2B2B30',
   white: '#F2EEE8', gray: '#6B6F86', grey: '#6B6F86',
 };
 
@@ -92,7 +92,7 @@ function buildProfile(player: PlayerProfile | null, companion: Companion, includ
     },
     companion: {
       name: companion.custom_name,
-      pronoun: companion.gender === 'male' ? 'he' : 'she',
+      pronoun: companion.gender === 'male' ? 'he' : companion.gender === 'female' ? 'she' : 'they',
       gender: companion.gender,
       personality: personality || 'warm, curious, playful',
       look: includeLooks
@@ -278,15 +278,12 @@ export function VelvetHouseGame() {
           // The player restarted last session but the fresh save never got
           // uploaded. Keep the local save (the fresh game) instead of
           // overwriting it with the old cloud save.
-          // If there's no local save at all, fall through to load from cloud.
+          // If there's no local save at all, leave local storage empty so the
+          // game starts fresh — do NOT reload the old cloud save (that would
+          // undo the restart).
           const localRaw = localStorage.getItem(key);
           if (!localRaw) {
-            const save = await loadVelvetHouseSave(companionId);
-            if (save) {
-              localStorage.setItem(key, JSON.stringify(save));
-            } else {
-              localStorage.removeItem(key);
-            }
+            localStorage.removeItem(key);
           }
         } else {
           const save = await loadVelvetHouseSave(companionId);
@@ -361,7 +358,7 @@ export function VelvetHouseGame() {
       {saveReady && (
         <iframe
           ref={iframeRef}
-          src={`${GAME_PATH}?companion=${encodeURIComponent(companionId)}`}
+          src={`${GAME_PATH}?companion=${encodeURIComponent(companionId ?? '')}`}
           title="Velvet House"
           className="flex-1 w-full border-0"
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"

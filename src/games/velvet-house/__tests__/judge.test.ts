@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tasteOf, rawTaste, computeTasteNorm, rollStyle, type CatalogItem } from './taste';
+import { tasteOf, rawTaste, computeTasteNorm, rollStyle, type CatalogItem } from '../state/taste';
 
 describe('judge / taste outcomes', () => {
   const rng = () => 0.5;

@@ -1,4 +1,13 @@
 {
+  "captured": 6,
+  "allTypes": [
+    "velvet:ready",
+    "velvet:profile",
+    "velvet:profileApplied",
+    "velvet:vidSearch",
+    "velvet:vidResults",
+    "velvet:restarted"
+  ],
   "outbound": [
     {
       "direction": "outbound",
@@ -9,6 +18,92 @@
         "day",
         "needsProfile"
       ]
+    },
+    {
+      "direction": "outbound",
+      "type": "velvet:profileApplied",
+      "fields": [
+        "type",
+        "game",
+        "day",
+        "player",
+        "companion"
+      ]
     }
-  ]
+  ],
+  "inbound": [
+    {
+      "direction": "inbound",
+      "type": "velvet:profile",
+      "fields": [
+        "type",
+        "player",
+        "companion"
+      ]
+    },
+    {
+      "direction": "inbound",
+      "type": "velvet:vidSearch",
+      "fields": [
+        "type",
+        "game",
+        "query",
+        "seq"
+      ]
+    },
+    {
+      "direction": "inbound",
+      "type": "velvet:vidResults",
+      "fields": [
+        "type",
+        "seq",
+        "videos"
+      ]
+    },
+    {
+      "direction": "inbound",
+      "type": "velvet:restarted",
+      "fields": [
+        "type",
+        "game",
+        "day"
+      ]
+    }
+  ],
+  "fieldSchema": {
+    "velvet:ready": [
+      "type",
+      "game",
+      "day",
+      "needsProfile"
+    ],
+    "velvet:profile": [
+      "type",
+      "player",
+      "companion"
+    ],
+    "velvet:profileApplied": [
+      "type",
+      "game",
+      "day",
+      "player",
+      "companion"
+    ],
+    "velvet:vidSearch": [
+      "type",
+      "game",
+      "query",
+      "seq"
+    ],
+    "velvet:vidResults": [
+      "type",
+      "seq",
+      "videos"
+    ],
+    "velvet:restarted": [
+      "type",
+      "game",
+      "day"
+    ]
+  }
 }

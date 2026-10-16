@@ -73,8 +73,8 @@ describe('bridge protocol', () => {
   });
 
   describe('isValidOrigin', () => {
-    it('allows all when no origins specified (prototyping)', () => {
-      expect(isValidOrigin('https://evil.com', [])).toBe(true);
+    it('rejects all when no origins specified', () => {
+      expect(isValidOrigin('https://evil.com', [])).toBe(false);
     });
 
     it('allows listed origins', () => {

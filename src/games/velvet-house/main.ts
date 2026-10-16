@@ -11,7 +11,7 @@ import {
 } from './state/agents';
 import type { CharacterLook, CharacterNeeds } from './state/types';
 import { createHouseArt, type WallMode, type PersonFrame } from './art/houseArt.js';
-import { startLoop, advanceClock } from './engine/loop';
+import { advanceClock } from './engine/loop';
 import { startFixedLoop } from './engine/fixedLoop';
 import { qualityManager } from './engine/qualityTier';
 import { LayerCache } from './engine/layerCache';
@@ -214,18 +214,21 @@ function boot(): void {
     const panX = isNarrow ? (w - Math.round(box.width * ratio)) / 2 : 0;
     ctx.setTransform(w / VIEW_W, 0, 0, h / VIEW_H, -panX * (w / VIEW_W) / w, 0);
   };
-  let panTarget = 0;
   const updatePan = (): void => {
     const box = canvas.getBoundingClientRect();
     if (box.width >= 560) return;
     // Pan toward the followed character's x position
     const followed = view.follow && people.find((p) => p.id === view.follow);
     if (followed) {
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      const screenW = box.width * ratio;
-      const gameW = (box.height * ratio * VIEW_W) / VIEW_H;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const screenW = box.width * dpr;
+      const gameW = (box.height * dpr * VIEW_W) / VIEW_H;
       const maxPan = Math.max(0, gameW - screenW);
-      panTarget = Math.max(0, Math.min(maxPan, (followed.x / 100) * maxPan));
+      const target = Math.max(0, Math.min(maxPan, (followed.x / 100) * maxPan));
+      // Apply pan by shifting the canvas transform
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.setTransform(w / VIEW_W, 0, 0, h / VIEW_H, -target * (w / VIEW_W) / w, 0);
     }
   };
   new ResizeObserver(fit).observe(canvas);

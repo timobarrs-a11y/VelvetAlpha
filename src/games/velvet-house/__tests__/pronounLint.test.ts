@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { theySwap, heSwap, pronounSwap, type CompanionState } from './companion';
+import { theySwap, heSwap, pronounSwap, PRESETS, type CompanionState } from '../state/companion';
 
 describe('theySwap', () => {
   it('converts she/her to they/them', () => {
@@ -48,5 +48,18 @@ describe('pronoun lint — raw he/she detection', () => {
   it('neutral text passes the lint', () => {
     const neutralText = 'Warm, funny, quick to tease, and honest when something bugs them. They love R&B and cooking shows.';
     expect(RAW_PRONOUN_RE.test(neutralText)).toBe(false);
+  });
+
+  it('scans PRESETS line tables for raw pronouns', () => {
+    const flagged: string[] = [];
+    for (const [key, preset] of Object.entries(PRESETS)) {
+      if (RAW_PRONOUN_RE.test(preset.text)) {
+        flagged.push(key);
+      }
+    }
+    // Documents which presets still contain raw gendered pronouns
+    expect(flagged).toContain('warm');
+    // The dry preset should be clean
+    expect(flagged).not.toContain('dry');
   });
 });

@@ -126,8 +126,8 @@ describe('taste — styleWords', () => {
 
 describe('taste — TASTE_LINE', () => {
   it('has descriptions for all taste levels', () => {
-    expect(TASTE_LINE[2]).toContain('loves');
-    expect(TASTE_LINE[1]).toContain('likes');
+    expect(TASTE_LINE[2]).toContain('love');
+    expect(TASTE_LINE[1]).toContain('like');
     expect(TASTE_LINE[0]).toContain('lukewarm');
     expect(TASTE_LINE[-1]).toContain('not really');
     expect(TASTE_LINE[-2]).toContain('can not stand');

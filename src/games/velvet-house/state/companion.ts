@@ -72,7 +72,24 @@ export function theySwap(s: string): string {
       return (H === 'H' ? (obj ? 'Them' : 'Their') : (obj ? 'them' : 'their')) + sp + nx;
     })
     .replace(/\bshe's\b/gi, "they're")
-    .replace(/\bis\b(\s+)(she|he)\b/gi, (_m, sp, _p) => 'are' + sp + 'they');
+    .replace(/\bis\b(\s+)(she|he)\b/gi, (_m, sp, _p) => 'are' + sp + 'they')
+    // Fix "they is" → "they are" (verb agreement after pronoun swap)
+    .replace(/\b(they|They)\s+is\b/g, (_m, cap) => cap + ' are')
+    // Fix third-person singular verbs after they/them: loves→love, likes→like, etc.
+    .replace(/\b(they|They)\s+(\w+)s\b/g, (_m, cap, verb) => {
+      // Only conjugate common verbs, not nouns/adjectives
+      const conjugatable = new Set([
+        'loves', 'likes', 'hates', 'knows', 'thinks', 'wants', 'gets',
+        'does', 'goes', 'looks', 'feels', 'needs', 'cooks', 'walks',
+        'talks', 'sees', 'makes', 'takes', 'plays', 'reads', 'watch',
+        'eats', 'sits', 'stands', 'sleeps', 'wakes', 'comes', 'leaves',
+      ]);
+      const lower = verb.toLowerCase() + 's';
+      if (conjugatable.has(lower)) {
+        return cap + ' ' + verb;
+      }
+      return _m;
+    });
 }
 
 export function pronounSwap(

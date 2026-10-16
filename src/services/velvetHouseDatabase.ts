@@ -10,6 +10,51 @@ export interface VelvetHouseSave {
   updated_at?: string;
 }
 
+/**
+ * Compare two saves by game progress (day, then minutes).
+ * Returns a positive number if `a` is more advanced, negative if `b` is, 0 if equal.
+ */
+export function compareSaveProgress(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>,
+): number {
+  const aDay = typeof a.day === 'number' ? a.day : 0;
+  const bDay = typeof b.day === 'number' ? b.day : 0;
+  if (aDay !== bDay) return aDay - bDay;
+  const aMin = typeof a.minutes === 'number' ? a.minutes : 0;
+  const bMin = typeof b.minutes === 'number' ? b.minutes : 0;
+  return aMin - bMin;
+}
+
+/**
+ * Strip v2-only fields to produce a v1-compatible save for the save_data column.
+ * This keeps save_data always holding a valid v1 save so we can roll back.
+ */
+function toV1Compatible(saveData: Record<string, unknown>): Record<string, unknown> {
+  const v1: Record<string, unknown> = {};
+  // Copy all v1-known fields, skip v2-only extensions
+  const V2_ONLY_KEYS = new Set(['v', 'rngSeed', 'player', 'partner', 'ext']);
+  for (const [key, value] of Object.entries(saveData)) {
+    if (!V2_ONLY_KEYS.has(key)) {
+      v1[key] = value;
+    }
+  }
+  // Extract grouped player/partner back to v1 flat fields if present
+  const player = saveData.player as Record<string, unknown> | undefined;
+  const partner = saveData.partner as Record<string, unknown> | undefined;
+  if (player) {
+    if (player.name) v1.simName = player.name;
+    if (player.look) v1.look = player.look;
+    if (player.needs) v1.jordan = player.needs;
+  }
+  if (partner) {
+    if (partner.name) v1.partnerName = partner.name;
+    if (partner.look) v1.mayaLook = partner.look;
+    if (partner.needs) v1.maya = partner.needs;
+  }
+  return v1;
+}
+
 export async function loadVelvetHouseSave(companionId: string): Promise<Record<string, unknown> | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -22,8 +67,16 @@ export async function loadVelvetHouseSave(companionId: string): Promise<Record<s
     .maybeSingle();
 
   if (error || !data) return null;
-  // Prefer v2 if available, fall back to v1
-  return (data.save_data_v2 as Record<string, unknown> | null) ?? (data.save_data as Record<string, unknown>);
+
+  const v1 = data.save_data as Record<string, unknown> | null;
+  const v2 = data.save_data_v2 as Record<string, unknown> | null;
+
+  if (v1 && v2) {
+    // Load whichever save is more advanced (e.g. if v1 was updated by the
+    // legacy game after a rollback, it may be newer than the stale v2 copy).
+    return compareSaveProgress(v1, v2) >= 0 ? v1 : v2;
+  }
+  return v2 ?? v1;
 }
 
 export async function saveVelvetHouseProgress(companionId: string, saveData: Record<string, unknown>, force = false): Promise<void> {
@@ -40,27 +93,27 @@ export async function saveVelvetHouseProgress(companionId: string, saveData: Rec
 
     if (existing?.save_data) {
       const cloud = existing.save_data as Record<string, unknown>;
-      const cloudDay = cloud.day;
-      const cloudMinutes = cloud.minutes;
-      const localDay = saveData.day;
-      const localMinutes = saveData.minutes;
-      if (typeof cloudDay === 'number' && typeof localDay === 'number') {
-        if (cloudDay > localDay) return;
-        if (cloudDay === localDay && typeof cloudMinutes === 'number' && typeof localMinutes === 'number' && cloudMinutes > localMinutes) return;
-      }
+      if (compareSaveProgress(cloud, saveData) > 0) return;
     }
   }
 
-  // Dual-write: v1 in save_data, v2 in save_data_v2 (rollback safety)
+  // True dual-write: save_data always holds a v1-compatible save,
+  // save_data_v2 holds the v2 save (if the game produced one).
+  // This way save_data is never corrupted by a v2 overwrite.
   const isV2 = saveData.v === 2;
   const upsertPayload: Record<string, unknown> = {
     user_id: user.id,
     companion_id: companionId,
-    save_data: saveData,
     updated_at: new Date().toISOString(),
   };
+
   if (isV2) {
+    // Write v1-compatible version to save_data, full v2 to save_data_v2
+    upsertPayload.save_data = toV1Compatible(saveData);
     upsertPayload.save_data_v2 = saveData;
+  } else {
+    // V1 save: write to save_data only, leave save_data_v2 untouched
+    upsertPayload.save_data = saveData;
   }
 
   const { error } = await supabase
