@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanion, type Companion } from '../services/companionService';
-import { loadVelvetHouseSave, saveVelvetHouseProgress, saveVelvetHouseHistory } from '../services/velvetHouseDatabase';
+import { loadVelvetHouseSave, saveVelvetHouseProgress, saveVelvetHouseHistory, maybeSnapshotHistory } from '../services/velvetHouseDatabase';
 
 const GAME_PATH = '/games/velvet-house/index.html';
 const SAVE_KEY_PREFIX = 'velvet-house-v1';
@@ -148,7 +148,11 @@ export function VelvetHouseGame() {
     if (!companionId) return;
     try {
       const raw = localStorage.getItem(saveKeyFor(companionId));
-      if (raw) await saveVelvetHouseProgress(companionId, JSON.parse(raw));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        await saveVelvetHouseProgress(companionId, parsed);
+        await maybeSnapshotHistory(companionId, parsed);
+      }
     } catch {
       // next interval retries
     }

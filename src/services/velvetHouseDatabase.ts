@@ -24,9 +24,26 @@ export async function loadVelvetHouseSave(companionId: string): Promise<Record<s
   return data.save_data as Record<string, unknown>;
 }
 
-export async function saveVelvetHouseProgress(companionId: string, saveData: Record<string, unknown>): Promise<void> {
+export async function saveVelvetHouseProgress(companionId: string, saveData: Record<string, unknown>, force = false): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
+
+  if (!force) {
+    const { data: existing } = await supabase
+      .from('velvet_house_saves')
+      .select('save_data')
+      .eq('user_id', user.id)
+      .eq('companion_id', companionId)
+      .maybeSingle();
+
+    if (existing?.save_data) {
+      const cloudDay = (existing.save_data as Record<string, unknown>).day;
+      const localDay = saveData.day;
+      if (typeof cloudDay === 'number' && typeof localDay === 'number' && cloudDay > localDay) {
+        return;
+      }
+    }
+  }
 
   const { error } = await supabase
     .from('velvet_house_saves')
@@ -42,6 +59,26 @@ export async function saveVelvetHouseProgress(companionId: string, saveData: Rec
   if (error) {
     console.error('Failed to save Velvet House progress:', error.message);
   }
+}
+
+export async function maybeSnapshotHistory(companionId: string, saveData: Record<string, unknown>): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const day = typeof saveData.day === 'number' ? saveData.day : 0;
+
+  const { data: last } = await supabase
+    .from('velvet_house_save_history')
+    .select('day')
+    .eq('user_id', user.id)
+    .eq('companion_id', companionId)
+    .order('saved_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (last && last.day === day) return;
+
+  await saveVelvetHouseHistory(companionId, saveData);
 }
 
 export async function saveVelvetHouseHistory(companionId: string, saveData: Record<string, unknown>): Promise<void> {
