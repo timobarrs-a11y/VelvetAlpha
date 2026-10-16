@@ -53,43 +53,25 @@ relationship is the product.
 
 ### Memory rule
 
-**The companion remembers only what happens in the game.**
+- **Coming in:** the player's and companion's **profile** from the Velvet app
+  (name, look, personality, hobbies, favorite color, music). The in-game AI
+  uses it to know who the player is and to respond in more tuned ways.
+- **Built in the game:** everything the companion remembers, meaning what you
+  did together and what you told them. It lives only in the game save.
+- **Never goes out:** nothing from Velvet House reaches the main companion
+  chat. No conversations, no memories, no moments.
 
-- Nothing comes **in** from outside: no Velvet app chat history and no app
-  memories.
-- Nothing goes **out**: the game doesn't write to the app's memory or to any
-  other store outside the game.
-- Everything the companion knows comes from inside the game: what you did,
-  what you said to them, what you went through together, and the
-  personality you gave them. That memory lives in the game save, so it stays
-  with that save.
+### How it works (built)
 
-### Where the code stands today
-
-| | Status |
+| | |
 |---|---|
-| Chat backend (`velvet-game-turn`) stores nothing and never reads app chats or memories | ✅ Already true |
-| Its prompt tells the companion it has no memory of conversations outside the house | ✅ Already true |
-| The host page sends `memories: []` into the game, so no app memories come in | ✅ Already true |
-| The game sends `velvet:memory` messages to the host page, which ignores them, so nothing is saved outside | ✅ True today. The host should keep ignoring them, or the game should stop sending them |
-| The backend pulls **permanent profile facts** (hobbies, favorite color, music) into the prompt | ⚠️ Decide: this is profile, not memory, but it does come from outside the game |
-| In-game memory holds only the **last 8 events** | ❌ Too short. The companion forgets things within a day or two |
-| **What you say in a conversation is never remembered.** When a chat closes, the game only logs "talked for a while" | ❌ This is the big one. Tell them your mom is sick, and tomorrow they don't know |
-| The conversation itself isn't saved, so a reload wipes it | ❌ Every session starts cold |
-
-### What "nailing it" needs
-
-1. **Conversation memory.** When a chat closes, the game asks for a short
-   summary of what mattered (things the player shared, promises, feelings,
-   plans) and stores it as in-game memories in the save.
-2. **A real memory budget.** Raise the 8-event cap to something like 40, and
-   group older memories into short summaries ("first week in the house: …")
-   rather than dropping them.
-3. **Persist recent turns.** Save the last ~16 chat turns in the save file,
-   so a reload picks up mid-conversation.
-4. **Keep memory inside the save.** It syncs to `velvet_house_saves` like
-   everything else, so it's tied to that player and companion, and a new
-   game starts it fresh.
+| Chat backend (`velvet-game-turn`) | Stores nothing. Reads the profile only, never main-chat history or memories |
+| Main companion chat | Never reads `velvet_house_saves`. Only the game page does |
+| Memories from the app | Ignored. The game always starts the companion with no outside memories |
+| Memories and moments going out | Removed. The game no longer posts them to the host page |
+| What you say in a chat | When a chat closes, the AI summarizes up to 3 things worth remembering (what the player shared, plans, promises, feelings) and stores them as in-game memories |
+| Memory budget | 40 memories (was 8), placed in the companion's system prompt so they're never cut off |
+| The conversation itself | The last 16 messages are saved with the game, so a reload picks up where you left off |
 
 ---
 
@@ -119,20 +101,21 @@ A knock sounds at the door, and a **!** pops over {partner}'s head.
 
 ### 2. The mover
 
-Dez backs through the door carrying a box labeled **COUCH**.
+Dez walks in empty-handed with a clipboard. His intro text (as written):
 
-> **Dez:** "Well howdy, howdy! Y'all must be {player} and {partner}. Welcome to Honeysuckle Hollow!" ▼
-> **Dez:** "Name's Dez. Dez Dupree. I'm your mover today." ▼
-> **Dez:** "Also your mayor." ▼
-> **{partner}:** "…The mayor?" ▼
-> **Dez:** "Yes indeed. Mayor, Dupree Construction, and Dupree Delivers. Groceries, takeout, a new lamp, whatever y'all buy, I bring it right to this here door." ▼
-> **Dez:** "My daddy ran this town, and his daddy, and his daddy's daddy. Folks call it a dynasty. I call it a family business." ▼
-> **Dez:** "But don't y'all fret none. I'm a real nice guy. Ask anybody! …Most of 'em are my cousins, but ask 'em anyway." ▼
-> **Dez:** *(sets the box down with a thud)* "Brought the big one first. Figured y'all'd want somewhere to sit. Just give it a tap when you're ready." ▼
-> **Dez:** "Rest of the truck's comin' right up. Good light in here, by the way." ▼
-> **Dez:** *(tips his cap at the door)* "Get 'er done!"
+> **Dez:** "Hey y'all! I'm Dez! Welcome to {town}! We're mighty glad to have the two of ya!" ▼
+> **Dez:** "I'm the mayor of this quaint little town, but I'm also the mover! Not that ya asked, but I run the food delivery service too." ▼
+> **Dez:** "Me and my family have lived here for ages, and we've started a few businesses 'round town, so don't hesitate to holler if ya need help!" ▼
+> **Dez:** *(checks the clipboard)* "Now, this paper here says your names are {player} and {partner}." ▼
+> **Dez:** "I've got some boxes in the truck with your names on 'em, so I'm gonna start bringing them in. Time to get 'er done!" ▼
 
-He leaves, and {partner} reacts:
+`{town}` = Honeysuckle Hollow. `{player}` and `{partner}` are the names from
+the setup screen.
+
+Dez heads back out and returns carrying the first box (**COUCH**). He sets it
+down with a thud and leaves again.
+
+Once he's out the door, {partner} reacts:
 
 > W: "Did the mayor just carry our couch? I love it here already." ▼
 > C: "He seems… sweet. A lot. But sweet." ▼
@@ -163,7 +146,7 @@ at the window:
 
 > W: "Okay, hear me out. What if it's under the window instead? Sunday mornings, coffee, sun on our feet." ▼
 > C: "Can I ask something? I'd sit here more if the light hit it. Would you mind trying it by the window?" ▼
-> B: "WAIT. The window! Dez was right, the light! Can we put it there? I know I just said TV. I contain multitudes." ▼
+> B: "WAIT. The window! Look at that light! Can we put it there? I know I just said TV. I contain multitudes." ▼
 > D: "So. The window. The light's good. The couch should be in it. I'm aware I just agreed to the TV wall." ▼
 
 ### 6. The first choice

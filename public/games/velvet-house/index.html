@@ -2353,8 +2353,8 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     tv: { label: 'Watch TV with Maya', chain: 'tv', ttl: 150, words: 'to watch something together', memory: () => `${simName} curled up with Maya to watch TV when she asked.` }
   };
   let wish = null, noticed = null, sparkClock = 0, tvShared = 0, tvCounted = false;
-  const memories = [], events = [], fired = {};
-  function remember(m) { memories.push(m); while (memories.length > 8) memories.shift(); velvetOut('memory', { text: P(m) }); }
+  const MEMORY_CAP = 40, memories = [], events = [], fired = {};
+  function remember(m) { memories.push(m); while (memories.length > MEMORY_CAP) memories.shift(); }   // memory lives only in this save; it never leaves the game
   // hobbies: things you own decide what there is to do
   const HOBBY = { piano: { j: 1, m: 1.2, label: 'Play piano' }, easel: { j: 0.8, m: 1.5, label: 'Paint' }, aquarium: { j: 1, m: 1, label: 'Watch the fish' }, stargaze: { j: 1.1, m: 1, label: 'Stargaze' }, boxing: { j: 1.3, m: 0.7, label: 'Hit the heavy bag' }, bike: { j: 1, m: 1, label: 'Ride the bike' },
     massage: { j: 1, m: 1.1, label: 'Massage chair' }, hammock: { j: 1, m: 1.1, label: 'Lie in the hammock' }, grill: { j: 1.3, m: 0.6, label: 'Grill out back' }, birds: { j: 0.8, m: 1.3, label: 'Watch the birds' }, guitar: { j: 1.2, m: 0.9, label: 'Play guitar' }, jukebox: { j: 1, m: 1.3, label: 'Play the jukebox' }, stretch: { j: 0.7, m: 1, label: 'Yoga' }, mixDrinks: { j: 1, m: 1, label: 'Mix drinks' }, fire: { j: 1, m: 1, label: 'Sit by the fire' } };
@@ -3080,7 +3080,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
       autonomy, mayaCap, mayaSpent, TASTE, style: mayaStyle, look: Object.assign({}, look), companion, mayaLook: maya.look, CHANGES: CHANGES.map(c => ({ id: c.id, at: c.at, text: c.text, undo: c.undo, undone: c.undone, seen: c.seen })), projectAt,
       objs: OBJS.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, pet: o.pet, pot: o.pot, attach: o.attach, home: o.home, grudge: o.grudge, movedAt: o.movedAt, mine: o.mine, grow: o.grow, wet: o.wet, contains: o.contains, col: o.col, art: o.art })),
       pets: PETS.map(p => ({ id: p.id, kind: p.kind, name: p.name, coat: p.coat, level: p.level, x: p.x, y: p.y, needs: p.needs, bowlFood: p.bowlFood, litterUses: p.litterUses, litterT: p.litterT, seed: p.seed, bowl: p.bowl && p.bowl.id, bed: p.bed && p.bed.id, litter: p.litter && p.litter.id })),
-      dirt: DIRT.map(d => Object.assign({}, d, { claim: null })), jordan: pos(jordan), maya: pos(maya) };
+      dirt: DIRT.map(d => Object.assign({}, d, { claim: null })), jordan: pos(jordan), maya: pos(maya), turns: chat.turns.slice(-16) };
   }
   function saveGame() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot())); } catch (e) {} }
   function loadGame() {
@@ -3093,6 +3093,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
       bond = s.bond; support = s.support; together = s.together; memories.length = 0; s.memories.forEach(m => memories.push(m)); dishes = s.dishes; petFood = s.petFood; petSeq = s.petSeq; dirtId = s.dirtId; changeSeq = s.changeSeq;
       simName = s.simName || 'Jordan'; autonomy = s.autonomy || 'free'; mayaCap = s.mayaCap || 80; mayaSpent = s.mayaSpent || { day: 0, amt: 0 }; Object.assign(TASTE, s.TASTE || {}); projectAt = s.projectAt; if (s.style) mayaStyle = s.style; if (s.companion) Object.assign(companion, s.companion); if (s.mayaLook) Object.assign(maya.look, s.mayaLook); if (s.look) Object.assign(look, s.look);
       CHANGES.length = 0; (s.CHANGES || []).forEach(c => CHANGES.push(c));
+      if (Array.isArray(s.turns)) chat.turns = s.turns.filter(t => t && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string').slice(-16);
       OBJS.length = 0; s.objs.forEach(o => { if (TYPES[o.type]) OBJS.push(o); });
       if (s.basementV !== 2) { DEFAULT_OBJS.filter(d => ['waterheater', 'furnace', 'laundry', 'shelves', 'boxes'].includes(d.type) && !OBJS.some(o => o.id === d.id)).forEach(d => { const o = JSON.parse(JSON.stringify(d)); OBJS.push(o); buildAll(); if (!placementOk(o) && !autoPlace(o)) OBJS.pop(); }); if (LOOKS[0].paper === null) LOOKS[0].paper = 'block'; owned.add('paper-block'); }
       if (typeof s.laundryPile === 'number') laundryPile = s.laundryPile;
@@ -3399,7 +3400,7 @@ input[type=text]{font:inherit;font-size:14px;background:var(--bg);color:var(--in
     // ---- milestone discovery ----
     { id: 'inlove', when: () => bond >= 80 && !flags.events.includes('inlove'), run: () => { showDiscovery({ eyebrow: 'Milestone', title: 'In love', body: 'It snuck up on both of you. Not one big moment, just a hundred small ones, and now the word fits. Maya said it first, over coffee, like it was the most ordinary thing in the world.' }); remember('They reached "in love." Maya said it over morning coffee.'); } }
   ];
-  function momentsTick() { MOMENTS.forEach(m => { if (!flags.events.includes(m.id) && m.when()) { flags.events.push(m.id); m.run(); velvetOut('moment', { id: m.id, text: P(logEl.firstChild ? logEl.firstChild.querySelector('span').textContent : m.id) }); } }); }
+  function momentsTick() { MOMENTS.forEach(m => { if (!flags.events.includes(m.id) && m.when()) { flags.events.push(m.id); m.run(); } }); }
 
   // ---- goals ----
   const SETTLE = [
@@ -4031,7 +4032,9 @@ mood is how Maya feels now. bond is how this exchange changes how close she feel
 
 Things Maya has opened up to ${simName} about (she can bring these up): ${flags.story.map(i => STORY[i].fact).join(' ')}` : ''}
 
-${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working toward being a ${LIFE[lifeGoal].name.toLowerCase()}` : ''}.`);
+${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working toward being a ${LIFE[lifeGoal].name.toLowerCase()}` : ''}.${memories.length ? `
+
+What Maya remembers from your life together in this house, oldest first. Bring these up the way a partner would, when they fit: ${memories.join(' ')}` : ''}`);
   }
   function companionWho() {
     const base = `In this game Maya ${companion.source === 'velvet' ? '' : 'is 27 and '}works as a graphic designer at a design studio from 11 AM to 5:30 PM on weekdays, with freelance jobs on the side.`;
@@ -4049,14 +4052,13 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     const low = Object.keys(jordan.needs).filter(k => jordan.needs[k] < 35).map(k => ({ energy: 'tired', food: 'hungry', hygiene: 'in need of a shower', fun: 'bored', comfort: 'uncomfortable', social: 'lonely' }[k]));
     const recent = [...logEl.children].slice(0, 4).map(li => li.querySelector('span').textContent).reverse().join(' ');
     const wants = wish ? ` Maya is currently hoping for ${WISHES[wish.kind].words}.` : '';
-    const mem = memories.length ? ` Maya remembers: ${memories.join(' ')}` : '';
     const dish = dishes >= 2 ? ` There are ${dishes} dirty plates on the table.` : '';
     const money$ = ` Household money: $${money}. Fridge: ${servings()} meals.${bill ? ` A $${bill.amount} bill is ${bill.overdue ? 'overdue and the power is cut' : 'due ' + whenText(bill.due)}.` : ''}`;
     const guests = GUESTS.length ? ` Guests over right now: ${GUESTS.map(g => g.gname).join(', ')}.` : '';
     const cal = upcoming().filter(e => e.d - day <= 2 && /anniversary|birthday/.test(e.t)).map(e => `${e.t} is ${e.d === day ? 'today' : e.d === day + 1 ? 'tomorrow' : 'in two days'}.`).join(' ');
     const pets = PETS.length ? ` Pets: ${PETS.map(p => `${p.name} the ${p.kind} (${petMood(p)}, ${petActivity(p).toLowerCase()})`).join('; ')}.` : '';
     const house = `${video.id && [jordan, maya].some(c => doing(c, 'movie')) ? ` They are watching a YouTube video on the ${video.screen === 'proj' ? 'projector in the basement' : 'TV'}${doing(maya, 'movie') ? ' together' : ''}.` : ''} The lawn is ${lawnStats().label.toLowerCase()}${raining() ? ' and it is raining' : ''}. The house is ${messLabel(messOf()).toLowerCase()}.${CHANGES.length ? ` Things Maya changed recently: ${CHANGES.slice(0, 3).map(c => c.text + (c.undone ? ` (${simName} undid it)` : '')).join(' ')}` : ''}${autonomy === 'off' ? ' (Maya has agreed not to change the house herself right now, so act must be none.)' : ''}`;
-    return P(`[Game state: day ${day} in the new house, ${season()},${guests}${cal ? ' ' + cal : ''} ${DAYS[weekday()]}, ${clockText()} (${part}).${OBJS.some(o => o.type === 'pbox') ? ` There are still ${OBJS.filter(o => o.type === 'pbox').length} moving boxes to unpack.` : ''}${pets}${house} Maya is in the ${placeOf(maya).toLowerCase()}, ${mDoing}. ${simName} is in the ${placeOf(jordan).toLowerCase()}. Maya's mood: ${maya.mood}. Bond: ${Math.round(bond)}/100 (${bondStage().toLowerCase()}). Things ${simName} has done for Maya: ${support}.${wants}${dish}${money$} ${simName} seems ${low.length ? low.join(', ') : 'fine'}. Recently: ${recent}${mem}]`);
+    return P(`[Game state: day ${day} in the new house, ${season()},${guests}${cal ? ' ' + cal : ''} ${DAYS[weekday()]}, ${clockText()} (${part}).${OBJS.some(o => o.type === 'pbox') ? ` There are still ${OBJS.filter(o => o.type === 'pbox').length} moving boxes to unpack.` : ''}${pets}${house} Maya is in the ${placeOf(maya).toLowerCase()}, ${mDoing}. ${simName} is in the ${placeOf(jordan).toLowerCase()}. Maya's mood: ${maya.mood}. Bond: ${Math.round(bond)}/100 (${bondStage().toLowerCase()}). Things ${simName} has done for Maya: ${support}.${wants}${dish}${money$} ${simName} seems ${low.length ? low.join(', ') : 'fine'}. Recently: ${recent}]`);
   }
   function parseTag(full) { const all = [...full.matchAll(/\[([^\[\]]*mood\s*=[^\[\]]*)\]/gi)]; if (!all.length) return null; const out = {}; all[all.length - 1][1].split(';').forEach(kv => { const i = kv.indexOf('='); if (i > 0) out[kv.slice(0, i).trim().toLowerCase()] = kv.slice(i + 1).trim().toLowerCase(); }); return out; }
   function applyTag(full) {
@@ -4079,7 +4081,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
       return;
     }
     if (!chat.open) {
-      chat.open = true; chat.count = 0; flags.talked = true;
+      chat.open = true; chat.count = 0; flags.talked = true; chat.turns = chat.turns.slice(-16); chat.start = chat.turns.length;
       const keepMaya = maya.task && maya.task.name === 'approach';
       interrupt(jordan); jordan.queue = [];
       if (!keepMaya && maya.task && maya.task.phase === 'walk' && !onStairs(maya)) finishAct(maya, true);
@@ -4099,8 +4101,18 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     chat.open = false; dialogEl.hidden = true; maya.thinking = false; maya.speaking = false; showPick(null);
     if (jordan.task && jordan.task.name === 'chat') finishAct(jordan);
     if (maya.task && maya.task.name === 'approach') finishAct(maya, true);
-    if (chat.count) log(`${simName} and Maya talked for a while.`);
+    if (chat.count) { log(`${simName} and Maya talked for a while.`); rememberChat(chat.turns.slice(chat.start)); }
     if (chat.ctx && !chat.acted) settle(chat.ctx, true); chat.ctx = null;
+  }
+  async function rememberChat(turns) {   // what Maya takes away from a conversation, kept in this save only
+    if (!sample || turns.length < 2) return;
+    const transcript = turns.map(t => t.role === 'assistant' ? `Maya: ${visible(t.content)}` : t.content.replace(/^\(.*\)$/s, '')).filter(Boolean).join('\n').slice(-3500);
+    const ask = P(`You keep Maya's memory in a life-sim game. Read this conversation between ${simName} and Maya. Write what Maya would still remember days later: things ${simName} shared about themselves, their life, people they care about, plans, promises, worries and feelings, plus anything Maya opened up about. Write up to 3 lines, each a short third-person sentence starting with "- ". Skip small talk and anything already obvious from the house. If nothing is worth remembering, write only "- none".`);
+    try {
+      const { text } = await sample([{ role: 'user', content: ask }, { role: 'user', content: transcript }], { modelTier: 'quick', cache: false });
+      String(text || '').split('\n').map(l => l.replace(/^\s*[-•*]\s*/, '').trim()).filter(l => l && !/^none\.?$/i.test(l) && !/\[mood/i.test(l)).slice(0, 3).forEach(l => remember(l.slice(0, 220)));
+      saveGame();
+    } catch (e) { /* the conversation still happened; it just isn't summarized */ }
   }
   function markUnavailable() { chat.dead = true; setBusy(false); hintEl.textContent = 'Maya can only talk when the game is opened from the Velvet app.'; }
   function send(msg) { return talk(`${simName}: ${msg}`, `${simName}: ${msg}`); }
@@ -4657,7 +4669,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
   // Velvet bridge: the host app hands in who you are and who your companion is, and hears back what happened
   // ======================================================================
   // Messages in:  { type: 'velvet:profile', player: { name, look }, companion: { name, pronoun, personality, look, memories, likes, dislikes } }
-  // Messages out: velvet:ready, velvet:profileApplied, velvet:companionCreated, velvet:memory { text }, velvet:moment { text }
+  // Messages out: velvet:ready, velvet:profileApplied, velvet:companionCreated. Memories and moments never leave the game.
   const VELVET_ORIGINS = [];   // the host can list its origins here; empty accepts any parent while prototyping
   function velvetOut(type, data) { try { if (window.parent && window.parent !== window) window.parent.postMessage(Object.assign({ type: 'velvet:' + type, game: 'velvet-house', day }, data || {}), '*'); } catch (e) {} }
   const STYLE_WORDS = { plants: 'natural', plant: 'natural', nature: 'natural', green: 'natural', wood: 'natural', boho: 'natural', vintage: 'vintage', retro: 'vintage', antique: 'vintage', thrift: 'vintage', minimal: 'minimal', minimalist: 'minimal', clean: 'minimal', modern: 'modern', sleek: 'modern', cozy: 'cozy', comfy: 'cozy', soft: 'soft', pastel: 'soft', pink: 'soft', colorful: 'playful', fun: 'playful', quirky: 'playful', bright: 'bold', bold: 'bold', dark: 'bold', moody: 'luxe', fancy: 'luxe', luxury: 'luxe', gold: 'luxe', velvet: 'luxe', industrial: 'industrial', concrete: 'industrial', metal: 'industrial', warm: 'warm', earthy: 'warm', cool: 'cool', blue: 'cool' };
@@ -4673,7 +4685,7 @@ ${simName} works as ${CAREER[career.level].t}${lifeGoal ? ` and is working towar
     applyLookFrom(pl.look, look); saveLook(); applyLookFrom(cp.look, maya.look);
     if (cp.gender === 'male' || cp.gender === 'female') companion.gender = cp.gender;
     companion.source = 'velvet'; companion.bio = clip(cp.personality || cp.bio, 900); companion.pronoun = ['she', 'he'].includes(cp.pronoun) ? cp.pronoun : companion.pronoun;
-    companion.memories = (Array.isArray(cp.memories) ? cp.memories : []).slice(0, 8).map(m => clip(m, 220)).filter(Boolean);
+    companion.memories = [];   // the companion here knows only what happens in this game
     if ((cp.likes || cp.dislikes)) { wordsToStyle(cp.likes, 1); wordsToStyle(cp.dislikes, -1); }
     $('suName').readOnly = !!pn; $('suPartner').readOnly = !!cn; $('buildPartner').hidden = true;
     const note = $('velvetNote'); note.hidden = false; note.textContent = `Playing as ${simName}, with ${partnerName} from Velvet.`;
