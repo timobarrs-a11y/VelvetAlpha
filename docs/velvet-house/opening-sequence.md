@@ -32,7 +32,7 @@ family business"), and he really is a sweetheart.
 *reckon*, *fixin' to* and *well I'll be*. He calls the player "neighbor"
 or "friend" rather than sir/ma'am, so his lines work for any player.
 
-**Catchphrase:** **"Keep on truckin'!"** He says it on his way out the door,
+**Catchphrase:** **"Get 'er done!"** He says it on his way out the door,
 every visit.
 
 **Why he matters to the system:** Dez is how the store becomes part of the
@@ -40,6 +40,56 @@ world. When you buy something, you don't just watch it appear. A knock comes
 at the door, Dez walks it in, says a line, and leaves. Because every purchase
 comes with a visit, he's the most recurring character in the game after your
 partner.
+
+---
+
+## The core: a companion chat with a house around it
+
+Everything in this doc (the house, Dez, the store, the tutorial) is a
+**shell around a conversation**. At any moment, the player can tap their
+partner and talk to them like a real person. The topic can be the couch,
+their day, or anything else on their mind. The game is the setting, and the
+relationship is the product.
+
+### Memory rule
+
+**The companion remembers only what happens in the game.**
+
+- Nothing comes **in** from outside: no Velvet app chat history and no app
+  memories.
+- Nothing goes **out**: the game doesn't write to the app's memory or to any
+  other store outside the game.
+- Everything the companion knows comes from inside the game: what you did,
+  what you said to them, what you went through together, and the
+  personality you gave them. That memory lives in the game save, so it stays
+  with that save.
+
+### Where the code stands today
+
+| | Status |
+|---|---|
+| Chat backend (`velvet-game-turn`) stores nothing and never reads app chats or memories | ✅ Already true |
+| Its prompt tells the companion it has no memory of conversations outside the house | ✅ Already true |
+| The host page sends `memories: []` into the game, so no app memories come in | ✅ Already true |
+| The game sends `velvet:memory` messages to the host page, which ignores them, so nothing is saved outside | ✅ True today. The host should keep ignoring them, or the game should stop sending them |
+| The backend pulls **permanent profile facts** (hobbies, favorite color, music) into the prompt | ⚠️ Decide: this is profile, not memory, but it does come from outside the game |
+| In-game memory holds only the **last 8 events** | ❌ Too short. The companion forgets things within a day or two |
+| **What you say in a conversation is never remembered.** When a chat closes, the game only logs "talked for a while" | ❌ This is the big one. Tell them your mom is sick, and tomorrow they don't know |
+| The conversation itself isn't saved, so a reload wipes it | ❌ Every session starts cold |
+
+### What "nailing it" needs
+
+1. **Conversation memory.** When a chat closes, the game asks for a short
+   summary of what mattered (things the player shared, promises, feelings,
+   plans) and stores it as in-game memories in the save.
+2. **A real memory budget.** Raise the 8-event cap to something like 40, and
+   group older memories into short summaries ("first week in the house: …")
+   rather than dropping them.
+3. **Persist recent turns.** Save the last ~16 chat turns in the save file,
+   so a reload picks up mid-conversation.
+4. **Keep memory inside the save.** It syncs to `velvet_house_saves` like
+   everything else, so it's tied to that player and companion, and a new
+   game starts it fresh.
 
 ---
 
@@ -80,7 +130,7 @@ Dez backs through the door carrying a box labeled **COUCH**.
 > **Dez:** "But don't y'all fret none. I'm a real nice guy. Ask anybody! …Most of 'em are my cousins, but ask 'em anyway." ▼
 > **Dez:** *(sets the box down with a thud)* "Brought the big one first. Figured y'all'd want somewhere to sit. Just give it a tap when you're ready." ▼
 > **Dez:** "Rest of the truck's comin' right up. Good light in here, by the way." ▼
-> **Dez:** *(tips his cap at the door)* "Keep on truckin'!"
+> **Dez:** *(tips his cap at the door)* "Get 'er done!"
 
 He leaves, and {partner} reacts:
 
@@ -159,7 +209,7 @@ done.
 | 12 | Primer White | **Paint/floors** · making a room yours · the companion's taste | {partner} + Dez (Construction) | `room` |
 | 13 | Upstairs | **Floors & camera** | {partner} | none |
 | 14 | Rent's Due Monday | **Money** · bills · work schedule | Dez (as mayor) | none |
-| 15 | Keep On Truckin' | Life goal · free will on · tutorial ends | Dez + {partner} | settles everything |
+| 15 | Get 'Er Done | Life goal · free will on · tutorial ends | Dez + {partner} | settles everything |
 
 **Pacing:**
 - From chapter 7 on, input is never locked. Chapters are prompts, not scenes.
@@ -179,7 +229,7 @@ spotlight and no instructions. The player does the full loop (tap → Unpack →
 place) alone.
 
 > **Dez:** "Got your lamp here. Fragile-ish. Y'all know the drill by now." ▼
-> **Dez:** "I'll stack the rest of 'em right by the door. Holler if you need me. Well, don't holler, I'll be in the truck." *(exits)* "Keep on truckin'!"
+> **Dez:** "I'll stack the rest of 'em right by the door. Holler if you need me. Well, don't holler, I'll be in the truck." *(exits)* "Get 'er done!"
 
 The remaining boxes appear stacked by the door, and the checklist shows
 *Unpack every box (optional)*.
@@ -210,7 +260,7 @@ The **store panel** opens with a highlight on it, and a system card appears:
 > arrive, so plan ahead.*
 
 > **Dez:** "Now I'd start with groceries if I were you. Y'all look hungry, and that fridge looks emptier'n a church on Super Bowl Sunday." ▼
-> **Dez:** "Keep on truckin'!" *(exits)*
+> **Dez:** "Get 'er done!" *(exits)*
 
 **Teaches:** the store, and the fact that Dez is how purchases get to you.
 
@@ -239,7 +289,7 @@ The player orders groceries. While the delivery is on its way:
 There's a knock at the door, and Dez walks in carrying grocery bags:
 
 > **Dez:** "Dupree Delivers! Fresh from my cousin Darla's farm stand. Well, second cousin. Well, Darla." ▼
-> **Dez:** *(sets the bags down)* "Y'all put them cold things away now, y'hear? Keep on truckin'!"
+> **Dez:** *(sets the bags down)* "Y'all put them cold things away now, y'hear? Get 'er done!"
 
 The player taps the bags, which open a radial with one option, **Put away**.
 The food goes into the fridge.
@@ -298,7 +348,8 @@ actions change with its state (no dishes means no Wash dishes).
 
 {partner} walks over with a **!** bubble:
 
-> *System card: Tap {partner} to talk. You can say anything.*
+> *System card: Tap {partner} to talk. You can say anything, not just
+> things about the house. {partner} remembers what you tell them.*
 
 The free-text chat opens. {partner}'s first line comes from **the first
 choice**:
@@ -327,7 +378,7 @@ The **Paint** tab is highlighted. Paint, wallpaper and floors come from
 
 > **Dez:** *(knock; Dez in a hard hat with paint cans)* "Dupree Construction, at your service! Same fella, different hat." ▼
 > **Dez:** "Paint, floors, wallpaper, all the fixin's. Y'all pick it, my boys'll have it on the walls 'fore lunch." ▼
-> **Dez:** "Keep on truckin'!"
+> **Dez:** "Get 'er done!"
 
 The player picks a color and the room changes. {partner} **reacts with their
 own taste**. Every new game shuffles their likes a little (existing system),
@@ -398,7 +449,7 @@ cut), and jobs.
 
 ---
 
-### Ch. 15: Keep On Truckin'
+### Ch. 15: Get 'Er Done
 
 **Trigger:** the `food`, `room` and `talk` goals are done and the couch is
 placed. This matches the existing "settled in" condition.
@@ -407,7 +458,7 @@ Dez makes one last visit with a welcome basket:
 
 > **Dez:** "Well I'll be. Look at this place! Y'all made it a home in one day." ▼
 > **Dez:** "Town of Honeysuckle Hollow'd like to give y'all a little welcome. *(hands over a check: +$100)* Don't spend it all at Dupree's. …Actually, do." ▼
-> **Dez:** "Anything y'all need, you know who to call. Keep on truckin'!" ▼
+> **Dez:** "Anything y'all need, you know who to call. Get 'er done!" ▼
 
 The **life goal** choice appears: Career climber · Hopeless romantic ·
 Homebody · Green thumb.
@@ -429,7 +480,7 @@ Only what this script needs:
 
 - **Store purchases currently appear instantly**, and groceries/takeout
   arrive as a parcel with no NPC. Both need to route through Dez:
-  - *Knock → walk in → line → drop → "Keep on truckin'!" → leave.*
+  - *Knock → walk in → line → drop → "Get 'er done!" → leave.*
   - Dez needs a pool of delivery lines per category (food, furniture, paint,
     decor), so later visits don't repeat.
 - **The existing 9:02 AM auto-chat** on day 1 has to wait until chapter 11.
