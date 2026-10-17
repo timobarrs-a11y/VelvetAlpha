@@ -168,6 +168,11 @@ export function createTray(): {
     el.addEventListener('mouseleave', () => { timer = setTimeout(hide, 6000); });
   }
 
+  function handleOutsideClick(e: MouseEvent): void {
+    if (!el.hidden && e.target instanceof Node && !el.contains(e.target)) hide();
+  }
+  document.addEventListener('click', handleOutsideClick);
+
   return { el, show, hide };
 }
 

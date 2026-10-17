@@ -15,7 +15,6 @@ import { advanceClock } from './engine/loop';
 import { startFixedLoop } from './engine/fixedLoop';
 import { qualityManager } from './engine/qualityTier';
 import { LayerCache } from './engine/layerCache';
-import { createGpuLights } from './engine/gpuLights';
 import {
   createHousehold, billTick, deliveryTick, dirtTick, laundryTick, newDayReset,
   servings, spend, earn, payBill, orderGroceries, orderTakeout,
@@ -238,10 +237,7 @@ function boot(): void {
   const btn = (act: string) => app.querySelector<HTMLButtonElement>(`[data-act="${act}"]`)!;
   const personEl = (id: AgentId) => app.querySelector<HTMLButtonElement>(`[data-person="${id}"]`)!;
 
-  const gpuLights = createGpuLights();
-  const art = createHouseArt(ctx, {
-    gpuLights: () => (gpuLights && qualityManager.getTier() !== 'low' ? gpuLights : null),
-  });
+  const art = createHouseArt(ctx);
   art.applySave(save);
   const savedMode = (save as { wallMode?: string })?.wallMode;
   const view = {
@@ -454,6 +450,11 @@ function boot(): void {
     const lightState = art.toggleLightAt(view.level, sx, sy);
     if (lightState !== null) { log(`Light turned ${lightState ? 'on' : 'off'}.`); return; }
     const obj = findObjectAt(sx, sy);
+    if (obj && TYPES[obj.type]?.light) {
+      const on = art.toggleObjectLight(obj.id);
+      log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);
+      return;
+    }
     if (obj) { showObjectActions(obj, e.clientX, e.clientY); return; }
   });
 
