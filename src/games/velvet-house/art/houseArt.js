@@ -2,6 +2,7 @@
 // Ported verbatim from the original Velvet House renderer. Live game state is copied in by `render()` each frame.
 import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
+import { createParticles } from '../engine/particles';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
 
@@ -270,7 +271,7 @@ export function createHouseArt(ctx0, opts = {}) {
   const F = (x1, y1, x2, y2, fn, f = {}) => Object.assign({ rect: [x1, y1, x2, y2], fn }, f);
   const doing = (ch, name) => ch.task && ch.task.name === name && ch.task.phase === 'do';
   const usingSlot = (sid, names) => [jordan, maya].some(c => c.task && c.task.phase === 'do' && c.task.slot === sid && (!names || names.includes(c.task.name)));
-  function steamAt(T, lx, ly, lz, t, n = 4, rise = 0.8) { for (let i = 0; i < n; i++) { const ph = (t * 0.6 + i / n) % 1; const [sx, sy] = T.P(lx, ly, lz + ph * rise); circle(sx + Math.sin(t * 2 + i) * 3, sy, 2.5 + ph * 4, `rgba(255,255,255,${(1 - ph) * 0.5})`); } }
+  function steamAt(T, lx, ly, lz, t, n = 4, rise = 0.8) { const [x, y] = T.W(lx, ly); PFX.emit(`${T.o.id}:${lx},${ly}`, 'steam', T.o.level, x, y, lz, (n / 4) * (rise / 0.8)); }
   const FL = { L: 1.2, N: 7, RUN: 0.28, RISE: 0.22, TOP: 1.76 };
   function flightParts(axis) {
     const { L, N, RUN, RISE, TOP } = FL, Y = axis === 'y', rail = '#5A3E2E';
@@ -606,7 +607,7 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: (o) => [F(0, 0, 2.4, 1.0, (T) => { const c = cl(o); [0.05, 2.28].forEach(x => T.box(x, 0.4, 0, 0.08, 0.08, 1.25, '#6B4A35')); T.box(0, 0.3, 0, 2.4, 0.28, 0.05, '#6B4A35'); const pts = [], back = []; for (let k = 0; k <= 10; k++) { const u = 0.3 + k / 10 * 1.8, z = 0.95 - Math.sin(k / 10 * Math.PI) * 0.45; pts.push([u, 0.25, z]); back.push([u, 0.75, z]); } T.poly(pts.concat(back.reverse()), c, shade(c, -0.25), 1); T.line([0.09, 0.44, 1.2], [0.3, 0.25, 0.95], '#C9B48E', 1); T.line([0.09, 0.44, 1.2], [0.3, 0.75, 0.95], '#C9B48E', 1); T.line([2.32, 0.44, 1.2], [2.1, 0.25, 0.95], '#C9B48E', 1); T.line([2.32, 0.44, 1.2], [2.1, 0.75, 0.95], '#C9B48E', 1); }, { name: 'bed' })],
       spots: { h: { stand: [1.2, 1.5], pos: [0.65, 0.5, 0.62], lie: [1, 0], tag: 'hammock', base: 'bed' } } },
     firepit: { W: 1.2, D: 1.2, h: 0.4, name: 'Fire pit', store: true, out: true, cols: ['#8C8884', '#A85A40', '#3A3A3F'],
-      parts: (o) => [F(0, 0, 1.2, 1.2, (T, ob, t) => { const c = cl(o); for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2, [sx, sy] = T.P(0.6 + Math.cos(a) * 0.45, 0.6 + Math.sin(a) * 0.45, 0.05); rr(sx - 6, sy - 7, 12, 9, 3, k % 2 ? c : shade(c, -0.15)); } const [fx, fy] = T.P(0.6, 0.6, 0.12); ell(fx, fy, 14, 6, '#2B2420'); const dark = darkness() > 0.05, fl = Math.sin(t * 9) * 0.5 + Math.sin(t * 13.7) * 0.3; if (dark || seasonIdx() >= 2) { ell(fx, fy - 7 - fl, 8, 10 + fl * 2, 'rgba(240,120,40,.9)'); ell(fx - 3, fy - 5, 5, 7 + fl, 'rgba(255,200,90,.95)'); ell(fx + 4, fy - 4, 4, 6 - fl, 'rgba(255,170,60,.9)'); } })],
+      parts: (o) => [F(0, 0, 1.2, 1.2, (T, ob, t) => { const c = cl(o); for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2, [sx, sy] = T.P(0.6 + Math.cos(a) * 0.45, 0.6 + Math.sin(a) * 0.45, 0.05); rr(sx - 6, sy - 7, 12, 9, 3, k % 2 ? c : shade(c, -0.15)); } const [fx, fy] = T.P(0.6, 0.6, 0.12); ell(fx, fy, 14, 6, '#2B2420'); const dark = darkness() > 0.05, fl = Math.sin(t * 9) * 0.5 + Math.sin(t * 13.7) * 0.3; if (dark || seasonIdx() >= 2) { ell(fx, fy - 7 - fl, 8, 10 + fl * 2, 'rgba(240,120,40,.9)'); ell(fx - 3, fy - 5, 5, 7 + fl, 'rgba(255,200,90,.95)'); ell(fx + 4, fy - 4, 4, 6 - fl, 'rgba(255,170,60,.9)'); const [px, py] = T.W(0.6, 0.6); PFX.emit(o.id + ':smoke', 'smoke', o.level, px, py, 0.45, raining() ? 1.5 : 1); PFX.emit(o.id + ':ember', 'ember', o.level, px, py, 0.25); } })],
       light: { at: [0.6, 0.6, 0.4], r: 150, col: '255,150,70' }, spots: { f: { stand: [0.6, 1.7], dir: [0, -1], tag: 'fireside' } } },
     grill: { W: 0.9, D: 0.6, h: 1.1, name: 'Charcoal grill', store: true, out: true, cols: ['#1B1A1F', '#C2413A', '#3D6B73'],
       parts: (o) => [F(0, 0, 0.9, 0.6, (T, ob, t) => { const c = cl(o); [[0.2, 0.15], [0.7, 0.15], [0.45, 0.5]].forEach(([x, y]) => T.line([x, y, 0], [0.45, 0.3, 0.6], '#4A4450', 2)); const [x, y] = T.P(0.45, 0.3, 0.75); ctx.beginPath(); ctx.ellipse(x, y, 17, 13, 0, 0, Math.PI); ctx.fillStyle = c; ctx.fill(); ell(x, y, 17, 6, shade(c, 0.12)); if (usingSlot(ob.id + ':g')) { ell(x, y, 14, 4.5, '#3A2420'); [-6, 0, 6].forEach(dx => ell(x + dx, y - 1, 3, 1.6, '#8A4A2A')); steamAt(T, 0.45, 0.3, 0.8, t, 3, 0.7); } else { ctx.beginPath(); ctx.ellipse(x, y - 1, 17, 12, 0, Math.PI, 0); ctx.fillStyle = shade(c, 0.05); ctx.fill(); circle(x, y - 13, 2, '#9AA3A8'); } })],
@@ -661,6 +662,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function xrect(o, r) { const a = xf(o, r[0], r[1]), b = xf(o, r[2], r[3]); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]; }
   function makeT(o) {
     return {
+      o, W: (lx, ly) => xf(o, lx, ly),
       P: (lx, ly, lz) => { const [x, y] = xf(o, lx, ly); return iso(x, y, lz); },
       box: (lx, ly, lz, w, d, h, c) => { const r = xrect(o, [lx, ly, lx + w, ly + d]); box(r[0], r[1], lz, r[2] - r[0], r[3] - r[1], h, c); },
       poly: (pts, fill, stroke, lw) => poly(pts.map(p => { const [x, y] = xf(o, p[0], p[1]); return [x, y, p[2]]; }), fill, stroke, lw),
@@ -857,6 +859,18 @@ export function createHouseArt(ctx0, opts = {}) {
   const roomFor = (n) => (flags.house === 'craftsman' && ALIAS[n] ? ALIAS[n] : n);
   const LA = {}, occ = {}, occLevel = {};
   let rdt = 0.016;
+  const PFX = createParticles();
+  function drawParticles(level, glow) {
+    if (glow) ctx.globalCompositeOperation = 'lighter';
+    PFX.forEach(level, (p, t) => {
+      if ((p.kind === 'ember') !== glow) return;
+      const [sx, sy] = iso(p.x, p.y, p.z), fadeIn = Math.min(1, t * 5);
+      if (p.kind === 'steam') circle(sx, sy, 2.5 + t * 6, `rgba(255,255,255,${(1 - t) * 0.42 * fadeIn})`);
+      else if (p.kind === 'smoke') circle(sx, sy, 4 + t * 13, `rgba(118,112,118,${(1 - t) * 0.26 * fadeIn})`);
+      else circle(sx, sy, 0.9 + p.seed * 0.8, `rgba(255,${150 + Math.round(p.seed * 90)},70,${(1 - t) * (0.6 + 0.4 * Math.sin(animT * 20 + p.seed * 30))})`);
+    });
+    ctx.globalCompositeOperation = 'source-over';
+  }
   const isLit = (key) => (LA[key] || 0) > 0.35;
   const lightCv = document.createElement('canvas'), lctx = lightCv.getContext('2d');
 
@@ -1203,6 +1217,7 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     const lights = activeLights(lv);
+    PFX.step(rdt, lv === 3 ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
     const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && tier() !== 'low';
     if (deferred) { G.begin(W, H, Math.min((cv.width / W) * (tier() === 'high' ? 0.75 : 0.5), 1600 / W)); ctx = G.wrap(ctx0); gOn = true; }
     try {
@@ -1215,7 +1230,9 @@ export function createHouseArt(ctx0, opts = {}) {
     drawFrontWalls(lv); drawProjector(lv);
     drawSparkles(lv);
     } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
+    drawParticles(lv, false);
     lighting(lv, lights, deferred);
+    drawParticles(lv, true);
     if (lv === 3) drawRain();
     ctx.restore();
     ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
