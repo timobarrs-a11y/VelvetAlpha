@@ -224,6 +224,7 @@ function boot(): void {
           <button data-act="rotate" title="Turn the house (R)" aria-label="Turn the house">&#8635;</button>
           <button data-act="walls" title="Change how walls show (W)">Cutaway</button>
           <button data-act="speed" title="Game speed">1x</button>
+          <button data-act="quality" title="Graphics quality">Auto</button>
           <button data-act="pause" title="Pause (Space)" aria-pressed="false">Pause</button>
           <button data-act="arrange" title="Arrange furniture (A)" aria-pressed="false">Arrange</button>
         </div>
@@ -337,12 +338,20 @@ function boot(): void {
   if (drawerPage) drawer.open(drawerPage);
 
   // Controls
+  const QUALITY_CHOICES = [null, 'high', 'medium', 'low'] as const;
+  const QUALITY_LABELS = ['Auto', 'High', 'Medium', 'Low'];
+  let qualityIdx = 0;
+  try { qualityIdx = Math.max(0, Math.min(3, Number(localStorage.getItem('velvet-quality')) || 0)); } catch {}
+  const applyQuality = (): void => qualityManager.setPlayerOverride(QUALITY_CHOICES[qualityIdx]);
+  applyQuality();
+  fit();
   const syncControls = (): void => {
     app.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((b) => {
       b.setAttribute('aria-selected', String(Number(b.dataset.level) === view.level));
     });
     btn('walls').textContent = WALL_MODES[view.wallIdx].label;
     btn('speed').textContent = `${SPEEDS[view.speedIdx]}x`;
+    btn('quality').textContent = QUALITY_LABELS[qualityIdx];
     btn('pause').setAttribute('aria-pressed', String(view.paused));
     btn('pause').textContent = view.paused ? 'Play' : 'Pause';
     people.forEach((p) => personEl(p.id).setAttribute('aria-pressed', String(view.follow === p.id)));
@@ -368,6 +377,13 @@ function boot(): void {
   people.forEach((p) => personEl(p.id).addEventListener('click', () => toggleFollow(p.id)));
   btn('rotate').addEventListener('click', rotate);
   btn('walls').addEventListener('click', cycleWalls);
+  btn('quality').addEventListener('click', () => {
+    qualityIdx = (qualityIdx + 1) % QUALITY_CHOICES.length;
+    applyQuality();
+    try { localStorage.setItem('velvet-quality', String(qualityIdx)); } catch {}
+    fit();
+    syncControls();
+  });
   btn('pause').addEventListener('click', togglePause);
   btn('speed').addEventListener('click', () => { view.speedIdx = (view.speedIdx + 1) % SPEEDS.length; syncControls(); });
 
