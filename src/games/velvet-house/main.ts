@@ -11,6 +11,7 @@ import {
 } from './state/agents';
 import type { CharacterLook, CharacterNeeds } from './state/types';
 import { createHouseArt, type WallMode, type PersonFrame } from './art/houseArt.js';
+import { createGpuLights } from './engine/gpuLights.js';
 import { advanceClock } from './engine/loop';
 import { startFixedLoop } from './engine/fixedLoop';
 import { qualityManager } from './engine/qualityTier';
@@ -237,7 +238,8 @@ function boot(): void {
   const btn = (act: string) => app.querySelector<HTMLButtonElement>(`[data-act="${act}"]`)!;
   const personEl = (id: AgentId) => app.querySelector<HTMLButtonElement>(`[data-person="${id}"]`)!;
 
-  const art = createHouseArt(ctx);
+  const gpuLights = createGpuLights();
+  const art = createHouseArt(ctx, gpuLights ? { gpuLights: () => gpuLights } : undefined);
   art.applySave(save);
   const savedMode = (save as { wallMode?: string })?.wallMode;
   const view = {
