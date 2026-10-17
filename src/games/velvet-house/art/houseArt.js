@@ -1,7 +1,15 @@
 /* eslint-disable */
 // Ported verbatim from the original Velvet House renderer. Live game state is copied in by `render()` each frame.
+import { MATERIAL } from '../engine/gbuffer';
+import { sunLight, gradeTint } from '../engine/deferredLights';
+
+const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
+
 export function createHouseArt(ctx0, opts = {}) {
   let ctx = ctx0;
+  const G = opts.gbuffer ? opts.gbuffer() : null;
+  const tier = () => (opts.quality ? opts.quality() : 'high');
+  let gOn = false, gMat = MATERIAL.matte;
   const objectLights = new Map();
   const wallLightOverrides = new Map();
   const W = 640, H = 440;
@@ -42,16 +50,21 @@ export function createHouseArt(ctx0, opts = {}) {
 
   function rgb(h) { if (h[0] !== '#') { const m = h.match(/[\d.]+/g) || [128, 128, 128]; return [+m[0], +m[1], +m[2]]; } h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
   function shade(h, a) { const [r, g, b] = rgb(h), t = a < 0 ? 0 : 255, p = Math.abs(a), al = h.startsWith('rgba') ? +(h.match(/[\d.]+/g)[3]) : 1; const v = `${Math.round(r + (t - r) * p)},${Math.round(g + (t - g) * p)},${Math.round(b + (t - b) * p)}`; return al < 1 ? `rgba(${v},${al})` : `rgb(${v})`; }
+  function gPlane(view) { G.plane(view, view.map(p => isoV(p[0], p[1], p[2])), gMat); }
   function poly(pts, fill, stroke, lw = 1) {
+    if (gOn && fill) gPlane(pts.map(p => { const [a, b] = V(p[0], p[1]); return [a, b, p[2]]; }));
     ctx.beginPath(); pts.forEach((p, i) => { const [sx, sy] = iso(p[0], p[1], p[2]); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.closePath();
     if (fill) { ctx.fillStyle = fill; ctx.fill(); }
     if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+    if (gOn && fill) G.reset();
   }
   const EDGE = 'rgba(40,20,32,.16)';
   function polyV(pts, fill, stroke, lw = 1) {
+    if (gOn && fill) gPlane(pts);
     ctx.beginPath(); pts.forEach((p, i) => { const [sx, sy] = isoV(p[0], p[1], p[2]); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.closePath();
     if (fill) { ctx.fillStyle = fill; ctx.fill(); }
     if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+    if (gOn && fill) G.reset();
   }
   function box(x, y, z, w, d, h, c) {
     const [a, b, a2, b2] = vrect(x, y, x + w, y + d);
@@ -694,8 +707,8 @@ export function createHouseArt(ctx0, opts = {}) {
   function featPoly(f, inset = 0, dz = 0) { const P = (u, z) => wallPoint(f.p, u, z); return [P(f.u[0] + inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[1] - inset), P(f.u[0] + inset, f.z[1] - inset)]; }
   function drawFeature(level, f) {
     const P = (u, z) => wallPoint(f.p, u, z);
-    if (f.k === 'window') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); poly(featPoly(f, 0.08), skyColor()); const mu = (f.u[0] + f.u[1]) / 2, mz = (f.z[0] + f.z[1]) / 2; line3(P(mu, f.z[0] + 0.08), P(mu, f.z[1] - 0.08), '#F7F3EE', 2); line3(P(f.u[0] + 0.08, mz), P(f.u[1] - 0.08, mz), '#F7F3EE', 2); }
-    else if (f.k === 'highwin') { poly(featPoly(f), '#E9E4DD', EDGE, 0.8); poly(featPoly(f, 0.06), skyColor()); }
+    if (f.k === 'window') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.08), skyColor()); gMat = MATERIAL.matte; const mu = (f.u[0] + f.u[1]) / 2, mz = (f.z[0] + f.z[1]) / 2; line3(P(mu, f.z[0] + 0.08), P(mu, f.z[1] - 0.08), '#F7F3EE', 2); line3(P(f.u[0] + 0.08, mz), P(f.u[1] - 0.08, mz), '#F7F3EE', 2); }
+    else if (f.k === 'highwin') { poly(featPoly(f), '#E9E4DD', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.06), skyColor()); gMat = MATERIAL.matte; }
     else if (f.k === 'door') { poly([P(f.u[0] - 0.08, 0), P(f.u[1] + 0.08, 0), P(f.u[1] + 0.08, f.z[1] + 0.05), P(f.u[0] - 0.08, f.z[1] + 0.05)], '#EFE8DE', EDGE, 0.8); poly(featPoly(f), '#7A5236'); poly([P(f.u[0] + 0.1, 1.15), P(f.u[1] - 0.1, 1.15), P(f.u[1] - 0.1, 1.9), P(f.u[0] + 0.1, 1.9)], null, 'rgba(0,0,0,.25)', 1); poly([P(f.u[0] + 0.1, 0.2), P(f.u[1] - 0.1, 0.2), P(f.u[1] - 0.1, 0.95), P(f.u[0] + 0.1, 0.95)], null, 'rgba(0,0,0,.25)', 1); const [kx, ky] = iso(...P(f.u[0] + 0.15, 1.02)); circle(kx, ky, 2, '#E0B85A'); }
     else if (f.k === 'switch') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); const mid = (f.u[0] + f.u[1]) / 2; poly(party ? [P(mid - 0.03, 1.11), P(mid + 0.03, 1.11), P(mid + 0.03, 1.19), P(mid - 0.03, 1.19)] : [P(mid - 0.03, 1.03), P(mid + 0.03, 1.03), P(mid + 0.03, 1.11), P(mid - 0.03, 1.11)], party ? '#D24A7A' : '#9C9298'); }
     else if (f.k === 'tv') {
@@ -753,10 +766,12 @@ export function createHouseArt(ctx0, opts = {}) {
   function drawFloor(level) {
     if (level === 3) { drawYardGround(); return; }
     const f = FLOORS[LOOKS[level].floor] || FLOORS.wood;
+    if (gOn && GLOSS_FLOORS.has(f.kind)) gMat = MATERIAL.gloss;
     for (let i = 0; i < WX; i++) for (let j = 0; j < WY; j++) floorTile(f, i, j);
     if (hasRoomLooks(level)) LEVELS[level].rooms.forEach(rm => { const ov = ROOMLOOK[level][rm.n]; if (!ov || !ov.floor) return; const rf = FLOORS[ov.floor] || f, [x1, y1, x2, y2] = rm.r;
       ctx.save(); poly([[x1, y1, 0], [x2, y1, 0], [x2, y2, 0], [x1, y2, 0]], null); ctx.clip(); for (let i = Math.floor(x1); i < Math.ceil(x2); i++) for (let j = Math.floor(y1); j < Math.ceil(y2); j++) floorTile(rf, i, j); ctx.restore(); });
     { const vw = viewW(), vd = viewD(); polyV([[0, vd, 0], [vw, vd, 0], [vw, vd, -0.25], [0, vd, -0.25]], shade(f.a, -0.28)); polyV([[vw, 0, 0], [vw, vd, 0], [vw, vd, -0.25], [vw, 0, -0.25]], shade(f.a, -0.42)); }
+    gMat = MATERIAL.matte;
     const rug = LEVELS[level].rug;
     if (level === 1 && !flags.rugPacked) { const [x1, y1, x2, y2] = rug; poly([[x1, y1, 0.01], [x2, y1, 0.01], [x2, y2, 0.01], [x1, y2, 0.01]], '#B5476E'); poly([[x1 + 0.18, y1 + 0.18, 0.012], [x2 - 0.18, y1 + 0.18, 0.012], [x2 - 0.18, y2 - 0.18, 0.012], [x1 + 0.18, y2 - 0.18, 0.012]], null, '#E8C9A0', 1.2); for (let k = 0; k < 4; k++) { const yy = y1 + 0.45 + k * 0.38; poly([[x1 + 0.4, yy, 0.013], [x2 - 0.4, yy, 0.013], [x2 - 0.4, yy + 0.12, 0.013], [x1 + 0.4, yy + 0.12, 0.013]], '#9C3A5E'); } }
     if (level === 0 && LOOKS[0].floor === 'concrete') { [2.5, 5.1, 7.5].forEach(x => line3([x, 0, 0.003], [x, WY, 0.003], 'rgba(60,55,55,.22)', 1)); line3([0, 4.0, 0.003], [WX, 4.0, 0.003], 'rgba(60,55,55,.22)', 1); const [dx, dy] = iso(1.3, 6.3, 0.004); ell(dx, dy, 7, 3.5, '#5E5A57'); ell(dx, dy, 5.5, 2.6, '#2B2830'); for (let k = -1; k <= 1; k++) limb(dx + k * 2.5 - 1.5, dy - 1.5, dx + k * 2.5 + 1.5, dy + 1.5, '#7A7570', 0.8); }
@@ -868,14 +883,15 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   function activeLights(level) {
     const out = [];
-    WALL_LIGHTS.forEach((L, i) => { if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const manual = wallLightOverrides.get(i); const target = manual === true ? 1 : manual === false ? 0 : wantLight(level, roomFor(L.room), L.night, L.amb); const s = ease('w' + i, target); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r, s, col: L.col }); });
-    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2]], pool: [x, y, 0], r: lt.r, s, col: lt.col }); });
+    WALL_LIGHTS.forEach((L, i) => { if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const manual = wallLightOverrides.get(i); const target = manual === true ? 1 : manual === false ? 0 : wantLight(level, roomFor(L.room), L.night, L.amb); const s = ease('w' + i, target); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r, s, col: L.col, vis: BACK[VR].includes(L.p) }); });
+    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2]], pool: [x, y, 0], r: lt.r, s, col: lt.col, vis: true }); });
     return out;
   }
   function drawWallLights(level) {
     WALL_LIGHTS.forEach((L, i) => {
       if (L.level !== level || (L.need && !has(L.need)) || !BACK[VR].includes(L.p) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return;
       const on = wallLightOverrides.get(i) === true || (wallLightOverrides.get(i) !== false && isLit('w' + i)), um = (L.u[0] + L.u[1]) / 2, P = (u, z, off = 0) => iso(...(L.p === 'B' ? [u, off, z] : [off, u, z]));
+      if (gOn && on && L.k !== 'under') G.emissive(L.z);
       if (L.k === 'sconce') { const [bx, by] = P(um, L.z - 0.12); rr(bx - 2.5, by - 6, 5, 9, 1.5, '#5A4A40'); const [sx, sy] = P(um, L.z + 0.06, 0.12); ctx.beginPath(); ctx.moveTo(sx - 7, sy + 4); ctx.lineTo(sx - 4, sy - 7); ctx.lineTo(sx + 4, sy - 7); ctx.lineTo(sx + 7, sy + 4); ctx.closePath(); ctx.fillStyle = on ? '#FFF0C4' : '#E7DCC8'; ctx.fill(); ctx.strokeStyle = 'rgba(60,40,30,.35)'; ctx.lineWidth = 0.8; ctx.stroke(); }
       else if (L.k === 'strip' || L.k === 'bar') { const a = P(L.u[0], L.z, 0.04), b = P(L.u[1], L.z, 0.04); limb(a[0], a[1], b[0], b[1], '#5A4A40', 5); limb(a[0], a[1] + 0.5, b[0], b[1] + 0.5, on ? '#FFF6D8' : '#D8D2C8', 2.4); }
       else if (L.k === 'string') { let prev = null; for (let k = 0; k <= 16; k++) { const u = L.u[0] + (L.u[1] - L.u[0]) * k / 16, sag = Math.sin(Math.PI * ((k % 8) / 8)) * 0.12, q = P(u, L.z - sag, 0.02); if (prev) limb(prev[0], prev[1], q[0], q[1], '#3A3340', 0.8); if (k % 2) circle(q[0], q[1] + 2, 2, on ? ['#FFD27A', '#FF9EC2', '#9EE0FF'][k % 3] : '#B9B0A6'); prev = q; } }
@@ -887,6 +903,7 @@ export function createHouseArt(ctx0, opts = {}) {
         for (let k = 0; k < 4; k++) { const u = L.u[0] + (L.u[1] - L.u[0]) * (k + 0.5) / 4 + (k % 2 ? -0.12 : 0.12); line3([u, 0.37, 1.64], [u, 0.37, 1.78], '#8B8189', 1.6); }
         if (on) { const a = P(L.u[0] + 0.05, 1.55, 0.3), b = P(L.u[1] - 0.05, 1.55, 0.3); limb(a[0], a[1], b[0], b[1], '#FFF6D8', 1.6); }
       }
+      if (gOn) G.clearBase();
     });
   }
 
@@ -1007,7 +1024,7 @@ export function createHouseArt(ctx0, opts = {}) {
       let key = vs((w[0] + w[2]) / 2, (w[1] + w[3]) / 2) + (p.onTop ? 0.002 : 0) + (p.box ? p.box[2] * 0.001 : 0);
       let rect = w;
       if (p.cover) { key = maxSit + 0.05; rect = xrect(o, [0, 0, T_OF(o).W, T_OF(o).D]); }
-      const draw = p.box ? () => T.box(p.box[0], p.box[1], p.box[2], p.box[3], p.box[4], p.box[5], typeof p.c === 'function' ? p.c(o) : p.c) : () => p.fn(T, o, t);
+      const draw = p.box ? () => T.box(p.box[0], p.box[1], p.box[2], p.box[3], p.box[4], p.box[5], typeof p.c === 'function' ? p.c(o) : p.c) : () => { if (gOn) G.billboard(iso((w[0] + w[2]) / 2, (w[1] + w[3]) / 2, 0)[1], ZH, MATERIAL.matte); p.fn(T, o, t); if (gOn) G.clearBase(); };
       items.push({ x1: rect[0], y1: rect[1], x2: rect[2], y2: rect[3], key, d: draw });
     });
   }
@@ -1039,7 +1056,7 @@ export function createHouseArt(ctx0, opts = {}) {
     return out;
   }
   function gpuLighting(level, lights, a) {
-    const gpu = opts.gpuLights && opts.gpuLights();
+    const gpu = tier() !== 'low' && opts.gpuLights && opts.gpuLights();
     if (!gpu) return false;
     const frame = {
       width: W, height: H, scale: cv.width / W, alpha: a, glow: Math.min(1, a / 0.35), t: animT,
@@ -1049,14 +1066,41 @@ export function createHouseArt(ctx0, opts = {}) {
     const darkCv = gpu.render(frame, 'dark');
     if (!darkCv) return false;
     ctx.drawImage(darkCv, 0, 0, W, H);
-    const glowCv = gpu.render(frame, 'glow');
+    const glowCv = gpu.render({ ...frame, lights: frame.lights.filter((_, i) => lights[i].vis) }, 'glow');
     if (glowCv) { ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowCv, 0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
     return true;
   }
-  function lighting(level, lights) {
+  function deferredLighting(level, lights) {
+    const R = opts.deferredLights && opts.deferredLights();
+    if (!R || !G) return false;
+    const dk = darkness(), si = seasonIdx(), rain = raining() ? 1 : 0, a = levelDark(level), h = hour();
+    const sun = sunLight(h, si, rain, 1 - dk), [sa, sb] = VD(sun.dir[0], sun.dir[1]);
+    const windows = [];
+    LEVELS[level].feats.forEach(f => {
+      if ((f.k !== 'window' && f.k !== 'highwin') || !BACK[VR].includes(f.p)) return;
+      const p0 = wallPoint(f.p, f.u[0], 0), p1 = wallPoint(f.p, f.u[1], 0), [a0, b0] = V(p0[0], p0[1]), [a1, b1] = V(p1[0], p1[1]);
+      windows.push(Math.abs(a0) < 1e-3 && Math.abs(a1) < 1e-3 ? { axis: 0, u0: b0, u1: b1, z0: f.z[0], z1: f.z[1] } : { axis: 1, u0: a0, u1: a1, z0: f.z[0], z1: f.z[1] });
+    });
+    const frame = {
+      view: [W, H], origin: [OX, OY], iso: [TW, TH, ZH], room: [viewW(), viewD(), WH],
+      darkA: a, night: level === 0 ? [0.14, 0.19, 0.34] : [0.2, 0.18, 0.42], glow: Math.min(1, a / 0.35),
+      sunDir: [sa, sb, sun.dir[2]], sunCol: sun.col, sky: rgb(skyColor()).map(v => v / 255), daylight: 1 - dk, rain,
+      grade: gradeTint(h, si), t: animT, quality: tier() === 'high' ? 'high' : 'medium', windows,
+      lights: lights.map(l => { const [la, lb] = V(l.src[0], l.src[1]), [sx, sy] = iso(...l.src); return { a: la, b: lb, z: l.src[2], range: l.r / 30, s: l.s, col: l.col, sx, sy, glow: l.r, vis: l.vis }; }),
+    };
+    const mul = R.render(frame, G.canvas, 'mul');
+    if (!mul) return false;
+    ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(mul, 0, 0, W, H);
+    const add = R.render(frame, G.canvas, 'add');
+    if (add) { ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(add, 0, 0, W, H); }
+    ctx.globalCompositeOperation = 'source-over';
+    return true;
+  }
+  function lighting(level, lights, deferred) {
     const a = levelDark(level);
     ctx.save(); roomPath(); ctx.clip();
-    if (a > 0.01 && !gpuLighting(level, lights, a)) {
+    const litOnGpu = deferred && deferredLighting(level, lights);
+    if (!litOnGpu && a > 0.01 && !gpuLighting(level, lights, a)) {
       if (lightCv.width !== cv.width || lightCv.height !== cv.height) { lightCv.width = cv.width; lightCv.height = cv.height; }
       const dpr = cv.width / W;
       lctx.setTransform(dpr, 0, 0, dpr, 0, 0); lctx.globalCompositeOperation = 'source-over'; lctx.clearRect(0, 0, W, H);
@@ -1069,7 +1113,7 @@ export function createHouseArt(ctx0, opts = {}) {
       });
       ctx.drawImage(lightCv, 0, 0, W, H);
       ctx.globalCompositeOperation = 'lighter';
-      lights.forEach(l => { const [sx, sy] = iso(...l.src), col = l.col || '255,190,120', g = ctx.createRadialGradient(sx, sy, 1, sx, sy, l.r * 0.55); g.addColorStop(0, `rgba(${col},${0.3 * l.s * Math.min(1, a / 0.35)})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); });
+      lights.forEach(l => { if (!l.vis) return; const [sx, sy] = iso(...l.src), col = l.col || '255,190,120', g = ctx.createRadialGradient(sx, sy, 1, sx, sy, l.r * 0.55); g.addColorStop(0, `rgba(${col},${0.3 * l.s * Math.min(1, a / 0.35)})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); });
       ctx.globalCompositeOperation = 'source-over';
     }
     if (level === 0) {
@@ -1159,15 +1203,19 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     const lights = activeLights(lv);
+    const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && lv === 0 && tier() !== 'low';
+    if (deferred) { G.begin(W, H, Math.min((cv.width / W) * (tier() === 'high' ? 0.75 : 0.5), 1600 / W)); ctx = G.wrap(ctx0); gOn = true; }
+    try {
     drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv);
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && TYPES[o.type] && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
-    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => drawPerson(c, t) }); });
+    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (gOn) G.clearBase(); } }); });
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     drawSparkles(lv);
-    lighting(lv, lights);
+    } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
+    lighting(lv, lights, deferred);
     if (lv === 3) drawRain();
     ctx.restore();
     ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';

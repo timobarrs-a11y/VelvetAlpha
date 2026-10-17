@@ -12,6 +12,8 @@ import {
 import type { CharacterLook, CharacterNeeds } from './state/types';
 import { createHouseArt, type WallMode, type PersonFrame } from './art/houseArt.js';
 import { createGpuLights } from './engine/gpuLights.js';
+import { createGBuffer } from './engine/gbuffer';
+import { createDeferredLights } from './engine/deferredLights';
 import { advanceClock } from './engine/loop';
 import { startFixedLoop } from './engine/fixedLoop';
 import { qualityManager } from './engine/qualityTier';
@@ -239,7 +241,14 @@ function boot(): void {
   const personEl = (id: AgentId) => app.querySelector<HTMLButtonElement>(`[data-person="${id}"]`)!;
 
   const gpuLights = createGpuLights();
-  const art = createHouseArt(ctx, gpuLights ? { gpuLights: () => gpuLights } : undefined);
+  const gbuffer = createGBuffer();
+  const deferredLights = createDeferredLights();
+  const art = createHouseArt(ctx, {
+    gpuLights: () => gpuLights,
+    gbuffer: () => gbuffer,
+    deferredLights: () => deferredLights,
+    quality: () => qualityManager.getTier(),
+  });
   art.applySave(save);
   const savedMode = (save as { wallMode?: string })?.wallMode;
   const view = {

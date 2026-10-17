@@ -1,5 +1,8 @@
 import type { ObjectInstance } from '../state/objects';
 import type { GpuLights } from '../engine/gpuLights';
+import type { GBuffer } from '../engine/gbuffer';
+import type { DeferredLights } from '../engine/deferredLights';
+import type { QualityTier } from '../engine/qualityTier';
 
 export type WallMode = 'cut' | 'up' | 'down';
 
@@ -48,6 +51,11 @@ export interface HouseArt {
 export interface HouseArtOptions {
   /** Returns the GPU light layer to use this frame, or null to draw lights on the 2D canvas. */
   gpuLights?: () => GpuLights | null;
+  /** Data canvas that records height, facing and material while the art draws. */
+  gbuffer?: () => GBuffer | null;
+  /** Full GPU lighting (sun, lamps, shadows, shafts); used on the basement when available. */
+  deferredLights?: () => DeferredLights | null;
+  quality?: () => QualityTier;
 }
 
 export function createHouseArt(ctx: CanvasRenderingContext2D, opts?: HouseArtOptions): HouseArt;
