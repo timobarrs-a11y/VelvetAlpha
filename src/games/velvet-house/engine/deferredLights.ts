@@ -33,6 +33,7 @@ export interface DeferredFrame {
   quality: 'high' | 'medium';
   lights: DeferredLight[];
   windows: DeferredWindow[];
+  outdoor?: boolean;
 }
 
 export interface DeferredLights {
@@ -132,7 +133,7 @@ precision highp float;
 uniform sampler2D uData;
 uniform vec2 uView, uPx, uOrigin;
 uniform vec3 uIso, uRoom;
-uniform int uMode, uCount, uShadowed, uSteps, uAoSteps, uShaftSteps, uWinCount;
+uniform int uMode, uCount, uShadowed, uSteps, uAoSteps, uShaftSteps, uWinCount, uOut;
 uniform float uDarkA, uRain, uTime, uDay, uGlow, uZMax;
 uniform vec3 uNight, uGrade, uSunDir, uSunCol, uSky;
 uniform vec4 uLP[MAXL];
@@ -215,8 +216,8 @@ float ambientOcclusion(vec3 P, vec3 N, int m, vec2 s, float jit) {
 }
 
 float sunAt(vec3 P, vec3 N, int m, float jit) {
-  float tHit;
-  float wm = winMask(P, uSunDir, tHit);
+  float tHit = 3.0;
+  float wm = uOut == 1 ? 1.0 : winMask(P, uSunDir, tHit);
   if (wm < 0.01) return 0.0;
   float ndl = m == 4 ? 0.6 : max(dot(N, uSunDir), 0.0);
   if (ndl <= 0.0) return 0.0;
@@ -235,9 +236,12 @@ void main() {
   vec3 Pn = P + N * 0.03;
 
   if (uMode == 0) {
-    if (!surf) { outColor = vec4(mix(vec3(1.0), uNight, uDarkA) * uGrade, 1.0); return; }
+    vec3 base = mix(vec3(1.0), uNight, uDarkA);
+    if (!surf) { outColor = vec4(base * uGrade, 1.0); return; }
     if (m == 3) { outColor = vec4(1.0); return; }
-    vec3 light = mix(vec3(1.0), uNight, uDarkA) * ambientOcclusion(P, N, m, s, jit);
+    // outdoors the sky only fills shade; direct sun supplies the rest so cast shadows read
+    if (uOut == 1) base *= mix(1.0, 0.68, uDay * (1.0 - uRain * 0.6));
+    vec3 light = base * ambientOcclusion(P, N, m, s, jit);
     for (int i = 0; i < MAXL; i++) {
       if (i >= uCount) break;
       vec3 Lv = uLP[i].xyz - Pn;
@@ -251,7 +255,7 @@ void main() {
       float sh = i < uShadowed ? shadow(Pn, L, max(0.0, dist - 0.12), jit) : 1.0;
       light += uLC[i].rgb * flicker(i) * att * ndl * sh * 1.25;
     }
-    light += uSunCol * sunAt(Pn, N, m, jit);
+    light += uSunCol * sunAt(Pn, N, m, jit) * (uOut == 1 ? 1.8 : 1.0);
     if (m == 2) light = mix(light, vec3(1.0), uDay * 0.85);
     outColor = vec4(clamp(light, 0.0, 1.0) * uGrade, 1.0);
     return;
@@ -357,7 +361,7 @@ export function createDeferredLights(): DeferredLights | null {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
   const names = ['uData', 'uView', 'uPx', 'uOrigin', 'uIso', 'uRoom', 'uMode', 'uCount', 'uShadowed', 'uSteps', 'uAoSteps', 'uShaftSteps',
-    'uWinCount', 'uDarkA', 'uRain', 'uTime', 'uDay', 'uGlow', 'uZMax', 'uNight', 'uGrade', 'uSunDir', 'uSunCol', 'uSky',
+    'uWinCount', 'uOut', 'uDarkA', 'uRain', 'uTime', 'uDay', 'uGlow', 'uZMax', 'uNight', 'uGrade', 'uSunDir', 'uSunCol', 'uSky',
     'uLP', 'uLC', 'uLS', 'uWin', 'uWinZ'] as const;
   const U = Object.fromEntries(names.map(n => [n, gl!.getUniformLocation(prog, n)])) as Record<(typeof names)[number], WebGLUniformLocation | null>;
 
@@ -395,6 +399,7 @@ export function createDeferredLights(): DeferredLights | null {
       gl.uniform1i(U.uAoSteps, q.ao);
       gl.uniform1i(U.uShaftSteps, q.shaft);
       gl.uniform1i(U.uWinCount, Wn.count);
+      gl.uniform1i(U.uOut, frame.outdoor ? 1 : 0);
       gl.uniform1f(U.uDarkA, frame.darkA);
       gl.uniform1f(U.uRain, frame.rain);
       gl.uniform1f(U.uTime, frame.t);

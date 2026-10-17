@@ -1083,7 +1083,7 @@ export function createHouseArt(ctx0, opts = {}) {
     });
     const frame = {
       view: [W, H], origin: [OX, OY], iso: [TW, TH, ZH], room: [viewW(), viewD(), WH],
-      darkA: a, night: level === 0 ? [0.14, 0.19, 0.34] : [0.2, 0.18, 0.42], glow: Math.min(1, a / 0.35),
+      darkA: a, night: level === 0 ? [0.14, 0.19, 0.34] : level === 3 ? [0.17, 0.2, 0.4] : [0.2, 0.18, 0.42], outdoor: level === 3, glow: Math.min(1, a / 0.35),
       sunDir: [sa, sb, sun.dir[2]], sunCol: sun.col, sky: rgb(skyColor()).map(v => v / 255), daylight: 1 - dk, rain,
       grade: gradeTint(h, si), t: animT, quality: tier() === 'high' ? 'high' : 'medium', windows,
       lights: lights.map(l => { const [la, lb] = V(l.src[0], l.src[1]), [sx, sy] = iso(...l.src); return { a: la, b: lb, z: l.src[2], range: l.r / 30, s: l.s, col: l.col, sx, sy, glow: l.r, vis: l.vis }; }),
@@ -1203,7 +1203,7 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     const lights = activeLights(lv);
-    const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && lv !== 3 && tier() !== 'low';
+    const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && tier() !== 'low';
     if (deferred) { G.begin(W, H, Math.min((cv.width / W) * (tier() === 'high' ? 0.75 : 0.5), 1600 / W)); ctx = G.wrap(ctx0); gOn = true; }
     try {
     drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv);
