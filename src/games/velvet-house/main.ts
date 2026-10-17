@@ -284,7 +284,9 @@ function boot(): void {
   fit();
 
   // UI: Drawer
+  let drawerPage: DrawerPage = '';
   const drawer = createDrawer({
+    onClose: () => { drawerPage = ''; try { localStorage.removeItem('velvet-drawer'); } catch {} },
     onBuy: (item, color) => handleBuy(item, color),
     onOrder: (chain) => handleOrder(chain),
     onPayBill: () => { payBill(world.household, absMin(world.day, world.minutes), log); },
@@ -320,7 +322,6 @@ function boot(): void {
   stage.appendChild(tray.el);
 
   // Restore drawer page
-  let drawerPage: DrawerPage = '';
   try { drawerPage = localStorage.getItem('velvet-drawer') as DrawerPage || ''; } catch {}
   if (drawerPage) drawer.open(drawerPage);
 

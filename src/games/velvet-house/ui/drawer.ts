@@ -11,6 +11,7 @@ import { clockText, season, weekday, DAYS } from '../state/time';
 export type DrawerPage = 'shop' | 'goals' | 'do' | 'partner' | 'you' | 'home' | 'log' | '';
 
 export interface DrawerCallbacks {
+  onClose: () => void;
   onBuy: (item: CatalogEntry, color?: string) => void;
   onOrder: (chain: string) => void;
   onPayBill: () => void;
@@ -93,7 +94,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     .join('');
 
   const closeBtn = el.querySelector('.vh-drawer-close')!;
-  closeBtn.addEventListener('click', () => openPage(''));
+  closeBtn.addEventListener('click', (e) => { e.stopPropagation(); cb.onClose(); openPage(''); });
 
   let currentPage: DrawerPage = '';
 
