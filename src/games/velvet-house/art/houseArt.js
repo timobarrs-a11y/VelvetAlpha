@@ -1203,7 +1203,7 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     const lights = activeLights(lv);
-    const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && lv === 0 && tier() !== 'low';
+    const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && lv !== 3 && tier() !== 'low';
     if (deferred) { G.begin(W, H, Math.min((cv.width / W) * (tier() === 'high' ? 0.75 : 0.5), 1600 / W)); ctx = G.wrap(ctx0); gOn = true; }
     try {
     drawWalls(lv); drawFloor(lv); decals(lv, t); drawFloorDirt(lv);
