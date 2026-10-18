@@ -1186,6 +1186,33 @@ export function createHouseArt(ctx0, opts = {}) {
     return Math.max(b(u), Math.floor(seed * 7) % 3 === 0 ? b(u - 0.34) : 0);
   }
 
+  const walkStates = new Map();
+  const poseStates = new Map();
+
+  function poseState(c) {
+    let ps = poseStates.get(c.seed);
+    if (!ps) { ps = { a: {} }; poseStates.set(c.seed, ps); }
+    return ps;
+  }
+
+  function ease2(ps, side, tx, ty, dt) {
+    const k = Math.min(1, dt * 9);
+    let a = ps.a[side];
+    if (!a) { a = ps.a[side] = [tx, ty]; }
+    a[0] += (tx - a[0]) * k; a[1] += (ty - a[1]) * k;
+    return a;
+  }
+
+  function walkState(c) {
+    let ws = walkStates.get(c.seed);
+    if (!ws) { ws = { px: c.x, py: c.y, ph: 0, amp: 0 }; walkStates.set(c.seed, ws); }
+    const dd = Math.hypot(c.x - ws.px, c.y - ws.py);
+    if (c.walking && dd < 0.6) ws.ph += dd / 0.24 * Math.PI;
+    ws.amp += ((c.walking ? 1 : 0) - ws.amp) * Math.min(1, rdt * 7);
+    ws.px = c.x; ws.py = c.y;
+    return ws;
+  }
+
   function drawPerson(c, t) {
     const L = c.look, pose = c.pose, f = facing(c.face);
     const P3 = (dx, dy, dz) => iso(c.x + dx, c.y + dy, c.z + dz);
@@ -1199,27 +1226,34 @@ export function createHouseArt(ctx0, opts = {}) {
       return;
     }
     if (c.z < 0.05) ell(fx, fy, 8, 3.5, 'rgba(0,0,0,.22)');
+    const ws = walkState(c), amp = ws.amp, ph = ws.ph;
     const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
     const breathe = Math.sin(t * 1.9 + c.seed * 2) * (idle ? 0.012 : 0.005);
     const sway = Math.sin(t * 2.2 + c.seed * 3) * (c.walking ? 2.6 : idle ? 0.9 : 0.4);
     const gaze = idle ? Math.sin(t * 0.45 + c.seed * 5) * 2.2 + Math.sin(t * 0.13 + c.seed) * 1.2 : 0;
     const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
-    const ph = c.walking ? t * 10 + c.seed : 0, dance = pose === 'dance';
-    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : c.walking ? Math.abs(Math.sin(ph)) * 0.025 : 0;
+    const dance = pose === 'dance';
+    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.035 * amp;
     const hipZ = c.sit ? 0.03 : 0.62 + bob + breathe, shZ = hipZ + 0.42, hdZ = shZ + 0.14;
     const hip = P3(0, 0, hipZ), sh = P3(0, 0, shZ), hd = P3(0, 0, hdZ), [dx, dy] = c.face;
     [-1, 1].forEach(side => {
       if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5); limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
-      const sw = c.walking ? Math.sin(ph + (side > 0 ? 0 : Math.PI)) * 0.14 : dance ? Math.sin(t * 6 + side) * 0.05 : 0, foot = P3(dx * sw, dy * sw, 0);
-      limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+      if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
+      const off = side > 0 ? 0 : Math.PI;
+      const sw = Math.sin(ph + off) * 0.17 * amp, lift = c.z < 0.05 ? Math.max(0, Math.sin(ph + off)) * 0.075 * amp : 0;
+      const foot = P3(dx * sw, dy * sw, lift);
+      const knee = P3(dx * sw * 0.55, dy * sw * 0.55, hipZ * 0.5 + lift * 0.7);
+      limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
+      limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
     });
     const hairBack = () => { if (L.longHair) ell(hd[0] + sway * 0.7, hd[1] - 2, 6, 7.5, L.hair); };
     if (f.front) hairBack();
     limb(hip[0] + shift, hip[1], sh[0] + shift * 1.4, sh[1], L.top, 11);
     [-1, 1].forEach(side => {
-      const sw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 3 : 0;
-      const [ex, ey] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + sw, sh[1] + 13];
-      limb(sh[0] + shift * 1.4 + side * 4.5, sh[1] + 1, ex, ey, L.skin, 3.2);
+      const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
+      const [ex, ey] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
+      const ps = poseState(c), e = ease2(ps, side, ex, ey, rdt);
+      limb(sh[0] + shift * 1.4 + side * 4.5, sh[1] + 1, e[0], e[1], L.skin, 3.2);
     });
     circle(hd[0] + shift * 1.6, hd[1] - 5, 5.6, L.skin);
     if (f.front) {
