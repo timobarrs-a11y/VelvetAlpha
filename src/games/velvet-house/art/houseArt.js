@@ -867,6 +867,7 @@ export function createHouseArt(ctx0, opts = {}) {
       const [sx, sy] = iso(p.x, p.y, p.z), fadeIn = Math.min(1, t * 5);
       if (p.kind === 'steam') circle(sx, sy, 2.5 + t * 6, `rgba(255,255,255,${(1 - t) * 0.42 * fadeIn})`);
       else if (p.kind === 'smoke') circle(sx, sy, 4 + t * 13, `rgba(118,112,118,${(1 - t) * 0.26 * fadeIn})`);
+      else if (p.kind === 'dust') circle(sx, sy, 1.5 + t * 5, `rgba(150,140,130,${(1 - t) * 0.3 * fadeIn})`);
       else circle(sx, sy, 0.9 + p.seed * 0.8, `rgba(255,${150 + Math.round(p.seed * 90)},70,${(1 - t) * (0.6 + 0.4 * Math.sin(animT * 20 + p.seed * 30))})`);
     });
     ctx.globalCompositeOperation = 'source-over';
@@ -1225,7 +1226,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && TYPES[o.type] && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
-    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (gOn) G.clearBase(); } }); });
+    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && lv === 3) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (gOn) G.clearBase(); } }); });
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     drawSparkles(lv);

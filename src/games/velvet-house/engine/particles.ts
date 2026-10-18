@@ -1,4 +1,4 @@
-export type ParticleKind = 'steam' | 'smoke' | 'ember';
+export type ParticleKind = 'steam' | 'smoke' | 'ember' | 'dust';
 
 export interface Particle {
   kind: ParticleKind;
@@ -20,6 +20,7 @@ const SPECS: Record<ParticleKind, Spec> = {
   steam: { rate: 7, life: 1.5, rise: 0.5, spread: 0.05, gravity: 0, drag: 0.6 },
   smoke: { rate: 5, life: 3.4, rise: 0.38, spread: 0.08, gravity: 0, drag: 0.35 },
   ember: { rate: 6, life: 1.2, rise: 1.1, spread: 0.25, gravity: 0.9, drag: 0.2 },
+  dust: { rate: 1, life: 0.7, rise: 0.18, spread: 0.12, gravity: 0.4, drag: 0.9 },
 };
 
 export interface Particles {
