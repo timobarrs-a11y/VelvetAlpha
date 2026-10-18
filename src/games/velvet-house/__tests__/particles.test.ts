@@ -27,4 +27,15 @@ describe('particles', () => {
     p.forEach(1, () => { other++; });
     expect(other).toBe(0);
   });
+
+  it('dust puffs settle toward the ground', () => {
+    const p = createParticles(50, () => 0.5);
+    for (let i = 0; i < 30; i++) { p.step(1 / 60, [0, 0], 1); p.emit('dust', 'dust', 3, 1, 1, 0.02); }
+    expect(p.count).toBeGreaterThan(0);
+    let falling = 0;
+    p.forEach(3, q => { if (q.vz < 0) falling++; });
+    expect(falling).toBeGreaterThan(0);
+    for (let i = 0; i < 120; i++) p.step(1 / 60, [0, 0], 1);
+    expect(p.count).toBe(0);
+  });
 });
