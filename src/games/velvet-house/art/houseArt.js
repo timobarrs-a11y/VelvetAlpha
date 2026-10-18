@@ -1180,6 +1180,12 @@ export function createHouseArt(ctx0, opts = {}) {
     if (s.wallMode) wallMode = s.wallMode;
   }
 
+  function blinkAmt(t, seed) {
+    const cyc = 3.8 + (seed % 1) * 2.4, u = (t + seed * 1.7) % cyc;
+    const b = x => x >= 0 && x < 0.14 ? Math.sin(x / 0.14 * Math.PI) : 0;
+    return Math.max(b(u), Math.floor(seed * 7) % 3 === 0 ? b(u - 0.34) : 0);
+  }
+
   function drawPerson(c, t) {
     const L = c.look, pose = c.pose, f = facing(c.face);
     const P3 = (dx, dy, dz) => iso(c.x + dx, c.y + dy, c.z + dz);
@@ -1193,28 +1199,34 @@ export function createHouseArt(ctx0, opts = {}) {
       return;
     }
     if (c.z < 0.05) ell(fx, fy, 8, 3.5, 'rgba(0,0,0,.22)');
+    const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
+    const breathe = Math.sin(t * 1.9 + c.seed * 2) * (idle ? 0.012 : 0.005);
+    const sway = Math.sin(t * 2.2 + c.seed * 3) * (c.walking ? 2.6 : idle ? 0.9 : 0.4);
+    const gaze = idle ? Math.sin(t * 0.45 + c.seed * 5) * 2.2 + Math.sin(t * 0.13 + c.seed) * 1.2 : 0;
+    const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
     const ph = c.walking ? t * 10 + c.seed : 0, dance = pose === 'dance';
     const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : c.walking ? Math.abs(Math.sin(ph)) * 0.025 : 0;
-    const hipZ = c.sit ? 0.03 : 0.62 + bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14;
+    const hipZ = c.sit ? 0.03 : 0.62 + bob + breathe, shZ = hipZ + 0.42, hdZ = shZ + 0.14;
     const hip = P3(0, 0, hipZ), sh = P3(0, 0, shZ), hd = P3(0, 0, hdZ), [dx, dy] = c.face;
     [-1, 1].forEach(side => {
       if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5); limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
       const sw = c.walking ? Math.sin(ph + (side > 0 ? 0 : Math.PI)) * 0.14 : dance ? Math.sin(t * 6 + side) * 0.05 : 0, foot = P3(dx * sw, dy * sw, 0);
       limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
     });
-    const hairBack = () => { if (L.longHair) ell(hd[0], hd[1] - 2, 6, 7.5, L.hair); };
+    const hairBack = () => { if (L.longHair) ell(hd[0] + sway * 0.7, hd[1] - 2, 6, 7.5, L.hair); };
     if (f.front) hairBack();
-    limb(hip[0], hip[1], sh[0], sh[1], L.top, 11);
+    limb(hip[0] + shift, hip[1], sh[0] + shift * 1.4, sh[1], L.top, 11);
     [-1, 1].forEach(side => {
       const sw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 3 : 0;
       const [ex, ey] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + sw, sh[1] + 13];
-      limb(sh[0] + side * 4.5, sh[1] + 1, ex, ey, L.skin, 3.2);
+      limb(sh[0] + shift * 1.4 + side * 4.5, sh[1] + 1, ex, ey, L.skin, 3.2);
     });
-    circle(hd[0], hd[1] - 5, 5.6, L.skin);
+    circle(hd[0] + shift * 1.6, hd[1] - 5, 5.6, L.skin);
     if (f.front) {
-      ell(hd[0], hd[1] - 9, 6, 3.6, L.hair);
-      ctx.fillStyle = '#241B25'; [-1, 1].forEach(side => ctx.fillRect(hd[0] + f.flip * 1.2 + side * 2.1 - 0.6, hd[1] - 5.5, 1.2, 1.4));
-    } else { ell(hd[0], hd[1] - 6.5, 6, 5.6, L.hair); hairBack(); }
+      ell(hd[0] + shift * 1.6 + sway * 0.3, hd[1] - 9, 6, 3.6, L.hair);
+      ctx.fillStyle = '#241B25';
+      [-1, 1].forEach(side => { const eh = Math.max(0.2, 1.4 * (1 - bl)); ctx.fillRect(hd[0] + shift * 1.6 + f.flip * 1.2 + side * 2.1 + gaze - 0.6, hd[1] - 5.5 + (1.4 - eh) / 2, 1.2, eh); });
+    } else { ell(hd[0] + shift * 1.6 + sway * 0.5, hd[1] - 6.5, 6, 5.6, L.hair); hairBack(); }
   }
 
   function render(s) {
