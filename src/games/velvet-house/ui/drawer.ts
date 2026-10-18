@@ -7,6 +7,7 @@ import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals
 import { careerTitle } from '../state/career';
 
 import { clockText, season, weekday, DAYS } from '../state/time';
+import type { OwnedCloth } from '../state/clothing';
 
 export type DrawerPage = 'shop' | 'goals' | 'do' | 'partner' | 'you' | 'home' | 'log' | '';
 
@@ -20,6 +21,7 @@ export interface DrawerCallbacks {
   onTalk: () => void;
   onRestart: () => void;
   onPickLifeGoal: (goal: string) => void;
+  onWear: (cloth: OwnedCloth) => void;
 }
 
 export interface DrawerState {
@@ -49,6 +51,8 @@ export interface DrawerState {
   townName: string;
   deliveryPending: boolean;
   mayaStatus: string;
+  closet: OwnedCloth[];
+  wearing: { top: string; topStyle: string; bottom: string };
 }
 
 const PAGE_TITLES: Record<string, string> = {
@@ -252,12 +256,30 @@ export function createDrawer(cb: DrawerCallbacks): {
 
   function renderYou(state: DrawerState): void {
     const sec = el.querySelector('[data-page="you"]')!;
+    const closet = state.closet.map(c =>
+      `<button class="vh-wardrobe-item ${c.style === state.wearing.topStyle || c.col === state.wearing.top || c.col === state.wearing.bottom ? 'vh-worn' : ''}"
+        data-wear="${c.id}" data-col="${c.col}" title="Wear ${c.name}">
+        <canvas class="vh-cloth-preview" width="36" height="36" data-col="${c.col}" data-style="${c.style}"></canvas>
+        <span>${c.name}</span>
+      </button>`).join('');
     sec.innerHTML = `<div class="vh-you">
       <h4>${state.simName}</h4>
       <p>Day ${state.day}, ${DAYS[weekday(state.day)]}, ${clockText(state.minutes)}</p>
       <p>${season(state.day)}</p>
       <p>Job: ${careerTitle({ level: state.careerLevel, perf: state.careerPerf })}</p>
+      <canvas class="vh-outfit-preview" width="140" height="120"></canvas>
+      <h4>Wardrobe</h4>
+      <div class="vh-wardrobe">${closet || '<p class="vh-empty">Nothing in the closet yet.</p>'}</div>
+      <p class="vh-wardrobe-hint">Buy more clothes in the Shop's Clothes tab.</p>
     </div>`;
+    drawOutfitPreview(sec.querySelector('.vh-outfit-preview')!, state.wearing);
+    sec.querySelectorAll<HTMLCanvasElement>('.vh-cloth-preview').forEach(cv => drawSwatch(cv));
+    sec.querySelectorAll('[data-wear]').forEach(b => {
+      b.addEventListener('click', () => {
+        const cloth = state.closet.find(c => c.id === (b as HTMLElement).dataset.wear && c.col === (b as HTMLElement).dataset.col);
+        if (cloth) cb.onWear(cloth);
+      });
+    });
   }
 
   function renderHome(state: DrawerState): void {
@@ -294,4 +316,72 @@ export function createDrawer(cb: DrawerCallbacks): {
     close: () => openPage(''),
     render,
   };
+}
+
+/** Draws the mini outfit preview: a torso wearing the current top with its fabric pattern. */
+function drawOutfitPreview(cv: HTMLCanvasElement, wearing: { top: string; topStyle: string; bottom: string }): void {
+  const c = cv.getContext('2d');
+  if (!c) return;
+  const W = cv.width, H = cv.height;
+  c.clearRect(0, 0, W, H);
+  c.save();
+  // Head
+  c.fillStyle = '#C68E6A';
+  c.beginPath(); c.arc(W / 2, 24, 13, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#2B1D16';
+  c.beginPath(); c.ellipse(W / 2, 16, 13, 7, 0, Math.PI, Math.PI * 2); c.fill();
+  // Torso (top color)
+  c.fillStyle = wearing.top;
+  c.beginPath();
+  c.moveTo(W / 2 - 24, H - 8); c.lineTo(W / 2 - 18, 52); c.lineTo(W / 2 + 18, 52); c.lineTo(W / 2 + 24, H - 8);
+  c.closePath(); c.fill();
+  drawFabricPattern(c, W / 2 - 24, 52, 48, H - 60, wearing.topStyle);
+  // Legs (bottom color)
+  c.fillStyle = wearing.bottom;
+  c.fillRect(W / 2 - 16, H - 8, 12, 8); c.fillRect(W / 2 + 4, H - 8, 12, 8);
+  c.restore();
+}
+
+/** Draws the same fabric pattern on a wardrobe swatch. */
+function drawSwatch(cv: HTMLCanvasElement): void {
+  const c = cv.getContext('2d');
+  if (!c) return;
+  const col = cv.dataset.col || '#888';
+  const style = cv.dataset.style || 'tee';
+  c.clearRect(0, 0, cv.width, cv.height);
+  c.fillStyle = col;
+  c.beginPath();
+  c.moveTo(8, 32); c.lineTo(11, 12); c.lineTo(25, 12); c.lineTo(28, 32);
+  c.closePath(); c.fill();
+  drawFabricPattern(c, 8, 12, 20, 20, style);
+}
+
+/** Fabric-pattern overlay shared by the outfit preview and wardrobe swatches. */
+function drawFabricPattern(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, style: string): void {
+  if (!style || style === 'tee' || style === 'blazer') return;
+  c.save();
+  c.beginPath(); c.rect(x, y, w, h); c.clip();
+  c.translate(x, y);
+  if (style === 'sweater' || style === 'tank') {
+    c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 2;
+    for (let yy = 0; yy < h; yy += 6) { c.beginPath(); c.moveTo(0, yy); c.lineTo(w, yy); c.stroke(); }
+  } else if (style === 'flannel') {
+    c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 2;
+    for (let yy = 0; yy < h; yy += 5) { c.beginPath(); c.moveTo(0, yy); c.lineTo(w, yy); c.moveTo(yy, 0); c.lineTo(yy, h); c.stroke(); }
+    c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1;
+    for (let yy = 2.5; yy < h; yy += 5) { c.beginPath(); c.moveTo(0, yy); c.lineTo(w, yy); c.moveTo(yy, 0); c.lineTo(yy, h); c.stroke(); }
+  } else if (style === 'dress') {
+    c.fillStyle = 'rgba(255,255,255,.55)';
+    for (let yy = 2; yy < h; yy += 5) for (let xx = (yy % 10 < 5 ? 2 : 4); xx < w; xx += 5) { c.beginPath(); c.arc(xx, yy, 1, 0, 7); c.fill(); }
+  } else if (style === 'jersey') {
+    c.fillStyle = 'rgba(255,255,255,.75)';
+    c.fillRect(0, h / 2 - 5, w, 3); c.fillRect(0, h / 2 + 2, w, 3);
+  } else if (style === 'hoodie' || style === 'puffer') {
+    c.strokeStyle = 'rgba(0,0,0,.28)'; c.lineWidth = 1.5;
+    for (let yy = 0; yy < h; yy += 5) { c.beginPath(); c.moveTo(0, yy); c.lineTo(w, yy); c.stroke(); }
+  } else if (style === 'denim') {
+    c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineWidth = 0.8;
+    for (let yy = 0; yy < h; yy += 3) { c.beginPath(); c.moveTo(0, yy); c.lineTo(w, yy); c.stroke(); }
+  }
+  c.restore();
 }

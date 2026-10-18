@@ -33,6 +33,7 @@ export interface AgentLook {
   skin: string;
   hair: string;
   top: string;
+  topStyle: string;
   bottom: string;
   longHair: boolean;
 }

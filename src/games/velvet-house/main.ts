@@ -31,6 +31,7 @@ import {
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
 import { createDrawer, type DrawerPage, type DrawerState } from './ui/drawer';
+import { clothByKey, clothId, wearOn, type OwnedCloth } from './state/clothing';
 import { createDialogue, createTray, showDiscoveryCard, createTownSign, type TrayAction } from './ui/dialogue';
 
 const VIEW_W = 640;
@@ -49,8 +50,8 @@ const WALL_MODES: { mode: WallMode; label: string }[] = [
 ];
 
 const DEFAULT_LOOKS: Record<AgentId, AgentLook> = {
-  jordan: { skin: '#C68E6A', hair: '#2B1D16', top: '#3E6E8E', bottom: '#2F3542', longHair: false },
-  maya: { skin: '#8D5A3B', hair: '#1E1412', top: '#B5523B', bottom: '#3B3140', longHair: true },
+  jordan: { skin: '#C68E6A', hair: '#2B1D16', top: '#3E6E8E', topStyle: 'tee', bottom: '#2F3542', longHair: false },
+  maya: { skin: '#8D5A3B', hair: '#1E1412', top: '#B5523B', topStyle: 'tee', bottom: '#3B3140', longHair: true },
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -61,6 +62,7 @@ function lookFrom(saved: unknown, fallback: AgentLook): AgentLook {
     skin: HEX.test(l.skin ?? '') ? l.skin! : fallback.skin,
     hair: HEX.test(l.hairColor ?? '') ? l.hairColor! : fallback.hair,
     top: HEX.test(l.top ?? '') ? l.top! : fallback.top,
+    topStyle: typeof (l as { topStyle?: unknown }).topStyle === 'string' ? (l as { topStyle: string }).topStyle : fallback.topStyle,
     bottom: fallback.bottom,
     longHair: typeof l.hair === 'string' ? /long|wav|curl|bun|pony|braid|loc/i.test(l.hair) : fallback.longHair,
   };
@@ -140,6 +142,15 @@ function boot(): void {
   let bond = typeof save?.bond === 'number' ? save.bond : 58;
   let freeWill = typeof save?.freeWill === 'boolean' ? save.freeWill : true;
   const owned = new Set<string>(Array.isArray(save?.owned) ? save!.owned as string[] : []);
+  // Closet: default pieces plus anything bought from the Clothes tab
+  const closet: OwnedCloth[] = Array.isArray(save?.closet)
+    ? (save!.closet as OwnedCloth[]).filter(c => clothByKey(c.id.slice(2)))
+    : [
+      { slot: 'top', style: 'tee', col: people[0].look.top, name: 'Old tee', id: clothId('tee') },
+      { slot: 'top', style: 'tee', col: people[1].look.top, name: 'Shared tee', id: clothId('tee') },
+      { slot: 'bottom', style: 'pants', col: people[0].look.bottom, name: 'Old jeans', id: clothId('jeans') },
+    ];
+  if (!closet.some(c => c.slot === 'bottom')) closet.push({ slot: 'bottom', style: 'pants', col: people[0].look.bottom, name: 'Old jeans', id: clothId('jeans') });
   let lifeGoal: string | null = typeof save?.lifeGoal === 'string' ? save!.lifeGoal : null;
   let settleDone = typeof save?.settleDone === 'boolean' ? save!.settleDone : false;
   const flags: Record<string, unknown> = (save?.flags as Record<string, unknown>) ?? {};
@@ -317,6 +328,11 @@ function boot(): void {
       location.reload();
     },
     onPickLifeGoal: (g) => { lifeGoal = g; log(`Life goal: ${g}`); },
+    onWear: (cloth) => {
+      wearOn(people[0].look, cloth);
+      log(`Changed into the ${cloth.name}.`);
+      refreshDrawer();
+    },
   });
   stage.appendChild(drawer.el);
   stage.appendChild(drawer.dock);
@@ -328,6 +344,8 @@ function boot(): void {
     onClose: () => handleCloseChat(),
   });
   stage.appendChild(dialogue.el);
+  dialogue.setPortraitLook({ skin: people[1].look.skin, hair: people[1].look.hair, longHair: people[1].look.longHair });
+  dialogue.setPortraitTalking(false);
 
   // UI: Tray
   const tray = createTray();
@@ -615,6 +633,19 @@ function boot(): void {
       flags.furniture = ((flags.furniture as number) ?? 0) + 1;
       log(`${item.name} will be delivered.`);
     }
+    // Clothing: add to the closet (same piece + color only once)
+    if (item.icon === 'cloth' && item.cloth) {
+      const key = item.id.slice(2);
+      const def = clothByKey(key);
+      if (def) {
+        const col = color || def.colors[0];
+        const name = col === def.colors[0] ? def.name : `${def.name} (${col.trim()})`;
+        if (!closet.some(c => c.id === item.id && c.col === col)) {
+          closet.push({ slot: def.slot, style: def.style, col, name, id: item.id });
+          log(`Added ${name} to your closet.`);
+        }
+      }
+    }
     // Bond boost from buying liked items
     if (item.tags) {
       const taste = tasteOf({ id: item.id, name: item.name, tags: item.tags }, style, tasteNorm);
@@ -652,6 +683,8 @@ function boot(): void {
     if (!sample) { dialogue.showInput(); return; }
     dialogue.busy(true);
     dialogue.showAI('...', true);
+    art.setTalking(true);
+    dialogue.setPortraitTalking(true);
 
     const ctx: PersonaContext = {
       partnerName, simName, townName,
@@ -680,10 +713,13 @@ function boot(): void {
     chatTurns = result.turns;
     dialogue.showAI(result.text, true);
     dialogue.busy(false);
+    art.setTalking(false);
+    dialogue.setPortraitTalking(false);
 
     // Apply mood tag
     if (result.tag) {
       bond = Math.max(0, Math.min(100, bond + result.tag.bond * 1.5));
+      art.setMood(bond / 100);
       if (result.tag.act !== 'none') {
         // Could trigger autonomous acts — for now just log
       }
@@ -707,7 +743,7 @@ function boot(): void {
         spentToday: world.household.spentToday,
         power: world.household.power, fridge: world.household.fridge,
         bill: world.household.bill, nextBillAt: world.household.nextBillAt,
-        owned: [...owned], bond, memories, coreMem, pastMem,
+        owned: [...owned], closet, bond, memories, coreMem, pastMem,
         townName, simName, rngSeed,
         freeWill, autonomy: 'on', mayaCap: 500,
         mayaSpent: { day: world.day, amt: 0 },
@@ -765,6 +801,8 @@ function boot(): void {
       partnerName, simName, townName,
       deliveryPending: !!world.household.delivery,
       mayaStatus: statusText(people[1]),
+      closet,
+      wearing: { top: people[0].look.top, topStyle: people[0].look.topStyle, bottom: people[0].look.bottom },
     };
     drawer.render(drawerState);
   }

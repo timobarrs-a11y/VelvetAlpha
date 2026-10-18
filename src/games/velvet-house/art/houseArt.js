@@ -303,8 +303,11 @@ export function createHouseArt(ctx0, opts = {}) {
   const cl = (o) => o.col || (TYPES[o.type].cols || ['#8A6A50'])[0];
   const TYPES = {
     sofa: { W: 2.4, D: 1.0, h: 0.95, name: 'Couch',
-      parts: () => [B(0, 0, 0.38, 2.4, 0.32, 0.6, C.sofa), B(0, 0, 0, 2.4, 1.0, 0.38, C.sofa, { name: 'base' }), B(0.2, 0.32, 0.38, 1.0, 0.62, 0.1, C.cushion), B(1.2, 0.32, 0.38, 1.0, 0.62, 0.1, C.cushion),
-        B(0, 0, 0, 0.2, 1.0, 0.62, C.sofa), B(2.2, 0, 0, 0.2, 1.0, 0.62, C.sofa), B(0.26, 0.34, 0.48, 0.42, 0.14, 0.32, '#E0A43A')],
+      parts: (o) => { const s1 = usingSlot(o.id + ':s1') ? 1 : 0, s2 = usingSlot(o.id + ':s2') ? 1 : 0;
+        return [B(0, 0, 0.38, 2.4, 0.32, 0.6, C.sofa), B(0, 0, 0, 2.4, 1.0, 0.38, C.sofa, { name: 'base' }),
+          B(0.2, 0.32, 0.38 - s1 * 0.018, 1.0, 0.62, 0.1 - s1 * 0.035, C.cushion),
+          B(1.2, 0.32, 0.38 - s2 * 0.018, 1.0, 0.62, 0.1 - s2 * 0.035, C.cushion),
+          B(0, 0, 0, 0.2, 1.0, 0.62, C.sofa), B(2.2, 0, 0, 0.2, 1.0, 0.62, C.sofa), B(0.26, 0.34, 0.48, 0.42, 0.14, 0.32, '#E0A43A')]; },
       spots: { s1: { stand: [0.85, 1.6], pos: [0.85, 0.6, 0.48], dir: [0, 1], tag: 'seat', base: 'base' }, s2: { stand: [1.6, 1.6], pos: [1.6, 0.6, 0.48], dir: [0, 1], tag: 'seat', base: 'base' } } },
     bed: { W: 2.5, D: 1.6, h: 1.0, name: 'Bed',
       parts: () => { const lux = has('bed'), z = lux ? 0.56 : 0.5; return [B(0, 0, 0, 0.14, 1.6, lux ? 1.3 : 1.0, lux ? '#6E4A5E' : C.dark), B(0.14, 0, 0, 2.36, 1.6, 0.32, lux ? '#5A3E4C' : C.wood), B(0.18, 0.04, 0.32, 2.28, 1.52, lux ? 0.24 : 0.18, '#F1ECE4', { name: 'mattress' }),
@@ -389,7 +392,7 @@ export function createHouseArt(ctx0, opts = {}) {
     tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true,
       parts: () => [F(0, 0, 1.6, 0.45, (T) => { T.box(0, 0, 0, 1.6, 0.45, 0.42, '#3A3340'); T.line([0.8, 0.45, 0.06], [0.8, 0.45, 0.36], 'rgba(255,255,255,.12)', 1); if (!has('bigtv')) { T.box(0.1, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); T.box(1.32, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); } })] },
     shower: { W: 1.18, D: 1.18, h: 2.1, fixed: true,
-      parts: () => [F(0, 0, 1.18, 1.18, (T) => { T.box(0, 0, 0, 1.18, 1.18, 0.1, '#E6ECEE'); const [dx, dy] = T.P(0.6, 0.58, 0.1); ell(dx, dy, 3, 1.5, '#9AA3A8'); T.line([0.57, 0, 2.15], [0.57, 0.2, 2.15], '#9AA3A8', 2.5); const [hx, hy] = T.P(0.57, 0.22, 2.1); ell(hx, hy, 5, 2.5, '#9AA3A8'); if (usingSlot(T.o.id + ':s')) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); }
+      parts: () => [F(0, 0, 1.18, 1.18, (T) => { T.box(0, 0, 0, 1.18, 1.18, 0.1, '#E6ECEE'); const [dx, dy] = T.P(0.6, 0.58, 0.1); ell(dx, dy, 3, 1.5, '#9AA3A8'); T.line([0.57, 0, 2.15], [0.57, 0.2, 2.15], '#9AA3A8', 2.5); const [hx, hy] = T.P(0.57, 0.22, 2.1); ell(hx, hy, 5, 2.5, '#9AA3A8'); if (usingSlot(T.o.id + ':s')) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.57, 0.22); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
           T.poly([[0, 0, 0.1], [0, 1.18, 0.1], [0, 1.18, 2.1], [0, 0, 2.1]], 'rgba(186,222,232,.22)', 'rgba(140,180,195,.7)', 1); }, { name: 'tray' }),
         F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.1], [1.18, 1.18, 0.1], [1.18, 1.18, 2.1], [0, 1.18, 2.1]], 'rgba(186,222,232,.26)', 'rgba(140,180,195,.7)', 1); T.line([0.2, 1.18, 1.9], [0.65, 1.18, 1.2], 'rgba(255,255,255,.55)', 2); }),
         F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0, 0.1], [1.18, 1.18, 0.1], [1.18, 1.18, 2.1], [1.18, 0, 2.1]], 'rgba(186,222,232,.22)', 'rgba(140,180,195,.7)', 1); })],
@@ -452,6 +455,7 @@ export function createHouseArt(ctx0, opts = {}) {
         if (si === 2) for (let k = 0; k < 5; k++) { const ph = (t * 0.25 + k / 5) % 1; circle(bx - 30 + k * 15 + Math.sin(t + k) * 8, ty - 20 + ph * 90, 2, '#D98F2B'); } })] },
     garden: { W: 2.0, D: 1.0, h: 0.7, name: 'Garden bed',
       parts: () => [F(0, 0, 2.0, 1.0, (T, o, t) => { T.box(0, 0, 0, 2.0, 1.0, 0.28, '#8A6A50'); T.poly([[0.08, 0.08, 0.281], [1.92, 0.08, 0.281], [1.92, 0.92, 0.281], [0.08, 0.92, 0.281]], (o.wet || 0) > 0.3 ? '#4A3426' : '#7A5E44');
+        if (usingSlot(o.id + ':t')) { const [gx, gy] = T.W(1.0, 0.5); PFX.emit(o.id + ':splash', 'splash', o.level, gx, gy, 0.55, 1); }
         if (seasonIdx() === 3) { T.poly([[0.08, 0.08, 0.282], [1.92, 0.08, 0.282], [1.92, 0.92, 0.282], [0.08, 0.92, 0.282]], 'rgba(244,246,248,.9)'); return; }
         const g = o.grow || 0; for (let k = 0; k < 6; k++) { const [sx, sy] = T.P(0.3 + (k % 3) * 0.7, 0.3 + Math.floor(k / 3) * 0.42, 0.29), hh = 4 + g * 18, sw = Math.sin(t * 1.4 + k) * 1.2; limb(sx, sy, sx + sw, sy - hh, '#3F7D4E', 1.6); ell(sx - 3 + sw, sy - hh * 0.55, 3.5 + g * 2, 1.8 + g, '#4F9460', null, -0.5); ell(sx + 3 + sw, sy - hh * 0.75, 3.5 + g * 2, 1.8 + g, '#5BA36C', null, 0.5); if (g >= 1) { circle(sx - 2 + sw, sy - hh * 0.45, 2.4, '#C2413A'); circle(sx + 3 + sw, sy - hh * 0.65, 2.2, k % 2 ? '#E0A43A' : '#C2413A'); } } })],
       spots: { t: { stand: [1.0, 1.5], dir: [0, -1], tag: 'garden' } } },
@@ -868,6 +872,7 @@ export function createHouseArt(ctx0, opts = {}) {
       if (p.kind === 'steam') circle(sx, sy, 2.5 + t * 6, `rgba(255,255,255,${(1 - t) * 0.42 * fadeIn})`);
       else if (p.kind === 'smoke') circle(sx, sy, 4 + t * 13, `rgba(118,112,118,${(1 - t) * 0.26 * fadeIn})`);
       else if (p.kind === 'dust') circle(sx, sy, 1.5 + t * 5, `rgba(150,140,130,${(1 - t) * 0.3 * fadeIn})`);
+      else if (p.kind === 'splash') circle(sx, sy, 1 + t * 1.6, `rgba(190,225,248,${(1 - t) * 0.55 * fadeIn})`);
       else circle(sx, sy, 0.9 + p.seed * 0.8, `rgba(255,${150 + Math.round(p.seed * 90)},70,${(1 - t) * (0.6 + 0.4 * Math.sin(animT * 20 + p.seed * 30))})`);
     });
     ctx.globalCompositeOperation = 'source-over';
@@ -1213,6 +1218,10 @@ export function createHouseArt(ctx0, opts = {}) {
     return ws;
   }
 
+  let talking = false, mood = 0.5;
+  function setTalking(v) { talking = Boolean(v); }
+  function setMood(v) { mood = Math.max(0, Math.min(1, Number(v) || 0)); }
+
   function drawPerson(c, t) {
     const L = c.look, pose = c.pose, f = facing(c.face);
     const P3 = (dx, dy, dz) => iso(c.x + dx, c.y + dy, c.z + dz);
@@ -1249,6 +1258,38 @@ export function createHouseArt(ctx0, opts = {}) {
     const hairBack = () => { if (L.longHair) ell(hd[0] + sway * 0.7, hd[1] - 2, 6, 7.5, L.hair); };
     if (f.front) hairBack();
     limb(hip[0] + shift, hip[1], sh[0] + shift * 1.4, sh[1], L.top, 11);
+    const pat = L.topStyle && L.topStyle !== 'tee' ? L.topStyle : null;
+    if (pat && f.front) {
+      const tx = hip[0] + shift, ty = hip[1], tx2 = sh[0] + shift * 1.4, ty2 = sh[1];
+      const mx = (tx + tx2) / 2, my = (ty + ty2) / 2;
+      const ang = Math.atan2(ty2 - ty, tx2 - tx);
+      const nx = Math.cos(ang), ny = Math.sin(ang);
+      ctx.save();
+      ctx.translate(mx, my); ctx.rotate(ang);
+      ctx.strokeStyle = 'rgba(255,255,255,.5)';
+      if (pat === 'sweater' || pat === 'tank') {
+        ctx.lineWidth = 1.6;
+        for (let i = -14; i <= 14; i += 5.5) { ctx.beginPath(); ctx.moveTo(-7, i); ctx.lineTo(7, i); ctx.stroke(); }
+      } else if (pat === 'flannel') {
+        ctx.lineWidth = 1.6;
+        for (let i = -14; i <= 14; i += 5) { ctx.beginPath(); ctx.moveTo(-7, i); ctx.lineTo(7, i); ctx.moveTo(i, -7); ctx.lineTo(i, 7); ctx.stroke(); }
+        ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 0.9;
+        for (let i = -11.5; i <= 14; i += 5) { ctx.beginPath(); ctx.moveTo(-7, i); ctx.lineTo(7, i); ctx.moveTo(i, -7); ctx.lineTo(i, 7); ctx.stroke(); }
+      } else if (pat === 'dress') {
+        ctx.fillStyle = 'rgba(255,255,255,.55)';
+        for (let r = -14; r <= 14; r += 4.5) for (let q = -6 + (r % 9 === 0 ? 0 : 2.2); q <= 6; q += 4.5) { ctx.beginPath(); ctx.arc(q, r, 0.8, 0, 7); ctx.fill(); }
+      } else if (pat === 'jersey') {
+        ctx.fillStyle = 'rgba(255,255,255,.75)';
+        [-4, 4].forEach(o => ctx.fillRect(-7, o - 0.8, 14, 1.6));
+      } else if (pat === 'hoodie' || pat === 'puffer') {
+        ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1.2;
+        for (let i = -12; i <= 12; i += 4) { ctx.beginPath(); ctx.moveTo(-6.5, i); ctx.lineTo(6.5, i); ctx.stroke(); }
+      } else if (pat === 'denim') {
+        ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 0.7;
+        for (let i = -14; i <= 14; i += 2.6) { ctx.beginPath(); ctx.moveTo(-7, i); ctx.lineTo(7, i); ctx.stroke(); }
+      }
+      ctx.restore();
+    }
     [-1, 1].forEach(side => {
       const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
       const [ex, ey] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
@@ -1260,6 +1301,18 @@ export function createHouseArt(ctx0, opts = {}) {
       ell(hd[0] + shift * 1.6 + sway * 0.3, hd[1] - 9, 6, 3.6, L.hair);
       ctx.fillStyle = '#241B25';
       [-1, 1].forEach(side => { const eh = Math.max(0.2, 1.4 * (1 - bl)); ctx.fillRect(hd[0] + shift * 1.6 + f.flip * 1.2 + side * 2.1 + gaze - 0.6, hd[1] - 5.5 + (1.4 - eh) / 2, 1.2, eh); });
+      const cx = hd[0] + shift * 1.6 + f.flip * 0.8 + gaze * 0.6, cy = hd[1] - 1.8;
+      if (talking) {
+        const open = (0.5 + 0.5 * Math.sin(t * 13 + c.seed * 7)) * 1.6 + 0.4;
+        ctx.fillStyle = '#8C4A42';
+        ell(cx, cy, 1.5, open, '#8C4A42');
+      } else if (mood > 0.6) {
+        ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.arc(cx, cy - 0.8, 1.4, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
+      } else if (mood < 0.3) {
+        ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.arc(cx, cy + 1.6, 1.4, 1.2 * Math.PI, 1.8 * Math.PI); ctx.stroke();
+      }
     } else { ell(hd[0] + shift * 1.6 + sway * 0.5, hd[1] - 6.5, 6, 5.6, L.hair); hairBack(); }
   }
 
@@ -1311,5 +1364,5 @@ export function createHouseArt(ctx0, opts = {}) {
     return toggleObjectLight(best.id);
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, TYPES, WTYPES };
 }

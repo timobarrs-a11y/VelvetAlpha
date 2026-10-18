@@ -14,12 +14,15 @@ export function createDialogue(cb: DialogueCallbacks): {
   showAI: (text: string, streaming?: boolean) => void;
   showInput: () => void;
   busy: (b: boolean) => void;
+  setPortraitLook: (l: { skin: string; hair: string; longHair: boolean } | null) => void;
+  setPortraitTalking: (v: boolean) => void;
 } {
   const el = document.createElement('div');
   el.className = 'vh-dialogue';
   el.hidden = true;
   el.innerHTML = `
     <div class="vh-dialogue-box">
+      <canvas class="vh-dialogue-portrait" width="64" height="64" aria-hidden="true"></canvas>
       <div class="vh-dialogue-name"></div>
       <div class="vh-dialogue-text"></div>
       <div class="vh-dialogue-input" style="display:none">
@@ -31,6 +34,35 @@ export function createDialogue(cb: DialogueCallbacks): {
 
   let typing = false;
   let typeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Animated portrait: blinks on a timer, mouth moves while the reply streams
+  const portrait = el.querySelector('.vh-dialogue-portrait') as HTMLCanvasElement;
+  const pctx = portrait.getContext('2d')!;
+  let look: { skin: string; hair: string; longHair: boolean } | null = null;
+  let talking = false, blinkT = Math.random() * 3;
+  function setPortraitLook(l: { skin: string; hair: string; longHair: boolean } | null): void { look = l; }
+  function setPortraitTalking(v: boolean): void { talking = Boolean(v); }
+  let last = performance.now();
+  function frame(ts: number): void {
+    const dt = Math.min(0.1, (ts - last) / 1000); last = ts;
+    if (!el.hidden) {
+      blinkT = (blinkT + dt) % 3.5;
+      const blink = blinkT > 3.3;
+      pctx.clearRect(0, 0, 64, 64);
+      if (look) {
+        if (look.longHair) { pctx.fillStyle = look.hair; pctx.beginPath(); pctx.ellipse(32, 32, 22, 23, 0, 0, Math.PI * 2); pctx.fill(); }
+        pctx.fillStyle = look.skin; pctx.beginPath(); pctx.arc(32, 35, 17, 0, Math.PI * 2); pctx.fill();
+        pctx.fillStyle = look.hair; pctx.beginPath(); pctx.ellipse(32, 21, 18, 9, 0, 0, Math.PI * 2); pctx.fill();
+        pctx.fillStyle = '#241B25';
+        [-1, 1].forEach(s => pctx.fillRect(32 + s * 6 - 1.5, blink ? 30 : 28, 3, blink ? 1.5 : 5));
+        const mh = talking ? 1.5 + Math.abs(Math.sin(ts / 90)) * 3.5 : 1.5;
+        pctx.fillStyle = '#8C4A42';
+        pctx.beginPath(); pctx.ellipse(32, 47, 4.5, mh, 0, 0, Math.PI * 2); pctx.fill();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 
   function open(): void {
     el.hidden = false;
@@ -118,7 +150,7 @@ export function createDialogue(cb: DialogueCallbacks): {
     if (e.target === el) close();
   });
 
-  return { el, open, close, showAI, showInput, busy };
+  return { el, open, close, showAI, showInput, busy, setPortraitLook, setPortraitTalking };
 }
 
 /**

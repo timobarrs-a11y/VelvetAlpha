@@ -141,6 +141,18 @@
 /* You */
 .vh-you h4 { font: 700 16px/1.2 Inter, system-ui, sans-serif; margin: 0 0 8px; color: #F2EEE8; }
 .vh-you p { margin: 4px 0; font-size: 13px; color: #A9A1AE; }
+.vh-outfit-preview { display: block; margin: 8px auto; width: 140px; height: 120px; }
+.vh-wardrobe { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.vh-wardrobe-item {
+  appearance: none; border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+  padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  color: #E9E4EC; background: rgba(255,255,255,.04); cursor: pointer;
+  font: 600 11px/1.2 Inter, system-ui, sans-serif; text-align: center;
+  transition: border-color .15s ease, background .15s ease;
+}
+.vh-wardrobe-item:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
+.vh-wardrobe-item.vh-worn { border-color: #E0A43A; background: rgba(224,164,58,.08); }
+.vh-wardrobe-hint { font-size: 11px; color: #6B6570; margin-top: 8px; }
 
 /* Home */
 .vh-home-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); }

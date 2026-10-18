@@ -3,6 +3,8 @@
  * Each item has an id, name, price, icon type, tab, and optional style tags.
  */
 
+import { CLOTHES, clothId } from './clothing';
+
 export interface CatalogEntry {
   id: string;
   name: string;
@@ -73,6 +75,11 @@ const plantItem = (id: string, type: string, name: string, price: number, tags: 
 const petItem = (id: string, name: string, price: number, kind: 'cat' | 'dog'): CatalogEntry => ({
   id, name, price, icon: 'pet', tab: 'Pets', pet: kind, tags: ['cozy'],
 });
+
+const clothItem = (key: string): CatalogEntry => {
+  const c = CLOTHES.find(x => x.key === key)!;
+  return { id: clothId(key), name: c.name, price: c.price, icon: 'cloth', tab: 'Clothes', cloth: { slot: c.slot, style: c.style }, cols: c.colors, tags: c.tags };
+};
 
 export const CATALOG: CatalogEntry[] = [
   // Paint
@@ -224,6 +231,9 @@ export const CATALOG: CatalogEntry[] = [
   petItem('pet-cat2', 'Black cat', 80, 'cat'),
   petItem('pet-dog', 'Golden retriever', 120, 'dog'),
   petItem('pet-dog2', 'Corgi', 100, 'dog'),
+
+  // Clothes (driven by the clothing catalog so ids and styles stay in sync)
+  ...CLOTHES.map(c => clothItem(c.key)),
 ];
 
 // Tags for items that have them, used by companion taste system

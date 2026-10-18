@@ -17,7 +17,7 @@ export interface PersonFrame {
   sit: boolean;
   hidden: boolean;
   seed: number;
-  look: { skin: string; hair: string; top: string; bottom: string; longHair: boolean };
+  look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean };
 }
 
 export interface HouseFrame {
@@ -44,6 +44,10 @@ export interface HouseArt {
   applyFloor(level: number, floor: string): void;
   toggleObjectLight(id: string): boolean;
   toggleLightAt(level: number, sx: number, sy: number): boolean | null;
+  /** Sets whether the partner's mouth animates (talking). */
+  setTalking(v: boolean): void;
+  /** Sets the partner's mood, 0-1, for facial expression. */
+  setMood(v: number): void;
   TYPES: Record<string, unknown>;
   WTYPES: Record<string, unknown>;
 }
