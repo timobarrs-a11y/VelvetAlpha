@@ -1150,6 +1150,11 @@ export function createHouseArt(ctx0, opts = {}) {
       for (let i = 0; i < 6; i++) { const a2 = t * 2 + i; circle(bx + Math.cos(a2) * 4, by + Math.sin(a2 * 1.3) * 4, 1.2, `hsl(${(i * 60 + t * 100) % 360},90%,75%)`); }
       ctx.globalAlpha = 1;
     }
+    if (tier() !== 'low' && a > 0.01) {
+      ctx.globalCompositeOperation = 'lighter';
+      lights.forEach(l => { if (!l.vis) return; const [sx, sy] = iso(...l.src), col = l.col || '255,190,120', s = l.s * Math.min(1, a / 0.35), g = ctx.createRadialGradient(sx, sy, 1, sx, sy, l.r * 1.5); g.addColorStop(0, `rgba(${col},${0.12 * s})`); g.addColorStop(0.4, `rgba(${col},${0.05 * s})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); });
+      ctx.globalCompositeOperation = 'source-over';
+    }
     ctx.restore();
   }
 
