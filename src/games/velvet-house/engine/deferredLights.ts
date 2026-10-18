@@ -19,7 +19,6 @@ export interface DeferredFrame {
   view: [number, number];
   origin: [number, number];
   iso: [number, number, number];
-  room: [number, number, number];
   darkA: number;
   night: Rgb;
   glow: number;
@@ -118,8 +117,8 @@ export function packWindows(windows: DeferredWindow[]) {
 }
 
 const QUALITY = {
-  high: { shadowed: 6, steps: 8, ao: 8, shaft: 10 },
-  medium: { shadowed: 3, steps: 5, ao: 4, shaft: 6 },
+  high: { shadowed: 6, steps: 8, ao: 8 },
+  medium: { shadowed: 3, steps: 5, ao: 4 },
 } as const;
 
 const VERT = `#version 300 es
@@ -132,8 +131,8 @@ precision highp float;
 #define MAXW ${MAX_WINDOWS}
 uniform sampler2D uData;
 uniform vec2 uView, uPx, uOrigin;
-uniform vec3 uIso, uRoom;
-uniform int uMode, uCount, uShadowed, uSteps, uAoSteps, uShaftSteps, uWinCount, uOut;
+uniform vec3 uIso;
+uniform int uMode, uCount, uShadowed, uSteps, uAoSteps, uWinCount, uOut;
 uniform float uDarkA, uRain, uTime, uDay, uGlow, uZMax;
 uniform vec3 uNight, uGrade, uSunDir, uSunCol, uSky;
 uniform vec4 uLP[MAXL];
@@ -289,21 +288,20 @@ void main() {
     }
   }
   if (surf && uWinCount > 0 && dot(uSunCol, vec3(1.0)) > 0.02) {
-    float tExit = min(min(uRoom.x - P.x, uRoom.y - P.y), (uRoom.z - P.z) / 0.941);
-    tExit = clamp(tExit, 0.0, 8.0);
-    float dens = 0.0, th;
-    for (int k = 0; k < 10; k++) {
-      if (k >= uShaftSteps) break;
-      dens += winMask(P + VIEW * (tExit * (float(k) + jit) / float(uShaftSteps)), uSunDir, th);
+    float tWin;
+    float wm = winMask(P, uSunDir, tWin);
+    if (wm > 0.0) {
+      // the beam runs from the window along the light direction; it fades with distance traveled
+      float deep = clamp(1.0 - tWin * 0.16, 0.3, 1.0);
+      float sh = shadow(Pn, uSunDir, max(0.0, tWin - 0.05), jit);
+      add += uSunCol * wm * deep * sh * 0.12;
+      vec2 drift = vec2(sin(uTime * 0.4) * 3.0, uTime * 3.5);
+      vec2 cell = floor((s + drift) / 6.0);
+      float hm = hash(cell);
+      vec2 f = fract((s + drift) / 6.0) - 0.5 - (vec2(hash(cell + 1.3), hash(cell + 2.7)) - 0.5) * 0.6;
+      float mote = step(0.9, hm) * smoothstep(0.22, 0.0, length(f)) * (0.55 + 0.45 * sin(uTime * 2.0 + hm * 40.0));
+      add += uSunCol * mote * wm * deep * sh * 1.2;
     }
-    dens /= float(max(uShaftSteps, 1));
-    add += uSunCol * dens * min(tExit, 6.0) * 0.06;
-    vec2 drift = vec2(sin(uTime * 0.4) * 3.0, uTime * 3.5);
-    vec2 cell = floor((s + drift) / 6.0);
-    float hm = hash(cell);
-    vec2 f = fract((s + drift) / 6.0) - 0.5 - (vec2(hash(cell + 1.3), hash(cell + 2.7)) - 0.5) * 0.6;
-    float mote = step(0.9, hm) * smoothstep(0.22, 0.0, length(f)) * (0.55 + 0.45 * sin(uTime * 2.0 + hm * 40.0));
-    add += uSunCol * mote * dens * 1.6;
   }
   for (int i = 0; i < MAXL; i++) {
     if (i >= uCount) break;
@@ -360,7 +358,7 @@ export function createDeferredLights(): DeferredLights | null {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-  const names = ['uData', 'uView', 'uPx', 'uOrigin', 'uIso', 'uRoom', 'uMode', 'uCount', 'uShadowed', 'uSteps', 'uAoSteps', 'uShaftSteps',
+  const names = ['uData', 'uView', 'uPx', 'uOrigin', 'uIso', 'uMode', 'uCount', 'uShadowed', 'uSteps', 'uAoSteps',
     'uWinCount', 'uOut', 'uDarkA', 'uRain', 'uTime', 'uDay', 'uGlow', 'uZMax', 'uNight', 'uGrade', 'uSunDir', 'uSunCol', 'uSky',
     'uLP', 'uLC', 'uLS', 'uWin', 'uWinZ'] as const;
   const U = Object.fromEntries(names.map(n => [n, gl!.getUniformLocation(prog, n)])) as Record<(typeof names)[number], WebGLUniformLocation | null>;
@@ -391,13 +389,11 @@ export function createDeferredLights(): DeferredLights | null {
       gl.uniform2f(U.uPx, pw, ph);
       gl.uniform2f(U.uOrigin, frame.origin[0], frame.origin[1]);
       gl.uniform3fv(U.uIso, frame.iso);
-      gl.uniform3fv(U.uRoom, frame.room);
       gl.uniform1i(U.uMode, mode === 'mul' ? 0 : 1);
       gl.uniform1i(U.uCount, L.count);
       gl.uniform1i(U.uShadowed, q.shadowed);
       gl.uniform1i(U.uSteps, q.steps);
       gl.uniform1i(U.uAoSteps, q.ao);
-      gl.uniform1i(U.uShaftSteps, q.shaft);
       gl.uniform1i(U.uWinCount, Wn.count);
       gl.uniform1i(U.uOut, frame.outdoor ? 1 : 0);
       gl.uniform1f(U.uDarkA, frame.darkA);

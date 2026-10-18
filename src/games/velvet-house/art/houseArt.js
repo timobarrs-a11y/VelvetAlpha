@@ -1097,7 +1097,7 @@ export function createHouseArt(ctx0, opts = {}) {
       windows.push(Math.abs(a0) < 1e-3 && Math.abs(a1) < 1e-3 ? { axis: 0, u0: b0, u1: b1, z0: f.z[0], z1: f.z[1] } : { axis: 1, u0: a0, u1: a1, z0: f.z[0], z1: f.z[1] });
     });
     const frame = {
-      view: [W, H], origin: [OX, OY], iso: [TW, TH, ZH], room: [viewW(), viewD(), WH],
+      view: [W, H], origin: [OX, OY], iso: [TW, TH, ZH],
       darkA: a, night: level === 0 ? [0.14, 0.19, 0.34] : level === 3 ? [0.17, 0.2, 0.4] : [0.2, 0.18, 0.42], outdoor: level === 3, glow: Math.min(1, a / 0.35),
       sunDir: [sa, sb, sun.dir[2]], sunCol: sun.col, sky: rgb(skyColor()).map(v => v / 255), daylight: 1 - dk, rain,
       grade: gradeTint(h, si), t: animT, quality: tier() === 'high' ? 'high' : 'medium', windows,
