@@ -262,6 +262,27 @@ export async function requestAIVelvetRopeReply(
 }
 
 // ----------------------------------------------------------------------------
+// Human matchmaking queue
+// ----------------------------------------------------------------------------
+
+export async function enterVelvetRopeQueue(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('vr_enter_queue');
+  if (error) throw new Error(`Failed to enter Velvet Rope queue: ${error.message}`);
+  return !!data;
+}
+
+export async function leaveVelvetRopeQueue(): Promise<void> {
+  const { error } = await supabase.rpc('vr_leave_queue');
+  if (error) throw new Error(`Failed to leave Velvet Rope queue: ${error.message}`);
+}
+
+export async function tryVelvetRopeMatch(): Promise<string | null> {
+  const { data, error } = await supabase.rpc('vr_try_match');
+  if (error) throw new Error(`Velvet Rope match attempt failed: ${error.message}`);
+  return (data as string) ?? null;
+}
+
+// ----------------------------------------------------------------------------
 // Typing indicator (reuses the im_typing table — Velvet Rope conv id is used as
 // the conversation_id, and the existing RLS policy checks im_conversations, so
 // we skip typing indicators for Velvet Rope for now until a dedicated table is
