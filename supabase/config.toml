@@ -164,3 +164,6 @@ verify_jwt = false
 
 [functions.coach-tools]
 verify_jwt = true
+
+[functions.velvet-rope-ai]
+verify_jwt = true

@@ -58,6 +58,8 @@ import {
   acceptVRRequest,
   declineVRRequest,
   closeVRConversation,
+  requestAIVelvetRopeOpener,
+  requestAIVelvetRopeReply,
   type VRRequest,
   type VRConversationSummary,
   type VRMessage,
@@ -358,6 +360,30 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
       setError(e instanceof Error ? e.message : 'Failed to close Velvet Rope conversation');
     }
   }, [refreshAll]);
+
+  // Periodically check if an AI Velvet Rope request can be created. The
+  // server-side vr_can_send_ai_request function enforces the toggle, one-at-
+  // a-time, and 5-minute gate. We poll every 60 seconds while the overlay is
+  // open and the toggle is on, and the edge function re-checks eligibility
+  // before creating the request.
+  useEffect(() => {
+    if (!user || !vrEnabled || vrRequests.length > 0 || vrConversations.some(c => c.status === 'active')) return;
+    let cancelled = false;
+    const tryRequest = async () => {
+      if (cancelled) return;
+      try {
+        const result = await requestAIVelvetRopeOpener();
+        if (result && !cancelled) {
+          await refreshAll();
+        }
+      } catch {
+        // Silently ignore — will retry next interval.
+      }
+    };
+    // Wait 60s before first attempt so we don't fire immediately on toggle.
+    const interval = setInterval(tryRequest, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user, vrEnabled, vrRequests.length, vrConversations, refreshAll]);
 
   const filteredFriends = friends.filter(f =>
     f.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1587,8 +1613,9 @@ function VRChatView({ target, onClose }: { target: VRChatTarget; onClose: () => 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [aiThinking, setAiThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null(null);
 
   useEffect(() => {
     (async () => {
@@ -1650,6 +1677,26 @@ function VRChatView({ target, onClose }: { target: VRChatTarget; onClose: () => 
       const msg = await sendVRMessage(target.conversationId, text);
       if (msg) {
         setMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]));
+      }
+      // If this is an AI match, request the AI's reply.
+      if (target.matchType === 'ai' && target.status === 'active') {
+        setAiThinking(true);
+        try {
+          const aiMsg = await requestAIVelvetRopeReply(
+            target.conversationId,
+            [...messages, msg].filter(Boolean).map(m => ({
+              senderId: m.sender_id,
+              content: m.content,
+            })),
+          );
+          if (aiMsg) {
+            setMessages(prev => (prev.some(m => m.id === aiMsg.id) ? prev : [...prev, aiMsg]));
+          }
+        } catch (e) {
+          setSendError(e instanceof Error ? e.message : 'AI reply failed');
+        } finally {
+          setAiThinking(false);
+        }
       }
     } catch (e) {
       setSendError(e instanceof Error ? e.message : 'Failed to send');
@@ -1725,6 +1772,13 @@ function VRChatView({ target, onClose }: { target: VRChatTarget; onClose: () => 
               </div>
             );
           })
+        )}
+        {aiThinking && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl rounded-bl-md px-3 py-2 text-sm bg-amber-500/10 border border-amber-500/25">
+              <span className="text-ink-muted text-xs italic">The stranger is typing...</span>
+            </div>
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>

@@ -216,6 +216,52 @@ export async function closeVRConversation(conversationId: string): Promise<void>
 }
 
 // ----------------------------------------------------------------------------
+// AI opponent (edge function)
+// ----------------------------------------------------------------------------
+
+const VR_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/velvet-rope-ai`;
+
+function authHeaders(token: string) {
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+  } as Record<string, string>;
+}
+
+export async function requestAIVelvetRopeOpener(): Promise<{ requestId: string | null; opener: string } | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Not signed in');
+  const res = await fetch(VR_AI_URL, {
+    method: 'POST',
+    headers: authHeaders(session.access_token),
+    body: JSON.stringify({ action: 'request' }),
+  });
+  if (res.status === 403) return null; // not eligible
+  if (!res.ok) throw new Error(`AI request failed (${res.status})`);
+  const data = await res.json();
+  if (data?.error) throw new Error(data.error);
+  return { requestId: data.requestId ?? null, opener: data.opener ?? '' };
+}
+
+export async function requestAIVelvetRopeReply(
+  conversationId: string,
+  history: { senderId: string | null; content: string }[],
+): Promise<VRMessage | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Not signed in');
+  const res = await fetch(VR_AI_URL, {
+    method: 'POST',
+    headers: authHeaders(session.access_token),
+    body: JSON.stringify({ action: 'reply', conversationId, history }),
+  });
+  if (!res.ok) throw new Error(`AI reply failed (${res.status})`);
+  const data = await res.json();
+  if (data?.error) throw new Error(data.error);
+  return (data.message as VRMessage) ?? null;
+}
+
+// ----------------------------------------------------------------------------
 // Typing indicator (reuses the im_typing table — Velvet Rope conv id is used as
 // the conversation_id, and the existing RLS policy checks im_conversations, so
 // we skip typing indicators for Velvet Rope for now until a dedicated table is
