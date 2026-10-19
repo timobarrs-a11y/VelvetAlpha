@@ -85,7 +85,7 @@ const navigationEntries: NavigationEntry[] = [
     id: 'games',
     label: 'Games',
     icon: Gamepad2,
-    match: ['/checkers', '/pacman', '/momentum', '/slime-soccer', '/stellar-pursuit', '/social-combat', '/velvet-house'],
+    match: ['/checkers', '/pacman', '/momentum', '/slime-soccer', '/stellar-pursuit', '/social-combat', '/velvet-house', '/velvet-house-legacy'],
     leaves: [
       { id: 'games-checkers', label: 'Checkers', path: '/checkers', match: ['/checkers'] },
       { id: 'games-pacman', label: 'Pac-Man', path: '/pacman', match: ['/pacman'] },
@@ -94,6 +94,7 @@ const navigationEntries: NavigationEntry[] = [
       { id: 'games-stellar', label: 'Stellar Pursuit', path: '/stellar-pursuit', match: ['/stellar-pursuit'] },
       { id: 'games-social', label: 'Social Combat RPG', path: '/social-combat', match: ['/social-combat'] },
       { id: 'games-velvet-house', label: 'Velvet House', path: '/velvet-house', match: ['/velvet-house', '/velvet-house-next'] },
+      { id: 'games-velvet-house-legacy', label: 'Velvet House (Legacy)', path: '/velvet-house-legacy', match: ['/velvet-house-legacy'] },
     ],
   },
   { id: 'profile', label: 'Profile', path: '/profile', icon: CircleUserRound },
