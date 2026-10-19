@@ -356,8 +356,8 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   const { available, toggleAvailable } = useAvailability(user);
 
   return (
-    <div className="min-h-screen bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
-      <div className="relative flex min-h-[calc(100dvh-0.75rem)] flex-col overflow-hidden rounded-[18px] border border-white/12 bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)] sm:min-h-[calc(100dvh-1.25rem)] lg:min-h-[calc(100dvh-2rem)]">
+    <div className="h-screen overflow-hidden bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] border border-white/12 bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,61,188,0.17),transparent_44%),radial-gradient(ellipse_at_bottom_left,rgba(244,63,107,0.08),transparent_42%)]" />
         <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">

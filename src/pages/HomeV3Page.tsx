@@ -6,7 +6,7 @@ import {
   Heart, LogOut, Volume2, VolumeX,
   Plus, Sparkles, ArrowRight,
   Target, CheckCircle2, UsersRound, Layers,
-  Sunrise, Zap, User, Menu, X, MessageSquare, BookOpen,
+  Sunrise, Zap, User, MessageSquare, BookOpen,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { useAudioScene } from '../hooks/useAudioScene';
@@ -40,7 +40,6 @@ export function HomeV3Page() {
   const { muted, toggleMute } = useAudioScene();
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [feedTab, setFeedTab] = useState<FeedTab>('feed');
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const {
     companions,
@@ -213,7 +212,6 @@ export function HomeV3Page() {
 
   const handleNavigate = (path: string) => {
     navigate(path);
-    setDrawerOpen(false);
   };
 
   const sidebarContent = (
@@ -259,7 +257,7 @@ export function HomeV3Page() {
           <GroupLabel>Companion</GroupLabel>
           {voices.map(c => renderPersonRow(c))}
           <button
-            onClick={() => { lobby.handleNewCompanion(); setDrawerOpen(false); }}
+            onClick={() => { lobby.handleNewCompanion(); }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors mt-1"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -292,7 +290,7 @@ export function HomeV3Page() {
             {GAMES.map(game => (
               <button
                 key={game.id}
-                onClick={() => { lobby.handleGameClick(game); setDrawerOpen(false); }}
+                onClick={() => { lobby.handleGameClick(game); }}
                 className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
               >
                 <span className={`flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0 bg-gradient-to-br ${game.iconBg}`}>
@@ -308,18 +306,10 @@ export function HomeV3Page() {
   );
 
   return (
-    <div className="ds-page flex flex-col h-screen overflow-hidden text-white">
+    <div className="ds-page flex min-h-full min-w-0 flex-col overflow-hidden text-white">
       {/* Header */}
       <header className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2.5 sm:py-3 flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="sm:hidden flex items-center justify-center w-9 h-9 rounded-lg bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
-            aria-label="Open menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
           <Heart className="w-5 h-5 text-pink-400 flex-shrink-0" fill="currentColor" style={{ filter: 'drop-shadow(0 0 6px rgba(244,114,182,0.70))' }} />
           <h1 className="ds-title-gradient text-lg sm:text-xl font-bold font-display truncate hidden sm:block">Velvet</h1>
           {subscriptionInfo && (
@@ -344,56 +334,14 @@ export function HomeV3Page() {
         </div>
       </header>
 
-      {/* Mobile slide-in drawer */}
-      <AnimatePresence>
-        {drawerOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm sm:hidden"
-              onClick={() => setDrawerOpen(false)}
-            />
-            <motion.aside
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
-              className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col overflow-hidden sm:hidden"
-              style={sidebarStyle}
-            >
-              <div className="flex items-center justify-between px-3 pt-3 pb-2 flex-shrink-0">
-                <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 select-none">Navigate</p>
-                <button
-                  onClick={() => setDrawerOpen(false)}
-                  className="flex items-center justify-center w-7 h-7 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-                  aria-label="Close menu"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              {sidebarContent}
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
       {lobby.setupResumeRoute && (
         <div className="px-4 pt-3 flex-shrink-0">
           <FinishSetupCard onResume={lobby.resumeSetup} />
         </div>
       )}
 
-      <div className="flex-1 flex flex-row overflow-hidden">
-        {/* Desktop sidebar */}
-        <aside className="w-64 flex-shrink-0 flex flex-col overflow-hidden hidden sm:flex" style={sidebarStyle}>
-          {sidebarContent}
-        </aside>
-
-        {/* Main content — the feed or videos */}
-        <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* Quiet check-in note at top of feed */}
           <AnimatePresence>
             {topCheckIn && (
@@ -427,50 +375,6 @@ export function HomeV3Page() {
                 { value: 'videos', label: 'Your Lens', icon: <PlayCircle className="w-3.5 h-3.5" /> },
               ]}
             />
-          </div>
-
-          {/* Mobile person strip + coaching shortcuts */}
-          <div className="sm:hidden flex items-center gap-2 px-3 py-2 overflow-x-auto scrollbar-hide flex-shrink-0">
-            {coaches.map(c => (
-              <button
-                key={c.id}
-                onClick={() => navigate(`/chat?companion=${c.id}`)}
-                className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 flex-shrink-0"
-                style={{ borderLeft: `2px solid ${getCoachColor(c.coach_color).base}` }}
-              >
-                <div className="w-7 h-7 rounded-full overflow-hidden">
-                  <Avatar config={companionAvatarConfig(c)} className="w-full h-full" />
-                </div>
-                <span className="text-xs font-semibold text-white/80">{c.custom_name}</span>
-              </button>
-            ))}
-            {voices.map(c => (
-              <button
-                key={c.id}
-                onClick={() => navigate(`/chat?companion=${c.id}`)}
-                className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 flex-shrink-0"
-              >
-                <div className="w-7 h-7 rounded-full overflow-hidden">
-                  <Avatar config={companionAvatarConfig(c)} className="w-full h-full" />
-                </div>
-                <span className="text-xs font-semibold text-white/80">{c.custom_name}</span>
-              </button>
-            ))}
-            {/* Coaching shortcut chips */}
-            <button
-              onClick={() => navigate('/coaching-progress')}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 flex-shrink-0"
-            >
-              <Target className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-xs font-semibold text-white/70">Progress</span>
-            </button>
-            <button
-              onClick={() => navigate('/coaching-commitments')}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 flex-shrink-0"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-sky-400" />
-              <span className="text-xs font-semibold text-white/70">Tasks</span>
-            </button>
           </div>
 
           <Suspense fallback={<LoadingState label={`Loading your ${feedTab === 'feed' ? 'feed' : 'lens'}...`} />}>
