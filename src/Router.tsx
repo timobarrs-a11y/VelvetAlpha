@@ -19,6 +19,7 @@ import { AudioScene } from './services/audioManager';
 import { InstallPWABanner } from './components/InstallPWABanner';
 import { SWUpdateToast } from './components/SWUpdateToast';
 import { FloatingChatMount } from './components/FloatingChatMount';
+import { MessagingOverlayMount } from './components/MessagingOverlayMount';
 
 const GAME_PATHS = [
   '/checkers', '/pacman', '/momentum', '/slime-soccer',
@@ -110,6 +111,7 @@ export function Router() {
             <AudioSceneSync />
             <GlobalEffects />
             <FloatingChatMount />
+            <MessagingOverlayMount />
             <Routes>
               {publicRoutes}
               {onboardingRoutes}
