@@ -20,6 +20,7 @@ import { InstallPWABanner } from './components/InstallPWABanner';
 import { SWUpdateToast } from './components/SWUpdateToast';
 import { FloatingChatMount } from './components/FloatingChatMount';
 import { MessagingOverlayMount } from './components/MessagingOverlayMount';
+import { SignedInWorkspace } from './components/SignedInWorkspace';
 
 const GAME_PATHS = [
   '/checkers', '/pacman', '/momentum', '/slime-soccer',
@@ -112,14 +113,16 @@ export function Router() {
             <GlobalEffects />
             <FloatingChatMount />
             <MessagingOverlayMount />
-            <Routes>
-              {publicRoutes}
-              {onboardingRoutes}
-              {appRoutes}
-              {adminRoutes}
-              {gamesRoutes}
-              <Route path="/" element={<RootRedirect />} />
-            </Routes>
+            <SignedInWorkspace>
+              <Routes>
+                {publicRoutes}
+                {onboardingRoutes}
+                {appRoutes}
+                {adminRoutes}
+                {gamesRoutes}
+                <Route path="/" element={<RootRedirect />} />
+              </Routes>
+            </SignedInWorkspace>
           </TutorialDirectorProvider>
       </ButtonHoverPreviewProvider>
     </BrowserRouter>
