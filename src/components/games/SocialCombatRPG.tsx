@@ -1334,7 +1334,22 @@ function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ul
               }}
             >
               <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1, filter: `drop-shadow(0 0 6px ${cfg.color}66)` }}>{cfg.icon}</span>
-              <span style={{ flex: 1 }}>{preview}</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display:'flex', alignItems:'center', gap:5, marginBottom:4, flexWrap:'wrap' }}>
+                  <span style={{
+                    display:'inline-flex', alignItems:'center', gap:3,
+                    fontSize:9, fontWeight:800, letterSpacing:0.8, textTransform:'uppercase',
+                    color: cfg.color,
+                    background: `${cfg.color}1a`,
+                    border: `1px solid ${cfg.color}44`,
+                    borderRadius: 8, padding: '1px 7px',
+                  }}>{cfg.icon} {cfg.label}</span>
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:2, fontSize:11, opacity:0.7 }} title={`Strong against: ${EFF_CHART[type].sup.map(e => EMOTIONS[e].name).join(', ')}`}>
+                    {EFF_CHART[type].sup.map(e => <span key={e}>{EMOTIONS[e].icon}</span>)}
+                  </span>
+                </span>
+                <span style={{ display:'block', opacity:0.92 }}>{preview}</span>
+              </span>
               {lg && (
                 <span
                   title={`You've learned: ${lg.label} on ${EMOTIONS[opponent.emotion]?.name || opponent.emotion}`}
