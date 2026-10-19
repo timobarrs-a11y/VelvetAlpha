@@ -12,8 +12,12 @@ import {
   recordRun,
   getMemory,
   updateMemory,
+  getLeaderboard,
+  getPersonalBest,
   type CombatMemory,
   type CombatOutcome,
+  type LeaderboardEntry,
+  type PersonalBest,
 } from "../../services/socialCombatService";
 import {
   getFieldNotes,
@@ -21,8 +25,10 @@ import {
   discoveredCount,
   type Eff,
 } from "../../game/social-combat/fieldNotes";
+import { sfx } from "../../game/social-combat/sfx";
 
 type EmotionKey = 'confident' | 'vulnerable' | 'grateful' | 'angry' | 'annoyed' | 'lazy' | 'guilty' | 'doubtful' | 'trusting' | 'defensive' | 'hostile' | 'overconfident';
+type OppAction = 'jab' | 'guilt_trip' | 'deflect' | 'stall' | 'escalate';
 type CharKey = 'scholar' | 'athlete' | 'artist';
 type UltKey = 'scholar' | 'athlete' | 'artist';
 type PerkId = 'iron_will' | 'silver_tongue' | 'sharp_tongue' | 'steel_nerves' | 'adrenaline' | 'fortune' | 'momentum' | 'second_wind' | 'versatile' | 'combo_master';
@@ -73,7 +79,29 @@ interface OpponentState {
   specialDesc?: string;
   startingEmotion?: EmotionKey;
   conflict?: string;
+  // Opponent turn system
+  pendingAction?: OppAction | null;
+  actionCooldown?: number; // rounds until next action
 }
+
+interface OppActionDef {
+  id: OppAction;
+  name: string;
+  icon: string;
+  desc: string;
+  damage: number;
+  emotionShift: EmotionKey | null;
+  chargeDrain: number;
+  color: string;
+}
+
+const OPP_ACTIONS: Record<OppAction, OppActionDef> = {
+  jab:        { id:'jab',        name:'Jab',         icon:'👊', desc:'Quick verbal hit — low damage.',           damage: 8,  emotionShift: 'annoyed',    chargeDrain: 0,  color:'#F87171' },
+  guilt_trip: { id:'guilt_trip', name:'Guilt Trip',  icon:'😔', desc:'Makes you feel guilty — shifts your stance.', damage: 6,  emotionShift: 'guilty',     chargeDrain: 10, color:'#A78BFA' },
+  deflect:    { id:'deflect',    name:'Deflect',     icon:'🛡️', desc:'Deflects and stalls — heals them a bit.',   damage: 0,  emotionShift: 'defensive',  chargeDrain: 8,  color:'#60A5FA' },
+  stall:      { id:'stall',      name:'Stall',       icon:'⏳', desc:'Buys time — restores their HP slightly.',   damage: 0,  emotionShift: null,         chargeDrain: 5,  color:'#94A3B8' },
+  escalate:   { id:'escalate',   name:'Escalate',    icon:'🔥', desc:'Escalates hard — high damage but risky.',   damage: 14, emotionShift: 'hostile',    chargeDrain: 0,  color:'#DC2626' },
+};
 
 interface Scenario {
   id: string;
@@ -97,7 +125,7 @@ interface DialogueEntry {
 }
 
 interface GameEvent {
-  kind: 'shake' | 'particles' | 'damage';
+  kind: 'shake' | 'particles' | 'damage' | 'oppTurn';
   intensity?: number;
   color?: string;
   count?: number;
@@ -107,6 +135,7 @@ interface GameEvent {
   eff?: EffType;
   isCrit?: boolean;
   isUlt?: boolean;
+  oppAction?: OppAction;
 }
 
 interface GameState {
@@ -121,6 +150,8 @@ interface GameState {
   combo: number;
   maxCombo: number;
   firedBeats: string[];
+  turn: 'player' | 'opponent';
+  retriesUsed: number;
 }
 
 interface ProcessResult {
@@ -242,20 +273,20 @@ const ULTIMATES: Record<UltKey, { name: string; icon: string; tagline: string; d
 const CHARS: Record<CharKey, CharDef> = {
   scholar: {
     id:'scholar', name:'The Scholar', icon:'🎓', archetype:'Smart & Methodical',
-    description:'Thinks through problems logically and understands others well, but less direct.',
+    description:'Thinks through problems logically and understands others well. Strong with logic and empathy, but aggression lands weak.',
     strongResponses:['logic','empathy'], weakResponses:['aggression'],
     baseResponses:['empathy','logic','manipulation','aggression'], ultimate: 'scholar',
   },
   athlete: {
     id:'athlete', name:'The Athlete', icon:'🏆', archetype:'Direct & Action-Oriented',
-    description:'Prefers direct confrontation and action over complex social maneuvering.',
-    strongResponses:['aggression'], weakResponses:[],
+    description:'Excels at direct confrontation and clever plays. Aggression is strong but empathy is weak.',
+    strongResponses:['aggression','cunning'], weakResponses:['empathy'],
     baseResponses:['empathy','logic','aggression','cunning'], ultimate: 'athlete',
   },
   artist: {
     id:'artist', name:'The Artist', icon:'🎨', archetype:'Creative & Emotionally Aware',
-    description:'Highly attuned to emotions and creative solutions, but may struggle with hard logic.',
-    strongResponses:['empathy'], weakResponses:[],
+    description:'Highly attuned to emotions and creative solutions. Empathy is strong but logic is weak.',
+    strongResponses:['empathy','manipulation'], weakResponses:['logic'],
     baseResponses:['empathy','logic','manipulation','aggression','cunning'], ultimate: 'artist',
   },
 };
@@ -264,9 +295,13 @@ const EFF_CHART: Record<RespType, { sup: EmotionKey[]; weak: EmotionKey[] }> = {
   logic:        { sup:['annoyed','overconfident','defensive'], weak:['confident','grateful','trusting'] },
   empathy:      { sup:['guilty','vulnerable','doubtful'],      weak:['angry','hostile','overconfident'] },
   manipulation: { sup:['trusting','confident','lazy'],         weak:['doubtful','defensive','hostile'] },
-  aggression:   { sup:['lazy','doubtful','trusting'],          weak:['vulnerable','grateful','defensive'] },
+  aggression:   { sup:['lazy','doubtful','trusting'],          weak:['angry','vulnerable','grateful'] },
   cunning:      { sup:['annoyed','guilty','vulnerable'],       weak:['hostile','grateful','overconfident'] },
 };
+
+// Empathy is NORMAL (not super) on lazy — the tutorial must match the chart.
+// (Previously the tutorial claimed empathy was super on lazy, which was wrong.)
+// The tutorial text has been corrected to match.
 
 const EMO_TRANS: Record<EmotionKey, Record<RespType, EmotionKey>> = {
   lazy:          { logic:'annoyed',   empathy:'guilty',     manipulation:'confident',     aggression:'defensive', cunning:'trusting'  },
@@ -304,6 +339,14 @@ const PLAYER_DLG: Record<string, Partial<Record<RespType, string>>> = {
   artist:{ logic:"Let's step back and look at the whole canvas. There's a much bigger picture we're not seeing.", empathy:"I can feel all the tension here. This isn't really about the task, is it? Let's connect on a human level.", manipulation:"Just imagine how amazing it'll feel when we've created something beautiful together.", aggression:"All this negative energy is poisoning our creative process. We need to purify this space.", cunning:"There's a really creative solution hiding here that nobody else would think of. What do you think?" },
 };
 
+const OPP_ACTION_DLG: Record<OppAction, string[]> = {
+  jab:        ["You think you're so clever, don't you?", "That's rich coming from you.", "Oh please, spare me the lecture.", "You're not as smart as you think you are."],
+  guilt_trip: ["After everything I've done for you?", "I can't believe you'd do this to me.", "You know I've been going through a lot.", "I thought you cared about me more than this."],
+  deflect:    ["That's not the point here.", "You're deflecting from the real issue.", "Let's not make this about me.", "That's a distraction and you know it."],
+  stall:      ["I... I need a minute.", "Can we just slow down?", "I'm not ready to talk about this yet.", "Give me a second to think."],
+  escalate:   ["You want to go there? FINE. Let's go there!", "I am DONE being nice about this!", "You have NO idea who you're dealing with!", "This is exactly the problem — you never know when to back off!"],
+};
+
 const CONFLICTS: { id: string; setup: string }[] = [
   { id:'group_project',       setup:"The deadline for your group project is tomorrow, and your partner {NAME} hasn't contributed anything meaningful. Your grade depends on this collaboration." },
   { id:'roommate_drama',      setup:"{NAME} has been leaving dirty dishes everywhere, playing loud music at night, and bringing strangers over. The lease is in both your names." },
@@ -312,32 +355,35 @@ const CONFLICTS: { id: string; setup: string }[] = [
   { id:'resource_competition',setup:"You and {NAME} both need the last available study room during finals week. You both have legitimate claims and time is running out." },
 ];
 
-const OPPONENTS: { id: string; name: string; archetype: string; icon: string; startingEmotion: EmotionKey }[] = [
-  { id:'slacker',       name:"Jake Morrison",    archetype:"The Slacker",        icon:"😎", startingEmotion:"lazy"       },
-  { id:'perfectionist', name:"Sarah Chen",        archetype:"The Perfectionist",  icon:"📊", startingEmotion:"confident"  },
-  { id:'hothead',       name:"Marcus Rodriguez",  archetype:"The Hothead",        icon:"😤", startingEmotion:"annoyed"    },
-  { id:'manipulator',   name:"Alex Thompson",     archetype:"The Manipulator",    icon:"🎭", startingEmotion:"confident"  },
-  { id:'anxious',       name:"Emma Davis",        archetype:"The Anxious One",    icon:"😰", startingEmotion:"vulnerable" },
+const OPPONENTS: { id: string; name: string; archetype: string; icon: string; startingEmotion: EmotionKey; preferredActions: OppAction[]; actionInterval: number }[] = [
+  { id:'slacker',       name:"Jake Morrison",    archetype:"The Slacker",        icon:"😎", startingEmotion:"lazy",       preferredActions:['stall','deflect','guilt_trip'], actionInterval: 2 },
+  { id:'perfectionist', name:"Sarah Chen",        archetype:"The Perfectionist",  icon:"📊", startingEmotion:"confident",  preferredActions:['guilt_trip','deflect','jab'],   actionInterval: 2 },
+  { id:'hothead',       name:"Marcus Rodriguez",  archetype:"The Hothead",        icon:"😤", startingEmotion:"annoyed",    preferredActions:['escalate','jab','escalate'],     actionInterval: 2 },
+  { id:'manipulator',   name:"Alex Thompson",     archetype:"The Manipulator",    icon:"🎭", startingEmotion:"confident",  preferredActions:['guilt_trip','deflect','jab'],    actionInterval: 2 },
+  { id:'anxious',       name:"Emma Davis",        archetype:"The Anxious One",    icon:"😰", startingEmotion:"vulnerable", preferredActions:['stall','guilt_trip','deflect'],  actionInterval: 3 },
 ];
 
-const BOSSES: { id: string; name: string; archetype: string; icon: string; startingEmotion: EmotionKey; bossHp: number; specials: string[]; specialDesc: string; conflict: string }[] = [
+const BOSSES: { id: string; name: string; archetype: string; icon: string; startingEmotion: EmotionKey; bossHp: number; specials: string[]; specialDesc: string; conflict: string; preferredActions: OppAction[]; actionInterval: number }[] = [
   {
     id:'director_hollis', name:"Director Hollis", archetype:"The Immovable Authority",
-    icon:"💼", startingEmotion:"overconfident", bossHp:140,
+    icon:"💼", startingEmotion:"overconfident", bossHp:160,
     specials:['emotionResist'], specialDesc:"30% chance to resist emotional shifts",
     conflict:"Director Hollis holds your project's future in their hands. They've publicly questioned your competence and now expect you to grovel for approval. This meeting decides everything — your position, your team, your next year.",
+    preferredActions:['deflect','jab','escalate','stall'], actionInterval: 2,
   },
   {
     id:'mira_kline', name:"Mira Kline", archetype:"The Master Manipulator",
-    icon:"🎭", startingEmotion:"confident", bossHp:130,
+    icon:"🎭", startingEmotion:"confident", bossHp:150,
     specials:['manipulationImmune'], specialDesc:"Manipulation always lands as weak",
     conflict:"Mira has been playing everyone in the office against each other for months. Today the games end. She's cornered you in the conference room and she's smiling — because she thinks she's already won.",
+    preferredActions:['guilt_trip','jab','deflect','escalate'], actionInterval: 2,
   },
   {
     id:'mr_ridgeway', name:"Mr. Ridgeway", archetype:"The Unreachable",
-    icon:"🗿", startingEmotion:"defensive", bossHp:150,
+    icon:"🗿", startingEmotion:"defensive", bossHp:180,
     specials:['thickSkin'], specialDesc:"Takes 25% less damage from all hits",
     conflict:"Mr. Ridgeway has watched the company decline for thirty years, and he's convinced any change is a threat. He controls the vote that will save your department or dismantle it. He has never been moved by an argument.",
+    preferredActions:['deflect','stall','escalate','jab'], actionInterval: 2,
   },
 ];
 
@@ -352,12 +398,12 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       title: "Welcome to the arena",
       body: "Every conversation here is a negotiation of emotional states. You won't see effect labels on your choices — you'll see what you'd actually SAY. Read my face. Then choose the line that fits.",
     },
-    setup: { emotion: 'lazy' },
-    instruct: "I'm feeling Lazy (😴). Someone checked out needs to feel SEEN, not pushed. Pick the line that meets me where I am.",
+    setup: { emotion: 'guilty' },
+    instruct: "I'm feeling Guilty (😔). Someone who feels guilty needs to feel SEEN, not pushed. Pick the line that meets me where I am.",
     forceResponse: 'empathy',
     after: {
       title: "You landed it",
-      body: "Empathy works on people who feel lazy, guilty, or vulnerable. Notice I shifted emotional state — that's how damage happens here. You'll learn the rules by watching me change.",
+      body: "Empathy works on people who feel guilty, vulnerable, or doubtful. Notice I shifted emotional state — that's how damage happens here. You'll learn the rules by watching me change.",
     },
   },
   {
@@ -366,7 +412,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       body: "You'll never get a tooltip telling you what works. You'll learn by remembering what moved me, and what didn't. Stay curious. Stay watching.",
     },
     setup: null,
-    instruct: "I'm Guilty now. Same line that worked before might still work. Or not. Trust what you saw. Commit.",
+    instruct: "I'm Vulnerable now. Same line that worked before might still work. Or not. Trust what you saw. Commit.",
     forceResponse: 'empathy',
     after: {
       title: "Combos reward reading",
@@ -395,8 +441,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     instruct: "You're fully charged. The Ultimate button up top is pulsing and glowing — unleash it.",
     forceResponse: 'ultimate',
     after: {
-      title: "You're ready",
-      body: "Emotional reading, combo chains, and ultimate timing — that's the core loop. Now go out there: try a Single Scenario to practice, or climb the Ascent for the real test.",
+      title: "One more thing",
+      body: "After every move you make, your opponent takes their own turn — a jab, a guilt trip, a stall. Watch for the telegraph above their head. That's the core loop: read, respond, weather their reply. Now go practice.",
       isFinal: true,
     },
   },
@@ -436,7 +482,7 @@ const genScenario = (): Scenario => {
   return {
     id,
     conflictId: c.id,
-    opponent: { id: o.id, name: o.name, archetype: o.archetype, icon: o.icon, startingEmotion: o.startingEmotion },
+    opponent: { id: o.id, name: o.name, archetype: o.archetype, icon: o.icon, startingEmotion: o.startingEmotion, specials: [], pendingAction: null, actionCooldown: 2 },
     setup: script?.intro || c.setup.replace('{NAME}', o.name),
     startingEmotion: o.startingEmotion as EmotionKey,
   };
@@ -444,16 +490,28 @@ const genScenario = (): Scenario => {
 
 const genAscentRun = (): { stages: StageDef[] } => {
   const shuffled = [...OPPONENTS].sort(() => Math.random() - 0.5);
-  const [o1, o2] = shuffled.slice(0, 2);
+  const [o1, o2, o3, o4] = shuffled.slice(0, 4);
   const boss = rnd(BOSSES);
-  const c1 = rnd(CONFLICTS), c2 = rnd(CONFLICTS);
-  const s1 = SCENARIO_SCRIPTS[`${c1.id}_${o1.id}`];
-  const s2 = SCENARIO_SCRIPTS[`${c2.id}_${o2.id}`];
+  const cs = [rnd(CONFLICTS), rnd(CONFLICTS), rnd(CONFLICTS), rnd(CONFLICTS)];
+  const scripts = cs.map(c => SCENARIO_SCRIPTS[`${c.id}_${shuffled[cs.indexOf(c)]?.id}`]);
+  const mkStage = (idx: number, o: typeof OPPONENTS[number], hp: number, stageNum: number): StageDef => {
+    const c = cs[idx];
+    const sid = `${c.id}_${o.id}`;
+    const s = SCENARIO_SCRIPTS[sid];
+    return {
+      id: sid, conflictId: c.id,
+      opponent: { id: o.id, name: o.name, archetype: o.archetype, icon: o.icon, startingEmotion: o.startingEmotion, stageHp: hp, specials: [], pendingAction: null, actionCooldown: o.actionInterval },
+      setup: s?.intro || c.setup.replace('{NAME}', o.name),
+      startingEmotion: o.startingEmotion as EmotionKey, stage: stageNum,
+    };
+  };
   return {
     stages: [
-      { id:`${c1.id}_${o1.id}`, conflictId:c1.id, opponent: { id: o1.id, name: o1.name, archetype: o1.archetype, icon: o1.icon, startingEmotion: o1.startingEmotion, stageHp: 85 }, setup: s1?.intro || c1.setup.replace('{NAME}', o1.name), startingEmotion: o1.startingEmotion as EmotionKey, stage:1 },
-      { id:`${c2.id}_${o2.id}`, conflictId:c2.id, opponent: { id: o2.id, name: o2.name, archetype: o2.archetype, icon: o2.icon, startingEmotion: o2.startingEmotion, stageHp: 105 }, setup: s2?.intro || c2.setup.replace('{NAME}', o2.name), startingEmotion: o2.startingEmotion as EmotionKey, stage:2 },
-      { id:`boss_${boss.id}`, conflictId:'boss', opponent: { id: boss.id, name: boss.name, archetype: boss.archetype, icon: boss.icon, startingEmotion: boss.startingEmotion, stageHp: boss.bossHp, specials: boss.specials, specialDesc: boss.specialDesc, conflict: boss.conflict }, setup: boss.conflict, startingEmotion: boss.startingEmotion as EmotionKey, stage:3, isBoss:true },
+      mkStage(0, o1, 90, 1),
+      mkStage(1, o2, 110, 2),
+      mkStage(2, o3, 120, 3),
+      mkStage(3, o4, 135, 4),
+      { id:`boss_${boss.id}`, conflictId:'boss', opponent: { id: boss.id, name: boss.name, archetype: boss.archetype, icon: boss.icon, startingEmotion: boss.startingEmotion, stageHp: boss.bossHp, specials: boss.specials, specialDesc: boss.specialDesc, conflict: boss.conflict, pendingAction: null, actionCooldown: boss.actionInterval }, setup: boss.conflict, startingEmotion: boss.startingEmotion as EmotionKey, stage:5, isBoss:true },
     ],
   };
 };
@@ -473,26 +531,26 @@ const getEff = (type: RespType, emo: EmotionKey): EffType => {
 
 const calcDamage = (eff: EffType, player: PlayerState, type: RespType, combo: number, isCrit: boolean): number => {
   const perks = player.perks || [];
-  // Versatile: weak → normal damage tier
   const effTier = (eff === 'weak' && hasPerk(perks, 'versatile')) ? 'normal' : eff;
-  const base = { super: 28, normal: 18, weak: 9 }[effTier as 'super' | 'normal' | 'weak'];
+  const base = { super: 24, normal: 15, weak: 7 }[effTier as 'super' | 'normal' | 'weak'];
   const bonus = player.strongResponses.includes(type) ? 1.2 : player.weakResponses.includes(type) ? 0.8 : 1.0;
-  const berserk = player.hp < 30 ? 1.5 : 1.0;
   const comboMult = combo >= 3 ? 1.3 : combo >= 2 ? 1.2 : combo >= 1 ? 1.1 : 1.0;
   const crit = isCrit ? 1.5 : 1.0;
   const sharp = hasPerk(perks, 'sharp_tongue') ? 1.15 : 1.0;
-  return Math.round(base * bonus * berserk * comboMult * crit * sharp);
+  return Math.round(base * bonus * comboMult * crit * sharp);
 };
 
 const plrDmg = (eff: EffType, perks: PerkId[]): number => {
-  const base = { super: -5, normal: 4, weak: 14 }[eff as 'super' | 'normal' | 'weak'];
+  // Player only takes damage from weak hits (bad picks) and opponent turns.
+  // Super-effective picks no longer heal; normal picks deal 0 net.
+  const base = { super: 0, normal: 0, weak: 10 }[eff as 'super' | 'normal' | 'weak'];
   if (base > 0 && hasPerk(perks, 'steel_nerves')) return Math.round(base * 0.75);
   return base;
 };
 
 const critChance = (perks: PerkId[]): number => 0.12 + (hasPerk(perks, 'fortune') ? 0.18 : 0);
 const chargeGain = (eff: EffType, perks: PerkId[]): number => {
-  const base = { super: 22, normal: 14, weak: 8 }[eff as 'super' | 'normal' | 'weak'];
+  const base = { super: 18, normal: 12, weak: 6 }[eff as 'super' | 'normal' | 'weak'];
   return eff === 'super' && hasPerk(perks, 'adrenaline') ? Math.round(base * 1.5) : base;
 };
 
@@ -525,12 +583,87 @@ const checkUnlocks = (player: PlayerState, round: number): RespType[] => {
   return r;
 };
 
+// ─── Opponent AI ───
+// After each player turn, the opponent may take their own action.
+// They telegraph it one round ahead so the player can read and prepare.
+const pickOppAction = (opp: OpponentState, round: number): OppAction | null => {
+  const oppDef = [...OPPONENTS, ...BOSSES].find(o => o.id === opp.id);
+  if (!oppDef) return null;
+  // Don't act every round — respect actionInterval
+  if (round < 2) return null;
+  const interval = oppDef.actionInterval || 2;
+  if ((round - 1) % interval !== 0) return null;
+  // Pick from preferred actions, weighted toward the first entries
+  const pool = oppDef.preferredActions;
+  // Add randomness: 70% pick from top 2, 30% pick from full pool
+  const r = Math.random();
+  if (r < 0.7) return pool[Math.floor(Math.random() * Math.min(2, pool.length))];
+  return pool[Math.floor(Math.random() * pool.length)];
+};
+
+const executeOppAction = (state: GameState, action: OppAction): { next: GameState; events: GameEvent[] } => {
+  const def = OPP_ACTIONS[action];
+  const { player, opponent, dialogue, scenario } = state;
+  const events: GameEvent[] = [];
+  const perks = player.perks || [];
+
+  let dmg = def.damage;
+  let chargeDrain = def.chargeDrain;
+
+  // Steel Nerves reduces opponent damage
+  if (dmg > 0 && hasPerk(perks, 'steel_nerves')) dmg = Math.round(dmg * 0.75);
+
+  const newPlrHp = Math.max(0, player.hp - dmg);
+  const newCharge = Math.max(0, player.charge - chargeDrain);
+
+  // Opponent heals on stall/deflect
+  let newOppHp = opponent.hp;
+  if (action === 'stall') newOppHp = Math.min(opponent.maxHp, opponent.hp + 6);
+  if (action === 'deflect') newOppHp = Math.min(opponent.maxHp, opponent.hp + 4);
+
+  // Emotion shift on opponent
+  let newOppEmo = opponent.emotion;
+  if (def.emotionShift) {
+    if (opponent.specials?.includes('emotionResist') && Math.random() < 0.3) {
+      // keep current
+    } else {
+      newOppEmo = def.emotionShift;
+    }
+  }
+
+  const line = rnd(OPP_ACTION_DLG[action]);
+  const dlg = [...dialogue];
+  dlg.push({ id: uid(), speaker: opponent.name, text: line, side: 'opp', emo: newOppEmo });
+  const actionLabel = `🎯 ${opponent.name} uses ${def.name}!${dmg > 0 ? ` (-${dmg} HP)` : ''}${chargeDrain > 0 ? ` (-${chargeDrain} charge)` : ''}${newOppHp > opponent.hp ? ` (+${newOppHp - opponent.hp} HP recovered)` : ''}`;
+  dlg.push({ id: uid(), isSystem: true, text: actionLabel, eff: 'normal' });
+
+  if (dmg > 0) {
+    events.push({ kind: 'shake', intensity: 6 });
+    events.push({ kind: 'damage', value: dmg, target: 'plr', eff: 'normal' });
+    events.push({ kind: 'particles', color: def.color, count: 6 });
+  }
+  if (newOppHp > opponent.hp) {
+    events.push({ kind: 'damage', value: newOppHp - opponent.hp, target: 'opp', eff: 'heal' });
+  }
+
+  return {
+    next: {
+      ...state,
+      player: { ...player, hp: newPlrHp, charge: newCharge },
+      opponent: { ...opponent, hp: newOppHp, emotion: newOppEmo, pendingAction: null },
+      dialogue: dlg,
+      turn: 'player',
+    },
+    events,
+  };
+};
+
 const initState = (char: CharDef, scenario: Scenario | null, opts: InitOpts = {}): GameState => {
   const { perks = [], carryHp = null } = opts;
   const s = scenario || genScenario();
   const ironBonus = hasPerk(perks, 'iron_will') ? 25 : 0;
-  const maxHp = 100 + ironBonus;
-  const hp = carryHp !== null ? Math.min(carryHp + 30, maxHp) : maxHp;
+  const maxHp = 120 + ironBonus;
+  const hp = carryHp !== null ? Math.min(carryHp + 20, maxHp) : maxHp;
   const startCharge = hasPerk(perks, 'silver_tongue') ? 50 : 0;
   const startCombo = hasPerk(perks, 'combo_master') ? 1 : 0;
   const oppHp = s.opponent.stageHp || 100;
@@ -547,10 +680,11 @@ const initState = (char: CharDef, scenario: Scenario | null, opts: InitOpts = {}
     opponent: {
       ...s.opponent, hp: oppHp, maxHp: oppHp, emotion: s.startingEmotion,
       specials: s.opponent.specials || [],
+      pendingAction: null, actionCooldown: 2,
     },
     round: 1, dialogue: [], phase: 'intro', isVictory: false,
     scenario: s, counts: {}, combo: startCombo, maxCombo: startCombo,
-    firedBeats: [],
+    firedBeats: [], turn: 'player', retriesUsed: 0,
   };
 };
 
@@ -686,16 +820,24 @@ const processResp = (state: GameState, type: RespType, isUltimate = false): Proc
     }
   }
 
+  // After player's move, schedule opponent telegraph for next round.
+  // The opponent picks an action that will fire on the NEXT player turn.
+  let pendingAction: OppAction | null = null;
+  if (!over) {
+    pendingAction = pickOppAction({ ...opponent, emotion: targetEmotion, hp: newOppHp }, newRound);
+  }
+
   return {
     next: {
       ...state,
       player: { ...player, hp:newPlrHp, history:newHistory, responses:updatedResps, charge:newCharge },
-      opponent: { ...opponent, hp:newOppHp, emotion:targetEmotion },
+      opponent: { ...opponent, hp:newOppHp, emotion:targetEmotion, pendingAction },
       round:newRound, dialogue:dlg,
       phase: over ? 'gameover' : 'playing',
       isVictory: newOppHp <= 0 && newPlrHp > 0,
       counts: newCounts, combo: newCombo, maxCombo: Math.max(maxCombo, newCombo),
       firedBeats: newFiredBeats,
+      turn: 'player',
     },
     events,
   };
@@ -1340,7 +1482,7 @@ function ModeSelect({ char, onTutorial, onSingle, onAscent, onBack }: {
   const cards = [
     { id:'t', onClick:onTutorial, icon:'🏀', title:'Tutorial', desc:'Learn the ropes with Coach Morgan — no stakes, just teaching.', time:'~3 MIN', color:'#FBBF24', timeColor:'#FBBF24' },
     { id:'s', onClick:onSingle, icon:'⚔️', title:'Single Scenario', desc:'One opponent. One conversation. Master it at your pace.', time:'~5 MIN', color:'#6366F1', timeColor:'#818CF8' },
-    { id:'a', onClick:onAscent, icon:'🏔️', title:'Ascent Mode', desc:'Three escalating conflicts. Earn perks. Face a boss.', time:'~15 MIN • HARDCORE', color:'#EC4899', timeColor:'#F472B6', badge:'NEW' },
+    { id:'a', onClick:onAscent, icon:'🏔️', title:'Ascent Mode', desc:'Five escalating conflicts. Earn perks. Face a boss. Limited retries.', time:'~20 MIN • HARDCORE', color:'#EC4899', timeColor:'#F472B6', badge:'5 STAGES' },
   ];
   return (
     <div style={{ padding:'28px 24px 32px', maxWidth:740, margin:'0 auto', position:'relative', zIndex:2, animation:'fadeIn 0.4s' }}>
@@ -1674,8 +1816,8 @@ function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetry
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {isAscent && !isVictory && (
             <>
-              <button onClick={onRetryStage} style={bStyle('linear-gradient(135deg,#F472B6,#EC4899)','none','white')}>
-                🔄 Retry Stage {ascent.stage} (keep perks)
+              <button onClick={onRetryStage} disabled={(state.retriesUsed ?? 0) >= 2} style={{ ...bStyle('linear-gradient(135deg,#F472B6,#EC4899)','none','white'), opacity: (state.retriesUsed ?? 0) >= 2 ? 0.4 : 1, cursor: (state.retriesUsed ?? 0) >= 2 ? 'not-allowed' : 'pointer' }}>
+                🔄 Retry Stage {ascent.stage} {((state.retriesUsed ?? 0) >= 2) ? '(no retries left)' : `(${2 - (state.retriesUsed ?? 0)} left)`}
               </button>
               <button onClick={onAbandonRun} style={bStyle('rgba(255,255,255,0.06)','1px solid rgba(255,255,255,0.15)','white')}>
                 ↩ Abandon Run
@@ -1703,7 +1845,7 @@ function RunVictory({ ascent, finalState, onNewRun, onMainMenu }: {
 }) {
   const totalRounds = ascent.totalRounds + (finalState.round - 1);
   const maxCombo = Math.max(ascent.maxCombo, finalState.maxCombo);
-  const bossName = ascent.stages[2].opponent.name;
+  const bossName = ascent.stages[ascent.stages.length - 1].opponent.name;
 
   return (
     <div style={{
@@ -1742,7 +1884,7 @@ function RunVictory({ ascent, finalState, onNewRun, onMainMenu }: {
             ['Max Combo', `×${maxCombo}`],
             ['Final HP', `${finalState.player.hp}/${finalState.player.maxHp}`],
             ['Perks Collected', String(ascent.perks.length)],
-            ['Stages Cleared', '3/3'],
+            ['Stages Cleared', '5/5'],
           ] as [string, string][]).map(([l,v]) => (
             <div key={l} style={{ display:'flex', justifyContent:'space-between', marginBottom:5, fontSize:12 }}>
               <span style={{ color:'rgba(255,255,255,0.5)' }}>{l}</span>
@@ -1868,6 +2010,84 @@ function FieldNotesPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+function LeaderboardPanel({ entries, personalBest, onClose }: { entries: LeaderboardEntry[] | null; personalBest: PersonalBest | null; onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position:'fixed', inset:0, zIndex:200,
+        background:'rgba(2,6,23,0.82)', backdropFilter:'blur(6px)',
+        display:'flex', alignItems:'center', justifyContent:'center', padding:16,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width:'100%', maxWidth:520, maxHeight:'88vh', overflowY:'auto',
+          background:'linear-gradient(180deg, rgba(30,41,59,0.97), rgba(15,23,42,0.99))',
+          border:'1px solid rgba(251,191,36,0.25)', borderRadius:18,
+          boxShadow:'0 30px 80px rgba(0,0,0,0.7), 0 0 100px rgba(251,191,36,0.08)',
+          padding:'18px 18px 22px',
+        }}
+      >
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+          <div>
+            <div style={{ color:'#FBBF24', fontSize:18, fontWeight:800 }}>🏆 Leaderboard</div>
+            <div style={{ color:'rgba(255,255,255,0.5)', fontSize:12, marginTop:2 }}>Top players by score</div>
+          </div>
+          <button onClick={onClose} style={{
+            background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)',
+            color:'white', borderRadius:8, padding:'4px 10px', cursor:'pointer', fontSize:13,
+          }}>Close</button>
+        </div>
+
+        {personalBest && (
+          <div style={{
+            background:'rgba(251,191,36,0.08)', border:'1px solid rgba(251,191,36,0.25)',
+            borderRadius:12, padding:'12px 14px', marginBottom:14,
+          }}>
+            <div style={{ color:'#FBBF24', fontSize:10, fontWeight:800, letterSpacing:1.5, marginBottom:6 }}>YOUR BEST</div>
+            <div style={{ display:'flex', gap:20, flexWrap:'wrap' }}>
+              <div><span style={{ color:'rgba(255,255,255,0.5)', fontSize:11 }}>Score</span> <span style={{ color:'white', fontWeight:700 }}>{personalBest.best_score}</span></div>
+              <div><span style={{ color:'rgba(255,255,255,0.5)', fontSize:11 }}>Max Combo</span> <span style={{ color:'white', fontWeight:700 }}>×{personalBest.best_combo}</span></div>
+              <div><span style={{ color:'rgba(255,255,255,0.5)', fontSize:11 }}>Wins</span> <span style={{ color:'#4ADE80', fontWeight:700 }}>{personalBest.total_wins}</span></div>
+              <div><span style={{ color:'rgba(255,255,255,0.5)', fontSize:11 }}>Runs</span> <span style={{ color:'white', fontWeight:700 }}>{personalBest.total_runs}</span></div>
+            </div>
+          </div>
+        )}
+
+        {!entries && <div style={{ color:'rgba(255,255,255,0.4)', textAlign:'center', padding:20 }}>Loading...</div>}
+        {entries && entries.length === 0 && (
+          <div style={{ color:'rgba(255,255,255,0.4)', textAlign:'center', padding:20, fontSize:13 }}>
+            No scores yet. Be the first to win a fight!
+          </div>
+        )}
+        {entries && entries.length > 0 && (
+          <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'28px 1fr 60px 50px 50px', gap:6, padding:'0 8px 6px', fontSize:9, color:'rgba(255,255,255,0.4)', fontWeight:700, letterSpacing:1 }}>
+              <span>#</span><span>PLAYER</span><span style={{ textAlign:'right' }}>SCORE</span><span style={{ textAlign:'right' }}>COMBO</span><span style={{ textAlign:'right' }}>TURNS</span>
+            </div>
+            {entries.map(e => (
+              <div key={e.rank} style={{
+                display:'grid', gridTemplateColumns:'28px 1fr 60px 50px 50px', gap:6,
+                padding:'8px', borderRadius:8, alignItems:'center',
+                background: e.rank <= 3 ? 'rgba(251,191,36,0.06)' : 'rgba(255,255,255,0.02)',
+                border: e.rank <= 3 ? '1px solid rgba(251,191,36,0.15)' : '1px solid rgba(255,255,255,0.04)',
+              }}>
+                <span style={{ fontWeight:800, color: e.rank === 1 ? '#FBBF24' : e.rank === 2 ? '#94A3B8' : e.rank === 3 ? '#FB923C' : 'rgba(255,255,255,0.4)', fontSize:13 }}>{e.rank}</span>
+                <span style={{ color:'white', fontWeight:600, fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{e.player_name}</span>
+                <span style={{ textAlign:'right', color:'#FBBF24', fontWeight:800, fontSize:13 }}>{e.score}</span>
+                <span style={{ textAlign:'right', color:'rgba(255,255,255,0.6)', fontSize:11 }}>×{e.max_combo}</span>
+                <span style={{ textAlign:'right', color:'rgba(255,255,255,0.6)', fontSize:11 }}>{e.turns}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => void) | null }) {
   const [screen, setScreen] = useState<'select'|'mode'|'tutorial'|'game'|'perk'|'runVictory'>('select');
   const [char, setChar] = useState<CharDef | null>(null);
@@ -1886,8 +2106,18 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
   const [memory, setMemory] = useState<CombatMemory | null>(null);
   const [showNotes, setShowNotes] = useState(false);
   const [noteToast, setNoteToast] = useState<string | null>(null);
+  const [muted, setMuted] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null);
+  const [personalBest, setPersonalBest] = useState<PersonalBest | null>(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const savedRunRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Load leaderboard + personal best on mount.
+  useEffect(() => {
+    getLeaderboard(25).then(setLeaderboard).catch(() => setLeaderboard([]));
+    getPersonalBest().then(setPersonalBest).catch(() => setPersonalBest(null));
+  }, []);
 
   // Load cross-run memory for the current opponent on scenario entry.
   useEffect(() => {
@@ -1942,6 +2172,12 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
       savedRunRef.current = false;
     }
   }, [gs?.scenario?.id, gs?.phase]);
+
+  const toggleMute = () => {
+    const next = !muted;
+    setMuted(next);
+    sfx.setMuted(next);
+  };
 
   const selectChar = (id: string) => { setChar(CHARS[id as CharKey]); setScreen('mode'); };
 
@@ -2061,6 +2297,8 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
 
   const retryStage = () => {
     if (!ascent || !char) return;
+    const maxRetries = 2;
+    if ((gs?.retriesUsed ?? 0) >= maxRetries) return;
     const stage = ascent.stages[ascent.stage - 1];
     const scenario: Scenario = {
       id: stage.id,
@@ -2069,7 +2307,11 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
       setup: stage.setup,
       startingEmotion: stage.startingEmotion,
     };
-    setGs(initState(char, scenario, { perks: ascent.perks }));
+    const retried = initState(char, scenario, { perks: ascent.perks });
+    retried.retriesUsed = (gs?.retriesUsed ?? 0) + 1;
+    // Retry starts at 60% HP — not full. Retries are costly.
+    retried.player.hp = Math.round(retried.player.maxHp * 0.6);
+    setGs(retried);
     setParticles([]); setDamageNums([]);
   };
 
@@ -2116,6 +2358,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
   const handleResp = (type: RespType | 'ultimate', isUltimate = false) => {
     if (busy || !gs) return;
     setBusy(true);
+    sfx.play('click');
     const prevEmo = gs.opponent.emotion;
     const actualType: RespType = isUltimate ? 'aggression' : type as RespType;
     const { next, events } = processResp(gs, actualType, isUltimate);
@@ -2140,6 +2383,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
       next.player.hp = Math.min(gs.player.hp, next.player.maxHp);
       next.phase = 'playing';
       next.isVictory = false;
+      next.opponent.pendingAction = null; // No opponent turns in tutorial
     }
 
     events.forEach(e => {
@@ -2150,6 +2394,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
         if (e.eff !== 'heal' && e.target === 'plr') {
           setHpFlash(f => ({ ...f, plr: true }));
           setTimeout(() => setHpFlash(f => ({ ...f, plr: false })), 500);
+          sfx.play('oppHit');
         }
         if (e.target === 'opp') {
           setHpFlash(f => ({ ...f, opp: true }));
@@ -2158,9 +2403,20 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
       }
     });
 
+    // Play SFX for player's hit
+    if (!isUltimate) {
+      const playerEff = events.find(e => e.kind === 'damage' && e.target === 'opp')?.eff;
+      if (playerEff === 'super') sfx.play(events.find(e => e.isCrit) ? 'crit' : 'super');
+      else if (playerEff === 'weak') sfx.play('weak');
+      else sfx.play('hit');
+    }
+    if (events.some(e => e.kind === 'damage' && e.eff === 'heal' && e.target === 'plr')) sfx.play('heal');
+    if (next.combo >= 2 && !isUltimate) sfx.play('combo');
+
     if (isUltimate) {
       setUltFlash(true);
       setTimeout(() => setUltFlash(false), 700);
+      sfx.play('ult');
     }
 
     setGs(next);
@@ -2181,7 +2437,8 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
     }
 
     if (next.phase === 'gameover' && next.isVictory && ascent) {
-      const isLastStage = ascent.stage === 3;
+      const isLastStage = ascent.stage === ascent.stages.length;
+      sfx.play('win');
       setTimeout(() => {
         setStageCleared({ stage: ascent.stage, isBoss: isLastStage });
         setTimeout(() => {
@@ -2190,6 +2447,43 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
           else openPerkSelect();
         }, 1800);
       }, 1200);
+    } else if (next.phase === 'gameover' && !next.isVictory) {
+      sfx.play('lose');
+    }
+
+    // Execute opponent's pending action after a short delay.
+    if (!tut && next.phase === 'playing' && next.opponent.pendingAction) {
+      const oppAction = next.opponent.pendingAction;
+      sfx.play('oppTelegraph');
+      setTimeout(() => {
+        setGs(g => {
+          if (!g || g.phase !== 'playing') return g;
+          const { next: oppNext, events: oppEvents } = executeOppAction(g, oppAction);
+          oppEvents.forEach(e => {
+            if (e.kind === 'shake') triggerShake(e.intensity);
+            if (e.kind === 'particles') spawnParticles(e.color || '#fff', e.count || 0, true, false);
+            if (e.kind === 'damage') {
+              spawnDamage(e.value || 0, e.target || 'plr', e.eff || 'normal', false, false);
+              if (e.eff !== 'heal' && e.target === 'plr') {
+                setHpFlash(f => ({ ...f, plr: true }));
+                setTimeout(() => setHpFlash(f => ({ ...f, plr: false })), 500);
+                sfx.play('oppHit');
+              }
+              if (e.target === 'opp' && e.eff === 'heal') {
+                setHpFlash(f => ({ ...f, opp: true }));
+                setTimeout(() => setHpFlash(f => ({ ...f, opp: false })), 500);
+              }
+            }
+          });
+          // Check if opponent killed the player
+          if (oppNext.player.hp <= 0) {
+            oppNext.phase = 'gameover';
+            oppNext.isVictory = false;
+            sfx.play('lose');
+          }
+          return oppNext;
+        });
+      }, 900);
     }
 
     setTimeout(() => setBusy(false), isUltimate ? 1000 : 700);
@@ -2206,16 +2500,35 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
     <div style={appBg}>
       <Starfield />
       <CharSelect onSelect={selectChar} onExit={onExit} />
-      <button
-        onClick={() => setShowNotes(true)}
-        style={{
-          position:'absolute', top:16, right:16, zIndex:30,
-          background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)',
-          color:'white', borderRadius:10, padding:'6px 12px', cursor:'pointer',
-          fontSize:13, fontWeight:600, backdropFilter:'blur(4px)',
-        }}
-      >📓 Field Notes</button>
+      <div style={{ position:'absolute', top:16, right:16, zIndex:30, display:'flex', gap:8 }}>
+        <button
+          onClick={toggleMute}
+          title={muted ? 'Unmute sound' : 'Mute sound'}
+          style={{
+            background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)',
+            color:'white', borderRadius:10, padding:'6px 12px', cursor:'pointer',
+            fontSize:13, fontWeight:600, backdropFilter:'blur(4px)',
+          }}
+        >{muted ? '🔇' : '🔊'}</button>
+        <button
+          onClick={() => setShowNotes(true)}
+          style={{
+            background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)',
+            color:'white', borderRadius:10, padding:'6px 12px', cursor:'pointer',
+            fontSize:13, fontWeight:600, backdropFilter:'blur(4px)',
+          }}
+        >📓 Notes</button>
+        <button
+          onClick={() => setShowLeaderboard(true)}
+          style={{
+            background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)',
+            color:'white', borderRadius:10, padding:'6px 12px', cursor:'pointer',
+            fontSize:13, fontWeight:600, backdropFilter:'blur(4px)',
+          }}
+        >🏆 Scores</button>
+      </div>
       {showNotes && <FieldNotesPanel onClose={() => setShowNotes(false)} />}
+      {showLeaderboard && <LeaderboardPanel entries={leaderboard} personalBest={personalBest} onClose={() => setShowLeaderboard(false)} />}
     </div>
   );
 
@@ -2482,6 +2795,25 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
               >📓</button>
             </div>
             <DlgLog entries={gs.dialogue} round={gs.round} combo={gs.combo} />
+            {gs.opponent.pendingAction && (
+              <div style={{
+                margin:'0 16px 8px', padding:'8px 12px',
+                background:`linear-gradient(135deg, ${OPP_ACTIONS[gs.opponent.pendingAction].color}22, ${OPP_ACTIONS[gs.opponent.pendingAction].color}08)`,
+                border:`1px solid ${OPP_ACTIONS[gs.opponent.pendingAction].color}55`,
+                borderRadius:10,
+                display:'flex', alignItems:'center', gap:10,
+                animation:'slideIn 0.3s ease-out',
+              }}>
+                <span style={{ fontSize:18 }}>{OPP_ACTIONS[gs.opponent.pendingAction].icon}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:10, fontWeight:800, letterSpacing:1, color:OPP_ACTIONS[gs.opponent.pendingAction].color, textTransform:'uppercase' }}>TELEGRAPH</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.85)', fontWeight:600 }}>
+                    {gs.opponent.name} is preparing: {OPP_ACTIONS[gs.opponent.pendingAction].name}
+                  </div>
+                </div>
+                <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)', fontWeight:600 }}>{OPP_ACTIONS[gs.opponent.pendingAction].desc}</span>
+              </div>
+            )}
             <RespBar
               responses={gs.player.responses}
               onResp={(type: RespType) => handleResp(type)}

@@ -123,3 +123,42 @@ export async function addUnlock(key: string): Promise<void> {
     .select()
     .maybeSingle();
 }
+
+// ─────────────────────────────────────────────────────────────
+// Public leaderboard + personal best (read via SECURITY DEFINER
+// functions so private run rows stay behind RLS).
+// ─────────────────────────────────────────────────────────────
+
+export interface LeaderboardEntry {
+  rank: number;
+  player_name: string;
+  score: number;
+  mode: string;
+  max_combo: number;
+  turns: number;
+  char_id: string;
+  completed_at: string;
+}
+
+export async function getLeaderboard(limit = 25): Promise<LeaderboardEntry[]> {
+  const { data, error } = await supabase
+    .rpc('social_combat_leaderboard', { p_limit: limit });
+  if (error || !data) return [];
+  return data as LeaderboardEntry[];
+}
+
+export interface PersonalBest {
+  best_score: number;
+  best_combo: number;
+  total_wins: number;
+  total_runs: number;
+}
+
+export async function getPersonalBest(): Promise<PersonalBest | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .rpc('social_combat_personal_best', { p_user_id: userId });
+  if (error || !data || data.length === 0) return null;
+  return data[0] as PersonalBest;
+}
