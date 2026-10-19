@@ -76,17 +76,21 @@ export async function setVelvetRopeEnabled(enabled: boolean): Promise<void> {
   if (error) throw new Error(`Failed to toggle Velvet Rope: ${error.message}`);
 
   if (!enabled) {
-    // Closing the toggle closes any active Velvet Rope conversation.
+    // Closing the toggle closes any active Velvet Rope conversations (both
+    // human and AI slots) and leaves the matchmaking queue.
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('velvet_rope_active_conv_id')
+      .select('velvet_rope_active_conv_id, velvet_rope_active_ai_conv_id')
       .maybeSingle();
-    const activeConvId = profile?.velvet_rope_active_conv_id;
-    if (activeConvId) {
-      try {
-        await supabase.rpc('vr_close_conversation', { p_conv_id: activeConvId });
-      } catch {
-        // Best-effort close; the server-side guard already prevents new requests.
+    const humanConv = profile?.velvet_rope_active_conv_id;
+    const aiConv = profile?.velvet_rope_active_ai_conv_id;
+    for (const id of [humanConv, aiConv]) {
+      if (id) {
+        try {
+          await supabase.rpc('vr_close_conversation', { p_conv_id: id });
+        } catch {
+          // Best-effort close.
+        }
       }
     }
   }

@@ -367,43 +367,47 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
     }
   }, [refreshAll]);
 
-  // Matchmaking: while the toggle is on and the user has no active VR
-  // conversation or pending request, try human matching first (enter queue +
-  // try to pair), then fall back to an AI opponent request. The 5-minute AI
-  // gate is enforced server-side by vr_can_send_ai_request. Human matching
-  // has no grace period — if two eligible users are waiting, they pair
-  // immediately.
+  // Matchmaking: while the toggle is on, try to fill whichever slot (human
+  // or AI) is still open. A user can have one human + one AI conversation
+  // active simultaneously. The 5-minute AI gate is enforced server-side.
   useEffect(() => {
     if (!user || !vrEnabled) return;
-    if (vrRequests.length > 0) return;
-    if (vrConversations.some(c => c.status === 'active')) return;
+    // Count active conversations by type.
+    const activeHuman = vrConversations.filter(c => c.status === 'active' && c.match_type === 'human').length;
+    const activeAI = vrConversations.filter(c => c.status === 'active' && c.match_type === 'ai').length;
+    const pendingHuman = vrRequests.filter(r => r.match_type === 'human').length;
+    const pendingAI = vrRequests.filter(r => r.match_type === 'ai').length;
+    // If both slots are filled (active or pending), stop polling.
+    if ((activeHuman > 0 || pendingHuman > 0) && (activeAI > 0 || pendingAI > 0)) return;
     let cancelled = false;
 
     const tryMatch = async () => {
       if (cancelled) return;
       try {
-        // Enter the human queue (no-op if already queued or not eligible).
-        await enterVelvetRopeQueue().catch(() => {});
-        if (cancelled) return;
-        // Try to pair with another waiting human.
-        const matchId = await tryVelvetRopeMatch().catch(() => null);
-        if (matchId && !cancelled) {
-          await refreshAll();
-          return;
+        // If the human slot is open, enter the queue and try to pair.
+        if (activeHuman === 0 && pendingHuman === 0) {
+          await enterVelvetRopeQueue().catch(() => {});
+          if (cancelled) return;
+          const matchId = await tryVelvetRopeMatch().catch(() => null);
+          if (matchId && !cancelled) {
+            await refreshAll();
+            return;
+          }
         }
         if (cancelled) return;
-        // No human partner available — try an AI opponent (server re-checks
-        // the 5-minute gate and one-at-a-time rule).
-        const aiResult = await requestAIVelvetRopeOpener().catch(() => null);
-        if (aiResult && !cancelled) {
-          await refreshAll();
+        // If the AI slot is open, try an AI opponent (server re-checks the
+        // 5-minute gate).
+        if (activeAI === 0 && pendingAI === 0) {
+          const aiResult = await requestAIVelvetRopeOpener().catch(() => null);
+          if (aiResult && !cancelled) {
+            await refreshAll();
+          }
         }
       } catch {
         // Silently ignore — will retry next interval.
       }
     };
 
-    // First attempt after 10s (lets human matching run quickly), then poll.
     const initial = setTimeout(tryMatch, 10000);
     const interval = setInterval(tryMatch, 45000);
     return () => {
@@ -411,7 +415,7 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
       clearTimeout(initial);
       clearInterval(interval);
     };
-  }, [user, vrEnabled, vrRequests.length, vrConversations, refreshAll]);
+  }, [user, vrEnabled, vrRequests, vrConversations, refreshAll]);
 
   const filteredFriends = friends.filter(f =>
     f.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
