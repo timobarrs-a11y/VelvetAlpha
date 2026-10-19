@@ -18,6 +18,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
+import { MessagingOverlayMount } from './MessagingOverlayMount';
 
 interface SignedInWorkspaceProps {
   children: ReactNode;
