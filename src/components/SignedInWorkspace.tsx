@@ -109,9 +109,8 @@ function WorkspaceNavigation({ collapsed, onToggle }: { collapsed: boolean; onTo
 
   return (
     <aside
-      className={`absolute inset-y-0 left-0 z-30 hidden flex-col border-r border-white/8 bg-[rgba(12,10,30,0.84)] py-4 backdrop-blur-2xl transition-[width] duration-300 lg:flex ${
-        collapsed ? 'w-[68px]' : 'w-[216px]'
-      }`}
+      className="relative z-20 hidden min-h-0 flex-col border-r border-white/8 bg-[rgba(12,10,30,0.84)] py-4 backdrop-blur-2xl transition-[width] duration-300 lg:flex"
+      style={{ width: collapsed ? 68 : 216 }}
     >
       <div className={`flex items-center px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
         {!collapsed && (
@@ -200,12 +199,17 @@ export function SignedInWorkspace({ children }: SignedInWorkspaceProps) {
 
   return (
     <div className="min-h-screen bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
-      <div className="relative min-h-[calc(100dvh-0.75rem)] overflow-hidden rounded-[18px] border border-white/12 bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)] sm:min-h-[calc(100dvh-1.25rem)] lg:min-h-[calc(100dvh-2rem)]">
+      <div className="relative flex min-h-[calc(100dvh-0.75rem)] flex-col overflow-hidden rounded-[18px] border border-white/12 bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)] sm:min-h-[calc(100dvh-1.25rem)] lg:min-h-[calc(100dvh-2rem)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,61,188,0.17),transparent_44%),radial-gradient(ellipse_at_bottom_left,rgba(244,63,107,0.08),transparent_42%)]" />
-        <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} />
-        <main className="relative z-10 min-h-full lg:pl-[68px]">
-          {children}
-        </main>
+        <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
+          <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} />
+          <main className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
+            {children}
+          </main>
+        </div>
+        <div className="relative z-20 flex-shrink-0 border-t border-white/10 bg-[rgba(8,8,22,0.92)]">
+          <MessagingOverlayMount />
+        </div>
         <div className="pointer-events-none absolute inset-0 rounded-[18px] ring-1 ring-inset ring-white/5" />
       </div>
     </div>

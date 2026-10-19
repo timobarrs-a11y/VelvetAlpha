@@ -19,7 +19,6 @@ import { AudioScene } from './services/audioManager';
 import { InstallPWABanner } from './components/InstallPWABanner';
 import { SWUpdateToast } from './components/SWUpdateToast';
 import { FloatingChatMount } from './components/FloatingChatMount';
-import { MessagingOverlayMount } from './components/MessagingOverlayMount';
 import { SignedInWorkspace } from './components/SignedInWorkspace';
 
 const GAME_PATHS = [
@@ -112,7 +111,6 @@ export function Router() {
             <AudioSceneSync />
             <GlobalEffects />
             <FloatingChatMount />
-            <MessagingOverlayMount />
             <SignedInWorkspace>
               <Routes>
                 {publicRoutes}

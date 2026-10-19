@@ -60,27 +60,35 @@ export function MessagingOverlayMount() {
   if (HIDDEN_PATHS.some(p => path.startsWith(p))) return null;
 
   return (
-    <>
-      <motion.button
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-40 w-12 h-12 rounded-full flex items-center justify-center bg-rose-500 hover:bg-rose-600 text-white shadow-lg transition-colors"
-        style={{ boxShadow: '0 8px 24px -6px rgba(244,63,94,0.5)' }}
-        title="Friends & messages"
-        aria-label="Open friends and messages"
-      >
-        <Users className="w-5 h-5" />
-        {unread > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-rose-600 text-[10px] font-bold flex items-center justify-center border-2 border-rose-500">
-            {unread > 9 ? '9+' : unread}
+    <div className="w-full">
+      {!open && (
+        <motion.button
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => setOpen(true)}
+          className="flex min-h-[58px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-white/5"
+          title="Friends & messages"
+          aria-label="Open friends and messages"
+        >
+          <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500 text-white shadow-[0_8px_24px_-6px_rgba(244,63,94,0.5)]">
+            <Users className="h-4 w-4" />
+            {unread > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-[#0c0b20] bg-white px-1 text-[10px] font-bold text-rose-600">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
           </span>
-        )}
-      </motion.button>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-semibold text-ink">Friends & messages</span>
+            <span className="block text-[10px] text-ink-muted">Keep conversations close while you explore</span>
+          </span>
+          <span className="rounded-lg border border-white/10 px-2 py-1 text-[10px] font-medium text-ink-muted">Open</span>
+        </motion.button>
+      )}
 
       <AnimatePresence>
-        {open && <MessagingOverlay onClose={() => setOpen(false)} />}
+        {open && <MessagingOverlay embedded onClose={() => setOpen(false)} />}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
