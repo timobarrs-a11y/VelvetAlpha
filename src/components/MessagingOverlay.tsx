@@ -13,6 +13,8 @@ import {
   Sparkles,
   CircleDot,
   Settings2,
+  VenetianMask,
+  EyeOff,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { useAuth } from '../auth/AuthProvider';
@@ -45,14 +47,36 @@ import {
   type ConversationSummary,
   type DirectMessage,
 } from '../shared/supabase/queries/messaging';
+import {
+  getVelvetRopeEnabled,
+  setVelvetRopeEnabled,
+  getIncomingVRRequests,
+  getVRConversationList,
+  getVRMessages,
+  sendVRMessage,
+  markVRConversationRead,
+  acceptVRRequest,
+  declineVRRequest,
+  closeVRConversation,
+  type VRRequest,
+  type VRConversationSummary,
+  type VRMessage,
+} from '../shared/supabase/queries/velvetRope';
 
-type View = 'friends' | 'conversations' | 'discover' | 'requests' | 'settings' | 'chat';
+type View = 'friends' | 'conversations' | 'discover' | 'requests' | 'settings' | 'chat' | 'vr-chat';
 
 interface ChatTarget {
   conversationId: string;
   peerId: string;
   peerName: string;
   peerAvatarUrl: string | null;
+}
+
+interface VRChatTarget {
+  conversationId: string;
+  peerHandle: string;
+  matchType: 'ai' | 'human';
+  status: 'active' | 'closed';
 }
 
 const INTEREST_SUGGESTIONS = [
@@ -141,6 +165,11 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
   const [discovery, setDiscovery] = useState<DiscoveryProfile[]>([]);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [chatTarget, setChatTarget] = useState<ChatTarget | null>(null);
+  const [vrEnabled, setVrEnabled] = useState(false);
+  const [vrToggling, setVrToggling] = useState(false);
+  const [vrRequests, setVrRequests] = useState<VRRequest[]>([]);
+  const [vrConversations, setVrConversations] = useState<VRConversationSummary[]>([]);
+  const [vrChatTarget, setVrChatTarget] = useState<VRChatTarget | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -150,18 +179,24 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
     setLoading(true);
     setError(null);
     try {
-      const [f, i, o, d, c] = await Promise.all([
+      const [f, i, o, d, c, vrEn, vrReq, vrConv] = await Promise.all([
         getFriends().catch(() => [] as FriendPeer[]),
         getIncomingRequests().catch(() => [] as FriendPeer[]),
         getOutgoingRequests().catch(() => [] as FriendPeer[]),
         getDiscoverySuggestions().catch(() => [] as DiscoveryProfile[]),
         getConversationList().catch(() => [] as ConversationSummary[]),
+        getVelvetRopeEnabled().catch(() => false),
+        getIncomingVRRequests().catch(() => [] as VRRequest[]),
+        getVRConversationList().catch(() => [] as VRConversationSummary[]),
       ]);
       setFriends(f);
       setIncoming(i);
       setOutgoing(o);
       setDiscovery(d);
       setConversations(c);
+      setVrEnabled(vrEn);
+      setVrRequests(vrReq);
+      setVrConversations(vrConv);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -264,6 +299,66 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
     }
   }, [refreshAll]);
 
+  const handleToggleVelvetRope = useCallback(async (enabled: boolean) => {
+    setVrToggling(true);
+    setError(null);
+    try {
+      await setVelvetRopeEnabled(enabled);
+      setVrEnabled(enabled);
+      await refreshAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to toggle Velvet Rope');
+    } finally {
+      setVrToggling(false);
+    }
+  }, [refreshAll]);
+
+  const handleAcceptVRRequest = useCallback(async (requestId: string) => {
+    setError(null);
+    try {
+      await acceptVRRequest(requestId);
+      await refreshAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to accept Velvet Rope request');
+    }
+  }, [refreshAll]);
+
+  const handleDeclineVRRequest = useCallback(async (requestId: string) => {
+    setError(null);
+    try {
+      await declineVRRequest(requestId);
+      await refreshAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to decline Velvet Rope request');
+    }
+  }, [refreshAll]);
+
+  const handleOpenVRConversation = useCallback(async (conv: VRConversationSummary) => {
+    setError(null);
+    setVrChatTarget({
+      conversationId: conv.id,
+      peerHandle: conv.peer_handle,
+      matchType: conv.match_type,
+      status: conv.status,
+    });
+    setView('vr-chat');
+    await markVRConversationRead(conv.id).catch(() => {});
+    getVRConversationList().then(setVrConversations).catch(() => {});
+  }, []);
+
+  const handleCloseVRConversation = useCallback(async (conversationId: string) => {
+    if (!confirm('Close this Velvet Rope conversation? You can be matched with someone new.')) return;
+    setError(null);
+    try {
+      await closeVRConversation(conversationId);
+      setVrChatTarget(null);
+      setView('conversations');
+      await refreshAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to close Velvet Rope conversation');
+    }
+  }, [refreshAll]);
+
   const filteredFriends = friends.filter(f =>
     f.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (f.alias ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
@@ -275,7 +370,9 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
   );
 
   const incomingCount = incoming.length;
-  const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0);
+  const vrUnread = vrConversations.reduce((sum, c) => sum + c.unread_count, 0);
+  const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0) + vrUnread;
+  const totalRequestBadge = incomingCount + vrRequests.length;
 
   const TabButton = ({ id, label, icon: Icon, badge }: { id: View; label: string; icon: any; badge?: number }) => (
     <button
@@ -317,9 +414,9 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
       >
         {/* Header */}
         <div className="flex items-center gap-2 p-3 border-b border-white/8 flex-shrink-0">
-          {view === 'chat' && chatTarget ? (
+          {(view === 'chat' && chatTarget) || (view === 'vr-chat' && vrChatTarget) ? (
             <button
-              onClick={() => { setView('conversations'); setChatTarget(null); }}
+              onClick={() => { setView('conversations'); setChatTarget(null); setVrChatTarget(null); }}
               className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
               title="Back"
             >
@@ -333,6 +430,7 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-semibold text-ink truncate">
               {view === 'chat' && chatTarget ? chatTarget.peerName
+                : view === 'vr-chat' && vrChatTarget ? vrChatTarget.peerHandle
                 : view === 'friends' ? 'Friends'
                 : view === 'discover' ? 'Discover people'
                 : view === 'requests' ? 'Friend requests'
@@ -340,7 +438,9 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
                 : 'Messages'}
             </h2>
             <p className="text-[10px] text-ink-muted">
-              {view === 'chat' && chatTarget ? 'Direct message' : 'Stay connected'}
+              {view === 'chat' && chatTarget ? 'Instant Messenger'
+                : view === 'vr-chat' && vrChatTarget ? 'Velvet Rope'
+                : 'Stay connected'}
             </p>
           </div>
           <button
@@ -352,14 +452,30 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
           </button>
         </div>
 
-        {/* Tabs (hidden in chat view) */}
-        {view !== 'chat' && (
+        {/* Tabs (hidden in chat views) + Velvet Rope toggle pill */}
+        {view !== 'chat' && view !== 'vr-chat' && (
           <div className="flex items-center gap-1 px-2 py-2 border-b border-white/8 flex-shrink-0 overflow-x-auto">
             <TabButton id="conversations" label="Chats" icon={MessageSquare} badge={totalUnread} />
             <TabButton id="friends" label="Friends" icon={Users} />
-            <TabButton id="requests" label="Requests" icon={UserPlus} badge={incomingCount} />
+            <TabButton id="requests" label="Requests" icon={UserPlus} badge={totalRequestBadge} />
             <TabButton id="discover" label="Discover" icon={Search} />
             <TabButton id="settings" label="Profile" icon={Settings2} />
+            <div className="flex-1" />
+            {/* Velvet Rope toggle pill */}
+            <button
+              onClick={() => handleToggleVelvetRope(!vrEnabled)}
+              disabled={vrToggling}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all flex-shrink-0 ${
+                vrEnabled
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  : 'bg-white/5 text-ink-muted border border-white/8 hover:bg-white/10'
+              }`}
+              title={vrEnabled ? 'Velvet Rope is ON — click to turn off' : 'Turn on Velvet Rope to receive mystery requests'}
+            >
+              <VenetianMask className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Velvet Rope</span>
+              <span className={`w-2 h-2 rounded-full ${vrEnabled ? 'bg-amber-400' : 'bg-white/20'}`} />
+            </button>
           </div>
         )}
 
@@ -391,15 +507,57 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
           )}
 
           {view === 'conversations' && (
-            <ConversationsView
-              conversations={conversations}
-              onOpen={(c) => handleOpenConversation({
-                user_id: c.peer_id,
-                display_name: c.peer_name,
-                avatar_url: c.peer_avatar_url,
-              })}
-              onRefresh={refreshAll}
-            />
+            <>
+              <ConversationsView
+                conversations={conversations}
+                onOpen={(c) => handleOpenConversation({
+                  user_id: c.peer_id,
+                  display_name: c.peer_name,
+                  avatar_url: c.peer_avatar_url,
+                })}
+                onRefresh={refreshAll}
+              />
+              {vrConversations.length > 0 && (
+                <div className="pt-2">
+                  <p className="px-3 pb-1 text-[10px] uppercase tracking-wider text-amber-400/80 font-semibold flex items-center gap-1">
+                    <VenetianMask className="w-3 h-3" /> Velvet Rope
+                  </p>
+                  {vrConversations.map((vc) => (
+                    <button
+                      key={vc.id}
+                      onClick={() => handleOpenVRConversation(vc)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-amber-500/5 transition-colors text-left"
+                    >
+                      <div
+                        className="relative flex-shrink-0 rounded-full flex items-center justify-center"
+                        style={{ width: 44, height: 44, background: 'linear-gradient(135deg, #f59e0b, #b45309)' }}
+                      >
+                        <VenetianMask className="w-5 h-5 text-amber-100" />
+                        {vc.status === 'active' && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2" style={{ borderColor: 'var(--ds-surface, #1a1a2e)' }} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-ink truncate">Velvet Rope</p>
+                          <span className="text-[10px] text-ink-muted flex-shrink-0">{relativeTime(vc.last_message_at)}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs text-ink-muted truncate">
+                            {vc.status === 'closed' ? 'Ended' : (vc.last_message ?? 'No messages yet')}
+                          </p>
+                          {vc.unread_count > 0 && (
+                            <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                              {vc.unread_count > 9 ? '9+' : vc.unread_count}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {view === 'friends' && (
@@ -411,14 +569,64 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
           )}
 
           {view === 'requests' && (
-            <RequestsView
-              incoming={incoming}
-              outgoing={outgoing}
-              onAccept={(id) => handleRespond(id, true)}
-              onDecline={(id) => handleRespond(id, false)}
-              onBlock={(uid) => handleBlock(uid)}
-              onCancel={handleCancel}
-            />
+            <>
+              {vrRequests.length > 0 && (
+                <div className="py-2">
+                  <p className="px-3 pb-1 text-[10px] uppercase tracking-wider text-amber-400/80 font-semibold flex items-center gap-1">
+                    <VenetianMask className="w-3 h-3" /> Velvet Rope
+                  </p>
+                  {vrRequests.map((vr) => (
+                    <div key={vr.id} className="px-3 py-2.5">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="relative flex-shrink-0 rounded-full flex items-center justify-center"
+                          style={{ width: 42, height: 42, background: 'linear-gradient(135deg, #f59e0b, #b45309)' }}
+                        >
+                          <VenetianMask className="w-5 h-5 text-amber-100" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-ink truncate flex items-center gap-1.5">
+                            <EyeOff className="w-3 h-3 text-amber-400/70" />
+                            {vr.masked_handle}
+                          </p>
+                          <p className="text-[11px] text-ink-muted truncate">
+                            Velvet Rope · wants to play
+                          </p>
+                        </div>
+                      </div>
+                      {vr.opener_message && (
+                        <div className="mt-2 rounded-xl bg-amber-500/8 border border-amber-500/20 px-3 py-2">
+                          <p className="text-[9px] uppercase tracking-wider text-amber-400/70 mb-1">Opener</p>
+                          <p className="text-xs text-ink whitespace-pre-wrap break-words">{vr.opener_message}</p>
+                        </div>
+                      )}
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          onClick={() => handleAcceptVRRequest(vr.id)}
+                          className="flex-1 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-xs font-semibold transition-colors"
+                        >
+                          Play
+                        </button>
+                        <button
+                          onClick={() => handleDeclineVRRequest(vr.id)}
+                          className="px-3 py-1.5 rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <RequestsView
+                incoming={incoming}
+                outgoing={outgoing}
+                onAccept={(id) => handleRespond(id, true)}
+                onDecline={(id) => handleRespond(id, false)}
+                onBlock={(uid) => handleBlock(uid)}
+                onCancel={handleCancel}
+              />
+            </>
           )}
 
           {view === 'discover' && (
@@ -432,6 +640,13 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
 
           {view === 'chat' && chatTarget && (
             <ChatView target={chatTarget} onUnfriend={() => handleUnfriend(friends.find(f => f.user_id === chatTarget.peerId)?.friendship_id ?? '')} />
+          )}
+
+          {view === 'vr-chat' && vrChatTarget && (
+            <VRChatView
+              target={vrChatTarget}
+              onClose={() => handleCloseVRConversation(vrChatTarget.conversationId)}
+            />
           )}
         </div>
       </motion.div>
@@ -1354,6 +1569,186 @@ function ChatView({ target, onUnfriend }: { target: ChatTarget; onUnfriend: () =
           onClick={handleSend}
           disabled={!input.trim()}
           className="p-2.5 rounded-xl bg-rose-500 text-white hover:bg-rose-600 transition-colors disabled:opacity-40 disabled:hover:bg-rose-500 flex-shrink-0"
+          title="Send"
+        >
+          <Send className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Velvet Rope chat view — labeled, masked-identity conversation
+// ---------------------------------------------------------------------------
+function VRChatView({ target, onClose }: { target: VRChatTarget; onClose: () => void }) {
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<VRMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const msgs = await getVRMessages(target.conversationId);
+        setMessages(msgs);
+        await markVRConversationRead(target.conversationId).catch(() => {});
+      } catch (e) {
+        setSendError(e instanceof Error ? e.message : 'Failed to load messages');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [target.conversationId]);
+
+  // Realtime subscription for new Velvet Rope messages
+  useEffect(() => {
+    if (channelRef.current) supabase.removeChannel(channelRef.current);
+    const channel = supabase
+      .channel(`vr-chat-${target.conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'vr_messages',
+          filter: `conversation_id=eq.${target.conversationId}`,
+        },
+        (payload) => {
+          const msg = payload.new as VRMessage;
+          setMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]));
+          if (msg.sender_id !== user?.id) {
+            markVRConversationRead(target.conversationId).catch(() => {});
+          }
+        },
+      )
+      .subscribe();
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [target.conversationId, user?.id]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text || !user) return;
+    setInput('');
+    setSendError(null);
+    try {
+      const msg = await sendVRMessage(target.conversationId, text);
+      if (msg) {
+        setMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]));
+      }
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : 'Failed to send');
+      setInput(text);
+    }
+  };
+
+  const closed = target.status === 'closed';
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Velvet Rope banner label */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-amber-500/15 bg-amber-500/5 flex-shrink-0">
+        <VenetianMask className="w-3.5 h-3.5 text-amber-400" />
+        <p className="text-[10px] text-amber-300/90 font-semibold uppercase tracking-wider">
+          Velvet Rope
+        </p>
+        <div className="flex-1" />
+        {closed && (
+          <span className="text-[10px] text-ink-muted">This conversation has ended</span>
+        )}
+        <button
+          onClick={onClose}
+          disabled={closed}
+          className="text-[10px] text-ink-muted hover:text-rose-300 transition-colors disabled:opacity-40"
+        >
+          End
+        </button>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-ink-muted text-xs">Loading messages...</div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center mb-2">
+              <VenetianMask className="w-5 h-5 text-amber-400/70" />
+            </div>
+            <p className="text-xs text-ink-muted">The guessing game begins. Say something.</p>
+          </div>
+        ) : (
+          messages.map((m) => {
+            const mine = m.sender_id === user?.id;
+            return (
+              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                <div className="max-w-[78%]">
+                  <p className="text-[9px] mb-0.5 flex items-center gap-1 text-amber-400/60">
+                    <VenetianMask className="w-2.5 h-2.5" />
+                    Velvet Rope
+                  </p>
+                  <div
+                    className={`rounded-2xl px-3 py-2 text-sm border ${
+                      mine
+                        ? 'bg-amber-500/90 text-white rounded-br-md border-amber-400/50'
+                        : 'bg-amber-500/10 text-ink rounded-bl-md border-amber-500/25'
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                    <p
+                      className={`text-[9px] mt-0.5 flex items-center gap-1 ${
+                        mine ? 'text-white/70 justify-end' : 'text-ink-muted'
+                      }`}
+                    >
+                      {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {mine && (m.read_at
+                        ? <><Check className="w-2.5 h-2.5" /> Read</>
+                        : <><CircleDot className="w-2.5 h-2.5" /> Sent</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {sendError && (
+        <div className="mx-3 mb-1 px-2 py-1.5 rounded-lg bg-rose-500/15 text-rose-300 text-[11px]">
+          {sendError}
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="p-2.5 border-t border-white/8 flex-shrink-0 flex items-center gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+          placeholder={closed ? 'This conversation has ended' : 'Send a message...'}
+          disabled={closed}
+          className="flex-1 bg-white/5 rounded-xl px-3 py-2 text-sm text-ink placeholder:text-ink-muted/60 outline-none focus:bg-white/8 transition-colors disabled:opacity-50"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!input.trim() || closed}
+          className="p-2.5 rounded-xl bg-amber-500 text-white hover:bg-amber-600 transition-colors disabled:opacity-40 disabled:hover:bg-amber-500 flex-shrink-0"
           title="Send"
         >
           <Send className="w-4 h-4" />
