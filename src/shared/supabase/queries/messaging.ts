@@ -21,11 +21,16 @@ export interface FriendPeer {
   display_name: string;
   avatar_url: string | null;
   headline: string | null;
+  alias: string | null;
+  age_range: string | null;
+  intro: string | null;
+  intro_message: string | null;
   friendship_id: string;
   status: FriendshipStatus;
   created_at: string;
   is_online: boolean;
   last_seen_at: string | null;
+  available_to_chat: boolean;
 }
 
 export interface DiscoveryProfile {
@@ -33,11 +38,24 @@ export interface DiscoveryProfile {
   display_name: string;
   avatar_url: string | null;
   headline: string | null;
+  alias: string | null;
+  age_range: string | null;
+  intro: string | null;
   interests: string[];
   discoverable: boolean;
+  available_to_chat: boolean;
+  is_online: boolean;
   shared_interests: string[];
   already_friends: boolean;
   request_pending: boolean;
+}
+
+export const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'] as const;
+export type AgeRange = typeof AGE_RANGES[number];
+
+export function ageRangeLabel(range: string | null | undefined): string {
+  if (!range) return '';
+  return range;
 }
 
 export interface DirectMessage {
@@ -80,6 +98,8 @@ export async function upsertMyDiscoveryProfile(updates: {
   headline?: string | null;
   interests?: string[];
   discoverable?: boolean;
+  intro?: string | null;
+  available_to_chat?: boolean;
 }) {
   const { data, error } = await supabase
     .from('im_discovery_profiles')
@@ -88,6 +108,17 @@ export async function upsertMyDiscoveryProfile(updates: {
     .maybeSingle();
   if (error) throw new Error(`Failed to save discovery profile: ${error.message}`);
   return data;
+}
+
+export async function setMyDiscoveryIdentity(alias: string, ageRange: string | null): Promise<void> {
+  const { error } = await supabase.rpc('im_set_discovery_identity', {
+    p_alias: alias,
+    p_age_range: ageRange,
+  });
+  if (error) {
+    if (error.code === '23505') throw new Error('That alias is taken');
+    throw new Error(error.message || 'Could not save alias');
+  }
 }
 
 // Mirror interests + name from user_profiles into im_discovery_profiles so
@@ -130,8 +161,8 @@ export async function getFriends(): Promise<FriendPeer[]> {
   if (peerIds.length === 0) return [];
 
   const [profiles, presence] = await Promise.all([
-    supabase.from('im_discovery_profiles').select('user_id, display_name, avatar_url, headline').in('user_id', peerIds),
-    supabase.from('im_presence').select('user_id, is_online, last_seen_at').in('user_id', peerIds),
+    supabase.from('im_discovery_profiles').select('user_id, display_name, avatar_url, headline, alias, age_range, intro, available_to_chat').in('user_id', peerIds),
+    supabase.from('im_presence').select('user_id, is_online, last_seen_at, available_to_chat').in('user_id', peerIds),
   ]);
 
   const profileMap = new Map((profiles.data ?? []).map((p: any) => [p.user_id, p]));
@@ -146,11 +177,16 @@ export async function getFriends(): Promise<FriendPeer[]> {
       display_name: profile?.display_name ?? 'Anonymous',
       avatar_url: profile?.avatar_url ?? null,
       headline: profile?.headline ?? null,
+      alias: profile?.alias ?? null,
+      age_range: profile?.age_range ?? null,
+      intro: profile?.intro ?? null,
+      intro_message: null,
       friendship_id: f.id,
       status: f.status,
       created_at: f.created_at,
       is_online: pres?.is_online ?? false,
       last_seen_at: pres?.last_seen_at ?? null,
+      available_to_chat: pres?.available_to_chat ?? false,
     };
   });
 }
@@ -165,31 +201,38 @@ export async function getIncomingRequests(): Promise<FriendPeer[]> {
 
   const { data, error } = await supabase
     .from('im_friendships')
-    .select('id, requester_id, addressee_id, status, created_at')
+    .select('id, requester_id, addressee_id, status, created_at, intro_message')
     .eq('addressee_id', user.id)
     .eq('status', 'pending');
   if (error) throw new Error(`Failed to load requests: ${error.message}`);
   if (!data || data.length === 0) return [];
 
-  const requesterIds = (data as Friendship[]).map(f => f.requester_id);
-  const { data: profiles } = await supabase
-    .from('im_discovery_profiles')
-    .select('user_id, display_name, avatar_url, headline')
-    .in('user_id', requesterIds);
-  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
+  const requesterIds = (data as any[]).map(f => f.requester_id);
+  const [profiles, presence] = await Promise.all([
+    supabase.from('im_discovery_profiles').select('user_id, display_name, avatar_url, headline, alias, age_range, intro').in('user_id', requesterIds),
+    supabase.from('im_presence').select('user_id, is_online, last_seen_at, available_to_chat').in('user_id', requesterIds),
+  ]);
+  const profileMap = new Map((profiles.data ?? []).map((p: any) => [p.user_id, p]));
+  const presenceMap = new Map((presence.data ?? []).map((p: any) => [p.user_id, p]));
 
-  return (data as Friendship[]).map(f => {
+  return (data as any[]).map(f => {
     const profile = profileMap.get(f.requester_id);
+    const pres = presenceMap.get(f.requester_id);
     return {
       user_id: f.requester_id,
       display_name: profile?.display_name ?? 'Anonymous',
       avatar_url: profile?.avatar_url ?? null,
       headline: profile?.headline ?? null,
+      alias: profile?.alias ?? null,
+      age_range: profile?.age_range ?? null,
+      intro: profile?.intro ?? null,
+      intro_message: f.intro_message ?? null,
       friendship_id: f.id,
       status: f.status,
       created_at: f.created_at,
-      is_online: false,
-      last_seen_at: null,
+      is_online: pres?.is_online ?? false,
+      last_seen_at: pres?.last_seen_at ?? null,
+      available_to_chat: pres?.available_to_chat ?? false,
     };
   });
 }
@@ -200,31 +243,38 @@ export async function getOutgoingRequests(): Promise<FriendPeer[]> {
 
   const { data, error } = await supabase
     .from('im_friendships')
-    .select('id, requester_id, addressee_id, status, created_at')
+    .select('id, requester_id, addressee_id, status, created_at, intro_message')
     .eq('requester_id', user.id)
     .eq('status', 'pending');
   if (error) throw new Error(`Failed to load outgoing requests: ${error.message}`);
   if (!data || data.length === 0) return [];
 
-  const addresseeIds = (data as Friendship[]).map(f => f.addressee_id);
-  const { data: profiles } = await supabase
-    .from('im_discovery_profiles')
-    .select('user_id, display_name, avatar_url, headline')
-    .in('user_id', addresseeIds);
-  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
+  const addresseeIds = (data as any[]).map(f => f.addressee_id);
+  const [profiles, presence] = await Promise.all([
+    supabase.from('im_discovery_profiles').select('user_id, display_name, avatar_url, headline, alias, age_range, intro').in('user_id', addresseeIds),
+    supabase.from('im_presence').select('user_id, is_online, last_seen_at, available_to_chat').in('user_id', addresseeIds),
+  ]);
+  const profileMap = new Map((profiles.data ?? []).map((p: any) => [p.user_id, p]));
+  const presenceMap = new Map((presence.data ?? []).map((p: any) => [p.user_id, p]));
 
-  return (data as Friendship[]).map(f => {
+  return (data as any[]).map(f => {
     const profile = profileMap.get(f.addressee_id);
+    const pres = presenceMap.get(f.addressee_id);
     return {
       user_id: f.addressee_id,
       display_name: profile?.display_name ?? 'Anonymous',
       avatar_url: profile?.avatar_url ?? null,
       headline: profile?.headline ?? null,
+      alias: profile?.alias ?? null,
+      age_range: profile?.age_range ?? null,
+      intro: profile?.intro ?? null,
+      intro_message: f.intro_message ?? null,
       friendship_id: f.id,
       status: f.status,
       created_at: f.created_at,
-      is_online: false,
-      last_seen_at: null,
+      is_online: pres?.is_online ?? false,
+      last_seen_at: pres?.last_seen_at ?? null,
+      available_to_chat: pres?.available_to_chat ?? false,
     };
   });
 }
@@ -233,14 +283,23 @@ export async function getOutgoingRequests(): Promise<FriendPeer[]> {
 // Friend request actions
 // ----------------------------------------------------------------------------
 
-export async function sendFriendRequest(otherUserId: string): Promise<void> {
+export async function sendFriendRequest(
+  otherUserId: string,
+  introMessage?: string,
+): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
   if (user.id === otherUserId) throw new Error("Can't friend yourself");
 
+  const trimmedIntro = introMessage?.trim() || null;
   const { error } = await supabase
     .from('im_friendships')
-    .insert({ requester_id: user.id, addressee_id: otherUserId, status: 'pending' });
+    .insert({
+      requester_id: user.id,
+      addressee_id: otherUserId,
+      status: 'pending',
+      intro_message: trimmedIntro,
+    });
   if (error) {
     // Unique-pair index may fire if a row already exists in any state.
     if (error.code === '23505') return;
@@ -308,7 +367,7 @@ export async function getDiscoverySuggestions(limit = 24): Promise<DiscoveryProf
 
   const { data, error } = await supabase
     .from('im_discovery_profiles')
-    .select('user_id, display_name, avatar_url, headline, interests, discoverable')
+    .select('user_id, display_name, avatar_url, headline, alias, age_range, intro, interests, discoverable, available_to_chat')
     .eq('discoverable', true)
     .neq('user_id', user.id)
     .limit(limit);
@@ -316,7 +375,7 @@ export async function getDiscoverySuggestions(limit = 24): Promise<DiscoveryProf
   if (!data) return [];
 
   const otherUserIds = (data as any[]).map(d => d.user_id);
-  const [friendRows, blockRows] = await Promise.all([
+  const [friendRows, blockRows, presenceRows] = await Promise.all([
     supabase
       .from('im_friendships')
       .select('id, requester_id, addressee_id, status')
@@ -326,6 +385,10 @@ export async function getDiscoverySuggestions(limit = 24): Promise<DiscoveryProf
       .from('im_blocks')
       .select('blocked_id')
       .eq('blocker_id', user.id),
+    supabase
+      .from('im_presence')
+      .select('user_id, is_online, last_seen_at, available_to_chat')
+      .in('user_id', otherUserIds),
   ]);
 
   const friendSet = new Set<string>();
@@ -336,7 +399,7 @@ export async function getDiscoverySuggestions(limit = 24): Promise<DiscoveryProf
     if (f.status === 'pending') pendingSet.add(peer);
   });
   const blockedByMe = new Set((blockRows.data ?? []).map((b: any) => b.blocked_id));
-
+  const presenceMap = new Map((presenceRows.data ?? []).map((p: any) => [p.user_id, p]));
   const mySet = new Set(myInterests.map(s => s.toLowerCase()));
 
   return (data as any[])
@@ -344,20 +407,29 @@ export async function getDiscoverySuggestions(limit = 24): Promise<DiscoveryProf
     .map(d => {
       const theirInterests: string[] = d.interests ?? [];
       const shared = theirInterests.filter(i => mySet.has(String(i).toLowerCase()));
+      const pres = presenceMap.get(d.user_id);
       return {
         user_id: d.user_id,
         display_name: d.display_name || 'Anonymous',
         avatar_url: d.avatar_url ?? null,
         headline: d.headline ?? null,
+        alias: d.alias ?? null,
+        age_range: d.age_range ?? null,
+        intro: d.intro ?? null,
         interests: theirInterests,
         discoverable: d.discoverable,
+        available_to_chat: pres?.available_to_chat ?? false,
         shared_interests: shared,
         already_friends: false,
         request_pending: pendingSet.has(d.user_id),
+        is_online: pres?.is_online ?? false,
       };
     })
     .sort((a, b) => {
-      // Most shared interests first; then alphabetical.
+      // Available now first, then most shared interests, then alphabetical.
+      if (!!b.available_to_chat !== !!a.available_to_chat) {
+        return a.available_to_chat ? -1 : 1;
+      }
       if (b.shared_interests.length !== a.shared_interests.length) {
         return b.shared_interests.length - a.shared_interests.length;
       }
@@ -538,4 +610,15 @@ export async function setOnline(isOnline: boolean): Promise<void> {
       { onConflict: 'user_id' },
     );
   if (error) throw new Error(`Failed to update presence: ${error.message}`);
+}
+
+export async function setAvailableToChat(available: boolean): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('im_presence')
+    .upsert(
+      { available_to_chat: available, updated_at: now },
+      { onConflict: 'user_id' },
+    );
+  if (error) throw new Error(`Failed to update availability: ${error.message}`);
 }

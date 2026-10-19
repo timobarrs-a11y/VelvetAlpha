@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Users,
   MessageSquare,
@@ -30,12 +30,16 @@ import {
   respondToFriendRequest,
   cancelFriendRequest,
   unfriend as unfriendDb,
+  blockUser,
   setTyping,
   clearTyping,
   setOnline,
+  setAvailableToChat as pushAvailability,
   getMyDiscoveryProfile,
   upsertMyDiscoveryProfile,
+  setMyDiscoveryIdentity,
   syncDiscoveryFromProfile,
+  AGE_RANGES,
   type FriendPeer,
   type DiscoveryProfile,
   type ConversationSummary,
@@ -207,10 +211,10 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
     }
   }, [user]);
 
-  const handleSendRequest = useCallback(async (otherUserId: string) => {
+  const handleSendRequest = useCallback(async (otherUserId: string, introMessage?: string) => {
     setError(null);
     try {
-      await sendFriendRequest(otherUserId);
+      await sendFriendRequest(otherUserId, introMessage);
       await refreshAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to send request');
@@ -250,11 +254,23 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
     }
   }, [refreshAll]);
 
+  const handleBlock = useCallback(async (otherUserId: string) => {
+    setError(null);
+    try {
+      await blockUser(otherUserId);
+      await refreshAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to block user');
+    }
+  }, [refreshAll]);
+
   const filteredFriends = friends.filter(f =>
-    f.display_name.toLowerCase().includes(searchQuery.toLowerCase()),
+    f.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (f.alias ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
   );
   const filteredDiscovery = discovery.filter(d =>
     d.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (d.alias ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     d.interests.some(i => i.toLowerCase().includes(searchQuery.toLowerCase())),
   );
 
@@ -400,6 +416,7 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
               outgoing={outgoing}
               onAccept={(id) => handleRespond(id, true)}
               onDecline={(id) => handleRespond(id, false)}
+              onBlock={(uid) => handleBlock(uid)}
               onCancel={handleCancel}
             />
           )}
@@ -555,12 +572,14 @@ function RequestsView({
   outgoing,
   onAccept,
   onDecline,
+  onBlock,
   onCancel,
 }: {
   incoming: FriendPeer[];
   outgoing: FriendPeer[];
   onAccept: (id: string) => void;
   onDecline: (id: string) => void;
+  onBlock: (userId: string) => void;
   onCancel: (id: string) => void;
 }) {
   if (incoming.length === 0 && outgoing.length === 0) {
@@ -569,7 +588,7 @@ function RequestsView({
         <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center mb-3">
           <UserPlus className="w-6 h-6 text-ink-muted" />
         </div>
-        <p className="text-sm text-ink font-medium">No friend requests</p>
+        <p className="text-sm text-ink font-medium">No connection requests</p>
         <p className="text-xs text-ink-muted mt-1">Find people to connect with in Discover.</p>
       </div>
     );
@@ -580,26 +599,44 @@ function RequestsView({
         <>
           <p className="px-3 pb-1 text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Incoming</p>
           {incoming.map((r) => (
-            <div key={r.friendship_id} className="flex items-center gap-3 px-3 py-2.5">
-              <PeerAvatar name={r.display_name} avatarUrl={r.avatar_url} size={40} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-ink truncate">{r.display_name}</p>
-                <p className="text-[11px] text-ink-muted truncate">{r.headline || 'Wants to connect'}</p>
+            <div key={r.friendship_id} className="px-3 py-2.5">
+              <div className="flex items-center gap-3">
+                <PeerAvatar name={r.display_name} avatarUrl={r.avatar_url} size={42} online={r.is_online} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-ink truncate">
+                    {r.alias ? `@${r.alias}` : r.display_name}
+                  </p>
+                  <p className="text-[11px] text-ink-muted truncate">
+                    {r.age_range ? `${r.age_range} · ` : ''}{r.headline || 'Wants to connect'}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() => onAccept(r.friendship_id)}
-                className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors"
-                title="Accept"
-              >
-                <Check className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => onDecline(r.friendship_id)}
-                className="p-2 rounded-lg text-ink-muted hover:text-rose-400 hover:bg-white/5 transition-colors"
-                title="Decline"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {r.intro_message && (
+                <div className="mt-2 rounded-xl bg-white/5 border border-white/8 px-3 py-2">
+                  <p className="text-[9px] uppercase tracking-wider text-ink-muted mb-1">Intro</p>
+                  <p className="text-xs text-ink whitespace-pre-wrap break-words">{r.intro_message}</p>
+                </div>
+              )}
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={() => onAccept(r.friendship_id)}
+                  className="flex-1 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 text-xs font-semibold transition-colors"
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => onDecline(r.friendship_id)}
+                  className="px-3 py-1.5 rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => onBlock(r.user_id)}
+                  className="px-3 py-1.5 rounded-lg text-xs text-ink-muted hover:text-rose-300 hover:bg-white/5 transition-colors"
+                >
+                  Block
+                </button>
+              </div>
             </div>
           ))}
         </>
@@ -611,7 +648,9 @@ function RequestsView({
             <div key={r.friendship_id} className="flex items-center gap-3 px-3 py-2.5">
               <PeerAvatar name={r.display_name} avatarUrl={r.avatar_url} size={40} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-ink truncate">{r.display_name}</p>
+                <p className="text-sm font-medium text-ink truncate">
+                  {r.alias ? `@${r.alias}` : r.display_name}
+                </p>
                 <p className="text-[11px] text-ink-muted flex items-center gap-1">
                   <Clock className="w-3 h-3" /> Waiting for response
                 </p>
@@ -638,8 +677,20 @@ function DiscoverView({
   onAdd,
 }: {
   discovery: DiscoveryProfile[];
-  onAdd: (userId: string) => void;
+  onAdd: (userId: string, intro?: string) => void;
 }) {
+  const [introTarget, setIntroTarget] = useState<string | null>(null);
+  const [introText, setIntroText] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const handleSend = (userId: string) => {
+    setSending(true);
+    onAdd(userId, introText.trim() || undefined);
+    setSending(false);
+    setIntroTarget(null);
+    setIntroText('');
+  };
+
   if (discovery.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
@@ -655,58 +706,114 @@ function DiscoverView({
   }
   return (
     <div className="py-2 space-y-2 px-3">
-      {discovery.map((d) => (
-        <div
-          key={d.user_id}
-          className="rounded-xl border border-white/8 bg-white/3 p-3"
-        >
-          <div className="flex items-center gap-3">
-            <PeerAvatar name={d.display_name} avatarUrl={d.avatar_url} size={42} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-ink truncate">{d.display_name}</p>
-              {d.headline && <p className="text-[11px] text-ink-muted truncate">{d.headline}</p>}
+      {discovery.map((d) => {
+        const expanded = introTarget === d.user_id;
+        return (
+          <div
+            key={d.user_id}
+            className="rounded-xl border border-white/8 bg-white/3 p-3"
+          >
+            <div className="flex items-center gap-3">
+              <PeerAvatar name={d.display_name} avatarUrl={d.avatar_url} size={42} online={d.is_online} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <p className="text-sm font-medium text-ink truncate">
+                    {d.alias ? `@${d.alias}` : d.display_name}
+                  </p>
+                  {d.available_to_chat && (
+                    <span className="flex-shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-300">
+                      <CircleDot className="w-2.5 h-2.5" /> Available
+                    </span>
+                  )}
+                </div>
+                {d.headline && <p className="text-[11px] text-ink-muted truncate">{d.headline}</p>}
+                {(d.age_range || d.intro) && (
+                  <p className="text-[10px] text-ink-muted truncate">
+                    {d.age_range ? `${d.age_range}` : ''}{d.age_range && d.intro ? ' · ' : ''}{d.intro ?? ''}
+                  </p>
+                )}
+              </div>
+              {expanded ? (
+                <button
+                  onClick={() => { setIntroTarget(null); setIntroText(''); }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-ink-muted hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  onClick={() => onAdd(d.user_id, undefined)}
+                  disabled={d.request_pending}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    d.request_pending
+                      ? 'bg-white/5 text-ink-muted cursor-not-allowed'
+                      : 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
+                  }`}
+                >
+                  {d.request_pending ? 'Sent' : 'Connect'}
+                </button>
+              )}
             </div>
-            <button
-              onClick={() => onAdd(d.user_id)}
-              disabled={d.request_pending}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                d.request_pending
-                  ? 'bg-white/5 text-ink-muted cursor-not-allowed'
-                  : 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
-              }`}
-            >
-              {d.request_pending ? 'Sent' : 'Add friend'}
-            </button>
-          </div>
-          {d.interests.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2.5">
-              {d.interests.slice(0, 8).map((tag) => {
-                const shared = d.shared_interests.some(
-                  s => s.toLowerCase() === tag.toLowerCase(),
-                );
-                return (
-                  <span
-                    key={tag}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                      shared
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                        : 'bg-white/5 text-ink-muted border border-white/8'
-                    }`}
+            {d.interests.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                {d.interests.slice(0, 8).map((tag) => {
+                  const shared = d.shared_interests.some(
+                    s => s.toLowerCase() === tag.toLowerCase(),
+                  );
+                  return (
+                    <span
+                      key={tag}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        shared
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          : 'bg-white/5 text-ink-muted border border-white/8'
+                      }`}
+                    >
+                      {tag}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {d.shared_interests.length > 0 && (
+              <p className="text-[10px] text-rose-300/80 mt-1.5 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                {d.shared_interests.length} shared {d.shared_interests.length === 1 ? 'interest' : 'interests'}
+              </p>
+            )}
+            {expanded && (
+              <div className="mt-2.5 space-y-2">
+                <textarea
+                  value={introText}
+                  onChange={(e) => setIntroText(e.target.value)}
+                  placeholder="Write a short intro (optional)"
+                  rows={3}
+                  maxLength={280}
+                  className="w-full bg-white/5 rounded-lg px-3 py-2 text-xs text-ink placeholder:text-ink-muted/60 outline-none focus:bg-white/8 transition-colors resize-none"
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-ink-muted">{introText.length}/280</span>
+                  <button
+                    onClick={() => handleSend(d.user_id)}
+                    disabled={sending}
+                    className="px-3 py-1.5 rounded-lg bg-rose-500 text-white text-xs font-semibold hover:bg-rose-600 disabled:opacity-50 transition-colors"
                   >
-                    {tag}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-          {d.shared_interests.length > 0 && (
-            <p className="text-[10px] text-rose-300/80 mt-1.5 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              {d.shared_interests.length} shared {d.shared_interests.length === 1 ? 'interest' : 'interests'}
-            </p>
-          )}
-        </div>
-      ))}
+                    Send request
+                  </button>
+                </div>
+              </div>
+            )}
+            {!expanded && !d.request_pending && (
+              <button
+                onClick={() => setIntroTarget(d.user_id)}
+                className="mt-2 text-[10px] text-rose-300/80 hover:text-rose-200 transition-colors"
+              >
+                Add an intro message
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -718,9 +825,13 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
   const { user } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [headline, setHeadline] = useState('');
+  const [alias, setAlias] = useState('');
+  const [ageRange, setAgeRange] = useState<string>('');
+  const [intro, setIntro] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [interests, setInterests] = useState<string[]>([]);
   const [discoverable, setDiscoverable] = useState(false);
+  const [availableToChat, setAvailableToChat] = useState(false);
   const [customInterest, setCustomInterest] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
@@ -734,9 +845,13 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
         if (profile) {
           setDisplayName(profile.display_name ?? '');
           setHeadline(profile.headline ?? '');
+          setAlias(profile.alias ?? '');
+          setAgeRange(profile.age_range ?? '');
+          setIntro(profile.intro ?? '');
           setAvatarUrl(profile.avatar_url ?? null);
           setInterests(profile.interests ?? []);
           setDiscoverable(profile.discoverable ?? false);
+          setAvailableToChat(profile.available_to_chat ?? false);
         } else {
           // Bootstrap from user_profiles so the user doesn't start empty.
           const { data: up } = await supabase
@@ -783,13 +898,20 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
     setSavedMsg(null);
     setLoadError(null);
     try {
+      const trimmedAlias = alias.trim().toLowerCase();
+      if (trimmedAlias) {
+        await setMyDiscoveryIdentity(trimmedAlias, ageRange || null);
+      }
       await upsertMyDiscoveryProfile({
         display_name: displayName.trim() || 'Anonymous',
         headline: headline.trim() || null,
         avatar_url: avatarUrl,
         interests,
         discoverable,
+        intro: intro.trim() || null,
+        available_to_chat: availableToChat,
       });
+      if (availableToChat) pushAvailability(true).catch(() => {});
       setSavedMsg('Saved');
       setTimeout(() => setSavedMsg(null), 2500);
       onSaved();
@@ -807,6 +929,42 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
           {loadError}
         </div>
       )}
+
+      <div>
+        <label className="block text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1">
+          Alias (public handle)
+        </label>
+        <input
+          value={alias}
+          onChange={(e) => setAlias(e.target.value)}
+          placeholder="e.g. luna_77"
+          maxLength={20}
+          className="w-full bg-white/5 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-ink-muted/60 outline-none focus:bg-white/8 transition-colors"
+        />
+        <p className="mt-1 text-[10px] text-ink-muted">3–20 characters: letters, numbers, underscore, hyphen. This is how you'll appear in chat.</p>
+      </div>
+
+      <div>
+        <label className="block text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1">
+          Age range
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {AGE_RANGES.map(range => (
+            <button
+              key={range}
+              onClick={() => setAgeRange(ageRange === range ? '' : range)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                ageRange === range
+                  ? 'bg-rose-500/25 text-rose-200 border border-rose-500/40'
+                  : 'bg-white/5 text-ink-muted border border-white/8 hover:bg-white/10'
+              }`}
+            >
+              {range}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1 text-[10px] text-ink-muted">Only a range is shown — never your exact birth date.</p>
+      </div>
 
       <div>
         <label className="block text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1">
@@ -830,6 +988,21 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
           placeholder="A one-line intro"
           className="w-full bg-white/5 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-ink-muted/60 outline-none focus:bg-white/8 transition-colors"
         />
+      </div>
+
+      <div>
+        <label className="block text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1">
+          Short intro
+        </label>
+        <textarea
+          value={intro}
+          onChange={(e) => setIntro(e.target.value)}
+          placeholder="A few sentences about you"
+          rows={3}
+          maxLength={280}
+          className="w-full bg-white/5 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-ink-muted/60 outline-none focus:bg-white/8 transition-colors resize-none"
+        />
+        <p className="mt-1 text-[10px] text-ink-muted">{intro.length}/280</p>
       </div>
 
       <div>
@@ -899,6 +1072,21 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
         <div className="flex-1">
           <p className="text-sm font-medium text-ink">Let others discover me</p>
           <p className="text-[11px] text-ink-muted">Only people you accept as friends can message you.</p>
+        </div>
+      </label>
+
+      <label className="flex items-center gap-3 cursor-pointer">
+        <button
+          onClick={() => setAvailableToChat(!availableToChat)}
+          className={`relative w-10 h-6 rounded-full transition-colors ${availableToChat ? 'bg-emerald-500' : 'bg-white/10'}`}
+        >
+          <span
+            className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${availableToChat ? 'translate-x-4' : 'translate-x-0.5'}`}
+          />
+        </button>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-ink">Available to chat</p>
+          <p className="text-[11px] text-ink-muted">Show an “Available” badge so people online know you're open to talk.</p>
         </div>
       </label>
 

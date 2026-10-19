@@ -103,7 +103,6 @@ message components, hub rails, tutorial overlay, pet, games, and the avatar crea
   `CreateAdditionalCompanionPage`) have their own gradients.
 - The per-destination `bgColor` on the navigation loading splash is still hand-picked per
   feature; consider deriving it from the tile accent.
-- `AppShell` (bottom / side nav) is token-driven but unused; adopt or delete.
 
 ## Audit summary (what this pass fixed)
 
