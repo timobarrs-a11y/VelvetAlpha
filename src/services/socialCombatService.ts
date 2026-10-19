@@ -1,6 +1,6 @@
 import { supabase } from '../shared/supabase/client';
 
-export type CombatMode = 'tutorial' | 'single' | 'ascent';
+export type CombatMode = 'tutorial' | 'single' | 'ascent' | 'daily';
 export type CombatOutcome =
   | 'win'
   | 'loss'

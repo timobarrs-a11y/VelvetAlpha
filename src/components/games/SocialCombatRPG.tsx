@@ -347,6 +347,59 @@ const OPP_ACTION_DLG: Record<OppAction, string[]> = {
   escalate:   ["You want to go there? FINE. Let's go there!", "I am DONE being nice about this!", "You have NO idea who you're dealing with!", "This is exactly the problem — you never know when to back off!"],
 };
 
+// Opponent-specific action dialogue — each character has their own voice.
+const OPP_SPECIFIC_DLG: Record<string, Partial<Record<OppAction, string[]>>> = {
+  slacker: {
+    stall:      ["Look, I just... I need to process. Can you give me a sec?", "I'm not ghosting you, I swear. I just need a minute."],
+    deflect:    ["Honestly, this feels like a you problem right now.", "I don't see why this has to be such a big deal."],
+    guilt_trip: ["I thought you of all people would cut me some slack.", "I've been drowning, and you're coming at me like this?"],
+  },
+  perfectionist: {
+    guilt_trip: ["I stayed up until 3 AM for this. For US. And you're mad at me?", "I was trying to help. I was ALWAYS trying to help."],
+    deflect:    ["Okay, but let's focus on the deliverable, not the feelings.", "The quality speaks for itself. Let's not make it personal."],
+    jab:        ["You wouldn't have done it this well. You know that, right?", "I fixed your work. You're welcome."],
+  },
+  hothead: {
+    escalate:   ["Oh, you want to push me? PUSH ME. See what happens!", "I swear to God, if you say one more word —"],
+    jab:        ["Yeah? SAY IT TO MY FACE.", "You always do this. You always push until I snap."],
+    escalate2:  ["You know what? This is EXACTLY why I didn't want to work with you!"],
+  },
+  manipulator: {
+    guilt_trip: ["I chose you for this project because I trusted you. Some trust this is.", "I gave you this opportunity. Remember that."],
+    deflect:    ["I think we're losing sight of the bigger picture here.", "Let's not get bogged down in who did what."],
+    jab:        ["You're smarter than this. Or maybe you're not.", "I expected better from you, honestly."],
+  },
+  anxious: {
+    stall:      ["I'm sorry, I just — I need to breathe. Can we slow down?", "I'm trying, I really am. Just... give me a second."],
+    guilt_trip: ["I know I'm the problem. You don't have to say it.", "I'm sorry I'm like this. I'm sorry for everything."],
+    deflect:    ["It's not that I don't want to help, I just... can't right now.", "I'm not making excuses, I just literally can't."],
+  },
+  director_hollis: {
+    deflect:    ["I've been in this industry longer than you've been alive. Sit down.", "That's not how we do things here. Moving on."],
+    jab:        ["Your track record doesn't exactly inspire confidence.", "I've reviewed your work. It's... adequate."],
+    escalate:   ["You're testing my patience. That would be a mistake.", "I can end your career with one phone call. Don't forget that."],
+    stall:      ["I'll take this under advisement. Next item.", "We'll table this for now."],
+  },
+  mira_kline: {
+    guilt_trip: ["I thought we were friends. Silly me.", "I defended you when no one else would. And this is how you repay me?"],
+    jab:        ["You're so predictable. I knew you'd do this.", "Cute. You think you're the first person to try this?"],
+    deflect:    ["You're projecting. That's a you thing.", "Let's not pretend you're innocent here."],
+    escalate:   ["Fine. You want to play rough? I can play rough.", "You have no idea who you just made an enemy of."],
+  },
+  mr_ridgeway: {
+    deflect:    ["I've heard this argument before. It wasn't persuasive then either.", "That's your opinion. I've been around long enough to know better."],
+    stall:      ["I'll think about it. Don't hold your breath.", "This isn't urgent. Nothing is, really."],
+    escalate:   ["You young people and your demands. It's always rush, rush, rush.", "I've survived worse than you. Don't test me."],
+    jab:        ["Your enthusiasm is noted. And dismissed.", "Come back when you have some real experience."],
+  },
+};
+
+const getOppActionLine = (oppId: string, action: OppAction): string => {
+  const specific = OPP_SPECIFIC_DLG[oppId]?.[action];
+  if (specific && specific.length > 0) return rnd(specific);
+  return rnd(OPP_ACTION_DLG[action]);
+};
+
 const CONFLICTS: { id: string; setup: string }[] = [
   { id:'group_project',       setup:"The deadline for your group project is tomorrow, and your partner {NAME} hasn't contributed anything meaningful. Your grade depends on this collaboration." },
   { id:'roommate_drama',      setup:"{NAME} has been leaving dirty dishes everywhere, playing loud music at night, and bringing strangers over. The lease is in both your names." },
@@ -474,6 +527,43 @@ const TIPS: Record<string, string> = {
 const rnd = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
 const uid = (): string => Math.random().toString(36).slice(2, 9);
 const hasPerk = (perks: PerkId[] | undefined, id: PerkId): boolean => perks?.includes(id) || false;
+
+// ─── Seeded RNG for Daily Challenge ───
+// Same seed = same opponent/conflict/boss for every player on the same day.
+const seededRng = (seed: number): (() => number) => {
+  let s = seed;
+  return () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+};
+const dailySeed = (): number => {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+};
+const dailySeedLabel = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const genDailyChallenge = (): { opponent: typeof OPPONENTS[number]; conflict: typeof CONFLICTS[number]; boss: typeof BOSSES[number]; stages: StageDef[] } => {
+  const rng = seededRng(dailySeed());
+  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
+  const opp = pick(OPPONENTS);
+  const opp2 = pick(OPPONENTS.filter(o => o.id !== opp.id));
+  const boss = pick(BOSSES);
+  const c1 = pick(CONFLICTS);
+  const c2 = pick(CONFLICTS.filter(c => c.id !== c1.id));
+  const s1id = `${c1.id}_${opp.id}`;
+  const s2id = `${c2.id}_${opp2.id}`;
+  const s1 = SCENARIO_SCRIPTS[s1id];
+  const s2 = SCENARIO_SCRIPTS[s2id];
+  const stages: StageDef[] = [
+    { id: s1id, conflictId: c1.id, opponent: { id: opp.id, name: opp.name, archetype: opp.archetype, icon: opp.icon, startingEmotion: opp.startingEmotion, stageHp: 100, specials: [], pendingAction: null, actionCooldown: opp.actionInterval }, setup: s1?.intro || c1.setup.replace('{NAME}', opp.name), startingEmotion: opp.startingEmotion, stage: 1 },
+    { id: s2id, conflictId: c2.id, opponent: { id: opp2.id, name: opp2.name, archetype: opp2.archetype, icon: opp2.icon, startingEmotion: opp2.startingEmotion, stageHp: 120, specials: [], pendingAction: null, actionCooldown: opp2.actionInterval }, setup: s2?.intro || c2.setup.replace('{NAME}', opp2.name), startingEmotion: opp2.startingEmotion, stage: 2 },
+    { id: `boss_${boss.id}`, conflictId: 'boss', opponent: { id: boss.id, name: boss.name, archetype: boss.archetype, icon: boss.icon, startingEmotion: boss.startingEmotion, stageHp: boss.bossHp, specials: boss.specials, specialDesc: boss.specialDesc, conflict: boss.conflict, pendingAction: null, actionCooldown: boss.actionInterval }, setup: boss.conflict, startingEmotion: boss.startingEmotion, stage: 3, isBoss: true },
+  ];
+  return { opponent: opp, conflict: c1, boss, stages };
+};
 
 const genScenario = (): Scenario => {
   const c = rnd(CONFLICTS), o = rnd(OPPONENTS);
@@ -631,7 +721,7 @@ const executeOppAction = (state: GameState, action: OppAction): { next: GameStat
     }
   }
 
-  const line = rnd(OPP_ACTION_DLG[action]);
+  const line = getOppActionLine(opponent.id, action);
   const dlg = [...dialogue];
   dlg.push({ id: uid(), speaker: opponent.name, text: line, side: 'opp', emo: newOppEmo });
   const actionLabel = `🎯 ${opponent.name} uses ${def.name}!${dmg > 0 ? ` (-${dmg} HP)` : ''}${chargeDrain > 0 ? ` (-${chargeDrain} charge)` : ''}${newOppHp > opponent.hp ? ` (+${newOppHp - opponent.hp} HP recovered)` : ''}`;
@@ -1025,16 +1115,18 @@ function ComboCounter({ combo }: { combo: number }) {
   );
 }
 
-function Avatar({ char, isOpp, damaged }: { char: PlayerState | OpponentState; isOpp: boolean; damaged?: boolean }) {
+function Avatar({ char, isOpp, damaged, hideMood = false }: { char: PlayerState | OpponentState; isOpp: boolean; damaged?: boolean; hideMood?: boolean }) {
   const emo = EMOTIONS[char.emotion] || EMOTIONS.confident;
   const charge = 'charge' in char ? char.charge : undefined;
   const ultimate = 'ultimate' in char ? char.ultimate : undefined;
+  const moodColor = hideMood ? '#475569' : emo.color;
+  const moodAura = hideMood ? 'rgba(71,85,105,0.4)' : emo.aura;
   return (
     <div style={{ position:'relative', width:160 }}>
       <div style={{
         position:'absolute', left:'50%', top: 40, transform:'translate(-50%, 0)',
         width: 90, height: 90, borderRadius: '50%',
-        background: `radial-gradient(circle, ${emo.aura} 0%, transparent 70%)`,
+        background: `radial-gradient(circle, ${moodAura} 0%, transparent 70%)`,
         animation: 'auraPulse 2.4s ease-in-out infinite',
         filter: 'blur(6px)', pointerEvents:'none',
       }} />
@@ -1052,17 +1144,17 @@ function Avatar({ char, isOpp, damaged }: { char: PlayerState | OpponentState; i
         {!isOpp && charge !== undefined && (
           <ChargeBar charge={charge} ultColor={ULTIMATES[ultimate as UltKey]?.color || '#818CF8'} />
         )}
-        <div style={{ fontSize:46, margin:'8px 0 4px', filter: `drop-shadow(0 0 14px ${emo.aura})`, transition: 'filter 0.5s' }}>{char.icon}</div>
+        <div style={{ fontSize:46, margin:'8px 0 4px', filter: `drop-shadow(0 0 14px ${moodAura})`, transition: 'filter 0.5s' }}>{char.icon}</div>
         <div style={{ color:'white', fontWeight:700, fontSize:12, marginBottom:2, lineHeight:1.2 }}>{char.name}</div>
         <div style={{ color:'#818CF8', fontSize:9, fontWeight:700, marginBottom:6, letterSpacing:0.5, textTransform:'uppercase' }}>{char.archetype}</div>
         <div style={{
-          background: `linear-gradient(135deg, ${emo.color}22, ${emo.color}11)`,
-          border: `1px solid ${emo.color}44`,
+          background: `linear-gradient(135deg, ${moodColor}22, ${moodColor}11)`,
+          border: `1px solid ${moodColor}44`,
           borderRadius:16, padding:'3px 9px', display:'inline-flex', alignItems:'center', gap:4,
           fontSize:10, color:'white', fontWeight:600, transition: 'all 0.5s',
         }}>
-          <span style={{ fontSize:11 }}>{emo.icon}</span>
-          <span>{emo.name}</span>
+          <span style={{ fontSize:11 }}>{hideMood ? '❓' : emo.icon}</span>
+          <span>{hideMood ? 'Unknown' : emo.name}</span>
         </div>
       </div>
     </div>
@@ -1261,10 +1353,10 @@ function RespBar({ responses, onResp, onUltimate, opponent, disabled, charge, ul
   );
 }
 
-function StageIndicator({ currentStage, stages }: { currentStage: number; stages: StageDef[] }) {
+function StageIndicator({ currentStage, stages, label = 'ASCENT' }: { currentStage: number; stages: StageDef[]; label?: string }) {
   return (
     <div style={{ display:'flex', gap:8, justifyContent:'center', alignItems:'center', padding:'6px 0' }}>
-      <span style={{ fontSize:9, color:'rgba(255,255,255,0.4)', fontWeight:700, letterSpacing:1, marginRight:4 }}>ASCENT</span>
+      <span style={{ fontSize:9, color:'rgba(255,255,255,0.4)', fontWeight:700, letterSpacing:1, marginRight:4 }}>{label}</span>
       {stages.map((s, i) => {
         const n = i + 1;
         const isActive = n === currentStage;
@@ -1471,17 +1563,20 @@ function CharSelect({ onSelect, onExit = null }: { onSelect: (id: string) => voi
   );
 }
 
-function ModeSelect({ char, onTutorial, onSingle, onAscent, onBack }: {
+function ModeSelect({ char, onTutorial, onSingle, onAscent, onDaily, dailySeed, onBack }: {
   char: CharDef;
   onTutorial: () => void;
   onSingle: () => void;
   onAscent: () => void;
+  onDaily: () => void;
+  dailySeed: string;
   onBack: () => void;
 }) {
   const [hov, setHov] = useState<string | null>(null);
   const cards = [
     { id:'t', onClick:onTutorial, icon:'🏀', title:'Tutorial', desc:'Learn the ropes with Coach Morgan — no stakes, just teaching.', time:'~3 MIN', color:'#FBBF24', timeColor:'#FBBF24' },
     { id:'s', onClick:onSingle, icon:'⚔️', title:'Single Scenario', desc:'One opponent. One conversation. Master it at your pace.', time:'~5 MIN', color:'#6366F1', timeColor:'#818CF8' },
+    { id:'d', onClick:onDaily, icon:'🎲', title:'Daily Challenge', desc:'Same opponent for everyone today. Three stages. One shot.', time:`${dailySeed}`, color:'#06B6D4', timeColor:'#22D3EE', badge:'DAILY' },
     { id:'a', onClick:onAscent, icon:'🏔️', title:'Ascent Mode', desc:'Five escalating conflicts. Earn perks. Face a boss. Limited retries.', time:'~20 MIN • HARDCORE', color:'#EC4899', timeColor:'#F472B6', badge:'5 STAGES' },
   ];
   return (
@@ -1499,7 +1594,7 @@ function ModeSelect({ char, onTutorial, onSingle, onAscent, onBack }: {
       <div style={{ color:'white', textAlign:'center', fontSize:16, fontWeight:700, marginBottom:16, letterSpacing:0.3 }}>
         Choose Your Mode
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:12, maxWidth:620, margin:'0 auto' }}>
         {cards.map(c => {
           const isHov = hov === c.id;
           return (
@@ -1719,7 +1814,7 @@ function StageClear({ stage, isBoss }: { stage: number; isBoss?: boolean }) {
   );
 }
 
-function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetryStage, onAbandonRun }: {
+function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetryStage, onAbandonRun, noRetry = false }: {
   state: GameState;
   ascent: AscentRun | null;
   onRestart: () => void;
@@ -1727,6 +1822,7 @@ function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetry
   onNewGame: () => void;
   onRetryStage: () => void;
   onAbandonRun: () => void;
+  noRetry?: boolean;
 }) {
   const { isVictory, counts, round, player, opponent, maxCombo, scenario } = state;
   const topResp = Object.entries(counts).filter(([k]) => k !== 'ultimate').sort((a,b) => b[1]-a[1])[0]?.[0];
@@ -1814,7 +1910,7 @@ function GameOver({ state, ascent, onRestart, onNewChallenge, onNewGame, onRetry
           </div>
         )}
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {isAscent && !isVictory && (
+          {isAscent && !isVictory && !noRetry && (
             <>
               <button onClick={onRetryStage} disabled={(state.retriesUsed ?? 0) >= 2} style={{ ...bStyle('linear-gradient(135deg,#F472B6,#EC4899)','none','white'), opacity: (state.retriesUsed ?? 0) >= 2 ? 0.4 : 1, cursor: (state.retriesUsed ?? 0) >= 2 ? 'not-allowed' : 'pointer' }}>
                 🔄 Retry Stage {ascent.stage} {((state.retriesUsed ?? 0) >= 2) ? '(no retries left)' : `(${2 - (state.retriesUsed ?? 0)} left)`}
@@ -2110,6 +2206,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null);
   const [personalBest, setPersonalBest] = useState<PersonalBest | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [dailyRun, setDailyRun] = useState(false);
   const savedRunRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -2138,7 +2235,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
     const conflictId = gs.scenario?.conflictId || (gs.scenario?.id ? parseConflictId(gs.scenario.id) : null);
     const summary = summarizeObjectives(gs);
     const ending = conflictId ? pickEnding(conflictId, summary) : null;
-    const mode = ascent ? 'ascent' : 'single';
+    const mode = ascent ? (dailyRun ? 'daily' : 'ascent') : 'single';
     const outcome = (ending?.id || (gs.isVictory ? 'win' : 'loss')) as CombatOutcome;
     const score = Math.max(0, (gs.isVictory ? 100 : 0) + gs.maxCombo * 10 + Math.max(0, gs.player.hp));
 
@@ -2183,14 +2280,31 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
 
   const startSingle = () => {
     if (!char) return;
-    setAscent(null); setTut(null);
+    setAscent(null); setTut(null); setDailyRun(false);
     setGs(initState(char, null, { perks: [] }));
+    setScreen('game');
+  };
+
+  const startDaily = () => {
+    if (!char) return;
+    setTut(null); setDailyRun(true);
+    const dc = genDailyChallenge();
+    const firstStage = dc.stages[0];
+    const scenario: Scenario = {
+      id: firstStage.id,
+      conflictId: firstStage.conflictId,
+      opponent: firstStage.opponent,
+      setup: firstStage.setup,
+      startingEmotion: firstStage.startingEmotion,
+    };
+    setAscent({ stages: dc.stages, stage: 1, perks: [], totalRounds: 0, maxCombo: 0 });
+    setGs(initState(char, scenario, { perks: [] }));
     setScreen('game');
   };
 
   const startAscent = () => {
     if (!char) return;
-    setTut(null);
+    setTut(null); setDailyRun(false);
     const run = genAscentRun();
     const firstStage = run.stages[0];
     const scenario: Scenario = {
@@ -2540,6 +2654,8 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
         onTutorial={startTutorial}
         onSingle={startSingle}
         onAscent={startAscent}
+        onDaily={startDaily}
+        dailySeed={dailySeedLabel()}
         onBack={() => { setChar(null); setScreen('select'); }}
       />
     </div>
@@ -2642,7 +2758,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
               <div style={{ fontSize:24, marginBottom:4, filter:'drop-shadow(0 0 12px rgba(251,191,36,0.5))' }}>🎯</div>
               <div style={{ color:'rgba(255,255,255,0.4)', fontSize:10, fontWeight:700, letterSpacing:1.5, textTransform:'uppercase' }}>train</div>
             </div>
-            <Avatar char={gs.opponent} isOpp={true} damaged={hpFlash.opp} />
+            <Avatar char={gs.opponent} isOpp={true} damaged={hpFlash.opp} hideMood={(memory?.times_faced ?? 0) < 2 && gs.round <= 1} />
           </div>
 
           <DlgLog entries={gs.dialogue} round={gs.round} combo={gs.combo} />
@@ -2755,7 +2871,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
             background:'rgba(0,0,0,0.3)',
             borderBottom:'1px solid rgba(255,255,255,0.05)',
           }}>
-            <StageIndicator currentStage={ascent.stage} stages={ascent.stages} />
+            <StageIndicator currentStage={ascent.stage} stages={ascent.stages} label={dailyRun ? 'DAILY' : 'ASCENT'} />
             {ascent.perks.length > 0 && (
               <div style={{ marginTop:4 }}>
                 <PerkBadges perks={ascent.perks} compact />
@@ -2782,7 +2898,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
                 <div style={{ fontSize:24, marginBottom:4, filter:'drop-shadow(0 0 12px rgba(139,92,246,0.5))' }}>⚔️</div>
                 <div style={{ color:'rgba(255,255,255,0.4)', fontSize:10, fontWeight:700, letterSpacing:1.5, textTransform:'uppercase' }}>vs</div>
               </div>
-              <Avatar char={gs.opponent} isOpp={true} damaged={hpFlash.opp} />
+              <Avatar char={gs.opponent} isOpp={true} damaged={hpFlash.opp} hideMood={(memory?.times_faced ?? 0) < 2 && gs.round <= 1} />
               <button
                 onClick={() => setShowNotes(true)}
                 title="Field Notes — what you've learned"
@@ -2845,6 +2961,7 @@ export default function SocialCombatRPG({ onExit = null }: { onExit?: (() => voi
               onNewGame={newGame}
               onRetryStage={retryStage}
               onAbandonRun={abandonRun}
+              noRetry={dailyRun}
             />
           </>
         )}
