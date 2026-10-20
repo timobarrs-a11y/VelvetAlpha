@@ -66,6 +66,9 @@ function WorkspaceToolbar({
   onOpenMobileNav,
   wallpaperStyle,
   wallpaperClass,
+  inkColor,
+  inkMuted,
+  inkSubtle,
 }: {
   available: boolean;
   onToggleAvailable: () => void;
