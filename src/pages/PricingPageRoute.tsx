@@ -84,7 +84,7 @@ export function PricingPageRoute() {
         return;
       }
 
-      toast.success('Your 3-day Premium Trial is now active!');
+      toast.success('Your 3-day card trial is now active!');
       navigate(returnTo);
     } catch (_err) {
       toast.error('Something went wrong. Please try again.');

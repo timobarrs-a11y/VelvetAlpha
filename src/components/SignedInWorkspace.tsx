@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleUserRound,
+  Compass,
   Layers,
   LayoutGrid,
   Lightbulb,
@@ -39,6 +40,8 @@ import type { CompanionWithLastMessage } from '../services/companionService';
 import { TOOLBAR_TEXT_COLOR_PRESETS, type ToolbarTextColorKey } from '../services/customizationService';
 import { useCustomization } from '../hooks/useCustomization';
 import { buildWallpaperMeta } from '../services/wallpaperService';
+import { useAccess } from '../hooks/useAccess';
+import { LockScreen } from './LockScreen';
 
 interface SignedInWorkspaceProps {
   children: ReactNode;
@@ -266,6 +269,8 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
     { label: 'Profile', path: '/profile', tone: '#cbd5e1', icon: <CircleUserRound className="h-3.5 w-3.5" /> },
   ];
   const connectTools = [
+    { label: 'Feed', path: '/feed', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
+    { label: 'Discover', path: '/discover', tone: '#fbbf24', icon: <Compass className="h-3.5 w-3.5" /> },
     { label: 'Atlas', path: '/atlas', tone: '#cbd5e1', icon: <Bot className="h-3.5 w-3.5" /> },
     { label: 'Navi', path: '/local-explorer', tone: '#34d399', icon: <MapPin className="h-3.5 w-3.5" /> },
     { label: 'Group Chat', path: '/group-chat', tone: '#2dd4bf', icon: <UsersRound className="h-3.5 w-3.5" /> },
@@ -391,6 +396,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   const location = useLocation();
   const lobby = useLobbyData();
   const { customization } = useCustomization();
+  const { showLockScreen } = useAccess();
   const textColorKey: ToolbarTextColorKey = customization?.toolbar_text_color ?? 'dark';
   const textColorDef = TOOLBAR_TEXT_COLOR_PRESETS.find(p => p.key === textColorKey) ?? TOOLBAR_TEXT_COLOR_PRESETS[0];
   const inkColor = textColorDef.color;
@@ -426,6 +432,9 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
         <div className="relative z-20 flex-shrink-0"><MessagingOverlayMount inkColor={inkColor} inkMuted={inkMuted} /></div>
         <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} lobby={lobby} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
       </div>
+      {showLockScreen && !location.pathname.startsWith('/pricing') && !location.pathname.startsWith('/success') && !location.pathname.startsWith('/billing') && (
+        <LockScreen />
+      )}
     </div>
   );
 }

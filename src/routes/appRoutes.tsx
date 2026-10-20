@@ -34,6 +34,9 @@ const CommunityPage = lazy(() => import('../pages/CommunityPage'));
 const BoardPage = lazy(() => import('../pages/BoardPage'));
 const PostDetailPage = lazy(() => import('../pages/PostDetailPage'));
 const CommunitySearchPage = lazy(() => import('../pages/CommunitySearchPage'));
+const MemberProfilePage = lazy(() => import('../pages/MemberProfilePage'));
+const ProgressFeedPage = lazy(() => import('../pages/ProgressFeedPage'));
+const DiscoverPage = lazy(() => import('../pages/DiscoverPage'));
 function P(el: React.ReactNode) {
   return (
     <ProtectedRoute>
@@ -75,4 +78,7 @@ export const appRoutes = [
   <Route key="community-board" path="/community/board/:boardId" element={P(<BoardPage />)} />,
   <Route key="community-post" path="/community/post/:postId" element={P(<PostDetailPage />)} />,
   <Route key="community-search" path="/community/search" element={P(<CommunitySearchPage />)} />,
+  <Route key="member-profile" path="/member/:userId" element={P(<MemberProfilePage />)} />,
+  <Route key="progress-feed" path="/feed" element={P(<ProgressFeedPage />)} />,
+  <Route key="discover" path="/discover" element={P(<DiscoverPage />)} />,
 ];

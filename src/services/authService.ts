@@ -26,26 +26,60 @@ export const authService = {
   async signUp(
     email: string,
     password: string,
-    consent: { termsVersion: string; termsAcceptedAt: string; ageVerifiedAt: string }
+    consent: {
+      termsVersion: string;
+      termsAcceptedAt: string;
+      birthday: string; // ISO date string YYYY-MM-DD
+      botCheckToken?: string; // honeypot field — must be empty
+      formRenderedAt: number; // timestamp when form was rendered
+    }
   ) {
+    // Client-side bot checks (server validates too, but these catch most bots early)
+    if (consent.botCheckToken) {
+      throw new Error('We could not complete that request. Please try again.');
+    }
+    // Form submitted in under 2 seconds = likely a bot
+    if (Date.now() - consent.formRenderedAt < 2000) {
+      throw new Error('Please take a moment to review your information and try again.');
+    }
+
     const { data, error } = await supabase.auth.signUp({ email, password });
 
     if (error) throw new Error(authFailureMessage(error.message));
     if (!data.user) throw new Error(authFailureMessage(undefined));
 
+    // Insert a minimal profile row — age/consent fields are set server-side below.
+    // This insert may fail silently if email confirmation is on (no session yet);
+    // verify_age_and_consent will be called after confirmation instead.
     const { error: profileError } = await supabase
       .from('user_profiles')
       .insert({
         id: data.user.id,
         name: 'there',
-        terms_accepted_at: consent.termsAcceptedAt,
-        terms_version: consent.termsVersion,
-        age_verified_at: consent.ageVerifiedAt,
       });
 
     if (profileError && !profileError.message.includes('duplicate')) {
-      // Non-duplicate errors are logged but not fatal — auth account was created
       console.error('Profile insert error:', profileError.message);
+    }
+
+    // If we have a session (email confirmation off), verify age server-side now.
+    // Otherwise this runs after the user confirms and lands in the app.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const { error: ageError } = await supabase.rpc('verify_age_and_consent', {
+        p_birthday: consent.birthday,
+        p_terms_version: consent.termsVersion,
+        p_terms_accepted_at: consent.termsAcceptedAt,
+      });
+      if (ageError) {
+        console.error('Age verification error:', ageError.message);
+      }
+
+      // Start the 48-hour welcome window
+      const { error: welcomeError } = await supabase.rpc('start_welcome_window');
+      if (welcomeError) {
+        console.error('Welcome window error:', welcomeError.message);
+      }
     }
 
     return data.user;

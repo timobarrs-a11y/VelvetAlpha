@@ -10,8 +10,9 @@ import { MemoryPanel } from '../components/MemoryPanel';
 import { getUserExperts, deleteUserExpert, UserExpert } from '../services/expertService';
 import { getExpertById } from '../config/signatureExperts';
 import { useRole } from '../hooks/useRole';
+import { PublicProfileSettings } from '../components/PublicProfileSettings';
 
-type Tab = 'notifications' | 'privacy' | 'appearance' | 'experts' | 'tour' | 'security' | 'data';
+type Tab = 'notifications' | 'privacy' | 'appearance' | 'experts' | 'tour' | 'security' | 'data' | 'public-profile';
 
 interface NotificationSettings {
   push_enabled: boolean;
@@ -288,6 +289,7 @@ export function SettingsPage() {
 
   const TABS: { id: Tab; label: string; icon: typeof Bell }[] = [
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'public-profile', label: 'Public Profile', icon: Users },
     { id: 'privacy', label: 'Privacy', icon: Shield },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'experts', label: 'AI Experts', icon: Brain },
@@ -443,6 +445,14 @@ export function SettingsPage() {
                   </div>
 
                   <SaveButton saving={saving} saved={saved} onSave={saveSettings} />
+                </div>
+              )}
+
+              {activeTab === 'public-profile' && (
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold text-white mb-1">Public Profile</h2>
+                  <p className="text-sm text-white/40 mb-6">Control how other members see you. Avatars only — never face photos.</p>
+                  <PublicProfileSettings />
                 </div>
               )}
 

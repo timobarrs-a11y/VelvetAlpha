@@ -4,6 +4,7 @@ import { supabase } from '../shared/supabase/client';
 import { referralService } from '../services/referralService';
 import { newsService } from '../services/newsService';
 import { claimGuestDonations } from '../services/donationService';
+import { completePostConfirmationVerification } from '../services/accessService';
 
 const NEWS_REFRESH_THROTTLE_KEY = 'velvet_news_last_refresh';
 
@@ -69,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (newSession) {
         referralService.redeemPendingReferral().catch(() => {});
         triggerNewsRefresh(newSession.user.id).catch(() => {});
+        completePostConfirmationVerification().catch(() => {});
         const email = newSession.user.email;
         if (email) {
           claimGuestDonations(newSession.user.id, email).catch(() => {});

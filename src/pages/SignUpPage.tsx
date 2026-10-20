@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Heart, ShieldCheck, ChevronDown } from 'lucide-react';
 import { authService } from '../services/authService';
 import { referralService } from '../services/referralService';
+import { storePendingAgeVerification } from '../services/accessService';
 import { Button, Input } from '../shared/ui';
 
 const TERMS_VERSION = '2026-01-28';
@@ -78,6 +79,10 @@ export default function SignUpPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Bot check: honeypot field (must stay empty) + form render timestamp
+  const [companyWebsite, setCompanyWebsite] = useState(''); // honeypot — hidden from humans
+  const formRenderedAt = useRef(Date.now());
+
   useEffect(() => { referralService.captureRefFromUrl(); }, []);
 
   const currentYear = new Date().getFullYear();
@@ -110,10 +115,14 @@ export default function SignUpPage() {
 
     setIsLoading(true);
     try {
+      const birthday = `${birthYear}-${birthMonth}-${birthDay}`;
+      storePendingAgeVerification(birthday, TERMS_VERSION);
       await authService.signUp(email, password, {
         termsVersion: TERMS_VERSION,
         termsAcceptedAt: new Date().toISOString(),
-        ageVerifiedAt: new Date().toISOString(),
+        birthday,
+        botCheckToken: companyWebsite,
+        formRenderedAt: formRenderedAt.current,
       });
       await referralService.redeemPendingReferral();
       navigate('/welcome');
@@ -341,6 +350,19 @@ export default function SignUpPage() {
                   </Link>{' '}
                   and consent to data processing as described.
                 </span>
+              </label>
+            </div>
+
+            {/* Honeypot field — hidden from real users, bots fill it automatically */}
+            <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden' }}>
+              <label>Company website (leave empty)
+                <input
+                  type="text"
+                  value={companyWebsite}
+                  onChange={(e) => setCompanyWebsite(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
               </label>
             </div>
 
