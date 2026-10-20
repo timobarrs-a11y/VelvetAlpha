@@ -13,7 +13,7 @@ import { useAudioScene } from '../hooks/useAudioScene';
 import { supabase } from '../shared/supabase/client';
 import {
   LoadingState, PageShell, Pill, HomeLayoutSwitch, Badge, Segmented,
-  ModalShell, EmptyState,
+  ModalShell, EmptyState, Button,
 } from '../shared/ui';
 import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { companionAvatarConfig, TONE_COLOR, FinishSetupCard } from '../components/lobby';
@@ -51,6 +51,7 @@ export function HomeV3Page() {
   const coach = coaches[0];
   const voices = companions.filter(c => c.relationship_type !== 'mentor');
 
+  const companionsKey = companions.map(c => c.id).join(',');
   const loadCheckIns = useCallback(async () => {
     if (companions.length === 0) return;
     try {
@@ -82,7 +83,8 @@ export function HomeV3Page() {
       }
       setCheckIns(results);
     } catch { /* best-effort */ }
-  }, [companions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companionsKey]);
 
   useEffect(() => {
     if (!loading && companions.length > 0) {
@@ -92,7 +94,8 @@ export function HomeV3Page() {
         if (user?.id) ensureCoachColors(user.id).catch(() => {});
       })();
     }
-  }, [loading, companions, loadCheckIns]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, companionsKey, loadCheckIns]);
 
   if (loading) {
     return (
@@ -423,6 +426,9 @@ export function HomeV3Page() {
             ))}
           </div>
         )}
+        <div className="flex justify-start mt-5 pt-4" style={{ borderTop: '1px solid var(--ds-border-soft)' }}>
+          <Button variant="ghost" size="sm" onClick={() => lobby.setShowGameModal(false)}>Back</Button>
+        </div>
       </ModalShell>
     </div>
   );

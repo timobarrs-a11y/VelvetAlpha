@@ -437,6 +437,9 @@ export function CompanionLobbyPage() {
             ))}
           </div>
         )}
+        <div className="flex justify-start mt-5 pt-4" style={{ borderTop: '1px solid var(--ds-border-soft)' }}>
+          <Button variant="ghost" size="sm" onClick={() => lobby.setShowGameModal(false)}>Back</Button>
+        </div>
       </ModalShell>
 
       <motion.button

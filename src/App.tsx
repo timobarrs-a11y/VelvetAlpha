@@ -1064,22 +1064,21 @@ function AppInner() {
 
   const toolbarBackgroundStyle: CSSProperties = toolbarBgMode === 'glass' || !toolbarWallpaperId
     ? {
-        // Frosted "Aero" glass — stronger blur, subtle tint, reflective top edge
+        // Frosted "Aero" glass — opaque enough to read as glass, with depth
         background: customization?.translucent_ui
-          ? 'linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)'
-          : 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.35) 100%)',
-        backdropFilter: 'blur(28px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(28px) saturate(160%)',
-        borderColor: 'rgba(255,255,255,0.35)',
-        boxShadow: '0 -12px 40px -12px rgba(0,0,0,0.18), inset 0 1px 0 0 rgba(255,255,255,0.45)',
+          ? 'linear-gradient(180deg, rgba(245,245,250,0.72) 0%, rgba(235,238,245,0.55) 100%)'
+          : 'linear-gradient(180deg, rgba(248,249,252,0.88) 0%, rgba(238,240,246,0.75) 100%)',
+        backdropFilter: 'blur(32px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+        boxShadow: '0 -8px 28px -6px rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.75), inset 0 -1px 0 0 rgba(0,0,0,0.04)',
       }
     : {
-        // Wallpaper-backed toolbar — still frosted so text stays readable
+        // Wallpaper-backed toolbar — frosted over the wallpaper image
         ...toolbarWallpaperStyle,
-        backdropFilter: 'blur(20px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(140%)',
-        borderColor: 'rgba(255,255,255,0.25)',
-        boxShadow: '0 -12px 40px -12px rgba(0,0,0,0.22), inset 0 1px 0 0 rgba(255,255,255,0.30)',
+        background: undefined,
+        backdropFilter: 'blur(24px) saturate(150%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(150%)',
+        boxShadow: '0 -8px 28px -6px rgba(0,0,0,0.18), inset 0 1px 0 0 rgba(255,255,255,0.45)',
       };
 
   const getBotDrawerProps = () => {
@@ -1328,15 +1327,16 @@ function AppInner() {
 
       {/* Bottom toolbar — hidden while a full-page feature tab is active */}
       <div
-        className={`relative z-40 border-t transition-all duration-500 ${
+        className={`relative z-40 transition-all duration-500 ${
           (activeThread === 'calendar' || activeThread === 'co-author' || activeThread === 'daily-feed' || activeThread === 'your-lens') ? 'hidden' : ''
         }`}
-        style={{
-          ...toolbarBackgroundStyle,
-          color: toolbarTextColor,
-          ['--toolbar-text' as string]: toolbarTextColor,
-        }}
       >
+        {/* Frosted glass background layer — sits behind the content so blur reads correctly */}
+        <div className="absolute inset-0 pointer-events-none" style={toolbarBackgroundStyle} />
+        {/* Soft top hairline that fades into the glass (replaces the hard white border) */}
+        <div className="absolute top-0 left-0 right-0 h-px pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.06) 20%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.06) 80%, transparent 100%)' }} />
+        {/* Content layer */}
+        <div className="relative" style={{ color: toolbarTextColor, ['--toolbar-text' as string]: toolbarTextColor }}>
         {/* Desktop layout — evenly distributed single row */}
         <div className="hidden lg:flex items-end gap-2 px-4 py-2">
 
@@ -1484,6 +1484,7 @@ function AppInner() {
               />
             </div>
           )}
+        </div>
         </div>
       </div>
 

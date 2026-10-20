@@ -104,11 +104,11 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
           }
           disabled={disabled}
           rows={1}
-          className={`w-full px-4 sm:px-5 py-2.5 rounded-2xl border-2 transition-all duration-200 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none resize-none overflow-y-auto ${
+          className={`w-full px-4 sm:px-5 py-2.5 rounded-2xl border transition-all duration-200 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none resize-none overflow-y-auto ${
             isFocused
-              ? 'border-rose-400 bg-white shadow-lg shadow-rose-100/50 ring-4 ring-rose-50'
-              : 'border-gray-200 bg-white/90 hover:border-gray-300 shadow-sm'
-          } disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:border-gray-200`}
+              ? 'border-rose-300 bg-white shadow-lg shadow-rose-100/40 ring-2 ring-rose-50'
+              : 'border-black/8 bg-white/85 hover:border-black/12 shadow-sm'
+          } disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:border-black/8`}
           style={{ maxHeight: MAX_TEXTAREA_HEIGHT }}
         />
       </div>
