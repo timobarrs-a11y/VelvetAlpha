@@ -158,7 +158,7 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
   const setWorkspaceWallpaper = useCallback(async (wallpaperId: string | null, wallpaperUrl: string | null) => {
     setCustomization(prev => prev ? { ...prev, workspace_wallpaper_id: wallpaperId, workspace_wallpaper_url: wallpaperUrl } : prev);
     const uid = userIdRef.current;
-    if (uid) saveWorkspaceWallpaper(uid, wallpaperId, wallpaperUrl).catch(() => {});
+    if (uid) await saveWorkspaceWallpaper(uid, wallpaperId, wallpaperUrl);
   }, []);
 
   const dismissUnlockNotice = useCallback(() => setJustUnlocked([]), []);

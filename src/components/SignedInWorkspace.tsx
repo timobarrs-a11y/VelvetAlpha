@@ -63,10 +63,14 @@ function WorkspaceToolbar({
   available,
   onToggleAvailable,
   onOpenMobileNav,
+  wallpaperStyle,
+  wallpaperClass,
 }: {
   available: boolean;
   onToggleAvailable: () => void;
   onOpenMobileNav: () => void;
+  wallpaperStyle?: React.CSSProperties;
+  wallpaperClass?: string;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -100,8 +104,13 @@ function WorkspaceToolbar({
   };
 
   return (
-    <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[rgba(14,12,35,0.55)] px-3 py-2.5 backdrop-blur-md sm:px-5">
-      <div className="flex min-w-0 items-center gap-2.5">
+    <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 border-b border-white/10 px-3 py-2.5 sm:px-5">
+      {!!wallpaperClass || !!wallpaperStyle ? (
+        <div className={`pointer-events-none absolute inset-0 z-0 ${wallpaperClass ?? ''}`} style={wallpaperStyle || undefined} />
+      ) : (
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[rgba(14,12,35,0.9)]" />
+      )}
+      <div className="relative z-10 flex min-w-0 items-center gap-2.5">
         <button
           type="button"
           onClick={onOpenMobileNav}
@@ -126,7 +135,7 @@ function WorkspaceToolbar({
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className="relative z-10 flex items-center gap-1.5 sm:gap-2">
         <button
           type="button"
           onClick={onToggleAvailable}
@@ -297,10 +306,19 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate }: { collapsed:
   );
 }
 
-function WorkspaceNavigation({ collapsed, onToggle, lobby }: { collapsed: boolean; onToggle: () => void; lobby: LobbyData }) {
+function WorkspaceNavigation({ collapsed, onToggle, lobby, wallpaperStyle, wallpaperClass }: { collapsed: boolean; onToggle: () => void; lobby: LobbyData; wallpaperStyle?: React.CSSProperties; wallpaperClass?: string }) {
   const location = useLocation();
   const navigate = useNavigate();
-  return <aside className="relative z-20 hidden min-h-0 flex-col border-r border-white/8 bg-[rgba(12,10,30,0.55)] py-4 backdrop-blur-md transition-[width] duration-300 lg:flex" style={{ width: collapsed ? 68 : 224 }}><div className={`flex items-center px-3 ${collapsed ? 'justify-center' : 'justify-end'}`}><button type="button" onClick={onToggle} className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-white/8 hover:text-ink" aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button></div><SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={navigate} /></aside>;
+  const hasWp = !!wallpaperClass || !!wallpaperStyle;
+  return <aside className="relative z-20 hidden min-h-0 flex-col border-r border-white/8 py-4 transition-[width] duration-300 lg:flex" style={{ width: collapsed ? 68 : 224 }}>
+    {hasWp && (
+      <div className={`pointer-events-none absolute inset-0 z-0 ${wallpaperClass ?? ''}`} style={wallpaperStyle || undefined} />
+    )}
+    <div className="relative z-10 flex h-full flex-col bg-[rgba(12,10,30,0.6)]">
+      <div className={`flex items-center px-3 ${collapsed ? 'justify-center' : 'justify-end'}`}><button type="button" onClick={onToggle} className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-white/8 hover:text-ink" aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button></div>
+      <SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={navigate} />
+    </div>
+  </aside>;
 }
 
 function MobileNavDrawer({ open, onClose, lobby }: { open: boolean; onClose: () => void; lobby: LobbyData }) {
@@ -375,21 +393,15 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   const wallpaperUrl = customization?.workspace_wallpaper_url ?? null;
   const wallpaperMeta = buildWallpaperMeta(wallpaperId, wallpaperUrl);
   const hasWallpaper = !!wallpaperId;
+  const wpStyle = hasWallpaper ? wallpaperMeta.style : undefined;
+  const wpClass = hasWallpaper ? wallpaperMeta.className : '';
 
   return (
     <div className="h-screen overflow-hidden bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
-        {/* Workspace wallpaper layer — sits behind the top toolbar and sidebar only */}
-        {hasWallpaper && (
-          <div
-            className={`pointer-events-none absolute inset-x-0 top-0 z-0 ${wallpaperMeta.className}`}
-            style={wallpaperMeta.style || undefined}
-          />
-        )}
-        <div className={`pointer-events-none absolute inset-0 ${hasWallpaper ? '' : 'bg-[radial-gradient(ellipse_at_top_right,rgba(99,61,188,0.17),transparent_44%),radial-gradient(ellipse_at_bottom_left,rgba(244,63,107,0.08),transparent_42%)]'}`} />
-        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} />
+        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} wallpaperStyle={wpStyle} wallpaperClass={wpClass} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
-          <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} />
+          <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} />
           <main className="min-h-0 min-w-0 overflow-hidden border-r border-white/8">{children}</main>
         </div>
         <div className="relative z-20 flex-shrink-0 border-t border-white/10 bg-[rgba(8,8,22,0.96)] shadow-[0_-14px_36px_rgba(0,0,0,0.18)]"><MessagingOverlayMount /></div>

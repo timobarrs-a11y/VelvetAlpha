@@ -381,17 +381,15 @@ export async function saveWorkspaceWallpaper(
 
   if (fetchErr) throw new Error(fetchErr.message);
 
-  const colors: Record<string, string> = (row?.tile_colors as Record<string, string>) ?? {};
-  const nextColors = {
-    ...colors,
-    __workspace_wallpaper_id: wallpaperId ?? '',
-    __workspace_wallpaper_url: wallpaperUrl ?? '',
-  };
+  const colors: Record<string, string> = row?.tile_colors
+    ? { ...(row.tile_colors as Record<string, string>) }
+    : {};
+
+  const nextColors = { ...colors, __workspace_wallpaper_id: wallpaperId ?? '', __workspace_wallpaper_url: wallpaperUrl ?? '' };
 
   const { error } = await supabase
     .from('user_customization')
-    .update({ tile_colors: nextColors, updated_at: new Date().toISOString() })
-    .eq('user_id', userId);
+    .upsert({ user_id: userId, tile_colors: nextColors, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
 
   if (error) throw new Error(error.message);
 }
