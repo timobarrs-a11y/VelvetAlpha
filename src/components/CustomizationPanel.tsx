@@ -40,9 +40,8 @@ interface Props {
   onSetToolbarBackgroundMode: (mode: ToolbarBackgroundMode) => void;
   onSetToolbarTextColor:     (key: ToolbarTextColorKey) => void;
   onCompanionFontUpdated?: (companionId: string, fontFamily: string) => void;
+  initialTab?: Tab;
 }
-
-type Tab = 'pointer' | 'effect' | 'rewards' | 'fonts' | 'toolbar';
 
 function SymbolIcon({ symbol }: { symbol: PointerSymbol }) {
   return (
@@ -266,8 +265,13 @@ export function CustomizationPanel({
   isOpen, onClose, customization, companions = [],
   onSetPointer, onSetShowTrail, onSetTrailStyle, onSetAnimationStyle, onSetCursorColor,
   onSetButtonHoverStyle, onSetTranslucentUI, onSetToolbarBackgroundMode, onSetToolbarTextColor, onCompanionFontUpdated,
+  initialTab,
 }: Props) {
-  const [tab, setTab] = useState<Tab>('pointer');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'pointer');
+
+  useEffect(() => {
+    if (isOpen && initialTab) setTab(initialTab);
+  }, [isOpen, initialTab]);
   const [editingCompanion, setEditingCompanion] = useState<CompanionWithLastMessage | null>(null);
   const [localCompanions, setLocalCompanions] = useState<CompanionWithLastMessage[]>(companions);
   const streak = customization.current_streak;
