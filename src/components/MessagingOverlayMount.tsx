@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { useAuth } from '../auth/AuthProvider';
 import { MessagingOverlay } from './MessagingOverlay';
@@ -10,17 +10,25 @@ const HIDDEN_PATHS = [
   '/splash', '/signin', '/signup', '/onboarding',
 ];
 
-export function MessagingOverlayMount() {
+interface MessagingOverlayMountProps {
+  inkColor?: string;
+  inkMuted?: string;
+}
+
+export function MessagingOverlayMount({ inkColor = '#f0eeff', inkMuted = '#9990cc' }: MessagingOverlayMountProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [hasMessages, setHasMessages] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const refreshUnread = useCallback(async () => {
     if (!user) return;
     try {
       const convs = await getConversationList();
-      setUnread(convs.reduce((sum, c) => sum + c.unread_count, 0));
+      const total = convs.reduce((sum, c) => sum + c.unread_count, 0);
+      setUnread(total);
+      setHasMessages(convs.length > 0);
     } catch {
       // ignore
     }
@@ -33,7 +41,6 @@ export function MessagingOverlayMount() {
     return () => clearInterval(interval);
   }, [user, refreshUnread]);
 
-  // Realtime: bump unread when a new DM arrives.
   useEffect(() => {
     if (!user) return;
     if (channelRef.current) supabase.removeChannel(channelRef.current);
@@ -54,7 +61,6 @@ export function MessagingOverlayMount() {
     };
   }, [user, refreshUnread]);
 
-  // Hide on auth / splash / onboarding pages
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
   if (!user) return null;
   if (HIDDEN_PATHS.some(p => path.startsWith(p))) return null;
@@ -62,28 +68,35 @@ export function MessagingOverlayMount() {
   return (
     <div className="w-full">
       {!open && (
-        <motion.button
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          onClick={() => setOpen(true)}
-          className="flex min-h-[58px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-white/5"
-          title="Friends & messages"
-          aria-label="Open friends and messages"
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-center px-3 py-1.5"
         >
-          <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500 text-white shadow-[0_8px_24px_-6px_rgba(244,63,94,0.5)]">
-            <Users className="h-4 w-4" />
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setOpen(true)}
+            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/20 transition-colors hover:bg-white/8"
+            style={{ color: inkColor }}
+            title="Instant messages"
+            aria-label="Open instant messages"
+          >
+            <MessageCircle className="h-4 w-4" />
             {unread > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-[#0c0b20] bg-white px-1 text-[10px] font-bold text-rose-600">
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -right-1 -top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full border-2 border-[#0c0b20] bg-rose-500 px-1 text-[9px] font-bold text-white"
+              >
                 {unread > 9 ? '9+' : unread}
-              </span>
+              </motion.span>
             )}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-xs font-semibold text-ink">Friends & messages</span>
-            <span className="block text-[10px] text-ink-muted">Keep conversations close while you explore</span>
-          </span>
-          <span className="rounded-lg border border-white/10 px-2 py-1 text-[10px] font-medium text-ink-muted">Open</span>
-        </motion.button>
+            {unread > 0 && (
+              <span className="absolute inset-0 rounded-full ring-2 ring-rose-500/40 animate-pulse" />
+            )}
+          </motion.button>
+        </motion.div>
       )}
 
       <AnimatePresence>

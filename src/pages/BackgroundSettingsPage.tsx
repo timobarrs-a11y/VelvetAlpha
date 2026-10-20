@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Upload, Sparkles, Check, ImageIcon, Palette, Loader2, AlertCircle, Lock, Zap, X } from 'lucide-react';
+import { ArrowLeft, Upload, Sparkles, Check, ImageIcon, Palette, Loader2, AlertCircle, Lock, Zap, X, Type } from 'lucide-react';
 import {
   CSS_WALLPAPER_PRESETS,
   PHOTO_WALLPAPER_PRESETS,
@@ -16,6 +16,7 @@ import { useCustomization } from '../hooks/useCustomization';
 import { useAuth } from '../auth/AuthProvider';
 import { SubscriptionTier } from '../types/subscription';
 import { ALL_PRESETS } from '../services/wallpaperService';
+import { TOOLBAR_TEXT_COLOR_PRESETS, type ToolbarTextColorKey } from '../services/customizationService';
 
 type Tab = 'live' | 'gradient' | 'photo' | 'upload' | 'ai';
 
@@ -37,7 +38,7 @@ const AI_PROMPT_SUGGESTIONS = [
 export function BackgroundSettingsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { customization, setWorkspaceWallpaper } = useCustomization();
+  const { customization, setWorkspaceWallpaper, setToolbarTextColor } = useCustomization();
 
   const userId = user?.id ?? '';
   const currentWallpaper = customization?.workspace_wallpaper_id ?? null;
@@ -57,6 +58,7 @@ export function BackgroundSettingsPage() {
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState(false);
+  const [textColor, setTextColor] = useState<ToolbarTextColorKey>(customization?.toolbar_text_color ?? 'dark');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const previewMeta = buildWallpaperMeta(selected, selectedUrl);
@@ -477,6 +479,33 @@ export function BackgroundSettingsPage() {
               {error}
             </motion.div>
           )}
+        </div>
+
+        {/* Text color presets — ensure legibility over any wallpaper */}
+        <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <Type size={16} className="text-gray-700" />
+            <h3 className="text-sm font-bold text-gray-900">Text color</h3>
+          </div>
+          <p className="mb-4 text-xs text-gray-500 leading-5">Pick a text color that stays readable over your chosen background. This affects the labels in your sidebar and top bar.</p>
+          <div className="flex flex-wrap gap-2.5">
+            {TOOLBAR_TEXT_COLOR_PRESETS.map(preset => {
+              const active = textColor === preset.key;
+              return (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => { setTextColor(preset.key); setToolbarTextColor(preset.key); }}
+                  className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 transition-all ${active ? 'border-gray-900 shadow-md' : 'border-gray-200 hover:border-gray-400'}`}
+                  aria-pressed={active}
+                >
+                  <span className="h-5 w-5 rounded-full border border-black/10" style={{ background: preset.color }} />
+                  <span className={`text-sm font-semibold ${active ? 'text-gray-900' : 'text-gray-600'}`}>{preset.label}</span>
+                  {active && <Check size={14} className="text-gray-900" />}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Action bar — sticky at bottom */}

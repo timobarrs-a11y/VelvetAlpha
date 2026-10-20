@@ -36,6 +36,7 @@ import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { Avatar } from './Avatar';
 import { companionAvatarConfig, TONE_COLOR } from './lobby';
 import type { CompanionWithLastMessage } from '../services/companionService';
+import { TOOLBAR_TEXT_COLOR_PRESETS, type ToolbarTextColorKey } from '../services/customizationService';
 import { useCustomization } from '../hooks/useCustomization';
 import { buildWallpaperMeta } from '../services/wallpaperService';
 
@@ -71,6 +72,9 @@ function WorkspaceToolbar({
   onOpenMobileNav: () => void;
   wallpaperStyle?: React.CSSProperties;
   wallpaperClass?: string;
+  inkColor: string;
+  inkMuted: string;
+  inkSubtle: string;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -114,7 +118,8 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={onOpenMobileNav}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-ink-muted transition-colors hover:bg-white/8 hover:text-ink lg:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 lg:hidden"
+          style={{ color: inkMuted }}
           aria-label="Open navigation"
         >
           <LayoutGrid className="h-4 w-4" />
@@ -129,8 +134,8 @@ function WorkspaceToolbar({
             <Sparkles className="h-4 w-4" />
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-ink">Velvet</span>
-            <span className="block max-w-[130px] truncate text-[10px] text-ink-muted sm:max-w-none">{displayName}</span>
+            <span className="block truncate text-sm font-semibold" style={{ color: inkColor }}>Velvet</span>
+            <span className="block max-w-[130px] truncate text-[10px] sm:max-w-none" style={{ color: inkMuted }}>{displayName}</span>
           </span>
         </button>
       </div>
@@ -142,10 +147,11 @@ function WorkspaceToolbar({
           className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${
             available
               ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
-              : 'border-white/10 bg-black/10 text-ink-muted hover:text-ink'
+              : 'border-white/10 bg-black/10 hover:bg-white/8'
           }`}
           aria-pressed={available}
           title={available ? 'Available to chat — click to turn off' : 'Turn on instant chat availability'}
+          style={available ? undefined : { color: inkMuted }}
         >
           {available ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
           <span className="hidden sm:inline">{available ? 'Available' : 'Unavailable'}</span>
@@ -155,7 +161,8 @@ function WorkspaceToolbar({
             type="button"
             onClick={() => selectMode('classic')}
             aria-pressed={mode === 'classic'}
-            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'classic' ? 'bg-white/12 text-ink' : 'text-ink-muted hover:text-ink'}`}
+            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'classic' ? 'bg-white/12' : 'hover:bg-white/8'}`}
+            style={{ color: mode === 'classic' ? inkColor : inkMuted }}
           >
             Classic
           </button>
@@ -163,7 +170,8 @@ function WorkspaceToolbar({
             type="button"
             onClick={() => selectMode('v3')}
             aria-pressed={mode === 'v3'}
-            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'v3' ? 'bg-rose-500/20 text-rose-200' : 'text-ink-muted hover:text-ink'}`}
+            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'v3' ? 'bg-rose-500/20 text-rose-200' : 'hover:bg-white/8'}`}
+            style={mode === 'v3' ? undefined : { color: inkMuted }}
           >
             V3
           </button>
@@ -171,7 +179,8 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={toggleSound}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 text-ink-muted transition-colors hover:bg-white/8 hover:text-ink"
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8"
+          style={{ color: inkMuted }}
           aria-label={soundEnabled ? 'Mute workspace sounds' : 'Enable workspace sounds'}
           title={soundEnabled ? 'Mute workspace sounds' : 'Enable workspace sounds'}
         >
@@ -180,7 +189,8 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={() => navigate('/settings')}
-          className="hidden h-8 w-8 items-center justify-center rounded-xl border border-white/10 text-ink-muted transition-colors hover:bg-white/8 hover:text-ink sm:flex"
+          className="hidden h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 sm:flex"
+          style={{ color: inkMuted }}
           aria-label="Open settings"
           title="Settings"
         >
@@ -189,7 +199,8 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={handleSignOut}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 text-ink-muted transition-colors hover:bg-rose-500/12 hover:text-rose-200"
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-rose-500/12 hover:text-rose-200"
+          style={{ color: inkMuted }}
           aria-label="Sign out"
           title="Sign out"
         >
@@ -203,11 +214,11 @@ function WorkspaceToolbar({
 
 type LobbyData = ReturnType<typeof useLobbyData>;
 
-function SidebarLabel({ children }: { children: ReactNode }) {
-  return <p className="px-2 pb-1 pt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-ink-subtle">{children}</p>;
+function SidebarLabel({ children, inkSubtle }: { children: ReactNode; inkSubtle: string }) {
+  return <p className="px-2 pb-1 pt-1 text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: inkSubtle }}>{children}</p>;
 }
 
-function PersonRow({ companion, coach, collapsed, pathname, onClick }: { companion: CompanionWithLastMessage; coach?: boolean; collapsed: boolean; pathname: string; onClick: () => void }) {
+function PersonRow({ companion, coach, collapsed, pathname, onClick, inkColor, inkMuted }: { companion: CompanionWithLastMessage; coach?: boolean; collapsed: boolean; pathname: string; onClick: () => void; inkColor: string; inkMuted: string }) {
   const active = pathname.startsWith(`/chat?companion=${companion.id}`) || pathname.includes(`companion=${companion.id}`);
   const line = companion.last_message_text || (companion.last_message_at ? new Date(companion.last_message_at).toLocaleDateString() : 'Say hello');
   return (
@@ -219,28 +230,28 @@ function PersonRow({ companion, coach, collapsed, pathname, onClick }: { compani
       {!collapsed && (
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="truncate text-[11px] font-semibold text-ink">{companion.custom_name}</span>
+            <span className="truncate text-[11px] font-semibold" style={{ color: inkColor }}>{companion.custom_name}</span>
             {coach && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold text-emerald-300">Coach</span>}
           </div>
-          <p className="mt-0.5 truncate text-[10px] leading-tight text-ink-muted">{line}</p>
+          <p className="mt-0.5 truncate text-[10px] leading-tight" style={{ color: inkMuted }}>{line}</p>
         </div>
       )}
     </button>
   );
 }
 
-function ToolRow({ label, icon, tone, path, collapsed, pathname, onNavigate }: { label: string; icon: ReactNode; tone: string; path: string; collapsed: boolean; pathname: string; onNavigate: (path: string) => void }) {
+function ToolRow({ label, icon, tone, path, collapsed, pathname, onNavigate, inkColor, inkMuted }: { label: string; icon: ReactNode; tone: string; path: string; collapsed: boolean; pathname: string; onNavigate: (path: string) => void; inkColor: string; inkMuted: string }) {
   const active = pathname === path || pathname.startsWith(`${path}/`);
   return (
-    <button type="button" onClick={() => onNavigate(path)} className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${active ? 'bg-rose-500/15 text-ink' : 'text-ink-muted hover:bg-white/7 hover:text-ink'}`} title={collapsed ? label : undefined}>
+    <button type="button" onClick={() => onNavigate(path)} className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${active ? 'bg-rose-500/15' : 'hover:bg-white/7'}`} style={{ color: active ? inkColor : inkMuted }} title={collapsed ? label : undefined}>
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-white/5" style={{ color: tone }}>{icon}</span>
-      {!collapsed && <span className="truncate text-[11px] font-semibold">{label}</span>}
+      {!collapsed && <span className="truncate text-[11px] font-semibold" style={{ color: active ? inkColor : inkMuted }}>{label}</span>}
       {active && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-rose-400" />}
     </button>
   );
 }
 
-function SidebarContent({ collapsed, pathname, lobby, onNavigate }: { collapsed: boolean; pathname: string; lobby: LobbyData; onNavigate: (path: string) => void }) {
+function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkMuted, inkSubtle }: { collapsed: boolean; pathname: string; lobby: LobbyData; onNavigate: (path: string) => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
   const coaches = lobby.companions.filter(companion => companion.relationship_type === 'mentor');
   const companions = lobby.companions.filter(companion => companion.relationship_type !== 'mentor');
   const coreTools = [
@@ -263,50 +274,50 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate }: { collapsed:
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         {!collapsed && (
           <div className="flex items-center justify-between px-2 pb-1 pt-1">
-            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-ink-subtle">Navigate</p>
-            <button type="button" onClick={() => onNavigate('/background-settings')} className="rounded-md p-0.5 text-ink-subtle transition-colors hover:bg-white/8 hover:text-ink-muted" title="Settings" aria-label="Settings"><Settings className="h-3 w-3" /></button>
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: inkSubtle }}>Navigate</p>
+            <button type="button" onClick={() => onNavigate('/background-settings')} className="rounded-md p-0.5 transition-colors hover:bg-white/8" style={{ color: inkSubtle }} title="Settings" aria-label="Settings"><Settings className="h-3 w-3" /></button>
           </div>
         )}
         {!collapsed && <div className="my-2 border-t border-white/8" />}
         <div className="space-y-0.5">
-          {!collapsed && <SidebarLabel>Coaching</SidebarLabel>}
-          {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(coach)} />)}
-          <ToolRow label="Progress" path="/coaching-progress" tone={TONE_COLOR.coach} icon={<Target className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
-          <ToolRow label="Commitments" path="/coaching-commitments" tone="#38bdf8" icon={<CheckCircle2 className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
-          <ToolRow label="Plans" path="/coaching-commitments?view=plans" tone="#a78bfa" icon={<Layers className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
-          <ToolRow label="Library" path="/coaching-library" tone="#94a3b8" icon={<BookOpen className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
-          {!collapsed && <button type="button" onClick={lobby.handleNewCoach} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] text-ink-muted transition-colors hover:bg-white/7 hover:text-ink"><Plus className="h-3.5 w-3.5" />Add another coach</button>}
+          {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Coaching</SidebarLabel>}
+          {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(coach)} inkColor={inkColor} inkMuted={inkMuted} />)}
+          <ToolRow label="Progress" path="/coaching-progress" tone={TONE_COLOR.coach} icon={<Target className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
+          <ToolRow label="Commitments" path="/coaching-commitments" tone="#38bdf8" icon={<CheckCircle2 className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
+          <ToolRow label="Plans" path="/coaching-commitments?view=plans" tone="#a78bfa" icon={<Layers className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
+          <ToolRow label="Library" path="/coaching-library" tone="#94a3b8" icon={<BookOpen className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
+          {!collapsed && <button type="button" onClick={lobby.handleNewCoach} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] transition-colors hover:bg-white/7" style={{ color: inkMuted }}><Plus className="h-3.5 w-3.5" />Add another coach</button>}
         </div>
         <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
-          {!collapsed && <SidebarLabel>Companion</SidebarLabel>}
-          {companions.map(companion => <PersonRow key={companion.id} companion={companion} collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(companion)} />)}
-          {!collapsed && <button type="button" onClick={lobby.handleNewCompanion} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] text-ink-muted transition-colors hover:bg-white/7 hover:text-ink"><Plus className="h-3.5 w-3.5" />Someone new</button>}
+          {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Companion</SidebarLabel>}
+          {companions.map(companion => <PersonRow key={companion.id} companion={companion} collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(companion)} inkColor={inkColor} inkMuted={inkMuted} />)}
+          {!collapsed && <button type="button" onClick={lobby.handleNewCompanion} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] transition-colors hover:bg-white/7" style={{ color: inkMuted }}><Plus className="h-3.5 w-3.5" />Someone new</button>}
         </div>
         <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
-          {!collapsed && <SidebarLabel>Core</SidebarLabel>}
-          {coreTools.map(tool => <ToolRow key={tool.path} {...tool} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />)}
+          {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Core</SidebarLabel>}
+          {coreTools.map(tool => <ToolRow key={tool.path} {...tool} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />)}
         </div>
         <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
-          {!collapsed && <SidebarLabel>Connect</SidebarLabel>}
-          {connectTools.map(tool => <ToolRow key={tool.path} {...tool} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />)}
-          {!collapsed && <SidebarLabel>Games</SidebarLabel>}
-          {GAMES.map(game => <button key={game.id} type="button" onClick={() => lobby.handleGameClick(game)} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname.startsWith(game.path ?? `/${game.id}`) ? 'bg-white/8 text-ink' : 'text-ink-muted hover:bg-white/7 hover:text-ink'}`} title={collapsed ? game.name : undefined}><span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${game.iconBg}`}><game.icon className="h-3.5 w-3.5 text-white" /></span>{!collapsed && <span className="truncate text-[11px] font-semibold">{game.name}</span>}</button>)}
+          {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Connect</SidebarLabel>}
+          {connectTools.map(tool => <ToolRow key={tool.path} {...tool} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />)}
+          {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Games</SidebarLabel>}
+          {GAMES.map(game => <button key={game.id} type="button" onClick={() => lobby.handleGameClick(game)} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname.startsWith(game.path ?? `/${game.id}`) ? 'bg-white/8' : 'hover:bg-white/7'}`} style={{ color: pathname.startsWith(game.path ?? `/${game.id}`) ? inkColor : inkMuted }} title={collapsed ? game.name : undefined}><span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${game.iconBg}`}><game.icon className="h-3.5 w-3.5 text-white" /></span>{!collapsed && <span className="truncate text-[11px] font-semibold" style={{ color: pathname.startsWith(game.path ?? `/${game.id}`) ? inkColor : inkMuted }}>{game.name}</span>}</button>)}
         </div>
       </div>
       <div className="flex-shrink-0 border-t border-white/8 px-2 py-2">
-        <button type="button" onClick={() => onNavigate('/support')} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname === '/support' ? 'bg-amber-500/15 text-amber-200' : 'text-ink-muted hover:bg-amber-500/10 hover:text-amber-200'}`} title={collapsed ? 'Support Velvet' : undefined}>
+        <button type="button" onClick={() => onNavigate('/support')} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname === '/support' ? 'bg-amber-500/15 text-amber-200' : 'hover:bg-amber-500/10 hover:text-amber-200'}`} style={pathname === '/support' ? undefined : { color: inkMuted }} title={collapsed ? 'Support Velvet' : undefined}>
           <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400"><Sparkles className="h-3.5 w-3.5" /></span>
-          {!collapsed && <span className="truncate text-[11px] font-semibold">Support Velvet</span>}
+          {!collapsed && <span className="truncate text-[11px] font-semibold" style={{ color: pathname === '/support' ? '#fcd34d' : inkMuted }}>Support Velvet</span>}
         </button>
       </div>
     </div>
   );
 }
 
-function WorkspaceNavigation({ collapsed, onToggle, lobby, wallpaperStyle, wallpaperClass }: { collapsed: boolean; onToggle: () => void; lobby: LobbyData; wallpaperStyle?: React.CSSProperties; wallpaperClass?: string }) {
+function WorkspaceNavigation({ collapsed, onToggle, lobby, wallpaperStyle, wallpaperClass, inkColor, inkMuted, inkSubtle }: { collapsed: boolean; onToggle: () => void; lobby: LobbyData; wallpaperStyle?: React.CSSProperties; wallpaperClass?: string; inkColor: string; inkMuted: string; inkSubtle: string }) {
   const location = useLocation();
   const navigate = useNavigate();
   const hasWp = !!wallpaperClass || !!wallpaperStyle;
@@ -315,8 +326,8 @@ function WorkspaceNavigation({ collapsed, onToggle, lobby, wallpaperStyle, wallp
       <div className={`pointer-events-none absolute inset-0 z-0 ${wallpaperClass ?? ''}`} style={wallpaperStyle || undefined} />
     )}
     <div className="relative z-10 flex h-full flex-col bg-[rgba(12,10,30,0.6)]">
-      <div className={`flex items-center px-3 ${collapsed ? 'justify-center' : 'justify-end'}`}><button type="button" onClick={onToggle} className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-white/8 hover:text-ink" aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button></div>
-      <SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={navigate} />
+      <div className={`flex items-center px-3 ${collapsed ? 'justify-center' : 'justify-end'}`}><button type="button" onClick={onToggle} className="rounded-lg p-2 transition-colors hover:bg-white/8" style={{ color: inkMuted }} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button></div>
+      <SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={navigate} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
     </div>
   </aside>;
 }
@@ -377,6 +388,11 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   const location = useLocation();
   const lobby = useLobbyData();
   const { customization } = useCustomization();
+  const textColorKey: ToolbarTextColorKey = customization?.toolbar_text_color ?? 'dark';
+  const textColorDef = TOOLBAR_TEXT_COLOR_PRESETS.find(p => p.key === textColorKey) ?? TOOLBAR_TEXT_COLOR_PRESETS[0];
+  const inkColor = textColorDef.color;
+  const inkMuted = `${textColorDef.color}99`;
+  const inkSubtle = `${textColorDef.color}66`;
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return true;
     return window.localStorage.getItem('velvet.workspace.nav-collapsed') !== 'false';
@@ -399,12 +415,12 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   return (
     <div className="h-screen overflow-hidden bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
-        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} wallpaperStyle={wpStyle} wallpaperClass={wpClass} />
+        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
-          <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} />
+          <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
           <main className="min-h-0 min-w-0 overflow-hidden border-r border-white/8">{children}</main>
         </div>
-        <div className="relative z-20 flex-shrink-0 border-t border-white/10 bg-[rgba(8,8,22,0.96)] shadow-[0_-14px_36px_rgba(0,0,0,0.18)]"><MessagingOverlayMount /></div>
+        <div className="relative z-20 flex-shrink-0"><MessagingOverlayMount inkColor={inkColor} inkMuted={inkMuted} /></div>
         <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} lobby={lobby} />
       </div>
     </div>
