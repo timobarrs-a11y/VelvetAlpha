@@ -67,20 +67,10 @@ function WorkspaceToolbar({
   available,
   onToggleAvailable,
   onOpenMobileNav,
-  wallpaperStyle,
-  wallpaperClass,
-  inkColor,
-  inkMuted,
-  inkSubtle,
 }: {
   available: boolean;
   onToggleAvailable: () => void;
   onOpenMobileNav: () => void;
-  wallpaperStyle?: React.CSSProperties;
-  wallpaperClass?: string;
-  inkColor: string;
-  inkMuted: string;
-  inkSubtle: string;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -114,18 +104,17 @@ function WorkspaceToolbar({
   };
 
   return (
-    <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 border-b border-white/10 px-3 py-2.5 sm:px-5">
-      {!!wallpaperClass || !!wallpaperStyle ? (
-        <div className={`pointer-events-none absolute inset-0 z-0 ${wallpaperClass ?? ''}`} style={wallpaperStyle || undefined} />
-      ) : (
-        <div className="pointer-events-none absolute inset-0 z-0 bg-[rgba(14,12,35,0.9)]" />
-      )}
+    <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 px-3 py-2.5 sm:px-5">
+      {/* Frosted glass base with subtle rose tint */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[rgba(12,10,30,0.82)] backdrop-blur-xl" />
+      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-rose-500/[0.06] via-transparent to-rose-500/[0.04]" />
+      {/* Subtle shimmer bottom border */}
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-gradient-to-r from-transparent via-rose-400/20 to-transparent" />
       <div className="relative z-10 flex min-w-0 items-center gap-2.5">
         <button
           type="button"
           onClick={onOpenMobileNav}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 lg:hidden"
-          style={{ color: inkMuted }}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 lg:hidden text-white/60"
           aria-label="Open navigation"
         >
           <LayoutGrid className="h-4 w-4" />
@@ -140,8 +129,8 @@ function WorkspaceToolbar({
             <Sparkles className="h-4 w-4" />
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold" style={{ color: inkColor }}>Velvet</span>
-            <span className="block max-w-[130px] truncate text-[10px] sm:max-w-none" style={{ color: inkMuted }}>{displayName}</span>
+            <span className="block truncate text-sm font-semibold text-white">Velvet</span>
+            <span className="block max-w-[130px] truncate text-[10px] text-white/50 sm:max-w-none">{displayName}</span>
           </span>
         </button>
       </div>
@@ -153,22 +142,20 @@ function WorkspaceToolbar({
           className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${
             available
               ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
-              : 'border-white/10 bg-black/10 hover:bg-white/8'
+              : 'border-white/10 bg-white/[0.03] hover:bg-white/8 text-white/60'
           }`}
           aria-pressed={available}
           title={available ? 'Available to chat — click to turn off' : 'Turn on instant chat availability'}
-          style={available ? undefined : { color: inkMuted }}
         >
           {available ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
           <span className="hidden sm:inline">{available ? 'Available' : 'Unavailable'}</span>
         </button>
-        <div className="flex items-center rounded-xl border border-white/10 bg-black/10 p-0.5" aria-label="Workspace appearance">
+        <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] p-0.5" aria-label="Workspace appearance">
           <button
             type="button"
             onClick={() => selectMode('classic')}
             aria-pressed={mode === 'classic'}
-            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'classic' ? 'bg-white/12' : 'hover:bg-white/8'}`}
-            style={{ color: mode === 'classic' ? inkColor : inkMuted }}
+            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'classic' ? 'bg-white/15 text-white' : 'hover:bg-white/8 text-white/60'}`}
           >
             Classic
           </button>
@@ -176,8 +163,7 @@ function WorkspaceToolbar({
             type="button"
             onClick={() => selectMode('v3')}
             aria-pressed={mode === 'v3'}
-            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'v3' ? 'bg-rose-500/20 text-rose-200' : 'hover:bg-white/8'}`}
-            style={mode === 'v3' ? undefined : { color: inkMuted }}
+            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'v3' ? 'bg-rose-500/20 text-rose-200' : 'hover:bg-white/8 text-white/60'}`}
           >
             V3
           </button>
@@ -185,8 +171,7 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={toggleSound}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8"
-          style={{ color: inkMuted }}
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 text-white/60"
           aria-label={soundEnabled ? 'Mute workspace sounds' : 'Enable workspace sounds'}
           title={soundEnabled ? 'Mute workspace sounds' : 'Enable workspace sounds'}
         >
@@ -195,8 +180,7 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={() => navigate('/settings')}
-          className="hidden h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 sm:flex"
-          style={{ color: inkMuted }}
+          className="hidden h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 sm:flex text-white/60"
           aria-label="Open settings"
           title="Settings"
         >
@@ -205,8 +189,7 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={handleSignOut}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-rose-500/12 hover:text-rose-200"
-          style={{ color: inkMuted }}
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-rose-500/12 hover:text-rose-200 text-white/60"
           aria-label="Sign out"
           title="Sign out"
         >
@@ -267,6 +250,7 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
     { label: 'Insights', path: '/insights', tone: '#fbbf24', icon: <Lightbulb className="h-3.5 w-3.5" /> },
     { label: 'Morning Journal', path: '/morning-journal', tone: '#fbbf24', icon: <Sunrise className="h-3.5 w-3.5" /> },
     { label: 'Profile', path: '/profile', tone: '#cbd5e1', icon: <CircleUserRound className="h-3.5 w-3.5" /> },
+    { label: 'My Page', path: '/my-profile', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
   ];
   const connectTools = [
     { label: 'Feed', path: '/feed', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
@@ -424,7 +408,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   return (
     <div className="h-screen overflow-hidden bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
-        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
+        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
           <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
           <main className="min-h-0 min-w-0 overflow-hidden border-r border-white/8">{children}</main>

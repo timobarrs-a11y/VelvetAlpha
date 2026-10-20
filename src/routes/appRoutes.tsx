@@ -37,6 +37,8 @@ const CommunitySearchPage = lazy(() => import('../pages/CommunitySearchPage'));
 const MemberProfilePage = lazy(() => import('../pages/MemberProfilePage'));
 const ProgressFeedPage = lazy(() => import('../pages/ProgressFeedPage'));
 const DiscoverPage = lazy(() => import('../pages/DiscoverPage'));
+const MyPublicProfilePage = lazy(() => import('../pages/MyPublicProfilePage'));
+const EditPublicProfilePage = lazy(() => import('../pages/EditPublicProfilePage'));
 function P(el: React.ReactNode) {
   return (
     <ProtectedRoute>
@@ -81,4 +83,6 @@ export const appRoutes = [
   <Route key="member-profile" path="/member/:userId" element={P(<MemberProfilePage />)} />,
   <Route key="progress-feed" path="/feed" element={P(<ProgressFeedPage />)} />,
   <Route key="discover" path="/discover" element={P(<DiscoverPage />)} />,
+  <Route key="my-profile" path="/my-profile" element={P(<MyPublicProfilePage />)} />,
+  <Route key="edit-public-profile" path="/my-profile/edit" element={P(<EditPublicProfilePage />)} />,
 ];

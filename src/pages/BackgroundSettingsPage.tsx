@@ -183,8 +183,8 @@ export function BackgroundSettingsPage() {
             <Sparkles className="h-5 w-5" />
           </div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-500">Workspace background</p>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">Choose a background for your sidebar and top bar.</h1>
-          <p className="mt-2 text-sm leading-6 text-gray-500">This only changes the background behind the workspace navigation. Your companion chat wallpapers stay separate.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">Choose a background for your sidebar.</h1>
+          <p className="mt-2 text-sm leading-6 text-gray-500">This only changes the background behind the workspace sidebar navigation. Your companion chat wallpapers stay separate.</p>
         </div>
 
         {/* Live preview banner */}
@@ -485,9 +485,9 @@ export function BackgroundSettingsPage() {
         <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5">
           <div className="mb-3 flex items-center gap-2">
             <Type size={16} className="text-gray-700" />
-            <h3 className="text-sm font-bold text-gray-900">Text color</h3>
+            <h3 className="text-sm font-bold text-gray-900">Sidebar text color</h3>
           </div>
-          <p className="mb-4 text-xs text-gray-500 leading-5">Pick a text color that stays readable over your chosen background. This affects the labels in your sidebar and top bar.</p>
+          <p className="mb-4 text-xs text-gray-500 leading-5">Pick a text color that stays readable over your chosen sidebar background.</p>
           <div className="flex flex-wrap gap-2.5">
             {TOOLBAR_TEXT_COLOR_PRESETS.map(preset => {
               const active = textColor === preset.key;
