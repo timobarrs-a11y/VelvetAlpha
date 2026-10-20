@@ -36,6 +36,8 @@ import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { Avatar } from './Avatar';
 import { companionAvatarConfig, TONE_COLOR } from './lobby';
 import type { CompanionWithLastMessage } from '../services/companionService';
+import { useCustomization } from '../hooks/useCustomization';
+import { buildWallpaperMeta } from '../services/wallpaperService';
 
 interface SignedInWorkspaceProps {
   children: ReactNode;
@@ -98,7 +100,7 @@ function WorkspaceToolbar({
   };
 
   return (
-    <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[rgba(14,12,35,0.9)] px-3 py-2.5 backdrop-blur-2xl sm:px-5">
+    <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[rgba(14,12,35,0.55)] px-3 py-2.5 backdrop-blur-md sm:px-5">
       <div className="flex min-w-0 items-center gap-2.5">
         <button
           type="button"
@@ -298,7 +300,7 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate }: { collapsed:
 function WorkspaceNavigation({ collapsed, onToggle, lobby }: { collapsed: boolean; onToggle: () => void; lobby: LobbyData }) {
   const location = useLocation();
   const navigate = useNavigate();
-  return <aside className="relative z-20 hidden min-h-0 flex-col border-r border-white/8 bg-[rgba(12,10,30,0.84)] py-4 backdrop-blur-2xl transition-[width] duration-300 lg:flex" style={{ width: collapsed ? 68 : 224 }}><div className={`flex items-center px-3 ${collapsed ? 'justify-center' : 'justify-end'}`}><button type="button" onClick={onToggle} className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-white/8 hover:text-ink" aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button></div><SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={navigate} /></aside>;
+  return <aside className="relative z-20 hidden min-h-0 flex-col border-r border-white/8 bg-[rgba(12,10,30,0.55)] py-4 backdrop-blur-md transition-[width] duration-300 lg:flex" style={{ width: collapsed ? 68 : 224 }}><div className={`flex items-center px-3 ${collapsed ? 'justify-center' : 'justify-end'}`}><button type="button" onClick={onToggle} className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-white/8 hover:text-ink" aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button></div><SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={navigate} /></aside>;
 }
 
 function MobileNavDrawer({ open, onClose, lobby }: { open: boolean; onClose: () => void; lobby: LobbyData }) {
@@ -356,6 +358,7 @@ function useAvailability(user: { id: string } | null | undefined) {
 function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: string } }) {
   const location = useLocation();
   const lobby = useLobbyData();
+  const { customization } = useCustomization();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return true;
     return window.localStorage.getItem('velvet.workspace.nav-collapsed') !== 'false';
@@ -368,10 +371,22 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
 
   const { available, toggleAvailable } = useAvailability(user);
 
+  const wallpaperId = customization?.workspace_wallpaper_id ?? null;
+  const wallpaperUrl = customization?.workspace_wallpaper_url ?? null;
+  const wallpaperMeta = buildWallpaperMeta(wallpaperId, wallpaperUrl);
+  const hasWallpaper = !!wallpaperId;
+
   return (
     <div className="h-screen overflow-hidden bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,61,188,0.17),transparent_44%),radial-gradient(ellipse_at_bottom_left,rgba(244,63,107,0.08),transparent_42%)]" />
+        {/* Workspace wallpaper layer — sits behind the top toolbar and sidebar only */}
+        {hasWallpaper && (
+          <div
+            className={`pointer-events-none absolute inset-x-0 top-0 z-0 ${wallpaperMeta.className}`}
+            style={wallpaperMeta.style || undefined}
+          />
+        )}
+        <div className={`pointer-events-none absolute inset-0 ${hasWallpaper ? '' : 'bg-[radial-gradient(ellipse_at_top_right,rgba(99,61,188,0.17),transparent_44%),radial-gradient(ellipse_at_bottom_left,rgba(244,63,107,0.08),transparent_42%)]'}`} />
         <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
           <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} />

@@ -368,6 +368,51 @@ export async function uploadWallpaperImage(
   return data.publicUrl;
 }
 
+export async function saveWorkspaceWallpaper(
+  userId: string,
+  wallpaperId: string | null,
+  wallpaperUrl: string | null = null
+): Promise<void> {
+  const { data: row, error: fetchErr } = await supabase
+    .from('user_customization')
+    .select('tile_colors')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (fetchErr) throw new Error(fetchErr.message);
+
+  const colors: Record<string, string> = (row?.tile_colors as Record<string, string>) ?? {};
+  const nextColors = {
+    ...colors,
+    __workspace_wallpaper_id: wallpaperId ?? '',
+    __workspace_wallpaper_url: wallpaperUrl ?? '',
+  };
+
+  const { error } = await supabase
+    .from('user_customization')
+    .update({ tile_colors: nextColors, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function uploadWorkspaceWallpaperImage(
+  userId: string,
+  file: File
+): Promise<string> {
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `wallpapers/workspace/${userId}/${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('chat-wallpapers')
+    .upload(path, file, { upsert: true, contentType: file.type });
+
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data } = supabase.storage.from('chat-wallpapers').getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function generateAIWallpaper(
   companionId: string,
   prompt: string,

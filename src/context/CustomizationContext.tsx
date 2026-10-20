@@ -12,6 +12,7 @@ import {
   ToolbarBackgroundMode,
   ToolbarTextColorKey,
 } from '../services/customizationService';
+import { saveWorkspaceWallpaper } from '../services/wallpaperService';
 
 interface CustomizationContextValue {
   customization: UserCustomization | null;
@@ -32,6 +33,7 @@ interface CustomizationContextValue {
   setRightRailCollapsed: (collapsed: boolean) => Promise<void>;
   setToolbarBackgroundMode: (mode: ToolbarBackgroundMode) => Promise<void>;
   setToolbarTextColor: (key: ToolbarTextColorKey) => Promise<void>;
+  setWorkspaceWallpaper: (wallpaperId: string | null, wallpaperUrl: string | null) => Promise<void>;
   dismissUnlockNotice: () => void;
 }
 
@@ -153,6 +155,12 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
     if (uid) updateCursorPrefs(uid, { toolbar_text_color: key }).catch(() => {});
   }, []);
 
+  const setWorkspaceWallpaper = useCallback(async (wallpaperId: string | null, wallpaperUrl: string | null) => {
+    setCustomization(prev => prev ? { ...prev, workspace_wallpaper_id: wallpaperId, workspace_wallpaper_url: wallpaperUrl } : prev);
+    const uid = userIdRef.current;
+    if (uid) saveWorkspaceWallpaper(uid, wallpaperId, wallpaperUrl).catch(() => {});
+  }, []);
+
   const dismissUnlockNotice = useCallback(() => setJustUnlocked([]), []);
 
   const activePointerDef = POINTER_SYMBOLS.find(s => s.key === customization?.active_pointer) ?? POINTER_SYMBOLS[0];
@@ -183,6 +191,7 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
       setRightRailCollapsed,
       setToolbarBackgroundMode,
       setToolbarTextColor,
+      setWorkspaceWallpaper,
       dismissUnlockNotice,
     }}>
       {children}

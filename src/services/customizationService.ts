@@ -281,6 +281,8 @@ export interface UserCustomization {
   right_rail_collapsed: boolean;
   toolbar_background_mode: ToolbarBackgroundMode;
   toolbar_text_color: ToolbarTextColorKey;
+  workspace_wallpaper_id: string | null;
+  workspace_wallpaper_url: string | null;
 }
 
 export type ToolbarBackgroundMode = 'glass' | 'companion' | 'coaching';
@@ -318,6 +320,8 @@ const DEFAULT_CUSTOMIZATION: UserCustomization = {
   right_rail_collapsed:        false,
   toolbar_background_mode:     'glass',
   toolbar_text_color:          'dark',
+  workspace_wallpaper_id:      null,
+  workspace_wallpaper_url:     null,
 };
 
 export async function getDailyCheckinStatus(userId: string): Promise<{
@@ -359,6 +363,8 @@ export async function getDailyCheckinStatus(userId: string): Promise<{
         right_rail_collapsed:        customRow.right_rail_collapsed ?? false,
         toolbar_background_mode:     (customRow.toolbar_background_mode as ToolbarBackgroundMode) ?? 'glass',
         toolbar_text_color:          (customRow.toolbar_text_color as ToolbarTextColorKey) ?? 'dark',
+        workspace_wallpaper_id:      (customRow.tile_colors as Record<string, string>)?.__workspace_wallpaper_id || null,
+        workspace_wallpaper_url:     (customRow.tile_colors as Record<string, string>)?.__workspace_wallpaper_url || null,
       }
     : { ...DEFAULT_CUSTOMIZATION };
 
@@ -400,6 +406,8 @@ export async function performDailyCheckin(userId: string): Promise<UserCustomiza
     right_rail_collapsed:        existing?.right_rail_collapsed  ?? false,
     toolbar_background_mode:     (existing?.toolbar_background_mode as ToolbarBackgroundMode) ?? 'glass',
     toolbar_text_color:          (existing?.toolbar_text_color as ToolbarTextColorKey) ?? 'dark',
+    workspace_wallpaper_id:      (existing?.tile_colors as Record<string, string>)?.__workspace_wallpaper_id || null,
+    workspace_wallpaper_url:     (existing?.tile_colors as Record<string, string>)?.__workspace_wallpaper_url || null,
   };
 }
 
