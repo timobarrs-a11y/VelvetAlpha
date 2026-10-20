@@ -22,12 +22,13 @@ other people see and respond to.
 3. **Public by choice, field by field.** Only the fields in §3 can ever be
    public. Nothing from journals, coaching chat, memories, insights or
    location ever leaves the private layer.
-4. **Paying or trial members, ID-verified adults only.** Every social surface is
-   gated server-side (§2).
+4. **Card-on-file adults only.** Paying or trial members (trials require a card)
+   with a server-verified 18+ date of birth. Every social surface is gated
+   server-side (§2). No photo ID: we don't add walls to the experience.
 5. **Bots are disclosed.** Bots like and comment as part of the system; the site
    says so, and bot accounts are labeled on their profiles and comments.
 
-## 2. Access gate: paid or trial + ID-verified 18+
+## 2. Access gate: card on file + 18+
 
 ### Current state (gaps found in the code)
 
@@ -37,46 +38,55 @@ other people see and respond to.
 | Age check is a client-side checkbox: the browser writes `age_verified_at = now()` at signup. | `src/pages/SignUpPage.tsx:116`, `src/services/authService.ts:43` |
 | `age_verified_at` and `birthday` are in the client-writable column grant, so any user can set them directly. | `20261009131910_restrict_user_profiles_privileged_columns.sql` |
 | `AgeVerificationModal.tsx` exists but nothing renders it. | `src/components/AgeVerificationModal.tsx` |
+| Trials start with no card: `start_trial()` flips the tier server-side with no Stripe involvement. | `start_trial()`, `src/pages/PricingPageRoute.tsx` |
+| The trial toast says "3-day", but `start_trial()` grants 7 days. | `PricingPageRoute.tsx`, `start_trial()` |
 
 ### Design
 
 - **Who gets in.** Members on a paid tier (essential, plus, elite) or an active
-  trial.
-- **Age verification uses ID, required at launch.** Use Stripe Identity: Stripe
-  is already integrated (`stripeService`, `stripe-webhook`), and it handles
-  document plus selfie checks.
-  - The check runs the first time a member opens any social surface, not at
-    signup. This keeps signup friction unchanged and only pays the
-    per-verification fee for people who want social.
-  - New edge function `create-identity-session` creates a Stripe Identity
-    VerificationSession and returns the client secret.
-  - `stripe-webhook` handles `identity.verification_session.verified`:
-    - reads the verified date of birth,
-    - rejects anyone under 18,
-    - writes `id_verified_at`, `birthday` and `age_verified_at` server-side.
-  - Store only the verified status and DOB. ID images and selfies stay with
-    Stripe and are never shown anywhere in the app.
-  - On failure (`requires_input`), the member can retry. After 3 failed attempts,
-    their case goes to the admin console queue.
-- **Lock down the existing columns.**
-  - Revoke client `UPDATE` on `age_verified_at` and `birthday`, and add
-    `id_verified_at` as a server-only column.
-  - The signup checkbox stays as the 18+ attestation for the private app, but it
-    no longer satisfies the social gate.
+  card-backed trial.
+- **Trials require a card.** Replace the `start_trial()` RPC with Stripe
+  Checkout:
+  - `create-checkout-session` gets a trial mode that sets
+    `subscription_data.trial_period_days = 7` and
+    `payment_method_collection = 'always'`. Nothing is charged until day 7; the
+    member can cancel any time before then.
+  - `stripe-webhook` already syncs tiers on `customer.subscription.updated` for
+    `trialing` status. Store `subscription_status = 'trialing'` and
+    `trial_expires_at` from the subscription's `trial_end`.
+  - Keep `trial_used` so each account gets one trial.
+  - Retire the client call to `start_trial()` in `PricingPageRoute.tsx`, and fix
+    the toast to say 7 days.
+  - Existing no-card trials keep running until they expire. They get no social
+    access unless they add a card.
+- **Date of birth, verified server-side.** No photo ID.
+  - Revoke client `UPDATE` on `age_verified_at` and `birthday`.
+  - Add RPC `verify_age(p_birthdate date)` (SECURITY DEFINER). It rejects anyone
+    under 18, writes `birthday` and `age_verified_at`, and is write-once (only an
+    admin can correct it).
+  - Signup collects date of birth with the selects already built in
+    `AgeVerificationModal` and calls `verify_age`, instead of the browser
+    inserting `age_verified_at`.
+  - Existing users without a server-set DOB see `AgeVerificationModal` the first
+    time they open any social surface.
+- **Possible-minor reports.** Add a report reason "may be under 18".
+  - These reports go to the top of the admin console queue.
+  - An admin can pause the account's social access while reviewing.
 - **Single gate function** used by every social table's RLS and every social
   edge function:
 
   ```sql
   can_use_social(uid uuid) RETURNS boolean
   -- true when:
-  --   (subscription tier is essential | plus | elite OR an active trial)
-  --   AND id_verified_at IS NOT NULL (set only by the Stripe Identity webhook)
+  --   (subscription tier is essential | plus | elite
+  --      OR subscription_status = 'trialing' with a Stripe subscription)
+  --   AND age_verified_at IS NOT NULL (set only by verify_age)
   --   AND NOT is_banned
+  --   AND social access not paused by an admin
   ```
 
 - **Lapsed access.** When a subscription or trial lapses, the profile and posts
-  are hidden from others (not deleted) and come back on renewal. ID
-  verification is kept and doesn't have to be redone.
+  are hidden from others (not deleted) and come back on renewal.
 
 ## 3. Public profile
 
@@ -341,9 +351,11 @@ user's coaches and goals, and the Atlas interface is the natural place for
 ## 13. Phases
 
 1. **Gate.**
-   - Stripe Identity session and webhook handling, `id_verified_at`.
-   - Revoke the client column grants, add `can_use_social()`.
-   - "Verify to join the community" screen in front of every social surface.
+   - Card-required trials through Stripe Checkout, retire `start_trial()`.
+   - Server-side `verify_age`, revoke the client column grants, add
+     `can_use_social()`.
+   - Wire `AgeVerificationModal` for existing users, plus the "may be under 18"
+     report reason.
 2. **Profiles.**
    - Extend `im_discovery_profiles`, add `social_shared_goals`.
    - Profile page and editor.
@@ -368,4 +380,4 @@ user's coaches and goals, and the Atlas interface is the natural place for
 | Follower counts visible? | No, never displayed |
 | Bot-like budget | Defaults in §5, tunable in `app_settings` |
 | Like counts visible on others' posts? | Yes, on everyone's posts |
-| ID verification at launch? | Yes, via Stripe Identity |
+| Photo ID verification? | No. Card required for trials, plus a server-verified date of birth |
