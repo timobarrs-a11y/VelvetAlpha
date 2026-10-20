@@ -39,7 +39,7 @@ import { CompanionHubLeftRail } from './components/hub/CompanionHubLeftRail';
 import { CompanionHubRightRail } from './components/hub/CompanionHubRightRail';
 import { GuidedTourOverlay } from './components/hub/GuidedTourOverlay';
 import { SharedMemoryConsentModal } from './components/SharedMemoryConsentModal';
-import { ThreadTabBar, ActiveThread } from './components/thread/ThreadTabBar';
+import { ActiveThread } from './components/thread/ThreadTabBar';
 import { TutorialElement } from './components/hub/TutorialElement';
 import { ONBOARDING_ELEMENT_IDS } from './features/onboarding/onboardingPrompt';
 import { useTutorialDirector } from './context/TutorialDirectorContext';
@@ -75,6 +75,7 @@ function AppInner() {
   const petName = usePetStore(s => s.name);
   const { startTour, isOnboarding } = useTutorialDirector();
   const tourAutoStartedRef = useRef(false);
+  const authCheckKeyRef = useRef<string | null>(null);
 
   const [remainingMessages, setRemainingMessages] = useState(50);
   const [isTyping, setIsTyping] = useState(false);
@@ -218,7 +219,11 @@ function AppInner() {
   };
 
   useEffect(() => {
-    if (!authLoading && user) checkAuthAndOnboarding();
+    const checkKey = `${user?.id ?? ''}-${companionId ?? ''}`;
+    if (!authLoading && user && authCheckKeyRef.current !== checkKey) {
+      authCheckKeyRef.current = checkKey;
+      checkAuthAndOnboarding();
+    }
     const initNotifications = async () => {
       try {
         const { NotificationService } = await import('./services/notificationService');
@@ -1064,13 +1069,13 @@ function AppInner() {
 
   const toolbarBackgroundStyle: CSSProperties = toolbarBgMode === 'glass' || !toolbarWallpaperId
     ? {
-        // Frosted "Aero" glass — opaque enough to read as glass, with depth
+        // Frosted "Aero" glass — translucent so scrolling content blurs through, with 3D depth
         background: customization?.translucent_ui
-          ? 'linear-gradient(180deg, rgba(245,245,250,0.72) 0%, rgba(235,238,245,0.55) 100%)'
-          : 'linear-gradient(180deg, rgba(248,249,252,0.88) 0%, rgba(238,240,246,0.75) 100%)',
+          ? 'linear-gradient(180deg, rgba(245,245,250,0.55) 0%, rgba(235,238,245,0.42) 100%)'
+          : 'linear-gradient(180deg, rgba(248,249,252,0.68) 0%, rgba(238,240,246,0.55) 100%)',
         backdropFilter: 'blur(32px) saturate(180%)',
         WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-        boxShadow: '0 -8px 28px -6px rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.75), inset 0 -1px 0 0 rgba(0,0,0,0.04)',
+        boxShadow: '0 -12px 36px -8px rgba(0,0,0,0.18), inset 0 1px 0 0 rgba(255,255,255,0.90), inset 0 -1px 0 0 rgba(0,0,0,0.06)',
       }
     : {
         // Wallpaper-backed toolbar — frosted over the wallpaper image
@@ -1101,7 +1106,7 @@ function AppInner() {
 
   return (
     <div
-      className={`h-screen flex flex-col relative ${wallpaperMeta.className}`}
+      className={`h-full flex flex-col relative ${wallpaperMeta.className}`}
       style={hasWallpaper && !wallpaperMeta.className ? wallpaperMeta.style : undefined}
     >
       {!hasWallpaper && (
@@ -1190,26 +1195,6 @@ function AppInner() {
           onToggleCollapse={toggleRailCollapse}
         />
         <TutorialElement elementId={ONBOARDING_ELEMENT_IDS.companionChat} className="flex-1 relative overflow-hidden flex flex-col">
-          <ThreadTabBar
-            companionName={getCharacterName()}
-            activeThread={activeThread}
-            hasAtlas={atlasMessages.length > 0}
-            hasNavi={naviMessages.length > 0}
-            openFeatures={openFeatures}
-            onSwitch={setActiveThread}
-            onClose={handleCloseThread}
-            onNewThread={(thread) => {
-              if (thread === 'atlas') {
-                atlasMessagesRef.current = [];
-                setAtlasMessages([]);
-                setActiveThread('atlas');
-              } else {
-                setNaviMessages([]);
-                naviMessagesRef.current = [];
-                setActiveThread('navi');
-              }
-            }}
-          />
           {/* Feature tab views — full page embedded, overflow-scroll */}
           {activeThread === 'calendar' && (
             <div className="flex-1 overflow-y-auto">
@@ -1325,16 +1310,16 @@ function AppInner() {
         )}
       </AnimatePresence>
 
-      {/* Bottom toolbar — hidden while a full-page feature tab is active */}
+      {/* Bottom toolbar — sticky so chat content scrolls under the frosted glass */}
       <div
-        className={`relative z-40 transition-all duration-500 ${
+        className={`sticky bottom-0 z-40 flex-shrink-0 transition-all duration-500 ${
           (activeThread === 'calendar' || activeThread === 'co-author' || activeThread === 'daily-feed' || activeThread === 'your-lens') ? 'hidden' : ''
         }`}
       >
-        {/* Frosted glass background layer — sits behind the content so blur reads correctly */}
+        {/* Frosted glass background layer — blurs the chat content scrolling behind it */}
         <div className="absolute inset-0 pointer-events-none" style={toolbarBackgroundStyle} />
-        {/* Soft top hairline that fades into the glass (replaces the hard white border) */}
-        <div className="absolute top-0 left-0 right-0 h-px pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.06) 20%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.06) 80%, transparent 100%)' }} />
+        {/* Lit top edge — gives the glass a 3D raised appearance */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.85) 15%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.85) 85%, transparent 100%)' }} />
         {/* Content layer */}
         <div className="relative" style={{ color: toolbarTextColor, ['--toolbar-text' as string]: toolbarTextColor }}>
         {/* Desktop layout — evenly distributed single row */}
