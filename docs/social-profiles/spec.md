@@ -1,4 +1,4 @@
-# Social Profiles & Progress Feed — Spec
+# Social Profiles, Progress Feed & Coaching Loop — Spec
 
 Status: draft for review · Owner: Timo · Last updated: 2026-10-20
 
@@ -14,6 +14,11 @@ trending. Atlas can introduce members working on the same things.
 The loop this closes: the small retention mechanics (streaks, check-ins,
 commitments, milestones) stop being private bookkeeping and become something
 other people see and respond to.
+
+Underneath it, the coaching loop has to be solid (§14). From the first
+conversation, the coach creates the goal, plan and commitments, walks the user
+through them, and edits them live. That's what generates the progress that gets
+shared.
 
 ### Principles
 
@@ -89,8 +94,8 @@ Sign up (email + password + date of birth, invisible bot check)
     `welcome_daily_message_cap`). A real person exploring won't hit it; a
     script will within minutes. On hitting it: "You've used today's welcome
     messages — start your trial to keep going."
-  - **DMs:** can reply to DMs and comment, like and follow freely, but can't
-    send the first DM to a stranger *(recommended, pending confirmation)*.
+  - **DMs:** same as every member. DMs to people who aren't connected yet go
+    out as message requests (§7).
 - **One welcome window per email.**
   - Emails are normalized before the check: lowercased, `+tags` stripped, dots
     removed for Gmail.
@@ -366,6 +371,24 @@ Who can comment is a per-user setting:
   user can't see the blocker's profile, posts or comments, and can't like,
   comment, follow or DM them, in either direction.
 
+### DMs and message requests
+
+Today only friends can message each other (`im_friendships`).
+
+- **Message requests.** A member can send a message request to anyone whose
+  profile they can see: a friend request with a first message attached.
+  - The recipient sees it under **Requests** with the message, the sender's
+    profile, and **Accept**, **Decline** and **Block**.
+  - Accepting opens the conversation. Declining is silent; the sender sees no
+    rejection.
+  - This applies to every member, including those in the welcome window.
+- **Limits.**
+  - The request message goes through the same moderation pre-screen as
+    comments.
+  - Pending requests are capped per sender per day: 10 during the welcome
+    window, 30 after, configurable in `app_settings`.
+  - Members can turn requests off ("only people I follow can send requests").
+
 ### Crisis content
 
 Self-harm or acute-distress signals on a post or comment:
@@ -460,23 +483,166 @@ user's coaches and goals, and the Atlas interface is the natural place for
    - `has_full_access()` / `can_use_social()`, AI rate limits, spend alert.
    - Wire `AgeVerificationModal` for existing users, plus the "may be under 18"
      report reason.
-2. **Profiles.**
+2. **Coaching loop** (§14). This is a prerequisite for auto-posts.
+   - New and changed coach tools, `user_goals.companion_id`,
+     `coaching_change_log`.
+   - Retire the separate commitment-extraction path.
+   - Plan and Commitments tabs, the IM walkthrough popup, realtime updates,
+     undo.
+   - Database triggers for step ↔ commitment ↔ goal progress.
+3. **Profiles.**
    - Extend `im_discovery_profiles`, add `social_shared_goals`.
    - Profile page and editor.
-3. **Auto-posts.**
+4. **Auto-posts.**
    - Triggers, worker, templates, bundling, undo toast, manual posts.
-4. **Likes & comments.**
+5. **Likes & comments.**
    - Likes with count-only display, comments with permission settings.
    - Moderation pre-screen, reports, blocks in RLS.
-5. **Bots.**
+6. **Bots.**
    - `social-bot` function: momentum-budgeted likes and question comments.
    - Disclosure page.
-6. **Discovery & follows.**
+7. **Discovery & follows.**
    - Shared-goal cards, trending (human-signal ranking), search.
-7. **Atlas `find_people`.**
+8. **Atlas `find_people`.**
    - The tool, the privacy test, and the introduction limits.
 
-## 14. Decisions
+## 14. Coaching loop: conversation → goal → plan → commitments
+
+From the **first** coaching conversation, the coach turns what the user says
+into a goal, an action plan and commitments. It then opens the Plan and
+Commitments tabs and walks the user through them in an instant-messenger-style
+popup. Because the popup is the coach itself (same conversation, same memory),
+the user can ask questions or ask for changes, and the coach edits the plan and
+commitments live.
+
+This is also the foundation for auto-posts (§4): those depend on every
+commitment and step being attached to the right goal.
+
+### Current state (gaps found in the code)
+
+| Finding | Where |
+|---|---|
+| Coach tools exist: `create_plan` (as a proposal), `add_step`, `adjust_step`, `create_commitment`, `create_artifact`. Mentor coaches get them, with at most 6 tool calls per reply. | `supabase/functions/_shared/coachTools.ts`, `chat-turn/index.ts` |
+| No tool to create a goal. Goals are only created by the user through forms. `extract-goal` exists, but nothing calls it. A first conversation can produce a plan attached to no goal. | `goalService.ts`, `supabase/functions/extract-goal` |
+| `activeGoalId()` attaches every new plan and commitment to the user's **oldest** active goal, not the goal being discussed. This is wrong as soon as someone has two goals. | `coachTools.ts` |
+| Commitments are created two ways: the `create_commitment` tool and a separate extraction step (`parsed.commitment`, confidence > 0.7). The extraction path can create duplicates and doesn't link a goal or step. | `chat-turn/index.ts` ~L827 |
+| Commitment status updates (`parsed.commitmentUpdate`) find rows with a fuzzy `ilike` on the description. That can update the wrong commitment, or several at once. | `chat-turn/index.ts` ~L846 |
+| No tools to edit a commitment's text or due date, cancel a commitment, remove or reorder steps, edit a plan, or activate a plan. | `coachTools.ts` |
+| Plans and commitments live on separate pages, not beside the chat. The thread tab bar has no Plan or Commitments tab. | `CoachingCommitmentsPage`, `CoachingProgressPage`, `GoalDetailPage`, `ThreadTabBar.tsx` |
+| `chat-turn` only tells the client about artifacts (`coachArtifacts`). Plan and commitment changes aren't sent back, and nothing subscribes to those tables in realtime, so the UI doesn't update live. | `chat-turn/index.ts` ~L2264 |
+
+### First-conversation flow
+
+1. **Intake (first few exchanges).** The coach learns:
+   - what the goal is and why it matters,
+   - the timeframe,
+   - where the user is now,
+   - constraints (time, money, injuries).
+
+   It asks naturally, not as a form.
+2. **Create as soon as the basics are known.** Once the coach knows the goal
+   and the timeframe, it creates a starter set in the same reply. It doesn't
+   wait for perfect information and refines later.
+   - `create_goal`
+   - `create_plan` with 3–6 steps, each with a concrete quantity and minimum
+     (existing rules)
+   - `create_commitment` for 1–3 commitments due within the next 7 days, each
+     tied to a step
+3. **Walkthrough.**
+   - The client opens the **Plan** tab with the new items highlighted.
+   - The coach appears as an IM-style popup docked over the tab and goes
+     through each item: what it is, why that number, and what "minimum" means.
+   - The popup then switches to the **Commitments** tab and covers what's due
+     first.
+4. **Questions and changes.** The user types in the popup.
+   - "Why 4 days?" gets an answer.
+   - "Can we make it mornings only?" makes the coach edit the step or
+     commitment, and the tab updates in front of them.
+5. **Lock it in.**
+   - The walkthrough ends with **"Let's go"**, which sets the plan from
+     `proposed` to `active`.
+   - If the user closes the popup instead, the plan activates when they complete
+     their first commitment.
+
+The popup is the same coaching thread (`chat-turn`, same companion, same
+memory). It is a compact view of the conversation, not a separate bot. Messages
+sent in the popup also appear in the main coach chat.
+
+### Coach tools: new and changed
+
+| Tool | Change |
+|---|---|
+| `create_goal` | **New.** Input: `title`, `goal_type`, and optionally `target_value`, `unit`, `target_date`. Skips duplicates by title and returns `goal_id`. The goal is linked to this coach via new column `user_goals.companion_id`. |
+| `create_plan` | Takes `goal_id`. If omitted, uses this coach's goal, and only when the coach has exactly one. Otherwise the call fails and the coach has to say which goal. Replaces the "oldest active goal" fallback. |
+| `update_plan` | **New.** Input: `title`, `description`, `cadence`, `status` (`proposed` → `active`, `paused`, `completed`). |
+| `remove_step` | **New.** Input: `step_id`, `reason`. Soft delete; the reason is shown in the step history. |
+| `reorder_steps` | **New.** Input: `plan_id`, ordered `step_ids`. |
+| `create_commitment` | Takes `goal_id`, which otherwise comes from the step's plan. |
+| `update_commitment` | **New.** Input: `commitment_id`, plus any of `description`, `due_date`, `plan_step_id`. |
+| `complete_commitment` / `cancel_commitment` | **New.** Input: `commitment_id`, plus a `reason` when cancelling. These replace the fuzzy `commitmentUpdate` matching. |
+| `show_in_tab` | **New, UI only.** Input: `tab` (`plan` \| `commitments`) and `highlight_ids`. Opens the tab beside the chat and highlights the listed items. |
+
+Rules for all of these:
+
+- **Ownership.** Every id is verified against the user and this coach
+  (`ownedPlan` / `ownedStep` exist; add `ownedCommitment` and `ownedGoal`).
+- **User-created commitments.** The coach can't cancel these unless the user
+  asked in this conversation.
+- **Tool budget.** Raise the per-reply cap from 6 to 12 for the first coaching
+  session only, since goal, plan and commitments all land in one reply. Keep 6
+  after that.
+- **One creation path.** Once these tools ship, retire the separate extraction
+  path (`parsed.commitment`, `parsed.commitmentUpdate`) so commitments are only
+  created and changed through tools.
+
+### Live updates and undo
+
+- **Response payload.** `chat-turn` returns `coachingChanges` (entity type, id,
+  action) and `uiActions` (from `show_in_tab`) alongside `coachArtifacts`. The
+  client reacts immediately.
+- **Realtime.** The client subscribes via Supabase Realtime to `user_goals`,
+  `coach_plans`, `coach_plan_steps` and `coaching_commitments` for the signed-in
+  user. Changes made anywhere (coach, user, another tab, the overdue sweep)
+  show up without a refresh.
+- **Highlighting.** Changed items flash with **"Coach updated this"** and an
+  **Undo** button.
+- **Change log.** Every coach change is written to
+  `coaching_change_log (user_id, companion_id, entity_type, entity_id, actor,
+  action, before jsonb, after jsonb, reason, created_at)`. This generalises the
+  per-step `override_log`.
+- **Undo.** Undo restores `before` and tells the coach on its next turn through
+  `[COACHING STATE]`.
+- **User edits.** Edits in the tabs keep the existing flow: the coach responds
+  with `adjust_step` (hold, accept or revise) when an edit goes below the
+  minimum.
+
+### Keeping it all in sync
+
+- **Step ↔ commitment.** Completing one completes the other, in both
+  directions. Move this into a database trigger so it works however the change
+  is made (tab tick, coach tool, or sweep).
+- **Goal progress.** Completed commitments update goal progress through the same
+  trigger. Today that only happens in the `commitmentUpdate` path.
+- **Coaching state.** `[COACHING STATE]` in the coach prompt always includes the
+  goal, the active plan with step ids, open commitments, and the most recent
+  `coaching_change_log` entries. The coach always knows what changed and who
+  changed it.
+- **Other features.** Auto-posts (§4), proactive check-ins and weekly reviews
+  read from the same tables, so they stay consistent automatically.
+
+### Tests
+
+- **Tool tests.** Extend `src/services/__tests__/coachTools.test.ts`:
+  - each new tool,
+  - the ownership checks,
+  - "no goal guessing when the coach has several goals".
+- **End-to-end (Playwright).** New user, first coach conversation:
+  - a goal, plan and commitments are created,
+  - the Plan tab opens and the popup walks through it,
+  - asking for a change updates the tab live,
+  - Undo restores the original.
+
+## 15. Decisions
 
 | Question | Decision |
 |---|---|
@@ -490,4 +656,5 @@ user's coaches and goals, and the Atlas interface is the natural place for
 | Plan a trial converts to? | Cheapest plan (essential) |
 | Welcome windows per person? | One per normalized email |
 | Abuse protections | Email verification, invisible Turnstile, daily AI cap, rate limits, spend alert |
-| New accounts DMing strangers during the welcome window? | Recommended: reply only. *Pending confirmation* |
+| New accounts DMing strangers during the welcome window? | Yes, as message requests the recipient accepts, same as every member |
+| Coaching loop | Goal, plan and commitments are auto-created from the first conversation; IM-style walkthrough; coach edits live (§14) |
