@@ -253,7 +253,7 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate }: { collapsed:
         {!collapsed && (
           <div className="flex items-center justify-between px-2 pb-1 pt-1">
             <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-ink-subtle">Navigate</p>
-            <button type="button" onClick={() => onNavigate('/settings')} className="rounded-md p-0.5 text-ink-subtle transition-colors hover:bg-white/8 hover:text-ink-muted" title="Settings" aria-label="Settings"><Settings className="h-3 w-3" /></button>
+            <button type="button" onClick={() => onNavigate('/background-settings')} className="rounded-md p-0.5 text-ink-subtle transition-colors hover:bg-white/8 hover:text-ink-muted" title="Settings" aria-label="Settings"><Settings className="h-3 w-3" /></button>
           </div>
         )}
         {!collapsed && <div className="my-2 border-t border-white/8" />}

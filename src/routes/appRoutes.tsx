@@ -15,6 +15,7 @@ const VideoHistoryPage = lazy(() => import('../pages/VideoHistoryPage').then(m =
 const PricingPageRoute = lazy(() => import('../pages/PricingPageRoute').then(m => ({ default: m.PricingPageRoute })));
 const SuccessPage = lazy(() => import('../pages/SuccessPage').then(m => ({ default: m.SuccessPage })));
 const SettingsPage = lazy(() => import('../pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const BackgroundSettingsPage = lazy(() => import('../pages/BackgroundSettingsPage').then(m => ({ default: m.BackgroundSettingsPage })));
 const BillingPage = lazy(() => import('../pages/BillingPage').then(m => ({ default: m.BillingPage })));
 const CoAuthorPage = lazy(() => import('../pages/CoAuthorPage').then(m => ({ default: m.CoAuthorPage })));
 const CoachingProgressPage = lazy(() => import('../pages/CoachingProgressPage').then(m => ({ default: m.CoachingProgressPage })));
@@ -64,6 +65,7 @@ export const appRoutes = [
   <Route key="relationship-briefs" path="/relationship-briefs" element={P(<RelationshipBriefPage />)} />,
   <Route key="success" path="/success" element={P(<SuccessPage />)} />,
   <Route key="settings" path="/settings" element={P(<SettingsPage />)} />,
+  <Route key="background-settings" path="/background-settings" element={P(<BackgroundSettingsPage />)} />,
   <Route key="billing" path="/billing" element={P(<BillingPage />)} />,
   <Route key="real-or-not" path="/real-or-not" element={P(<RealOrNotPage />)} />,
   <Route key="invite" path="/invite" element={P(<InvitePage />)} />,
