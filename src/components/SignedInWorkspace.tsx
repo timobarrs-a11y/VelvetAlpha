@@ -248,35 +248,48 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate }: { collapsed:
     { label: 'Community', path: '/community', tone: '#60a5fa', icon: <Users className="h-3.5 w-3.5" /> },
   ];
   return (
-    <div className="flex-1 overflow-y-auto px-2">
-      {!collapsed && <SidebarLabel>Navigate</SidebarLabel>}
-      {!collapsed && <div className="my-2 border-t border-white/8" />}
-      <div className="space-y-0.5">
-        {!collapsed && <SidebarLabel>Coaching</SidebarLabel>}
-        {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(coach)} />)}
-        <ToolRow label="Progress" path="/coaching-progress" tone={TONE_COLOR.coach} icon={<Target className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
-        <ToolRow label="Commitments" path="/coaching-commitments" tone="#38bdf8" icon={<CheckCircle2 className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
-        <ToolRow label="Plans" path="/coaching-commitments?view=plans" tone="#a78bfa" icon={<Layers className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
-        <ToolRow label="Library" path="/coaching-library" tone="#94a3b8" icon={<BookOpen className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
-        {!collapsed && <button type="button" onClick={lobby.handleNewCoach} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] text-ink-muted transition-colors hover:bg-white/7 hover:text-ink"><Plus className="h-3.5 w-3.5" />Add another coach</button>}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex-1 overflow-y-auto px-2 pb-4">
+        {!collapsed && (
+          <div className="flex items-center justify-between px-2 pb-1 pt-1">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-ink-subtle">Navigate</p>
+            <button type="button" onClick={() => onNavigate('/settings')} className="rounded-md p-0.5 text-ink-subtle transition-colors hover:bg-white/8 hover:text-ink-muted" title="Settings" aria-label="Settings"><Settings className="h-3 w-3" /></button>
+          </div>
+        )}
+        {!collapsed && <div className="my-2 border-t border-white/8" />}
+        <div className="space-y-0.5">
+          {!collapsed && <SidebarLabel>Coaching</SidebarLabel>}
+          {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(coach)} />)}
+          <ToolRow label="Progress" path="/coaching-progress" tone={TONE_COLOR.coach} icon={<Target className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
+          <ToolRow label="Commitments" path="/coaching-commitments" tone="#38bdf8" icon={<CheckCircle2 className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
+          <ToolRow label="Plans" path="/coaching-commitments?view=plans" tone="#a78bfa" icon={<Layers className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
+          <ToolRow label="Library" path="/coaching-library" tone="#94a3b8" icon={<BookOpen className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />
+          {!collapsed && <button type="button" onClick={lobby.handleNewCoach} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] text-ink-muted transition-colors hover:bg-white/7 hover:text-ink"><Plus className="h-3.5 w-3.5" />Add another coach</button>}
+        </div>
+        <div className="my-3 border-t border-white/8" />
+        <div className="space-y-0.5">
+          {!collapsed && <SidebarLabel>Companion</SidebarLabel>}
+          {companions.map(companion => <PersonRow key={companion.id} companion={companion} collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(companion)} />)}
+          {!collapsed && <button type="button" onClick={lobby.handleNewCompanion} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] text-ink-muted transition-colors hover:bg-white/7 hover:text-ink"><Plus className="h-3.5 w-3.5" />Someone new</button>}
+        </div>
+        <div className="my-3 border-t border-white/8" />
+        <div className="space-y-0.5">
+          {!collapsed && <SidebarLabel>Core</SidebarLabel>}
+          {coreTools.map(tool => <ToolRow key={tool.path} {...tool} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />)}
+        </div>
+        <div className="my-3 border-t border-white/8" />
+        <div className="space-y-0.5">
+          {!collapsed && <SidebarLabel>Connect</SidebarLabel>}
+          {connectTools.map(tool => <ToolRow key={tool.path} {...tool} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />)}
+          {!collapsed && <SidebarLabel>Games</SidebarLabel>}
+          {GAMES.map(game => <button key={game.id} type="button" onClick={() => lobby.handleGameClick(game)} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname.startsWith(game.path ?? `/${game.id}`) ? 'bg-white/8 text-ink' : 'text-ink-muted hover:bg-white/7 hover:text-ink'}`} title={collapsed ? game.name : undefined}><span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${game.iconBg}`}><game.icon className="h-3.5 w-3.5 text-white" /></span>{!collapsed && <span className="truncate text-[11px] font-semibold">{game.name}</span>}</button>)}
+        </div>
       </div>
-      <div className="my-3 border-t border-white/8" />
-      <div className="space-y-0.5">
-        {!collapsed && <SidebarLabel>Companion</SidebarLabel>}
-        {companions.map(companion => <PersonRow key={companion.id} companion={companion} collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(companion)} />)}
-        {!collapsed && <button type="button" onClick={lobby.handleNewCompanion} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] text-ink-muted transition-colors hover:bg-white/7 hover:text-ink"><Plus className="h-3.5 w-3.5" />Someone new</button>}
-      </div>
-      <div className="my-3 border-t border-white/8" />
-      <div className="space-y-0.5">
-        {!collapsed && <SidebarLabel>Core</SidebarLabel>}
-        {coreTools.map(tool => <ToolRow key={tool.path} {...tool} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />)}
-      </div>
-      <div className="my-3 border-t border-white/8" />
-      <div className="space-y-0.5">
-        {!collapsed && <SidebarLabel>Connect</SidebarLabel>}
-        {connectTools.map(tool => <ToolRow key={tool.path} {...tool} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} />)}
-        {!collapsed && <SidebarLabel>Games</SidebarLabel>}
-        {GAMES.map(game => <button key={game.id} type="button" onClick={() => lobby.handleGameClick(game)} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname.startsWith(game.path ?? `/${game.id}`) ? 'bg-white/8 text-ink' : 'text-ink-muted hover:bg-white/7 hover:text-ink'}`} title={collapsed ? game.name : undefined}><span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${game.iconBg}`}><game.icon className="h-3.5 w-3.5 text-white" /></span>{!collapsed && <span className="truncate text-[11px] font-semibold">{game.name}</span>}</button>)}
+      <div className="flex-shrink-0 border-t border-white/8 px-2 py-2">
+        <button type="button" onClick={() => onNavigate('/support')} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname === '/support' ? 'bg-amber-500/15 text-amber-200' : 'text-ink-muted hover:bg-amber-500/10 hover:text-amber-200'}`} title={collapsed ? 'Support Velvet' : undefined}>
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400"><Sparkles className="h-3.5 w-3.5" /></span>
+          {!collapsed && <span className="truncate text-[11px] font-semibold">Support Velvet</span>}
+        </button>
       </div>
     </div>
   );
