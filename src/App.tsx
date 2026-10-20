@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CalendarPlus, RefreshCw, Settings, Heart } from 'lucide-react';
+import { CalendarPlus, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatContainer } from './components/ChatContainer';
 import { ChatInput } from './components/ChatInput';
@@ -1195,6 +1195,7 @@ function AppInner() {
           collapsed={isRailCollapsed}
           translucent={customization?.translucent_ui ?? false}
           onToggleCollapse={toggleRailCollapse}
+          onOpenToolbarSettings={() => { setCustomizationInitialTab('toolbar'); setShowCustomizationPanel(true); }}
         />
         <TutorialElement elementId={ONBOARDING_ELEMENT_IDS.companionChat} className="flex-1 relative overflow-hidden flex flex-col">
           {/* Feature tab views — full page embedded, overflow-scroll */}
@@ -1337,19 +1338,6 @@ function AppInner() {
             }
           />
 
-          {/* Toolbar settings — opens customization panel on the Toolbar tab */}
-          <button
-            onClick={() => { setCustomizationInitialTab('toolbar'); setShowCustomizationPanel(true); }}
-            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{
-              background: 'rgba(0,0,0,0.04)',
-              border: '1.5px solid rgba(0,0,0,0.08)',
-            }}
-            title="Toolbar background settings"
-          >
-            <Settings className="w-4 h-4 opacity-60" style={{ color: toolbarTextColor }} />
-          </button>
-
           {/* Chat Input — grows */}
           <div className="flex-1 min-w-0">
             <ChatInput
@@ -1421,22 +1409,6 @@ function AppInner() {
             />
             </div>
           )}
-
-          {/* Support Velvet — gold accent so it stands out on the toolbar */}
-          <button
-            onClick={() => navigate('/support')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all duration-200 flex-shrink-0"
-            style={{
-              background: 'rgba(251,191,36,0.08)',
-              border: '1.5px solid rgba(251,191,36,0.35)',
-            }}
-            title="Support Velvet"
-          >
-            <Heart className="w-3.5 h-3.5" style={{ color: '#fbbf24' }} />
-            <span className="text-[11px] font-bold tracking-wide" style={{ color: '#fbbf24' }}>
-              Support Velvet
-            </span>
-          </button>
         </div>
 
         {/* Mobile layout */}
@@ -1452,19 +1424,6 @@ function AppInner() {
             }}
           >
             <span className={`text-sm ${petEnabled ? '' : 'grayscale opacity-50'}`}>🐾</span>
-          </button>
-
-          {/* Toolbar settings — opens customization panel on the Toolbar tab */}
-          <button
-            onClick={() => { setCustomizationInitialTab('toolbar'); setShowCustomizationPanel(true); }}
-            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{
-              background: 'rgba(0,0,0,0.04)',
-              border: '1.5px solid rgba(0,0,0,0.08)',
-            }}
-            title="Toolbar background settings"
-          >
-            <Settings className="w-4 h-4 opacity-60" style={{ color: toolbarTextColor }} />
           </button>
 
           <div className="flex-1 min-w-0">
@@ -1513,19 +1472,6 @@ function AppInner() {
               />
             </div>
           )}
-
-          {/* Support Velvet — gold icon on mobile */}
-          <button
-            onClick={() => navigate('/support')}
-            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{
-              background: 'rgba(251,191,36,0.08)',
-              border: '1.5px solid rgba(251,191,36,0.35)',
-            }}
-            title="Support Velvet"
-          >
-            <Heart className="w-4 h-4" style={{ color: '#fbbf24' }} />
-          </button>
         </div>
         </div>
       </div>

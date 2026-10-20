@@ -18,6 +18,7 @@ import {
   PanelLeftOpen,
   RotateCcw,
   Heart,
+  Settings,
 } from 'lucide-react';
 import { TutorialElement } from './TutorialElement';
 import { ONBOARDING_ELEMENT_IDS } from '../../features/onboarding/onboardingPrompt';
@@ -48,6 +49,7 @@ interface Props {
   collapsed?: boolean;
   translucent?: boolean;
   onToggleCollapse?: () => void;
+  onOpenToolbarSettings?: () => void;
 }
 
 interface ShortcutDef {
@@ -136,7 +138,7 @@ function ShortcutTile({ s, onShortcut }: { s: ShortcutDef; onShortcut: (s: Short
   );
 }
 
-export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId, collapsed = false, translucent = false, onToggleCollapse }: Props) {
+export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId, collapsed = false, translucent = false, onToggleCollapse, onOpenToolbarSettings }: Props) {
   const navigate = useNavigate();
   const { startTour } = useTutorialDirector();
   const [activePanel, setActivePanel] = useState<PanelResult | null>(null);
@@ -238,16 +240,27 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
             Your World
           </p>
         )}
-        {onToggleCollapse && !activePanel && (
-          <button
-            data-tour-id="tour-sidebar-toggle"
-            onClick={onToggleCollapse}
-            title="Collapse sidebar"
-            className="flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 flex-shrink-0"
-          >
-            <PanelLeftClose className="w-3.5 h-3.5" />
-          </button>
-        )}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {onOpenToolbarSettings && !activePanel && (
+            <button
+              onClick={onOpenToolbarSettings}
+              title="Toolbar background settings"
+              className="flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onToggleCollapse && !activePanel && (
+            <button
+              data-tour-id="tour-sidebar-toggle"
+              onClick={onToggleCollapse}
+              title="Collapse sidebar"
+              className="flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
+            >
+              <PanelLeftClose className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -297,8 +310,8 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
         )}
       </AnimatePresence>
 
-      {/* Replay the tour — pinned footer */}
-      <div className="flex-shrink-0 border-t border-gray-100/80 px-2 py-2">
+      {/* Footer — Replay tour + Support Velvet */}
+      <div className="flex-shrink-0 border-t border-gray-100/80 px-2 py-2 space-y-0.5">
         <button
           onClick={handleReplayTour}
           className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-gray-100/80"
@@ -312,6 +325,21 @@ export function CompanionHubLeftRail({ disabled: _disabled, userId, companionId,
           <span className="flex-1 min-w-0">
             <span className="block text-[11.5px] font-semibold text-gray-600 leading-tight">Replay the tour</span>
             <span className="block text-[9.5px] text-gray-400 leading-tight">See the hub intro again</span>
+          </span>
+        </button>
+        <button
+          onClick={() => navigate('/support')}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-amber-50/80"
+        >
+          <span
+            className="flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0"
+            style={{ background: 'rgba(251,191,36,0.12)', boxShadow: '0 2px 5px rgba(251,191,36,0.15)' }}
+          >
+            <Heart className="w-3.5 h-3.5" style={{ color: '#f59e0b' }} />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-[11.5px] font-bold leading-tight" style={{ color: '#d97706' }}>Support Velvet</span>
+            <span className="block text-[9.5px] leading-tight" style={{ color: 'rgba(217,119,6,0.6)' }}>Help us keep building</span>
           </span>
         </button>
       </div>
