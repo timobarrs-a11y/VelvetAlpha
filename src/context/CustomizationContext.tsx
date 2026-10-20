@@ -9,6 +9,8 @@ import {
   POINTER_SYMBOLS,
   CURSOR_COLOR_OPTIONS,
   BUTTON_HOVER_STYLES,
+  ToolbarBackgroundMode,
+  ToolbarTextColorKey,
 } from '../services/customizationService';
 
 interface CustomizationContextValue {
@@ -27,6 +29,9 @@ interface CustomizationContextValue {
   setButtonHoverStyle: (style: string) => Promise<void>;
   setTranslucentUI: (enabled: boolean) => Promise<void>;
   setLeftRailCollapsed: (collapsed: boolean) => Promise<void>;
+  setRightRailCollapsed: (collapsed: boolean) => Promise<void>;
+  setToolbarBackgroundMode: (mode: ToolbarBackgroundMode) => Promise<void>;
+  setToolbarTextColor: (key: ToolbarTextColorKey) => Promise<void>;
   dismissUnlockNotice: () => void;
 }
 
@@ -130,6 +135,24 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
     if (uid) updateCursorPrefs(uid, { left_rail_collapsed: collapsed }).catch(() => {});
   }, []);
 
+  const setRightRailCollapsed = useCallback(async (collapsed: boolean) => {
+    setCustomization(prev => prev ? { ...prev, right_rail_collapsed: collapsed } : prev);
+    const uid = userIdRef.current;
+    if (uid) updateCursorPrefs(uid, { right_rail_collapsed: collapsed }).catch(() => {});
+  }, []);
+
+  const setToolbarBackgroundMode = useCallback(async (mode: ToolbarBackgroundMode) => {
+    setCustomization(prev => prev ? { ...prev, toolbar_background_mode: mode } : prev);
+    const uid = userIdRef.current;
+    if (uid) updateCursorPrefs(uid, { toolbar_background_mode: mode }).catch(() => {});
+  }, []);
+
+  const setToolbarTextColor = useCallback(async (key: ToolbarTextColorKey) => {
+    setCustomization(prev => prev ? { ...prev, toolbar_text_color: key } : prev);
+    const uid = userIdRef.current;
+    if (uid) updateCursorPrefs(uid, { toolbar_text_color: key }).catch(() => {});
+  }, []);
+
   const dismissUnlockNotice = useCallback(() => setJustUnlocked([]), []);
 
   const activePointerDef = POINTER_SYMBOLS.find(s => s.key === customization?.active_pointer) ?? POINTER_SYMBOLS[0];
@@ -157,6 +180,9 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
       setButtonHoverStyle,
       setTranslucentUI,
       setLeftRailCollapsed,
+      setRightRailCollapsed,
+      setToolbarBackgroundMode,
+      setToolbarTextColor,
       dismissUnlockNotice,
     }}>
       {children}

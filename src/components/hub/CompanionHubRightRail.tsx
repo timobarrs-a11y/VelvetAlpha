@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, ExternalLink, RefreshCw, Newspaper, Video,
-  AlertCircle, ArrowLeft, X,
+  AlertCircle, ArrowLeft, X, PanelRightClose, PanelRightOpen,
 } from 'lucide-react';
 import { supabase } from '../../shared/supabase/client';
 import { newsService } from '../../services/newsService';
@@ -25,6 +25,8 @@ interface Props {
   onCommand: (command: QuickCommand) => Promise<void>;
   disabled?: boolean;
   initialTab?: Tab;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const BLOCKED_PATTERNS = [
@@ -175,7 +177,7 @@ function InlineVideoPlayer({ video, onClose }: { video: VideoResult; onClose: ()
   );
 }
 
-export function CompanionHubRightRail({ userId, initialTab }: Props) {
+export function CompanionHubRightRail({ userId, initialTab, collapsed = false, onToggleCollapse }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? 'news');
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [videos, setVideos] = useState<VideoResult[]>([]);
@@ -250,6 +252,38 @@ export function CompanionHubRightRail({ userId, initialTab }: Props) {
   const hasError = activeTab === 'news' ? newsError : videoError;
   const showingPlayer = activeTab === 'video' && !!activeVideo;
 
+  const activeTabLabel = activeTab === 'news' ? 'Daily Feed' : 'Your Lens';
+  const activeTabIcon = activeTab === 'news' ? <Newspaper className="w-3 h-3" /> : <Video className="w-3 h-3" />;
+
+  // Collapsed view — slim vertical handle on the right edge
+  if (collapsed) {
+    return (
+      <div
+        className="relative flex-shrink-0 h-full flex flex-col items-center justify-start py-2 w-9"
+        style={{
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(16px)',
+          borderLeft: '1px solid rgba(0,0,0,0.07)',
+        }}
+      >
+        <button
+          onClick={() => onToggleCollapse?.()}
+          className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-gray-100 transition-colors mb-2"
+          title="Expand Daily Feed / Your Lens"
+          aria-label="Expand Daily Feed / Your Lens"
+        >
+          <PanelRightOpen className="w-4 h-4 text-gray-500" />
+        </button>
+        <div className="flex flex-col items-center gap-1 mt-1 [writing-mode:vertical-rl] rotate-180">
+          <span className="flex items-center gap-1 text-[10px] font-semibold text-gray-500 tracking-wide uppercase select-none">
+            {activeTabIcon}
+            {activeTabLabel}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       data-tour-id="tour-right-rail"
@@ -290,6 +324,15 @@ export function CompanionHubRightRail({ userId, initialTab }: Props) {
             title="Refresh"
           >
             <RefreshCw className={`w-3 h-3 text-gray-400 ${isContentLoading ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button
+            onClick={() => onToggleCollapse?.()}
+            className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-gray-100 transition-colors ml-1 flex-shrink-0"
+            title="Tuck away Daily Feed / Your Lens"
+            aria-label="Tuck away Daily Feed / Your Lens"
+          >
+            <PanelRightClose className="w-3 h-3 text-gray-400" />
           </button>
         </div>
       )}

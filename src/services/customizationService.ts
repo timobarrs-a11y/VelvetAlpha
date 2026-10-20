@@ -278,7 +278,27 @@ export interface UserCustomization {
   button_hover_style: string;
   translucent_ui: boolean;
   left_rail_collapsed: boolean;
+  right_rail_collapsed: boolean;
+  toolbar_background_mode: ToolbarBackgroundMode;
+  toolbar_text_color: ToolbarTextColorKey;
 }
+
+export type ToolbarBackgroundMode = 'glass' | 'companion' | 'coaching';
+export type ToolbarTextColorKey = 'dark' | 'light' | 'rose' | 'sky' | 'amber';
+
+export const TOOLBAR_TEXT_COLOR_PRESETS: { key: ToolbarTextColorKey; label: string; color: string }[] = [
+  { key: 'dark',  label: 'Dark',  color: '#1f2937' },
+  { key: 'light', label: 'Light', color: '#f8fafc' },
+  { key: 'rose',  label: 'Rose',  color: '#fb7185' },
+  { key: 'sky',   label: 'Sky',   color: '#38bdf8' },
+  { key: 'amber', label: 'Amber', color: '#fbbf24' },
+];
+
+export const TOOLBAR_BACKGROUND_MODES: { key: ToolbarBackgroundMode; label: string; description: string }[] = [
+  { key: 'glass',     label: 'Frosted glass',     description: 'A see-through Aero-style blur that works over any page.' },
+  { key: 'companion', label: 'Match companion',  description: 'Use the active companion chat wallpaper behind the toolbar.' },
+  { key: 'coaching',  label: 'Match coaching',   description: 'Use the active coaching chat wallpaper behind the toolbar.' },
+];
 
 const DEFAULT_CUSTOMIZATION: UserCustomization = {
   active_pointer:              'star',
@@ -295,6 +315,9 @@ const DEFAULT_CUSTOMIZATION: UserCustomization = {
   button_hover_style:          'none',
   translucent_ui:              false,
   left_rail_collapsed:         false,
+  right_rail_collapsed:        false,
+  toolbar_background_mode:     'glass',
+  toolbar_text_color:          'dark',
 };
 
 export async function getDailyCheckinStatus(userId: string): Promise<{
@@ -333,6 +356,9 @@ export async function getDailyCheckinStatus(userId: string): Promise<{
         button_hover_style:          customRow.button_hover_style ?? 'none',
         translucent_ui:              customRow.translucent_ui ?? false,
         left_rail_collapsed:         customRow.left_rail_collapsed ?? false,
+        right_rail_collapsed:        customRow.right_rail_collapsed ?? false,
+        toolbar_background_mode:     (customRow.toolbar_background_mode as ToolbarBackgroundMode) ?? 'glass',
+        toolbar_text_color:          (customRow.toolbar_text_color as ToolbarTextColorKey) ?? 'dark',
       }
     : { ...DEFAULT_CUSTOMIZATION };
 
@@ -371,6 +397,9 @@ export async function performDailyCheckin(userId: string): Promise<UserCustomiza
     button_hover_style:          existing?.button_hover_style    ?? 'none',
     translucent_ui:              existing?.translucent_ui        ?? false,
     left_rail_collapsed:         existing?.left_rail_collapsed   ?? false,
+    right_rail_collapsed:        existing?.right_rail_collapsed  ?? false,
+    toolbar_background_mode:     (existing?.toolbar_background_mode as ToolbarBackgroundMode) ?? 'glass',
+    toolbar_text_color:          (existing?.toolbar_text_color as ToolbarTextColorKey) ?? 'dark',
   };
 }
 
@@ -381,13 +410,16 @@ export async function updateActivePointer(userId: string, pointerKey: string): P
 }
 
 export async function updateCursorPrefs(userId: string, prefs: Partial<{
-  show_trail:          boolean;
-  trail_style:         string;
-  animation_style:     string;
-  cursor_color:        string;
-  button_hover_style:  string;
-  translucent_ui:      boolean;
-  left_rail_collapsed: boolean;
+  show_trail:             boolean;
+  trail_style:            string;
+  animation_style:        string;
+  cursor_color:           string;
+  button_hover_style:     string;
+  translucent_ui:         boolean;
+  left_rail_collapsed:    boolean;
+  right_rail_collapsed:   boolean;
+  toolbar_background_mode: ToolbarBackgroundMode;
+  toolbar_text_color:      ToolbarTextColorKey;
 }>): Promise<void> {
   await supabase.from('user_customization')
     .upsert({ user_id: userId, ...prefs, updated_at: new Date().toISOString() })

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CalendarPlus, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,7 +32,7 @@ import { CompanionAppearanceModal } from './components/CompanionAppearanceModal'
 import { AvatarConfigV2 } from './types/avatar-v2';
 import { CookieConsent } from './components/CookieConsent';
 import { WallpaperPickerModal } from './components/WallpaperPickerModal';
-import { buildWallpaperMeta } from './services/wallpaperService';
+import { buildWallpaperMeta, buildWallpaperStyle } from './services/wallpaperService';
 import { BotPromptDrawer, ThreadMode } from './components/thread/ThreadToolbar';
 import { QuickCommand, QuickCommandPopover } from './components/QuickCommandBar';
 import { CompanionHubLeftRail } from './components/hub/CompanionHubLeftRail';
@@ -91,7 +91,7 @@ function AppInner() {
   const [userAvatarConfig, setUserAvatarConfig] = useState<AvatarConfig | null>(null);
   const { subscriptionInfo, refreshSubscription } = useSubscription();
   const { playSound } = useSound();
-  const { customization, setPointer, setShowTrail, setTrailStyle, setAnimationStyle, setCursorColor, setButtonHoverStyle, setTranslucentUI, setLeftRailCollapsed } = useCustomization();
+  const { customization, setPointer, setShowTrail, setTrailStyle, setAnimationStyle, setCursorColor, setButtonHoverStyle, setTranslucentUI, setLeftRailCollapsed, setRightRailCollapsed, setToolbarBackgroundMode, setToolbarTextColor } = useCustomization();
   const [currentStatus, setCurrentStatus] = useState<string>('');
   const [dailyExperience, setDailyExperience] = useState<any>(null);
 
@@ -1040,6 +1040,48 @@ function AppInner() {
   const wallpaperMeta = buildWallpaperMeta(chatWallpaper, chatWallpaperUrl);
   const hasWallpaper = !!chatWallpaper;
 
+  // Sticky toolbar appearance — universal setting (independent of per-companion chat wallpaper)
+  const toolbarBgMode = customization?.toolbar_background_mode ?? 'glass';
+  const toolbarTextColorKey = customization?.toolbar_text_color ?? 'dark';
+  const toolbarTextColor =
+    toolbarTextColorKey === 'light' ? '#f8fafc'
+    : toolbarTextColorKey === 'rose' ? '#fb7185'
+    : toolbarTextColorKey === 'sky' ? '#38bdf8'
+    : toolbarTextColorKey === 'amber' ? '#fbbf24'
+    : '#1f2937';
+
+  // Pick the wallpaper source for the toolbar background based on the mode
+  const mentorCompanion = allCompanions.find(c => c.relationship_type === 'mentor');
+  const toolbarWallpaperId =
+    toolbarBgMode === 'companion' ? chatWallpaper
+    : toolbarBgMode === 'coaching' ? (mentorCompanion?.chat_wallpaper ?? null)
+    : null;
+  const toolbarWallpaperUrl =
+    toolbarBgMode === 'companion' ? chatWallpaperUrl
+    : toolbarBgMode === 'coaching' ? (mentorCompanion?.chat_wallpaper_url ?? null)
+    : null;
+  const toolbarWallpaperStyle = buildWallpaperStyle(toolbarWallpaperId, toolbarWallpaperUrl);
+
+  const toolbarBackgroundStyle: CSSProperties = toolbarBgMode === 'glass' || !toolbarWallpaperId
+    ? {
+        // Frosted "Aero" glass — stronger blur, subtle tint, reflective top edge
+        background: customization?.translucent_ui
+          ? 'linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)'
+          : 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.35) 100%)',
+        backdropFilter: 'blur(28px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(28px) saturate(160%)',
+        borderColor: 'rgba(255,255,255,0.35)',
+        boxShadow: '0 -12px 40px -12px rgba(0,0,0,0.18), inset 0 1px 0 0 rgba(255,255,255,0.45)',
+      }
+    : {
+        // Wallpaper-backed toolbar — still frosted so text stays readable
+        ...toolbarWallpaperStyle,
+        backdropFilter: 'blur(20px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(140%)',
+        borderColor: 'rgba(255,255,255,0.25)',
+        boxShadow: '0 -12px 40px -12px rgba(0,0,0,0.22), inset 0 1px 0 0 rgba(255,255,255,0.30)',
+      };
+
   const getBotDrawerProps = () => {
     if (activeMode === 'atlas-prompt') return {
       botName: 'Atlas',
@@ -1107,6 +1149,8 @@ function AppInner() {
           onSetCursorColor={setCursorColor}
           onSetButtonHoverStyle={setButtonHoverStyle}
           onSetTranslucentUI={setTranslucentUI}
+          onSetToolbarBackgroundMode={setToolbarBackgroundMode}
+          onSetToolbarTextColor={setToolbarTextColor}
           onCompanionFontUpdated={(cId, fontFamily) => {
             setAllCompanions(prev => prev.map(c => c.id === cId ? { ...c, font_family: fontFamily } : c));
             if (companion?.id === cId) setCompanion(prev => prev ? { ...prev, font_family: fontFamily } : prev);
@@ -1235,6 +1279,8 @@ function AppInner() {
             userId={userId}
             onCommand={handleQuickCommand}
             disabled={isTyping || remainingMessages === 0 || isCurrentlyLoading}
+            collapsed={customization?.right_rail_collapsed ?? false}
+            onToggleCollapse={() => setRightRailCollapsed(!(customization?.right_rail_collapsed ?? false))}
           />
         </div>
       </div>
@@ -1285,10 +1331,11 @@ function AppInner() {
         className={`relative z-40 border-t transition-all duration-500 ${
           (activeThread === 'calendar' || activeThread === 'co-author' || activeThread === 'daily-feed' || activeThread === 'your-lens') ? 'hidden' : ''
         }`}
-        style={customization?.translucent_ui
-          ? { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(209,213,219,0.12)', boxShadow: 'none' }
-          : { background: 'rgba(255,255,255,0.80)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderColor: 'rgba(209,213,219,0.50)', boxShadow: '0 -10px 40px -10px rgba(0,0,0,0.10)' }
-        }
+        style={{
+          ...toolbarBackgroundStyle,
+          color: toolbarTextColor,
+          ['--toolbar-text' as string]: toolbarTextColor,
+        }}
       >
         {/* Desktop layout — evenly distributed single row */}
         <div className="hidden lg:flex items-end gap-2 px-4 py-2">

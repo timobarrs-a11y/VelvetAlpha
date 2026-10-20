@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Check, Flame, Sparkles, Type, ChevronRight, X, Wand2 } from 'lucide-react';
+import { Lock, Check, Flame, Sparkles, Type, ChevronRight, X, Wand2, PanelBottom } from 'lucide-react';
 import { ModalShell } from '../shared/ui/ModalShell';
 import { Button } from '../shared/ui/Button';
 import { useButtonHoverPreview } from '../context/ButtonHoverPreviewContext';
@@ -11,6 +11,10 @@ import {
   TRAIL_STYLES,
   FONT_OPTIONS,
   BUTTON_HOVER_STYLES,
+  TOOLBAR_BACKGROUND_MODES,
+  TOOLBAR_TEXT_COLOR_PRESETS,
+  ToolbarBackgroundMode,
+  ToolbarTextColorKey,
   UserCustomization,
   PointerSymbol,
   AnimationStyle,
@@ -33,10 +37,12 @@ interface Props {
   onSetCursorColor:       (key: string)   => void;
   onSetButtonHoverStyle:  (style: string) => void;
   onSetTranslucentUI:     (enabled: boolean) => void;
+  onSetToolbarBackgroundMode: (mode: ToolbarBackgroundMode) => void;
+  onSetToolbarTextColor:     (key: ToolbarTextColorKey) => void;
   onCompanionFontUpdated?: (companionId: string, fontFamily: string) => void;
 }
 
-type Tab = 'pointer' | 'effect' | 'rewards' | 'fonts';
+type Tab = 'pointer' | 'effect' | 'rewards' | 'fonts' | 'toolbar';
 
 function SymbolIcon({ symbol }: { symbol: PointerSymbol }) {
   return (
@@ -259,7 +265,7 @@ function FontPickerModal({
 export function CustomizationPanel({
   isOpen, onClose, customization, companions = [],
   onSetPointer, onSetShowTrail, onSetTrailStyle, onSetAnimationStyle, onSetCursorColor,
-  onSetButtonHoverStyle, onSetTranslucentUI, onCompanionFontUpdated,
+  onSetButtonHoverStyle, onSetTranslucentUI, onSetToolbarBackgroundMode, onSetToolbarTextColor, onCompanionFontUpdated,
 }: Props) {
   const [tab, setTab] = useState<Tab>('pointer');
   const [editingCompanion, setEditingCompanion] = useState<CompanionWithLastMessage | null>(null);
@@ -297,7 +303,7 @@ export function CustomizationPanel({
         </div>
 
         <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid rgba(80,70,130,0.40)' }}>
-          {(['pointer', 'effect', 'rewards', 'fonts'] as Tab[]).map(t => (
+          {(['pointer', 'effect', 'rewards', 'fonts', 'toolbar'] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
                 tab === t ? 'bg-primary-600 text-white' : 'text-ink-muted hover:text-ink-secondary'
@@ -311,11 +317,16 @@ export function CustomizationPanel({
                     <Wand2 className="w-3 h-3" />
                     FX
                   </>
-                ) : (
+                ) : t === 'fonts' ? (
                   <>
                     <Type className="w-3 h-3" />
                     Fonts
                     {false && <Lock className="w-2.5 h-2.5 opacity-70" />}
+                  </>
+                ) : (
+                  <>
+                    <PanelBottom className="w-3 h-3" />
+                    Toolbar
                   </>
                 )
               }
@@ -617,6 +628,75 @@ export function CustomizationPanel({
                   </div>
                 )}
               </>
+            </motion.div>
+          )}
+
+          {tab === 'toolbar' && (
+            <motion.div key="toolbar"
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
+              className="space-y-5"
+            >
+              <div>
+                <p className="text-xs font-semibold text-ink-secondary mb-1">Sticky toolbar background</p>
+                <p className="text-xs text-ink-muted mb-4">Affects the message bar across the whole app. Your chat wallpaper settings stay separate.</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {TOOLBAR_BACKGROUND_MODES.map(mode => {
+                    const active = (customization.toolbar_background_mode ?? 'glass') === mode.key;
+                    return (
+                      <button key={mode.key}
+                        onClick={() => onSetToolbarBackgroundMode(mode.key)}
+                        style={{
+                          background:  active ? 'rgba(244,63,107,0.18)' : 'rgba(40,36,68,0.80)',
+                          borderColor: active ? 'rgba(244,63,107,0.70)' : 'rgba(60,55,100,0.60)',
+                          width: '100%', textAlign: 'left',
+                        }}
+                        className={`relative flex flex-col gap-1 px-4 py-3 rounded-xl border transition-all duration-200 ${
+                          active ? 'text-primary-400' : 'text-ink-secondary hover:text-ink'
+                        }`}
+                      >
+                        {active && (
+                          <span className="absolute top-3 right-3 w-3.5 h-3.5 bg-primary-500 rounded-full flex items-center justify-center">
+                            <Check className="w-2 h-2 text-white" />
+                          </span>
+                        )}
+                        <span className="text-xs font-semibold">{mode.label}</span>
+                        <span className="text-2xs text-ink-subtle leading-tight">{mode.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-ink-secondary mb-1">Toolbar text color</p>
+                <p className="text-xs text-ink-muted mb-4">Pick a preset that stays readable over your chosen background.</p>
+                <div className="flex flex-wrap gap-2.5">
+                  {TOOLBAR_TEXT_COLOR_PRESETS.map(preset => {
+                    const sel = (customization.toolbar_text_color ?? 'dark') === preset.key;
+                    return (
+                      <button key={preset.key} onClick={() => onSetToolbarTextColor(preset.key)} title={preset.label}
+                        style={{
+                          appearance: 'none', WebkitAppearance: 'none',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, width: 38, height: 38, borderRadius: '50%',
+                          background: preset.color,
+                          border: sel ? '3px solid #fff' : '3px solid rgba(255,255,255,0.08)',
+                          outline: sel ? `3px solid ${preset.color}` : 'none', outlineOffset: 2,
+                          boxShadow: sel ? `0 0 16px ${preset.color}` : 'none',
+                          transform: sel ? 'scale(1.18)' : 'scale(1)',
+                          transition: 'all 0.15s ease', cursor: 'pointer', padding: 0,
+                        }}
+                      >
+                        {sel && (
+                          <Check style={{ width: 14, height: 14, color: preset.key === 'light' ? '#1f2937' : '#fff',
+                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))', flexShrink: 0 }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
