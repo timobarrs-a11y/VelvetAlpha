@@ -191,7 +191,7 @@ ask questions or ask for changes. The coach then edits the plan and commitments
 - [ ] `coachTools.test.ts` covers each new tool, the ownership checks and goal
       resolution.
 - [ ] A Playwright e2e test covers the first-session flow.
-- [ ] `npm run lint`, `npm run test` and `npm run build` pass.
+- [ ] `npm run lint`, `npx vitest run` and `npm run build` pass.
 
 ## Manual steps for you
 1. **Supabase → Database → Replication:** confirm Realtime is on for the four

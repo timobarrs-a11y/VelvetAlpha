@@ -72,4 +72,4 @@ write their own posts.
 - [ ] The first auto-post shows the toast. Undo removes the post, and "Turn
       off" stops future ones.
 - [ ] `show_details` off: the post shows only the goal title.
-- [ ] `npm run lint`, `npm run test` and `npm run build` pass.
+- [ ] `npm run lint`, `npx vitest run` and `npm run build` pass.

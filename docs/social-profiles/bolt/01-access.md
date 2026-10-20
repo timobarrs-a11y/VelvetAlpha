@@ -163,7 +163,7 @@ Behind the lock screen, the user can still see their own goals and progress
       returns.
 - [ ] Stripe test clock: on day 3 the subscription converts to essential.
 - [ ] Existing users without a server-set DOB see the age modal once.
-- [ ] `npm run lint`, `npm run test` and `npm run build` pass.
+- [ ] `npm run lint`, `npx vitest run` and `npm run build` pass.
 
 ## Manual steps for you
 1. **Supabase → Authentication → Providers → Email:** turn on **Confirm

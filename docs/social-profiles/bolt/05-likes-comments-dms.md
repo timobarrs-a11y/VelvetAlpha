@@ -96,4 +96,4 @@ safety controls.
       leaves the sender seeing nothing.
 - [ ] The 11th request in a day from a welcome-window account is refused.
 - [ ] Blocked users can't see, like, comment on or message each other.
-- [ ] `npm run lint`, `npm run test` and `npm run build` pass.
+- [ ] `npm run lint`, `npx vitest run` and `npm run build` pass.

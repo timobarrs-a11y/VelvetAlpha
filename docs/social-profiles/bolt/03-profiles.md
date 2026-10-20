@@ -85,4 +85,4 @@ phase 4). **Nothing else is ever public.**
 - [ ] Blocked users can't load each other's profiles in either direction.
 - [ ] Querying `user_profiles` or `user_goals` for another user from the
       browser console returns nothing.
-- [ ] `npm run lint`, `npm run test` and `npm run build` pass.
+- [ ] `npm run lint`, `npx vitest run` and `npm run build` pass.

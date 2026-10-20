@@ -59,4 +59,4 @@ working toward a 5K and just hit a 30-day streak. Want to see their profile?"
       Assert that only B's public fields appear in the tool result and in
       Atlas's prompt context.
 - [ ] Blocked, non-discoverable and opted-out users never appear.
-- [ ] `npm run lint`, `npm run test` and `npm run build` pass.
+- [ ] `npm run lint`, `npx vitest run` and `npm run build` pass.

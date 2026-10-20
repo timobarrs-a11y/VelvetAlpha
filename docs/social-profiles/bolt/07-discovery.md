@@ -52,4 +52,4 @@ are never shown.**
       with 5 human likes.
 - [ ] Blocked or non-discoverable profiles never appear.
 - [ ] No follower count appears anywhere in the UI or in API responses.
-- [ ] `npm run lint`, `npm run test` and `npm run build` pass.
+- [ ] `npm run lint`, `npx vitest run` and `npm run build` pass.

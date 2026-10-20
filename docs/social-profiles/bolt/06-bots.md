@@ -91,4 +91,4 @@ Bots are part of the community and the site says so.
       crisis-flagged ones do.
 - [ ] Turning off "bot interactions" stops bot likes and comments for that
       user.
-- [ ] `npm run lint`, `npm run test` and `npm run build` pass.
+- [ ] `npm run lint`, `npx vitest run` and `npm run build` pass.
