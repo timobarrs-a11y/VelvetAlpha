@@ -22,11 +22,12 @@ other people see and respond to.
 3. **Public by choice, field by field.** Only the fields in §3 can ever be
    public. Nothing from journals, coaching chat, memories, insights or
    location ever leaves the private layer.
-4. **Paying adults only.** Every social surface is gated server-side (§2).
+4. **Paying or trial members, ID-verified adults only.** Every social surface is
+   gated server-side (§2).
 5. **Bots are disclosed.** Bots like and comment as part of the system; the site
    says so, and bot accounts are labeled on their profiles and comments.
 
-## 2. Access gate: paid + 18+
+## 2. Access gate: paid or trial + ID-verified 18+
 
 ### Current state (gaps found in the code)
 
@@ -39,31 +40,43 @@ other people see and respond to.
 
 ### Design
 
-- **Move age verification server-side.**
-  - Revoke client `UPDATE` on `age_verified_at` and `birthday`.
-  - Add RPC `verify_age(p_birthdate date)` (SECURITY DEFINER). It rejects anyone
-    under 18, writes `birthday` and `age_verified_at`, and is write-once
-    (re-verification is admin only).
-  - Signup collects date of birth (reuse the selects in `AgeVerificationModal`)
-    and calls `verify_age` instead of inserting `age_verified_at` from the
-    browser.
-  - Existing users without a server-verified DOB see `AgeVerificationModal` the
-    first time they open any social surface.
+- **Who gets in.** Members on a paid tier (essential, plus, elite) or an active
+  trial.
+- **Age verification uses ID, required at launch.** Use Stripe Identity: Stripe
+  is already integrated (`stripeService`, `stripe-webhook`), and it handles
+  document plus selfie checks.
+  - The check runs the first time a member opens any social surface, not at
+    signup. This keeps signup friction unchanged and only pays the
+    per-verification fee for people who want social.
+  - New edge function `create-identity-session` creates a Stripe Identity
+    VerificationSession and returns the client secret.
+  - `stripe-webhook` handles `identity.verification_session.verified`:
+    - reads the verified date of birth,
+    - rejects anyone under 18,
+    - writes `id_verified_at`, `birthday` and `age_verified_at` server-side.
+  - Store only the verified status and DOB. ID images and selfies stay with
+    Stripe and are never shown anywhere in the app.
+  - On failure (`requires_input`), the member can retry. After 3 failed attempts,
+    their case goes to the admin console queue.
+- **Lock down the existing columns.**
+  - Revoke client `UPDATE` on `age_verified_at` and `birthday`, and add
+    `id_verified_at` as a server-only column.
+  - The signup checkbox stays as the 18+ attestation for the private app, but it
+    no longer satisfies the social gate.
 - **Single gate function** used by every social table's RLS and every social
   edge function:
 
   ```sql
   can_use_social(uid uuid) RETURNS boolean
   -- true when:
-  --   subscription tier is paid (essential | plus | elite, mirroring isPaidTier)
-  --   AND age_verified_at IS NOT NULL (set by verify_age)
+  --   (subscription tier is essential | plus | elite OR an active trial)
+  --   AND id_verified_at IS NOT NULL (set only by the Stripe Identity webhook)
   --   AND NOT is_banned
   ```
 
-- **Lapsed subscriptions.** When a subscription lapses, the profile and posts
-  are hidden from others (not deleted) and come back on renewal.
-- **Later, optional:** ID-based age verification (e.g. Stripe Identity) if a
-  payment card plus self-reported DOB turns out not to be enough.
+- **Lapsed access.** When a subscription or trial lapses, the profile and posts
+  are hidden from others (not deleted) and come back on renewal. ID
+  verification is kept and doesn't have to be redone.
 
 ## 3. Public profile
 
@@ -140,8 +153,9 @@ Same moderation as comments (§7).
 ### Behavior
 
 - One reaction type: **like**.
-- Public display is the **count only**. The list of who liked is not shown to
-  anyone, including the author.
+- Public display is the **count only**. Everyone who can see a post sees its
+  like count. The list of who liked is not shown to anyone, including the
+  author.
 - Likes come from members and from bots. Both count the same toward the
   displayed total.
 
@@ -165,15 +179,21 @@ isn't shown in the UI.
   - the size of the milestone (a 100-day streak earns more than a first
     check-in).
 
-  A first post gets a few likes; budgets ramp over weeks. Starting curve (tune
-  with data):
+  A first post gets a few likes; budgets ramp over weeks. Default curve:
 
-  | Author's post # | Typical bot likes |
+  | Author's post # | Bot likes per post |
   |---|---|
   | 1–3 | 1–4 |
   | 4–10 | 3–10 |
   | 11–30 | 5–20 |
-  | 30+ | scales with human engagement, hard cap per post |
+  | 30+ | Grows with human engagement, up to the per-post cap |
+
+  Big milestones (goal completed, a 30+ day streak) get up to 2× the range. The
+  per-post cap defaults to 60.
+
+- **Settings.** The curve, milestone multiplier and cap live in `app_settings`
+  under the key `social_bot_like_budget`, so they can be tuned from the admin
+  console without a deploy.
 
 - **Delivery.** Likes are spread over hours, front-loaded the way organic
   engagement is, not dropped in all at once.
@@ -246,8 +266,10 @@ Self-harm or acute-distress signals on a post or comment:
 
 ## 8. Follow & discovery
 
-- **Follows:** `social_follows (follower_id, followee_id, created_at)`. Follower
-  counts are hidden in v1 (open question, §12).
+- **Follows:** `social_follows (follower_id, followee_id, created_at)`.
+- **No counts shown.** Follower and following counts are never displayed,
+  including to the profile owner. A member can see the list of people they
+  follow, not a number.
 - **Discovery, mode A — shared goals.** Cards like "12 people training for a 5K
   right now", built from `social_shared_goals` grouped by `goal_type` and
   normalized title. Tapping a card lists those members' profiles.
@@ -319,8 +341,9 @@ user's coaches and goals, and the Atlas interface is the natural place for
 ## 13. Phases
 
 1. **Gate.**
-   - Server-side `verify_age`, revoke the client column grants, `can_use_social()`.
-   - Wire `AgeVerificationModal` for existing users.
+   - Stripe Identity session and webhook handling, `id_verified_at`.
+   - Revoke the client column grants, add `can_use_social()`.
+   - "Verify to join the community" screen in front of every social surface.
 2. **Profiles.**
    - Extend `im_discovery_profiles`, add `social_shared_goals`.
    - Profile page and editor.
@@ -337,12 +360,12 @@ user's coaches and goals, and the Atlas interface is the natural place for
 7. **Atlas `find_people`.**
    - The tool, the privacy test, and the introduction limits.
 
-## 14. Open questions
+## 14. Decisions
 
-1. Do **trial** users get social access, or only paid tiers
-   (essential / plus / elite)?
-2. Should follower counts be shown (hidden in v1 as drafted)?
-3. Starting numbers for the bot-like budget curve and the per-post cap.
-4. Should members be able to see the like count on other people's posts, or
-   only on their own?
-5. Is ID-based age verification needed at launch, or later?
+| Question | Decision |
+|---|---|
+| Trial users get social access? | Yes |
+| Follower counts visible? | No, never displayed |
+| Bot-like budget | Defaults in §5, tunable in `app_settings` |
+| Like counts visible on others' posts? | Yes, on everyone's posts |
+| ID verification at launch? | Yes, via Stripe Identity |
