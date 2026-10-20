@@ -22,13 +22,17 @@ other people see and respond to.
 3. **Public by choice, field by field.** Only the fields in §3 can ever be
    public. Nothing from journals, coaching chat, memories, insights or
    location ever leaves the private layer.
-4. **Card-on-file adults only.** Paying or trial members (trials require a card)
-   with a server-verified 18+ date of birth. Every social surface is gated
-   server-side (§2). No photo ID: we don't add walls to the experience.
+4. **Try first, then pay. Adults only.** New members get 48 hours of full
+   access with no card, then a 3-day card trial or membership. Everyone has a
+   verified email and a server-verified 18+ date of birth. Every social surface
+   is gated server-side (§2). No photo ID: we don't add walls to the experience.
 5. **Bots are disclosed.** Bots like and comment as part of the system; the site
    says so, and bot accounts are labeled on their profiles and comments.
 
-## 2. Access gate: card on file + 18+
+## 2. Access: welcome window → card trial → membership
+
+Applies to the whole app, not just social. The goal: let people see what the
+product does before asking for a card, without opening the door to abuse.
 
 ### Current state (gaps found in the code)
 
@@ -38,58 +42,151 @@ other people see and respond to.
 | Age check is a client-side checkbox: the browser writes `age_verified_at = now()` at signup. | `src/pages/SignUpPage.tsx:116`, `src/services/authService.ts:43` |
 | `age_verified_at` and `birthday` are in the client-writable column grant, so any user can set them directly. | `20261009131910_restrict_user_profiles_privileged_columns.sql` |
 | `AgeVerificationModal.tsx` exists but nothing renders it. | `src/components/AgeVerificationModal.tsx` |
-| Trials start with no card: `start_trial()` flips the tier server-side with no Stripe involvement. | `start_trial()`, `src/pages/PricingPageRoute.tsx` |
+| Trials start with no card: `start_trial()` flips the tier server-side with no Stripe involvement, and grants 8,000 messages. | `start_trial()`, `src/pages/PricingPageRoute.tsx` |
 | The trial toast says "3-day", but `start_trial()` grants 7 days. | `PricingPageRoute.tsx`, `start_trial()` |
+| The browser inserts the `user_profiles` row right after `signUp`. With email confirmation on, there's no session yet, so that insert fails under RLS. Whether confirmation is enabled is set in the Supabase dashboard (not in `config.toml`), so check before building. | `src/services/authService.ts` |
+| No bot check on signup. | `SignUpPage.tsx` |
 
-### Design
+### Flow
 
-- **Who gets in.** Members on a paid tier (essential, plus, elite) or an active
-  card-backed trial.
-- **Trials require a card.** Replace the `start_trial()` RPC with Stripe
-  Checkout:
-  - `create-checkout-session` gets a trial mode that sets
-    `subscription_data.trial_period_days = 7` and
-    `payment_method_collection = 'always'`. Nothing is charged until day 7; the
-    member can cancel any time before then.
-  - `stripe-webhook` already syncs tiers on `customer.subscription.updated` for
-    `trialing` status. Store `subscription_status = 'trialing'` and
-    `trial_expires_at` from the subscription's `trial_end`.
-  - The trial subscribes to the cheapest plan (essential). The member gets
-    top-tier features during the trial, then is billed for essential on day 7
-    unless they pick another plan or cancel.
-  - Keep `trial_used` so each account gets one trial.
-  - Retire the client call to `start_trial()` in `PricingPageRoute.tsx`, and fix
-    the toast to say 7 days.
-  - Existing no-card trials keep running until they expire. They get no social
-    access unless they add a card.
-- **Date of birth, verified server-side.** No photo ID.
-  - Revoke client `UPDATE` on `age_verified_at` and `birthday`.
-  - Add RPC `verify_age(p_birthdate date)` (SECURITY DEFINER). It rejects anyone
-    under 18, writes `birthday` and `age_verified_at`, and is write-once (only an
-    admin can correct it).
-  - Signup collects date of birth with the selects already built in
-    `AgeVerificationModal` and calls `verify_age`, instead of the browser
-    inserting `age_verified_at`.
-  - Existing users without a server-set DOB see `AgeVerificationModal` the first
-    time they open any social surface.
-- **Possible-minor reports.** Add a report reason "may be under 18".
-  - These reports go to the top of the admin console queue.
-  - An admin can pause the account's social access while reviewing.
-- **Single gate function** used by every social table's RLS and every social
-  edge function:
+```
+Sign up (email + password + date of birth, invisible bot check)
+  → verification email → user clicks link
+  → WELCOME WINDOW: 48 hours, full access, no card
+  → lock screen:
+       [Keep going free for 3 more days]  card required, $0 today
+       [Start my membership]              pay now, any plan
+  → 3-DAY CARD TRIAL → billed for essential on day 3 unless they cancel
+                       or choose another plan
+```
 
-  ```sql
-  can_use_social(uid uuid) RETURNS boolean
-  -- true when:
-  --   (subscription tier is essential | plus | elite
-  --      OR subscription_status = 'trialing' with a Stripe subscription)
-  --   AND age_verified_at IS NOT NULL (set only by verify_age)
-  --   AND NOT is_banned
-  --   AND social access not paused by an admin
-  ```
+### Step 1: Signup and email verification
 
-- **Lapsed access.** When a subscription or trial lapses, the profile and posts
-  are hidden from others (not deleted) and come back on renewal.
+- **Turn on "Confirm email"** in Supabase Auth. The 48-hour clock starts when
+  the user clicks the link (`auth.users.email_confirmed_at`), not at signup.
+  Nobody burns their window waiting for an email.
+- **Create profiles on the server.** A trigger on `auth.users` insert creates
+  the `user_profiles` row (terms version and consent timestamps passed through
+  signup metadata), replacing the browser insert.
+- **Date of birth at signup.** Use the selects from `AgeVerificationModal`.
+  - Under 18 is rejected on the spot.
+  - It's stored server-side by `verify_age` (see "Date of birth" below).
+- **"Check your inbox" screen** with resend (rate-limited to once per 60
+  seconds, 5 per hour) and "wrong email? change it".
+- **Bot check.** Cloudflare Turnstile in invisible mode on the signup form,
+  verified server-side through Supabase Auth's built-in CAPTCHA support. Real
+  people never see a challenge.
+
+### Step 2: Welcome window (48 hours, no card)
+
+- **Server-set expiry.** On email confirmation, set
+  `user_profiles.welcome_expires_at = email_confirmed_at + 48 hours` and
+  `subscription_status = 'welcome'`. Only the server writes these, so clock
+  changes or clearing storage don't extend anything.
+- **Full access.** Every feature, game, coach, Atlas, and social, with two
+  limits:
+  - **AI messages:** a daily cap of 200 (in `app_settings`, key
+    `welcome_daily_message_cap`). A real person exploring won't hit it; a
+    script will within minutes. On hitting it: "You've used today's welcome
+    messages — start your trial to keep going."
+  - **DMs:** can reply to DMs and comment, like and follow freely, but can't
+    send the first DM to a stranger *(recommended, pending confirmation)*.
+- **One welcome window per email.**
+  - Emails are normalized before the check: lowercased, `+tags` stripped, dots
+    removed for Gmail.
+  - Signups from disposable-email domains (maintained blocklist) skip the
+    window and go straight to the lock screen.
+  - Stored in `welcome_grants (email_normalized PRIMARY KEY, user_id,
+    granted_at)`, which survives account deletion so a new account with the
+    same email doesn't get a second window.
+- **Countdown.** A small banner shows "31 hours of full access left". A
+  reminder notification and email go out at 6 hours left.
+
+### Step 3: Lock screen
+
+When `welcome_expires_at` passes and there's no trial or subscription:
+
+- A full-screen choice with two options: **"Keep going free for 3 more days"**
+  or **"Start my membership."**
+- Nothing is deleted. Profile, posts, progress, goals and coach history are all
+  kept. Social content is hidden from others until they continue.
+- Read-only access to their own data (goals, progress) stays available behind
+  the lock screen, so it never feels like their stuff was taken.
+
+### Step 4: 3-day card trial
+
+Replace the `start_trial()` RPC with Stripe Checkout:
+
+- **Checkout settings.** `create-checkout-session` gets a trial mode that sets
+  `subscription_data.trial_period_days = 3` and
+  `payment_method_collection = 'always'`. Nothing is charged until day 3, and
+  the member can cancel any time before then.
+- **Plan.** The trial subscribes to the cheapest plan (essential). The member
+  gets top-tier features during the trial, then is billed for essential on day 3
+  unless they pick another plan or cancel.
+- **Webhook.** `stripe-webhook` already syncs tiers on
+  `customer.subscription.updated` for `trialing` status. Store
+  `subscription_status = 'trialing'` and `trial_expires_at` from the
+  subscription's `trial_end`.
+- **One trial per account.** Keep `trial_used`.
+- **Cleanup.**
+  - Retire the client call to `start_trial()` in `PricingPageRoute.tsx`.
+  - Fix the toast text.
+  - Existing no-card trials keep running until they expire.
+
+### Abuse and cost protections
+
+| Protection | Stops |
+|---|---|
+| Verified email, one welcome window per normalized email | Throwaway accounts farming free access |
+| Invisible Turnstile check on signup | Scripted mass signups |
+| Daily AI message cap during the welcome window | One account burning AI budget |
+| Per-user rate limit on AI endpoints (existing `rate_limits` table): e.g. 20 messages/minute | Scripts hammering the API |
+| Spend alert on the AI provider account + daily cost-by-tier report in the admin console | Abuse going unnoticed until the monthly bill |
+
+### Date of birth, verified server-side
+
+No photo ID.
+
+- Revoke client `UPDATE` on `age_verified_at` and `birthday`.
+- Add RPC `verify_age(p_birthdate date)` (SECURITY DEFINER):
+  - rejects anyone under 18,
+  - writes `birthday` and `age_verified_at`,
+  - is write-once (only an admin can correct it).
+- Existing users without a server-set DOB see `AgeVerificationModal` the next
+  time they open the app.
+
+### Possible-minor reports
+
+- Add a report reason "may be under 18".
+- These reports go to the top of the admin console queue.
+- An admin can pause the account's social access while reviewing.
+
+### Gate functions
+
+Used by RLS and every edge function:
+
+```sql
+has_full_access(uid uuid) RETURNS boolean
+-- true when:
+--   subscription tier is essential | plus | elite
+--   OR subscription_status = 'trialing' with a Stripe subscription
+--   OR now() < welcome_expires_at
+
+can_use_social(uid uuid) RETURNS boolean
+-- true when:
+--   has_full_access(uid)
+--   AND age_verified_at IS NOT NULL (set only by verify_age)
+--   AND NOT is_banned
+--   AND social access not paused by an admin
+```
+
+### Lapsed access
+
+When a welcome window, trial or subscription ends:
+
+- profile and posts are hidden from others (not deleted);
+- everything comes back as it was on renewal.
 
 ## 3. Public profile
 
@@ -353,10 +450,14 @@ user's coaches and goals, and the Atlas interface is the natural place for
 
 ## 13. Phases
 
-1. **Gate.**
-   - Card-required trials through Stripe Checkout, retire `start_trial()`.
-   - Server-side `verify_age`, revoke the client column grants, add
-     `can_use_social()`.
+1. **Access.**
+   - Email confirmation, server-side profile creation, Turnstile on signup.
+   - Server-side `verify_age`, revoke the client column grants.
+   - Welcome window: `welcome_expires_at`, `welcome_grants`, daily message cap,
+     countdown and 6-hour reminder.
+   - Lock screen, 3-day card trial through Stripe Checkout, retire
+     `start_trial()`.
+   - `has_full_access()` / `can_use_social()`, AI rate limits, spend alert.
    - Wire `AgeVerificationModal` for existing users, plus the "may be under 18"
      report reason.
 2. **Profiles.**
@@ -379,9 +480,14 @@ user's coaches and goals, and the Atlas interface is the natural place for
 
 | Question | Decision |
 |---|---|
-| Trial users get social access? | Yes |
+| Trial users get social access? | Yes (welcome window and card trial) |
 | Follower counts visible? | No, never displayed |
 | Bot-like budget | Defaults in §5, tunable in `app_settings` |
 | Like counts visible on others' posts? | Yes, on everyone's posts |
-| Photo ID verification? | No. Card required for trials, plus a server-verified date of birth |
+| Photo ID verification? | No. Verified email plus a server-verified date of birth |
+| Access before a card? | 48-hour welcome window from email verification, full access |
+| Card trial length? | 3 days, after the welcome window |
 | Plan a trial converts to? | Cheapest plan (essential) |
+| Welcome windows per person? | One per normalized email |
+| Abuse protections | Email verification, invisible Turnstile, daily AI cap, rate limits, spend alert |
+| New accounts DMing strangers during the welcome window? | Recommended: reply only. *Pending confirmation* |
