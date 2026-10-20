@@ -332,7 +332,7 @@ function WorkspaceNavigation({ collapsed, onToggle, lobby, wallpaperStyle, wallp
   </aside>;
 }
 
-function MobileNavDrawer({ open, onClose, lobby }: { open: boolean; onClose: () => void; lobby: LobbyData }) {
+function MobileNavDrawer({ open, onClose, lobby, inkColor, inkMuted, inkSubtle }: { open: boolean; onClose: () => void; lobby: LobbyData; inkColor: string; inkMuted: string; inkSubtle: string }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -352,10 +352,10 @@ function MobileNavDrawer({ open, onClose, lobby }: { open: boolean; onClose: () 
       <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-label="Close navigation" onClick={onClose} />
       <div className="relative flex h-full w-[280px] max-w-[82vw] flex-col border-r border-white/12 bg-[rgba(12,10,30,0.96)] px-3 py-4 shadow-2xl">
         <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/15 text-rose-300"><Sparkles className="h-4 w-4" /></span><span className="text-sm font-semibold text-ink">Velvet</span></div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-ink-muted hover:bg-white/8 hover:text-ink" aria-label="Close navigation"><ChevronLeft className="h-4 w-4" /></button>
+          <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/15 text-rose-300"><Sparkles className="h-4 w-4" /></span><span className="text-sm font-semibold" style={{ color: inkColor }}>Velvet</span></div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 transition-colors hover:bg-white/8" style={{ color: inkMuted }} aria-label="Close navigation"><ChevronLeft className="h-4 w-4" /></button>
         </div>
-        <div className="mt-4 flex min-h-0 flex-1 flex-col"><SidebarContent collapsed={false} pathname={location.pathname} lobby={lobby} onNavigate={(path) => { navigate(path); onClose(); }} /></div>
+        <div className="mt-4 flex min-h-0 flex-1 flex-col"><SidebarContent collapsed={false} pathname={location.pathname} lobby={lobby} onNavigate={(path) => { navigate(path); onClose(); }} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} /></div>
       </div>
     </div>
   );
@@ -421,7 +421,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
           <main className="min-h-0 min-w-0 overflow-hidden border-r border-white/8">{children}</main>
         </div>
         <div className="relative z-20 flex-shrink-0"><MessagingOverlayMount inkColor={inkColor} inkMuted={inkMuted} /></div>
-        <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} lobby={lobby} />
+        <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} lobby={lobby} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
       </div>
     </div>
   );
