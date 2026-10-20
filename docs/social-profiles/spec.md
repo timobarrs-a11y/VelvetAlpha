@@ -54,6 +54,9 @@ other people see and respond to.
   - `stripe-webhook` already syncs tiers on `customer.subscription.updated` for
     `trialing` status. Store `subscription_status = 'trialing'` and
     `trial_expires_at` from the subscription's `trial_end`.
+  - The trial subscribes to the cheapest plan (essential). The member gets
+    top-tier features during the trial, then is billed for essential on day 7
+    unless they pick another plan or cancel.
   - Keep `trial_used` so each account gets one trial.
   - Retire the client call to `start_trial()` in `PricingPageRoute.tsx`, and fix
     the toast to say 7 days.
@@ -381,3 +384,4 @@ user's coaches and goals, and the Atlas interface is the natural place for
 | Bot-like budget | Defaults in §5, tunable in `app_settings` |
 | Like counts visible on others' posts? | Yes, on everyone's posts |
 | Photo ID verification? | No. Card required for trials, plus a server-verified date of birth |
+| Plan a trial converts to? | Cheapest plan (essential) |
