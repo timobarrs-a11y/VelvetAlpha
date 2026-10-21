@@ -209,6 +209,30 @@ export function NotificationBell() {
                             )}
                             {notif.type === 'badge' && `You earned ${(notif.meta as any)?.name ?? 'a new medal'}!`}
                             {notif.type === 'weekly' && 'A new weekly thread is up'}
+                            {notif.type === 'mention' && (
+                              <>
+                                <span className="font-semibold text-white/90">
+                                  {notif.actor_name ?? 'Someone'}
+                                </span>{' '}
+                                mentioned you
+                              </>
+                            )}
+                            {notif.type === 'join_request' && (
+                              <>
+                                <span className="font-semibold text-white/90">
+                                  {notif.actor_name ?? 'Someone'}
+                                </span>{' '}
+                                wants to join {(notif.meta as any)?.board_name ?? 'a space'}
+                              </>
+                            )}
+                            {notif.type === 'join_approved' && (
+                              <>
+                                You're in! Welcome to{' '}
+                                <span className="font-semibold text-white/90">
+                                  {(notif.meta as any)?.board_name ?? 'the space'}
+                                </span>
+                              </>
+                            )}
                           </p>
                           <span className="text-[10px] text-white/25 mt-0.5 inline-block">
                             {timeAgo(notif.created_at)}
