@@ -150,9 +150,9 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setToolbarTextColor = useCallback(async (key: ToolbarTextColorKey) => {
-    setCustomization(prev => prev ? { ...prev, toolbar_text_color: key } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { toolbar_text_color: key }).catch((e) => console.error('[toolbar_text_color] save failed:', e));
+    if (uid) await updateCursorPrefs(uid, { toolbar_text_color: key });
+    setCustomization(prev => prev ? { ...prev, toolbar_text_color: key } : prev);
   }, []);
 
   const setWorkspaceWallpaper = useCallback(async (wallpaperId: string | null, wallpaperUrl: string | null) => {

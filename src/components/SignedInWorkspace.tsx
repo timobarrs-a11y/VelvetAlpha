@@ -413,7 +413,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
         <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
           <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
-          <main className="min-h-0 min-w-0 overflow-hidden border-r border-white/8">{children}</main>
+          <main className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/8">{children}</main>
         </div>
         <div className="relative z-20 flex-shrink-0"><MessagingOverlayMount inkColor={inkColor} inkMuted={inkMuted} /></div>
         <MedalToastHost />

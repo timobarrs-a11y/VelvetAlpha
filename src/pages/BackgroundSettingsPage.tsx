@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Upload, Sparkles, Check, ImageIcon, Palette, Loader2, AlertCircle, Lock, Zap, X, Type } from 'lucide-react';
@@ -59,7 +59,28 @@ export function BackgroundSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState(false);
   const [textColor, setTextColor] = useState<ToolbarTextColorKey>(customization?.toolbar_text_color ?? 'dark');
+  const [isSavingTextColor, setIsSavingTextColor] = useState(false);
+  const [textColorSaved, setTextColorSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (customization?.toolbar_text_color) setTextColor(customization.toolbar_text_color);
+  }, [customization?.toolbar_text_color]);
+
+  const handleTextColorSave = async () => {
+    setIsSavingTextColor(true);
+    setTextColorSaved(false);
+    setError(null);
+    try {
+      await setToolbarTextColor(textColor);
+      setTextColorSaved(true);
+      setTimeout(() => setTextColorSaved(false), 2000);
+    } catch {
+      setError('Failed to save sidebar text color. Please try again.');
+    } finally {
+      setIsSavingTextColor(false);
+    }
+  };
 
   const previewMeta = buildWallpaperMeta(selected, selectedUrl);
   const previewStyle = previewMeta.style;
@@ -201,7 +222,7 @@ export function BackgroundSettingsPage() {
                 <button
                   key={preset.key}
                   type="button"
-                  onClick={() => { setTextColor(preset.key); setToolbarTextColor(preset.key); }}
+                  onClick={() => { setTextColor(preset.key); setTextColorSaved(false); }}
                   className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 transition-all ${active ? 'border-gray-900 shadow-md' : 'border-gray-200 hover:border-gray-400'}`}
                   aria-pressed={active}
                 >
@@ -211,6 +232,19 @@ export function BackgroundSettingsPage() {
                 </button>
               );
             })}
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+            <p className="text-xs text-gray-500">
+              {textColorSaved ? 'Sidebar text color saved.' : 'Choose a color, then save it.'}
+            </p>
+            <button
+              type="button"
+              onClick={handleTextColorSave}
+              disabled={isSavingTextColor || textColor === (customization?.toolbar_text_color ?? 'dark')}
+              className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSavingTextColor ? 'Saving...' : textColorSaved ? <><Check size={14} /> Saved</> : 'Save text color'}
+            </button>
           </div>
         </div>
 
