@@ -21,7 +21,21 @@ export interface MemberProfile {
 export async function getMyMemberProfile(): Promise<MemberProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  return getMemberProfile(user.id);
+  const existing = await getMemberProfile(user.id);
+  if (existing) return existing;
+
+  const { data: userProfile } = await supabase
+    .from('user_profiles')
+    .select('name, avatar_config')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  return upsertMyMemberProfile({
+    display_name: userProfile?.name || 'Member',
+    avatar_config: userProfile?.avatar_config ?? null,
+    is_public: true,
+    discoverable: true,
+  });
 }
 
 export async function getMemberProfile(userId: string): Promise<MemberProfile | null> {

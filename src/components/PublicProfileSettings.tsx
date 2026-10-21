@@ -23,7 +23,7 @@ export function PublicProfileSettings() {
   const [displayName, setDisplayName] = useState('');
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
+  const [isPublic, setIsPublic] = useState(true);
   const [discoverable, setDiscoverable] = useState(true);
   const [sharedGoalIds, setSharedGoalIds] = useState<string[]>([]);
   const [profileImageType, setProfileImageType] = useState<'avatar' | 'smilie'>('avatar');
