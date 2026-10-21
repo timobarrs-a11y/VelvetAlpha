@@ -413,7 +413,7 @@ export async function performDailyCheckin(userId: string): Promise<UserCustomiza
 
 export async function updateActivePointer(userId: string, pointerKey: string): Promise<void> {
   await supabase.from('user_customization')
-    .upsert({ user_id: userId, active_pointer: pointerKey, updated_at: new Date().toISOString() })
+    .upsert({ user_id: userId, active_pointer: pointerKey, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
     .throwOnError();
 }
 
@@ -430,6 +430,6 @@ export async function updateCursorPrefs(userId: string, prefs: Partial<{
   toolbar_text_color:      ToolbarTextColorKey;
 }>): Promise<void> {
   await supabase.from('user_customization')
-    .upsert({ user_id: userId, ...prefs, updated_at: new Date().toISOString() })
+    .upsert({ user_id: userId, ...prefs, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
     .throwOnError();
 }
