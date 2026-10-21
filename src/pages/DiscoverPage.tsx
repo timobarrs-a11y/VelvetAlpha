@@ -4,9 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Compass, Target, Users, Loader2, UserPlus, UserMinus, Bot, Sparkles,
 } from 'lucide-react';
-import { Avatar } from '../components/Avatar';
-import { migrateAvatarConfig } from '../utils/avatarConfig';
-import type { AvatarConfigV2 } from '../types/avatar-v2';
+import { PublicProfileImage } from '../components/PublicProfileImage';
 import {
   discoverMembersByGoalType,
   DiscoverableMember,
@@ -26,8 +24,6 @@ function MemberCard({ member, index, following, onToggleFollow }: {
   onToggleFollow: (userId: string) => void;
 }) {
   const navigate = useNavigate();
-  const avatarConfig = member.avatar_config ? migrateAvatarConfig(member.avatar_config) : null;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -40,13 +36,7 @@ function MemberCard({ member, index, following, onToggleFollow }: {
           onClick={() => navigate(`/member/${member.user_id}`)}
           className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 bg-white/5 hover:border-white/20 transition-colors"
         >
-          {avatarConfig ? (
-            <Avatar config={avatarConfig as AvatarConfigV2} className="w-full h-full" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm font-bold text-white/30">
-              {member.display_name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
+          <PublicProfileImage profile={member} className="h-full w-full" />
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">

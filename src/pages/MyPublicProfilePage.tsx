@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Users, Bot, Target, TrendingUp, Loader2, Pencil, EyeOff, Trophy } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
-import { Avatar } from '../components/Avatar';
-import { migrateAvatarConfig } from '../utils/avatarConfig';
-import type { AvatarConfigV2 } from '../types/avatar';
+import { PublicProfileImage } from '../components/PublicProfileImage';
 import { getMyMemberProfile, MemberProfile } from '../services/memberProfileService';
 import { goalProgressPercent, goalDaysRemaining, GOAL_TYPE_LABELS, CoachingGoal } from '../services/coachingService';
 import { getUserMedals, type UserMedal } from '../services/medalsService';
@@ -77,8 +75,6 @@ export default function MyPublicProfilePage() {
     );
   }
 
-  const avatarConfig = profile.avatar_config ? migrateAvatarConfig(profile.avatar_config) : null;
-
   return (
     <div className="ds-page text-white">
       {/* Header */}
@@ -112,13 +108,7 @@ export default function MyPublicProfilePage() {
           className="flex items-start gap-5 mb-8"
         >
           <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border border-white/10 bg-white/5">
-            {avatarConfig ? (
-              <Avatar config={avatarConfig as AvatarConfigV2} className="w-full h-full" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-white/30">
-                {profile.display_name.slice(0, 2).toUpperCase()}
-              </div>
-            )}
+            <PublicProfileImage profile={profile} className="h-full w-full" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

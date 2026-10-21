@@ -6,6 +6,8 @@ export interface MemberProfile {
   headline: string | null;
   bio: string | null;
   avatar_config: Record<string, unknown> | null;
+  profile_image_type: 'avatar' | 'smilie';
+  profile_smilie_code: string | null;
   is_public: boolean;
   shared_goal_ids: string[];
   follower_count: number;
@@ -41,6 +43,8 @@ export async function upsertMyMemberProfile(updates: {
   headline?: string | null;
   bio?: string | null;
   avatar_config?: Record<string, unknown> | null;
+  profile_image_type?: 'avatar' | 'smilie';
+  profile_smilie_code?: string | null;
   is_public?: boolean;
   shared_goal_ids?: string[];
   discoverable?: boolean;

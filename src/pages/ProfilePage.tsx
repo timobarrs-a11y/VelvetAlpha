@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, Loader, CreditCard as Edit3, Check, X, CreditCard, ExternalLink } from 'lucide-react';
+import { Save, Loader, CreditCard as Edit3, Check, X, CreditCard, ExternalLink, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { User as UserIcon } from 'lucide-react';
 import { PageHeader } from '../shared/ui/PageHeader';
@@ -392,25 +392,36 @@ export function ProfilePage() {
         icon={UserIcon}
         accent="#94a3b8"
         width="md"
-        actions={(isSaving || saveMessage) ? (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 text-sm"
-          >
-            {isSaving ? (
-              <>
-                <Loader className="w-4 h-4 animate-spin ds-muted" />
-                <span className="ds-muted">Saving...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 text-green-400" />
-                <span className="text-green-400">{saveMessage}</span>
-              </>
+        actions={(
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/my-profile')}
+              className="flex items-center gap-1.5 rounded-lg border border-pink-400/25 bg-pink-500/10 px-3 py-1.5 text-xs font-semibold text-pink-300 transition-colors hover:bg-pink-500/20"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              View my public page
+            </button>
+            {(isSaving || saveMessage) && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 text-sm"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin ds-muted" />
+                    <span className="ds-muted">Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 text-green-400" />
+                    <span className="text-green-400">{saveMessage}</span>
+                  </>
+                )}
+              </motion.div>
             )}
-          </motion.div>
-        ) : undefined}
+          </div>
+        )}
       />
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
 
