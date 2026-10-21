@@ -22,8 +22,6 @@ import { AvatarConfig } from './types/avatar';
 import { useSubscription } from './hooks/useSubscription';
 import { getCurrentStatus } from './utils/statusHelper';
 import { useMessages, useSendMessage } from './features/chat/hooks';
-import { messagesKey } from './features/chat/queryKeys';
-import { useQueryClient } from '@tanstack/react-query';
 import { conversationOrchestrator } from './features/chat/orchestrator';
 import { useAuth } from './auth/AuthProvider';
 import { processEnhancedInsights } from './services/enhancedInsightsService';
@@ -160,9 +158,8 @@ function AppInner() {
   const insightsTurnCountRef = useRef<number>(0);
   const driftTurnCountRef = useRef<number>(0);
 
-  const { data: rawMessages, isLoading: isLoadingMessages, error: messagesError } = useMessages(userId, companionId);
-  const sendMessageMutation = useSendMessage();
-  const queryClient = useQueryClient();
+  const { data: rawMessages, isLoading: isLoadingMessages, error: messagesError, clearMessages, appendOptimistic, replaceOptimistic, removeOptimistic } = useMessages(userId, companionId);
+  const sendMessage = useSendMessage({ appendOptimistic, replaceOptimistic, removeOptimistic });
 
   const uiMessages: Message[] = (rawMessages ?? []).map((msg: any) => ({
     id: msg.id,
@@ -416,7 +413,7 @@ function AppInner() {
         const { DailyRitualService } = await import('./services/dailyRitualService');
         const ritualResult = await DailyRitualService.checkAndTriggerRituals(userId, companionId, companion.custom_name);
         if (ritualResult.shouldSendMessage && ritualResult.message) {
-          await sendMessageMutation.mutateAsync({
+          await sendMessage({
             userId, companionId, role: 'assistant', content: ritualResult.message,
             clientMessageId: safeRandomUUID(),
           });
@@ -453,7 +450,7 @@ function AppInner() {
           userId, companionId, companion.custom_name, companion.gender, userName, companion.signature_voice
         );
         if (resumptionMessage) {
-          await sendMessageMutation.mutateAsync({
+          await sendMessage({
             userId, companionId, role: 'assistant', content: resumptionMessage,
             clientMessageId: safeRandomUUID(),
           });
@@ -743,7 +740,7 @@ function AppInner() {
       await new Promise(resolve => setTimeout(resolve, Math.min(firstMsg.length * 15, 3000)));
       setIsTyping(false);
 
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId: cid, role: 'assistant', content: firstMsg, clientMessageId: safeRandomUUID() });
+      await sendMessage({ userId: user.id, companionId: cid, role: 'assistant', content: firstMsg, clientMessageId: safeRandomUUID() });
 
       await finalizeFirstMessage(cid);
       const updatedCompanion = await getCompanion(cid);
@@ -785,7 +782,7 @@ function AppInner() {
     conversationOrchestrator.dispatch({ type: 'USER_MESSAGE_SENT', contentLength: content.length });
 
     try {
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'user', content, clientMessageId: userClientId });
+      await sendMessage({ userId: user.id, companionId, role: 'user', content, clientMessageId: userClientId });
       await updateLastMessageTime(companionId);
     } catch (error) {
       console.error('Error saving user message:', error);
@@ -816,7 +813,7 @@ function AppInner() {
       await new Promise(resolve => setTimeout(resolve, Math.min(response.length * 15, 3000)));
       setIsTyping(false);
 
-      await sendMessageMutation.mutateAsync({
+      await sendMessage({
         userId: user.id,
         companionId,
         role: 'assistant',
@@ -900,7 +897,7 @@ function AppInner() {
         else if (error.message.includes('No messages remaining')) errorContent = "You've used all your messages! Check out the plans page to get more.";
       }
 
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: errorContent, clientMessageId: safeRandomUUID() });
+      await sendMessage({ userId: user.id, companionId, role: 'assistant', content: errorContent, clientMessageId: safeRandomUUID() });
     }
   };
 
@@ -910,7 +907,7 @@ function AppInner() {
     if (!companion || !companionId || !user) return;
 
     try {
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'user', content: videoUrl });
+      await sendMessage({ userId: user.id, companionId, role: 'user', content: videoUrl });
     } catch (error) { console.error('Error saving video message:', error); }
 
     setIsTyping(true);
@@ -924,7 +921,7 @@ function AppInner() {
     const openingMessage = `ooh "${metadata.title}"? let's watch it! 🎬`;
 
     try {
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: openingMessage, clientMessageId: safeRandomUUID() });
+      await sendMessage({ userId: user.id, companionId, role: 'assistant', content: openingMessage, clientMessageId: safeRandomUUID() });
     } catch (error) { console.error('Error saving AI response:', error); }
 
     setIsTyping(false);
@@ -957,7 +954,7 @@ function AppInner() {
   const sendCompanionMessage = async (content: string) => {
     if (!companionId || !user) return;
     try {
-      await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content });
+      await sendMessage({ userId: user.id, companionId, role: 'assistant', content });
     } catch (error) { console.error('Error saving companion message:', error); }
     conversationOrchestrator.dispatch({ type: 'AI_MESSAGE_RECEIVED', contentLength: content.length });
     playSound();
@@ -984,7 +981,7 @@ function AppInner() {
     setIsStartingOver(true);
     try {
       await clearConversationMessages(userId, companionId);
-      queryClient.setQueryData(messagesKey(userId, companionId), []);
+      clearMessages();
       setRatingsMap({});
       setShowStartOverConfirm(false);
       await resetFirstMessage(companionId);
@@ -1016,7 +1013,7 @@ function AppInner() {
         const response = await ChatService.sendMessage(lastUserMsg.content, companionId, companion.relationship_type);
         await new Promise(resolve => setTimeout(resolve, Math.min(response.length * 15, 3000)));
         setIsTyping(false);
-        await sendMessageMutation.mutateAsync({ userId: user.id, companionId, role: 'assistant', content: response, clientMessageId: safeRandomUUID() });
+        await sendMessage({ userId: user.id, companionId, role: 'assistant', content: response, clientMessageId: safeRandomUUID() });
         playSound();
       } catch (error) {
         setIsTyping(false);
