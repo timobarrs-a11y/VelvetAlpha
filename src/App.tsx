@@ -7,7 +7,6 @@ import { ChatInput } from './components/ChatInput';
 import { ChatStyleBar } from './components/ChatStyleBar';
 import FeedbackModal from './components/FeedbackModal';
 import { VideoPlayer } from './components/VideoPlayer';
-import { ChatHeader } from './components/ChatHeader';
 import { Message } from './types';
 import { ChatService } from './services/chatService';
 import { setAppBridgeContext } from './services/appBridgeStore';
@@ -1117,24 +1116,6 @@ function AppInner() {
       {hasWallpaper && <div className="absolute inset-0 bg-black/10 pointer-events-none" />}
 
       <CookieConsent />
-
-      <ChatHeader
-        characterName={getCharacterName()}
-        avatarConfig={companion?.avatar_config}
-        gender={companion?.gender}
-        currentStatus={currentStatus}
-        favoriteColor={companion?.favorite_color}
-        onOpenLoyaltyRewards={() => setShowCustomizationPanel(true)}
-        fontFamily={companion?.font_family}
-        companionId={companionId || ''}
-        currentTier={currentTier}
-        expertDomain={expertDomain}
-        subscriptionInfo={subscriptionInfo || undefined}
-        onReset={handleReset}
-        onAvatarClick={() => setShowAppearanceModal(true)}
-        onOpenReflection={() => setReflectionOpen(true)}
-        onStartOver={handleStartOver}
-      />
 
       <CBTReflectionDeckModal isOpen={reflectionOpen} onClose={() => setReflectionOpen(false)} />
 
