@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, MessageCircle, Smile, Award, Check, X } from 'lucide-react';
+import { Bell, MessageCircle, Smile, Award, Check, X, AtSign, UserPlus, DoorOpen } from 'lucide-react';
 import {
   fetchNotifications,
   getUnreadNotificationCount,
@@ -30,6 +30,9 @@ const TYPE_ICON = {
   reaction: Smile,
   badge: Award,
   weekly: Bell,
+  mention: AtSign,
+  join_request: UserPlus,
+  join_approved: DoorOpen,
 };
 
 const TYPE_COLOR = {
@@ -37,6 +40,9 @@ const TYPE_COLOR = {
   reaction: 'text-amber-400',
   badge: 'text-emerald-400',
   weekly: 'text-violet-400',
+  mention: 'text-pink-400',
+  join_request: 'text-amber-400',
+  join_approved: 'text-emerald-400',
 };
 
 export function NotificationBell() {
@@ -90,8 +96,18 @@ export function NotificationBell() {
         prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)),
       );
     }
+    const meta = notif.meta as Record<string, unknown> | null;
     if (notif.type === 'badge') {
       navigate('/medals');
+    } else if (notif.type === 'mention') {
+      const boardId = meta?.board_id as string | undefined;
+      if (boardId) navigate(`/house/${boardId}`);
+    } else if (notif.type === 'join_approved') {
+      const boardId = meta?.board_id as string | undefined;
+      if (boardId) navigate(`/house/${boardId}`);
+    } else if (notif.type === 'join_request') {
+      const boardId = meta?.board_id as string | undefined;
+      if (boardId) navigate(`/house/${boardId}`);
     } else if (notif.post_id) {
       navigate(`/community/post/${notif.post_id}`);
     }

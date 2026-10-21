@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowDown, Loader2, Trash2, Reply } from 'lucide-react';
-import type { RoomMessage, SpaceMember, SpaceRoom } from '../../types/spaces';
+import type { RoomMessage, SpaceMember, SpaceRoom, RoleTag } from '../../types/spaces';
 import {
   getRoomMessages, sendRoomMessage, deleteRoomMessage, markRoomRead, getSpaceMembers,
 } from '../../services/spacesService';
@@ -19,6 +19,52 @@ interface Props {
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
+const MENTION_RE = /<@([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})>/gi;
+
+function renderBody(body: string, memberMap: Map<string, SpaceMember>, currentUserId: string | undefined): { text: string; isMention: boolean } {
+  const mentionsMe = currentUserId && body.includes(`<@${currentUserId}>`);
+  return { text: body, isMention: !!mentionsMe };
+}
+
+function BodyWithMentions({ body, memberMap }: { body: string; memberMap: Map<string, SpaceMember> }) {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const re = new RegExp(MENTION_RE.source, 'gi');
+  let key = 0;
+
+  while ((match = re.exec(body)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(body.slice(lastIndex, match.index));
+    }
+    const userId = match[1];
+    const member = memberMap.get(userId);
+    const name = member?.display_name ?? 'Member';
+    parts.push(
+      <span key={`mention-${key++}`} className="text-pink-400 bg-pink-500/10 rounded px-1 font-medium">
+        @{name}
+      </span>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < body.length) {
+    parts.push(body.slice(lastIndex));
+  }
+
+  return <>{parts}</>;
+}
+
+function RoleTagPill({ tag }: { tag: RoleTag }) {
+  return (
+    <span
+      className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+      style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+    >
+      {tag.name}
+    </span>
+  );
+}
+
 export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialAccessError }: Props) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<RoomMessage[]>([]);
@@ -27,6 +73,7 @@ export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialA
   const [hasMore, setHasMore] = useState(false);
   const [showJump, setShowJump] = useState(false);
   const [memberMap, setMemberMap] = useState<Map<string, SpaceMember>>(new Map());
+  const [members, setMembers] = useState<SpaceMember[]>([]);
   const [replyTo, setReplyTo] = useState<{ id: string; authorName: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -58,8 +105,9 @@ export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialA
 
   const loadMembers = useCallback(async () => {
     try {
-      const members = await getSpaceMembers(boardId);
-      setMemberMap(new Map(members.map(m => [m.user_id, m])));
+      const m = await getSpaceMembers(boardId);
+      setMembers(m);
+      setMemberMap(new Map(m.map(mem => [mem.user_id, mem])));
     } catch { /* non-critical */ }
   }, [boardId]);
 
@@ -91,9 +139,10 @@ export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialA
           authorIsBot = m.is_bot;
         } else if (newMsg.author_id) {
           try {
-            const members = await getSpaceMembers(boardId);
-            setMemberMap(new Map(members.map(m2 => [m2.user_id, m2])));
-            const m = members.find(m2 => m2.user_id === newMsg.author_id);
+            const freshMembers = await getSpaceMembers(boardId);
+            setMembers(freshMembers);
+            setMemberMap(new Map(freshMembers.map(m2 => [m2.user_id, m2])));
+            const m = freshMembers.find(m2 => m2.user_id === newMsg.author_id);
             if (m) { authorName = m.display_name; authorAvatar = m.avatar_config; authorIsBot = m.is_bot; }
           } catch { /* non-critical */ }
         }
@@ -253,8 +302,11 @@ export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialA
           const authorName = first.author_name ?? 'Member';
           const isMe = first.author_id === user?.id;
           const canDelete = isMe || canModerate;
+          const authorMember = first.author_id ? memberMap.get(first.author_id) : undefined;
+          const authorTag = authorMember?.tags?.[0];
+          const groupMentionsMe = group.some(msg => user?.id && msg.body.includes(`<@${user.id}>`));
           return (
-            <div key={gi} className="group/msg">
+            <div key={gi} className={`group/msg rounded-lg ${groupMentionsMe ? 'bg-pink-500/[0.06] -mx-1 px-1' : ''}`}>
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-xs font-medium ${first.author_is_bot ? 'text-violet-400' : isMe ? 'text-pink-300' : 'text-ink'}`}>
                   {authorName}
@@ -265,6 +317,7 @@ export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialA
                 {first.is_ai_generated && !first.author_is_bot && (
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-semibold">AI</span>
                 )}
+                {authorTag && <RoleTagPill tag={authorTag} />}
                 <span className="text-[10px] text-ink-muted/60">
                   {new Date(first.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
@@ -272,6 +325,7 @@ export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialA
               {group.map((msg, mi) => {
                 const isDeleted = !!msg.deleted_at;
                 const reply = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
+                const { isMention } = renderBody(msg.body, memberMap, user?.id);
                 return (
                   <div key={msg.id} className="group/hover relative flex items-start gap-2 py-0.5 hover:bg-white/[0.03] -mx-1 px-1 rounded">
                     {mi > 0 && <span className="w-0 flex-shrink-0" />}
@@ -281,8 +335,8 @@ export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialA
                           {reply.author_name}: {reply.body}
                         </div>
                       )}
-                      <p className={`text-sm leading-relaxed ${isDeleted ? 'text-ink-muted/40 italic' : 'text-ink/90'}`}>
-                        {isDeleted ? '[deleted]' : msg.body}
+                      <p className={`text-sm leading-relaxed ${isDeleted ? 'text-ink-muted/40 italic' : isMention ? 'text-ink' : 'text-ink/90'}`}>
+                        {isDeleted ? '[deleted]' : <BodyWithMentions body={msg.body} memberMap={memberMap} />}
                       </p>
                     </div>
                     {!isDeleted && (
@@ -339,6 +393,7 @@ export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialA
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           placeholder={isAnnouncement && canModerate ? 'Post an announcement...' : 'Send a message...'}
+          members={members}
         />
       ) : isAnnouncement && !canModerate ? (
         <div className="flex-shrink-0 px-3 py-3 border-t border-white/8 text-center">

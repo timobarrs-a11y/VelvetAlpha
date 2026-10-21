@@ -15,6 +15,7 @@ import { RoomChat } from '../components/house/RoomChat';
 import { HereNow } from '../components/house/HereNow';
 import { SpaceSuggestions } from '../components/house/SpaceSuggestions';
 import { AddFriendsModal } from '../components/house/AddFriendsModal';
+import { SpaceSettingsModal } from '../components/house/SpaceSettingsModal';
 import { SpaceIcon } from '../components/house/SpaceIcon';
 
 export default function HousePage() {
@@ -31,6 +32,7 @@ export default function HousePage() {
   const [suggestions, setSuggestions] = useState<SpaceSuggestion[]>([]);
   const [friends, setFriends] = useState<FriendPeer[]>([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [myName, setMyName] = useState('Member');
   const [mobileView, setMobileView] = useState<'spaces' | 'rooms' | 'chat'>('spaces');
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -295,6 +297,7 @@ export default function HousePage() {
                 onJoin={handleJoin}
                 onLeave={handleLeave}
                 onAddFriends={() => setShowAddFriends(true)}
+                onOpenSettings={() => setShowSettings(true)}
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
               />
@@ -341,6 +344,20 @@ export default function HousePage() {
           isOpen={showAddFriends}
           onClose={() => setShowAddFriends(false)}
           boardId={activeSpace.board_id}
+        />
+      )}
+
+      {showSettings && activeSpace && (
+        <SpaceSettingsModal
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          boardId={activeSpace.board_id}
+          boardName={activeSpace.name}
+          boardIcon={activeSpace.icon}
+          boardColor={activeSpace.color}
+          boardDescription={activeSpace.description ?? ''}
+          boardVisibility={activeSpace.visibility}
+          isOwner={activeSpace.role === 'owner'}
         />
       )}
     </div>

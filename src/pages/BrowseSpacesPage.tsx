@@ -1,44 +1,54 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Lock, Search, Users } from 'lucide-react';
-import { supabase } from '../shared/supabase/client';
-import { joinSpace } from '../services/spacesService';
-import { searchCommunity, type SearchResult } from '../services/communityService';
+import { ArrowLeft, Lock, Search, Users, ChevronRight, Plus } from 'lucide-react';
+import {
+  getSpaceDirectory, joinSpace, requestToJoinSpace,
+} from '../services/spacesService';
+import type { DirectorySpace } from '../types/spaces';
 import { SpaceIcon } from '../components/house/SpaceIcon';
+import { StartCrewModal } from '../components/house/StartCrewModal';
 import { toast } from '../shared/ui/Toast';
 
-interface BoardRow {
-  id: string; name: string; description: string | null; icon: string; color: string;
-  category: string; visibility: string; member_count: number; is_approved: boolean;
-  is_pinned: boolean; sort_order: number;
-}
+const VISIBILITY_LABELS: Record<string, string> = {
+  open: 'Open',
+  request: 'Request',
+  invite: 'Invite only',
+  private: 'Private',
+};
+
+const VISIBILITY_CHIP: Record<string, string> = {
+  open: 'bg-emerald-500/15 text-emerald-400',
+  request: 'bg-amber-500/15 text-amber-400',
+  invite: 'bg-sky-500/15 text-sky-400',
+  private: 'bg-rose-500/15 text-rose-400',
+};
 
 export default function BrowseSpacesPage() {
   const navigate = useNavigate();
-  const [boards, setBoards] = useState<BoardRow[]>([]);
+  const [topLevel, setTopLevel] = useState<DirectorySpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<DirectorySpace[]>([]);
   const [searching, setSearching] = useState(false);
-  const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
+  const [selectedParent, setSelectedParent] = useState<DirectorySpace | null>(null);
+  const [crews, setCrews] = useState<DirectorySpace[]>([]);
+  const [loadingCrews, setLoadingCrews] = useState(false);
+  const [showStartCrew, setShowStartCrew] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from('community_boards')
-      .select('id, name, description, icon, color, category, visibility, member_count, is_approved, is_pinned, sort_order')
-      .eq('is_approved', true)
-      .order('is_pinned', { ascending: false })
-      .order('sort_order')
-      .then(({ data, error }) => {
-        if (!error && data) setBoards(data as BoardRow[]);
-        setLoading(false);
-      });
+    getSpaceDirectory(null, null)
+      .then(setTopLevel)
+      .catch(() => setTopLevel([]))
+      .finally(() => setLoading(false));
+  }, []);
 
-    // Load joined spaces
-    supabase.rpc('get_my_spaces').then(({ data }) => {
-      if (data) setJoinedIds(new Set((data as any[]).map(s => s.board_id)));
-    });
+  const loadCrews = useCallback((parent: DirectorySpace) => {
+    setLoadingCrews(true);
+    getSpaceDirectory(parent.board_id, null)
+      .then(setCrews)
+      .catch(() => setCrews([]))
+      .finally(() => setLoadingCrews(false));
   }, []);
 
   const doSearch = useCallback(async (q: string) => {
@@ -49,8 +59,8 @@ export default function BrowseSpacesPage() {
     }
     setSearching(true);
     try {
-      const results = await searchCommunity(q, 20);
-      setSearchResults(results.filter(r => r.result_type === 'board'));
+      const results = await getSpaceDirectory(null, q);
+      setSearchResults(results);
     } catch {
       setSearchResults([]);
     } finally {
@@ -67,8 +77,9 @@ export default function BrowseSpacesPage() {
     setBusy(boardId);
     try {
       await joinSpace(boardId);
-      setJoinedIds(prev => new Set([...prev, boardId]));
       toast.success('Joined space!');
+      setTopLevel(prev => prev.map(s => s.board_id === boardId ? { ...s, is_member: true } : s));
+      setCrews(prev => prev.map(s => s.board_id === boardId ? { ...s, is_member: true } : s));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to join');
     } finally {
@@ -76,21 +87,143 @@ export default function BrowseSpacesPage() {
     }
   };
 
-  const grouped = boards.reduce<Record<string, BoardRow[]>>((acc, b) => {
-    (acc[b.category] ??= []).push(b);
+  const handleRequest = async (boardId: string) => {
+    setBusy(boardId);
+    try {
+      await requestToJoinSpace(boardId);
+      toast.success('Request sent!');
+      setTopLevel(prev => prev.map(s => s.board_id === boardId ? { ...s, has_pending_request: true } : s));
+      setCrews(prev => prev.map(s => s.board_id === boardId ? { ...s, has_pending_request: true } : s));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to request');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const grouped = topLevel.reduce<Record<string, DirectorySpace[]>>((acc, s) => {
+    (acc[s.category] ??= []).push(s);
     return acc;
   }, {});
   const categories = Object.keys(grouped).sort();
 
   const showSearch = searchQuery.trim().length > 0;
 
+  const renderAction = (space: DirectorySpace) => {
+    if (space.is_member) {
+      return (
+        <button
+          onClick={() => navigate(`/house/${space.board_id}`)}
+          className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-ink transition-colors"
+        >
+          Open
+        </button>
+      );
+    }
+    if (space.visibility === 'open') {
+      return (
+        <button
+          onClick={() => handleJoin(space.board_id)}
+          disabled={busy === space.board_id}
+          className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-pink-500/20 hover:bg-pink-500/30 text-xs text-pink-300 border border-pink-500/30 transition-colors disabled:opacity-50"
+        >
+          {busy === space.board_id ? '...' : 'Join'}
+        </button>
+      );
+    }
+    if (space.visibility === 'request') {
+      if (space.has_pending_request) {
+        return (
+          <span className="flex-shrink-0 text-xs text-amber-400 px-3 py-1.5">Requested</span>
+        );
+      }
+      return (
+        <button
+          onClick={() => handleRequest(space.board_id)}
+          disabled={busy === space.board_id}
+          className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs text-amber-300 border border-amber-500/30 transition-colors disabled:opacity-50"
+        >
+          {busy === space.board_id ? '...' : 'Request'}
+        </button>
+      );
+    }
+    if (space.visibility === 'invite') {
+      return (
+        <span className="flex-shrink-0 text-xs text-sky-400/70 px-3 py-1.5">Invite only</span>
+      );
+    }
+    return (
+      <span className="flex-shrink-0 text-xs text-ink-muted px-3 py-1.5">Members only</span>
+    );
+  };
+
+  const renderSpaceCard = (space: DirectorySpace, indent = false) => (
+    <div
+      key={space.board_id}
+      className={`flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/8 ${indent ? 'ml-6' : ''}`}
+    >
+      <button
+        onClick={() => {
+          if (space.sub_space_count > 0 || space.is_member) {
+            setSelectedParent(space);
+            loadCrews(space);
+          } else {
+            navigate(`/house/${space.board_id}`);
+          }
+        }}
+        className="flex items-center gap-3 flex-1 min-w-0 text-left"
+      >
+        <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+          <SpaceIcon name={space.icon} color={space.color} className="w-5 h-5" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-medium text-ink truncate">{space.name}</span>
+            {space.visibility !== 'open' && <Lock className="w-3 h-3 text-ink-muted flex-shrink-0" />}
+          </div>
+          {space.description && (
+            <p className="text-xs text-ink-muted/70 truncate mt-0.5">{space.description}</p>
+          )}
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-1">
+              <Users className="w-3 h-3 text-ink-muted/60" />
+              <span className="text-[10px] text-ink-muted/60">{space.member_count} members</span>
+            </div>
+            {space.sub_space_count > 0 && (
+              <span className="text-[10px] text-ink-muted/60">· {space.sub_space_count} crews</span>
+            )}
+          </div>
+        </div>
+      </button>
+      <span className={`flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded font-medium ${VISIBILITY_CHIP[space.visibility] ?? VISIBILITY_CHIP.private}`}>
+        {VISIBILITY_LABELS[space.visibility] ?? space.visibility}
+      </span>
+      {renderAction(space)}
+    </div>
+  );
+
   return (
     <div className="ds-page text-white flex flex-col h-full overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8 flex-shrink-0">
-        <button onClick={() => navigate('/house')} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-base font-bold flex-1">Browse Spaces</h1>
+        {selectedParent && (
+          <button
+            onClick={() => setSelectedParent(null)}
+            className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+        <h1 className="text-base font-bold flex-1">
+          {selectedParent ? selectedParent.name : 'Browse Spaces'}
+        </h1>
+        {selectedParent && selectedParent.is_member && (
+          <button
+            onClick={() => setShowStartCrew(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-pink-500/20 hover:bg-pink-500/30 text-xs text-pink-300 border border-pink-500/30 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Start a crew
+          </button>
+        )}
       </div>
 
       <div className="flex-shrink-0 px-4 py-3 border-b border-white/8">
@@ -99,7 +232,7 @@ export default function BrowseSpacesPage() {
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search spaces..."
+            placeholder="Search spaces and crews..."
             className="w-full bg-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-ink placeholder:text-ink-muted/60 outline-none focus:bg-white/8 transition-colors"
           />
         </div>
@@ -114,80 +247,52 @@ export default function BrowseSpacesPage() {
             {!searching && searchResults.length === 0 && (
               <p className="text-sm text-ink-muted text-center py-4">No spaces found.</p>
             )}
-            {!searching && searchResults.map(r => (
-              <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/8">
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-ink block">{r.title}</span>
-                  {r.body && <span className="text-xs text-ink-muted/70 truncate block">{r.body}</span>}
-                </div>
-                <button
-                  onClick={() => navigate(`/house/${r.id}`)}
-                  className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-ink transition-colors"
-                >
-                  View
-                </button>
-              </div>
-            ))}
+            {!searching && searchResults.map(s => renderSpaceCard(s))}
           </div>
         )}
 
-        {!loading && !showSearch && (
+        {!loading && !showSearch && selectedParent && (
+          <div className="max-w-2xl mx-auto space-y-2">
+            <button
+              onClick={() => navigate(`/house/${selectedParent.board_id}`)}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-white/5 transition-colors text-left"
+            >
+              <ChevronRight className="w-4 h-4 text-ink-muted" />
+              <span className="text-sm text-ink-muted">Open {selectedParent.name}</span>
+            </button>
+            <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mt-4 mb-2">Crews</h2>
+            {loadingCrews && <p className="text-sm text-ink-muted text-center py-4">Loading...</p>}
+            {!loadingCrews && crews.length === 0 && (
+              <p className="text-sm text-ink-muted text-center py-4">No crews yet. Start one!</p>
+            )}
+            {!loadingCrews && crews.map(c => renderSpaceCard(c, true))}
+          </div>
+        )}
+
+        {!loading && !showSearch && !selectedParent && (
           <div className="max-w-2xl mx-auto space-y-6">
             {categories.map(cat => (
               <div key={cat}>
                 <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">{cat}</h2>
                 <div className="space-y-2">
-                  {grouped[cat].map(board => {
-                    const joined = joinedIds.has(board.id);
-                    const isPrivate = board.visibility === 'private';
-                    return (
-                      <div
-                        key={board.id}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/8"
-                      >
-                        <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                          <SpaceIcon name={board.icon} color={board.color} className="w-5 h-5" />
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium text-ink truncate">{board.name}</span>
-                            {isPrivate && <Lock className="w-3 h-3 text-ink-muted flex-shrink-0" />}
-                          </div>
-                          {board.description && (
-                            <p className="text-xs text-ink-muted/70 truncate mt-0.5">{board.description}</p>
-                          )}
-                          <div className="flex items-center gap-1 mt-1">
-                            <Users className="w-3 h-3 text-ink-muted/60" />
-                            <span className="text-[10px] text-ink-muted/60">{board.member_count} members</span>
-                          </div>
-                        </div>
-                        {joined ? (
-                          <button
-                            onClick={() => navigate(`/house/${board.id}`)}
-                            className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-ink transition-colors"
-                          >
-                            Open
-                          </button>
-                        ) : isPrivate ? (
-                          <span className="flex-shrink-0 text-xs text-ink-muted px-3 py-1.5">Members only</span>
-                        ) : (
-                          <button
-                            onClick={() => handleJoin(board.id)}
-                            disabled={busy === board.id}
-                            className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-pink-500/20 hover:bg-pink-500/30 text-xs text-pink-300 border border-pink-500/30 transition-colors disabled:opacity-50"
-                          >
-                            {busy === board.id ? '...' : 'Join'}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {grouped[cat].map(space => renderSpaceCard(space))}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {showStartCrew && selectedParent && (
+        <StartCrewModal
+          parentSpace={selectedParent}
+          onClose={() => setShowStartCrew(false)}
+          onCreated={(newId) => {
+            setShowStartCrew(false);
+            navigate(`/house/${newId}`);
+          }}
+        />
+      )}
     </div>
   );
 }
