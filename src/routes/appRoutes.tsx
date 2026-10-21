@@ -41,6 +41,7 @@ const MyPublicProfilePage = lazy(() => import('../pages/MyPublicProfilePage'));
 const EditPublicProfilePage = lazy(() => import('../pages/EditPublicProfilePage'));
 const HousePage = lazy(() => import('../pages/HousePage'));
 const BrowseSpacesPage = lazy(() => import('../pages/BrowseSpacesPage'));
+const MedalsPage = lazy(() => import('../pages/MedalsPage'));
 function P(el: React.ReactNode) {
   return (
     <ProtectedRoute>
@@ -91,4 +92,5 @@ export const appRoutes = [
   <Route key="house-space" path="/house/:boardId" element={P(<HousePage />)} />,
   <Route key="house-room" path="/house/:boardId/:roomName" element={P(<HousePage />)} />,
   <Route key="house-browse" path="/house/browse" element={P(<BrowseSpacesPage />)} />,
+  <Route key="medals" path="/medals" element={P(<MedalsPage />)} />,
 ];

@@ -33,6 +33,7 @@ import {
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
 import { MessagingOverlayMount } from './MessagingOverlayMount';
+import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { Avatar } from './Avatar';
@@ -415,6 +416,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
           <main className="min-h-0 min-w-0 overflow-hidden border-r border-white/8">{children}</main>
         </div>
         <div className="relative z-20 flex-shrink-0"><MessagingOverlayMount inkColor={inkColor} inkMuted={inkMuted} /></div>
+        <MedalToastHost />
         <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} lobby={lobby} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
       </div>
       {showLockScreen && !location.pathname.startsWith('/pricing') && !location.pathname.startsWith('/success') && !location.pathname.startsWith('/billing') && (

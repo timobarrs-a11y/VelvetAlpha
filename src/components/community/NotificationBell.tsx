@@ -90,7 +90,9 @@ export function NotificationBell() {
         prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)),
       );
     }
-    if (notif.post_id) {
+    if (notif.type === 'badge') {
+      navigate('/medals');
+    } else if (notif.post_id) {
       navigate(`/community/post/${notif.post_id}`);
     }
     setOpen(false);
@@ -189,7 +191,7 @@ export function NotificationBell() {
                                 reacted to your {notif.target_type}
                               </>
                             )}
-                            {notif.type === 'badge' && 'You earned a new badge!'}
+                            {notif.type === 'badge' && `You earned ${(notif.meta as any)?.name ?? 'a new medal'}!`}
                             {notif.type === 'weekly' && 'A new weekly thread is up'}
                           </p>
                           <span className="text-[10px] text-white/25 mt-0.5 inline-block">

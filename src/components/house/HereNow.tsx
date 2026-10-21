@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../shared/supabase/client';
 import { useAuth } from '../../auth/AuthProvider';
 import { getSpaceMembers } from '../../services/spacesService';
+import { getUserMedals, type UserMedal } from '../../services/medalsService';
+import { MedalBadge } from '../medals/MedalBadge';
 import type { SpaceMember } from '../../types/spaces';
 
 interface Props {
@@ -18,10 +20,24 @@ export function HereNow({ boardId, myDisplayName }: Props) {
   const { user } = useAuth();
   const [hereNow, setHereNow] = useState<PresenceEntry[]>([]);
   const [members, setMembers] = useState<SpaceMember[]>([]);
+  const [medalCache, setMedalCache] = useState<Record<string, UserMedal | null>>({});
 
   useEffect(() => {
     getSpaceMembers(boardId).then(setMembers).catch(() => {});
   }, [boardId]);
+
+  useEffect(() => {
+    if (members.length === 0) return;
+    members.forEach(m => {
+      if (medalCache[m.user_id] !== undefined) return;
+      getUserMedals(m.user_id)
+        .then(medals => {
+          const showcase = medals.find(md => md.showcase_slot === 1) ?? null;
+          setMedalCache(prev => ({ ...prev, [m.user_id]: showcase }));
+        })
+        .catch(() => {});
+    });
+  }, [members, medalCache]);
 
   useEffect(() => {
     if (!user) return;
@@ -92,6 +108,9 @@ export function HereNow({ boardId, myDisplayName }: Props) {
                 <span className="text-sm text-ink truncate">{member.display_name}</span>
                 {member.is_bot && (
                   <span className="text-[9px] px-1 py-0.5 rounded bg-violet-500/20 text-violet-300 font-semibold">AI</span>
+                )}
+                {medalCache[member.user_id] && (
+                  <MedalBadge icon={(medalCache[member.user_id] as UserMedal).icon} tier={(medalCache[member.user_id] as UserMedal).tier as any} size="sm" />
                 )}
               </div>
               <span className="text-[10px] text-ink-muted">

@@ -1,18 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Users, Bot, Target, TrendingUp, Loader2, Pencil, EyeOff } from 'lucide-react';
+import { ArrowLeft, Users, Bot, Target, TrendingUp, Loader2, Pencil, EyeOff, Trophy } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { Avatar } from '../components/Avatar';
 import { migrateAvatarConfig } from '../utils/avatarConfig';
-import type { AvatarConfigV2 } from '../types/avatar-v2';
+import type { AvatarConfigV2 } from '../types/avatar';
 import { getMyMemberProfile, MemberProfile } from '../services/memberProfileService';
 import { goalProgressPercent, goalDaysRemaining, GOAL_TYPE_LABELS, CoachingGoal } from '../services/coachingService';
+import { getUserMedals, type UserMedal } from '../services/medalsService';
+import { MedalShowcase } from '../components/medals/MedalShowcase';
+import { MedalBadge } from '../components/medals/MedalBadge';
 
 export default function MyPublicProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [goals, setGoals] = useState<CoachingGoal[]>([]);
+  const [medals, setMedals] = useState<UserMedal[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -31,6 +35,7 @@ export default function MyPublicProfilePage() {
         if (goalData) setGoals(goalData as CoachingGoal[]);
       }
     }
+    getUserMedals().then(setMedals).catch(() => {});
     setLoading(false);
   }, []);
 
@@ -146,6 +151,25 @@ export default function MyPublicProfilePage() {
           <div className="mb-8">
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">About</h2>
             <p className="text-sm text-white/70 leading-relaxed">{profile.bio}</p>
+          </div>
+        )}
+
+        {/* Medal showcase */}
+        {medals.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3 flex items-center gap-1.5">
+              <Trophy className="w-3 h-3" />
+              Medals
+            </h2>
+            <div className="flex flex-col gap-4 p-4 rounded-xl border border-white/8 bg-white/[0.02]">
+              <MedalShowcase medals={medals} isOwn onEdit={() => navigate('/medals')} />
+              <div className="flex flex-wrap gap-2">
+                {medals.filter(m => m.earned_at).map(m => (
+                  <MedalBadge key={m.slug} icon={m.icon} tier={m.tier as any} size="sm" />
+                ))}
+              </div>
+              <button onClick={() => navigate('/medals')} className="text-xs text-pink-400 hover:text-pink-300 transition-colors self-start">See all medals →</button>
+            </div>
           </div>
         )}
 

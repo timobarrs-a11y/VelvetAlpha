@@ -85,6 +85,7 @@ export interface CommunityNotification {
   post_id: string | null;
   read: boolean;
   created_at: string;
+  meta?: Record<string, unknown> | null;
 }
 
 export interface NotificationWithActor extends CommunityNotification {
