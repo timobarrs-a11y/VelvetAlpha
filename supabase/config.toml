@@ -167,3 +167,6 @@ verify_jwt = true
 
 [functions.velvet-rope-ai]
 verify_jwt = true
+
+[functions.community-room-send]
+verify_jwt = true

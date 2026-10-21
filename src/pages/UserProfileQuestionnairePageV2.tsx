@@ -4,6 +4,7 @@ import { QuestionnaireShell, HonestBridge, PERSONAL_QUESTIONNAIRE, makeContext, 
 import { userProfileService } from '../services/userProfileService';
 import { toast } from '../shared/ui/Toast';
 import { AtlasTransitionOverlay } from '../components/AtlasTransitionOverlay';
+import { supabase } from '../shared/supabase/client';
 
 function buildBridgeLines(answers: Record<string, string | string[]>): { text: string }[] {
   const lines: { text: string }[] = [];
@@ -69,6 +70,8 @@ export function UserProfileQuestionnairePageV2() {
       toast.error('Something went wrong saving your profile. Please try again.');
       return;
     }
+
+    supabase.rpc('join_spaces_from_interests').then(() => {}, () => {});
 
     setBridgeAnswers(finalAnswers);
     setShowBridge(true);

@@ -28,6 +28,7 @@ import {
   VolumeX,
   Wifi,
   WifiOff,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
@@ -253,13 +254,13 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
     { label: 'My Page', path: '/my-profile', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
   ];
   const connectTools = [
+    { label: 'House', path: '/house', tone: '#f472b6', icon: <Home className="h-3.5 w-3.5" /> },
     { label: 'Feed', path: '/feed', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
     { label: 'Discover', path: '/discover', tone: '#fbbf24', icon: <Compass className="h-3.5 w-3.5" /> },
     { label: 'Atlas', path: '/atlas', tone: '#cbd5e1', icon: <Bot className="h-3.5 w-3.5" /> },
     { label: 'Navi', path: '/local-explorer', tone: '#34d399', icon: <MapPin className="h-3.5 w-3.5" /> },
     { label: 'Group Chat', path: '/group-chat', tone: '#2dd4bf', icon: <UsersRound className="h-3.5 w-3.5" /> },
     { label: 'Velvet Rope', path: '/real-or-not', tone: '#f472b6', icon: <Zap className="h-3.5 w-3.5" /> },
-    { label: 'Community', path: '/community', tone: '#60a5fa', icon: <Users className="h-3.5 w-3.5" /> },
   ];
   return (
     <div className="flex min-h-0 flex-1 flex-col">
