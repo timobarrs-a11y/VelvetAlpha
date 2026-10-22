@@ -5,6 +5,8 @@ export interface AtlasIntroduction {
   display_name: string;
   headline: string | null;
   avatar_config: Record<string, unknown> | null;
+  profile_image_type: string;
+  profile_smilie_code: string | null;
   is_bot: boolean;
   follower_count: number;
   shared_goal_types: string[];

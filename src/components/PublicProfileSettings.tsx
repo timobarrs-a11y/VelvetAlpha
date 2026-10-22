@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Loader2, Eye, EyeOff, Target, Check, Users, Bot, Search, UserRound,
+  Loader2, Eye, EyeOff, Target, Check, Users, Bot, Search, UserRound, CheckCircle2,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import {
@@ -9,14 +9,16 @@ import {
   upsertMyMemberProfile,
   MemberProfile,
 } from '../services/memberProfileService';
-import { getGoals, CoachingGoal } from '../services/coachingService';
+import { getGoals, getCommitments, CoachingGoal, CoachingCommitment } from '../services/coachingService';
+import { toggleGoalShowOnProfile, toggleCommitmentShowOnProfile } from '../services/publicProfileService';
 import { toast } from '../shared/ui/Toast';
 import { SMILIES, smilieUrl } from '../config/smilieRegistry';
 import { PublicProfileImage } from './PublicProfileImage';
 
 export function PublicProfileSettings() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
-  const [goals, setGoals] = useState<CoachingGoal[]>([]);
+  const [goals, setGoals] = useState<(CoachingGoal & { show_on_profile?: boolean })[]>([]);
+  const [commitments, setCommitments] = useState<(CoachingCommitment & { show_on_profile?: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -25,23 +27,27 @@ export function PublicProfileSettings() {
   const [bio, setBio] = useState('');
   const [isPublic, setIsPublic] = useState(true);
   const [discoverable, setDiscoverable] = useState(true);
-  const [sharedGoalIds, setSharedGoalIds] = useState<string[]>([]);
   const [profileImageType, setProfileImageType] = useState<'avatar' | 'smilie'>('avatar');
   const [profileSmilieCode, setProfileSmilieCode] = useState<string | null>(null);
   const [smilieSearch, setSmilieSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [p, userGoals] = await Promise.all([getMyMemberProfile(), getGoals(await getCurrentUserId())]);
+    const uid = await getCurrentUserId();
+    const [p, userGoals, userCommitments] = await Promise.all([
+      getMyMemberProfile(),
+      getGoals(uid),
+      getCommitments(uid),
+    ]);
     setProfile(p);
-    setGoals(userGoals);
+    setGoals(userGoals as (CoachingGoal & { show_on_profile?: boolean })[]);
+    setCommitments(userCommitments as (CoachingCommitment & { show_on_profile?: boolean })[]);
     if (p) {
       setDisplayName(p.display_name);
       setHeadline(p.headline ?? '');
       setBio(p.bio ?? '');
       setIsPublic(p.is_public);
       setDiscoverable(p.discoverable);
-      setSharedGoalIds(p.shared_goal_ids);
       setProfileImageType(p.profile_image_type ?? 'avatar');
       setProfileSmilieCode(p.profile_smilie_code ?? null);
     }
@@ -63,7 +69,6 @@ export function PublicProfileSettings() {
         bio: bio || null,
         is_public: isPublic,
         discoverable,
-        shared_goal_ids: sharedGoalIds,
         profile_image_type: profileImageType,
         profile_smilie_code: profileImageType === 'smilie' ? profileSmilieCode : null,
       });
@@ -80,12 +85,28 @@ export function PublicProfileSettings() {
     ? SMILIES.filter(s => s.code.includes(smilieSearch.toLowerCase()) || s.label.toLowerCase().includes(smilieSearch.toLowerCase()))
     : SMILIES;
 
-  const toggleGoalShare = (goalId: string) => {
-    setSharedGoalIds(prev =>
-      prev.includes(goalId)
-        ? prev.filter(id => id !== goalId)
-        : [...prev, goalId]
-    );
+  const toggleGoalShow = async (goalId: string, current: boolean) => {
+    const next = !current;
+    setGoals(prev => prev.map(g => g.id === goalId ? { ...g, show_on_profile: next } : g));
+    try {
+      await toggleGoalShowOnProfile(goalId, next);
+      toast.success(next ? 'Goal is now visible on your profile.' : 'Goal hidden from your profile.');
+    } catch {
+      setGoals(prev => prev.map(g => g.id === goalId ? { ...g, show_on_profile: current } : g));
+      toast.error('Failed to update goal visibility.');
+    }
+  };
+
+  const toggleCommitmentShow = async (commitmentId: string, current: boolean) => {
+    const next = !current;
+    setCommitments(prev => prev.map(c => c.id === commitmentId ? { ...c, show_on_profile: next } : c));
+    try {
+      await toggleCommitmentShowOnProfile(commitmentId, next);
+      toast.success(next ? 'Commitment is now visible on your profile.' : 'Commitment hidden from your profile.');
+    } catch {
+      setCommitments(prev => prev.map(c => c.id === commitmentId ? { ...c, show_on_profile: current } : c));
+      toast.error('Failed to update commitment visibility.');
+    }
   };
 
   if (loading) {
@@ -240,13 +261,13 @@ export function PublicProfileSettings() {
         </div>
       </div>
 
-      {/* Goal sharing */}
+      {/* Goal visibility */}
       <div>
         <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-3 flex items-center gap-1.5">
           <Target className="w-3.5 h-3.5" />
-          Share goals publicly
+          Show goals on profile
         </h3>
-        <p className="text-xs text-white/30 mb-3">Choose which goals appear on your public profile. Progress is shown automatically.</p>
+        <p className="text-xs text-white/30 mb-3">Toggle each goal to show its title and progress on your public profile. Off by default.</p>
         {goals.length === 0 ? (
           <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-6 text-center">
             <p className="text-white/30 text-sm">No goals yet. Your coach can help you create one.</p>
@@ -254,23 +275,62 @@ export function PublicProfileSettings() {
         ) : (
           <div className="space-y-2">
             {goals.map(goal => {
-              const shared = sharedGoalIds.includes(goal.id);
+              const shown = goal.show_on_profile ?? false;
               return (
                 <button
                   key={goal.id}
-                  onClick={() => toggleGoalShare(goal.id)}
+                  onClick={() => toggleGoalShow(goal.id, shown)}
                   className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-all ${
-                    shared ? 'bg-pink-500/10 border border-pink-400/30' : 'bg-white/[0.02] border border-white/8 hover:border-white/15'
+                    shown ? 'bg-pink-500/10 border border-pink-400/30' : 'bg-white/[0.02] border border-white/8 hover:border-white/15'
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all ${
-                    shared ? 'bg-pink-500 text-white' : 'border border-white/20'
+                    shown ? 'bg-pink-500 text-white' : 'border border-white/20'
                   }`}>
-                    {shared && <Check className="w-3.5 h-3.5" />}
+                    {shown && <Check className="w-3.5 h-3.5" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-white truncate">{goal.title}</p>
                     <p className="text-xs text-white/40 mt-0.5 capitalize">{goal.goal_type.replace(/_/g, ' ')}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Commitment visibility */}
+      <div>
+        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          Show commitments on profile
+        </h3>
+        <p className="text-xs text-white/30 mb-3">Toggle each commitment to show its text on your public profile. Off by default.</p>
+        {commitments.length === 0 ? (
+          <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-6 text-center">
+            <p className="text-white/30 text-sm">No commitments yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {commitments.map(c => {
+              const shown = c.show_on_profile ?? false;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => toggleCommitmentShow(c.id, shown)}
+                  className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-all ${
+                    shown ? 'bg-pink-500/10 border border-pink-400/30' : 'bg-white/[0.02] border border-white/8 hover:border-white/15'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all ${
+                    shown ? 'bg-pink-500 text-white' : 'border border-white/20'
+                  }`}>
+                    {shown && <Check className="w-3.5 h-3.5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-white truncate">{c.description}</p>
+                    <p className="text-xs text-white/40 mt-0.5 capitalize">{c.status.replace(/_/g, ' ')}</p>
                   </div>
                 </button>
               );

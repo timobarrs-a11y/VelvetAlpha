@@ -5,6 +5,7 @@ import {
   Check, Layers, Target, Trophy, Flame, Heart, MessageCircle,
   Bot, Loader2, Sparkles, TrendingUp, Users, Send, Trash2,
 } from 'lucide-react';
+import { PublicProfileImage } from '../components/PublicProfileImage';
 import { Avatar } from '../components/Avatar';
 import { migrateAvatarConfig } from '../utils/avatarConfig';
 import type { AvatarConfigV2 } from '../types/avatar-v2';
@@ -109,7 +110,11 @@ function PostCard({ post, index, liked, onToggleLike }: {
 
   const meta = POST_TYPE_LABELS[post.post_type] ?? { label: post.post_type, icon: 'check', color: '#94a3b8' };
   const Icon = POST_ICONS[meta.icon] ?? Check;
-  const avatarConfig = post.author_avatar_config ? migrateAvatarConfig(post.author_avatar_config) : null;
+  const postProfile = {
+    avatar_config: post.author_avatar_config,
+    profile_image_type: (post.author_profile_image_type ?? 'avatar') as 'avatar' | 'smilie',
+    profile_smilie_code: post.author_profile_smilie_code ?? null,
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -167,13 +172,7 @@ function PostCard({ post, index, liked, onToggleLike }: {
           onClick={() => navigate(`/member/${post.user_id}`)}
           className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 bg-white/5 hover:border-white/20 transition-colors"
         >
-          {avatarConfig ? (
-            <Avatar config={avatarConfig as AvatarConfigV2} className="w-full h-full" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm font-bold text-white/30">
-              {post.author_name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
+          <PublicProfileImage profile={postProfile} className="h-full w-full" />
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -285,13 +284,28 @@ function IntroductionCard({ intro, onFollow }: {
 }) {
   const navigate = useNavigate();
   const [followed, setFollowed] = useState(false);
-  const avatarConfig = intro.avatar_config ? migrateAvatarConfig(intro.avatar_config) : null;
 
   const handleFollow = async () => {
     await followUser(intro.user_id);
     setFollowed(true);
     onFollow(intro.user_id);
   };
+
+  const introProfile = {
+    avatar_config: intro.avatar_config,
+    profile_image_type: intro.profile_image_type as 'avatar' | 'smilie',
+    profile_smilie_code: intro.profile_smilie_code,
+  };
+
+  const hasTitles = intro.shared_goal_titles && intro.shared_goal_titles.length > 0;
+  const goalTypeLabels = (intro.shared_goal_types ?? []).map(t =>
+    t.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+  );
+  const connectionText = hasTitles
+    ? `You're both working on ${intro.shared_goal_titles.slice(0, 2).join(' and ')}`
+    : goalTypeLabels.length > 0
+      ? `You're both working on a ${goalTypeLabels[0]} goal`
+      : 'You share common goals';
 
   return (
     <motion.div
@@ -308,13 +322,7 @@ function IntroductionCard({ intro, onFollow }: {
           onClick={() => navigate(`/member/${intro.user_id}`)}
           className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 bg-white/5 hover:border-white/20 transition-colors"
         >
-          {avatarConfig ? (
-            <Avatar config={avatarConfig as AvatarConfigV2} className="w-full h-full" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm font-bold text-white/30">
-              {intro.display_name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
+          <PublicProfileImage profile={introProfile} className="h-full w-full" />
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -329,9 +337,7 @@ function IntroductionCard({ intro, onFollow }: {
             )}
           </div>
           {intro.headline && <p className="text-xs text-white/40 truncate mt-0.5">{intro.headline}</p>}
-          <p className="text-xs text-violet-300/60 mt-1">
-            You're both working on {intro.shared_goal_titles.slice(0, 2).join(' and ')}
-          </p>
+          <p className="text-xs text-violet-300/60 mt-1">{connectionText}</p>
         </div>
         <button
           onClick={handleFollow}

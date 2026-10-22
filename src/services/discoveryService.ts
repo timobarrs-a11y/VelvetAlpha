@@ -6,88 +6,77 @@ export interface DiscoverableMember extends MemberProfile {
   shared_goal_types: string[];
 }
 
+interface DiscoverableGoalRow {
+  user_id: string;
+  goal_type: string;
+  title: string | null;
+}
+
+interface DiscoverableGoalRpcResult {
+  success: boolean;
+  goals: DiscoverableGoalRow[];
+}
+
 export async function discoverMembersByGoalType(goalType?: string, limit = 30): Promise<DiscoverableMember[]> {
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Query public, discoverable profiles
-  let query = supabase
+  const { data: profiles, error } = await supabase
     .from('member_profiles')
-    .select('*')
+    .select('user_id, display_name, headline, avatar_config, profile_image_type, profile_smilie_code, is_public, shared_goal_ids, follower_count, following_count, discoverable, is_bot, created_at, updated_at')
     .eq('is_public', true)
     .eq('discoverable', true)
     .neq('user_id', user?.id ?? '')
     .limit(limit);
 
-  if (goalType) {
-    // Filter by goal type via the shared goals — we need to join through user_goals
-    // Since shared_goal_ids is an array, we query user_goals for matching type,
-    // then filter profiles whose shared_goal_ids intersect
-    const { data: matchingGoals } = await supabase
-      .from('user_goals')
-      .select('id, user_id, title, goal_type')
-      .eq('goal_type', goalType);
-
-    if (!matchingGoals || matchingGoals.length === 0) return [];
-
-    const goalIds = matchingGoals.map(g => g.id);
-    const { data: profiles } = await query;
-
-    // Filter profiles that share at least one goal of this type
-    const filtered = (profiles as MemberProfile[] ?? []).filter(p =>
-      p.shared_goal_ids.some(id => goalIds.includes(id))
-    );
-
-    return enrichWithGoals(filtered, matchingGoals);
+  if (error) {
+    console.error('[discoveryService] query error:', error.message);
+    return [];
   }
 
-  const { data: profiles } = await query;
-  return enrichWithGoals((profiles as MemberProfile[]) ?? []);
-}
+  const memberProfiles = (profiles ?? []) as MemberProfile[];
+  if (memberProfiles.length === 0) return [];
 
-async function enrichWithGoals(
-  profiles: MemberProfile[],
-  matchingGoals?: { id: string; user_id: string; title: string; goal_type: string }[]
-): Promise<DiscoverableMember[]> {
-  if (profiles.length === 0) return [];
+  const userIds = memberProfiles.map(p => p.user_id);
 
-  // If we don't have pre-fetched goals, fetch goals for all profile users
-  let goalsByUser: Map<string, { id: string; title: string; goal_type: string }[]>;
-
-  if (matchingGoals) {
-    goalsByUser = new Map();
-    for (const g of matchingGoals) {
-      const arr = goalsByUser.get(g.user_id) ?? [];
-      arr.push({ id: g.id, title: g.title, goal_type: g.goal_type });
-      goalsByUser.set(g.user_id, arr);
-    }
-  } else {
-    const userIds = profiles.map(p => p.user_id);
-    const { data: allGoals } = await supabase
-      .from('user_goals')
-      .select('id, user_id, title, goal_type')
-      .in('user_id', userIds);
-
-    goalsByUser = new Map();
-    for (const g of (allGoals ?? [])) {
-      const arr = goalsByUser.get(g.user_id) ?? [];
-      arr.push({ id: g.id, title: g.title, goal_type: g.goal_type });
-      goalsByUser.set(g.user_id, arr);
-    }
+  // Use SECURITY DEFINER function to get goal types (always visible) and
+  // titles (only when show_on_profile = true) for other users' goals
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_discoverable_goals', { p_user_ids: userIds });
+  if (rpcError) {
+    console.error('[discoveryService] get_discoverable_goals error:', rpcError.message);
+    return memberProfiles.map(p => ({ ...p, shared_goal_titles: [], shared_goal_types: [] } as DiscoverableMember));
   }
 
-  return profiles.map(p => {
+  const rpcResult = rpcData as DiscoverableGoalRpcResult;
+  const allGoals = rpcResult?.goals ?? [];
+
+  // Group goals by user
+  const goalsByUser = new Map<string, DiscoverableGoalRow[]>();
+  for (const g of allGoals) {
+    const arr = goalsByUser.get(g.user_id) ?? [];
+    arr.push(g);
+    goalsByUser.set(g.user_id, arr);
+  }
+
+  // If filtering by goal type, only include members who have at least one goal of that type
+  const filtered = goalType
+    ? memberProfiles.filter(p => {
+        const userGoals = goalsByUser.get(p.user_id) ?? [];
+        return userGoals.some(g => g.goal_type === goalType);
+      })
+    : memberProfiles;
+
+  return filtered.map(p => {
     const userGoals = goalsByUser.get(p.user_id) ?? [];
-    const sharedGoals = userGoals.filter(g => p.shared_goal_ids.includes(g.id));
+    const visibleGoals = userGoals.filter(g => g.title !== null);
     return {
       ...p,
-      shared_goal_titles: sharedGoals.map(g => g.title),
-      shared_goal_types: [...new Set(sharedGoals.map(g => g.goal_type))],
-    };
+      shared_goal_titles: visibleGoals.map(g => g.title!),
+      shared_goal_types: [...new Set(userGoals.map(g => g.goal_type))],
+    } as DiscoverableMember;
   });
 }
 
 export async function discoverMembersBySharedGoal(myGoalId: string, limit = 20): Promise<DiscoverableMember[]> {
-  // Find the goal type for this goal
   const { data: myGoal } = await supabase
     .from('user_goals')
     .select('goal_type')

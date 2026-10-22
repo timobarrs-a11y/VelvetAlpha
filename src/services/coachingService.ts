@@ -19,6 +19,7 @@ export interface CoachingCommitment {
   extracted_from_message?: string | null;
   plan_step_id?: string | null;
   companion_color?: string | null;
+  show_on_profile?: boolean;
 }
 
 export interface CoachingGoal {
@@ -62,7 +63,8 @@ export async function getCommitments(userId: string, companionId?: string | null
       is_user_created,
       category,
       extracted_from_message,
-      plan_step_id
+      plan_step_id,
+      show_on_profile
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
