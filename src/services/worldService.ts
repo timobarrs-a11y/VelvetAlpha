@@ -1,5 +1,5 @@
 import { supabase } from '../shared/supabase/client';
-import { townSlot, type Plot, type PlotConfig } from '../features/velvet-world/art/streetArt.js';
+import { townSlot, townLayout, type Plot, type PlotConfig, type HouseStyle } from '../features/velvet-world/art/streetArt.js';
 
 export interface WorldCard {
   user_id: string; slot_index: number; house: PlotConfig['house']; sign: PlotConfig['sign']; yard: Omit<PlotConfig, 'house' | 'sign'>;
@@ -10,6 +10,8 @@ export interface MyPlot {
   slot_index: number; house: PlotConfig['house']; sign: PlotConfig['sign']; yard: Omit<PlotConfig, 'house' | 'sign'>;
   main_companion_id: string | null; moved_in_at: string; is_member: boolean; earned: string[];
 }
+
+export interface TownPlot { user_id: string; slot_index: number; style: string | null; body: string | null; roof: string | null; door: string | null; sign_color: string | null; is_member: boolean; earned: string[] }
 
 /** The user's local calendar date as YYYY-MM-DD. The daily block changes at their midnight. */
 export function localDay(d = new Date()): string {
@@ -63,6 +65,31 @@ export async function markSeen(day: string, userIds: string[]): Promise<void> {
   if (error) console.warn('mark_block_seen failed', error.message);
 }
 
+export async function getTownSize(): Promise<number> {
+  const { data, error } = await supabase.rpc('get_town_size');
+  if (error) throw new Error(error.message);
+  return (data as number) ?? 0;
+}
+
+/** Plot summaries for slot_index in [from, to). The server caps one call at 5,000. */
+export async function getTownPlots(from: number, to: number): Promise<TownPlot[]> {
+  const { data, error } = await supabase.rpc('get_town_plots', { p_from: from, p_to: to });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TownPlot[];
+}
+
+export async function findPlot(query: string): Promise<{ user_id: string; slot_index: number; display_name: string }[]> {
+  if (query.trim().length < 2) return [];
+  const { data, error } = await supabase.rpc('find_world_plot', { p_query: query });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function getLandmarkProgress(): Promise<number> {
+  const { data } = await supabase.rpc('get_landmark_progress');
+  return (data as number) ?? 0;
+}
+
 /** A database card → the plot object the art kit draws. */
 export function cardToPlot(c: WorldCard): Plot {
   const slot = townSlot(c.slot_index);
@@ -83,5 +110,15 @@ export function cardToPlot(c: WorldCard): Plot {
       newNeighbor: c.new_neighbor,
       address: slot.address,
     },
+  };
+}
+
+/** A town summary → a kit plot placed at its permanent lot. Enough for drawPlotLowDetail. */
+export function townToPlot(t: TownPlot): Plot {
+  const slot = townSlot(t.slot_index);
+  return {
+    id: t.user_id, number: (slot.col + 1) * 2, member: t.is_member, origin: { x: slot.x, y: slot.y },
+    config: { house: { style: (t.style ?? 'standard') as HouseStyle, ...(t.body && { body: t.body }), ...(t.roof && { roof: t.roof }), ...(t.door && { door: t.door }) }, sign: t.sign_color ? { color: t.sign_color } : {} },
+    profile: { name: '', earned: t.earned, address: slot.address },
   };
 }
