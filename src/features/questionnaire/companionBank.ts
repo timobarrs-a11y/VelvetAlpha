@@ -42,7 +42,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'energy',
       archetype: 'scrub',
       chapter: 'energy',
-      question: (ctx) => tpl(`Picture your ideal person. Is {she} the life of the party, or in {her} own world?`, ctx),
+      question: (ctx) => tpl(`Picture your ideal person. Is {she} the life of the party, or in {hers} own world?`, ctx),
       confidence: 'tapped',
       config: {
         min: 0,
@@ -50,8 +50,12 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
         step: 1,
         default: 1,
         leftLabel: 'Life of the party',
-        rightLabel: 'In her own world',
-        valueLabels: ['Life of the party', 'Somewhere in between', 'In her own world'],
+        rightLabel: tpl('In {hers} own world', ctx),
+        valueLabels: [
+          'Life of the party',
+          'Somewhere in between',
+          tpl('In {hers} own world', ctx),
+        ],
       },
     },
     {

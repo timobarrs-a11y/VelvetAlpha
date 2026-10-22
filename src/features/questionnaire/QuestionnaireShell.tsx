@@ -277,7 +277,7 @@ export function QuestionnaireShell({
         chapterLabel={currentChapter ? tpl(currentChapter.label, ctx) : ''}
         chapterIndex={chapterIndex}
         totalChapters={definition.chapters.length}
-        onBack={currentIdx > 0 ? handleBack : undefined}
+        onBack={currentIdx > 0 || onBack ? handleBack : undefined}
         onConfirm={() => {
           setBeatVisible(false);
           advance();
@@ -302,13 +302,13 @@ export function QuestionnaireShell({
       )}
 
       <div className="max-w-2xl w-full relative z-10">
-        {currentIdx > 0 && (
+        {(currentIdx > 0 || onBack) && (
           <button
             onClick={handleBack}
             className="mb-4 flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
           >
             <ArrowLeft size={18} />
-            <span className="text-sm font-medium">Back</span>
+            <span className="text-sm font-medium">{currentIdx === 0 ? 'Exit' : 'Back'}</span>
           </button>
         )}
 
@@ -782,6 +782,47 @@ function ScrubRenderer({
   const leftLabel = tpl(config.leftLabel, ctx);
   const rightLabel = tpl(config.rightLabel, ctx);
   const valueLabels = config.valueLabels.map(l => tpl(l, ctx));
+  const draggingRef = useRef(false);
+
+  const computeValueFromPointer = useCallback((clientX: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const newValue = Math.round(ratio * config.max);
+    onChange(newValue);
+  }, [config.max, onChange, trackRef]);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    computeValueFromPointer(e.clientX);
+  }, [computeValueFromPointer]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    computeValueFromPointer(e.clientX);
+  }, [computeValueFromPointer]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    draggingRef.current = false;
+    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      onChange(Math.max(0, value - 1));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      onChange(Math.min(config.max, value + 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      onSubmit();
+    }
+  }, [config.max, value, onChange, onSubmit]);
+
   return (
     <div className="space-y-8 py-4">
       <div className="text-center">
@@ -800,24 +841,39 @@ function ScrubRenderer({
           <span>{leftLabel}</span>
           <span>{rightLabel}</span>
         </div>
-        <div ref={trackRef} className="relative h-2 bg-white/10 rounded-full">
+        <div
+          ref={trackRef}
+          className="relative h-8 flex items-center cursor-pointer touch-none select-none"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
+          <div className="absolute inset-x-0 h-2 bg-white/10 rounded-full">
+            <div
+              className="absolute h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all"
+              style={{ width: `${(value / config.max) * 100}%` }}
+            />
+          </div>
           <div
-            className="absolute h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all"
-            style={{ width: `${(value / config.max) * 100}%` }}
-          />
-          <motion.div
-            className="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white shadow-lg cursor-grab active:cursor-grabbing"
-            style={{ left: `calc(${(value / config.max) * 100}% - 12px)` }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0}
-            onDrag={(_, info) => {
-              const trackWidth = trackRef.current?.offsetWidth || 300;
-              const newValue = Math.round(Math.max(0, Math.min(config.max, value + (info.delta.x / trackWidth) * config.max)));
-              onChange(newValue);
+            className="absolute w-6 h-6 rounded-full bg-white shadow-lg pointer-events-none transition-transform"
+            style={{
+              left: `calc(${(value / config.max) * 100}% - 12px)`,
+              transform: draggingRef.current ? 'scale(1.2)' : 'scale(1)',
             }}
           />
         </div>
+        <input
+          type="range"
+          min={config.min}
+          max={config.max}
+          step={config.step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          onKeyDown={handleKeyDown}
+          className="sr-only"
+          aria-label={valueLabels[value]}
+          aria-valuetext={valueLabels[value]}
+        />
       </div>
 
       <div className="flex justify-center">

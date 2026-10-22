@@ -96,6 +96,7 @@ export function UserProfileQuestionnairePageV2() {
       definition={PERSONAL_QUESTIONNAIRE}
       context={ctx}
       onComplete={handleComplete}
+      onBack={() => navigate(-1)}
     />
   );
 }

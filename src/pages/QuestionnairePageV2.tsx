@@ -206,6 +206,7 @@ export function QuestionnairePageV2() {
       context={ctx}
       onComplete={handleComplete}
       onAnswer={handleAnswer}
+      onBack={() => navigate(-1)}
       showOrb={true}
       renderOrb={renderOrb}
     />

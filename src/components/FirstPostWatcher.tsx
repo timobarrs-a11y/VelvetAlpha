@@ -59,7 +59,10 @@ export function FirstPostWatcher() {
 
   const handleUndo = async () => {
     if (!popup) return;
-    await supabase.from('progress_posts').delete().eq('id', popup.postId);
+    await supabase
+      .from('progress_posts')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', popup.postId);
     setPopup(null);
   };
 
@@ -68,7 +71,7 @@ export function FirstPostWatcher() {
     if (user) {
       await supabase
         .from('member_profiles')
-        .update({ is_public: false, updated_at: new Date().toISOString() })
+        .update({ auto_posting_enabled: false, updated_at: new Date().toISOString() })
         .eq('user_id', user.id);
     }
     setPopup(null);

@@ -709,16 +709,7 @@ Respond ONLY with JSON (no other text):
     "route": "/route-path",
     "seedText": "brief topic context for the destination app"
   } | null,
-  "commitment": {
-    "description": "what the user committed to do",
-    "due_date": "ISO 8601 date string or null if no specific date",
-    "confidence": 0.0
-  } | null,
-  "commitmentUpdate": {
-    "matched_description": "the commitment description this update refers to",
-    "new_status": "completed|missed|renegotiated",
-    "confidence": 0.0
-  } | null,
+
   "memoryCorrection": {
     "memory_item_id": "uuid or null",
     "old_content": "what the companion remembered that was wrong",
@@ -759,8 +750,7 @@ Today's date: ${new Date().toISOString()}`,
     let parsed: {
       calendarEvent: { title: string; event_type: string; event_date: string; description?: string; confidence: number } | null;
       navigationIntent: { destination: string; route: string; seedText?: string } | null;
-      commitment: { description: string; due_date: string | null; confidence: number } | null;
-      commitmentUpdate: { matched_description: string; new_status: string; confidence: number } | null;
+
       memoryCorrection: { memory_item_id: string | null; old_content: string | null; corrected_content: string | null; confidence: number } | null;
       memoryReference: { memory_item_id: string | null; engagement: string; confidence: number } | null;
       threadClosed: { memory_item_id: string; confidence: number } | null;

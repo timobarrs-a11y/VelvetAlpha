@@ -41,6 +41,8 @@ export function PlanTab({ userId, companionId, highlightIds, onBack }: Props) {
       .channel('plan-tab-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'coach_plan_steps' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'coach_plans' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coaching_commitments' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_goals' }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [load]);
