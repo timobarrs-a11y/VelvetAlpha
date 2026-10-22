@@ -96,6 +96,16 @@
   .swatches button[aria-pressed="true"] { border-color: var(--ink); }
   .swatches button:disabled { opacity: 0.35; cursor: not-allowed; }
 
+  .pop { position: fixed; z-index: 7; top: calc(env(safe-area-inset-top, 0px) + 84px); right: max(16px, env(safe-area-inset-right, 0px)); width: 280px; padding: 14px; display: grid; gap: 10px; }
+  .pop[hidden] { display: none; }
+  .pop h3 { margin: 0; font-family: var(--font-display); font-size: 16px; }
+  .friend { display: flex; align-items: center; gap: 10px; }
+  .friend .dot { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-weight: 800; font-size: 12px; color: #fff; flex: none; }
+  .friend span { min-width: 0; flex: 1; font-size: 13.5px; font-weight: 600; }
+  .friend small { display: block; color: var(--ink-3); font-weight: 500; font-size: 12px; }
+  .row-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ghost.strong { color: var(--ink); border-color: rgba(255, 255, 255, 0.3); }
+  .day { font-size: 12px; color: var(--ink-3); padding: 0 4px; white-space: nowrap; }
   @media (max-width: 760px) {
     .controls { margin-left: 0; width: 100%; justify-content: flex-start; }
     .time input[type="range"] { width: 110px; }
@@ -110,11 +120,17 @@
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
 
-<canvas id="stage" aria-label="Maple Street: a street of member houses and billboards. Drag to look around, tap a billboard to see who lives there."></canvas>
+<canvas id="stage" aria-label="Velvet World: a street of resident houses and billboards. Drag to look around, tap a billboard to see who lives there."></canvas>
 
 <header class="top">
-  <div class="brand glass"><b>Maple Street</b><span>Velvet World <em>(working name)</em> · art test</span></div>
+  <div class="brand glass"><b id="title">Your block today</b><span>Velvet World <em>(working name)</em> · art test</span></div>
   <div class="controls glass" role="toolbar" aria-label="Scene controls">
+    <div class="seg" id="view" role="group" aria-label="View">
+      <button type="button" data-v="street" aria-pressed="true">My block</button><button type="button" data-v="town">Whole town</button>
+    </div>
+    <button class="ghost strong" id="tomorrow" type="button">Tomorrow →</button>
+    <span class="day" id="day">Day 1</span>
+    <button class="ghost" id="friends" type="button">Friends</button>
     <div class="time">
       <button id="play" type="button" aria-label="Play the day">▶</button>
       <input id="hour" type="range" min="0" max="24" step="0.05" value="17.6" aria-label="Time of day">
@@ -123,356 +139,363 @@
     <div class="seg" id="season" role="group" aria-label="Season">
       <button type="button" data-v="spring">Spring</button><button type="button" data-v="summer" aria-pressed="true">Summer</button><button type="button" data-v="fall">Fall</button><button type="button" data-v="winter">Winter</button>
     </div>
-    <div class="seg" id="mode" role="group" aria-label="Show the street as">
+    <div class="seg" id="mode" role="group" aria-label="Show plots as">
       <button type="button" data-v="mixed" aria-pressed="true">Mixed</button><button type="button" data-v="free">All free</button><button type="button" data-v="member">All members</button>
     </div>
     <button class="ghost" id="tower" type="button">Clock tower</button>
-    <button class="ghost" id="stress" type="button">Load 60 plots</button>
   </div>
 </header>
 
 <aside class="panel glass" id="panel" hidden aria-live="polite"></aside>
-<p class="hint glass"><b>Drag</b> to walk the street · <b>scroll or pinch</b> to zoom · <b>tap a billboard</b> to meet the neighbor</p>
-<p class="stats glass" id="stats">6 plots</p>
+<aside class="pop glass" id="friend-pop" hidden></aside>
+<p class="hint glass" id="hint"><b>Drag</b> to walk the block · <b>scroll or pinch</b> to zoom · <b>tap a billboard</b> to meet the neighbor</p>
+<p class="stats glass" id="stats">Loading the town…</p>
 
 <script type="module">
 /*__STREET_ART__*/
 
 // ---------------------------------------------------------------------------------------------
-// Sample residents (made up for the test)
+// A sample town of 2,000 made-up residents
 // ---------------------------------------------------------------------------------------------
-const SAMPLE = [
-  { id: 'marcus', number: 2, member: true,
-    profile: { name: 'Marcus J.', headline: 'Training for my first 10K', goal: { label: '10K run', pct: 64 }, medals: ['iron-will', 'a-friend-in-need', 'day-one'], medalCount: 14, spaces: ['Fitness & Motivation', 'Sports Talk'], crew: 'Run Club' },
-    config: { house: { style: 'victorian' }, sign: { style: 'classic', color: '#3D8A8A' }, car: { type: 'suv', color: '#2B4A6B' }, pet: { kind: 'dog', coat: '#C98A3E' }, lawn: 'garden', tree: 'oak', extras: { flag: true, lights: true } } },
-  { id: 'dee', number: 4, member: false,
-    profile: { name: 'Dee W.', headline: 'Getting my sleep schedule back', goal: { label: 'In bed by 11', pct: 30 }, medals: ['first-step'], medalCount: 1, spaces: ['Welcome & Introductions'], newNeighbor: true },
-    config: { house: { style: 'cottage', body: '#EFE7D8', roof: '#5F6E52', door: '#C2413A' } } },
-  { id: 'priya', number: 6, member: true,
-    profile: { name: 'Priya S.', headline: 'Building my design studio', goal: { label: 'Launch the site', pct: 82 }, medals: ['the-closer', 'halfway-there', 'life-of-the-party'], medalCount: 9, spaces: ['Career & Money', 'Creative Corner'], crew: 'Studio' },
-    config: { house: { style: 'modern' }, sign: { style: 'neon', color: '#FF5FA2' }, car: { type: 'hatch', color: '#F2EEE8' }, pet: { kind: 'cat', coat: '#9AA3A8' }, lawn: 'zen', tree: 'pine', extras: { lanterns: true } } },
-  { id: 'ana', number: 8, member: false,
-    profile: { name: 'Ana P.', headline: 'Hiking all 12 state parks', goal: { label: 'State parks', pct: 25 }, medals: ['first-step', 'showed-up'], medalCount: 3, spaces: ['Travel & Adventure'] },
-    config: { house: { style: 'cabin', body: '#B98A6A', roof: '#3F3A3D', door: '#2F4F3E' } } },
-  { id: 'sam', number: 10, member: true,
-    profile: { name: 'Sam K.', headline: 'Learning guitar, one song a week', goal: { label: '12 songs', pct: 50 }, medals: ['showed-up', 'hype-man', 'found-my-people'], medalCount: 6, spaces: ['Movies, Music & Pop Culture'], crew: 'Garage Band' },
-    config: { house: { style: 'colonial' }, sign: { style: 'hanging', color: '#E0A43A' }, car: { type: 'pickup', color: '#C2413A' }, pet: { kind: 'dog', coat: '#2B2B30' }, lawn: 'meadow', tree: 'cherry', extras: { flag: true, lights: true } } },
-  { id: 'kofi', number: 12, member: false,
-    profile: { name: 'Kofi A.', headline: 'Saving for my first car', goal: { label: 'Car fund', pct: 58 }, medals: ['halfway-there'], medalCount: 2, spaces: ['Career & Money'] },
-    config: { house: { style: 'bungalow', body: '#9FB4A2', roof: '#4B5D6B', door: '#E0A43A' } } },
-  { id: 'lena', number: 14, member: true,
-    profile: { name: 'Lena R.', headline: 'Cooking one new recipe a week', goal: { label: 'New recipes', pct: 73 }, medals: ['unbreakable', 'coachable', 'is-a-friend-indeed'], medalCount: 21, spaces: ['Cooking & Recipes'], crew: 'Supper Club' },
-    config: { house: { style: 'villa' }, sign: { style: 'marquee', color: '#C2413A' }, car: { type: 'vintage', color: '#3D8A8A' }, pet: { kind: 'cat', coat: '#D98F2B' }, lawn: 'striped', tree: 'none', extras: { fountain: true, lights: true } } },
-  { id: 'theo', number: 16, member: false,
-    profile: { name: 'Theo B.', headline: 'Reading 24 books this year', goal: { label: '24 books', pct: 41 }, medals: ['halfway-there', 'hat-trick', 'showed-up'], medalCount: 7, spaces: ['Books & Writing'] },
-    config: { house: { style: 'craftsman', body: '#7E9A7A', roof: '#5A4A44', door: '#C2413A' } } },
-  { id: 'jon', number: 18, member: false,
-    profile: { name: 'Jon D.', headline: 'Walking 10,000 steps a day', goal: { label: 'Step streak', pct: 46 }, medals: ['showed-up'], medalCount: 2, spaces: ['Fitness & Motivation'] },
-    config: { house: { style: 'ranch', body: '#E6C27A', roof: '#6E3B3B', door: '#2F4F3E' } } },
-];
-const clone = (o) => JSON.parse(JSON.stringify(o));
-const withAddress = (p) => ({ ...p, profile: { ...p.profile, address: `${p.number} Maple St` } });
-let plots = SAMPLE.map((p) => withAddress(clone(p)));
-const savedMember = new Map(plots.map((p) => [p.id, p.member]));
-
-function makeStress(n) {
-  const first = ['Ava', 'Jordan', 'Mia', 'Noah', 'Zoe', 'Eli', 'Nia', 'Leo', 'Ivy', 'Kai', 'Rosa', 'Omar', 'June', 'Ezra', 'Maya', 'Cole'];
-  const goals = [['Run a half marathon', 'Half marathon'], ['Learning Spanish', 'Spanish lessons'], ['Paying off my card', 'Debt free'], ['Meditating every morning', 'Morning sits'], ['Writing my novel', 'Chapters'], ['Getting stronger', 'Gym days']];
-  const styles = HOUSE_STYLES.map((s) => s.id), signs = BILLBOARD_STYLES.map((s) => s.id).filter((s) => s !== 'post');
-  const medalIds = Object.keys(MEDALS);
-  const rnd = (k) => { const s = Math.sin(k * 91.7 + 13.1) * 43758.5453; return s - Math.floor(s); };
-  const pick = (a, k) => a[Math.floor(rnd(k) * a.length) % a.length];
-  return Array.from({ length: n }, (_, i) => {
-    const g = pick(goals, i * 3 + 1);
-    return withAddress({
-      id: `s${i}`, number: i * 2 + 2, member: rnd(i * 7 + 2) < 0.7,
-      profile: { name: `${pick(first, i * 5)} ${String.fromCharCode(65 + Math.floor(rnd(i * 11) * 26))}.`, headline: g[0], goal: { label: g[1], pct: Math.round(10 + rnd(i * 13) * 85) }, medals: [pick(medalIds, i * 17), pick(medalIds, i * 19 + 1), pick(medalIds, i * 23 + 2)], medalCount: Math.floor(rnd(i * 31 + 5) * 16), spaces: ['Welcome & Introductions'], newNeighbor: rnd(i * 29) < 0.08 },
-      config: {
-        house: { style: pick(styles, i * 31), body: pick(COLORS.body, i * 37), roof: pick(COLORS.roof, i * 41), door: pick(COLORS.door, i * 43) },
-        sign: { style: pick(signs, i * 47), color: pick(COLORS.sign, i * 53) },
-        car: rnd(i * 59) < 0.6 ? { type: pick(['hatch', 'suv', 'pickup', 'vintage'], i * 61), color: pick(COLORS.car, i * 67) } : { type: 'none' },
-        pet: rnd(i * 71) < 0.5 ? { kind: pick(['dog', 'cat'], i * 73) } : { kind: 'none' },
-        lawn: pick(['plain', 'striped', 'garden', 'meadow', 'zen'], i * 79), tree: pick(['none', 'oak', 'cherry', 'pine'], i * 83),
-        extras: { fountain: rnd(i * 89) < 0.2, flag: rnd(i * 97) < 0.3, lights: rnd(i * 101) < 0.4, lanterns: rnd(i * 103) < 0.3 },
-      },
-    });
-  });
+const TOWN_SIZE = 2000;
+const layout = townLayout(TOWN_SIZE);
+const rnd = (k) => { const s = Math.sin(k * 91.7 + 13.1) * 43758.5453; return s - Math.floor(s); };
+const choose = (a, k) => a[Math.floor(rnd(k) * a.length) % a.length];
+const FIRST = ['Ava', 'Jordan', 'Mia', 'Noah', 'Zoe', 'Eli', 'Nia', 'Leo', 'Ivy', 'Kai', 'Rosa', 'Omar', 'June', 'Ezra', 'Maya', 'Cole', 'Ana', 'Kofi', 'Dee', 'Theo', 'Jon', 'Sam', 'Lena', 'Priya', 'Marcus', 'Tess', 'Ravi', 'Bea', 'Luis', 'Hana', 'Owen', 'Sade', 'Ines', 'Malik', 'Grace', 'Felix'];
+const GOALS = [['Training for my first 10K', '10K run'], ['Learning Spanish', 'Spanish lessons'], ['Paying off my card', 'Debt free'], ['Meditating every morning', 'Morning sits'], ['Writing my novel', 'Chapters'], ['Getting stronger', 'Gym days'], ['Reading 24 books this year', '24 books'], ['Learning guitar, one song a week', '12 songs'], ['Cooking one new recipe a week', 'New recipes'], ['Saving for a house', 'Down payment'], ['Walking 10,000 steps a day', 'Step streak'], ['Building my design studio', 'Launch the site']];
+const SPACES = ['Fitness & Motivation', 'Books & Writing', 'Gaming Lounge', 'Cooking & Recipes', 'Career & Money', 'Travel & Adventure', 'Movies, Music & Pop Culture', 'Creative Corner'];
+const STARTERS = HOUSE_STYLES.filter((h) => h.tier === 'starter').map((h) => h.id), MEMBERS = HOUSE_STYLES.filter((h) => h.tier === 'member').map((h) => h.id);
+const MEDAL_IDS = Object.keys(MEDALS);
+function makeResident(k) {
+  const slot = layout.slots[k], member = rnd(k * 7 + 2) < 0.38, g = choose(GOALS, k * 3 + 1);
+  const earned = MEDAL_IDS.filter((m, j) => rnd(k * 13 + j * 7) < (m === 'iron-will' ? 0.07 : m === 'the-closer' ? 0.05 : m === 'hat-trick' ? 0.12 : m === 'day-one' ? 0.02 : 0.25));
+  const earnedHouses = HOUSE_STYLES.filter((h) => h.tier === 'earned' && earned.includes(h.medal)).map((h) => h.id);
+  let style = member ? (rnd(k * 17) < 0.8 ? choose(MEMBERS, k * 19) : choose(STARTERS, k * 23)) : choose(STARTERS, k * 29);
+  if (earnedHouses.length && rnd(k * 31) < 0.55) style = choose(earnedHouses, k * 37);
+  const colored = member || rnd(k * 41) < 0.7;
+  return {
+    id: `r${k}`, number: (slot.col + 1) * 2, member, origin: slot,
+    profile: { name: `${choose(FIRST, k * 5)} ${String.fromCharCode(65 + Math.floor(rnd(k * 11) * 26))}.`, headline: g[0], goal: { label: g[1], pct: Math.round(8 + rnd(k * 43) * 88) }, medals: earned.slice(0, 3).length ? earned.slice(-3) : ['first-step'], earned, medalCount: earned.length, spaces: [choose(SPACES, k * 47)], newNeighbor: rnd(k * 53) < 0.04, address: slot.address },
+    config: {
+      house: colored ? { style, body: choose(COLORS.body, k * 59), roof: choose(COLORS.roof, k * 61), door: choose(COLORS.door, k * 67), windows: choose(['classic', 'shutters', 'arched', 'classic'], k * 71) } : { style },
+      sign: { style: choose(['classic', 'marquee', 'round', 'hanging', 'neon'], k * 73), color: choose(COLORS.sign, k * 79) },
+      car: rnd(k * 83) < 0.6 ? { type: choose(['hatch', 'suv', 'pickup', 'vintage'], k * 89), color: choose(COLORS.car, k * 97) } : { type: 'none' },
+      pet: rnd(k * 101) < 0.5 ? { kind: choose(['dog', 'cat'], k * 103), coat: undefined } : { kind: 'none' },
+      lawn: choose(['plain', 'striped', 'garden', 'meadow', 'zen'], k * 107), tree: choose(['none', 'oak', 'cherry', 'pine'], k * 109),
+      extras: { fountain: rnd(k * 113) < 0.18, flag: rnd(k * 127) < 0.3, lights: rnd(k * 131) < 0.4, lanterns: rnd(k * 137) < 0.3 },
+    },
+  };
 }
+const residents = Array.from({ length: TOWN_SIZE }, (_, k) => makeResident(k));
+residents.forEach((r) => { if (r.config.pet.kind !== 'none') r.config.pet.coat = choose(COLORS.coat[r.config.pet.kind], r.number * 3); });
+// You: a free resident in the middle of town who has earned Hat Trick (so the treehouse is open to you)
+const YOU = Math.floor(TOWN_SIZE / 2) + 7;
+Object.assign(residents[YOU], { member: false });
+Object.assign(residents[YOU].profile, { name: 'You', headline: 'Your goal shows up here', goal: { label: 'Your goal', pct: 35 }, medals: ['hat-trick', 'showed-up', 'first-step'], earned: ['hat-trick', 'showed-up', 'first-step'], medalCount: 3, spaces: ['Books & Writing'], newNeighbor: false });
+residents[YOU].config.house = { style: 'cottage', body: '#EFE7D8', roof: '#5F6E52', door: '#C2413A' };
+// Three friends with standout houses, spread around town
+const FRIENDS = [
+  [137, 'Marcus J.', true, { style: 'victorian' }, ['iron-will', 'a-friend-in-need', 'day-one']],
+  [1544, 'Lena R.', false, { style: 'lighthouse', roof: '#C2413A' }, ['iron-will', 'coachable', 'halfway-there']],
+  [762, 'Priya S.', true, { style: 'observatory' }, ['the-closer', 'halfway-there', 'life-of-the-party']],
+];
+FRIENDS.forEach(([k, name, member, house, medals]) => { const r = residents[k]; r.member = member; r.profile.name = name; r.profile.medals = medals; r.profile.earned = [...new Set([...medals, ...r.profile.earned])]; r.profile.medalCount = r.profile.earned.length; r.config.house = house; });
+const savedMember = new Map(residents.map((r) => [r.id, r.member]));
 
 // ---------------------------------------------------------------------------------------------
-// Scene state
+// State
 // ---------------------------------------------------------------------------------------------
-const canvas = document.getElementById('stage');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('stage'), ctx = canvas.getContext('2d');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const state = { hour: 17.6, season: 'summer', mode: 'mixed', playing: false, selected: -1, stress: false, preview: new Set(), sent: new Set() };
-const cam = { x: 0, y: 0, zoom: 1.4 };
-let W = 0, H = 0, dpr = 1;
-const caches = new Map();
-let flight = null;
-function flyTo(x, y, zoom, ms = 900) { flight = { from: { ...cam }, to: { x, y, zoom }, t0: performance.now(), ms }; }
-let zoomSettled = 0;
+const state = { view: 'street', hour: 17.6, season: 'summer', mode: 'mixed', playing: false, selected: null, preview: new Set(), sent: new Set(), friends: new Set(FRIENDS.map(([k]) => `r${k}`)), day: 1, seen: new Set(), kitOpen: false };
+const cam = { x: 0, y: 0, zoom: 1.2 };
+let W = 0, H = 0, dpr = 1, flight = null, zoomSettled = 0, street = [];
+const streetCache = new Map(), townCache = new Map();
+let townImage = null;
 
 function effective(p) {
   const member = state.mode === 'member' ? true : state.mode === 'free' ? false : (p.member || state.preview.has(p.id));
-  return { ...p, member };
+  return member === p.member ? p : { ...p, member, _resolved: null };
 }
-function cacheKey(p) { return JSON.stringify([p.member, p.config, p.profile, state.season]); }
+const cacheKey = (p) => JSON.stringify([p.member, p.config, p.profile.name, p.profile.medals, state.season]);
 
-function resize() {
-  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  W = window.innerWidth; H = window.innerHeight;
-  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-}
-function frameStreet(first = false) {
-  const n = plots.length;
-  const narrow = W < 760;
-  if (first || !state.stress) {
-    cam.zoom = narrow ? Math.max(0.55, W / 640) : Math.min(1.6, W / 1250);
-    const [ax, ay] = iso(narrow ? 3.5 : 9, 5.2, 1.2);
-    cam.x = ax; cam.y = ay + (narrow ? -40 : 30);
-  } else {
-    cam.zoom = narrow ? 0.32 : 0.42;
-    const [ax, ay] = iso((n * LOT_W) / 2, 4, 0); cam.x = ax; cam.y = ay;
+// ---------------------------------------------------------------------------------------------
+// Today's block: everyone rotates daily, nobody repeats until we run out, no matching neighbors
+// ---------------------------------------------------------------------------------------------
+function buildStreet(day) {
+  const you = residents[YOU], mySpace = you.profile.spaces[0];
+  const order = residents.map((_, k) => k).filter((k) => k !== YOU).sort((a, b) => rnd(a * 3.1 + day * 17.7) - rnd(b * 3.1 + day * 17.7));
+  let pool = order.filter((k) => !state.seen.has(k));
+  if (pool.length < 8) { state.seen.clear(); pool = order; }
+  // a few neighbors who share your interests, the rest from anywhere in town
+  const shared = pool.filter((k) => residents[k].profile.spaces.includes(mySpace)).slice(0, 3);
+  const rest = pool.filter((k) => !shared.includes(k));
+  const queue = [shared[0], rest[0], shared[1], rest[1], rest[2], shared[2], rest[3], rest[4], ...rest.slice(5, 40)].filter((k) => k !== undefined);
+  const looks = (k) => { const r = resolvePlot(effective(residents[k])); return `${r.house.style}|${r.house.body}`; };
+  const slots = [], used = new Set();
+  for (let pos = 0; pos < 9; pos++) {
+    if (pos === 4) { slots.push(YOU); continue; }
+    const left = slots[pos - 1];
+    const k = queue.find((c) => !used.has(c) && (left === undefined || looks(c) !== looks(left)));
+    used.add(k); slots.push(k);
   }
+  slots.forEach((k) => { if (k !== YOU) state.seen.add(k); });
+  street = slots.map((k) => residents[k]);
+  streetCache.clear(); state.selected = null; renderPanel();
+  document.getElementById('day').textContent = `Day ${day}`;
 }
 
 // ---------------------------------------------------------------------------------------------
-// Plot caching: each plot's static layers are drawn once into images at the current zoom
+// Camera
 // ---------------------------------------------------------------------------------------------
-function buildCache(i, p, scale) {
-  const e = effective(p), b = plotBounds(i), env = { season: state.season };
-  e._resolved = resolvePlot(e);
-  const pxW = Math.ceil(b.w * scale), pxH = Math.ceil(b.h * scale);
-  const live = pxW * pxH > 7e6;
-  const entry = { key: cacheKey(e), scale, b, live, e, meta: null };
-  if (live) { caches.set(i, entry); return entry; }
-  const mk = () => { const c = document.createElement('canvas'); c.width = pxW; c.height = pxH; const o = c.getContext('2d'); o.setTransform(scale, 0, 0, scale, -b.x * scale, -b.y * scale); return [c, o]; };
-  const [cb, ob] = mk(); entry.meta = drawPlot(ob, e, i, 'back', env); entry.back = cb;
-  const [cf, of] = mk(); drawPlot(of, e, i, 'front', env); entry.front = cf;
-  caches.set(i, entry);
+function resize() { dpr = Math.min(window.devicePixelRatio || 1, 2.5); W = window.innerWidth; H = window.innerHeight; canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); }
+function flyTo(x, y, zoom, ms = 900) { flight = { from: { ...cam }, to: { x, y, zoom }, t0: performance.now(), ms }; }
+const narrow = () => W < 760;
+function frameStreet() { cam.zoom = narrow() ? Math.max(0.55, W / 640) : Math.min(1.5, W / 1300); const [ax, ay] = iso(narrow() ? 43.5 : 45, 5.2, 1.2); cam.x = ax; cam.y = ay + (narrow() ? -40 : 30); }
+function townFit() { const b = townBounds(layout); return { x: b.x + b.w / 2, y: b.y + b.h / 2, zoom: Math.min(W / b.w, (H - 120) / b.h) * 0.95 }; }
+function plotCenter(r) { const o = r.origin; return iso(o.x + 4, o.y + 4.5, 1.5); }
+
+// ---------------------------------------------------------------------------------------------
+// Drawing
+// ---------------------------------------------------------------------------------------------
+function buildPlotCache(cache, key, p, i, scale) {
+  const b = plotBounds(i, p), pxW = Math.ceil(b.w * scale), pxH = Math.ceil(b.h * scale);
+  const entry = { key: cacheKey(p), scale, b, e: p, live: pxW * pxH > 7e6 };
+  p._resolved = resolvePlot(p);
+  if (!entry.live) {
+    const mk = () => { const c = document.createElement('canvas'); c.width = pxW; c.height = pxH; const o = c.getContext('2d'); o.setTransform(scale, 0, 0, scale, -b.x * scale, -b.y * scale); return [c, o]; };
+    const env = { season: state.season };
+    const [cb, ob] = mk(); entry.meta = drawPlot(ob, p, i, 'back', env); entry.back = cb;
+    const [cf, of] = mk(); drawPlot(of, p, i, 'front', env); entry.front = cf;
+  }
+  cache.delete(key); cache.set(key, entry);
+  if (cache.size > 140) cache.delete(cache.keys().next().value);
   return entry;
 }
-function getCache(i, p, wantScale) {
-  const e = effective(p), c = caches.get(i);
-  const key = cacheKey(e);
-  if (c && c.key === key && (Math.abs(c.scale - wantScale) / wantScale < 0.02 || performance.now() < zoomSettled)) return c;
-  return buildCache(i, p, wantScale);
+function drawDetailed(cache, key, p, i, s, env, t, budget) {
+  const e = effective(p), c = cache.get(key);
+  const fresh = c && c.key === cacheKey(e) && (Math.abs(c.scale - s) / s < 0.02 || performance.now() < zoomSettled);
+  let entry = fresh ? c : null;
+  if (!entry) { if (budget.left <= 0 && c && c.key === cacheKey(e)) entry = c; else if (budget.left > 0) { budget.left--; entry = buildPlotCache(cache, key, e, i, s); } }
+  if (!entry) { drawPlotLowDetail(ctx, e, env); return null; }
+  if (entry.live) { entry.meta = drawPlot(ctx, entry.e, i, 'back', env); drawPlotLive(ctx, entry.e, i, entry.meta, t, env); drawPlot(ctx, entry.e, i, 'front', env); }
+  else { const b = entry.b; ctx.drawImage(entry.back, b.x, b.y, b.w, b.h); drawPlotLive(ctx, entry.e, i, entry.meta, t, env); ctx.drawImage(entry.front, b.x, b.y, b.w, b.h); }
+  return entry;
 }
-function invalidate(i) { if (i === undefined) caches.clear(); else caches.delete(i); }
-
-// ---------------------------------------------------------------------------------------------
-// Render loop
-// ---------------------------------------------------------------------------------------------
-let last = performance.now(), fpsAvg = 60, t0 = performance.now();
+function buildTownImage() {
+  const b = townBounds(layout), sc = Math.min(1, 3400 / b.w);
+  const c = document.createElement('canvas'); c.width = Math.ceil(b.w * sc); c.height = Math.ceil(b.h * sc);
+  const o = c.getContext('2d'); o.setTransform(sc, 0, 0, sc, -b.x * sc, -b.y * sc);
+  const env = { season: state.season };
+  drawTownStreets(o, layout, env, null, false);
+  residents.forEach((r) => drawPlotLowDetail(o, effective(r), env));
+  drawTownSquare(o, layout, env, null, 62);
+  townImage = { canvas: c, b, key: state.season + state.mode + [...state.preview].join() };
+}
+const slotBounds = layout.slots.map((s, k) => plotBounds(k, { origin: s }));
+let last = performance.now(), fpsAvg = 60; const t0 = performance.now();
 function render(now) {
-  const dt = Math.min(0.1, (now - last) / 1000); last = now;
-  fpsAvg = fpsAvg * 0.94 + (1 / Math.max(dt, 0.001)) * 0.06;
+  const dt = Math.min(0.1, (now - last) / 1000); last = now; fpsAvg = fpsAvg * 0.94 + (1 / Math.max(dt, 0.001)) * 0.06;
   if (state.playing) { state.hour = (state.hour + dt * 0.4) % 24; syncClock(); }
-  if (flight) { const u = Math.min(1, (now - flight.t0) / flight.ms), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; cam.x = flight.from.x + (flight.to.x - flight.from.x) * e; cam.y = flight.from.y + (flight.to.y - flight.from.y) * e; cam.zoom = flight.from.zoom + (flight.to.zoom - flight.from.zoom) * e; if (u >= 1) flight = null; zoomSettled = now + 220; }
+  if (flight) { const u = Math.min(1, (now - flight.t0) / flight.ms), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; cam.x = flight.from.x + (flight.to.x - flight.from.x) * e; cam.y = flight.from.y + (flight.to.y - flight.from.y) * e; cam.zoom = Math.exp(Math.log(flight.from.zoom) + (Math.log(flight.to.zoom) - Math.log(flight.from.zoom)) * e); if (u >= 1) flight = null; zoomSettled = now + 220; }
   const t = (now - t0) / 1000, light = lightingAt(state.hour, state.season);
   const env = { season: state.season, hour: state.hour, night: light.night, reducedMotion: reduceMotion.matches, zoom: cam.zoom };
   const s = cam.zoom * dpr;
   const view = { x0: cam.x - W / 2 / cam.zoom, x1: cam.x + W / 2 / cam.zoom, y0: cam.y - H / 2 / cam.zoom, y1: cam.y + H / 2 / cam.zoom };
-  const world = () => ctx.setTransform(s, 0, 0, s, W * dpr / 2 - cam.x * s, H * dpr / 2 - cam.y * s);
-
+  const world = () => ctx.setTransform(s, 0, 0, s, (W * dpr) / 2 - cam.x * s, (H * dpr) / 2 - cam.y * s);
+  const inView = (b) => !(b.x > view.x1 || b.x + b.w < view.x0 || b.y > view.y1 || b.y + b.h < view.y0);
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = state.season === 'winter' ? '#D9E0E6' : '#9DAE97'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   world();
-  const n = plots.length;
-  const ground = drawTownGround(ctx, n, env, view, 62);
-  const visible = [];
-  for (let i = 0; i < n; i++) {
-    const b = plotBounds(i);
-    if (b.x > view.x1 || b.x + b.w < view.x0 || b.y > view.y1 || b.y + b.h < view.y0) continue;
-    const c = getCache(i, plots[i], s);
-    if (c.live) { const meta = drawPlot(ctx, c.e, i, 'back', env); c.meta = meta; drawPlotLive(ctx, c.e, i, meta, t, env); drawPlot(ctx, c.e, i, 'front', env); }
-    else { ctx.drawImage(c.back, b.x, b.y, b.w, b.h); drawPlotLive(ctx, c.e, i, c.meta, t, env); ctx.drawImage(c.front, b.x, b.y, b.w, b.h); }
-    visible.push([i, c]);
+  const detailed = [], lowVisible = []; let ground = { lights: [] }, front = { lamps: [] }, square = { lights: [] };
+  const budget = { left: 5 };
+  if (state.view === 'street') {
+    ground = drawTownGround(ctx, street.length, env, view, 62);
+    street.forEach((p, i) => { const b = plotBounds(i, p.origin ? { ...p, origin: null } : p); if (!inView(b)) return; const sp = streetPlot(p); const entry = drawDetailed(streetCache, i, sp, i, s, env, t, budget); if (entry) detailed.push([i, entry]); });
+    front = drawTownFront(ctx, street.length, env, view);
+  } else if (cam.zoom < 0.2) {
+    const key = state.season + state.mode + [...state.preview].join(); if (!townImage || townImage.key !== key) buildTownImage();
+    const b = townImage.b; ctx.drawImage(townImage.canvas, b.x, b.y, b.w, b.h);
+    residents.forEach((r, k) => { if (inView(slotBounds[k])) lowVisible.push(effective(r)); });
+  } else {
+    const full = cam.zoom >= 0.45;
+    drawTownStreets(ctx, layout, env, view, full);
+    residents.forEach((r, k) => {
+      if (!inView(slotBounds[k])) return;
+      if (full) { const entry = drawDetailed(townCache, k, effective(r), k, s, env, t, budget); if (entry) detailed.push([k, entry]); else lowVisible.push(effective(r)); }
+      else { drawPlotLowDetail(ctx, effective(r), env); lowVisible.push(effective(r)); }
+    });
+    square = drawTownSquare(ctx, layout, env, view, 62);
   }
-  const front = drawTownFront(ctx, n, env, view);
-  // time of day: multiply the whole frame, then add everything that glows
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (light.tint.toLowerCase() !== '#ffffff') { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = light.tint; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.globalCompositeOperation = 'source-over'; }
   world();
-  visible.forEach(([i, c]) => drawPlotLights(ctx, c.e, i, c.meta, t, env));
-  drawTownLights(ctx, n, t, env, ground, front);
-  // selection ring around the chosen billboard
-  if (state.selected >= 0) { const c = caches.get(state.selected); if (c && c.meta && c.meta.hit.sign) { const pts = c.meta.hit.sign; ctx.beginPath(); pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.lineWidth = 3 / cam.zoom; ctx.strokeStyle = `rgba(240,106,155,${0.65 + 0.35 * Math.sin(t * 4)})`; ctx.stroke(); } }
+  detailed.forEach(([i, c]) => drawPlotLights(ctx, c.e, i, c.meta, t, env));
+  if (lowVisible.length) drawTownLightsLow(ctx, lowVisible, t, env, view);
+  if (state.view === 'street') drawTownLights(ctx, street.length, t, env, ground, front); else drawTownLights(ctx, 0, t, env, square, { lamps: [] });
+  // selection ring
+  if (state.selected) { const hit = detailed.find(([, c]) => c.e.id === state.selected); if (hit && hit[1].meta && hit[1].meta.hit.sign) { const pts = hit[1].meta.hit.sign; ctx.beginPath(); pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.lineWidth = 3 / cam.zoom; ctx.strokeStyle = `rgba(240,106,155,${0.65 + 0.35 * Math.sin(t * 4)})`; ctx.stroke(); } }
+  // pins for you and your friends in the town view
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (state.view === 'town') {
+    [...state.friends].map((id) => residents.find((r) => r.id === id)).filter(Boolean).concat([residents[YOU]]).forEach((r) => {
+      const [wx, wy] = plotCenter(r), sx = (wx - cam.x) * cam.zoom + W / 2, sy = (wy - cam.y) * cam.zoom + H / 2;
+      if (sx < -40 || sx > W + 40 || sy < -60 || sy > H + 40) return;
+      pin(sx, sy, r === residents[YOU] ? 'You' : r.profile.name.split(' ')[0], r === residents[YOU] ? '#F06A9B' : '#59C98A');
+    });
+  }
   drawWeather(ctx, W, H, t, env);
-  if (Math.floor(now / 500) !== Math.floor((now - dt * 1000) / 500)) document.getElementById('stats').textContent = `${n} plots · ${visible.length} on screen · ${Math.round(fpsAvg)} fps`;
+  if (Math.floor(now / 500) !== Math.floor((now - dt * 1000) / 500)) {
+    document.getElementById('stats').textContent = state.view === 'street' ? `Day ${state.day} · 8 new neighbors · ${TOWN_SIZE.toLocaleString()} residents · ${Math.round(fpsAvg)} fps` : `${TOWN_SIZE.toLocaleString()} residents · ${detailed.length + lowVisible.length} on screen · ${Math.round(fpsAvg)} fps`;
+  }
   requestAnimationFrame(render);
+}
+function streetPlot(p) { if (!p.origin) return effective(p); const e = effective(p); return { ...e, origin: null }; }
+function pin(x, y, label, color) {
+  ctx.font = `700 12px ${FONTS.ui}`; const w = ctx.measureText(label).width + 16;
+  ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 6, y - 10); ctx.lineTo(x + 6, y - 10); ctx.closePath(); ctx.fill();
+  rrPath(ctx, x - w / 2, y - 32, w, 22, 11); ctx.fill(); ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.fillText(label, x, y - 17); ctx.textAlign = 'left';
 }
 
 // ---------------------------------------------------------------------------------------------
-// Input: drag to pan, wheel or pinch to zoom, tap to pick a plot
+// Input
 // ---------------------------------------------------------------------------------------------
-const pointers = new Map();
-let drag = null, pinch = null;
+const pointers = new Map(); let drag = null, pinch = null;
 const toWorld = (sx, sy) => [cam.x + (sx - W / 2) / cam.zoom, cam.y + (sy - H / 2) / cam.zoom];
 function clampCam() {
-  const n = plots.length, [a] = iso(-6, 12, 0), [b] = iso(n * LOT_W + 6, 0, 0), [, c] = iso(0, -20, 6), [, d] = iso(n * LOT_W, 16, 0);
-  cam.x = Math.max(a, Math.min(b, cam.x)); cam.y = Math.max(c, Math.min(d, cam.y));
+  if (state.view === 'street') { const n = street.length, [a] = iso(-6, 12, 0), [b] = iso(n * LOT_W + 6, 0, 0), [, c] = iso(0, -20, 6), [, d] = iso(n * LOT_W, 16, 0); cam.x = Math.max(a, Math.min(b, cam.x)); cam.y = Math.max(c, Math.min(d, cam.y)); }
+  else { const b = townBounds(layout); cam.x = Math.max(b.x, Math.min(b.x + b.w, cam.x)); cam.y = Math.max(b.y, Math.min(b.y + b.h, cam.y)); }
 }
 function zoomAt(sx, sy, f) {
-  const [wx, wy] = toWorld(sx, sy);
-  cam.zoom = Math.max(0.3, Math.min(4, cam.zoom * f));
-  cam.x = wx - (sx - W / 2) / cam.zoom; cam.y = wy - (sy - H / 2) / cam.zoom;
-  zoomSettled = performance.now() + 220; clampCam();
+  const [wx, wy] = toWorld(sx, sy), min = state.view === 'town' ? townFit().zoom * 0.9 : 0.3;
+  cam.zoom = Math.max(min, Math.min(4, cam.zoom * f)); cam.x = wx - (sx - W / 2) / cam.zoom; cam.y = wy - (sy - H / 2) / cam.zoom; zoomSettled = performance.now() + 220; clampCam();
 }
-canvas.addEventListener('pointerdown', (e) => {
-  flight = null;
-  canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]);
-  if (pointers.size === 1) drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: 0 };
-  if (pointers.size === 2) { const [p, q] = [...pointers.values()]; pinch = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), z: cam.zoom }; drag = null; }
-});
+canvas.addEventListener('pointerdown', (e) => { flight = null; canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]); if (pointers.size === 1) drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: 0 }; if (pointers.size === 2) { const [p, q] = [...pointers.values()]; pinch = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), z: cam.zoom }; drag = null; } });
 canvas.addEventListener('pointermove', (e) => {
   if (!pointers.has(e.pointerId)) return; pointers.set(e.pointerId, [e.clientX, e.clientY]);
   if (pinch && pointers.size === 2) { const [p, q] = [...pointers.values()], d = Math.hypot(p[0] - q[0], p[1] - q[1]); zoomAt((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (pinch.z * (d / pinch.d)) / cam.zoom); return; }
-  if (!drag) return;
-  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
-  if (drag.moved > 4) canvas.classList.add('dragging');
+  if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.hypot(dx, dy)); if (drag.moved > 4) canvas.classList.add('dragging');
   cam.x = drag.cx - dx / cam.zoom; cam.y = drag.cy - dy / cam.zoom; clampCam();
 });
-const endPointer = (e) => {
-  if (!pointers.has(e.pointerId)) return; pointers.delete(e.pointerId);
-  if (drag && drag.moved < 6 && e.type === 'pointerup') pick(e.clientX, e.clientY);
-  if (pointers.size < 2) pinch = null;
-  if (pointers.size === 0) { drag = null; canvas.classList.remove('dragging'); }
-};
+const endPointer = (e) => { if (!pointers.has(e.pointerId)) return; pointers.delete(e.pointerId); if (drag && drag.moved < 6 && e.type === 'pointerup') pick(e.clientX, e.clientY); if (pointers.size < 2) pinch = null; if (pointers.size === 0) { drag = null; canvas.classList.remove('dragging'); } };
 canvas.addEventListener('pointerup', endPointer); canvas.addEventListener('pointercancel', endPointer);
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); flight = null; zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
 function inside(pts, x, y) { let a = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) a = !a; } return a; }
 function pick(sx, sy) {
-  const [x, y] = toWorld(sx, sy);
-  let hit = -1;
-  for (const [i, c] of caches) if (c.meta && c.meta.hit.sign && inside(c.meta.hit.sign, x, y)) hit = i;
-  if (hit < 0) for (const [i, c] of caches) { const h = c.meta && c.meta.hit.house; if (!h) continue; const xs = h.map((p) => p[0]), ys = h.map((p) => p[1]); if (x > Math.min(...xs) && x < Math.max(...xs) && y > Math.min(...ys) && y < Math.max(...ys)) hit = i; }
+  const [x, y] = toWorld(sx, sy), cache = state.view === 'street' ? streetCache : townCache;
+  let hit = null;
+  for (const [, c] of cache) if (c.meta && c.meta.hit.sign && inside(c.meta.hit.sign, x, y)) hit = c.e.id;
+  if (!hit) for (const [, c] of cache) { const h = c.meta && c.meta.hit.house; if (!h) continue; const xs = h.map((p) => p[0]), ys = h.map((p) => p[1]); if (x > Math.min(...xs) && x < Math.max(...xs) && y > Math.min(...ys) && y < Math.max(...ys)) hit = c.e.id; }
+  if (!hit && state.view === 'town') {
+    // far away: find the lot under the finger and fly to it
+    const wx = (x / TW + y / TH) / 2, wy = (y / TH - x / TW) / 2, row = Math.floor(wy / TOWN.rowPitch), col = Math.floor(wx / LOT_W);
+    const k = layout.slots.findIndex((sl) => sl.row === row && sl.col === col);
+    if (k >= 0 && wy - row * TOWN.rowPitch < STREET.lawnFront + 1) { const [cx, cy] = plotCenter(residents[k]); flyTo(cx, cy, Math.max(cam.zoom, 0.9)); hit = residents[k].id; }
+  }
   select(hit);
 }
 
 // ---------------------------------------------------------------------------------------------
-// Panel: the neighbor card and the customizer
+// Panels
 // ---------------------------------------------------------------------------------------------
-const panel = document.getElementById('panel');
+const panel = document.getElementById('panel'), pop = document.getElementById('friend-pop');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-function select(i) { state.selected = i; renderPanel(); }
-function medalIcon(slug) {
-  const c = document.createElement('canvas'); c.width = 48; c.height = 48; const o = c.getContext('2d'); o.scale(2, 2);
-  const m = MEDALS[slug] || { tier: 'bronze', glyph: 'star' }, col = TIER_COLORS[m.tier];
-  if (m.tier === 'legendary') { const g = o.createLinearGradient(2, 2, 22, 22); g.addColorStop(0, '#F472B6'); g.addColorStop(1, '#7C5CE8'); o.fillStyle = g; } else o.fillStyle = col;
-  o.beginPath(); o.arc(12, 12, 10.5, 0, Math.PI * 2); o.fill(); glyph(o, m.glyph, 12, 12, 11, m.tier === 'silver' ? '#4A5260' : '#FFFFFF');
-  return c;
-}
-function optRow(label, items, current, onPick, locked) {
-  const row = document.createElement('div'); row.className = 'opt';
-  row.innerHTML = `<span class="label">${esc(label)}</span>`;
-  const box = document.createElement('div'); box.className = 'opts';
-  items.forEach((it) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = it.label; b.setAttribute('aria-pressed', String(it.id === current)); b.disabled = locked && !it.free; b.onclick = () => onPick(it.id); box.appendChild(b); });
-  row.appendChild(box); return row;
-}
-function swatchRow(label, colors, current, onPick, locked) {
-  const row = document.createElement('div'); row.className = 'opt'; row.innerHTML = `<span class="label">${esc(label)}</span>`;
-  const box = document.createElement('div'); box.className = 'swatches';
-  colors.forEach((c) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.title = c; b.setAttribute('aria-label', `${label} ${c}`); b.setAttribute('aria-pressed', String(c.toLowerCase() === String(current).toLowerCase())); b.disabled = locked; b.onclick = () => onPick(c); box.appendChild(b); });
-  row.appendChild(box); return row;
-}
+const byId = (id) => residents.find((r) => r.id === id);
+function select(id) { state.selected = id; pop.hidden = true; renderPanel(); }
+function medalIcon(slug) { const c = document.createElement('canvas'); c.width = 48; c.height = 48; const o = c.getContext('2d'); o.scale(2, 2); const m = MEDALS[slug] || { tier: 'bronze', glyph: 'star' }; if (m.tier === 'legendary') { const g = o.createLinearGradient(2, 2, 22, 22); g.addColorStop(0, '#F472B6'); g.addColorStop(1, '#7C5CE8'); o.fillStyle = g; } else o.fillStyle = TIER_COLORS[m.tier]; o.beginPath(); o.arc(12, 12, 10.5, 0, Math.PI * 2); o.fill(); glyph(o, m.glyph, 12, 12, 11, m.tier === 'silver' ? '#4A5260' : '#FFFFFF'); return c; }
+function optRow(label, items, current, onPick) { const row = document.createElement('div'); row.className = 'opt'; row.innerHTML = `<span class="label">${esc(label)}</span>`; const box = document.createElement('div'); box.className = 'opts'; items.forEach((it) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = it.label; b.setAttribute('aria-pressed', String(it.id === current)); b.disabled = !it.ok; b.onclick = () => onPick(it.id); box.appendChild(b); }); row.appendChild(box); return row; }
+function swatchRow(label, colors, current, onPick, locked) { const row = document.createElement('div'); row.className = 'opt'; row.innerHTML = `<span class="label">${esc(label)}</span>`; const box = document.createElement('div'); box.className = 'swatches'; colors.forEach((c) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', `${label} ${c}`); b.setAttribute('aria-pressed', String(c.toLowerCase() === String(current).toLowerCase())); b.disabled = locked; b.onclick = () => onPick(c); box.appendChild(b); }); row.appendChild(box); return row; }
+function houseLine(r, prof) { const h = houseInfo(r.house.style); return `${h.label} · ${r.houseBy === 'member' ? 'member house' : r.houseBy === 'medal' ? `earned with ${MEDALS[h.medal].name}` : 'starter house'}`; }
+function invalidatePlot(id) { const r = byId(id); if (r) r._resolved = null; for (const c of [streetCache, townCache]) for (const [k, v] of c) if (v.e.id === id) c.delete(k); townImage = null; }
 function renderPanel() {
-  const i = state.selected;
-  if (i < 0 || !plots[i]) { panel.hidden = true; panel.innerHTML = ''; return; }
-  const p = plots[i], e = effective(p), r = resolvePlot(e), prof = p.profile;
+  const p = state.selected && byId(state.selected);
+  if (!p) { panel.hidden = true; panel.innerHTML = ''; return; }
+  const e = effective(p), r = resolvePlot(e), prof = p.profile, isYou = p === residents[YOU], isFriend = state.friends.has(p.id);
   const initials = prof.name.split(' ').map((w) => w[0]).join('').slice(0, 2);
-  const sent = state.sent.has(p.id);
   panel.hidden = false;
   panel.innerHTML = `
     <section class="card">
-      <div class="card-head">
-        <div class="avatar" style="background:${r.member ? esc(r.sign.color) : '#6B6070'}">${esc(initials)}</div>
-        <div class="who"><h2>${esc(prof.name)}</h2><p>${esc(prof.address)}</p></div>
-        <button class="close" type="button" aria-label="Close">×</button>
-      </div>
-      <div class="chips">${r.member ? '<span class="chip member">★ Member</span>' : ''}${prof.newNeighbor ? '<span class="chip new">New neighbor</span>' : ''}${(prof.spaces || []).map((s) => `<span class="chip">${esc(s)}</span>`).join('')}</div>
+      <div class="card-head"><div class="avatar" style="background:${r.member ? esc(r.sign.color) : '#6B6070'}">${esc(initials)}</div><div class="who"><h2>${esc(prof.name)}</h2><p>${esc(prof.address)}</p></div><button class="close" type="button" aria-label="Close">×</button></div>
+      <div class="chips">${r.member ? '<span class="chip member">★ Member</span>' : ''}${prof.newNeighbor ? '<span class="chip new">New neighbor</span>' : ''}${isFriend ? '<span class="chip new">Friend</span>' : ''}${(prof.spaces || []).map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>
       <p class="headline">${esc(prof.headline)}</p>
-      <p class="fine">${esc((HOUSE_STYLES.find((h) => h.id === r.house.style) || {}).label || '')} · ${r.houseBy === 'member' ? 'member house' : r.houseBy === 'medals' ? `unlocked with ${prof.medalCount} medals` : 'starter house'}</p>
+      <p class="fine">${esc(houseLine(r, prof))}</p>
       ${prof.goal ? `<div class="goal"><span class="label">Working on</span><div class="goal-row"><span>${esc(prof.goal.label)}</span><span>${Math.round(prof.goal.pct)}%</span></div><div class="bar"><i style="width:${Math.min(100, prof.goal.pct)}%"></i></div></div>` : ''}
       <div class="medals"><span class="label">Pinned medals</span><div class="medals" id="medal-list"></div></div>
-      <button class="add" type="button" ${sent ? 'disabled' : ''}>${sent ? 'Request sent' : 'Add friend'}</button>
-      ${sent ? '<p class="fine">This is a test page, so nothing was actually sent.</p>' : ''}
+      <div class="row-btns">${isYou ? '' : `<button class="add" id="add" type="button" ${isFriend || state.sent.has(p.id) ? 'disabled' : ''}>${isFriend ? 'Friends' : state.sent.has(p.id) ? 'Request sent' : 'Add friend'}</button>`}${state.view === 'street' ? `<button class="ghost strong" id="visit" type="button">${isYou ? 'See my house in town' : 'Visit their house'}</button>` : ''}</div>
+      ${state.sent.has(p.id) ? '<p class="fine">Test page: nothing was actually sent.</p>' : ''}
     </section>
-    <details class="kit" ${state.kitOpen ? 'open' : ''}><summary>Try the kit on this plot</summary><div class="kit-body" id="kit"></div></details>`;
+    ${isYou || state.mode !== 'mixed' || true ? `<details class="kit" ${state.kitOpen ? 'open' : ''}><summary>${isYou ? 'Customize my plot' : 'Try the kit on this plot'}</summary><div class="kit-body" id="kit"></div></details>` : ''}`;
   const list = panel.querySelector('#medal-list');
-  (prof.medals || []).forEach((m) => { const row = document.createElement('div'); row.className = 'medal'; row.appendChild(medalIcon(m)); const t = document.createElement('span'); t.innerHTML = `${esc((MEDALS[m] || {}).name || m)} <small>· ${esc((MEDALS[m] || {}).tier || '')}</small>`; row.appendChild(t); list.appendChild(row); });
-  panel.querySelector('.close').onclick = () => select(-1);
-  panel.querySelector('.add').onclick = () => { state.sent.add(p.id); renderPanel(); };
+  (prof.medals || []).forEach((m) => { const row = document.createElement('div'); row.className = 'medal'; row.appendChild(medalIcon(m)); const tx = document.createElement('span'); tx.innerHTML = `${esc((MEDALS[m] || {}).name || m)} <small>· ${esc((MEDALS[m] || {}).tier || '')}</small>`; row.appendChild(tx); list.appendChild(row); });
+  panel.querySelector('.close').onclick = () => select(null);
+  const add = panel.querySelector('#add'); if (add) add.onclick = () => { state.sent.add(p.id); renderPanel(); };
+  const visit = panel.querySelector('#visit'); if (visit) visit.onclick = () => visitHouse(p);
   panel.querySelector('details.kit').addEventListener('toggle', (ev) => { state.kitOpen = ev.target.open; });
-  const kit = panel.querySelector('#kit'), locked = !e.member, c = p.config;
+  const kit = panel.querySelector('#kit'), c = p.config, locked = !e.member;
   if (!p.member) {
     const box = document.createElement('div'); box.className = 'lockbox';
-    box.innerHTML = `<span>${esc(prof.name.split(' ')[0])} is on the free plan: any starter house in any colors. Bigger houses unlock at 5 and 12 medals (${esc(prof.medalCount || 0)} so far). Twinkle lights, animation, cars, pets and yard extras are for members.</span><label class="toggle"><input type="checkbox" id="preview" ${state.preview.has(p.id) || state.mode === 'member' ? 'checked' : ''} ${state.mode !== 'mixed' ? 'disabled' : ''}> Preview as a member</label>`;
+    box.innerHTML = `<span>${isYou ? 'You are' : esc(prof.name.split(' ')[0]) + ' is'} on the free plan: any starter house in any colors, plus earned houses for medals ${isYou ? 'you have' : 'they have'}. Member houses, twinkle lights, animation and yard extras come with membership.</span><label class="toggle"><input type="checkbox" id="preview" ${state.preview.has(p.id) || state.mode === 'member' ? 'checked' : ''} ${state.mode !== 'mixed' ? 'disabled' : ''}> Preview as a member</label>`;
     kit.appendChild(box);
-    box.querySelector('#preview').onchange = (ev) => { ev.target.checked ? state.preview.add(p.id) : state.preview.delete(p.id); invalidate(i); renderPanel(); };
+    box.querySelector('#preview').onchange = (ev) => { ev.target.checked ? state.preview.add(p.id) : state.preview.delete(p.id); invalidatePlot(p.id); renderPanel(); };
   }
-  const set = (fn) => { fn(c); invalidate(i); renderPanel(); };
-  ['small', 'medium', 'large'].forEach((tier) => {
-    const items = HOUSE_STYLES.filter((h) => h.tier === tier).map((h) => {
-      const u = houseUnlock(h.id, e.member, prof.medalCount || 0);
-      return { id: h.id, label: u.ok ? h.label : `${h.label} · ${u.need} medals`, free: u.ok };
-    });
-    const t = HOUSE_TIERS[tier];
-    kit.appendChild(optRow(tier === 'small' ? `${t.label} · everyone` : `${t.label} · ${t.medals} medals or member`, items, r.house.style, (v) => set((c) => { c.house = { style: v }; }), true));
+  const set = (fn) => { fn(c); invalidatePlot(p.id); renderPanel(); };
+  ['starter', 'member', 'earned'].forEach((tier) => {
+    const items = HOUSE_STYLES.filter((h) => h.tier === tier).map((h) => { const u = houseUnlock(h.id, e.member, prof.earned || []); return { id: h.id, ok: u.ok, label: u.ok ? h.label : tier === 'earned' ? `${h.label} · ${MEDALS[h.medal].name}` : `${h.label} · members` }; });
+    kit.appendChild(optRow(`${HOUSE_TIERS[tier].label} · ${HOUSE_TIERS[tier].note}`, items, r.house.style, (v) => set((cc) => { cc.house = { style: v }; })));
   });
-  kit.appendChild(swatchRow('Walls', COLORS.body, r.house.body, (v) => set((c) => { c.house = { ...c.house, body: v }; }), false));
-  kit.appendChild(swatchRow('Roof', COLORS.roof, r.house.roof, (v) => set((c) => { c.house = { ...c.house, roof: v }; }), false));
-  kit.appendChild(swatchRow('Door', COLORS.door, r.house.door, (v) => set((c) => { c.house = { ...c.house, door: v }; }), false));
-  kit.appendChild(optRow('Windows', WINDOW_STYLES.map((w) => ({ ...w, free: true })), r.house.windows, (v) => set((c) => { c.house = { ...c.house, windows: v }; }), locked));
-  kit.appendChild(optRow('Billboard', BILLBOARD_STYLES, r.sign.style, (v) => set((c) => { c.sign = { ...c.sign, style: v }; }), locked));
-  kit.appendChild(swatchRow('Sign color', COLORS.sign, r.sign.color, (v) => set((c) => { c.sign = { ...c.sign, color: v }; }), locked));
-  kit.appendChild(optRow('Car', CAR_TYPES, r.car ? r.car.type : 'none', (v) => set((c) => { c.car = { ...(c.car || {}), type: v }; }), locked));
-  kit.appendChild(swatchRow('Car color', COLORS.car, r.car ? r.car.color : '', (v) => set((c) => { c.car = { type: (c.car && c.car.type !== 'none') ? c.car.type : 'hatch', color: v }; }), locked));
-  kit.appendChild(optRow('Pet', PET_TYPES, r.pet ? r.pet.kind : 'none', (v) => set((c) => { c.pet = { kind: v, coat: v === 'none' ? undefined : COLORS.coat[v][0] }; }), locked));
-  if (r.pet) kit.appendChild(swatchRow('Coat', COLORS.coat[r.pet.kind], r.pet.coat, (v) => set((c) => { c.pet = { ...c.pet, coat: v }; }), locked));
-  kit.appendChild(optRow('Yard', LAWN_STYLES, r.lawn, (v) => set((c) => { c.lawn = v; }), locked));
-  kit.appendChild(optRow('Tree', TREE_TYPES, r.tree, (v) => set((c) => { c.tree = v; }), locked));
-  const ex = document.createElement('div'); ex.className = 'opt'; ex.innerHTML = '<span class="label">Extras</span>';
-  const exBox = document.createElement('div'); exBox.className = 'opts';
-  EXTRAS.forEach((x) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = x.label; const on = !!(r.extras && r.extras[x.id]); b.setAttribute('aria-pressed', String(on)); b.disabled = locked; b.onclick = () => set((c) => { c.extras = { ...(c.extras || {}), [x.id]: !on }; }); exBox.appendChild(b); });
-  ex.appendChild(exBox); kit.appendChild(ex);
+  kit.appendChild(swatchRow('Walls', COLORS.body, r.house.body, (v) => set((cc) => { cc.house = { ...cc.house, body: v }; }), false));
+  kit.appendChild(swatchRow('Roof', COLORS.roof, r.house.roof, (v) => set((cc) => { cc.house = { ...cc.house, roof: v }; }), false));
+  kit.appendChild(swatchRow('Door', COLORS.door, r.house.door, (v) => set((cc) => { cc.house = { ...cc.house, door: v }; }), false));
+  const memberRow = (label, items, cur, fn) => kit.appendChild(optRow(locked ? `${label} · members` : label, items.map((x) => ({ ...x, ok: !locked })), cur, fn));
+  memberRow('Billboard', BILLBOARD_STYLES.filter((b) => b.id !== 'post'), r.sign.style, (v) => set((cc) => { cc.sign = { ...cc.sign, style: v }; }));
+  if (!locked) kit.appendChild(swatchRow('Sign color', COLORS.sign, r.sign.color, (v) => set((cc) => { cc.sign = { ...cc.sign, color: v }; }), false));
+  memberRow('Car', CAR_TYPES, r.car ? r.car.type : 'none', (v) => set((cc) => { cc.car = { ...(cc.car || {}), type: v }; }));
+  memberRow('Pet', PET_TYPES, r.pet ? r.pet.kind : 'none', (v) => set((cc) => { cc.pet = { kind: v, coat: v === 'none' ? undefined : COLORS.coat[v][0] }; }));
+  memberRow('Yard', LAWN_STYLES, r.lawn, (v) => set((cc) => { cc.lawn = v; }));
+  memberRow('Tree', TREE_TYPES, r.tree, (v) => set((cc) => { cc.tree = v; }));
+}
+function visitHouse(p) {
+  setView('town', false);
+  const [cx, cy] = plotCenter(p); cam.x = cx; cam.y = cy; cam.zoom = 0.2; flyTo(cx, cy, narrow() ? 0.7 : 1.0, 1300);
+  state.selected = p.id; renderPanel();
+}
+function renderFriends() {
+  const list = [...state.friends].map(byId).filter(Boolean);
+  pop.innerHTML = `<h3>Friends</h3>${list.map((r) => `<div class="friend"><div class="dot" style="background:${r.member ? '#F5B82E' : '#6B6070'}">${esc(r.profile.name[0])}</div><span>${esc(r.profile.name)}<small>${esc(r.profile.address)}</small></span><button class="ghost" type="button" data-id="${r.id}">Visit</button></div>`).join('')}<div class="friend"><div class="dot" style="background:#F06A9B">Y</div><span>Your house<small>${esc(residents[YOU].profile.address)}</small></span><button class="ghost" type="button" data-id="${residents[YOU].id}">Go</button></div><p class="fine">Neighbors change every day. Friends are always one tap away.</p>`;
+  pop.querySelectorAll('button[data-id]').forEach((b) => (b.onclick = () => { pop.hidden = true; visitHouse(byId(b.dataset.id)); }));
 }
 
 // ---------------------------------------------------------------------------------------------
 // Top bar
 // ---------------------------------------------------------------------------------------------
 const hourEl = document.getElementById('hour'), clockEl = document.getElementById('clock'), playEl = document.getElementById('play');
-function syncClock() {
-  hourEl.value = state.hour.toFixed(2);
-  const h = Math.floor(state.hour) % 24, m = Math.floor((state.hour % 1) * 60), ap = h >= 12 ? 'PM' : 'AM';
-  clockEl.textContent = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${ap}`;
-}
-hourEl.addEventListener('input', () => { state.hour = +hourEl.value; state.playing = false; playEl.textContent = '▶'; playEl.setAttribute('aria-label', 'Play the day'); syncClock(); });
+function syncClock() { hourEl.value = state.hour.toFixed(2); const h = Math.floor(state.hour) % 24, m = Math.floor((state.hour % 1) * 60); clockEl.textContent = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`; }
+hourEl.addEventListener('input', () => { state.hour = +hourEl.value; state.playing = false; playEl.textContent = '▶'; syncClock(); });
 playEl.addEventListener('click', () => { state.playing = !state.playing; playEl.textContent = state.playing ? '❚❚' : '▶'; playEl.setAttribute('aria-label', state.playing ? 'Pause' : 'Play the day'); });
-function seg(id, key, after) {
-  const el = document.getElementById(id);
-  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state[key] = b.dataset.v; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); after && after(); });
+function segment(id, key, after) { const el = document.getElementById(id); el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); if (key) state[key] = b.dataset.v; after && after(b.dataset.v); }); }
+segment('season', 'season', () => { streetCache.clear(); townCache.clear(); townImage = null; });
+segment('mode', 'mode', () => { streetCache.clear(); townCache.clear(); townImage = null; renderPanel(); });
+function setView(v, animate = true) {
+  if (state.view === v) return;
+  state.view = v;
+  document.querySelectorAll('#view button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.v === v)));
+  document.getElementById('title').textContent = v === 'street' ? 'Your block today' : `Velvet town · ${TOWN_SIZE.toLocaleString()} residents`;
+  document.getElementById('tomorrow').hidden = v !== 'street'; document.getElementById('day').hidden = v !== 'street';
+  document.getElementById('hint').innerHTML = v === 'street' ? '<b>Drag</b> to walk the block · <b>scroll or pinch</b> to zoom · <b>tap a billboard</b> to meet the neighbor' : '<b>Zoom in</b> to see houses · <b>tap a lot</b> to fly there · pins show you and your friends';
+  if (v === 'street') { frameStreet(); flight = null; }
+  else if (animate) { const [cx, cy] = plotCenter(residents[YOU]); cam.x = cx; cam.y = cy; cam.zoom = narrow() ? 0.7 : 1.0; const f = townFit(); setTimeout(() => flyTo(f.x, f.y, f.zoom, 1800), 350); }
+  state.selected = null; renderPanel();
 }
-seg('season', 'season', () => invalidate());
-seg('mode', 'mode', () => { invalidate(); renderPanel(); });
+segment('view', null, (v) => setView(v));
+document.getElementById('tomorrow').addEventListener('click', () => { state.day++; buildStreet(state.day); frameStreet(); });
+document.getElementById('friends').addEventListener('click', () => { renderFriends(); pop.hidden = !pop.hidden; if (!pop.hidden) { panel.hidden = true; state.selected = null; } });
 document.getElementById('tower').addEventListener('click', () => {
-  const lx = Math.min(plots.length * LOT_W / 2, 12), [x, y] = iso(lx, -12.6, 4.4);
-  flyTo(x, y + 40, W < 760 ? 0.7 : 1.0);
-});
-document.getElementById('stress').addEventListener('click', (e) => {
-  state.stress = !state.stress; state.selected = -1; renderPanel();
-  plots = state.stress ? makeStress(60) : SAMPLE.map((p) => withAddress(clone(p)));
-  e.currentTarget.textContent = state.stress ? 'Back to 6 plots' : 'Load 60 plots';
-  invalidate(); frameStreet(false); clampCam();
+  if (state.view === 'street') { const lx = Math.min(street.length * LOT_W / 2, 12), [x, y] = iso(lx, -12.6, 4.4); flyTo(x, y + 40, narrow() ? 0.7 : 1.0); }
+  else { const q = layout.square, [x, y] = iso(q.cx, q.cy, 4); flyTo(x, y, narrow() ? 0.6 : 0.9, 1200); }
 });
 
-window.addEventListener('resize', () => { resize(); invalidate(); });
-resize(); frameStreet(true); syncClock();
+window.addEventListener('resize', () => { resize(); streetCache.clear(); townCache.clear(); });
+resize(); buildStreet(state.day); frameStreet(); syncClock();
 requestAnimationFrame(render);
-// Billboard text uses web fonts: redraw the cached plots once they arrive.
-if (document.fonts && document.fonts.load) {
-  Promise.all(['800 12px "Bricolage Grotesque"', '400 12px "Alfa Slab One"', '700 12px "Fraunces"', '400 12px "Yellowtail"', '600 12px "Instrument Sans"'].map((f) => document.fonts.load(f).catch(() => null))).then(() => invalidate());
-}
+if (document.fonts && document.fonts.load) Promise.all(['800 12px "Bricolage Grotesque"', '400 12px "Alfa Slab One"', '700 12px "Fraunces"', '400 12px "Yellowtail"', '600 12px "Instrument Sans"'].map((f) => document.fonts.load(f).catch(() => null))).then(() => { streetCache.clear(); townCache.clear(); townImage = null; });
 </script>
