@@ -1749,15 +1749,19 @@ export function drawWeather(ctx, w, h, t, env) {
 // ---------------------------------------------------------------------------------------------
 export const TOWN = { perRow: 50, rowPitch: 17 };
 export const STREET_NAMES = ['Maple', 'Oak', 'Cedar', 'Birch', 'Willow', 'Aspen', 'Juniper', 'Magnolia', 'Hazel', 'Laurel', 'Linden', 'Poplar', 'Spruce', 'Sycamore', 'Elm', 'Hawthorn', 'Alder', 'Cypress', 'Dogwood', 'Fir', 'Holly', 'Ivy', 'Larch', 'Myrtle', 'Olive', 'Pine', 'Redwood', 'Rowan', 'Sage', 'Tupelo', 'Walnut', 'Yew', 'Acacia', 'Bay', 'Chestnut', 'Ginkgo', 'Hemlock', 'Lilac', 'Mulberry', 'Peach', 'Quince'];
-// Slots for `count` plots, leaving three lots in the middle row for the town square.
+// Addresses never move. Plot number n always maps to the same row and lot, filling rows of
+// TOWN.perRow from the top. Three lots in row SQUARE_ROW are kept for the town square, so the
+// square never shifts as the town grows.
+const SQUARE_ROW = 2, SQUARE_COL = Math.floor(TOWN.perRow / 2);
+export function townSlot(n) {
+  const reserved = SQUARE_ROW * TOWN.perRow + SQUARE_COL - 1, p = n < reserved ? n : n + 3;
+  const row = Math.floor(p / TOWN.perRow), col = p % TOWN.perRow;
+  return { x: col * LOT_W, y: row * TOWN.rowPitch, row, col, address: `${(col + 1) * 2} ${STREET_NAMES[row % STREET_NAMES.length]} St` };
+}
 export function townLayout(count) {
-  const per = TOWN.perRow, rows = Math.ceil((count + 3) / per), midRow = Math.floor(rows / 2), midCol = Math.floor(per / 2);
-  const slots = [];
-  for (let r = 0; slots.length < count; r++) for (let c = 0; c < per && slots.length < count; c++) {
-    if (r === midRow && Math.abs(c - midCol) <= 1) continue;
-    slots.push({ x: c * LOT_W, y: r * TOWN.rowPitch, row: r, col: c, address: `${(c + 1) * 2} ${STREET_NAMES[r % STREET_NAMES.length]} St` });
-  }
-  return { slots, rows, width: per * LOT_W, depth: rows * TOWN.rowPitch, square: { x: (midCol - 1) * LOT_W, y: midRow * TOWN.rowPitch, cx: midCol * LOT_W + LOT_W / 2, cy: midRow * TOWN.rowPitch + 3.6 } };
+  const slots = Array.from({ length: count }, (_, n) => townSlot(n));
+  const rows = Math.max(SQUARE_ROW + 1, slots.length ? slots[slots.length - 1].row + 1 : 1);
+  return { slots, rows, width: TOWN.perRow * LOT_W, depth: rows * TOWN.rowPitch, square: { x: (SQUARE_COL - 1) * LOT_W, y: SQUARE_ROW * TOWN.rowPitch, cx: SQUARE_COL * LOT_W + LOT_W / 2, cy: SQUARE_ROW * TOWN.rowPitch + 3.6 } };
 }
 export function townBounds(layout) {
   const pts = [[-6, -6, 0], [layout.width + 6, -6, 0], [layout.width + 6, layout.depth + 6, 0], [-6, layout.depth + 6, 0], [layout.square.cx, layout.square.cy, 12]].map(([x, y, z]) => iso(x, y, z));
