@@ -1,0 +1,461 @@
+<title>Maple Street Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&family=Instrument+Sans:wght@400;500;600;700&family=Yellowtail&display=swap">
+<style>
+  /* Layout: the street fills the screen; controls float on frosted night-glass panels at the edges. */
+  :root {
+    --ink: #F4EFF7;
+    --ink-2: #C9C0D3;
+    --ink-3: #958AA3;
+    --glass: rgba(24, 19, 34, 0.78);
+    --glass-2: rgba(40, 32, 54, 0.92);
+    --line: rgba(255, 255, 255, 0.12);
+    --accent: #F06A9B;
+    --accent-ink: #2A0F1C;
+    --gold: #F5B82E;
+    --ok: #59C98A;
+    --ground: #9FB09A;
+    --font-display: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
+    --font-ui: "Instrument Sans", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--font-ui); overflow: hidden; -webkit-font-smoothing: antialiased; }
+  #stage { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
+  #stage.dragging { cursor: grabbing; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .glass { background: var(--glass); backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 10px 30px rgba(10, 6, 20, 0.35); }
+
+  .top { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; pointer-events: none; z-index: 5; }
+  .top > * { pointer-events: auto; }
+  .brand { padding: 10px 14px; display: grid; gap: 2px; }
+  .brand b { font-family: var(--font-display); font-weight: 800; font-size: 18px; letter-spacing: -0.01em; }
+  .brand span { font-size: 12px; color: var(--ink-2); }
+  .brand em { font-style: normal; color: var(--ink-3); }
+  .controls { margin-left: auto; padding: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+  .seg { display: inline-flex; background: rgba(255, 255, 255, 0.06); border-radius: 11px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: transparent; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: #1E1828; }
+  .time { display: flex; align-items: center; gap: 8px; padding: 2px 6px 2px 2px; }
+  .time button { width: 32px; height: 32px; border-radius: 10px; border: 0; background: rgba(255, 255, 255, 0.08); display: grid; place-items: center; }
+  .time output { font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 600; min-width: 64px; }
+  .time input[type="range"] { width: 150px; accent-color: var(--accent); }
+  .ghost { border: 1px solid var(--line); background: transparent; padding: 6px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+
+  .hint { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); padding: 8px 12px; font-size: 12.5px; color: var(--ink-2); z-index: 4; max-width: calc(100% - 32px); }
+  .hint b { color: var(--ink); font-weight: 600; }
+  .stats { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); padding: 8px 12px; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; z-index: 4; }
+
+  .panel { position: fixed; z-index: 6; top: calc(env(safe-area-inset-top, 0px) + 84px); right: max(16px, env(safe-area-inset-right, 0px)); width: 360px; max-height: calc(100% - 170px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow: auto; padding: 0; }
+  .panel[hidden] { display: none; }
+  .card { padding: 18px 18px 14px; display: grid; gap: 12px; }
+  .card-head { display: flex; gap: 12px; align-items: center; }
+  .avatar { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; font-size: 20px; color: #fff; flex: none; }
+  .who { min-width: 0; display: grid; gap: 2px; }
+  .who h2 { margin: 0; font-family: var(--font-display); font-size: 21px; line-height: 1.1; font-weight: 800; letter-spacing: -0.01em; }
+  .who p { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+  .close { margin-left: auto; align-self: flex-start; width: 30px; height: 30px; border-radius: 9px; border: 0; background: rgba(255, 255, 255, 0.08); font-size: 18px; line-height: 1; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: var(--ink-2); letter-spacing: 0.02em; }
+  .chip.member { background: rgba(245, 184, 46, 0.16); color: var(--gold); }
+  .chip.new { background: rgba(89, 201, 138, 0.16); color: var(--ok); }
+  .headline { margin: 0; font-size: 15px; line-height: 1.4; color: var(--ink); }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 700; }
+  .goal { display: grid; gap: 6px; }
+  .goal-row { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 600; }
+  .bar { height: 7px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #F5A3C1); }
+  .medals { display: grid; gap: 6px; }
+  .medal { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+  .medal canvas { width: 24px; height: 24px; flex: none; }
+  .medal small { color: var(--ink-3); text-transform: capitalize; }
+  .add { border: 0; border-radius: 12px; padding: 11px 14px; font-weight: 700; font-size: 15px; background: var(--accent); color: var(--accent-ink); }
+  .add[disabled] { background: rgba(255, 255, 255, 0.1); color: var(--ink-2); cursor: default; }
+  .fine { margin: -4px 0 0; font-size: 12px; color: var(--ink-3); }
+
+  details.kit { border-top: 1px solid var(--line); }
+  details.kit > summary { list-style: none; padding: 14px 18px; font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+  details.kit > summary::-webkit-details-marker { display: none; }
+  details.kit > summary::after { content: "+"; color: var(--ink-3); font-size: 18px; }
+  details.kit[open] > summary::after { content: "–"; }
+  .kit-body { padding: 0 18px 18px; display: grid; gap: 14px; }
+  .lockbox { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: rgba(245, 184, 46, 0.08); border: 1px solid rgba(245, 184, 46, 0.25); font-size: 13px; color: var(--ink-2); }
+  .toggle { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--ink); }
+  .opt { display: grid; gap: 7px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .opts button { border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); padding: 6px 9px; border-radius: 9px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+  .opts button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); background: rgba(255, 255, 255, 0.12); }
+  .opts button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+  .swatches button { width: 24px; height: 24px; border-radius: 8px; border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
+  .swatches button[aria-pressed="true"] { border-color: var(--ink); }
+  .swatches button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  @media (max-width: 760px) {
+    .controls { margin-left: 0; width: 100%; justify-content: flex-start; }
+    .time input[type="range"] { width: 110px; }
+    .panel { top: auto; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); width: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); max-height: 58%; }
+    .hint { display: none; }
+    .brand b { font-size: 16px; }
+    .brand { padding: 8px 12px; }
+    .controls { padding: 6px; gap: 6px; }
+    .seg button, .ghost { padding: 5px 8px; font-size: 12px; }
+    .time output { min-width: 56px; font-size: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<canvas id="stage" aria-label="Maple Street: a street of member houses and billboards. Drag to look around, tap a billboard to see who lives there."></canvas>
+
+<header class="top">
+  <div class="brand glass"><b>Maple Street</b><span>Velvet World <em>(working name)</em> · art test</span></div>
+  <div class="controls glass" role="toolbar" aria-label="Scene controls">
+    <div class="time">
+      <button id="play" type="button" aria-label="Play the day">▶</button>
+      <input id="hour" type="range" min="0" max="24" step="0.05" value="17.6" aria-label="Time of day">
+      <output id="clock" for="hour">5:36 PM</output>
+    </div>
+    <div class="seg" id="season" role="group" aria-label="Season">
+      <button type="button" data-v="spring">Spring</button><button type="button" data-v="summer" aria-pressed="true">Summer</button><button type="button" data-v="fall">Fall</button><button type="button" data-v="winter">Winter</button>
+    </div>
+    <div class="seg" id="mode" role="group" aria-label="Show the street as">
+      <button type="button" data-v="mixed" aria-pressed="true">Mixed</button><button type="button" data-v="free">All free</button><button type="button" data-v="member">All members</button>
+    </div>
+    <button class="ghost" id="tower" type="button">Clock tower</button>
+    <button class="ghost" id="stress" type="button">Load 60 plots</button>
+  </div>
+</header>
+
+<aside class="panel glass" id="panel" hidden aria-live="polite"></aside>
+<p class="hint glass"><b>Drag</b> to walk the street · <b>scroll or pinch</b> to zoom · <b>tap a billboard</b> to meet the neighbor</p>
+<p class="stats glass" id="stats">6 plots</p>
+
+<script type="module">
+/*__STREET_ART__*/
+
+// ---------------------------------------------------------------------------------------------
+// Sample residents (made up for the test)
+// ---------------------------------------------------------------------------------------------
+const SAMPLE = [
+  { id: 'marcus', number: 2, member: true,
+    profile: { name: 'Marcus J.', headline: 'Training for my first 10K', goal: { label: '10K run', pct: 64 }, medals: ['iron-will', 'a-friend-in-need', 'day-one'], spaces: ['Fitness & Motivation', 'Sports Talk'], crew: 'Run Club' },
+    config: { house: { style: 'victorian' }, sign: { style: 'classic', color: '#3D8A8A' }, car: { type: 'suv', color: '#2B4A6B' }, pet: { kind: 'dog', coat: '#C98A3E' }, lawn: 'garden', tree: 'oak', extras: { flag: true, lights: true } } },
+  { id: 'dee', number: 4, member: false,
+    profile: { name: 'Dee W.', headline: 'Getting my sleep schedule back', goal: { label: 'In bed by 11', pct: 30 }, medals: ['first-step'], spaces: ['Welcome & Introductions'], newNeighbor: true },
+    config: { house: { style: 'colonial' }, sign: { style: 'round', color: '#7C5CC4' }, car: { type: 'hatch', color: '#F2EEE8' }, pet: { kind: 'none' }, lawn: 'striped', tree: 'cherry', extras: { lanterns: true } } },
+  { id: 'priya', number: 6, member: true,
+    profile: { name: 'Priya S.', headline: 'Building my design studio', goal: { label: 'Launch the site', pct: 82 }, medals: ['the-closer', 'halfway-there', 'life-of-the-party'], spaces: ['Career & Money', 'Creative Corner'], crew: 'Studio' },
+    config: { house: { style: 'modern' }, sign: { style: 'neon', color: '#FF5FA2' }, car: { type: 'hatch', color: '#F2EEE8' }, pet: { kind: 'cat', coat: '#9AA3A8' }, lawn: 'zen', tree: 'pine', extras: { lanterns: true } } },
+  { id: 'sam', number: 8, member: true,
+    profile: { name: 'Sam K.', headline: 'Learning guitar, one song a week', goal: { label: '12 songs', pct: 50 }, medals: ['showed-up', 'hype-man', 'found-my-people'], spaces: ['Movies, Music & Pop Culture'], crew: 'Garage Band' },
+    config: { house: { style: 'craftsman' }, sign: { style: 'hanging', color: '#E0A43A' }, car: { type: 'pickup', color: '#C2413A' }, pet: { kind: 'dog', coat: '#2B2B30' }, lawn: 'meadow', tree: 'cherry', extras: { flag: true, lights: true } } },
+  { id: 'theo', number: 10, member: false,
+    profile: { name: 'Theo B.', headline: 'Reading 24 books this year', goal: { label: '24 books', pct: 41 }, medals: ['halfway-there', 'first-step'], spaces: ['Books & Writing'] },
+    config: { house: { style: 'standard', windows: 'shutters', body: '#8FA9BF', door: '#E0A43A' }, sign: { style: 'marquee', color: '#E0A43A' }, car: { type: 'suv', color: '#4F9460' }, pet: { kind: 'dog', coat: '#E8DCC8' }, lawn: 'garden', tree: 'oak', extras: {} } },
+  { id: 'lena', number: 12, member: true,
+    profile: { name: 'Lena R.', headline: 'Cooking one new recipe a week', goal: { label: 'New recipes', pct: 73 }, medals: ['unbreakable', 'coachable', 'is-a-friend-indeed'], spaces: ['Cooking & Recipes'], crew: 'Supper Club' },
+    config: { house: { style: 'villa' }, sign: { style: 'marquee', color: '#C2413A' }, car: { type: 'vintage', color: '#3D8A8A' }, pet: { kind: 'cat', coat: '#D98F2B' }, lawn: 'striped', tree: 'none', extras: { fountain: true, lights: true } } },
+];
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const withAddress = (p) => ({ ...p, profile: { ...p.profile, address: `${p.number} Maple St` } });
+let plots = SAMPLE.map((p) => withAddress(clone(p)));
+const savedMember = new Map(plots.map((p) => [p.id, p.member]));
+
+function makeStress(n) {
+  const first = ['Ava', 'Jordan', 'Mia', 'Noah', 'Zoe', 'Eli', 'Nia', 'Leo', 'Ivy', 'Kai', 'Rosa', 'Omar', 'June', 'Ezra', 'Maya', 'Cole'];
+  const goals = [['Run a half marathon', 'Half marathon'], ['Learning Spanish', 'Spanish lessons'], ['Paying off my card', 'Debt free'], ['Meditating every morning', 'Morning sits'], ['Writing my novel', 'Chapters'], ['Getting stronger', 'Gym days']];
+  const styles = HOUSE_STYLES.map((s) => s.id), signs = BILLBOARD_STYLES.map((s) => s.id).filter((s) => s !== 'post');
+  const medalIds = Object.keys(MEDALS);
+  const rnd = (k) => { const s = Math.sin(k * 91.7 + 13.1) * 43758.5453; return s - Math.floor(s); };
+  const pick = (a, k) => a[Math.floor(rnd(k) * a.length) % a.length];
+  return Array.from({ length: n }, (_, i) => {
+    const g = pick(goals, i * 3 + 1);
+    return withAddress({
+      id: `s${i}`, number: i * 2 + 2, member: rnd(i * 7 + 2) < 0.7,
+      profile: { name: `${pick(first, i * 5)} ${String.fromCharCode(65 + Math.floor(rnd(i * 11) * 26))}.`, headline: g[0], goal: { label: g[1], pct: Math.round(10 + rnd(i * 13) * 85) }, medals: [pick(medalIds, i * 17), pick(medalIds, i * 19 + 1), pick(medalIds, i * 23 + 2)], spaces: ['Welcome & Introductions'], newNeighbor: rnd(i * 29) < 0.08 },
+      config: {
+        house: { style: pick(styles, i * 31), body: pick(COLORS.body, i * 37), roof: pick(COLORS.roof, i * 41), door: pick(COLORS.door, i * 43) },
+        sign: { style: pick(signs, i * 47), color: pick(COLORS.sign, i * 53) },
+        car: rnd(i * 59) < 0.6 ? { type: pick(['hatch', 'suv', 'pickup', 'vintage'], i * 61), color: pick(COLORS.car, i * 67) } : { type: 'none' },
+        pet: rnd(i * 71) < 0.5 ? { kind: pick(['dog', 'cat'], i * 73) } : { kind: 'none' },
+        lawn: pick(['plain', 'striped', 'garden', 'meadow', 'zen'], i * 79), tree: pick(['none', 'oak', 'cherry', 'pine'], i * 83),
+        extras: { fountain: rnd(i * 89) < 0.2, flag: rnd(i * 97) < 0.3, lights: rnd(i * 101) < 0.4, lanterns: rnd(i * 103) < 0.3 },
+      },
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Scene state
+// ---------------------------------------------------------------------------------------------
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const state = { hour: 17.6, season: 'summer', mode: 'mixed', playing: false, selected: -1, stress: false, preview: new Set(), sent: new Set() };
+const cam = { x: 0, y: 0, zoom: 1.4 };
+let W = 0, H = 0, dpr = 1;
+const caches = new Map();
+let flight = null;
+function flyTo(x, y, zoom, ms = 900) { flight = { from: { ...cam }, to: { x, y, zoom }, t0: performance.now(), ms }; }
+let zoomSettled = 0;
+
+function effective(p) {
+  const member = state.mode === 'member' ? true : state.mode === 'free' ? false : (p.member || state.preview.has(p.id));
+  return { ...p, member };
+}
+function cacheKey(p) { return JSON.stringify([p.member, p.config, p.profile, state.season]); }
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+}
+function frameStreet(first = false) {
+  const n = plots.length;
+  const narrow = W < 760;
+  if (first || !state.stress) {
+    cam.zoom = narrow ? Math.max(0.55, W / 640) : Math.min(1.6, W / 1250);
+    const [ax, ay] = iso(narrow ? 3.5 : 9, 5.2, 1.2);
+    cam.x = ax; cam.y = ay + (narrow ? -40 : 30);
+  } else {
+    cam.zoom = narrow ? 0.32 : 0.42;
+    const [ax, ay] = iso((n * LOT_W) / 2, 4, 0); cam.x = ax; cam.y = ay;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Plot caching: each plot's static layers are drawn once into images at the current zoom
+// ---------------------------------------------------------------------------------------------
+function buildCache(i, p, scale) {
+  const e = effective(p), b = plotBounds(i), env = { season: state.season };
+  e._resolved = resolvePlot(e);
+  const pxW = Math.ceil(b.w * scale), pxH = Math.ceil(b.h * scale);
+  const live = pxW * pxH > 7e6;
+  const entry = { key: cacheKey(e), scale, b, live, e, meta: null };
+  if (live) { caches.set(i, entry); return entry; }
+  const mk = () => { const c = document.createElement('canvas'); c.width = pxW; c.height = pxH; const o = c.getContext('2d'); o.setTransform(scale, 0, 0, scale, -b.x * scale, -b.y * scale); return [c, o]; };
+  const [cb, ob] = mk(); entry.meta = drawPlot(ob, e, i, 'back', env); entry.back = cb;
+  const [cf, of] = mk(); drawPlot(of, e, i, 'front', env); entry.front = cf;
+  caches.set(i, entry);
+  return entry;
+}
+function getCache(i, p, wantScale) {
+  const e = effective(p), c = caches.get(i);
+  const key = cacheKey(e);
+  if (c && c.key === key && (Math.abs(c.scale - wantScale) / wantScale < 0.02 || performance.now() < zoomSettled)) return c;
+  return buildCache(i, p, wantScale);
+}
+function invalidate(i) { if (i === undefined) caches.clear(); else caches.delete(i); }
+
+// ---------------------------------------------------------------------------------------------
+// Render loop
+// ---------------------------------------------------------------------------------------------
+let last = performance.now(), fpsAvg = 60, t0 = performance.now();
+function render(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  fpsAvg = fpsAvg * 0.94 + (1 / Math.max(dt, 0.001)) * 0.06;
+  if (state.playing) { state.hour = (state.hour + dt * 0.4) % 24; syncClock(); }
+  if (flight) { const u = Math.min(1, (now - flight.t0) / flight.ms), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; cam.x = flight.from.x + (flight.to.x - flight.from.x) * e; cam.y = flight.from.y + (flight.to.y - flight.from.y) * e; cam.zoom = flight.from.zoom + (flight.to.zoom - flight.from.zoom) * e; if (u >= 1) flight = null; zoomSettled = now + 220; }
+  const t = (now - t0) / 1000, light = lightingAt(state.hour, state.season);
+  const env = { season: state.season, hour: state.hour, night: light.night, reducedMotion: reduceMotion.matches };
+  const s = cam.zoom * dpr;
+  const view = { x0: cam.x - W / 2 / cam.zoom, x1: cam.x + W / 2 / cam.zoom, y0: cam.y - H / 2 / cam.zoom, y1: cam.y + H / 2 / cam.zoom };
+  const world = () => ctx.setTransform(s, 0, 0, s, W * dpr / 2 - cam.x * s, H * dpr / 2 - cam.y * s);
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = state.season === 'winter' ? '#D9E0E6' : '#9DAE97'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  world();
+  const n = plots.length;
+  const ground = drawTownGround(ctx, n, env, view, 62);
+  const visible = [];
+  for (let i = 0; i < n; i++) {
+    const b = plotBounds(i);
+    if (b.x > view.x1 || b.x + b.w < view.x0 || b.y > view.y1 || b.y + b.h < view.y0) continue;
+    const c = getCache(i, plots[i], s);
+    if (c.live) { const meta = drawPlot(ctx, c.e, i, 'back', env); c.meta = meta; drawPlotLive(ctx, c.e, i, meta, t, env); drawPlot(ctx, c.e, i, 'front', env); }
+    else { ctx.drawImage(c.back, b.x, b.y, b.w, b.h); drawPlotLive(ctx, c.e, i, c.meta, t, env); ctx.drawImage(c.front, b.x, b.y, b.w, b.h); }
+    visible.push([i, c]);
+  }
+  const front = drawTownFront(ctx, n, env, view);
+  // time of day: multiply the whole frame, then add everything that glows
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (light.tint.toLowerCase() !== '#ffffff') { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = light.tint; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.globalCompositeOperation = 'source-over'; }
+  world();
+  visible.forEach(([i, c]) => drawPlotLights(ctx, c.e, i, c.meta, t, env));
+  drawTownLights(ctx, n, t, env, ground, front);
+  // selection ring around the chosen billboard
+  if (state.selected >= 0) { const c = caches.get(state.selected); if (c && c.meta && c.meta.hit.sign) { const pts = c.meta.hit.sign; ctx.beginPath(); pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.lineWidth = 3 / cam.zoom; ctx.strokeStyle = `rgba(240,106,155,${0.65 + 0.35 * Math.sin(t * 4)})`; ctx.stroke(); } }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawWeather(ctx, W, H, t, env);
+  if (Math.floor(now / 500) !== Math.floor((now - dt * 1000) / 500)) document.getElementById('stats').textContent = `${n} plots · ${visible.length} on screen · ${Math.round(fpsAvg)} fps`;
+  requestAnimationFrame(render);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Input: drag to pan, wheel or pinch to zoom, tap to pick a plot
+// ---------------------------------------------------------------------------------------------
+const pointers = new Map();
+let drag = null, pinch = null;
+const toWorld = (sx, sy) => [cam.x + (sx - W / 2) / cam.zoom, cam.y + (sy - H / 2) / cam.zoom];
+function clampCam() {
+  const n = plots.length, [a] = iso(-6, 12, 0), [b] = iso(n * LOT_W + 6, 0, 0), [, c] = iso(0, -20, 6), [, d] = iso(n * LOT_W, 16, 0);
+  cam.x = Math.max(a, Math.min(b, cam.x)); cam.y = Math.max(c, Math.min(d, cam.y));
+}
+function zoomAt(sx, sy, f) {
+  const [wx, wy] = toWorld(sx, sy);
+  cam.zoom = Math.max(0.25, Math.min(4, cam.zoom * f));
+  cam.x = wx - (sx - W / 2) / cam.zoom; cam.y = wy - (sy - H / 2) / cam.zoom;
+  zoomSettled = performance.now() + 220; clampCam();
+}
+canvas.addEventListener('pointerdown', (e) => {
+  flight = null;
+  canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pointers.size === 1) drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: 0 };
+  if (pointers.size === 2) { const [p, q] = [...pointers.values()]; pinch = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), z: cam.zoom }; drag = null; }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointers.has(e.pointerId)) return; pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && pointers.size === 2) { const [p, q] = [...pointers.values()], d = Math.hypot(p[0] - q[0], p[1] - q[1]); zoomAt((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (pinch.z * (d / pinch.d)) / cam.zoom); return; }
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+  if (drag.moved > 4) canvas.classList.add('dragging');
+  cam.x = drag.cx - dx / cam.zoom; cam.y = drag.cy - dy / cam.zoom; clampCam();
+});
+const endPointer = (e) => {
+  if (!pointers.has(e.pointerId)) return; pointers.delete(e.pointerId);
+  if (drag && drag.moved < 6 && e.type === 'pointerup') pick(e.clientX, e.clientY);
+  if (pointers.size < 2) pinch = null;
+  if (pointers.size === 0) { drag = null; canvas.classList.remove('dragging'); }
+};
+canvas.addEventListener('pointerup', endPointer); canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+function inside(pts, x, y) { let a = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) a = !a; } return a; }
+function pick(sx, sy) {
+  const [x, y] = toWorld(sx, sy);
+  let hit = -1;
+  for (const [i, c] of caches) if (c.meta && c.meta.hit.sign && inside(c.meta.hit.sign, x, y)) hit = i;
+  if (hit < 0) for (const [i, c] of caches) { const h = c.meta && c.meta.hit.house; if (!h) continue; const xs = h.map((p) => p[0]), ys = h.map((p) => p[1]); if (x > Math.min(...xs) && x < Math.max(...xs) && y > Math.min(...ys) && y < Math.max(...ys)) hit = i; }
+  select(hit);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Panel: the neighbor card and the customizer
+// ---------------------------------------------------------------------------------------------
+const panel = document.getElementById('panel');
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function select(i) { state.selected = i; renderPanel(); }
+function medalIcon(slug) {
+  const c = document.createElement('canvas'); c.width = 48; c.height = 48; const o = c.getContext('2d'); o.scale(2, 2);
+  const m = MEDALS[slug] || { tier: 'bronze', glyph: 'star' }, col = TIER_COLORS[m.tier];
+  if (m.tier === 'legendary') { const g = o.createLinearGradient(2, 2, 22, 22); g.addColorStop(0, '#F472B6'); g.addColorStop(1, '#7C5CE8'); o.fillStyle = g; } else o.fillStyle = col;
+  o.beginPath(); o.arc(12, 12, 10.5, 0, Math.PI * 2); o.fill(); glyph(o, m.glyph, 12, 12, 11, m.tier === 'silver' ? '#4A5260' : '#FFFFFF');
+  return c;
+}
+function optRow(label, items, current, onPick, locked) {
+  const row = document.createElement('div'); row.className = 'opt';
+  row.innerHTML = `<span class="label">${esc(label)}</span>`;
+  const box = document.createElement('div'); box.className = 'opts';
+  items.forEach((it) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = it.label; b.setAttribute('aria-pressed', String(it.id === current)); b.disabled = locked && !it.free; b.onclick = () => onPick(it.id); box.appendChild(b); });
+  row.appendChild(box); return row;
+}
+function swatchRow(label, colors, current, onPick, locked) {
+  const row = document.createElement('div'); row.className = 'opt'; row.innerHTML = `<span class="label">${esc(label)}</span>`;
+  const box = document.createElement('div'); box.className = 'swatches';
+  colors.forEach((c) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.title = c; b.setAttribute('aria-label', `${label} ${c}`); b.setAttribute('aria-pressed', String(c.toLowerCase() === String(current).toLowerCase())); b.disabled = locked; b.onclick = () => onPick(c); box.appendChild(b); });
+  row.appendChild(box); return row;
+}
+function renderPanel() {
+  const i = state.selected;
+  if (i < 0 || !plots[i]) { panel.hidden = true; panel.innerHTML = ''; return; }
+  const p = plots[i], e = effective(p), r = resolvePlot(e), prof = p.profile;
+  const initials = prof.name.split(' ').map((w) => w[0]).join('').slice(0, 2);
+  const sent = state.sent.has(p.id);
+  panel.hidden = false;
+  panel.innerHTML = `
+    <section class="card">
+      <div class="card-head">
+        <div class="avatar" style="background:${r.member ? esc(r.sign.color) : '#6B6070'}">${esc(initials)}</div>
+        <div class="who"><h2>${esc(prof.name)}</h2><p>${esc(prof.address)}</p></div>
+        <button class="close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="chips">${r.member ? '<span class="chip member">★ Member</span>' : ''}${prof.newNeighbor ? '<span class="chip new">New neighbor</span>' : ''}${(prof.spaces || []).map((s) => `<span class="chip">${esc(s)}</span>`).join('')}</div>
+      <p class="headline">${esc(prof.headline)}</p>
+      ${prof.goal ? `<div class="goal"><span class="label">Working on</span><div class="goal-row"><span>${esc(prof.goal.label)}</span><span>${Math.round(prof.goal.pct)}%</span></div><div class="bar"><i style="width:${Math.min(100, prof.goal.pct)}%"></i></div></div>` : ''}
+      <div class="medals"><span class="label">Pinned medals</span><div class="medals" id="medal-list"></div></div>
+      <button class="add" type="button" ${sent ? 'disabled' : ''}>${sent ? 'Request sent' : 'Add friend'}</button>
+      ${sent ? '<p class="fine">This is a test page, so nothing was actually sent.</p>' : ''}
+    </section>
+    <details class="kit" ${state.kitOpen ? 'open' : ''}><summary>Try the kit on this plot</summary><div class="kit-body" id="kit"></div></details>`;
+  const list = panel.querySelector('#medal-list');
+  (prof.medals || []).forEach((m) => { const row = document.createElement('div'); row.className = 'medal'; row.appendChild(medalIcon(m)); const t = document.createElement('span'); t.innerHTML = `${esc((MEDALS[m] || {}).name || m)} <small>· ${esc((MEDALS[m] || {}).tier || '')}</small>`; row.appendChild(t); list.appendChild(row); });
+  panel.querySelector('.close').onclick = () => select(-1);
+  panel.querySelector('.add').onclick = () => { state.sent.add(p.id); renderPanel(); };
+  panel.querySelector('details.kit').addEventListener('toggle', (ev) => { state.kitOpen = ev.target.open; });
+  const kit = panel.querySelector('#kit'), locked = !e.member, c = p.config;
+  if (!p.member) {
+    const box = document.createElement('div'); box.className = 'lockbox';
+    box.innerHTML = `<span>${esc(prof.name.split(' ')[0])} is on the free plan: standard house and sign, no animation or yard extras.</span><label class="toggle"><input type="checkbox" id="preview" ${state.preview.has(p.id) || state.mode === 'member' ? 'checked' : ''} ${state.mode !== 'mixed' ? 'disabled' : ''}> Preview as a member</label>`;
+    kit.appendChild(box);
+    box.querySelector('#preview').onchange = (ev) => { ev.target.checked ? state.preview.add(p.id) : state.preview.delete(p.id); invalidate(i); renderPanel(); };
+  }
+  const set = (fn) => { fn(c); invalidate(i); renderPanel(); };
+  kit.appendChild(optRow('House', HOUSE_STYLES, r.house.style, (v) => set((c) => { c.house = { style: v }; }), locked));
+  kit.appendChild(swatchRow('Walls', COLORS.body, r.house.body, (v) => set((c) => { c.house.body = v; }), locked));
+  kit.appendChild(swatchRow('Roof', COLORS.roof, r.house.roof, (v) => set((c) => { c.house.roof = v; }), locked));
+  kit.appendChild(swatchRow('Door', COLORS.door, r.house.door, (v) => set((c) => { c.house.door = v; }), locked));
+  kit.appendChild(optRow('Windows', WINDOW_STYLES, r.house.windows, (v) => set((c) => { c.house.windows = v; }), locked));
+  kit.appendChild(optRow('Billboard', BILLBOARD_STYLES, r.sign.style, (v) => set((c) => { c.sign = { ...c.sign, style: v }; }), locked));
+  kit.appendChild(swatchRow('Sign color', COLORS.sign, r.sign.color, (v) => set((c) => { c.sign = { ...c.sign, color: v }; }), locked));
+  kit.appendChild(optRow('Car', CAR_TYPES, r.car ? r.car.type : 'none', (v) => set((c) => { c.car = { ...(c.car || {}), type: v }; }), locked));
+  kit.appendChild(swatchRow('Car color', COLORS.car, r.car ? r.car.color : '', (v) => set((c) => { c.car = { type: (c.car && c.car.type !== 'none') ? c.car.type : 'hatch', color: v }; }), locked));
+  kit.appendChild(optRow('Pet', PET_TYPES, r.pet ? r.pet.kind : 'none', (v) => set((c) => { c.pet = { kind: v, coat: v === 'none' ? undefined : COLORS.coat[v][0] }; }), locked));
+  if (r.pet) kit.appendChild(swatchRow('Coat', COLORS.coat[r.pet.kind], r.pet.coat, (v) => set((c) => { c.pet = { ...c.pet, coat: v }; }), locked));
+  kit.appendChild(optRow('Yard', LAWN_STYLES, r.lawn, (v) => set((c) => { c.lawn = v; }), locked));
+  kit.appendChild(optRow('Tree', TREE_TYPES, r.tree, (v) => set((c) => { c.tree = v; }), locked));
+  const ex = document.createElement('div'); ex.className = 'opt'; ex.innerHTML = '<span class="label">Extras</span>';
+  const exBox = document.createElement('div'); exBox.className = 'opts';
+  EXTRAS.forEach((x) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = x.label; const on = !!(r.extras && r.extras[x.id]); b.setAttribute('aria-pressed', String(on)); b.disabled = locked; b.onclick = () => set((c) => { c.extras = { ...(c.extras || {}), [x.id]: !on }; }); exBox.appendChild(b); });
+  ex.appendChild(exBox); kit.appendChild(ex);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Top bar
+// ---------------------------------------------------------------------------------------------
+const hourEl = document.getElementById('hour'), clockEl = document.getElementById('clock'), playEl = document.getElementById('play');
+function syncClock() {
+  hourEl.value = state.hour.toFixed(2);
+  const h = Math.floor(state.hour) % 24, m = Math.floor((state.hour % 1) * 60), ap = h >= 12 ? 'PM' : 'AM';
+  clockEl.textContent = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${ap}`;
+}
+hourEl.addEventListener('input', () => { state.hour = +hourEl.value; state.playing = false; playEl.textContent = '▶'; playEl.setAttribute('aria-label', 'Play the day'); syncClock(); });
+playEl.addEventListener('click', () => { state.playing = !state.playing; playEl.textContent = state.playing ? '❚❚' : '▶'; playEl.setAttribute('aria-label', state.playing ? 'Pause' : 'Play the day'); });
+function seg(id, key, after) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state[key] = b.dataset.v; el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); after && after(); });
+}
+seg('season', 'season', () => invalidate());
+seg('mode', 'mode', () => { invalidate(); renderPanel(); });
+document.getElementById('tower').addEventListener('click', () => {
+  const lx = Math.min(plots.length * LOT_W / 2, 12), [x, y] = iso(lx, -12.6, 4.4);
+  flyTo(x, y + 40, W < 760 ? 0.7 : 1.0);
+});
+document.getElementById('stress').addEventListener('click', (e) => {
+  state.stress = !state.stress; state.selected = -1; renderPanel();
+  plots = state.stress ? makeStress(60) : SAMPLE.map((p) => withAddress(clone(p)));
+  e.currentTarget.textContent = state.stress ? 'Back to 6 plots' : 'Load 60 plots';
+  invalidate(); frameStreet(false); clampCam();
+});
+
+window.addEventListener('resize', () => { resize(); invalidate(); });
+resize(); frameStreet(true); syncClock();
+requestAnimationFrame(render);
+// Billboard text uses web fonts: redraw the cached plots once they arrive.
+if (document.fonts && document.fonts.load) {
+  Promise.all(['800 12px "Bricolage Grotesque"', '400 12px "Alfa Slab One"', '700 12px "Fraunces"', '400 12px "Yellowtail"', '600 12px "Instrument Sans"'].map((f) => document.fonts.load(f).catch(() => null))).then(() => invalidate());
+}
+</script>
