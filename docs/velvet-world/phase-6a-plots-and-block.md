@@ -22,8 +22,10 @@
 - Real time of day and season from the user's clock. Night lighting just
   works.
 
-Not in 6a: the whole-town view, pins, Friends popover and search (6b);
-email (6c).
+- Friend requests **pop up on the site**: the messages button counts them,
+  and a small "Maya wants to be friends" bubble appears. There's no email.
+
+Not in 6a: the whole-town view, pins, Friends popover and search (6b).
 
 ## Files
 
@@ -38,6 +40,7 @@ email (6c).
 | New | `src/features/velvet-world/MoveInSheet.tsx` (step 7) |
 | New | `src/pages/WorldPage.tsx` (step 8) |
 | Edit | `src/routes/appRoutes.tsx`: add the route next to the `house` routes (`const HousePage = lazy(...)` is at line 42, routes at ~92) |
+| Edit | `src/components/MessagingOverlayMount.tsx` and `src/components/MessagingOverlay.tsx` (step 9) |
 | Edit | `src/components/SignedInWorkspace.tsx`: `connectTools` (~line 256), add after House: `{ label: 'Town', path: '/world', tone: '#f472b6', icon: <Building2 className="h-3.5 w-3.5" /> }` (import `Building2` from lucide-react) |
 | Read only | `src/features/velvet-world/demo/street-test.html` (the reference), `src/features/velvet-world/art/streetArt.d.ts` (kit types) |
 
@@ -294,12 +297,54 @@ Header text: "Your block today" and a small "Velvet World" label. There is
 no "Tomorrow" button. That was a demo control; the block changes at the
 user's midnight.
 
+## Step 9: friend requests pop up on the site (no email)
+
+Today a request is only visible if someone opens the messages overlay and
+clicks **Requests**. The button's red badge (`MessagingOverlayMount.tsx`)
+counts unread messages only. Fix it in two small edits:
+
+**`MessagingOverlay.tsx`:** let the overlay open on a given tab.
+
+```tsx
+// line 164
+export function MessagingOverlay({ onClose, embedded = false, initialView = 'conversations' }: { onClose: () => void; embedded?: boolean; initialView?: View }) {
+  const [view, setView] = useState<View>(initialView);
+```
+
+**`MessagingOverlayMount.tsx`:**
+
+1. Import `getIncomingRequests` next to `getConversationList`.
+2. Add state `const [requests, setRequests] = useState<{ id: string; name: string }[]>([]);`,
+   `const [bubble, setBubble] = useState<string | null>(null);` and
+   `const [openOn, setOpenOn] = useState<'conversations' | 'requests'>('conversations');`,
+   plus `const seenRequests = useRef<Set<string> | null>(null);`.
+3. In `refreshUnread` (it already runs on load and every 20 seconds), also
+   call `getIncomingRequests()` and map each row to
+   `{ id: r.friendship_id, name: r.display_name }`. Compare with
+   `seenRequests.current`:
+   - On the first load, just remember the ids. Don't pop anything for
+     requests that were already waiting; the badge covers those.
+   - After that, for any new id, call `setBubble(`${name} wants to be friends`)`
+     (with several: "Maya and 2 others want to be friends").
+4. Badge: show `unread + requests.length` instead of `unread` (both the
+   number and the pulse ring).
+5. Bubble: while `bubble` is set and the overlay is closed, render a small
+   pill under the button. Use the same `bg-black/20 border-white/10` look as
+   the button, white text, a `UserPlus` icon, `role="status"`, and hide it
+   after 8 seconds. Clicking the pill calls `setOpenOn('requests')`,
+   `setOpen(true)` and `setBubble(null)`. Clicking the button itself opens
+   on `'conversations'` as it does today.
+6. Pass `initialView={openOn}` to `<MessagingOverlay>`.
+
+No realtime subscription is needed. The 20-second refresh is enough and
+keeps realtime load flat.
+
 ## Done when
 
 - [ ] A new user sees the move-in sheet. After Move in, they land on their block, in the middle, with their house.
 - [ ] Reloading the same day shows the same neighbors in the same order. The next day shows different people. Test by passing a different `day` in dev.
 - [ ] No two neighbors next to each other share both style and wall color.
-- [ ] Tapping a billboard opens the card. Add friend sends a request, and the recipient sees it in the Messaging overlay's requests list.
+- [ ] Tapping a billboard opens the card. Add friend sends a request. Within about 20 seconds the other person, anywhere on the site, sees the badge count go up and a "… wants to be friends" bubble. Clicking the bubble opens their Requests tab.
 - [ ] A free user can change house (starter or earned) and colors, and save. Member rows are disabled. A paid user can use everything and sees twinkle lights, smoke and a pet moving.
 - [ ] Private-profile users never appear on anyone's block.
 - [ ] Picking a main house works, and deleting that companion leaves the plot in place.

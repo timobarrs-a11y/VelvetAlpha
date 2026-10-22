@@ -34,7 +34,7 @@ something, not report everything to you.
 | Private profiles | They still get a house in the town. Their billboard just says "A neighbor", and they're never put on someone else's daily block or in search. |
 | Front vs inside | The front of the house (what the town sees) is edited only in Velvet World. The life-sim game (`VelvetHouseGame`) shows the inside and back. Nothing syncs between them. |
 | Companion | The user picks which companion's game house is their "main" one (`main_companion_id`). Deleting that companion sets it to null. **The plot is never deleted.** |
-| Email | Only for actions (a friend request). Never for page views. See Phase 6c. |
+| Notifications | No email for now. A friend request pops up on the site (badge and bubble on the messages button, Phase 6a step 9). Viewing a billboard never notifies anyone. |
 
 ## Phases
 
@@ -42,7 +42,6 @@ something, not report everything to you.
 |---|---|---|---|
 | 6a | [phase-6a-plots-and-block.md](phase-6a-plots-and-block.md) | Migration, move-in, your daily block (street view), billboards with Add friend, customizer, main companion | Large |
 | 6b | [phase-6b-town.md](phase-6b-town.md) | Whole-town view (every plot), pins, Friends with Visit, search, clock tower | Medium |
-| 6c | [phase-6c-email.md](phase-6c-email.md) | Friend-request emails (needs an email provider key from Tim) | Small |
 
 Requires community Phases 1–4 (already applied).
 
