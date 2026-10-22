@@ -143,23 +143,32 @@
 // ---------------------------------------------------------------------------------------------
 const SAMPLE = [
   { id: 'marcus', number: 2, member: true,
-    profile: { name: 'Marcus J.', headline: 'Training for my first 10K', goal: { label: '10K run', pct: 64 }, medals: ['iron-will', 'a-friend-in-need', 'day-one'], spaces: ['Fitness & Motivation', 'Sports Talk'], crew: 'Run Club' },
+    profile: { name: 'Marcus J.', headline: 'Training for my first 10K', goal: { label: '10K run', pct: 64 }, medals: ['iron-will', 'a-friend-in-need', 'day-one'], medalCount: 14, spaces: ['Fitness & Motivation', 'Sports Talk'], crew: 'Run Club' },
     config: { house: { style: 'victorian' }, sign: { style: 'classic', color: '#3D8A8A' }, car: { type: 'suv', color: '#2B4A6B' }, pet: { kind: 'dog', coat: '#C98A3E' }, lawn: 'garden', tree: 'oak', extras: { flag: true, lights: true } } },
   { id: 'dee', number: 4, member: false,
-    profile: { name: 'Dee W.', headline: 'Getting my sleep schedule back', goal: { label: 'In bed by 11', pct: 30 }, medals: ['first-step'], spaces: ['Welcome & Introductions'], newNeighbor: true },
-    config: { house: { style: 'colonial' }, sign: { style: 'round', color: '#7C5CC4' }, car: { type: 'hatch', color: '#F2EEE8' }, pet: { kind: 'none' }, lawn: 'striped', tree: 'cherry', extras: { lanterns: true } } },
+    profile: { name: 'Dee W.', headline: 'Getting my sleep schedule back', goal: { label: 'In bed by 11', pct: 30 }, medals: ['first-step'], medalCount: 1, spaces: ['Welcome & Introductions'], newNeighbor: true },
+    config: { house: { style: 'cottage', body: '#EFE7D8', roof: '#5F6E52', door: '#C2413A' } } },
   { id: 'priya', number: 6, member: true,
-    profile: { name: 'Priya S.', headline: 'Building my design studio', goal: { label: 'Launch the site', pct: 82 }, medals: ['the-closer', 'halfway-there', 'life-of-the-party'], spaces: ['Career & Money', 'Creative Corner'], crew: 'Studio' },
+    profile: { name: 'Priya S.', headline: 'Building my design studio', goal: { label: 'Launch the site', pct: 82 }, medals: ['the-closer', 'halfway-there', 'life-of-the-party'], medalCount: 9, spaces: ['Career & Money', 'Creative Corner'], crew: 'Studio' },
     config: { house: { style: 'modern' }, sign: { style: 'neon', color: '#FF5FA2' }, car: { type: 'hatch', color: '#F2EEE8' }, pet: { kind: 'cat', coat: '#9AA3A8' }, lawn: 'zen', tree: 'pine', extras: { lanterns: true } } },
-  { id: 'sam', number: 8, member: true,
-    profile: { name: 'Sam K.', headline: 'Learning guitar, one song a week', goal: { label: '12 songs', pct: 50 }, medals: ['showed-up', 'hype-man', 'found-my-people'], spaces: ['Movies, Music & Pop Culture'], crew: 'Garage Band' },
-    config: { house: { style: 'craftsman' }, sign: { style: 'hanging', color: '#E0A43A' }, car: { type: 'pickup', color: '#C2413A' }, pet: { kind: 'dog', coat: '#2B2B30' }, lawn: 'meadow', tree: 'cherry', extras: { flag: true, lights: true } } },
-  { id: 'theo', number: 10, member: false,
-    profile: { name: 'Theo B.', headline: 'Reading 24 books this year', goal: { label: '24 books', pct: 41 }, medals: ['halfway-there', 'first-step'], spaces: ['Books & Writing'] },
-    config: { house: { style: 'standard', windows: 'shutters', body: '#8FA9BF', door: '#E0A43A' }, sign: { style: 'marquee', color: '#E0A43A' }, car: { type: 'suv', color: '#4F9460' }, pet: { kind: 'dog', coat: '#E8DCC8' }, lawn: 'garden', tree: 'oak', extras: {} } },
-  { id: 'lena', number: 12, member: true,
-    profile: { name: 'Lena R.', headline: 'Cooking one new recipe a week', goal: { label: 'New recipes', pct: 73 }, medals: ['unbreakable', 'coachable', 'is-a-friend-indeed'], spaces: ['Cooking & Recipes'], crew: 'Supper Club' },
+  { id: 'ana', number: 8, member: false,
+    profile: { name: 'Ana P.', headline: 'Hiking all 12 state parks', goal: { label: 'State parks', pct: 25 }, medals: ['first-step', 'showed-up'], medalCount: 3, spaces: ['Travel & Adventure'] },
+    config: { house: { style: 'cabin', body: '#B98A6A', roof: '#3F3A3D', door: '#2F4F3E' } } },
+  { id: 'sam', number: 10, member: true,
+    profile: { name: 'Sam K.', headline: 'Learning guitar, one song a week', goal: { label: '12 songs', pct: 50 }, medals: ['showed-up', 'hype-man', 'found-my-people'], medalCount: 6, spaces: ['Movies, Music & Pop Culture'], crew: 'Garage Band' },
+    config: { house: { style: 'colonial' }, sign: { style: 'hanging', color: '#E0A43A' }, car: { type: 'pickup', color: '#C2413A' }, pet: { kind: 'dog', coat: '#2B2B30' }, lawn: 'meadow', tree: 'cherry', extras: { flag: true, lights: true } } },
+  { id: 'kofi', number: 12, member: false,
+    profile: { name: 'Kofi A.', headline: 'Saving for my first car', goal: { label: 'Car fund', pct: 58 }, medals: ['halfway-there'], medalCount: 2, spaces: ['Career & Money'] },
+    config: { house: { style: 'bungalow', body: '#9FB4A2', roof: '#4B5D6B', door: '#E0A43A' } } },
+  { id: 'lena', number: 14, member: true,
+    profile: { name: 'Lena R.', headline: 'Cooking one new recipe a week', goal: { label: 'New recipes', pct: 73 }, medals: ['unbreakable', 'coachable', 'is-a-friend-indeed'], medalCount: 21, spaces: ['Cooking & Recipes'], crew: 'Supper Club' },
     config: { house: { style: 'villa' }, sign: { style: 'marquee', color: '#C2413A' }, car: { type: 'vintage', color: '#3D8A8A' }, pet: { kind: 'cat', coat: '#D98F2B' }, lawn: 'striped', tree: 'none', extras: { fountain: true, lights: true } } },
+  { id: 'theo', number: 16, member: false,
+    profile: { name: 'Theo B.', headline: 'Reading 24 books this year', goal: { label: '24 books', pct: 41 }, medals: ['halfway-there', 'hat-trick', 'showed-up'], medalCount: 7, spaces: ['Books & Writing'] },
+    config: { house: { style: 'craftsman', body: '#7E9A7A', roof: '#5A4A44', door: '#C2413A' } } },
+  { id: 'jon', number: 18, member: false,
+    profile: { name: 'Jon D.', headline: 'Walking 10,000 steps a day', goal: { label: 'Step streak', pct: 46 }, medals: ['showed-up'], medalCount: 2, spaces: ['Fitness & Motivation'] },
+    config: { house: { style: 'ranch', body: '#E6C27A', roof: '#6E3B3B', door: '#2F4F3E' } } },
 ];
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const withAddress = (p) => ({ ...p, profile: { ...p.profile, address: `${p.number} Maple St` } });
@@ -177,7 +186,7 @@ function makeStress(n) {
     const g = pick(goals, i * 3 + 1);
     return withAddress({
       id: `s${i}`, number: i * 2 + 2, member: rnd(i * 7 + 2) < 0.7,
-      profile: { name: `${pick(first, i * 5)} ${String.fromCharCode(65 + Math.floor(rnd(i * 11) * 26))}.`, headline: g[0], goal: { label: g[1], pct: Math.round(10 + rnd(i * 13) * 85) }, medals: [pick(medalIds, i * 17), pick(medalIds, i * 19 + 1), pick(medalIds, i * 23 + 2)], spaces: ['Welcome & Introductions'], newNeighbor: rnd(i * 29) < 0.08 },
+      profile: { name: `${pick(first, i * 5)} ${String.fromCharCode(65 + Math.floor(rnd(i * 11) * 26))}.`, headline: g[0], goal: { label: g[1], pct: Math.round(10 + rnd(i * 13) * 85) }, medals: [pick(medalIds, i * 17), pick(medalIds, i * 19 + 1), pick(medalIds, i * 23 + 2)], medalCount: Math.floor(rnd(i * 31 + 5) * 16), spaces: ['Welcome & Introductions'], newNeighbor: rnd(i * 29) < 0.08 },
       config: {
         house: { style: pick(styles, i * 31), body: pick(COLORS.body, i * 37), roof: pick(COLORS.roof, i * 41), door: pick(COLORS.door, i * 43) },
         sign: { style: pick(signs, i * 47), color: pick(COLORS.sign, i * 53) },
@@ -262,7 +271,7 @@ function render(now) {
   if (state.playing) { state.hour = (state.hour + dt * 0.4) % 24; syncClock(); }
   if (flight) { const u = Math.min(1, (now - flight.t0) / flight.ms), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; cam.x = flight.from.x + (flight.to.x - flight.from.x) * e; cam.y = flight.from.y + (flight.to.y - flight.from.y) * e; cam.zoom = flight.from.zoom + (flight.to.zoom - flight.from.zoom) * e; if (u >= 1) flight = null; zoomSettled = now + 220; }
   const t = (now - t0) / 1000, light = lightingAt(state.hour, state.season);
-  const env = { season: state.season, hour: state.hour, night: light.night, reducedMotion: reduceMotion.matches };
+  const env = { season: state.season, hour: state.hour, night: light.night, reducedMotion: reduceMotion.matches, zoom: cam.zoom };
   const s = cam.zoom * dpr;
   const view = { x0: cam.x - W / 2 / cam.zoom, x1: cam.x + W / 2 / cam.zoom, y0: cam.y - H / 2 / cam.zoom, y1: cam.y + H / 2 / cam.zoom };
   const world = () => ctx.setTransform(s, 0, 0, s, W * dpr / 2 - cam.x * s, H * dpr / 2 - cam.y * s);
@@ -308,7 +317,7 @@ function clampCam() {
 }
 function zoomAt(sx, sy, f) {
   const [wx, wy] = toWorld(sx, sy);
-  cam.zoom = Math.max(0.25, Math.min(4, cam.zoom * f));
+  cam.zoom = Math.max(0.3, Math.min(4, cam.zoom * f));
   cam.x = wx - (sx - W / 2) / cam.zoom; cam.y = wy - (sy - H / 2) / cam.zoom;
   zoomSettled = performance.now() + 220; clampCam();
 }
@@ -385,6 +394,7 @@ function renderPanel() {
       </div>
       <div class="chips">${r.member ? '<span class="chip member">★ Member</span>' : ''}${prof.newNeighbor ? '<span class="chip new">New neighbor</span>' : ''}${(prof.spaces || []).map((s) => `<span class="chip">${esc(s)}</span>`).join('')}</div>
       <p class="headline">${esc(prof.headline)}</p>
+      <p class="fine">${esc((HOUSE_STYLES.find((h) => h.id === r.house.style) || {}).label || '')} · ${r.houseBy === 'member' ? 'member house' : r.houseBy === 'medals' ? `unlocked with ${prof.medalCount} medals` : 'starter house'}</p>
       ${prof.goal ? `<div class="goal"><span class="label">Working on</span><div class="goal-row"><span>${esc(prof.goal.label)}</span><span>${Math.round(prof.goal.pct)}%</span></div><div class="bar"><i style="width:${Math.min(100, prof.goal.pct)}%"></i></div></div>` : ''}
       <div class="medals"><span class="label">Pinned medals</span><div class="medals" id="medal-list"></div></div>
       <button class="add" type="button" ${sent ? 'disabled' : ''}>${sent ? 'Request sent' : 'Add friend'}</button>
@@ -399,16 +409,23 @@ function renderPanel() {
   const kit = panel.querySelector('#kit'), locked = !e.member, c = p.config;
   if (!p.member) {
     const box = document.createElement('div'); box.className = 'lockbox';
-    box.innerHTML = `<span>${esc(prof.name.split(' ')[0])} is on the free plan: standard house and sign, no animation or yard extras.</span><label class="toggle"><input type="checkbox" id="preview" ${state.preview.has(p.id) || state.mode === 'member' ? 'checked' : ''} ${state.mode !== 'mixed' ? 'disabled' : ''}> Preview as a member</label>`;
+    box.innerHTML = `<span>${esc(prof.name.split(' ')[0])} is on the free plan: any starter house in any colors. Bigger houses unlock at 5 and 12 medals (${esc(prof.medalCount || 0)} so far). Twinkle lights, animation, cars, pets and yard extras are for members.</span><label class="toggle"><input type="checkbox" id="preview" ${state.preview.has(p.id) || state.mode === 'member' ? 'checked' : ''} ${state.mode !== 'mixed' ? 'disabled' : ''}> Preview as a member</label>`;
     kit.appendChild(box);
     box.querySelector('#preview').onchange = (ev) => { ev.target.checked ? state.preview.add(p.id) : state.preview.delete(p.id); invalidate(i); renderPanel(); };
   }
   const set = (fn) => { fn(c); invalidate(i); renderPanel(); };
-  kit.appendChild(optRow('House', HOUSE_STYLES, r.house.style, (v) => set((c) => { c.house = { style: v }; }), locked));
-  kit.appendChild(swatchRow('Walls', COLORS.body, r.house.body, (v) => set((c) => { c.house.body = v; }), locked));
-  kit.appendChild(swatchRow('Roof', COLORS.roof, r.house.roof, (v) => set((c) => { c.house.roof = v; }), locked));
-  kit.appendChild(swatchRow('Door', COLORS.door, r.house.door, (v) => set((c) => { c.house.door = v; }), locked));
-  kit.appendChild(optRow('Windows', WINDOW_STYLES, r.house.windows, (v) => set((c) => { c.house.windows = v; }), locked));
+  ['small', 'medium', 'large'].forEach((tier) => {
+    const items = HOUSE_STYLES.filter((h) => h.tier === tier).map((h) => {
+      const u = houseUnlock(h.id, e.member, prof.medalCount || 0);
+      return { id: h.id, label: u.ok ? h.label : `${h.label} · ${u.need} medals`, free: u.ok };
+    });
+    const t = HOUSE_TIERS[tier];
+    kit.appendChild(optRow(tier === 'small' ? `${t.label} · everyone` : `${t.label} · ${t.medals} medals or member`, items, r.house.style, (v) => set((c) => { c.house = { style: v }; }), true));
+  });
+  kit.appendChild(swatchRow('Walls', COLORS.body, r.house.body, (v) => set((c) => { c.house = { ...c.house, body: v }; }), false));
+  kit.appendChild(swatchRow('Roof', COLORS.roof, r.house.roof, (v) => set((c) => { c.house = { ...c.house, roof: v }; }), false));
+  kit.appendChild(swatchRow('Door', COLORS.door, r.house.door, (v) => set((c) => { c.house = { ...c.house, door: v }; }), false));
+  kit.appendChild(optRow('Windows', WINDOW_STYLES.map((w) => ({ ...w, free: true })), r.house.windows, (v) => set((c) => { c.house = { ...c.house, windows: v }; }), locked));
   kit.appendChild(optRow('Billboard', BILLBOARD_STYLES, r.sign.style, (v) => set((c) => { c.sign = { ...c.sign, style: v }; }), locked));
   kit.appendChild(swatchRow('Sign color', COLORS.sign, r.sign.color, (v) => set((c) => { c.sign = { ...c.sign, color: v }; }), locked));
   kit.appendChild(optRow('Car', CAR_TYPES, r.car ? r.car.type : 'none', (v) => set((c) => { c.car = { ...(c.car || {}), type: v }; }), locked));

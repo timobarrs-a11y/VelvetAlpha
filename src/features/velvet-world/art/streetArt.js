@@ -33,14 +33,34 @@ export function iso(x, y, z = 0) { return [(x - y) * TW, (x + y) * TH - z * ZH];
 // ---------------------------------------------------------------------------------------------
 // Catalog
 // ---------------------------------------------------------------------------------------------
+// Houses come in three sizes. Starter houses are open to everyone; bigger ones unlock with
+// medals or come with membership, so a bigger house always means something.
 export const HOUSE_STYLES = [
-  { id: 'standard', label: 'Classic', free: true },
-  { id: 'colonial', label: 'Brick colonial' },
-  { id: 'craftsman', label: 'Craftsman' },
-  { id: 'victorian', label: 'Victorian' },
-  { id: 'modern', label: 'Modern' },
-  { id: 'villa', label: 'Villa' },
+  { id: 'standard', label: 'Classic', tier: 'small' },
+  { id: 'cottage', label: 'Cottage', tier: 'small' },
+  { id: 'bungalow', label: 'Bungalow', tier: 'small' },
+  { id: 'ranch', label: 'Ranch', tier: 'small' },
+  { id: 'cabin', label: 'A-frame cabin', tier: 'small' },
+  { id: 'craftsman', label: 'Craftsman', tier: 'medium' },
+  { id: 'modern', label: 'Modern', tier: 'medium' },
+  { id: 'colonial', label: 'Brick colonial', tier: 'large' },
+  { id: 'victorian', label: 'Victorian', tier: 'large' },
+  { id: 'villa', label: 'Villa', tier: 'large' },
 ];
+export const HOUSE_TIERS = {
+  small: { label: 'Starter houses', medals: 0 },
+  medium: { label: 'Bigger houses', medals: 5 },
+  large: { label: 'Biggest houses', medals: 12 },
+};
+export function houseTier(style) { return (HOUSE_STYLES.find((h) => h.id === style) || HOUSE_STYLES[0]).tier; }
+// Can this person live in this house? Members can; free users once they've earned enough medals.
+export function houseUnlock(style, member, medalCount = 0) {
+  const tier = houseTier(style), need = HOUSE_TIERS[tier].medals;
+  if (tier === 'small') return { ok: true, by: 'starter', need: 0 };
+  if (member) return { ok: true, by: 'member', need };
+  if (medalCount >= need) return { ok: true, by: 'medals', need };
+  return { ok: false, by: null, need };
+}
 export const WINDOW_STYLES = [
   { id: 'classic', label: 'Classic' }, { id: 'shutters', label: 'Shutters' },
   { id: 'arched', label: 'Arched' }, { id: 'picture', label: 'Picture' },
@@ -75,6 +95,10 @@ export const COLORS = {
 };
 export const STYLE_DEFAULTS = {
   standard: { body: '#D9CDBD', trim: '#F7F3EE', roof: '#5A4A44', door: '#8E5468', windows: 'classic' },
+  cottage: { body: '#EFE7D8', trim: '#F7F3EE', roof: '#5F6E52', door: '#C2413A', windows: 'classic' },
+  bungalow: { body: '#8FA9BF', trim: '#F7F3EE', roof: '#4B5D6B', door: '#E0A43A', windows: 'classic' },
+  ranch: { body: '#E6C27A', trim: '#F7F3EE', roof: '#6E3B3B', door: '#2F4F3E', windows: 'picture' },
+  cabin: { body: '#B98A6A', trim: '#EFE6D3', roof: '#3F3A3D', door: '#2F4F3E', windows: 'classic' },
   colonial: { body: '#9C4A3A', trim: '#F7F3EE', roof: '#3F3A3D', door: '#2F4F3E', windows: 'shutters' },
   craftsman: { body: '#7E9A7A', trim: '#EFE6D3', roof: '#5A4A44', door: '#C2413A', windows: 'classic' },
   victorian: { body: '#C98A9A', trim: '#F7F3EE', roof: '#4A4450', door: '#3D6B73', windows: 'arched' },
@@ -109,22 +133,24 @@ export const MEDALS = {
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
 const h1 = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 
-// What a plot actually shows. Free plots ignore their saved choices and use a preset.
+// What a plot actually shows. Free plots keep their house choice and colors (starter houses, or
+// bigger ones unlocked with medals) but get the post sign and no yard extras or animation.
 export function resolvePlot(plot) {
-  const seed = hashStr(plot.id || 'plot');
-  const c = plot.config || {};
-  if (!plot.member) {
-    const p = FREE_PRESETS[Math.floor(seed * FREE_PRESETS.length) % FREE_PRESETS.length];
-    return { member: false, seed, house: { style: 'standard', ...p, windows: 'classic' }, sign: { style: 'post', color: COLORS.sign[0] }, car: null, pet: null, lawn: 'plain', tree: 'none', extras: {}, profile: plot.profile || {} };
-  }
-  const style = (c.house && c.house.style) || 'standard';
-  const house = { ...STYLE_DEFAULTS[style], ...(c.house || {}), style };
+  const seed = hashStr(plot.id || 'plot'), c = plot.config || {}, profile = plot.profile || {}, member = !!plot.member;
+  const want = (c.house && c.house.style) || 'standard';
+  const unlock = houseUnlock(want, member, profile.medalCount || 0);
+  const style = unlock.ok ? want : 'standard';
+  const preset = FREE_PRESETS[Math.floor(seed * FREE_PRESETS.length) % FREE_PRESETS.length];
+  const chosen = { ...(c.house || {}) }; delete chosen.style;
+  const house = { ...STYLE_DEFAULTS[style], ...(member || Object.keys(chosen).length ? {} : preset), ...chosen, style };
+  const houseBy = unlock.ok ? unlock.by : 'starter';
+  if (!member) return { member: false, seed, house, houseBy, sign: { style: 'post', color: COLORS.sign[0] }, car: null, pet: null, lawn: 'plain', tree: 'none', extras: {}, profile };
   return {
-    member: true, seed, house,
+    member: true, seed, house, houseBy,
     sign: { style: 'classic', color: COLORS.sign[0], ...(c.sign || {}) },
     car: c.car && c.car.type && c.car.type !== 'none' ? { color: COLORS.car[0], ...c.car } : null,
     pet: c.pet && c.pet.kind && c.pet.kind !== 'none' ? { coat: COLORS.coat[c.pet.kind][0], ...c.pet } : null,
-    lawn: c.lawn || 'plain', tree: c.tree || 'none', extras: c.extras || {}, profile: plot.profile || {},
+    lawn: c.lawn || 'plain', tree: c.tree || 'none', extras: c.extras || {}, profile,
   };
 }
 
@@ -423,10 +449,10 @@ function roofFrontGable(d, o) {
   return { xm, zAtRight: (x) => zR - (x - xm) * slope, eaveRight: { x: xr, y0: yb, y1: yf, z: zEo - t } };
 }
 function roofHip(d, o) {
-  const { x0, x1, y0, y1, zE, zR, oh = 0.32, color, trim, snow, hookBack } = o;
+  const { x0, x1, y0, y1, zE, zR, oh = 0.32, color, trim, snow, hookBack, mat = 'tile' } = o;
   const run = (y1 - y0) / 2, slope = (zR - zE) / run, zEo = zE - oh * slope, t = 0.12, ym = (y0 + y1) / 2;
   const xl = x0 - oh, xr = x1 + oh, yb = y0 - oh, yf = y1 + oh, xa = x0 + run, xb = x1 - run;
-  const tex = (eA, eB, tA, tB) => (s) => tileLines(d, eA, eB, tA, tB, color, s);
+  const tex = (eA, eB, tA, tB) => (s) => (mat === 'tile' ? tileLines(d, eA, eB, tA, tB, color, s) : shingleRows(d, eA, eB, tA, tB, 6, color, s, true));
   slopeFace(d, [[xl, yb, zEo], [xr, yb, zEo], [xb, ym, zR], [xa, ym, zR]], [0, -(zR - zE), run], color, o, tex([xl, yb, zEo], [xr, yb, zEo], [xa, ym, zR], [xb, ym, zR]));
   if (hookBack) hookBack((x, y) => zE + (y - y0) * slope);
   slopeFace(d, [[xl, yf, zEo], [xl, yb, zEo], [xa, ym, zR]], [-(zR - zE), 0, run], color, o, tex([xl, yf, zEo], [xl, yb, zEo], [xa, ym, zR], [xa, ym, zR]));
@@ -725,8 +751,114 @@ function houseVilla(d, H, meta, env) {
   return { doorX: cx, front: y1 + 0.75, eave: r.eave, top: zR };
 }
 
+function flowerBox(ctx, u, v, w, env) {
+  ctx.fillStyle = '#8A5A3B'; ctx.fillRect(u, v, w, 3.6); ctx.fillStyle = 'rgba(30,15,10,.3)'; ctx.fillRect(u, v + 3, w, 0.8);
+  if (env.season === 'winter') { ctx.fillStyle = '#F4F7FA'; ctx.fillRect(u, v - 1.2, w, 1.4); return; }
+  const fc = env.season === 'fall' ? ['#D98F2B', '#C2632B', '#E8B04A'] : ['#E05D8A', '#F2C230', '#F2EEE8'];
+  for (let k = 2; k < w - 1; k += 3.1) { circ(ctx, u + k, v - 0.6, 1.9, '#4E7F3A'); circ(ctx, u + k + 0.7, v - 1.8, 1.1, fc[Math.floor(k) % 3]); }
+}
+
+// Starter: a cottage with a steep roof and a little arched entry porch.
+function houseCottage(d, H, meta, env) {
+  const x0 = 2.0, x1 = 5.5, y0 = 1.8, y1 = 4.3, wall = 1.22, zR = 2.85, f = 0.12, snow = env.season === 'winter';
+  const vx0 = 3.15, vx1 = 4.35, vy1 = 4.95, vwall = 1.0, vzR = 1.88, cx = (vx0 + vx1) / 2;
+  d.shadowRect(x0 - 0.3, y0 - 0.3, x1 + 0.3, vy1 + 0.2, zR);
+  d.box(x0 - 0.05, y0 - 0.05, 0, x1 - x0 + 0.1, y1 - y0 + 0.1, f, '#A49B91');
+  wallFront(d, x0, x1, y1, f, wall, H.body, 'stucco', (ctx, W, Hp, map) => {
+    const reg = regFor(meta, map), ws = H.windows === 'picture' ? 'classic' : H.windows;
+    [W * 0.16, W * 0.84].forEach((c) => { win(ctx, c - 8.5, 8, 17, 17, ws, H, reg, { low: true }); flowerBox(ctx, c - 11, 29, 22, env); });
+  });
+  wallSide(d, x1, y0, y1, f, wall, H.body, 'stucco', (ctx, W, Hp, map) => { win(ctx, W / 2 - 8, 9, 16, 16, H.windows === 'shutters' ? 'classic' : H.windows, H, regFor(meta, map)); });
+  gableSide(d, x1, y0, y1, wall, zR, H.body, 'stucco', (ctx, W, Hp, map) => { const reg = regFor(meta, map); ctx.fillStyle = H.trim; ctx.beginPath(); ctx.arc(W / 2, Hp * 0.62, 6.5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = glassFill(ctx, W / 2 - 5, Hp * 0.62 - 5, 10, 10); ctx.beginPath(); ctx.arc(W / 2, Hp * 0.62, 5, 0, Math.PI * 2); ctx.fill(); reg(W / 2 - 4, Hp * 0.62 - 4, W / 2 + 4, Hp * 0.62 + 4); });
+  const r = roofSideGable(d, { x0, x1, y0, y1, zE: wall, zR, oh: 0.24, color: H.roof, trim: H.trim, snow, hookBack: (zAt) => chimney(d, x1 - 0.95, x1 - 0.5, y0 + 0.35, y0 + 0.75, zAt, zR + 0.32, '#9A8F82', meta) });
+  // entry porch with an arched door
+  d.box(vx0 - 0.04, y1, 0, vx1 - vx0 + 0.08, vy1 - y1 + 0.04, f, '#A49B91');
+  wallFront(d, vx0, vx1, vy1, f, vwall, H.body, 'stucco', (ctx, W, Hp, map) => { const reg = regFor(meta, map); door(ctx, W / 2 - 8, Hp - 26, 16, 26, H.door, H, 'arched', reg); });
+  wallSide(d, vx1, y1, vy1, f, vwall, H.body, 'stucco', null);
+  gableFront(d, vx0, vx1, vy1, vwall, vzR, H.body, 'stucco', (ctx, W, Hp, map) => lampFixture(ctx, W / 2, Hp * 0.35, regFor(meta, map)));
+  roofFrontGable(d, { x0: vx0, x1: vx1, y0: 3.8, y1: vy1, zE: vwall, zR: vzR, oh: 0.14, ohBack: 0, color: H.roof, trim: H.trim, snow });
+  d.box(cx - 0.42, vy1, 0, 0.84, 0.32, 0.12, '#B9B2A8');
+  return { doorX: cx, front: vy1 + 0.35, eave: r.eave, top: zR };
+}
+
+// Starter: a small front-gable bungalow with a two-post porch.
+function houseBungalow(d, H, meta, env) {
+  const x0 = 2.0, x1 = 5.4, y0 = 1.6, y1 = 4.0, py = 4.95, wall = 1.22, zR = 2.35, f = 0.26, snow = env.season === 'winter', cx = 3.0;
+  d.shadowRect(x0 - 0.3, y0 - 0.3, x1 + 0.3, py + 0.3, zR);
+  wallFront(d, x0, x1, y1, f, wall, H.body, 'lap', (ctx, W, Hp, map) => {
+    const reg = regFor(meta, map);
+    door(ctx, (cx - x0) * TW - 8, Hp - 31, 16, 31, H.door, H, 'craftsman', reg);
+    win(ctx, W * 0.68 - 13, 5, 26, 18, H.windows, H, reg, { low: true });
+    const g = ctx.createLinearGradient(0, 0, 0, Hp); g.addColorStop(0, 'rgba(25,15,25,.32)'); g.addColorStop(1, 'rgba(25,15,25,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, Hp);
+  });
+  wallSide(d, x1, y0, y1, f, wall, H.body, 'lap', (ctx, W, Hp, map) => win(ctx, W / 2 - 9, 6, 18, 17, H.windows === 'shutters' ? 'classic' : H.windows, H, regFor(meta, map)));
+  d.box(x0 - 0.05, y1, 0, x1 - x0 + 0.1, py - y1 + 0.05, f, '#9A8A78', { top: lit('#A07850', [0, 0, 1]) });
+  for (let k = 1; k < 6; k++) d.line([x0 - 0.05 + k * 0.58, y1, f + 0.001], [x0 - 0.05 + k * 0.58, py + 0.05, f + 0.001], 'rgba(60,40,20,.25)', 0.6);
+  d.box(cx - 0.45, py + 0.05, 0, 0.9, 0.3, 0.16, '#A89A88');
+  [x0 + 0.08, x1 - 0.22].forEach((x) => d.box(x, py - 0.16, f, 0.14, 0.14, wall - f - 0.16, H.trim));
+  d.box(cx + 0.6, py - 0.1, f + 0.45, x1 - cx - 0.85, 0.06, 0.05, H.trim);
+  for (let x = cx + 0.7; x < x1 - 0.25; x += 0.2) d.line([x, py - 0.07, f], [x, py - 0.07, f + 0.45], shade(H.trim, -0.15), 1.3);
+  d.box(x0 - 0.05, py - 0.14, wall - 0.16, x1 - x0 + 0.1, 0.14, 0.16, H.trim);
+  gableFront(d, x0 - 0.05, x1 + 0.05, py, wall, zR, H.body, 'shingle', (ctx, W, Hp) => vent(ctx, W, Hp));
+  roofFrontGable(d, { x0: x0 - 0.05, x1: x1 + 0.05, y0, y1: py, zE: wall, zR, oh: 0.26, color: H.roof, trim: H.trim, snow, hookRight: (zAt) => chimney(d, 4.55, 4.95, 1.9, 2.3, (x) => zAt(x), zR + 0.2, '#9A5B4A', meta) });
+  return { doorX: cx, front: py + 0.4, eave: { x0: x0 - 0.05, x1: x1 + 0.05, y: py + 0.05, z: wall - 0.04 }, top: zR };
+}
+
+// Starter: a long, low ranch with a hip roof and a big picture window.
+function houseRanch(d, H, meta, env) {
+  const x0 = 1.3, x1 = 6.0, y0 = 1.9, y1 = 4.2, wall = 1.08, zR = 1.9, f = 0.1, snow = env.season === 'winter', doorX = 4.35;
+  d.shadowRect(x0 - 0.4, y0 - 0.4, x1 + 0.4, y1 + 0.4, zR);
+  d.box(x0 - 0.05, y0 - 0.05, 0, x1 - x0 + 0.1, y1 - y0 + 0.1, f, '#A49B91');
+  wallFront(d, x0, x1, y1, f, wall, H.body, 'board', (ctx, W, Hp, map) => {
+    const reg = regFor(meta, map);
+    // brick wainscot along the bottom
+    ctx.fillStyle = '#9C5A48'; ctx.fillRect(0, Hp - 9, W, 9); ctx.save(); ctx.translate(0, Hp - 9); texture(ctx, 'brick', W, 9, '#9C5A48', 3); ctx.restore();
+    ctx.fillStyle = H.trim; ctx.fillRect(0, Hp - 10, W, 1.4);
+    win(ctx, 10, 6, 52, 18, 'picture', H, reg, { low: true, big: true });
+    const du = (doorX - x0) * TW - 8; door(ctx, du, Hp - 30, 16, 30, H.door, H, 'panel', reg);
+    ctx.fillStyle = glassFill(ctx, du + 18, Hp - 30, 5, 20); ctx.fillRect(du + 18.5, Hp - 29, 4.5, 19); reg(du + 18.5, Hp - 29, du + 23, Hp - 10, 'door');
+    win(ctx, W - 28, 7, 18, 15, H.windows, H, reg, { low: true });
+    lampFixture(ctx, du - 6, Hp - 25, reg);
+  }, { eaveShadow: 7 });
+  wallSide(d, x1, y0, y1, f, wall, H.body, 'board', (ctx, W, Hp, map) => { ctx.fillStyle = lit('#9C5A48', [1, 0, 0]); ctx.fillRect(0, Hp - 9, W, 9); ctx.save(); ctx.translate(0, Hp - 9); texture(ctx, 'brick', W, 9, lit('#9C5A48', [1, 0, 0]), 4); ctx.restore(); win(ctx, W / 2 - 9, 7, 18, 15, H.windows === 'shutters' ? 'classic' : H.windows, H, regFor(meta, map)); }, { eaveShadow: 7 });
+  d.box(doorX - 0.5, y1, 0, 1.0, 0.45, 0.12, '#B9B2A8');
+  const r = roofHip(d, { x0, x1, y0, y1, zE: wall, zR, oh: 0.42, color: H.roof, trim: H.trim, snow, mat: 'shingle', hookBack: (zAt) => chimney(d, 2.3, 2.75, 2.35, 2.75, zAt, zR + 0.32, '#9A5B4A', meta) });
+  return { doorX, front: y1 + 0.75, eave: r.eave, top: zR };
+}
+
+// Starter: an A-frame cabin on a little deck.
+function houseCabin(d, H, meta, env) {
+  const x0 = 2.25, x1 = 5.35, y0 = 1.3, y1 = 4.3, zR = 3.15, snow = env.season === 'winter', cx = (x0 + x1) / 2;
+  d.shadowRect(x0 - 0.2, y0 - 0.2, x1 + 0.2, y1 + 0.2, zR * 0.8);
+  gableFront(d, x0, x1, y1, 0, zR, H.body, 'board', (ctx, W, Hp, map) => {
+    const reg = regFor(meta, map), mid = W / 2;
+    // tall glass on both sides of the door and a triangle of glass above
+    ctx.fillStyle = H.trim; ctx.beginPath(); ctx.moveTo(mid, 22); ctx.lineTo(mid - 30, Hp - 34); ctx.lineTo(mid + 30, Hp - 34); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = glassFill(ctx, mid - 27, 26, 54, Hp - 62); ctx.beginPath(); ctx.moveTo(mid, 26); ctx.lineTo(mid - 26, Hp - 36); ctx.lineTo(mid + 26, Hp - 36); ctx.closePath(); ctx.fill();
+    vline(ctx, mid, 26, Hp - 36, H.trim, 1.3); hline(ctx, mid - 14, mid + 14, Hp - 58, H.trim, 1.2);
+    reg(mid - 18, Hp - 60, mid + 18, Hp - 36, 'window', { big: true });
+    win(ctx, mid - 31, Hp - 33, 15, 31, 'picture', H, reg, { low: true }); win(ctx, mid + 16, Hp - 33, 15, 31, 'picture', H, reg, { low: true });
+    door(ctx, mid - 8, Hp - 31, 16, 31, H.door, H, 'craftsman', reg);
+  });
+  roofFrontGable(d, { x0, x1, y0, y1, zE: 0.08, zR, oh: 0.06, color: H.roof, trim: H.trim, snow, hookRight: (zAt) => {
+    // stovepipe
+    const px = 4.35, py = 2.0, zb = zAt(px); d.box(px - 0.06, py - 0.06, zb, 0.12, 0.12, zR + 0.55 - zb, '#3A3D42'); d.box(px - 0.1, py - 0.1, zR + 0.55, 0.2, 0.2, 0.06, '#2B2D31'); meta.chimneys.push(d.P(px, py, zR + 0.62));
+  } });
+  // deck with a railing
+  d.box(x0 - 0.3, y1, 0, x1 - x0 + 0.6, 0.95, 0.3, '#8A6A55', { top: lit('#A07850', [0, 0, 1]) });
+  for (let k = 1; k < 7; k++) d.line([x0 - 0.3 + k * 0.52, y1, 0.301], [x0 - 0.3 + k * 0.52, y1 + 0.95, 0.301], 'rgba(60,40,20,.25)', 0.6);
+  [[x0 - 0.25, cx - 0.5], [cx + 0.5, x1 + 0.25]].forEach(([a, b]) => { d.box(a, y1 + 0.85, 0.3, b - a, 0.05, 0.05, '#7A5A45'); d.box(a, y1 + 0.85, 0.75, b - a, 0.06, 0.05, '#7A5A45'); });
+  [x0 - 0.25, cx - 0.55, cx + 0.45, x1 + 0.15].forEach((x) => d.box(x, y1 + 0.82, 0.3, 0.1, 0.1, 0.5, '#7A5A45'));
+  d.box(cx - 0.45, y1 + 0.95, 0, 0.9, 0.3, 0.18, '#8A6A55'); d.box(cx - 0.45, y1 + 1.25, 0, 0.9, 0.25, 0.09, '#8A6A55');
+  return { doorX: cx, front: y1 + 1.5, eave: { x0: x0 - 0.2, x1: x1 + 0.2, y: y1 + 0.06, z: 1.25 }, top: zR + 0.6 };
+}
+
 const HOUSE_FN = {
   standard: (d, H, m, e) => houseSideGable(d, H, m, e, { x0: 1.6, x1: 5.9, y0: 1.6, y1: 4.4, wall: 1.32, zR: 2.48, mat: 'lap' }),
+  cottage: houseCottage,
+  bungalow: houseBungalow,
+  ranch: houseRanch,
+  cabin: houseCabin,
   colonial: (d, H, m, e) => houseSideGable(d, H, m, e, { x0: 1.2, x1: 6.1, y0: 1.4, y1: 4.3, wall: 2.6, zR: 3.75, mat: 'brick', twoStory: true }),
   craftsman: houseCraftsman,
   victorian: houseVictorian,
@@ -1043,6 +1175,16 @@ function drawBillboard(d, r, env, meta) {
   }
   const m = (u, v) => { const [a, bb] = d.P(b.x0, yb, b.z1); return [a + u, bb + 0.5 * u + v]; };
   meta.hit.sign = [m(0, 0), m(W, 0), m(W, H), m(0, H)];
+  // members get a string of twinkle lights around the sign (the marquee already has bulbs)
+  if (member && s !== 'marquee') {
+    const pts = [], o = 3, step = 5.5;
+    if (s === 'round') { const R = W / 2 + o, n = Math.round((2 * Math.PI * R) / step); for (let k = 0; k < n; k++) { const a = (k / n) * Math.PI * 2; pts.push(m(W / 2 + Math.cos(a) * R, H / 2 + Math.sin(a) * R)); } }
+    else {
+      for (let u = -o; u <= W + o + 0.1; u += step) { pts.push(m(u, -o)); pts.push(m(u, H + o)); }
+      for (let v = -o + step; v < H + o - 1; v += step) { pts.push(m(-o, v)); pts.push(m(W + o, v)); }
+    }
+    meta.twinkle = pts;
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1086,6 +1228,10 @@ export function drawPlot(ctx, plot, i, layer, env) {
 // Door positions per style, used by the yard before the house is drawn.
 const HOUSE_LAYOUT = {
   standard: { doorX: 3.75, front: 5.1, eave: { x0: 1.32, x1: 6.18, y: 4.68, z: 1.12 } },
+  cottage: { doorX: 3.75, front: 5.3, eave: { x0: 1.76, x1: 5.74, y: 4.54, z: 0.9 } },
+  bungalow: { doorX: 3.0, front: 5.35, eave: { x0: 1.95, x1: 5.45, y: 5.0, z: 1.18 } },
+  ranch: { doorX: 4.35, front: 4.95, eave: { x0: 0.88, x1: 6.42, y: 4.62, z: 0.8 } },
+  cabin: { doorX: 3.8, front: 5.8, eave: { x0: 2.05, x1: 5.55, y: 4.36, z: 1.25 } },
   colonial: { doorX: 3.65, front: 5.0, eave: { x0: 0.92, x1: 6.38, y: 4.58, z: 2.4 } },
   craftsman: { doorX: 3.7, front: 6.15, eave: { x0: 1.1, x1: 6.3, y: 5.5, z: 1.33 } },
   victorian: { doorX: 4.35, front: 5.75, eave: { x0: 3.05, x1: 6.2, y: 5.35, z: 1.42 } },
@@ -1103,7 +1249,7 @@ export function drawPlotLive(ctx, plot, i, meta, t, env) {
   if (r.tree !== 'none') tree(ctx, ...d.P(1.05, 5.25), r.tree, env, tt, seed, d);
   if (meta.fountain) fountainWater(ctx, meta.fountain, tt, env);
   if (meta.flag) pennant(ctx, meta.flag, tt, r.sign.color, (r.profile.crew || 'V')[0]);
-  if (meta.chimneys.length && env.season !== 'summer') smoke(ctx, meta.chimneys[0], tt, seed);
+  if (meta.chimneys.length) smoke(ctx, meta.chimneys[0], tt, seed, env.season === 'summer' ? 0.22 : 0.42);
   if (r.pet) pet(ctx, d, r, meta, tt, env);
   if (env.season === 'fall' && r.tree !== 'none' && r.tree !== 'pine') fallingLeaves(ctx, d.P(1.05, 5.25), tt, seed);
 }
@@ -1149,10 +1295,10 @@ function pennant(ctx, [x, y], t, color, letter) {
   ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x, y - 4.5); pts.forEach(([px, py, hh]) => ctx.lineTo(px, py - hh / 2)); for (let k = n; k >= 0; k--) { const [px, py, hh] = pts[k]; ctx.lineTo(px, py + hh / 2); } ctx.lineTo(x, y + 4.5); ctx.closePath(); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `800 6px ${FONTS.display}`; ctx.fillText(letter, x + 3, pts[2][1] + 2.2);
 }
-function smoke(ctx, [x, y], t, seed) {
+function smoke(ctx, [x, y], t, seed, a = 0.42) {
   for (let k = 0; k < 7; k++) {
     const age = (t * 0.22 + k / 7 + seed) % 1, px = x + age * 18 + Math.sin(age * 6 + k) * 2.5, py = y - age * 42;
-    circ(ctx, px, py, 2.4 + age * 7, `rgba(235,235,240,${0.42 * (1 - age)})`);
+    circ(ctx, px, py, 2.4 + age * 7, `rgba(235,235,240,${a * (1 - age)})`);
   }
 }
 function fallingLeaves(ctx, [x, y], t, seed) {
@@ -1267,9 +1413,22 @@ export function drawPlotLights(ctx, plot, i, meta, t, env) {
   }
   ctx.restore();
 }
+const TWINKLE = ['#FF4D5E', '#FFC23D', '#4BD67A', '#4DA8FF', '#FF7AD9'];
+function drawTwinkle(ctx, pts, t, env, seed) {
+  // Bulbs keep a minimum size on screen so a member's sign still sparkles when zoomed out.
+  const rad = Math.max(1.25, Math.min(5, 1.9 / (env.zoom || 1))), n = env.night || 0;
+  pts.forEach(([x, y], k) => {
+    const c = TWINKLE[k % TWINKLE.length];
+    const on = env.reducedMotion ? 0.75 : 0.3 + 0.7 * Math.max(0, Math.sin(t * (1.4 + h1(k + seed) * 2) + h1(k * 7 + seed) * 6.28));
+    ctx.globalAlpha = 0.5 + 0.5 * on; circ(ctx, x, y, rad, c);
+    if (on > 0.55) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (on - 0.55) * (0.9 + n); circ(ctx, x, y, rad * 2.3, c); circ(ctx, x, y, rad * 0.55, '#FFFFFF'); ctx.globalCompositeOperation = 'source-over'; }
+  });
+  ctx.globalAlpha = 1;
+}
 function drawSignLights(ctx, plot, i, meta, t, env) {
   const r = meta.resolved, f = meta.sign, n = env.night; if (!f) return;
   const accent = r.sign.color;
+  if (meta.twinkle) drawTwinkle(ctx, meta.twinkle, t, env, r.seed * 50);
   const facePts = meta.hit.sign;
   // A lit sign is redrawn at near-daylight brightness on top of the darkened frame.
   const relight = (a) => { if (a <= 0.01) return; const d = pen(ctx, plotOrigin(i)); ctx.save(); ctx.globalAlpha = a; d.front(f.x0, f.y, f.z1, () => signFace(ctx, f.style, f.W, f.H, r.profile, accent, r.member)); ctx.restore(); };
@@ -1352,10 +1511,10 @@ export function drawTownGround(ctx, n, env, view, landmarkPct = 62) {
     backHouse(d, x, -7.6, s, env, lights, 0.3);
   }
   // a soft haze over everything behind the alley
-  const [ax, ay] = d.P(e.x0, -1.9, 0), [bx, by] = d.P(e.x1, -1.9, 0), hz = env.season === 'winter' ? '#E4EAF0' : FOG;
-  const g = ctx.createLinearGradient(0, Math.min(ay, by) - 900, 0, Math.max(ay, by));
+  const [ax, ay] = d.P(e.x0, -1.9, 0), [bx, by] = d.P(e.x1, -1.9, 0), [cx2, cy2] = d.P(e.x1, e.y0, 0), [dx2, dy2] = d.P(e.x0, e.y0, 0), hz = env.season === 'winter' ? '#E4EAF0' : FOG;
+  const g = ctx.createLinearGradient(0, Math.min(cy2, dy2), 0, Math.max(ay, by));
   g.addColorStop(0, rgba(hz, 0.55)); g.addColorStop(1, rgba(hz, 0.18));
-  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(bx, by - 4000); ctx.lineTo(ax, ay - 4000); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx2, cy2); ctx.lineTo(dx2, dy2); ctx.closePath(); ctx.fill();
   return { lights };
 }
 function backHouse(d, x0, y0, s, env, lights, haze, simple) {
