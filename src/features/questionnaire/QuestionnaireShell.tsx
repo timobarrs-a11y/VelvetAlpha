@@ -224,6 +224,7 @@ export function QuestionnaireShell({
   };
 
   const handleSwipeComplete = (direction: 'left' | 'right') => {
+    if (swipeDirection !== null) return;
     const swipeQ = question as SwipeQuestion;
     const card = swipeQ.cards[swipeIdx];
     const value = direction === 'left' ? card.left.label : card.right.label;
@@ -782,6 +783,7 @@ function ScrubRenderer({
   const leftLabel = tpl(config.leftLabel, ctx);
   const rightLabel = tpl(config.rightLabel, ctx);
   const valueLabels = config.valueLabels.map(l => tpl(l, ctx));
+  const [isDragging, setIsDragging] = useState(false);
   const draggingRef = useRef(false);
 
   const computeValueFromPointer = useCallback((clientX: number) => {
@@ -796,7 +798,8 @@ function ScrubRenderer({
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
     draggingRef.current = true;
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    setIsDragging(true);
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     computeValueFromPointer(e.clientX);
   }, [computeValueFromPointer]);
 
@@ -807,7 +810,8 @@ function ScrubRenderer({
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     draggingRef.current = false;
-    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+    setIsDragging(false);
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -858,7 +862,7 @@ function ScrubRenderer({
             className="absolute w-6 h-6 rounded-full bg-white shadow-lg pointer-events-none transition-transform"
             style={{
               left: `calc(${(value / config.max) * 100}% - 12px)`,
-              transform: draggingRef.current ? 'scale(1.2)' : 'scale(1)',
+              transform: isDragging ? 'scale(1.2)' : 'scale(1)',
             }}
           />
         </div>
@@ -915,6 +919,14 @@ function SwipeRenderer({
   const opacity = Math.max(0, 1 - Math.abs(dragX) / 400);
   const LeftIcon = loadIcon(card.left.icon || '') || Heart;
   const RightIcon = loadIcon(card.right.icon || '') || Check;
+  const isAnimating = direction !== null;
+
+  const handleTap = (e: React.MouseEvent, dir: 'left' | 'right') => {
+    e.stopPropagation();
+    if (isAnimating) return;
+    if (Math.abs(dragX) > 10) return;
+    onSwipe(dir);
+  };
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -936,7 +948,7 @@ function SwipeRenderer({
       >
         <div className="flex gap-4 w-full justify-center items-stretch">
           <button
-            onClick={(e) => { e.stopPropagation(); onSwipe('left'); }}
+            onClick={(e) => handleTap(e, 'left')}
             className="flex-1 flex flex-col items-center justify-center gap-3 px-5 py-8 rounded-2xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-all min-h-[12rem]"
           >
             <div className="w-14 h-14 rounded-2xl bg-rose-500/15 flex items-center justify-center">
@@ -945,7 +957,7 @@ function SwipeRenderer({
             <span className="text-sm text-gray-300 font-medium text-center leading-snug">{card.left.label}</span>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onSwipe('right'); }}
+            onClick={(e) => handleTap(e, 'right')}
             className="flex-1 flex flex-col items-center justify-center gap-3 px-5 py-8 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all min-h-[12rem]"
           >
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center">

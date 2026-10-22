@@ -100,6 +100,7 @@ export function VideoHistoryPage() {
           body: JSON.stringify({
             query,
             userContext: 'User prefers content matching their personal interests and hobbies',
+            allTags: shuffled,
           }),
         }
       );

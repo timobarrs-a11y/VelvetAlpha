@@ -102,7 +102,7 @@ async function fetchVideos(userId?: string | null): Promise<VideoResult[]> {
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ query, userContext: `user interests: ${tags.slice(0, 5).join(', ')}` }),
+    body: JSON.stringify({ query, userContext: `user interests: ${tags.slice(0, 5).join(', ')}`, allTags: tags }),
   });
   if (!response.ok) return [];
   const data = await response.json();

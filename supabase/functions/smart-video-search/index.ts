@@ -84,7 +84,7 @@ async function searchYouTube(query: string): Promise<YouTubeVideo[]> {
   }));
 }
 
-async function rankVideosWithAI(query: string, videos: YouTubeVideo[], userContext?: string): Promise<YouTubeVideo[]> {
+async function rankVideosWithAI(query: string, videos: YouTubeVideo[], userContext?: string, allTags?: string[]): Promise<YouTubeVideo[]> {
   const anthropic = new Anthropic({
     apiKey: Deno.env.get("ANTHROPIC_API_KEY"),
   });
@@ -93,9 +93,13 @@ async function rankVideosWithAI(query: string, videos: YouTubeVideo[], userConte
     `${idx + 1}. "${v.title}" by ${v.channelTitle}\n   Description: ${v.description.slice(0, 200)}...\n   Views: ${parseInt(v.viewCount || '0').toLocaleString()}`
   ).join('\n\n');
 
+  const tagsLine = allTags && allTags.length > 0
+    ? `The user's selected interests are: ${allTags.join(', ')}\nSTRICT RULE: Every video you include MUST be clearly relevant to at least one of these interests. Reject any video that does not genuinely relate to one of the listed topics.\n\n`
+    : '';
+
   const prompt = `You are a smart video recommendation system for an adult companion app. A user searched for: "${query}"
 
-${userContext ? `User context: ${userContext}\n\n` : ''}Here are YouTube search results:
+${tagsLine}${userContext ? `User context: ${userContext}\n\n` : ''}Here are YouTube search results:
 
 ${videoList}
 
@@ -107,9 +111,10 @@ Your task: Rank these videos based on contextual relevance and usefulness, NOT p
 - Avoid clickbait or low-quality content
 - Prioritize educational, insightful, entertaining, or romantic content appropriate for adults
 - If the query seems romantic or intimate, prioritize content suitable for couples/relationships
+${allTags && allTags.length > 0 ? '- ONLY include videos that are clearly relevant to at least one of the user\'s listed interests. If a video does not match any interest, EXCLUDE it.' : ''}
 
 Respond with ONLY a JSON array of video numbers in order of relevance, like: [3, 7, 1, 5, 2, ...]
-Include the top 8 most relevant videos. EXCLUDE any videos that are clearly for children.`;
+Include the top 8 most relevant videos. EXCLUDE any videos that are clearly for children${allTags && allTags.length > 0 ? ' or do not match any of the user\'s interests' : ''}.`;
 
   const message = await anthropic.messages.create({
     model: MODEL_CONFIG.HAIKU,
@@ -156,7 +161,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { query, userContext } = await req.json();
+    const { query, userContext, allTags } = await req.json();
 
     if (!query || typeof query !== 'string') {
       return new Response(
@@ -179,7 +184,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const rankedVideos = await rankVideosWithAI(query, videos, userContext);
+    const rankedVideos = await rankVideosWithAI(query, videos, userContext, allTags);
 
     return new Response(
       JSON.stringify({ videos: rankedVideos }),

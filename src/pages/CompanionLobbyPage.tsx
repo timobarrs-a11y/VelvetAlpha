@@ -225,6 +225,9 @@ export function CompanionLobbyPage() {
         <div className="flex items-center gap-2 min-w-0">
           <Heart className="w-5 h-5 text-pink-400 flex-shrink-0" fill="currentColor" style={{ filter: 'drop-shadow(0 0 6px rgba(244,114,182,0.70))' }} />
           <h1 className="ds-title-gradient text-3xl md:text-4xl font-bold font-display truncate">Velvet Lobby</h1>
+          {subscriptionInfo && (
+            <SubscriptionBanner tier={subscriptionInfo.tier} messagesRemaining={subscriptionInfo.messagesRemaining} compact />
+          )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
           <HomeLayoutSwitch mode="compact" className="hidden md:inline-flex" />
@@ -278,8 +281,8 @@ export function CompanionLobbyPage() {
       )}
 
       {subscriptionInfo && (
-        <div className="mb-8">
-          <SubscriptionBanner tier={subscriptionInfo.tier} messagesRemaining={subscriptionInfo.messagesRemaining} />
+        <div className="mb-6 lg:hidden">
+          <SubscriptionBanner tier={subscriptionInfo.tier} messagesRemaining={subscriptionInfo.messagesRemaining} compact />
         </div>
       )}
 
