@@ -49,7 +49,7 @@ Existing code you'll call (signatures already checked):
   `sendFriendRequest(otherUserId, introMessage?)` (silently ignores
   duplicates), `getFriends(): FriendPeer[]` (`user_id`, `display_name`),
   `getOutgoingRequests(): FriendPeer[]`
-- `src/hooks/useAccess.ts`: `useAccess().isPaid`
+- Member status: use `myPlot.is_member` from `getMyPlot()`. **Don't use `useAccess().isPaid`**: it checks plan names, and pricing isn't final. See "Who counts as a member" in the README.
 - `src/services/companionService.ts`: `getCompanions(userId)`
 
 ## Step 1: migration
@@ -230,7 +230,7 @@ three tier rows, member rows) to JSX, using the same labels. Rules (the kit
 helpers do the work):
 
 - House rows: one per tier, from `HOUSE_STYLES` / `HOUSE_TIERS`.
-  `houseUnlock(id, isPaid, earned)` decides enabled. A locked member house
+  `houseUnlock(id, myPlot.is_member, myPlot.earned)` decides enabled. A locked member house
   says "Craftsman · members". A locked earned house says
   "Treehouse · Hat Trick".
 - Walls, Roof and Door swatches (`COLORS.body/roof/door`) are open to

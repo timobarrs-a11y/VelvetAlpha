@@ -89,14 +89,16 @@ and can be re-run safely. The test, run as real users with RLS on, checked:
   recently last
 - search skips private profiles
 
-## Before Phase 6a: one check in the Supabase SQL editor (Tim)
+## Who counts as a member
 
-```sql
--- Paid tiers must be exactly these (the migration and check_access() both use them).
-select subscription_tier, count(*) from user_profiles group by 1 order by 2 desc;
--- Expect only: free, trial, essential, plus, elite (and maybe starter/unlimited from old rows).
--- If paying users show a different value, tell Claude before applying the migration.
-```
+Pricing isn't final, so **nothing here uses plan names.** A member is anyone
+whose `user_profiles.subscription_tier` is set and isn't `free` or `trial`.
+The Stripe webhook sets `free` when a subscription ends, so new or renamed
+plans count automatically. This lives in one place, `is_paid_member()` in
+the SQL. The app reads it from the server (`is_member` from
+`get_my_world_plot` / `world_cards`) and **never** from `useAccess().isPaid`,
+which still checks a fixed list of names. If trial users should get member
+houses too, remove `'trial'` from that one function.
 
 ## Ideas for later (not scheduled)
 

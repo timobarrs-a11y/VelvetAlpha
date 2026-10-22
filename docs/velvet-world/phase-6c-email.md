@@ -14,7 +14,9 @@ can't happen by accident.
 
 ## Before starting (Tim)
 
-The repo has no email provider yet. Recommended: **Resend** (free up to
+Every user already has an email address (it's their login). What's
+missing is a **sending service**: Velvet has no way to send its own email
+yet. Supabase only sends login emails. Recommended: **Resend** (free up to
 3,000 emails a month, simple API).
 
 1. Create a Resend account and verify the sending domain.

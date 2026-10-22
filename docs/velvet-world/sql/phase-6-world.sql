@@ -42,11 +42,13 @@ member_profiles. Idempotent.
 -- ============================================================
 -- 1. Helpers
 -- ============================================================
+-- Paid = on any plan that isn't free or the trial. Deliberately not a list of plan names:
+-- pricing isn't final, and the Stripe webhook sets 'free' whenever a subscription ends.
 CREATE OR REPLACE FUNCTION public.is_paid_member(p_user_id uuid)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT COALESCE((SELECT subscription_tier IN ('essential', 'plus', 'elite') FROM public.user_profiles WHERE id = p_user_id), false);
+  SELECT COALESCE((SELECT COALESCE(subscription_tier, 'free') NOT IN ('free', 'trial') FROM public.user_profiles WHERE id = p_user_id), false);
 $$;
 REVOKE EXECUTE ON FUNCTION public.is_paid_member(uuid) FROM anon, authenticated, public;
 
