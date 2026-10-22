@@ -29,3 +29,4 @@ all point Bolt at the full spec (`docs/social-profiles/spec.md`) for detail.
 | 7 | [`07-discovery.md`](07-discovery.md) | Follows, shared-goal discovery, trending, search |
 | 8 | [`08-atlas.md`](08-atlas.md) | Atlas introduces members working on the same things |
 | 9 | [`09-audit.md`](09-audit.md) | **Audit only:** checks everything above was built as decided |
+| 10 | [`10-fix-post-privacy.md`](10-fix-post-privacy.md) | **Urgent fix for `main`:** generic-by-default posts and profiles, Atlas title leak. Run this first. |

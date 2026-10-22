@@ -159,9 +159,10 @@ A and B. Report each query and its result.
 ## 3. Profiles
 
 - **P1.** Public fields are **only**: avatar (generated, never a photo),
-  display name, headline, optional gender (off by default), interests, shared
-  goals (title, type, current/target value, unit, target date, status, streak),
-  and posts. List **every** other column exposed by the public profile table,
+  display name, headline, optional gender (off by default), interests,
+  progress **counts** (active goals, goals completed, commitments kept, steps
+  done, streak), goals and commitments the member turned on "Show on profile"
+  for (listed fields only), and posts. List **every** other column exposed by the public profile table,
   view or function, including bio and anything else.
 - **P2.** No photo upload path exists. `avatar_url` (if any) can only hold our
   generated renders.
@@ -171,9 +172,10 @@ A and B. Report each query and its result.
   time.
 - **P4.** Invisible members never appear in discovery, trending, search or
   Atlas introductions.
-- **P5.** Goals are shared per goal, with "Auto-post progress" and "Show
-  commitment details" toggles. Nothing is copied to the public layer
-  automatically.
+- **P5.** Every goal and every commitment has a "Show on profile" toggle,
+  **off by default**, stored server-side. With it off, the item's title or
+  text is unreachable by other users through any table, view, function, post
+  or Atlas result.
 - **P6.** There's no client-readable path from another user to `user_profiles`,
   `user_goals` notes, journals, memories, insights, location or political
   leaning.
@@ -181,14 +183,18 @@ A and B. Report each query and its result.
 
 ## 4. Auto-posts
 
-- **AP1.** Triggers fire only for goals shared with auto-post on.
-  Commitments without a goal never post.
+- **AP1.** Auto-posts fire for every visible member with auto-posting on,
+  but their text is **generic** ("Kept a commitment") unless the specific
+  goal or commitment is shown on the profile. **Check specifically** that no
+  trigger copies `coaching_commitments.description`, a goal title or a step
+  title into a post when the item is hidden. Bolt's
+  `progress_posts_and_triggers` migration did this. Report each trigger.
 - **AP2.** Events covered: commitment completed, plan step completed, goal
   completed, 25/50/75 % progress, streaks (3, 7, 14, 30, 60, 100, 180, 365),
   and achievements of rarity uncommon or higher.
-- **AP3.** Post text comes from templates only. It never uses
-  `extracted_from_message` or any chat or journal text. Details appear only
-  when `show_details` is on.
+- **AP3.** Post text comes from templates only and is resolved at read time,
+  so hiding an item later makes old posts generic. It never uses
+  `extracted_from_message` or any chat or journal text.
 - **AP4.** Same-goal events within 6 hours are bundled. Max 3 auto-posts per
   user per day, with overflow going to a recap.
 - **AP5.** The first auto-post shows a toast with Undo and "Turn off for this

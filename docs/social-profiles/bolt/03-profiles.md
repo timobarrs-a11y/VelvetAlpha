@@ -5,10 +5,14 @@
 
 ## Goal
 
-Every member can have a public profile. It shows an **avatar (never a face
-photo)**, a display name, a headline, optional gender, interests, the goals
-they chose to share with progress and streaks, and their posts (posts come in
-phase 4). **Nothing else is ever public.**
+Every member has a public profile, **visible by default**. It shows an
+**avatar (never a face photo)**, a display name, a headline, optional gender,
+interests, **progress counts** (active goals, goals completed, commitments
+kept, plan steps done, current streak) and their posts (phase 4).
+
+**Goal and commitment contents are hidden by default.** Each goal and each
+commitment has a **Show on profile** toggle (off by default). Only shown items
+reveal their text. **Nothing else is ever public.**
 
 ## What exists today
 - **`im_discovery_profiles`** (migration
@@ -32,24 +36,26 @@ phase 4). **Nothing else is ever public.**
   - Lock `avatar_url` so it can only hold our own generated avatar render
     URLs (check constraint on the storage prefix), or drop its use. **No
     uploads.**
-- **New table `social_shared_goals`.**
-  - Columns: `user_id`, `goal_id → user_goals on delete cascade`,
-    `auto_post boolean default true`, `show_details boolean default false`,
-    `created_at`, `PRIMARY KEY (user_id, goal_id)`.
-  - RLS: owner writes; others read only via the profile RPC.
+- **Per-item visibility.** Add `show_on_profile boolean not null default
+  false` to `user_goals` and `coaching_commitments` (owner-writable).
 - **RPC `get_public_profile(p_user_id uuid)`** (SECURITY DEFINER). Returns
   **only**:
   - display name, avatar_config, headline, gender (only if `show_gender`),
     interests;
-  - shared goals with `title, goal_type, current_value, target_value, unit,
-    target_date, status` and current streak.
-  - **Never** `notes` or any other column.
+  - progress counts: active goals, goals completed, commitments kept, plan
+    steps done, current streak;
+  - **shown** goals only (`show_on_profile = true`): `title, goal_type,
+    current_value, target_value, unit, target_date, status`;
+  - **shown** commitments only: `description` and due/completed date.
+  - **Never** `notes`, `extracted_from_message`, step descriptions or any
+    other column.
   - It returns nothing if:
     - the viewer or the target fails `can_use_social`,
     - the target isn't discoverable (unless it's the viewer's own profile),
     - either has blocked the other (`im_blocks`).
 - **Profile page** at `/u/:userId`: avatar, name, headline, gender (if shown),
-  interest chips, and shared goal cards with progress bar and streak.
+  interest chips, the progress counts row, and cards for shown goals and
+  commitments.
   - Leave a placeholder for the posts feed (phase 4).
   - Show follower and following counts.
 - **Profile editor** (in settings or the existing `ProfilePage`):
@@ -60,8 +66,10 @@ phase 4). **Nothing else is ever public.**
   - interests,
   - avatar, pulled from the user's current avatar with a "Refresh from my
     avatar" button,
-  - a per-goal "Share this goal" toggle, with sub-toggles "Auto-post progress"
-    and "Show commitment details".
+  - a "Show on profile" toggle on every goal and every commitment (also
+    reachable from the Plan and Commitments tabs), off by default,
+  - an "Auto-post my progress" switch (on by default; posts are generic unless
+    an item is shown).
   - Saving copies the chosen values into `im_discovery_profiles`. Nothing is
     copied automatically.
 - **Preview.** An "as others see it" button shows the profile through
@@ -69,7 +77,10 @@ phase 4). **Nothing else is ever public.**
 
 ## Non-negotiables
 - **Only these fields are public:** avatar, display name, headline, optional
-  gender, interests, shared goals (listed fields only), posts.
+  gender, interests, progress counts, shown goals and commitments (listed
+  fields only), posts.
+- **Contents hidden by default.** A goal or commitment's text is public only
+  after its owner turns on "Show on profile".
 - **Nothing private leaks.** Nothing from journals, coaching chat, memories,
   insights, location, political leaning or `notes` is ever reachable by
   another user.
@@ -78,8 +89,9 @@ phase 4). **Nothing else is ever public.**
 - **Everything is gated** by `can_use_social` and blocks.
 
 ## Done when
-- [ ] A user shares one of two goals; another user sees only that goal, with
-      only the listed fields.
+- [ ] A new member's profile shows counts only; no goal or commitment text.
+- [ ] Turning on "Show on profile" for one goal reveals only that goal's listed
+      fields; turning it off hides it again.
 - [ ] Turning off "Show my gender" hides it.
 - [ ] A brand-new member's profile is visible to others by default.
 - [ ] Turning on "Go invisible" hides the profile from everyone else.

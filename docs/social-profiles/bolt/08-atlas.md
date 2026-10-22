@@ -19,13 +19,14 @@ working toward a 5K and just hit a 30-day streak. Want to see their profile?"
 - **SQL function `find_people_for(p_user_id uuid, p_limit int)`**
   (SECURITY DEFINER). Reads **only** the public layer:
   - `im_discovery_profiles` where `discoverable`,
-  - `social_shared_goals` plus the shared goal fields,
+  - goal types, plus goals and commitments with `show_on_profile = true`
+    (listed public fields only),
   - recent `social_posts`.
 
   It filters by `can_use_social`, blocks both ways, `crisis_flagged`, and the
   target's `social_settings.atlas_intros`. It matches on the user's own goal
-  types and interests, and returns display name, user id, the shared goal
-  title, and the latest milestone.
+  types and interests, and returns display name, user id, goal type, a goal
+  title **only if shown**, and the latest milestone.
 - **Atlas tool `find_people`** in `atlas-agent` that calls only that function.
   - **The tool must not query any other user's rows directly through
     `supabaseAdmin`.** That covers `user_goals`, `coaching_*`, memories, chats
@@ -54,8 +55,8 @@ working toward a 5K and just hit a 30-day streak. Want to see their profile?"
 ## Done when
 - [ ] Ask Atlas "anyone else training for a 5K?" and it returns matching
       members as cards.
-- [ ] **Privacy test** (automated): seed user B with a private goal, journal
-      text and coach notes, and one shared goal. Call `find_people` as user A.
+- [ ] **Privacy test** (automated): seed user B with a hidden goal, journal
+      text and coach notes, and one shown goal. Call `find_people` as user A.
       Assert that only B's public fields appear in the tool result and in
       Atlas's prompt context.
 - [ ] Blocked, non-discoverable and opted-out users never appear.

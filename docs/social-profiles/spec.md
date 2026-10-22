@@ -5,10 +5,10 @@ Status: draft for review · Owner: Timo · Last updated: 2026-10-20
 ## 1. What we're building
 
 Open VelvetAlpha up so members can see each other's progress. Every member gets a
-public profile (avatar only — no face photos) showing their shared goals and
-progress. When they do something — finish a commitment, hit a streak, complete a
+public profile (avatar only — no face photos) showing their progress as counts,
+plus any goals or commitments they choose to show. When they do something — finish a commitment, hit a streak, complete a
 plan step — the app posts it for them automatically as a reward. Other members
-can like, comment, follow, and discover each other by shared goals or by what's
+can like, comment, follow, and discover each other by goal type or by what's
 trending. Atlas can introduce members working on the same things.
 
 The loop this closes: the small retention mechanics (streaks, check-ins,
@@ -213,61 +213,88 @@ owner-read-only.
 | `headline` | user-entered | Existing column. |
 | `gender` | copied on opt-in | New column plus `show_gender boolean default false`. |
 | `interests` | user-picked | Existing column. |
-| Shared goals | `social_shared_goals` | See below. |
+| Progress counts | computed | Active goals, goals completed, commitments kept, plan steps done, current streak. **Numbers only.** |
+| Shown goals and commitments | per-item "Show on profile" toggle | See below. **Hidden by default.** |
 | Posts | `social_posts` | See §4. |
 
 Nothing else. Public fields are copied into the public table only when the user
 saves their profile; there are no views or joins from public tables into
 `user_profiles`.
 
-### Shared goals
+### Generic by default: counts, not contents
 
-`social_shared_goals (user_id, goal_id → user_goals, auto_post boolean, show_details boolean, created_at)`
+Profiles and posts show **how much** someone is doing, never **what** it is,
+unless the member chooses to show a specific item.
 
-- Sharing is per goal. Nothing is shared by default.
-- Public goal fields: `title`, `goal_type`, `current_value`, `target_value`,
-  `unit`, `target_date`, `status`, and the streak. `notes` is never public.
-- `show_details` (default false) controls whether commitment and plan-step
-  titles appear in auto-posts (§4).
+- **Default profile:** "3 active goals · 12 commitments kept · 🔥 9-day
+  streak". No goal titles, commitment text or plan-step titles.
+- **Show on profile, per item.** Every goal and every commitment has a **Show
+  on profile** toggle, **off by default**.
+  - **A shown goal:** title, type, progress (current/target value, unit),
+    target date, status.
+  - **A shown commitment:** its text and due/completed date.
+  - Hiding an item again removes it from the profile and from any post that
+    mentions it (the post reverts to generic text).
+- **Never public, even when shown:** goal `notes`,
+  `coaching_commitments.extracted_from_message`, coaching chat, plan-step
+  descriptions, memories, journals.
+- **Storage.** Visibility is stored server-side (for example
+  `show_on_profile boolean default false` on `user_goals` and
+  `coaching_commitments`, or a visibility table). Public reads go through a
+  SECURITY DEFINER function that applies these flags. Never use direct table
+  access.
 
 ## 4. Auto-posts (progress as reward)
+
+Every member's progress auto-posts (profiles are visible by default, §3), but
+**posts are generic** unless the item involved is shown on the profile.
 
 ### Triggers
 
 Database triggers write an event to `social_post_events`. A worker turns events
-into posts. A trigger fires only if the related goal is in
-`social_shared_goals` with `auto_post = true`.
+into posts.
 
 | Event | Source |
 |---|---|
-| Commitment completed | `coaching_commitments.status → 'completed'` (must have `goal_id`) |
-| Plan step completed | `coach_plan_steps.completed_at` set (plan linked to a shared goal) |
+| Commitment completed | `coaching_commitments.status → 'completed'` |
+| Plan step completed | `coach_plan_steps.completed_at` set |
 | Goal completed | `user_goals.status → 'completed'` |
 | Goal progress milestone | `user_goals.current_value` crosses 25 / 50 / 75 % |
 | Streak milestone | Check-in streak hits 3, 7, 14, 30, 60, 100, 180, 365 |
 | Achievement unlocked | `milestone_achievements` insert (rarity uncommon or higher) |
 
-Commitments with no `goal_id` never post. They come from chat extraction and
-may be private.
+Members can turn auto-posting off entirely in settings. Invisible members never
+auto-post.
 
 ### Post content
 
-- Generated from **templates**, not from chat text. Never use
-  `coaching_commitments.extracted_from_message`, and use `description` only when
-  `show_details = true`.
-  - Default example: "Completed a step toward **Run a 5K** · 🔥 12-day streak"
-  - With details: "Completed **'Run 3km without stopping'** toward **Run a 5K**"
-- The user can add an optional one-line note afterwards.
-- Several events on the same goal within 6 hours are bundled into one post.
-- At most 3 auto-posts per user per day; overflow is bundled into a daily recap.
-- The user's first auto-post shows a one-time toast: "We shared this to your
-  profile" with **Undo** and **Turn off for this goal**.
-- Any post can be deleted. Deletion is a soft delete, and the post is hidden
-  immediately.
+Generated from **templates only**. Text is resolved **at read time** against
+the current visibility flags, so hiding an item later also generalises old
+posts. Never use `extracted_from_message` or any chat or journal text.
+
+| Event | Generic (default) | If the item is shown on profile |
+|---|---|---|
+| Commitment kept | "Kept a commitment · 🔥 12-day streak" | "Kept a commitment: **Run 3 km without stopping**" |
+| Plan step done | "Completed a plan step" | "Completed a step toward **Run a 5K**" (goal shown) |
+| Goal completed | "Finished a goal 🏆" | "Finished **Run a 5K** 🏆" |
+| Goal progress | "Halfway to a goal" | "Halfway to **Run a 5K**" |
+| Streak | "Hit a 30-day streak 🔥" | (same) |
+
+- **Notes.** The user can add an optional one-line note afterwards.
+- **Bundling.** Several events within 6 hours are bundled into one post
+  ("Kept 3 commitments today").
+- **Daily cap.** At most 3 auto-posts per user per day; overflow is bundled
+  into a daily recap.
+- **First-post toast.** The user's first auto-post shows a one-time toast: "We
+  shared your progress (no details) to your profile" with **Undo** and **Turn
+  off auto-posts**.
+- **Deleting.** Any post can be deleted. Deletion is a soft delete, and the
+  post is hidden immediately.
 
 ### Manual posts
 
-Members can also write a free-text post (optionally linked to a shared goal).
+Members can also write a free-text post (optionally linked to a goal; the goal
+title appears only if that goal is shown on the profile).
 Same moderation as comments (§7).
 
 ## 5. Likes
@@ -410,9 +437,11 @@ Self-harm or acute-distress signals on a post or comment:
 - **Counts are shown.** Follower and following counts appear on profiles and
   discovery cards: seeing who has momentum draws people in to follow too.
   *(Changed from the original "never shown" decision.)*
-- **Discovery, mode A — shared goals.** Cards like "12 people training for a 5K
-  right now", built from `social_shared_goals` grouped by `goal_type` and
-  normalized title. Tapping a card lists those members' profiles.
+- **Discovery, mode A — goal types.** Cards built from goal **type** (public
+  for everyone, since it reveals no contents), e.g. "34 people working on a
+  fitness goal right now". Where enough members **show** a goal with a similar
+  title, a more specific card appears: "12 people training for a 5K". Tapping a
+  card lists those members' profiles.
 - **Discovery, mode B — trending.** Posts ranked by effort and recent
   engagement:
   - ranking signals: milestone size, streak length, human likes, comments, and
@@ -431,7 +460,8 @@ user's coaches and goals, and the Atlas interface is the natural place for
 - **New tool: `find_people`.** Calls a SECURITY DEFINER function that reads
   only the public layer:
   - `im_discovery_profiles` where `discoverable`,
-  - `social_shared_goals` and recent `social_posts`,
+  - goal types, shown goals (per §3 visibility flags) and recent posts as
+    rendered for the public,
 
   filtered by `can_use_social()` and blocks.
 - **Hard rule.** `atlas-agent` currently queries with the service-role client
@@ -440,7 +470,8 @@ user's coaches and goals, and the Atlas interface is the natural place for
   information about another member comes only from the public layer above.
   Enforce this in code review and with a test that seeds private data for user
   B and asserts it never appears in user A's Atlas context.
-- **Suggestion style:** "Sam is also working toward a 5K and just hit a 30-day
+- **Suggestion style:** only mentions a goal title if Sam shows that goal;
+  otherwise the goal type. Example: "Sam is also working toward a 5K and just hit a 30-day
   streak. Want to see their profile?"
 - **Limits:** at most one unprompted introduction per day. Users can turn
   introductions off, and can't be suggested to others while
@@ -458,7 +489,7 @@ user's coaches and goals, and the Atlas interface is the natural place for
 | Table | Purpose | RLS (all require `can_use_social(auth.uid())`) |
 |---|---|---|
 | `im_discovery_profiles` (extended) | Public profile | Read where `discoverable` and not blocked; write own |
-| `social_shared_goals` | Which goals are public | Read via profile visibility; write own |
+| `show_on_profile` flags on `user_goals` / `coaching_commitments` (or a visibility table) | Which items are shown | Owner writes; public reads only via SECURITY DEFINER profile function |
 | `social_post_events` | Trigger output queue | Service role only |
 | `social_posts` | Auto and manual posts | Read if author visible and not blocked; insert own manual posts; soft-delete own |
 | `social_likes` | Likes (human and bot) | Insert own human likes; expose only the count via RPC; bots insert via service role |
@@ -498,7 +529,7 @@ user's coaches and goals, and the Atlas interface is the natural place for
      undo.
    - Database triggers for step ↔ commitment ↔ goal progress.
 3. **Profiles.**
-   - Extend `im_discovery_profiles`, add `social_shared_goals`.
+   - Public profile table, progress counts, per-item "Show on profile" flags.
    - Profile page and editor.
 4. **Auto-posts.**
    - Triggers, worker, templates, bundling, undo toast, manual posts.
@@ -656,6 +687,8 @@ Rules for all of these:
 | Trial users get social access? | Yes (welcome window and card trial) |
 | Follower counts visible? | Yes, on profiles and discovery (changed from "never") |
 | Profiles visible by default? | Yes. Every profile is visible and discoverable from day 1, with an "invisible" option |
+| What progress is public by default? | Counts only (goals, commitments kept, steps, streak). Goal and commitment contents are hidden unless the member turns on "Show on profile" per item |
+| Auto-post text | Generic templates by default; specifics only for items shown on profile, resolved at read time |
 | Bot-like budget | Defaults in §5, tunable in `app_settings` |
 | Like counts visible on others' posts? | Yes, on everyone's posts |
 | Photo ID verification? | No. Verified email plus a server-verified date of birth |
