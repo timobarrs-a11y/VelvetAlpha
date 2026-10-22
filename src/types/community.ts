@@ -78,13 +78,14 @@ export interface BoardWithCounts extends CommunityBoard {
 export interface CommunityNotification {
   id: string;
   user_id: string;
-  type: 'reply' | 'reaction' | 'badge' | 'weekly';
+  type: 'reply' | 'reaction' | 'badge' | 'weekly' | 'mention' | 'join_request' | 'join_approved';
   actor_id: string | null;
   target_type: 'post' | 'comment' | null;
   target_id: string | null;
   post_id: string | null;
   read: boolean;
   created_at: string;
+  meta?: Record<string, unknown> | null;
 }
 
 export interface NotificationWithActor extends CommunityNotification {

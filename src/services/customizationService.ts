@@ -412,9 +412,10 @@ export async function performDailyCheckin(userId: string): Promise<UserCustomiza
 }
 
 export async function updateActivePointer(userId: string, pointerKey: string): Promise<void> {
-  await supabase.from('user_customization')
-    .upsert({ user_id: userId, active_pointer: pointerKey, updated_at: new Date().toISOString() })
-    .throwOnError();
+  const { error } = await supabase.from('user_customization')
+    .update({ active_pointer: pointerKey, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  if (error) throw error;
 }
 
 export async function updateCursorPrefs(userId: string, prefs: Partial<{
@@ -429,7 +430,8 @@ export async function updateCursorPrefs(userId: string, prefs: Partial<{
   toolbar_background_mode: ToolbarBackgroundMode;
   toolbar_text_color:      ToolbarTextColorKey;
 }>): Promise<void> {
-  await supabase.from('user_customization')
-    .upsert({ user_id: userId, ...prefs, updated_at: new Date().toISOString() })
-    .throwOnError();
+  const { error } = await supabase.from('user_customization')
+    .update({ ...prefs, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  if (error) throw error;
 }

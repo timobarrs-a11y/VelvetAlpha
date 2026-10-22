@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Check, Flame, Sparkles, Type, ChevronRight, X, Wand2, PanelBottom } from 'lucide-react';
+import { Lock, Check, Flame, Sparkles, Type, ChevronRight, X, Wand2, PanelBottom, Save } from 'lucide-react';
 import { ModalShell } from '../shared/ui/ModalShell';
 import { Button } from '../shared/ui/Button';
 import { useButtonHoverPreview } from '../context/ButtonHoverPreviewContext';
@@ -274,6 +274,8 @@ export function CustomizationPanel({
   }, [isOpen, initialTab]);
   const [editingCompanion, setEditingCompanion] = useState<CompanionWithLastMessage | null>(null);
   const [localCompanions, setLocalCompanions] = useState<CompanionWithLastMessage[]>(companions);
+  const [localTextColor, setLocalTextColor] = useState<ToolbarTextColorKey>(customization.toolbar_text_color ?? 'dark');
+  const [textColorSaved, setTextColorSaved] = useState(false);
   const streak = customization.current_streak;
   const fontUnlocked = customization.font_customization_unlocked;
   const { setPreviewStyle } = useButtonHoverPreview();
@@ -287,6 +289,17 @@ export function CustomizationPanel({
       setPreviewStyle(null);
     }
   }, [isOpen, tab, setPreviewStyle]);
+
+  useEffect(() => {
+    setLocalTextColor(customization.toolbar_text_color ?? 'dark');
+  }, [customization.toolbar_text_color]);
+
+  useEffect(() => {
+    if (textColorSaved) {
+      const t = setTimeout(() => setTextColorSaved(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [textColorSaved]);
 
   return (
     <>
@@ -677,9 +690,9 @@ export function CustomizationPanel({
                 <p className="text-xs text-ink-muted mb-4">Pick a preset that stays readable over your chosen background.</p>
                 <div className="flex flex-wrap gap-2.5">
                   {TOOLBAR_TEXT_COLOR_PRESETS.map(preset => {
-                    const sel = (customization.toolbar_text_color ?? 'dark') === preset.key;
+                    const sel = localTextColor === preset.key;
                     return (
-                      <button key={preset.key} onClick={() => onSetToolbarTextColor(preset.key)} title={preset.label}
+                      <button key={preset.key} onClick={() => { setLocalTextColor(preset.key); setTextColorSaved(false); }} title={preset.label}
                         style={{
                           appearance: 'none', WebkitAppearance: 'none',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -699,6 +712,32 @@ export function CustomizationPanel({
                       </button>
                     );
                   })}
+                </div>
+                <div className="flex items-center gap-3 mt-4">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      onSetToolbarTextColor(localTextColor);
+                      setTextColorSaved(true);
+                    }}
+                    disabled={localTextColor === (customization.toolbar_text_color ?? 'dark')}
+                    className="flex items-center gap-1.5"
+                  >
+                    {textColorSaved ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        Saved!
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-3.5 h-3.5" />
+                        Save text color
+                      </>
+                    )}
+                  </Button>
+                  {localTextColor !== (customization.toolbar_text_color ?? 'dark') && !textColorSaved && (
+                    <span className="text-xs text-ink-muted">Unsaved changes</span>
+                  )}
                 </div>
               </div>
             </motion.div>

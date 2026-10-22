@@ -99,7 +99,7 @@ const HUB_TILES: HubTileDef[] = [
   },
   {
     id: 'community', label: 'Community', desc: 'Boards, posts, and discussions.',
-    icon: MessageSquare, accent: '#60a5fa', solidBg: '#1565c0', path: '/community', slot: 'wide', size: 'wide',
+    icon: MessageSquare, accent: '#60a5fa', solidBg: '#1565c0', path: '/house', slot: 'wide', size: 'wide',
   },
 ];
 

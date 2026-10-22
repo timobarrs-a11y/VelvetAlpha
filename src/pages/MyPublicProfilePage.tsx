@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Users, Bot, Target, TrendingUp, Loader2, Pencil, EyeOff } from 'lucide-react';
+import { ArrowLeft, Users, Bot, Target, TrendingUp, Loader2, Pencil, EyeOff, Trophy } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
-import { Avatar } from '../components/Avatar';
-import { migrateAvatarConfig } from '../utils/avatarConfig';
-import type { AvatarConfigV2 } from '../types/avatar-v2';
+import { PublicProfileImage } from '../components/PublicProfileImage';
 import { getMyMemberProfile, MemberProfile } from '../services/memberProfileService';
 import { goalProgressPercent, goalDaysRemaining, GOAL_TYPE_LABELS, CoachingGoal } from '../services/coachingService';
+import { getUserMedals, type UserMedal } from '../services/medalsService';
+import { MedalShowcase } from '../components/medals/MedalShowcase';
+import { MedalBadge } from '../components/medals/MedalBadge';
 
 export default function MyPublicProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [goals, setGoals] = useState<CoachingGoal[]>([]);
+  const [medals, setMedals] = useState<UserMedal[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -31,6 +33,7 @@ export default function MyPublicProfilePage() {
         if (goalData) setGoals(goalData as CoachingGoal[]);
       }
     }
+    getUserMedals().then(setMedals).catch(() => {});
     setLoading(false);
   }, []);
 
@@ -72,8 +75,6 @@ export default function MyPublicProfilePage() {
     );
   }
 
-  const avatarConfig = profile.avatar_config ? migrateAvatarConfig(profile.avatar_config) : null;
-
   return (
     <div className="ds-page text-white">
       {/* Header */}
@@ -107,13 +108,7 @@ export default function MyPublicProfilePage() {
           className="flex items-start gap-5 mb-8"
         >
           <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border border-white/10 bg-white/5">
-            {avatarConfig ? (
-              <Avatar config={avatarConfig as AvatarConfigV2} className="w-full h-full" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-white/30">
-                {profile.display_name.slice(0, 2).toUpperCase()}
-              </div>
-            )}
+            <PublicProfileImage profile={profile} className="h-full w-full" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -146,6 +141,25 @@ export default function MyPublicProfilePage() {
           <div className="mb-8">
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">About</h2>
             <p className="text-sm text-white/70 leading-relaxed">{profile.bio}</p>
+          </div>
+        )}
+
+        {/* Medal showcase */}
+        {medals.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3 flex items-center gap-1.5">
+              <Trophy className="w-3 h-3" />
+              Medals
+            </h2>
+            <div className="flex flex-col gap-4 p-4 rounded-xl border border-white/8 bg-white/[0.02]">
+              <MedalShowcase medals={medals} isOwn onEdit={() => navigate('/medals')} />
+              <div className="flex flex-wrap gap-2">
+                {medals.filter(m => m.earned_at).map(m => (
+                  <MedalBadge key={m.slug} icon={m.icon} tier={m.tier as any} size="sm" />
+                ))}
+              </div>
+              <button onClick={() => navigate('/medals')} className="text-xs text-pink-400 hover:text-pink-300 transition-colors self-start">See all medals →</button>
+            </div>
           </div>
         )}
 

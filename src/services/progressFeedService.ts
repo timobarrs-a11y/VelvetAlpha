@@ -118,4 +118,5 @@ export const POST_TYPE_LABELS: Record<string, { label: string; icon: string; col
   goal_completed: { label: 'Goal Completed', icon: 'target', color: '#fbbf24' },
   milestone_achieved: { label: 'Milestone', icon: 'trophy', color: '#f472b6' },
   streak_milestone: { label: 'Streak', icon: 'flame', color: '#fb923c' },
+  medal_earned: { label: 'Medal Earned', icon: 'trophy', color: '#fbbf24' },
 };

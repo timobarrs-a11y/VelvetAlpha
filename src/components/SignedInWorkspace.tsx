@@ -28,10 +28,12 @@ import {
   VolumeX,
   Wifi,
   WifiOff,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
 import { MessagingOverlayMount } from './MessagingOverlayMount';
+import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { Avatar } from './Avatar';
@@ -250,16 +252,16 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
     { label: 'Insights', path: '/insights', tone: '#fbbf24', icon: <Lightbulb className="h-3.5 w-3.5" /> },
     { label: 'Morning Journal', path: '/morning-journal', tone: '#fbbf24', icon: <Sunrise className="h-3.5 w-3.5" /> },
     { label: 'Profile', path: '/profile', tone: '#cbd5e1', icon: <CircleUserRound className="h-3.5 w-3.5" /> },
-    { label: 'My Page', path: '/my-profile', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
   ];
   const connectTools = [
+    { label: 'My Page', path: '/my-profile', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
+    { label: 'House', path: '/house', tone: '#f472b6', icon: <Home className="h-3.5 w-3.5" /> },
     { label: 'Feed', path: '/feed', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
     { label: 'Discover', path: '/discover', tone: '#fbbf24', icon: <Compass className="h-3.5 w-3.5" /> },
     { label: 'Atlas', path: '/atlas', tone: '#cbd5e1', icon: <Bot className="h-3.5 w-3.5" /> },
     { label: 'Navi', path: '/local-explorer', tone: '#34d399', icon: <MapPin className="h-3.5 w-3.5" /> },
     { label: 'Group Chat', path: '/group-chat', tone: '#2dd4bf', icon: <UsersRound className="h-3.5 w-3.5" /> },
     { label: 'Velvet Rope', path: '/real-or-not', tone: '#f472b6', icon: <Zap className="h-3.5 w-3.5" /> },
-    { label: 'Community', path: '/community', tone: '#60a5fa', icon: <Users className="h-3.5 w-3.5" /> },
   ];
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -411,9 +413,10 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
         <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
           <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
-          <main className="min-h-0 min-w-0 overflow-hidden border-r border-white/8">{children}</main>
+          <main className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/8">{children}</main>
         </div>
         <div className="relative z-20 flex-shrink-0"><MessagingOverlayMount inkColor={inkColor} inkMuted={inkMuted} /></div>
+        <MedalToastHost />
         <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} lobby={lobby} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
       </div>
       {showLockScreen && !location.pathname.startsWith('/pricing') && !location.pathname.startsWith('/success') && !location.pathname.startsWith('/billing') && (

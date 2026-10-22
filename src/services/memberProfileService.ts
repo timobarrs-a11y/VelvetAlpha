@@ -6,6 +6,8 @@ export interface MemberProfile {
   headline: string | null;
   bio: string | null;
   avatar_config: Record<string, unknown> | null;
+  profile_image_type: 'avatar' | 'smilie';
+  profile_smilie_code: string | null;
   is_public: boolean;
   shared_goal_ids: string[];
   follower_count: number;
@@ -19,7 +21,21 @@ export interface MemberProfile {
 export async function getMyMemberProfile(): Promise<MemberProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  return getMemberProfile(user.id);
+  const existing = await getMemberProfile(user.id);
+  if (existing) return existing;
+
+  const { data: userProfile } = await supabase
+    .from('user_profiles')
+    .select('name, avatar_config')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  return upsertMyMemberProfile({
+    display_name: userProfile?.name || 'Member',
+    avatar_config: userProfile?.avatar_config ?? null,
+    is_public: true,
+    discoverable: true,
+  });
 }
 
 export async function getMemberProfile(userId: string): Promise<MemberProfile | null> {
@@ -41,6 +57,8 @@ export async function upsertMyMemberProfile(updates: {
   headline?: string | null;
   bio?: string | null;
   avatar_config?: Record<string, unknown> | null;
+  profile_image_type?: 'avatar' | 'smilie';
+  profile_smilie_code?: string | null;
   is_public?: boolean;
   shared_goal_ids?: string[];
   discoverable?: boolean;
