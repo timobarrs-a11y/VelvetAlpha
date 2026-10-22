@@ -51,9 +51,10 @@ phase 4). **Nothing else is ever public.**
 - **Profile page** at `/u/:userId`: avatar, name, headline, gender (if shown),
   interest chips, and shared goal cards with progress bar and streak.
   - Leave a placeholder for the posts feed (phase 4).
-  - **No follower or following counts anywhere.**
+  - Show follower and following counts.
 - **Profile editor** (in settings or the existing `ProfilePage`):
-  - "Make my profile visible" toggle (`discoverable`),
+  - "Go invisible" toggle. Profiles are **visible by default** from day 1;
+    invisible hides the profile from everyone else and from discovery,
   - display name, headline,
   - "Show my gender" toggle,
   - interests,
@@ -80,8 +81,8 @@ phase 4). **Nothing else is ever public.**
 - [ ] A user shares one of two goals; another user sees only that goal, with
       only the listed fields.
 - [ ] Turning off "Show my gender" hides it.
-- [ ] Turning off "Make my profile visible" hides the profile from everyone
-      else.
+- [ ] A brand-new member's profile is visible to others by default.
+- [ ] Turning on "Go invisible" hides the profile from everyone else.
 - [ ] Blocked users can't load each other's profiles in either direction.
 - [ ] Querying `user_profiles` or `user_goals` for another user from the
       browser console returns nothing.

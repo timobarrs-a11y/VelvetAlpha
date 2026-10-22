@@ -10,16 +10,15 @@ Members find each other two ways:
 - **By shared goals:** "12 people training for a 5K right now".
 - **By trending:** the posts showing the most effort and real engagement.
 
-They can follow people and search by interest or goal type. **Follower counts
-are never shown.**
+They can follow people and search by interest or goal type. Follower and
+following counts are shown on profiles and discovery cards.
 
 ## Build
 - **Follows.** Table `social_follows (follower_id, followee_id, created_at,
   PRIMARY KEY (follower_id, followee_id))`, if not already added in phase 5.
   - Follow and Unfollow buttons on profiles.
   - A "People I follow" list for the user themselves.
-  - **No follower or following counts anywhere**, including on your own
-    profile.
+  - Follower and following counts on profiles and discovery cards.
 - **Following feed.** Posts from people you follow, newest first.
 - **Shared-goal discovery.**
   - Cards grouped by `goal_type` and normalized goal title from
@@ -42,7 +41,6 @@ are never shown.**
   - Cap how often any one member sees boosted posts.
 
 ## Non-negotiables
-- **No follower counts.**
 - **Trending is human-ranked.** It uses human signals only.
 - **Blocks, visibility and crisis flags** apply everywhere in discovery.
 
@@ -51,5 +49,4 @@ are never shown.**
 - [ ] A post with 50 bot likes and no human engagement doesn't outrank a post
       with 5 human likes.
 - [ ] Blocked or non-discoverable profiles never appear.
-- [ ] No follower count appears anywhere in the UI or in API responses.
 - [ ] `npm run lint`, `npx vitest run` and `npm run build` pass.

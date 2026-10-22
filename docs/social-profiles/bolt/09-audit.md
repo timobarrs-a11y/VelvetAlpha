@@ -7,6 +7,10 @@
 >   what you built. Open the file, the migration or the function and cite it.
 > - If two migrations touch the same thing, the **latest** one wins. Check
 >   the final state, not the first version.
+> - **Names may differ.** Table and function names below come from the
+>   original spec. The build may use others (for example `member_profiles` /
+>   `member_follows` instead of `im_discovery_profiles` / `social_follows`).
+>   Judge by **behavior**, and name the actual table or function in Evidence.
 > - This checklist is self-contained. If `docs/social-profiles/spec.md` exists
 >   in the repo, use it for extra detail. If it doesn't, this list is the
 >   source of truth.
@@ -58,7 +62,8 @@ A and B. Report each query and its result.
   birthday = '1990-01-01' where id = A`. It must fail.
 - **S4.** As A, try to write `welcome_expires_at`, `subscription_tier`,
   `subscription_status`, `is_banned`, `social_paused`, `is_bot`, or any
-  follower/like count on your own rows. Every one must fail.
+  follower/like count on your own rows. Every one must fail. (Counts are
+  shown publicly, but only triggers or the server may change them.)
 - **S5.** As A, try to read the list of users who liked a post. Only a count
   may be readable.
 - **S6.** A blocks B (`im_blocks`). As B, A's profile, posts and comments are
@@ -160,11 +165,12 @@ A and B. Report each query and its result.
   view or function, including bio and anything else.
 - **P2.** No photo upload path exists. `avatar_url` (if any) can only hold our
   generated renders.
-- **P3.** Profiles are **opt-in**: hidden until the member turns visibility on.
-  **Check specifically** whether any migration changed the default to public
-  or flipped existing private profiles to public (for example
-  `profiles_public_by_default`). If so, report it as **DIFFERENT, privacy**.
-- **P4.** `discoverable` (appearing in discovery and Atlas intros) is opt-in.
+- **P3.** Profiles are **visible by default** from day 1, and every member has
+  a clear **"Go invisible"** option. Invisible hides the profile, posts and
+  discovery listing from everyone else, and the member can switch back any
+  time.
+- **P4.** Invisible members never appear in discovery, trending, search or
+  Atlas introductions.
 - **P5.** Goals are shared per goal, with "Auto-post progress" and "Show
   commitment details" toggles. Nothing is copied to the public layer
   automatically.
@@ -231,16 +237,15 @@ A and B. Report each query and its result.
 
 ## 7. Follows and discovery
 
-- **D1.** Follower and following counts are **never shown**: not on your own
-  profile, other profiles, discovery cards or Atlas intro cards, and not
-  returned by any API or service the UI uses. **Check specifically** for
-  `follower_count` / `following_count` in components, services and views.
-  Report every place.
+- **D1.** Follower and following counts are shown on profiles and discovery
+  cards. They're kept accurate by triggers (follow and unfollow), never
+  written by the client, and don't count follows from or to invisible or
+  blocked users in any way that reveals them.
 - **D2.** Shared-goal discovery cards ("12 people training for a 5K").
 - **D3.** Trending ranks by effort and **human** engagement only. Bot likes
   don't count.
 - **D4.** Search by interest and goal type.
-- **D5.** Discovery excludes non-discoverable, blocked, crisis-flagged and
+- **D5.** Discovery excludes invisible, blocked, crisis-flagged and
   users without social access.
 - **D6.** There's a new-member boost for the first 5 posts.
 
@@ -253,6 +258,6 @@ A and B. Report each query and its result.
 - **AT2.** There's an automated privacy test: user B's private goal, journal
   and coach notes never appear in user A's Atlas tool result or prompt.
 - **AT3.** At most one unprompted introduction per day. The `atlas_intros` and
-  `discoverable` opt-outs are respected.
+  invisible opt-outs are respected.
 - **AT4.** Introductions render as cards with avatar, name, shared goal and a
-  View profile button, and **no follower count**.
+  View profile button.
