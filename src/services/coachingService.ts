@@ -38,6 +38,7 @@ export interface CoachingGoal {
   source_companion_id?: string | null;
   companion_name?: string;
   companion_color?: string | null;
+  show_on_profile?: boolean;
 }
 
 export interface WeeklyStats {
@@ -139,7 +140,7 @@ export async function getGoals(userId: string): Promise<CoachingGoal[]> {
 export async function getGoalById(userId: string, goalId: string): Promise<CoachingGoal | null> {
   const { data, error } = await supabase
     .from('user_goals')
-    .select('*')
+    .select('*, show_on_profile')
     .eq('user_id', userId)
     .eq('id', goalId)
     .maybeSingle();

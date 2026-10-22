@@ -57,6 +57,8 @@ import { resolveExpert } from './services/expertService';
 import { inspectVoiceFidelity, clearDriftCorrection } from './services/voiceFidelityService';
 import { CoAuthorPage } from './pages/CoAuthorPage';
 import { DailyFeedPage } from './pages/DailyFeedPage';
+import { PlanTab } from './components/thread/PlanTab';
+import { CommitmentsTab } from './components/thread/CommitmentsTab';
 import { RatingValue, getRatingsForMessages, clearConversationMessages, markRatingRegenerated } from './services/ratingService';
 import { safeRandomUUID } from './utils/uuid';
 
@@ -133,7 +135,8 @@ function AppInner() {
 
   // Conversation threads + feature tabs
   const [activeThread, setActiveThread] = useState<ActiveThread>('companion');
-  const [openFeatures, setOpenFeatures] = useState<Array<'calendar' | 'co-author' | 'daily-feed' | 'your-lens'>>([]);
+  const [openFeatures, setOpenFeatures] = useState<Array<'calendar' | 'co-author' | 'daily-feed' | 'your-lens' | 'plan' | 'commitments'>>([]);
+  const [coachingHighlightIds, setCoachingHighlightIds] = useState<string[]>([]);
   const [atlasMessages, setAtlasMessages] = useState<Message[]>([]);
   const [naviMessages, setNaviMessages] = useState<Message[]>([]);
   const [atlasTyping, setAtlasTyping] = useState(false);
@@ -313,7 +316,7 @@ function AppInner() {
   // Listen for feature tab-opening events (calendar / co-author / daily-feed / your-lens)
   useEffect(() => {
     const handler = (e: Event) => {
-      const { tab } = (e as CustomEvent).detail as { tab: 'calendar' | 'co-author' | 'daily-feed' | 'your-lens' };
+      const { tab } = (e as CustomEvent).detail as { tab: 'calendar' | 'co-author' | 'daily-feed' | 'your-lens' | 'plan' | 'commitments' };
       setOpenFeatures(prev => prev.includes(tab) ? prev : [...prev, tab]);
       setActiveThread(tab);
     };
@@ -477,7 +480,7 @@ function AppInner() {
 
   const handleCloseThread = useCallback(async (thread: Exclude<ActiveThread, 'companion'>) => {
     // Feature tabs — just remove from open set
-    if (thread === 'calendar' || thread === 'co-author' || thread === 'daily-feed' || thread === 'your-lens') {
+    if (thread === 'calendar' || thread === 'co-author' || thread === 'daily-feed' || thread === 'your-lens' || thread === 'plan' || thread === 'commitments') {
       setOpenFeatures(prev => prev.filter(f => f !== thread));
       setActiveThread('companion');
       return;
@@ -797,6 +800,8 @@ function AppInner() {
       let navigationIntent: { destination: string; route: string; seedText?: string } | null = null;
       let articleIds: string[] | undefined;
       let coachArtifacts: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }> | undefined;
+      let coachingChanges: Array<{ entityType: string; entityId: string; action: string }> | undefined;
+      let uiActions: Array<{ tab: 'plan' | 'commitments'; highlightIds: string[] }> | undefined;
 
       if (userProfile && companionId) {
         const result = await ChatService.sendMessageWithSignals(content, companionId, userProfile);
@@ -805,6 +810,8 @@ function AppInner() {
         navigationIntent = result.navigationIntent || null;
         articleIds = result.article_ids;
         coachArtifacts = result.coachArtifacts;
+        coachingChanges = result.coachingChanges;
+        uiActions = result.uiActions;
       } else {
         response = await ChatService.sendMessage(content, companionId, companion.relationship_type);
       }
@@ -826,6 +833,13 @@ function AppInner() {
         setLastCalendarEvent(calendarEvent);
         if (calendarToastTimer.current) clearTimeout(calendarToastTimer.current);
         calendarToastTimer.current = setTimeout(() => setLastCalendarEvent(null), 7000);
+      }
+
+      if (uiActions && uiActions.length > 0) {
+        const lastAction = uiActions[uiActions.length - 1];
+        setCoachingHighlightIds(lastAction.highlightIds);
+        setOpenFeatures(prev => prev.includes(lastAction.tab) ? prev : [...prev, lastAction.tab]);
+        setActiveThread(lastAction.tab);
       }
 
       if (navigationIntent) {
@@ -1197,8 +1211,24 @@ function AppInner() {
               <DailyFeedPage onBack={() => { setOpenFeatures(p => p.filter(f => f !== 'your-lens')); setActiveThread('companion'); }} />
             </div>
           )}
+          {activeThread === 'plan' && (
+            <PlanTab
+              userId={userId || ''}
+              companionId={companionId}
+              highlightIds={coachingHighlightIds}
+              onBack={() => { setOpenFeatures(p => p.filter(f => f !== 'plan')); setActiveThread('companion'); }}
+            />
+          )}
+          {activeThread === 'commitments' && (
+            <CommitmentsTab
+              userId={userId || ''}
+              companionId={companionId}
+              highlightIds={coachingHighlightIds}
+              onBack={() => { setOpenFeatures(p => p.filter(f => f !== 'commitments')); setActiveThread('companion'); }}
+            />
+          )}
           {/* Chat view — hidden (not unmounted) when a feature tab is active so messages are preserved */}
-          <div className={activeThread === 'calendar' || activeThread === 'co-author' || activeThread === 'daily-feed' || activeThread === 'your-lens' ? 'hidden' : 'flex-1 flex flex-col overflow-hidden'}>
+          <div className={activeThread === 'calendar' || activeThread === 'co-author' || activeThread === 'daily-feed' || activeThread === 'your-lens' || activeThread === 'plan' || activeThread === 'commitments' ? 'hidden' : 'flex-1 flex flex-col overflow-hidden'}>
             <ChatContainer
               messages={
                 activeThread === 'atlas' ? atlasMessages
@@ -1238,7 +1268,7 @@ function AppInner() {
             />
           </div>
         </TutorialElement>
-        <div className={`hidden lg:block ${(activeThread === 'calendar' || activeThread === 'co-author' || activeThread === 'daily-feed' || activeThread === 'your-lens') ? 'lg:hidden' : ''}`}>
+        <div className={`hidden lg:block ${(activeThread === 'calendar' || activeThread === 'co-author' || activeThread === 'daily-feed' || activeThread === 'your-lens' || activeThread === 'plan' || activeThread === 'commitments') ? 'lg:hidden' : ''}`}>
           <CompanionHubRightRail
             companionName={getCharacterName()}
             userId={userId}
@@ -1294,7 +1324,7 @@ function AppInner() {
       {/* Bottom toolbar — sticky so chat content scrolls under the frosted glass */}
       <div
         className={`sticky bottom-0 z-40 flex-shrink-0 transition-all duration-500 ${
-          (activeThread === 'calendar' || activeThread === 'co-author' || activeThread === 'daily-feed' || activeThread === 'your-lens') ? 'hidden' : ''
+          (activeThread === 'calendar' || activeThread === 'co-author' || activeThread === 'daily-feed' || activeThread === 'your-lens' || activeThread === 'plan' || activeThread === 'commitments') ? 'hidden' : ''
         }`}
       >
         {/* Frosted glass background layer — blurs the chat content scrolling behind it */}

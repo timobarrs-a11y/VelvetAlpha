@@ -709,6 +709,8 @@ export class ChatService {
     navigationIntent?: { destination: string; route: string; seedText?: string } | null;
     article_ids?: string[];
     coachArtifacts?: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }>;
+    coachingChanges?: Array<{ entityType: string; entityId: string; action: string }>;
+    uiActions?: Array<{ tab: 'plan' | 'commitments'; highlightIds: string[] }>;
   }> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Authentication required');
@@ -745,6 +747,8 @@ export class ChatService {
       navigationIntent: data.navigationIntent || null,
       ...(Array.isArray(data.article_ids) && data.article_ids.length > 0 ? { article_ids: data.article_ids } : {}),
       ...(Array.isArray(data.coachArtifacts) && data.coachArtifacts.length > 0 ? { coachArtifacts: data.coachArtifacts } : {}),
+      ...(Array.isArray(data.coachingChanges) && data.coachingChanges.length > 0 ? { coachingChanges: data.coachingChanges } : {}),
+      ...(Array.isArray(data.uiActions) && data.uiActions.length > 0 ? { uiActions: data.uiActions } : {}),
     };
   }
 

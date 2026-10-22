@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Zap, MapPin, RotateCcw, MessageSquarePlus, Calendar, BookOpen, Newspaper, Video } from 'lucide-react';
+import { X, Zap, MapPin, RotateCcw, MessageSquarePlus, Calendar, BookOpen, Newspaper, Video, ListChecks, Target } from 'lucide-react';
 
-export type ActiveThread = 'companion' | 'atlas' | 'navi' | 'calendar' | 'co-author' | 'daily-feed' | 'your-lens';
+export type ActiveThread = 'companion' | 'atlas' | 'navi' | 'calendar' | 'co-author' | 'daily-feed' | 'your-lens' | 'plan' | 'commitments';
 
 // Threads that are bot conversations (support new/resume)
 type BotThread = 'atlas' | 'navi';
 // Feature tabs (full-page embeds, just open/close)
-type FeatureThread = 'calendar' | 'co-author' | 'daily-feed' | 'your-lens';
+type FeatureThread = 'calendar' | 'co-author' | 'daily-feed' | 'your-lens' | 'plan' | 'commitments';
 
 interface ThreadTab {
   id: ActiveThread;
@@ -24,6 +24,7 @@ interface Props {
   hasAtlas: boolean;
   hasNavi: boolean;
   openFeatures: FeatureThread[];
+  isMentor: boolean;
   onSwitch: (thread: ActiveThread) => void;
   onClose: (thread: Exclude<ActiveThread, 'companion'>) => void;
   onNewThread?: (thread: BotThread) => void;
@@ -119,7 +120,7 @@ export function ThreadTabBar({
   onClose,
   onNewThread,
 }: Props) {
-  const hasAny = hasAtlas || hasNavi || openFeatures.length > 0;
+  const hasAny = hasAtlas || hasNavi || openFeatures.length > 0 || isMentor;
   if (!hasAny) return null;
 
   const tabs: ThreadTab[] = [
@@ -177,6 +178,22 @@ export function ThreadTabBar({
       icon: <Video className="w-3 h-3" />,
       color: 'text-rose-600',
       activeStyle: { background: 'rgba(225,29,72,0.08)', borderColor: 'rgba(225,29,72,0.25)' },
+      kind: 'feature' as const,
+    }] : []),
+    ...(isMentor || openFeatures.includes('plan') ? [{
+      id: 'plan' as ActiveThread,
+      label: 'Plan',
+      icon: <ListChecks className="w-3 h-3" />,
+      color: 'text-emerald-600',
+      activeStyle: { background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.25)' },
+      kind: 'feature' as const,
+    }] : []),
+    ...(isMentor || openFeatures.includes('commitments') ? [{
+      id: 'commitments' as ActiveThread,
+      label: 'Commitments',
+      icon: <Target className="w-3 h-3" />,
+      color: 'text-amber-600',
+      activeStyle: { background: 'rgba(245,158,11,0.08)', borderColor: 'rgba(245,158,11,0.25)' },
       kind: 'feature' as const,
     }] : []),
   ];

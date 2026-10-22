@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from './shared/ui/Toast';
+import { FirstPostWatcher } from './components/FirstPostWatcher';
 import { RootRedirect } from './routes/rootRedirect';
 import { publicRoutes } from './routes/publicRoutes';
 import { onboardingRoutes } from './routes/onboardingRoutes';
@@ -106,6 +107,7 @@ export function Router() {
       <ButtonHoverPreviewProvider>
           <TutorialDirectorProvider>
             <ToastContainer />
+            <FirstPostWatcher />
             <SWUpdateToast />
             <InstallPWABanner />
             <AudioSceneSync />

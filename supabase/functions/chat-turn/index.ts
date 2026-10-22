@@ -16,7 +16,7 @@ import {
 } from "../_shared/correspondentFramework.ts";
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
-import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult } from "../_shared/coachTools.ts";
+import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult, type CoachingChange } from "../_shared/coachTools.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -212,6 +212,8 @@ interface ChatTurnResponse {
   navigationIntent?: NavigationIntent | null;
   article_ids?: string[];
   coachArtifacts?: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }>;
+  coachingChanges?: CoachingChange[];
+  uiActions?: Array<{ tab: 'plan' | 'commitments'; highlightIds: string[] }>;
   usage?: {
     cache_read_input_tokens?: number;
     cache_creation_input_tokens?: number;
@@ -824,88 +826,10 @@ Today's date: ${new Date().toISOString()}`,
       }
     }
 
-    if (isMentor && parsed.commitment && parsed.commitment.confidence > 0.7) {
-      const c = parsed.commitment;
-      try {
-        await supabaseAdmin.from("coaching_commitments").insert({
-          user_id: userId,
-          companion_id: companionId,
-          description: c.description,
-          due_date: c.due_date || null,
-          status: 'pending',
-          extracted_from_message: userMessage.substring(0, 500),
-        });
-      } catch {}
-      result.commitment = {
-        description: c.description,
-        due_date: c.due_date,
-        confidence: c.confidence,
-      };
-    }
-
-    if (isMentor && parsed.commitmentUpdate && parsed.commitmentUpdate.confidence > 0.65) {
-      const cu = parsed.commitmentUpdate;
-      const validStatuses = ['completed', 'missed', 'renegotiated'];
-      if (validStatuses.includes(cu.new_status)) {
-        const updateData: Record<string, unknown> = {
-          status: cu.new_status,
-          updated_at: new Date().toISOString(),
-        };
-        if (cu.new_status === 'completed') {
-          updateData.completed_at = new Date().toISOString();
-        }
-
-        // Find the matching commitment to check if it's linked to a goal
-        const { data: matchedCommitments } = await supabaseAdmin
-          .from('coaching_commitments')
-          .select('id, goal_id')
-          .eq('user_id', userId)
-          .eq('companion_id', companionId)
-          .in('status', ['pending', 'missed'])
-          .ilike('description', `%${cu.matched_description.substring(0, 100)}%`)
-          .limit(1);
-
-        const { error: updateErr } = await supabaseAdmin
-          .from('coaching_commitments')
-          .update(updateData)
-          .eq('user_id', userId)
-          .eq('companion_id', companionId)
-          .in('status', ['pending', 'missed'])
-          .ilike('description', `%${cu.matched_description.substring(0, 100)}%`);
-
-        if (updateErr) {
-          console.error(`[${traceId}] Commitment update failed:`, updateErr);
-        }
-
-        // Auto-update goal progress when a linked commitment is completed
-        if (cu.new_status === 'completed' && matchedCommitments && matchedCommitments.length > 0) {
-          const goalId = matchedCommitments[0].goal_id;
-          if (goalId) {
-            try {
-              const { data: goal } = await supabaseAdmin
-                .from('user_goals')
-                .select('current_value, target_value')
-                .eq('id', goalId)
-                .maybeSingle();
-
-              if (goal) {
-                const newValue = (Number(goal.current_value) || 0) + 1;
-                const patch: Record<string, unknown> = {
-                  current_value: newValue,
-                  updated_at: new Date().toISOString(),
-                };
-                if (goal.target_value && newValue >= Number(goal.target_value)) {
-                  patch.status = 'completed';
-                }
-                await supabaseAdmin.from('user_goals').update(patch).eq('id', goalId);
-              }
-            } catch (goalErr) {
-              console.error('[chat-turn] Goal progress auto-update error:', goalErr);
-            }
-          }
-        }
-      }
-    }
+    // Legacy commitment extraction paths retired — commitments are now created
+    // and updated only through coach tools (create_commitment, complete_commitment,
+    // cancel_commitment, update_commitment). Goal progress is handled by the
+    // sync_commitment_completion_to_goal trigger.
     // Process memory correction: supersede the item in-band, don't wait for dreaming
     if (parsed.memoryCorrection && parsed.memoryCorrection.confidence > 0.7) {
       const mc = parsed.memoryCorrection;
@@ -2029,7 +1953,7 @@ ${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, s
 RESPONSE LENGTH: ${isMentor ? 'As long as the topic warrants — use markdown, lists, and code blocks when they help. Never pad.' : 'Default short — like a real text.'} Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
     const hallucinationGuard = isMentor
-      ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference plans, steps, and commitments that appear in the [COACHING STATE] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [COACHING STATE] or [USER'S ACTIVE GOALS] sections. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.\n- COACH TOOLS: You have tools to propose plans (create_plan, add_step), respond to edits and revise steps (adjust_step), record commitments (create_commitment), and save things the user keeps (create_artifact: reading_material, routine, practice_set, worksheet, checklist, resource_pick, progress_report). Call a tool BEFORE you tell the user it is done, and read the tool result: if it reports an error, say so plainly and do not claim success. Never invent ids — use the plan_id / step_id / commitment_id values shown in [COACHING STATE]. Check [COACHING STATE] first: do not create a second plan when one already exists, and do not repeat a commitment or artifact you already made.\n- PROPOSE, DON'T IMPOSE: plans and steps you create are proposals the user can accept and edit. Give every step a concrete quantity and, where a real floor exists, a minimum (minimum_value). A real coach knows what will not work: if the user edits a step below your minimum, do not simply go along with it. Decide: adjust_step hold (keep your number and explain why it matters), revise (a middle ground), or accept (lower your minimum and say why). Respect edits at or above your minimum.\n- ADJUSTMENT SIGNALS: If [COACHING STATE] lists ADJUSTMENT SIGNALS, act on each once this session. Do not only ask what happened — propose a concrete change (a smaller step via adjust_step revise, a new commitment, or a new artifact) and lead with empathy. Do not repeat a signal you already addressed.`
+      ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference plans, steps, and commitments that appear in the [COACHING STATE] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [COACHING STATE] or [USER'S ACTIVE GOALS] sections. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.\n- COACH TOOLS: You have tools to create goals (create_goal), propose plans (create_plan, add_step), update plans (update_plan), respond to edits and revise steps (adjust_step, remove_step, reorder_steps), record and update commitments (create_commitment, update_commitment, complete_commitment, cancel_commitment), open tabs (show_in_tab), and save things the user keeps (create_artifact: reading_material, routine, practice_set, worksheet, checklist, resource_pick, progress_report). Call a tool BEFORE you tell the user it is done, and read the tool result: if it reports an error, say so plainly and do not claim success. Never invent ids — use the plan_id / step_id / commitment_id values shown in [COACHING STATE]. Check [COACHING STATE] first: do not create a second plan when one already exists, and do not repeat a commitment or artifact you already made.\n- FIRST CONVERSATION FLOW: As soon as you know the goal and timeframe, create a starter set in one reply: call create_goal, then create_plan with 3-6 steps (each with a concrete quantity and minimum), then create_commitment for 1-3 commitments due within 7 days (each tied to a step via plan_step_id). After creating items, call show_in_tab to open the Plan tab and walk the user through them. The popup is the same conversation — the user can ask questions or request changes, and you edit the plan or commitments live using your tools. End the walkthrough with update_plan status=active ("Let's go").\n- PROPOSE, DON'T IMPOSE: plans and steps you create are proposals the user can accept and edit. Give every step a concrete quantity and, where a real floor exists, a minimum (minimum_value). A real coach knows what will not work: if the user edits a step below your minimum, do not simply go along with it. Decide: adjust_step hold (keep your number and explain why it matters), revise (a middle ground), or accept (lower your minimum and say why). Respect edits at or above your minimum.\n- ADJUSTMENT SIGNALS: If [COACHING STATE] lists ADJUSTMENT SIGNALS, act on each once this session. Do not only ask what happened — propose a concrete change (a smaller step via adjust_step revise, a new commitment, or a new artifact) and lead with empathy. Do not repeat a signal you already addressed.\n- RECENT CHANGES: The [COACHING STATE] includes a RECENT CHANGES section showing what was edited since you last looked. Use this to acknowledge changes the user made (e.g. they ticked a step) or to know what you changed last time.`
       : '';
 
     const volatileContext = `\n\nRelationship duration: ${relationshipDuration} days
@@ -2132,15 +2056,34 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
     // Coaches can call tools mid-reply (plans, steps, commitments, artifacts). Every call is
     // verified against this user and this coach inside executeCoachTool.
     const createdArtifacts: CoachArtifactResult[] = [];
+    const coachingChanges: CoachingChange[] = [];
+    const collectedUiActions: Array<{ tab: 'plan' | 'commitments'; highlightIds: string[] }> = [];
+
+    // Check if this is the first coaching session (no prior closed sessions).
+    let isFirstSession = false;
+    if (isMentor) {
+      try {
+        const { count } = await supabaseAdmin
+          .from('coaching_sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('companion_id', companionId)
+          .eq('status', 'closed');
+        isFirstSession = (count ?? 0) === 0;
+      } catch {}
+    }
+
     const toolRunner: CoachToolRunner | undefined = isMentor
       ? {
           tools: COACH_TOOLS,
-          maxCalls: 6,
+          maxCalls: isFirstSession ? 12 : 6,
           executed: false,
           run: async (name, input) => {
             const outcome = await executeCoachTool(supabaseAdmin, user.id, companionId, name, input);
             if (outcome.isError) console.error(`[${traceId}] Coach tool ${name} failed:`, outcome.result);
             if (outcome.artifact && !createdArtifacts.some(a => a.id === outcome.artifact!.id)) createdArtifacts.push(outcome.artifact);
+            if (outcome.change) coachingChanges.push(outcome.change);
+            if (outcome.uiAction) collectedUiActions.push(outcome.uiAction);
             return { result: outcome.result, isError: outcome.isError };
           },
         }
@@ -2262,6 +2205,8 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
       navigationIntent: null,
       ...(correspondentArticleIds.length > 0 ? { article_ids: correspondentArticleIds } : {}),
       ...(createdArtifacts.length > 0 ? { coachArtifacts: createdArtifacts } : {}),
+      ...(coachingChanges.length > 0 ? { coachingChanges } : {}),
+      ...(collectedUiActions.length > 0 ? { uiActions: collectedUiActions } : {}),
       ...(apiUsage ? { usage: apiUsage } : {}),
     };
 

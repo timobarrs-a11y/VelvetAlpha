@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Target, Layers, CheckCircle2, BookOpen, TrendingUp, ChevronRight,
   Circle, Clock, Flame, AlertCircle, Calendar, Plus, X, ArrowLeft,
-  Sparkles, Lock, Activity,
+  Sparkles, Lock, Activity, Eye, EyeOff,
 } from 'lucide-react';
 import { PageShell, PageHeader, Card, EmptyState, LoadingState, Badge } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
@@ -23,6 +23,7 @@ import {
   type CoachArtifact, type CommitmentStatus, type PlanStatus, type StepStatus,
 } from '../services/coachingService';
 import { getCoachColor, formatDeadline, daysToDeadline, deadlineUrgency, type CoachColorPalette } from '../utils/coachColors';
+import { toggleGoalShowOnProfile, toggleCommitmentShowOnProfile } from '../services/publicProfileService';
 
 type Tab = 'plans' | 'commitments' | 'progress' | 'library';
 
@@ -148,6 +149,19 @@ export function GoalDetailPage() {
     toast({ type: 'success', message: 'Deadline updated.' });
   };
 
+  const handleToggleProfile = async () => {
+    if (!goal) return;
+    const next = !goal.show_on_profile;
+    setGoal(prev => prev ? { ...prev, show_on_profile: next } : prev);
+    try {
+      await toggleGoalShowOnProfile(goal.id, next);
+      toast({ type: 'success', message: next ? 'Goal visible on your profile.' : 'Goal hidden from your profile.' });
+    } catch {
+      setGoal(prev => prev ? { ...prev, show_on_profile: !next } : prev);
+      toast({ type: 'error', message: 'Could not update visibility.' });
+    }
+  };
+
   if (loading) {
     return (
       <PageShell center>
@@ -194,12 +208,26 @@ export function GoalDetailPage() {
             </span>
           }
           actions={
-            <button
-              onClick={handlePauseGoal}
-              className="text-xs px-3 py-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
-            >
-              Pause
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleToggleProfile}
+                className={`text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+                  goal.show_on_profile
+                    ? 'text-ink hover:bg-white/5'
+                    : 'text-ink-muted hover:text-ink hover:bg-white/5'
+                }`}
+                title={goal.show_on_profile ? 'Visible on your public profile' : 'Hidden from your public profile'}
+              >
+                {goal.show_on_profile ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{goal.show_on_profile ? 'On profile' : 'Hidden'}</span>
+              </button>
+              <button
+                onClick={handlePauseGoal}
+                className="text-xs px-3 py-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
+              >
+                Pause
+              </button>
+            </div>
           }
         >
           {/* Deadline + pace strip */}

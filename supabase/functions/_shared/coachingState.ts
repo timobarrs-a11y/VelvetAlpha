@@ -55,6 +55,16 @@ export interface CoachingState {
   };
   /** Most recent user message to this coach that is older than the current burst of chat. */
   lastUserMessageBeforeSession: string | null;
+  /** Recent coaching change log entries (coach or user edits). */
+  changeLog: Array<{
+    id: string;
+    entity_type: string;
+    entity_id: string;
+    actor: string;
+    action: string;
+    reason: string | null;
+    created_at: string;
+  }>;
 }
 
 export interface Signal {
@@ -85,7 +95,7 @@ export async function loadCoachingState(
 ): Promise<CoachingState> {
   const burstCutoff = new Date(Date.now() - SESSION_BURST_MINUTES * 60 * 1000).toISOString();
 
-  const [goalRes, plansRes, commitmentsRes, tickRes, artifactRes, confidenceRes, lastMsgRes] = await Promise.all([
+  const [goalRes, plansRes, commitmentsRes, tickRes, artifactRes, confidenceRes, lastMsgRes, changeLogRes] = await Promise.all([
     supabaseAdmin
       .from('user_goals')
       .select('title, goal_type, target_date, status')
@@ -147,6 +157,13 @@ export async function loadCoachingState(
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabaseAdmin
+      .from('coaching_change_log')
+      .select('id, entity_type, entity_id, actor, action, reason, created_at')
+      .eq('user_id', userId)
+      .or(`companion_id.eq.${companionId},companion_id.is.null`)
+      .order('created_at', { ascending: false })
+      .limit(10),
   ]);
 
   const plans = (plansRes.data ?? []).map((p: Record<string, unknown>) => ({
@@ -177,6 +194,7 @@ export async function loadCoachingState(
     artifacts: (artifactRes.data ?? []) as CoachingState['artifacts'],
     confidenceTrend: buildConfidenceTrend(confidenceRes.data ?? []),
     lastUserMessageBeforeSession: (lastMsgRes.data as { created_at: string } | null)?.created_at ?? null,
+    changeLog: (changeLogRes.data ?? []) as CoachingState['changeLog'],
   };
 }
 
@@ -320,6 +338,15 @@ export function formatCoachingStateBlock(state: CoachingState, signals: Signal[]
     if (ct.direction === 'up') line += ' (trending up)';
     else if (ct.direction === 'down') line += ' (trending down — check in on them)';
     parts.push(line);
+  }
+
+  if (state.changeLog.length > 0) {
+    const logLines = state.changeLog.map(e => {
+      const ts = new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const actor = e.actor === 'coach' ? 'coach' : e.actor === 'user' ? 'user' : 'system';
+      return `  [${ts}] ${actor} ${e.action} ${e.entity_type} ${e.entity_id.slice(0, 8)}${e.reason ? ` — ${e.reason}` : ''}`;
+    });
+    parts.push(`RECENT CHANGES (what changed since you last looked):\n${logLines.join('\n')}`);
   }
 
   if (signals.length > 0) {
