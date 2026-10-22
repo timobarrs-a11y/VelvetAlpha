@@ -162,9 +162,9 @@ function relativeTime(iso: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function MessagingOverlay({ onClose, onMinimize, embedded = false }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean }) {
+export function MessagingOverlay({ onClose, onMinimize, embedded = false, initialView = 'conversations' }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean; initialView?: View }) {
   const { user } = useAuth();
-  const [view, setView] = useState<View>('conversations');
+  const [view, setView] = useState<View>(initialView);
   const [friends, setFriends] = useState<FriendPeer[]>([]);
   const [incoming, setIncoming] = useState<FriendPeer[]>([]);
   const [outgoing, setOutgoing] = useState<FriendPeer[]>([]);

@@ -40,6 +40,7 @@ const DiscoverPage = lazy(() => import('../pages/DiscoverPage'));
 const MyPublicProfilePage = lazy(() => import('../pages/MyPublicProfilePage'));
 const EditPublicProfilePage = lazy(() => import('../pages/EditPublicProfilePage'));
 const HousePage = lazy(() => import('../pages/HousePage'));
+const WorldPage = lazy(() => import('../pages/WorldPage').then(m => ({ default: m.WorldPage })));
 const BrowseSpacesPage = lazy(() => import('../pages/BrowseSpacesPage'));
 const MedalsPage = lazy(() => import('../pages/MedalsPage'));
 const JoinInvitePage = lazy(() => import('../pages/JoinInvitePage'));
@@ -93,6 +94,7 @@ export const appRoutes = [
   <Route key="house-space" path="/house/:boardId" element={P(<HousePage />)} />,
   <Route key="house-room" path="/house/:boardId/:roomName" element={P(<HousePage />)} />,
   <Route key="house-browse" path="/house/browse" element={P(<BrowseSpacesPage />)} />,
+  <Route key="world" path="/world" element={P(<WorldPage />)} />,
   <Route key="medals" path="/medals" element={P(<MedalsPage />)} />,
   <Route key="join" path="/join/:code" element={P(<JoinInvitePage />)} />,
 ];
