@@ -35,8 +35,9 @@ a starter house instead (resolvePlot in the kit), until they're a member again.
 - find_world_plot(p_query)          find someone by name
 - get_landmark_progress()           how built the clock tower is (0-100)
 
-Requires community Phases 2-3 (community_board_members, user_medals) and
-member_profiles. Idempotent.
+Requires community Phases 2-3 (community_board_members, user_medals),
+member_profiles, im_blocks, and user_goals.show_on_profile (migration
+20261022170300 generic_by_default_progress). Idempotent.
 */
 
 -- ============================================================
@@ -63,6 +64,16 @@ AS $$
     AND medal_slug IN ('iron-will', 'the-closer', 'hat-trick');
 $$;
 REVOKE EXECUTE ON FUNCTION public.world_earned_medals(uuid) FROM anon, authenticated, public;
+
+-- Has either person blocked the other? Blocked people never see each other's billboard details,
+-- block or search results.
+CREATE OR REPLACE FUNCTION public.world_blocked(p_a uuid, p_b uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.im_blocks WHERE (blocker_id = p_a AND blocked_id = p_b) OR (blocker_id = p_b AND blocked_id = p_a));
+$$;
+REVOKE EXECUTE ON FUNCTION public.world_blocked(uuid, uuid) FROM anon, authenticated, public;
 
 -- ============================================================
 -- 2. Plots
@@ -188,7 +199,8 @@ GRANT EXECUTE ON FUNCTION public.save_world_plot(jsonb, jsonb, jsonb) TO authent
 -- ============================================================
 -- 3. What a billboard shows
 -- ============================================================
--- Private profiles still get a house, but their billboard just says "A neighbor".
+-- Private profiles (and people you've blocked or who blocked you) still have a house, but their
+-- billboard just says "A neighbor". Goals show only if the owner turned on show_on_profile.
 CREATE OR REPLACE FUNCTION public.world_cards(p_user_ids uuid[])
 RETURNS TABLE (
   user_id uuid, slot_index int, house jsonb, sign jsonb, yard jsonb, is_member boolean, earned text[],
@@ -200,12 +212,12 @@ AS $$
   SELECT
     p.user_id, p.slot_index, p.house, p.sign, p.yard,
     public.is_paid_member(p.user_id), public.world_earned_medals(p.user_id),
-    COALESCE(mp.is_public, false),
-    CASE WHEN COALESCE(mp.is_public, false) THEN COALESCE(NULLIF(btrim(mp.display_name), ''), up.nickname, up.name, 'Neighbor') ELSE 'A neighbor' END,
-    CASE WHEN COALESCE(mp.is_public, false) THEN mp.headline END,
+    v.shown,
+    CASE WHEN v.shown THEN COALESCE(NULLIF(btrim(mp.display_name), ''), up.nickname, up.name, 'Neighbor') ELSE 'A neighbor' END,
+    CASE WHEN v.shown THEN mp.headline END,
     g.title,
     g.pct,
-    CASE WHEN COALESCE(mp.is_public, false) THEN COALESCE((
+    CASE WHEN v.shown THEN COALESCE((
       SELECT array_agg(x.medal_slug ORDER BY x.ord)
       FROM (
         SELECT um.medal_slug, COALESCE(um.showcase_slot, 10) * 1000 + row_number() OVER (ORDER BY um.earned_at DESC) AS ord
@@ -214,8 +226,8 @@ AS $$
         ORDER BY COALESCE(um.showcase_slot, 10), um.earned_at DESC
         LIMIT 3
       ) x), '{}') ELSE '{}' END,
-    CASE WHEN COALESCE(mp.is_public, false) THEN (SELECT count(*)::int FROM public.user_medals um WHERE um.user_id = p.user_id AND um.earned_at IS NOT NULL) ELSE 0 END,
-    CASE WHEN COALESCE(mp.is_public, false) THEN COALESCE((
+    CASE WHEN v.shown THEN (SELECT count(*)::int FROM public.user_medals um WHERE um.user_id = p.user_id AND um.earned_at IS NOT NULL) ELSE 0 END,
+    CASE WHEN v.shown THEN COALESCE((
       SELECT array_agg(b.name ORDER BY m.joined_at)
       FROM (SELECT * FROM public.community_board_members m0 WHERE m0.user_id = p.user_id ORDER BY m0.joined_at LIMIT 2) m
       JOIN public.community_boards b ON b.id = m.board_id AND b.visibility = 'open'), '{}') ELSE '{}' END,
@@ -224,12 +236,14 @@ AS $$
   JOIN public.world_plots p ON p.user_id = ids.id
   LEFT JOIN public.member_profiles mp ON mp.user_id = p.user_id
   LEFT JOIN public.user_profiles up ON up.id = p.user_id
+  -- shown = a public profile, and neither of you has blocked the other (you always see your own)
+  CROSS JOIN LATERAL (SELECT (p.user_id = auth.uid()) OR (COALESCE(mp.is_public, false) AND NOT public.world_blocked(auth.uid(), p.user_id)) AS shown) v
   LEFT JOIN LATERAL (
-    -- the first goal they chose to share
+    -- one goal they turned on "show on profile" for: an active one first, newest first
     SELECT ug.title, LEAST(100, GREATEST(0, round(100 * ug.current_value / NULLIF(ug.target_value, 0))))::int AS pct
     FROM public.user_goals ug
-    WHERE COALESCE(mp.is_public, false) AND ug.user_id = p.user_id AND ug.id = ANY (COALESCE(mp.shared_goal_ids, '{}'))
-    ORDER BY array_position(mp.shared_goal_ids, ug.id)
+    WHERE v.shown AND ug.user_id = p.user_id AND ug.show_on_profile
+    ORDER BY (ug.status = 'completed'), ug.created_at DESC
     LIMIT 1
   ) g ON true;
 $$;
@@ -267,7 +281,7 @@ AS $$
            md5(auth.uid()::text || p_day::text || p.user_id::text) AS shuffle
     FROM public.world_plots p
     JOIN public.member_profiles mp ON mp.user_id = p.user_id AND mp.is_public
-    WHERE p.user_id <> auth.uid()
+    WHERE p.user_id <> auth.uid() AND NOT public.world_blocked(auth.uid(), p.user_id)
   ),
   shared AS (SELECT c.user_id, true AS s, 0 AS grp, c.seen, c.shuffle FROM cands c WHERE c.shares ORDER BY c.seen, c.shuffle LIMIT 3),
   rest AS (SELECT c.user_id, c.shares AS s, 1 AS grp, c.seen, c.shuffle FROM cands c WHERE c.user_id NOT IN (SELECT shared.user_id FROM shared) ORDER BY c.seen, c.shuffle LIMIT GREATEST(p_count - (SELECT count(*) FROM shared), 0))
@@ -325,6 +339,7 @@ AS $$
   FROM public.world_plots p
   JOIN public.member_profiles mp ON mp.user_id = p.user_id AND mp.is_public
   WHERE length(btrim(p_query)) >= 2 AND mp.display_name ILIKE '%' || btrim(p_query) || '%'
+    AND NOT public.world_blocked(auth.uid(), p.user_id)
   ORDER BY mp.display_name
   LIMIT 10;
 $$;

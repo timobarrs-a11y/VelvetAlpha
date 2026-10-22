@@ -31,7 +31,8 @@ something, not report everything to you.
 | Neighbors | Everyone rotates every day. Nobody repeats until the pool runs out (30-day window). Up to 3 a day share one of your community spaces. Two side-by-side houses never match in style and color. |
 | Friends | Always findable: the Friends list has **Visit**, the town view pins friends, and search finds anyone with a public profile. |
 | Inactivity | Never shown. No "last seen", no empty or dark plots for inactive people. Every plot looks lived in. |
-| Private profiles | They still get a house in the town. Their billboard just says "A neighbor", and they're never put on someone else's daily block or in search. |
+| Private profiles and blocks | Private profiles still get a house in the town. Their billboard just says "A neighbor", and they're never put on someone else's daily block or in search. The same applies between two people when either has blocked the other (`im_blocks`). |
+| Goal on the billboard | Only goals the owner switched on with **show on profile** (`user_goals.show_on_profile`, the same switch the public profile uses), active ones first. |
 | Front vs inside | The front of the house (what the town sees) is edited only in Velvet World. The life-sim game (`VelvetHouseGame`) shows the inside and back. Nothing syncs between them. |
 | Companion | The user picks which companion's game house is their "main" one (`main_companion_id`). Deleting that companion sets it to null. **The plot is never deleted.** |
 | Notifications | No email for now. A friend request pops up on the site (badge and bubble on the messages button, Phase 6a step 9). Viewing a billboard never notifies anyone. |
