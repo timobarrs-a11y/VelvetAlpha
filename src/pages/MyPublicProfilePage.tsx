@@ -105,7 +105,7 @@ export default function MyPublicProfilePage() {
         {/* Preview banner */}
         <div className="mb-6 flex items-center gap-2 rounded-xl border border-pink-400/20 bg-pink-500/[0.04] px-4 py-2.5">
           <Users className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />
-          <p className="text-xs text-pink-300/70">This is how other members see your profile.</p>
+          <p className="text-xs text-pink-300/70">This is how other members see your profile. Items you haven't shared are shown faded so you can manage what's visible.</p>
         </div>
 
         {/* Avatar + identity */}
@@ -176,10 +176,13 @@ export default function MyPublicProfilePage() {
           </div>
         </div>
 
-        {/* Bio */}
+        {/* Bio — only visible to the owner, not to other members */}
         {profile.bio && (
           <div className="mb-8">
-            <h2 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">About</h2>
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2 flex items-center gap-1.5">
+              About
+              <span className="text-[9px] text-white/20 normal-case font-normal">(only visible to you)</span>
+            </h2>
             <p className="text-sm text-white/70 leading-relaxed">{profile.bio}</p>
           </div>
         )}

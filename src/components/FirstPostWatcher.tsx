@@ -61,7 +61,7 @@ export function FirstPostWatcher() {
     if (!popup) return;
     await supabase
       .from('progress_posts')
-      .update({ deleted_at: new Date().toISOString() })
+      .delete()
       .eq('id', popup.postId);
     setPopup(null);
   };

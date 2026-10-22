@@ -100,16 +100,17 @@ async function ownedGoal(admin: Admin, userId: string, companionId: string, goal
   return goal;
 }
 
-async function activeGoalId(admin: Admin, userId: string): Promise<string | null> {
+async function singleActiveGoalId(admin: Admin, userId: string, companionId: string): Promise<string | null> {
   const { data } = await admin
     .from('user_goals')
-    .select('id')
+    .select('id, source_companion_id')
     .eq('user_id', userId)
     .eq('status', 'active')
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  return (data as { id: string } | null)?.id ?? null;
+    .order('created_at', { ascending: true });
+  const goals = (data ?? []) as Array<{ id: string; source_companion_id: string | null }>;
+  const coachGoals = goals.filter(g => !g.source_companion_id || g.source_companion_id === companionId);
+  if (coachGoals.length === 1) return coachGoals[0].id;
+  return null;
 }
 
 async function ownedPlan(admin: Admin, userId: string, companionId: string, planId: unknown) {
@@ -732,7 +733,10 @@ export async function executeCoachTool(
           if (!goal) return fail('goal not found for this coach');
           goalId = goal.id as string;
         }
-        if (!goalId) goalId = await activeGoalId(admin, userId);
+        if (!goalId) {
+          goalId = await singleActiveGoalId(admin, userId, companionId);
+          if (!goalId) return fail('Could not determine the goal for this commitment. Pass goal_id, or link it to a plan step.');
+        }
 
         const { data: dup } = await admin
           .from('coaching_commitments')
@@ -899,7 +903,7 @@ export async function executeCoachTool(
           .insert({
             user_id: userId,
             companion_id: companionId,
-            goal_id: await activeGoalId(admin, userId),
+            goal_id: await singleActiveGoalId(admin, userId, companionId),
             artifact_type: artifactType,
             title,
             content,
