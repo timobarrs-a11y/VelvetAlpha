@@ -15,6 +15,7 @@ import {
   Settings2,
   VenetianMask,
   EyeOff,
+  Minus,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { useAuth } from '../auth/AuthProvider';
@@ -161,7 +162,7 @@ function relativeTime(iso: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function MessagingOverlay({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }) {
+export function MessagingOverlay({ onClose, onMinimize, embedded = false }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean }) {
   const { user } = useAuth();
   const [view, setView] = useState<View>('conversations');
   const [friends, setFriends] = useState<FriendPeer[]>([]);
@@ -455,9 +456,9 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className={embedded
-        ? 'relative z-40 flex h-[min(62vh,620px)] w-full items-stretch justify-end'
+        ? 'relative z-40 flex h-full w-full items-stretch justify-end'
         : 'fixed inset-0 z-[60] flex items-stretch sm:items-end sm:justify-end bg-black/60 p-0 backdrop-blur-sm sm:p-4'}
-      onClick={onClose}
+      onClick={embedded ? undefined : onClose}
     >
       <motion.div
         initial={{ x: 40, opacity: 0 }}
@@ -466,7 +467,7 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
         transition={{ type: 'spring', damping: 28, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
         className={embedded
-          ? 'flex h-full w-full flex-col overflow-hidden border border-white/10 bg-[var(--ds-surface,#1a1a2e)] shadow-2xl'
+          ? 'flex h-full w-full flex-col overflow-hidden'
           : 'flex h-full w-full flex-col overflow-hidden rounded-none border border-white/10 shadow-2xl sm:h-[min(720px,90vh)] sm:w-[420px] sm:rounded-2xl'}
         style={{ background: 'var(--ds-surface, #1a1a2e)', color: 'var(--ink, #fff)' }}
       >
@@ -501,6 +502,15 @@ export function MessagingOverlay({ onClose, embedded = false }: { onClose: () =>
                 : 'Stay connected'}
             </p>
           </div>
+          {onMinimize && (
+            <button
+              onClick={onMinimize}
+              className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
+              title="Minimize"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"

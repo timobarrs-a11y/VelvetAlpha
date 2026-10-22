@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, X, Minus, ChevronUp } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { useAuth } from '../auth/AuthProvider';
 import { MessagingOverlay } from './MessagingOverlay';
@@ -15,11 +15,12 @@ interface MessagingOverlayMountProps {
   inkMuted?: string;
 }
 
+type DockState = 'closed' | 'open' | 'minimized';
+
 export function MessagingOverlayMount({ inkColor = '#f0eeff', inkMuted = '#9990cc' }: MessagingOverlayMountProps) {
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [dockState, setDockState] = useState<DockState>('closed');
   const [unread, setUnread] = useState(0);
-  const [hasMessages, setHasMessages] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const refreshUnread = useCallback(async () => {
@@ -28,7 +29,6 @@ export function MessagingOverlayMount({ inkColor = '#f0eeff', inkMuted = '#9990c
       const convs = await getConversationList();
       const total = convs.reduce((sum, c) => sum + c.unread_count, 0);
       setUnread(total);
-      setHasMessages(convs.length > 0);
     } catch {
       // ignore
     }
@@ -65,9 +65,64 @@ export function MessagingOverlayMount({ inkColor = '#f0eeff', inkMuted = '#9990c
   if (!user) return null;
   if (HIDDEN_PATHS.some(p => path.startsWith(p))) return null;
 
+  const open = dockState === 'open';
+  const minimized = dockState === 'minimized';
+
   return (
-    <div className="w-full">
-      {!open && (
+    <div className="relative w-full">
+      {/* Docked chat panel — grows upward from the bar */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scaleY: 0.9 }}
+            animate={{ opacity: 1, y: 0, scaleY: 1 }}
+            exit={{ opacity: 0, y: 20, scaleY: 0.9 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            className="absolute bottom-full right-0 z-50 w-[100vw] sm:w-[400px] h-[min(70vh,640px)] flex flex-col overflow-hidden rounded-t-2xl border border-white/10 border-b-0 shadow-2xl"
+            style={{ background: 'var(--ds-surface, #1a1a2e)', transformOrigin: 'bottom right' }}
+          >
+            <MessagingOverlay
+              embedded
+              onClose={() => setDockState('closed')}
+              onMinimize={() => setDockState('minimized')}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Minimized tab — sits inside the bar, shows unread + name */}
+      <AnimatePresence>
+        {minimized && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 340 }}
+            className="flex items-center justify-center px-2 py-1.5"
+          >
+            <button
+              onClick={() => setDockState('open')}
+              className="relative flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-white/10"
+              style={{ color: inkColor }}
+              title="Open messages"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Messages</span>
+              {unread > 0 && (
+                <span
+                  className="flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white"
+                >
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+              <ChevronUp className="h-3 w-3 text-ink-muted" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Closed launcher — single button in the bar */}
+      {dockState === 'closed' && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -76,7 +131,7 @@ export function MessagingOverlayMount({ inkColor = '#f0eeff', inkMuted = '#9990c
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setOpen(true)}
+            onClick={() => setDockState('open')}
             className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/20 transition-colors hover:bg-white/8"
             style={{ color: inkColor }}
             title="Instant messages"
@@ -98,10 +153,6 @@ export function MessagingOverlayMount({ inkColor = '#f0eeff', inkMuted = '#9990c
           </motion.button>
         </motion.div>
       )}
-
-      <AnimatePresence>
-        {open && <MessagingOverlay embedded onClose={() => setOpen(false)} />}
-      </AnimatePresence>
     </div>
   );
 }
