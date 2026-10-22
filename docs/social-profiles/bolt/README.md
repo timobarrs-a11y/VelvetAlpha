@@ -28,3 +28,4 @@ all point Bolt at the full spec (`docs/social-profiles/spec.md`) for detail.
 | 6 | [`06-bots.md`](06-bots.md) | Bot likes with momentum, question bots, disclosure page |
 | 7 | [`07-discovery.md`](07-discovery.md) | Follows, shared-goal discovery, trending, search |
 | 8 | [`08-atlas.md`](08-atlas.md) | Atlas introduces members working on the same things |
+| 9 | [`09-audit.md`](09-audit.md) | **Audit only:** checks everything above was built as decided |
