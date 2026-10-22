@@ -30,3 +30,4 @@ all point Bolt at the full spec (`docs/social-profiles/spec.md`) for detail.
 | 8 | [`08-atlas.md`](08-atlas.md) | Atlas introduces members working on the same things |
 | 9 | [`09-audit.md`](09-audit.md) | **Audit only:** checks everything above was built as decided |
 | 10 | [`10-fix-post-privacy.md`](10-fix-post-privacy.md) | **Urgent fix for `main`:** generic-by-default posts and profiles, Atlas title leak. Run this first. |
+| 11 | [`11-resume-loop.md`](11-resume-loop.md) | Login check: unfinished coaching loop sends the user back where they left off, with a personal resume message |
