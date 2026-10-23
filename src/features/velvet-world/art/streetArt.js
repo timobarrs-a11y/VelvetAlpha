@@ -50,8 +50,6 @@ export const HOUSE_STYLES = [
   { id: 'lighthouse', label: 'Lighthouse', tier: 'earned', medal: 'iron-will' },
   { id: 'observatory', label: 'Observatory', tier: 'earned', medal: 'the-closer' },
   { id: 'treehouse', label: 'Treehouse', tier: 'earned', medal: 'hat-trick' },
-  { id: 'windmill', label: 'Windmill', tier: 'earned', medal: 'coachable' },
-  { id: 'castle', label: 'Castle', tier: 'earned', medal: 'unbreakable' },
 ];
 export const HOUSE_TIERS = {
   starter: { label: 'Starter houses', note: 'everyone' },
@@ -108,8 +106,6 @@ export const STYLE_DEFAULTS = {
   lighthouse: { body: '#F2EEE8', trim: '#F7F3EE', roof: '#C2413A', door: '#2B4A6B', windows: 'classic' },
   observatory: { body: '#D8CFC2', trim: '#F7F3EE', roof: '#E8ECF0', door: '#2B4A6B', windows: 'arched' },
   treehouse: { body: '#B98A6A', trim: '#EFE6D3', roof: '#4F7A44', door: '#C2413A', windows: 'classic' },
-  windmill: { body: '#F2EEE8', trim: '#F7F3EE', roof: '#5A4A44', door: '#2F4F3E', windows: 'classic' },
-  castle: { body: '#C9C1B4', trim: '#EFE9DF', roof: '#2B4A6B', door: '#7A4A2E', windows: 'arched' },
   colonial: { body: '#9C4A3A', trim: '#F7F3EE', roof: '#3F3A3D', door: '#2F4F3E', windows: 'shutters' },
   craftsman: { body: '#7E9A7A', trim: '#EFE6D3', roof: '#5A4A44', door: '#C2413A', windows: 'classic' },
   victorian: { body: '#C98A9A', trim: '#F7F3EE', roof: '#4A4450', door: '#3D6B73', windows: 'arched' },
@@ -563,7 +559,7 @@ function houseSideGable(d, H, meta, env, o) {
 }
 
 function houseCraftsman(d, H, meta, env) {
-  const x0 = 1.2, x1 = 6.2, y0 = 1.3, y1 = 4.25, py = 5.45, wall = 1.38, zR = 4.05, f = 0.32;
+  const x0 = 1.2, x1 = 6.2, y0 = 1.3, y1 = 4.25, py = 5.45, wall = 1.38, zR = 2.95, f = 0.32;
   const cx = 3.7, snow = env.season === 'winter';
   d.shadowRect(x0 - 0.3, y0 - 0.3, x1 + 0.3, py + 0.3, zR);
   // house front under the porch roof
@@ -601,10 +597,8 @@ function houseCraftsman(d, H, meta, env) {
   d.box(x0 - 0.05, py - 0.15, wall - 0.2, x1 - x0 + 0.1, 0.15, 0.2, H.trim);
   gableFront(d, x0 - 0.05, x1 + 0.05, py, wall, zR, H.body, 'shingle', (ctx, W, Hp, map) => {
     const reg = regFor(meta, map);
-    // the upstairs: a pair of bedroom windows under a little attic vent
-    ctx.fillStyle = H.trim; ctx.fillRect(W / 2 - 31, Hp * 0.5 - 3, 62, 30);
-    [W / 2 - 28, W / 2 + 2].forEach((u) => win(ctx, u, Hp * 0.5, 26, 24, 'classic', H, reg));
-    ctx.fillStyle = shade(H.trim, -0.1); ctx.beginPath(); ctx.moveTo(W / 2 - 9, Hp * 0.3); ctx.lineTo(W / 2 + 9, Hp * 0.3); ctx.lineTo(W / 2, Hp * 0.18); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = H.trim; ctx.fillRect(W / 2 - 17, Hp * 0.45 - 2, 34, 17);
+    [W / 2 - 15, W / 2 - 5, W / 2 + 5].forEach((u) => win(ctx, u, Hp * 0.45, 9, 12, 'picture', H, reg));
     // knee braces
     ctx.fillStyle = H.trim; [[14, 1], [W - 14, -1]].forEach(([u, s]) => { ctx.beginPath(); ctx.moveTo(u, Hp); ctx.lineTo(u, Hp - 8); ctx.lineTo(u + 7 * s, Hp); ctx.closePath(); ctx.fill(); });
   });
@@ -736,11 +730,6 @@ function houseModern(d, H, meta, env) {
 function houseVilla(d, H, meta, env) {
   const x0 = 1.0, x1 = 6.3, y0 = 1.3, y1 = 4.4, wall = 2.45, zR = 3.3, f = 0.12, snow = env.season === 'winter', cx = 3.65;
   d.shadowRect(x0 - 0.35, y0 - 0.35, x1 + 0.35, y1 + 0.35, zR);
-  // the bell tower stands behind the house, so it's drawn first
-  const bx0 = 4.6, bx1 = 5.7, by0 = 0.2, by1 = 1.2, bz = 4.6;
-  wallFront(d, bx0, bx1, by1, 0, bz, H.body, 'stucco', (ctx2, W, Hp) => { ctx2.fillStyle = '#2A2226'; ctx2.beginPath(); ctx2.moveTo(W / 2 - 7, 30); ctx2.lineTo(W / 2 - 7, 14); ctx2.arc(W / 2, 14, 7, Math.PI, 0); ctx2.lineTo(W / 2 + 7, 30); ctx2.closePath(); ctx2.fill(); circ(ctx2, W / 2, 20, 4, '#C9A24A'); ctx2.fillStyle = shade(H.body, -0.2); ctx2.fillRect(0, 32, W, 2); }, { eaveShadow: 0 });
-  wallSide(d, bx1, by0, by1, 0, bz, H.body, 'stucco', (ctx2, W) => { ctx2.fillStyle = '#2A2226'; ctx2.beginPath(); ctx2.moveTo(W / 2 - 6, 30); ctx2.lineTo(W / 2 - 6, 15); ctx2.arc(W / 2, 15, 6, Math.PI, 0); ctx2.lineTo(W / 2 + 6, 30); ctx2.closePath(); ctx2.fill(); }, { eaveShadow: 0 });
-  roofHip(d, { x0: bx0, x1: bx1, y0: by0, y1: by1, zE: bz, zR: bz + 0.75, oh: 0.15, color: H.roof, trim: H.trim, snow });
   d.box(x0 - 0.04, y0 - 0.04, 0, x1 - x0 + 0.08, y1 - y0 + 0.08, f, '#B9A58A');
   wallFront(d, x0, x1, y1, f, wall, H.body, 'stucco', (ctx, W, Hp, map) => {
     const reg = regFor(meta, map), dc = (cx - x0) * TW, du = dc - 11;
@@ -921,16 +910,15 @@ function houseLighthouse(d, H, meta, env) {
 
 // Earned with The Closer (10 goals): a stone observatory with a domed telescope.
 function houseObservatory(d, H, meta, env) {
-  const ctx = d.ctx, snow = env.season === 'winter', x0 = 1.2, x1 = 5.6, y0 = 1.7, y1 = 4.5, wall = 2.75, cx = 3.4;
+  const ctx = d.ctx, snow = env.season === 'winter', x0 = 1.2, x1 = 5.6, y0 = 1.7, y1 = 4.5, wall = 1.6, cx = 3.4;
   d.shadowRect(x0 - 0.2, y0 - 0.2, x1 + 0.2, y1 + 0.2, 3.2);
   wallFront(d, x0, x1, y1, 0, wall, H.body, 'stone', (ctx2, W, Hp, map) => {
     const reg = regFor(meta, map), du = (cx - x0) * TW - 10;
     door(ctx2, du, Hp - 34, 20, 34, H.door, H, 'arched', reg);
-    [W * 0.14, W * 0.86 - 4].forEach((c) => { win(ctx2, c - 8, 10, 16, 30, 'arched', H, reg); win(ctx2, c - 7, Hp - 40, 14, 26, 'arched', H, reg, { low: true }); });
-    ctx2.fillStyle = shade(H.body, -0.18); ctx2.fillRect(0, Hp * 0.5, W, 2.5);
+    [W * 0.14, W * 0.86 - 4].forEach((c) => win(ctx2, c - 8, 10, 16, 30, 'arched', H, reg, { low: true }));
     ctx2.fillStyle = shade(H.body, -0.25); ctx2.fillRect(0, 0, W, 4); ctx2.fillStyle = shade(H.body, 0.15); ctx2.fillRect(0, 4, W, 1.5);
   }, { eaveShadow: 0 });
-  wallSide(d, x1, y0, y1, 0, wall, H.body, 'stone', (ctx2, W, Hp, map) => { const reg = regFor(meta, map); win(ctx2, W / 2 - 7, 10, 14, 28, 'arched', H, reg); win(ctx2, W / 2 - 7, Hp - 38, 14, 26, 'arched', H, reg, { low: true }); }, { eaveShadow: 0 });
+  wallSide(d, x1, y0, y1, 0, wall, H.body, 'stone', (ctx2, W, Hp, map) => win(ctx2, W / 2 - 7, 10, 14, 28, 'arched', H, regFor(meta, map)), { eaveShadow: 0 });
   d.box(x0 - 0.08, y0 - 0.08, wall, x1 - x0 + 0.16, y1 - y0 + 0.16, 0.14, shade(H.body, -0.15), { top: snow ? SNOW : lit(shade(H.body, -0.08), [0, 0, 1]) });
   // drum and dome
   const dcx = 4.15, dcy = 3.0;
@@ -984,104 +972,6 @@ function houseTreehouse(d, H, meta, env) {
   return { doorX: ladX + 0.2, front: py1 + 1.0, eave: { x0: cx0 - 0.2, x1: cx1 + 0.2, y: cy1 + 0.2, z: cw - 0.1 }, top: pz + 2.8 };
 }
 
-// A stone tower with a conical roof, used by the castle's corner turrets.
-function turret(d, cx, cy, r, z1, zTip, H, snow, meta, env) {
-  const ctx = d.ctx;
-  d.shadowBlob(cx, cy, r * 1.1, z1, 0.16);
-  const c = cylinder(d, cx, cy, 0, z1, r, r, H.body, { top: false });
-  // stone courses and an arrow slit
-  for (let z = 0.45; z < z1; z += 0.45) { const [ax, ay] = d.P(cx, cy, z); ctx.strokeStyle = 'rgba(40,30,30,.18)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(ax, ay, c.rx0, c.ry1, 0, 0, Math.PI); ctx.stroke(); }
-  [z1 * 0.42, z1 * 0.75].forEach((z) => { const [wx, wy] = d.P(cx + r * 0.2, cy + r * 0.7, z); rr(ctx, wx - 1.6, wy - 9, 3.2, 12, 1.2, env && env.night > 0.4 ? '#FFC978' : '#2A2730'); });
-  // eave ring and cone
-  const ring = cylinder(d, cx, cy, z1, z1 + 0.12, r + 0.12, r + 0.12, shade(H.body, -0.12), { topColor: shade(H.roof, -0.2) });
-  const [tx, ty] = d.P(cx, cy, zTip), roofC = snow ? SNOW : H.roof;
-  const g = ctx.createLinearGradient(ring.tx - ring.rx1, 0, ring.tx + ring.rx1, 0);
-  g.addColorStop(0, shade(roofC, 0.1)); g.addColorStop(0.5, roofC); g.addColorStop(1, shade(roofC, -0.3));
-  ctx.beginPath(); ctx.moveTo(ring.tx - ring.rx1, ring.ty); ctx.ellipse(ring.tx, ring.ty, ring.rx1, ring.ry1, 0, Math.PI, 0, true); ctx.lineTo(tx, ty); ctx.closePath(); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = EDGE; ctx.stroke();
-  limb(ctx, tx, ty, tx, ty - 10, '#2B2D31', 1.1); circ(ctx, tx, ty - 10, 1.4, '#C9A24A');
-  return [tx, ty];
-}
-
-// Crenellations along the top of a wall: the notched battlement every castle needs.
-function battlement(d, x0, x1, y0, y1, z, color, snow) {
-  const top = snow ? SNOW : lit(shade(color, 0.05), [0, 0, 1]);
-  for (let x = x0; x < x1 - 0.1; x += 0.6) d.box(x, y1 - 0.28, z, 0.32, 0.28, 0.34, color, { top });
-  for (let y = y0; y < y1 - 0.35; y += 0.6) d.box(x1 - 0.28, y, z, 0.28, 0.32, 0.34, color, { top });
-}
-
-// Earned with Unbreakable (a 100-day streak): a stone keep with two round turrets and a banner.
-function houseCastle(d, H, meta, env) {
-  const ctx = d.ctx, snow = env.season === 'winter', x0 = 1.6, x1 = 5.6, y0 = 1.5, y1 = 4.2, wall = 2.9, cx = 3.6;
-  d.shadowRect(x0 - 0.2, y0 - 0.2, x1 + 0.8, y1 + 0.6, 4.6);
-  // the tall inner tower behind the walls
-  const tx0 = 2.7, tx1 = 4.5, ty0 = 1.7, ty1 = 3.0, tz = 4.4;
-  wallFront(d, tx0, tx1, ty1, 0, tz, shade(H.body, -0.04), 'stone', (ctx2, W, Hp, map) => { const reg = regFor(meta, map); win(ctx2, W / 2 - 7, 8, 14, 22, 'arched', H, reg); }, { eaveShadow: 0 });
-  wallSide(d, tx1, ty0, ty1, 0, tz, shade(H.body, -0.04), 'stone', (ctx2, W, Hp, map) => win(ctx2, W / 2 - 5, 10, 10, 18, 'arched', H, regFor(meta, map)), { eaveShadow: 0 });
-  d.box(tx0, ty0, tz, tx1 - tx0, ty1 - ty0, 0.06, shade(H.body, -0.1), { top: snow ? SNOW : lit(shade(H.body, -0.2), [0, 0, 1]) });
-  battlement(d, tx0, tx1, ty0, ty1, tz, H.body, snow);
-  // banner on a pole above the tower
-  const [px, py] = d.P(3.6, 2.35, tz); limb(ctx, px, py, px, py - 52, '#2B2D31', 1.3);
-  ctx.fillStyle = H.door; ctx.beginPath(); ctx.moveTo(px, py - 52); ctx.quadraticCurveTo(px + 14, py - 50, px + 26, py - 44); ctx.quadraticCurveTo(px + 14, py - 40, px, py - 36); ctx.closePath(); ctx.fill();
-  circ(ctx, px + 10, py - 44, 2.6, '#F5D27A');
-  // the keep
-  wallFront(d, x0, x1, y1, 0, wall, H.body, 'stone', (ctx2, W, Hp, map) => {
-    const reg = regFor(meta, map), dc = (cx - x0) * TW;
-    // a big arched gate with a stone surround
-    ctx2.fillStyle = shade(H.body, -0.22); ctx2.beginPath(); ctx2.moveTo(dc - 17, Hp); ctx2.lineTo(dc - 17, Hp - 30); ctx2.arc(dc, Hp - 30, 17, Math.PI, 0); ctx2.lineTo(dc + 17, Hp); ctx2.closePath(); ctx2.fill();
-    door(ctx2, dc - 13, Hp - 42, 26, 42, H.door, { ...H, trim: shade(H.body, -0.3) }, 'arched', reg);
-    for (let u = dc - 11; u < dc + 12; u += 5.5) vline(ctx2, u, Hp - 40, Hp - 2, 'rgba(30,20,15,.35)', 0.9);
-    // arrow slits low, arched windows up high
-    [W * 0.16, W * 0.84].forEach((c) => { ctx2.fillStyle = '#2A2730'; ctx2.fillRect(c - 1.6, Hp - 46, 3.2, 16); win(ctx2, c - 8, 12, 16, 24, 'arched', H, reg); });
-    lampFixture(ctx2, dc - 24, Hp - 36, reg); lampFixture(ctx2, dc + 24, Hp - 36, reg);
-  }, { eaveShadow: 0 });
-  wallSide(d, x1, y0, y1, 0, wall, H.body, 'stone', (ctx2, W, Hp, map) => { const reg = regFor(meta, map); win(ctx2, W / 2 - 8, 12, 16, 24, 'arched', H, reg); ctx2.fillStyle = '#2A2730'; ctx2.fillRect(W / 2 - 1.6, Hp - 44, 3.2, 16); }, { eaveShadow: 0 });
-  d.box(x0, y0, wall, x1 - x0, y1 - y0, 0.06, shade(H.body, -0.1), { top: snow ? SNOW : lit(shade(H.body, -0.2), [0, 0, 1]) });
-  battlement(d, x0, x1, y0, y1, wall, H.body, snow);
-  // two round turrets on the front corners
-  turret(d, x0 + 0.05, y1 + 0.05, 0.62, 3.6, 5.1, H, snow, meta, env);
-  turret(d, x1 + 0.05, y1 + 0.05, 0.62, 3.6, 5.1, H, snow, meta, env);
-  d.box(cx - 0.75, y1, 0, 1.5, 0.55, 0.16, '#A49B91');
-  return { doorX: cx, front: y1 + 0.85, eave: { x0: x0, x1: x1, y: y1, z: wall }, top: 5.3 };
-}
-
-// Earned with Coachable (10 commitments from your coach): a whitewashed windmill and its shed.
-function houseWindmill(d, H, meta, env) {
-  const ctx = d.ctx, snow = env.season === 'winter', mx = 4.6, my = 3.0;
-  // the miller's shed on the left
-  const sx0 = 1.2, sx1 = 3.3, sy0 = 2.4, sy1 = 4.3, sw = 1.05;
-  d.shadowRect(sx0 - 0.2, sy0 - 0.2, sx1 + 0.2, sy1 + 0.2, 1.8);
-  wallFront(d, sx0, sx1, sy1, 0.1, sw, shade(H.body, -0.06), 'board', (ctx2, W, Hp, map) => { const reg = regFor(meta, map); win(ctx2, W / 2 - 9, 7, 18, 16, 'classic', H, reg, { low: true }); });
-  roofSideGable(d, { x0: sx0, x1: sx1, y0: sy0, y1: sy1, zE: sw, zR: sw + 0.75, oh: 0.2, color: H.roof, trim: H.trim, snow, mat: 'shingle' });
-  // the tower: a stone base and a tapering whitewashed body
-  d.shadowBlob(mx, my, 1.6, 4.5, 0.2);
-  cylinder(d, mx, my, 0, 0.55, 1.42, 1.38, '#A49B91');
-  const body = cylinder(d, mx, my, 0.55, 4.6, 1.3, 0.82, H.body, { top: false });
-  const [dx, dy] = d.P(mx + 0.25, my + 1.25, 0.55); rr(ctx, dx - 7, dy - 26, 14, 26, 6, H.door); rr(ctx, dx - 9, dy - 28, 18, 3, 1.5, H.trim);
-  [1.6, 3.5].forEach((z, k) => { const [wx, wy] = d.P(mx + 0.2 - k * 0.1, my + 1.0 - k * 0.12, z); rr(ctx, wx - 5, wy - 10, 10, 13, 4.5, H.trim); glassFill(ctx, wx - 3.5, wy - 8.5, 7, 10); rr(ctx, wx - 3.5, wy - 8.5, 7, 10, 3.5, env.night > 0.4 ? '#FFC978' : 'rgba(47,59,70,.85)'); });
-  // a gallery ring halfway up (a band only: its top would hide the tower above it)
-  const gr = cylinder(d, mx, my, 2.45, 2.55, 1.24, 1.24, '#6A4A36', { top: false });
-  for (let k = 0; k <= 12; k++) { const a = (k / 12) * Math.PI, x = gr.tx + Math.cos(a) * gr.rx1, y = gr.ty + Math.sin(a) * gr.ry1; limb(ctx, x, y, x, y - 7, '#6A4A36', 0.8); }
-  ctx.strokeStyle = '#6A4A36'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(gr.tx, gr.ty - 7, gr.rx1, gr.ry1, 0, 0, Math.PI); ctx.stroke();
-  // the cap
-  const cap = cylinder(d, mx, my, 4.6, 4.7, 0.95, 0.95, shade(H.trim, -0.1), { topColor: shade(H.roof, -0.2) });
-  const [kx, ky] = d.P(mx, my, 5.75), roofC = snow ? SNOW : H.roof;
-  ctx.beginPath(); ctx.moveTo(cap.tx - cap.rx1, cap.ty); ctx.quadraticCurveTo(cap.tx - cap.rx1 * 0.8, ky + 4, kx, ky); ctx.quadraticCurveTo(cap.tx + cap.rx1 * 0.8, ky + 4, cap.tx + cap.rx1, cap.ty); ctx.ellipse(cap.tx, cap.ty, cap.rx1, cap.ry1, 0, 0, Math.PI, false); ctx.closePath();
-  const g = ctx.createLinearGradient(cap.tx - cap.rx1, 0, cap.tx + cap.rx1, 0); g.addColorStop(0, shade(roofC, 0.1)); g.addColorStop(1, shade(roofC, -0.3)); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = EDGE; ctx.stroke();
-  // four lattice sails on a hub at the front of the cap
-  const [hx, hy] = d.P(mx + 0.55, my + 0.75, 4.95), spin = (H.variant && H.variant.flip ? 0.3 : 0) + Math.PI / 4;
-  for (let k = 0; k < 4; k++) {
-    const a = spin + (k * Math.PI) / 2;
-    ctx.save(); ctx.translate(hx, hy); ctx.transform(1, 0.5, 0, 1, 0, 0); ctx.rotate(a);
-    ctx.fillStyle = 'rgba(246,240,228,.82)'; ctx.fillRect(8, -8, 84, 16);
-    ctx.strokeStyle = '#6A4A36'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(94, 0); ctx.stroke();
-    ctx.lineWidth = 0.7; ctx.strokeRect(8, -8, 84, 16); for (let u = 17; u < 92; u += 9) { ctx.beginPath(); ctx.moveTo(u, -8); ctx.lineTo(u, 8); ctx.stroke(); }
-    ctx.restore();
-  }
-  circ(ctx, hx, hy, 4, '#4A3A30'); circ(ctx, hx - 1, hy - 1, 1.6, '#8A6A55');
-  meta.sails = [hx, hy];
-  return { doorX: mx + 0.25, front: my + 2.0, eave: { x0: sx0, x1: sx1, y: sy1, z: sw }, top: 6.2 };
-}
-
 const HOUSE_FN = {
   standard: (d, H, m, e) => houseSideGable(d, H, m, e, { x0: 1.6, x1: 5.9, y0: 1.6, y1: 4.4, wall: 1.32, zR: 2.48, mat: H.variant && H.variant.board ? 'board' : 'lap', variant: H.variant }),
   cottage: houseCottage,
@@ -1091,8 +981,6 @@ const HOUSE_FN = {
   lighthouse: houseLighthouse,
   observatory: houseObservatory,
   treehouse: houseTreehouse,
-  castle: houseCastle,
-  windmill: houseWindmill,
   colonial: (d, H, m, e) => houseSideGable(d, H, m, e, { x0: 1.2, x1: 6.1, y0: 1.4, y1: 4.3, wall: 2.6, zR: 3.75, mat: 'brick', twoStory: true }),
   craftsman: houseCraftsman,
   victorian: houseVictorian,
@@ -1469,10 +1357,8 @@ const HOUSE_LAYOUT = {
   ranch: { doorX: 4.35, front: 4.95, eave: { x0: 0.88, x1: 6.42, y: 4.62, z: 0.8 } },
   cabin: { doorX: 3.8, front: 5.8, eave: { x0: 2.05, x1: 5.55, y: 4.36, z: 1.25 } },
   lighthouse: { doorX: 2.8, front: 5.2, eave: { x0: 1.02, x1: 4.58, y: 4.78, z: 0.94 } },
-  observatory: { doorX: 3.4, front: 5.25, eave: { x0: 1.12, x1: 5.68, y: 4.58, z: 2.75 } },
+  observatory: { doorX: 3.4, front: 5.25, eave: { x0: 1.12, x1: 5.68, y: 4.58, z: 1.6 } },
   treehouse: { doorX: 3.65, front: 5.5, eave: { x0: 2.5, x1: 5.2, y: 4.1, z: 3.25 } },
-  castle: { doorX: 3.6, front: 5.05, eave: { x0: 1.6, x1: 5.6, y: 4.2, z: 2.9 } },
-  windmill: { doorX: 4.85, front: 5.0, eave: { x0: 1.2, x1: 3.3, y: 4.3, z: 1.05 } },
   colonial: { doorX: 3.65, front: 5.0, eave: { x0: 0.92, x1: 6.38, y: 4.58, z: 2.4 } },
   craftsman: { doorX: 3.7, front: 6.15, eave: { x0: 1.1, x1: 6.3, y: 5.5, z: 1.33 } },
   victorian: { doorX: 4.35, front: 5.75, eave: { x0: 3.05, x1: 6.2, y: 5.35, z: 1.42 } },
@@ -1913,9 +1799,9 @@ export function drawTownSquare(ctx, layout, env, view, pct = 62) {
 // The far-away version of a plot: a few shapes, so thousands can be drawn at once.
 const LOW = {
   standard: [1.6, 5.9, 1.6, 4.4, 1.32, 'side', 1.16], cottage: [2.0, 5.5, 1.8, 4.4, 1.22, 'side', 1.6], bungalow: [2.0, 5.4, 1.6, 4.95, 1.22, 'front', 1.1],
-  ranch: [1.3, 6.0, 1.9, 4.2, 1.08, 'hip', 0.82], cabin: [2.25, 5.35, 1.3, 4.3, 0.1, 'front', 3.0], craftsman: [1.2, 6.2, 1.3, 5.45, 1.38, 'front', 2.67],
+  ranch: [1.3, 6.0, 1.9, 4.2, 1.08, 'hip', 0.82], cabin: [2.25, 5.35, 1.3, 4.3, 0.1, 'front', 3.0], craftsman: [1.2, 6.2, 1.3, 5.45, 1.38, 'front', 1.57],
   modern: [1.0, 6.75, 1.2, 4.85, 2.6, 'flat', 0], colonial: [1.2, 6.1, 1.4, 4.3, 2.6, 'side', 1.15], victorian: [1.0, 5.8, 1.0, 4.9, 2.6, 'side', 1.6],
-  villa: [1.0, 6.3, 1.3, 4.4, 2.45, 'hip', 0.85], lighthouse: [1.3, 4.3, 2.3, 4.5, 1.15, 'side', 0.9], observatory: [1.2, 5.6, 1.7, 4.5, 2.75, 'flat', 0], castle: [1.6, 5.6, 1.5, 4.2, 2.9, 'flat', 0], windmill: [1.2, 3.3, 2.4, 4.3, 1.05, 'side', 0.75], treehouse: [2.7, 5.0, 2.2, 3.9, 3.35, 'side', 0.75],
+  villa: [1.0, 6.3, 1.3, 4.4, 2.45, 'hip', 0.85], lighthouse: [1.3, 4.3, 2.3, 4.5, 1.15, 'side', 0.9], observatory: [1.2, 5.6, 1.7, 4.5, 1.6, 'flat', 0], treehouse: [2.7, 5.0, 2.2, 3.9, 3.35, 'side', 0.75],
 };
 export function drawPlotLowDetail(ctx, plot, env) {
   const r = plot._resolved || (plot._resolved = resolvePlot(plot)), [ox, oy] = plotOrigin(0, plot), d = pen(ctx, ox, oy), H = r.house, snow = env.season === 'winter';
@@ -1923,7 +1809,6 @@ export function drawPlotLowDetail(ctx, plot, env) {
   d.ground(6.95, 2.0, 1.95, STREET.lawnFront - 2.0, snow ? '#C8CDD2' : '#BDB7AE', 0.005);
   const [x0, x1, y0, y1, h, roof, rh] = LOW[H.style] || LOW.standard, roofC = snow ? SNOW : H.roof;
   if (H.style === 'treehouse') { const [tx, ty] = d.P(4, 3.2, 0); limb(ctx, tx, ty, tx, ty - 80, '#6A4A36', 9); circ(ctx, tx, ty - 110, 50, snow ? '#7A8A7E' : '#4E8A3A'); }
-  if (H.style === 'villa') d.box(4.6, 0.25, 0, 1.1, 1.0, 4.6, H.body);
   const z0 = H.style === 'treehouse' ? 2.4 : 0;
   d.box(x0, y0, z0, x1 - x0, y1 - y0, h - z0, H.body, { noTop: roof !== 'flat', stroke: 'rgba(40,20,32,.2)' });
   if (roof === 'flat') d.box(x0 - 0.1, y0 - 0.1, h, x1 - x0 + 0.2, y1 - y0 + 0.2, 0.15, '#2F3437', { top: snow ? SNOW : lit('#4A4D52', [0, 0, 1]) });
@@ -1931,9 +1816,7 @@ export function drawPlotLowDetail(ctx, plot, env) {
   else if (roof === 'front') { const xm = (x0 + x1) / 2; d.poly([[xm, y0 - 0.2, h + rh], [x1 + 0.2, y0 - 0.2, h - 0.1], [x1 + 0.2, y1 + 0.2, h - 0.1], [xm, y1 + 0.2, h + rh]], lit(roofC, [1, 0, 1])); d.poly([[x0, y1, h], [x1, y1, h], [xm, y1, h + rh]], lit(H.body, [0, 1, 0])); }
   else if (roof === 'hip') { const ym = (y0 + y1) / 2, run = (y1 - y0) / 2; d.poly([[x1 + 0.3, y0 - 0.3, h - 0.1], [x1 + 0.3, y1 + 0.3, h - 0.1], [x1 - run, ym, h + rh]], lit(roofC, [1, 0, 1])); d.poly([[x0 + run, ym, h + rh], [x1 - run, ym, h + rh], [x1 + 0.3, y1 + 0.3, h - 0.1], [x0 - 0.3, y1 + 0.3, h - 0.1]], lit(roofC, [0, 1, 1])); }
   if (H.style === 'lighthouse') { for (let k = 0; k < 5; k++) d.box(5.2, 2.85, k, 0.7, 0.7, 1, k % 2 ? H.roof : '#F2EEE8'); d.box(5.25, 2.9, 5, 0.6, 0.6, 0.6, '#BFD6E2'); }
-  if (H.style === 'castle') { d.box(2.7, 1.7, 2.9, 1.8, 1.3, 1.5, shade(H.body, -0.04)); [[1.65, 4.25], [5.65, 4.25]].forEach(([x, y]) => { d.box(x - 0.55, y - 0.55, 0, 1.1, 1.1, 3.6, H.body); const [tx, ty] = d.P(x, y, 3.6); ctx.fillStyle = snow ? SNOW : H.roof; ctx.beginPath(); ctx.moveTo(tx - 26, ty); ctx.lineTo(tx, ty - 52); ctx.lineTo(tx + 26, ty); ctx.closePath(); ctx.fill(); }); }
-  if (H.style === 'windmill') { d.box(3.7, 2.1, 0, 1.8, 1.8, 4.6, H.body); const [tx, ty] = d.P(4.6, 3.0, 4.6); ctx.fillStyle = snow ? SNOW : H.roof; ctx.beginPath(); ctx.moveTo(tx - 30, ty); ctx.lineTo(tx, ty - 34); ctx.lineTo(tx + 30, ty); ctx.closePath(); ctx.fill(); const [hx, hy] = d.P(5.15, 3.75, 4.95); ctx.save(); ctx.translate(hx, hy); ctx.strokeStyle = '#F6F0E4'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(-60, -60); ctx.lineTo(60, 60); ctx.moveTo(60, -60); ctx.lineTo(-60, 60); ctx.stroke(); ctx.restore(); }
-  if (H.style === 'observatory') { const [tx, ty] = d.P(4.15, 3.0, 2.9); ctx.beginPath(); ctx.ellipse(tx, ty, 47, 36, 0, Math.PI, 0); ctx.fillStyle = snow ? SNOW : '#E8ECF0'; ctx.fill(); }
+  if (H.style === 'observatory') { const [tx, ty] = d.P(4.15, 3.0, 1.75); ctx.beginPath(); ctx.ellipse(tx, ty, 47, 36, 0, Math.PI, 0); ctx.fillStyle = snow ? SNOW : '#E8ECF0'; ctx.fill(); }
   // the billboard: white for free, the member's color otherwise
   d.box(0.45, 7.6, 0, 0.1, 0.1, 1.2, '#5A5D62');
   d.poly([[0.3, 7.7, 1.0], [3.0, 7.7, 1.0], [3.0, 7.7, 2.2], [0.3, 7.7, 2.2]], r.member ? r.sign.color : '#F4EFE6', 'rgba(40,20,32,.3)');

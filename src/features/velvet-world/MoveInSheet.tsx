@@ -1,39 +1,70 @@
 import { useState, useRef, useEffect } from 'react';
-import { COLORS, STYLE_DEFAULTS, houseUnlock, type HouseStyle } from './art/streetArt';
-import { claimPlot, getUnlocks } from '../../services/worldService';
-import { HousePicker } from './HousePicker';
-import { drawHouseTile, tilePlot } from './houseTiles';
+import {
+  drawPlot, plotBounds, HOUSE_STYLES, COLORS,
+  type Plot, type PlotConfig, type HouseStyle, type Env,
+} from './art/streetArt';
+import { claimPlot } from '../../services/worldService';
 
-/**
- * Pick a house and its colors, then move in. Used by the welcome popup and by /world on a
- * first visit. Every collection is shown; member and earned houses are locked until unlocked.
- */
-export function MoveInPanel({ onMoved, compact = false }: { onMoved: () => void; compact?: boolean }) {
+interface MoveInSheetProps {
+  onMoved: () => void;
+}
+
+const STARTERS = HOUSE_STYLES.filter((h) => h.tier === 'starter');
+
+export function MoveInSheet({ onMoved }: MoveInSheetProps) {
   const [house, setHouse] = useState<HouseStyle>('standard');
-  const [colors, setColors] = useState(() => ({ body: STYLE_DEFAULTS.standard.body, roof: STYLE_DEFAULTS.standard.roof, door: STYLE_DEFAULTS.standard.door }));
-  const [unlocks, setUnlocks] = useState<{ is_member: boolean; earned: string[] }>({ is_member: false, earned: [] });
+  const [body, setBody] = useState<string>(COLORS.body[0]);
+  const [roof, setRoof] = useState<string>(COLORS.roof[0]);
+  const [door, setDoor] = useState<string>(COLORS.door[0]);
   const [moving, setMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
+  const tileRefs = useRef<Map<string, HTMLCanvasElement>>(new Map());
 
-  useEffect(() => { getUnlocks().then(setUnlocks).catch(() => {}); }, []);
+  const env: Env = { season: 'summer', hour: 12, night: 0, reducedMotion: false };
+
+  const makePlot = (style: HouseStyle, b: string, r: string, d: string): Plot => ({
+    id: 'preview',
+    number: 2,
+    member: false,
+    origin: null,
+    config: { house: { style, body: b, roof: r, door: d } },
+    profile: { name: '' },
+  });
+
+  const drawPreview = (canvas: HTMLCanvasElement, plot: Plot) => {
+    const b = plotBounds(0, plot);
+    const scale = Math.min(canvas.width / b.w, canvas.height / b.h);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const ox = (canvas.width - b.w * scale) / 2 - b.x * scale;
+    const oy = (canvas.height - b.h * scale) / 2 - b.y * scale;
+    ctx.setTransform(scale, 0, 0, scale, ox, oy);
+    drawPlot(ctx, plot, 0, 'back', env);
+    drawPlot(ctx, plot, 0, 'front', env);
+  };
 
   useEffect(() => {
-    if (previewRef.current) drawHouseTile(previewRef.current, tilePlot(house, colors, unlocks.is_member, unlocks.earned), 10);
-  }, [house, colors, unlocks]);
+    if (previewRef.current) {
+      drawPreview(previewRef.current, makePlot(house, body, roof, door));
+    }
+  }, [house, body, roof, door]);
 
-  const pickHouse = (style: HouseStyle) => {
-    if (!houseUnlock(style, unlocks.is_member, unlocks.earned).ok) return;
-    setHouse(style);
-    const d = STYLE_DEFAULTS[style];
-    setColors({ body: d.body, roof: d.roof, door: d.door });
-  };
+  useEffect(() => {
+    STARTERS.forEach((h) => {
+      const canvas = tileRefs.current.get(h.id);
+      if (canvas) drawPreview(canvas, makePlot(h.id, COLORS.body[0], COLORS.roof[0], COLORS.door[0]));
+    });
+  }, []);
 
   const handleMoveIn = async () => {
     setMoving(true);
     setError(null);
     try {
-      await claimPlot({ style: house, ...colors });
+      const houseConfig: PlotConfig['house'] = { style: house, body, roof, door };
+      await claimPlot(houseConfig);
       onMoved();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to move in');
@@ -42,48 +73,62 @@ export function MoveInPanel({ onMoved, compact = false }: { onMoved: () => void;
   };
 
   return (
-    <div className="grid gap-5">
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#9DAE97]/20" style={{ height: compact ? 190 : 240 }}>
-        <canvas ref={previewRef} width={640} height={compact ? 190 : 240} className="h-full w-full object-contain" />
-      </div>
-
-      <HousePicker value={house} onChange={pickHouse} isMember={unlocks.is_member} earned={unlocks.earned} colors={colors} />
-
-      <div className="grid gap-3">
-        <SwatchPicker label="Walls" colors={COLORS.body} current={colors.body} onPick={(v) => setColors((c) => ({ ...c, body: v }))} />
-        <SwatchPicker label="Roof" colors={COLORS.roof} current={colors.roof} onPick={(v) => setColors((c) => ({ ...c, roof: v }))} />
-        <SwatchPicker label="Door" colors={COLORS.door} current={colors.door} onPick={(v) => setColors((c) => ({ ...c, door: v }))} />
-      </div>
-
-      {error && <p className="text-center text-sm text-rose-400">{error}</p>}
-
-      <button
-        type="button"
-        onClick={handleMoveIn}
-        disabled={moving}
-        className="w-full rounded-full bg-gradient-to-r from-rose-500 to-pink-600 py-3.5 font-bold text-white transition-all hover:shadow-xl disabled:opacity-50"
-      >
-        {moving ? 'Moving in…' : 'Move in'}
-      </button>
-    </div>
-  );
-}
-
-export function MoveInSheet({ onMoved }: { onMoved: () => void }) {
-  return (
-    <div className="flex min-h-screen items-start justify-center overflow-auto bg-[#080b14] p-6">
-      <div className="w-full max-w-2xl py-6">
-        <h1 className="mb-2 text-center text-2xl font-extrabold text-white" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>
+    <div className="flex min-h-screen items-center justify-center bg-[#080b14] p-6">
+      <div className="w-full max-w-2xl">
+        <h1 className="mb-2 text-center font-extrabold text-2xl text-white" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>
           Pick your house
         </h1>
-        <p className="mb-6 text-center text-sm text-white/45">You can change your house and colors any time.</p>
-        <MoveInPanel onMoved={onMoved} />
+        <p className="mb-6 text-center text-sm text-white/40">Choose a starter home and its colors. You can change everything later.</p>
+
+        {/* Big preview */}
+        <div className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]" style={{ height: '240px' }}>
+          <canvas ref={previewRef} width={600} height={240} className="h-full w-full" />
+        </div>
+
+        {/* House tiles */}
+        <div className="mb-6 grid grid-cols-5 gap-3">
+          {STARTERS.map((h) => (
+            <button
+              key={h.id}
+              onClick={() => setHouse(h.id)}
+              aria-pressed={house === h.id}
+              className={`overflow-hidden rounded-xl border-2 transition-all ${
+                house === h.id ? 'border-white' : 'border-white/10 hover:border-white/30'
+              }`}
+            >
+              <canvas
+                ref={(el) => { if (el) tileRefs.current.set(h.id, el); }}
+                width={120}
+                height={100}
+                className="h-full w-full"
+              />
+              <p className="px-1 py-1.5 text-[10px] font-semibold text-white/60">{h.label}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Color swatches */}
+        <div className="mb-6 space-y-4">
+          <SwatchPicker label="Walls" colors={COLORS.body} current={body} onPick={setBody} />
+          <SwatchPicker label="Roof" colors={COLORS.roof} current={roof} onPick={setRoof} />
+          <SwatchPicker label="Door" colors={COLORS.door} current={door} onPick={setDoor} />
+        </div>
+
+        {error && <p className="mb-4 text-center text-sm text-rose-400">{error}</p>}
+
+        <button
+          onClick={handleMoveIn}
+          disabled={moving}
+          className="w-full rounded-full bg-gradient-to-r from-rose-500 to-pink-600 py-3.5 font-bold text-white transition-all hover:shadow-xl disabled:opacity-50"
+        >
+          {moving ? 'Moving in...' : 'Move in'}
+        </button>
       </div>
     </div>
   );
 }
 
-export function SwatchPicker({ label, colors, current, onPick }: { label: string; colors: string[]; current: string; onPick: (v: string) => void }) {
+function SwatchPicker({ label, colors, current, onPick }: { label: string; colors: string[]; current: string; onPick: (v: string) => void }) {
   return (
     <div className="grid gap-1.5">
       <span className="text-[11px] font-bold uppercase tracking-wider text-white/40">{label}</span>
@@ -91,7 +136,6 @@ export function SwatchPicker({ label, colors, current, onPick }: { label: string
         {colors.map((c) => (
           <button
             key={c}
-            type="button"
             onClick={() => onPick(c)}
             aria-pressed={c.toLowerCase() === current.toLowerCase()}
             aria-label={`${label} ${c}`}
