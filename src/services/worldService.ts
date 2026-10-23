@@ -37,6 +37,19 @@ export async function savePlot(config: PlotConfig): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** What this person can live in right now. Works before they have a plot. */
+export async function getUnlocks(): Promise<{ is_member: boolean; earned: string[] }> {
+  const { data, error } = await supabase.rpc('get_world_unlocks');
+  if (error) throw new Error(error.message);
+  return (data as { is_member: boolean; earned: string[] }[] | null)?.[0] ?? { is_member: false, earned: [] };
+}
+
+/** Move in with a random starter house, for people who skip the picker. Safe to call twice. */
+export async function claimDefaultPlot(): Promise<number> {
+  const starters = ['standard', 'cottage', 'bungalow', 'ranch', 'cabin'];
+  return claimPlot({ style: starters[Math.floor(Math.random() * starters.length)] as HouseStyle });
+}
+
 export async function setMainCompanion(companionId: string | null): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
