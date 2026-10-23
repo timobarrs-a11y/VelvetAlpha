@@ -1,5 +1,5 @@
 import { supabase } from '../shared/supabase/client';
-import { townSlot, townLayout, type Plot, type PlotConfig, type HouseStyle } from '../features/velvet-world/art/streetArt.js';
+import { townSlot, type Plot, type PlotConfig, type HouseStyle } from '../features/velvet-world/art/streetArt.js';
 
 export interface WorldCard {
   user_id: string; slot_index: number; house: PlotConfig['house']; sign: PlotConfig['sign']; yard: Omit<PlotConfig, 'house' | 'sign'>;

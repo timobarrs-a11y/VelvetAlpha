@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, type MutableRefObject } from 'react';
 import {
   iso, LOT_W, TW, TH, TOWN, STREET, FONTS,
   drawPlot, drawPlotLive, drawPlotLights, drawPlotLowDetail,
@@ -6,12 +6,20 @@ import {
   drawTownStreets, drawTownSquare,
   drawWeather, lightingAt, plotBounds, resolvePlot,
   townBounds,
-  type Plot, type Season, type Env, type View, type PlotMeta, type TownLayout,
+  type Plot, type Season, type Env, type View, type PlotMeta, type TownLayout, type Rect,
 } from './art/streetArt';
 
 export type ViewMode = 'street' | 'town';
 
-export interface FlyTarget { x: number; y: number; zoom: number; ms?: number }
+/** Camera moves the page can ask for. Slots are permanent plot numbers (slot_index). */
+export interface WorldControl {
+  showStreet: () => void;
+  /** Start over your own house, then pull back to the whole town. */
+  showTown: () => void;
+  /** Jump high over a plot, then fly down to it. */
+  visit: (slot: number) => void;
+  tower: () => void;
+}
 
 interface WorldCanvasProps {
   plots: Plot[];
@@ -20,17 +28,25 @@ interface WorldCanvasProps {
   season: Season;
   hour: number;
   view: ViewMode;
-  townPlots: Plot[];
+  /** Town summaries indexed by slot_index; gaps (deleted accounts) are undefined. */
+  townPlots: (Plot | undefined)[];
+  /** Bump when townPlots gains rows, so the zoomed-out image is redrawn. */
+  townVersion: number;
+  /** Full plots (with names) for the close-up town, keyed by user id, origin set. */
+  detailRef: MutableRefObject<Map<string, Plot>>;
+  /** Asks the page to load cards for plots that are close up but have no name yet. */
+  onNeedCards: (ids: string[]) => void;
   townLayout: TownLayout;
   landmarkPct: number;
-  pins: { id: string; label: string; color: string }[];
-  onFly?: (target: FlyTarget) => void;
+  homeSlot: number;
+  pins: { slot: number; label: string; color: string }[];
+  controlRef: MutableRefObject<WorldControl | null>;
 }
 
 interface CacheEntry {
   key: string;
   scale: number;
-  b: { x: number; y: number; w: number; h: number };
+  b: Rect;
   e: Plot;
   live: boolean;
   meta?: PlotMeta;
@@ -52,64 +68,35 @@ function rrPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, 
   ctx.closePath();
 }
 
-export function WorldCanvas({ plots, selectedId, onSelect, season, hour, view, townPlots, townLayout: layout, landmarkPct, pins, onFly }: WorldCanvasProps) {
+export function WorldCanvas(props: WorldCanvasProps) {
+  const { plots, season, townPlots, controlRef } = props;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const camRef = useRef({ x: 0, y: 0, zoom: 1.2 });
-  const plotsRef = useRef(plots);
-  const townPlotsRef = useRef(townPlots);
-  const layoutRef = useRef(layout);
-  const landmarkRef = useRef(landmarkPct);
-  const pinsRef = useRef(pins);
-  const viewRef = useRef(view);
-  const selectedRef = useRef(selectedId);
-  const onSelectRef = useRef(onSelect);
-  const onFlyRef = useRef(onFly);
-  const seasonRef = useRef(season);
-  const hourRef = useRef(hour);
+  // The render loop reads the latest props from here, so React never re-runs it.
+  const propsRef = useRef(props);
+  propsRef.current = props;
   const streetCacheRef = useRef<Map<number, CacheEntry>>(new Map());
   const townCacheRef = useRef<Map<number, CacheEntry>>(new Map());
-  const townImageRef = useRef<{ canvas: HTMLCanvasElement; b: { x: number; y: number; w: number; h: number }; key: string } | null>(null);
-  const rafRef = useRef<number>(0);
-  const flightRef = useRef<{ from: typeof camRef.current; to: typeof camRef.current; t0: number; ms: number } | null>(null);
-  const zoomSettledRef = useRef(0);
-
-  plotsRef.current = plots;
-  townPlotsRef.current = townPlots;
-  layoutRef.current = layout;
-  landmarkRef.current = landmarkPct;
-  pinsRef.current = pins;
-  viewRef.current = view;
-  selectedRef.current = selectedId;
-  onSelectRef.current = onSelect;
-  onFlyRef.current = onFly;
-  seasonRef.current = season;
-  hourRef.current = hour;
-
-  const flyTo = (x: number, y: number, zoom: number, ms = 900) => {
-    flightRef.current = { from: { ...camRef.current }, to: { x, y, zoom }, t0: performance.now(), ms };
-  };
-  const flyRef = useRef(flyTo);
-  flyRef.current = flyTo;
-
-  // Expose flyTo imperatively via onFly callback
-  useEffect(() => {
-    if (onFly) {
-      onFlyRef.current = (target: FlyTarget) => {
-        flyRef.current(target.x, target.y, target.zoom, target.ms ?? 900);
-      };
-    }
-  }, [onFly]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvasEl = canvasRef.current;
     const container = containerRef.current;
-    if (!canvas || !container) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx2d = canvasEl?.getContext('2d');
+    if (!canvasEl || !container || !ctx2d) return;
+    const canvas: HTMLCanvasElement = canvasEl;
+    const ctx: CanvasRenderingContext2D = ctx2d;
+    const P = () => propsRef.current;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let W = 0, H = 0, dpr = 1;
+    const cam = { x: 0, y: 0, zoom: 1.2 };
+    let view: ViewMode = P().view, lastPropView: ViewMode = view;
+    let W = 0, H = 0, dpr = 1, raf = 0, zoomSettled = 0;
+    let flight: { from: typeof cam; to: typeof cam; t0: number; ms: number } | null = null;
+    let townImage: { canvas: HTMLCanvasElement; b: Rect; key: string } | null = null;
+    let slotBoundsFor: TownLayout | null = null, slotBounds: Rect[] = [];
+    const requested = new Map<string, number>();
+    let needTimer: ReturnType<typeof setTimeout> | null = null;
+    const streetCache = streetCacheRef.current, townCache = townCacheRef.current;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -118,93 +105,96 @@ export function WorldCanvas({ plots, selectedId, onSelect, season, hour, view, t
       H = rect.height;
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
-      canvas.style.width = `${W}px`;
-      canvas.style.height = `${H}px`;
     };
-
-    const ro = new ResizeObserver(() => {
-      resize();
-      streetCacheRef.current.clear();
-      townCacheRef.current.clear();
-      townImageRef.current = null;
-    });
+    const ro = new ResizeObserver(() => { resize(); streetCache.clear(); townCache.clear(); townImage = null; });
     ro.observe(container);
     resize();
 
     const narrow = () => W < 760;
-
+    const flyTo = (x: number, y: number, zoom: number, ms = 900) => { flight = { from: { ...cam }, to: { x, y, zoom }, t0: performance.now(), ms }; };
+    const slotCenter = (slot: number) => { const s = P().townLayout.slots[slot] ?? { x: 0, y: 0 }; return iso(s.x + 4, s.y + 4.5, 1.5); };
+    const townFit = () => {
+      const b = townBounds(P().townLayout);
+      return { x: b.x + b.w / 2, y: b.y + b.h / 2, zoom: Math.min(W / b.w, (H - 120) / b.h) * 0.95 };
+    };
+    const getSlotBounds = () => {
+      const layout = P().townLayout;
+      if (slotBoundsFor !== layout) { slotBounds = layout.slots.map((s) => plotBounds(0, { id: '', member: false, origin: s, profile: { name: '' }, config: {} })); slotBoundsFor = layout; }
+      return slotBounds;
+    };
     function frameStreet() {
-      const cam = camRef.current;
       cam.zoom = narrow() ? Math.max(0.55, W / 640) : Math.min(1.5, W / 1300);
       const [ax, ay] = iso(narrow() ? 43.5 : 45, 5.2, 1.2);
       cam.x = ax;
       cam.y = ay + (narrow() ? -40 : 30);
     }
-    if (viewRef.current === 'street') frameStreet();
 
-    function townFit() {
-      const b = townBounds(layoutRef.current);
-      return { x: b.x + b.w / 2, y: b.y + b.h / 2, zoom: Math.min(W / b.w, (H - 120) / b.h) * 0.95 };
-    }
-
-    function plotCenter(p: Plot): [number, number] {
-      const o = p.origin ?? { x: 0, y: 0 };
-      return iso(o.x + 4, o.y + 4.5, 1.5);
-    }
-
-    const toWorld = (sx: number, sy: number): [number, number] => {
-      const cam = camRef.current;
-      return [cam.x + (sx - W / 2) / cam.zoom, cam.y + (sy - H / 2) / cam.zoom];
+    controlRef.current = {
+      showStreet: () => { view = 'street'; flight = null; frameStreet(); },
+      showTown: () => {
+        view = 'town';
+        const [cx, cy] = slotCenter(P().homeSlot);
+        cam.x = cx; cam.y = cy; cam.zoom = narrow() ? 0.7 : 1.0; flight = null;
+        setTimeout(() => { const f = townFit(); flyTo(f.x, f.y, f.zoom, 1800); }, 350);
+      },
+      visit: (slot) => {
+        view = 'town';
+        const [cx, cy] = slotCenter(slot);
+        cam.x = cx; cam.y = cy; cam.zoom = 0.2;
+        flyTo(cx, cy, narrow() ? 0.7 : 1.0, 1300);
+      },
+      tower: () => {
+        if (view === 'street') {
+          const lx = Math.min((P().plots.length * LOT_W) / 2, 12), [x, y] = iso(lx, -12.6, 4.4);
+          flyTo(x, y + 40, narrow() ? 0.7 : 1.0);
+        } else {
+          const q = P().townLayout.square, [x, y] = iso(q.cx, q.cy, 4);
+          flyTo(x, y, narrow() ? 0.6 : 0.9, 1200);
+        }
+      },
     };
+    if (view === 'street') frameStreet(); else controlRef.current.showTown();
+
+    const toWorld = (sx: number, sy: number): [number, number] => [cam.x + (sx - W / 2) / cam.zoom, cam.y + (sy - H / 2) / cam.zoom];
 
     function clampCam() {
-      const cam = camRef.current;
-      if (viewRef.current === 'street') {
-        const n = plotsRef.current.length;
-        if (n > 0) {
-          const [a] = iso(-6, 12, 0);
-          const [b] = iso(n * LOT_W + 6, 0, 0);
-          const [, c] = iso(0, -20, 6);
-          const [, d] = iso(n * LOT_W, 16, 0);
-          cam.x = Math.max(a, Math.min(b, cam.x));
-          cam.y = Math.max(c, Math.min(d, cam.y));
-        }
+      if (view === 'street') {
+        const n = P().plots.length;
+        if (n === 0) return;
+        const [a] = iso(-6, 12, 0), [b] = iso(n * LOT_W + 6, 0, 0), [, c] = iso(0, -20, 6), [, d] = iso(n * LOT_W, 16, 0);
+        cam.x = Math.max(a, Math.min(b, cam.x));
+        cam.y = Math.max(c, Math.min(d, cam.y));
       } else {
-        const b = townBounds(layoutRef.current);
+        const b = townBounds(P().townLayout);
         cam.x = Math.max(b.x, Math.min(b.x + b.w, cam.x));
         cam.y = Math.max(b.y, Math.min(b.y + b.h, cam.y));
       }
     }
 
     function zoomAt(sx: number, sy: number, f: number) {
-      const cam = camRef.current;
       const [wx, wy] = toWorld(sx, sy);
-      const min = viewRef.current === 'town' ? townFit().zoom * 0.9 : 0.3;
+      const min = view === 'town' ? townFit().zoom * 0.9 : 0.3;
       cam.zoom = Math.max(min, Math.min(4, cam.zoom * f));
       cam.x = wx - (sx - W / 2) / cam.zoom;
       cam.y = wy - (sy - H / 2) / cam.zoom;
-      zoomSettledRef.current = performance.now() + 220;
+      zoomSettled = performance.now() + 220;
       clampCam();
     }
 
-    function buildPlotCache(cache: Map<number, CacheEntry>, i: number, p: Plot, scale: number): CacheEntry {
-      const b = plotBounds(i, p);
-      const pxW = Math.ceil(b.w * scale);
-      const pxH = Math.ceil(b.h * scale);
-      const entry: CacheEntry = {
-        key: cacheKey(p, seasonRef.current), scale, b, e: p, live: pxW * pxH > 7e6,
-      };
+    function buildPlotCache(cache: Map<number, CacheEntry>, i: number, p: Plot, scale: number, season: Season): CacheEntry {
+      const b = plotBounds(i, p), pxW = Math.ceil(b.w * scale), pxH = Math.ceil(b.h * scale);
+      const entry: CacheEntry = { key: cacheKey(p, season), scale, b, e: p, live: pxW * pxH > 7e6 };
       p._resolved = resolvePlot(p);
       if (!entry.live) {
         const mk = (): [HTMLCanvasElement, CanvasRenderingContext2D] => {
           const c = document.createElement('canvas');
           c.width = pxW;
           c.height = pxH;
-          const o = c.getContext('2d')!;
+          const o = c.getContext('2d') as CanvasRenderingContext2D;
           o.setTransform(scale, 0, 0, scale, -b.x * scale, -b.y * scale);
           return [c, o];
         };
-        const env = { season: seasonRef.current } as Env;
+        const env = { season } as Env;
         const [cb, ob] = mk();
         entry.meta = drawPlot(ob, p, i, 'back', env);
         entry.back = cb;
@@ -214,154 +204,131 @@ export function WorldCanvas({ plots, selectedId, onSelect, season, hour, view, t
       }
       cache.delete(i);
       cache.set(i, entry);
-      if (cache.size > 140) cache.delete(cache.keys().next().value!);
+      if (cache.size > 140) cache.delete(cache.keys().next().value as number);
       return entry;
     }
 
-    function drawDetailed(
-      cache: Map<number, CacheEntry>, i: number, p: Plot, scale: number,
-      env: Env, t: number, budget: { left: number },
-    ): CacheEntry | null {
-      const c = cache.get(i);
-      const fresh = c && c.key === cacheKey(p, env.season) &&
-        (Math.abs(c.scale - scale) / scale < 0.02 || performance.now() < zoomSettledRef.current);
+    function drawDetailed(cache: Map<number, CacheEntry>, i: number, p: Plot, scale: number, env: Env, t: number, budget: { left: number }): CacheEntry | null {
+      const c = cache.get(i), key = cacheKey(p, env.season);
+      const fresh = c && c.key === key && (Math.abs(c.scale - scale) / scale < 0.02 || performance.now() < zoomSettled);
       let entry = fresh ? c : null;
       if (!entry) {
-        if (budget.left <= 0 && c && c.key === cacheKey(p, env.season)) entry = c;
-        else if (budget.left > 0) { budget.left--; entry = buildPlotCache(cache, i, p, scale); }
+        if (budget.left <= 0 && c && c.key === key) entry = c;
+        else if (budget.left > 0) { budget.left--; entry = buildPlotCache(cache, i, p, scale, env.season); }
       }
       if (!entry) { drawPlotLowDetail(ctx, p, env); return null; }
-      if (entry.live) {
+      if (entry.live || !entry.back || !entry.front || !entry.meta) {
         entry.meta = drawPlot(ctx, entry.e, i, 'back', env);
         drawPlotLive(ctx, entry.e, i, entry.meta, t, env);
         drawPlot(ctx, entry.e, i, 'front', env);
       } else {
         const b = entry.b;
-        ctx.drawImage(entry.back!, b.x, b.y, b.w, b.h);
-        drawPlotLive(ctx, entry.e, i, entry.meta!, t, env);
-        ctx.drawImage(entry.front!, b.x, b.y, b.w, b.h);
+        ctx.drawImage(entry.back, b.x, b.y, b.w, b.h);
+        drawPlotLive(ctx, entry.e, i, entry.meta, t, env);
+        ctx.drawImage(entry.front, b.x, b.y, b.w, b.h);
       }
       return entry;
     }
 
-    function buildTownImage() {
-      const b = townBounds(layoutRef.current), sc = Math.min(1, 3400 / b.w);
+    function buildTownImage(key: string) {
+      const layout = P().townLayout, b = townBounds(layout), sc = Math.min(1, 3400 / b.w);
       const c = document.createElement('canvas');
       c.width = Math.ceil(b.w * sc);
       c.height = Math.ceil(b.h * sc);
-      const o = c.getContext('2d')!;
+      const o = c.getContext('2d') as CanvasRenderingContext2D;
       o.setTransform(sc, 0, 0, sc, -b.x * sc, -b.y * sc);
-      const env = { season: seasonRef.current } as Env;
-      drawTownStreets(o, layoutRef.current, env, null, false);
-      townPlotsRef.current.forEach((p) => drawPlotLowDetail(o, p, env));
-      drawTownSquare(o, layoutRef.current, env, null, landmarkRef.current);
-      townImageRef.current = { canvas: c, b, key: seasonRef.current };
+      const env = { season: P().season } as Env;
+      drawTownStreets(o, layout, env, null, false);
+      for (const p of P().townPlots) if (p) drawPlotLowDetail(o, p, env);
+      drawTownSquare(o, layout, env, null, P().landmarkPct);
+      townImage = { canvas: c, b, key };
+    }
+
+    // Close-up plots without a name yet: ask the page for their cards, at most every 250 ms.
+    function requestCards(ids: string[]) {
+      const now = performance.now();
+      const fresh = ids.filter((id) => now - (requested.get(id) ?? -Infinity) > 15000);
+      if (fresh.length === 0 || needTimer) return;
+      needTimer = setTimeout(() => {
+        needTimer = null;
+        const t = performance.now(), batch = fresh.filter((id) => !P().detailRef.current.has(id)).slice(0, 100);
+        batch.forEach((id) => requested.set(id, t));
+        if (batch.length) P().onNeedCards(batch);
+      }, 250);
     }
 
     function inside(pts: [number, number][], x: number, y: number): boolean {
       let a = false;
       for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-        const [xi, yi] = pts[i];
-        const [xj, yj] = pts[j];
+        const [xi, yi] = pts[i], [xj, yj] = pts[j];
         if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) a = !a;
       }
       return a;
     }
 
-    function slotBounds() {
-      return layoutRef.current.slots.map((s, k) => plotBounds(k, { origin: s }));
-    }
-
     function pick(sx: number, sy: number) {
       const [x, y] = toWorld(sx, sy);
-      const isStreet = viewRef.current === 'street';
-      const cache = isStreet ? streetCacheRef.current : townCacheRef.current;
+      const cache = view === 'street' ? streetCache : townCache;
       let hit: string | null = null;
-      for (const [, c] of cache) {
-        if (c.meta && c.meta.hit.sign && inside(c.meta.hit.sign, x, y)) hit = c.e.id;
-      }
+      for (const [, c] of cache) if (c.meta && c.meta.hit.sign && inside(c.meta.hit.sign, x, y)) hit = c.e.id;
       if (!hit) {
         for (const [, c] of cache) {
           const h = c.meta && c.meta.hit.house;
           if (!h) continue;
-          const xs = h.map(p => p[0]);
-          const ys = h.map(p => p[1]);
+          const xs = h.map((p) => p[0]), ys = h.map((p) => p[1]);
           if (x > Math.min(...xs) && x < Math.max(...xs) && y > Math.min(...ys) && y < Math.max(...ys)) hit = c.e.id;
         }
       }
-      if (!hit && !isStreet) {
-        // Far away: find the lot under the finger and fly to it
+      if (!hit && view === 'town') {
+        // far away: find the lot under the finger and fly to it
         const wx = (x / TW + y / TH) / 2, wy = (y / TH - x / TW) / 2;
         const row = Math.floor(wy / TOWN.rowPitch), col = Math.floor(wx / LOT_W);
-        const k = layoutRef.current.slots.findIndex((sl) => sl.row === row && sl.col === col);
-        if (k >= 0 && wy - row * TOWN.rowPitch < STREET.lawnFront + 1) {
-          const tp = townPlotsRef.current[k];
-          if (tp) {
-            const [cx, cy] = plotCenter(tp);
-            flyRef.current(cx, cy, Math.max(camRef.current.zoom, 0.9));
-            hit = tp.id;
-          }
+        const k = P().townLayout.slots.findIndex((sl) => sl.row === row && sl.col === col);
+        const tp = k >= 0 ? P().townPlots[k] : undefined;
+        if (tp && wy - row * TOWN.rowPitch < STREET.lawnFront + 1) {
+          const [cx, cy] = slotCenter(k);
+          flyTo(cx, cy, Math.max(cam.zoom, 0.9));
+          hit = tp.id;
         }
       }
-      onSelectRef.current(hit);
+      P().onSelect(hit);
     }
 
-    // Pointer handlers
     const pointers = new Map<number, [number, number]>();
     let drag: { x: number; y: number; cx: number; cy: number; moved: number } | null = null;
     let pinch: { d: number; z: number } | null = null;
+    const local = (e: { clientX: number; clientY: number }): [number, number] => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 
     const onPointerDown = (e: PointerEvent) => {
-      flightRef.current = null;
+      flight = null;
       canvas.setPointerCapture(e.pointerId);
-      pointers.set(e.pointerId, [e.clientX, e.clientY]);
-      if (pointers.size === 1) {
-        const cam = camRef.current;
-        drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: 0 };
-      }
-      if (pointers.size === 2) {
-        const [p, q] = [...pointers.values()];
-        pinch = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), z: camRef.current.zoom };
-        drag = null;
-      }
+      pointers.set(e.pointerId, local(e));
+      if (pointers.size === 1) drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: 0 };
+      if (pointers.size === 2) { const [p, q] = [...pointers.values()]; pinch = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), z: cam.zoom }; drag = null; }
     };
-
     const onPointerMove = (e: PointerEvent) => {
       if (!pointers.has(e.pointerId)) return;
-      pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      pointers.set(e.pointerId, local(e));
       if (pinch && pointers.size === 2) {
-        const [p, q] = [...pointers.values()];
-        const d = Math.hypot(p[0] - q[0], p[1] - q[1]);
-        zoomAt((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (pinch.z * (d / pinch.d)) / camRef.current.zoom);
+        const [p, q] = [...pointers.values()], d = Math.hypot(p[0] - q[0], p[1] - q[1]);
+        zoomAt((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (pinch.z * (d / pinch.d)) / cam.zoom);
         return;
       }
       if (!drag) return;
-      const dx = e.clientX - drag.x;
-      const dy = e.clientY - drag.y;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
-      const cam = camRef.current;
       cam.x = drag.cx - dx / cam.zoom;
       cam.y = drag.cy - dy / cam.zoom;
       clampCam();
     };
-
     const endPointer = (e: PointerEvent) => {
       if (!pointers.has(e.pointerId)) return;
       pointers.delete(e.pointerId);
-      if (drag && drag.moved < 6 && e.type === 'pointerup') {
-        const rect = canvas.getBoundingClientRect();
-        pick(e.clientX - rect.left, e.clientY - rect.top);
-      }
+      if (drag && drag.moved < 6 && e.type === 'pointerup') pick(...local(e));
       if (pointers.size < 2) pinch = null;
       if (pointers.size === 0) drag = null;
     };
-
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      flightRef.current = null;
-      const rect = canvas.getBoundingClientRect();
-      zoomAt(e.clientX - rect.left, e.clientY - rect.top, Math.exp(-e.deltaY * 0.0015));
-    };
+    const onWheel = (e: WheelEvent) => { e.preventDefault(); flight = null; zoomAt(...local(e), Math.exp(-e.deltaY * 0.0015)); };
 
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
@@ -369,92 +336,75 @@ export function WorldCanvas({ plots, selectedId, onSelect, season, hour, view, t
     canvas.addEventListener('pointercancel', endPointer);
     canvas.addEventListener('wheel', onWheel, { passive: false });
 
-    // Render loop
     const t0 = performance.now();
-
     function render(now: number) {
-      rafRef.current = requestAnimationFrame(render);
-
-      const flight = flightRef.current;
+      raf = requestAnimationFrame(render);
+      const props = P();
+      // The page's Block/Town toggle. visit() already switched, so this only reacts to a real change.
+      if (props.view !== lastPropView) {
+        lastPropView = props.view;
+        if (props.view !== view && props.view === 'street') controlRef.current?.showStreet();
+        else if (props.view !== view) controlRef.current?.showTown();
+      }
       if (flight) {
-        const u = Math.min(1, (now - flight.t0) / flight.ms);
-        const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
-        const cam = camRef.current;
+        const u = Math.min(1, (now - flight.t0) / flight.ms), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
         cam.x = flight.from.x + (flight.to.x - flight.from.x) * e;
         cam.y = flight.from.y + (flight.to.y - flight.from.y) * e;
         cam.zoom = Math.exp(Math.log(flight.from.zoom) + (Math.log(flight.to.zoom) - Math.log(flight.from.zoom)) * e);
-        if (u >= 1) flightRef.current = null;
-        zoomSettledRef.current = now + 220;
+        if (u >= 1) flight = null;
+        zoomSettled = now + 220;
       }
-
-      const t = (now - t0) / 1000;
-      const s_season = seasonRef.current;
-      const s_hour = hourRef.current;
-      const light = lightingAt(s_hour, s_season);
-      const env: Env = {
-        season: s_season,
-        hour: s_hour,
-        night: light.night,
-        reducedMotion: reduceMotion.matches,
-        zoom: camRef.current.zoom,
-      };
-      const cam = camRef.current;
+      const t = (now - t0) / 1000, light = lightingAt(props.hour, props.season);
+      const env: Env = { season: props.season, hour: props.hour, night: light.night, reducedMotion: reduceMotion.matches, zoom: cam.zoom };
       const s = cam.zoom * dpr;
-      const viewRect: View = {
-        x0: cam.x - W / 2 / cam.zoom, x1: cam.x + W / 2 / cam.zoom,
-        y0: cam.y - H / 2 / cam.zoom, y1: cam.y + H / 2 / cam.zoom,
-      };
-      const inView = (b: { x: number; y: number; w: number; h: number }) =>
-        !(b.x > viewRect.x1 || b.x + b.w < viewRect.x0 || b.y > viewRect.y1 || b.y + b.h < viewRect.y0);
+      const vr: View = { x0: cam.x - W / 2 / cam.zoom, x1: cam.x + W / 2 / cam.zoom, y0: cam.y - H / 2 / cam.zoom, y1: cam.y + H / 2 / cam.zoom };
+      const inView = (b: Rect) => !(b.x > vr.x1 || b.x + b.w < vr.x0 || b.y > vr.y1 || b.y + b.h < vr.y0);
+      const world = () => ctx.setTransform(s, 0, 0, s, (W * dpr) / 2 - cam.x * s, (H * dpr) / 2 - cam.y * s);
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = s_season === 'winter' ? '#D9E0E6' : '#9DAE97';
+      ctx.fillStyle = props.season === 'winter' ? '#D9E0E6' : '#9DAE97';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const world = () => ctx.setTransform(s, 0, 0, s, (W * dpr) / 2 - cam.x * s, (H * dpr) / 2 - cam.y * s);
       world();
 
-      const detailed: [number, CacheEntry][] = [];
-      const lowVisible: Plot[] = [];
-      const budget = { left: 5 };
-      let ground = { lights: [] as unknown[] };
-      let front = { lamps: [] as unknown[] };
-      let square = { lights: [] as unknown[] };
+      const detailed: [number, CacheEntry][] = [], lowVisible: Plot[] = [], budget = { left: 5 };
+      let ground: { lights: unknown[] } = { lights: [] }, front: { lamps: unknown[] } = { lamps: [] }, square: { lights: unknown[] } = { lights: [] };
 
-      if (viewRef.current === 'street') {
-        const streetPlots = plotsRef.current;
-        ground = drawTownGround(ctx, streetPlots.length, env, viewRect, landmarkRef.current);
-        streetPlots.forEach((p, i) => {
-          const b = plotBounds(i, p);
-          if (!inView(b)) return;
-          const entry = drawDetailed(streetCacheRef.current, i, p, s, env, t, budget);
+      if (view === 'street') {
+        ground = drawTownGround(ctx, props.plots.length, env, vr, props.landmarkPct);
+        props.plots.forEach((p, i) => {
+          if (!inView(plotBounds(i, p))) return;
+          const entry = drawDetailed(streetCache, i, p, s, env, t, budget);
           if (entry) detailed.push([i, entry]);
         });
-        front = drawTownFront(ctx, streetPlots.length, env, viewRect);
-      } else if (cam.zoom < 0.2) {
-        // Cached town image
-        if (!townImageRef.current || townImageRef.current.key !== s_season) buildTownImage();
-        const ti = townImageRef.current!;
-        ctx.drawImage(ti.canvas, ti.b.x, ti.b.y, ti.b.w, ti.b.h);
-        const sb = slotBounds();
-        townPlotsRef.current.forEach((p, k) => { if (inView(sb[k])) lowVisible.push(p); });
+        front = drawTownFront(ctx, props.plots.length, env, vr);
       } else {
-        const full = cam.zoom >= 0.45;
-        drawTownStreets(ctx, layoutRef.current, env, viewRect, full);
-        const sb = slotBounds();
-        townPlotsRef.current.forEach((p, k) => {
-          if (!inView(sb[k])) return;
-          if (full) {
-            const entry = drawDetailed(townCacheRef.current, k, p, s, env, t, budget);
-            if (entry) detailed.push([k, entry]);
-            else lowVisible.push(p);
-          } else {
-            drawPlotLowDetail(ctx, p, env);
-            lowVisible.push(p);
+        const sb = getSlotBounds(), townPlots = props.townPlots, detail = props.detailRef.current;
+        if (cam.zoom < 0.2) {
+          const key = `${props.season}|${props.townVersion}|${props.landmarkPct}`;
+          if (!townImage || townImage.key !== key) buildTownImage(key);
+          if (townImage) ctx.drawImage(townImage.canvas, townImage.b.x, townImage.b.y, townImage.b.w, townImage.b.h);
+          for (let k = 0; k < townPlots.length; k++) { const p = townPlots[k]; if (p && inView(sb[k])) lowVisible.push(p); }
+        } else {
+          const full = cam.zoom >= 0.45, missing: string[] = [];
+          drawTownStreets(ctx, props.townLayout, env, vr, full);
+          for (let k = 0; k < townPlots.length; k++) {
+            const summary = townPlots[k];
+            if (!summary || !inView(sb[k])) continue;
+            const p = detail.get(summary.id) ?? summary;
+            if (full) {
+              if (p === summary) missing.push(summary.id);
+              const entry = p === summary ? null : drawDetailed(townCache, k, p, s, env, t, budget);
+              if (entry) detailed.push([k, entry]);
+              else { if (p === summary) drawPlotLowDetail(ctx, p, env); lowVisible.push(p); }
+            } else {
+              drawPlotLowDetail(ctx, p, env);
+              lowVisible.push(p);
+            }
           }
-        });
-        square = drawTownSquare(ctx, layoutRef.current, env, viewRect, landmarkRef.current);
+          if (missing.length) requestCards(missing);
+          square = drawTownSquare(ctx, props.townLayout, env, vr, props.landmarkPct);
+        }
       }
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -465,18 +415,16 @@ export function WorldCanvas({ plots, selectedId, onSelect, season, hour, view, t
         ctx.globalCompositeOperation = 'source-over';
       }
       world();
-
-      detailed.forEach(([i, c]) => drawPlotLights(ctx, c.e, i, c.meta!, t, env));
-      if (lowVisible.length) drawTownLightsLow(ctx, lowVisible, t, env, viewRect);
-      if (viewRef.current === 'street') drawTownLights(ctx, plotsRef.current.length, t, env, ground, front);
+      detailed.forEach(([i, c]) => { if (c.meta) drawPlotLights(ctx, c.e, i, c.meta, t, env); });
+      if (lowVisible.length) drawTownLightsLow(ctx, lowVisible, t, env, vr);
+      if (view === 'street') drawTownLights(ctx, props.plots.length, t, env, ground, front);
       else drawTownLights(ctx, 0, t, env, square, { lamps: [] });
 
-      // Selection ring
-      const sel = selectedRef.current;
-      if (sel) {
-        const hit = detailed.find(([, c]) => c.e.id === sel);
-        if (hit && hit[1].meta && hit[1].meta.hit.sign) {
-          const pts = hit[1].meta.hit.sign;
+      // selection ring around the chosen billboard
+      if (props.selectedId) {
+        const hit = detailed.find(([, c]) => c.e.id === props.selectedId);
+        const pts = hit?.[1].meta?.hit.sign;
+        if (pts) {
           ctx.beginPath();
           pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
           ctx.closePath();
@@ -486,25 +434,17 @@ export function WorldCanvas({ plots, selectedId, onSelect, season, hour, view, t
         }
       }
 
-      // Pins (town view only)
+      // pins for you and your friends in the town view
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (viewRef.current === 'town') {
-        for (const pin of pinsRef.current) {
-          const tp = townPlotsRef.current.find((p) => p.id === pin.id);
-          if (!tp) continue;
-          const [wx, wy] = plotCenter(tp);
-          const sx = (wx - cam.x) * cam.zoom + W / 2;
-          const sy = (wy - cam.y) * cam.zoom + H / 2;
+      if (view === 'town') {
+        for (const pin of props.pins) {
+          if (!props.townLayout.slots[pin.slot]) continue;
+          const [wx, wy] = slotCenter(pin.slot), sx = (wx - cam.x) * cam.zoom + W / 2, sy = (wy - cam.y) * cam.zoom + H / 2;
           if (sx < -40 || sx > W + 40 || sy < -60 || sy > H + 40) continue;
           ctx.font = `700 12px ${FONTS.ui}`;
           const w = ctx.measureText(pin.label).width + 16;
           ctx.fillStyle = pin.color;
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.lineTo(sx - 6, sy - 10);
-          ctx.lineTo(sx + 6, sy - 10);
-          ctx.closePath();
-          ctx.fill();
+          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - 6, sy - 10); ctx.lineTo(sx + 6, sy - 10); ctx.closePath(); ctx.fill();
           rrPath(ctx, sx - w / 2, sy - 32, w, 22, 11);
           ctx.fill();
           ctx.fillStyle = '#FFFFFF';
@@ -513,47 +453,36 @@ export function WorldCanvas({ plots, selectedId, onSelect, season, hour, view, t
           ctx.textAlign = 'left';
         }
       }
-
       drawWeather(ctx, W, H, t, env);
     }
+    raf = requestAnimationFrame(render);
 
-    rafRef.current = requestAnimationFrame(render);
-
-    // Font load → rebuild caches
+    // Billboards use web fonts; redraw the caches once they arrive.
+    let alive = true;
     if (document.fonts && document.fonts.load) {
-      Promise.all([
-        '800 12px "Bricolage Grotesque"',
-        '400 12px "Alfa Slab One"',
-        '700 12px "Fraunces"',
-        '400 12px "Yellowtail"',
-        '600 12px "Instrument Sans"',
-      ].map(f => document.fonts.load(f).catch(() => null))).then(() => {
-        streetCacheRef.current.clear();
-        townCacheRef.current.clear();
-        townImageRef.current = null;
-      });
+      Promise.all(['800 12px "Bricolage Grotesque"', '400 12px "Alfa Slab One"', '700 12px "Fraunces"', '400 12px "Yellowtail"', '600 12px "Instrument Sans"']
+        .map((f) => document.fonts.load(f).catch(() => null)))
+        .then(() => { if (alive) { streetCache.clear(); townCache.clear(); townImage = null; } });
     }
 
     return () => {
-      cancelAnimationFrame(rafRef.current);
+      alive = false;
+      cancelAnimationFrame(raf);
+      if (needTimer) clearTimeout(needTimer);
       ro.disconnect();
+      controlRef.current = null;
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', endPointer);
       canvas.removeEventListener('pointercancel', endPointer);
       canvas.removeEventListener('wheel', onWheel);
     };
-  }, []);
+  }, [controlRef]);
 
-  // Invalidate caches when plots change
-  useEffect(() => {
-    streetCacheRef.current.clear();
-  }, [plots]);
-
-  useEffect(() => {
-    townCacheRef.current.clear();
-    townImageRef.current = null;
-  }, [townPlots, season]);
+  // A new block (after a save or a new day) redraws the street.
+  useEffect(() => { streetCacheRef.current.clear(); }, [plots]);
+  // Plots whose look changed rebuild by themselves (the cache key includes it); a season change redraws all.
+  useEffect(() => { townCacheRef.current.clear(); }, [season, townPlots.length]);
 
   return (
     <div ref={containerRef} className="absolute inset-0 overflow-hidden">

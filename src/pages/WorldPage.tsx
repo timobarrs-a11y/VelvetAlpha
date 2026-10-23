@@ -5,7 +5,7 @@ import {
   localDay, getMyPlot, getDailyBlock, getCards, cardToPlot, markSeen,
   getTownSize, getTownPlots, findPlot, getLandmarkProgress,
   townToPlot,
-  type MyPlot, type WorldCard, type TownPlot,
+  type MyPlot, type WorldCard,
 } from '../services/worldService';
 import { getCompanions } from '../services/companionService';
 import { getFriends, type FriendPeer } from '../shared/supabase/queries/messaging';
@@ -13,7 +13,7 @@ import {
   resolvePlot, townSlot, townLayout as buildTownLayout,
   type Plot, type PlotConfig, type Season, type TownLayout,
 } from '../features/velvet-world/art/streetArt';
-import { WorldCanvas, type FlyTarget } from '../features/velvet-world/WorldCanvas';
+import { WorldCanvas, type WorldControl } from '../features/velvet-world/WorldCanvas';
 import { BillboardCard } from '../features/velvet-world/BillboardCard';
 import { Customizer } from '../features/velvet-world/Customizer';
 import { MoveInSheet } from '../features/velvet-world/MoveInSheet';
@@ -101,7 +101,9 @@ export function WorldPage() {
 
   // Town state
   const [view, setView] = useState<'street' | 'town'>('street');
-  const [townPlotList, setTownPlotList] = useState<Plot[]>([]);
+  const [townPlotList, setTownPlotList] = useState<(Plot | undefined)[]>([]);
+  const [townVersion, setTownVersion] = useState(0);
+  const [cardsVersion, setCardsVersion] = useState(0);
   const [townLayoutState, setTownLayoutState] = useState<TownLayout | null>(null);
   const [landmarkPct, setLandmarkPct] = useState(62);
   const [friends, setFriends] = useState<FriendPeer[]>([]);
@@ -110,9 +112,25 @@ export function WorldPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ user_id: string; slot_index: number; display_name: string }[]>([]);
   const [showSearch, setShowSearch] = useState(false);
-  const flyRef = useRef<((target: FlyTarget) => void) | null>(null);
-  const townPlotsMapRef = useRef<Map<string, Plot>>(new Map());
+  const controlRef = useRef<WorldControl | null>(null);
   const cardMapRef = useRef<Map<string, WorldCard>>(new Map());
+  // Full plots (with names) placed at their town lots, for the close-up town view.
+  const detailRef = useRef<Map<string, Plot>>(new Map());
+
+  const rememberCards = useCallback((cards: WorldCard[]) => {
+    for (const c of cards) {
+      cardMapRef.current.set(c.user_id, c);
+      const slot = townSlot(c.slot_index), p = cardToPlot(c);
+      p.origin = { x: slot.x, y: slot.y };
+      detailRef.current.set(c.user_id, p);
+    }
+    if (cards.length) setCardsVersion((v) => v + 1);
+  }, []);
+
+  // The canvas asks for names of close-up plots; batches are at most 100.
+  const loadCards = useCallback((ids: string[]) => {
+    getCards(ids).then(rememberCards).catch(() => {});
+  }, [rememberCards]);
 
   // Refresh hour every minute
   useEffect(() => {
@@ -155,9 +173,8 @@ export function WorldPage() {
       setTownLayoutState(layout);
 
       // Load town plot summaries in background chunks
-      const summaries: (TownPlot | null)[] = new Array(townSize).fill(null);
+      const summaries: (Plot | undefined)[] = new Array(townSize);
       const chunkSize = 5000;
-      const chunkStart = performance.now();
       let lastRebuild = 0;
       const loadChunks = async () => {
         for (let from = 0; from < townSize; from += chunkSize) {
@@ -165,18 +182,14 @@ export function WorldPage() {
           try {
             const chunk = await getTownPlots(from, to);
             for (const tp of chunk) {
-              if (tp.slot_index < townSize) {
-                summaries[tp.slot_index] = tp;
-              }
+              if (tp.slot_index < townSize) summaries[tp.slot_index] = townToPlot(tp);
             }
           } catch { /* skip failed chunk */ }
           // Rebuild town plots array every 2s while loading
           const now = performance.now();
           if (now - lastRebuild > 2000 || from + chunkSize >= townSize) {
-            const plots = summaries.map((tp) => tp ? townToPlot(tp) : null).filter(Boolean) as Plot[];
-            const map = new Map<string, Plot>();
-            for (const p of plots) { map.set(p.id, p); townPlotsMapRef.current.set(p.id, p); }
-            setTownPlotList(plots);
+            setTownPlotList(summaries.slice());
+            setTownVersion((v) => v + 1);
             lastRebuild = now;
           }
         }
@@ -188,8 +201,12 @@ export function WorldPage() {
       const allIds = [user.id, ...candidates.map(c => c.user_id), ...friendIds.filter(id => !candidates.some(c => c.user_id === id))];
       const cards = await getCards(allIds);
       const cardMap = new Map(cards.map(c => [c.user_id, c]));
-      cardMapRef.current = cardMap;
-      setFriendCards(new Map(friendIds.map(id => [id, cardMap.get(id)!]).filter(([, v]) => v)));
+      cardMapRef.current = new Map();
+      detailRef.current = new Map();
+      rememberCards(cards);
+      const fc = new Map<string, WorldCard>();
+      for (const id of friendIds) { const c = cardMap.get(id); if (c) fc.set(id, c); }
+      setFriendCards(fc);
 
       const myCard = cardMap.get(user.id);
       if (!myCard) {
@@ -207,13 +224,11 @@ export function WorldPage() {
         .filter(p => p.id !== user.id)
         .map(p => p.id);
       markSeen(day, neighborIds);
-
-      void chunkStart;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     }
     setLoading(false);
-  }, [user]);
+  }, [user, rememberCards]);
 
   useEffect(() => {
     loadPage();
@@ -251,40 +266,28 @@ export function WorldPage() {
     if (view === 'street') {
       return block.find(p => p.id === selectedId) ?? null;
     }
-    // In town view, try block first, then town plots, then build from card
-    const fromBlock = block.find(p => p.id === selectedId);
-    if (fromBlock) return fromBlock;
-    const fromTown = townPlotsMapRef.current.get(selectedId);
-    if (fromTown) return fromTown;
-    const card = cardMapRef.current.get(selectedId);
-    if (card) {
-      const slot = townSlot(card.slot_index);
-      const p = cardToPlot(card);
-      p.origin = { x: slot.x, y: slot.y };
-      return p;
-    }
-    return null;
-  }, [selectedId, block, view]);
+    // In the town, show the card once its name has loaded (see the effect below).
+    return detailRef.current.get(selectedId) ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, block, view, cardsVersion]);
+
+  // Tapping a far-away plot selects someone whose card isn't loaded yet.
+  useEffect(() => {
+    if (view === 'town' && selectedId && !detailRef.current.has(selectedId)) loadCards([selectedId]);
+  }, [view, selectedId, loadCards]);
 
   const isYou = selectedPlot?.id === user?.id;
 
   // Build pins: you + friends who have plots
   const pins = useMemo(() => {
-    const result: { id: string; label: string; color: string }[] = [];
-    if (user) {
-      const myCard = cardMapRef.current.get(user.id);
-      if (myCard) {
-        result.push({ id: user.id, label: 'You', color: '#F06A9B' });
-      }
-    }
+    const result: { slot: number; label: string; color: string }[] = [];
     for (const f of friends) {
-      const card = cardMapRef.current.get(f.user_id);
-      if (card) {
-        result.push({ id: f.user_id, label: (f.display_name || 'Friend').split(' ')[0], color: '#59C98A' });
-      }
+      const card = friendCards.get(f.user_id);
+      if (card) result.push({ slot: card.slot_index, label: (f.display_name || 'Friend').split(' ')[0], color: '#59C98A' });
     }
+    if (myPlot) result.push({ slot: myPlot.slot_index, label: 'You', color: '#F06A9B' });
     return result;
-  }, [friends, user]);
+  }, [friends, friendCards, myPlot]);
 
   // Friends list for popover
   const friendRows = useMemo<FriendRow[]>(() => {
@@ -307,54 +310,27 @@ export function WorldPage() {
     return townSlot(myPlot.slot_index).address;
   }, [myPlot]);
 
-  const handleFly = useCallback((target: FlyTarget) => {
-    flyRef.current?.(target);
+  const visitSlot = useCallback((slot: number, id: string) => {
+    setShowFriends(false);
+    setView('town');
+    controlRef.current?.visit(slot);
+    setSelectedId(id);
   }, []);
 
   const visitHouse = useCallback((id: string) => {
-    const isMe = id === '__you__' || id === user?.id;
-    const targetId = isMe ? user!.id : id;
-    const card = cardMapRef.current.get(targetId);
-    if (!card) return;
-    const slot = townSlot(card.slot_index);
-    const cx = slot.x + 4;
-    const cy = slot.y + 4.5;
-    // Switch to town view, jump to zoom 0.2, then fly in
-    setView('town');
-    setShowFriends(false);
-    // Start zoomed out, then fly in
-    setTimeout(() => {
-      flyRef.current?.({ x: cx, y: cy, zoom: 0.2, ms: 1 });
-      setTimeout(() => {
-        flyRef.current?.({ x: cx, y: cy, zoom: 1.0, ms: 1300 });
-        setSelectedId(targetId);
-      }, 50);
-    }, 50);
-  }, [user]);
+    const targetId = id === '__you__' ? user?.id : id;
+    if (!targetId) return;
+    const slot = targetId === user?.id ? myPlot?.slot_index : cardMapRef.current.get(targetId)?.slot_index;
+    if (slot !== undefined) visitSlot(slot, targetId);
+  }, [user, myPlot, visitSlot]);
 
   const handleSearchResult = useCallback((result: { user_id: string; slot_index: number; display_name: string }) => {
     setShowSearch(false);
     setSearchQuery('');
-    // Load the card for this person, then visit
-    getCards([result.user_id]).then(cards => {
-      if (cards.length > 0) {
-        cardMapRef.current.set(result.user_id, cards[0]);
-        visitHouse(result.user_id);
-      }
-    }).catch(() => {});
-  }, [visitHouse]);
+    visitSlot(result.slot_index, result.user_id);
+  }, [visitSlot]);
 
-  const handleTower = useCallback(() => {
-    if (view === 'street') {
-      const lx = Math.min(block.length * 10 / 2, 12);
-      // Tower is behind the street
-      flyRef.current?.({ x: lx, y: -12.6 + 40, zoom: 1.0 });
-    } else if (townLayoutState) {
-      const q = townLayoutState.square;
-      const [x, y] = [q.cx, q.cy];
-      flyRef.current?.({ x, y, zoom: 0.9, ms: 1200 });
-    }
-  }, [view, block, townLayoutState]);
+  const handleTower = useCallback(() => { controlRef.current?.tower(); }, []);
 
   if (loading) {
     return (
@@ -392,10 +368,14 @@ export function WorldPage() {
           hour={hour}
           view={view}
           townPlots={townPlotList}
+          townVersion={townVersion}
+          detailRef={detailRef}
+          onNeedCards={loadCards}
           townLayout={townLayoutState}
           landmarkPct={landmarkPct}
+          homeSlot={myPlot.slot_index}
           pins={pins}
-          onFly={(target: FlyTarget) => { flyRef.current = (t: FlyTarget) => handleFly(t); handleFly(target); }}
+          controlRef={controlRef}
         />
       )}
 
