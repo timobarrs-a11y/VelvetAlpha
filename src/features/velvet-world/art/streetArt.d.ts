@@ -4,9 +4,9 @@
 export type HouseStyle =
   | 'standard' | 'cottage' | 'bungalow' | 'ranch' | 'cabin'
   | 'craftsman' | 'modern' | 'colonial' | 'victorian' | 'villa'
-  | 'lighthouse' | 'observatory' | 'treehouse' | 'windmill' | 'castle';
+  | 'lighthouse' | 'observatory' | 'treehouse';
 export type HouseTier = 'starter' | 'member' | 'earned';
-export type Season = 'spring' | 'summer' | 'fall' | 'winter';
+export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 export type PlotLayer = 'back' | 'front';
 
 export interface Option { id: string; label: string; free?: boolean }

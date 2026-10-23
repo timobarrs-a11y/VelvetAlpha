@@ -21,7 +21,6 @@ import { InstallPWABanner } from './components/InstallPWABanner';
 import { SWUpdateToast } from './components/SWUpdateToast';
 
 import { SignedInWorkspace } from './components/SignedInWorkspace';
-import { WorldWelcomeMount } from './features/velvet-world/WorldWelcome';
 
 const GAME_PATHS = [
   '/checkers', '/pacman', '/momentum', '/slime-soccer',
@@ -109,7 +108,6 @@ export function Router() {
           <TutorialDirectorProvider>
             <ToastContainer />
             <FirstPostWatcher />
-            <WorldWelcomeMount />
             <SWUpdateToast />
             <InstallPWABanner />
             <AudioSceneSync />
