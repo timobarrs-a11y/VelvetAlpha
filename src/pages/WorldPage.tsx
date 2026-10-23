@@ -24,7 +24,7 @@ function getSeason(d = new Date()): Season {
   if (m <= 1 || m === 11) return 'winter';
   if (m <= 4) return 'spring';
   if (m <= 7) return 'summer';
-  return 'autumn';
+  return 'fall';
 }
 
 function getHour(d = new Date()): number {
@@ -494,6 +494,7 @@ export function WorldPage() {
               isYou={isYou}
               onClose={() => { setSelectedId(null); setShowCustomizer(false); }}
               onCustomize={() => setShowCustomizer(true)}
+              mainCompanionId={myPlot?.main_companion_id ?? null}
             />
           )}
         </aside>

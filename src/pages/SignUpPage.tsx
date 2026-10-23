@@ -5,6 +5,7 @@ import { authService } from '../services/authService';
 import { referralService } from '../services/referralService';
 import { storePendingAgeVerification } from '../services/accessService';
 import { Button, Input } from '../shared/ui';
+import { passwordProblem, isBreachedPassword, passwordErrorMessage, BREACHED_PASSWORD_MESSAGE, MIN_PASSWORD_LENGTH } from '../shared/auth/passwordPolicy';
 
 const TERMS_VERSION = '2026-01-28';
 const VELVET_BG = 'var(--ds-bg-page)';
@@ -95,7 +96,7 @@ export default function SignUpPage() {
     return { value: y, label: y };
   });
 
-  const passwordValid = password.length >= 8;
+  const passwordValid = passwordProblem(password) === null;
   const passwordsMatch = password === confirmPassword && confirmPassword !== '';
   const age = calcAge(birthMonth, birthDay, birthYear);
   const dobComplete = birthMonth && birthDay && birthYear && birthYear.length === 4;
@@ -110,11 +111,13 @@ export default function SignUpPage() {
     if (!dobComplete) { setError('Please enter your complete date of birth.'); return; }
     if (!isAdult) { setError('You must be 18 years or older to create an account.'); return; }
     if (!termsAccepted || !privacyAccepted) { setError('You must accept the Terms of Service and Privacy Policy to continue.'); return; }
-    if (!passwordValid) { setError('Password must be at least 8 characters long.'); return; }
+    const pwProblem = passwordProblem(password);
+    if (pwProblem) { setError(pwProblem); return; }
     if (!passwordsMatch) { setError('Passwords do not match.'); return; }
 
     setIsLoading(true);
     try {
+      if (await isBreachedPassword(password)) { setError(BREACHED_PASSWORD_MESSAGE); return; }
       const birthday = `${birthYear}-${birthMonth}-${birthDay}`;
       storePendingAgeVerification(birthday, TERMS_VERSION);
       await authService.signUp(email, password, {
@@ -127,7 +130,7 @@ export default function SignUpPage() {
       await referralService.redeemPendingReferral();
       navigate('/welcome');
     } catch (err: any) {
-      setError(err.message || 'Failed to create account. Please try again.');
+      setError(passwordErrorMessage(err, 'Failed to create account. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -200,11 +203,11 @@ export default function SignUpPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a password (8+ characters)"
+                placeholder={`Create a password (${MIN_PASSWORD_LENGTH}+ characters)`}
                 required
                 disabled={isLoading}
                 label="Password"
-                error={password && !passwordValid ? 'Password must be at least 8 characters' : undefined}
+                error={password && !passwordValid ? (passwordProblem(password) ?? undefined) : undefined}
               />
               {password && passwordValid && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-emerald-400">

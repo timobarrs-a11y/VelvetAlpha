@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
+import { passwordProblem, isBreachedPassword, passwordErrorMessage, BREACHED_PASSWORD_MESSAGE, PASSWORD_RULE } from '../shared/auth/passwordPolicy';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -47,8 +48,9 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError('');
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    const pwProblem = passwordProblem(password);
+    if (pwProblem) {
+      setError(pwProblem);
       return;
     }
 
@@ -60,6 +62,10 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
+      if (await isBreachedPassword(password)) {
+        setError(BREACHED_PASSWORD_MESSAGE);
+        return;
+      }
       const { error } = await supabase.auth.updateUser({
         password: password,
       });
@@ -72,7 +78,7 @@ export default function ResetPasswordPage() {
         navigate('/login');
       }, 3000);
     } catch (err: any) {
-      setError('Failed to reset password. Please try again.');
+      setError(passwordErrorMessage(err, 'Failed to reset password. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +159,7 @@ export default function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-                  placeholder="Enter new password"
+                  placeholder={`New password: ${PASSWORD_RULE.toLowerCase()}`}
                   required
                   disabled={isLoading}
                   minLength={6}

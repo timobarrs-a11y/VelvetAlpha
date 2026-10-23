@@ -452,12 +452,14 @@ export function ProfilePage() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <EditableField
-              label="Birthday"
-              value={profile.birthday || ''}
-              onSave={(v) => handleFieldSave('birthday', v)}
-              type="date"
-            />
+            {/* Set by the age check at sign-up, so it can't be edited here */}
+            <div className="ds-card p-5">
+              <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">Birthday</span>
+              <p className="text-lg text-white font-medium mt-1">
+                {profile.birthday ? new Date(`${profile.birthday}T00:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : 'Not set'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">Set when you signed up.</p>
+            </div>
           </motion.div>
 
           {profile.zodiac_sign && (

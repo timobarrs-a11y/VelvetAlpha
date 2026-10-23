@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   resolvePlot, houseInfo, MEDALS, TIER_COLORS, glyph,
   type Plot, type ResolvedPlot,
@@ -11,6 +12,8 @@ interface BillboardCardProps {
   isYou: boolean;
   onClose: () => void;
   onCustomize: () => void;
+  /** Your main companion: "Look inside" opens their Velvet House. */
+  mainCompanionId?: string | null;
 }
 
 function medalCanvas(slug: string): HTMLCanvasElement {
@@ -42,7 +45,8 @@ function houseLine(r: ResolvedPlot): string {
   return `${h.label} · starter house`;
 }
 
-export function BillboardCard({ plot, isYou, onClose, onCustomize }: BillboardCardProps) {
+export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanionId = null }: BillboardCardProps) {
+  const navigate = useNavigate();
   const resolved = resolvePlot(plot);
   const prof = plot.profile;
   const medalListRef = useRef<HTMLDivElement>(null);
@@ -161,12 +165,14 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize }: BillboardCa
               >
                 Customize my plot
               </button>
-              <a
-                href="/velvet-house"
+              {/* Only on your own house: the inside is the Velvet House game */}
+              <button
+                type="button"
+                onClick={() => navigate(mainCompanionId ? `/velvet-house?companion=${encodeURIComponent(mainCompanionId)}` : '/velvet-house')}
                 className="rounded-[12px] border border-white/15 bg-transparent px-3.5 py-2.5 font-bold text-[14px] text-white/60 hover:text-white hover:border-white/30 transition-colors"
               >
-                Play inside
-              </a>
+                Look inside
+              </button>
             </>
           ) : (
             <button

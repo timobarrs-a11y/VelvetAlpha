@@ -131,7 +131,8 @@ class UserProfileService {
     return this.updateProfile({
       name: answers.name,
       nickname: answers.nickname || null,
-      birthday: answers.birthday || null,
+      // birthday is set by verify_age_and_consent at sign-up; the app can't write it (and
+      // sending it makes the whole save fail with "permission denied")
       gender: answers.gender || null,
       favorite_color: answers.favoriteColor || null,
       zodiac_sign: answers.zodiacSign || null,

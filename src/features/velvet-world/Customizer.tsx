@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
 import {
-  HOUSE_STYLES, HOUSE_TIERS, houseUnlock, COLORS,
+  houseUnlock, COLORS,
   BILLBOARD_STYLES, CAR_TYPES, PET_TYPES, LAWN_STYLES, TREE_TYPES,
-  MEDALS, resolvePlot,
+  resolvePlot,
   type Plot, type PlotConfig, type HouseStyle,
 } from './art/streetArt';
+import { HousePicker } from './HousePicker';
 import { savePlot, setMainCompanion, type MyPlot } from '../../services/worldService';
 
 interface CustomizerProps {
@@ -40,15 +41,13 @@ export function Customizer({ plot, myPlot, companions, mainCompanionId, onSaved,
     try {
       const toSave: PlotConfig = { ...config };
       if (locked) {
-        // Free users: strip member-only sign/yard choices
-        const house = toSave.house;
+        // Free users keep their house and colors; member-only sign and yard choices are dropped
         toSave.sign = {};
         toSave.car = { type: 'none' };
         toSave.pet = { kind: 'none' };
         toSave.lawn = 'plain';
         toSave.tree = 'none';
         toSave.extras = {};
-        toSave.house = { style: house?.style };
       }
       await savePlot(toSave);
       invalidate(plot.id);
@@ -83,35 +82,14 @@ export function Customizer({ plot, myPlot, companions, mainCompanionId, onSaved,
         </div>
       )}
 
-      {/* House rows by tier */}
-      {(['starter', 'member', 'earned'] as const).map((tier) => {
-        const items = HOUSE_STYLES.filter((h) => h.tier === tier);
-        return (
-          <div key={tier} className="grid gap-1.5">
-            <span className="label">{HOUSE_TIERS[tier].label} · {HOUSE_TIERS[tier].note}</span>
-            <div className="flex flex-wrap gap-1.5">
-              {items.map((h) => {
-                const u = houseUnlock(h.id, myPlot.is_member, myPlot.earned);
-                const isCurrent = resolved.house.style === h.id;
-                const label = u.ok ? h.label : tier === 'earned' ? `${h.label} · ${MEDALS[h.medal!].name}` : `${h.label} · members`;
-                return (
-                  <button
-                    key={h.id}
-                    onClick={() => u.ok && set((cc) => { cc.house = { style: h.id as HouseStyle }; })}
-                    disabled={!u.ok}
-                    aria-pressed={isCurrent}
-                    className={`rounded-[9px] border px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
-                      isCurrent ? 'border-white text-white bg-white/12' : 'border-white/10 text-white/60 hover:border-white/20'
-                    } ${!u.ok ? 'opacity-40 cursor-not-allowed' : ''}`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+      {/* Houses: all three collections, locked ones shown with how to unlock them */}
+      <HousePicker
+        value={resolved.house.style}
+        onChange={(style: HouseStyle) => { if (houseUnlock(style, myPlot.is_member, myPlot.earned).ok) set((cc) => { cc.house = { style }; }); }}
+        isMember={myPlot.is_member}
+        earned={myPlot.earned}
+        colors={{ body: resolved.house.body, roof: resolved.house.roof, door: resolved.house.door }}
+      />
 
       {/* Color swatches */}
       <SwatchRow label="Walls" colors={COLORS.body} current={resolved.house.body} onPick={(v) => set((cc) => { cc.house = { ...cc.house, body: v }; })} />
