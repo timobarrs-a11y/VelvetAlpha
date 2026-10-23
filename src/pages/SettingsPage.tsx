@@ -11,6 +11,7 @@ import { getUserExperts, deleteUserExpert, UserExpert } from '../services/expert
 import { getExpertById } from '../config/signatureExperts';
 import { useRole } from '../hooks/useRole';
 import { PublicProfileSettings } from '../components/PublicProfileSettings';
+import { passwordProblem, isBreachedPassword, passwordErrorMessage, BREACHED_PASSWORD_MESSAGE, PASSWORD_RULE } from '../shared/auth/passwordPolicy';
 
 type Tab = 'notifications' | 'privacy' | 'appearance' | 'experts' | 'tour' | 'security' | 'data' | 'public-profile';
 
@@ -211,20 +212,25 @@ export function SettingsPage() {
       setPwMessage({ type: 'error', text: 'New passwords do not match.' });
       return;
     }
-    if (newPassword.length < 8) {
-      setPwMessage({ type: 'error', text: 'Password must be at least 8 characters.' });
+    const pwProblem = passwordProblem(newPassword);
+    if (pwProblem) {
+      setPwMessage({ type: 'error', text: pwProblem });
       return;
     }
     setPwLoading(true);
     setPwMessage(null);
     try {
+      if (await isBreachedPassword(newPassword)) {
+        setPwMessage({ type: 'error', text: BREACHED_PASSWORD_MESSAGE });
+        return;
+      }
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       setPwMessage({ type: 'success', text: 'Password updated successfully.' });
       setNewPassword('');
       setConfirmPassword('');
     } catch (e: any) {
-      setPwMessage({ type: 'error', text: e.message || 'Failed to update password.' });
+      setPwMessage({ type: 'error', text: passwordErrorMessage(e, 'Failed to update password.') });
     } finally {
       setPwLoading(false);
     }
@@ -658,7 +664,7 @@ export function SettingsPage() {
                         onChange={setNewPassword}
                         show={showNewPw}
                         onToggle={() => setShowNewPw(p => !p)}
-                        placeholder="Minimum 8 characters"
+                        placeholder={PASSWORD_RULE}
                       />
                       <PasswordInput
                         label="Confirm New Password"
