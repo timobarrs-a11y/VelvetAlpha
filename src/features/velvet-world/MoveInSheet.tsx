@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { COLORS, STYLE_DEFAULTS, houseUnlock, type HouseStyle } from './art/streetArt';
-import { claimPlot, getUnlocks } from '../../services/worldService';
+import { COLORS, STYLE_DEFAULTS, houseUnlock, type HouseStyle, type HouseConfig } from './art/streetArt';
+import { claimPlot, getUnlocks, saveHouse } from '../../services/worldService';
 import { HousePicker } from './HousePicker';
 import { drawHouseTile, tilePlot } from './houseTiles';
 
@@ -8,9 +8,18 @@ import { drawHouseTile, tilePlot } from './houseTiles';
  * Pick a house and its colors, then move in. Used by the welcome popup and by /world on a
  * first visit. Every collection is shown; member and earned houses are locked until unlocked.
  */
-export function MoveInPanel({ onMoved, compact = false }: { onMoved: () => void; compact?: boolean }) {
-  const [house, setHouse] = useState<HouseStyle>('standard');
-  const [colors, setColors] = useState(() => ({ body: STYLE_DEFAULTS.standard.body, roof: STYLE_DEFAULTS.standard.roof, door: STYLE_DEFAULTS.standard.door }));
+export function MoveInPanel({ onMoved, compact = false, initial, submitLabel = 'Move in' }: {
+  onMoved: () => void;
+  compact?: boolean;
+  /** A house that already exists (a member we built one for): edit it instead of moving in. */
+  initial?: HouseConfig | null;
+  submitLabel?: string;
+}) {
+  const start = initial?.style ?? 'standard';
+  const [house, setHouse] = useState<HouseStyle>(start);
+  const [colors, setColors] = useState(() => ({
+    body: initial?.body ?? STYLE_DEFAULTS[start].body, roof: initial?.roof ?? STYLE_DEFAULTS[start].roof, door: initial?.door ?? STYLE_DEFAULTS[start].door,
+  }));
   const [unlocks, setUnlocks] = useState<{ is_member: boolean; earned: string[] }>({ is_member: false, earned: [] });
   const [moving, setMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +42,8 @@ export function MoveInPanel({ onMoved, compact = false }: { onMoved: () => void;
     setMoving(true);
     setError(null);
     try {
-      await claimPlot({ style: house, ...colors });
+      if (initial) await saveHouse({ style: house, ...colors });
+      else await claimPlot({ style: house, ...colors });
       onMoved();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to move in');
@@ -63,7 +73,7 @@ export function MoveInPanel({ onMoved, compact = false }: { onMoved: () => void;
         disabled={moving}
         className="w-full rounded-full bg-gradient-to-r from-rose-500 to-pink-600 py-3.5 font-bold text-white transition-all hover:shadow-xl disabled:opacity-50"
       >
-        {moving ? 'Moving in…' : 'Move in'}
+        {moving ? 'Saving…' : submitLabel}
       </button>
     </div>
   );

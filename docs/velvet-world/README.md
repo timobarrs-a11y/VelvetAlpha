@@ -45,7 +45,7 @@ something, not report everything to you.
 |---|---|---|---|
 | 6a | [phase-6a-plots-and-block.md](phase-6a-plots-and-block.md) | Migration, move-in, your daily block (street view), billboards with Add friend, customizer, main companion | Large |
 | 6b | [phase-6b-town.md](phase-6b-town.md) | Whole-town view (every plot), pins, Friends with Visit, search, clock tower | Medium |
-| 6c | [sql/phase-6c-houses-and-welcome.sql](sql/phase-6c-houses-and-welcome.sql) | Windmill and Castle unlocks, `get_world_unlocks()` for the welcome popup. Code is already on main; only the migration needs applying. | Tiny |
+| 6c | [sql/phase-6c-houses-and-welcome.sql](sql/phase-6c-houses-and-welcome.sql) | Windmill and Castle unlocks; `get_world_unlocks()`; **a house for every existing member** (sign-up order, starter house, door in their favorite color), with a one-time "We built you a house" popup. Code is already on main; only the migration needs applying. | Small |
 
 Requires community Phases 1–4 (already applied).
 

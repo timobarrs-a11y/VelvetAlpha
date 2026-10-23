@@ -9,6 +9,17 @@ Adds two earned houses, so there are five (one medal each, never for sale):
 Also adds get_world_unlocks(), so the welcome popup can show a new person which
 houses they can pick before they have a plot.
 
+## Existing members get a house automatically
+Everyone who signed up before Velvet World gets a plot now, so the town is full on
+day one and nobody has to go looking for a setup screen:
+- Plot numbers follow sign-up order, so the earliest members live on the first streets.
+- Each gets a starter house (picked from their user id, so it's stable) with the front
+  door in their favorite color.
+- Bots and banned accounts are skipped.
+- `welcomed_at` stays empty for these plots. The app shows them a one-time "We built you a
+  house" popup with Make it mine / Looks great. Plots people chose themselves count as
+  welcomed already.
+
 Requires Phase 6 (velvet_world_phase6). Idempotent.
 */
 
@@ -67,3 +78,83 @@ AS $$
 $$;
 REVOKE EXECUTE ON FUNCTION public.get_world_unlocks() FROM anon, public;
 GRANT EXECUTE ON FUNCTION public.get_world_unlocks() TO authenticated;
+
+-- ============================================================
+-- Existing members: a house for everyone, and a one-time welcome
+-- ============================================================
+-- Plots people already chose themselves have been welcomed. Only on the first run, so a
+-- re-run can't mark the houses built below as seen.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'world_plots' AND column_name = 'welcomed_at') THEN
+    ALTER TABLE public.world_plots ADD COLUMN welcomed_at timestamptz;
+    UPDATE public.world_plots SET welcomed_at = moved_in_at;
+  END IF;
+END $$;
+
+-- Favorite color (from the personal questionnaire) → a front door color from the kit's palette.
+CREATE OR REPLACE FUNCTION public.world_door_for_color(p_color text)
+RETURNS text
+LANGUAGE sql IMMUTABLE SET search_path = public
+AS $$
+  SELECT CASE lower(COALESCE(p_color, ''))
+    WHEN 'red' THEN '#C2413A' WHEN 'orange' THEN '#B98A6A' WHEN 'yellow' THEN '#E0A43A'
+    WHEN 'green' THEN '#2F4F3E' WHEN 'teal' THEN '#2F4F3E' WHEN 'cyan' THEN '#2B4A6B'
+    WHEN 'blue' THEN '#2B4A6B' WHEN 'purple' THEN '#8E5468' WHEN 'magenta' THEN '#8E5468'
+    WHEN 'pink' THEN '#8E5468' WHEN 'black' THEN '#3A3340' WHEN 'white' THEN '#B98A6A'
+    ELSE NULL END;
+$$;
+
+-- Move every existing member in. Safe to re-run: only people without a plot are added.
+DO $$
+DECLARE v_next int;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('world_plots_slot'));
+  SELECT COALESCE(max(slot_index) + 1, 0) INTO v_next FROM public.world_plots;
+  INSERT INTO public.world_plots (user_id, slot_index, house, welcomed_at)
+  SELECT u.id,
+         v_next + (row_number() OVER (ORDER BY u.created_at, u.id))::int - 1,
+         jsonb_strip_nulls(jsonb_build_object(
+           'style', (ARRAY['standard', 'cottage', 'bungalow', 'ranch', 'cabin'])[1 + abs(hashtext(u.id::text)) % 5],
+           'door', public.world_door_for_color(to_jsonb(up) ->> 'favorite_color'))),
+         NULL
+  FROM auth.users u
+  JOIN public.user_profiles up ON up.id = u.id
+  WHERE NOT COALESCE(up.is_bot, false) AND NOT COALESCE(up.is_banned, false)
+    AND NOT EXISTS (SELECT 1 FROM public.world_plots p WHERE p.user_id = u.id);
+END $$;
+
+-- Moving in yourself, or saving your look, counts as being welcomed.
+CREATE OR REPLACE FUNCTION public.world_plots_mark_welcomed()
+RETURNS trigger
+LANGUAGE plpgsql SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NOT NULL AND NEW.user_id = auth.uid() AND NEW.welcomed_at IS NULL THEN NEW.welcomed_at := now(); END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_world_plots_mark_welcomed ON public.world_plots;
+CREATE TRIGGER trg_world_plots_mark_welcomed
+  BEFORE INSERT OR UPDATE OF house, sign, yard ON public.world_plots
+  FOR EACH ROW EXECUTE FUNCTION public.world_plots_mark_welcomed();
+
+-- What the welcome popup needs: no plot yet (new person), or a plot we built and they haven't seen.
+CREATE OR REPLACE FUNCTION public.get_world_welcome()
+RETURNS TABLE (has_plot boolean, needs_welcome boolean, slot_index int, house jsonb)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT p.user_id IS NOT NULL, p.user_id IS NULL OR p.welcomed_at IS NULL, p.slot_index, p.house
+  FROM (SELECT auth.uid() AS uid) me
+  LEFT JOIN public.world_plots p ON p.user_id = me.uid
+  WHERE me.uid IS NOT NULL;
+$$;
+REVOKE EXECUTE ON FUNCTION public.get_world_welcome() FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.get_world_welcome() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.mark_world_welcomed()
+RETURNS void
+LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$ UPDATE public.world_plots SET welcomed_at = now() WHERE user_id = auth.uid() AND welcomed_at IS NULL; $$;
+REVOKE EXECUTE ON FUNCTION public.mark_world_welcomed() FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.mark_world_welcomed() TO authenticated;

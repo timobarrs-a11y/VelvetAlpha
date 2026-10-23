@@ -30,5 +30,7 @@ export function drawHouseTile(canvas: HTMLCanvasElement, plot: Plot, pad = 6) {
 }
 
 export function tilePlot(style: HouseStyle, colors: { body?: string; roof?: string; door?: string } = {}, member = false, earned: string[] = []): Plot {
-  return { id: `tile-${style}`, number: 2, member, origin: null, config: { house: { style, ...colors }, sign: {} }, profile: { name: '', earned } };
+  // Leave out colors that aren't set, so the style's own defaults show through.
+  const set = Object.fromEntries(Object.entries(colors).filter(([, v]) => typeof v === 'string' && v));
+  return { id: `tile-${style}`, number: 2, member, origin: null, config: { house: { style, ...set }, sign: {} }, profile: { name: '', earned } };
 }

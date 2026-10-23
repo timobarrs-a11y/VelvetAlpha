@@ -3,8 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
 import { useTutorialDirector } from '../../context/TutorialDirectorContext';
-import { claimDefaultPlot, getMyPlot } from '../../services/worldService';
-import { townSlot } from './art/streetArt';
+import { claimDefaultPlot, getMyPlot, getWelcome, markWelcomed, type WorldWelcome as WelcomeState } from '../../services/worldService';
+import { drawHouseTile, tilePlot } from './houseTiles';
+import { townSlot, type HouseStyle } from './art/streetArt';
 import { MoveInPanel } from './MoveInSheet';
 
 // Never interrupt sign-up, onboarding, a game, or the town itself (it has its own move-in screen).
@@ -24,7 +25,7 @@ export function WorldWelcomeMount() {
   const { user } = useAuth();
   const { pathname } = useLocation();
   const { isOnboarding } = useTutorialDirector();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<WelcomeState | null>(null);
   const checking = useRef(false);
 
   useEffect(() => {
@@ -35,10 +36,10 @@ export function WorldWelcomeMount() {
     if (seen) return;
     checking.current = true;
     const timer = setTimeout(() => {
-      getMyPlot()
-        .then((plot) => {
+      getWelcome()
+        .then((w) => {
           try { sessionStorage.setItem(CHECKED_KEY, user.id); } catch { /* storage blocked */ }
-          if (!plot) setOpen(true);
+          if (w && w.needs_welcome) setOpen(w);
         })
         .catch(() => {})
         .finally(() => { checking.current = false; });
@@ -47,14 +48,25 @@ export function WorldWelcomeMount() {
   }, [user, pathname, isOnboarding, open]);
 
   if (!open) return null;
-  return <WorldWelcome onClose={() => setOpen(false)} />;
+  return <WorldWelcome state={open} onClose={() => setOpen(null)} />;
 }
 
-type Step = 'intro' | 'pick' | 'done';
+type Step = 'intro' | 'built' | 'pick' | 'done';
 
-function WorldWelcome({ onClose }: { onClose: () => void }) {
+/** The house we built for an existing member, drawn small. */
+function BuiltPreview({ house }: { house: WelcomeState['house'] }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (ref.current) drawHouseTile(ref.current, tilePlot((house?.style ?? 'standard') as HouseStyle, { body: house?.body, roof: house?.roof, door: house?.door }), 10);
+  }, [house]);
+  return <canvas ref={ref} width={560} height={220} className="h-auto w-full rounded-2xl border border-white/10 bg-[#9DAE97]/20" />;
+}
+
+function WorldWelcome({ state, onClose }: { state: WelcomeState; onClose: () => void }) {
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>('intro');
+  // Existing members already have a house we built for them; new people pick one.
+  const built = state.has_plot;
+  const [step, setStep] = useState<Step>(built ? 'built' : 'intro');
   const [address, setAddress] = useState<string | null>(null);
   const [skipping, setSkipping] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -69,7 +81,8 @@ function WorldWelcome({ onClose }: { onClose: () => void }) {
 
   const notNow = async () => {
     setSkipping(true);
-    await claimDefaultPlot().catch(() => {});
+    if (built) await markWelcomed().catch(() => {});
+    else await claimDefaultPlot().catch(() => {});
     setSkipping(false);
     onClose();
   };
@@ -115,12 +128,34 @@ function WorldWelcome({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
+        {step === 'built' && (
+          <div className="grid gap-4">
+            <p className="text-[12px] font-bold uppercase tracking-wider text-pink-300/80">New: Velvet World</p>
+            <h2 id="world-welcome-title" className="text-2xl font-extrabold leading-tight" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>
+              We built you a house
+            </h2>
+            <BuiltPreview house={state.house} />
+            <p className="text-[14.5px] leading-snug text-white/75">
+              Everyone in Velvet now lives in one town{state.slot_index !== null ? <>, and you're at <b className="text-white">{townSlot(state.slot_index).address}</b></> : null}. Your billboard out front shows your name, a goal you choose to share, and your medals. You'll have new neighbors every day; tap a billboard to meet someone.
+            </p>
+            <p className="text-[13.5px] text-white/55">Bigger houses come with membership, and five can only be earned with medals. Inside, it's your home in Velvet House.</p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button type="button" onClick={() => setStep('pick')} className="flex-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 py-3 font-bold text-white hover:shadow-xl">
+                Make it mine
+              </button>
+              <button type="button" onClick={async () => { await markWelcomed().catch(() => {}); await finish(); }} className="rounded-full border border-white/15 px-5 py-3 font-semibold text-white/70 hover:border-white/30 hover:text-white">
+                Looks great
+              </button>
+            </div>
+          </div>
+        )}
+
         {step === 'pick' && (
           <div className="grid gap-4">
             <h2 id="world-welcome-title" className="text-xl font-extrabold" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>
               Pick your house
             </h2>
-            <MoveInPanel compact onMoved={finish} />
+            <MoveInPanel compact onMoved={finish} initial={built ? state.house : null} submitLabel={built ? 'Save my house' : 'Move in'} />
           </div>
         )}
 
