@@ -37,6 +37,41 @@ export async function savePlot(config: PlotConfig): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** What this person can live in right now. Works before they have a plot. */
+export async function getUnlocks(): Promise<{ is_member: boolean; earned: string[] }> {
+  const { data, error } = await supabase.rpc('get_world_unlocks');
+  if (error) throw new Error(error.message);
+  return (data as { is_member: boolean; earned: string[] }[] | null)?.[0] ?? { is_member: false, earned: [] };
+}
+
+export interface WorldWelcome { has_plot: boolean; needs_welcome: boolean; slot_index: number | null; house: PlotConfig['house'] | null }
+
+/** Should this person see the welcome popup? Falls back to "no plot yet" before migration 6c is applied. */
+export async function getWelcome(): Promise<WorldWelcome | null> {
+  const { data, error } = await supabase.rpc('get_world_welcome');
+  if (error) {
+    const plot = await getMyPlot();
+    return plot ? { has_plot: true, needs_welcome: false, slot_index: plot.slot_index, house: plot.house } : { has_plot: false, needs_welcome: true, slot_index: null, house: null };
+  }
+  return (data as WorldWelcome[] | null)?.[0] ?? null;
+}
+
+export async function markWelcomed(): Promise<void> {
+  await supabase.rpc('mark_world_welcomed');
+}
+
+/** Change just the house (style and colors), keeping the billboard and yard as they are. */
+export async function saveHouse(house: PlotConfig['house']): Promise<void> {
+  const { error } = await supabase.rpc('save_world_plot', { p_house: house, p_sign: null, p_yard: null });
+  if (error) throw new Error(error.message);
+}
+
+/** Move in with a random starter house, for people who skip the picker. Safe to call twice. */
+export async function claimDefaultPlot(): Promise<number> {
+  const starters = ['standard', 'cottage', 'bungalow', 'ranch', 'cabin'];
+  return claimPlot({ style: starters[Math.floor(Math.random() * starters.length)] as HouseStyle });
+}
+
 export async function setMainCompanion(companionId: string | null): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');

@@ -25,7 +25,9 @@ something, not report everything to you.
 |---|---|
 | Name | "Velvet World" is a working name. The sidebar label is **Town** at `/world`. **House** at `/house` is the community spaces page, so leave it alone. |
 | Plot | One per person, permanent number. The number maps to a permanent street address through `townSlot()`. |
-| Houses | **Starter** (everyone): Classic, Cottage, Bungalow, Ranch, A-frame cabin. **Member** (paid): Craftsman, Modern, Brick colonial, Victorian, Villa. **Earned** (one medal each, never for sale): Lighthouse (Iron Will), Observatory (The Closer), Treehouse (Hat Trick). |
+| Houses | **Starter** (everyone): Classic, Cottage, Bungalow, Ranch, A-frame cabin. **Member** (paid): Craftsman, Modern, Brick colonial, Victorian, Villa. **Earned** (one medal each, never for sale): Lighthouse (Iron Will), Observatory (The Closer), Treehouse (Hat Trick), Windmill (Coachable), Castle (Unbreakable). Every member and earned house is taller than any starter house. Pickers always show all three collections; locked houses say how to unlock them. |
+| Onboarding | No extra onboarding page. The first time someone is in the app without a house (not during onboarding or the guided tour), a popup explains Velvet World and offers a quick pick (`WorldWelcome.tsx`, mounted in `Router.tsx`). "Not now" still moves them in with a random starter house, so everyone is in the town. |
+| Look inside | Only on your own billboard. Opens Velvet House for your main companion. |
 | Free vs paid | Free users pick a starter house (or one they earned) **and its colors**. Members also get billboard styles and colors, car, pet, lawn, tree and extras, plus all the animation: twinkle lights around the billboard, chimney smoke, swaying trees, pets moving. The kit already applies these rules in `resolvePlot()`. |
 | Lapsed member | The saved look is kept. Viewers' clients show a starter house and plain yard until they're a member again (the kit does this). |
 | Neighbors | Everyone rotates every day. Nobody repeats until the pool runs out (30-day window). Up to 3 a day share one of your community spaces. Two side-by-side houses never match in style and color. |
@@ -43,6 +45,7 @@ something, not report everything to you.
 |---|---|---|---|
 | 6a | [phase-6a-plots-and-block.md](phase-6a-plots-and-block.md) | Migration, move-in, your daily block (street view), billboards with Add friend, customizer, main companion | Large |
 | 6b | [phase-6b-town.md](phase-6b-town.md) | Whole-town view (every plot), pins, Friends with Visit, search, clock tower | Medium |
+| 6c | [sql/phase-6c-houses-and-welcome.sql](sql/phase-6c-houses-and-welcome.sql) | Windmill and Castle unlocks; `get_world_unlocks()`; **a house for every existing member** (sign-up order, starter house, door in their favorite color), with a one-time "We built you a house" popup. Code is already on main; only the migration needs applying. | Small |
 
 Requires community Phases 1–4 (already applied).
 
