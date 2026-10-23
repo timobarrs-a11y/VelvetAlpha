@@ -1,161 +1,142 @@
-# Getting to know people without wearing them out
+# Arrival: getting to know people without a questionnaire
 
-Plan for the personal, companion and coaching questionnaires. Written to be decided
-on by Tim first, then built by Bolt in the phases at the bottom.
+How a new person goes from sign-up to their coach. Replaces the earlier
+"spread it over two weeks" plan: personal answers come first, because they change
+the first conversation and the look of the app, and Atlas asks the rest himself,
+in conversation.
 
-## The problem
+## What's wrong today (found in the code)
 
-A new person today goes through:
+1. **About 20 form screens before Atlas says a word.** The personal questionnaire
+   (`personalBank.ts`) runs name → nickname → color → birthday → zodiac → gender → six
+   interest screens → four "wavelength" questions → a swipe deck, plus 3 beat screens.
+2. **Nothing is saved until the last screen.** `UserProfileQuestionnairePageV2` saves only in
+   `handleComplete`. Quit at question 15 and everything is lost, and the Daily Feed can't fill
+   until the end. (`saveUserLevelAnswers` writes every field at once, so it can't simply be
+   called per answer; it needs a per-field save.)
+3. **Favorite color does nothing in the chat.** Atlas loads it (`fetchUserProfile` selects
+   `favorite_color`) but never uses it, and the Atlas page is hard-coded gold
+   (`accent="#c9a961"`).
+4. **Atlas only sees half the interests.** His prompt gets hobbies, sports and music, not
+   entertainment, tech or lifestyle.
+5. **Atlas's opening breaks his own rule.** The canned greeting asks four questions in one
+   breath ("existing business? Starting a business? Learning a language? …this year?") and
+   opens with "With your personal interests out of the way." His prompt says "ONE question at
+   a time" and "never sound like a survey."
+6. **The wavelength answers shape coaching but are asked as a form**: conflict, connection,
+   decision style, motivation. They go into the coach's system prompt
+   (`systemPromptBuilder.ts`), so they matter. They're just asked in the wrong place.
 
-| Step | Screens | What it asks |
-|---|---|---|
-| Personal questionnaire | ~20 | name, nickname, favorite color, birthday, zodiac cusp, gender, hobbies, music, entertainment, tech, lifestyle, sports, a 6-card swipe deck, how you handle conflict, how you connect, how you decide, what motivates you, plus 3 "beat" screens |
-| Atlas (coach intake) | a chat | what you want help with, then a coach recommendation |
-| Coach avatar, environment setup | 2+ | looks |
-| Guided tour | several | where things are |
-| Companion (optional branch) | ~12 | relationship type, connection, energy, voice, warmth, interests, when it's hard, love language, name, voice pick, avatar |
+## The idea: one continuous arrival, hosted by Atlas
 
-That's 35+ screens before someone has had one good moment. Most of what's asked
-isn't needed yet, and none of it pays off on screen when they answer.
+No separate questionnaire. From the first screen it's a conversation with Atlas, in two acts.
 
-## How games solve this
+### Act 1: "Who you are" (about 90 seconds, scripted, no AI)
 
-Games never front-load a form. They:
+Atlas asks each question as a chat message, and the answer UI appears **inside the chat**
+as a tappable card (the existing questionnaire archetypes: tap, grid, scrub). Between
+questions, Atlas reacts in a sentence before asking the next thing, so it never feels
+like a form.
 
-1. **Ask only what the next 5 minutes need.** Name and a goal, then play.
-2. **Pay off every answer immediately and visibly.** Pick a color, see your house
-   painted. Pick interests, watch your feed fill in.
-3. **Teach and ask in context.** The first time you open a menu, it asks one thing about that menu.
-4. **Notice, then confirm.** They watch what you do and ask "you seem to like X, right?"
-   One tap, not a blank form.
-5. **Make it part of the fun.** A character creator is the game, not a survey before it.
+| # | Atlas asks | Answer card | Atlas reacts with | Saved instantly to |
+|---|---|---|---|---|
+| 1 | "Hey, I'm Atlas. I'm going to get you set up. What should I call you?" | text | uses the name right away | `name` (+ `nickname` if they give a short form) |
+| 2 | "When's your birthday? I like to know when to make a fuss." | date wheel | the sign or the countdown ("Scorpio. That explains the confidence."); asks the cusp only if they're on one | `birthday`, `zodiac_sign` |
+| 3 | "How should I refer to you?" | chips | none, just moves on (keep it quick and respectful) | `gender` |
+| 4 | "Pick a color. This one's yours." | swatches | **the whole chat re-skins to that color, live**: "Better. This is your space now." | `favorite_color` |
+| 5 | "What are you into? Tap everything that's you." | one grid with tabs: hobbies · sports · music · shows · tech · lifestyle | names one or two picks and **shows 3 real Daily Feed or Lens items appearing**: "F1 and true crime. Your feed's already filling up." | `hobbies`, `sports`, `music_genre`, `*_interests` |
 
-## The plan in six rules
+Why it's scripted:
+- **No waiting and no cost.** Reactions come from small pre-written banks per answer.
+- **It can't go off the rails** in the most important 90 seconds.
+- **It still feels alive.** The banks vary the wording and use what the person just said.
 
-1. **Onboarding asks only what the first session uses** (about 6 screens, under 2 minutes).
-2. **Everything else is learned over the first two weeks**, one small question at a time,
-   in the place it matters.
-3. **Learn before asking.** Chat already pulls interests out of conversations
-   (`threadSignalService.ts`), and feed, Lens and spaces show what people tap. When we're
-   fairly sure, ask a one-tap confirm ("Looks like you're into F1. Add it?") instead of a question.
-4. **One shared budget for all three sources** (cards, coach, companion): at most
-   **1 ask a day and 3 a week**. A coach question and a companion question never land on the same day.
-5. **Every answer changes something you can see within seconds:** feed, Lens, billboard,
-   neighbors, how the coach or companion talks.
-6. **Skipping is always fine and always remembered.** Skip once: that question waits 14 days.
-   Twice: 60 days. Three times: never again unless they open their profile and answer it.
+The two moments that sell it:
+- **The chat turns their color** right after they pick it.
+- **Their feed visibly fills in** right after they pick interests.
 
-## Where each question goes
+That's the game-designer move: every answer changes the screen.
 
-| Question | Today | Goes to | Why |
-|---|---|---|---|
-| Name | onboarding | **Onboarding** | needed everywhere |
-| Nickname | onboarding (optional) | **Companion asks, week 1** ("What should I call you?") | feels personal from a character, cold on a form |
-| Birthday | onboarding | **Onboarding** | birthday messages and zodiac; `profileComplete` needs it today |
-| Gender | onboarding | **Onboarding** | `profileComplete` needs it, pronouns |
-| Hobbies, music, entertainment, tech, lifestyle, sports (6 screens) | onboarding | **Onboarding: one screen**, "Pick what you're into," with category tabs | drives Daily Feed, Lens and spaces; one screen instead of six |
-| Favorite color | onboarding | **Velvet World move-in** (it's the house color) | it already has a visual payoff there |
-| Zodiac cusp | onboarding | **Card, day 3+**, only if birthday is near a cusp | most people never need it |
-| Swipe deck (6 cards) | onboarding | **Cards, one swipe a day**, on the Daily Feed | it's fun as a daily ritual, tiring as a block |
-| Conflict, connection, decision style, motivation | onboarding | **Coach asks in conversation**, weeks 1 and 2 | they shape coaching, and a coach asking feels natural |
-| Companion: relationship type, energy, voice, name, avatar | companion branch | **Keep up front** | this is the character creator, the fun part |
-| Companion: warmth | companion branch | **Keep**, as a live preview (the `preview` archetype already shows sample messages) | instant payoff |
-| Companion: interests | companion branch | **Default to the user's interests**, with an "edit" link | removes a screen |
-| Companion: when it's hard, love language | companion branch | **Companion asks, in character, week 1** | intimate questions land better from the character |
-| Coach goal (Atlas) | onboarding chat | **Keep** | it's the reason they came |
-| House pick | (new) | **Welcome popup after onboarding** (built) | its own payoff, never blocks the coach |
+### Act 2: "What you're working toward" (the existing Atlas AI chat, upgraded)
 
-Result: **about 6 onboarding screens instead of 20+**, and the rest arrives over 14 days
-as roughly 10 small moments.
+The AI takes over with everything from Act 1 in its prompt, all six interest groups included.
+It does the goal discovery it does today, and **weaves in the four wavelength questions
+where they naturally belong in a goal conversation**:
 
-## The pieces to build
-
-### 1. A question registry (one list for everything)
-
-`src/features/questionnaire/registry.ts` holds one entry per fact:
-
-```ts
-{
-  key: 'decisionStyle',             // the existing answer key
-  saveTo: 'communication_profile',  // where it's stored today (unchanged)
-  askVia: ['coach', 'card'],        // who may ask it, in order of preference
-  earliestDay: 3,                   // days since signup
-  priority: 2,
-  confirmFirst: false,              // true when we can infer it and only confirm
-  usedBy: ['systemPromptBuilder', 'profileInsights'],
-}
-```
-
-It reuses the existing question definitions in `personalBank.ts` and `companionBank.ts`
-(same ids, same options, same save code), so nothing about storage changes.
-
-### 2. A "curiosity" scheduler
-
-One function, `nextAsk(userId)`, called by the three surfaces. It returns the single
-question allowed right now, or nothing. It checks:
-
-- the shared budget (1 a day, 3 a week)
-- the skip cooldowns
-- `earliestDay`
-- **never during a hard moment**: not when the ambient profile says
-  `emotional_state = needs_support`, not in a session's first 30 seconds, and not
-  during a streak check-in
-
-One small table, `profile_asks`, logs each ask with columns `user_id`, `key`, `asked_at`,
-`via`, `outcome` (answered / skipped / dismissed). That's enough for budgets, cooldowns
-and measurement.
-
-### 3. Three surfaces
-
-- **Card:** a small card at the top of the Daily Feed. It uses the existing questionnaire
-  archetypes (tap, grid, swipe, scrub), so no new question UI is needed. Answering
-  animates the payoff, for example "Added F1. 3 new videos in your Lens."
-- **Coach:** the coach's system prompt gets an "open question" slot with
-  `nextAsk('coach')`. Rules: ask only once the conversation is light or after a win,
-  phrase it naturally, and never more than once a conversation. The answer is extracted
-  with the existing `signal_extract` call and saved to the same field, with a quick
-  "Got it, noted that you trust your gut" so the person knows it stuck.
-- **Companion:** the same slot, asked in character. Love language, "when it's hard" and
-  nickname live here.
-
-### 4. Make it feel like progress, not paperwork
-
-- **No percent-complete meters and no red badges.** Those make it homework.
-- **"Things we know about you"** on the profile: each answer as a small chip they can
-  edit or delete. This builds trust and lets people fill gaps when they want to.
-- **A medal, "Open Book":** answer 15 get-to-know-you moments. It plugs into the existing
-  medal system, shows on the billboard, and feeds the medal count.
-- **Better neighbors:** interests already pick some of the Velvet World daily block
-  (shared spaces). Say so on the interest card: "Your block tomorrow will have people into this."
-
-## Guardrails we'll measure
-
-| Number | Target |
+| Field (existing values) | How Atlas gets at it, after hearing their goal |
 |---|---|
-| Time from sign-up to first coach reply | under 3 minutes |
-| Onboarding drop-off | down at least a third from today (needs a baseline first) |
-| Card skip rate | any card above 50% skips gets reworded or removed |
-| Asks per user per week | never above 3 |
-| Day-7 return rate | must not drop when this ships |
+| `motivation` (internal / external) | "What gets you moving on something hard: wanting it for yourself, or someone counting on you?" |
+| `decisionStyle` (intuitive / analytical) | "Are you a go-with-your-gut person or a weigh-every-option person?" |
+| `conflictResponse` (solutions / empathy) | "When this gets frustrating, what helps more: help fixing it, or someone hearing you out first?" |
+| `connection` (deep / lively) | "Do you like real heart-to-hearts, or quick back-and-forth?" (sets how the coach talks to them) |
 
-## Phases for Bolt
+Rules for Atlas:
+- **React, then ask.** Every message is one or two sentences about what they said, then
+  *one* question. Never two questions.
+- **Skip what he already knows.** If "I just need someone to keep me accountable" already answers
+  what motivates them, he doesn't ask it.
+- **Quick replies:** each wavelength question shows its two answers as tap chips under his
+  message, using the existing option values in `personalBank.ts`. Typing freely always works too.
+- **Turn limit:** 10 exchanges (the existing `MAX_TURNS`). Unanswered wavelength
+  questions are left for the coach to pick up later. Atlas never stretches the
+  conversation to finish them.
+
+How answers are saved:
+- Atlas appends a hidden marker the user never sees, the same pattern as the existing
+  `[GOAL_COMPLETE]`: `[PROFILE {"decisionStyle":"intuitive"}]`.
+- The `atlas-onboarding` function strips it, checks the value against the allowed options,
+  and saves it to `communication_profile` (`conflict`, `connection`, `decisionStyle`, `motivation`).
+- Tapped chips save directly.
+
+The opening greeting changes too. Instead of four questions in one, it becomes one line
+that bridges from Act 1: "Okay, I've got a feel for you. Now the fun part: what's one thing
+you'd love to be different a year from now?"
+
+Why this is better than asking those questions later (the old plan): these four answers
+pick the coach and set how the coach talks on day one. Asking them *during* the
+goal conversation means the coach match and the first coaching session are already
+tuned, and they're the most natural questions to ask there.
+
+### What doesn't make the cut for arrival
+
+| Question | Where it goes |
+|---|---|
+| Swipe "taste" deck | a one-swipe-a-day card on the Daily Feed (fun as a ritual, tiring as a block) |
+| Nickname, if not given in #1 | Atlas or the companion picks it up naturally ("what do your friends call you?") |
+| Love language, "when it's hard" (companion questions) | the companion asks in character during week 1 |
+| Zodiac cusp | asked only when the birthday falls on a cusp (one tap, inside #2) |
+
+## Before and after
+
+| | Today | Arrival |
+|---|---|---|
+| Screens before Atlas speaks | ~20 | 0 (Atlas hosts from the start) |
+| Questions answered | 17 + 6 swipes | 5 taps + the conversation |
+| Saved if they quit halfway | nothing | everything they answered |
+| Feed ready when they reach the lobby | only if they finished | from question 5 |
+| Wavelength answers | form, before the goal | in context, during the goal |
+| Chat look | gold for everyone | their color |
+
+## Build phases for Bolt
 
 | Phase | What ships | Size |
 |---|---|---|
-| Q1 | Shorten onboarding: merge the six interest screens into one tabbed grid, move favorite color, zodiac, swipe deck and the four "wavelength" questions out. Companion interests default to the user's. | Small |
-| Q2 | Registry, `profile_asks` table, `nextAsk()` scheduler, the Daily Feed card. Moved questions start arriving as cards. | Medium |
-| Q3 | Coach and companion "open question" slots in the system prompts, saving through `signal_extract`. | Medium |
-| Q4 | "Things we know about you" chips on the profile, plus the Open Book medal. | Small |
+| A1 | **Save as you go:** a per-field profile save called from `onAnswer`, and resume at the first unanswered question. Pass all six interest groups into Atlas's prompt. Fix the greeting to one bridging question. | Small |
+| A2 | **Atlas in their color:** set the chat's `--shell-*` color tokens from `favorite_color` (accent, accent-soft, user bubble) on the Atlas page, replacing the hard-coded gold. | Small |
+| A3 | **Act 1 in the chat:** render Act 1's five questions as Atlas messages with inline answer cards (reusing the questionnaire archetypes) and reaction banks. Merge the six interest screens into one tabbed grid. Show the feed preview after interests. | Medium |
+| A4 | **Act 2 wavelength:** prompt changes, quick-reply chips, `[PROFILE …]` marker parsing and validation in `atlas-onboarding`. | Medium |
+| A5 | Swipe deck as a daily feed card; companion asks love language and "when it's hard" in week 1. | Small |
 
-Q1 alone removes about 14 screens and can ship by itself.
+A1 and A2 are worth doing this week even if the rest waits.
 
 ## Decisions for Tim
 
-1. **Birthday:** keep it required in onboarding or allow "skip for now"? Today the
-   profile-complete check needs it, and birthday messages and zodiac use it. Recommendation:
-   keep it required (one quick screen) unless the onboarding numbers say otherwise.
-2. **Swipe deck:** keep it as a daily ritual (recommended) or drop it?
-3. **Wavelength questions** (conflict, connection, decision, motivation): coach-only, or
-   also as cards for people who rarely talk to their coach? Recommendation: coach first,
-   card as a fallback after day 10.
-4. **Open Book medal:** worth adding, or keep medals strictly for real progress?
+1. **Act 1 inside the Atlas chat (recommended), or keep it as the separate questionnaire
+   screen but faster and saving as you go?** The chat version is the bigger win, but it's more work (A3).
+2. **Pronouns question (#3):** keep it in Act 1, or let Atlas infer and only ask when
+   unsure? It's needed today for the profile-complete check and for pronouns.
+3. **Feed preview after interests:** show real items (needs a fast feed fetch) or
+   illustrated placeholders that become real later? Real is much stronger.
+4. **Should Atlas's reactions in Act 1 be AI-written** (more alive, about a second of wait
+   and a small cost per user) **or pre-written banks** (instant and free)?
+   Recommendation: pre-written for launch.
