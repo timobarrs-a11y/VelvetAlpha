@@ -5,11 +5,12 @@ import type { RunResult } from '../games/shootout/three/game3d';
 import { LEVELS, starsFor } from '../games/shootout/engine';
 import { RunView } from '../games/shootout/ui/RunView';
 import { Contest, type ContestResult } from '../games/shootout/ui/Contest';
+import { getLook, setLook, type Look } from '../games/shootout/settings';
 
 const SAVE = 'velvet.shootout.v1';
-interface Progress { unlocked: number; best: Record<number, number>; stars: Record<number, number>; moneyRack: number; wins: Record<number, number> }
+interface Progress { unlocked: number; best: Record<number, number>; stars: Record<number, number>; moneyRack: number; wins: Record<number, number>; attack: Record<number, number> }
 const RACK_NAMES = ['Left corner', 'Left wing', 'Top', 'Right wing', 'Right corner'];
-const FRESH: Progress = { unlocked: 0, best: {}, stars: {}, moneyRack: 4, wins: {} };
+const FRESH: Progress = { unlocked: 0, best: {}, stars: {}, moneyRack: 4, wins: {}, attack: {} };
 
 function loadProgress(): Progress {
   try { const p = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (p) return { ...FRESH, ...p }; } catch { /* storage blocked */ }
@@ -17,7 +18,7 @@ function loadProgress(): Progress {
 }
 function saveProgress(p: Progress) { try { localStorage.setItem(SAVE, JSON.stringify(p)); } catch { /* storage blocked */ } }
 
-type Screen = 'title' | 'play' | 'results' | 'contest';
+type Screen = 'title' | 'play' | 'results' | 'contest' | 'attack' | 'attack-results';
 
 /**
  * 3-Point Shootout: a standalone timing game. Five racks around the arc and
@@ -30,7 +31,9 @@ export function ShootoutGame() {
   const [progress, setProgress] = useState<Progress>(loadProgress);
   const [screen, setScreen] = useState<Screen>('title');
   const [runNo, setRunNo] = useState(0);
+  const [look, setLookState] = useState<Look>(getLook);
   const [levelId, setLevelId] = useState(() => Math.min(loadProgress().unlocked, LEVELS.length - 1));
+  const [attack, setAttack] = useState<{ score: number; makes: number; shots: number; bestStreak: number; prev: number } | null>(null);
   const [result, setResult] = useState<(RunResult & { stars: number; newBest: boolean; unlockedNext: boolean }) | null>(null);
 
   /** Bank a score: personal best, stars, and the next level when it's earned. */
@@ -55,11 +58,20 @@ export function ShootoutGame() {
     setScreen('results');
   }, [bank]);
 
+  const finishAttack = useCallback((r: RunResult) => {
+    const p = loadProgress();
+    const prev = p.attack[r.level.id] ?? 0;
+    const next = { ...p, attack: { ...p.attack, [r.level.id]: Math.max(prev, r.score) } };
+    saveProgress(next); setProgress(next);
+    setAttack({ score: r.score, makes: r.makes, shots: r.shots, bestStreak: r.bestStreak, prev });
+    setScreen('attack-results');
+  }, []);
+
   const finishContest = useCallback((r: ContestResult) => {
     const p = loadProgress();
-    const best = Math.max(r.round1, r.final ?? 0);
-    // Winning the title unlocks the next level too.
-    bank(r.level.id, best, 40, r.won ? { wins: { ...p.wins, [r.level.id]: (p.wins[r.level.id] ?? 0) + 1 } } : {}, r.won);
+    // Contest scores include perfect-release bonuses, so they don't count toward
+    // practice bests; winning the title records it and unlocks the next level.
+    if (r.won) bank(r.level.id, 0, 40, { wins: { ...p.wins, [r.level.id]: (p.wins[r.level.id] ?? 0) + 1 } }, true);
   }, [bank]);
 
   const level = LEVELS[levelId];
@@ -68,6 +80,37 @@ export function ShootoutGame() {
     <div className="fixed inset-0 select-none overflow-hidden bg-[#05060C] text-white" style={{ touchAction: 'none' }}>
       {screen === 'play' && (
         <RunView key={runNo} level={level} moneyRack={progress.moneyRack} label={level.name} onDone={finishPractice} />
+      )}
+
+      {screen === 'attack' && (
+        <RunView key={runNo} level={level} moneyRack={progress.moneyRack} label={`${level.name} · ATTACK`} opts={{ scoring: 'attack' }} onDone={finishAttack}
+          ticker={h => (progress.attack[levelId] ? (
+            <div className="w-[min(200px,48vw)] overflow-hidden rounded-md border border-white/10 bg-black/70 text-center shadow-xl backdrop-blur">
+              <div className="bg-gradient-to-r from-emerald-600 to-teal-700 px-2 py-0.5 text-[10px] font-black italic tracking-wider">SCORE ATTACK</div>
+              <div className="px-2 py-1 font-mono text-xs"><span className="text-white/50">HIGH </span><span className="font-black">{progress.attack[levelId].toLocaleString()}</span></div>
+              {h.score > progress.attack[levelId] && <div className="bg-emerald-500/80 py-0.5 text-[10px] font-black tracking-wider">NEW HIGH SCORE PACE!</div>}
+            </div>
+          ) : null)}
+        />
+      )}
+
+      {screen === 'attack-results' && attack && (
+        <div className="flex h-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,#0f3a33,#05060C_70%)] px-5 text-center">
+          <div className="text-xs font-bold uppercase tracking-[0.3em] text-white/50">{level.name} · Score Attack</div>
+          <div className="mt-2 font-mono text-6xl font-black text-emerald-300 sm:text-7xl">{attack.score.toLocaleString()}</div>
+          {attack.score > attack.prev
+            ? <div className="mt-3 rounded-full bg-emerald-400/20 px-4 py-1 text-sm font-bold text-emerald-200">{attack.prev ? `New high score! (was ${attack.prev.toLocaleString()})` : 'First high score set!'}</div>
+            : <div className="mt-3 text-sm text-white/60">High score {attack.prev.toLocaleString()} · {(attack.prev - attack.score).toLocaleString()} short</div>}
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-xl bg-white/5 px-3 py-2"><div className="text-[10px] uppercase text-white/50">Makes</div><div className="font-bold">{attack.makes}/{attack.shots}</div></div>
+            <div className="rounded-xl bg-white/5 px-3 py-2"><div className="text-[10px] uppercase text-white/50">Best streak</div><div className="font-bold">{attack.bestStreak}</div></div>
+          </div>
+          <p className="mt-4 max-w-xs text-xs text-white/50">Make it: 100 a point. Perfect release: ×1.5. Perfects in a row stack ×1.1, ×1.2, ×1.3…</p>
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={() => setScreen('title')} className="rounded-xl bg-white/10 px-5 py-2.5 font-semibold">Menu</button>
+            <button type="button" onClick={() => { setRunNo(n => n + 1); setScreen('attack'); }} className="rounded-xl bg-gradient-to-r from-emerald-300 to-teal-400 px-6 py-2.5 font-black text-[#062019]">Go again</button>
+          </div>
+        </div>
       )}
 
       {screen === 'contest' && (
@@ -108,7 +151,15 @@ export function ShootoutGame() {
               );
             })}
           </div>
-          <div className="mt-5 w-full max-w-md">
+          <div className="mt-5 flex w-full max-w-md items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-white/55">Look</span>
+            <span className="flex rounded-lg bg-white/5 p-0.5 text-xs font-bold">
+              {(['arena', 'retro'] as const).map(l => (
+                <button key={l} type="button" onClick={() => { setLook(l); setLookState(l); }} className={`rounded-md px-3 py-1 ${look === l ? 'bg-amber-300 text-black' : 'text-white/70'}`}>{l === 'arena' ? 'Arena' : 'Retro 8-bit'}</button>
+              ))}
+            </span>
+          </div>
+          <div className="mt-4 w-full max-w-md">
             <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-white/55">Your money rack</div>
             <div className="grid grid-cols-5 gap-1.5">
               {RACK_NAMES.map((n, i) => (
@@ -122,9 +173,15 @@ export function ShootoutGame() {
               <span className="block text-lg font-black">CONTEST</span>
               <span className="block text-[11px] font-semibold opacity-75">You vs 5 AI shooters · final · shoot-offs</span>
             </button>
-            <button type="button" onClick={() => { setRunNo(n => n + 1); setScreen('play'); }} className="flex-1 rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-left transition hover:bg-white/10">
-              <span className="block text-lg font-black">PRACTICE</span>
-              <span className="block text-[11px] text-white/55">Solo run · unlock levels · stars</span>
+            <button type="button" onClick={() => { setRunNo(n => n + 1); setScreen('attack'); }} className="flex-1 rounded-2xl bg-gradient-to-r from-emerald-300 to-teal-400 px-6 py-3 text-left text-[#062019] transition hover:scale-[1.02]">
+              <span className="block text-lg font-black">SCORE ATTACK</span>
+              <span className="block text-[11px] font-semibold opacity-75">{progress.attack[levelId] ? `High score ${progress.attack[levelId].toLocaleString()}` : 'Perfects multiply · beat your best'}</span>
+            </button>
+          </div>
+          <div className="mt-2 w-full max-w-md">
+            <button type="button" onClick={() => { setRunNo(n => n + 1); setScreen('play'); }} className="w-full rounded-2xl border border-white/15 bg-white/5 px-6 py-2.5 text-left transition hover:bg-white/10">
+              <span className="text-sm font-black">PRACTICE</span>
+              <span className="ml-2 text-[11px] text-white/55">Solo run · classic 1/2/3 scoring · unlock levels · stars</span>
             </button>
           </div>
           {(progress.wins[levelId] ?? 0) > 0 && <p className="mt-3 flex items-center gap-1.5 text-xs font-bold text-amber-200"><Trophy className="h-3.5 w-3.5" />{progress.wins[levelId]} contest {progress.wins[levelId] === 1 ? 'title' : 'titles'} on {level.name}</p>}

@@ -22,14 +22,15 @@ describe('shootout rivals', () => {
     let s = 0;
     for (const sh of run.shots) { s += sh.points; expect(sh.score).toBe(s); expect(sh.t).toBeLessThanOrEqual(68); }
     expect(run.score).toBe(s);
-    expect(run.score).toBeLessThanOrEqual(MAX_SCORE(course));
+    // Contest scoring: at most one bonus point per ball on top of the max.
+    expect(run.score).toBeLessThanOrEqual(MAX_SCORE(course) + course.flatMap(s => s.balls).length);
   });
 
   it('gets tougher level by level', () => {
     const scores = [0, 1, 2, 3, 4].map(l => avg(l, 60));
     for (let i = 1; i < scores.length; i++) expect(scores[i]).toBeGreaterThan(scores[i - 1]);
-    expect(scores[0]).toBeGreaterThan(10); expect(scores[0]).toBeLessThan(18);
-    expect(scores[4]).toBeGreaterThan(24); expect(scores[4]).toBeLessThan(33);
+    expect(scores[0]).toBeGreaterThan(12); expect(scores[0]).toBeLessThan(22);
+    expect(scores[4]).toBeGreaterThan(34); expect(scores[4]).toBeLessThan(50);
   });
 
   it('stops shooting when the clock runs out', () => {

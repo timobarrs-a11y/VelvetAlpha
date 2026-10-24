@@ -7,6 +7,24 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 type V = [number, number, number];
 
+/** The seating bowl's shape, shared with the arena (walls, suites, roof). */
+export const BOWL = {
+  sections: [
+    { along: 'x' as const, fixed: -6.2, from: -16, to: 16, dir: -1 },  // behind the baseline
+    { along: 'y' as const, fixed: 11.2, from: -5, to: 17, dir: 1 },    // right sideline
+    { along: 'y' as const, fixed: -11.2, from: -5, to: 17, dir: -1 },  // left sideline
+  ],
+  lowerRows: 12,
+  upperRows: 14,
+  rowDepth: 0.85,
+  /** Depth of the suite level between the tiers. */
+  gap: 1.2,
+  /** Lower bowl top, and where the upper deck starts. */
+  lowerTop: 0.6 + 12 * 0.45,
+  upperZ: 0.6 + 12 * 0.45 + 2.6,
+  roofZ: 20,
+};
+
 interface Fan { pos: V; phase: number; jump: number }
 
 export class Crowd {
@@ -26,27 +44,29 @@ export class Crowd {
     // Tiered stands: behind the baseline and along both sidelines.
     const standMat = new THREE.MeshStandardMaterial({ color: 0x15131f, roughness: 0.9 });
     const seatMat = new THREE.MeshStandardMaterial({ color: 0x3a1230, roughness: 0.7 });
-    const sections: Array<{ along: 'x' | 'y'; fixed: number; from: number; to: number; dir: number }> = [
-      { along: 'x', fixed: -6.2, from: -16, to: 16, dir: -1 },  // behind the baseline
-      { along: 'y', fixed: 11.2, from: -5, to: 17, dir: 1 },    // right sideline
-      { along: 'y', fixed: -11.2, from: -5, to: 17, dir: -1 },  // left sideline
+    // Two tiers: the lower bowl right off the floor, and an upper deck set
+    // back above the suite level (see BOWL, which the arena builds around).
+    const tiers = [
+      { first: 0, rows: BOWL.lowerRows, z0: 0.6, rise: 0.45, extra: 0, spacing: 0.55 },
+      { first: BOWL.lowerRows * BOWL.rowDepth + BOWL.gap, rows: BOWL.upperRows, z0: BOWL.upperZ, rise: 0.5, extra: 8, spacing: 0.6 },
     ];
-    const rows = 12, rowDepth = 0.85, rowRise = 0.45;
-    // Steps are merged into two meshes (one per colour): two draw calls, not 36.
+    const rowDepth = BOWL.rowDepth;
+    // Steps are merged into two meshes (one per colour): a couple of draw calls, not dozens.
     const standGeos: THREE.BufferGeometry[] = [], seatGeos: THREE.BufferGeometry[] = [];
     const spots: V[] = [];
-    sections.forEach(sec => {
-      for (let r = 0; r < rows; r++) {
-        const off = sec.fixed + sec.dir * (r * rowDepth), z = 0.6 + r * rowRise;
-        const len = sec.to - sec.from;
-        const step = new THREE.BoxGeometry(sec.along === 'x' ? len : rowDepth, rowRise, sec.along === 'x' ? rowDepth : len);
-        const c: V = sec.along === 'x' ? [(sec.from + sec.to) / 2, off, z - rowRise / 2] : [off, (sec.from + sec.to) / 2, z - rowRise / 2];
+    tiers.forEach(tier => BOWL.sections.forEach(sec => {
+      const from = sec.from - tier.extra, to = sec.to + tier.extra;
+      for (let r = 0; r < tier.rows; r++) {
+        const off = sec.fixed + sec.dir * (tier.first + r * rowDepth), z = tier.z0 + r * tier.rise;
+        const len = to - from;
+        const step = new THREE.BoxGeometry(sec.along === 'x' ? len : rowDepth, tier.rise, sec.along === 'x' ? rowDepth : len);
+        const c: V = sec.along === 'x' ? [(from + to) / 2, off, z - tier.rise / 2] : [off, (from + to) / 2, z - tier.rise / 2];
         const at = this.toThree(c);
         step.translate(at.x, at.y, at.z);
         (r % 2 ? standGeos : seatGeos).push(step);
-        for (let s = sec.from + 0.3; s < sec.to; s += 0.55) spots.push(sec.along === 'x' ? [s, off, z] : [off, s, z]);
+        for (let q = from + 0.3; q < to; q += tier.spacing) spots.push(sec.along === 'x' ? [q, off, z] : [off, q, z]);
       }
-    });
+    }));
     ([[standGeos, standMat], [seatGeos, seatMat]] as const).forEach(([geos, mat]) => {
       const m = new THREE.Mesh(mergeGeometries(geos), mat);
       m.receiveShadow = true;
