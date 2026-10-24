@@ -50,6 +50,8 @@ interface DockApi {
   unread: Record<string, number>;
   clearUnread: (companionId: string) => void;
   openMessages: (view?: 'conversations' | 'requests') => void;
+  /** Open Messages and add someone by friend code. */
+  addFriendByCode: (code: string) => void;
   openCompanion: (companionId: string, send?: string) => void;
   minimize: (key: string) => void;
   restore: (key: string) => void;
@@ -134,6 +136,12 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
     bringToFront(MESSAGES_KEY);
   }, [bringToFront]);
 
+  const addFriendByCode = useCallback((code: string) => {
+    setPendingFriendCode(code.replace(/\D/g, ''));
+    setMessagesView('conversations');
+    bringToFront(MESSAGES_KEY);
+  }, [bringToFront]);
+
   const openCompanion = useCallback((companionId: string, send?: string) => {
     const key = aiKey(companionId);
     bringToFront(key, companionId);
@@ -178,9 +186,9 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
 
   const api = useMemo<DockApi>(() => ({
     windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread,
-    openMessages, openCompanion, minimize, restore, close,
+    openMessages, addFriendByCode, openCompanion, minimize, restore, close,
     pendingFor, consumePending, registerCoachSurface: setCoachSurface,
-  }), [windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, openMessages, openCompanion, minimize, restore, close, pendingFor, consumePending]);
+  }), [windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, openMessages, addFriendByCode, openCompanion, minimize, restore, close, pendingFor, consumePending]);
 
   return <DockContext.Provider value={api}>{children}</DockContext.Provider>;
 }
