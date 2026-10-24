@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const STATIC_CACHE = `project-velvet-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `project-velvet-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `project-velvet-images-${CACHE_VERSION}`;
@@ -86,12 +86,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname === '/' || url.pathname === '/index.html') {
-    event.respondWith(networkFirst(request, STATIC_CACHE));
-    return;
-  }
-
-  event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));
+  event.respondWith(networkFirst(request, DYNAMIC_CACHE));
 });
 
 async function cacheFirst(request, cacheName, maxAgeMs) {
