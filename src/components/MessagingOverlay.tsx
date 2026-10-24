@@ -263,13 +263,15 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
     }
   }, [refreshAll]);
 
-  const handleRespond = useCallback(async (friendshipId: string, accept: boolean) => {
+  const handleRespond = useCallback(async (friendshipId: string, accept: boolean): Promise<boolean> => {
     setError(null);
     try {
       await respondToFriendRequest(friendshipId, accept);
       await refreshAll();
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to respond');
+      return false;
     }
   }, [refreshAll]);
 
@@ -699,7 +701,11 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
               <RequestsView
                 incoming={incoming}
                 outgoing={outgoing}
-                onAccept={(id) => handleRespond(id, true)}
+                onAccept={async (id) => {
+                  // Accepting opens the chat with them straight away.
+                  const peer = incoming.find(r => r.friendship_id === id);
+                  if (await handleRespond(id, true) && peer) await handleOpenConversation(peer);
+                }}
                 onDecline={(id) => handleRespond(id, false)}
                 onBlock={(uid) => handleBlock(uid)}
                 onCancel={handleCancel}
