@@ -30,6 +30,7 @@ export interface FriendPeer {
   created_at: string;
   is_online: boolean;
   last_seen_at: string | null;
+  presence?: Presence;
   available_to_chat: boolean;
 }
 
@@ -142,6 +143,18 @@ export async function syncDiscoveryFromProfile(profile: {
 // Friends list
 // ----------------------------------------------------------------------------
 
+/** Buddy-list status. Heartbeats only run while the tab is visible, so a recent one means online. */
+export type Presence = 'online' | 'away' | 'offline';
+const ONLINE_WINDOW_MS = 2 * 60 * 1000;
+const AWAY_WINDOW_MS = 30 * 60 * 1000;
+
+export function presenceOf(isOnline: boolean | null | undefined, lastSeenAt: string | null | undefined): Presence {
+  if (!isOnline || !lastSeenAt) return 'offline';
+  const age = Date.now() - new Date(lastSeenAt).getTime();
+  if (age < ONLINE_WINDOW_MS) return 'online';
+  return age < AWAY_WINDOW_MS ? 'away' : 'offline';
+}
+
 export async function getFriends(): Promise<FriendPeer[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -185,8 +198,9 @@ export async function getFriends(): Promise<FriendPeer[]> {
       friendship_id: f.id,
       status: f.status,
       created_at: f.created_at,
-      is_online: pres?.is_online ?? false,
+      is_online: presenceOf(pres?.is_online, pres?.last_seen_at) === 'online',
       last_seen_at: pres?.last_seen_at ?? null,
+      presence: presenceOf(pres?.is_online, pres?.last_seen_at),
       available_to_chat: pres?.available_to_chat ?? false,
     };
   });
