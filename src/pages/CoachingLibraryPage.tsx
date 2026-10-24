@@ -17,8 +17,8 @@ import {
 } from '../services/coachingService';
 import { getCoachColor } from '../utils/coachColors';
 import { useAuth } from '../auth/AuthProvider';
-import { CoachWorkspace } from '../components/coaching/CoachWorkspace';
-import { useCoachPanel, useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/useCoachPanel';
+import { useDockCoach } from '../components/dock/DockContext';
+import { useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/coachingHooks';
 
 const LIBRARY_PROMPTS = [
   'Make me a reading list for my goal',
@@ -61,7 +61,6 @@ export function CoachingLibraryPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { user } = useAuth();
-  const coach = useCoachPanel();
   const { highlighted, flash } = useCoachHighlight();
 
   const loadData = useCallback(async () => {
@@ -86,6 +85,8 @@ export function CoachingLibraryPage() {
     else loadData();
     flash(ids);
   }, [filter, loadData, flash]);
+
+  const coach = useDockCoach({ surface: 'library', quickPrompts: LIBRARY_PROMPTS, preferredCoachId: companionId, onCoachChanged: handleCoachChanged });
 
   const handleAccept = async (artifactId: string) => {
     setUpdatingId(artifactId);
@@ -122,13 +123,6 @@ export function CoachingLibraryPage() {
   }
 
   return (
-    <CoachWorkspace
-      surface="library"
-      coach={coach}
-      preferredCoachId={companionId}
-      quickPrompts={LIBRARY_PROMPTS}
-      onCoachChanged={handleCoachChanged}
-    >
     <PageShell
       header={
         <PageHeader
@@ -187,7 +181,6 @@ export function CoachingLibraryPage() {
         </div>
       )}
     </PageShell>
-    </CoachWorkspace>
   );
 }
 

@@ -27,16 +27,39 @@ interface MemoryItem {
   shared_origin_companion_id: string | null;
 }
 
+/** Why a companion or coach is reaching out. Every proactive message needs one. */
+type Reason =
+  | { kind: 'commitment_missed'; detail: string }
+  | { kind: 'commitment_due_today'; detail: string }
+  | { kind: 'plan_awaiting'; detail: string }
+  | { kind: 'follow_up'; detail: string }
+  | { kind: 'long_gap'; detail: string; gapDays: number };
+
+// Most important first: when several companions have a reason, only the top one writes.
+const REASON_PRIORITY: Reason['kind'][] = ['commitment_missed', 'commitment_due_today', 'follow_up', 'plan_awaiting', 'long_gap'];
+
+const REASON_INSTRUCTION: Record<Reason['kind'], string> = {
+  commitment_missed:
+    'They missed a commitment they made with you. Reach out with empathy, no guilt. Ask what got in the way and offer to make the next step smaller or move it.',
+  commitment_due_today:
+    'They have a commitment due today. Give a short, encouraging nudge that names it, and offer help if something is in the way.',
+  plan_awaiting:
+    'You proposed a plan that they have not accepted yet. Check whether it fits, and offer to adjust anything before they commit.',
+  follow_up:
+    'They told you about something that was coming up. Ask how it went, naturally, like a friend who remembered.',
+  long_gap:
+    'You have not heard from them in a while. Check in warmly about how they are doing. Never mention a specific number of days.',
+};
+
 async function generateCheckInMessage(
   companion: Companion,
-  gapDays: number,
+  reason: Reason,
   memories: MemoryItem[],
   openCommitments: Array<{ description: string; due_date: string | null; status: string }>,
   companionNameMap: Map<string, string>,
 ): Promise<string> {
   const isMentor = companion.relationship_type === 'mentor';
   const companionName = companion.custom_name || (isMentor ? 'your coach' : 'your friend');
-
   // Build the context for the LLM
   const memoryLines: string[] = [];
   for (const m of memories) {
@@ -63,18 +86,6 @@ async function generateCheckInMessage(
     return line;
   });
 
-  // Determine tone based on gap length
-  let toneInstruction: string;
-  if (gapDays <= 1) {
-    return ''; // Don't send anything for short gaps
-  } else if (gapDays <= 3) {
-    toneInstruction = 'light and casual, like a friend following up on something. No mention of time apart.';
-  } else if (gapDays <= 7) {
-    toneInstruction = 'warm and genuinely interested. You can reference that it\'s been a few days but never say a specific number. Sound like you noticed they\'ve been away, not like you\'re tracking them.';
-  } else {
-    toneInstruction = 'genuinely concerned but not dramatic. Something like "haven\'t heard from you in a while" — never say a specific number of days. If there\'s something personal in the memories (like a sick parent), ask about it with real care. Sound like a friend who missed them, not a system that tracked their absence.';
-  }
-
   const roleInstruction = isMentor
     ? 'You are the user\'s COACH. You check in on their goals and commitments with warmth, never scolding. You care about them as a person, not just their progress.'
     : 'You are the user\'s COMPANION/FRIEND. You check in on THEM — how they\'re doing, what\'s going on in their life. You\'re not here to push goals, you\'re here because you care.';
@@ -89,9 +100,10 @@ async function generateCheckInMessage(
 
   const prompt = `${roleInstruction}
 
-Write a short check-in message to the user. Keep it to 1-3 sentences, natural and conversational — like a real text from a friend.
+Write a short message to the user. Keep it to 1-3 sentences, natural and conversational — like a real text from a friend.
 
-Tone: ${toneInstruction}
+Why you are reaching out: ${REASON_INSTRUCTION[reason.kind]}
+Specifically: ${reason.detail}
 
 Your name is ${companionName}.${memoriesBlock}${commitmentsBlock}
 
@@ -115,7 +127,7 @@ Write only the message, no preamble, no quotes.`;
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-haiku-4-5',
         max_tokens: 200,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -150,7 +162,6 @@ Deno.serve(async (req: Request) => {
     );
 
     const now = new Date();
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
     // Auto-retire threads older than 21 days
     const twentyOneDaysAgo = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000).toISOString();
@@ -163,98 +174,128 @@ Deno.serve(async (req: Request) => {
       .then(() => {})
       .catch(() => {});
 
-    // Find all companions whose last message was > 24h ago
-    const { data: staleCompanions, error: fetchError } = await supabase
+    const HOUR = 60 * 60 * 1000;
+    const iso = (msAgo: number) => new Date(now.getTime() - msAgo).toISOString();
+
+    const { data: allActive, error: fetchError } = await supabase
       .from('companions')
       .select('id, user_id, custom_name, relationship_type, last_message_at')
-      .eq('is_active', true)
-      .or(`last_message_at.is.null,last_message_at.lt.${twentyFourHoursAgo}`);
+      .eq('is_active', true);
+    if (fetchError) throw new Error(`Failed to fetch companions: ${fetchError.message}`);
 
-    if (fetchError) {
-      throw new Error(`Failed to fetch stale companions: ${fetchError.message}`);
-    }
-
-    if (!staleCompanions || staleCompanions.length === 0) {
-      return new Response(
-        JSON.stringify({ processed: 0, message: 'No stale companions' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    // Only process ONE companion per user per run — never the whole cast at once
-    const byUser = new Map<string, typeof staleCompanions>();
-    for (const c of staleCompanions) {
+    const byUser = new Map<string, Companion[]>();
+    for (const c of (allActive ?? []) as Companion[]) {
       if (!byUser.has(c.user_id)) byUser.set(c.user_id, []);
       byUser.get(c.user_id)!.push(c);
     }
 
-    // Fetch subscription tiers for all users with stale companions
-    const allUserIds = Array.from(byUser.keys());
     const { data: profiles } = await supabase
       .from('user_profiles')
       .select('id, subscription_tier, is_super_user')
-      .in('id', allUserIds);
-
+      .in('id', Array.from(byUser.keys()));
     const tierMap = new Map<string, string>();
     for (const p of profiles ?? []) {
-      const tier = p.is_super_user ? 'elite' : (p.subscription_tier || 'free');
-      tierMap.set(p.id, tier);
+      tierMap.set(p.id, p.is_super_user ? 'elite' : (p.subscription_tier || 'free'));
     }
 
     let processed = 0;
-    for (const [_userId, userCompanions] of byUser) {
-      // Pick the stalest companion for this user
-      const companion = userCompanions.sort((a, b) => {
-        const aT = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-        const bT = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-        return aT - bT;
-      })[0];
+    const skipped: Record<string, number> = {};
+    const skip = (why: string) => { skipped[why] = (skipped[why] ?? 0) + 1; };
 
-      // Free-tier users only get check-ins from non-mentor companions (friends).
-      // Coach/mentor check-ins are a paid feature.
-      const userTier = tierMap.get(companion.user_id) || 'free';
-      if (userTier === 'free' && companion.relationship_type === 'mentor') continue;
-
-      // Check if there's already a proactive message in the last 24h
-      const { data: recentProactive } = await supabase
+    for (const [userId, companions] of byUser) {
+      // "Not often": at most one proactive message per person every 6 hours, from anyone.
+      const { data: recentAny } = await supabase
         .from('conversations')
         .select('id')
-        .eq('user_id', companion.user_id)
-        .eq('companion_id', companion.id)
-        .eq('role', 'assistant')
-        .gte('created_at', twentyFourHoursAgo)
+        .eq('user_id', userId)
+        .eq('metadata->>type', 'check_in')
+        .gte('created_at', iso(6 * HOUR))
         .limit(1);
+      if (recentAny && recentAny.length > 0) { skip('user_recently_messaged'); continue; }
 
-      if (recentProactive && recentProactive.length > 0) continue;
+      const tier = tierMap.get(userId) || 'free';
+      const candidates: Array<{ companion: Companion; reason: Reason }> = [];
 
-      // Calculate the real gap from the user's last message (not from our last check-in)
-      const { data: lastUserMsg } = await supabase
-        .from('conversations')
-        .select('created_at')
-        .eq('user_id', companion.user_id)
-        .eq('companion_id', companion.id)
-        .eq('role', 'user')
-        .order('created_at', { ascending: false })
-        .limit(1);
+      for (const companion of companions) {
+        const isMentor = companion.relationship_type === 'mentor';
+        // Coach check-ins are a paid feature.
+        if (isMentor && tier === 'free') continue;
 
-      let gapDays: number;
-      if (lastUserMsg && lastUserMsg.length > 0) {
-        gapDays = Math.floor((now.getTime() - new Date(lastUserMsg[0].created_at).getTime()) / 86400000);
-      } else if (companion.last_message_at) {
-        gapDays = Math.floor((now.getTime() - new Date(companion.last_message_at).getTime()) / 86400000);
-      } else {
-        gapDays = 7; // default if no messages at all
+        const [{ data: lastProactive }, { data: lastUserMsg }] = await Promise.all([
+          supabase.from('conversations').select('id')
+            .eq('user_id', userId).eq('companion_id', companion.id)
+            .eq('metadata->>type', 'check_in').gte('created_at', iso(24 * HOUR)).limit(1),
+          supabase.from('conversations').select('created_at')
+            .eq('user_id', userId).eq('companion_id', companion.id).eq('role', 'user')
+            .order('created_at', { ascending: false }).limit(1),
+        ]);
+        // Once a day per companion at most.
+        if (lastProactive && lastProactive.length > 0) continue;
+        const lastUserAt = lastUserMsg?.[0]?.created_at ? new Date(lastUserMsg[0].created_at).getTime() : null;
+        // Mid-conversation with this companion: they'll bring it up themselves.
+        if (lastUserAt !== null && now.getTime() - lastUserAt < 2 * HOUR) continue;
+
+        let reason: Reason | null = null;
+
+        if (isMentor) {
+          const { data: commits } = await supabase
+            .from('coaching_commitments')
+            .select('description, due_date, status, updated_at')
+            .eq('user_id', userId).eq('companion_id', companion.id)
+            .in('status', ['pending', 'in_progress', 'missed'])
+            .order('due_date', { ascending: true, nullsFirst: false })
+            .limit(10);
+          const list = (commits ?? []) as Array<{ description: string; due_date: string | null; status: string; updated_at: string | null }>;
+          const missed = list.find(c => c.status === 'missed' && c.updated_at && new Date(c.updated_at).getTime() > now.getTime() - 48 * HOUR);
+          const today = now.toISOString().slice(0, 10);
+          const dueToday = list.find(c => c.status !== 'missed' && c.due_date && c.due_date.slice(0, 10) === today);
+          if (missed) {
+            reason = { kind: 'commitment_missed', detail: `the missed commitment was "${missed.description}"` };
+          } else if (dueToday) {
+            reason = { kind: 'commitment_due_today', detail: `today's commitment is "${dueToday.description}"` };
+          } else {
+            const { data: waiting } = await supabase
+              .from('coach_plans').select('title')
+              .eq('user_id', userId).eq('companion_id', companion.id).eq('status', 'proposed')
+              .lt('created_at', iso(24 * HOUR)).limit(1);
+            if (waiting && waiting.length > 0) {
+              reason = { kind: 'plan_awaiting', detail: `the plan is "${(waiting[0] as { title: string }).title}"` };
+            }
+          }
+        } else {
+          // Something they mentioned that's worth following up on.
+          const { data: threads } = await supabase
+            .from('memory_items')
+            .select('content, companion_id, scope')
+            .eq('user_id', userId).eq('kind', 'thread').eq('status', 'active')
+            .gte('updated_at', iso(7 * 24 * HOUR)).lt('updated_at', iso(24 * HOUR))
+            .or(`and(scope.eq.global,companion_id.is.null),and(scope.eq.companion,companion_id.eq.${companion.id})`)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+          const thread = (threads ?? [])[0] as { content: string } | undefined;
+          if (thread) {
+            reason = { kind: 'follow_up', detail: `what they mentioned: "${thread.content}"` };
+          }
+        }
+
+        if (!reason) {
+          const lastContact = lastUserAt ?? (companion.last_message_at ? new Date(companion.last_message_at).getTime() : null);
+          const gapDays = lastContact === null ? 7 : Math.floor((now.getTime() - lastContact) / (24 * HOUR));
+          if (gapDays >= 4) reason = { kind: 'long_gap', detail: 'it has been a while since you last talked', gapDays };
+        }
+
+        if (reason) candidates.push({ companion, reason });
       }
 
-      // Don't send check-ins for very short gaps
-      if (gapDays < 2) continue;
+      if (candidates.length === 0) { skip('no_reason'); continue; }
+      candidates.sort((x, y) => REASON_PRIORITY.indexOf(x.reason.kind) - REASON_PRIORITY.indexOf(y.reason.kind));
+      const { companion, reason } = candidates[0];
 
       // Fetch relevant memories: shared (global) + this companion's scoped memories
-      // Include person and fact kinds, not just threads
       const { data: memories } = await supabase
         .from('memory_items')
         .select('id, kind, content, scope, companion_id, shared_origin_companion_id')
-        .eq('user_id', companion.user_id)
+        .eq('user_id', userId)
         .eq('status', 'active')
         .in('kind', ['fact', 'person', 'thread'])
         .or(`and(scope.eq.global,companion_id.is.null),and(scope.eq.companion,companion_id.eq.${companion.id})`)
@@ -265,33 +306,27 @@ Deno.serve(async (req: Request) => {
       const { data: boundaries } = await supabase
         .from('memory_items')
         .select('content')
-        .eq('user_id', companion.user_id)
+        .eq('user_id', userId)
         .eq('kind', 'boundary')
         .eq('status', 'active');
-
       const boundaryContents = (boundaries || []).map(b => b.content.toLowerCase());
       const filteredMemories = (memories || []).filter(m => {
         const contentLower = m.content.toLowerCase();
         return !boundaryContents.some(b => contentLower.includes(b) || b.includes(contentLower));
       });
+      if (boundaryContents.some(b => reason.detail.toLowerCase().includes(b))) { skip('boundary'); continue; }
 
-      // Build a map of companion names for shared memory attribution
       const companionNameMap = new Map<string, string>();
-      const { data: allCompanions } = await supabase
-        .from('companions')
-        .select('id, custom_name')
-        .eq('user_id', companion.user_id);
-      for (const c of allCompanions || []) {
+      for (const c of companions) {
         if (c.custom_name) companionNameMap.set(c.id, c.custom_name);
       }
 
-      // Fetch open commitments for mentors
       let openCommitments: Array<{ description: string; due_date: string | null; status: string }> = [];
       if (companion.relationship_type === 'mentor') {
         const { data: commitments } = await supabase
           .from('coaching_commitments')
           .select('description, due_date, status')
-          .eq('user_id', companion.user_id)
+          .eq('user_id', userId)
           .eq('companion_id', companion.id)
           .in('status', ['pending', 'missed'])
           .order('due_date', { ascending: true, nullsFirst: false })
@@ -299,37 +334,33 @@ Deno.serve(async (req: Request) => {
         openCommitments = commitments || [];
       }
 
-      // Generate the check-in message using the LLM
-      const checkInText = await generateCheckInMessage(
-        companion,
-        gapDays,
-        filteredMemories,
-        openCommitments,
-        companionNameMap,
-      );
+      const checkInText = await generateCheckInMessage(companion, reason, filteredMemories, openCommitments, companionNameMap);
+      if (!checkInText) { skip('generation_failed'); continue; }
 
-      if (!checkInText) continue;
-
-      // Insert the check-in message
-      await supabase
+      // Lands in the same thread as the chat screen and the dock, so memory carries over.
+      const { error: insertError } = await supabase
         .from('conversations')
         .insert({
-          user_id: companion.user_id,
+          user_id: userId,
           companion_id: companion.id,
           role: 'assistant',
           content: checkInText,
-          metadata: { type: 'check_in', gap_days: gapDays },
-          client_message_id: `proactive_${companion.id}_${Date.now()}`,
+          message_type: 'text',
+          metadata: { type: 'check_in', reason: reason.kind, ...(reason.kind === 'long_gap' ? { gap_days: reason.gapDays } : {}) },
+          client_message_id: crypto.randomUUID(),
         });
+      if (insertError) {
+        console.error('[check-in-scheduler] insert failed:', insertError.message);
+        skip('insert_failed');
+        continue;
+      }
 
       // Do NOT update last_message_at — that would erase the real gap.
-      // The gap is tracked from the user's last message, not from our check-in.
-
       processed++;
     }
 
     return new Response(
-      JSON.stringify({ processed, total: staleCompanions.length }),
+      JSON.stringify({ processed, users: byUser.size, skipped }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {

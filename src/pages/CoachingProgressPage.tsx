@@ -22,8 +22,8 @@ import {
 } from '../services/coachingService';
 import { getCoachColor, formatDeadline, daysToDeadline } from '../utils/coachColors';
 import { useAuth } from '../auth/AuthProvider';
-import { CoachWorkspace } from '../components/coaching/CoachWorkspace';
-import { useCoachPanel, useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/useCoachPanel';
+import { useDockCoach } from '../components/dock/DockContext';
+import { useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/coachingHooks';
 
 const COACHING_TABLES = ['user_goals', 'coach_plans', 'coach_plan_steps', 'coaching_commitments'];
 
@@ -72,7 +72,6 @@ export function CoachingProgressPage() {
   const [confidenceScore, setConfidenceScore] = useState(7);
   const [plans, setPlans] = useState<CoachPlan[]>([]);
   const { user } = useAuth();
-  const coach = useCoachPanel();
   const { highlighted, flash } = useCoachHighlight();
 
   const loadData = useCallback(async () => {
@@ -107,6 +106,8 @@ export function CoachingProgressPage() {
     loadData();
     flash(ids);
   }, [loadData, flash]);
+
+  const coach = useDockCoach({ surface: 'progress', quickPrompts: PROGRESS_PROMPTS, onCoachChanged: handleCoachChanged });
 
   const stats = getWeeklyStats(commitments);
 
@@ -177,12 +178,7 @@ export function CoachingProgressPage() {
   const hasNoData = commitments.length === 0 && goals.length === 0;
 
   return (
-    <CoachWorkspace
-      surface="progress"
-      coach={coach}
-      quickPrompts={PROGRESS_PROMPTS}
-      onCoachChanged={handleCoachChanged}
-    >
+    <>
       <PageShell
         header={
           <PageHeader
@@ -343,7 +339,7 @@ export function CoachingProgressPage() {
           </div>
         )}
       </PageShell>
-    </CoachWorkspace>
+    </>
   );
 }
 

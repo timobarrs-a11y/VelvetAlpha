@@ -1,0 +1,286 @@
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircle, UserPlus } from 'lucide-react';
+import { supabase } from '../../shared/supabase/client';
+import { useAuth } from '../../auth/AuthProvider';
+import { MessagingOverlay } from '../MessagingOverlay';
+import { getConversationList, getIncomingRequests } from '../../shared/supabase/queries/messaging';
+import { AiChatWindow } from './AiChatWindow';
+import { markCompanionRead } from '../../services/companionReadService';
+import { MESSAGES_KEY, aiKey, markCoachDismissed, useDock, type DockWindow } from './DockContext';
+
+const HIDDEN_PATHS = ['/splash', '/signin', '/signup', '/onboarding'];
+const SURFACE_LABEL = { progress: 'Progress', plans: 'Plans', commitments: 'Commitments', library: 'Library' } as const;
+
+/** How many windows fit side by side: three on wide screens, one on phones. */
+function useWindowCapacity(): number {
+  const read = () => (typeof window === 'undefined' ? 1 : window.innerWidth >= 1280 ? 3 : window.innerWidth >= 900 ? 2 : 1);
+  const [capacity, setCapacity] = useState(read);
+  useEffect(() => {
+    const onResize = () => setCapacity(read());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return capacity;
+}
+
+function useInbox(userId: string | undefined) {
+  const [unread, setUnread] = useState(0);
+  const [requests, setRequests] = useState<{ id: string; name: string }[]>([]);
+  const [bubble, setBubble] = useState<string | null>(null);
+  const seenRequests = useRef<Set<string> | null>(null);
+  const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const [convs, incoming] = await Promise.all([
+        getConversationList(),
+        getIncomingRequests().catch(() => []),
+      ]);
+      setUnread(convs.reduce((sum, c) => sum + c.unread_count, 0));
+      const mapped = (incoming || []).map((r) => ({
+        id: (r as { friendship_id?: string }).friendship_id ?? r.user_id,
+        name: r.display_name,
+      }));
+      setRequests(mapped);
+
+      const currentIds = new Set(mapped.map((r) => r.id));
+      if (seenRequests.current === null) {
+        seenRequests.current = currentIds;
+      } else {
+        const newOnes = mapped.filter((r) => !seenRequests.current!.has(r.id));
+        if (newOnes.length > 0) {
+          setBubble(newOnes.length === 1
+            ? `${newOnes[0].name} wants to be friends`
+            : `${newOnes[0].name} and ${newOnes.length - 1} other${newOnes.length - 1 > 1 ? 's' : ''} want to be friends`);
+          if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
+          bubbleTimer.current = setTimeout(() => setBubble(null), 8000);
+        }
+        seenRequests.current = currentIds;
+      }
+    } catch {
+      // ignore
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    refresh();
+    const interval = setInterval(refresh, 20000);
+    const channel = supabase
+      .channel('im-inbox-watch')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'im_messages' }, () => { refresh(); })
+      .subscribe();
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [userId, refresh]);
+
+  const dismissBubble = () => {
+    setBubble(null);
+    if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
+  };
+
+  return { badge: unread + requests.length, bubble, dismissBubble };
+}
+
+function WindowFrame({ children, fullWidth }: { children: ReactNode; fullWidth: boolean }) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 24 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+      className={`flex h-[min(70vh,600px)] flex-col overflow-hidden rounded-t-2xl border border-b-0 border-white/10 shadow-2xl shadow-black/50 ${fullWidth ? 'w-full' : 'w-[360px]'}`}
+      style={{ background: 'var(--ds-surface, #1a1a2e)' }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * The bottom dock bar and the chat windows that rise from it: Messages (real
+ * friends) plus one window per AI companion or coach, side by side.
+ */
+export function Dock() {
+  const { user } = useAuth();
+  const location = useLocation();
+  const dock = useDock();
+  const capacity = useWindowCapacity();
+  const inbox = useInbox(user?.id);
+
+  // Anything the user is looking at counts as read: an open dock window, or
+  // that companion's full chat screen.
+  const shownCompanionIds = dock.windows.filter(w => !w.minimized).slice(-capacity)
+    .map(w => w.companionId).filter((id): id is string => !!id);
+  const chatScreenId = location.pathname === '/chat' ? new URLSearchParams(location.search).get('companion') : null;
+  const readingKey = [...shownCompanionIds, ...(chatScreenId ? [chatScreenId] : [])].sort().join(',');
+  const { unread, clearUnread } = dock;
+  useEffect(() => {
+    if (!readingKey) return;
+    for (const id of readingKey.split(',')) {
+      if (unread[id]) {
+        clearUnread(id);
+        markCompanionRead(id).catch(() => {});
+      }
+    }
+  }, [readingKey, unread, clearUnread]);
+
+  if (!user || HIDDEN_PATHS.some(p => location.pathname.startsWith(p))) return null;
+
+  const companionById = new Map(dock.companions.map(c => [c.id, c]));
+  const shown = dock.windows.filter(w => !w.minimized).slice(-capacity);
+  const shownKeys = new Set(shown.map(w => w.key));
+  const openKeys = new Set(dock.windows.map(w => w.key));
+
+  const toggle = (key: string, open: () => void) => {
+    if (shownKeys.has(key)) dock.minimize(key);
+    else if (openKeys.has(key)) dock.restore(key);
+    else open();
+  };
+
+  const closeWindow = (w: DockWindow) => {
+    if (w.companionId && w.companionId === dock.pageCoachId) markCoachDismissed();
+    dock.close(w.key);
+  };
+
+  // Coaches first, then companions.
+  const heads = [...dock.companions].sort((a, b) =>
+    Number(b.relationship_type === 'mentor') - Number(a.relationship_type === 'mentor'));
+
+  return (
+    <div className="relative w-full">
+      {/* Windows rise from the bar, newest on the right */}
+      <div className={`pointer-events-none absolute bottom-full z-50 flex items-end gap-2 ${capacity === 1 ? 'inset-x-0' : 'right-0 pr-3'}`}>
+        <AnimatePresence initial={false}>
+          {shown.map(w => {
+            if (w.key === MESSAGES_KEY) {
+              return (
+                <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
+                  <WindowFrame fullWidth={capacity === 1}>
+                    <MessagingOverlay
+                      embedded
+                      initialView={dock.messagesView}
+                      onClose={() => dock.close(MESSAGES_KEY)}
+                      onMinimize={() => dock.minimize(MESSAGES_KEY)}
+                    />
+                  </WindowFrame>
+                </div>
+              );
+            }
+            const companion = w.companionId ? companionById.get(w.companionId) : undefined;
+            if (!companion) return null;
+            const isPageCoach = companion.id === dock.pageCoachId && !!dock.coachSurface;
+            return (
+              <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
+                <WindowFrame fullWidth={capacity === 1}>
+                  <AiChatWindow
+                    companion={companion}
+                    surface={isPageCoach ? dock.coachSurface!.surface : undefined}
+                    quickPrompts={isPageCoach ? dock.coachSurface!.quickPrompts : []}
+                    onCoachChanged={isPageCoach ? dock.coachSurface!.onCoachChanged : undefined}
+                    pending={dock.pendingFor(w.key)}
+                    onConsumePending={() => dock.consumePending(w.key)}
+                    onMinimize={() => dock.minimize(w.key)}
+                    onClose={() => closeWindow(w)}
+                  />
+                </WindowFrame>
+              </div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {/* The bar */}
+      <div className="relative flex h-[52px] items-center gap-2 border-t border-pink-500/25 bg-[rgba(12,10,30,0.92)] px-2 backdrop-blur-xl sm:px-3">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pink-400/50 to-transparent" />
+
+        <div className="relative">
+          <AnimatePresence>
+            {inbox.bubble && (
+              <motion.button
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                onClick={() => { dock.openMessages('requests'); inbox.dismissBubble(); }}
+                className="absolute bottom-full left-0 mb-2 flex items-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-[#14122a] px-3 py-2 text-xs font-semibold text-white shadow-lg"
+                role="status"
+              >
+                <UserPlus className="h-3.5 w-3.5 text-pink-400" />
+                {inbox.bubble}
+              </motion.button>
+            )}
+          </AnimatePresence>
+          <button
+            type="button"
+            onClick={() => toggle(MESSAGES_KEY, () => dock.openMessages())}
+            className={`flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors ${
+              shownKeys.has(MESSAGES_KEY)
+                ? 'border-pink-400/60 bg-pink-500/20 text-white'
+                : 'border-white/12 bg-white/[0.05] text-white/85 hover:bg-white/10'
+            }`}
+            aria-pressed={shownKeys.has(MESSAGES_KEY)}
+            title="Messages with friends"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Messages</span>
+            {inbox.badge > 0 && (
+              <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-bold text-white">
+                {inbox.badge > 9 ? '9+' : inbox.badge}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {heads.length > 0 && <div className="h-6 w-px flex-shrink-0 bg-white/10" />}
+
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-hide">
+          {heads.map(c => {
+            const key = aiKey(c.id);
+            const isCoach = c.relationship_type === 'mentor';
+            const isShown = shownKeys.has(key);
+            const isMinimized = openKeys.has(key) && !isShown;
+            const onPage = c.id === dock.pageCoachId && dock.coachSurface;
+            const count = dock.unread[c.id] ?? 0;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => toggle(key, () => dock.openCompanion(c.id))}
+                className={`relative flex h-9 flex-shrink-0 items-center gap-2 rounded-lg border-l-[3px] px-3 text-xs font-semibold transition-colors ${
+                  isCoach ? 'border-l-emerald-400' : 'border-l-pink-400'
+                } ${
+                  isShown
+                    ? 'bg-white/12 text-white'
+                    : isMinimized || onPage
+                      ? 'bg-white/[0.06] text-white/90 hover:bg-white/10'
+                      : 'text-white/70 hover:bg-white/[0.06] hover:text-white'
+                }`}
+                aria-pressed={isShown}
+                title={`${c.custom_name}${isCoach ? ' · coach' : ''}${count ? ` · ${count} new` : ''}`}
+              >
+                <span className="max-w-[140px] truncate">{c.custom_name}</span>
+                {onPage && <span className="hidden font-normal text-emerald-300 sm:inline">· {SURFACE_LABEL[dock.coachSurface!.surface]}</span>}
+                {!isShown && count > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white"
+                    aria-label={`${count} unread from ${c.custom_name}`}
+                  >
+                    {count > 9 ? '9+' : count}
+                  </motion.span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

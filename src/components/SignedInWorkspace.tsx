@@ -35,7 +35,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
-import { MessagingOverlayMount } from './MessagingOverlayMount';
+import { Dock } from './dock/Dock';
+import { DockProvider } from './dock/DockContext';
 import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
@@ -75,16 +76,16 @@ function isExcludedPath(pathname: string): boolean {
   return excludedPrefixes.some(prefix => pathname.startsWith(prefix));
 }
 
-// Re-point the shared pill/segment tokens so the Classic/V3 switch reads on pink.
+// Re-point the shared pill/segment tokens so the Classic/V3 switch reads on the light bar.
 const TOOLBAR_THEME = {
-  '--ds-pill-bg': 'rgba(255,255,255,0.12)',
-  '--ds-pill-bg-hover': 'rgba(255,255,255,0.20)',
-  '--ds-pill-border': 'rgba(255,255,255,0.30)',
-  '--ds-pill-fg': '#ffffff',
-  '--ds-pill-fg-hover': '#ffffff',
-  '--ds-accent-soft': '#ffffff',
-  '--ds-accent-line': '#ffffff',
-  '--ds-accent-fg': '#BE185D',
+  '--ds-pill-bg': 'rgba(42,20,36,0.04)',
+  '--ds-pill-bg-hover': 'rgba(42,20,36,0.08)',
+  '--ds-pill-border': 'rgba(42,20,36,0.12)',
+  '--ds-pill-fg': '#2a1424',
+  '--ds-pill-fg-hover': '#2a1424',
+  '--ds-accent-soft': '#db2777',
+  '--ds-accent-line': '#db2777',
+  '--ds-accent-fg': '#ffffff',
 } as React.CSSProperties;
 
 function WorkspaceToolbar({
@@ -112,15 +113,15 @@ function WorkspaceToolbar({
   };
 
   return (
-    <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 px-3 py-2.5 text-white sm:px-5" style={TOOLBAR_THEME}>
-      {/* Soft pink base (pink-600, the darkest shade that keeps white text readable) */}
-      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[#DB2777] to-[#D63384]" />
-      <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-black/25" />
+    <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 px-3 py-2.5 text-[#2a1424] sm:px-5" style={TOOLBAR_THEME}>
+      {/* Warm blush white, pink as the accent */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5]" />
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-[#f5cfe0]" />
       <div className="relative z-10 flex min-w-0 items-center gap-2.5">
         <button
           type="button"
           onClick={onOpenMobileNav}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/30 transition-colors hover:bg-white/15 lg:hidden text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 lg:hidden text-[#2a1424]/80"
           aria-label="Open navigation"
         >
           <LayoutGrid className="h-4 w-4" />
@@ -131,12 +132,12 @@ function WorkspaceToolbar({
           className="flex min-w-0 items-center gap-2.5 text-left"
           title="Velvet home"
         >
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-pink-100 text-pink-600">
             <Sparkles className="h-4 w-4" />
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-white">Velvet</span>
-            <span className="block max-w-[130px] truncate text-[10px] text-white/85 sm:max-w-none">{displayName}</span>
+            <span className="block truncate text-sm font-semibold text-[#2a1424]">Velvet</span>
+            <span className="block max-w-[130px] truncate text-[10px] text-[#2a1424]/60 sm:max-w-none">{displayName}</span>
           </span>
         </button>
       </div>
@@ -151,8 +152,8 @@ function WorkspaceToolbar({
           onClick={onToggleAvailable}
           className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${
             available
-              ? 'border-white bg-white text-emerald-700'
-              : 'border-white/30 hover:bg-white/15 text-white'
+              ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+              : 'border-[#2a1424]/12 hover:bg-pink-50 text-[#2a1424]/75'
           }`}
           aria-pressed={available}
           title={available ? 'Available to chat — click to turn off' : 'Turn on instant chat availability'}
@@ -163,7 +164,7 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={onOpenRewards}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/30 transition-colors hover:bg-white/15 text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 text-pink-600"
           aria-label="Loyalty rewards"
           title="Loyalty rewards"
         >
@@ -173,7 +174,7 @@ function WorkspaceToolbar({
           <button
             type="button"
             onClick={() => navigate(`/chat?companion=${lobby.companions[0].id}&tour=1`)}
-            className="hidden h-8 w-8 items-center justify-center rounded-xl border border-white/30 transition-colors hover:bg-white/15 sm:flex text-white"
+            className="hidden h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 sm:flex text-[#2a1424]/75"
             aria-label="Take the tour"
             title="Take the tour"
           >
@@ -183,7 +184,7 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={toggleMute}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/30 transition-colors hover:bg-white/15 text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 text-[#2a1424]/75"
           aria-label={muted ? 'Unmute music' : 'Mute music'}
           title={muted ? 'Unmute music' : 'Mute music'}
         >
@@ -192,7 +193,7 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={() => navigate('/settings')}
-          className="hidden h-8 w-8 items-center justify-center rounded-xl border border-white/30 transition-colors hover:bg-white/15 sm:flex text-white"
+          className="hidden h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 sm:flex text-[#2a1424]/75"
           aria-label="Open settings"
           title="Settings"
         >
@@ -201,7 +202,7 @@ function WorkspaceToolbar({
         <button
           type="button"
           onClick={handleSignOut}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/30 transition-colors hover:bg-white/15 text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 text-[#2a1424]/75"
           aria-label="Sign out"
           title="Sign out"
         >
@@ -431,6 +432,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   const wpClass = hasWallpaper ? wallpaperMeta.className : '';
 
   return (
+    <DockProvider companions={lobby.companions}>
     <div className="h-screen overflow-hidden bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
         <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} onOpenRewards={() => setShowRewards(true)} lobby={lobby} />
@@ -438,7 +440,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
           <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
           <main className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/8">{children}</main>
         </div>
-        <div className="relative z-20 flex-shrink-0"><MessagingOverlayMount inkColor={inkColor} inkMuted={inkMuted} /></div>
+        <div className="relative z-20 flex-shrink-0"><Dock /></div>
         <MedalToastHost />
         {customization && (
           <CustomizationPanel
@@ -468,6 +470,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
         <LockScreen />
       )}
     </div>
+    </DockProvider>
   );
 }
 

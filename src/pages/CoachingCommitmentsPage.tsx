@@ -20,8 +20,8 @@ import {
 } from '../services/coachingService';
 import { getCoachColor } from '../utils/coachColors';
 import { useAuth } from '../auth/AuthProvider';
-import { CoachWorkspace } from '../components/coaching/CoachWorkspace';
-import { useCoachPanel, useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/useCoachPanel';
+import { useDockCoach } from '../components/dock/DockContext';
+import { useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/coachingHooks';
 
 const COACHING_TABLES = ['user_goals', 'coach_plans', 'coach_plan_steps', 'coaching_commitments'];
 
@@ -54,7 +54,6 @@ export function CoachingCommitmentsPage() {
     setSearchParams(params, { replace: true });
   };
   const { user } = useAuth();
-  const coach = useCoachPanel();
   const { highlighted, flash } = useCoachHighlight();
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
@@ -316,14 +315,6 @@ export function CoachingCommitmentsPage() {
     void loadData();
   };
 
-  if (loading) {
-    return (
-      <PageShell center>
-        <LoadingState label="Loading your tasks..." />
-      </PageShell>
-    );
-  }
-
   const proposedPlans = plans.filter(p => p.status === 'proposed');
   const activePlans = plans.filter(p => p.status === 'active' || p.status === 'paused');
   const completedPlans = plans.filter(p => p.status === 'completed');
@@ -348,14 +339,22 @@ export function CoachingCommitmentsPage() {
         ? ['Build me a plan first']
         : ["Plan this week's commitments", 'Reschedule what I missed', 'What should I do today?']);
 
+  const coach = useDockCoach({
+    surface: view === 'plans' ? 'plans' : 'commitments',
+    quickPrompts,
+    preferredCoachId: companionId,
+    onCoachChanged: handleCoachChanged,
+  });
+
+  if (loading) {
+    return (
+      <PageShell center>
+        <LoadingState label="Loading your tasks..." />
+      </PageShell>
+    );
+  }
+
   return (
-    <CoachWorkspace
-      surface={view === 'plans' ? 'plans' : 'commitments'}
-      coach={coach}
-      preferredCoachId={companionId}
-      quickPrompts={quickPrompts}
-      onCoachChanged={handleCoachChanged}
-    >
     <PageShell
       header={
         <PageHeader
@@ -628,7 +627,6 @@ export function CoachingCommitmentsPage() {
         </>
       )}
     </PageShell>
-    </CoachWorkspace>
   );
 }
 

@@ -556,6 +556,24 @@
   .atlas-md strong { color: #111827; font-weight: 600; }
   .atlas-md em { font-style: italic; color: #374151; }
 
+  /* Dark surfaces (dock chat windows) */
+  .dock-md .atlas-md,
+  .dock-md .atlas-md .atlas-h4,
+  .dock-md .atlas-md .atlas-h5,
+  .dock-md .atlas-md .atlas-h6,
+  .dock-md .atlas-md em { color: rgba(255, 255, 255, 0.88); }
+  .dock-md .atlas-md .atlas-h1,
+  .dock-md .atlas-md .atlas-h2,
+  .dock-md .atlas-md .atlas-h3,
+  .dock-md .atlas-md strong { color: #ffffff; }
+  .dock-md .atlas-md .atlas-hr { border-top-color: rgba(255, 255, 255, 0.12); }
+  .dock-md .atlas-md .atlas-code-block { background: rgba(0, 0, 0, 0.35); border-color: rgba(255, 255, 255, 0.1); }
+  .dock-md .atlas-md .atlas-code-lang { background: rgba(255, 255, 255, 0.04); border-bottom-color: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.55); }
+  .dock-md .atlas-md .atlas-code-block pre { color: rgba(255, 255, 255, 0.9); }
+  .dock-md .atlas-md .atlas-inline-code { background: rgba(255, 255, 255, 0.1); color: #fbcfe8; }
+  .dock-md .atlas-md .atlas-link,
+  .dock-md .atlas-md .atlas-link:hover { color: #f9a8d4; }
+
   /* ─── Tutorial Director Animations ──────────────────────────────────────── */
 
   @keyframes tutorial-pulse-ring {

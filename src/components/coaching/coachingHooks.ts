@@ -1,32 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../shared/supabase/client';
 
-export interface CoachRequest {
-  text: string;
-  nonce: number;
-}
-
-/**
- * Page-side handle for the coach panel: lets an empty state or button hand the
- * coach a message (and open the panel on mobile). The panel consumes each
- * request once, so remounting it never re-sends.
- */
-export function useCoachPanel() {
-  const [request, setRequest] = useState<CoachRequest | null>(null);
-  const [open, setOpen] = useState(false);
-
-  const ask = useCallback((text: string) => {
-    setRequest({ text, nonce: Date.now() });
-    setOpen(true);
-  }, []);
-
-  const consume = useCallback(() => setRequest(null), []);
-
-  return { request, ask, consume, open, setOpen };
-}
-
-export type CoachPanelHandle = ReturnType<typeof useCoachPanel>;
-
 /** Ids the coach just created or changed, highlighted on the page for a few seconds. */
 export function useCoachHighlight(durationMs = 6000) {
   const [highlighted, setHighlighted] = useState<Set<string>>(() => new Set());
