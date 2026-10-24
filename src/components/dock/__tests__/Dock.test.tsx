@@ -209,4 +209,14 @@ describe('Dock', () => {
     fireEvent.click(screen.getByText('hey you'));
     expect(await screen.findByText('chat with Leah')).toBeTruthy();
   });
+
+  it('welcomes you back with the friends who messaged while you were away', async () => {
+    const { getConversationList } = await import('../../../shared/supabase/queries/messaging');
+    vi.mocked(getConversationList).mockResolvedValue([
+      { id: 'c1', peer_id: 'leah', peer_name: 'Leah', peer_avatar_url: null, unread_count: 3, last_message_at: '2026-10-24T09:00:00Z' },
+    ] as never);
+    renderDock();
+    expect(await screen.findByText('sent you 3 messages while you were away')).toBeTruthy();
+    expect(screen.getAllByTitle('Leah · friend · 3 new').length).toBeGreaterThan(0);
+  });
 });
