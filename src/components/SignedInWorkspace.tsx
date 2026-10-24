@@ -38,6 +38,7 @@ import { supabase } from '../shared/supabase/client';
 import { Dock } from './dock/Dock';
 import { DockProvider, useDock } from './dock/DockContext';
 import { AddFriendButton } from './AddFriendButton';
+import { usePopoverPosition } from './usePopoverPosition';
 import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
@@ -123,6 +124,7 @@ function WorkspaceToolbar({
   const waiting = Object.values(dock.unread).reduce((n, c) => n + c, 0) + Object.values(dock.friendUnread).reduce((n, c) => n + c, 0);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuStyle = usePopoverPosition(menuOpen, menuRef, 240);
   useEffect(() => {
     if (!menuOpen) return;
     const onDown = (e: MouseEvent | TouchEvent) => {
@@ -142,7 +144,7 @@ function WorkspaceToolbar({
   };
 
   return (
-    <header className="relative z-30 flex min-h-[60px] flex-nowrap items-center justify-between gap-2 px-2.5 py-2.5 sm:gap-3 text-[#2a1424] sm:px-5" style={TOOLBAR_THEME}>
+    <header className="relative z-30 flex min-h-[60px] flex-nowrap items-center justify-between gap-2 px-2.5 py-2.5 sm:gap-3 [@media(max-height:500px)]:min-h-[46px] [@media(max-height:500px)]:py-1 text-[#2a1424] sm:px-5" style={TOOLBAR_THEME}>
       {/* Warm blush white, pink as the accent */}
       <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5]" />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-[#f5cfe0]" />
@@ -203,7 +205,7 @@ function WorkspaceToolbar({
             <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#fff7fa] ${available ? 'bg-emerald-500' : 'bg-gray-300'}`} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-[min(15rem,calc(100vw-1.5rem))] rounded-xl border border-[#f5cfe0] bg-white p-1.5 text-[#2a1424] shadow-xl">
+            <div style={menuStyle} className="z-[80] rounded-xl border border-[#f5cfe0] bg-white p-1.5 text-[#2a1424] shadow-xl">
               <div className="px-2.5 pb-2 pt-1.5">
                 <p className="truncate text-sm font-semibold">{displayName}</p>
                 <p className="text-[10px] text-[#2a1424]/55">{available ? 'Available to chat' : 'Not available to chat'}</p>
@@ -463,7 +465,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
 
   return (
     <DockProvider companions={lobby.companions}>
-    <div className="fixed inset-0 overflow-hidden bg-[#070914] p-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:p-2.5 lg:p-4">
+    <div className="fixed inset-0 overflow-hidden bg-[#070914] p-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] pl-[max(0.375rem,env(safe-area-inset-left))] pr-[max(0.375rem,env(safe-area-inset-right))] sm:p-2.5 lg:p-4 [@media(max-height:500px)]:p-1 [@media(max-height:500px)]:pl-[max(0.25rem,env(safe-area-inset-left))] [@media(max-height:500px)]:pr-[max(0.25rem,env(safe-area-inset-right))]">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
         <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} onOpenRewards={() => setShowRewards(true)} lobby={lobby} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">

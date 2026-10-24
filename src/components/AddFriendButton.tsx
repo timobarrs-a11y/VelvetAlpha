@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { UserPlus } from 'lucide-react';
+import { usePopoverPosition } from './usePopoverPosition';
 
 /** Add a friend by their 8-digit code: a pink button with a small form that drops down. */
 export function AddFriendButton({ onAdd }: { onAdd: (code: string) => void }) {
@@ -7,6 +8,7 @@ export function AddFriendButton({ onAdd }: { onAdd: (code: string) => void }) {
   const [code, setCode] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const digits = code.replace(/\D/g, '');
+  const popover = usePopoverPosition(open, ref, 256);
 
   useEffect(() => {
     if (!open) return;
@@ -43,7 +45,7 @@ export function AddFriendButton({ onAdd }: { onAdd: (code: string) => void }) {
         <span className="hidden sm:inline">Add friend</span>
       </button>
       {open && (
-        <form onSubmit={submit} className="absolute right-0 top-full z-50 mt-2 w-[min(16rem,calc(100vw-1.5rem))] sm:left-0 sm:right-auto rounded-xl border border-[#f5cfe0] bg-white p-3 text-[#2a1424] shadow-xl">
+        <form onSubmit={submit} style={popover} className="z-[80] rounded-xl border border-[#f5cfe0] bg-white p-3 text-[#2a1424] shadow-xl">
           <label className="block text-[11px] font-semibold text-[#2a1424]/70" htmlFor="dock-add-friend">Their friend code</label>
           <input
             id="dock-add-friend"
