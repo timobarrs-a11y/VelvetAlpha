@@ -358,3 +358,49 @@ export const ANIMATED_POSES = [
 ];
 
 export { TAU };
+
+/**
+ * Idle life: while standing around, a character fidgets every few seconds
+ * instead of freezing. Picks a fidget per window of time; mood tilts the
+ * choice (tired people yawn and stretch, happy ones bounce).
+ */
+const FIDGETS = {
+  phone: () => ({ idle: true, hands: { 1: [0.2, 0.04, -0.14], [-1]: [0.06, 0.12, -0.34] }, headDown: true, props: [{ kind: 'phone', side: 1 }] }),
+  scratch: (t) => ({ idle: true, hands: { 1: [0.02, 0.06, 0.3 + Math.sin(t * 14) * 0.02], [-1]: [0.06, 0.12, -0.34] }, elbows: { 1: [0.04, 0.2, 0.12] } }),
+  hips: () => ({ idle: true, hands: { 1: [0, 0.16, -0.36], [-1]: [0, 0.16, -0.36] }, elbows: { 1: [-0.02, 0.26, -0.18], [-1]: [-0.02, 0.26, -0.18] } }),
+  yawn: (t) => ({ idle: true, hands: { 1: [0.06, 0.04, 0.12], [-1]: [0.04, 0.14, 0.5] }, yawn: true, bob: Math.sin(t * 2) * 0.01 }),
+  stretch: () => ({ idle: true, hands: { 1: [0, 0.06, 0.62], [-1]: [0, 0.06, 0.62] }, elbows: { 1: [0, 0.12, 0.32], [-1]: [0, 0.12, 0.32] }, bob: 0.015 }),
+  bounce: (t) => ({ idle: true, hands: { 1: [0.06, 0.12, -0.3], [-1]: [0.06, 0.12, -0.3] }, bob: Math.abs(Math.sin(t * 5)) * 0.03 }),
+  look: () => null, // just the default idle, with a long look around
+};
+
+const FIDGET_POOL = {
+  tired: ['yawn', 'stretch', 'look', 'hips', 'look'],
+  happy: ['bounce', 'phone', 'look', 'scratch', 'bounce'],
+  playful: ['bounce', 'phone', 'hips', 'bounce', 'look'],
+  annoyed: ['hips', 'look', 'scratch', 'hips', 'phone'],
+  sad: ['look', 'look', 'phone', 'hips', 'look'],
+  neutral: ['look', 'phone', 'scratch', 'look', 'hips', 'stretch'],
+};
+
+export function idleRig(t, seed = 0, expr = 'neutral') {
+  const win = 6.5, n = Math.floor((t + seed * 13) / win), u = ((t + seed * 13) % win) / win;
+  // Half of each window is plain standing, so fidgets read as moments.
+  if (u < 0.5) return null;
+  const pool = FIDGET_POOL[expr] || FIDGET_POOL.neutral;
+  const pick = pool[Math.abs(Math.floor(Math.sin(n * 12.9898 + seed * 78.233) * 43758.5453)) % pool.length];
+  return FIDGETS[pick](t);
+}
+
+/** How someone looks, from their needs (0-100 each). */
+export function expressionFor(needs) {
+  if (!needs) return 'neutral';
+  const { energy = 50, food = 50, hygiene = 50, fun = 50, comfort = 50, social = 50 } = needs;
+  if (energy < 25) return 'tired';
+  if (Math.min(food, hygiene, comfort) < 20) return 'annoyed';
+  if (social < 20 || fun < 15) return 'sad';
+  const avg = (energy + food + hygiene + fun + comfort + social) / 6;
+  if (fun > 80 && avg > 60) return 'playful';
+  if (avg >= 65) return 'happy';
+  return 'neutral';
+}

@@ -62,3 +62,22 @@ describe('poseRig', () => {
     expect(new Set([at('dance'), at('jukebox'), at('danceTogether')]).size).toBe(3);
   });
 });
+
+import { idleRig, expressionFor } from '../art/poseAnim.js';
+
+describe('idle life and expressions', () => {
+  it('fidgets now and then while standing, but never all the time', () => {
+    const frames = Array.from({ length: 200 }, (_, i) => idleRig(i * 0.25, 0.4, 'neutral'));
+    const busy = frames.filter(Boolean).length;
+    expect(busy).toBeGreaterThan(20);
+    expect(busy).toBeLessThan(180);
+  });
+
+  it('reads feelings from needs', () => {
+    expect(expressionFor({ energy: 10, food: 80, hygiene: 80, fun: 80, comfort: 80, social: 80 })).toBe('tired');
+    expect(expressionFor({ energy: 80, food: 10, hygiene: 80, fun: 80, comfort: 80, social: 80 })).toBe('annoyed');
+    expect(expressionFor({ energy: 80, food: 80, hygiene: 80, fun: 80, comfort: 80, social: 10 })).toBe('sad');
+    expect(expressionFor({ energy: 80, food: 80, hygiene: 80, fun: 70, comfort: 80, social: 80 })).toBe('happy');
+    expect(expressionFor({ energy: 50, food: 50, hygiene: 50, fun: 50, comfort: 50, social: 50 })).toBe('neutral');
+  });
+});

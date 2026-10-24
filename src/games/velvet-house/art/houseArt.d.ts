@@ -21,6 +21,10 @@ export interface PersonFrame {
   act?: string | null;
   /** Game minutes into that activity, so clips can move through steps. */
   actMin?: number;
+  /** How they feel, from their needs: happy, playful, neutral, tired, annoyed, sad. */
+  expr?: string;
+  /** A spot they're looking at (world x, y), e.g. the person they're talking to. */
+  lookAt?: [number, number] | null;
   look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean };
 }
 

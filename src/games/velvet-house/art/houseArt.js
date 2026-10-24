@@ -3,7 +3,7 @@
 import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
-import { poseRig } from './poseAnim.js';
+import { poseRig, idleRig } from './poseAnim.js';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
 
@@ -1310,11 +1310,15 @@ export function createHouseArt(ctx0, opts = {}) {
     if (c.z < 0.05) ell(fx, fy, 8, 3.5, 'rgba(0,0,0,.22)');
     const ws = walkState(c), amp = ws.amp, ph = ws.ph;
     // What this activity looks like right now (null: plain standing/walking).
-    const rig = c.walking ? null : poseRig(pose, t, c.seed, c.act, c.actMin || 0);
-    const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = !rig && !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
+    const standing = !c.walking && !c.sit && pose === 'stand';
+    // Activity clip, or while standing around, an idle fidget now and then.
+    const rig = c.walking ? null : (poseRig(pose, t, c.seed, c.act, c.actMin || 0) || (standing && !c.lookAt ? idleRig(t, c.seed, c.expr) : null));
+    const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = (!rig || rig.idle) && !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
     const breathe = Math.sin(t * 1.9 + c.seed * 2) * (idle ? 0.012 : 0.005);
     const sway = Math.sin(t * 2.2 + c.seed * 3) * (c.walking ? 2.6 : idle ? 0.9 : 0.4);
-    const gaze = idle ? Math.sin(t * 0.45 + c.seed * 5) * 2.2 + Math.sin(t * 0.13 + c.seed) * 1.2 : 0;
+    // Eyes follow whoever they're with; otherwise they wander while idle.
+    const look = c.lookAt ? iso(c.lookAt[0], c.lookAt[1], 1.1) : null;
+    const gaze = look ? Math.max(-2.6, Math.min(2.6, (look[0] - fx) / 14)) : idle ? Math.sin(t * 0.45 + c.seed * 5) * 2.2 + Math.sin(t * 0.13 + c.seed) * 1.2 : 0;
     const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
     const dance = pose === 'dance' && !rig;
     const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.035 * amp;
@@ -1435,12 +1439,24 @@ export function createHouseArt(ctx0, opts = {}) {
       ell(hd[0] + shift * 1.6 + sway * 0.3, hd[1] - 9, 6, 3.6, L.hair);
       ctx.fillStyle = '#241B25';
       const down = rig?.headDown ? 1.3 : rig?.lookUp ? -1.2 : 0;
-      [-1, 1].forEach(side => { const eh = Math.max(0.2, (rig?.headDown ? 0.8 : 1.4) * (1 - bl)); ctx.fillRect(hd[0] + shift * 1.6 + f.flip * 1.2 + side * 2.1 + gaze - 0.6, hd[1] - 5.5 + down + (1.4 - eh) / 2, 1.2, eh); });
+      const lids = c.expr === 'tired' || rig?.yawn ? 0.55 : 1;
+      [-1, 1].forEach(side => { const eh = Math.max(0.2, (rig?.headDown ? 0.8 : 1.4) * lids * (1 - bl)); ctx.fillRect(hd[0] + shift * 1.6 + f.flip * 1.2 + side * 2.1 + gaze - 0.6, hd[1] - 5.5 + down + (1.4 - eh) / 2, 1.2, eh); });
       const cx = hd[0] + shift * 1.6 + f.flip * 0.8 + gaze * 0.6, cy = hd[1] - 1.8;
       if (talking || rig?.talk) {
         const open = (0.5 + 0.5 * Math.sin(t * 13 + c.seed * 7)) * 1.6 + 0.4;
         ctx.fillStyle = '#8C4A42';
         ell(cx, cy, 1.5, open, '#8C4A42');
+      } else if (rig?.yawn || c.expr) {
+        const ex = rig?.yawn ? 'yawn' : c.expr;
+        ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
+        const bx = hd[0] + shift * 1.6 + f.flip * 1.2 + gaze, by = hd[1] - 7.6;
+        // Brows set the feeling; the mouth finishes it.
+        if (ex === 'annoyed') [-1, 1].forEach(sd => { ctx.beginPath(); ctx.moveTo(bx + sd * 3.2, by - 0.6); ctx.lineTo(bx + sd * 1.1, by + 0.5); ctx.stroke(); });
+        if (ex === 'sad') [-1, 1].forEach(sd => { ctx.beginPath(); ctx.moveTo(bx + sd * 3.2, by + 0.5); ctx.lineTo(bx + sd * 1.1, by - 0.5); ctx.stroke(); });
+        if (ex === 'happy' || ex === 'playful') { ctx.beginPath(); ctx.arc(cx, cy - 0.8, 1.6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
+        else if (ex === 'sad') { ctx.beginPath(); ctx.arc(cx, cy + 1.6, 1.4, 1.2 * Math.PI, 1.8 * Math.PI); ctx.stroke(); }
+        else if (ex === 'yawn') ell(cx, cy, 1.3, 1.9, '#5A2A2A');
+        else { ctx.beginPath(); ctx.moveTo(cx - 1.2, cy); ctx.lineTo(cx + 1.2, cy); ctx.stroke(); }
       } else if (mood > 0.6) {
         ctx.strokeStyle = '#241B25'; ctx.lineWidth = 0.8;
         ctx.beginPath(); ctx.arc(cx, cy - 0.8, 1.4, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();

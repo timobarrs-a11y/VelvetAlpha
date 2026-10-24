@@ -11,6 +11,7 @@ import {
 } from './state/agents';
 import type { CharacterLook, CharacterNeeds } from './state/types';
 import { createHouseArt, type WallMode, type PersonFrame } from './art/houseArt.js';
+import { expressionFor } from './art/poseAnim.js';
 import { createGpuLights } from './engine/gpuLights.js';
 import { createGBuffer } from './engine/gbuffer';
 import { createDeferredLights } from './engine/deferredLights';
@@ -929,6 +930,14 @@ function boot(): void {
   const layerCache = new LayerCache();
 
   const seeds: Record<AgentId, number> = { jordan: 0.3, maya: 2.1 };
+  // Talking, hanging out or dancing together: look at the other person.
+  const SOCIAL_ACTS = new Set(['chat', 'hangout', 'gChat', 'danceTogether', 'fireJoin', 'snowmanHelp']);
+  function lookTargetOf(p: Agent): [number, number] | null {
+    const other = people.find(o => o.id !== p.id);
+    if (!other || other.level !== p.level || !p.task || !SOCIAL_ACTS.has(p.task.act)) return null;
+    return [other.x, other.y];
+  }
+
   function toFrame(p: Agent): PersonFrame {
     const pose = poseOf(p);
     return {
@@ -937,6 +946,8 @@ function boot(): void {
       seed: seeds[p.id], look: p.look,
       act: p.task && p.task.phase === 'do' ? p.task.act : null,
       actMin: p.task && p.task.phase === 'do' ? p.task.time : 0,
+      expr: expressionFor(p.needs),
+      lookAt: lookTargetOf(p),
     };
   }
 
