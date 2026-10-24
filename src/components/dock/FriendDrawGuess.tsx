@@ -1,198 +1,255 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Eraser, SkipForward } from 'lucide-react';
+import { Send, SkipForward } from 'lucide-react';
 import { useGameChannel } from './friendGameChannel';
 import { useSquareFit } from './useSquareFit';
+import { DrawToolbar, extendStroke, newStrokeId, renderStrokes, startStroke, type Stroke, type Tool } from './drawKit';
 
 const WORDS = [
   'cat', 'dog', 'pizza', 'house', 'sun', 'tree', 'car', 'fish', 'heart', 'star',
   'banana', 'rocket', 'snowman', 'guitar', 'cupcake', 'rainbow', 'spider', 'ghost', 'crown', 'island',
   'castle', 'dragon', 'robot', 'balloon', 'volcano', 'pirate', 'unicorn', 'cactus', 'penguin', 'bicycle',
   'glasses', 'umbrella', 'butterfly', 'mermaid', 'taco', 'skateboard', 'lighthouse', 'octopus', 'tornado', 'hamburger',
+  'giraffe', 'pineapple', 'campfire', 'ice cream', 'treasure', 'anchor', 'airplane', 'snail', 'tent', 'waterfall',
 ];
-const COLORS = ['#111827', '#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#ec4899'];
 
-/** Points are 0..1 of the canvas so phones and laptops draw the same picture. */
-interface Stroke { color: string; pts: [number, number][] }
+interface Msg { id: string; by: string; text: string; ts: number; kind: 'chat' | 'correct' | 'system' }
+
+/** The whole game, shared by both players and kept on each device. */
 interface Round {
   n: number;
-  /** Bumped on every change in a round; the higher copy wins (so a clear sticks). */
-  v: number;
   drawerId: string;
+  /** Bumped by Clear; strokes from an older sheet are dropped. */
+  sheet: number;
   strokes: Stroke[];
-  /** Set when the round ends: the word, and who guessed it (null if skipped). */
+  /** Undone strokes, so a merge can't bring them back. */
+  removed: string[];
+  /** Set when the round ends: the word (blank if the guesser gave up first) and who got it. */
   solved: { word: string; by: string | null } | null;
+  /** Chat and guesses, across rounds. */
+  log: Msg[];
+  score: Record<string, number>;
 }
 
+const STORE = (cid: string) => `velvet.dg.${cid}`;
+const WORD_STORE = (cid: string, n: number) => `velvet.dg.word.${cid}.${n}`;
+const read = <T,>(key: string): T | null => { try { const r = localStorage.getItem(key); return r ? (JSON.parse(r) as T) : null; } catch { return null; } };
+const write = (key: string, v: unknown) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* storage full or blocked */ } };
+const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
 /**
- * Draw & Guess with a friend: the drawer gets a secret word and draws with a
- * finger or mouse; the picture streams live to the guesser, who types guesses.
- * Only the drawer knows the word, so the drawer's side judges each guess.
+ * Two copies of the game (one per device) combine without losing anything:
+ * a later round wins; within a round strokes, undos, chat and scores union.
+ */
+function merge(a: Round, b: Round): Round {
+  const log = [...new Map([...a.log, ...b.log].map(m => [m.id, m])).values()].sort((x, y) => x.ts - y.ts).slice(-80);
+  const score: Record<string, number> = { ...a.score };
+  for (const [k, v] of Object.entries(b.score)) score[k] = Math.max(score[k] ?? 0, v);
+  if (a.n !== b.n) { const base = a.n > b.n ? a : b; return { ...base, log, score }; }
+  const sheet = Math.max(a.sheet, b.sheet);
+  const removed = [...new Set([...a.removed, ...b.removed])];
+  const gone = new Set(removed);
+  const strokes = [...new Map([...a.strokes, ...b.strokes].map(s => [s.id, s])).values()]
+    .filter(s => (s.sheet ?? 0) === sheet && !gone.has(s.id));
+  const solved = a.solved?.word ? a.solved : b.solved?.word ? b.solved : a.solved ?? b.solved;
+  return { ...a, sheet, strokes, removed, solved, log, score };
+}
+
+const same = (a: Round, b: Round) =>
+  a.n === b.n && a.sheet === b.sheet && a.strokes.length === b.strokes.length && a.removed.length === b.removed.length &&
+  a.log.length === b.log.length && JSON.stringify(a.solved) === JSON.stringify(b.solved) && JSON.stringify(a.score) === JSON.stringify(b.score);
+
+/**
+ * Draw & Guess with a friend. The drawer gets a secret word and draws it; the
+ * picture streams live. Both can chat the whole time, and everything the
+ * guesser types counts as a guess. Nothing skips on its own: a round ends
+ * when it's guessed, or someone taps skip. Leave and come back, and you're
+ * right where you were.
  */
 export function FriendDrawGuess({ conversationId, myId, peerId, peerName }: { conversationId: string; myId: string; peerId: string; peerName: string }) {
-  const [round, setRound] = useState<Round>({ n: 0, v: 0, drawerId: myId < peerId ? myId : peerId, strokes: [], solved: null });
-  const [word, setWord] = useState<string | null>(null);
-  const [guesses, setGuesses] = useState<{ by: string; text: string }[]>([]);
-  const [guess, setGuess] = useState('');
-  const [color, setColor] = useState(COLORS[0]);
-  const [score, setScore] = useState<Record<string, number>>({});
-  const [squareRef, square] = useSquareFit<HTMLDivElement>();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const drawing = useRef<Stroke | null>(null);
+  const [round, setRoundState] = useState<Round>(() =>
+    read<Round>(STORE(conversationId)) ?? { n: 0, drawerId: myId < peerId ? myId : peerId, sheet: 0, strokes: [], removed: [], solved: null, log: [], score: {} });
   const roundRef = useRef(round);
   roundRef.current = round;
+  const [tool, setTool] = useState<Tool>('pen');
+  const [color, setColor] = useState('#111827');
+  const [size, setSize] = useState(6);
+  const [text, setText] = useState('');
+  const [hint, setHint] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [squareRef, square] = useSquareFit<HTMLDivElement>();
+  const drawing = useRef<Stroke | null>(null);
+  const peerLive = useRef<Stroke | null>(null);
+  const logEnd = useRef<HTMLDivElement>(null);
 
   const iDraw = round.drawerId === myId;
   const nameOf = (id: string | null) => (id === myId ? 'You' : id ? peerName : 'Nobody');
 
-  // The drawer picks a new secret word each round.
+  // The drawer's word for this round, kept so a reload doesn't change it.
+  const [word, setWord] = useState<string | null>(null);
   useEffect(() => {
-    if (iDraw && !round.solved) setWord(WORDS[Math.floor(Math.random() * WORDS.length)]);
-    if (!iDraw) setWord(null);
-    setGuesses([]);
-  }, [iDraw, round.n]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!iDraw) { setWord(null); return; }
+    const key = WORD_STORE(conversationId, round.n);
+    let w = read<string>(key);
+    if (!w) { w = WORDS[Math.floor(Math.random() * WORDS.length)]; write(key, w); }
+    setWord(w);
+  }, [iDraw, round.n, conversationId]);
 
   const redraw = useCallback(() => {
-    const c = canvasRef.current;
-    if (!c) return;
-    const ctx = c.getContext('2d');
-    if (!ctx) return;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, c.width, c.height);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(3, c.width / 90);
-    const all = drawing.current ? [...roundRef.current.strokes, drawing.current] : roundRef.current.strokes;
-    for (const s of all) {
-      ctx.strokeStyle = s.color;
-      ctx.beginPath();
-      s.pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x * c.width, y * c.height) : ctx.lineTo(x * c.width, y * c.height)));
-      if (s.pts.length === 1) ctx.lineTo(s.pts[0][0] * c.width + 0.1, s.pts[0][1] * c.height);
-      ctx.stroke();
-    }
+    const c = canvasRef.current, ctx = c?.getContext('2d');
+    if (!c || !ctx) return;
+    const extra = [peerLive.current, drawing.current].filter(Boolean) as Stroke[];
+    renderStrokes(ctx, [...roundRef.current.strokes, ...extra], c.width, c.height);
   }, []);
 
   useEffect(() => { redraw(); }, [round, redraw]);
+  useEffect(() => { logEnd.current?.scrollIntoView?.({ block: 'nearest' }); }, [round.log.length]);
 
   // Keep the canvas sharp at its on-screen size.
   useEffect(() => {
     const c = canvasRef.current;
-    if (!c) return;
-    const fit = () => {
-      const r = c.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      c.width = Math.max(1, Math.round(r.width * dpr));
-      c.height = Math.max(1, Math.round(r.height * dpr));
-      redraw();
-    };
-    fit();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
-    ro?.observe(c);
-    return () => ro?.disconnect();
-  }, [redraw]);
+    if (!c || !square) return;
+    const dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(square * dpr);
+    c.height = Math.round(square * dpr);
+    redraw();
+  }, [square, redraw]);
 
-  const adopt = (r: Round) => {
+  const sendRef = useRef<(e: string, p: unknown) => void>(() => {});
+  /** Apply a change locally, save it, and share it. */
+  const commit = useCallback((next: Round) => {
+    roundRef.current = next;
+    setRoundState(next);
+    write(STORE(conversationId), next);
+    sendRef.current('state', next);
+  }, [conversationId]);
+
+  // The drawer judges guesses (only they know the word).
+  const judged = useRef<Set<string>>(new Set());
+  const judge = useCallback((r: Round): Round => {
+    if (r.drawerId !== myId || r.solved || !word) return r;
+    for (const m of r.log) {
+      if (judged.current.has(m.id) || m.by !== peerId || m.kind !== 'chat') continue;
+      judged.current.add(m.id);
+      if (norm(m.text) === norm(word)) {
+        const score = { ...r.score, [peerId]: (r.score[peerId] ?? 0) + 1, [myId]: (r.score[myId] ?? 0) + 1 };
+        return {
+          ...r, score, solved: { word, by: peerId },
+          log: [...r.log, { id: newStrokeId(), by: peerId, text: `${peerName} got it: ${word}! 🎉`, ts: Date.now(), kind: 'correct' as const }],
+        };
+      }
+    }
+    return r;
+  }, [myId, peerId, peerName, word]);
+
+  const absorb = useCallback((incoming: Round) => {
     const cur = roundRef.current;
-    if (r.n < cur.n || (r.n === cur.n && r.v <= cur.v)) return;
-    setRound(r);
-  };
+    const merged = judge(merge(cur, incoming));
+    if (incoming.n > cur.n) { drawing.current = null; judged.current = new Set(); }
+    if (!same(merged, cur)) {
+      roundRef.current = merged; setRoundState(merged); write(STORE(conversationId), merged);
+      // Tell the other side if we added something they don't have yet.
+      if (!same(merged, incoming)) sendRef.current('state', merged);
+    }
+  }, [judge, conversationId]);
 
   const send = useGameChannel(`draw-${conversationId}`, {
-    // Live stroke in progress (drawer → guesser).
-    live: (p: { n: number; stroke: Stroke }) => {
-      if (p.n !== roundRef.current.n) return;
-      drawing.current = p.stroke;
-      redraw();
+    live: (p: { n: number; sheet: number; stroke: Stroke | null }) => {
+      if (p.n !== roundRef.current.n || p.sheet !== roundRef.current.sheet) return;
+      peerLive.current = p.stroke; redraw();
     },
-    round: (r: Round) => { drawing.current = null; adopt(r); },
-    guess: (p: { n: number; text: string }) => {
-      const r = roundRef.current;
-      if (p.n !== r.n || r.solved || r.drawerId !== myId) return;
-      setGuesses(g => [...g, { by: peerId, text: p.text }]);
-      if (word && p.text.trim().toLowerCase() === word.toLowerCase()) finish(peerId);
-    },
-    score: (s: Record<string, number>) => setScore(s),
-    hello: () => send('round', roundRef.current),
+    state: (r: Round) => { peerLive.current = null; absorb(r); },
+    hello: () => send('state', roundRef.current),
   }, (s) => s('hello', {}));
+  sendRef.current = send;
 
-  const finish = (by: string | null) => {
-    const r = roundRef.current;
-    if (!word || r.solved) return;
-    const next: Round = { ...r, v: r.v + 1, solved: { word, by } };
-    setRound(next);
-    send('round', next);
-    if (by) {
-      // Both the guesser and the drawer score when it's guessed.
-      const s = { ...score, [by]: (score[by] ?? 0) + 1, [myId]: (score[myId] ?? 0) + (by === myId ? 0 : 1) };
-      setScore(s);
-      send('score', s);
-    }
-  };
-
-  const nextRound = () => {
-    const r = roundRef.current;
-    const next: Round = { n: r.n + 1, v: 0, drawerId: r.drawerId === myId ? peerId : myId, strokes: [], solved: null };
-    setRound(next);
-    send('round', next);
-  };
+  // Once the word is known, check anything that came in before it.
+  useEffect(() => { if (word) absorb(roundRef.current); }, [word, absorb]);
 
   // Drawing (pointer events cover touch, pen and mouse).
   const point = (e: React.PointerEvent<HTMLCanvasElement>): [number, number] => {
     const r = e.currentTarget.getBoundingClientRect();
     return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))];
   };
-  const lastSent = useRef(0);
+  const lastLive = useRef(0);
   const onDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!iDraw || round.solved) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    drawing.current = { color, pts: [point(e)] };
+    drawing.current = startStroke(tool, color, size, point(e), myId, round.sheet);
+    if (tool === 'fill') { onUp(); return; }
     redraw();
   };
   const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!drawing.current) return;
-    drawing.current.pts.push(point(e));
+    extendStroke(drawing.current, point(e));
     redraw();
     const now = Date.now();
-    if (now - lastSent.current > 60) {
-      lastSent.current = now;
-      send('live', { n: round.n, stroke: drawing.current });
-    }
+    if (now - lastLive.current > 60) { lastLive.current = now; send('live', { n: round.n, sheet: round.sheet, stroke: drawing.current }); }
   };
   const onUp = () => {
     const s = drawing.current;
     if (!s) return;
     drawing.current = null;
-    const next = { ...roundRef.current, v: roundRef.current.v + 1, strokes: [...roundRef.current.strokes, s] };
-    setRound(next);
-    send('round', next);
+    commit({ ...roundRef.current, strokes: [...roundRef.current.strokes, s] });
+    send('live', { n: round.n, sheet: round.sheet, stroke: null });
+  };
+  const undo = () => {
+    const mine = [...roundRef.current.strokes].reverse().find(s => s.by === myId);
+    if (!mine) return;
+    commit({ ...roundRef.current, strokes: roundRef.current.strokes.filter(s => s.id !== mine.id), removed: [...roundRef.current.removed, mine.id] });
   };
   const clear = () => {
-    const next = { ...roundRef.current, v: roundRef.current.v + 1, strokes: [] };
-    setRound(next);
-    send('round', next);
+    if (roundRef.current.strokes.length && !confirm('Clear the drawing?')) return;
+    commit({ ...roundRef.current, sheet: roundRef.current.sheet + 1, strokes: [] });
   };
 
-  const submitGuess = (e: React.FormEvent) => {
+  const say = (e: React.FormEvent) => {
     e.preventDefault();
-    const text = guess.trim();
-    if (!text || round.solved) return;
-    setGuess('');
-    setGuesses(g => [...g, { by: myId, text }]);
-    send('guess', { n: round.n, text });
+    const t = text.trim();
+    if (!t) return;
+    // No spoilers from the drawer.
+    if (iDraw && word && !round.solved && norm(t).includes(norm(word))) { setHint("That's the word! No spoilers 😄"); return; }
+    setHint(null);
+    setText('');
+    commit({ ...roundRef.current, log: [...roundRef.current.log, { id: newStrokeId(), by: myId, text: t, ts: Date.now(), kind: 'chat' }] });
   };
+
+  const skip = () => {
+    const r = roundRef.current;
+    if (r.solved) return;
+    if (!confirm(iDraw ? 'Skip this word?' : 'Give up on this one?')) return;
+    commit({
+      ...r,
+      solved: { word: iDraw ? word ?? '' : '', by: null },
+      log: [...r.log, { id: newStrokeId(), by: myId, text: iDraw ? 'skipped the word' : 'gave up', ts: Date.now(), kind: 'system' }],
+    });
+  };
+
+  const nextRound = () => {
+    const r = roundRef.current;
+    judged.current = new Set();
+    commit({ ...r, n: r.n + 1, drawerId: r.drawerId === myId ? peerId : myId, sheet: 0, strokes: [], removed: [], solved: null });
+  };
+
+  const status = round.solved
+    ? round.solved.by ? `${nameOf(round.solved.by)} got it: ${round.solved.word}! 🎉` : round.solved.word ? `Skipped. It was ${round.solved.word}` : 'Gave up'
+    : null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 py-2 [&>*:not(.square-slot)]:flex-shrink-0">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-white/60">You <b className="text-amber-300">{score[myId] ?? 0}</b> · <b className="text-amber-300">{score[peerId] ?? 0}</b> {peerName}</span>
-        <span className="font-semibold text-amber-200">
-          {round.solved
-            ? round.solved.by ? `${nameOf(round.solved.by)} got it: ${round.solved.word}! 🎉` : `Skipped. It was ${round.solved.word}`
-            : iDraw ? <>Draw: <span className="rounded bg-amber-300 px-1.5 py-0.5 text-[#1d1a10]">{word}</span></> : `${peerName} is drawing…`}
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5 px-3 py-2 [&>*:not(.square-slot)]:flex-shrink-0">
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="text-white/60">You <b className="text-amber-300">{round.score[myId] ?? 0}</b> · <b className="text-amber-300">{round.score[peerId] ?? 0}</b> {peerName}</span>
+        <span className="truncate font-semibold text-amber-200">
+          {status ?? (iDraw ? <>Draw: <span className="rounded bg-amber-300 px-1.5 py-0.5 text-[#1d1a10]">{word}</span></> : `${peerName} is drawing…`)}
         </span>
+        {!round.solved && (
+          <button type="button" onClick={skip} className="flex-shrink-0 rounded-lg p-1 text-white/50 hover:bg-white/10 hover:text-white" title={iDraw ? 'Skip this word' : 'Give up'} aria-label={iDraw ? 'Skip this word' : 'Give up'}>
+            <SkipForward className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      {/* The canvas takes the largest square that fits, so the controls below stay on screen. */}
-      <div ref={squareRef} className="square-slot flex min-h-0 flex-1 items-center justify-center">
+      {/* The canvas takes the largest square that fits, so the tools and chat stay on screen. */}
+      <div ref={squareRef} className="square-slot flex min-h-[120px] flex-1 items-center justify-center">
         <canvas
           ref={canvasRef}
           onPointerDown={onDown}
@@ -206,36 +263,36 @@ export function FriendDrawGuess({ conversationId, myId, peerId, peerName }: { co
       </div>
 
       {iDraw && !round.solved && (
-        <div className="flex items-center gap-1.5">
-          {COLORS.map(c => (
-            <button key={c} type="button" onClick={() => setColor(c)} className={`h-7 w-7 rounded-full border-2 ${color === c ? 'border-amber-300 scale-110' : 'border-white/20'}`} style={{ background: c }} aria-label={`Colour ${c}`} />
-          ))}
-          <div className="flex-1" />
-          <button type="button" onClick={clear} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10" title="Clear"><Eraser className="h-4 w-4" /></button>
-          <button type="button" onClick={() => finish(null)} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10" title="Skip word"><SkipForward className="h-4 w-4" /></button>
-        </div>
-      )}
-
-      {!iDraw && !round.solved && (
-        <form onSubmit={submitGuess} className="flex gap-2">
-          <input value={guess} onChange={e => setGuess(e.target.value)} placeholder="Your guess…" className="min-w-0 flex-1 rounded-xl bg-white/5 px-3 py-2 text-sm text-white outline-none focus:bg-white/10" />
-          <button type="submit" className="rounded-xl bg-amber-300 px-3 py-2 text-sm font-semibold text-[#1d1a10]">Guess</button>
-        </form>
+        <DrawToolbar tool={tool} setTool={setTool} color={color} setColor={setColor} size={size} setSize={setSize}
+          onUndo={undo} canUndo={round.strokes.some(s => s.by === myId)} onClear={clear} />
       )}
 
       {round.solved && (
-        <button type="button" onClick={nextRound} className="rounded-xl bg-amber-300 px-4 py-2 text-sm font-semibold text-[#1d1a10]">
+        <button type="button" onClick={nextRound} className="rounded-xl bg-amber-300 px-4 py-1.5 text-sm font-semibold text-[#1d1a10]">
           Next round ({round.drawerId === myId ? `${peerName} draws` : 'you draw'})
         </button>
       )}
 
-      {guesses.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 text-[11px]">
-          {guesses.slice(-8).map((g, i) => (
-            <span key={i} className="rounded-full bg-white/8 px-2 py-0.5 text-white/75">{nameOf(g.by)}: {g.text}</span>
-          ))}
-        </div>
-      )}
+      {/* Chat during the game; for the guesser, every message is a guess. */}
+      <div className="max-h-20 min-h-[2.5rem] overflow-y-auto rounded-lg bg-white/[0.04] px-2 py-1 text-[11px]">
+        {round.log.length === 0 && <p className="text-white/40">{iDraw ? `Chat with ${peerName} while you draw.` : 'Type your guesses here. Chat too!'}</p>}
+        {round.log.slice(-30).map(m => (
+          <p key={m.id} className={m.kind === 'correct' ? 'font-semibold text-emerald-300' : m.kind === 'system' ? 'italic text-white/45' : 'text-white/80'}>
+            {m.kind === 'correct' ? m.text : <><b className={m.by === myId ? 'text-pink-300' : 'text-amber-300'}>{nameOf(m.by)}</b> {m.text}</>}
+          </p>
+        ))}
+        <div ref={logEnd} />
+      </div>
+      {hint && <p className="text-[11px] text-amber-300">{hint}</p>}
+      <form onSubmit={say} className="flex gap-2">
+        <input
+          value={text}
+          onChange={e => setText(e.target.value)}
+          placeholder={iDraw || round.solved ? `Message ${peerName}…` : 'Guess or chat…'}
+          className="min-w-0 flex-1 rounded-xl bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:bg-white/10"
+        />
+        <button type="submit" className="flex items-center rounded-xl bg-amber-300 px-3 text-[#1d1a10]" aria-label="Send"><Send className="h-4 w-4" /></button>
+      </form>
     </div>
   );
 }

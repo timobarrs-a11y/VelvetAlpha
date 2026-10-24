@@ -100,7 +100,7 @@ export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
           <div key={g} className={playing === g ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
             {g === 'checkers' && <FriendCheckers conversationId={friend.conversationId} myId={user.id} peerId={friend.peerId} peerName={friend.peerName} />}
             {g === 'draw' && <FriendDrawGuess conversationId={friend.conversationId} myId={user.id} peerId={friend.peerId} peerName={friend.peerName} />}
-            {g === 'paint' && <FriendPaint conversationId={friend.conversationId} peerName={friend.peerName} onSent={() => setPlaying(null)} />}
+            {g === 'paint' && <FriendPaint conversationId={friend.conversationId} myId={user.id} peerName={friend.peerName} onSent={() => setPlaying(null)} />}
             {g === 'rps' && <FriendRps conversationId={friend.conversationId} peerName={friend.peerName} />}
           </div>
         ))}
