@@ -26,7 +26,9 @@
     .vh-controls button:focus-visible { outline: 2px solid #E0A43A; outline-offset: 1px; }
     .vh-controls button[aria-selected="true"], .vh-controls button[aria-pressed="true"] { background: #F2EEE8; color: #241B25; }
     @media (max-width: 560px) { .vh-controls button { padding: 8px 9px; font-size: 12px; } .vh-hud { top: 8px; left: 8px; } }
-    .vh-people { position: absolute; top: 16px; right: 16px; display: flex; flex-direction: column; gap: 8px; width: 216px; }
+    .vh-people { position: absolute; top: 16px; right: 120px; display: flex; flex-direction: column; gap: 8px; width: 216px; max-height: calc(100% - 140px); overflow-y: auto; z-index: 18; }
+    .vh-people[hidden] { display: none; }
+    @media (max-width: 560px) { .vh-people { top: auto; right: 8px; left: 8px; bottom: 112px; width: auto; max-height: 45%; } }
     .vh-person { appearance: none; border: 1px solid rgba(255,255,255,.06); text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: rgba(23,21,29,.84); backdrop-filter: blur(8px); color: #E9E4EC; font: 400 12px/1.5 Inter, system-ui, sans-serif; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.3); transition: border-color .18s ease, transform .18s ease, background .18s ease; }
     .vh-person:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.18); }
     .vh-person:focus-visible { outline: 2px solid #E0A43A; outline-offset: 2px; }
