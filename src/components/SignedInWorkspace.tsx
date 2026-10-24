@@ -38,7 +38,7 @@ import { supabase } from '../shared/supabase/client';
 import { Dock } from './dock/Dock';
 import { DockProvider } from './dock/DockContext';
 import { MedalToastHost } from './medals/MedalToast';
-import { setAvailableToChat } from '../shared/supabase/queries/messaging';
+import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { Avatar } from './Avatar';
 import { companionAvatarConfig, TONE_COLOR } from './lobby';
@@ -107,6 +107,17 @@ function WorkspaceToolbar({
   const { muted, toggleMute } = useAudioScene();
 
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Your space';
+  // Your friend code, always on show like a phone number; tap to copy.
+  const [friendCode, setFriendCode] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+  useEffect(() => { getMyFriendCode().then(setFriendCode); }, []);
+  const copyFriendCode = () => {
+    if (!friendCode) return;
+    navigator.clipboard?.writeText(friendCode).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 1800);
+    }).catch(() => {});
+  };
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -141,6 +152,18 @@ function WorkspaceToolbar({
             <span className="block max-w-[130px] truncate text-[10px] text-[#2a1424]/60 sm:max-w-none">{displayName}</span>
           </span>
         </button>
+        {friendCode && (
+          <button
+            type="button"
+            onClick={copyFriendCode}
+            className="flex flex-shrink-0 flex-col items-start rounded-lg border border-[#2a1424]/10 px-2 py-0.5 text-left transition-colors hover:bg-pink-50"
+            title="Your friend code. Tap to copy and give it to someone."
+            aria-label={`Your friend code ${formatFriendCode(friendCode)}, tap to copy`}
+          >
+            <span className="text-[9px] uppercase tracking-wider text-[#2a1424]/50">{codeCopied ? 'Copied' : 'Friend code'}</span>
+            <span className="font-mono text-xs font-semibold tracking-widest text-pink-600">{formatFriendCode(friendCode)}</span>
+          </button>
+        )}
       </div>
 
       <div className="relative z-10 flex items-center gap-1.5 sm:gap-2">

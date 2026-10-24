@@ -167,6 +167,7 @@ export function Dock() {
                     <MessagingOverlay
                       embedded
                       initialView={dock.messagesView}
+                      initialFriendCode={dock.pendingFriendCode}
                       onClose={() => dock.close(MESSAGES_KEY)}
                       onMinimize={() => dock.minimize(MESSAGES_KEY)}
                     />

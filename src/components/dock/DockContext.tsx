@@ -14,6 +14,8 @@ import type { CoachSurface } from '../../services/chatService';
  */
 
 export const MESSAGES_KEY = 'messages';
+/** A friend code from an /add/<code> link, waiting for the dock to open Messages with it. */
+export const PENDING_FRIEND_CODE_KEY = 'velvet.pending_friend_code';
 export const aiKey = (companionId: string) => `ai:${companionId}`;
 
 export interface DockWindow {
@@ -39,6 +41,8 @@ interface DockApi {
   windows: DockWindow[];
   companions: CompanionWithLastMessage[];
   messagesView: 'conversations' | 'requests';
+  /** Friend code to add when Messages opens (from a share link). */
+  pendingFriendCode: string | null;
   coachSurface: CoachSurfaceRegistration | null;
   /** The coach a coaching page talks to: its preferred coach, else the first. */
   pageCoachId: string | null;
@@ -63,6 +67,7 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
   // Ordered by recency: the last window is the one most recently opened or restored.
   const [windows, setWindows] = useState<DockWindow[]>([]);
   const [messagesView, setMessagesView] = useState<'conversations' | 'requests'>('conversations');
+  const [pendingFriendCode, setPendingFriendCode] = useState<string | null>(null);
   const [pending, setPending] = useState<Record<string, PendingSend>>({});
   const [coachSurface, setCoachSurface] = useState<CoachSurfaceRegistration | null>(null);
   const [unread, setUnread] = useState<Record<string, number>>({});
@@ -95,6 +100,21 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
       supabase.removeChannel(channel);
     };
   }, [userId, refreshUnread]);
+
+  // A share link saved a friend code: open Messages with it once signed in.
+  useEffect(() => {
+    if (!userId) return;
+    let code: string | null = null;
+    try {
+      code = sessionStorage.getItem(PENDING_FRIEND_CODE_KEY);
+      sessionStorage.removeItem(PENDING_FRIEND_CODE_KEY);
+    } catch { /* storage blocked */ }
+    if (code) {
+      setPendingFriendCode(code);
+      setMessagesView('conversations');
+      setWindows(prev => [...prev.filter(w => w.key !== MESSAGES_KEY), { key: MESSAGES_KEY, minimized: false }]);
+    }
+  }, [userId]);
 
   const clearUnread = useCallback((companionId: string) => {
     setUnread(prev => {
@@ -157,10 +177,10 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
     : null;
 
   const api = useMemo<DockApi>(() => ({
-    windows, companions, messagesView, coachSurface, pageCoachId, unread, clearUnread,
+    windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread,
     openMessages, openCompanion, minimize, restore, close,
     pendingFor, consumePending, registerCoachSurface: setCoachSurface,
-  }), [windows, companions, messagesView, coachSurface, pageCoachId, unread, clearUnread, openMessages, openCompanion, minimize, restore, close, pendingFor, consumePending]);
+  }), [windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, openMessages, openCompanion, minimize, restore, close, pendingFor, consumePending]);
 
   return <DockContext.Provider value={api}>{children}</DockContext.Provider>;
 }
