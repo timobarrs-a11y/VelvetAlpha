@@ -3,6 +3,7 @@
 import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
+import { poseRig } from './poseAnim.js';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
 
@@ -1222,6 +1223,67 @@ export function createHouseArt(ctx0, opts = {}) {
   function setTalking(v) { talking = Boolean(v); }
   function setMood(v) { mood = Math.max(0, Math.min(1, Number(v) || 0)); }
 
+  // Things in hand for an activity, drawn over the arms.
+  function drawProps(rig, hand, c, t, hd, local) {
+    (rig.props || []).forEach(p => {
+      const h = hand[p.side || 1] || hand[1];
+      switch (p.kind) {
+        case 'spoon': limb(h[0], h[1], h[0] + 1.5, h[1] + 7, '#8A5A3B', 1.6); break;
+        case 'fork': limb(h[0], h[1], h[0] + 0.5, h[1] - 6, '#C9CED6', 1.2); break;
+        case 'cup': rr(h[0] - 2.5, h[1] - 4, 5, 6, 1.2, '#F4EFE6'); limb(h[0] + 2.5, h[1] - 2.5, h[0] + 4, h[1] - 1, '#F4EFE6', 1.2); break;
+        case 'phone': rr(h[0] - 1.6, h[1] - 3.5, 3.2, 6, 0.8, '#1E1B2E'); break;
+        case 'dumbbell': limb(h[0] - 4, h[1], h[0] + 4, h[1], '#3B3F4A', 1.8); circle(h[0] - 4, h[1], 2.2, '#2A2D35'); circle(h[0] + 4, h[1], 2.2, '#2A2D35'); break;
+        case 'brush': limb(h[0], h[1], h[0] + 2, h[1] - 6, '#8A5A3B', 1.2); circle(h[0] + 2, h[1] - 6, 1.1, '#E48AAE'); break;
+        case 'palette': ell(h[0], h[1] - 1, 5, 3, '#D9B98C'); circle(h[0] - 2, h[1] - 2, 0.9, '#E5484D'); circle(h[0] + 1, h[1] - 2.5, 0.9, '#3B82F6'); circle(h[0] + 2.5, h[1] - 0.5, 0.9, '#22C55E'); break;
+        case 'ball': circle(h[0] + 3, h[1] - 6, 2.4, '#E5484D'); break;
+        case 'book': {
+          const a = hand[-1] || h, b = hand[1] || h, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+          rr(mx - 7, my - 6, 14, 8, 1, c.seed % 1 > 0.5 ? '#7A3B5C' : '#2F5D7C');
+          rr(mx - 6, my - 5, 12, 6, 0.5, '#F4EFE6');
+          if (p.flip > 0.05) { ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.moveTo(mx, my - 5); ctx.lineTo(mx + 6 * (1 - p.flip * 2), my - 5 - p.flip * 3); ctx.lineTo(mx + 6 * (1 - p.flip * 2), my + 1 - p.flip * 3); ctx.lineTo(mx, my + 1); ctx.fill(); }
+          break;
+        }
+        case 'can': {
+          rr(h[0] - 1, h[1] - 3, 7, 5, 1.5, '#3FA36B');
+          const spout = local([0.5, 0.06, -0.2], 1);
+          limb(h[0] + 5, h[1] - 2, spout[0], spout[1], '#3FA36B', 1.4);
+          for (let i = 0; i < 3; i++) { const u = (t * 2.2 + i / 3) % 1; circle(spout[0] + 1, spout[1] + u * 14, 0.9, `rgba(140,200,255,${1 - u})`); }
+          break;
+        }
+        case 'mop': {
+          const a = hand[-1] || h, end = local([0.6, (p.sweep || 0) * 0.12, -1.04], 1);
+          limb(a[0], a[1], end[0], end[1], "#B08A5A", 1.8);
+          ell(end[0], end[1], 6, 2.4, '#C9CED6');
+          break;
+        }
+        case 'roller': {
+          const top = [h[0] + 1, h[1] - 12];
+          limb(h[0], h[1], top[0], top[1], '#6B6F7A', 1.4);
+          rr(top[0] - 5, top[1] - 3, 10, 4, 1.5, LOOKS[viewLevel]?.paint || '#E48AAE');
+          break;
+        }
+        case 'water':
+          for (let i = 0; i < 7; i++) {
+            const u = (t * 1.6 + i / 7) % 1, x = hd[0] + (i - 3) * 2.6, y = hd[1] - 26 + u * 34;
+            limb(x, y, x, y + 4, `rgba(170,210,255,${0.7 * (1 - u)})`, 1);
+          }
+          break;
+        case 'notes': {
+          const u = (t * 0.5 + c.seed) % 1;
+          ctx.globalAlpha = 1 - u; ctx.fillStyle = '#E48AAE'; ctx.font = '700 10px Inter, system-ui, sans-serif';
+          ctx.fillText('♪', hd[0] + 8 + Math.sin(u * 6) * 3, hd[1] - 12 - u * 16); ctx.globalAlpha = 1;
+          break;
+        }
+        case 'splash': {
+          const base = local([0, 0, -0.3], 1), r = 11 + Math.sin(t * 4) * 1.5;
+          ctx.strokeStyle = 'rgba(220,240,255,.7)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(base[0], base[1], r, r * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
+          break;
+        }
+        default: break;
+      }
+    });
+  }
+
   function drawPerson(c, t) {
     const L = c.look, pose = c.pose, f = facing(c.face);
     const P3 = (dx, dy, dz) => iso(c.x + dx, c.y + dy, c.z + dz);
@@ -1236,18 +1298,40 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     if (c.z < 0.05) ell(fx, fy, 8, 3.5, 'rgba(0,0,0,.22)');
     const ws = walkState(c), amp = ws.amp, ph = ws.ph;
-    const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
+    // What this activity looks like right now (null: plain standing/walking).
+    const rig = c.walking ? null : poseRig(pose, t, c.seed);
+    const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = !rig && !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
     const breathe = Math.sin(t * 1.9 + c.seed * 2) * (idle ? 0.012 : 0.005);
     const sway = Math.sin(t * 2.2 + c.seed * 3) * (c.walking ? 2.6 : idle ? 0.9 : 0.4);
     const gaze = idle ? Math.sin(t * 0.45 + c.seed * 5) * 2.2 + Math.sin(t * 0.13 + c.seed) * 1.2 : 0;
     const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
     const dance = pose === 'dance';
     const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.035 * amp;
-    const hipZ = c.sit ? 0.03 : 0.62 + bob + breathe, shZ = hipZ + 0.42, hdZ = shZ + 0.14;
-    const hip = P3(0, 0, hipZ), sh = P3(0, 0, shZ), hd = P3(0, 0, hdZ), [dx, dy] = c.face;
+    const hipZ = (c.sit ? 0.03 : 0.62 - (rig?.drop || 0)) + bob + breathe + (rig?.bob || 0), shZ = hipZ + 0.42, hdZ = shZ + 0.14;
+    const [dx, dy] = c.face, lean = rig?.lean || 0;
+    const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
+    // The body's own sideways axis, signed so side +1 is screen-right (matching the shoulders).
+    let rx = -dy, ry = dx;
+    if (P3(rx, ry, 0)[0] < fx) { rx = -rx; ry = -ry; }
+    const local = (v, side) => P3(dx * v[0] + rx * side * v[1], dy * v[0] + ry * side * v[1], shZ + v[2]);
     [-1, 1].forEach(side => {
       if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5); limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
       if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
+      if (rig && rig.legs === 'crouch') {
+        const knee = P3(dx * 0.24, dy * 0.24, hipZ * 0.75), foot = P3(dx * 0.06, dy * 0.06, 0);
+        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 3, knee[1], L.bottom, 5);
+        limb(knee[0] + side * 3, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        return;
+      }
+      if (rig && rig.legs === 'swim') return; // underwater
+      if (rig && (rig.legs === 'run' || rig.legs === 'step')) {
+        const big = rig.legs === 'run', off = side > 0 ? 0 : Math.PI, p = rig.phase + off;
+        const sw = Math.sin(p) * (big ? 0.22 : 0.12), lift = Math.max(0, Math.sin(p)) * (big ? 0.15 : 0.06);
+        const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), dy * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), hipZ * 0.5 + lift);
+        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
+        limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        return;
+      }
       const off = side > 0 ? 0 : Math.PI;
       const sw = Math.sin(ph + off) * 0.17 * amp, lift = c.z < 0.05 ? Math.max(0, Math.sin(ph + off)) * 0.075 * amp : 0;
       const foot = P3(dx * sw, dy * sw, lift);
@@ -1290,6 +1374,21 @@ export function createHouseArt(ctx0, opts = {}) {
       }
       ctx.restore();
     }
+    const handAt = {};
+    if (rig && rig.hands) {
+      // Activity arms: shoulder, elbow, hand, eased so poses blend in and out.
+      const ps = poseState(c);
+      [-1, 1].forEach(side => {
+        const spec = rig.hands[side];
+        const sx0 = sh[0] + shift * 1.4 + side * 4.5, sy0 = sh[1] + 1;
+        if (!spec) { const e = ease2(ps, side, sx0 + side * 2, sy0 + 13, rdt); limb(sx0, sy0, e[0], e[1], L.skin, 3.2); handAt[side] = e; return; }
+        const h = local(spec, side), e = ease2(ps, side, h[0], h[1], rdt);
+        const el = rig.elbows && rig.elbows[side] ? local(rig.elbows[side], side) : [(sx0 + e[0]) / 2 + side * 2.5, (sy0 + e[1]) / 2 + 3];
+        limb3(sx0, sy0, el[0], el[1], e[0], e[1], L.skin, 3.2);
+        handAt[side] = e;
+      });
+      drawProps(rig, handAt, c, t, hd, local);
+    } else
     [-1, 1].forEach(side => {
       const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
       const [ex, ey] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
@@ -1300,9 +1399,10 @@ export function createHouseArt(ctx0, opts = {}) {
     if (f.front) {
       ell(hd[0] + shift * 1.6 + sway * 0.3, hd[1] - 9, 6, 3.6, L.hair);
       ctx.fillStyle = '#241B25';
-      [-1, 1].forEach(side => { const eh = Math.max(0.2, 1.4 * (1 - bl)); ctx.fillRect(hd[0] + shift * 1.6 + f.flip * 1.2 + side * 2.1 + gaze - 0.6, hd[1] - 5.5 + (1.4 - eh) / 2, 1.2, eh); });
+      const down = rig?.headDown ? 1.3 : 0;
+      [-1, 1].forEach(side => { const eh = Math.max(0.2, (rig?.headDown ? 0.8 : 1.4) * (1 - bl)); ctx.fillRect(hd[0] + shift * 1.6 + f.flip * 1.2 + side * 2.1 + gaze - 0.6, hd[1] - 5.5 + down + (1.4 - eh) / 2, 1.2, eh); });
       const cx = hd[0] + shift * 1.6 + f.flip * 0.8 + gaze * 0.6, cy = hd[1] - 1.8;
-      if (talking) {
+      if (talking || rig?.talk) {
         const open = (0.5 + 0.5 * Math.sin(t * 13 + c.seed * 7)) * 1.6 + 0.4;
         ctx.fillStyle = '#8C4A42';
         ell(cx, cy, 1.5, open, '#8C4A42');
