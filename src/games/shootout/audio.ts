@@ -16,7 +16,22 @@ function ac(): AudioContext | null {
   } catch { return null; }
 }
 
-export function setMuted(v: boolean): void { muted = v; }
+/**
+ * Start audio from inside a tap or click. iOS only lets audio begin during a
+ * user gesture (and creating the context is slow), so do it here rather than
+ * on the first sound, which plays from the game loop mid-jump.
+ */
+export function unlockAudio(): void {
+  const c = ac();
+  if (!c) return;
+  try {
+    const src = c.createBufferSource();
+    src.buffer = c.createBuffer(1, 1, c.sampleRate);
+    src.connect(c.destination); src.start();
+  } catch { /* not supported */ }
+}
+
+export function setMuted(v: boolean): void { muted = v; if (!v) unlockAudio(); }
 export const isMuted = () => muted;
 
 function tone(c: AudioContext, at: number, freq: number, dur: number, peak: number, type: OscillatorType = 'sine') {

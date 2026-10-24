@@ -42,6 +42,14 @@ export const LEVELS: Level[] = [
 ];
 
 export const RIM_HEIGHT = 3.05;
+
+/**
+ * Pace, shared by the game and the rival simulation so they can't drift:
+ * after a release you follow through and grab the next ball (catch and
+ * shoot, the last one still in the air), and moving racks is a short jog.
+ */
+export const RELOAD = 0.65;
+export const JOG = 1.6;
 export const THREE_TOP = 7.24;
 export const THREE_CORNER = 6.7;
 

@@ -2,7 +2,7 @@
 // so a run can be watched live in 3D or skipped with the same result. Pure
 // rules, no drawing or sound, so it can be tested.
 
-import { buildCourse, isMake, resolveShot, shotPoints, shotWindow, type Ball, type Grade, type Level, type Outcome, type Spot } from './engine';
+import { buildCourse, isMake, JOG, RELOAD, resolveShot, shotPoints, shotWindow, type Ball, type Grade, type Level, type Outcome, type Spot } from './engine';
 
 export type RivalStyle = 'steady' | 'streaky' | 'clutch' | 'quick';
 
@@ -53,7 +53,7 @@ export interface RivalShot {
 export interface RivalRun { rival: Rival; shots: RivalShot[]; score: number; /** Elapsed time when the run ended. */ end: number }
 
 /** Pace model shared with the 3D playback. */
-export const PACE = { walk: 2.2, settle: 0.95, firstWalk: 1.6 };
+export const PACE = { walk: JOG, settle: RELOAD, firstWalk: JOG };
 
 /** Seeded random numbers, so a contest replays the same and tests are stable. */
 export function seeded(seed: number): () => number {

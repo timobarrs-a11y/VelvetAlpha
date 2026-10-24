@@ -6,6 +6,7 @@ import { LEVELS, starsFor } from '../games/shootout/engine';
 import { RunView } from '../games/shootout/ui/RunView';
 import { Contest, type ContestResult } from '../games/shootout/ui/Contest';
 import { getLook, setLook, type Look } from '../games/shootout/settings';
+import { unlockAudio } from '../games/shootout/audio';
 
 const SAVE = 'velvet.shootout.v1';
 interface Progress { unlocked: number; best: Record<number, number>; stars: Record<number, number>; moneyRack: number; wins: Record<number, number>; attack: Record<number, number> }
@@ -108,7 +109,7 @@ export function ShootoutGame() {
           <p className="mt-4 max-w-xs text-xs text-white/50">Make it: 100 a point. Perfect release: ×1.5. Perfects in a row stack ×1.1, ×1.2, ×1.3…</p>
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setScreen('title')} className="rounded-xl bg-white/10 px-5 py-2.5 font-semibold">Menu</button>
-            <button type="button" onClick={() => { setRunNo(n => n + 1); setScreen('attack'); }} className="rounded-xl bg-gradient-to-r from-emerald-300 to-teal-400 px-6 py-2.5 font-black text-[#062019]">Go again</button>
+            <button type="button" onClick={() => { unlockAudio(); setRunNo(n => n + 1); setScreen('attack'); }} className="rounded-xl bg-gradient-to-r from-emerald-300 to-teal-400 px-6 py-2.5 font-black text-[#062019]">Go again</button>
           </div>
         </div>
       )}
@@ -118,12 +119,12 @@ export function ShootoutGame() {
       )}
 
       {screen === 'title' && (
-        <div className="flex h-full flex-col items-center justify-center overflow-y-auto bg-[radial-gradient(ellipse_at_top,#2a1a3e,#05060C_70%)] px-5 py-8">
+        <div className="flex h-full flex-col items-center overflow-y-auto bg-[radial-gradient(ellipse_at_top,#2a1a3e,#05060C_70%)] px-5 py-8 [&>*:nth-child(2)]:mt-auto [&>*:last-child]:mb-auto">
           <button type="button" onClick={() => navigate(-1)} className="absolute left-4 top-4 flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-sm"><ArrowLeft className="h-4 w-4" />Back</button>
           <div className="mt-10 text-center sm:mt-0">
             <div className="text-xs font-bold uppercase tracking-[0.4em] text-amber-300">Velvet</div>
             <h1 className="mt-1 text-4xl font-black italic tracking-tight sm:text-5xl">3-POINT SHOOTOUT</h1>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-white/65">Five racks, two deep Starry balls, one clock. Hold to rise, release at the top. Hit the green.</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-white/65">Five racks, two deep Starry balls, one clock. Hold to rise, let go on the green. The timing shifts a little every game.</p>
           </div>
           <div className="mt-6 grid w-full max-w-md gap-2">
             {LEVELS.map(l => {
@@ -169,17 +170,17 @@ export function ShootoutGame() {
             </div>
           </div>
           <div className="mt-6 flex w-full max-w-md flex-col gap-2 sm:flex-row">
-            <button type="button" onClick={() => { setRunNo(n => n + 1); setScreen('contest'); }} className="flex-1 rounded-2xl bg-gradient-to-r from-amber-300 to-orange-400 px-6 py-3 text-left text-[#1d1a10] shadow-[0_10px_40px_rgba(251,191,36,.35)] transition hover:scale-[1.02]">
+            <button type="button" onClick={() => { unlockAudio(); setRunNo(n => n + 1); setScreen('contest'); }} className="flex-1 rounded-2xl bg-gradient-to-r from-amber-300 to-orange-400 px-6 py-3 text-left text-[#1d1a10] shadow-[0_10px_40px_rgba(251,191,36,.35)] transition hover:scale-[1.02]">
               <span className="block text-lg font-black">CONTEST</span>
               <span className="block text-[11px] font-semibold opacity-75">You vs 5 AI shooters · final · shoot-offs</span>
             </button>
-            <button type="button" onClick={() => { setRunNo(n => n + 1); setScreen('attack'); }} className="flex-1 rounded-2xl bg-gradient-to-r from-emerald-300 to-teal-400 px-6 py-3 text-left text-[#062019] transition hover:scale-[1.02]">
+            <button type="button" onClick={() => { unlockAudio(); setRunNo(n => n + 1); setScreen('attack'); }} className="flex-1 rounded-2xl bg-gradient-to-r from-emerald-300 to-teal-400 px-6 py-3 text-left text-[#062019] transition hover:scale-[1.02]">
               <span className="block text-lg font-black">SCORE ATTACK</span>
               <span className="block text-[11px] font-semibold opacity-75">{progress.attack[levelId] ? `High score ${progress.attack[levelId].toLocaleString()}` : 'Perfects multiply · beat your best'}</span>
             </button>
           </div>
           <div className="mt-2 w-full max-w-md">
-            <button type="button" onClick={() => { setRunNo(n => n + 1); setScreen('play'); }} className="w-full rounded-2xl border border-white/15 bg-white/5 px-6 py-2.5 text-left transition hover:bg-white/10">
+            <button type="button" onClick={() => { unlockAudio(); setRunNo(n => n + 1); setScreen('play'); }} className="w-full rounded-2xl border border-white/15 bg-white/5 px-6 py-2.5 text-left transition hover:bg-white/10">
               <span className="text-sm font-black">PRACTICE</span>
               <span className="ml-2 text-[11px] text-white/55">Solo run · classic 1/2/3 scoring · unlock levels · stars</span>
             </button>
