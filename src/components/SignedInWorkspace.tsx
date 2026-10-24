@@ -58,6 +58,7 @@ interface SignedInWorkspaceProps {
 }
 
 const excludedPrefixes = [
+  '/login',
   '/signin',
   '/signup',
   '/forgot-password',

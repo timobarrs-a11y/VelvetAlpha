@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { AlertCircle, Heart } from 'lucide-react';
 import { authService } from '../services/authService';
+import { useAuth } from '../auth/AuthProvider';
 import { Button, Input } from '../shared/ui';
 
 const VELVET_BG = 'var(--ds-bg-page)';
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +29,9 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // Already signed in (e.g. back button, or the sign-in just finished): go to the app.
+  if (user && !isLoading) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: VELVET_BG }}>

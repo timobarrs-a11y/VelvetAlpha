@@ -1,16 +1,62 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useHomeLayout } from '../hooks/useHomeLayout';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 
 const CompanionLobbyPage = lazy(() => import('./CompanionLobbyPage').then(m => ({ default: m.CompanionLobbyPage })));
-const HomeV3Page = lazy(() => import('./HomeV3Page').then(m => ({ default: m.HomeV3Page })));
+
+let v3Loaded = false;
+const loadV3 = () => import('./HomeV3Page').then(m => { v3Loaded = true; return m; });
+const HomeV3Page = lazy(() => loadV3().then(m => ({ default: m.HomeV3Page })));
+
+/** V3 (live feed) is heavy; past this, a slow connection gets the lighter Classic home. */
+const V3_LOAD_BUDGET_MS = 4000;
+const SLOW_KEY = 'velvet.home_slow_fallback';
+
+function connectionLooksSlow(): boolean {
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  return !!c && (!!c.saveData || ['slow-2g', '2g', '3g'].includes(c.effectiveType ?? ''));
+}
+
+function readSlowFlag(): boolean {
+  try { return sessionStorage.getItem(SLOW_KEY) === '1'; } catch { return false; }
+}
 
 export function HomeSwitcher() {
   const [layout] = useHomeLayout();
+  // Session-only: the saved preference stays V3 and is used again next visit.
+  const [useClassic, setUseClassic] = useState(() => readSlowFlag() || connectionLooksSlow());
+
+  useEffect(() => {
+    if (layout !== 'v3' || useClassic || v3Loaded) return;
+    const timer = setTimeout(() => {
+      if (v3Loaded) return;
+      try { sessionStorage.setItem(SLOW_KEY, '1'); } catch { /* storage blocked */ }
+      setUseClassic(true);
+    }, V3_LOAD_BUDGET_MS);
+    loadV3().then(() => clearTimeout(timer), () => {});
+    return () => clearTimeout(timer);
+  }, [layout, useClassic]);
+
+  const showV3 = layout === 'v3' && !useClassic;
 
   return (
     <Suspense fallback={<RouteFallback />}>
-      {layout === 'v3' ? <HomeV3Page /> : <CompanionLobbyPage />}
+      {layout === 'v3' && useClassic && (
+        <div className="flex items-center justify-between gap-3 border-b border-white/8 bg-white/[0.03] px-4 py-2 text-xs text-white/70">
+          <span>Slow connection, so we opened the faster Classic home.</span>
+          <button
+            type="button"
+            onClick={() => {
+              try { sessionStorage.removeItem(SLOW_KEY); } catch { /* storage blocked */ }
+              setUseClassic(false);
+            }}
+            className="flex-shrink-0 font-semibold text-pink-300 hover:text-pink-200"
+          >
+            Load V3 anyway
+          </button>
+        </div>
+      )}
+      {showV3 ? <HomeV3Page /> : <CompanionLobbyPage />}
     </Suspense>
   );
 }

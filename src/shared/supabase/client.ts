@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, processLock } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -21,5 +21,10 @@ export const supabase = createClient(clientUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    // The default lock is shared by every tab of the site through the browser's
+    // Web Locks API, and data requests wait on it with no timeout. On mobile,
+    // a frozen background tab can hold it forever: sign-in succeeds but nothing
+    // else ever loads. A per-tab lock avoids that.
+    lock: processLock,
   },
 });
