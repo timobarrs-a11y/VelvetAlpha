@@ -14,17 +14,24 @@ vi.mock('../../../services/companionReadService', () => ({
   markCompanionRead: (id: string) => markCompanionRead(id),
 }));
 
+const realtime: Record<string, Array<(p: unknown) => void>> = {};
 vi.mock('../../../shared/supabase/client', () => {
-  const channel = { on: () => channel, subscribe: () => channel };
+  const channel = {
+    on: (_t: string, f: { table: string }, cb: (p: unknown) => void) => { (realtime[f.table] ??= []).push(cb); return channel; },
+    subscribe: () => channel,
+  };
   return { supabase: { channel: () => channel, removeChannel: () => {} } };
 });
 vi.mock('../../../shared/supabase/queries/messaging', () => ({
   getConversationList: vi.fn(async () => [{ unread_count: 2 }]),
   getIncomingRequests: vi.fn(async () => []),
   setOnline: vi.fn(async () => {}),
+  displayNames: vi.fn(async (ids: string[]) => new Map(ids.map(id => [id, 'Leah']))),
+  getOrCreateConversation: vi.fn(async () => 'c1'),
 }));
 vi.mock('../../MessagingOverlay', () => ({
   MessagingOverlay: () => <div>friends inbox</div>,
+  ChatView: ({ target }: { target: { peerName: string } }) => <div>chat with {target.peerName}</div>,
 }));
 vi.mock('../../../auth/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 vi.mock('../../../services/companionService', () => ({ updateLastMessageTime: vi.fn(async () => {}) }));
@@ -191,5 +198,15 @@ describe('Dock', () => {
     renderDock(<CoachingPage onChanged={() => {}} />);
     await new Promise(r => setTimeout(r, 20));
     expect(screen.queryByText('Earlier with coach')).toBeNull();
+  });
+
+  it('pops up a friend message with a yellow tab, and opens their chat on tap', async () => {
+    renderDock();
+    await waitFor(() => expect(realtime.im_messages?.length).toBeGreaterThan(0));
+    for (const cb of realtime.im_messages) cb({ new: { conversation_id: 'c1', sender_id: 'leah', content: 'hey you' } });
+    expect(await screen.findByText('hey you')).toBeTruthy();
+    expect(screen.getAllByTitle('Leah · friend · 1 new').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByText('hey you'));
+    expect(await screen.findByText('chat with Leah')).toBeTruthy();
   });
 });

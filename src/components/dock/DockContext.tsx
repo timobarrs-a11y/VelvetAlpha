@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import type { CompanionWithLastMessage } from '../../services/companionService';
 import { getCompanionUnreadCounts } from '../../services/companionReadService';
 import { supabase } from '../../shared/supabase/client';
-import { setOnline } from '../../shared/supabase/queries/messaging';
+import { setOnline, displayNames, getOrCreateConversation } from '../../shared/supabase/queries/messaging';
+import { playDing } from './ding';
 import { useAuth } from '../../auth/AuthProvider';
 import type { CoachSurface } from '../../services/chatService';
 
@@ -18,11 +19,28 @@ export const MESSAGES_KEY = 'messages';
 /** A friend code from an /add/<code> link, waiting for the dock to open Messages with it. */
 export const PENDING_FRIEND_CODE_KEY = 'velvet.pending_friend_code';
 export const aiKey = (companionId: string) => `ai:${companionId}`;
+export const friendKey = (peerId: string) => `im:${peerId}`;
+
+/** A real person's chat: the same shape Messages uses. */
+export interface FriendTarget {
+  conversationId: string;
+  peerId: string;
+  peerName: string;
+  peerAvatarUrl: string | null;
+}
 
 export interface DockWindow {
   key: string;
   companionId?: string;
+  friend?: FriendTarget;
   minimized: boolean;
+}
+
+/** The "Leah: hey" popup above the dock for a message you haven't seen. */
+export interface DockToast {
+  friend: FriendTarget;
+  text: string;
+  nonce: number;
 }
 
 export interface CoachSurfaceRegistration {
@@ -50,6 +68,12 @@ interface DockApi {
   /** Unread messages per companion id, e.g. a companion who messaged while you talked to your coach. */
   unread: Record<string, number>;
   clearUnread: (companionId: string) => void;
+  /** Unread messages per friend (user id) whose window isn't showing. */
+  friendUnread: Record<string, number>;
+  toast: DockToast | null;
+  dismissToast: () => void;
+  /** Open a chat with a real person as its own window. */
+  openFriend: (friend: FriendTarget) => void;
   openMessages: (view?: 'conversations' | 'requests') => void;
   /** Open Messages and add someone by friend code. */
   addFriendByCode: (code: string) => void;
@@ -149,6 +173,68 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
     setWindows(prev => [...prev.filter(w => w.key !== key), { key, companionId, minimized: false }]);
   }, []);
 
+  const [friendUnread, setFriendUnread] = useState<Record<string, number>>({});
+  const [toast, setToast] = useState<DockToast | null>(null);
+  const windowsRef = useRef(windows);
+  windowsRef.current = windows;
+
+  const openFriend = useCallback((friend: FriendTarget) => {
+    const key = friendKey(friend.peerId);
+    setWindows(prev => [...prev.filter(w => w.key !== key), { key, friend, minimized: false }]);
+    setFriendUnread(prev => {
+      if (!prev[friend.peerId]) return prev;
+      const next = { ...prev };
+      delete next[friend.peerId];
+      return next;
+    });
+    setToast(t => (t?.friend.peerId === friend.peerId ? null : t));
+  }, []);
+  const dismissToast = useCallback(() => setToast(null), []);
+
+  // Messages from friends: ding, pop up, and add their tab, unless their chat is
+  // already open in front of you. RLS only delivers your own conversations.
+  useEffect(() => {
+    if (!userId) return;
+    const names = new Map<string, string>();
+    const nameOf = async (id: string) => {
+      if (!names.has(id)) names.set(id, (await displayNames([id])).get(id) ?? 'A friend');
+      return names.get(id)!;
+    };
+    const channel = supabase
+      .channel(`dock-friends-${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'im_messages' }, async (payload) => {
+        const msg = payload.new as { conversation_id: string; sender_id: string; content: string };
+        if (msg.sender_id === userId) return;
+        const key = friendKey(msg.sender_id);
+        const existing = windowsRef.current.find(w => w.key === key);
+        if (existing && !existing.minimized) return;
+        const friend: FriendTarget = existing?.friend ?? {
+          conversationId: msg.conversation_id,
+          peerId: msg.sender_id,
+          peerName: await nameOf(msg.sender_id),
+          peerAvatarUrl: null,
+        };
+        setWindows(prev => (prev.some(w => w.key === key) ? prev : [...prev, { key, friend, minimized: true }]));
+        setFriendUnread(prev => ({ ...prev, [msg.sender_id]: (prev[msg.sender_id] ?? 0) + 1 }));
+        setToast({ friend, text: msg.content, nonce: Date.now() });
+        playDing();
+      })
+      // Someone accepted your request: open your chat with them.
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'im_friendships', filter: `requester_id=eq.${userId}` }, async (payload) => {
+        const row = payload.new as { addressee_id: string; status: string };
+        const old = payload.old as { status?: string };
+        if (row.status !== 'accepted' || old.status === 'accepted') return;
+        const conversationId = await getOrCreateConversation(row.addressee_id).catch(() => null);
+        if (!conversationId) return;
+        const friend = { conversationId, peerId: row.addressee_id, peerName: await nameOf(row.addressee_id), peerAvatarUrl: null };
+        openFriend(friend);
+        setToast({ friend, text: 'accepted your friend request. Say hi!', nonce: Date.now() });
+        playDing();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, openFriend]);
+
   const openMessages = useCallback((view: 'conversations' | 'requests' = 'conversations') => {
     setMessagesView(view);
     bringToFront(MESSAGES_KEY);
@@ -171,6 +257,15 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
   }, []);
 
   const restore = useCallback((key: string) => {
+    const peerId = key.startsWith('im:') ? key.slice(3) : null;
+    if (peerId) {
+      setFriendUnread(prev => {
+        if (!prev[peerId]) return prev;
+        const next = { ...prev };
+        delete next[peerId];
+        return next;
+      });
+    }
     setWindows(prev => {
       const w = prev.find(x => x.key === key);
       return w ? [...prev.filter(x => x.key !== key), { ...w, minimized: false }] : prev;
@@ -203,10 +298,10 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
     : null;
 
   const api = useMemo<DockApi>(() => ({
-    windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread,
+    windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, friendUnread, toast, dismissToast, openFriend,
     openMessages, addFriendByCode, openCompanion, minimize, restore, close,
     pendingFor, consumePending, registerCoachSurface: setCoachSurface,
-  }), [windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, openMessages, addFriendByCode, openCompanion, minimize, restore, close, pendingFor, consumePending]);
+  }), [windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, friendUnread, toast, dismissToast, openFriend, openMessages, addFriendByCode, openCompanion, minimize, restore, close, pendingFor, consumePending]);
 
   return <DockContext.Provider value={api}>{children}</DockContext.Provider>;
 }

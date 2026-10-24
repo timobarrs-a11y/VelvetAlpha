@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import { MessagingOverlay } from '../MessagingOverlay';
 import { getConversationList, getIncomingRequests } from '../../shared/supabase/queries/messaging';
 import { AiChatWindow } from './AiChatWindow';
+import { FriendChatWindow } from './FriendChatWindow';
 import { markCompanionRead } from '../../services/companionReadService';
 import { MESSAGES_KEY, aiKey, markCoachDismissed, useDock, type DockWindow } from './DockContext';
 
@@ -132,6 +133,14 @@ export function Dock() {
     }
   }, [readingKey, unread, clearUnread]);
 
+  // The message popup fades on its own.
+  const { toast, dismissToast } = dock;
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(dismissToast, 6000);
+    return () => clearTimeout(t);
+  }, [toast, dismissToast]);
+
   if (!user || HIDDEN_PATHS.some(p => location.pathname.startsWith(p))) return null;
 
   const companionById = new Map(dock.companions.map(c => [c.id, c]));
@@ -170,7 +179,17 @@ export function Dock() {
                       initialFriendCode={dock.pendingFriendCode}
                       onClose={() => dock.close(MESSAGES_KEY)}
                       onMinimize={() => dock.minimize(MESSAGES_KEY)}
+                      onOpenChat={dock.openFriend}
                     />
+                  </WindowFrame>
+                </div>
+              );
+            }
+            if (w.friend) {
+              return (
+                <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
+                  <WindowFrame fullWidth={capacity === 1}>
+                    <FriendChatWindow friend={w.friend} onMinimize={() => dock.minimize(w.key)} onClose={() => dock.close(w.key)} />
                   </WindowFrame>
                 </div>
               );
@@ -204,6 +223,22 @@ export function Dock() {
 
         <div className="relative">
           <AnimatePresence>
+            {dock.toast && !inbox.bubble && (
+              <motion.button
+                key={dock.toast.nonce}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                onClick={() => dock.openFriend(dock.toast!.friend)}
+                className="absolute bottom-full left-0 z-50 mb-2 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-xl border border-amber-300/40 bg-[#1d1a10] px-3 py-2 text-left text-xs text-amber-50 shadow-lg"
+                role="status"
+              >
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-amber-300 text-[11px] font-bold text-[#1d1a10]">
+                  {dock.toast.friend.peerName.charAt(0).toUpperCase()}
+                </span>
+                <span className="min-w-0 truncate"><span className="font-semibold text-amber-200">{dock.toast.friend.peerName}</span> {dock.toast.text}</span>
+              </motion.button>
+            )}
             {inbox.bubble && (
               <motion.button
                 initial={{ opacity: 0, y: 8 }}
@@ -239,7 +274,7 @@ export function Dock() {
           </button>
         </div>
 
-        {heads.length > 0 && <div className="h-6 w-px flex-shrink-0 bg-white/10" />}
+        {(heads.length > 0 || dock.windows.some(w => w.friend)) && <div className="h-6 w-px flex-shrink-0 bg-white/10" />}
 
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-hide">
           {heads.map(c => {
@@ -274,6 +309,35 @@ export function Dock() {
                     animate={{ scale: 1 }}
                     className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white"
                     aria-label={`${count} unread from ${c.custom_name}`}
+                  >
+                    {count > 9 ? '9+' : count}
+                  </motion.span>
+                )}
+              </button>
+            );
+          })}
+          {dock.windows.filter(w => w.friend).map(w => {
+            const f = w.friend!;
+            const isShown = shownKeys.has(w.key);
+            const count = dock.friendUnread[f.peerId] ?? 0;
+            return (
+              <button
+                key={w.key}
+                type="button"
+                onClick={() => toggle(w.key, () => dock.openFriend(f))}
+                className={`relative flex h-9 flex-shrink-0 items-center gap-2 rounded-lg border-l-[3px] border-l-amber-300 px-3 text-xs font-semibold transition-colors ${
+                  isShown ? 'bg-amber-300/20 text-amber-50' : 'bg-amber-300/[0.08] text-amber-100 hover:bg-amber-300/15'
+                }`}
+                aria-pressed={isShown}
+                title={`${f.peerName} · friend${count ? ` · ${count} new` : ''}`}
+              >
+                <span className="max-w-[140px] truncate">{f.peerName}</span>
+                {!isShown && count > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white"
+                    aria-label={`${count} unread from ${f.peerName}`}
                   >
                     {count > 9 ? '9+' : count}
                   </motion.span>
