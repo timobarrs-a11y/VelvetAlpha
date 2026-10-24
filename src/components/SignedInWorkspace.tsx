@@ -60,6 +60,9 @@ const excludedPrefixes = [
   '/onboarding',
   '/create-user-avatar',
   '/age-verification',
+  '/velvet-house',
+  '/velvet-house-next',
+  '/velvet-house-legacy',
 ];
 
 function isExcludedPath(pathname: string): boolean {
