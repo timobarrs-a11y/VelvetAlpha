@@ -37,6 +37,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
 import { Dock } from './dock/Dock';
 import { DockProvider, useDock } from './dock/DockContext';
+import { AddFriendButton } from './AddFriendButton';
 import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
@@ -181,6 +182,7 @@ function WorkspaceToolbar({
             <span className="font-mono text-xs font-semibold tracking-widest text-pink-600">{formatFriendCode(friendCode)}</span>
           </button>
         )}
+        <AddFriendButton onAdd={dock.addFriendByCode} />
       </div>
 
       <div className="relative z-10 flex items-center gap-1.5 sm:gap-2">

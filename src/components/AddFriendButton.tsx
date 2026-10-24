@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { UserPlus } from 'lucide-react';
 
-/** Add a friend by their 8-digit code, next to Friends HQ (people live in the dock). */
+/** Add a friend by their 8-digit code: a pink button with a small form that drops down. */
 export function AddFriendButton({ onAdd }: { onAdd: (code: string) => void }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
@@ -34,15 +34,16 @@ export function AddFriendButton({ onAdd }: { onAdd: (code: string) => void }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className={`flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${open ? 'border-pink-400 bg-pink-50 text-pink-600' : 'border-[#2a1424]/12 bg-white text-pink-600 hover:bg-pink-50'}`}
+        className="flex items-center gap-1 rounded-lg bg-pink-500 px-2.5 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-pink-600"
         aria-expanded={open}
         aria-label="Add a friend"
         title="Add a friend by their friend code"
       >
-        <UserPlus className="h-4 w-4" />
+        <UserPlus className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Add friend</span>
       </button>
       {open && (
-        <form onSubmit={submit} className="absolute bottom-full left-0 z-50 mb-2 w-64 rounded-xl border border-[#f5cfe0] bg-white p-3 text-[#2a1424] shadow-xl">
+        <form onSubmit={submit} className="absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-[#f5cfe0] bg-white p-3 text-[#2a1424] shadow-xl">
           <label className="block text-[11px] font-semibold text-[#2a1424]/70" htmlFor="dock-add-friend">Their friend code</label>
           <input
             id="dock-add-friend"

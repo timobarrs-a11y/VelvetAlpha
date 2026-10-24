@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, UserPlus } from 'lucide-react';
-import { AddFriendButton } from './AddFriendButton';
 import { supabase } from '../../shared/supabase/client';
 import { useAuth } from '../../auth/AuthProvider';
 import { MessagingOverlay } from '../MessagingOverlay';
@@ -288,7 +287,6 @@ export function Dock() {
             )}
           </button>
         </div>
-        <AddFriendButton onAdd={dock.addFriendByCode} />
 
         {(heads.length > 0 || dock.windows.some(w => w.friend)) && <div className="h-6 w-px flex-shrink-0 bg-[#2a1424]/12" />}
 
