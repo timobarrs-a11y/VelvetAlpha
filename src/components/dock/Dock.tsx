@@ -72,6 +72,7 @@ function useInbox(userId: string | undefined) {
     const channel = supabase
       .channel('im-inbox-watch')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'im_messages' }, () => { refresh(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'im_friendships' }, () => { refresh(); })
       .subscribe();
     return () => {
       clearInterval(interval);
