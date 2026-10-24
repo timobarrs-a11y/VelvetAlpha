@@ -121,6 +121,7 @@ export function FriendCheckers({ conversationId, myId, peerId, peerName }: { con
           // The board draws row 0 on top for 'black'; red starts on rows 5-7, so this keeps your pieces at the bottom.
           playerColor={myColor === 'red' ? 'black' : 'red'}
           isPlayerTurn={myTurn}
+          waitingLabel={winner ? 'Game over' : `${peerName}'s move…`}
         />
       </div>
     </div>

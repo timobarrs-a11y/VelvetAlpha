@@ -13,6 +13,8 @@ interface CheckersBoardProps {
   isPlayerTurn: boolean;
   activeAnimations?: PieceAnimation[];
   onAnimationComplete?: (animation: PieceAnimation) => void;
+  /** Shown while it's the other side's turn. Leave unset for the AI game ("AI is thinking..."). */
+  waitingLabel?: string;
 }
 
 export function CheckersBoard({
@@ -23,7 +25,8 @@ export function CheckersBoard({
   playerColor,
   isPlayerTurn,
   activeAnimations = [],
-  onAnimationComplete
+  onAnimationComplete,
+  waitingLabel,
 }: CheckersBoardProps) {
   const [animatingPieces, setAnimatingPieces] = useState<Set<string>>(new Set());
 
@@ -189,7 +192,13 @@ export function CheckersBoard({
         })}
       </AnimatePresence>
 
-      {!isPlayerTurn && (
+      {!isPlayerTurn && waitingLabel && (
+        // Against a friend: a small note, and the board stays in full view.
+        <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white">
+          {waitingLabel}
+        </div>
+      )}
+      {!isPlayerTurn && !waitingLabel && (
         <div className="absolute inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center rounded-lg">
           <div className="bg-white px-6 py-3 rounded-lg shadow-xl">
             <p className="text-gray-900 font-semibold">AI is thinking...</p>

@@ -39,3 +39,12 @@ describe('particles', () => {
     expect(p.count).toBe(0);
   });
 });
+
+describe('particle bursts', () => {
+  it('puffs a set number of particles at once', async () => {
+    const { createParticles } = await import('../engine/particles');
+    const pfx = createParticles(100, () => 0.5);
+    pfx.burst('dust', 1, 2, 2, 0.02, 6);
+    expect(pfx.count).toBe(6);
+  });
+});

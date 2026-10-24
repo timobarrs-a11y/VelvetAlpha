@@ -185,7 +185,7 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
   }, [pending, sending, onConsumePending, send]);
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
       <div className="flex items-center gap-2.5 border-b border-white/8 px-3 py-2.5">
         <div className={`h-11 w-11 flex-shrink-0 overflow-hidden rounded-full border-2 ${isCoach ? 'border-emerald-400/70' : 'border-pink-400/60'}`}>
           <Avatar config={companionAvatarConfig(companion)} className="h-full w-full" />
@@ -197,13 +197,13 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
             {isCoach && surface ? <> · <span className="text-emerald-300">on {SURFACE_LABEL[surface]}</span></> : null}
           </p>
         </div>
-        <button type="button" onClick={() => { onMinimize(); navigate(`/chat?companion=${companion.id}`); }} className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" aria-label={`Open full chat with ${companion.custom_name}`} title="Open full chat">
+        <button type="button" onClick={() => { onMinimize(); navigate(`/chat?companion=${companion.id}`); }} className="flex-shrink-0 rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" aria-label={`Open full chat with ${companion.custom_name}`} title="Open full chat">
           <Maximize2 className="h-4 w-4" />
         </button>
-        <button type="button" onClick={onMinimize} className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" aria-label={`Minimize ${companion.custom_name}`} title="Minimize">
+        <button type="button" onClick={onMinimize} className="flex-shrink-0 rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" aria-label={`Minimize ${companion.custom_name}`} title="Minimize">
           <Minus className="h-4 w-4" />
         </button>
-        <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" aria-label={`Close ${companion.custom_name}`} title="Close">
+        <button type="button" onClick={onClose} className="flex-shrink-0 rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" aria-label={`Close ${companion.custom_name}`} title="Close">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -219,10 +219,10 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
           return (
             <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {m.role === 'user' ? (
-                <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-pink-600/80 px-3.5 py-2 text-sm text-white">{m.content}</p>
+                <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-pink-600/80 px-3.5 py-2 text-sm text-white [overflow-wrap:anywhere]">{m.content}</p>
               ) : (
-                <div className="max-w-[92%]">
-                  <div className="dock-md rounded-2xl rounded-bl-md bg-white/[0.06] px-3.5 py-2 text-sm text-white/90">
+                <div className="min-w-0 max-w-[92%]">
+                  <div className="dock-md overflow-x-auto rounded-2xl rounded-bl-md bg-white/[0.06] px-3.5 py-2 text-sm text-white/90 [overflow-wrap:anywhere]">
                     <AtlasMarkdown content={m.content} />
                   </div>
                   <DoneCards
