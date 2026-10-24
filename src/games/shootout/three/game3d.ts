@@ -13,6 +13,7 @@ import { legAt, planFlight, type Leg, type V3 } from '../game';
 import * as sfx from '../audio';
 import { ballTexture, FLOOR, floorTexture, jerseyTexture, makeScoreboard, ribbonTexture } from './textures';
 import { Net } from './net';
+import type { RivalRun } from '../rivals';
 import { Crowd } from './crowd';
 
 // 3-Point Shootout in 3D: a lit arena with a lacquered floor, glass board and
@@ -26,7 +27,7 @@ export type Phase = 'walk' | 'aim' | 'hold' | 'flight' | 'replay' | 'done';
 export type ShootoutEvent =
   | { type: 'rack'; label: string; index: number; money: boolean }
   | { type: 'ball'; kind: Ball['kind'] }
-  | { type: 'grade'; grade: Grade }
+  | { type: 'grade'; grade: Grade; error: number; window: number }
   | { type: 'make'; points: number; outcome: Outcome; streak: number }
   | { type: 'miss'; outcome: Outcome }
   | { type: 'fire' }
@@ -34,6 +35,17 @@ export type ShootoutEvent =
   | { type: 'final10' };
 
 export interface RunResult { score: number; max: number; makes: number; shots: number; bestStreak: number; level: Level }
+
+/** Options for one run: a custom course and clock (tiebreakers), a jersey, or a rival on autopilot. */
+export interface RunOptions {
+  course?: Spot[];
+  clock?: number;
+  jersey?: { colors: [string, string]; number: number };
+  /** Play a rival's pre-simulated run from the broadcast camera instead of taking input. */
+  auto?: RivalRun;
+  /** Playback speed for autopilot runs. */
+  speed?: number;
+}
 
 export interface Callbacks {
   onEvent?: (e: ShootoutEvent) => void;
@@ -89,6 +101,11 @@ export class Shootout3D {
   /** Frame governor: 0 = full quality; each step trades detail for frame rate. */
   private perf = { acc: 0, n: 0, skip: 90, level: 0, good: 0, ups: 0, frame: 0 };
   private noDraw = false;
+  private opts: RunOptions;
+  /** Autopilot: the rival run being played back, and the next shot in it. */
+  private auto: RivalRun | null;
+  private autoIdx = 0;
+  private clock0: number;
 
   // World pieces.
   private net!: Net;
@@ -141,12 +158,15 @@ export class Shootout3D {
   private camLook = new THREE.Vector3(0, 1, 4);
   private reduced: boolean;
 
-  constructor(private canvas: HTMLCanvasElement, level: Level, moneyRack: number, cb: Callbacks = {}) {
+  constructor(private canvas: HTMLCanvasElement, level: Level, moneyRack: number, cb: Callbacks = {}, opts: RunOptions = {}) {
     this.cb = cb;
+    this.opts = opts;
+    this.auto = opts.auto ?? null;
     this.level = level;
-    this.course = buildCourse(moneyRack);
+    this.course = opts.course ?? buildCourse(moneyRack);
     this.max = MAX_SCORE(this.course);
-    this.clock = level.clock;
+    this.clock = opts.clock ?? level.clock;
+    this.clock0 = this.clock;
     this.reduced = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const coarse = window.matchMedia?.('(pointer: coarse)').matches;
     this.quality = coarse || Math.min(window.innerWidth, window.innerHeight) < 600 ? 'mid' : 'high';
@@ -432,8 +452,8 @@ export class Shootout3D {
 
   private buildPlayer(): void {
     const skin = new THREE.MeshStandardMaterial({ color: 0x8d5a3b, roughness: 0.55 });
-    const jersey = new THREE.MeshStandardMaterial({ map: jerseyTexture(30), roughness: 0.7 });
-    const shorts = new THREE.MeshStandardMaterial({ color: 0x5c163a, roughness: 0.7 });
+    const jersey = new THREE.MeshStandardMaterial({ map: jerseyTexture(this.opts.jersey?.number ?? 30, this.opts.jersey?.colors), roughness: 0.7 });
+    const shorts = new THREE.MeshStandardMaterial({ color: this.opts.jersey?.colors[0] ?? 0x5c163a, roughness: 0.7 });
     const shoe = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
     const P = this.playerParts;
     const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.42, 4, 12), jersey); torso.position.y = 1.32; P.torso = torso;
@@ -539,17 +559,29 @@ export class Shootout3D {
   }
 
   press(): void {
+    if (this.auto) return;
     if (this.phase === 'replay') { this.endReplay(); return; }
     if (this.phase !== 'aim') return;
     this.phase = 'hold'; this.holdT = 0; this.greenPinged = false;
   }
 
-  release(): void { if (this.phase === 'hold') this.shoot(); }
+  release(): void { if (this.phase === 'hold' && !this.auto) this.shoot(); }
+
+  /** Autopilot only: jump to the end of the rival's run (same result as watching it). */
+  skip(): void {
+    const run = this.auto;
+    if (!run || this.phase === 'done') return;
+    this.score = run.score;
+    this.makes = run.shots.filter(s => s.points > 0).length;
+    this.shots = run.shots.length;
+    this.clock = this.clock0 - run.end;
+    this.finish();
+  }
 
   get spot(): Spot { return this.course[this.spotIdx]; }
 
   hud() {
-    return { score: this.score, time: Math.max(0, this.clock), spot: this.spot?.label ?? '', streak: this.streak, phase: this.phase, fade: this.fade, max: this.max, level: this.level.name };
+    return { elapsed: this.clock0 - Math.max(0, this.clock), score: this.score, time: Math.max(0, this.clock), spot: this.spot?.label ?? '', streak: this.streak, phase: this.phase, fade: this.fade, max: this.max, level: this.level.name };
   }
 
   rackState(): Array<{ kind: Ball['kind']; state: 'done' | 'now' | 'left' }> {
@@ -574,6 +606,7 @@ export class Shootout3D {
   }
 
   private frame(real: number): void {
+    if (this.auto) real *= this.opts.speed ?? 1;
     // Hitstop freezes the action for a beat on a swish; replays run slow.
     if (this.hitstop > 0) { this.hitstop -= real; this.render(real); return; }
     const scale = this.phase === 'replay' ? 0.32 : 1;
@@ -583,13 +616,27 @@ export class Shootout3D {
 
     if (this.phase !== 'done' && this.phase !== 'replay') {
       this.clock -= real;
+      // Autopilot: the clock follows the simulated run, so watching and skipping agree.
+      if (this.auto) {
+        const next = this.auto.shots[this.autoIdx];
+        this.clock = Math.max(this.clock, this.clock0 - (next ? next.t : this.auto.end));
+      }
       const sec = Math.ceil(this.clock);
       if (this.clock <= 5 && sec !== this.lastTick && sec > 0) { this.lastTick = sec; sfx.playTick(); }
       if (this.clock <= 10 && !this.sentFinal) { this.sentFinal = true; this.cb.onEvent?.({ type: 'final10' }); }
-      if (this.clock <= 0 && this.phase !== 'flight') { this.finish(); }
+      if (this.clock <= 0 && this.phase !== 'flight' && !this.auto) { this.finish(); }
     }
     if (this.phase === 'walk' && this.phaseT > 1.6) { this.enter('aim'); this.fade = 1; this.cb.onEvent?.({ type: 'ball', kind: this.spot.balls[this.ballIdx].kind }); }
-    if (this.phase === 'hold') {
+    if (this.auto && this.phase === 'aim') {
+      const next = this.auto.shots[this.autoIdx];
+      if (!next || next.spotIdx !== this.spotIdx || next.ballIdx !== this.ballIdx) { this.finish(); }
+      else if (this.phaseT >= this.auto.rival.gather) { this.phase = 'hold'; this.holdT = 0; this.greenPinged = true; }
+    }
+    if (this.auto && this.phase === 'hold') {
+      this.holdT += dt;
+      const next = this.auto.shots[this.autoIdx];
+      if (next && this.holdT >= this.win.rise + next.error) this.shoot();
+    } else if (this.phase === 'hold') {
       this.holdT += dt;
       const { green, rise } = this.win;
       if (!this.greenPinged && this.holdT >= rise - (green * fireBoost(this.streak)) / 2) { this.greenPinged = true; sfx.playGreen(); }
@@ -638,18 +685,29 @@ export class Shootout3D {
 
   private shoot(): void {
     const ball = this.spot.balls[this.ballIdx];
-    const { grade } = judge(this.holdT, this.win.rise, this.win.green * fireBoost(this.streak));
-    this.outcome = resolveShot(grade);
+    const windowW = this.win.green * fireBoost(this.streak);
+    const planned = this.auto?.shots[this.autoIdx];
+    let grade: Grade, error: number;
+    if (planned) {
+      grade = planned.grade; error = planned.error; this.outcome = planned.outcome;
+      this.autoIdx++;
+      this.clock = this.clock0 - planned.t;
+    } else {
+      ({ grade, error } = judge(this.holdT, this.win.rise, windowW));
+      this.outcome = resolveShot(grade);
+    }
     this.ballNow = ball;
     this.ball.material = this.ballMats[ball.kind];
     // The ball leaves from the hands, wherever the jump put them.
-    const hand = new THREE.Vector3(); this.heldBall.getWorldPosition(hand);
+    const hand = new THREE.Vector3();
+    if (this.auto) hand.copy(this.ball.position);
+    else this.heldBall.getWorldPosition(hand);
     const from: V3 = [hand.x, hand.z, hand.y];
     this.flight = planFlight(from, this.outcome, Math.random() < 0.5 ? -1 : 1);
     this.flightT = 0; this.legPlayed = 0;
     this.shots++;
     sfx.playRelease();
-    this.cb.onEvent?.({ type: 'grade', grade });
+    this.cb.onEvent?.({ type: 'grade', grade, error, window: windowW });
     this.enter('flight');
     if (!isMake(this.outcome)) {
       this.streak = 0;
@@ -672,7 +730,7 @@ export class Shootout3D {
     const big = pts > 1 || this.streak >= 3 || this.outcome === 'swish';
     sfx.playCheer(pts + (this.streak >= 3 ? 1 : 0));
     this.crowd.cheer(pts + (this.streak >= 3 ? 1 : 0));
-    if (this.outcome === 'swish' && !this.reduced) this.hitstop = 0.07;
+    if (this.outcome === 'swish' && !this.reduced && !this.auto) this.hitstop = 0.07;
     this.punch = big ? 1 : 0.5;
     if (!this.reduced) this.shake = big ? 0.6 : 0.25;
     try { navigator.vibrate?.(pts > 1 ? [20, 40, 30] : 18); } catch { /* not supported */ }
@@ -700,7 +758,7 @@ export class Shootout3D {
   /** After a shot lands: a replay for the big ones, else on to the next ball. */
   private afterShot(): void {
     const big = this.outcome && isMake(this.outcome) && this.ballNow && (this.ballNow.points >= 2 || this.isLastBall());
-    if (big && !this.reduced) {
+    if (big && !this.reduced && !this.auto) {
       this.enter('replay'); this.replayT = 0; this.legPlayed = 0; this.fade = 1;
       this.cb.onEvent?.({ type: 'replay', on: true });
       return;
@@ -742,6 +800,7 @@ export class Shootout3D {
 
   private finish(): void {
     if (this.phase === 'done') return;
+    if (this.auto) this.clock = this.clock0 - this.auto.end;
     this.enter('done'); this.fade = 1;
     sfx.playHorn();
     this.crowd.cheer(2);
@@ -761,13 +820,23 @@ export class Shootout3D {
     const bp = flying ? this.ballPos(this.phase === 'replay' ? this.replayT : this.flightT) : null;
     this.ball.visible = !!bp;
     if (bp) { this.ball.position.copy(toThree(bp)); this.ball.rotation.x -= real * 14 * (this.phase === 'replay' ? 0.32 : 1); }
+    if (this.auto && !bp && (this.phase === 'aim' || this.phase === 'hold')) {
+      // The rival's ball: at the chest while gathering, overhead in the jump.
+      const pp = this.player.position;
+      const j = this.phase === 'hold' ? Math.min(1, this.holdT / this.win.rise) : 0;
+      this.ball.visible = true;
+      this.ball.material = this.ballMats[this.spot.balls[this.ballIdx]?.kind ?? 'regular'];
+      // Out in front of the body, toward the rim.
+      const d = Math.hypot(pp.x, pp.z) || 1, out = 0.32 - j * 0.12;
+      this.ball.position.set(pp.x - (pp.x / d) * out, pp.y + 1.3 + j * 1.15, pp.z - (pp.z / d) * out);
+    }
     this.net.step(real * (this.phase === 'replay' ? 0.32 : 1), bp, BALL_R, 0);
     this.stepConfetti(real);
     this.stepFlames(bp);
 
     // Arms and held ball: first person only.
-    const fp = this.phase === 'aim' || this.phase === 'hold';
-    this.arms.visible = fp || (this.phase === 'flight' && this.flightT < 0.25);
+    const fp = !this.auto && (this.phase === 'aim' || this.phase === 'hold');
+    this.arms.visible = fp || (!this.auto && this.phase === 'flight' && this.flightT < 0.25);
     this.heldBall.visible = fp;
     this.ballRig.rotation.set(0, 0, 0);
     if (fp) {
@@ -818,7 +887,7 @@ export class Shootout3D {
 
   /** The shooter, seen from the broadcast camera: jogs to the next rack, then turns to the hoop. */
   private updatePlayer(t: number): void {
-    const show = this.phase === 'walk' || this.phase === 'done';
+    const show = this.phase === 'walk' || this.phase === 'done' || (!!this.auto && this.phase !== 'replay');
     this.player.visible = show;
     if (!show) return;
     const to = spotPosition(this.spot ?? this.course[this.course.length - 1]);
@@ -832,17 +901,37 @@ export class Shootout3D {
     P.legL.rotation.x = sw; P.legR.rotation.x = -sw; P.armL.rotation.x = -sw * 0.8; P.armR.rotation.x = sw * 0.8;
     if (this.phase === 'done') { P.armL.rotation.x = P.armR.rotation.x = -2.9 + Math.sin(t * 6) * 0.15; }
     this.player.position.y = moving ? Math.abs(Math.sin(t * 13)) * 0.05 : 0;
+    if (this.auto) {
+      // A rival's jumper: dip and gather, rise with the ball overhead, follow through, land.
+      const rise = this.win.rise;
+      const j = this.phase === 'hold' ? Math.sin(Math.min(1, this.holdT / rise) * Math.PI * 0.5)
+        : this.phase === 'flight' ? Math.max(0, Math.cos(Math.min(1, this.flightT / 0.45) * Math.PI * 0.5)) : 0;
+      const dip = this.phase === 'aim' ? Math.sin(Math.min(1, this.phaseT / Math.max(0.1, this.auto.rival.gather)) * Math.PI) * 0.08 : 0;
+      this.player.position.y = j * 0.5 - dip;
+      if (this.phase === 'aim' || this.phase === 'hold' || this.phase === 'flight') {
+        const up = this.phase === 'aim' ? -1.2 : -2.6 - (this.phase === 'flight' ? 0.3 : 0);
+        P.armL.rotation.x = up; P.armR.rotation.x = up - 0.1;
+        P.legL.rotation.x = P.legR.rotation.x = dip * 2;
+      }
+    }
   }
 
   private updateCamera(real: number): void {
     let pos: THREE.Vector3, look: THREE.Vector3, fov: number;
     const k = 1 - Math.pow(0.0015, real); // smooth follow
-    if (this.phase === 'walk' || this.phase === 'done') {
+    if (this.phase === 'walk' || this.phase === 'done' || (this.auto && this.phase !== 'replay')) {
       // Broadcast: high on the sideline, tracking the shooter with the hoop in frame.
       const pp = this.player.position;
       pos = new THREE.Vector3(-11.5, 6.2, pp.z * 0.5 + 6.5);
       look = new THREE.Vector3(pp.x * 0.6, 1.4, pp.z * 0.55);
       fov = 42;
+      if (this.auto && this.phase !== 'walk') {
+        // Watching a rival: frame shooter and rim together, pushing in a touch while the ball's up.
+        const push = this.phase === 'flight' ? Math.min(1, this.flightT * 1.5) : 0;
+        const k = this.camera.aspect < 1 ? 0.68 : 0.45; // tall screens favour the shooter
+        look.set(pp.x * k, 1.9 + push * 0.6, pp.z * k);
+        fov = 40 - push * 4;
+      }
       this.camPos.lerp(pos, this.fade > 0.5 ? 1 : k);
       this.camLook.lerp(look, this.fade > 0.5 ? 1 : k);
     } else if (this.phase === 'replay') {

@@ -164,13 +164,13 @@ export function ribbonTexture(text: string, color: string): THREE.CanvasTexture 
 }
 
 /** A jersey: colour, trim and a number, for the shooter seen from the broadcast camera. */
-export function jerseyTexture(number: number): THREE.CanvasTexture {
+export function jerseyTexture(number: number, colors: [string, string] = ['#5C163A', '#F5C451']): THREE.CanvasTexture {
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
   const g = cv.getContext('2d')!;
-  g.fillStyle = '#5C163A'; g.fillRect(0, 0, 256, 256);
-  g.fillStyle = '#F5C451'; g.fillRect(0, 0, 256, 14); g.fillRect(0, 242, 256, 14);
+  g.fillStyle = colors[0]; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = colors[1]; g.fillRect(0, 0, 256, 14); g.fillRect(0, 242, 256, 14);
   g.font = '900 120px Inter, Helvetica, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.lineWidth = 8; g.strokeStyle = '#F5C451'; g.strokeText(String(number), 64, 130); g.fillStyle = '#FFFFFF'; g.fillText(String(number), 64, 130);
+  g.lineWidth = 8; g.strokeStyle = colors[1]; g.strokeText(String(number), 64, 130); g.fillStyle = '#FFFFFF'; g.fillText(String(number), 64, 130);
   g.strokeText(String(number), 192, 130); g.fillText(String(number), 192, 130);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
   return t;
