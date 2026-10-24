@@ -3,21 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, Heart, Users, Crown, Cherry, Zap, Circle,
-  Rocket, LogOut, Gamepad2, Lightbulb, FileText, User,
+  Rocket, Gamepad2, Lightbulb, FileText,
   UsersRound, Calendar, Youtube, Newspaper, MessageSquare,
   Info, Plus,
-  Sparkles, Flame, Wand2, Volume2, VolumeX, Bot, MapPin, Brain,
-  HelpCircle,
+  Sparkles, Flame, Bot, MapPin, Brain,
 } from 'lucide-react';
-import { useAudioScene } from '../hooks/useAudioScene';
 import {
   Button, ModalShell, LoadingState, EmptyState,
-  PageShell, Pill, SectionHeader, Badge, HomeLayoutSwitch,
+  PageShell, Pill, SectionHeader, Badge,
 } from '../shared/ui';
-import { SubscriptionBanner } from '../components/SubscriptionBanner';
-import { useSubscription } from '../hooks/useSubscription';
 import { CreateGroupChatModal } from '../components/CreateGroupChatModal';
-import { CustomizationPanel } from '../components/CustomizationPanel';
 import { useCustomization } from '../hooks/useCustomization';
 import { POINTER_SYMBOLS } from '../services/customizationService';
 import FeedbackModal from '../components/FeedbackModal';
@@ -106,23 +101,13 @@ const HUB_TILES: HubTileDef[] = [
 export function CompanionLobbyPage() {
   const navigate = useNavigate();
   const lobby = useLobbyData();
-  const { muted, toggleMute } = useAudioScene();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
   const {
     customization,
     checkedInToday: _checkedInToday,
     justUnlocked,
-    setPointer,
-    setShowTrail,
-    setTrailStyle,
-    setAnimationStyle,
-    setCursorColor,
-    setButtonHoverStyle,
-    setTranslucentUI,
     dismissUnlockNotice,
   } = useCustomization();
-  const { subscriptionInfo } = useSubscription();
 
   const {
     companions,
@@ -220,54 +205,6 @@ export function CompanionLobbyPage() {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <header className="mb-6 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-2 min-w-0">
-          <Heart className="w-5 h-5 text-pink-400 flex-shrink-0" fill="currentColor" style={{ filter: 'drop-shadow(0 0 6px rgba(244,114,182,0.70))' }} />
-          <h1 className="ds-title-gradient text-3xl md:text-4xl font-bold font-display truncate">Velvet Lobby</h1>
-          {subscriptionInfo && (
-            <SubscriptionBanner tier={subscriptionInfo.tier} messagesRemaining={subscriptionInfo.messagesRemaining} compact />
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-          <HomeLayoutSwitch mode="compact" className="hidden md:inline-flex" />
-          <Pill
-            onClick={toggleMute}
-            title={muted ? 'Unmute music' : 'Mute music'}
-            aria-label={muted ? 'Unmute music' : 'Mute music'}
-            icon={muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          />
-          <Pill
-            onClick={() => setShowCustomizationPanel(true)}
-            icon={<Wand2 className="w-4 h-4 text-pink-400" />}
-            hideLabelOnMobile
-          >
-            Loyalty Rewards
-          </Pill>
-          {companions.length > 0 && (
-            <Pill
-              onClick={() => navigate(`/chat?companion=${companions[0].id}&tour=1`)}              icon={<HelpCircle className="w-4 h-4 text-sky-300" />}
-              hideLabelOnMobile
-            >
-              Tour
-            </Pill>
-          )}
-          <Pill
-            onClick={() => navigate('/profile')}            icon={<User className="w-4 h-4" />}
-            hideLabelOnMobile
-          >
-            Profile
-          </Pill>
-          <Pill
-            variant="quiet"
-            onClick={lobby.handleSignOut}
-            title="Sign out"
-            aria-label="Sign out"
-            icon={<LogOut className="w-4 h-4" />}
-          />
-        </div>
-      </header>
-
       {lobby.setupResumeRoute && (
         <div className="mb-6">
           <FinishSetupCard onResume={lobby.resumeSetup} />
@@ -277,12 +214,6 @@ export function CompanionLobbyPage() {
       {(customization?.current_streak ?? 0) > 0 && (
         <div className="mb-6 flex justify-center">
           <Badge tone="#fbbf24" icon={<Flame className="w-3 h-3" />}>{customization!.current_streak}d streak</Badge>
-        </div>
-      )}
-
-      {subscriptionInfo && (
-        <div className="mb-6 lg:hidden">
-          <SubscriptionBanner tier={subscriptionInfo.tier} messagesRemaining={subscriptionInfo.messagesRemaining} compact />
         </div>
       )}
 
@@ -472,26 +403,6 @@ export function CompanionLobbyPage() {
         </div>
       </ModalShell>
 
-      {customization && (
-        <CustomizationPanel
-          isOpen={showCustomizationPanel}
-          onClose={() => setShowCustomizationPanel(false)}
-          customization={customization}
-          companions={companions}
-          onSetPointer={setPointer}
-          onSetShowTrail={setShowTrail}
-          onSetTrailStyle={setTrailStyle}
-          onSetAnimationStyle={setAnimationStyle}
-          onSetCursorColor={setCursorColor}
-          onSetButtonHoverStyle={setButtonHoverStyle}
-          onSetTranslucentUI={setTranslucentUI}
-          onCompanionFontUpdated={(companionId, fontFamily) => {
-            lobby.setCompanionsList(prev =>
-              prev.map(c => c.id === companionId ? { ...c, font_family: fontFamily } : c)
-            );
-          }}
-        />
-      )}
 
     </PageShell>
   );

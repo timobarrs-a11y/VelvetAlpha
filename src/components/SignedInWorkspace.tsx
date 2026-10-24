@@ -30,6 +30,8 @@ import {
   WifiOff,
   Home,
   Building2,
+  Wand2,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
@@ -45,6 +47,10 @@ import { useCustomization } from '../hooks/useCustomization';
 import { buildWallpaperMeta } from '../services/wallpaperService';
 import { useAccess } from '../hooks/useAccess';
 import { LockScreen } from './LockScreen';
+import { SubscriptionBanner } from './SubscriptionBanner';
+import { useAudioScene } from '../hooks/useAudioScene';
+import { CustomizationPanel } from './CustomizationPanel';
+import { HomeLayoutSwitch } from '../shared/ui';
 
 interface SignedInWorkspaceProps {
   children: ReactNode;
@@ -73,27 +79,20 @@ function WorkspaceToolbar({
   available,
   onToggleAvailable,
   onOpenMobileNav,
+  onOpenRewards,
+  lobby,
 }: {
   available: boolean;
   onToggleAvailable: () => void;
   onOpenMobileNav: () => void;
+  onOpenRewards: () => void;
+  lobby: LobbyData;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return window.localStorage.getItem('velvet.workspace.sound') !== 'off';
-  });
+  const { muted, toggleMute } = useAudioScene();
 
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Your space';
-
-  const toggleSound = () => {
-    setSoundEnabled(enabled => {
-      const nextEnabled = !enabled;
-      window.localStorage.setItem('velvet.workspace.sound', nextEnabled ? 'on' : 'off');
-      return nextEnabled;
-    });
-  };
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -133,6 +132,10 @@ function WorkspaceToolbar({
       </div>
 
       <div className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+        {lobby.subscriptionInfo && (
+          <SubscriptionBanner tier={lobby.subscriptionInfo.tier} messagesRemaining={lobby.subscriptionInfo.messagesRemaining} compact />
+        )}
+        <HomeLayoutSwitch mode="compact" className="hidden md:inline-flex" />
         <button
           type="button"
           onClick={onToggleAvailable}
@@ -149,12 +152,32 @@ function WorkspaceToolbar({
         </button>
         <button
           type="button"
-          onClick={toggleSound}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 text-white/60"
-          aria-label={soundEnabled ? 'Mute workspace sounds' : 'Enable workspace sounds'}
-          title={soundEnabled ? 'Mute workspace sounds' : 'Enable workspace sounds'}
+          onClick={onOpenRewards}
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 text-pink-400"
+          aria-label="Loyalty rewards"
+          title="Loyalty rewards"
         >
-          {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          <Wand2 className="h-4 w-4" />
+        </button>
+        {lobby.companions.length > 0 && (
+          <button
+            type="button"
+            onClick={() => navigate(`/chat?companion=${lobby.companions[0].id}&tour=1`)}
+            className="hidden h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 sm:flex text-sky-300"
+            aria-label="Take the tour"
+            title="Take the tour"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={toggleMute}
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 text-white/60"
+          aria-label={muted ? 'Unmute music' : 'Mute music'}
+          title={muted ? 'Unmute music' : 'Mute music'}
+        >
+          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </button>
         <button
           type="button"
@@ -359,8 +382,20 @@ function useAvailability(user: { id: string } | null | undefined) {
 function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: string } }) {
   const location = useLocation();
   const lobby = useLobbyData();
-  const { customization } = useCustomization();
+  const {
+    customization,
+    setPointer,
+    setShowTrail,
+    setTrailStyle,
+    setAnimationStyle,
+    setCursorColor,
+    setButtonHoverStyle,
+    setTranslucentUI,
+    setToolbarBackgroundMode,
+    setToolbarTextColor,
+  } = useCustomization();
   const { showLockScreen } = useAccess();
+  const [showRewards, setShowRewards] = useState(false);
   const textColorKey: ToolbarTextColorKey = customization?.toolbar_text_color ?? 'light';
   const textColorDef = TOOLBAR_TEXT_COLOR_PRESETS.find(p => p.key === textColorKey) ?? TOOLBAR_TEXT_COLOR_PRESETS[0];
   const inkColor = textColorDef.color;
@@ -388,13 +423,35 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   return (
     <div className="h-screen overflow-hidden bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
-        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} />
+        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} onOpenRewards={() => setShowRewards(true)} lobby={lobby} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
           <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
           <main className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/8">{children}</main>
         </div>
         <div className="relative z-20 flex-shrink-0"><MessagingOverlayMount inkColor={inkColor} inkMuted={inkMuted} /></div>
         <MedalToastHost />
+        {customization && (
+          <CustomizationPanel
+            isOpen={showRewards}
+            onClose={() => setShowRewards(false)}
+            customization={customization}
+            companions={lobby.companions}
+            onSetPointer={setPointer}
+            onSetShowTrail={setShowTrail}
+            onSetTrailStyle={setTrailStyle}
+            onSetAnimationStyle={setAnimationStyle}
+            onSetCursorColor={setCursorColor}
+            onSetButtonHoverStyle={setButtonHoverStyle}
+            onSetTranslucentUI={setTranslucentUI}
+            onSetToolbarBackgroundMode={setToolbarBackgroundMode}
+            onSetToolbarTextColor={setToolbarTextColor}
+            onCompanionFontUpdated={(companionId, fontFamily) => {
+              lobby.setCompanionsList(prev =>
+                prev.map(c => c.id === companionId ? { ...c, font_family: fontFamily } : c)
+              );
+            }}
+          />
+        )}
         <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} lobby={lobby} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
       </div>
       {showLockScreen && !location.pathname.startsWith('/pricing') && !location.pathname.startsWith('/success') && !location.pathname.startsWith('/billing') && (

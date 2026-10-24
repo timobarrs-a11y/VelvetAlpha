@@ -3,19 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Newspaper, PlayCircle, Calendar, FileText, Lightbulb, Bot, MapPin,
-  Heart, LogOut, Volume2, VolumeX,
+  Heart,
   Plus, Sparkles, ArrowRight,
   Target, CheckCircle2, UsersRound, Layers,
   Sunrise, Zap, User, MessageSquare, BookOpen,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
-import { useAudioScene } from '../hooks/useAudioScene';
 import { supabase } from '../shared/supabase/client';
 import {
-  LoadingState, PageShell, Pill, HomeLayoutSwitch, Badge, Segmented,
+  LoadingState, PageShell, Badge, Segmented,
   ModalShell, EmptyState, Button,
 } from '../shared/ui';
-import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { companionAvatarConfig, TONE_COLOR, FinishSetupCard } from '../components/lobby';
 import { Avatar } from '../components/Avatar';
 import { colorNameToHex } from '../utils/colorMapping';
@@ -37,14 +35,12 @@ interface CheckIn {
 export function HomeV3Page() {
   const navigate = useNavigate();
   const lobby = useLobbyData();
-  const { muted, toggleMute } = useAudioScene();
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [feedTab, setFeedTab] = useState<FeedTab>('feed');
 
   const {
     companions,
     loading,
-    subscriptionInfo,
   } = lobby;
 
   const coaches = companions.filter(c => c.relationship_type === 'mentor');
@@ -310,33 +306,6 @@ export function HomeV3Page() {
 
   return (
     <div className="ds-page flex min-h-full min-w-0 flex-col overflow-hidden text-white">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2.5 sm:py-3 flex-shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Heart className="w-5 h-5 text-pink-400 flex-shrink-0" fill="currentColor" style={{ filter: 'drop-shadow(0 0 6px rgba(244,114,182,0.70))' }} />
-          <h1 className="ds-title-gradient text-lg sm:text-xl font-bold font-display truncate hidden sm:block">Velvet</h1>
-          {subscriptionInfo && (
-            <SubscriptionBanner tier={subscriptionInfo.tier} messagesRemaining={subscriptionInfo.messagesRemaining} compact />
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-          <HomeLayoutSwitch mode="compact" className="hidden md:inline-flex" />
-          <Pill
-            onClick={toggleMute}
-            title={muted ? 'Unmute music' : 'Mute music'}
-            aria-label={muted ? 'Unmute music' : 'Mute music'}
-            icon={muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          />
-          <Pill
-            onClick={lobby.handleSignOut}
-            title="Sign out"
-            aria-label="Sign out"
-            variant="quiet"
-            icon={<LogOut className="w-4 h-4" />}
-          />
-        </div>
-      </header>
-
       {lobby.setupResumeRoute && (
         <div className="px-4 pt-3 flex-shrink-0">
           <FinishSetupCard onResume={lobby.resumeSetup} />
