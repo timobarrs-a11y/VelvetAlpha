@@ -55,24 +55,9 @@ export async function getVelvetRopeEnabled(): Promise<boolean> {
 }
 
 export async function setVelvetRopeEnabled(enabled: boolean): Promise<void> {
-  const { data: current } = await supabase
-    .from('user_profiles')
-    .select('velvet_rope_first_seen_at')
-    .maybeSingle();
-
-  // Stamp the first-seen timestamp the first time the user enables it so the
-  // 5-minute AI gate can be enforced. If turning off, close any active VR conv.
-  const firstSeen = enabled && !current?.velvet_rope_first_seen_at
-    ? new Date().toISOString()
-    : undefined;
-
-  const updates: Record<string, unknown> = { velvet_rope_enabled: enabled };
-  if (firstSeen) updates.velvet_rope_first_seen_at = firstSeen;
-
-  const { error } = await supabase
-    .from('user_profiles')
-    .update(updates)
-    .eq('id', (await supabase.auth.getUser()).data.user?.id ?? '');
+  // Server-side: it also stamps the first time it's turned on, which gates AI
+  // matches, so the client can't set that itself.
+  const { error } = await supabase.rpc('set_velvet_rope_enabled', { p_enabled: enabled });
   if (error) throw new Error(`Failed to toggle Velvet Rope: ${error.message}`);
 
   if (!enabled) {
