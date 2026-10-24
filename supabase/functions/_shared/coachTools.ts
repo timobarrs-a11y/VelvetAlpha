@@ -223,7 +223,7 @@ export const COACH_TOOLS = [
   {
     name: 'create_plan',
     description:
-      'Propose a new plan (an ordered list of steps) toward the user\'s goal. The user sees it as a PROPOSAL they can accept and edit. ' +
+      'Propose a new plan (an ordered list of steps) toward the user\'s goal. A goal must exist first (create_goal). The user sees it as a PROPOSAL they can accept and edit. ' +
       'Give each step a concrete quantity in its title (e.g. "15 push-ups, 4 days a week") and, where a floor exists, a minimum_value below which the step would not meaningfully count. ' +
       'Only one open plan per goal: check COACHING STATE first and use add_step/adjust_step to change an existing plan.',
     input_schema: {
@@ -333,16 +333,17 @@ export const COACH_TOOLS = [
   {
     name: 'create_commitment',
     description:
-      'Record a concrete, dated commitment for the user. Pass plan_step_id (from COACHING STATE) to tie it to a plan step so ticking one completes the other.',
+      'Record a concrete, dated commitment for the user from one of their plan steps. plan_step_id (from COACHING STATE) is required: ticking the commitment completes the step. ' +
+      'If there is no plan yet, create_plan first; if there is no goal, create_goal before that.',
     input_schema: {
       type: 'object',
       properties: {
         goal_id: { type: 'string', description: 'The goal this commitment serves. If omitted, uses the step\'s plan goal or the coach\'s single active goal.' },
         description: { type: 'string' },
         due_date: { type: 'string', description: 'ISO 8601 date or date-time' },
-        plan_step_id: { type: 'string' },
+        plan_step_id: { type: 'string', description: 'The plan step this commitment delivers. Required.' },
       },
-      required: ['description'],
+      required: ['description', 'plan_step_id'],
     },
   },
   {
@@ -500,6 +501,10 @@ export async function executeCoachTool(
           } else if (userGoals.length > 1) {
             return fail('The user has multiple active goals. Pass goal_id to specify which one this plan is for.');
           }
+        }
+        // A plan always serves a goal: goal → plan → commitments → progress.
+        if (!goalId) {
+          return fail('There is no goal yet. Agree the goal with the user and call create_goal first, then create_plan with its goal_id.');
         }
 
         const { data: existing } = await admin
@@ -716,17 +721,16 @@ export async function executeCoachTool(
           dueDate = d.toISOString();
         }
 
-        let stepId: string | null = null;
-        let goalId: string | null = null;
-
-        if (input.plan_step_id !== undefined && input.plan_step_id !== null && input.plan_step_id !== '') {
-          const step = await ownedStep(admin, userId, companionId, input.plan_step_id);
-          if (!step) return fail('plan step not found');
-          stepId = step.id as string;
-          // Try to get goal from the step's plan
-          const plan = await ownedPlan(admin, userId, companionId, step.plan_id);
-          if (plan?.goal_id) goalId = plan.goal_id as string;
+        // Commitments are built from plan steps: goal → plan → commitments → progress.
+        if (input.plan_step_id === undefined || input.plan_step_id === null || input.plan_step_id === '') {
+          return fail('A commitment must come from a plan step. Pass plan_step_id from COACHING STATE. If there is no plan yet, create_plan first (and create_goal before that).');
         }
+        const step = await ownedStep(admin, userId, companionId, input.plan_step_id);
+        if (!step) return fail('plan step not found');
+        const stepId = step.id as string;
+        // Try to get goal from the step's plan
+        const stepPlan = await ownedPlan(admin, userId, companionId, step.plan_id);
+        let goalId: string | null = (stepPlan?.goal_id as string | undefined) ?? null;
 
         if (!goalId && input.goal_id && isUuid(input.goal_id)) {
           const goal = await ownedGoal(admin, userId, companionId, input.goal_id);
@@ -735,7 +739,7 @@ export async function executeCoachTool(
         }
         if (!goalId) {
           goalId = await singleActiveGoalId(admin, userId, companionId);
-          if (!goalId) return fail('Could not determine the goal for this commitment. Pass goal_id, or link it to a plan step.');
+          if (!goalId) return fail('Could not determine the goal for this commitment. Pass goal_id.');
         }
 
         const { data: dup } = await admin
@@ -765,9 +769,7 @@ export async function executeCoachTool(
         if (error || !commit) return fail(`could not create commitment: ${error?.message ?? 'unknown error'}`);
 
         const commitId = (commit as { id: string }).id;
-        if (stepId) {
-          await admin.from('coach_plan_steps').update({ commitment_id: commitId }).eq('id', stepId).is('commitment_id', null);
-        }
+        await admin.from('coach_plan_steps').update({ commitment_id: commitId }).eq('id', stepId).is('commitment_id', null);
         await logChange(admin, userId, companionId, 'commitment', commitId, 'coach', 'created',
           undefined, { description, due_date: dueDate }, null);
         return ok({ commitment_id: commitId }, {

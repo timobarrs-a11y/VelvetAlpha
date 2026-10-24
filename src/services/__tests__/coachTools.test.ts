@@ -145,6 +145,24 @@ describe('executeCoachTool behaviour', () => {
     expect(data.override_log.at(-1)).toMatchObject({ actor: 'coach', action: 'hold', to: '15 push-ups' });
   });
 
+  it('refuses a plan when the user has no goal yet', async () => {
+    const db = fakeAdmin({ user_goals: [], coach_plans: [], coach_plan_steps: [] });
+    const out = await executeCoachTool(db, ME, COACH, 'create_plan', { title: 'Strength', steps: [{ title: '15 push-ups' }] });
+    expect(out.isError).toBe(true);
+    expect(String(out.result.error)).toContain('create_goal');
+    const { data } = await db.from('coach_plans').eq('title', 'Strength').maybeSingle();
+    expect(data).toBeNull();
+  });
+
+  it('refuses a commitment that is not tied to a plan step', async () => {
+    const db = seeded();
+    const out = await executeCoachTool(db, ME, COACH, 'create_commitment', { description: 'Push-ups today', goal_id: 'g1' });
+    expect(out.isError).toBe(true);
+    expect(String(out.result.error)).toContain('plan_step_id');
+    const { data } = await db.from('coaching_commitments').eq('description', 'Push-ups today').maybeSingle();
+    expect(data).toBeNull();
+  });
+
   it('links a commitment to a step in both columns', async () => {
     const db = seeded();
     const out = await executeCoachTool(db, ME, COACH, 'create_commitment', { description: 'Push-ups today', plan_step_id: MY_STEP, due_date: '2026-12-01' });

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, BookOpen, Plus, X, Loader2,
+  BookOpen, Plus, X, Loader2,
   CheckCircle2, Clock, FileText, Dumbbell, ClipboardList,
   Lightbulb, Video, TrendingUp, Archive,
 } from 'lucide-react';
@@ -16,6 +16,16 @@ import {
   type ArtifactStatus,
 } from '../services/coachingService';
 import { getCoachColor } from '../utils/coachColors';
+import { useAuth } from '../auth/AuthProvider';
+import { useDockCoach } from '../components/dock/DockContext';
+import { useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/coachingHooks';
+
+const LIBRARY_PROMPTS = [
+  'Make me a reading list for my goal',
+  'Build me a weekly routine',
+  'Give me a practice set',
+  'A checklist for this week',
+];
 
 const ARTIFACT_ICONS: Record<string, React.ReactNode> = {
   reading_material: <BookOpen className="w-4 h-4" />,
@@ -50,6 +60,8 @@ export function CoachingLibraryPage() {
   const [filter, setFilter] = useState<'proposed' | 'accepted' | 'all'>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { highlighted, flash } = useCoachHighlight();
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -64,6 +76,17 @@ export function CoachingLibraryPage() {
   useEffect(() => {
     loadData().finally(() => setLoading(false));
   }, [loadData]);
+
+  useCoachingRealtime(user?.id, ['coach_artifacts'], () => { loadData(); });
+
+  const handleCoachChanged = useCallback((ids: string[]) => {
+    // New items arrive as proposals; make sure the current filter shows them.
+    if (ids.length > 0 && filter === 'accepted') setFilter('all');
+    else loadData();
+    flash(ids);
+  }, [filter, loadData, flash]);
+
+  const coach = useDockCoach({ surface: 'library', quickPrompts: LIBRARY_PROMPTS, preferredCoachId: companionId, onCoachChanged: handleCoachChanged });
 
   const handleAccept = async (artifactId: string) => {
     setUpdatingId(artifactId);
@@ -107,15 +130,7 @@ export function CoachingLibraryPage() {
           subtitle="Reading material, routines, practice sets, and more from your coach"
           icon={BookOpen}
           accent="var(--ds-accent, #3b82f6)"
-          actions={
-            <button
-              onClick={() => navigate(companionId ? '/lobby' : '/coaching-progress')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Back
-            </button>
-          }
+          back={false}
         />
       }
     >
@@ -143,11 +158,8 @@ export function CoachingLibraryPage() {
         <EmptyState
           icon={<BookOpen className="w-7 h-7 text-ink-muted" />}
           title="Nothing in your library yet"
-          description="Your coach creates reading material, routines, practice sets, and other resources during your conversations. They'll show up here."
-          action={companionId
-            ? { label: `Chat with ${companionName ?? 'coach'}`, onClick: () => navigate(`/chat?companion=${companionId}`), variant: 'primary' }
-            : { label: 'Go to lobby', onClick: () => navigate('/lobby'), variant: 'primary' }
-          }
+          description="Ask your coach for reading, a routine, a practice set or a checklist. They make it right here, built around your goal."
+          action={{ label: 'Ask my coach for a starter set', onClick: () => coach.ask('Make me a starter set for my library, built around my current goal and plan.'), variant: 'primary' }}
         />
       ) : (
         <div className="space-y-3">
@@ -162,6 +174,7 @@ export function CoachingLibraryPage() {
                 onArchive={() => handleArchive(artifact.id)}
                 onDelete={() => handleDelete(artifact.id)}
                 updating={updatingId === artifact.id}
+                highlighted={highlighted.has(artifact.id)}
               />
             ))}
           </AnimatePresence>
@@ -172,7 +185,7 @@ export function CoachingLibraryPage() {
 }
 
 function ArtifactCard({
-  artifact, expanded, onToggleExpand, onAccept, onArchive, onDelete, updating,
+  artifact, expanded, onToggleExpand, onAccept, onArchive, onDelete, updating, highlighted,
 }: {
   artifact: CoachArtifact;
   expanded: boolean;
@@ -181,6 +194,7 @@ function ArtifactCard({
   onArchive: () => void;
   onDelete: () => void;
   updating: boolean;
+  highlighted: boolean;
 }) {
   const typeLabel = ARTIFACT_TYPE_LABELS[artifact.artifact_type] ?? artifact.artifact_type;
   const icon = ARTIFACT_ICONS[artifact.artifact_type] ?? <FileText className="w-4 h-4" />;
@@ -190,7 +204,7 @@ function ArtifactCard({
   const coachColor = getCoachColor(artifact.companion_color);
 
   return (
-    <Card className="overflow-hidden" style={{ borderLeft: `3px solid ${coachColor.base}` }}>
+    <Card className={`overflow-hidden ${highlighted ? HIGHLIGHT_CLASS : ''}`} style={{ borderLeft: `3px solid ${coachColor.base}` }}>
       <button
         onClick={onToggleExpand}
         className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/[0.02] transition-colors"

@@ -200,6 +200,26 @@ interface ChatTurnRequest {
   mode?: 'chat' | 'video' | 'ritual';
   video?: { url: string; timestamp: number };
   timezone?: string;
+  /** Coaching page the coach panel is open on, if the message comes from there. */
+  surface?: CoachSurface;
+}
+
+type CoachSurface = 'progress' | 'plans' | 'commitments' | 'library';
+
+const COACH_SURFACES: Record<CoachSurface, string> = {
+  progress:
+    'the Progress page. It shows their goals, how far along each is, and their commitments. Help them review where they stand, log progress, and adjust. Progress comes from completed commitments and plan steps, so if there is no goal or plan yet, start there.',
+  plans:
+    'the Plans page. Build and refine the plan for their goal here. No goal yet: agree it and call create_goal first, then create_plan with its goal_id. A plan already exists: change it with add_step, adjust_step, remove_step or reorder_steps rather than making a second one. When they agree, update_plan status=active.',
+  commitments:
+    'the Commitments page. Turn plan steps into dated commitments with create_commitment (plan_step_id required), and complete, reschedule or cancel existing ones. No plan yet: build it first (and the goal before that).',
+  library:
+    'the Library page, where everything you make for them is kept. When they ask for reading, a routine, a practice set, a worksheet, a checklist, a resource pick or a progress report, make it now with create_artifact, shaped around their goal and plan.',
+};
+
+function coachSurfaceBlock(surface: CoachSurface | undefined): string {
+  if (!surface || !Object.prototype.hasOwnProperty.call(COACH_SURFACES, surface)) return '';
+  return `\n\n[COACH PANEL]\nThe user is talking to you from the coach panel on ${COACH_SURFACES[surface]}\nThis is the same conversation as your chat, so carry on from it. Whatever you create or change with your tools appears on this page straight away, so do the work here: never send them to another page or back to the chat screen, and you do not need show_in_tab.`;
 }
 
 interface ChatTurnResponse {
@@ -1584,7 +1604,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body: ChatTurnRequest = await req.json();
-    const { userId, companionId, message, mode = 'chat', _video, timezone } = body;
+    const { userId, companionId, message, mode = 'chat', _video, timezone, surface } = body;
 
     // Identity comes from the verified auth token, not the request body.
     // If the client sends a userId that doesn't match, reject as impersonation.
@@ -1943,7 +1963,7 @@ ${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, s
 RESPONSE LENGTH: ${isMentor ? 'As long as the topic warrants — use markdown, lists, and code blocks when they help. Never pad.' : 'Default short — like a real text.'} Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
     const hallucinationGuard = isMentor
-      ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference plans, steps, and commitments that appear in the [COACHING STATE] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [COACHING STATE] or [USER'S ACTIVE GOALS] sections. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.\n- COACH TOOLS: You have tools to create goals (create_goal), propose plans (create_plan, add_step), update plans (update_plan), respond to edits and revise steps (adjust_step, remove_step, reorder_steps), record and update commitments (create_commitment, update_commitment, complete_commitment, cancel_commitment), open tabs (show_in_tab), and save things the user keeps (create_artifact: reading_material, routine, practice_set, worksheet, checklist, resource_pick, progress_report). Call a tool BEFORE you tell the user it is done, and read the tool result: if it reports an error, say so plainly and do not claim success. Never invent ids — use the plan_id / step_id / commitment_id values shown in [COACHING STATE]. Check [COACHING STATE] first: do not create a second plan when one already exists, and do not repeat a commitment or artifact you already made.\n- FIRST CONVERSATION FLOW: As soon as you know the goal and timeframe, create a starter set in one reply: call create_goal, then create_plan with 3-6 steps (each with a concrete quantity and minimum), then create_commitment for 1-3 commitments due within 7 days (each tied to a step via plan_step_id). After creating items, call show_in_tab to open the Plan tab and walk the user through them. The popup is the same conversation — the user can ask questions or request changes, and you edit the plan or commitments live using your tools. End the walkthrough with update_plan status=active ("Let's go").\n- PROPOSE, DON'T IMPOSE: plans and steps you create are proposals the user can accept and edit. Give every step a concrete quantity and, where a real floor exists, a minimum (minimum_value). A real coach knows what will not work: if the user edits a step below your minimum, do not simply go along with it. Decide: adjust_step hold (keep your number and explain why it matters), revise (a middle ground), or accept (lower your minimum and say why). Respect edits at or above your minimum.\n- ADJUSTMENT SIGNALS: If [COACHING STATE] lists ADJUSTMENT SIGNALS, act on each once this session. Do not only ask what happened — propose a concrete change (a smaller step via adjust_step revise, a new commitment, or a new artifact) and lead with empathy. Do not repeat a signal you already addressed.\n- RECENT CHANGES: The [COACHING STATE] includes a RECENT CHANGES section showing what was edited since you last looked. Use this to acknowledge changes the user made (e.g. they ticked a step) or to know what you changed last time.`
+      ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference plans, steps, and commitments that appear in the [COACHING STATE] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [COACHING STATE] or [USER'S ACTIVE GOALS] sections. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.\n- COACH TOOLS: You have tools to create goals (create_goal), propose plans (create_plan, add_step), update plans (update_plan), respond to edits and revise steps (adjust_step, remove_step, reorder_steps), record and update commitments (create_commitment, update_commitment, complete_commitment, cancel_commitment), open tabs (show_in_tab), and save things the user keeps (create_artifact: reading_material, routine, practice_set, worksheet, checklist, resource_pick, progress_report). Call a tool BEFORE you tell the user it is done, and read the tool result: if it reports an error, say so plainly and do not claim success. Never invent ids — use the plan_id / step_id / commitment_id values shown in [COACHING STATE]. Check [COACHING STATE] first: do not create a second plan when one already exists, and do not repeat a commitment or artifact you already made.\n- ORDER: goal → plan → commitments → progress. Each builds on the one before: a plan always serves a goal, and every commitment comes from a plan step. Your tools refuse anything out of order, so if something is missing, create the earlier piece first.\n- FIRST CONVERSATION FLOW: As soon as you know the goal and timeframe, create a starter set in one reply: call create_goal, then create_plan with 3-6 steps (each with a concrete quantity and minimum), then create_commitment for 1-3 commitments due within 7 days (each tied to a step via plan_step_id). After creating items, call show_in_tab to open the Plan tab and walk the user through them. The popup is the same conversation — the user can ask questions or request changes, and you edit the plan or commitments live using your tools. End the walkthrough with update_plan status=active ("Let's go").\n- PROPOSE, DON'T IMPOSE: plans and steps you create are proposals the user can accept and edit. Give every step a concrete quantity and, where a real floor exists, a minimum (minimum_value). A real coach knows what will not work: if the user edits a step below your minimum, do not simply go along with it. Decide: adjust_step hold (keep your number and explain why it matters), revise (a middle ground), or accept (lower your minimum and say why). Respect edits at or above your minimum.\n- ADJUSTMENT SIGNALS: If [COACHING STATE] lists ADJUSTMENT SIGNALS, act on each once this session. Do not only ask what happened — propose a concrete change (a smaller step via adjust_step revise, a new commitment, or a new artifact) and lead with empathy. Do not repeat a signal you already addressed.\n- RECENT CHANGES: The [COACHING STATE] includes a RECENT CHANGES section showing what was edited since you last looked. Use this to acknowledge changes the user made (e.g. they ticked a step) or to know what you changed last time.`
       : '';
 
     const volatileContext = `\n\nRelationship duration: ${relationshipDuration} days
@@ -1952,7 +1972,7 @@ User's local time context: ${timeOfDay}
 
 ${contextReminder}
 
-${groundingBlock}${memoryBusBlock}${hallucinationGuard}`;
+${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurfaceBlock(surface) : ''}`;
 
     // Semi-stable layer: companion memory. Changes only after summarization
     // runs, not per-turn. Gets its own 1h cache breakpoint so the frozen
