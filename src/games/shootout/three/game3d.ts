@@ -20,6 +20,7 @@ import type { RivalRun } from '../rivals';
 import { Crowd } from './crowd';
 import { buildArena, type Arena } from './arena';
 import { getLook } from '../settings';
+import { HoldClock } from '../holdClock';
 
 // 3-Point Shootout in 3D: a lit arena with a lacquered floor, glass board and
 // a cloth net, a full crowd, first-person shooting and a broadcast camera
@@ -190,6 +191,11 @@ export class Shootout3D {
   score = 0;
   private makes = 0; private shots = 0; streak = 0; private bestStreak = 0;
   private holdT = 0;
+  /** Times your hold from input timestamps, so judging doesn't depend on frame rate. */
+  private holdClock = new HoldClock(() => (this.synthetic ? this.simMs : performance.now()));
+  /** Test harness only: advance() drives a synthetic clock instead of wall time. */
+  private synthetic = false;
+  private simMs = 0;
   private win = { green: 0.08, rise: 0.7 };
   /** This run's release point (fraction of the jump), and where the green sits for the current shot. */
   private shift = 0;
@@ -549,6 +555,7 @@ export class Shootout3D {
   advance(seconds: number): void {
     cancelAnimationFrame(this.raf);
     const n = Math.max(1, Math.round(seconds * 60));
+    this.synthetic = true;
     for (let i = 0; i < n; i++) { this.noDraw = i < n - 1; this.frame(1 / 60); }
     this.noDraw = false;
   }
@@ -621,14 +628,21 @@ export class Shootout3D {
     this.emitRack();
   }
 
-  press(): void {
+  /** Start the jump. `at` is the input event's timeStamp, for frame-accurate timing. */
+  press(at?: number): void {
     if (this.auto) return;
     if (this.phase === 'replay') { this.endReplay(); return; }
     if (this.phase !== 'aim') return;
     this.phase = 'hold'; this.holdT = 0; this.greenPinged = false;
+    this.holdClock.start(at);
   }
 
-  release(): void { if (this.phase === 'hold' && !this.auto) this.shoot(); }
+  /** Let go. The hold is measured between the two event timestamps, not in frames. */
+  release(at?: number): void {
+    if (this.phase !== 'hold' || this.auto) return;
+    this.holdT = this.holdClock.stop(at);
+    this.shoot();
+  }
 
   /** Autopilot only: jump to the end of the rival's run (same result as watching it). */
   skip(): void {
@@ -678,6 +692,7 @@ export class Shootout3D {
   }
 
   private frame(real: number): void {
+    this.simMs += real * 1000;
     if (this.auto) real *= this.opts.speed ?? 1;
     // Hitstop freezes the action for a beat on a swish; replays run slow.
     if (this.hitstop > 0) { this.hitstop -= real; this.render(real); return; }
@@ -709,11 +724,11 @@ export class Shootout3D {
       const next = this.auto.shots[this.autoIdx];
       if (next && this.holdT >= this.win.rise + next.error) this.shoot();
     } else if (this.phase === 'hold') {
-      this.holdT += dt;
+      this.holdT = this.holdClock.held();
       const { green } = this.win;
       // Only the first shot of a run pings the green: after that it's timing from memory.
       if (!this.greenPinged && this.shots === 0 && this.holdT >= this.target - (green * fireBoost(this.streak)) / 2) { this.greenPinged = true; sfx.playGreen(); }
-      if (this.holdT > Math.max(this.target, this.win.rise) * 1.45) this.shoot();
+      if (this.holdT > Math.max(this.target, this.win.rise) * 1.45) { this.holdT = this.holdClock.stop(); this.shoot(); }
     }
     if (this.phase === 'flight' || this.phase === 'replay') this.stepFlight(dt);
     this.fade = Math.max(0, this.fade - real * 3.2);

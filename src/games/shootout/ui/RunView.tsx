@@ -15,7 +15,7 @@ interface Card { id: number; title: string; sub: string; money: boolean }
 
 /** What the view needs from a game: the 3D one, or the 2D one when WebGL is missing. */
 interface GameLike {
-  start(): void; stop(): void; begin(): void; resize(): void; press(): void; release(): void;
+  start(): void; stop(): void; begin(): void; resize(): void; press(at?: number): void; release(at?: number): void;
   hud(): Omit<Hud, 'elapsed'> & { fade?: number; elapsed?: number };
   rackState(): Rack;
   meterView?(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number };
@@ -139,8 +139,8 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   // Hold anywhere (or Space) to shoot.
   useEffect(() => {
     if (rival) return;
-    const down = (e: KeyboardEvent) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); gameRef.current?.press(); } };
-    const up = (e: KeyboardEvent) => { if (e.code === 'Space') { e.preventDefault(); gameRef.current?.release(); } };
+    const down = (e: KeyboardEvent) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); gameRef.current?.press(e.timeStamp); } };
+    const up = (e: KeyboardEvent) => { if (e.code === 'Space') { e.preventDefault(); gameRef.current?.release(e.timeStamp); } };
     window.addEventListener('keydown', down); window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
   }, [rival]);
@@ -154,9 +154,9 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
       <canvas
         ref={canvasRef}
         className="absolute inset-0 h-full w-full"
-        onPointerDown={(e) => { if (rival) return; e.currentTarget.setPointerCapture(e.pointerId); gameRef.current?.press(); }}
-        onPointerUp={() => gameRef.current?.release()}
-        onPointerCancel={() => gameRef.current?.release()}
+        onPointerDown={(e) => { if (rival) return; e.currentTarget.setPointerCapture(e.pointerId); gameRef.current?.press(e.timeStamp); }}
+        onPointerUp={(e) => gameRef.current?.release(e.timeStamp)}
+        onPointerCancel={(e) => gameRef.current?.release(e.timeStamp)}
         onContextMenu={(e) => e.preventDefault()}
       />
       <BroadcastOverlay hud={hud} rack={rack} level={label} callout={callout} card={card} replay={replay} onFire={onFire} final10={final10} rival={rival} />
