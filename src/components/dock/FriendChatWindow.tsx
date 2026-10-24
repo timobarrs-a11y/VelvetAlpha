@@ -78,6 +78,23 @@ export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
           <X className="h-4 w-4" />
         </button>
       </div>
+      {/* Games always on show, so nobody has to find a menu to invite. */}
+      {!playing && (
+        <div className="flex items-center gap-1.5 overflow-x-auto border-b border-white/8 px-3 py-2 scrollbar-hide">
+          <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider text-amber-200/70">Play</span>
+          {GAME_ORDER.map(id => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => openGame(id, true)}
+              className="flex flex-shrink-0 items-center gap-1 rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[11px] font-semibold text-amber-100 hover:bg-amber-300/20"
+              title={`Invite ${friend.peerName} to ${FRIEND_GAMES[id].label}`}
+            >
+              <span>{FRIEND_GAMES[id].icon}</span>{FRIEND_GAMES[id].label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex min-h-0 flex-1 flex-col">
         {user && started.map(g => (
           <div key={g} className={playing === g ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
