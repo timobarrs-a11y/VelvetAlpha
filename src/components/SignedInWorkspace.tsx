@@ -142,11 +142,11 @@ function WorkspaceToolbar({
   };
 
   return (
-    <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 px-3 py-2.5 text-[#2a1424] sm:px-5" style={TOOLBAR_THEME}>
+    <header className="relative z-30 flex min-h-[60px] flex-nowrap items-center justify-between gap-2 px-2.5 py-2.5 sm:gap-3 text-[#2a1424] sm:px-5" style={TOOLBAR_THEME}>
       {/* Warm blush white, pink as the accent */}
       <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5]" />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-[#f5cfe0]" />
-      <div className="relative z-10 flex min-w-0 items-center gap-2.5">
+      <div className="relative z-10 flex min-w-0 items-center gap-1.5 sm:gap-2.5">
         <button
           type="button"
           onClick={onOpenMobileNav}
@@ -162,7 +162,7 @@ function WorkspaceToolbar({
           className="flex min-w-0 items-center gap-2.5 text-left"
           title="Velvet home"
         >
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-pink-100 text-pink-600">
+          <span className="hidden h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-pink-100 text-pink-600 sm:flex">
             <Sparkles className="h-4 w-4" />
           </span>
           <span className="min-w-0">
@@ -185,9 +185,9 @@ function WorkspaceToolbar({
         <AddFriendButton onAdd={dock.addFriendByCode} />
       </div>
 
-      <div className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+      <div className="relative z-10 flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
         {lobby.subscriptionInfo && (
-          <SubscriptionBanner tier={lobby.subscriptionInfo.tier} messagesRemaining={lobby.subscriptionInfo.messagesRemaining} compact />
+          <div className="hidden sm:block"><SubscriptionBanner tier={lobby.subscriptionInfo.tier} messagesRemaining={lobby.subscriptionInfo.messagesRemaining} compact /></div>
         )}
         {/* Everything else lives in one menu, so the bar stays calm. */}
         <div ref={menuRef} className="relative">
@@ -203,11 +203,17 @@ function WorkspaceToolbar({
             <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#fff7fa] ${available ? 'bg-emerald-500' : 'bg-gray-300'}`} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-60 rounded-xl border border-[#f5cfe0] bg-white p-1.5 text-[#2a1424] shadow-xl">
+            <div className="absolute right-0 top-full z-50 mt-2 w-[min(15rem,calc(100vw-1.5rem))] rounded-xl border border-[#f5cfe0] bg-white p-1.5 text-[#2a1424] shadow-xl">
               <div className="px-2.5 pb-2 pt-1.5">
                 <p className="truncate text-sm font-semibold">{displayName}</p>
                 <p className="text-[10px] text-[#2a1424]/55">{available ? 'Available to chat' : 'Not available to chat'}</p>
               </div>
+              {lobby.subscriptionInfo && (
+                <button type="button" onClick={() => { setMenuOpen(false); navigate('/pricing'); }} className="mx-1 mb-2 flex w-[calc(100%-0.5rem)] items-center justify-between rounded-lg bg-amber-50 px-2.5 py-1.5 text-left text-[11px] font-semibold text-amber-800 hover:bg-amber-100 sm:hidden">
+                  <span className="capitalize">{lobby.subscriptionInfo.tier} plan</span>
+                  <span className="font-normal">See plans</span>
+                </button>
+              )}
               <div className="px-2.5 pb-2"><HomeLayoutSwitch mode="compact" /></div>
               <div className="my-1 border-t border-[#f5cfe0]" />
               <button type="button" onClick={onToggleAvailable} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[#2a1424]/85 hover:bg-pink-50">
