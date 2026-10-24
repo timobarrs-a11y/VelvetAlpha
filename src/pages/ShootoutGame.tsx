@@ -18,7 +18,7 @@ function saveProgress(p: Progress) { try { localStorage.setItem(SAVE, JSON.strin
 
 type Screen = 'title' | 'play' | 'results';
 type Rack = Array<{ kind: Ball['kind']; state: 'done' | 'now' | 'left' }>;
-interface Hud { score: number; time: number; spot: string; streak: number }
+interface Hud { score: number; time: number; spot: string; streak: number; phase?: string }
 interface Callout { id: number; big: string; small?: string; tone: 'gold' | 'green' | 'red' | 'money' | 'starry' | 'fire' }
 interface Card { id: number; title: string; sub: string; money: boolean }
 
@@ -59,6 +59,7 @@ export function ShootoutGame() {
   const [showHint, setShowHint] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
+  const fpsRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<GameLike | null>(null);
   const seq = useRef(0);
 
@@ -126,12 +127,18 @@ export function ShootoutGame() {
     window.addEventListener('resize', onResize);
     const hudTimer = setInterval(() => {
       const h = game.hud();
-      setHud(prev => (prev.score === h.score && prev.time.toFixed(1) === h.time.toFixed(1) && prev.spot === h.spot && prev.streak === h.streak) ? prev : { score: h.score, time: h.time, spot: h.spot, streak: h.streak });
+      setHud(prev => (prev.score === h.score && prev.time.toFixed(1) === h.time.toFixed(1) && prev.spot === h.spot && prev.streak === h.streak && prev.phase === h.phase) ? prev : { score: h.score, time: h.time, spot: h.spot, streak: h.streak, phase: h.phase });
       setRack(prev => { const r = game.rackState(); return JSON.stringify(r) === JSON.stringify(prev) ? prev : r; });
     }, 100);
     // Camera-cut fades follow the game every frame.
-    let raf = 0;
-    const tick = () => { if (fadeRef.current) fadeRef.current.style.opacity = String(game.hud().fade ?? 0); raf = requestAnimationFrame(tick); };
+    let raf = 0, frames = 0, since = performance.now();
+    const tick = (now: number) => {
+      if (fadeRef.current) fadeRef.current.style.opacity = String(game.hud().fade ?? 0);
+      // Optional frame counter (?fps) for checking smoothness on a real phone.
+      frames++;
+      if (fpsRef.current && now - since >= 500) { fpsRef.current.textContent = `${Math.round((frames * 1000) / (now - since))} fps`; frames = 0; since = now; }
+      raf = requestAnimationFrame(tick);
+    };
     raf = requestAnimationFrame(tick);
     return () => { game.stop(); clearInterval(hudTimer); cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); gameRef.current = null; };
   }, [screen, levelId, progress.moneyRack, finish, onEvent]);
@@ -149,6 +156,7 @@ export function ShootoutGame() {
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
   }, [screen]);
 
+  const showFps = typeof window !== 'undefined' && /[?&]fps\b/.test(window.location.search);
   const toggleMute = () => { setMuted(!muted); setMutedState(!muted); };
   const level = LEVELS[levelId];
 
@@ -168,10 +176,11 @@ export function ShootoutGame() {
           <BroadcastOverlay hud={hud} rack={rack} level={level.name} callout={callout} card={card} replay={replay} onFire={onFire} final10={final10} />
           <ShotMeter gameRef={gameRef} />
           <div ref={fadeRef} className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: 0 }} />
+          {showFps && <div ref={fpsRef} className="pointer-events-none absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 font-mono text-[11px] text-emerald-300" />}
           <div className="absolute right-3 top-3 flex gap-2" style={{ marginTop: 'env(safe-area-inset-top)' }}>
             <button type="button" onClick={toggleMute} className="rounded-lg bg-black/50 p-2 backdrop-blur" aria-label={muted ? 'Sound on' : 'Mute'}>{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}</button>
           </div>
-          {showHint && (
+          {showHint && hud.phase === 'aim' && (
             <div className="sh-pulse pointer-events-none absolute top-[12%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/55 px-4 py-2 text-xs font-bold tracking-wide sm:px-5 sm:py-2.5 sm:text-sm text-white/90 backdrop-blur">
               HOLD to jump · RELEASE at the top
             </div>

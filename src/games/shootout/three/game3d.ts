@@ -84,6 +84,10 @@ export class Shootout3D {
   private last = 0;
   private time = 0;
   private cb: Callbacks;
+  private basePR = 1;
+  private mirror: THREE.Object3D | null = null;
+  /** Frame governor: 0 = full quality; each step trades detail for frame rate. */
+  private perf = { acc: 0, n: 0, skip: 90, level: 0, good: 0, ups: 0, frame: 0 };
   private noDraw = false;
 
   // World pieces.
@@ -148,12 +152,14 @@ export class Shootout3D {
     this.quality = coarse || Math.min(window.innerWidth, window.innerHeight) < 600 ? 'mid' : 'high';
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.quality === 'high' ? 2 : 1.75));
+    // Start sharp but sane; the frame governor trades resolution for 60fps.
+    this.basePR = Math.min(window.devicePixelRatio || 1, this.quality === 'high' ? 1.5 : 1.35);
+    this.renderer.setPixelRatio(this.basePR);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = this.quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.05, 120);
     this.scene.add(this.camera);
@@ -178,6 +184,7 @@ export class Shootout3D {
     this.confettiLife = new Float32Array(400);
     this.build();
     this.resize();
+    this.precompile();
     sfx.startCrowd();
   }
 
@@ -200,13 +207,24 @@ export class Shootout3D {
       map, roughnessMap: rough, roughness: 0.42, clearcoat: 1, clearcoatRoughness: 0.14, envMapIntensity: 0.55,
       transparent: hi, opacity: hi ? 0.9 : 1,
     });
+    if (!hi) { floorMat.clearcoat = 0; floorMat.roughness = 0.5; }
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.position.set((FLOOR.x0 + FLOOR.x1) / 2, 0, (FLOOR.y0 + FLOOR.y1) / 2);
     floor.receiveShadow = true;
     s.add(floor);
     if (hi) {
-      const mirror = new Reflector(new THREE.PlaneGeometry(fw, fh), { textureWidth: 1024, textureHeight: 1024, color: 0x6b6b6b });
+      const mirror = new Reflector(new THREE.PlaneGeometry(fw, fh), { textureWidth: 768, textureHeight: 768, color: 0x6b6b6b });
       mirror.rotateX(-Math.PI / 2);
+      // The reflection pass skips the crowd and net: thousands of triangles
+      // nobody sees in a blurry floor.
+      const reflect = mirror.onBeforeRender.bind(mirror);
+      mirror.onBeforeRender = (...args: Parameters<typeof mirror.onBeforeRender>) => {
+        const c = this.crowd?.group, n = this.net?.mesh;
+        if (c) c.visible = false; if (n) n.visible = false;
+        reflect(...args);
+        if (c) c.visible = true; if (n) n.visible = true;
+      };
+      this.mirror = mirror;
       mirror.position.set(floor.position.x, -0.002, floor.position.z);
       s.add(mirror);
     }
@@ -218,7 +236,7 @@ export class Shootout3D {
       const L = new THREE.SpotLight(0xfff1dd, i === 4 ? 2.4 : 1.5, 45, 0.62, 0.65, 1.1);
       L.position.copy(toThree([x, y, z]));
       L.target.position.copy(toThree([x * 0.4, y * 0.7 + 1, 0]));
-      if (i === 4) { L.castShadow = true; L.shadow.mapSize.set(hi ? 2048 : 1024, hi ? 2048 : 1024); L.shadow.bias = -0.0004; L.shadow.camera.near = 4; L.shadow.camera.far = 30; }
+      if (i === 4) { L.castShadow = true; L.shadow.mapSize.set(1024, 1024); L.shadow.bias = -0.0004; L.shadow.camera.near = 4; L.shadow.camera.far = 30; }
       s.add(L, L.target);
       // The fixture itself, glowing.
       const fix = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.25, 16), new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0xfff4e0, emissiveIntensity: 2.2 }));
@@ -288,10 +306,11 @@ export class Shootout3D {
       rack.position.copy(p);
       rack.lookAt(new THREE.Vector3(0, 0, 0)); rack.rotateY(Math.PI / 2);
       s.add(rack);
+      const rackGeo = new THREE.SphereGeometry(BALL_R, 20, 14);
       const balls = spot.balls.map((b, i) => {
-        const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 32, 20), this.ballMats[b.kind]);
+        const m = new THREE.Mesh(rackGeo, this.ballMats[b.kind]);
         m.position.set(-0.56 + i * 0.28, 0.72 + BALL_R, 0);
-        m.castShadow = true;
+        m.castShadow = hi;
         rack.add(m);
         return m;
       });
@@ -438,8 +457,10 @@ export class Shootout3D {
   start(): void {
     this.last = performance.now();
     const loop = (now: number) => {
-      const real = Math.min(0.05, (now - this.last) / 1000);
+      const ms = now - this.last;
+      const real = Math.min(0.05, ms / 1000);
       this.last = now;
+      this.govern(ms);
       this.frame(real);
       this.raf = requestAnimationFrame(loop);
     };
@@ -457,6 +478,45 @@ export class Shootout3D {
   stop(): void {
     cancelAnimationFrame(this.raf);
     this.renderer.dispose();
+  }
+
+  /** Compile every shader up front (hidden effects too) so nothing hitches mid-run. */
+  private precompile(): void {
+    const hidden: THREE.Object3D[] = [];
+    this.scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+    this.renderer.compile(this.scene, this.camera);
+    hidden.forEach(o => { o.visible = false; });
+  }
+
+  /**
+   * Hold 60fps: average the frame time over ~40 frames and step quality down
+   * when it runs long (resolution, then the floor mirror, then bloom, then
+   * shadow refresh rate), and back up a little when there's headroom.
+   */
+  private govern(ms: number): void {
+    const p = this.perf;
+    p.frame++;
+    if (document.hidden || ms > 250) return;
+    if (p.skip > 0) { p.skip--; return; }
+    p.acc += ms; p.n++;
+    if (p.n < 40) return;
+    const avg = p.acc / p.n; p.acc = 0; p.n = 0;
+    if (avg > 18.5 && p.level < 5) { p.level++; p.good = 0; this.applyPerf(); }
+    else if (avg < 12.5 && p.level > 0 && p.ups < 3) { if (++p.good >= 5) { p.level--; p.ups++; p.good = 0; this.applyPerf(); } }
+    else p.good = 0;
+  }
+
+  private applyPerf(): void {
+    const L = this.perf.level;
+    const scale = [1, 0.85, 0.85, 0.75, 0.66, 0.58][L];
+    const pr = Math.max(0.7, this.basePR * scale);
+    this.renderer.setPixelRatio(pr);
+    this.composer.setPixelRatio(pr);
+    if (this.mirror) this.mirror.visible = L < 2;
+    this.bloom.enabled = L < 3;
+    this.renderer.shadowMap.autoUpdate = L < 5;
+    this.resize();
+    this.perf.skip = 20; // let the new settings settle before judging them
   }
 
   resize(): void {
@@ -728,6 +788,7 @@ export class Shootout3D {
 
     this.updatePlayer(t);
     this.updateCamera(real);
+    if (!this.renderer.shadowMap.autoUpdate && this.perf.frame % 3 === 0) this.renderer.shadowMap.needsUpdate = true;
     if (!this.noDraw) this.composer.render();
   }
 

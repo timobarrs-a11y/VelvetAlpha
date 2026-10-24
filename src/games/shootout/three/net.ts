@@ -3,7 +3,7 @@ import * as THREE from 'three';
 // The net as a small cloth simulation (Verlet particles and distance
 // constraints) hanging from the rim, drawn as instanced cords. The ball
 // pushes the cords aside, so swishes whip the net and rattles shake it.
-// Works in game coordinates (x across, y out, z up); `toThree` maps to Three.
+// Works in game coordinates (x across, y out, z up), written out in Three's y-up space.
 
 type V = [number, number, number];
 
@@ -17,8 +17,11 @@ export class Net {
   private links: Array<[number, number, number]> = [];
   private tmp = new THREE.Object3D();
   private up = new THREE.Vector3(0, 1, 0);
+  private A = new THREE.Vector3();
+  private B = new THREE.Vector3();
+  private D = new THREE.Vector3();
 
-  constructor(rim: { x: number; y: number; z: number; r: number }, private toThree: (v: V) => THREE.Vector3) {
+  constructor(rim: { x: number; y: number; z: number; r: number }, _toThree?: (v: V) => THREE.Vector3) {
     for (let l = 0; l < DOWN; l++) {
       const rr = rim.r * (1 - 0.42 * (l / (DOWN - 1)));
       for (let i = 0; i < AROUND; i++) {
@@ -82,9 +85,10 @@ export class Net {
 
   /** Place each cord between its two knots. */
   private write(): void {
-    const A = new THREE.Vector3(), B = new THREE.Vector3(), D = new THREE.Vector3();
+    const { A, B, D } = this;
     this.links.forEach(([a, b], k) => {
-      A.copy(this.toThree(this.p[a])); B.copy(this.toThree(this.p[b]));
+      const p = this.p[a], q = this.p[b];
+      A.set(p[0], p[2], p[1]); B.set(q[0], q[2], q[1]);
       D.subVectors(B, A);
       const len = D.length();
       this.tmp.position.copy(A).addScaledVector(D, 0.5);

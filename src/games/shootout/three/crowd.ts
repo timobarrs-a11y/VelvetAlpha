@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // The stands and the fans in them. Fans are instanced (torsos and heads),
 // bob gently all game and jump up when something big happens. Phone flashes
@@ -17,6 +18,8 @@ export class Crowd {
   private excite = 0;
   private flashes: THREE.Points;
   private flashLife: Float32Array;
+  private uTime = { value: 0 };
+  private uExcite = { value: 0 };
 
   constructor(private toThree: (v: V) => THREE.Vector3, count: number) {
     const rand = (() => { let s = 99; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
@@ -29,36 +32,69 @@ export class Crowd {
       { along: 'y', fixed: -11.2, from: -5, to: 17, dir: -1 },  // left sideline
     ];
     const rows = 12, rowDepth = 0.85, rowRise = 0.45;
+    // Steps are merged into two meshes (one per colour): two draw calls, not 36.
+    const standGeos: THREE.BufferGeometry[] = [], seatGeos: THREE.BufferGeometry[] = [];
     const spots: V[] = [];
     sections.forEach(sec => {
       for (let r = 0; r < rows; r++) {
         const off = sec.fixed + sec.dir * (r * rowDepth), z = 0.6 + r * rowRise;
         const len = sec.to - sec.from;
-        const step = new THREE.Mesh(new THREE.BoxGeometry(sec.along === 'x' ? len : rowDepth, rowRise, sec.along === 'x' ? rowDepth : len), r % 2 ? standMat : seatMat);
+        const step = new THREE.BoxGeometry(sec.along === 'x' ? len : rowDepth, rowRise, sec.along === 'x' ? rowDepth : len);
         const c: V = sec.along === 'x' ? [(sec.from + sec.to) / 2, off, z - rowRise / 2] : [off, (sec.from + sec.to) / 2, z - rowRise / 2];
-        step.position.copy(this.toThree(c));
-        step.receiveShadow = true;
-        this.group.add(step);
+        const at = this.toThree(c);
+        step.translate(at.x, at.y, at.z);
+        (r % 2 ? standGeos : seatGeos).push(step);
         for (let s = sec.from + 0.3; s < sec.to; s += 0.55) spots.push(sec.along === 'x' ? [s, off, z] : [off, s, z]);
       }
+    });
+    ([[standGeos, standMat], [seatGeos, seatMat]] as const).forEach(([geos, mat]) => {
+      const m = new THREE.Mesh(mergeGeometries(geos), mat);
+      m.receiveShadow = true;
+      this.group.add(m);
     });
     // Pick seats until we have enough fans; some seats stay empty.
     for (let i = spots.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [spots[i], spots[j]] = [spots[j], spots[i]]; }
     spots.slice(0, Math.min(count, spots.length)).forEach(p => this.fans.push({ pos: p, phase: rand() * 10, jump: 0.4 + rand() * 0.8 }));
 
-    const torso = new THREE.CapsuleGeometry(0.17, 0.32, 3, 6);
-    const head = new THREE.SphereGeometry(0.105, 8, 6);
-    const shirtMat = new THREE.MeshStandardMaterial({ roughness: 0.8 });
-    const skinMat = new THREE.MeshStandardMaterial({ roughness: 0.7 });
+    // Low-poly fans: they're small on screen and there are thousands of them.
+    const torso = new THREE.CapsuleGeometry(0.19, 0.16, 2, 6);
+    const head = new THREE.IcosahedronGeometry(0.11, 1);
+    // Bobbing and jumping run in the vertex shader, so the instance matrices
+    // are written once and nothing is re-uploaded per frame.
+    const phase = new Float32Array(this.fans.length), jump = new Float32Array(this.fans.length);
+    this.fans.forEach((f, i) => { phase[i] = f.phase; jump[i] = f.jump; });
+    [torso, head].forEach(g => {
+      g.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phase, 1));
+      g.setAttribute('aJump', new THREE.InstancedBufferAttribute(jump, 1));
+    });
+    const animate = (m: THREE.MeshStandardMaterial) => {
+      m.onBeforeCompile = sh => {
+        sh.uniforms.uTime = this.uTime; sh.uniforms.uExcite = this.uExcite;
+        sh.vertexShader = 'attribute float aPhase;\nattribute float aJump;\nuniform float uTime;\nuniform float uExcite;\n' + sh.vertexShader.replace(
+          '#include <begin_vertex>',
+          '#include <begin_vertex>\ntransformed.y += sin(uTime * 2.2 + aPhase) * 0.015 + uExcite * aJump * max(0.0, sin(uTime * 9.0 + aPhase)) * 0.28;',
+        );
+      };
+      return m;
+    };
+    const shirtMat = animate(new THREE.MeshStandardMaterial({ roughness: 0.8 }));
+    const skinMat = animate(new THREE.MeshStandardMaterial({ roughness: 0.7 }));
     this.bodies = new THREE.InstancedMesh(torso, shirtMat, this.fans.length);
     this.heads = new THREE.InstancedMesh(head, skinMat, this.fans.length);
     const shirts = ['#5C163A', '#F5C451', '#FFFFFF', '#1F2937', '#2563EB', '#DC2626', '#10B981', '#7C3AED', '#F472B6', '#111827', '#5C163A', '#F5C451'];
     const skins = ['#F1C7A5', '#D9A37E', '#B07850', '#8D5A3B', '#5E3A22', '#E8B48F'];
     const col = new THREE.Color();
-    this.fans.forEach((_, i) => {
-      this.bodies.setColorAt(i, col.set(shirts[Math.floor(rand() * shirts.length)]).multiplyScalar(0.42 + rand() * 0.2));
-      this.heads.setColorAt(i, col.set(skins[Math.floor(rand() * skins.length)]).multiplyScalar(0.55));
+    this.fans.forEach((f, i) => {
+      this.bodies.setColorAt(i, col.set(shirts[Math.floor(rand() * shirts.length)]).multiplyScalar(0.16 + rand() * 0.12));
+      this.heads.setColorAt(i, col.set(skins[Math.floor(rand() * skins.length)]).multiplyScalar(0.3));
+      const [x, y, z] = f.pos;
+      this.tmp.position.copy(this.toThree([x, y, z + 0.3])); this.tmp.updateMatrix();
+      this.bodies.setMatrixAt(i, this.tmp.matrix);
+      this.tmp.position.copy(this.toThree([x, y, z + 0.66])); this.tmp.updateMatrix();
+      this.heads.setMatrixAt(i, this.tmp.matrix);
     });
+    // Bounds never change and the stands are always in shot.
+    this.bodies.frustumCulled = this.heads.frustumCulled = false;
     this.group.add(this.bodies, this.heads);
 
     // Phone camera flashes.
@@ -77,17 +113,7 @@ export class Crowd {
   update(t: number, dt: number): void {
     this.excite = Math.max(0, this.excite - dt * 0.6);
     const e = this.excite;
-    this.fans.forEach((f, i) => {
-      const bob = Math.sin(t * 2.2 + f.phase) * 0.015 + e * f.jump * Math.max(0, Math.sin(t * 9 + f.phase)) * 0.28;
-      const [x, y, z] = f.pos;
-      this.tmp.position.copy(this.toThree([x, y, z + 0.33 + bob]));
-      this.tmp.rotation.set(0, 0, 0); this.tmp.scale.setScalar(1); this.tmp.updateMatrix();
-      this.bodies.setMatrixAt(i, this.tmp.matrix);
-      this.tmp.position.copy(this.toThree([x, y, z + 0.78 + bob])); this.tmp.updateMatrix();
-      this.heads.setMatrixAt(i, this.tmp.matrix);
-    });
-    this.bodies.instanceMatrix.needsUpdate = true;
-    this.heads.instanceMatrix.needsUpdate = true;
+    this.uTime.value = t; this.uExcite.value = e;
     // Flashes: more of them in big moments.
     const pos = this.flashes.geometry.getAttribute('position') as THREE.BufferAttribute;
     for (let i = 0; i < this.flashLife.length; i++) {
@@ -95,7 +121,7 @@ export class Crowd {
       if (this.flashLife[i] <= 0) {
         if (Math.random() < dt * (0.6 + e * 6)) {
           const f = this.fans[Math.floor(Math.random() * this.fans.length)];
-          if (f) { const p = this.toThree([f.pos[0], f.pos[1], f.pos[2] + 1]); pos.setXYZ(i, p.x, p.y, p.z); this.flashLife[i] = 0.08; }
+          if (f) { pos.setXYZ(i, f.pos[0], f.pos[2] + 1, f.pos[1]); this.flashLife[i] = 0.08; }
         } else pos.setXYZ(i, 0, -100, 0);
       }
     }
