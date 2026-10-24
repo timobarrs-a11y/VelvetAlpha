@@ -179,7 +179,7 @@ export function Dock() {
                       initialFriendCode={dock.pendingFriendCode}
                       onClose={() => dock.close(MESSAGES_KEY)}
                       onMinimize={() => dock.minimize(MESSAGES_KEY)}
-                      onOpenChat={dock.openFriend}
+                      onOpenChat={(t, g) => dock.openFriend(t, g, true)}
                     />
                   </WindowFrame>
                 </div>

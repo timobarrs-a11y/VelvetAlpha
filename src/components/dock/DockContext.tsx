@@ -34,7 +34,7 @@ export interface DockWindow {
   companionId?: string;
   friend?: FriendTarget;
   /** A game to open in this friend's window (from an invite); nonce re-triggers it. */
-  game?: { id: FriendGameId; nonce: number };
+  game?: { id: FriendGameId; nonce: number; /** You started it: send them an invite. */ invite?: boolean };
   minimized: boolean;
 }
 
@@ -79,7 +79,7 @@ interface DockApi {
   toast: DockToast | null;
   dismissToast: () => void;
   /** Open a chat with a real person as its own window. */
-  openFriend: (friend: FriendTarget, game?: FriendGameId) => void;
+  openFriend: (friend: FriendTarget, game?: FriendGameId, invite?: boolean) => void;
   openMessages: (view?: 'conversations' | 'requests') => void;
   /** Open Messages and add someone by friend code. */
   addFriendByCode: (code: string) => void;
@@ -194,14 +194,14 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
   const windowsRef = useRef(windows);
   windowsRef.current = windows;
 
-  const openFriend = useCallback((friend: FriendTarget, game?: FriendGameId) => {
+  const openFriend = useCallback((friend: FriendTarget, game?: FriendGameId, invite = false) => {
     const key = friendKey(friend.peerId);
     setWindows(prev => {
       const existing = prev.find(w => w.key === key);
       return [...prev.filter(w => w.key !== key), {
         key,
         friend: existing?.friend ?? friend,
-        game: game ? { id: game, nonce: Date.now() } : existing?.game,
+        game: game ? { id: game, nonce: Date.now(), invite } : existing?.game,
         minimized: false,
       }];
     });

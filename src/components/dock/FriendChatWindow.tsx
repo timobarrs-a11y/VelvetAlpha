@@ -16,7 +16,7 @@ const GAME_ORDER: Game[] = ['draw', 'paint', 'rps', 'checkers'];
 export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
   friend: FriendTarget;
   /** Open this game (they tapped Play on an invite). */
-  gameRequest?: { id: Game; nonce: number };
+  gameRequest?: { id: Game; nonce: number; invite?: boolean };
   onMinimize: () => void;
   onClose: () => void;
 }) {
@@ -35,7 +35,7 @@ export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
   };
 
   useEffect(() => {
-    if (gameRequest) openGame(gameRequest.id, false);
+    if (gameRequest) openGame(gameRequest.id, !!gameRequest.invite);
   }, [gameRequest?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
