@@ -42,7 +42,9 @@ import { usePopoverPosition } from './usePopoverPosition';
 import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
-import { TONE_COLOR } from './lobby';
+import { Avatar } from './Avatar';
+import { companionAvatarConfig, TONE_COLOR } from './lobby';
+import type { CompanionWithLastMessage } from '../services/companionService';
 import { TOOLBAR_TEXT_COLOR_PRESETS, type ToolbarTextColorKey } from '../services/customizationService';
 import { useCustomization } from '../hooks/useCustomization';
 import { buildWallpaperMeta } from '../services/wallpaperService';
@@ -256,6 +258,28 @@ function SidebarLabel({ children, inkSubtle }: { children: ReactNode; inkSubtle:
   return <p className="px-2 pb-1 pt-1 text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: inkSubtle }}>{children}</p>;
 }
 
+function PersonRow({ companion, coach, collapsed, pathname, onClick, inkColor, inkMuted }: { companion: CompanionWithLastMessage; coach?: boolean; collapsed: boolean; pathname: string; onClick: () => void; inkColor: string; inkMuted: string }) {
+  const active = pathname.startsWith(`/chat?companion=${companion.id}`) || pathname.includes(`companion=${companion.id}`);
+  const line = companion.last_message_text || (companion.last_message_at ? new Date(companion.last_message_at).toLocaleDateString() : 'Say hello');
+  return (
+    <button type="button" onClick={onClick} className={`group flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors ${active ? 'bg-emerald-400/10' : 'hover:bg-white/7'}`} title={collapsed ? companion.custom_name : undefined}>
+      <div className={`relative flex-shrink-0 overflow-hidden rounded-full border ${coach ? 'h-10 w-10 border-emerald-400/70' : 'h-8 w-8 border-white/10'}`}>
+        <Avatar config={companionAvatarConfig(companion)} className="h-full w-full" />
+        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#0c0a1e] bg-emerald-400" />
+      </div>
+      {!collapsed && (
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-[11px] font-semibold" style={{ color: inkColor }}>{companion.custom_name}</span>
+            {coach && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold text-emerald-300">Coach</span>}
+          </div>
+          <p className="mt-0.5 truncate text-[10px] leading-tight" style={{ color: inkMuted }}>{line}</p>
+        </div>
+      )}
+    </button>
+  );
+}
+
 function ToolRow({ label, icon, tone, path, collapsed, pathname, onNavigate, inkColor, inkMuted }: { label: string; icon: ReactNode; tone: string; path: string; collapsed: boolean; pathname: string; onNavigate: (path: string) => void; inkColor: string; inkMuted: string }) {
   const active = pathname === path || pathname.startsWith(`${path}/`);
   return (
@@ -268,6 +292,10 @@ function ToolRow({ label, icon, tone, path, collapsed, pathname, onNavigate, ink
 }
 
 function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkMuted, inkSubtle }: { collapsed: boolean; pathname: string; lobby: LobbyData; onNavigate: (path: string) => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
+  // Your coaches and companions, with their faces, in the full toolbar only;
+  // the folded rail stays icon-only.
+  const coaches = collapsed ? [] : lobby.companions.filter(companion => companion.relationship_type === 'mentor');
+  const companions = collapsed ? [] : lobby.companions.filter(companion => companion.relationship_type !== 'mentor');
   const coreTools = [
     { label: 'Daily Feed', path: '/daily-feed', tone: '#34d399', icon: <Newspaper className="h-3.5 w-3.5" /> },
     { label: 'Calendar', path: '/calendar', tone: '#fb923c', icon: <CalendarDays className="h-3.5 w-3.5" /> },
@@ -315,6 +343,7 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
         )}
         <div className="space-y-0.5">
           {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Coaching</SidebarLabel>}
+          {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(coach)} inkColor={inkColor} inkMuted={inkMuted} />)}
           <ToolRow label="Progress" path="/coaching-progress" tone={TONE_COLOR.coach} icon={<Target className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
           <ToolRow label="Commitments" path="/coaching-commitments" tone="#38bdf8" icon={<CheckCircle2 className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
           <ToolRow label="Plans" path="/coaching-commitments?view=plans" tone="#a78bfa" icon={<Layers className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
@@ -324,6 +353,7 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
         <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
           {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Companion</SidebarLabel>}
+          {companions.map(companion => <PersonRow key={companion.id} companion={companion} collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(companion)} inkColor={inkColor} inkMuted={inkMuted} />)}
           {!collapsed && <button type="button" onClick={lobby.handleNewCompanion} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] transition-colors hover:bg-white/7" style={{ color: inkMuted }}><Plus className="h-3.5 w-3.5" />Someone new</button>}
         </div>
         <div className="my-3 border-t border-white/8" />

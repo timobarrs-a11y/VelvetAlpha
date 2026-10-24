@@ -9,9 +9,11 @@ import { getConversationList, getIncomingRequests } from '../../shared/supabase/
 import { AiChatWindow } from './AiChatWindow';
 import { FriendChatWindow } from './FriendChatWindow';
 import { markCompanionRead } from '../../services/companionReadService';
-import { MESSAGES_KEY, aiKey, markCoachDismissed, useDock, type DockWindow } from './DockContext';
+import { MESSAGES_KEY, aiKey, friendKey, markCoachDismissed, useDock, type DockWindow } from './DockContext';
 
 const HIDDEN_PATHS = ['/splash', '/signin', '/signup', '/onboarding'];
+/** How many people stay in the dock as tabs; the rest are a tap away in Friends HQ. */
+const FRIEND_TRAY_SIZE = 4;
 const SURFACE_LABEL = { progress: 'Progress', plans: 'Plans', commitments: 'Commitments', library: 'Library' } as const;
 
 /** How many windows fit side by side: three on wide screens, two on tablets and landscape phones, one on portrait phones. */
@@ -191,6 +193,16 @@ export function Dock() {
     dock.close(w.key);
   };
 
+  // The friend tray: your most recent conversations stay put as tabs, plus any
+  // chat you opened that isn't among them.
+  const tray = dock.recentFriends.slice(0, FRIEND_TRAY_SIZE);
+  const friendTabs = [
+    ...tray,
+    ...dock.windows.filter(w => w.friend && !tray.some(f => f.peerId === w.friend!.peerId)).map(w => w.friend!),
+  ];
+  const overflow = dock.recentFriends.filter(f => !friendTabs.some(t => t.peerId === f.peerId));
+  const overflowUnread = overflow.reduce((n, f) => n + (dock.friendUnread[f.peerId] ?? 0), 0);
+
   // Coaches first, then companions.
   const heads = [...dock.companions].sort((a, b) =>
     Number(b.relationship_type === 'mentor') - Number(a.relationship_type === 'mentor'));
@@ -320,9 +332,55 @@ export function Dock() {
           </button>
         </div>
 
-        {(heads.length > 0 || dock.windows.some(w => w.friend)) && <div className="h-6 w-px flex-shrink-0 bg-[#2a1424]/12" />}
+        {(heads.length > 0 || friendTabs.length > 0) && <div className="h-6 w-px flex-shrink-0 bg-[#2a1424]/12" />}
 
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-hide">
+          {/* Real people first: the tray of your most recent chats. */}
+          {friendTabs.map(f => {
+            const w = { key: friendKey(f.peerId) };
+            const isShown = shownKeys.has(w.key);
+            const count = dock.friendUnread[f.peerId] ?? 0;
+            return (
+              <button
+                key={w.key}
+                type="button"
+                onClick={() => toggle(w.key, () => dock.openFriend(f))}
+                className={`relative flex h-9 flex-shrink-0 items-center gap-2 rounded-lg border-l-[3px] border-l-amber-400 px-3 text-xs font-semibold transition-colors ${
+                  isShown ? 'bg-amber-200 text-amber-950 shadow-sm' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                }`}
+                aria-pressed={isShown}
+                title={`${f.peerName} · friend${count ? ` · ${count} new` : ''}`}
+              >
+                <span className="max-w-[140px] truncate">{f.peerName}</span>
+                {!isShown && count > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white"
+                    aria-label={`${count} unread from ${f.peerName}`}
+                  >
+                    {count > 9 ? '9+' : count}
+                  </motion.span>
+                )}
+              </button>
+            );
+          })}
+          {overflow.length > 0 && (
+            <button
+              type="button"
+              onClick={() => dock.openMessages()}
+              className="relative flex h-9 flex-shrink-0 items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-2.5 text-xs font-semibold text-amber-900 hover:bg-amber-50"
+              title={`${overflow.length} more in Friends HQ${overflowUnread ? ` · ${overflowUnread} new` : ''}`}
+            >
+              +{overflow.length}
+              {overflowUnread > 0 && (
+                <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                  {overflowUnread > 9 ? '9+' : overflowUnread}
+                </span>
+              )}
+            </button>
+          )}
+          {friendTabs.length > 0 && heads.length > 0 && <div className="h-6 w-px flex-shrink-0 bg-[#2a1424]/12" />}
           {heads.map(c => {
             const key = aiKey(c.id);
             const isCoach = c.relationship_type === 'mentor';
@@ -355,35 +413,6 @@ export function Dock() {
                     animate={{ scale: 1 }}
                     className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white"
                     aria-label={`${count} unread from ${c.custom_name}`}
-                  >
-                    {count > 9 ? '9+' : count}
-                  </motion.span>
-                )}
-              </button>
-            );
-          })}
-          {dock.windows.filter(w => w.friend).map(w => {
-            const f = w.friend!;
-            const isShown = shownKeys.has(w.key);
-            const count = dock.friendUnread[f.peerId] ?? 0;
-            return (
-              <button
-                key={w.key}
-                type="button"
-                onClick={() => toggle(w.key, () => dock.openFriend(f))}
-                className={`relative flex h-9 flex-shrink-0 items-center gap-2 rounded-lg border-l-[3px] border-l-amber-400 px-3 text-xs font-semibold transition-colors ${
-                  isShown ? 'bg-amber-200 text-amber-950 shadow-sm' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
-                }`}
-                aria-pressed={isShown}
-                title={`${f.peerName} · friend${count ? ` · ${count} new` : ''}`}
-              >
-                <span className="max-w-[140px] truncate">{f.peerName}</span>
-                {!isShown && count > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white"
-                    aria-label={`${count} unread from ${f.peerName}`}
                   >
                     {count > 9 ? '9+' : count}
                   </motion.span>
