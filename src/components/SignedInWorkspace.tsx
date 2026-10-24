@@ -80,21 +80,12 @@ function WorkspaceToolbar({
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [mode, setMode] = useState<'classic' | 'v3'>(() => {
-    if (typeof window === 'undefined') return 'v3';
-    return window.localStorage.getItem('velvet.workspace.mode') === 'classic' ? 'classic' : 'v3';
-  });
   const [soundEnabled, setSoundEnabled] = useState(() => {
     if (typeof window === 'undefined') return true;
     return window.localStorage.getItem('velvet.workspace.sound') !== 'off';
   });
 
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Your space';
-
-  const selectMode = (nextMode: 'classic' | 'v3') => {
-    setMode(nextMode);
-    window.localStorage.setItem('velvet.workspace.mode', nextMode);
-  };
 
   const toggleSound = () => {
     setSoundEnabled(enabled => {
@@ -156,24 +147,6 @@ function WorkspaceToolbar({
           {available ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
           <span className="hidden sm:inline">{available ? 'Available' : 'Unavailable'}</span>
         </button>
-        <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] p-0.5" aria-label="Workspace appearance">
-          <button
-            type="button"
-            onClick={() => selectMode('classic')}
-            aria-pressed={mode === 'classic'}
-            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'classic' ? 'bg-white/15 text-white' : 'hover:bg-white/8 text-white/60'}`}
-          >
-            Classic
-          </button>
-          <button
-            type="button"
-            onClick={() => selectMode('v3')}
-            aria-pressed={mode === 'v3'}
-            className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors sm:px-3 ${mode === 'v3' ? 'bg-rose-500/20 text-rose-200' : 'hover:bg-white/8 text-white/60'}`}
-          >
-            V3
-          </button>
-        </div>
         <button
           type="button"
           onClick={toggleSound}
