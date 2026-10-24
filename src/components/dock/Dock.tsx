@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, UserPlus } from 'lucide-react';
+import { AddFriendButton } from './AddFriendButton';
 import { supabase } from '../../shared/supabase/client';
 import { useAuth } from '../../auth/AuthProvider';
 import { MessagingOverlay } from '../MessagingOverlay';
@@ -218,8 +219,8 @@ export function Dock() {
       </div>
 
       {/* The bar */}
-      <div className="relative flex h-[52px] items-center gap-2 border-t border-pink-500/25 bg-[rgba(12,10,30,0.92)] px-2 backdrop-blur-xl sm:px-3">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pink-400/50 to-transparent" />
+      {/* Same warm white as the top bar: the two read as one frame around the page. */}
+      <div className="relative flex h-[52px] items-center gap-2 border-t border-[#f5cfe0] bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5] px-2 text-[#2a1424] sm:px-3">
 
         <div className="relative">
           <AnimatePresence>
@@ -272,8 +273,8 @@ export function Dock() {
             onClick={() => toggle(MESSAGES_KEY, () => dock.openMessages())}
             className={`flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors ${
               shownKeys.has(MESSAGES_KEY)
-                ? 'border-pink-400/60 bg-pink-500/20 text-white'
-                : 'border-white/12 bg-white/[0.05] text-white/85 hover:bg-white/10'
+                ? 'border-pink-400 bg-pink-500 text-white'
+                : 'border-[#2a1424]/12 bg-white text-[#2a1424]/85 hover:bg-pink-50'
             }`}
             aria-pressed={shownKeys.has(MESSAGES_KEY)}
             title="Friends HQ"
@@ -287,8 +288,9 @@ export function Dock() {
             )}
           </button>
         </div>
+        <AddFriendButton onAdd={dock.addFriendByCode} />
 
-        {(heads.length > 0 || dock.windows.some(w => w.friend)) && <div className="h-6 w-px flex-shrink-0 bg-white/10" />}
+        {(heads.length > 0 || dock.windows.some(w => w.friend)) && <div className="h-6 w-px flex-shrink-0 bg-[#2a1424]/12" />}
 
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-hide">
           {heads.map(c => {
@@ -304,19 +306,19 @@ export function Dock() {
                 type="button"
                 onClick={() => toggle(key, () => dock.openCompanion(c.id))}
                 className={`relative flex h-9 flex-shrink-0 items-center gap-2 rounded-lg border-l-[3px] px-3 text-xs font-semibold transition-colors ${
-                  isCoach ? 'border-l-emerald-400' : 'border-l-pink-400'
+                  isCoach ? 'border-l-emerald-500' : 'border-l-pink-500'
                 } ${
                   isShown
-                    ? 'bg-white/12 text-white'
+                    ? 'bg-white text-[#2a1424] shadow-sm'
                     : isMinimized || onPage
-                      ? 'bg-white/[0.06] text-white/90 hover:bg-white/10'
-                      : 'text-white/70 hover:bg-white/[0.06] hover:text-white'
+                      ? 'bg-white/70 text-[#2a1424]/90 hover:bg-white'
+                      : 'text-[#2a1424]/70 hover:bg-white/70 hover:text-[#2a1424]'
                 }`}
                 aria-pressed={isShown}
                 title={`${c.custom_name}${isCoach ? ' · coach' : ''}${count ? ` · ${count} new` : ''}`}
               >
                 <span className="max-w-[140px] truncate">{c.custom_name}</span>
-                {onPage && <span className="hidden font-normal text-emerald-300 sm:inline">· {SURFACE_LABEL[dock.coachSurface!.surface]}</span>}
+                {onPage && <span className="hidden font-normal text-emerald-600 sm:inline">· {SURFACE_LABEL[dock.coachSurface!.surface]}</span>}
                 {!isShown && count > 0 && (
                   <motion.span
                     initial={{ scale: 0 }}
@@ -339,8 +341,8 @@ export function Dock() {
                 key={w.key}
                 type="button"
                 onClick={() => toggle(w.key, () => dock.openFriend(f))}
-                className={`relative flex h-9 flex-shrink-0 items-center gap-2 rounded-lg border-l-[3px] border-l-amber-300 px-3 text-xs font-semibold transition-colors ${
-                  isShown ? 'bg-amber-300/20 text-amber-50' : 'bg-amber-300/[0.08] text-amber-100 hover:bg-amber-300/15'
+                className={`relative flex h-9 flex-shrink-0 items-center gap-2 rounded-lg border-l-[3px] border-l-amber-400 px-3 text-xs font-semibold transition-colors ${
+                  isShown ? 'bg-amber-200 text-amber-950 shadow-sm' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
                 }`}
                 aria-pressed={isShown}
                 title={`${f.peerName} · friend${count ? ` · ${count} new` : ''}`}
