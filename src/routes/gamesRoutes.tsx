@@ -9,6 +9,7 @@ const MomentumGame = lazy(() => import('../pages/MomentumGame').then(m => ({ def
 const SlimeSoccer = lazy(() => import('../components/slime-soccer'));
 const StellarPursuitGame = lazy(() => import('../pages/StellarPursuitGame').then(m => ({ default: m.StellarPursuitGame })));
 const SocialCombatRPGGame = lazy(() => import('../pages/SocialCombatRPGGame').then(m => ({ default: m.SocialCombatRPGGame })));
+const ShootoutGame = lazy(() => import('../pages/ShootoutGame').then(m => ({ default: m.ShootoutGame })));
 const VelvetHouseGame = lazy(() => import('../pages/VelvetHouseGame').then(m => ({ default: m.VelvetHouseGame })));
 const VelvetHouseNextGame = lazy(() => import('../pages/VelvetHouseNextGame').then(m => ({ default: m.VelvetHouseNextGame })));
 
@@ -26,6 +27,7 @@ export const gamesRoutes = [
   <Route key="momentum" path="/momentum" element={game(<MomentumGame />)} />,
   <Route key="slime-soccer" path="/slime-soccer" element={game(<SlimeSoccer />)} />,
   <Route key="stellar-pursuit" path="/stellar-pursuit" element={game(<StellarPursuitGame />)} />,
+  <Route key="shootout" path="/shootout" element={game(<ShootoutGame />)} />,
   <Route key="social-combat" path="/social-combat" element={game(<SocialCombatRPGGame />)} />,
   // Phase 1B: the live game now loads the typed/bundled engine (velvet-house-next entry)
   <Route key="velvet-house" path="/velvet-house" element={game(<VelvetHouseNextGame />)} />,

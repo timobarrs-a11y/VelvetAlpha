@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Crown, Cherry, Zap, Circle,
-  Rocket, Brain, Home,
+  Rocket, Brain, Home, Target,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
@@ -28,6 +28,7 @@ export interface GameEntry {
 
 export const GAMES: GameEntry[] = [
   { id: 'checkers',     name: 'Checkers',        description: 'Challenge an AI opponent with personality and banter',           icon: Crown,     iconBg: 'from-amber-500 to-orange-500',   path: '/checkers' },
+  { id: 'shootout',     name: '3-Point Shootout', description: 'Hold to rise, release at the top: a timing-based 3-point contest',    icon: Target,    iconBg: 'from-orange-500 to-red-600',     path: '/shootout' },
   { id: 'momentum',     name: 'Momentum',        description: 'AI-generated platformer — each run has a unique hand-crafted world', icon: Zap,       iconBg: 'from-cyan-500 to-blue-600',      path: '/momentum' },
   { id: 'slime-soccer', name: 'Slime Soccer',    description: 'Classic physics-based slime soccer showdown',                        icon: Circle,    iconBg: 'from-fuchsia-500 to-pink-600',   path: '/slime-soccer' },
   { id: 'stellar',      name: 'Stellar Pursuit', description: 'Space shooter — navigate 9 sectors to rescue your family',          icon: Rocket,    iconBg: 'from-slate-600 to-slate-900',    path: '/stellar-pursuit' },
