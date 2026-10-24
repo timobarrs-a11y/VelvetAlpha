@@ -11,7 +11,7 @@ import {
 } from './engine';
 import * as sfx from './audio';
 
-type V3 = [number, number, number];
+export type V3 = [number, number, number];
 type Phase = 'walk' | 'aim' | 'hold' | 'flight' | 'done';
 
 export interface RunResult { score: number; max: number; makes: number; shots: number; bestStreak: number; level: Level }
@@ -30,15 +30,15 @@ const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[
 const norm = (a: V3): V3 => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 
 /** One piece of the ball's path: a parabola from a to b over dur seconds, peaking h above the higher end. */
-interface Leg { a: V3; b: V3; h: number; dur: number; sound?: 'rim' | 'board' | 'swish' | 'bounce' | null }
+export interface Leg { a: V3; b: V3; h: number; dur: number; sound?: 'rim' | 'board' | 'swish' | 'bounce' | null }
 
-function legAt(l: Leg, u: number): V3 {
+export function legAt(l: Leg, u: number): V3 {
   // Straight line from a to b, lifted by a parabola h high at the middle.
   return [lerp(l.a[0], l.b[0], u), lerp(l.a[1], l.b[1], u), lerp(l.a[2], l.b[2], u) + 4 * l.h * u * (1 - u)];
 }
 
 /** The ball's whole flight for an outcome, from the release point. */
-function planFlight(from: V3, outcome: Outcome, side: number): Leg[] {
+export function planFlight(from: V3, outcome: Outcome, side: number): Leg[] {
   const dist = Math.hypot(from[0], from[1]);
   const arc = 1.3 + dist * 0.12, t = 0.85 + dist * 0.03;
   const toward = norm([from[0], from[1], 0]); // from the rim out to the shooter
