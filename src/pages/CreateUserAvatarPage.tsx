@@ -8,7 +8,6 @@ import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
 import { trackOpenCustomizer, trackSaveAvatar, trackSkipAvatar } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
-import { resolveHomeRoute } from '../utils/homeRoute';
 import { VELVET_THEME } from '../config/velvetTheme';
 
 const AMBIENT_ORBS = [
@@ -44,7 +43,7 @@ export function CreateUserAvatarPage() {
       const companions = await getCompanions(user.id);
 
       if (companions.length > 0) {
-        pendingRoute.current = await resolveHomeRoute(user.id);
+        pendingRoute.current = '/lobby';
       } else {
         pendingRoute.current = '/atlas-onboarding';
       }

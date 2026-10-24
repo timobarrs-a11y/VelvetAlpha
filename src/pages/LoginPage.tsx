@@ -19,13 +19,8 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
     try {
-      const { companions: found } = await authService.signIn(email, password);
-
-      if (found.length === 1) {
-        navigate(`/chat?companion=${found[0].id}`);
-      } else {
-        navigate('/');
-      }
+      await authService.signIn(email, password);
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'Failed to log in. Please check your credentials.');
     } finally {
