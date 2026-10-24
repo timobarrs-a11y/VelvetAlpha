@@ -299,8 +299,24 @@ body{margin:0;overflow:hidden}
   .drawer{width:auto;flex:1;border-left:0;border-top:1px solid var(--line)}
   .dock{position:fixed;left:0;right:0;bottom:0;z-index:20;flex-direction:row;width:auto;height:calc(60px + env(safe-area-inset-bottom));padding:4px 6px env(safe-area-inset-bottom);border-left:0;border-top:1px solid var(--line);overflow:hidden}
   .dock button{flex:1;padding:6px 0}
-  .dialog{position:fixed;left:8px;right:8px;bottom:calc(68px + env(safe-area-inset-bottom));margin:0;z-index:21}
+  .dialog{position:fixed;left:8px;right:8px;bottom:calc(104px + env(safe-area-inset-bottom));margin:0;z-index:21}
+  .screen > .hud{display:none}
+  .infobar{display:block}
+  .floorbar{flex-wrap:nowrap;overflow-x:auto;padding:6px 8px;gap:4px;-webkit-overflow-scrolling:touch}
+  .floorbar .sep{display:none}
+  .floorbar label{font-size:11px}
+  .floorbar button{font-size:11px;padding:3px 8px}
 }
+/* Collapsible info bar — replaces the floating top HUD on mobile */
+.infobar{display:none}
+.infobar-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:6px 12px;border:0;border-top:1px solid var(--line);background:var(--surface);cursor:pointer;font:inherit;color:var(--ink)}
+.ib-compact{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;align-items:center}
+.ib-compact .chip{font-family:var(--mono);font-size:11px;white-space:nowrap}
+.ib-chevron{font-size:12px;color:var(--muted);transition:transform .2s;flex:none}
+.infobar.open .ib-chevron{transform:rotate(180deg)}
+.infobar-expanded{display:none;padding:6px 12px 8px;border-top:1px solid var(--line);background:var(--surface);gap:6px;flex-wrap:wrap;align-items:center}
+.infobar.open .infobar-expanded{display:flex}
+.infobar-expanded .who{max-width:100%}
 </style>
 
 <div class="setup" id="setup" hidden>
@@ -394,6 +410,23 @@ body{margin:0;overflow:hidden}
           <button type="button" id="storeBtn" hidden>Put away</button>
         </div>
         <div class="arrangehint" id="arrangeHint" hidden>Arrange mode pauses time. Click a piece of furniture to pick it up, move it, press Rotate or R, then click to set it down. Green means it fits. Esc puts it back.</div>
+        <div class="infobar" id="infobar">
+          <button class="infobar-toggle" id="infoToggle" type="button" aria-expanded="false" aria-label="Show player info">
+            <span class="ib-compact">
+              <span class="chip" id="ibClock">Fri · 6:20 AM</span>
+              <span class="chip wallet" id="ibCash">$70</span>
+              <span class="chip alert" id="ibPower" hidden>Power off</span>
+            </span>
+            <span class="ib-chevron" aria-hidden="true">▾</span>
+          </button>
+          <div class="infobar-expanded" id="ibExpanded">
+            <button class="who" type="button" id="ibJTag"><i style="background:#4A5DA8"></i><b id="ibJTagText">Jordan · Bedroom · Asleep</b></button>
+            <button class="who" type="button" id="ibMTag"><i style="background:#E0A43A"></i><b id="ibMTagText">Maya · Bedroom · Asleep</b></button>
+            <span id="ibPetTags" style="display:contents"></span>
+            <span class="chip skip" id="ibSkip" hidden>Skipping ahead</span>
+            <span class="chip" id="ibGuest" hidden></span>
+          </div>
+        </div>
     </div>
 
     <aside class="drawer" id="drawer" aria-label="Menu" hidden>
@@ -4703,11 +4736,26 @@ ${memoryBrief()}` : ''}`);
     $('talkBtn').setAttribute('aria-disabled', String(!canTalk()));
     renderHousehold();
     if (lastMoney !== money || lastDeliveryState !== !!(delivery || parcel)) { lastMoney = money; lastDeliveryState = !!(delivery || parcel); renderShop(); }
+    syncInfoBar();
+  }
+  function syncInfoBar() {
+    const ib = $('infobar'); if (!ib) return;
+    $('ibClock').textContent = $('clock').textContent;
+    $('ibCash').textContent = $('cashChip').textContent;
+    $('ibPower').hidden = $('powerChip').hidden;
+    $('ibSkip').hidden = $('skipChip').hidden;
+    $('ibGuest').hidden = $('guestChip').hidden;
+    if (!$('ibGuest').hidden) $('ibGuest').textContent = $('guestChip').textContent;
+    $('ibJTagText').textContent = $('jTagText').textContent;
+    $('ibJTag').classList.toggle('away', $('jTag').classList.contains('away'));
+    $('ibMTagText').textContent = $('mTagText').textContent;
+    $('ibMTag').classList.toggle('away', $('mTag').classList.contains('away'));
+    PETS.forEach(p => { if (p.ui && p.ui.tag2) { p.ui.tag2.textContent = p.ui.tag.textContent; p.ui.tagBtn2.classList.toggle('away', !!p.away); } });
   }
   let lastMoney = null, lastDeliveryState = null, petsShown = 0, goalsT = 0;
   function renderPets() {
     petsShown = PETS.length; $('petsGroup').hidden = !PETS.length;
-    const body = $('petsBody'), tags = $('petTags'); body.innerHTML = ''; tags.innerHTML = '';
+    const body = $('petsBody'), tags = $('petTags'); body.innerHTML = ''; tags.innerHTML = ''; $('ibPetTags').innerHTML = '';
     PETS.forEach(p => {
       const wrap = document.createElement('div'); wrap.style.cssText = 'display:grid;gap:7px';
       const head = document.createElement('div'); head.className = 'row';
@@ -4724,6 +4772,8 @@ ${memoryBrief()}` : ''}`);
       wrap.append(head, bars, st, acts); body.appendChild(wrap);
       const tb = document.createElement('button'); tb.type = 'button'; tb.className = 'who'; const dot = document.createElement('i'); dot.style.background = p.coat.c; dot.style.border = '1px solid var(--line)'; const tx = document.createElement('b'); tb.append(dot, tx); tb.addEventListener('click', () => { if (!p.away) { setView(p.level); if (p.level !== jordan.level) { follow = false; $('follow').checked = false; } } }); tags.appendChild(tb);
       p.ui.tag = tx; p.ui.tagBtn = tb;
+      const tb2 = tb.cloneNode(true); tb2.addEventListener('click', () => { if (!p.away) { setView(p.level); if (p.level !== jordan.level) { follow = false; $('follow').checked = false; } } }); $('ibPetTags').appendChild(tb2);
+      p.ui.tag2 = tb2.querySelector('b'); p.ui.tagBtn2 = tb2;
     });
   }
   function petOrder(a, p) {
@@ -4842,6 +4892,13 @@ ${memoryBrief()}` : ''}`);
   }
   document.querySelectorAll('#dock [data-open]').forEach(b => b.addEventListener('click', () => openPage(b.dataset.open)));
   $('drawerClose').addEventListener('click', () => openPage(''));
+  const ibEl = $('infobar');
+  $('infoToggle').addEventListener('click', () => {
+    const open = ibEl.classList.toggle('open');
+    $('infoToggle').setAttribute('aria-expanded', String(open));
+    $('infoToggle').setAttribute('aria-label', open ? 'Hide player info' : 'Show player info');
+  });
+  $('ibJTag').addEventListener('click', () => { if (!jordan.away) setView(jordan.level); });
   { let first = null; try { first = localStorage.getItem('velvet-drawer'); } catch (e) {} if (first === null) first = matchMedia('(max-width:760px)').matches ? '' : 'goals'; openPage(first); }
   let trackKey = '', trackHold = 0;
   function currentObjective() {
