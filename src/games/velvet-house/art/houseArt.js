@@ -1231,10 +1231,17 @@ export function createHouseArt(ctx0, opts = {}) {
         case 'spoon': limb(h[0], h[1], h[0] + 1.5, h[1] + 7, '#8A5A3B', 1.6); break;
         case 'fork': limb(h[0], h[1], h[0] + 0.5, h[1] - 6, '#C9CED6', 1.2); break;
         case 'cup': rr(h[0] - 2.5, h[1] - 4, 5, 6, 1.2, '#F4EFE6'); limb(h[0] + 2.5, h[1] - 2.5, h[0] + 4, h[1] - 1, '#F4EFE6', 1.2); break;
-        case 'phone': rr(h[0] - 1.6, h[1] - 3.5, 3.2, 6, 0.8, '#1E1B2E'); break;
+        case 'phone': rr(h[0] - 1.6, h[1] - 3.5, 3.2, 6, 0.8, '#1E1B2E'); if (p.scroll != null) limb(h[0] - 0.6, h[1] - 2.6 + p.scroll * 4, h[0] + 0.6, h[1] - 2.6 + p.scroll * 4, '#7FB2FF', 0.8); break;
         case 'dumbbell': limb(h[0] - 4, h[1], h[0] + 4, h[1], '#3B3F4A', 1.8); circle(h[0] - 4, h[1], 2.2, '#2A2D35'); circle(h[0] + 4, h[1], 2.2, '#2A2D35'); break;
         case 'brush': limb(h[0], h[1], h[0] + 2, h[1] - 6, '#8A5A3B', 1.2); circle(h[0] + 2, h[1] - 6, 1.1, '#E48AAE'); break;
         case 'palette': ell(h[0], h[1] - 1, 5, 3, '#D9B98C'); circle(h[0] - 2, h[1] - 2, 0.9, '#E5484D'); circle(h[0] + 1, h[1] - 2.5, 0.9, '#3B82F6'); circle(h[0] + 2.5, h[1] - 0.5, 0.9, '#22C55E'); break;
+        case 'knife': limb(h[0], h[1], h[0] + 1, h[1] + 6, '#C9CED6', 1.4); limb(h[0], h[1], h[0] - 0.5, h[1] - 2, '#3B2A20', 2); break;
+        case 'plate': { const a = hand[-1] || h, b = hand[1] || h; ell((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 1, 7, 2.6, '#F4EFE6'); ell((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 2, 3.5, 1.4, '#C2703D'); break; }
+        case 'spatula': { const tip = [h[0] + 3, h[1] + 5 - (p.flip || 0) * 4]; limb(h[0], h[1], tip[0], tip[1], '#3B2A20', 1.4); rr(tip[0] - 2, tip[1] - 1, 4, 2.5, 0.5, '#C9CED6'); if (p.flip > 0.3) ell(tip[0], tip[1] - 5 * p.flip, 2.6, 1.2, '#8B4A2B'); break; }
+        case 'guitar': { const body = local([0.16, -0.02, -0.3], 1), neck = local([0.24, 0.26, -0.1], -1); limb(body[0], body[1], neck[0], neck[1], '#5A3A22', 2); ell(body[0], body[1], 5, 4, '#B5651D'); circle(body[0], body[1], 1.2, '#2A1A10'); break; }
+        case 'gloves': [-1, 1].forEach(sd => { const g = hand[sd]; if (g) circle(g[0], g[1], 2.6, '#D7263D'); }); break;
+        case 'parcel': { const a = hand[-1] || h, b = hand[1] || h; rr((a[0] + b[0]) / 2 - 5, (a[1] + b[1]) / 2 - 7, 10, 7, 1, '#C79A5B'); limb((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 7, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, '#E8D2A6', 1); break; }
+        case 'cloth': { const a = hand[-1] || h, b = hand[1] || h; ctx.fillStyle = '#9EC5E8'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(b[0], b[1] + 4 + (p.open || 0) * 4); ctx.lineTo(a[0], a[1] + 4 + (p.open || 0) * 4); ctx.fill(); break; }
         case 'ball': circle(h[0] + 3, h[1] - 6, 2.4, '#E5484D'); break;
         case 'book': {
           const a = hand[-1] || h, b = hand[1] || h, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
@@ -1289,8 +1296,12 @@ export function createHouseArt(ctx0, opts = {}) {
     const P3 = (dx, dy, dz) => iso(c.x + dx, c.y + dy, c.z + dz);
     const [fx, fy] = P3(0, 0, 0);
     if (pose === 'sleep') {
-      const [lx, ly] = c.face, head = P3(0, 0, 0.16), mid = P3(lx * 0.3, ly * 0.3, 0.14), feet = P3(lx * 1.45, ly * 1.45, 0.12);
-      limb(mid[0], mid[1], feet[0], feet[1], shade(L.top, 0.25), 15);
+      // Breathing under the covers, and rolling over now and then.
+      const [lx, ly] = c.face, breath = Math.sin(t * 1.2 + c.seed * 4) * 0.012;
+      const turn = Math.floor((t + c.seed * 37) / 24) % 2 === 1, tilt = turn ? 1 : -1;
+      const head = P3(0, 0, 0.16), mid = P3(lx * 0.3, ly * 0.3, 0.14 + breath), feet = P3(lx * 1.45, ly * 1.45, 0.12);
+      limb(mid[0], mid[1], feet[0], feet[1], shade(L.top, 0.25), 15 + breath * 60);
+      limb(mid[0] + tilt * 3, mid[1] - 2, mid[0] + tilt * 1, mid[1] + 1, shade(L.top, 0.35), 4);
       if (L.longHair) ell(head[0] - 3, head[1] - 1, 7, 4, L.hair);
       circle(head[0], head[1] - 2, 5.5, L.skin); ell(head[0] - 1, head[1] - 5, 6, 3.5, L.hair);
       const zz = (t * 0.6 + c.seed) % 1; ctx.globalAlpha = 1 - zz; ctx.fillStyle = '#F2EEE8'; ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.fillText('z', head[0] + 6 + zz * 6, head[1] - 10 - zz * 12); ctx.globalAlpha = 1;
@@ -1299,13 +1310,13 @@ export function createHouseArt(ctx0, opts = {}) {
     if (c.z < 0.05) ell(fx, fy, 8, 3.5, 'rgba(0,0,0,.22)');
     const ws = walkState(c), amp = ws.amp, ph = ws.ph;
     // What this activity looks like right now (null: plain standing/walking).
-    const rig = c.walking ? null : poseRig(pose, t, c.seed);
+    const rig = c.walking ? null : poseRig(pose, t, c.seed, c.act, c.actMin || 0);
     const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = !rig && !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
     const breathe = Math.sin(t * 1.9 + c.seed * 2) * (idle ? 0.012 : 0.005);
     const sway = Math.sin(t * 2.2 + c.seed * 3) * (c.walking ? 2.6 : idle ? 0.9 : 0.4);
     const gaze = idle ? Math.sin(t * 0.45 + c.seed * 5) * 2.2 + Math.sin(t * 0.13 + c.seed) * 1.2 : 0;
     const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
-    const dance = pose === 'dance';
+    const dance = pose === 'dance' && !rig;
     const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.035 * amp;
     const hipZ = (c.sit ? 0.03 : 0.62 - (rig?.drop || 0)) + bob + breathe + (rig?.bob || 0), shZ = hipZ + 0.42, hdZ = shZ + 0.14;
     const [dx, dy] = c.face, lean = rig?.lean || 0;
@@ -1315,6 +1326,16 @@ export function createHouseArt(ctx0, opts = {}) {
     if (P3(rx, ry, 0)[0] < fx) { rx = -rx; ry = -ry; }
     const local = (v, side) => P3(dx * v[0] + rx * side * v[1], dy * v[0] + ry * side * v[1], shZ + v[2]);
     [-1, 1].forEach(side => {
+      if (rig && rig.legs === 'pedal') {
+        const p = rig.phase + (side > 0 ? 0 : Math.PI);
+        // Pedals sit below a bike seat, or in front when standing on the floor.
+        const footZ = c.sit ? -c.z * 0.55 : 0.16, kneeZ = c.sit ? 0.04 : hipZ * 0.7;
+        const foot = P3(dx * (0.16 + Math.cos(p) * 0.1), dy * (0.16 + Math.cos(p) * 0.1), footZ + Math.sin(p) * 0.1);
+        const knee = P3(dx * 0.3, dy * 0.3, kneeZ + Math.sin(p) * 0.06);
+        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
+        limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        return;
+      }
       if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5); limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
       if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
       if (rig && rig.legs === 'crouch') {
@@ -1324,6 +1345,20 @@ export function createHouseArt(ctx0, opts = {}) {
         return;
       }
       if (rig && rig.legs === 'swim') return; // underwater
+
+      if (rig && rig.legs === 'tree' && side > 0) {
+        // Tree pose: this foot rests against the other knee.
+        const knee = P3(rx * 0.22, ry * 0.22, hipZ * 0.55), foot = P3(rx * 0.02, ry * 0.02, hipZ * 0.45);
+        limb(hip[0] + 2.5, hip[1], knee[0] + 2.5, knee[1], L.bottom, 5);
+        limb(knee[0] + 2.5, knee[1], foot[0] + 1, foot[1], L.bottom, 4.5);
+        return;
+      }
+      if (rig && rig.legs === 'lunge') {
+        const fw = side > 0 ? 0.3 : -0.26, knee = P3(dx * fw * (side > 0 ? 1 : 0.6), dy * fw * (side > 0 ? 1 : 0.6), hipZ * 0.5), foot = P3(dx * fw * 1.1, dy * fw * 1.1, 0);
+        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
+        limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        return;
+      }
       if (rig && (rig.legs === 'run' || rig.legs === 'step')) {
         const big = rig.legs === 'run', off = side > 0 ? 0 : Math.PI, p = rig.phase + off;
         const sw = Math.sin(p) * (big ? 0.22 : 0.12), lift = Math.max(0, Math.sin(p)) * (big ? 0.15 : 0.06);
@@ -1399,7 +1434,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (f.front) {
       ell(hd[0] + shift * 1.6 + sway * 0.3, hd[1] - 9, 6, 3.6, L.hair);
       ctx.fillStyle = '#241B25';
-      const down = rig?.headDown ? 1.3 : 0;
+      const down = rig?.headDown ? 1.3 : rig?.lookUp ? -1.2 : 0;
       [-1, 1].forEach(side => { const eh = Math.max(0.2, (rig?.headDown ? 0.8 : 1.4) * (1 - bl)); ctx.fillRect(hd[0] + shift * 1.6 + f.flip * 1.2 + side * 2.1 + gaze - 0.6, hd[1] - 5.5 + down + (1.4 - eh) / 2, 1.2, eh); });
       const cx = hd[0] + shift * 1.6 + f.flip * 0.8 + gaze * 0.6, cy = hd[1] - 1.8;
       if (talking || rig?.talk) {

@@ -42,4 +42,23 @@ describe('poseRig', () => {
   it('leaves plain standing alone', () => {
     expect(poseRig('stand', 1, 0)).toBeNull();
   });
+
+  it('gives activities that share a pose their own clip', () => {
+    // Piano and the bike both use the desk pose, but neither should type.
+    const desk = poseRig('desk', 1, 0.2)!;
+    expect(poseRig('desk', 1, 0.2, 'piano')).not.toEqual(desk);
+    expect(poseRig('desk', 1, 0.2, 'bike')!.legs).toBe('pedal');
+    expect(poseRig('arcade', 1, 0.2, 'boxing')!.props!.some(p => p.kind === 'gloves')).toBe(true);
+    expect(poseRig('listen', 1, 0.2, 'guitar')!.props!.some(p => p.kind === 'guitar')).toBe(true);
+  });
+
+  it('walks cooking through chop, stir, taste and plate', () => {
+    const kinds = [1, 8, 14, 20].map(m => (poseRig('cook', 1, 0, 'cook', m)!.props ?? []).map(p => p.kind).join());
+    expect(kinds).toEqual(['knife', 'spoon', 'spoon', 'plate']);
+  });
+
+  it('dances in more than one style', () => {
+    const at = (act: string) => JSON.stringify(poseRig('dance', 2, 0, act)!.hands);
+    expect(new Set([at('dance'), at('jukebox'), at('danceTogether')]).size).toBe(3);
+  });
 });

@@ -935,6 +935,8 @@ function boot(): void {
       level: p.level, x: p.x, y: p.y, z: p.z, face: p.face, pose,
       walking: isWalking(p), sit: SITTING_POSES.has(pose) && p.z > 0.05, hidden: p.onStairs,
       seed: seeds[p.id], look: p.look,
+      act: p.task && p.task.phase === 'do' ? p.task.act : null,
+      actMin: p.task && p.task.phase === 'do' ? p.task.time : 0,
     };
   }
 

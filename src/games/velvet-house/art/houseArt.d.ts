@@ -17,6 +17,10 @@ export interface PersonFrame {
   sit: boolean;
   hidden: boolean;
   seed: number;
+  /** The activity in progress (e.g. 'piano'), for clips beyond the shared pose. */
+  act?: string | null;
+  /** Game minutes into that activity, so clips can move through steps. */
+  actMin?: number;
   look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean };
 }
 
