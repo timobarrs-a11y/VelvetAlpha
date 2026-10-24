@@ -21,6 +21,7 @@ vi.mock('../../../shared/supabase/client', () => {
 vi.mock('../../../shared/supabase/queries/messaging', () => ({
   getConversationList: vi.fn(async () => [{ unread_count: 2 }]),
   getIncomingRequests: vi.fn(async () => []),
+  setOnline: vi.fn(async () => {}),
 }));
 vi.mock('../../MessagingOverlay', () => ({
   MessagingOverlay: () => <div>friends inbox</div>,

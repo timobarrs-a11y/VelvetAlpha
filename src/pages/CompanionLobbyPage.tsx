@@ -364,7 +364,7 @@ export function CompanionLobbyPage() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.5, type: 'spring' }}
         onClick={() => setShowFeedbackModal(true)}
-        className="fixed bottom-6 right-6 w-13 h-13 bg-gradient-to-br from-primary-500 to-pink-500 hover:from-primary-600 hover:to-pink-600 text-white rounded-full shadow-glow hover:shadow-glow-lg transition-all duration-200 flex items-center justify-center z-40 group"
+        className="fixed bottom-24 right-4 w-13 h-13 bg-gradient-to-br from-primary-500 to-pink-500 hover:from-primary-600 hover:to-pink-600 text-white rounded-full shadow-glow hover:shadow-glow-lg transition-all duration-200 flex items-center justify-center z-40 group"
         title="Send Feedback"
         aria-label="Send Feedback">
         <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />

@@ -230,7 +230,7 @@ export function Dock() {
             title="Messages with friends"
           >
             <MessageCircle className="h-4 w-4" />
-            <span className="hidden sm:inline">Messages</span>
+            <span>Messages</span>
             {inbox.badge > 0 && (
               <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-bold text-white">
                 {inbox.badge > 9 ? '9+' : inbox.badge}

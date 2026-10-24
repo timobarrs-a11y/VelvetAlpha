@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { CompanionWithLastMessage } from '../../services/companionService';
 import { getCompanionUnreadCounts } from '../../services/companionReadService';
 import { supabase } from '../../shared/supabase/client';
+import { setOnline } from '../../shared/supabase/queries/messaging';
 import { useAuth } from '../../auth/AuthProvider';
 import type { CoachSurface } from '../../services/chatService';
 
@@ -102,6 +103,23 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
       supabase.removeChannel(channel);
     };
   }, [userId, refreshUnread]);
+
+  // Friends see you online whenever Velvet is open in front of you. Hidden tabs
+  // stop the heartbeat, so you drift to away and then offline on your own.
+  useEffect(() => {
+    if (!userId) return;
+    const beat = () => { if (document.visibilityState === 'visible') setOnline(true).catch(() => {}); };
+    beat();
+    const heartbeat = setInterval(beat, 45000);
+    const onUnload = () => { setOnline(false).catch(() => {}); };
+    document.addEventListener('visibilitychange', beat);
+    window.addEventListener('beforeunload', onUnload);
+    return () => {
+      clearInterval(heartbeat);
+      document.removeEventListener('visibilitychange', beat);
+      window.removeEventListener('beforeunload', onUnload);
+    };
+  }, [userId]);
 
   // A share link saved a friend code: open Messages with it once signed in.
   useEffect(() => {

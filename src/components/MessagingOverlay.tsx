@@ -16,6 +16,7 @@ import {
   VenetianMask,
   EyeOff,
   Minus,
+  ChevronDown,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { FriendCodeCard } from './FriendCodeCard';
@@ -37,7 +38,6 @@ import {
   blockUser,
   setTyping,
   clearTyping,
-  setOnline,
   setAvailableToChat as pushAvailability,
   getMyDiscoveryProfile,
   upsertMyDiscoveryProfile,
@@ -45,6 +45,7 @@ import {
   syncDiscoveryFromProfile,
   AGE_RANGES,
   type FriendPeer,
+  type Presence,
   type DiscoveryProfile,
   type ConversationSummary,
   type DirectMessage,
@@ -215,18 +216,17 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
     refreshAll();
   }, [refreshAll]);
 
-  // Mark online while overlay is open; mark offline on unmount.
+  // Buddy list stays live: presence changes arrive over realtime, and a poll
+  // catches friends drifting to away or offline (no write marks that).
   useEffect(() => {
     if (!user) return;
-    setOnline(true).catch(() => {});
-    const onUnload = () => { setOnline(false).catch(() => {}); };
-    const heartbeat = setInterval(() => { setOnline(true).catch(() => {}); }, 45000);
-    window.addEventListener('beforeunload', onUnload);
-    return () => {
-      clearInterval(heartbeat);
-      window.removeEventListener('beforeunload', onUnload);
-      setOnline(false).catch(() => {});
-    };
+    const reloadFriends = () => { getFriends().then(setFriends).catch(() => {}); };
+    const channel = supabase
+      .channel(`buddy-presence-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'im_presence' }, reloadFriends)
+      .subscribe();
+    const poll = setInterval(reloadFriends, 30000);
+    return () => { clearInterval(poll); supabase.removeChannel(channel); };
   }, [user]);
 
   const handleOpenConversation = useCallback(async (peer: { user_id: string; display_name: string; avatar_url: string | null }) => {
@@ -419,6 +419,7 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
     };
   }, [user, vrEnabled, vrRequests, vrConversations, refreshAll]);
 
+  const onlineCount = friends.filter(f => f.presence === 'online').length;
   const filteredFriends = friends.filter(f =>
     f.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (f.alias ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
@@ -491,7 +492,7 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
             <h2 className="text-sm font-semibold text-ink truncate">
               {view === 'chat' && chatTarget ? chatTarget.peerName
                 : view === 'vr-chat' && vrChatTarget ? vrChatTarget.peerHandle
-                : view === 'friends' ? 'Friends'
+                : view === 'friends' ? 'Buddy List'
                 : view === 'discover' ? 'Discover people'
                 : view === 'requests' ? 'Friend requests'
                 : view === 'settings' ? 'Your discovery card'
@@ -525,7 +526,7 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
         {view !== 'chat' && view !== 'vr-chat' && (
           <div className="flex items-center gap-1 px-2 py-2 border-b border-white/8 flex-shrink-0 overflow-x-auto">
             <TabButton id="conversations" label="Chats" icon={MessageSquare} badge={totalUnread} />
-            <TabButton id="friends" label="Friends" icon={Users} />
+            <TabButton id="friends" label={onlineCount ? `Buddies · ${onlineCount}` : 'Buddies'} icon={Users} />
             <TabButton id="requests" label="Requests" icon={UserPlus} badge={totalRequestBadge} />
             <TabButton id="discover" label="Discover" icon={Search} />
             <TabButton id="settings" label="Profile" icon={Settings2} />
@@ -822,33 +823,64 @@ function FriendsView({
       </div>
     );
   }
+  const groups: { key: Presence; label: string; people: FriendPeer[] }[] = [
+    { key: 'online', label: 'Online', people: friends.filter(f => f.presence === 'online') },
+    { key: 'away', label: 'Away', people: friends.filter(f => f.presence === 'away') },
+    { key: 'offline', label: 'Offline', people: friends.filter(f => (f.presence ?? 'offline') === 'offline') },
+  ];
   return (
     <div className="py-1">
-      {friends.map((f) => (
-        <div
-          key={f.user_id}
-          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors"
-        >
-          <PeerAvatar name={f.display_name} avatarUrl={f.avatar_url} size={44} online={f.is_online} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-ink truncate">{f.display_name}</p>
-            <p className="text-[11px] text-ink-muted truncate">
-              {f.headline || (f.is_online ? 'Online now' : `Last seen ${relativeTime(f.last_seen_at)}`)}
-            </p>
-          </div>
-          <button
-            onClick={() => onOpenChat(f)}
-            className="p-2 rounded-lg text-ink-muted hover:text-rose-400 hover:bg-white/5 transition-colors"
-            title="Message"
-          >
-            <MessageSquare className="w-4 h-4" />
+      {groups.map(g => (
+        <BuddyGroup key={g.key} group={g} onOpenChat={onOpenChat} onUnfriend={onUnfriend} />
+      ))}
+    </div>
+  );
+}
+
+const PRESENCE_DOT: Record<Presence, string> = { online: '#22c55e', away: '#f59e0b', offline: '#6b7280' };
+
+function BuddyGroup({
+  group,
+  onOpenChat,
+  onUnfriend,
+}: {
+  group: { key: Presence; label: string; people: FriendPeer[] };
+  onOpenChat: (f: FriendPeer) => void;
+  onUnfriend: (friendshipId: string) => void;
+}) {
+  // Offline starts folded, like a buddy list; online and away start open.
+  const [open, setOpen] = useState(group.key !== 'offline');
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-muted hover:text-ink"
+        aria-expanded={open}
+      >
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? '' : '-rotate-90'}`} />
+        {group.label} ({group.people.length})
+      </button>
+      {open && group.people.map((f) => (
+        <div key={f.user_id} className="group flex w-full items-center gap-2.5 px-3 py-1.5 hover:bg-white/5 transition-colors">
+          <button type="button" onClick={() => onOpenChat(f)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left" title={`Message ${f.display_name}`}>
+            <span className="relative flex-shrink-0">
+              <PeerAvatar name={f.display_name} avatarUrl={f.avatar_url} size={32} />
+              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2" style={{ background: PRESENCE_DOT[group.key], borderColor: 'var(--ds-surface, #1a1a2e)' }} />
+            </span>
+            <span className="min-w-0">
+              <span className={`block truncate text-sm ${group.key === 'offline' ? 'text-ink-muted' : 'font-medium text-ink'}`}>{f.display_name}</span>
+              <span className="block truncate text-[11px] text-ink-muted">
+                {f.headline || (group.key === 'online' ? 'Online now' : group.key === 'away' ? `Away · active ${relativeTime(f.last_seen_at)}` : `Last seen ${relativeTime(f.last_seen_at)}`)}
+              </span>
+            </span>
           </button>
           <button
             onClick={() => onUnfriend(f.friendship_id)}
-            className="p-2 rounded-lg text-ink-muted hover:text-rose-400 hover:bg-white/5 transition-colors"
+            className="p-1.5 rounded-lg text-ink-muted opacity-0 group-hover:opacity-100 hover:text-rose-400 hover:bg-white/5 transition"
             title="Unfriend"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       ))}
@@ -1666,7 +1698,7 @@ function VRChatView({ target, onClose }: { target: VRChatTarget; onClose: () => 
   const [sendError, setSendError] = useState<string | null>(null);
   const [aiThinking, setAiThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     (async () => {
