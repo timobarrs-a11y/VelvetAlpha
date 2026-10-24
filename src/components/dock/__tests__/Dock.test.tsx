@@ -28,6 +28,9 @@ vi.mock('../../../shared/supabase/queries/messaging', () => ({
   setOnline: vi.fn(async () => {}),
   messagePreview: (t: string) => t,
   parseGameInvite: () => null,
+  FRIEND_GAMES: { draw: { icon: 'd', label: 'Draw' }, paint: { icon: 'p', label: 'Paint' }, rps: { icon: 'r', label: 'RPS' }, checkers: { icon: 'c', label: 'Checkers' } },
+  gameInvite: () => '',
+  sendMessage: vi.fn(async () => null),
   displayNames: vi.fn(async (ids: string[]) => new Map(ids.map(id => [id, 'Leah']))),
   getOrCreateConversation: vi.fn(async () => 'c1'),
 }));

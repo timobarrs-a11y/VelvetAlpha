@@ -9,7 +9,6 @@ import {
   CircleUserRound,
   Compass,
   Layers,
-  LayoutGrid,
   Lightbulb,
   LogOut,
   MapPin,
@@ -93,7 +92,6 @@ const TOOLBAR_THEME = {
 function WorkspaceToolbar({
   available,
   onToggleAvailable,
-  onOpenMobileNav,
   onOpenRewards,
   lobby,
 }: {
@@ -144,14 +142,6 @@ function WorkspaceToolbar({
       <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5]" />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-[#f5cfe0]" />
       <div className="relative z-10 flex min-w-0 items-center gap-2.5">
-        <button
-          type="button"
-          onClick={onOpenMobileNav}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 lg:hidden text-[#2a1424]/80"
-          aria-label="Open navigation"
-        >
-          <LayoutGrid className="h-4 w-4" />
-        </button>
         <button
           type="button"
           onClick={() => navigate('/lobby')}
@@ -415,15 +405,20 @@ function WorkspaceNavigation({ collapsed, onToggle, lobby, wallpaperStyle, wallp
   const location = useLocation();
   const navigate = useNavigate();
   const hasWp = !!wallpaperClass || !!wallpaperStyle;
-  return <aside className="relative z-20 hidden min-h-0 flex-col border-r border-white/8 py-4 transition-[width] duration-300 lg:flex" style={{ width: collapsed ? 68 : 224 }}>
+  // Phones get the same rail, collapsed to icons; opened, it slides over the page
+  // instead of squeezing it.
+  return <div className="relative z-30 min-h-0 w-[56px] lg:w-auto">
+    {!collapsed && <button type="button" aria-label="Close navigation" onClick={onToggle} className="fixed inset-0 z-20 bg-black/40 lg:hidden" />}
+    <aside className={`absolute inset-y-0 left-0 z-30 flex min-h-0 flex-col overflow-hidden border-r border-white/8 bg-[var(--ds-bg-base,#090c1e)] py-4 transition-[width] duration-300 lg:relative lg:inset-auto lg:h-full ${collapsed ? 'w-[56px] lg:w-[68px]' : 'w-[224px] shadow-2xl lg:shadow-none'}`}>
     {hasWp && (
       <div className={`pointer-events-none absolute inset-0 z-0 ${wallpaperClass ?? ''}`} style={wallpaperStyle || undefined} />
     )}
     <div className="relative z-10 flex h-full flex-col bg-[rgba(12,10,30,0.6)]">
       <div className={`flex items-center px-3 ${collapsed ? 'justify-center' : 'justify-end'}`}><button type="button" onClick={onToggle} className="rounded-lg p-2 transition-colors hover:bg-white/8" style={{ color: inkMuted }} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button></div>
-      <SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={navigate} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
+      <SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={(path) => { navigate(path); if (!collapsed && window.innerWidth < 1024) onToggle(); }} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
     </div>
-  </aside>;
+  </aside>
+  </div>;
 }
 
 function MobileNavDrawer({ open, onClose, lobby, wallpaperStyle, wallpaperClass, inkColor, inkMuted, inkSubtle }: { open: boolean; onClose: () => void; lobby: LobbyData; wallpaperStyle?: React.CSSProperties; wallpaperClass?: string; inkColor: string; inkMuted: string; inkSubtle: string }) {
@@ -508,12 +503,15 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   const inkSubtle = `${textColorDef.color}66`;
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return true;
+    // Phones always start with the rail folded so the page has room.
+    if (window.innerWidth < 1024) return true;
     return window.localStorage.getItem('velvet.workspace.nav-collapsed') !== 'false';
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
-    window.localStorage.setItem('velvet.workspace.nav-collapsed', String(collapsed));
+    // Only desktop remembers the choice; phones always start folded.
+    if (window.innerWidth >= 1024) window.localStorage.setItem('velvet.workspace.nav-collapsed', String(collapsed));
   }, [collapsed]);
 
   const { available, toggleAvailable } = useAvailability(user);
@@ -530,7 +528,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
     <div className="fixed inset-0 overflow-hidden bg-[#070914] p-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:p-2.5 lg:p-4">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
         <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} onOpenRewards={() => setShowRewards(true)} lobby={lobby} />
-        <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
+        <div className="relative z-10 grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)]">
           <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
           <main className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/8">{children}</main>
         </div>

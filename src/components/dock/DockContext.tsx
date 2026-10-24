@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { CompanionWithLastMessage } from '../../services/companionService';
 import { getCompanionUnreadCounts } from '../../services/companionReadService';
 import { supabase } from '../../shared/supabase/client';
@@ -178,6 +178,16 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
   const bringToFront = useCallback((key: string, companionId?: string) => {
     setWindows(prev => [...prev.filter(w => w.key !== key), { key, companionId, minimized: false }]);
   }, []);
+
+  // On phones a chat window covers the page, so going somewhere new folds the
+  // open windows back into the dock (they stay there as tabs).
+  const { pathname } = useLocation();
+  const firstPath = useRef(true);
+  useEffect(() => {
+    if (firstPath.current) { firstPath.current = false; return; }
+    if (window.innerWidth >= 900) return;
+    setWindows(prev => (prev.some(w => !w.minimized) ? prev.map(w => ({ ...w, minimized: true })) : prev));
+  }, [pathname]);
 
   const [friendUnread, setFriendUnread] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<DockToast | null>(null);
