@@ -12,7 +12,7 @@ import {
   perfectMultiplier, shotPoints,
   type Ball, type Grade, type ScoringMode, type Level, type Outcome, type Spot,
 } from '../engine';
-import { planShotSteps, planShot, sampleAt, type ShotPlan, type V3 } from '../ballSim';
+import { planShotSteps, planShot, previewArc, sampleAt, simulateLaunch, type ShotPlan, type V3 } from '../ballSim';
 import * as sfx from '../audio';
 import { ballTexture, FLOOR, floorTexture, jerseyTexture, makeScoreboard, ribbonTexture } from './textures';
 import { Net } from './net';
@@ -34,7 +34,7 @@ export type ShootoutEvent =
   | { type: 'rack'; label: string; index: number; money: boolean }
   | { type: 'ball'; kind: Ball['kind'] }
   | { type: 'grade'; grade: Grade; error: number; window: number }
-  | { type: 'make'; points: number; outcome: Outcome; streak: number; perfect: boolean; chain: number; mult: number; kind: Ball['kind'] }
+  | { type: 'make'; points: number; outcome: Outcome; streak: number; perfect: boolean; chain: number; mult: number; kind: Ball['kind']; bank?: boolean }
   | { type: 'time' }
   | { type: 'buzzer' }
   | { type: 'miss'; outcome: Outcome }
@@ -51,6 +51,12 @@ export interface RunOptions {
   jersey?: { colors: [string, string]; number: number };
   /** Play a rival's pre-simulated run from the broadcast camera instead of taking input. */
   auto?: RivalRun;
+  /**
+   * How you shoot. 'jumper' (default): hold to rise, let go on the green; the
+   * rules decide and physics stages it. 'touch': drag toward the hoop and let
+   * go; the physics decides. Random spots, side-on camera.
+   */
+  control?: 'jumper' | 'touch';
   /** How makes score (default classic 1/2/3). */
   scoring?: ScoringMode;
   /** Playback speed for autopilot runs. */
@@ -68,6 +74,16 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const ease = (t: number) => t * t * (3 - 2 * t);
 
 type Quality = 'high' | 'mid';
+
+/** A soft round dot for the touch guide (points are square otherwise). */
+function dotTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 32;
+  const g = cv.getContext('2d')!;
+  const grad = g.createRadialGradient(16, 16, 0, 16, 16, 15);
+  grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.65, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad; g.beginPath(); g.arc(16, 16, 15, 0, Math.PI * 2); g.fill();
+  return new THREE.CanvasTexture(cv);
+}
 
 /** Flights worth having ready at each spot (outcome:side; early = -1 is short, late = +1 is long). */
 const PLAN_KEYS = ['swish:1', 'make:1', 'make:-1', 'rim-in:1', 'rim-in:-1', 'rim-out:-1', 'rim-out:1', 'brick:-1', 'brick:1', 'airball:-1'];
@@ -96,6 +112,7 @@ interface LiveBall {
   perfect: boolean;
   chain: number;
   streakAfter: number;
+  bank?: boolean;
   nextEvent: number;
   resolved: boolean;
 }
@@ -254,6 +271,14 @@ export class Shootout3D {
   /** No more shots (clock out or course done); finish once the last balls land. */
   private ending = false;
   private replayBall: LiveBall | null = null;
+  /** Touch shooting: aiming state, the guide arc, and how long it shows (shorter on harder levels). */
+  private touch: boolean;
+  private aiming = false;
+  private aimV: V3 | null = null;
+  private guide!: THREE.Points;
+  private guideSecs: number;
+  private touchRand: () => number = Math.random;
+  private walkTime = JOG;
   private replayT = 0;
   private punch = 0;
   private shake = 0;
@@ -271,9 +296,12 @@ export class Shootout3D {
     this.opts = opts;
     this.auto = opts.auto ?? null;
     this.level = level;
-    this.course = opts.course ?? buildCourse(moneyRack);
+    this.touch = opts.control === 'touch';
+    this.guideSecs = [0.55, 0.45, 0.38, 0.3, 0.24][level.id] ?? 0.4;
+    this.touchRand = seeded(this.seed ^ 0x5bd1e995);
+    this.course = this.touch ? [this.touchSpot(0)] : opts.course ?? buildCourse(moneyRack);
     this.max = MAX_SCORE(this.course);
-    this.clock = opts.clock ?? level.clock;
+    this.clock = opts.clock ?? (this.touch ? 60 : level.clock);
     this.clock0 = this.clock;
     this.shift = pickRelease().shift;
     this.reduced = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -418,7 +446,7 @@ export class Shootout3D {
 
     // Ball racks at each spot.
     const rackMat = new THREE.MeshStandardMaterial({ color: 0x9aa3b2, metalness: 0.85, roughness: 0.3 });
-    this.course.forEach((spot) => {
+    if (!this.touch) this.course.forEach((spot) => {
       const [x, y] = spotPosition(spot);
       const p = toThree([x * 1.1, y * 1.1, 0]);
       const rack = new THREE.Group();
@@ -450,6 +478,12 @@ export class Shootout3D {
       m.castShadow = true; m.visible = false;
       s.add(m); this.ballPool.push(m);
     }
+    // Touch: the dotted guide showing the start of your throw.
+    const gg = new THREE.BufferGeometry();
+    gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(64 * 3), 3));
+    this.guide = new THREE.Points(gg, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, map: dotTexture(), alphaTest: 0.3, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, fog: false }));
+    this.guide.frustumCulled = false; this.guide.renderOrder = 10; this.guide.visible = false;
+    s.add(this.guide);
     this.buildArms();
     this.buildPlayer();
 
@@ -671,14 +705,119 @@ export class Shootout3D {
 
   begin(): void {
     this.prepWindow();
-    this.walkFrom = [-2, 11];
+    this.walkFrom = this.touch ? [0, 9.5] : [-2, 11];
     this.enter('walk');
-    this.emitRack();
+    if (!this.touch) this.emitRack();
+  }
+
+  // ---- Touch shooting ---------------------------------------------------------
+
+  /** A random spot for touch shooting: anywhere from the paint to well beyond the arc. */
+  private touchSpot(n: number): Spot {
+    const r = this.touchRand;
+    const angle = (r() * 2 - 1) * 78;
+    const dist = 3.6 + r() * 5.4;
+    const three = dist >= (Math.abs(angle) > 68 ? 6.7 : 7.24);
+    const money = n > 0 && r() < 0.16;
+    return { id: `t${n}`, label: `${dist.toFixed(1)}m · ${three ? 3 : 2}PT${money ? ' · MONEY' : ''}`, angle, dist, balls: [{ kind: money ? 'money' : 'regular', points: (three ? 3 : 2) * (money ? 2 : 1) }] };
+  }
+
+  /** Point to aim (screen coords -1..1). Press shows the guide, moving adjusts it, letting go throws. */
+  aimStart(nx: number, ny: number): void {
+    if (!this.touch || this.phase !== 'aim' || this.ending) return;
+    this.aiming = true;
+    this.aimMove(nx, ny);
+  }
+
+  aimMove(nx: number, ny: number): void {
+    if (!this.aiming) return;
+    this.aimV = this.touchVelocity(nx, ny);
+    const pos = this.guide.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const pts = this.aimV ? previewArc(this.handPoint(), this.aimV, [0, 0, 0], this.guideSecs, 0.035) : [];
+    for (let i = 0; i < pos.count; i++) {
+      const p = pts[i];
+      if (p) { const t = toThree(p); pos.setXYZ(i, t.x, t.y, t.z); } else pos.setXYZ(i, 0, -100, 0);
+    }
+    pos.needsUpdate = true;
+    this.guide.visible = pts.length > 0;
+  }
+
+  aimEnd(nx: number, ny: number): void {
+    if (!this.aiming) return;
+    this.aimMove(nx, ny);
+    this.aiming = false;
+    this.guide.visible = false;
+    if (this.aimV && this.phase === 'aim' && !this.ending) this.throwBall(this.aimV);
+  }
+
+  aimCancel(): void { this.aiming = false; this.guide.visible = false; }
+
+  /** Where the ball leaves the hands in touch mode (overhead, a little in front). */
+  private handPoint(): V3 { return [this.ball.position.x, this.ball.position.z, this.ball.position.y]; }
+
+  /**
+   * The throw for a pointer position: the pointer is projected onto the
+   * upright plane through the ball and the rim, and the ball is thrown
+   * toward that point, faster the further away it is.
+   */
+  private touchVelocity(nx: number, ny: number): V3 | null {
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(nx, ny), this.camera);
+    const b = this.handPoint();
+    const d = Math.hypot(b[0], b[1]) || 1;
+    const n = new THREE.Vector3(-b[1] / d, 0, b[0] / d); // plane normal (three space: x, up, z = game y)
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(n, toThree(b));
+    const hit = ray.ray.intersectPlane(plane, new THREE.Vector3());
+    if (!hit) return null;
+    const p: V3 = [hit.x, hit.z, hit.y];
+    const POWER = 3.1, MAX = 13.5;
+    let v: V3 = [(p[0] - b[0]) * POWER, (p[1] - b[1]) * POWER, (p[2] - b[2]) * POWER];
+    const sp = Math.hypot(v[0], v[1], v[2]);
+    if (sp < 2.5 || v[2] < 0.5) return null;
+    if (sp > MAX) v = [v[0] * MAX / sp, v[1] * MAX / sp, v[2] * MAX / sp];
+    return v;
+  }
+
+  /** Throw exactly as aimed: the physics decides make or miss. */
+  private throwBall(v: V3): void {
+    const ball = this.spot.balls[0];
+    const from = this.handPoint();
+    const l = Math.hypot(v[0], v[1]) || 1;
+    const w: V3 = [-(v[1] / l) * 15, (v[0] / l) * 15, 0]; // backspin
+    const shot = simulateLaunch(from, v, w);
+    const swish = shot.outcome === 'swish';
+    const points = shot.made ? ball.points + (swish ? 1 : 0) + (shot.bank ? 1 : 0) : 0;
+    this.chain = shot.made && swish ? this.chain + 1 : 0;
+    this.streak = shot.made ? this.streak + 1 : 0;
+    this.bestStreak = Math.max(this.bestStreak, this.streak);
+    if (shot.made) this.makes++;
+    this.shots++;
+    const mesh = this.ballPool.find(m => !m.visible) ?? this.ballPool[0];
+    mesh.material = this.ballMats[ball.kind];
+    mesh.visible = true; mesh.scale.setScalar(1);
+    this.live.push({
+      mesh, plan: shot, t: 0, pos: [...from], offset: [0, 0, 0], kind: ball.kind, outcome: shot.outcome, points,
+      perfect: swish, chain: this.chain, streakAfter: this.streak, bank: shot.bank, nextEvent: 0, resolved: false,
+    });
+    if (this.live.length > this.ballPool.length) this.live.shift();
+    this.replayBall = this.live[this.live.length - 1];
+    this.enter('flight'); this.flightT = 0;
+  }
+
+  /** On to a fresh random spot: a quick jog while the last ball is still up. */
+  private nextTouchSpot(): void {
+    this.walkFrom = spotPosition(this.spot);
+    this.course.push(this.touchSpot(this.course.length));
+    this.spotIdx++; this.ballIdx = 0;
+    const [x, y] = spotPosition(this.spot);
+    this.walkTime = Math.max(0.55, Math.min(1.2, Math.hypot(x - this.walkFrom[0], y - this.walkFrom[1]) / 6));
+    this.prepWindow();
+    this.enter('walk');
   }
 
   /** Start the jump. `at` is the input event's timeStamp, for frame-accurate timing. */
   press(at?: number): void {
-    if (this.auto) return;
+    if (this.auto || this.touch) return;
     if (this.phase === 'replay') { this.endReplay(); return; }
     if (this.ending) return;
     if (this.phase !== 'aim') return;
@@ -735,7 +874,7 @@ export class Shootout3D {
    * each release (where you let go against the green), then fades.
    */
   meterView(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number } {
-    if (this.auto) return { mode: 'off', hold: 0, target: 1, green: 0, error: 0, age: 0 };
+    if (this.auto || this.touch) return { mode: 'off', hold: 0, target: 1, green: 0, error: 0, age: 0 };
     const green = this.win.green * fireBoost(this.streak);
     if (this.shots === 0 && (this.phase === 'aim' || this.phase === 'hold')) return { mode: 'live', hold: this.holdT, target: this.target, green, error: 0, age: 0 };
     const r = this.lastRelease, age = r ? this.time - r.at : 99;
@@ -774,7 +913,7 @@ export class Shootout3D {
       if (this.clock <= 10 && !this.sentFinal) { this.sentFinal = true; this.cb.onEvent?.({ type: 'final10' }); }
       if (this.clock <= 0 && !this.auto && !this.ending) this.timeUp();
     }
-    if (this.phase === 'walk' && this.phaseT > JOG) { this.enter('aim'); this.fade = 1; this.cb.onEvent?.({ type: 'ball', kind: this.spot.balls[this.ballIdx].kind }); }
+    if (this.phase === 'walk' && this.phaseT > (this.touch ? this.walkTime : JOG)) { this.enter('aim'); this.fade = this.touch ? 0 : 1; this.cb.onEvent?.({ type: 'ball', kind: this.spot.balls[this.ballIdx].kind }); }
     if (this.auto && this.phase === 'aim') {
       const next = this.auto.shots[this.autoIdx];
       if (!next || next.spotIdx !== this.spotIdx || next.ballIdx !== this.ballIdx) { this.ending = true; this.enter('wait'); }
@@ -792,7 +931,7 @@ export class Shootout3D {
       if (this.holdT > Math.max(this.target, this.win.rise) * 1.45) { this.holdT = this.holdClock.stop(); this.shoot(); }
     }
     // Catch and shoot: the next ball comes as soon as you've followed through and reached for it.
-    if (this.phase === 'flight') { this.flightT += dt; if (this.phaseT >= RELOAD) this.nextBall(); }
+    if (this.phase === 'flight') { this.flightT += dt; if (this.phaseT >= (this.touch ? 0.45 : RELOAD)) this.nextBall(); }
     if (this.phase === 'replay') this.stepReplay(dt);
     else this.stepBalls(dt);
     this.pumpPlans();
@@ -805,7 +944,7 @@ export class Shootout3D {
 
   /** The clock ran out. A ball already released still counts; one in your hands doesn't. */
   private timeUp(): void {
-    if (this.phase === 'hold') { this.holdClock.stop(); this.cb.onEvent?.({ type: 'time' }); }
+    if (this.phase === 'hold' || this.aiming) { this.holdClock.stop(); this.aimCancel(); this.cb.onEvent?.({ type: 'time' }); }
     this.ending = true;
     this.enter('wait');
   }
@@ -882,7 +1021,7 @@ export class Shootout3D {
    * frame would hurt.
    */
   private pumpPlans(): void {
-    if (this.ending || this.phase === 'done' || this.phase === 'replay' || this.phase === 'hold' || !this.spot) return;
+    if (this.touch || this.ending || this.phase === 'done' || this.phase === 'replay' || this.phase === 'hold' || !this.spot) return;
     if (this.planSpot !== this.spotIdx) { this.plans.clear(); this.planJob = null; this.planSpot = this.spotIdx; }
     const t0 = performance.now();
     while (performance.now() - t0 < 1.5) {
@@ -940,7 +1079,7 @@ export class Shootout3D {
     this.score += b.points;
     if (this.clock <= 0 && !this.auto) this.cb.onEvent?.({ type: 'buzzer' });
     if (b.streakAfter === 3) { this.cb.onEvent?.({ type: 'fire' }); this.rimMat.emissive.setHex(0x5a1a00); }
-    this.cb.onEvent?.({ type: 'make', points: b.points, outcome: b.outcome, streak: b.streakAfter, perfect: b.perfect, chain: b.chain, mult: b.perfect ? perfectMultiplier(b.chain) : 1, kind: b.kind });
+    this.cb.onEvent?.({ type: 'make', points: b.points, outcome: b.outcome, streak: b.streakAfter, perfect: b.perfect, chain: b.chain, mult: b.perfect ? perfectMultiplier(b.chain) : 1, kind: b.kind, bank: b.bank });
     const value = b.kind === 'starry' ? 3 : b.kind === 'money' ? 2 : 1;
     const big = value > 1 || b.perfect || b.streakAfter >= 3;
     this.crowd.cheer(value + (b.perfect ? 1 : 0) + (b.streakAfter >= 3 ? 1 : 0));
@@ -995,6 +1134,7 @@ export class Shootout3D {
   }
 
   private nextBall(): void {
+    if (this.touch) { this.nextTouchSpot(); return; }
     this.ballIdx++;
     if (this.ballIdx >= this.spot.balls.length) {
       this.walkFrom = spotPosition(this.spot);
@@ -1046,10 +1186,11 @@ export class Shootout3D {
       this.live.forEach(b => { b.mesh.visible = false; });
     }
     this.ball.visible = !!bp;
-    if (this.auto && !bp && (this.phase === 'aim' || this.phase === 'hold')) {
-      // The rival's ball: at the chest while gathering, overhead in the jump.
+    const touchHolding = this.touch && (this.phase === 'aim' || this.phase === 'walk');
+    if (!bp && ((this.auto && (this.phase === 'aim' || this.phase === 'hold')) || touchHolding)) {
+      // The shooter's ball: at the chest while gathering (or jogging), overhead to shoot.
       const pp = this.player.position;
-      const j = this.phase === 'hold' ? Math.min(1, this.holdT / this.win.rise) : 0;
+      const j = this.touch ? (this.phase === 'aim' ? 1 : 0) : this.phase === 'hold' ? Math.min(1, this.holdT / this.win.rise) : 0;
       this.ball.visible = true;
       this.ball.material = this.ballMats[this.spot.balls[this.ballIdx]?.kind ?? 'regular'];
       // Out in front of the body, toward the rim.
@@ -1067,8 +1208,8 @@ export class Shootout3D {
     this.stepFlames(bp ?? (newest && !newest.resolved ? newest.pos : null));
 
     // Arms and held ball: first person only.
-    const fp = !this.auto && (this.phase === 'aim' || this.phase === 'hold');
-    const reloading = !this.auto && this.phase === 'flight';
+    const fp = !this.auto && !this.touch && (this.phase === 'aim' || this.phase === 'hold');
+    const reloading = !this.auto && !this.touch && this.phase === 'flight';
     // Last ball at this rack: no next ball to grab here (you jog to the next one).
     const lastHere = !this.spot || this.ballIdx >= this.spot.balls.length - 1;
     const r = Math.min(1, this.phaseT / RELOAD);
@@ -1134,11 +1275,11 @@ export class Shootout3D {
 
   /** The shooter, seen from the broadcast camera: jogs to the next rack, then turns to the hoop. */
   private updatePlayer(t: number): void {
-    const show = this.phase === 'walk' || this.phase === 'done' || (!!this.auto && this.phase !== 'replay');
+    const show = this.phase === 'walk' || this.phase === 'done' || ((!!this.auto || this.touch) && this.phase !== 'replay');
     this.player.visible = show;
     if (!show) return;
     const to = spotPosition(this.spot ?? this.course[this.course.length - 1]);
-    const u = this.phase === 'walk' ? ease(Math.min(1, this.phaseT / 1.3)) : 1;
+    const u = this.phase === 'walk' ? ease(Math.min(1, this.phaseT / (this.touch ? this.walkTime * 0.85 : 1.3))) : 1;
     const x = lerp(this.walkFrom[0], to[0], u), y = lerp(this.walkFrom[1], to[1], u);
     this.player.position.copy(toThree([x, y, 0]));
     const moving = this.phase === 'walk' && u < 1;
@@ -1148,6 +1289,13 @@ export class Shootout3D {
     P.legL.rotation.x = sw; P.legR.rotation.x = -sw; P.armL.rotation.x = -sw * 0.8; P.armR.rotation.x = sw * 0.8;
     if (this.phase === 'done') { P.armL.rotation.x = P.armR.rotation.x = -2.9 + Math.sin(t * 6) * 0.15; }
     this.player.position.y = moving ? Math.abs(Math.sin(t * 13)) * 0.05 : 0;
+    if (this.touch && !moving && this.phase !== 'done') {
+      // Set and ready overhead; a little hop and follow-through on the throw.
+      const ft = this.phase === 'flight' ? Math.min(1, this.flightT / 0.15) : 0;
+      this.player.position.y = this.phase === 'flight' ? Math.sin(Math.min(1, this.flightT / 0.4) * Math.PI) * 0.25 : 0;
+      P.armL.rotation.x = P.armR.rotation.x = this.phase === 'flight' ? -2.6 - ft * 0.4 : -2.6;
+      P.legL.rotation.x = P.legR.rotation.x = 0;
+    }
     if (this.auto) {
       // A rival's jumper: dip and gather, rise with the ball overhead, follow through, land.
       const rise = this.win.rise;
@@ -1166,7 +1314,28 @@ export class Shootout3D {
   private updateCamera(real: number): void {
     let pos: THREE.Vector3, look: THREE.Vector3, fov: number;
     const k = 1 - Math.pow(0.0015, real); // smooth follow
-    if (this.phase === 'walk' || this.phase === 'done' || (this.auto && this.phase !== 'replay')) {
+    if (this.touch && this.phase !== 'replay') {
+      // Side-on to the shot: shooter on one side of the frame, hoop on the other, so you can read the whole arc.
+      const pp = this.player.position;
+      const bx = pp.x, by = pp.z, d = Math.hypot(bx, by) || 1;
+      let nx = -by / d, ny = bx / d;
+      if (ny < 0 || (Math.abs(ny) < 0.3 && nx > 0)) { nx = -nx; ny = -ny; }
+      if (this.camera.aspect < 1) {
+        // Tall screens: three-quarters from behind the shooter, so the arc rises up the screen.
+        const ux = -bx / d, uy = -by / d; // shooter → rim
+        pos = toThree([bx - ux * 6.2 + nx * 2.2, by - uy * 6.2 + ny * 2.2, 3.9]);
+        look = toThree([bx + ux * d * 0.5, by + uy * d * 0.5, 2.5]);
+        fov = 40;
+      } else {
+        const back = d * 0.62 + 4.2;
+        const mid: V3 = [bx * 0.5, by * 0.5, 2.3];
+        pos = toThree([mid[0] + nx * back, mid[1] + ny * back, 2.6]);
+        look = toThree(mid);
+        fov = 42;
+      }
+      this.camPos.lerp(pos, k * 0.6);
+      this.camLook.lerp(look, k * 0.6);
+    } else if (this.phase === 'walk' || this.phase === 'done' || (this.auto && this.phase !== 'replay')) {
       // Broadcast: high on the sideline, tracking the shooter with the hoop in frame.
       const pp = this.player.position;
       pos = new THREE.Vector3(-11.5, 6.2, pp.z * 0.5 + 6.5);

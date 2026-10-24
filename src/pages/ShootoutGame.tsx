@@ -9,9 +9,9 @@ import { getLook, setLook, type Look } from '../games/shootout/settings';
 import { unlockAudio } from '../games/shootout/audio';
 
 const SAVE = 'velvet.shootout.v1';
-interface Progress { unlocked: number; best: Record<number, number>; stars: Record<number, number>; moneyRack: number; wins: Record<number, number>; attack: Record<number, number> }
+interface Progress { unlocked: number; best: Record<number, number>; stars: Record<number, number>; moneyRack: number; wins: Record<number, number>; attack: Record<number, number>; street: Record<number, number> }
 const RACK_NAMES = ['Left corner', 'Left wing', 'Top', 'Right wing', 'Right corner'];
-const FRESH: Progress = { unlocked: 0, best: {}, stars: {}, moneyRack: 4, wins: {}, attack: {} };
+const FRESH: Progress = { unlocked: 0, best: {}, stars: {}, moneyRack: 4, wins: {}, attack: {}, street: {} };
 
 function loadProgress(): Progress {
   try { const p = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (p) return { ...FRESH, ...p }; } catch { /* storage blocked */ }
@@ -19,7 +19,7 @@ function loadProgress(): Progress {
 }
 function saveProgress(p: Progress) { try { localStorage.setItem(SAVE, JSON.stringify(p)); } catch { /* storage blocked */ } }
 
-type Screen = 'title' | 'play' | 'results' | 'contest' | 'attack' | 'attack-results';
+type Screen = 'title' | 'play' | 'results' | 'contest' | 'attack' | 'attack-results' | 'street';
 
 /**
  * 3-Point Shootout: a standalone timing game. Five racks around the arc and
@@ -34,7 +34,7 @@ export function ShootoutGame() {
   const [runNo, setRunNo] = useState(0);
   const [look, setLookState] = useState<Look>(getLook);
   const [levelId, setLevelId] = useState(() => Math.min(loadProgress().unlocked, LEVELS.length - 1));
-  const [attack, setAttack] = useState<{ score: number; makes: number; shots: number; bestStreak: number; prev: number } | null>(null);
+  const [attack, setAttack] = useState<{ mode: 'attack' | 'street'; score: number; makes: number; shots: number; bestStreak: number; prev: number } | null>(null);
   const [result, setResult] = useState<(RunResult & { stars: number; newBest: boolean; unlockedNext: boolean }) | null>(null);
 
   /** Bank a score: personal best, stars, and the next level when it's earned. */
@@ -64,7 +64,16 @@ export function ShootoutGame() {
     const prev = p.attack[r.level.id] ?? 0;
     const next = { ...p, attack: { ...p.attack, [r.level.id]: Math.max(prev, r.score) } };
     saveProgress(next); setProgress(next);
-    setAttack({ score: r.score, makes: r.makes, shots: r.shots, bestStreak: r.bestStreak, prev });
+    setAttack({ mode: 'attack', score: r.score, makes: r.makes, shots: r.shots, bestStreak: r.bestStreak, prev });
+    setScreen('attack-results');
+  }, []);
+
+  const finishStreet = useCallback((r: RunResult) => {
+    const p = loadProgress();
+    const prev = p.street[r.level.id] ?? 0;
+    const next = { ...p, street: { ...p.street, [r.level.id]: Math.max(prev, r.score) } };
+    saveProgress(next); setProgress(next);
+    setAttack({ mode: 'street', score: r.score, makes: r.makes, shots: r.shots, bestStreak: r.bestStreak, prev });
     setScreen('attack-results');
   }, []);
 
@@ -95,9 +104,13 @@ export function ShootoutGame() {
         />
       )}
 
+      {screen === 'street' && (
+        <RunView key={runNo} level={level} moneyRack={progress.moneyRack} label={`${level.name} · STREET`} opts={{ control: 'touch' }} onDone={finishStreet} />
+      )}
+
       {screen === 'attack-results' && attack && (
         <div className="flex h-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,#0f3a33,#05060C_70%)] px-5 text-center">
-          <div className="text-xs font-bold uppercase tracking-[0.3em] text-white/50">{level.name} · Score Attack</div>
+          <div className="text-xs font-bold uppercase tracking-[0.3em] text-white/50">{level.name} · {attack.mode === 'street' ? 'Street' : 'Score Attack'}</div>
           <div className="mt-2 font-mono text-6xl font-black text-emerald-300 sm:text-7xl">{attack.score.toLocaleString()}</div>
           {attack.score > attack.prev
             ? <div className="mt-3 rounded-full bg-emerald-400/20 px-4 py-1 text-sm font-bold text-emerald-200">{attack.prev ? `New high score! (was ${attack.prev.toLocaleString()})` : 'First high score set!'}</div>
@@ -106,10 +119,10 @@ export function ShootoutGame() {
             <div className="rounded-xl bg-white/5 px-3 py-2"><div className="text-[10px] uppercase text-white/50">Makes</div><div className="font-bold">{attack.makes}/{attack.shots}</div></div>
             <div className="rounded-xl bg-white/5 px-3 py-2"><div className="text-[10px] uppercase text-white/50">Best streak</div><div className="font-bold">{attack.bestStreak}</div></div>
           </div>
-          <p className="mt-4 max-w-xs text-xs text-white/50">Make it: 100 a point. Perfect release: ×1.5. Perfects in a row stack ×1.1, ×1.2, ×1.3…</p>
+          <p className="mt-4 max-w-xs text-xs text-white/50">{attack.mode === 'street' ? '2 or 3 by distance, +1 for a swish, +1 off the glass, money balls double.' : 'Make it: 100 a point. Perfect release: ×1.5. Perfects in a row stack ×1.1, ×1.2, ×1.3…'}</p>
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setScreen('title')} className="rounded-xl bg-white/10 px-5 py-2.5 font-semibold">Menu</button>
-            <button type="button" onClick={() => { unlockAudio(); setRunNo(n => n + 1); setScreen('attack'); }} className="rounded-xl bg-gradient-to-r from-emerald-300 to-teal-400 px-6 py-2.5 font-black text-[#062019]">Go again</button>
+            <button type="button" onClick={() => { unlockAudio(); setRunNo(n => n + 1); setScreen(attack.mode); }} className="rounded-xl bg-gradient-to-r from-emerald-300 to-teal-400 px-6 py-2.5 font-black text-[#062019]">Go again</button>
           </div>
         </div>
       )}
@@ -180,6 +193,10 @@ export function ShootoutGame() {
             </button>
           </div>
           <div className="mt-2 w-full max-w-md">
+            <button type="button" onClick={() => { unlockAudio(); setRunNo(n => n + 1); setScreen('street'); }} className="mb-2 w-full rounded-2xl bg-gradient-to-r from-sky-400 to-indigo-500 px-6 py-3 text-left transition hover:scale-[1.01]">
+              <span className="block text-lg font-black">STREET <span className="ml-1 rounded bg-white/20 px-1.5 py-0.5 align-middle text-[10px] font-black tracking-wider">NEW · TOUCH</span></span>
+              <span className="block text-[11px] font-semibold text-white/80">{progress.street[levelId] ? `Best ${progress.street[levelId]}` : 'Drag to aim, let go to shoot · random spots · 60 seconds · real physics'}</span>
+            </button>
             <button type="button" onClick={() => { unlockAudio(); setRunNo(n => n + 1); setScreen('play'); }} className="w-full rounded-2xl border border-white/15 bg-white/5 px-6 py-2.5 text-left transition hover:bg-white/10">
               <span className="text-sm font-black">PRACTICE</span>
               <span className="ml-2 text-[11px] text-white/55">Solo run · classic 1/2/3 scoring · unlock levels · stars</span>

@@ -14,6 +14,7 @@ The skill is the release. Everything else (scoring, rivals, graphics) exists to 
 - **Modes:**
   - **Practice:** classic 1/2/3 scoring, unlocks levels and stars.
   - **Contest:** you vs 5 AI rivals, +1 per perfect. Round 1, top 3 advance to a final in reverse order; ties go to a 30s shoot-off.
+  - **Street (Touch, prototype):** a second way to shoot. Drag toward the hoop and let go; the **physics decides**. Random spots, 60 seconds. Scores 2 or 3 by distance, +1 for a swish, +1 off the glass, and money balls double. A dotted guide shows the start of the throw (shorter on harder levels). The camera is side-on in landscape and three-quarters from behind in portrait.
   - **Score Attack:** 100 per point, ×1.5 for a perfect, and back-to-back perfects stack ×1.1…×2.
 
 ## Stack and structure
@@ -34,6 +35,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 | `pages/ShootoutGame.tsx` | Title screen, mode select, results, saved progress (`velvet.shootout.v1`). |
 
 ## Decisions
+- **Two ways to shoot, kept apart.** Jumper (timing) runs Contest, Score Attack and Practice; Touch runs Street. They share the arena, physics, sound and saves. Touch stays out of the Contest until it's balanced on its own.
 - **The rules decide every shot at release; physics stages it.** Perfects always go in. Early misses come up short and late ones go long, so the ball teaches your timing. A shot's points and callouts land when the ball does.
 - **Catch and shoot.** The next ball comes `RELOAD` (0.65s) after release. The game and the rival simulation share `RELOAD`/`JOG`, so their pace can't drift apart. Before this, a flawless player reached only 20–21 of 27 balls.
 - **Flights are planned ahead while you aim**, about 1.5ms a frame and never during a hold, so a release never waits on the physics.
@@ -50,6 +52,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 - In dev builds `window.__shootout` exposes the game. `advance(seconds)` steps a synthetic clock for scripted checks.
 
 ## Known issues
+0. **Street is a prototype.** Throw power (3.1×, max 13.5 m/s), guide lengths and scoring are first guesses. Needs a playtest.
 1. **Unverified on real hardware.** Frame rate with up to 5 balls in the air, feel, and whether sound now works on iOS.
 2. **Rookie may be too forgiving.** Random ±90ms timing errors still made 27 of 27 (the make zone is ±176ms on Rookie). Needs playtest data before changing.
 3. **Contest difficulty needs a playtest** now that humans can reach every ball. Rival scores didn't change; they always finished 27.

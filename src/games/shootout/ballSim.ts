@@ -275,6 +275,34 @@ export function planShot(from: V3, outcome: Outcome, side: number, rand: () => n
   for (;;) { const r = g.next(); if (r.done) return r.value; }
 }
 
+// ---- Touch shots: the physics decides -----------------------------------------
+
+/** What a real flight turned out to be, for scoring and callouts. */
+export function classify(made: boolean, touches: Record<ContactKind, number>): Outcome {
+  if (made) return touches.rim === 0 && touches.board === 0 ? 'swish' : touches.rim === 0 ? 'make' : 'rim-in';
+  return touches.rim + touches.board === 0 ? 'airball' : touches.rim > 0 ? 'rim-out' : 'brick';
+}
+
+/** Fly a launch exactly as thrown (no outcome forced). `bank` is true when the glass helped it in. */
+export function simulateLaunch(from: V3, v: V3, w: V3, seconds = 4): ShotPlan & { outcome: Outcome; bank: boolean } {
+  const { sim, samples, resolvedAt } = fly(from, v, w, seconds, true);
+  const through = sim.events.find(e => e.kind === 'through');
+  const bank = !!through && sim.events.some(e => e.kind === 'board' && e.t < through.t);
+  return { samples, events: sim.events, made: sim.made, resolvedAt, duration: sim.t, fitted: true, outcome: classify(sim.made, sim.touches), bank };
+}
+
+/** The first `seconds` of a throw (the aiming guide), every `every` seconds. */
+export function previewArc(from: V3, v: V3, w: V3, seconds: number, every = 0.04): V3[] {
+  const sim = new BallSim(from, v, w);
+  const pts: V3[] = [];
+  let next = 0;
+  while (sim.t < seconds) {
+    if (sim.t >= next) { pts.push([...sim.p]); next += every; }
+    sim.step();
+  }
+  return pts;
+}
+
 /** Position and spin at time t along a recorded flight (linear between samples). */
 export function sampleAt(samples: Sample[], t: number): Sample {
   if (t <= 0 || samples.length < 2) return samples[0];

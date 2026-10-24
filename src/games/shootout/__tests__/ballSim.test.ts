@@ -121,3 +121,37 @@ describe('ball physics', () => {
     expect((performance.now() - t0) / n).toBeLessThan(25);
   });
 });
+
+describe('touch shots (physics decides)', () => {
+  it('a throw aimed through the hoop goes in, and is named for how it went in', async () => {
+    const { simulateLaunch, launchVelocity: lv } = await import('../ballSim');
+    const from: V3 = [0, 6, 2.3];
+    const v = lv(from, [0, 0, RIM_HEIGHT], 50);
+    const shot = simulateLaunch(from, v, [-15, 0, 0]);
+    expect(shot.made).toBe(true);
+    expect(shot.outcome).toBe('swish');
+    const short = simulateLaunch(from, lv(from, [0, 1.2, RIM_HEIGHT], 45), [0, 0, 0]);
+    expect(short.made).toBe(false);
+  });
+
+  it('the glass can bank one in from the wing', async () => {
+    const { simulateLaunch } = await import('../ballSim');
+    // Aim at the square on the glass from the wing: some of these banks should drop.
+    const from: V3 = [3.2, 3.2, 2.3];
+    let banks = 0;
+    for (let k = 0; k < 40; k++) {
+      const v = launchVelocity(from, [-0.12 + k * 0.006, -0.3, RIM_HEIGHT + 0.35], 50 + (k % 5));
+      const s = simulateLaunch(from, v, [0, 0, 0]);
+      if (s.made && s.bank) banks++;
+    }
+    expect(banks).toBeGreaterThan(0);
+  });
+
+  it('previews the start of the arc from the hands', async () => {
+    const { previewArc } = await import('../ballSim');
+    const pts = previewArc([0, 6, 2.3], [0, -5, 6], [0, 0, 0], 0.4);
+    expect(pts.length).toBeGreaterThan(8);
+    expect(pts[0]).toEqual([0, 6, 2.3]);
+    expect(pts[pts.length - 1][2]).toBeGreaterThan(2.3);
+  });
+});
