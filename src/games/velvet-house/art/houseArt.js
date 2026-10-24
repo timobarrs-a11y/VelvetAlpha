@@ -1291,6 +1291,26 @@ export function createHouseArt(ctx0, opts = {}) {
     });
   }
 
+  /**
+   * A damped spring that trails an anchor point: returns the offset (screen
+   * px) of something hanging off it. Moving the anchor fast swings it the
+   * other way, then it settles back.
+   */
+  function springAt(ps, key, ax, ay, drag, k, damp) {
+    let s = ps[key];
+    if (!s) { s = ps[key] = { px: ax, py: ay, ox: 0, oy: 0, vx: 0, vy: 0 }; }
+    const dt = Math.min(0.05, Math.max(0.001, rdt || 0.016));
+    const mvx = (ax - s.px) / dt, mvy = (ay - s.py) / dt;
+    s.px = ax; s.py = ay;
+    // A big jump (teleport, level change) shouldn't fling the hair.
+    if (Math.abs(mvx) > 2000 || Math.abs(mvy) > 2000) { s.ox = s.oy = s.vx = s.vy = 0; return [0, 0]; }
+    s.vx += (-mvx * drag * k - k * s.ox - damp * s.vx) * dt;
+    s.vy += (-mvy * drag * k - k * s.oy - damp * s.vy) * dt;
+    s.ox = Math.max(-5, Math.min(5, s.ox + s.vx * dt));
+    s.oy = Math.max(-4, Math.min(4, s.oy + s.vy * dt));
+    return [s.ox, s.oy];
+  }
+
   function drawPerson(c, t) {
     const L = c.look, pose = c.pose, f = facing(c.face);
     const P3 = (dx, dy, dz) => iso(c.x + dx, c.y + dy, c.z + dz);
@@ -1378,8 +1398,25 @@ export function createHouseArt(ctx0, opts = {}) {
       limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
       limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
     });
-    const hairBack = () => { if (L.longHair) ell(hd[0] + sway * 0.7, hd[1] - 2, 6, 7.5, L.hair); };
+    // Secondary motion: hair and hems trail the body on springs, so they
+    // swing when someone moves, turns or bounces, then settle.
+    const sp = poseState(c);
+    const hair = springAt(sp, 'hair', hd[0], hd[1], 0.05, 26, 7);
+    const hem = springAt(sp, 'hem', hip[0], hip[1], 0.035, 32, 8);
+    const hairBack = () => {
+      if (!L.longHair) return;
+      ell(hd[0] + sway * 0.7 + hair[0] * 0.6, hd[1] - 2 + hair[1] * 0.3, 6, 7.5, L.hair);
+      // The ends swing a little further than the rest.
+      ell(hd[0] + sway * 0.7 + hair[0], hd[1] + 3 + hair[1] * 0.5, 4.6, 3.6, L.hair);
+    };
     if (f.front) hairBack();
+    if (L.topStyle === 'dress' && !c.sit) {
+      // A skirt that flares and swings at the hem.
+      const kz = P3(0, 0, hipZ * 0.55);
+      ctx.fillStyle = L.top; ctx.beginPath();
+      ctx.moveTo(hip[0] + shift - 5, hip[1] - 2); ctx.lineTo(hip[0] + shift + 5, hip[1] - 2);
+      ctx.lineTo(kz[0] + 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.lineTo(kz[0] - 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.closePath(); ctx.fill();
+    }
     limb(hip[0] + shift, hip[1], sh[0] + shift * 1.4, sh[1], L.top, 11);
     const pat = L.topStyle && L.topStyle !== 'tee' ? L.topStyle : null;
     if (pat && f.front) {
@@ -1389,6 +1426,9 @@ export function createHouseArt(ctx0, opts = {}) {
       const nx = Math.cos(ang), ny = Math.sin(ang);
       ctx.save();
       ctx.translate(mx, my); ctx.rotate(ang);
+      // Keep the pattern on the shirt: clip to the torso's shape.
+      const half = Math.hypot(tx2 - tx, ty2 - ty) / 2 + 5.5;
+      ctx.beginPath(); ctx.rect(-half, -5.5, half * 2, 11); ctx.clip();
       ctx.strokeStyle = 'rgba(255,255,255,.5)';
       if (pat === 'sweater' || pat === 'tank') {
         ctx.lineWidth = 1.6;
