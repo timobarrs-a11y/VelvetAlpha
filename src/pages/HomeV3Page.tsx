@@ -15,6 +15,7 @@ import {
   ModalShell, EmptyState, Button,
 } from '../shared/ui';
 import { companionAvatarConfig, TONE_COLOR, FinishSetupCard } from '../components/lobby';
+import { NoCompanionCard } from '../components/lobby/NoCompanionCard';
 import { Avatar } from '../components/Avatar';
 import { colorNameToHex } from '../utils/colorMapping';
 import { getCoachColor } from '../utils/coachColors';
@@ -101,28 +102,6 @@ export function HomeV3Page() {
     );
   }
 
-  if (companions.length === 0) {
-    return (
-      <PageShell center>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="ds-card max-w-sm w-full p-10 text-center rounded-3xl"
-        >
-          <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-pink-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-glow">
-            <Heart className="w-10 h-10 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-ink mb-3 font-display">Find Your First Companion</h2>
-          <p className="text-ink-muted text-sm mb-8 leading-relaxed">
-            Answer a few quick questions and we will match you with the perfect companion.
-          </p>
-          <button onClick={lobby.handleNewCompanion} className="w-full px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-all">
-            Get Started
-          </button>
-        </motion.div>
-      </PageShell>
-    );
-  }
 
   const checkInMap = new Map(checkIns.map(c => [c.companion_id, c]));
   const topCheckIn = checkIns.find(c => c.is_important) ?? null;
@@ -306,6 +285,8 @@ export function HomeV3Page() {
 
   return (
     <div className="ds-page flex min-h-full min-w-0 flex-col overflow-hidden text-white">
+      {companions.length === 0 && <NoCompanionCard onCreate={lobby.handleNewCompanion} />}
+
       {lobby.setupResumeRoute && (
         <div className="px-4 pt-3 flex-shrink-0">
           <FinishSetupCard onResume={lobby.resumeSetup} />

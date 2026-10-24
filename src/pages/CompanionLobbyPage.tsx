@@ -22,6 +22,7 @@ import {
   TONE_COLOR, GROUP_TONE, companionAvatarConfig,
 } from '../components/lobby';
 import type { HubTileSize } from '../components/lobby';
+import { NoCompanionCard } from '../components/lobby/NoCompanionCard';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 
 interface GameEntry {
@@ -131,26 +132,6 @@ export function CompanionLobbyPage() {
     );
   }
 
-  if (companions.length === 0) {
-    return (
-      <PageShell center>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="ds-card max-w-sm w-full p-10 text-center rounded-3xl"
-        >
-          <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-pink-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-glow">
-            <Users className="w-10 h-10 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-ink mb-3 font-display">Find Your First Companion</h2>
-          <p className="text-ink-muted text-sm mb-8 leading-relaxed">
-            Answer a few quick questions and we will match you with the perfect companion.
-          </p>
-          <Button fullWidth size="lg" onClick={lobby.handleNewCompanion}>Get Started</Button>
-        </motion.div>
-      </PageShell>
-    );
-  }
 
   const heroTiles   = HUB_TILES.filter(t => t.slot === 'hero');
   const rowTiles    = HUB_TILES.filter(t => t.slot === 'row');
@@ -204,6 +185,8 @@ export function CompanionLobbyPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {companions.length === 0 && <NoCompanionCard onCreate={lobby.handleNewCompanion} />}
 
       {lobby.setupResumeRoute && (
         <div className="mb-6">
