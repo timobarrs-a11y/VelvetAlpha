@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { CompanionWithLastMessage } from '../../services/companionService';
 import { getCompanionUnreadCounts } from '../../services/companionReadService';
 import { supabase } from '../../shared/supabase/client';
-import { setOnline, displayNames, getOrCreateConversation, getConversationList } from '../../shared/supabase/queries/messaging';
+import { setOnline, displayNames, getOrCreateConversation, getConversationList, messagePreview } from '../../shared/supabase/queries/messaging';
 import { playDing } from './ding';
 import { useAuth } from '../../auth/AuthProvider';
 import type { CoachSurface } from '../../services/chatService';
@@ -248,7 +248,7 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
         };
         setWindows(prev => (prev.some(w => w.key === key) ? prev : [...prev, { key, friend, minimized: true }]));
         setFriendUnread(prev => ({ ...prev, [msg.sender_id]: (prev[msg.sender_id] ?? 0) + 1 }));
-        setToast({ friend, text: msg.content, nonce: Date.now() });
+        setToast({ friend, text: messagePreview(msg.content), nonce: Date.now() });
         playDing();
       })
       // Someone accepted your request: open your chat with them.

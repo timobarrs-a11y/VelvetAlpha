@@ -632,6 +632,16 @@ export async function getMessages(conversationId: string, limit = 100): Promise<
   return (data ?? []) as DirectMessage[];
 }
 
+/** Doodles travel as a message whose content is this prefix plus a JPEG data URL. */
+export const DOODLE_PREFIX = '[doodle]';
+export function doodleSrc(content: string): string | null {
+  return content.startsWith(DOODLE_PREFIX + 'data:image/') ? content.slice(DOODLE_PREFIX.length) : null;
+}
+/** A message as one line, for previews and popups. */
+export function messagePreview(content: string): string {
+  return doodleSrc(content) ? 'sent you a doodle 🎨' : content;
+}
+
 export async function sendMessage(conversationId: string, content: string): Promise<DirectMessage | null> {
   const { data, error } = await supabase
     .from('im_messages')
