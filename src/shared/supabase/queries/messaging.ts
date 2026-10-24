@@ -167,6 +167,7 @@ export async function getFriends(): Promise<FriendPeer[]> {
 
   const profileMap = new Map((profiles.data ?? []).map((p: any) => [p.user_id, p]));
   const presenceMap = new Map((presence.data ?? []).map((p: any) => [p.user_id, p]));
+  const names = await displayNames(peerIds.filter(id => !profileMap.get(id)?.display_name));
 
   return friendRows.map(f => {
     const peerId = f.requester_id === user.id ? f.addressee_id : f.requester_id;
@@ -174,7 +175,7 @@ export async function getFriends(): Promise<FriendPeer[]> {
     const pres = presenceMap.get(peerId);
     return {
       user_id: peerId,
-      display_name: profile?.display_name ?? 'Anonymous',
+      display_name: profile?.display_name ?? names.get(peerId) ?? 'Anonymous',
       avatar_url: profile?.avatar_url ?? null,
       headline: profile?.headline ?? null,
       alias: profile?.alias ?? null,
@@ -214,13 +215,14 @@ export async function getIncomingRequests(): Promise<FriendPeer[]> {
   ]);
   const profileMap = new Map((profiles.data ?? []).map((p: any) => [p.user_id, p]));
   const presenceMap = new Map((presence.data ?? []).map((p: any) => [p.user_id, p]));
+  const names = await displayNames(requesterIds.filter(id => !profileMap.get(id)?.display_name));
 
   return (data as any[]).map(f => {
     const profile = profileMap.get(f.requester_id);
     const pres = presenceMap.get(f.requester_id);
     return {
       user_id: f.requester_id,
-      display_name: profile?.display_name ?? 'Anonymous',
+      display_name: profile?.display_name ?? names.get(f.requester_id) ?? 'Anonymous',
       avatar_url: profile?.avatar_url ?? null,
       headline: profile?.headline ?? null,
       alias: profile?.alias ?? null,
@@ -256,13 +258,14 @@ export async function getOutgoingRequests(): Promise<FriendPeer[]> {
   ]);
   const profileMap = new Map((profiles.data ?? []).map((p: any) => [p.user_id, p]));
   const presenceMap = new Map((presence.data ?? []).map((p: any) => [p.user_id, p]));
+  const names = await displayNames(addresseeIds.filter(id => !profileMap.get(id)?.display_name));
 
   return (data as any[]).map(f => {
     const profile = profileMap.get(f.addressee_id);
     const pres = presenceMap.get(f.addressee_id);
     return {
       user_id: f.addressee_id,
-      display_name: profile?.display_name ?? 'Anonymous',
+      display_name: profile?.display_name ?? names.get(f.addressee_id) ?? 'Anonymous',
       avatar_url: profile?.avatar_url ?? null,
       headline: profile?.headline ?? null,
       alias: profile?.alias ?? null,
@@ -277,6 +280,90 @@ export async function getOutgoingRequests(): Promise<FriendPeer[]> {
       available_to_chat: pres?.available_to_chat ?? false,
     };
   });
+}
+
+/**
+ * Names for people the user is connected to who have no messenger card, from
+ * their member profile or account nickname (server checks the connection).
+ */
+async function displayNames(userIds: string[]): Promise<Map<string, string>> {
+  if (userIds.length === 0) return new Map();
+  const { data, error } = await supabase.rpc('im_display_names', { p_user_ids: userIds });
+  if (error || !Array.isArray(data)) return new Map();
+  return new Map((data as Array<{ user_id: string; display_name: string }>).map(r => [r.user_id, r.display_name]));
+}
+
+// ----------------------------------------------------------------------------
+// Friend codes
+// ----------------------------------------------------------------------------
+
+/** Show a code as "1234 5678". */
+export function formatFriendCode(code: string): string {
+  const digits = code.replace(/\D/g, '');
+  return digits.length === 8 ? `${digits.slice(0, 4)} ${digits.slice(4)}` : digits;
+}
+
+export function friendCodeLink(code: string): string {
+  return `${window.location.origin}/add/${code.replace(/\D/g, '')}`;
+}
+
+export async function getMyFriendCode(): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_my_friend_code');
+  if (error) return null;
+  return (data as string | null) ?? null;
+}
+
+export async function getFriendCode(userId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_friend_code', { p_user_id: userId });
+  if (error) return null;
+  return (data as string | null) ?? null;
+}
+
+export interface FriendCodeMatch {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
+export type AddByCodeResult =
+  | { kind: 'invalid' | 'not_found' | 'self' }
+  | { kind: 'friends' | 'accepted' | 'requested' | 'already_requested'; peer: FriendCodeMatch };
+
+/**
+ * Add someone by their friend code: already friends → ready to chat; they had
+ * asked you → accepted; otherwise a request is sent.
+ */
+export async function addFriendByCode(code: string): Promise<AddByCodeResult> {
+  const digits = code.replace(/\D/g, '');
+  if (digits.length !== 8) return { kind: 'invalid' };
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+
+  const { data, error } = await supabase.rpc('find_user_by_friend_code', { p_code: digits });
+  if (error) throw new Error(`Could not look up that code: ${error.message}`);
+  const peer = (Array.isArray(data) ? data[0] : null) as FriendCodeMatch | null;
+  if (!peer) return { kind: 'not_found' };
+  if (peer.user_id === user.id) return { kind: 'self' };
+
+  const { data: existing } = await supabase
+    .from('im_friendships')
+    .select('id, requester_id, status')
+    .or(`and(requester_id.eq.${user.id},addressee_id.eq.${peer.user_id}),and(requester_id.eq.${peer.user_id},addressee_id.eq.${user.id})`)
+    .limit(1)
+    .maybeSingle();
+  const row = existing as { id: string; requester_id: string; status: FriendshipStatus } | null;
+
+  if (row?.status === 'accepted') return { kind: 'friends', peer };
+  if (row?.status === 'blocked') return { kind: 'not_found' };
+  if (row?.status === 'pending' && row.requester_id === peer.user_id) {
+    await respondToFriendRequest(row.id, true);
+    return { kind: 'accepted', peer };
+  }
+  if (row) return { kind: 'already_requested', peer };
+
+  await sendFriendRequest(peer.user_id, 'Added you with your friend code');
+  return { kind: 'requested', peer };
 }
 
 // ----------------------------------------------------------------------------
@@ -495,6 +582,7 @@ export async function getConversationList(): Promise<ConversationSummary[]> {
   const presenceMap = new Map((presence.data ?? []).map((p: any) => [p.user_id, p]));
   const lastMap = new Map(lastMessages.map(l => [l.conv_id, l.last]));
   const unreadMap = new Map(unread.map(u => [u.conv_id, u.count]));
+  const names = await displayNames(peerIds.filter(id => !profileMap.get(id)?.display_name));
 
   return convs.map(c => {
     const peerId = c.user_a_id === user.id ? c.user_b_id : c.user_a_id;
@@ -504,7 +592,7 @@ export async function getConversationList(): Promise<ConversationSummary[]> {
     return {
       id: c.id,
       peer_id: peerId,
-      peer_name: profile?.display_name ?? 'Anonymous',
+      peer_name: profile?.display_name ?? names.get(peerId) ?? 'Anonymous',
       peer_avatar_url: profile?.avatar_url ?? null,
       last_message: last?.content ?? null,
       last_message_at: last?.created_at ?? c.last_message_at ?? null,

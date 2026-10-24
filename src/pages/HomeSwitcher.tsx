@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useHomeLayout } from '../hooks/useHomeLayout';
+import { useNavigate } from 'react-router-dom';
 import { RouteFallback } from '../shared/ui/RouteFallback';
+import { useHasInterests } from '../hooks/useHasInterests';
 
 const CompanionLobbyPage = lazy(() => import('./CompanionLobbyPage').then(m => ({ default: m.CompanionLobbyPage })));
 
@@ -23,6 +25,9 @@ function readSlowFlag(): boolean {
 
 export function HomeSwitcher() {
   const [layout] = useHomeLayout();
+  const navigate = useNavigate();
+  // V3 is a feed built on interests; without any, Classic is the useful home.
+  const hasInterests = useHasInterests();
   // Session-only: the saved preference stays V3 and is used again next visit.
   const [useClassic, setUseClassic] = useState(() => readSlowFlag() || connectionLooksSlow());
 
@@ -37,11 +42,20 @@ export function HomeSwitcher() {
     return () => clearTimeout(timer);
   }, [layout, useClassic]);
 
-  const showV3 = layout === 'v3' && !useClassic;
+  const needsInterests = layout === 'v3' && hasInterests === false;
+  const showV3 = layout === 'v3' && !useClassic && !needsInterests;
 
   return (
     <Suspense fallback={<RouteFallback />}>
-      {layout === 'v3' && useClassic && (
+      {needsInterests && (
+        <div className="flex items-center justify-between gap-3 border-b border-white/8 bg-white/[0.03] px-4 py-2 text-xs text-white/70">
+          <span>Pick a few interests to unlock your V3 feed.</span>
+          <button type="button" onClick={() => navigate('/profile')} className="flex-shrink-0 font-semibold text-pink-300 hover:text-pink-200">
+            Choose interests
+          </button>
+        </div>
+      )}
+      {layout === 'v3' && useClassic && !needsInterests && (
         <div className="flex items-center justify-between gap-3 border-b border-white/8 bg-white/[0.03] px-4 py-2 text-xs text-white/70">
           <span>Slow connection, so we opened the faster Classic home.</span>
           <button

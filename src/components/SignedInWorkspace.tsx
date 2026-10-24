@@ -286,6 +286,22 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
           </div>
         )}
         {!collapsed && <div className="my-2 border-t border-white/8" />}
+        {lobby.setupResumeRoute && (
+          <button
+            type="button"
+            onClick={lobby.resumeSetup}
+            className="mb-2 flex w-full items-center gap-2.5 rounded-xl border border-pink-400/30 bg-pink-500/10 px-2 py-2 text-left transition-colors hover:bg-pink-500/15"
+            title={collapsed ? 'Finish setup' : undefined}
+          >
+            <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-pink-500/20 text-pink-300"><Sparkles className="h-3.5 w-3.5" /></span>
+            {!collapsed && (
+              <span className="min-w-0">
+                <span className="block truncate text-[11px] font-semibold" style={{ color: inkColor }}>Finish setup</span>
+                <span className="block truncate text-[10px]" style={{ color: inkMuted }}>Pick up where you left off</span>
+              </span>
+            )}
+          </button>
+        )}
         <div className="space-y-0.5">
           {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Coaching</SidebarLabel>}
           {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(coach)} inkColor={inkColor} inkMuted={inkMuted} />)}

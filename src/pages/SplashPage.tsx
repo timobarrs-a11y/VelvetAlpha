@@ -88,7 +88,8 @@ export function SplashPage() {
           const companionId = sessionStorage.getItem('currentCompanionId');
           const matchAnswers = sessionStorage.getItem('matchAnswers');
           if (companionId && matchAnswers) { navigate('/voice-selection', { replace: true }); return; }
-          navigate('/welcome', { replace: true });
+          // No companion yet: the lobby offers to create one, no forced setup.
+          navigate('/lobby', { replace: true });
           return;
         }
         setIsChecking(false);
