@@ -129,7 +129,7 @@ function WindowFrame({ children, fullWidth, room }: { children: ReactNode; fullW
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 24 }}
       transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-      className={`flex h-[min(70vh,600px)] flex-col overflow-hidden rounded-t-2xl border border-b-0 border-white/10 shadow-2xl shadow-black/50 ${fullWidth ? 'w-full' : 'w-[360px]'}`}
+      className={`flex h-[min(70vh,600px)] flex-col overflow-hidden rounded-t-2xl border border-b-0 border-white/10 shadow-2xl shadow-black/50 ${fullWidth ? 'w-full max-w-full min-w-0' : 'w-[min(360px,calc(100vw-1.5rem))]'}`}
       style={{ background: 'var(--ds-surface, #1a1a2e)', ...(room ? { maxHeight: room } : {}) }}
     >
       {children}
@@ -215,7 +215,7 @@ export function Dock() {
           {shown.map(w => {
             if (w.key === MESSAGES_KEY) {
               return (
-                <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
+                <div key={w.key} className={`pointer-events-auto min-w-0 ${capacity === 1 ? 'w-full max-w-full' : ''}`}>
                   <WindowFrame fullWidth={capacity === 1} room={room}>
                     <MessagingOverlay
                       embedded
@@ -231,7 +231,7 @@ export function Dock() {
             }
             if (w.friend) {
               return (
-                <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
+                <div key={w.key} className={`pointer-events-auto min-w-0 ${capacity === 1 ? 'w-full max-w-full' : ''}`}>
                   <WindowFrame fullWidth={capacity === 1} room={room}>
                     <FriendChatWindow friend={w.friend} gameRequest={w.game} onMinimize={() => dock.minimize(w.key)} onClose={() => dock.close(w.key)} />
                   </WindowFrame>
@@ -242,7 +242,7 @@ export function Dock() {
             if (!companion) return null;
             const isPageCoach = companion.id === dock.pageCoachId && !!dock.coachSurface;
             return (
-              <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
+              <div key={w.key} className={`pointer-events-auto min-w-0 ${capacity === 1 ? 'w-full max-w-full' : ''}`}>
                 <WindowFrame fullWidth={capacity === 1} room={room}>
                   <AiChatWindow
                     companion={companion}

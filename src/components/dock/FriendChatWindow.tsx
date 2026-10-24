@@ -39,7 +39,7 @@ export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
   }, [gameRequest?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
       <div className="flex items-center gap-2.5 border-b border-amber-300/25 bg-amber-300/[0.07] px-3 py-2.5">
         <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-amber-300/80 bg-amber-300/15 text-base font-bold text-amber-200">
           {friend.peerAvatarUrl
