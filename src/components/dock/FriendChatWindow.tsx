@@ -39,7 +39,7 @@ export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
   }, [gameRequest?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
       <div className="flex items-center gap-2.5 border-b border-amber-300/25 bg-amber-300/[0.07] px-3 py-2.5">
         <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-amber-300/80 bg-amber-300/15 text-base font-bold text-amber-200">
           {friend.peerAvatarUrl
@@ -100,7 +100,7 @@ export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
           <div key={g} className={playing === g ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
             {g === 'checkers' && <FriendCheckers conversationId={friend.conversationId} myId={user.id} peerId={friend.peerId} peerName={friend.peerName} />}
             {g === 'draw' && <FriendDrawGuess conversationId={friend.conversationId} myId={user.id} peerId={friend.peerId} peerName={friend.peerName} />}
-            {g === 'paint' && <FriendPaint conversationId={friend.conversationId} peerName={friend.peerName} onSent={() => setPlaying(null)} />}
+            {g === 'paint' && <FriendPaint conversationId={friend.conversationId} myId={user.id} peerName={friend.peerName} onSent={() => setPlaying(null)} />}
             {g === 'rps' && <FriendRps conversationId={friend.conversationId} peerName={friend.peerName} />}
           </div>
         ))}

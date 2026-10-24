@@ -17,6 +17,14 @@ export interface PersonFrame {
   sit: boolean;
   hidden: boolean;
   seed: number;
+  /** The activity in progress (e.g. 'piano'), for clips beyond the shared pose. */
+  act?: string | null;
+  /** Game minutes into that activity, so clips can move through steps. */
+  actMin?: number;
+  /** How they feel, from their needs: happy, playful, neutral, tired, annoyed, sad. */
+  expr?: string;
+  /** A spot they're looking at (world x, y), e.g. the person they're talking to. */
+  lookAt?: [number, number] | null;
   look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean };
 }
 
@@ -34,6 +42,10 @@ export interface HouseFrame {
 
 export interface HouseArt {
   render(frame: HouseFrame): void;
+  /** Furniture was just set down: it lands with a bounce and a puff of dust. */
+  objectPlaced(id: string): void;
+  /** Where a world point lands in view coordinates (follows the current rotation). */
+  project(x: number, y: number, z?: number): [number, number];
   /** Restores paint, wallpaper, floors, wall decor, yard and household details from an original save. */
   applySave(save: unknown): void;
   /** Sets the paint color for a floor level. */

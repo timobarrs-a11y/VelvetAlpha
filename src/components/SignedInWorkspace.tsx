@@ -71,6 +71,7 @@ const excludedPrefixes = [
   '/create-user-avatar',
   '/age-verification',
   '/velvet-house',
+  '/shootout',
   '/velvet-house-next',
   '/velvet-house-legacy',
 ];
