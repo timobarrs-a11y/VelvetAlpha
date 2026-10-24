@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCourse, judge, LEVELS, MAX_SCORE, resolveShot, isMake, shotWindow, starsFor, spotPosition, fireBoost } from '../engine';
+import { buildCourse, judge, LEVELS, MAX_SCORE, resolveShot, isMake, shotWindow, starsFor, spotPosition, fireBoost, shotPoints, perfectMultiplier } from '../engine';
 
 describe('3-point shootout rules', () => {
   it('lays out five racks and two Starry balls like the real contest (27 balls, 40 points)', () => {
@@ -63,5 +63,29 @@ describe('3-point shootout rules', () => {
     expect(starsFor(LEVELS[0].unlockAt, LEVELS[0], 40)).toBe(1);
     expect(starsFor(30, LEVELS[0], 40)).toBe(2);
     expect(starsFor(38, LEVELS[0], 40)).toBe(3);
+  });
+});
+
+describe('shootout scoring', () => {
+  const regular = { kind: 'regular' as const, points: 1 }, money = { kind: 'money' as const, points: 2 };
+  it('scores the real contest 1/2/3 in classic', () => {
+    expect(shotPoints('classic', money, true, true, 3)).toBe(2);
+    expect(shotPoints('classic', money, false, false, 0)).toBe(0);
+  });
+  it('adds a point for a perfect release in contest mode', () => {
+    expect(shotPoints('contest', regular, true, false, 0)).toBe(1);
+    expect(shotPoints('contest', regular, true, true, 1)).toBe(2);
+    expect(shotPoints('contest', money, true, true, 4)).toBe(3);
+  });
+  it('builds a multiplier on back-to-back perfects in score attack', () => {
+    expect(shotPoints('attack', regular, true, false, 0)).toBe(100);
+    expect(shotPoints('attack', regular, true, true, 1)).toBe(150);
+    expect(shotPoints('attack', regular, true, true, 2)).toBe(170);
+    expect(shotPoints('attack', regular, true, true, 3)).toBe(180);
+    expect(shotPoints('attack', money, true, true, 3)).toBe(360);
+    expect(perfectMultiplier(50)).toBe(2);
+  });
+  it('makes every good release (slightly early or late)', () => {
+    for (let r = 0; r < 1; r += 0.05) expect(isMake(resolveShot('good', () => r))).toBe(true);
   });
 });

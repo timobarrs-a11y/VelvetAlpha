@@ -85,6 +85,21 @@ export function shotWindow(level: Level, spot: Spot, ball: Ball, ballIndex: numb
   return { green: g, rise };
 }
 
+/**
+ * Each run gets its own release point, so the timing can't be memorised
+ * across games: some runs want an early release (on the way up), some the top
+ * of the jump, some a late one (holding at the peak). Returned as a fraction
+ * of the jump: the green centre sits at rise * (1 + shift).
+ */
+export type ReleaseStyle = 'early' | 'set' | 'late';
+export function pickRelease(rand: () => number = Math.random): { style: ReleaseStyle; shift: number } {
+  const r = rand(), j = rand();
+  // Subtle on purpose: slightly early, the top, or slightly late.
+  if (r < 1 / 3) return { style: 'early', shift: -0.14 + j * 0.06 };
+  if (r < 2 / 3) return { style: 'set', shift: -0.03 + j * 0.06 };
+  return { style: 'late', shift: 0.08 + j * 0.06 };
+}
+
 export type Grade = 'perfect' | 'good' | 'early' | 'late' | 'very-early' | 'very-late';
 
 /**
@@ -102,15 +117,16 @@ export function judge(held: number, rise: number, green: number): { error: numbe
 }
 
 /**
- * What happens to the ball. Perfect releases always go in (often clean);
- * good ones usually do; early/late ones mostly rattle out; way off is a brick
- * or an airball. `rand` is injectable for tests.
+ * What happens to the ball. The make zone runs from slightly early to
+ * slightly late: perfect releases (dead centre) go in clean, good ones always
+ * go in too (sometimes off the rim); outside that they mostly rattle out, and
+ * way off is a brick or an airball. `rand` is injectable for tests.
  */
 export function resolveShot(grade: Grade, rand: () => number = Math.random): Outcome {
   const r = rand();
   switch (grade) {
     case 'perfect': return r < 0.7 ? 'swish' : 'make';
-    case 'good': return r < 0.35 ? 'make' : r < 0.75 ? 'rim-in' : 'rim-out';
+    case 'good': return r < 0.25 ? 'swish' : r < 0.7 ? 'make' : 'rim-in';
     case 'early':
     case 'late': return r < 0.22 ? 'rim-in' : r < 0.75 ? 'rim-out' : 'brick';
     case 'very-early': return r < 0.6 ? 'airball' : 'brick';
@@ -119,6 +135,28 @@ export function resolveShot(grade: Grade, rand: () => number = Math.random): Out
 }
 
 export const isMake = (o: Outcome) => o === 'swish' || o === 'make' || o === 'rim-in';
+
+// ---- Scoring -----------------------------------------------------------------
+
+/**
+ * How shots score. Classic is the real contest's 1/2/3. Contest adds +1 for
+ * every perfect release. Score Attack is in big round numbers: 100 a point,
+ * half again for a perfect, and back-to-back perfects build a multiplier.
+ */
+export type ScoringMode = 'classic' | 'contest' | 'attack';
+
+/** Score Attack multiplier for a run of perfect releases (1 = this is the first). */
+export function perfectMultiplier(chain: number): number {
+  return Math.min(2, 1 + Math.max(0, chain - 1) * 0.1);
+}
+
+export function shotPoints(mode: ScoringMode, ball: Ball, made: boolean, perfect: boolean, chain: number): number {
+  if (!made) return 0;
+  if (mode === 'classic') return ball.points;
+  if (mode === 'contest') return ball.points + (perfect ? 1 : 0);
+  const base = ball.points * 100 * (perfect ? 1.5 : 1) * (perfect ? perfectMultiplier(chain) : 1);
+  return Math.round(base / 10) * 10;
+}
 
 /** Streak bonus: three in a row puts you "on fire", which widens your window a little. */
 export function fireBoost(streak: number): number {

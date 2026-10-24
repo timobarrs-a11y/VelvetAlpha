@@ -215,6 +215,7 @@ export function Contest({ level, moneyRack, onExit, onFinish }: {
           clock: stageClock,
           auto: shooter.you ? undefined : current.run,
           speed: 1.35,
+          scoring: 'contest',
           jersey: shooter.rival ? { colors: shooter.rival.colors, number: shooter.rival.number } : undefined,
         }}
         ticker={tickerFor(shooter)}

@@ -5,9 +5,12 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import {
+  pickRelease,
   buildCourse, fireBoost, isMake, judge, MAX_SCORE, resolveShot, RIM_HEIGHT, shotWindow, spotPosition,
-  type Ball, type Grade, type Level, type Outcome, type Spot,
+  perfectMultiplier, shotPoints,
+  type Ball, type Grade, type ScoringMode, type Level, type Outcome, type Spot,
 } from '../engine';
 import { legAt, planFlight, type Leg, type V3 } from '../game';
 import * as sfx from '../audio';
@@ -15,6 +18,8 @@ import { ballTexture, FLOOR, floorTexture, jerseyTexture, makeScoreboard, ribbon
 import { Net } from './net';
 import type { RivalRun } from '../rivals';
 import { Crowd } from './crowd';
+import { buildArena, type Arena } from './arena';
+import { getLook } from '../settings';
 
 // 3-Point Shootout in 3D: a lit arena with a lacquered floor, glass board and
 // a cloth net, a full crowd, first-person shooting and a broadcast camera
@@ -28,7 +33,7 @@ export type ShootoutEvent =
   | { type: 'rack'; label: string; index: number; money: boolean }
   | { type: 'ball'; kind: Ball['kind'] }
   | { type: 'grade'; grade: Grade; error: number; window: number }
-  | { type: 'make'; points: number; outcome: Outcome; streak: number }
+  | { type: 'make'; points: number; outcome: Outcome; streak: number; perfect: boolean; chain: number; mult: number }
   | { type: 'miss'; outcome: Outcome }
   | { type: 'fire' }
   | { type: 'replay'; on: boolean }
@@ -43,6 +48,8 @@ export interface RunOptions {
   jersey?: { colors: [string, string]; number: number };
   /** Play a rival's pre-simulated run from the broadcast camera instead of taking input. */
   auto?: RivalRun;
+  /** How makes score (default classic 1/2/3). */
+  scoring?: ScoringMode;
   /** Playback speed for autopilot runs. */
   speed?: number;
 }
@@ -58,6 +65,19 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const ease = (t: number) => t * t * (3 - 2 * t);
 
 type Quality = 'high' | 'mid';
+
+/** The stanchion pad's side: brand colour, a stripe and the logo. */
+function stanchionPadTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
+  const g = cv.getContext('2d')!;
+  const grad = g.createLinearGradient(0, 0, 0, 256); grad.addColorStop(0, '#7a1f4f'); grad.addColorStop(1, '#4a1030');
+  g.fillStyle = grad; g.fillRect(0, 0, 512, 256);
+  g.fillStyle = '#F5C451'; g.fillRect(0, 196, 512, 10);
+  g.fillStyle = '#fff'; g.font = 'italic 900 92px Inter, Helvetica, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('VELVET', 256, 110);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
 
 // Final pass: ACES tone mapping, a soft vignette and sRGB out. (three 0.154's
 // OutputPass redeclares toneMappingExposure and fails to compile.)
@@ -85,6 +105,36 @@ function outputPass(exposure: number): ShaderPass {
   return pass;
 }
 
+// Retro look: chunky pixels (about 200 rows tall), a limited palette and
+// ordered dithering, like a 16-bit console, over the same 3D arena.
+function retroPass(): ShaderPass {
+  const pass = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uPx: { value: 4 } },
+    vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `
+      uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uPx; varying vec2 vUv;
+      float bayer(vec2 p) {
+        vec2 q = mod(p, 4.0);
+        int i = int(q.x) + int(q.y) * 4;
+        float m[16];
+        m[0]=0.0; m[1]=8.0; m[2]=2.0; m[3]=10.0; m[4]=12.0; m[5]=4.0; m[6]=14.0; m[7]=6.0;
+        m[8]=3.0; m[9]=11.0; m[10]=1.0; m[11]=9.0; m[12]=15.0; m[13]=7.0; m[14]=13.0; m[15]=5.0;
+        for (int k = 0; k < 16; k++) if (k == i) return m[k] / 16.0 - 0.5;
+        return 0.0;
+      }
+      void main() {
+        vec2 cell = floor(vUv * uRes / uPx);
+        vec2 uv = (cell + 0.5) * uPx / uRes;
+        vec3 c = texture2D(tDiffuse, uv).rgb;
+        float levels = 9.0;
+        c = floor(c * levels + 0.5 + bayer(cell) * 0.55) / levels;
+        gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+      }`,
+  });
+  pass.material.toneMapped = false;
+  return pass;
+}
+
 export class Shootout3D {
   private renderer: THREE.WebGLRenderer;
   private composer: EffectComposer;
@@ -101,6 +151,7 @@ export class Shootout3D {
   /** Frame governor: 0 = full quality; each step trades detail for frame rate. */
   private perf = { acc: 0, n: 0, skip: 90, level: 0, good: 0, ups: 0, frame: 0 };
   private noDraw = false;
+  private retro: ShaderPass | null = null;
   private opts: RunOptions;
   /** Autopilot: the rival run being played back, and the next shot in it. */
   private auto: RivalRun | null;
@@ -110,6 +161,7 @@ export class Shootout3D {
   // World pieces.
   private net!: Net;
   private crowd!: Crowd;
+  private arena!: Arena;
   private ball!: THREE.Mesh;
   private ballMats: Record<Ball['kind'], THREE.MeshStandardMaterial>;
   private heldBall!: THREE.Mesh;
@@ -139,12 +191,20 @@ export class Shootout3D {
   private makes = 0; private shots = 0; streak = 0; private bestStreak = 0;
   private holdT = 0;
   private win = { green: 0.08, rise: 0.7 };
+  /** This run's release point (fraction of the jump), and where the green sits for the current shot. */
+  private shift = 0;
+  private target = 0.7;
+  /** The last release, flashed on the meter for a moment so you can learn the timing. */
+  private lastRelease: { held: number; target: number; green: number; at: number; error: number } | null = null;
   private greenPinged = false;
   private flight: Leg[] = [];
   private flightT = 0;
   private legPlayed = -1;
   private outcome: Outcome | null = null;
   private ballNow: Ball | null = null;
+  private gradeNow: Grade | null = null;
+  /** Perfect releases in a row (Score Attack multiplier). */
+  private chain = 0;
   private replayT = 0;
   private hitstop = 0;
   private punch = 0;
@@ -167,6 +227,7 @@ export class Shootout3D {
     this.max = MAX_SCORE(this.course);
     this.clock = opts.clock ?? level.clock;
     this.clock0 = this.clock;
+    this.shift = pickRelease().shift;
     this.reduced = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const coarse = window.matchMedia?.('(pointer: coarse)').matches;
     this.quality = coarse || Math.min(window.innerWidth, window.innerHeight) < 600 ? 'mid' : 'high';
@@ -177,7 +238,7 @@ export class Shootout3D {
     this.renderer.setPixelRatio(this.basePR);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 0.94;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = this.quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 
@@ -195,6 +256,7 @@ export class Shootout3D {
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.42, 0.55, 0.82);
     this.composer.addPass(this.bloom);
     this.composer.addPass(outputPass(this.renderer.toneMappingExposure));
+    if (getLook() === 'retro') { this.retro = retroPass(); this.composer.addPass(this.retro); }
 
     this.ballMats = {
       regular: this.makeBallMat('regular'), money: this.makeBallMat('money'), starry: this.makeBallMat('starry'),
@@ -205,7 +267,6 @@ export class Shootout3D {
     this.build();
     this.resize();
     this.precompile();
-    sfx.startCrowd();
   }
 
   // ---- Building the arena ---------------------------------------------------
@@ -263,14 +324,17 @@ export class Shootout3D {
       fix.position.copy(L.position);
       s.add(fix);
     });
-    // Ceiling trusses.
+    // Ceiling trusses carrying the spots.
     const truss = new THREE.MeshStandardMaterial({ color: 0x1c1d24, metalness: 0.6, roughness: 0.5 });
     [2, 9].forEach(y => { const b = new THREE.Mesh(new THREE.BoxGeometry(22, 0.35, 0.35), truss); b.position.copy(toThree([0, y, 13.3])); s.add(b); });
+    // The building: upper deck, suites, walls, roof, banners, light beams.
+    this.arena = buildArena(s, toThree, { hi, spots });
+    this.ribbons.push(...this.arena.ribbons);
 
     this.buildHoop();
 
     // Crowd and stands.
-    this.crowd = new Crowd(toThree, hi ? 2600 : 1300);
+    this.crowd = new Crowd(toThree, hi ? 4200 : 2200);
     s.add(this.crowd.group);
 
     // LED ribbon boards along the front of each stand.
@@ -299,20 +363,10 @@ export class Shootout3D {
     }
     jumbo.position.copy(toThree([0, 7, 10.5]));
     s.add(jumbo);
-    const back = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), sbMat);
-    back.position.copy(toThree([0, -11.4, 7.6]));
+    // The big board on the upper deck behind the basket.
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(9, 4.5), sbMat);
+    back.position.copy(toThree([0, -18.6, 12.4]));
     s.add(back);
-    // Banners high on the end wall.
-    const banner = (txt: string, x: number, col: string) => {
-      const cv = document.createElement('canvas'); cv.width = 256; cv.height = 512;
-      const g = cv.getContext('2d')!; g.fillStyle = col; g.fillRect(0, 0, 256, 512);
-      g.fillStyle = '#F5C451'; g.fillRect(0, 470, 256, 42);
-      g.save(); g.translate(128, 256); g.rotate(-Math.PI / 2); g.fillStyle = '#FFFFFF'; g.font = '900 64px Inter, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 0, 0); g.restore();
-      const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 3.2), new THREE.MeshStandardMaterial({ map: t, emissive: 0x222222, roughness: 0.9 }));
-      m.position.copy(toThree([x, -13.5, 10])); s.add(m);
-    };
-    banner('CHAMPS', -7, '#5C163A'); banner('2026', -4.5, '#1F2937'); banner('LEGENDS', 4.5, '#1F2937'); banner('VELVET', 7, '#5C163A');
 
     // Ball racks at each spot.
     const rackMat = new THREE.MeshStandardMaterial({ color: 0x9aa3b2, metalness: 0.85, roughness: 0.3 });
@@ -362,11 +416,15 @@ export class Shootout3D {
   private buildHoop(): void {
     const s = this.scene;
     // Stanchion: padded base, pole and arm.
-    const pad = new THREE.MeshStandardMaterial({ color: 0x5c163a, roughness: 0.75 });
+    const padTex = stanchionPadTexture();
+    const pad = new THREE.MeshStandardMaterial({ map: padTex, roughness: 0.6 });
+    const padPlain = new THREE.MeshStandardMaterial({ color: 0x5c163a, roughness: 0.6 });
     const steel = new THREE.MeshStandardMaterial({ color: 0x23252d, metalness: 0.7, roughness: 0.35 });
-    const base = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 2.2), pad); base.position.copy(toThree([0, -3.7, 0.55])); base.castShadow = true; s.add(base);
-    const pole = new THREE.Mesh(new THREE.BoxGeometry(0.28, 3.4, 0.28), steel); pole.position.copy(toThree([0, -3.4, 2.2])); s.add(pole);
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 3.0), steel); arm.position.copy(toThree([0, -2.0, 3.55])); arm.rotation.x = -0.12; s.add(arm);
+    // Soft, rounded padding with the logo on the sides; the pole and arm padded too.
+    const base = new THREE.Mesh(new RoundedBoxGeometry(1.4, 1.1, 2.2, 4, 0.16), [pad, pad, padPlain, padPlain, padPlain, padPlain]);
+    base.position.copy(toThree([0, -3.7, 0.55])); base.castShadow = true; s.add(base);
+    const pole = new THREE.Mesh(new RoundedBoxGeometry(0.42, 3.4, 0.42, 3, 0.1), padPlain); pole.position.copy(toThree([0, -3.4, 2.2])); s.add(pole);
+    const arm = new THREE.Mesh(new RoundedBoxGeometry(0.26, 0.26, 3.0, 3, 0.08), steel); arm.position.copy(toThree([0, -2.0, 3.55])); arm.rotation.x = -0.12; s.add(arm);
     // Glass backboard with frame and shooter's square.
     const glass = new THREE.Mesh(new THREE.BoxGeometry(1.83, 1.07, 0.025), new THREE.MeshPhysicalMaterial({
       color: 0xe8f0ff, transparent: true, opacity: 0.16, roughness: 0.03, metalness: 0, clearcoat: 1, envMapIntensity: 1.2,
@@ -547,6 +605,11 @@ export class Shootout3D {
     this.bloom.resolution.set(w / 2, h / 2);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    if (this.retro) {
+      const pr = this.renderer.getPixelRatio();
+      this.retro.uniforms.uRes.value.set(w * pr, h * pr);
+      this.retro.uniforms.uPx.value = Math.max(2, Math.round((h * pr) / 200));
+    }
     // Arms sit closer to centre on tall phone screens.
     this.arms.scale.setScalar(w < h ? 0.8 : 1);
   }
@@ -590,9 +653,18 @@ export class Shootout3D {
     return s.balls.map((b, i) => ({ kind: b.kind, state: i < this.ballIdx ? 'done' : i === this.ballIdx ? 'now' : 'left' }));
   }
 
-  /** The current shot window, for the meter in the HUD. */
-  meter(): { hold: number; rise: number; green: number; active: boolean } {
-    return { hold: this.holdT, rise: this.win.rise, green: this.win.green * fireBoost(this.streak), active: this.phase === 'hold' || this.phase === 'aim' };
+  /**
+   * What the release meter should show. The first shot of a run shows it live
+   * so you can find the mark; after that it only flashes for a moment after
+   * each release (where you let go against the green), then fades.
+   */
+  meterView(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number } {
+    if (this.auto) return { mode: 'off', hold: 0, target: 1, green: 0, error: 0, age: 0 };
+    const green = this.win.green * fireBoost(this.streak);
+    if (this.shots === 0 && (this.phase === 'aim' || this.phase === 'hold')) return { mode: 'live', hold: this.holdT, target: this.target, green, error: 0, age: 0 };
+    const r = this.lastRelease, age = r ? this.time - r.at : 99;
+    if (r && age < 1.3) return { mode: 'flash', hold: r.held, target: r.target, green: r.green, error: r.error, age };
+    return { mode: 'off', hold: 0, target: this.target, green, error: 0, age };
   }
 
   // ---- Simulation -----------------------------------------------------------
@@ -638,9 +710,10 @@ export class Shootout3D {
       if (next && this.holdT >= this.win.rise + next.error) this.shoot();
     } else if (this.phase === 'hold') {
       this.holdT += dt;
-      const { green, rise } = this.win;
-      if (!this.greenPinged && this.holdT >= rise - (green * fireBoost(this.streak)) / 2) { this.greenPinged = true; sfx.playGreen(); }
-      if (this.holdT > rise * 1.45) this.shoot();
+      const { green } = this.win;
+      // Only the first shot of a run pings the green: after that it's timing from memory.
+      if (!this.greenPinged && this.shots === 0 && this.holdT >= this.target - (green * fireBoost(this.streak)) / 2) { this.greenPinged = true; sfx.playGreen(); }
+      if (this.holdT > Math.max(this.target, this.win.rise) * 1.45) this.shoot();
     }
     if (this.phase === 'flight' || this.phase === 'replay') this.stepFlight(dt);
     this.fade = Math.max(0, this.fade - real * 3.2);
@@ -660,7 +733,7 @@ export class Shootout3D {
         if (snd === 'board') sfx.playBoard();
         if (snd === 'bounce') sfx.playBounce();
         if (snd === 'swish') {
-          sfx.playSwish();
+          sfx.playSwish(this.ballNow?.points);
           if (this.phase === 'flight') this.celebrate();
           else this.burst();
         }
@@ -693,10 +766,12 @@ export class Shootout3D {
       this.autoIdx++;
       this.clock = this.clock0 - planned.t;
     } else {
-      ({ grade, error } = judge(this.holdT, this.win.rise, windowW));
+      ({ grade, error } = judge(this.holdT, this.target, windowW));
+      this.lastRelease = { held: this.holdT, target: this.target, green: windowW, at: this.time, error };
       this.outcome = resolveShot(grade);
     }
     this.ballNow = ball;
+    this.gradeNow = grade;
     this.ball.material = this.ballMats[ball.kind];
     // The ball leaves from the hands, wherever the jump put them.
     const hand = new THREE.Vector3();
@@ -706,14 +781,13 @@ export class Shootout3D {
     this.flight = planFlight(from, this.outcome, Math.random() < 0.5 ? -1 : 1);
     this.flightT = 0; this.legPlayed = 0;
     this.shots++;
-    sfx.playRelease();
     this.cb.onEvent?.({ type: 'grade', grade, error, window: windowW });
     this.enter('flight');
     if (!isMake(this.outcome)) {
       this.streak = 0;
       this.rimMat.emissive.setHex(0x000000);
+      this.chain = 0;
       this.cb.onEvent?.({ type: 'miss', outcome: this.outcome });
-      if (this.outcome === 'airball') setTimeout(() => sfx.playGroan(), 900);
     }
     // That ball leaves the rack.
     const rb = this.rackBalls[this.spotIdx]?.[this.ballIdx];
@@ -722,18 +796,19 @@ export class Shootout3D {
 
   private celebrate(): void {
     if (!this.outcome || !isMake(this.outcome) || !this.ballNow) return;
-    const pts = this.ballNow.points;
+    const perfect = this.gradeNow === 'perfect';
+    this.chain = perfect ? this.chain + 1 : 0;
+    const pts = shotPoints(this.opts.scoring ?? 'classic', this.ballNow, true, perfect, this.chain);
     this.score += pts; this.makes++; this.streak++;
     this.bestStreak = Math.max(this.bestStreak, this.streak);
     if (this.streak === 3) { this.cb.onEvent?.({ type: 'fire' }); this.rimMat.emissive.setHex(0x5a1a00); }
-    this.cb.onEvent?.({ type: 'make', points: pts, outcome: this.outcome, streak: this.streak });
-    const big = pts > 1 || this.streak >= 3 || this.outcome === 'swish';
-    sfx.playCheer(pts + (this.streak >= 3 ? 1 : 0));
-    this.crowd.cheer(pts + (this.streak >= 3 ? 1 : 0));
+    this.cb.onEvent?.({ type: 'make', points: pts, outcome: this.outcome, streak: this.streak, perfect, chain: this.chain, mult: perfect ? perfectMultiplier(this.chain) : 1 });
+    const big = this.ballNow.points > 1 || perfect || this.streak >= 3;
+    this.crowd.cheer(this.ballNow.points + (perfect ? 1 : 0) + (this.streak >= 3 ? 1 : 0));
     if (this.outcome === 'swish' && !this.reduced && !this.auto) this.hitstop = 0.07;
     this.punch = big ? 1 : 0.5;
     if (!this.reduced) this.shake = big ? 0.6 : 0.25;
-    try { navigator.vibrate?.(pts > 1 ? [20, 40, 30] : 18); } catch { /* not supported */ }
+    try { navigator.vibrate?.(big ? [20, 40, 30] : 18); } catch { /* not supported */ }
     this.burst();
   }
 
@@ -796,6 +871,7 @@ export class Shootout3D {
     const s = this.spot;
     if (!s) return;
     this.win = shotWindow(this.level, s, s.balls[this.ballIdx], this.ballIdx);
+    this.target = this.win.rise * (1 + this.shift);
   }
 
   private finish(): void {
@@ -812,6 +888,7 @@ export class Shootout3D {
   private render(real: number): void {
     const t = this.time;
     this.crowd.update(t, real);
+    this.arena.update(t, real);
     this.ribbons.forEach((tex, i) => { tex.offset.x = (tex.offset.x + real * (0.05 + i * 0.01)) % 1; });
     if (Math.floor(t * 10) !== Math.floor((t - real) * 10)) this.scoreboards.draw(this.score, Math.max(0, this.clock), this.spot?.label ?? 'Final');
 

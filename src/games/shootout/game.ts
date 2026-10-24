@@ -150,7 +150,6 @@ export class Shootout {
     const hues = ['#2B2D42', '#8D99AE', '#EF233C', '#F2E9E4', '#3A86FF', '#FFBE0B', '#6A4C93', '#1B998B'];
     for (let i = 0; i < 520; i++) this.crowd.push({ x: Math.random(), y: Math.random(), c: hues[Math.floor(Math.random() * hues.length)], s: Math.random() });
     this.resize();
-    sfx.startCrowd();
   }
 
   start(): void {
@@ -216,7 +215,7 @@ export class Shootout {
           const s = this.flight[i].sound;
           if (s === 'rim') { sfx.playRim(); this.netKick = Math.max(this.netKick, 0.4); }
           if (s === 'board') sfx.playBoard();
-          if (s === 'swish') { sfx.playSwish(); this.netKick = 1; this.celebrate(); }
+          if (s === 'swish') { sfx.playSwish(this.ballNow?.points); this.netKick = 1; this.celebrate(); }
           if (s === 'bounce') sfx.playBounce();
         }
         acc += this.flight[i].dur;
@@ -244,7 +243,6 @@ export class Shootout {
     this.flight = planFlight(from, this.outcome, Math.random() < 0.5 ? -1 : 1);
     this.flightT = 0; this.legPlayed = 0;
     this.shots++;
-    sfx.playRelease();
     const label: Record<Grade, [string, string]> = {
       perfect: ['PERFECT', '#22C55E'], good: ['GOOD', '#A3E635'], early: ['EARLY', '#FBBF24'], late: ['LATE', '#FBBF24'],
       'very-early': ['WAY EARLY', '#F87171'], 'very-late': ['WAY LATE', '#F87171'],
@@ -253,7 +251,6 @@ export class Shootout {
     this.enter('flight');
     if (!isMake(this.outcome)) {
       this.streak = 0;
-      setTimeout(() => { if (this.outcome === 'airball') sfx.playGroan(); }, 900);
     }
   }
 
@@ -266,7 +263,6 @@ export class Shootout {
     const big = pts > 1 || this.streak >= 3 || this.outcome === 'swish';
     this.popups.push({ text: `+${pts}${this.outcome === 'swish' ? '  SWISH' : ''}`, color: pts === 3 ? '#E0E7FF' : pts === 2 ? '#F472B6' : '#FFFFFF', t: 0, big: true });
     if (this.streak === 3) this.popups.push({ text: 'ON FIRE 🔥', color: '#FB923C', t: -0.3, big: true });
-    sfx.playCheer(pts + (this.streak >= 3 ? 1 : 0));
     this.flash = pts > 1 ? 0.6 : 0.25;
     if (!this.reduced) this.shake = big ? 0.5 : 0.2;
     try { navigator.vibrate?.(pts > 1 ? [20, 40, 30] : 18); } catch { /* not supported */ }

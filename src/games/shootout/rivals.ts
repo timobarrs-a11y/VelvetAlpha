@@ -2,7 +2,7 @@
 // so a run can be watched live in 3D or skipped with the same result. Pure
 // rules, no drawing or sound, so it can be tested.
 
-import { buildCourse, isMake, resolveShot, shotWindow, type Ball, type Grade, type Level, type Outcome, type Spot } from './engine';
+import { buildCourse, isMake, resolveShot, shotPoints, shotWindow, type Ball, type Grade, type Level, type Outcome, type Spot } from './engine';
 
 export type RivalStyle = 'steady' | 'streaky' | 'clutch' | 'quick';
 
@@ -33,7 +33,7 @@ export const ROSTER: Rival[] = [
 ];
 
 /** How good the field is at each level: chance a rival's release is clean. */
-const BASE_TOUCH = [0.33, 0.44, 0.55, 0.66, 0.76];
+const BASE_TOUCH = [0.27, 0.38, 0.5, 0.62, 0.73];
 
 export interface RivalShot {
   spotIdx: number;
@@ -69,7 +69,7 @@ export function seeded(seed: number): () => number {
  */
 export function simulateRival(rival: Rival, level: Level, course: Spot[], clock: number, rand: () => number): RivalRun {
   const shots: RivalShot[] = [];
-  let t = PACE.firstWalk, score = 0, streak = 0, cold = 0;
+  let t = PACE.firstWalk, score = 0, streak = 0, cold = 0, chain = 0;
   for (let si = 0; si < course.length; si++) {
     const spot = course[si];
     if (si > 0) t += PACE.walk;
@@ -98,7 +98,9 @@ export function simulateRival(rival: Rival, level: Level, course: Spot[], clock:
       const error = sign * mag;
       const outcome = resolveShot(grade, rand);
       const made = isMake(outcome);
-      const points = made ? ball.points : 0;
+      chain = made && grade === 'perfect' ? chain + 1 : 0;
+      // Contest scoring: +1 for a perfect release, same as you.
+      const points = shotPoints('contest', ball, made, grade === 'perfect', chain);
       score += points;
       if (made) { streak++; cold = 0; } else { streak = 0; cold++; }
       shots.push({ spotIdx: si, ballIdx: bi, ball, grade, error, outcome, points, t: release, score });

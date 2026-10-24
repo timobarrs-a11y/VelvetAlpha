@@ -12,14 +12,13 @@ export type Rack = Array<{ kind: Ball['kind']; state: 'done' | 'now' | 'left' }>
 export interface Hud { score: number; time: number; spot: string; streak: number; phase?: string; elapsed: number }
 interface Callout { id: number; big: string; small?: string; tone: 'gold' | 'green' | 'red' | 'money' | 'starry' | 'fire' }
 interface Card { id: number; title: string; sub: string; money: boolean }
-interface Feedback { id: number; grade: string; error: number; window: number }
 
 /** What the view needs from a game: the 3D one, or the 2D one when WebGL is missing. */
 interface GameLike {
   start(): void; stop(): void; begin(): void; resize(): void; press(): void; release(): void;
   hud(): Omit<Hud, 'elapsed'> & { fade?: number; elapsed?: number };
   rackState(): Rack;
-  meter?(): { hold: number; rise: number; green: number; active: boolean };
+  meterView?(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number };
   skip?(): void;
 }
 
@@ -49,7 +48,6 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   const [muted, setMutedState] = useState(isMuted());
   const [callout, setCallout] = useState<Callout | null>(null);
   const [card, setCard] = useState<Card | null>(null);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [replay, setReplay] = useState(false);
   const [onFire, setOnFire] = useState(false);
   const [final10, setFinal10] = useState(false);
@@ -78,14 +76,15 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
         case 'grade': {
           if (rival) break;
           setShowHint(false);
-          setFeedback({ id, grade: e.grade, error: e.error, window: e.window });
           const g = GRADE_TEXT[e.grade];
           if (g) say({ big: g[0], tone: g[1] });
           break;
         }
         case 'make': {
-          const what = e.points >= 3 ? 'STARRY BALL' : e.points === 2 ? 'MONEY BALL' : e.outcome === 'swish' ? 'SWISH' : e.outcome === 'rim-in' ? 'IN AND OUT... IN!' : 'BUCKET';
-          say({ big: `+${e.points}`, small: what, tone: e.points >= 3 ? 'starry' : e.points === 2 ? 'money' : e.streak >= 3 ? 'fire' : 'gold' });
+          const ball = game.rackState().find(b => b.state === 'now')?.kind ?? 'regular';
+          const what = ball === 'starry' ? 'STARRY BALL' : ball === 'money' ? 'MONEY BALL' : e.outcome === 'swish' ? 'SWISH' : e.outcome === 'rim-in' ? 'IN AND OUT... IN!' : 'BUCKET';
+          const bonus = !e.perfect ? '' : opts?.scoring === 'attack' ? (e.mult > 1 ? `PERFECT ×${e.mult.toFixed(1)} · ` : 'PERFECT · ') : opts?.scoring === 'contest' ? 'PERFECT +1 · ' : '';
+          say({ big: `+${e.points.toLocaleString()}`, small: bonus + what, tone: e.perfect ? 'green' : ball === 'starry' ? 'starry' : ball === 'money' ? 'money' : e.streak >= 3 ? 'fire' : 'gold' });
           break;
         }
         case 'miss':
@@ -133,10 +132,9 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Clear callouts, cards and feedback after their animations.
+  // Clear callouts and cards after their animations.
   useEffect(() => { if (!callout) return; const t = setTimeout(() => setCallout(null), 1300); return () => clearTimeout(t); }, [callout]);
   useEffect(() => { if (!card) return; const t = setTimeout(() => setCard(null), 2100); return () => clearTimeout(t); }, [card]);
-  useEffect(() => { if (!feedback) return; const t = setTimeout(() => setFeedback(null), 1600); return () => clearTimeout(t); }, [feedback]);
 
   // Hold anywhere (or Space) to shoot.
   useEffect(() => {
@@ -163,7 +161,6 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
       />
       <BroadcastOverlay hud={hud} rack={rack} level={label} callout={callout} card={card} replay={replay} onFire={onFire} final10={final10} rival={rival} />
       {!rival && <ShotMeter gameRef={gameRef} />}
-      {feedback && <ShotFeedback key={feedback.id} f={feedback} />}
       {ticker && <div className="pointer-events-none absolute right-3 top-14 sm:right-5" style={{ marginTop: 'env(safe-area-inset-top)' }}>{ticker(hud)}</div>}
       <div ref={fadeRef} className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: 0 }} />
       {showFps && <div ref={fpsRef} className="pointer-events-none absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 font-mono text-[11px] text-emerald-300" />}
@@ -191,29 +188,6 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   );
 }
 
-/** 2K-style release feedback: where you let go against the green window. */
-function ShotFeedback({ f }: { f: Feedback }) {
-  const ms = Math.round(Math.abs(f.error) * 1000);
-  const span = Math.max(f.window * 4, 0.12); // the bar shows +/- 2 windows (at least 60ms each way)
-  const pos = Math.max(0, Math.min(1, 0.5 + f.error / span));
-  const green = Math.min(1, f.window / span);
-  const perfect = f.grade === 'perfect';
-  const text = perfect ? (ms <= 5 ? 'PERFECT' : `GREEN · ${f.error < 0 ? '-' : '+'}${ms}ms`) : `${f.error < 0 ? 'EARLY' : 'LATE'} BY ${ms}ms`;
-  return (
-    <div className="sh-fb pointer-events-none absolute bottom-[17%] left-1/2 w-[min(260px,70vw)] -translate-x-1/2 text-center">
-      <div className={`mb-1 text-[11px] font-black tracking-[0.2em] ${perfect ? 'text-emerald-300' : f.grade === 'good' ? 'text-amber-200' : 'text-rose-300'}`}>{text}</div>
-      <div className="relative h-2.5 overflow-hidden rounded-full border border-white/30 bg-black/60">
-        <div className="absolute inset-y-0 bg-amber-300/35" style={{ left: `${(0.5 - green * 1.6) * 100}%`, width: `${green * 3.2 * 100}%` }} />
-        <div className="absolute inset-y-0 bg-emerald-400/90 shadow-[0_0_10px_#34d399]" style={{ left: `${(0.5 - green / 2) * 100}%`, width: `${green * 100}%` }} />
-      </div>
-      <div className="relative h-0">
-        <div className="absolute -top-[14px] h-[18px] w-[3px] -translate-x-1/2 rounded bg-white shadow-[0_0_6px_#fff]" style={{ left: `${pos * 100}%` }} />
-      </div>
-      <div className="mt-1 flex justify-between text-[9px] font-bold tracking-widest text-white/45"><span>EARLY</span><span>LATE</span></div>
-    </div>
-  );
-}
-
 export const BROADCAST_CSS = `
 @keyframes sh-card { 0% { transform: translateX(-110%) skewX(-12deg); } 14%, 82% { transform: translateX(0) skewX(-12deg); } 100% { transform: translateX(-110%) skewX(-12deg); } }
 @keyframes sh-pop { 0% { transform: translate(-50%,-50%) scale(.4); opacity: 0; } 14% { transform: translate(-50%,-50%) scale(1.18); opacity: 1; } 26% { transform: translate(-50%,-50%) scale(1); } 78% { opacity: 1; } 100% { transform: translate(-50%,-62%) scale(1.02); opacity: 0; } }
@@ -221,7 +195,6 @@ export const BROADCAST_CSS = `
 @keyframes sh-pulse { 0%,100% { opacity: .85; } 50% { opacity: .45; } }
 @keyframes sh-blink { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
 @keyframes sh-flame { 0%,100% { transform: scaleY(1); filter: hue-rotate(0deg); } 50% { transform: scaleY(1.15); filter: hue-rotate(-12deg); } }
-@keyframes sh-fb { 0% { opacity: 0; transform: translate(-50%, 8px); } 12%, 80% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
 @keyframes sh-tick { 0% { transform: scale(1.25); } 100% { transform: scale(1); } }
 .sh-card { animation: sh-card 2.1s cubic-bezier(.2,.9,.2,1) both; }
 .sh-pop { animation: sh-pop 1.3s cubic-bezier(.2,.9,.2,1) both; }
@@ -229,7 +202,6 @@ export const BROADCAST_CSS = `
 .sh-pulse { animation: sh-pulse 1.8s ease-in-out infinite; }
 .sh-blink { animation: sh-blink .8s steps(2) infinite; }
 .sh-flame { animation: sh-flame .35s ease-in-out infinite; transform-origin: bottom; }
-.sh-fb { animation: sh-fb 1.6s ease-out both; }
 .sh-tick { animation: sh-tick .25s ease-out; }
 `;
 
@@ -282,7 +254,7 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
           <div className="text-[9px] font-bold uppercase tracking-widest text-white/50">{level}</div>
           <RackDots rack={rack} />
         </div>
-        <div key={hud.score} className="sh-tick flex min-w-[3.25rem] items-center justify-center bg-gradient-to-b from-amber-200 to-amber-400 px-3 font-mono text-2xl font-black text-[#1d1300]">{hud.score}</div>
+        <div key={hud.score} className="sh-tick flex min-w-[3.25rem] items-center justify-center bg-gradient-to-b from-amber-200 to-amber-400 px-3 font-mono text-2xl font-black text-[#1d1300]">{hud.score.toLocaleString()}</div>
         <div className={`flex min-w-[4.5rem] items-center justify-center px-3 font-mono text-xl font-black tabular-nums ${low ? 'bg-red-600 text-white' : 'bg-[#181b2b] text-white'} ${final10 && low ? 'sh-blink' : ''}`}>
           {low ? hud.time.toFixed(1) : `0:${String(Math.ceil(hud.time)).padStart(2, '0')}`}
         </div>
@@ -329,37 +301,61 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
   );
 }
 
-/** Vertical release meter beside the shooter, read straight from the game each frame. */
+/**
+ * The release meter, beside the shooter. Live on the first shot of a run so
+ * you can find the mark; after that it only flashes for a moment after each
+ * release, frozen where you let go against the green, then fades. You learn
+ * the timing from those flashes, not by watching a bar fill.
+ */
 function ShotMeter({ gameRef }: { gameRef: MutableRefObject<GameLike | null> }) {
   const wrap = useRef<HTMLDivElement>(null);
   const fill = useRef<HTMLDivElement>(null);
   const band = useRef<HTMLDivElement>(null);
+  const zone = useRef<HTMLDivElement>(null);
+  const label = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let raf = 0;
     const tick = () => {
-      const m = gameRef.current?.meter?.();
-      if (m && wrap.current && fill.current && band.current) {
-        const span = m.rise * 1.45;
+      const m = gameRef.current?.meterView?.();
+      if (m && wrap.current && fill.current && band.current && zone.current && label.current) {
+        const span = m.target * 1.45;
         const pos = Math.min(1, m.hold / span);
-        const lo = (m.rise - m.green / 2) / span, hi = (m.rise + m.green / 2) / span;
-        const inGreen = m.hold >= m.rise - m.green / 2 && m.hold <= m.rise + m.green / 2;
-        wrap.current.style.opacity = m.active && m.hold > 0 ? '1' : '0';
+        const lo = (m.target - m.green / 2) / span, hi = (m.target + m.green / 2) / span;
+        const inGreen = m.hold >= m.target - m.green / 2 && m.hold <= m.target + m.green / 2;
+        // The make zone: slightly early to slightly late still goes in.
+        const zlo = (m.target - m.green * 1.6) / span, zhi = (m.target + m.green * 1.6) / span;
+        const inZone = m.hold >= m.target - m.green * 1.6 && m.hold <= m.target + m.green * 1.6;
+        zone.current.style.bottom = `${zlo * 100}%`;
+        zone.current.style.height = `${(zhi - zlo) * 100}%`;
+        const show = m.mode !== 'off';
+        wrap.current.style.opacity = !show ? '0' : m.mode === 'flash' ? String(Math.min(1, m.age * 8, Math.max(0, (1.3 - m.age) / 0.45))) : '1';
+        wrap.current.style.transform = `translateY(-50%) scale(${m.mode === 'flash' ? 1 + Math.max(0, 0.12 - m.age) : 1})`;
         fill.current.style.height = `${pos * 100}%`;
-        fill.current.style.background = inGreen ? 'linear-gradient(#bbf7d0,#22c55e)' : pos > hi ? 'linear-gradient(#fecaca,#ef4444)' : 'linear-gradient(#fff,#fcd34d)';
+        fill.current.style.background = inGreen ? 'linear-gradient(#bbf7d0,#22c55e)' : inZone ? 'linear-gradient(#fef3c7,#f59e0b)' : pos > hi ? 'linear-gradient(#fecaca,#ef4444)' : 'linear-gradient(#fff,#cbd5e1)';
         band.current.style.bottom = `${lo * 100}%`;
         band.current.style.height = `${Math.max(2, (hi - lo) * 100)}%`;
-      }
+        if (m.mode === 'flash') {
+          const ms = Math.round(Math.abs(m.error) * 1000);
+          label.current.textContent = inGreen ? 'PERFECT' : `${inZone ? 'GOOD · ' : ''}${m.error < 0 ? 'EARLY' : 'LATE'} ${ms}ms`;
+          label.current.style.color = inGreen ? '#6ee7b7' : inZone ? '#fcd34d' : '#fda4af';
+        } else {
+          label.current.textContent = m.mode === 'live' ? 'FIND THE GREEN' : '';
+          label.current.style.color = '#fde68a';
+        }
+      } else if (wrap.current) wrap.current.style.opacity = '0';
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [gameRef]);
   return (
-    <div ref={wrap} className="pointer-events-none absolute right-[22%] top-1/2 h-[30vh] max-h-56 w-3 -translate-y-1/2 transition-opacity duration-150" style={{ opacity: 0 }}>
-      <div className="absolute inset-0 overflow-hidden rounded-full border border-white/40 bg-black/55 shadow-[0_0_20px_rgba(0,0,0,.6)]">
-        <div ref={band} className="absolute inset-x-0 bg-emerald-400/60 shadow-[0_0_12px_#34d399]" />
+    <div ref={wrap} className="pointer-events-none absolute right-[18%] top-1/2 flex h-[32vh] max-h-60 flex-col items-center" style={{ opacity: 0, transform: 'translateY(-50%)' }}>
+      <div className="relative w-3.5 flex-1 overflow-hidden rounded-full border-2 border-white/60 bg-black/60 shadow-[0_0_24px_rgba(0,0,0,.7)]">
+        <div ref={zone} className="absolute inset-x-0 bg-amber-400/35" />
+        <div ref={band} className="absolute inset-x-0 bg-emerald-400/80 shadow-[0_0_14px_#34d399]" />
         <div ref={fill} className="absolute inset-x-0 bottom-0 rounded-full" />
       </div>
+      <div ref={label} className="mt-1.5 whitespace-nowrap rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-black tracking-wider" />
     </div>
   );
 }
