@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Eraser, Send } from 'lucide-react';
 import { DOODLE_PREFIX, sendMessage } from '../../shared/supabase/queries/messaging';
 import { useGameChannel } from './friendGameChannel';
+import { useSquareFit } from './useSquareFit';
 
 const COLORS = ['#111827', '#ef4444', '#f97316', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff'];
 const SIZES = [4, 10, 22];
@@ -21,6 +22,7 @@ export function FriendPaint({ conversationId, peerName, onSent }: { conversation
   const [sending, setSending] = useState(false);
   const [color, setColor] = useState(COLORS[1]);
   const [size, setSize] = useState(SIZES[1]);
+  const [squareRef, square] = useSquareFit<HTMLDivElement>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const doc = useRef<Canvas>((() => {
     try { const raw = localStorage.getItem(storageKey(conversationId)); if (raw) return JSON.parse(raw) as Canvas; } catch { /* storage blocked */ }
@@ -151,23 +153,27 @@ export function FriendPaint({ conversationId, peerName, onSent }: { conversation
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 py-2 [&>*:not(.square-slot)]:flex-shrink-0">
       <p className="text-center text-[11px] text-white/55">Paint together. {peerName} sees every stroke live.</p>
-      <canvas
-        ref={canvasRef}
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-        className="aspect-square w-full cursor-crosshair rounded-xl bg-white"
-        style={{ touchAction: 'none' }}
-        aria-label="Shared paint canvas"
-      />
-      <div className="flex flex-wrap items-center gap-1.5">
+      {/* The canvas takes the largest square that fits, so the controls below stay on screen. */}
+      <div ref={squareRef} className="square-slot flex min-h-0 flex-1 items-center justify-center">
+        <canvas
+          ref={canvasRef}
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          className="cursor-crosshair rounded-xl bg-white"
+          style={{ touchAction: 'none', width: square ?? undefined, height: square ?? undefined }}
+          aria-label="Shared paint canvas"
+        />
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto py-1 scrollbar-hide">
         {COLORS.map(c => (
-          <button key={c} type="button" onClick={() => setColor(c)} className={`h-6 w-6 rounded-full border-2 ${color === c ? 'border-amber-300 scale-110' : 'border-white/20'}`} style={{ background: c }} aria-label={`Colour ${c}`} />
+          <button key={c} type="button" onClick={() => setColor(c)} className={`h-6 w-6 flex-shrink-0 rounded-full border-2 ${color === c ? 'border-amber-300 scale-110' : 'border-white/20'}`} style={{ background: c }} aria-label={`Colour ${c}`} />
         ))}
-        <div className="flex-1" />
+        </div>
         {SIZES.map(sz => (
           <button key={sz} type="button" onClick={() => setSize(sz)} className={`flex h-7 w-7 items-center justify-center rounded-lg ${size === sz ? 'bg-white/15' : 'hover:bg-white/10'}`} aria-label={`Brush ${sz}`}>
             <span className="rounded-full bg-white" style={{ width: Math.min(18, sz * 0.8 + 2), height: Math.min(18, sz * 0.8 + 2) }} />

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Eraser, SkipForward } from 'lucide-react';
 import { useGameChannel } from './friendGameChannel';
+import { useSquareFit } from './useSquareFit';
 
 const WORDS = [
   'cat', 'dog', 'pizza', 'house', 'sun', 'tree', 'car', 'fish', 'heart', 'star',
@@ -34,6 +35,7 @@ export function FriendDrawGuess({ conversationId, myId, peerId, peerName }: { co
   const [guess, setGuess] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [score, setScore] = useState<Record<string, number>>({});
+  const [squareRef, square] = useSquareFit<HTMLDivElement>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef<Stroke | null>(null);
   const roundRef = useRef(round);
@@ -179,7 +181,7 @@ export function FriendDrawGuess({ conversationId, myId, peerId, peerName }: { co
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 py-2 [&>*:not(.square-slot)]:flex-shrink-0">
       <div className="flex items-center justify-between text-xs">
         <span className="text-white/60">You <b className="text-amber-300">{score[myId] ?? 0}</b> · <b className="text-amber-300">{score[peerId] ?? 0}</b> {peerName}</span>
         <span className="font-semibold text-amber-200">
@@ -189,16 +191,19 @@ export function FriendDrawGuess({ conversationId, myId, peerId, peerName }: { co
         </span>
       </div>
 
-      <canvas
-        ref={canvasRef}
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-        className={`aspect-square w-full rounded-xl bg-white ${iDraw && !round.solved ? 'cursor-crosshair' : ''}`}
-        style={{ touchAction: 'none' }}
-        aria-label={iDraw ? 'Drawing canvas' : `${peerName}'s drawing`}
-      />
+      {/* The canvas takes the largest square that fits, so the controls below stay on screen. */}
+      <div ref={squareRef} className="square-slot flex min-h-0 flex-1 items-center justify-center">
+        <canvas
+          ref={canvasRef}
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          className={`rounded-xl bg-white ${iDraw && !round.solved ? 'cursor-crosshair' : ''}`}
+          style={{ touchAction: 'none', width: square ?? undefined, height: square ?? undefined }}
+          aria-label={iDraw ? 'Drawing canvas' : `${peerName}'s drawing`}
+        />
+      </div>
 
       {iDraw && !round.solved && (
         <div className="flex items-center gap-1.5">
