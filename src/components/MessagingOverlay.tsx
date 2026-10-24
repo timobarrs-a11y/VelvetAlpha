@@ -1516,6 +1516,16 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
 // ---------------------------------------------------------------------------
 // Chat view
 // ---------------------------------------------------------------------------
+/** A message of up to 3 smileys or emoji and nothing else shows big. */
+function isOnlyEmoji(content: string): boolean {
+  const smilies = content.match(/:[a-z0-9]+:/gi) ?? [];
+  const rest = content.replace(/:[a-z0-9]+:/gi, '').replace(/\s+/g, '');
+  const emoji = rest.match(/\p{Extended_Pictographic}/gu) ?? [];
+  const leftover = rest.replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Emoji_Component}\u200d\ufe0f]/gu, '');
+  const count = smilies.length + emoji.length;
+  return leftover.length === 0 && count > 0 && count <= 3;
+}
+
 export function ChatView({ target, onUnfriend, onJoinGame }: { target: ChatTarget; onUnfriend: () => void; /** In the dock: open a game from an invite card. */ onJoinGame?: (game: FriendGameId) => void }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
@@ -1696,10 +1706,14 @@ export function ChatView({ target, onUnfriend, onJoinGame }: { target: ChatTarge
         ) : (
           messages.map((m) => {
             const mine = m.sender_id === user?.id;
+            const big = isOnlyEmoji(m.content);
             return (
               <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm ${
+                  className={big
+                    // Just smileys or emoji: big, with no bubble, like iMessage.
+                    ? 'max-w-[78%] text-4xl leading-tight'
+                    : `max-w-[78%] rounded-2xl px-3 py-2 text-sm ${
                     mine
                       ? 'bg-rose-500/90 text-white rounded-br-md'
                       : 'bg-white/8 text-ink rounded-bl-md border border-white/8'
@@ -1719,7 +1733,7 @@ export function ChatView({ target, onUnfriend, onJoinGame }: { target: ChatTarge
                         )}
                       </span>
                     );
-                  })() : doodleSrc(m.content) ? <img src={doodleSrc(m.content)!} alt="Doodle" className="w-48 max-w-full rounded-lg bg-white" /> : <SmilieText text={m.content} className="whitespace-pre-wrap break-words" smilieSize={24} />}
+                  })() : doodleSrc(m.content) ? <img src={doodleSrc(m.content)!} alt="Doodle" className="w-48 max-w-full rounded-lg bg-white" /> : <SmilieText text={m.content} className="whitespace-pre-wrap break-words" smilieSize={big ? 56 : 32} />}
                   <p
                     className={`text-[9px] mt-0.5 flex items-center gap-1 ${
                       mine ? 'text-white/70 justify-end' : 'text-ink-muted'
