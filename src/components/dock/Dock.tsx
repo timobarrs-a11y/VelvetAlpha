@@ -136,7 +136,7 @@ export function Dock() {
   // The message popup fades on its own.
   const { toast, dismissToast } = dock;
   useEffect(() => {
-    if (!toast) return;
+    if (!toast || toast.sticky) return;
     const t = setTimeout(dismissToast, 6000);
     return () => clearTimeout(t);
   }, [toast, dismissToast]);
@@ -237,6 +237,17 @@ export function Dock() {
                   {dock.toast.friend.peerName.charAt(0).toUpperCase()}
                 </span>
                 <span className="min-w-0 truncate"><span className="font-semibold text-amber-200">{dock.toast.friend.peerName}</span> {dock.toast.text}</span>
+                {dock.toast.sticky && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); dock.dismissToast(); }}
+                    className="ml-1 flex-shrink-0 text-amber-100/50 hover:text-amber-100"
+                    aria-label="Dismiss"
+                  >
+                    ×
+                  </span>
+                )}
               </motion.button>
             )}
             {inbox.bubble && (

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { CompanionWithLastMessage } from '../../services/companionService';
 import { getCompanionUnreadCounts } from '../../services/companionReadService';
 import { supabase } from '../../shared/supabase/client';
-import { setOnline, displayNames, getOrCreateConversation } from '../../shared/supabase/queries/messaging';
+import { setOnline, displayNames, getOrCreateConversation, getConversationList } from '../../shared/supabase/queries/messaging';
 import { playDing } from './ding';
 import { useAuth } from '../../auth/AuthProvider';
 import type { CoachSurface } from '../../services/chatService';
@@ -41,6 +41,8 @@ export interface DockToast {
   friend: FriendTarget;
   text: string;
   nonce: number;
+  /** Stays until tapped or closed (the welcome-back note). */
+  sticky?: boolean;
 }
 
 export interface CoachSurfaceRegistration {
@@ -190,6 +192,36 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
     setToast(t => (t?.friend.peerId === friend.peerId ? null : t));
   }, []);
   const dismissToast = useCallback(() => setToast(null), []);
+
+  // Welcome back: friends who messaged while you were away get their yellow
+  // tab with an unread count, and a note says who reached out.
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    getConversationList().then(convs => {
+      if (cancelled) return;
+      const waiting = convs.filter(c => c.unread_count > 0 && c.peer_id)
+        .sort((a, b) => (b.last_message_at ?? '').localeCompare(a.last_message_at ?? ''));
+      if (waiting.length === 0) return;
+      const targets = waiting.map(c => ({ conversationId: c.id, peerId: c.peer_id, peerName: c.peer_name || 'A friend', peerAvatarUrl: c.peer_avatar_url }));
+      setWindows(prev => [
+        ...prev,
+        ...targets.filter(t => !prev.some(w => w.key === friendKey(t.peerId)))
+          .map(t => ({ key: friendKey(t.peerId), friend: t, minimized: true })),
+      ]);
+      setFriendUnread(prev => {
+        const next = { ...prev };
+        for (const c of waiting) next[c.peer_id] = c.unread_count;
+        return next;
+      });
+      const total = waiting.reduce((n, c) => n + c.unread_count, 0);
+      const text = waiting.length === 1
+        ? `sent you ${total === 1 ? 'a message' : `${total} messages`} while you were away`
+        : `and ${waiting.length - 1} other${waiting.length > 2 ? 's' : ''} messaged you while you were away`;
+      setToast({ friend: targets[0], text, nonce: Date.now(), sticky: true });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [userId]);
 
   // Messages from friends: ding, pop up, and add their tab, unless their chat is
   // already open in front of you. RLS only delivers your own conversations.
