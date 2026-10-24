@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Loader2, Minus, Send, X } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Loader2, Maximize2, Minus, Send, X } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
 import { updateLastMessageTime, type CompanionWithLastMessage } from '../../services/companionService';
 import { ChatService, type CoachSurface } from '../../services/chatService';
@@ -197,6 +197,9 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
             {isCoach && surface ? <> · <span className="text-emerald-300">on {SURFACE_LABEL[surface]}</span></> : null}
           </p>
         </div>
+        <button type="button" onClick={() => { onMinimize(); navigate(`/chat?companion=${companion.id}`); }} className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" aria-label={`Open full chat with ${companion.custom_name}`} title="Open full chat">
+          <Maximize2 className="h-4 w-4" />
+        </button>
         <button type="button" onClick={onMinimize} className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" aria-label={`Minimize ${companion.custom_name}`} title="Minimize">
           <Minus className="h-4 w-4" />
         </button>

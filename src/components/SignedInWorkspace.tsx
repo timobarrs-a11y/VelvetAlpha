@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -9,6 +9,7 @@ import {
   CircleUserRound,
   Compass,
   Layers,
+  LayoutGrid,
   Lightbulb,
   LogOut,
   MapPin,
@@ -31,18 +32,16 @@ import {
   Building2,
   Wand2,
   HelpCircle,
-  UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
 import { Dock } from './dock/Dock';
 import { DockProvider, useDock } from './dock/DockContext';
+import { AddFriendButton } from './AddFriendButton';
 import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
-import { Avatar } from './Avatar';
-import { companionAvatarConfig, TONE_COLOR } from './lobby';
-import type { CompanionWithLastMessage } from '../services/companionService';
+import { TONE_COLOR } from './lobby';
 import { TOOLBAR_TEXT_COLOR_PRESETS, type ToolbarTextColorKey } from '../services/customizationService';
 import { useCustomization } from '../hooks/useCustomization';
 import { buildWallpaperMeta } from '../services/wallpaperService';
@@ -92,6 +91,7 @@ const TOOLBAR_THEME = {
 function WorkspaceToolbar({
   available,
   onToggleAvailable,
+  onOpenMobileNav,
   onOpenRewards,
   lobby,
 }: {
@@ -118,18 +118,23 @@ function WorkspaceToolbar({
     }).catch(() => {});
   };
 
-  // Add a friend by their code, right beside your own.
+  // Anything waiting for you in the dock lights a dot on the toolbar button.
   const dock = useDock();
-  const [addOpen, setAddOpen] = useState(false);
-  const [addCode, setAddCode] = useState('');
-  const submitAddFriend = (e: React.FormEvent) => {
-    e.preventDefault();
-    const digits = addCode.replace(/\D/g, '');
-    if (digits.length !== 8) return;
-    dock.addFriendByCode(digits);
-    setAddCode('');
-    setAddOpen(false);
-  };
+  const waiting = Object.values(dock.unread).reduce((n, c) => n + c, 0) + Object.values(dock.friendUnread).reduce((n, c) => n + c, 0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('touchstart', onDown);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('touchstart', onDown);
+    };
+  }, [menuOpen]);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -142,6 +147,15 @@ function WorkspaceToolbar({
       <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5]" />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-[#f5cfe0]" />
       <div className="relative z-10 flex min-w-0 items-center gap-2.5">
+        <button
+          type="button"
+          onClick={onOpenMobileNav}
+          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 lg:hidden text-[#2a1424]/80"
+          aria-label={waiting ? `Open navigation, ${waiting} unread` : 'Open navigation'}
+        >
+          <LayoutGrid className="h-4 w-4" />
+          {waiting > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#fff7fa] bg-rose-500" />}
+        </button>
         <button
           type="button"
           onClick={() => navigate('/lobby')}
@@ -168,108 +182,60 @@ function WorkspaceToolbar({
             <span className="font-mono text-xs font-semibold tracking-widest text-pink-600">{formatFriendCode(friendCode)}</span>
           </button>
         )}
-        <div className="relative flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => setAddOpen(o => !o)}
-            className="flex items-center gap-1 rounded-lg bg-pink-500 px-2.5 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-pink-600"
-            aria-expanded={addOpen}
-            title="Add a friend by their friend code"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Add friend</span>
-          </button>
-          {addOpen && (
-            <form
-              onSubmit={submitAddFriend}
-              className="absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-[#f5cfe0] bg-white p-3 shadow-lg"
-            >
-              <label className="block text-[11px] font-semibold text-[#2a1424]/70" htmlFor="toolbar-add-friend">Their friend code</label>
-              <input
-                id="toolbar-add-friend"
-                autoFocus
-                inputMode="numeric"
-                value={addCode}
-                onChange={e => setAddCode(e.target.value.replace(/[^\d\s-]/g, '').slice(0, 10))}
-                placeholder="1234 5678"
-                className="mt-1 w-full rounded-lg border border-[#2a1424]/15 px-2.5 py-1.5 font-mono text-sm tracking-widest text-[#2a1424] outline-none focus:border-pink-400"
-              />
-              <p className="mt-1.5 text-[10px] text-[#2a1424]/55">Sends a friend request. Once they accept, you can chat in Messages.</p>
-              <div className="mt-2 flex justify-end gap-2">
-                <button type="button" onClick={() => setAddOpen(false)} className="rounded-lg px-2.5 py-1 text-xs text-[#2a1424]/60 hover:bg-pink-50">Cancel</button>
-                <button type="submit" disabled={addCode.replace(/\D/g, '').length !== 8} className="rounded-lg bg-pink-500 px-3 py-1 text-xs font-semibold text-white disabled:opacity-40">Add</button>
-              </div>
-            </form>
-          )}
-        </div>
+        <AddFriendButton onAdd={dock.addFriendByCode} />
       </div>
 
       <div className="relative z-10 flex items-center gap-1.5 sm:gap-2">
         {lobby.subscriptionInfo && (
           <SubscriptionBanner tier={lobby.subscriptionInfo.tier} messagesRemaining={lobby.subscriptionInfo.messagesRemaining} compact />
         )}
-        <HomeLayoutSwitch mode="compact" className="hidden md:inline-flex" />
-        <button
-          type="button"
-          onClick={onToggleAvailable}
-          className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${
-            available
-              ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-              : 'border-[#2a1424]/12 hover:bg-pink-50 text-[#2a1424]/75'
-          }`}
-          aria-pressed={available}
-          title={available ? 'Available to chat — click to turn off' : 'Turn on instant chat availability'}
-        >
-          {available ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-          <span className="hidden sm:inline">{available ? 'Available' : 'Unavailable'}</span>
-        </button>
-        <button
-          type="button"
-          onClick={onOpenRewards}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 text-pink-600"
-          aria-label="Loyalty rewards"
-          title="Loyalty rewards"
-        >
-          <Wand2 className="h-4 w-4" />
-        </button>
-        {lobby.companions.length > 0 && (
+        {/* Everything else lives in one menu, so the bar stays calm. */}
+        <div ref={menuRef} className="relative">
           <button
             type="button"
-            onClick={() => navigate(`/chat?companion=${lobby.companions[0].id}&tour=1`)}
-            className="hidden h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 sm:flex text-[#2a1424]/75"
-            aria-label="Take the tour"
-            title="Take the tour"
+            onClick={() => setMenuOpen(o => !o)}
+            className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${menuOpen ? 'border-pink-300 bg-pink-50' : 'border-[#2a1424]/12 hover:bg-pink-50'} text-sm font-bold text-pink-600`}
+            aria-expanded={menuOpen}
+            aria-label="Your menu"
+            title="Your menu"
           >
-            <HelpCircle className="h-4 w-4" />
+            {displayName.charAt(0).toUpperCase()}
+            <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#fff7fa] ${available ? 'bg-emerald-500' : 'bg-gray-300'}`} />
           </button>
-        )}
-        <button
-          type="button"
-          onClick={toggleMute}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 text-[#2a1424]/75"
-          aria-label={muted ? 'Unmute music' : 'Mute music'}
-          title={muted ? 'Unmute music' : 'Mute music'}
-        >
-          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/settings')}
-          className="hidden h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 sm:flex text-[#2a1424]/75"
-          aria-label="Open settings"
-          title="Settings"
-        >
-          <Settings className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#2a1424]/12 transition-colors hover:bg-pink-50 text-[#2a1424]/75"
-          aria-label="Sign out"
-          title="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-60 rounded-xl border border-[#f5cfe0] bg-white p-1.5 text-[#2a1424] shadow-xl">
+              <div className="px-2.5 pb-2 pt-1.5">
+                <p className="truncate text-sm font-semibold">{displayName}</p>
+                <p className="text-[10px] text-[#2a1424]/55">{available ? 'Available to chat' : 'Not available to chat'}</p>
+              </div>
+              <div className="px-2.5 pb-2"><HomeLayoutSwitch mode="compact" /></div>
+              <div className="my-1 border-t border-[#f5cfe0]" />
+              <button type="button" onClick={onToggleAvailable} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[#2a1424]/85 hover:bg-pink-50">
+                {available ? <Wifi className="h-4 w-4 text-emerald-600" /> : <WifiOff className="h-4 w-4" />}
+                {available ? 'Available to chat' : 'Set available to chat'}
+              </button>
+              <button type="button" onClick={() => { setMenuOpen(false); onOpenRewards(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[#2a1424]/85 hover:bg-pink-50">
+                <Wand2 className="h-4 w-4 text-pink-600" />Loyalty rewards
+              </button>
+              <button type="button" onClick={toggleMute} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[#2a1424]/85 hover:bg-pink-50">
+                {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                {muted ? 'Unmute music' : 'Mute music'}
+              </button>
+              {lobby.companions.length > 0 && (
+                <button type="button" onClick={() => { setMenuOpen(false); navigate(`/chat?companion=${lobby.companions[0].id}&tour=1`); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[#2a1424]/85 hover:bg-pink-50">
+                  <HelpCircle className="h-4 w-4" />Take the tour
+                </button>
+              )}
+              <button type="button" onClick={() => { setMenuOpen(false); navigate('/settings'); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[#2a1424]/85 hover:bg-pink-50">
+                <Settings className="h-4 w-4" />Settings
+              </button>
+              <div className="my-1 border-t border-[#f5cfe0]" />
+              <button type="button" onClick={handleSignOut} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[#2a1424]/85 hover:bg-pink-50">
+                <LogOut className="h-4 w-4" />Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -280,28 +246,6 @@ type LobbyData = ReturnType<typeof useLobbyData>;
 
 function SidebarLabel({ children, inkSubtle }: { children: ReactNode; inkSubtle: string }) {
   return <p className="px-2 pb-1 pt-1 text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: inkSubtle }}>{children}</p>;
-}
-
-function PersonRow({ companion, coach, collapsed, pathname, onClick, inkColor, inkMuted }: { companion: CompanionWithLastMessage; coach?: boolean; collapsed: boolean; pathname: string; onClick: () => void; inkColor: string; inkMuted: string }) {
-  const active = pathname.startsWith(`/chat?companion=${companion.id}`) || pathname.includes(`companion=${companion.id}`);
-  const line = companion.last_message_text || (companion.last_message_at ? new Date(companion.last_message_at).toLocaleDateString() : 'Say hello');
-  return (
-    <button type="button" onClick={onClick} className={`group flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors ${active ? 'bg-emerald-400/10' : 'hover:bg-white/7'}`} title={collapsed ? companion.custom_name : undefined}>
-      <div className={`relative flex-shrink-0 overflow-hidden rounded-full border ${coach ? 'h-10 w-10 border-emerald-400/70' : 'h-8 w-8 border-white/10'}`}>
-        <Avatar config={companionAvatarConfig(companion)} className="h-full w-full" />
-        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#0c0a1e] bg-emerald-400" />
-      </div>
-      {!collapsed && (
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-[11px] font-semibold" style={{ color: inkColor }}>{companion.custom_name}</span>
-            {coach && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold text-emerald-300">Coach</span>}
-          </div>
-          <p className="mt-0.5 truncate text-[10px] leading-tight" style={{ color: inkMuted }}>{line}</p>
-        </div>
-      )}
-    </button>
-  );
 }
 
 function ToolRow({ label, icon, tone, path, collapsed, pathname, onNavigate, inkColor, inkMuted }: { label: string; icon: ReactNode; tone: string; path: string; collapsed: boolean; pathname: string; onNavigate: (path: string) => void; inkColor: string; inkMuted: string }) {
@@ -316,8 +260,6 @@ function ToolRow({ label, icon, tone, path, collapsed, pathname, onNavigate, ink
 }
 
 function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkMuted, inkSubtle }: { collapsed: boolean; pathname: string; lobby: LobbyData; onNavigate: (path: string) => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
-  const coaches = lobby.companions.filter(companion => companion.relationship_type === 'mentor');
-  const companions = lobby.companions.filter(companion => companion.relationship_type !== 'mentor');
   const coreTools = [
     { label: 'Daily Feed', path: '/daily-feed', tone: '#34d399', icon: <Newspaper className="h-3.5 w-3.5" /> },
     { label: 'Calendar', path: '/calendar', tone: '#fb923c', icon: <CalendarDays className="h-3.5 w-3.5" /> },
@@ -365,7 +307,6 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
         )}
         <div className="space-y-0.5">
           {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Coaching</SidebarLabel>}
-          {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(coach)} inkColor={inkColor} inkMuted={inkMuted} />)}
           <ToolRow label="Progress" path="/coaching-progress" tone={TONE_COLOR.coach} icon={<Target className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
           <ToolRow label="Commitments" path="/coaching-commitments" tone="#38bdf8" icon={<CheckCircle2 className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
           <ToolRow label="Plans" path="/coaching-commitments?view=plans" tone="#a78bfa" icon={<Layers className="h-3.5 w-3.5" />} collapsed={collapsed} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
@@ -375,7 +316,6 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
         <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
           {!collapsed && <SidebarLabel inkSubtle={inkSubtle}>Companion</SidebarLabel>}
-          {companions.map(companion => <PersonRow key={companion.id} companion={companion} collapsed={collapsed} pathname={pathname} onClick={() => lobby.openCompanion(companion)} inkColor={inkColor} inkMuted={inkMuted} />)}
           {!collapsed && <button type="button" onClick={lobby.handleNewCompanion} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] transition-colors hover:bg-white/7" style={{ color: inkMuted }}><Plus className="h-3.5 w-3.5" />Someone new</button>}
         </div>
         <div className="my-3 border-t border-white/8" />
@@ -405,20 +345,15 @@ function WorkspaceNavigation({ collapsed, onToggle, lobby, wallpaperStyle, wallp
   const location = useLocation();
   const navigate = useNavigate();
   const hasWp = !!wallpaperClass || !!wallpaperStyle;
-  // Phones get the same rail, collapsed to icons; opened, it slides over the page
-  // instead of squeezing it.
-  return <div className="relative z-30 min-h-0 w-[56px] lg:w-auto">
-    {!collapsed && <button type="button" aria-label="Close navigation" onClick={onToggle} className="fixed inset-0 z-20 bg-black/40 lg:hidden" />}
-    <aside className={`absolute inset-y-0 left-0 z-30 flex min-h-0 flex-col overflow-hidden border-r border-white/8 bg-[var(--ds-bg-base,#090c1e)] py-4 transition-[width] duration-300 lg:relative lg:inset-auto lg:h-full ${collapsed ? 'w-[56px] lg:w-[68px]' : 'w-[224px] shadow-2xl lg:shadow-none'}`}>
+  return <aside className="relative z-20 hidden min-h-0 flex-col border-r border-white/8 py-4 transition-[width] duration-300 lg:flex" style={{ width: collapsed ? 68 : 224 }}>
     {hasWp && (
       <div className={`pointer-events-none absolute inset-0 z-0 ${wallpaperClass ?? ''}`} style={wallpaperStyle || undefined} />
     )}
     <div className="relative z-10 flex h-full flex-col bg-[rgba(12,10,30,0.6)]">
       <div className={`flex items-center px-3 ${collapsed ? 'justify-center' : 'justify-end'}`}><button type="button" onClick={onToggle} className="rounded-lg p-2 transition-colors hover:bg-white/8" style={{ color: inkMuted }} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button></div>
-      <SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={(path) => { navigate(path); if (!collapsed && window.innerWidth < 1024) onToggle(); }} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
+      <SidebarContent collapsed={collapsed} pathname={location.pathname} lobby={lobby} onNavigate={navigate} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
     </div>
-  </aside>
-  </div>;
+  </aside>;
 }
 
 function MobileNavDrawer({ open, onClose, lobby, wallpaperStyle, wallpaperClass, inkColor, inkMuted, inkSubtle }: { open: boolean; onClose: () => void; lobby: LobbyData; wallpaperStyle?: React.CSSProperties; wallpaperClass?: string; inkColor: string; inkMuted: string; inkSubtle: string }) {
@@ -503,15 +438,12 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   const inkSubtle = `${textColorDef.color}66`;
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return true;
-    // Phones always start with the rail folded so the page has room.
-    if (window.innerWidth < 1024) return true;
     return window.localStorage.getItem('velvet.workspace.nav-collapsed') !== 'false';
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
-    // Only desktop remembers the choice; phones always start folded.
-    if (window.innerWidth >= 1024) window.localStorage.setItem('velvet.workspace.nav-collapsed', String(collapsed));
+    window.localStorage.setItem('velvet.workspace.nav-collapsed', String(collapsed));
   }, [collapsed]);
 
   const { available, toggleAvailable } = useAvailability(user);
@@ -528,7 +460,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
     <div className="fixed inset-0 overflow-hidden bg-[#070914] p-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:p-2.5 lg:p-4">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
         <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} onOpenRewards={() => setShowRewards(true)} lobby={lobby} />
-        <div className="relative z-10 grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)]">
+        <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
           <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
           <main className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/8">{children}</main>
         </div>
