@@ -3,18 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, Heart, Users, Crown, Cherry, Zap, Circle,
-  Rocket, Gamepad2, Lightbulb, FileText, User,
+  Rocket, Gamepad2, Lightbulb, FileText,
   UsersRound, Calendar, Youtube, Newspaper, MessageSquare,
   Info, Plus,
-  Sparkles, Flame, Wand2, Bot, MapPin, Brain,
-  HelpCircle,
+  Sparkles, Flame, Bot, MapPin, Brain,
 } from 'lucide-react';
 import {
   Button, ModalShell, LoadingState, EmptyState,
   PageShell, Pill, SectionHeader, Badge,
 } from '../shared/ui';
 import { CreateGroupChatModal } from '../components/CreateGroupChatModal';
-import { CustomizationPanel } from '../components/CustomizationPanel';
 import { useCustomization } from '../hooks/useCustomization';
 import { POINTER_SYMBOLS } from '../services/customizationService';
 import FeedbackModal from '../components/FeedbackModal';
@@ -104,18 +102,10 @@ export function CompanionLobbyPage() {
   const navigate = useNavigate();
   const lobby = useLobbyData();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
   const {
     customization,
     checkedInToday: _checkedInToday,
     justUnlocked,
-    setPointer,
-    setShowTrail,
-    setTrailStyle,
-    setAnimationStyle,
-    setCursorColor,
-    setButtonHoverStyle,
-    setTranslucentUI,
     dismissUnlockNotice,
   } = useCustomization();
 
@@ -214,37 +204,6 @@ export function CompanionLobbyPage() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Header */}
-      <header className="mb-6 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-2 min-w-0">
-          <Heart className="w-5 h-5 text-pink-400 flex-shrink-0" fill="currentColor" style={{ filter: 'drop-shadow(0 0 6px rgba(244,114,182,0.70))' }} />
-          <h1 className="ds-title-gradient text-3xl md:text-4xl font-bold font-display truncate">Velvet Lobby</h1>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-          <Pill
-            onClick={() => setShowCustomizationPanel(true)}
-            icon={<Wand2 className="w-4 h-4 text-pink-400" />}
-            hideLabelOnMobile
-          >
-            Loyalty Rewards
-          </Pill>
-          {companions.length > 0 && (
-            <Pill
-              onClick={() => navigate(`/chat?companion=${companions[0].id}&tour=1`)}              icon={<HelpCircle className="w-4 h-4 text-sky-300" />}
-              hideLabelOnMobile
-            >
-              Tour
-            </Pill>
-          )}
-          <Pill
-            onClick={() => navigate('/profile')}            icon={<User className="w-4 h-4" />}
-            hideLabelOnMobile
-          >
-            Profile
-          </Pill>
-        </div>
-      </header>
 
       {lobby.setupResumeRoute && (
         <div className="mb-6">
@@ -444,26 +403,6 @@ export function CompanionLobbyPage() {
         </div>
       </ModalShell>
 
-      {customization && (
-        <CustomizationPanel
-          isOpen={showCustomizationPanel}
-          onClose={() => setShowCustomizationPanel(false)}
-          customization={customization}
-          companions={companions}
-          onSetPointer={setPointer}
-          onSetShowTrail={setShowTrail}
-          onSetTrailStyle={setTrailStyle}
-          onSetAnimationStyle={setAnimationStyle}
-          onSetCursorColor={setCursorColor}
-          onSetButtonHoverStyle={setButtonHoverStyle}
-          onSetTranslucentUI={setTranslucentUI}
-          onCompanionFontUpdated={(companionId, fontFamily) => {
-            lobby.setCompanionsList(prev =>
-              prev.map(c => c.id === companionId ? { ...c, font_family: fontFamily } : c)
-            );
-          }}
-        />
-      )}
 
     </PageShell>
   );
