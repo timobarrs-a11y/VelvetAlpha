@@ -75,7 +75,7 @@ function isExcludedPath(pathname: string): boolean {
   return excludedPrefixes.some(prefix => pathname.startsWith(prefix));
 }
 
-// Re-point the shared pill/segment tokens so the Classic/V3 switch reads on red.
+// Re-point the shared pill/segment tokens so the Classic/V3 switch reads on pink.
 const TOOLBAR_THEME = {
   '--ds-pill-bg': 'rgba(255,255,255,0.12)',
   '--ds-pill-bg-hover': 'rgba(255,255,255,0.20)',
@@ -84,7 +84,7 @@ const TOOLBAR_THEME = {
   '--ds-pill-fg-hover': '#ffffff',
   '--ds-accent-soft': '#ffffff',
   '--ds-accent-line': '#ffffff',
-  '--ds-accent-fg': '#A50D26',
+  '--ds-accent-fg': '#BE185D',
 } as React.CSSProperties;
 
 function WorkspaceToolbar({
@@ -113,8 +113,8 @@ function WorkspaceToolbar({
 
   return (
     <header className="relative z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 px-3 py-2.5 text-white sm:px-5" style={TOOLBAR_THEME}>
-      {/* Valentine red base, deepening to the right */}
-      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[#C8102E] to-[#A50D26]" />
+      {/* Soft pink base (pink-600, the darkest shade that keeps white text readable) */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[#DB2777] to-[#D63384]" />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-black/25" />
       <div className="relative z-10 flex min-w-0 items-center gap-2.5">
         <button
