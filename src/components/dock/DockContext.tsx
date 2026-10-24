@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { CompanionWithLastMessage } from '../../services/companionService';
 import { getCompanionUnreadCounts } from '../../services/companionReadService';
 import { supabase } from '../../shared/supabase/client';
-import { setOnline, displayNames, getOrCreateConversation, getConversationList, messagePreview } from '../../shared/supabase/queries/messaging';
+import { setOnline, displayNames, getOrCreateConversation, getConversationList, messagePreview, parseGameInvite, type FriendGameId } from '../../shared/supabase/queries/messaging';
 import { playDing } from './ding';
 import { useAuth } from '../../auth/AuthProvider';
 import type { CoachSurface } from '../../services/chatService';
@@ -33,6 +33,8 @@ export interface DockWindow {
   key: string;
   companionId?: string;
   friend?: FriendTarget;
+  /** A game to open in this friend's window (from an invite); nonce re-triggers it. */
+  game?: { id: FriendGameId; nonce: number };
   minimized: boolean;
 }
 
@@ -41,8 +43,10 @@ export interface DockToast {
   friend: FriendTarget;
   text: string;
   nonce: number;
-  /** Stays until tapped or closed (the welcome-back note). */
+  /** Stays until tapped or closed (the welcome-back note, game invites). */
   sticky?: boolean;
+  /** A game invite: tapping opens the game. */
+  game?: FriendGameId;
 }
 
 export interface CoachSurfaceRegistration {
@@ -75,7 +79,7 @@ interface DockApi {
   toast: DockToast | null;
   dismissToast: () => void;
   /** Open a chat with a real person as its own window. */
-  openFriend: (friend: FriendTarget) => void;
+  openFriend: (friend: FriendTarget, game?: FriendGameId) => void;
   openMessages: (view?: 'conversations' | 'requests') => void;
   /** Open Messages and add someone by friend code. */
   addFriendByCode: (code: string) => void;
@@ -180,9 +184,17 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
   const windowsRef = useRef(windows);
   windowsRef.current = windows;
 
-  const openFriend = useCallback((friend: FriendTarget) => {
+  const openFriend = useCallback((friend: FriendTarget, game?: FriendGameId) => {
     const key = friendKey(friend.peerId);
-    setWindows(prev => [...prev.filter(w => w.key !== key), { key, friend, minimized: false }]);
+    setWindows(prev => {
+      const existing = prev.find(w => w.key === key);
+      return [...prev.filter(w => w.key !== key), {
+        key,
+        friend: existing?.friend ?? friend,
+        game: game ? { id: game, nonce: Date.now() } : existing?.game,
+        minimized: false,
+      }];
+    });
     setFriendUnread(prev => {
       if (!prev[friend.peerId]) return prev;
       const next = { ...prev };
@@ -239,7 +251,9 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
         if (msg.sender_id === userId) return;
         const key = friendKey(msg.sender_id);
         const existing = windowsRef.current.find(w => w.key === key);
-        if (existing && !existing.minimized) return;
+        // A game invite always alerts, even with their chat open, so it can't be missed.
+        const game = parseGameInvite(msg.content);
+        if (existing && !existing.minimized && !game) return;
         const friend: FriendTarget = existing?.friend ?? {
           conversationId: msg.conversation_id,
           peerId: msg.sender_id,
@@ -247,8 +261,8 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
           peerAvatarUrl: null,
         };
         setWindows(prev => (prev.some(w => w.key === key) ? prev : [...prev, { key, friend, minimized: true }]));
-        setFriendUnread(prev => ({ ...prev, [msg.sender_id]: (prev[msg.sender_id] ?? 0) + 1 }));
-        setToast({ friend, text: messagePreview(msg.content), nonce: Date.now() });
+        if (!existing || existing.minimized) setFriendUnread(prev => ({ ...prev, [msg.sender_id]: (prev[msg.sender_id] ?? 0) + 1 }));
+        setToast({ friend, text: messagePreview(msg.content), nonce: Date.now(), ...(game ? { game, sticky: true } : {}) });
         playDing();
       })
       // Someone accepted your request: open your chat with them.

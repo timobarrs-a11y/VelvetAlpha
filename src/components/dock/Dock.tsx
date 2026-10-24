@@ -189,7 +189,7 @@ export function Dock() {
               return (
                 <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
                   <WindowFrame fullWidth={capacity === 1}>
-                    <FriendChatWindow friend={w.friend} onMinimize={() => dock.minimize(w.key)} onClose={() => dock.close(w.key)} />
+                    <FriendChatWindow friend={w.friend} gameRequest={w.game} onMinimize={() => dock.minimize(w.key)} onClose={() => dock.close(w.key)} />
                   </WindowFrame>
                 </div>
               );
@@ -229,7 +229,7 @@ export function Dock() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
-                onClick={() => dock.openFriend(dock.toast!.friend)}
+                onClick={() => { const t = dock.toast!; dock.openFriend(t.friend, t.game); dock.dismissToast(); }}
                 className="absolute bottom-full left-0 z-50 mb-2 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-xl border border-amber-300/40 bg-[#1d1a10] px-3 py-2 text-left text-xs text-amber-50 shadow-lg"
                 role="status"
               >
@@ -237,6 +237,9 @@ export function Dock() {
                   {dock.toast.friend.peerName.charAt(0).toUpperCase()}
                 </span>
                 <span className="min-w-0 truncate"><span className="font-semibold text-amber-200">{dock.toast.friend.peerName}</span> {dock.toast.text}</span>
+                {dock.toast.game && (
+                  <span className="ml-1 flex-shrink-0 rounded-md bg-amber-300 px-2 py-0.5 font-semibold text-[#1d1a10]">Play</span>
+                )}
                 {dock.toast.sticky && (
                   <span
                     role="button"
@@ -273,10 +276,10 @@ export function Dock() {
                 : 'border-white/12 bg-white/[0.05] text-white/85 hover:bg-white/10'
             }`}
             aria-pressed={shownKeys.has(MESSAGES_KEY)}
-            title="Messages with friends"
+            title="Friends HQ"
           >
             <MessageCircle className="h-4 w-4" />
-            <span>Messages</span>
+            <span>Friends HQ</span>
             {inbox.badge > 0 && (
               <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-bold text-white">
                 {inbox.badge > 9 ? '9+' : inbox.badge}

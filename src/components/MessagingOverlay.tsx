@@ -33,6 +33,9 @@ import {
   sendMessage as sendDM,
   doodleSrc,
   messagePreview,
+  parseGameInvite,
+  FRIEND_GAMES,
+  type FriendGameId,
   markConversationRead,
   getOrCreateConversation,
   sendFriendRequest,
@@ -507,7 +510,7 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
                 : view === 'discover' ? 'Discover people'
                 : view === 'requests' ? 'Friend requests'
                 : view === 'settings' ? 'Your discovery card'
-                : 'Messages'}
+                : 'Friends HQ'}
             </h2>
             <p className="text-[10px] text-ink-muted">
               {view === 'chat' && chatTarget ? 'Instant Messenger'
@@ -1443,7 +1446,7 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
 // ---------------------------------------------------------------------------
 // Chat view
 // ---------------------------------------------------------------------------
-export function ChatView({ target, onUnfriend }: { target: ChatTarget; onUnfriend: () => void }) {
+export function ChatView({ target, onUnfriend, onJoinGame }: { target: ChatTarget; onUnfriend: () => void; /** In the dock: open a game from an invite card. */ onJoinGame?: (game: FriendGameId) => void }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [input, setInput] = useState('');
@@ -1632,7 +1635,21 @@ export function ChatView({ target, onUnfriend }: { target: ChatTarget; onUnfrien
                       : 'bg-white/8 text-ink rounded-bl-md border border-white/8'
                   }`}
                 >
-                  {doodleSrc(m.content) ? <img src={doodleSrc(m.content)!} alt="Doodle" className="w-48 max-w-full rounded-lg bg-white" /> : <SmilieText text={m.content} className="whitespace-pre-wrap break-words" smilieSize={24} />}
+                  {parseGameInvite(m.content) ? (() => {
+                    const g = parseGameInvite(m.content)!;
+                    const fromMe = m.sender_id === user?.id;
+                    return (
+                      <span className="flex items-center gap-2">
+                        <span className="text-xl">{FRIEND_GAMES[g].icon}</span>
+                        <span>{fromMe ? `You invited ${target.peerName} to ${FRIEND_GAMES[g].label}` : `${target.peerName} wants to play ${FRIEND_GAMES[g].label}!`}</span>
+                        {onJoinGame && (
+                          <button type="button" onClick={() => onJoinGame(g)} className="flex-shrink-0 rounded-md bg-amber-300 px-2 py-0.5 text-xs font-semibold text-[#1d1a10]">
+                            {fromMe ? 'Open' : 'Play'}
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })() : doodleSrc(m.content) ? <img src={doodleSrc(m.content)!} alt="Doodle" className="w-48 max-w-full rounded-lg bg-white" /> : <SmilieText text={m.content} className="whitespace-pre-wrap break-words" smilieSize={24} />}
                   <p
                     className={`text-[9px] mt-0.5 flex items-center gap-1 ${
                       mine ? 'text-white/70 justify-end' : 'text-ink-muted'
