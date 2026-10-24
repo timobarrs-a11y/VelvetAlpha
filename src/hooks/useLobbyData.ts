@@ -13,7 +13,7 @@ import { toast } from '../shared/ui/Toast';
 import { newsService } from '../services/newsService';
 import { getGroupChats, createGroupChat, deleteGroupChat, GroupChatWithMembers } from '../services/groupChatService';
 import {
-  SOMEONE_NEW_ROUTE, getSetupProgress, isCompanionSetupPending, prepareResume,
+  SOMEONE_NEW_ROUTE, getSetupProgress, isCompanionSetupPending, prepareResume, updateSetupProgress,
 } from '../services/setupProgressService';
 
 export interface GameEntry {
@@ -67,9 +67,12 @@ export function useLobbyData() {
       getSetupProgress(user.id),
     ]);
     const resumeRoute = prepareResume(progress, companionsList);
-    if (resumeRoute && isCompanionSetupPending(progress)) {
+    if (resumeRoute && isCompanionSetupPending(progress, companionsList)) {
       navigate(resumeRoute, { replace: true });
       return;
+    }
+    if (progress && progress.path === 'coach_and_companion' && progress.step !== 'complete' && companionsList.some(c => c.relationship_type !== 'mentor' && c.is_active !== false)) {
+      await updateSetupProgress(user.id, { step: 'complete' });
     }
     setSetupResumeRoute(resumeRoute);
     setCompanions(companionsList);

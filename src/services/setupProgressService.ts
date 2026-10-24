@@ -66,17 +66,23 @@ export async function advanceSetupStepIf(
   if (error) console.error('[setupProgress] advance failed:', error);
 }
 
-export function isCompanionSetupPending(progress: SetupProgress | null): boolean {
-  return !!progress && progress.path === 'coach_and_companion' && progress.step !== 'complete';
+export function isCompanionSetupPending(progress: SetupProgress | null, companions: CompanionLite[] = []): boolean {
+  if (!progress || progress.path !== 'coach_and_companion' || progress.step === 'complete') return false;
+  const nonMentorCompanions = companions.filter(c => c.relationship_type !== 'mentor' && c.is_active !== false);
+  if (nonMentorCompanions.length > 0) return false;
+  return true;
 }
 
-export function isSetupUnfinished(progress: SetupProgress | null): boolean {
-  return !!progress && progress.step !== null && progress.step !== 'complete' && progress.step !== 'atlas';
+export function isSetupUnfinished(progress: SetupProgress | null, companions: CompanionLite[] = []): boolean {
+  if (!progress || progress.step === null || progress.step === 'complete' || progress.step === 'atlas') return false;
+  const nonMentorCompanions = companions.filter(c => c.relationship_type !== 'mentor' && c.is_active !== false);
+  if (nonMentorCompanions.length > 0 && (progress.step === 'companion_in_progress' || progress.step === 'choose_conversation')) return false;
+  return true;
 }
 
 // Restores the session hints each setup screen reads; returns null when nothing to resume.
 export function prepareResume(progress: SetupProgress | null, companions: CompanionLite[]): string | null {
-  if (!progress || !isSetupUnfinished(progress)) return null;
+  if (!progress || !isSetupUnfinished(progress, companions)) return null;
 
   const coach = companions.find(c => c.relationship_type === 'mentor' && c.is_active !== false);
   const others = companions.filter(c => c.relationship_type !== 'mentor');

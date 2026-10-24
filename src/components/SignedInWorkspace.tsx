@@ -388,7 +388,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   const lobby = useLobbyData();
   const { customization } = useCustomization();
   const { showLockScreen } = useAccess();
-  const textColorKey: ToolbarTextColorKey = customization?.toolbar_text_color ?? 'dark';
+  const textColorKey: ToolbarTextColorKey = customization?.toolbar_text_color ?? 'light';
   const textColorDef = TOOLBAR_TEXT_COLOR_PRESETS.find(p => p.key === textColorKey) ?? TOOLBAR_TEXT_COLOR_PRESETS[0];
   const inkColor = textColorDef.color;
   const inkMuted = `${textColorDef.color}99`;

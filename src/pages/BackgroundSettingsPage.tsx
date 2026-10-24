@@ -115,16 +115,18 @@ export function BackgroundSettingsPage() {
     reader.readAsDataURL(file);
   };
 
-  const handleUploadConfirm = async () => {
-    if (!uploadFile) return;
+  const handleUploadConfirm = async (): Promise<string | null> => {
+    if (!uploadFile) return null;
     setIsUploading(true);
     setError(null);
     try {
       const publicUrl = await uploadWorkspaceWallpaperImage(userId, uploadFile);
       setSelectedUrl(publicUrl);
       setSelected('custom');
+      return publicUrl;
     } catch {
       setError('Upload failed. Please try again.');
+      return null;
     } finally {
       setIsUploading(false);
     }
@@ -151,10 +153,11 @@ export function BackgroundSettingsPage() {
     setIsSaving(true);
     setError(null);
     try {
-      if (selected === 'custom' && uploadFile && !selectedUrl?.startsWith('https://')) {
-        await handleUploadConfirm();
+      let resolvedUrl = selectedUrl;
+      if (selected === 'custom' && uploadFile && !resolvedUrl?.startsWith('https://')) {
+        resolvedUrl = await handleUploadConfirm();
       }
-      const finalUrl = selectedUrl?.startsWith('https://') ? selectedUrl : null;
+      const finalUrl = resolvedUrl?.startsWith('https://') ? resolvedUrl : null;
       await setWorkspaceWallpaper(selected, finalUrl);
       setSavedNotice(true);
       setTimeout(() => setSavedNotice(false), 2000);

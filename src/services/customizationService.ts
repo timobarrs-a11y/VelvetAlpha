@@ -319,7 +319,7 @@ const DEFAULT_CUSTOMIZATION: UserCustomization = {
   left_rail_collapsed:         false,
   right_rail_collapsed:        false,
   toolbar_background_mode:     'glass',
-  toolbar_text_color:          'dark',
+  toolbar_text_color:          'light',
   workspace_wallpaper_id:      null,
   workspace_wallpaper_url:     null,
 };
