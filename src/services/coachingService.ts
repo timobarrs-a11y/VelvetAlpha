@@ -191,20 +191,38 @@ export async function updateCommitmentStatus(
   await supabase.from('coaching_commitments').update(patch).eq('id', commitmentId);
 }
 
+/**
+ * Commitments are built from plan steps (goal → plan → commitments → progress),
+ * so a step is required; the goal comes from the step's plan.
+ */
 export async function createCommitment(
   userId: string,
   params: {
     description: string;
+    planStepId: string;
     dueDate?: string | null;
     companionId?: string | null;
     category?: string | null;
   },
 ): Promise<CoachingCommitment | null> {
+  const { data: step } = await supabase
+    .from('coach_plan_steps')
+    .select('id, commitment_id, coach_plans!inner(goal_id, user_id)')
+    .eq('id', params.planStepId)
+    .maybeSingle();
+  const plan = (step as { coach_plans?: { goal_id: string; user_id: string } } | null)?.coach_plans;
+  if (!step || !plan || plan.user_id !== userId) {
+    console.error('[coachingService] createCommitment: plan step not found');
+    return null;
+  }
+
   const { data, error } = await supabase
     .from('coaching_commitments')
     .insert({
       user_id: userId,
       companion_id: params.companionId ?? null,
+      goal_id: plan.goal_id,
+      plan_step_id: params.planStepId,
       description: params.description,
       due_date: params.dueDate ?? null,
       status: 'pending',
@@ -217,6 +235,10 @@ export async function createCommitment(
   if (error) {
     console.error('[coachingService] createCommitment error:', error);
     return null;
+  }
+
+  if (data && !(step as { commitment_id: string | null }).commitment_id) {
+    await supabase.from('coach_plan_steps').update({ commitment_id: (data as CoachingCommitment).id }).eq('id', params.planStepId);
   }
 
   return (data as CoachingCommitment) ?? null;
@@ -484,6 +506,7 @@ export interface CoachPlanStep {
 export interface CoachPlan {
   id: string;
   companion_id: string | null;
+  goal_id: string;
   title: string;
   description: string | null;
   status: PlanStatus;
@@ -501,7 +524,7 @@ export async function getPlans(
 ): Promise<CoachPlan[]> {
   let query = supabase
     .from('coach_plans')
-    .select('id, companion_id, title, description, status, cadence, created_at, updated_at')
+    .select('id, companion_id, goal_id, title, description, status, cadence, created_at, updated_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -553,9 +576,11 @@ export async function getPlans(
   return plans;
 }
 
+/** Every plan serves a goal (goal → plan → commitments → progress). */
 export async function createPlan(
   userId: string,
   params: {
+    goalId: string;
     title: string;
     description?: string | null;
     companionId?: string | null;
@@ -568,12 +593,13 @@ export async function createPlan(
     .insert({
       user_id: userId,
       companion_id: params.companionId ?? null,
+      goal_id: params.goalId,
       title: params.title,
       description: params.description ?? null,
       cadence: params.cadence ?? null,
       status: 'active',
     })
-    .select('id, companion_id, title, description, status, cadence, created_at, updated_at')
+    .select('id, companion_id, goal_id, title, description, status, cadence, created_at, updated_at')
     .maybeSingle();
 
   if (planError || !planData) {

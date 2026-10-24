@@ -251,6 +251,9 @@ interface ContextSummary {
   topics: string[];
 }
 
+/** Coaching page a coach panel is open on; tells the coach what the user is doing. */
+export type CoachSurface = 'progress' | 'plans' | 'commitments' | 'library';
+
 export class ChatService {
   private static getMaxTokensForTier(tier: SubscriptionTier): number {
     switch (tier) {
@@ -703,6 +706,7 @@ export class ChatService {
     message: string,
     companionId: string,
     userProfile: UserProfile,
+    surface?: CoachSurface,
   ): Promise<{
     assistantMessage: string;
     calendarEvent?: { title: string; event_type: string; event_date: string } | null;
@@ -722,7 +726,7 @@ export class ChatService {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat', timezone: userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' }),
+      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat', timezone: userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', ...(surface ? { surface } : {}) }),
     });
 
     if (!response.ok) {

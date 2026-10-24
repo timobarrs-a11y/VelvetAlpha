@@ -16,11 +16,45 @@ import {
   getWeeklyStats, commitmentDueLabel, commitmentStatusColor,
   goalProgressPercent, goalDaysRemaining, GOAL_TYPE_LABELS,
   getLatestWeeklyReview, markReviewRead,
-  getConfidenceChecks, addConfidenceCheck, confidenceTrend,
+  getConfidenceChecks, addConfidenceCheck, confidenceTrend, getPlans,
   type CoachingCommitment, type CoachingGoal, type CommitmentStatus,
-  type WeeklyReview, type ConfidenceCheck,
+  type WeeklyReview, type ConfidenceCheck, type CoachPlan,
 } from '../services/coachingService';
 import { getCoachColor, formatDeadline, daysToDeadline } from '../utils/coachColors';
+import { useAuth } from '../auth/AuthProvider';
+import { CoachWorkspace } from '../components/coaching/CoachWorkspace';
+import { useCoachPanel, useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/useCoachPanel';
+
+const COACHING_TABLES = ['user_goals', 'coach_plans', 'coach_plan_steps', 'coaching_commitments'];
+
+const PROGRESS_PROMPTS = [
+  'How am I doing?',
+  'Log progress on my goal',
+  'What should I focus on this week?',
+  'Write my progress report',
+];
+
+/** Progress is built from the chain: a goal's plan steps and the commitments made from them. */
+interface GoalChain {
+  stepsDone: number;
+  stepsTotal: number;
+  kept: number;
+  commitmentsTotal: number;
+  hasPlan: boolean;
+}
+
+function goalChain(goal: CoachingGoal, plans: CoachPlan[], commitments: CoachingCommitment[]): GoalChain {
+  const goalPlans = plans.filter(p => p.goal_id === goal.id && p.status !== 'completed');
+  const steps = goalPlans.flatMap(p => (p.steps ?? []).filter(st => st.status !== 'skipped'));
+  const goalCommitments = commitments.filter(c => c.goal_id === goal.id);
+  return {
+    stepsDone: steps.filter(st => st.status === 'completed').length,
+    stepsTotal: steps.length,
+    kept: goalCommitments.filter(c => c.status === 'completed').length,
+    commitmentsTotal: goalCommitments.length,
+    hasPlan: goalPlans.length > 0,
+  };
+}
 
 export function CoachingProgressPage() {
   const navigate = useNavigate();
@@ -36,6 +70,10 @@ export function CoachingProgressPage() {
   const [confidenceChecks, setConfidenceChecks] = useState<ConfidenceCheck[]>([]);
   const [showConfidenceInput, setShowConfidenceInput] = useState(false);
   const [confidenceScore, setConfidenceScore] = useState(7);
+  const [plans, setPlans] = useState<CoachPlan[]>([]);
+  const { user } = useAuth();
+  const coach = useCoachPanel();
+  const { highlighted, flash } = useCoachHighlight();
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -44,15 +82,17 @@ export function CoachingProgressPage() {
       return;
     }
 
-    const [comms, gls, review, checks] = await Promise.all([
+    const [comms, gls, review, checks, planData] = await Promise.all([
       getCommitments(user.id),
       getGoals(user.id),
       getLatestWeeklyReview(user.id),
       getConfidenceChecks(user.id),
+      getPlans(user.id),
     ]);
 
     setCommitments(comms);
     setGoals(gls);
+    setPlans(planData);
     setWeeklyReview(review);
     setConfidenceChecks(checks);
   }, [navigate]);
@@ -60,6 +100,13 @@ export function CoachingProgressPage() {
   useEffect(() => {
     loadData().finally(() => setLoading(false));
   }, [loadData]);
+
+  useCoachingRealtime(user?.id, COACHING_TABLES, () => { loadData(); });
+
+  const handleCoachChanged = useCallback((ids: string[]) => {
+    loadData();
+    flash(ids);
+  }, [loadData, flash]);
 
   const stats = getWeeklyStats(commitments);
 
@@ -130,7 +177,12 @@ export function CoachingProgressPage() {
   const hasNoData = commitments.length === 0 && goals.length === 0;
 
   return (
-    <>
+    <CoachWorkspace
+      surface="progress"
+      coach={coach}
+      quickPrompts={PROGRESS_PROMPTS}
+      onCoachChanged={handleCoachChanged}
+    >
       <PageShell
         header={
           <PageHeader
@@ -138,6 +190,7 @@ export function CoachingProgressPage() {
             subtitle="Your commitments, goals, and momentum"
             icon={Target}
             accent="var(--ds-success, #10b981)"
+            back={false}
           />
         }
       >
@@ -153,9 +206,9 @@ export function CoachingProgressPage() {
           <Card padding="lg" className="mb-6">
             <EmptyState
               icon={<Brain className="w-7 h-7 text-ink-muted" />}
-              title="No coaching activity yet"
-              description="Start a conversation with your coach and make a commitment. Your progress will show up here."
-              action={{ label: 'Go to coaching', onClick: () => navigate('/lobby'), variant: 'primary' }}
+              title="Start with your goal"
+              description="Progress builds up in order: a goal, a plan to reach it, then commitments from the plan. Set the goal with your coach and the rest follows."
+              action={{ label: 'Set my goal with my coach', onClick: () => coach.ask("Let's set my goal. Ask me what I want to achieve and by when."), variant: 'primary' }}
             />
           </Card>
         )}
@@ -214,8 +267,11 @@ export function CoachingProgressPage() {
                 <GoalCard
                   key={goal.id}
                   goal={goal}
+                  chain={goalChain(goal, plans, commitments)}
+                  highlighted={highlighted.has(goal.id)}
                   onPause={() => handlePauseGoal(goal.id)}
                   onOpen={() => navigate(`/goal/${goal.id}`)}
+                  onBuildPlan={() => coach.ask(`Build me a plan for my goal "${goal.title}", with concrete steps.`)}
                 />
               ))}
             </div>
@@ -265,6 +321,7 @@ export function CoachingProgressPage() {
                     onComplete={() => handleMarkCompleted(commitment.id)}
                     onRenegotiate={() => handleRenegotiate(commitment.id)}
                     updating={updatingId === commitment.id}
+                    highlighted={highlighted.has(commitment.id)}
                   />
                 ))}
               </AnimatePresence>
@@ -273,7 +330,7 @@ export function CoachingProgressPage() {
             {filteredCommitments.length === 0 && (
               <p className="text-sm text-ink-muted text-center py-8">
                 {filter === 'active'
-                  ? 'No active commitments. Talk to your coach to set new ones.'
+                  ? 'No active commitments. Ask your coach to plan the next ones.'
                   : filter === 'completed'
                     ? 'No completed commitments yet.'
                     : 'No commitments found.'}
@@ -286,7 +343,7 @@ export function CoachingProgressPage() {
           </div>
         )}
       </PageShell>
-    </>
+    </CoachWorkspace>
   );
 }
 
@@ -603,14 +660,21 @@ function StatCard({ icon, label, value, tone }: { icon: React.ReactNode; label: 
   );
 }
 
-function GoalCard({ goal, onPause, onOpen }: { goal: CoachingGoal; onPause: () => void; onOpen: () => void }) {
+function GoalCard({ goal, chain, highlighted, onPause, onOpen, onBuildPlan }: {
+  goal: CoachingGoal;
+  chain: GoalChain;
+  highlighted: boolean;
+  onPause: () => void;
+  onOpen: () => void;
+  onBuildPlan: () => void;
+}) {
   const pct = goalProgressPercent(goal);
   const daysLeft = daysToDeadline(goal.target_date, goal.deadline_precision);
   const typeLabel = GOAL_TYPE_LABELS[goal.goal_type] ?? goal.goal_type;
   const coachColor = getCoachColor(goal.companion_color);
 
   return (
-    <Card padding="md" interactive onClick={onOpen} className="cursor-pointer" style={{ borderLeft: `3px solid ${coachColor.base}` }}>
+    <Card padding="md" interactive onClick={onOpen} className={`cursor-pointer ${highlighted ? HIGHLIGHT_CLASS : ''}`} style={{ borderLeft: `3px solid ${coachColor.base}` }}>
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-ink text-sm truncate">{goal.title}</h3>
@@ -652,6 +716,24 @@ function GoalCard({ goal, onPause, onOpen }: { goal: CoachingGoal; onPause: () =
         </div>
       )}
 
+      <div className="mb-3 flex items-center gap-3 text-xs text-ink-muted">
+        {chain.hasPlan ? (
+          <>
+            <span>Plan: <span className="font-semibold text-ink">{chain.stepsDone}/{chain.stepsTotal}</span> steps</span>
+            <span>·</span>
+            <span>Commitments kept: <span className="font-semibold text-ink">{chain.kept}/{chain.commitmentsTotal}</span></span>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onBuildPlan(); }}
+            className="font-semibold text-pink-300 hover:text-pink-200"
+          >
+            No plan yet · Build it with my coach →
+          </button>
+        )}
+      </div>
+
       <div className="flex items-center gap-3 text-xs text-ink-muted">
         {daysLeft !== null && (
           <span className="flex items-center gap-1">
@@ -679,11 +761,13 @@ function CommitmentRow({
   onComplete,
   onRenegotiate,
   updating,
+  highlighted,
 }: {
   commitment: CoachingCommitment;
   onComplete: () => void;
   onRenegotiate: () => void;
   updating: boolean;
+  highlighted: boolean;
 }) {
   const isDone = commitment.status === 'completed';
   const isMissed = commitment.status === 'missed';
@@ -699,7 +783,7 @@ function CommitmentRow({
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.2 }}
     >
-      <Card padding="sm" className="flex items-center gap-3">
+      <Card padding="sm" className={`flex items-center gap-3 ${highlighted ? HIGHLIGHT_CLASS : ''}`}>
         <div className="flex-shrink-0">
           {isDone ? (
             <CheckCircle2 className="w-5 h-5" style={{ color: tone }} />

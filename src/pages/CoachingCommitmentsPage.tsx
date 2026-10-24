@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, CheckCircle2, Circle, AlertCircle, Trophy,
-  Calendar, Plus, X, MessageCircle, Trash2, Loader2,
+  CheckCircle2, Circle, AlertCircle, Trophy,
+  Calendar, Plus, X, Trash2, Loader2, Target,
   Clock, PlayCircle, RotateCcw, Sparkles, Layers, ChevronDown, ChevronRight,
   ListChecks, ExternalLink, Pencil, Check,
 } from 'lucide-react';
@@ -14,17 +14,26 @@ import {
   getCommitments, updateCommitmentStatus, createCommitment, updateProgressNote, deleteCommitment,
   getWeeklyStats, commitmentDueLabel, commitmentStatusColor,
   getPlans, createPlan, updatePlanStepStatus, deletePlan, planProgressPercent,
-  createTickEvent, updatePlanStepTitle, respondToPlan,
+  createTickEvent, updatePlanStepTitle, respondToPlan, getGoals,
   type CoachingCommitment, type CommitmentStatus,
-  type CoachPlan, type StepStatus,
+  type CoachPlan, type StepStatus, type CoachingGoal,
 } from '../services/coachingService';
 import { getCoachColor } from '../utils/coachColors';
+import { useAuth } from '../auth/AuthProvider';
+import { CoachWorkspace } from '../components/coaching/CoachWorkspace';
+import { useCoachPanel, useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/useCoachPanel';
+
+const COACHING_TABLES = ['user_goals', 'coach_plans', 'coach_plan_steps', 'coaching_commitments'];
+
+const ASK_GOAL = "Let's set my goal. Ask me what I want to achieve and by when.";
+const ASK_PLAN = 'Build me a plan for my goal, with concrete steps.';
+const ASK_COMMITMENTS = "Turn my plan's next steps into commitments for this week, with dates.";
 
 type Filter = 'active' | 'completed' | 'all';
 
 export function CoachingCommitmentsPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const companionId = searchParams.get('companion');
   const companionName = searchParams.get('name');
 
@@ -36,7 +45,17 @@ export function CoachingCommitmentsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [progressDraft, setProgressDraft] = useState('');
   const [plans, setPlans] = useState<CoachPlan[]>([]);
-  const [view, setView] = useState<'tasks' | 'plans'>(searchParams.get('view') === 'plans' ? 'plans' : 'tasks');
+  const [goals, setGoals] = useState<CoachingGoal[]>([]);
+  // The sidebar links to both views of this one page, so follow the URL.
+  const view: 'tasks' | 'plans' = searchParams.get('view') === 'plans' ? 'plans' : 'tasks';
+  const setView = (next: 'tasks' | 'plans') => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'plans') params.set('view', 'plans'); else params.delete('view');
+    setSearchParams(params, { replace: true });
+  };
+  const { user } = useAuth();
+  const coach = useCoachPanel();
+  const { highlighted, flash } = useCoachHighlight();
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
 
@@ -46,17 +65,26 @@ export function CoachingCommitmentsPage() {
       navigate('/splash', { replace: true });
       return;
     }
-    const [comms, planData] = await Promise.all([
+    const [comms, planData, goalData] = await Promise.all([
       getCommitments(user.id, companionId),
       getPlans(user.id, companionId),
+      getGoals(user.id),
     ]);
     setCommitments(comms);
     setPlans(planData);
+    setGoals(goalData.filter(g => g.status === 'active'));
   }, [navigate, companionId]);
 
   useEffect(() => {
     loadData().finally(() => setLoading(false));
   }, [loadData]);
+
+  useCoachingRealtime(user?.id, COACHING_TABLES, () => { loadData(); });
+
+  const handleCoachChanged = useCallback((ids: string[]) => {
+    loadData();
+    flash(ids);
+  }, [loadData, flash]);
 
   const stats = getWeeklyStats(commitments);
 
@@ -176,10 +204,11 @@ export function CoachingCommitmentsPage() {
     setUpdatingId(null);
   };
 
-  const handleCreate = async (description: string, dueDate: string | null, category: string | null) => {
+  const handleCreate = async (planStepId: string, description: string, dueDate: string | null, category: string | null) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const created = await createCommitment(user.id, {
+      planStepId,
       description,
       dueDate,
       companionId: companionId ?? null,
@@ -194,10 +223,11 @@ export function CoachingCommitmentsPage() {
     setShowCreate(false);
   };
 
-  const handleCreatePlan = async (title: string, cadence: string | null, steps: { title: string; description?: string | null }[]) => {
+  const handleCreatePlan = async (goalId: string, title: string, cadence: string | null, steps: { title: string; description?: string | null }[]) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const created = await createPlan(user.id, {
+      goalId,
       title,
       companionId: companionId ?? null,
       cadence,
@@ -281,8 +311,9 @@ export function CoachingCommitmentsPage() {
     setUpdatingId(planId);
     await deletePlan(planId);
     setPlans(prev => prev.filter(p => p.id !== planId));
-    toast.info('Plan deleted.');
+    toast.info('Plan deleted, along with the commitments built from it.');
     setUpdatingId(null);
+    void loadData();
   };
 
   if (loading) {
@@ -293,42 +324,56 @@ export function CoachingCommitmentsPage() {
     );
   }
 
-  const hasCompanionContext = !!companionId;
   const proposedPlans = plans.filter(p => p.status === 'proposed');
   const activePlans = plans.filter(p => p.status === 'active' || p.status === 'paused');
   const completedPlans = plans.filter(p => p.status === 'completed');
+  const openPlans = [...proposedPlans, ...activePlans];
+  // Steps a commitment can be built from: open steps of open plans.
+  const stepOptions = openPlans.flatMap(p => (p.steps ?? [])
+    .filter(st => st.status !== 'completed' && st.status !== 'skipped')
+    .map(st => ({ id: st.id, title: st.user_set_title ?? st.title, planTitle: p.title })));
+  const hasGoal = goals.length > 0;
+  const hasPlan = openPlans.length > 0;
+  const nextAsk = !hasGoal ? ASK_GOAL : !hasPlan ? ASK_PLAN : ASK_COMMITMENTS;
+
+  const quickPrompts = view === 'plans'
+    ? (!hasGoal
+      ? ['Help me set my goal', 'I want to get fitter', 'I want to learn a skill']
+      : !hasPlan
+        ? ['Build me a plan for my goal', 'Make the first week easy', 'What should my steps be?']
+        : ['Add a step', 'Make this plan easier', 'Make it more challenging', 'Activate my plan'])
+    : (!hasGoal
+      ? ['Help me set my goal']
+      : !hasPlan
+        ? ['Build me a plan first']
+        : ["Plan this week's commitments", 'Reschedule what I missed', 'What should I do today?']);
 
   return (
+    <CoachWorkspace
+      surface={view === 'plans' ? 'plans' : 'commitments'}
+      coach={coach}
+      preferredCoachId={companionId}
+      quickPrompts={quickPrompts}
+      onCoachChanged={handleCoachChanged}
+    >
     <PageShell
       header={
         <PageHeader
-          title={hasCompanionContext ? `${companionName ?? 'Coach'} — Action Items` : 'Action Items'}
-          subtitle="Your tasks, commitments, and accountability"
-          icon={CheckCircle2}
+          title={view === 'plans' ? 'Plans' : 'Commitments'}
+          subtitle={view === 'plans' ? 'Ordered steps toward your goal' : "Dated things you'll do, built from your plan"}
+          icon={view === 'plans' ? Layers : CheckCircle2}
           accent="var(--ds-success, #10b981)"
-          actions={
-            <div className="flex items-center gap-2">
-              {hasCompanionContext && (
-                <button
-                  onClick={() => navigate(`/chat?companion=${companionId}`)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-white/10 hover:bg-white/15 transition-colors"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  Chat
-                </button>
-              )}
-              <button
-                onClick={() => navigate(hasCompanionContext ? '/lobby' : '/coaching-progress')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                {hasCompanionContext ? 'Lobby' : 'Progress'}
-              </button>
-            </div>
-          }
+          back={false}
         />
       }
     >
+      <ChainProgress
+        goal={goals[0]?.title ?? null}
+        planCount={openPlans.length}
+        commitmentCount={activeCommitments.length}
+        onAsk={coach.ask}
+      />
+
       {/* View toggle: Tasks / Plans */}
       <div className="flex items-center gap-1 mb-6 p-1 rounded-xl bg-white/[0.03] border border-white/8 w-fit">
         <button
@@ -362,15 +407,16 @@ export function CoachingCommitmentsPage() {
           onEditStep={handleEditStep}
           onRespondToPlan={handleRespondToPlan}
           completedPlans={completedPlans}
+          hasGoal={hasGoal}
+          goals={goals}
+          highlighted={highlighted}
+          onAsk={coach.ask}
           expandedPlanId={expandedPlanId}
           setExpandedPlanId={setExpandedPlanId}
           onStepToggle={handleStepToggle}
           onDeletePlan={handleDeletePlan}
           updatingId={updatingId}
-          hasCompanionContext={hasCompanionContext}
           companionName={companionName}
-          companionId={companionId}
-          navigate={navigate}
           showCreatePlan={showCreatePlan}
           setShowCreatePlan={setShowCreatePlan}
           onCreatePlan={handleCreatePlan}
@@ -385,26 +431,29 @@ export function CoachingCommitmentsPage() {
         <MiniStat icon={<Trophy className="w-4 h-4" />} label="Done" value={completedCommitments.length} tone="var(--ds-warning, #f59e0b)" />
       </div>
 
-      {/* New Task button */}
+      {/* New commitment button: commitments come from plan steps */}
       <div className="mb-6">
         <button
           onClick={() => setShowCreate(true)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/15 hover:border-white/25 text-white/50 hover:text-white/80 transition-all text-sm font-medium"
+          disabled={stepOptions.length === 0}
+          title={stepOptions.length === 0 ? 'Commitments come from plan steps. Build a plan first.' : undefined}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/15 hover:border-white/25 text-white/50 hover:text-white/80 transition-all text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/15 disabled:hover:text-white/50"
         >
           <Plus className="w-4 h-4" />
-          Add a task
+          Add a commitment from your plan
         </button>
       </div>
 
       {commitments.length === 0 ? (
         <EmptyState
           icon={<CheckCircle2 className="w-7 h-7 text-ink-muted" />}
-          title="No tasks yet"
-          description="Add your own task above, or start a conversation with your coach — action items they identify will show up here automatically."
-          action={hasCompanionContext
-            ? { label: `Chat with ${companionName ?? 'coach'}`, onClick: () => navigate(`/chat?companion=${companionId}`), variant: 'primary' }
-            : { label: 'Go to lobby', onClick: () => navigate('/lobby'), variant: 'primary' }
-          }
+          title={!hasGoal ? 'Start with your goal' : !hasPlan ? 'Build your plan first' : 'No commitments yet'}
+          description={!hasGoal
+            ? 'Commitments come from a plan, and a plan serves a goal. Set the goal with your coach and the rest follows.'
+            : !hasPlan
+              ? 'Commitments are built from plan steps. Have your coach lay out the plan, then turn its steps into commitments.'
+              : "Turn your plan's next steps into dated commitments. Your coach can do it with you right now."}
+          action={{ label: !hasGoal ? 'Set my goal with my coach' : !hasPlan ? 'Build my plan with my coach' : "Plan this week's commitments", onClick: () => coach.ask(nextAsk), variant: 'primary' }}
         />
       ) : (
         <>
@@ -446,6 +495,7 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
+                  highlighted={highlighted}
                 />
               )}
               {dueToday.length > 0 && (
@@ -464,6 +514,7 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
+                  highlighted={highlighted}
                 />
               )}
               {dueThisWeek.length > 0 && (
@@ -482,6 +533,7 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
+                  highlighted={highlighted}
                 />
               )}
               {noDeadline.length > 0 && (
@@ -500,6 +552,7 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
+                  highlighted={highlighted}
                 />
               )}
               {missedCommitments.length > 0 && (
@@ -518,6 +571,7 @@ export function CoachingCommitmentsPage() {
                   onDelete={handleDelete}
                   onSaveProgress={handleSaveProgress}
                   updatingId={updatingId}
+                  highlighted={highlighted}
                 />
               )}
               {activeCommitments.length === 0 && (
@@ -526,7 +580,7 @@ export function CoachingCommitmentsPage() {
                     <Trophy className="w-7 h-7 text-emerald-400" />
                   </div>
                   <p className="text-sm text-ink font-medium mb-1">All caught up!</p>
-                  <p className="text-xs text-ink-muted">No active tasks. Add one above or chat with your coach.</p>
+                  <p className="text-xs text-ink-muted">No active commitments. Ask your coach for the next ones.</p>
                 </div>
               )}
             </div>
@@ -547,6 +601,7 @@ export function CoachingCommitmentsPage() {
                     onDelete={() => handleDelete(commitment.id)}
                     onSaveProgress={() => handleSaveProgress(commitment.id, commitment.description)}
                     updating={updatingId === commitment.id}
+                    highlighted={highlighted.has(commitment.id)}
                   />
                 ))}
               </AnimatePresence>
@@ -568,10 +623,53 @@ export function CoachingCommitmentsPage() {
         onClose={() => setShowCreate(false)}
         onCreate={handleCreate}
         defaultCompanionName={companionName}
+        stepOptions={stepOptions}
       />
         </>
       )}
     </PageShell>
+    </CoachWorkspace>
+  );
+}
+
+/** Goal → Plan → Commitments, each built on the one before. */
+function ChainProgress({ goal, planCount, commitmentCount, onAsk }: {
+  goal: string | null;
+  planCount: number;
+  commitmentCount: number;
+  onAsk: (text: string) => void;
+}) {
+  const stages = [
+    { key: 'goal', label: 'Goal', done: !!goal, detail: goal ?? 'Not set yet', ask: ASK_GOAL },
+    { key: 'plan', label: 'Plan', done: planCount > 0, detail: planCount > 0 ? `${planCount} open` : 'Needs a goal first', ask: ASK_PLAN },
+    { key: 'commitments', label: 'Commitments', done: commitmentCount > 0, detail: commitmentCount > 0 ? `${commitmentCount} active` : 'Built from plan steps', ask: ASK_COMMITMENTS },
+  ];
+  const nextIndex = stages.findIndex(st => !st.done);
+
+  return (
+    <div className="mb-6 grid grid-cols-3 gap-2">
+      {stages.map((stage, i) => {
+        const isNext = i === nextIndex;
+        const locked = nextIndex !== -1 && i > nextIndex;
+        return (
+          <div
+            key={stage.key}
+            className={`rounded-xl border p-3 ${isNext ? 'border-pink-400/50 bg-pink-500/10' : 'border-white/8 bg-white/[0.03]'} ${locked ? 'opacity-50' : ''}`}
+          >
+            <div className="mb-1 flex items-center gap-1.5">
+              {stage.done ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <Target className={`h-3.5 w-3.5 ${isNext ? 'text-pink-300' : 'text-ink-muted'}`} />}
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{i + 1}. {stage.label}</span>
+            </div>
+            <p className="truncate text-xs text-ink">{stage.detail}</p>
+            {isNext && (
+              <button type="button" onClick={() => onAsk(stage.ask)} className="mt-1.5 text-[11px] font-semibold text-pink-300 hover:text-pink-200">
+                Do this with my coach →
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -589,7 +687,7 @@ function MiniStat({ icon, label, value, tone }: { icon: React.ReactNode; label: 
 
 function CommitmentSection({
   title, icon, tone, commitments, expandedId, progressDraft, setProgressDraft,
-  onExpand, onComplete, onStart, onRenegotiate, onDelete, onSaveProgress, updatingId,
+  onExpand, onComplete, onStart, onRenegotiate, onDelete, onSaveProgress, updatingId, highlighted,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -605,6 +703,7 @@ function CommitmentSection({
   onDelete: (id: string) => void;
   onSaveProgress: (id: string, description: string) => void;
   updatingId: string | null;
+  highlighted: Set<string>;
 }) {
   return (
     <div>
@@ -629,6 +728,7 @@ function CommitmentSection({
               onDelete={() => onDelete(commitment.id)}
               onSaveProgress={() => onSaveProgress(commitment.id, commitment.description)}
               updating={updatingId === commitment.id}
+              highlighted={highlighted.has(commitment.id)}
             />
           ))}
         </AnimatePresence>
@@ -639,7 +739,7 @@ function CommitmentSection({
 
 function CommitmentRow({
   commitment, expanded, progressDraft, setProgressDraft, onExpand,
-  onComplete, onStart, onRenegotiate, onDelete, onSaveProgress, updating,
+  onComplete, onStart, onRenegotiate, onDelete, onSaveProgress, updating, highlighted,
 }: {
   commitment: CoachingCommitment;
   expanded: boolean;
@@ -652,6 +752,7 @@ function CommitmentRow({
   onDelete: () => void;
   onSaveProgress: () => void;
   updating: boolean;
+  highlighted: boolean;
 }) {
   const isDone = commitment.status === 'completed';
   const isMissed = commitment.status === 'missed';
@@ -669,7 +770,7 @@ function CommitmentRow({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.2 }}
-      className="rounded-xl border border-white/8 bg-white/[0.03] overflow-hidden"
+      className={`rounded-xl border border-white/8 bg-white/[0.03] overflow-hidden ${highlighted ? HIGHLIGHT_CLASS : ''}`}
       style={{ borderLeft: `3px solid ${coachColor.base}` }}
     >
       <div className="flex items-center gap-3 p-4">
@@ -821,19 +922,22 @@ function CommitmentRow({
 }
 
 function CreateTaskModal({
-  isOpen, onClose, onCreate, defaultCompanionName,
+  isOpen, onClose, onCreate, defaultCompanionName, stepOptions,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (description: string, dueDate: string | null, category: string | null) => void;
+  onCreate: (planStepId: string, description: string, dueDate: string | null, category: string | null) => void;
   defaultCompanionName?: string | null;
+  stepOptions: { id: string; title: string; planTitle: string }[];
 }) {
+  const [stepId, setStepId] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [category, setCategory] = useState('');
 
   useEffect(() => {
     if (!isOpen) {
+      setStepId('');
       setDescription('');
       setDueDate('');
       setCategory('');
@@ -842,10 +946,12 @@ function CreateTaskModal({
 
   if (!isOpen) return null;
 
+  const selectedStep = stepOptions.find(o => o.id === stepId);
+
   const handleSubmit = () => {
-    if (!description.trim()) return;
+    if (!selectedStep) return;
     const due = dueDate ? new Date(dueDate).toISOString() : null;
-    onCreate(description.trim(), due, category.trim() || null);
+    onCreate(selectedStep.id, description.trim() || selectedStep.title, due, category.trim() || null);
   };
 
   return (
@@ -858,7 +964,7 @@ function CreateTaskModal({
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-bold text-ink font-display">New Task</h2>
+          <h2 className="text-base font-bold text-ink font-display">New Commitment</h2>
           <button onClick={onClose} className="text-ink-muted hover:text-ink transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -866,14 +972,28 @@ function CreateTaskModal({
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-ink-muted mb-1.5 block">What do you need to do?</label>
+            <label className="text-xs text-ink-muted mb-1.5 block">Which plan step is this for?</label>
+            <select
+              value={stepId}
+              onChange={(e) => setStepId(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/10 rounded-xl p-2.5 text-ink text-sm focus:outline-none focus:border-white/20 transition-all"
+              autoFocus
+            >
+              <option value="">Choose a step…</option>
+              {stepOptions.map(o => (
+                <option key={o.id} value={o.id}>{o.title} · {o.planTitle}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-ink-muted mb-1.5 block">What exactly will you do? (optional)</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. Send the project draft to Sarah by Friday"
+              placeholder={selectedStep ? selectedStep.title : 'e.g. 15 push-ups before work on Monday'}
               className="w-full bg-white/[0.04] border border-white/10 rounded-xl p-3 text-ink text-sm placeholder:text-ink-muted/50 focus:outline-none focus:border-white/20 transition-all resize-none"
               rows={3}
-              autoFocus
             />
           </div>
 
@@ -916,9 +1036,9 @@ function CreateTaskModal({
               variant="primary"
               size="sm"
               onClick={handleSubmit}
-              disabled={!description.trim()}
+              disabled={!selectedStep}
             >
-              Create Task
+              Create Commitment
             </Button>
           </div>
         </div>
@@ -932,11 +1052,15 @@ function CreateTaskModal({
 // =====================================================
 
 function PlansView({
-  plans, proposedPlans, activePlans, completedPlans, expandedPlanId, setExpandedPlanId,
-  onStepToggle, onEditStep, onRespondToPlan, onDeletePlan, updatingId, hasCompanionContext, companionName,
-  companionId, navigate, showCreatePlan, setShowCreatePlan, onCreatePlan,
+  plans, proposedPlans, activePlans, completedPlans, hasGoal, goals, highlighted, onAsk, expandedPlanId, setExpandedPlanId,
+  onStepToggle, onEditStep, onRespondToPlan, onDeletePlan, updatingId, companionName,
+  showCreatePlan, setShowCreatePlan, onCreatePlan,
 }: {
   plans: CoachPlan[];
+  hasGoal: boolean;
+  goals: CoachingGoal[];
+  highlighted: Set<string>;
+  onAsk: (text: string) => void;
   proposedPlans: CoachPlan[];
   onEditStep: (stepId: string, newTitle: string) => Promise<boolean>;
   onRespondToPlan: (plan: CoachPlan, accept: boolean) => void;
@@ -947,36 +1071,39 @@ function PlansView({
   onStepToggle: (stepId: string, current: StepStatus, stepTitle: string) => void;
   onDeletePlan: (planId: string) => void;
   updatingId: string | null;
-  hasCompanionContext: boolean;
   companionName: string | null;
-  companionId: string | null;
-  navigate: ReturnType<typeof useNavigate>;
   showCreatePlan: boolean;
   setShowCreatePlan: (v: boolean) => void;
-  onCreatePlan: (title: string, cadence: string | null, steps: { title: string; description?: string | null }[]) => void;
+  onCreatePlan: (goalId: string, title: string, cadence: string | null, steps: { title: string; description?: string | null }[]) => void;
 }) {
+  const planHighlighted = (plan: CoachPlan) =>
+    highlighted.has(plan.id) || (plan.steps ?? []).some(st => highlighted.has(st.id));
+
   return (
     <div className="space-y-6">
-      {/* Create plan CTA */}
+      {/* Create plan CTA: a plan always serves a goal */}
       <div>
         <button
           onClick={() => setShowCreatePlan(true)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/15 hover:border-white/25 text-white/50 hover:text-white/80 transition-all text-sm font-medium"
+          disabled={!hasGoal}
+          title={!hasGoal ? 'A plan serves a goal. Set your goal first.' : undefined}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/15 hover:border-white/25 text-white/50 hover:text-white/80 transition-all text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/15 disabled:hover:text-white/50"
         >
           <Plus className="w-4 h-4" />
-          Create a plan
+          Create a plan yourself
         </button>
       </div>
 
       {plans.length === 0 ? (
         <EmptyState
           icon={<Layers className="w-7 h-7 text-ink-muted" />}
-          title="No plans yet"
-          description="Plans break a big goal into ordered steps your coach can track. Create one above, or ask your coach to build one during a chat."
-          action={hasCompanionContext
-            ? { label: `Chat with ${companionName ?? 'coach'}`, onClick: () => navigate(`/chat?companion=${companionId}`), variant: 'primary' }
-            : { label: 'Go to lobby', onClick: () => navigate('/lobby'), variant: 'primary' }
-          }
+          title={hasGoal ? 'No plans yet' : 'Set your goal first'}
+          description={hasGoal
+            ? 'A plan breaks your goal into ordered steps, each with a real number to hit. Your coach can lay it out with you right now.'
+            : 'Every plan serves a goal. Tell your coach what you want to achieve and by when, then build the plan together.'}
+          action={hasGoal
+            ? { label: 'Build my plan with my coach', onClick: () => onAsk(ASK_PLAN), variant: 'primary' }
+            : { label: 'Set my goal with my coach', onClick: () => onAsk(ASK_GOAL), variant: 'primary' }}
         />
       ) : (
         <>
@@ -984,7 +1111,7 @@ function PlansView({
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-amber-400/90 uppercase tracking-wider px-1">Proposed by your coach</h3>
               {proposedPlans.map(plan => (
-                <div key={plan.id} className="rounded-2xl border border-amber-400/25">
+                <div key={plan.id} className={`rounded-2xl border border-amber-400/25 ${planHighlighted(plan) ? HIGHLIGHT_CLASS : ''}`}>
                   <PlanCard
                     plan={plan}
                     expanded={expandedPlanId === plan.id || expandedPlanId === null}
@@ -1010,6 +1137,7 @@ function PlansView({
                 <PlanCard
                   key={plan.id}
                   plan={plan}
+                  highlighted={planHighlighted(plan)}
                   expanded={expandedPlanId === plan.id}
                   onToggleExpand={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
                   onStepToggle={onStepToggle}
@@ -1027,6 +1155,7 @@ function PlansView({
                 <PlanCard
                   key={plan.id}
                   plan={plan}
+                  highlighted={planHighlighted(plan)}
                   expanded={expandedPlanId === plan.id}
                   onToggleExpand={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
                   onStepToggle={onStepToggle}
@@ -1045,15 +1174,17 @@ function PlansView({
         onClose={() => setShowCreatePlan(false)}
         onCreate={onCreatePlan}
         defaultCompanionName={companionName}
+        goals={goals}
       />
     </div>
   );
 }
 
 function PlanCard({
-  plan, expanded, onToggleExpand, onStepToggle, onEditStep, onDelete, updatingId,
+  plan, expanded, onToggleExpand, onStepToggle, onEditStep, onDelete, updatingId, highlighted = false,
 }: {
   plan: CoachPlan;
+  highlighted?: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
   onStepToggle: (stepId: string, current: StepStatus, stepTitle: string) => void;
@@ -1082,7 +1213,7 @@ function PlanCard({
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className={`overflow-hidden ${highlighted ? HIGHLIGHT_CLASS : ''}`}>
       <button
         onClick={onToggleExpand}
         className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/[0.02] transition-colors"
@@ -1240,19 +1371,22 @@ function PlanCard({
 }
 
 function CreatePlanModal({
-  isOpen, onClose, onCreate, defaultCompanionName,
+  isOpen, onClose, onCreate, defaultCompanionName, goals,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (title: string, cadence: string | null, steps: { title: string; description?: string | null }[]) => void;
+  onCreate: (goalId: string, title: string, cadence: string | null, steps: { title: string; description?: string | null }[]) => void;
   defaultCompanionName?: string | null;
+  goals: CoachingGoal[];
 }) {
+  const [goalId, setGoalId] = useState('');
   const [title, setTitle] = useState('');
   const [cadence, setCadence] = useState('');
   const [steps, setSteps] = useState<string[]>(['', '']);
 
   useEffect(() => {
     if (!isOpen) {
+      setGoalId('');
       setTitle('');
       setCadence('');
       setSteps(['', '']);
@@ -1261,14 +1395,16 @@ function CreatePlanModal({
 
   if (!isOpen) return null;
 
+  const chosenGoalId = goalId || (goals.length === 1 ? goals[0].id : '');
+
   const handleSubmit = () => {
     const cleanTitle = title.trim();
-    if (!cleanTitle) return;
+    if (!cleanTitle || !chosenGoalId) return;
     const cleanSteps = steps
       .map(s => s.trim())
       .filter(s => s.length > 0)
       .map(s => ({ title: s, description: null }));
-    onCreate(cleanTitle, cadence.trim() || null, cleanSteps);
+    onCreate(chosenGoalId, cleanTitle, cadence.trim() || null, cleanSteps);
   };
 
   const updateStep = (idx: number, val: string) => {
@@ -1294,6 +1430,18 @@ function CreatePlanModal({
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label className="text-xs text-ink-muted mb-1.5 block">Goal this plan serves</label>
+            <select
+              value={chosenGoalId}
+              onChange={(e) => setGoalId(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/10 rounded-xl p-2.5 text-ink text-sm focus:outline-none focus:border-white/20 transition-all"
+            >
+              {goals.length !== 1 && <option value="">Choose a goal…</option>}
+              {goals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
+            </select>
+          </div>
+
           <div>
             <label className="text-xs text-ink-muted mb-1.5 block">Plan title</label>
             <input
@@ -1366,7 +1514,7 @@ function CreatePlanModal({
               variant="primary"
               size="sm"
               onClick={handleSubmit}
-              disabled={!title.trim()}
+              disabled={!title.trim() || !chosenGoalId}
             >
               Create Plan
             </Button>
