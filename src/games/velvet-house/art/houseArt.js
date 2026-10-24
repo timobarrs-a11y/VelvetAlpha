@@ -874,6 +874,13 @@ export function createHouseArt(ctx0, opts = {}) {
       else if (p.kind === 'smoke') circle(sx, sy, 4 + t * 13, `rgba(118,112,118,${(1 - t) * 0.26 * fadeIn})`);
       else if (p.kind === 'dust') circle(sx, sy, 1.5 + t * 5, `rgba(150,140,130,${(1 - t) * 0.3 * fadeIn})`);
       else if (p.kind === 'splash') circle(sx, sy, 1 + t * 1.6, `rgba(190,225,248,${(1 - t) * 0.55 * fadeIn})`);
+      else if (p.kind === 'leaf') {
+        // A tumbling leaf in autumn colours.
+        const spin = animT * (2 + p.seed * 3) + p.seed * 10, col = ['#C2410C', '#D97706', '#B45309', '#A16207'][Math.floor(p.seed * 4)];
+        ctx.globalAlpha = Math.min(1, (1 - t) * 3) * fadeIn;
+        ell(sx, sy, 2.6, 1.2 + Math.abs(Math.sin(spin)) * 0.9, col, null, spin);
+        ctx.globalAlpha = 1;
+      }
       else circle(sx, sy, 0.9 + p.seed * 0.8, `rgba(255,${150 + Math.round(p.seed * 90)},70,${(1 - t) * (0.6 + 0.4 * Math.sin(animT * 20 + p.seed * 30))})`);
     });
     ctx.globalCompositeOperation = 'source-over';
@@ -1035,6 +1042,33 @@ export function createHouseArt(ctx0, opts = {}) {
 
   const BOX_LABEL = { sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
 
+  // Just-placed furniture lands with a squash and a little bounce.
+  const placedAt = new Map();
+  function bouncy(o, draw) {
+    const at = placedAt.get(o.id);
+    if (at == null) return draw;
+    const u = (animT - at) / 0.5;
+    if (u < 0 || u >= 1) { if (u >= 1) placedAt.delete(o.id); return draw; }
+    const b = Math.sin(u * Math.PI * 2.5) * (1 - u);
+    return () => {
+      const T = T_OF(o), [cx, cy] = xf(o, T.W / 2, T.D / 2), [bx, by] = iso(cx, cy, 0);
+      ctx.save(); ctx.translate(bx, by); ctx.scale(1 + b * 0.07, 1 - b * 0.1); ctx.translate(-bx, -by);
+      draw();
+      ctx.restore();
+    };
+  }
+  function objectPlaced(id) {
+    const o = OBJS.find(x => x.id === id);
+    if (!o) return;
+    placedAt.set(id, animT);
+    const T = T_OF(o);
+    // A puff of dust where it lands.
+    for (let i = 0; i < 4; i++) {
+      const [x, y] = xf(o, T.W * (0.2 + 0.2 * i), i % 2 ? 0.05 : T.D - 0.05);
+      PFX.burst('dust', o.level, x, y, 0.02, 4);
+    }
+  }
+
   function objItems(o, items, t) {
     const parts = T_OF(o).parts(o), T = makeT(o);
     let maxSit = 0;
@@ -1046,7 +1080,7 @@ export function createHouseArt(ctx0, opts = {}) {
       let rect = w;
       if (p.cover) { key = maxSit + 0.05; rect = xrect(o, [0, 0, T_OF(o).W, T_OF(o).D]); }
       const draw = p.box ? () => T.box(p.box[0], p.box[1], p.box[2], p.box[3], p.box[4], p.box[5], typeof p.c === 'function' ? p.c(o) : p.c) : () => { if (gOn) G.billboard(iso((w[0] + w[2]) / 2, (w[1] + w[3]) / 2, 0)[1], ZH, MATERIAL.matte); p.fn(T, o, t); if (gOn) G.clearBase(); };
-      items.push({ x1: rect[0], y1: rect[1], x2: rect[2], y2: rect[3], key, d: draw });
+      items.push({ x1: rect[0], y1: rect[1], x2: rect[2], y2: rect[3], key, d: bouncy(o, draw) });
     });
   }
   function decals(level, t) { OBJS.forEach(o => { if (o.level !== level) return; const T = makeT(o); T_OF(o).parts(o).forEach(p => { if (p.decal) p.fn(T, o, t); }); }); }
@@ -1514,6 +1548,10 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.save();
     const lights = activeLights(lv);
     PFX.step(rdt, lv === 3 ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
+    // Fall: leaves blow across the yard from the trees' side.
+    if (lv === 3 && seasonIdx() === 2 && tier() !== 'low') {
+      for (let i = 0; i < 3; i++) PFX.emit('leaves' + i, 'leaf', 3, 1 + i * 3.2, 0.6 + (i % 2) * 2.4, 2.2 + i * 0.3, 1);
+    }
     const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && tier() !== 'low';
     if (deferred) { G.begin(W, H, Math.min((cv.width / W) * (tier() === 'high' ? 0.75 : 0.5), 1600 / W)); ctx = G.wrap(ctx0); gOn = true; }
     try {
@@ -1555,5 +1593,5 @@ export function createHouseArt(ctx0, opts = {}) {
     return toggleObjectLight(best.id);
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, TYPES, WTYPES };
 }

@@ -1,4 +1,4 @@
-export type ParticleKind = 'steam' | 'smoke' | 'ember' | 'dust' | 'splash';
+export type ParticleKind = 'steam' | 'smoke' | 'ember' | 'dust' | 'splash' | 'leaf';
 
 export interface Particle {
   kind: ParticleKind;
@@ -22,11 +22,14 @@ const SPECS: Record<ParticleKind, Spec> = {
   ember: { rate: 6, life: 1.2, rise: 1.1, spread: 0.25, gravity: 0.9, drag: 0.2 },
   dust: { rate: 14, life: 0.7, rise: 0.18, spread: 0.12, gravity: 0.4, drag: 0.9 },
   splash: { rate: 20, life: 0.5, rise: 0.9, spread: 0.16, gravity: 2.8, drag: 0.2 },
+  leaf: { rate: 0.6, life: 6, rise: 0.25, spread: 0.3, gravity: 0.12, drag: 0.15 },
 };
 
 export interface Particles {
   /** Call every frame while the source is active; emission is rate-limited per key. */
   emit(key: string, kind: ParticleKind, level: number, x: number, y: number, z: number, strength?: number): void;
+  /** A one-off puff of n particles (furniture landing, a box dropped). */
+  burst(kind: ParticleKind, level: number, x: number, y: number, z: number, n: number): void;
   step(dt: number, wind: [number, number], density: number): void;
   forEach(level: number, fn: (p: Particle, t: number) => void): void;
   readonly count: number;
@@ -51,6 +54,17 @@ export function createParticles(max = 360, rand: () => number = Math.random): Pa
         });
       }
       acc.set(key, Math.min(a, 1));
+    },
+    burst(kind, level, x, y, z, n) {
+      const s = SPECS[kind];
+      for (let i = 0; i < n && list.length < max; i++) {
+        const ang = rand() * Math.PI * 2, r = (0.4 + rand()) * s.spread * 2.5;
+        list.push({
+          kind, level, x: x + Math.cos(ang) * r * 0.3, y: y + Math.sin(ang) * r * 0.3, z,
+          vx: Math.cos(ang) * r * 2, vy: Math.sin(ang) * r * 2, vz: s.rise * (0.5 + rand() * 0.8),
+          age: 0, life: s.life * (0.8 + rand() * 0.6), seed: rand(),
+        });
+      }
     },
     step(frameDt, wind, dens) {
       dt = Math.min(frameDt, 0.1);

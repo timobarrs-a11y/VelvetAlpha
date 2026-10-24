@@ -42,6 +42,8 @@ export interface HouseFrame {
 
 export interface HouseArt {
   render(frame: HouseFrame): void;
+  /** Furniture was just set down: it lands with a bounce and a puff of dust. */
+  objectPlaced(id: string): void;
   /** Restores paint, wallpaper, floors, wall decor, yard and household details from an original save. */
   applySave(save: unknown): void;
   /** Sets the paint color for a floor level. */

@@ -391,12 +391,18 @@ function boot(): void {
     btn('pause').textContent = view.paused ? 'Play' : 'Pause';
     people.forEach((p) => personEl(p.id).setAttribute('aria-pressed', String(view.follow === p.id)));
   };
+  // Changing floors or turning the view crossfades instead of snapping.
+  const softCut = (): void => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    canvas.animate?.([{ opacity: 0.35 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
+  };
   const setLevel = (lv: number, keepFollow = false): void => {
+    if (lv !== view.level) softCut();
     view.level = lv;
     if (!keepFollow) view.follow = null;
     syncControls();
   };
-  const rotate = (): void => { view.rot = (view.rot + 1) % 4; };
+  const rotate = (): void => { softCut(); view.rot = (view.rot + 1) % 4; };
   const cycleWalls = (): void => { view.wallIdx = (view.wallIdx + 1) % WALL_MODES.length; syncControls(); };
   const togglePause = (): void => { view.paused = !view.paused; syncControls(); };
   const toggleFollow = (id: AgentId): void => {
@@ -483,6 +489,7 @@ function boot(): void {
         heldObj.x = Math.max(0, Math.min(10, wx));
         heldObj.y = Math.max(0, Math.min(8, wy));
         log(`Moved the ${TYPES[heldObj.type]?.name ?? 'furniture'}.`);
+        art.objectPlaced(heldObj.id);
         heldObj = null;
         heldOrig = null;
         return;
