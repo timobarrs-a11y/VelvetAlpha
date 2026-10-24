@@ -656,3 +656,13 @@
     font-family: var(--shell-display-font, 'Space Grotesk', sans-serif);
   }
 }
+
+/* Phones zoom into any text field under 16px when it's tapped, which shifts
+   the whole app sideways. Keep fields at 16px on small screens. */
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

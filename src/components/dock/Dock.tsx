@@ -14,9 +14,9 @@ import { MESSAGES_KEY, aiKey, markCoachDismissed, useDock, type DockWindow } fro
 const HIDDEN_PATHS = ['/splash', '/signin', '/signup', '/onboarding'];
 const SURFACE_LABEL = { progress: 'Progress', plans: 'Plans', commitments: 'Commitments', library: 'Library' } as const;
 
-/** How many windows fit side by side: three on wide screens, one on phones. */
+/** How many windows fit side by side: three on wide screens, two on tablets and landscape phones, one on portrait phones. */
 function useWindowCapacity(): number {
-  const read = () => (typeof window === 'undefined' ? 1 : window.innerWidth >= 1280 ? 3 : window.innerWidth >= 900 ? 2 : 1);
+  const read = () => (typeof window === 'undefined' ? 1 : window.innerWidth >= 1280 ? 3 : window.innerWidth >= 700 ? 2 : 1);
   const [capacity, setCapacity] = useState(read);
   useEffect(() => {
     const onResize = () => setCapacity(read());
@@ -251,7 +251,7 @@ export function Dock() {
 
       {/* The bar */}
       {/* Same warm white as the top bar: the two read as one frame around the page. */}
-      <div ref={barRef} className="relative flex h-[52px] items-center gap-2 border-t border-[#f5cfe0] bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5] px-2 text-[#2a1424] sm:px-3">
+      <div ref={barRef} className="relative flex h-[52px] items-center [@media(max-height:500px)]:h-[44px] gap-2 border-t border-[#f5cfe0] bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5] px-2 text-[#2a1424] sm:px-3">
 
         <div className="relative">
           <AnimatePresence>
