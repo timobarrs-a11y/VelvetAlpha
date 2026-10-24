@@ -73,7 +73,7 @@ import {
 
 type View = 'friends' | 'conversations' | 'discover' | 'requests' | 'settings' | 'chat' | 'vr-chat';
 
-interface ChatTarget {
+export interface ChatTarget {
   conversationId: string;
   peerId: string;
   peerName: string;
@@ -164,7 +164,7 @@ function relativeTime(iso: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function MessagingOverlay({ onClose, onMinimize, embedded = false, initialView = 'conversations', initialFriendCode = null }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean; initialView?: View; initialFriendCode?: string | null }) {
+export function MessagingOverlay({ onClose, onMinimize, embedded = false, initialView = 'conversations', initialFriendCode = null, onOpenChat }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean; initialView?: View; initialFriendCode?: string | null; /** In the dock, chats open as their own window instead of inside Messages. */ onOpenChat?: (target: ChatTarget) => void }) {
   const { user } = useAuth();
   const [view, setView] = useState<View>(initialView);
   const [friends, setFriends] = useState<FriendPeer[]>([]);
@@ -238,12 +238,17 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
         setError('Could not open conversation');
         return;
       }
-      setChatTarget({
+      const target = {
         conversationId: convId,
         peerId: peer.user_id,
         peerName: peer.display_name,
         peerAvatarUrl: peer.avatar_url,
-      });
+      };
+      if (onOpenChat) {
+        onOpenChat(target);
+        return;
+      }
+      setChatTarget(target);
       setView('chat');
       await markConversationRead(convId).catch(() => {});
       // Refresh conversation list so unread counts update.
@@ -251,7 +256,7 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to open chat');
     }
-  }, [user]);
+  }, [user, onOpenChat]);
 
   const handleSendRequest = useCallback(async (otherUserId: string, introMessage?: string) => {
     setError(null);
@@ -263,13 +268,15 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
     }
   }, [refreshAll]);
 
-  const handleRespond = useCallback(async (friendshipId: string, accept: boolean) => {
+  const handleRespond = useCallback(async (friendshipId: string, accept: boolean): Promise<boolean> => {
     setError(null);
     try {
       await respondToFriendRequest(friendshipId, accept);
       await refreshAll();
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to respond');
+      return false;
     }
   }, [refreshAll]);
 
@@ -699,7 +706,11 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
               <RequestsView
                 incoming={incoming}
                 outgoing={outgoing}
-                onAccept={(id) => handleRespond(id, true)}
+                onAccept={async (id) => {
+                  // Accepting opens the chat with them straight away.
+                  const peer = incoming.find(r => r.friendship_id === id);
+                  if (await handleRespond(id, true) && peer) await handleOpenConversation(peer);
+                }}
                 onDecline={(id) => handleRespond(id, false)}
                 onBlock={(uid) => handleBlock(uid)}
                 onCancel={handleCancel}
@@ -1428,7 +1439,7 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
 // ---------------------------------------------------------------------------
 // Chat view
 // ---------------------------------------------------------------------------
-function ChatView({ target, onUnfriend }: { target: ChatTarget; onUnfriend: () => void }) {
+export function ChatView({ target, onUnfriend }: { target: ChatTarget; onUnfriend: () => void }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [input, setInput] = useState('');

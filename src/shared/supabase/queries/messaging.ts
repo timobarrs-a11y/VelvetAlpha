@@ -300,7 +300,7 @@ export async function getOutgoingRequests(): Promise<FriendPeer[]> {
  * Names for people the user is connected to who have no messenger card, from
  * their member profile or account nickname (server checks the connection).
  */
-async function displayNames(userIds: string[]): Promise<Map<string, string>> {
+export async function displayNames(userIds: string[]): Promise<Map<string, string>> {
   if (userIds.length === 0) return new Map();
   const { data, error } = await supabase.rpc('im_display_names', { p_user_ids: userIds });
   if (error || !Array.isArray(data)) return new Map();
