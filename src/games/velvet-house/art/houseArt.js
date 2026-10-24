@@ -1452,6 +1452,9 @@ export function createHouseArt(ctx0, opts = {}) {
       ctx.lineTo(kz[0] + 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.lineTo(kz[0] - 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.closePath(); ctx.fill();
     }
     limb(hip[0] + shift, hip[1], sh[0] + shift * 1.4, sh[1], L.top, 11);
+    // Fold shading: a soft shadow down the far side of the shirt, a highlight on the near side.
+    limb(hip[0] + shift + 3.2, hip[1], sh[0] + shift * 1.4 + 3.2, sh[1] + 1, shade(L.top, -0.18), 3.2);
+    limb(hip[0] + shift - 3, hip[1] - 1, sh[0] + shift * 1.4 - 3, sh[1] + 2, shade(L.top, 0.14), 1.6);
     const pat = L.topStyle && L.topStyle !== 'tee' ? L.topStyle : null;
     if (pat && f.front) {
       const tx = hip[0] + shift, ty = hip[1], tx2 = sh[0] + shift * 1.4, ty2 = sh[1];
@@ -1511,6 +1514,9 @@ export function createHouseArt(ctx0, opts = {}) {
     circle(hd[0] + shift * 1.6, hd[1] - 5, 5.6, L.skin);
     if (f.front) {
       ell(hd[0] + shift * 1.6 + sway * 0.3, hd[1] - 9, 6, 3.6, L.hair);
+      // A sheen on the hair and a touch of warmth on the cheeks.
+      ell(hd[0] + shift * 1.6 + sway * 0.3 - 2, hd[1] - 10, 2.4, 1, shade(L.hair, 0.28));
+      ctx.globalAlpha = 0.18; [-1, 1].forEach(sd => circle(hd[0] + shift * 1.6 + f.flip * 1.2 + sd * 3.2, hd[1] - 2.6, 1.3, '#E0607A')); ctx.globalAlpha = 1;
       ctx.fillStyle = '#241B25';
       const down = rig?.headDown ? 1.3 : rig?.lookUp ? -1.2 : 0;
       const lids = c.expr === 'tired' || rig?.yawn ? 0.55 : 1;
@@ -1593,5 +1599,5 @@ export function createHouseArt(ctx0, opts = {}) {
     return toggleObjectLight(best.id);
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, project: (x, y, z = 0) => iso(x, y, z), TYPES, WTYPES };
 }

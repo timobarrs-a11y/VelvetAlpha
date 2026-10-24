@@ -287,23 +287,60 @@ function boot(): void {
       h = Math.max(1, Math.round((w * VIEW_H) / VIEW_W));
     }
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-    const panX = isNarrow ? (w - Math.round(box.width * ratio)) / 2 : 0;
-    ctx.setTransform(w / VIEW_W, 0, 0, h / VIEW_H, -panX * (w / VIEW_W) / w, 0);
+    basePan = isNarrow ? -((w - Math.round(box.width * ratio)) / 2) * (w / VIEW_W) / w : 0;
+    applyCamera(0);
   };
-  const updatePan = (): void => {
-    const box = canvas.getBoundingClientRect();
-    if (box.width >= 560) return;
+
+  // Camera: zoom and focus on top of the fitted view. Following someone frames
+  // them in a close-up (a two-shot when they're with the other person);
+  // otherwise scroll or pinch to zoom, drag to pan, double-tap to reset.
+  let basePan = 0;
+  const cam = { z: 1, fx: VIEW_W / 2, fy: VIEW_H / 2, tz: 1, tfx: VIEW_W / 2, tfy: VIEW_H / 2 };
+  const CAM_MAX = 2.6;
+  function clampFocus(z: number, fx: number, fy: number): [number, number] {
+    const hw = VIEW_W / (2 * z), hh = VIEW_H / (2 * z);
+    return [Math.max(hw, Math.min(VIEW_W - hw, fx)), Math.max(hh, Math.min(VIEW_H - hh, fy))];
+  }
+  function cameraShot(): void {
     const followed = view.follow && people.find((p) => p.id === view.follow);
-    if (followed) {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const screenW = box.width * dpr;
-      const gameW = (box.height * dpr * VIEW_W) / VIEW_H;
-      const maxPan = Math.max(0, gameW - screenW);
-      const target = Math.max(0, Math.min(maxPan, (followed.x / 100) * maxPan));
-      const w = canvas.width, h = canvas.height;
-      ctx.setTransform(w / VIEW_W, 0, 0, h / VIEW_H, -target * (w / VIEW_W) / w, 0);
+    if (!followed || followed.level !== view.level) return;
+    const other = people.find((p) => p.id !== followed.id);
+    const together = other && other.level === followed.level && followed.task && SOCIAL_ACTS.has(followed.task.act);
+    const [ax, ay] = art.project(followed.x, followed.y, 0.7);
+    if (together && other) {
+      const [bx, by] = art.project(other.x, other.y, 0.7);
+      cam.tz = 1.7; cam.tfx = (ax + bx) / 2; cam.tfy = (ay + by) / 2;
+    } else {
+      cam.tz = 2.1; cam.tfx = ax; cam.tfy = ay;
     }
-  };
+  }
+  function applyCamera(frameDt: number): void {
+    cameraShot();
+    const k = frameDt > 0 ? Math.min(1, frameDt * 6) : 1;
+    cam.z += (cam.tz - cam.z) * k;
+    [cam.tfx, cam.tfy] = clampFocus(cam.tz, cam.tfx, cam.tfy);
+    cam.fx += (cam.tfx - cam.fx) * k; cam.fy += (cam.tfy - cam.fy) * k;
+    [cam.fx, cam.fy] = clampFocus(cam.z, cam.fx, cam.fy);
+    const w = canvas.width, h = canvas.height, sx = (w / VIEW_W) * cam.z, sy = (h / VIEW_H) * cam.z;
+    ctx!.setTransform(sx, 0, 0, sy, w / 2 - sx * cam.fx + basePan, h / 2 - sy * cam.fy);
+  }
+  /** A pointer position in game view coordinates, whatever the zoom. */
+  function toView(clientX: number, clientY: number): [number, number] {
+    const rect = canvas.getBoundingClientRect();
+    const px = ((clientX - rect.left) / rect.width) * canvas.width, py = ((clientY - rect.top) / rect.height) * canvas.height;
+    const p = ctx!.getTransform().inverse().transformPoint(new DOMPoint(px, py));
+    return [p.x, p.y];
+  }
+  function zoomAt(clientX: number, clientY: number, factor: number): void {
+    if (view.follow) toggleFollow(view.follow); // taking the camera back from a follow
+    const [px, py] = toView(clientX, clientY);
+    const nz = Math.max(1, Math.min(CAM_MAX, cam.tz * factor));
+    // Keep the spot under the finger or cursor where it is.
+    cam.tfx = px - (px - cam.tfx) * (cam.tz / nz);
+    cam.tfy = py - (py - cam.tfy) * (cam.tz / nz);
+    cam.tz = nz;
+  }
+  function resetCamera(): void { cam.tz = 1; cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
   new ResizeObserver(fit).observe(canvas);
   fit();
 
@@ -476,9 +513,8 @@ function boot(): void {
 
   // Canvas click → interaction or arrange
   canvas.addEventListener('click', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const sx = ((e.clientX - rect.left) / rect.width) * VIEW_W;
-    const sy = ((e.clientY - rect.top) / rect.height) * VIEW_H;
+    if (suppressClick) { suppressClick = false; return; }
+    const [sx, sy] = toView(e.clientX, e.clientY);
 
     if (arranging) {
       // Click in arrange mode: pick up or place furniture
@@ -531,14 +567,46 @@ function boot(): void {
   // Mouse move in arrange mode: drag held object
   canvas.addEventListener('mousemove', (e) => {
     if (!arranging || !heldObj) return;
-    const rect = canvas.getBoundingClientRect();
-    const sx = ((e.clientX - rect.left) / rect.width) * VIEW_W;
-    const sy = ((e.clientY - rect.top) / rect.height) * VIEW_H;
+    const [sx, sy] = toView(e.clientX, e.clientY);
     const wx = Math.round(((sx - 288) / 32 + (sy - 128) / 16) / 2 * 4) / 4;
     const wy = Math.round(((sy - 128) / 16 - (sx - 288) / 32) / 2 * 4) / 4;
     heldObj.x = Math.max(0, Math.min(10, wx));
     heldObj.y = Math.max(0, Math.min(8, wy));
   });
+
+  // Zoom and pan: wheel, pinch, drag (when zoomed), double-tap to reset.
+  let suppressClick = false;
+  const touches = new Map<number, { x: number; y: number }>();
+  let dragFrom: { x: number; y: number; fx: number; fy: number } | null = null;
+  let pinchFrom = 0;
+  canvas.style.touchAction = 'none';
+  canvas.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+  canvas.addEventListener('dblclick', () => { if (view.follow) toggleFollow(view.follow); resetCamera(); });
+  canvas.addEventListener('pointerdown', (e) => {
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 1) dragFrom = { x: e.clientX, y: e.clientY, fx: cam.tfx, fy: cam.tfy };
+    if (touches.size === 2) { const [a, b] = [...touches.values()]; pinchFrom = Math.hypot(a.x - b.x, a.y - b.y); dragFrom = null; }
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!touches.has(e.pointerId)) return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2 && pinchFrom > 0) {
+      const [a, b] = [...touches.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+      zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinchFrom);
+      pinchFrom = d; suppressClick = true;
+    } else if (dragFrom && cam.tz > 1.01 && !(arranging && heldObj)) {
+      const dx = e.clientX - dragFrom.x, dy = e.clientY - dragFrom.y;
+      if (Math.hypot(dx, dy) > 6) {
+        const rect = canvas.getBoundingClientRect(), k = VIEW_W / rect.width / cam.tz;
+        if (view.follow) toggleFollow(view.follow);
+        cam.tfx = dragFrom.fx - dx * k; cam.tfy = dragFrom.fy - dy * k;
+        suppressClick = true;
+      }
+    }
+  });
+  const lift = (e: PointerEvent) => { touches.delete(e.pointerId); if (touches.size < 2) pinchFrom = 0; if (touches.size === 0) dragFrom = null; };
+  canvas.addEventListener('pointerup', lift);
+  canvas.addEventListener('pointercancel', lift);
 
   function findObjectAt(sx: number, sy: number): ObjectInstance | null {
     // Simple hit test: find the nearest object on the current level
@@ -993,6 +1061,7 @@ function boot(): void {
       const interpMinutes = prevSim.minutes + (simCache.minutes - prevSim.minutes) * alpha;
       const cacheKey = { level: view.level, rot: view.rot, wallMode: WALL_MODES[view.wallIdx].mode, zoomBucket: Math.floor(canvas.width / 400) };
       if (layerCache.keyChanged(cacheKey)) fit();
+      applyCamera(frameDt);
 
       art.render({
         level: view.level, rot: view.rot, minutes: interpMinutes, day: world.day,
@@ -1011,7 +1080,6 @@ function boot(): void {
         const sv = servings(world.household);
         el('fridge').textContent = sv === 0 ? 'Fridge empty' : `${sv} meals`;
         refreshPeople();
-        updatePan();
         refreshDrawer();
       }
     },
