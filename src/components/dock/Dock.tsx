@@ -405,7 +405,15 @@ export function Dock() {
                 aria-pressed={isShown}
                 title={`${c.custom_name}${isCoach ? ' · coach' : ''}${count ? ` · ${count} new` : ''}`}
               >
-                <span className="max-w-[140px] truncate">{c.custom_name}</span>
+                {/* A small label pill above the name, so coach vs companion is obvious at a glance. */}
+                <span className="flex min-w-0 flex-col items-start leading-none">
+                  <span className={`mb-0.5 rounded-full px-1.5 py-[2px] text-[8px] font-bold uppercase tracking-wider ${
+                    isCoach ? 'bg-emerald-100 text-emerald-700' : 'bg-pink-100 text-pink-700'
+                  }`}>
+                    {isCoach ? 'Coach' : 'Companion'}
+                  </span>
+                  <span className="max-w-[140px] truncate text-xs">{c.custom_name}</span>
+                </span>
                 {onPage && <span className="hidden font-normal text-emerald-600 sm:inline">· {SURFACE_LABEL[dock.coachSurface!.surface]}</span>}
                 {!isShown && count > 0 && (
                   <motion.span
