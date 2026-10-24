@@ -108,12 +108,12 @@ export function createDrawer(cb: DrawerCallbacks): {
     el.dataset.open = pg;
     const titleEl = el.querySelector('[data-title]')!;
     titleEl.textContent = pg ? PAGE_TITLES[pg] : '';
-    dock.querySelectorAll('button').forEach(b => {
+    dock.querySelectorAll<HTMLButtonElement>('button[data-open]').forEach(b => {
       b.setAttribute('aria-pressed', String(b.dataset.open === pg));
     });
   }
 
-  dock.querySelectorAll('button').forEach(b => {
+  dock.querySelectorAll<HTMLButtonElement>('button[data-open]').forEach(b => {
     b.addEventListener('click', () => {
       const pg = b.dataset.open as DrawerPage;
       openPage(currentPage === pg ? '' : pg);

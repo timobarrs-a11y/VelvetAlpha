@@ -336,6 +336,22 @@ function boot(): void {
   });
   stage.appendChild(drawer.el);
   stage.appendChild(drawer.dock);
+
+  // Who's home (needs and what they're doing) lives behind a People tab in the
+  // bottom bar instead of covering the house; it opens above the bar.
+  const peopleEl = app.querySelector<HTMLElement>('.vh-people')!;
+  peopleEl.hidden = true;
+  const peopleBtn = document.createElement('button');
+  peopleBtn.type = 'button';
+  peopleBtn.dataset.people = '';
+  peopleBtn.textContent = 'People';
+  peopleBtn.setAttribute('aria-pressed', 'false');
+  peopleBtn.addEventListener('click', () => {
+    const show = peopleEl.hidden;
+    peopleEl.hidden = !show;
+    peopleBtn.setAttribute('aria-pressed', String(show));
+  });
+  drawer.dock.prepend(peopleBtn);
   stage.appendChild(townSign);
 
   // UI: Dialogue

@@ -18,6 +18,7 @@ import {
   Minus,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
+import { FriendCodeCard } from './FriendCodeCard';
 import { useAuth } from '../auth/AuthProvider';
 import {
   getFriends,
@@ -162,7 +163,7 @@ function relativeTime(iso: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function MessagingOverlay({ onClose, onMinimize, embedded = false, initialView = 'conversations' }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean; initialView?: View }) {
+export function MessagingOverlay({ onClose, onMinimize, embedded = false, initialView = 'conversations', initialFriendCode = null }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean; initialView?: View; initialFriendCode?: string | null }) {
   const { user } = useAuth();
   const [view, setView] = useState<View>(initialView);
   const [friends, setFriends] = useState<FriendPeer[]>([]);
@@ -572,6 +573,14 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
 
           {loading && view !== 'chat' && (
             <div className="flex items-center justify-center py-12 text-ink-muted text-xs">Loading...</div>
+          )}
+
+          {(view === 'conversations' || view === 'friends') && (
+            <FriendCodeCard
+              initialCode={initialFriendCode}
+              onChanged={refreshAll}
+              onOpenChat={(peer) => handleOpenConversation({ user_id: peer.user_id, display_name: peer.display_name, avatar_url: peer.avatar_url })}
+            />
           )}
 
           {view === 'conversations' && (
