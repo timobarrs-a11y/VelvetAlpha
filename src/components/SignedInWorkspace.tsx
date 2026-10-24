@@ -45,6 +45,8 @@ import { useCustomization } from '../hooks/useCustomization';
 import { buildWallpaperMeta } from '../services/wallpaperService';
 import { useAccess } from '../hooks/useAccess';
 import { LockScreen } from './LockScreen';
+import { SubscriptionBanner } from './SubscriptionBanner';
+import { useAudioScene } from '../hooks/useAudioScene';
 
 interface SignedInWorkspaceProps {
   children: ReactNode;
@@ -73,27 +75,18 @@ function WorkspaceToolbar({
   available,
   onToggleAvailable,
   onOpenMobileNav,
+  subscriptionInfo,
 }: {
   available: boolean;
   onToggleAvailable: () => void;
   onOpenMobileNav: () => void;
+  subscriptionInfo: LobbyData['subscriptionInfo'];
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return window.localStorage.getItem('velvet.workspace.sound') !== 'off';
-  });
+  const { muted, toggleMute } = useAudioScene();
 
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Your space';
-
-  const toggleSound = () => {
-    setSoundEnabled(enabled => {
-      const nextEnabled = !enabled;
-      window.localStorage.setItem('velvet.workspace.sound', nextEnabled ? 'on' : 'off');
-      return nextEnabled;
-    });
-  };
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -133,6 +126,9 @@ function WorkspaceToolbar({
       </div>
 
       <div className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+        {subscriptionInfo && (
+          <SubscriptionBanner tier={subscriptionInfo.tier} messagesRemaining={subscriptionInfo.messagesRemaining} compact />
+        )}
         <button
           type="button"
           onClick={onToggleAvailable}
@@ -149,12 +145,12 @@ function WorkspaceToolbar({
         </button>
         <button
           type="button"
-          onClick={toggleSound}
+          onClick={toggleMute}
           className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 transition-colors hover:bg-white/8 text-white/60"
-          aria-label={soundEnabled ? 'Mute workspace sounds' : 'Enable workspace sounds'}
-          title={soundEnabled ? 'Mute workspace sounds' : 'Enable workspace sounds'}
+          aria-label={muted ? 'Unmute music' : 'Mute music'}
+          title={muted ? 'Unmute music' : 'Mute music'}
         >
-          {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </button>
         <button
           type="button"
@@ -388,7 +384,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   return (
     <div className="h-screen overflow-hidden bg-[#070914] p-1.5 sm:p-2.5 lg:p-4">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
-        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} />
+        <WorkspaceToolbar available={available} onToggleAvailable={toggleAvailable} onOpenMobileNav={() => setMobileNavOpen(true)} subscriptionInfo={lobby.subscriptionInfo} />
         <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
           <WorkspaceNavigation collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
           <main className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/8">{children}</main>
