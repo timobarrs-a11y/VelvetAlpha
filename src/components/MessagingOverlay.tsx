@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { FriendCodeCard } from './FriendCodeCard';
+import { ChatFunPicker } from './chat/ChatFunPicker';
+import { SmilieText } from './community/SmilieText';
 import { useAuth } from '../auth/AuthProvider';
 import {
   getFriends,
@@ -29,6 +31,8 @@ import {
   getConversationList,
   getMessages,
   sendMessage as sendDM,
+  doodleSrc,
+  messagePreview,
   markConversationRead,
   getOrCreateConversation,
   sendFriendRequest,
@@ -794,7 +798,7 @@ function ConversationsView({
             </div>
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs text-ink-muted truncate">
-                {c.last_message ?? 'No messages yet'}
+                {c.last_message ? messagePreview(c.last_message) : 'No messages yet'}
               </p>
               {c.unread_count > 0 && (
                 <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -1628,7 +1632,7 @@ export function ChatView({ target, onUnfriend }: { target: ChatTarget; onUnfrien
                       : 'bg-white/8 text-ink rounded-bl-md border border-white/8'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                  {doodleSrc(m.content) ? <img src={doodleSrc(m.content)!} alt="Doodle" className="w-48 max-w-full rounded-lg bg-white" /> : <SmilieText text={m.content} className="whitespace-pre-wrap break-words" smilieSize={24} />}
                   <p
                     className={`text-[9px] mt-0.5 flex items-center gap-1 ${
                       mine ? 'text-white/70 justify-end' : 'text-ink-muted'
@@ -1678,6 +1682,7 @@ export function ChatView({ target, onUnfriend }: { target: ChatTarget; onUnfrien
         >
           <Users className="w-4 h-4" />
         </button>
+        <ChatFunPicker onInsert={(t) => handleInput(input + (input && !input.endsWith(' ') ? ' ' : '') + t + ' ')} />
         <input
           value={input}
           onChange={(e) => handleInput(e.target.value)}

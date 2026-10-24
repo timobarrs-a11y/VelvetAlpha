@@ -26,6 +26,7 @@ vi.mock('../../../shared/supabase/queries/messaging', () => ({
   getConversationList: vi.fn(async () => [{ unread_count: 2 }]),
   getIncomingRequests: vi.fn(async () => []),
   setOnline: vi.fn(async () => {}),
+  messagePreview: (t: string) => t,
   displayNames: vi.fn(async (ids: string[]) => new Map(ids.map(id => [id, 'Leah']))),
   getOrCreateConversation: vi.fn(async () => 'c1'),
 }));
