@@ -637,9 +637,28 @@ export const DOODLE_PREFIX = '[doodle]';
 export function doodleSrc(content: string): string | null {
   return content.startsWith(DOODLE_PREFIX + 'data:image/') ? content.slice(DOODLE_PREFIX.length) : null;
 }
+/** Game invites travel as "[game:<id>] <text>"; the chat shows them as a Play card. */
+export type FriendGameId = 'checkers' | 'draw' | 'rps' | 'paint';
+export const FRIEND_GAMES: Record<FriendGameId, { icon: string; label: string }> = {
+  draw: { icon: '🎨', label: 'Draw & Guess' },
+  paint: { icon: '🖌️', label: 'Doodle together' },
+  rps: { icon: '✊', label: 'Rock Paper Scissors' },
+  checkers: { icon: '♟️', label: 'Checkers' },
+};
+export function gameInvite(game: FriendGameId): string {
+  return `[game:${game}] ${FRIEND_GAMES[game].icon} wants to play ${FRIEND_GAMES[game].label}!`;
+}
+export function parseGameInvite(content: string): FriendGameId | null {
+  const m = /^\[game:(checkers|draw|rps|paint)\]/.exec(content);
+  return m ? (m[1] as FriendGameId) : null;
+}
+
 /** A message as one line, for previews and popups. */
 export function messagePreview(content: string): string {
-  return doodleSrc(content) ? 'sent you a doodle 🎨' : content;
+  if (doodleSrc(content)) return 'sent you a doodle 🎨';
+  const game = parseGameInvite(content);
+  if (game) return `wants to play ${FRIEND_GAMES[game].label} ${FRIEND_GAMES[game].icon}`;
+  return content;
 }
 
 export async function sendMessage(conversationId: string, content: string): Promise<DirectMessage | null> {

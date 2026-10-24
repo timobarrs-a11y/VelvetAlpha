@@ -27,6 +27,10 @@ vi.mock('../../../shared/supabase/queries/messaging', () => ({
   getIncomingRequests: vi.fn(async () => []),
   setOnline: vi.fn(async () => {}),
   messagePreview: (t: string) => t,
+  parseGameInvite: () => null,
+  FRIEND_GAMES: { draw: { icon: 'd', label: 'Draw' }, paint: { icon: 'p', label: 'Paint' }, rps: { icon: 'r', label: 'RPS' }, checkers: { icon: 'c', label: 'Checkers' } },
+  gameInvite: () => '',
+  sendMessage: vi.fn(async () => null),
   displayNames: vi.fn(async (ids: string[]) => new Map(ids.map(id => [id, 'Leah']))),
   getOrCreateConversation: vi.fn(async () => 'c1'),
 }));
@@ -118,7 +122,7 @@ beforeEach(() => {
 describe('Dock', () => {
   it('opens a companion from its chat head on their existing thread, alongside Messages', async () => {
     renderDock();
-    fireEvent.click(screen.getByTitle('Messages with friends'));
+    fireEvent.click(screen.getByTitle('Friends HQ'));
     fireEvent.click(screen.getByTitle('Andre'));
     expect(await screen.findByText('friends inbox')).toBeTruthy();
     expect(screen.getByText('Earlier with buddy')).toBeTruthy();
@@ -130,7 +134,7 @@ describe('Dock', () => {
     fireEvent.click(screen.getByTitle('Kelicia'));
     fireEvent.click(screen.getByTitle('Coach Kim · coach'));
     fireEvent.click(screen.getByTitle('Andre'));
-    fireEvent.click(screen.getByTitle('Messages with friends'));
+    fireEvent.click(screen.getByTitle('Friends HQ'));
     await screen.findByText('friends inbox');
     expect(screen.queryByText('Earlier with friendly')).toBeNull();
     expect(screen.getByText('Earlier with coach')).toBeTruthy();

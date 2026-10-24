@@ -17,6 +17,7 @@ import {
   EyeOff,
   Minus,
   ChevronDown,
+  Gamepad2,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { FriendCodeCard } from './FriendCodeCard';
@@ -33,6 +34,10 @@ import {
   sendMessage as sendDM,
   doodleSrc,
   messagePreview,
+  parseGameInvite,
+  gameInvite,
+  FRIEND_GAMES,
+  type FriendGameId,
   markConversationRead,
   getOrCreateConversation,
   sendFriendRequest,
@@ -75,7 +80,7 @@ import {
   type VRMessage,
 } from '../shared/supabase/queries/velvetRope';
 
-type View = 'friends' | 'conversations' | 'discover' | 'requests' | 'settings' | 'chat' | 'vr-chat';
+type View = 'friends' | 'games' | 'conversations' | 'discover' | 'requests' | 'settings' | 'chat' | 'vr-chat';
 
 export interface ChatTarget {
   conversationId: string;
@@ -168,7 +173,7 @@ function relativeTime(iso: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function MessagingOverlay({ onClose, onMinimize, embedded = false, initialView = 'conversations', initialFriendCode = null, onOpenChat }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean; initialView?: View; initialFriendCode?: string | null; /** In the dock, chats open as their own window instead of inside Messages. */ onOpenChat?: (target: ChatTarget) => void }) {
+export function MessagingOverlay({ onClose, onMinimize, embedded = false, initialView = 'conversations', initialFriendCode = null, onOpenChat }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean; initialView?: View; initialFriendCode?: string | null; /** In the dock, chats open as their own window instead of inside Messages; `game` opens that game and invites them. */ onOpenChat?: (target: ChatTarget, game?: FriendGameId) => void }) {
   const { user } = useAuth();
   const [view, setView] = useState<View>(initialView);
   const [friends, setFriends] = useState<FriendPeer[]>([]);
@@ -233,7 +238,7 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
     return () => { clearInterval(poll); supabase.removeChannel(channel); };
   }, [user]);
 
-  const handleOpenConversation = useCallback(async (peer: { user_id: string; display_name: string; avatar_url: string | null }) => {
+  const handleOpenConversation = useCallback(async (peer: { user_id: string; display_name: string; avatar_url: string | null }, game?: FriendGameId) => {
     if (!user) return;
     setError(null);
     try {
@@ -249,9 +254,11 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
         peerAvatarUrl: peer.avatar_url,
       };
       if (onOpenChat) {
-        onOpenChat(target);
+        onOpenChat(target, game);
         return;
       }
+      // Outside the dock there is no game window; the invite still lands in the chat.
+      if (game) await sendDM(convId, gameInvite(game)).catch(() => null);
       setChatTarget(target);
       setView('chat');
       await markConversationRead(convId).catch(() => {});
@@ -504,10 +511,11 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
               {view === 'chat' && chatTarget ? chatTarget.peerName
                 : view === 'vr-chat' && vrChatTarget ? vrChatTarget.peerHandle
                 : view === 'friends' ? 'Buddy List'
+                : view === 'games' ? 'Games'
                 : view === 'discover' ? 'Discover people'
                 : view === 'requests' ? 'Friend requests'
                 : view === 'settings' ? 'Your discovery card'
-                : 'Messages'}
+                : 'Friends HQ'}
             </h2>
             <p className="text-[10px] text-ink-muted">
               {view === 'chat' && chatTarget ? 'Instant Messenger'
@@ -538,6 +546,7 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
           <div className="flex items-center gap-1 px-2 py-2 border-b border-white/8 flex-shrink-0 overflow-x-auto">
             <TabButton id="conversations" label="Chats" icon={MessageSquare} badge={totalUnread} />
             <TabButton id="friends" label={onlineCount ? `Buddies · ${onlineCount}` : 'Buddies'} icon={Users} />
+            <TabButton id="games" label="Games" icon={Gamepad2} />
             <TabButton id="requests" label="Requests" icon={UserPlus} badge={totalRequestBadge} />
             <TabButton id="discover" label="Discover" icon={Search} />
             <TabButton id="settings" label="Profile" icon={Settings2} />
@@ -647,6 +656,10 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
                 </div>
               )}
             </>
+          )}
+
+          {view === 'games' && (
+            <GamesView friends={friends} onInvite={(f, g) => handleOpenConversation(f, g)} />
           )}
 
           {view === 'friends' && (
@@ -808,6 +821,66 @@ function ConversationsView({
             </div>
           </div>
         </button>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Games: pick a game, then a buddy to invite
+// ---------------------------------------------------------------------------
+const GAME_ORDER: FriendGameId[] = ['draw', 'paint', 'rps', 'checkers'];
+const GAME_BLURB: Record<FriendGameId, string> = {
+  draw: 'One draws a secret word, the other guesses',
+  paint: 'Paint on one canvas together, then send it',
+  rps: 'Lock in, then reveal at the same time',
+  checkers: 'The classic, live on one board',
+};
+
+function GamesView({ friends, onInvite }: { friends: FriendPeer[]; onInvite: (f: FriendPeer, game: FriendGameId) => void }) {
+  const [game, setGame] = useState<FriendGameId | null>(null);
+  const rank = { online: 0, away: 1, offline: 2 } as const;
+  const buddies = [...friends].sort((a, b) => rank[a.presence ?? 'offline'] - rank[b.presence ?? 'offline']);
+
+  if (!game) {
+    return (
+      <div className="grid grid-cols-2 gap-2 p-3">
+        {GAME_ORDER.map(id => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setGame(id)}
+            className="flex flex-col items-start gap-1 rounded-xl border border-amber-300/25 bg-amber-300/[0.06] p-3 text-left transition-colors hover:bg-amber-300/[0.12]"
+          >
+            <span className="text-2xl">{FRIEND_GAMES[id].icon}</span>
+            <span className="text-sm font-semibold text-ink">{FRIEND_GAMES[id].label}</span>
+            <span className="text-[11px] leading-snug text-ink-muted">{GAME_BLURB[id]}</span>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-1">
+      <button type="button" onClick={() => setGame(null)} className="flex items-center gap-1.5 px-3 py-2 text-xs text-ink-muted hover:text-ink">
+        <ArrowLeft className="h-3.5 w-3.5" /> All games
+      </button>
+      <p className="px-3 pb-2 text-sm font-semibold text-ink">{FRIEND_GAMES[game].icon} {FRIEND_GAMES[game].label}: who do you want to play?</p>
+      {buddies.length === 0 && (
+        <p className="px-3 py-6 text-center text-xs text-ink-muted">Add a friend first, then invite them here.</p>
+      )}
+      {buddies.map(f => (
+        <div key={f.user_id} className="flex items-center gap-2.5 px-3 py-1.5">
+          <PeerAvatar name={f.display_name} avatarUrl={f.avatar_url} size={32} online={f.presence === 'online'} />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-ink">{f.display_name}</span>
+            <span className="block text-[11px] text-ink-muted">{f.presence === 'online' ? 'Online now' : f.presence === 'away' ? 'Away' : 'Offline'}</span>
+          </span>
+          <button type="button" onClick={() => onInvite(f, game)} className="flex-shrink-0 rounded-lg bg-amber-300 px-3 py-1.5 text-xs font-semibold text-[#1d1a10]">
+            Invite
+          </button>
+        </div>
       ))}
     </div>
   );
@@ -1443,7 +1516,7 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
 // ---------------------------------------------------------------------------
 // Chat view
 // ---------------------------------------------------------------------------
-export function ChatView({ target, onUnfriend }: { target: ChatTarget; onUnfriend: () => void }) {
+export function ChatView({ target, onUnfriend, onJoinGame }: { target: ChatTarget; onUnfriend: () => void; /** In the dock: open a game from an invite card. */ onJoinGame?: (game: FriendGameId) => void }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [input, setInput] = useState('');
@@ -1632,7 +1705,21 @@ export function ChatView({ target, onUnfriend }: { target: ChatTarget; onUnfrien
                       : 'bg-white/8 text-ink rounded-bl-md border border-white/8'
                   }`}
                 >
-                  {doodleSrc(m.content) ? <img src={doodleSrc(m.content)!} alt="Doodle" className="w-48 max-w-full rounded-lg bg-white" /> : <SmilieText text={m.content} className="whitespace-pre-wrap break-words" smilieSize={24} />}
+                  {parseGameInvite(m.content) ? (() => {
+                    const g = parseGameInvite(m.content)!;
+                    const fromMe = m.sender_id === user?.id;
+                    return (
+                      <span className="flex items-center gap-2">
+                        <span className="text-xl">{FRIEND_GAMES[g].icon}</span>
+                        <span>{fromMe ? `You invited ${target.peerName} to ${FRIEND_GAMES[g].label}` : `${target.peerName} wants to play ${FRIEND_GAMES[g].label}!`}</span>
+                        {onJoinGame && (
+                          <button type="button" onClick={() => onJoinGame(g)} className="flex-shrink-0 rounded-md bg-amber-300 px-2 py-0.5 text-xs font-semibold text-[#1d1a10]">
+                            {fromMe ? 'Open' : 'Play'}
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })() : doodleSrc(m.content) ? <img src={doodleSrc(m.content)!} alt="Doodle" className="w-48 max-w-full rounded-lg bg-white" /> : <SmilieText text={m.content} className="whitespace-pre-wrap break-words" smilieSize={24} />}
                   <p
                     className={`text-[9px] mt-0.5 flex items-center gap-1 ${
                       mine ? 'text-white/70 justify-end' : 'text-ink-muted'
