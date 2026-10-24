@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Newspaper, RefreshCw, Clock, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
 import { Pill, Badge } from '../shared/ui';
+import { InterestsPrompt } from '../components/interests/InterestsPrompt';
 import { userProfileService } from '../services/userProfileService';
 import { supabase } from '../shared/supabase/client';
 import { newsService } from '../services/newsService';
@@ -618,23 +619,7 @@ export function DailyFeedPage({ initialTab: _initialTab }: { initialTab?: 'news'
   }
 
   if (newsCategories.length === 0 && allInterests.length === 0) {
-    return (
-      <div className="ds-page flex items-center justify-center px-4">
-        <div className="text-center max-w-sm">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-5">
-            <Newspaper className="w-8 h-8 text-emerald-400" />
-          </div>
-          <h2 className="text-xl font-bold text-white mb-2">No Interests Yet</h2>
-          <p className="text-white/50 text-sm mb-6">Complete your profile to get personalized news.</p>
-          <button
-            onClick={() => navigate('/profile')}
-            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-all"
-          >
-            Complete Profile
-          </button>
-        </div>
-      </div>
-    );
+    return <div className="ds-page"><InterestsPrompt feature="Your Daily Feed" /></div>;
   }
 
   return (

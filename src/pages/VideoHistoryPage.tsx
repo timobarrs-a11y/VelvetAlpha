@@ -6,6 +6,8 @@ import { PageHeader, Pill, Segmented } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { VideoPreferencesModal } from '../components/VideoPreferencesModal';
+import { InterestsPrompt } from '../components/interests/InterestsPrompt';
+import { useHasInterests } from '../hooks/useHasInterests';
 
 interface SearchedVideo {
   id: string;
@@ -54,6 +56,12 @@ async function getActiveTags(userId: string): Promise<string[]> {
 }
 
 export function VideoHistoryPage() {
+  const hasInterests = useHasInterests();
+  if (hasInterests === false) return <InterestsPrompt feature="Your Lens" />;
+  return <VideoHistoryContent />;
+}
+
+function VideoHistoryContent() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'interest-based' | 'search'>('interest-based');
   const [interestBasedVideos, setInterestBasedVideos] = useState<SearchedVideo[]>([]);
