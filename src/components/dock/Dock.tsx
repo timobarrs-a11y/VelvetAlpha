@@ -89,7 +89,37 @@ function useInbox(userId: string | undefined) {
   return { badge: unread + requests.length, bubble, dismissBubble };
 }
 
-function WindowFrame({ children, fullWidth }: { children: ReactNode; fullWidth: boolean }) {
+/**
+ * Room for a chat window: from the bottom of the top bar to the top of the
+ * dock. Measured, because phone browsers (iPhone Safari especially) report a
+ * viewport taller than what's visible, and the top bar can wrap to two rows.
+ */
+function useWindowRoom(barRef: React.RefObject<HTMLDivElement>): number | null {
+  const [room, setRoom] = useState<number | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const bar = barRef.current;
+      if (!bar) return;
+      const header = document.querySelector('header');
+      const top = header ? header.getBoundingClientRect().bottom : 0;
+      setRoom(Math.max(200, Math.floor(bar.getBoundingClientRect().top - top - 8)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
+    const header = document.querySelector('header');
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (header) ro?.observe(header);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('resize', measure);
+      ro?.disconnect();
+    };
+  }, [barRef]);
+  return room;
+}
+
+function WindowFrame({ children, fullWidth, room }: { children: ReactNode; fullWidth: boolean; room: number | null }) {
   return (
     <motion.div
       layout
@@ -98,7 +128,7 @@ function WindowFrame({ children, fullWidth }: { children: ReactNode; fullWidth: 
       exit={{ opacity: 0, y: 24 }}
       transition={{ type: 'spring', damping: 28, stiffness: 320 }}
       className={`flex h-[min(70vh,600px)] flex-col overflow-hidden rounded-t-2xl border border-b-0 border-white/10 shadow-2xl shadow-black/50 ${fullWidth ? 'w-full' : 'w-[360px]'}`}
-      style={{ background: 'var(--ds-surface, #1a1a2e)' }}
+      style={{ background: 'var(--ds-surface, #1a1a2e)', ...(room ? { maxHeight: room } : {}) }}
     >
       {children}
     </motion.div>
@@ -114,6 +144,8 @@ export function Dock() {
   const location = useLocation();
   const dock = useDock();
   const capacity = useWindowCapacity();
+  const barRef = useRef<HTMLDivElement>(null);
+  const room = useWindowRoom(barRef);
   const inbox = useInbox(user?.id);
 
   // Anything the user is looking at counts as read: an open dock window, or
@@ -172,7 +204,7 @@ export function Dock() {
             if (w.key === MESSAGES_KEY) {
               return (
                 <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
-                  <WindowFrame fullWidth={capacity === 1}>
+                  <WindowFrame fullWidth={capacity === 1} room={room}>
                     <MessagingOverlay
                       embedded
                       initialView={dock.messagesView}
@@ -188,7 +220,7 @@ export function Dock() {
             if (w.friend) {
               return (
                 <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
-                  <WindowFrame fullWidth={capacity === 1}>
+                  <WindowFrame fullWidth={capacity === 1} room={room}>
                     <FriendChatWindow friend={w.friend} gameRequest={w.game} onMinimize={() => dock.minimize(w.key)} onClose={() => dock.close(w.key)} />
                   </WindowFrame>
                 </div>
@@ -199,7 +231,7 @@ export function Dock() {
             const isPageCoach = companion.id === dock.pageCoachId && !!dock.coachSurface;
             return (
               <div key={w.key} className={`pointer-events-auto ${capacity === 1 ? 'w-full' : ''}`}>
-                <WindowFrame fullWidth={capacity === 1}>
+                <WindowFrame fullWidth={capacity === 1} room={room}>
                   <AiChatWindow
                     companion={companion}
                     surface={isPageCoach ? dock.coachSurface!.surface : undefined}
@@ -219,7 +251,7 @@ export function Dock() {
 
       {/* The bar */}
       {/* Same warm white as the top bar: the two read as one frame around the page. */}
-      <div className="relative flex h-[52px] items-center gap-2 border-t border-[#f5cfe0] bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5] px-2 text-[#2a1424] sm:px-3">
+      <div ref={barRef} className="relative flex h-[52px] items-center gap-2 border-t border-[#f5cfe0] bg-gradient-to-r from-[#fff7fa] to-[#fdf0f5] px-2 text-[#2a1424] sm:px-3">
 
         <div className="relative">
           <AnimatePresence>
