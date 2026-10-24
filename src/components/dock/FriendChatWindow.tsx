@@ -48,7 +48,7 @@ export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-amber-100">{friend.peerName}</p>
-          <p className="truncate text-[10px] text-amber-200/70">Friend · real person</p>
+          <p className="truncate text-[10px] text-amber-200/70">Friend</p>
         </div>
         <div className="relative">
           <button

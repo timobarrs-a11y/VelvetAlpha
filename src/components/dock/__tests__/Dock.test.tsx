@@ -213,6 +213,11 @@ describe('Dock', () => {
     expect(screen.getAllByTitle('Leah · friend · 1 new').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText('hey you'));
     expect(await screen.findByText('chat with Leah')).toBeTruthy();
+
+    // Closing the chat keeps Leah in the dock's tray.
+    fireEvent.click(screen.getByLabelText('Close Leah'));
+    await waitFor(() => expect(screen.queryByText('chat with Leah')).toBeNull());
+    expect(screen.getByTitle('Leah · friend')).toBeTruthy();
   });
 
   it('welcomes you back with the friends who messaged while you were away', async () => {

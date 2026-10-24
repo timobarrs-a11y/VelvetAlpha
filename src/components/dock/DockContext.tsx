@@ -76,6 +76,8 @@ interface DockApi {
   clearUnread: (companionId: string) => void;
   /** Unread messages per friend (user id) whose window isn't showing. */
   friendUnread: Record<string, number>;
+  /** Everyone you have a chat with, most recent first: the dock keeps the top few as tabs. */
+  recentFriends: FriendTarget[];
   toast: DockToast | null;
   dismissToast: () => void;
   /** Open a chat with a real person as its own window. */
@@ -215,35 +217,42 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
   }, []);
   const dismissToast = useCallback(() => setToast(null), []);
 
-  // Welcome back: friends who messaged while you were away get their yellow
-  // tab with an unread count, and a note says who reached out.
+  // The dock's friend tray: your conversations, most recent first, with their
+  // unread counts (a chat open in front of you counts as read).
+  const [recentFriends, setRecentFriends] = useState<FriendTarget[]>([]);
+  const refreshRecent = useCallback(async () => {
+    const convs = await getConversationList().catch(() => null);
+    if (!convs) return null;
+    const list = convs.filter(c => c.peer_id)
+      .sort((a, b) => (b.last_message_at ?? '').localeCompare(a.last_message_at ?? ''));
+    setRecentFriends(list.map(c => ({ conversationId: c.id, peerId: c.peer_id, peerName: c.peer_name || 'A friend', peerAvatarUrl: c.peer_avatar_url })));
+    const showing = new Set(windowsRef.current.filter(w => w.friend && !w.minimized).map(w => w.friend!.peerId));
+    setFriendUnread(() => {
+      const next: Record<string, number> = {};
+      for (const c of list) if (c.unread_count > 0 && !showing.has(c.peer_id)) next[c.peer_id] = c.unread_count;
+      return next;
+    });
+    return list;
+  }, []);
+
+  // Welcome back: a note says who messaged while you were away.
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    getConversationList().then(convs => {
-      if (cancelled) return;
-      const waiting = convs.filter(c => c.unread_count > 0 && c.peer_id)
-        .sort((a, b) => (b.last_message_at ?? '').localeCompare(a.last_message_at ?? ''));
+    refreshRecent().then(list => {
+      if (cancelled || !list) return;
+      const waiting = list.filter(c => c.unread_count > 0);
       if (waiting.length === 0) return;
-      const targets = waiting.map(c => ({ conversationId: c.id, peerId: c.peer_id, peerName: c.peer_name || 'A friend', peerAvatarUrl: c.peer_avatar_url }));
-      setWindows(prev => [
-        ...prev,
-        ...targets.filter(t => !prev.some(w => w.key === friendKey(t.peerId)))
-          .map(t => ({ key: friendKey(t.peerId), friend: t, minimized: true })),
-      ]);
-      setFriendUnread(prev => {
-        const next = { ...prev };
-        for (const c of waiting) next[c.peer_id] = c.unread_count;
-        return next;
-      });
+      const first = waiting[0];
       const total = waiting.reduce((n, c) => n + c.unread_count, 0);
       const text = waiting.length === 1
         ? `sent you ${total === 1 ? 'a message' : `${total} messages`} while you were away`
         : `and ${waiting.length - 1} other${waiting.length > 2 ? 's' : ''} messaged you while you were away`;
-      setToast({ friend: targets[0], text, nonce: Date.now(), sticky: true });
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [userId]);
+      setToast({ friend: { conversationId: first.id, peerId: first.peer_id, peerName: first.peer_name || 'A friend', peerAvatarUrl: first.peer_avatar_url }, text, nonce: Date.now(), sticky: true });
+    });
+    const poll = setInterval(refreshRecent, 60000);
+    return () => { cancelled = true; clearInterval(poll); };
+  }, [userId, refreshRecent]);
 
   // Messages from friends: ding, pop up, and add their tab, unless their chat is
   // already open in front of you. RLS only delivers your own conversations.
@@ -258,7 +267,8 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
       .channel(`dock-friends-${userId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'im_messages' }, async (payload) => {
         const msg = payload.new as { conversation_id: string; sender_id: string; content: string };
-        if (msg.sender_id === userId) return;
+        // Your own message moves that friend to the front of the tray.
+        if (msg.sender_id === userId) { refreshRecent(); return; }
         const key = friendKey(msg.sender_id);
         const existing = windowsRef.current.find(w => w.key === key);
         // A game invite always alerts, even with their chat open, so it can't be missed.
@@ -270,7 +280,7 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
           peerName: await nameOf(msg.sender_id),
           peerAvatarUrl: null,
         };
-        setWindows(prev => (prev.some(w => w.key === key) ? prev : [...prev, { key, friend, minimized: true }]));
+        setRecentFriends(prev => [friend, ...prev.filter(f => f.peerId !== friend.peerId)]);
         if (!existing || existing.minimized) setFriendUnread(prev => ({ ...prev, [msg.sender_id]: (prev[msg.sender_id] ?? 0) + 1 }));
         setToast({ friend, text: messagePreview(msg.content), nonce: Date.now(), ...(game ? { game, sticky: true } : {}) });
         playDing();
@@ -289,7 +299,7 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [userId, openFriend]);
+  }, [userId, openFriend, refreshRecent]);
 
   const openMessages = useCallback((view: 'conversations' | 'requests' = 'conversations') => {
     setMessagesView(view);
@@ -354,10 +364,10 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
     : null;
 
   const api = useMemo<DockApi>(() => ({
-    windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, friendUnread, toast, dismissToast, openFriend,
+    windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, friendUnread, recentFriends, toast, dismissToast, openFriend,
     openMessages, addFriendByCode, openCompanion, minimize, restore, close,
     pendingFor, consumePending, registerCoachSurface: setCoachSurface,
-  }), [windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, friendUnread, toast, dismissToast, openFriend, openMessages, addFriendByCode, openCompanion, minimize, restore, close, pendingFor, consumePending]);
+  }), [windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, friendUnread, recentFriends, toast, dismissToast, openFriend, openMessages, addFriendByCode, openCompanion, minimize, restore, close, pendingFor, consumePending]);
 
   return <DockContext.Provider value={api}>{children}</DockContext.Provider>;
 }
