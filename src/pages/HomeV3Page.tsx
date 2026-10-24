@@ -351,7 +351,7 @@ export function HomeV3Page() {
 
           <Suspense fallback={<LoadingState label={`Loading your ${feedTab === 'feed' ? 'feed' : 'lens'}...`} />}>
             <div className="flex-1 overflow-y-auto">
-              {feedTab === 'feed' ? <DailyFeedPage onBack={undefined} /> : <VideoHistoryPage />}
+              {feedTab === 'feed' ? <DailyFeedPage /> : <VideoHistoryPage />}
             </div>
           </Suspense>
         </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Newspaper, RefreshCw, Clock, TrendingUp, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
-import { PageHeader, Pill, Badge } from '../shared/ui';
+import { Newspaper, RefreshCw, Clock, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
+import { Pill, Badge } from '../shared/ui';
 import { userProfileService } from '../services/userProfileService';
 import { supabase } from '../shared/supabase/client';
 import { newsService } from '../services/newsService';
@@ -289,9 +289,8 @@ function ListArticleCard({ article, onClick, seen, openers, companions, onDiscus
   );
 }
 
-export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: () => void; initialTab?: 'news' | 'video' } = {}) {
+export function DailyFeedPage({ initialTab: _initialTab }: { initialTab?: 'news' | 'video' } = {}) {
   const navigate = useNavigate();
-  const goBack = () => { if (onBack) { onBack(); } else { navigate('/lobby'); } };
   const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
@@ -640,14 +639,16 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
 
   return (
     <div className="ds-page text-white">
-      <PageHeader
-        title="Daily Feed"
-        icon={TrendingUp}
-        accent="#34d399"
-        back={goBack}
-        progress={silentFetching}
-        actions={
-          <>
+      <header className="ds-header">
+        <div className="flex w-full items-center gap-3 px-4 py-2.5 sm:px-6">
+          <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto scrollbar-hide">
+            {categoryTabs.length > 1 && categoryTabs.map(tab => (
+              <Pill key={tab} size="sm" active={activeFilter === tab} onClick={() => setActiveFilter(tab)}>
+                {tab}
+              </Pill>
+            ))}
+          </div>
+          <div className="flex flex-shrink-0 items-center gap-2">
             {newArticlesBadge > 0 && (
               <Badge tone="#34d399" icon={<Zap className="w-3 h-3" />}>{newArticlesBadge} new</Badge>
             )}
@@ -658,19 +659,14 @@ export function DailyFeedPage({ onBack, initialTab: _initialTab }: { onBack?: ()
               aria-label="Fetch latest news"
               icon={<RefreshCw className={`w-4 h-4 ${(refreshing || silentFetching) ? 'animate-spin' : ''}`} />}
             />
-          </>
-        }
-      >
-        {categoryTabs.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {categoryTabs.map(tab => (
-              <Pill key={tab} size="sm" active={activeFilter === tab} onClick={() => setActiveFilter(tab)}>
-                {tab}
-              </Pill>
-            ))}
+          </div>
+        </div>
+        {silentFetching && (
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden">
+            <div className="h-full w-2/5 animate-shimmer" style={{ background: 'var(--ds-accent)', opacity: 0.7 }} />
           </div>
         )}
-      </PageHeader>
+      </header>
 
       <div className={`max-w-6xl mx-auto px-4 py-6 ${getBucketTintClass(bucket)}`}>
         <div className="relative z-10">
