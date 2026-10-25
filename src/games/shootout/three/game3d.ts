@@ -394,7 +394,7 @@ export class Shootout3D {
       const L = new THREE.SpotLight(0xfff1dd, i === 4 ? 2.4 : 1.5, 45, 0.62, 0.65, 1.1);
       L.position.copy(toThree([x, y, z]));
       L.target.position.copy(toThree([x * 0.4, y * 0.7 + 1, 0]));
-      if (i === 4) { L.castShadow = true; L.shadow.mapSize.set(1024, 1024); L.shadow.bias = -0.0004; L.shadow.camera.near = 4; L.shadow.camera.far = 30; }
+      if (i === 4) { L.castShadow = true; L.shadow.mapSize.set(1024, 1024); L.shadow.bias = -0.0004; L.shadow.normalBias = 0.025; L.shadow.camera.near = 4; L.shadow.camera.far = 30; }
       s.add(L, L.target);
       // The fixture itself, glowing.
       const fix = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.25, 16), new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0xfff4e0, emissiveIntensity: 2.2 }));
@@ -1230,7 +1230,7 @@ export class Shootout3D {
     if (!bp && ((this.auto && (this.phase === 'aim' || this.phase === 'hold')) || touchHolding)) {
       this.ball.visible = true;
       this.ball.material = this.ballMats[this.spot.balls[this.ballIdx]?.kind ?? 'regular'];
-      this.athlete.ballPoint(this.ball.position);
+      this.athlete.ballCenter(this.ball.position);
     }
     this.updateCamera(real);
     if (!this.renderer.shadowMap.autoUpdate && this.perf.frame % 3 === 0) this.renderer.shadowMap.needsUpdate = true;

@@ -27,7 +27,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 | `holdClock.ts` | Times your hold from input-event timestamps, independent of frame rate. Tested. |
 | `ballSim.ts` | Ball physics (gravity, drag, backspin; rim, glass, floor, stanchion) and `planShot`: a real flight for the outcome the rules chose. Fixed 240Hz step, deterministic. Tested. |
 | `three/game3d.ts` | `Shootout3D`: scene, cameras, phases (walk/aim/hold/flight/wait/replay/done), live balls and catch-and-shoot, scoring, rival autopilot, frame governor, `meterView()`. |
-| `three/athlete.ts` | The player figure (shaped torso, jersey with number, shorts, jointed arms and legs, hands, sneakers, face and hair) and its poses: jog, dip, set point, release, celebrate. Used by you, rivals and Street. |
+| `three/athlete.ts` | The player figure (muscle-shaped limbs, jersey with number, shorts, fingered hands, sneakers, face and hair) and its poses: jog, dip, set point, release, celebrate. While holding the ball, two-bone IK puts each palm on the ball's surface facing its centre and the fingers curl round it; `ballCenter()` is where the game draws the ball. Used by you, rivals and Street. |
 | `three/arena.ts`, `crowd.ts`, `net.ts`, `textures.ts` | The building, the GPU-animated crowd (`BOWL` shape), the cloth net, canvas textures. |
 | `ui/RunView.tsx` | One run: canvas, input, broadcast overlay, meter. Remount with a new `key` per run. |
 | `ui/Contest.tsx` | The contest flow and standings. |
@@ -36,6 +36,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 | `pages/ShootoutGame.tsx` | Title screen, mode select, results, saved progress (`velvet.shootout.v1`). |
 
 ## Decisions
+- **The ball is placed first and the hands reach it** (IK), rather than the ball following the hands, so the grip is exact in every pose. Measured: palm on the surface (within about 1mm), facing the centre, in both the chest hold and the set point.
 - **Two ways to shoot, kept apart.** Jumper (timing) runs Contest, Score Attack and Practice; Touch runs Street. They share the arena, physics, sound and saves. Touch stays out of the Contest until it's balanced on its own.
 - **The rules decide every shot at release; physics stages it.** Perfects always go in. Early misses come up short and late ones go long, so the ball teaches your timing. A shot's points and callouts land when the ball does.
 - **Catch and shoot.** The next ball comes `RELOAD` (0.65s) after release. The game and the rival simulation share `RELOAD`/`JOG`, so their pace can't drift apart. Before this, a flawless player reached only 20–21 of 27 balls.
@@ -60,7 +61,6 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 4. **No walls.** A ball that rolls far fades out after its recorded 4s flight.
 5. **The 2D fallback** is out of date (rare: only without WebGL).
 
-6. **The player figure still looks blocky, and the hands don't grip the ball** (playtest feedback). It's built from rigid shapes, so seams show at the joints; the hands are paddles, and the ball is placed near them rather than held. Fix later: one smooth skinned body with tapered muscle shapes; fingered hands; arm IK from the ball so the palms sit on its surface and the fingers wrap it in every pose (chest, set point, release).
 
 ## Next three
 1. **iPhone playtest:** `?fps`, timing feel, sound.
