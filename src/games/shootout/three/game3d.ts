@@ -17,6 +17,7 @@ import * as sfx from '../audio';
 import { ballTexture, FLOOR, floorTexture, makeScoreboard, ribbonTexture } from './textures';
 import { Effects } from './effects';
 import { NO_FX, shotFx, startFx, stepFx, type FxRun, type ShotFx } from '../fx';
+import { JUMP, jumpAfter, jumpAt, jumpSettles, takeoffAt, type JumpState } from '../jump';
 import { Net } from './net';
 import { seeded, type RivalRun } from '../rivals';
 import { Crowd } from './crowd';
@@ -260,6 +261,8 @@ export class Shootout3D {
   private rimHeat = 0;
   private rimOnFire = false;
   private finaleAt = -99;
+  /** The last jump, from the release on: the fall and landing carry on into the next catch. */
+  private jumpOff: { from: JumpState; held: number; rise: number; at: number } | null = null;
 
   // Game state.
   readonly level: Level;
@@ -1003,6 +1006,7 @@ export class Shootout3D {
     this.fxRun = stepFx(this.fxRun, ball.kind, made, perfect);
     const fx = shotFx(this.fxRun, made, perfect, this.shots >= this.ballsTotal);
 
+    this.jumpOff = { from: jumpAt(this.holdT, this.win.rise), held: this.holdT, rise: this.win.rise, at: this.time };
     // The ball leaves from the hands, wherever the jump put them. Early comes up short, late goes long.
     const hand = new THREE.Vector3();
     if (this.auto) hand.copy(this.ball.position);
@@ -1247,12 +1251,15 @@ export class Shootout3D {
     this.ballRig.rotation.set(0, 0, 0);
     if (fp) {
       this.heldBall.material = this.ballMats[this.spot.balls[this.ballIdx]?.kind ?? 'regular'];
-      const j = this.phase === 'hold' ? ease(Math.min(1, this.holdT / this.win.rise)) : 0;
-      // Set point: the ball comes up from the chest toward the forehead as
-      // you rise, drifting to the shooting side so the rim stays in view.
+      // The dip gathers the ball low and in; the takeoff brings it up to the
+      // set point (forehead, drifting to the shooting side so the rim stays in
+      // view), arriving just before the top of the jump.
+      const rise = this.win.rise, td = takeoffAt(rise);
+      const gather = this.phase === 'hold' ? ease(Math.min(1, this.holdT / td)) : 0;
+      const j = this.phase === 'hold' ? ease(Math.min(1, Math.max(0, (this.holdT - td) / ((rise - td) * 0.75)))) : 0;
       const bob = this.phase === 'aim' ? Math.sin(t * 2.4) * 0.006 : 0;
-      this.arms.position.set(0.035 * j, -0.26 + j * 0.17 + bob, -0.6 - j * 0.06);
-      this.arms.rotation.set(-0.1 + j * 0.35, 0, -0.05 * j);
+      this.arms.position.set(0.035 * j, lerp(-0.26 - 0.07 * gather, -0.09, j) + bob, lerp(-0.6 + 0.04 * gather, -0.66, j));
+      this.arms.rotation.set(lerp(-0.1 - 0.12 * gather, 0.25, j), 0, -0.05 * j);
       this.heldBall.rotation.y = 0.4;
     } else if (reloading) {
       // Follow-through: hands snap up and out as the ball leaves...
@@ -1285,6 +1292,30 @@ export class Shootout3D {
     if (!this.noDraw) this.composer.render();
   }
 
+  /**
+   * The body through a jump shot (see jump.ts): `y` height off the floor
+   * (negative with knees bent), `fwd` the drift toward the rim the takeoff
+   * carries, `crouch` 0..1 for the dip and the landing.
+   */
+  private jumpMotion(): { y: number; fwd: number; crouch: number } {
+    const drift = (held: number, rise: number) => {
+      const td = takeoffAt(rise);
+      return 0.12 * ease(Math.min(1, Math.max(0, (held - td) / (rise - td))));
+    };
+    if (this.phase === 'hold') {
+      const j = jumpAt(this.holdT, this.win.rise);
+      return { y: j.y, fwd: drift(this.holdT, this.win.rise), crouch: j.y < 0 ? -j.y / JUMP.dip : 0 };
+    }
+    const o = this.jumpOff;
+    if (!o) return { y: 0, fwd: 0, crouch: 0 };
+    const t = this.time - o.at, settle = jumpSettles(o.from, o.rise);
+    if (t > settle + 0.4) return { y: 0, fwd: 0, crouch: 0 };
+    const y = jumpAfter(o.from, o.rise, t);
+    // The drift carries on through the air, then eases back as you reset for the next ball.
+    const fwd = lerp(drift(o.held, o.rise), 0.12, Math.min(1, t / 0.25)) * (1 - ease(Math.min(1, Math.max(0, (t - settle) / 0.4))));
+    return { y, fwd, crouch: y < 0 ? -y / JUMP.land : 0 };
+  }
+
   /** The shooter, seen from the broadcast camera: jogs to the next rack, then turns to the hoop. */
   private updatePlayer(t: number): void {
     const show = this.phase === 'walk' || this.phase === 'done' || ((!!this.auto || this.touch) && this.phase !== 'replay');
@@ -1309,14 +1340,14 @@ export class Shootout3D {
     }
     if (this.auto && !moving && this.phase !== 'done') {
       // A rival's jumper: dip and gather at the chest, rise to the set point, release and flick, land.
-      const rise = this.win.rise;
+      const rise = this.win.rise, td = takeoffAt(rise);
       const gather = this.phase === 'aim' ? Math.min(1, this.phaseT / Math.max(0.1, this.auto.rival.gather)) : 1;
-      const j = this.phase === 'hold' ? Math.sin(Math.min(1, this.holdT / rise) * Math.PI * 0.5)
-        : this.phase === 'flight' ? Math.max(0, Math.cos(Math.min(1, this.flightT / 0.45) * Math.PI * 0.5)) : 0;
-      this.player.position.y = j * 0.5;
+      const m = this.jumpMotion();
+      this.player.position.y = Math.max(0, m.y);
       pose.carry = 1;
-      pose.crouch = this.phase === 'aim' ? Math.sin(gather * Math.PI) * 0.45 : this.phase === 'flight' ? Math.max(0, 1 - this.flightT / 0.5) * (this.flightT > 0.35 ? 0.3 : 0) : 0;
-      pose.set = this.phase === 'hold' ? Math.min(1, this.holdT / (rise * 0.7)) : this.phase === 'flight' ? 1 : 0;
+      // A small give on the catch, then the real load is the dip into the jump (and the landing).
+      pose.crouch = this.phase === 'aim' ? Math.sin(gather * Math.PI) * 0.2 : m.crouch * 0.55;
+      pose.set = this.phase === 'hold' ? ease(Math.min(1, Math.max(0, (this.holdT - td) / ((rise - td) * 0.75)))) : this.phase === 'flight' ? 1 : 0;
       pose.release = this.phase === 'flight' ? Math.min(1, this.flightT / 0.12) * Math.max(0, 1 - Math.max(0, this.flightT - 0.4) / 0.25) : 0;
       if (this.phase === 'flight' && this.flightT > 0.4) { pose.set = Math.max(0, 1 - (this.flightT - 0.4) / 0.25); pose.carry = pose.set; }
     }
@@ -1369,10 +1400,13 @@ export class Shootout3D {
     } else {
       // First person: your eyes rise with the jump; after release the view follows the ball a little.
       const [px, py] = spotPosition(this.spot ?? this.course[this.course.length - 1]);
-      const j = this.phase === 'hold' ? Math.sin(Math.min(1, this.holdT / this.win.rise) * Math.PI * 0.5) : this.phase === 'flight' ? Math.max(0, 1 - this.flightT * 1.3) : 0;
+      // Your eyes ride the jump: dip, takeoff (drifting toward the rim), top, fall, landing.
+      const m = this.jumpMotion();
       const sway = this.phase === 'aim' && !this.reduced ? Math.sin(this.phaseT * 1.6) * 0.01 : 0;
-      pos = toThree([px * 1.04 + sway, py * 1.04, 1.78 + j * 0.5]);
-      let lk: V3 = [0, 0, RIM_HEIGHT - 0.55];
+      const d = Math.hypot(px, py) || 1;
+      pos = toThree([px * 1.04 - (px / d) * m.fwd + sway, py * 1.04 - (py / d) * m.fwd, 1.78 + m.y]);
+      // The view dips a touch with the knees.
+      let lk: V3 = [0, 0, RIM_HEIGHT - 0.55 - 0.12 * (this.phase === 'hold' ? m.crouch : 0)];
       const nb = this.live[this.live.length - 1];
       if ((this.phase === 'flight' || this.phase === 'wait') && nb && nb.t < 1.6) { const b = nb.pos; lk = [lerp(0, b[0], 0.2), lerp(0, b[1], 0.2), Math.max(lk[2], lerp(lk[2], b[2], 0.35))]; }
       look = toThree(lk);
