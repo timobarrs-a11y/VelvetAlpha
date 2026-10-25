@@ -1,7 +1,7 @@
 import type { Ball, Spot } from './engine';
 
-// The make-effects chain. Only perfect releases light anything up; a run of
-// them grows the show, sets the ball on fire, and a perfect run ends with the
+// The make-effects chain. Only perfect releases light anything up; each one in
+// a row steps the show up a tier, sets the ball on fire, and a perfect run ends with the
 // rim catching fire and exploding. Starry balls are the bonus: missing one (or
 // not hitting it perfectly) never breaks the run. Pure, so it's tested.
 
@@ -20,8 +20,13 @@ export interface FxRun {
 export type Finale = 'none' | 'perfect' | 'made';
 
 export interface ShotFx {
-  /** How big the fireworks are, 0 (none: not a perfect release) to 1 (a perfect run's last ball). */
-  level: number;
+  /**
+   * The show for this make: 0 = none (not a perfect release), then one step per
+   * perfect in a row up to MAX_TIER, so every perfect visibly tops the last.
+   */
+  tier: number;
+  /** Perfects in a row once this ball lands (for the chain badge). */
+  chain: number;
   /** The ball burns on its way to the rim. */
   fireball: boolean;
   /** The rim is on fire once this ball gets there (a perfect run into the last rack). */
@@ -30,7 +35,10 @@ export interface ShotFx {
   finale: Finale;
 }
 
-export const NO_FX: ShotFx = { level: 0, fireball: false, rimFire: false, finale: 'none' };
+export const NO_FX: ShotFx = { tier: 0, chain: 0, fireball: false, rimFire: false, finale: 'none' };
+
+/** The show stops growing here (it's already everything at once). */
+export const MAX_TIER = 12;
 
 /** How many perfects in a row set the ball on fire: about a quarter of the run. */
 export const fireAt = (total: number): number => Math.max(3, Math.round(total * 0.25));
@@ -59,7 +67,6 @@ export function stepFx(run: FxRun, kind: Ball['kind'], made: boolean, perfect: b
 export function shotFx(run: FxRun, made: boolean, perfect: boolean, last: boolean): ShotFx {
   const finale: Finale = !last ? 'none' : run.perfectRun && run.taken === run.total ? 'perfect' : run.allMade && run.taken === run.total ? 'made' : 'none';
   const rimFire = run.perfectRun && run.taken > 0 && run.total - run.taken <= RIM_FIRE_LEFT && finale === 'none';
-  if (!(made && perfect)) return { ...NO_FX, rimFire, finale };
-  const level = Math.min(1, Math.max(1, run.chain) / Math.max(1, run.total));
-  return { level, fireball: run.chain >= fireAt(run.total), rimFire, finale };
+  if (!(made && perfect)) return { ...NO_FX, chain: run.chain, rimFire, finale };
+  return { tier: Math.min(MAX_TIER, Math.max(1, run.chain)), chain: run.chain, fireball: run.chain >= fireAt(run.total), rimFire, finale };
 }

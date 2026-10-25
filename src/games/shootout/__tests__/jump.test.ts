@@ -6,9 +6,10 @@ describe('jump shot motion', () => {
 
   it('flies under real gravity: a longer rise loads longer, the flight stays the same', () => {
     const air = Math.sqrt((2 * (JUMP.height + JUMP.dip)) / JUMP.g);
-    expect(0.76 - takeoffAt(0.76)).toBeCloseTo(air, 6);
-    expect(0.5 - takeoffAt(0.5)).toBeCloseTo(air, 6);
-    expect(takeoffAt(0.76)).toBeGreaterThan(takeoffAt(0.5));
+    // Every level's rise, Legend (0.55s) to Rookie (0.78s).
+    expect(0.78 - takeoffAt(0.78)).toBeCloseTo(air, 6);
+    expect(0.55 - takeoffAt(0.55)).toBeCloseTo(air, 6);
+    expect(takeoffAt(0.78)).toBeGreaterThan(takeoffAt(0.55));
     // Too short for real gravity: the dip keeps its minimum and the flight speeds up.
     expect(takeoffAt(0.3)).toBe(JUMP.minDip);
     expect(jumpAt(0.3, 0.3).y).toBeCloseTo(JUMP.height, 6);
@@ -37,7 +38,7 @@ describe('jump shot motion', () => {
   });
 
   it('lands in time for the next catch (0.65s after release)', () => {
-    for (const r of [0.5, 0.76]) expect(jumpSettles(jumpAt(r, r), r)).toBeLessThan(0.65);
+    for (const r of [0.55, 0.78]) expect(jumpSettles(jumpAt(r, r), r)).toBeLessThan(0.65);
   });
 
   it('carries on from the release without a jump, lands, gives at the knees and settles', () => {

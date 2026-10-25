@@ -9,7 +9,7 @@ import { isMuted, setMuted, unlockAudio } from '../audio';
 // Used for practice runs, your contest rounds, and watching rivals shoot.
 
 export type Rack = Array<{ kind: Ball['kind']; state: 'done' | 'now' | 'left' }>;
-export interface Hud { score: number; time: number; spot: string; streak: number; phase?: string; elapsed: number }
+export interface Hud { score: number; time: number; spot: string; streak: number; chain?: number; phase?: string; elapsed: number }
 interface Callout { id: number; big: string; small?: string; tone: 'gold' | 'green' | 'red' | 'money' | 'starry' | 'fire' }
 interface Card { id: number; title: string; sub: string; money: boolean }
 
@@ -129,8 +129,8 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
     const hudTimer = setInterval(() => {
       const h = game.hud();
       const elapsed = h.elapsed ?? 0;
-      setHud(prev => (prev.score === h.score && prev.time.toFixed(1) === h.time.toFixed(1) && prev.spot === h.spot && prev.streak === h.streak && prev.phase === h.phase) ? prev
-        : { score: h.score, time: h.time, spot: h.spot, streak: h.streak, phase: h.phase, elapsed });
+      setHud(prev => (prev.score === h.score && prev.time.toFixed(1) === h.time.toFixed(1) && prev.spot === h.spot && prev.streak === h.streak && prev.chain === h.chain && prev.phase === h.phase) ? prev
+        : { score: h.score, time: h.time, spot: h.spot, streak: h.streak, chain: h.chain, phase: h.phase, elapsed });
       setRack(prev => { const r = game.rackState(); return JSON.stringify(r) === JSON.stringify(prev) ? prev : r; });
     }, 100);
     // Camera-cut fades follow the game every frame.
@@ -224,7 +224,13 @@ export const BROADCAST_CSS = `
 .sh-blink { animation: sh-blink .8s steps(2) infinite; }
 .sh-flame { animation: sh-flame .35s ease-in-out infinite; transform-origin: bottom; }
 .sh-tick { animation: sh-tick .25s ease-out; }
+@keyframes sh-chain { 0% { transform: skewX(-12deg) scale(1.45); filter: brightness(2); } 100% { transform: skewX(-12deg) scale(1); filter: brightness(1); } }
+.sh-chain { animation: sh-chain .45s cubic-bezier(.2,.9,.2,1) both; }
 `;
+
+/** The chain badge's colour and title climb with it, like the effects. */
+const CHAIN_TONE = (n: number) => n >= 10 ? 'from-fuchsia-400 via-amber-300 to-white text-[#2a0a1e]' : n >= 6 ? 'from-yellow-300 via-orange-500 to-red-600 text-white' : n >= 3 ? 'from-amber-200 via-amber-400 to-orange-500 text-[#2a1600]' : 'from-emerald-200 to-emerald-500 text-[#032013]';
+const chainTitle = (n: number) => n >= 10 ? 'UNSTOPPABLE' : n >= 6 ? 'FIREBALL' : n >= 3 ? 'HEATING UP' : '';
 
 const TONE: Record<Callout['tone'], string> = {
   gold: 'from-amber-200 via-amber-300 to-orange-400 text-[#2a1600]',
@@ -285,6 +291,17 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
       {hud.streak >= 2 && !replay && (
         <div className="absolute bottom-[4.25rem] left-3 skew-x-[-12deg] bg-gradient-to-r from-orange-500 to-red-600 px-3 py-0.5 text-xs font-black italic tracking-wider shadow-lg sm:bottom-[5rem] sm:left-5">
           {hud.streak} STRAIGHT{hud.streak >= 3 ? ' 🔥' : ''}
+        </div>
+      )}
+
+      {/* Perfect chain: grows with every perfect in a row (the effects grow with it). */}
+      {(hud.chain ?? 0) >= 2 && !replay && (
+        <div key={hud.chain} className="sh-chain absolute bottom-[6rem] left-3 origin-left skew-x-[-12deg] sm:bottom-[7rem] sm:left-5">
+          <div className={`flex items-baseline gap-2 bg-gradient-to-r px-3 py-1 font-black italic shadow-[0_0_24px_rgba(255,190,80,.45)] ${CHAIN_TONE(hud.chain!)}`}>
+            <span className="text-[10px] tracking-[0.25em] opacity-80">PERFECT</span>
+            <span className="text-xl leading-none sm:text-2xl">×{hud.chain}</span>
+            {chainTitle(hud.chain!) && <span className="text-[10px] tracking-[0.2em]">{chainTitle(hud.chain!)}</span>}
+          </div>
         </div>
       )}
 

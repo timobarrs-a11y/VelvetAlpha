@@ -5,7 +5,7 @@
 
 export const JUMP = {
   /** How far the knees bend before takeoff, metres. */
-  dip: 0.14,
+  dip: 0.17,
   /** Height of the jump at its top, metres. */
   height: 0.55,
   /** Real gravity, so the flight is snappy, not floaty. */

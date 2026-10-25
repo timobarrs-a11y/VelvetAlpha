@@ -1,6 +1,7 @@
 // Shootout sounds, synthesised with Web Audio (no files): clean tones only
-// (make chime, rim, backboard, bounce, shot clock, horn). Crowd and net noise
-// are out until there are real recordings. Silent when blocked or muted.
+// (make chime, rim, backboard, bounce, shot clock, horn, firework booms,
+// landing). Crowd and net noise are out until there are real recordings.
+// Silent when blocked or muted.
 
 let ctx: AudioContext | null = null;
 let muted = false;
@@ -89,4 +90,19 @@ export function playGreen(): void {
   const c = ac(); if (!c) return;
   const t = c.currentTime;
   tone(c, t, 1320, 0.15, 0.06); tone(c, t + 0.05, 1760, 0.18, 0.05);
+}
+
+/** A firework breaking overhead: a deep thump with a short crack on top. */
+export function playBoom(size = 1): void {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + Math.random() * 0.03, k = Math.min(1.4, size);
+  const o = tone(c, t, 95, 0.55, 0.16 * k); o.frequency.exponentialRampToValueAtTime(36, t + 0.45);
+  const cr = tone(c, t, 340, 0.09, 0.035 * k, 'triangle'); cr.frequency.exponentialRampToValueAtTime(120, t + 0.08);
+}
+
+/** Feet back on the floor after a jump shot. */
+export function playLand(): void {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime;
+  const o = tone(c, t, 115, 0.13, 0.1); o.frequency.exponentialRampToValueAtTime(55, t + 0.11);
 }
