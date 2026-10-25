@@ -6,6 +6,7 @@ import {
   renderHeadwear, headwearHairCut, renderFaceAccessory,
 } from '../renderers/outfitRenderer';
 import { outfitItem } from '../data/avatarItems';
+import { migrateAvatarConfig } from '../utils/avatarConfig';
 import { faceOutlinePath } from '../renderers/faceGeometry';
 import {
   renderEyes, renderEyelashes, renderEyeliner, renderEyeShadow, renderEyebrows, renderNose,
@@ -16,11 +17,15 @@ import { renderFacialHair } from '../renderers/facialHairRenderer';
 const LIP_HALF_WIDTH: Record<string, number> = { natural: 8, full: 10, thin: 7, heart: 8 };
 
 interface AvatarV2Props {
-  config: AvatarConfigV2;
+  // Any stored avatar: current, older versions, or a v1 config.
+  config: Partial<AvatarConfigV2>;
   className?: string;
 }
 
-function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
+function AvatarV2Inner({ config: raw, className = '' }: AvatarV2Props) {
+  // Whatever comes in (a database row, an old draft, a v1 config) is brought
+  // up to date first, so every caller draws the same avatar.
+  const config = migrateAvatarConfig(raw);
   const {
     gender, skinTone, eyeColor, hairColor, hairStyle, hairTexture,
     lipShape, lipColor, eyebrowShape, eyeShape, noseShape, faceShape,
@@ -161,7 +166,6 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   };
 
   const renderFacialHairLayer = () => {
-    if (gender !== 'male') return null;
     return renderFacialHair({
       facialHair, hairColor, geometry: faceGeometry,
       mouthHalfWidth: LIP_HALF_WIDTH[lipShape] ?? 8,
@@ -385,7 +389,7 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   };
 
   const lips = lipShapes[lipShape] || lipShapes.natural;
-  const faceGradientId = `facev2-${skinTone.replace('#', '')}`;
+  const faceGradientId = `${uid}-skin`;
   const { shoulderRx, torsoScaleX } = bodyParams;
   const neckY = faceParams.jawY ?? 78;
 
@@ -421,7 +425,7 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   const neckWidth = 11;
 
   const hair = renderHair({
-    hairStyle, hairTexture, gender, hairColor, skinTone,
+    hairStyle, hairTexture, hairColor, skinTone,
     geometry: faceGeometry, idPrefix: uid,
   });
   const hatClip = hairCut !== null ? `url(#${hairClipId})` : undefined;
@@ -456,7 +460,7 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
       {renderBlush()}
       {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid })}
       {renderEyeliner(eyeliner, eyeShape)}
-      {gender === 'female' && eyelashes === 'dramatic' && renderEyelashes(eyeShape)}
+      {eyelashes === 'dramatic' && renderEyelashes(eyeShape)}
       {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender)}
       {renderNose(noseShape, skinTone)}
       {renderNosePiercing()}

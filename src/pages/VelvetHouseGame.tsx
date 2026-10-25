@@ -4,6 +4,8 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanion, type Companion } from '../services/companionService';
 import { loadVelvetHouseSave, saveVelvetHouseProgress, saveVelvetHouseHistory, maybeSnapshotHistory } from '../services/velvetHouseDatabase';
+import { migrateAvatarConfig } from '../utils/avatarConfig';
+import type { HairStyle } from '../types/avatar-v2';
 import { isRestartedMessage, isReadyMessage, isVidSearchMessage, sanitizeMessage } from '../games/velvet-house/bridge/protocol';
 
 const GAME_PATH = '/games/velvet-house/index.html';
@@ -46,29 +48,20 @@ function colorToHex(color: string | null | undefined): string | undefined {
   return key ? COLOR_HEX[key] : undefined;
 }
 
-function hairFor(style: unknown, length: unknown): string {
-  if (style === 'afro') return 'afro';
-  if (style === 'bun') return 'bun';
-  if (style === 'ponytail') return 'ponytail';
-  if (style === 'braids') return 'braids';
-  if (style === 'locs') return 'locs';
-  if (style === 'wavy') return 'wavy';
-  if (style === 'buzz') return 'buzz';
-  if (style === 'fade') return 'fade';
-  if (style === 'short' || length === 'short') return 'short';
-  if (length === 'long') return 'long';
-  return 'short';
-}
+const GAME_HAIR: Partial<Record<HairStyle, string>> = {
+  afro: 'afro', bun: 'bun', ponytail: 'ponytail', braids: 'braids',
+  locs: 'locs', locs_short: 'locs', wavy: 'wavy', short_wavy: 'wavy',
+  buzz: 'buzz', fade: 'fade', sleek: 'long', curly: 'long',
+};
 
-function toGameLook(avatar: Record<string, unknown> | null | undefined, favoriteColor?: string | null): GameLook | undefined {
-  if (!avatar || typeof avatar !== 'object') return undefined;
-  const female = avatar.gender === 'female';
-  const length = avatar.hairLength ?? (female ? 'long' : 'short');
+function toGameLook(raw: Record<string, unknown> | null | undefined, favoriteColor?: string | null): GameLook | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const avatar = migrateAvatarConfig(raw);
   const gender: GameGender = avatar.gender === 'female' ? 'female' : 'male';
   return {
     skin: isHex(avatar.skinTone) ? avatar.skinTone : undefined,
     hairColor: isHex(avatar.hairColor) ? avatar.hairColor : undefined,
-    hair: hairFor(avatar.hairStyle, length),
+    hair: GAME_HAIR[avatar.hairStyle] ?? 'short',
     top: colorToHex(favoriteColor),
     eyeColor: isHex(avatar.eyeColor) ? avatar.eyeColor : undefined,
     facialHair: typeof avatar.facialHair === 'string' ? avatar.facialHair : undefined,

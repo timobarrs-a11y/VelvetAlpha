@@ -3,13 +3,13 @@ import { ChevronLeft, ChevronRight, LayoutGrid, Shuffle } from 'lucide-react';
 import { AvatarV2 } from './AvatarV2';
 import { coherentRandomize } from './AvatarCreatorV2';
 import {
-  AvatarConfigV2, Gender, HairTexture,
-  SKIN_TONES, EYE_COLORS, LIP_COLORS, HAIR_COLORS, MALE_HAIRSTYLES, FEMALE_HAIRSTYLES,
+  AvatarConfigV2, Gender,
+  SKIN_TONES, EYE_COLORS, LIP_COLORS, HAIR_COLORS, HAIRSTYLES,
   HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
-  DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2,
   LipShape, EyebrowShape, FacialHair, Eyelashes, Freckles, Blush, BodyType, Tattoo,
   Glasses, Earrings, NosePiercing, LipPiercing, Necklace, Eyeliner, NECKLACE_COLORS,
 } from '../types/avatar-v2';
+import { applyAvatarChange } from '../utils/avatarConfig';
 
 type GuidedStep = 'face' | 'hair' | 'body' | 'accessories';
 
@@ -72,14 +72,14 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
   const currentStep = STEPS[stepIndex];
 
   const update = useCallback((partial: Partial<AvatarConfigV2>) => {
-    onChange({ ...config, ...partial });
+    onChange(applyAvatarChange(config, partial));
   }, [config, onChange]);
 
   const randomize = useCallback(() => {
     onChange(coherentRandomize());
   }, [onChange]);
 
-  const hairstyles = config.gender === 'male' ? MALE_HAIRSTYLES : FEMALE_HAIRSTYLES;
+  const hairstyles = HAIRSTYLES;
 
   const canGoBack = stepIndex > 0;
   const canGoNext = stepIndex < STEPS.length - 1;
@@ -89,13 +89,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       <div className="grid grid-cols-2 gap-2 mb-2">
         {(['male', 'female'] as Gender[]).map(g => (
           <button key={g}
-            onClick={() => update({
-              ...(g === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2),
-              gender: g,
-              hairStyle: g === 'male' ? 'short' : 'sleek',
-              facialHair: 'none',
-              eyelashes: 'none',
-            })}
+            onClick={() => update({ gender: g })}
             className={`py-2 rounded-lg text-sm font-semibold transition-all border ${
               config.gender === g
                 ? 'bg-sky-700 border-sky-600 text-white'
@@ -179,16 +173,14 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
         </div>
       </Sect>
 
-      {config.gender === 'female' && (
-        <Sect label="Eyelashes">
-          <div className="grid grid-cols-2 gap-2">
-            {(['none', 'dramatic'] as Eyelashes[]).map(v => (
-              <OptionBtn key={v} label={v === 'none' ? 'None' : 'Dramatic'}
-                selected={config.eyelashes === v} onClick={() => update({ eyelashes: v })} />
-            ))}
-          </div>
-        </Sect>
-      )}
+      <Sect label="Eyelashes">
+        <div className="grid grid-cols-2 gap-2">
+          {(['none', 'dramatic'] as Eyelashes[]).map(v => (
+            <OptionBtn key={v} label={v === 'none' ? 'None' : 'Dramatic'}
+              selected={config.eyelashes === v} onClick={() => update({ eyelashes: v })} />
+          ))}
+        </div>
+      </Sect>
 
       <Sect label="Eyeliner">
         <div className="grid grid-cols-4 gap-2">
@@ -252,16 +244,14 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
         </div>
       </Sect>
 
-      {config.gender === 'male' && (
-        <Sect label="Facial Hair">
-          <div className="grid grid-cols-3 gap-2">
-            {([{ value: 'none', label: 'None' }, { value: 'stubble', label: 'Stubble' }, { value: 'beard', label: 'Beard' }, { value: 'goatee', label: 'Goatee' }, { value: 'mustache', label: 'Mustache' }] as Array<{ value: FacialHair; label: string }>).map(o => (
-              <OptionBtn key={o.value} label={o.label}
-                selected={config.facialHair === o.value} onClick={() => update({ facialHair: o.value })} />
-            ))}
-          </div>
-        </Sect>
-      )}
+      <Sect label="Facial Hair">
+        <div className="grid grid-cols-3 gap-2">
+          {([{ value: 'none', label: 'None' }, { value: 'stubble', label: 'Stubble' }, { value: 'beard', label: 'Beard' }, { value: 'goatee', label: 'Goatee' }, { value: 'mustache', label: 'Mustache' }] as Array<{ value: FacialHair; label: string }>).map(o => (
+            <OptionBtn key={o.value} label={o.label}
+              selected={config.facialHair === o.value} onClick={() => update({ facialHair: o.value })} />
+          ))}
+        </div>
+      </Sect>
     </div>
   );
 

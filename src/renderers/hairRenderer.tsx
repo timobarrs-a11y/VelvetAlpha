@@ -1,4 +1,4 @@
-import type { Gender, HairStyle, HairTexture } from '../types/avatar-v2';
+import type { HairStyle, HairTexture } from '../types/avatar-v2';
 import { FaceGeometry, faceHalfWidthAt, chinY } from './faceGeometry';
 import { shade } from './outfitRenderer';
 
@@ -12,7 +12,6 @@ import { shade } from './outfitRenderer';
 export interface HairRenderParams {
   hairStyle: HairStyle;
   hairTexture: HairTexture;
-  gender: Gender;
   hairColor: string;
   skinTone: string;
   geometry: FaceGeometry;
@@ -36,32 +35,22 @@ interface HairSpec {
   opacity?: number;
 }
 
-const MALE: Partial<Record<HairStyle, HairSpec>> = {
-  buzz:  { v: 0.8, sv: 0.3, sideY: -4, hairline: 'natural', texture: 'buzz', sideburn: true, opacity: 0.85 },
-  short: { v: 3.6, sv: 1, sideY: -3, hairline: 'part', texture: 'straight', sideburn: true },
-  wavy:  { v: 5.5, sv: 2, sideY: -1, hairline: 'sweep', texture: 'wavy', sideburn: true },
-  sleek: { v: 3.2, sv: 0.8, sideY: -3, hairline: 'high', texture: 'slick', sideburn: true },
-  afro:  { v: 13, sv: 9, sideY: 4, hairline: 'curly', texture: 'coily', extra: 'afro' },
-  locs:  { v: 4, sv: 2, sideY: 2, hairline: 'natural', texture: 'locs', back: { length: 112, spread: 4, edge: 'blunt' }, locks: { length: 104, width: 7 } },
-  fade:  { v: 4.2, sv: 0, sideY: -4, hairline: 'natural', texture: 'straight', extra: 'fade', sideburn: true },
+const STYLES: Record<HairStyle, HairSpec> = {
+  buzz:       { v: 0.8, sv: 0.3, sideY: -4, hairline: 'natural', texture: 'buzz', sideburn: true, opacity: 0.85 },
+  fade:       { v: 4.2, sv: 0, sideY: -4, hairline: 'natural', texture: 'straight', extra: 'fade', sideburn: true },
+  short:      { v: 3.6, sv: 1, sideY: -3, hairline: 'part', texture: 'straight', sideburn: true },
+  short_wavy: { v: 5.5, sv: 2, sideY: -1, hairline: 'sweep', texture: 'wavy', sideburn: true },
+  slick_back: { v: 3.2, sv: 0.8, sideY: -3, hairline: 'high', texture: 'slick', sideburn: true },
+  afro:       { v: 14, sv: 10, sideY: 5, hairline: 'curly', texture: 'coily', extra: 'afro' },
+  locs_short: { v: 4, sv: 2, sideY: 2, hairline: 'natural', texture: 'locs', back: { length: 112, spread: 4, edge: 'blunt' }, locks: { length: 104, width: 7 } },
+  bun:        { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'bun' },
+  ponytail:   { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'ponytail' },
+  sleek:      { v: 3, sv: 1.5, sideY: 2, hairline: 'center', texture: 'straight', back: { length: 122, spread: 4, edge: 'blunt' }, locks: { length: 110, width: 6.5 } },
+  wavy:       { v: 5, sv: 3, sideY: 2, hairline: 'part', texture: 'wavy', back: { length: 124, spread: 7, edge: 'soft' }, locks: { length: 114, width: 7.5 } },
+  curly:      { v: 8, sv: 7, sideY: 4, hairline: 'curly', texture: 'coily', back: { length: 108, spread: 10, edge: 'curly' }, locks: { length: 100, width: 8.5 } },
+  braids:     { v: 2.6, sv: 1, sideY: 2, hairline: 'center', texture: 'braids', back: { length: 124, spread: 4, edge: 'blunt' }, locks: { length: 118, width: 5 } },
+  locs:       { v: 4, sv: 2.5, sideY: 2, hairline: 'center', texture: 'locs', back: { length: 126, spread: 5, edge: 'blunt' }, locks: { length: 116, width: 7 } },
 };
-
-const FEMALE: Partial<Record<HairStyle, HairSpec>> = {
-  sleek:    { v: 3, sv: 1.5, sideY: 2, hairline: 'center', texture: 'straight', back: { length: 122, spread: 4, edge: 'blunt' }, locks: { length: 110, width: 6.5 } },
-  wavy:     { v: 5, sv: 3, sideY: 2, hairline: 'part', texture: 'wavy', back: { length: 124, spread: 7, edge: 'soft' }, locks: { length: 114, width: 7.5 } },
-  curly:    { v: 8, sv: 7, sideY: 4, hairline: 'curly', texture: 'coily', back: { length: 108, spread: 10, edge: 'curly' }, locks: { length: 100, width: 8.5 } },
-  braids:   { v: 2.6, sv: 1, sideY: 2, hairline: 'center', texture: 'braids', back: { length: 124, spread: 4, edge: 'blunt' }, locks: { length: 118, width: 5 } },
-  ponytail: { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'ponytail' },
-  afro:     { v: 15, sv: 11, sideY: 6, hairline: 'curly', texture: 'coily', extra: 'afro' },
-  locs:     { v: 4, sv: 2.5, sideY: 2, hairline: 'center', texture: 'locs', back: { length: 126, spread: 5, edge: 'blunt' }, locks: { length: 116, width: 7 } },
-  bun:      { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'bun' },
-};
-
-function specFor(gender: Gender, style: HairStyle): HairSpec {
-  const own = gender === 'male' ? MALE : FEMALE;
-  const other = gender === 'male' ? FEMALE : MALE;
-  return own[style] ?? other[style] ?? (MALE.short as HairSpec);
-}
 
 // Long hair takes on its texture: wavy hair has more body, coily much more.
 function withTexture(spec: HairSpec, texture: HairTexture): HairSpec {
@@ -157,7 +146,7 @@ function lockPoints(fr: Frame, s: 1 | -1, width: number, length: number, startY:
 
 export function renderHair(p: HairRenderParams): { back: React.ReactNode; front: React.ReactNode } {
   const g = p.geometry;
-  const s = withTexture(specFor(p.gender, p.hairStyle), p.hairTexture);
+  const s = withTexture(STYLES[p.hairStyle] ?? STYLES.short, p.hairTexture);
   const fr: Frame = {
     T: g.faceTop, W: g.fRx, cy: g.faceCenterY, chin: chinY(g),
     hw: (y: number) => faceHalfWidthAt(g, y),

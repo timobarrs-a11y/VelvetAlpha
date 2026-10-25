@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AvatarV2 } from '../AvatarV2';
 import { migrateAvatarConfig } from '../../utils/avatarConfig';
-import { MALE_HAIRSTYLES, FEMALE_HAIRSTYLES, FACE_SHAPES, EYE_SHAPES } from '../../types/avatar-v2';
+import { HAIRSTYLES, FACE_SHAPES, EYE_SHAPES } from '../../types/avatar-v2';
 import { faceOutlinePath } from '../../renderers/faceGeometry';
 
 describe('AvatarV2', () => {
@@ -41,9 +41,9 @@ describe('AvatarV2', () => {
     }
   });
 
-  it('draws every hairstyle and texture for both genders, the same way every time', () => {
-    for (const [gender, styles] of [['male', MALE_HAIRSTYLES], ['female', FEMALE_HAIRSTYLES]] as const) {
-      for (const { value: hairStyle } of styles) {
+  it('draws every hairstyle and texture on either gender, the same way every time', () => {
+    for (const gender of ['male', 'female'] as const) {
+      for (const { value: hairStyle } of HAIRSTYLES) {
         for (const hairTexture of ['straight', 'wavy', 'coily'] as const) {
           const config = migrateAvatarConfig({ gender, hairStyle, hairTexture });
           const a = renderToStaticMarkup(<AvatarV2 config={config} />);
@@ -65,5 +65,18 @@ describe('AvatarV2', () => {
   it('draws every eye shape differently', () => {
     const drawn = EYE_SHAPES.map(({ value }) => renderToStaticMarkup(<AvatarV2 config={migrateAvatarConfig({ eyeShape: value })} />));
     expect(new Set(drawn).size).toBe(EYE_SHAPES.length);
+  });
+
+  it('gives each avatar its own skin colour, so a hidden copy never blanks a visible one', () => {
+    const config = migrateAvatarConfig({ skinTone: '#7d4a2e' });
+    const { container } = render(<><AvatarV2 config={config} /><AvatarV2 config={config} /></>);
+    const ids = [...container.querySelectorAll('radialGradient')].map(g => g.id).filter(id => id.endsWith('-skin'));
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).not.toBe(ids[1]);
+  });
+
+  it('draws v1 configs from before the current renderer', () => {
+    const { container } = render(<AvatarV2 config={{ gender: 'male', hairStyle: 'sleek', skinTone: '#e8b890' }} />);
+    expect(container.querySelector('svg')).not.toBeNull();
   });
 });

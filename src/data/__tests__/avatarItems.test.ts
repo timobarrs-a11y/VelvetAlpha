@@ -3,7 +3,7 @@ import {
   OUTFITS, HEADWEAR, FACE_ACCESSORIES, AVATAR_KITS, STARTER_ONLY,
   itemUnlock, kitUnlock, kitTier, outfitItem, headwearItem, faceAccessoryItem, resolveAvatarForDisplay,
 } from '../avatarItems';
-import { migrateAvatarConfig } from '../../utils/avatarConfig';
+import { migrateAvatarConfig, applyAvatarChange } from '../../utils/avatarConfig';
 
 const MEMBER = { member: true, earned: [] };
 const pirate = migrateAvatarConfig({ gender: 'female', ...AVATAR_KITS.find(k => k.id === 'pirate')!.look });
@@ -85,5 +85,25 @@ describe('migrateAvatarConfig', () => {
     expect(old.outfitColor).toBe('#1e293b');
     expect(old.headwear).toBe('none');
     expect(old.faceAccessory).toBe('none');
+  });
+
+  it('keeps short cuts short when every hairstyle opens to everyone', () => {
+    // Before version 4, these three names meant a short cut on a male avatar.
+    expect(migrateAvatarConfig({ gender: 'male', hairStyle: 'sleek' }).hairStyle).toBe('slick_back');
+    expect(migrateAvatarConfig({ gender: 'male', hairStyle: 'wavy', _version: 3 }).hairStyle).toBe('short_wavy');
+    expect(migrateAvatarConfig({ gender: 'male', hairStyle: 'locs' }).hairStyle).toBe('locs_short');
+    expect(migrateAvatarConfig({ gender: 'female', hairStyle: 'sleek' }).hairStyle).toBe('sleek');
+    expect(migrateAvatarConfig({ gender: 'male', hairStyle: 'short' }).hairStyle).toBe('short');
+  });
+
+  it('never renames a style someone picked on the current version', () => {
+    const picked = applyAvatarChange({ gender: 'male', hairStyle: 'short' }, { hairStyle: 'sleek' });
+    expect(picked.hairStyle).toBe('sleek');
+    expect(migrateAvatarConfig(picked).hairStyle).toBe('sleek');
+  });
+
+  it('reads an old config the old way before applying an edit', () => {
+    const edited = applyAvatarChange({ gender: 'male', hairStyle: 'sleek' }, { eyeColor: '#4a8ccc' });
+    expect(edited.hairStyle).toBe('slick_back');
   });
 });

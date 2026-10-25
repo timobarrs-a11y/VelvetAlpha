@@ -7,7 +7,14 @@ All avatar configs carry an optional `_version` field (integer).
 | Version | Description |
 |---------|-------------|
 | 1 (legacy) | `AvatarConfig` (v1 SVG, `src/types/avatar.ts`) |
-| 2 (current) | `AvatarConfigV2` (`src/types/avatar-v2.ts`) |
+| 2–3 | `AvatarConfigV2` (`src/types/avatar-v2.ts`) |
+| 4 (current) | Every option open to every gender. Male `sleek`/`wavy`/`locs` became `slick_back`/`short_wavy`/`locs_short`. |
+
+`AvatarV2` migrates whatever it is given, so any stored config (a database
+row, an old draft, a v1 config) draws correctly. Edits go through
+`applyAvatarChange`, which reads an old config the old way before applying
+the change and stamping the current version. The legacy `Avatar` component is
+now a thin wrapper over `AvatarV2`.
 
 ### Adding a new field
 

@@ -4,7 +4,7 @@ import { AvatarV2 } from './AvatarV2';
 import {
   AvatarConfigV2, Gender, HairTexture,
   SKIN_TONES, EYE_COLORS, HAIR_COLORS, LIP_COLORS, NECKLACE_COLORS,
-  MALE_HAIRSTYLES, FEMALE_HAIRSTYLES,
+  HAIRSTYLES, AVATAR_CONFIG_VERSION,
   HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
   DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2,
   LipShape, EyebrowShape, FacialHair, Eyelashes, Freckles, Glasses,
@@ -18,12 +18,24 @@ import {
   AvatarUnlocks, UnlockResult, itemUnlock, kitUnlock, kitTier, outfitItem,
 } from '../data/avatarItems';
 import { useAvatarUnlocks } from '../hooks/useAvatarUnlocks';
+import { migrateAvatarConfig, applyAvatarChange } from '../utils/avatarConfig';
 import { useAvatarFavorites } from '../hooks/useAvatarFavorites';
 import { trackApplyPreset, trackRandomize } from '../services/avatarAnalytics';
 
 type Tab = 'face' | 'hair' | 'body' | 'wardrobe' | 'accessories' | 'presets';
 
 const HISTORY_LIMIT = 30;
+
+// The preview leans in on whatever the current tab changes: the face up close,
+// the whole outfit on Wardrobe.
+const TAB_ZOOM: Record<Tab, { scale: number; origin: string }> = {
+  face: { scale: 1.55, origin: '50% 38%' },
+  hair: { scale: 1.2, origin: '50% 40%' },
+  accessories: { scale: 1.2, origin: '50% 46%' },
+  body: { scale: 1, origin: '50% 50%' },
+  wardrobe: { scale: 1, origin: '50% 50%' },
+  presets: { scale: 1, origin: '50% 50%' },
+};
 
 interface AvatarCreatorV2Props {
   initialConfig?: AvatarConfigV2;
@@ -122,10 +134,10 @@ function coherentRandomize(): AvatarConfigV2 {
   const hairTexture = pick(textures);
 
   const compatibleStyles = hairTexture === 'coily'
-    ? (g === 'male' ? ['afro', 'locs', 'fade', 'short'] : ['afro', 'locs', 'braids', 'curly'])
+    ? (g === 'male' ? ['afro', 'locs_short', 'fade', 'short'] : ['afro', 'locs', 'braids', 'curly'])
     : hairTexture === 'wavy'
-    ? (g === 'male' ? ['wavy', 'short', 'sleek'] : ['wavy', 'sleek', 'curly', 'ponytail'])
-    : (g === 'male' ? ['buzz', 'short', 'sleek', 'fade'] : ['sleek', 'ponytail', 'bun', 'wavy']);
+    ? (g === 'male' ? ['short_wavy', 'short', 'slick_back'] : ['wavy', 'sleek', 'curly', 'ponytail'])
+    : (g === 'male' ? ['buzz', 'short', 'slick_back', 'fade'] : ['sleek', 'ponytail', 'bun', 'wavy']);
 
   const hairStyle = pick(compatibleStyles) as AvatarConfigV2['hairStyle'];
 
@@ -144,6 +156,7 @@ function coherentRandomize(): AvatarConfigV2 {
   const eyelinerOpts: Eyeliner[] = ['none', 'none', 'none', 'thin', 'winged'];
 
   return {
+    _version: AVATAR_CONFIG_VERSION,
     gender: g,
     skinTone,
     eyeColor: pick(EYE_COLORS).value,
@@ -187,10 +200,10 @@ export function AvatarCreatorV2({
     if (draftKey) {
       try {
         const stored = localStorage.getItem(draftKey);
-        if (stored) return { ...DEFAULT_MALE_AVATAR_V2, ...JSON.parse(stored) } as AvatarConfigV2;
+        if (stored) return migrateAvatarConfig(JSON.parse(stored));
       } catch {}
     }
-    return initialConfig ?? DEFAULT_MALE_AVATAR_V2;
+    return migrateAvatarConfig(initialConfig ?? DEFAULT_MALE_AVATAR_V2);
   };
 
   const [config, setConfig] = useState<AvatarConfigV2>(getInitial);
@@ -200,7 +213,9 @@ export function AvatarCreatorV2({
 
   const { favorites, addFavorite, removeFavorite, applyFavorite, maxSlots } = useAvatarFavorites(favoritesNamespace);
 
-  const push = useCallback((next: AvatarConfigV2) => {
+  const push = useCallback((incoming: AvatarConfigV2) => {
+    // Saved looks and presets can be older configs; read them the old way first.
+    const next = migrateAvatarConfig(incoming);
     const slice = history.current.slice(0, historyIdx.current + 1);
     slice.push(next);
     if (slice.length > HISTORY_LIMIT) slice.shift();
@@ -216,7 +231,7 @@ export function AvatarCreatorV2({
 
   const update = useCallback((partial: Partial<AvatarConfigV2>) => {
     setConfig(prev => {
-      const next = { ...prev, ...partial };
+      const next = applyAvatarChange(prev, partial);
       push(next);
       return next;
     });
@@ -255,7 +270,7 @@ export function AvatarCreatorV2({
     onRandomize?.(randomized);
   };
 
-  const hairstyles = config.gender === 'male' ? MALE_HAIRSTYLES : FEMALE_HAIRSTYLES;
+  const hairstyles = HAIRSTYLES;
 
   const TABS: Array<{ id: Tab; label: string }> = [
     { id: 'presets', label: 'Presets' },
@@ -355,16 +370,14 @@ export function AvatarCreatorV2({
         </div>
       </Section>
 
-      {config.gender === 'female' && (
-        <Section label="Eyelashes">
-          <div className="grid grid-cols-2 gap-2">
-            {(['none', 'dramatic'] as Eyelashes[]).map(v => (
-              <OptionButton key={v} label={v === 'none' ? 'None' : 'Dramatic'}
-                selected={config.eyelashes === v} onClick={() => update({ eyelashes: v })} />
-            ))}
-          </div>
-        </Section>
-      )}
+      <Section label="Eyelashes">
+        <div className="grid grid-cols-2 gap-2">
+          {(['none', 'dramatic'] as Eyelashes[]).map(v => (
+            <OptionButton key={v} label={v === 'none' ? 'None' : 'Dramatic'}
+              selected={config.eyelashes === v} onClick={() => update({ eyelashes: v })} />
+          ))}
+        </div>
+      </Section>
 
       <Section label="Eyeliner">
         <div className="grid grid-cols-4 gap-2">
@@ -453,22 +466,20 @@ export function AvatarCreatorV2({
         </div>
       </Section>
 
-      {config.gender === 'male' && (
-        <Section label="Facial Hair">
-          <div className="grid grid-cols-3 gap-2">
-            {([
-              { value: 'none', label: 'None' },
-              { value: 'stubble', label: 'Stubble' },
-              { value: 'beard', label: 'Beard' },
-              { value: 'goatee', label: 'Goatee' },
-              { value: 'mustache', label: 'Mustache' },
-            ] as Array<{ value: FacialHair; label: string }>).map(o => (
-              <OptionButton key={o.value} label={o.label}
-                selected={config.facialHair === o.value} onClick={() => update({ facialHair: o.value })} />
-            ))}
-          </div>
-        </Section>
-      )}
+      <Section label="Facial Hair">
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { value: 'none', label: 'None' },
+            { value: 'stubble', label: 'Stubble' },
+            { value: 'beard', label: 'Beard' },
+            { value: 'goatee', label: 'Goatee' },
+            { value: 'mustache', label: 'Mustache' },
+          ] as Array<{ value: FacialHair; label: string }>).map(o => (
+            <OptionButton key={o.value} label={o.label}
+              selected={config.facialHair === o.value} onClick={() => update({ facialHair: o.value })} />
+          ))}
+        </div>
+      </Section>
     </div>
   );
 
@@ -697,27 +708,32 @@ export function AvatarCreatorV2({
     accessories: accessoriesTab,
   };
 
+  const zoom = TAB_ZOOM[tab];
+  const preview = (size: string) => (
+    <div className={`${size} rounded-2xl overflow-hidden flex-shrink-0
+      bg-[radial-gradient(ellipse_at_center,_#1e2a3a_0%,_#060a0f_100%)]
+      shadow-[0_0_40px_rgba(0,0,0,0.8)] flex items-center justify-center`}>
+      <div className="w-full h-full transition-transform duration-300 ease-out"
+        style={{ transform: `scale(${zoom.scale})`, transformOrigin: zoom.origin }}>
+        <AvatarV2 config={config} className="w-full h-full" />
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col lg:flex-row gap-0 h-full min-h-0">
+      {/* On wide screens this column stays put while the options scroll past. */}
       <div className="lg:w-72 xl:w-80 flex-shrink-0 flex flex-col items-center justify-start py-8 px-6
         bg-gradient-to-b from-[#0d1117] to-[#070c14]
-        border-b lg:border-b-0 lg:border-r border-white/5">
-        <div className="w-52 h-52 lg:w-64 lg:h-64 rounded-2xl overflow-hidden
-          bg-[radial-gradient(ellipse_at_center,_#1e2a3a_0%,_#060a0f_100%)]
-          shadow-[0_0_40px_rgba(0,0,0,0.8)] flex items-center justify-center">
-          <AvatarV2 config={config} className="w-full h-full" />
-        </div>
+        border-t lg:border-t-0 lg:border-r border-white/5
+        lg:sticky lg:top-0 lg:self-start lg:max-h-screen lg:overflow-y-auto">
+        <div className="hidden lg:block">{preview('w-64 h-64')}</div>
 
-        <div className="mt-6 w-full space-y-3">
+        <div className="lg:mt-6 w-full space-y-3">
           <div className="grid grid-cols-2 gap-2">
             {(['male', 'female'] as Gender[]).map(g => (
               <button key={g}
-                onClick={() => update({
-                  gender: g,
-                  hairStyle: g === 'male' ? 'short' : 'sleek',
-                  facialHair: 'none',
-                  eyelashes: 'none',
-                })}
+                onClick={() => update({ gender: g })}
                 className={`py-2 rounded-lg text-sm font-semibold transition-all border ${
                   config.gender === g
                     ? 'bg-sky-700 border-sky-600 text-white'
@@ -818,22 +834,42 @@ export function AvatarCreatorV2({
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0 bg-[#080d14]">
-        <div className="flex border-b border-white/5 flex-shrink-0 overflow-x-auto">
-          {TABS.map(t => (
-            <button key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex-1 min-w-0 py-3.5 text-sm font-semibold tracking-wide transition-all border-b-2 whitespace-nowrap ${
-                tab === t.id
-                  ? t.id === 'presets'
-                    ? 'text-amber-400 border-amber-500'
-                    : 'text-sky-400 border-sky-500'
-                  : 'text-gray-500 border-transparent hover:text-gray-300'
-              }`}
-            >
-              {t.id === 'presets' ? '✦ Presets' : t.label}
-            </button>
-          ))}
+      <div className="flex-1 flex flex-col min-h-0 bg-[#080d14] order-first lg:order-none">
+        {/* On phones the avatar rides along at the top while you scroll the options. */}
+        <div className="sticky top-0 z-20 bg-[#080d14] flex-shrink-0">
+          <div className="lg:hidden flex items-center justify-center gap-4 pt-4 pb-3 px-4">
+            {preview('w-32 h-32')}
+            <div className="flex flex-col gap-2">
+              <button onClick={randomize} title="Randomize"
+                className="flex items-center justify-center w-10 h-9 rounded-lg bg-sky-600/20 border border-sky-500/30 text-sky-400">
+                <Shuffle className="w-4 h-4" />
+              </button>
+              <button onClick={undo} title="Undo" disabled={historyIdx.current <= 0}
+                className="flex items-center justify-center w-10 h-9 rounded-lg bg-white/5 border border-white/10 text-gray-400 disabled:opacity-30">
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button onClick={redo} title="Redo" disabled={historyIdx.current >= history.current.length - 1}
+                className="flex items-center justify-center w-10 h-9 rounded-lg bg-white/5 border border-white/10 text-gray-400 disabled:opacity-30">
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div className="flex border-b border-white/5 flex-shrink-0 overflow-x-auto">
+            {TABS.map(t => (
+              <button key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex-shrink-0 lg:flex-1 lg:min-w-0 px-4 py-3.5 text-sm font-semibold tracking-wide transition-all border-b-2 whitespace-nowrap ${
+                  tab === t.id
+                    ? t.id === 'presets'
+                      ? 'text-amber-400 border-amber-500'
+                      : 'text-sky-400 border-sky-500'
+                    : 'text-gray-500 border-transparent hover:text-gray-300'
+                }`}
+              >
+                {t.id === 'presets' ? '✦ Presets' : t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
