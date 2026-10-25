@@ -60,6 +60,8 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 4. **No walls.** A ball that rolls far fades out after its recorded 4s flight.
 5. **The 2D fallback** is out of date (rare: only without WebGL).
 
+6. **The player figure still looks blocky, and the hands don't grip the ball** (playtest feedback). It's built from rigid shapes, so seams show at the joints; the hands are paddles, and the ball is placed near them rather than held. Fix later: one smooth skinned body with tapered muscle shapes; fingered hands; arm IK from the ball so the palms sit on its surface and the fingers wrap it in every pose (chest, set point, release).
+
 ## Next three
 1. **iPhone playtest:** `?fps`, timing feel, sound.
 2. **Balance pass from that data:** Rookie make zone, rivals, stars and unlock scores.
