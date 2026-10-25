@@ -323,10 +323,11 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
 }
 
 /**
- * The release meter, beside the shooter. Live on the first shot of a run so
- * you can find the mark; after that it only flashes for a moment after each
+ * The release meter, beside the shooter. Live on the first shot at each rack
+ * so you can find the mark; after that it only flashes for a moment after each
  * release, frozen where you let go against the green, then fades. You learn
- * the timing from those flashes, not by watching a bar fill.
+ * the timing from those flashes, not by watching a bar fill. Starry balls
+ * never show it.
  */
 function ShotMeter({ gameRef }: { gameRef: MutableRefObject<GameLike | null> }) {
   const wrap = useRef<HTMLDivElement>(null);

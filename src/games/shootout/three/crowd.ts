@@ -25,11 +25,12 @@ export const BOWL = {
   roofZ: 20,
 };
 
-/** Eight head-and-shoulder silhouettes side by side (128×256 each). Red marks
- *  the shirt (and caps, hoods), green the skin, dimmer green the hair; alpha is
- *  the outline. The shader colours each fan from these masks. */
+/** Eight head-and-shoulder silhouettes side by side (128×256 each), and below
+ *  them the same eight with both arms up (for jumping). Red marks the shirt
+ *  (and caps, hoods), green the skin, dimmer green the hair; alpha is the
+ *  outline. The shader colours each fan from these masks. */
 function silhouettes(): THREE.CanvasTexture {
-  const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256;
+  const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 512;
   const g = cv.getContext('2d')!;
   const SHIRT = 'rgb(255,0,0)', SKIN = 'rgb(0,255,0)', HAIR = 'rgb(0,80,0)';
   const ell = (x: number, y: number, rx: number, ry: number, fill: string) => { g.fillStyle = fill; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fill(); };
@@ -46,7 +47,18 @@ function silhouettes(): THREE.CanvasTexture {
     cx => { body(cx, 100); g.fillStyle = SHIRT; g.fillRect(cx + 30, 70, 17, 110); ell(cx + 38, 64, 10, 12, SKIN); neck(cx); head(cx); ell(cx, 92, 22, 12, HAIR); }, // arm up
     cx => { body(cx, 104); neck(cx); ell(cx, 102, 36, 34, HAIR); head(cx, 114, 25); ell(cx, 92, 30, 18, HAIR); },  // big hair
   ];
-  variants.forEach((draw, i) => draw(i * 128 + 64));
+  // Both arms raised from the shoulders, hands open at the top.
+  const armsUp = (cx: number, spread: number) => {
+    g.strokeStyle = SHIRT; g.lineWidth = 15; g.lineCap = 'round';
+    [-1, 1].forEach(s => {
+      g.beginPath(); g.moveTo(cx + s * 30, 182); g.quadraticCurveTo(cx + s * (40 + spread), 120, cx + s * (34 + spread), 40); g.stroke();
+      ell(cx + s * (34 + spread), 32, 9, 11, SKIN);
+    });
+  };
+  variants.forEach((draw, i) => {
+    draw(i * 128 + 64);
+    g.save(); g.translate(0, 256); armsUp(i * 128 + 64, (i % 3) * 5); draw(i * 128 + 64); g.restore();
+  });
   const t = new THREE.CanvasTexture(cv);
   return t;
 }
@@ -156,7 +168,9 @@ export class Crowd {
           vec3 wp = c + right * position.x * s * sign(aLook) + vec3(0.0, position.y * s, 0.0);
           vec4 mvPosition = viewMatrix * vec4(wp, 1.0);
           gl_Position = projectionMatrix * mvPosition;
-          vUv = vec2((abs(aLook) - 1.0 + uv.x) / 8.0, uv.y);
+          // Arms up while in the air, down again on landing.
+          float up = step(0.06, uExcite * aJump * max(0.0, sin(uTime * 9.0 + aPhase)));
+          vUv = vec2((abs(aLook) - 1.0 + uv.x) / 8.0, (uv.y + 1.0 - up) * 0.5);
           vShirt = aShirt; vSkin = aSkin; vRim = aRim;
           #include <fog_vertex>
         }`,
@@ -168,7 +182,7 @@ export class Crowd {
           vec4 t = texture2D(map, vUv);
           if (t.a < 0.04) discard;
           // The arena lights catch the top edge: lit where the texel above is empty.
-          float rim = t.a * (1.0 - texture2D(map, vUv + vec2(0.0, 0.012)).a);
+          float rim = t.a * (1.0 - texture2D(map, vUv + vec2(0.0, 0.006)).a);
           vec3 col = vShirt * t.r + vSkin * t.g + uRim * rim * vRim;
           gl_FragColor = vec4(col, smoothstep(0.25, 0.65, t.a));
           #include <fog_fragment>

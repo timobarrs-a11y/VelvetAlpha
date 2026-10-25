@@ -15,6 +15,8 @@ import {
 import { planShotSteps, planShot, previewArc, sampleAt, simulateLaunch, type ShotPlan, type V3 } from '../ballSim';
 import * as sfx from '../audio';
 import { ballTexture, FLOOR, floorTexture, makeScoreboard, ribbonTexture } from './textures';
+import { Effects } from './effects';
+import { NO_FX, shotFx, startFx, stepFx, type FxRun, type ShotFx } from '../fx';
 import { Net } from './net';
 import { seeded, type RivalRun } from '../rivals';
 import { Crowd } from './crowd';
@@ -114,6 +116,8 @@ interface LiveBall {
   chain: number;
   streakAfter: number;
   bank?: boolean;
+  /** What it shows when it gets to the rim (perfect-release chain). */
+  fx: ShotFx;
   nextEvent: number;
   resolved: boolean;
 }
@@ -249,10 +253,13 @@ export class Shootout3D {
   private ribbons: THREE.Texture[] = [];
   private rimMat!: THREE.MeshStandardMaterial;
   private scoreboards: ReturnType<typeof makeScoreboard>;
-  private confetti!: THREE.Points;
-  private confettiVel: Float32Array;
-  private confettiLife: Float32Array;
-  private flames!: THREE.Points;
+  private fx!: Effects;
+  private fxRun!: FxRun;
+  private ballsTotal = 0;
+  /** How hot the rim glows: steady while it's on fire, a flash when it explodes. */
+  private rimHeat = 0;
+  private rimOnFire = false;
+  private finaleAt = -99;
 
   // Game state.
   readonly level: Level;
@@ -276,7 +283,7 @@ export class Shootout3D {
   private shift = 0;
   private target = 0.7;
   /** The last release, flashed on the meter for a moment so you can learn the timing. */
-  private lastRelease: { held: number; target: number; green: number; at: number; error: number } | null = null;
+  private lastRelease: { held: number; target: number; green: number; at: number; error: number; starry: boolean } | null = null;
   private greenPinged = false;
   /** Time since the last release (follow-through and reaching for the next ball). */
   private flightT = 0;
@@ -363,8 +370,6 @@ export class Shootout3D {
       regular: this.makeBallMat('regular'), money: this.makeBallMat('money'), starry: this.makeBallMat('starry'),
     };
     this.scoreboards = makeScoreboard();
-    this.confettiVel = new Float32Array(400 * 3);
-    this.confettiLife = new Float32Array(400);
     this.build();
     this.resize();
     this.precompile();
@@ -519,18 +524,11 @@ export class Shootout3D {
     this.buildArms();
     this.buildPlayer();
 
-    // Confetti and fire.
-    const cg = new THREE.BufferGeometry();
-    cg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(400 * 3).fill(-100), 3));
-    cg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(400 * 3), 3));
-    this.confetti = new THREE.Points(cg, new THREE.PointsMaterial({ size: 0.06, vertexColors: true, transparent: true, depthWrite: false }));
-    this.confetti.frustumCulled = false;
-    s.add(this.confetti);
-    const fg = new THREE.BufferGeometry();
-    fg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(60 * 3).fill(-100), 3));
-    this.flames = new THREE.Points(fg, new THREE.PointsMaterial({ size: 0.12, color: 0xff7a1a, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
-    this.flames.frustumCulled = false;
-    s.add(this.flames);
+    // Make effects: fireworks, flames and the finale, driven by the perfect-release chain.
+    this.fx = new Effects(toThree, [0, 0, RIM_HEIGHT], RIM_R);
+    s.add(this.fx.group);
+    this.fxRun = startFx(this.course);
+    this.ballsTotal = this.course.reduce((n, sp) => n + sp.balls.length, 0);
   }
 
   private buildHoop(): void {
@@ -820,7 +818,7 @@ export class Shootout3D {
     mesh.visible = true; mesh.scale.setScalar(1);
     this.live.push({
       mesh, plan: shot, t: 0, pos: [...from], offset: [0, 0, 0], kind: ball.kind, outcome: shot.outcome, points,
-      perfect: swish, chain: this.chain, streakAfter: this.streak, bank: shot.bank, nextEvent: 0, resolved: false,
+      perfect: swish, chain: this.chain, streakAfter: this.streak, bank: shot.bank, fx: NO_FX, nextEvent: 0, resolved: false,
     });
     if (this.live.length > this.ballPool.length) this.live.shift();
     this.replayBall = this.live[this.live.length - 1];
@@ -892,17 +890,23 @@ export class Shootout3D {
   }
 
   /**
-   * What the release meter should show. The first shot of a run shows it live
-   * so you can find the mark; after that it only flashes for a moment after
-   * each release (where you let go against the green), then fades.
+   * What the release meter should show. The first shot at each rack shows it
+   * live so you can find the mark; after that it only flashes for a moment
+   * after each release (where you let go against the green), then fades.
+   * Starry balls never show it: they're timed from memory of the shots before.
    */
   meterView(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number } {
     if (this.auto || this.touch) return { mode: 'off', hold: 0, target: 1, green: 0, error: 0, age: 0 };
     const green = this.win.green * fireBoost(this.streak);
-    if (this.shots === 0 && (this.phase === 'aim' || this.phase === 'hold')) return { mode: 'live', hold: this.holdT, target: this.target, green, error: 0, age: 0 };
+    if (this.meterLive() && (this.phase === 'aim' || this.phase === 'hold')) return { mode: 'live', hold: this.holdT, target: this.target, green, error: 0, age: 0 };
     const r = this.lastRelease, age = r ? this.time - r.at : 99;
-    if (r && age < 1.3) return { mode: 'flash', hold: r.held, target: r.target, green: r.green, error: r.error, age };
+    if (r && !r.starry && age < 1.3) return { mode: 'flash', hold: r.held, target: r.target, green: r.green, error: r.error, age };
     return { mode: 'off', hold: 0, target: this.target, green, error: 0, age };
+  }
+
+  /** The meter runs live for the first ball at each rack, never for a Starry ball. */
+  private meterLive(): boolean {
+    return this.ballIdx === 0 && this.spot?.balls[0]?.kind !== 'starry';
   }
 
   // ---- Simulation -----------------------------------------------------------
@@ -949,8 +953,8 @@ export class Shootout3D {
     } else if (this.phase === 'hold') {
       this.holdT = this.holdClock.held();
       const { green } = this.win;
-      // Only the first shot of a run pings the green: after that it's timing from memory.
-      if (!this.greenPinged && this.shots === 0 && this.holdT >= this.target - (green * fireBoost(this.streak)) / 2) { this.greenPinged = true; sfx.playGreen(); }
+      // Only a live meter (the first shot at each rack) pings the green: after that it's timing from memory.
+      if (!this.greenPinged && this.meterLive() && this.holdT >= this.target - (green * fireBoost(this.streak)) / 2) { this.greenPinged = true; sfx.playGreen(); }
       if (this.holdT > Math.max(this.target, this.win.rise) * 1.45) { this.holdT = this.holdClock.stop(); this.shoot(); }
     }
     // Catch and shoot: the next ball comes as soon as you've followed through and reached for it.
@@ -958,7 +962,8 @@ export class Shootout3D {
     if (this.phase === 'replay') this.stepReplay(dt);
     else this.stepBalls(dt);
     this.pumpPlans();
-    if (this.phase === 'wait' && this.phaseT > 0.5 && this.live.every(b => b.resolved)) this.wrapUp();
+    // After a finale, let the explosion play out before the replay.
+    if (this.phase === 'wait' && this.phaseT > 0.5 && this.live.every(b => b.resolved) && this.time - this.finaleAt > 2.4) this.wrapUp();
     this.fade = Math.max(0, this.fade - real * 3.2);
     this.punch = Math.max(0, this.punch - real * 2.5);
     this.shake = Math.max(0, this.shake - real * 3);
@@ -983,7 +988,7 @@ export class Shootout3D {
       this.clock = this.clock0 - planned.t;
     } else {
       ({ grade, error } = judge(this.holdT, this.target, windowW));
-      this.lastRelease = { held: this.holdT, target: this.target, green: windowW, at: this.time, error };
+      this.lastRelease = { held: this.holdT, target: this.target, green: windowW, at: this.time, error, starry: ball.kind === 'starry' };
       outcome = resolveShot(grade);
     }
     // The rules decide the shot now; the score and the crowd wait until the ball gets there.
@@ -995,6 +1000,8 @@ export class Shootout3D {
     const points = made ? shotPoints(this.opts.scoring ?? 'classic', ball, true, perfect, this.chain) : 0;
     if (made) this.makes++;
     this.shots++;
+    this.fxRun = stepFx(this.fxRun, ball.kind, made, perfect);
+    const fx = shotFx(this.fxRun, made, perfect, this.shots >= this.ballsTotal);
 
     // The ball leaves from the hands, wherever the jump put them. Early comes up short, late goes long.
     const hand = new THREE.Vector3();
@@ -1009,7 +1016,7 @@ export class Shootout3D {
     const start = plan.samples[0].p;
     this.live.push({
       mesh, plan, t: 0, pos: [...from], offset: [from[0] - start[0], from[1] - start[1], from[2] - start[2]],
-      kind: ball.kind, outcome, points, perfect, chain: this.chain, streakAfter: this.streak, nextEvent: 0, resolved: false,
+      kind: ball.kind, outcome, points, perfect, chain: this.chain, streakAfter: this.streak, fx, nextEvent: 0, resolved: false,
     });
     if (this.live.length > this.ballPool.length) this.live.shift();
     this.replayBall = this.live[this.live.length - 1];
@@ -1094,39 +1101,40 @@ export class Shootout3D {
   private resolve(b: LiveBall): void {
     b.resolved = true;
     this.shownStreak = b.streakAfter;
+    this.rimOnFire = b.fx.rimFire;
+    this.fx.setRimFire(b.fx.rimFire);
     if (!isMake(b.outcome)) {
-      this.rimMat.emissive.setHex(0x000000);
       this.cb.onEvent?.({ type: 'miss', outcome: b.outcome });
       return;
     }
     this.score += b.points;
     if (this.clock <= 0 && !this.auto) this.cb.onEvent?.({ type: 'buzzer' });
-    if (b.streakAfter === 3) { this.cb.onEvent?.({ type: 'fire' }); this.rimMat.emissive.setHex(0x5a1a00); }
+    if (b.streakAfter === 3) this.cb.onEvent?.({ type: 'fire' });
     this.cb.onEvent?.({ type: 'make', points: b.points, outcome: b.outcome, streak: b.streakAfter, perfect: b.perfect, chain: b.chain, mult: b.perfect ? perfectMultiplier(b.chain) : 1, kind: b.kind, bank: b.bank });
     const value = b.kind === 'starry' ? 3 : b.kind === 'money' ? 2 : 1;
-    const big = value > 1 || b.perfect || b.streakAfter >= 3;
-    this.crowd.cheer(value + (b.perfect ? 1 : 0) + (b.streakAfter >= 3 ? 1 : 0));
-    this.punch = big ? 1 : 0.5;
-    if (!this.reduced) this.shake = big ? 0.5 : 0.2;
-    try { navigator.vibrate?.(big ? [20, 40, 30] : 18); } catch { /* not supported */ }
-    this.burst(value, b.streakAfter);
+    // Only a perfect release gets effects, and they grow with the chain. Any
+    // other make just gets the crowd.
+    const f = b.fx;
+    if (b.perfect) {
+      this.crowd.cheer(value + 1 + f.level * 3);
+      this.punch = 0.6 + f.level * 0.6;
+      if (!this.reduced) this.shake = 0.25 + f.level * 0.5;
+      this.fx.fireworks(f.level);
+    } else this.crowd.cheer(value * 0.5);
+    try { navigator.vibrate?.(b.perfect ? [20, 40, 30] : 18); } catch { /* not supported */ }
+    if (f.finale !== 'none') this.finale(f.finale);
   }
 
-  private burst(pts: number, streak: number): void {
-    const palette = pts === 3 ? [0xe0e7ff, 0xa5b4fc, 0xffffff] : pts === 2 ? [0xf472b6, 0xf5c451, 0xffffff] : [0xf5c451, 0xffffff, 0xfb923c];
-    const pos = this.confetti.geometry.getAttribute('position') as THREE.BufferAttribute;
-    const col = this.confetti.geometry.getAttribute('color') as THREE.BufferAttribute;
-    const c = new THREE.Color();
-    const n = pts > 1 || streak >= 3 ? 400 : 180;
-    for (let i = 0; i < n; i++) {
-      const p = toThree([0, 0, RIM_HEIGHT]);
-      pos.setXYZ(i, p.x, p.y, p.z);
-      const a = Math.random() * Math.PI * 2, v = 1 + Math.random() * 3;
-      this.confettiVel[i * 3] = Math.cos(a) * v; this.confettiVel[i * 3 + 1] = 2 + Math.random() * 3.5; this.confettiVel[i * 3 + 2] = Math.sin(a) * v;
-      this.confettiLife[i] = 1.2 + Math.random() * 0.8;
-      c.setHex(palette[i % palette.length]); col.setXYZ(i, c.r, c.g, c.b);
-    }
-    pos.needsUpdate = true; col.needsUpdate = true;
+  /** The last ball of a perfect run blows up the burning rim; every ball made gets a gold burst. */
+  private finale(kind: 'perfect' | 'made'): void {
+    this.fx.explode(kind);
+    if (this.phase !== 'replay') this.finaleAt = this.time;
+    this.rimOnFire = false;
+    this.rimHeat = kind === 'perfect' ? 3 : 1.5;
+    this.crowd.cheer(4);
+    this.punch = 1.4;
+    if (!this.reduced) this.shake = 1.2;
+    try { navigator.vibrate?.([40, 30, 60, 30, 90]); } catch { /* not supported */ }
   }
 
   /** Everything has landed: show the last make again in slow motion, then the horn. */
@@ -1146,7 +1154,11 @@ export class Shootout3D {
     const before = this.replayT;
     this.replayT += dt;
     const through = b.plan.events.find(e => e.kind === 'through');
-    if (through && before < through.t && this.replayT >= through.t) { sfx.playSwish(); this.burst(b.kind === 'starry' ? 3 : b.kind === 'money' ? 2 : 1, 0); }
+    if (through && before < through.t && this.replayT >= through.t) {
+      sfx.playSwish();
+      if (b.perfect) this.fx.fireworks(b.fx.level);
+      if (b.fx.finale !== 'none') this.finale(b.fx.finale);
+    }
     if (this.replayT > b.plan.resolvedAt + 0.7) this.endReplay();
   }
 
@@ -1215,9 +1227,14 @@ export class Shootout3D {
       if (d < best) { best = d; atRim = b.pos; }
     }
     this.net.step(real * (this.phase === 'replay' ? 0.32 : 1), atRim, BALL_R, 0);
-    this.stepConfetti(real);
-    const newest = this.live[this.live.length - 1];
-    this.stepFlames(bp ?? (newest && !newest.resolved ? newest.pos : null));
+    // A ball on fire burns all the way to the rim (and again in the replay).
+    const fdt = real * (this.phase === 'replay' ? 0.32 : 1);
+    if (bp && this.replayBall?.fx.fireball) this.fx.burn(toThree(bp), fdt);
+    for (const b of this.live) if (b.fx.fireball && !b.resolved && b.mesh.visible) this.fx.burn(toThree(b.pos), fdt);
+    this.fx.update(fdt, this.renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)));
+    // The rim glows while it burns and flashes white-hot when it explodes.
+    this.rimHeat += ((this.rimOnFire ? 0.55 : 0) - this.rimHeat) * Math.min(1, real * (this.rimHeat > 0.6 ? 1.5 : 4));
+    this.rimMat.emissive.setRGB(1, 0.38, 0.08).multiplyScalar(this.rimHeat);
 
     // Arms and held ball: first person only.
     const fp = !this.auto && !this.touch && (this.phase === 'aim' || this.phase === 'hold');
@@ -1266,30 +1283,6 @@ export class Shootout3D {
     this.updateCamera(real);
     if (!this.renderer.shadowMap.autoUpdate && this.perf.frame % 3 === 0) this.renderer.shadowMap.needsUpdate = true;
     if (!this.noDraw) this.composer.render();
-  }
-
-  private stepConfetti(dt: number): void {
-    const pos = this.confetti.geometry.getAttribute('position') as THREE.BufferAttribute;
-    for (let i = 0; i < this.confettiLife.length; i++) {
-      if (this.confettiLife[i] <= 0) continue;
-      this.confettiLife[i] -= dt;
-      this.confettiVel[i * 3 + 1] -= 6 * dt;
-      const x = pos.getX(i) + this.confettiVel[i * 3] * dt, y = pos.getY(i) + this.confettiVel[i * 3 + 1] * dt, z = pos.getZ(i) + this.confettiVel[i * 3 + 2] * dt;
-      pos.setXYZ(i, x, this.confettiLife[i] > 0 ? Math.max(0.01, y) : -100, z);
-    }
-    pos.needsUpdate = true;
-  }
-
-  private stepFlames(bp: V3 | null): void {
-    const pos = this.flames.geometry.getAttribute('position') as THREE.BufferAttribute;
-    const on = this.shownStreak >= 3 && !!bp;
-    for (let i = 0; i < pos.count; i++) {
-      if (!on) { pos.setXYZ(i, 0, -100, 0); continue; }
-      const p = toThree(bp!);
-      const k = i / pos.count;
-      pos.setXYZ(i, p.x + (Math.random() - 0.5) * 0.12, p.y + (Math.random() - 0.5) * 0.12 - k * 0.1, p.z + (Math.random() - 0.5) * 0.12 + k * 0.25);
-    }
-    pos.needsUpdate = true;
   }
 
   /** The shooter, seen from the broadcast camera: jogs to the next rack, then turns to the hoop. */

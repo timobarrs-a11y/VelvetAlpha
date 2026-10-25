@@ -10,7 +10,8 @@ The skill is the release. Everything else (scoring, rivals, graphics) exists to 
 
 - **Make zone.** Slightly early to slightly late always goes in. Dead centre is a **perfect** release.
 - **Release point.** Each run picks its own: slightly early, the top, or slightly late (`pickRelease`). Timing can't be memorised across games.
-- **Meter.** Live on the first shot of a run only. After that it flashes for about a second after each release, frozen where you let go, then fades. You learn from the flashes.
+- **Meter.** Live for the whole first shot at each rack. After that it flashes for about a second after each release, frozen where you let go, then fades. You learn from the flashes. Starry balls never show it: they're timed from memory of the shots before.
+- **Make effects (`fx.ts`).** Only a perfect release gets effects; any other make just gets the crowd. Perfects in a row grow the show with the run: bigger, more colourful fireworks and shells overhead, then the ball catches fire (about a quarter of the run in a row), then the rim burns through the last rack of a perfect run and explodes on its last ball. Every ball made but not all perfect ends in a gold burst instead. Starry balls can be missed without breaking the chain or the run.
 - **Modes:**
   - **Practice:** classic 1/2/3 scoring, unlocks levels and stars.
   - **Contest:** you vs 5 AI rivals, +1 per perfect. Round 1, top 3 advance to a final in reverse order; ties go to a 30s shoot-off.
@@ -24,11 +25,13 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 |---|---|
 | `engine.ts` | Pure rules: course, levels, shot window, judge, outcomes, release point, scoring. Tested. |
 | `rivals.ts` | Rival roster, seeded run simulation, pace (`scoreAt`), cut/tiebreak rules. Tested. |
+| `fx.ts` | The make-effects chain: perfects in a row, fireball, rim fire, finale (perfect run or every ball made). Tested. |
 | `holdClock.ts` | Times your hold from input-event timestamps, independent of frame rate. Tested. |
 | `ballSim.ts` | Ball physics (gravity, drag, backspin; rim, glass, floor, stanchion) and `planShot`: a real flight for the outcome the rules chose. Fixed 240Hz step, deterministic. Tested. |
 | `three/game3d.ts` | `Shootout3D`: scene, cameras, phases (walk/aim/hold/flight/wait/replay/done), live balls and catch-and-shoot, scoring, rival autopilot, frame governor, `meterView()`. |
 | `three/athlete.ts` | The player figure (muscle-shaped limbs, jersey with number, shorts, fingered hands, sneakers, face and hair) and its poses: jog, dip, set point, release, celebrate. While holding the ball, two-bone IK puts each palm on the ball's surface facing its centre and the fingers curl round it; `ballCenter()` is where the game draws the ball. Used by you, rivals and Street. |
-| `three/arena.ts`, `crowd.ts`, `net.ts`, `textures.ts` | The building (suites, roof, lighting rigs), the instanced cut-out crowd (`BOWL` shape), the cloth net, canvas textures. |
+| `three/arena.ts`, `crowd.ts`, `net.ts`, `textures.ts` | The building (suites, roof, lighting rigs), the instanced cut-out crowd (`BOWL` shape; arms go up as they jump), the cloth net, canvas textures. |
+| `three/effects.ts` | Fireworks, flames and the finale explosion: one pool of glowing points and a shockwave ring. |
 | `ui/RunView.tsx` | One run: canvas, input, broadcast overlay, meter. Remount with a new `key` per run. |
 | `ui/Contest.tsx` | The contest flow and standings. |
 | `game.ts` | The 2D court, used only when WebGL is unavailable (scripted flights, classic scoring; kept as is). |
@@ -50,6 +53,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 - **The shooter's backdrop stays calm.** Every part of the bowl that sits behind the rim from some rack (the whole baseline end, the sidelines' near end) has mostly dark suites and no LED panels; suites elsewhere come in bays between dark pillars, and the LED ribbon is broken into panels. The board behind the basket glows at 0.6 (the jumbotron 1.4). Measured around the rim in all 14 first-person views: edge density 7.5% → 4.9% (desktop), brightness about 12% lower.
 - **A modern roof, not a grid.** Three dark girders, grouped lighting rigs (one per row of arena spots, a cluster of fixtures around each), and a centre-hung board with a slim wine-and-gold LED halo. The SpotLights didn't move, so the court lighting didn't change.
 - **Fans are silhouette cut-outs.** One instanced quad each (8 head-and-shoulder shapes, mirrored at random), turned to face the camera, coloured from masks, with the top edge catching the light. Fans behind the rim are dimmer and barely rim-lit, so the backdrop stays calm. This took the scene from about 840k to 73k triangles on desktop (427k to 25k on phone).
+- **Effects reward perfects, not just makes.** The existing 3-in-a-row "on fire" boost (a wider green) and its badge are unchanged, but its 3D flames and rim glow are gone: fire now means a run of perfects. The finale holds the replay back about 2.4s so the explosion plays out live first; the replay shows it again in slow motion. Particles are capped in screen size so the hoop and ball stay readable.
 - **Contest scores don't feed practice bests.** A contest title unlocks the next level.
 
 ## Verifying
