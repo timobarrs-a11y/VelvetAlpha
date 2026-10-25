@@ -27,6 +27,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 | `holdClock.ts` | Times your hold from input-event timestamps, independent of frame rate. Tested. |
 | `ballSim.ts` | Ball physics (gravity, drag, backspin; rim, glass, floor, stanchion) and `planShot`: a real flight for the outcome the rules chose. Fixed 240Hz step, deterministic. Tested. |
 | `three/game3d.ts` | `Shootout3D`: scene, cameras, phases (walk/aim/hold/flight/wait/replay/done), live balls and catch-and-shoot, scoring, rival autopilot, frame governor, `meterView()`. |
+| `three/athlete.ts` | The player figure (shaped torso, jersey with number, shorts, jointed arms and legs, hands, sneakers, face and hair) and its poses: jog, dip, set point, release, celebrate. Used by you, rivals and Street. |
 | `three/arena.ts`, `crowd.ts`, `net.ts`, `textures.ts` | The building, the GPU-animated crowd (`BOWL` shape), the cloth net, canvas textures. |
 | `ui/RunView.tsx` | One run: canvas, input, broadcast overlay, meter. Remount with a new `key` per run. |
 | `ui/Contest.tsx` | The contest flow and standings. |

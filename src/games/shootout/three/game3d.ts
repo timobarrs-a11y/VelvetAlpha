@@ -14,11 +14,12 @@ import {
 } from '../engine';
 import { planShotSteps, planShot, previewArc, sampleAt, simulateLaunch, type ShotPlan, type V3 } from '../ballSim';
 import * as sfx from '../audio';
-import { ballTexture, FLOOR, floorTexture, jerseyTexture, makeScoreboard, ribbonTexture } from './textures';
+import { ballTexture, FLOOR, floorTexture, makeScoreboard, ribbonTexture } from './textures';
 import { Net } from './net';
 import { seeded, type RivalRun } from '../rivals';
 import { Crowd } from './crowd';
 import { buildArena, type Arena } from './arena';
+import { Athlete, HAIRS, SKINS } from './athlete';
 import { getLook } from '../settings';
 import { HoldClock } from '../holdClock';
 
@@ -219,7 +220,7 @@ export class Shootout3D {
   private arms = new THREE.Group();
   private ballRig!: THREE.Group;
   private player = new THREE.Group();
-  private playerParts: Record<string, THREE.Object3D> = {};
+  private athlete!: Athlete;
   private rackBalls: THREE.Mesh[][] = [];
   private ribbons: THREE.Texture[] = [];
   private rimMat!: THREE.MeshStandardMaterial;
@@ -597,24 +598,15 @@ export class Shootout3D {
   }
 
   private buildPlayer(): void {
-    const skin = new THREE.MeshStandardMaterial({ color: 0x8d5a3b, roughness: 0.55 });
-    const jersey = new THREE.MeshStandardMaterial({ map: jerseyTexture(this.opts.jersey?.number ?? 30, this.opts.jersey?.colors), roughness: 0.7 });
-    const shorts = new THREE.MeshStandardMaterial({ color: this.opts.jersey?.colors[0] ?? 0x5c163a, roughness: 0.7 });
-    const shoe = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
-    const P = this.playerParts;
-    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.42, 4, 12), jersey); torso.position.y = 1.32; P.torso = torso;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), skin); head.position.y = 1.82; P.head = head;
-    const hip = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.12, 4, 12), shorts); hip.position.y = 0.98; P.hip = hip;
-    this.player.add(torso, head, hip);
-    const limb = (name: string, x: number, y: number, len: number, r: number, mat: THREE.Material, footMat?: THREE.Material) => {
-      const pivot = new THREE.Group(); pivot.position.set(x, y, 0);
-      const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 4, 10), mat); m.position.y = -len / 2 - r; pivot.add(m);
-      if (footMat) { const f = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.07, 0.24), footMat); f.position.set(0, -len - r * 2, 0.06); pivot.add(f); }
-      this.player.add(pivot); P[name] = pivot;
-    };
-    limb('legL', -0.1, 0.92, 0.72, 0.075, skin, shoe); limb('legR', 0.1, 0.92, 0.72, 0.075, skin, shoe);
-    limb('armL', -0.27, 1.55, 0.55, 0.055, skin); limb('armR', 0.27, 1.55, 0.55, 0.055, skin);
-    this.player.traverse(o => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; });
+    const j = this.opts.jersey;
+    const n = j?.number ?? 30;
+    this.athlete = new Athlete({
+      jersey: j?.colors ?? ['#5C163A', '#F5C451'],
+      number: n,
+      skin: SKINS[j ? n % SKINS.length : 0],
+      hair: HAIRS[n % HAIRS.length],
+    });
+    this.player.add(this.athlete.group);
     this.scene.add(this.player);
   }
 
@@ -1186,17 +1178,6 @@ export class Shootout3D {
       this.live.forEach(b => { b.mesh.visible = false; });
     }
     this.ball.visible = !!bp;
-    const touchHolding = this.touch && (this.phase === 'aim' || this.phase === 'walk');
-    if (!bp && ((this.auto && (this.phase === 'aim' || this.phase === 'hold')) || touchHolding)) {
-      // The shooter's ball: at the chest while gathering (or jogging), overhead to shoot.
-      const pp = this.player.position;
-      const j = this.touch ? (this.phase === 'aim' ? 1 : 0) : this.phase === 'hold' ? Math.min(1, this.holdT / this.win.rise) : 0;
-      this.ball.visible = true;
-      this.ball.material = this.ballMats[this.spot.balls[this.ballIdx]?.kind ?? 'regular'];
-      // Out in front of the body, toward the rim.
-      const d = Math.hypot(pp.x, pp.z) || 1, out = 0.32 - j * 0.12;
-      this.ball.position.set(pp.x - (pp.x / d) * out, pp.y + 1.3 + j * 1.15, pp.z - (pp.z / d) * out);
-    }
     let atRim = bp, best = 1.2;
     for (const b of this.live) {
       const d = Math.hypot(b.pos[0], b.pos[1], b.pos[2] - RIM_HEIGHT);
@@ -1244,6 +1225,13 @@ export class Shootout3D {
     }
 
     this.updatePlayer(t);
+    // The ball in the shooter's hands (rivals and Street), between the athlete's palms.
+    const touchHolding = this.touch && (this.phase === 'aim' || this.phase === 'walk');
+    if (!bp && ((this.auto && (this.phase === 'aim' || this.phase === 'hold')) || touchHolding)) {
+      this.ball.visible = true;
+      this.ball.material = this.ballMats[this.spot.balls[this.ballIdx]?.kind ?? 'regular'];
+      this.athlete.ballPoint(this.ball.position);
+    }
     this.updateCamera(real);
     if (!this.renderer.shadowMap.autoUpdate && this.perf.frame % 3 === 0) this.renderer.shadowMap.needsUpdate = true;
     if (!this.noDraw) this.composer.render();
@@ -1285,30 +1273,30 @@ export class Shootout3D {
     const moving = this.phase === 'walk' && u < 1;
     const dir = moving ? Math.atan2(to[0] - this.walkFrom[0], to[1] - this.walkFrom[1]) : Math.atan2(-x, -y);
     this.player.rotation.y = dir;
-    const P = this.playerParts, sw = moving ? Math.sin(t * 13) * 0.7 : 0;
-    P.legL.rotation.x = sw; P.legR.rotation.x = -sw; P.armL.rotation.x = -sw * 0.8; P.armR.rotation.x = sw * 0.8;
-    if (this.phase === 'done') { P.armL.rotation.x = P.armR.rotation.x = -2.9 + Math.sin(t * 6) * 0.15; }
-    this.player.position.y = moving ? Math.abs(Math.sin(t * 13)) * 0.05 : 0;
+    this.player.position.y = 0;
+    const pose = { run: moving ? 1 : 0, stride: t * 11, crouch: 0, set: 0, release: 0, carry: this.touch ? 1 : 0, celebrate: this.phase === 'done' ? 1 : 0, t };
+    if (moving) this.player.position.y = Math.abs(Math.sin(t * 11)) * 0.04;
     if (this.touch && !moving && this.phase !== 'done') {
-      // Set and ready overhead; a little hop and follow-through on the throw.
-      const ft = this.phase === 'flight' ? Math.min(1, this.flightT / 0.15) : 0;
-      this.player.position.y = this.phase === 'flight' ? Math.sin(Math.min(1, this.flightT / 0.4) * Math.PI) * 0.25 : 0;
-      P.armL.rotation.x = P.armR.rotation.x = this.phase === 'flight' ? -2.6 - ft * 0.4 : -2.6;
-      P.legL.rotation.x = P.legR.rotation.x = 0;
+      // Street: ball up at the set point while aiming; a hop and follow-through on the throw.
+      const ft = this.phase === 'flight' ? Math.min(1, this.flightT / 0.12) : 0;
+      this.player.position.y = this.phase === 'flight' ? Math.sin(Math.min(1, this.flightT / 0.4) * Math.PI) * 0.22 : 0;
+      pose.set = 1; pose.release = this.phase === 'flight' ? ft * Math.max(0, 1 - (this.flightT - 0.3) / 0.2) : 0;
+      if (this.aiming) pose.crouch = 0.15;
     }
-    if (this.auto) {
-      // A rival's jumper: dip and gather, rise with the ball overhead, follow through, land.
+    if (this.auto && !moving && this.phase !== 'done') {
+      // A rival's jumper: dip and gather at the chest, rise to the set point, release and flick, land.
       const rise = this.win.rise;
+      const gather = this.phase === 'aim' ? Math.min(1, this.phaseT / Math.max(0.1, this.auto.rival.gather)) : 1;
       const j = this.phase === 'hold' ? Math.sin(Math.min(1, this.holdT / rise) * Math.PI * 0.5)
         : this.phase === 'flight' ? Math.max(0, Math.cos(Math.min(1, this.flightT / 0.45) * Math.PI * 0.5)) : 0;
-      const dip = this.phase === 'aim' ? Math.sin(Math.min(1, this.phaseT / Math.max(0.1, this.auto.rival.gather)) * Math.PI) * 0.08 : 0;
-      this.player.position.y = j * 0.5 - dip;
-      if (this.phase === 'aim' || this.phase === 'hold' || this.phase === 'flight') {
-        const up = this.phase === 'aim' ? -1.2 : -2.6 - (this.phase === 'flight' ? 0.3 : 0);
-        P.armL.rotation.x = up; P.armR.rotation.x = up - 0.1;
-        P.legL.rotation.x = P.legR.rotation.x = dip * 2;
-      }
+      this.player.position.y = j * 0.5;
+      pose.carry = 1;
+      pose.crouch = this.phase === 'aim' ? Math.sin(gather * Math.PI) * 0.45 : this.phase === 'flight' ? Math.max(0, 1 - this.flightT / 0.5) * (this.flightT > 0.35 ? 0.3 : 0) : 0;
+      pose.set = this.phase === 'hold' ? Math.min(1, this.holdT / (rise * 0.7)) : this.phase === 'flight' ? 1 : 0;
+      pose.release = this.phase === 'flight' ? Math.min(1, this.flightT / 0.12) * Math.max(0, 1 - Math.max(0, this.flightT - 0.4) / 0.25) : 0;
+      if (this.phase === 'flight' && this.flightT > 0.4) { pose.set = Math.max(0, 1 - (this.flightT - 0.4) / 0.25); pose.carry = pose.set; }
     }
+    this.athlete.pose(pose);
   }
 
   private updateCamera(real: number): void {
