@@ -56,6 +56,9 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   const [replay, setReplay] = useState(false);
   const [onFire, setOnFire] = useState(false);
   const [final10, setFinal10] = useState(false);
+  // The graphics context was lost (memory, usually on a phone): offer a restart on a fresh canvas.
+  const [lost, setLost] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [showHint, setShowHint] = useState(!rivalName);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
@@ -109,6 +112,7 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
         case 'fire': setOnFire(true); break;
         case 'replay': setReplay(e.on); break;
         case 'final10': setFinal10(true); break;
+        case 'lost': setLost(true); break;
         case 'time': say({ big: 'TIME!', small: 'RELEASE BEFORE THE HORN', tone: 'red' }); break;
         case 'buzzer': say({ big: 'BUZZER BEATER!', tone: 'fire' }); break;
       }
@@ -144,9 +148,10 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
     };
     raf = requestAnimationFrame(tick);
     return () => { alive = false; game.stop(); clearInterval(hudTimer); cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); gameRef.current = null; };
-    // The game is created once per mount; callers remount with a new key.
+    // The game is created once per mount (callers remount with a new key), or again
+    // on a fresh canvas after the graphics context was lost.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [attempt]);
 
   // Clear callouts and cards after their animations.
   useEffect(() => { if (!callout) return; const t = setTimeout(() => setCallout(null), 1300); return () => clearTimeout(t); }, [callout]);
@@ -167,7 +172,15 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   return (
     <>
       <style>{BROADCAST_CSS}</style>
+      {lost && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[#05060C]/95 px-6 text-center">
+          <div className="text-2xl font-black italic">GRAPHICS RESET</div>
+          <p className="max-w-xs text-sm text-white/70">Your device ran short of graphics memory and dropped the game view. Restart this run to carry on.</p>
+          <button className="rounded-full bg-amber-400 px-6 py-2 font-black text-[#2a1600]" onClick={() => { setLost(false); setAttempt(a => a + 1); }}>Restart run</button>
+        </div>
+      )}
       <canvas
+        key={attempt}
         ref={canvasRef}
         className="absolute inset-0 h-full w-full"
         onPointerDown={(e) => {

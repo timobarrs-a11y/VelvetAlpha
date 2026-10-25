@@ -27,6 +27,8 @@ export interface AthletePose {
   crouch: number;
   /** Ball from the chest (0) to the set point above the forehead (1). */
   set: number;
+  /** At the set point, the ball pulled back over the forehead, loaded to throw (0..1). */
+  cock?: number;
   /** Shooting arm extending and the wrist flicking through (0..1); the ball has left. */
   release: number;
   /** Holding the ball at the chest (0 = hands free). */
@@ -226,7 +228,8 @@ export class Athlete {
 
     // Holding the ball: place it, then reach it with both hands.
     const grip = Math.max(p.carry, p.set) * (1 - p.release) * (1 - p.celebrate);
-    this.ball.set(mix(0, 0.05, p.set), mix(1.3, 2.1, p.set) - p.crouch * 0.2, mix(0.3, 0.16, p.set));
+    const cock = (p.cock ?? 0) * p.set;
+    this.ball.set(mix(0, 0.05, p.set), mix(1.3, 2.1, p.set) - p.crouch * 0.2 + cock * 0.07, mix(0.3, 0.16, p.set) - cock * 0.15);
     if (grip > 0.001) this.reach(p.set, grip);
     this.curl(grip);
   }
