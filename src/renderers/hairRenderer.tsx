@@ -15,7 +15,7 @@ export interface HairRenderParams {
 }
 
 export function renderMaleHair(p: HairRenderParams): React.ReactNode {
-  const { hairColor, hairColorDark, hairColorLight, hairColorMid, hairStyle, hairTexture, fRx, faceTop, faceCenterY, faceBottom } = p;
+  const { hairColor, hairColorDark, hairColorLight, hairColorMid, hairStyle, hairTexture, fRx, fRy, faceTop, faceCenterY, faceBottom } = p;
 
   switch (hairStyle) {
     case 'buzz':
@@ -204,7 +204,7 @@ export function renderMaleHair(p: HairRenderParams): React.ReactNode {
 }
 
 export function renderFemaleHair(p: HairRenderParams): React.ReactNode {
-  const { hairColor, hairColorDark, hairColorLight, hairColorMid, hairStyle, hairTexture, fRx, faceTop, faceCenterY, faceBottom } = p;
+  const { hairColor, hairColorDark, hairColorLight, hairColorMid, hairStyle, hairTexture, fRx, fRy, faceTop, faceCenterY, faceBottom } = p;
 
   const textureAmp = hairTexture === 'coily' ? 6 : hairTexture === 'wavy' ? 4 : 1.5;
 
