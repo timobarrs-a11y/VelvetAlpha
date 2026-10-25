@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
-import { FastForward, Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 import { Shootout } from '../game';
 import { Shootout3D, type RunOptions, type RunResult, type ShootoutEvent } from '../three/game3d';
 import type { Ball, Level } from '../engine';
 import { isMuted, setMuted, unlockAudio } from '../audio';
 
 // One run on the floor: the 3D game plus the broadcast graphics over it.
-// Used for practice runs, your contest rounds, and watching rivals shoot.
+// Used for practice, Score Attack, Street and your contest rounds.
 
 export type Rack = Array<{ kind: Ball['kind']; state: 'done' | 'now' | 'left' }>;
 export interface Hud { score: number; time: number; spot: string; streak: number; chain?: number; phase?: string; elapsed: number }
@@ -19,7 +19,6 @@ interface GameLike {
   hud(): Omit<Hud, 'elapsed'> & { fade?: number; elapsed?: number };
   rackState(): Rack;
   meterView?(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number };
-  skip?(): void;
   cancel?(): void;
   aimStart?(nx: number, ny: number): void;
   aimMove?(nx: number, ny: number): void;
@@ -39,15 +38,13 @@ export interface RunViewProps {
   opts?: RunOptions;
   /** Name on the score bug (the level name for your own runs). */
   label: string;
-  /** A rival on autopilot: no input, a LIVE bug and a skip button. */
-  rivalName?: string;
   /** Contest graphics fed from the live HUD (pace, score to beat). */
   ticker?: (h: Hud) => ReactNode;
   onDone: (r: RunResult) => void;
 }
 
 /** Mount with a fresh `key` per run: the game is created once, on mount. */
-export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDone }: RunViewProps) {
+export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunViewProps) {
   const [hud, setHud] = useState<Hud>({ score: 0, time: opts?.clock ?? level.clock, spot: '', streak: 0, elapsed: 0 });
   const [rack, setRack] = useState<Rack>([]);
   const [muted, setMutedState] = useState(isMuted());
@@ -59,7 +56,7 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   // The graphics context was lost (memory, usually on a phone): offer a restart on a fresh canvas.
   const [lost, setLost] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [showHint, setShowHint] = useState(!rivalName);
+  const [showHint, setShowHint] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLDivElement>(null);
@@ -67,7 +64,6 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   const seq = useRef(0);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
-  const rival = !!rivalName;
   const touch = opts?.control === 'touch';
   /** Pointer position on the canvas, -1..1 both ways (y up). */
   const ndc = (e: { clientX: number; clientY: number }): [number, number] => {
@@ -79,7 +75,7 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   useEffect(() => {
     if (!canvasRef.current) return;
     let alive = true;
-    const finish = (r: RunResult) => { setTimeout(() => { if (alive) doneRef.current(r); }, rival ? 1400 : 1800); };
+    const finish = (r: RunResult) => { setTimeout(() => { if (alive) doneRef.current(r); }, 1800); };
     // Broadcast graphics react to what happens on the floor.
     const onEvent = (e: ShootoutEvent) => {
       const id = ++seq.current;
@@ -89,7 +85,6 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
           setCard({ id, title: `RACK ${e.index + 1}`, sub: e.label.toUpperCase(), money: e.money });
           break;
         case 'grade': {
-          if (rival) break;
           setShowHint(false);
           const g = GRADE_TEXT[e.grade];
           if (g) say({ big: g[0], tone: g[1] });
@@ -121,8 +116,7 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
     try {
       game = new Shootout3D(canvasRef.current, level, moneyRack, { onEvent, onDone: finish }, opts);
     } catch {
-      // No WebGL: fall back to the 2D court (your own runs only; rivals just finish).
-      if (opts?.auto) { const run = opts.auto; finish({ score: run.score, max: 0, makes: 0, shots: run.shots.length, bestStreak: 0, level }); return () => { alive = false; }; }
+      // No WebGL: fall back to the 2D court.
       game = new Shootout(canvasRef.current, level, moneyRack, { onDone: finish });
     }
     gameRef.current = game;
@@ -159,12 +153,11 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
 
   // Hold anywhere (or Space) to shoot.
   useEffect(() => {
-    if (rival) return;
     const down = (e: KeyboardEvent) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); unlockAudio(); gameRef.current?.press(e.timeStamp); } };
     const up = (e: KeyboardEvent) => { if (e.code === 'Space') { e.preventDefault(); gameRef.current?.release(e.timeStamp); } };
     window.addEventListener('keydown', down); window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
-  }, [rival]);
+  }, []);
 
   const showFps = typeof window !== 'undefined' && /[?&]fps\b/.test(window.location.search);
   const toggleMute = () => { setMuted(!muted); setMutedState(!muted); };
@@ -184,7 +177,7 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
         ref={canvasRef}
         className="absolute inset-0 h-full w-full"
         onPointerDown={(e) => {
-          unlockAudio(); if (rival) return;
+          unlockAudio();
           e.currentTarget.setPointerCapture(e.pointerId);
           if (touch) { const [x, y] = ndc(e); gameRef.current?.aimStart?.(x, y); } else gameRef.current?.press(e.timeStamp);
         }}
@@ -193,26 +186,14 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
         onPointerCancel={() => { if (touch) gameRef.current?.aimCancel?.(); else gameRef.current?.cancel?.(); }}
         onContextMenu={(e) => e.preventDefault()}
       />
-      <BroadcastOverlay hud={hud} rack={rack} level={label} callout={callout} card={card} replay={replay} onFire={onFire} final10={final10} rival={rival} />
-      {!rival && <ShotMeter gameRef={gameRef} />}
+      <BroadcastOverlay hud={hud} rack={rack} level={label} callout={callout} card={card} replay={replay} onFire={onFire} final10={final10} />
+      <ShotMeter gameRef={gameRef} />
       {ticker && <div className="pointer-events-none absolute right-3 top-14 sm:right-5" style={{ marginTop: 'env(safe-area-inset-top)' }}>{ticker(hud)}</div>}
       <div ref={fadeRef} className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: 0 }} />
       {showFps && <div ref={fpsRef} className="pointer-events-none absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 font-mono text-[11px] text-emerald-300" />}
       <div className="absolute right-3 top-3 flex gap-2" style={{ marginTop: 'env(safe-area-inset-top)' }}>
         <button type="button" onClick={toggleMute} className="rounded-lg bg-black/50 p-2 backdrop-blur" aria-label={muted ? 'Sound on' : 'Mute'}>{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}</button>
       </div>
-      {rival && (
-        <>
-          <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 sm:left-5 sm:top-5" style={{ marginTop: 'env(safe-area-inset-top)' }}>
-            <span className="sh-blink h-2 w-2 rounded-full bg-red-500" />
-            <span className="skew-x-[-10deg] bg-red-600 px-2 py-0.5 text-[11px] font-black italic tracking-widest">LIVE</span>
-            <span className="skew-x-[-10deg] bg-black/70 px-2.5 py-0.5 text-xs font-black italic tracking-wide">{rivalName}</span>
-          </div>
-          <button type="button" onClick={() => gameRef.current?.skip?.()} className="absolute bottom-20 right-3 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-bold tracking-wide backdrop-blur sm:bottom-6 sm:right-5">
-            <FastForward className="h-3.5 w-3.5" />Skip to result
-          </button>
-        </>
-      )}
       {showHint && hud.phase === 'aim' && (
         <div className="sh-pulse pointer-events-none absolute top-[12%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/55 px-4 py-2 text-xs font-bold tracking-wide sm:px-5 sm:py-2.5 sm:text-sm text-white/90 backdrop-blur">
           {touch ? 'DRAG toward the hoop · LET GO to shoot' : 'HOLD to jump · LET GO on the green'}
@@ -267,8 +248,8 @@ function RackDots({ rack }: { rack: Rack }) {
 }
 
 /** The TV graphics: score bug, rack cards, callouts, replay bug, on-fire banner. */
-function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, final10, rival }: {
-  hud: Hud; rack: Rack; level: string; callout: Callout | null; card: Card | null; replay: boolean; onFire: boolean; final10: boolean; rival?: boolean;
+function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, final10 }: {
+  hud: Hud; rack: Rack; level: string; callout: Callout | null; card: Card | null; replay: boolean; onFire: boolean; final10: boolean;
 }) {
   const low = hud.time <= 10;
   return (
@@ -286,7 +267,7 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
 
       {/* Score bug, bottom left. */}
       <div className={`absolute bottom-3 left-3 flex items-stretch overflow-hidden rounded-md shadow-[0_8px_30px_rgba(0,0,0,.5)] transition-opacity sm:bottom-5 sm:left-5 ${replay ? 'opacity-0' : ''}`}>
-        <div className={`flex flex-col justify-center bg-gradient-to-b px-2.5 py-1.5 ${rival ? 'from-slate-600 to-slate-800' : 'from-[#7a1f4f] to-[#3d0d27]'}`}>
+        <div className="flex flex-col justify-center bg-gradient-to-b from-[#7a1f4f] to-[#3d0d27] px-2.5 py-1.5">
           <div className="text-[8px] font-black uppercase tracking-[0.25em] text-amber-300">Velvet</div>
           <div className="text-[11px] font-black italic leading-none tracking-tight">3PT</div>
         </div>
