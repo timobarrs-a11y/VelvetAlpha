@@ -47,6 +47,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 - **Rival runs are simulated up front.** Watching and skipping give the same score.
 - **Noise-based audio was removed** ("sounded like white noise"). Real recordings are a later task.
 - **Lighting hierarchy: court, hoop and ball first; the building sits back.** The crowd wears a restrained home palette (wine, charcoal, navy, the odd gold) and barely reflects the environment; suites, LED ribbons and walls glow softly; the haze is near-neutral dark rather than purple; bloom is gentle (0.26, threshold 0.9). The court lights are unchanged. Measured with fixed cameras: ball-vs-background colour difference (ΔE) rose from a minimum of 44 to 55, stand brightness fell by half to three-quarters, court brightness moved by about 1%.
+- **The shooter's backdrop stays calm.** Every part of the bowl that sits behind the rim from some rack (the whole baseline end, the sidelines' near end) has mostly dark suites and no LED panels; suites elsewhere come in bays between dark pillars, and the LED ribbon is broken into panels. The board behind the basket glows at 0.6 (the jumbotron 1.4). Measured around the rim in all 14 first-person views: edge density 7.5% → 4.9% (desktop), brightness about 12% lower.
 - **Contest scores don't feed practice bests.** A contest title unlocks the next level.
 
 ## Verifying

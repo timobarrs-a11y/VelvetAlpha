@@ -441,7 +441,8 @@ export class Shootout3D {
     jumbo.position.copy(toThree([0, 7, 10.5]));
     s.add(jumbo);
     // The big board on the upper deck behind the basket.
-    const back = new THREE.Mesh(new THREE.PlaneGeometry(9, 4.5), sbMat);
+    // It sits behind the rim from most racks, so it glows less than the jumbotron.
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(9, 4.5), new THREE.MeshStandardMaterial({ map: this.scoreboards.tex, emissive: 0xffffff, emissiveMap: this.scoreboards.tex, emissiveIntensity: 0.6, color: 0x000000 }));
     back.position.copy(toThree([0, -18.6, 12.4]));
     s.add(back);
 
