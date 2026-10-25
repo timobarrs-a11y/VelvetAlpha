@@ -355,13 +355,6 @@ export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', id
   const lowBottom = M + m.curve * 0.6 + m.open + l.lo * 1.25;
   const lower = `${lowerTop} C${p([50 + l.w * 0.55, lowBottom])} ${p([50 - l.w * 0.55, lowBottom])} ${p(L)} Z`;
 
-  // The lower lip's top and bottom edges at the middle (a cubic's midpoint is
-  // a quarter of the ends plus three quarters of the controls), so the shine
-  // sits on the lip however far the mouth is open.
-  const lipTopMid = 0.25 * L[1] + 0.75 * botC[0][1];
-  const lipBottomMid = 0.25 * L[1] + 0.75 * lowBottom;
-  const lipThick = lipBottomMid - lipTopMid;
-  const shineY = (lipTopMid + lipBottomMid) / 2;
   const lipDark = shade(lipColor, -0.14);
   const line = shade(lipColor, -0.58);
   const skinShadow = shade(skinTone, -0.28);
@@ -389,10 +382,6 @@ export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', id
         </>
       )}
       <path d={lower} fill={lipColor} />
-      {/* A sliver of shine on the lower lip, in a lighter shade of the lip itself
-          (white reads as a pale patch on darker lips). */}
-      <path d={`M${50 - l.w * 0.38},${shineY - 0.1} Q49,${shineY + 0.25} ${50 + l.w * 0.12},${shineY}`}
-        stroke={shade(lipColor, 0.32)} strokeWidth={Math.max(0.4, lipThick * 0.22)} fill="none" opacity="0.45" strokeLinecap="round" />
       <path d={upper} fill={lipDark} />
       <path d={parting} stroke={line} strokeWidth="0.75" fill="none" strokeLinecap="round" opacity="0.85" />
       {/* Corners tuck in; a smile pushes up little creases beside them. */}
