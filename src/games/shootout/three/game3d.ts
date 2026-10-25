@@ -22,7 +22,7 @@ import { Net } from './net';
 import { seeded, type RivalRun } from '../rivals';
 import { Crowd } from './crowd';
 import { buildArena, type Arena } from './arena';
-import { Athlete, HAIRS, SKINS } from './athlete';
+import { Athlete, HAIRS, SKINS, type AthletePose } from './athlete';
 import { getLook } from '../settings';
 import { HoldClock } from '../holdClock';
 
@@ -44,7 +44,9 @@ export type ShootoutEvent =
   | { type: 'miss'; outcome: Outcome }
   | { type: 'fire' }
   | { type: 'replay'; on: boolean }
-  | { type: 'final10' };
+  | { type: 'final10' }
+  /** The browser dropped the graphics context (usually memory on a phone): the run can't go on. */
+  | { type: 'lost' };
 
 export interface RunResult { score: number; max: number; makes: number; shots: number; bestStreak: number; level: Level }
 
@@ -76,6 +78,8 @@ const BALL_R = 0.12, RIM_R = 0.2286, BOARD_Y = -0.38;
 const toThree = (v: V3 | readonly number[]) => new THREE.Vector3(v[0], v[2], v[1]);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const ease = (t: number) => t * t * (3 - 2 * t);
+/** The arms pulling back to load the throw, over the last moment before the top of the jump. */
+const cockAt = (held: number, rise: number) => ease(Math.min(1, Math.max(0, (held - (rise - 0.2)) / 0.16)));
 
 type Quality = 'high' | 'mid';
 
@@ -263,6 +267,8 @@ export class Shootout3D {
   private finaleAt = -99;
   /** The last jump, from the release on: the fall and landing carry on into the next catch. */
   private jumpOff: { from: JumpState; held: number; rise: number; at: number; landed: boolean } | null = null;
+  /** Where the arms were when the ball left: the follow-through starts from there. */
+  private armsAtRelease = { y: -0.09, z: -0.66, rot: 0.25 };
   /** How far the view lifts with the jump, applied on top of the smoothed look target. */
   private lookLift = 0;
 
@@ -380,6 +386,7 @@ export class Shootout3D {
     this.build();
     this.resize();
     this.precompile();
+    canvas.addEventListener('webglcontextlost', this.onLost);
   }
 
   // ---- Building the arena ---------------------------------------------------
@@ -670,10 +677,45 @@ export class Shootout3D {
     this.noDraw = false;
   }
 
+  /**
+   * End this run and give back everything it held on the GPU. Every run makes
+   * its own context, and the browser only allows a few (fewer on phones, where
+   * memory runs out first), so a context left behind eventually costs a live
+   * one: the canvas goes blank or the page dies.
+   */
   stop(): void {
     cancelAnimationFrame(this.raf);
+    this.stopped = true;
+    this.renderer.domElement.removeEventListener('webglcontextlost', this.onLost);
+    const textures = new Set<THREE.Texture>();
+    const collect = (m: THREE.Material) => {
+      Object.values(m).forEach(v => { if (v instanceof THREE.Texture) textures.add(v); });
+      const u = (m as THREE.ShaderMaterial).uniforms;
+      if (u) Object.values(u).forEach(x => { if (x?.value instanceof THREE.Texture) textures.add(x.value); });
+      m.dispose();
+    };
+    this.scene.traverse(o => {
+      const mesh = o as THREE.Mesh;
+      mesh.geometry?.dispose();
+      if (mesh.material) (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach(collect);
+    });
+    textures.forEach(t => t.dispose());
+    this.scene.environment?.dispose();
+    (this.mirror as unknown as { dispose?: () => void } | null)?.dispose?.(); // the Reflector's render target
+    this.bloom.dispose();
+    this.composer.renderTarget1.dispose(); this.composer.renderTarget2.dispose();
     this.renderer.dispose();
+    this.renderer.forceContextLoss();
   }
+
+  private stopped = false;
+  /** The browser took the context away mid-run: stop and say so, rather than leave a blank canvas. */
+  private onLost = (e: Event) => {
+    e.preventDefault();
+    if (this.stopped) return;
+    cancelAnimationFrame(this.raf);
+    this.cb.onEvent?.({ type: 'lost' });
+  };
 
   /** Compile every shader up front (hidden effects too) so nothing hitches mid-run. */
   private precompile(): void {
@@ -1011,6 +1053,7 @@ export class Shootout3D {
     const fx = shotFx(this.fxRun, made, perfect, this.shots >= this.ballsTotal);
 
     this.jumpOff = { from: jumpAt(this.holdT, this.win.rise), held: this.holdT, rise: this.win.rise, at: this.time, landed: false };
+    this.armsAtRelease = { y: this.arms.position.y, z: this.arms.position.z, rot: this.arms.rotation.x };
     // The ball leaves from the hands, wherever the jump put them. Early comes up short, late goes long.
     const hand = new THREE.Vector3();
     if (this.auto) hand.copy(this.ball.position);
@@ -1039,8 +1082,8 @@ export class Shootout3D {
   private releasePoint(): V3 {
     const [px, py] = spotPosition(this.spot);
     const d = Math.hypot(px, py) || 1, ux = px / d, uy = py / d;
-    // First person: the hands at the top of the jump, after the step in (measured).
-    return this.auto ? [px - ux * 0.25, py - uy * 0.25, 2.95] : [px * 1.04 - ux * 0.9, py * 1.04 - uy * 0.9, 2.26];
+    // First person: the hands at the top of the jump, after the step in, the ball loaded up and to the shooting side (measured).
+    return this.auto ? [px - ux * 0.25, py - uy * 0.25, 2.95] : [px * 1.04 - ux * 0.83 + uy * 0.1, py * 1.04 - uy * 0.83 - ux * 0.1, 2.41];
   }
 
   /** A planned flight for this outcome: from the cache if one was made while aiming, else now. */
@@ -1264,23 +1307,28 @@ export class Shootout3D {
       const rise = this.win.rise, td = takeoffAt(rise);
       const gather = this.phase === 'hold' ? ease(Math.min(1, this.holdT / td)) : 0;
       const j = this.phase === 'hold' ? ease(Math.min(1, Math.max(0, (this.holdT - td) / ((rise - td) * 0.75)))) : 0;
+      // Near the top the arms pull back: the ball goes up and back over your head, loaded to throw.
+      const cock = this.phase === 'hold' ? cockAt(this.holdT, rise) : 0;
       const bob = this.phase === 'aim' ? Math.sin(t * 2.4) * 0.006 : 0;
-      this.arms.position.set(0.035 * j, lerp(-0.26 - 0.07 * gather, -0.09, j) + bob, lerp(-0.6 + 0.04 * gather, -0.66, j));
-      this.arms.rotation.set(lerp(-0.1 - 0.12 * gather, 0.25, j), 0, -0.05 * j);
+      // (Up and out to the shooting side, not toward your face, so the rim stays in view.)
+      this.arms.position.set(0.035 * j + 0.07 * cock, lerp(-0.26 - 0.07 * gather, -0.09, j) + bob + 0.17 * cock, lerp(-0.6 + 0.04 * gather, -0.66, j) + 0.08 * cock);
+      this.arms.rotation.set(lerp(-0.1 - 0.12 * gather, 0.25, j) - 0.3 * cock, 0, -0.05 * j);
       this.heldBall.rotation.y = 0.4;
     } else if (reloading) {
-      // Follow-through: hands snap up and out as the ball leaves...
-      const k = Math.min(1, this.phaseT / 0.12);
-      const ftY = -0.09 + k * 0.12, ftRot = 0.25 + k * 0.5;
+      // The release: from wherever the arms were loaded, a hard push forward and
+      // up, the wrists snapping through as the ball leaves; held a beat...
+      const k = ease(Math.min(1, this.phaseT / 0.09));
+      const a = this.armsAtRelease;
+      const ftY = lerp(a.y, 0.05, k), ftZ = lerp(a.z, -0.92, k), ftRot = lerp(a.rot, 1.0, k);
       if (r < 0.35) {
-        this.arms.position.set(0.05, ftY, -0.68);
+        this.arms.position.set(0.05, ftY, ftZ);
         this.arms.rotation.set(ftRot, 0, 0);
       } else {
         // ...then drop to the rack and come back up with the next ball, in one smooth move.
         const u = ease((r - 0.35) / 0.65);
         const dip = Math.sin(u * Math.PI) * (lastHere ? 0.9 : 0.34);
         const toY = lastHere ? -0.9 : -0.26;
-        this.arms.position.set(lerp(0.05, 0, u) + dip * 0.35, lerp(ftY, toY, u) - dip, lerp(-0.68, -0.6, u));
+        this.arms.position.set(lerp(0.05, 0, u) + dip * 0.35, lerp(ftY, toY, u) - dip, lerp(ftZ, -0.6, u));
         this.arms.rotation.set(lerp(ftRot, -0.1, u), 0, 0);
         if (!lastHere) this.heldBall.material = this.ballMats[this.spot.balls[this.ballIdx + 1].kind];
       }
@@ -1342,7 +1390,7 @@ export class Shootout3D {
     const dir = moving ? Math.atan2(to[0] - this.walkFrom[0], to[1] - this.walkFrom[1]) : Math.atan2(-x, -y);
     this.player.rotation.y = dir;
     this.player.position.y = 0;
-    const pose = { run: moving ? 1 : 0, stride: t * 11, crouch: 0, set: 0, release: 0, carry: this.touch ? 1 : 0, celebrate: this.phase === 'done' ? 1 : 0, t };
+    const pose: AthletePose = { run: moving ? 1 : 0, stride: t * 11, crouch: 0, set: 0, cock: 0, release: 0, carry: this.touch ? 1 : 0, celebrate: this.phase === 'done' ? 1 : 0, t };
     if (moving) this.player.position.y = Math.abs(Math.sin(t * 11)) * 0.04;
     if (this.touch && !moving && this.phase !== 'done') {
       // Street: ball up at the set point while aiming; a hop and follow-through on the throw.
@@ -1361,6 +1409,7 @@ export class Shootout3D {
       // A small give on the catch, then the real load is the dip into the jump (and the landing).
       pose.crouch = this.phase === 'aim' ? Math.sin(gather * Math.PI) * 0.2 : m.crouch * 0.55;
       pose.set = this.phase === 'hold' ? ease(Math.min(1, Math.max(0, (this.holdT - td) / ((rise - td) * 0.75)))) : this.phase === 'flight' ? 1 : 0;
+      pose.cock = this.phase === 'hold' ? cockAt(this.holdT, rise) : 0;
       pose.release = this.phase === 'flight' ? Math.min(1, this.flightT / 0.12) * Math.max(0, 1 - Math.max(0, this.flightT - 0.4) / 0.25) : 0;
       if (this.phase === 'flight' && this.flightT > 0.4) { pose.set = Math.max(0, 1 - (this.flightT - 0.4) / 0.25); pose.carry = pose.set; }
     }
