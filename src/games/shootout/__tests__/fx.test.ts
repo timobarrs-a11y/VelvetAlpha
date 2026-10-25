@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildCourse } from '../engine';
-import { fireAt, shotFx, startFx, stepFx, type FxRun } from '../fx';
+import { fireAt, MAX_TIER, shotFx, startFx, stepFx, type FxRun } from '../fx';
 
 // Play a whole course: `grade(kind, i)` says how each ball goes.
 function play(grade: (kind: string, i: number) => 'perfect' | 'made' | 'miss') {
@@ -21,16 +21,22 @@ describe('make effects chain', () => {
 
   it('shows nothing for a make that was not a perfect release', () => {
     const shots = play(() => 'made');
-    expect(shots.every(s => s.fx.level === 0 && !s.fx.fireball && !s.fx.rimFire)).toBe(true);
+    expect(shots.every(s => s.fx.tier === 0 && !s.fx.fireball && !s.fx.rimFire)).toBe(true);
     // ...but every ball going in still earns the gold finale.
     expect(shots[shots.length - 1].fx.finale).toBe('made');
   });
 
-  it('grows with each perfect in a row and resets on one that is not', () => {
+  it('steps up a tier with every perfect in a row, and resets on one that is not', () => {
     const shots = play((_, i) => (i === 3 ? 'made' : 'perfect'));
-    expect(shots[1].fx.level).toBeGreaterThan(shots[0].fx.level);
-    expect(shots[3].fx.level).toBe(0);
-    expect(shots[4].run.chain).toBe(1);
+    expect(shots.slice(0, 3).map(s => s.fx.tier)).toEqual([1, 2, 3]);
+    expect(shots[3].fx.tier).toBe(0);
+    expect(shots[3].fx.chain).toBe(0);
+    expect(shots[4].fx.tier).toBe(1);
+  });
+
+  it('tops out at the highest tier', () => {
+    const shots = play(() => 'perfect');
+    expect(Math.max(...shots.map(s => s.fx.tier))).toBe(MAX_TIER);
   });
 
   it('sets the ball on fire after about a quarter of the run in a row', () => {
@@ -45,7 +51,7 @@ describe('make effects chain', () => {
     const lit = shots.filter(s => s.fx.rimFire);
     expect(lit.map(s => s.run.taken)).toEqual([20, 21, 22, 23, 24]);
     const last = shots[shots.length - 1];
-    expect(last.fx).toMatchObject({ finale: 'perfect', rimFire: false, level: 1, fireball: true });
+    expect(last.fx).toMatchObject({ finale: 'perfect', rimFire: false, tier: MAX_TIER, fireball: true });
   });
 
   it('lets Starry balls be missed without breaking a perfect run or the chain', () => {

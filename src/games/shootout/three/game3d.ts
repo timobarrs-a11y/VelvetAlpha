@@ -16,7 +16,7 @@ import { planShotSteps, planShot, previewArc, sampleAt, simulateLaunch, type Sho
 import * as sfx from '../audio';
 import { ballTexture, FLOOR, floorTexture, makeScoreboard, ribbonTexture } from './textures';
 import { Effects } from './effects';
-import { NO_FX, shotFx, startFx, stepFx, type FxRun, type ShotFx } from '../fx';
+import { MAX_TIER, NO_FX, shotFx, startFx, stepFx, type FxRun, type ShotFx } from '../fx';
 import { JUMP, jumpAfter, jumpAt, jumpSettles, takeoffAt, type JumpState } from '../jump';
 import { Net } from './net';
 import { seeded, type RivalRun } from '../rivals';
@@ -262,7 +262,9 @@ export class Shootout3D {
   private rimOnFire = false;
   private finaleAt = -99;
   /** The last jump, from the release on: the fall and landing carry on into the next catch. */
-  private jumpOff: { from: JumpState; held: number; rise: number; at: number } | null = null;
+  private jumpOff: { from: JumpState; held: number; rise: number; at: number; landed: boolean } | null = null;
+  /** How far the view lifts with the jump, applied on top of the smoothed look target. */
+  private lookLift = 0;
 
   // Game state.
   readonly level: Level;
@@ -303,6 +305,8 @@ export class Shootout3D {
   private shotSeq = 0;
   /** What the crowd has seen: the streak as of the last ball to land. */
   private shownStreak = 0;
+  /** Perfects in a row, as of the last ball to land (the chain badge). */
+  private shownChain = 0;
   /** No more shots (clock out or course done); finish once the last balls land. */
   private ending = false;
   private replayBall: LiveBall | null = null;
@@ -528,7 +532,7 @@ export class Shootout3D {
     this.buildPlayer();
 
     // Make effects: fireworks, flames and the finale, driven by the perfect-release chain.
-    this.fx = new Effects(toThree, [0, 0, RIM_HEIGHT], RIM_R);
+    this.fx = new Effects(toThree, [0, 0, RIM_HEIGHT], RIM_R, hi, size => sfx.playBoom(size));
     s.add(this.fx.group);
     this.fxRun = startFx(this.course);
     this.ballsTotal = this.course.reduce((n, sp) => n + sp.balls.length, 0);
@@ -883,7 +887,7 @@ export class Shootout3D {
   get spot(): Spot { return this.course[this.spotIdx]; }
 
   hud() {
-    return { elapsed: this.clock0 - Math.max(0, this.clock), score: this.score, time: Math.max(0, this.clock), spot: this.spot?.label ?? '', streak: this.shownStreak, phase: this.phase, fade: this.fade, max: this.max, level: this.level.name };
+    return { elapsed: this.clock0 - Math.max(0, this.clock), score: this.score, time: Math.max(0, this.clock), spot: this.spot?.label ?? '', streak: this.shownStreak, chain: this.shownChain, phase: this.phase, fade: this.fade, max: this.max, level: this.level.name };
   }
 
   rackState(): Array<{ kind: Ball['kind']; state: 'done' | 'now' | 'left' }> {
@@ -1006,7 +1010,7 @@ export class Shootout3D {
     this.fxRun = stepFx(this.fxRun, ball.kind, made, perfect);
     const fx = shotFx(this.fxRun, made, perfect, this.shots >= this.ballsTotal);
 
-    this.jumpOff = { from: jumpAt(this.holdT, this.win.rise), held: this.holdT, rise: this.win.rise, at: this.time };
+    this.jumpOff = { from: jumpAt(this.holdT, this.win.rise), held: this.holdT, rise: this.win.rise, at: this.time, landed: false };
     // The ball leaves from the hands, wherever the jump put them. Early comes up short, late goes long.
     const hand = new THREE.Vector3();
     if (this.auto) hand.copy(this.ball.position);
@@ -1035,7 +1039,8 @@ export class Shootout3D {
   private releasePoint(): V3 {
     const [px, py] = spotPosition(this.spot);
     const d = Math.hypot(px, py) || 1, ux = px / d, uy = py / d;
-    return this.auto ? [px - ux * 0.25, py - uy * 0.25, 2.95] : [px * 1.04 - ux * 0.6, py * 1.04 - uy * 0.6, 2.2];
+    // First person: the hands at the top of the jump, after the step in (measured).
+    return this.auto ? [px - ux * 0.25, py - uy * 0.25, 2.95] : [px * 1.04 - ux * 0.9, py * 1.04 - uy * 0.9, 2.26];
   }
 
   /** A planned flight for this outcome: from the cache if one was made while aiming, else now. */
@@ -1106,6 +1111,7 @@ export class Shootout3D {
     b.resolved = true;
     this.shownStreak = b.streakAfter;
     this.rimOnFire = b.fx.rimFire;
+    this.shownChain = b.fx.chain;
     this.fx.setRimFire(b.fx.rimFire);
     if (!isMake(b.outcome)) {
       this.cb.onEvent?.({ type: 'miss', outcome: b.outcome });
@@ -1118,12 +1124,12 @@ export class Shootout3D {
     const value = b.kind === 'starry' ? 3 : b.kind === 'money' ? 2 : 1;
     // Only a perfect release gets effects, and they grow with the chain. Any
     // other make just gets the crowd.
-    const f = b.fx;
+    const f = b.fx, lvl = f.tier / MAX_TIER;
     if (b.perfect) {
-      this.crowd.cheer(value + 1 + f.level * 3);
-      this.punch = 0.6 + f.level * 0.6;
-      if (!this.reduced) this.shake = 0.25 + f.level * 0.5;
-      this.fx.fireworks(f.level);
+      this.crowd.cheer(value + 1 + lvl * 3);
+      this.punch = 0.6 + lvl * 0.6;
+      if (!this.reduced) this.shake = 0.25 + lvl * 0.5;
+      this.fx.perfect(f.tier);
     } else this.crowd.cheer(value * 0.5);
     try { navigator.vibrate?.(b.perfect ? [20, 40, 30] : 18); } catch { /* not supported */ }
     if (f.finale !== 'none') this.finale(f.finale);
@@ -1160,7 +1166,7 @@ export class Shootout3D {
     const through = b.plan.events.find(e => e.kind === 'through');
     if (through && before < through.t && this.replayT >= through.t) {
       sfx.playSwish();
-      if (b.perfect) this.fx.fireworks(b.fx.level);
+      if (b.perfect) this.fx.perfect(b.fx.tier);
       if (b.fx.finale !== 'none') this.finale(b.fx.finale);
     }
     if (this.replayT > b.plan.resolvedAt + 0.7) this.endReplay();
@@ -1235,7 +1241,8 @@ export class Shootout3D {
     const fdt = real * (this.phase === 'replay' ? 0.32 : 1);
     if (bp && this.replayBall?.fx.fireball) this.fx.burn(toThree(bp), fdt);
     for (const b of this.live) if (b.fx.fireball && !b.resolved && b.mesh.visible) this.fx.burn(toThree(b.pos), fdt);
-    this.fx.update(fdt, this.renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)));
+    const buf = this.renderer.domElement;
+    this.fx.update(fdt, buf.height / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)), buf.width, buf.height);
     // The rim glows while it burns and flashes white-hot when it explodes.
     this.rimHeat += ((this.rimOnFire ? 0.55 : 0) - this.rimHeat) * Math.min(1, real * (this.rimHeat > 0.6 ? 1.5 : 4));
     this.rimMat.emissive.setRGB(1, 0.38, 0.08).multiplyScalar(this.rimHeat);
@@ -1297,23 +1304,29 @@ export class Shootout3D {
    * (negative with knees bent), `fwd` the drift toward the rim the takeoff
    * carries, `crouch` 0..1 for the dip and the landing.
    */
-  private jumpMotion(): { y: number; fwd: number; crouch: number } {
-    const drift = (held: number, rise: number) => {
+  private jumpMotion(): { y: number; vy: number; fwd: number; crouch: number } {
+    // A step into the shot during the load, then the takeoff carries you on toward the rim.
+    const step = (held: number, rise: number) => {
       const td = takeoffAt(rise);
-      return 0.12 * ease(Math.min(1, Math.max(0, (held - td) / (rise - td))));
+      return 0.16 * ease(Math.min(1, held / td)) + 0.1 * ease(Math.min(1, Math.max(0, (held - td) / (rise - td))));
     };
     if (this.phase === 'hold') {
       const j = jumpAt(this.holdT, this.win.rise);
-      return { y: j.y, fwd: drift(this.holdT, this.win.rise), crouch: j.y < 0 ? -j.y / JUMP.dip : 0 };
+      return { y: j.y, vy: j.vy, fwd: step(this.holdT, this.win.rise), crouch: j.y < 0 ? -j.y / JUMP.dip : 0 };
     }
     const o = this.jumpOff;
-    if (!o) return { y: 0, fwd: 0, crouch: 0 };
+    if (!o) return { y: 0, vy: 0, fwd: 0, crouch: 0 };
     const t = this.time - o.at, settle = jumpSettles(o.from, o.rise);
-    if (t > settle + 0.4) return { y: 0, fwd: 0, crouch: 0 };
+    if (t > settle + 0.6) return { y: 0, vy: 0, fwd: 0, crouch: 0 };
+    // Feet back on the floor: a thud (yours only) and a jolt.
+    if (!o.landed && t >= settle - JUMP.landTime) {
+      o.landed = true;
+      if (!this.auto && !this.touch) { sfx.playLand(); if (!this.reduced) this.shake = Math.max(this.shake, 0.35); }
+    }
     const y = jumpAfter(o.from, o.rise, t);
-    // The drift carries on through the air, then eases back as you reset for the next ball.
-    const fwd = lerp(drift(o.held, o.rise), 0.12, Math.min(1, t / 0.25)) * (1 - ease(Math.min(1, Math.max(0, (t - settle) / 0.4))));
-    return { y, fwd, crouch: y < 0 ? -y / JUMP.land : 0 };
+    // The drift carries on through the air, then you reset your feet for the next ball.
+    const fwd = lerp(step(o.held, o.rise), 0.3, Math.min(1, t / 0.3)) * (1 - ease(Math.min(1, Math.max(0, (t - settle) / 0.6))));
+    return { y, vy: 0, fwd, crouch: y < 0 ? -y / JUMP.land : 0 };
   }
 
   /** The shooter, seen from the broadcast camera: jogs to the next rack, then turns to the hoop. */
@@ -1400,23 +1413,29 @@ export class Shootout3D {
     } else {
       // First person: your eyes rise with the jump; after release the view follows the ball a little.
       const [px, py] = spotPosition(this.spot ?? this.course[this.course.length - 1]);
-      // Your eyes ride the jump: dip, takeoff (drifting toward the rim), top, fall, landing.
+      // Your eyes ride the jump: step in and load, takeoff, top, fall, landing.
       const m = this.jumpMotion();
       const sway = this.phase === 'aim' && !this.reduced ? Math.sin(this.phaseT * 1.6) * 0.01 : 0;
       const d = Math.hypot(px, py) || 1;
       pos = toThree([px * 1.04 - (px / d) * m.fwd + sway, py * 1.04 - (py / d) * m.fwd, 1.78 + m.y]);
-      // The view dips a touch with the knees.
-      let lk: V3 = [0, 0, RIM_HEIGHT - 0.55 - 0.12 * (this.phase === 'hold' ? m.crouch : 0)];
+      // Your head stays level as you rise, so the court drops away and the rim
+      // sinks in view (applied after the look smoothing, so it doesn't lag);
+      // the knees nod the view down on the load and the landing.
+      this.lookLift = m.y * 0.85 - 0.22 * m.crouch;
+      let lk: V3 = [0, 0, RIM_HEIGHT - 0.55];
       const nb = this.live[this.live.length - 1];
       if ((this.phase === 'flight' || this.phase === 'wait') && nb && nb.t < 1.6) { const b = nb.pos; lk = [lerp(0, b[0], 0.2), lerp(0, b[1], 0.2), Math.max(lk[2], lerp(lk[2], b[2], 0.35))]; }
       look = toThree(lk);
-      fov = 52;
+      // A touch wider on the push off the floor.
+      fov = 52 + 3 * Math.min(1, Math.max(0, m.vy / 3.5));
       this.camPos.copy(pos);
       this.camLook.lerp(look, this.fade > 0.5 ? 1 : k);
     }
     this.camera.position.copy(this.camPos);
     if (this.shake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * 0.04 * this.shake, (Math.random() - 0.5) * 0.04 * this.shake, 0));
-    this.camera.lookAt(this.camLook);
+    const fpView = !this.touch && !this.auto && this.phase !== 'walk' && this.phase !== 'done' && this.phase !== 'replay';
+    if (!fpView) this.lookLift = 0;
+    this.camera.lookAt(this.camLook.x, this.camLook.y + this.lookLift, this.camLook.z);
     // Wider on tall phone screens so the hoop and court both fit.
     const tall = this.camera.aspect < 1 ? 1 + (1 - this.camera.aspect) * 0.55 : 1;
     this.camera.fov = fov * tall - this.punch * 5;
