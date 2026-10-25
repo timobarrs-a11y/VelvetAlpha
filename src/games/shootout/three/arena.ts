@@ -4,9 +4,9 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { ribbonTexture } from './textures';
 
 // The building around the court: a sky-dome gradient instead of a black
-// void, the suite level (kept dark behind the rim), back walls, the roof with its
-// trusses and lights, banners in the rafters, light beams through the haze
-// and dust drifting in them. Game coords (x across, y out, z up) via `toThree`.
+// void, the suite level (kept dark behind the rim), back walls, the roof with
+// its girders and grouped lighting rigs, banners in the rafters, light beams
+// through the haze and dust drifting in them. Game coords (x across, y out, z up) via `toThree`.
 
 type V = [number, number, number];
 
@@ -142,22 +142,60 @@ export function buildArena(scene: THREE.Scene, toThree: (v: V) => THREE.Vector3,
     place(new THREE.Mesh(new THREE.PlaneGeometry(len + 10, wallH), new THREE.MeshStandardMaterial({ map: wt, emissive: 0xffffff, emissiveMap: wt, emissiveIntensity: 0.12, color: 0x161616 })), upperBack + 0.3, upperTop - 1 + wallH / 2);
   });
 
-  // ---- Roof: a dark lid, a truss grid and rows of small lights.
+  // ---- Roof: a dark lid, a few heavy girders, and the lighting rigs.
   const roofSize = 90;
   const roof = new THREE.Mesh(new THREE.PlaneGeometry(roofSize, roofSize), new THREE.MeshStandardMaterial({ color: 0x08070d, roughness: 1 }));
   roof.rotation.x = Math.PI / 2; roof.position.copy(toThree([0, 6, BOWL.roofZ])); group.add(roof);
-  const trussMat = new THREE.MeshStandardMaterial({ color: 0x24222e, metalness: 0.6, roughness: 0.5 });
-  const beams: THREE.Matrix4[] = [];
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
-  for (let x = -30; x <= 30; x += 5) { m4.compose(toThree([x, 6, BOWL.roofZ - 1.2]), q.identity(), sc.set(0.3, 0.3, 60)); beams.push(m4.clone()); }
-  for (let y = -24; y <= 36; y += 5) { m4.compose(toThree([0, y, BOWL.roofZ - 1.6]), q.identity(), sc.set(60, 0.3, 0.3)); beams.push(m4.clone()); }
-  const truss = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), trussMat, beams.length);
-  beams.forEach((b, i) => truss.setMatrixAt(i, b));
-  group.add(truss);
-  const lights: number[] = [];
-  for (let x = -27.5; x <= 27.5; x += 5) for (let y = -21.5; y <= 33.5; y += 5) { const p = toThree([x, y, BOWL.roofZ - 1.8]); lights.push(p.x, p.y, p.z); }
-  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lights, 3));
-  group.add(new THREE.Points(lg, new THREE.PointsMaterial({ color: 0xffe3b8, size: 0.5, sizeAttenuation: true, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })));
+  // Every steel member (girders, rig chords and rungs, hangers) is one instanced box.
+  const steel: THREE.Matrix4[] = [];
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  const bar = (a: V, b: V, w: number) => {
+    const pa = toThree(a), pb = toThree(b), d = pb.clone().sub(pa);
+    q.setFromUnitVectors(up, d.clone().normalize());
+    steel.push(m4.compose(pa.add(pb).multiplyScalar(0.5), q, sc.set(w, d.length(), w)).clone());
+  };
+  // A box truss from a to b (along x or y), `deep` square, with rungs every metre.
+  const truss = (a: V, b: V, deep: number, w: number) => {
+    const alongX = a[1] === b[1], h = deep / 2;
+    const off = (u: number, v: number): V => (alongX ? [0, u, v] : [u, 0, v]);
+    const add = (p: V, o: V): V => [p[0] + o[0], p[1] + o[1], p[2] + o[2]];
+    const corners = [off(-h, -h), off(h, -h), off(-h, h), off(h, h)];
+    corners.forEach(o => bar(add(a, o), add(b, o), w));
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    for (let k = 0; k <= Math.floor(len); k++) {
+      const t = k / Math.floor(len), p: V = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2]];
+      bar(add(p, corners[0]), add(p, corners[2]), w * 0.6); bar(add(p, corners[1]), add(p, corners[3]), w * 0.6);
+    }
+  };
+  // Three girders spanning the building, high and dark: structure, not a grid.
+  [-8, 6, 20].forEach(y => truss([-34, y, BOWL.roofZ - 1], [34, y, BOWL.roofZ - 1], 1.4, 0.12));
+  // Lighting rigs: grouped clusters over the court, one per row of arena spots,
+  // hung from the roof. The spots themselves (and so the court lighting) are unchanged.
+  const fixtures: Array<{ at: V; aim: V }> = [];
+  const rows = new Map<string, V[]>();
+  opts.spots.forEach(p => { const k = `${p[1]}:${p[2]}`; rows.set(k, [...(rows.get(k) ?? []), p]); });
+  rows.forEach(ps => {
+    const [, y, z] = ps[0], xs = ps.map(p => p[0]);
+    const x0 = Math.min(...xs) - 2.2, x1 = Math.max(...xs) + 2.2, rz = z + 0.55;
+    truss([x0, y, rz], [x1, y, rz], 0.55, 0.05);
+    [x0 + 0.4, x1 - 0.4].forEach(x => bar([x, y, rz + 0.3], [x, y, BOWL.roofZ - 1.7], 0.025));
+    // A cluster of fixtures around each spot, all aimed where that spot aims.
+    ps.forEach(([x]) => [-0.75, 0, 0.75].forEach(dx => fixtures.push({ at: [x + dx, y, z], aim: [x * 0.4 + dx, y * 0.7 + 1, 0] })));
+  });
+  const steelMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x1a1920, metalness: 0.6, roughness: 0.55 }), steel.length);
+  steel.forEach((mm, i) => steelMesh.setMatrixAt(i, mm));
+  group.add(steelMesh);
+  // Fixtures: a dark can with a glowing lens facing its target.
+  const can = new THREE.CylinderGeometry(0.2, 0.26, 0.42, 12).translate(0, 0.21, 0);
+  const lens = new THREE.CircleGeometry(0.19, 16).rotateX(Math.PI / 2).translate(0, -0.01, 0);
+  const cans = new THREE.InstancedMesh(can, new THREE.MeshStandardMaterial({ color: 0x111116, metalness: 0.5, roughness: 0.5 }), fixtures.length);
+  const lenses = new THREE.InstancedMesh(lens, new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xfff1dd, emissiveIntensity: 1.8, side: THREE.DoubleSide }), fixtures.length);
+  fixtures.forEach(({ at, aim }, i) => {
+    const p = toThree(at), d = p.clone().sub(toThree(aim)).normalize();
+    m4.compose(p, q.setFromUnitVectors(up, d), sc.set(1, 1, 1));
+    cans.setMatrixAt(i, m4); lenses.setMatrixAt(i, m4);
+  });
+  group.add(cans, lenses);
 
   // ---- Banners in the rafters over the baseline end.
   const banners: Array<[string[], string, string]> = [
@@ -174,14 +212,14 @@ export function buildArena(scene: THREE.Scene, toThree: (v: V) => THREE.Vector3,
   // ---- Light beams from the arena spots, and dust drifting through them.
   const beamMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
-    uniforms: { color: { value: new THREE.Color(0xfff1dd) }, strength: { value: opts.hi ? 0.05 : 0.04 } },
+    uniforms: { color: { value: new THREE.Color(0xfff1dd) }, strength: { value: opts.hi ? 0.035 : 0.03 } },
     vertexShader: 'varying float vY; varying vec3 vN; varying vec3 vV; void main() { vY = uv.y; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
     fragmentShader: 'uniform vec3 color; uniform float strength; varying float vY; varying vec3 vN; varying vec3 vV; void main() { float edge = pow(abs(dot(vN, vV)), 1.6); float fade = smoothstep(0.0, 0.85, vY); gl_FragColor = vec4(color * strength * edge * fade, 1.0); }',
   });
   opts.spots.forEach(([x, y, z]) => {
     const top = toThree([x, y, z]), bottom = toThree([x * 0.4, y * 0.7 + 1, 0]);
     const h = top.distanceTo(bottom);
-    const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 3.2, h, 24, 1, true), beamMat);
+    const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2.6, h, 24, 1, true), beamMat);
     cone.position.copy(top).add(bottom).multiplyScalar(0.5);
     cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), top.clone().sub(bottom).normalize());
     cone.renderOrder = 2;
