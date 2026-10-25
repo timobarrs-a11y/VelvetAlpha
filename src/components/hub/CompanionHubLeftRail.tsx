@@ -31,7 +31,7 @@ interface GameDef {
 }
 
 const ARCADE_GAMES: GameDef[] = [
-  { emoji: '🏠', name: 'Velvet House (Preview)', desc: 'Rebuilt sim engine', path: '/velvet-house-next' },
+  { emoji: '🏠', name: 'Velvet Sims (Preview)', desc: 'Rebuilt sim engine', path: '/velvet-house-next' },
   { emoji: '🎯', name: 'Checkers',      desc: 'Classic board game',       path: '/checkers' },
   { emoji: '💰', name: 'Money Game',    desc: 'Collect coins',            path: '/pacman' },
   { emoji: '⚡', name: 'Momentum',      desc: 'AI-themed platformer',     path: '/momentum' },

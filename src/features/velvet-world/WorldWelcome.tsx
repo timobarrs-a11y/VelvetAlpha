@@ -113,7 +113,7 @@ function WorldWelcome({ state, onClose }: { state: WelcomeState; onClose: () => 
               <li><b className="text-white">Everyone in Velvet lives here.</b> Your house sits on a real street with a billboard out front: your name, a goal you choose to share, and your medals.</li>
               <li><b className="text-white">New neighbors every day.</b> Tap a billboard to meet someone and add them as a friend.</li>
               <li><b className="text-white">Houses grow with you.</b> Bigger houses come with membership, and five can only be earned with medals.</li>
-              <li><b className="text-white">It's also your home in Velvet House.</b> The town sees the outside. In the game, you go inside and play with your companion.</li>
+              <li><b className="text-white">It's also your home in Velvet Sims.</b> The town sees the outside. In the game, you go inside and play with your companion.</li>
             </ul>
             <p className="text-[13px] text-white/45">Takes about 20 seconds. You can change everything later.</p>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -138,7 +138,7 @@ function WorldWelcome({ state, onClose }: { state: WelcomeState; onClose: () => 
             <p className="text-[14.5px] leading-snug text-white/75">
               Everyone in Velvet now lives in one town{state.slot_index !== null ? <>, and you're at <b className="text-white">{townSlot(state.slot_index).address}</b></> : null}. Your billboard out front shows your name, a goal you choose to share, and your medals. You'll have new neighbors every day; tap a billboard to meet someone.
             </p>
-            <p className="text-[13.5px] text-white/55">Bigger houses come with membership, and five can only be earned with medals. Inside, it's your home in Velvet House.</p>
+            <p className="text-[13.5px] text-white/55">Bigger houses come with membership, and five can only be earned with medals. Inside, it's your home in Velvet Sims.</p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button type="button" onClick={() => setStep('pick')} className="flex-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 py-3 font-bold text-white hover:shadow-xl">
                 Make it mine

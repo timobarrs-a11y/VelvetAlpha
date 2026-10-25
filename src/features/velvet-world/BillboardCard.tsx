@@ -12,7 +12,7 @@ interface BillboardCardProps {
   isYou: boolean;
   onClose: () => void;
   onCustomize: () => void;
-  /** Your main companion: "Look inside" opens their Velvet House. */
+  /** Your main companion: "Look inside" opens their Velvet Sims game. */
   mainCompanionId?: string | null;
 }
 
@@ -165,7 +165,7 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanion
               >
                 Customize my plot
               </button>
-              {/* Only on your own house: the inside is the Velvet House game */}
+              {/* Only on your own house: the inside is the Velvet Sims game */}
               <button
                 type="button"
                 onClick={() => navigate(mainCompanionId ? `/velvet-house?companion=${encodeURIComponent(mainCompanionId)}` : '/velvet-house')}

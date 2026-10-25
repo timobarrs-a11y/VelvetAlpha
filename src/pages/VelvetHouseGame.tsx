@@ -209,7 +209,7 @@ export function VelvetHouseGame() {
 
   useEffect(() => {
     if (!companionId) {
-      setError('No companion selected. Choose a companion from the lobby to play Velvet House.');
+      setError('No companion selected. Choose a companion from the lobby to play Velvet Sims.');
       setLoading(false);
       return;
     }
@@ -230,7 +230,7 @@ export function VelvetHouseGame() {
         fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
-          body: JSON.stringify({ query: clean.query, userContext: 'Velvet House in-game TV' }),
+          body: JSON.stringify({ query: clean.query, userContext: 'Velvet Sims in-game TV' }),
         })
           .then(r => r.json())
           .then(data => {
@@ -343,7 +343,7 @@ export function VelvetHouseGame() {
         <div className="absolute inset-0 top-12 flex items-center justify-center bg-[#0a0a0f] z-10">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
-            <p className="text-white/40 text-sm">Loading Velvet House...</p>
+            <p className="text-white/40 text-sm">Loading Velvet Sims...</p>
           </div>
         </div>
       )}
@@ -352,7 +352,7 @@ export function VelvetHouseGame() {
         <iframe
           ref={iframeRef}
           src={`${GAME_PATH}?companion=${encodeURIComponent(companionId ?? '')}`}
-          title="Velvet House"
+          title="Velvet Sims"
           className="flex-1 w-full border-0"
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           onLoad={() => setLoading(false)}

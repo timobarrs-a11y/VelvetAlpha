@@ -38,7 +38,7 @@ export function VelvetHouseNextGame() {
         <div className="absolute inset-0 top-12 flex items-center justify-center bg-[#0a0a0f] z-10">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
-            <p className="text-white/40 text-sm">Loading Velvet House...</p>
+            <p className="text-white/40 text-sm">Loading Velvet Sims...</p>
           </div>
         </div>
       )}
@@ -46,7 +46,7 @@ export function VelvetHouseNextGame() {
       <iframe
         ref={iframeRef}
         src={`${GAME_PATH}${companionId ? `?companion=${encodeURIComponent(companionId)}` : ''}`}
-        title="Velvet House (Preview)"
+        title="Velvet Sims (Preview)"
         className="flex-1 w-full border-0"
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
         onLoad={() => setLoading(false)}
