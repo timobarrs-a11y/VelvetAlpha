@@ -79,4 +79,17 @@ describe('AvatarV2', () => {
     const { container } = render(<AvatarV2 config={{ gender: 'male', hairStyle: 'sleek', skinTone: '#e8b890' }} />);
     expect(container.querySelector('svg')).not.toBeNull();
   });
+
+  it('draws every lip shape in every mood, with teeth only when the mouth is open', () => {
+    for (const lipShape of ['natural', 'full', 'thin', 'heart'] as const) {
+      const config = migrateAvatarConfig({ lipShape });
+      const closed = renderToStaticMarkup(<AvatarV2 config={config} />);
+      const smile = renderToStaticMarkup(<AvatarV2 config={config} mood="smile" />);
+      const grin = renderToStaticMarkup(<AvatarV2 config={config} mood="grin" />);
+      for (const svg of [closed, smile, grin]) expect(svg).not.toContain('NaN');
+      expect(smile).not.toBe(closed);
+      expect(closed).not.toContain('mouth-open');
+      expect(grin).toContain('mouth-open');
+    }
+  });
 });

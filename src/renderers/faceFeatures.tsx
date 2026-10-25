@@ -1,5 +1,5 @@
 import type {
-  EyeShape, EyebrowShape, NoseShape, Eyeliner, EyeShadow, MakeupIntensity, Gender,
+  EyeShape, EyebrowShape, NoseShape, Eyeliner, EyeShadow, MakeupIntensity, Gender, LipShape,
 } from '../types/avatar-v2';
 import { FaceGeometry, faceHalfWidthAt } from './faceGeometry';
 import { shade } from './outfitRenderer';
@@ -270,4 +270,108 @@ export function renderEars({ geometry, skinTone }: EarParams): React.ReactNode {
       </g>
     );
   });
+}
+
+// ---- Mouth ----
+// Built the way cartoonists build it: two corners, the line where the lips
+// meet, a darker upper lip with a cupid's bow, a fuller lower lip with a
+// highlight, the groove under the nose and a soft shadow under the lower lip.
+// The mood moves the corners and can part the lips, so expressions reuse it.
+
+export type MouthMood = 'neutral' | 'smile' | 'grin';
+
+const MOUTH_Y = 76.6;
+
+interface LipSpec { w: number; up: number; lo: number; bow: number }
+const LIPS: Record<LipShape, LipSpec> = {
+  natural: { w: 7.4, up: 2.3, lo: 3.0, bow: 0.8 },
+  full:    { w: 8.4, up: 3.3, lo: 4.4, bow: 0.9 },
+  thin:    { w: 7.0, up: 1.3, lo: 1.8, bow: 0.5 },
+  heart:   { w: 7.0, up: 2.6, lo: 3.0, bow: 1.6 },
+};
+
+const MOODS: Record<MouthMood, { lift: number; curve: number; open: number }> = {
+  neutral: { lift: 0.35, curve: 0.45, open: 0 },
+  smile:   { lift: 2.0, curve: 1.5, open: 0 },
+  grin:    { lift: 2.5, curve: 1.1, open: 3.6 },
+};
+
+// Half the mouth's width, so a beard leaves room for it.
+export function mouthHalfWidth(shape: LipShape): number {
+  return (LIPS[shape] ?? LIPS.natural).w + 0.6;
+}
+
+export interface MouthParams {
+  lipShape: LipShape;
+  lipColor: string;
+  skinTone: string;
+  mood?: MouthMood;
+  idPrefix: string;
+}
+
+export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', idPrefix }: MouthParams): React.ReactNode {
+  const l = LIPS[lipShape] ?? LIPS.natural;
+  const m = MOODS[mood];
+  const M = MOUTH_Y;
+  const L: Pt = [50 - l.w, M - m.lift], R: Pt = [50 + l.w, M - m.lift];
+  // The line where the lips meet, and (when the mouth is open) the lower one.
+  const topC: [Pt, Pt] = [[50 - l.w * 0.5, M + m.curve], [50 + l.w * 0.5, M + m.curve]];
+  const botC: [Pt, Pt] = [[50 - l.w * 0.5, M + m.curve + m.open * 1.33], [50 + l.w * 0.5, M + m.curve + m.open * 1.33]];
+  const parting = `M${p(L)} C${p(topC[0])} ${p(topC[1])} ${p(R)}`;
+  const partingBack = `C${p(topC[1])} ${p(topC[0])} ${p(L)}`;
+  const lowerTop = `M${p(L)} C${p(botC[0])} ${p(botC[1])} ${p(R)}`;
+
+  const peakY = M - l.up - m.lift * 0.35;
+  const upper = [
+    `M${p(L)}`,
+    `C${p([50 - l.w * 0.6, M - l.up * 0.55 - m.lift * 0.6])} ${p([50 - 3.6, peakY])} ${p([50 - 2.4, peakY])}`,
+    `Q${p([50 - 1, peakY])} ${p([50, peakY + l.bow])}`,
+    `Q${p([50 + 1, peakY])} ${p([50 + 2.4, peakY])}`,
+    `C${p([50 + 3.6, peakY])} ${p([50 + l.w * 0.6, M - l.up * 0.55 - m.lift * 0.6])} ${p(R)}`,
+    partingBack, 'Z',
+  ].join(' ');
+  const lowBottom = M + m.curve * 0.6 + m.open + l.lo * 1.25;
+  const lower = `${lowerTop} C${p([50 + l.w * 0.55, lowBottom])} ${p([50 - l.w * 0.55, lowBottom])} ${p(L)} Z`;
+
+  const lipDark = shade(lipColor, -0.14);
+  const line = shade(lipColor, -0.58);
+  const skinShadow = shade(skinTone, -0.28);
+  const openId = `${idPrefix}-mouth-open`;
+  const chinY = lowBottom + 1.6;
+
+  return (
+    <g>
+      {/* The groove between nose and lip. */}
+      {([-1, 1] as const).map((s) => (
+        <path key={s} d={`M${50 + s * 1.1},67.6 Q${50 + s * 1.5},${(67.6 + peakY) / 2} ${50 + s * 2.1},${peakY - 0.3}`}
+          stroke={shade(skinTone, -0.14)} strokeWidth="0.55" fill="none" opacity="0.45" strokeLinecap="round" />
+      ))}
+      {m.open > 0 && (
+        <>
+          <defs><clipPath id={openId}><path d={`${parting} C${p(botC[1])} ${p(botC[0])} ${p(L)} Z`} /></clipPath></defs>
+          <path d={`${parting} C${p(botC[1])} ${p(botC[0])} ${p(L)} Z`} fill="#4a2226" />
+          <g clipPath={`url(#${openId})`}>
+            {/* The top row of teeth follows the curve of the smile. */}
+            <path d={`${parting} L${p([R[0], R[1] + 2])} C${p([topC[1][0], topC[1][1] + 2.9])} ${p([topC[0][0], topC[0][1] + 2.9])} ${p([L[0], L[1] + 2])} Z`}
+              fill="#f7f3ee" />
+            <path d={`M50,${M + m.curve * 0.7} L50,${M + m.curve * 0.7 + 2.2}`} stroke="#ddd5cb" strokeWidth="0.3" />
+            <ellipse cx="50" cy={M + m.curve + m.open + 0.9} rx={l.w * 0.42} ry="1.3" fill="#c0606a" opacity="0.75" />
+          </g>
+        </>
+      )}
+      <path d={lower} fill={lipColor} />
+      <ellipse cx="49" cy={M + m.curve * 0.6 + m.open + l.lo * 0.5} rx={l.w * 0.34} ry={Math.max(0.5, l.lo * 0.17)} fill="#fff" opacity="0.28" />
+      <path d={upper} fill={lipDark} />
+      <path d={parting} stroke={line} strokeWidth="0.75" fill="none" strokeLinecap="round" opacity="0.85" />
+      {/* Corners tuck in; a smile pushes up little creases beside them. */}
+      {([L, R] as Pt[]).map(([x, y], i) => {
+        const s = i === 0 ? -1 : 1;
+        return m.lift > 1
+          ? <path key={i} d={`M${x + s * 0.6},${y - 1.6} q${s * 1},${1.4} ${s * 0.2},${3}`} stroke={skinShadow} strokeWidth="0.6" fill="none" opacity="0.5" strokeLinecap="round" />
+          : <circle key={i} cx={x + s * 0.2} cy={y + 0.1} r="0.45" fill={line} opacity="0.55" />;
+      })}
+      <path d={`M${50 - l.w * 0.45},${chinY} Q50,${chinY + 0.9} ${50 + l.w * 0.45},${chinY}`}
+        stroke={skinShadow} strokeWidth="0.9" fill="none" opacity="0.32" strokeLinecap="round" style={{ filter: 'blur(0.4px)' }} />
+    </g>
+  );
 }

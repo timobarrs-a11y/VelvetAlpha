@@ -92,7 +92,7 @@ export function renderFacialHair(p: FacialHairRenderParams): React.ReactNode {
       }
       return (
         <g>
-          {clipDefs(`${cheekLine} ${mouth(0.6)}`, 1.0)}
+          {clipDefs(`${cheekLine} ${mouth(0.2)}`, 1.0)}
           <g clipPath={`url(#${regionClipId})`}>
             <g fill={hairColor} opacity="0.2">{box}</g>
             {dots}
@@ -104,7 +104,7 @@ export function renderFacialHair(p: FacialHairRenderParams): React.ReactNode {
     case 'beard':
       return (
         <g>
-          {clipDefs(`${cheekLine} ${mouth(0.8)}`, 1.09)}
+          {clipDefs(`${cheekLine} ${mouth(0.25)}`, 1.09)}
           <g clipPath={`url(#${regionClipId})`}>
             <g fill={hairColor} opacity="0.95">{box}</g>
             <ellipse cx="50" cy={C + 4} rx={g.fRx - 4} ry="9" fill={dark} opacity="0.35" />
@@ -118,7 +118,7 @@ export function renderFacialHair(p: FacialHairRenderParams): React.ReactNode {
       const region = `M${50 - w + 1},70.5 Q${50 - 6},68.5 50,69.2 Q${50 + 6},68.5 ${50 + w - 1},70.5 Q${50 + w + 1},79 ${50 + w - 3},${C - 3} Q50,${C + 3} ${50 - w + 3},${C - 3} Q${50 - w - 1},79 ${50 - w + 1},70.5 Z`;
       return (
         <g>
-          {clipDefs(`${region} ${mouth(0.6)}`, 1.05)}
+          {clipDefs(`${region} ${mouth(0.2)}`, 1.05)}
           <g clipPath={`url(#${regionClipId})`}>
             <g fill={hairColor} opacity="0.95">{box}</g>
             {strands(2.2, 5, 2.4, 0.7)}

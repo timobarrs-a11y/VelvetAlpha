@@ -10,19 +10,20 @@ import { migrateAvatarConfig } from '../utils/avatarConfig';
 import { faceOutlinePath } from '../renderers/faceGeometry';
 import {
   renderEyes, renderEyelashes, renderEyeliner, renderEyeShadow, renderEyebrows, renderNose,
-  renderEars, earLobes,
+  renderEars, earLobes, renderMouth, mouthHalfWidth, MouthMood,
 } from '../renderers/faceFeatures';
 import { renderFacialHair } from '../renderers/facialHairRenderer';
 
-const LIP_HALF_WIDTH: Record<string, number> = { natural: 8, full: 10, thin: 7, heart: 8 };
 
 interface AvatarV2Props {
   // Any stored avatar: current, older versions, or a v1 config.
   config: Partial<AvatarConfigV2>;
   className?: string;
+  // The mouth's expression. Neutral unless something (like a reaction) says otherwise.
+  mood?: MouthMood;
 }
 
-function AvatarV2Inner({ config: raw, className = '' }: AvatarV2Props) {
+function AvatarV2Inner({ config: raw, className = '', mood = 'neutral' }: AvatarV2Props) {
   // Whatever comes in (a database row, an old draft, a v1 config) is brought
   // up to date first, so every caller draws the same avatar.
   const config = migrateAvatarConfig(raw);
@@ -158,17 +159,10 @@ function AvatarV2Inner({ config: raw, className = '' }: AvatarV2Props) {
     }
   };
 
-  const lipShapes: Record<string, { top: string; bottom: string }> = {
-    natural: { top: 'M42 76 Q46 73 50 74 Q54 73 58 76', bottom: 'M42 76 Q50 82 58 76' },
-    full:    { top: 'M40 76 Q45 72 50 73 Q55 72 60 76', bottom: 'M40 76 Q50 85 60 76' },
-    thin:    { top: 'M43 76 Q46 74 50 75 Q54 74 57 76', bottom: 'M43 76 Q50 79 57 76' },
-    heart:   { top: 'M42 76 Q46 71 50 74 Q54 71 58 76', bottom: 'M42 76 Q50 82 58 76' },
-  };
-
   const renderFacialHairLayer = () => {
     return renderFacialHair({
       facialHair, hairColor, geometry: faceGeometry,
-      mouthHalfWidth: LIP_HALF_WIDTH[lipShape] ?? 8,
+      mouthHalfWidth: mouthHalfWidth(lipShape),
       idPrefix: uid,
     });
   };
@@ -388,7 +382,6 @@ function AvatarV2Inner({ config: raw, className = '' }: AvatarV2Props) {
     }
   };
 
-  const lips = lipShapes[lipShape] || lipShapes.natural;
   const faceGradientId = `${uid}-skin`;
   const { shoulderRx, torsoScaleX } = bodyParams;
   const neckY = faceParams.jawY ?? 78;
@@ -466,9 +459,7 @@ function AvatarV2Inner({ config: raw, className = '' }: AvatarV2Props) {
       {renderNosePiercing()}
       {renderFreckles()}
 
-      <path d={lips.bottom} fill={lipColor} opacity="0.9" />
-      <path d={lips.top} fill={lipColor} opacity="0.8" />
-      <path d="M46 75 Q50 73.5 54 75" stroke="white" strokeWidth="0.7" fill="none" opacity="0.2" />
+      {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid })}
 
       {renderLipPiercing()}
       {renderFacialHairLayer()}
@@ -483,5 +474,6 @@ function AvatarV2Inner({ config: raw, className = '' }: AvatarV2Props) {
 
 export const AvatarV2 = memo(AvatarV2Inner, (prev, next) =>
   prev.className === next.className &&
+  prev.mood === next.mood &&
   JSON.stringify(prev.config) === JSON.stringify(next.config)
 );
