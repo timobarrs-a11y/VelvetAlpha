@@ -57,7 +57,7 @@ export function renderFacialHair(p: FacialHairRenderParams): React.ReactNode {
         out.push(
           <path key={i}
             d={`M${jx},${jy} q${lean * 0.5},${len * 0.5} ${lean},${len}`}
-            stroke={i % 5 === 0 ? light : dark} strokeWidth={width}
+            stroke={i % 9 === 0 ? light : dark} strokeWidth={width}
             opacity={0.35 + seeded(i, salt + 2) * 0.3} fill="none" strokeLinecap="round" />,
         );
       }

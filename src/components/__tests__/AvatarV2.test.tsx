@@ -3,6 +3,8 @@ import { render } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AvatarV2 } from '../AvatarV2';
 import { migrateAvatarConfig } from '../../utils/avatarConfig';
+import { MALE_HAIRSTYLES, FEMALE_HAIRSTYLES, FACE_SHAPES, EYE_SHAPES } from '../../types/avatar-v2';
+import { faceOutlinePath } from '../../renderers/faceGeometry';
 
 describe('AvatarV2', () => {
   it('draws the afro for both genders', () => {
@@ -37,5 +39,31 @@ describe('AvatarV2', () => {
       const config = migrateAvatarConfig({ gender: 'male', facialHair });
       expect(renderToStaticMarkup(<AvatarV2 config={config} />)).toBe(renderToStaticMarkup(<AvatarV2 config={config} />));
     }
+  });
+
+  it('draws every hairstyle and texture for both genders, the same way every time', () => {
+    for (const [gender, styles] of [['male', MALE_HAIRSTYLES], ['female', FEMALE_HAIRSTYLES]] as const) {
+      for (const { value: hairStyle } of styles) {
+        for (const hairTexture of ['straight', 'wavy', 'coily'] as const) {
+          const config = migrateAvatarConfig({ gender, hairStyle, hairTexture });
+          const a = renderToStaticMarkup(<AvatarV2 config={config} />);
+          expect(a).toBe(renderToStaticMarkup(<AvatarV2 config={config} />));
+          expect(a).not.toContain('NaN');
+        }
+      }
+    }
+  });
+
+  it('gives every face shape its own outline', () => {
+    const outlines = FACE_SHAPES.map(({ value }) => faceOutlinePath({
+      faceShape: value, fRx: 28, fRy: 34, chinW: 20, faceTop: 18, faceBottom: 86, faceCenterY: 52,
+    }));
+    expect(new Set(outlines).size).toBe(FACE_SHAPES.length);
+    for (const d of outlines) expect(d).not.toContain('NaN');
+  });
+
+  it('draws every eye shape differently', () => {
+    const drawn = EYE_SHAPES.map(({ value }) => renderToStaticMarkup(<AvatarV2 config={migrateAvatarConfig({ eyeShape: value })} />));
+    expect(new Set(drawn).size).toBe(EYE_SHAPES.length);
   });
 });

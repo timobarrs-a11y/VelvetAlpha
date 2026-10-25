@@ -1,429 +1,372 @@
-import { HairTexture, HairStyle } from '../types/avatar-v2';
+import type { Gender, HairStyle, HairTexture } from '../types/avatar-v2';
+import { FaceGeometry, faceHalfWidthAt, chinY } from './faceGeometry';
+import { shade } from './outfitRenderer';
+
+// Hair in two layers, so it sits on the head instead of behind it:
+//   back:  drawn before the body. Volume behind the head, long lengths behind
+//          the shoulders, ponytails and buns.
+//   front: drawn over the face. The cap that hugs the crown and ends at a real
+//          hairline on the forehead, sideburns, and locks that frame the face.
+// Strand texture is seeded, so a style draws the same way every time.
 
 export interface HairRenderParams {
-  hairColor: string;
-  hairColorDark: string;
-  hairColorLight: string;
-  hairColorMid: string;
   hairStyle: HairStyle;
   hairTexture: HairTexture;
-  fRx: number;
-  fRy: number;
-  faceTop: number;
-  faceBottom: number;
-  faceCenterY: number;
+  gender: Gender;
+  hairColor: string;
+  skinTone: string;
+  geometry: FaceGeometry;
+  idPrefix: string;
 }
 
-export function renderMaleHair(p: HairRenderParams): React.ReactNode {
-  const { hairColor, hairColorDark, hairColorLight, hairColorMid, hairStyle, hairTexture, fRx, fRy, faceTop, faceCenterY, faceBottom } = p;
+type Pt = [number, number];
+type Hairline = 'natural' | 'high' | 'fringe' | 'sweep' | 'part' | 'center' | 'curly';
+type Texture = 'straight' | 'wavy' | 'coily' | 'buzz' | 'locs' | 'braids' | 'slick';
 
-  switch (hairStyle) {
-    case 'buzz':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 6} rx={fRx + 1} ry="10" fill={hairColor} />
-          <ellipse cx="50" cy={faceTop + 2} rx={fRx - 4} ry="8" fill={hairColor} />
-          {Array.from({ length: 320 }, (_, i) => {
-            const col = i % 40;
-            const row = Math.floor(i / 40);
-            const angle = (col / 40) * Math.PI;
-            const rx = fRx - 2 + row * 0.6;
-            const ry = 8 + row * 0.3;
-            const x = 50 + Math.cos(angle) * rx + (((i * 7919) % 7) - 3) * 0.2;
-            const y = faceTop + 4 + Math.sin(angle) * ry * 0.6 + (((i * 6271) % 5) - 2) * 0.3;
-            if (y < faceTop - 2 || y > faceTop + 14) return null;
-            return (
-              <line key={i}
-                x1={x} y1={y} x2={x + (((i * 3571) % 5) - 2) * 0.3} y2={y - 1.2 - (i % 3) * 0.2}
-                stroke={i % 5 === 0 ? hairColorLight : hairColorDark}
-                strokeWidth={0.6} opacity={0.55 + (i % 4) * 0.08} strokeLinecap="round" />
-            );
-          })}
-          <ellipse cx={50 - fRx + 1} cy={faceCenterY - 4} rx="5" ry="10" fill={hairColor} opacity="0.85" />
-          <ellipse cx={50 + fRx - 1} cy={faceCenterY - 4} rx="5" ry="10" fill={hairColor} opacity="0.85" />
-        </g>
-      );
+interface HairSpec {
+  v: number;            // height of the hair above the crown
+  sv: number;           // width of the hair past the sides of the head
+  sideY: number;        // where the cap ends at the sides, relative to face centre
+  hairline: Hairline;
+  texture: Texture;
+  back?: { length: number; spread: number; edge: 'blunt' | 'soft' | 'curly' };
+  locks?: { length: number; width: number };
+  extra?: 'ponytail' | 'bun' | 'fade' | 'afro';
+  sideburn?: boolean;
+  opacity?: number;
+}
 
-    case 'short':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="16" fill={hairColor} />
-          <ellipse cx="50" cy={faceTop + 2} rx={fRx - 2} ry="12" fill={hairColorDark} opacity="0.4" />
-          {Array.from({ length: 48 }, (_, i) => {
-            const t = (i / 48) * Math.PI;
-            const bx = 50 + Math.cos(t) * (fRx + 1);
-            const by = faceTop + 8 + Math.sin(t) * 12;
-            const len = 5 + Math.sin(i * 1.3) * 2;
-            const angle = -Math.PI * 0.5 + (i / 48) * Math.PI * 0.6 - 0.3;
-            return (
-              <path key={i}
-                d={`M${bx},${by} Q${bx + Math.cos(angle) * len * 0.5 + Math.sin(i) * 1.5},${by + Math.sin(angle) * len * 0.5} ${bx + Math.cos(angle) * len},${by + Math.sin(angle) * len}`}
-                stroke={i % 7 === 0 ? hairColorLight : hairColor}
-                strokeWidth={1.4} fill="none" opacity={0.8} strokeLinecap="round" />
-            );
-          })}
-          <ellipse cx={50 - fRx + 1} cy={faceCenterY - 2} rx="5" ry="12" fill={hairColorDark} opacity="0.75" />
-          <ellipse cx={50 + fRx - 1} cy={faceCenterY - 2} rx="5" ry="12" fill={hairColorDark} opacity="0.75" />
-        </g>
-      );
+const MALE: Partial<Record<HairStyle, HairSpec>> = {
+  buzz:  { v: 0.8, sv: 0.3, sideY: -4, hairline: 'natural', texture: 'buzz', sideburn: true, opacity: 0.85 },
+  short: { v: 3.6, sv: 1, sideY: -3, hairline: 'part', texture: 'straight', sideburn: true },
+  wavy:  { v: 5.5, sv: 2, sideY: -1, hairline: 'sweep', texture: 'wavy', sideburn: true },
+  sleek: { v: 3.2, sv: 0.8, sideY: -3, hairline: 'high', texture: 'slick', sideburn: true },
+  afro:  { v: 13, sv: 9, sideY: 4, hairline: 'curly', texture: 'coily', extra: 'afro' },
+  locs:  { v: 4, sv: 2, sideY: 2, hairline: 'natural', texture: 'locs', back: { length: 112, spread: 4, edge: 'blunt' }, locks: { length: 104, width: 7 } },
+  fade:  { v: 4.2, sv: 0, sideY: -4, hairline: 'natural', texture: 'straight', extra: 'fade', sideburn: true },
+};
 
-    case 'wavy': {
-      const waveAmp = hairTexture === 'coily' ? 5.5 : hairTexture === 'wavy' ? 3.5 : 2;
-      const wavePaths = Array.from({ length: 14 }, (_, i) => {
-        const x0 = 22 + i * 4;
-        const phase = (i % 3) * 1.1;
-        const amp = waveAmp + (i % 2) * 1.5;
-        const segments = [];
-        for (let s = 0; s < 3; s++) {
-          const y0 = faceTop + 4 + s * 12;
-          const y1 = y0 + 6;
-          const y2 = y0 + 12;
-          const cx1 = x0 + Math.sin(phase + s) * amp;
-          const cx2 = x0 - Math.sin(phase + s + 1) * amp;
-          segments.push(`Q${cx1},${y1} ${x0},${y2} Q${cx2},${y2 + 6} ${x0},${y2 + 12}`);
-        }
-        return (
-          <path key={i}
-            d={`M${x0},${faceTop + 4} ${segments.join(' ')}`}
-            stroke={i % 5 === 0 ? hairColorLight : hairColor}
-            strokeWidth={2.5 + (i % 3) * 0.5} fill="none" opacity={0.85} strokeLinecap="round" />
-        );
-      });
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-          {wavePaths}
-          <ellipse cx={50 - fRx + 1} cy={faceCenterY} rx="6" ry="14" fill={hairColorDark} opacity="0.7" />
-          <ellipse cx={50 + fRx - 1} cy={faceCenterY} rx="6" ry="14" fill={hairColorDark} opacity="0.7" />
-        </g>
-      );
-    }
+const FEMALE: Partial<Record<HairStyle, HairSpec>> = {
+  sleek:    { v: 3, sv: 1.5, sideY: 2, hairline: 'center', texture: 'straight', back: { length: 122, spread: 4, edge: 'blunt' }, locks: { length: 110, width: 6.5 } },
+  wavy:     { v: 5, sv: 3, sideY: 2, hairline: 'part', texture: 'wavy', back: { length: 124, spread: 7, edge: 'soft' }, locks: { length: 114, width: 7.5 } },
+  curly:    { v: 8, sv: 7, sideY: 4, hairline: 'curly', texture: 'coily', back: { length: 108, spread: 10, edge: 'curly' }, locks: { length: 100, width: 8.5 } },
+  braids:   { v: 2.6, sv: 1, sideY: 2, hairline: 'center', texture: 'braids', back: { length: 124, spread: 4, edge: 'blunt' }, locks: { length: 118, width: 5 } },
+  ponytail: { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'ponytail' },
+  afro:     { v: 15, sv: 11, sideY: 6, hairline: 'curly', texture: 'coily', extra: 'afro' },
+  locs:     { v: 4, sv: 2.5, sideY: 2, hairline: 'center', texture: 'locs', back: { length: 126, spread: 5, edge: 'blunt' }, locks: { length: 116, width: 7 } },
+  bun:      { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'bun' },
+};
 
-    case 'sleek':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-          <path d={`M${50 - fRx + 2},${faceTop + 8} Q${50 - fRx - 2},${faceTop + 20} ${50 - fRx},${faceTop + 35} L${50 - fRx + 4},${faceTop + 35} Q${50 - fRx + 2},${faceTop + 20} ${50 - fRx + 5},${faceTop + 8} Z`} fill={hairColor} />
-          <path d={`M${50 + fRx - 2},${faceTop + 8} Q${50 + fRx + 2},${faceTop + 20} ${50 + fRx},${faceTop + 35} L${50 + fRx - 4},${faceTop + 35} Q${50 + fRx - 2},${faceTop + 20} ${50 + fRx - 5},${faceTop + 8} Z`} fill={hairColor} />
-          {Array.from({ length: 18 }, (_, i) => {
-            const x = 22 + i * 3.4;
-            return (
-              <path key={i}
-                d={`M${x},${faceTop + 4} L${x - 1},${faceTop + 22}`}
-                stroke={i % 4 === 0 ? hairColorLight : hairColorMid}
-                strokeWidth={1.8} opacity={0.35} strokeLinecap="round" />
-            );
-          })}
-          <ellipse cx={50 - fRx + 1} cy={faceCenterY - 4} rx="5.5" ry="13" fill={hairColor} opacity="0.9" />
-          <ellipse cx={50 + fRx - 1} cy={faceCenterY - 4} rx="5.5" ry="13" fill={hairColor} opacity="0.9" />
-        </g>
-      );
+function specFor(gender: Gender, style: HairStyle): HairSpec {
+  const own = gender === 'male' ? MALE : FEMALE;
+  const other = gender === 'male' ? FEMALE : MALE;
+  return own[style] ?? other[style] ?? (MALE.short as HairSpec);
+}
 
-    case 'afro':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceCenterY - 18} rx={fRx + 14} ry={fRy - 2} fill={hairColor} opacity="0.9" />
-          {Array.from({ length: 260 }, (_, i) => {
-            const angle = (i / 260) * Math.PI * 2;
-            const layer = Math.floor(i / 52);
-            const r = 10 + layer * 4.5;
-            const x = 50 + Math.cos(angle) * r * 1.4 + (((i * 4373) % 7) - 3) * 0.9;
-            const y = faceCenterY - 18 + Math.sin(angle) * r + (((i * 6113) % 5) - 2) * 0.8;
-            const dist = Math.sqrt(Math.pow((x - 50) / 1.4, 2) + Math.pow(y - (faceCenterY - 18), 2));
-            if (dist > fRy + 2) return null;
-            return (
-              <circle key={i} cx={x} cy={y} r={1.5 + (i % 3) * 0.4}
-                fill={i % 9 === 0 ? hairColorLight : hairColor}
-                opacity={0.6 + (i % 4) * 0.08} />
-            );
-          })}
-        </g>
-      );
+// Long hair takes on its texture: wavy hair has more body, coily much more.
+function withTexture(spec: HairSpec, texture: HairTexture): HairSpec {
+  if (!spec.back || spec.texture === 'locs' || spec.texture === 'braids' || spec.texture === 'coily') return spec;
+  if (texture === 'wavy') return { ...spec, v: spec.v + 1.5, sv: spec.sv + 2, texture: 'wavy', back: { ...spec.back, spread: spec.back.spread + 3, edge: 'soft' } };
+  if (texture === 'coily') return { ...spec, v: spec.v + 5, sv: spec.sv + 6, texture: 'coily', back: { ...spec.back, length: spec.back.length - 12, spread: spec.back.spread + 8, edge: 'curly' } };
+  return spec;
+}
 
-    case 'locs':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-          {Array.from({ length: 9 }, (_, i) => {
-            const x = 22 + i * 6.5;
-            const curveMod = (i - 4) * 3;
-            const len = 70;
-            return (
-              <g key={i}>
-                <path d={`M${x},${faceTop + 10} Q${x + curveMod * 0.5},${faceTop + 10 + len * 0.4} ${x + curveMod * 0.7},${faceTop + 10 + len * 0.7} Q${x + curveMod},${faceTop + 10 + len} ${x + curveMod * 0.8},${faceTop + 10 + len * 1.3}`}
-                  stroke={hairColor} strokeWidth={6.5} fill="none" strokeLinecap="round" opacity="0.95" />
-                {Array.from({ length: 9 }, (_, j) => {
-                  const t = j / 9;
-                  const sx = x + curveMod * t * 0.7;
-                  const sy = faceTop + 10 + len * t;
-                  return (
-                    <ellipse key={j} cx={sx} cy={sy} rx="2.8" ry="1.2"
-                      fill={hairColorDark} opacity="0.5"
-                      transform={`rotate(${(curveMod > 0 ? 1 : -1) * 15 * t}, ${sx}, ${sy})`} />
-                  );
-                })}
-              </g>
-            );
-          })}
-        </g>
-      );
+function seeded(i: number, salt: number): number {
+  const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+}
 
-    case 'fade':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 10} rx={fRx - 4} ry="16" fill={hairColor} />
-          {Array.from({ length: 8 }, (_, i) => {
-            const opacity = 0.15 + (i / 8) * 0.75;
-            const ry = 4 + i * 1.8;
-            const rx2 = fRx - 4 - i * 0.5;
-            return (
-              <ellipse key={i} cx="50" cy={faceBottom - 2 - i * 3}
-                rx={rx2} ry={ry}
-                fill={hairColor} opacity={opacity} />
-            );
-          })}
-          {Array.from({ length: 36 }, (_, i) => {
-            const t = (i / 36) * Math.PI;
-            const bx = 50 + Math.cos(t) * (fRx - 5);
-            const by = faceTop + 10 + Math.sin(t) * 10;
-            const len = 4 + Math.sin(i * 1.7) * 1.5;
-            return (
-              <path key={`top-${i}`}
-                d={`M${bx},${by} Q${bx + Math.sin(i) * 1.2},${by - len * 0.5} ${bx + Math.sin(i + 1) * 0.8},${by - len}`}
-                stroke={i % 6 === 0 ? hairColorLight : hairColor}
-                strokeWidth={1.3} fill="none" opacity={0.85} strokeLinecap="round" />
-            );
-          })}
-          <ellipse cx={50 - fRx + 3} cy={faceCenterY + 2} rx="4" ry="10" fill={hairColor} opacity="0.45" />
-          <ellipse cx={50 + fRx - 3} cy={faceCenterY + 2} rx="4" ry="10" fill={hairColor} opacity="0.45" />
-        </g>
-      );
+const f = (n: number) => n.toFixed(2);
+const pt = ([x, y]: Pt) => `${f(x)},${f(y)}`;
 
-    default: return null;
+function smooth(pts: Pt[], closed: boolean, tension = 1): string {
+  const n = pts.length;
+  const at = (i: number) => (closed ? pts[(i + n) % n] : pts[Math.max(0, Math.min(n - 1, i))]);
+  let d = `M${pt(pts[0])}`;
+  const segs = closed ? n : n - 1;
+  for (let i = 0; i < segs; i++) {
+    const [p0, p1, p2, p3] = [at(i - 1), at(i), at(i + 1), at(i + 2)];
+    const c1: Pt = [p1[0] + ((p2[0] - p0[0]) / 6) * tension, p1[1] + ((p2[1] - p0[1]) / 6) * tension];
+    const c2: Pt = [p2[0] - ((p3[0] - p1[0]) / 6) * tension, p2[1] - ((p3[1] - p1[1]) / 6) * tension];
+    d += ` C${pt(c1)} ${pt(c2)} ${pt(p2)}`;
   }
+  return closed ? d + ' Z' : d;
 }
 
-export function renderFemaleHair(p: HairRenderParams): React.ReactNode {
-  const { hairColor, hairColorDark, hairColorLight, hairColorMid, hairStyle, hairTexture, fRx, fRy, faceTop, faceCenterY, faceBottom } = p;
+interface Frame {
+  T: number; W: number; cy: number; chin: number;
+  hw: (y: number) => number;
+}
 
-  const textureAmp = hairTexture === 'coily' ? 6 : hairTexture === 'wavy' ? 4 : 1.5;
+// The outer edge of the hair over the top of the head, left side to right side.
+function crownPoints(fr: Frame, s: HairSpec, sideY: number): Pt[] {
+  const { T, W, hw } = fr;
+  const v = s.v, sv = s.sv;
+  const mid = T + (sideY - T) * 0.35;
+  return [
+    [50 - hw(sideY) - sv, sideY],
+    [50 - Math.max(hw(mid), W * 0.95) - sv, mid - v * 0.25],
+    [50 - W * 0.62 - sv * 0.6, T - v * 0.8],
+    [50, T - v],
+    [50 + W * 0.62 + sv * 0.6, T - v * 0.8],
+    [50 + Math.max(hw(mid), W * 0.95) + sv, mid - v * 0.25],
+    [50 + hw(sideY) + sv, sideY],
+  ];
+}
 
-  switch (hairStyle) {
-    case 'sleek':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-          {Array.from({ length: 22 }, (_, i) => {
-            const x = 18 + i * 3;
-            const side = x < 50 ? -1 : 1;
-            const fallY = faceBottom + 20 + Math.abs(x - 50) * 0.4;
-            const wobble = hairTexture === 'coily' ? Math.sin(i * 0.8) * 4 : hairTexture === 'wavy' ? Math.sin(i * 0.5) * 2 : 0;
-            return (
-              <path key={i}
-                d={`M${x},${faceTop + 8} C${x + side * 0.5 + wobble},${faceCenterY} ${x + side * 1.5 + wobble},${faceBottom} ${x + side * 2 + wobble * 0.5},${fallY}`}
-                stroke={i % 5 === 0 ? hairColorLight : hairColor}
-                strokeWidth={2.8} fill="none" opacity={0.88} strokeLinecap="round" />
-            );
-          })}
-          {Array.from({ length: 8 }, (_, i) => {
-            const x = 20 + i * 3.5;
-            return (
-              <path key={`shine-${i}`}
-                d={`M${x},${faceTop + 6} L${x - 0.5},${faceTop + 22}`}
-                stroke={hairColorLight} strokeWidth={1} opacity={0.2} strokeLinecap="round" />
-            );
-          })}
-          <ellipse cx={50 - fRx - 2} cy={faceCenterY + 4} rx="7.5" ry="20" fill={hairColor} opacity="0.92" />
-          <ellipse cx={50 + fRx + 2} cy={faceCenterY + 4} rx="7.5" ry="20" fill={hairColor} opacity="0.92" />
-        </g>
-      );
-
-    case 'wavy': {
-      const amp = textureAmp + (hairTexture === 'coily' ? 2 : 0);
-      const strandPaths = Array.from({ length: 16 }, (_, i) => {
-        const x0 = 16 + i * 4.5;
-        const side = x0 < 50 ? -1 : 1;
-        const phase = i * 0.8;
-        const yStart = faceTop + 6;
-        const segments: string[] = [];
-        for (let s = 0; s < 5; s++) {
-          const y = yStart + s * 16;
-          const yn = y + 8;
-          const yn2 = y + 16;
-          const cx1 = x0 + Math.sin(phase + s * 1.4) * amp * side;
-          const cx2 = x0 - Math.sin(phase + s * 1.4 + 0.7) * amp * side;
-          segments.push(`Q${cx1},${yn} ${x0},${yn2}`);
-          if (s < 4) segments.push(`Q${cx2},${yn2 + 8} ${x0},${yn2 + 16}`);
-        }
-        return (
-          <path key={i}
-            d={`M${x0},${yStart} ${segments.join(' ')}`}
-            stroke={i % 4 === 0 ? hairColorLight : hairColor}
-            strokeWidth={3 + (i % 3) * 0.5} fill="none" opacity={0.87} strokeLinecap="round" />
-        );
-      });
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-          {strandPaths}
-          <ellipse cx={50 - fRx - 2} cy={faceCenterY + 8} rx="8" ry="22" fill={hairColorDark} opacity="0.65" />
-          <ellipse cx={50 + fRx + 2} cy={faceCenterY + 8} rx="8" ry="22" fill={hairColorDark} opacity="0.65" />
-        </g>
-      );
-    }
-
+// The hairline, right side to left side.
+function hairlinePoints(fr: Frame, kind: Hairline, sideY: number): { pts: Pt[]; part: number | null } {
+  const { T, W, hw } = fr;
+  const side = (s: 1 | -1, y: number): Pt => [50 + s * (hw(y) - 0.5), y];
+  switch (kind) {
+    case 'high':
+      return { pts: [side(1, sideY), [50 + W * 0.66, T + 6], [50 + W * 0.3, T + 5.5], [50, T + 6.5], [50 - W * 0.3, T + 5.5], [50 - W * 0.66, T + 6], side(-1, sideY)], part: null };
+    case 'fringe':
+      return { pts: [side(1, sideY), [50 + W * 0.82, T + 15], [50 + W * 0.4, T + 19], [50, T + 19.5], [50 - W * 0.4, T + 19], [50 - W * 0.82, T + 15], side(-1, sideY)], part: null };
+    case 'sweep':
+      return { pts: [side(1, sideY), [50 + W * 0.7, T + 8], [50 + W * 0.3, T + 9], [50 - W * 0.1, T + 13], [50 - W * 0.55, T + 16.5], [50 - W * 0.86, T + 15], side(-1, sideY)], part: 50 + W * 0.32 };
+    case 'part':
+      return { pts: [side(1, sideY), [50 + W * 0.7, T + 8], [50 + W * 0.32, T + 7.4], [50, T + 8.6], [50 - W * 0.4, T + 9.4], [50 - W * 0.72, T + 8.8], side(-1, sideY)], part: 50 + W * 0.32 };
+    case 'center':
+      return { pts: [side(1, sideY), [50 + W * 0.72, T + 9.5], [50 + W * 0.3, T + 8.6], [50, T + 7.6], [50 - W * 0.3, T + 8.6], [50 - W * 0.72, T + 9.5], side(-1, sideY)], part: 50 };
     case 'curly':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 8} rx={fRx + 2} ry="16" fill={hairColor} />
-          <path d={`M${50 - fRx - 2},${faceTop + 12} Q${50 - fRx - 6},${faceCenterY} ${50 - fRx - 2},${faceBottom + 16} L${50 - fRx + 4},${faceBottom + 18} Q${50 - fRx + 2},${faceCenterY + 2} ${50 - fRx + 6},${faceTop + 14} Z`} fill={hairColor} opacity="0.88" />
-          <path d={`M${50 + fRx + 2},${faceTop + 12} Q${50 + fRx + 6},${faceCenterY} ${50 + fRx + 2},${faceBottom + 16} L${50 + fRx - 4},${faceBottom + 18} Q${50 + fRx - 2},${faceCenterY + 2} ${50 + fRx - 6},${faceTop + 14} Z`} fill={hairColor} opacity="0.88" />
-          {Array.from({ length: 90 }, (_, i) => {
-            const col = i % 10;
-            const row = Math.floor(i / 10);
-            const x = 20 + col * 6.5 + (((i * 3137) % 7) - 3) * 0.8;
-            const y = faceTop + 6 + row * 8 + (((i * 5987) % 5) - 2) * 0.7;
-            const r = 2.2 + (i % 4) * 0.5;
-            if (x < 16 || x > 84 || y > faceBottom + 18 || y < faceTop) return null;
-            return (
-              <circle key={i} cx={x} cy={y} r={r}
-                fill="none" stroke={i % 6 === 0 ? hairColorLight : hairColorDark}
-                strokeWidth={1.1} opacity={0.65} />
-            );
-          })}
-        </g>
-      );
-
-    case 'braids':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-          {Array.from({ length: 10 }, (_, i) => {
-            const x = 18 + i * 6.5;
-            const curveMod = (i - 4.5) * 3;
-            const yEnd = faceBottom + 60;
-            return (
-              <g key={i}>
-                <path d={`M${x},${faceTop + 10} Q${x + curveMod * 0.5},${faceCenterY + 20} ${x + curveMod * 0.8},${faceBottom + 30} Q${x + curveMod * 1.1},${yEnd - 5} ${x + curveMod * 0.7},${yEnd}`}
-                  stroke={hairColor} strokeWidth={7} fill="none" strokeLinecap="round" opacity="0.95" />
-                {Array.from({ length: 12 }, (_, j) => {
-                  const t = j / 12;
-                  const bx = x + curveMod * t * 0.8;
-                  const by = faceTop + 10 + (faceBottom + 30 - faceTop - 10) * t;
-                  const offset = j % 2 === 0 ? -3.2 : 3.2;
-                  return (
-                    <g key={j}>
-                      <path d={`M${bx + offset},${by} Q${bx},${by + 2.5} ${bx - offset},${by + 5}`}
-                        stroke={hairColorDark} strokeWidth={2.2} fill="none" opacity={0.85} strokeLinecap="round" />
-                      <path d={`M${bx + offset * 0.6},${by + 1} L${bx - offset * 0.6},${by + 4}`}
-                        stroke={hairColorLight} strokeWidth={0.8} opacity={0.6} strokeLinecap="round" />
-                    </g>
-                  );
-                })}
-              </g>
-            );
-          })}
-        </g>
-      );
-
-    case 'ponytail':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 10} rx={fRx + 1} ry="16" fill={hairColor} />
-          <path d={`M${50 - fRx + 2},${faceTop + 12} Q${50 - fRx - 2},${faceCenterY + 4} ${50 - fRx},${faceBottom + 4} L${50 - fRx + 5},${faceBottom + 6} Q${50 - fRx + 3},${faceCenterY + 6} ${50 - fRx + 6},${faceTop + 14} Z`} fill={hairColorDark} opacity="0.7" />
-          <ellipse cx="80" cy={faceCenterY} rx="5" ry="7" fill="#111" opacity="0.55" />
-          <path d={`M80,${faceCenterY - 6} Q${fRx + 50},${faceCenterY + 20} ${fRx + 56},${faceCenterY + 52} Q${fRx + 58},${faceCenterY + 72} ${fRx + 46},${faceCenterY + 88}`}
-            stroke={hairColor} strokeWidth={18} fill="none" strokeLinecap="round" opacity="0.9" />
-          {Array.from({ length: 40 }, (_, i) => {
-            const t = i / 40;
-            const px = (fRx + 50) + t * 8;
-            const py = faceCenterY + 18 + t * 68;
-            const wave = Math.sin(t * Math.PI * 3 + i * 0.5) * (hairTexture === 'coily' ? 6 : hairTexture === 'wavy' ? 4 : 2);
-            return (
-              <path key={i}
-                d={`M${px + wave},${py} Q${px + wave + 2},${py + 5} ${px + wave},${py + 10}`}
-                stroke={i % 6 === 0 ? hairColorLight : hairColor}
-                strokeWidth={1.6} fill="none" opacity={0.75} strokeLinecap="round" />
-            );
-          })}
-        </g>
-      );
-
-    case 'afro':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceCenterY - 18} rx={fRx + 16} ry={fRy + 2} fill={hairColor} opacity="0.88" />
-          {Array.from({ length: 300 }, (_, i) => {
-            const angle = (i / 300) * Math.PI * 2;
-            const layer = Math.floor(i / 60);
-            const r = 12 + layer * 5;
-            const x = 50 + Math.cos(angle) * r * 1.45 + (((i * 4373) % 7) - 3) * 1.0;
-            const y = faceCenterY - 18 + Math.sin(angle) * r + (((i * 6113) % 5) - 2) * 0.9;
-            const dist = Math.sqrt(Math.pow((x - 50) / 1.45, 2) + Math.pow(y - (faceCenterY - 18), 2));
-            if (dist > fRy + 4) return null;
-            return (
-              <circle key={i} cx={x} cy={y} r={1.6 + (i % 3) * 0.4}
-                fill={i % 9 === 0 ? hairColorLight : hairColor}
-                opacity={0.6 + (i % 4) * 0.08} />
-            );
-          })}
-        </g>
-      );
-
-    case 'locs':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 8} rx={fRx + 1} ry="14" fill={hairColor} />
-          {Array.from({ length: 11 }, (_, i) => {
-            const x = 16 + i * 6.5;
-            const curveMod = (i - 5) * 3.5;
-            const len = 90;
-            return (
-              <g key={i}>
-                <path d={`M${x},${faceTop + 10} Q${x + curveMod * 0.5},${faceTop + 10 + len * 0.4} ${x + curveMod * 0.7},${faceTop + 10 + len * 0.7} Q${x + curveMod},${faceTop + 10 + len} ${x + curveMod * 0.8},${faceTop + 10 + len * 1.3}`}
-                  stroke={hairColor} strokeWidth={7.5} fill="none" strokeLinecap="round" opacity="0.95" />
-                {Array.from({ length: 11 }, (_, j) => {
-                  const t = j / 11;
-                  const sx = x + curveMod * t * 0.7;
-                  const sy = faceTop + 10 + len * t;
-                  return (
-                    <ellipse key={j} cx={sx} cy={sy} rx="3.2" ry="1.4"
-                      fill={hairColorDark} opacity="0.45"
-                      transform={`rotate(${(curveMod > 0 ? 1 : -1) * 18 * t}, ${sx}, ${sy})`} />
-                  );
-                })}
-              </g>
-            );
-          })}
-        </g>
-      );
-
-    case 'bun':
-      return (
-        <g>
-          <ellipse cx="50" cy={faceTop + 10} rx={fRx + 1} ry="16" fill={hairColor} />
-          <path d={`M${50 - fRx + 2},${faceTop + 12} Q${50 - fRx},${faceCenterY} ${50 - fRx + 1},${faceBottom + 2} L${50 - fRx + 6},${faceBottom + 4} Q${50 - fRx + 4},${faceCenterY + 2} ${50 - fRx + 7},${faceTop + 14} Z`} fill={hairColorDark} opacity="0.65" />
-          <ellipse cx="50" cy={faceTop - 14} rx="17" ry="15" fill={hairColor} opacity="0.92" />
-          <ellipse cx="50" cy={faceTop - 14} rx="12" ry="10" fill={hairColorDark} opacity="0.35" />
-          {Array.from({ length: 100 }, (_, i) => {
-            const angle = (i / 100) * Math.PI * 6;
-            const layer = Math.floor(i / 20);
-            const r = 3 + layer * 2.2;
-            const bx = 50 + Math.cos(angle) * r;
-            const by = faceTop - 14 + Math.sin(angle) * r * 0.85;
-            if (r > 14) return null;
-            return (
-              <path key={i}
-                d={`M50,${faceTop - 14} L${bx},${by}`}
-                stroke={i % 8 === 0 ? hairColorLight : hairColorMid}
-                strokeWidth={0.8} opacity={0.5} strokeLinecap="round" />
-            );
-          })}
-          <ellipse cx={50 - fRx - 1} cy={faceCenterY - 2} rx="5.5" ry="15" fill={hairColorDark} opacity="0.65" />
-          <ellipse cx={50 + fRx + 1} cy={faceCenterY - 2} rx="5.5" ry="15" fill={hairColorDark} opacity="0.65" />
-        </g>
-      );
-
-    default: return null;
+    case 'natural':
+    default:
+      return { pts: [side(1, sideY), [50 + W * 0.7, T + 8], [50 + W * 0.3, T + 8.6], [50, T + 8.8], [50 - W * 0.3, T + 8.6], [50 - W * 0.7, T + 8], side(-1, sideY)], part: null };
   }
+}
+
+function capPath(crown: Pt[], hairline: Pt[]): string {
+  // Out along the crown, back along the hairline, as one closed shape.
+  return `${smooth(crown, false)} L${pt(hairline[0])} ${smooth(hairline, false).replace(/^M[^C]*/, '')} Z`;
+}
+
+// A strip that frames the face, from the temple down past the jaw.
+function lockPoints(fr: Frame, s: 1 | -1, width: number, length: number, startY: number, wave: number): { outline: Pt[]; spine: Pt[] } {
+  const ys = [startY, fr.cy, fr.chin - 6, fr.chin + 4, (fr.chin + length) / 2, length];
+  const inner = ys.map((y, i) => {
+    const edge = y < fr.chin - 4 ? fr.hw(y) - 2.2 : fr.hw(fr.chin - 6) - 3 - (i - 3) * 0.6;
+    return 50 + s * edge + (i > 2 ? Math.sin(i * 1.7) * wave * s : 0);
+  });
+  const widths = ys.map((_, i) => width * (i === 0 ? 0.7 : i === ys.length - 1 ? 0.35 : 1 + i * 0.06));
+  const out: Pt[] = ys.map((y, i) => [inner[i] + s * widths[i], y]);
+  const inn: Pt[] = ys.map((y, i) => [inner[i], y]);
+  const spine: Pt[] = ys.map((y, i) => [inner[i] + s * widths[i] * 0.5, y]);
+  return { outline: [...out, ...inn.reverse()], spine };
+}
+
+export function renderHair(p: HairRenderParams): { back: React.ReactNode; front: React.ReactNode } {
+  const g = p.geometry;
+  const s = withTexture(specFor(p.gender, p.hairStyle), p.hairTexture);
+  const fr: Frame = {
+    T: g.faceTop, W: g.fRx, cy: g.faceCenterY, chin: chinY(g),
+    hw: (y: number) => faceHalfWidthAt(g, y),
+  };
+  const base = p.hairColor;
+  const dark = shade(base, -0.32);
+  const deep = shade(base, -0.5);
+  const light = shade(base, 0.28);
+  const id = (k: string) => `${p.idPrefix}-hair-${k}`;
+  const sideY = fr.cy + s.sideY;
+  const crown = crownPoints(fr, s, sideY);
+  const { pts: hairline, part } = hairlinePoints(fr, s.hairline, sideY);
+  const cap = capPath(crown, hairline);
+  const origin: Pt = [part ?? 50, fr.T - s.v * 0.4];
+
+  // ---- texture inside the cap ----
+  const capStrands: React.ReactNode[] = [];
+  if (s.texture === 'buzz') {
+    for (let i = 0; i < 260; i++) {
+      const x = 50 - fr.W - 2 + seeded(i, 1) * (fr.W * 2 + 4);
+      const y = fr.T - 2 + seeded(i, 2) * (sideY - fr.T + 2);
+      capStrands.push(<circle key={i} cx={x} cy={y} r="0.32" fill={i % 4 === 0 ? light : deep} opacity="0.55" />);
+    }
+  } else if (s.texture === 'coily') {
+    for (let i = 0; i < 70; i++) {
+      const x = 50 - fr.W - s.sv + seeded(i, 3) * (2 * (fr.W + s.sv));
+      const y = fr.T - s.v + seeded(i, 4) * (sideY - fr.T + s.v);
+      const r = 1.1 + seeded(i, 5) * 1.1;
+      capStrands.push(<path key={i} d={`M${f(x - r)},${f(y)} a${f(r)},${f(r)} 0 1 1 ${f(r * 1.6)},${f(r * 0.9)}`}
+        stroke={i % 5 === 0 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.7" strokeLinecap="round" />);
+    }
+  } else if (s.texture === 'braids') {
+    // Cornrows running back from the hairline.
+    hairline.slice(1, -1).forEach((h, i) => {
+      for (let k = -1; k <= 1; k += 2) {
+        const sx = h[0] + k * 2.2;
+        capStrands.push(<path key={`${i}${k}`} d={`M${f(sx)},${f(h[1])} Q${f(sx + (sx - 50) * 0.15)},${f((h[1] + origin[1]) / 2)} ${f(50 + (sx - 50) * 0.5)},${f(fr.T - s.v)}`}
+          stroke={deep} strokeWidth="0.7" fill="none" opacity="0.6" />);
+      }
+    });
+  } else {
+    const count = 26;
+    const amp = s.texture === 'wavy' ? 1.8 : 0;
+    for (let i = 0; i <= count; i++) {
+      const t = i / count;
+      // A point along the hairline (or the cap's bottom edge at the sides).
+      const seg = t * (hairline.length - 1);
+      const a = hairline[Math.floor(seg)], b = hairline[Math.min(hairline.length - 1, Math.floor(seg) + 1)];
+      const k = seg - Math.floor(seg);
+      const end: Pt = [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+      const bend = (end[0] - origin[0]) * 0.18;
+      const mid: Pt = [(origin[0] + end[0]) / 2 + bend + Math.sin(i * 1.3) * amp, (origin[1] + end[1]) / 2 - 3];
+      capStrands.push(<path key={i} d={`M${pt(origin)} Q${pt(mid)} ${pt(end)}`}
+        stroke={i % 6 === 0 ? light : dark} strokeWidth={s.texture === 'slick' ? 0.6 : 0.8}
+        fill="none" opacity={0.5 + seeded(i, 6) * 0.3} strokeLinecap="round" />);
+    }
+  }
+
+  // A soft sheen across the crown, the classic cartoon highlight.
+  const sheen = s.texture === 'buzz' || s.texture === 'coily' ? null : (
+    <path d={`M${f(50 - fr.W * 0.55)},${f(fr.T - s.v * 0.35 + 3)} Q${f(origin[0] - 2)},${f(fr.T - s.v * 0.9 + 1)} ${f(50 + fr.W * 0.45)},${f(fr.T - s.v * 0.3 + 3.5)}`}
+      stroke={light} strokeWidth="2.2" fill="none" opacity="0.35" strokeLinecap="round" />
+  );
+
+  const partLine = part === null || s.texture === 'coily' ? null : (
+    <path d={`M${f(part)},${f(hairline[3][1] - 0.5)} L${f(origin[0] + (part > 50 ? 1 : 0))},${f(origin[1] + 1)}`}
+      stroke={shade(p.skinTone, -0.05)} strokeWidth="0.6" opacity="0.6" strokeLinecap="round" />
+  );
+
+  // ---- back layer ----
+  const back: React.ReactNode[] = [];
+
+  if (s.extra === 'afro') {
+    const rx = fr.W + s.sv, ryTop = s.v + (sideY - fr.T) * 0.5;
+    const acy = fr.T + (sideY - fr.T) * 0.5;
+    back.push(<ellipse key="afro" cx="50" cy={acy} rx={rx} ry={ryTop + (sideY - fr.T) * 0.15} fill={base} />);
+    for (let i = 0; i < 46; i++) {
+      const a = (i / 46) * Math.PI * 2;
+      back.push(<circle key={`b${i}`} cx={50 + Math.cos(a) * rx * 0.97} cy={acy + Math.sin(a) * (ryTop + (sideY - fr.T) * 0.15) * 0.97}
+        r={2.4 + seeded(i, 7) * 1.4} fill={i % 7 === 0 ? shade(base, 0.08) : base} />);
+    }
+    for (let i = 0; i < 90; i++) {
+      const a = seeded(i, 8) * Math.PI * 2, r = Math.sqrt(seeded(i, 9));
+      const x = 50 + Math.cos(a) * rx * r * 0.95, y = acy + Math.sin(a) * (ryTop + 4) * r * 0.95;
+      const cr = 1 + seeded(i, 10) * 1.2;
+      back.push(<path key={`c${i}`} d={`M${f(x - cr)},${f(y)} a${f(cr)},${f(cr)} 0 1 1 ${f(cr * 1.6)},${f(cr * 0.9)}`}
+        stroke={i % 6 === 0 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.6" />);
+    }
+  }
+
+  if (s.back) {
+    const { length, spread, edge } = s.back;
+    const top = crownPoints(fr, s, sideY);
+    const L = 50 - fr.W - s.sv, R = 50 + fr.W + s.sv;
+    const bottom: Pt[] = [];
+    const n = edge === 'blunt' ? 2 : 6;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const x = R + spread - (R - L + 2 * spread) * t;
+      const y = length - (edge === 'curly' ? seeded(i, 11) * 6 : edge === 'soft' ? Math.sin(t * Math.PI * 3) * 2.5 : Math.sin(t * Math.PI) * 2);
+      bottom.push([x, y]);
+    }
+    const outline: Pt[] = [...top, [R + spread * 0.6, (sideY + length) / 2], ...bottom, [L - spread * 0.6, (sideY + length) / 2]];
+    back.push(<path key="mass" d={smooth(outline, true, 0.9)} fill={dark} />);
+    if (s.texture === 'locs' || s.texture === 'braids') {
+      for (let i = 0; i < 9; i++) {
+        const x = L - spread + ((R - L + 2 * spread) * (i + 0.5)) / 9;
+        back.push(<path key={`r${i}`} d={`M${f(x)},${f(sideY - 4)} Q${f(x + (x - 50) * 0.1)},${f((sideY + length) / 2)} ${f(x + (x - 50) * 0.15)},${f(length - 2)}`}
+          stroke={base} strokeWidth={s.texture === 'locs' ? 5 : 4} fill="none" strokeLinecap="round" />);
+      }
+    }
+  }
+
+  if (s.extra === 'ponytail') {
+    const ax = 50 + fr.W * 0.7, ay = fr.T + 6;
+    const tail: Pt[] = [[ax, ay - 3], [ax + 9, ay + 2], [ax + 12, fr.cy + 8], [ax + 8, fr.cy + 34], [ax + 3, fr.cy + 46], [ax + 2, fr.cy + 30], [ax + 4, fr.cy + 8], [ax, ay + 6]];
+    back.push(<path key="tail" d={smooth(tail, true, 0.9)} fill={base} />);
+    for (let i = 0; i < 6; i++) {
+      back.push(<path key={`t${i}`} d={`M${f(ax + 2 + i)},${f(ay + 2)} Q${f(ax + 11 + i * 0.3)},${f(fr.cy + 10)} ${f(ax + 4 + i * 0.6)},${f(fr.cy + 40 - i * 2)}`}
+        stroke={i % 3 === 0 ? light : dark} strokeWidth="0.6" fill="none" opacity="0.55" />);
+    }
+    back.push(<ellipse key="tie" cx={ax + 4} cy={ay + 3} rx="2.4" ry="3" fill={deep} />);
+  }
+
+  if (s.extra === 'bun') {
+    const by = fr.T - s.v - 6.5;
+    back.push(<circle key="bun" cx="50" cy={by} r="9" fill={base} />);
+    for (let i = 0; i < 4; i++) {
+      back.push(<path key={`s${i}`} d={`M${f(43 + i)},${f(by + 3 - i)} Q50,${f(by - 9 + i * 1.5)} ${f(57 - i)},${f(by + 1 + i)}`}
+        stroke={i % 2 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.6" />);
+    }
+    back.push(<rect key="band" x="44" y={by + 6.5} width="12" height="2.2" rx="1" fill={deep} />);
+  }
+
+  // ---- front layer ----
+  const front: React.ReactNode[] = [];
+  const capClip = id('cap');
+  const isFade = s.extra === 'fade';
+  const capFill = isFade ? `url(#${id('fade')})` : base;
+
+  front.push(
+    <defs key="defs">
+      <clipPath id={capClip}><path d={cap} /></clipPath>
+      {isFade && (
+        <linearGradient id={id('fade')} gradientUnits="userSpaceOnUse" x1="0" y1={fr.T} x2="0" y2={sideY}>
+          <stop offset="0.35" stopColor={base} stopOpacity="1" />
+          <stop offset="1" stopColor={base} stopOpacity="0.3" />
+        </linearGradient>
+      )}
+    </defs>,
+  );
+
+  // Hair sits on skin: a faint shadow under the hairline.
+  front.push(<path key="contact" d={smooth(hairline, false)} stroke={shade(p.skinTone, -0.4)} strokeWidth="1.8" fill="none" opacity="0.22" style={{ filter: 'blur(0.6px)' }} />);
+
+  if (s.sideburn) {
+    // A narrow wedge from the temple down in front of the ear, tapering out.
+    const top = sideY - 1.5, bot = fr.cy + 5;
+    for (const sd of [-1, 1] as const) {
+      const ot = 50 + sd * (fr.hw(top) + 0.2), ob = 50 + sd * (fr.hw(bot) + 0.2);
+      front.push(<path key={`sb${sd}`}
+        d={`M${f(ot)},${f(top)} L${f(ot - sd * 2.4)},${f(top)} Q${f(ob - sd * 2)},${f((top + bot) / 2)} ${f(ob - sd * 0.5)},${f(bot)} L${f(ob)},${f(bot)} Z`}
+        fill={base} opacity={isFade ? 0.35 : 0.85} />);
+    }
+  }
+
+  front.push(<path key="cap" d={cap} fill={capFill} opacity={s.opacity ?? 1} />);
+  front.push(
+    <g key="tex" clipPath={`url(#${capClip})`}>
+      {capStrands}
+      {sheen}
+    </g>,
+  );
+  if (partLine) front.push(<g key="part">{partLine}</g>);
+
+  if (s.hairline === 'curly' || s.texture === 'coily') {
+    // A soft, curly hairline instead of a hard edge.
+    hairline.slice(1, -1).forEach((h, i) => {
+      front.push(<circle key={`cl${i}`} cx={h[0]} cy={h[1] - 0.3} r={1.8 + seeded(i, 12) * 0.8} fill={base} />);
+    });
+  }
+
+  if (s.locks) {
+    const wave = s.texture === 'wavy' ? 1.6 : s.texture === 'coily' ? 2.4 : 0;
+    for (const sd of [-1, 1] as const) {
+      const { outline, spine } = lockPoints(fr, sd, s.locks.width, s.locks.length, fr.T + 10, wave);
+      const lockId = id(`lock${sd}`);
+      front.push(
+        <g key={`lock${sd}`}>
+          <defs><clipPath id={lockId}><path d={smooth(outline, true, 0.85)} /></clipPath></defs>
+          <path d={smooth(outline, true, 0.85)} fill={base} />
+          <g clipPath={`url(#${lockId})`}>
+            {s.texture === 'locs' || s.texture === 'braids'
+              ? [-1, 0, 1].map((k) => (
+                <path key={k} d={smooth(spine.map(([x, y]) => [x + k * s.locks!.width * 0.3, y] as Pt), false)}
+                  stroke={k === 0 ? dark : deep} strokeWidth={s.texture === 'locs' ? 2.2 : 1.6}
+                  strokeDasharray={s.texture === 'braids' ? '2 1.4' : '3.5 0.9'} fill="none" opacity="0.7" />
+              ))
+              : [-0.35, -0.1, 0.15, 0.4].map((k, i) => (
+                <path key={k} d={smooth(spine.map(([x, y], j) => [x + k * s.locks!.width + (s.texture === 'coily' ? Math.sin(j * 2 + i) * 1.5 : 0), y] as Pt), false)}
+                  stroke={i % 3 === 0 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.55" />
+              ))}
+            <path d={smooth(spine.map(([x, y]) => [x - sd * s.locks!.width * 0.2, y] as Pt), false)}
+              stroke={light} strokeWidth="1.4" fill="none" opacity="0.25" />
+          </g>
+        </g>,
+      );
+    }
+  }
+
+  return { back: <g>{back}</g>, front: <g>{front}</g> };
 }

@@ -94,7 +94,28 @@ When a WebGL/Three.js renderer is ready:
 
 ---
 
-## 4. Wardrobe
+## 4. How a face is drawn
+
+The renderers in `src/renderers/` draw in this order, back to front:
+back hair, body, neck, collar, ears, face, features, facial hair, earrings,
+front hair, glasses, headwear.
+
+- **Face shape** (`faceGeometry.ts`): each shape is a list of widths down the
+  side of the head, joined by a smooth curve, so every shape has a rounded
+  crown and its own jaw. `faceHalfWidthAt` reads the width at any height for
+  things that sit against the edge (ears, sideburns, framing locks), and the
+  beard clips to the same outline.
+- **Features** (`faceFeatures.tsx`): lidded eyes with the iris tucked under
+  the upper lid, eyeliner built from each eye's own lid line, tapered brows,
+  a nose made of a shadow and a highlight, and ears behind the face.
+- **Hair** (`hairRenderer.tsx`): a back layer (volume behind the head, long
+  lengths, ponytails, buns) and a front layer (the cap over the crown down to
+  a real hairline, sideburns, locks that frame the face). Each style is a
+  spec: volume, hairline, texture, lengths. Hats clip both layers.
+- All texture is seeded, never random, so an avatar draws the same way on
+  every render.
+
+## 5. Wardrobe
 
 Outfits, headwear and face accessories (eyepatch) are optional config fields
 (`outfit`, `outfitColor`, `outfitAccent`, `headwear`, `faceAccessory`). Older
@@ -128,7 +149,7 @@ configs migrate to the navy `tee` every avatar wore before.
 Not built yet: the server check on save, and the stored "what others see" copy
 that the display rule fills in when a plan lapses.
 
-## 5. Performance Notes
+## 6. Performance Notes
 
 ### Current hot paths (PERF-NOTE comments in source)
 
