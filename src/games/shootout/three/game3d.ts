@@ -131,6 +131,30 @@ function stanchionPadTexture(): THREE.CanvasTexture {
   return t;
 }
 
+// The scoreboard's LED halo: deep wine with a thin gold line through it.
+function haloTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 32;
+  const g = cv.getContext('2d')!;
+  const grad = g.createLinearGradient(0, 0, 0, 32);
+  grad.addColorStop(0, '#2a0717'); grad.addColorStop(0.5, '#5C163A'); grad.addColorStop(1, '#2a0717');
+  g.fillStyle = grad; g.fillRect(0, 0, 256, 32);
+  g.fillStyle = '#B8923A'; g.fillRect(0, 15, 256, 2);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// The scoreboard's underside: a dark panel with a soft wine glow and a gold ring.
+function bellyTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const g = cv.getContext('2d')!;
+  const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+  grad.addColorStop(0, '#4a1230'); grad.addColorStop(1, '#0c0408');
+  g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = '#8a6a2c'; g.lineWidth = 2; g.beginPath(); g.arc(64, 64, 40, 0, Math.PI * 2); g.stroke();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 // Final pass: ACES tone mapping, a soft vignette and sRGB out. (three 0.154's
 // OutputPass redeclares toneMappingExposure and fails to compile.)
 function outputPass(exposure: number): ShaderPass {
@@ -396,15 +420,9 @@ export class Shootout3D {
       L.target.position.copy(toThree([x * 0.4, y * 0.7 + 1, 0]));
       if (i === 4) { L.castShadow = true; L.shadow.mapSize.set(1024, 1024); L.shadow.bias = -0.0004; L.shadow.normalBias = 0.025; L.shadow.camera.near = 4; L.shadow.camera.far = 30; }
       s.add(L, L.target);
-      // The fixture itself, glowing.
-      const fix = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.25, 16), new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0xfff4e0, emissiveIntensity: 2.2 }));
-      fix.position.copy(L.position);
-      s.add(fix);
     });
-    // Ceiling trusses carrying the spots.
-    const truss = new THREE.MeshStandardMaterial({ color: 0x1c1d24, metalness: 0.6, roughness: 0.5 });
-    [2, 9].forEach(y => { const b = new THREE.Mesh(new THREE.BoxGeometry(22, 0.35, 0.35), truss); b.position.copy(toThree([0, y, 13.3])); s.add(b); });
-    // The building: upper deck, suites, walls, roof, banners, light beams.
+    // The building: upper deck, suites, walls, roof, lighting rigs (the fixtures
+    // for these spots), banners, light beams.
     this.arena = buildArena(s, toThree, { hi, spots });
     this.ribbons.push(...this.arena.ribbons);
 
@@ -427,18 +445,30 @@ export class Shootout3D {
     ribbon('MONEY BALL  •  STARRY RANGE', '#F472B6', 22, [11.1, 6, 0.35], -Math.PI / 2);
     ribbon('HIT THE GREEN', '#7CF7D4', 22, [-11.1, 6, 0.35], Math.PI / 2);
 
-    // Scoreboards: a jumbotron over the court and a board behind the basket.
-    const sbMat = new THREE.MeshStandardMaterial({ map: this.scoreboards.tex, emissive: 0xffffff, emissiveMap: this.scoreboards.tex, emissiveIntensity: 1.4, color: 0x000000 });
+    // Scoreboards: a centre-hung board over the court and a board behind the basket.
+    const sbMat = new THREE.MeshStandardMaterial({ map: this.scoreboards.tex, emissive: 0xffffff, emissiveMap: this.scoreboards.tex, emissiveIntensity: 1.2, color: 0x000000 });
     const jumbo = new THREE.Group();
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(4.6, 2.5, 4.6), new THREE.MeshStandardMaterial({ color: 0x0b0b10, metalness: 0.5, roughness: 0.4 }));
-    jumbo.add(frame);
+    const steel = new THREE.MeshStandardMaterial({ color: 0x0b0b10, metalness: 0.5, roughness: 0.4 });
+    jumbo.add(new THREE.Mesh(new THREE.BoxGeometry(6.6, 3.5, 6.6), steel));
     for (let k = 0; k < 4; k++) {
-      const scr = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.1), sbMat);
-      scr.position.set(Math.sin((k * Math.PI) / 2) * 2.31, 0, Math.cos((k * Math.PI) / 2) * 2.31);
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(6.2, 3.1), sbMat);
+      scr.position.set(Math.sin((k * Math.PI) / 2) * 3.31, 0, Math.cos((k * Math.PI) / 2) * 3.31);
       scr.rotation.y = (k * Math.PI) / 2;
       jumbo.add(scr);
     }
-    jumbo.position.copy(toThree([0, 7, 10.5]));
+    // A slim LED halo under the screens: wine with a gold line, quietly lit.
+    const halo = new THREE.Mesh(new THREE.CylinderGeometry(4.3, 4.3, 0.42, 48, 1, true), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: haloTexture(), emissiveIntensity: 0.55, side: THREE.DoubleSide }));
+    halo.position.y = -2.25;
+    jumbo.add(halo);
+    // The underbelly, seen from the floor: a soft wine glow, not a black slab.
+    const belly = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 6.6).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: bellyTexture(), emissiveIntensity: 0.5 }));
+    belly.position.y = -1.76;
+    jumbo.add(belly);
+    // Hung on four cables.
+    [[-2.6, -2.6], [2.6, -2.6], [-2.6, 2.6], [2.6, 2.6]].forEach(([x, z]) => {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 7, 6), steel); c.position.set(x, 5.25, z); jumbo.add(c);
+    });
+    jumbo.position.copy(toThree([0, 7, 11.2]));
     s.add(jumbo);
     // The big board on the upper deck behind the basket.
     // It sits behind the rim from most racks, so it glows less than the jumbotron.
