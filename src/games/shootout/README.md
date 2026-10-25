@@ -46,6 +46,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 - **Hold timing comes from `event.timeStamp`, not frame counting.** Before this, a flawless release was graded perfect only 53–76% of the time at 30fps on Legend, and any frame over 50ms was dropped from the hold.
 - **Rival runs are simulated up front.** Watching and skipping give the same score.
 - **Noise-based audio was removed** ("sounded like white noise"). Real recordings are a later task.
+- **Lighting hierarchy: court, hoop and ball first; the building sits back.** The crowd wears a restrained home palette (wine, charcoal, navy, the odd gold) and barely reflects the environment; suites, LED ribbons and walls glow softly; the haze is near-neutral dark rather than purple; bloom is gentle (0.26, threshold 0.9). The court lights are unchanged. Measured with fixed cameras: ball-vs-background colour difference (ΔE) rose from a minimum of 44 to 55, stand brightness fell by half to three-quarters, court brightness moved by about 1%.
 - **Contest scores don't feed practice bests.** A contest title unlocks the next level.
 
 ## Verifying

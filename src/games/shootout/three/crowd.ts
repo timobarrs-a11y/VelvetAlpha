@@ -42,8 +42,9 @@ export class Crowd {
   constructor(private toThree: (v: V) => THREE.Vector3, count: number) {
     const rand = (() => { let s = 99; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
     // Tiered stands: behind the baseline and along both sidelines.
-    const standMat = new THREE.MeshStandardMaterial({ color: 0x15131f, roughness: 0.9 });
-    const seatMat = new THREE.MeshStandardMaterial({ color: 0x3a1230, roughness: 0.7 });
+    // Dark and low-reflection: the stands sit back so the court reads first.
+    const standMat = new THREE.MeshStandardMaterial({ color: 0x0e0d12, roughness: 0.9, envMapIntensity: 0.25 });
+    const seatMat = new THREE.MeshStandardMaterial({ color: 0x24101c, roughness: 0.8, envMapIntensity: 0.25 });
     // Two tiers: the lower bowl right off the floor, and an upper deck set
     // back above the suite level (see BOWL, which the arena builds around).
     const tiers = [
@@ -97,16 +98,17 @@ export class Crowd {
       };
       return m;
     };
-    const shirtMat = animate(new THREE.MeshStandardMaterial({ roughness: 0.8 }));
-    const skinMat = animate(new THREE.MeshStandardMaterial({ roughness: 0.7 }));
+    const shirtMat = animate(new THREE.MeshStandardMaterial({ roughness: 0.85, envMapIntensity: 0.25 }));
+    const skinMat = animate(new THREE.MeshStandardMaterial({ roughness: 0.8, envMapIntensity: 0.25 }));
     this.bodies = new THREE.InstancedMesh(torso, shirtMat, this.fans.length);
     this.heads = new THREE.InstancedMesh(head, skinMat, this.fans.length);
-    const shirts = ['#5C163A', '#F5C451', '#FFFFFF', '#1F2937', '#2563EB', '#DC2626', '#10B981', '#7C3AED', '#F472B6', '#111827', '#5C163A', '#F5C451'];
+    // Home crowd: mostly wine, charcoal and navy, the odd white or gold shirt.
+    const shirts = ['#5C163A', '#5C163A', '#5C163A', '#3A1026', '#3A1026', '#1F2937', '#1F2937', '#111827', '#111827', '#1E2A44', '#1E2A44', '#2B2F3A', '#4A4550', '#C9C4BC', '#B8923A'];
     const skins = ['#F1C7A5', '#D9A37E', '#B07850', '#8D5A3B', '#5E3A22', '#E8B48F'];
     const col = new THREE.Color();
     this.fans.forEach((f, i) => {
-      this.bodies.setColorAt(i, col.set(shirts[Math.floor(rand() * shirts.length)]).multiplyScalar(0.16 + rand() * 0.12));
-      this.heads.setColorAt(i, col.set(skins[Math.floor(rand() * skins.length)]).multiplyScalar(0.3));
+      this.bodies.setColorAt(i, col.set(shirts[Math.floor(rand() * shirts.length)]).multiplyScalar(0.2 + rand() * 0.14));
+      this.heads.setColorAt(i, col.set(skins[Math.floor(rand() * skins.length)]).multiplyScalar(0.22));
       const [x, y, z] = f.pos;
       this.tmp.position.copy(this.toThree([x, y, z + 0.3])); this.tmp.updateMatrix();
       this.bodies.setMatrixAt(i, this.tmp.matrix);

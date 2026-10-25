@@ -330,7 +330,7 @@ export class Shootout3D {
     const rt = new THREE.WebGLRenderTarget(1, 1, { samples: this.quality === 'high' ? 4 : 2, type: THREE.HalfFloatType });
     this.composer = new EffectComposer(this.renderer, rt);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.42, 0.55, 0.82);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.26, 0.5, 0.9);
     this.composer.addPass(this.bloom);
     this.composer.addPass(outputPass(this.renderer.toneMappingExposure));
     if (getLook() === 'retro') { this.retro = retroPass(); this.composer.addPass(this.retro); }
@@ -419,7 +419,7 @@ export class Shootout3D {
       const tex = ribbonTexture(text, color);
       tex.repeat.set(len / 12, 1);
       this.ribbons.push(tex);
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.55), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.3, color: 0x000000 }));
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.55), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.7, color: 0x000000 }));
       m.position.copy(toThree(pos)); m.rotation.y = rotY;
       s.add(m);
     };
