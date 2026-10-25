@@ -9,6 +9,7 @@ import {
 const V3_OPTIONAL_DEFAULTS: Required<Pick<
   AvatarConfigV2,
   '_version' | 'hairLength' | 'makeupIntensity' | 'eyeShadow' | 'eyeliner' | 'skinDetail'
+  | 'outfit' | 'outfitColor' | 'outfitAccent' | 'headwear' | 'faceAccessory'
 >> = {
   _version: AVATAR_CONFIG_VERSION,
   hairLength: 'medium',
@@ -16,6 +17,12 @@ const V3_OPTIONAL_DEFAULTS: Required<Pick<
   eyeShadow: 'none',
   eyeliner: 'none',
   skinDetail: 'none',
+  // The navy tee every avatar wore before the wardrobe existed.
+  outfit: 'tee',
+  outfitColor: '#1e293b',
+  outfitAccent: '#2d3748',
+  headwear: 'none',
+  faceAccessory: 'none',
 };
 
 export function migrateAvatarConfig(raw: unknown): AvatarConfigV2 {

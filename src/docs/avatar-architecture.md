@@ -94,7 +94,41 @@ When a WebGL/Three.js renderer is ready:
 
 ---
 
-## 4. Performance Notes
+## 4. Wardrobe
+
+Outfits, headwear and face accessories (eyepatch) are optional config fields
+(`outfit`, `outfitColor`, `outfitAccent`, `headwear`, `faceAccessory`). Older
+configs migrate to the navy `tee` every avatar wore before.
+
+- **Catalogue:** `src/data/avatarItems.ts` lists every item with its tier, and
+  the medal for earned items. The creator's locks and the display rule both
+  read it. Kits (`AVATAR_KITS`) are whole looks; a kit is as locked as its most
+  locked item.
+- **Tiers:** the same as the Velvet World houses. `starter` is for everyone.
+  `member` needs a paid plan. `earned` needs one medal, is never for sale, and
+  is never locked by a lapsed plan.
+- **Lapsed plans:** `resolveAvatarForDisplay(config, unlocks)` swaps each locked
+  item for its `fallback` (always a starter item) and never changes the saved
+  config, so rejoining restores the look.
+- **Drawing:** `src/renderers/outfitRenderer.tsx`. A garment is drawn once on the
+  shared torso, and the body-type stretch fits it to every build. The body sits
+  behind the neck; collars, lapels and ties sit in front. A hat names the line
+  above which hair is tucked away (`headwearHairCut`).
+- **Ids:** anything in `<defs>` that differs per avatar takes its id from
+  `useId`, so several avatars on one page never borrow each other's clip or
+  colours.
+
+### Adding an item
+
+1. Add the id to the type in `src/types/avatar-v2.ts`.
+2. Add it to the catalogue with a tier, a starter fallback, and a medal if earned.
+3. Draw it in `outfitRenderer.tsx`.
+4. Optionally add or extend a kit.
+
+Not built yet: the server check on save, and the stored "what others see" copy
+that the display rule fills in when a plan lapses.
+
+## 5. Performance Notes
 
 ### Current hot paths (PERF-NOTE comments in source)
 

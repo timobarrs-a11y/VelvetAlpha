@@ -1,6 +1,11 @@
-import { memo, useMemo } from 'react';
+import { memo, useId, useMemo } from 'react';
 import { AvatarConfigV2 } from '../types/avatar-v2';
 import { renderMaleHair, renderFemaleHair } from '../renderers/hairRenderer';
+import {
+  outfitGradient, renderOutfitBody, renderOutfitFront,
+  renderHeadwear, headwearHairCut, renderFaceAccessory,
+} from '../renderers/outfitRenderer';
+import { outfitItem } from '../data/avatarItems';
 
 interface AvatarV2Props {
   config: AvatarConfigV2;
@@ -14,7 +19,17 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
     bodyType, facialHair, eyelashes, freckles, blush, glasses, earrings,
     nosePiercing, lipPiercing, necklace, necklaceColor, tattoo, eyeliner,
     eyeShadow, makeupIntensity, skinDetail,
+    outfit = 'tee', headwear = 'none', faceAccessory = 'none',
   } = config;
+  const outfitColor = config.outfitColor ?? outfitItem(outfit).color;
+  const outfitAccent = config.outfitAccent ?? outfitItem(outfit).accent;
+
+  // Ids for <defs> that differ per avatar must be unique per instance, or
+  // several avatars on one page all borrow the first one's clip and colours.
+  const uid = useId().replace(/:/g, '');
+  const faceClipId = `${uid}-face`;
+  const outfitGradientId = `${uid}-outfit`;
+  const hairClipId = `${uid}-hair`;
 
   const hairColorDark = hairColor + 'cc';
   const hairColorLight = hairColor + '55';
@@ -83,7 +98,7 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   const renderFaceShading = () => {
     const shadeColor = skinTone + '30';
     return (
-      <g opacity="0.25" clipPath="url(#faceClipV2)">
+      <g opacity="0.25" clipPath={`url(#${faceClipId})`}>
         <ellipse cx={50 - fRx + 6} cy={faceCenterY + 8} rx="5" ry="8" fill={shadeColor} style={{ filter: 'blur(3px)' }} />
         <ellipse cx={50 + fRx - 6} cy={faceCenterY + 8} rx="5" ry="8" fill={shadeColor} style={{ filter: 'blur(3px)' }} />
         <ellipse cx="50" cy={faceCenterY + fRy - 6} rx={fRx - 8} ry="4" fill={shadeColor} style={{ filter: 'blur(2px)' }} />
@@ -103,7 +118,7 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
     if (!skinDetail || skinDetail === 'none') return null;
     if (skinDetail === 'smooth') return null;
     return (
-      <g clipPath="url(#faceClipV2)" opacity="0.12">
+      <g clipPath={`url(#${faceClipId})`} opacity="0.12">
         {Array.from({ length: 20 }, (_, i) => {
           const angle = (i / 20) * Math.PI * 2;
           const r = 6 + (i % 4) * 5;
@@ -715,25 +730,36 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   const { shoulderRx, torsoScaleX } = bodyParams;
   const neckY = faceParams.jawY ?? 78;
 
+  const outfitParams = {
+    outfit, main: outfitColor, accent: outfitAccent, skin: skinTone,
+    neckY, shoulderRx, gradientId: outfitGradientId,
+  };
+  const headwearParams = { headwear, fRx, faceTop };
+  const hairCut = headwearHairCut(headwearParams);
+
   const svgDefs = useMemo(() => (
     <defs>
       <linearGradient id={faceGradientId} x1="30%" y1="0%" x2="70%" y2="100%">
         <stop offset="0%" stopColor={skinTone} stopOpacity="1" />
         <stop offset="100%" stopColor={skinTone} stopOpacity="1" />
       </linearGradient>
-      <linearGradient id="shirtGradV2" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#1e293b" />
-        <stop offset="100%" stopColor="#0f172a" />
-      </linearGradient>
+      {outfitGradient(outfitParams)}
       <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="0.4" result="blur" />
         <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
       </filter>
-      <clipPath id="faceClipV2">
+      <clipPath id={faceClipId}>
         <ellipse cx="50" cy={faceCenterY} rx={fRx + 3} ry={fRy + 3} />
       </clipPath>
+      {hairCut !== null && (
+        <clipPath id={hairClipId}>
+          <rect x="-100" y={hairCut} width="300" height="300" />
+        </clipPath>
+      )}
     </defs>
-  ), [skinTone, fRx, fRy, faceGradientId, faceCenterY]);
+  // outfitParams is rebuilt each render; its gradient only depends on these.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [skinTone, fRx, fRy, faceGradientId, faceCenterY, faceClipId, hairClipId, hairCut, outfit, outfitColor, outfitGradientId]);
 
   const neckTopY = neckY - 4;
   const neckWidth = 11;
@@ -748,17 +774,20 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
     <svg viewBox="0 0 100 130" className={className}>
       {svgDefs}
 
-      {gender === 'male' ? renderMaleHair(hairParams) : renderFemaleHair(hairParams)}
+      <g clipPath={hairCut !== null ? `url(#${hairClipId})` : undefined}>
+        {gender === 'male' ? renderMaleHair(hairParams) : renderFemaleHair(hairParams)}
+      </g>
 
       <g transform={`translate(50,0) scale(${torsoScaleX},1) translate(-50,0)`}>
-        <path d={`M50 ${neckY + 12} Q${50 - shoulderRx} ${neckY + 16} ${50 - shoulderRx - 10} ${neckY + 36} Q${50 - shoulderRx - 14} ${neckY + 53} ${50 - shoulderRx - 14} ${neckY + 73} L${50 + shoulderRx + 14} ${neckY + 73} Q${50 + shoulderRx + 14} ${neckY + 53} ${50 + shoulderRx + 10} ${neckY + 36} Q${50 + shoulderRx} ${neckY + 16} 50 ${neckY + 12} Z`}
-          fill="url(#shirtGradV2)" />
-        <path d={`M${50 - 14} ${neckY + 12} Q${50 - 6} ${neckY + 24} 50 ${neckY + 28} Q${50 + 6} ${neckY + 24} ${50 + 14} ${neckY + 12}`}
-          stroke="#2d3748" strokeWidth="1.5" fill="none" />
+        {renderOutfitBody(outfitParams)}
       </g>
 
       <rect x={50 - neckWidth} y={neckTopY} width={neckWidth * 2} height={neckY - neckTopY + 14}
         fill={`url(#${faceGradientId})`} rx="2" />
+
+      <g transform={`translate(50,0) scale(${torsoScaleX},1) translate(-50,0)`}>
+        {renderOutfitFront(outfitParams)}
+      </g>
 
       {renderNecklace()}
       {renderTattoo()}
@@ -789,6 +818,8 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
       {renderLipPiercing()}
       {renderFacialHair()}
       {renderGlasses()}
+      {renderFaceAccessory(faceAccessory)}
+      {renderHeadwear(headwearParams)}
     </svg>
   );
 }

@@ -29,6 +29,11 @@ export type EyeShadow = 'none' | 'smoky' | 'natural' | 'colorful';
 export type Eyeliner = 'none' | 'thin' | 'winged' | 'bold';
 export type SkinDetail = 'none' | 'smooth' | 'textured';
 
+// Wardrobe. Which of these a person may wear lives in src/data/avatarItems.ts.
+export type Outfit = 'tee' | 'linen' | 'suit' | 'chef' | 'labcoat' | 'pirate';
+export type Headwear = 'none' | 'chef_hat' | 'bandana' | 'tricorn' | 'top_hat';
+export type FaceAccessory = 'none' | 'eyepatch';
+
 export const AVATAR_CONFIG_VERSION = 3 as const;
 export type AvatarConfigVersion = typeof AVATAR_CONFIG_VERSION;
 
@@ -63,6 +68,11 @@ export interface AvatarConfigV2 {
   eyeShadow?: EyeShadow;
   eyeliner?: Eyeliner;
   skinDetail?: SkinDetail;
+  outfit?: Outfit;
+  outfitColor?: string;
+  outfitAccent?: string;
+  headwear?: Headwear;
+  faceAccessory?: FaceAccessory;
 }
 
 const V3_REQUIRED: Pick<AvatarConfigV2, 'hairTexture'> = { hairTexture: 'straight' };

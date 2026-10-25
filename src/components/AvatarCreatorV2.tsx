@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Shuffle, Undo2, Redo2, RotateCcw, Bookmark, BookmarkCheck, X, Sparkles } from 'lucide-react';
+import { Shuffle, Undo2, Redo2, RotateCcw, Bookmark, BookmarkCheck, X, Sparkles, Lock } from 'lucide-react';
 import { AvatarV2 } from './AvatarV2';
 import {
   AvatarConfigV2, Gender, HairTexture,
@@ -13,10 +13,15 @@ import {
   getSkinUndertone,
 } from '../types/avatar-v2';
 import { AVATAR_PRESETS } from '../data/avatarPresets';
+import {
+  AVATAR_KITS, OUTFITS, HEADWEAR, FACE_ACCESSORIES, OUTFIT_COLORS,
+  AvatarUnlocks, UnlockResult, itemUnlock, kitUnlock, kitTier, outfitItem,
+} from '../data/avatarItems';
+import { useAvatarUnlocks } from '../hooks/useAvatarUnlocks';
 import { useAvatarFavorites } from '../hooks/useAvatarFavorites';
 import { trackApplyPreset, trackRandomize } from '../services/avatarAnalytics';
 
-type Tab = 'face' | 'hair' | 'body' | 'accessories' | 'presets';
+type Tab = 'face' | 'hair' | 'body' | 'wardrobe' | 'accessories' | 'presets';
 
 const HISTORY_LIMIT = 30;
 
@@ -26,6 +31,8 @@ interface AvatarCreatorV2Props {
   draftKey?: string;
   favoritesNamespace?: string;
   onRandomize?: (config: AvatarConfigV2) => void;
+  // Defaults to the signed-in person's own membership and medals.
+  unlocks?: AvatarUnlocks;
 }
 
 function ColorSwatch({
@@ -62,6 +69,28 @@ function OptionButton({
       }`}
     >
       {label}
+    </button>
+  );
+}
+
+function lockLabel(u: UnlockResult): string {
+  if (u.ok) return '';
+  if (u.need === 'membership') return 'Members';
+  return (u.need ?? 'medal').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' medal';
+}
+
+function LockableOption({
+  label, selected, onClick, lock,
+}: { label: string; selected: boolean; onClick: () => void; lock: UnlockResult }) {
+  if (lock.ok) return <OptionButton label={label} selected={selected} onClick={onClick} />;
+  return (
+    <button
+      disabled
+      title={`Unlocks with: ${lockLabel(lock)}`}
+      className="px-3 py-2 rounded-lg text-sm font-medium border border-dashed border-white/10 bg-white/[0.02] text-gray-500 cursor-not-allowed flex flex-col items-center gap-0.5"
+    >
+      <span className="flex items-center gap-1"><Lock className="w-3 h-3" />{label}</span>
+      <span className="text-[10px] text-amber-500/80 leading-none">{lockLabel(lock)}</span>
     </button>
   );
 }
@@ -149,7 +178,11 @@ export function AvatarCreatorV2({
   draftKey,
   favoritesNamespace = 'default',
   onRandomize,
+  unlocks: unlocksProp,
 }: AvatarCreatorV2Props) {
+  const ownUnlocks = useAvatarUnlocks();
+  const unlocks = unlocksProp ?? ownUnlocks;
+
   const getInitial = (): AvatarConfigV2 => {
     if (draftKey) {
       try {
@@ -212,7 +245,12 @@ export function AvatarCreatorV2({
 
   const randomize = () => {
     trackRandomize();
-    const randomized = coherentRandomize();
+    // A new face, same clothes: shuffling a pirate should give another pirate.
+    const randomized = {
+      ...coherentRandomize(),
+      outfit: config.outfit, outfitColor: config.outfitColor, outfitAccent: config.outfitAccent,
+      headwear: config.headwear, faceAccessory: config.faceAccessory,
+    };
     push(randomized);
     onRandomize?.(randomized);
   };
@@ -224,6 +262,7 @@ export function AvatarCreatorV2({
     { id: 'face', label: 'Face' },
     { id: 'hair', label: 'Hair' },
     { id: 'body', label: 'Body' },
+    { id: 'wardrobe', label: 'Wardrobe' },
     { id: 'accessories', label: 'Accessories' },
   ];
 
@@ -465,6 +504,103 @@ export function AvatarCreatorV2({
     </div>
   );
 
+  const currentOutfit = outfitItem(config.outfit);
+  const kitButton = (kit: typeof AVATAR_KITS[number]) => {
+    const lock = kitUnlock(kit, unlocks);
+    return (
+      <button
+        key={kit.id}
+        disabled={!lock.ok}
+        onClick={() => update(kit.look)}
+        title={lock.ok ? kit.description : `Unlocks with: ${lockLabel(lock)}`}
+        className={`flex items-center gap-3 px-4 py-3 rounded-xl text-left border transition-all group ${
+          lock.ok
+            ? 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+            : 'bg-white/[0.02] border-dashed border-white/10 cursor-not-allowed'
+        }`}
+      >
+        <span className={`text-xl flex-shrink-0 w-8 text-center ${lock.ok ? '' : 'grayscale opacity-60'}`}>{kit.icon}</span>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-semibold truncate ${lock.ok ? 'text-white group-hover:text-sky-300' : 'text-gray-500'}`}>
+            {kit.label}
+          </p>
+          <p className="text-xs text-gray-500 truncate">{kit.description}</p>
+        </div>
+        {!lock.ok && (
+          <span className="flex items-center gap-1 text-[11px] text-amber-500/80 flex-shrink-0">
+            <Lock className="w-3 h-3" />{lockLabel(lock)}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  const wardrobeTab = (
+    <div className="space-y-5">
+      <Section label="Work Looks">
+        <div className="grid grid-cols-1 gap-2">
+          {AVATAR_KITS.filter(k => kitTier(k) === 'starter').map(kitButton)}
+        </div>
+      </Section>
+
+      <Section label="Costume Closet">
+        <div className="grid grid-cols-1 gap-2">
+          {AVATAR_KITS.filter(k => kitTier(k) !== 'starter').map(kitButton)}
+        </div>
+      </Section>
+
+      <Section label="Outfit">
+        <div className="grid grid-cols-3 gap-2">
+          {OUTFITS.map(o => (
+            <LockableOption key={o.id} label={o.label} lock={itemUnlock(o, unlocks)}
+              selected={currentOutfit.id === o.id}
+              onClick={() => update({ outfit: o.id, outfitColor: o.color, outfitAccent: o.accent })} />
+          ))}
+        </div>
+      </Section>
+
+      <Section label={currentOutfit.colorLabel}>
+        <div className="flex flex-wrap gap-2">
+          {OUTFIT_COLORS.map(c => (
+            <ColorSwatch key={c.value} color={c.value} title={c.name}
+              selected={(config.outfitColor ?? currentOutfit.color) === c.value}
+              onClick={() => update({ outfitColor: c.value })} />
+          ))}
+        </div>
+      </Section>
+
+      <Section label={currentOutfit.accentLabel}>
+        <div className="flex flex-wrap gap-2">
+          {OUTFIT_COLORS.map(c => (
+            <ColorSwatch key={c.value} color={c.value} title={c.name}
+              selected={(config.outfitAccent ?? currentOutfit.accent) === c.value}
+              onClick={() => update({ outfitAccent: c.value })} />
+          ))}
+        </div>
+      </Section>
+
+      <Section label="Headwear">
+        <div className="grid grid-cols-3 gap-2">
+          {HEADWEAR.map(h => (
+            <LockableOption key={h.id} label={h.label} lock={itemUnlock(h, unlocks)}
+              selected={(config.headwear ?? 'none') === h.id}
+              onClick={() => update({ headwear: h.id })} />
+          ))}
+        </div>
+      </Section>
+
+      <Section label="Face">
+        <div className="grid grid-cols-3 gap-2">
+          {FACE_ACCESSORIES.map(f => (
+            <LockableOption key={f.id} label={f.label} lock={itemUnlock(f, unlocks)}
+              selected={(config.faceAccessory ?? 'none') === f.id}
+              onClick={() => update({ faceAccessory: f.id })} />
+          ))}
+        </div>
+      </Section>
+    </div>
+  );
+
   const accessoriesTab = (
     <div className="space-y-5">
       <Section label="Glasses">
@@ -557,6 +693,7 @@ export function AvatarCreatorV2({
     face: faceTab,
     hair: hairTab,
     body: bodyTab,
+    wardrobe: wardrobeTab,
     accessories: accessoriesTab,
   };
 
