@@ -26,6 +26,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 | `engine.ts` | Pure rules: course, levels, shot window, judge, outcomes, release point, scoring. Tested. |
 | `rivals.ts` | Rival roster, seeded run simulation, pace (`scoreAt`), cut/tiebreak rules. Tested. |
 | `fx.ts` | The make-effects chain: perfects in a row, fireball, rim fire, finale (perfect run or every ball made). Tested. |
+| `jump.ts` | The jump shot's body motion (visual only): load, takeoff under real gravity, the top exactly at `rise`, fall and landing. Drives your eyes in first person and the athlete for rivals. Tested. |
 | `holdClock.ts` | Times your hold from input-event timestamps, independent of frame rate. Tested. |
 | `ballSim.ts` | Ball physics (gravity, drag, backspin; rim, glass, floor, stanchion) and `planShot`: a real flight for the outcome the rules chose. Fixed 240Hz step, deterministic. Tested. |
 | `three/game3d.ts` | `Shootout3D`: scene, cameras, phases (walk/aim/hold/flight/wait/replay/done), live balls and catch-and-shoot, scoring, rival autopilot, frame governor, `meterView()`. |
@@ -54,6 +55,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 - **A modern roof, not a grid.** Three dark girders, grouped lighting rigs (one per row of arena spots, a cluster of fixtures around each), and a centre-hung board with a slim wine-and-gold LED halo. The SpotLights didn't move, so the court lighting didn't change.
 - **Fans are silhouette cut-outs.** One instanced quad each (8 head-and-shoulder shapes, mirrored at random), turned to face the camera, coloured from masks, with the top edge catching the light. Fans behind the rim are dimmer and barely rim-lit, so the backdrop stays calm. This took the scene from about 840k to 73k triangles on desktop (427k to 25k on phone).
 - **Effects reward perfects, not just makes.** The existing 3-in-a-row "on fire" boost (a wider green) and its badge are unchanged, but its 3D flames and rim glow are gone: fire now means a run of perfects. The finale holds the replay back about 2.4s so the explosion plays out live first; the replay shows it again in slow motion. Particles are capped in screen size so the hoop and ball stay readable.
+- **The hold is a real jump.** Press to load (knees sink, the ball drops to the gather), then explode off the floor under real gravity, reach the top exactly at `rise` (where the meter has always put it), and fall and land after the release, before the next catch. Gravity stays real at every level, so a longer rise (Rookie) means a deeper, longer load rather than a floaty jump. Hold past the top and you're already falling. Visual only: judging and physics never read it.
 - **Contest scores don't feed practice bests.** A contest title unlocks the next level.
 
 ## Verifying
