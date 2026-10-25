@@ -28,7 +28,7 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 | `ballSim.ts` | Ball physics (gravity, drag, backspin; rim, glass, floor, stanchion) and `planShot`: a real flight for the outcome the rules chose. Fixed 240Hz step, deterministic. Tested. |
 | `three/game3d.ts` | `Shootout3D`: scene, cameras, phases (walk/aim/hold/flight/wait/replay/done), live balls and catch-and-shoot, scoring, rival autopilot, frame governor, `meterView()`. |
 | `three/athlete.ts` | The player figure (muscle-shaped limbs, jersey with number, shorts, fingered hands, sneakers, face and hair) and its poses: jog, dip, set point, release, celebrate. While holding the ball, two-bone IK puts each palm on the ball's surface facing its centre and the fingers curl round it; `ballCenter()` is where the game draws the ball. Used by you, rivals and Street. |
-| `three/arena.ts`, `crowd.ts`, `net.ts`, `textures.ts` | The building, the GPU-animated crowd (`BOWL` shape), the cloth net, canvas textures. |
+| `three/arena.ts`, `crowd.ts`, `net.ts`, `textures.ts` | The building (suites, roof, lighting rigs), the instanced cut-out crowd (`BOWL` shape), the cloth net, canvas textures. |
 | `ui/RunView.tsx` | One run: canvas, input, broadcast overlay, meter. Remount with a new `key` per run. |
 | `ui/Contest.tsx` | The contest flow and standings. |
 | `game.ts` | The 2D court, used only when WebGL is unavailable (scripted flights, classic scoring; kept as is). |
@@ -48,6 +48,8 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 - **Noise-based audio was removed** ("sounded like white noise"). Real recordings are a later task.
 - **Lighting hierarchy: court, hoop and ball first; the building sits back.** The crowd wears a restrained home palette (wine, charcoal, navy, the odd gold) and barely reflects the environment; suites, LED ribbons and walls glow softly; the haze is near-neutral dark rather than purple; bloom is gentle (0.26, threshold 0.9). The court lights are unchanged. Measured with fixed cameras: ball-vs-background colour difference (ΔE) rose from a minimum of 44 to 55, stand brightness fell by half to three-quarters, court brightness moved by about 1%.
 - **The shooter's backdrop stays calm.** Every part of the bowl that sits behind the rim from some rack (the whole baseline end, the sidelines' near end) has mostly dark suites and no LED panels; suites elsewhere come in bays between dark pillars, and the LED ribbon is broken into panels. The board behind the basket glows at 0.6 (the jumbotron 1.4). Measured around the rim in all 14 first-person views: edge density 7.5% → 4.9% (desktop), brightness about 12% lower.
+- **A modern roof, not a grid.** Three dark girders, grouped lighting rigs (one per row of arena spots, a cluster of fixtures around each), and a centre-hung board with a slim wine-and-gold LED halo. The SpotLights didn't move, so the court lighting didn't change.
+- **Fans are silhouette cut-outs.** One instanced quad each (8 head-and-shoulder shapes, mirrored at random), turned to face the camera, coloured from masks, with the top edge catching the light. Fans behind the rim are dimmer and barely rim-lit, so the backdrop stays calm. This took the scene from about 840k to 73k triangles on desktop (427k to 25k on phone).
 - **Contest scores don't feed practice bests.** A contest title unlocks the next level.
 
 ## Verifying
