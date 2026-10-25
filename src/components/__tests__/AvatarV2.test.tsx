@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { AvatarV2 } from '../AvatarV2';
 import { migrateAvatarConfig } from '../../utils/avatarConfig';
 
@@ -29,5 +30,12 @@ describe('AvatarV2', () => {
     expect(hatted.container.querySelector('[id$="-hair"]')).not.toBeNull();
     const bare = render(<AvatarV2 config={migrateAvatarConfig({ hairStyle: 'bun' })} />);
     expect(bare.container.querySelector('[id$="-hair"]')).toBeNull();
+  });
+
+  it('draws the same facial hair every time, so a beard never flickers between renders', () => {
+    for (const facialHair of ['stubble', 'beard', 'goatee', 'mustache'] as const) {
+      const config = migrateAvatarConfig({ gender: 'male', facialHair });
+      expect(renderToStaticMarkup(<AvatarV2 config={config} />)).toBe(renderToStaticMarkup(<AvatarV2 config={config} />));
+    }
   });
 });

@@ -6,6 +6,10 @@ import {
   renderHeadwear, headwearHairCut, renderFaceAccessory,
 } from '../renderers/outfitRenderer';
 import { outfitItem } from '../data/avatarItems';
+import { faceOutlinePath } from '../renderers/faceGeometry';
+import { renderFacialHair } from '../renderers/facialHairRenderer';
+
+const LIP_HALF_WIDTH: Record<string, number> = { natural: 8, full: 10, thin: 7, heart: 8 };
 
 interface AvatarV2Props {
   config: AvatarConfigV2;
@@ -56,44 +60,11 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
   const faceTop = faceCenterY - fRy;
   const faceBottom = faceCenterY + fRy;
 
-  const renderFaceShape = () => {
-    switch (faceShape) {
-      case 'square':
-        return (
-          <g>
-            <path d={`M${50 - fRx},${faceTop + 6} L${50 - fRx},${faceBottom - 6} Q${50 - chinW/2},${faceBottom + 4} 50,${faceBottom + 6} Q${50 + chinW/2},${faceBottom + 4} ${50 + fRx},${faceBottom - 6} L${50 + fRx},${faceTop + 6} Q50,${faceTop - 2} ${50 - fRx},${faceTop + 6} Z`}
-              fill={`url(#${faceGradientId})`} />
-          </g>
-        );
-      case 'heart':
-        return (
-          <g>
-            <path d={`M${50 - fRx},${faceTop + 4} Q50,${faceTop - 2} ${50 + fRx},${faceTop + 4} L${50 + fRx},${faceBottom - 8} Q${50 + fRx - 4},${faceBottom + 2} 50,${faceBottom + 6} Q${50 - fRx + 4},${faceBottom + 2} ${50 - fRx},${faceBottom - 8} Z`}
-              fill={`url(#${faceGradientId})`} />
-          </g>
-        );
-      case 'diamond':
-        return (
-          <g>
-            <path d={`M${50 - fRx + 4},${faceTop + 6} Q50,${faceTop - 2} ${50 + fRx - 4},${faceTop + 6} L${50 + fRx},${faceBottom - 10} Q${50 + chinW/2},${faceBottom + 3} 50,${faceBottom + 6} Q${50 - chinW/2},${faceBottom + 3} ${50 - fRx},${faceBottom - 10} Z`}
-              fill={`url(#${faceGradientId})`} />
-          </g>
-        );
-      case 'oblong':
-        return (
-          <g>
-            <path d={`M${50 - fRx},${faceTop + 8} Q50,${faceTop - 1} ${50 + fRx},${faceTop + 8} L${50 + fRx},${faceBottom - 8} Q${50 + chinW/2},${faceBottom + 4} 50,${faceBottom + 7} Q${50 - chinW/2},${faceBottom + 4} ${50 - fRx},${faceBottom - 8} Z`}
-              fill={`url(#${faceGradientId})`} />
-          </g>
-        );
-      default:
-        return (
-          <g>
-            <ellipse cx="50" cy={faceCenterY} rx={fRx} ry={fRy} fill={`url(#${faceGradientId})`} />
-          </g>
-        );
-    }
-  };
+  const faceGeometry = { faceShape, fRx, fRy, chinW, faceTop, faceBottom, faceCenterY };
+
+  const renderFaceShape = () => (
+    <path d={faceOutlinePath(faceGeometry)} fill={`url(#${faceGradientId})`} />
+  );
 
   const renderFaceShading = () => {
     const shadeColor = skinTone + '30';
@@ -201,96 +172,13 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
     heart:   { top: 'M42 76 Q46 71 50 74 Q54 71 58 76', bottom: 'M42 76 Q50 82 58 76' },
   };
 
-  const renderFacialHair = () => {
-    if (gender !== 'male' || !facialHair || facialHair === 'none') return null;
-    const fhColor = hairColor;
-    const fhDark = hairColor + 'bb';
-    switch (facialHair) {
-      case 'stubble':
-        return (
-          <g>
-            {Array.from({ length: 90 }, (_, i) => {
-              const positions = [
-                { x: 28 + (i % 12) * 3.5, y: 62 + Math.floor(i / 12) * 3.5 },
-              ];
-              const pos = positions[0];
-              if (pos.x > 72) return null;
-              if (pos.y > 90 && (pos.x < 40 || pos.x > 60)) return null;
-              if (pos.y > 98) return null;
-              const angle = -0.3 + (((i * 1237) % 7) - 3) * 0.15;
-              return (
-                <line key={i}
-                  x1={pos.x} y1={pos.y}
-                  x2={pos.x + Math.sin(angle) * 1.2} y2={pos.y - 1.5 - (i % 3) * 0.3}
-                  stroke={fhColor} strokeWidth={0.8}
-                  opacity={0.3 + (((i * 3571) % 7) / 7) * 0.25}
-                  strokeLinecap="round" />
-              );
-            })}
-          </g>
-        );
-
-      case 'beard':
-        return (
-          <g>
-            <path
-              d={`M${50 - fRx + 4},64 Q${50 - fRx},70 ${50 - fRx + 1},78 Q${50 - fRx + 2},88 ${50 - fRx + 8},95 Q${50 - fRx + 16},102 50,104 Q${50 + fRx - 16},102 ${50 + fRx - 8},95 Q${50 + fRx - 2},88 ${50 + fRx - 1},78 Q${50 + fRx},70 ${50 + fRx - 4},64`}
-              fill={fhColor} opacity="0.88" />
-            {Array.from({ length: 60 }, (_, i) => {
-              const t = (i / 60) * Math.PI;
-              const bx = 50 + Math.cos(t + Math.PI) * (fRx - 8) * 0.9;
-              const by = 64 + Math.sin(t) * 0;
-              const endX = bx + (Math.random() > 0.5 ? 1 : -1) * (1 + (i % 3) * 0.5);
-              const endY = by + 3 + (i % 4) * 0.5;
-              return (
-                <path key={i}
-                  d={`M${bx},${by} Q${(bx + endX) / 2 + Math.sin(i) * 0.8},${(by + endY) / 2} ${endX},${endY}`}
-                  stroke={i % 8 === 0 ? hairColorLight : fhDark}
-                  strokeWidth={1} fill="none" opacity={0.6} strokeLinecap="round" />
-              );
-            })}
-            <ellipse cx={50 - fRx + 3} cy="66" rx="3" ry="9" fill={fhColor} opacity="0.8" />
-            <ellipse cx={50 + fRx - 3} cy="66" rx="3" ry="9" fill={fhColor} opacity="0.8" />
-          </g>
-        );
-
-      case 'goatee':
-        return (
-          <g>
-            <path
-              d="M44 78 Q42 84 43 91 Q45 98 50 102 Q55 98 57 91 Q58 84 56 78 Q52 77 50 77 Q48 77 44 78 Z"
-              fill={fhColor} opacity="0.85" />
-            {Array.from({ length: 18 }, (_, i) => {
-              const x = 44 + (i % 6) * 2;
-              const y = 80 + Math.floor(i / 6) * 5;
-              return (
-                <line key={i}
-                  x1={x} y1={y} x2={x + Math.sin(i * 0.9) * 0.8} y2={y + 2.5}
-                  stroke={fhDark} strokeWidth={0.8} opacity={0.5} strokeLinecap="round" />
-              );
-            })}
-          </g>
-        );
-
-      case 'mustache':
-        return (
-          <g>
-            <path
-              d={`M37,70 Q40,66 44,68 Q47,70 50,70 Q53,70 56,68 Q60,66 63,70 Q61,73 57,74 Q54,75 50,74 Q46,75 43,74 Q39,73 37,70 Z`}
-              fill={fhColor} opacity="0.85" />
-            {Array.from({ length: 14 }, (_, i) => {
-              const x = 38 + i * 1.9;
-              return (
-                <path key={i}
-                  d={`M${x},70 Q${x + Math.sin(i) * 1},72 ${x},74`}
-                  stroke={fhDark} strokeWidth={0.7} fill="none" opacity={0.5} strokeLinecap="round" />
-              );
-            })}
-          </g>
-        );
-
-      default: return null;
-    }
+  const renderFacialHairLayer = () => {
+    if (gender !== 'male') return null;
+    return renderFacialHair({
+      facialHair, hairColor, geometry: faceGeometry,
+      mouthHalfWidth: LIP_HALF_WIDTH[lipShape] ?? 8,
+      idPrefix: uid,
+    });
   };
 
   const renderFreckles = () => {
@@ -816,7 +704,7 @@ function AvatarV2Inner({ config, className = '' }: AvatarV2Props) {
       <path d="M46 75 Q50 73.5 54 75" stroke="white" strokeWidth="0.7" fill="none" opacity="0.2" />
 
       {renderLipPiercing()}
-      {renderFacialHair()}
+      {renderFacialHairLayer()}
       {renderGlasses()}
       {renderFaceAccessory(faceAccessory)}
       {renderHeadwear(headwearParams)}
