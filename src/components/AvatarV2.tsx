@@ -10,7 +10,7 @@ import { migrateAvatarConfig } from '../utils/avatarConfig';
 import { faceOutlinePath } from '../renderers/faceGeometry';
 import {
   renderEyes, renderEyelashes, renderEyeliner, renderEyeShadow, renderEyebrows, renderNose,
-  renderEars, earLobes, renderMouth, mouthHalfWidth, MouthMood,
+  renderEars, earLobes, renderMouth, mouthGeometry, MouthMood,
 } from '../renderers/faceFeatures';
 import { renderFacialHair } from '../renderers/facialHairRenderer';
 
@@ -162,7 +162,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral' }: Avatar
   const renderFacialHairLayer = () => {
     return renderFacialHair({
       facialHair, hairColor, geometry: faceGeometry,
-      mouthHalfWidth: mouthHalfWidth(lipShape),
+      mouth: mouthGeometry(lipShape, mood),
       idPrefix: uid,
     });
   };

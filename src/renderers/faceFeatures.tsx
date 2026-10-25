@@ -278,7 +278,7 @@ export function renderEars({ geometry, skinTone }: EarParams): React.ReactNode {
 // highlight, the groove under the nose and a soft shadow under the lower lip.
 // The mood moves the corners and can part the lips, so expressions reuse it.
 
-export type MouthMood = 'neutral' | 'smile' | 'grin';
+export type MouthMood = 'neutral' | 'smile' | 'sad' | 'grin';
 
 const MOUTH_Y = 76.6;
 
@@ -293,12 +293,40 @@ const LIPS: Record<LipShape, LipSpec> = {
 const MOODS: Record<MouthMood, { lift: number; curve: number; open: number }> = {
   neutral: { lift: 0.35, curve: 0.45, open: 0 },
   smile:   { lift: 2.0, curve: 1.5, open: 0 },
+  sad:     { lift: -1.3, curve: -0.2, open: 0 },
   grin:    { lift: 2.5, curve: 1.1, open: 3.6 },
 };
 
-// Half the mouth's width, so a beard leaves room for it.
-export function mouthHalfWidth(shape: LipShape): number {
-  return (LIPS[shape] ?? LIPS.natural).w + 0.6;
+// Everything facial hair needs to fit around a mouth: its corners, the top
+// of the upper lip (cupid's bow included) and its whole outline. Facial hair
+// is built from this, so it fits every lip shape in every mood.
+export interface MouthGeometry {
+  w: number;
+  L: Pt; R: Pt;
+  // Top of the upper lip, left corner to right corner.
+  upperTop: string;
+  // The whole mouth, upper lip and lower lip, as one closed shape.
+  outline: string;
+  top: number; bottom: number;
+}
+
+export function mouthGeometry(lipShape: LipShape, mood: MouthMood = 'neutral'): MouthGeometry {
+  const l = LIPS[lipShape] ?? LIPS.natural;
+  const m = MOODS[mood];
+  const M = MOUTH_Y;
+  const L: Pt = [50 - l.w, M - m.lift], R: Pt = [50 + l.w, M - m.lift];
+  const peakY = M - l.up - m.lift * 0.35;
+  const shoulder = M - l.up * 0.55 - m.lift * 0.6;
+  const upperTop = [
+    `M${p(L)}`,
+    `C${p([50 - l.w * 0.6, shoulder])} ${p([50 - 3.6, peakY])} ${p([50 - 2.4, peakY])}`,
+    `Q${p([50 - 1, peakY])} ${p([50, peakY + l.bow])}`,
+    `Q${p([50 + 1, peakY])} ${p([50 + 2.4, peakY])}`,
+    `C${p([50 + 3.6, peakY])} ${p([50 + l.w * 0.6, shoulder])} ${p(R)}`,
+  ].join(' ');
+  const bottom = M + m.curve * 0.6 + m.open + l.lo * 1.25;
+  const outline = `${upperTop} C${p([50 + l.w * 0.55, bottom])} ${p([50 - l.w * 0.55, bottom])} ${p(L)} Z`;
+  return { w: l.w, L, R, upperTop, outline, top: peakY, bottom: M + m.curve * 0.45 + m.open + l.lo * 0.95 };
 }
 
 export interface MouthParams {
@@ -321,18 +349,19 @@ export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', id
   const partingBack = `C${p(topC[1])} ${p(topC[0])} ${p(L)}`;
   const lowerTop = `M${p(L)} C${p(botC[0])} ${p(botC[1])} ${p(R)}`;
 
-  const peakY = M - l.up - m.lift * 0.35;
-  const upper = [
-    `M${p(L)}`,
-    `C${p([50 - l.w * 0.6, M - l.up * 0.55 - m.lift * 0.6])} ${p([50 - 3.6, peakY])} ${p([50 - 2.4, peakY])}`,
-    `Q${p([50 - 1, peakY])} ${p([50, peakY + l.bow])}`,
-    `Q${p([50 + 1, peakY])} ${p([50 + 2.4, peakY])}`,
-    `C${p([50 + 3.6, peakY])} ${p([50 + l.w * 0.6, M - l.up * 0.55 - m.lift * 0.6])} ${p(R)}`,
-    partingBack, 'Z',
-  ].join(' ');
+  const geo = mouthGeometry(lipShape, mood);
+  const peakY = geo.top;
+  const upper = `${geo.upperTop} ${partingBack} Z`;
   const lowBottom = M + m.curve * 0.6 + m.open + l.lo * 1.25;
   const lower = `${lowerTop} C${p([50 + l.w * 0.55, lowBottom])} ${p([50 - l.w * 0.55, lowBottom])} ${p(L)} Z`;
 
+  // The lower lip's top and bottom edges at the middle (a cubic's midpoint is
+  // a quarter of the ends plus three quarters of the controls), so the shine
+  // sits on the lip however far the mouth is open.
+  const lipTopMid = 0.25 * L[1] + 0.75 * botC[0][1];
+  const lipBottomMid = 0.25 * L[1] + 0.75 * lowBottom;
+  const lipThick = lipBottomMid - lipTopMid;
+  const shineY = (lipTopMid + lipBottomMid) / 2;
   const lipDark = shade(lipColor, -0.14);
   const line = shade(lipColor, -0.58);
   const skinShadow = shade(skinTone, -0.28);
@@ -360,7 +389,10 @@ export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', id
         </>
       )}
       <path d={lower} fill={lipColor} />
-      <ellipse cx="49" cy={M + m.curve * 0.6 + m.open + l.lo * 0.5} rx={l.w * 0.34} ry={Math.max(0.5, l.lo * 0.17)} fill="#fff" opacity="0.28" />
+      {/* A sliver of shine on the lower lip, in a lighter shade of the lip itself
+          (white reads as a pale patch on darker lips). */}
+      <path d={`M${50 - l.w * 0.38},${shineY - 0.1} Q49,${shineY + 0.25} ${50 + l.w * 0.12},${shineY}`}
+        stroke={shade(lipColor, 0.32)} strokeWidth={Math.max(0.4, lipThick * 0.22)} fill="none" opacity="0.45" strokeLinecap="round" />
       <path d={upper} fill={lipDark} />
       <path d={parting} stroke={line} strokeWidth="0.75" fill="none" strokeLinecap="round" opacity="0.85" />
       {/* Corners tuck in; a smile pushes up little creases beside them. */}
