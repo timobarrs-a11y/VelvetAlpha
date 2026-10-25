@@ -44,7 +44,7 @@ function wallTexture(): THREE.CanvasTexture {
     for (let x = 0; x < 512; x += 32) { g.fillStyle = x % 64 ? '#121020' : '#100d1b'; g.fillRect(x, 0, 30, 256); }
     for (let x = 60; x < 512; x += 128) {
       const grad = g.createLinearGradient(x, 0, x + 6, 0);
-      grad.addColorStop(0, 'rgba(244,114,182,0)'); grad.addColorStop(0.5, 'rgba(244,114,182,.9)'); grad.addColorStop(1, 'rgba(244,114,182,0)');
+      grad.addColorStop(0, 'rgba(244,114,182,0)'); grad.addColorStop(0.5, 'rgba(244,114,182,.5)'); grad.addColorStop(1, 'rgba(244,114,182,0)');
       g.fillStyle = grad; g.fillRect(x - 6, 0, 18, 256);
     }
   });
@@ -69,14 +69,15 @@ export function buildArena(scene: THREE.Scene, toThree: (v: V) => THREE.Vector3,
   const upperBack = lowerBack + BOWL.gap + BOWL.upperRows * BOWL.rowDepth;
   const upperTop = BOWL.upperZ + BOWL.upperRows * 0.5;
 
-  // ---- Sky dome and haze: the far reaches fade into a purple haze, not black.
-  scene.background = new THREE.Color(0x0a0612);
-  scene.fog = new THREE.Fog(0x150d24, 24, 78);
+  // ---- Sky dome and haze: the far reaches fade into a dark, near-neutral haze
+  // (a hint of wine), so the bright court is what the eye finds first.
+  scene.background = new THREE.Color(0x060508);
+  scene.fog = new THREE.Fog(0x0b090d, 26, 85);
   const dome = new THREE.Mesh(
     new THREE.SphereGeometry(120, 32, 16),
     new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
-      uniforms: { top: { value: new THREE.Color(0x05040a) }, mid: { value: new THREE.Color(0x1d1130) }, low: { value: new THREE.Color(0x2a1638) } },
+      uniforms: { top: { value: new THREE.Color(0x030305) }, mid: { value: new THREE.Color(0x0c0a10) }, low: { value: new THREE.Color(0x140b12) } },
       vertexShader: 'varying vec3 vP; void main() { vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: 'uniform vec3 top; uniform vec3 mid; uniform vec3 low; varying vec3 vP; void main() { float h = vP.y; vec3 c = h > 0.0 ? mix(mid, top, smoothstep(0.0, 0.5, h)) : mix(mid, low, smoothstep(0.0, -0.3, h)); gl_FragColor = vec4(c, 1.0); }',
     }),
@@ -100,16 +101,16 @@ export function buildArena(scene: THREE.Scene, toThree: (v: V) => THREE.Vector3,
     // Suite level: a band of lit boxes between the tiers, an LED ribbon above.
     const bandH = BOWL.upperZ - BOWL.lowerTop;
     const t = suiteMat.clone(); t.repeat.set(len / 16, 1); t.needsUpdate = true;
-    place(new THREE.Mesh(new THREE.PlaneGeometry(len, bandH * 0.78), new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.7, color: 0x000000 })), lowerBack + 0.05, BOWL.lowerTop + bandH * 0.42);
+    place(new THREE.Mesh(new THREE.PlaneGeometry(len, bandH * 0.78), new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.2, color: 0x000000 })), lowerBack + 0.05, BOWL.lowerTop + bandH * 0.42);
     const rib = ribbonTexture(['VELVET', 'MONEY BALL', 'HIT THE GREEN'][i], ['#F5C451', '#F472B6', '#7CF7D4'][i]);
     rib.repeat.set(len / 12, 1); ribbons.push(rib);
-    place(new THREE.Mesh(new THREE.PlaneGeometry(len, 0.45), new THREE.MeshStandardMaterial({ map: rib, emissive: 0xffffff, emissiveMap: rib, emissiveIntensity: 1.2, color: 0x000000 })), lowerBack + BOWL.gap - 0.02, BOWL.upperZ - 0.3);
+    place(new THREE.Mesh(new THREE.PlaneGeometry(len, 0.45), new THREE.MeshStandardMaterial({ map: rib, emissive: 0xffffff, emissiveMap: rib, emissiveIntensity: 0.55, color: 0x000000 })), lowerBack + BOWL.gap - 0.02, BOWL.upperZ - 0.3);
     // A fascia under the suites so the lower bowl's back edge isn't open.
     place(new THREE.Mesh(new THREE.PlaneGeometry(len, 0.6), fasciaMat), lowerBack + 0.04, BOWL.lowerTop + 0.1);
     // Back wall behind the upper deck, up to the roof.
     const wt = wallTex.clone(); wt.repeat.set(len / 10, 1); wt.needsUpdate = true;
     const wallH = BOWL.roofZ - upperTop + 2;
-    place(new THREE.Mesh(new THREE.PlaneGeometry(len + 10, wallH), new THREE.MeshStandardMaterial({ map: wt, emissive: 0xffffff, emissiveMap: wt, emissiveIntensity: 0.35, color: 0x222222 })), upperBack + 0.3, upperTop - 1 + wallH / 2);
+    place(new THREE.Mesh(new THREE.PlaneGeometry(len + 10, wallH), new THREE.MeshStandardMaterial({ map: wt, emissive: 0xffffff, emissiveMap: wt, emissiveIntensity: 0.12, color: 0x161616 })), upperBack + 0.3, upperTop - 1 + wallH / 2);
   });
 
   // ---- Roof: a dark lid, a truss grid and rows of small lights.
@@ -136,7 +137,7 @@ export function buildArena(scene: THREE.Scene, toThree: (v: V) => THREE.Vector3,
   ];
   banners.forEach(([lines, col, trim], i) => {
     const tx = bannerTexture(lines, col, trim);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 4.8), new THREE.MeshStandardMaterial({ map: tx, transparent: true, emissive: 0xffffff, emissiveMap: tx, emissiveIntensity: 0.25, side: THREE.DoubleSide }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 4.8), new THREE.MeshStandardMaterial({ map: tx, transparent: true, emissive: 0xffffff, emissiveMap: tx, emissiveIntensity: 0.15, side: THREE.DoubleSide }));
     m.position.copy(toThree([-12.5 + i * 5, -15, BOWL.roofZ - 4.6]));
     group.add(m);
   });
@@ -144,7 +145,7 @@ export function buildArena(scene: THREE.Scene, toThree: (v: V) => THREE.Vector3,
   // ---- Light beams from the arena spots, and dust drifting through them.
   const beamMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
-    uniforms: { color: { value: new THREE.Color(0xfff1dd) }, strength: { value: opts.hi ? 0.075 : 0.06 } },
+    uniforms: { color: { value: new THREE.Color(0xfff1dd) }, strength: { value: opts.hi ? 0.05 : 0.04 } },
     vertexShader: 'varying float vY; varying vec3 vN; varying vec3 vV; void main() { vY = uv.y; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
     fragmentShader: 'uniform vec3 color; uniform float strength; varying float vY; varying vec3 vN; varying vec3 vV; void main() { float edge = pow(abs(dot(vN, vV)), 1.6); float fade = smoothstep(0.0, 0.85, vY); gl_FragColor = vec4(color * strength * edge * fade, 1.0); }',
   });
@@ -160,7 +161,7 @@ export function buildArena(scene: THREE.Scene, toThree: (v: V) => THREE.Vector3,
   const N = opts.hi ? 600 : 300, dust = new Float32Array(N * 3), r = rng(5);
   for (let i = 0; i < N; i++) { const p = toThree([(r() - 0.5) * 22, -4 + r() * 18, 0.5 + r() * 11]); dust.set([p.x, p.y, p.z], i * 3); }
   const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(dust, 3));
-  const motes = new THREE.Points(dg, new THREE.PointsMaterial({ color: 0xfff4e0, size: 0.035, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+  const motes = new THREE.Points(dg, new THREE.PointsMaterial({ color: 0xfff4e0, size: 0.035, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }));
   motes.frustumCulled = false;
   group.add(motes);
 
