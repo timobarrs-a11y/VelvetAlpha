@@ -7,18 +7,19 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import {
-  pickRelease,
+  pickRelease, RELOAD, JOG,
   buildCourse, fireBoost, isMake, judge, MAX_SCORE, resolveShot, RIM_HEIGHT, shotWindow, spotPosition,
   perfectMultiplier, shotPoints,
   type Ball, type Grade, type ScoringMode, type Level, type Outcome, type Spot,
 } from '../engine';
-import { legAt, planFlight, type Leg, type V3 } from '../game';
+import { planShotSteps, planShot, previewArc, sampleAt, simulateLaunch, type ShotPlan, type V3 } from '../ballSim';
 import * as sfx from '../audio';
-import { ballTexture, FLOOR, floorTexture, jerseyTexture, makeScoreboard, ribbonTexture } from './textures';
+import { ballTexture, FLOOR, floorTexture, makeScoreboard, ribbonTexture } from './textures';
 import { Net } from './net';
-import type { RivalRun } from '../rivals';
+import { seeded, type RivalRun } from '../rivals';
 import { Crowd } from './crowd';
 import { buildArena, type Arena } from './arena';
+import { Athlete, HAIRS, SKINS } from './athlete';
 import { getLook } from '../settings';
 import { HoldClock } from '../holdClock';
 
@@ -28,13 +29,15 @@ import { HoldClock } from '../holdClock';
 // ../engine; game coordinates are metres with z up (x across, y out from the
 // rim), mapped to Three's y-up space by toThree.
 
-export type Phase = 'walk' | 'aim' | 'hold' | 'flight' | 'replay' | 'done';
+export type Phase = 'walk' | 'aim' | 'hold' | 'flight' | 'wait' | 'replay' | 'done';
 
 export type ShootoutEvent =
   | { type: 'rack'; label: string; index: number; money: boolean }
   | { type: 'ball'; kind: Ball['kind'] }
   | { type: 'grade'; grade: Grade; error: number; window: number }
-  | { type: 'make'; points: number; outcome: Outcome; streak: number; perfect: boolean; chain: number; mult: number }
+  | { type: 'make'; points: number; outcome: Outcome; streak: number; perfect: boolean; chain: number; mult: number; kind: Ball['kind']; bank?: boolean }
+  | { type: 'time' }
+  | { type: 'buzzer' }
   | { type: 'miss'; outcome: Outcome }
   | { type: 'fire' }
   | { type: 'replay'; on: boolean }
@@ -49,6 +52,12 @@ export interface RunOptions {
   jersey?: { colors: [string, string]; number: number };
   /** Play a rival's pre-simulated run from the broadcast camera instead of taking input. */
   auto?: RivalRun;
+  /**
+   * How you shoot. 'jumper' (default): hold to rise, let go on the green; the
+   * rules decide and physics stages it. 'touch': drag toward the hoop and let
+   * go; the physics decides. Random spots, side-on camera.
+   */
+  control?: 'jumper' | 'touch';
   /** How makes score (default classic 1/2/3). */
   scoring?: ScoringMode;
   /** Playback speed for autopilot runs. */
@@ -66,6 +75,48 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const ease = (t: number) => t * t * (3 - 2 * t);
 
 type Quality = 'high' | 'mid';
+
+/** A soft round dot for the touch guide (points are square otherwise). */
+function dotTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 32;
+  const g = cv.getContext('2d')!;
+  const grad = g.createRadialGradient(16, 16, 0, 16, 16, 15);
+  grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.65, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad; g.beginPath(); g.arc(16, 16, 15, 0, Math.PI * 2); g.fill();
+  return new THREE.CanvasTexture(cv);
+}
+
+/** Flights worth having ready at each spot (outcome:side; early = -1 is short, late = +1 is long). */
+const PLAN_KEYS = ['swish:1', 'make:1', 'make:-1', 'rim-in:1', 'rim-in:-1', 'rim-out:-1', 'rim-out:1', 'brick:-1', 'brick:1', 'airball:-1'];
+
+const spinAxis = new THREE.Vector3(), spinQ = new THREE.Quaternion();
+/** Turn a ball by its spin (game coords, rad/s) over dt. The y/z swap to three's space mirrors the axis. */
+function spin(mesh: THREE.Object3D, w: V3, dt: number): void {
+  const rate = Math.hypot(w[0], w[1], w[2]);
+  if (rate < 1e-4) return;
+  spinAxis.set(-w[0] / rate, -w[2] / rate, -w[1] / rate);
+  mesh.quaternion.premultiply(spinQ.setFromAxisAngle(spinAxis, rate * dt));
+}
+
+/** One shot in the air: its planned flight, and what the rules already decided about it. */
+interface LiveBall {
+  mesh: THREE.Mesh;
+  plan: ShotPlan;
+  /** Seconds since release. */
+  t: number;
+  pos: V3;
+  /** Gap between the hand and the planned start, blended away over the first moment. */
+  offset: V3;
+  kind: Ball['kind'];
+  outcome: Outcome;
+  points: number;
+  perfect: boolean;
+  chain: number;
+  streakAfter: number;
+  bank?: boolean;
+  nextEvent: number;
+  resolved: boolean;
+}
 
 /** The stanchion pad's side: brand colour, a stripe and the logo. */
 function stanchionPadTexture(): THREE.CanvasTexture {
@@ -169,7 +220,7 @@ export class Shootout3D {
   private arms = new THREE.Group();
   private ballRig!: THREE.Group;
   private player = new THREE.Group();
-  private playerParts: Record<string, THREE.Object3D> = {};
+  private athlete!: Athlete;
   private rackBalls: THREE.Mesh[][] = [];
   private ribbons: THREE.Texture[] = [];
   private rimMat!: THREE.MeshStandardMaterial;
@@ -203,16 +254,33 @@ export class Shootout3D {
   /** The last release, flashed on the meter for a moment so you can learn the timing. */
   private lastRelease: { held: number; target: number; green: number; at: number; error: number } | null = null;
   private greenPinged = false;
-  private flight: Leg[] = [];
+  /** Time since the last release (follow-through and reaching for the next ball). */
   private flightT = 0;
-  private legPlayed = -1;
-  private outcome: Outcome | null = null;
-  private ballNow: Ball | null = null;
-  private gradeNow: Grade | null = null;
-  /** Perfect releases in a row (Score Attack multiplier). */
+  /** Perfect releases in a row (Score Attack multiplier). Decided at release. */
   private chain = 0;
+  /** Balls in the air or rolling away. Catch and shoot: several can be live. */
+  private live: LiveBall[] = [];
+  private ballPool: THREE.Mesh[] = [];
+  /** Flights planned ahead for this spot while you aim, so release never waits on the physics. */
+  private plans = new Map<string, { plan: ShotPlan; from: V3 }>();
+  private planJob: { key: string; from: V3; gen: Generator<void, ShotPlan> } | null = null;
+  private planSpot = -1;
+  private seed = (Math.random() * 1e9) >>> 0;
+  private shotSeq = 0;
+  /** What the crowd has seen: the streak as of the last ball to land. */
+  private shownStreak = 0;
+  /** No more shots (clock out or course done); finish once the last balls land. */
+  private ending = false;
+  private replayBall: LiveBall | null = null;
+  /** Touch shooting: aiming state, the guide arc, and how long it shows (shorter on harder levels). */
+  private touch: boolean;
+  private aiming = false;
+  private aimV: V3 | null = null;
+  private guide!: THREE.Points;
+  private guideSecs: number;
+  private touchRand: () => number = Math.random;
+  private walkTime = JOG;
   private replayT = 0;
-  private hitstop = 0;
   private punch = 0;
   private shake = 0;
   private walkFrom: [number, number] = [0, 10];
@@ -229,9 +297,12 @@ export class Shootout3D {
     this.opts = opts;
     this.auto = opts.auto ?? null;
     this.level = level;
-    this.course = opts.course ?? buildCourse(moneyRack);
+    this.touch = opts.control === 'touch';
+    this.guideSecs = [0.55, 0.45, 0.38, 0.3, 0.24][level.id] ?? 0.4;
+    this.touchRand = seeded(this.seed ^ 0x5bd1e995);
+    this.course = this.touch ? [this.touchSpot(0)] : opts.course ?? buildCourse(moneyRack);
     this.max = MAX_SCORE(this.course);
-    this.clock = opts.clock ?? level.clock;
+    this.clock = opts.clock ?? (this.touch ? 60 : level.clock);
     this.clock0 = this.clock;
     this.shift = pickRelease().shift;
     this.reduced = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -323,7 +394,7 @@ export class Shootout3D {
       const L = new THREE.SpotLight(0xfff1dd, i === 4 ? 2.4 : 1.5, 45, 0.62, 0.65, 1.1);
       L.position.copy(toThree([x, y, z]));
       L.target.position.copy(toThree([x * 0.4, y * 0.7 + 1, 0]));
-      if (i === 4) { L.castShadow = true; L.shadow.mapSize.set(1024, 1024); L.shadow.bias = -0.0004; L.shadow.camera.near = 4; L.shadow.camera.far = 30; }
+      if (i === 4) { L.castShadow = true; L.shadow.mapSize.set(1024, 1024); L.shadow.bias = -0.0004; L.shadow.normalBias = 0.025; L.shadow.camera.near = 4; L.shadow.camera.far = 30; }
       s.add(L, L.target);
       // The fixture itself, glowing.
       const fix = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.25, 16), new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0xfff4e0, emissiveIntensity: 2.2 }));
@@ -376,7 +447,7 @@ export class Shootout3D {
 
     // Ball racks at each spot.
     const rackMat = new THREE.MeshStandardMaterial({ color: 0x9aa3b2, metalness: 0.85, roughness: 0.3 });
-    this.course.forEach((spot) => {
+    if (!this.touch) this.course.forEach((spot) => {
       const [x, y] = spotPosition(spot);
       const p = toThree([x * 1.1, y * 1.1, 0]);
       const rack = new THREE.Group();
@@ -402,6 +473,18 @@ export class Shootout3D {
     this.ball.castShadow = true;
     this.ball.visible = false;
     s.add(this.ball);
+    // Balls in flight: catch and shoot means a few can be up at once.
+    for (let i = 0; i < 5; i++) {
+      const m = new THREE.Mesh(this.ball.geometry, this.ballMats.regular);
+      m.castShadow = true; m.visible = false;
+      s.add(m); this.ballPool.push(m);
+    }
+    // Touch: the dotted guide showing the start of your throw.
+    const gg = new THREE.BufferGeometry();
+    gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(64 * 3), 3));
+    this.guide = new THREE.Points(gg, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, map: dotTexture(), alphaTest: 0.3, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, fog: false }));
+    this.guide.frustumCulled = false; this.guide.renderOrder = 10; this.guide.visible = false;
+    s.add(this.guide);
     this.buildArms();
     this.buildPlayer();
 
@@ -515,24 +598,15 @@ export class Shootout3D {
   }
 
   private buildPlayer(): void {
-    const skin = new THREE.MeshStandardMaterial({ color: 0x8d5a3b, roughness: 0.55 });
-    const jersey = new THREE.MeshStandardMaterial({ map: jerseyTexture(this.opts.jersey?.number ?? 30, this.opts.jersey?.colors), roughness: 0.7 });
-    const shorts = new THREE.MeshStandardMaterial({ color: this.opts.jersey?.colors[0] ?? 0x5c163a, roughness: 0.7 });
-    const shoe = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
-    const P = this.playerParts;
-    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.42, 4, 12), jersey); torso.position.y = 1.32; P.torso = torso;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), skin); head.position.y = 1.82; P.head = head;
-    const hip = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.12, 4, 12), shorts); hip.position.y = 0.98; P.hip = hip;
-    this.player.add(torso, head, hip);
-    const limb = (name: string, x: number, y: number, len: number, r: number, mat: THREE.Material, footMat?: THREE.Material) => {
-      const pivot = new THREE.Group(); pivot.position.set(x, y, 0);
-      const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 4, 10), mat); m.position.y = -len / 2 - r; pivot.add(m);
-      if (footMat) { const f = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.07, 0.24), footMat); f.position.set(0, -len - r * 2, 0.06); pivot.add(f); }
-      this.player.add(pivot); P[name] = pivot;
-    };
-    limb('legL', -0.1, 0.92, 0.72, 0.075, skin, shoe); limb('legR', 0.1, 0.92, 0.72, 0.075, skin, shoe);
-    limb('armL', -0.27, 1.55, 0.55, 0.055, skin); limb('armR', 0.27, 1.55, 0.55, 0.055, skin);
-    this.player.traverse(o => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; });
+    const j = this.opts.jersey;
+    const n = j?.number ?? 30;
+    this.athlete = new Athlete({
+      jersey: j?.colors ?? ['#5C163A', '#F5C451'],
+      number: n,
+      skin: SKINS[j ? n % SKINS.length : 0],
+      hair: HAIRS[n % HAIRS.length],
+    });
+    this.player.add(this.athlete.group);
     this.scene.add(this.player);
   }
 
@@ -623,15 +697,121 @@ export class Shootout3D {
 
   begin(): void {
     this.prepWindow();
-    this.walkFrom = [-2, 11];
+    this.walkFrom = this.touch ? [0, 9.5] : [-2, 11];
     this.enter('walk');
-    this.emitRack();
+    if (!this.touch) this.emitRack();
+  }
+
+  // ---- Touch shooting ---------------------------------------------------------
+
+  /** A random spot for touch shooting: anywhere from the paint to well beyond the arc. */
+  private touchSpot(n: number): Spot {
+    const r = this.touchRand;
+    const angle = (r() * 2 - 1) * 78;
+    const dist = 3.6 + r() * 5.4;
+    const three = dist >= (Math.abs(angle) > 68 ? 6.7 : 7.24);
+    const money = n > 0 && r() < 0.16;
+    return { id: `t${n}`, label: `${dist.toFixed(1)}m · ${three ? 3 : 2}PT${money ? ' · MONEY' : ''}`, angle, dist, balls: [{ kind: money ? 'money' : 'regular', points: (three ? 3 : 2) * (money ? 2 : 1) }] };
+  }
+
+  /** Point to aim (screen coords -1..1). Press shows the guide, moving adjusts it, letting go throws. */
+  aimStart(nx: number, ny: number): void {
+    if (!this.touch || this.phase !== 'aim' || this.ending) return;
+    this.aiming = true;
+    this.aimMove(nx, ny);
+  }
+
+  aimMove(nx: number, ny: number): void {
+    if (!this.aiming) return;
+    this.aimV = this.touchVelocity(nx, ny);
+    const pos = this.guide.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const pts = this.aimV ? previewArc(this.handPoint(), this.aimV, [0, 0, 0], this.guideSecs, 0.035) : [];
+    for (let i = 0; i < pos.count; i++) {
+      const p = pts[i];
+      if (p) { const t = toThree(p); pos.setXYZ(i, t.x, t.y, t.z); } else pos.setXYZ(i, 0, -100, 0);
+    }
+    pos.needsUpdate = true;
+    this.guide.visible = pts.length > 0;
+  }
+
+  aimEnd(nx: number, ny: number): void {
+    if (!this.aiming) return;
+    this.aimMove(nx, ny);
+    this.aiming = false;
+    this.guide.visible = false;
+    if (this.aimV && this.phase === 'aim' && !this.ending) this.throwBall(this.aimV);
+  }
+
+  aimCancel(): void { this.aiming = false; this.guide.visible = false; }
+
+  /** Where the ball leaves the hands in touch mode (overhead, a little in front). */
+  private handPoint(): V3 { return [this.ball.position.x, this.ball.position.z, this.ball.position.y]; }
+
+  /**
+   * The throw for a pointer position: the pointer is projected onto the
+   * upright plane through the ball and the rim, and the ball is thrown
+   * toward that point, faster the further away it is.
+   */
+  private touchVelocity(nx: number, ny: number): V3 | null {
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(nx, ny), this.camera);
+    const b = this.handPoint();
+    const d = Math.hypot(b[0], b[1]) || 1;
+    const n = new THREE.Vector3(-b[1] / d, 0, b[0] / d); // plane normal (three space: x, up, z = game y)
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(n, toThree(b));
+    const hit = ray.ray.intersectPlane(plane, new THREE.Vector3());
+    if (!hit) return null;
+    const p: V3 = [hit.x, hit.z, hit.y];
+    const POWER = 3.1, MAX = 13.5;
+    let v: V3 = [(p[0] - b[0]) * POWER, (p[1] - b[1]) * POWER, (p[2] - b[2]) * POWER];
+    const sp = Math.hypot(v[0], v[1], v[2]);
+    if (sp < 2.5 || v[2] < 0.5) return null;
+    if (sp > MAX) v = [v[0] * MAX / sp, v[1] * MAX / sp, v[2] * MAX / sp];
+    return v;
+  }
+
+  /** Throw exactly as aimed: the physics decides make or miss. */
+  private throwBall(v: V3): void {
+    const ball = this.spot.balls[0];
+    const from = this.handPoint();
+    const l = Math.hypot(v[0], v[1]) || 1;
+    const w: V3 = [-(v[1] / l) * 15, (v[0] / l) * 15, 0]; // backspin
+    const shot = simulateLaunch(from, v, w);
+    const swish = shot.outcome === 'swish';
+    const points = shot.made ? ball.points + (swish ? 1 : 0) + (shot.bank ? 1 : 0) : 0;
+    this.chain = shot.made && swish ? this.chain + 1 : 0;
+    this.streak = shot.made ? this.streak + 1 : 0;
+    this.bestStreak = Math.max(this.bestStreak, this.streak);
+    if (shot.made) this.makes++;
+    this.shots++;
+    const mesh = this.ballPool.find(m => !m.visible) ?? this.ballPool[0];
+    mesh.material = this.ballMats[ball.kind];
+    mesh.visible = true; mesh.scale.setScalar(1);
+    this.live.push({
+      mesh, plan: shot, t: 0, pos: [...from], offset: [0, 0, 0], kind: ball.kind, outcome: shot.outcome, points,
+      perfect: swish, chain: this.chain, streakAfter: this.streak, bank: shot.bank, nextEvent: 0, resolved: false,
+    });
+    if (this.live.length > this.ballPool.length) this.live.shift();
+    this.replayBall = this.live[this.live.length - 1];
+    this.enter('flight'); this.flightT = 0;
+  }
+
+  /** On to a fresh random spot: a quick jog while the last ball is still up. */
+  private nextTouchSpot(): void {
+    this.walkFrom = spotPosition(this.spot);
+    this.course.push(this.touchSpot(this.course.length));
+    this.spotIdx++; this.ballIdx = 0;
+    const [x, y] = spotPosition(this.spot);
+    this.walkTime = Math.max(0.55, Math.min(1.2, Math.hypot(x - this.walkFrom[0], y - this.walkFrom[1]) / 6));
+    this.prepWindow();
+    this.enter('walk');
   }
 
   /** Start the jump. `at` is the input event's timeStamp, for frame-accurate timing. */
   press(at?: number): void {
-    if (this.auto) return;
+    if (this.auto || this.touch) return;
     if (this.phase === 'replay') { this.endReplay(); return; }
+    if (this.ending) return;
     if (this.phase !== 'aim') return;
     this.phase = 'hold'; this.holdT = 0; this.greenPinged = false;
     this.holdClock.start(at);
@@ -644,6 +824,17 @@ export class Shootout3D {
     this.shoot();
   }
 
+  /**
+   * The touch was taken away mid-jump (an iOS system gesture): land without
+   * shooting rather than firing a shot the player didn't choose.
+   */
+  cancel(): void {
+    if (this.phase !== 'hold' || this.auto) return;
+    this.holdClock.stop();
+    this.holdT = 0;
+    this.enter('aim');
+  }
+
   /** Autopilot only: jump to the end of the rival's run (same result as watching it). */
   skip(): void {
     const run = this.auto;
@@ -652,13 +843,15 @@ export class Shootout3D {
     this.makes = run.shots.filter(s => s.points > 0).length;
     this.shots = run.shots.length;
     this.clock = this.clock0 - run.end;
+    this.live.forEach(b => { b.mesh.visible = false; });
+    this.live = [];
     this.finish();
   }
 
   get spot(): Spot { return this.course[this.spotIdx]; }
 
   hud() {
-    return { elapsed: this.clock0 - Math.max(0, this.clock), score: this.score, time: Math.max(0, this.clock), spot: this.spot?.label ?? '', streak: this.streak, phase: this.phase, fade: this.fade, max: this.max, level: this.level.name };
+    return { elapsed: this.clock0 - Math.max(0, this.clock), score: this.score, time: Math.max(0, this.clock), spot: this.spot?.label ?? '', streak: this.shownStreak, phase: this.phase, fade: this.fade, max: this.max, level: this.level.name };
   }
 
   rackState(): Array<{ kind: Ball['kind']; state: 'done' | 'now' | 'left' }> {
@@ -673,7 +866,7 @@ export class Shootout3D {
    * each release (where you let go against the green), then fades.
    */
   meterView(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number } {
-    if (this.auto) return { mode: 'off', hold: 0, target: 1, green: 0, error: 0, age: 0 };
+    if (this.auto || this.touch) return { mode: 'off', hold: 0, target: 1, green: 0, error: 0, age: 0 };
     const green = this.win.green * fireBoost(this.streak);
     if (this.shots === 0 && (this.phase === 'aim' || this.phase === 'hold')) return { mode: 'live', hold: this.holdT, target: this.target, green, error: 0, age: 0 };
     const r = this.lastRelease, age = r ? this.time - r.at : 99;
@@ -694,8 +887,7 @@ export class Shootout3D {
   private frame(real: number): void {
     this.simMs += real * 1000;
     if (this.auto) real *= this.opts.speed ?? 1;
-    // Hitstop freezes the action for a beat on a swish; replays run slow.
-    if (this.hitstop > 0) { this.hitstop -= real; this.render(real); return; }
+    // Replays run slow.
     const scale = this.phase === 'replay' ? 0.32 : 1;
     const dt = real * scale;
     this.time += real;
@@ -711,12 +903,12 @@ export class Shootout3D {
       const sec = Math.ceil(this.clock);
       if (this.clock <= 5 && sec !== this.lastTick && sec > 0) { this.lastTick = sec; sfx.playTick(); }
       if (this.clock <= 10 && !this.sentFinal) { this.sentFinal = true; this.cb.onEvent?.({ type: 'final10' }); }
-      if (this.clock <= 0 && this.phase !== 'flight' && !this.auto) { this.finish(); }
+      if (this.clock <= 0 && !this.auto && !this.ending) this.timeUp();
     }
-    if (this.phase === 'walk' && this.phaseT > 1.6) { this.enter('aim'); this.fade = 1; this.cb.onEvent?.({ type: 'ball', kind: this.spot.balls[this.ballIdx].kind }); }
+    if (this.phase === 'walk' && this.phaseT > (this.touch ? this.walkTime : JOG)) { this.enter('aim'); this.fade = this.touch ? 0 : 1; this.cb.onEvent?.({ type: 'ball', kind: this.spot.balls[this.ballIdx].kind }); }
     if (this.auto && this.phase === 'aim') {
       const next = this.auto.shots[this.autoIdx];
-      if (!next || next.spotIdx !== this.spotIdx || next.ballIdx !== this.ballIdx) { this.finish(); }
+      if (!next || next.spotIdx !== this.spotIdx || next.ballIdx !== this.ballIdx) { this.ending = true; this.enter('wait'); }
       else if (this.phaseT >= this.auto.rival.gather) { this.phase = 'hold'; this.holdT = 0; this.greenPinged = true; }
     }
     if (this.auto && this.phase === 'hold') {
@@ -730,110 +922,171 @@ export class Shootout3D {
       if (!this.greenPinged && this.shots === 0 && this.holdT >= this.target - (green * fireBoost(this.streak)) / 2) { this.greenPinged = true; sfx.playGreen(); }
       if (this.holdT > Math.max(this.target, this.win.rise) * 1.45) { this.holdT = this.holdClock.stop(); this.shoot(); }
     }
-    if (this.phase === 'flight' || this.phase === 'replay') this.stepFlight(dt);
+    // Catch and shoot: the next ball comes as soon as you've followed through and reached for it.
+    if (this.phase === 'flight') { this.flightT += dt; if (this.phaseT >= (this.touch ? 0.45 : RELOAD)) this.nextBall(); }
+    if (this.phase === 'replay') this.stepReplay(dt);
+    else this.stepBalls(dt);
+    this.pumpPlans();
+    if (this.phase === 'wait' && this.phaseT > 0.5 && this.live.every(b => b.resolved)) this.wrapUp();
     this.fade = Math.max(0, this.fade - real * 3.2);
     this.punch = Math.max(0, this.punch - real * 2.5);
     this.shake = Math.max(0, this.shake - real * 3);
     this.render(real);
   }
 
-  private stepFlight(dt: number): void {
-    const t = this.phase === 'replay' ? (this.replayT += dt) : (this.flightT += dt);
-    let acc = 0;
-    for (let i = 0; i < this.flight.length; i++) {
-      if (t >= acc && i > this.legPlayed) {
-        this.legPlayed = i;
-        const snd = this.flight[i].sound;
-        if (snd === 'rim') sfx.playRim();
-        if (snd === 'board') sfx.playBoard();
-        if (snd === 'bounce') sfx.playBounce();
-        if (snd === 'swish') {
-          sfx.playSwish(this.ballNow?.points);
-          if (this.phase === 'flight') this.celebrate();
-          else this.burst();
-        }
-      }
-      acc += this.flight[i].dur;
-    }
-    if (t > acc + 0.15) {
-      if (this.phase === 'replay') this.endReplay();
-      else this.afterShot();
-    }
-  }
-
-  private ballPos(t: number): V3 {
-    let acc = 0;
-    for (const leg of this.flight) {
-      if (t <= acc + leg.dur) return legAt(leg, Math.max(0, (t - acc) / leg.dur));
-      acc += leg.dur;
-    }
-    const last = this.flight[this.flight.length - 1];
-    return last ? last.b : [0, 0, 0];
+  /** The clock ran out. A ball already released still counts; one in your hands doesn't. */
+  private timeUp(): void {
+    if (this.phase === 'hold' || this.aiming) { this.holdClock.stop(); this.aimCancel(); this.cb.onEvent?.({ type: 'time' }); }
+    this.ending = true;
+    this.enter('wait');
   }
 
   private shoot(): void {
     const ball = this.spot.balls[this.ballIdx];
     const windowW = this.win.green * fireBoost(this.streak);
     const planned = this.auto?.shots[this.autoIdx];
-    let grade: Grade, error: number;
+    let grade: Grade, error: number, outcome: Outcome;
     if (planned) {
-      grade = planned.grade; error = planned.error; this.outcome = planned.outcome;
+      grade = planned.grade; error = planned.error; outcome = planned.outcome;
       this.autoIdx++;
       this.clock = this.clock0 - planned.t;
     } else {
       ({ grade, error } = judge(this.holdT, this.target, windowW));
       this.lastRelease = { held: this.holdT, target: this.target, green: windowW, at: this.time, error };
-      this.outcome = resolveShot(grade);
+      outcome = resolveShot(grade);
     }
-    this.ballNow = ball;
-    this.gradeNow = grade;
-    this.ball.material = this.ballMats[ball.kind];
-    // The ball leaves from the hands, wherever the jump put them.
+    // The rules decide the shot now; the score and the crowd wait until the ball gets there.
+    const made = isMake(outcome);
+    const perfect = made && grade === 'perfect';
+    this.chain = perfect ? this.chain + 1 : 0;
+    this.streak = made ? this.streak + 1 : 0;
+    this.bestStreak = Math.max(this.bestStreak, this.streak);
+    const points = made ? shotPoints(this.opts.scoring ?? 'classic', ball, true, perfect, this.chain) : 0;
+    if (made) this.makes++;
+    this.shots++;
+
+    // The ball leaves from the hands, wherever the jump put them. Early comes up short, late goes long.
     const hand = new THREE.Vector3();
     if (this.auto) hand.copy(this.ball.position);
     else this.heldBall.getWorldPosition(hand);
     const from: V3 = [hand.x, hand.z, hand.y];
-    this.flight = planFlight(from, this.outcome, Math.random() < 0.5 ? -1 : 1);
-    this.flightT = 0; this.legPlayed = 0;
-    this.shots++;
+    const side = outcome === 'airball' ? -1 : outcome === 'swish' ? 1 : error < 0 ? -1 : 1;
+    const plan = this.takePlan(outcome, side, from);
+    const mesh = this.ballPool.find(m => !m.visible) ?? this.ballPool[0];
+    mesh.material = this.ballMats[ball.kind];
+    mesh.visible = true; mesh.scale.setScalar(1);
+    const start = plan.samples[0].p;
+    this.live.push({
+      mesh, plan, t: 0, pos: [...from], offset: [from[0] - start[0], from[1] - start[1], from[2] - start[2]],
+      kind: ball.kind, outcome, points, perfect, chain: this.chain, streakAfter: this.streak, nextEvent: 0, resolved: false,
+    });
+    if (this.live.length > this.ballPool.length) this.live.shift();
+    this.replayBall = this.live[this.live.length - 1];
     this.cb.onEvent?.({ type: 'grade', grade, error, window: windowW });
-    this.enter('flight');
-    if (!isMake(this.outcome)) {
-      this.streak = 0;
-      this.rimMat.emissive.setHex(0x000000);
-      this.chain = 0;
-      this.cb.onEvent?.({ type: 'miss', outcome: this.outcome });
-    }
+    this.enter('flight'); this.flightT = 0;
     // That ball leaves the rack.
     const rb = this.rackBalls[this.spotIdx]?.[this.ballIdx];
     if (rb) rb.visible = false;
   }
 
-  private celebrate(): void {
-    if (!this.outcome || !isMake(this.outcome) || !this.ballNow) return;
-    const perfect = this.gradeNow === 'perfect';
-    this.chain = perfect ? this.chain + 1 : 0;
-    const pts = shotPoints(this.opts.scoring ?? 'classic', this.ballNow, true, perfect, this.chain);
-    this.score += pts; this.makes++; this.streak++;
-    this.bestStreak = Math.max(this.bestStreak, this.streak);
-    if (this.streak === 3) { this.cb.onEvent?.({ type: 'fire' }); this.rimMat.emissive.setHex(0x5a1a00); }
-    this.cb.onEvent?.({ type: 'make', points: pts, outcome: this.outcome, streak: this.streak, perfect, chain: this.chain, mult: perfect ? perfectMultiplier(this.chain) : 1 });
-    const big = this.ballNow.points > 1 || perfect || this.streak >= 3;
-    this.crowd.cheer(this.ballNow.points + (perfect ? 1 : 0) + (this.streak >= 3 ? 1 : 0));
-    if (this.outcome === 'swish' && !this.reduced && !this.auto) this.hitstop = 0.07;
-    this.punch = big ? 1 : 0.5;
-    if (!this.reduced) this.shake = big ? 0.6 : 0.25;
-    try { navigator.vibrate?.(big ? [20, 40, 30] : 18); } catch { /* not supported */ }
-    this.burst();
+  /** Where the ball will leave the hands at this spot, for planning ahead. */
+  private releasePoint(): V3 {
+    const [px, py] = spotPosition(this.spot);
+    const d = Math.hypot(px, py) || 1, ux = px / d, uy = py / d;
+    return this.auto ? [px - ux * 0.25, py - uy * 0.25, 2.95] : [px * 1.04 - ux * 0.6, py * 1.04 - uy * 0.6, 2.2];
   }
 
-  private burst(): void {
-    const pts = this.ballNow?.points ?? 1;
+  /** A planned flight for this outcome: from the cache if one was made while aiming, else now. */
+  private takePlan(outcome: Outcome, side: number, from: V3): ShotPlan {
+    const key = `${outcome}:${side}`;
+    const ready = this.plans.get(key);
+    if (ready && Math.hypot(ready.from[0] - from[0], ready.from[1] - from[1], ready.from[2] - from[2]) < 0.6) {
+      this.plans.delete(key); // plan a fresh one for next time, so no two shots look the same
+      return ready.plan;
+    }
+    return planShot(from, outcome, side, seeded(this.seed + this.shotSeq++));
+  }
+
+  /**
+   * Plan flights for this spot a little at a time (about 1.5ms a frame), so a
+   * release never stalls. Never while you're holding: that's when a dropped
+   * frame would hurt.
+   */
+  private pumpPlans(): void {
+    if (this.touch || this.ending || this.phase === 'done' || this.phase === 'replay' || this.phase === 'hold' || !this.spot) return;
+    if (this.planSpot !== this.spotIdx) { this.plans.clear(); this.planJob = null; this.planSpot = this.spotIdx; }
+    const t0 = performance.now();
+    while (performance.now() - t0 < 1.5) {
+      if (!this.planJob) {
+        const key = PLAN_KEYS.find(k => !this.plans.has(k));
+        if (!key) return;
+        const [o, sd] = key.split(':');
+        const from = this.releasePoint();
+        this.planJob = { key, from, gen: planShotSteps(from, o as Outcome, Number(sd), seeded(this.seed + this.shotSeq++)) };
+      }
+      const r = this.planJob.gen.next();
+      if (r.done) { this.plans.set(this.planJob.key, { plan: r.value, from: this.planJob.from }); this.planJob = null; }
+    }
+  }
+
+  /** Move every live ball along its flight: sounds on contact, the score when it drops. */
+  private stepBalls(dt: number): void {
+    for (let i = 0; i < this.live.length; i++) {
+      const b = this.live[i];
+      b.t += dt;
+      const smp = sampleAt(b.plan.samples, b.t);
+      const f = Math.max(0, 1 - b.t / 0.15);
+      b.pos = [smp.p[0] + b.offset[0] * f, smp.p[1] + b.offset[1] * f, smp.p[2] + b.offset[2] * f];
+      b.mesh.position.copy(toThree(b.pos));
+      spin(b.mesh, smp.w, dt);
+      // Fade the ball out at the very end of its recorded flight (it's rolled away by then).
+      b.mesh.scale.setScalar(Math.max(0.001, Math.min(1, (b.plan.duration - b.t) / 0.3)));
+      while (b.nextEvent < b.plan.events.length && b.plan.events[b.nextEvent].t <= b.t) {
+        const e = b.plan.events[b.nextEvent++];
+        if (e.kind === 'rim') sfx.playRim(Math.min(1, 0.35 + e.speed / 5));
+        else if (e.kind === 'board' || e.kind === 'stanchion') sfx.playBoard();
+        else if (e.kind === 'floor' && e.speed > 0.8) sfx.playBounce();
+        else if (e.kind === 'through') sfx.playSwish(b.points > 0 ? Math.max(1, Math.round(b.points / (this.opts.scoring === 'attack' ? 100 : 1))) : 1);
+      }
+      // Shots are announced in the order they were taken.
+      if (!b.resolved && b.t >= b.plan.resolvedAt && this.live.slice(0, i).every(p => p.resolved)) this.resolve(b);
+    }
+    // Retire balls that have finished their flight.
+    this.live = this.live.filter(b => {
+      if (b.t < b.plan.duration || !b.resolved) return true;
+      b.mesh.visible = false;
+      return false;
+    });
+  }
+
+  /** A ball's result reaches the crowd: points, streak, callouts. */
+  private resolve(b: LiveBall): void {
+    b.resolved = true;
+    this.shownStreak = b.streakAfter;
+    if (!isMake(b.outcome)) {
+      this.rimMat.emissive.setHex(0x000000);
+      this.cb.onEvent?.({ type: 'miss', outcome: b.outcome });
+      return;
+    }
+    this.score += b.points;
+    if (this.clock <= 0 && !this.auto) this.cb.onEvent?.({ type: 'buzzer' });
+    if (b.streakAfter === 3) { this.cb.onEvent?.({ type: 'fire' }); this.rimMat.emissive.setHex(0x5a1a00); }
+    this.cb.onEvent?.({ type: 'make', points: b.points, outcome: b.outcome, streak: b.streakAfter, perfect: b.perfect, chain: b.chain, mult: b.perfect ? perfectMultiplier(b.chain) : 1, kind: b.kind, bank: b.bank });
+    const value = b.kind === 'starry' ? 3 : b.kind === 'money' ? 2 : 1;
+    const big = value > 1 || b.perfect || b.streakAfter >= 3;
+    this.crowd.cheer(value + (b.perfect ? 1 : 0) + (b.streakAfter >= 3 ? 1 : 0));
+    this.punch = big ? 1 : 0.5;
+    if (!this.reduced) this.shake = big ? 0.5 : 0.2;
+    try { navigator.vibrate?.(big ? [20, 40, 30] : 18); } catch { /* not supported */ }
+    this.burst(value, b.streakAfter);
+  }
+
+  private burst(pts: number, streak: number): void {
     const palette = pts === 3 ? [0xe0e7ff, 0xa5b4fc, 0xffffff] : pts === 2 ? [0xf472b6, 0xf5c451, 0xffffff] : [0xf5c451, 0xffffff, 0xfb923c];
     const pos = this.confetti.geometry.getAttribute('position') as THREE.BufferAttribute;
     const col = this.confetti.geometry.getAttribute('color') as THREE.BufferAttribute;
     const c = new THREE.Color();
-    const n = pts > 1 || this.streak >= 3 ? 400 : 180;
+    const n = pts > 1 || streak >= 3 ? 400 : 180;
     for (let i = 0; i < n; i++) {
       const p = toThree([0, 0, RIM_HEIGHT]);
       pos.setXYZ(i, p.x, p.y, p.z);
@@ -845,33 +1098,40 @@ export class Shootout3D {
     pos.needsUpdate = true; col.needsUpdate = true;
   }
 
-  /** After a shot lands: a replay for the big ones, else on to the next ball. */
-  private afterShot(): void {
-    const big = this.outcome && isMake(this.outcome) && this.ballNow && (this.ballNow.points >= 2 || this.isLastBall());
-    if (big && !this.reduced && !this.auto) {
-      this.enter('replay'); this.replayT = 0; this.legPlayed = 0; this.fade = 1;
+  /** Everything has landed: show the last make again in slow motion, then the horn. */
+  private wrapUp(): void {
+    const last = this.replayBall;
+    if (last && isMake(last.outcome) && !this.reduced && !this.auto) {
+      this.enter('replay'); this.replayT = Math.max(0, last.plan.resolvedAt - 1.1); this.fade = 1;
       this.cb.onEvent?.({ type: 'replay', on: true });
       return;
     }
-    this.nextBall();
+    this.finish();
+  }
+
+  private stepReplay(dt: number): void {
+    const b = this.replayBall;
+    if (!b) { this.finish(); return; }
+    const before = this.replayT;
+    this.replayT += dt;
+    const through = b.plan.events.find(e => e.kind === 'through');
+    if (through && before < through.t && this.replayT >= through.t) { sfx.playSwish(); this.burst(b.kind === 'starry' ? 3 : b.kind === 'money' ? 2 : 1, 0); }
+    if (this.replayT > b.plan.resolvedAt + 0.7) this.endReplay();
   }
 
   private endReplay(): void {
     this.cb.onEvent?.({ type: 'replay', on: false });
     this.fade = 1;
-    this.nextBall();
-  }
-
-  private isLastBall(): boolean {
-    return this.spotIdx === this.course.length - 1 && this.ballIdx === this.spot.balls.length - 1;
+    this.finish();
   }
 
   private nextBall(): void {
+    if (this.touch) { this.nextTouchSpot(); return; }
     this.ballIdx++;
     if (this.ballIdx >= this.spot.balls.length) {
       this.walkFrom = spotPosition(this.spot);
       this.spotIdx++; this.ballIdx = 0;
-      if (this.spotIdx >= this.course.length) { this.finish(); return; }
+      if (this.spotIdx >= this.course.length) { this.ending = true; this.enter('wait'); return; }
       this.prepWindow();
       this.enter('walk'); this.fade = 1;
       this.emitRack();
@@ -907,29 +1167,35 @@ export class Shootout3D {
     this.ribbons.forEach((tex, i) => { tex.offset.x = (tex.offset.x + real * (0.05 + i * 0.01)) % 1; });
     if (Math.floor(t * 10) !== Math.floor((t - real) * 10)) this.scoreboards.draw(this.score, Math.max(0, this.clock), this.spot?.label ?? 'Final');
 
-    // The ball in flight (or replay), its spin, and the net reacting to it.
-    const flying = this.phase === 'flight' || this.phase === 'replay';
-    const bp = flying ? this.ballPos(this.phase === 'replay' ? this.replayT : this.flightT) : null;
-    this.ball.visible = !!bp;
-    if (bp) { this.ball.position.copy(toThree(bp)); this.ball.rotation.x -= real * 14 * (this.phase === 'replay' ? 0.32 : 1); }
-    if (this.auto && !bp && (this.phase === 'aim' || this.phase === 'hold')) {
-      // The rival's ball: at the chest while gathering, overhead in the jump.
-      const pp = this.player.position;
-      const j = this.phase === 'hold' ? Math.min(1, this.holdT / this.win.rise) : 0;
-      this.ball.visible = true;
-      this.ball.material = this.ballMats[this.spot.balls[this.ballIdx]?.kind ?? 'regular'];
-      // Out in front of the body, toward the rim.
-      const d = Math.hypot(pp.x, pp.z) || 1, out = 0.32 - j * 0.12;
-      this.ball.position.set(pp.x - (pp.x / d) * out, pp.y + 1.3 + j * 1.15, pp.z - (pp.z / d) * out);
+    // The replay ball (slow motion), the live balls, and the net reacting to whichever is at the rim.
+    let bp: V3 | null = null;
+    if (this.phase === 'replay' && this.replayBall) {
+      const smp = sampleAt(this.replayBall.plan.samples, this.replayT);
+      bp = smp.p;
+      this.ball.material = this.ballMats[this.replayBall.kind];
+      this.ball.position.copy(toThree(bp));
+      spin(this.ball, smp.w, real * 0.32);
+      this.live.forEach(b => { b.mesh.visible = false; });
     }
-    this.net.step(real * (this.phase === 'replay' ? 0.32 : 1), bp, BALL_R, 0);
+    this.ball.visible = !!bp;
+    let atRim = bp, best = 1.2;
+    for (const b of this.live) {
+      const d = Math.hypot(b.pos[0], b.pos[1], b.pos[2] - RIM_HEIGHT);
+      if (d < best) { best = d; atRim = b.pos; }
+    }
+    this.net.step(real * (this.phase === 'replay' ? 0.32 : 1), atRim, BALL_R, 0);
     this.stepConfetti(real);
-    this.stepFlames(bp);
+    const newest = this.live[this.live.length - 1];
+    this.stepFlames(bp ?? (newest && !newest.resolved ? newest.pos : null));
 
     // Arms and held ball: first person only.
-    const fp = !this.auto && (this.phase === 'aim' || this.phase === 'hold');
-    this.arms.visible = fp || (!this.auto && this.phase === 'flight' && this.flightT < 0.25);
-    this.heldBall.visible = fp;
+    const fp = !this.auto && !this.touch && (this.phase === 'aim' || this.phase === 'hold');
+    const reloading = !this.auto && !this.touch && this.phase === 'flight';
+    // Last ball at this rack: no next ball to grab here (you jog to the next one).
+    const lastHere = !this.spot || this.ballIdx >= this.spot.balls.length - 1;
+    const r = Math.min(1, this.phaseT / RELOAD);
+    this.arms.visible = fp || reloading;
+    this.heldBall.visible = fp || (reloading && !lastHere && r > 0.6);
     this.ballRig.rotation.set(0, 0, 0);
     if (fp) {
       this.heldBall.material = this.ballMats[this.spot.balls[this.ballIdx]?.kind ?? 'regular'];
@@ -940,14 +1206,32 @@ export class Shootout3D {
       this.arms.position.set(0.035 * j, -0.26 + j * 0.17 + bob, -0.6 - j * 0.06);
       this.arms.rotation.set(-0.1 + j * 0.35, 0, -0.05 * j);
       this.heldBall.rotation.y = 0.4;
-    } else if (this.phase === 'flight') {
-      // Follow-through: hands snap up and out as the ball leaves.
-      const k = Math.min(1, this.flightT / 0.12);
-      this.arms.position.set(0.05, -0.09 + k * 0.12, -0.68);
-      this.arms.rotation.x = 0.25 + k * 0.5;
+    } else if (reloading) {
+      // Follow-through: hands snap up and out as the ball leaves...
+      const k = Math.min(1, this.phaseT / 0.12);
+      const ftY = -0.09 + k * 0.12, ftRot = 0.25 + k * 0.5;
+      if (r < 0.35) {
+        this.arms.position.set(0.05, ftY, -0.68);
+        this.arms.rotation.set(ftRot, 0, 0);
+      } else {
+        // ...then drop to the rack and come back up with the next ball, in one smooth move.
+        const u = ease((r - 0.35) / 0.65);
+        const dip = Math.sin(u * Math.PI) * (lastHere ? 0.9 : 0.34);
+        const toY = lastHere ? -0.9 : -0.26;
+        this.arms.position.set(lerp(0.05, 0, u) + dip * 0.35, lerp(ftY, toY, u) - dip, lerp(-0.68, -0.6, u));
+        this.arms.rotation.set(lerp(ftRot, -0.1, u), 0, 0);
+        if (!lastHere) this.heldBall.material = this.ballMats[this.spot.balls[this.ballIdx + 1].kind];
+      }
     }
 
     this.updatePlayer(t);
+    // The ball in the shooter's hands (rivals and Street), between the athlete's palms.
+    const touchHolding = this.touch && (this.phase === 'aim' || this.phase === 'walk');
+    if (!bp && ((this.auto && (this.phase === 'aim' || this.phase === 'hold')) || touchHolding)) {
+      this.ball.visible = true;
+      this.ball.material = this.ballMats[this.spot.balls[this.ballIdx]?.kind ?? 'regular'];
+      this.athlete.ballCenter(this.ball.position);
+    }
     this.updateCamera(real);
     if (!this.renderer.shadowMap.autoUpdate && this.perf.frame % 3 === 0) this.renderer.shadowMap.needsUpdate = true;
     if (!this.noDraw) this.composer.render();
@@ -967,7 +1251,7 @@ export class Shootout3D {
 
   private stepFlames(bp: V3 | null): void {
     const pos = this.flames.geometry.getAttribute('position') as THREE.BufferAttribute;
-    const on = this.streak >= 3 && !!bp;
+    const on = this.shownStreak >= 3 && !!bp;
     for (let i = 0; i < pos.count; i++) {
       if (!on) { pos.setXYZ(i, 0, -100, 0); continue; }
       const p = toThree(bp!);
@@ -979,39 +1263,67 @@ export class Shootout3D {
 
   /** The shooter, seen from the broadcast camera: jogs to the next rack, then turns to the hoop. */
   private updatePlayer(t: number): void {
-    const show = this.phase === 'walk' || this.phase === 'done' || (!!this.auto && this.phase !== 'replay');
+    const show = this.phase === 'walk' || this.phase === 'done' || ((!!this.auto || this.touch) && this.phase !== 'replay');
     this.player.visible = show;
     if (!show) return;
     const to = spotPosition(this.spot ?? this.course[this.course.length - 1]);
-    const u = this.phase === 'walk' ? ease(Math.min(1, this.phaseT / 1.3)) : 1;
+    const u = this.phase === 'walk' ? ease(Math.min(1, this.phaseT / (this.touch ? this.walkTime * 0.85 : 1.3))) : 1;
     const x = lerp(this.walkFrom[0], to[0], u), y = lerp(this.walkFrom[1], to[1], u);
     this.player.position.copy(toThree([x, y, 0]));
     const moving = this.phase === 'walk' && u < 1;
     const dir = moving ? Math.atan2(to[0] - this.walkFrom[0], to[1] - this.walkFrom[1]) : Math.atan2(-x, -y);
     this.player.rotation.y = dir;
-    const P = this.playerParts, sw = moving ? Math.sin(t * 13) * 0.7 : 0;
-    P.legL.rotation.x = sw; P.legR.rotation.x = -sw; P.armL.rotation.x = -sw * 0.8; P.armR.rotation.x = sw * 0.8;
-    if (this.phase === 'done') { P.armL.rotation.x = P.armR.rotation.x = -2.9 + Math.sin(t * 6) * 0.15; }
-    this.player.position.y = moving ? Math.abs(Math.sin(t * 13)) * 0.05 : 0;
-    if (this.auto) {
-      // A rival's jumper: dip and gather, rise with the ball overhead, follow through, land.
+    this.player.position.y = 0;
+    const pose = { run: moving ? 1 : 0, stride: t * 11, crouch: 0, set: 0, release: 0, carry: this.touch ? 1 : 0, celebrate: this.phase === 'done' ? 1 : 0, t };
+    if (moving) this.player.position.y = Math.abs(Math.sin(t * 11)) * 0.04;
+    if (this.touch && !moving && this.phase !== 'done') {
+      // Street: ball up at the set point while aiming; a hop and follow-through on the throw.
+      const ft = this.phase === 'flight' ? Math.min(1, this.flightT / 0.12) : 0;
+      this.player.position.y = this.phase === 'flight' ? Math.sin(Math.min(1, this.flightT / 0.4) * Math.PI) * 0.22 : 0;
+      pose.set = 1; pose.release = this.phase === 'flight' ? ft * Math.max(0, 1 - (this.flightT - 0.3) / 0.2) : 0;
+      if (this.aiming) pose.crouch = 0.15;
+    }
+    if (this.auto && !moving && this.phase !== 'done') {
+      // A rival's jumper: dip and gather at the chest, rise to the set point, release and flick, land.
       const rise = this.win.rise;
+      const gather = this.phase === 'aim' ? Math.min(1, this.phaseT / Math.max(0.1, this.auto.rival.gather)) : 1;
       const j = this.phase === 'hold' ? Math.sin(Math.min(1, this.holdT / rise) * Math.PI * 0.5)
         : this.phase === 'flight' ? Math.max(0, Math.cos(Math.min(1, this.flightT / 0.45) * Math.PI * 0.5)) : 0;
-      const dip = this.phase === 'aim' ? Math.sin(Math.min(1, this.phaseT / Math.max(0.1, this.auto.rival.gather)) * Math.PI) * 0.08 : 0;
-      this.player.position.y = j * 0.5 - dip;
-      if (this.phase === 'aim' || this.phase === 'hold' || this.phase === 'flight') {
-        const up = this.phase === 'aim' ? -1.2 : -2.6 - (this.phase === 'flight' ? 0.3 : 0);
-        P.armL.rotation.x = up; P.armR.rotation.x = up - 0.1;
-        P.legL.rotation.x = P.legR.rotation.x = dip * 2;
-      }
+      this.player.position.y = j * 0.5;
+      pose.carry = 1;
+      pose.crouch = this.phase === 'aim' ? Math.sin(gather * Math.PI) * 0.45 : this.phase === 'flight' ? Math.max(0, 1 - this.flightT / 0.5) * (this.flightT > 0.35 ? 0.3 : 0) : 0;
+      pose.set = this.phase === 'hold' ? Math.min(1, this.holdT / (rise * 0.7)) : this.phase === 'flight' ? 1 : 0;
+      pose.release = this.phase === 'flight' ? Math.min(1, this.flightT / 0.12) * Math.max(0, 1 - Math.max(0, this.flightT - 0.4) / 0.25) : 0;
+      if (this.phase === 'flight' && this.flightT > 0.4) { pose.set = Math.max(0, 1 - (this.flightT - 0.4) / 0.25); pose.carry = pose.set; }
     }
+    this.athlete.pose(pose);
   }
 
   private updateCamera(real: number): void {
     let pos: THREE.Vector3, look: THREE.Vector3, fov: number;
     const k = 1 - Math.pow(0.0015, real); // smooth follow
-    if (this.phase === 'walk' || this.phase === 'done' || (this.auto && this.phase !== 'replay')) {
+    if (this.touch && this.phase !== 'replay') {
+      // Side-on to the shot: shooter on one side of the frame, hoop on the other, so you can read the whole arc.
+      const pp = this.player.position;
+      const bx = pp.x, by = pp.z, d = Math.hypot(bx, by) || 1;
+      let nx = -by / d, ny = bx / d;
+      if (ny < 0 || (Math.abs(ny) < 0.3 && nx > 0)) { nx = -nx; ny = -ny; }
+      if (this.camera.aspect < 1) {
+        // Tall screens: three-quarters from behind the shooter, so the arc rises up the screen.
+        const ux = -bx / d, uy = -by / d; // shooter → rim
+        pos = toThree([bx - ux * 6.2 + nx * 2.2, by - uy * 6.2 + ny * 2.2, 3.9]);
+        look = toThree([bx + ux * d * 0.5, by + uy * d * 0.5, 2.5]);
+        fov = 40;
+      } else {
+        const back = d * 0.62 + 4.2;
+        const mid: V3 = [bx * 0.5, by * 0.5, 2.3];
+        pos = toThree([mid[0] + nx * back, mid[1] + ny * back, 2.6]);
+        look = toThree(mid);
+        fov = 42;
+      }
+      this.camPos.lerp(pos, k * 0.6);
+      this.camLook.lerp(look, k * 0.6);
+    } else if (this.phase === 'walk' || this.phase === 'done' || (this.auto && this.phase !== 'replay')) {
       // Broadcast: high on the sideline, tracking the shooter with the hoop in frame.
       const pp = this.player.position;
       pos = new THREE.Vector3(-11.5, 6.2, pp.z * 0.5 + 6.5);
@@ -1032,16 +1344,17 @@ export class Shootout3D {
       this.camPos.copy(pos); this.camLook.copy(look);
     } else {
       // First person: your eyes rise with the jump; after release the view follows the ball a little.
-      const [px, py] = spotPosition(this.spot);
+      const [px, py] = spotPosition(this.spot ?? this.course[this.course.length - 1]);
       const j = this.phase === 'hold' ? Math.sin(Math.min(1, this.holdT / this.win.rise) * Math.PI * 0.5) : this.phase === 'flight' ? Math.max(0, 1 - this.flightT * 1.3) : 0;
       const sway = this.phase === 'aim' && !this.reduced ? Math.sin(this.phaseT * 1.6) * 0.01 : 0;
       pos = toThree([px * 1.04 + sway, py * 1.04, 1.78 + j * 0.5]);
       let lk: V3 = [0, 0, RIM_HEIGHT - 0.55];
-      if (this.phase === 'flight') { const b = this.ballPos(this.flightT); lk = [lerp(0, b[0], 0.25), lerp(0, b[1], 0.25), Math.max(lk[2], lerp(lk[2], b[2], 0.5))]; }
+      const nb = this.live[this.live.length - 1];
+      if ((this.phase === 'flight' || this.phase === 'wait') && nb && nb.t < 1.6) { const b = nb.pos; lk = [lerp(0, b[0], 0.2), lerp(0, b[1], 0.2), Math.max(lk[2], lerp(lk[2], b[2], 0.35))]; }
       look = toThree(lk);
       fov = 52;
       this.camPos.copy(pos);
-      this.camLook.lerp(look, this.phase === 'flight' ? k : 1);
+      this.camLook.lerp(look, this.fade > 0.5 ? 1 : k);
     }
     this.camera.position.copy(this.camPos);
     if (this.shake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * 0.04 * this.shake, (Math.random() - 0.5) * 0.04 * this.shake, 0));

@@ -49,6 +49,7 @@ export function Contest({ level, moneyRack, onExit, onFinish }: {
   const [banner, setBanner] = useState<string | null>(null);
   const [champion, setChampion] = useState<{ winner: string; places: string[] } | null>(null);
   const finalistsRef = useRef<string[]>([]);
+  const revealTimer = useRef<ReturnType<typeof setInterval>>();
 
   const stageCourse = (e: Entrant): Spot[] => (stage === 'cut-tb' || stage === 'final-tb' ? tiebreakCourse(e.moneyRack) : buildCourse(e.moneyRack));
   const stageClock = stage === 'cut-tb' || stage === 'final-tb' ? TIEBREAK_CLOCK : level.clock;
@@ -89,12 +90,17 @@ export function Contest({ level, moneyRack, onExit, onFinish }: {
     setRevealing({ id: slot.id, shown: 0 });
     let shown = 0;
     const step = Math.max(1, Math.round(target / 14));
-    const t = setInterval(() => {
+    revealTimer.current = setInterval(() => {
       shown = Math.min(target, shown + step);
       setRevealing({ id: slot.id, shown });
-      if (shown >= target) { clearInterval(t); setTimeout(() => { setRevealing(null); record(slot.id, target); }, 450); }
+      if (shown >= target) {
+        clearInterval(revealTimer.current);
+        revealTimer.current = setTimeout(() => { setRevealing(null); record(slot.id, target); }, 450);
+      }
     }, 70);
   };
+  // Quitting mid-reveal stops the count.
+  useEffect(() => () => { clearInterval(revealTimer.current); clearTimeout(revealTimer.current); }, []);
 
   // When everyone in a stage has shot, decide what happens next.
   useEffect(() => {
@@ -271,7 +277,7 @@ export function Contest({ level, moneyRack, onExit, onFinish }: {
                     <span className="h-7 w-1.5 shrink-0 rounded-full" style={{ background: e.color }} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold">{e.name}</span>
-                      <span className="block truncate text-[11px] text-white/45">{e.you ? (stage === 'final' && round1.you != null ? `Round 1: ${round1.you}` : 'Hold, rise, release at the top') : `${e.rival!.tag}${stage === 'final' && round1[s.id] != null ? ` · R1 ${round1[s.id]}` : ''}`}</span>
+                      <span className="block truncate text-[11px] text-white/45">{e.you ? (stage === 'final' && round1.you != null ? `Round 1: ${round1.you}` : 'Hold, rise, let go on the green') : `${e.rival!.tag}${stage === 'final' && round1[s.id] != null ? ` · R1 ${round1[s.id]}` : ''}`}</span>
                     </span>
                     {up && shown == null && <span className="ct-blink rounded bg-amber-300 px-1.5 py-0.5 text-[10px] font-black text-black">UP</span>}
                     <span className={`w-10 text-right font-mono text-2xl font-black ${revealing?.id === s.id ? 'text-amber-300' : ''}`}>{shown ?? '–'}</span>

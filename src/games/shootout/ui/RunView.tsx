@@ -3,7 +3,7 @@ import { FastForward, Volume2, VolumeX } from 'lucide-react';
 import { Shootout } from '../game';
 import { Shootout3D, type RunOptions, type RunResult, type ShootoutEvent } from '../three/game3d';
 import type { Ball, Level } from '../engine';
-import { isMuted, setMuted } from '../audio';
+import { isMuted, setMuted, unlockAudio } from '../audio';
 
 // One run on the floor: the 3D game plus the broadcast graphics over it.
 // Used for practice runs, your contest rounds, and watching rivals shoot.
@@ -20,6 +20,11 @@ interface GameLike {
   rackState(): Rack;
   meterView?(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number };
   skip?(): void;
+  cancel?(): void;
+  aimStart?(nx: number, ny: number): void;
+  aimMove?(nx: number, ny: number): void;
+  aimEnd?(nx: number, ny: number): void;
+  aimCancel?(): void;
 }
 
 const GRADE_TEXT: Record<string, [string, Callout['tone']] | undefined> = {
@@ -60,6 +65,13 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
   const rival = !!rivalName;
+  const touch = opts?.control === 'touch';
+  /** Pointer position on the canvas, -1..1 both ways (y up). */
+  const ndc = (e: { clientX: number; clientY: number }): [number, number] => {
+    const r = canvasRef.current?.getBoundingClientRect();
+    if (!r) return [0, 0];
+    return [((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1)];
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -81,13 +93,15 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
           break;
         }
         case 'make': {
-          const ball = game.rackState().find(b => b.state === 'now')?.kind ?? 'regular';
+          setShowHint(false);
+          const ball = e.kind;
           const what = ball === 'starry' ? 'STARRY BALL' : ball === 'money' ? 'MONEY BALL' : e.outcome === 'swish' ? 'SWISH' : e.outcome === 'rim-in' ? 'IN AND OUT... IN!' : 'BUCKET';
-          const bonus = !e.perfect ? '' : opts?.scoring === 'attack' ? (e.mult > 1 ? `PERFECT ×${e.mult.toFixed(1)} · ` : 'PERFECT · ') : opts?.scoring === 'contest' ? 'PERFECT +1 · ' : '';
+          const bonus = touch ? (e.outcome === 'swish' ? 'SWISH +1 · ' : e.bank ? 'BANK +1 · ' : '') : !e.perfect ? '' : opts?.scoring === 'attack' ? (e.mult > 1 ? `PERFECT ×${e.mult.toFixed(1)} · ` : 'PERFECT · ') : opts?.scoring === 'contest' ? 'PERFECT +1 · ' : '';
           say({ big: `+${e.points.toLocaleString()}`, small: bonus + what, tone: e.perfect ? 'green' : ball === 'starry' ? 'starry' : ball === 'money' ? 'money' : e.streak >= 3 ? 'fire' : 'gold' });
           break;
         }
         case 'miss':
+          setShowHint(false);
           if (e.outcome === 'airball') say({ big: 'AIRBALL', tone: 'red' });
           else if (e.outcome === 'rim-out') say({ big: 'RIMMED OUT', tone: 'red' });
           setOnFire(false);
@@ -95,6 +109,8 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
         case 'fire': setOnFire(true); break;
         case 'replay': setReplay(e.on); break;
         case 'final10': setFinal10(true); break;
+        case 'time': say({ big: 'TIME!', small: 'RELEASE BEFORE THE HORN', tone: 'red' }); break;
+        case 'buzzer': say({ big: 'BUZZER BEATER!', tone: 'fire' }); break;
       }
     };
     let game: GameLike;
@@ -139,7 +155,7 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   // Hold anywhere (or Space) to shoot.
   useEffect(() => {
     if (rival) return;
-    const down = (e: KeyboardEvent) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); gameRef.current?.press(e.timeStamp); } };
+    const down = (e: KeyboardEvent) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); unlockAudio(); gameRef.current?.press(e.timeStamp); } };
     const up = (e: KeyboardEvent) => { if (e.code === 'Space') { e.preventDefault(); gameRef.current?.release(e.timeStamp); } };
     window.addEventListener('keydown', down); window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
@@ -154,9 +170,14 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
       <canvas
         ref={canvasRef}
         className="absolute inset-0 h-full w-full"
-        onPointerDown={(e) => { if (rival) return; e.currentTarget.setPointerCapture(e.pointerId); gameRef.current?.press(e.timeStamp); }}
-        onPointerUp={(e) => gameRef.current?.release(e.timeStamp)}
-        onPointerCancel={(e) => gameRef.current?.release(e.timeStamp)}
+        onPointerDown={(e) => {
+          unlockAudio(); if (rival) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          if (touch) { const [x, y] = ndc(e); gameRef.current?.aimStart?.(x, y); } else gameRef.current?.press(e.timeStamp);
+        }}
+        onPointerMove={(e) => { if (touch) { const [x, y] = ndc(e); gameRef.current?.aimMove?.(x, y); } }}
+        onPointerUp={(e) => { if (touch) { const [x, y] = ndc(e); gameRef.current?.aimEnd?.(x, y); } else gameRef.current?.release(e.timeStamp); }}
+        onPointerCancel={() => { if (touch) gameRef.current?.aimCancel?.(); else gameRef.current?.cancel?.(); }}
         onContextMenu={(e) => e.preventDefault()}
       />
       <BroadcastOverlay hud={hud} rack={rack} level={label} callout={callout} card={card} replay={replay} onFire={onFire} final10={final10} rival={rival} />
@@ -181,7 +202,7 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
       )}
       {showHint && hud.phase === 'aim' && (
         <div className="sh-pulse pointer-events-none absolute top-[12%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/55 px-4 py-2 text-xs font-bold tracking-wide sm:px-5 sm:py-2.5 sm:text-sm text-white/90 backdrop-blur">
-          HOLD to jump · RELEASE at the top
+          {touch ? 'DRAG toward the hoop · LET GO to shoot' : 'HOLD to jump · LET GO on the green'}
         </div>
       )}
     </>

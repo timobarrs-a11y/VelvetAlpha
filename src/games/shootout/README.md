@@ -5,7 +5,7 @@ A standalone timing game at `/shootout` (separate from Velvet House).
 ## Vision and core loop
 Feel like a broadcast 3-point contest you can master in a minute and chase for weeks.
 
-**Loop:** jog to the rack → hold to rise into the jump → release → watch it drop (or not) → next ball, against the clock.
+**Loop:** jog to the rack → hold to rise into the jump → release → grab the next ball while that one is still in the air (catch and shoot) → next rack, against the clock.
 The skill is the release. Everything else (scoring, rivals, graphics) exists to make that release matter and feel good.
 
 - **Make zone.** Slightly early to slightly late always goes in. Dead centre is a **perfect** release.
@@ -14,6 +14,7 @@ The skill is the release. Everything else (scoring, rivals, graphics) exists to 
 - **Modes:**
   - **Practice:** classic 1/2/3 scoring, unlocks levels and stars.
   - **Contest:** you vs 5 AI rivals, +1 per perfect. Round 1, top 3 advance to a final in reverse order; ties go to a 30s shoot-off.
+  - **Street (Touch, prototype):** a second way to shoot. Drag toward the hoop and let go; the **physics decides**. Random spots, 60 seconds. Scores 2 or 3 by distance, +1 for a swish, +1 off the glass, and money balls double. A dotted guide shows the start of the throw (shorter on harder levels). The camera is side-on in landscape and three-quarters from behind in portrait.
   - **Score Attack:** 100 per point, ×1.5 for a perfect, and back-to-back perfects stack ×1.1…×2.
 
 ## Stack and structure
@@ -24,15 +25,24 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 | `engine.ts` | Pure rules: course, levels, shot window, judge, outcomes, release point, scoring. Tested. |
 | `rivals.ts` | Rival roster, seeded run simulation, pace (`scoreAt`), cut/tiebreak rules. Tested. |
 | `holdClock.ts` | Times your hold from input-event timestamps, independent of frame rate. Tested. |
-| `three/game3d.ts` | `Shootout3D`: scene, cameras, phases (walk/aim/hold/flight/replay/done), scoring, rival autopilot, frame governor, `meterView()`. |
+| `ballSim.ts` | Ball physics (gravity, drag, backspin; rim, glass, floor, stanchion) and `planShot`: a real flight for the outcome the rules chose. Fixed 240Hz step, deterministic. Tested. |
+| `three/game3d.ts` | `Shootout3D`: scene, cameras, phases (walk/aim/hold/flight/wait/replay/done), live balls and catch-and-shoot, scoring, rival autopilot, frame governor, `meterView()`. |
+| `three/athlete.ts` | The player figure (muscle-shaped limbs, jersey with number, shorts, fingered hands, sneakers, face and hair) and its poses: jog, dip, set point, release, celebrate. While holding the ball, two-bone IK puts each palm on the ball's surface facing its centre and the fingers curl round it; `ballCenter()` is where the game draws the ball. Used by you, rivals and Street. |
 | `three/arena.ts`, `crowd.ts`, `net.ts`, `textures.ts` | The building, the GPU-animated crowd (`BOWL` shape), the cloth net, canvas textures. |
 | `ui/RunView.tsx` | One run: canvas, input, broadcast overlay, meter. Remount with a new `key` per run. |
 | `ui/Contest.tsx` | The contest flow and standings. |
-| `game.ts` | The 2D court, used only when WebGL is unavailable. |
+| `game.ts` | The 2D court, used only when WebGL is unavailable (scripted flights, classic scoring; kept as is). |
 | `audio.ts`, `settings.ts` | Synthesised tones only; the Arena/Retro look setting. |
 | `pages/ShootoutGame.tsx` | Title screen, mode select, results, saved progress (`velvet.shootout.v1`). |
 
 ## Decisions
+- **The ball is placed first and the hands reach it** (IK), rather than the ball following the hands, so the grip is exact in every pose. Measured: palm on the surface (within about 1mm), facing the centre, in both the chest hold and the set point.
+- **Two ways to shoot, kept apart.** Jumper (timing) runs Contest, Score Attack and Practice; Touch runs Street. They share the arena, physics, sound and saves. Touch stays out of the Contest until it's balanced on its own.
+- **The rules decide every shot at release; physics stages it.** Perfects always go in. Early misses come up short and late ones go long, so the ball teaches your timing. A shot's points and callouts land when the ball does.
+- **Catch and shoot.** The next ball comes `RELOAD` (0.65s) after release. The game and the rival simulation share `RELOAD`/`JOG`, so their pace can't drift apart. Before this, a flawless player reached only 20–21 of 27 balls.
+- **Flights are planned ahead while you aim**, about 1.5ms a frame and never during a hold, so a release never waits on the physics.
+- **Audio starts on the first tap** (iOS only allows that, and creating it mid-jump caused a hitch).
+- **One replay, at the end of a run** (the last make), so the rhythm isn't interrupted. No hitstop freeze.
 - **Hold timing comes from `event.timeStamp`, not frame counting.** Before this, a flawless release was graded perfect only 53–76% of the time at 30fps on Legend, and any frame over 50ms was dropped from the hold.
 - **Rival runs are simulated up front.** Watching and skipping give the same score.
 - **Noise-based audio was removed** ("sounded like white noise"). Real recordings are a later task.
@@ -44,13 +54,15 @@ React + TypeScript + Vite, rendered with three.js 0.154 (types 0.183). State liv
 - In dev builds `window.__shootout` exposes the game. `advance(seconds)` steps a synthetic clock for scripted checks.
 
 ## Known issues
-1. **Buzzer.** If you're mid-hold when the clock hits 0, the run ends and that shot silently vanishes. There's no "time" feedback.
-2. **Unverified on real hardware.** Feel and frame rate have only been checked in a software renderer.
-3. **`pointercancel` counts as a release**, so an iOS system gesture mid-hold would shoot.
-4. **The 2D fallback** ignores scoring modes and the timestamp timing (rare: WebGL missing).
-5. **Contest "Result" reveal timer** keeps running if you quit mid-reveal (harmless React no-op).
+0. **Street is a prototype.** Throw power (3.1×, max 13.5 m/s), guide lengths and scoring are first guesses. Needs a playtest.
+1. **Unverified on real hardware.** Frame rate with up to 5 balls in the air, feel, and whether sound now works on iOS.
+2. **Rookie may be too forgiving.** Random ±90ms timing errors still made 27 of 27 (the make zone is ±176ms on Rookie). Needs playtest data before changing.
+3. **Contest difficulty needs a playtest** now that humans can reach every ball. Rival scores didn't change; they always finished 27.
+4. **No walls.** A ball that rolls far fades out after its recorded 4s flight.
+5. **The 2D fallback** is out of date (rare: only without WebGL).
+
 
 ## Next three
-1. **iPhone playtest.** Check `?fps`, whether the timing windows feel fair, and whether the first-shot meter plus flashes are learnable.
-2. **Buzzer rule.** A release before the horn counts (a slow-mo buzzer beater); a ball still in hand at 0:00 gets a clear "TIME" callout.
-3. **A three-shot first-run tutorial**: the make zone, perfect releases, and what the flash means.
+1. **iPhone playtest:** `?fps`, timing feel, sound.
+2. **Balance pass from that data:** Rookie make zone, rivals, stars and unlock scores.
+3. **A three-shot first-run tutorial:** the make zone, perfects, and what the flash means.
