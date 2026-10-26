@@ -16,6 +16,7 @@ import { clothByKey, clothId, type OwnedCloth, type Wardrobe } from '../state/cl
 import { createDialogue, createTray } from '../ui/dialogue';
 import { WALL_MODES, DEFAULT_LOOKS, lookFrom, nameFrom, type World } from '../kernel/config';
 import { type MemoryStore } from '../state/memory';
+import { validateGarment } from '../state/garment';
 import { mountShell } from '../ui/shell';
 import { loadWorld } from './config';
 
@@ -185,7 +186,9 @@ export function createGame(app: HTMLElement): Game | null {
   const owned = new Set<string>(Array.isArray(save?.owned) ? save!.owned as string[] : []);
   // Closet: default pieces plus anything bought from the Clothes tab
   const closet: OwnedCloth[] = Array.isArray(save?.closet)
-    ? (save!.closet as OwnedCloth[]).filter(c => c.id.startsWith('sig-') || clothByKey(c.id.slice(2)))
+    ? (save!.closet as OwnedCloth[])
+      .map(c => (c.recipe ? { ...c, recipe: validateGarment(c.recipe) ?? undefined } : c))
+      .filter(c => c.recipe || c.id.startsWith('sig-') || clothByKey(c.id.slice(2)))
     : [
       { slot: 'top', style: 'tee', col: people[0].look.top, name: 'Old tee', id: clothId('tee') },
       { slot: 'top', style: 'tee', col: people[1].look.top, name: 'Shared tee', id: clothId('tee') },

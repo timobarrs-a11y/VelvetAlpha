@@ -1,3 +1,4 @@
+import { validateGarment } from '../state/garment';
 import { migrateSave } from '../state/saveMigration';
 import { INITIAL_OBJS, type ObjectInstance } from '../state/objects';
 import { type AgentId, type AgentLook } from '../state/agents';
@@ -42,6 +43,8 @@ export function lookFrom(saved: unknown, fallback: AgentLook): AgentLook {
     accent: HEX.test((l as { accent?: string }).accent ?? '') ? (l as { accent: string }).accent : undefined,
     bottomStyle: BOTTOM_STYLES.has((l as { bottomStyle?: string }).bottomStyle ?? '') ? (l as { bottomStyle: string }).bottomStyle : undefined,
     bottomAccent: HEX.test((l as { bottomAccent?: string }).bottomAccent ?? '') ? (l as { bottomAccent: string }).bottomAccent : undefined,
+    topGarment: validateGarment((l as { topGarment?: unknown }).topGarment) ?? undefined,
+    bottomGarment: validateGarment((l as { bottomGarment?: unknown }).bottomGarment) ?? undefined,
     longHair: typeof l.hair === 'string' ? /long|wav|curl|bun|pony|braid|loc/i.test(l.hair) : fallback.longHair,
   };
 }

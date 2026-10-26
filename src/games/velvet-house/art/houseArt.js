@@ -9,6 +9,8 @@ import { handImage, HAND_SPRITE } from '../state/bodySprites';
 import { TYPES as STATE_TYPES } from '../state/objects';
 import { isOutdoor } from '../state/scenes';
 import { rand } from '../state/rng';
+import { createFabric } from './fabric.js';
+import { SLEEVE_BY_CUT } from '../state/garment';
 import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
@@ -907,6 +909,7 @@ export function createHouseArt(ctx0, opts = {}) {
   const LA = {}, occ = {}, occLevel = {};
   let rdt = 0.016;
   const PFX = createParticles(360, rand);
+  const FAB = createFabric();
   function drawParticles(level, glow) {
     if (glow) ctx.globalCompositeOperation = 'lighter';
     PFX.forEach(level, (p, t) => {
@@ -1551,12 +1554,13 @@ export function createHouseArt(ctx0, opts = {}) {
     const thighCol = skirty ? L.skin : L.bottom, tw = bs === 'baggy' ? 6.6 : bs === 'leather' ? 4.2 : 5, sw = bs === 'baggy' ? 6.2 : bs === 'leather' ? 3.8 : 4.5;
     const shinCol = bareLegs ? L.skin : bs === 'breeches' ? (L.bottomAccent || '#2b1d12') : L.bottom;
     const checks = (x1, y1, x2, y2) => { if (bs === 'chef_pants') { ctx.save(); ctx.setLineDash([1.3, 1.3]); limb(x1, y1, x2, y2, L.bottomAccent || '#f4f1ea', 1.5); ctx.restore(); } };
-    const shin = (kx, ky, ax, ay) => { limb(kx, ky, ax, ay, shinCol, sw); checks(kx, ky, ax, ay); shoeAt(ax, ay); };
-    const thighLimb = (x1, y1, x2, y2) => { limb(x1, y1, x2, y2, thighCol, tw); checks(x1, y1, x2, y2); };
+    const BG = L.bottomGarment && !skirty ? L.bottomGarment : null;
+    const shin = (kx, ky, ax, ay) => { limb(kx, ky, ax, ay, shinCol, sw); if (BG && !bareLegs) FAB.paint(ctx, [[kx, ky], [ax, ay]], sw, BG, { hem: 0, hemEnd: true }); checks(kx, ky, ax, ay); shoeAt(ax, ay); };
+    const thighLimb = (x1, y1, x2, y2) => { limb(x1, y1, x2, y2, thighCol, tw); if (BG) FAB.paint(ctx, [[x1, y1], [x2, y2]], tw, BG, { hem: 0 }); checks(x1, y1, x2, y2); };
     // Arms: shoulder, elbow and hand, worked out once per frame, then drawn
     // behind the torso (the far arm) or in front of it.
     const SLEEVES = { tank: 0, tee: 0.55, jersey: 0.5, dress: 0.4, cheer: 0, cop: 0.55, scrubs: 0.55 };
-    const sleeve = L.topStyle ? (SLEEVES[L.topStyle] ?? 1) : 0.55;
+    const sleeve = L.topGarment ? (SLEEVE_BY_CUT[L.topGarment.cut] ?? 1) : L.topStyle ? (SLEEVES[L.topStyle] ?? 1) : 0.55;
     const NOT_HELD = new Set(['notes', 'water', 'splash']), OPEN_KINDS = new Set(['book', 'plate', 'parcel', 'cloth', 'paper']);
     // Props too wide to grip by a handle: no fingers drawn over them.
     const NO_FINGERS = new Set(['guitar', 'gloves']);
@@ -1591,6 +1595,7 @@ export function createHouseArt(ctx0, opts = {}) {
       if (sleeve > 0) {
         const long = sleeve >= 1, from = long ? el : [sx0, sy0], end = long ? mix2(el, e, 0.8) : mix2([sx0, sy0], el, sleeve);
         if (long) limb3(sx0, sy0, el[0], el[1], end[0], end[1], L.top, 4.1); else limb(sx0, sy0, end[0], end[1], L.top, 4.1);
+        if (L.topGarment) FAB.paint(ctx, long ? [[sx0, sy0], el, end] : [[sx0, sy0], end], 4.1, L.topGarment, {});
         // A shadowed underside and a lit top edge, like the shirt's folds.
         const edge = (a, b) => {
           const sx = b[0] - a[0], sy = b[1] - a[1], sl = Math.hypot(sx, sy) || 1; let nx = -sy / sl, ny = sx / sl;
@@ -1699,6 +1704,8 @@ export function createHouseArt(ctx0, opts = {}) {
       ctx.fillStyle = skirty ? L.bottom : L.top; ctx.beginPath();
       ctx.moveTo(hip[0] + shift - 5, hip[1] - 2); ctx.lineTo(hip[0] + shift + 5, hip[1] - 2);
       ctx.lineTo(kz[0] + fl + hem[0], kz[1] + hem[1] * 0.4); ctx.lineTo(kz[0] - fl + hem[0], kz[1] + hem[1] * 0.4); ctx.closePath(); ctx.fill();
+      const skirtCloth = skirty ? L.bottomGarment : L.topGarment;
+      if (skirtCloth) { ctx.save(); ctx.clip(); FAB.fill(ctx, skirtCloth, [hip[0] - 20, hip[1] - 6, 40, 40], [0, 0]); ctx.restore(); }
       if (skirty) {
         for (let k = -2; k <= 2; k++) limb(hip[0] + shift + k * 1.8, hip[1] - 1, kz[0] + k * fl * 0.42 + hem[0], kz[1] + hem[1] * 0.4 - 0.4, shade(L.bottom, -0.22), 0.7);
         limb(kz[0] - fl + hem[0], kz[1] + hem[1] * 0.4, kz[0] + fl + hem[0], kz[1] + hem[1] * 0.4, L.bottomAccent || '#f4f1ea', bs === 'cheer_skirt' ? 1.6 : 0.8);
@@ -1706,6 +1713,7 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     [-1, 1].forEach(sd => { if (armBehind(sd)) drawArm(arms[sd], sd); });
     limb(hip[0] + shift, hip[1], sh[0] + shift * 1.4, sh[1], L.top, 11);
+    if (L.topGarment) FAB.paint(ctx, [[hip[0] + shift, hip[1]], [sh[0] + shift * 1.4, sh[1]]], 11, L.topGarment, { torso: true, front: f.front });
     if (!skirty && ['pants', 'jeans', 'trousers', 'cop_pants', 'leather', 'baggy', 'breeches'].includes(bs)) {
       // A belt at the waist, with a buckle when you can see the front.
       const belt = bs === 'cop_pants' ? '#17171b' : bs === 'leather' ? '#2a2a30' : bs === 'breeches' ? '#2b1d12' : shade(L.bottom, -0.38);
@@ -1715,7 +1723,7 @@ export function createHouseArt(ctx0, opts = {}) {
     // Fold shading: a soft shadow down the far side of the shirt, a highlight on the near side.
     limb(hip[0] + shift + 3.2, hip[1], sh[0] + shift * 1.4 + 3.2, sh[1] + 1, shade(L.top, -0.18), 3.2);
     limb(hip[0] + shift - 3, hip[1] - 1, sh[0] + shift * 1.4 - 3, sh[1] + 2, shade(L.top, 0.14), 1.6);
-    const pat = L.topStyle && L.topStyle !== 'tee' ? L.topStyle : null;
+    const pat = L.topStyle && L.topStyle !== 'tee' && !L.topGarment ? L.topStyle : null;
     if (pat && f.front) {
       const tx = hip[0] + shift, ty = hip[1], tx2 = sh[0] + shift * 1.4, ty2 = sh[1];
       const mx = (tx + tx2) / 2, my = (ty + ty2) / 2;

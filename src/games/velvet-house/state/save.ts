@@ -62,7 +62,7 @@ const DEFAULT_SKILLS = { cooking: 0, fitness: 0, logic: 0, creativity: 0, charis
 const DEFAULT_MOOD = { happy: 50, sad: 0, angry: 0, tired: 0, playful: 30, affectionate: 40 };
 
 const lookOut = (l: AgentLook, gender: 'male' | 'female') => ({
-  skin: l.skin, hair: '', hairColor: l.hair, top: l.top, topStyle: l.topStyle, bottom: l.bottom, bottomStyle: l.bottomStyle, bottomAccent: l.bottomAccent, accent: l.accent,
+  skin: l.skin, hair: '', hairColor: l.hair, top: l.top, topStyle: l.topStyle, bottom: l.bottom, bottomStyle: l.bottomStyle, bottomAccent: l.bottomAccent, accent: l.accent, topGarment: l.topGarment, bottomGarment: l.bottomGarment,
   eyeColor: '', facialHair: '', glasses: '', gender,
 });
 

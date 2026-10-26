@@ -1,3 +1,4 @@
+import type { Garment } from './garment';
 import type { HeadImages } from './headSprites';
 import type { BodyImages } from './bodySprites';
 import { TYPES, blocksOf, isRug, isWall, type ObjectInstance } from './objects';
@@ -43,6 +44,9 @@ export interface AgentLook {
   // The cut of the pants ('jeans', 'cheer_skirt', ...) and their trim; plain pants when unset.
   bottomStyle?: string;
   bottomAccent?: string;
+  // A designed garment worn on the body or legs (state/garment.ts); it is drawn over `top` and `bottom`, which hold its base colour.
+  topGarment?: Garment;
+  bottomGarment?: Garment;
   // The person's real avatar head, when the host sent one. Never saved.
   heads?: HeadImages;
   // The person's real avatar hands, when the host sent them. Never saved.
