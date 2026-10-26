@@ -52,15 +52,12 @@ export default function SemanticMemoryDebugPage() {
         const embedding = await SemanticMemoryService.generateEmbedding('test query');
         const duration = Date.now() - start;
 
-        const isZeroVector = embedding.every(v => v === 0);
-
-        if (isZeroVector) {
+        if (!embedding) {
           return {
             test: 'Embedding Generation',
             status: 'warning' as const,
-            message: 'Returning zero vectors (OpenAI API key not configured)',
+            message: 'No embedding returned (OpenAI API key not configured?)',
             details: {
-              dimensions: embedding.length,
               duration: `${duration}ms`,
               note: 'System will fall back to keyword search'
             },

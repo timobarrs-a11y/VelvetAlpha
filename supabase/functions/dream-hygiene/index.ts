@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireCronAuth } from "../_shared/cronAuth.ts";
+import { EMBEDDING_MODEL, embedTexts, findDuplicateGroups, toPgVector } from "../_shared/memoryEngine.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +9,6 @@ const corsHeaders = {
 };
 
 const HAIKU_MODEL = "claude-haiku-4-5";
-const CONCURRENCY = 5;
 
 interface MemoryItem {
   id: string;
@@ -24,8 +24,22 @@ interface MemoryItem {
   recall_count: number;
   last_recalled_at: string | null;
   version: number;
+  confirm_count: number;
+  valid_until: string | null;
+  embedding_model: string | null;
+  embedding: string | number[] | null;
   created_at: string;
   updated_at: string;
+}
+
+function parseVector(v: string | number[] | null): number[] | null {
+  if (!v) return null;
+  if (Array.isArray(v)) return v;
+  try {
+    return JSON.parse(v);
+  } catch {
+    return null;
+  }
 }
 
 interface MemoryEvent {
@@ -77,19 +91,6 @@ async function callAnthropic(apiKey: string, system: string, userMessage: string
     ?.filter((c: { type: string; text: string }) => c.type === "text")
     .map((c: { text: string }) => c.text)
     .join("") || "";
-}
-
-async function runWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let index = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (index < items.length) {
-      const i = index++;
-      results[i] = await fn(items[i]);
-    }
-  });
-  await Promise.all(workers);
-  return results;
 }
 
 Deno.serve(async (req: Request) => {
@@ -152,16 +153,90 @@ Return ONLY a JSON array. No other text.`;
 
     for (const pair of pairs) {
       try {
-        const { data: memoryItems } = await supabaseAdmin
+        // Everything this companion sees: its own items plus the user's global ones.
+        const { data: fetchedItems } = await supabaseAdmin
           .from("memory_items")
-          .select("id, user_id, companion_id, scope, kind, content, status, confidence, importance, source, recall_count, last_recalled_at, version, created_at, updated_at")
+          .select("id, user_id, companion_id, scope, kind, content, status, confidence, importance, source, recall_count, last_recalled_at, version, confirm_count, valid_until, embedding_model, embedding, created_at, updated_at")
           .eq("user_id", pair.user_id)
-          .eq("companion_id", pair.companion_id)
+          .or(`companion_id.eq.${pair.companion_id},and(companion_id.is.null,scope.eq.global)`)
           .eq("status", "active")
           .order("updated_at", { ascending: false })
-          .limit(100);
+          .limit(150);
 
-        if (!memoryItems || memoryItems.length === 0) continue;
+        if (!fetchedItems || fetchedItems.length === 0) continue;
+        let memoryItems = fetchedItems as MemoryItem[];
+
+        // ── Deterministic pass (no LLM) ─────────────────────────────────
+        // 1. Temporary memories past their valid_until are retired.
+        const expired = memoryItems.filter(m => m.valid_until && new Date(m.valid_until) <= now);
+        for (const m of expired) {
+          const { data } = await supabaseAdmin.rpc("update_memory_item", {
+            p_id: m.id, p_base_version: m.version, p_patch: { status: "retired" }, p_actor_type: "dream",
+          });
+          if (data) totalAutoApplied++;
+        }
+        const expiredIds = new Set(expired.map(m => m.id));
+        memoryItems = memoryItems.filter(m => !expiredIds.has(m.id));
+
+        // 2. Embed rows that have no vector, or one from an older model.
+        const unembedded = memoryItems.filter(m => !m.embedding || m.embedding_model !== EMBEDDING_MODEL).slice(0, 100);
+        const vectors = await embedTexts(unembedded.map(m => m.content), Deno.env.get("OPENAI_API_KEY"), 10000);
+        if (vectors) {
+          for (let i = 0; i < unembedded.length; i++) {
+            // Bookkeeping-only update: no new version or history row (see memory_engine_v2).
+            await supabaseAdmin.from("memory_items")
+              .update({ embedding: toPgVector(vectors[i]), embedding_model: EMBEDDING_MODEL })
+              .eq("id", unembedded[i].id)
+              .eq("version", unembedded[i].version);
+            unembedded[i].embedding = vectors[i];
+            unembedded[i].embedding_model = EMBEDDING_MODEL;
+          }
+        }
+
+        // 3. Fold near-duplicates into one row. Strict matching only, and a
+        // vector match also needs word overlap, so contradictions are left for
+        // the LLM pass / review queue instead of being merged.
+        const groups = findDuplicateGroups(memoryItems.map(m => ({
+          ...m,
+          embedding: m.embedding_model === EMBEDDING_MODEL ? parseVector(m.embedding) : null,
+        })));
+        const folded = new Set<string>();
+        for (const g of groups) {
+          for (const d of g.drop) {
+            const dup = d as unknown as MemoryItem;
+            const { data, error } = await supabaseAdmin.rpc("update_memory_item", {
+              p_id: dup.id,
+              p_base_version: dup.version,
+              p_patch: { status: "superseded", superseded_by: g.keep.id },
+              p_actor_type: "dream",
+            });
+            const applied = !error && !!data;
+            if (applied) {
+              folded.add(dup.id);
+              totalAutoApplied++;
+            }
+            await supabaseAdmin.from("memory_proposals").insert({
+              proposal_id: crypto.randomUUID(),
+              pass: "hygiene",
+              target: "memory_item",
+              target_id: dup.id,
+              user_id: pair.user_id,
+              companion_id: pair.companion_id,
+              action: "merge",
+              before: dup.content,
+              after: g.keep.content,
+              evidence: [g.keep.id],
+              rationale: "Near-duplicate of a kept memory (deterministic dedupe).",
+              risk: "low",
+              base_version: dup.version,
+              eval_delta: null,
+              status: applied ? "auto_applied" : "failed",
+            });
+            totalProposals++;
+          }
+        }
+        memoryItems = memoryItems.filter(m => !folded.has(m.id));
+        if (memoryItems.length === 0) continue;
 
         const { data: events } = await supabaseAdmin
           .from("memory_events")
@@ -181,7 +256,7 @@ Return ONLY a JSON array. No other text.`;
           .order("created_at", { ascending: false })
           .limit(30);
 
-        const itemsSummary = (memoryItems as MemoryItem[]).map(m => ({
+        const itemsSummary = memoryItems.map(m => ({
           id: m.id,
           kind: m.kind,
           content: m.content.substring(0, 200),
@@ -260,8 +335,10 @@ If no proposals needed, return [].`;
         for (const p of proposals) {
           if (!p.target_id || !p.action) continue;
 
-          const targetItem = (memoryItems as MemoryItem[]).find(m => m.id === p.target_id);
-          const baseVersion = targetItem?.version ?? (p.risk === "low" ? 1 : null);
+          const targetItem = memoryItems.find(m => m.id === p.target_id);
+          // Only act on items we actually showed the model.
+          if (!targetItem) continue;
+          const baseVersion = targetItem.version;
 
           const proposalRow = {
             proposal_id: crypto.randomUUID(),
@@ -271,14 +348,14 @@ If no proposals needed, return [].`;
             user_id: pair.user_id,
             companion_id: pair.companion_id,
             action: p.action,
-            before: p.before || targetItem?.content || null,
+            before: targetItem.content,
             after: p.after || null,
             evidence: p.evidence || [],
             rationale: p.rationale || "",
             risk: p.risk || "medium",
             base_version: baseVersion,
             eval_delta: null,
-            status: "pending" as const,
+            status: "pending" as "pending" | "auto_applied" | "failed",
           };
 
           const isLowRisk = p.risk === "low" && (
@@ -299,10 +376,12 @@ If no proposals needed, return [].`;
                   p_actor_type: "dream",
                 });
               } else if (p.action === "supersede" && p.after) {
-                applyResult = await supabaseAdmin.rpc("update_memory_item", {
+                // The corrected text becomes a new active row; the old one is
+                // kept as superseded history.
+                applyResult = await supabaseAdmin.rpc("supersede_memory_item", {
                   p_id: p.target_id,
                   p_base_version: baseVersion ?? 0,
-                  p_patch: { content: p.after, status: "superseded" },
+                  p_patch: { content: p.after, source: "user_stated", confidence: 0.9 },
                   p_actor_type: "dream",
                 });
               }
