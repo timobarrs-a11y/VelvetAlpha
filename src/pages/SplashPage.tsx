@@ -4,12 +4,13 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowRight, Sparkles, ShieldCheck, BadgeCheck, Flag,
   Compass, CalendarDays, MapPin, Target, ClipboardCheck, TrendingUp,
-  Users, UserPlus, Medal, Gamepad2, PenLine, Newspaper,
+  Users, UserPlus, PenLine, Newspaper, Home, MessageCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
 import { SplashShowcase } from '../components/splash/SplashShowcase';
+import { VelvetHomeSection } from '../components/splash/VelvetHomeSection';
 
 const DISPLAY_FONT = "'Bricolage Grotesque', 'Space Grotesk', system-ui, sans-serif";
 
@@ -57,24 +58,24 @@ const PILLARS: Pillar[] = [
     id: 'connect',
     kicker: 'Connect',
     title: 'Real people who get it.',
-    blurb: 'Velvet already knows what you are into, so it puts you where your people are.',
+    blurb: 'Velvet already knows what you are into, so it puts you where your crowd is.',
     accent: '56,189,248',
     items: [
-      { icon: Users, name: 'The House', text: 'Community spaces with live rooms and boards, matched to your interests from day one.' },
+      { icon: Users, name: 'Community Board', text: 'Spaces with live rooms and posts, matched to your interests from day one.' },
       { icon: UserPlus, name: 'Meet people', text: 'Find members who share your interests and goals. Follow, message, and start a crew.' },
-      { icon: Medal, name: 'Progress & medals', text: 'Share wins on the progress feed and earn medals your friends can see.' },
+      { icon: MessageCircle, name: 'Statuses & Your Feed', text: 'Post what you are up to. Friends like and comment, and your wins show up alongside.' },
     ],
   },
   {
-    id: 'play',
-    kicker: 'Play & create',
-    title: 'Something good to do with your time.',
-    blurb: 'A feed worth reading, stories worth writing, and games worth one more round.',
+    id: 'live',
+    kicker: 'Live & create',
+    title: 'A home of your own, and things worth making.',
+    blurb: 'A house in town, a life inside it, a feed worth reading, and stories worth writing.',
     accent: '251,146,60',
     items: [
+      { icon: Home, name: 'Velvet House & Velvet Sims', text: 'Your house on a real street in town, and the cozy life sim that happens inside it.' },
       { icon: Newspaper, name: 'Daily Feed & Lens', text: 'Articles and videos on your topics only. No chasing clicks.' },
       { icon: PenLine, name: 'Co-Author', text: 'Write stories, scripts, and worlds together on a shared canvas.' },
-      { icon: Gamepad2, name: 'The Arcade', text: 'Checkers, Momentum, Slime Soccer, Stellar Pursuit, and more.' },
     ],
   },
 ];
@@ -82,7 +83,7 @@ const PILLARS: Pillar[] = [
 const STEPS = [
   { n: '01', title: 'Tell us what you are into', text: 'A few quick questions about your interests, your goals, and how you like to be supported.' },
   { n: '02', title: 'Meet Atlas', text: 'Atlas turns what you are working toward into a plan and matches you with the right coach.' },
-  { n: '03', title: 'Walk into the House', text: 'You are already placed in spaces with people who are into the same things. Say hi.' },
+  { n: '03', title: 'Move in', text: 'Pick your house in town and walk into spaces with people who are into the same things. Say hi.' },
 ];
 
 const SPACES = [
@@ -269,7 +270,8 @@ export function SplashPage() {
           </span>
           <nav className="hidden md:flex items-center gap-7 text-sm text-gray-400">
             <button onClick={() => scrollTo('inside')} className="hover:text-white transition-colors">What's inside</button>
-            <button onClick={() => scrollTo('community')} className="hover:text-white transition-colors">Community</button>
+            <button onClick={() => scrollTo('home')} className="hover:text-white transition-colors">Velvet House</button>
+            <button onClick={() => scrollTo('community')} className="hover:text-white transition-colors">Community Board</button>
             <button onClick={() => scrollTo('how')} className="hover:text-white transition-colors">How it works</button>
           </nav>
           <div className="flex items-center gap-2">
@@ -321,7 +323,7 @@ export function SplashPage() {
                   backgroundClip: 'text',
                 }}
               >
-                Find your people.
+                Find your crowd.
               </span>
             </h1>
 
@@ -411,11 +413,13 @@ export function SplashPage() {
           </div>
         </section>
 
+        <VelvetHomeSection rise={rise} />
+
         {/* Community */}
         <section id="community" className="relative scroll-mt-20 py-24" style={{ background: 'linear-gradient(180deg, transparent, rgba(56,189,248,0.04) 30%, rgba(244,114,182,0.04) 70%, transparent)' }}>
           <div className="max-w-6xl mx-auto px-5 grid lg:grid-cols-[1fr_1.15fr] gap-12 items-center">
             <motion.div {...rise()}>
-              <Eyebrow accent="56,189,248">The community</Eyebrow>
+              <Eyebrow accent="56,189,248">The Community Board</Eyebrow>
               <SectionTitle>Pull up a chair. Your spaces are already waiting.</SectionTitle>
               <p className="mt-5 text-gray-300 text-lg leading-relaxed max-w-lg">
                 Your interests place you in the right spaces from day one. Each one has live rooms, a board for longer posts,
@@ -536,7 +540,7 @@ export function SplashPage() {
                 Your next chapter starts with hello.
               </h2>
               <p className="mt-5 text-gray-300 text-lg max-w-xl mx-auto">
-                Set a goal, meet your coach, and find your people. It takes a few minutes and costs nothing to start.
+                Set a goal, meet your coach, and find your crowd. It takes a few minutes and costs nothing to start.
               </p>
               <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
                 {primaryCta('Join Project Velvet')}

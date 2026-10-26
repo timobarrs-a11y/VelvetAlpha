@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Compass, Target, Newspaper, Users, UserPlus, PenLine, Gamepad2,
-  Search, CalendarCheck, Check, Circle, Hash, Medal, Sparkles, Play,
+  Compass, Target, Newspaper, Users, UserPlus, PenLine, Home,
+  Search, CalendarCheck, Check, Circle, Hash, Sparkles, DoorOpen,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -183,7 +183,7 @@ function FeedScreen() {
 function HouseScreen() {
   const a = '56,189,248';
   const msgs = [
-    { name: 'Jules', hue: 330, text: 'anyone up for Slime Soccer tonight?' },
+    { name: 'Jules', hue: 330, text: 'anyone down for a co-op run tonight?' },
     { name: 'Dre', hue: 200, text: "I'm in after 9 🎮" },
     { name: 'Sam', hue: 140, text: 'same. loser picks the next game' },
   ];
@@ -302,40 +302,55 @@ function CoAuthorScreen() {
   );
 }
 
-function ArcadeScreen() {
-  const games = [
-    { name: 'Checkers', hue: 350 },
-    { name: 'Momentum', hue: 265 },
-    { name: 'Slime Soccer', hue: 145 },
-    { name: 'Stellar Pursuit', hue: 210 },
+function VelvetHouseScreen() {
+  const a = '244,114,182';
+  const medals = [
+    { name: 'Iron Will', color: '#fbbf24' },
+    { name: 'Coachable', color: '#34d399' },
+    { name: 'Hat Trick', color: '#38bdf8' },
   ];
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2.5">
-        {games.map((g, i) => (
-          <motion.div
-            key={g.name}
-            {...item(i * 0.6)}
-            className="relative rounded-xl p-3 h-[76px] flex flex-col justify-end overflow-hidden"
-            style={{ background: `linear-gradient(140deg, hsl(${g.hue} 70% 45% / 0.55), hsl(${g.hue + 30} 70% 30% / 0.25))`, border: '1px solid rgba(255,255,255,0.08)' }}
-          >
-            <Play className="absolute top-2.5 right-2.5 w-3.5 h-3.5 text-white/60" />
-            <p className="text-white text-[12.5px] font-semibold">{g.name}</p>
-          </motion.div>
-        ))}
-      </div>
       <motion.div
-        {...item(3)}
-        className="flex items-center gap-3 p-3 rounded-xl"
-        style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}
+        {...item(0)}
+        className="rounded-2xl p-3.5"
+        style={{ background: '#14122a', border: `1.5px solid rgba(${a},0.45)` }}
       >
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(251,191,36,0.18)' }}>
-          <Medal className="w-4 h-4 text-amber-300" />
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-white text-[14px] font-semibold">Priya&apos;s place</p>
+            <p className="text-[11px]" style={{ color: 'rgba(202,197,240,0.6)' }}>214 Maple Street · Lighthouse</p>
+          </div>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(251,191,36,0.14)', color: '#fde68a' }}>Earned house</span>
         </div>
-        <div>
-          <p className="text-amber-200 text-[12px] font-semibold">Medal unlocked: First Win</p>
-          <p className="text-[11px] text-gray-400">It&apos;s on your profile for your friends to see.</p>
+        <p className="mt-2.5 text-[12px] text-gray-300">
+          <span className="text-gray-500">Working on:</span> Run a half marathon
+        </p>
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {medals.map(m => (
+            <span key={m.name} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] text-white" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />{m.name}
+            </span>
+          ))}
         </div>
+      </motion.div>
+      <motion.div {...item(1)} className="flex gap-2">
+        <span className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-[12px] font-semibold text-white" style={{ background: `rgba(${a},0.2)`, border: `1px solid rgba(${a},0.35)` }}>
+          <UserPlus className="w-3.5 h-3.5" />Add friend
+        </span>
+        <span className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl text-[12px] font-semibold text-white" style={{ background: 'rgba(251,146,60,0.18)', border: '1px solid rgba(251,146,60,0.35)' }}>
+          <DoorOpen className="w-3.5 h-3.5" />Look inside
+        </span>
+      </motion.div>
+      <motion.div
+        {...item(2)}
+        className="rounded-xl p-3"
+        style={{ background: 'rgba(251,146,60,0.07)', border: '1px solid rgba(251,146,60,0.2)' }}
+      >
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-orange-300 mb-1.5">Inside · Velvet Sims</p>
+        <p className="text-[12.5px] text-gray-300 leading-relaxed">
+          New couch in the living room, tomatoes coming up in the garden, and dinner&apos;s almost ready.
+        </p>
       </motion.div>
     </div>
   );
@@ -345,10 +360,10 @@ const SLIDES: Slide[] = [
   { id: 'atlas', icon: Compass, label: 'Atlas', title: 'Atlas', caption: 'Your assistant. Searches, plans, and books it on your calendar.', accent: '192,132,252', Screen: AtlasScreen },
   { id: 'coach', icon: Target, label: 'Coaches', title: 'Your coach', caption: 'Turns a goal into a plan, then checks in so you follow through.', accent: '52,211,153', Screen: CoachScreen },
   { id: 'feed', icon: Newspaper, label: 'Daily Feed', title: 'Today', caption: 'Your morning brief and stories picked for what you care about.', accent: '251,191,36', Screen: FeedScreen },
-  { id: 'house', icon: Users, label: 'Community', title: 'The House', caption: 'Spaces with live rooms, already matched to your interests.', accent: '56,189,248', Screen: HouseScreen },
+  { id: 'board', icon: Users, label: 'Community Board', title: 'Community Board', caption: 'Spaces with live rooms, already matched to your interests.', accent: '56,189,248', Screen: HouseScreen },
   { id: 'people', icon: UserPlus, label: 'Meet people', title: 'Discover', caption: 'Real people who are into the same things you are.', accent: '244,114,182', Screen: PeopleScreen },
   { id: 'coauthor', icon: PenLine, label: 'Co-Author', title: 'Co-Author', caption: 'Write stories, scripts, and worlds with a partner who never runs dry.', accent: '52,211,153', Screen: CoAuthorScreen },
-  { id: 'arcade', icon: Gamepad2, label: 'Arcade', title: 'The Arcade', caption: 'Quick games, medals to earn, and something to do together.', accent: '251,146,60', Screen: ArcadeScreen },
+  { id: 'home', icon: Home, label: 'Velvet House', title: 'Velvet House', caption: 'Your house in town. Tap Look inside to play Velvet Sims.', accent: '251,146,60', Screen: VelvetHouseScreen },
 ];
 
 export function SplashShowcase({ lite, still }: { lite: boolean; still: boolean }) {
