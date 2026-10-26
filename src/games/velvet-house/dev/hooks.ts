@@ -1,4 +1,5 @@
 import { TYPES } from '../state/objects';
+import { checkPlacement } from '../state/arrange';
 import { CATALOG } from '../state/catalog';
 import { isWalking, poseOf } from '../state/agents';
 import { type SampleFn } from '../state/companionAI';
@@ -34,6 +35,7 @@ export function installDevHooks(g: Game): void {
       closeChat: () => dialogue.close(),
       personLevel: (who: 'jordan' | 'maya') => (who === 'maya' ? people[1] : people[0]).level,
       level: () => view.level,
+      placeCheck: (id: string) => { const o = world.objs.find((q) => q.id === id); return o ? JSON.stringify({ check: checkPlacement(world.objs, o, people), people: people.map((p) => [p.id, p.level, +p.x.toFixed(2), +p.y.toFixed(2), p.onStairs, p.task?.act ?? null]) }) : null; },
       story: () => JSON.stringify(g.flags.story ?? {}),
       openTab: (t: string) => g.drawer.open(t as never),
       closeDrawer: () => g.drawer.close(),

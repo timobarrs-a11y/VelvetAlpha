@@ -31,7 +31,7 @@ test('the first day plays through from the move-in to free will', async ({ page 
       const arranging = await game.locator('.vh-stage.vh-arranging').count();
       const box = (await objects(page)).find((o) => o.id === 'box.lamp' && o.type === 'pbox');
       if (arranging) { await game.getByRole('button', { name: 'Rotate' }).first().click().catch(() => {}); await inGame(page, 'v.closeDrawer()'); }
-      else if (box) { const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
+      else if (box) { await inGame(page, 'v.setView(1)'); const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
     } else if (title === 'The shop' && once('shop')) await inGame(page, "v.openTab('shop')");
     else if (title === 'Order groceries' && once('groceries')) { await inGame(page, "v.openTab('do')"); await game.locator('[data-groceries]').click(); await inGame(page, 'v.closeDrawer()'); }
     else if (flags['tutorial.shop'] && !flags['tutorial.groceries'] && !(await inGame<string>(page, 'v.parcel()')).includes('"ready":false')) await inGame(page, 'v.advance(5)');
