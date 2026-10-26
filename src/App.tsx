@@ -11,7 +11,8 @@ import { Message } from './types';
 import { ChatService } from './services/chatService';
 import { setAppBridgeContext } from './services/appBridgeStore';
 import { supabase } from './shared/supabase/client';
-import { SubscriptionTier } from './types/subscription';
+import { SubscriptionTier, PAID_TIERS } from './types/subscription';
+import { searchMessage, WEB_SEARCH_PRO_ONLY, type HelperSearchRequest } from './features/search/searchTopics';
 import { useSound } from './hooks/useSound';
 import { getCompanion, getCompanions, updateLastMessageTime, claimFirstMessage, finalizeFirstMessage, resetFirstMessage, Companion, CompanionWithLastMessage } from './services/companionService';
 import { getMessageTrackingInfo } from './services/messageTrackingService';
@@ -746,7 +747,7 @@ function AppInner() {
     }
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, search?: HelperSearchRequest) => {
     if (isTyping || !companionId || !companion || !user) return;
 
     if (activeMode === 'atlas-prompt' || activeMode === 'atlas-full') {
@@ -794,7 +795,7 @@ function AppInner() {
       let uiActions: Array<{ tab: 'plan' | 'commitments'; highlightIds: string[] }> | undefined;
 
       if (userProfile && companionId) {
-        const result = await ChatService.sendMessageWithSignals(content, companionId, userProfile);
+        const result = await ChatService.sendMessageWithSignals(content, companionId, userProfile, undefined, search);
         response = result.assistantMessage;
         calendarEvent = result.calendarEvent || null;
         navigationIntent = result.navigationIntent || null;
@@ -905,6 +906,12 @@ function AppInner() {
   };
 
   sendMessageRef.current = handleSendMessage;
+
+  // Coaches and assistants: the search button, which asks what the search is for first.
+  const helperSearch = activeThread === 'companion' && user && isHelper(companion?.relationship_type)
+    && (!WEB_SEARCH_PRO_ONLY || PAID_TIERS.includes(currentTier))
+    ? { userId: user.id, onSearch: (req: HelperSearchRequest) => { void handleSendMessage(searchMessage(req), req); } }
+    : undefined;
 
   const handleVideoWatch = async (videoUrl: string, videoId: string) => {
     if (!companion || !companionId || !user) return;
@@ -1320,7 +1327,7 @@ function AppInner() {
           {/* Chat Input — grows */}
           <div className="flex-1 min-w-0">
             <ChatInput
-              onSend={activeThread === 'companion' ? handleSendMessage : handleThreadSend}
+              onSend={activeThread === 'companion' ? (m: string) => handleSendMessage(m) : handleThreadSend}
               disabled={
                 activeThread === 'companion'
                   ? (isTyping || remainingMessages === 0 || isCurrentlyLoading)
@@ -1336,6 +1343,7 @@ function AppInner() {
               lastMessageText={uiMessages.length > 0 ? uiMessages[uiMessages.length - 1].content.slice(0, 120) : undefined}
               showNavRadial={false}
               showLanguageToolbar={activeThread === 'companion' && companion?.relationship_type === 'mentor' && (companion?.signature_expert === 'language_tutor' || (expertDomain ?? '').includes('language'))}
+              helperSearch={helperSearch}
             />
           </div>
 
@@ -1407,7 +1415,7 @@ function AppInner() {
 
           <div className="flex-1 min-w-0">
             <ChatInput
-              onSend={activeThread === 'companion' ? handleSendMessage : handleThreadSend}
+              onSend={activeThread === 'companion' ? (m: string) => handleSendMessage(m) : handleThreadSend}
               disabled={
                 activeThread === 'companion'
                   ? (isTyping || remainingMessages === 0 || isCurrentlyLoading)
@@ -1423,6 +1431,7 @@ function AppInner() {
               lastMessageText={uiMessages.length > 0 ? uiMessages[uiMessages.length - 1].content.slice(0, 120) : undefined}
               showNavRadial={false}
               showLanguageToolbar={activeThread === 'companion' && companion?.relationship_type === 'mentor' && (companion?.signature_expert === 'language_tutor' || (expertDomain ?? '').includes('language'))}
+              helperSearch={helperSearch}
             />
           </div>
 

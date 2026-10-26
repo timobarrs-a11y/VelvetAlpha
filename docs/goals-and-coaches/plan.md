@@ -120,6 +120,19 @@ up real dates; `atlas-agent` falls back to it when no Brave key is set. The sche
 "step pencilled in today" and "due tomorrow" reasons after missed and due-today; the morning
 brief now includes open commitments and today's plan steps.
 
+**The search button.** Coach and assistant chats have a search button (the globe beside the
+message box). Before it searches, it asks **"Is this search about…"** and lists what that helper
+is carrying: its goals, open commitments (soonest first) and open plan steps, plus **Something
+else** for searches that aren't tied to a goal yet (like looking into something before deciding
+on one). The choice goes to `chat-turn` with the item's id; the server looks it up (only the
+user's own, only this helper's) and adds a search brief to the message: the item, its dates,
+its goal or plan, and the instruction to search first and use what it knows from the
+conversation rather than asking. Typing what to look up is optional; left blank, the helper
+picks the most useful search for that item. General searches belong to **Atlas**, and the sheet
+says so with a link. Helpers can also offer a search themselves when it would move a goal
+forward. `WEB_SEARCH_PRO_ONLY` (client `src/features/search/searchTopics.ts`, server
+`_shared/webSearch.ts`) turns it into a paid feature later.
+
 ## 3. Setting up a goal: plan, commitments, progress, then the calendar
 
 When a goal is mapped out and its assistant or coach is chosen (in onboarding or any time

@@ -18,7 +18,9 @@ import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
 import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult, type CoachingChange } from "../_shared/coachTools.ts";
 import { buildAssistantBehavioralInstructions } from "../_shared/assistantFramework.ts";
-import { webSearchTool, WEB_SEARCH_GUIDANCE, textOf } from "../_shared/webSearch.ts";
+import {
+  webSearchTool, WEB_SEARCH_GUIDANCE, WEB_SEARCH_PRO_ONLY, textOf, parseSearchRequest, buildSearchBrief, type SearchSubject,
+} from "../_shared/webSearch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -204,6 +206,8 @@ interface ChatTurnRequest {
   timezone?: string;
   /** Coaching page the coach panel is open on, if the message comes from there. */
   surface?: CoachSurface;
+  /** From the search button in a coach's or assistant's chat. */
+  search?: unknown;
 }
 
 type CoachSurface = 'progress' | 'plans' | 'commitments' | 'library';
@@ -2050,11 +2054,50 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isHelper ? coachSurface
       alternatingMessages.pop();
     }
 
+    // The search button: look up what the search is about, so the helper can
+    // search with it in hand. Only for this user's own goals and this helper's items.
+    const searchRequest = isHelper && (!WEB_SEARCH_PRO_ONLY || tier === 'plus' || tier === 'elite' || tier === 'essential' || isSuperUser)
+      ? parseSearchRequest(body.search)
+      : null;
+    let searchBrief = '';
+    if (searchRequest) {
+      let subject: SearchSubject | null = null;
+      try {
+        const about = searchRequest.about;
+        if (about?.kind === 'goal') {
+          const { data } = await supabaseAdmin.from('user_goals').select('title, target_date')
+            .eq('id', about.id).eq('user_id', user.id).maybeSingle();
+          if (data) subject = { kind: 'goal', title: data.title, date: data.target_date };
+        } else if (about?.kind === 'commitment') {
+          const { data } = await supabaseAdmin.from('coaching_commitments').select('description, due_date, goal_id')
+            .eq('id', about.id).eq('user_id', user.id).eq('companion_id', companionId).maybeSingle();
+          if (data) {
+            const { data: goal } = data.goal_id
+              ? await supabaseAdmin.from('user_goals').select('title').eq('id', data.goal_id).eq('user_id', user.id).maybeSingle()
+              : { data: null };
+            subject = { kind: 'commitment', title: data.description, date: data.due_date ? String(data.due_date).slice(0, 10) : null, goalTitle: goal?.title ?? null };
+          }
+        } else if (about?.kind === 'step') {
+          const { data } = await supabaseAdmin.from('coach_plan_steps')
+            .select('title, scheduled_for, coach_plans!inner(title, user_id, companion_id)')
+            .eq('id', about.id).eq('coach_plans.user_id', user.id).eq('coach_plans.companion_id', companionId).maybeSingle();
+          if (data) {
+            const plan = (Array.isArray(data.coach_plans) ? data.coach_plans[0] : data.coach_plans) as { title?: string } | null;
+            subject = { kind: 'step', title: data.title, date: data.scheduled_for, planTitle: plan?.title ?? null };
+          }
+        }
+      } catch (searchErr) {
+        console.error(`[${traceId}] Search subject lookup failed:`, searchErr);
+      }
+      // An item that isn't theirs (or is gone) and no query: nothing to search for.
+      if (subject || searchRequest.query) searchBrief = `\n\n${buildSearchBrief(searchRequest.query, subject)}`;
+    }
+
     const messagesToSend = [
       ...alternatingMessages,
       {
         role: 'user' as const,
-        content: message,
+        content: message + searchBrief,
       },
     ].filter(msg => msg.content && msg.content.trim().length > 0);
 
@@ -2122,7 +2165,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isHelper ? coachSurface
 
     const toolRunner: CoachToolRunner | undefined = isHelper
       ? {
-          tools: [...COACH_TOOLS, webSearchTool(3)],
+          tools: [...COACH_TOOLS, webSearchTool(searchBrief ? 5 : 3)],
           maxCalls: isFirstSession ? 12 : 6,
           executed: false,
           run: async (name, input) => {

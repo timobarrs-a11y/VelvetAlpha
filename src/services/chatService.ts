@@ -36,6 +36,7 @@ import {
 import { affectionService } from './affectionService';
 import type { RelationshipType } from './companionService';
 import { isHelper } from '../utils/relationshipType';
+import type { HelperSearchRequest } from '../features/search/searchTopics';
 
 const USE_SERVER_PROMPT = true;
 
@@ -709,6 +710,7 @@ export class ChatService {
     companionId: string,
     userProfile: UserProfile,
     surface?: CoachSurface,
+    search?: HelperSearchRequest,
   ): Promise<{
     assistantMessage: string;
     calendarEvent?: { title: string; event_type: string; event_date: string } | null;
@@ -728,7 +730,7 @@ export class ChatService {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat', timezone: userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', ...(surface ? { surface } : {}) }),
+      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat', timezone: userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', ...(surface ? { surface } : {}), ...(search ? { search } : {}) }),
     });
 
     if (!response.ok) {
