@@ -34,6 +34,7 @@ import {
   Wand2,
   HelpCircle,
   Heart,
+  PlayCircle,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
@@ -339,6 +340,7 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
   const companions = collapsed ? [] : lobby.companions.filter(companion => companion.relationship_type !== 'mentor');
   const coreTools = [
     { label: 'Daily Feed', path: '/daily-feed', tone: '#34d399', icon: <Newspaper className="h-3.5 w-3.5" /> },
+    { label: 'Your Lens', path: '/videos', tone: '#fb7185', icon: <PlayCircle className="h-3.5 w-3.5" /> },
     { label: 'Calendar', path: '/calendar', tone: '#fb923c', icon: <CalendarDays className="h-3.5 w-3.5" /> },
     { label: 'Co-Author', path: '/co-author', tone: '#60a5fa', icon: <FileText className="h-3.5 w-3.5" /> },
     { label: 'Insights', path: '/insights', tone: '#fbbf24', icon: <Lightbulb className="h-3.5 w-3.5" /> },
