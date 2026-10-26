@@ -1,218 +1,103 @@
-import { useState, useEffect, useRef, useCallback, type TouchEvent as ReactTouchEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
+import {
+  PLAYER_WIDTH,
+  PLAYER_HEIGHT,
+  STEP_MS,
+  MAX_FRAME_MS,
+  MAX_BOOST_CHARGES,
+  BOOST_BUFFER_FRAMES,
+  BOOST_COOLDOWN_FRAMES,
+  PERFECT_WINDOW_FRAMES,
+  BOOST_HORIZONTAL,
+  bounceVelocity,
+  boostVelocity,
+  perfectBounceVelocity,
+  nextChain,
+} from '../game/momentum/physics';
+import {
+  type TouchSettings,
+  type SteerSensitivity,
+  isTap,
+  steerTarget,
+  steerVelocity,
+  haptic,
+  isCoarsePointer,
+  loadTouchSettings,
+  saveTouchSettings,
+  hasSeenTutorial,
+  markTutorialSeen,
+} from '../game/momentum/touchControls';
+import { momentumSfx } from '../game/momentum/sfx';
+import { loadTheme } from '../game/momentum/themes';
+import type { ThemeColors, PlayerState, Particle, TrailPoint, GameMode, CareerProgressRow } from '../game/momentum/types';
+import { renderFrame } from '../game/momentum/render';
+import { themePresets, type CareerLevel } from '../game/momentum/config';
+import { MenuScreen, ModeSelectScreen, CareerSelectScreen, ThemeSelectScreen, LoadingScreen, LevelCompleteScreen, CareerFailedScreen, GameOverScreen, type ScreenProps } from '../components/games/momentum/MomentumScreens';
+import {
+  type Platform,
+  type Orb,
+  type Rng,
+  generateLevel,
+  generateChunk,
+  createRng,
+  seedFromString,
+  isPhaseSolid,
+  createEndlessState,
+  endlessDifficulty,
+  lavaSpeed,
+  LANDSCAPE_WIDTH,
+  PORTRAIT_WIDTH,
+} from '../game/momentum/levelGen';
+import { type GhostRun, GHOST_SAMPLE_STEPS, loadLocalGhost, saveLocalGhostIfBest } from '../game/momentum/ghost';
+import { loadStats, updateStats, loadSkinId, skinById } from '../game/momentum/skins';
+import { todayKey, submitRun, fetchLeaderboard } from '../game/momentum/leaderboard';
+import { analyticsService } from '../services/analyticsService';
 
-const GAME_WIDTH = 800;
-const GAME_HEIGHT = 600;
-const PLAYER_WIDTH = 22;
-const PLAYER_HEIGHT = 22;
+// The playfield is chosen per run: landscape 800x600, or a taller, narrower world in portrait.
+let GAME_WIDTH = 800;
+let GAME_HEIGHT = 600;
+const choosePlayfield = () => {
+  const portrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth * 1.15;
+  if (portrait) {
+    GAME_WIDTH = PORTRAIT_WIDTH;
+    GAME_HEIGHT = Math.round(Math.min(1000, Math.max(720, PORTRAIT_WIDTH * (window.innerHeight / window.innerWidth))));
+  } else {
+    GAME_WIDTH = LANDSCAPE_WIDTH;
+    GAME_HEIGHT = 600;
+  }
+};
 const GRAVITY = 0.55;
 const HORIZONTAL_SPEED = 4.5;
-const BOUNCE_VELOCITY = -13;
-const BOOST_VELOCITY = -8;
-const BOOST_HORIZONTAL = 2.5;
-const PLATFORM_HEIGHT = 14;
-const MAX_BOOST_FUEL = 100;
-const BOOST_COST = 50;
-const FUEL_REGEN = 35;
-const TOUCH_SENSITIVITY = 1.6;
 
-const themePresets = [
-  { name: 'Neon Cityscape', icon: '🌃', hint: 'Cyberpunk rooftops' },
-  { name: 'Ancient Ruins', icon: '🏛️', hint: 'Crumbling temples' },
-  { name: 'Candy Kingdom', icon: '🍭', hint: 'Sweet dreamland' },
-  { name: 'Deep Ocean', icon: '🌊', hint: 'Bioluminescent depths' },
-  { name: 'Volcanic Forge', icon: '🌋', hint: 'Molten fire' },
-  { name: 'Crystal Caves', icon: '💎', hint: 'Shimmering underground' },
-];
 
-interface Platform {
-  id: number;
-  y: number;
-  width: number;
-  startX: number;
-  x: number;
-  moveRange: number;
-  speed: number;
-  direction: number;
-  color: string;
-  glow: string;
-  isFar: boolean;
-  isCheckpoint: boolean;
-  touched: boolean;
-  minX: number;
-  maxX: number;
-  type: 'normal' | 'crumbling' | 'spring';
-  crumbleTimer: number;
-  crumbled: boolean;
-  springBounce: number;
-}
 
-interface ThemeColors {
-  levelName: string;
-  background: [string, string];
-  playerColor: string;
-  playerGlow: string;
-  boostTrailColor: string;
-  platforms: string[];
-  glows: string[];
-  checkpoint: string;
-  checkpointGlow: string;
-  flavorText: string;
-  goalY?: number;
-}
+const DAILY_DIFFICULTY = 5;
+const ENDLESS_CHUNK = 30;
 
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  color: string;
-  size: number;
-}
-
-interface TrailPoint {
-  x: number;
-  y: number;
-  life: number;
-}
-
-interface PlayerState {
-  x: number;
-  y: number;
-  prevY: number;
-  vx: number;
-  vy: number;
-  boostFuel: number;
-  isBoosting: boolean;
-  boostTimer: number;
-}
-
-const generatePlatforms = (level: number, themeColors: ThemeColors) => {
-  const safeJumpCount = 60 + level * 10;
-  const platforms: Platform[] = [];
-  let currentY = 520;
-  let platformId = 0;
-
-  for (let i = 0; i < safeJumpCount; i++) {
-    const isFirst = i === 0;
-    const isCheckpoint = i > 0 && i % 20 === 0;
-
-    const safeGap = isFirst ? 0 : isCheckpoint ? 65 : 60 + Math.random() * 40;
-    currentY -= safeGap;
-
-    const safeWidth = isFirst ? 150 : isCheckpoint ? 180 : 90 + Math.random() * (40 - level);
-    const safeStartX = isFirst ? 325 : isCheckpoint ? GAME_WIDTH / 2 - 90 : 50 + Math.random() * (GAME_WIDTH - 200 - safeWidth);
-    const safeMoveRange = isFirst ? 100 : isCheckpoint ? 60 : 100 + Math.random() * 100;
-    const safeSpeed = isFirst ? 0.3 : isCheckpoint ? 0.35 : 0.4 + Math.random() * (0.3 + level * 0.05);
-
-    const safeColorIndex = platformId % themeColors.platforms.length;
-
-    let platType: Platform['type'] = 'normal';
-    if (!isFirst && !isCheckpoint && i > 5) {
-      const roll = Math.random();
-      if (roll < 0.12 + level * 0.01) platType = 'crumbling';
-      else if (roll < 0.20 + level * 0.015) platType = 'spring';
-    }
-
-    platforms.push({
-      id: platformId++,
-      y: currentY,
-      width: Math.max(60, safeWidth),
-      startX: safeStartX,
-      x: safeStartX,
-      moveRange: safeMoveRange,
-      speed: Math.min(safeSpeed, 1.5),
-      direction: Math.random() > 0.5 ? 1 : -1,
-      color: isCheckpoint ? themeColors.checkpoint : themeColors.platforms[safeColorIndex],
-      glow: isCheckpoint ? themeColors.checkpointGlow : themeColors.glows[safeColorIndex],
-      isFar: false,
-      isCheckpoint,
-      touched: false,
-      minX: Math.max(0, safeStartX - safeMoveRange / 2),
-      maxX: Math.min(GAME_WIDTH - safeWidth, safeStartX + safeMoveRange / 2),
-      type: platType,
-      crumbleTimer: 0,
-      crumbled: false,
-      springBounce: 0,
-    });
-
-    if (!isFirst && !isCheckpoint && i > 3 && Math.random() < 0.4) {
-      const boostGap = 80 + Math.random() * (70 + level * 5);
-      const boostY = currentY - boostGap;
-
-      const boostWidth = 60 + Math.random() * 40;
-      const boostStartX = 40 + Math.random() * (GAME_WIDTH - 120 - boostWidth);
-      const boostMoveRange = 140 + Math.random() * 160;
-      const boostSpeed = (0.8 + level * 0.15) + Math.random() * (0.8 + level * 0.2);
-
-      const boostColorIndex = platformId % themeColors.platforms.length;
-
-      platforms.push({
-        id: platformId++,
-        y: boostY,
-        width: boostWidth,
-        startX: boostStartX,
-        x: boostStartX,
-        moveRange: boostMoveRange,
-        speed: Math.min(boostSpeed, 2.8),
-        direction: Math.random() > 0.5 ? 1 : -1,
-        color: themeColors.platforms[boostColorIndex],
-        glow: themeColors.glows[boostColorIndex],
-        isFar: true,
-        isCheckpoint: false,
-        touched: false,
-        minX: Math.max(0, boostStartX - boostMoveRange / 2),
-        maxX: Math.min(GAME_WIDTH - boostWidth, boostStartX + boostMoveRange / 2),
-        type: 'normal',
-        crumbleTimer: 0,
-        crumbled: false,
-        springBounce: 0,
-      });
-    }
-  }
-
-  platforms.sort((a, b) => b.y - a.y);
-
-  return { platforms, goalY: currentY - 50 };
+const trackMomentum = (action: string, metadata: Record<string, unknown>) => {
+  void analyticsService.trackEvent({
+    action_type: 'feature_used',
+    action_target: `momentum_${action}`,
+    page_path: '/momentum',
+    metadata,
+  });
 };
 
-interface CareerLevel {
-  number: number;
-  name: string;
-  theme: string;
-  timeLimit: number;
-  threeStarTime: number;
-  twoStarTime: number;
-  difficulty: number;
-}
+const dailyThemeName = (day: string) => themePresets[seedFromString(day) % themePresets.length].name;
 
-const careerLevels: CareerLevel[] = [
-  { number: 1, name: "First Steps", theme: "Neon Cityscape", timeLimit: 45, threeStarTime: 30, twoStarTime: 37, difficulty: 1 },
-  { number: 2, name: "Rising Fast", theme: "Crystal Caves", timeLimit: 50, threeStarTime: 35, twoStarTime: 42, difficulty: 2 },
-  { number: 3, name: "Quick Reflexes", theme: "Candy Kingdom", timeLimit: 40, threeStarTime: 28, twoStarTime: 34, difficulty: 3 },
-  { number: 4, name: "Under Pressure", theme: "Deep Ocean", timeLimit: 38, threeStarTime: 26, twoStarTime: 32, difficulty: 4 },
-  { number: 5, name: "Speed Demon", theme: "Volcanic Forge", timeLimit: 35, threeStarTime: 24, twoStarTime: 29, difficulty: 5 },
-  { number: 6, name: "Against the Clock", theme: "Ancient Ruins", timeLimit: 33, threeStarTime: 22, twoStarTime: 27, difficulty: 6 },
-  { number: 7, name: "Time Trial", theme: "Neon Cityscape", timeLimit: 30, threeStarTime: 20, twoStarTime: 25, difficulty: 7 },
-  { number: 8, name: "Racing Shadows", theme: "Crystal Caves", timeLimit: 28, threeStarTime: 19, twoStarTime: 23, difficulty: 8 },
-  { number: 9, name: "Final Sprint", theme: "Volcanic Forge", timeLimit: 25, threeStarTime: 17, twoStarTime: 21, difficulty: 9 },
-  { number: 10, name: "Legend", theme: "Deep Ocean", timeLimit: 22, threeStarTime: 15, twoStarTime: 18, difficulty: 10 }
-];
 
 export function MomentumGame() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [gameState, setGameState] = useState<'menu' | 'modeSelect' | 'careerLevelSelect' | 'themeSelect' | 'loading' | 'playing' | 'levelComplete' | 'gameOver' | 'careerFailed'>('menu');
-  const [gameMode, setGameMode] = useState<'freeplay' | 'career'>('freeplay');
+  const [gameMode, setGameMode] = useState<GameMode>('freeplay');
   const [theme, setTheme] = useState('');
   const [customTheme, setCustomTheme] = useState('');
   const [level, setLevel] = useState(1);
-  const [careerProgress, setCareerProgress] = useState<any[]>([]);
+  const [careerProgress, setCareerProgress] = useState<CareerProgressRow[]>([]);
   const [currentCareerLevel, setCurrentCareerLevel] = useState<CareerLevel | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState(0);
   const [levelData, setLevelData] = useState<ThemeColors | null>(null);
   const [score, setScore] = useState(0);
   const [loadingText, setLoadingText] = useState('');
@@ -221,11 +106,28 @@ export function MomentumGame() {
   const [starsEarned, setStarsEarned] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  const playerRef = useRef<PlayerState>({ x: 100, y: 300, prevY: 300, vx: 0, vy: 0, boostFuel: MAX_BOOST_FUEL, isBoosting: false, boostTimer: 0 });
+  const playerRef = useRef<PlayerState>({ x: 100, y: 300, prevY: 300, vx: 0, vy: 0, boostCharges: MAX_BOOST_CHARGES, isBoosting: false, boostTimer: 0 });
   const trailRef = useRef<TrailPoint[]>([]);
   const platformsRef = useRef<Platform[]>([]);
   const particlesRef = useRef<Particle[]>([]);
-  const keysRef = useRef({ left: false, right: false, boost: false, boostUsed: false });
+  const keysRef = useRef({ left: false, right: false });
+  // Boost / momentum state (frame counts are fixed 60Hz steps)
+  const boostBufferRef = useRef(0);
+  const boostCooldownRef = useRef(0);
+  const framesSinceLandingRef = useRef(9999);
+  const chainRef = useRef(0);
+  const prevLandingYRef = useRef<number | null>(null);
+  const lastLandingSpringRef = useRef(false);
+  // Fixed timestep + game feel
+  const accumulatorRef = useRef(0);
+  const lastFrameTimeRef = useRef<number | null>(null);
+  const hitStopRef = useRef(0);
+  const shakeRef = useRef(0);
+  const flashRef = useRef(0);
+  const popupRef = useRef<{ text: string; life: number; color: string } | null>(null);
+  const pauseStartRef = useRef(0);
+  // Latest render values for the rAF loop, which is not recreated on every state change
+  const liveRef = useRef({ isPaused, gameMode, currentCareerLevel, level });
   const cameraYRef = useRef(0);
   const gameLoopRef = useRef<number>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -244,7 +146,31 @@ export function MomentumGame() {
   const lastPlatformYRef = useRef(520); // Track last successful platform landing
   const bounceYRef = useRef<number | null>(null); // Y position at moment of bounce, null when not recently bounced
   const touchTargetXRef = useRef<number | null>(null);
-  const touchInfoRef = useRef<{ startClientX: number; startBallCenter: number; moved: boolean; startTime: number } | null>(null);
+  // Steering finger (one at a time); boost taps are handled independently so both thumbs work together
+  const steerPointerRef = useRef<{ id: number; startClientX: number; startClientY: number; startTime: number; startBallCenter: number; maxMove: number } | null>(null);
+  const tapFxRef = useRef<Array<{ x: number; y: number; life: number }>>([]);
+  const simFrameRef = useRef(0);
+  const landingFrameRef = useRef(-9999);
+  const boostPressFrameRef = useRef(0);
+  const [touchSettings, setTouchSettings] = useState<TouchSettings>(loadTouchSettings);
+  const touchSettingsRef = useRef(touchSettings);
+  touchSettingsRef.current = touchSettings;
+  const [isTouchDevice] = useState(isCoarsePointer);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [muted, setMuted] = useState(momentumSfx.muted);
+  const [skinId, setSkinId] = useState(loadSkinId);
+  const [lifetimeStats, setLifetimeStats] = useState(loadStats);
+  const [runResult, setRunResult] = useState<{ newBest: boolean; height: number; bestHeight: number; leaderboardKey: number }>({ newBest: false, height: 0, bestHeight: 0, leaderboardKey: 0 });
+  const orbsRef = useRef<Orb[]>([]);
+  const endlessRef = useRef<{ state: ReturnType<typeof createEndlessState>; rng: Rng; topY: number } | null>(null);
+  const lavaYRef = useRef(Infinity);
+  const carryVxRef = useRef(0);
+  const ghostRecRef = useRef<number[]>([]);
+  const ghostRef = useRef<GhostRun | null>(null);
+  const runModeRef = useRef<GameMode>('freeplay');
+  const skinRef = useRef(skinById(skinId));
+  skinRef.current = skinById(skinId);
+  liveRef.current = { isPaused: isPaused || showTutorial, gameMode, currentCareerLevel, level };
 
   useEffect(() => {
     if (gameMode === 'career') {
@@ -280,7 +206,7 @@ export function MomentumGame() {
 
       if (existingProgress) {
         const shouldUpdate = !existingProgress.completed ||
-                            (completed && time < existingProgress.best_time) ||
+                            (completed && time < (existingProgress.best_time ?? Infinity)) ||
                             stars > existingProgress.stars_earned;
 
         if (shouldUpdate) {
@@ -322,80 +248,29 @@ export function MomentumGame() {
     }
   };
 
-  const generateThemeWithAI = async (selectedTheme: string, currentLevel: number, careerLevel?: CareerLevel) => {
+  const generateThemeWithAI = async (selectedTheme: string, currentLevel: number, careerLevel?: CareerLevel, mode: GameMode = careerLevel ? 'career' : 'freeplay') => {
     setLoadingText('Painting your world...');
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/generate-momentum-theme`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({ theme: selectedTheme })
+      const themeConfig: ThemeColors = await loadTheme(selectedTheme, async () => {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const response = await fetch(`${supabaseUrl}/functions/v1/generate-momentum-theme`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ theme: selectedTheme })
+        });
+        if (!response.ok) throw new Error('Failed to generate theme');
+        return response.json();
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate theme');
-      }
-
-      const themeConfig: ThemeColors = await response.json();
-
-      const { platforms, goalY } = generatePlatforms(careerLevel?.difficulty || currentLevel, themeConfig);
-
-      platformsRef.current = platforms;
-      const firstPlatform = platforms[0];
-      playerRef.current = {
-        x: firstPlatform.startX + firstPlatform.width / 2 - PLAYER_WIDTH / 2,
-        y: 520 - PLAYER_HEIGHT - 2,
-        prevY: 520 - PLAYER_HEIGHT - 2,
-        vx: 0,
-        vy: 0,
-        boostFuel: MAX_BOOST_FUEL,
-        isBoosting: false,
-        boostTimer: 0
-      };
-      cameraYRef.current = 0;
-      scoreRef.current = 0;
-      comboRef.current = 0;
-      lastPlatformRef.current = -1;
-      particlesRef.current = [];
-      trailRef.current = [];
-      startYRef.current = 520;
-      goalYRef.current = goalY;
-      highestYRef.current = 520;
-      checkpointYRef.current = 520;
-      lastPlatformYRef.current = 520; // Initialize last platform Y
-      startTimeRef.current = Date.now();
-      elapsedTimeRef.current = 0;
-
-      if (careerLevel) {
-        setTimeRemaining(careerLevel.timeLimit);
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = window.setInterval(() => {
-          setTimeRemaining(prev => {
-            if (prev <= 0) {
-              if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-              return 0;
-            }
-            return prev - 0.1;
-          });
-        }, 100);
-      }
-
-      setLevelData({ ...themeConfig, goalY });
-      setScore(0);
-      setIsPaused(false);
-      pauseTimeRef.current = 0;
-      initSpeedLines();
-      setGameState('playing');
+      startRun(themeConfig, careerLevel?.difficulty || currentLevel, mode, careerLevel);
     } catch (error) {
-      console.error('Theme generation failed:', error);
-      setLoadingText('Retrying...');
-      setTimeout(() => generateThemeWithAI(selectedTheme, currentLevel, careerLevel), 1000);
+      console.error('Failed to start level:', error);
+      setGameState('menu');
     }
   };
 
@@ -404,6 +279,36 @@ export function MomentumGame() {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, []);
+
+  const resetMomentum = () => {
+    boostBufferRef.current = 0;
+    boostCooldownRef.current = 0;
+    framesSinceLandingRef.current = 9999;
+    chainRef.current = 0;
+    prevLandingYRef.current = null;
+    lastLandingSpringRef.current = false;
+    hitStopRef.current = 0;
+    simFrameRef.current = 0;
+    landingFrameRef.current = -9999;
+    carryVxRef.current = 0;
+    ghostRecRef.current = [];
+    shakeRef.current = 0;
+    flashRef.current = 0;
+    popupRef.current = null;
+  };
+
+  const pauseGame = () => {
+    if (liveRef.current.isPaused) return;
+    pauseStartRef.current = Date.now();
+    setIsPaused(true);
+  };
+
+  const resumeGame = () => {
+    if (!liveRef.current.isPaused) return;
+    pauseTimeRef.current += Date.now() - pauseStartRef.current;
+    lastFrameTimeRef.current = null;
+    setIsPaused(false);
+  };
 
   const spawnParticles = (x: number, y: number, color: string, count = 6, spread = 8) => {
     for (let i = 0; i < count; i++) {
@@ -439,8 +344,9 @@ export function MomentumGame() {
     const playerBottom = player.y + PLAYER_HEIGHT;
     const playerPrevBottom = player.prevY + PLAYER_HEIGHT;
     const platformTop = platform.y;
-    const platformLeft = platform.x - 10;
-    const platformRight = platform.x + platform.width + 10;
+    // Forgiving edges: count a landing if most of the ball is still over the platform
+    const platformLeft = platform.x - PLAYER_WIDTH * 0.5 - 6;
+    const platformRight = platform.x + platform.width + PLAYER_WIDTH * 0.5 + 6;
     const playerCenterX = player.x + PLAYER_WIDTH / 2;
 
     const wasAbove = playerPrevBottom <= platformTop + 6;
@@ -461,14 +367,16 @@ export function MomentumGame() {
     player.prevY = player.y;
     player.vx = 0;
     player.vy = 0;
-    player.boostFuel = MAX_BOOST_FUEL;
-    cameraYRef.current = Math.max(0, GAME_HEIGHT / 2.5 - player.y);
+    player.boostCharges = MAX_BOOST_CHARGES;
+    resetMomentum();
+    cameraYRef.current = Math.max(0, GAME_HEIGHT * (GAME_HEIGHT > 600 ? 0.45 : 0.4) - player.y);
     comboRef.current = 0;
     lastPlatformYRef.current = player.y; // Reset last platform Y on respawn
     touchTargetXRef.current = null;
+    steerPointerRef.current = null;
   };
 
-  const saveGameStats = async () => {
+  const saveGameStats = async (completed: boolean) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -479,7 +387,7 @@ export function MomentumGame() {
         theme_name: levelData?.levelName || theme,
         score: scoreRef.current,
         completion_time: elapsedTimeRef.current,
-        completed: gameState === 'levelComplete'
+        completed
       });
     } catch (error) {
       console.error('Failed to save game stats:', error);
@@ -499,57 +407,99 @@ export function MomentumGame() {
     }
   };
 
-  const triggerBoost = () => {
-    keysRef.current.boost = true;
-    setTimeout(() => {
-      keysRef.current.boost = false;
-      keysRef.current.boostUsed = false;
-    }, 60);
+  // Presses are buffered for a few frames so an early or mistimed press is never lost
+  // framesAgo lets a tap that is recognised on release count from when the finger went down
+  const triggerBoost = (framesAgo = 0) => {
+    momentumSfx.unlock();
+    if (playerRef.current.boostCharges === 0) momentumSfx.empty();
+    boostBufferRef.current = BOOST_BUFFER_FRAMES;
+    boostPressFrameRef.current = simFrameRef.current - framesAgo;
   };
 
-  const handleCanvasTouchStart = (e: ReactTouchEvent<HTMLCanvasElement>) => {
-    if (gameState !== 'playing' || isPaused) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    touchInfoRef.current = {
-      startClientX: touch.clientX,
-      startBallCenter: playerRef.current.x + PLAYER_WIDTH / 2,
-      moved: false,
-      startTime: Date.now(),
-    };
+  const updateTouchSettings = (patch: Partial<TouchSettings>) => {
+    const next = { ...touchSettingsRef.current, ...patch };
+    setTouchSettings(next);
+    saveTouchSettings(next);
   };
 
-  const handleCanvasTouchMove = (e: ReactTouchEvent<HTMLCanvasElement>) => {
-    if (gameState !== 'playing' || isPaused) return;
-    const touch = e.touches[0];
-    if (!touch || !touchInfoRef.current) return;
+  const dismissTutorial = () => {
+    markTutorialSeen();
+    pauseTimeRef.current += Date.now() - pauseStartRef.current;
+    lastFrameTimeRef.current = null;
+    setShowTutorial(false);
+  };
+
+  const pointerToCanvasX = (clientX: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return 0;
+    const rect = canvas.getBoundingClientRect();
+    return clientX * (GAME_WIDTH / rect.width);
+  };
+
+  const spawnTapFx = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = GAME_WIDTH / rect.width;
-    const touchCanvasX = (touch.clientX - rect.left) * scaleX;
-    const startCanvasX = (touchInfoRef.current.startClientX - rect.left) * scaleX;
-    const dragDelta = touchCanvasX - startCanvasX;
-    if (Math.abs(dragDelta) > 8) {
-      touchInfoRef.current.moved = true;
-    }
-    touchTargetXRef.current = touchInfoRef.current.startBallCenter + dragDelta;
+    const scale = GAME_WIDTH / rect.width;
+    tapFxRef.current.push({ x: (clientX - rect.left) * scale, y: (clientY - rect.top) * scale, life: 1 });
   };
 
-  const handleCanvasTouchEnd = () => {
-    if (!touchInfoRef.current) return;
-    const info = touchInfoRef.current;
-    const elapsed = Date.now() - info.startTime;
-    // Quick tap (minimal movement, short duration) = boost
-    if (!info.moved && elapsed < 250) {
-      triggerBoost();
+  const boostFromTouch = (clientX: number, clientY: number, framesAgo = 0) => {
+    triggerBoost(framesAgo);
+    haptic(8);
+    spawnTapFx(clientX, clientY);
+  };
+
+  // One-thumb controls, anywhere on screen: drag to steer, tap to boost.
+  // A second finger landing while one is steering boosts immediately.
+  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') return;
+    momentumSfx.unlock();
+    if (gameState !== 'playing' || liveRef.current.isPaused) return;
+    if ((e.target as HTMLElement).closest('button')) return;
+    if (steerPointerRef.current) {
+      boostFromTouch(e.clientX, e.clientY);
+      return;
     }
+    steerPointerRef.current = {
+      id: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startTime: performance.now(),
+      startBallCenter: playerRef.current.x + PLAYER_WIDTH / 2,
+      maxMove: 0,
+    };
+    touchTargetXRef.current = steerPointerRef.current.startBallCenter;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const steer = steerPointerRef.current;
+    if (!steer || steer.id !== e.pointerId) return;
+    steer.maxMove = Math.max(steer.maxMove, Math.hypot(e.clientX - steer.startClientX, e.clientY - steer.startClientY));
+    const drag = pointerToCanvasX(e.clientX) - pointerToCanvasX(steer.startClientX);
+    touchTargetXRef.current = steerTarget(steer.startBallCenter, drag, touchSettingsRef.current.sensitivity);
+  };
+
+  const handlePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const steer = steerPointerRef.current;
+    if (!steer || steer.id !== e.pointerId) return;
+    steerPointerRef.current = null;
     touchTargetXRef.current = null;
-    touchInfoRef.current = null;
+    const heldMs = performance.now() - steer.startTime;
+    if (e.type === 'pointerup' && isTap(heldMs, steer.maxMove) && !liveRef.current.isPaused) {
+      boostFromTouch(steer.startClientX, steer.startClientY, Math.round(heldMs / STEP_MS));
+    }
   };
 
-  const gameLoop = useCallback(() => {
-    if (gameState !== 'playing' || !levelData || isPaused) return;
+  const gameLoop = useCallback((now: number) => {
+    if (gameState !== 'playing' || !levelData) return;
+    const { isPaused, gameMode, currentCareerLevel, level } = liveRef.current;
+    if (isPaused) {
+      lastFrameTimeRef.current = null;
+      gameLoopRef.current = requestAnimationFrame(gameLoop);
+      return;
+    }
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -562,7 +512,17 @@ export function MomentumGame() {
 
     elapsedTimeRef.current = (Date.now() - startTimeRef.current - pauseTimeRef.current) / 1000;
 
-    // Calculate movement state for both speed lines and rendering
+    // Career timer is derived from the game clock so it pauses with the game
+    let timeRemaining = 0;
+    if (gameMode === 'career' && currentCareerLevel) {
+      timeRemaining = Math.max(0, currentCareerLevel.timeLimit - elapsedTimeRef.current);
+    }
+
+    const frameMs = lastFrameTimeRef.current === null ? STEP_MS : Math.min(MAX_FRAME_MS, now - lastFrameTimeRef.current);
+    lastFrameTimeRef.current = now;
+    accumulatorRef.current += frameMs;
+
+    const getMotion = () => {
     const fallenDistance = player.y - lastPlatformYRef.current;
     const isTrueFalling = player.vy > 0 && fallenDistance > 150; // ~2 platform gaps (true free fall)
 
@@ -572,6 +532,12 @@ export function MomentumGame() {
     if (risenFromBounce > 250) bounceYRef.current = null; // Clear once well past bounce
     const isRisingFast = player.vy < -8 && (bounceYRef.current === null || risenFromBounce >= 80);
     const speedIntensity = isTrueFalling ? Math.abs(player.vy) / 15 : isRisingFast ? Math.abs(player.vy) / 20 : 0;
+    return { isTrueFalling, isRisingFast, speedIntensity };
+    };
+
+    // One fixed 60Hz physics step. Returns true when the run has ended.
+    const simulate = (): boolean => {
+    const { isTrueFalling, isRisingFast, speedIntensity } = getMotion();
 
     speedLinesRef.current.forEach(line => {
       if (isTrueFalling) {
@@ -615,12 +581,7 @@ export function MomentumGame() {
     const touchX = touchTargetXRef.current;
     if (touchX !== null) {
       const ballCenter = player.x + PLAYER_WIDTH / 2;
-      const delta = touchX - ballCenter;
-      if (Math.abs(delta) > 4) {
-        player.vx = Math.max(-HORIZONTAL_SPEED, Math.min(HORIZONTAL_SPEED, delta * TOUCH_SENSITIVITY));
-      } else {
-        player.vx *= 0.6;
-      }
+      player.vx = steerVelocity(player.vx, touchX, ballCenter, HORIZONTAL_SPEED);
     } else if (keys.left) {
       player.vx = -HORIZONTAL_SPEED;
     } else if (keys.right) {
@@ -629,26 +590,66 @@ export function MomentumGame() {
       player.vx *= 0.82;
     }
 
-    if (keys.boost && !keys.boostUsed && player.boostFuel >= BOOST_COST && player.vy > -10) {
-      player.vy += BOOST_VELOCITY;
-      // Apply horizontal kick based on current intent (touch or keyboard)
-      if (touchX !== null) {
-        const ballCenter = player.x + PLAYER_WIDTH / 2;
-        const delta = touchX - ballCenter;
-        if (Math.abs(delta) > 4) {
-          player.vx += Math.sign(delta) * BOOST_HORIZONTAL;
-        }
-      } else {
-        if (keys.left) player.vx -= BOOST_HORIZONTAL;
-        if (keys.right) player.vx += BOOST_HORIZONTAL;
-      }
-      player.boostFuel -= BOOST_COST;
-      player.isBoosting = true;
-      player.boostTimer = 25;
-      keys.boostUsed = true;
-      spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, levelData.boostTrailColor || '#00ffff', 12, 12);
+    if (boostCooldownRef.current > 0) boostCooldownRef.current--;
+    framesSinceLandingRef.current++;
+    simFrameRef.current++;
+    if (shakeRef.current > 0) shakeRef.current *= 0.85;
+    if (flashRef.current > 0) flashRef.current = Math.max(0, flashRef.current - 0.06);
+    if (popupRef.current) {
+      popupRef.current.life -= 0.02;
+      if (popupRef.current.life <= 0) popupRef.current = null;
     }
-    if (!keys.boost) keys.boostUsed = false;
+
+    if (boostBufferRef.current > 0) {
+      const boostColor = levelData.boostTrailColor || '#00ffff';
+      const pressAfterLanding = boostPressFrameRef.current - landingFrameRef.current;
+      const isPerfect = pressAfterLanding >= -3 && pressAfterLanding <= PERFECT_WINDOW_FRAMES
+        && framesSinceLandingRef.current <= PERFECT_WINDOW_FRAMES + BOOST_BUFFER_FRAMES && player.vy < 0;
+      if (isPerfect) {
+        // Perfect bounce: pressing right after landing is free and launches much higher
+        player.vy = Math.min(player.vy, perfectBounceVelocity(level, chainRef.current, lastLandingSpringRef.current));
+        boostBufferRef.current = 0;
+        framesSinceLandingRef.current = 9999;
+        landingFrameRef.current = -9999;
+        player.boostTimer = 30;
+        player.isBoosting = true;
+        hitStopRef.current = 3;
+        shakeRef.current = 7;
+        flashRef.current = 0.35;
+        popupRef.current = { text: 'PERFECT!', life: 1, color: '#ffe066' };
+        haptic(25);
+        momentumSfx.perfect();
+        updateStats(st => ({ perfects: st.perfects + 1 }));
+        scoreRef.current += 100 * (1 + chainRef.current);
+        spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, '#ffe066', 18, 14);
+      } else if (player.boostCharges > 0 && boostCooldownRef.current === 0) {
+        player.vy = boostVelocity(player.vy);
+        // Apply horizontal kick based on current intent (touch or keyboard)
+        if (touchX !== null) {
+          const ballCenter = player.x + PLAYER_WIDTH / 2;
+          const delta = touchX - ballCenter;
+          if (Math.abs(delta) > 4) {
+            player.vx += Math.sign(delta) * BOOST_HORIZONTAL;
+          }
+        } else {
+          if (keys.left) player.vx -= BOOST_HORIZONTAL;
+          if (keys.right) player.vx += BOOST_HORIZONTAL;
+        }
+        player.boostCharges--;
+        haptic(12);
+        momentumSfx.boost();
+        player.isBoosting = true;
+        player.boostTimer = 25;
+        boostBufferRef.current = 0;
+        boostCooldownRef.current = BOOST_COOLDOWN_FRAMES;
+        hitStopRef.current = 2;
+        shakeRef.current = 4;
+        flashRef.current = 0.18;
+        spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, boostColor, 14, 12);
+      } else {
+        boostBufferRef.current--;
+      }
+    }
 
     if (player.boostTimer > 0) {
       player.boostTimer--;
@@ -657,7 +658,7 @@ export function MomentumGame() {
       player.isBoosting = false;
     }
 
-    if (player.isBoosting || player.boostTimer > 0) {
+    if (player.isBoosting || player.boostTimer > 0 || (chainRef.current >= 3 && player.vy < -6)) {
       trailRef.current.push({ x: player.x + PLAYER_WIDTH/2, y: player.y + PLAYER_HEIGHT/2, life: 1 });
       if (trailRef.current.length > 20) trailRef.current.shift();
     }
@@ -665,8 +666,47 @@ export function MomentumGame() {
 
     player.vy += GRAVITY;
     if (player.vy > 18) player.vy = 18;
-    player.x += player.vx;
+    player.x += player.vx + carryVxRef.current;
     player.y += player.vy;
+    carryVxRef.current *= 0.97;
+
+    if (simFrameRef.current % GHOST_SAMPLE_STEPS === 0 && ghostRecRef.current.length < 20000) {
+      ghostRecRef.current.push(Math.round(player.x), Math.round(player.y));
+    }
+
+    for (const orb of orbsRef.current) {
+      if (orb.collected) continue;
+      const dx = player.x + PLAYER_WIDTH / 2 - orb.x;
+      const dy = player.y + PLAYER_HEIGHT / 2 - orb.y;
+      if (dx * dx + dy * dy < 24 * 24) {
+        orb.collected = true;
+        player.boostCharges = Math.min(MAX_BOOST_CHARGES, player.boostCharges + 1);
+        scoreRef.current += 250;
+        momentumSfx.orb();
+        haptic(10);
+        popupRef.current = { text: '+1 BOOST', life: 0.7, color: levelData.boostTrailColor || '#00ffff' };
+        spawnParticles(orb.x, orb.y, levelData.boostTrailColor || '#00ffff', 14, 10);
+      }
+    }
+
+    // Endless: keep building upward, drop what's far below, and raise the lava
+    const endless = endlessRef.current;
+    if (endless) {
+      if (endless.topY > player.y - 1400) {
+        const { platforms: more, orbs: moreOrbs } = generateChunk(
+          endless.state, ENDLESS_CHUNK, endlessDifficulty(520 - player.y), levelData, endless.rng, Number.MAX_SAFE_INTEGER,
+        );
+        endless.topY = endless.state.y;
+        platformsRef.current = [...platformsRef.current.filter(pl => pl.y < lavaYRef.current + 200), ...more].sort((a, b) => b.y - a.y);
+        orbsRef.current = [...orbsRef.current.filter(o => !o.collected && o.y < lavaYRef.current), ...moreOrbs];
+      }
+      // Lava never trails too far behind, so the pressure stays on
+      lavaYRef.current = Math.min(lavaYRef.current - lavaSpeed(elapsedTimeRef.current), player.y + 700);
+      if (player.y + PLAYER_HEIGHT > lavaYRef.current) {
+        endRunInLava();
+        return true;
+      }
+    }
 
     if (player.x < 0) { player.x = 0; player.vx = 0; }
     if (player.x > GAME_WIDTH - PLAYER_WIDTH) { player.x = GAME_WIDTH - PLAYER_WIDTH; player.vx = 0; }
@@ -675,11 +715,11 @@ export function MomentumGame() {
       const heightGained = highestYRef.current - player.y;
       scoreRef.current += Math.floor(heightGained * (1 + comboRef.current * 0.1));
       highestYRef.current = player.y;
-      setScore(scoreRef.current);
     }
 
-    for (let i = 0; i < platforms.length; i++) {
-      const platform = platforms[i];
+    const currentPlatforms = platformsRef.current;
+    for (let i = 0; i < currentPlatforms.length; i++) {
+      const platform = currentPlatforms[i];
       if (platform.crumbled) continue;
 
       if (platform.crumbleTimer > 0) {
@@ -695,15 +735,32 @@ export function MomentumGame() {
         platform.springBounce -= 0.05;
       }
 
-      if (checkCollision(player, platform)) {
+      if (isPhaseSolid(platform, simFrameRef.current) && checkCollision(player, platform)) {
         player.y = platform.y - PLAYER_HEIGHT;
 
-        if (platform.type === 'spring') {
-          player.vy = BOUNCE_VELOCITY * 1.6;
+        const isSpring = platform.type === 'spring';
+        const prevChain = chainRef.current;
+        chainRef.current = nextChain(prevChain, player.y, prevLandingYRef.current, framesSinceLandingRef.current);
+        prevLandingYRef.current = player.y;
+        framesSinceLandingRef.current = 0;
+        landingFrameRef.current = simFrameRef.current;
+        lastLandingSpringRef.current = isSpring;
+        player.vy = bounceVelocity(level, chainRef.current, isSpring);
+        if (isSpring) momentumSfx.spring();
+        else momentumSfx.bounce(chainRef.current);
+
+        carryVxRef.current = platform.type === 'conveyor' ? platform.param * 3.2 : 0;
+        if (isSpring) {
           platform.springBounce = 1;
+          shakeRef.current = Math.max(shakeRef.current, 5);
           spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, '#00ff88', 15, 12);
-        } else {
-          player.vy = BOUNCE_VELOCITY - (level * 0.3);
+        }
+        if (chainRef.current > prevChain && chainRef.current >= 2) {
+          popupRef.current = {
+            text: chainRef.current >= 6 ? 'MAX MOMENTUM!' : `MOMENTUM x${chainRef.current}`,
+            life: 0.8,
+            color: levelData.boostTrailColor || '#00ffff',
+          };
         }
 
         if (platform.type === 'crumbling' && platform.crumbleTimer <= 0) {
@@ -716,12 +773,14 @@ export function MomentumGame() {
         if (lastPlatformRef.current !== platform.id) {
           if (!platform.touched) {
             platform.touched = true;
-            player.boostFuel = Math.min(MAX_BOOST_FUEL, player.boostFuel + FUEL_REGEN);
+            player.boostCharges = Math.min(MAX_BOOST_CHARGES, player.boostCharges + 1);
             const pointMultiplier = platform.type === 'spring' ? 2 : 1;
             scoreRef.current += 50 * (1 + comboRef.current) * pointMultiplier;
-            setScore(scoreRef.current);
 
             if (platform.isCheckpoint) {
+              player.boostCharges = MAX_BOOST_CHARGES;
+              haptic(30);
+              momentumSfx.checkpoint();
               checkpointYRef.current = platform.y;
               spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, levelData.checkpointGlow, 20, 15);
             }
@@ -735,7 +794,7 @@ export function MomentumGame() {
       }
     }
 
-    const targetCameraY = Math.max(0, GAME_HEIGHT / 2.5 - player.y);
+    const targetCameraY = Math.max(0, GAME_HEIGHT * (GAME_HEIGHT > 600 ? 0.45 : 0.4) - player.y);
     cameraYRef.current += (targetCameraY - cameraYRef.current) * 0.06;
     const camY = cameraYRef.current;
 
@@ -753,12 +812,14 @@ export function MomentumGame() {
       if (currentCareerLevel) {
         saveCareerProgress(currentCareerLevel.number, false, 0, 0);
       }
-      saveGameStats();
-      return;
+      setScore(scoreRef.current);
+      saveGameStats(false);
+      return true;
     }
 
     if (player.y < levelData.goalY!) {
       const time = elapsedTimeRef.current;
+      finishRun(time);
 
       if (gameMode === 'career' && currentCareerLevel) {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -775,7 +836,7 @@ export function MomentumGame() {
         setScore(scoreRef.current);
         saveCareerProgress(currentCareerLevel.number, true, time, stars);
         setGameState('levelComplete');
-        saveGameStats();
+        saveGameStats(true);
       } else {
         const targetTime = 45 + level * 5;
         const bonus = Math.max(0, Math.floor((targetTime - time) * 100));
@@ -784,282 +845,77 @@ export function MomentumGame() {
         scoreRef.current += bonus;
         setScore(scoreRef.current);
         setGameState('levelComplete');
-        saveGameStats();
+        saveGameStats(true);
       }
-      return;
+      return true;
     }
 
     if (player.y - camY > GAME_HEIGHT + 80) {
       if (checkpointYRef.current < 500) {
+        momentumSfx.fall();
+        trackMomentum('respawn', { mode: runModeRef.current, level, checkpoint_y: Math.round(checkpointYRef.current) });
         respawnAtCheckpoint();
         comboRef.current = 0;
       } else {
-        setGameState('gameOver');
-        saveGameStats();
-        return;
-      }
-    }
-
-    const bg = levelData.background || ['#1a1a2e', '#0f3460'];
-    const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-    gradient.addColorStop(0, bg[0]);
-    gradient.addColorStop(1, bg[1]);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Render speed lines only when truly falling or rising fast
-    const showSpeedLines = isTrueFalling || isRisingFast;
-
-    if (showSpeedLines) {
-      speedLinesRef.current.forEach(line => {
-        const intensity = Math.abs(player.vy) / 15;
-        const alpha = line.opacity * Math.min(1, intensity * 1.2);
-        if (alpha > 0.05) {
-          // Different colors for falling vs rising
-          const lineColor = isTrueFalling
-            ? `rgba(255, 100, 100, ${alpha})` // Red tint for falling
-            : `rgba(100, 200, 255, ${alpha})`; // Blue/cyan tint for rising
-          ctx.strokeStyle = lineColor;
-          ctx.lineWidth = intensity > 0.8 ? 2 : 1;
-          ctx.beginPath();
-          ctx.moveTo(line.x, line.y);
-          // Lines point in direction of movement
-          if (isTrueFalling) {
-            ctx.lineTo(line.x, line.y + line.length * intensity);
-          } else {
-            ctx.lineTo(line.x, line.y - line.length * intensity);
-          }
-          ctx.stroke();
+        if (endlessRef.current) {
+          endRunInLava();
+          return true;
         }
-      });
+        momentumSfx.fall();
+        trackMomentum('death', {
+          mode: runModeRef.current,
+          level,
+          progress: Number(Math.min(1, (520 - highestYRef.current) / (520 - goalYRef.current)).toFixed(2)),
+          time: Number(elapsedTimeRef.current.toFixed(1)),
+        });
+        setGameState('gameOver');
+        setScore(scoreRef.current);
+        saveGameStats(false);
+        return true;
+      }
     }
 
-    const progress = Math.max(0, Math.min(1, (startYRef.current - player.y) / (startYRef.current - goalYRef.current)));
-    const barHeight = GAME_HEIGHT - 140;
-    const barX = GAME_WIDTH - 20;
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(barX, 70, 6, barHeight);
-    ctx.fillStyle = levelData.playerGlow || 'rgba(255,255,255,0.6)';
-    ctx.fillRect(barX, 70 + barHeight * (1 - progress), 6, barHeight * progress);
+    return false;
+    };
 
-    platforms.filter(p => p.isCheckpoint).forEach(cp => {
-      const cpProgress = (startYRef.current - cp.y) / (startYRef.current - goalYRef.current);
-      const markerY = 70 + barHeight * (1 - cpProgress);
-      ctx.fillStyle = cp.touched ? levelData.checkpointGlow : 'rgba(255,255,255,0.3)';
-      ctx.fillRect(barX - 4, markerY - 2, 14, 4);
+    while (accumulatorRef.current >= STEP_MS) {
+      accumulatorRef.current -= STEP_MS;
+      if (hitStopRef.current > 0) {
+        hitStopRef.current--;
+        continue;
+      }
+      if (simulate()) return;
+    }
+
+    const { isTrueFalling, isRisingFast } = getMotion();
+    const camY = cameraYRef.current;
+
+    renderFrame(ctx, {
+      GAME_WIDTH, GAME_HEIGHT, levelData, player, platforms, camY, isTrueFalling, isRisingFast,
+      level, gameMode, timeRemaining, isTouchDevice,
+      chainRef, comboRef, elapsedTimeRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
+      orbsRef, particlesRef, popupRef, runModeRef, scoreRef, shakeRef, simFrameRef, skinRef, speedLinesRef,
+      startYRef, tapFxRef, trailRef,
     });
-
-    const goalScreenY = levelData.goalY! + camY;
-    if (goalScreenY > -50 && goalScreenY < GAME_HEIGHT + 50) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 8]);
-      ctx.beginPath();
-      ctx.moveTo(0, goalScreenY);
-      ctx.lineTo(GAME_WIDTH - 35, goalScreenY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.font = '11px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText('★ GOAL ★', GAME_WIDTH / 2, goalScreenY - 8);
-    }
-
-    platforms.forEach(platform => {
-      if (platform.crumbled) return;
-      const screenY = platform.y + camY;
-      if (screenY < -30 || screenY > GAME_HEIGHT + 30) return;
-
-      let alpha = platform.touched ? 0.4 : 1;
-      const glowSize = platform.touched ? 6 : platform.isCheckpoint ? 30 : platform.isFar ? 22 : 14;
-
-      if (platform.crumbleTimer > 0) {
-        alpha *= platform.crumbleTimer / 0.5;
-        const shakeX = (Math.random() - 0.5) * 4;
-        const shakeY = (Math.random() - 0.5) * 2;
-        ctx.save();
-        ctx.translate(shakeX, shakeY);
-      }
-
-      ctx.shadowColor = platform.glow || platform.color;
-      ctx.shadowBlur = glowSize;
-
-      if (platform.type === 'spring' && !platform.touched) {
-        ctx.fillStyle = '#00ff88';
-      } else if (platform.type === 'crumbling' && !platform.touched) {
-        ctx.fillStyle = platform.color;
-        ctx.setLineDash([6, 4]);
-      } else {
-        ctx.fillStyle = platform.color;
-      }
-      ctx.globalAlpha = alpha;
-
-      const springOffset = platform.springBounce > 0 ? Math.sin(platform.springBounce * Math.PI) * 6 : 0;
-      ctx.beginPath();
-      ctx.roundRect(platform.x, screenY + springOffset, platform.width, PLATFORM_HEIGHT, platform.isCheckpoint ? 4 : 7);
-      ctx.fill();
-      ctx.setLineDash([]);
-
-      if (platform.type === 'spring' && !platform.touched) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#00ff88';
-        ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.006) * 0.3;
-        const cx = platform.x + platform.width / 2;
-        ctx.beginPath();
-        ctx.moveTo(cx - 6, screenY + springOffset - 2);
-        ctx.lineTo(cx, screenY + springOffset - 8);
-        ctx.lineTo(cx + 6, screenY + springOffset - 2);
-        ctx.fill();
-      }
-
-      if (platform.type === 'crumbling' && !platform.touched) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(255,200,100,0.5)';
-        ctx.globalAlpha = 0.6;
-        ctx.font = '8px system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText('FRAGILE', platform.x + platform.width/2, screenY + springOffset - 4);
-      }
-
-      if (platform.isCheckpoint && !platform.touched) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#fff';
-        ctx.globalAlpha = 0.8;
-        ctx.font = 'bold 10px system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText('CHECKPOINT', platform.x + platform.width/2, screenY - 8);
-      }
-
-      if (platform.isFar && !platform.touched) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
-        ctx.globalAlpha = 0.6 + Math.sin(Date.now() * 0.008) * 0.3;
-        ctx.beginPath();
-        ctx.arc(platform.x + platform.width/2, screenY + PLATFORM_HEIGHT/2, 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      if (platform.crumbleTimer > 0) {
-        ctx.restore();
-      }
-
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
-    });
-
-    if (trailRef.current.length > 1) {
-      ctx.lineCap = 'round';
-      for (let i = 1; i < trailRef.current.length; i++) {
-        const t = trailRef.current[i];
-        const prev = trailRef.current[i-1];
-        ctx.strokeStyle = levelData.boostTrailColor || '#00ffff';
-        ctx.globalAlpha = t.life * 0.7;
-        ctx.lineWidth = t.life * 12;
-        ctx.beginPath();
-        ctx.moveTo(prev.x, prev.y + camY);
-        ctx.lineTo(t.x, t.y + camY);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    particlesRef.current.forEach(p => {
-      const screenY = p.y + camY;
-      ctx.globalAlpha = p.life;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, screenY, p.size * p.life, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.globalAlpha = 1;
-
-    const playerScreenY = player.y + camY;
-    const squash = player.vy > 6 ? 0.75 : player.vy < -6 ? 1.25 : 1;
-    const stretch = 1 / squash;
-
-    ctx.save();
-    ctx.translate(player.x + PLAYER_WIDTH/2, playerScreenY + PLAYER_HEIGHT/2);
-    ctx.scale(stretch, squash);
-
-    if (player.isBoosting || player.boostTimer > 0) {
-      ctx.shadowColor = levelData.boostTrailColor || '#00ffff';
-      ctx.shadowBlur = 30;
-    } else {
-      ctx.shadowColor = levelData.playerGlow || 'rgba(255,255,255,0.8)';
-      ctx.shadowBlur = 18;
-    }
-
-    ctx.fillStyle = player.isBoosting ? (levelData.boostTrailColor || '#00ffff') : (levelData.playerColor || '#ffffff');
-    ctx.beginPath();
-    ctx.arc(0, 0, PLAYER_WIDTH/2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.restore();
-
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = '10px system-ui';
-    ctx.textAlign = 'left';
-    ctx.fillText(`LEVEL ${level}`, 16, 24);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.font = '16px system-ui';
-    ctx.fillText(levelData.levelName || '', 16, 42);
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    ctx.font = 'italic 10px system-ui';
-    ctx.fillText(levelData.flavorText || '', 16, 58);
-
-    ctx.textAlign = 'center';
-    if (gameMode === 'career') {
-      const isLowTime = timeRemaining < 10;
-      const isVeryLowTime = timeRemaining < 5;
-      ctx.fillStyle = isVeryLowTime ? 'rgba(255,50,50,0.9)' : isLowTime ? 'rgba(255,150,50,0.9)' : 'rgba(255,255,255,0.9)';
-      ctx.font = isVeryLowTime ? 'bold 24px monospace' : isLowTime ? 'bold 18px monospace' : 'bold 16px monospace';
-      const timeText = timeRemaining > 0 ? timeRemaining.toFixed(1) + 's' : 'TIME UP!';
-      ctx.fillText(timeText, GAME_WIDTH / 2, isVeryLowTime ? 32 : 26);
-
-      if (isVeryLowTime) {
-        ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.02) * 0.3;
-        ctx.fillStyle = 'rgba(255,0,0,0.8)';
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        ctx.globalAlpha = 1;
-      }
-    } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.font = '12px monospace';
-      ctx.fillText(elapsedTimeRef.current.toFixed(1) + 's', GAME_WIDTH / 2, 24);
-    }
-
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = '10px system-ui';
-    ctx.fillText('SCORE', GAME_WIDTH - 40, 24);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.font = '20px system-ui';
-    ctx.fillText(scoreRef.current.toLocaleString(), GAME_WIDTH - 40, 46);
-
-    if (comboRef.current > 1) {
-      ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
-      ctx.globalAlpha = 0.7 + Math.sin(Date.now() * 0.01) * 0.3;
-      ctx.font = 'bold 13px system-ui';
-      ctx.fillText(`${comboRef.current}x COMBO`, GAME_WIDTH - 40, 64);
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(16, GAME_HEIGHT - 28, 100, 6);
-    const fuelColor = player.boostFuel >= BOOST_COST ? (levelData.boostTrailColor || '#00ffff') : 'rgba(255,100,100,0.6)';
-    ctx.fillStyle = fuelColor;
-    ctx.fillRect(16, GAME_HEIGHT - 28, player.boostFuel, 6);
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.font = '9px system-ui';
-    ctx.textAlign = 'left';
-    ctx.fillText('BOOST [SPACE]', 16, GAME_HEIGHT - 36);
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, levelData, level]);
+  }, [gameState, levelData, isTouchDevice]);
+
+  useEffect(() => {
+    if (gameState === 'playing' && isTouchDevice && !hasSeenTutorial()) {
+      pauseStartRef.current = Date.now();
+      setShowTutorial(true);
+    }
+    if (gameState !== 'playing') {
+      steerPointerRef.current = null;
+      touchTargetXRef.current = null;
+    }
+  }, [gameState, isTouchDevice]);
 
   useEffect(() => {
     if (gameState === 'playing') {
+      lastFrameTimeRef.current = null;
+      accumulatorRef.current = 0;
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     }
     return () => {
@@ -1070,44 +926,28 @@ export function MomentumGame() {
   }, [gameState, gameLoop]);
 
   useEffect(() => {
-    const pauseStartTimeRef = { current: 0 };
-
     const handleKeyDown = (e: KeyboardEvent) => {
+      momentumSfx.unlock();
+      if ((gameState === 'gameOver' || gameState === 'careerFailed') && (e.key === 'r' || e.key === 'R' || e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        retryLevel();
+        return;
+      }
       if (gameState === 'playing') {
         if (e.key === 'Escape') {
           e.preventDefault();
-          if (!isPaused) {
-            pauseStartTimeRef.current = Date.now();
-            setIsPaused(true);
-            if (timerIntervalRef.current && gameMode === 'career') {
-              clearInterval(timerIntervalRef.current);
-            }
-          } else {
-            pauseTimeRef.current += Date.now() - pauseStartTimeRef.current;
-            setIsPaused(false);
-            if (gameMode === 'career' && currentCareerLevel) {
-              timerIntervalRef.current = window.setInterval(() => {
-                setTimeRemaining(prev => {
-                  if (prev <= 0) {
-                    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-                    return 0;
-                  }
-                  return prev - 0.1;
-                });
-              }, 100);
-            }
-          }
+          if (isPaused) resumeGame();
+          else pauseGame();
           return;
         }
         if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keysRef.current.left = true;
         if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keysRef.current.right = true;
-        if (e.key === ' ') { e.preventDefault(); keysRef.current.boost = true; }
+        if (e.key === ' ') { e.preventDefault(); if (!e.repeat) triggerBoost(); }
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keysRef.current.left = false;
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keysRef.current.right = false;
-      if (e.key === ' ') keysRef.current.boost = false;
     };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -1120,7 +960,7 @@ export function MomentumGame() {
   const selectTheme = (t: string) => {
     setTheme(t);
     setGameState('loading');
-    generateThemeWithAI(t, level);
+    generateThemeWithAI(t, gameMode === 'endless' ? 1 : level, undefined, gameMode);
   };
 
   const startCareerLevel = (careerLevel: CareerLevel) => {
@@ -1151,11 +991,37 @@ export function MomentumGame() {
     }
   };
 
-  const retryLevel = () => {
-    if (!levelData) return;
+  const ghostKeyFor = (mode: GameMode, careerLevel?: CareerLevel | null) =>
+    mode === 'career' && careerLevel ? `career-${careerLevel.number}-${GAME_WIDTH}` : mode === 'daily' ? `daily-${todayKey()}-${GAME_WIDTH}` : null;
 
-    const { platforms, goalY } = generatePlatforms(level, levelData);
+  // Builds a fresh run. Career and daily levels are seeded so they are identical every attempt.
+  const startRun = (theme: ThemeColors, difficulty: number, mode: GameMode, careerLevel?: CareerLevel | null) => {
+    runModeRef.current = mode;
+    const seed = mode === 'career' && careerLevel
+      ? seedFromString(`career-${careerLevel.number}`)
+      : mode === 'daily'
+        ? seedFromString(`daily-${todayKey()}`)
+        : Math.floor(Math.random() * 2 ** 32);
+    const rng = createRng(seed);
+    choosePlayfield();
+
+    let platforms: Platform[];
+    let orbs: Orb[];
+    let goalY: number;
+    if (mode === 'endless') {
+      const state = createEndlessState(GAME_WIDTH);
+      ({ platforms, orbs } = generateChunk(state, ENDLESS_CHUNK, 1, theme, rng, Number.MAX_SAFE_INTEGER));
+      endlessRef.current = { state, rng, topY: state.y };
+      goalY = -Infinity;
+      lavaYRef.current = 520 + 420;
+    } else {
+      ({ platforms, orbs, goalY } = generateLevel(difficulty, theme, rng, GAME_WIDTH));
+      endlessRef.current = null;
+      lavaYRef.current = Infinity;
+    }
+    platforms.sort((a, b) => b.y - a.y);
     platformsRef.current = platforms;
+    orbsRef.current = orbs;
 
     const firstPlatform = platforms[0];
     playerRef.current = {
@@ -1164,7 +1030,7 @@ export function MomentumGame() {
       prevY: 520 - PLAYER_HEIGHT - 2,
       vx: 0,
       vy: 0,
-      boostFuel: MAX_BOOST_FUEL,
+      boostCharges: MAX_BOOST_CHARGES,
       isBoosting: false,
       boostTimer: 0
     };
@@ -1178,229 +1044,137 @@ export function MomentumGame() {
     goalYRef.current = goalY;
     highestYRef.current = 520;
     checkpointYRef.current = 520;
-    lastPlatformYRef.current = 520; // Reset last platform Y on retry
+    lastPlatformYRef.current = 520;
     startTimeRef.current = Date.now();
     elapsedTimeRef.current = 0;
+    resetMomentum();
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
+    // Ghost: your own best, or for the daily climb today's fastest run if it beats yours
+    const ghostKey = ghostKeyFor(mode, careerLevel);
+    ghostRef.current = ghostKey ? loadLocalGhost(ghostKey) : null;
+    if (mode === 'daily') {
+      fetchLeaderboard('daily', todayKey(), 1).then(([top]) => {
+        // Leaderboard ghosts start with -worldWidth so portrait and landscape runs are not mixed
+        const path = top?.ghost;
+        if (!path || path[0] !== -GAME_WIDTH || runModeRef.current !== 'daily') return;
+        if (!ghostRef.current || Number(top.time) < ghostRef.current.time) {
+          ghostRef.current = { time: Number(top.time), path: path.slice(1), name: top.display_name };
+        }
+      });
+    }
+
+    trackMomentum('run_start', { mode, difficulty, career_level: careerLevel?.number ?? null });
+
+    setLevelData({ ...theme, goalY });
     setScore(0);
     setIsPaused(false);
     pauseTimeRef.current = 0;
     initSpeedLines();
-    setLevelData(prev => prev ? { ...prev, goalY } : null);
     setGameState('playing');
   };
 
-  if (gameState === 'menu') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex items-center justify-center">
-        <div className="max-w-2xl w-full p-6">
-          <button
-            onClick={() => {
-              const companionId = searchParams.get('companion');
-              navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-            }}
-            className="mb-8 flex items-center gap-2 text-white/60 hover:text-white/90 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Exit Game
-          </button>
+  const retryLevel = () => {
+    if (!levelData) return;
+    startRun(levelData, level, gameMode, currentCareerLevel);
+  };
 
-          <div className="text-center">
-            <h1 className="text-5xl font-extralight tracking-[0.3em] text-white mb-1" style={{ textShadow: '0 0 60px rgba(255,255,255,0.2)' }}>MOMENTUM</h1>
-            <p className="text-gray-500 text-xs tracking-[0.2em] mb-10">AI-GENERATED PLATFORMER</p>
+  const startDaily = () => {
+    setGameMode('daily');
+    setCurrentCareerLevel(null);
+    setLevel(DAILY_DIFFICULTY);
+    setGameState('loading');
+    generateThemeWithAI(dailyThemeName(todayKey()), DAILY_DIFFICULTY, undefined, 'daily');
+  };
 
-            <div className="text-gray-400 text-sm mb-4 text-center space-y-3">
-              <p>Auto-bounce up • Score while ascending</p>
-              <div className="flex justify-center gap-3">
-                <span className="px-4 py-2 bg-white/5 rounded-lg text-white/80 text-xs">← A</span>
-                <span className="px-4 py-2 bg-white/5 rounded-lg text-white/80 text-xs">D →</span>
-                <span className="px-4 py-2 bg-cyan-500/20 rounded-lg text-cyan-300 text-xs">SPACE Boost</span>
-              </div>
-              <p className="text-gray-600 text-xs">Checkpoints save progress • Speed bonus at finish</p>
-            </div>
+  // Bookkeeping shared by every completed run: unlock progress, ghosts, leaderboards, analytics
+  const finishRun = (time: number) => {
+    const mode = runModeRef.current;
+    momentumSfx.win();
+    const stats = updateStats(st => ({
+      levelsCompleted: st.levelsCompleted + 1,
+      dailyCompletions: st.dailyCompletions + (mode === 'daily' ? 1 : 0),
+    }));
+    setLifetimeStats(stats);
+    const ghostKey = ghostKeyFor(mode, liveRef.current.currentCareerLevel);
+    const run: GhostRun = { time, path: ghostRecRef.current };
+    const newBest = ghostKey ? saveLocalGhostIfBest(ghostKey, run) : false;
+    setRunResult(r => ({ ...r, newBest }));
+    if (mode === 'daily') {
+      submitRun('daily', todayKey(), scoreRef.current, time, { ...run, path: [-GAME_WIDTH, ...run.path] }).then(() =>
+        setRunResult(r => ({ ...r, leaderboardKey: r.leaderboardKey + 1 })));
+    }
+    trackMomentum('complete', { mode, level: liveRef.current.level, time: Number(time.toFixed(2)), score: scoreRef.current });
+  };
 
-            <button onClick={() => setGameState('modeSelect')} className="mt-6 px-14 py-4 bg-white/5 hover:bg-white/10 text-white/90 rounded-full transition-all duration-500 tracking-[0.15em] text-sm border border-white/10">
-              BEGIN
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const endRunInLava = () => {
+    momentumSfx.fall();
+    const height = Math.max(0, Math.round(520 - highestYRef.current));
+    const previousBest = loadStats().bestEndlessHeight;
+    const stats = updateStats(st => ({ bestEndlessHeight: Math.max(st.bestEndlessHeight, height) }));
+    setLifetimeStats(stats);
+    setRunResult(r => ({ ...r, newBest: height > previousBest, height, bestHeight: stats.bestEndlessHeight }));
+    submitRun('endless', todayKey(), height, elapsedTimeRef.current, null).then(() =>
+      setRunResult(r => ({ ...r, leaderboardKey: r.leaderboardKey + 1 })));
+    trackMomentum('death', { mode: 'endless', height, time: Number(elapsedTimeRef.current.toFixed(1)) });
+    setScore(scoreRef.current);
+    setGameState('gameOver');
+    saveGameStats(false);
+  };
 
-  if (gameState === 'modeSelect') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex items-center justify-center p-6">
-        <div className="max-w-2xl w-full">
-          <h2 className="text-3xl font-extralight text-white tracking-wider mb-8 text-center">Select Mode</h2>
+  const exitRun = () => {
+    const player = playerRef.current;
+    trackMomentum('quit', {
+      mode: runModeRef.current,
+      level,
+      height: Math.round(520 - player.y),
+      time: Number(elapsedTimeRef.current.toFixed(1)),
+    });
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    setGameState(gameMode === 'career' ? 'careerLevelSelect' : 'menu');
+  };
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <button
-              onClick={() => {
-                setGameMode('career');
-                setGameState('careerLevelSelect');
-              }}
-              className="group p-8 bg-gradient-to-br from-orange-500/10 to-red-500/10 hover:from-orange-500/20 hover:to-red-500/20 rounded-2xl transition-all duration-300 border border-orange-500/20 hover:border-orange-500/40 text-left"
-            >
-              <div className="text-4xl mb-3">⏱️</div>
-              <h3 className="text-2xl font-light text-white mb-2">Career Mode</h3>
-              <p className="text-white/50 text-sm mb-3">Time-based challenges with escalating difficulty</p>
-              <div className="flex items-center gap-2 text-orange-400 text-xs">
-                <span>10 Levels</span>
-                <span>•</span>
-                <span>Beat the clock</span>
-                <span>•</span>
-                <span>Earn stars</span>
-              </div>
-            </button>
+  const screenProps: ScreenProps = {
+    careerProgress, currentCareerLevel, customTheme, finalTime, gameMode, isTouchDevice, level, levelData, lifetimeStats, loadingText, navigate, nextLevel, restart, retryLevel, runResult, score, searchParams, selectTheme, setCurrentCareerLevel, setCustomTheme, setGameMode, setGameState, setSkinId, skinId, speedBonus, starsEarned, startCareerLevel, startDaily, theme,
+  };
 
-            <button
-              onClick={() => {
-                setGameMode('freeplay');
-                setGameState('themeSelect');
-              }}
-              className="group p-8 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 hover:from-cyan-500/20 hover:to-blue-500/20 rounded-2xl transition-all duration-300 border border-cyan-500/20 hover:border-cyan-500/40 text-left"
-            >
-              <div className="text-4xl mb-3">🎨</div>
-              <h3 className="text-2xl font-light text-white mb-2">Free Play</h3>
-              <p className="text-white/50 text-sm mb-3">Endless progression with custom AI-generated themes</p>
-              <div className="flex items-center gap-2 text-cyan-400 text-xs">
-                <span>Infinite levels</span>
-                <span>•</span>
-                <span>No time limit</span>
-                <span>•</span>
-                <span>Relaxed</span>
-              </div>
-            </button>
-          </div>
+  if (gameState === 'menu') return <MenuScreen {...screenProps} />;
 
-          <button
-            onClick={() => setGameState('menu')}
-            className="mx-auto block px-6 py-2 text-white/40 hover:text-white/60 transition-colors text-sm"
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (gameState === 'modeSelect') return <ModeSelectScreen {...screenProps} />;
 
-  if (gameState === 'careerLevelSelect') {
-    const maxUnlockedLevel = Math.max(
-      1,
-      ...careerProgress.filter(p => p.completed).map(p => p.level_number + 1)
-    );
+  if (gameState === 'careerLevelSelect') return <CareerSelectScreen {...screenProps} />;
 
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex items-center justify-center p-6 overflow-y-auto">
-        <div className="max-w-4xl w-full py-8">
-          <h2 className="text-3xl font-extralight text-white tracking-wider mb-2 text-center">Career Mode</h2>
-          <p className="text-white/40 text-sm text-center mb-8">Complete levels within the time limit to earn stars</p>
+  if (gameState === 'themeSelect') return <ThemeSelectScreen {...screenProps} />;
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-            {careerLevels.map((careerLevel) => {
-              const progress = careerProgress.find(p => p.level_number === careerLevel.number);
-              const isLocked = careerLevel.number > maxUnlockedLevel;
-              const stars = progress?.stars_earned || 0;
-
-              return (
-                <button
-                  key={careerLevel.number}
-                  onClick={() => !isLocked && startCareerLevel(careerLevel)}
-                  disabled={isLocked}
-                  className={`
-                    group relative p-4 rounded-xl transition-all duration-300 text-left
-                    ${isLocked
-                      ? 'bg-white/[0.02] border border-white/5 cursor-not-allowed opacity-40'
-                      : progress?.completed
-                        ? 'bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50'
-                        : 'bg-white/[0.05] border border-white/10 hover:bg-white/[0.1] hover:border-white/20'
-                    }
-                  `}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-white/90 font-bold text-lg">{careerLevel.number}</span>
-                    {isLocked && <span className="text-white/30 text-xl">🔒</span>}
-                  </div>
-                  <h3 className="text-white/80 text-xs font-medium mb-1 leading-tight">{careerLevel.name}</h3>
-                  <p className="text-white/30 text-[10px] mb-2">{careerLevel.timeLimit}s limit</p>
-
-                  {progress?.completed && (
-                    <div className="flex gap-0.5">
-                      {[1, 2, 3].map(s => (
-                        <span key={s} className={`text-sm ${s <= stars ? 'text-yellow-400' : 'text-white/10'}`}>★</span>
-                      ))}
-                    </div>
-                  )}
-
-                  {progress && !progress.completed && (
-                    <p className="text-orange-400/60 text-[10px]">{progress.attempts} attempts</p>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => setGameState('modeSelect')}
-            className="mx-auto block px-6 py-2 text-white/40 hover:text-white/60 transition-colors text-sm"
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'themeSelect') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex items-center justify-center p-6">
-        <div className="max-w-2xl w-full">
-          <p className="text-white/30 text-xs tracking-[0.2em] mb-1 text-center">LEVEL {level}</p>
-          <h2 className="text-2xl font-extralight text-white tracking-wider mb-8 text-center">Choose Your World</h2>
-
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            {themePresets.map((t) => (
-              <button key={t.name} onClick={() => selectTheme(t.name)} className="group p-3 bg-white/[0.03] hover:bg-white/[0.08] rounded-xl transition-all duration-300 text-left border border-white/5 hover:border-white/10">
-                <span className="text-xl block mb-1 opacity-80 group-hover:opacity-100">{t.icon}</span>
-                <span className="text-white/90 text-xs block leading-tight">{t.name}</span>
-                <span className="text-white/30 text-[10px]">{t.hint}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input type="text" value={customTheme} onChange={(e) => setCustomTheme(e.target.value)} placeholder="Or describe your own world..." className="flex-1 px-4 py-3 bg-white/[0.03] rounded-xl text-white placeholder-white/20 outline-none focus:bg-white/[0.06] transition-all text-sm border border-white/5" onKeyDown={(e) => e.key === 'Enter' && customTheme && selectTheme(customTheme)} />
-            <button onClick={() => customTheme && selectTheme(customTheme)} disabled={!customTheme} className="px-5 py-3 bg-white/10 hover:bg-white/15 disabled:opacity-20 text-white rounded-xl transition-all text-sm">Create</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'loading') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border border-white/20 border-t-cyan-400 rounded-full animate-spin mb-8" />
-        <p className="text-white/50 text-sm tracking-wider">{loadingText}</p>
-        <p className="text-white/25 text-xs mt-2">{theme}</p>
-      </div>
-    );
-  }
+  if (gameState === 'loading') return <LoadingScreen {...screenProps} />;
 
   if (gameState === 'playing') {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div
+        className="fixed inset-0 bg-black flex items-center justify-center select-none overflow-hidden"
+        style={{
+          touchAction: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+          padding: 'env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px)',
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <div className="relative">
           <canvas
             ref={canvasRef}
             width={GAME_WIDTH}
             height={GAME_HEIGHT}
             className="block rounded-lg shadow-2xl select-none"
-            style={{ touchAction: 'none' }}
-            onTouchStart={handleCanvasTouchStart}
-            onTouchMove={handleCanvasTouchMove}
-            onTouchEnd={handleCanvasTouchEnd}
+            style={{
+              width: `min(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * ${GAME_WIDTH} / ${GAME_HEIGHT}), 1100px)`,
+              height: 'auto',
+              touchAction: 'none',
+            }}
           />
 
           {isPaused && (
@@ -1408,222 +1182,100 @@ export function MomentumGame() {
               <h2 className="text-4xl font-extralight text-white mb-8 tracking-wider">PAUSED</h2>
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => {
-                    pauseTimeRef.current += Date.now() - (pauseTimeRef.current || Date.now());
-                    setIsPaused(false);
-                    if (gameMode === 'career' && currentCareerLevel && !timerIntervalRef.current) {
-                      timerIntervalRef.current = window.setInterval(() => {
-                        setTimeRemaining(prev => {
-                          if (prev <= 0) {
-                            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-                            return 0;
-                          }
-                          return prev - 0.1;
-                        });
-                      }, 100);
-                    }
-                  }}
+                  onClick={resumeGame}
                   className="px-12 py-3 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all text-sm border border-white/20"
                 >
                   Resume
                 </button>
                 <button
-                  onClick={() => {
-                    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-                    if (gameMode === 'career') {
-                      setGameState('careerLevelSelect');
-                    } else {
-                      setGameState('menu');
-                    }
-                  }}
+                  onClick={exitRun}
                   className="px-12 py-3 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm"
                 >
                   Exit
                 </button>
               </div>
-              <p className="text-white/30 text-xs mt-8">Press ESC to resume</p>
+              {isTouchDevice ? (
+                <div className="mt-8 flex flex-col items-center gap-3 text-xs text-white/60">
+                  <div className="flex items-center gap-2">
+                    <span className="w-20 text-right">Steer feel</span>
+                    {(['low', 'medium', 'high'] as SteerSensitivity[]).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => updateTouchSettings({ sensitivity: s })}
+                        className={`px-3 py-2 rounded-full border ${touchSettings.sensitivity === s ? 'bg-white/20 border-white/40 text-white' : 'border-white/10'}`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-white/30 text-xs mt-8">Press ESC to resume</p>
+              )}
             </div>
           )}
 
           {!isPaused && (
-            <div className="absolute top-4 right-4 flex gap-2">
+            <div className="fixed z-10 flex gap-1" style={{ top: 'max(8px, env(safe-area-inset-top, 0px))', right: 'max(8px, env(safe-area-inset-right, 0px))' }}>
               <button
-                onClick={() => setIsPaused(true)}
-                className="px-4 py-2 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-lg transition-all text-xs backdrop-blur-sm border border-white/10"
+                onClick={() => { momentumSfx.setMuted(!muted); setMuted(!muted); }}
+                aria-label={muted ? 'Unmute' : 'Mute'}
+                className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-lg transition-all text-xs backdrop-blur-sm border border-white/10"
               >
-                PAUSE
+                {muted ? '🔇' : '🔊'}
               </button>
               <button
-                onClick={() => {
-                  if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-                  if (gameMode === 'career') {
-                    setGameState('careerLevelSelect');
-                  } else {
-                    setGameState('menu');
-                  }
-                }}
-                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-lg transition-all text-xs backdrop-blur-sm border border-red-500/20"
+                onClick={pauseGame}
+                aria-label="Pause"
+                className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-lg transition-all text-xs backdrop-blur-sm border border-white/10"
               >
-                EXIT
+                ❚❚
+              </button>
+              <button
+                onClick={exitRun}
+                aria-label="Exit"
+                className="w-9 h-9 flex items-center justify-center bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-lg transition-all text-xs backdrop-blur-sm border border-red-500/20"
+              >
+                ✕
               </button>
             </div>
           )}
 
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center md:hidden pointer-events-none">
+        </div>
+
+        {showTutorial && (
+          <div className="fixed inset-0 z-20 bg-black/85 flex flex-col items-center justify-center px-6 text-center" onPointerDown={(e) => e.stopPropagation()}>
+            <h2 className="text-2xl font-light text-white mb-6 tracking-wider">How to play</h2>
+            <div className="flex w-full max-w-md gap-3 mb-6">
+              <div className="flex-1 rounded-2xl border border-white/20 p-4 text-white/80 text-sm">
+                <div className="text-3xl mb-2">👈 👉</div>
+                Drag anywhere to steer
+              </div>
+              <div className="flex-1 rounded-2xl border border-cyan-400/40 bg-cyan-500/10 p-4 text-cyan-100 text-sm">
+                <div className="text-3xl mb-2">👆</div>
+                Tap anywhere to boost
+              </div>
+            </div>
+            <p className="text-white/60 text-sm mb-2">Everything works with one thumb.</p>
+            <p className="text-white/60 text-sm mb-2">Climb higher each bounce to build momentum.</p>
+            <p className="text-white/60 text-sm mb-8">Boost right as you land for a free PERFECT bounce.</p>
             <button
-              onTouchStart={() => triggerBoost()}
-              className="pointer-events-auto px-10 py-4 rounded-full bg-cyan-500/20 active:bg-cyan-500/40 text-cyan-300 text-sm font-medium tracking-wider border border-cyan-500/30 select-none"
+              onClick={dismissTutorial}
+              className="px-12 py-3 bg-white/15 text-white rounded-full text-sm border border-white/30"
             >
-              BOOST
+              Let's go
             </button>
           </div>
-          <p className="absolute bottom-20 left-0 right-0 text-center text-white/30 text-xs md:hidden pointer-events-none select-none">
-            Swipe to steer · Tap to boost
-          </p>
-        </div>
+        )}
       </div>
     );
   }
 
-  if (gameState === 'levelComplete') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-900 to-teal-950 flex items-center justify-center">
-        <div className="max-w-md w-full text-center p-6">
-          {gameMode === 'career' && currentCareerLevel ? (
-            <>
-              <p className="text-white/30 text-xs tracking-[0.2em] mb-1">LEVEL {currentCareerLevel.number}</p>
-              <h2 className="text-3xl font-extralight text-white mb-1">{currentCareerLevel.name}</h2>
-              <p className="text-emerald-400/80 tracking-[0.2em] text-sm mb-6">COMPLETE</p>
+  if (gameState === 'levelComplete') return <LevelCompleteScreen {...screenProps} />;
 
-              <div className="flex justify-center gap-2 mb-6">
-                {[1, 2, 3].map(s => (
-                  <span key={s} className={`text-5xl ${s <= starsEarned ? 'text-yellow-400' : 'text-white/10'}`}>★</span>
-                ))}
-              </div>
+  if (gameState === 'careerFailed') return <CareerFailedScreen {...screenProps} />;
 
-              <div className="text-center mb-6 space-y-2">
-                <p className="text-white/40 text-xs">TIME</p>
-                <p className="text-white text-2xl font-light">{finalTime.toFixed(1)}s</p>
-                {starsEarned === 3 && (
-                  <p className="text-yellow-400 text-sm font-medium">PERFECT RUN!</p>
-                )}
-                {starsEarned === 2 && (
-                  <p className="text-emerald-400 text-sm">Great time!</p>
-                )}
-                {speedBonus > 0 && (
-                  <p className="text-emerald-400 text-sm">+{speedBonus.toLocaleString()} TIME BONUS</p>
-                )}
-              </div>
-
-              <p className="text-white/40 text-xs mb-1">TOTAL SCORE</p>
-              <p className="text-white text-4xl font-extralight mb-10">{score.toLocaleString()}</p>
-
-              <div className="flex flex-col gap-3 justify-center">
-                {currentCareerLevel.number < careerLevels.length && (
-                  <button onClick={nextLevel} className="px-14 py-4 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all tracking-[0.15em] text-sm border border-white/10">
-                    NEXT LEVEL
-                  </button>
-                )}
-                <button onClick={() => startCareerLevel(currentCareerLevel)} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">RETRY</button>
-                <button onClick={() => setGameState('careerLevelSelect')} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">LEVEL SELECT</button>
-                <button onClick={() => {
-                  const companionId = searchParams.get('companion');
-                  navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-                }} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm border border-white/5">
-                  EXIT GAME
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-white/30 text-xs tracking-[0.2em] mb-1">LEVEL {level}</p>
-              <h2 className="text-3xl font-extralight text-white mb-1">{levelData?.levelName}</h2>
-              <p className="text-emerald-400/80 tracking-[0.2em] text-sm mb-6">COMPLETE</p>
-
-              <div className="text-center mb-8 space-y-2">
-                <p className="text-white/40 text-xs">TIME</p>
-                <p className="text-white text-2xl font-light">{finalTime.toFixed(1)}s</p>
-                {speedBonus > 0 && (
-                  <p className="text-emerald-400 text-sm">+{speedBonus.toLocaleString()} SPEED BONUS</p>
-                )}
-              </div>
-
-              <p className="text-white/40 text-xs mb-1">TOTAL SCORE</p>
-              <p className="text-white text-4xl font-extralight mb-10">{score.toLocaleString()}</p>
-
-              <div className="flex gap-4 justify-center">
-                <button onClick={nextLevel} className="px-14 py-4 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all tracking-[0.15em] text-sm border border-white/10">
-                  NEXT LEVEL
-                </button>
-                <button onClick={() => {
-                  const companionId = searchParams.get('companion');
-                  navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-                }} className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm border border-white/5">
-                  EXIT GAME
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'careerFailed') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-950 via-rose-900 to-orange-950 flex items-center justify-center">
-        <div className="max-w-md w-full text-center p-6">
-          <div className="text-6xl mb-4">⏱️</div>
-          <h2 className="text-3xl font-extralight text-white mb-1">TIME'S UP</h2>
-          <p className="text-white/30 text-xs tracking-wider mb-8">
-            {currentCareerLevel ? `${currentCareerLevel.name} • ${currentCareerLevel.timeLimit}s limit` : ''}
-          </p>
-
-          <p className="text-white/60 text-sm mb-10">You need to complete the level faster. Use boost strategically and take the shortest path!</p>
-
-          <div className="flex flex-col gap-3 justify-center">
-            {currentCareerLevel && (
-              <button onClick={() => startCareerLevel(currentCareerLevel)} className="px-14 py-4 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all tracking-[0.15em] text-sm border border-white/10">
-                TRY AGAIN
-              </button>
-            )}
-            <button onClick={() => setGameState('careerLevelSelect')} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">LEVEL SELECT</button>
-            <button onClick={() => {
-              const companionId = searchParams.get('companion');
-              navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-            }} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm border border-white/5">
-              EXIT GAME
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'gameOver') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-950 via-rose-900 to-pink-950 flex items-center justify-center">
-        <div className="max-w-md w-full text-center p-6">
-          <h2 className="text-3xl font-extralight text-white mb-1">MOMENTUM LOST</h2>
-          <p className="text-white/30 text-xs tracking-wider mb-8">Level {level} · {levelData?.levelName}</p>
-
-          <p className="text-white/40 text-xs mb-1">FINAL SCORE</p>
-          <p className="text-white text-4xl font-extralight mb-10">{score.toLocaleString()}</p>
-
-          <div className="flex gap-4 justify-center">
-            <button onClick={retryLevel} className="px-10 py-3 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all text-sm border border-white/10">RETRY</button>
-            <button onClick={restart} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">RESTART</button>
-            <button onClick={() => {
-              const companionId = searchParams.get('companion');
-              navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-            }} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm border border-white/5">
-              EXIT GAME
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (gameState === 'gameOver') return <GameOverScreen {...screenProps} />;
 
   return null;
 }
