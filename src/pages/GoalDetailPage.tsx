@@ -93,7 +93,7 @@ export function GoalDetailPage() {
         companionId: goal.source_companion_id,
       });
     }
-    toast({ type: 'success', message: 'Done. Nice work.' });
+    toast.success('Done. Nice work.');
     setUpdatingId(null);
   };
 
@@ -109,7 +109,7 @@ export function GoalDetailPage() {
           : s),
       })));
     } catch (err) {
-      toast({ type: 'error', message: 'Could not update step.' });
+      toast.error('Could not update step.');
     }
     setUpdatingId(null);
   };
@@ -121,23 +121,23 @@ export function GoalDetailPage() {
     await respondToPlan(user.id, { id: p.id, title: p.title, companion_id: p.companion_id }, accept);
     if (accept) {
       setPlans(prev => prev.map(p => p.id === p.id ? { ...p, status: 'active' as PlanStatus } : p));
-      toast({ type: 'success', message: 'Plan accepted.' });
+      toast.success('Plan accepted.');
     } else {
       setPlans(prev => prev.filter(x => x.id !== p.id));
-      toast({ type: 'info', message: 'Plan declined.' });
+      toast.info('Plan declined.');
     }
   };
 
   const handleDeletePlan = async (planId: string) => {
     await deletePlan(planId);
     setPlans(prev => prev.filter(p => p.id !== planId));
-    toast({ type: 'info', message: 'Plan deleted.' });
+    toast.info('Plan deleted.');
   };
 
   const handlePauseGoal = async () => {
     if (!goal) return;
     await updateGoalStatus(goal.id, 'paused');
-    toast({ type: 'info', message: 'Goal paused.' });
+    toast.info('Goal paused.');
     navigate('/coaching-progress');
   };
 
@@ -146,7 +146,7 @@ export function GoalDetailPage() {
     await updateGoalDeadline(goal.id, date, precision);
     setGoal(prev => prev ? { ...prev, target_date: date, deadline_precision: precision } : prev);
     setShowDeadlineEditor(false);
-    toast({ type: 'success', message: 'Deadline updated.' });
+    toast.success('Deadline updated.');
   };
 
   const handleToggleProfile = async () => {
@@ -155,10 +155,10 @@ export function GoalDetailPage() {
     setGoal(prev => prev ? { ...prev, show_on_profile: next } : prev);
     try {
       await toggleGoalShowOnProfile(goal.id, next);
-      toast({ type: 'success', message: next ? 'Goal visible on your profile.' : 'Goal hidden from your profile.' });
+      toast.success(next ? 'Goal visible on your profile.' : 'Goal hidden from your profile.');
     } catch {
       setGoal(prev => prev ? { ...prev, show_on_profile: !next } : prev);
-      toast({ type: 'error', message: 'Could not update visibility.' });
+      toast.error('Could not update visibility.');
     }
   };
 
@@ -317,9 +317,9 @@ export function GoalDetailPage() {
                     ...p,
                     steps: p.steps?.map(s => s.id === step.id ? { ...s, title } : s),
                   })));
-                  toast({ type: 'success', message: 'Step updated.' });
+                  toast.success('Step updated.');
                 } catch {
-                  toast({ type: 'error', message: 'Could not edit step.' });
+                  toast.error('Could not edit step.');
                 }
               }}
             />
@@ -346,9 +346,9 @@ export function GoalDetailPage() {
             <LibraryTab
               artifacts={artifacts}
               coachColor={coachColor}
-              onAccept={async (id) => { await updateArtifactStatus(id, 'accepted'); setArtifacts(prev => prev.map(a => a.id === id ? { ...a, status: 'accepted' } : a)); toast({ type: 'success', message: 'Saved to your library.' }); }}
+              onAccept={async (id) => { await updateArtifactStatus(id, 'accepted'); setArtifacts(prev => prev.map(a => a.id === id ? { ...a, status: 'accepted' } : a)); toast.success('Saved to your library.'); }}
               onArchive={async (id) => { await updateArtifactStatus(id, 'archived'); setArtifacts(prev => prev.map(a => a.id === id ? { ...a, status: 'archived' } : a)); }}
-              onDelete={async (id) => { await deleteArtifact(id); setArtifacts(prev => prev.filter(a => a.id !== id)); toast({ type: 'info', message: 'Item deleted.' }); }}
+              onDelete={async (id) => { await deleteArtifact(id); setArtifacts(prev => prev.filter(a => a.id !== id)); toast.info('Item deleted.'); }}
             />
           )}
         </motion.div>

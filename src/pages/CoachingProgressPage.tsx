@@ -134,7 +134,7 @@ export function CoachingProgressPage() {
         : c,
       ),
     );
-    toast({ type: 'success', message: 'Commitment marked complete. Nice work.' });
+    toast.success('Commitment marked complete. Nice work.');
     setUpdatingId(null);
   };
 
@@ -147,7 +147,7 @@ export function CoachingProgressPage() {
         : c,
       ),
     );
-    toast({ type: 'info', message: 'Marked as renegotiated. Talk to your coach about a new plan.' });
+    toast.info('Marked as renegotiated. Talk to your coach about a new plan.');
     setUpdatingId(null);
   };
 
@@ -158,13 +158,13 @@ export function CoachingProgressPage() {
     const updated = await getConfidenceChecks(user.id);
     setConfidenceChecks(updated);
     setShowConfidenceInput(false);
-    toast({ type: 'success', message: 'Confidence check logged.' });
+    toast.success('Confidence check logged.');
   };
 
   const handlePauseGoal = async (goalId: string) => {
     await updateGoalStatus(goalId, 'paused');
     setGoals(prev => prev.map(g => g.id === goalId ? { ...g, status: 'paused' } : g));
-    toast({ type: 'info', message: 'Goal paused.' });
+    toast.info('Goal paused.');
   };
 
   if (loading) {

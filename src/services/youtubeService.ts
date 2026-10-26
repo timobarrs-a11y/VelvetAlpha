@@ -89,7 +89,7 @@ export class YouTubeService {
       }
 
       return data?.id || null;
-    } catch (_error) {
+    } catch (error) {
       console.error('Error saving watched video:', error);
       return null;
     }
@@ -119,7 +119,7 @@ export class YouTubeService {
       }
 
       return true;
-    } catch (_error) {
+    } catch (error) {
       console.error('Error saving video reaction:', error);
       return false;
     }
@@ -138,7 +138,7 @@ export class YouTubeService {
       }
 
       return true;
-    } catch (_error) {
+    } catch (error) {
       console.error('Error marking video as completed:', error);
       return false;
     }
@@ -159,7 +159,7 @@ export class YouTubeService {
       }
 
       return data || [];
-    } catch (_error) {
+    } catch (error) {
       console.error('Error fetching watched videos:', error);
       return [];
     }

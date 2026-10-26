@@ -21,7 +21,7 @@ export async function isSuperUser(): Promise<boolean> {
   const { data: profile } = await supabase
     .from('user_profiles')
     .select('is_super_user')
-    .eq('id', (await supabase.auth.getUser()).user?.id ?? '')
+    .eq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
     .maybeSingle();
   return profile?.is_super_user ?? false;
 }
@@ -315,7 +315,7 @@ export async function toggleReaction(
     } else {
       await supabase
         .from('community_reactions')
-        .update({ reaction_type })
+        .update({ reaction_type: reactionType })
         .eq('id', existing.id);
     }
   } else {

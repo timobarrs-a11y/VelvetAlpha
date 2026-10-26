@@ -26,7 +26,7 @@ const RealOrNotPage = lazy(() => import('../pages/RealOrNotPage').then(m => ({ d
 const AtlasPage = lazy(() => import('../pages/AtlasPage').then(m => ({ default: m.AtlasPage })));
 const LocalExplorerPage = lazy(() => import('../pages/LocalExplorerPage').then(m => ({ default: m.LocalExplorerPage })));
 const InvitePage = lazy(() => import('../pages/InvitePage').then(m => ({ default: m.InvitePage })));
-const MemoryTrainingPage = lazy(() => import('../pages/MemoryTrainingPage').then(m => ({ default: m.MemoryTrainingPage })));
+const MemoryTrainingPage = lazy(() => import('../pages/MemoryTrainingPage'));
 const MorningJournalPage = lazy(() => import('../pages/MorningJournalPage').then(m => ({ default: m.MorningJournalPage })));
 const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(m => ({ default: m.PersonProfilePage })));
 const RelationshipBriefPage = lazy(() => import('../pages/RelationshipBriefPage').then(m => ({ default: m.RelationshipBriefPage })));

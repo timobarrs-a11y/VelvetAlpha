@@ -311,7 +311,7 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
         setConversation(prev => prev ? { ...prev, title: autoTitle } : prev);
         setTitleInput(autoTitle);
       }
-    } catch (_err) {
+    } catch (err) {
       setStreamingText('');
       setSearchingWeb(false);
       setError(err instanceof Error ? err.message : 'Failed to send message');

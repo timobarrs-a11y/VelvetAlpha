@@ -116,6 +116,7 @@ export function ThreadTabBar({
   hasAtlas,
   hasNavi,
   openFeatures,
+  isMentor,
   onSwitch,
   onClose,
   onNewThread,
