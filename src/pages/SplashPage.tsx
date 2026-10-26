@@ -1,67 +1,163 @@
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { Users, ArrowRight, Sparkles, Heart, ShieldCheck, Lock, Bot } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState, useMemo, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+  ArrowRight, Sparkles, ShieldCheck, BadgeCheck, Flag,
+  Compass, CalendarDays, MapPin, Target, ClipboardCheck, TrendingUp,
+  Users, UserPlus, PenLine, Newspaper, Home, MessageCircle,
+  type LucideIcon,
+} from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
-import { SplashChatPreview } from '../components/SplashChatPreview';
+import { SplashShowcase } from '../components/splash/SplashShowcase';
+import { VelvetHomeSection } from '../components/splash/VelvetHomeSection';
+
+const DISPLAY_FONT = "'Bricolage Grotesque', 'Space Grotesk', system-ui, sans-serif";
 
 const ORBS = [
-  { x: '-5%', y: '-15%', w: 720, h: 720, color: 'rgba(244,63,94,0.18)', blur: 140, dur: 28 },
-  { x: '60%', y: '5%', w: 580, h: 580, color: 'rgba(14,165,233,0.16)', blur: 120, dur: 34 },
-  { x: '20%', y: '55%', w: 660, h: 440, color: 'rgba(251,191,36,0.12)', blur: 130, dur: 40 },
-  { x: '-15%', y: '65%', w: 480, h: 480, color: 'rgba(52,211,153,0.12)', blur: 110, dur: 32 },
-  { x: '75%', y: '70%', w: 520, h: 520, color: 'rgba(232,121,249,0.12)', blur: 120, dur: 38 },
+  { x: '-10%', y: '-12%', w: 760, h: 760, color: 'rgba(192,132,252,0.16)', blur: 150 },
+  { x: '55%', y: '-6%', w: 620, h: 620, color: 'rgba(244,63,107,0.12)', blur: 140 },
+  { x: '30%', y: '38%', w: 700, h: 520, color: 'rgba(56,189,248,0.08)', blur: 150 },
 ];
 
-const PARTICLES = Array.from({ length: 55 }, (_, i) => ({
-  id: i,
-  x: Math.random() * 100,
-  y: Math.random() * 100,
-  size: Math.random() * 1.8 + 0.4,
-  duration: Math.random() * 10 + 6,
-  delay: Math.random() * 8,
-  opacity: Math.random() * 0.4 + 0.08,
-  isShooting: i < 5,
-}));
+type Pillar = {
+  id: string;
+  kicker: string;
+  title: string;
+  blurb: string;
+  accent: string;
+  items: { icon: LucideIcon; name: string; text: string }[];
+};
 
-const features = [
+const PILLARS: Pillar[] = [
   {
-    icon: Users,
-    accentRgb: '14,165,233',
-    iconGlow: 'rgba(14,165,233,0.22)',
-    borderColor: 'rgba(14,165,233,0.3)',
-    tag: 'Your world, organized',
-    title: 'Core',
-    desc: 'A personalized feed of articles and videos, a full calendar, group chats, an arcade, and Navi — your local concierge. The platform-wide features that make Project Velvet a world, not just a chat app.',
+    id: 'do',
+    kicker: 'Get things done',
+    title: 'An assistant that actually does the thing.',
+    blurb: 'Ask in plain words. Atlas searches, plans, and puts it on your calendar.',
+    accent: '192,132,252',
+    items: [
+      { icon: Compass, name: 'Atlas', text: 'Searches the web in real time, manages your calendar, remembers what you like, and takes you anywhere in the app.' },
+      { icon: CalendarDays, name: 'Calendar & Morning Brief', text: 'Your events, goals, and headlines in one brief before your day starts.' },
+      { icon: MapPin, name: 'Navi', text: 'Local events, restaurants, and things to do, filtered to your city and taste.' },
+    ],
   },
   {
-    icon: Heart,
-    accentRgb: '244,63,94',
-    iconGlow: 'rgba(244,63,94,0.22)',
-    borderColor: 'rgba(244,63,94,0.3)',
-    tag: 'Connection that remembers',
-    title: 'Companions',
-    desc: 'Companions powered by a Semantic Memory Engine that retains what matters and gets sharper the more you talk. Each one gets a Signature Voice™ with a real personality, a hand-crafted avatar, and a distinct way of showing up — not a generic chatbot tone.',
+    id: 'grow',
+    kicker: 'Grow',
+    title: 'Coaches that keep you moving.',
+    blurb: 'Tell Atlas what you are working toward. You leave with a plan and someone in your corner.',
+    accent: '52,211,153',
+    items: [
+      { icon: Target, name: 'Coaches', text: 'Domain-trained coaches for fitness, career, money, creativity, and more, matched to your goal.' },
+      { icon: ClipboardCheck, name: 'Check-ins', text: 'Gentle, moderate, or firm. Your coach follows up on what you said you would do.' },
+      { icon: TrendingUp, name: 'Goals & Insights', text: 'See your progress, streaks, and the patterns behind them.' },
+    ],
   },
   {
-    icon: Bot,
-    accentRgb: '52,211,153',
-    iconGlow: 'rgba(52,211,153,0.22)',
-    borderColor: 'rgba(52,211,153,0.3)',
-    tag: 'Goal-driven experts',
-    title: 'Coaches',
-    desc: 'Tell Atlas what you are working toward in a conversation. It extracts your goal, matches you with a domain-trained coach, and sets accountability that fits you — gentle, moderate, or firm. Not a bot told to act like an expert, but one built to actually be one.',
+    id: 'connect',
+    kicker: 'Connect',
+    title: 'Real people who get it.',
+    blurb: 'Velvet already knows what you are into, so it puts you where your crowd is.',
+    accent: '56,189,248',
+    items: [
+      { icon: Users, name: 'Community Board', text: 'Spaces with live rooms and posts, matched to your interests from day one.' },
+      { icon: UserPlus, name: 'Meet people', text: 'Find members who share your interests and goals. Follow, message, and start a crew.' },
+      { icon: MessageCircle, name: 'Statuses & Your Feed', text: 'Post what you are up to. Friends like and comment, and your wins show up alongside.' },
+    ],
+  },
+  {
+    id: 'live',
+    kicker: 'Live & create',
+    title: 'A home of your own, and things worth making.',
+    blurb: 'A house in town, a life inside it, a feed worth reading, and stories worth writing.',
+    accent: '251,146,60',
+    items: [
+      { icon: Home, name: 'Velvet House & Velvet Sims', text: 'Your house on a real street in town, and the cozy life sim that happens inside it.' },
+      { icon: Newspaper, name: 'Daily Feed & Lens', text: 'Articles and videos on your topics only. No chasing clicks.' },
+      { icon: PenLine, name: 'Co-Author', text: 'Write stories, scripts, and worlds together on a shared canvas.' },
+    ],
   },
 ];
+
+const STEPS = [
+  { n: '01', title: 'Tell us what you are into', text: 'A few quick questions about your interests, your goals, and how you like to be supported.' },
+  { n: '02', title: 'Meet Atlas', text: 'Atlas turns what you are working toward into a plan and matches you with the right coach.' },
+  { n: '03', title: 'Move in', text: 'Pick your house in town and walk into spaces with people who are into the same things. Say hi.' },
+];
+
+const SPACES = [
+  { emoji: '🎮', name: 'Gaming Lounge', line: 'Best plays, worst fails.' },
+  { emoji: '🏀', name: 'Sports Talk', line: 'Hot takes welcome.' },
+  { emoji: '💪', name: 'Fitness & Motivation', line: 'Find people to train with.' },
+  { emoji: '🎬', name: 'Movies, Music & Pop Culture', line: 'What are you watching?' },
+  { emoji: '💼', name: 'Career & Money', line: 'Moves, raises, side hustles.' },
+  { emoji: '🍳', name: 'Cooking & Recipes', line: 'Share what you made.' },
+  { emoji: '📚', name: 'Books & Writing', line: 'Reading lists and first drafts.' },
+  { emoji: '✈️', name: 'Travel & Adventure', line: 'Where to next?' },
+];
+
+const INTERESTS = [
+  'Running', 'Anime', 'Hip-Hop', 'Startups', 'Cooking', 'Photography', 'Jazz', 'Board Games',
+  'AI & ML', 'Hiking', 'Basketball', 'Lo-fi', 'Podcasts', 'Yoga', 'Manga', 'Travel',
+  'Programming', 'Stand-up Comedy', 'Fitness', 'Writing', 'Gaming', 'Science', 'Fashion', 'R&B',
+];
+
+const TRUST = [
+  { icon: ShieldCheck, title: 'Private by design', text: 'Your conversations are encrypted. Export or delete everything anytime from Settings.' },
+  { icon: BadgeCheck, title: 'AI is always labeled', text: 'Bots in the community wear a badge, so you always know when you are talking to a person.' },
+  { icon: Flag, title: 'Spaces that stay kind', text: 'Moderation, reporting, and blocking are built in. Crews can lock their doors.' },
+];
+
+function Eyebrow({ children, accent = '192,132,252' }: { children: ReactNode; accent?: string }) {
+  return (
+    <p className="text-[11px] font-bold tracking-[0.22em] uppercase mb-4" style={{ color: `rgb(${accent})` }}>
+      {children}
+    </p>
+  );
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h2
+      className="text-white"
+      style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: 'clamp(32px, 4.6vw, 52px)', letterSpacing: '-0.035em', lineHeight: 1.04 }}
+    >
+      {children}
+    </h2>
+  );
+}
+
+function InterestRow({ items, reverse, still }: { items: string[]; reverse?: boolean; still: boolean }) {
+  const chips = (keyPrefix: string) =>
+    items.map(i => (
+      <span
+        key={`${keyPrefix}-${i}`}
+        className="flex-shrink-0 px-4 py-2 rounded-full text-sm text-gray-300 whitespace-nowrap"
+        style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        {i}
+      </span>
+    ));
+  if (still) return <div className="flex flex-wrap justify-center gap-2.5">{chips('a')}</div>;
+  return (
+    <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)' }}>
+      <motion.div
+        className="flex gap-2.5 w-max"
+        animate={{ x: reverse ? ['-50%', '0%'] : ['0%', '-50%'] }}
+        transition={{ duration: 48, repeat: Infinity, ease: 'linear' }}
+      >
+        {chips('a')}
+        {chips('b')}
+      </motion.div>
+    </div>
+  );
+}
 
 export function SplashPage() {
   const navigate = useNavigate();
   const [isChecking, setIsChecking] = useState(true);
-  const [visible, setVisible] = useState(false);
-  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
-  const featuresRef = useRef<HTMLDivElement>(null);
-  const [visibleFeatures, setVisibleFeatures] = useState<number[]>([]);
+  const reduceMotion = useReducedMotion() ?? false;
 
   const lite = useMemo(
     () =>
@@ -70,60 +166,46 @@ export function SplashPage() {
       window.matchMedia('(pointer: coarse)').matches,
     []
   );
-  const orbBlur = (b: number) => (lite ? Math.min(b, 36) : b);
-  const enter = (from: Record<string, number>) => (lite ? false : from);
+  const still = reduceMotion;
+  const orbBlur = (b: number) => (lite ? Math.min(b, 40) : b);
+  const rise = (delay = 0) =>
+    still
+      ? {}
+      : {
+          initial: { opacity: 0, y: 24 },
+          whileInView: { opacity: 1, y: 0 },
+          viewport: { once: true, margin: '-60px' },
+          transition: { duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] as const },
+        };
 
   useEffect(() => {
     const checkUserStatus = async () => {
       try {
         const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
-        const result = await Promise.race([
+        const user = await Promise.race([
           supabase.auth.getUser().then(r => r.data.user),
           timeout,
         ]);
-        const user = result;
         if (user) {
           const companions = await getCompanions(user.id);
-          if (companions.length > 0) { navigate('/lobby', { replace: true }); return; }
-          const companionId = sessionStorage.getItem('currentCompanionId');
-          const matchAnswers = sessionStorage.getItem('matchAnswers');
-          if (companionId && matchAnswers) { navigate('/voice-selection', { replace: true }); return; }
-          // No companion yet: the lobby offers to create one, no forced setup.
+          if (companions.length === 0 && sessionStorage.getItem('currentCompanionId') && sessionStorage.getItem('matchAnswers')) {
+            navigate('/voice-selection', { replace: true });
+            return;
+          }
           navigate('/lobby', { replace: true });
           return;
         }
         setIsChecking(false);
-        setTimeout(() => setVisible(true), 60);
       } catch {
         setIsChecking(false);
-        setTimeout(() => setVisible(true), 60);
       }
     };
     checkUserStatus();
   }, [navigate]);
 
-  useEffect(() => {
-    if (!visible) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const index = parseInt(entry.target.getAttribute('data-index') || '0');
-            setVisibleFeatures(prev => [...new Set([...prev, index])]);
-          }
-        });
-      },
-      { threshold: 0.08 }
-    );
-    const cards = featuresRef.current?.querySelectorAll('[data-index]');
-    cards?.forEach(card => observer.observe(card));
-    const fallback = setTimeout(() => {
-      setVisibleFeatures(prev =>
-        prev.length < features.length ? features.map((_, i) => i) : prev
-      );
-    }, 1200);
-    return () => { observer.disconnect(); clearTimeout(fallback); };
-  }, [visible]);
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
+  };
 
   if (isChecking) {
     return (
@@ -133,417 +215,375 @@ export function SplashPage() {
     );
   }
 
-  return (
-    <div className="relative min-h-screen overflow-x-hidden" style={{ background: 'var(--ds-bg-page)', backgroundColor: 'var(--ds-bg-base)' }}>
+  const primaryCta = (label: string) => (
+    <motion.button
+      onClick={() => navigate('/signup')}
+      whileTap={{ scale: 0.97 }}
+      className="group relative inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-2xl text-white font-semibold text-base overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg,#a855f7,#ec4899)',
+        boxShadow: '0 10px 40px -10px rgba(236,72,153,0.6), inset 0 1px 0 rgba(255,255,255,0.25)',
+      }}
+    >
+      <span className="relative z-10">{label}</span>
+      <ArrowRight className="w-4 h-4 relative z-10 transition-transform group-hover:translate-x-1" />
+    </motion.button>
+  );
 
-      {/* Grain texture overlay */}
+  return (
+    <div className="relative min-h-screen overflow-x-hidden text-white" style={{ background: 'var(--ds-bg-page)', backgroundColor: 'var(--ds-bg-base)' }}>
+
+      {/* Grain */}
       <div
-        className="fixed inset-0 pointer-events-none z-[1] opacity-[0.028]"
+        className="fixed inset-0 pointer-events-none z-[1] opacity-[0.03]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'repeat',
           backgroundSize: '160px',
         }}
       />
 
-      {/* Sticky top bar */}
-      <div
-        className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-6"
+      {/* Aurora */}
+      <div className="absolute inset-x-0 top-0 h-[1400px] pointer-events-none overflow-hidden">
+        {ORBS.map((o, i) => (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{ left: o.x, top: o.y, width: o.w, height: o.h, borderRadius: '50%', background: o.color, filter: `blur(${orbBlur(o.blur)}px)` }}
+            animate={still || lite ? undefined : { x: [0, i % 2 ? -40 : 40, 0], y: [0, 24, 0] }}
+            transition={{ duration: 26 + i * 6, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        ))}
+      </div>
+
+      {/* Nav */}
+      <header
+        className="fixed top-0 inset-x-0 z-50"
         style={{
-          background: lite ? 'rgba(7,9,15,0.92)' : 'rgba(7,9,15,0.72)',
-          backdropFilter: lite ? undefined : 'blur(20px)',
-          borderBottom: '1px solid rgba(255,255,255,0.055)',
+          background: lite ? 'rgba(12,11,24,0.92)' : 'rgba(12,11,24,0.6)',
+          backdropFilter: lite ? undefined : 'blur(20px) saturate(140%)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}
       >
-        <span className="text-white text-sm font-bold tracking-[0.18em] uppercase">
-          Project <span style={{ color: '#c084fc' }}>Velvet</span>
-        </span>
-        <button
-          onClick={() => navigate('/login')}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full text-gray-400 text-xs font-medium transition-all duration-200 hover:text-white"
-          style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            backdropFilter: lite ? undefined : 'blur(12px)',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.09)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
-        >
-          Sign In
-        </button>
-      </div>
+        <div className="max-w-6xl mx-auto h-14 px-5 flex items-center justify-between gap-4">
+          <span className="text-sm font-bold tracking-[0.18em] uppercase">
+            Project <span style={{ color: '#c084fc' }}>Velvet</span>
+          </span>
+          <nav className="hidden md:flex items-center gap-7 text-sm text-gray-400">
+            <button onClick={() => scrollTo('inside')} className="hover:text-white transition-colors">What's inside</button>
+            <button onClick={() => scrollTo('home')} className="hover:text-white transition-colors">Velvet House</button>
+            <button onClick={() => scrollTo('community')} className="hover:text-white transition-colors">Community Board</button>
+            <button onClick={() => scrollTo('how')} className="hover:text-white transition-colors">How it works</button>
+          </nav>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-3.5 py-1.5 rounded-full text-sm text-gray-300 hover:text-white transition-colors"
+            >
+              Sign in
+            </button>
+            <button
+              onClick={() => navigate('/signup')}
+              className="px-4 py-1.5 rounded-full text-sm font-semibold text-white transition-colors"
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.16)' }}
+            >
+              Join free
+            </button>
+          </div>
+        </div>
+      </header>
 
-      {/* Ambient orbs */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <motion.div
-          className="absolute"
-          animate={lite ? undefined : { x: ['0%', '3%', '0%'], y: ['0%', '2%', '0%'] }}
-          transition={{ duration: 28, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <div style={{ position: 'absolute', left: ORBS[0].x, top: ORBS[0].y, width: ORBS[0].w, height: ORBS[0].h, borderRadius: '50%', background: ORBS[0].color, filter: `blur(${orbBlur(ORBS[0].blur)}px)` }} />
-        </motion.div>
-        <motion.div
-          className="absolute"
-          animate={lite ? undefined : { x: ['0%', '-2%', '0%'] }}
-          transition={{ duration: 34, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <div style={{ position: 'absolute', left: ORBS[1].x, top: ORBS[1].y, width: ORBS[1].w, height: ORBS[1].h, borderRadius: '50%', background: ORBS[1].color, filter: `blur(${orbBlur(ORBS[1].blur)}px)` }} />
-        </motion.div>
-        <motion.div
-          className="absolute"
-          animate={lite ? undefined : { x: ['0%', '1.5%', '0%'] }}
-          transition={{ duration: 40, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <div style={{ position: 'absolute', left: ORBS[2].x, top: ORBS[2].y, width: ORBS[2].w, height: ORBS[2].h, borderRadius: '50%', background: ORBS[2].color, filter: `blur(${orbBlur(ORBS[2].blur)}px)` }} />
-        </motion.div>
-        <div style={{ position: 'absolute', left: ORBS[3].x, top: ORBS[3].y, width: ORBS[3].w, height: ORBS[3].h, borderRadius: '50%', background: ORBS[3].color, filter: `blur(${orbBlur(ORBS[3].blur)}px)` }} />
-        <div style={{ position: 'absolute', left: ORBS[4].x, top: ORBS[4].y, width: ORBS[4].w, height: ORBS[4].h, borderRadius: '50%', background: ORBS[4].color, filter: `blur(${orbBlur(ORBS[4].blur)}px)` }} />
-      </div>
-
-      {/* Particles + shooting stars */}
-      {!lite && PARTICLES.map(p =>
-        p.isShooting ? (
-          <motion.div
-            key={p.id}
-            className="absolute pointer-events-none"
-            style={{
-              left: `${p.x}%`,
-              top: `${p.y}%`,
-              width: '80px',
-              height: '1px',
-              background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.55), transparent)',
-              rotate: '30deg',
-              opacity: 0,
-            }}
-            animate={{ opacity: [0, 0.7, 0], x: [0, 120], y: [0, 70] }}
-            transition={{ duration: 1.2, delay: p.delay * 4, repeat: Infinity, repeatDelay: Math.random() * 18 + 10, ease: 'easeOut' }}
-          />
-        ) : (
-          <motion.div
-            key={p.id}
-            className="absolute rounded-full bg-white pointer-events-none"
-            style={{ left: `${p.x}%`, top: `${p.y}%`, width: `${p.size}px`, height: `${p.size}px`, opacity: p.opacity }}
-            animate={{ opacity: [p.opacity, p.opacity * 2.8, p.opacity], scale: [1, 1.6, 1] }}
-            transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        )
-      )}
-
-      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-28 pb-8">
+      <main className="relative z-10">
 
         {/* Hero */}
-        <AnimatePresence>
-          {visible && (
-            <motion.div
-              className="text-center mb-24"
-              initial={enter({ opacity: 0, y: 50 })}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease: 'easeOut' }}
+        <section className="max-w-6xl mx-auto px-5 pt-28 md:pt-36 pb-20 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-14 lg:gap-12 items-center">
+          <motion.div
+            initial={still ? false : { opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            className="min-w-0 text-center lg:text-left"
+          >
+            <div
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8"
+              style={{ background: 'rgba(192,132,252,0.08)', border: '1px solid rgba(192,132,252,0.28)' }}
             >
-              {/* Early access pill with shimmer */}
-              <motion.div
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full mb-10 overflow-hidden relative cursor-default select-none"
-                style={{
-                  background: 'rgba(192,132,252,0.08)',
-                  border: '1px solid rgba(192,132,252,0.28)',
-                  backdropFilter: lite ? undefined : 'blur(16px)',
-                }}
-                initial={enter({ opacity: 0, scale: 0.88 })}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.15, duration: 0.5 }}
-              >
-                <motion.div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.14) 50%, transparent 70%)',
-                  }}
-                  animate={lite ? undefined : { x: ['-100%', '200%'] }}
-                  transition={{ duration: 2.4, delay: 1.2, repeat: Infinity, repeatDelay: 4 }}
-                />
-                <Sparkles className="w-3 h-3" style={{ color: '#c084fc' }} />
-                <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: '#c084fc' }}>Now in Early Access</span>
-              </motion.div>
-
-              {/* Hero headline */}
-              <motion.h1
-                className="mb-7 leading-none"
-                initial={enter({ opacity: 0, y: 24 })}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.28, duration: 0.75 }}
-              >
-                <span
-                  className="block text-white"
-                  style={{
-                    fontSize: 'clamp(64px, 10vw, 108px)',
-                    fontWeight: 900,
-                    letterSpacing: '-0.04em',
-                    lineHeight: 1,
-                  }}
-                >
-                  Project
-                </span>
-                <span
-                  className="block relative"
-                  style={{
-                    fontSize: 'clamp(64px, 10vw, 108px)',
-                    fontWeight: 200,
-                    letterSpacing: '0.12em',
-                    lineHeight: 1.05,
-                  }}
-                >
-                  <span
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                    style={{ filter: lite ? 'blur(24px)' : 'blur(60px)', opacity: 0.45 }}
-                    aria-hidden
-                  >
-                    <span
-                      style={{
-                        fontSize: 'clamp(64px, 10vw, 108px)',
-                        fontWeight: 200,
-                        letterSpacing: '0.12em',
-                        background: 'linear-gradient(135deg,#c084fc,#f472b6,#c084fc)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                      }}
-                    >
-                      Velvet
-                    </span>
-                  </span>
-                  <motion.span
-                    style={{
-                      background: 'linear-gradient(135deg,#c084fc 0%,#f472b6 50%,#c084fc 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                    }}
-                    animate={lite ? undefined : { backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                  >
-                    Velvet
-                  </motion.span>
-                </span>
-              </motion.h1>
-
-              <motion.p
-                className="text-gray-300 max-w-2xl mx-auto font-light mb-10"
-                style={{ fontSize: 'clamp(18px,2.2vw,22px)', lineHeight: 1.6 }}
-                initial={enter({ opacity: 0 })}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.7 }}
-              >
-                Your World, Projected.
-              </motion.p>
-
-              {/* CTA buttons — center of hero */}
-              <motion.div
-                className="flex flex-row gap-4 justify-center max-w-lg mx-auto w-full"
-                initial={enter({ opacity: 0, y: 12 })}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.65, duration: 0.6 }}
-              >
-                <motion.button
-                  onClick={() => navigate('/signup')}
-                  whileTap={{ scale: 0.97 }}
-                  className="group relative flex-1 inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl text-white font-bold text-base overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(135deg,#a855f7,#ec4899)',
-                    boxShadow: '0 4px 28px rgba(168,85,247,0.32)',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 40px rgba(168,85,247,0.52)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 28px rgba(168,85,247,0.32)'; }}
-                >
-                  <motion.div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{ background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%)' }}
-                    initial={{ x: '-100%' }}
-                    whileHover={{ x: '200%' }}
-                    transition={{ duration: 0.5, ease: 'easeOut' }}
-                  />
-                  <span className="relative z-10">Create Account</span>
-                  <ArrowRight className="w-4 h-4 relative z-10 transition-transform group-hover:translate-x-1" />
-                </motion.button>
-                <motion.button
-                  onClick={() => navigate('/login')}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex-1 px-8 py-4 rounded-2xl text-white font-semibold text-base transition-all duration-200"
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1.5px solid rgba(255,255,255,0.15)',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.09)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
-                >
-                  Enter Project Velvet
-                </motion.button>
-              </motion.div>
-
-              <motion.p
-                className="text-gray-600 text-xs mt-5"
-                initial={enter({ opacity: 0 })}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.85 }}
-              >
-                Start with 15 free messages — no credit card required.
-              </motion.p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Product preview mockup */}
-        {visible && (
-          <motion.div
-            className="mb-20"
-            initial={enter({ opacity: 0 })}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.9, duration: 0.6 }}
-          >
-            <SplashChatPreview lite={lite} />
-          </motion.div>
-        )}
-
-        {/* Section divider */}
-        {visible && (
-          <motion.div
-            className="mb-10 flex items-center gap-4"
-            initial={enter({ opacity: 0 })}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.0 }}
-          >
-            <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, transparent, rgba(244,63,94,0.3), transparent)' }} />
-            <div className="flex items-center gap-2">
-              <div className="w-px h-3 rounded-full bg-rose-500/60" />
-              <span className="text-[10px] text-gray-500 tracking-[0.28em] uppercase font-semibold">What Awaits</span>
-              <div className="w-px h-3 rounded-full bg-rose-500/60" />
+              <Sparkles className="w-3.5 h-3.5" style={{ color: '#c084fc' }} />
+              <span className="text-xs font-semibold tracking-wide" style={{ color: '#d8b4fe' }}>Now in early access</span>
             </div>
-            <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, transparent, rgba(244,63,94,0.3), transparent)' }} />
-          </motion.div>
-        )}
 
-        {/* Feature cards */}
-        {visible && (
-          <div ref={featuresRef} className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 mb-16">
-            {features.map(({ icon: Icon, accentRgb, borderColor, tag, title, desc }, i) => {
-              const isVisible = visibleFeatures.includes(i);
-              const isHovered = hoveredCard === i;
-              return (
+            <h1
+              style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: 'clamp(42px, 5.2vw, 70px)', letterSpacing: '-0.045em', lineHeight: 0.98 }}
+            >
+              <span className="block lg:whitespace-nowrap">Reach your goals.</span>
+              <span
+                className="block pb-2 lg:whitespace-nowrap"
+                style={{
+                  background: 'linear-gradient(120deg,#f472b6 0%,#c084fc 45%,#818cf8 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Find your crowd.
+              </span>
+            </h1>
+
+            <p className="mt-6 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
+              Project Velvet gives you Atlas, an assistant that gets things done, and coaches that keep you on track.
+              Then it connects you with real people who are into the same things you are.
+            </p>
+
+            <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+              {primaryCta('Create your free account')}
+              <button
+                onClick={() => scrollTo('inside')}
+                className="inline-flex items-center justify-center px-7 py-4 rounded-2xl font-semibold text-base text-gray-200 hover:text-white transition-colors"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}
+              >
+                See what's inside
+              </button>
+            </div>
+            <p className="mt-4 text-sm text-gray-500">Free to start. No credit card required.</p>
+          </motion.div>
+
+          <motion.div
+            initial={still ? false : { opacity: 0, y: 40, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="min-w-0 w-full max-w-[520px] mx-auto"
+          >
+            <SplashShowcase lite={lite} still={still} />
+          </motion.div>
+        </section>
+
+        {/* Interests marquee */}
+        <section className="pb-24">
+          <motion.p {...rise()} className="text-center text-sm text-gray-500 mb-6">
+            Whatever you are into, there are people here who are into it too.
+          </motion.p>
+          <div className="flex flex-col gap-3">
+            <InterestRow items={INTERESTS.slice(0, 12)} still={still} />
+            <InterestRow items={INTERESTS.slice(12)} reverse still={still} />
+          </div>
+        </section>
+
+        {/* What's inside */}
+        <section id="inside" className="max-w-6xl mx-auto px-5 pb-28 scroll-mt-20">
+          <motion.div {...rise()} className="max-w-2xl mb-12">
+            <Eyebrow>What's inside</Eyebrow>
+            <SectionTitle>Everything you need to grow, and people to grow with.</SectionTitle>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-5">
+            {PILLARS.map((p, pi) => (
+              <motion.article
+                key={p.id}
+                {...rise(still ? 0 : (pi % 2) * 0.1)}
+                className="relative rounded-[24px] p-7 md:p-8 overflow-hidden"
+                style={{
+                  background: `linear-gradient(160deg, rgba(${p.accent},0.09), rgba(255,255,255,0.02) 55%)`,
+                  border: `1px solid rgba(${p.accent},0.18)`,
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+                }}
+              >
+                <div
+                  className="absolute -top-24 -right-24 w-64 h-64 rounded-full pointer-events-none"
+                  style={{ background: `radial-gradient(circle, rgba(${p.accent},0.22), transparent 70%)` }}
+                />
+                <p className="relative text-[11px] font-bold tracking-[0.2em] uppercase mb-3" style={{ color: `rgb(${p.accent})` }}>{p.kicker}</p>
+                <h3 className="relative text-white text-2xl font-bold tracking-tight mb-2" style={{ fontFamily: DISPLAY_FONT, letterSpacing: '-0.02em' }}>{p.title}</h3>
+                <p className="relative text-gray-400 text-[15px] leading-relaxed mb-6">{p.blurb}</p>
+                <ul className="relative flex flex-col gap-4">
+                  {p.items.map(({ icon: Icon, name, text }) => (
+                    <li key={name} className="flex gap-3.5">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: `rgba(${p.accent},0.12)`, border: `1px solid rgba(${p.accent},0.25)` }}
+                      >
+                        <Icon className="w-[18px] h-[18px]" style={{ color: `rgb(${p.accent})` }} />
+                      </div>
+                      <div>
+                        <p className="text-white text-[15px] font-semibold">{name}</p>
+                        <p className="text-gray-400 text-sm leading-relaxed">{text}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </motion.article>
+            ))}
+          </div>
+        </section>
+
+        <VelvetHomeSection rise={rise} />
+
+        {/* Community */}
+        <section id="community" className="relative scroll-mt-20 py-24" style={{ background: 'linear-gradient(180deg, transparent, rgba(56,189,248,0.04) 30%, rgba(244,114,182,0.04) 70%, transparent)' }}>
+          <div className="max-w-6xl mx-auto px-5 grid lg:grid-cols-[1fr_1.15fr] gap-12 items-center">
+            <motion.div {...rise()}>
+              <Eyebrow accent="56,189,248">The Community Board</Eyebrow>
+              <SectionTitle>Pull up a chair. Your spaces are already waiting.</SectionTitle>
+              <p className="mt-5 text-gray-300 text-lg leading-relaxed max-w-lg">
+                Your interests place you in the right spaces from day one. Each one has live rooms, a board for longer posts,
+                and a list of who is around right now. Like someone? Follow them, send a message, or start a crew together.
+              </p>
+              <ul className="mt-7 flex flex-col gap-3 text-gray-300">
+                {[
+                  'Live rooms and boards in every space',
+                  'Crews: smaller, private groups inside a space',
+                  'Find members by shared interests and goals',
+                  'Medals and a progress feed to cheer each other on',
+                ].map(t => (
+                  <li key={t} className="flex items-center gap-3 text-[15px]">
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#38bdf8' }} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {SPACES.map((s, i) => (
                 <motion.div
-                  key={title}
-                  data-index={i}
-                  onMouseEnter={() => setHoveredCard(i)}
-                  onMouseLeave={() => setHoveredCard(null)}
-                  className="rounded-2xl p-5 flex flex-col gap-3 cursor-default relative overflow-hidden"
-                  initial={enter({ opacity: 0, y: 28 })}
-                  animate={(lite || isVisible) ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
-                  transition={{ duration: 0.55, delay: i * 0.1 }}
+                  key={s.name}
+                  {...rise(still ? 0 : (i % 4) * 0.06)}
+                  className="rounded-2xl p-4"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <div className="text-2xl mb-2" aria-hidden>{s.emoji}</div>
+                  <p className="text-white text-[15px] font-semibold leading-snug">{s.name}</p>
+                  <p className="text-gray-500 text-sm">{s.line}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section id="how" className="max-w-6xl mx-auto px-5 py-24 scroll-mt-20">
+          <motion.div {...rise()} className="max-w-2xl mb-12">
+            <Eyebrow accent="244,114,182">How it works</Eyebrow>
+            <SectionTitle>Up and running in a few minutes.</SectionTitle>
+          </motion.div>
+          <ol className="grid md:grid-cols-3 gap-5">
+            {STEPS.map((s, i) => (
+              <motion.li
+                key={s.n}
+                {...rise(still ? 0 : i * 0.1)}
+                className="rounded-[22px] p-7"
+                style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <p
+                  className="mb-5"
                   style={{
-                    background: isHovered ? `rgba(${accentRgb},0.07)` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${isHovered ? borderColor : 'rgba(255,255,255,0.08)'}`,
-                    borderTop: `2px solid rgba(${accentRgb},${isHovered ? 0.65 : 0.28})`,
-                    boxShadow: isHovered ? `0 8px 40px rgba(${accentRgb},0.14), 0 0 0 1px rgba(${accentRgb},0.12)` : 'none',
-                    transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-                    transition: 'all 0.3s ease',
-                    backdropFilter: lite ? undefined : 'blur(12px)',
+                    fontFamily: DISPLAY_FONT,
+                    fontWeight: 800,
+                    fontSize: 44,
+                    lineHeight: 1,
+                    letterSpacing: '-0.04em',
+                    background: 'linear-gradient(135deg,#f472b6,#c084fc)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
                   }}
                 >
-                  <div
-                    className="absolute inset-0 pointer-events-none opacity-[0.018]"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-                      backgroundSize: '120px',
-                    }}
-                  />
-                  <div className="flex items-start justify-between gap-2 relative z-10">
-                    <div
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: `radial-gradient(circle at 35% 35%, rgba(${accentRgb},0.35), rgba(${accentRgb},0.1))`,
-                        border: `1px solid rgba(${accentRgb},0.3)`,
-                        boxShadow: isHovered ? `0 0 20px rgba(${accentRgb},0.25)` : 'none',
-                        transition: 'box-shadow 0.3s ease',
-                      }}
-                    >
-                      <Icon className="w-5 h-5" style={{ color: `rgb(${accentRgb})` }} />
-                    </div>
-                    <span
-                      className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full whitespace-nowrap"
-                      style={{
-                        color: `rgb(${accentRgb})`,
-                        background: `rgba(${accentRgb},0.1)`,
-                        border: `1px solid rgba(${accentRgb},0.2)`,
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  </div>
-                  <div className="relative z-10">
-                    <h3 className="text-white font-bold text-base mb-1.5 tracking-tight">{title}</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">{desc}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
+                  {s.n}
+                </p>
+                <h3 className="text-white text-lg font-semibold mb-2">{s.title}</h3>
+                <p className="text-gray-400 text-[15px] leading-relaxed">{s.text}</p>
+              </motion.li>
+            ))}
+          </ol>
+        </section>
+
+        {/* Trust */}
+        <section className="max-w-6xl mx-auto px-5 pb-24">
+          <div className="grid md:grid-cols-3 gap-4">
+            {TRUST.map(({ icon: Icon, title, text }, i) => (
+              <motion.div
+                key={title}
+                {...rise(still ? 0 : i * 0.08)}
+                className="flex gap-4 rounded-2xl p-5"
+                style={{ background: 'rgba(52,211,153,0.035)', border: '1px solid rgba(52,211,153,0.14)' }}
+              >
+                <Icon className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-white text-[15px] font-semibold mb-1">{title}</p>
+                  <p className="text-gray-400 text-sm leading-relaxed">{text}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
-        )}
+          <p className="mt-6 text-center text-gray-600 text-xs max-w-xl mx-auto">
+            Coaches are AI, not licensed professionals. They offer support and guidance but are not a substitute for medical,
+            mental health, financial, or other professional care.
+          </p>
+        </section>
 
-        {/* Coach disclaimer */}
-        {visible && (
-          <motion.p
-            className="text-center text-gray-600 text-xs mb-6 max-w-lg mx-auto"
-            initial={enter({ opacity: 0 })}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            Coaches are AI companions, not licensed professionals. They provide support and guidance but are not a substitute for medical, mental health, or other professional care.
-          </motion.p>
-        )}
-
-        {/* Trust callout */}
-        {visible && (
+        {/* Final CTA */}
+        <section className="max-w-6xl mx-auto px-5 pb-20">
           <motion.div
-            className="mb-10 flex items-center gap-4 px-5 py-4 rounded-2xl max-w-2xl mx-auto"
-            initial={enter({ opacity: 0, y: 20 })}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
+            {...rise()}
+            className="relative rounded-[32px] px-6 py-16 md:py-20 text-center overflow-hidden"
             style={{
-              background: 'rgba(34,197,94,0.04)',
-              border: '1px solid rgba(34,197,94,0.15)',
+              background: 'linear-gradient(135deg, rgba(168,85,247,0.18), rgba(236,72,153,0.12) 50%, rgba(56,189,248,0.1))',
+              border: '1px solid rgba(255,255,255,0.1)',
             }}
           >
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)' }}>
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-white text-sm font-semibold mb-0.5">Private by design</p>
-              <p className="text-gray-400 text-xs leading-relaxed">
-                Your conversations are encrypted, your data is yours. Export or delete everything anytime from Settings.
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(ellipse 60% 60% at 50% 0%, rgba(255,255,255,0.08), transparent 70%)' }}
+            />
+            <div className="relative">
+              <h2
+                className="text-white max-w-3xl mx-auto"
+                style={{ fontFamily: DISPLAY_FONT, fontWeight: 800, fontSize: 'clamp(34px, 5vw, 60px)', letterSpacing: '-0.04em', lineHeight: 1.02 }}
+              >
+                Your next chapter starts with hello.
+              </h2>
+              <p className="mt-5 text-gray-300 text-lg max-w-xl mx-auto">
+                Set a goal, meet your coach, and find your crowd. It takes a few minutes and costs nothing to start.
               </p>
+              <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
+                {primaryCta('Join Project Velvet')}
+                <button
+                  onClick={() => navigate('/login')}
+                  className="inline-flex items-center justify-center px-7 py-4 rounded-2xl font-semibold text-base text-gray-200 hover:text-white transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)' }}
+                >
+                  I already have an account
+                </button>
+              </div>
             </div>
-            <Lock className="w-4 h-4 text-emerald-400/40 flex-shrink-0" />
           </motion.div>
-        )}
+        </section>
+      </main>
 
-        <motion.p
-          className="text-center text-gray-700 text-xs mb-6"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          By continuing you agree to our{' '}
-          <button onClick={() => navigate('/terms')} className="underline hover:text-gray-500 transition-colors">Terms of Service</button>
-          {' '}and{' '}
-          <button onClick={() => navigate('/privacy')} className="underline hover:text-gray-500 transition-colors">Privacy Policy</button>.
-        </motion.p>
-
-        <footer className="text-center pb-6">
-          <div className="flex items-center justify-center gap-2">
-            <Heart className="w-3.5 h-3.5 text-rose-500/50" fill="currentColor" />
-            <p className="text-gray-700 text-sm">© 2025 Project Velvet. All rights reserved.</p>
+      <footer className="relative z-10 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="max-w-6xl mx-auto px-5 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="text-center md:text-left">
+            <p className="text-sm font-bold tracking-[0.18em] uppercase">
+              Project <span style={{ color: '#c084fc' }}>Velvet</span>
+            </p>
+            <p className="text-gray-600 text-xs mt-1">© {new Date().getFullYear()} Project Velvet. All rights reserved.</p>
           </div>
-        </footer>
-
-      </div>
+          <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-500">
+            {[
+              { label: 'About', to: '/about' },
+              { label: 'Changelog', to: '/changelog' },
+              { label: 'Support us', to: '/support' },
+              { label: 'Terms', to: '/terms' },
+              { label: 'Privacy', to: '/privacy' },
+            ].map(l => (
+              <button key={l.to} onClick={() => navigate(l.to)} className="hover:text-white transition-colors">{l.label}</button>
+            ))}
+          </nav>
+        </div>
+        <p className="text-center text-gray-700 text-xs pb-8 px-5">
+          By creating an account you agree to our{' '}
+          <button onClick={() => navigate('/terms')} className="underline hover:text-gray-500">Terms of Service</button>
+          {' '}and{' '}
+          <button onClick={() => navigate('/privacy')} className="underline hover:text-gray-500">Privacy Policy</button>.
+        </p>
+      </footer>
     </div>
   );
 }
