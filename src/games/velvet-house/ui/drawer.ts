@@ -118,6 +118,26 @@ export interface DrawerState {
 
 const SALON_TAB = 'Salon';
 
+// Each bottom-bar tab has its own colour and a little icon, so you know where you are at a glance.
+const svg = (d: string) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+export const DOCK_TABS: Record<string, { color: string; label?: string; icon: string }> = {
+  people: { color: '#4FC3C9', icon: svg('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-5.6 6-5.6s6 2.2 6 5.6"/><circle cx="17.2" cy="9" r="2.3"/><path d="M16.5 14.6c2.7-.3 4.6 1.3 4.8 4.2"/>') },
+  shop: { color: '#F5A83B', icon: svg('<path d="M5 8.5h14l-1.2 11.5H6.2z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>') },
+  arrange: { color: '#A582F0', icon: svg('<path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>') },
+  goals: { color: '#6FCB78', icon: svg('<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>') },
+  do: { color: '#F2805C', label: 'Orders', icon: svg('<rect x="5.5" y="4" width="13" height="17" rx="2.5"/><path d="M9 3.5h6v3H9zM9 11h6M9 15h4"/>') },
+  partner: { color: '#EC5F90', icon: svg('<path d="M12 20.5s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7.6a4.2 4.2 0 0 1 7.5 2.6c0 5.7-7.5 10.3-7.5 10.3z"/>') },
+  you: { color: '#5FA2F2', icon: svg('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.2c1.2 1.8 5.8 1.8 7 0M9 9.5h.01M15 9.5h.01"/>') },
+  home: { color: '#DDA663', icon: svg('<path d="M3.5 11 12 4l8.5 7M5.5 9.5V20h13V9.5M10 20v-5h4v5"/>') },
+  log: { color: '#A2AABE', label: 'Today', icon: svg('<rect x="4" y="5" width="16" height="16" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/>') },
+};
+
+/** The inside of one bottom-bar tab. */
+export const dockTabHtml = (key: string, title: string): string => {
+  const t = DOCK_TABS[key];
+  return `<span class="vh-tab-ico">${t?.icon ?? ''}</span><span class="vh-tab-label">${title}</span>`;
+};
+
 const esc = (t: string): string => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
 const PAGE_TITLES: Record<string, string> = {
@@ -161,9 +181,8 @@ export function createDrawer(cb: DrawerCallbacks): {
   const dock = document.createElement('nav');
   dock.className = 'vh-dock';
   // The dock is tight on a phone, so the long page titles get a short label.
-  const DOCK_LABELS: Record<string, string> = { do: 'Orders' };
   dock.innerHTML = ['shop', 'arrange', 'goals', 'do', 'partner', 'you', 'home', 'log']
-    .map(pg => `<button data-open="${pg}" aria-pressed="false">${DOCK_LABELS[pg] ?? PAGE_TITLES[pg]}</button>`)
+    .map(pg => `<button data-open="${pg}" aria-pressed="false" style="--tab:${DOCK_TABS[pg].color}">${dockTabHtml(pg, DOCK_TABS[pg].label ?? PAGE_TITLES[pg])}</button>`)
     .join('');
 
   const closeBtn = el.querySelector('.vh-drawer-close')!;
@@ -181,6 +200,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     el.dataset.open = pg;
     const titleEl = el.querySelector('[data-title]')!;
     titleEl.textContent = pg ? PAGE_TITLES[pg] : '';
+    if (pg) el.style.setProperty('--tab', DOCK_TABS[pg]?.color ?? '#E0A43A');
     dock.querySelectorAll<HTMLButtonElement>('button[data-open]').forEach(b => {
       b.setAttribute('aria-pressed', String(b.dataset.open === pg));
     });

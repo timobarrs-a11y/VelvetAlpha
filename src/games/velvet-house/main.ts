@@ -35,7 +35,7 @@ import {
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
 import { PICTURE_WALLS } from './state/pictureWalls';
-import { createDrawer, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
+import { createDrawer, dockTabHtml, DOCK_TABS, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
 import { clothByKey, clothId, wearOnAgent, validOutfit, type OwnedCloth } from './state/clothing';
 import { validHeadSvgs, loadHeadImages } from './state/headSprites';
 import { createDialogue, createTray, showDiscoveryCard, createTownSign, type TrayAction } from './ui/dialogue';
@@ -414,7 +414,8 @@ function boot(): void {
   const peopleBtn = document.createElement('button');
   peopleBtn.type = 'button';
   peopleBtn.dataset.people = '';
-  peopleBtn.textContent = 'People';
+  peopleBtn.innerHTML = dockTabHtml('people', 'People');
+  peopleBtn.style.setProperty('--tab', DOCK_TABS.people.color);
   peopleBtn.setAttribute('aria-pressed', 'false');
   peopleBtn.addEventListener('click', () => {
     const show = peopleEl.hidden;
