@@ -34,6 +34,7 @@ import {
   talk, rememberChat, remember,
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
+import { snapshot } from './state/save';
 import { createHostSample } from './bridge/hostSample';
 import { PICTURE_WALLS } from './state/pictureWalls';
 import { createDrawer, dockTabHtml, DOCK_TABS, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
@@ -1082,46 +1083,23 @@ function boot(): void {
     setTimeout(() => dialogue.showInput(true), 600);
   }
 
-  // Save
+  // Save: one serializer (state/save.ts). What the game models comes from live state; the rest is carried over from the loaded save.
   function doSave(): void {
     try {
-      const saveData = {
-        v: 2, setupDone: true, partnerName, lifeGoal, settleDone,
-        flags, career: { level: 0, perf: 0 }, mcareer: { level: 0, perf: 0 },
-        pboxes: false, wallMode: WALL_MODES[view.wallIdx].mode,
-        yard: { t: [], rainAt: 0, rainUntil: 0, rainCheck: 0 },
-        laundryPile: world.household.laundryPile, savedAt: Date.now(),
-        minutes: world.minutes, day: world.day,
-        money: world.household.money,
-        earnedToday: world.household.earnedToday,
-        spentToday: world.household.spentToday,
-        power: world.household.power, fridge: world.household.fridge,
+      const data = snapshot({
+        day: world.day, minutes: world.minutes,
+        money: world.household.money, earnedToday: world.household.earnedToday, spentToday: world.household.spentToday,
+        power: world.household.power, fridge: world.household.fridge, dishes: world.household.dishes, laundryPile: world.household.laundryPile,
         bill: world.household.bill, nextBillAt: world.household.nextBillAt,
-        owned: [...owned], closet, bond, memories, coreMem, pastMem,
-        townName, simName, rngSeed,
-        freeWill, autonomy: 'on', mayaCap: 500,
-        mayaSpent: { day: world.day, amt: 0 },
-        style, companion: companionCfg,
-        changes: [], pets: [], dirt: [],
-        storage: storage.map(o => ({ ...o })),
-        LOOKS: art.getLooks(), ROOMLOOK: [{},{},{},{}], WALLOBJS: [],
-        support: 0, together: 0,
-        dishes: world.household.dishes, petFood: 6, petSeq: 0,
-        dirtId: 0, changeSeq: 0, projectAt: null,
-        objs: world.objs.map(o => ({
-          id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot,
-          col: o.col ?? null, pot: o.pot, pet: o.pet, grow: o.grow, wet: o.wet, art: o.art,
-        })),
-        jordan: { needs: people[0].needs, skills: { cooking: 0, fitness: 0, logic: 0, creativity: 0, charisma: 0 }, mood: { happy: 50, sad: 0, angry: 0, tired: 0, playful: 30, affectionate: 40 }, workedDay: false, friendsDay: false },
-        maya: { needs: people[1].needs, skills: { cooking: 0, fitness: 0, logic: 0, creativity: 0, charisma: 0 }, mood: { happy: 50, sad: 0, angry: 0, tired: 0, playful: 30, affectionate: 40 }, workedDay: false, friendsDay: false },
-        turns: chatTurns,
-        look: { skin: people[0].look.skin, hair: '', hairColor: people[0].look.hair, top: people[0].look.top, topStyle: people[0].look.topStyle, bottom: people[0].look.bottom, accent: people[0].look.accent, eyeColor: '', facialHair: '', glasses: '', gender: 'male' },
-        mayaLook: { skin: people[1].look.skin, hair: '', hairColor: people[1].look.hair, top: people[1].look.top, topStyle: people[1].look.topStyle, bottom: people[1].look.bottom, accent: people[1].look.accent, eyeColor: '', facialHair: '', glasses: '', gender: 'female' },
-        TASTE: style, CHANGES: [], ext: {},
-        player: { name: simName, look: {} },
-        partner: { name: partnerName, look: {} },
-      };
-      localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+        objs: world.objs, storage, owned: [...owned], closet, bond, flags,
+        simName, partnerName, look: people[0].look, mayaLook: people[1].look,
+        needs: { jordan: people[0].needs, maya: people[1].needs },
+        memories, coreMem, pastMem, townName, turns: chatTurns, rngSeed,
+        lifeGoal, settleDone, freeWill, style, companion: companionCfg as unknown as Record<string, unknown>,
+        wallMode: WALL_MODES[view.wallIdx].mode,
+        looks: art.exportLooks(),
+      }, world.save);
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch { /* non-fatal */ }
   }
 
@@ -1338,6 +1316,7 @@ function boot(): void {
         t: view.t, dt: frameDt, objs: world.objs, wallMode: WALL_MODES[view.wallIdx].mode,
         chars: people.map(toFrame),
         arrange: arrangeFrame(),
+        house: { power: world.household.power, dishes: world.household.dishes, laundryPile: world.household.laundryPile, fridge: world.household.fridge, owned },
       });
       qualityManager.recordFrame(frameDt * 1000);
 

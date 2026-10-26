@@ -40,6 +40,8 @@ export interface HouseFrame {
   objs: ObjectInstance[];
   wallMode: WallMode;
   chars?: PersonFrame[];
+  /** The household's state, so the art always draws the real power, dishes, laundry, fridge and purchases. */
+  house?: { power: boolean; dishes: number; laundryPile: number; fridge: { basic: number; fresh: number }; owned?: Set<string> };
   /** Arrange mode: what can move, what's carried, whether it fits, what's under the pointer. */
   arrange?: { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null } | null;
 }
@@ -63,6 +65,7 @@ export interface HouseArt {
   /** Makes pictures (photos by url, or gradients by colour stops) available as wallpaper ids. */
   registerPictures(list: Array<{ id: string; base: string; url?: string; stops?: Array<[number, string]> }>): void;
   /** The paint, wallpaper and floor of each level, for saving. */
+  exportLooks(): { LOOKS: Array<{ paint: string; paper: string | null; floor: string }>; ROOMLOOK: Array<Record<string, unknown>>; WALLOBJS: unknown[]; yard: { t: number[][]; rainAt: number; rainUntil: number; rainCheck: number } };
   getLooks(): Array<{ paint: string; paper: string | null; floor: string }>;
   /** The drawing recipe for a wallpaper or floor id, for shop thumbnails. */
   lookInfo(kind: 'paper' | 'floor', key: string): { pat?: string; kind?: string; base?: string; ink?: string; ink2?: string; a?: string; b?: string; line?: string; url?: string; stops?: Array<[number, string]> } | null;

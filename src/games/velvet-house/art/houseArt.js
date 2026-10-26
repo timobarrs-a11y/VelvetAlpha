@@ -1701,6 +1701,8 @@ export function createHouseArt(ctx0, opts = {}) {
   }
 
   function render(s) {
+    // What the household is doing to the house (the power, the dishes, the fridge) comes in with every frame, so the art never shows stale state.
+    if (s.house) { power = s.house.power; dishes = s.house.dishes; laundryPile = s.house.laundryPile; fridge = s.house.fridge; if (s.house.owned) owned = s.house.owned; }
     sync(s);
     const t = animT, lv = viewLevel;
     const watching = [jordan, maya].some(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
@@ -1740,6 +1742,14 @@ export function createHouseArt(ctx0, opts = {}) {
   // Pictures that can hang as wallpaper: { id, base (a matching tone, used while loading), url | stops }.
   function registerPictures(list) { list.forEach(p => { if (p && p.id && !PAPERS[p.id]) PAPERS[p.id] = { pat: 'image', base: p.base, url: p.url, stops: p.stops }; }); }
   const getLooks = () => LOOKS.map(l => Object.assign({}, l));
+  // Everything the art owns that has to survive a reload: house looks (paint, wallpaper, floors, per-room
+  // overrides), wall decor, and the yard's grass, weeds, burns and rain. The mirror image of applySave.
+  const exportLooks = () => ({
+    LOOKS: getLooks(),
+    ROOMLOOK: ROOMLOOK.map(r => JSON.parse(JSON.stringify(r))),
+    WALLOBJS: WALLOBJS.map(w => Object.assign({}, w)),
+    yard: { t: YARD.tiles.map(t => [t.len, t.water, t.weed, t.burn, t.mowedAt]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck },
+  });
   const lookInfo = (kind, key) => (kind === 'paper' ? PAPERS[key] : kind === 'floor' ? FLOORS[key] : null) || null;
   function toggleObjectLight(id) { const next = objectLights.get(id) !== true; objectLights.set(id, next); return next; }
   function toggleLightAt(level, sx, sy) {
@@ -1848,5 +1858,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }
