@@ -78,7 +78,8 @@ when every row is "ported" or "dropped".
 | Shop: gameplay upgrades (string lights, espresso machine, 75-inch TV, chef's range, projector, memory-foam bed) | Only the attic | Port |
 | Shop: Groceries (3), Gifts (5), Homes (2) tabs | Empty | Port |
 | Shop depth: Paint 25 / Floors 29 / Decor 15 vs 12 / 18 / 5 | Smaller | Port the missing ones |
-| Backyard gameplay (mowing, weeds, `lawnStats`, seasons, festivals) | Visuals only | Port (overhaul Phase 5) |
+| Backyard gameplay (mowing, weeds, `lawnStats`, seasons) | Visuals only | Port (overhaul Phase 5) |
+| Seasonal festivals (four one-line events; the Holiday one depended on gifts) | Module exists, not wired | **Replaced** by mayor-run town events with a small objective (for example Dez hosts a Leaf Day cleanup: rake the yard before 5 PM for money and a Maya reaction). Later, after the opening and the yard work. The "Spring is here" season-change messages stay as flavour |
 
 Ported or better in the live game: rendering and lighting, animation, 86 activities, needs
 and free will, arrange (new design), outfits, avatar heads and the Salon, bills, grocery
@@ -107,7 +108,4 @@ conversation that follows.
 
 ## Decisions still open
 
-- **Festivals:** the old game had seasonal festivals. Calendar and gifts are
-  dropped; festivals were not mentioned. The opening doc has the mayor running
-  town events, so they could stay as a mayor-driven thing. Keep or drop?
 - **Second house (The Craftsman on Elm):** port or drop?
