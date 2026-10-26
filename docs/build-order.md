@@ -38,7 +38,7 @@ The two eval scripts need `ANTHROPIC_API_KEY` and call the live API:
 
 ## Later
 
-- **Free and paid in Velvet Sims:** the game is free without the AI; the live AI companion and the better jobs are paid. Plan and open decisions: `docs/velvet-house/free-and-paid.md`.
+- **Velvet Sims economy, free and paid:** free plays the game without the AI and works the Corner Market; paid gets the live AI companion, the five jobs and more side-job offers. Separate weekly bills (rent, electric, water, internet) paid by hand in a Bank app, five timed side jobs with progress bars, and an automatic daily routine. Plan: `docs/velvet-house/free-and-paid.md`.
 
 ## Decisions (made by Tim, 26 October)
 
