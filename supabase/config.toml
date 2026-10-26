@@ -174,3 +174,6 @@ verify_jwt = true
 
 [functions.community-room-send]
 verify_jwt = true
+
+[functions.velvet-design-share]
+verify_jwt = true

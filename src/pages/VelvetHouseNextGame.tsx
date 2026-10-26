@@ -8,10 +8,11 @@ import { buildProfile, avatarFromGameLook, buildAvatarLook, type PlayerProfile }
 import { lookUnlock, resolveLookForDisplay } from '../data/avatarCatalog';
 import {
   isReadyMessage, isAvatarItemBoughtMessage, isLookChangedMessage, isRestartedMessage,
-  isSampleRequestMessage, isSampleCancelMessage,
+  isSampleRequestMessage, isSampleCancelMessage, isDesignsRequestMessage,
 } from '../games/velvet-house/bridge/protocol';
 import { toGameTurnInput } from '../games/velvet-house/bridge/chatInput';
 import { sampleGameTurn } from '../services/velvetGameTurn';
+import { runDesignsOp } from '../services/velvetDesigns';
 import { useVelvetHouseCloudSave } from '../hooks/useVelvetHouseCloudSave';
 import { announceAvatarSaved, onAvatarSaved } from '../stores/avatarEditorStore';
 import { applyAvatarChange, migrateAvatarConfig } from '../utils/avatarConfig';
@@ -86,6 +87,13 @@ export function VelvetHouseNextGame() {
         return;
       }
       if (isSampleCancelMessage(e.data)) { turns.get(e.data.seq)?.abort(); return; }
+      // Sharing designs with friends and the gallery, run as the player.
+      if (isDesignsRequestMessage(e.data)) {
+        const { seq, op, args } = e.data;
+        const r = await runDesignsOp(op, args);
+        win.postMessage({ type: 'velvet:designsResult', seq, ...r }, window.location.origin);
+        return;
+      }
       if (isRestartedMessage(e.data)) { noteRestart(); return; }
       // Bought in the game: it's theirs everywhere now.
       if (isAvatarItemBoughtMessage(e.data)) {

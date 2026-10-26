@@ -5,6 +5,7 @@ import { createHostSample } from '../bridge/hostSample';
 import { validHeadSvgs, loadHeadImages } from '../state/headSprites';
 import { validBodySvgs, loadBodyImages } from '../state/bodySprites';
 import type { Game } from '../kernel/game';
+import { createHostDesigns } from './hostDesigns';
 
 export function createHostBridge(g: Game): Partial<Game> {
   const { world, people, companionCfg } = g;
@@ -93,5 +94,5 @@ export function createHostBridge(g: Game): Partial<Game> {
       w.claude.use('sample').then((f) => { g.s.sample = f; }).catch(() => {});
     }
   } catch {}
-  return { doVidSearch };
+  return { doVidSearch, designs: createHostDesigns() };
 }

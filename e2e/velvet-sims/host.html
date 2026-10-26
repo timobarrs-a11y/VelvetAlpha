@@ -16,5 +16,37 @@ addEventListener('message', (e) => {
   window.sampleLog.push(d.input);
   setTimeout(() => e.source.postMessage({ type: 'velvet:sampleResult', seq: d.seq, text: window.reply }, location.origin), 100);
 });
+
+// Sharing designs: a small in-memory stand-in for the database. Tests set window.friendDesigns, window.pendingDesigns and
+// window.moderator before opening the Community tab.
+window.designsLog = [];
+window.friendDesigns = [];
+window.pendingDesigns = [];
+window.moderator = false;
+const mine = [];
+addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d || d.type !== 'velvet:designs') return;
+  window.designsLog.push({ op: d.op, args: d.args });
+  const answer = (body) => setTimeout(() => e.source.postMessage({ type: 'velvet:designsResult', seq: d.seq, ...body }, location.origin), 50);
+  const a = d.args || {};
+  switch (d.op) {
+    case 'caps': return answer({ ok: true, data: { moderator: window.moderator } });
+    case 'friends': return answer({ ok: true, data: window.friendDesigns });
+    case 'gallery': return answer({ ok: true, data: [] });
+    case 'mine': return answer({ ok: true, data: mine });
+    case 'publish': {
+      if (/bad/i.test(a.name)) return answer({ ok: false, error: 'blocked' });
+      const row = { id: 'd' + (mine.length + 1), name: a.name, code: a.code, visibility: a.visibility, status: a.visibility === 'public' ? 'pending' : 'approved', report_count: 0 };
+      mine.push(row);
+      return answer({ ok: true, data: { id: row.id, status: row.status } });
+    }
+    case 'delete': { const i = mine.findIndex((m) => m.id === a.id); if (i >= 0) mine.splice(i, 1); return answer({ ok: i >= 0, data: i >= 0 }); }
+    case 'report': return answer({ ok: true, data: 'approved' });
+    case 'pending': return answer({ ok: true, data: window.pendingDesigns });
+    case 'review': window.pendingDesigns = window.pendingDesigns.filter((p) => p.id !== a.id); return answer({ ok: true, data: a.approve ? 'approved' : 'rejected' });
+    default: return answer({ ok: false, error: 'unavailable' });
+  }
+});
 </script>
 </body></html>

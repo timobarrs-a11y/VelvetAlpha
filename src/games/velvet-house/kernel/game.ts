@@ -18,6 +18,7 @@ import { WALL_MODES, DEFAULT_LOOKS, lookFrom, nameFrom, type World } from '../ke
 import { type MemoryStore } from '../state/memory';
 import { validateGarment } from '../state/garment';
 import type { Garment } from '../state/garment';
+import type { DesignsClient } from '../bridge/hostDesigns';
 import type { BoutiqueItem } from '../systems/outfit';
 import type { Occasion, SavedOutfit } from '../state/outfits';
 import { mountShell } from '../ui/shell';
@@ -178,6 +179,8 @@ export interface Game {
   wearPiece(piece: OwnedCloth): void;
   tellHostLook(top?: OwnedCloth, bottom?: OwnedCloth, hat?: string): void;
   doVidSearch(query: string, cb: (videos: Video[]) => void): void;
+  /** Sharing designs with friends and the gallery; null when the game is not inside the Velvet app. */
+  designs: DesignsClient | null;
   toFrame(p: Agent): PersonFrame;
 }
 

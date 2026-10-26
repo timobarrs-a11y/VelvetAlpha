@@ -20,7 +20,7 @@ new scope that the overhaul brief never covered.
 | 1. Move into the repo as modules | **Done, with two things left** | `src/games/velvet-house/` (state, art, ui, engine, bridge, plus `kernel`, `systems`, `view`, `dev` since the `main.ts` split), served by `games/velvet-house-next`. Typed save with migrations tested against a v1 fixture, seeded RNG (looks and dirt now draw from it too), Vitest on the pure logic, host messages checked and posted to the app's origin, a separate lazy chunk, live e2e (`npm run test:live`, 22 tests) and golden screenshots (`npm run test:visual`). **Left:** the legacy game is still served at `/velvet-house-legacy` until the parity checklist below is clear (the brief said delete it); the screenshots were taken after the animation work, not before the move, so they guard against regressions from here, not parity with the old game |
 | 2. Renderer (deferred lighting) | **Done** | `engine/gbuffer.ts`, `deferredLights.ts`, `gpuLights.ts`, quality tiers with automatic detection and a player override. Soft shadows, ambient occlusion, window beams, bloom, time-of-day and season grade, wet yard, snow, material sheen, dust motes and pooled particles. Added in the gap pass: depth of field while Maya and the player talk (high quality only, a cheap shrink-and-stretch blur with a clear hole around Maya) and rain droplets sliding down window glass. Frame times (`npm run test:perf`, measured in a cloud container with **no GPU**, so a worst case): phone-size view, auto 22.6 ms (44 fps), high 38.5 ms (26 fps), medium 22.4 ms, low 16.7 ms (60 fps); desktop-size view, high 273 ms and medium 128 ms in software, low 16.9 ms. Quote real numbers only from a run on a real device |
 | 3. Animation | **Done** | `art/poseAnim.js`: 30 activity clips on top of 31 poses, springs for hair and hems, blinks and eye darts, look-at, expressions from needs, idle fidgets, close-up and two-shot camera. Added in the gap pass: a drag that ends while moving glides on, a short screen shake for big moments (attic built, tutorial finished; none with reduced motion), a close-up on the player when trying something on, and a pull-back with sparkles when a room is repainted or refloored. PR #54 added the blend between activities and the turn on the spot before walking off. Still to do at the end: the brief's review of a short recording of each activity |
-| 4. Clothing system and design generator | **Recipes built; pixel designs, outfits by occasion and gifts still to do** | PR #48 first brought the avatar app's wardrobe (shirts, pants, hats, personas, full-body sprites). On top of that: garment recipes (`state/garment.ts`: schema with clamping, seeded generator with curated palettes and pattern rules, prices, typeable share codes with a checksum), cloth drawn on the body (`state/fabricTile.ts`, `art/fabric.js`: patterns turn with each limb segment; denim wash, stitching, rips, cuffs, knit, corduroy, flannel, satin and leather sheen), the Design Studio tab (live mannequin, cut, cloth, colours, pattern with size, angle, busy-ness and an overlay, details, Surprise me, Describe it through `velvet-game-turn` with a safe fallback, share codes), a daily boutique of six pieces by rarity, try-on close-up, and the partner reacting from taste. Recipes are saved with the look and the closet. **Not built yet:** converting the old shop clothes to recipes (they still draw as before), saving outfits for occasions and changing automatically by activity, the companion designing a gift, Dez delivering boutique orders, and the pixel editor, friends-only sharing and public gallery (see Design Studio below) |
+| 4. Clothing system and design generator | **Built, pending the backend switch-on** | PR #48 first brought the avatar app's wardrobe (shirts, pants, hats, personas, full-body sprites). On top of that: garment recipes (`state/garment.ts`: schema with clamping, seeded generator with curated palettes and pattern rules, prices, typeable share codes with a checksum), cloth drawn on the body (`state/fabricTile.ts`, `art/fabric.js`: patterns turn with each limb segment; denim wash, stitching, rips, cuffs, knit, corduroy, flannel, satin and leather sheen), the Design Studio tab (live mannequin, cut, cloth, colours, pattern with size, angle, busy-ness and an overlay, details, Surprise me, Describe it through `velvet-game-turn` with a safe fallback, share codes), a daily boutique of six pieces by rarity, try-on close-up, and the partner reacting from taste. Recipes are saved with the look and the closet. Also built: outfits by occasion that change automatically, remixing the old shop clothes as recipes (they still draw as before when worn as they are), rare boutique pieces ordered and delivered in a parcel, a gift from Maya once a day, the pixel editor, friends-only sharing and a reviewed public gallery with reporting (see Design Studio below). **Not built:** Dez as a person delivering the parcels (needs the script engine), and pixel designs on floors, wallpaper and rugs |
 | 5. Gardens and the outdoors | **Partly** | Grass, weeds, rain, seasons and a garden bed in the art. No plant species, growth stages or yard decorating. The `yard`, `dirt`, `pets`, `calendar` and `festivals` modules are not wired into the live game |
 | 6. Opening and tutorial | **Not started** | Design exists (`opening-sequence.md`); no script engine, no Dez, no scripted tutorial |
 
@@ -144,17 +144,20 @@ Effect on the plan: none of the architecture steps change. Two notes:
 
 ## Design Studio (overhaul Phase 4, kept)
 
-The idea, in the style of Animal Crossing custom designs: players make their own patterns and
-apply them to clothes, floors, wallpaper and rugs, and share them.
+Built, in this order:
 
-- **Recipes (procedural):** a small data object (cut, fabric, base colour, pattern kind and
-  colours) the game draws live. Cheap, no moderation problem, and it is what the brief asked
-  for. Floors and wallpaper already work this way (`FLOORS` and `PAPERS` in the art).
-- **Pixel designs (player-made):** a small grid (for example 32 by 32, up to 16 colours) painted
-  in an editor, stored as a short code, and applied as a texture: tiled on a floor, hung on a
-  wall (the picture-wallpaper code already maps an image onto a wall), or wrapped on a shirt.
-- **Sharing:** a design code that can be pasted into a message (the messaging system exists), with
-  friends-only first. A public gallery is the last step and needs moderation and reporting before
-  it opens, because player-made images can be offensive.
-- **Order:** recipes first (done), then the pixel editor with private and friends-only sharing, then a
-  public gallery.
+- **Recipes** (procedural garments), the studio, the daily boutique, Describe it, outfits by occasion, a gift from Maya,
+  parcels for rare pieces, remixing the old shop clothes.
+- **Pixel designs:** a Pixels tab (8 or 16 cells square, up to seven colours; draw, erase, fill, mirror, undo). The picture
+  is part of the recipe, worn as an all-over print, saved, and carried in share codes.
+- **Sharing:** share codes anyone can paste. Designs can be shared with friends (they show under Community straight away)
+  or offered to the public gallery, where a moderator approves each one first. Members can report a design; three
+  different reporters hide it until a moderator looks. Moderators (accounts with `is_super_user`) get a Review list in
+  the same tab. Backend: migration `20261029100000_velvet_designs.sql` (tables closed to members, everything through
+  functions that check who is asking) and the edge function `velvet-design-share` (checks the name with the app's
+  moderation, then publishes). The migration's rules are checked against a real Postgres by
+  `supabase/tests/velvet_designs_behaviour.sql`. **To turn it on:** apply the migration, deploy `velvet-design-share`.
+  Until then the Community tab shows a friendly "could not reach the server".
+- **Not built:** applying pixel designs to floors, wallpaper and rugs (wallpaper pictures are not tiled today), likes in
+  the gallery, a moderator screen outside the game.
+

@@ -15,7 +15,9 @@ import { OCCASIONS, OCCASION_LABEL, type Occasion, type SavedOutfit } from '../s
  * describe one in words, shop the daily boutique, or trade share codes. It builds its page once and updates it in
  * place, because the drawer around it is refreshed several times a second.
  */
-type Tab = 'make' | 'pixel' | 'describe' | 'boutique' | 'outfits' | 'share';
+type Tab = 'make' | 'pixel' | 'describe' | 'boutique' | 'outfits' | 'share' | 'community';
+type CommView = 'friends' | 'gallery' | 'mine' | 'review';
+interface CommItem { id: string; name: string; code: string; owner_name?: string; visibility?: string; status?: string; report_count?: number }
 
 const SLOT_LABEL: Partial<Record<GarmentSlot, string>> = { top: 'Top', outer: 'Jacket', dress: 'Dress', bottom: 'Bottoms' };
 const STUDIO_SLOTS: GarmentSlot[] = ['top', 'outer', 'dress', 'bottom'];
@@ -50,7 +52,7 @@ export function createStudio(g: Game): Partial<Game> {
       </div>
     </div>
     <div class="vh-st-tabs" role="tablist">
-      ${(['make', 'pixel', 'describe', 'boutique', 'outfits', 'share'] as Tab[]).map((t) => `<button type="button" role="tab" data-sttab="${t}">${t === 'make' ? 'Design' : t === 'pixel' ? 'Pixels' : t === 'describe' ? 'Describe' : t === 'boutique' ? 'Boutique' : t === 'outfits' ? 'Outfits' : 'Share'}</button>`).join('')}
+      ${(['make', 'pixel', 'describe', 'boutique', 'outfits', 'share', 'community'] as Tab[]).map((t) => `<button type="button" role="tab" data-sttab="${t}">${t === 'make' ? 'Design' : t === 'pixel' ? 'Pixels' : t === 'describe' ? 'Describe' : t === 'boutique' ? 'Boutique' : t === 'outfits' ? 'Outfits' : t === 'share' ? 'Share' : 'Community'}</button>`).join('')}
     </div>
     <div class="vh-st-msg" data-msg aria-live="polite"></div>
     <div class="vh-st-pane" data-pane></div>
@@ -190,6 +192,88 @@ export function createStudio(g: Game): Partial<Game> {
         <div class="vh-st-cardrow"><button type="button" data-wearoutfit="${o.id}">Wear</button><button type="button" data-deleteoutfit="${o.id}" aria-label="Delete ${esc(o.name)}">&times;</button></div></div>`).join('') : '<p class="vh-st-hint">Nothing saved yet.</p>'}`;
   }
 
+  // -- community: friends, the gallery, my designs, and the review queue -----------------------------------------
+  const comm = { view: 'friends' as CommView, items: null as CommItem[] | null, loading: false, error: '', moderator: false, capsAsked: false };
+  const COMM_ERRORS: Record<string, string> = {
+    unavailable: 'Could not reach the server. Try again in a moment.', blocked: "That name isn't allowed.", slow_down: 'Easy now. Try again tomorrow.',
+    too_many: 'You have shared a lot already. Delete one first.', banned: 'Sharing is not available for this account.', not_allowed: 'Not allowed.', bad_name: 'Give it a name first.',
+  };
+  const STATUS_LABEL: Record<string, string> = { approved: 'Shared', pending: 'Waiting for review', hidden: 'Hidden after reports', rejected: 'Not approved' };
+
+  async function loadCommunity(): Promise<void> {
+    if (!g.designs) return;
+    comm.loading = true; comm.error = ''; comm.items = null; renderPane();
+    if (!comm.capsAsked) {
+      comm.capsAsked = true;
+      const caps = await g.designs<{ moderator: boolean }>('caps');
+      comm.moderator = caps.ok && caps.data?.moderator === true;
+    }
+    const op = comm.view === 'friends' ? 'friends' : comm.view === 'gallery' ? 'gallery' : comm.view === 'mine' ? 'mine' : 'pending';
+    const r = await g.designs<CommItem[]>(op);
+    comm.loading = false;
+    if (!r.ok) { comm.error = COMM_ERRORS[r.error ?? 'unavailable'] ?? COMM_ERRORS.unavailable; comm.items = []; }
+    else comm.items = (Array.isArray(r.data) ? r.data : []).filter((i) => i && typeof i.id === 'string' && typeof i.code === 'string' && decodeGarment(i.code));
+    if (tab === 'community') renderPane();
+  }
+
+  function communityPane(): string {
+    if (!g.designs) return '<p class="vh-st-hint">Community designs need the Velvet app.</p>';
+    const views: [CommView, string][] = [['friends', 'Friends'], ['gallery', 'Gallery'], ['mine', 'Mine'], ...(comm.moderator ? [['review', 'Review'] as [CommView, string]] : [])];
+    const head = `<div class="vh-st-row">${views.map(([v, l]) => chip(l, 'data-commview', v, comm.view === v)).join('')}</div>`;
+    if (comm.loading || !comm.items) return head + '<p class="vh-st-hint">Loading…</p>';
+    if (comm.error) return head + `<p class="vh-st-hint">${esc(comm.error)}</p>`;
+    if (!comm.items.length) {
+      const empty = { friends: 'Nothing from friends yet. Designs they share show up here.', gallery: 'The gallery is empty right now.', mine: 'You have not shared anything yet. Use the Share tab.', review: 'Nothing waiting for review.' }[comm.view];
+      return head + `<p class="vh-st-hint">${empty}</p>`;
+    }
+    return head + `<div class="vh-st-boutique">${comm.items.map((it, i) => `
+      <div class="vh-st-card" data-citem="${i}">
+        <canvas width="66" height="88" data-cpreview="${i}"></canvas>
+        <strong>${esc(it.name)}</strong>
+        <span class="vh-st-by">${it.owner_name ? `by ${esc(it.owner_name)}` : it.status ? esc(STATUS_LABEL[it.status] ?? it.status) : ''}${comm.view === 'review' && it.report_count ? ` · ${it.report_count} reports` : ''}</span>
+        <div class="vh-st-cardrow">${comm.view === 'mine'
+          ? `<button type="button" data-ctry="${i}">Try</button><button type="button" data-cdelete="${i}" aria-label="Delete ${esc(it.name)}">&times;</button>`
+          : comm.view === 'review'
+            ? `<button type="button" data-capprove="${i}">Approve</button><button type="button" data-creject="${i}">Reject</button>`
+            : `<button type="button" data-ctry="${i}">Try</button><button type="button" data-creport="${i}">Report</button>`}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  function drawCommunityPreviews(): void {
+    const other = companion();
+    pane.querySelectorAll<HTMLCanvasElement>('[data-cpreview]').forEach((cv) => {
+      const it = comm.items?.[Number(cv.dataset.cpreview)];
+      const gm = it && decodeGarment(it.code);
+      if (!gm) return;
+      const part = bodyPart(gm);
+      createGarmentPreview(cv).draw(part === 'top' ? gm : other.top, part === 'bottom' ? gm : other.bottom, 0);
+    });
+  }
+
+  async function commAction(kind: 'delete' | 'report' | 'approve' | 'reject', i: number): Promise<void> {
+    const it = comm.items?.[i];
+    if (!it || !g.designs || busy) return;
+    if (kind === 'report' && !window.confirm(`Report "${it.name}"? Moderators will take a look.`)) return;
+    busy = true;
+    const r = kind === 'delete' ? await g.designs('delete', { id: it.id })
+      : kind === 'report' ? await g.designs('report', { id: it.id, reason: 'reported in game' })
+        : await g.designs('review', { id: it.id, approve: kind === 'approve' });
+    busy = false;
+    if (!r.ok) { say(COMM_ERRORS[r.error ?? 'unavailable'] ?? COMM_ERRORS.unavailable); return; }
+    say(kind === 'report' ? 'Thanks. A moderator will take a look.' : kind === 'delete' ? 'Deleted.' : kind === 'approve' ? 'Approved.' : 'Rejected.');
+    comm.items = comm.items!.filter((_, k) => k !== i);
+    renderPane();
+  }
+
+  async function publish(): Promise<void> {
+    if (!g.designs || busy) return;
+    busy = true; renderPane(); say('Sharing…');
+    const r = await g.designs<{ id: string; status: string }>('publish', { name: cur.name, code: encodeGarment({ ...cur, rarity: 'one-of-a-kind' }), visibility: shareVis });
+    busy = false;
+    say(r.ok ? (shareVis === 'public' ? 'Sent for review. It will appear in the gallery once approved.' : 'Shared with your friends.') : COMM_ERRORS[r.error ?? 'unavailable'] ?? COMM_ERRORS.unavailable);
+    renderPane();
+  }
+
   // -- pixel art ------------------------------------------------------------------------------------------------
   const DEFAULT_PALETTE = ['#2b2b30', '#f2eee8', '#c2413a', '#e0a43a', '#7fb069', '#4a5da8', '#d24a7a'];
   const px = { w: 16, palette: [...DEFAULT_PALETTE], data: new Array<number>(256).fill(0), tool: 'pencil' as 'pencil' | 'erase' | 'fill', color: 1, mirror: false, undo: [] as number[][] };
@@ -281,11 +365,16 @@ export function createStudio(g: Game): Partial<Game> {
     cv.addEventListener('pointercancel', end);
   }
 
+  let shareVis: 'friends' | 'public' = 'friends';
   function sharePane(): string {
     const code = encodeGarment(cur);
     return `<h5>This design</h5>
       <textarea class="vh-st-code" readonly rows="3" data-code>${code}</textarea>
       <div class="vh-st-row"><button type="button" class="vh-st-chip" data-copy>Copy code</button></div>
+      <h5>Share it</h5>
+      ${g.designs ? `<div class="vh-st-row">${chip('Friends', 'data-sharevis', 'friends', shareVis === 'friends')}${chip('Public gallery', 'data-sharevis', 'public', shareVis === 'public')}</div>
+        <p class="vh-st-hint">${shareVis === 'friends' ? 'Your friends can find it under Community and try it on.' : 'A moderator looks at it first. It appears in the gallery once approved.'}</p>
+        <div class="vh-st-row"><button type="button" class="vh-st-primary" data-publish ${busy ? 'disabled' : ''}>Share ${esc(cur.name)}</button></div>` : '<p class="vh-st-hint">Sharing with friends needs the Velvet app. You can still copy the code.</p>'}
       <h5>Use someone's code</h5>
       <input class="vh-st-text" placeholder="VH-…" data-incode aria-label="A share code" />
       <div class="vh-st-row"><button type="button" class="vh-st-primary" data-load>Load it</button></div>`;
@@ -303,9 +392,10 @@ export function createStudio(g: Game): Partial<Game> {
   }
 
   function renderPane(): void {
-    pane.innerHTML = tab === 'make' ? makePane() : tab === 'boutique' ? boutiquePane() : tab === 'describe' ? describePane() : tab === 'outfits' ? outfitsPane() : tab === 'pixel' ? pixelPane() : sharePane();
+    pane.innerHTML = tab === 'make' ? makePane() : tab === 'boutique' ? boutiquePane() : tab === 'describe' ? describePane() : tab === 'outfits' ? outfitsPane() : tab === 'pixel' ? pixelPane() : tab === 'community' ? communityPane() : sharePane();
     if (tab === 'boutique') drawBoutiquePreviews();
     if (tab === 'pixel') { drawPixelGrid(); wirePixelGrid(); }
+    if (tab === 'community') drawCommunityPreviews();
     syncHead();
   }
 
@@ -397,7 +487,15 @@ export function createStudio(g: Game): Partial<Game> {
     const t = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!t || !sec.contains(t)) return;
     const d = t.dataset;
-    if (d.sttab) { tab = d.sttab as Tab; if (tab === 'pixel') loadPixelsFromDesign(); renderPane(); return; }
+    if (d.sttab) { tab = d.sttab as Tab; if (tab === 'pixel') loadPixelsFromDesign(); if (tab === 'community') { void loadCommunity(); return; } renderPane(); return; }
+    if (d.commview) { comm.view = d.commview as CommView; void loadCommunity(); return; }
+    if (d.sharevis) { shareVis = d.sharevis as 'friends' | 'public'; renderPane(); return; }
+    if (d.publish !== undefined) { void publish(); return; }
+    if (d.ctry) { const it = comm.items?.[Number(d.ctry)]; const gm = it && decodeGarment(it.code); if (gm) { cur = { ...gm, rarity: 'one-of-a-kind' }; tab = 'make'; renderPane(); drawPreview(performance.now() / 1000); say(`Trying on ${gm.name}.`); } return; }
+    if (d.cdelete) { void commAction('delete', Number(d.cdelete)); return; }
+    if (d.creport) { void commAction('report', Number(d.creport)); return; }
+    if (d.capprove) { void commAction('approve', Number(d.capprove)); return; }
+    if (d.creject) { void commAction('reject', Number(d.creject)); return; }
     if (d.pxtool) { px.tool = d.pxtool as typeof px.tool; renderPane(); return; }
     if (d.pxcolor) { px.color = Number(d.pxcolor); if (px.tool === 'erase') px.tool = 'pencil'; renderPane(); return; }
     if (d.pxmirror !== undefined) { px.mirror = !px.mirror; renderPane(); return; }

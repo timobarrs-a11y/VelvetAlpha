@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isLookChangedMessage, isAvatarLookMessage, sanitizeMessage } from '../bridge/protocol';
+import { isLookChangedMessage, isAvatarLookMessage, sanitizeMessage, isDesignsRequestMessage, isDesignsResultMessage } from '../bridge/protocol';
 
 const base = { type: 'velvet:lookChanged', game: 'velvet-house', who: 'player' };
 const top = { style: 'cop', color: '#2c4a7a', accent: '#c9a24a' };
@@ -33,5 +33,34 @@ describe('avatar look messages', () => {
     expect(isAvatarLookMessage({ type: 'velvet:avatarLook', who: 'player', sprites: { neutral: '<svg></svg>' } })).toBe(true);
     expect(isAvatarLookMessage({ type: 'velvet:avatarLook', who: 'player' })).toBe(false);
     expect(isAvatarLookMessage({ type: 'velvet:avatarLook', who: 'partner', sprites: {} })).toBe(false);
+  });
+});
+
+describe('design sharing messages', () => {
+  const ok = { type: 'velvet:designs', game: 'velvet-house', seq: 1 };
+
+  it('accepts the operations the game uses, with short plain arguments', () => {
+    expect(isDesignsRequestMessage({ ...ok, op: 'friends' })).toBe(true);
+    expect(isDesignsRequestMessage({ ...ok, op: 'publish', args: { name: 'Plaid', code: 'VH-ABCD-EFGHJ', visibility: 'friends' } })).toBe(true);
+    expect(isDesignsRequestMessage({ ...ok, op: 'review', args: { id: 'abc', approve: true } })).toBe(true);
+    expect(isDesignsRequestMessage({ ...ok, op: 'gallery', args: { offset: 40 } })).toBe(true);
+  });
+
+  it('refuses anything else', () => {
+    expect(isDesignsRequestMessage({ ...ok, op: 'dropTables' })).toBe(false);
+    expect(isDesignsRequestMessage({ ...ok, op: 'publish', args: { name: 'x'.repeat(25) } })).toBe(false);
+    expect(isDesignsRequestMessage({ ...ok, op: 'publish', args: { code: 'x'.repeat(701) } })).toBe(false);
+    expect(isDesignsRequestMessage({ ...ok, op: 'publish', args: { sql: 'select 1' } })).toBe(false);
+    expect(isDesignsRequestMessage({ ...ok, op: 'review', args: { name: true } })).toBe(false);
+    expect(isDesignsRequestMessage({ ...ok, op: 'gallery', args: { offset: -1 } })).toBe(false);
+    expect(isDesignsRequestMessage({ ...ok, op: 'mine', args: [1] })).toBe(false);
+    expect(isDesignsRequestMessage({ ...ok, seq: 'one', op: 'mine' })).toBe(false);
+    expect(isDesignsRequestMessage({ ...ok, type: 'velvet:sample', op: 'mine' })).toBe(false);
+  });
+
+  it('reads results and drops unknown fields on the way out', () => {
+    expect(isDesignsResultMessage({ type: 'velvet:designsResult', seq: 1, ok: true, data: [] })).toBe(true);
+    expect(isDesignsResultMessage({ type: 'velvet:designsResult', seq: 1, ok: 'yes' })).toBe(false);
+    expect(sanitizeMessage({ type: 'velvet:designs', game: 'velvet-house', seq: 1, op: 'mine', evil: 1 })).toEqual({ type: 'velvet:designs', game: 'velvet-house', seq: 1, op: 'mine' });
   });
 });

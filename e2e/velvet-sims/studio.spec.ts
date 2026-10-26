@@ -146,3 +146,91 @@ test('draw pixel art, wear it as a print, and keep it', async ({ page }) => {
   const code = await game.locator('[data-code]').inputValue();
   expect(code.length).toBeGreaterThan(100);
 });
+
+// A valid share code to stand in for a friend's design, made by the app's own generator.
+async function codeFor(page: import('@playwright/test').Page, seed: number): Promise<string> {
+  return page.evaluate(async (s) => {
+    const m = await import('/src/games/velvet-house/state/garment.ts');
+    return m.encodeGarment(m.generateGarment(s));
+  }, seed);
+}
+
+test('share a design with friends, see friends\' designs, and delete your own', async ({ page }) => {
+  const game = await openGame(page);
+  await game.locator('.vh-dock [data-open=studio]').click();
+  await game.locator('[data-cut=sweater]').click();
+  await game.locator('[data-sttab=share]').click();
+  await game.locator('[data-publish]').click();
+  await expect(game.locator('[data-msg]')).toContainText('Shared with your friends');
+  await game.locator('[data-sharevis=public]').click();
+  await game.locator('[data-publish]').click();
+  await expect(game.locator('[data-msg]')).toContainText('Sent for review');
+  const sent = await page.evaluate(() => (window as unknown as { designsLog: { op: string; args: { visibility: string; code: string } }[] }).designsLog.filter((l) => l.op === 'publish'));
+  expect(sent.map((s) => s.args.visibility)).toEqual(['friends', 'public']);
+  expect(sent[0].args.code).toMatch(/^VH-/);
+
+  await game.locator('[data-sttab=community]').click();
+  await game.locator('[data-commview=mine]').click();
+  await expect(game.locator('.vh-st-card')).toHaveCount(2);
+  await expect(game.locator('.vh-st-by').first()).toContainText(/Shared|Waiting for review/);
+  await game.locator('[data-cdelete="0"]').click();
+  await expect(game.locator('.vh-st-card')).toHaveCount(1);
+});
+
+test('a name the server will not allow is refused politely', async ({ page }) => {
+  const game = await openGame(page);
+  await game.locator('.vh-dock [data-open=studio]').click();
+  await game.locator('.vh-st-name').fill('bad name');
+  await game.locator('.vh-st-name').dispatchEvent('change');
+  await game.locator('[data-sttab=share]').click();
+  await game.locator('[data-publish]').click();
+  await expect(game.locator('[data-msg]')).toContainText("isn't allowed");
+});
+
+test('friends\' designs can be tried on and reported; junk codes are ignored', async ({ page }) => {
+  const game = await openGame(page);
+  const code = await codeFor(page, 42);
+  await page.evaluate((c) => {
+    (window as unknown as { friendDesigns: unknown[] }).friendDesigns = [
+      { id: 'f1', name: 'Pals Plaid', owner_name: 'Sam', code: c, visibility: 'friends' },
+      { id: 'f2', name: 'Junk', owner_name: 'Sam', code: 'VH-NOTREAL', visibility: 'friends' },
+    ];
+  }, code);
+  page.on('dialog', (d) => d.accept());
+  await game.locator('.vh-dock [data-open=studio]').click();
+  await game.locator('[data-sttab=community]').click();
+  await expect(game.locator('.vh-st-card')).toHaveCount(1);
+  await expect(game.locator('.vh-st-by')).toContainText('by Sam');
+  await game.locator('[data-ctry="0"]').click();
+  await expect(game.locator('[data-msg]')).toContainText('Trying on');
+  await expect(game.locator('[data-sttab=make]')).toHaveAttribute('aria-selected', 'true');
+  await game.locator('[data-sttab=community]').click();
+  await game.locator('[data-creport="0"]').click();
+  await expect(game.locator('[data-msg]')).toContainText('Thanks');
+  await expect(game.locator('.vh-st-card')).toHaveCount(0);
+});
+
+test('a member does not see the review queue', async ({ page }) => {
+  const game = await openGame(page);
+  await game.locator('.vh-dock [data-open=studio]').click();
+  await game.locator('[data-sttab=community]').click();
+  await expect(game.locator('[data-commview=friends]')).toBeVisible();
+  await expect(game.locator('[data-commview=review]')).toHaveCount(0);
+});
+
+test('a moderator can approve from the review queue', async ({ page }) => {
+  const game = await openGame(page);
+  const code = await codeFor(page, 7);
+  await page.evaluate((c) => {
+    const w = window as unknown as { moderator: boolean; pendingDesigns: unknown[] };
+    w.moderator = true;
+    w.pendingDesigns = [{ id: 'p1', name: 'Waiting', owner_name: 'Alex', code: c, visibility: 'public', status: 'pending', report_count: 0 }];
+  }, code);
+  await game.locator('.vh-dock [data-open=studio]').click();
+  await game.locator('[data-sttab=community]').click();
+  await game.locator('[data-commview=review]').click();
+  await expect(game.locator('.vh-st-card')).toHaveCount(1);
+  await game.locator('[data-capprove="0"]').click();
+  await expect(game.locator('[data-msg]')).toContainText('Approved');
+  await expect(game.locator('.vh-st-card')).toHaveCount(0);
+});

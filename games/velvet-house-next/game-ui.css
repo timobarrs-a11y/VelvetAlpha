@@ -495,3 +495,4 @@
 .vh-st-outfit div:first-child { display: flex; flex-direction: column; min-width: 0; font-size: 12px; }
 .vh-st-outfit span { color: #A9A1AE; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vh-st-pixgrid { display: block; width: min(100%, 256px); aspect-ratio: 1; margin: 6px auto 10px; border-radius: 8px; image-rendering: pixelated; cursor: crosshair; }
+.vh-st-by { font-size: 11px; color: #A9A1AE; }
