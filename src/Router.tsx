@@ -21,6 +21,7 @@ import { InstallPWABanner } from './components/InstallPWABanner';
 import { SWUpdateToast } from './components/SWUpdateToast';
 
 import { SignedInWorkspace } from './components/SignedInWorkspace';
+import { CookieConsent } from './components/CookieConsent';
 import { AvatarEditorHost } from './components/AvatarEditorModal';
 import { WorldWelcomeMount } from './features/velvet-world/WorldWelcome';
 
@@ -119,6 +120,7 @@ export function Router() {
             <AudioSceneSync />
             <GlobalEffects />
             <AvatarEditorHost />
+            <CookieConsent />
 <SignedInWorkspace>
               <Routes>
                 {publicRoutes}

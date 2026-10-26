@@ -25,34 +25,37 @@ export function CookieConsent() {
 
   if (!showConsent) return null;
 
+  // A small card just under the top bar: the chat box and the chat tray
+  // along the bottom stay fully visible and usable while it waits.
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 animate-in slide-in-from-bottom">
-      <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6 sm:py-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 mb-2">Cookie Consent</h3>
-            <p className="text-sm text-gray-600">
-              We use cookies to enhance your experience, analyze traffic, and serve personalized content. By continuing, you consent to our use of cookies.{' '}
-              <a href="/privacy" className="text-blue-600 hover:text-blue-700 underline">
-                Learn more
-              </a>
-            </p>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={handleReject}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              Reject
-            </button>
-            <button
-              onClick={handleAccept}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-            >
-              <Check className="w-4 h-4" />
-              Accept
-            </button>
-          </div>
+    <div
+      role="dialog"
+      aria-label="Cookie consent"
+      className="pointer-events-none fixed inset-x-0 top-[calc(4.25rem+env(safe-area-inset-top))] z-[60] flex justify-center px-3 sm:top-[calc(4.75rem+env(safe-area-inset-top))] [@media(max-height:500px)]:top-[calc(3.25rem+env(safe-area-inset-top))]"
+    >
+      <div className="pointer-events-auto flex w-full max-w-xl items-center gap-3 rounded-2xl border border-[#f5cfe0] bg-[#fff7fa]/95 px-3 py-2 text-[#2a1424] shadow-[0_8px_30px_rgba(0,0,0,0.25)] backdrop-blur">
+        <p className="min-w-0 flex-1 text-[11.5px] leading-snug sm:text-xs">
+          We use cookies to improve Velvet and personalise it for you.{' '}
+          <a href="/privacy" className="font-semibold text-pink-600 underline hover:text-pink-700">
+            Learn more
+          </a>
+        </p>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleReject}
+            className="rounded-full px-3 py-1.5 text-xs font-semibold text-[#2a1424]/70 transition-colors hover:bg-[#2a1424]/5"
+          >
+            Reject
+          </button>
+          <button
+            type="button"
+            onClick={handleAccept}
+            className="flex items-center gap-1 rounded-full bg-pink-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-pink-600"
+          >
+            <Check className="h-3.5 w-3.5" />
+            Accept
+          </button>
         </div>
       </div>
     </div>

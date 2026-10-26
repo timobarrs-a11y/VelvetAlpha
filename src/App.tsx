@@ -26,7 +26,6 @@ import { useAuth } from './auth/AuthProvider';
 import { processEnhancedInsights } from './services/enhancedInsightsService';
 import CBTReflectionDeckModal from './components/CBTReflectionDeckModal';
 import { onAvatarSaved } from './stores/avatarEditorStore';
-import { CookieConsent } from './components/CookieConsent';
 import { WallpaperPickerModal } from './components/WallpaperPickerModal';
 import { buildWallpaperMeta, buildWallpaperStyle } from './services/wallpaperService';
 import { BotPromptDrawer, ThreadMode } from './components/thread/ThreadToolbar';
@@ -1119,7 +1118,6 @@ function AppInner() {
       )}
       {hasWallpaper && <div className="absolute inset-0 bg-black/10 pointer-events-none" />}
 
-      <CookieConsent />
 
       <CBTReflectionDeckModal isOpen={reflectionOpen} onClose={() => setReflectionOpen(false)} />
 
