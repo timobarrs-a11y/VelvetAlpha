@@ -29,7 +29,7 @@ in conversation.
 
 ## The arrival, in two acts
 
-### Act 1: a quick questionnaire, in this order (no AI, about 60 seconds)
+### Act 1: a quick questionnaire, in this order (no AI, about 90 seconds)
 
 Quick tap screens using the existing questionnaire shell, each answer saved the moment it's
 given:
@@ -42,12 +42,56 @@ given:
 | 4 | Birthday | date wheel |
 | 5 | Zodiac | worked out from the birthday and shown as a one-tap confirm ("Scorpio ♏, sound right?"); the cusp question appears only when the date is on a cusp |
 | 6 | Gender | also sets how Atlas addresses them (see below) |
-| 7 | Hobbies, interests, music | one screen with tabs, last, so the feed is ready the moment they finish |
+| 7 | Hobbies, interests, music | one screen with tabs, so the feed is ready the moment they finish. This is what they already do and like. |
+| 8 | Someday | one screen with tabs: things they've always wanted to try but haven't got round to. Optional. See below. |
+
+### Act 1, screen 8: Someday
+
+Interests map what people already do. The real treasure is what they'd like to do and haven't
+got round to: the nurse who's always found IT interesting, the person who's meant to learn the
+guitar for ten years. That isn't an interest; it's something they're interested *in*. Those are
+the easiest goals to turn into plans, because the wish is already there.
+
+The trouble is that nobody can recall these on the spot. Asked "what have you always wanted to
+do?", most people go blank. So the screen doesn't ask them to think of anything. It shows them
+words and lets them recognise what's theirs.
+
+**The question:**
+
+> **Things you've always been curious about**
+> Not what you do now. What you'd try if someone handed you the time. Tap anything that makes
+> you think "one day…"
+
+**How it jogs their memory:**
+- **Concrete options, starting with a verb.** "Learn to code", not "Technology"; "See the
+  Northern Lights", not "Travel".
+- **Tabs by part of life**, about ten options each, so each tab is quick to scan.
+- **A one-line nudge at the top of each tab** that brings a memory forward.
+- **No minimum.** Skip is one tap, and "Something else" takes free text.
+- Each tap is saved straight away, like every other answer.
+
+| Tab | Nudge | Options (examples) |
+|---|---|---|
+| Work | "Ever looked at someone's job and thought, I'd be good at that?" | A field I've always found interesting: Tech & IT, Healthcare, Teaching, Design, Law, Finance, Psychology & counselling, Trades (electrician, carpentry), Cooking professionally, Writing & media, Aviation, Fitness coaching. Also: Start my own business, Get a promotion, Go back to school. |
+| Skills | "Something you watched someone do and thought, I could learn that" | Learn to code, Play an instrument, Speak another language, Cook properly, Learn to dance, Fix things around the house, Learn to swim, Drive, Photography |
+| Body | "Something you'd do if you felt fitter" | Run a 5K, Do a pull-up, Learn a martial art, Try yoga, Hike a mountain, Get a good night's sleep, Climb |
+| Places | "Somewhere you've said 'one day' about" | See the Northern Lights, Road trip, Visit where my family's from, Live abroad for a while, See a wonder of the world, Go somewhere on my own |
+| Experiences | "Something you'd regret never doing" | See my team play live, Go to a festival, Skydive, Learn to sail, Do stand-up, Volunteer, Run a marathon |
+| Creative | "Something you made as a kid and stopped" | Write a book, Paint or draw, Make music, Start a podcast or channel, Make a short film, Build something with my hands |
+| Money & home | "Something you'd sort out if you had a free weekend" | Start investing, Buy a home, Pay off debt, Get organised, Grow my own food, Get a pet |
+| People | "Someone you'd like to be closer to, or a crowd you'd like to belong to" | Make new friends, Find a partner, Reconnect with family, Find my people locally, Mentor someone |
+
+**Storing it:** a new `someday` column on `user_profiles` (jsonb), a list of
+`{ tab, value, custom }`. This is the only migration in the plan.
+
+**Where it's used:** Atlas gets it in his prompt as things they'd like to try, ranked above
+their interests (see "Where goals come from" below). Later it can feed the Daily Feed and Navi's
+local suggestions too.
 
 ### Act 2: Atlas introduces himself (the Alfred voice)
 
 This is the first time anyone hears Atlas's voice. He has Act 1's answers, but he doesn't recite
-them. He introduces himself, says what Velvet is for, and then asks a probing question.
+them. He introduces himself, says what Velvet is for, and then asks what *they* have in mind.
 
 **Atlas's voice, modeled on Alfred Pennyworth:**
 - Impeccably courteous, warm underneath, never gushing.
@@ -67,7 +111,7 @@ does. For anyone else, or anyone who'd rather not, it's just the first name. Ear
 once: "Shall I keep the formalities, or would you prefer plain Tim?" The answer is saved
 (`address_style`) and every AI in Velvet respects it after that.
 
-**Opening: who he is, what Velvet is for, then straight into a probing question** (with a
+**Opening: who he is, what Velvet is for, then what they already have in mind** (with a
 time-of-day greeting):
 
 > Good evening, Master Tim. I'm Atlas. I look after things here at Velvet.
@@ -75,36 +119,49 @@ time-of-day greeting):
 > Velvet exists to help people dream large and then actually see it through. Not just talking
 > about it: putting it on the calendar, with someone in your corner until it's done.
 >
-> So let's find something worth planning. Basketball, I gather. When did you last see a game
-> in person, rather than on a screen?
+> So let's begin with you. Is there something you already have in mind, something you'd like
+> to accomplish or finally get round to?
 
-The question in the last paragraph is built from **one** interest, picked because it can lead
-to something real (a game, a trip, a class). It is never a list. If nothing in Act 1 lends
-itself to that, he asks what they've been meaning to do and haven't.
+The person is always the first stop. He doesn't open with an interest or a Someday pick.
 
 ### Act 2, continued: probing for hidden goals
 
-Atlas is discovering as much as learning. Most people don't arrive with a goal they can state.
-They have things they enjoy but rarely do, things they used to do, and things they keep
-meaning to do. Atlas's job is to find those and make them real.
+Atlas is discovering as much as learning. Some people arrive with a goal they can state. Many
+don't. They have things they keep meaning to do, things they've always been curious about, and
+things they enjoy but rarely do. Atlas's job is to find those and make them real.
+
+**Where goals come from, in order:**
+1. **The person.** The opening asks what they already have in mind. While their answers give
+   him something to work with, he follows them and brings up nothing else.
+2. **Their Someday picks.** If they're unsure, or a couple of turns go by with nothing he can
+   turn into a plan, he picks up one thing from screen 8: "You marked tech as something you've
+   always been curious about. Is that idle curiosity, or something you'd act on, given a
+   nudge?"
+3. **Their interests,** last. Only if Someday is empty or nothing there lands: "Basketball, I
+   gather. When did you last see a game in person?"
+
+He uses one item at a time and never reads a list back to them.
 
 **How he probes:**
-- **The gap between enjoying and doing.** When did you last do it? Who with? What got in the
-  way? What would make it great?
 - **Listening for wishes.** "I keep meaning to…", "I used to…", "One day I'd like to…" are
   hidden goals. He picks them up and asks one more question about them.
+- **What pulls them toward it.** For a Someday pick: what is it about it? How long has it been
+  on their mind? What's stopped them so far?
+- **The gap between enjoying and doing,** for interests: when did you last do it? Who with?
+  What got in the way?
 - **One question at a time**, phrased in terms of what they just said, never a survey.
 - **Bigger ambitions count too.** If they bring a big goal ("start a business", "lose 20
   pounds"), he follows it, and the trait questions below apply.
 
 **Every probing thread aims to end in something tangible with a date:**
 
-| They say | Atlas probes | Atlas proposes |
-|---|---|---|
-| Likes basketball; last saw a game "years ago" | "What kept you away? Tickets, time, or no one to go with?" | "Then let's fix that. Shall I pencil in Saturday to pick a game and buy the tickets?" |
-| Likes hiking; "never have time" | "When's the last time you were properly outside for an hour?" | "A walk in the park on Sunday morning, then. Shall I put it down for nine?" |
-| Single; mentions wanting to meet people | "What would a good evening out look like for you?" | "Shall I pencil in Thursday evening for it?" |
-| "I keep meaning to finish my portfolio" | "How far off is it, honestly?" | "Then one section by Friday. Shall I put that in?" |
+| Source | They say | Atlas probes | Atlas proposes |
+|---|---|---|---|
+| Them | "I keep meaning to finish my portfolio" | "How far off is it, honestly?" | "Then one section by Friday. Shall I put that in?" |
+| Them | "Get fitter, I suppose" | "What would fitter look like by the new year?" | "Then a first run on Saturday morning. Shall I put it down for eight?" |
+| Someday | A nurse, unsure of a goal; picked Tech & IT | "You marked tech as something you've always been curious about. What is it that pulls at you?" | "Then an hour on Thursday evening to look at beginner IT courses. Shall I pencil it in?" |
+| Someday | Picked "Play an instrument" | "Which one have you always pictured yourself playing?" | "Half an hour on Saturday to find a teacher or a beginner course?" |
+| Interests | Nothing from the above; likes basketball, last saw a game "years ago" | "What kept you away? Tickets, time, or no one to go with?" | "Then let's fix that. Shall I pencil in Saturday to pick a game and buy the tickets?" |
 
 **Rules for proposals:**
 - He **asks before adding anything** ("Shall I pencil it in?"). They can say yes, pick another
@@ -167,7 +224,7 @@ How it's built:
 | then | `conflictResponse` | "On the mornings the scale refuses to cooperate, would you rather we fix the plan, or would you like to be heard out first?" |
 | "Start a business" | `decisionStyle` | "A venture of your own. Are you one to trust your instincts on the big calls, or do you prefer every number in front of you first?" |
 | "Learn Spanish" | `connection` (it decides what practice feels like) | "Ah, Spanish. When you practise, do you picture long, proper conversations, or quick back-and-forth to keep it lively?" |
-| "I'm not sure" | none yet | He goes back to probing their interests (above) and asks no trait questions until there is a goal. |
+| "I'm not sure" | none yet | He moves to their Someday picks, then their interests (see "Where goals come from"), and asks no trait questions until there is a goal. |
 
 **Testing before launch:** a script that runs about 15 made-up people through the real prompt
 and checks every reply for:
@@ -175,6 +232,9 @@ and checks every reply for:
 - a relevant trait choice
 - no banned phrases
 - no list of their answers read back to them
+- the opening asks what they have in mind, not about an interest
+- Someday picks and interests only come up once the person hasn't given him something to work
+  with, and Someday before interests
 - correct markers
 - the right form of address
 - at least one dated proposal by the end of the conversation, and no calendar entry without a
@@ -274,9 +334,10 @@ February shows on the 28th in other years.
 | Questionnaire screens | ~20 | 7 quick taps |
 | Saved if they quit halfway | nothing | everything they answered |
 | Feed ready when they reach the lobby | only if they finished | the moment they finish Act 1 |
+| Things they'd like to try but haven't | never asked | a Someday screen Atlas draws on when they're unsure of a goal |
 | Wavelength answers | a form, before the goal | asked by Atlas, chosen to fit the goal |
 | Atlas's tone | assistant ("With your personal interests out of the way…") | Alfred |
-| Atlas's opening | four questions at once | who he is, what Velvet is for, one probing question |
+| Atlas's opening | four questions at once | who he is, what Velvet is for, then what they have in mind |
 | What the chat produces | a coach match | a coach match and at least one dated plan on the calendar |
 | Home screen | the feed first | Today first, the feed below it |
 | Their own appointments, tasks and goals | only on the calendar page | in Today, added in a few taps |
@@ -287,13 +348,13 @@ February shows on the 28th in other years.
 
 | Phase | What ships | Size |
 |---|---|---|
-| A0 | **Atlas's voice:** the Alfred style guide and the new opening in `atlas-onboarding` (introduction, what Velvet is for, one probing question built from one interest; no list of answers read back), a time-of-day greeting, `address_style`, and switching this conversation to Sonnet. | Small |
-| A1 | **Act 1 order and saving:** reorder `personalBank.ts` to name → color → nickname → birthday → zodiac → gender → interests, with one tabbed interests screen. Save each answer as it's given (a per-field save from `onAnswer`) and resume at the first unanswered question. Move the four wavelength questions and the swipe deck out. Pass all six interest groups into Atlas's prompt. | Small |
+| A0 | **Atlas's voice:** the Alfred style guide and the new opening in `atlas-onboarding` (introduction, what Velvet is for, then what they already have in mind; no list of answers read back), a time-of-day greeting, `address_style`, and switching this conversation to Sonnet. | Small |
+| A1 | **Act 1 order and saving:** reorder `personalBank.ts` to name → color → nickname → birthday → zodiac → gender → interests, with one tabbed interests screen. Save each answer as it's given (a per-field save from `onAnswer`) and resume at the first unanswered question. Move the four wavelength questions and the swipe deck out. Pass all six interest groups into Atlas's prompt. Add the Someday screen (8) and its `someday` column, and pass the picks to Atlas. | Small–Medium |
 | A2 | **Their color:** re-skin the questionnaire shell after question 2, and the Atlas chat (`--shell-*` tokens instead of the hard-coded gold). | Small |
 | A3 | **Atlas picks the right question:** the trait ledger, the choosing rule, tap chips, and `[PROFILE …]` marker parsing and validation in `atlas-onboarding`, plus the 15-person test script. | Medium |
 | A4 | Swipe deck as a daily feed card; the companion asks love language and "when it's hard" in week 1. | Small |
 | A5 | **Today on the home screen:** the Today section above the feed in `HomeV3Page`, with done, confirm, move and drop. No dependencies, so it can go first. | Small–Medium |
-| A6 | **Atlas makes plans:** the probing rules and proposal rules in his prompt, the `add_calendar_event` tool in `atlas-onboarding` with `tentative` in metadata, and the extra checks in the test script. | Medium |
+| A6 | **Atlas makes plans:** the probing rules, the order goals come from (them, then Someday, then interests) and the proposal rules in his prompt, the `add_calendar_event` tool in `atlas-onboarding` with `tentative` in metadata, and the extra checks in the test script. | Medium |
 | A7 | **Repeating events that repeat:** the shared expand-repeats helper used by the calendar page and Today, done dates per occurrence, and all-day dates compared in local time. Fixes the calendar as it is today, so it should go before A8. | Small–Medium |
 | A8 | **Their own plans and their people:** quick add in Today (task, appointment, birthday, reminder, goal), the My people birthday form and the one-time Today card, ages worked out from the birth year, and birthdays a week ahead in "coming up". | Medium |
 
@@ -304,5 +365,7 @@ February shows on the 28th in other years.
 2. **Sonnet for Atlas's onboarding chat:** about 10 turns once per person. Recommended; Haiku
    will struggle to pick the right question and hold the voice.
 3. **Zodiac:** worked out from the birthday with a one-tap confirm (recommended), or asked outright?
-4. **Atlas's plans:** go straight onto the calendar as pencilled in once they say yes
+4. **Someday screen:** in Act 1 as screen 8 (recommended, because it's Atlas's main backup
+   when someone is unsure), or offered later in the first week to keep Act 1 shorter?
+5. **Atlas's plans:** go straight onto the calendar as pencilled in once they say yes
    (recommended, because it shows up immediately), or wait in a suggestions list until confirmed?
