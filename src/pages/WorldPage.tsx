@@ -95,7 +95,6 @@ export function WorldPage() {
   // Part of the arrival: a short look around, then on to Atlas.
   const [searchParams] = useSearchParams();
   const arriving = searchParams.get('arrival') === '1';
-  const arrivalFlown = useRef(false);
   const [myPlot, setMyPlot] = useState<MyPlot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -340,17 +339,6 @@ export function WorldPage() {
 
   const handleTower = useCallback(() => { controlRef.current?.tower(); }, []);
 
-  // The look around town opens on their own new house.
-  useEffect(() => {
-    if (!arriving || arrivalFlown.current || !townLayoutState || !myPlot) return;
-    const timer = setTimeout(() => {
-      if (!controlRef.current) return;
-      arrivalFlown.current = true;
-      controlRef.current.visit(myPlot.slot_index);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [arriving, townLayoutState, myPlot]);
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#080b14]">
@@ -377,7 +365,7 @@ export function WorldPage() {
   const narrow = typeof window !== 'undefined' && window.innerWidth < 760;
 
   return (
-    <div className="relative h-screen max-h-full overflow-hidden bg-[#9DAE97]" style={{ colorScheme: 'dark' }}>
+    <div className="relative h-screen overflow-hidden bg-[#9DAE97]" style={{ colorScheme: 'dark' }}>
       {townLayoutState && (
         <WorldCanvas
           plots={block}

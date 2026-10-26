@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 
 const CAPTIONS = [
-  { title: 'This is your house.', body: 'Your billboard is out front. New neighbors move onto your block every day, and some of them share your spaces.' },
+  { title: 'This is your block.', body: 'New neighbors every day, and some of them share your spaces.' },
   { title: 'Tap any billboard', body: 'to see who lives there, and add them as a friend. Friends are pinned when you zoom out to the whole town.' },
   { title: 'Change anything, any time.', body: 'Tap your own house to open the editor again.' },
 ];
