@@ -58,6 +58,7 @@ import { SubscriptionBanner } from './SubscriptionBanner';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { CustomizationPanel } from './CustomizationPanel';
 import { HomeLayoutSwitch } from '../shared/ui';
+import { isHelper } from '../utils/relationshipType';
 
 interface SignedInWorkspaceProps {
   children: ReactNode;
@@ -351,8 +352,8 @@ function ToolRow({ label, icon, tone, path, pathname, onNavigate, inkColor, inkM
 
 function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSubtle }: { pathname: string; lobby: LobbyData; onNavigate: (path: string) => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
   // Your coaches and companions, with their faces.
-  const coaches = lobby.companions.filter(companion => companion.relationship_type === 'mentor');
-  const companions = lobby.companions.filter(companion => companion.relationship_type !== 'mentor');
+  const coaches = lobby.companions.filter(companion => isHelper(companion.relationship_type));
+  const companions = lobby.companions.filter(companion => !isHelper(companion.relationship_type));
   const coreTools = [
     { label: 'Daily Feed', path: '/daily-feed', tone: '#34d399', icon: <Newspaper className="h-3.5 w-3.5" /> },
     { label: 'Your Lens', path: '/videos', tone: '#fb7185', icon: <PlayCircle className="h-3.5 w-3.5" /> },

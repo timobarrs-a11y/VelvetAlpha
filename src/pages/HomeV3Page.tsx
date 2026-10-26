@@ -22,6 +22,7 @@ import { getCoachColor } from '../utils/coachColors';
 import { ensureCoachColors } from '../services/companionService';
 import { TodayCard } from '../features/today/TodayCard';
 import type { CompanionWithLastMessage } from '../services/companionService';
+import { isHelper } from '../utils/relationshipType';
 
 const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default: m.DailyFeedPage })));
 const VideoHistoryPage = lazy(() => import('./VideoHistoryPage').then(m => ({ default: m.VideoHistoryPage })));
@@ -45,9 +46,9 @@ export function HomeV3Page() {
     loading,
   } = lobby;
 
-  const coaches = companions.filter(c => c.relationship_type === 'mentor');
+  const coaches = companions.filter(c => isHelper(c.relationship_type));
   const coach = coaches[0];
-  const voices = companions.filter(c => c.relationship_type !== 'mentor');
+  const voices = companions.filter(c => !isHelper(c.relationship_type));
 
   const companionsKey = companions.map(c => c.id).join(',');
   const loadCheckIns = useCallback(async () => {

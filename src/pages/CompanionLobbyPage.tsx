@@ -24,6 +24,7 @@ import {
 import type { HubTileSize } from '../components/lobby';
 import { NoCompanionCard } from '../components/lobby/NoCompanionCard';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
+import { isHelper } from '../utils/relationshipType';
 
 interface GameEntry {
   id: string;
@@ -138,8 +139,8 @@ export function CompanionLobbyPage() {
   const pairedTiles = HUB_TILES.filter(t => t.slot === 'paired');
   const wideTiles   = HUB_TILES.filter(t => t.slot === 'wide');
 
-  const voices         = companions.filter(c => c.relationship_type !== 'mentor');
-  const coaches        = companions.filter(c => c.relationship_type === 'mentor');
+  const voices         = companions.filter(c => !isHelper(c.relationship_type));
+  const coaches        = companions.filter(c => isHelper(c.relationship_type));
 
   const renderTile = (tile: HubTileDef, delay: number) => (
     <HubTile

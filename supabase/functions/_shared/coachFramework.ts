@@ -192,7 +192,7 @@ export function getCuratedExpert(id: string): CuratedExpert | null {
   return CURATED_EXPERT_MAP[id] || null;
 }
 
-function accountabilityLine(level: AccountabilityLevel | null | undefined): string {
+export function accountabilityLine(level: AccountabilityLevel | null | undefined): string {
   switch (level) {
     case 'firm':
       return `ACCOUNTABILITY — FIRM: Hold them directly accountable. Call out excuses without cruelty; keep commitments front and center. "You said 5 days this week. It's Thursday and you've done 2 — what's the plan for the next 48 hours?" If they're genuinely struggling, drop the pressure instantly and support them.`;
@@ -204,7 +204,7 @@ function accountabilityLine(level: AccountabilityLevel | null | undefined): stri
   }
 }
 
-function checkInLine(style: CheckInStyle | null | undefined): string {
+export function checkInLine(style: CheckInStyle | null | undefined): string {
   switch (style) {
     case 'proactive':
       return `CHECK-IN STYLE — PROACTIVE: You initiate. Open by checking on their progress since last time, even when they don't bring it up.`;

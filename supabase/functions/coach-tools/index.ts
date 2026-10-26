@@ -46,7 +46,7 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', user.id)
       .maybeSingle();
     if (!companion) return json({ error: 'companion not found' }, 404);
-    if (companion.relationship_type !== 'mentor') return json({ error: 'not a coach' }, 403);
+    if (companion.relationship_type !== 'mentor' && companion.relationship_type !== 'assistant') return json({ error: 'not a coach or assistant' }, 403);
 
     const outcome = await executeCoachTool(admin, user.id, companionId, tool, input);
     return json({ success: !outcome.isError, ...outcome.result, ...(outcome.artifact ? { artifact: outcome.artifact } : {}) }, outcome.isError ? 400 : 200);

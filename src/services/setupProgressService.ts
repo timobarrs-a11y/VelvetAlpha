@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { isHelper } from '../utils/relationshipType';
 
 export type SetupStep =
   | 'atlas'
@@ -68,14 +69,14 @@ export async function advanceSetupStepIf(
 
 export function isCompanionSetupPending(progress: SetupProgress | null, companions: CompanionLite[] = []): boolean {
   if (!progress || progress.path !== 'coach_and_companion' || progress.step === 'complete') return false;
-  const nonMentorCompanions = companions.filter(c => c.relationship_type !== 'mentor' && c.is_active !== false);
+  const nonMentorCompanions = companions.filter(c => !isHelper(c.relationship_type) && c.is_active !== false);
   if (nonMentorCompanions.length > 0) return false;
   return true;
 }
 
 export function isSetupUnfinished(progress: SetupProgress | null, companions: CompanionLite[] = []): boolean {
   if (!progress || progress.step === null || progress.step === 'complete' || progress.step === 'atlas') return false;
-  const nonMentorCompanions = companions.filter(c => c.relationship_type !== 'mentor' && c.is_active !== false);
+  const nonMentorCompanions = companions.filter(c => !isHelper(c.relationship_type) && c.is_active !== false);
   if (nonMentorCompanions.length > 0 && (progress.step === 'companion_in_progress' || progress.step === 'choose_conversation')) return false;
   return true;
 }
@@ -85,7 +86,7 @@ export function prepareResume(progress: SetupProgress | null, companions: Compan
   if (!progress || !isSetupUnfinished(progress, companions)) return null;
 
   const coach = companions.find(c => c.relationship_type === 'mentor' && c.is_active !== false);
-  const others = companions.filter(c => c.relationship_type !== 'mentor');
+  const others = companions.filter(c => !isHelper(c.relationship_type));
 
   if (coach) sessionStorage.setItem('atlasCoachId', coach.id);
 

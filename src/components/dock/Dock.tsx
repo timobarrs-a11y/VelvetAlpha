@@ -10,6 +10,7 @@ import { AiChatWindow } from './AiChatWindow';
 import { FriendChatWindow } from './FriendChatWindow';
 import { markCompanionRead } from '../../services/companionReadService';
 import { MESSAGES_KEY, aiKey, friendKey, markCoachDismissed, useDock, type DockWindow } from './DockContext';
+import { isHelper } from '../../utils/relationshipType';
 
 const HIDDEN_PATHS = ['/splash', '/signin', '/signup', '/onboarding'];
 /** How many people stay in the dock as tabs; the rest are a tap away in Friends HQ. */
@@ -228,7 +229,7 @@ export function Dock() {
 
   // Coaches first, then companions.
   const heads = [...dock.companions].sort((a, b) =>
-    Number(b.relationship_type === 'mentor') - Number(a.relationship_type === 'mentor'));
+    Number(isHelper(b.relationship_type)) - Number(isHelper(a.relationship_type)));
 
   return (
     <div className="relative w-full">
@@ -406,7 +407,7 @@ export function Dock() {
           {friendTabs.length > 0 && heads.length > 0 && <div className="h-6 w-px flex-shrink-0 bg-[#2a1424]/12" />}
           {heads.map(c => {
             const key = aiKey(c.id);
-            const isCoach = c.relationship_type === 'mentor';
+            const isCoach = isHelper(c.relationship_type);
             const isShown = shownKeys.has(key);
             const isMinimized = openKeys.has(key) && !isShown;
             const onPage = c.id === dock.pageCoachId && dock.coachSurface;

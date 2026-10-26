@@ -12,6 +12,7 @@ import { Avatar } from '../Avatar';
 import { useAvatarEditor } from '../../stores/avatarEditorStore';
 import { AtlasMarkdown } from '../AtlasMarkdown';
 import { companionAvatarConfig } from '../lobby';
+import { isHelper } from '../../utils/relationshipType';
 
 const VISIBLE_MESSAGES = 40;
 
@@ -99,7 +100,7 @@ interface AiChatWindowProps {
 export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachChanged, pending, onConsumePending, onMinimize, onClose }: AiChatWindowProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isCoach = companion.relationship_type === 'mentor';
+  const isCoach = isHelper(companion.relationship_type);
   const openAvatarEditor = useAvatarEditor(s => s.open);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);

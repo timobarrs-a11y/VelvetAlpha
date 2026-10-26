@@ -476,7 +476,13 @@ Write a 2-3 sentence instruction describing what the coach teaches, how (short l
         } else {
           const { data, error } = await supabaseAdmin
             .from("companions")
-            .insert({ ...baseHelper, relationship_type: "mentor", signature_expert: expertId })
+            .insert({
+              ...baseHelper,
+              relationship_type: "mentor",
+              signature_expert: expertId,
+              // chat-turn reads a custom coach's instruction only when this says "user".
+              signature_expert_source: expertId && getCuratedExpert(expertId) ? "curated" : "user",
+            })
             .select("id")
             .maybeSingle();
           if (error || !data) {

@@ -16,6 +16,7 @@ import { getGroupChats, createGroupChat, deleteGroupChat, GroupChatWithMembers }
 import {
   SOMEONE_NEW_ROUTE, getSetupProgress, prepareResume, updateSetupProgress,
 } from '../services/setupProgressService';
+import { isHelper } from '../utils/relationshipType';
 
 export interface GameEntry {
   id: string;
@@ -76,7 +77,7 @@ export function useLobbyData() {
     ]);
     // Unfinished setup is offered (sidebar "Finish setup", lobby card), never forced.
     const resumeRoute = prepareResume(progress, companionsList);
-    if (progress && progress.path === 'coach_and_companion' && progress.step !== 'complete' && companionsList.some(c => c.relationship_type !== 'mentor' && c.is_active !== false)) {
+    if (progress && progress.path === 'coach_and_companion' && progress.step !== 'complete' && companionsList.some(c => !isHelper(c.relationship_type) && c.is_active !== false)) {
       await updateSetupProgress(user.id, { step: 'complete' });
     }
     setSetupResumeRoute(resumeRoute);

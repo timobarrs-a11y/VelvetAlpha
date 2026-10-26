@@ -58,8 +58,8 @@ async function generateCheckInMessage(
   openCommitments: Array<{ description: string; due_date: string | null; status: string }>,
   companionNameMap: Map<string, string>,
 ): Promise<string> {
-  const isMentor = companion.relationship_type === 'mentor';
-  const companionName = companion.custom_name || (isMentor ? 'your coach' : 'your friend');
+  const isMentor = companion.relationship_type === 'mentor' || companion.relationship_type === 'assistant';
+  const companionName = companion.custom_name || (isMentor ? (companion.relationship_type === 'assistant' ? 'your assistant' : 'your coach') : 'your friend');
   // Build the context for the LLM
   const memoryLines: string[] = [];
   for (const m of memories) {
@@ -217,8 +217,8 @@ Deno.serve(async (req: Request) => {
       const candidates: Array<{ companion: Companion; reason: Reason }> = [];
 
       for (const companion of companions) {
-        const isMentor = companion.relationship_type === 'mentor';
-        // Coach check-ins are a paid feature.
+        const isMentor = companion.relationship_type === 'mentor' || companion.relationship_type === 'assistant';
+        // Coach and assistant check-ins are a paid feature.
         if (isMentor && tier === 'free') continue;
 
         const [{ data: lastProactive }, { data: lastUserMsg }] = await Promise.all([
@@ -322,7 +322,7 @@ Deno.serve(async (req: Request) => {
       }
 
       let openCommitments: Array<{ description: string; due_date: string | null; status: string }> = [];
-      if (companion.relationship_type === 'mentor') {
+      if (companion.relationship_type === 'mentor' || companion.relationship_type === 'assistant') {
         const { data: commitments } = await supabase
           .from('coaching_commitments')
           .select('description, due_date, status')

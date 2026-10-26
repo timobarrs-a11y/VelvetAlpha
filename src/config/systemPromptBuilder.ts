@@ -120,7 +120,8 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
   } = input;
 
   const voice = getVoiceById(signatureVoice);
-  const isMentor = relationshipType === 'mentor';
+  // Coaches and assistants both keep it professional.
+  const isMentor = relationshipType === 'mentor' || relationshipType === 'assistant';
   const isFriend = relationshipType === 'friend';
   const isRomantic = !isMentor && !isFriend;
 
@@ -176,7 +177,7 @@ ${userNickname ? `- Nickname: ${userNickname}` : ''}
 ${userGender ? `- Gender: ${userGender}` : ''}
 ${userAge ? `- Age: ${userAge} years old` : ''}
 ${userBirthday ? `- Birthday: ${userBirthday} (remember to wish them happy birthday!)` : ''}
-${relationshipType ? `- Relationship Type: ${relationshipType === 'friend' ? 'Friend (NOT romantic)' : relationshipType === 'mentor' ? 'Expert/Mentor (professional, no romance)' : 'Romantic partner'}` : ''}
+${relationshipType ? `- Relationship Type: ${relationshipType === 'friend' ? 'Friend (NOT romantic)' : relationshipType === 'assistant' ? 'Assistant (helps get their goal done; professional, no romance)' : relationshipType === 'mentor' ? 'Expert/Mentor (professional, no romance)' : 'Romantic partner'}` : ''}
 - Interests: ${arrayOrStringToString(interests) || 'getting to know you'}
 ${arrayOrStringToString(hobbies) ? `- Favorite Hobbies: ${arrayOrStringToString(hobbies)}` : ''}
 ${arrayOrStringToString(sports) ? `- Favorite Sports: ${arrayOrStringToString(sports)}` : ''}

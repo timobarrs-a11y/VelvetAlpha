@@ -1,5 +1,6 @@
 import type { CompanionWithLastMessage } from './companionService';
 import { getExpertById } from '../config/signatureExperts';
+import { isHelper } from '../utils/relationshipType';
 
 export interface RelevanceInput {
   categories: string[];
@@ -58,7 +59,8 @@ function matchSingleCompanion(
 ): string | null {
   const relationshipType = companion.relationship_type;
 
-  if (relationshipType === 'mentor') {
+  // Coaches and assistants get articles for their specialty only.
+  if (isHelper(relationshipType)) {
     return matchMentor(companion, articleTags);
   }
 

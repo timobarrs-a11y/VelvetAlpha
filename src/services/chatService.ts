@@ -35,6 +35,7 @@ import {
 } from './temporalAwarenessService';
 import { affectionService } from './affectionService';
 import type { RelationshipType } from './companionService';
+import { isHelper } from '../utils/relationshipType';
 
 const USE_SERVER_PROMPT = true;
 
@@ -810,7 +811,7 @@ export class ChatService {
           .maybeSingle();
 
         const connectionType = companionData?.relationship_type || 'romantic';
-        const isMentorCompanion = connectionType === 'mentor';
+        const isMentorCompanion = isHelper(connectionType);
 
         if (!isMentorCompanion) {
           try {
@@ -944,7 +945,7 @@ export class ChatService {
       let temporalContextString: string | undefined;
       let affectionContextString: string | undefined;
 
-      const isMentorCompanion = connectionType === 'mentor';
+      const isMentorCompanion = isHelper(connectionType);
 
       try {
         if (!companionId) throw new Error('companionId required');

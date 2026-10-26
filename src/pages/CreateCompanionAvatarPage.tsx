@@ -22,7 +22,7 @@ async function resolveCompanionId(): Promise<string | null> {
     .select('id')
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .neq('relationship_type', 'mentor')
+    .not('relationship_type', 'in', '(mentor,assistant)')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();

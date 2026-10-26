@@ -58,6 +58,7 @@ import { PlanTab } from './components/thread/PlanTab';
 import { CommitmentsTab } from './components/thread/CommitmentsTab';
 import { RatingValue, getRatingsForMessages, clearConversationMessages, markRatingRegenerated } from './services/ratingService';
 import { safeRandomUUID } from './utils/uuid';
+import { isHelper } from './utils/relationshipType';
 
 function AppInner() {
   const navigate = useNavigate();
@@ -1231,7 +1232,7 @@ function AppInner() {
               companionBubbleColorKey={activeThread === 'companion' ? companionBubbleColor : null}
               companionTextColorKey={activeThread === 'companion' ? companionTextColor : null}
               companionId={companionId || ''}
-              isMentor={companion?.relationship_type === 'mentor'}
+              isMentor={isHelper(companion?.relationship_type)}
               ratingsMap={activeThread === 'companion' ? ratingsMap : {}}
               onRated={handleRated}
               onRegenerate={activeThread === 'companion' ? handleRegenerate : undefined}

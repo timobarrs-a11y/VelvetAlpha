@@ -147,7 +147,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const userName = profile.name && profile.name !== 'there' ? profile.name : '';
-    const isMentor = companion.relationship_type === 'mentor';
+    const isMentor = companion.relationship_type === 'mentor' || companion.relationship_type === 'assistant';
     const isCorrespondent = companion.relationship_type === 'correspondent' && companion.correspondent_id;
     const isFirstMatch = situation === 'first_match';
 

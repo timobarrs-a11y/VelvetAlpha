@@ -17,6 +17,7 @@ import {
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
 import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult, type CoachingChange } from "../_shared/coachTools.ts";
+import { buildAssistantBehavioralInstructions } from "../_shared/assistantFramework.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1736,13 +1737,17 @@ Deno.serve(async (req: Request) => {
 
     const companionName = companion.custom_name || 'Companion';
     const isMentor = companion.relationship_type === 'mentor';
+    // An assistant helps get one goal done; it shares the coach's goal tools,
+    // coaching state and sessions, with its own way of working.
+    const isAssistant = companion.relationship_type === 'assistant';
+    const isHelper = isMentor || isAssistant;
     const isCorrespondent = companion.relationship_type === 'correspondent';
-    const selectedModel = selectModel(message, tier, isCorrespondent, isMentor);
+    const selectedModel = selectModel(message, tier, isCorrespondent, isHelper);
 
     console.log(`[${traceId}] Model selection:`, { model: selectedModel, tier, isCorrespondent });
 
-    const mentorTokenFloor = isMentor ? (message.includes('```') ? 1500 : 1200) : 600;
-    const maxTokens = (isMentor || isCorrespondent) ? Math.max(getMaxTokensForTier(tier), mentorTokenFloor) : getMaxTokensForTier(tier);
+    const mentorTokenFloor = isHelper ? (message.includes('```') ? 1500 : 1200) : 600;
+    const maxTokens = (isHelper || isCorrespondent) ? Math.max(getMaxTokensForTier(tier), mentorTokenFloor) : getMaxTokensForTier(tier);
     const historyDepth = getHistoryDepthForTier(tier);
 
     const last20Messages = formattedHistory.slice(-historyDepth);
@@ -1875,11 +1880,21 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       }
     }
 
-    // Fetch the user's discovered goal so the coach can anchor to it.
+    // Fetch the goal this coach or assistant carries (linked to them), else the
+    // user's most recent discovered goal, so they can anchor to it.
     let discoveredGoalText: string | null = null;
-    if (isMentor) {
+    if (isHelper) {
       try {
-        const { data: goalRow } = await supabaseAdmin
+        const { data: ownGoal } = await supabaseAdmin
+          .from('user_goals')
+          .select('title')
+          .eq('user_id', user.id)
+          .eq('source_companion_id', companionId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const { data: goalRow } = ownGoal ? { data: ownGoal } : await supabaseAdmin
           .from('user_goals')
           .select('title')
           .eq('user_id', user.id)
@@ -1905,6 +1920,14 @@ Balance this domain expertise naturally with your relationship dynamic — bring
           accountabilityLevel: expertAccountability,
           checkInStyle: expertCheckInStyle,
         })
+      : isAssistant
+        ? buildAssistantBehavioralInstructions({
+            assistantName: companionName,
+            userName: profile.name,
+            goalText: discoveredGoalText,
+            accountabilityLevel: expertAccountability,
+            checkInStyle: expertCheckInStyle,
+          })
       : isCorrespondent && companion.correspondent_id
         ? buildCorrespondentBehavioralInstructions({
             correspondentName: companionName,
@@ -1925,10 +1948,10 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     // frozen and volatile) so it benefits from prompt caching.
     // Threads, commitments, goals, and facts go into the volatile block.
     const [coachingState, goalsBlock, scopedMemories] = await Promise.all([
-      isMentor
+      isHelper
         ? buildCoachingStateBlock(supabaseAdmin, user.id, companionId)
         : Promise.resolve({ block: '', raised: [] as string[] }),
-      (isMentor || companion.relationship_type === 'companion' || companion.relationship_type === 'partner')
+      (isHelper || companion.relationship_type === 'companion' || companion.relationship_type === 'partner')
         ? fetchActiveGoalsForPrompt(supabaseAdmin, user.id) : Promise.resolve(''),
       fetchScopedMemories(supabaseAdmin, user.id, companionId, companion.relationship_type, message),
     ]);
@@ -1936,7 +1959,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
 
     // Coaching session lifecycle: ensure an open session and inject prior summaries
     let sessionBlock = '';
-    if (isMentor) {
+    if (isHelper) {
       await ensureCoachingSession(supabaseAdmin, user.id, companionId);
       sessionBlock = await fetchLastSessionSummary(supabaseAdmin, user.id, companionId);
     }
@@ -1959,10 +1982,10 @@ CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - Remember key facts from this conversation: their mood, their plans, what they're doing, what they told you
 - You have access to the last ${historyDepth} messages in history - USE THEM
 - NEVER repeat questions within the same conversation session
-${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, supportive tone. No romantic or flirtatious content.' : ''}${isCorrespondent ? '\nIMPORTANT: You are a correspondent — write a dispatch, not a chat reply. No romantic or flirtatious content. No coaching or self-help.' : ''}${isCorrespondent && tier === 'free' ? '\nLENGTH: Write a tight, punchy dispatch — 3-4 sentences max. Make every word count. Upgrade to premium for the full column-length experience.' : ''}
-RESPONSE LENGTH: ${isMentor ? 'As long as the topic warrants — use markdown, lists, and code blocks when they help. Never pad.' : 'Default short — like a real text.'} Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
+${isHelper ? `\nIMPORTANT: You are ${isAssistant ? 'an assistant' : 'a mentor/coach'} — maintain a professional, supportive tone. No romantic or flirtatious content.` : ''}${isCorrespondent ? '\nIMPORTANT: You are a correspondent — write a dispatch, not a chat reply. No romantic or flirtatious content. No coaching or self-help.' : ''}${isCorrespondent && tier === 'free' ? '\nLENGTH: Write a tight, punchy dispatch — 3-4 sentences max. Make every word count. Upgrade to premium for the full column-length experience.' : ''}
+RESPONSE LENGTH: ${isHelper ? 'As long as the topic warrants — use markdown, lists, and code blocks when they help. Never pad.' : 'Default short — like a real text.'} Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
-    const hallucinationGuard = isMentor
+    const hallucinationGuard = isHelper
       ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference plans, steps, and commitments that appear in the [COACHING STATE] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [COACHING STATE] or [USER'S ACTIVE GOALS] sections. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.\n- COACH TOOLS: You have tools to create goals (create_goal), propose plans (create_plan, add_step), update plans (update_plan), respond to edits and revise steps (adjust_step, remove_step, reorder_steps), record and update commitments (create_commitment, update_commitment, complete_commitment, cancel_commitment), open tabs (show_in_tab), and save things the user keeps (create_artifact: reading_material, routine, practice_set, worksheet, checklist, resource_pick, progress_report). Call a tool BEFORE you tell the user it is done, and read the tool result: if it reports an error, say so plainly and do not claim success. Never invent ids — use the plan_id / step_id / commitment_id values shown in [COACHING STATE]. Check [COACHING STATE] first: do not create a second plan when one already exists, and do not repeat a commitment or artifact you already made.\n- ORDER: goal → plan → commitments → progress. Each builds on the one before: a plan always serves a goal, and every commitment comes from a plan step. Your tools refuse anything out of order, so if something is missing, create the earlier piece first.\n- FIRST CONVERSATION FLOW: As soon as you know the goal and timeframe, create a starter set in one reply: call create_goal, then create_plan with 3-6 steps (each with a concrete quantity and minimum), then create_commitment for 1-3 commitments due within 7 days (each tied to a step via plan_step_id). After creating items, call show_in_tab to open the Plan tab and walk the user through them. The popup is the same conversation — the user can ask questions or request changes, and you edit the plan or commitments live using your tools. End the walkthrough with update_plan status=active ("Let's go").\n- PROPOSE, DON'T IMPOSE: plans and steps you create are proposals the user can accept and edit. Give every step a concrete quantity and, where a real floor exists, a minimum (minimum_value). A real coach knows what will not work: if the user edits a step below your minimum, do not simply go along with it. Decide: adjust_step hold (keep your number and explain why it matters), revise (a middle ground), or accept (lower your minimum and say why). Respect edits at or above your minimum.\n- ADJUSTMENT SIGNALS: If [COACHING STATE] lists ADJUSTMENT SIGNALS, act on each once this session. Do not only ask what happened — propose a concrete change (a smaller step via adjust_step revise, a new commitment, or a new artifact) and lead with empathy. Do not repeat a signal you already addressed.\n- RECENT CHANGES: The [COACHING STATE] includes a RECENT CHANGES section showing what was edited since you last looked. Use this to acknowledge changes the user made (e.g. they ticked a step) or to know what you changed last time.`
       : '';
 
@@ -1972,7 +1995,7 @@ User's local time context: ${timeOfDay}
 
 ${contextReminder}
 
-${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurfaceBlock(surface) : ''}`;
+${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isHelper ? coachSurfaceBlock(surface) : ''}`;
 
     // Semi-stable layer: companion memory. Changes only after summarization
     // runs, not per-turn. Gets its own 1h cache breakpoint so the frozen
@@ -2071,7 +2094,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
 
     // Check if this is the first coaching session (no prior closed sessions).
     let isFirstSession = false;
-    if (isMentor) {
+    if (isHelper) {
       try {
         const { count } = await supabaseAdmin
           .from('coaching_sessions')
@@ -2083,7 +2106,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
       } catch {}
     }
 
-    const toolRunner: CoachToolRunner | undefined = isMentor
+    const toolRunner: CoachToolRunner | undefined = isHelper
       ? {
           tools: COACH_TOOLS,
           maxCalls: isFirstSession ? 12 : 6,
@@ -2120,7 +2143,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
     console.log(`[${traceId}] Response generated in ${latencyMs}ms`);
 
     // Increment coaching session message count
-    if (isMentor) {
+    if (isHelper) {
       try {
         const { data: session } = await supabaseAdmin
           .from('coaching_sessions')
@@ -2163,7 +2186,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
       message,
       assistantMessage,
       last20Messages,
-      isMentor,
+      isHelper,
       injectedMemoryIds,
       openThreadContents,
     );
@@ -2196,7 +2219,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
       last20Messages.map(m => ({ role: m.role, content: m.content, id: m.id })),
     );
 
-    if (isMentor) {
+    if (isHelper) {
       EdgeRuntime.waitUntil(Promise.allSettled([
         acknowledgeTickEvents(supabaseAdmin, user.id, companionId),
         markSignalsRaised(supabaseAdmin, user.id, companionId, coachingState.raised),
