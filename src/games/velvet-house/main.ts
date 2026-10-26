@@ -1,6 +1,7 @@
 import { migrateSave } from './state/saveMigration';
 import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage } from './bridge/protocol';
-import { setOwnedAvatarItems } from './bridge/avatarShop';
+import { setOwnedAvatarItems, ownsAvatarItem, buyAvatarItem } from './bridge/avatarShop';
+import { simsShopItems, itemLabel } from '../../data/avatarCatalog';
 import { INITIAL_OBJS, TYPES, type ObjectInstance } from './state/objects';
 import { DAYS, weekday, clockText, season, absMin } from './state/time';
 import { LEVEL_NAMES } from './state/house';
@@ -352,6 +353,7 @@ function boot(): void {
   const drawer = createDrawer({
     onClose: () => { drawerPage = ''; try { localStorage.removeItem('velvet-drawer'); } catch {} },
     onBuy: (item, color) => handleBuy(item, color),
+    onBuyAvatarItem: (id) => handleBuyAvatarItem(id),
     onOrder: (chain) => handleOrder(chain),
     onPayBill: () => { payBill(world.household, absMin(world.day, world.minutes), log); },
     onOrderGroceries: () => {
@@ -696,6 +698,17 @@ function boot(): void {
     syncControls();
   }
 
+  // The salon: spend Sims money on an avatar item, and it's the player's
+  // everywhere (the app records it to their account).
+  function handleBuyAvatarItem(id: string): void {
+    const item = simsShopItems().find(i => i.id === id);
+    if (!item || ownsAvatarItem(id)) return;
+    if (!spend(world.household, item.price)) { log('Not enough money.'); return; }
+    buyAvatarItem(id);
+    log(`Bought ${itemLabel(item.id)} for $${item.price}. It's yours in Velvet too.`);
+    refreshDrawer();
+  }
+
   function handleBuy(item: CatalogEntry, color?: string): void {
     const price = item.price;
     if (!spend(world.household, price)) { log('Not enough money.'); return; }
@@ -898,6 +911,10 @@ function boot(): void {
       mayaStatus: statusText(people[1]),
       closet,
       wearing: { top: people[0].look.top, topStyle: people[0].look.topStyle, bottom: people[0].look.bottom },
+      salon: simsShopItems().map(i => ({
+        id: i.id, name: itemLabel(i.id), price: i.price, owned: ownsAvatarItem(i.id),
+        swatch: i.id.startsWith('hairHighlight:') || i.id.startsWith('hairColor:') ? i.id.split(':')[1] : undefined,
+      })),
     };
     drawer.render(drawerState);
   }

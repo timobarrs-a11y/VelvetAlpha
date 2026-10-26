@@ -1,5 +1,5 @@
 import type { AvatarConfigV2 } from '../types/avatar-v2';
-import { HAIR_COLORS, HAIR_FASHION_COLORS } from '../types/avatar-v2';
+import { HAIR_COLORS, HAIR_FASHION_COLORS, HAIRSTYLES } from '../types/avatar-v2';
 import { OUTFITS, HEADWEAR, FACE_ACCESSORIES, resolveAvatarForDisplay, type AvatarUnlocks, type UnlockResult } from './avatarItems';
 
 // Everything a person can own for their avatar, and how each thing is got.
@@ -55,8 +55,14 @@ export const EARNING_LIVE = false;
 // member and medal items come from avatarItems.ts; shop prices and rewards
 // are set here.
 const RULES: Partial<Record<ItemId, HowToGet>> = {
-  // The examples so far: Bantu knots from the Sims salon, dyed colours as a reward.
+  // The Velvet Sims salon. Prices are in Sims dollars; a first stock, easy to change.
   'hairStyle:bantu_knots': { how: 'sims', price: 150 },
+  'hairStyle:mohawk': { how: 'sims', price: 120 },
+  'hairStyle:top_knot': { how: 'sims', price: 90 },
+  'hairHighlight:#c9933e': { how: 'sims', price: 60 },
+  'hairHighlight:#e07a9f': { how: 'sims', price: 60 },
+  'hairHighlight:#2f6fd6': { how: 'sims', price: 60 },
+  // Dyed colours for the whole head: a reward, once earning goes live.
   ...Object.fromEntries(HAIR_FASHION_COLORS.map(c => [itemId('hairColor', c.value), { how: 'reward', reward: 'dyed-hair' }])),
   ...Object.fromEntries(
     [...OUTFITS.map(o => ['outfit', o] as const), ...HEADWEAR.map(h => ['headwear', h] as const), ...FACE_ACCESSORIES.map(f => ['faceAccessory', f] as const)]
@@ -74,6 +80,23 @@ export function simsShopItems(): Array<{ id: ItemId; price: number }> {
   return (Object.entries(RULES) as Array<[ItemId, HowToGet]>)
     .filter(([, r]) => r.how === 'sims')
     .map(([id, r]) => ({ id, price: (r as { price: number }).price }));
+}
+
+// A name for an item, for shops and messages: "Bantu Knots", "Honey highlights".
+export function itemLabel(id: ItemId): string {
+  const parsed = parseItemId(id);
+  if (!parsed) return id;
+  const { slot, value } = parsed;
+  const colour = [...HAIR_COLORS, ...HAIR_FASHION_COLORS].find(c => c.value === value)?.name;
+  switch (slot) {
+    case 'hairStyle': return HAIRSTYLES.find(h => h.value === value)?.label ?? value;
+    case 'hairHighlight': return `${colour ?? value} highlights`;
+    case 'hairColor': return `${colour ?? value} hair`;
+    case 'outfit': return OUTFITS.find(o => o.id === value)?.label ?? value;
+    case 'headwear': return HEADWEAR.find(h => h.id === value)?.label ?? value;
+    case 'faceAccessory': return FACE_ACCESSORIES.find(f => f.id === value)?.label ?? value;
+    default: return value.charAt(0).toUpperCase() + value.slice(1);
+  }
 }
 
 // May this person use this item?
