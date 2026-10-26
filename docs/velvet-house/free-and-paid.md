@@ -3,6 +3,10 @@
 *Plan for later. Ideas and decisions from Tim, 26 October; nothing here is built yet. The
 numbers are a first pass, tuned to the shop's prices (median item about $100).*
 
+**When this gets built:** near the end. The gameplay loop gets locked in first, then the
+paywall. Nothing here should be applied before that. Starting money and the first purchase
+(the opening script teaches buying the first wallpaper) are worked out with the script.
+
 The aim: enough for free that someone comes back every day, and enough behind the paywall
 that they want to sign up. The game is good on its own without the AI; the AI makes it come
 alive. Money isn't only for buying things: bills come due, and the player has to manage it.
@@ -83,7 +87,7 @@ Every payment is something the player does and sees.
 - **Paychecks** come in on Friday evening, the full week at once. Rent is due on Monday, so
   the weekend's spending decides whether rent is easy or tight.
 - **No autopay.** Paying is part of the game. A reminder lands the day before each due date.
-- **Starting money:** $900, with the first rent due on day 3.
+- **Starting money:** set with the opening script, which walks them through buying their first wallpaper. First rent due on day 3.
 
 ## 4. Side jobs at home
 
@@ -160,13 +164,16 @@ keeps to his routine and his job, but bills go late, offers expire and chores st
 the companion's daily message, a daily side-job offer that's on the real calendar, and Today in
 Velvet. Earnings are per game day, so playing more game days earns more.
 
-## 7. Open decisions
+## 7. Decided
+
+- **The first paid tier (Essential) unlocks the live game.**
+- Time stops when the game is closed (section 6).
+
+## 8. Open decisions
 
 1. **A taste of the AI for free:** none, or a small allowance (a few live conversations, or the
    first week).
 2. **Late rent:** after the warning, what's the worst that happens? My recommendation: no
    eviction, just a growing fee and an awkward landlord. Losing the house would drive people away.
-3. **Which paid tier unlocks the live game:** Essential, Plus or Elite (`src/types/subscription.ts`),
-   or a game-only add-on.
-4. **One clear offer:** how this fits with Velvet's other paid features (coaches, assistants,
+3. **One clear offer:** how this fits with Velvet's other paid features (coaches, assistants,
    the web search button) so it's one subscription, not several small ones.
