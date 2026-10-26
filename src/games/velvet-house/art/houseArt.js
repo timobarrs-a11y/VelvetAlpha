@@ -5,6 +5,7 @@ import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
 import { poseRig, idleRig } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
+import { handImage, HAND_SPRITE } from '../state/bodySprites';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
 
@@ -1309,8 +1310,8 @@ export function createHouseArt(ctx0, opts = {}) {
     return ps;
   }
 
-  function ease2(ps, side, tx, ty, dt) {
-    const k = Math.min(1, dt * 9);
+  function ease2(ps, side, tx, ty, dt, rate = 9) {
+    const k = Math.min(1, dt * rate);
     let a = ps.a[side];
     if (!a) { a = ps.a[side] = [tx, ty]; }
     a[0] += (tx - a[0]) * k; a[1] += (ty - a[1]) * k;
@@ -1332,13 +1333,25 @@ export function createHouseArt(ctx0, opts = {}) {
   function setMood(v) { mood = Math.max(0, Math.min(1, Number(v) || 0)); }
 
   // Things in hand for an activity, drawn over the arms.
-  function drawProps(rig, hand, c, t, hd, local) {
+  const PROP_ZOOM = { spoon: 1.5, fork: 1.6, cup: 1.4, phone: 1.5, knife: 1.5, brush: 1.5, pen: 1.5, comb: 1.5, spatula: 1.4, apple: 1.3, rag: 1.3, can: 1.3, ball: 1.3, roller: 1.2 };
+  function drawProps(rig, hand, c, t, hd, local, pass) {
     (rig.props || []).forEach(p => {
+      // The guitar's body sits behind the hands that play it; everything else is held in front.
+      if ((p.kind === 'guitar') !== (pass === 'back')) return;
       const h = hand[p.side || 1] || hand[1];
+      // Hand-sized props are drawn small; scale them up around the hand so they read.
+      const zoom = PROP_ZOOM[p.kind];
+      if (zoom) { ctx.save(); ctx.translate(h[0], h[1]); ctx.scale(zoom, zoom); ctx.translate(-h[0], -h[1]); }
       switch (p.kind) {
         case 'spoon': limb(h[0], h[1], h[0] + 1.5, h[1] + 7, '#8A5A3B', 1.6); break;
-        case 'fork': limb(h[0], h[1], h[0] + 0.5, h[1] - 6, '#C9CED6', 1.2); break;
-        case 'cup': rr(h[0] - 2.5, h[1] - 4, 5, 6, 1.2, '#F4EFE6'); limb(h[0] + 2.5, h[1] - 2.5, h[0] + 4, h[1] - 1, '#F4EFE6', 1.2); break;
+        case 'fork':
+          limb(h[0], h[1], h[0] + 0.5, h[1] - 6, '#C9CED6', 1.2);
+          if (p.food) circle(h[0] + 0.5, h[1] - 7, 1.5, '#C2703D');
+          break;
+        case 'cup':
+          rr(h[0] - 2.5, h[1] - 4, 5, 6, 1.2, '#F4EFE6'); limb(h[0] + 2.5, h[1] - 2.5, h[0] + 4, h[1] - 1, '#F4EFE6', 1.2);
+          if (p.steam) for (let k = 0; k < 2; k++) { const u = (t * 0.9 + k * 0.5) % 1; ctx.globalAlpha = 0.55 * (1 - u); limb(h[0] - 1 + k * 2 + Math.sin(u * 6 + k) * 0.8, h[1] - 5 - u * 6, h[0] - 1 + k * 2 + Math.sin(u * 6 + k + 1) * 0.8, h[1] - 7 - u * 6, '#FFFFFF', 0.9); ctx.globalAlpha = 1; }
+          break;
         case 'phone': rr(h[0] - 1.6, h[1] - 3.5, 3.2, 6, 0.8, '#1E1B2E'); if (p.scroll != null) limb(h[0] - 0.6, h[1] - 2.6 + p.scroll * 4, h[0] + 0.6, h[1] - 2.6 + p.scroll * 4, '#7FB2FF', 0.8); break;
         case 'dumbbell': limb(h[0] - 4, h[1], h[0] + 4, h[1], '#3B3F4A', 1.8); circle(h[0] - 4, h[1], 2.2, '#2A2D35'); circle(h[0] + 4, h[1], 2.2, '#2A2D35'); break;
         case 'brush': limb(h[0], h[1], h[0] + 2, h[1] - 6, '#8A5A3B', 1.2); circle(h[0] + 2, h[1] - 6, 1.1, '#E48AAE'); break;
@@ -1346,8 +1359,8 @@ export function createHouseArt(ctx0, opts = {}) {
         case 'knife': limb(h[0], h[1], h[0] + 1, h[1] + 6, '#C9CED6', 1.4); limb(h[0], h[1], h[0] - 0.5, h[1] - 2, '#3B2A20', 2); break;
         case 'plate': { const a = hand[-1] || h, b = hand[1] || h; ell((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 1, 7, 2.6, '#F4EFE6'); ell((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 2, 3.5, 1.4, '#C2703D'); break; }
         case 'spatula': { const tip = [h[0] + 3, h[1] + 5 - (p.flip || 0) * 4]; limb(h[0], h[1], tip[0], tip[1], '#3B2A20', 1.4); rr(tip[0] - 2, tip[1] - 1, 4, 2.5, 0.5, '#C9CED6'); if (p.flip > 0.3) ell(tip[0], tip[1] - 5 * p.flip, 2.6, 1.2, '#8B4A2B'); break; }
-        case 'guitar': { const body = local([0.16, -0.02, -0.3], 1), neck = local([0.24, 0.26, -0.1], -1); limb(body[0], body[1], neck[0], neck[1], '#5A3A22', 2); ell(body[0], body[1], 5, 4, '#B5651D'); circle(body[0], body[1], 1.2, '#2A1A10'); break; }
-        case 'gloves': [-1, 1].forEach(sd => { const g = hand[sd]; if (g) circle(g[0], g[1], 2.6, '#D7263D'); }); break;
+        case 'guitar': { const body = local([0.16, -0.02, -0.3], 1), neck = local([0.24, 0.26, -0.1], -1); limb(body[0], body[1], neck[0], neck[1], '#5A3A22', 2.6); ell(body[0], body[1], 7.5, 5.5, '#B5651D'); ell(body[0] + 1.6, body[1] - 0.8, 3, 2, 'rgba(255,255,255,.14)'); circle(body[0], body[1], 1.9, '#2A1A10'); break; }
+        case 'gloves': [-1, 1].forEach(sd => { const g = hand[sd]; if (g) { circle(g[0], g[1], 3.5, '#D7263D'); ell(g[0] - 0.8, g[1] - 1.2, 1.3, 0.8, 'rgba(255,255,255,.35)'); } }); break;
         case 'parcel': { const a = hand[-1] || h, b = hand[1] || h; rr((a[0] + b[0]) / 2 - 5, (a[1] + b[1]) / 2 - 7, 10, 7, 1, '#C79A5B'); limb((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 7, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, '#E8D2A6', 1); break; }
         case 'cloth': { const a = hand[-1] || h, b = hand[1] || h; ctx.fillStyle = '#9EC5E8'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(b[0], b[1] + 4 + (p.open || 0) * 4); ctx.lineTo(a[0], a[1] + 4 + (p.open || 0) * 4); ctx.fill(); break; }
         case 'ball': circle(h[0] + 3, h[1] - 6, 2.4, '#E5484D'); break;
@@ -1395,9 +1408,9 @@ export function createHouseArt(ctx0, opts = {}) {
           break;
         }
         case 'mop': {
-          const a = hand[-1] || h, end = local([0.6, (p.sweep || 0) * 0.12, -1.04], 1);
-          limb(a[0], a[1], end[0], end[1], "#B08A5A", 1.8);
-          ell(end[0], end[1], 6, 2.4, '#C9CED6');
+          const a = hand[-1] || h, end = local([0.6, (p.sweep || 0) * 0.3, -1.04], 1);
+          limb(a[0], a[1], end[0], end[1], "#B08A5A", 2);
+          ell(end[0], end[1], 8, 3, '#C9CED6');
           break;
         }
         case 'roller': {
@@ -1425,6 +1438,7 @@ export function createHouseArt(ctx0, opts = {}) {
         }
         default: break;
       }
+      if (zoom) ctx.restore();
     });
   }
 
@@ -1451,6 +1465,8 @@ export function createHouseArt(ctx0, opts = {}) {
   // A person's real avatar head (state/headSprites.ts), drawn about twice the
   // old head's size so faces read: classic big-head cartoon proportions.
   const HEAD_W = 24;
+  // Shoes follow the pants: white sneakers with jeans, brown boots with breeches, black boots with leather and uniforms.
+  const SHOE_COLOR = { jeans: '#EDE8E0', baggy: '#EDE8E0', shorts: '#EDE8E0', cheer_skirt: '#F6F6F4', scrub_pants: '#F4F4F2', breeches: '#3A2A1C', leather: '#101013', cop_pants: '#17171B' };
   function drawHeadImage(img, cx, chinY, w, mirror, rot) {
     const h = w * 1.04;
     ctx.save(); ctx.translate(cx, chinY);
@@ -1494,13 +1510,97 @@ export function createHouseArt(ctx0, opts = {}) {
     const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
     const dance = pose === 'dance' && !rig;
     const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.035 * amp;
-    const hipZ = (c.sit ? 0.03 : 0.62 - (rig?.drop || 0)) + bob + breathe + (rig?.bob || 0), shZ = hipZ + 0.42, hdZ = shZ + 0.14;
+    const hipZ = (c.sit ? 0.03 : 0.62 - (rig?.drop || 0)) + bob + breathe + (rig?.bob || 0), shZ = hipZ + 0.42, hdZ = shZ + 0.14 + (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0);
     const [dx, dy] = c.face, lean = rig?.lean || 0;
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
     // The body's own sideways axis, signed so side +1 is screen-right (matching the shoulders).
     let rx = -dy, ry = dx;
     if (P3(rx, ry, 0)[0] < fx) { rx = -rx; ry = -ry; }
     const local = (v, side) => P3(dx * v[0] + rx * side * v[1], dy * v[0] + ry * side * v[1], shZ + v[2]);
+    // Shoes: a dark toe cap that points the way they face, so feet read as feet.
+    const fvx = P3(dx * 0.1, dy * 0.1, 0), shoeDir = Math.atan2(fvx[1] - fy, fvx[0] - fx), shoeLen = f.front ? 1.6 : 0.4;
+    const shoeAt = (x, y) => {
+      ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5 + 0.9, f.front ? 3.5 : 2.9, 1.5, '#E9E4DC', null, shoeDir);
+      ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5, f.front ? 3.4 : 2.8, 2, L.shoes || SHOE_COLOR[L.bottomStyle] || '#2B2630', null, shoeDir);
+      ell(x + Math.cos(shoeDir) * shoeLen - 0.4, y + Math.sin(shoeDir) * shoeLen * 0.5 - 0.7, 1.5, 0.7, 'rgba(255,255,255,.18)', null, shoeDir);
+    };
+    // The cut of the pants: bare legs below shorts and skirts, boots under breeches, wide baggy legs, slim leather.
+    const bs = L.bottomStyle || 'pants', skirty = bs === 'skirt' || bs === 'cheer_skirt', bareLegs = skirty || bs === 'shorts';
+    const thighCol = skirty ? L.skin : L.bottom, tw = bs === 'baggy' ? 6.6 : bs === 'leather' ? 4.2 : 5, sw = bs === 'baggy' ? 6.2 : bs === 'leather' ? 3.8 : 4.5;
+    const shinCol = bareLegs ? L.skin : bs === 'breeches' ? (L.bottomAccent || '#2b1d12') : L.bottom;
+    const checks = (x1, y1, x2, y2) => { if (bs === 'chef_pants') { ctx.save(); ctx.setLineDash([1.3, 1.3]); limb(x1, y1, x2, y2, L.bottomAccent || '#f4f1ea', 1.5); ctx.restore(); } };
+    const shin = (kx, ky, ax, ay) => { limb(kx, ky, ax, ay, shinCol, sw); checks(kx, ky, ax, ay); shoeAt(ax, ay); };
+    const thighLimb = (x1, y1, x2, y2) => { limb(x1, y1, x2, y2, thighCol, tw); checks(x1, y1, x2, y2); };
+    // Arms: shoulder, elbow and hand, worked out once per frame, then drawn
+    // behind the torso (the far arm) or in front of it.
+    const SLEEVES = { tank: 0, tee: 0.55, jersey: 0.5, dress: 0.4, cheer: 0, cop: 0.55, scrubs: 0.55 };
+    const sleeve = L.topStyle ? (SLEEVES[L.topStyle] ?? 1) : 0.55;
+    const NOT_HELD = new Set(['notes', 'water', 'splash']), OPEN_KINDS = new Set(['book', 'plate', 'parcel', 'cloth', 'paper']);
+    // Props too wide to grip by a handle: no fingers drawn over them.
+    const NO_FINGERS = new Set(['guitar', 'gloves']);
+    const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+    const armGeo = (side) => {
+      const psA = poseState(c);
+      const sx0 = sh[0] + shift * 1.4 + side * 4.5, sy0 = sh[1] + 1;
+      const spec = rig && rig.hands ? rig.hands[side] : null;
+      let tx, ty, el = null;
+      if (rig && rig.hands) {
+        if (spec) { const h = local(spec, side); tx = h[0]; ty = h[1]; el = rig.elbows && rig.elbows[side] ? local(rig.elbows[side], side) : null; }
+        else { tx = sx0 + side * 2; ty = sy0 + 13; }
+      } else {
+        const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
+        [tx, ty] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
+      }
+      const e = ease2(psA, side, tx, ty, rdt, rig && rig.hands ? (rig.snap ? 28 : 12) : 9);
+      if (!el) el = spec ? [(sx0 + e[0]) / 2 + side * 2.5, (sy0 + e[1]) / 2 + 3] : [(sx0 + e[0]) / 2, (sy0 + e[1]) / 2];
+      const held = rig && rig.props ? rig.props.find(q => !NOT_HELD.has(q.kind) && (q.side == null || q.side === side)) : null;
+      const grip = (rig && rig.grip && rig.grip[side]) || (held ? (OPEN_KINDS.has(held.kind) ? 'open' : 'fist') : spec && spec[2] > 0.3 ? 'open' : 'relaxed');
+      return { sx0, sy0, el, e, grip, reach: spec ? spec[0] : 0, fingers: !!held && !NO_FINGERS.has(held.kind) };
+    };
+    const arms = { [-1]: armGeo(-1), 1: armGeo(1) };
+    // The arm on the far side of the body sits behind the torso, unless it is reaching out front.
+    const sideY = (sd) => P3(rx * sd, ry * sd, 0)[1];
+    const farSide = Math.abs(sideY(1) - sideY(-1)) < 0.5 ? 0 : sideY(1) < sideY(-1) ? 1 : -1;
+    const armBehind = (sd) => sd === farSide && arms[sd].reach < 0.15;
+    const drawArm = (g, side) => {
+      const { sx0, sy0, el, e, grip } = g;
+      limb3(sx0, sy0, el[0], el[1], e[0], e[1], L.skin, 3.2);
+      if (sleeve > 0) {
+        const long = sleeve >= 1, from = long ? el : [sx0, sy0], end = long ? mix2(el, e, 0.8) : mix2([sx0, sy0], el, sleeve);
+        if (long) limb3(sx0, sy0, el[0], el[1], end[0], end[1], L.top, 4.1); else limb(sx0, sy0, end[0], end[1], L.top, 4.1);
+        // A shadowed underside and a lit top edge, like the shirt's folds.
+        const edge = (a, b) => {
+          const sx = b[0] - a[0], sy = b[1] - a[1], sl = Math.hypot(sx, sy) || 1; let nx = -sy / sl, ny = sx / sl;
+          if (ny < 0) { nx = -nx; ny = -ny; }
+          limb(a[0] + nx * 1.3, a[1] + ny * 1.3, b[0] + nx * 1.3, b[1] + ny * 1.3, shade(L.top, -0.2), 1.3);
+          limb(a[0] - nx * 1.1, a[1] - ny * 1.1, b[0] - nx * 1.1, b[1] - ny * 1.1, shade(L.top, 0.14), 0.9);
+        };
+        if (long) { edge([sx0, sy0], el); edge(el, end); } else edge([sx0, sy0], end);
+        const vx = end[0] - from[0], vy = end[1] - from[1], vl = Math.hypot(vx, vy) || 1;
+        limb(end[0] - vx / vl * 0.9, end[1] - vy / vl * 0.9, end[0], end[1], shade(L.top, -0.18), 4.3);
+      }
+      circle(sx0 - side * 0.4, sy0, 2.5, sleeve > 0 ? L.top : L.skin);
+      // The hand, pointing the way the forearm does.
+      let ax = e[0] - el[0], ay = e[1] - el[1];
+      const al = Math.hypot(ax, ay);
+      if (al < 0.5) { ax = 0; ay = 1; } else { ax /= al; ay /= al; }
+      const ang = Math.atan2(ay, ax), hx = e[0] + ax * 1.2, hy = e[1] + ay * 1.2, px = -ay, py = ax;
+      const hand = handImage(grip, L.body);
+      if (hand) {
+        // The avatar's own hand, turned to the forearm and mirrored for the other side.
+        const K = 0.2, H = HAND_SPRITE;
+        ctx.save(); ctx.imageSmoothingQuality = 'high';
+        ctx.translate(e[0] - ax * 2, e[1] - ay * 2); ctx.rotate(ang); if (side > 0) ctx.scale(1, -1);
+        ctx.drawImage(hand, -H.wristX * K, -H.wristY * K, H.w * K, H.h * K);
+        ctx.restore();
+        return;
+      }
+      const fist = grip === 'fist';
+      ell(hx, hy, fist ? 2.4 : 2.8, fist ? 2.3 : 2.1, L.skin, null, ang);
+      const tn = side > 0 ? -1 : 1;
+      ell(hx + px * tn * 1.9 + ax * 0.5, hy + py * tn * 1.9 + ay * 0.5, 1.2, 0.85, L.skin, null, ang);
+      if (grip === 'open') [-1, 0, 1].forEach(k => ell(hx + ax * 2.5 + px * k * 1.15, hy + ay * 2.5 + py * k * 1.15, 1.05, 0.75, L.skin, null, ang));
+    };
     [-1, 1].forEach(side => {
       if (rig && rig.legs === 'pedal') {
         const p = rig.phase + (side > 0 ? 0 : Math.PI);
@@ -1508,53 +1608,53 @@ export function createHouseArt(ctx0, opts = {}) {
         const footZ = c.sit ? -c.z * 0.55 : 0.16, kneeZ = c.sit ? 0.04 : hipZ * 0.7;
         const foot = P3(dx * (0.16 + Math.cos(p) * 0.1), dy * (0.16 + Math.cos(p) * 0.1), footZ + Math.sin(p) * 0.1);
         const knee = P3(dx * 0.3, dy * 0.3, kneeZ + Math.sin(p) * 0.06);
-        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
-        limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
+        shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
-      if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5); limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
-      if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
+      if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]); shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]); return; }
+      if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); shin(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1]); return; }
       if (rig && rig.legs === 'crouch') {
         const knee = P3(dx * 0.24, dy * 0.24, hipZ * 0.75), foot = P3(dx * 0.06, dy * 0.06, 0);
-        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 3, knee[1], L.bottom, 5);
-        limb(knee[0] + side * 3, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 3, knee[1]);
+        shin(knee[0] + side * 3, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
       if (rig && rig.legs === 'swim') return; // underwater
       if (rig && rig.legs === 'jack') {
         // Jumping jacks: feet out to the sides and back together.
         const out = (rig.spread || 0) * side, foot = P3(rx * out, ry * out, 0);
-        limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.8);
+        shin(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
 
       if (rig && rig.legs === 'tree' && side > 0) {
         // Tree pose: this foot rests against the other knee.
         const knee = P3(rx * 0.22, ry * 0.22, hipZ * 0.55), foot = P3(rx * 0.02, ry * 0.02, hipZ * 0.45);
-        limb(hip[0] + 2.5, hip[1], knee[0] + 2.5, knee[1], L.bottom, 5);
-        limb(knee[0] + 2.5, knee[1], foot[0] + 1, foot[1], L.bottom, 4.5);
+        thighLimb(hip[0] + 2.5, hip[1], knee[0] + 2.5, knee[1]);
+        shin(knee[0] + 2.5, knee[1], foot[0] + 1, foot[1]);
         return;
       }
       if (rig && rig.legs === 'lunge') {
         const fw = side > 0 ? 0.3 : -0.26, knee = P3(dx * fw * (side > 0 ? 1 : 0.6), dy * fw * (side > 0 ? 1 : 0.6), hipZ * 0.5), foot = P3(dx * fw * 1.1, dy * fw * 1.1, 0);
-        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
-        limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
+        shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
       if (rig && (rig.legs === 'run' || rig.legs === 'step')) {
         const big = rig.legs === 'run', off = side > 0 ? 0 : Math.PI, p = rig.phase + off;
         const sw = Math.sin(p) * (big ? 0.22 : 0.12), lift = Math.max(0, Math.sin(p)) * (big ? 0.15 : 0.06);
         const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), dy * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), hipZ * 0.5 + lift);
-        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
-        limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
+        shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
       const off = side > 0 ? 0 : Math.PI;
       const sw = Math.sin(ph + off) * 0.17 * amp, lift = c.z < 0.05 ? Math.max(0, Math.sin(ph + off)) * 0.075 * amp : 0;
       const foot = P3(dx * sw, dy * sw, lift);
       const knee = P3(dx * sw * 0.55, dy * sw * 0.55, hipZ * 0.5 + lift * 0.7);
-      limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
-      limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+      thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
+      shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
     });
     // Secondary motion: hair and hems trail the body on springs, so they
     // swing when someone moves, turns or bounces, then settle.
@@ -1568,14 +1668,25 @@ export function createHouseArt(ctx0, opts = {}) {
       ell(hd[0] + sway * 0.7 + hair[0], hd[1] + 3 + hair[1] * 0.5, 4.6, 3.6, L.hair);
     };
     if (f.front && !L.heads) hairBack();
-    if (L.topStyle === 'dress' && !c.sit) {
-      // A skirt that flares and swings at the hem.
-      const kz = P3(0, 0, hipZ * 0.55);
-      ctx.fillStyle = L.top; ctx.beginPath();
+    if ((L.topStyle === 'dress' || skirty) && !c.sit) {
+      // A skirt that flares and swings at the hem: a dress's, or the skirt worn as pants (shorter, pleated for the cheer skirt).
+      const kz = P3(0, 0, hipZ * (skirty ? 0.66 : 0.55)), fl = skirty ? 7.6 : 7;
+      ctx.fillStyle = skirty ? L.bottom : L.top; ctx.beginPath();
       ctx.moveTo(hip[0] + shift - 5, hip[1] - 2); ctx.lineTo(hip[0] + shift + 5, hip[1] - 2);
-      ctx.lineTo(kz[0] + 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.lineTo(kz[0] - 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.closePath(); ctx.fill();
+      ctx.lineTo(kz[0] + fl + hem[0], kz[1] + hem[1] * 0.4); ctx.lineTo(kz[0] - fl + hem[0], kz[1] + hem[1] * 0.4); ctx.closePath(); ctx.fill();
+      if (skirty) {
+        for (let k = -2; k <= 2; k++) limb(hip[0] + shift + k * 1.8, hip[1] - 1, kz[0] + k * fl * 0.42 + hem[0], kz[1] + hem[1] * 0.4 - 0.4, shade(L.bottom, -0.22), 0.7);
+        limb(kz[0] - fl + hem[0], kz[1] + hem[1] * 0.4, kz[0] + fl + hem[0], kz[1] + hem[1] * 0.4, L.bottomAccent || '#f4f1ea', bs === 'cheer_skirt' ? 1.6 : 0.8);
+      }
     }
+    [-1, 1].forEach(sd => { if (armBehind(sd)) drawArm(arms[sd], sd); });
     limb(hip[0] + shift, hip[1], sh[0] + shift * 1.4, sh[1], L.top, 11);
+    if (!skirty && ['pants', 'jeans', 'trousers', 'cop_pants', 'leather', 'baggy', 'breeches'].includes(bs)) {
+      // A belt at the waist, with a buckle when you can see the front.
+      const belt = bs === 'cop_pants' ? '#17171b' : bs === 'leather' ? '#2a2a30' : bs === 'breeches' ? '#2b1d12' : shade(L.bottom, -0.38);
+      limb(hip[0] + shift - 5.2, hip[1] + 0.8, hip[0] + shift + 5.2, hip[1] + 0.8, belt, 1.9);
+      if (f.front) circle(hip[0] + shift, hip[1] + 0.8, 1.15, bs === 'cop_pants' ? '#c9a24a' : '#c8ccd2');
+    }
     // Fold shading: a soft shadow down the far side of the shirt, a highlight on the near side.
     limb(hip[0] + shift + 3.2, hip[1], sh[0] + shift * 1.4 + 3.2, sh[1] + 1, shade(L.top, -0.18), 3.2);
     limb(hip[0] + shift - 3, hip[1] - 1, sh[0] + shift * 1.4 - 3, sh[1] + 2, shade(L.top, 0.14), 1.6);
@@ -1634,30 +1745,55 @@ export function createHouseArt(ctx0, opts = {}) {
         } else if (pat === 'linen') {
           line([hl, -2], [hl - 5, 0], A || '#8a6a4a', 0.5); line([hl - 5, 0], [hl, 2], A || '#8a6a4a', 0.5);
           line([hl - 1.5, -1.4], [hl - 3, 1], A || '#8a6a4a', 0.4);
+        } else if (pat === 'cheer') {
+          // A V-neck with a trim, two stripes across the chest and a star.
+          tri([[hl, -3], [hl, 3], [hl - 7, 0]], L.skin);
+          line([hl, -3.2], [hl - 7.4, 0], A || '#f4f1ea', 0.9); line([hl, 3.2], [hl - 7.4, 0], A || '#f4f1ea', 0.9);
+          line([hl - 12, -5.5], [hl - 12, 5.5], A || '#f4f1ea', 1.4); line([hl - 14.6, -5.5], [hl - 14.6, 5.5], A || '#f4f1ea', 0.7);
+          ctx.fillStyle = A || '#f4f1ea'; ctx.beginPath(); ctx.arc(hl - 8.2, 0, 1.3, 0, 7); ctx.fill();
+        } else if (pat === 'cop') {
+          // Collar points, a black tie, a gold badge and a name tag.
+          tri([[hl, -3.2], [hl - 3.2, -2], [hl, -0.8]], shade(L.top, 0.2)); tri([[hl, 3.2], [hl - 3.2, 2], [hl, 0.8]], shade(L.top, 0.2));
+          line([hl - 1, 0], [hl - 14, 0], '#17171b', 1.5);
+          ctx.fillStyle = A || '#c9a24a'; ctx.fillRect(hl - 7.6, 2.2, 2.4, 2.6);
+          ctx.fillStyle = '#e8e8ec'; ctx.fillRect(hl - 7.2, -4.6, 1.2, 2.6);
+        } else if (pat === 'scrubs') {
+          tri([[hl, -2.8], [hl, 2.8], [hl - 8, 0]], L.skin);
+          line([hl, -3], [hl - 8.4, 0], A || '#e8f3f3', 0.9); line([hl, 3], [hl - 8.4, 0], A || '#e8f3f3', 0.9);
+          ctx.strokeStyle = shade(L.top, -0.3); ctx.lineWidth = 0.6; ctx.strokeRect(hl - 15, 1.2, 4.6, 3.6);
+        } else if (pat === 'rockstar') {
+          // The band tee between black lapels, with studs.
+          tri([[hl, -2.4], [hl, 2.4], [hl - 11, 0]], '#e9e9ee');
+          line([hl, -3.4], [hl - 11, -0.6], 'rgba(255,255,255,.32)', 0.7); line([hl, 3.4], [hl - 11, 0.6], 'rgba(255,255,255,.32)', 0.7);
+          [0.2, 0.5, 0.8].forEach(t => { ctx.fillStyle = A || '#b8bcc4'; [-1, 1].forEach(sd => { ctx.beginPath(); ctx.arc(hl - 11 * t, sd * (3.2 - 2.6 * t), 0.5, 0, 7); ctx.fill(); }); });
+          line([hl - 4, 0.5], [hl - 7.5, -0.6], '#c2262e', 0.9);
+        } else if (pat === 'streetwear') {
+          // The hood at the neck, drawstrings and a round logo.
+          line([hl, -4.6], [hl, 4.6], shade(L.top, -0.28), 2.2);
+          line([hl - 1.5, -1.3], [hl - 8.5, -1.5], A || '#17171b', 0.7); line([hl - 1.5, 1.3], [hl - 8.5, 1.5], A || '#17171b', 0.7);
+          ctx.fillStyle = A || '#17171b'; ctx.beginPath(); ctx.arc(hl - 14, 0, 1.9, 0, 7); ctx.fill();
+        } else if (pat === 'president') {
+          tri([[hl, -2.8], [hl, 2.8], [hl - 9, 0]], '#f2efe8');
+          ctx.fillStyle = A || '#b3202f'; ctx.fillRect(hl - 11, -0.8, 10, 1.6);
+          line([hl, -3.4], [hl - 11, -0.5], 'rgba(0,0,0,.35)', 0.8); line([hl, 3.4], [hl - 11, 0.5], 'rgba(0,0,0,.35)', 0.8);
+          ctx.fillStyle = '#f4f4f2'; ctx.fillRect(hl - 9.6, -4.3, 2.4, 1.6);
+          ctx.fillStyle = '#b3202f'; ctx.fillRect(hl - 9.6, -3.5, 2.4, 0.5); ctx.fillStyle = '#2a4a9a'; ctx.fillRect(hl - 9.6, -4.3, 1, 0.9);
+          ctx.fillStyle = '#c8ccd2'; [-1, 1].forEach(sd => { ctx.beginPath(); ctx.arc(hl - 17, sd * 2.4, 0.6, 0, 7); ctx.fill(); });
         }
       }
       ctx.restore();
     }
     const handAt = {};
-    if (rig && rig.hands) {
-      // Activity arms: shoulder, elbow, hand, eased so poses blend in and out.
-      const ps = poseState(c);
-      [-1, 1].forEach(side => {
-        const spec = rig.hands[side];
-        const sx0 = sh[0] + shift * 1.4 + side * 4.5, sy0 = sh[1] + 1;
-        if (!spec) { const e = ease2(ps, side, sx0 + side * 2, sy0 + 13, rdt); limb(sx0, sy0, e[0], e[1], L.skin, 3.2); handAt[side] = e; return; }
-        const h = local(spec, side), e = ease2(ps, side, h[0], h[1], rdt);
-        const el = rig.elbows && rig.elbows[side] ? local(rig.elbows[side], side) : [(sx0 + e[0]) / 2 + side * 2.5, (sy0 + e[1]) / 2 + 3];
-        limb3(sx0, sy0, el[0], el[1], e[0], e[1], L.skin, 3.2);
-        handAt[side] = e;
-      });
-      drawProps(rig, handAt, c, t, hd, local);
-    } else
-    [-1, 1].forEach(side => {
-      const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
-      const [ex, ey] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
-      const ps = poseState(c), e = ease2(ps, side, ex, ey, rdt);
-      limb(sh[0] + shift * 1.4 + side * 4.5, sh[1] + 1, e[0], e[1], L.skin, 3.2);
+    [-1, 1].forEach(sd => { handAt[sd] = arms[sd].e; });
+    if (rig && rig.hands) drawProps(rig, handAt, c, t, hd, local, 'back');
+    [-1, 1].forEach(sd => { if (!armBehind(sd)) drawArm(arms[sd], sd); });
+    if (rig && rig.hands) drawProps(rig, handAt, c, t, hd, local, 'front');
+    // Fingers curl over whatever they hold.
+    [-1, 1].forEach(sd => {
+      const g = arms[sd];
+      if (g.grip !== 'fist' || !g.fingers || armBehind(sd)) return;
+      let ax = g.e[0] - g.el[0], ay = g.e[1] - g.el[1]; const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al;
+      [-1, 1].forEach(k => ell(g.e[0] + ax * 1.6 - ay * k * 0.95, g.e[1] + ay * 1.6 + ax * k * 0.95, 0.95, 0.8, L.skin));
     });
     if (L.heads && L.heads.neutral) {
       const frame = headFrameFor({ front: f.front, talking: talking || !!rig?.talk, t, seed: c.seed, blink: bl > 0.5, expr: c.expr, mood }, L.heads);

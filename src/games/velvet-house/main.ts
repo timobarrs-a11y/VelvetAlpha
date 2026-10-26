@@ -1,5 +1,5 @@
 import { migrateSave } from './state/saveMigration';
-import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage } from './bridge/protocol';
+import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage, isAvatarLookMessage } from './bridge/protocol';
 import { setOwnedAvatarItems, ownsAvatarItem, buyAvatarItem } from './bridge/avatarShop';
 import { simsShopItems, itemLabel } from '../../data/avatarCatalog';
 import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, type PlacementCheck } from './state/arrange';
@@ -38,8 +38,9 @@ import { snapshot } from './state/save';
 import { createHostSample } from './bridge/hostSample';
 import { PICTURE_WALLS } from './state/pictureWalls';
 import { createDrawer, dockTabHtml, DOCK_TABS, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
-import { clothByKey, clothId, wearOnAgent, validOutfit, type OwnedCloth } from './state/clothing';
+import { clothByKey, clothId, wearOnAgent, validOutfit, validWardrobe, closetFromWardrobe, AVATAR_HATS, BOTTOM_STYLES, type OwnedCloth, type Wardrobe } from './state/clothing';
 import { validHeadSvgs, loadHeadImages } from './state/headSprites';
+import { validBodySvgs, loadBodyImages } from './state/bodySprites';
 import { createDialogue, createTray, showDiscoveryCard, createTownSign, type TrayAction } from './ui/dialogue';
 
 const VIEW_W = 640;
@@ -76,6 +77,8 @@ function lookFrom(saved: unknown, fallback: AgentLook): AgentLook {
     topStyle: typeof (l as { topStyle?: unknown }).topStyle === 'string' ? (l as { topStyle: string }).topStyle : fallback.topStyle,
     bottom: HEX.test((l as { bottom?: string }).bottom ?? '') ? (l as { bottom: string }).bottom : fallback.bottom,
     accent: HEX.test((l as { accent?: string }).accent ?? '') ? (l as { accent: string }).accent : undefined,
+    bottomStyle: BOTTOM_STYLES.has((l as { bottomStyle?: string }).bottomStyle ?? '') ? (l as { bottomStyle: string }).bottomStyle : undefined,
+    bottomAccent: HEX.test((l as { bottomAccent?: string }).bottomAccent ?? '') ? (l as { bottomAccent: string }).bottomAccent : undefined,
     longHair: typeof l.hair === 'string' ? /long|wav|curl|bun|pony|braid|loc/i.test(l.hair) : fallback.longHair,
   };
 }
@@ -168,6 +171,9 @@ function boot(): void {
       { slot: 'bottom', style: 'pants', col: people[0].look.bottom, name: 'Old jeans', id: clothId('jeans') },
     ];
   if (!closet.some(c => c.slot === 'bottom')) closet.push({ slot: 'bottom', style: 'pants', col: people[0].look.bottom, name: 'Old jeans', id: clothId('jeans') });
+  // What the avatar wardrobe lets the player wear (sent by the host), and the avatar hat they have on.
+  let wardrobe: Wardrobe | null = null;
+  let wornHat = 'none';
   let lifeGoal: string | null = typeof save?.lifeGoal === 'string' ? save!.lifeGoal : null;
   let settleDone = typeof save?.settleDone === 'boolean' ? save!.settleDone : false;
   const flags: Record<string, unknown> = (save?.flags as Record<string, unknown>) ?? {};
@@ -405,13 +411,23 @@ function boot(): void {
     },
     onPickLifeGoal: (g) => { lifeGoal = g; log(`Life goal: ${g}`); },
     onWear: (cloth) => {
-      wearOnAgent(people[0].look, cloth);
+      wearPiece(cloth);
       log(`Changed into the ${cloth.name}.`);
       refreshDrawer();
-      // A new top shows on the player's avatar outside the game too.
-      if (cloth.slot === 'top') {
-        postToParent({ type: 'velvet:lookChanged', game: 'velvet-house', who: 'player', top: { style: cloth.style, color: cloth.col, accent: cloth.accent } });
-      }
+      // New clothes show on the player's avatar outside the game too.
+      if (cloth.slot === 'top') tellHostLook(cloth);
+      else if (cloth.slot === 'bottom') tellHostLook(undefined, cloth);
+      else if (cloth.slot === 'hat' && AVATAR_HATS.has(cloth.style)) tellHostLook(undefined, undefined, cloth.style);
+    },
+    onWearPersona: (id) => {
+      const p = wardrobe?.personas.find(x => x.id === id);
+      const top = p && closet.find(c => c.id === p.top), base = p && closet.find(c => c.id === p.bottom), hat = p && closet.find(c => c.id === p.hat);
+      if (!p || !top || !base || !hat) return;
+      const bottom = p.bottomCol ? { ...base, col: p.bottomCol } : base;
+      wearPiece(top); wearPiece(bottom); wearPiece(hat);
+      log(`Changed into the ${p.label} look.`);
+      refreshDrawer();
+      tellHostLook(top, bottom, hat.style);
     },
   });
   stage.appendChild(drawer.el);
@@ -1105,7 +1121,7 @@ function boot(): void {
         money: world.household.money, earnedToday: world.household.earnedToday, spentToday: world.household.spentToday,
         power: world.household.power, fridge: world.household.fridge, dishes: world.household.dishes, laundryPile: world.household.laundryPile,
         bill: world.household.bill, nextBillAt: world.household.nextBillAt,
-        objs: world.objs, storage, owned: [...owned], closet, bond, flags,
+        objs: world.objs, storage, owned: [...owned], closet: closet.filter(c => !c.id.startsWith('w-')), bond, flags,
         simName, partnerName, look: people[0].look, mayaLook: people[1].look,
         needs: { jordan: people[0].needs, maya: people[1].needs },
         memories, coreMem, pastMem, townName, turns: chatTurns, rngSeed,
@@ -1151,7 +1167,8 @@ function boot(): void {
       deliveryPending: !!world.household.delivery,
       mayaStatus: statusText(people[1]),
       closet,
-      wearing: { top: people[0].look.top, topStyle: people[0].look.topStyle, bottom: people[0].look.bottom },
+      personas: wardrobe?.personas ?? [],
+      wearing: { top: people[0].look.top, topStyle: people[0].look.topStyle, bottom: people[0].look.bottom, bottomStyle: people[0].look.bottomStyle, hat: wornHat },
       salon: simsShopItems().map(i => ({
         id: i.id, name: itemLabel(i.id), price: i.price, owned: ownsAvatarItem(i.id),
         swatch: i.id.startsWith('hairHighlight:') || i.id.startsWith('hairColor:') ? i.id.split(':')[1] : undefined,
@@ -1374,6 +1391,14 @@ function boot(): void {
 
   window.addEventListener('message', (e: MessageEvent) => {
     if (!isValidOrigin(e.origin, allowedOrigins)) return;
+    if (isAvatarLookMessage(e.data)) {
+      // A new hat changes the head: the host redrew it.
+      const svgs = validHeadSvgs(e.data.sprites);
+      if (svgs) loadHeadImages(svgs).then((imgs) => { if (imgs.neutral) people[0].look.heads = imgs; }).catch(() => {});
+      const hands = validBodySvgs(e.data.body);
+      if (hands) loadBodyImages(hands).then((imgs) => { if (imgs.relaxed) people[0].look.body = imgs; }).catch(() => {});
+      return;
+    }
     if (isAvatarInventoryMessage(e.data)) {
       setOwnedAvatarItems(e.data.owned);
       return;
@@ -1424,7 +1449,9 @@ function boot(): void {
   // The real avatar: its head frames, and its outfit as the signature look.
   // The signature goes on when it's new or changed; otherwise whatever they
   // last wore stays on. The player's is always in the closet to switch back to.
-  function applyAvatar(person: Agent, look: { sprites?: unknown; outfit?: unknown }, who: AgentId): void {
+  function applyAvatar(person: Agent, look: { sprites?: unknown; body?: unknown; outfit?: unknown }, who: AgentId): void {
+    const hands = validBodySvgs(look.body);
+    if (hands) loadBodyImages(hands).then((imgs) => { if (imgs.relaxed) person.look.body = imgs; }).catch(() => {});
     const svgs = validHeadSvgs(look.sprites);
     if (svgs) {
       loadHeadImages(svgs).then((imgs) => {
@@ -1433,20 +1460,47 @@ function boot(): void {
         if (person === people[1]) dialogue.setPortraitImages(imgs);
       }).catch(() => {});
     }
+    // The player's wardrobe: every piece they may wear joins the closet, and personas become buttons.
+    const wardrobeIn = who === 'jordan' ? validWardrobe((look as { wardrobe?: unknown }).wardrobe) : null;
+    if (wardrobeIn) {
+      wardrobe = wardrobeIn;
+      wornHat = wardrobeIn.hat ?? 'none';
+      for (let i = closet.length - 1; i >= 0; i--) if (closet[i].id.startsWith('w-')) closet.splice(i, 1);
+      closet.push(...closetFromWardrobe(wardrobeIn));
+    }
     const outfit = validOutfit(look.outfit);
     if (!outfit) return;
     if (who === 'jordan') {
       for (let i = closet.length - 1; i >= 0; i--) if (closet[i].id.startsWith('sig-')) closet.splice(i, 1);
       closet.unshift(
         { slot: 'top', style: outfit.style, col: outfit.color, accent: outfit.accent, name: 'Signature look', id: 'sig-top' },
-        { slot: 'bottom', style: 'pants', col: outfit.bottom, name: 'Signature bottoms', id: 'sig-bottom' },
+        { slot: 'bottom', style: outfit.bottomStyle, col: outfit.bottom, accent: outfit.bottomAccent, name: 'Signature bottoms', id: 'sig-bottom' },
       );
     }
     const keys = (flags.signature ?? (flags.signature = {})) as Record<string, string>;
     if (keys[who] !== outfit.key) {
-      Object.assign(person.look, { topStyle: outfit.style, top: outfit.color, accent: outfit.accent, bottom: outfit.bottom });
+      Object.assign(person.look, {
+        topStyle: outfit.style, top: outfit.color, accent: outfit.accent,
+        bottom: outfit.bottom, bottomStyle: outfit.bottomStyle, bottomAccent: outfit.bottomAccent,
+      });
       keys[who] = outfit.key;
     }
+  }
+
+  // Putting a closet piece on the player. A hat is on the avatar's head, so it waits for the host's new head frames.
+  function wearPiece(piece: OwnedCloth): void {
+    if (piece.slot === 'hat') { if (AVATAR_HATS.has(piece.style)) wornHat = piece.style; return; }
+    wearOnAgent(people[0].look, piece);
+  }
+
+  // Tell the host what the player changed into, so their avatar outside the game matches.
+  function tellHostLook(top?: OwnedCloth, bottom?: OwnedCloth, hat?: string): void {
+    postToParent({
+      type: 'velvet:lookChanged', game: 'velvet-house', who: 'player',
+      ...(top ? { top: { style: top.style, color: top.col, accent: top.accent } } : {}),
+      ...(bottom ? { bottom: { style: bottom.style, color: bottom.col, accent: bottom.accent } } : {}),
+      ...(hat !== undefined ? { hat } : {}),
+    } as never);
   }
 
   // Video search: game sends vidSearch to parent, parent responds with vidResults

@@ -77,15 +77,30 @@ export function wearOn(look: LookState, pc: OwnedCloth): void {
   }
 }
 
-// Putting a closet piece on a game character (its look keeps colours, not styles, for legs).
-export function wearOnAgent(look: { top: string; topStyle: string; bottom: string; accent?: string }, pc: OwnedCloth): void {
+// Putting a closet piece on a game character. A top brings its style, colour and accent; pants bring theirs.
+export interface WornLook {
+  top: string; topStyle: string; bottom: string; accent?: string;
+  // The pants' cut ('jeans', 'cheer_skirt', ...) and their trim; plain pants when unset.
+  bottomStyle?: string; bottomAccent?: string;
+}
+export function wearOnAgent(look: WornLook, pc: OwnedCloth): void {
   if (pc.slot === 'top') { look.topStyle = pc.style; look.top = pc.col; look.accent = pc.accent; }
-  if (pc.slot === 'bottom') look.bottom = pc.col;
+  if (pc.slot === 'bottom') { look.bottom = pc.col; look.bottomStyle = pc.style; look.bottomAccent = pc.accent; }
 }
 
 // The avatar's outfit, sent by the host: worn by default, kept in the closet.
-export interface SignatureOutfit { style: string; color: string; accent: string; bottom: string; key: string }
-export const SIGNATURE_STYLES = new Set(['tee', 'linen', 'blazer', 'chef', 'labcoat', 'pirate']);
+export interface SignatureOutfit {
+  style: string; color: string; accent: string; bottom: string; key: string;
+  // The pants' cut and trim (older hosts send neither: plain pants).
+  bottomStyle: string; bottomAccent: string;
+}
+export const SIGNATURE_STYLES = new Set([
+  'tee', 'linen', 'blazer', 'chef', 'labcoat', 'pirate', 'rockstar', 'cheer', 'cop', 'scrubs', 'streetwear', 'president',
+]);
+// Every cut the game draws: the avatar's pants, and the plain pants it always sold.
+export const BOTTOM_STYLES = new Set([
+  'pants', 'jeans', 'trousers', 'breeches', 'chef_pants', 'leather', 'cheer_skirt', 'cop_pants', 'scrub_pants', 'baggy', 'shorts', 'skirt',
+]);
 const HEX6 = /^#[0-9a-f]{6}$/i;
 
 export function validOutfit(raw: unknown): SignatureOutfit | null {
@@ -94,7 +109,61 @@ export function validOutfit(raw: unknown): SignatureOutfit | null {
   if (typeof o.style !== 'string' || !SIGNATURE_STYLES.has(o.style)) return null;
   if (![o.color, o.accent, o.bottom].every(c => typeof c === 'string' && HEX6.test(c))) return null;
   if (typeof o.key !== 'string' || o.key.length > 200) return null;
-  return { style: o.style, color: o.color as string, accent: o.accent as string, bottom: o.bottom as string, key: o.key };
+  const bottomStyle = typeof o.bottomStyle === 'string' && BOTTOM_STYLES.has(o.bottomStyle) ? o.bottomStyle : 'pants';
+  const bottomAccent = typeof o.bottomAccent === 'string' && HEX6.test(o.bottomAccent) ? o.bottomAccent : (o.bottom as string);
+  return { style: o.style, color: o.color as string, accent: o.accent as string, bottom: o.bottom as string, key: o.key, bottomStyle, bottomAccent };
+}
+
+// What the host says the player may wear from the avatar wardrobe: every piece they can use (not the
+// locked ones), and the personas that bundle them. Pieces go in the closet; a persona is a button.
+export interface WardrobePiece { id: string; slot: 'top' | 'bottom' | 'hat'; style: string; col: string; accent?: string; name: string }
+export interface WardrobePersona { id: string; label: string; icon: string; top: string; bottom: string; hat: string; bottomCol?: string }
+// `hat` is the avatar hat they have on now.
+export interface Wardrobe { pieces: WardrobePiece[]; personas: WardrobePersona[]; hat?: string }
+
+// The hats the avatar can wear; any other shop hat is only a closet item and never reaches the head.
+export const AVATAR_HATS = new Set([
+  'none', 'chef_hat', 'bandana', 'tricorn', 'top_hat', 'cop_cap', 'nurse_cap', 'hair_bow', 'snapback',
+  'beanie', 'baseball_cap', 'cowboy_hat', 'beret', 'headband', 'bucket_hat', 'headwrap',
+]);
+
+const ID = /^[a-z0-9_-]{1,40}$/i;
+const short = (v: unknown, n: number): v is string => typeof v === 'string' && v.length > 0 && v.length <= n;
+
+export function validWardrobe(raw: unknown): Wardrobe | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const w = raw as Record<string, unknown>;
+  if (!Array.isArray(w.pieces) || !Array.isArray(w.personas)) return null;
+  const pieces: WardrobePiece[] = [];
+  for (const p of w.pieces.slice(0, 80)) {
+    if (!p || typeof p !== 'object') continue;
+    const o = p as Record<string, unknown>;
+    if (!short(o.id, 40) || !ID.test(o.id) || !short(o.name, 40) || !short(o.style, 40) || !ID.test(o.style)) continue;
+    if (o.slot !== 'top' && o.slot !== 'bottom' && o.slot !== 'hat') continue;
+    if (typeof o.col !== 'string' || !HEX6.test(o.col)) continue;
+    if (o.slot === 'top' && !SIGNATURE_STYLES.has(o.style)) continue;
+    if (o.slot === 'bottom' && !BOTTOM_STYLES.has(o.style)) continue;
+    if (o.slot === 'hat' && !AVATAR_HATS.has(o.style)) continue;
+    pieces.push({ id: o.id, slot: o.slot, style: o.style, col: o.col, accent: typeof o.accent === 'string' && HEX6.test(o.accent) ? o.accent : undefined, name: o.name });
+  }
+  const have = new Set(pieces.map(p => p.id));
+  const personas: WardrobePersona[] = [];
+  for (const p of w.personas.slice(0, 30)) {
+    if (!p || typeof p !== 'object') continue;
+    const o = p as Record<string, unknown>;
+    if (!short(o.id, 40) || !ID.test(o.id) || !short(o.label, 30) || !short(o.icon, 8)) continue;
+    if (![o.top, o.bottom, o.hat].every(x => typeof x === 'string' && have.has(x))) continue;
+    personas.push({
+      id: o.id, label: o.label, icon: o.icon, top: o.top as string, bottom: o.bottom as string, hat: o.hat as string,
+      ...(typeof o.bottomCol === 'string' && HEX6.test(o.bottomCol) ? { bottomCol: o.bottomCol } : {}),
+    });
+  }
+  return { pieces, personas, hat: typeof w.hat === 'string' && AVATAR_HATS.has(w.hat) ? w.hat : undefined };
+}
+
+/** The wardrobe's pieces as closet items, so they can be worn like anything bought in the shop. */
+export function closetFromWardrobe(w: Wardrobe): OwnedCloth[] {
+  return w.pieces.map(p => ({ slot: p.slot, style: p.style, col: p.col, accent: p.accent, name: p.name, id: p.id }));
 }
 
 export function defaultCloset(look: LookState, mayaLook: LookState, pantsCol: string, shoeCol: string): OwnedCloth[] {
