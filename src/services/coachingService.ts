@@ -214,6 +214,32 @@ export async function getGoalById(userId: string, goalId: string): Promise<Coach
   return goal;
 }
 
+/** A goal the user set themselves (from quick add in Today), with an optional target date. */
+export async function createUserGoal(
+  userId: string,
+  title: string,
+  targetDate: string | null,
+): Promise<CoachingGoal | null> {
+  const { data, error } = await supabase
+    .from('user_goals')
+    .insert({
+      user_id: userId,
+      title,
+      goal_type: 'project',
+      target_date: targetDate,
+      source: 'stated',
+      status: 'active',
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('[coachingService] createUserGoal error:', error);
+    return null;
+  }
+  return data as CoachingGoal;
+}
+
 export async function updateGoalDeadline(
   goalId: string,
   targetDate: string | null,

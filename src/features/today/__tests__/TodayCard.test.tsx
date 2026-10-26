@@ -23,8 +23,12 @@ const coaching = {
   getNextOpenCommitment: vi.fn(),
   getGoals: vi.fn(),
   updateCommitmentStatus: vi.fn(),
+  createUserGoal: vi.fn(),
 };
 vi.mock('../../../services/coachingService', () => coaching);
+
+const people = { getAll: vi.fn(), create: vi.fn() };
+vi.mock('../../../services/realPeopleService', () => ({ realPeopleService: people }));
 
 const { TodayCard } = await import('../TodayCard');
 
@@ -60,7 +64,15 @@ beforeEach(() => {
   coaching.getNextOpenCommitment.mockResolvedValue(null);
   coaching.getGoals.mockResolvedValue([]);
   coaching.updateCommitmentStatus.mockResolvedValue(undefined);
+  people.getAll.mockResolvedValue([]);
+  localStorage.clear();
 });
+
+function isoDay(offset: number, birthYear: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${birthYear}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 describe('TodayCard', () => {
   it("shows today's events and commitments with who set them up and the done count", async () => {
@@ -145,5 +157,41 @@ describe('TodayCard', () => {
     expect(screen.queryByText('Item 5')).toBeNull();
     fireEvent.click(screen.getByText('+2 more'));
     expect(navigate).toHaveBeenCalledWith('/calendar');
+  });
+
+  it("leads with today's birthdays, with the age worked out", async () => {
+    const birthYear = new Date().getFullYear() - 57;
+    people.getAll.mockResolvedValue([{ id: 'p1', name: 'Queen', birthday: isoDay(0, birthYear), birthday_year_known: true }]);
+    render(<TodayCard />);
+    expect(await screen.findByText("Queen's 57th birthday")).toBeTruthy();
+  });
+
+  it('shows the next birthday in the week ahead', async () => {
+    people.getAll.mockResolvedValue([
+      { id: 'p2', name: 'Sam', birthday: isoDay(3, 2000), birthday_year_known: false },
+      { id: 'p3', name: 'Ana', birthday: isoDay(5, 1990), birthday_year_known: true },
+    ]);
+    render(<TodayCard />);
+    expect(await screen.findByText(/Coming up:/)).toBeTruthy();
+    expect(screen.getByText(/Sam's birthday/)).toBeTruthy();
+    expect(screen.getByText(/and 1 more/)).toBeTruthy();
+  });
+
+  it('asks once for their people, and remembers "not now"', async () => {
+    const { unmount } = render(<TodayCard />);
+    expect(await screen.findByText('Add your people')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Not now'));
+    expect(screen.queryByText('Add your people')).toBeNull();
+    unmount();
+
+    render(<TodayCard />);
+    await screen.findByText('Plan something with Atlas');
+    expect(screen.queryByText('Add your people')).toBeNull();
+  });
+
+  it('opens quick add from the + button', async () => {
+    render(<TodayCard />);
+    fireEvent.click(await screen.findByLabelText('Add something to your days'));
+    expect(await screen.findByText('Add to your days')).toBeTruthy();
   });
 });

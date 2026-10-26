@@ -1,17 +1,26 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, CalendarDays, Sparkles } from 'lucide-react';
+import { Check, ChevronRight, CalendarDays, Sparkles, Plus, Cake, X } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
 import { calendarService } from '../../services/calendarService';
 import {
   getGoals, getNextOpenCommitment, getTodayCommitments, updateCommitmentStatus,
 } from '../../services/coachingService';
+import { realPeopleService, type RealPerson } from '../../services/realPeopleService';
 import { toast } from '../../shared/ui/Toast';
+import { birthdaysBetween, birthdayTitle, type BirthdayOccurrence } from './birthdays';
+import { QuickAddSheet } from './QuickAddSheet';
+import { PeopleSheet } from './PeopleSheet';
 import {
   buildTodayItems, endOfDay, nextLabel, startOfDay, todayHeading, type TodayItem,
 } from './todayItems';
 
 const MAX_ROWS = 5;
+const PEOPLE_PROMPT_KEY = 'velvet.today.peoplePromptDismissed';
+
+function readDismissed(): boolean {
+  try { return localStorage.getItem(PEOPLE_PROMPT_KEY) === '1'; } catch { return false; }
+}
 
 interface NextUp {
   title: string;
@@ -28,6 +37,11 @@ export function TodayCard() {
   const [items, setItems] = useState<TodayItem[] | null>(null);
   const [next, setNext] = useState<NextUp | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [people, setPeople] = useState<RealPerson[] | null>(null);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [peopleName, setPeopleName] = useState('');
+  const [promptDismissed, setPromptDismissed] = useState(readDismissed);
 
   // What's coming next, shown once nothing is left today.
   const loadNext = useCallback(async () => {
@@ -64,9 +78,28 @@ export function TodayCard() {
     if (today.every(i => i.done)) await loadNext();
   }, [userId, loadNext]);
 
+  const loadPeople = useCallback(async () => {
+    setPeople(await realPeopleService.getAll().catch(() => []));
+  }, []);
+
   useEffect(() => {
     load().catch(() => setItems([]));
   }, [load]);
+
+  useEffect(() => {
+    if (userId) loadPeople();
+  }, [userId, loadPeople]);
+
+  const openPeople = (name = '') => {
+    setPeopleName(name);
+    setQuickAddOpen(false);
+    setPeopleOpen(true);
+  };
+
+  const dismissPrompt = () => {
+    setPromptDismissed(true);
+    try { localStorage.setItem(PEOPLE_PROMPT_KEY, '1'); } catch { /* storage blocked */ }
+  };
 
   const replace = (key: string, patch: Partial<TodayItem>) =>
     setItems(prev => prev?.map(i => (i.key === key ? { ...i, ...patch } : i)) ?? prev);
@@ -112,6 +145,12 @@ export function TodayCard() {
     navigate(item.kind === 'commitment' ? '/coaching-commitments' : '/calendar');
 
   const now = new Date();
+  // Birthdays: today's lead the card; the next week's go in one "Coming up" line.
+  const todayBirthdays: BirthdayOccurrence[] = people ? birthdaysBetween(people, startOfDay(now), endOfDay(now)) : [];
+  const weekAhead: BirthdayOccurrence[] = people
+    ? birthdaysBetween(people, new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), endOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7)))
+    : [];
+  const showPeoplePrompt = people !== null && !promptDismissed && !people.some(p => p.birthday);
   const doneCount = items?.filter(i => i.done).length ?? 0;
   const shown = items?.slice(0, MAX_ROWS) ?? [];
   const more = (items?.length ?? 0) - shown.length;
@@ -132,6 +171,15 @@ export function TodayCard() {
         </div>
         <button
           type="button"
+          onClick={() => setQuickAddOpen(true)}
+          aria-label="Add something to your days"
+          className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-white/5"
+          style={{ color: 'var(--ds-ink-2)' }}
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
           onClick={() => navigate('/calendar')}
           className="flex items-center gap-1 text-xs font-medium rounded-lg px-2 py-1 transition-colors hover:bg-white/5"
           style={{ color: 'var(--ds-ink-2)' }}
@@ -147,6 +195,28 @@ export function TodayCard() {
         </div>
       ) : (
         <>
+          {todayBirthdays.length > 0 && (
+            <ul className="px-2 pb-1">
+              {todayBirthdays.map(b => (
+                <li key={b.person.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/person/${b.person.id}`)}
+                    className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-white/[0.03] transition-colors"
+                  >
+                    <Cake className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--ds-accent-fg)' }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium truncate" style={{ color: 'var(--ds-ink)' }}>
+                        {birthdayTitle(b.person.name, b.age)}
+                      </span>
+                      <span className="block text-xs" style={{ color: 'var(--ds-ink-3)' }}>Today</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
           {shown.length > 0 && (
             <ul className="px-2 pb-1">
               {shown.map(item => (
@@ -206,7 +276,34 @@ export function TodayCard() {
             </button>
           )}
 
-          {items.every(i => i.done) && (
+          {weekAhead.length > 0 && (
+            <button
+              type="button"
+              onClick={() => navigate(`/person/${weekAhead[0].person.id}`)}
+              className="flex w-full items-center gap-2.5 px-4 pb-3 pt-1 text-left"
+            >
+              <Cake className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--ds-ink-3)' }} />
+              <span className="min-w-0 flex-1 truncate text-sm" style={{ color: 'var(--ds-ink-2)' }}>
+                <span style={{ color: 'var(--ds-ink-3)' }}>Coming up: </span>
+                {birthdayTitle(weekAhead[0].person.name, weekAhead[0].age)}, {nextLabel(weekAhead[0].date, now)}
+                {weekAhead.length > 1 && <span style={{ color: 'var(--ds-ink-3)' }}> and {weekAhead.length - 1} more</span>}
+              </span>
+            </button>
+          )}
+
+          {showPeoplePrompt && (
+            <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: 'var(--ds-accent-soft)' }}>
+              <Cake className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--ds-accent-fg)' }} />
+              <button type="button" onClick={() => openPeople()} className="min-w-0 flex-1 text-left text-sm" style={{ color: 'var(--ds-ink)' }}>
+                Never miss the birthdays that matter. <span style={{ color: 'var(--ds-accent-fg)' }}>Add your people</span>
+              </button>
+              <button type="button" onClick={dismissPrompt} aria-label="Not now" className="p-1 rounded-md hover:bg-white/5" style={{ color: 'var(--ds-ink-3)' }}>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {items.every(i => i.done) && todayBirthdays.length === 0 && (
             next ? (
               <button
                 type="button"
@@ -234,6 +331,22 @@ export function TodayCard() {
           )}
         </>
       )}
+
+      {userId && (
+        <QuickAddSheet
+          isOpen={quickAddOpen}
+          onClose={() => setQuickAddOpen(false)}
+          onSaved={() => { load().catch(() => {}); }}
+          onBirthday={openPeople}
+          userId={userId}
+        />
+      )}
+      <PeopleSheet
+        isOpen={peopleOpen}
+        onClose={() => setPeopleOpen(false)}
+        onSaved={loadPeople}
+        initialName={peopleName}
+      />
     </section>
   );
 }
