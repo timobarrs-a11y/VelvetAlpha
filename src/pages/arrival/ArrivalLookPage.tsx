@@ -105,12 +105,14 @@ export function ArrivalLookPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mx-auto mt-16 max-w-md text-center"
         >
-          <h1 className="text-4xl font-extrabold tracking-tight" style={{ color: accent }}>Now, you.</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight" style={{ color: accent }}>Now for the fun part.</h1>
           <p className="mt-5 text-lg leading-relaxed text-white/80">
-            In Velvet, you're not a profile picture. This is you on the community boards, in every chat,
-            and on your billboard in town.
+            In Velvet you're not a goal or an idea. You're a person.
           </p>
-          <p className="mt-3 text-lg leading-relaxed text-white/80">It's not about looks; make it feel like you.</p>
+          <p className="mt-3 text-lg leading-relaxed text-white/80">
+            Next you'll make the digital you, or whoever you like. Explore the options and have fun with it:
+            you'll be seeing your avatar on the community boards, in your chats and on your billboard in town.
+          </p>
           <button
             type="button"
             onClick={() => setCreating(true)}
@@ -129,7 +131,11 @@ export function ArrivalLookPage() {
             onRandomize={config => { baseline.current = config; current.current = config; }}
           />
           {error && <p role="alert" className="mt-4 text-center text-sm text-rose-400">{error}</p>}
-          <div className="sticky bottom-4 mt-6 flex justify-center">
+          {/* A fade behind the button, so it never sits on top of an option. */}
+          <div
+            className="sticky bottom-0 mt-6 flex justify-center pb-4 pt-8"
+            style={{ background: 'linear-gradient(to top, rgba(7,10,19,0.96) 55%, rgba(7,10,19,0))' }}
+          >
             <button
               type="button"
               onClick={handleDone}

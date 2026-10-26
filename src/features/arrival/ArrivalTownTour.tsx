@@ -17,7 +17,7 @@ export function ArrivalTownTour({ onContinue }: { onContinue: () => void }) {
   const last = i === CAPTIONS.length - 1;
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 z-30 flex justify-center px-4" style={{ bottom: 'max(16px, env(safe-area-inset-bottom))' }}>
       <div
         className="pointer-events-auto w-full max-w-md rounded-2xl border border-white/10 p-4 text-white shadow-2xl"
         style={{ background: 'rgba(24,19,34,0.9)', backdropFilter: 'blur(14px)' }}

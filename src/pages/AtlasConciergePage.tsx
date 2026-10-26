@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Compass, CalendarCheck } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
+import { useAuth } from '../auth/AuthProvider';
 import { useTypingEffect, useWritingIndicator } from '../hooks/useTypingEffect';
 import { ShellProvider, useShell } from '../shells/ShellProvider';
-import { PageHeader } from '../shared/ui';
+import { ArrivalProgress } from '../features/arrival/ArrivalProgress';
 import { AtlasFadeTyping } from '../shells/slots/AtlasFadeTyping';
 import { AtlasBackgroundScene } from '../shells/slots/AtlasBackgroundScene';
 import { updateSetupProgress } from '../services/setupProgressService';
@@ -64,23 +65,29 @@ interface SavedState {
   msgIdCounter: number;
 }
 
-function saveState(state: SavedState) {
-  try { sessionStorage.setItem(ATLAS_STATE_KEY, JSON.stringify(state)); } catch { /* storage full or blocked */ }
+// Kept in the browser per account, so someone who leaves part-way (or taps
+// Finish later) comes back to the same conversation. Gone after a week.
+const KEEP_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+const stateKey = (userId: string) => `${ATLAS_STATE_KEY}:${userId}`;
+
+function saveState(userId: string, state: SavedState) {
+  try { localStorage.setItem(stateKey(userId), JSON.stringify({ ...state, savedAt: Date.now() })); } catch { /* storage full or blocked */ }
 }
 
-function loadState(): SavedState | null {
+function loadState(userId: string): SavedState | null {
   try {
-    const raw = sessionStorage.getItem(ATLAS_STATE_KEY);
+    const raw = localStorage.getItem(stateKey(userId));
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as SavedState;
+    const parsed = JSON.parse(raw) as SavedState & { savedAt?: number };
+    if (!parsed.savedAt || Date.now() - parsed.savedAt > KEEP_FOR_MS) return null;
     return Array.isArray(parsed.messages) && parsed.messages.length > 0 ? parsed : null;
   } catch {
     return null;
   }
 }
 
-function clearState() {
-  try { sessionStorage.removeItem(ATLAS_STATE_KEY); } catch { /* storage blocked */ }
+function clearState(userId: string) {
+  try { localStorage.removeItem(stateKey(userId)); } catch { /* storage blocked */ }
 }
 
 /** Where the user is: their hour for the greeting, their date and offset for scheduling. */
@@ -144,6 +151,8 @@ function AtlasConciergeInner() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const transcriptRef = useRef<ChatMessage[]>([]);
   const hasInitialized = useRef(false);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const provisioning = useRef<Promise<Provisioned | null> | null>(null);
   const writingLabel = useWritingIndicator(isThinking, 4000);
 
@@ -161,10 +170,10 @@ function AtlasConciergeInner() {
 
   // Start, or pick up where they left off in this tab.
   useEffect(() => {
-    if (hasInitialized.current) return;
+    if (hasInitialized.current || !userId) return;
     hasInitialized.current = true;
 
-    const saved = loadState();
+    const saved = loadState(userId);
     if (saved) {
       msgIdCounter = saved.msgIdCounter;
       transcriptRef.current = saved.messages;
@@ -205,12 +214,12 @@ function AtlasConciergeInner() {
         setError('Something went wrong starting the conversation. Please refresh.');
       }
     })();
-  }, [navigate, addAtlas]);
+  }, [navigate, addAtlas, userId]);
 
   useEffect(() => {
     if (messages.length === 0) return;
-    saveState({ messages, phase, recommendation, helperAvatar, provisioned, plan, summary, latestAtlasId, msgIdCounter });
-  }, [messages, phase, recommendation, helperAvatar, provisioned, plan, summary, latestAtlasId]);
+    if (userId) saveState(userId, { messages, phase, recommendation, helperAvatar, provisioned, plan, summary, latestAtlasId, msgIdCounter });
+  }, [messages, phase, recommendation, helperAvatar, provisioned, plan, summary, latestAtlasId, userId]);
 
   // A look changed in the avatar editor shows on the Meet card straight away.
   useEffect(() => onAvatarSaved(saved => {
@@ -362,7 +371,7 @@ function AtlasConciergeInner() {
   };
 
   const finish = () => {
-    clearState();
+    if (userId) clearState(userId);
     navigate('/lobby?arrived=1', { replace: true });
   };
 
@@ -392,15 +401,44 @@ function AtlasConciergeInner() {
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--shell-bg)' }}>
       <AtlasBackgroundScene />
 
-      <PageHeader title="Atlas" icon={Compass} accent="var(--shell-accent)" back="/lobby" />
+      {/* The last step of the arrival: Atlas, introduced in the middle, under the progress strip. */}
+      <header className="relative z-10 w-full max-w-2xl mx-auto px-4 sm:px-6 pt-6">
+        <div className="relative">
+          <ArrivalProgress step={3} accent="var(--shell-accent)" />
+          <button
+            type="button"
+            onClick={() => navigate('/lobby')}
+            className="absolute right-0 -top-1 text-xs font-medium hover:underline"
+            style={{ color: 'var(--shell-text-muted)' }}
+          >
+            Finish later
+          </button>
+        </div>
+        <div className="mt-6 flex flex-col items-center text-center">
+          <span
+            className="flex h-14 w-14 items-center justify-center rounded-full"
+            style={{
+              background: 'color-mix(in srgb, var(--shell-accent) 18%, transparent)',
+              boxShadow: '0 0 0 1px color-mix(in srgb, var(--shell-accent) 45%, transparent), 0 8px 30px color-mix(in srgb, var(--shell-accent) 25%, transparent)',
+            }}
+            aria-hidden
+          >
+            <Compass className="h-7 w-7" style={{ color: 'var(--shell-accent)' }} />
+          </span>
+          <h1 className="mt-3 text-2xl font-bold tracking-tight" style={{ color: 'var(--shell-text-primary)', fontFamily: '"Bricolage Grotesque", sans-serif' }}>
+            Atlas
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--shell-text-muted)' }}>Your concierge at Velvet</p>
+        </div>
+      </header>
 
-      <div className="relative z-10 flex-1 flex flex-col max-w-2xl w-full mx-auto px-4 sm:px-6 pt-6 pb-6">
+      <div className="relative z-10 flex-1 flex flex-col max-w-2xl w-full mx-auto px-4 sm:px-6 pt-4 pb-6">
         <main className="w-full flex flex-col">
           <div
             className="rounded-[1.75rem] overflow-hidden flex flex-col"
             style={{ border: '1px solid var(--shell-border)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)' }}
           >
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3" style={{ maxHeight: 'calc(100dvh - 260px)' }}>
               <AnimatePresence>
                 {messages.map(msg => {
                   const isUser = msg.role === 'user';

@@ -240,3 +240,22 @@ describe('dates in the user\'s time zone', () => {
     expect(nextWeekday('2026-10-31', 'Monday')).toBe('2026-11-02');
   });
 });
+
+describe('extractJson', async () => {
+  const { extractJson } = await import('../../../supabase/functions/_shared/atlasArrival');
+
+  it('reads a plan that comes after some prose, as replies with web search do', () => {
+    const raw = 'I checked the CompTIA site {for dates}. Here is the plan:\n{"goal":{"title":"Help desk job"},"phases":[{"title":"Study","steps":[{"title":"Book the exam"}]}]}\nGood luck.';
+    expect(extractJson(raw)).toMatchObject({ goal: { title: 'Help desk job' } });
+  });
+
+  it('reads a fenced block, and copes with braces inside strings', () => {
+    expect(extractJson('```json\n{"a":"x } y"}\n```')).toEqual({ a: 'x } y' });
+    expect(extractJson('{"note":"use {braces}","n":1}')).toEqual({ note: 'use {braces}', n: 1 });
+  });
+
+  it('gives null for a reply cut off mid-JSON', () => {
+    expect(extractJson('{"goal":{"title":"Help desk"},"phases":[{"title":"Stu')).toBeNull();
+    expect(extractJson(null)).toBeNull();
+  });
+});

@@ -415,6 +415,33 @@ function addDays(day: string, n: number): string {
  * past; at most five years out. Commitments must fall within two weeks. Returns
  * null when there's nothing usable (no phase with a step).
  */
+/** The JSON object in a model reply: a fenced block, or the last balanced {...} that parses. */
+export function extractJson(raw: string | null): unknown {
+  if (!raw) return null;
+  // A fenced block first; otherwise every balanced {...} in the text, last one
+  // first (after a web search the JSON can follow a sentence or two of prose).
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const candidates: string[] = fenced ? [fenced[1]] : [];
+  const starts: number[] = [];
+  let depth = 0, inString = false, escaped = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") { if (depth === 0) starts.push(i); depth++; }
+    else if (ch === "}" && depth > 0) { depth--; if (depth === 0) candidates.push(raw.slice(starts[starts.length - 1], i + 1)); }
+  }
+  for (const c of candidates.reverse()) {
+    try { return JSON.parse(c.trim()); } catch { /* try the next one */ }
+  }
+  return null;
+}
+
 export function validatePlan(raw: unknown, today: string): ArrivalPlan | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
