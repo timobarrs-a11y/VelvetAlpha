@@ -377,7 +377,7 @@ export function WorldPage() {
   const narrow = typeof window !== 'undefined' && window.innerWidth < 760;
 
   return (
-    <div className="relative h-screen overflow-hidden bg-[#9DAE97]" style={{ colorScheme: 'dark' }}>
+    <div className="relative h-screen max-h-full overflow-hidden bg-[#9DAE97]" style={{ colorScheme: 'dark' }}>
       {townLayoutState && (
         <WorldCanvas
           plots={block}

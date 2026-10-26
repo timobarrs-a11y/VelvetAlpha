@@ -16,7 +16,8 @@ block with new neighbors, so you keep seeing other people's creativity.
 Zoom out and you see the whole town, every member, with you and your
 friends pinned. Tap a billboard to read it and **Add friend**. That's the
 only action: no knocks, no DMs from a billboard, nothing that says when
-someone was last online. It's an experience. It's meant to make you feel
+someone was last online. Each billboard keeps a tally of its visitors
+(everyone who has opened it), but never says who. It's an experience. It's meant to make you feel
 something, not report everything to you.
 
 ## Decisions already made (don't revisit)
@@ -28,6 +29,8 @@ something, not report everything to you.
 | Houses | **Starter** (everyone): Classic, Cottage, Bungalow, Ranch, A-frame cabin. **Member** (paid): Craftsman, Modern, Brick colonial, Victorian, Villa. **Earned** (one medal each, never for sale): Lighthouse (Iron Will), Observatory (The Closer), Treehouse (Hat Trick), Windmill (Coachable), Castle (Unbreakable). Every member and earned house is taller than any starter house. Pickers always show all three collections; locked houses say how to unlock them. |
 | Onboarding | **Superseded by `docs/onboarding/questionnaire-plan.md`** ("The whole arrival"): new members pick their house and billboard as step 4 of onboarding and get a short look around the town before Atlas. The popup (`WorldWelcome.tsx`, mounted in `Router.tsx`) stays for existing members who don't have a house yet. "Not now" still moves them in with a random starter house, so everyone is in the town. |
 | Look inside | Only on your own billboard. Opens Velvet House for your main companion. |
+| Visitors | Opening someone else's billboard counts as a visit, once per person (`world_plot_visits`, `record_world_visit`). The card shows the total and how many are new this week. Nobody is told who visited, and blocked people don't count. |
+| Billboard card | Banner in their sign color, their avatar, headline and bio, stats (visitors, friends, streak, medals), friends and spaces in common, up to three shared goals, pinned medals, then **Add friend** and **Profile**. Everything past the visitor count comes from `world_card_details` and only for public profiles. |
 | Free vs paid | Free users pick a starter house (or one they earned) **and its colors**. Members also get billboard styles and colors, car, pet, lawn, tree and extras, plus all the animation: twinkle lights around the billboard, chimney smoke, swaying trees, pets moving. The kit already applies these rules in `resolvePlot()`. |
 | Lapsed member | The saved look is kept. Viewers' clients show a starter house and plain yard until they're a member again (the kit does this). |
 | Neighbors | Everyone rotates every day. Nobody repeats until the pool runs out (30-day window). Up to 3 a day share one of your community spaces. Two side-by-side houses never match in style and color. |
