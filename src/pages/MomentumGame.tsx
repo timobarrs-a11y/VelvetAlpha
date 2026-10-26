@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import {
+  PLAYER_WIDTH,
+  PLAYER_HEIGHT,
   STEP_MS,
   MAX_FRAME_MS,
   MAX_BOOST_CHARGES,
@@ -30,6 +31,10 @@ import {
 } from '../game/momentum/touchControls';
 import { momentumSfx } from '../game/momentum/sfx';
 import { loadTheme } from '../game/momentum/themes';
+import type { ThemeColors, PlayerState, Particle, TrailPoint, GameMode, CareerProgressRow } from '../game/momentum/types';
+import { renderFrame } from '../game/momentum/render';
+import { themePresets, type CareerLevel } from '../game/momentum/config';
+import { MenuScreen, ModeSelectScreen, CareerSelectScreen, ThemeSelectScreen, LoadingScreen, LevelCompleteScreen, CareerFailedScreen, GameOverScreen, type ScreenProps } from '../components/games/momentum/MomentumScreens';
 import {
   type Platform,
   type Orb,
@@ -42,15 +47,12 @@ import {
   createEndlessState,
   endlessDifficulty,
   lavaSpeed,
-  PHASE_CYCLE_FRAMES,
-  PHASE_SOLID_FRAMES,
   LANDSCAPE_WIDTH,
   PORTRAIT_WIDTH,
 } from '../game/momentum/levelGen';
-import { type GhostRun, GHOST_SAMPLE_STEPS, ghostPositionAt, loadLocalGhost, saveLocalGhostIfBest } from '../game/momentum/ghost';
-import { SKINS, loadStats, updateStats, loadSkinId, saveSkinId, skinById } from '../game/momentum/skins';
+import { type GhostRun, GHOST_SAMPLE_STEPS, loadLocalGhost, saveLocalGhostIfBest } from '../game/momentum/ghost';
+import { loadStats, updateStats, loadSkinId, skinById } from '../game/momentum/skins';
 import { todayKey, submitRun, fetchLeaderboard } from '../game/momentum/leaderboard';
-import { LeaderboardPanel } from '../components/games/momentum/LeaderboardPanel';
 import { analyticsService } from '../services/analyticsService';
 
 // The playfield is chosen per run: landscape 800x600, or a taller, narrower world in portrait.
@@ -66,63 +68,10 @@ const choosePlayfield = () => {
     GAME_HEIGHT = 600;
   }
 };
-const PLAYER_WIDTH = 22;
-const PLAYER_HEIGHT = 22;
 const GRAVITY = 0.55;
 const HORIZONTAL_SPEED = 4.5;
-const PLATFORM_HEIGHT = 14;
 
-const themePresets = [
-  { name: 'Neon Cityscape', icon: '🌃', hint: 'Cyberpunk rooftops' },
-  { name: 'Ancient Ruins', icon: '🏛️', hint: 'Crumbling temples' },
-  { name: 'Candy Kingdom', icon: '🍭', hint: 'Sweet dreamland' },
-  { name: 'Deep Ocean', icon: '🌊', hint: 'Bioluminescent depths' },
-  { name: 'Volcanic Forge', icon: '🌋', hint: 'Molten fire' },
-  { name: 'Crystal Caves', icon: '💎', hint: 'Shimmering underground' },
-];
 
-interface ThemeColors {
-  levelName: string;
-  background: [string, string];
-  playerColor: string;
-  playerGlow: string;
-  boostTrailColor: string;
-  platforms: string[];
-  glows: string[];
-  checkpoint: string;
-  checkpointGlow: string;
-  flavorText: string;
-  goalY?: number;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  color: string;
-  size: number;
-}
-
-interface TrailPoint {
-  x: number;
-  y: number;
-  life: number;
-}
-
-interface PlayerState {
-  x: number;
-  y: number;
-  prevY: number;
-  vx: number;
-  vy: number;
-  boostCharges: number;
-  isBoosting: boolean;
-  boostTimer: number;
-}
-
-type GameMode = 'freeplay' | 'career' | 'daily' | 'endless';
 
 const DAILY_DIFFICULTY = 5;
 const ENDLESS_CHUNK = 30;
@@ -138,28 +87,6 @@ const trackMomentum = (action: string, metadata: Record<string, unknown>) => {
 
 const dailyThemeName = (day: string) => themePresets[seedFromString(day) % themePresets.length].name;
 
-interface CareerLevel {
-  number: number;
-  name: string;
-  theme: string;
-  timeLimit: number;
-  threeStarTime: number;
-  twoStarTime: number;
-  difficulty: number;
-}
-
-const careerLevels: CareerLevel[] = [
-  { number: 1, name: "First Steps", theme: "Neon Cityscape", timeLimit: 45, threeStarTime: 30, twoStarTime: 37, difficulty: 1 },
-  { number: 2, name: "Rising Fast", theme: "Crystal Caves", timeLimit: 50, threeStarTime: 35, twoStarTime: 42, difficulty: 2 },
-  { number: 3, name: "Quick Reflexes", theme: "Candy Kingdom", timeLimit: 40, threeStarTime: 28, twoStarTime: 34, difficulty: 3 },
-  { number: 4, name: "Under Pressure", theme: "Deep Ocean", timeLimit: 38, threeStarTime: 26, twoStarTime: 32, difficulty: 4 },
-  { number: 5, name: "Speed Demon", theme: "Volcanic Forge", timeLimit: 35, threeStarTime: 24, twoStarTime: 29, difficulty: 5 },
-  { number: 6, name: "Against the Clock", theme: "Ancient Ruins", timeLimit: 33, threeStarTime: 22, twoStarTime: 27, difficulty: 6 },
-  { number: 7, name: "Time Trial", theme: "Neon Cityscape", timeLimit: 30, threeStarTime: 20, twoStarTime: 25, difficulty: 7 },
-  { number: 8, name: "Racing Shadows", theme: "Crystal Caves", timeLimit: 28, threeStarTime: 19, twoStarTime: 23, difficulty: 8 },
-  { number: 9, name: "Final Sprint", theme: "Volcanic Forge", timeLimit: 25, threeStarTime: 17, twoStarTime: 21, difficulty: 9 },
-  { number: 10, name: "Legend", theme: "Deep Ocean", timeLimit: 22, threeStarTime: 15, twoStarTime: 18, difficulty: 10 }
-];
 
 export function MomentumGame() {
   const navigate = useNavigate();
@@ -169,7 +96,7 @@ export function MomentumGame() {
   const [theme, setTheme] = useState('');
   const [customTheme, setCustomTheme] = useState('');
   const [level, setLevel] = useState(1);
-  const [careerProgress, setCareerProgress] = useState<any[]>([]);
+  const [careerProgress, setCareerProgress] = useState<CareerProgressRow[]>([]);
   const [currentCareerLevel, setCurrentCareerLevel] = useState<CareerLevel | null>(null);
   const [levelData, setLevelData] = useState<ThemeColors | null>(null);
   const [score, setScore] = useState(0);
@@ -279,7 +206,7 @@ export function MomentumGame() {
 
       if (existingProgress) {
         const shouldUpdate = !existingProgress.completed ||
-                            (completed && time < existingProgress.best_time) ||
+                            (completed && time < (existingProgress.best_time ?? Infinity)) ||
                             stars > existingProgress.stars_earned;
 
         if (shouldUpdate) {
@@ -963,415 +890,13 @@ export function MomentumGame() {
     const { isTrueFalling, isRisingFast } = getMotion();
     const camY = cameraYRef.current;
 
-    ctx.save();
-    if (shakeRef.current > 0.3) {
-      ctx.translate((Math.random() - 0.5) * shakeRef.current, (Math.random() - 0.5) * shakeRef.current);
-    }
-
-    const bg = levelData.background || ['#1a1a2e', '#0f3460'];
-    const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-    gradient.addColorStop(0, bg[0]);
-    gradient.addColorStop(1, bg[1]);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Render speed lines only when truly falling or rising fast
-    const showSpeedLines = isTrueFalling || isRisingFast;
-
-    if (showSpeedLines) {
-      speedLinesRef.current.forEach(line => {
-        const intensity = Math.abs(player.vy) / 15;
-        const alpha = line.opacity * Math.min(1, intensity * 1.2);
-        if (alpha > 0.05) {
-          // Different colors for falling vs rising
-          const lineColor = isTrueFalling
-            ? `rgba(255, 100, 100, ${alpha})` // Red tint for falling
-            : `rgba(100, 200, 255, ${alpha})`; // Blue/cyan tint for rising
-          ctx.strokeStyle = lineColor;
-          ctx.lineWidth = intensity > 0.8 ? 2 : 1;
-          ctx.beginPath();
-          ctx.moveTo(line.x, line.y);
-          // Lines point in direction of movement
-          if (isTrueFalling) {
-            ctx.lineTo(line.x, line.y + line.length * intensity);
-          } else {
-            ctx.lineTo(line.x, line.y - line.length * intensity);
-          }
-          ctx.stroke();
-        }
-      });
-    }
-
-    const isEndless = endlessRef.current !== null;
-    const progress = isEndless ? 0 : Math.max(0, Math.min(1, (startYRef.current - player.y) / (startYRef.current - goalYRef.current)));
-    const barHeight = GAME_HEIGHT - 140;
-    const barX = GAME_WIDTH - 20;
-    if (!isEndless) {
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(barX, 70, 6, barHeight);
-    ctx.fillStyle = levelData.playerGlow || 'rgba(255,255,255,0.6)';
-    ctx.fillRect(barX, 70 + barHeight * (1 - progress), 6, barHeight * progress);
-
-    platforms.filter(p => p.isCheckpoint).forEach(cp => {
-      const cpProgress = (startYRef.current - cp.y) / (startYRef.current - goalYRef.current);
-      const markerY = 70 + barHeight * (1 - cpProgress);
-      ctx.fillStyle = cp.touched ? levelData.checkpointGlow : 'rgba(255,255,255,0.3)';
-      ctx.fillRect(barX - 4, markerY - 2, 14, 4);
+    renderFrame(ctx, {
+      GAME_WIDTH, GAME_HEIGHT, levelData, player, platforms, camY, isTrueFalling, isRisingFast,
+      level, gameMode, timeRemaining, isTouchDevice,
+      chainRef, comboRef, elapsedTimeRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
+      orbsRef, particlesRef, popupRef, runModeRef, scoreRef, shakeRef, simFrameRef, skinRef, speedLinesRef,
+      startYRef, tapFxRef, trailRef,
     });
-    }
-
-    const goalScreenY = levelData.goalY! + camY;
-    if (goalScreenY > -50 && goalScreenY < GAME_HEIGHT + 50) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 8]);
-      ctx.beginPath();
-      ctx.moveTo(0, goalScreenY);
-      ctx.lineTo(GAME_WIDTH - 35, goalScreenY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.font = '11px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText('★ GOAL ★', GAME_WIDTH / 2, goalScreenY - 8);
-    }
-
-    platforms.forEach(platform => {
-      if (platform.crumbled) return;
-      const screenY = platform.y + camY;
-      if (screenY < -30 || screenY > GAME_HEIGHT + 30) return;
-
-      let alpha = platform.touched ? 0.4 : 1;
-      const glowSize = platform.touched ? 6 : platform.isCheckpoint ? 30 : platform.isFar ? 22 : 14;
-
-      if (platform.type === 'phase') {
-        const t = (simFrameRef.current + platform.param) % PHASE_CYCLE_FRAMES;
-        if (t >= PHASE_SOLID_FRAMES) alpha *= 0.12;
-        else if (t > PHASE_SOLID_FRAMES - 40) alpha *= 0.4 + 0.6 * (Math.floor(t / 5) % 2);
-      }
-
-      if (platform.crumbleTimer > 0) {
-        alpha *= platform.crumbleTimer / 0.5;
-        const shakeX = (Math.random() - 0.5) * 4;
-        const shakeY = (Math.random() - 0.5) * 2;
-        ctx.save();
-        ctx.translate(shakeX, shakeY);
-      }
-
-      ctx.shadowColor = platform.glow || platform.color;
-      ctx.shadowBlur = glowSize;
-
-      if (platform.type === 'spring' && !platform.touched) {
-        ctx.fillStyle = '#00ff88';
-      } else if (platform.type === 'crumbling' && !platform.touched) {
-        ctx.fillStyle = platform.color;
-        ctx.setLineDash([6, 4]);
-      } else {
-        ctx.fillStyle = platform.color;
-      }
-      ctx.globalAlpha = alpha;
-
-      const springOffset = platform.springBounce > 0 ? Math.sin(platform.springBounce * Math.PI) * 6 : 0;
-      ctx.beginPath();
-      ctx.roundRect(platform.x, screenY + springOffset, platform.width, PLATFORM_HEIGHT, platform.isCheckpoint ? 4 : 7);
-      ctx.fill();
-      ctx.setLineDash([]);
-
-      if (platform.type === 'spring' && !platform.touched) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#00ff88';
-        ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.006) * 0.3;
-        const cx = platform.x + platform.width / 2;
-        ctx.beginPath();
-        ctx.moveTo(cx - 6, screenY + springOffset - 2);
-        ctx.lineTo(cx, screenY + springOffset - 8);
-        ctx.lineTo(cx + 6, screenY + springOffset - 2);
-        ctx.fill();
-      }
-
-      if (platform.type === 'crumbling' && !platform.touched) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(255,200,100,0.5)';
-        ctx.globalAlpha = 0.6;
-        ctx.font = '8px system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText('FRAGILE', platform.x + platform.width/2, screenY + springOffset - 4);
-      }
-
-      if (platform.isCheckpoint && !platform.touched) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#fff';
-        ctx.globalAlpha = 0.8;
-        ctx.font = 'bold 10px system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText('CHECKPOINT', platform.x + platform.width/2, screenY - 8);
-      }
-
-      if (platform.isFar && !platform.touched) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
-        ctx.globalAlpha = 0.6 + Math.sin(Date.now() * 0.008) * 0.3;
-        ctx.beginPath();
-        ctx.arc(platform.x + platform.width/2, screenY + PLATFORM_HEIGHT/2, 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      if (platform.type === 'conveyor') {
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-        ctx.lineWidth = 2;
-        const offset = ((simFrameRef.current * 0.8 * platform.param) % 14 + 14) % 14;
-        for (let cx = platform.x + offset; cx < platform.x + platform.width - 6; cx += 14) {
-          const dir = platform.param;
-          ctx.beginPath();
-          ctx.moveTo(cx - 3 * dir, screenY + 3);
-          ctx.lineTo(cx + 2 * dir, screenY + PLATFORM_HEIGHT / 2);
-          ctx.lineTo(cx - 3 * dir, screenY + PLATFORM_HEIGHT - 3);
-          ctx.stroke();
-        }
-      }
-
-      if (platform.crumbleTimer > 0) {
-        ctx.restore();
-      }
-
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
-    });
-
-    if (trailRef.current.length > 1) {
-      ctx.lineCap = 'round';
-      for (let i = 1; i < trailRef.current.length; i++) {
-        const t = trailRef.current[i];
-        const prev = trailRef.current[i-1];
-        ctx.strokeStyle = skinRef.current.rainbow ? `hsl(${(i * 18 + simFrameRef.current * 3) % 360}, 90%, 65%)` : (skinRef.current.trail || levelData.boostTrailColor || '#00ffff');
-        ctx.globalAlpha = t.life * 0.7;
-        ctx.lineWidth = t.life * 12;
-        ctx.beginPath();
-        ctx.moveTo(prev.x, prev.y + camY);
-        ctx.lineTo(t.x, t.y + camY);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    particlesRef.current.forEach(p => {
-      const screenY = p.y + camY;
-      ctx.globalAlpha = p.life;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, screenY, p.size * p.life, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.globalAlpha = 1;
-
-    // Landing guide: mark where the ball will touch down on the next platform below
-    if (player.vy > -3) {
-      const ballCenterX = player.x + PLAYER_WIDTH / 2;
-      const ballBottom = player.y + PLAYER_HEIGHT;
-      let target: Platform | null = null;
-      for (const pl of platforms) {
-        if (pl.crumbled || pl.y < ballBottom - 2) continue;
-        if (ballCenterX < pl.x - PLAYER_WIDTH * 0.5 - 6 || ballCenterX > pl.x + pl.width + PLAYER_WIDTH * 0.5 + 6) continue;
-        if (!target || pl.y < target.y) target = pl;
-      }
-      if (target) {
-        const dist = target.y - ballBottom;
-        const alpha = Math.max(0.15, 0.6 - dist / 600);
-        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-        ctx.beginPath();
-        ctx.ellipse(Math.min(Math.max(ballCenterX, target.x), target.x + target.width), target.y + camY - 1, PLAYER_WIDTH * 0.6, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    const boostTint = levelData.boostTrailColor || '#00ffff';
-    orbsRef.current.forEach(orb => {
-      if (orb.collected) return;
-      const sy = orb.y + camY;
-      if (sy < -20 || sy > GAME_HEIGHT + 20) return;
-      const pulse = 1 + Math.sin(simFrameRef.current * 0.12) * 0.15;
-      ctx.shadowColor = boostTint;
-      ctx.shadowBlur = 20;
-      ctx.fillStyle = boostTint;
-      ctx.beginPath();
-      ctx.arc(orb.x, sy, 8 * pulse, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(orb.x, sy, 3, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    const ghost = ghostRef.current;
-    const ghostPos = ghost ? ghostPositionAt(ghost, simFrameRef.current) : null;
-    if (ghost && ghostPos) {
-      const gy = ghostPos.y + camY;
-      ctx.globalAlpha = 0.3;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(ghostPos.x + PLAYER_WIDTH / 2, gy + PLAYER_HEIGHT / 2, PLAYER_WIDTH / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 0.5;
-      ctx.font = '9px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText(ghost.name ? ghost.name : 'BEST', ghostPos.x + PLAYER_WIDTH / 2, gy - 6);
-      ctx.globalAlpha = 1;
-    }
-
-    if (Number.isFinite(lavaYRef.current)) {
-      const lavaTop = lavaYRef.current + camY;
-      if (lavaTop < GAME_HEIGHT) {
-        const lava = ctx.createLinearGradient(0, lavaTop, 0, GAME_HEIGHT);
-        lava.addColorStop(0, 'rgba(255,90,0,0.95)');
-        lava.addColorStop(1, 'rgba(140,0,0,0.95)');
-        ctx.fillStyle = lava;
-        ctx.beginPath();
-        ctx.moveTo(0, GAME_HEIGHT);
-        for (let x = 0; x <= GAME_WIDTH; x += 20) {
-          ctx.lineTo(x, lavaTop + Math.sin(x * 0.03 + simFrameRef.current * 0.08) * 6);
-        }
-        ctx.lineTo(GAME_WIDTH, GAME_HEIGHT);
-        ctx.closePath();
-        ctx.shadowColor = '#ff5a00';
-        ctx.shadowBlur = 30;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-    }
-
-    const playerScreenY = player.y + camY;
-    const squash = player.vy > 6 ? 0.75 : player.vy < -6 ? 1.25 : 1;
-    const stretch = 1 / squash;
-
-    ctx.save();
-    ctx.translate(player.x + PLAYER_WIDTH/2, playerScreenY + PLAYER_HEIGHT/2);
-    ctx.scale(stretch, squash);
-
-    if (player.isBoosting || player.boostTimer > 0) {
-      ctx.shadowColor = levelData.boostTrailColor || '#00ffff';
-      ctx.shadowBlur = 30;
-    } else {
-      ctx.shadowColor = levelData.playerGlow || 'rgba(255,255,255,0.8)';
-      ctx.shadowBlur = 18;
-    }
-
-    const skin = skinRef.current;
-    const skinFill = skin.rainbow ? `hsl(${(simFrameRef.current * 3) % 360}, 90%, 65%)` : skin.fill;
-    ctx.fillStyle = player.isBoosting ? (skin.trail || levelData.boostTrailColor || '#00ffff') : (skinFill || levelData.playerColor || '#ffffff');
-    ctx.beginPath();
-    ctx.arc(0, 0, PLAYER_WIDTH/2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.restore();
-
-    // Soft dark halo keeps HUD text readable on light themes
-    ctx.shadowColor = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur = 6;
-    ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.font = '10px system-ui';
-    ctx.textAlign = 'left';
-    ctx.fillText(isEndless ? `ENDLESS · ${Math.max(0, Math.round(520 - highestYRef.current)).toLocaleString()}m` : runModeRef.current === 'daily' ? `DAILY CLIMB · ${todayKey()}` : `LEVEL ${level}`, 16, 24);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.font = '16px system-ui';
-    ctx.fillText(levelData.levelName || '', 16, 42);
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    ctx.font = 'italic 10px system-ui';
-    ctx.fillText(levelData.flavorText || '', 16, 58);
-
-    ctx.textAlign = 'center';
-    if (gameMode === 'career') {
-      const isLowTime = timeRemaining < 10;
-      const isVeryLowTime = timeRemaining < 5;
-      ctx.fillStyle = isVeryLowTime ? 'rgba(255,50,50,0.9)' : isLowTime ? 'rgba(255,150,50,0.9)' : 'rgba(255,255,255,0.9)';
-      ctx.font = isVeryLowTime ? 'bold 24px monospace' : isLowTime ? 'bold 18px monospace' : 'bold 16px monospace';
-      const timeText = timeRemaining > 0 ? timeRemaining.toFixed(1) + 's' : 'TIME UP!';
-      ctx.fillText(timeText, GAME_WIDTH / 2, isVeryLowTime ? 32 : 26);
-
-      if (isVeryLowTime) {
-        ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.02) * 0.3;
-        ctx.fillStyle = 'rgba(255,0,0,0.8)';
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        ctx.globalAlpha = 1;
-      }
-    } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.font = '12px monospace';
-      ctx.fillText(elapsedTimeRef.current.toFixed(1) + 's', GAME_WIDTH / 2, 24);
-    }
-
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = '10px system-ui';
-    ctx.fillText('SCORE', GAME_WIDTH - 40, 66);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.font = '20px system-ui';
-    ctx.fillText(scoreRef.current.toLocaleString(), GAME_WIDTH - 40, 88);
-
-    if (comboRef.current > 1) {
-      ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
-      ctx.globalAlpha = 0.7 + Math.sin(Date.now() * 0.01) * 0.3;
-      ctx.font = 'bold 13px system-ui';
-      ctx.fillText(`${comboRef.current}x COMBO`, GAME_WIDTH - 40, 106);
-      ctx.globalAlpha = 1;
-    }
-
-    const boostColor = levelData.boostTrailColor || '#00ffff';
-    for (let i = 0; i < MAX_BOOST_CHARGES; i++) {
-      const filled = i < player.boostCharges;
-      ctx.fillStyle = filled ? boostColor : 'rgba(255,255,255,0.12)';
-      ctx.shadowColor = boostColor;
-      ctx.shadowBlur = filled ? 10 : 0;
-      ctx.beginPath();
-      ctx.arc(24 + i * 22, GAME_HEIGHT - 24, 7, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.font = '9px system-ui';
-    ctx.textAlign = 'left';
-    ctx.fillText(isTouchDevice ? 'BOOST' : 'BOOST [SPACE]', 16, GAME_HEIGHT - 40);
-
-    if (chainRef.current > 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.fillText('MOMENTUM', 100, GAME_HEIGHT - 40);
-      for (let i = 0; i < 6; i++) {
-        ctx.fillStyle = i < chainRef.current ? boostColor : 'rgba(255,255,255,0.1)';
-        ctx.fillRect(100 + i * 12, GAME_HEIGHT - 30, 9, 10);
-      }
-    }
-
-    const popup = popupRef.current;
-    if (popup) {
-      ctx.globalAlpha = Math.min(1, popup.life * 1.5);
-      ctx.fillStyle = popup.color;
-      ctx.font = 'bold 22px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText(popup.text, player.x + PLAYER_WIDTH / 2, player.y + camY - 24 - (1 - popup.life) * 30);
-      ctx.globalAlpha = 1;
-    }
-
-    tapFxRef.current = tapFxRef.current.filter(t => {
-      t.life -= 0.06;
-      if (t.life <= 0) return false;
-      ctx.strokeStyle = boostColor;
-      ctx.globalAlpha = t.life * 0.6;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, 12 + (1 - t.life) * 40, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      return true;
-    });
-
-    ctx.restore();
-
-    if (flashRef.current > 0) {
-      ctx.fillStyle = `rgba(255,255,255,${flashRef.current})`;
-      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    }
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
   }, [gameState, levelData, isTouchDevice]);
@@ -1609,276 +1134,19 @@ export function MomentumGame() {
     setGameState(gameMode === 'career' ? 'careerLevelSelect' : 'menu');
   };
 
-  if (gameState === 'menu') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex items-center justify-center">
-        <div className="max-w-2xl w-full p-6">
-          <button
-            onClick={() => {
-              const companionId = searchParams.get('companion');
-              navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-            }}
-            className="mb-8 flex items-center gap-2 text-white/60 hover:text-white/90 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Exit Game
-          </button>
+  const screenProps: ScreenProps = {
+    careerProgress, currentCareerLevel, customTheme, finalTime, gameMode, isTouchDevice, level, levelData, lifetimeStats, loadingText, navigate, nextLevel, restart, retryLevel, runResult, score, searchParams, selectTheme, setCurrentCareerLevel, setCustomTheme, setGameMode, setGameState, setSkinId, skinId, speedBonus, starsEarned, startCareerLevel, startDaily, theme,
+  };
 
-          <div className="text-center">
-            <h1 className="text-5xl font-extralight tracking-[0.3em] text-white mb-1" style={{ textShadow: '0 0 60px rgba(255,255,255,0.2)' }}>MOMENTUM</h1>
-            <p className="text-gray-500 text-xs tracking-[0.2em] mb-10">AI-GENERATED PLATFORMER</p>
+  if (gameState === 'menu') return <MenuScreen {...screenProps} />;
 
-            <div className="text-gray-400 text-sm mb-4 text-center space-y-3">
-              <p>Auto-bounce up • Score while ascending</p>
-              {isTouchDevice ? (
-                <p className="text-white/80 text-sm">Drag to steer · Tap to boost</p>
-              ) : (
-              <div className="flex justify-center gap-3">
-                <span className="px-4 py-2 bg-white/5 rounded-lg text-white/80 text-xs">← A</span>
-                <span className="px-4 py-2 bg-white/5 rounded-lg text-white/80 text-xs">D →</span>
-                <span className="px-4 py-2 bg-cyan-500/20 rounded-lg text-cyan-300 text-xs">SPACE Boost</span>
-              </div>
-              )}
-              <p className="text-gray-600 text-xs">Checkpoints save progress • Speed bonus at finish</p>
-            </div>
+  if (gameState === 'modeSelect') return <ModeSelectScreen {...screenProps} />;
 
-            <div className="mt-8">
-              <p className="text-white/40 text-xs tracking-[0.2em] mb-3">BALL</p>
-              <div className="flex flex-wrap justify-center gap-3">
-                {SKINS.map(skin => {
-                  const unlocked = skin.isUnlocked(lifetimeStats, careerProgress.reduce((sum, p) => sum + (p.stars_earned || 0), 0));
-                  const selected = skin.id === skinId;
-                  return (
-                    <button
-                      key={skin.id}
-                      disabled={!unlocked}
-                      title={unlocked ? skin.name : `Locked: ${skin.requirement}`}
-                      onClick={() => { setSkinId(skin.id); saveSkinId(skin.id); }}
-                      className={`flex flex-col items-center gap-1 w-16 py-2 rounded-xl border transition-all ${selected ? 'border-white/60 bg-white/10' : 'border-white/10'} ${unlocked ? 'hover:bg-white/10' : 'opacity-40'}`}
-                    >
-                      <span
-                        className="w-7 h-7 rounded-full"
-                        style={{
-                          background: skin.rainbow
-                            ? 'conic-gradient(#ff5f6d, #ffc371, #7dffc4, #4cc9f0, #c77dff, #ff5f6d)'
-                            : skin.fill || '#ffffff',
-                          boxShadow: `0 0 12px ${skin.trail || 'rgba(255,255,255,0.6)'}`,
-                        }}
-                      />
-                      <span className="text-[10px] text-white/70">{unlocked ? skin.name : '🔒'}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {(() => {
-                const next = SKINS.find(sk => !sk.isUnlocked(lifetimeStats, careerProgress.reduce((sum, p) => sum + (p.stars_earned || 0), 0)));
-                return next ? <p className="text-white/30 text-xs mt-3">Next unlock: {next.name} · {next.requirement}</p> : null;
-              })()}
-            </div>
+  if (gameState === 'careerLevelSelect') return <CareerSelectScreen {...screenProps} />;
 
-            <button onClick={() => setGameState('modeSelect')} className="mt-6 px-14 py-4 bg-white/5 hover:bg-white/10 text-white/90 rounded-full transition-all duration-500 tracking-[0.15em] text-sm border border-white/10">
-              BEGIN
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (gameState === 'themeSelect') return <ThemeSelectScreen {...screenProps} />;
 
-  if (gameState === 'modeSelect') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex items-center justify-center p-6">
-        <div className="max-w-2xl w-full">
-          <h2 className="text-3xl font-extralight text-white tracking-wider mb-8 text-center">Select Mode</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <button
-              onClick={() => {
-                setGameMode('career');
-                setGameState('careerLevelSelect');
-              }}
-              className="group p-8 bg-gradient-to-br from-orange-500/10 to-red-500/10 hover:from-orange-500/20 hover:to-red-500/20 rounded-2xl transition-all duration-300 border border-orange-500/20 hover:border-orange-500/40 text-left"
-            >
-              <div className="text-4xl mb-3">⏱️</div>
-              <h3 className="text-2xl font-light text-white mb-2">Career Mode</h3>
-              <p className="text-white/50 text-sm mb-3">Time-based challenges with escalating difficulty</p>
-              <div className="flex items-center gap-2 text-orange-400 text-xs">
-                <span>10 Levels</span>
-                <span>•</span>
-                <span>Beat the clock</span>
-                <span>•</span>
-                <span>Earn stars</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => {
-                setGameMode('freeplay');
-                setCurrentCareerLevel(null);
-                setGameState('themeSelect');
-              }}
-              className="group p-8 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 hover:from-cyan-500/20 hover:to-blue-500/20 rounded-2xl transition-all duration-300 border border-cyan-500/20 hover:border-cyan-500/40 text-left"
-            >
-              <div className="text-4xl mb-3">🎨</div>
-              <h3 className="text-2xl font-light text-white mb-2">Free Play</h3>
-              <p className="text-white/50 text-sm mb-3">Endless progression with custom AI-generated themes</p>
-              <div className="flex items-center gap-2 text-cyan-400 text-xs">
-                <span>Infinite levels</span>
-                <span>•</span>
-                <span>No time limit</span>
-                <span>•</span>
-                <span>Relaxed</span>
-              </div>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 -mt-2">
-            <button
-              onClick={startDaily}
-              className="group p-8 bg-gradient-to-br from-pink-500/10 to-amber-500/10 hover:from-pink-500/20 hover:to-amber-500/20 rounded-2xl transition-all duration-300 border border-pink-500/20 hover:border-pink-500/40 text-left"
-            >
-              <div className="text-4xl mb-3">🌅</div>
-              <h3 className="text-2xl font-light text-white mb-2">Daily Climb</h3>
-              <p className="text-white/50 text-sm mb-3">Same level for everyone today. Race the leader's ghost.</p>
-              <div className="flex items-center gap-2 text-pink-300 text-xs">
-                <span>New every day</span>
-                <span>•</span>
-                <span>Leaderboard</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => {
-                setGameMode('endless');
-                setCurrentCareerLevel(null);
-                setGameState('themeSelect');
-              }}
-              className="group p-8 bg-gradient-to-br from-red-500/10 to-orange-500/10 hover:from-red-500/20 hover:to-orange-500/20 rounded-2xl transition-all duration-300 border border-red-500/20 hover:border-red-500/40 text-left"
-            >
-              <div className="text-4xl mb-3">🌋</div>
-              <h3 className="text-2xl font-light text-white mb-2">Endless</h3>
-              <p className="text-white/50 text-sm mb-3">Climb forever. The lava keeps rising.</p>
-              <div className="flex items-center gap-2 text-orange-300 text-xs">
-                <span>Best: {lifetimeStats.bestEndlessHeight.toLocaleString()}m</span>
-                <span>•</span>
-                <span>Leaderboard</span>
-              </div>
-            </button>
-          </div>
-
-          <button
-            onClick={() => setGameState('menu')}
-            className="mx-auto block px-6 py-2 text-white/40 hover:text-white/60 transition-colors text-sm"
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'careerLevelSelect') {
-    const maxUnlockedLevel = Math.max(
-      1,
-      ...careerProgress.filter(p => p.completed).map(p => p.level_number + 1)
-    );
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex items-center justify-center p-6 overflow-y-auto">
-        <div className="max-w-4xl w-full py-8">
-          <h2 className="text-3xl font-extralight text-white tracking-wider mb-2 text-center">Career Mode</h2>
-          <p className="text-white/40 text-sm text-center mb-8">Complete levels within the time limit to earn stars</p>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-            {careerLevels.map((careerLevel) => {
-              const progress = careerProgress.find(p => p.level_number === careerLevel.number);
-              const isLocked = careerLevel.number > maxUnlockedLevel;
-              const stars = progress?.stars_earned || 0;
-
-              return (
-                <button
-                  key={careerLevel.number}
-                  onClick={() => !isLocked && startCareerLevel(careerLevel)}
-                  disabled={isLocked}
-                  className={`
-                    group relative p-4 rounded-xl transition-all duration-300 text-left
-                    ${isLocked
-                      ? 'bg-white/[0.02] border border-white/5 cursor-not-allowed opacity-40'
-                      : progress?.completed
-                        ? 'bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50'
-                        : 'bg-white/[0.05] border border-white/10 hover:bg-white/[0.1] hover:border-white/20'
-                    }
-                  `}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-white/90 font-bold text-lg">{careerLevel.number}</span>
-                    {isLocked && <span className="text-white/30 text-xl">🔒</span>}
-                  </div>
-                  <h3 className="text-white/80 text-xs font-medium mb-1 leading-tight">{careerLevel.name}</h3>
-                  <p className="text-white/30 text-[10px] mb-2">{careerLevel.timeLimit}s limit</p>
-
-                  {progress?.completed && (
-                    <div className="flex gap-0.5">
-                      {[1, 2, 3].map(s => (
-                        <span key={s} className={`text-sm ${s <= stars ? 'text-yellow-400' : 'text-white/10'}`}>★</span>
-                      ))}
-                    </div>
-                  )}
-
-                  {progress && !progress.completed && (
-                    <p className="text-orange-400/60 text-[10px]">{progress.attempts} attempts</p>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => setGameState('modeSelect')}
-            className="mx-auto block px-6 py-2 text-white/40 hover:text-white/60 transition-colors text-sm"
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'themeSelect') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex items-center justify-center p-6">
-        <div className="max-w-2xl w-full">
-          <p className="text-white/30 text-xs tracking-[0.2em] mb-1 text-center">LEVEL {level}</p>
-          <h2 className="text-2xl font-extralight text-white tracking-wider mb-8 text-center">Choose Your World</h2>
-
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            {themePresets.map((t) => (
-              <button key={t.name} onClick={() => selectTheme(t.name)} className="group p-3 bg-white/[0.03] hover:bg-white/[0.08] rounded-xl transition-all duration-300 text-left border border-white/5 hover:border-white/10">
-                <span className="text-xl block mb-1 opacity-80 group-hover:opacity-100">{t.icon}</span>
-                <span className="text-white/90 text-xs block leading-tight">{t.name}</span>
-                <span className="text-white/30 text-[10px]">{t.hint}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input type="text" value={customTheme} onChange={(e) => setCustomTheme(e.target.value)} placeholder="Or describe your own world..." className="flex-1 px-4 py-3 bg-white/[0.03] rounded-xl text-white placeholder-white/20 outline-none focus:bg-white/[0.06] transition-all text-sm border border-white/5" onKeyDown={(e) => e.key === 'Enter' && customTheme && selectTheme(customTheme)} />
-            <button onClick={() => customTheme && selectTheme(customTheme)} disabled={!customTheme} className="px-5 py-3 bg-white/10 hover:bg-white/15 disabled:opacity-20 text-white rounded-xl transition-all text-sm">Create</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'loading') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border border-white/20 border-t-cyan-400 rounded-full animate-spin mb-8" />
-        <p className="text-white/50 text-sm tracking-wider">{loadingText}</p>
-        <p className="text-white/25 text-xs mt-2">{theme}</p>
-      </div>
-    );
-  }
+  if (gameState === 'loading') return <LoadingScreen {...screenProps} />;
 
   if (gameState === 'playing') {
     return (
@@ -2003,179 +1271,11 @@ export function MomentumGame() {
     );
   }
 
-  if (gameState === 'levelComplete') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-900 to-teal-950 flex items-center justify-center">
-        <div className="max-w-md w-full text-center p-6">
-          {gameMode === 'career' && currentCareerLevel ? (
-            <>
-              <p className="text-white/30 text-xs tracking-[0.2em] mb-1">LEVEL {currentCareerLevel.number}</p>
-              <h2 className="text-3xl font-extralight text-white mb-1">{currentCareerLevel.name}</h2>
-              <p className="text-emerald-400/80 tracking-[0.2em] text-sm mb-6">COMPLETE</p>
-              {runResult.newBest && <p className="text-yellow-300 text-sm -mt-4 mb-4">New best — your ghost will race you next time</p>}
+  if (gameState === 'levelComplete') return <LevelCompleteScreen {...screenProps} />;
 
-              <div className="flex justify-center gap-2 mb-6">
-                {[1, 2, 3].map(s => (
-                  <span key={s} className={`text-5xl ${s <= starsEarned ? 'text-yellow-400' : 'text-white/10'}`}>★</span>
-                ))}
-              </div>
+  if (gameState === 'careerFailed') return <CareerFailedScreen {...screenProps} />;
 
-              <div className="text-center mb-6 space-y-2">
-                <p className="text-white/40 text-xs">TIME</p>
-                <p className="text-white text-2xl font-light">{finalTime.toFixed(1)}s</p>
-                {starsEarned === 3 && (
-                  <p className="text-yellow-400 text-sm font-medium">PERFECT RUN!</p>
-                )}
-                {starsEarned === 2 && (
-                  <p className="text-emerald-400 text-sm">Great time!</p>
-                )}
-                {speedBonus > 0 && (
-                  <p className="text-emerald-400 text-sm">+{speedBonus.toLocaleString()} TIME BONUS</p>
-                )}
-              </div>
-
-              <p className="text-white/40 text-xs mb-1">TOTAL SCORE</p>
-              <p className="text-white text-4xl font-extralight mb-10">{score.toLocaleString()}</p>
-
-              <div className="flex flex-col gap-3 justify-center">
-                {currentCareerLevel.number < careerLevels.length && (
-                  <button onClick={nextLevel} className="px-14 py-4 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all tracking-[0.15em] text-sm border border-white/10">
-                    NEXT LEVEL
-                  </button>
-                )}
-                <button onClick={retryLevel} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">RETRY</button>
-                <button onClick={() => setGameState('careerLevelSelect')} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">LEVEL SELECT</button>
-                <button onClick={() => {
-                  const companionId = searchParams.get('companion');
-                  navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-                }} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm border border-white/5">
-                  EXIT GAME
-                </button>
-              </div>
-            </>
-          ) : gameMode === 'daily' ? (
-            <>
-              <p className="text-white/30 text-xs tracking-[0.2em] mb-1">DAILY CLIMB · {todayKey()}</p>
-              <h2 className="text-3xl font-extralight text-white mb-1">{levelData?.levelName}</h2>
-              <p className="text-emerald-400/80 tracking-[0.2em] text-sm mb-6">COMPLETE</p>
-              <p className="text-white/40 text-xs">TIME</p>
-              <p className="text-white text-4xl font-light mb-1">{finalTime.toFixed(2)}s</p>
-              {runResult.newBest && <p className="text-yellow-300 text-sm mb-4">New personal best!</p>}
-              <div className="my-6">
-                <LeaderboardPanel mode="daily" period={todayKey()} refreshKey={runResult.leaderboardKey} />
-              </div>
-              <div className="flex gap-3 justify-center">
-                <button autoFocus onClick={retryLevel} className="px-12 py-4 bg-white/20 hover:bg-white/25 text-white rounded-full transition-all text-base font-medium border border-white/30 whitespace-nowrap">RETRY ↻</button>
-                <button onClick={() => setGameState('modeSelect')} className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm border border-white/5">MODES</button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-white/30 text-xs tracking-[0.2em] mb-1">LEVEL {level}</p>
-              <h2 className="text-3xl font-extralight text-white mb-1">{levelData?.levelName}</h2>
-              <p className="text-emerald-400/80 tracking-[0.2em] text-sm mb-6">COMPLETE</p>
-
-              <div className="text-center mb-8 space-y-2">
-                <p className="text-white/40 text-xs">TIME</p>
-                <p className="text-white text-2xl font-light">{finalTime.toFixed(1)}s</p>
-                {speedBonus > 0 && (
-                  <p className="text-emerald-400 text-sm">+{speedBonus.toLocaleString()} SPEED BONUS</p>
-                )}
-              </div>
-
-              <p className="text-white/40 text-xs mb-1">TOTAL SCORE</p>
-              <p className="text-white text-4xl font-extralight mb-10">{score.toLocaleString()}</p>
-
-              <div className="flex gap-4 justify-center">
-                <button onClick={nextLevel} className="px-14 py-4 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all tracking-[0.15em] text-sm border border-white/10">
-                  NEXT LEVEL
-                </button>
-                <button onClick={() => {
-                  const companionId = searchParams.get('companion');
-                  navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-                }} className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm border border-white/5">
-                  EXIT GAME
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'careerFailed') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-950 via-rose-900 to-orange-950 flex items-center justify-center">
-        <div className="max-w-md w-full text-center p-6">
-          <div className="text-6xl mb-4">⏱️</div>
-          <h2 className="text-3xl font-extralight text-white mb-1">TIME'S UP</h2>
-          <p className="text-white/30 text-xs tracking-wider mb-8">
-            {currentCareerLevel ? `${currentCareerLevel.name} • ${currentCareerLevel.timeLimit}s limit` : ''}
-          </p>
-
-          <p className="text-white/60 text-sm mb-10">You need to complete the level faster. Use boost strategically and take the shortest path!</p>
-
-          <div className="flex flex-col gap-3 justify-center">
-            {currentCareerLevel && (
-              <button autoFocus onClick={retryLevel} className="px-14 py-4 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all tracking-[0.15em] text-sm border border-white/10">
-                TRY AGAIN
-              </button>
-            )}
-            <button onClick={() => setGameState('careerLevelSelect')} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">LEVEL SELECT</button>
-            <button onClick={() => {
-              const companionId = searchParams.get('companion');
-              navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-            }} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm border border-white/5">
-              EXIT GAME
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'gameOver') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-950 via-rose-900 to-pink-950 flex items-center justify-center">
-        <div className="max-w-md w-full text-center p-6">
-          <h2 className="text-3xl font-extralight text-white mb-1">{gameMode === 'endless' ? 'SWALLOWED BY LAVA' : 'MOMENTUM LOST'}</h2>
-          <p className="text-white/30 text-xs tracking-wider mb-8">
-            {gameMode === 'endless' ? `Endless · ${levelData?.levelName}` : gameMode === 'daily' ? `Daily Climb · ${todayKey()}` : `Level ${level} · ${levelData?.levelName}`}
-          </p>
-
-          {gameMode === 'endless' ? (
-            <>
-              <p className="text-white/40 text-xs mb-1">HEIGHT</p>
-              <p className="text-white text-5xl font-extralight mb-1">{runResult.height.toLocaleString()}m</p>
-              <p className={`text-sm mb-6 ${runResult.newBest ? 'text-yellow-300' : 'text-white/40'}`}>
-                {runResult.newBest ? 'New personal best!' : `Best: ${runResult.bestHeight.toLocaleString()}m`}
-              </p>
-              <div className="mb-8">
-                <LeaderboardPanel mode="endless" period={todayKey()} refreshKey={runResult.leaderboardKey} />
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-white/40 text-xs mb-1">FINAL SCORE</p>
-              <p className="text-white text-4xl font-extralight mb-10">{score.toLocaleString()}</p>
-            </>
-          )}
-
-          <div className="flex gap-4 justify-center">
-            <button autoFocus onClick={retryLevel} className="px-12 py-4 bg-white/20 hover:bg-white/25 text-white rounded-full transition-all text-base font-medium border border-white/30 whitespace-nowrap">RETRY ↻</button>
-            <button onClick={restart} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">RESTART</button>
-            <button onClick={() => {
-              const companionId = searchParams.get('companion');
-              navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
-            }} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white/60 rounded-full transition-all text-sm border border-white/5">
-              EXIT GAME
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (gameState === 'gameOver') return <GameOverScreen {...screenProps} />;
 
   return null;
 }

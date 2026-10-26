@@ -1,5 +1,9 @@
 // Pure tuning + physics helpers for Momentum. All values are per fixed 60Hz step.
 
+export const PLAYER_WIDTH = 22;
+export const PLAYER_HEIGHT = 22;
+export const PLATFORM_HEIGHT = 14;
+
 export const STEP_MS = 1000 / 60;
 export const MAX_FRAME_MS = 100; // clamp long frames (tab switch) to avoid spiral of death
 
