@@ -240,20 +240,10 @@ export function answersFromSomeday(picks: SomedayPick[]): Record<string, string[
   return out;
 }
 
-/** The old swipe deck, kept for the daily feed card. */
-export const TASTE_DECK_CARDS = [
-  { left: { label: 'Gaming night', icon: 'Gamepad2' }, right: { label: 'Sunrise hike', icon: 'Sunrise' } },
-  { left: { label: 'Cook at home', icon: 'Utensils' }, right: { label: 'Try a new restaurant', icon: 'MapPin' } },
-  { left: { label: 'Road trip', icon: 'Car' }, right: { label: 'Stay in & recharge', icon: 'Home' } },
-  { left: { label: 'Live at the game', icon: 'Trophy' }, right: { label: 'On the couch', icon: 'Tv' } },
-  { left: { label: 'Dive bar', icon: 'Wine' }, right: { label: 'Rooftop spot', icon: 'Building' } },
-  { left: { label: 'Gym at 6am', icon: 'Dumbbell' }, right: { label: 'Sleep in', icon: 'Moon' } },
-];
-
 // ─── Act 1: the quick questionnaire ─────────────────────────────────────
 // name → color → nickname → birthday → zodiac → gender → interests → Someday.
 // Each answer is saved as it's given. The "wavelength" questions are asked by
-// Atlas in conversation now, and the swipe deck lives in the feed.
+// Atlas in conversation now.
 
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 10,

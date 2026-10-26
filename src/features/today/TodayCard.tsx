@@ -178,7 +178,12 @@ export function TodayCard() {
     <section
       aria-label="Today"
       className="mx-4 mt-3 mb-2 rounded-2xl"
-      style={{ background: 'var(--ds-surface-1)', border: '1px solid var(--ds-border)' }}
+      // Tinted with the accent so Today stands apart from the feed below it.
+      style={{
+        background: 'linear-gradient(180deg, color-mix(in srgb, var(--ds-accent) 16%, var(--ds-surface-2)), color-mix(in srgb, var(--ds-accent) 7%, var(--ds-surface-1)))',
+        border: '1px solid color-mix(in srgb, var(--ds-accent) 38%, transparent)',
+        boxShadow: '0 6px 24px color-mix(in srgb, var(--ds-accent) 14%, transparent)',
+      }}
     >
       <header className="flex items-center gap-3 px-4 pt-3.5 pb-2">
         <div className="min-w-0 flex-1">

@@ -22,3 +22,4 @@ dist-ssr
 *.sw?
 .env
 e2e/velvet-sims/test-results/
+supabase/.temp/

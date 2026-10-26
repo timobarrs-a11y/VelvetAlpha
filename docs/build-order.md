@@ -12,7 +12,7 @@ Everything below is built on one branch. Before deploying, apply the new migrati
 |---|---|
 | `20261029100000_real_people_birthday_year_known.sql` | `real_people.birthday_year_known` (birthdays are stored on `real_people`; year 2000 stands in when the year isn't known) |
 | `20261029110000_goals_assistants_and_arrival.sql` | the `assistant` relationship type; `scheduled_for`, `duration_minutes`, `phase` on plan steps; `someday`, `address_style`, `arrival_choices` on profiles; the arrival setup steps |
-| `20261029120000_user_profiles_taste_picks.sql` | `user_profiles.taste_picks` for "this or that" |
+| `20261029120000_user_profiles_taste_picks.sql` | `user_profiles.taste_picks` for "this or that" (the card has since been removed; the column is unused) |
 
 Then deploy the changed edge functions: `chat-turn`, `atlas-onboarding`, `atlas-agent`,
 `coach-tools`, `generate-opener`, `proactive-check-in-scheduler`, `morning-brief`, `sync-coach`.
@@ -31,7 +31,7 @@ Then deploy the changed edge functions: `chat-turn`, `atlas-onboarding`, `atlas-
 | 10 | G5 | Web search for helpers and Atlas; the search button tied to a goal, commitment or step; nudges and today's steps in the brief | `_shared/webSearch.ts`, `features/search/`, scheduler, `morningBriefService` |
 | 11 | G6 | Coaches teach: the teaching loop, what each coach teaches, the scripted learner | `coachFramework.ts` (both), `scripts/coach-teaching-eval.ts` |
 | 12 | G7 | Goals and Your team in the menu, Coach and Assistant badges, Today icons | `SignedInWorkspace`, `relationshipType.ts` |
-| 13 | A4 | "This or that" in the feed; the companion asks love language and "when it's hard" in week one | `features/feed/`, `_shared/companionWeekOne.ts` |
+| 13 | A4 | The companion asks love language and "when it's hard" in week one ("this or that" in the feed was removed) | `_shared/companionWeekOne.ts` |
 
 The two eval scripts need `ANTHROPIC_API_KEY` and call the live API:
 `scripts/atlas-arrival-eval.ts` and `scripts/coach-teaching-eval.ts`.
