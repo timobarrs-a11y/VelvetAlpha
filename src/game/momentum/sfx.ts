@@ -35,6 +35,12 @@ class MomentumSfx {
     return this.ctx;
   }
 
+  /** Shared audio graph for the music engine, so mute and volume cover both. */
+  output(): { ctx: AudioContext; master: GainNode } | null {
+    const ctx = this.ensureCtx();
+    return ctx && this.master ? { ctx, master: this.master } : null;
+  }
+
   /** Call from a user gesture so mobile browsers allow audio. */
   unlock() {
     this.ensureCtx();
@@ -122,6 +128,15 @@ class MomentumSfx {
 
   fall() {
     this.tone(500, 0.6, 'triangle', 0.2, 80);
+  }
+
+  overdrive() {
+    this.noise(0.6, 0.3, 300, 6000);
+    [0, 7, 12, 16, 19, 24].forEach((st, i) => this.tone(220 * Math.pow(2, st / 12), 0.5, 'sawtooth', 0.07, undefined, i * 0.05));
+  }
+
+  overdriveEnd() {
+    this.tone(880, 0.4, 'triangle', 0.12, 330);
   }
 
   win() {

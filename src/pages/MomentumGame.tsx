@@ -18,7 +18,13 @@ import {
   MAX_CHAIN,
   comboMultiplier,
   climbBroken,
+  OVERDRIVE_FRAMES,
+  OVERDRIVE_EXTEND_FRAMES,
+  OVERDRIVE_MAX_FRAMES,
+  OVERDRIVE_SCORE_MULTIPLIER,
+  magnetVx,
 } from '../game/momentum/physics';
+import { momentumMusic, musicIntensity } from '../game/momentum/music';
 import {
   type TouchSettings,
   type SteerSensitivity,
@@ -156,6 +162,8 @@ export function MomentumGame() {
   const landingFrameRef = useRef(-9999);
   const boostPressFrameRef = useRef(0);
   const perfectStreakRef = useRef(0);
+  const overdriveRef = useRef(0);
+  const musicLevelRef = useRef(0);
   const perfectedThisBounceRef = useRef(false);
   const [touchSettings, setTouchSettings] = useState<TouchSettings>(loadTouchSettings);
   const touchSettingsRef = useRef(touchSettings);
@@ -303,6 +311,9 @@ export function MomentumGame() {
     landingFrameRef.current = -9999;
     perfectStreakRef.current = 0;
     perfectedThisBounceRef.current = false;
+    overdriveRef.current = 0;
+    musicLevelRef.current = 0;
+    momentumMusic.setIntensity(0);
     carryVxRef.current = 0;
     ghostRecRef.current = [];
     shakeRef.current = 0;
@@ -387,6 +398,7 @@ export function MomentumGame() {
     lastPlatformYRef.current = player.y; // Reset last platform Y on respawn
     touchTargetXRef.current = null;
     steerPointerRef.current = null;
+    endOverdrive();
   };
 
   const saveGameStats = async (completed: boolean) => {
@@ -418,6 +430,15 @@ export function MomentumGame() {
         opacity: 0.1 + Math.random() * 0.3
       });
     }
+  };
+
+  const scoreMultiplier = () =>
+    comboMultiplier(comboRef.current) * (overdriveRef.current > 0 ? OVERDRIVE_SCORE_MULTIPLIER : 1);
+
+  const endOverdrive = () => {
+    if (overdriveRef.current <= 0) return;
+    overdriveRef.current = 0;
+    momentumSfx.overdriveEnd();
   };
 
   // Presses are buffered for a few frames so an early or mistimed press is never lost
@@ -622,6 +643,7 @@ export function MomentumGame() {
         // Perfect bounce: pressing right after landing is free, builds momentum and launches much higher
         perfectStreakRef.current++;
         perfectedThisBounceRef.current = true;
+        const wasMaxMomentum = chainRef.current >= MAX_CHAIN;
         chainRef.current = Math.min(MAX_CHAIN, chainRef.current + 1);
         player.vy = Math.min(player.vy, perfectBounceVelocity(level, chainRef.current, lastLandingSpringRef.current));
         boostBufferRef.current = 0;
@@ -635,9 +657,24 @@ export function MomentumGame() {
         haptic(25);
         momentumSfx.perfect(streak);
         updateStats(st => ({ perfects: st.perfects + 1 }));
-        scoreRef.current += Math.round(100 * streak * comboMultiplier(comboRef.current));
+        if (overdriveRef.current > 0) {
+          overdriveRef.current = Math.min(OVERDRIVE_MAX_FRAMES, overdriveRef.current + OVERDRIVE_EXTEND_FRAMES);
+        } else if (wasMaxMomentum) {
+          // Overdrive: a perfect bounce at max momentum
+          overdriveRef.current = OVERDRIVE_FRAMES;
+          hitStopRef.current = 6;
+          shakeRef.current = 10;
+          flashRef.current = 0.5;
+          popupRef.current = { text: 'OVERDRIVE!', life: 1.4, color: '#ff4fd8' };
+          momentumSfx.overdrive();
+          haptic(40);
+          const stats = updateStats(st => ({ overdrives: st.overdrives + 1 }));
+          setLifetimeStats(stats);
+          trackMomentum('overdrive', { mode: runModeRef.current, level, time: Number(elapsedTimeRef.current.toFixed(1)) });
+        }
+        scoreRef.current += Math.round(100 * streak * scoreMultiplier());
         spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, '#ffe066', 18, 14);
-      } else if (player.boostCharges > 0 && boostCooldownRef.current === 0) {
+      } else if ((player.boostCharges > 0 || overdriveRef.current > 0) && boostCooldownRef.current === 0) {
         player.vy = boostVelocity(player.vy);
         // Apply horizontal kick based on current intent (touch or keyboard)
         if (touchX !== null) {
@@ -650,13 +687,13 @@ export function MomentumGame() {
           if (keys.left) player.vx -= BOOST_HORIZONTAL;
           if (keys.right) player.vx += BOOST_HORIZONTAL;
         }
-        player.boostCharges--;
+        if (overdriveRef.current <= 0) player.boostCharges--;
         haptic(12);
         momentumSfx.boost();
         player.isBoosting = true;
         player.boostTimer = 25;
         boostBufferRef.current = 0;
-        boostCooldownRef.current = BOOST_COOLDOWN_FRAMES;
+        boostCooldownRef.current = overdriveRef.current > 0 ? Math.floor(BOOST_COOLDOWN_FRAMES / 2) : BOOST_COOLDOWN_FRAMES;
         hitStopRef.current = 2;
         shakeRef.current = 4;
         flashRef.current = 0.18;
@@ -680,6 +717,32 @@ export function MomentumGame() {
       if (trailRef.current.length > 20) trailRef.current.shift();
     }
     trailRef.current = trailRef.current.filter(t => { t.life -= 0.08; return t.life > 0; });
+
+    if (overdriveRef.current > 0) {
+      overdriveRef.current--;
+      if (overdriveRef.current === 0) {
+        momentumSfx.overdriveEnd();
+        popupRef.current = { text: 'OVERDRIVE OVER', life: 0.6, color: '#ffffff' };
+      }
+      // Landing assist: pull toward the platform the ball is falling onto
+      if (player.vy > 0) {
+        const ballCenterX = player.x + PLAYER_WIDTH / 2;
+        const ballBottom = player.y + PLAYER_HEIGHT;
+        let target: Platform | null = null;
+        for (const pl of platformsRef.current) {
+          if (pl.crumbled || pl.y < ballBottom || pl.y > ballBottom + 260) continue;
+          if (!isPhaseSolid(pl, simFrameRef.current)) continue;
+          if (!target || Math.abs(pl.x + pl.width / 2 - ballCenterX) < Math.abs(target.x + target.width / 2 - ballCenterX)) target = pl;
+        }
+        if (target) player.vx = magnetVx(player.vx, ballCenterX, target.x + target.width / 2);
+      }
+    }
+
+    const musicLevel = musicIntensity(chainRef.current, overdriveRef.current > 0);
+    if (musicLevel !== musicLevelRef.current) {
+      musicLevelRef.current = musicLevel;
+      momentumMusic.setIntensity(musicLevel);
+    }
 
     player.vy += GRAVITY;
     if (player.vy > 18) player.vy = 18;
@@ -730,7 +793,7 @@ export function MomentumGame() {
 
     if (player.y < highestYRef.current) {
       const heightGained = highestYRef.current - player.y;
-      scoreRef.current += Math.floor(heightGained * comboMultiplier(comboRef.current));
+      scoreRef.current += Math.floor(heightGained * scoreMultiplier());
       highestYRef.current = player.y;
     }
 
@@ -757,7 +820,11 @@ export function MomentumGame() {
 
         const isSpring = platform.type === 'spring';
         const prevChain = chainRef.current;
-        if (climbBroken(player.y, prevLandingYRef.current, framesSinceLandingRef.current)) comboRef.current = 0;
+        if (climbBroken(player.y, prevLandingYRef.current, framesSinceLandingRef.current)) {
+          comboRef.current = 0;
+          if (prevChain > 0) momentumMusic.drop();
+          endOverdrive();
+        }
         // A landing that wasn't perfected ends the perfect streak
         if (!perfectedThisBounceRef.current) perfectStreakRef.current = 0;
         perfectedThisBounceRef.current = false;
@@ -796,7 +863,7 @@ export function MomentumGame() {
             platform.touched = true;
             player.boostCharges = Math.min(MAX_BOOST_CHARGES, player.boostCharges + 1);
             const pointMultiplier = platform.type === 'spring' || platform.isFar ? 2 : 1;
-            scoreRef.current += Math.round(50 * comboMultiplier(comboRef.current) * pointMultiplier);
+            scoreRef.current += Math.round(50 * scoreMultiplier() * pointMultiplier);
 
             if (platform.isFar) {
               // Sky hop: the fast side platforms are a risky shortcut, so pay out for them
@@ -922,13 +989,45 @@ export function MomentumGame() {
     renderFrame(ctx, {
       GAME_WIDTH, GAME_HEIGHT, levelData, player, platforms, camY, isTrueFalling, isRisingFast,
       level, gameMode, timeRemaining, isTouchDevice,
-      chainRef, comboRef, elapsedTimeRef, landingFrameRef, perfectedThisBounceRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
+      chainRef, comboRef, elapsedTimeRef, landingFrameRef, perfectedThisBounceRef, overdriveRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
       orbsRef, particlesRef, popupRef, runModeRef, scoreRef, shakeRef, simFrameRef, skinRef, speedLinesRef,
       startYRef, tapFxRef, trailRef,
     });
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
   }, [gameState, levelData, isTouchDevice]);
+
+  // Music plays only while a run is live
+  useEffect(() => {
+    if (gameState === 'playing' && !isPaused && !showTutorial) momentumMusic.start();
+    else momentumMusic.stop();
+  }, [gameState, isPaused, showTutorial]);
+
+  useEffect(() => () => momentumMusic.stop(), []);
+
+  // Dev-only hooks for automated tests and tuning; stripped from production builds
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __momentumDebug?: unknown };
+    w.__momentumDebug = {
+      state: () => ({
+        chain: chainRef.current,
+        combo: comboRef.current,
+        overdrive: overdriveRef.current,
+        charges: playerRef.current.boostCharges,
+        score: scoreRef.current,
+        music: musicLevelRef.current,
+      }),
+      triggerOverdrive: () => {
+        chainRef.current = MAX_CHAIN;
+        overdriveRef.current = OVERDRIVE_FRAMES;
+        momentumSfx.overdrive();
+      },
+    };
+    return () => {
+      delete w.__momentumDebug;
+    };
+  }, []);
 
   useEffect(() => {
     if (gameState === 'playing' && isTouchDevice && !hasSeenTutorial()) {
@@ -1287,7 +1386,8 @@ export function MomentumGame() {
             </div>
             <p className="text-white/60 text-sm mb-2">Everything works with one thumb.</p>
             <p className="text-white/60 text-sm mb-2">Climb higher each bounce to build momentum.</p>
-            <p className="text-white/60 text-sm mb-8">Boost right as you land for a free PERFECT bounce.</p>
+            <p className="text-white/60 text-sm mb-2">Boost right as you land for a free PERFECT bounce.</p>
+            <p className="text-white/60 text-sm mb-8">Hit a PERFECT at max momentum to trigger OVERDRIVE.</p>
             <button
               onClick={dismissTutorial}
               className="px-12 py-3 bg-white/15 text-white rounded-full text-sm border border-white/30"

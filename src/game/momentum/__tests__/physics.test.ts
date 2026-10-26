@@ -66,3 +66,21 @@ describe('combo and career timing', () => {
     expect(careerLevels[9].timeLimit).toBeGreaterThan(careerLevels[0].timeLimit);
   });
 });
+
+describe('overdrive and music', () => {
+  it('magnet pulls toward a nearby platform and ignores far ones', async () => {
+    const { magnetVx } = await import('../physics');
+    expect(magnetVx(0, 100, 160)).toBeGreaterThan(0);
+    expect(magnetVx(0, 200, 140)).toBeLessThan(0);
+    expect(magnetVx(1, 100, 500)).toBe(1);
+  });
+
+  it('music intensity follows momentum and peaks in overdrive', async () => {
+    const { musicIntensity } = await import('../music');
+    expect(musicIntensity(0, false)).toBe(0);
+    expect(musicIntensity(2, false)).toBe(1);
+    expect(musicIntensity(4, false)).toBe(2);
+    expect(musicIntensity(6, false)).toBe(3);
+    expect(musicIntensity(0, true)).toBe(4);
+  });
+});

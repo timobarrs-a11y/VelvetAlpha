@@ -64,3 +64,18 @@ export const comboMultiplier = (combo: number): number => 1 + Math.min(combo, MA
 /** True when a landing loses the climb: lower than the previous landing, or too long since it. */
 export const climbBroken = (landingY: number, prevLandingY: number | null, framesSinceLanding: number): boolean =>
   prevLandingY !== null && (landingY > prevLandingY + 5 || framesSinceLanding > CHAIN_WINDOW_FRAMES);
+
+// Overdrive: a perfect bounce at max momentum. Free boosts, double score and a landing assist.
+export const OVERDRIVE_FRAMES = 300; // 5s
+export const OVERDRIVE_EXTEND_FRAMES = 60; // each perfect during Overdrive adds 1s
+export const OVERDRIVE_MAX_FRAMES = 600;
+export const OVERDRIVE_SCORE_MULTIPLIER = 2;
+const MAGNET_RANGE_X = 140;
+const MAGNET_STRENGTH = 0.06;
+
+/** While falling in Overdrive, gently pull the ball toward the platform it is heading for. */
+export const magnetVx = (vx: number, ballCenterX: number, targetCenterX: number): number => {
+  const dx = targetCenterX - ballCenterX;
+  if (Math.abs(dx) > MAGNET_RANGE_X) return vx;
+  return vx + dx * MAGNET_STRENGTH * (1 - Math.abs(dx) / MAGNET_RANGE_X);
+};

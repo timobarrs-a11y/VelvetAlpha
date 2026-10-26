@@ -72,7 +72,7 @@ export function MenuScreen(p: ScreenProps) {
               <span className="px-4 py-2 bg-cyan-500/20 rounded-lg text-cyan-300 text-xs">SPACE Boost</span>
             </div>
             )}
-            <p className="text-gray-600 text-xs">Checkpoints save progress • Speed bonus at finish</p>
+            <p className="text-gray-600 text-xs">Climb fast to build momentum • Perfect at max momentum = OVERDRIVE</p>
           </div>
 
           <div className="mt-8">
