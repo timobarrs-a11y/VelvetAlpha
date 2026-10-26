@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  normalizeMemoryText, isNearDuplicate, selectMemories, formatMemoryLine, formatAsOf, isGroundedIn,
+  normalizeMemoryText, isNearDuplicate, mayContradict, selectMemories, formatMemoryLine, formatAsOf, isGroundedIn,
   looksLikeInstruction, findDuplicateGroups, embedTexts, toPgVector, DEFAULT_FACT_SELECTION,
   EMBEDDING_DIMENSIONS, type MemoryCandidate,
 } from '../../../supabase/functions/_shared/memoryEngine';
@@ -33,6 +33,15 @@ describe('isNearDuplicate', () => {
     const b = 'User wants to open their mind to more concepts and engage in more general thinking';
     expect(isNearDuplicate(a, b)).toBe(true);
     expect(isNearDuplicate(a, b, 'strict')).toBe(false);
+  });
+  it('never matches statements that differ by a negation or a number', () => {
+    expect(isNearDuplicate('User eats red meat', "User doesn't eat red meat", 'strict')).toBe(false);
+    expect(isNearDuplicate('User eats red meat', "User doesn't eat red meat")).toBe(false);
+    expect(isNearDuplicate('User has 2 kids', 'User has 3 kids')).toBe(false);
+    expect(isNearDuplicate('User works at Acme', 'User no longer works at Acme')).toBe(false);
+    expect(isNearDuplicate('User smokes', 'User used to smoke')).toBe(false);
+    expect(mayContradict('User has 2 kids', 'User has two kids and a dog')).toBe(true);
+    expect(mayContradict('User reads mystery novels', 'User reads mystery novels.')).toBe(false);
   });
   it('keeps distinct facts apart', () => {
     expect(isNearDuplicate('User has a dog named Biscuit', 'User is allergic to cats')).toBe(false);
@@ -127,6 +136,20 @@ describe('findDuplicateGroups', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].keep.id).toBe('c');
     expect(groups[0].drop.map(d => d.id).sort()).toEqual(['a', 'b']);
+  });
+  it('never folds a shared memory into a companion-only one', () => {
+    const groups = findDuplicateGroups([
+      { id: 'a', kind: 'fact', content: 'User reads mystery novels', source: 'inferred', created_at: '2026-10-01T00:00:00Z', companion_id: 'c1', scope: 'companion' },
+      { id: 'b', kind: 'fact', content: 'User reads mystery novels', source: 'inferred', created_at: '2026-10-02T00:00:00Z', companion_id: null, scope: 'global' },
+    ]);
+    expect(groups).toHaveLength(0);
+  });
+  it('never folds contradictions', () => {
+    const groups = findDuplicateGroups([
+      { id: 'a', kind: 'fact', content: 'User eats red meat', source: 'inferred', confirm_count: 5, created_at: '2026-10-01T00:00:00Z' },
+      { id: 'b', kind: 'fact', content: "User doesn't eat red meat", source: 'inferred', created_at: '2026-10-09T00:00:00Z' },
+    ]);
+    expect(groups).toHaveLength(0);
   });
   it('uses embeddings when present', () => {
     const v = [1, 0, 0];

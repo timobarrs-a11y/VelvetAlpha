@@ -49,7 +49,8 @@ function stem(word: string): string {
 export function contentTokens(text: string): Set<string> {
   const out = new Set<string>();
   for (const w of normalizeMemoryText(text).split(' ')) {
-    if (w.length < 2 || STOPWORDS.has(w)) continue;
+    // Single digits stay: "2 kids" and "3 kids" must not look alike.
+    if ((w.length < 2 && !/\d/.test(w)) || STOPWORDS.has(w)) continue;
     out.add(stem(w));
   }
   return out;
@@ -82,6 +83,27 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return norm === 0 ? 0 : dot / norm;
 }
 
+// Words that flip or end a statement. "t" is what's left of "doesn't" etc.
+const NEGATIONS = new Set([
+  'not', 'no', 'never', 'none', 'nothing', 'nobody', 'nor', 'without', 't', 'cannot', 'dont', 'doesnt', 'didnt',
+  'isnt', 'wasnt', 'arent', 'werent', 'wont', 'cant', 'anymore', 'longer', 'ex', 'former', 'formerly', 'stopped',
+  'quit', 'quitting', 'used',
+]);
+
+/**
+ * The two texts differ by a negation or a number, so they may say opposite
+ * things ("eats red meat" / "doesn't eat red meat", "2 kids" / "3 kids").
+ * Such pairs are never treated as duplicates, however many words they share.
+ */
+export function mayContradict(a: string, b: string): boolean {
+  const wa = new Set(normalizeMemoryText(a).split(' '));
+  const wb = new Set(normalizeMemoryText(b).split(' '));
+  const differs = (w: string) => NEGATIONS.has(w) || /\d/.test(w);
+  for (const w of wa) if (!wb.has(w) && differs(w)) return true;
+  for (const w of wb) if (!wa.has(w) && differs(w)) return true;
+  return false;
+}
+
 /**
  * Two memories say the same thing. Loose mode also treats "X" and "X plus
  * detail" as duplicates (fine for keeping a prompt diverse); strict mode only
@@ -89,6 +111,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
  */
 export function isNearDuplicate(a: string, b: string, mode: 'loose' | 'strict' = 'loose'): boolean {
   if (normalizeMemoryText(a) === normalizeMemoryText(b)) return true;
+  if (mayContradict(a, b)) return false;
   const ta = contentTokens(a);
   const tb = contentTokens(b);
   if (mode === 'strict') return jaccard(ta, tb) >= 0.75;
@@ -113,7 +136,7 @@ export interface SelectionOptions {
 export const DEFAULT_FACT_SELECTION: SelectionOptions = {
   maxItems: 12,
   maxTokens: 900,
-  minRelevance: 0.15,
+  minRelevance: 0.2,
   backgroundSlots: 5,
   lambda: 0.7,
 };
@@ -121,7 +144,7 @@ export const DEFAULT_FACT_SELECTION: SelectionOptions = {
 export const DEFAULT_THREAD_SELECTION: SelectionOptions = {
   maxItems: 4,
   maxTokens: 300,
-  minRelevance: 0.15,
+  minRelevance: 0.2,
   backgroundSlots: 2,
   lambda: 0.6,
 };
@@ -242,6 +265,8 @@ export interface DuplicateItem {
   recall_count?: number | null;
   created_at: string;
   embedding?: number[] | null;
+  companion_id?: string | null;
+  scope?: string;
 }
 
 /** Which of two duplicates to keep: user-stated beats inferred, then the most reinforced, then the oldest. */
@@ -261,7 +286,8 @@ function better(a: DuplicateItem, b: DuplicateItem): boolean {
 }
 
 /**
- * Group near-duplicate memories of the same kind. Returns one entry per group
+ * Group near-duplicate memories of the same kind and visibility (a shared
+ * memory is never folded into one only a single companion can see). Returns one entry per group
  * with the row to keep and the rows to fold into it.
  */
 export function findDuplicateGroups(
@@ -273,8 +299,8 @@ export function findDuplicateGroups(
   const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
-      if (items[i].kind !== items[j].kind) continue;
       const a = items[i], b = items[j];
+      if (a.kind !== b.kind || (a.companion_id ?? null) !== (b.companion_id ?? null) || a.scope !== b.scope) continue;
       const textDup = isNearDuplicate(a.content, b.content, 'strict');
       // Vectors alone can't tell "lives in Denver" from "lives in Boulder";
       // a vector match also needs real word overlap so contradictions never merge.

@@ -83,6 +83,20 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      // The RPC trusts the service role, so ownership is checked here.
+      const { data: owned } = await admin
+        .from("memory_items")
+        .select("id, companion_id, shared_origin_companion_id")
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!owned) {
+        return new Response(JSON.stringify({ error: "Memory not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { data: result, error } = await admin.rpc("update_memory_item", {
         p_id: id,
         p_base_version: baseVersion,
@@ -93,14 +107,18 @@ Deno.serve(async (req: Request) => {
 
       if (error) throw error;
 
-      // Log a memory_event for the edit
-      await admin.from("memory_events").insert({
-        user_id: user.id,
-        companion_id: body.companionId ?? null,
-        memory_item_id: id,
-        event_type: "correction",
-        payload: { action: "user_edit", new_content: content },
-      }).then(() => {}).catch(() => {});
+      // Log a memory_event for the edit (events need a companion; a shared
+      // memory is attributed to the companion that first heard it)
+      const eventCompanion = owned.companion_id ?? owned.shared_origin_companion_id ?? body.companionId ?? null;
+      if (eventCompanion) {
+        await admin.from("memory_events").insert({
+          user_id: user.id,
+          companion_id: eventCompanion,
+          memory_item_id: id,
+          event_type: "correction",
+          payload: { action: "user_edit", new_content: content },
+        }).then(() => {}, () => {});
+      }
 
       if (!result) {
         return new Response(JSON.stringify({ error: "Version conflict — someone else edited this memory. Please refresh." }), {
@@ -114,7 +132,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // DELETE (forget) — set status to 'retired' and scrub content
+    // FORGET — retire the memory and scrub its text from every copy: earlier
+    // versions, history, events, proposals and the companion summary.
     if (action === "forget") {
       const { id } = body;
       if (!id) {
@@ -124,10 +143,9 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // Read current version for optimistic concurrency
       const { data: item } = await admin
         .from("memory_items")
-        .select("id, version")
+        .select("id, companion_id, shared_origin_companion_id")
         .eq("id", id)
         .eq("user_id", user.id)
         .maybeSingle();
@@ -139,24 +157,30 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const { error } = await admin.rpc("update_memory_item", {
-        p_id: id,
-        p_base_version: item.version,
-        p_patch: { status: "retired", content: "[forgotten by user]" },
-        p_actor_type: "user",
-      });
-
+      const { error } = await admin.rpc("forget_memory_item", { p_id: id, p_user_id: user.id });
       if (error) throw error;
 
-      await admin.from("memory_events").insert({
-        user_id: user.id,
-        companion_id: body.companionId ?? null,
-        memory_item_id: id,
-        event_type: "correction",
-        payload: { action: "user_forgot" },
-      }).then(() => {}).catch(() => {});
+      const eventCompanion = item.companion_id ?? item.shared_origin_companion_id ?? body.companionId ?? null;
+      if (eventCompanion) {
+        await admin.from("memory_events").insert({
+          user_id: user.id,
+          companion_id: eventCompanion,
+          memory_item_id: id,
+          event_type: "correction",
+          payload: { action: "user_forgot" },
+        }).then(() => {}, () => {});
+      }
 
       return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // CLEAR — forget everything every companion remembers about this user.
+    if (action === "clear") {
+      const { data: cleared, error } = await admin.rpc("clear_user_memory", { p_user_id: user.id });
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, cleared: cleared ?? 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

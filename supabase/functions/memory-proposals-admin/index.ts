@@ -91,13 +91,32 @@ Deno.serve(async (req: Request) => {
 
       const applyContent = editedAfter ?? proposal.after;
 
+      // For a merge (or a supersede with no replacement text) the kept memory
+      // is the first evidence id that is another active memory of this user.
+      const evidenceIds = (Array.isArray(proposal.evidence) ? proposal.evidence : [])
+        .filter((e: unknown): e is string => typeof e === "string" && e !== proposal.target_id);
+      let keepId: string | null = null;
+      if (evidenceIds.length > 0) {
+        const { data: keepers } = await admin
+          .from("memory_items")
+          .select("id")
+          .in("id", evidenceIds.filter((e: string) => /^[0-9a-f-]{36}$/i.test(e)))
+          .eq("user_id", proposal.user_id)
+          .eq("status", "active");
+        const active = new Set((keepers ?? []).map((k: { id: string }) => k.id));
+        keepId = evidenceIds.find((e: string) => active.has(e)) ?? null;
+      }
+      const isFold = proposal.action === "merge" || (proposal.action === "supersede" && !applyContent);
+
       try {
         let applied: { data: unknown; error: { message: string } | null } | null = null;
-        if (proposal.action === "retire" || proposal.action === "merge") {
+        if (proposal.action === "retire" || isFold) {
           applied = await admin.rpc("update_memory_item", {
             p_id: proposal.target_id,
             p_base_version: proposal.base_version ?? 0,
-            p_patch: { status: proposal.action === "merge" ? "superseded" : "retired" },
+            p_patch: isFold && keepId
+              ? { status: "superseded", superseded_by: keepId }
+              : { status: "retired" },
             p_actor_type: "admin",
           });
         } else if (proposal.action === "supersede" && applyContent) {
@@ -105,7 +124,7 @@ Deno.serve(async (req: Request) => {
           applied = await admin.rpc("supersede_memory_item", {
             p_id: proposal.target_id,
             p_base_version: proposal.base_version ?? 0,
-            p_patch: { content: applyContent, source: "user_stated", confidence: 0.9 },
+            p_patch: { content: applyContent, source: "dream", confidence: 0.85 },
             p_actor_type: "admin",
           });
         } else if (proposal.action === "edit" && applyContent) {

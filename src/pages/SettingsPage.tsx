@@ -309,13 +309,16 @@ export function SettingsPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const tables = ['companion_memories', 'companion_memory', 'relationship_memories', 'conversation_summaries', 'semantic_memories'];
-      // Also retire all memory_items for this user
-      await supabase.from('memory_items').update({ status: 'retired', content: '[cleared by user]' }).eq('user_id', user.id).eq('status', 'active').then(() => {}).catch(() => {});
-      const results = await Promise.allSettled(
+      // The main memory store is write-protected from the browser; the server
+      // retires and scrubs it (history and summaries included).
+      const { error: clearError } = await supabase.functions.invoke('memory-mutate', { body: { action: 'clear' } });
+      if (clearError) throw new Error('Could not clear memory. Please try again.');
+      // Legacy stores the browser may still clean up itself.
+      const tables = ['companion_memory', 'relationship_memories', 'memory_clusters', 'temporal_chains'];
+      const results = await Promise.all(
         tables.map(t => supabase.from(t).delete().eq('user_id', user.id))
       );
-      const failed = results.filter(r => r.status === 'rejected').length;
+      const failed = results.filter(r => r.error).length;
       if (failed > 0) {
         setMemoryMessage({ type: 'error', text: `Cleared most memories, but ${failed} table(s) had issues. Please try again.` });
       } else {

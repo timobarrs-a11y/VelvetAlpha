@@ -49,9 +49,13 @@ when `USE_SERVER_PROMPT` is off).
    `embedding_model` stored per row).
 
 ### Read path (`fetch_memories_for_turn` → `selectMemories`)
-1. **Hybrid retrieval in SQL.** Postgres full-text search (OR of the message's
-   stemmed terms) plus pgvector cosine, fused with reciprocal rank fusion
-   (k=60).
+1. **Hybrid retrieval in SQL** with calibrated relevance (v3):
+   - Lexical score: the share of a memory's terms that the message mentions,
+     with only half credit for a single shared word.
+   - Semantic score: cosine rescaled so 0.25 maps to 0 and 0.60 maps to 1.
+   - Relevance is the stronger of the two, plus a bonus when both agree.
+   - v2 used reciprocal rank fusion. Rank-based scores made any match look
+     relevant however weak, so the relevance gate did nothing.
 2. **Blended score.** 0.55 relevance + 0.20 importance + 0.15 recency (30-day
    half-life since last said or confirmed) + 0.10 confidence, plus a bonus for
    user-stated memories (Generative Agents' recency × importance × relevance).
@@ -63,29 +67,63 @@ when `USE_SERVER_PROMPT` is off).
    reason about staleness, and the block tells it to say "I don't remember"
    rather than guess (abstention, as tested by LongMemEval).
 5. **Graceful degradation.** With no `OPENAI_API_KEY`, or if embedding takes
-   more than 1.5 s, retrieval runs on full-text alone. Relevance is normalized
-   to the signals available.
+   more than 1.5 s, retrieval runs on full-text alone.
 6. Vectors from different embedding models are never compared, so the model
    can change safely. Dream-hygiene re-embeds rows on the old model over a few
    nights.
 
 ### Nightly (`dream-hygiene`)
-1. Retire expired temporary memories.
-2. Embed rows that have no vector or an old-model vector (up to 100 per pair).
-3. Run a deterministic dedupe that folds near-paraphrases into the
-   user-stated, most-reinforced, oldest row. A vector match also needs ≥75%
-   word overlap, so "lives in Denver" and "lives in Boulder" are never merged;
-   contradictions go to the LLM pass and the review queue.
-4. The LLM pass now covers global memories too, and applies corrections
-   through `supersede_memory_item`.
+1. **Every user:** retire expired temporary memories (`retire_expired_memories`),
+   and embed up to 200 rows that have no vector or an old-model vector.
+2. **Deterministic dedupe** for recently active pairs. It folds
+   near-paraphrases into the user-stated, most-reinforced, oldest row. It
+   never merges:
+   - across visibility (shared vs one companion);
+   - when the texts differ by a negation or a number ("eats red meat" vs
+     "doesn't eat red meat", "2 kids" vs "3 kids");
+   - on a vector match alone: that also needs ≥75% word overlap.
+3. **LLM pass:**
+   - It never touches the companion summary, boundaries or text the user
+     edited.
+   - It auto-applies only two things: closing a thread past its follow-up
+     date, and a correction the user made explicitly. Everything else waits
+     in the review queue.
+   - In "merge" proposals, the target is the redundant memory and
+     `evidence[0]` is the memory that's kept.
 
 ### Companion summary (`summarize-memory`)
+- Messages are claimed atomically (`claim_unsummarized_messages`), so two
+  runs can't process the same batch. A failed run hands the batch back.
 - The summary is grounded in the canonical fact list, and facts win over the
   rolling summary. The merge prompt says the newer chunk wins and nothing may
   be invented.
 - The summary is published as the companion's `moment` row through the
   supersede chain, so chat-turn actually reads it (into the cached
   semi-stable block).
+
+### Corrections, forgetting and clearing (v3)
+- **One write path for corrections.** The extractor's `update` op writes
+  them, and it must quote the user's words.
+  - The post-response analyzer only logs correction and reference events.
+  - It now sees each remembered fact's text, not just its id.
+  - It may only name ids it was shown.
+- **Forget** (`forget_memory_item`) scrubs the text from:
+  - the memory and the earlier versions it replaced;
+  - `memory_history`, `memory_events` and `memory_proposals`;
+  - the companion summary written from it, which is retired and rebuilt
+    later.
+- **Clear memory** (Settings → `memory-mutate` → `clear_user_memory`) does the
+  same for every memory the user has, plus all summaries and the legacy fact
+  list. Before v3 this button updated `memory_items` from the browser, which
+  RLS silently refused, so nothing was cleared.
+- **Account deletion** cascades to `memory_items`, and the history trigger
+  now erases each row's history instead of logging the deletion with the
+  content.
+- **Write lockdown.** Browsers can't execute any memory write RPC. Every
+  write goes through an edge function that checks ownership; editing used to
+  skip that check.
+- **Atlas** reads shared memories from `memory_items`. It used to read
+  `user_insights`, which is empty and was never corrected or cleared.
 
 ## Research checklist
 
@@ -119,23 +157,28 @@ while this was written. Treat their specific numbers as unverified.
 - `src/services/__tests__/memoryEngine.test.ts` (vitest, in `npm test`):
   dedup, MMR selection, grounding, the injection filter, formatting and
   embedding fallbacks.
-- `scripts/memory-eval/memory_engine_v2.test.sql`: 23 checks against a
-  scratch Postgres with pgvector. They cover dedup, reinforcement, recall
-  tracking, ranking, expiry, cross-companion and private scoping,
-  supersession, version conflicts, embedding hygiene, cross-user isolation
-  and "forget".
+- `scripts/memory-eval/memory_engine.test.sql`: 46 checks against a
+  scratch Postgres with pgvector. They cover:
+  - dedup, reinforcement and the duplicate-insert race;
+  - recall tracking, calibrated ranking and expiry;
+  - cross-companion and private scoping;
+  - supersession and version conflicts;
+  - embedding hygiene and cross-user isolation;
+  - grants;
+  - forget, clear and account deletion reaching every copy;
+  - the summarization claim.
 
   ```
-  createdb scratch && psql -d scratch -v ON_ERROR_STOP=1 -f scripts/memory-eval/memory_engine_v2.test.sql
+  createdb scratch && psql -d scratch -v ON_ERROR_STOP=1 -f scripts/memory-eval/memory_engine.test.sql
   ```
 
 ## Rollout notes
 
-- Apply migration `20261030100000_memory_engine_v2.sql`, then deploy
-  `chat-turn`, `dream-hygiene`, `summarize-memory`, `memory-mutate` and
-  `memory-proposals-admin` together. The migration changes
-  `fetch_memories_for_turn`'s signature, so the old chat-turn would get an
-  error from the RPC and fall back to no memory until it is redeployed.
+- v2 is live (applied 2026-10-26).
+- **v3:** apply `20261031100000_memory_engine_v3.sql` *before* publishing.
+  The new functions call RPCs that exist only after the migration. The
+  currently deployed functions keep working against v3: they already use the
+  service role, and the browser path v3 revokes never worked.
 - Set `OPENAI_API_KEY` in the edge function secrets for vector retrieval.
   Without it everything still works on full-text search.
 - The first nightly run embeds existing rows and folds strict duplicates. The
