@@ -102,6 +102,43 @@ export function createGBuffer(): GBuffer | null {
     return gr;
   };
 
+  // Sprites (drawImage) are recorded by their opaque pixels, so a head or hand is lit as part of
+  // the character instead of as whatever surface happens to be behind it.
+  const scratch = document.createElement('canvas');
+  let baseT = new DOMMatrix();
+  const stamp = (args: unknown[]) => {
+    const img = args[0] as CanvasImageSource & { width?: number; height?: number };
+    const nine = args.length >= 9, five = args.length >= 5;
+    const [dx, dy, dw, dh] = nine ? (args.slice(5, 9) as number[])
+      : five ? (args.slice(1, 5) as number[])
+      : [args[1] as number, args[2] as number, img.width ?? 0, img.height ?? 0];
+    if (!(dw > 0) || !(dh > 0) || !cur) return;
+    // Where the sprite lands on the data canvas, after the transforms mirrored so far.
+    const m = d.getTransform();
+    const xs: number[] = [], ys: number[] = [];
+    for (const [px, py] of [[dx, dy], [dx + dw, dy], [dx, dy + dh], [dx + dw, dy + dh]]) {
+      xs.push(m.a * px + m.c * py + m.e); ys.push(m.b * px + m.d * py + m.f);
+    }
+    const bx = Math.max(0, Math.floor(Math.min(...xs)) - 1), by = Math.max(0, Math.floor(Math.min(...ys)) - 1);
+    const bw = Math.min(canvas.width, Math.ceil(Math.max(...xs)) + 1) - bx, bh = Math.min(canvas.height, Math.ceil(Math.max(...ys)) + 1) - by;
+    if (bw < 1 || bh < 1 || bw > 600 || bh > 600) return;
+    scratch.width = bw; scratch.height = bh;
+    const s = scratch.getContext('2d');
+    if (!s) return;
+    s.setTransform(m.a, m.b, m.c, m.d, m.e - bx, m.f - by);
+    if (nine) s.drawImage(img, args[1] as number, args[2] as number, args[3] as number, args[4] as number, dx, dy, dw, dh);
+    else s.drawImage(img, dx, dy, dw, dh);
+    // Tint the silhouette with the character's height ramp, which lives in view space.
+    s.globalCompositeOperation = 'source-in';
+    s.setTransform(baseT.a, 0, 0, baseT.d, -bx, -by);
+    s.fillStyle = cur.style;
+    s.fillRect(-1e4, -1e4, 2e4, 2e4);
+    d.save();
+    d.setTransform(1, 0, 0, 1, 0, 0);
+    d.drawImage(scratch, bx, by);
+    d.restore();
+  };
+
   let real: CanvasRenderingContext2D | null = null;
   const writable = (a: number) => !!cur && !!real && a >= 0.5 && real.globalAlpha >= 0.5 && real.globalCompositeOperation === 'source-over';
 
@@ -119,6 +156,12 @@ export function createGBuffer(): GBuffer | null {
         w = (...args: unknown[]) => {
           fn.apply(t, args);
           if (writable(fillA)) { d.fillStyle = cur!.style; (d as unknown as Record<string, (...a: unknown[]) => unknown>)[prop](...args); }
+        };
+      } else if (prop === 'drawImage') {
+        w = (...args: unknown[]) => {
+          fn.apply(t, args);
+          // Only characters (billboards and glowing things) stamp their sprites; scenery art is unchanged.
+          if (cur?.stroke && writable(1)) stamp(args);
         };
       } else if (prop === 'stroke') {
         w = (...args: unknown[]) => {
@@ -149,6 +192,7 @@ export function createGBuffer(): GBuffer | null {
       d.setTransform(1, 0, 0, 1, 0, 0);
       d.clearRect(0, 0, pw, ph);
       d.setTransform(pw / width, 0, 0, ph / height, 0, 0);
+      baseT = d.getTransform();
       d.globalAlpha = 1;
       d.globalCompositeOperation = 'source-over';
       base = null; cur = null;

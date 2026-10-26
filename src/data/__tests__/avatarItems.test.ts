@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-  OUTFITS, HEADWEAR, FACE_ACCESSORIES, AVATAR_KITS, STARTER_ONLY,
-  itemUnlock, kitUnlock, kitTier, outfitItem, headwearItem, faceAccessoryItem, resolveAvatarForDisplay,
+  OUTFITS, BOTTOMS, HEADWEAR, FACE_ACCESSORIES, AVATAR_KITS, PERSONAS, STARTER_ONLY,
+  itemUnlock, kitUnlock, kitTier, outfitItem, bottomItem, headwearItem, faceAccessoryItem, resolveAvatarForDisplay,
+  resolveBottom, personaOf, personaPiece,
 } from '../avatarItems';
 import { migrateAvatarConfig, applyAvatarChange } from '../../utils/avatarConfig';
 
@@ -105,5 +106,96 @@ describe('migrateAvatarConfig', () => {
   it('reads an old config the old way before applying an edit', () => {
     const edited = applyAvatarChange({ gender: 'male', hairStyle: 'sleek' }, { eyeColor: '#4a8ccc' });
     expect(edited.hairStyle).toBe('slick_back');
+  });
+});
+
+describe('personas', () => {
+  const persona = (id: string) => PERSONAS.find(p => p.id === id)!;
+
+  it('are the four kits that always existed plus six new ones', () => {
+    expect(PERSONAS.map(p => p.id)).toEqual([
+      'lawyer', 'chef', 'doctor', 'cop', 'nurse', 'cheerleader', 'pirate', 'rockstar', 'rapper', 'president',
+    ]);
+    expect(AVATAR_KITS).toBe(PERSONAS);
+    expect(new Set(PERSONAS.map(p => p.id)).size).toBe(PERSONAS.length);
+  });
+
+  it('are a shirt, pants and a hat, all of which exist and match what the persona sets', () => {
+    for (const p of PERSONAS) {
+      expect(OUTFITS.map(o => o.id), p.id).toContain(p.top);
+      expect(BOTTOMS.map(b => b.id), p.id).toContain(p.bottom);
+      expect(HEADWEAR.map(h => h.id), p.id).toContain(p.hat);
+      expect(p.look.outfit, p.id).toBe(p.top);
+      expect(p.look.bottom, p.id).toBe(p.bottom);
+      expect(p.look.headwear, p.id).toBe(p.hat);
+    }
+  });
+
+  it('give every pants and shirt a starter fallback', () => {
+    for (const b of BOTTOMS) expect(bottomItem(b.fallback).tier, b.id).toBe('starter');
+    for (const o of OUTFITS) expect(outfitItem(o.fallback).tier, o.id).toBe('starter');
+  });
+
+  it('keep the free personas free and the premium ones for members', () => {
+    for (const id of ['lawyer', 'chef', 'doctor', 'cop', 'nurse', 'cheerleader']) expect(kitTier(persona(id)), id).toBe('starter');
+    for (const id of ['pirate', 'rockstar', 'rapper', 'president']) {
+      expect(kitTier(persona(id)), id).toBe('member');
+      expect(kitUnlock(persona(id), STARTER_ONLY).ok, id).toBe(false);
+      expect(kitUnlock(persona(id), MEMBER).ok, id).toBe(true);
+    }
+  });
+
+  it('can be mixed: chef whites with rockstar pants and a cheerleader bow', () => {
+    const look = migrateAvatarConfig({
+      gender: 'female', ...persona('chef').look, ...personaPiece(persona('rockstar'), 'bottom'), ...personaPiece(persona('cheerleader'), 'hat'),
+    });
+    expect(look.outfit).toBe('chef');
+    expect(look.bottom).toBe('leather');
+    expect(look.headwear).toBe('hair_bow');
+    expect(personaOf(look)).toBeNull();
+  });
+
+  it('are recognised while all three pieces belong to the same one, whatever the colours', () => {
+    const chef = migrateAvatarConfig({ gender: 'male', ...persona('chef').look });
+    expect(personaOf(chef)?.id).toBe('chef');
+    expect(personaOf({ ...chef, outfitColor: '#c2262e', bottomColor: '#3d5b8a' })?.id).toBe('chef');
+    expect(personaOf({ ...chef, headwear: 'none' })).toBeNull();
+  });
+});
+
+describe('pants', () => {
+  it('match the shirt when none are picked, so avatars saved before pants keep the trousers they had', () => {
+    const tee = resolveBottom(migrateAvatarConfig({ gender: 'male' }));
+    expect(tee).toMatchObject({ id: 'jeans', color: '#3D5B8A', matched: true });
+    expect(resolveBottom(migrateAvatarConfig({ outfit: 'pirate' }))).toMatchObject({ id: 'breeches', color: '#4A3A2A' });
+    expect(resolveBottom(migrateAvatarConfig({ outfit: 'chef' }))).toMatchObject({ id: 'chef_pants', color: '#2B2B30' });
+    expect(resolveBottom(migrateAvatarConfig({ outfit: 'labcoat' }))).toMatchObject({ id: 'trousers', color: '#3A4250' });
+    expect(resolveBottom(migrateAvatarConfig({ outfit: 'linen' }))).toMatchObject({ id: 'trousers', color: '#6B5A45' });
+    // A suit's trousers are the jacket's colour, however it is dyed.
+    expect(resolveBottom(migrateAvatarConfig({ outfit: 'suit', outfitColor: '#334455' }))).toMatchObject({ id: 'trousers', color: '#334455' });
+  });
+
+  it('follow a new shirt until some are picked, then stay put', () => {
+    const picked = { ...migrateAvatarConfig({ outfit: 'cop' }), bottom: 'baggy' as const };
+    expect(resolveBottom(picked)).toMatchObject({ id: 'baggy', color: bottomItem('baggy').color, matched: false });
+    expect(resolveBottom({ ...picked, outfit: 'chef' }).id).toBe('baggy');
+    expect(resolveBottom({ ...picked, bottomColor: '#123456' }).color).toBe('#123456');
+  });
+
+  it('swap locked pants for a starter pair, with their own colours, and never touch the saved look', () => {
+    const look = migrateAvatarConfig({ gender: 'male', ...PERSONAS.find(p => p.id === 'rockstar')!.look });
+    const before = JSON.stringify(look);
+    const shown = resolveAvatarForDisplay(look, STARTER_ONLY);
+    expect(shown.outfit).toBe('tee');
+    expect(shown.bottom).toBe('jeans');
+    expect(shown.bottomColor).toBe(bottomItem('jeans').color);
+    expect(JSON.stringify(look)).toBe(before);
+    expect(resolveAvatarForDisplay(look, MEMBER)).toBe(look);
+  });
+
+  it('leave matched pants alone when only the shirt is locked: they follow the fallback shirt', () => {
+    const shown = resolveAvatarForDisplay(migrateAvatarConfig({ outfit: 'pirate' }), STARTER_ONLY);
+    expect(shown.bottom).toBeUndefined();
+    expect(resolveBottom(shown).id).toBe('trousers');
   });
 });

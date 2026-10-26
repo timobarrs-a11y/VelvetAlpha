@@ -1,6 +1,6 @@
 import type { AvatarConfigV2 } from '../types/avatar-v2';
 import { HAIR_COLORS, HAIR_FASHION_COLORS, HAIRSTYLES } from '../types/avatar-v2';
-import { OUTFITS, HEADWEAR, FACE_ACCESSORIES, resolveAvatarForDisplay, type AvatarUnlocks, type UnlockResult } from './avatarItems';
+import { OUTFITS, BOTTOMS, HEADWEAR, FACE_ACCESSORIES, resolveAvatarForDisplay, type AvatarUnlocks, type UnlockResult } from './avatarItems';
 
 // Everything a person can own for their avatar, and how each thing is got.
 //
@@ -16,11 +16,11 @@ import { OUTFITS, HEADWEAR, FACE_ACCESSORIES, resolveAvatarForDisplay, type Avat
 
 export type ItemSlot =
   | 'hairStyle' | 'hairColor' | 'hairHighlight'
-  | 'outfit' | 'outfitColor' | 'headwear' | 'faceAccessory'
+  | 'outfit' | 'outfitColor' | 'bottom' | 'bottomColor' | 'headwear' | 'faceAccessory'
   | 'glasses' | 'earrings' | 'necklace';
 
 export const ITEM_SLOTS: ItemSlot[] = [
-  'hairStyle', 'hairColor', 'hairHighlight', 'outfit', 'outfitColor', 'headwear', 'faceAccessory', 'glasses', 'earrings', 'necklace',
+  'hairStyle', 'hairColor', 'hairHighlight', 'outfit', 'outfitColor', 'bottom', 'bottomColor', 'headwear', 'faceAccessory', 'glasses', 'earrings', 'necklace',
 ];
 
 export type ItemId = `${ItemSlot}:${string}`;
@@ -30,7 +30,7 @@ export function itemId(slot: ItemSlot, value: string): ItemId {
 }
 
 // A well-formed item id, or null. Also the shape the database accepts.
-export const ITEM_ID_PATTERN = /^(hairStyle|hairColor|hairHighlight|outfit|outfitColor|headwear|faceAccessory|glasses|earrings|necklace):[#a-zA-Z0-9_-]{1,40}$/;
+export const ITEM_ID_PATTERN = /^(hairStyle|hairColor|hairHighlight|outfit|outfitColor|bottom|bottomColor|headwear|faceAccessory|glasses|earrings|necklace):[#a-zA-Z0-9_-]{1,40}$/;
 
 export function parseItemId(id: string): { slot: ItemSlot; value: string } | null {
   if (!ITEM_ID_PATTERN.test(id)) return null;
@@ -65,7 +65,7 @@ const RULES: Partial<Record<ItemId, HowToGet>> = {
   // Dyed colours for the whole head: a reward, once earning goes live.
   ...Object.fromEntries(HAIR_FASHION_COLORS.map(c => [itemId('hairColor', c.value), { how: 'reward', reward: 'dyed-hair' }])),
   ...Object.fromEntries(
-    [...OUTFITS.map(o => ['outfit', o] as const), ...HEADWEAR.map(h => ['headwear', h] as const), ...FACE_ACCESSORIES.map(f => ['faceAccessory', f] as const)]
+    [...OUTFITS.map(o => ['outfit', o] as const), ...BOTTOMS.map(b => ['bottom', b] as const), ...HEADWEAR.map(h => ['headwear', h] as const), ...FACE_ACCESSORIES.map(f => ['faceAccessory', f] as const)]
       .filter(([, item]) => item.tier !== 'starter')
       .map(([slot, item]) => [itemId(slot as ItemSlot, item.id), item.tier === 'member' ? { how: 'member' } : { how: 'medal', medal: item.medal ?? '' }]),
   ),
@@ -93,6 +93,7 @@ export function itemLabel(id: ItemId): string {
     case 'hairHighlight': return `${colour ?? value} highlights`;
     case 'hairColor': return `${colour ?? value} hair`;
     case 'outfit': return OUTFITS.find(o => o.id === value)?.label ?? value;
+    case 'bottom': return BOTTOMS.find(b => b.id === value)?.label ?? value;
     case 'headwear': return HEADWEAR.find(h => h.id === value)?.label ?? value;
     case 'faceAccessory': return FACE_ACCESSORIES.find(f => f.id === value)?.label ?? value;
     default: return value.charAt(0).toUpperCase() + value.slice(1);
@@ -121,6 +122,8 @@ export function lookItems(config: Partial<AvatarConfigV2>): ItemId[] {
   add('hairHighlight', config.hairHighlight);
   add('outfit', config.outfit);
   add('outfitColor', config.outfitColor);
+  add('bottom', config.bottom);
+  add('bottomColor', config.bottomColor);
   add('headwear', config.headwear);
   add('faceAccessory', config.faceAccessory);
   add('glasses', config.glasses);

@@ -36,6 +36,16 @@ export function shade(hex: string, amt: number): string {
 
 const pts = (list: Array<[number, number]>) => list.map(([x, y]) => `${x},${y}`).join(' ');
 
+// A five-pointed star centred on (cx, cy), as polygon points.
+function star(cx: number, cy: number, outer: number, inner: number): string {
+  const list: Array<[number, number]> = [];
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? outer : inner, a = -Math.PI / 2 + (i * Math.PI) / 5;
+    list.push([+(cx + Math.cos(a) * r).toFixed(2), +(cy + Math.sin(a) * r).toFixed(2)]);
+  }
+  return pts(list);
+}
+
 function torsoPath(N: number, S: number): string {
   return `M50 ${N + 12} Q${50 - S} ${N + 16} ${50 - S - 10} ${N + 36} Q${50 - S - 14} ${N + 53} ${50 - S - 14} ${N + 73} L${50 + S + 14} ${N + 73} Q${50 + S + 14} ${N + 53} ${50 + S + 10} ${N + 36} Q${50 + S} ${N + 16} 50 ${N + 12} Z`;
 }
@@ -86,6 +96,64 @@ export function renderOutfitBody(p: OutfitRenderParams): React.ReactNode {
             stroke={accent} strokeWidth="1.5" fill="none" />
         </g>
       );
+    case 'cheer': {
+      // A team top: a V-neck with a trim, two stripes across the chest and a star.
+      const half = S + 11;
+      return (
+        <g>
+          {torso}
+          <polygon points={pts([[50 - 12, N + 11], [50, N + 30], [50 + 12, N + 11]])} fill={p.skin} />
+          <path d={`M${50 - 13} ${N + 11} L50 ${N + 31} L${50 + 13} ${N + 11}`} stroke={accent} strokeWidth="2.4" fill="none" strokeLinejoin="round" />
+          <rect x={50 - half} y={N + 43} width={half * 2} height="3.4" fill={accent} />
+          <rect x={50 - half} y={N + 49} width={half * 2} height="1.6" fill={accent} />
+          <polygon points={star(50, N + 61, 7, 3)} fill={accent} />
+        </g>
+      );
+    }
+    case 'scrubs':
+      return (
+        <g>
+          {torso}
+          <polygon points={pts([[50 - 10, N + 10], [50, N + 32], [50 + 10, N + 10]])} fill={p.skin} />
+          <path d={`M${50 - 11} ${N + 10} L50 ${N + 33} L${50 + 11} ${N + 10}`} stroke={accent} strokeWidth="2.2" fill="none" strokeLinejoin="round" />
+          <rect x={50 - S + 2} y={N + 44} width="13" height="12" rx="1.5" fill="none" stroke={shade(main, -0.3)} strokeWidth="0.9" />
+          <path d={`M${50 - S + 6} ${N + 40} L${50 - S + 6} ${N + 48}`} stroke="#2a5db0" strokeWidth="1.3" strokeLinecap="round" />
+        </g>
+      );
+    case 'cop':
+      return (
+        <g>
+          {torso}
+          {([-1, 1] as const).map((side) => (
+            <polygon key={side}
+              points={pts([[50 + side * (S - 2), N + 17], [50 + side * (S + 9), N + 24], [50 + side * (S + 8), N + 30], [50 + side * (S - 3), N + 24]])}
+              fill={shade(main, -0.25)} stroke={accent} strokeWidth="0.7" />
+          ))}
+          <rect x={50 + 8} y={N + 42} width="10" height="3" rx="0.6" fill="#e8e8ec" />
+          <rect x={50 - 22} y={N + 52} width="13" height="11" rx="1" fill="none" stroke={shade(main, -0.35)} strokeWidth="0.9" />
+        </g>
+      );
+    case 'rockstar':
+      return (
+        <g>
+          {torso}
+          {/* the band tee showing between the lapels */}
+          <polygon points={pts([[50 - 12, N + 9], [50 + 12, N + 9], [50 + 2, N + 54], [50 - 2, N + 54]])} fill="#e9e9ee" />
+          <polygon points={pts([[50 + 2, N + 26], [50 - 5, N + 36], [50 - 1, N + 36], [50 - 4, N + 46], [50 + 5, N + 33], [50 + 1, N + 33]])} fill="#c2262e" />
+        </g>
+      );
+    case 'streetwear':
+      return (
+        <g>
+          {/* the hood, bunched behind the neck */}
+          <path d={`M${50 - 27} ${N + 14} Q${50 - 24} ${N - 4} 50 ${N - 2} Q${50 + 24} ${N - 4} ${50 + 27} ${N + 14} Z`} fill={shade(main, -0.25)} />
+          {torso}
+          <circle cx="50" cy={N + 49} r="7" fill={accent} />
+          <path d={`M${50 - 3} ${N + 51} L50 ${N + 45} L${50 + 3} ${N + 51} M${50 - 2} ${N + 49.5} L${50 + 2} ${N + 49.5}`} stroke={main} strokeWidth="1.3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      );
+    case 'president':
+      return <g>{torso}</g>;
     default:
       return torso;
   }
@@ -173,6 +241,63 @@ export function renderOutfitFront(p: OutfitRenderParams): React.ReactNode {
         </g>
       );
 
+    case 'president':
+      return (
+        <g>
+          <polygon points={pts([[50 - 12, N + 9], [50 + 12, N + 9], [50, N + 56]])} fill="#f4f4f2" />
+          {shirtCollar(N, '#fafaf8', '#cfcfca')}
+          <polygon points={pts([[50 - 2.6, N + 14], [50 + 2.6, N + 14], [50 + 1.8, N + 19], [50 - 1.8, N + 19]])} fill={shade(accent, -0.1)} />
+          <polygon points={pts([[50 - 1.8, N + 19], [50 + 1.8, N + 19], [50 + 4.4, N + 48], [50, N + 53], [50 - 4.4, N + 48]])} fill={accent} />
+          {lapels(N, shade(main, 0.1), shade(main, -0.45), true)}
+          {/* double-breasted: two columns of buttons */}
+          {[-1, 1].flatMap((side) => [N + 58, N + 66].map((y) => (
+            <circle key={`${side}${y}`} cx={50 + side * 11} cy={y} r="1.5" fill="#c8ccd2" stroke={shade(main, -0.5)} strokeWidth="0.4" />
+          )))}
+          {/* the flag pin */}
+          <g transform={`translate(${50 + 17} ${N + 36})`}>
+            <rect width="8" height="5.4" fill="#f4f4f2" />
+            {[0.6, 2.4, 4.2].map((y) => <rect key={y} y={y} width="8" height="0.9" fill="#b3202f" />)}
+            <rect width="3.4" height="2.8" fill="#2a4a9a" />
+          </g>
+        </g>
+      );
+
+    case 'cop':
+      return (
+        <g>
+          {shirtCollar(N, shade(main, 0.12), shade(main, -0.4))}
+          <polygon points={pts([[50 - 2, N + 12], [50 + 2, N + 12], [50 + 3, N + 45], [50, N + 49], [50 - 3, N + 45]])} fill="#17171b" />
+          <path d={`M50 ${N + 49} L50 ${N + 75}`} stroke={shade(main, -0.35)} strokeWidth="0.8" />
+          {/* the badge */}
+          <path d={`M${50 - 15} ${N + 34} L${50 - 10.5} ${N + 36} L${50 - 10.5} ${N + 41} Q${50 - 15} ${N + 46} ${50 - 19.5} ${N + 41} L${50 - 19.5} ${N + 36} Z`}
+            fill={accent} stroke={shade(accent, -0.4)} strokeWidth="0.7" />
+          <polygon points={star(50 - 15, N + 39.6, 2.6, 1.1)} fill={shade(accent, -0.35)} />
+        </g>
+      );
+
+    case 'rockstar':
+      return (
+        <g>
+          {lapels(N, shade(main, 0.1), shade(main, -0.5), true)}
+          {/* studs along the lapel edges, and a zip across the chest */}
+          {([-1, 1] as const).flatMap((side) => [0.12, 0.3, 0.48, 0.66, 0.84].map((t) => {
+            const x = 50 + side * (12 - 11 * t), y = N + 9 + (45 + 2) * t;
+            return <circle key={`${side}${t}`} cx={x + side * 0.5} cy={y} r="1.1" fill={accent} />;
+          }))}
+          <path d={`M${50 + 3} ${N + 52} L${50 + 28} ${N + 70}`} stroke={accent} strokeWidth="1.3" strokeDasharray="1.6 1.2" />
+        </g>
+      );
+
+    case 'streetwear':
+      return (
+        <g>
+          <path d={`M${50 - 6} ${N + 12} Q${50 - 8} ${N + 24} ${50 - 5} ${N + 34}`} stroke={accent} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          <path d={`M${50 + 6} ${N + 12} Q${50 + 8} ${N + 24} ${50 + 5} ${N + 34}`} stroke={accent} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          <circle cx={50 - 5} cy={N + 35} r="1.4" fill={accent} />
+          <circle cx={50 + 5} cy={N + 35} r="1.4" fill={accent} />
+        </g>
+      );
+
     case 'chef':
       return (
         <g>
@@ -200,6 +325,9 @@ export function headwearHairCut(p: HeadwearRenderParams): number | null {
     case 'bandana': return p.faceTop + 9;
     case 'tricorn': return p.faceTop + 5;
     case 'top_hat': return p.faceTop + 5;
+    case 'cop_cap': return p.faceTop + 8;
+    case 'nurse_cap': return p.faceTop + 7;
+    case 'snapback': return p.faceTop + 7;
     case 'beanie': return p.faceTop + 8;
     case 'baseball_cap': return p.faceTop + 7;
     case 'cowboy_hat': return p.faceTop + 6;
@@ -271,6 +399,57 @@ export function renderHeadwear(p: HeadwearRenderParams): React.ReactNode {
           <rect x={50 - cw} y={brim - 6} width={cw * 2} height="4" fill="#7a1f2b" />
           <path d={`M${50 + cw * 0.5} ${brim - 7.5} l1 2.2 2.4 0.2 -1.8 1.6 0.6 2.3 -2.2 -1.2 -2.2 1.2 0.6 -2.3 -1.8 -1.6 2.4 -0.2 Z`} fill="#d4af37" />
           <ellipse cx="50" cy={brim} rx={fRx + 9} ry="3.5" fill="#141417" />
+        </g>
+      );
+    }
+    case 'cop_cap': {
+      const brim = faceTop + 8;
+      return (
+        <g>
+          <path d={`M${50 - fRx - 2} ${brim} Q${50 - fRx - 4} ${faceTop - 10} 50 ${faceTop - 13} Q${50 + fRx + 4} ${faceTop - 10} ${50 + fRx + 2} ${brim} Z`} fill="#1d2b4a" />
+          <path d={`M${50 - fRx * 0.5} ${faceTop - 8} Q50 ${faceTop - 14} ${50 + fRx * 0.5} ${faceTop - 8}`} stroke="#ffffff" strokeWidth="1.2" fill="none" opacity="0.1" />
+          <rect x={50 - fRx - 2} y={brim - 7} width={fRx * 2 + 4} height="7" rx="1.5" fill="#12161d" />
+          <path d={`M50 ${brim - 15} L${50 + 4.4} ${brim - 13} L${50 + 4.4} ${brim - 8} Q50 ${brim - 3} ${50 - 4.4} ${brim - 8} L${50 - 4.4} ${brim - 13} Z`} fill="#c9a24a" stroke="#8f7430" strokeWidth="0.7" />
+          <circle cx="50" cy={brim - 10} r="1.4" fill="#8f7430" />
+          <path d={`M${50 - fRx + 3} ${brim} Q50 ${brim + 10} ${50 + fRx - 3} ${brim} Q50 ${brim + 3.5} ${50 - fRx + 3} ${brim} Z`} fill="#0d0f13" />
+        </g>
+      );
+    }
+    case 'nurse_cap': {
+      const base = faceTop + 7;
+      return (
+        <g>
+          <path d={`M${50 - 17} ${base} L${50 - 13} ${faceTop - 8} Q50 ${faceTop - 12} ${50 + 13} ${faceTop - 8} L${50 + 17} ${base} Q50 ${base - 5} ${50 - 17} ${base} Z`} fill="#fbfbf9" stroke="#d6d6d0" strokeWidth="0.7" />
+          <path d={`M${50 - 17} ${base} Q50 ${base - 5} ${50 + 17} ${base}`} stroke="#e4e4de" strokeWidth="2" fill="none" />
+          <rect x={50 - 1.6} y={faceTop - 6.5} width="3.2" height="9" rx="0.5" fill="#c2262e" />
+          <rect x={50 - 4.5} y={faceTop - 3.7} width="9" height="3.2" rx="0.5" fill="#c2262e" />
+        </g>
+      );
+    }
+    case 'hair_bow': {
+      const cx = 50 + fRx * 0.52, cy = faceTop + 3;
+      return (
+        <g>
+          <path d={`M${cx} ${cy} Q${cx - 8} ${cy - 11} ${cx - 15} ${cy - 5} Q${cx - 13} ${cy + 4} ${cx} ${cy} Z`} fill="#c2262e" stroke="#8f1a21" strokeWidth="0.6" />
+          <path d={`M${cx} ${cy} Q${cx + 8} ${cy - 11} ${cx + 15} ${cy - 5} Q${cx + 13} ${cy + 4} ${cx} ${cy} Z`} fill="#c2262e" stroke="#8f1a21" strokeWidth="0.6" />
+          <path d={`M${cx - 2} ${cy + 1} L${cx - 7} ${cy + 11} L${cx - 2} ${cy + 8} Z M${cx + 2} ${cy + 1} L${cx + 7} ${cy + 11} L${cx + 2} ${cy + 8} Z`} fill="#a81f27" />
+          <path d={`M${cx - 11} ${cy - 5} Q${cx - 6} ${cy - 7} ${cx - 3} ${cy - 3}`} stroke="#ffffff" strokeWidth="1" fill="none" opacity="0.28" strokeLinecap="round" />
+          <circle cx={cx} cy={cy} r="3" fill="#e0353d" stroke="#8f1a21" strokeWidth="0.6" />
+        </g>
+      );
+    }
+    case 'snapback': {
+      const brim = faceTop + 8;
+      return (
+        <g>
+          <path d={`M${50 - fRx - 1} ${brim} Q${50 - fRx - 2} ${faceTop - 9} 50 ${faceTop - 11} Q${50 + fRx + 2} ${faceTop - 9} ${50 + fRx + 1} ${brim} Z`} fill="#17171b" />
+          <path d={`M50 ${faceTop - 11} L50 ${brim}`} stroke="#2c2c33" strokeWidth="0.8" />
+          <path d={`M${50 - fRx * 0.55} ${faceTop - 6} Q${50 - fRx * 0.4} ${brim - 6} ${50 - fRx * 0.2} ${brim}`} stroke="#2c2c33" strokeWidth="0.8" fill="none" />
+          <path d={`M${50 + fRx * 0.55} ${faceTop - 6} Q${50 + fRx * 0.4} ${brim - 6} ${50 + fRx * 0.2} ${brim}`} stroke="#2c2c33" strokeWidth="0.8" fill="none" />
+          <circle cx="50" cy={faceTop - 11} r="1.7" fill="#2c2c33" />
+          <polygon points={pts([[50, brim - 12], [50 + 3.4, brim - 8], [50, brim - 4], [50 - 3.4, brim - 8]])} fill="#c9a24a" />
+          <ellipse cx="50" cy={brim + 1.5} rx={fRx + 7} ry="4.2" fill="#c2262e" />
+          <ellipse cx="50" cy={brim + 0.6} rx={fRx + 4} ry="2.4" fill="#e0353d" opacity="0.55" />
         </g>
       );
     }

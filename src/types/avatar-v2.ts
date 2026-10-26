@@ -35,10 +35,15 @@ export type Eyeliner = 'none' | 'thin' | 'winged' | 'bold';
 export type SkinDetail = 'none' | 'smooth' | 'textured';
 
 // Wardrobe. Which of these a person may wear lives in src/data/avatarItems.ts.
-export type Outfit = 'tee' | 'linen' | 'suit' | 'chef' | 'labcoat' | 'pirate';
+// The shirt (top), the pants (bottom) and the hat are three separate slots; a persona is just a preset for all three.
+export type Outfit = 'tee' | 'linen' | 'suit' | 'chef' | 'labcoat' | 'pirate'
+  | 'rockstar' | 'cheer' | 'cop' | 'scrubs' | 'streetwear' | 'president';
+export type Bottom = 'jeans' | 'trousers' | 'breeches' | 'chef_pants' | 'leather' | 'cheer_skirt'
+  | 'cop_pants' | 'scrub_pants' | 'baggy' | 'shorts' | 'skirt';
 export type Headwear =
   | 'none' | 'chef_hat' | 'bandana' | 'tricorn' | 'top_hat'
-  | 'beanie' | 'baseball_cap' | 'cowboy_hat' | 'beret' | 'headband' | 'bucket_hat' | 'headwrap';
+  | 'beanie' | 'baseball_cap' | 'cowboy_hat' | 'beret' | 'headband' | 'bucket_hat' | 'headwrap'
+  | 'cop_cap' | 'nurse_cap' | 'hair_bow' | 'snapback';
 export type FaceAccessory = 'none' | 'eyepatch';
 
 export const AVATAR_CONFIG_VERSION = 4 as const;
@@ -82,6 +87,11 @@ export interface AvatarConfigV2 {
   outfit?: Outfit;
   outfitColor?: string;
   outfitAccent?: string;
+  // The pants. Unset means "matches the shirt" (a chef's whites come with chef pants), so older
+  // avatars keep the trousers they always had; set one to mix and match.
+  bottom?: Bottom;
+  bottomColor?: string;
+  bottomAccent?: string;
   headwear?: Headwear;
   faceAccessory?: FaceAccessory;
   // Fine-tuning on top of the shapes above, each from -1 to 1 (0 = as drawn).
