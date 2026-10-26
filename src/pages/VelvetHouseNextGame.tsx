@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { supabase } from '../shared/supabase/client';
+import { getCompanion } from '../services/companionService';
+import { loadAvatarUnlocks } from '../hooks/useAvatarUnlocks';
+import { buildProfile, type PlayerProfile } from '../features/velvet-sims/simProfile';
+import { isReadyMessage } from '../games/velvet-house/bridge/protocol';
 
 const GAME_PATH = '/games/velvet-house-next/index.html';
 
@@ -16,6 +21,28 @@ export function VelvetHouseNextGame() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Every time the game starts it asks who's playing. Answer with the real
+  // avatars (heads and signature outfits), so changes show on the next visit.
+  useEffect(() => {
+    if (!companionId) return;
+    let cancelled = false;
+    const onMessage = async (e: MessageEvent) => {
+      const win = iframeRef.current?.contentWindow;
+      if (!win || e.source !== win || e.origin !== window.location.origin || !isReadyMessage(e.data)) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const [{ data: player }, companion, unlocks] = await Promise.all([
+        supabase.from('user_profiles').select('name, nickname, avatar_config, favorite_color').eq('id', user.id).maybeSingle(),
+        getCompanion(companionId),
+        loadAvatarUnlocks(),
+      ]);
+      if (!companion || cancelled) return;
+      win.postMessage(buildProfile(player as PlayerProfile | null, companion, true, unlocks), window.location.origin);
+    };
+    window.addEventListener('message', onMessage);
+    return () => { cancelled = true; window.removeEventListener('message', onMessage); };
+  }, [companionId]);
+
   const handleExit = () => {
     navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
   };
@@ -30,7 +57,7 @@ export function VelvetHouseNextGame() {
           <ArrowLeft className="w-4 h-4" />
           Exit
         </button>
-        <span className="text-white/40 text-xs font-medium tracking-wide">VELVET HOUSE (PREVIEW)</span>
+        <span className="text-white/40 text-xs font-medium tracking-wide">VELVET SIMS (PREVIEW)</span>
         <div className="w-16" />
       </div>
 

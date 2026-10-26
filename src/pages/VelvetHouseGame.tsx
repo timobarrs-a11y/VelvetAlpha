@@ -2,10 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
-import { getCompanion, type Companion } from '../services/companionService';
+import { getCompanion } from '../services/companionService';
 import { loadVelvetHouseSave, saveVelvetHouseProgress, saveVelvetHouseHistory, maybeSnapshotHistory } from '../services/velvetHouseDatabase';
-import { migrateAvatarConfig } from '../utils/avatarConfig';
-import type { HairStyle } from '../types/avatar-v2';
+import { buildProfile, type PlayerProfile } from '../features/velvet-sims/simProfile';
 import { isRestartedMessage, isReadyMessage, isVidSearchMessage, sanitizeMessage } from '../games/velvet-house/bridge/protocol';
 
 const GAME_PATH = '/games/velvet-house/index.html';
@@ -21,82 +20,7 @@ function restartKeyFor(companionId: string) {
 }
 const GAME_TURN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/velvet-game-turn`;
 
-type GameLook = { skin?: string; hair?: string; hairColor?: string; top?: string; eyeColor?: string; facialHair?: string; glasses?: string; gender?: 'male' | 'female' };
-type GameGender = 'male' | 'female';
 type GameError = Error & { code?: string };
-
-interface PlayerProfile {
-  name: string | null;
-  nickname: string | null;
-  avatar_config: Record<string, unknown> | null;
-  favorite_color: string | null;
-}
-
-const COLOR_HEX: Record<string, string> = {
-  red: '#A63A2C', burgundy: '#8A2D54', maroon: '#8A2D54', pink: '#D97A9B', orange: '#D9763A',
-  yellow: '#E0A43A', gold: '#E0A43A', green: '#4F7A4A', teal: '#3D6B73', blue: '#4A5DA8',
-  navy: '#2E3D6B', purple: '#6B4A8A', lavender: '#9A86B8', brown: '#7A4E31', black: '#2B2B30',
-  white: '#F2EEE8', gray: '#6B6F86', grey: '#6B6F86',
-};
-
-const isHex = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
-
-function colorToHex(color: string | null | undefined): string | undefined {
-  if (!color) return undefined;
-  if (/^#[0-9a-f]{6}$/i.test(color)) return color;
-  const key = color.toLowerCase().split(/\W+/).find((w: string) => COLOR_HEX[w]);
-  return key ? COLOR_HEX[key] : undefined;
-}
-
-const GAME_HAIR: Partial<Record<HairStyle, string>> = {
-  afro: 'afro', bun: 'bun', ponytail: 'ponytail', braids: 'braids',
-  locs: 'locs', locs_short: 'locs', wavy: 'wavy', short_wavy: 'wavy',
-  buzz: 'buzz', fade: 'fade', sleek: 'long', curly: 'long',
-};
-
-function toGameLook(raw: Record<string, unknown> | null | undefined, favoriteColor?: string | null): GameLook | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const avatar = migrateAvatarConfig(raw);
-  const gender: GameGender = avatar.gender === 'female' ? 'female' : 'male';
-  return {
-    skin: isHex(avatar.skinTone) ? avatar.skinTone : undefined,
-    hairColor: isHex(avatar.hairColor) ? avatar.hairColor : undefined,
-    hair: GAME_HAIR[avatar.hairStyle] ?? 'short',
-    top: colorToHex(favoriteColor),
-    eyeColor: isHex(avatar.eyeColor) ? avatar.eyeColor : undefined,
-    facialHair: typeof avatar.facialHair === 'string' ? avatar.facialHair : undefined,
-    glasses: typeof avatar.glasses === 'string' ? avatar.glasses : undefined,
-    gender,
-  };
-}
-
-function buildProfile(player: PlayerProfile | null, companion: Companion, includeLooks: boolean) {
-  const personality = [companion.communication_style, companion.humor_style, companion.signature_voice]
-    .filter(Boolean)
-    .join('. ');
-  const likes = [...(companion.hobbies || []), companion.interest_text, companion.favorite_color]
-    .filter(Boolean) as string[];
-
-  return {
-    type: 'velvet:profile',
-    player: {
-      name: (player?.nickname || player?.name || '').trim().slice(0, 16),
-      look: includeLooks ? toGameLook(player?.avatar_config, player?.favorite_color) : undefined,
-    },
-    companion: {
-      name: companion.custom_name,
-      pronoun: companion.gender === 'male' ? 'he' : companion.gender === 'female' ? 'she' : 'they',
-      gender: companion.gender,
-      personality: personality || 'warm, curious, playful',
-      look: includeLooks
-        ? toGameLook(companion.avatar_config as Record<string, unknown> | undefined, companion.favorite_color)
-        : undefined,
-      memories: [],
-      likes,
-      dislikes: [],
-    },
-  };
-}
 
 function gameError(code: string): GameError {
   const err = new Error(code) as GameError;

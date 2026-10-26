@@ -25,7 +25,7 @@ export interface PersonFrame {
   expr?: string;
   /** A spot they're looking at (world x, y), e.g. the person they're talking to. */
   lookAt?: [number, number] | null;
-  look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean };
+  look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean; accent?: string; heads?: import('../state/headSprites').HeadImages };
 }
 
 export interface HouseFrame {

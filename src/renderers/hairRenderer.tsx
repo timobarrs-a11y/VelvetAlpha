@@ -16,6 +16,8 @@ export interface HairRenderParams {
   skinTone: string;
   geometry: FaceGeometry;
   idPrefix: string;
+  // Seen from behind, long hair is the outside of the hair, not its shadowed underside.
+  fromBehind?: boolean;
 }
 
 type Pt = [number, number];
@@ -250,7 +252,14 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
       bottom.push([x, y]);
     }
     const outline: Pt[] = [...top, [R + spread * 0.6, (sideY + length) / 2], ...bottom, [L - spread * 0.6, (sideY + length) / 2]];
-    back.push(<path key="mass" d={smooth(outline, true, 0.9)} fill={dark} />);
+    back.push(<path key="mass" d={smooth(outline, true, 0.9)} fill={p.fromBehind ? base : dark} />);
+    if (p.fromBehind && s.texture !== 'locs' && s.texture !== 'braids') {
+      for (let i = 0; i < 14; i++) {
+        const x = L - spread + ((R - L + 2 * spread) * (i + 0.5)) / 14;
+        back.push(<path key={`fb${i}`} d={`M${f(50 + (x - 50) * 0.3)},${f(fr.T)} Q${f(x)},${f(fr.cy)} ${f(x + (x - 50) * 0.08)},${f(length - 3)}`}
+          stroke={i % 4 === 0 ? light : dark} strokeWidth="0.8" fill="none" opacity="0.5" />);
+      }
+    }
     if (s.texture === 'locs' || s.texture === 'braids') {
       for (let i = 0; i < 9; i++) {
         const x = L - spread + ((R - L + 2 * spread) * (i + 0.5)) / 9;

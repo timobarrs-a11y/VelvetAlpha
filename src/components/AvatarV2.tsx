@@ -21,9 +21,17 @@ interface AvatarV2Props {
   className?: string;
   // The mouth's expression. Neutral unless something (like a reaction) says otherwise.
   mood?: MouthMood;
+  // 'head' draws only the head, cropped to it, for game sprites and small portraits.
+  part?: 'bust' | 'head';
+  // 'back' draws the back of the head (head part only), for walking away.
+  view?: 'front' | 'back';
+  eyesClosed?: boolean;
 }
 
-function AvatarV2Inner({ config: raw, className = '', mood = 'neutral' }: AvatarV2Props) {
+// Styles short enough that the neck shows below them from behind.
+const SHORT_BACK = new Set(['buzz', 'fade', 'short', 'short_wavy', 'slick_back']);
+
+function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = 'bust', view = 'front', eyesClosed = false }: AvatarV2Props) {
   // Whatever comes in (a database row, an old draft, a v1 config) is brought
   // up to date first, so every caller draws the same avatar.
   const config = migrateAvatarConfig(raw);
@@ -420,8 +428,84 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral' }: Avatar
   const hair = renderHair({
     hairStyle, hairTexture, hairColor, skinTone,
     geometry: faceGeometry, idPrefix: uid,
+    fromBehind: part === 'head' && view === 'back',
   });
   const hatClip = hairCut !== null ? `url(#${hairClipId})` : undefined;
+
+  if (part === 'head') {
+    // Long hair fades out below the chin, where a game body takes over.
+    const fadeId = `${uid}-fade`, napeId = `${uid}-nape`;
+    const shortBack = SHORT_BACK.has(hairStyle);
+    const back = view === 'back';
+    return (
+      <svg viewBox="0 -4 100 104" className={className}>
+        {svgDefs}
+        <defs>
+          <linearGradient id={`${fadeId}-g`} gradientUnits="userSpaceOnUse" x1="0" y1="88" x2="0" y2="100">
+            <stop offset="0" stopColor="#fff" />
+            <stop offset="1" stopColor="#000" />
+          </linearGradient>
+          <mask id={fadeId} maskUnits="userSpaceOnUse" x="-10" y="-10" width="120" height="120">
+            <rect x="-10" y="-10" width="120" height="120" fill={`url(#${fadeId}-g)`} />
+          </mask>
+          {/* The nape: hair ends in a soft curve, lowest in the middle. */}
+          <clipPath id={napeId}>
+            <path d={`M-5,-10 H105 V${faceCenterY + 1} Q50,${faceCenterY + 20} -5,${faceCenterY + 1} Z`} />
+          </clipPath>
+        </defs>
+        <g mask={`url(#${fadeId})`}>
+          <g clipPath={hatClip}>{hair.back}</g>
+          {/* From behind, long hair hides the ears and the head under it. */}
+          {(!back || shortBack) && renderEars({ geometry: faceGeometry, skinTone })}
+          {(!back || shortBack) && renderFaceShape()}
+          {back ? (
+            // From behind, hair covers the head; short cuts stop at the nape.
+            <g clipPath={shortBack ? `url(#${napeId})` : undefined}>
+              <g clipPath={hatClip}>
+                <path d={faceOutlinePath(faceGeometry)} fill={hairColor}
+                  opacity={hairStyle === 'buzz' || hairStyle === 'fade' ? 0.82 : 1} />
+                {hairStyle !== 'buzz' && hairStyle !== 'afro' && (
+                  <g clipPath={`url(#${faceClipId})`}>
+                    {/* Strands falling from the crown, and a sheen across it. */}
+                    {Array.from({ length: 15 }, (_, i) => {
+                      const x = 50 - fRx + ((i + 0.5) * fRx * 2) / 15;
+                      return (
+                        <path key={i} d={`M${50 + (x - 50) * 0.25},${faceTop + 1} Q${x},${faceCenterY - 6} ${x + (x - 50) * 0.1},${faceBottom + 6}`}
+                          stroke={shade(hairColor, i % 4 === 0 ? 0.2 : -0.28)} strokeWidth="0.8" fill="none" opacity="0.55" />
+                      );
+                    })}
+                    <path d={`M${50 - fRx * 0.6},${faceTop + 9} Q50,${faceTop + 3} ${50 + fRx * 0.6},${faceTop + 9}`}
+                      stroke={shade(hairColor, 0.25)} strokeWidth="2.4" fill="none" opacity="0.3" strokeLinecap="round" />
+                  </g>
+                )}
+              </g>
+            </g>
+          ) : (
+            <>
+              {renderFaceShading()}
+              {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity)}
+              {renderBlush()}
+              {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed })}
+              {!eyesClosed && renderEyeliner(eyeliner, eyeShape)}
+              {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape)}
+              {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender)}
+              {renderNose(noseShape, skinTone)}
+              {renderNosePiercing()}
+              {renderFreckles()}
+              {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid })}
+              {renderLipPiercing()}
+              {renderFacialHairLayer()}
+              {renderEarrings()}
+              <g clipPath={hatClip}>{hair.front}</g>
+              {renderGlasses()}
+              {renderFaceAccessory(faceAccessory)}
+            </>
+          )}
+          {renderHeadwear(headwearParams)}
+        </g>
+      </svg>
+    );
+  }
 
   return (
     <svg viewBox="0 0 100 130" className={className}>
@@ -451,9 +535,9 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral' }: Avatar
 
       {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity)}
       {renderBlush()}
-      {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid })}
-      {renderEyeliner(eyeliner, eyeShape)}
-      {eyelashes === 'dramatic' && renderEyelashes(eyeShape)}
+      {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed })}
+      {!eyesClosed && renderEyeliner(eyeliner, eyeShape)}
+      {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape)}
       {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender)}
       {renderNose(noseShape, skinTone)}
       {renderNosePiercing()}
@@ -475,5 +559,8 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral' }: Avatar
 export const AvatarV2 = memo(AvatarV2Inner, (prev, next) =>
   prev.className === next.className &&
   prev.mood === next.mood &&
+  prev.part === next.part &&
+  prev.view === next.view &&
+  prev.eyesClosed === next.eyesClosed &&
   JSON.stringify(prev.config) === JSON.stringify(next.config)
 );

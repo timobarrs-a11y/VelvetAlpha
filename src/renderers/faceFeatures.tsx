@@ -61,14 +61,25 @@ export interface EyeParams {
   eyeColor: string;
   skinTone: string;
   idPrefix: string;
+  // Closed for a blink or sleep: the lid covers the eye, lashes along a soft curve.
+  closed?: boolean;
 }
 
-export function renderEyes({ eyeShape, eyeColor, skinTone, idPrefix }: EyeParams): React.ReactNode {
+export function renderEyes({ eyeShape, eyeColor, skinTone, idPrefix, closed }: EyeParams): React.ReactNode {
   const lidLine = '#2b1d18';
   const crease = shade(skinTone, -0.22);
   return EYES.map(({ cx, side }) => {
     const e = eyeGeom(cx, side, eyeShape);
     const s = e.spec;
+    if (closed) {
+      return (
+        <g key={side}>
+          <path d={openingPath(e)} fill={shade(skinTone, -0.05)} />
+          <path d={`M${p(e.inner)} Q${cx},${EYE_Y + s.lo * 0.7} ${p(e.outer)}`}
+            stroke={lidLine} strokeWidth="1.2" fill="none" strokeLinecap="round" />
+        </g>
+      );
+    }
     const clipId = `${idPrefix}-eye${side}`;
     const irisR = Math.min(4.7, Math.max(3.4, s.up * 1.02));
     const ic: Pt = [cx, EYE_Y + 0.4];
