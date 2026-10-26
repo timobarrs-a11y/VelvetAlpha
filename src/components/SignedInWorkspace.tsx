@@ -305,6 +305,38 @@ function PersonRow({ companion, coach, pathname, onClick, inkColor, inkMuted }: 
   );
 }
 
+// You, at the top of the toolbar: your face opens your avatar editor, your
+// name opens your profile, and your own pages sit right under it.
+function MeSection({ pathname, onNavigate, inkColor, inkMuted, inkSubtle }: { pathname: string; onNavigate: (path: string) => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
+  const { user } = useAuth();
+  const myAvatar = useMyAvatar();
+  const openEditor = useAvatarEditor(s => s.open);
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'You';
+  return (
+    <div className="space-y-0.5">
+      <SidebarLabel inkSubtle={inkSubtle}>Me</SidebarLabel>
+      <div className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-2 transition-colors ${pathname === '/profile' ? 'bg-pink-400/10' : 'hover:bg-white/7'}`}>
+        <button type="button" onClick={() => openEditor({ kind: 'user' })} className="group/face flex-shrink-0" aria-label="Edit your avatar" title="Edit your avatar">
+          <div className="relative h-10 w-10 overflow-hidden rounded-full border border-pink-300/70 bg-pink-100/10">
+            {myAvatar
+              ? <Avatar config={myAvatar} className="h-full w-full" />
+              : <Sparkles className="mx-auto mt-3 h-4 w-4 text-pink-300" />}
+            <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity group-hover/face:opacity-100">
+              <Pencil className="h-3.5 w-3.5 text-white" />
+            </span>
+          </div>
+        </button>
+        <button type="button" onClick={() => onNavigate('/profile')} className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-[11px] font-semibold" style={{ color: inkColor }}>{displayName}</span>
+          <span className="mt-0.5 block truncate text-[10px] leading-tight" style={{ color: inkMuted }}>Tap your face to change your look</span>
+        </button>
+      </div>
+      <ToolRow label="My Profile" path="/profile" tone="#cbd5e1" icon={<CircleUserRound className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
+      <ToolRow label="My Page" path="/my-profile" tone="#f472b6" icon={<Sparkles className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
+    </div>
+  );
+}
+
 function ToolRow({ label, icon, tone, path, pathname, onNavigate, inkColor, inkMuted }: { label: string; icon: ReactNode; tone: string; path: string; pathname: string; onNavigate: (path: string) => void; inkColor: string; inkMuted: string }) {
   const active = pathname === path || pathname.startsWith(`${path}/`);
   return (
@@ -328,10 +360,8 @@ function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSu
     { label: 'Insights', path: '/insights', tone: '#fbbf24', icon: <Lightbulb className="h-3.5 w-3.5" /> },
     { label: 'Briefs', path: '/relationship-briefs', tone: '#fb7185', icon: <Heart className="h-3.5 w-3.5" /> },
     { label: 'Morning Journal', path: '/morning-journal', tone: '#fbbf24', icon: <Sunrise className="h-3.5 w-3.5" /> },
-    { label: 'Profile', path: '/profile', tone: '#cbd5e1', icon: <CircleUserRound className="h-3.5 w-3.5" /> },
   ];
   const connectTools = [
-    { label: 'My Page', path: '/my-profile', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
     { label: 'House', path: '/house', tone: '#f472b6', icon: <Home className="h-3.5 w-3.5" /> },
     { label: 'Town', path: '/world', tone: '#f472b6', icon: <Building2 className="h-3.5 w-3.5" /> },
     { label: 'Feed', path: '/feed', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
@@ -362,6 +392,8 @@ function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSu
             </span>
           </button>
         )}
+        <MeSection pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
+        <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
           <SidebarLabel inkSubtle={inkSubtle}>Coaching</SidebarLabel>
           {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach pathname={pathname} onClick={() => lobby.openCompanion(coach)} inkColor={inkColor} inkMuted={inkMuted} />)}
