@@ -25,8 +25,7 @@ import { conversationOrchestrator } from './features/chat/orchestrator';
 import { useAuth } from './auth/AuthProvider';
 import { processEnhancedInsights } from './services/enhancedInsightsService';
 import CBTReflectionDeckModal from './components/CBTReflectionDeckModal';
-import { CompanionAppearanceModal } from './components/CompanionAppearanceModal';
-import { AvatarConfigV2 } from './types/avatar-v2';
+import { onAvatarSaved } from './stores/avatarEditorStore';
 import { CookieConsent } from './components/CookieConsent';
 import { WallpaperPickerModal } from './components/WallpaperPickerModal';
 import { buildWallpaperMeta, buildWallpaperStyle } from './services/wallpaperService';
@@ -95,7 +94,6 @@ function AppInner() {
   const [currentStatus, setCurrentStatus] = useState<string>('');
   const [dailyExperience, setDailyExperience] = useState<any>(null);
 
-  const [showAppearanceModal, setShowAppearanceModal] = useState(false);
   const [showWallpaperModal, setShowWallpaperModal] = useState(false);
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
   const [customizationInitialTab, setCustomizationInitialTab] = useState<'pointer' | 'effect' | 'rewards' | 'fonts' | 'toolbar'>('pointer');
@@ -122,6 +120,14 @@ function AppInner() {
   // conversation is the focus. User can still expand it manually mid-session.
   const [railAutoCollapsed, setRailAutoCollapsed] = useState(true);
   useEffect(() => { setRailAutoCollapsed(true); }, [companionId]);
+
+  // A face edited from anywhere (sidebar, chat, toolbar) updates this chat in place.
+  useEffect(() => onAvatarSaved(({ target, config }) => {
+    if (target.kind === 'user') { setUserAvatarConfig(config as unknown as AvatarConfig); return; }
+    const avatar_config = config as unknown as CompanionWithLastMessage['avatar_config'];
+    setAllCompanions(prev => prev.map(c => c.id === target.id ? { ...c, avatar_config } : c));
+    setCompanion(prev => prev && prev.id === target.id ? { ...prev, avatar_config } : prev);
+  }), []);
   const isRailCollapsed = railAutoCollapsed || (customization?.left_rail_collapsed ?? false);
   const toggleRailCollapse = () => {
     if (railAutoCollapsed) {
@@ -1156,15 +1162,6 @@ function AppInner() {
         />
       )}
 
-      {showAppearanceModal && companion && companionId && (
-        <CompanionAppearanceModal
-          companionId={companionId}
-          companionName={companion.custom_name || 'Companion'}
-          currentConfig={companion.avatar_config as any as AvatarConfigV2 | null}
-          onClose={() => setShowAppearanceModal(false)}
-          onSaved={(newConfig) => setCompanion(prev => prev ? { ...prev, avatar_config: newConfig as any } : prev)}
-        />
-      )}
 
       {showWallpaperModal && companion && companionId && userId && (
         <WallpaperPickerModal

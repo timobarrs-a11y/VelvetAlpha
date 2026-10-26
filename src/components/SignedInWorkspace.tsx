@@ -16,6 +16,7 @@ import {
   Newspaper,
   Plus,
   Settings,
+  Pencil,
   Sparkles,
   Sunrise,
   Target,
@@ -43,6 +44,8 @@ import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { Avatar } from './Avatar';
+import { useAvatarEditor } from '../stores/avatarEditorStore';
+import { useMyAvatar } from '../hooks/useMyAvatar';
 import { companionAvatarConfig, TONE_COLOR } from './lobby';
 import type { CompanionWithLastMessage } from '../services/companionService';
 import { TOOLBAR_TEXT_COLOR_PRESETS, type ToolbarTextColorKey } from '../services/customizationService';
@@ -107,6 +110,8 @@ function WorkspaceToolbar({
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const myAvatar = useMyAvatar();
+  const openAvatarEditor = useAvatarEditor(s => s.open);
   const { muted, toggleMute } = useAudioScene();
 
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Your space';
@@ -161,15 +166,27 @@ function WorkspaceToolbar({
           <LayoutGrid className="h-4 w-4" />
           {waiting > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#fff7fa] bg-rose-500" />}
         </button>
+        {/* Your own face: a shortcut to your avatar editor. */}
+        <button
+          type="button"
+          onClick={() => openAvatarEditor({ kind: 'user' })}
+          className="group relative h-9 w-9 flex-shrink-0 overflow-hidden rounded-full border border-pink-200 bg-pink-100 transition-shadow hover:ring-2 hover:ring-pink-300"
+          title="Edit your avatar"
+          aria-label="Edit your avatar"
+        >
+          {myAvatar
+            ? <Avatar config={myAvatar} className="h-full w-full" />
+            : <Sparkles className="mx-auto h-4 w-4 text-pink-600" />}
+          <span className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100">
+            <Pencil className="h-3.5 w-3.5 text-white" />
+          </span>
+        </button>
         <button
           type="button"
           onClick={() => navigate('/lobby')}
           className="flex min-w-0 items-center gap-2.5 text-left"
           title="Velvet home"
         >
-          <span className="hidden h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-pink-100 text-pink-600 sm:flex">
-            <Sparkles className="h-4 w-4" />
-          </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold text-[#2a1424]">Velvet</span>
             <span className="block max-w-[130px] truncate text-[10px] text-[#2a1424]/60 sm:max-w-none">{displayName}</span>
@@ -260,24 +277,46 @@ function SidebarLabel({ children, inkSubtle }: { children: ReactNode; inkSubtle:
 }
 
 function PersonRow({ companion, coach, collapsed, pathname, onClick, inkColor, inkMuted }: { companion: CompanionWithLastMessage; coach?: boolean; collapsed: boolean; pathname: string; onClick: () => void; inkColor: string; inkMuted: string }) {
+  const openEditor = useAvatarEditor(s => s.open);
   const active = pathname.startsWith(`/chat?companion=${companion.id}`) || pathname.includes(`companion=${companion.id}`);
   const line = companion.last_message_text || (companion.last_message_at ? new Date(companion.last_message_at).toLocaleDateString() : 'Say hello');
-  return (
-    <button type="button" onClick={onClick} className={`group flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors ${active ? 'bg-emerald-400/10' : 'hover:bg-white/7'}`} title={collapsed ? companion.custom_name : undefined}>
-      <div className={`relative flex-shrink-0 overflow-hidden rounded-full border ${coach ? 'h-10 w-10 border-emerald-400/70' : 'h-8 w-8 border-white/10'}`}>
-        <Avatar config={companionAvatarConfig(companion)} className="h-full w-full" />
-        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#0c0a1e] bg-emerald-400" />
-      </div>
+  const edit = () => openEditor({ kind: 'companion', id: companion.id });
+  // The face opens their avatar editor; the rest of the row opens the chat.
+  // Collapsed, the face is the whole row, so it chats and a pencil edits.
+  const face = (
+    <div className={`relative flex-shrink-0 overflow-hidden rounded-full border ${coach ? 'h-10 w-10 border-emerald-400/70' : 'h-8 w-8 border-white/10'}`}>
+      <Avatar config={companionAvatarConfig(companion)} className="h-full w-full" />
+      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#0c0a1e] bg-emerald-400" />
       {!collapsed && (
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-[11px] font-semibold" style={{ color: inkColor }}>{companion.custom_name}</span>
-            {coach && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold text-emerald-300">Coach</span>}
-          </div>
-          <p className="mt-0.5 truncate text-[10px] leading-tight" style={{ color: inkMuted }}>{line}</p>
-        </div>
+        <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity group-hover/face:opacity-100">
+          <Pencil className="h-3.5 w-3.5 text-white" />
+        </span>
       )}
-    </button>
+    </div>
+  );
+  return (
+    <div className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2 py-2 transition-colors ${active ? 'bg-emerald-400/10' : 'hover:bg-white/7'}`}>
+      {collapsed ? (
+        <>
+          <button type="button" onClick={onClick} className="flex-shrink-0" title={companion.custom_name}>{face}</button>
+          <button type="button" onClick={edit} aria-label={`Edit ${companion.custom_name}'s avatar`} title="Edit avatar"
+            className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0c0a1e] text-white/80 opacity-0 ring-1 ring-white/20 transition-opacity group-hover:opacity-100 focus-visible:opacity-100">
+            <Pencil className="h-2.5 w-2.5" />
+          </button>
+        </>
+      ) : (
+        <>
+          <button type="button" onClick={edit} className="group/face flex-shrink-0" aria-label={`Edit ${companion.custom_name}'s avatar`} title="Edit avatar">{face}</button>
+          <button type="button" onClick={onClick} className="min-w-0 flex-1 text-left">
+            <div className="flex items-center gap-1.5">
+              <span className="truncate text-[11px] font-semibold" style={{ color: inkColor }}>{companion.custom_name}</span>
+              {coach && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold text-emerald-300">Coach</span>}
+            </div>
+            <p className="mt-0.5 truncate text-[10px] leading-tight" style={{ color: inkMuted }}>{line}</p>
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 

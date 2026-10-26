@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Message } from '../types';
 import { Avatar } from './Avatar';
+import { useAvatarEditor } from '../stores/avatarEditorStore';
 import { AvatarConfig } from '../types/avatar';
 import { motion } from 'framer-motion';
 import { calculateComposeDelayMs } from '../features/chat/typing/typingPacer';
@@ -333,6 +334,7 @@ export const ChatMessage = ({
 }: ChatMessageProps) => {
   const navigate = useNavigate();
   const isUser = message.sender === 'user';
+  const openAvatarEditor = useAvatarEditor(s => s.open);
 
   // User bubble style — custom key overrides favoriteColor-based gradient
   const customBubbleStyle = bubbleColorKey ? getBubbleStyle(bubbleColorKey) : null;
@@ -469,11 +471,15 @@ export const ChatMessage = ({
       {!isUser && (
         <div className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 mt-0.5">
           {!isGrouped ? (
-            <motion.div
+            <motion.button
+              type="button"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.05, type: 'spring', stiffness: 200 }}
-              className="w-full h-full rounded-full overflow-hidden shadow-md ring-2 ring-white/60"
+              onClick={companionId ? () => openAvatarEditor({ kind: 'companion', id: companionId }) : undefined}
+              disabled={!companionId}
+              title={companionId ? 'Edit avatar' : undefined}
+              className="block w-full h-full rounded-full overflow-hidden shadow-md ring-2 ring-white/60 enabled:hover:ring-rose-300 enabled:cursor-pointer"
             >
               {avatarConfig ? (
                 <Avatar config={avatarConfig} className="w-full h-full" />
@@ -482,7 +488,7 @@ export const ChatMessage = ({
                   <span className="text-white text-xs font-bold">AI</span>
                 </div>
               )}
-            </motion.div>
+            </motion.button>
           ) : (
             <div className="w-full h-full" />
           )}
@@ -552,11 +558,14 @@ export const ChatMessage = ({
       {isUser && (
         <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 mt-0.5">
           {!isGrouped ? (
-            <motion.div
+            <motion.button
+              type="button"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.05, type: 'spring', stiffness: 200 }}
-              className="w-full h-full rounded-full overflow-hidden shadow-md ring-2 ring-white/60"
+              onClick={() => openAvatarEditor({ kind: 'user' })}
+              title="Edit your avatar"
+              className="block w-full h-full rounded-full overflow-hidden shadow-md ring-2 ring-white/60 hover:ring-sky-300 cursor-pointer"
             >
               {avatarConfig ? (
                 <Avatar config={avatarConfig} className="w-full h-full" />
@@ -565,7 +574,7 @@ export const ChatMessage = ({
                   <span className="text-white text-xs font-bold">You</span>
                 </div>
               )}
-            </motion.div>
+            </motion.button>
           ) : (
             <div className="w-full h-full" />
           )}

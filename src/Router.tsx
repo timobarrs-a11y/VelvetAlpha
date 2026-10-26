@@ -21,6 +21,7 @@ import { InstallPWABanner } from './components/InstallPWABanner';
 import { SWUpdateToast } from './components/SWUpdateToast';
 
 import { SignedInWorkspace } from './components/SignedInWorkspace';
+import { AvatarEditorHost } from './components/AvatarEditorModal';
 import { WorldWelcomeMount } from './features/velvet-world/WorldWelcome';
 
 const GAME_PATHS = [
@@ -114,6 +115,7 @@ export function Router() {
             <InstallPWABanner />
             <AudioSceneSync />
             <GlobalEffects />
+            <AvatarEditorHost />
 <SignedInWorkspace>
               <Routes>
                 {publicRoutes}
