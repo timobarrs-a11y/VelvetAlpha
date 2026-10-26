@@ -58,6 +58,12 @@ export function migrateAvatarConfig(raw: unknown): AvatarConfigV2 {
     merged.faceTune = clamped as unknown as AvatarConfigV2['faceTune'];
   }
 
+  // Frame colour is a #rrggbb or nothing; anything else is dropped, so a
+  // hand-edited draft can't put junk into the SVG.
+  if (merged.glassesColor !== undefined && !/^#[0-9a-f]{6}$/i.test(String(merged.glassesColor))) {
+    delete merged.glassesColor;
+  }
+
   // Version 4 opened every hairstyle to everyone. Three names used to mean a
   // short cut on male avatars; give those their own names so nothing changes.
   if ((Number(partial._version) || 0) < 4 && gender === 'male') {

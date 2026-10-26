@@ -497,6 +497,13 @@ function drawHatSwatch(c: CanvasRenderingContext2D, style: string): void {
     case 'bandana': dome('#A8322D', 22); c.fillStyle = '#F4EDE0'; [[12, 18], [18, 14], [24, 18]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 1.1, 0, 7); c.fill(); }); break;
     case 'tricorn': c.fillStyle = '#332A26'; c.beginPath(); c.moveTo(3, 22); c.lineTo(18, 8); c.lineTo(33, 22); c.quadraticCurveTo(18, 28, 3, 22); c.fill(); c.strokeStyle = '#C9A24A'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(3, 22); c.quadraticCurveTo(18, 28, 33, 22); c.stroke(); break;
     case 'top_hat': c.fillStyle = '#1B1B1F'; c.fillRect(10, 6, 16, 18); brim('#141417', 24, 14); c.fillStyle = '#7A1F2B'; c.fillRect(10, 19, 16, 3); break;
+    case 'beanie': dome('#3D6B73', 24); c.fillStyle = '#4E8590'; c.fillRect(7, 21, 22, 5); c.fillStyle = '#F0E9DC'; c.beginPath(); c.arc(18, 11, 3.4, 0, 7); c.fill(); break;
+    case 'baseball_cap': dome('#27406B', 22); brim('#1D3150', 24, 13); c.fillStyle = '#1D3150'; c.beginPath(); c.ellipse(24, 24, 11, 3, 0, 0, Math.PI); c.fill(); break;
+    case 'cowboy_hat': c.fillStyle = '#8A5A3B'; c.beginPath(); c.moveTo(11, 22); c.quadraticCurveTo(11, 8, 18, 12); c.quadraticCurveTo(25, 8, 25, 22); c.closePath(); c.fill(); brim('#6E4529', 23, 16); c.fillStyle = '#D4AF37'; c.fillRect(16.5, 19, 3, 2.4); break;
+    case 'beret': c.fillStyle = '#7A1F2B'; c.beginPath(); c.ellipse(19, 18, 13, 8, -0.12, 0, Math.PI * 2); c.fill(); c.fillStyle = '#5A1620'; c.fillRect(21, 9, 2, 3); break;
+    case 'headband': c.strokeStyle = '#E8707A'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.arc(18, 28, 14, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); break;
+    case 'bucket_hat': dome('#C9B88A', 21); brim('#B8A778', 23, 15); break;
+    case 'headwrap': dome('#D9A441', 22); c.fillStyle = '#7A1F2B'; [[12, 18], [18, 14], [24, 18], [15, 21], [22, 22]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 1, 0, 7); c.fill(); }); c.fillStyle = '#D9A441'; c.beginPath(); c.ellipse(14, 10, 5, 2.6, -0.4, 0, 7); c.ellipse(22, 10, 5, 2.6, 0.4, 0, 7); c.fill(); break;
     default: c.strokeStyle = '#8E9C96'; c.lineWidth = 2; c.beginPath(); c.arc(18, 18, 9, 0, 7); c.moveTo(12, 24); c.lineTo(24, 12); c.stroke();
   }
 }

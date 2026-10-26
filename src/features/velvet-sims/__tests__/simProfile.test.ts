@@ -124,7 +124,8 @@ describe('changing clothes in the game', () => {
 
   it('takes a hat only if it is an avatar hat, and ignores bad colours', () => {
     expect(avatarFromGameLook({ hat: 'nurse_cap' })).toEqual({ headwear: 'nurse_cap' });
-    expect(avatarFromGameLook({ hat: 'beanie' })).toEqual({});
+    expect(avatarFromGameLook({ hat: 'beanie' })).toEqual({ headwear: 'beanie' });
+    expect(avatarFromGameLook({ hat: 'sombrero' })).toEqual({});
     expect(avatarFromGameLook({ top: { style: 'cop', color: 'red' } })).toEqual({});
   });
 

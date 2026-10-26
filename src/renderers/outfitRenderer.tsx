@@ -328,6 +328,13 @@ export function headwearHairCut(p: HeadwearRenderParams): number | null {
     case 'cop_cap': return p.faceTop + 8;
     case 'nurse_cap': return p.faceTop + 7;
     case 'snapback': return p.faceTop + 7;
+    case 'beanie': return p.faceTop + 8;
+    case 'baseball_cap': return p.faceTop + 7;
+    case 'cowboy_hat': return p.faceTop + 6;
+    case 'beret': return p.faceTop + 7;
+    case 'bucket_hat': return p.faceTop + 6;
+    case 'headwrap': return p.faceTop + 9;
+    // A headband sits on the hair instead of covering it.
     default: return null;
   }
 }
@@ -443,6 +450,98 @@ export function renderHeadwear(p: HeadwearRenderParams): React.ReactNode {
           <polygon points={pts([[50, brim - 12], [50 + 3.4, brim - 8], [50, brim - 4], [50 - 3.4, brim - 8]])} fill="#c9a24a" />
           <ellipse cx="50" cy={brim + 1.5} rx={fRx + 7} ry="4.2" fill="#c2262e" />
           <ellipse cx="50" cy={brim + 0.6} rx={fRx + 4} ry="2.4" fill="#e0353d" opacity="0.55" />
+        </g>
+      );
+    }
+    case 'beanie': {
+      const brow = faceTop + 9, main = '#3d6b73', top = faceTop - 11;
+      return (
+        <g>
+          <path d={`M${50 - fRx - 1.5} ${brow - 6} C${50 - fRx - 2.5} ${faceTop - 4} ${50 - fRx * 0.55} ${top} 50 ${top} C${50 + fRx * 0.55} ${top} ${50 + fRx + 2.5} ${faceTop - 4} ${50 + fRx + 1.5} ${brow - 6} Z`} fill={main} />
+          {[-0.72, -0.43, -0.14, 0.14, 0.43, 0.72].map((k) => (
+            <path key={k} d={`M${50 + k * (fRx + 1)} ${brow - 6} Q${50 + k * fRx * 0.8} ${faceTop - 2} ${50 + k * fRx * 0.45} ${top + 2}`} stroke={shade(main, -0.22)} strokeWidth="0.6" fill="none" opacity="0.55" />
+          ))}
+          <rect x={50 - fRx - 2.4} y={brow - 7} width={fRx * 2 + 4.8} height="7.8" rx="2.4" fill={shade(main, 0.14)} stroke={shade(main, -0.2)} strokeWidth="0.5" />
+          {Array.from({ length: Math.floor((fRx * 2 + 1) / 3.2) }, (_, i) => (
+            <path key={i} d={`M${50 - fRx - 0.4 + i * 3.2} ${brow - 6.2} L${50 - fRx - 0.4 + i * 3.2} ${brow + 0.2}`} stroke={shade(main, -0.2)} strokeWidth="0.5" opacity="0.5" />
+          ))}
+          <circle cx="50" cy={top - 1.2} r="4.2" fill="#f0e9dc" stroke="#d8d0c0" strokeWidth="0.6" />
+        </g>
+      );
+    }
+    case 'baseball_cap': {
+      const brow = faceTop + 8, main = '#27406b', top = faceTop - 9;
+      return (
+        <g>
+          <path d={`M${50 - fRx - 1} ${brow} C${50 - fRx - 2} ${faceTop - 3} ${50 - fRx * 0.6} ${top} 50 ${top} C${50 + fRx * 0.6} ${top} ${50 + fRx + 2} ${faceTop - 3} ${50 + fRx + 1} ${brow} Q50 ${brow + 3} ${50 - fRx - 1} ${brow} Z`} fill={main} />
+          {[-1, 1].map((sd) => (
+            <path key={sd} d={`M50 ${top} Q${50 + sd * fRx * 0.45} ${faceTop} ${50 + sd * fRx * 0.55} ${brow + 0.6}`} stroke={shade(main, -0.28)} strokeWidth="0.6" fill="none" />
+          ))}
+          <path d={`M50 ${top} L50 ${brow + 1.4}`} stroke={shade(main, -0.28)} strokeWidth="0.6" />
+          <circle cx="50" cy={top} r="1.6" fill={shade(main, -0.12)} />
+          <path d={`M${50 - fRx + 2} ${brow - 1} Q50 ${brow + 15} ${50 + fRx - 2} ${brow - 1} Q50 ${brow + 5} ${50 - fRx + 2} ${brow - 1} Z`} fill={shade(main, -0.25)} stroke={shade(main, -0.4)} strokeWidth="0.4" />
+        </g>
+      );
+    }
+    case 'cowboy_hat': {
+      const brow = faceTop + 8;
+      return (
+        <g>
+          <path d={`M${50 - fRx + 3} ${brow} C${50 - fRx + 3} ${faceTop + 2} ${50 - fRx + 5} ${faceTop - 9} 44 ${faceTop - 10} Q50 ${faceTop - 5.5} 56 ${faceTop - 10} C${50 + fRx - 5} ${faceTop - 9} ${50 + fRx - 3} ${faceTop + 2} ${50 + fRx - 3} ${brow} Z`} fill="#a9754a" />
+          <path d={`M${50 - fRx + 3} ${brow - 5} Q50 ${brow - 2.2} ${50 + fRx - 3} ${brow - 5} L${50 + fRx - 3} ${brow - 0.5} Q50 ${brow + 2.5} ${50 - fRx + 3} ${brow - 0.5} Z`} fill="#4a2f1d" />
+          <rect x="47.8" y={brow - 3.4} width="4.4" height="3.6" rx="0.6" fill="none" stroke="#d4af37" strokeWidth="0.8" />
+          <path d={`M${50 - fRx - 15} ${brow - 6} Q${50 - fRx - 5} ${brow + 3} 50 ${brow + 3.5} Q${50 + fRx + 5} ${brow + 3} ${50 + fRx + 15} ${brow - 6} Q${50 + fRx + 6} ${brow - 1.5} ${50 + fRx - 3} ${brow - 1} L${50 - fRx + 3} ${brow - 1} Q${50 - fRx - 6} ${brow - 1.5} ${50 - fRx - 15} ${brow - 6} Z`} fill="#8b5e3c" stroke="#6e4528" strokeWidth="0.5" />
+          <path d={`M${50 - fRx - 11} ${brow - 3.6} Q${50 - fRx - 4} ${brow + 1.8} 50 ${brow + 2} Q${50 + fRx + 4} ${brow + 1.8} ${50 + fRx + 11} ${brow - 3.6}`} stroke="#6e4528" strokeWidth="0.5" strokeDasharray="1.4 1.1" fill="none" />
+        </g>
+      );
+    }
+    case 'beret': {
+      const main = '#7a1f2b', cy = faceTop + 1;
+      return (
+        <g>
+          <g transform={`rotate(-7 50 ${cy})`}>
+            <ellipse cx="54" cy={cy} rx={fRx + 3} ry="10" fill={main} />
+            <ellipse cx="52" cy={cy - 2.5} rx={fRx - 4} ry="5.5" fill={shade(main, 0.12)} opacity="0.55" />
+            <rect x="57.5" y={cy - 12.8} width="2.2" height="3.4" rx="0.9" fill={shade(main, -0.22)} />
+          </g>
+          <path d={`M${50 - fRx - 1} ${faceTop + 8} Q50 ${faceTop + 12.5} ${50 + fRx + 1} ${faceTop + 8}`} stroke={shade(main, -0.32)} strokeWidth="1.3" fill="none" strokeLinecap="round" />
+        </g>
+      );
+    }
+    case 'headband': {
+      const main = '#e8707a', t = faceTop;
+      return (
+        <g>
+          <path d={`M${50 - fRx + 0.6} ${t + 15} Q50 ${t + 0.5} ${50 + fRx - 0.6} ${t + 15} L${50 + fRx - 0.6} ${t + 20} Q50 ${t + 5.5} ${50 - fRx + 0.6} ${t + 20} Z`} fill={main} stroke={shade(main, -0.25)} strokeWidth="0.5" />
+          <path d={`M${50 - fRx + 3} ${t + 16.6} Q50 ${t + 3} ${50 + fRx - 3} ${t + 16.6}`} stroke={shade(main, 0.4)} strokeWidth="0.8" fill="none" opacity="0.7" />
+        </g>
+      );
+    }
+    case 'bucket_hat': {
+      const brow = faceTop + 8, main = '#c9b88a';
+      return (
+        <g>
+          <path d={`M${50 - fRx + 1} ${brow - 0.5} C${50 - fRx + 1} ${faceTop - 1} ${50 - fRx + 4} ${faceTop - 8} 50 ${faceTop - 8} C${50 + fRx - 4} ${faceTop - 8} ${50 + fRx - 1} ${faceTop - 1} ${50 + fRx - 1} ${brow - 0.5} Z`} fill={main} />
+          <path d={`M${50 - fRx + 1} ${brow - 4} Q50 ${brow - 1.2} ${50 + fRx - 1} ${brow - 4}`} stroke={shade(main, -0.25)} strokeWidth="0.6" fill="none" />
+          <path d={`M${50 - fRx - 8} ${brow + 3} Q${50 - fRx - 3} ${brow - 2.5} ${50 - fRx + 1} ${brow - 1} L${50 + fRx - 1} ${brow - 1} Q${50 + fRx + 3} ${brow - 2.5} ${50 + fRx + 8} ${brow + 3} Q50 ${brow + 11} ${50 - fRx - 8} ${brow + 3} Z`} fill={shade(main, -0.08)} stroke={shade(main, -0.3)} strokeWidth="0.5" />
+          <path d={`M${50 - fRx - 5} ${brow + 2.3} Q50 ${brow + 8.8} ${50 + fRx + 5} ${brow + 2.3}`} stroke={shade(main, -0.3)} strokeWidth="0.5" strokeDasharray="1.3 1" fill="none" />
+        </g>
+      );
+    }
+    case 'headwrap': {
+      const main = '#d9a441', dot = '#7a1f2b', t = faceTop;
+      return (
+        <g>
+          <path d={`M${50 - fRx - 1.5} ${t + 18} C${50 - fRx - 3} ${t - 2} ${50 - fRx * 0.5} ${t - 10} 50 ${t - 10} C${50 + fRx * 0.5} ${t - 10} ${50 + fRx + 3} ${t - 2} ${50 + fRx + 1.5} ${t + 18} Q50 ${t + 9.5} ${50 - fRx - 1.5} ${t + 18} Z`} fill={main} />
+          {[0.25, 0.5, 0.75].map((k) => (
+            <path key={k} d={`M${50 - fRx - 1 + k * 6} ${t + 17 - k * 4} Q50 ${t - 9 + k * 14} ${50 + fRx + 1 - k * 6} ${t + 17 - k * 4}`} stroke={shade(main, -0.25)} strokeWidth="0.7" fill="none" opacity="0.6" />
+          ))}
+          {[[-17, 6], [-8, -2], [4, 3], [14, -3], [20, 9], [-22, 13], [0, 10], [9, 12]].map(([dx, dy]) => (
+            <circle key={`${dx},${dy}`} cx={50 + dx * (fRx / 28)} cy={t + dy} r="1" fill={dot} opacity="0.85" />
+          ))}
+          <ellipse cx="46.5" cy={t - 10.5} rx="6" ry="3.2" transform={`rotate(-22 46.5 ${t - 10.5})`} fill={shade(main, 0.08)} stroke={shade(main, -0.25)} strokeWidth="0.5" />
+          <ellipse cx="53.5" cy={t - 10.5} rx="6" ry="3.2" transform={`rotate(22 53.5 ${t - 10.5})`} fill={shade(main, 0.08)} stroke={shade(main, -0.25)} strokeWidth="0.5" />
+          <circle cx="50" cy={t - 10.2} r="2.3" fill={shade(main, -0.12)} stroke={shade(main, -0.3)} strokeWidth="0.5" />
         </g>
       );
     }

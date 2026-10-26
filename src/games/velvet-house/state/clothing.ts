@@ -121,8 +121,11 @@ export interface WardrobePersona { id: string; label: string; icon: string; top:
 // `hat` is the avatar hat they have on now.
 export interface Wardrobe { pieces: WardrobePiece[]; personas: WardrobePersona[]; hat?: string }
 
-// The hats the avatar can wear (the shop's beanies and caps are only closet items; they never reach the head).
-export const AVATAR_HATS = new Set(['none', 'chef_hat', 'bandana', 'tricorn', 'top_hat', 'cop_cap', 'nurse_cap', 'hair_bow', 'snapback']);
+// The hats the avatar can wear; any other shop hat is only a closet item and never reaches the head.
+export const AVATAR_HATS = new Set([
+  'none', 'chef_hat', 'bandana', 'tricorn', 'top_hat', 'cop_cap', 'nurse_cap', 'hair_bow', 'snapback',
+  'beanie', 'baseball_cap', 'cowboy_hat', 'beret', 'headband', 'bucket_hat', 'headwrap',
+]);
 
 const ID = /^[a-z0-9_-]{1,40}$/i;
 const short = (v: unknown, n: number): v is string => typeof v === 'string' && v.length > 0 && v.length <= n;

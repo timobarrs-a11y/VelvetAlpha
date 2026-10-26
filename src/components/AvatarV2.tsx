@@ -1,5 +1,5 @@
 import { memo, useId, useMemo } from 'react';
-import { AvatarConfigV2, tuneOf } from '../types/avatar-v2';
+import { AvatarConfigV2, DEFAULT_GLASSES_COLOR } from '../types/avatar-v2';
 import { renderHair, renderHairBehind } from '../renderers/hairRenderer';
 import {
   outfitGradient, renderOutfitBody, renderOutfitFront, shade,
@@ -8,7 +8,7 @@ import {
 import { outfitItem, resolveBottom } from '../data/avatarItems';
 import { renderLegs, renderWaist, renderArms, HIP_OFFSET, type FullBodyParams } from '../renderers/bodyRenderer';
 import { migrateAvatarConfig } from '../utils/avatarConfig';
-import { faceOutlinePath } from '../renderers/faceGeometry';
+import { faceOutlinePath, buildFaceGeometry, FACE_PARAMS } from '../renderers/faceGeometry';
 import {
   renderEyes, renderEyelashes, renderEyeliner, renderEyeShadow, renderEyebrows, renderNose,
   renderEars, earLobes, renderMouth, mouthGeometry, MouthMood,
@@ -59,14 +59,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
   const hairClipId = `${uid}-hair`;
 
 
-  const faceParams = {
-    oval:    { rx: 28, ry: 34, chinW: 20, jawY: 78 },
-    round:   { rx: 30, ry: 30, chinW: 26, jawY: 76 },
-    square:  { rx: 28, ry: 32, chinW: 24, jawY: 80 },
-    heart:   { rx: 30, ry: 32, chinW: 16, jawY: 78 },
-    diamond: { rx: 27, ry: 35, chinW: 15, jawY: 80 },
-    oblong:  { rx: 25, ry: 37, chinW: 18, jawY: 82 },
-  }[faceShape] ?? { rx: 28, ry: 34, chinW: 20, jawY: 78 };
+  const faceParams = FACE_PARAMS[faceShape] ?? FACE_PARAMS.oval;
 
   const bodyParams = {
     slim:     { shoulderRx: 26, torsoScaleX: 0.82 },
@@ -75,17 +68,11 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
     curvy:    { shoulderRx: 30, torsoScaleX: 1.14 },
   }[bodyType] ?? { shoulderRx: 30, torsoScaleX: 1.0 };
 
-  // The fine-tune sliders widen or narrow the face and jaw; hair, ears and
-  // everything built on the face outline follow.
+  // The fine-tune sliders widen or narrow the face and jaw; hair, hats, ears
+  // and everything built on the face outline follow.
   const tune = config.faceTune;
-  const fRx = faceParams.rx * (1 + tuneOf(tune, 'faceWidth') * 0.1);
-  const { chinW, ry: fRy } = faceParams;
-  const jaw = tuneOf(tune, 'jawWidth');
-  const faceCenterY = 52;
-  const faceTop = faceCenterY - fRy;
-  const faceBottom = faceCenterY + fRy;
-
-  const faceGeometry = { faceShape, fRx, fRy, chinW, faceTop, faceBottom, faceCenterY, jaw };
+  const faceGeometry = buildFaceGeometry(faceShape, tune);
+  const { fRx, fRy, faceCenterY, faceTop, faceBottom } = faceGeometry;
 
   const renderFaceShape = () => (
     <path d={faceOutlinePath(faceGeometry)} fill={`url(#${faceGradientId})`} />
@@ -216,11 +203,13 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
 
   const renderGlasses = () => {
     if (!glasses || glasses === 'none') return null;
-    const frameColor = '#1a1a1a';
+    const frameColor = config.glassesColor ?? DEFAULT_GLASSES_COLOR;
+    // A faint dark edge keeps pale frames (white, silver) visible on a light face or background.
+    const edge = { filter: 'drop-shadow(0 0.3px 0.4px rgba(0,0,0,0.4))' };
     switch (glasses) {
       case 'round':
         return (
-          <g fill="none" stroke={frameColor} strokeWidth="1.5">
+          <g style={edge} fill="none" stroke={frameColor} strokeWidth="1.5">
             <circle cx="38" cy="50" r="10" />
             <circle cx="62" cy="50" r="10" />
             <path d="M48 50 L52 50" />
@@ -232,7 +221,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
         );
       case 'square':
         return (
-          <g fill="none" stroke={frameColor} strokeWidth="1.5">
+          <g style={edge} fill="none" stroke={frameColor} strokeWidth="1.5">
             <rect x="28" y="44" width="18" height="14" rx="2" />
             <rect x="54" y="44" width="18" height="14" rx="2" />
             <path d="M46 50 L54 50" />
@@ -242,7 +231,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
         );
       case 'cat-eye':
         return (
-          <g fill="none" stroke={frameColor} strokeWidth="1.5">
+          <g style={edge} fill="none" stroke={frameColor} strokeWidth="1.5">
             <path d="M28 54 Q28 44 38 44 Q48 44 48 50 Q48 56 38 56 Q28 56 28 54 L28 44" />
             <path d="M72 54 Q72 44 62 44 Q52 44 52 50 Q52 56 62 56 Q72 56 72 54 L72 44" />
             <path d="M48 50 L52 50" />
@@ -252,7 +241,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
         );
       case 'aviator':
         return (
-          <g fill="none" stroke={frameColor} strokeWidth="1.2">
+          <g style={edge} fill="none" stroke={frameColor} strokeWidth="1.2">
             <path d="M26 48 Q26 42 34 42 L42 42 Q48 42 48 48 L48 54 Q48 60 40 60 L32 60 Q26 60 26 54 Z" />
             <path d="M74 48 Q74 42 66 42 L58 42 Q52 42 52 48 L52 54 Q52 60 60 60 L68 60 Q74 60 74 54 Z" />
             <path d="M48 48 L52 48" />

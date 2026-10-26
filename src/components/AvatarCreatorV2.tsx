@@ -3,7 +3,7 @@ import { Shuffle, Undo2, Redo2, RotateCcw, Bookmark, BookmarkCheck, X, Sparkles,
 import { AvatarV2 } from './AvatarV2';
 import {
   AvatarConfigV2, Gender, HairTexture,
-  SKIN_TONES, EYE_COLORS, HAIR_COLORS, HAIR_FASHION_COLORS, HAIRSTYLE_GROUPS, LIP_COLORS, NECKLACE_COLORS,
+  SKIN_TONES, EYE_COLORS, HAIR_COLORS, HAIR_FASHION_COLORS, HAIRSTYLE_GROUPS, LIP_COLORS, NECKLACE_COLORS, GLASSES_COLORS, DEFAULT_GLASSES_COLOR,
   FACE_TUNE_SLIDERS, tuneOf,
   HAIRSTYLES, AVATAR_CONFIG_VERSION,
   HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
@@ -191,6 +191,7 @@ function coherentRandomize(): AvatarConfigV2 {
     freckles: pick(freckleOpts),
     blush: g === 'female' ? pick(blushOpts) : 'none',
     glasses: pick(glassesOpts),
+    glassesColor: pick(GLASSES_COLORS).value,
     earrings: pick(earringOpts),
     nosePiercing: pick(nosePiercingOpts),
     lipPiercing: pick(lipPiercingOpts),
@@ -739,6 +740,18 @@ export function AvatarCreatorV2({
         </div>
       </Section>
 
+      {config.glasses && config.glasses !== 'none' && (
+        <Section label="Frame Color">
+          <div className="flex flex-wrap gap-2">
+            {GLASSES_COLORS.map(c => (
+              <ColorSwatch key={c.value} color={c.value} title={c.name}
+                selected={(config.glassesColor ?? DEFAULT_GLASSES_COLOR) === c.value}
+                onClick={() => update({ glassesColor: c.value })} />
+            ))}
+          </div>
+        </Section>
+      )}
+
       <Section label="Earrings">
         <div className="grid grid-cols-3 gap-2">
           {([
@@ -823,8 +836,7 @@ export function AvatarCreatorV2({
   const wholeBody = tab === 'body' || tab === 'wardrobe';
   const preview = (size: string, tall: string) => (
     <div className={`${wholeBody ? tall : size} rounded-2xl overflow-hidden flex-shrink-0
-      bg-[radial-gradient(ellipse_at_center,_#1e2a3a_0%,_#060a0f_100%)]
-      shadow-[0_0_40px_rgba(0,0,0,0.8)] flex items-center justify-center`}>
+      bg-white shadow-[0_8px_30px_rgba(0,0,0,0.45)] flex items-center justify-center`}>
       <div className="w-full h-full transition-transform duration-300 ease-out"
         style={{ transform: `scale(${zoom.scale})`, transformOrigin: zoom.origin }}>
         <AvatarV2 config={config} part={wholeBody ? 'full' : 'bust'} className="w-full h-full" />
@@ -833,9 +845,10 @@ export function AvatarCreatorV2({
   );
 
   return (
-    <div className="flex flex-col lg:flex-row gap-0 h-full min-h-0">
-      {/* On wide screens this column stays put while the options scroll past. */}
-      <div className="lg:w-72 xl:w-80 flex-shrink-0 flex flex-col items-center justify-start py-8 px-6
+    <div className="flex flex-col lg:flex-row gap-0 h-full min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible">
+      {/* On wide screens this column stays put while the options scroll past.
+          On phones it sits under the options, inside the same scroll. */}
+      <div className="lg:w-72 xl:w-80 flex-shrink-0 flex flex-col items-center justify-start py-5 lg:py-8 px-6
         bg-gradient-to-b from-[#0d1117] to-[#070c14]
         border-t lg:border-t-0 lg:border-r border-white/5
         lg:sticky lg:top-0 lg:self-start lg:max-h-screen lg:overflow-y-auto">
@@ -909,8 +922,7 @@ export function AvatarCreatorV2({
                       }}
                       title={`Apply saved look ${i + 1}`}
                       className="w-full aspect-square rounded-xl overflow-hidden
-                        bg-[radial-gradient(ellipse_at_center,_#1e2a3a_0%,_#060a0f_100%)]
-                        ring-1 ring-white/10 hover:ring-sky-500/50 transition-all"
+                        bg-white ring-1 ring-white/10 hover:ring-sky-500/50 transition-all"
                     >
                       <AvatarV2 config={slot.config} className="w-full h-full" />
                     </button>
@@ -946,7 +958,7 @@ export function AvatarCreatorV2({
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0 bg-[#080d14] order-first lg:order-none">
+      <div className="flex-none lg:flex-1 flex flex-col lg:min-h-0 bg-[#080d14] order-first lg:order-none">
         {/* On phones the avatar rides along at the top while you scroll the options. */}
         <div className="sticky top-0 z-20 bg-[#080d14] flex-shrink-0">
           <div className="lg:hidden flex items-center justify-center gap-4 pt-4 pb-3 px-4">
@@ -984,7 +996,7 @@ export function AvatarCreatorV2({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="lg:flex-1 lg:overflow-y-auto p-5 space-y-5">
           {tabContent[tab]}
         </div>
       </div>
