@@ -9,7 +9,8 @@ import { drawHouseTile, tilePlot } from './houseTiles';
  * first visit. Every collection is shown; member and earned houses are locked until unlocked.
  */
 export function MoveInPanel({ onMoved, compact = false, initial, submitLabel = 'Move in' }: {
-  onMoved: () => void;
+  /** The house they moved in with, and whether they picked it themselves. */
+  onMoved: (house: HouseConfig, chosen: boolean) => void;
   compact?: boolean;
   /** A house that already exists (a member we built one for): edit it instead of moving in. */
   initial?: HouseConfig | null;
@@ -22,6 +23,8 @@ export function MoveInPanel({ onMoved, compact = false, initial, submitLabel = '
   }));
   const [unlocks, setUnlocks] = useState<{ is_member: boolean; earned: string[] }>({ is_member: false, earned: [] });
   const [moving, setMoving] = useState(false);
+  // Any pick or color change makes it theirs (for Atlas's first remark).
+  const [chosen, setChosen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
 
@@ -34,6 +37,7 @@ export function MoveInPanel({ onMoved, compact = false, initial, submitLabel = '
   const pickHouse = (style: HouseStyle) => {
     if (!houseUnlock(style, unlocks.is_member, unlocks.earned).ok) return;
     setHouse(style);
+    setChosen(true);
     const d = STYLE_DEFAULTS[style];
     setColors({ body: d.body, roof: d.roof, door: d.door });
   };
@@ -44,7 +48,7 @@ export function MoveInPanel({ onMoved, compact = false, initial, submitLabel = '
     try {
       if (initial) await saveHouse({ style: house, ...colors });
       else await claimPlot({ style: house, ...colors });
-      onMoved();
+      onMoved({ style: house, ...colors }, chosen);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to move in');
     }
@@ -60,9 +64,9 @@ export function MoveInPanel({ onMoved, compact = false, initial, submitLabel = '
       <HousePicker value={house} onChange={pickHouse} isMember={unlocks.is_member} earned={unlocks.earned} colors={colors} />
 
       <div className="grid gap-3">
-        <SwatchPicker label="Walls" colors={COLORS.body} current={colors.body} onPick={(v) => setColors((c) => ({ ...c, body: v }))} />
-        <SwatchPicker label="Roof" colors={COLORS.roof} current={colors.roof} onPick={(v) => setColors((c) => ({ ...c, roof: v }))} />
-        <SwatchPicker label="Door" colors={COLORS.door} current={colors.door} onPick={(v) => setColors((c) => ({ ...c, door: v }))} />
+        <SwatchPicker label="Walls" colors={COLORS.body} current={colors.body} onPick={(v) => { setChosen(true); setColors((c) => ({ ...c, body: v })); }} />
+        <SwatchPicker label="Roof" colors={COLORS.roof} current={colors.roof} onPick={(v) => { setChosen(true); setColors((c) => ({ ...c, roof: v })); }} />
+        <SwatchPicker label="Door" colors={COLORS.door} current={colors.door} onPick={(v) => { setChosen(true); setColors((c) => ({ ...c, door: v })); }} />
       </div>
 
       {error && <p className="text-center text-sm text-rose-400">{error}</p>}

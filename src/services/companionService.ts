@@ -8,11 +8,15 @@ import { getEligibleFonts } from './customizationService';
 import { getCurrentStatus } from '../utils/statusHelper';
 import { seedVoiceBaseline } from './voiceFidelityService';
 
+import type { RelationshipType } from '../utils/relationshipType';
+export type { RelationshipType } from '../utils/relationshipType';
+export { isHelper } from '../utils/relationshipType';
+
 export interface Companion {
   id: string;
   user_id: string;
   gender: 'male' | 'female';
-  relationship_type: 'friend' | 'romantic' | 'mentor';
+  relationship_type: RelationshipType;
   font_family?: string | null;
   created_at: string;
   last_message_at: string;
@@ -419,7 +423,7 @@ export async function ensureCoachColors(userId: string): Promise<void> {
     .select('id, coach_color')
     .eq('user_id', userId)
     .eq('is_active', true)
-    .eq('relationship_type', 'mentor');
+    .in('relationship_type', ['mentor', 'assistant']);
 
   if (!coaches || coaches.length === 0) return;
 

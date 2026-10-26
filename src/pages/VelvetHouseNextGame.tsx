@@ -16,6 +16,8 @@ import { useVelvetHouseCloudSave } from '../hooks/useVelvetHouseCloudSave';
 import { announceAvatarSaved, onAvatarSaved } from '../stores/avatarEditorStore';
 import { applyAvatarChange, migrateAvatarConfig } from '../utils/avatarConfig';
 import { recordSimsPurchase } from '../services/avatarInventoryService';
+import { isHelper } from '../utils/relationshipType';
+import { SOMEONE_NEW_ROUTE } from '../services/setupProgressService';
 
 const GAME_PATH = '/games/velvet-house-next/index.html';
 
@@ -40,7 +42,7 @@ export function VelvetHouseNextGame() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const all = await getCompanions(user.id);
-          const pick = all.find(c => c.relationship_type !== 'mentor') ?? all[0] ?? null;
+          const pick = all.find(c => !isHelper(c.relationship_type)) ?? null;
           if (!cancelled && pick) setPickedId(pick.id);
         }
       } catch { /* start without a cloud save */ }
@@ -109,7 +111,7 @@ export function VelvetHouseNextGame() {
       const pickCompanion = async () => {
         if (companionId) return getCompanion(companionId);
         const all = await getCompanions(user.id);
-        return all.find(c => c.relationship_type !== 'mentor') ?? all[0] ?? null;
+        return all.find(c => !isHelper(c.relationship_type)) ?? null;
       };
       const [{ data: player }, companion, unlocks] = await Promise.all([
         supabase.from('user_profiles').select('name, nickname, avatar_config, favorite_color').eq('id', user.id).maybeSingle(),
@@ -151,6 +153,31 @@ export function VelvetHouseNextGame() {
   const handleExit = () => {
     navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
   };
+
+  // A home you share with a companion: with no companion yet, invite them to
+  // meet one rather than move a coach or assistant in.
+  if (settled && !companionId) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0f] p-6 text-white">
+        <div className="max-w-sm text-center">
+          <h1 className="text-2xl font-extrabold">Velvet House is a home you share with a companion</h1>
+          <p className="mt-3 text-white/70">Meet someone to move in with, and the house comes alive.</p>
+          <div className="mt-6 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(SOMEONE_NEW_ROUTE)}
+              className="rounded-full bg-gradient-to-r from-rose-500 to-pink-600 py-3 font-bold"
+            >
+              Meet a companion
+            </button>
+            <button type="button" onClick={() => navigate('/lobby')} className="py-2 text-sm text-white/60 hover:text-white">
+              Not now
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-[#0a0a0f] z-50 flex flex-col">

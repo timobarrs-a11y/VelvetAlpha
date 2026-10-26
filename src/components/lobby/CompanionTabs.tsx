@@ -4,6 +4,7 @@ import { Heart, Brain, Plus, Trash2, Users } from 'lucide-react';
 import { Avatar } from '../Avatar';
 import { companionAvatarConfig } from './lobbyUtils';
 import type { CompanionWithLastMessage } from '../../services/companionService';
+import { isHelper } from '../../utils/relationshipType';
 
 type Category = 'companions' | 'coaching';
 
@@ -17,7 +18,7 @@ interface CategoryConfig {
 
 const CATEGORIES: CategoryConfig[] = [
   { key: 'companions',    label: 'Companions',    icon: <Heart className="w-3 h-3" />,      color: '#f472b6', matchTypes: ['romantic', 'friend', null] },
-  { key: 'coaching',      label: 'Coaching',      icon: <Brain className="w-3 h-3" />,       color: '#34d399', matchTypes: ['mentor'] },
+  { key: 'coaching',      label: 'Your team',     icon: <Brain className="w-3 h-3" />,       color: '#34d399', matchTypes: ['mentor', 'assistant'] },
 ];
 
 interface Props {
@@ -49,7 +50,7 @@ export function CompanionTabs({ companions, onOpen, onAddCompanion, onAddCoach, 
 
   const activeConfig = CATEGORIES.find(c => c.key === activeCategory)!;
   const activeList = sorted(filterByCategory(activeConfig));
-  const hasCoach = companions.some(c => c.relationship_type === 'mentor');
+  const hasCoach = companions.some(c => isHelper(c.relationship_type));
 
   const clearLongPress = () => {
     if (longPressTimer.current) {

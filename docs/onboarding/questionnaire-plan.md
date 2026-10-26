@@ -511,21 +511,18 @@ February shows on the 28th in other years.
 | A1 | **Act 1 order and saving:** reorder `personalBank.ts` to name → color → nickname → birthday → zodiac → gender → interests, with one tabbed interests screen. Save each answer as it's given (a per-field save from `onAnswer`) and resume at the first unanswered question. Move the four wavelength questions and the swipe deck out. Pass all six interest groups into Atlas's prompt. Add the Someday screen (8) and its `someday` column, and pass the picks to Atlas. | Small–Medium |
 | A2 | **Their color:** re-skin the questionnaire shell after question 2, and the Atlas chat (`--shell-*` tokens instead of the hard-coded gold). | Small |
 | A3 | **Atlas picks the right question:** the trait ledger, the choosing rule, tap chips, and `[PROFILE …]` marker parsing and validation in `atlas-onboarding`, plus the 15-person test script. | Medium |
-| A4 | Swipe deck as a daily feed card; the companion asks love language and "when it's hard" in week 1. | Small |
+| A4 | Swipe deck as a daily feed card; the companion asks love language and "when it's hard" in week 1. | Small *Built:* `ThisOrThatCard` at the top of the feed, one pair a day, saved to `user_profiles.taste_picks` and passed to companions; the two questions left the companion setup and are asked in conversation in the first week (`_shared/companionWeekOne.ts`), saved from a hidden `[TRAIT …]` marker. |
 | A5 | **Today on the home screen:** the Today section above the feed in `HomeV3Page`, with done, confirm, move and drop. No dependencies, so it can go first. | Small–Medium |
 | A6 | **Atlas makes plans:** the probing rules, the order goals come from (them, then Someday, then interests) and the proposal rules in his prompt, the `add_calendar_event` tool in `atlas-onboarding` with `tentative` in metadata, and the extra checks in the test script. | Medium |
 | A7 | **Repeating events that repeat:** the shared expand-repeats helper used by the calendar page and Today, done dates per occurrence, and all-day dates compared in local time. Fixes the calendar as it is today, so it should go before A8. | Small–Medium |
 | A8 | **Their own plans and their people:** quick add in Today (task, appointment, birthday, reminder, goal), the My people birthday form and the one-time Today card, ages worked out from the birth year, and birthdays a week ahead in "coming up". | Medium |
 | A9 | **The first-session chain:** the progress strip and saving at each step; the "Now, you" screen and the avatar creator set from Act 1, recording what was chosen by hand; the house and billboard step with headline starters; the scripted look around the town with **Continue to Atlas**; Atlas's remark on a hand-picked choice; meet your assistant or coach (randomized, with Change anything); the billboard goal question; Community and Games highlights on home; avatar-free companion and pricing timing as in "What waits". | Medium–Large |
 
-## Decisions for Tim
+## Decisions (made by Tim, 26 October)
 
-1. **"Master" and "Miss":** keep them as the default with the one-time "shall I keep the
-   formalities?" offer (recommended), or first names only?
-2. **Sonnet for Atlas's onboarding chat:** about 10 turns once per person. Recommended; Haiku
-   will struggle to pick the right question and hold the voice.
-3. **Zodiac:** worked out from the birthday with a one-tap confirm (recommended), or asked outright?
-4. **Someday screen:** in Act 1 as screen 8 (recommended, because it's Atlas's main backup
-   when someone is unsure), or offered later in the first week to keep Act 1 shorter?
-5. **Atlas's plans:** go straight onto the calendar as pencilled in once they say yes
-   (recommended, because it shows up immediately), or wait in a suggestions list until confirmed?
+1. **"Master" and "Miss"** are the default, with the one-time "shall I keep the formalities?"
+   offer.
+2. **Atlas's onboarding chat runs on Sonnet.**
+3. **Zodiac** is worked out from the birthday, with a one-tap confirm.
+4. **The Someday screen** is in Act 1, as screen 8.
+5. **Atlas's plans** go straight onto the calendar as pencilled in once they say yes.

@@ -67,7 +67,17 @@ export interface Agent {
   // The last few things they did, newest first: they avoid repeating them.
   recent?: string[];
   look: AgentLook;
+  // Out of the house (at work): hidden, and only their needs change.
+  away?: 'work' | null;
 }
+
+/** When someone sleeps on their own: night starts at `nightStart` and they get up after `wakeAt`. */
+export interface SleepTimes {
+  nightStart: number;
+  wakeAt: number;
+}
+
+const DEFAULT_SLEEP: SleepTimes = { nightStart: 22.5, wakeAt: 6 };
 
 export interface HouseWorld {
   slots: Slot[];
@@ -112,6 +122,8 @@ const ACT_TAGS: Record<string, string[]> = {
   newspaper: ['seat'], snack: ['fridge'], wipeCounter: ['sink'], journal: ['desk'], freelance: ['desk'],
   mirror: ['mirror'], foldClothes: ['dresser'], makeBed: ['makebed'], laundry: ['washer'],
   rummage: ['rummage'], tend: ['garden'],
+  // Side jobs (sideJobs.ts): never chosen on their own, only when the player says.
+  sideDesk: ['desk'], sideBake: ['stove'],
 };
 
 const CHOICES = [
@@ -227,8 +239,10 @@ function chainAvailable(world: HouseWorld, ch: Agent, chain: string, taken: Set<
   return chainOf(chain).every((act) => freeSlot(world, ch, act, taken) !== null);
 }
 
-function chainScore(ch: Agent, chain: string, hourF: number): number {
-  const night = hourF >= 22.5 || hourF < 6;
+function chainScore(ch: Agent, chain: string, hourF: number, sleep: SleepTimes = DEFAULT_SLEEP): number {
+  const night = sleep.nightStart < sleep.wakeAt
+    ? hourF >= sleep.nightStart && hourF < sleep.wakeAt
+    : hourF >= sleep.nightStart || hourF < sleep.wakeAt;
   if (chain === 'sleep') return night && ch.needs.energy < 90 ? 200 : ch.needs.energy < 15 ? 120 : -1;
   if (night) return -1;
   if (chain === 'nap' && ch.needs.energy > 40) return -1;
@@ -249,11 +263,11 @@ const URGENT = 20;
 // How many recent activities someone remembers, and avoids repeating.
 const RECENT = 4;
 
-export function chooseChain(world: HouseWorld, ch: Agent, other: Agent | null, hourF: number, rng: () => number): string | null {
+export function chooseChain(world: HouseWorld, ch: Agent, other: Agent | null, hourF: number, rng: () => number, sleep?: SleepTimes): string | null {
   const taken = takenBy(other);
   const options: Array<{ chain: string; score: number }> = [];
   for (const c of CHOICES) {
-    let sc = chainScore(ch, c, hourF);
+    let sc = chainScore(ch, c, hourF, sleep);
     if (sc < 0) continue;
     // Something they did a moment ago is less tempting.
     if (ch.recent?.includes(c)) sc *= 0.35;
@@ -293,6 +307,15 @@ function startAct(world: HouseWorld, ch: Agent, act: string, next: string[], oth
   }
   ch.task = { act, slot: slot ?? null, phase: 'walk', route: routeTo(world, ch, ...goal), time: 0, dur: meta?.dur ?? 8, next };
   return true;
+}
+
+/** Several activities in a row, e.g. the morning routine. Skips any that can't be done. */
+export function startSequence(world: HouseWorld, ch: Agent, acts: string[], other: Agent | null, rng: () => number): boolean {
+  const queue = [...acts];
+  while (queue.length) {
+    if (startAct(world, ch, queue.shift()!, queue, other, rng)) return true;
+  }
+  return false;
 }
 
 export function startChain(world: HouseWorld, ch: Agent, chain: string, other: Agent | null, rng: () => number): boolean {
@@ -380,6 +403,7 @@ export function isWalking(ch: Agent): boolean {
 }
 
 export function statusText(ch: Agent): string {
+  if (ch.away === 'work') return 'At work';
   const t = ch.task;
   if (!t) return 'Taking a breather';
   const verb = ACTIVITIES[t.act]?.verb ?? 'Busy';
@@ -391,7 +415,15 @@ export function tickAgent(
   world: HouseWorld, ch: Agent, other: Agent | null,
   dt: number, gameMin: number, walkMul: number, hourF: number, rng: () => number,
   household?: HouseholdState,
+  sleep: SleepTimes = DEFAULT_SLEEP,
 ): void {
+  if (ch.away) {
+    ch.needs = tickNeeds(ch.needs, {
+      away: true, asleep: false, fitness: 0, starving: ch.needs.food < 15, messLevel: 0, hasBed: true,
+      activity: null, activityName: null, foodScale: 1, coffeeBoost: 1, hasBigTv: false, hasBookshelf: false, hasRecords: false,
+    }, gameMin).needs;
+    return;
+  }
   const t = ch.task;
   const doingAct = t && t.phase === 'do' ? ACTIVITIES[t.act] : null;
   ch.needs = tickNeeds(ch.needs, {
@@ -403,7 +435,7 @@ export function tickAgent(
   if (!t) {
     ch.idle -= dt * walkMul;
     if (ch.idle > 0) return;
-    const chain = chooseChain(world, ch, other, hourF, rng);
+    const chain = chooseChain(world, ch, other, hourF, rng, sleep);
     if (!chain || !startChain(world, ch, chain, other, rng)) startAct(world, ch, 'wander', [], other, rng);
     return;
   }
@@ -416,7 +448,7 @@ export function tickAgent(
   if (household && t.act === 'wash' && t.time >= 0.1 && t.time < gameMin + 0.1) washDishes(household, 99);
   if (household && t.act === 'scrub' && t.slot == null && t.time >= 0.1) { const d = worstDirt(household); if (d) scrubDirt(household, d); }
   const done = t.act === 'sleep'
-    ? ch.needs.energy >= 99 || (hourF >= 6.5 && hourF < 22 && ch.needs.energy >= 85)
+    ? ch.needs.energy >= 99 || (hourF >= sleep.wakeAt + 0.5 && hourF < 22 && ch.needs.energy >= 85)
     : t.time >= t.dur;
   if (done) finish(world, ch, other, rng);
 }

@@ -1,5 +1,6 @@
 import { supabase } from '../shared/supabase/client';
 import { ProactiveMessageService } from './proactiveMessageService';
+import { isHelper } from '../utils/relationshipType';
 
 type RitualType = 'morning' | 'evening' | 'night';
 
@@ -143,7 +144,7 @@ export class DailyRitualService {
     }
 
     if (!message) {
-      if (companionRow?.relationship_type === 'mentor') {
+      if (isHelper(companionRow?.relationship_type)) {
         let domain: string | undefined;
         let coachingContext = '';
         try {

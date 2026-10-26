@@ -2,6 +2,8 @@ import { supabase } from '../shared/supabase/client';
 import { MODEL_CONFIG } from './modelSelector';
 import type { ExpertConfig } from '../config/signatureExperts';
 import { buildCoachOpeningGuidance, buildCoachOpeningFallback } from '../config/coachFramework';
+import type { RelationshipType } from './companionService';
+import { isHelper } from '../utils/relationshipType';
 
 export interface FirstMessageTemplate {
   greeting: string;
@@ -25,7 +27,7 @@ export class FirstMessageService {
     const { getVoiceById } = await import('../config/signatureVoices');
     const voice = getVoiceById(signatureVoiceId);
 
-    const isMentor = connectionType === 'mentor';
+    const isMentor = isHelper(connectionType);
 
     if (!voice) {
       console.warn('Signature voice not found, falling back to template');
@@ -186,7 +188,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     userBirthday?: string,
     expertDomain?: string,
     expertConfig?: ExpertConfig | null,
-    relationshipTypeOverride?: 'friend' | 'romantic' | 'mentor',
+    relationshipTypeOverride?: RelationshipType,
   ): Promise<string> {
     const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || sessionStorage.getItem('expertMatchAnswers') || '{}');
 
@@ -204,7 +206,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     const isFemale = userGender === 'Female';
     const isFriend = connectionType === 'friend';
     const isRomantic = connectionType === 'romantic';
-    const isMentor = connectionType === 'mentor';
+    const isMentor = isHelper(connectionType);
 
     let personalInterest = '';
     if (resolvedExpertDomain) {

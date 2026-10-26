@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Globe } from 'lucide-react';
 import { Button } from '../shared/ui';
 import { AppNavRadial } from './AppNavRadial';
 import { LanguageInputToolbar } from './LanguageInputToolbar';
 import { getDraft, setDraft, clearDraft } from '../utils/draftCache';
+import { HelperSearchSheet } from '../features/search/HelperSearchSheet';
+import type { HelperSearchRequest } from '../features/search/searchTopics';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -14,14 +16,17 @@ interface ChatInputProps {
   showNavRadial?: boolean;
   draftScope?: string;
   showLanguageToolbar?: boolean;
+  /** Coaches and assistants: a search button that asks what the search is for. */
+  helperSearch?: { userId: string; onSearch: (req: HelperSearchRequest) => void };
 }
 
 const MAX_TEXTAREA_HEIGHT = 120;
 
-export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMessageText, showNavRadial = true, draftScope, showLanguageToolbar = false }: ChatInputProps) => {
+export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMessageText, showNavRadial = true, draftScope, showLanguageToolbar = false, helperSearch }: ChatInputProps) => {
   const draftKey = draftScope ?? companionId ?? '';
   const [input, setInput] = useState(() => (draftKey ? getDraft(draftKey) : ''));
   const [isFocused, setIsFocused] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const resize = () => {
@@ -86,6 +91,28 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
             theme="light"
           />
         </div>
+      )}
+
+      {helperSearch && companionId && (
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          disabled={disabled}
+          aria-label={`Search the web with ${characterName}`}
+          title="Search the web"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-black/8 bg-white/85 text-gray-500 hover:text-rose-500 disabled:opacity-40"
+        >
+          <Globe className="h-[18px] w-[18px]" />
+        </button>
+      )}
+      {searchOpen && helperSearch && companionId && (
+        <HelperSearchSheet
+          userId={helperSearch.userId}
+          companionId={companionId}
+          helperName={characterName}
+          onSearch={helperSearch.onSearch}
+          onClose={() => setSearchOpen(false)}
+        />
       )}
 
       <div className="flex-1 relative">

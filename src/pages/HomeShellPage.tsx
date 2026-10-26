@@ -32,6 +32,7 @@ const CoAuthorPage = lazy(() => import('./CoAuthorPage').then(m => ({ default: m
 
 import { EmbeddedChat } from '../components/hub/EmbeddedChat';
 import { InsightsTeaser } from '../components/hub/InsightsTeaser';
+import { isHelper } from '../utils/relationshipType';
 
 type ContentTab = 'feed' | 'videos' | 'calendar' | 'co-author' | 'insights' | 'chat' | 'companion-list';
 type FeedTab = 'feed' | 'videos';
@@ -143,7 +144,7 @@ export function HomeShellPage() {
       group: 'core', action: () => { setCompanionCategory('companions'); setActiveTab('companion-list'); },
     },
     {
-      id: 'coaching', label: 'Coaching', sub: `${companions.filter(c => c.relationship_type === 'mentor').length} mentors`,
+      id: 'coaching', label: 'Your team', sub: `${companions.filter(c => isHelper(c.relationship_type)).length} coaches and assistants`,
       icon: <Brain className="w-3.5 h-3.5" />, color: 'text-emerald-400',
       group: 'core', action: () => { setCompanionCategory('coaching'); setActiveTab('companion-list'); },
     },
@@ -534,7 +535,7 @@ export function HomeShellPage() {
 
 const CATEGORY_CONFIG: Record<CompanionCategory, { label: string; color: string; matchTypes: string[]; addLabel: string }> = {
   companions:     { label: 'Companions',    color: '#f472b6', matchTypes: ['romantic', 'friend', ''], addLabel: 'Someone New' },
-  coaching:       { label: 'Coaching',      color: '#34d399', matchTypes: ['mentor'],                 addLabel: 'Add coach' },
+  coaching:       { label: 'Your team',     color: '#34d399', matchTypes: ['mentor', 'assistant'],    addLabel: 'Add coach' },
 };
 
 function CompanionList({

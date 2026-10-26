@@ -10,7 +10,7 @@ import { MoveInPanel } from './MoveInSheet';
 
 // Never interrupt sign-up, onboarding, a game, or the town itself (it has its own move-in screen).
 const QUIET_PREFIXES = [
-  '/splash', '/login', '/signin', '/signup', '/onboarding', '/atlas-onboarding', '/coach-avatar', '/user-questionnaire',
+  '/splash', '/login', '/signin', '/signup', '/onboarding', '/atlas-onboarding', '/coach-avatar', '/user-questionnaire', '/arrival',
   '/create-user-avatar', '/intent-select', '/companion-path', '/expert-', '/questionnaire', '/create-additional-companion',
   '/analyzing', '/voice-selection', '/create-companion-avatar', '/pricing', '/coach-ready', '/who-to-talk',
   '/environment-setup', '/world', '/velvet-house', '/admin',

@@ -19,6 +19,8 @@ export interface CoachingCommitment {
   extracted_from_message?: string | null;
   plan_step_id?: string | null;
   companion_color?: string | null;
+  /** mentor (a coach) or assistant, for showing lessons apart from goal steps. */
+  companion_relationship_type?: string | null;
   show_on_profile?: boolean;
 }
 
@@ -81,8 +83,60 @@ export async function getCommitments(userId: string, companionId?: string | null
     return [];
   }
 
-  const commitments = (data ?? []) as CoachingCommitment[];
+  return withCompanionInfo((data ?? []) as CoachingCommitment[]);
+}
 
+/**
+ * Commitments for Today on the home screen: open ones (pending or in progress)
+ * due by `end`, overdue ones included, plus any ticked off since `start`, so
+ * the day's done count holds. Soonest first.
+ */
+export async function getTodayCommitments(userId: string, start: Date, end: Date): Promise<CoachingCommitment[]> {
+  const columns = 'id, companion_id, goal_id, description, due_date, status, completed_at, created_at, is_user_created, plan_step_id';
+  const [open, doneToday] = await Promise.all([
+    supabase
+      .from('coaching_commitments')
+      .select(columns)
+      .eq('user_id', userId)
+      .in('status', ['pending', 'in_progress'])
+      .not('due_date', 'is', null)
+      .lte('due_date', end.toISOString()),
+    supabase
+      .from('coaching_commitments')
+      .select(columns)
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .not('due_date', 'is', null)
+      .gte('completed_at', start.toISOString()),
+  ]);
+
+  if (open.error || doneToday.error) {
+    console.error('[coachingService] getTodayCommitments error:', open.error ?? doneToday.error);
+    return [];
+  }
+  const rows = [...(open.data ?? []), ...(doneToday.data ?? [])] as CoachingCommitment[];
+  rows.sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime());
+  return withCompanionInfo(rows);
+}
+
+/** The next open commitment due after `after`, if any. */
+export async function getNextOpenCommitment(userId: string, after: Date): Promise<CoachingCommitment | null> {
+  const { data, error } = await supabase
+    .from('coaching_commitments')
+    .select('id, companion_id, goal_id, description, due_date, status, completed_at, created_at, is_user_created, plan_step_id')
+    .eq('user_id', userId)
+    .in('status', ['pending', 'in_progress'])
+    .gt('due_date', after.toISOString())
+    .order('due_date', { ascending: true })
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+  const [next] = await withCompanionInfo(data as CoachingCommitment[]);
+  return next;
+}
+
+/** Adds each commitment's coach name and color. */
+async function withCompanionInfo(commitments: CoachingCommitment[]): Promise<CoachingCommitment[]> {
   if (commitments.length === 0) return commitments;
 
   const companionIds = [...new Set(commitments.map(c => c.companion_id).filter(Boolean))] as string[];
@@ -92,14 +146,19 @@ export async function getCommitments(userId: string, companionId?: string | null
 
   const { data: companions } = await supabase
     .from('companions')
-    .select('id, custom_name, coach_color')
+    .select('id, custom_name, coach_color, relationship_type')
     .in('id', companionIds);
 
-  const infoMap = new Map((companions ?? []).map(c => [c.id, { name: c.custom_name, color: (c as Record<string, unknown>).coach_color as string | null }]));
+  const infoMap = new Map((companions ?? []).map(c => [c.id, {
+    name: c.custom_name,
+    color: (c as Record<string, unknown>).coach_color as string | null,
+    relationshipType: (c as Record<string, unknown>).relationship_type as string | null,
+  }]));
   return commitments.map(c => ({
     ...c,
     companion_name: c.companion_id ? (infoMap.get(c.companion_id)?.name ?? 'Coach') : 'You',
     companion_color: c.companion_id ? (infoMap.get(c.companion_id)?.color ?? null) : null,
+    companion_relationship_type: c.companion_id ? (infoMap.get(c.companion_id)?.relationshipType ?? null) : null,
   }));
 }
 
@@ -160,6 +219,32 @@ export async function getGoalById(userId: string, goalId: string): Promise<Coach
     }
   }
   return goal;
+}
+
+/** A goal the user set themselves (from quick add in Today), with an optional target date. */
+export async function createUserGoal(
+  userId: string,
+  title: string,
+  targetDate: string | null,
+): Promise<CoachingGoal | null> {
+  const { data, error } = await supabase
+    .from('user_goals')
+    .insert({
+      user_id: userId,
+      title,
+      goal_type: 'project',
+      target_date: targetDate,
+      source: 'stated',
+      status: 'active',
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('[coachingService] createUserGoal error:', error);
+    return null;
+  }
+  return data as CoachingGoal;
 }
 
 export async function updateGoalDeadline(
@@ -501,6 +586,11 @@ export interface CoachPlanStep {
   minimum_value?: number | null;
   target_unit?: string | null;
   user_target_value?: number | null;
+  /** The day it's planned for, so the calendar shows which days hold what. */
+  scheduled_for?: string | null;
+  duration_minutes?: number | null;
+  /** The stage it belongs to, e.g. "Get the money ready". */
+  phase?: string | null;
 }
 
 export interface CoachPlan {
@@ -561,7 +651,9 @@ export async function getPlans(
   const planIds = plans.map(p => p.id);
   const { data: steps } = await supabase
     .from('coach_plan_steps')
-    .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, coach_proposed_title, user_set_title, coach_minimum, is_below_floor, minimum_value, target_unit, user_target_value, created_at, updated_at')
+    // All columns, so newer ones (phase, scheduled_for, duration_minutes) come
+    // through without breaking before their migration has run.
+    .select('*')
     .in('plan_id', planIds)
     .order('order_index', { ascending: true });
 

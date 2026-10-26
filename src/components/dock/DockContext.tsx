@@ -7,6 +7,7 @@ import { setOnline, displayNames, getOrCreateConversation, getConversationList, 
 import { playDing } from './ding';
 import { useAuth } from '../../auth/AuthProvider';
 import type { CoachSurface } from '../../services/chatService';
+import { isHelper } from '../../utils/relationshipType';
 
 /**
  * The bottom dock: one Messages window (friends, requests, Velvet Rope) plus a
@@ -358,7 +359,7 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
     });
   }, []);
 
-  const mentors = useMemo(() => companions.filter(c => c.relationship_type === 'mentor'), [companions]);
+  const mentors = useMemo(() => companions.filter(c => isHelper(c.relationship_type)), [companions]);
   const pageCoachId = coachSurface
     ? (mentors.find(c => c.id === coachSurface.preferredCoachId) ?? mentors[0])?.id ?? null
     : null;

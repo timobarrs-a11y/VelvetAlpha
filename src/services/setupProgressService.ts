@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { isHelper } from '../utils/relationshipType';
 
 export type SetupStep =
   | 'atlas'
@@ -7,7 +8,12 @@ export type SetupStep =
   | 'coach_ready'
   | 'companion_in_progress'
   | 'choose_conversation'
-  | 'complete';
+  | 'complete'
+  // The arrival (docs/onboarding/questionnaire-plan.md): your look, your home, the town, Atlas.
+  | 'arrival_look'
+  | 'arrival_home'
+  | 'arrival_town'
+  | 'arrival_atlas';
 
 export type SetupPath = 'coach_only' | 'coach_and_companion';
 
@@ -68,14 +74,14 @@ export async function advanceSetupStepIf(
 
 export function isCompanionSetupPending(progress: SetupProgress | null, companions: CompanionLite[] = []): boolean {
   if (!progress || progress.path !== 'coach_and_companion' || progress.step === 'complete') return false;
-  const nonMentorCompanions = companions.filter(c => c.relationship_type !== 'mentor' && c.is_active !== false);
+  const nonMentorCompanions = companions.filter(c => !isHelper(c.relationship_type) && c.is_active !== false);
   if (nonMentorCompanions.length > 0) return false;
   return true;
 }
 
 export function isSetupUnfinished(progress: SetupProgress | null, companions: CompanionLite[] = []): boolean {
   if (!progress || progress.step === null || progress.step === 'complete' || progress.step === 'atlas') return false;
-  const nonMentorCompanions = companions.filter(c => c.relationship_type !== 'mentor' && c.is_active !== false);
+  const nonMentorCompanions = companions.filter(c => !isHelper(c.relationship_type) && c.is_active !== false);
   if (nonMentorCompanions.length > 0 && (progress.step === 'companion_in_progress' || progress.step === 'choose_conversation')) return false;
   return true;
 }
@@ -85,11 +91,19 @@ export function prepareResume(progress: SetupProgress | null, companions: Compan
   if (!progress || !isSetupUnfinished(progress, companions)) return null;
 
   const coach = companions.find(c => c.relationship_type === 'mentor' && c.is_active !== false);
-  const others = companions.filter(c => c.relationship_type !== 'mentor');
+  const others = companions.filter(c => !isHelper(c.relationship_type));
 
   if (coach) sessionStorage.setItem('atlasCoachId', coach.id);
 
   switch (progress.step) {
+    case 'arrival_look':
+      return '/arrival/look';
+    case 'arrival_home':
+      return '/arrival/home';
+    case 'arrival_town':
+      return '/world?arrival=1';
+    case 'arrival_atlas':
+      return '/atlas-onboarding';
     case 'coach_avatar':
       if (!coach) return null;
       sessionStorage.setItem('atlasNextDestination', '/coach-ready');

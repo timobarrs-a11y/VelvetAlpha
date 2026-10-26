@@ -114,6 +114,25 @@ fills in:
 - Proactive follow-ups through what already exists: `proactive-check-in-scheduler` for nudges
   before and after due dates, and the morning brief for "today on your goals".
 
+*Built (G5):* coaches and assistants get the web search tool in `chat-turn` (up to 3 searches a
+reply, with guidance to search only for current or specific facts); Atlas's plan draft can look
+up real dates; `atlas-agent` falls back to it when no Brave key is set. The scheduler adds
+"step pencilled in today" and "due tomorrow" reasons after missed and due-today; the morning
+brief now includes open commitments and today's plan steps.
+
+**The search button.** Coach and assistant chats have a search button (the globe beside the
+message box). Before it searches, it asks **"Is this search about…"** and lists what that helper
+is carrying: its goals, open commitments (soonest first) and open plan steps, plus **Something
+else** for searches that aren't tied to a goal yet (like looking into something before deciding
+on one). The choice goes to `chat-turn` with the item's id; the server looks it up (only the
+user's own, only this helper's) and adds a search brief to the message: the item, its dates,
+its goal or plan, and the instruction to search first and use what it knows from the
+conversation rather than asking. Typing what to look up is optional; left blank, the helper
+picks the most useful search for that item. General searches belong to **Atlas**, and the sheet
+says so with a link. Helpers can also offer a search themselves when it would move a goal
+forward. `WEB_SEARCH_PRO_ONLY` (client `src/features/search/searchTopics.ts`, server
+`_shared/webSearch.ts`) turns it into a paid feature later.
+
 ## 3. Setting up a goal: plan, commitments, progress, then the calendar
 
 When a goal is mapped out and its assistant or coach is chosen (in onboarding or any time
@@ -166,6 +185,10 @@ The tough-love coaches keep their style. Firm or gentle is how a coach talks (th
 Both copies of the framework change together: `supabase/functions/_shared/coachFramework.ts`
 and `src/config/coachFramework.ts` (the comment says to keep them in sync).
 
+*Built (G6):* the teaching loop is in both copies of `buildCoachBehavioralInstructions`; every
+curated coach has `teaches` in `CURATED_EXPERT_MAP`, added to its expert layer in `chat-turn` as
+"WHAT YOU TEACH". `scripts/coach-teaching-eval.ts` runs the scripted learner (below).
+
 **Testing:** a script with a scripted learner for each coach checks that the first session
 places them, that sessions contain an explanation, an example, an attempt and feedback, and
 that practice ends up with dates. A matching script for assistants checks that a named goal
@@ -180,6 +203,12 @@ yes.
 - **Today:** "Buy a home: check your credit score" with a target icon and Maya's face;
   "Spanish lesson with Sofia" with a book icon.
 - **Goal board:** who's carrying it, with a link to their chat.
+
+*Built (G7):* the menu (`SignedInWorkspace`) now has **Goals** (active goals, each opening
+`/goal/:id`, then All progress; or "Set a goal with Atlas") and **Your team** (coaches and
+assistants with Coach and Assistant badges in different colors, Commitments, Plans, Library).
+The lobby tabs and the home shell say "Your team". Today marks a coach's items with a book and
+goal steps with a target.
 
 ## Data changes
 
@@ -201,9 +230,9 @@ yes.
 | G6 | **Coaches teach:** the teaching loop, a "what you teach" section for each of the 20 coaches, and the scripted-learner test. | Medium–Large |
 | G7 | **Show them apart:** Goals and Your team in the home menu, labels and badges, and Today icons. | Small |
 
-## Decisions for Tim
+## Decisions (made by Tim, 26 October)
 
-1. **Web search:** worth adding? It's what makes "buy a home" current and specific, and costs a
-   little per search.
-2. **Can one person have several assistants?** One per goal (recommended: each has a face and
-   a focus), or one assistant who handles every non-learning goal?
+1. **Web search** is added, for assistants, Atlas and coaches.
+2. **One assistant per goal.** Each assistant's memory and chat stay focused on one goal,
+   which keeps what it has to remember small and relevant. A new goal without a skill to learn
+   gets a new assistant; a goal with a skill gets a coach.

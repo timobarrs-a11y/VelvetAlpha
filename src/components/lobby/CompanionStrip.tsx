@@ -4,6 +4,7 @@ import { Plus, Heart, Brain, Users, Trash2 } from 'lucide-react';
 import { Avatar } from '../Avatar';
 import { companionAvatarConfig, TONE_COLOR } from './lobbyUtils';
 import type { CompanionWithLastMessage } from '../../services/companionService';
+import { isHelper } from '../../utils/relationshipType';
 
 interface Props {
   companions: CompanionWithLastMessage[];
@@ -39,7 +40,7 @@ export function CompanionStrip({ companions, onOpen, onAddCompanion, onAddCoach,
     return bTime - aTime;
   });
 
-  const hasCoach = companions.some(c => c.relationship_type === 'mentor');
+  const hasCoach = companions.some(c => isHelper(c.relationship_type));
 
   const clearLongPress = () => {
     if (longPressTimer.current) {

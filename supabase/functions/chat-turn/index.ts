@@ -17,6 +17,11 @@ import {
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
 import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult, type CoachingChange } from "../_shared/coachTools.ts";
+import { buildAssistantBehavioralInstructions } from "../_shared/assistantFramework.ts";
+import { weekOneQuestions, weekOneBlock, takeTraitMarkers, tastePicksLine } from "../_shared/companionWeekOne.ts";
+import {
+  webSearchTool, WEB_SEARCH_GUIDANCE, WEB_SEARCH_PRO_ONLY, textOf, parseSearchRequest, buildSearchBrief, type SearchSubject,
+} from "../_shared/webSearch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -202,6 +207,8 @@ interface ChatTurnRequest {
   timezone?: string;
   /** Coaching page the coach panel is open on, if the message comes from there. */
   surface?: CoachSurface;
+  /** From the search button in a coach's or assistant's chat. */
+  search?: unknown;
 }
 
 type CoachSurface = 'progress' | 'plans' | 'commitments' | 'library';
@@ -473,6 +480,14 @@ async function generateResponseWithValidation(
         data = await anthropicResponse.json();
         const blocks: Array<{ type?: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }> =
           Array.isArray(data.content) ? data.content : [];
+
+        // A long web search can pause the turn; hand it back so the API carries on.
+        if (toolRunner && data.stop_reason === 'pause_turn' && round < 3) {
+          collectedText += textOf(data.content);
+          convo.push({ role: 'assistant', content: data.content });
+          data = undefined;
+          continue;
+        }
 
         if (!toolRunner || data.stop_reason !== 'tool_use') break;
 
@@ -1736,13 +1751,17 @@ Deno.serve(async (req: Request) => {
 
     const companionName = companion.custom_name || 'Companion';
     const isMentor = companion.relationship_type === 'mentor';
+    // An assistant helps get one goal done; it shares the coach's goal tools,
+    // coaching state and sessions, with its own way of working.
+    const isAssistant = companion.relationship_type === 'assistant';
+    const isHelper = isMentor || isAssistant;
     const isCorrespondent = companion.relationship_type === 'correspondent';
-    const selectedModel = selectModel(message, tier, isCorrespondent, isMentor);
+    const selectedModel = selectModel(message, tier, isCorrespondent, isHelper);
 
     console.log(`[${traceId}] Model selection:`, { model: selectedModel, tier, isCorrespondent });
 
-    const mentorTokenFloor = isMentor ? (message.includes('```') ? 1500 : 1200) : 600;
-    const maxTokens = (isMentor || isCorrespondent) ? Math.max(getMaxTokensForTier(tier), mentorTokenFloor) : getMaxTokensForTier(tier);
+    const mentorTokenFloor = isHelper ? (message.includes('```') ? 1500 : 1200) : 600;
+    const maxTokens = (isHelper || isCorrespondent) ? Math.max(getMaxTokensForTier(tier), mentorTokenFloor) : getMaxTokensForTier(tier);
     const historyDepth = getHistoryDepthForTier(tier);
 
     const last20Messages = formattedHistory.slice(-historyDepth);
@@ -1766,6 +1785,7 @@ Deno.serve(async (req: Request) => {
     if (companion.signature_expert) {
       try {
         let expertInstruction: string | null = null;
+        let expertTeaches: string | null = null;
 
         if (companion.signature_expert_source === 'user') {
           const { data: userExpert } = await supabaseAdmin
@@ -1808,12 +1828,14 @@ Deno.serve(async (req: Request) => {
                 expertInstruction = null;
               } else {
                 expertInstruction = curated.instruction;
+                expertTeaches = curated.teaches;
                 expertDomain = curated.domain;
                 expertAccountability = curated.accountabilityLevel;
                 expertCheckInStyle = curated.checkInStyle;
               }
             } else {
               expertInstruction = curated.instruction;
+              expertTeaches = curated.teaches;
               expertDomain = curated.domain;
               expertAccountability = curated.accountabilityLevel;
               expertCheckInStyle = curated.checkInStyle;
@@ -1838,7 +1860,7 @@ ${expertInstruction}
 === EXPERT LAYER: ${expertDomain.toUpperCase()} ===
 This companion has expert-level knowledge and focus in ${expertDomain}. In addition to your core personality, you apply this specialized expertise:
 
-${expertInstruction}
+${expertInstruction}${expertTeaches ? `\n\nWHAT YOU TEACH: ${expertTeaches}` : ''}
 
 Balance this domain expertise naturally with your relationship dynamic — bring it up when relevant, not in every message.`;
           }
@@ -1875,11 +1897,21 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       }
     }
 
-    // Fetch the user's discovered goal so the coach can anchor to it.
+    // Fetch the goal this coach or assistant carries (linked to them), else the
+    // user's most recent discovered goal, so they can anchor to it.
     let discoveredGoalText: string | null = null;
-    if (isMentor) {
+    if (isHelper) {
       try {
-        const { data: goalRow } = await supabaseAdmin
+        const { data: ownGoal } = await supabaseAdmin
+          .from('user_goals')
+          .select('title')
+          .eq('user_id', user.id)
+          .eq('source_companion_id', companionId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const { data: goalRow } = ownGoal ? { data: ownGoal } : await supabaseAdmin
           .from('user_goals')
           .select('title')
           .eq('user_id', user.id)
@@ -1905,6 +1937,14 @@ Balance this domain expertise naturally with your relationship dynamic — bring
           accountabilityLevel: expertAccountability,
           checkInStyle: expertCheckInStyle,
         })
+      : isAssistant
+        ? buildAssistantBehavioralInstructions({
+            assistantName: companionName,
+            userName: profile.name,
+            goalText: discoveredGoalText,
+            accountabilityLevel: expertAccountability,
+            checkInStyle: expertCheckInStyle,
+          })
       : isCorrespondent && companion.correspondent_id
         ? buildCorrespondentBehavioralInstructions({
             correspondentName: companionName,
@@ -1914,6 +1954,12 @@ Balance this domain expertise naturally with your relationship dynamic — bring
             voiceDescription: getCuratedCorrespondent(companion.correspondent_id)?.voiceDescription,
           })
         : BEHAVIORAL_INSTRUCTIONS;
+    // Coaches and assistants can look things up (see the web search tool below).
+    const helperSearchBlock = isHelper ? `\n\n${WEB_SEARCH_GUIDANCE}` : '';
+    // A companion's first week: it asks love language and "when it's hard" in conversation.
+    const weekOneOpen = isCorrespondent ? [] : weekOneQuestions(companion);
+    const weekOneText = weekOneBlock(weekOneOpen, formattedHistory.filter(m => m.role === 'user').length)
+      + (isHelper || isCorrespondent ? '' : tastePicksLine(profile.taste_picks));
 
     const groundingBlock = correspondentStoriesBlock
       ? `\n\nRECENT STORIES (use these — do NOT invent stories):\n${correspondentStoriesBlock}\n`
@@ -1925,10 +1971,10 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     // frozen and volatile) so it benefits from prompt caching.
     // Threads, commitments, goals, and facts go into the volatile block.
     const [coachingState, goalsBlock, scopedMemories] = await Promise.all([
-      isMentor
+      isHelper
         ? buildCoachingStateBlock(supabaseAdmin, user.id, companionId)
         : Promise.resolve({ block: '', raised: [] as string[] }),
-      (isMentor || companion.relationship_type === 'companion' || companion.relationship_type === 'partner')
+      (isHelper || companion.relationship_type === 'companion' || companion.relationship_type === 'partner')
         ? fetchActiveGoalsForPrompt(supabaseAdmin, user.id) : Promise.resolve(''),
       fetchScopedMemories(supabaseAdmin, user.id, companionId, companion.relationship_type, message),
     ]);
@@ -1936,7 +1982,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
 
     // Coaching session lifecycle: ensure an open session and inject prior summaries
     let sessionBlock = '';
-    if (isMentor) {
+    if (isHelper) {
       await ensureCoachingSession(supabaseAdmin, user.id, companionId);
       sessionBlock = await fetchLastSessionSummary(supabaseAdmin, user.id, companionId);
     }
@@ -1948,7 +1994,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     // per-turn) layers so Anthropic prompt caching actually works.
     const frozenPrompt = `${personaLayer}
 
-${behavioralBlock}${expertLayer}
+${behavioralBlock}${helperSearchBlock}${weekOneText}${expertLayer}
 
 CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - NEVER ask a question you already asked in this conversation
@@ -1959,10 +2005,10 @@ CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - Remember key facts from this conversation: their mood, their plans, what they're doing, what they told you
 - You have access to the last ${historyDepth} messages in history - USE THEM
 - NEVER repeat questions within the same conversation session
-${isMentor ? '\nIMPORTANT: You are a mentor/coach — maintain a professional, supportive tone. No romantic or flirtatious content.' : ''}${isCorrespondent ? '\nIMPORTANT: You are a correspondent — write a dispatch, not a chat reply. No romantic or flirtatious content. No coaching or self-help.' : ''}${isCorrespondent && tier === 'free' ? '\nLENGTH: Write a tight, punchy dispatch — 3-4 sentences max. Make every word count. Upgrade to premium for the full column-length experience.' : ''}
-RESPONSE LENGTH: ${isMentor ? 'As long as the topic warrants — use markdown, lists, and code blocks when they help. Never pad.' : 'Default short — like a real text.'} Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
+${isHelper ? `\nIMPORTANT: You are ${isAssistant ? 'an assistant' : 'a mentor/coach'} — maintain a professional, supportive tone. No romantic or flirtatious content.` : ''}${isCorrespondent ? '\nIMPORTANT: You are a correspondent — write a dispatch, not a chat reply. No romantic or flirtatious content. No coaching or self-help.' : ''}${isCorrespondent && tier === 'free' ? '\nLENGTH: Write a tight, punchy dispatch — 3-4 sentences max. Make every word count. Upgrade to premium for the full column-length experience.' : ''}
+RESPONSE LENGTH: ${isHelper ? 'As long as the topic warrants — use markdown, lists, and code blocks when they help. Never pad.' : 'Default short — like a real text.'} Never exceed ${maxTokens} tokens, but never write long just because you can. A finished short message always beats a clipped long one.`;
 
-    const hallucinationGuard = isMentor
+    const hallucinationGuard = isHelper
       ? `\n\nHALLUCINATION PREVENTION (CRITICAL FOR COACHES):\n- Only reference plans, steps, and commitments that appear in the [COACHING STATE] section above. Do NOT invent commitments, deadlines, or promises the user never made.\n- Only reference goals that appear in the [COACHING STATE] or [USER'S ACTIVE GOALS] sections. Do NOT fabricate goals.\n- Only reference facts in the <memory> sections. Do NOT state things about the user you have no evidence for.\n- If you are unsure whether something is true, ask the user instead of assuming.\n- COACH TOOLS: You have tools to create goals (create_goal), propose plans (create_plan, add_step), update plans (update_plan), respond to edits and revise steps (adjust_step, remove_step, reorder_steps), record and update commitments (create_commitment, update_commitment, complete_commitment, cancel_commitment), open tabs (show_in_tab), and save things the user keeps (create_artifact: reading_material, routine, practice_set, worksheet, checklist, resource_pick, progress_report). Call a tool BEFORE you tell the user it is done, and read the tool result: if it reports an error, say so plainly and do not claim success. Never invent ids — use the plan_id / step_id / commitment_id values shown in [COACHING STATE]. Check [COACHING STATE] first: do not create a second plan when one already exists, and do not repeat a commitment or artifact you already made.\n- ORDER: goal → plan → commitments → progress. Each builds on the one before: a plan always serves a goal, and every commitment comes from a plan step. Your tools refuse anything out of order, so if something is missing, create the earlier piece first.\n- FIRST CONVERSATION FLOW: As soon as you know the goal and timeframe, create a starter set in one reply: call create_goal, then create_plan with 3-6 steps (each with a concrete quantity and minimum), then create_commitment for 1-3 commitments due within 7 days (each tied to a step via plan_step_id). After creating items, call show_in_tab to open the Plan tab and walk the user through them. The popup is the same conversation — the user can ask questions or request changes, and you edit the plan or commitments live using your tools. End the walkthrough with update_plan status=active ("Let's go").\n- PROPOSE, DON'T IMPOSE: plans and steps you create are proposals the user can accept and edit. Give every step a concrete quantity and, where a real floor exists, a minimum (minimum_value). A real coach knows what will not work: if the user edits a step below your minimum, do not simply go along with it. Decide: adjust_step hold (keep your number and explain why it matters), revise (a middle ground), or accept (lower your minimum and say why). Respect edits at or above your minimum.\n- ADJUSTMENT SIGNALS: If [COACHING STATE] lists ADJUSTMENT SIGNALS, act on each once this session. Do not only ask what happened — propose a concrete change (a smaller step via adjust_step revise, a new commitment, or a new artifact) and lead with empathy. Do not repeat a signal you already addressed.\n- RECENT CHANGES: The [COACHING STATE] includes a RECENT CHANGES section showing what was edited since you last looked. Use this to acknowledge changes the user made (e.g. they ticked a step) or to know what you changed last time.`
       : '';
 
@@ -1972,7 +2018,7 @@ User's local time context: ${timeOfDay}
 
 ${contextReminder}
 
-${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurfaceBlock(surface) : ''}`;
+${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isHelper ? coachSurfaceBlock(surface) : ''}`;
 
     // Semi-stable layer: companion memory. Changes only after summarization
     // runs, not per-turn. Gets its own 1h cache breakpoint so the frozen
@@ -2013,11 +2059,50 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
       alternatingMessages.pop();
     }
 
+    // The search button: look up what the search is about, so the helper can
+    // search with it in hand. Only for this user's own goals and this helper's items.
+    const searchRequest = isHelper && (!WEB_SEARCH_PRO_ONLY || tier === 'plus' || tier === 'elite' || tier === 'essential' || isSuperUser)
+      ? parseSearchRequest(body.search)
+      : null;
+    let searchBrief = '';
+    if (searchRequest) {
+      let subject: SearchSubject | null = null;
+      try {
+        const about = searchRequest.about;
+        if (about?.kind === 'goal') {
+          const { data } = await supabaseAdmin.from('user_goals').select('title, target_date')
+            .eq('id', about.id).eq('user_id', user.id).maybeSingle();
+          if (data) subject = { kind: 'goal', title: data.title, date: data.target_date };
+        } else if (about?.kind === 'commitment') {
+          const { data } = await supabaseAdmin.from('coaching_commitments').select('description, due_date, goal_id')
+            .eq('id', about.id).eq('user_id', user.id).eq('companion_id', companionId).maybeSingle();
+          if (data) {
+            const { data: goal } = data.goal_id
+              ? await supabaseAdmin.from('user_goals').select('title').eq('id', data.goal_id).eq('user_id', user.id).maybeSingle()
+              : { data: null };
+            subject = { kind: 'commitment', title: data.description, date: data.due_date ? String(data.due_date).slice(0, 10) : null, goalTitle: goal?.title ?? null };
+          }
+        } else if (about?.kind === 'step') {
+          const { data } = await supabaseAdmin.from('coach_plan_steps')
+            .select('title, scheduled_for, coach_plans!inner(title, user_id, companion_id)')
+            .eq('id', about.id).eq('coach_plans.user_id', user.id).eq('coach_plans.companion_id', companionId).maybeSingle();
+          if (data) {
+            const plan = (Array.isArray(data.coach_plans) ? data.coach_plans[0] : data.coach_plans) as { title?: string } | null;
+            subject = { kind: 'step', title: data.title, date: data.scheduled_for, planTitle: plan?.title ?? null };
+          }
+        }
+      } catch (searchErr) {
+        console.error(`[${traceId}] Search subject lookup failed:`, searchErr);
+      }
+      // An item that isn't theirs (or is gone) and no query: nothing to search for.
+      if (subject || searchRequest.query) searchBrief = `\n\n${buildSearchBrief(searchRequest.query, subject)}`;
+    }
+
     const messagesToSend = [
       ...alternatingMessages,
       {
         role: 'user' as const,
-        content: message,
+        content: message + searchBrief,
       },
     ].filter(msg => msg.content && msg.content.trim().length > 0);
 
@@ -2071,7 +2156,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
 
     // Check if this is the first coaching session (no prior closed sessions).
     let isFirstSession = false;
-    if (isMentor) {
+    if (isHelper) {
       try {
         const { count } = await supabaseAdmin
           .from('coaching_sessions')
@@ -2083,9 +2168,9 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
       } catch {}
     }
 
-    const toolRunner: CoachToolRunner | undefined = isMentor
+    const toolRunner: CoachToolRunner | undefined = isHelper
       ? {
-          tools: COACH_TOOLS,
+          tools: [...COACH_TOOLS, webSearchTool(searchBrief ? 5 : 3)],
           maxCalls: isFirstSession ? 12 : 6,
           executed: false,
           run: async (name, input) => {
@@ -2115,12 +2200,22 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
     let assistantMessage = result.message;
     const apiUsage = result.usage;
 
+    // Save what the companion learned in its first week, and hide the marker.
+    if (weekOneOpen.length > 0 || assistantMessage.includes('[TRAIT')) {
+      const { text, updates } = takeTraitMarkers(assistantMessage);
+      assistantMessage = text;
+      if (Object.keys(updates).length > 0) {
+        const { error: traitErr } = await supabaseAdmin.from('companions').update(updates).eq('id', companionId).eq('user_id', user.id);
+        if (traitErr) console.error(`[${traceId}] Week-one trait save failed:`, traitErr);
+      }
+    }
+
     const latencyMs = Date.now() - startTime;
 
     console.log(`[${traceId}] Response generated in ${latencyMs}ms`);
 
     // Increment coaching session message count
-    if (isMentor) {
+    if (isHelper) {
       try {
         const { data: session } = await supabaseAdmin
           .from('coaching_sessions')
@@ -2163,7 +2258,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
       message,
       assistantMessage,
       last20Messages,
-      isMentor,
+      isHelper,
       injectedMemoryIds,
       openThreadContents,
     );
@@ -2196,7 +2291,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isMentor ? coachSurface
       last20Messages.map(m => ({ role: m.role, content: m.content, id: m.id })),
     );
 
-    if (isMentor) {
+    if (isHelper) {
       EdgeRuntime.waitUntil(Promise.allSettled([
         acknowledgeTickEvents(supabaseAdmin, user.id, companionId),
         markSignalsRaised(supabaseAdmin, user.id, companionId, coachingState.raised),

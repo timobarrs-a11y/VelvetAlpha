@@ -6,11 +6,12 @@ import { CATALOG, TABS, itemsForTab, lockOf, type CatalogEntry } from '../state/
 import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals';
 import { careerTitle } from '../state/career';
 import { paperCss, floorCss, type LookInfo } from './swatch';
+import { phoneHtml, phoneStructure, patchPhone, animateMoney, type PhoneTab, type PhoneView } from './phone';
 
 import { clockText, season, weekday, DAYS } from '../state/time';
 import type { OwnedCloth, WardrobePersona } from '../state/clothing';
 
-export type DrawerPage = 'shop' | 'arrange' | 'goals' | 'do' | 'partner' | 'you' | 'home' | 'log' | '';
+export type DrawerPage = 'shop' | 'arrange' | 'goals' | 'do' | 'phone' | 'partner' | 'you' | 'home' | 'log' | '';
 
 export interface DrawerCallbacks {
   onClose: () => void;
@@ -38,6 +39,13 @@ export interface DrawerCallbacks {
   onWearPersona: (id: string) => void;
   // The salon: avatar items that are the player's everywhere once bought.
   onBuyAvatarItem: (itemId: string) => void;
+  // The phone: pay one bill, take a side-job offer, work on a taken job,
+  // change the routine, or stay home from work today.
+  onPayBillId?: (id: string) => void;
+  onTakeOffer?: (id: string) => void;
+  onWorkJob?: (id: string) => void;
+  onRoutine?: (key: 'wake' | 'weekendWake' | 'bed' | 'shower', delta: number) => void;
+  onCallIn?: () => void;
 }
 
 // One thing for sale in the salon (see src/data/avatarCatalog.ts).
@@ -117,6 +125,7 @@ export interface DrawerState {
   personas: WardrobePersona[];
   wearing: { top: string; topStyle: string; bottom: string; bottomStyle?: string; hat?: string };
   salon: SalonItem[];
+  phone?: PhoneView;
 }
 
 const SALON_TAB = 'Salon';
@@ -128,6 +137,7 @@ export const DOCK_TABS: Record<string, { color: string; label?: string; icon: st
   shop: { color: '#F5A83B', icon: svg('<path d="M5 8.5h14l-1.2 11.5H6.2z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>') },
   arrange: { color: '#A582F0', icon: svg('<path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>') },
   goals: { color: '#6FCB78', icon: svg('<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>') },
+  phone: { color: '#7FD38A', icon: svg('<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>') },
   do: { color: '#F2805C', label: 'Orders', icon: svg('<rect x="5.5" y="4" width="13" height="17" rx="2.5"/><path d="M9 3.5h6v3H9zM9 11h6M9 15h4"/>') },
   partner: { color: '#EC5F90', icon: svg('<path d="M12 20.5s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7.6a4.2 4.2 0 0 1 7.5 2.6c0 5.7-7.5 10.3-7.5 10.3z"/>') },
   you: { color: '#5FA2F2', icon: svg('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.2c1.2 1.8 5.8 1.8 7 0M9 9.5h.01M15 9.5h.01"/>') },
@@ -148,6 +158,7 @@ const PAGE_TITLES: Record<string, string> = {
   arrange: 'Arrange',
   goals: 'Goals',
   do: 'Give an order',
+  phone: 'Phone',
   partner: 'Partner',
   you: 'You',
   home: 'Household',
@@ -175,6 +186,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       <section data-page="arrange"></section>
       <section data-page="goals"></section>
       <section data-page="do"></section>
+      <section data-page="phone"></section>
       <section data-page="partner"></section>
       <section data-page="you"></section>
       <section data-page="home"></section>
@@ -184,7 +196,7 @@ export function createDrawer(cb: DrawerCallbacks): {
   const dock = document.createElement('nav');
   dock.className = 'vh-dock';
   // The dock is tight on a phone, so the long page titles get a short label.
-  dock.innerHTML = ['shop', 'arrange', 'goals', 'do', 'partner', 'you', 'home', 'log']
+  dock.innerHTML = ['shop', 'arrange', 'goals', 'do', 'phone', 'partner', 'you', 'home', 'log']
     .map(pg => `<button data-open="${pg}" aria-pressed="false" style="--tab:${DOCK_TABS[pg].color}">${dockTabHtml(pg, DOCK_TABS[pg].label ?? PAGE_TITLES[pg])}</button>`)
     .join('');
 
@@ -223,6 +235,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     else if (currentPage === 'arrange') renderArrange(state);
     else if (currentPage === 'goals') renderGoals(state);
     else if (currentPage === 'do') renderDo(state);
+    else if (currentPage === 'phone') renderPhone(state);
     else if (currentPage === 'partner') renderPartner(state);
     else if (currentPage === 'you') renderYou(state);
     else if (currentPage === 'home') renderHome(state);
@@ -541,6 +554,40 @@ export function createDrawer(cb: DrawerCallbacks): {
     box.querySelectorAll('[data-persona]').forEach(b => b.addEventListener('click', () => cb.onWearPersona((b as HTMLElement).dataset.persona!)));
   }
 
+  // The phone keeps its tab, and the balance counts up or down when it changes.
+  // Clicks are handled once, on the section, so a redraw never loses one.
+  let phoneTab: PhoneTab = 'bank';
+  let shownBalance: number | null = null;
+  let phoneKey = '';
+  let phoneState: DrawerState | null = null;
+  const phoneSec = el.querySelector('[data-page="phone"]') as HTMLElement;
+  phoneSec.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLElement>('button');
+    if (!b || b.hasAttribute('disabled')) return;
+    const d = b.dataset;
+    if (d.phoneTab) { phoneTab = d.phoneTab as PhoneTab; if (phoneState) renderPhone(phoneState); }
+    else if (d.pay) cb.onPayBillId?.(d.pay);
+    else if (d.take) cb.onTakeOffer?.(d.take);
+    else if (d.work) cb.onWorkJob?.(d.work);
+    else if (d.routine) cb.onRoutine?.(d.routine as 'wake' | 'weekendWake' | 'bed' | 'shower', Number(d.delta ?? 0));
+    else if ('callin' in d) cb.onCallIn?.();
+  });
+  function renderPhone(state: DrawerState): void {
+    phoneState = state;
+    const v = state.phone;
+    if (!v) return;
+    const key = phoneTab + phoneHtml(phoneStructure(v), phoneTab);
+    if (key !== phoneKey) {
+      phoneKey = key;
+      phoneSec.innerHTML = phoneHtml(v, phoneTab);
+    } else {
+      patchPhone(phoneSec, v);
+    }
+    const balEl = phoneSec.querySelector<HTMLElement>('[data-balance]');
+    if (balEl && shownBalance !== null && shownBalance !== v.balance) animateMoney(balEl, shownBalance, v.balance);
+    if (balEl || shownBalance === null) shownBalance = v.balance;
+  }
+
   function renderHome(state: DrawerState): void {
     const sec = el.querySelector('[data-page="home"]')!;
     const sv = state.fridgeBasic + state.fridgeFresh;
@@ -550,14 +597,19 @@ export function createDrawer(cb: DrawerCallbacks): {
       <div class="vh-home-row"><span>Dishes</span><strong>${state.dishes}</strong></div>
       <div class="vh-home-row"><span>Laundry</span><strong>${state.laundryPile}/6</strong></div>
       <div class="vh-home-row"><span>Power</span><strong>${state.power ? 'On' : 'OFF'}</strong></div>
+      ${state.phone ? `<div class="vh-home-row"><span>Water</span><strong>${state.phone.services.water ? 'On' : 'OFF'}</strong></div>
+      <div class="vh-home-row"><span>Internet</span><strong>${state.phone.services.internet ? 'On' : 'OFF'}</strong></div>` : ''}
+      ${state.phone && state.phone.bills.length ? `<div class="vh-home-row vh-bill"><span>Bills to pay</span><strong>$${state.phone.bills.reduce((s, b) => s + b.total, 0)}${state.phone.bills.some(b => b.overdue) ? ' (OVERDUE)' : ''}</strong></div>` : ''}
       ${state.billAmount !== null ? `<div class="vh-home-row vh-bill"><span>Bill due</span><strong>$${state.billAmount}${state.billOverdue ? ' (OVERDUE)' : ''}</strong></div>` : ''}
       <div class="vh-home-actions">
+        ${state.phone && state.phone.bills.length ? `<button data-openphone>Pay bills on the phone</button>` : ''}
         ${state.billAmount !== null ? `<button data-paybill>Pay bill</button>` : ''}
         <button data-groceries ${state.deliveryPending ? 'disabled' : ''}>Order groceries ($40)</button>
         <button data-takeout ${state.deliveryPending ? 'disabled' : ''}>Order takeout ($25)</button>
       </div>
     </div>`)) return;
     sec.querySelector('[data-paybill]')?.addEventListener('click', () => cb.onPayBill());
+    sec.querySelector('[data-openphone]')?.addEventListener('click', () => openPage('phone'));
     sec.querySelector('[data-groceries]')?.addEventListener('click', () => cb.onOrderGroceries());
     sec.querySelector('[data-takeout]')?.addEventListener('click', () => cb.onOrderTakeout());
   }

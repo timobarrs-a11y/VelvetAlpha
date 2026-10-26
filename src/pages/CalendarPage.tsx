@@ -9,6 +9,7 @@ import { relationshipCalendarService } from '../services/relationshipCalendarSer
 import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import { EventCard } from '../components/calendar/EventCard';
+import { occurrenceKey, seriesOf } from '../services/calendarRecurrence';
 import { EventModal } from '../components/calendar/EventModal';
 
 const PRICE_LABELS: Record<GiftSuggestion['price_range'], string> = {
@@ -75,7 +76,7 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
     }
 
     const [upcoming, sug, giftList] = await Promise.all([
-      calendarService.getUpcomingEvents(user.id, 14),
+      calendarService.getUpcomingCalendarItems(user.id, 14),
       calendarService.getEventSuggestions(user.id),
       calendarService.getGiftSuggestions(user.id),
     ]);
@@ -90,7 +91,7 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
     if (!userId) return;
     const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
-    const monthEvents = await calendarService.getUserEvents(userId, start, end);
+    const monthEvents = await calendarService.getCalendarItems(userId, start, end);
     setEvents(monthEvents);
   };
 
@@ -115,7 +116,7 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
       await calendarService.createEvent({ ...eventData, user_id: userId });
     }
     await loadMonthEvents();
-    const upcoming = await calendarService.getUpcomingEvents(userId, 14);
+    const upcoming = await calendarService.getUpcomingCalendarItems(userId, 14);
     setUpcomingEvents(upcoming);
     setEditingEvent(null);
   };
@@ -123,14 +124,14 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
   const handleDeleteEvent = async (eventId: string) => {
     await calendarService.deleteEvent(eventId);
     await loadMonthEvents();
-    const upcoming = await calendarService.getUpcomingEvents(userId, 14);
+    const upcoming = await calendarService.getUpcomingCalendarItems(userId, 14);
     setUpcomingEvents(upcoming);
   };
 
-  const handleToggleComplete = async (eventId: string, completed: boolean) => {
-    await calendarService.updateEvent(eventId, { completed } as Partial<UserEvent>);
+  const handleToggleComplete = async (event: UserEvent, completed: boolean) => {
+    await calendarService.setCompleted(event, completed);
     await loadMonthEvents();
-    const upcoming = await calendarService.getUpcomingEvents(userId, 14);
+    const upcoming = await calendarService.getUpcomingCalendarItems(userId, 14);
     setUpcomingEvents(upcoming);
   };
 
@@ -138,7 +139,7 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
     await calendarService.acceptEventSuggestion(suggestion.id, userId);
     setSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
     await loadMonthEvents();
-    const upcoming = await calendarService.getUpcomingEvents(userId, 14);
+    const upcoming = await calendarService.getUpcomingCalendarItems(userId, 14);
     setUpcomingEvents(upcoming);
   };
 
@@ -331,9 +332,9 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
                       <div className="space-y-2">
                         {selectedDateEvents.map(event => (
                           <EventCard
-                            key={event.id}
+                            key={occurrenceKey(event)}
                             event={event}
-                            onEdit={(e) => { setEditingEvent(e); setShowEventModal(true); }}
+                            onEdit={(e) => { setEditingEvent(seriesOf(e)); setShowEventModal(true); }}
                             onDelete={handleDeleteEvent}
                             onToggleComplete={handleToggleComplete}
                           />
@@ -354,13 +355,13 @@ export function CalendarPage({ onBack }: { onBack?: () => void } = {}) {
                       const d = new Date(event.event_date);
                       const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                       return (
-                        <div key={event.id}>
+                        <div key={occurrenceKey(event)}>
                           <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
                             {dayLabel}
                           </span>
                           <EventCard
                             event={event}
-                            onEdit={(e) => { setEditingEvent(e); setShowEventModal(true); }}
+                            onEdit={(e) => { setEditingEvent(seriesOf(e)); setShowEventModal(true); }}
                             onDelete={handleDeleteEvent}
                             onToggleComplete={handleToggleComplete}
                           />

@@ -56,6 +56,8 @@ export interface SaveContext {
     WALLOBJS: unknown[];
     yard: { t: number[][]; rainAt: number; rainUntil: number; rainCheck: number };
   };
+  /** Bills, the bank, side jobs and the routine (state/life.ts). */
+  life?: unknown;
 }
 
 const DEFAULT_SKILLS = { cooking: 0, fitness: 0, logic: 0, creativity: 0, charisma: 0 };
@@ -152,6 +154,7 @@ export function snapshot(ctx: SaveContext, prev: Record<string, unknown> | null 
     support: kept('support', 0),
     together: kept('together', 0),
     ext: kept('ext', {}),
+    life: ctx.life ?? kept('life', null),
   } as unknown as SaveDataV3;
 }
 
