@@ -10,7 +10,9 @@ export type BridgeMessageType =
   | 'velvet:companionCreated'
   | 'velvet:vidSearch'
   | 'velvet:vidResults'
-  | 'velvet:restarted';
+  | 'velvet:restarted'
+  | 'velvet:avatarItemBought'
+  | 'velvet:avatarInventory';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -83,6 +85,35 @@ export interface RestartedMessage extends BridgeMessage {
   type: 'velvet:restarted';
   game: 'velvet-house';
   day: number;
+}
+
+// Bought in the game's shop (a hairstyle at the salon, clothes at the
+// boutique): the host records it to the player's account, so it can be worn
+// everywhere outside the game too. `itemId` is an avatar catalog id such as
+// 'hairStyle:bantu_knots' (see src/data/avatarCatalog.ts).
+export interface AvatarItemBoughtMessage extends BridgeMessage {
+  type: 'velvet:avatarItemBought';
+  game: 'velvet-house';
+  itemId: string;
+}
+
+// Everything the player owns for their avatar, sent by the host when the game
+// starts and after each purchase, so the shop can show what's already theirs.
+export interface AvatarInventoryMessage extends BridgeMessage {
+  type: 'velvet:avatarInventory';
+  owned: string[];
+}
+
+export function isAvatarItemBoughtMessage(data: unknown): data is AvatarItemBoughtMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:avatarItemBought' && typeof m.itemId === 'string' && m.itemId.length <= 64;
+}
+
+export function isAvatarInventoryMessage(data: unknown): data is AvatarInventoryMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:avatarInventory' && Array.isArray(m.owned) && m.owned.every(x => typeof x === 'string');
 }
 
 export function isBridgeMessage(data: unknown): data is BridgeMessage {
@@ -160,6 +191,8 @@ const FIELD_WHITELISTS: Record<string, string[]> = {
   'velvet:vidSearch': ['type', 'game', 'query', 'seq'],
   'velvet:vidResults': ['type', 'seq', 'videos'],
   'velvet:restarted': ['type', 'game', 'day'],
+  'velvet:avatarItemBought': ['type', 'game', 'itemId'],
+  'velvet:avatarInventory': ['type', 'owned'],
 };
 
 export function sanitizeMessage(msg: Record<string, unknown>): Record<string, unknown> {

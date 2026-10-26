@@ -5,7 +5,8 @@ import { supabase } from '../shared/supabase/client';
 import { getCompanion, getCompanions, type Companion } from '../services/companionService';
 import { loadAvatarUnlocks } from '../hooks/useAvatarUnlocks';
 import { buildProfile, type PlayerProfile } from '../features/velvet-sims/simProfile';
-import { isReadyMessage } from '../games/velvet-house/bridge/protocol';
+import { isReadyMessage, isAvatarItemBoughtMessage } from '../games/velvet-house/bridge/protocol';
+import { recordSimsPurchase } from '../services/avatarInventoryService';
 
 const GAME_PATH = '/games/velvet-house-next/index.html';
 
@@ -27,9 +28,21 @@ export function VelvetHouseNextGame() {
   // talked to, preferring a companion over a coach.
   useEffect(() => {
     let cancelled = false;
+    // What the player owns for their avatar, for the game's shop.
+    const sendInventory = async (win: Window) => {
+      const owned = (await loadAvatarUnlocks()).owned ?? [];
+      if (!cancelled) win.postMessage({ type: 'velvet:avatarInventory', owned }, window.location.origin);
+    };
     const onMessage = async (e: MessageEvent) => {
       const win = iframeRef.current?.contentWindow;
-      if (!win || e.source !== win || e.origin !== window.location.origin || !isReadyMessage(e.data)) return;
+      if (!win || e.source !== win || e.origin !== window.location.origin) return;
+      // Bought in the game: it's theirs everywhere now.
+      if (isAvatarItemBoughtMessage(e.data)) {
+        if (await recordSimsPurchase(e.data.itemId)) sendInventory(win);
+        return;
+      }
+      if (!isReadyMessage(e.data)) return;
+      sendInventory(win);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || cancelled) return;
       const pickCompanion = async () => {

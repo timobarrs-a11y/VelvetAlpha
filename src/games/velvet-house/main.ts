@@ -1,5 +1,6 @@
 import { migrateSave } from './state/saveMigration';
-import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage } from './bridge/protocol';
+import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage } from './bridge/protocol';
+import { setOwnedAvatarItems } from './bridge/avatarShop';
 import { INITIAL_OBJS, TYPES, type ObjectInstance } from './state/objects';
 import { DAYS, weekday, clockText, season, absMin } from './state/time';
 import { LEVEL_NAMES } from './state/house';
@@ -1097,6 +1098,10 @@ function boot(): void {
 
   window.addEventListener('message', (e: MessageEvent) => {
     if (!isValidOrigin(e.origin, allowedOrigins)) return;
+    if (isAvatarInventoryMessage(e.data)) {
+      setOwnedAvatarItems(e.data.owned);
+      return;
+    }
     if (isProfileMessage(e.data)) {
       const d = e.data;
       // Apply profile
