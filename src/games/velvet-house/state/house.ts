@@ -143,11 +143,11 @@ export const LEVELS: LevelDef[] = [
 ];
 
 export const STAIRS: StairDef[] = [
-  { id: 'S01', lower: 0, upper: 1, lowerNode: [9.5, 3.7], upperNode: [9.5, 0.75] },
-  { id: 'S12', lower: 1, upper: 2, lowerNode: [3.7, 7.5], upperNode: [0.75, 7.5] },
+  { id: 'S01', lower: 0, upper: 1, lowerNode: [9.5, 3.7], bottom: [9.5, 3.25], top: [9.5, 1.25], upperNode: [9.5, 0.75] },
+  { id: 'S12', lower: 1, upper: 2, lowerNode: [3.7, 7.5], bottom: [3.25, 7.5], top: [1.25, 7.5], upperNode: [0.75, 7.5] },
   { id: 'D13', lower: 1, upper: 3, lowerNode: [0.7, 3.6], upperNode: [0.75, 3.6], door: true },
   // Only exists once the attic has been built (see ATTIC_STAIR_OBJS).
-  { id: 'S24', lower: 2, upper: ATTIC, lowerNode: [7.0, 7.5], upperNode: [4.05, 7.5] },
+  { id: 'S24', lower: 2, upper: ATTIC, lowerNode: [7.0, 7.5], bottom: [6.55, 7.5], top: [4.55, 7.5], upperNode: [4.05, 7.5] },
 ];
 
 export const DOOR: [number, number] = [0.6, 5.05];
