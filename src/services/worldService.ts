@@ -87,6 +87,35 @@ export async function getCards(userIds: string[]): Promise<WorldCard[]> {
   return (data ?? []) as WorldCard[];
 }
 
+/** The rest of the billboard card. Everything past the visitor counts is only there for a public profile (or your own). */
+export interface CardDetails {
+  visitors: number;
+  visitors_week: number;
+  avatar_config?: Record<string, unknown> | null;
+  bio?: string | null;
+  moved_in_at?: string;
+  friends?: number;
+  mutual_friends?: number;
+  streak?: number;
+  goals_done?: number;
+  commitments_kept?: number;
+  goals?: { label: string; pct: number | null; done: boolean }[];
+  shared_spaces?: string[];
+}
+
+export async function getCardDetails(userId: string): Promise<CardDetails | null> {
+  const { data, error } = await supabase.rpc('world_card_details', { p_user_id: userId });
+  if (error) throw new Error(`Failed to load billboard: ${error.message}`);
+  return (data as CardDetails | null) ?? null;
+}
+
+/** Opening someone's billboard counts as a visit (once per person). Returns their visitor count. */
+export async function recordVisit(hostId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('record_world_visit', { p_host: hostId });
+  if (error) throw new Error(`Failed to record visit: ${error.message}`);
+  return (data as number) ?? 0;
+}
+
 /** Today's candidates in order (16 by default). The page picks 8 of them; see pickBlock. */
 export async function getDailyBlock(day = localDay(), count = 16): Promise<{ user_id: string; shares_space: boolean; ord: number }[]> {
   const { data, error } = await supabase.rpc('get_daily_block', { p_day: day, p_count: count });
