@@ -1,0 +1,54 @@
+// Pure tuning + physics helpers for Momentum. All values are per fixed 60Hz step.
+
+export const STEP_MS = 1000 / 60;
+export const MAX_FRAME_MS = 100; // clamp long frames (tab switch) to avoid spiral of death
+
+export const BASE_BOUNCE = 13;
+export const LEVEL_BOUNCE_BONUS = 0.3;
+export const SPRING_MULTIPLIER = 1.6;
+
+// Momentum chain: consecutive climbing landings add upward velocity.
+export const CHAIN_STEP = 0.9;
+export const MAX_CHAIN = 6;
+export const CHAIN_WINDOW_FRAMES = 90; // must land again within 1.5s to keep the chain
+
+// Boost
+export const MAX_BOOST_CHARGES = 3;
+export const BOOST_FLOOR_VY = -15; // a boost always gets you rising at least this fast
+export const BOOST_KICK_VY = 3; // extra kick when already rising faster than the floor
+export const MAX_RISE_VY = -24;
+export const BOOST_BUFFER_FRAMES = 9; // ~150ms: early presses are remembered
+export const BOOST_COOLDOWN_FRAMES = 15; // ~250ms
+export const PERFECT_WINDOW_FRAMES = 5; // ~80ms after landing
+export const PERFECT_MULTIPLIER = 1.35;
+export const BOOST_HORIZONTAL = 2.5;
+
+export const bounceVelocity = (level: number, chain: number, isSpring: boolean): number => {
+  const clampedChain = Math.max(0, Math.min(MAX_CHAIN, chain));
+  const base = -(BASE_BOUNCE + level * LEVEL_BOUNCE_BONUS + clampedChain * CHAIN_STEP);
+  const vy = isSpring ? base * SPRING_MULTIPLIER : base;
+  return Math.max(MAX_RISE_VY * (isSpring ? 1.25 : 1), vy);
+};
+
+export const perfectBounceVelocity = (level: number, chain: number, isSpring: boolean): number =>
+  Math.max(MAX_RISE_VY * 1.25, bounceVelocity(level, chain, isSpring) * PERFECT_MULTIPLIER);
+
+// Sets (rather than adds) upward speed so every boost feels the same regardless of fall speed.
+export const boostVelocity = (vy: number): number =>
+  Math.max(MAX_RISE_VY, Math.min(vy - BOOST_KICK_VY, BOOST_FLOOR_VY));
+
+/**
+ * Next chain value after a landing. Climbing to a higher platform quickly grows the chain,
+ * bouncing at the same height holds it, falling to a lower platform or stalling resets it.
+ */
+export const nextChain = (
+  chain: number,
+  landingY: number,
+  prevLandingY: number | null,
+  framesSinceLanding: number,
+): number => {
+  if (prevLandingY === null || framesSinceLanding > CHAIN_WINDOW_FRAMES) return 0;
+  if (landingY < prevLandingY - 5) return Math.min(MAX_CHAIN, chain + 1);
+  if (landingY > prevLandingY + 5) return 0;
+  return chain;
+};
