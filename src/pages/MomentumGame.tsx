@@ -18,7 +18,7 @@ import {
 import {
   type TouchSettings,
   type SteerSensitivity,
-  zoneForX,
+  isTap,
   steerTarget,
   steerVelocity,
   haptic,
@@ -280,13 +280,15 @@ export function MomentumGame() {
   const bounceYRef = useRef<number | null>(null); // Y position at moment of bounce, null when not recently bounced
   const touchTargetXRef = useRef<number | null>(null);
   // Steering finger (one at a time); boost taps are handled independently so both thumbs work together
-  const steerPointerRef = useRef<{ id: number; startClientX: number; startBallCenter: number } | null>(null);
-  const boostPointersRef = useRef<Set<number>>(new Set());
+  const steerPointerRef = useRef<{ id: number; startClientX: number; startClientY: number; startTime: number; startBallCenter: number; maxMove: number } | null>(null);
+  const tapFxRef = useRef<Array<{ x: number; y: number; life: number }>>([]);
+  const simFrameRef = useRef(0);
+  const landingFrameRef = useRef(-9999);
+  const boostPressFrameRef = useRef(0);
   const [touchSettings, setTouchSettings] = useState<TouchSettings>(loadTouchSettings);
   const touchSettingsRef = useRef(touchSettings);
   touchSettingsRef.current = touchSettings;
   const [isTouchDevice] = useState(isCoarsePointer);
-  const [boostPressed, setBoostPressed] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   liveRef.current = { isPaused: isPaused || showTutorial, gameMode, currentCareerLevel, level };
 
@@ -563,8 +565,10 @@ export function MomentumGame() {
   };
 
   // Presses are buffered for a few frames so an early or mistimed press is never lost
-  const triggerBoost = () => {
+  // framesAgo lets a tap that is recognised on release count from when the finger went down
+  const triggerBoost = (framesAgo = 0) => {
     boostBufferRef.current = BOOST_BUFFER_FRAMES;
+    boostPressFrameRef.current = simFrameRef.current - framesAgo;
   };
 
   const updateTouchSettings = (patch: Partial<TouchSettings>) => {
@@ -587,42 +591,58 @@ export function MomentumGame() {
     return clientX * (GAME_WIDTH / rect.width);
   };
 
-  // The whole screen is the controller: one zone steers by relative drag, the other boosts.
+  const spawnTapFx = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const scale = GAME_WIDTH / rect.width;
+    tapFxRef.current.push({ x: (clientX - rect.left) * scale, y: (clientY - rect.top) * scale, life: 1 });
+  };
+
+  const boostFromTouch = (clientX: number, clientY: number, framesAgo = 0) => {
+    triggerBoost(framesAgo);
+    haptic(8);
+    spawnTapFx(clientX, clientY);
+  };
+
+  // One-thumb controls, anywhere on screen: drag to steer, tap to boost.
+  // A second finger landing while one is steering boosts immediately.
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse') return;
     if (gameState !== 'playing' || liveRef.current.isPaused) return;
     if ((e.target as HTMLElement).closest('button')) return;
-    const zone = zoneForX(e.clientX / window.innerWidth, touchSettingsRef.current.leftHanded);
-    if (zone === 'boost') {
-      boostPointersRef.current.add(e.pointerId);
-      triggerBoost();
-      haptic(8);
-      setBoostPressed(true);
-    } else if (!steerPointerRef.current) {
-      steerPointerRef.current = {
-        id: e.pointerId,
-        startClientX: e.clientX,
-        startBallCenter: playerRef.current.x + PLAYER_WIDTH / 2,
-      };
-      touchTargetXRef.current = steerPointerRef.current.startBallCenter;
+    if (steerPointerRef.current) {
+      boostFromTouch(e.clientX, e.clientY);
+      return;
     }
+    steerPointerRef.current = {
+      id: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startTime: performance.now(),
+      startBallCenter: playerRef.current.x + PLAYER_WIDTH / 2,
+      maxMove: 0,
+    };
+    touchTargetXRef.current = steerPointerRef.current.startBallCenter;
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
   const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const steer = steerPointerRef.current;
     if (!steer || steer.id !== e.pointerId) return;
+    steer.maxMove = Math.max(steer.maxMove, Math.hypot(e.clientX - steer.startClientX, e.clientY - steer.startClientY));
     const drag = pointerToCanvasX(e.clientX) - pointerToCanvasX(steer.startClientX);
     touchTargetXRef.current = steerTarget(steer.startBallCenter, drag, touchSettingsRef.current.sensitivity);
   };
 
   const handlePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (steerPointerRef.current?.id === e.pointerId) {
-      steerPointerRef.current = null;
-      touchTargetXRef.current = null;
-    }
-    if (boostPointersRef.current.delete(e.pointerId) && boostPointersRef.current.size === 0) {
-      setBoostPressed(false);
+    const steer = steerPointerRef.current;
+    if (!steer || steer.id !== e.pointerId) return;
+    steerPointerRef.current = null;
+    touchTargetXRef.current = null;
+    const heldMs = performance.now() - steer.startTime;
+    if (e.type === 'pointerup' && isTap(heldMs, steer.maxMove) && !liveRef.current.isPaused) {
+      boostFromTouch(steer.startClientX, steer.startClientY, Math.round(heldMs / STEP_MS));
     }
   };
 
@@ -726,6 +746,7 @@ export function MomentumGame() {
 
     if (boostCooldownRef.current > 0) boostCooldownRef.current--;
     framesSinceLandingRef.current++;
+    simFrameRef.current++;
     if (shakeRef.current > 0) shakeRef.current *= 0.85;
     if (flashRef.current > 0) flashRef.current = Math.max(0, flashRef.current - 0.06);
     if (popupRef.current) {
@@ -735,12 +756,15 @@ export function MomentumGame() {
 
     if (boostBufferRef.current > 0) {
       const boostColor = levelData.boostTrailColor || '#00ffff';
-      const isPerfect = framesSinceLandingRef.current <= PERFECT_WINDOW_FRAMES && player.vy < 0;
+      const pressAfterLanding = boostPressFrameRef.current - landingFrameRef.current;
+      const isPerfect = pressAfterLanding >= -3 && pressAfterLanding <= PERFECT_WINDOW_FRAMES
+        && framesSinceLandingRef.current <= PERFECT_WINDOW_FRAMES + BOOST_BUFFER_FRAMES && player.vy < 0;
       if (isPerfect) {
         // Perfect bounce: pressing right after landing is free and launches much higher
         player.vy = Math.min(player.vy, perfectBounceVelocity(level, chainRef.current, lastLandingSpringRef.current));
         boostBufferRef.current = 0;
         framesSinceLandingRef.current = 9999;
+        landingFrameRef.current = -9999;
         player.boostTimer = 30;
         player.isBoosting = true;
         hitStopRef.current = 3;
@@ -830,6 +854,7 @@ export function MomentumGame() {
         chainRef.current = nextChain(prevChain, player.y, prevLandingYRef.current, framesSinceLandingRef.current);
         prevLandingYRef.current = player.y;
         framesSinceLandingRef.current = 0;
+        landingFrameRef.current = simFrameRef.current;
         lastLandingSpringRef.current = isSpring;
         player.vy = bounceVelocity(level, chainRef.current, isSpring);
 
@@ -1243,6 +1268,19 @@ export function MomentumGame() {
       ctx.globalAlpha = 1;
     }
 
+    tapFxRef.current = tapFxRef.current.filter(t => {
+      t.life -= 0.06;
+      if (t.life <= 0) return false;
+      ctx.strokeStyle = boostColor;
+      ctx.globalAlpha = t.life * 0.6;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 12 + (1 - t.life) * 40, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      return true;
+    });
+
     ctx.restore();
 
     if (flashRef.current > 0) {
@@ -1261,8 +1299,6 @@ export function MomentumGame() {
     if (gameState !== 'playing') {
       steerPointerRef.current = null;
       touchTargetXRef.current = null;
-      boostPointersRef.current.clear();
-      setBoostPressed(false);
     }
   }, [gameState, isTouchDevice]);
 
@@ -1644,18 +1680,6 @@ export function MomentumGame() {
                       </button>
                     ))}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-20 text-right">Boost side</span>
-                    {[false, true].map((left) => (
-                      <button
-                        key={String(left)}
-                        onClick={() => updateTouchSettings({ leftHanded: left })}
-                        className={`px-3 py-2 rounded-full border ${touchSettings.leftHanded === left ? 'bg-white/20 border-white/40 text-white' : 'border-white/10'}`}
-                      >
-                        {left ? 'left' : 'right'}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               ) : (
                 <p className="text-white/30 text-xs mt-8">Press ESC to resume</p>
@@ -1691,32 +1715,20 @@ export function MomentumGame() {
 
         </div>
 
-        {isTouchDevice && !isPaused && !showTutorial && (
-          <div
-            className={`fixed bottom-0 ${touchSettings.leftHanded ? 'left-0' : 'right-0'} pointer-events-none flex items-end ${touchSettings.leftHanded ? 'justify-start' : 'justify-end'}`}
-            style={{ width: '35vw', height: '100dvh', padding: 'max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px))' }}
-          >
-            <div
-              className={`w-24 h-24 rounded-full border-2 flex items-center justify-center text-xs font-semibold tracking-widest transition-transform duration-75 ${boostPressed ? 'scale-90 bg-cyan-400/40 border-cyan-300 text-white' : 'bg-cyan-500/10 border-cyan-400/40 text-cyan-200/80'}`}
-            >
-              BOOST
-            </div>
-          </div>
-        )}
-
         {showTutorial && (
           <div className="fixed inset-0 z-20 bg-black/85 flex flex-col items-center justify-center px-6 text-center" onPointerDown={(e) => e.stopPropagation()}>
             <h2 className="text-2xl font-light text-white mb-6 tracking-wider">How to play</h2>
-            <div className={`flex w-full max-w-md gap-3 mb-6 ${touchSettings.leftHanded ? 'flex-row-reverse' : ''}`}>
-              <div className="flex-[65] rounded-2xl border border-white/20 p-4 text-white/80 text-sm">
+            <div className="flex w-full max-w-md gap-3 mb-6">
+              <div className="flex-1 rounded-2xl border border-white/20 p-4 text-white/80 text-sm">
                 <div className="text-3xl mb-2">👈 👉</div>
-                Drag anywhere here to steer
+                Drag anywhere to steer
               </div>
-              <div className="flex-[35] rounded-2xl border border-cyan-400/40 bg-cyan-500/10 p-4 text-cyan-100 text-sm">
+              <div className="flex-1 rounded-2xl border border-cyan-400/40 bg-cyan-500/10 p-4 text-cyan-100 text-sm">
                 <div className="text-3xl mb-2">👆</div>
-                Tap to boost
+                Tap anywhere to boost
               </div>
             </div>
+            <p className="text-white/60 text-sm mb-2">Everything works with one thumb.</p>
             <p className="text-white/60 text-sm mb-2">Climb higher each bounce to build momentum.</p>
             <p className="text-white/60 text-sm mb-8">Boost right as you land for a free PERFECT bounce.</p>
             <button

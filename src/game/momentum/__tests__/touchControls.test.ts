@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { steerTarget, steerVelocity, zoneForX } from '../touchControls';
+import { isTap, steerTarget, steerVelocity } from '../touchControls';
 
 describe('momentum touch controls', () => {
-  it('splits the screen into steer and boost zones', () => {
-    expect(zoneForX(0.2, false)).toBe('steer');
-    expect(zoneForX(0.9, false)).toBe('boost');
-    expect(zoneForX(0.9, true)).toBe('steer');
-    expect(zoneForX(0.1, true)).toBe('boost');
+  it('tells taps from drags', () => {
+    expect(isTap(120, 4)).toBe(true);
+    expect(isTap(120, 30)).toBe(false);
+    expect(isTap(500, 2)).toBe(false);
   });
 
   it('steering is relative to the drag and scaled by sensitivity', () => {

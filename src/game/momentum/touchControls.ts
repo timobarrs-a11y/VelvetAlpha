@@ -1,14 +1,14 @@
-// Touch control helpers for Momentum: screen zones, relative steering and saved preferences.
+// Touch control helpers for Momentum: one-thumb tap/drag, relative steering and saved preferences.
 
-export type TouchZone = 'steer' | 'boost';
 export type SteerSensitivity = 'low' | 'medium' | 'high';
 
 export interface TouchSettings {
-  leftHanded: boolean;
   sensitivity: SteerSensitivity;
 }
 
-export const BOOST_ZONE_FRACTION = 0.35;
+// A touch counts as a tap (boost) when it is short and barely moves; anything else is a steer.
+export const TAP_MAX_MS = 220;
+export const TAP_MAX_MOVE_PX = 12;
 export const SENSITIVITY_MULTIPLIER: Record<SteerSensitivity, number> = { low: 1.2, medium: 1.8, high: 2.6 };
 const STEER_GAIN = 0.35; // canvas px of offset -> px/step of desired velocity
 const STEER_SMOOTHING = 0.45; // fraction of the gap to the desired velocity closed each step
@@ -16,13 +16,10 @@ const STEER_DEADZONE = 3;
 
 const SETTINGS_KEY = 'momentum_touch_settings';
 const TUTORIAL_KEY = 'momentum_touch_tutorial_seen';
-export const DEFAULT_TOUCH_SETTINGS: TouchSettings = { leftHanded: false, sensitivity: 'medium' };
+export const DEFAULT_TOUCH_SETTINGS: TouchSettings = { sensitivity: 'medium' };
 
-/** Right-handed: left 65% of the screen steers, right 35% boosts. Mirrored for left-handed. */
-export const zoneForX = (fractionX: number, leftHanded: boolean): TouchZone => {
-  const f = leftHanded ? 1 - fractionX : fractionX;
-  return f >= 1 - BOOST_ZONE_FRACTION ? 'boost' : 'steer';
-};
+export const isTap = (heldMs: number, maxMovePx: number): boolean =>
+  heldMs <= TAP_MAX_MS && maxMovePx <= TAP_MAX_MOVE_PX;
 
 /** Relative steering: the ball follows the thumb's drag from where the touch started. */
 export const steerTarget = (startBallCenter: number, dragCanvasPx: number, sensitivity: SteerSensitivity): number =>
