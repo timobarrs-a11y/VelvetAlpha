@@ -19,8 +19,8 @@ new scope that the overhaul brief never covered.
 |---|---|---|
 | 1. Move into the repo as modules | **Done** | `src/games/velvet-house/` (state, art, ui, engine, bridge), served by `games/velvet-house-next` |
 | 2. Renderer (deferred lighting) | **Done** | `engine/gbuffer.ts`, `deferredLights.ts`, `gpuLights.ts`, quality tiers, tests |
-| 3. Animation | **Done** | `art/poseAnim.js`; commits "watch them do it", clips per activity, springs, expressions, camera close-ups |
-| 4. Clothing system and design generator | **Partly** | A clothing catalog, patterns on shirts, avatar heads and the Salon exist. The garment-recipe format and the design generator from the brief do not |
+| 3. Animation | **Done, and extended by PR #48** | `art/poseAnim.js`; clips per activity, springs, expressions, camera close-ups; then hands, shaded sleeves, shoe soles, see-through heads fixed, and activities you can actually see |
+| 4. Clothing system and design generator | **Took a different route (PR #48)** | Instead of garment recipes, the game now wears the avatar app's own wardrobe: separate shirts, pants and hats that mix and match, personas (a whole look in one tap), full-body sprites (`state/bodySprites.ts`, `renderers/bodyRenderer`, `handRenderer`, `outfitRenderer`), six new shirts, four hats, pants and six personas, with migration `20261028120000_wardrobe_pants_personas.sql`. The garment-recipe format and the design generator from the brief are not built: decide whether they are still wanted |
 | 5. Gardens and the outdoors | **Partly** | Grass, weeds, rain, seasons and a garden bed in the art. No plant species, growth stages or yard decorating. The `yard`, `dirt`, `pets`, `calendar` and `festivals` modules are not wired into the live game |
 | 6. Opening and tutorial | **Not started** | Design exists (`opening-sequence.md`); no script engine, no Dez, no scripted tutorial |
 
@@ -124,3 +124,22 @@ conversation that follows.
 ## Decisions still open
 
 - **Second house (The Craftsman on Elm):** port or drop?
+
+## After PR #48 (merged to `main`)
+
+The avatar and animation work landed on `main` while the Sims branch was in progress. It was merged
+into the Sims branch with four conflicts, all resolved by keeping both sides:
+
+- `bridge/protocol.ts`: the AI-turn messages (`velvet:sample*`) and the avatar look messages
+  (`velvet:avatarLook`, `bottom` and `hat` on `velvet:lookChanged`).
+- `VelvetHouseNextGame.tsx`: the host answers AI turns and restarts, and also sends the wardrobe and
+  saves shirt, pants and hat changes to the avatar.
+- `ui/drawer.ts`: the You page uses the animation work's own rebuild guard (it only rebuilds the
+  wardrobe when it changes); every other page uses the shared `put()` guard.
+- `main.ts` and `state/save.ts`: one serializer, now also carrying `bottomStyle` and `bottomAccent`;
+  wardrobe items (`w-` ids) come from the host each time and are not saved.
+
+Effect on the plan: none of the architecture steps change. Two notes:
+- The avatar wardrobe makes work outfits for each job (step 4.1 onwards) mostly a content job, not a
+  rendering job.
+- The worn hat is not saved; the host sends it at boot.
