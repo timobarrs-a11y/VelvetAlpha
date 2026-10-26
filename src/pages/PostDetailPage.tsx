@@ -11,6 +11,7 @@ import { Button } from '../shared/ui/Button';
 import { Textarea } from '../shared/ui';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { toast } from '../shared/ui';
+import { saveErrorMessage } from '../services/moderation';
 import { ReportModal } from '../components/community/CommunityComponents';
 import { PollDisplay } from '../components/community/PollDisplay';
 import { BadgeRow } from '../components/community/BadgeDisplay';
@@ -198,7 +199,14 @@ export default function PostDetailPage() {
   const handleSubmitComment = async () => {
     if (!commentBody.trim() || !postId) return;
     setSubmitting(true);
-    const c = await createComment({ post_id: postId, body: commentBody.trim() });
+    let c: Awaited<ReturnType<typeof createComment>> = null;
+    try {
+      c = await createComment({ post_id: postId, body: commentBody.trim() });
+    } catch (err) {
+      setSubmitting(false);
+      toast.error(saveErrorMessage(err, 'Could not post comment. Try again.'));
+      return;
+    }
     setSubmitting(false);
     if (c) {
       setCommentBody('');
@@ -234,7 +242,14 @@ export default function PostDetailPage() {
   const handleSaveEdit = async () => {
     if (!postId || !editBody.trim()) return;
     setSavingEdit(true);
-    const ok = await editPost(postId, editBody.trim());
+    let ok = false;
+    try {
+      ok = await editPost(postId, editBody.trim());
+    } catch (err) {
+      setSavingEdit(false);
+      toast.error(saveErrorMessage(err, 'Could not edit post.'));
+      return;
+    }
     setSavingEdit(false);
     if (ok) {
       toast.success('Post edited.');

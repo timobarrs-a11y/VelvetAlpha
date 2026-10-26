@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { throwIfModerated } from './moderation';
 
 export interface MemberProfile {
   user_id: string;
@@ -76,6 +77,7 @@ export async function upsertMyMemberProfile(updates: {
     .maybeSingle();
 
   if (error) {
+    throwIfModerated(error);
     console.error('[memberProfileService] upsert error:', error.message);
     throw new Error(error.message);
   }

@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { throwIfModerated } from './moderation';
 
 export interface ProgressPost {
   id: string;
@@ -72,6 +73,7 @@ const STATUS_ERRORS: Record<string, string> = {
 export async function createStatus(body: string): Promise<string> {
   const { data, error } = await supabase.rpc('create_status_post', { p_body: body });
   if (error) {
+    throwIfModerated(error);
     console.error('[progressFeedService] create_status_post error:', error.message);
     throw new Error("Couldn't post that. Try again.");
   }
