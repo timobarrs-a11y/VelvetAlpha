@@ -5,7 +5,8 @@
 export const LANDSCAPE_WIDTH = 800;
 export const PORTRAIT_WIDTH = 480;
 
-export type PlatformType = 'normal' | 'crumbling' | 'spring' | 'conveyor' | 'phase';
+/** charge: +1 boost the first time you land on it. drain: -1 boost the first time. */
+export type PlatformType = 'normal' | 'crumbling' | 'spring' | 'conveyor' | 'phase' | 'charge' | 'drain';
 
 export interface Platform {
   id: number;
@@ -31,6 +32,8 @@ export interface Platform {
   param: number;
   /** Set on the first platform of a designed section so it can be labelled */
   sectionLabel?: string;
+  /** An alternative ledge beside the main path: a choice, not a requirement */
+  isBranch?: boolean;
 }
 
 export interface Orb {
@@ -78,10 +81,12 @@ export const isPhaseSolid = (platform: Platform, frame: number): boolean =>
 const pickType = (rng: Rng, level: number, index: number): PlatformType => {
   if (index <= 5) return 'normal';
   const roll = rng();
-  if (roll < 0.12 + level * 0.01) return 'crumbling';
-  if (roll < 0.20 + level * 0.015) return 'spring';
-  if (level >= 2 && roll < 0.27 + level * 0.015) return 'conveyor';
-  if (level >= 3 && roll < 0.33 + level * 0.015) return 'phase';
+  if (roll < 0.12) return 'charge';
+  if (level >= 2 && roll < 0.17 + level * 0.008) return 'drain';
+  if (roll < 0.27 + level * 0.01) return 'crumbling';
+  if (roll < 0.35 + level * 0.015) return 'spring';
+  if (level >= 2 && roll < 0.42 + level * 0.015) return 'conveyor';
+  if (level >= 3 && roll < 0.48 + level * 0.015) return 'phase';
   return 'normal';
 };
 
@@ -160,7 +165,7 @@ interface PlatformSpec {
 const clampX = (x: number, width: number, W: number) => Math.max(20, Math.min(W - width - 20, x));
 
 /** Max centre-to-centre distance between consecutive main-path platforms. */
-const MAX_REACH_X = 240;
+const MAX_REACH_X = 300;
 
 /** Layout for the next main-path platform within the current section. */
 const sectionSpec = (sec: SectionState, state: ChunkState, rng: Rng, level: number, index: number): PlatformSpec => {
@@ -170,9 +175,10 @@ const sectionSpec = (sec: SectionState, state: ChunkState, rng: Rng, level: numb
   switch (sec.kind) {
     case 'zigzag': {
       // Alternate sides of the centre, within one bounce's reach
-      const width = 100;
-      const cx = W / 2 + (k % 2 === 0 ? -1 : 1) * sec.dir * W * 0.18;
-      return { gap: 85 + rng() * 15, width, startX: clampX(cx - width / 2, width, W), moveRange: 30, speed: 0.3, type: 'normal', param: 0, allowFar: false };
+      const width = 90;
+      const cx = W / 2 + (k % 2 === 0 ? -1 : 1) * sec.dir * W * 0.3;
+      const last = sec.remaining === 1;
+      return { gap: 85 + rng() * 15, width, startX: clampX(cx - width / 2, width, W), moveRange: 30, speed: 0.3, type: last ? 'charge' : 'normal', param: 0, allowFar: false };
     }
     case 'staircase': {
       // Short, quick steps marching one way: ideal for building momentum
@@ -185,34 +191,39 @@ const sectionSpec = (sec: SectionState, state: ChunkState, rng: Rng, level: numb
       // Springs alternate with normal ledges; the gap above a spring is big
       const width = 110;
       const isSpring = k % 2 === 0;
-      const cx = W / 2 + (rng() - 0.5) * W * 0.2;
+      const cx = 60 + rng() * (W - 120);
       return { gap: state.prevWasSpring ? 140 + rng() * 20 : 80 + rng() * 10, width, startX: clampX(cx - width / 2, width, W), moveRange: 40, speed: 0.3, type: isSpring ? 'spring' : 'normal', param: 0, allowFar: false };
     }
     case 'conveyorRun': {
       // Each conveyor pushes toward the next platform on the other side
       const width = 120;
       const side = k % 2 === 0 ? -1 : 1;
-      const cx = W / 2 + side * sec.dir * W * 0.2;
+      const cx = W / 2 + side * sec.dir * W * 0.3;
       return { gap: 80 + rng() * 10, width, startX: clampX(cx - width / 2, width, W), moveRange: 20, speed: 0.2, type: 'conveyor', param: -side * sec.dir, allowFar: false };
     }
     case 'phaseGauntlet': {
       // Phase platforms whose cycles are staggered, so the safe route moves upward
-      const width = 120;
-      const cx = W / 2 + (rng() - 0.5) * W * 0.3;
+      const width = 110;
+      const cx = 60 + rng() * (W - 120);
+      if (sec.remaining === 1) {
+        // Reward for getting through: a boost ledge at the top
+        return { gap: 75 + rng() * 10, width, startX: clampX(cx - width / 2, width, W), moveRange: 30, speed: 0.25, type: 'charge', param: 0, allowFar: false };
+      }
       return { gap: 75 + rng() * 10, width, startX: clampX(cx - width / 2, width, W), moveRange: 30, speed: 0.25, type: 'phase', param: (PHASE_CYCLE_FRAMES - k * 40 + PHASE_CYCLE_FRAMES * 4) % PHASE_CYCLE_FRAMES, allowFar: false };
     }
     case 'rest': {
       // Wide, calm ledges with a boost orb as a breather
-      const width = 160;
-      return { gap: 70, width, startX: clampX(W / 2 - width / 2 + (rng() - 0.5) * 80, width, W), moveRange: 30, speed: 0.2, type: 'normal', param: 0, allowFar: false, orbAbove: k === 1 };
+      const width = 140;
+      return { gap: 70, width, startX: clampX(60 + rng() * (W - 120) - width / 2, width, W), moveRange: 30, speed: 0.2, type: 'normal', param: 0, allowFar: false, orbAbove: k === 1 };
     }
     default: {
-      const width = Math.max(60, 90 + rng() * Math.max(0, 40 - level));
+      // Free-form: narrower ledges anywhere across the screen
+      const width = Math.max(60, 75 + rng() * Math.max(0, 35 - level * 2));
       const type = pickType(rng, level, index);
       return {
         gap: 60 + rng() * 40,
         width,
-        startX: 50 + rng() * Math.max(0, W - 200 - width),
+        startX: 20 + rng() * Math.max(0, W - 40 - width),
         moveRange: 100 + rng() * 100,
         speed: 0.4 + rng() * (0.3 + level * 0.05),
         type,
@@ -297,6 +308,49 @@ export const generateChunk = (
       sectionLabel,
     });
 
+    // A second ledge at about the same height on the other side: read ahead and pick.
+    // A drain on the main path always gets a clean alternative.
+    const wantsBranch = !isFirst && !isCheckpoint && i > 5 && (type === 'drain' || (spec.allowFar && rng() < 0.3));
+    if (wantsBranch) {
+      const mainCx = startX + width / 2;
+      const branchW = 80;
+      const otherSide = mainCx < W / 2 ? W * 0.75 : W * 0.25;
+      let branchCx = Math.max(mainCx - MAX_REACH_X, Math.min(mainCx + MAX_REACH_X, otherSide + (rng() - 0.5) * W * 0.2));
+      if (type === 'drain' && Math.abs(branchCx - mainCx) <= 140) {
+        // Never leave a forced drain: put the clean ledge on whichever side has room
+        branchCx = mainCx - 170 >= branchW / 2 + 20 ? mainCx - 170 : mainCx + 170;
+      }
+      if (Math.abs(branchCx - mainCx) > 140) {
+        const roll = rng();
+        const branchType: PlatformType = type === 'drain' ? 'normal' : roll < 0.5 ? 'charge' : level >= 2 && roll < 0.75 ? 'drain' : 'normal';
+        const bx = clampX(branchCx - branchW / 2, branchW, W);
+        const bColor = state.nextId % palette.platforms.length;
+        platforms.push({
+          id: state.nextId++,
+          y: state.y - 10 + rng() * 20,
+          width: branchW,
+          startX: bx,
+          x: bx,
+          moveRange: 40,
+          speed: 0.3,
+          direction: rng() > 0.5 ? 1 : -1,
+          color: palette.platforms[bColor],
+          glow: palette.glows[bColor],
+          isFar: false,
+          isCheckpoint: false,
+          touched: false,
+          minX: Math.max(0, bx - 20),
+          maxX: Math.min(W - branchW, bx + 20),
+          type: branchType,
+          crumbleTimer: 0,
+          crumbled: false,
+          springBounce: 0,
+          param: 0,
+          isBranch: true,
+        });
+      }
+    }
+
     if (spec.orbAbove) {
       orbs.push({ x: startX + width / 2, y: state.y - 55, collected: false });
     }
@@ -325,7 +379,7 @@ export const generateChunk = (
         touched: false,
         minX: Math.max(0, farStartX - farRange / 2),
         maxX: Math.min(W - farWidth, farStartX + farRange / 2),
-        type: 'normal',
+        type: rng() < 0.5 ? 'charge' : 'normal',
         crumbleTimer: 0,
         crumbled: false,
         springBounce: 0,

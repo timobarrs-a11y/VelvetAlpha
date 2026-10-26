@@ -122,6 +122,10 @@ class MomentumSfx {
     this.tone(990, 0.12, 'sine', 0.2, 1480);
   }
 
+  drain() {
+    this.tone(420, 0.3, 'sawtooth', 0.12, 110);
+  }
+
   empty() {
     this.tone(160, 0.08, 'square', 0.06);
   }
