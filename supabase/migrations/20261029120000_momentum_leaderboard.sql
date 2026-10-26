@@ -83,5 +83,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION submit_momentum_run(text, date, integer, numeric, jsonb) FROM public;
+REVOKE ALL ON FUNCTION submit_momentum_run(text, date, integer, numeric, jsonb) FROM public, anon;
 GRANT EXECUTE ON FUNCTION submit_momentum_run(text, date, integer, numeric, jsonb) TO authenticated;
