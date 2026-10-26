@@ -5,12 +5,12 @@ import { simsShopItems, itemLabel } from '../../data/avatarCatalog';
 import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, type PlacementCheck } from './state/arrange';
 import { INITIAL_OBJS, ATTIC_STAIR_OBJS, TYPES, type ObjectInstance } from './state/objects';
 import { DAYS, weekday, clockText, season, absMin } from './state/time';
-import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, roomName } from './state/house';
+import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, LEVELS, roomName } from './state/house';
 import { NEED_KEYS, NEED_LABELS } from './state/needs';
 import { RNG } from './state/rng';
 import {
   buildWorld, createAgent, tickAgent, poseOf, isWalking, statusText,
-  SITTING_POSES, startChain, type Agent, type AgentId, type AgentLook,
+  SITTING_POSES, startChain, startSequence, isAsleep, type Agent, type AgentId, type AgentLook,
 } from './state/agents';
 import type { CharacterLook, CharacterNeeds } from './state/types';
 import { createHouseArt, type WallMode, type PersonFrame } from './art/houseArt.js';
@@ -23,8 +23,8 @@ import { startFixedLoop } from './engine/fixedLoop';
 import { qualityManager } from './engine/qualityTier';
 import { LayerCache } from './engine/layerCache';
 import {
-  createHousehold, billTick, deliveryTick, dirtTick, laundryTick, newDayReset,
-  servings, spend, earn, payBill, orderGroceries, orderTakeout,
+  createHousehold, deliveryTick, dirtTick, laundryTick, newDayReset,
+  servings, payBill, orderGroceries, orderTakeout,
   type HouseholdState,
 } from './state/household';
 import { CATALOG, type CatalogEntry } from './state/catalog';
@@ -35,6 +35,11 @@ import {
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
 import { snapshot } from './state/save';
+import { parseLife, type LifeState } from './state/life';
+import { financeTick, payBill as payOneBill, withdraw, deposit } from './state/finance';
+import { sideJobsTick, takeOffer, blockedBy, startWork, addWork, finishJob, workRate, SIDE_JOBS, SIDE_ACTS } from './state/sideJobs';
+import { routineStep, rollDay, morningActs, nightStart, wakeHour, dayPay, clampRoutine, isWorkday, CORNER_MARKET } from './state/routine';
+import { phoneView } from './ui/phone';
 import { createHostSample } from './bridge/hostSample';
 import { PICTURE_WALLS } from './state/pictureWalls';
 import { createDrawer, dockTabHtml, DOCK_TABS, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
@@ -55,6 +60,9 @@ const VELVET_COMPANION_ID = (() => {
 const SAVE_KEY = VELVET_COMPANION_ID ? `velvet-sims:${VELVET_COMPANION_ID}` : 'velvet-sims';
 const LEGACY_SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
 const SPEEDS = [1, 3, 10];
+// The Sims' fast-forwards: skipping the work day, and the night while everyone sleeps.
+const SKIP_SPEED = 180;
+const NIGHT_SPEED = 60;
 const WALL_MODES: { mode: WallMode; label: string }[] = [
   { mode: 'cut', label: 'Cutaway' },
   { mode: 'up', label: 'Walls up' },
@@ -97,6 +105,7 @@ interface World {
   objs: ObjectInstance[];
   save: Record<string, unknown> | null;
   household: HouseholdState;
+  life: LifeState;
 }
 
 function loadWorld(): World {
@@ -135,7 +144,11 @@ function loadWorld(): World {
     }
     if (typeof save.nextBillAt === 'number') household.nextBillAt = save.nextBillAt;
   }
-  return { day, minutes, objs, save, household };
+  // Bills are separate now (state/finance.ts): the old single bill is retired.
+  household.bill = null;
+  household.nextBillAt = null;
+  const life = parseLife(save?.life, day);
+  return { day, minutes, objs, save, household, life };
 }
 
 function boot(): void {
@@ -258,6 +271,7 @@ function boot(): void {
           <button data-act="rotate" title="Turn the house (R)" aria-label="Turn the house">&#8635;</button>
           <button data-act="walls" title="Change how walls show (W)">Cutaway</button>
           <button data-act="speed" title="Game speed">1x</button>
+          <button data-act="skipwork" title="Skip ahead to when he's home" hidden>Skip to 5 PM</button>
           <button data-act="quality" title="Graphics quality">Auto</button>
           <button data-act="pause" title="Pause (Space)" aria-pressed="false">Pause</button>
         </div>
@@ -395,12 +409,31 @@ function boot(): void {
     onBuyAvatarItem: (id) => handleBuyAvatarItem(id),
     onOrder: (chain) => handleOrder(chain),
     onPayBill: () => { payBill(world.household, absMin(world.day, world.minutes), log); },
+    onPayBillId: (id) => { payOneBill(world.household, world.life, id, world.day, world.minutes, log); refreshDrawer(); },
+    onTakeOffer: (id) => {
+      const t = takeOffer(world.life, id);
+      if (t) log(`Took the job: ${SIDE_JOBS[t.job].title.toLowerCase()} for ${t.client}.`);
+      else log('Finish a job first: three can wait at once.');
+      refreshDrawer();
+    },
+    onWorkJob: (id) => workOnJob(id),
+    onRoutine: (key, delta) => {
+      const r = world.life.routine;
+      if (key === 'shower') r.shower = !r.shower;
+      else world.life.routine = clampRoutine({ ...r, [key]: r[key] + delta });
+      refreshDrawer();
+    },
+    onCallIn: () => {
+      world.life.today.calledIn = true;
+      log(`${people[0].name} is staying home today. No pay for today.`);
+      refreshDrawer();
+    },
     onOrderGroceries: () => {
-      if (spend(world.household, 40)) { orderGroceries(world.household, absMin(world.day, world.minutes), 6, false); log('Groceries ordered. Delivery in 30 min.'); }
+      if (spendOn('Groceries', 40)) { orderGroceries(world.household, absMin(world.day, world.minutes), 6, false); log('Groceries ordered. Delivery in 30 min.'); }
       else log('Not enough money for groceries.');
     },
     onOrderTakeout: () => {
-      if (spend(world.household, 25)) { orderTakeout(world.household, absMin(world.day, world.minutes)); log('Takeout ordered. Delivery in 35 min.'); }
+      if (spendOn('Takeout', 25)) { orderTakeout(world.household, absMin(world.day, world.minutes)); log('Takeout ordered. Delivery in 35 min.'); }
       else log('Not enough money for takeout.');
     },
     onTalk: () => openChat(),
@@ -525,6 +558,7 @@ function boot(): void {
   });
   btn('pause').addEventListener('click', togglePause);
   btn('speed').addEventListener('click', () => { view.speedIdx = (view.speedIdx + 1) % SPEEDS.length; syncControls(); });
+  btn('skipwork').addEventListener('click', () => { if (people[0].away) { skipping = true; btn('skipwork').hidden = true; } });
 
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -914,6 +948,87 @@ function boot(): void {
     return labels[tag] ?? null;
   }
 
+  // Skipping ahead through the work day ("Skip to 5 PM").
+  let skipping = false;
+
+  // Every purchase goes through the bank, so it shows in the transactions.
+  function spendOn(label: string, amount: number): boolean {
+    return withdraw(world.household, world.life, world.day, world.minutes, label, amount);
+  }
+
+  // Start (or go back to) a side job: Jordan walks to the desk or the stove and works until it's done.
+  function workOnJob(id: string): void {
+    const jordan = people[0];
+    const t = world.life.taken.find(x => x.id === id);
+    if (!t) return;
+    if (jordan.away) { log(`${jordan.name} is at work. Side jobs wait for the evening.`); return; }
+    const blocked = blockedBy(world.household, world.life, t);
+    if (blocked) { log(blocked); return; }
+    if (!startChain(house, jordan, SIDE_JOBS[t.job].act, people[1], () => rng.next())) {
+      log(SIDE_JOBS[t.job].act === 'sideBake' ? 'The stove is busy.' : 'The desk is busy.');
+      return;
+    }
+    startWork(world.household, world.life, t);
+    log(`${jordan.name} is working on: ${SIDE_JOBS[t.job].title.toLowerCase()}.`);
+    view.follow = 'jordan';
+    if (jordan.level !== view.level) setLevel(jordan.level, true);
+    refreshDrawer();
+  }
+
+  // The day's routine: wake up, get ready, go to work, come home (state/routine.ts).
+  function runRoutine(hourF: number): void {
+    const jordan = people[0];
+    const step = routineStep(world.life, world.day, hourF, { asleep: isAsleep(jordan), away: !!jordan.away });
+    if (step === 'wake') {
+      world.life.today.woke = true;
+      jordan.task = null;
+      const work = isWorkday(world.day) && !world.life.today.calledIn && hourF < CORNER_MARKET.start;
+      const acts = work ? morningActs(world.life.routine, servings(world.household) > 0) : ['mirror'];
+      startSequence(house, jordan, acts.filter(a => a !== 'shower' || world.life.water), people[1], () => rng.next());
+      log(`${jordan.name} is up.`);
+    } else if (step === 'leave') {
+      world.life.today.left = true;
+      world.life.today.woke = true;
+      world.life.working = null;
+      jordan.task = null;
+      jordan.away = 'work';
+      log(`${jordan.name} left for work at the ${CORNER_MARKET.place}.`);
+    } else if (step === 'return') {
+      world.life.today.returned = true;
+      world.life.wagesOwed += dayPay();
+      jordan.away = null;
+      jordan.level = 1;
+      [jordan.x, jordan.y] = LEVELS[1].anchor;
+      jordan.idle = 0.5;
+      skipping = false;
+      log(`${jordan.name} is home from work. +$${dayPay()} toward Friday's paycheck.`);
+    }
+  }
+
+  // Side-job work: the bar fills while he's at it; it stops if he's worn out or the power, water or internet goes.
+  function tickSideJob(gameMin: number): void {
+    const jordan = people[0];
+    const t = world.life.working ? world.life.taken.find(x => x.id === world.life.working) : null;
+    if (!t) return;
+    const task = jordan.task;
+    if (!task || !SIDE_ACTS.has(task.act)) { world.life.working = null; return; }
+    if (task.phase !== 'do') return;
+    const blocked = blockedBy(world.household, world.life, { ...t, started: true });
+    const worn = Math.min(jordan.needs.energy, jordan.needs.food, jordan.needs.hygiene) < 15;
+    if (blocked || worn) {
+      jordan.task = null;
+      jordan.idle = 0.5;
+      world.life.working = null;
+      log(blocked ? `Work stopped: ${blocked}` : `${jordan.name} needs a break. The work is saved.`);
+      return;
+    }
+    if (addWork(t, gameMin, workRate(jordan.needs))) {
+      jordan.task = null;
+      jordan.idle = 1;
+      finishJob(world.household, world.life, t, world.day, world.minutes, log);
+    }
+  }
+
   function handleObjectAction(obj: ObjectInstance, tag: string): void {
     if (tag === 'toggleLight') {
       const on = art.toggleObjectLight(obj.id);
@@ -939,6 +1054,8 @@ function boot(): void {
 
   function handleOrder(chain: string): void {
     const jordan = people[0];
+    if (jordan.away) { log(`${jordan.name} is at work until ${CORNER_MARKET.end - 12} PM.`); return; }
+    world.life.working = null;
     startChain(house, jordan, chain, people[1], () => rng.next());
     view.follow = 'jordan';
     if (jordan.level !== view.level) setLevel(jordan.level, true);
@@ -950,7 +1067,7 @@ function boot(): void {
   function handleBuyAvatarItem(id: string): void {
     const item = simsShopItems().find(i => i.id === id);
     if (!item || ownsAvatarItem(id)) return;
-    if (!spend(world.household, item.price)) { log('Not enough money.'); return; }
+    if (!spendOn(`Salon: ${itemLabel(item.id)}`, item.price)) { log('Not enough money.'); return; }
     buyAvatarItem(id);
     log(`Bought ${itemLabel(item.id)} for $${item.price}. It's yours in Velvet too.`);
     refreshDrawer();
@@ -963,7 +1080,7 @@ function boot(): void {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
-    if (!spend(world.household, price)) { log('Not enough money.'); return; }
+    if (!spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
     log(`Bought ${item.name} for $${price}.`);
 
@@ -1128,6 +1245,7 @@ function boot(): void {
         lifeGoal, settleDone, freeWill, style, companion: companionCfg as unknown as Record<string, unknown>,
         wallMode: WALL_MODES[view.wallIdx].mode,
         looks: art.exportLooks(),
+        life: world.life,
       }, world.save);
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch { /* non-fatal */ }
@@ -1169,6 +1287,7 @@ function boot(): void {
       closet,
       personas: wardrobe?.personas ?? [],
       wearing: { top: people[0].look.top, topStyle: people[0].look.topStyle, bottom: people[0].look.bottom, bottomStyle: people[0].look.bottomStyle, hat: wornHat },
+      phone: phoneView(world.household, world.life, world.day, world.minutes, !!people[0].away),
       salon: simsShopItems().map(i => ({
         id: i.id, name: itemLabel(i.id), price: i.price, owned: ownsAvatarItem(i.id),
         swatch: i.id.startsWith('hairHighlight:') || i.id.startsWith('hairColor:') ? i.id.split(':')[1] : undefined,
@@ -1192,7 +1311,7 @@ function boot(): void {
         const result = checkLifeGoalSimple(lifeGoal, goalCtx);
         if (result) {
           flags.lifeStep = (flags.lifeStep as number) + 1;
-          earn(world.household, result.reward);
+          deposit(world.household, world.life, world.day, world.minutes, 'Life goal reward', result.reward);
           log(`Life goal step complete: ${result.stepText} (+$${result.reward})`);
         }
       }
@@ -1215,7 +1334,7 @@ function boot(): void {
       if (settleComplete(goalCtx)) {
         settleDone = true;
         freeWill = true;
-        earn(world.household, 100);
+        deposit(world.household, world.life, world.day, world.minutes, `Welcome basket from ${townName}`, 100);
         showDiscoveryCard('Welcome home!', `${townName} gave you a $100 welcome basket. The tutorial is over — make it yours.`);
         log('Settled in! +$100 welcome bonus. Free will is on.');
       }
@@ -1310,7 +1429,7 @@ function boot(): void {
     const pose = poseOf(p);
     return {
       level: p.level, x: p.x, y: p.y, z: p.z, face: p.face, pose,
-      walking: isWalking(p), sit: SITTING_POSES.has(pose) && p.z > 0.05, hidden: p.onStairs,
+      walking: isWalking(p), sit: SITTING_POSES.has(pose) && p.z > 0.05, hidden: p.onStairs || !!p.away,
       seed: seeds[p.id], look: p.look,
       act: p.task && p.task.phase === 'do' ? p.task.act : null,
       actMin: p.task && p.task.phase === 'do' ? p.task.time : 0,
@@ -1327,7 +1446,11 @@ function boot(): void {
     (dt) => {
       if (view.paused) return;
       view.t += dt;
-      const speed = SPEEDS[view.speedIdx];
+      // Like The Sims: the work day can be skipped, and the night runs fast when everyone's asleep.
+      const jordanAway = !!people[0].away;
+      const allAsleep = !jordanAway && people.every(p => isAsleep(p));
+      if (!jordanAway) skipping = false;
+      const speed = skipping ? SKIP_SPEED : allAsleep ? NIGHT_SPEED : SPEEDS[view.speedIdx];
       const before = world.minutes + world.day * 1440;
       Object.assign(world, advanceClock(world.day, world.minutes, dt, speed));
       const gameMin = world.minutes + world.day * 1440 - before;
@@ -1335,12 +1458,19 @@ function boot(): void {
       const walkMul = Math.min(speed, 6);
       const absM = world.minutes + world.day * 1440;
       const prevDay = world.day;
-      billTick(world.household, absM, log);
+      if (settleDone) {
+        rollDay(world.life, world.day);
+        financeTick(world.household, world.life, world.day, world.minutes, log);
+        sideJobsTick(world.life, world.day, world.minutes, () => rng.next(), log);
+        runRoutine(hourF);
+      }
       deliveryTick(world.household, absM, log);
       dirtTick(world.household, gameMin);
       laundryTick(world.household, gameMin);
       if (world.day !== prevDay) { newDayReset(world.household, log); }
-      tickAgent(house, people[0], people[1], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
+      tickAgent(house, people[0], people[1], dt, gameMin, walkMul, hourF, () => rng.next(), world.household,
+        settleDone ? { nightStart: nightStart(world.life.routine), wakeAt: wakeHour(world.life.routine, world.day) } : undefined);
+      tickSideJob(gameMin);
       tickAgent(house, people[1], people[0], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
       const followed = view.follow && people.find((p) => p.id === view.follow);
       if (followed && !followed.onStairs && followed.level !== view.level) setLevel(followed.level, true);
@@ -1373,6 +1503,7 @@ function boot(): void {
         el('clock').textContent = clockText(world.minutes);
         el('season').textContent = season(world.day);
         el('money').textContent = `$${world.household.money}`;
+        btn('skipwork').hidden = !people[0].away || skipping;
         const sv = servings(world.household);
         el('fridge').textContent = sv === 0 ? 'Fridge empty' : `${sv} meals`;
         refreshPeople();

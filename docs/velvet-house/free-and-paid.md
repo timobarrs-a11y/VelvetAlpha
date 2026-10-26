@@ -11,6 +11,27 @@ The aim: enough for free that someone comes back every day, and enough behind th
 that they want to sign up. The game is good on its own without the AI; the AI makes it come
 alive. Money isn't only for buying things: bills come due, and the player has to manage it.
 
+## Built: the life sim (no paywall yet)
+
+Everyone currently gets the paid amounts (3 side-job offers a day). Free and paid split when the
+paywall is built.
+
+| Part | Where |
+|---|---|
+| Separate weekly bills (rent Mon $400, electric Wed $70, water Fri $40, internet Fri $30). Each arrives 3 days ahead with a reminder the day before. Late bills get a fee, and power, water or internet goes off until paid | `state/finance.ts` |
+| Bank: balance and every transaction, with each bill paid by hand. The balance counts down when they pay | `state/finance.ts`, `ui/phone.ts` (the Phone tab) |
+| Corner Market job, $20/hr, 8:00–5:00 weekdays. Pay builds up and arrives Friday at 5:30 | `state/routine.ts`, `finance.ts` |
+| Five side jobs, with offers arriving at 7:00 that expire after 2 days. A progress bar fills while he works at the desk or stove; he can stop and come back, and it pays only when finished. Work slows when he's tired and stops if he's worn out or the power, water or internet goes | `state/sideJobs.ts` |
+| Daily routine: up at 6:00 (8:00 weekends), mirror, shower and breakfast, leaves at 8:00 (hidden while at work), home at 5:00, bed at midnight. Changeable on the phone, with "Stay home today" | `state/routine.ts`, `state/agents.ts` (`away`, sleep times) |
+| Sims-style fast-forward: "Skip to 5 PM" while he's at work (180x), and the night runs at 60x while everyone sleeps. The clock already stops when the tab is hidden | `main.ts` |
+| Saved as `life` in the save; the old single bill is retired | `state/life.ts`, `state/save.ts` |
+
+All of it starts once the move-in tutorial is finished (`settleDone`), so the opening script
+stays as it is. Tests: `__tests__/lifeSim.test.ts`.
+
+Not built yet: the paywall (free and paid amounts, the five paid jobs, the AI student for
+tutoring), starting money and the first wallpaper in the opening script, and "While you were away".
+
 ## 1. Two levels of the same game
 
 | | **Free: the game** | **Paid: the live game** |
