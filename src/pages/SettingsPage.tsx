@@ -11,6 +11,7 @@ import { getUserExperts, deleteUserExpert, UserExpert } from '../services/expert
 import { getExpertById } from '../config/signatureExperts';
 import { useRole } from '../hooks/useRole';
 import { PublicProfileSettings } from '../components/PublicProfileSettings';
+import { pushSupport, isPushSubscribed, enablePush, disablePush, type PushSupport } from '../services/pushService';
 import { passwordProblem, isBreachedPassword, passwordErrorMessage, BREACHED_PASSWORD_MESSAGE, PASSWORD_RULE } from '../shared/auth/passwordPolicy';
 
 type Tab = 'notifications' | 'privacy' | 'appearance' | 'experts' | 'tour' | 'security' | 'data' | 'public-profile';
@@ -22,6 +23,11 @@ interface NotificationSettings {
   calendar_reminders: boolean;
   daily_checkin: boolean;
   system_updates: boolean;
+  /** Messages from real people (phone notifications). */
+  people_messages: boolean;
+  /** Show the message text on the lock screen. Off by default. */
+  show_preview: boolean;
+  quiet_hours: { start: string; end: string; tz: string } | null;
 }
 
 interface PrivacySettings {
@@ -31,7 +37,11 @@ interface PrivacySettings {
 }
 
 const DEFAULT_NOTIFICATIONS: NotificationSettings = {
-  push_enabled: true,
+  // Phone notifications are opt-in: on only once a device has been subscribed.
+  push_enabled: false,
+  people_messages: true,
+  show_preview: false,
+  quiet_hours: null,
   email_digest: false,
   companion_messages: true,
   calendar_reminders: true,
@@ -50,6 +60,11 @@ export function SettingsPage() {
   const { isManagerOrAbove } = useRole();
   const [activeTab, setActiveTab] = useState<Tab>('notifications');
   const [notifications, setNotifications] = useState<NotificationSettings>(DEFAULT_NOTIFICATIONS);
+  // Phone notifications are per device: what this browser can do, and whether it is subscribed.
+  const [pushState, setPushState] = useState<{ support: PushSupport; on: boolean; busy: boolean; message: string | null }>({ support: 'ok', on: false, busy: false, message: null });
+  useEffect(() => {
+    isPushSubscribed().then(on => setPushState(s => ({ ...s, support: pushSupport(), on })));
+  }, []);
   const [privacy, setPrivacy] = useState<PrivacySettings>(DEFAULT_PRIVACY);
   const [themeMode, setThemeMode] = useState<'dark' | 'light' | 'system'>('dark');
   const [saving, setSaving] = useState(false);
@@ -184,6 +199,45 @@ export function SettingsPage() {
         setSharedMemoryEnabled(profile.shared_memory_consent);
       }
     } catch {
+    }
+  };
+
+  // Saves the notification settings straight away (used when a phone is subscribed or unsubscribed, so the
+  // server never disagrees with what the person just did).
+  const persistNotifications = async (next: NotificationSettings) => {
+    setNotifications(next);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('user_settings').upsert(
+      { user_id: user.id, notification_settings: next, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' },
+    );
+  };
+
+  const togglePush = async (turnOn: boolean) => {
+    setPushState(s => ({ ...s, busy: true, message: null }));
+    if (turnOn) {
+      const r = await enablePush();
+      if (r.ok) {
+        await persistNotifications({ ...notifications, push_enabled: true });
+        setPushState(s => ({ ...s, on: true, busy: false }));
+      } else {
+        const text: Record<string, string> = {
+          blocked: 'Notifications are blocked for this site. Allow them in your browser settings, then try again.',
+          declined: 'No problem. You can turn them on any time.',
+          'needs-install': 'On iPhone and iPad, add Velvet to your Home Screen first (Share, then Add to Home Screen), then turn this on.',
+          unsupported: "This browser can't show notifications.",
+          'not-configured': 'Notifications are not set up on this version yet.',
+          failed: 'Something went wrong turning notifications on. Please try again.',
+        };
+        setPushState(s => ({ ...s, busy: false, message: text[r.reason] ?? text.failed }));
+      }
+    } else {
+      await disablePush();
+      // Other devices may still be subscribed; the account stays opted in while any are.
+      const { count } = await supabase.from('push_subscriptions').select('id', { count: 'exact', head: true });
+      await persistNotifications({ ...notifications, push_enabled: (count ?? 0) > 0 });
+      setPushState(s => ({ ...s, on: false, busy: false }));
     }
   };
 
@@ -408,11 +462,58 @@ export function SettingsPage() {
                   <div className="space-y-1">
                     <ToggleRow
                       icon={Smartphone}
-                      label="Push Notifications"
-                      description="Allow push notifications in your browser"
-                      value={notifications.push_enabled}
-                      onChange={v => setNotifications(p => ({ ...p, push_enabled: v }))}
+                      label="Phone notifications"
+                      description={pushState.support === 'needs-install'
+                        ? 'On iPhone and iPad, add Velvet to your Home Screen first, then turn this on.'
+                        : 'Get a notification on this device when you are away from the app'}
+                      value={pushState.on}
+                      onChange={v => { if (!pushState.busy) togglePush(v); }}
                     />
+                    {pushState.message && <p className="text-amber-300/80 text-xs py-2">{pushState.message}</p>}
+                    {pushState.on && (
+                      <>
+                        <ToggleRow
+                          icon={Users}
+                          label="Messages from people"
+                          description="When a friend messages you and you're not in the app"
+                          value={notifications.people_messages}
+                          onChange={v => persistNotifications({ ...notifications, people_messages: v })}
+                        />
+                        <ToggleRow
+                          icon={Eye}
+                          label="Show message text"
+                          description="Off keeps messages private on your lock screen: it says who, not what"
+                          value={notifications.show_preview}
+                          onChange={v => persistNotifications({ ...notifications, show_preview: v })}
+                        />
+                        <div className="py-4 border-b border-white/5">
+                          <ToggleRow
+                            icon={Moon}
+                            label="Quiet hours"
+                            description="No notifications during these hours"
+                            value={!!notifications.quiet_hours}
+                            onChange={v => persistNotifications({
+                              ...notifications,
+                              quiet_hours: v ? { start: '22:00', end: '07:00', tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } : null,
+                            })}
+                          />
+                          {notifications.quiet_hours && (
+                            <div className="flex items-center gap-3 pl-7 text-sm text-white/70">
+                              <label className="flex items-center gap-2">From
+                                <input type="time" value={notifications.quiet_hours.start}
+                                  onChange={e => persistNotifications({ ...notifications, quiet_hours: { ...notifications.quiet_hours!, start: e.target.value || '22:00' } })}
+                                  className="rounded-md bg-white/10 px-2 py-1 text-white" />
+                              </label>
+                              <label className="flex items-center gap-2">to
+                                <input type="time" value={notifications.quiet_hours.end}
+                                  onChange={e => persistNotifications({ ...notifications, quiet_hours: { ...notifications.quiet_hours!, end: e.target.value || '07:00' } })}
+                                  className="rounded-md bg-white/10 px-2 py-1 text-white" />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
                     <ToggleRow
                       icon={Mail}
                       label="Weekly Email Digest"

@@ -4,13 +4,14 @@
  */
 
 import { CLOTHES, clothId } from './clothing';
+import { PICTURE_WALLS } from './pictureWalls';
 
 export interface CatalogEntry {
   id: string;
   name: string;
   desc?: string;
   price: number;
-  icon: 'paint' | 'paper' | 'floor' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
+  icon: 'paint' | 'paper' | 'floor' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
   tab: string;
   tags?: string[];
   type?: string;
@@ -31,7 +32,7 @@ export interface CatalogEntry {
 export const TABS = [
   'Today', 'Groceries', 'Paint', 'Wallpaper', 'Floors',
   'Furniture', 'Wall', 'Decor', 'Plants', 'Hobbies',
-  'Outdoor', 'Clothes', 'Upgrades', 'Pets', 'Gifts', 'Homes',
+  'Outdoor', 'Clothes', 'Upgrades', 'Attic', 'Pets', 'Homes',
 ] as const;
 
 export type TabName = typeof TABS[number];
@@ -117,6 +118,24 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-blossom', 'Blossom', 'blossom', 100, ['soft', 'natural', 'playful']),
   wallpaper('paper-palms', 'Palms', 'palms', 100, ['natural', 'playful', 'cool']),
   wallpaper('paper-jungle-night', 'Jungle night', 'jungle-night', 120, ['bold', 'natural', 'cool']),
+
+  // Upgrades
+  { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
+
+  // The attic: a reading nook, a studio and a few things worth finding in a trunk
+  { id: 'attic-trunk', name: 'Steamer trunk', desc: 'Somewhere to keep things nobody has opened in years.', price: 90, icon: 'obj', tab: 'Attic', type: 'trunk', cols: ['#7A4E32', '#2E3B57', '#3F5B4C', '#8E5468'], tags: ['vintage', 'cozy', 'natural'], repeat: true },
+  { id: 'attic-dressform', name: 'Dress form', desc: 'For the sewing corner.', price: 70, icon: 'obj', tab: 'Attic', type: 'dressform', cols: ['#E8DCC8', '#B5476E', '#2E3B57'], tags: ['vintage', 'creative', 'soft'], repeat: true },
+  { id: 'attic-gramophone', name: 'Gramophone', desc: 'Crackly records under the rafters.', price: 220, icon: 'obj', tab: 'Attic', type: 'gramophone', cols: ['#7A4E32', '#1B1A1F', '#C9A24A'], tags: ['vintage', 'warm', 'cozy'], repeat: true },
+  { id: 'attic-floorcushion', name: 'Floor cushions', desc: 'A reading nook, no chair needed.', price: 60, icon: 'obj', tab: 'Attic', type: 'floorcushion', cols: ['#B5476E', '#4F6F74', '#C9A24A', '#E8DCC8', '#6E3C50'], tags: ['cozy', 'soft', 'playful'], repeat: true },
+  { id: 'attic-crates', name: 'Book crates', desc: 'Paperbacks, by the dozen.', price: 45, icon: 'obj', tab: 'Attic', type: 'crates', cols: ['#B98A6A', '#3A2E2A', '#E4DDD2'], tags: ['natural', 'cozy', 'vintage'], repeat: true },
+  { id: 'attic-telescope', name: 'Telescope', desc: 'Best view in the house.', price: 150, icon: 'obj', tab: 'Attic', type: 'telescope', cols: ['#F2EEE8', '#2B2B30', '#C9A24A'], tags: ['modern', 'cool', 'minimal'], repeat: true },
+  { id: 'attic-easel', name: 'Art easel', desc: 'A studio in the roof.', price: 100, icon: 'obj', tab: 'Attic', type: 'easel', cols: ['#B98A6A', '#2B2B30', '#F2EEE8'], tags: ['natural', 'creative', 'soft'], repeat: true },
+  { id: 'attic-rocker', name: 'Rocking chair', price: 150, icon: 'obj', tab: 'Attic', type: 'rocker', cols: ['#8A5E3B', '#3A2E2A', '#F2EEE8', '#3F5B4C'], tags: ['vintage', 'cozy', 'natural'], repeat: true },
+  { id: 'attic-globe', name: 'Antique globe', price: 120, icon: 'obj', tab: 'Attic', type: 'globe', cols: ['#9C6B45', '#2B2B30'], tags: ['vintage', 'luxe', 'natural'], repeat: true },
+  { id: 'attic-lantern', name: 'Floor lantern', price: 40, icon: 'obj', tab: 'Attic', type: 'lantern', cols: ['#2B2B30', '#C9A24A', '#F2EEE8'], tags: ['cozy', 'warm', 'vintage'], repeat: true },
+
+  // Pictures on the wall: photos and gradients, the same ones as the app's wallpaper picker
+  ...PICTURE_WALLS.map(w => wallpaper(`paper-${w.id}`, w.name, w.id, w.price, w.tags)),
 
   // Floors
   floor('floor-wood', 'Oak plank', 'wood', 120, ['natural', 'warm', 'cozy']),

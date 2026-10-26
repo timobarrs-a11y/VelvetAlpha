@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, UserPlus } from 'lucide-react';
 import { supabase } from '../../shared/supabase/client';
@@ -144,6 +144,7 @@ function WindowFrame({ children, fullWidth, room }: { children: ReactNode; fullW
 export function Dock() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const dock = useDock();
   const capacity = useWindowCapacity();
   const barRef = useRef<HTMLDivElement>(null);
@@ -166,6 +167,28 @@ export function Dock() {
       }
     }
   }, [readingKey, unread, clearUnread]);
+
+  // Tapping a phone notification opens that chat: from the link it opened the app with, or from the service
+  // worker when the app was already open.
+  const { openFriend } = dock;
+  useEffect(() => {
+    const open = (conversationId?: string, peerId?: string, name?: string) => {
+      if (!conversationId || !peerId) return;
+      openFriend({ conversationId, peerId, peerName: name || 'Chat', peerAvatarUrl: null });
+    };
+    const params = new URLSearchParams(location.search);
+    if (params.get('im') && params.get('conv')) {
+      open(params.get('conv') ?? undefined, params.get('im') ?? undefined, params.get('n') ?? undefined);
+      ['im', 'conv', 'n'].forEach(k => params.delete(k));
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    }
+    const onMessage = (e: MessageEvent) => {
+      const d = e.data as { type?: string; conversationId?: string; senderId?: string; senderName?: string } | null;
+      if (d?.type === 'velvet:open-im') open(d.conversationId, d.senderId, d.senderName);
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, [location.pathname, location.search, navigate, openFriend]);
 
   // The message popup fades on its own.
   const { toast, dismissToast } = dock;

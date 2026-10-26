@@ -169,6 +169,42 @@ export function memoryBrief(coreMem: string[], memories: string[], pastMem: stri
   return result;
 }
 
+// What she says when the AI can't answer, in her own voice. `budget` is the daily allowance running out.
+export type ChatFailure = 'budget' | 'rate_limited' | 'unavailable' | 'refused' | 'blocked' | 'cancelled';
+
+const CANNED: Record<string, Record<'budget' | 'rate_limited' | 'unavailable' | 'refused', string>> = {
+  warm: {
+    budget: "I'm all talked out for today, babe. Let's pick this up tomorrow. I'll still be right here.",
+    rate_limited: 'Give me a second to think, okay? Ask me again in a minute.',
+    unavailable: "Sorry, I lost my train of thought. Say that again in a bit?",
+    refused: "Let's talk about something else, okay?",
+  },
+  calm: {
+    budget: "I think we've said what we needed to today. Let's continue tomorrow.",
+    rate_limited: 'One moment. Let me gather my thoughts, and ask me again shortly.',
+    unavailable: "I can't find the words right now. Try me again in a little while.",
+    refused: "I'd rather not go there. Something else?",
+  },
+  bubbly: {
+    budget: "Okay I am OUT of words for today! Tomorrow, though? I'll have SO much to say.",
+    rate_limited: "Whoa, slow down, my brain is buffering! Ask me again in a sec!",
+    unavailable: "Ahh I blanked completely. Say it again in a minute?",
+    refused: "Nope, not that one! Let's talk about literally anything else.",
+  },
+  dry: {
+    budget: "That's enough talking for one day. I'm closing the shop. Tomorrow.",
+    rate_limited: "Hold on. Thinking. Ask again in a minute.",
+    unavailable: "Something went wrong with my words. Try again later.",
+    refused: "Let's not. Next topic.",
+  },
+};
+
+export function cannedFor(code: string, preset: string): string {
+  const voice = CANNED[preset] ?? CANNED.warm;
+  const key = code === 'blocked' ? 'refused' : code;
+  return (voice as Record<string, string>)[key] ?? voice.unavailable;
+}
+
 /** Sends a chat message and returns the AI response with parsed mood tag. */
 export async function talk(
   userLine: string,
@@ -176,7 +212,7 @@ export async function talk(
   ctx: PersonaContext,
   sample: SampleFn,
   onText?: (chunk: string) => void,
-): Promise<{ text: string; tag: MoodTag | null; turns: ChatTurn[] }> {
+): Promise<{ text: string; tag: MoodTag | null; turns: ChatTurn[]; failed?: ChatFailure }> {
   const input: string[] = [
     persona(ctx),
     ...turns.slice(-MAX_TURNS).map(t => `${t.role === 'user' ? 'Player' : 'Partner'}: ${t.content}`),
@@ -191,11 +227,15 @@ export async function talk(
       { role: 'assistant', content: text },
     ];
     return { text, tag, turns: newTurns };
-  } catch {
+  } catch (e) {
+    const code = ((e as Error)?.message ?? 'unavailable') as ChatFailure;
+    const failed: ChatFailure = ['budget', 'rate_limited', 'refused', 'blocked', 'cancelled'].includes(code) ? code : 'unavailable';
     return {
-      text: `(connection issue — try again)`,
+      text: failed === 'cancelled' ? '' : cannedFor(failed, ctx.companion.preset),
       tag: null,
-      turns: [...turns, { role: 'user', content: userLine }],
+      // A refused message is not kept in the conversation, so it can't be built on.
+      turns: failed === 'refused' || failed === 'blocked' ? turns : [...turns, { role: 'user', content: userLine }],
+      failed,
     };
   }
 }

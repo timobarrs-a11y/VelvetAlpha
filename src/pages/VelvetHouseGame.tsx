@@ -5,6 +5,7 @@ import { supabase } from '../shared/supabase/client';
 import { getCompanion } from '../services/companionService';
 import { loadVelvetHouseSave, saveVelvetHouseProgress, saveVelvetHouseHistory, maybeSnapshotHistory } from '../services/velvetHouseDatabase';
 import { buildProfile, type PlayerProfile } from '../features/velvet-sims/simProfile';
+import { sampleGameTurn } from '../services/velvetGameTurn';
 import { isRestartedMessage, isReadyMessage, isVidSearchMessage, sanitizeMessage } from '../games/velvet-house/bridge/protocol';
 
 const GAME_PATH = '/games/velvet-house/index.html';
@@ -18,44 +19,6 @@ function saveKeyFor(companionId: string) {
 function restartKeyFor(companionId: string) {
   return `${RESTART_KEY_PREFIX}:${companionId}`;
 }
-const GAME_TURN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/velvet-game-turn`;
-
-type GameError = Error & { code?: string };
-
-function gameError(code: string): GameError {
-  const err = new Error(code) as GameError;
-  err.code = code;
-  return err;
-}
-
-async function sampleGameTurn(companionId: string, input: unknown, signal?: AbortSignal): Promise<{ text: string }> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) throw gameError('unavailable');
-
-  let res: Response;
-  try {
-    res = await fetch(GAME_TURN_URL, {
-      method: 'POST',
-      signal,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({ companionId, input }),
-    });
-  } catch (e) {
-    if ((e as Error)?.name === 'AbortError') throw gameError('cancelled');
-    throw gameError('unavailable');
-  }
-
-  const data = await res.json().catch(() => null);
-  if (res.status === 429 || data?.error === 'rate_limited') throw gameError('rate_limited');
-  if (data?.error === 'refused') throw gameError('refused');
-  if (!res.ok || typeof data?.text !== 'string') throw gameError('unavailable');
-  return { text: data.text };
-}
-
 export function VelvetHouseGame() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

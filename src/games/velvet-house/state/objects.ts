@@ -184,6 +184,13 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   chesterfield: { W: 2.0, D: 0.95, h: 0.9, name: 'Chesterfield sofa', store: true, cols: ['#5A2E1E', '#2E3B57', '#3F5B4C', '#6E3C50'],
     spots: { s1: { stand: [0.6, 1.5], pos: [0.6, 0.58, 0.5], dir: [0, 1], tag: 'seat', base: 'base' }, s2: { stand: [1.4, 1.5], pos: [1.4, 0.58, 0.5], dir: [0, 1], tag: 'seat', base: 'base' } } },
   globe: { W: 0.5, D: 0.5, h: 1.15, name: 'Antique globe', store: true, cols: ['#9C6B45', '#2B2B30'] },
+  trunk: { W: 0.9, D: 0.55, h: 0.55, name: 'Steamer trunk', store: true, cols: ['#7A4E32', '#2E3B57', '#3F5B4C', '#8E5468'] },
+  dressform: { W: 0.5, D: 0.5, h: 1.5, name: 'Dress form', store: true, cols: ['#E8DCC8', '#B5476E', '#2E3B57'] },
+  gramophone: { W: 0.6, D: 0.6, h: 1.1, name: 'Gramophone', store: true, cols: ['#7A4E32', '#1B1A1F', '#C9A24A'],
+    spots: { r: { stand: [0.3, 1.1], dir: [0, -1], tag: 'records' } } },
+  floorcushion: { W: 1.1, D: 1.1, h: 0.25, name: 'Floor cushions', store: true, cols: ['#B5476E', '#4F6F74', '#C9A24A', '#E8DCC8', '#6E3C50'],
+    spots: { s: { stand: [0.55, 1.7], pos: [0.55, 0.55, 0.16], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  crates: { W: 0.8, D: 0.5, h: 0.55, name: 'Book crates', store: true, cols: ['#B98A6A', '#3A2E2A', '#E4DDD2'] },
 };
 
 export interface ObjectInstance {
@@ -235,6 +242,12 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'vanity', type: 'vanity', level: 2, x: 6.8, y: 0.12, rot: 0 },
   { id: 'desk', type: 'desk', level: 2, x: 7.0, y: 5.6, rot: 0 },
   { id: 'plant2', type: 'plant', level: 2, x: 9.2, y: 7.3, rot: 2, pot: '#E4DDD2' },
+];
+
+// Building the attic puts a staircase in the upstairs hall and an opening above it.
+export const ATTIC_STAIR_OBJS: ObjectInstance[] = [
+  { id: 'stair24', type: 'flightX', level: 2, x: 3.3, y: 7.0, rot: 0 },
+  { id: 'open24', type: 'holeX', level: 4, x: 4.5, y: 7.0, rot: 0 },
 ];
 
 export function footprint(o: ObjectInstance): [number, number] {

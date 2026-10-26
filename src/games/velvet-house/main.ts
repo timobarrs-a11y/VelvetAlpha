@@ -2,10 +2,10 @@ import { migrateSave } from './state/saveMigration';
 import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage, isAvatarLookMessage } from './bridge/protocol';
 import { setOwnedAvatarItems, ownsAvatarItem, buyAvatarItem } from './bridge/avatarShop';
 import { simsShopItems, itemLabel } from '../../data/avatarCatalog';
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, type PlacementCheck } from './state/arrange';
-import { INITIAL_OBJS, TYPES, type ObjectInstance } from './state/objects';
+import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, type PlacementCheck } from './state/arrange';
+import { INITIAL_OBJS, ATTIC_STAIR_OBJS, TYPES, type ObjectInstance } from './state/objects';
 import { DAYS, weekday, clockText, season, absMin } from './state/time';
-import { LEVEL_NAMES } from './state/house';
+import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, roomName } from './state/house';
 import { NEED_KEYS, NEED_LABELS } from './state/needs';
 import { RNG } from './state/rng';
 import {
@@ -31,10 +31,13 @@ import { CATALOG, type CatalogEntry } from './state/catalog';
 import { SETTLE, settleComplete, type GoalContext } from './state/goals';
 import { rollStyle, tasteOf, computeTasteNorm, type StyleProfile, type CatalogItem } from './state/taste';
 import {
-  talk, rememberChat, remember,
+  talk, rememberChat, remember, cannedFor,
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
-import { createDrawer, type DrawerPage, type DrawerState } from './ui/drawer';
+import { snapshot } from './state/save';
+import { createHostSample } from './bridge/hostSample';
+import { PICTURE_WALLS } from './state/pictureWalls';
+import { createDrawer, dockTabHtml, DOCK_TABS, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
 import { clothByKey, clothId, wearOnAgent, validOutfit, validWardrobe, closetFromWardrobe, AVATAR_HATS, BOTTOM_STYLES, type OwnedCloth, type Wardrobe } from './state/clothing';
 import { validHeadSvgs, loadHeadImages } from './state/headSprites';
 import { validBodySvgs, loadBodyImages } from './state/bodySprites';
@@ -47,7 +50,10 @@ const VELVET_COMPANION_ID = (() => {
   try { return new URLSearchParams(location.search).get('companion') || ''; } catch { return ''; }
 })();
 
-const SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
+// The live game keeps its own save slot. The legacy game uses `velvet-house-v1:<id>`, and sharing it meant
+// each could overwrite the other's progress.
+const SAVE_KEY = VELVET_COMPANION_ID ? `velvet-sims:${VELVET_COMPANION_ID}` : 'velvet-sims';
+const LEGACY_SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
 const SPEEDS = [1, 3, 10];
 const WALL_MODES: { mode: WallMode; label: string }[] = [
   { mode: 'cut', label: 'Cutaway' },
@@ -99,6 +105,11 @@ function loadWorld(): World {
   let objs: ObjectInstance[] = INITIAL_OBJS.map((o) => ({ ...o }));
   let save: Record<string, unknown> | null = null;
   try {
+    // First run on the new slot: carry the house over from the old one (migrated, so the old copy stays as it was).
+    if (localStorage.getItem(SAVE_KEY) === null) {
+      const old = migrateSave(JSON.parse(localStorage.getItem(LEGACY_SAVE_KEY) ?? 'null'));
+      if (old) localStorage.setItem(SAVE_KEY, JSON.stringify(old));
+    }
     const raw = localStorage.getItem(SAVE_KEY);
     const s = raw ? migrateSave(JSON.parse(raw)) : null;
     if (s) {
@@ -241,7 +252,7 @@ function boot(): void {
       <ul class="vh-log" aria-live="polite"></ul>
       <div class="vh-controls">
         <div class="vh-floors" role="tablist" aria-label="Floors">
-          ${LEVEL_NAMES.map((n, i) => `<button role="tab" data-level="${i}">${n}</button>`).join('')}
+          ${FLOOR_ORDER.map((i) => `<button role="tab" data-level="${i}"${i === ATTIC ? ' hidden' : ''}>${LEVEL_NAMES[i]}</button>`).join('')}
         </div>
         <div class="vh-tools">
           <button data-act="rotate" title="Turn the house (R)" aria-label="Turn the house">&#8635;</button>
@@ -249,7 +260,6 @@ function boot(): void {
           <button data-act="speed" title="Game speed">1x</button>
           <button data-act="quality" title="Graphics quality">Auto</button>
           <button data-act="pause" title="Pause (Space)" aria-pressed="false">Pause</button>
-          <button data-act="arrange" title="Arrange furniture (A)" aria-pressed="false">Arrange</button>
         </div>
       </div>
     </div>`;
@@ -273,6 +283,8 @@ function boot(): void {
     deferredLights: () => deferredLights,
     quality: () => qualityManager.getTier(),
   });
+  art.registerPictures(PICTURE_WALLS);
+  const pictureThumbs: Record<string, string> = Object.fromEntries(PICTURE_WALLS.filter(w => w.thumb).map(w => [w.id, w.thumb]));
   art.applySave(save);
   const savedMode = (save as { wallMode?: string })?.wallMode;
   const view = {
@@ -284,6 +296,18 @@ function boot(): void {
     t: 0,
     follow: null as AgentId | null,
   };
+
+  // Arrange mode: tap a piece to select it (it gets an outline), then drag it.
+  let arranging = false;
+  let selectedObj: ObjectInstance | null = null;
+  let heldObj: ObjectInstance | null = null; // the piece being dragged right now
+  let heldOrig: { x: number; y: number; rot: number } | null = null;
+  let heldGrab: [number, number] = [0, 0]; // where on the piece it was grabbed, so it doesn't jump under the finger
+  let dragCandidate: { id: number; obj: ObjectInstance; x: number; y: number } | null = null;
+  let wasPaused = false;
+
+  // The attic exists once its stairs have been built.
+  const hasAttic = (): boolean => world.objs.some(o => o.id === ATTIC_STAIR_OBJS[0].id);
 
   const fit = (): void => {
     const ratio = qualityManager.resolveDpr(window.devicePixelRatio || 1);
@@ -359,6 +383,14 @@ function boot(): void {
   let drawerPage: DrawerPage = '';
   const drawer = createDrawer({
     onClose: () => { drawerPage = ''; try { localStorage.removeItem('velvet-drawer'); } catch {} },
+    onPage: (pg) => { if (pg === 'arrange') enterArrange(); else if (arranging) exitArrange(); },
+    onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) selectObject(o); },
+    onArrangeRotate: () => rotateSelected(),
+    onArrangeColour: () => recolourHeld(),
+    onArrangeFloor: (lv) => carryTo(lv),
+    onArrangeStore: () => storeSelected(),
+    onArrangeUnstore: (id) => unstore(id),
+    onPickFloor: (lv) => setLevel(lv),
     onBuy: (item, color) => handleBuy(item, color),
     onBuyAvatarItem: (id) => handleBuyAvatarItem(id),
     onOrder: (chain) => handleOrder(chain),
@@ -408,7 +440,8 @@ function boot(): void {
   const peopleBtn = document.createElement('button');
   peopleBtn.type = 'button';
   peopleBtn.dataset.people = '';
-  peopleBtn.textContent = 'People';
+  peopleBtn.innerHTML = dockTabHtml('people', 'People');
+  peopleBtn.style.setProperty('--tab', DOCK_TABS.people.color);
   peopleBtn.setAttribute('aria-pressed', 'false');
   peopleBtn.addEventListener('click', () => {
     const show = peopleEl.hidden;
@@ -446,6 +479,7 @@ function boot(): void {
   const syncControls = (): void => {
     app.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((b) => {
       b.setAttribute('aria-selected', String(Number(b.dataset.level) === view.level));
+      if (Number(b.dataset.level) === ATTIC) b.hidden = !hasAttic();
     });
     btn('walls').textContent = WALL_MODES[view.wallIdx].label;
     btn('speed').textContent = `${SPEEDS[view.speedIdx]}x`;
@@ -461,6 +495,7 @@ function boot(): void {
   };
   const setLevel = (lv: number, keepFollow = false): void => {
     if (lv !== view.level) softCut();
+    if (selectedObj && selectedObj.level !== lv) { cancelHold(); selectedObj = null; }
     view.level = lv;
     if (!keepFollow) view.follow = null;
     syncControls();
@@ -493,62 +528,141 @@ function boot(): void {
 
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    if (e.key >= '1' && e.key <= '4') setLevel(Number(e.key) - 1);
-    else if (e.key === 'r' || e.key === 'R') rotate();
+    if (e.key >= '1' && e.key <= '5' && (Number(e.key) - 1 !== ATTIC || hasAttic())) setLevel(Number(e.key) - 1);
+    else if (e.key === 'r' || e.key === 'R') { if (arranging) { rotateSelected(); e.preventDefault(); } else rotate(); }
     else if (e.key === 'w' || e.key === 'W') cycleWalls();
     else if (e.key === ' ') { e.preventDefault(); togglePause(); }
     else if (e.key === 'a' || e.key === 'A') { toggleArrange(); }
     if (arranging) {
-      if (e.key === 'r' || e.key === 'R') { rotateHeld(); e.preventDefault(); }
       if (e.key === 'c' || e.key === 'C') { recolourHeld(); }
-      if (e.key === 'Escape') { cancelHold(); }
+      if (e.key === 'Escape') { if (heldObj) cancelHold(); else selectedObj = null; }
     }
   });
   syncControls();
 
   // Arrange mode
-  let arranging = false;
-  let heldObj: ObjectInstance | null = null;
-  let heldOrig: { x: number; y: number; rot: number } | null = null;
-  let wasPaused = false;
-  function toggleArrange(): void {
-    arranging = !arranging;
-    const ab = btn('arrange');
-    ab.setAttribute('aria-pressed', String(arranging));
-    ab.textContent = arranging ? 'Done' : 'Arrange';
-    if (arranging) {
-      heldObj = null;
-      wasPaused = view.paused;
-      view.paused = true;
-      syncControls();
-    } else {
-      cancelHold();
-      view.paused = wasPaused;
-      syncControls();
-    }
+  const toggleArrange = (): void => { if (arranging) drawer.close(); else drawer.open('arrange'); };
+  function enterArrange(): void {
+    if (arranging) return;
+    arranging = true;
+    stage.classList.add('vh-arranging');
+    selectedObj = null;
+    heldObj = null;
+    wasPaused = view.paused;
+    view.paused = true;
+    syncControls();
+  }
+  function exitArrange(): void {
+    if (!arranging) return;
+    cancelHold();
+    arranging = false;
+    selectedObj = null;
+    dragCandidate = null;
+    hoverObj = null;
+    canvas.style.cursor = '';
+    resetCamera();
+    stage.classList.remove('vh-arranging');
+    view.paused = wasPaused;
+    syncControls();
   }
   // Whether the carried piece fits where it is, and why not.
   let heldCheck: PlacementCheck = { ok: true };
   let hoverObj: ObjectInstance | null = null;
+  const peopleOnFloor = () => people.filter(p => !p.onStairs);
+  const nameOf = (o: ObjectInstance) => (TYPES[o.type]?.name ?? 'furniture').toLowerCase();
   function recheck(): void {
-    if (heldObj) heldCheck = checkPlacement(world.objs, heldObj, people.filter(p => !p.onStairs));
+    if (heldObj) heldCheck = checkPlacement(world.objs, heldObj, peopleOnFloor());
   }
-  function rotateHeld(): void {
-    if (!heldObj) return;
-    rotateAboutCentre(heldObj);
-    recheck();
+  const movableHere = (): string[] => world.objs.filter(o => o.level === view.level && isMovable(o)).map(o => o.id);
+  // Select a piece: jump to its floor, outline it, and bring it into frame.
+  function selectObject(o: ObjectInstance | null): void {
+    cancelHold();
+    selectedObj = o;
+    if (!o) return;
+    if (o.level !== view.level) { selectedObj = null; setLevel(o.level); selectedObj = o; }
+    // On a phone held upright the whole house is small: close in on the piece so it's easy to drag.
+    if (canvas.getBoundingClientRect().width < 560 && cam.tz < 1.6) cam.tz = 1.8;
+    if (cam.tz > 1.05) {
+      const [fw, fd] = [TYPES[o.type].W, TYPES[o.type].D];
+      const [px, py] = art.project(o.x + fw / 2, o.y + fd / 2, (TYPES[o.type].h ?? 1) / 2);
+      cam.tfx = px; cam.tfy = py;
+    }
+  }
+  // Set a piece down for good: the house learns where it is now.
+  function commitMove(o: ObjectInstance, verb = 'Moved'): void {
+    log(`${verb} the ${nameOf(o)}.`);
+    art.objectPlaced(o.id);
+    relearnLayout(o);
+  }
+  // Turn the selected piece a quarter, skipping turns that don't fit.
+  function rotateSelected(): void {
+    const o = heldObj ?? selectedObj;
+    if (!o) return;
+    const orig = { x: o.x, y: o.y, rot: o.rot };
+    if (o === heldObj) { rotateAboutCentre(o); recheck(); return; }
+    for (let i = 0; i < 3; i++) {
+      rotateAboutCentre(o);
+      if (checkPlacement(world.objs, o, peopleOnFloor()).ok) { commitMove(o, 'Turned'); return; }
+    }
+    Object.assign(o, orig);
+    log(`There's no room to turn the ${nameOf(o)} here.`);
   }
   function recolourHeld(): void {
-    const o = heldObj ?? hoverObj;
+    const o = heldObj ?? selectedObj ?? hoverObj;
     const col = o && nextColour(o);
     if (!o || !col) return;
     o.col = col;
-    log(`Changed the ${(TYPES[o.type]?.name ?? 'furniture').toLowerCase()}'s colour.`);
+    log(`Changed the ${nameOf(o)}'s colour.`);
   }
+  // Put a dragged piece back where it was picked up.
   function cancelHold(): void {
     if (heldObj && heldOrig) { heldObj.x = heldOrig.x; heldObj.y = heldOrig.y; heldObj.rot = heldOrig.rot; }
     heldObj = null;
     heldOrig = null;
+    dragCandidate = null;
+  }
+  // Carry the selected piece up or down the stairs to another floor.
+  function carryTo(level: number): void {
+    const o = selectedObj;
+    if (!o || !otherFloors(o).includes(level) || (level === ATTIC && !hasAttic())) return;
+    const from = o.level;
+    if (!relocate(world.objs, o, level, peopleOnFloor())) { log(`There's no room for the ${nameOf(o)} on the ${LEVEL_NAMES[level].toLowerCase()}.`); return; }
+    selectedObj = null;
+    setLevel(level);
+    selectedObj = o;
+    log(`Carried the ${nameOf(o)} ${level > from ? 'up' : 'down'} to the ${LEVEL_NAMES[level].toLowerCase()}. Drag it where you want it.`);
+    commitMove(o, 'Set down');
+  }
+  // Storage: pieces put away leave the house but stay yours, and are saved.
+  const storage: ObjectInstance[] = Array.isArray((save as { storage?: unknown } | null)?.storage)
+    ? ((save as { storage: ObjectInstance[] }).storage).filter(o => o && TYPES[o.type]).map(o => ({ ...o }))
+    : [];
+  function storeSelected(): void {
+    const o = selectedObj;
+    if (!o || !canStore(o)) return;
+    cancelHold();
+    const i = world.objs.indexOf(o);
+    if (i < 0) return;
+    world.objs.splice(i, 1);
+    storage.push(o);
+    selectedObj = null;
+    relearnLayout(o);
+    log(`Put the ${nameOf(o)} in storage.`);
+  }
+  function unstore(id: string): void {
+    const i = storage.findIndex(o => o.id === id);
+    if (i < 0) return;
+    const [o] = storage.splice(i, 1);
+    world.objs.push(o);
+    if (!relocate(world.objs, o, view.level, peopleOnFloor())) {
+      world.objs.pop();
+      storage.splice(i, 0, o);
+      log(`There's no room for the ${nameOf(o)} on the ${LEVEL_NAMES[view.level].toLowerCase()}.`);
+      return;
+    }
+    selectedObj = o;
+    log(`Took the ${nameOf(o)} out of storage. Drag it where you want it.`);
+    commitMove(o, 'Set down');
   }
   // After a move, the household learns the new layout: the spots to stand at,
   // the walkable floor, and anyone heading to (or using) the moved piece
@@ -567,14 +681,39 @@ function boot(): void {
   function arrangeFrame() {
     if (!arranging) return null;
     return {
-      movable: world.objs.filter(o => o.level === view.level && isMovable(o)).map(o => o.id),
-      held: heldObj?.id ?? null, valid: heldCheck.ok, hover: hoverObj?.id ?? null,
+      movable: movableHere(),
+      held: heldObj?.id ?? null, selected: selectedObj?.id ?? null,
+      valid: heldCheck.ok, hover: hoverObj?.id ?? null,
     };
   }
-  function screenToWorld(sx: number, sy: number): [number, number] {
-    return [((sx - 288) / 32 + (sy - 128) / 16) / 2, ((sy - 128) / 16 - (sx - 288) / 32) / 2];
+  // The Arrange list: everything that can move, wherever it is in the house.
+  function arrangeState(): ArrangeState {
+    const items = world.objs.filter(isMovable).map((o) => {
+      const t = TYPES[o.type];
+      const [fw, fd] = t.W && o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
+      return { id: o.id, name: t.name ?? o.type, room: roomName(o.level, o.x + fw / 2, o.y + fd / 2), level: o.level, color: o.col };
+    }).sort((a, b) => a.name.localeCompare(b.name) || a.room.localeCompare(b.room));
+    const o = selectedObj;
+    return {
+      floors: [...LEVEL_NAMES],
+      order: FLOOR_ORDER.filter(l => l !== ATTIC || hasAttic()),
+      stored: storage.map(o => ({ id: o.id, name: TYPES[o.type]?.name ?? o.type, color: o.col })),
+      level: view.level,
+      items,
+      selected: o ? {
+        id: o.id, name: TYPES[o.type]?.name ?? o.type,
+        where: `${LEVEL_NAMES[o.level]} · ${items.find(i => i.id === o.id)?.room ?? ''}`,
+        canColour: !!nextColour(o),
+        canStore: canStore(o),
+        moveTo: otherFloors(o).filter(l => l !== ATTIC || hasAttic()),
+      } : null,
+    };
   }
-  btn('arrange').addEventListener('click', toggleArrange);
+  const worldAt = (sx: number, sy: number): [number, number] => art.unproject(sx, sy);
+  const movableAt = (sx: number, sy: number): ObjectInstance | null => {
+    const o = art.hitObject(view.level, sx, sy, movableHere());
+    return o && isMovable(o) ? o : null;
+  };
 
   // Canvas click → interaction or arrange
   canvas.addEventListener('click', (e) => {
@@ -582,26 +721,9 @@ function boot(): void {
     const [sx, sy] = toView(e.clientX, e.clientY);
 
     if (arranging) {
-      // Arrange mode: tap a piece to pick it up, tap again to set it down.
-      if (heldObj) {
-        centreAt(heldObj, ...screenToWorld(sx, sy));
-        recheck();
-        if (!heldCheck.ok) { log(heldCheck.reason ?? "It doesn't fit there."); return; }
-        const placed = heldObj;
-        log(`Moved the ${(TYPES[placed.type]?.name ?? 'furniture').toLowerCase()}.`);
-        art.objectPlaced(placed.id);
-        heldObj = null;
-        heldOrig = null;
-        relearnLayout(placed);
-        return;
-      }
-      const obj = findObjectAt(sx, sy);
-      if (obj && isMovable(obj)) {
-        heldObj = obj;
-        heldOrig = { x: obj.x, y: obj.y, rot: obj.rot };
-        recheck();
-        log(`Picked up the ${(TYPES[obj.type]?.name ?? 'furniture').toLowerCase()}. R to turn it, C for colour, Esc to put it back.`);
-      }
+      // Arrange mode: pointer events do the work (select on press, drag to
+      // move). A tap on empty floor lets go of the selection.
+      if (!movableAt(sx, sy)) selectObject(null);
       return;
     }
 
@@ -649,14 +771,58 @@ function boot(): void {
     return parts.reduce((best, p) => Math.abs(p[1] - along) < Math.abs(best[1] - along) ? p : best)[0];
   }
 
-  // Arrange mode: the carried piece follows the pointer (mouse or finger),
-  // and whatever's under it is highlighted.
+  // Arrange mode: press a piece to select it and drag to carry it (mouse or
+  // finger). With a mouse, whatever's under the pointer is highlighted.
+  const DRAG_SLOP = 6;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!arranging || !e.isPrimary || e.button > 0) return;
+    const [sx, sy] = toView(e.clientX, e.clientY);
+    const o = movableAt(sx, sy);
+    if (!o) return;
+    selectObject(o);
+    const [wx, wy] = worldAt(sx, sy), [fw, fd] = [TYPES[o.type].W, TYPES[o.type].D];
+    const [cw, cd] = o.rot % 2 ? [fd, fw] : [fw, fd];
+    heldGrab = [wx - (o.x + cw / 2), wy - (o.y + cd / 2)];
+    dragCandidate = { id: e.pointerId, obj: o, x: e.clientX, y: e.clientY };
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* not capturable: drag still works while over the canvas */ }
+  });
   canvas.addEventListener('pointermove', (e) => {
     if (!arranging) return;
     const [sx, sy] = toView(e.clientX, e.clientY);
-    if (heldObj) { centreAt(heldObj, ...screenToWorld(sx, sy)); recheck(); }
-    else { const o = findObjectAt(sx, sy); hoverObj = o && isMovable(o) ? o : null; }
+    if (dragCandidate && dragCandidate.id === e.pointerId) {
+      if (!heldObj) {
+        if (Math.hypot(e.clientX - dragCandidate.x, e.clientY - dragCandidate.y) < DRAG_SLOP) return;
+        heldObj = dragCandidate.obj;
+        heldOrig = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot };
+        suppressClick = true;
+      }
+      const [wx, wy] = worldAt(sx, sy);
+      centreAt(heldObj, wx - heldGrab[0], wy - heldGrab[1]);
+      recheck();
+    } else if (!heldObj && e.pointerType === 'mouse') {
+      const o = movableAt(sx, sy);
+      hoverObj = o;
+      canvas.style.cursor = o ? (o === selectedObj ? 'grab' : 'pointer') : '';
+    }
   });
+  // Let go: it stays where it fits, or goes back to where it was.
+  const dropHeld = (e: PointerEvent): void => {
+    if (!dragCandidate || dragCandidate.id !== e.pointerId) return;
+    const o = heldObj;
+    dragCandidate = null;
+    if (!o) return;
+    recheck();
+    if (heldCheck.ok) {
+      heldObj = null; heldOrig = null;
+      commitMove(o);
+    } else {
+      log(`${heldCheck.reason ?? "It doesn't fit there."} Back it goes.`);
+      cancelHold();
+    }
+    heldCheck = { ok: true };
+  };
+  canvas.addEventListener('pointerup', dropHeld);
+  canvas.addEventListener('pointercancel', (e) => { if (dragCandidate?.id === e.pointerId) { cancelHold(); heldCheck = { ok: true }; } });
 
   // Zoom and pan: wheel, pinch, drag (when zoomed), double-tap to reset.
   let suppressClick = false;
@@ -668,8 +834,8 @@ function boot(): void {
   canvas.addEventListener('dblclick', () => { if (view.follow) toggleFollow(view.follow); resetCamera(); });
   canvas.addEventListener('pointerdown', (e) => {
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (touches.size === 1) dragFrom = { x: e.clientX, y: e.clientY, fx: cam.tfx, fy: cam.tfy };
-    if (touches.size === 2) { const [a, b] = [...touches.values()]; pinchFrom = Math.hypot(a.x - b.x, a.y - b.y); dragFrom = null; }
+    if (touches.size === 1) dragFrom = arranging && movableAt(...toView(e.clientX, e.clientY)) ? null : { x: e.clientX, y: e.clientY, fx: cam.tfx, fy: cam.tfy };
+    if (touches.size === 2) { const [a, b] = [...touches.values()]; pinchFrom = Math.hypot(a.x - b.x, a.y - b.y); dragFrom = null; if (heldObj) { cancelHold(); heldCheck = { ok: true }; } dragCandidate = null; }
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!touches.has(e.pointerId)) return;
@@ -678,7 +844,7 @@ function boot(): void {
       const [a, b] = [...touches.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
       zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinchFrom);
       pinchFrom = d; suppressClick = true;
-    } else if (dragFrom && cam.tz > 1.01 && !(arranging && heldObj)) {
+    } else if (dragFrom && cam.tz > 1.01) {
       const dx = e.clientX - dragFrom.x, dy = e.clientY - dragFrom.y;
       if (Math.hypot(dx, dy) > 6) {
         const rect = canvas.getBoundingClientRect(), k = VIEW_W / rect.width / cam.tz;
@@ -792,9 +958,21 @@ function boot(): void {
 
   function handleBuy(item: CatalogEntry, color?: string): void {
     const price = item.price;
+    if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }
+    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor') && view.level === 3) {
+      log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
+      return;
+    }
     if (!spend(world.household, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
     log(`Bought ${item.name} for $${price}.`);
+
+    if (item.icon === 'upgrade' && item.id === 'upgrade-attic') {
+      world.objs.push(...ATTIC_STAIR_OBJS.map(o => ({ ...o })));
+      Object.assign(house, buildWorld(world.objs));
+      log('The attic is built! New stairs lead up from the Upstairs hall.');
+      setLevel(ATTIC);
+    }
 
     // Apply paint/wallpaper/floor
     if (item.icon === 'paint' && (color || item.color)) {
@@ -813,14 +991,25 @@ function boot(): void {
     }
     // Furniture: add to world
     if (item.type && item.icon === 'obj') {
+      // Attic finds go in the attic once it's built; everything else where you're looking.
+      const level = item.tab === 'Attic' && hasAttic() ? ATTIC : view.level;
       const newObj: ObjectInstance = {
         id: `${item.type}-${Date.now() & 0xffff}`,
-        type: item.type, level: view.level, x: 5, y: 5, rot: 0,
+        type: item.type, level, x: 5, y: 5, rot: 0,
         col: color || item.cols?.[0],
       };
       world.objs.push(newObj);
       flags.furniture = ((flags.furniture as number) ?? 0) + 1;
-      log(`${item.name} will be delivered.`);
+      // Set it down on free floor; if the floor is full it waits in storage.
+      if (relocate(world.objs, newObj, level, peopleOnFloor())) {
+        relearnLayout(newObj);
+        art.objectPlaced(newObj.id);
+        log(`${item.name} is in the ${LEVEL_NAMES[level].toLowerCase()}. Use Arrange to move it.`);
+      } else {
+        world.objs.pop();
+        storage.push(newObj);
+        log(`No room for the ${item.name.toLowerCase()} on the ${LEVEL_NAMES[level].toLowerCase()}, so it's in storage (Arrange).`);
+      }
     }
     // Clothing: add to the closet (same piece + color only once)
     if (item.icon === 'cloth' && item.cloth) {
@@ -868,6 +1057,7 @@ function boot(): void {
     }
   }
 
+  let chatBudgetDay = -1;
   async function handleTalk(text: string): Promise<void> {
     if (!sample) { dialogue.showInput(); return; }
     dialogue.busy(true);
@@ -894,11 +1084,15 @@ function boot(): void {
       coreMem, memories, pastMem,
     };
 
+    // Out of replies for today: don't ask the network again until tomorrow.
     let streamed = '';
-    const result = await talk(text, chatTurns, ctx, sample, (chunk) => {
+    const result = chatBudgetDay === world.day
+      ? { text: cannedFor('budget', companionCfg.preset), tag: null, turns: chatTurns }
+      : await talk(text, chatTurns, ctx, sample, (chunk) => {
       streamed += chunk;
       dialogue.showAI(streamed, true);
     });
+    if ('failed' in result && result.failed === 'budget') chatBudgetDay = world.day;
     chatTurns = result.turns;
     dialogue.showAI(result.text, true);
     dialogue.busy(false);
@@ -914,48 +1108,28 @@ function boot(): void {
       }
     }
 
-    setTimeout(() => dialogue.showInput(), 1500);
+    // Leave the reply up while the box comes back, so it can be read as the player answers.
+    setTimeout(() => dialogue.showInput(true), 600);
   }
 
-  // Save
+  let saveRev = typeof (world.save as { rev?: unknown } | null)?.rev === 'number' ? (world.save as { rev: number }).rev : 0;
+  // Save: one serializer (state/save.ts). What the game models comes from live state; the rest is carried over from the loaded save.
   function doSave(): void {
     try {
-      const saveData = {
-        v: 2, setupDone: true, partnerName, lifeGoal, settleDone,
-        flags, career: { level: 0, perf: 0 }, mcareer: { level: 0, perf: 0 },
-        pboxes: false, wallMode: WALL_MODES[view.wallIdx].mode,
-        yard: { t: [], rainAt: 0, rainUntil: 0, rainCheck: 0 },
-        laundryPile: world.household.laundryPile, savedAt: Date.now(),
-        minutes: world.minutes, day: world.day,
-        money: world.household.money,
-        earnedToday: world.household.earnedToday,
-        spentToday: world.household.spentToday,
-        power: world.household.power, fridge: world.household.fridge,
+      const data = snapshot({
+        rev: ++saveRev, day: world.day, minutes: world.minutes,
+        money: world.household.money, earnedToday: world.household.earnedToday, spentToday: world.household.spentToday,
+        power: world.household.power, fridge: world.household.fridge, dishes: world.household.dishes, laundryPile: world.household.laundryPile,
         bill: world.household.bill, nextBillAt: world.household.nextBillAt,
-        owned: [...owned], closet: closet.filter(c => !c.id.startsWith('w-')), bond, memories, coreMem, pastMem,
-        townName, simName, rngSeed,
-        freeWill, autonomy: 'on', mayaCap: 500,
-        mayaSpent: { day: world.day, amt: 0 },
-        style, companion: companionCfg,
-        changes: [], pets: [], dirt: [],
-        LOOKS: [], ROOMLOOK: [{},{},{},{}], WALLOBJS: [],
-        support: 0, together: 0,
-        dishes: world.household.dishes, petFood: 6, petSeq: 0,
-        dirtId: 0, changeSeq: 0, projectAt: null,
-        objs: world.objs.map(o => ({
-          id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot,
-          col: o.col ?? null, pot: o.pot, pet: o.pet, grow: o.grow, wet: o.wet, art: o.art,
-        })),
-        jordan: { needs: people[0].needs, skills: { cooking: 0, fitness: 0, logic: 0, creativity: 0, charisma: 0 }, mood: { happy: 50, sad: 0, angry: 0, tired: 0, playful: 30, affectionate: 40 }, workedDay: false, friendsDay: false },
-        maya: { needs: people[1].needs, skills: { cooking: 0, fitness: 0, logic: 0, creativity: 0, charisma: 0 }, mood: { happy: 50, sad: 0, angry: 0, tired: 0, playful: 30, affectionate: 40 }, workedDay: false, friendsDay: false },
-        turns: chatTurns,
-        look: { skin: people[0].look.skin, hair: '', hairColor: people[0].look.hair, top: people[0].look.top, topStyle: people[0].look.topStyle, bottom: people[0].look.bottom, bottomStyle: people[0].look.bottomStyle, bottomAccent: people[0].look.bottomAccent, accent: people[0].look.accent, eyeColor: '', facialHair: '', glasses: '', gender: 'male' },
-        mayaLook: { skin: people[1].look.skin, hair: '', hairColor: people[1].look.hair, top: people[1].look.top, topStyle: people[1].look.topStyle, bottom: people[1].look.bottom, bottomStyle: people[1].look.bottomStyle, bottomAccent: people[1].look.bottomAccent, accent: people[1].look.accent, eyeColor: '', facialHair: '', glasses: '', gender: 'female' },
-        TASTE: style, CHANGES: [], ext: {},
-        player: { name: simName, look: {} },
-        partner: { name: partnerName, look: {} },
-      };
-      localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+        objs: world.objs, storage, owned: [...owned], closet: closet.filter(c => !c.id.startsWith('w-')), bond, flags,
+        simName, partnerName, look: people[0].look, mayaLook: people[1].look,
+        needs: { jordan: people[0].needs, maya: people[1].needs },
+        memories, coreMem, pastMem, townName, turns: chatTurns, rngSeed,
+        lifeGoal, settleDone, freeWill, style, companion: companionCfg as unknown as Record<string, unknown>,
+        wallMode: WALL_MODES[view.wallIdx].mode,
+        looks: art.exportLooks(),
+      }, world.save);
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch { /* non-fatal */ }
   }
 
@@ -975,6 +1149,8 @@ function boot(): void {
       lawnLabel: 'Lush', lawnWeeds: 0,
     };
     const drawerState: DrawerState = {
+      arrange: arranging ? arrangeState() : null,
+      level: view.level, levelNames: [...LEVEL_NAMES], shopLevels: FLOOR_ORDER.filter(l => l !== 3 && (l !== ATTIC || hasAttic())), lookInfo: art.lookInfo, pictureThumbs,
       page: drawerPage, shopTab: 'Today',
       money: world.household.money, bond, day: world.day,
       minutes: world.minutes, owned, careerLevel: 0, careerPerf: 0,
@@ -1099,6 +1275,21 @@ function boot(): void {
       set bond(v: number) { bond = v; },
       setSample: (f: SampleFn) => { sample = f; },
       doVidSearch,
+      // For the end-to-end tests (e2e/velvet-sims): read what is in the house, and find a piece on screen.
+      objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot })),
+      storedCount: () => storage.length,
+      resetCamera: () => resetCamera(),
+      level: () => view.level,
+      clientPosOf: (id: string): [number, number] | null => {
+        const o = world.objs.find(q => q.id === id);
+        if (!o) return null;
+        const t = TYPES[o.type];
+        const [fw, fd] = o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
+        const [vx, vy] = art.project(o.x + fw / 2, o.y + fd / 2, (t.h || 1) / 2);
+        const p = ctx.getTransform().transformPoint(new DOMPoint(vx, vy));
+        const r = canvas.getBoundingClientRect();
+        return [r.left + (p.x / canvas.width) * r.width, r.top + (p.y / canvas.height) * r.height];
+      },
     };
   }
 
@@ -1171,6 +1362,7 @@ function boot(): void {
         t: view.t, dt: frameDt, objs: world.objs, wallMode: WALL_MODES[view.wallIdx].mode,
         chars: people.map(toFrame),
         arrange: arrangeFrame(),
+        house: { power: world.household.power, dishes: world.household.dishes, laundryPile: world.household.laundryPile, fridge: world.household.fridge, owned },
       });
       qualityManager.recordFrame(frameDt * 1000);
 
@@ -1322,6 +1514,8 @@ function boot(): void {
     setTimeout(() => { if (vidSearchSeq === seq && vidSearchCb) { vidSearchCb = null; cb([]); } }, 12000);
   }
 
+  // Inside the Velvet app the host page answers AI turns; the older artifact-style provider still wins if present.
+  sample = createHostSample();
   // Try to get sample function from parent
   try {
     const w = window as unknown as { claude?: { use?: (name: string) => Promise<SampleFn> } };

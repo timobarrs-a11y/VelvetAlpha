@@ -6,7 +6,13 @@ import { getCompanion, getCompanions, type Companion } from '../services/compani
 import { loadAvatarUnlocks } from '../hooks/useAvatarUnlocks';
 import { buildProfile, avatarFromGameLook, buildAvatarLook, type PlayerProfile } from '../features/velvet-sims/simProfile';
 import { lookUnlock, resolveLookForDisplay } from '../data/avatarCatalog';
-import { isReadyMessage, isAvatarItemBoughtMessage, isLookChangedMessage } from '../games/velvet-house/bridge/protocol';
+import {
+  isReadyMessage, isAvatarItemBoughtMessage, isLookChangedMessage, isRestartedMessage,
+  isSampleRequestMessage, isSampleCancelMessage,
+} from '../games/velvet-house/bridge/protocol';
+import { toGameTurnInput } from '../games/velvet-house/bridge/chatInput';
+import { sampleGameTurn } from '../services/velvetGameTurn';
+import { useVelvetHouseCloudSave } from '../hooks/useVelvetHouseCloudSave';
 import { announceAvatarSaved, onAvatarSaved } from '../stores/avatarEditorStore';
 import { applyAvatarChange, migrateAvatarConfig } from '../utils/avatarConfig';
 import { recordSimsPurchase } from '../services/avatarInventoryService';
@@ -16,9 +22,32 @@ const GAME_PATH = '/games/velvet-house-next/index.html';
 export function VelvetHouseNextGame() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const companionId = searchParams.get('companion');
+  const queryCompanionId = searchParams.get('companion');
+  // Opened without a companion (from the lobby or hub), it's the one you last
+  // talked to, preferring a companion over a coach.
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const [settled, setSettled] = useState(!!queryCompanionId);
+  const companionId = queryCompanionId ?? pickedId;
+  const { saveReady, noteRestart } = useVelvetHouseCloudSave(companionId, settled);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (queryCompanionId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const all = await getCompanions(user.id);
+          const pick = all.find(c => c.relationship_type !== 'mentor') ?? all[0] ?? null;
+          if (!cancelled && pick) setPickedId(pick.id);
+        }
+      } catch { /* start without a cloud save */ }
+      if (!cancelled) setSettled(true);
+    })();
+    return () => { cancelled = true; };
+  }, [queryCompanionId]);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 3000);
@@ -36,9 +65,28 @@ export function VelvetHouseNextGame() {
       const owned = (await loadAvatarUnlocks()).owned ?? [];
       if (!cancelled) win.postMessage({ type: 'velvet:avatarInventory', owned }, window.location.origin);
     };
+    // AI turns the game asks for, run with the player's account.
+    const turns = new Map<number, AbortController>();
+    const answer = (win: Window, seq: number, body: { text?: string; error?: string }) =>
+      win.postMessage({ type: 'velvet:sampleResult', seq, ...body }, window.location.origin);
     const onMessage = async (e: MessageEvent) => {
       const win = iframeRef.current?.contentWindow;
       if (!win || e.source !== win || e.origin !== window.location.origin) return;
+      if (isSampleRequestMessage(e.data)) {
+        const { seq, input } = e.data;
+        if (!companionId) { answer(win, seq, { error: 'unavailable' }); return; }
+        const ctrl = new AbortController();
+        turns.set(seq, ctrl);
+        try {
+          const { text } = await sampleGameTurn(companionId, toGameTurnInput(input), ctrl.signal);
+          if (!ctrl.signal.aborted) answer(win, seq, { text });
+        } catch (err) {
+          if (!ctrl.signal.aborted) answer(win, seq, { error: (err as { code?: string })?.code ?? 'unavailable' });
+        } finally { turns.delete(seq); }
+        return;
+      }
+      if (isSampleCancelMessage(e.data)) { turns.get(e.data.seq)?.abort(); return; }
+      if (isRestartedMessage(e.data)) { noteRestart(); return; }
       // Bought in the game: it's theirs everywhere now.
       if (isAvatarItemBoughtMessage(e.data)) {
         if (await recordSimsPurchase(e.data.itemId)) sendInventory(win);
@@ -97,8 +145,8 @@ export function VelvetHouseNextGame() {
       if (win && !savingFromGame) sendProfile(win);
     });
     window.addEventListener('message', onMessage);
-    return () => { cancelled = true; offSaved(); window.removeEventListener('message', onMessage); };
-  }, [companionId]);
+    return () => { cancelled = true; offSaved(); window.removeEventListener('message', onMessage); turns.forEach(c => c.abort()); };
+  }, [companionId, noteRestart]);
 
   const handleExit = () => {
     navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
@@ -127,6 +175,7 @@ export function VelvetHouseNextGame() {
         </div>
       )}
 
+      {saveReady && (
       <iframe
         ref={iframeRef}
         src={`${GAME_PATH}${companionId ? `?companion=${encodeURIComponent(companionId)}` : ''}`}
@@ -135,6 +184,7 @@ export function VelvetHouseNextGame() {
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
         onLoad={() => setLoading(false)}
       />
+      )}
     </div>
   );
 }
