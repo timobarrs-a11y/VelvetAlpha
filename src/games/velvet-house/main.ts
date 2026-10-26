@@ -2,7 +2,7 @@ import { migrateSave } from './state/saveMigration';
 import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage } from './bridge/protocol';
 import { setOwnedAvatarItems, ownsAvatarItem, buyAvatarItem } from './bridge/avatarShop';
 import { simsShopItems, itemLabel } from '../../data/avatarCatalog';
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, type PlacementCheck } from './state/arrange';
+import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, type PlacementCheck } from './state/arrange';
 import { INITIAL_OBJS, TYPES, type ObjectInstance } from './state/objects';
 import { DAYS, weekday, clockText, season, absMin } from './state/time';
 import { LEVEL_NAMES, roomName } from './state/house';
@@ -369,6 +369,8 @@ function boot(): void {
     onArrangeRotate: () => rotateSelected(),
     onArrangeColour: () => recolourHeld(),
     onArrangeFloor: (lv) => carryTo(lv),
+    onArrangeStore: () => storeSelected(),
+    onArrangeUnstore: (id) => unstore(id),
     onPickFloor: (lv) => setLevel(lv),
     onBuy: (item, color) => handleBuy(item, color),
     onBuyAvatarItem: (id) => handleBuyAvatarItem(id),
@@ -527,6 +529,7 @@ function boot(): void {
     dragCandidate = null;
     hoverObj = null;
     canvas.style.cursor = '';
+    resetCamera();
     stage.classList.remove('vh-arranging');
     view.paused = wasPaused;
     syncControls();
@@ -599,6 +602,37 @@ function boot(): void {
     log(`Carried the ${nameOf(o)} ${level > from ? 'up' : 'down'} to the ${LEVEL_NAMES[level].toLowerCase()}. Drag it where you want it.`);
     commitMove(o, 'Set down');
   }
+  // Storage: pieces put away leave the house but stay yours, and are saved.
+  const storage: ObjectInstance[] = Array.isArray((save as { storage?: unknown } | null)?.storage)
+    ? ((save as { storage: ObjectInstance[] }).storage).filter(o => o && TYPES[o.type]).map(o => ({ ...o }))
+    : [];
+  function storeSelected(): void {
+    const o = selectedObj;
+    if (!o || !canStore(o)) return;
+    cancelHold();
+    const i = world.objs.indexOf(o);
+    if (i < 0) return;
+    world.objs.splice(i, 1);
+    storage.push(o);
+    selectedObj = null;
+    relearnLayout(o);
+    log(`Put the ${nameOf(o)} in storage.`);
+  }
+  function unstore(id: string): void {
+    const i = storage.findIndex(o => o.id === id);
+    if (i < 0) return;
+    const [o] = storage.splice(i, 1);
+    world.objs.push(o);
+    if (!relocate(world.objs, o, view.level, peopleOnFloor())) {
+      world.objs.pop();
+      storage.splice(i, 0, o);
+      log(`There's no room for the ${nameOf(o)} on the ${LEVEL_NAMES[view.level].toLowerCase()}.`);
+      return;
+    }
+    selectedObj = o;
+    log(`Took the ${nameOf(o)} out of storage. Drag it where you want it.`);
+    commitMove(o, 'Set down');
+  }
   // After a move, the household learns the new layout: the spots to stand at,
   // the walkable floor, and anyone heading to (or using) the moved piece
   // starts over, so they walk to where it is now.
@@ -631,12 +665,14 @@ function boot(): void {
     const o = selectedObj;
     return {
       floors: [...LEVEL_NAMES],
+      stored: storage.map(o => ({ id: o.id, name: TYPES[o.type]?.name ?? o.type, color: o.col })),
       level: view.level,
       items,
       selected: o ? {
         id: o.id, name: TYPES[o.type]?.name ?? o.type,
         where: `${LEVEL_NAMES[o.level]} · ${items.find(i => i.id === o.id)?.room ?? ''}`,
         canColour: !!nextColour(o),
+        canStore: canStore(o),
         moveTo: otherFloors(o),
       } : null,
     };
@@ -1040,6 +1076,7 @@ function boot(): void {
         mayaSpent: { day: world.day, amt: 0 },
         style, companion: companionCfg,
         changes: [], pets: [], dirt: [],
+        storage: storage.map(o => ({ ...o })),
         LOOKS: art.getLooks(), ROOMLOOK: [{},{},{},{}], WALLOBJS: [],
         support: 0, together: 0,
         dishes: world.household.dishes, petFood: 6, petSeq: 0,

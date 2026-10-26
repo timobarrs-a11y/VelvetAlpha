@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { INITIAL_OBJS, type ObjectInstance } from '../state/objects';
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate } from '../state/arrange';
+import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore } from '../state/arrange';
 import { buildWorld } from '../state/agents';
 
 const fresh = () => INITIAL_OBJS.map(o => ({ ...o }));
@@ -76,5 +76,14 @@ describe('arrange mode', () => {
     const before = { ...desk };
     expect(relocate(objs, desk, 0)).toBe(false);
     expect(desk).toEqual(before);
+  });
+
+  it('lets you store furniture, but not the stairs or built-in appliances', () => {
+    const objs = fresh();
+    const get = (id: string) => objs.find(o => o.id === id)!;
+    expect(canStore(get('sofa'))).toBe(true);
+    expect(canStore(get('bed'))).toBe(true);
+    expect(canStore(get('fridge'))).toBe(false);
+    expect(canStore(get('stair01'))).toBe(false);
   });
 });

@@ -21,6 +21,8 @@ export interface DrawerCallbacks {
   onArrangeRotate?: () => void;
   onArrangeColour?: () => void;
   onArrangeFloor?: (level: number) => void;
+  onArrangeStore?: () => void;
+  onArrangeUnstore?: (id: string) => void;
   // Shop: which floor Paint, Wallpaper and Floors are going on.
   onPickFloor?: (level: number) => void;
   onBuy: (item: CatalogEntry, color?: string) => void;
@@ -59,7 +61,10 @@ export interface ArrangeState {
   // The floor on screen: its pieces are listed first.
   level: number;
   items: ArrangeItem[];
+  // Put away: not in the house until placed.
+  stored: Array<{ id: string; name: string; color?: string }>;
   selected: null | {
+    canStore: boolean;
     id: string;
     name: string;
     where: string;
@@ -220,6 +225,7 @@ export function createDrawer(cb: DrawerCallbacks): {
           <div class="vh-arr-acts">
             <button data-arr="rotate" title="Turn it (R)">Rotate</button>
             ${sel.canColour ? '<button data-arr="colour" title="Change colour (C)">Colour</button>' : ''}
+            ${sel.canStore ? '<button data-arr="store" title="Put it in storage">Store</button>' : ''}
           </div>
           ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
         </div>`
@@ -235,12 +241,20 @@ export function createDrawer(cb: DrawerCallbacks): {
           <span class="vh-arr-name"><strong>${esc(i.name)}</strong><small>${esc(i.room)}</small></span>
         </button>`).join('')}</div></div>`;
     }).join('');
-    sec.innerHTML = `<div class="vh-arr">${bar}<div class="vh-arr-list">${groups || '<p class="vh-empty">Nothing here can be moved.</p>'}</div></div>`;
+    const stash = a.stored.length
+      ? `<div class="vh-arr-group"><h4 class="vh-order-floor">In storage (${a.stored.length})</h4><div class="vh-arr-items">${
+        a.stored.map(i => `<button class="vh-arr-item vh-stored" data-arr-unstore="${i.id}" title="Put it in the house">
+          <span class="vh-arr-dot"${i.color ? ` style="background:${i.color}"` : ''}></span>
+          <span class="vh-arr-name"><strong>${esc(i.name)}</strong><small>Tap to place</small></span>
+        </button>`).join('')}</div></div>` : '';
+    sec.innerHTML = `<div class="vh-arr">${bar}<div class="vh-arr-list">${groups}${stash}${groups || stash ? '' : '<p class="vh-empty">Nothing here can be moved.</p>'}</div></div>`;
     const list = sec.querySelector<HTMLElement>('.vh-arr-list')!;
     list.scrollLeft = scroll[0]; list.scrollTop = scroll[1];
     if (sel && sel.id !== arrangeSelected) sec.querySelector('.vh-sel')?.scrollIntoView({ block: 'nearest', inline: 'center' });
     arrangeSelected = sel?.id ?? null;
     sec.querySelectorAll<HTMLElement>('[data-arr-pick]').forEach(b => b.addEventListener('click', () => cb.onArrangePick?.(b.dataset.arrPick!)));
+    sec.querySelector('[data-arr="store"]')?.addEventListener('click', () => cb.onArrangeStore?.());
+    sec.querySelectorAll<HTMLElement>('[data-arr-unstore]').forEach(b => b.addEventListener('click', () => cb.onArrangeUnstore?.(b.dataset.arrUnstore!)));
     sec.querySelector('[data-arr="rotate"]')?.addEventListener('click', () => cb.onArrangeRotate?.());
     sec.querySelector('[data-arr="colour"]')?.addEventListener('click', () => cb.onArrangeColour?.());
     sec.querySelectorAll<HTMLElement>('[data-arr-floor]').forEach(b => b.addEventListener('click', () => cb.onArrangeFloor?.(Number(b.dataset.arrFloor))));

@@ -166,3 +166,8 @@ export function relocate(
   Object.assign(o, orig);
   return false;
 }
+
+/** Anything that isn't built into the house can be put away in storage. */
+export function canStore(o: ObjectInstance): boolean {
+  return isMovable(o) && !isFixed(o.type);
+}
