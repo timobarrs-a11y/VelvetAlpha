@@ -73,7 +73,7 @@ caching, no per-user budget, and **`velvet-game-turn` does not run
 **R3. Data is duplicated, and floors are bare numbers.** `houseArt.js:250`
 `LEVELS`, `:268` `STAIRS`, `:313` `TYPES` (84 types with full geometry and
 spots, the same 84 as `state/objects.ts`), `:130` `LEVEL_NAMES`, plus
-`WALL_LIGHTS` at `:873`. `LEVEL_NAMES` also exists in `state/house.ts` and
+`WALL_LIGHTS` at `:859`. `LEVEL_NAMES` also exists in `state/house.ts` and
 `state/time.ts`, so there are three copies. The art has 18 `level === 3` /
 `!== 3` checks. World size is the constant `WX=10, WY=8`, defined separately in `state/house.ts` and `houseArt.js`. Tap
 hit-testing in `main.ts:595,602,687` and `screenToWorld` (`:558`) hard-code the
