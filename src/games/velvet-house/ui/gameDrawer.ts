@@ -16,7 +16,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
   // UI: Drawer
   const drawer = createDrawer({
     onClose: () => { g.s.drawerPage = ''; try { localStorage.removeItem('velvet-drawer'); } catch {} },
-    onPage: (pg) => { if (pg === 'arrange') g.enterArrange(); else if (g.isArranging()) g.exitArrange(); },
+    onPage: (pg) => { if (pg === 'arrange') g.enterArrange(); else if (g.isArranging()) g.exitArrange(); g.studioPage?.(pg); },
     onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) g.selectObject(o); },
     onArrangeRotate: () => g.rotateSelected(),
     onArrangeColour: () => g.recolourHeld(),
@@ -44,11 +44,9 @@ export function createGameDrawer(g: Game): Partial<Game> {
     },
     onPickLifeGoal: (goal) => { g.s.lifeGoal = goal; log(`Life goal: ${goal}`); },
     onWear: (cloth) => {
-      g.wearPiece(cloth);
-      g.cameraBeat('closeup', 'jordan');
-      log(`Changed into the ${cloth.name}.`);
-      g.refreshDrawer();
-      // New clothes show on the player's avatar outside the game too.
+      g.wearOutfitPiece(cloth);
+      // New clothes show on the player's avatar outside the game too (a designed garment is the game's own).
+      if (cloth.recipe) return;
       if (cloth.slot === 'top') g.tellHostLook(cloth);
       else if (cloth.slot === 'bottom') g.tellHostLook(undefined, cloth);
       else if (cloth.slot === 'hat' && AVATAR_HATS.has(cloth.style)) g.tellHostLook(undefined, undefined, cloth.style);

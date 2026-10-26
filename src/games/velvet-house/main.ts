@@ -13,6 +13,8 @@ import { createChat } from './systems/chat';
 import { createPersist } from './systems/persist';
 import { createGoals } from './systems/goals';
 import { createAvatar } from './systems/avatar';
+import { createOutfit } from './systems/outfit';
+import { createStudio } from './ui/studio';
 import { createFrame } from './view/frame';
 import { installDevHooks } from './dev/hooks';
 import { createHostBridge } from './bridge/hostBridge';
@@ -29,6 +31,7 @@ function boot(): void {
 
   Object.assign(g, createCamera(g));
   Object.assign(g, createGameDrawer(g));
+  Object.assign(g, createOutfit(g));
   Object.assign(g, createControls(g));
   Object.assign(g, createArrange(g));
   Object.assign(g, createInteract(g));
@@ -40,6 +43,7 @@ function boot(): void {
   Object.assign(g, createGoals(g));
   Object.assign(g, createAvatar(g));
   Object.assign(g, createFrame(g));
+  Object.assign(g, createStudio(g));
   installDevHooks(g);
   startGameLoop(g);
   Object.assign(g, createHostBridge(g));

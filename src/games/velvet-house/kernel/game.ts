@@ -17,6 +17,8 @@ import { createDialogue, createTray } from '../ui/dialogue';
 import { WALL_MODES, DEFAULT_LOOKS, lookFrom, nameFrom, type World } from '../kernel/config';
 import { type MemoryStore } from '../state/memory';
 import { validateGarment } from '../state/garment';
+import type { Garment } from '../state/garment';
+import type { BoutiqueItem } from '../systems/outfit';
 import { mountShell } from '../ui/shell';
 import { loadWorld } from './config';
 
@@ -154,6 +156,14 @@ export interface Game {
   refreshDrawer(): void;
   refreshPeople(): void;
   goalsTick(): void;
+  // designed clothes and the studio
+  ownGarment(garment: Garment): OwnedCloth;
+  boutiqueFor(day: number): BoutiqueItem[];
+  markBought(day: number, id: string): void;
+  reactToOutfit(garment: Garment, verb: 'wears' | 'made' | 'bought'): void;
+  wearOutfitPiece(piece: OwnedCloth): void;
+  outfitId(garment: Garment): string;
+  studioPage(pg: string): void;
   // avatar and host
   applyAvatar(person: Agent, look: { sprites?: unknown; body?: unknown; outfit?: unknown }, who: AgentId): void;
   wearPiece(piece: OwnedCloth): void;

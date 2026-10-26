@@ -40,7 +40,7 @@ export function createHud(g: Game): Partial<Game> {
       mayaStatus: statusText(people[1]),
       closet,
       personas: g.s.wardrobe?.personas ?? [],
-      wearing: { top: people[0].look.top, topStyle: people[0].look.topStyle, bottom: people[0].look.bottom, bottomStyle: people[0].look.bottomStyle, hat: g.s.wornHat },
+      wearing: { top: people[0].look.top, topStyle: people[0].look.topStyle, topGarment: people[0].look.topGarment, bottomGarment: people[0].look.bottomGarment, bottom: people[0].look.bottom, bottomStyle: people[0].look.bottomStyle, hat: g.s.wornHat },
       salon: simsShopItems().map(i => ({
         id: i.id, name: itemLabel(i.id), price: i.price, owned: ownsAvatarItem(i.id),
         swatch: i.id.startsWith('hairHighlight:') || i.id.startsWith('hairColor:') ? i.id.split(':')[1] : undefined,
