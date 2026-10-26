@@ -27,6 +27,74 @@ in conversation.
    decision style, motivation. They go into the coach's system prompt
    (`systemPromptBuilder.ts`), so they matter. They're just asked in the wrong place.
 
+## The whole arrival: what comes first, and what waits
+
+Velvet asks a lot of a new person: a profile, Atlas, a coach, an avatar, a companion, a house,
+community, games. Asked all at once, they quit before they see why any of it matters.
+
+**The rule: ask for something only at the moment it pays off.** The first session gets them
+to value in about five minutes. Everything else waits until they reach the feature that needs
+it, and nothing ever blocks the way, because every setup has a good default.
+
+**Value is three things**, and the first session shows all three:
+1. **Atlas sets goals with you,** and your first step is already in Today.
+2. **There are people here.** You've already joined spaces that match your interests.
+3. **There's plenty to do in between:** your house in Velvet World, games, companions.
+
+### Today: how it's wired now
+
+Sign up → Welcome page → about 20 questionnaire screens → Atlas chat → a coach is always
+assigned → design the coach's avatar (`/coach-avatar`) → choose a chat background
+(`/environment-setup`) → coach ready (`/coach-ready`) → a guided tour inside the coach chat
+(`/onboarding` opens the chat with `tour=1`).
+
+That's roughly 35 steps before the lobby. Meanwhile:
+- **The user's own avatar** (`/create-user-avatar`) isn't in the path at all. Only the old
+  questionnaire led there.
+- **Companions** are reached from the lobby ("someone new"): intent → path → 11 questions →
+  avatar → background → who to talk to → chat. The voice step leads to the pricing offer.
+- **Velvet World** shows its welcome popup (your house and plot) once onboarding ends
+  (`WorldWelcomeMount`).
+- **Velvet House** opens with the companion you last talked to, or the coach if there's no
+  companion.
+
+### The first session (about five minutes)
+
+| # | Step | Time |
+|---|---|---|
+| 1 | Sign up | |
+| 2 | **Act 1:** name, color, nickname, birthday, gender, interests, Someday | ~90 s |
+| 3 | **Atlas:** "Where do things stand?" → the goal → plan, commitments, progress, calendar | ~3 min |
+| 4 | A coach **only if the goal has a skill to learn.** The coach gets a generated look (from its style and the user's color) and the default background; both can be changed later from the chat. | one tap |
+| 5 | **Home**, with their first step at the top of Today | |
+| 6 | **"Here's what's yours,"** three highlights on the home screen: Today ("this is what you're on"), Community ("you're already in these spaces", from `join_spaces_from_interests`, which already runs after Act 1), and Velvet World and games ("your house is built; come by when you've a minute"). Then it's theirs. | ~20 s |
+
+What moves out of the first session:
+- **The coach avatar designer and the background picker**, which become defaults.
+- **The tour inside the coach chat**, which moves to the home screen. The home screen is where
+  all three parts of the value are.
+- **The Velvet World welcome popup**, which becomes highlight 3: the house is already claimed
+  (`claimDefaultPlot`), so it's something they've got, not something to do.
+
+### What waits until it's needed
+
+| Setup | When it's asked | Default until then |
+|---|---|---|
+| **Their own avatar** | The first time they enter Velvet World or post in Community, where other people see it: "Make it look like you?" | One generated from gender and favorite color. |
+| **A companion** | When they open Velvet House (a home you share with a companion), or from a Today card in the first week: "Someone to talk to between goals." | None. Velvet House shows the invite instead of borrowing the coach. |
+| **Companion look, voice and background** | Inside the companion setup, as today. | |
+| **Pricing** | After they've had value: their first completed step, or the first time they reach a paid feature. Not in the middle of creating a companion. | |
+| **Birthdays of their people** | The one-time card in Today. | |
+
+### Keeping them coming back between goals
+
+- **A "Your first week" card** on the home screen, replacing `FinishSetupCard`. It lists five
+  optional things: make your avatar, visit your house, say something in a space, play a game,
+  meet a companion. Each is one tap away and ticks off when done. It disappears once all five
+  are done or the week is over.
+- **Today always has something:** a goal step, a birthday, or a "between goals" suggestion
+  (a game, a space that's busy, the companion).
+
 ## The arrival, in two acts
 
 ### Act 1: a quick questionnaire, in this order (no AI, about 90 seconds)
@@ -374,6 +442,7 @@ February shows on the 28th in other years.
 | A6 | **Atlas makes plans:** the probing rules, the order goals come from (them, then Someday, then interests) and the proposal rules in his prompt, the `add_calendar_event` tool in `atlas-onboarding` with `tentative` in metadata, and the extra checks in the test script. | Medium |
 | A7 | **Repeating events that repeat:** the shared expand-repeats helper used by the calendar page and Today, done dates per occurrence, and all-day dates compared in local time. Fixes the calendar as it is today, so it should go before A8. | Small–Medium |
 | A8 | **Their own plans and their people:** quick add in Today (task, appointment, birthday, reminder, goal), the My people birthday form and the one-time Today card, ages worked out from the birth year, and birthdays a week ahead in "coming up". | Medium |
+| A9 | **The five-minute first session:** coach only when there is a skill, generated coach look and default background, the three home-screen highlights in place of the coach-chat tour, the World welcome folded into them, avatar and companion asked for at the point of use, pricing after the first completed step, and the "Your first week" card. | Medium |
 
 ## Decisions for Tim
 
