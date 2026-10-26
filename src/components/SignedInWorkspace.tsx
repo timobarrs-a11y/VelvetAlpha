@@ -33,6 +33,7 @@ import {
   Building2,
   Wand2,
   HelpCircle,
+  Heart,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
@@ -341,6 +342,7 @@ function SidebarContent({ collapsed, pathname, lobby, onNavigate, inkColor, inkM
     { label: 'Calendar', path: '/calendar', tone: '#fb923c', icon: <CalendarDays className="h-3.5 w-3.5" /> },
     { label: 'Co-Author', path: '/co-author', tone: '#60a5fa', icon: <FileText className="h-3.5 w-3.5" /> },
     { label: 'Insights', path: '/insights', tone: '#fbbf24', icon: <Lightbulb className="h-3.5 w-3.5" /> },
+    { label: 'Briefs', path: '/relationship-briefs', tone: '#fb7185', icon: <Heart className="h-3.5 w-3.5" /> },
     { label: 'Morning Journal', path: '/morning-journal', tone: '#fbbf24', icon: <Sunrise className="h-3.5 w-3.5" /> },
     { label: 'Profile', path: '/profile', tone: '#cbd5e1', icon: <CircleUserRound className="h-3.5 w-3.5" /> },
   ];

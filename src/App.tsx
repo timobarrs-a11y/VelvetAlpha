@@ -31,7 +31,6 @@ import { WallpaperPickerModal } from './components/WallpaperPickerModal';
 import { buildWallpaperMeta, buildWallpaperStyle } from './services/wallpaperService';
 import { BotPromptDrawer, ThreadMode } from './components/thread/ThreadToolbar';
 import { QuickCommand, QuickCommandPopover } from './components/QuickCommandBar';
-import { CompanionHubLeftRail } from './components/hub/CompanionHubLeftRail';
 import { CompanionHubRightRail } from './components/hub/CompanionHubRightRail';
 import { GuidedTourOverlay } from './components/hub/GuidedTourOverlay';
 import { SharedMemoryConsentModal } from './components/SharedMemoryConsentModal';
@@ -90,13 +89,13 @@ function AppInner() {
   const [userAvatarConfig, setUserAvatarConfig] = useState<AvatarConfig | null>(null);
   const { subscriptionInfo, refreshSubscription } = useSubscription();
   const { playSound } = useSound();
-  const { customization, setPointer, setShowTrail, setTrailStyle, setAnimationStyle, setCursorColor, setButtonHoverStyle, setTranslucentUI, setLeftRailCollapsed, setRightRailCollapsed, setToolbarBackgroundMode, setToolbarTextColor } = useCustomization();
+  const { customization, setPointer, setShowTrail, setTrailStyle, setAnimationStyle, setCursorColor, setButtonHoverStyle, setTranslucentUI, setRightRailCollapsed, setToolbarBackgroundMode, setToolbarTextColor } = useCustomization();
   const [currentStatus, setCurrentStatus] = useState<string>('');
   const [dailyExperience, setDailyExperience] = useState<any>(null);
 
   const [showWallpaperModal, setShowWallpaperModal] = useState(false);
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
-  const [customizationInitialTab, setCustomizationInitialTab] = useState<'pointer' | 'effect' | 'rewards' | 'fonts' | 'toolbar'>('pointer');
+  const [customizationInitialTab] = useState<'pointer' | 'effect' | 'rewards' | 'fonts' | 'toolbar'>('pointer');
   const [allCompanions, setAllCompanions] = useState<CompanionWithLastMessage[]>([]);
   const [chatWallpaper, setChatWallpaper] = useState<string | null>(null);
   const [chatWallpaperUrl, setChatWallpaperUrl] = useState<string | null>(null);
@@ -116,11 +115,6 @@ function AppInner() {
   const [showCalendarPanel, setShowCalendarPanel] = useState(false);
   const [isBotLoading, setIsBotLoading] = useState(false);
 
-  // Auto-minimize the left rail whenever a companion chat opens so the
-  // conversation is the focus. User can still expand it manually mid-session.
-  const [railAutoCollapsed, setRailAutoCollapsed] = useState(true);
-  useEffect(() => { setRailAutoCollapsed(true); }, [companionId]);
-
   // A face edited from anywhere (sidebar, chat, toolbar) updates this chat in place.
   useEffect(() => onAvatarSaved(({ target, config }) => {
     if (target.kind === 'user') { setUserAvatarConfig(config as unknown as AvatarConfig); return; }
@@ -128,16 +122,6 @@ function AppInner() {
     setAllCompanions(prev => prev.map(c => c.id === target.id ? { ...c, avatar_config } : c));
     setCompanion(prev => prev && prev.id === target.id ? { ...prev, avatar_config } : prev);
   }), []);
-  const isRailCollapsed = railAutoCollapsed || (customization?.left_rail_collapsed ?? false);
-  const toggleRailCollapse = () => {
-    if (railAutoCollapsed) {
-      setRailAutoCollapsed(false);
-      if (!(customization?.left_rail_collapsed ?? false)) setLeftRailCollapsed(true);
-    } else {
-      const next = !(customization?.left_rail_collapsed ?? false);
-      setLeftRailCollapsed(next);
-    }
-  };
 
   // Conversation threads + feature tabs
   const [activeThread, setActiveThread] = useState<ActiveThread>('companion');
@@ -1177,15 +1161,6 @@ function AppInner() {
       )}
 
       <div className="flex-1 relative overflow-hidden flex flex-row">
-        <CompanionHubLeftRail
-          disabled={isTyping || remainingMessages === 0 || isCurrentlyLoading}
-          userId={userId || undefined}
-          companionId={companionId || undefined}
-          collapsed={isRailCollapsed}
-          translucent={customization?.translucent_ui ?? false}
-          onToggleCollapse={toggleRailCollapse}
-          onOpenToolbarSettings={() => { setCustomizationInitialTab('toolbar'); setShowCustomizationPanel(true); }}
-        />
         <TutorialElement elementId={ONBOARDING_ELEMENT_IDS.companionChat} className="flex-1 relative overflow-hidden flex flex-col">
           {/* Feature tab views — full page embedded, overflow-scroll */}
           {activeThread === 'calendar' && (
