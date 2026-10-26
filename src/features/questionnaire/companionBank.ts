@@ -50,11 +50,11 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
         step: 1,
         default: 1,
         leftLabel: 'Life of the party',
-        rightLabel: tpl('In {hers} own world', ctx),
+        rightLabel: 'In {hers} own world',
         valueLabels: [
           'Life of the party',
           'Somewhere in between',
-          tpl('In {hers} own world', ctx),
+          'In {hers} own world',
         ],
       },
     },

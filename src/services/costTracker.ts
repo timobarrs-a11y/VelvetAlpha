@@ -58,6 +58,12 @@ export class CostTracker {
     this.saveStats(stats);
   }
 
+  static trackCacheHit(): void {
+    const stats = this.getStats();
+    stats.cacheHits++;
+    this.saveStats(stats);
+  }
+
   static trackApiCall(modelType: 'cheap' | 'premium', cost: number): void {
     const stats = this.getStats();
 
