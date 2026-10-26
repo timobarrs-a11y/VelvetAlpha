@@ -86,7 +86,7 @@ when every row is "ported" or "dropped".
 | Errands: going out the front door (`startErrand`) | Missing | **Port, redesigned:** a way to get someone out of the house for a short, unseen trip. Unlike a job you can't watch it; they come back at a random time, and it never takes long (target: about 30 to 90 game minutes) |
 | Wishes, noticing and sparks (Maya's initiative: she asks for things, comments on what you do, starts conversations) | Modules exist, not wired | **Port** (recommended; see explanation below). Feeds the daily list and chat engine |
 | Offline catch-up and welcome-back recap (`offlineCatchup`, `showRecap`) | Missing | Port |
-| Second house, The Craftsman on Elm (`moveHouse`, Homes tab) | Missing | Port or drop |
+| Second house, The Craftsman on Elm (`moveHouse`, Homes tab) | Missing | **Dropped** (decided): replaced by a house-upgrade plan. The empty Homes shop tab stays until that plan is built |
 | Wall decor that hangs and slides along walls (17 types, `WALLOBJS`) | Art code exists, nothing in the shop places it | Port |
 | Per-room paint, wallpaper and floor (`setLookRoom`) | Per floor only | Port |
 | Shop: Today's picks, deals, rotation, locks | Missing (Today tab is empty) | Port |
@@ -123,7 +123,6 @@ conversation that follows.
 
 ## Decisions still open
 
-- **Second house (The Craftsman on Elm):** port or drop?
 
 ## After PR #48 (merged to `main`)
 
