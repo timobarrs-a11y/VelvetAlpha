@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { INITIAL_OBJS } from '../state/objects';
 import { RNG } from '../state/rng';
-import { buildWorld, createAgent, tickAgent, chooseChain, startChain, isAsleep, statusText, type Agent } from '../state/agents';
+import { buildWorld, createAgent, tickAgent, chooseChain, startChain, isAsleep, isWalking, statusText, turnToward, type Agent } from '../state/agents';
 
 const LOOK = { skin: '#C68E6A', hair: '#2B1D16', top: '#3E6E8E', bottom: '#2F3542', longHair: false };
 
@@ -91,6 +91,52 @@ describe('household agents', () => {
         expect(v).toBeLessThanOrEqual(100);
       }
     }
+  });
+
+  it('turns toward a direction by at most a step, the short way round', () => {
+    const half = turnToward([1, 0], [0, 1], 0.5);
+    expect(half.left).toBeCloseTo(Math.PI / 2 - 0.5, 5);
+    expect(Math.atan2(half.face[1], half.face[0])).toBeCloseTo(0.5, 5);
+    expect(turnToward([1, 0], [0, 1], 2)).toEqual({ face: [0, 1], left: 0 });
+    // Past straight-behind, it goes the other way instead of the long way.
+    const back = turnToward([1, 0], [Math.cos(-3), Math.sin(-3)], 0.5);
+    expect(Math.atan2(back.face[1], back.face[0])).toBeCloseTo(-0.5, 5);
+  });
+
+  it('turns on the spot before walking off the other way, then goes', () => {
+    const { world, j, m, rng } = setup();
+    startChain(world, j, 'wander', m, () => rng.next());
+    expect(j.task!.phase).toBe('walk');
+    const next = j.task!.route.find((l) => l.type !== 'stair' && l.pts.length)!;
+    const [tx, ty] = (next as { pts: [number, number][] }).pts[0];
+    const d = Math.hypot(tx - j.x, ty - j.y) || 1;
+    // Facing exactly away from where the route heads.
+    j.face = [-(tx - j.x) / d, -(ty - j.y) / d];
+    const [x0, y0] = [j.x, j.y];
+    let turned = 0;
+    for (let i = 0; i < 80 && j.task?.phase === 'walk'; i++) {
+      tickAgent(world, j, m, 0.05, 0.15, 3, 12, () => rng.next());
+      if (j.turning) {
+        turned++;
+        expect([j.x, j.y], 'stays put while turning').toEqual([x0, y0]);
+        expect(isWalking(j), 'not marching in place').toBe(false);
+      }
+    }
+    expect(turned, 'pivots first').toBeGreaterThan(0);
+    expect(turned, 'but only briefly').toBeLessThan(12);
+    expect(j.turning).toBe(false);
+    expect(Math.hypot(j.x - x0, j.y - y0)).toBeGreaterThan(0.05);
+  });
+
+  it('does not stop to turn for a gentle bend', () => {
+    const { world, j, m, rng } = setup();
+    startChain(world, j, 'wander', m, () => rng.next());
+    const next = j.task!.route.find((l) => l.type !== 'stair' && l.pts.length)!;
+    const [tx, ty] = (next as { pts: [number, number][] }).pts[0];
+    const a = Math.atan2(ty - j.y, tx - j.x) + 0.5;
+    j.face = [Math.cos(a), Math.sin(a)];
+    tickAgent(world, j, m, 0.05, 0.15, 3, 12, () => rng.next());
+    expect(j.turning).toBe(false);
   });
 
   it('ignores corrupt saved needs', () => {

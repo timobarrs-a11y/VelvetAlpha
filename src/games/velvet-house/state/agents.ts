@@ -57,6 +57,8 @@ export interface Agent {
   y: number;
   z: number;
   face: [number, number];
+  /** True while turning on the spot before walking off. */
+  turning?: boolean;
   needs: CharacterNeeds;
   task: AgentTask | null;
   idle: number;
@@ -74,6 +76,21 @@ export interface HouseWorld {
 
 const WALK_SPEED = 1.5;
 const STAIR_SPEED = 0.9;
+// Turning: how fast they swing round (radians per second). Someone more than TURN_STOP off the
+// way they're heading stops and turns on the spot, and starts walking again once within TURN_GO.
+const TURN_RATE = 9;
+const TURN_STOP = 0.9;
+const TURN_GO = 0.25;
+
+/** Rotates a facing toward a wanted direction by at most `step` radians; `left` is what remains. */
+export function turnToward(face: [number, number], want: [number, number], step: number): { face: [number, number]; left: number } {
+  const a = Math.atan2(face[1], face[0]);
+  let d = Math.atan2(want[1], want[0]) - a;
+  d = Math.atan2(Math.sin(d), Math.cos(d));
+  if (Math.abs(d) <= step) return { face: [want[0], want[1]], left: 0 };
+  const n = a + Math.sign(d) * step;
+  return { face: [Math.cos(n), Math.sin(n)], left: Math.abs(d) - step };
+}
 const WALL_HALF = 0.06;
 
 const OWN_SIDE: Record<string, Record<AgentId, string[]>> = {
@@ -307,7 +324,14 @@ function moveAlong(ch: Agent, dt: number, mul: number): boolean {
     const dx = tx - ch.x;
     const dy = ty - ch.y;
     const d = Math.hypot(dx, dy);
-    if (d > 1e-4) ch.face = [dx / d, dy / d];
+    if (d > 1e-4) {
+      // Swing round toward the way they're going; if it's well off, turn on the spot first.
+      const want: [number, number] = [dx / d, dy / d];
+      const off = Math.abs(Math.atan2(ch.face[0] * want[1] - ch.face[1] * want[0], ch.face[0] * want[0] + ch.face[1] * want[1]));
+      ch.turning = off > (ch.turning ? TURN_GO : TURN_STOP);
+      ch.face = turnToward(ch.face, want, TURN_RATE * dt * mul).face;
+      if (ch.turning) return false;
+    }
     if (d <= budget) {
       ch.x = tx; ch.y = ty; budget -= d;
       leg.pts.shift();
@@ -322,6 +346,7 @@ function moveAlong(ch: Agent, dt: number, mul: number): boolean {
 
 function arrive(ch: Agent): void {
   const t = ch.task!;
+  ch.turning = false;
   t.phase = 'do';
   t.time = 0;
   const s = t.slot;
@@ -334,6 +359,7 @@ function finish(world: HouseWorld, ch: Agent, other: Agent | null, rng: () => nu
   const t = ch.task!;
   if (t.slot?.pos) { [ch.x, ch.y] = t.slot.stand; ch.z = 0; }
   ch.task = null;
+  ch.turning = false;
   while (t.next.length) {
     if (startAct(world, ch, t.next.shift()!, t.next, other, rng)) return;
   }
@@ -350,7 +376,7 @@ export function poseOf(ch: Agent): string {
 }
 
 export function isWalking(ch: Agent): boolean {
-  return !!ch.task && ch.task.phase === 'walk' && !ch.onStairs;
+  return !!ch.task && ch.task.phase === 'walk' && !ch.onStairs && !ch.turning;
 }
 
 export function statusText(ch: Agent): string {

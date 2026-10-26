@@ -1451,7 +1451,53 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.restore();
   }
 
+  // How long one activity takes to melt into the next, in seconds.
+  const CLIP_BLEND = 0.32;
+  const smooth01 = (k) => k * k * (3 - 2 * k);
+
+  // Smooths what the sim hands over as instant changes: the way someone faces swings round at a
+  // human pace, a jump to or from a seat or bed slides instead of popping, and the body-level
+  // parts of a clip (lean, bob, head nod) blend from the last clip into the new one.
+  function settle(c) {
+    const ps = poseState(c), dt = Math.max(0.001, Math.min(0.05, rdt || 0.016));
+    const want = Math.atan2(c.face[1], c.face[0]);
+    if (!ps.init || ps.lv !== c.level) {
+      Object.assign(ps, { init: true, lv: c.level, fa: want, spin: 0, tph: 0, ox: 0, oy: 0, oz: 0, lx: c.x, ly: c.y, lz: c.z, key: null });
+    }
+    // Facing: turn the short way at up to ~16 rad/s.
+    let d = want - ps.fa; d = Math.atan2(Math.sin(d), Math.cos(d));
+    const step = Math.max(-16 * dt, Math.min(16 * dt, d));
+    ps.fa += step;
+    ps.spin += (step / dt - ps.spin) * Math.min(1, dt * 14);
+    ps.tph += Math.abs(ps.spin) * dt * 2.4;
+    // Position: absorb a jump (to a seat, a bed, a spot at a stove) and ease it out.
+    const jx = c.x - ps.lx, jy = c.y - ps.ly, jz = c.z - ps.lz;
+    if (Math.hypot(jx, jy) > 0.5 && Math.hypot(jx, jy) < 4) { ps.ox -= jx; ps.oy -= jy; }
+    if (Math.abs(jz) > 0.08 && Math.abs(jz) < 2) ps.oz -= jz;
+    ps.lx = c.x; ps.ly = c.y; ps.lz = c.z;
+    const k = Math.exp(-dt * 9);
+    ps.ox *= k; ps.oy *= k; ps.oz *= k;
+    ps.turn = Math.min(1, Math.abs(ps.spin) / 4);
+    return { ...c, x: c.x + ps.ox, y: c.y + ps.oy, z: Math.max(0, c.z + ps.oz), face: [Math.cos(ps.fa), Math.sin(ps.fa)] };
+  }
+
+  // The body-level numbers of the current clip, blended from the clip before it for a moment after a change.
+  function blendClip(c, rig, target) {
+    const ps = poseState(c), dt = Math.max(0.001, Math.min(0.05, rdt || 0.016));
+    const key = (c.walking ? 'walk' : c.pose) + '|' + (c.act || '') + '|' + (c.sit ? 1 : 0);
+    if (ps.key == null) { ps.key = key; ps.k = 1; ps.cur = target; ps.last = rig; ps.prev = null; }
+    else if (ps.key !== key) { ps.key = key; ps.k = 0; ps.from = ps.cur; ps.prev = ps.last; }
+    ps.k = Math.min(1, ps.k + dt / CLIP_BLEND);
+    const e = smooth01(ps.k);
+    const out = {};
+    for (const n in target) out[n] = ps.k >= 1 || !ps.from ? target[n] : ps.from[n] + (target[n] - ps.from[n]) * e;
+    ps.cur = out; ps.last = rig;
+    if (ps.k >= 1) ps.prev = null;
+    return { v: out, e, active: ps.k < 1, prev: ps.prev };
+  }
+
   function drawPerson(c, t) {
+    c = settle(c);
     const L = c.look, pose = c.pose, f = facing(c.face);
     const P3 = (dx, dy, dz) => iso(c.x + dx, c.y + dy, c.z + dz);
     const [fx, fy] = P3(0, 0, 0);
@@ -1485,8 +1531,9 @@ export function createHouseArt(ctx0, opts = {}) {
     const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
     const dance = pose === 'dance' && !rig;
     const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.035 * amp;
-    const hipZ = (c.sit ? 0.03 : 0.62 - (rig?.drop || 0)) + bob + breathe + (rig?.bob || 0), shZ = hipZ + 0.42, hdZ = shZ + 0.14 + (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0);
-    const [dx, dy] = c.face, lean = rig?.lean || 0;
+    const clip = blendClip(c, rig, { drop: rig?.drop || 0, bob: rig?.bob || 0, lean: rig?.lean || 0, head: (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0) });
+    const hipZ = (c.sit ? 0.03 : 0.62 - clip.v.drop) + bob + breathe + clip.v.bob, shZ = hipZ + 0.42, hdZ = shZ + 0.14 + clip.v.head;
+    const [dx, dy] = c.face, lean = clip.v.lean;
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
     // The body's own sideways axis, signed so side +1 is screen-right (matching the shoulders).
     let rx = -dy, ry = dx;
@@ -1526,7 +1573,8 @@ export function createHouseArt(ctx0, opts = {}) {
         const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
         [tx, ty] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
       }
-      const e = ease2(psA, side, tx, ty, rdt, rig && rig.hands ? (rig.snap ? 28 : 12) : 9);
+      const armRate = rig && rig.hands ? (rig.snap ? 28 : 12) : 9;
+      const e = ease2(psA, side, tx, ty, rdt, clip.active ? Math.min(armRate, 4 + 9 * clip.e) : armRate);
       if (!el) el = spec ? [(sx0 + e[0]) / 2 + side * 2.5, (sy0 + e[1]) / 2 + 3] : [(sx0 + e[0]) / 2, (sy0 + e[1]) / 2];
       const held = rig && rig.props ? rig.props.find(q => !NOT_HELD.has(q.kind) && (q.side == null || q.side === side)) : null;
       const grip = (rig && rig.grip && rig.grip[side]) || (held ? (OPEN_KINDS.has(held.kind) ? 'open' : 'fist') : spec && spec[2] > 0.3 ? 'open' : 'relaxed');
@@ -1625,7 +1673,9 @@ export function createHouseArt(ctx0, opts = {}) {
         return;
       }
       const off = side > 0 ? 0 : Math.PI;
-      const sw = Math.sin(ph + off) * 0.17 * amp, lift = c.z < 0.05 ? Math.max(0, Math.sin(ph + off)) * 0.075 * amp : 0;
+      // Turning on the spot: small alternating steps, so the feet carry the body round.
+      const tp = poseState(c), shuf = c.walking ? 0 : tp.turn || 0;
+      const sw = Math.sin(ph + off) * 0.17 * amp + Math.sin(tp.tph + off) * 0.06 * shuf, lift = c.z < 0.05 ? Math.max(0, Math.sin(ph + off)) * 0.075 * amp + Math.max(0, Math.sin(tp.tph + off)) * 0.045 * shuf : 0;
       const foot = P3(dx * sw, dy * sw, lift);
       const knee = P3(dx * sw * 0.55, dy * sw * 0.55, hipZ * 0.5 + lift * 0.7);
       thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
@@ -1760,9 +1810,12 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     const handAt = {};
     [-1, 1].forEach(sd => { handAt[sd] = arms[sd].e; });
-    if (rig && rig.hands) drawProps(rig, handAt, c, t, hd, local, 'back');
+    // Props fade in with the new clip, and the last clip's fade out, instead of popping.
+    const propsOf = (r, pass, a) => { if (!r || !r.hands) return; ctx.save(); ctx.globalAlpha *= a; drawProps(r, handAt, c, t, hd, local, pass); ctx.restore(); };
+    const fadeIn = clip.active ? clip.e : 1, fadeOut = clip.active && clip.prev ? 1 - clip.e : 0;
+    propsOf(clip.prev, 'back', fadeOut); propsOf(rig, 'back', fadeIn);
     [-1, 1].forEach(sd => { if (!armBehind(sd)) drawArm(arms[sd], sd); });
-    if (rig && rig.hands) drawProps(rig, handAt, c, t, hd, local, 'front');
+    propsOf(clip.prev, 'front', fadeOut); propsOf(rig, 'front', fadeIn);
     // Fingers curl over whatever they hold.
     [-1, 1].forEach(sd => {
       const g = arms[sd];

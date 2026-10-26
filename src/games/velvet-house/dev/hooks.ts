@@ -1,4 +1,5 @@
 import { TYPES } from '../state/objects';
+import { isWalking, poseOf } from '../state/agents';
 import { type SampleFn } from '../state/companionAI';
 import type { Game } from '../kernel/game';
 
@@ -31,6 +32,15 @@ export function installDevHooks(g: Game): void {
       closeChat: () => dialogue.close(),
       personLevel: (who: 'jordan' | 'maya') => (who === 'maya' ? people[1] : people[0]).level,
       level: () => view.level,
+      // Where a household member is and what they're doing, with their spot on screen.
+      agentState: (id: string) => {
+        const p = people.find(q => q.id === id);
+        if (!p) return null;
+        const [vx, vy] = art.project(p.x, p.y, 0.9);
+        const q = ctx.getTransform().transformPoint(new DOMPoint(vx, vy));
+        const r = canvas.getBoundingClientRect();
+        return { level: p.level, face: p.face, turning: !!p.turning, walking: isWalking(p), pose: poseOf(p), act: p.task?.act ?? null, screen: [r.left + (q.x / canvas.width) * r.width, r.top + (q.y / canvas.height) * r.height] };
+      },
       clientPosOf: (id: string): [number, number] | null => {
         const o = world.objs.find(q => q.id === id);
         if (!o) return null;
