@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Lock, Star, Trophy } from 'lucide-react';
+import { ArrowLeft, Camera, Lock, Star, Trophy } from 'lucide-react';
 import type { RunResult } from '../games/shootout/three/game3d';
 import { LEVELS, starsFor } from '../games/shootout/engine';
 import { RunView } from '../games/shootout/ui/RunView';
 import { Contest, type ContestResult } from '../games/shootout/ui/Contest';
-import { getLook, setLook, type Look } from '../games/shootout/settings';
+import { getLook, getView, setLook, setView, VIEW_NAMES, VIEWS, type Look, type View } from '../games/shootout/settings';
 import { unlockAudio } from '../games/shootout/audio';
 
 const SAVE = 'velvet.shootout.v1';
@@ -33,6 +33,7 @@ export function ShootoutGame() {
   const [screen, setScreen] = useState<Screen>('title');
   const [runNo, setRunNo] = useState(0);
   const [look, setLookState] = useState<Look>(getLook);
+  const [view, setViewState] = useState<View>(getView);
   const [levelId, setLevelId] = useState(() => Math.min(loadProgress().unlocked, LEVELS.length - 1));
   const [attack, setAttack] = useState<{ mode: 'attack' | 'street'; score: number; makes: number; shots: number; bestStreak: number; prev: number } | null>(null);
   const [result, setResult] = useState<(RunResult & { stars: number; newBest: boolean; unlockedNext: boolean }) | null>(null);
@@ -172,6 +173,12 @@ export function ShootoutGame() {
                 <button key={l} type="button" onClick={() => { setLook(l); setLookState(l); }} className={`rounded-md px-3 py-1 ${look === l ? 'bg-amber-300 text-black' : 'text-white/70'}`}>{l === 'arena' ? 'Arena' : 'Retro 8-bit'}</button>
               ))}
             </span>
+          </div>
+          <div className="mt-3 flex w-full max-w-md items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-white/55">View</span>
+            <button type="button" onClick={() => { const v = VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]; setView(v); setViewState(v); }} className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1 text-xs font-bold text-white/85">
+              <Camera className="h-3.5 w-3.5 text-amber-300" />{VIEW_NAMES[view]}<span className="text-white/40">▸</span>
+            </button>
           </div>
           <div className="mt-4 w-full max-w-md">
             <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-white/55">Your money rack</div>

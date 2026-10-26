@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Camera, Volume2, VolumeX } from 'lucide-react';
 import { Shootout } from '../game';
 import { Shootout3D, type RunOptions, type RunResult, type ShootoutEvent } from '../three/game3d';
 import type { Ball, Level } from '../engine';
 import { isMuted, setMuted, unlockAudio } from '../audio';
+import { VIEW_NAMES, type View } from '../settings';
 
 // One run on the floor: the 3D game plus the broadcast graphics over it.
 // Used for practice, Score Attack, Street and your contest rounds.
@@ -19,6 +20,7 @@ interface GameLike {
   hud(): Omit<Hud, 'elapsed'> & { fade?: number; elapsed?: number };
   rackState(): Rack;
   meterView?(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number };
+  cycleView?(): View;
   cancel?(): void;
   aimStart?(nx: number, ny: number): void;
   aimMove?(nx: number, ny: number): void;
@@ -51,7 +53,6 @@ export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunVi
   const [callout, setCallout] = useState<Callout | null>(null);
   const [card, setCard] = useState<Card | null>(null);
   const [replay, setReplay] = useState(false);
-  const [onFire, setOnFire] = useState(false);
   const [final10, setFinal10] = useState(false);
   // The graphics context was lost (memory, usually on a phone): offer a restart on a fresh canvas.
   const [lost, setLost] = useState(false);
@@ -112,9 +113,7 @@ export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunVi
           setShowHint(false);
           if (e.outcome === 'airball') say({ big: 'AIRBALL', tone: 'red' });
           else if (e.outcome === 'rim-out') say({ big: 'RIMMED OUT', tone: 'red' });
-          setOnFire(false);
           break;
-        case 'fire': setOnFire(true); break;
         case 'replay': setReplay(e.on); break;
         case 'final10': setFinal10(true); break;
         case 'lost': setLost(true); break;
@@ -171,6 +170,10 @@ export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunVi
 
   const showFps = typeof window !== 'undefined' && /[?&]fps\b/.test(window.location.search);
   const toggleMute = () => { setMuted(!muted); setMutedState(!muted); };
+  // Switch the angle you shoot from; its name shows for a moment.
+  const [viewName, setViewName] = useState<{ id: number; name: string } | null>(null);
+  const cycleView = () => { const v = gameRef.current?.cycleView?.(); if (v) setViewName({ id: Date.now(), name: VIEW_NAMES[v] }); };
+  useEffect(() => { if (!viewName) return; const t = setTimeout(() => setViewName(null), 1400); return () => clearTimeout(t); }, [viewName]);
 
   return (
     <>
@@ -195,14 +198,18 @@ export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunVi
         onPointerCancel={() => { if (touch) gameRef.current?.aimCancel?.(); else gameRef.current?.cancel?.(); }}
         onContextMenu={(e) => e.preventDefault()}
       />
-      <BroadcastOverlay hud={hud} rack={rack} level={label} callout={callout} card={card} replay={replay} onFire={onFire} final10={final10} />
+      <BroadcastOverlay hud={hud} rack={rack} level={label} callout={callout} card={card} replay={replay} final10={final10} />
       <ShotMeter gameRef={gameRef} />
       {ticker && <div className="pointer-events-none absolute right-3 top-14 sm:right-5" style={{ marginTop: 'env(safe-area-inset-top)' }}>{ticker(hud)}</div>}
       <div ref={fadeRef} className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: 0 }} />
       {showFps && <div ref={fpsRef} className="pointer-events-none absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 font-mono text-[11px] text-emerald-300" />}
       <div className="absolute right-3 top-3 flex gap-2" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+        {!touch && <button type="button" onClick={cycleView} className="rounded-lg bg-black/50 p-2 backdrop-blur" aria-label="Change camera angle"><Camera className="h-4 w-4" /></button>}
         <button type="button" onClick={toggleMute} className="rounded-lg bg-black/50 p-2 backdrop-blur" aria-label={muted ? 'Sound on' : 'Mute'}>{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}</button>
       </div>
+      {viewName && (
+        <div key={viewName.id} className="pointer-events-none absolute right-3 top-14 rounded-md bg-black/70 px-3 py-1 text-xs font-black italic tracking-wider backdrop-blur" style={{ marginTop: 'env(safe-area-inset-top)' }}>{viewName.name.toUpperCase()}</div>
+      )}
       {showHint && hud.phase === 'aim' && (
         <div className="sh-pulse pointer-events-none absolute top-[12%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/55 px-4 py-2 text-xs font-bold tracking-wide sm:px-5 sm:py-2.5 sm:text-sm text-white/90 backdrop-blur">
           {touch ? 'DRAG toward the hoop · LET GO to shoot' : 'HOLD to jump · LET GO on the green'}
@@ -227,12 +234,12 @@ export const BROADCAST_CSS = `
 .sh-blink { animation: sh-blink .8s steps(2) infinite; }
 .sh-flame { animation: sh-flame .35s ease-in-out infinite; transform-origin: bottom; }
 .sh-tick { animation: sh-tick .25s ease-out; }
-@keyframes sh-chain { 0% { transform: skewX(-12deg) scale(1.45); filter: brightness(2); } 100% { transform: skewX(-12deg) scale(1); filter: brightness(1); } }
-.sh-chain { animation: sh-chain .45s cubic-bezier(.2,.9,.2,1) both; }
+@keyframes sh-chain { 0% { transform: scale(1.35); filter: brightness(2); } 100% { transform: scale(1); filter: brightness(1); } }
+.sh-chain { animation: sh-chain .45s cubic-bezier(.2,.9,.2,1) both; transform-origin: center; }
 `;
 
 /** The chain badge's colour and title climb with it, like the effects. */
-const CHAIN_TONE = (n: number) => n >= 10 ? 'from-fuchsia-400 via-amber-300 to-white text-[#2a0a1e]' : n >= 6 ? 'from-yellow-300 via-orange-500 to-red-600 text-white' : n >= 3 ? 'from-amber-200 via-amber-400 to-orange-500 text-[#2a1600]' : 'from-emerald-200 to-emerald-500 text-[#032013]';
+const CHAIN_TONE = (n: number) => n >= 10 ? 'from-fuchsia-500 to-[#5C163A] text-white' : n >= 6 ? 'from-orange-500 to-red-700 text-white' : n >= 3 ? 'from-amber-300 to-amber-600 text-[#2a1600]' : 'from-emerald-400 to-emerald-700 text-white';
 const chainTitle = (n: number) => n >= 10 ? 'UNSTOPPABLE' : n >= 6 ? 'FIREBALL' : n >= 3 ? 'HEATING UP' : '';
 
 const TONE: Record<Callout['tone'], string> = {
@@ -256,11 +263,15 @@ function RackDots({ rack }: { rack: Rack }) {
   );
 }
 
-/** The TV graphics: score bug, rack cards, callouts, replay bug, on-fire banner. */
-function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, final10 }: {
-  hud: Hud; rack: Rack; level: string; callout: Callout | null; card: Card | null; replay: boolean; onFire: boolean; final10: boolean;
+/** The TV graphics: scorebug, rack cards, callouts, replay bug. */
+function BroadcastOverlay({ hud, rack, level, callout, card, replay, final10 }: {
+  hud: Hud; rack: Rack; level: string; callout: Callout | null; card: Card | null; replay: boolean; final10: boolean;
 }) {
   const low = hud.time <= 10;
+  // The bar's last segment: your perfect chain (it drives the effects), else your streak of makes.
+  const chain = hud.chain ?? 0;
+  const status = chain >= 2 ? { key: `c${chain}`, label: chainTitle(chain) || 'PERFECT', value: `×${chain}`, tone: CHAIN_TONE(chain) }
+    : hud.streak >= 2 ? { key: `s${hud.streak}`, label: 'STRAIGHT', value: `${hud.streak}`, tone: 'from-orange-500 to-red-700 text-white' } : null;
   return (
     <div className="pointer-events-none absolute inset-0 font-sans" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Letterbox during replays. */}
@@ -274,39 +285,37 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
         </div>
       )}
 
-      {/* Score bug, bottom left. */}
-      <div className={`absolute bottom-3 left-3 flex items-stretch overflow-hidden rounded-md shadow-[0_8px_30px_rgba(0,0,0,.5)] transition-opacity sm:bottom-5 sm:left-5 ${replay ? 'opacity-0' : ''}`}>
-        <div className="flex flex-col justify-center bg-gradient-to-b from-[#7a1f4f] to-[#3d0d27] px-2.5 py-1.5">
-          <div className="text-[8px] font-black uppercase tracking-[0.25em] text-amber-300">Velvet</div>
-          <div className="text-[11px] font-black italic leading-none tracking-tight">3PT</div>
-        </div>
-        <div className="flex flex-col justify-center bg-[#0d0f1a]/90 px-3 py-1 backdrop-blur">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-white/50">{level}</div>
-          <RackDots rack={rack} />
-        </div>
-        <div key={hud.score} className="sh-tick flex min-w-[3.25rem] items-center justify-center bg-gradient-to-b from-amber-200 to-amber-400 px-3 font-mono text-2xl font-black text-[#1d1300]">{hud.score.toLocaleString()}</div>
-        <div className={`flex min-w-[4.5rem] items-center justify-center px-3 font-mono text-xl font-black tabular-nums ${low ? 'bg-red-600 text-white' : 'bg-[#181b2b] text-white'} ${final10 && low ? 'sh-blink' : ''}`}>
-          {low ? hud.time.toFixed(1) : `0:${String(Math.ceil(hud.time)).padStart(2, '0')}`}
+      {/* Scorebug, bottom centre: an NBA-broadcast bar. Logo, the rack you're
+          on and its balls, the score, the clock, and the run's status (perfect
+          chain or streak) when there is one. */}
+      <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 transition-opacity sm:bottom-5 ${replay ? 'opacity-0' : ''}`}>
+        <div className="h-[3px] bg-gradient-to-r from-amber-300 via-[#c2185b] to-[#5C163A]" />
+        <div className="flex h-12 items-stretch bg-gradient-to-b from-[#1b1e27] to-[#0a0b10] shadow-[0_12px_40px_rgba(0,0,0,.6)] sm:h-14">
+          <div className="flex flex-col items-center justify-center bg-gradient-to-b from-[#7a1f4f] to-[#3d0d27] px-3 [clip-path:polygon(0_0,100%_0,88%_100%,0_100%)] sm:px-4">
+            <div className="text-[8px] font-black uppercase tracking-[0.3em] text-amber-300 sm:text-[9px]">Velvet</div>
+            <div className="text-sm font-black italic leading-none tracking-tight sm:text-base">3PT</div>
+          </div>
+          <div className="flex min-w-0 flex-col justify-center gap-1 px-3 sm:px-4">
+            <div className="max-w-[9rem] truncate text-[9px] font-bold uppercase tracking-[0.18em] text-white/55 sm:max-w-none sm:text-[10px]">{hud.spot || level}</div>
+            <RackDots rack={rack} />
+          </div>
+          <div className="w-px self-stretch bg-white/10" />
+          <div className="flex min-w-[3.6rem] flex-col items-center justify-center px-3 sm:min-w-[4.5rem]">
+            <div className="text-[8px] font-bold uppercase tracking-[0.25em] text-white/45">PTS</div>
+            <div key={hud.score} className="sh-tick text-2xl font-black leading-none tabular-nums sm:text-3xl">{hud.score.toLocaleString()}</div>
+          </div>
+          <div className={`flex min-w-[4.6rem] flex-col items-center justify-center px-3 ${low ? 'bg-red-600' : 'bg-white/[.06]'} ${final10 && low ? 'sh-blink' : ''}`}>
+            <div className={`text-[8px] font-bold uppercase tracking-[0.25em] ${low ? 'text-white/80' : 'text-white/45'}`}>{level.split(' · ')[0]}</div>
+            <div className="text-xl font-black leading-none tabular-nums sm:text-2xl">{low ? hud.time.toFixed(1) : `0:${String(Math.ceil(hud.time)).padStart(2, '0')}`}</div>
+          </div>
+          {status && (
+            <div key={status.key} className={`sh-chain flex flex-col items-center justify-center bg-gradient-to-b px-3 ${status.tone}`}>
+              <div className="text-[8px] font-black uppercase tracking-[0.2em] opacity-80">{status.label}</div>
+              <div className="text-lg font-black italic leading-none sm:text-xl">{status.value}</div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Streak chip above the bug. */}
-      {hud.streak >= 2 && !replay && (
-        <div className="absolute bottom-[4.25rem] left-3 skew-x-[-12deg] bg-gradient-to-r from-orange-500 to-red-600 px-3 py-0.5 text-xs font-black italic tracking-wider shadow-lg sm:bottom-[5rem] sm:left-5">
-          {hud.streak} STRAIGHT{hud.streak >= 3 ? ' 🔥' : ''}
-        </div>
-      )}
-
-      {/* Perfect chain: grows with every perfect in a row (the effects grow with it). */}
-      {(hud.chain ?? 0) >= 2 && !replay && (
-        <div key={hud.chain} className="sh-chain absolute bottom-[6rem] left-3 origin-left skew-x-[-12deg] sm:bottom-[7rem] sm:left-5">
-          <div className={`flex items-baseline gap-2 bg-gradient-to-r px-3 py-1 font-black italic shadow-[0_0_24px_rgba(255,190,80,.45)] ${CHAIN_TONE(hud.chain!)}`}>
-            <span className="text-[10px] tracking-[0.25em] opacity-80">PERFECT</span>
-            <span className="text-xl leading-none sm:text-2xl">×{hud.chain}</span>
-            {chainTitle(hud.chain!) && <span className="text-[10px] tracking-[0.2em]">{chainTitle(hud.chain!)}</span>}
-          </div>
-        </div>
-      )}
 
       {/* Rack title card, slides in from the left. */}
       {card && (
@@ -330,14 +339,6 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
         </div>
       )}
 
-      {/* On fire banner across the top. */}
-      {onFire && !replay && (
-        <div className="absolute left-1/2 top-3 -translate-x-1/2 sm:top-5">
-          <div className="sh-shine flex items-center gap-2 rounded-sm bg-gradient-to-r from-yellow-300 via-orange-500 to-red-600 px-4 py-1 text-sm font-black italic tracking-[0.2em] shadow-[0_0_30px_rgba(255,120,0,.6)]">
-            <span className="sh-flame">🔥</span>ON FIRE · BIGGER GREEN<span className="sh-flame">🔥</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

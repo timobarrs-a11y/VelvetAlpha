@@ -5,16 +5,16 @@
 
 export const JUMP = {
   /** How far the knees bend before takeoff, metres. */
-  dip: 0.17,
+  dip: 0.08,
   /** Height of the jump at its top, metres. */
-  height: 0.55,
+  height: 0.7,
   /** Real gravity, so the flight is snappy, not floaty. */
   g: 9.8,
   /** The shortest dip before takeoff, seconds. */
   minDip: 0.12,
   /** How far the knees give on landing, metres, and how long that takes. */
   land: 0.1,
-  landTime: 0.3,
+  landTime: 0.25,
 };
 
 export interface JumpState {
