@@ -25,7 +25,7 @@
     .vh-controls button:active { transform: scale(.96); }
     .vh-controls button:focus-visible { outline: 2px solid #E0A43A; outline-offset: 1px; }
     .vh-controls button[aria-selected="true"], .vh-controls button[aria-pressed="true"] { background: #F2EEE8; color: #241B25; }
-    @media (max-width: 560px) { .vh-controls button { padding: 8px 9px; font-size: 12px; } .vh-hud { top: 8px; left: 8px; } }
+    @media (max-width: 560px) { .vh-controls { flex-wrap: wrap-reverse; } .vh-controls button { padding: 8px 9px; font-size: 12px; } .vh-hud { top: 8px; left: 8px; } }
     .vh-people { position: absolute; top: 16px; right: 120px; display: flex; flex-direction: column; gap: 8px; width: 216px; max-height: calc(100% - 140px); overflow-y: auto; z-index: 18; }
     .vh-people[hidden] { display: none; }
     @media (max-width: 560px) { .vh-people { top: auto; right: 8px; left: 8px; bottom: 112px; width: auto; max-height: 45%; } }
