@@ -13,6 +13,8 @@ See docs/goals-and-coaches/plan.md and docs/onboarding/questionnaire-plan.md.
      can show which days hold what.
    - `coach_plan_steps.duration_minutes` (integer): how long it takes, so a plan can estimate
      its finish date and how long it runs.
+   - `coach_plan_steps.phase` (text): the stage a step belongs to ("Get the money ready"), so the
+     goal board can group steps into phases.
 
 3. The arrival (onboarding)
    - `user_profiles.someday` (jsonb, default '[]'): things they've always wanted to try,
@@ -39,6 +41,7 @@ ALTER TABLE companions
 ALTER TABLE coach_plan_steps ADD COLUMN IF NOT EXISTS scheduled_for date;
 ALTER TABLE coach_plan_steps ADD COLUMN IF NOT EXISTS duration_minutes integer
   CHECK (duration_minutes IS NULL OR duration_minutes > 0);
+ALTER TABLE coach_plan_steps ADD COLUMN IF NOT EXISTS phase text;
 
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS someday jsonb NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS address_style text

@@ -582,6 +582,8 @@ export interface CoachPlanStep {
   /** The day it's planned for, so the calendar shows which days hold what. */
   scheduled_for?: string | null;
   duration_minutes?: number | null;
+  /** The stage it belongs to, e.g. "Get the money ready". */
+  phase?: string | null;
 }
 
 export interface CoachPlan {

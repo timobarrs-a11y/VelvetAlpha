@@ -132,8 +132,9 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 const WARM_LIP_VALUES = ['#c4917c', '#b07a5e', '#c8857a', '#d88e89', '#e5b8a8', '#f4a6b8', '#e88ba3', '#c73e3a'];
 const COOL_LIP_VALUES = ['#b0726a', '#a0604a', '#c75f7e', '#8b4876'];
 
-function coherentRandomize(): AvatarConfigV2 {
-  const g: Gender = Math.random() > 0.5 ? 'male' : 'female';
+/** A random look whose pieces go together. Pass a gender to keep it; otherwise it's random too. */
+function coherentRandomize(gender?: Gender): AvatarConfigV2 {
+  const g: Gender = gender ?? (Math.random() > 0.5 ? 'male' : 'female');
   const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
   const skinTone = pick(SKIN_TONES).value;
