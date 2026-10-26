@@ -34,6 +34,7 @@ import {
   talk, rememberChat, remember,
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
+import { createHostSample } from './bridge/hostSample';
 import { PICTURE_WALLS } from './state/pictureWalls';
 import { createDrawer, dockTabHtml, DOCK_TABS, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
 import { clothByKey, clothId, wearOnAgent, validOutfit, type OwnedCloth } from './state/clothing';
@@ -1077,7 +1078,8 @@ function boot(): void {
       }
     }
 
-    setTimeout(() => dialogue.showInput(), 1500);
+    // Leave the reply up while the box comes back, so it can be read as the player answers.
+    setTimeout(() => dialogue.showInput(true), 600);
   }
 
   // Save
@@ -1450,6 +1452,8 @@ function boot(): void {
     setTimeout(() => { if (vidSearchSeq === seq && vidSearchCb) { vidSearchCb = null; cb([]); } }, 12000);
   }
 
+  // Inside the Velvet app the host page answers AI turns; the older artifact-style provider still wins if present.
+  sample = createHostSample();
   // Try to get sample function from parent
   try {
     const w = window as unknown as { claude?: { use?: (name: string) => Promise<SampleFn> } };

@@ -13,7 +13,10 @@ export type BridgeMessageType =
   | 'velvet:restarted'
   | 'velvet:avatarItemBought'
   | 'velvet:avatarInventory'
-  | 'velvet:lookChanged';
+  | 'velvet:lookChanged'
+  | 'velvet:sample'
+  | 'velvet:sampleCancel'
+  | 'velvet:sampleResult';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -114,6 +117,55 @@ export interface LookChangedMessage extends BridgeMessage {
   top: { style: string; color: string; accent?: string };
 }
 
+// The game asks the host to run one AI turn (the game itself holds no keys or
+// accounts): `input` is the game's prompt lines, answered by a sampleResult
+// with the same `seq`. See bridge/chatInput.ts for how the lines become a chat.
+export interface SampleRequestMessage extends BridgeMessage {
+  type: 'velvet:sample';
+  game: 'velvet-house';
+  seq: number;
+  input: string[];
+}
+
+export interface SampleCancelMessage extends BridgeMessage {
+  type: 'velvet:sampleCancel';
+  game: 'velvet-house';
+  seq: number;
+}
+
+export interface SampleResultMessage extends BridgeMessage {
+  type: 'velvet:sampleResult';
+  seq: number;
+  text?: string;
+  // 'unavailable' | 'rate_limited' | 'refused' | 'cancelled'
+  error?: string;
+}
+
+const MAX_SAMPLE_LINES = 40;
+const MAX_SAMPLE_CHARS = 24000;
+
+export function isSampleRequestMessage(data: unknown): data is SampleRequestMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:sample' && typeof m.seq === 'number' && Array.isArray(m.input)
+    && m.input.length > 0 && m.input.length <= MAX_SAMPLE_LINES
+    && m.input.every(x => typeof x === 'string')
+    && (m.input as string[]).reduce((n, x) => n + x.length, 0) <= MAX_SAMPLE_CHARS;
+}
+
+export function isSampleCancelMessage(data: unknown): data is SampleCancelMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:sampleCancel' && typeof m.seq === 'number';
+}
+
+export function isSampleResultMessage(data: unknown): data is SampleResultMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:sampleResult' && typeof m.seq === 'number'
+    && (m.text === undefined || typeof m.text === 'string') && (m.error === undefined || typeof m.error === 'string');
+}
+
 export function isLookChangedMessage(data: unknown): data is LookChangedMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;
@@ -212,6 +264,9 @@ const FIELD_WHITELISTS: Record<string, string[]> = {
   'velvet:avatarItemBought': ['type', 'game', 'itemId'],
   'velvet:avatarInventory': ['type', 'owned'],
   'velvet:lookChanged': ['type', 'game', 'who', 'top'],
+  'velvet:sample': ['type', 'game', 'seq', 'input'],
+  'velvet:sampleCancel': ['type', 'game', 'seq'],
+  'velvet:sampleResult': ['type', 'seq', 'text', 'error'],
 };
 
 export function sanitizeMessage(msg: Record<string, unknown>): Record<string, unknown> {

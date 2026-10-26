@@ -13,7 +13,8 @@ export function createDialogue(cb: DialogueCallbacks): {
   open: () => void;
   close: () => void;
   showAI: (text: string, streaming?: boolean) => void;
-  showInput: () => void;
+  // `keepText` leaves the last reply on screen above the box, so it can be read while you answer.
+  showInput: (keepText?: boolean) => void;
   busy: (b: boolean) => void;
   setPortraitLook: (l: { skin: string; hair: string; longHair: boolean } | null) => void;
   setPortraitTalking: (v: boolean) => void;
@@ -116,7 +117,7 @@ export function createDialogue(cb: DialogueCallbacks): {
     }
   }
 
-  function showInput(): void {
+  function showInput(keepText = false): void {
     if (typing) {
       // skip typewriter
       typing = false;
@@ -125,7 +126,7 @@ export function createDialogue(cb: DialogueCallbacks): {
     const input = el.querySelector('.vh-dialogue-input') as HTMLElement;
     input.style.display = 'flex';
     const textEl = el.querySelector('.vh-dialogue-text') as HTMLElement;
-    textEl.textContent = '';
+    if (!keepText) textEl.textContent = '';
     const hint = el.querySelector('.vh-dialogue-hint') as HTMLElement;
     hint.textContent = '';
     const inp = el.querySelector('input') as HTMLInputElement;
