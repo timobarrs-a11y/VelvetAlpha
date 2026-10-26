@@ -44,6 +44,7 @@ import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { Avatar } from './Avatar';
+import { LiveAvatar } from './LiveAvatar';
 import { useAvatarEditor } from '../stores/avatarEditorStore';
 import { useMyAvatar } from '../hooks/useMyAvatar';
 import { companionAvatarConfig, TONE_COLOR } from './lobby';
@@ -283,8 +284,8 @@ function PersonRow({ companion, coach, pathname, onClick, inkColor, inkMuted }: 
   const edit = () => openEditor({ kind: 'companion', id: companion.id });
   // The face opens their avatar editor; the name opens the chat.
   const face = (
-    <div className={`relative flex-shrink-0 overflow-hidden rounded-full border ${coach ? 'h-10 w-10 border-emerald-400/70' : 'h-8 w-8 border-white/10'}`}>
-      <Avatar config={companionAvatarConfig(companion)} className="h-full w-full" />
+    <div className={`relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-full border-2 ${coach ? 'border-emerald-400/70' : 'border-pink-300/40'}`}>
+      <LiveAvatar config={companionAvatarConfig(companion)} className="h-full w-full" portrait />
       <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#0c0a1e] bg-emerald-400" />
       <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity group-hover/face:opacity-100">
         <Pencil className="h-3.5 w-3.5 text-white" />
@@ -317,9 +318,9 @@ function MeSection({ pathname, onNavigate, inkColor, inkMuted, inkSubtle }: { pa
       <SidebarLabel inkSubtle={inkSubtle}>Me</SidebarLabel>
       <div className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-2 transition-colors ${pathname === '/profile' ? 'bg-pink-400/10' : 'hover:bg-white/7'}`}>
         <button type="button" onClick={() => openEditor({ kind: 'user' })} className="group/face flex-shrink-0" aria-label="Edit your avatar" title="Edit your avatar">
-          <div className="relative h-10 w-10 overflow-hidden rounded-full border border-pink-300/70 bg-pink-100/10">
+          <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-pink-300/70 bg-pink-100/10">
             {myAvatar
-              ? <Avatar config={myAvatar} className="h-full w-full" />
+              ? <LiveAvatar config={myAvatar} className="h-full w-full" portrait />
               : <Sparkles className="mx-auto mt-3 h-4 w-4 text-pink-300" />}
             <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity group-hover/face:opacity-100">
               <Pencil className="h-3.5 w-3.5 text-white" />
