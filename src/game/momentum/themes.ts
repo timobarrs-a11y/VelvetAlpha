@@ -107,3 +107,24 @@ export const loadTheme = async (name: string, fetchTheme: () => Promise<unknown>
   }
   return fallbackTheme(name);
 };
+
+const hexToRgb = (hex: string): [number, number, number] | null => {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const h = m[1].length === 3 ? m[1].split('').map(c => c + c).join('') : m[1];
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+};
+
+/** Near-white: every channel high (bright and barely tinted). Unknown formats count as not white. */
+export const isNearWhite = (color: string): boolean => {
+  const rgb = hexToRgb(color);
+  return !!rgb && Math.min(...rgb) > 200;
+};
+
+/** White is reserved for boost ledges, so ordinary ledges never look like one. */
+export const reserveBoostWhite = <T extends { platforms: string[]; glows: string[] }>(theme: T): T => {
+  const keep = theme.platforms.map((c, i) => ({ c, g: theme.glows[i % theme.glows.length] })).filter(({ c }) => !isNearWhite(c));
+  if (keep.length === theme.platforms.length) return theme;
+  const safe = keep.length > 0 ? keep : [{ c: '#8f9bff', g: '#8f9bff' }];
+  return { ...theme, platforms: safe.map(k => k.c), glows: safe.map(k => k.g) };
+};
