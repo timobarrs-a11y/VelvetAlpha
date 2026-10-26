@@ -28,6 +28,8 @@ import {
   hasSeenTutorial,
   markTutorialSeen,
 } from '../game/momentum/touchControls';
+import { momentumSfx } from '../game/momentum/sfx';
+import { loadTheme } from '../game/momentum/themes';
 
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
@@ -290,6 +292,7 @@ export function MomentumGame() {
   touchSettingsRef.current = touchSettings;
   const [isTouchDevice] = useState(isCoarsePointer);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [muted, setMuted] = useState(momentumSfx.muted);
   liveRef.current = { isPaused: isPaused || showTutorial, gameMode, currentCareerLevel, level };
 
   useEffect(() => {
@@ -372,23 +375,20 @@ export function MomentumGame() {
     setLoadingText('Painting your world...');
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/generate-momentum-theme`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({ theme: selectedTheme })
+      const themeConfig: ThemeColors = await loadTheme(selectedTheme, async () => {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const response = await fetch(`${supabaseUrl}/functions/v1/generate-momentum-theme`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ theme: selectedTheme })
+        });
+        if (!response.ok) throw new Error('Failed to generate theme');
+        return response.json();
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate theme');
-      }
-
-      const themeConfig: ThemeColors = await response.json();
 
       const { platforms, goalY } = generatePlatforms(careerLevel?.difficulty || currentLevel, themeConfig);
 
@@ -430,9 +430,8 @@ export function MomentumGame() {
       initSpeedLines();
       setGameState('playing');
     } catch (error) {
-      console.error('Theme generation failed:', error);
-      setLoadingText('Retrying...');
-      setTimeout(() => generateThemeWithAI(selectedTheme, currentLevel, careerLevel), 1000);
+      console.error('Failed to start level:', error);
+      setGameState('menu');
     }
   };
 
@@ -502,8 +501,9 @@ export function MomentumGame() {
     const playerBottom = player.y + PLAYER_HEIGHT;
     const playerPrevBottom = player.prevY + PLAYER_HEIGHT;
     const platformTop = platform.y;
-    const platformLeft = platform.x - 10;
-    const platformRight = platform.x + platform.width + 10;
+    // Forgiving edges: count a landing if most of the ball is still over the platform
+    const platformLeft = platform.x - PLAYER_WIDTH * 0.5 - 6;
+    const platformRight = platform.x + platform.width + PLAYER_WIDTH * 0.5 + 6;
     const playerCenterX = player.x + PLAYER_WIDTH / 2;
 
     const wasAbove = playerPrevBottom <= platformTop + 6;
@@ -567,6 +567,8 @@ export function MomentumGame() {
   // Presses are buffered for a few frames so an early or mistimed press is never lost
   // framesAgo lets a tap that is recognised on release count from when the finger went down
   const triggerBoost = (framesAgo = 0) => {
+    momentumSfx.unlock();
+    if (playerRef.current.boostCharges === 0) momentumSfx.empty();
     boostBufferRef.current = BOOST_BUFFER_FRAMES;
     boostPressFrameRef.current = simFrameRef.current - framesAgo;
   };
@@ -609,6 +611,7 @@ export function MomentumGame() {
   // A second finger landing while one is steering boosts immediately.
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse') return;
+    momentumSfx.unlock();
     if (gameState !== 'playing' || liveRef.current.isPaused) return;
     if ((e.target as HTMLElement).closest('button')) return;
     if (steerPointerRef.current) {
@@ -772,6 +775,7 @@ export function MomentumGame() {
         flashRef.current = 0.35;
         popupRef.current = { text: 'PERFECT!', life: 1, color: '#ffe066' };
         haptic(25);
+        momentumSfx.perfect();
         scoreRef.current += 100 * (1 + chainRef.current);
         spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, '#ffe066', 18, 14);
       } else if (player.boostCharges > 0 && boostCooldownRef.current === 0) {
@@ -789,6 +793,7 @@ export function MomentumGame() {
         }
         player.boostCharges--;
         haptic(12);
+        momentumSfx.boost();
         player.isBoosting = true;
         player.boostTimer = 25;
         boostBufferRef.current = 0;
@@ -857,6 +862,8 @@ export function MomentumGame() {
         landingFrameRef.current = simFrameRef.current;
         lastLandingSpringRef.current = isSpring;
         player.vy = bounceVelocity(level, chainRef.current, isSpring);
+        if (isSpring) momentumSfx.spring();
+        else momentumSfx.bounce(chainRef.current);
 
         if (isSpring) {
           platform.springBounce = 1;
@@ -888,6 +895,7 @@ export function MomentumGame() {
             if (platform.isCheckpoint) {
               player.boostCharges = MAX_BOOST_CHARGES;
               haptic(30);
+              momentumSfx.checkpoint();
               checkpointYRef.current = platform.y;
               spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, levelData.checkpointGlow, 20, 15);
             }
@@ -941,6 +949,7 @@ export function MomentumGame() {
         scoreRef.current += bonus;
         setScore(scoreRef.current);
         saveCareerProgress(currentCareerLevel.number, true, time, stars);
+        momentumSfx.win();
         setGameState('levelComplete');
         saveGameStats(true);
       } else {
@@ -950,6 +959,7 @@ export function MomentumGame() {
         setSpeedBonus(bonus);
         scoreRef.current += bonus;
         setScore(scoreRef.current);
+        momentumSfx.win();
         setGameState('levelComplete');
         saveGameStats(true);
       }
@@ -958,9 +968,11 @@ export function MomentumGame() {
 
     if (player.y - camY > GAME_HEIGHT + 80) {
       if (checkpointYRef.current < 500) {
+        momentumSfx.fall();
         respawnAtCheckpoint();
         comboRef.current = 0;
       } else {
+        momentumSfx.fall();
         setGameState('gameOver');
         setScore(scoreRef.current);
         saveGameStats(false);
@@ -1162,6 +1174,26 @@ export function MomentumGame() {
     });
     ctx.globalAlpha = 1;
 
+    // Landing guide: mark where the ball will touch down on the next platform below
+    if (player.vy > -3) {
+      const ballCenterX = player.x + PLAYER_WIDTH / 2;
+      const ballBottom = player.y + PLAYER_HEIGHT;
+      let target: Platform | null = null;
+      for (const pl of platforms) {
+        if (pl.crumbled || pl.y < ballBottom - 2) continue;
+        if (ballCenterX < pl.x - PLAYER_WIDTH * 0.5 - 6 || ballCenterX > pl.x + pl.width + PLAYER_WIDTH * 0.5 + 6) continue;
+        if (!target || pl.y < target.y) target = pl;
+      }
+      if (target) {
+        const dist = target.y - ballBottom;
+        const alpha = Math.max(0.15, 0.6 - dist / 600);
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        ctx.beginPath();
+        ctx.ellipse(Math.min(Math.max(ballCenterX, target.x), target.x + target.width), target.y + camY - 1, PLAYER_WIDTH * 0.6, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     const playerScreenY = player.y + camY;
     const squash = player.vy > 6 ? 0.75 : player.vy < -6 ? 1.25 : 1;
     const stretch = 1 / squash;
@@ -1220,16 +1252,16 @@ export function MomentumGame() {
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.font = '10px system-ui';
-    ctx.fillText('SCORE', GAME_WIDTH - 40, 24);
+    ctx.fillText('SCORE', GAME_WIDTH - 40, 66);
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.font = '20px system-ui';
-    ctx.fillText(scoreRef.current.toLocaleString(), GAME_WIDTH - 40, 46);
+    ctx.fillText(scoreRef.current.toLocaleString(), GAME_WIDTH - 40, 88);
 
     if (comboRef.current > 1) {
       ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
       ctx.globalAlpha = 0.7 + Math.sin(Date.now() * 0.01) * 0.3;
       ctx.font = 'bold 13px system-ui';
-      ctx.fillText(`${comboRef.current}x COMBO`, GAME_WIDTH - 40, 64);
+      ctx.fillText(`${comboRef.current}x COMBO`, GAME_WIDTH - 40, 106);
       ctx.globalAlpha = 1;
     }
 
@@ -1317,6 +1349,12 @@ export function MomentumGame() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      momentumSfx.unlock();
+      if ((gameState === 'gameOver' || gameState === 'careerFailed') && (e.key === 'r' || e.key === 'R' || e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        retryLevel();
+        return;
+      }
       if (gameState === 'playing') {
         if (e.key === 'Escape') {
           e.preventDefault();
@@ -1690,6 +1728,13 @@ export function MomentumGame() {
           {!isPaused && (
             <div className="fixed z-10 flex gap-1" style={{ top: 'max(8px, env(safe-area-inset-top, 0px))', right: 'max(8px, env(safe-area-inset-right, 0px))' }}>
               <button
+                onClick={() => { momentumSfx.setMuted(!muted); setMuted(!muted); }}
+                aria-label={muted ? 'Unmute' : 'Mute'}
+                className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-lg transition-all text-xs backdrop-blur-sm border border-white/10"
+              >
+                {muted ? '🔇' : '🔊'}
+              </button>
+              <button
                 onClick={pauseGame}
                 aria-label="Pause"
                 className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-lg transition-all text-xs backdrop-blur-sm border border-white/10"
@@ -1841,7 +1886,7 @@ export function MomentumGame() {
 
           <div className="flex flex-col gap-3 justify-center">
             {currentCareerLevel && (
-              <button onClick={() => startCareerLevel(currentCareerLevel)} className="px-14 py-4 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all tracking-[0.15em] text-sm border border-white/10">
+              <button autoFocus onClick={retryLevel} className="px-14 py-4 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all tracking-[0.15em] text-sm border border-white/10">
                 TRY AGAIN
               </button>
             )}
@@ -1869,7 +1914,7 @@ export function MomentumGame() {
           <p className="text-white text-4xl font-extralight mb-10">{score.toLocaleString()}</p>
 
           <div className="flex gap-4 justify-center">
-            <button onClick={retryLevel} className="px-10 py-3 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all text-sm border border-white/10">RETRY</button>
+            <button autoFocus onClick={retryLevel} className="px-12 py-4 bg-white/20 hover:bg-white/25 text-white rounded-full transition-all text-base font-medium border border-white/30">RETRY ↻</button>
             <button onClick={restart} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">RESTART</button>
             <button onClick={() => {
               const companionId = searchParams.get('companion');
