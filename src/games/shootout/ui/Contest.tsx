@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Eye, FastForward, Trophy } from 'lucide-react';
+import { ArrowLeft, FastForward, Trophy } from 'lucide-react';
 import { buildCourse, type Level, type Spot } from '../engine';
 import { cut, pickField, scoreAt, seeded, simulateRival, tiebreakCourse, TIEBREAK_CLOCK, type Rival, type RivalRun } from '../rivals';
 import { RunView, type Hud } from './RunView';
@@ -7,8 +7,8 @@ import { RunView, type Hud } from './RunView';
 // The contest: you against five AI shooters. Round 1, top three advance; the
 // final shoots in reverse order of round-1 scores, so the leader goes last
 // knowing the number. Ties on the cut line or for the title go to a
-// 30-second shoot-off. Rival runs are simulated up front, so you can watch
-// them live in 3D or skip to the result and get the same score.
+// 30-second shoot-off. Rival runs are simulated up front and play out on the
+// board as a live count-up (only your own runs load the 3D arena).
 
 type Stage = 'round1' | 'cut-tb' | 'final' | 'final-tb';
 
@@ -41,7 +41,7 @@ export function Contest({ level, moneyRack, onExit, onFinish }: {
   const [stageNo, setStageNo] = useState(0);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [turn, setTurn] = useState(0);
-  const [view, setView] = useState<'board' | 'run' | 'watch' | 'done'>('board');
+  const [view, setView] = useState<'board' | 'run' | 'done'>('board');
   const [round1, setRound1] = useState<Record<string, number>>({});
   const [finalScores, setFinalScores] = useState<Record<string, number>>({});
   const [revealing, setRevealing] = useState<{ id: string; shown: number } | null>(null);
@@ -207,25 +207,17 @@ export function Contest({ level, moneyRack, onExit, onFinish }: {
   };
 
   // ---- Views ---------------------------------------------------------------
-  if ((view === 'run' || view === 'watch') && shooter && current) {
+  if (view === 'run' && shooter?.you && current) {
     const tb = stage === 'cut-tb' || stage === 'final-tb';
     return (
       <RunView
         key={`${stageNo}-${turn}`}
         level={level}
         moneyRack={shooter.moneyRack}
-        label={shooter.you ? `${level.name}${tb ? ' · SHOOT-OFF' : ''}` : shooter.short}
-        rivalName={shooter.you ? undefined : shooter.name}
-        opts={{
-          course: stageCourse(shooter),
-          clock: stageClock,
-          auto: shooter.you ? undefined : current.run,
-          speed: 1.35,
-          scoring: 'contest',
-          jersey: shooter.rival ? { colors: shooter.rival.colors, number: shooter.rival.number } : undefined,
-        }}
+        label={`${level.name}${tb ? ' · SHOOT-OFF' : ''}`}
+        opts={{ course: stageCourse(shooter), clock: stageClock, scoring: 'contest' }}
         ticker={tickerFor(shooter)}
-        onDone={r => record(current.id, shooter.you ? r.score : current.run!.score)}
+        onDone={r => record(current.id, r.score)}
       />
     );
   }
@@ -300,10 +292,7 @@ export function Contest({ level, moneyRack, onExit, onFinish }: {
               ) : (
                 <>
                   <div className="text-sm text-white/70"><span className="font-bold text-white">{shooter.name}</span> is up</div>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => setView('watch')} className={`flex items-center gap-1.5 rounded-xl px-5 py-2.5 font-black ${watchMatters(known, stage) ? 'bg-gradient-to-r from-rose-500 to-orange-500' : 'bg-white/15'}`}><Eye className="h-4 w-4" />Watch live</button>
-                    <button type="button" onClick={() => current && sim(current)} className="flex items-center gap-1.5 rounded-xl bg-white/10 px-5 py-2.5 font-semibold"><FastForward className="h-4 w-4" />Result</button>
-                  </div>
+                  <button type="button" onClick={() => current && sim(current)} className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 px-6 py-2.5 font-black"><FastForward className="h-4 w-4" />{shooter.short.toUpperCase()} SHOOTS</button>
                 </>
               )}
             </div>
@@ -314,10 +303,6 @@ export function Contest({ level, moneyRack, onExit, onFinish }: {
   );
 }
 
-/** Watching matters once you've posted a score they can beat. */
-function watchMatters(known: Array<{ id: string }>, stage: Stage): boolean {
-  return stage !== 'round1' && known.some(s => s.id === 'you');
-}
 
 function yourBrief(known: Array<{ id: string; score: number }>, spots: number, byId: Record<string, { short: string }>): string {
   const sorted = [...known].sort((a, b) => b.score - a.score);

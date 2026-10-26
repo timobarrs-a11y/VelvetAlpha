@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
-import { FastForward, Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 import { Shootout } from '../game';
 import { Shootout3D, type RunOptions, type RunResult, type ShootoutEvent } from '../three/game3d';
 import type { Ball, Level } from '../engine';
 import { isMuted, setMuted, unlockAudio } from '../audio';
 
 // One run on the floor: the 3D game plus the broadcast graphics over it.
-// Used for practice runs, your contest rounds, and watching rivals shoot.
+// Used for practice, Score Attack, Street and your contest rounds.
 
 export type Rack = Array<{ kind: Ball['kind']; state: 'done' | 'now' | 'left' }>;
-export interface Hud { score: number; time: number; spot: string; streak: number; phase?: string; elapsed: number }
+export interface Hud { score: number; time: number; spot: string; streak: number; chain?: number; phase?: string; elapsed: number }
 interface Callout { id: number; big: string; small?: string; tone: 'gold' | 'green' | 'red' | 'money' | 'starry' | 'fire' }
 interface Card { id: number; title: string; sub: string; money: boolean }
 
@@ -19,7 +19,6 @@ interface GameLike {
   hud(): Omit<Hud, 'elapsed'> & { fade?: number; elapsed?: number };
   rackState(): Rack;
   meterView?(): { mode: 'live' | 'flash' | 'off'; hold: number; target: number; green: number; error: number; age: number };
-  skip?(): void;
   cancel?(): void;
   aimStart?(nx: number, ny: number): void;
   aimMove?(nx: number, ny: number): void;
@@ -39,15 +38,13 @@ export interface RunViewProps {
   opts?: RunOptions;
   /** Name on the score bug (the level name for your own runs). */
   label: string;
-  /** A rival on autopilot: no input, a LIVE bug and a skip button. */
-  rivalName?: string;
   /** Contest graphics fed from the live HUD (pace, score to beat). */
   ticker?: (h: Hud) => ReactNode;
   onDone: (r: RunResult) => void;
 }
 
 /** Mount with a fresh `key` per run: the game is created once, on mount. */
-export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDone }: RunViewProps) {
+export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunViewProps) {
   const [hud, setHud] = useState<Hud>({ score: 0, time: opts?.clock ?? level.clock, spot: '', streak: 0, elapsed: 0 });
   const [rack, setRack] = useState<Rack>([]);
   const [muted, setMutedState] = useState(isMuted());
@@ -56,15 +53,20 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   const [replay, setReplay] = useState(false);
   const [onFire, setOnFire] = useState(false);
   const [final10, setFinal10] = useState(false);
-  const [showHint, setShowHint] = useState(!rivalName);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // The graphics context was lost (memory, usually on a phone): offer a restart on a fresh canvas.
+  const [lost, setLost] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [showHint, setShowHint] = useState(true);
+  // The game draws on a canvas made fresh for each game (see the effect below);
+  // input lands on the stage that holds it.
+  const stageRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<GameLike | null>(null);
   const seq = useRef(0);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
-  const rival = !!rivalName;
   const touch = opts?.control === 'touch';
   /** Pointer position on the canvas, -1..1 both ways (y up). */
   const ndc = (e: { clientX: number; clientY: number }): [number, number] => {
@@ -74,9 +76,16 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   };
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!stageRef.current) return;
+    // A new canvas every time: a finished game releases its graphics context for
+    // good, so reusing its canvas (React's dev double-mount, a restart after a
+    // reset) would leave nothing to draw with.
+    const canvas = document.createElement('canvas');
+    canvas.className = 'absolute inset-0 block h-full w-full';
+    stageRef.current.appendChild(canvas);
+    canvasRef.current = canvas;
     let alive = true;
-    const finish = (r: RunResult) => { setTimeout(() => { if (alive) doneRef.current(r); }, rival ? 1400 : 1800); };
+    const finish = (r: RunResult) => { setTimeout(() => { if (alive) doneRef.current(r); }, 1800); };
     // Broadcast graphics react to what happens on the floor.
     const onEvent = (e: ShootoutEvent) => {
       const id = ++seq.current;
@@ -86,7 +95,6 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
           setCard({ id, title: `RACK ${e.index + 1}`, sub: e.label.toUpperCase(), money: e.money });
           break;
         case 'grade': {
-          if (rival) break;
           setShowHint(false);
           const g = GRADE_TEXT[e.grade];
           if (g) say({ big: g[0], tone: g[1] });
@@ -109,17 +117,17 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
         case 'fire': setOnFire(true); break;
         case 'replay': setReplay(e.on); break;
         case 'final10': setFinal10(true); break;
+        case 'lost': setLost(true); break;
         case 'time': say({ big: 'TIME!', small: 'RELEASE BEFORE THE HORN', tone: 'red' }); break;
         case 'buzzer': say({ big: 'BUZZER BEATER!', tone: 'fire' }); break;
       }
     };
     let game: GameLike;
     try {
-      game = new Shootout3D(canvasRef.current, level, moneyRack, { onEvent, onDone: finish }, opts);
+      game = new Shootout3D(canvas, level, moneyRack, { onEvent, onDone: finish }, opts);
     } catch {
-      // No WebGL: fall back to the 2D court (your own runs only; rivals just finish).
-      if (opts?.auto) { const run = opts.auto; finish({ score: run.score, max: 0, makes: 0, shots: run.shots.length, bestStreak: 0, level }); return () => { alive = false; }; }
-      game = new Shootout(canvasRef.current, level, moneyRack, { onDone: finish });
+      // No WebGL: fall back to the 2D court.
+      game = new Shootout(canvas, level, moneyRack, { onDone: finish });
     }
     gameRef.current = game;
     if (import.meta.env.DEV) (window as unknown as { __shootout?: GameLike }).__shootout = game;
@@ -129,8 +137,8 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
     const hudTimer = setInterval(() => {
       const h = game.hud();
       const elapsed = h.elapsed ?? 0;
-      setHud(prev => (prev.score === h.score && prev.time.toFixed(1) === h.time.toFixed(1) && prev.spot === h.spot && prev.streak === h.streak && prev.phase === h.phase) ? prev
-        : { score: h.score, time: h.time, spot: h.spot, streak: h.streak, phase: h.phase, elapsed });
+      setHud(prev => (prev.score === h.score && prev.time.toFixed(1) === h.time.toFixed(1) && prev.spot === h.spot && prev.streak === h.streak && prev.chain === h.chain && prev.phase === h.phase) ? prev
+        : { score: h.score, time: h.time, spot: h.spot, streak: h.streak, chain: h.chain, phase: h.phase, elapsed });
       setRack(prev => { const r = game.rackState(); return JSON.stringify(r) === JSON.stringify(prev) ? prev : r; });
     }, 100);
     // Camera-cut fades follow the game every frame.
@@ -143,10 +151,11 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => { alive = false; game.stop(); clearInterval(hudTimer); cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); gameRef.current = null; };
-    // The game is created once per mount; callers remount with a new key.
+    return () => { alive = false; game.stop(); canvas.remove(); canvasRef.current = null; clearInterval(hudTimer); cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); gameRef.current = null; };
+    // The game is created once per mount (callers remount with a new key), and
+    // again after the graphics context was lost.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [attempt]);
 
   // Clear callouts and cards after their animations.
   useEffect(() => { if (!callout) return; const t = setTimeout(() => setCallout(null), 1300); return () => clearTimeout(t); }, [callout]);
@@ -154,12 +163,11 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
 
   // Hold anywhere (or Space) to shoot.
   useEffect(() => {
-    if (rival) return;
     const down = (e: KeyboardEvent) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); unlockAudio(); gameRef.current?.press(e.timeStamp); } };
     const up = (e: KeyboardEvent) => { if (e.code === 'Space') { e.preventDefault(); gameRef.current?.release(e.timeStamp); } };
     window.addEventListener('keydown', down); window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
-  }, [rival]);
+  }, []);
 
   const showFps = typeof window !== 'undefined' && /[?&]fps\b/.test(window.location.search);
   const toggleMute = () => { setMuted(!muted); setMutedState(!muted); };
@@ -167,11 +175,18 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
   return (
     <>
       <style>{BROADCAST_CSS}</style>
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 h-full w-full"
+      {lost && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[#05060C]/95 px-6 text-center">
+          <div className="text-2xl font-black italic">GRAPHICS RESET</div>
+          <p className="max-w-xs text-sm text-white/70">Your device ran short of graphics memory and dropped the game view. Restart this run to carry on.</p>
+          <button className="rounded-full bg-amber-400 px-6 py-2 font-black text-[#2a1600]" onClick={() => { setLost(false); setAttempt(a => a + 1); }}>Restart run</button>
+        </div>
+      )}
+      <div
+        ref={stageRef}
+        className="absolute inset-0"
         onPointerDown={(e) => {
-          unlockAudio(); if (rival) return;
+          unlockAudio();
           e.currentTarget.setPointerCapture(e.pointerId);
           if (touch) { const [x, y] = ndc(e); gameRef.current?.aimStart?.(x, y); } else gameRef.current?.press(e.timeStamp);
         }}
@@ -180,26 +195,14 @@ export function RunView({ level, moneyRack, opts, label, rivalName, ticker, onDo
         onPointerCancel={() => { if (touch) gameRef.current?.aimCancel?.(); else gameRef.current?.cancel?.(); }}
         onContextMenu={(e) => e.preventDefault()}
       />
-      <BroadcastOverlay hud={hud} rack={rack} level={label} callout={callout} card={card} replay={replay} onFire={onFire} final10={final10} rival={rival} />
-      {!rival && <ShotMeter gameRef={gameRef} />}
+      <BroadcastOverlay hud={hud} rack={rack} level={label} callout={callout} card={card} replay={replay} onFire={onFire} final10={final10} />
+      <ShotMeter gameRef={gameRef} />
       {ticker && <div className="pointer-events-none absolute right-3 top-14 sm:right-5" style={{ marginTop: 'env(safe-area-inset-top)' }}>{ticker(hud)}</div>}
       <div ref={fadeRef} className="pointer-events-none absolute inset-0 bg-black" style={{ opacity: 0 }} />
       {showFps && <div ref={fpsRef} className="pointer-events-none absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 font-mono text-[11px] text-emerald-300" />}
       <div className="absolute right-3 top-3 flex gap-2" style={{ marginTop: 'env(safe-area-inset-top)' }}>
         <button type="button" onClick={toggleMute} className="rounded-lg bg-black/50 p-2 backdrop-blur" aria-label={muted ? 'Sound on' : 'Mute'}>{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}</button>
       </div>
-      {rival && (
-        <>
-          <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 sm:left-5 sm:top-5" style={{ marginTop: 'env(safe-area-inset-top)' }}>
-            <span className="sh-blink h-2 w-2 rounded-full bg-red-500" />
-            <span className="skew-x-[-10deg] bg-red-600 px-2 py-0.5 text-[11px] font-black italic tracking-widest">LIVE</span>
-            <span className="skew-x-[-10deg] bg-black/70 px-2.5 py-0.5 text-xs font-black italic tracking-wide">{rivalName}</span>
-          </div>
-          <button type="button" onClick={() => gameRef.current?.skip?.()} className="absolute bottom-20 right-3 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-bold tracking-wide backdrop-blur sm:bottom-6 sm:right-5">
-            <FastForward className="h-3.5 w-3.5" />Skip to result
-          </button>
-        </>
-      )}
       {showHint && hud.phase === 'aim' && (
         <div className="sh-pulse pointer-events-none absolute top-[12%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/55 px-4 py-2 text-xs font-bold tracking-wide sm:px-5 sm:py-2.5 sm:text-sm text-white/90 backdrop-blur">
           {touch ? 'DRAG toward the hoop · LET GO to shoot' : 'HOLD to jump · LET GO on the green'}
@@ -224,7 +227,13 @@ export const BROADCAST_CSS = `
 .sh-blink { animation: sh-blink .8s steps(2) infinite; }
 .sh-flame { animation: sh-flame .35s ease-in-out infinite; transform-origin: bottom; }
 .sh-tick { animation: sh-tick .25s ease-out; }
+@keyframes sh-chain { 0% { transform: skewX(-12deg) scale(1.45); filter: brightness(2); } 100% { transform: skewX(-12deg) scale(1); filter: brightness(1); } }
+.sh-chain { animation: sh-chain .45s cubic-bezier(.2,.9,.2,1) both; }
 `;
+
+/** The chain badge's colour and title climb with it, like the effects. */
+const CHAIN_TONE = (n: number) => n >= 10 ? 'from-fuchsia-400 via-amber-300 to-white text-[#2a0a1e]' : n >= 6 ? 'from-yellow-300 via-orange-500 to-red-600 text-white' : n >= 3 ? 'from-amber-200 via-amber-400 to-orange-500 text-[#2a1600]' : 'from-emerald-200 to-emerald-500 text-[#032013]';
+const chainTitle = (n: number) => n >= 10 ? 'UNSTOPPABLE' : n >= 6 ? 'FIREBALL' : n >= 3 ? 'HEATING UP' : '';
 
 const TONE: Record<Callout['tone'], string> = {
   gold: 'from-amber-200 via-amber-300 to-orange-400 text-[#2a1600]',
@@ -248,8 +257,8 @@ function RackDots({ rack }: { rack: Rack }) {
 }
 
 /** The TV graphics: score bug, rack cards, callouts, replay bug, on-fire banner. */
-function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, final10, rival }: {
-  hud: Hud; rack: Rack; level: string; callout: Callout | null; card: Card | null; replay: boolean; onFire: boolean; final10: boolean; rival?: boolean;
+function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, final10 }: {
+  hud: Hud; rack: Rack; level: string; callout: Callout | null; card: Card | null; replay: boolean; onFire: boolean; final10: boolean;
 }) {
   const low = hud.time <= 10;
   return (
@@ -267,7 +276,7 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
 
       {/* Score bug, bottom left. */}
       <div className={`absolute bottom-3 left-3 flex items-stretch overflow-hidden rounded-md shadow-[0_8px_30px_rgba(0,0,0,.5)] transition-opacity sm:bottom-5 sm:left-5 ${replay ? 'opacity-0' : ''}`}>
-        <div className={`flex flex-col justify-center bg-gradient-to-b px-2.5 py-1.5 ${rival ? 'from-slate-600 to-slate-800' : 'from-[#7a1f4f] to-[#3d0d27]'}`}>
+        <div className="flex flex-col justify-center bg-gradient-to-b from-[#7a1f4f] to-[#3d0d27] px-2.5 py-1.5">
           <div className="text-[8px] font-black uppercase tracking-[0.25em] text-amber-300">Velvet</div>
           <div className="text-[11px] font-black italic leading-none tracking-tight">3PT</div>
         </div>
@@ -285,6 +294,17 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
       {hud.streak >= 2 && !replay && (
         <div className="absolute bottom-[4.25rem] left-3 skew-x-[-12deg] bg-gradient-to-r from-orange-500 to-red-600 px-3 py-0.5 text-xs font-black italic tracking-wider shadow-lg sm:bottom-[5rem] sm:left-5">
           {hud.streak} STRAIGHT{hud.streak >= 3 ? ' 🔥' : ''}
+        </div>
+      )}
+
+      {/* Perfect chain: grows with every perfect in a row (the effects grow with it). */}
+      {(hud.chain ?? 0) >= 2 && !replay && (
+        <div key={hud.chain} className="sh-chain absolute bottom-[6rem] left-3 origin-left skew-x-[-12deg] sm:bottom-[7rem] sm:left-5">
+          <div className={`flex items-baseline gap-2 bg-gradient-to-r px-3 py-1 font-black italic shadow-[0_0_24px_rgba(255,190,80,.45)] ${CHAIN_TONE(hud.chain!)}`}>
+            <span className="text-[10px] tracking-[0.25em] opacity-80">PERFECT</span>
+            <span className="text-xl leading-none sm:text-2xl">×{hud.chain}</span>
+            {chainTitle(hud.chain!) && <span className="text-[10px] tracking-[0.2em]">{chainTitle(hud.chain!)}</span>}
+          </div>
         </div>
       )}
 
@@ -323,10 +343,11 @@ function BroadcastOverlay({ hud, rack, level, callout, card, replay, onFire, fin
 }
 
 /**
- * The release meter, beside the shooter. Live on the first shot of a run so
- * you can find the mark; after that it only flashes for a moment after each
+ * The release meter, beside the shooter. Live on the first shot at each rack
+ * so you can find the mark; after that it only flashes for a moment after each
  * release, frozen where you let go against the green, then fades. You learn
- * the timing from those flashes, not by watching a bar fill.
+ * the timing from those flashes, not by watching a bar fill. Starry balls
+ * never show it.
  */
 function ShotMeter({ gameRef }: { gameRef: MutableRefObject<GameLike | null> }) {
   const wrap = useRef<HTMLDivElement>(null);
