@@ -76,3 +76,37 @@ describe('house artwork', () => {
     INITIAL_OBJS.forEach((o) => expect(art.TYPES[o.type], o.type).toBeTruthy());
   });
 });
+
+describe('finding things on screen at every rotation', () => {
+  const frame = (rot: number, objs: ReturnType<typeof INITIAL_OBJS.map>) => ({ level: 1, rot, minutes: 600, day: 1, t: 1, dt: 0.016, objs, wallMode: 'cut' as const });
+
+  it('unproject undoes project, whichever way the house is turned', () => {
+    const art = createHouseArt(stubCtx().ctx);
+    const objs = INITIAL_OBJS.map(o => ({ ...o }));
+    for (let rot = 0; rot < 4; rot++) {
+      art.render(frame(rot, objs));
+      for (const [x, y] of [[1, 1], [4.5, 3.25], [8.2, 6.5], [0.3, 7.5]]) {
+        const [px, py] = art.project(x, y, 0);
+        const [wx, wy] = art.unproject(px, py);
+        expect(wx).toBeCloseTo(x, 5);
+        expect(wy).toBeCloseTo(y, 5);
+      }
+    }
+  });
+
+  it('a tap on a piece finds that piece at every rotation, and only on its own floor', () => {
+    const art = createHouseArt(stubCtx().ctx);
+    const objs = INITIAL_OBJS.map(o => ({ ...o }));
+    for (let rot = 0; rot < 4; rot++) {
+      art.render(frame(rot, objs));
+      for (const id of ['sofa', 'tvunit', 'dining', 'fridge']) {
+        const o = objs.find(q => q.id === id)!;
+        const t = art.TYPES[o.type];
+        const [fw, fd] = o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
+        const [sx, sy] = art.project(o.x + fw / 2, o.y + fd / 2, (t.h || 1) / 2);
+        expect(art.hitObject(1, sx, sy)?.id, `${id} at rotation ${rot}`).toBe(id);
+        expect(art.hitObject(0, sx, sy)?.id).not.toBe(id);
+      }
+    }
+  });
+});

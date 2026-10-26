@@ -732,15 +732,13 @@ function boot(): void {
     // Try clicking on Maya → open chat
     const maya = people[1];
     if (maya.level === view.level) {
-      const mx = 288 + (maya.x - maya.y) * 32;
-      const my = 128 + (maya.x + maya.y) * 16 - maya.z * 34;
+      const [mx, my] = art.project(maya.x, maya.y, maya.z);
       if (Math.hypot(sx - mx, sy - my) < 30) { openChat(); return; }
     }
     // Try clicking on Jordan → follow
     const jordan = people[0];
     if (jordan.level === view.level) {
-      const jx = 288 + (jordan.x - jordan.y) * 32;
-      const jy = 128 + (jordan.x + jordan.y) * 16 - jordan.z * 34;
+      const [jx, jy] = art.project(jordan.x, jordan.y, jordan.z);
       if (Math.hypot(sx - jx, sy - jy) < 30) { toggleFollow('jordan'); return; }
     }
     // Try clicking on objects. Touch one and it comes alive: the TV flickers
@@ -767,7 +765,7 @@ function boot(): void {
   // Which part of the kitchen counter was tapped: the sink, the stove or the coffee machine.
   function counterPartAt(obj: ObjectInstance, sx: number, sy: number): string {
     if (obj.type !== 'counter') return '';
-    const wx = ((sx - 288) / 32 + (sy - 128) / 16) / 2, wy = ((sy - 128) / 16 - (sx - 288) / 32) / 2;
+    const [wx, wy] = art.unproject(sx, sy);
     const along = obj.rot % 2 ? wy - obj.y : wx - obj.x;
     const parts: [string, number][] = [['sink', 0.65], ['stove', 1.65], ['coffee', 2.45]];
     return parts.reduce((best, p) => Math.abs(p[1] - along) < Math.abs(best[1] - along) ? p : best)[0];
@@ -860,21 +858,12 @@ function boot(): void {
   canvas.addEventListener('pointerup', lift);
   canvas.addEventListener('pointercancel', lift);
 
+  // The piece under a tap, front-most, by its drawn shape: right at every rotation of the house. Floor openings are
+  // part of the house, not something to tap.
+  const NOT_TAPPABLE = new Set(['holeX', 'holeY']);
   function findObjectAt(sx: number, sy: number): ObjectInstance | null {
-    // Simple hit test: find the nearest object on the current level
-    let best: ObjectInstance | null = null;
-    let bestDist = Infinity;
-    for (const o of world.objs) {
-      if (o.level !== view.level) continue;
-      const t = TYPES[o.type];
-      if (!t) continue;
-      const cx = 288 + (o.x + t.W / 2 - o.y - t.D / 2) * 32;
-      const cy = 128 + (o.x + t.W / 2 + o.y + t.D / 2) * 16 - t.h * 17;
-      const d = Math.hypot(sx - cx, sy - cy);
-      const radius = Math.max(t.W, t.D) * 24;
-      if (d < radius && d < bestDist) { bestDist = d; best = o; }
-    }
-    return best;
+    const ids = world.objs.filter(o => o.level === view.level && !NOT_TAPPABLE.has(o.type)).map(o => o.id);
+    return art.hitObject(view.level, sx, sy, ids);
   }
 
   function showObjectActions(obj: ObjectInstance, x: number, y: number, poked = false): void {
@@ -1283,6 +1272,15 @@ function boot(): void {
       objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot })),
       storedCount: () => storage.length,
       resetCamera: () => resetCamera(),
+      personClientPos: (who: 'jordan' | 'maya'): [number, number] => {
+        const a = who === 'maya' ? people[1] : people[0];
+        const [vx, vy] = art.project(a.x, a.y, a.z + 0.7);
+        const p = ctx.getTransform().transformPoint(new DOMPoint(vx, vy));
+        const r = canvas.getBoundingClientRect();
+        return [r.left + (p.x / canvas.width) * r.width, r.top + (p.y / canvas.height) * r.height];
+      },
+      closeChat: () => dialogue.close(),
+      personLevel: (who: 'jordan' | 'maya') => (who === 'maya' ? people[1] : people[0]).level,
       level: () => view.level,
       clientPosOf: (id: string): [number, number] | null => {
         const o = world.objs.find(q => q.id === id);
