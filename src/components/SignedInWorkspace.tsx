@@ -386,7 +386,7 @@ function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSu
   const connectTools = [
     { label: 'Community Board', path: '/house', tone: '#f472b6', icon: <MessagesSquare className="h-3.5 w-3.5" /> },
     { label: 'Town', path: '/world', tone: '#f472b6', icon: <Building2 className="h-3.5 w-3.5" /> },
-    { label: 'Feed', path: '/feed', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
+    { label: 'Your Feed', path: '/feed', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
     { label: 'Discover', path: '/discover', tone: '#fbbf24', icon: <Compass className="h-3.5 w-3.5" /> },
     { label: 'Atlas', path: '/atlas', tone: '#cbd5e1', icon: <Bot className="h-3.5 w-3.5" /> },
     { label: 'Navi', path: '/local-explorer', tone: '#34d399', icon: <MapPin className="h-3.5 w-3.5" /> },

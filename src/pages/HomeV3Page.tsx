@@ -29,8 +29,9 @@ import { isHelper } from '../utils/relationshipType';
 
 const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default: m.DailyFeedPage })));
 const VideoHistoryPage = lazy(() => import('./VideoHistoryPage').then(m => ({ default: m.VideoHistoryPage })));
+const YourFeed = lazy(() => import('../components/social/YourFeed').then(m => ({ default: m.YourFeed })));
 
-type FeedTab = 'feed' | 'videos';
+type FeedTab = 'feed' | 'videos' | 'people';
 
 interface CheckIn {
   companion_id: string;
@@ -331,21 +332,22 @@ export function HomeV3Page() {
             {showHighlights && <ArrivalHighlights onDone={() => setShowHighlights(false)} />}
             {!lobby.setupResumeRoute && <FirstWeekCard />}
 
-            {/* Feed / Your Lens toggle */}
+            {/* Daily Feed / Your Lens / Your Feed toggle */}
             <div className="flex items-center justify-center px-4 py-2 border-b border-white/8">
               <Segmented
                 value={feedTab}
                 onChange={(v) => setFeedTab(v)}
                 size="md"
                 options={[
-                  { value: 'feed', label: 'Feed', icon: <Newspaper className="w-3.5 h-3.5" /> },
+                  { value: 'feed', label: 'Daily Feed', icon: <Newspaper className="w-3.5 h-3.5" /> },
                   { value: 'videos', label: 'Your Lens', icon: <PlayCircle className="w-3.5 h-3.5" /> },
+                  { value: 'people', label: 'Your Feed', icon: <UsersRound className="w-3.5 h-3.5" /> },
                 ]}
               />
             </div>
 
-            <Suspense fallback={<LoadingState label={`Loading your ${feedTab === 'feed' ? 'feed' : 'lens'}...`} />}>
-              {feedTab === 'feed' ? <DailyFeedPage /> : <VideoHistoryPage />}
+            <Suspense fallback={<LoadingState label={`Loading your ${feedTab === 'videos' ? 'lens' : 'feed'}...`} />}>
+              {feedTab === 'feed' ? <DailyFeedPage /> : feedTab === 'videos' ? <VideoHistoryPage /> : <YourFeed />}
             </Suspense>
           </div>
         </div>

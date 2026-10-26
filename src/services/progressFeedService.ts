@@ -52,6 +52,46 @@ export async function getTrendingPosts(limit = 20): Promise<ProgressPostWithAuth
   return callFeedRpc('get_trending_posts', { p_limit: limit });
 }
 
+/** Posts from every public member, plus your own. */
+export async function getPublicFeed(limit = 30, offset = 0): Promise<ProgressPostWithAuthor[]> {
+  return callFeedRpc('get_public_feed', { p_limit: limit, p_offset: offset });
+}
+
+export const STATUS_MAX_LENGTH = 500;
+
+const STATUS_ERRORS: Record<string, string> = {
+  not_signed_in: 'Sign in to post.',
+  no_access: 'Posting opens up once your membership or trial is active.',
+  banned: "Your account can't post right now.",
+  empty: 'Write something first.',
+  too_long: `Keep it under ${STATUS_MAX_LENGTH} characters.`,
+  rate_limited: "You've posted a lot in the last hour. Try again a bit later.",
+};
+
+/** Post a status. Resolves to the new post's id, or throws with a message to show. */
+export async function createStatus(body: string): Promise<string> {
+  const { data, error } = await supabase.rpc('create_status_post', { p_body: body });
+  if (error) {
+    console.error('[progressFeedService] create_status_post error:', error.message);
+    throw new Error("Couldn't post that. Try again.");
+  }
+  const result = data as { success: boolean; id?: string; error?: string };
+  if (!result?.success || !result.id) {
+    throw new Error(STATUS_ERRORS[result?.error ?? ''] ?? "Couldn't post that. Try again.");
+  }
+  return result.id;
+}
+
+/** Delete one of your own posts. RLS only lets the owner delete. */
+export async function deletePost(postId: string): Promise<boolean> {
+  const { error } = await supabase.from('progress_posts').delete().eq('id', postId);
+  if (error) {
+    console.error('[progressFeedService] deletePost error:', error.message);
+    return false;
+  }
+  return true;
+}
+
 export async function getPostsByGoal(goalId: string, limit = 20): Promise<ProgressPostWithAuthor[]> {
   const { data, error } = await supabase
     .from('progress_posts')
@@ -89,6 +129,7 @@ export async function getPostsByUser(userId: string, limit = 20): Promise<Progre
 }
 
 export const POST_TYPE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
+  status: { label: 'Status', icon: 'message', color: '#38bdf8' },
   commitment_completed: { label: 'Commitment Kept', icon: 'check', color: '#34d399' },
   plan_step_completed: { label: 'Plan Step Done', icon: 'layers', color: '#a78bfa' },
   goal_completed: { label: 'Goal Completed', icon: 'target', color: '#fbbf24' },
