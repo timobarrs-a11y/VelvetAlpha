@@ -46,20 +46,20 @@ const STYLES: Record<HairStyle, HairSpec> = {
   short_wavy: { v: 5.5, sv: 2, sideY: -1, hairline: 'sweep', texture: 'wavy', sideburn: true },
   slick_back: { v: 3.2, sv: 0.8, sideY: -3, hairline: 'high', texture: 'slick', sideburn: true },
   afro:       { v: 14, sv: 10, sideY: 5, hairline: 'curly', texture: 'coily', extra: 'afro' },
-  locs_short: { v: 4, sv: 2, sideY: 2, hairline: 'natural', texture: 'locs', back: { length: 112, spread: 4, edge: 'blunt' }, locks: { length: 104, width: 7 } },
+  locs_short: { v: 4, sv: 2, sideY: 2, hairline: 'natural', texture: 'locs', back: { length: 112, spread: 4, edge: 'blunt' }, locks: { length: 104, width: 9 } },
   bun:        { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'bun' },
   ponytail:   { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'ponytail' },
   sleek:      { v: 3, sv: 1.5, sideY: 2, hairline: 'center', texture: 'straight', back: { length: 122, spread: 4, edge: 'blunt' }, locks: { length: 110, width: 6.5 } },
   wavy:       { v: 5, sv: 3, sideY: 2, hairline: 'part', texture: 'wavy', back: { length: 124, spread: 7, edge: 'soft' }, locks: { length: 114, width: 7.5 } },
   curly:      { v: 8, sv: 7, sideY: 4, hairline: 'curly', texture: 'coily', back: { length: 108, spread: 10, edge: 'curly' }, locks: { length: 100, width: 8.5 } },
-  braids:     { v: 2.6, sv: 1, sideY: 2, hairline: 'center', texture: 'braids', back: { length: 124, spread: 4, edge: 'blunt' }, locks: { length: 118, width: 5 } },
-  locs:       { v: 4, sv: 2.5, sideY: 2, hairline: 'center', texture: 'locs', back: { length: 126, spread: 5, edge: 'blunt' }, locks: { length: 116, width: 7 } },
+  braids:     { v: 2.6, sv: 1, sideY: 2, hairline: 'center', texture: 'braids', back: { length: 124, spread: 4, edge: 'blunt' }, locks: { length: 118, width: 9.5 } },
+  locs:       { v: 4, sv: 2.5, sideY: 2, hairline: 'center', texture: 'locs', back: { length: 126, spread: 5, edge: 'blunt' }, locks: { length: 116, width: 10 } },
   // No hair at all: drawn as nothing (see renderHair).
   bald:       { v: 0, sv: 0, sideY: -4, hairline: 'natural', texture: 'buzz' },
   // Tight rows braided back from the hairline, flat to the head.
   cornrows:   { v: 1.4, sv: 0.3, sideY: -3, hairline: 'natural', texture: 'braids', sideburn: true },
   // Two-strand twists falling to the jaw.
-  twists:     { v: 6, sv: 3.5, sideY: 3, hairline: 'curly', texture: 'twists', back: { length: 92, spread: 6, edge: 'curly' }, locks: { length: 88, width: 6.5 } },
+  twists:     { v: 4.5, sv: 2.5, sideY: 3, hairline: 'center', texture: 'twists', back: { length: 94, spread: 5, edge: 'soft' }, locks: { length: 92, width: 9 } },
   // Small coiled knots on a neatly parted, close scalp.
   bantu_knots:{ v: 1.6, sv: 0.4, sideY: -3, hairline: 'natural', texture: 'parted', extra: 'knots' },
   // Natural hair gathered into one round puff on top.
@@ -105,6 +105,25 @@ function smooth(pts: Pt[], closed: boolean, tension = 1): string {
   }
   return closed ? d + ' Z' : d;
 }
+
+// One braid, twist or loc: two strands wrapped round each other, drawn as
+// alternating dark segments either side of the centre, with a soft shine.
+// `period` is the length of one wrap: tight for braids, longer for locs.
+interface RopeColors { base: string; dark: string; deep: string; light: string }
+function twistedRope(key: string, d: string, w: number, c: RopeColors, period: number, shine = c.light, shineStrong = false): React.ReactNode {
+  const half = `${f(period / 2)} ${f(period / 2)}`;
+  return (
+    <g key={key}>
+      <path d={d} stroke={c.base} strokeWidth={w} fill="none" strokeLinecap="round" />
+      <path d={d} stroke={c.dark} strokeWidth={w * 0.5} strokeDasharray={half} fill="none" opacity="0.75" transform={`translate(${f(-w * 0.22)} 0)`} />
+      <path d={d} stroke={c.deep} strokeWidth={w * 0.5} strokeDasharray={half} strokeDashoffset={f(period / 2)} fill="none" opacity="0.6" transform={`translate(${f(w * 0.22)} 0)`} />
+      <path d={d} stroke={shine} strokeWidth={w * (shineStrong ? 0.3 : 0.16)} fill="none" opacity={shineStrong ? 0.8 : 0.35} transform={`translate(${f(-w * 0.3)} 0)`} />
+    </g>
+  );
+}
+
+const ROPE_PERIOD = { braids: 2.4, twists: 2.8, locs: 3.8 } as const;
+const isRope = (t: string): t is keyof typeof ROPE_PERIOD => t in ROPE_PERIOD;
 
 interface Frame {
   T: number; W: number; cy: number; chin: number;
@@ -182,6 +201,7 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
   const streak = p.hairHighlight && p.hairHighlight !== 'none' ? p.hairHighlight : null;
   // Highlights replace the usual lighter strands, and add a few broad streaks.
   const light = streak ?? shade(base, 0.28);
+  const rope: RopeColors = { base, dark, deep, light: shade(base, 0.28) };
   const id = (k: string) => `${p.idPrefix}-hair-${k}`;
   const sideY = fr.cy + s.sideY;
   const crown = crownPoints(fr, s, sideY);
@@ -216,15 +236,6 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
       <path key={`p${i}`} d={`M${f(50 + k * fr.W)},${f(fr.T + 8)} Q${f(50 + k * fr.W * 1.15)},${f(fr.T - 1)} ${f(50 + k * fr.W * 0.9)},${f(fr.T - 6)}`}
         stroke={shade(p.skinTone, -0.08)} strokeWidth="0.7" fill="none" opacity="0.8" />,
     ));
-  } else if (s.texture === 'twists') {
-    // Short twisted coils pointing out from the crown.
-    for (let i = 0; i < 46; i++) {
-      const a = Math.PI * (1.05 + seeded(i, 15) * 0.9);
-      const r = 0.35 + seeded(i, 16) * 0.65;
-      const x = 50 + Math.cos(a) * (fr.W + s.sv) * r, y = fr.T + 6 + Math.sin(a) * (s.v + 8) * r;
-      capStrands.push(<path key={i} d={`M${f(x)},${f(y)} l${f(Math.cos(a) * 3)},${f(Math.sin(a) * 3)}`}
-        stroke={i % 5 === 0 ? light : deep} strokeWidth="1.6" strokeDasharray="1 0.6" fill="none" opacity="0.75" strokeLinecap="round" />);
-    }
   } else if (s.texture === 'braids' && !s.back) {
     // Cornrows: raised braided rows from the hairline to the crown, with
     // scalp showing in the parts between them.
@@ -247,15 +258,30 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
       capStrands.push(<path key={`rw${i}`} d={d} stroke={dark} strokeWidth="2.6" fill="none" strokeLinecap="round" />);
       capStrands.push(<path key={`rb${i}`} d={d} stroke={i % 3 === 0 ? light : deep} strokeWidth="1.6" strokeDasharray="1.1 0.9" fill="none" opacity="0.8" />);
     }
-  } else if (s.texture === 'braids') {
-    // Cornrows running back from the hairline.
-    hairline.slice(1, -1).forEach((h, i) => {
-      for (let k = -1; k <= 1; k += 2) {
-        const sx = h[0] + k * 2.2;
-        capStrands.push(<path key={`${i}${k}`} d={`M${f(sx)},${f(h[1])} Q${f(sx + (sx - 50) * 0.15)},${f((h[1] + origin[1]) / 2)} ${f(50 + (sx - 50) * 0.5)},${f(fr.T - s.v)}`}
-          stroke={deep} strokeWidth="0.7" fill="none" opacity="0.6" />);
-      }
-    });
+  } else if (isRope(s.texture)) {
+    // Braids, twists and locs grow from sections parted on the scalp: the
+    // parts show as fine lines of scalp, and each section starts a rope that
+    // runs from the parting out to the hairline, where it falls.
+    const n = 10;
+    const at = (t: number): Pt => {
+      const seg = t * (hairline.length - 1);
+      const a = hairline[Math.floor(seg)], b = hairline[Math.min(hairline.length - 1, Math.floor(seg) + 1)];
+      const k = seg - Math.floor(seg);
+      return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+    };
+    const from = (end: Pt): Pt => [origin[0] + (end[0] - origin[0]) * 0.15, origin[1] + 2];
+    const curve = (end: Pt) => {
+      const st = from(end);
+      return `M${pt(st)} Q${f((st[0] + end[0]) / 2 + (end[0] - 50) * 0.18)},${f((st[1] + end[1]) / 2 - 2)} ${pt(end)}`;
+    };
+    for (let i = 1; i < n; i++) {
+      capStrands.push(<path key={`pt${i}`} d={curve(at(i / n))} stroke={shade(p.skinTone, -0.1)} strokeWidth="0.45" fill="none" opacity="0.65" />);
+    }
+    for (let i = 0; i < n; i++) {
+      // With highlights, every third rope carries the colour.
+      const marked = !!streak && i % 3 === 1;
+      capStrands.push(twistedRope(`cr${i}`, curve(at((i + 0.5) / n)), 2.6, rope, ROPE_PERIOD[s.texture as keyof typeof ROPE_PERIOD], marked ? streak! : rope.light, marked));
+    }
   } else {
     const count = 26;
     const amp = s.texture === 'wavy' ? 1.8 : 0;
@@ -275,9 +301,9 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
   }
 
   // A soft sheen across the crown, the classic cartoon highlight.
-  const sheen = s.texture === 'buzz' || s.texture === 'coily' ? null : (
+  const sheen = s.texture === 'buzz' || s.texture === 'coily' || isRope(s.texture) ? null : (
     <path d={`M${f(50 - fr.W * 0.55)},${f(fr.T - s.v * 0.35 + 3)} Q${f(origin[0] - 2)},${f(fr.T - s.v * 0.9 + 1)} ${f(50 + fr.W * 0.45)},${f(fr.T - s.v * 0.3 + 3.5)}`}
-      stroke={light} strokeWidth="2.2" fill="none" opacity="0.35" strokeLinecap="round" />
+      stroke={rope.light} strokeWidth="2.2" fill="none" opacity="0.35" strokeLinecap="round" />
   );
 
   const partLine = part === null || s.texture === 'coily' ? null : (
@@ -327,16 +353,17 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
           stroke={i % 4 === 0 ? light : dark} strokeWidth="0.8" fill="none" opacity="0.5" />);
       }
     }
-    if (s.texture === 'locs' || s.texture === 'braids' || s.texture === 'twists') {
+    // Ropes hanging inside the mass: they start within the head's width and
+    // fan out only as far as the hair does, so none hang loose at the edges.
+    // From behind, renderHairBehind draws them instead.
+    if ((s.texture === 'locs' || s.texture === 'braids' || s.texture === 'twists') && !p.fromBehind) {
       const ropes = s.texture === 'twists' ? 12 : 9;
+      const half = (R - L) / 2 - 1.5;
       for (let i = 0; i < ropes; i++) {
-        const x = L - spread + ((R - L + 2 * spread) * (i + 0.5)) / ropes;
-        back.push(<path key={`r${i}`} d={`M${f(x)},${f(sideY - 4)} Q${f(x + (x - 50) * 0.1)},${f((sideY + length) / 2)} ${f(x + (x - 50) * 0.15)},${f(length - 2)}`}
-          stroke={base} strokeWidth={s.texture === 'locs' ? 5 : s.texture === 'twists' ? 3.4 : 4} fill="none" strokeLinecap="round" />);
-        if (s.texture === 'twists') {
-          back.push(<path key={`rt${i}`} d={`M${f(x)},${f(sideY - 4)} Q${f(x + (x - 50) * 0.1)},${f((sideY + length) / 2)} ${f(x + (x - 50) * 0.15)},${f(length - 2)}`}
-            stroke={i % 4 === 0 ? light : deep} strokeWidth="1.4" strokeDasharray="1.2 1" fill="none" opacity="0.6" />);
-        }
+        const k = ((i + 0.5) / ropes) * 2 - 1;
+        const x0 = 50 + k * half, x1 = 50 + k * (half + spread * 0.7);
+        const d = `M${f(x0)},${f(sideY - 4)} Q${f((x0 + x1) / 2)},${f((sideY + length) / 2)} ${f(x1)},${f(length - 5)}`;
+        back.push(twistedRope(`r${i}`, d, s.texture === 'locs' ? 5 : s.texture === 'twists' ? 3.4 : 4, rope, ROPE_PERIOD[s.texture as keyof typeof ROPE_PERIOD]));
       }
     }
   }
@@ -463,7 +490,7 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
     }
   }
 
-  if (streak && s.texture !== 'buzz' && s.texture !== 'parted') {
+  if (streak && s.texture !== 'buzz' && s.texture !== 'parted' && !isRope(s.texture)) {
     // Highlights: a few broad streaks from the crown to the hairline.
     front.push(
       <g key="streaks" clipPath={`url(#${capClip})`}>
@@ -491,20 +518,26 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
       front.push(
         <g key={`lock${sd}`}>
           <defs><clipPath id={lockId}><path d={smooth(outline, true, 0.85)} /></clipPath></defs>
-          <path d={smooth(outline, true, 0.85)} fill={base} />
+          <path d={smooth(outline, true, 0.85)} fill={isRope(s.texture) ? deep : base} />
           <g clipPath={`url(#${lockId})`}>
-            {s.texture === 'locs' || s.texture === 'braids' || s.texture === 'twists'
-              ? [-1, 0, 1].map((k) => (
-                <path key={k} d={smooth(spine.map(([x, y]) => [x + k * s.locks!.width * 0.3, y] as Pt), false)}
-                  stroke={k === 0 ? dark : deep} strokeWidth={s.texture === 'locs' ? 2.2 : 1.6}
-                  strokeDasharray={s.texture === 'braids' ? '2 1.4' : s.texture === 'twists' ? '1.2 1' : '3.5 0.9'} fill="none" opacity="0.7" />
-              ))
+            {isRope(s.texture)
+              ? (() => {
+                // A bundle of ropes falling over the shoulder, side by side.
+                const n = s.texture === 'locs' ? 2 : 3;
+                const w = (s.locks!.width / n) * 1.1;
+                return Array.from({ length: n }, (_, i) => {
+                  const k = ((i + 0.5) / n - 0.5) * s.locks!.width;
+                  const d = smooth(spine.map(([x, y]) => [x + k, y] as Pt), false);
+                  const highlighted = !!streak && i === (sd > 0 ? 0 : n - 1);
+                  return twistedRope(`l${i}`, d, w, rope, ROPE_PERIOD[s.texture as keyof typeof ROPE_PERIOD], highlighted ? streak! : rope.light, highlighted);
+                });
+              })()
               : [-0.35, -0.1, 0.15, 0.4].map((k, i) => (
                 <path key={k} d={smooth(spine.map(([x, y], j) => [x + k * s.locks!.width + (s.texture === 'coily' ? Math.sin(j * 2 + i) * 1.5 : 0), y] as Pt), false)}
                   stroke={i % 3 === 0 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.55" />
               ))}
-            <path d={smooth(spine.map(([x, y]) => [x - sd * s.locks!.width * 0.2, y] as Pt), false)}
-              stroke={light} strokeWidth={streak ? 2 : 1.4} fill="none" opacity={streak ? 0.55 : 0.25} />
+            {!isRope(s.texture) && <path d={smooth(spine.map(([x, y]) => [x - sd * s.locks!.width * 0.2, y] as Pt), false)}
+              stroke={light} strokeWidth={streak ? 2 : 1.4} fill="none" opacity={streak ? 0.55 : 0.25} />}
           </g>
         </g>,
       );
@@ -512,4 +545,79 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
   }
 
   return { back: <g>{back}</g>, front: <g>{front}</g> };
+}
+
+// The back of the head for styles whose pattern is the whole point from
+// behind: braids, locs and twists hang in ropes from the crown, cornrows run
+// in rows down to the nape, and Bantu knots sit in parted sections all over.
+// Drawn over the hair-coloured head: cornrows and knots are clipped to it,
+// while long ropes carry on down past it. Null for every other style, which
+// keep the plain falling strands.
+export function renderHairBehind(p: { hairStyle: HairStyle; hairColor: string; hairHighlight?: string; skinTone: string; geometry: FaceGeometry }): { node: React.ReactNode; clipToHead: boolean } | null {
+  const { hairStyle, hairColor: base, skinTone } = p;
+  const g = p.geometry;
+  const T = g.faceTop, B = g.faceBottom, cy = g.faceCenterY, W = g.fRx;
+  const streak = p.hairHighlight && p.hairHighlight !== 'none' ? p.hairHighlight : null;
+  const dark = shade(base, -0.32), deep = shade(base, -0.5), light = streak ?? shade(base, 0.28);
+  const scalp = shade(skinTone, -0.12);
+
+  // Ropes from the crown. Long ones fan out a little as they fall.
+  const ropes = (count: number, end: number, width: number, period: number, parts: boolean, fan: number) => {
+    const out: React.ReactNode[] = [];
+    const path = (x: number) => `M${f(50 + (x - 50) * 0.3)},${f(T + 1)} Q${f(x)},${f(cy - 4)} ${f(x + (x - 50) * fan)},${f(end)}`;
+    for (let i = 0; i < count; i++) {
+      const x = 50 - W - 1 + ((i + 0.5) * (W * 2 + 2)) / count;
+      if (parts && i > 0) {
+        out.push(<path key={`p${i}`} d={path(50 - W - 1 + (i * (W * 2 + 2)) / count)} stroke={scalp} strokeWidth="0.5" fill="none" opacity="0.6" />);
+      }
+      const marked = !!streak && i % 3 === 1;
+      out.push(twistedRope(`r${i}`, path(x), width, { base, dark, deep, light: shade(base, 0.28) }, period, marked ? streak! : shade(base, 0.28), marked));
+    }
+    return out;
+  };
+
+  switch (hairStyle) {
+    case 'braids':
+      return { node: <g>{ropes(11, 104, 3.4, ROPE_PERIOD.braids, false, 0.3)}</g>, clipToHead: false };
+    case 'locs':
+    case 'locs_short':
+      return { node: <g>{ropes(9, 104, 4.4, ROPE_PERIOD.locs, false, 0.3)}</g>, clipToHead: false };
+    case 'twists':
+      return { node: <g>{ropes(12, B + 10, 3.2, ROPE_PERIOD.twists, false, 0.35)}</g>, clipToHead: false };
+    case 'cornrows':
+      // Rows lie flat to the head and end in a neat line at the nape.
+      return { node: <g>{ropes(9, cy + 16, 2.6, 2, true, 0.1)}</g>, clipToHead: true };
+    case 'bantu_knots': {
+      // Sections parted in a grid, a knot in the middle of each.
+      const rows: Array<{ y: number; xs: number[] }> = [
+        { y: T + 9, xs: [-0.5, 0, 0.5] },
+        { y: cy - 1, xs: [-0.66, -0.22, 0.22, 0.66] },
+        { y: cy + 11, xs: [-0.4, 0.4] },
+      ];
+      const parts: React.ReactNode[] = [];
+      [T + 15, cy + 5].forEach((y, i) => parts.push(
+        <path key={`h${i}`} d={`M${f(50 - W - 2)},${f(y + 4)} Q50,${f(y - 4)} ${f(50 + W + 2)},${f(y + 4)}`} stroke={scalp} strokeWidth="0.5" fill="none" opacity="0.55" />,
+      ));
+      rows.forEach((r, ri) => r.xs.slice(1).forEach((k, i) => {
+        const x = 50 + ((r.xs[i] + k) / 2) * W;
+        const y0 = ri === 0 ? T : ri === 1 ? T + 15 : cy + 5, y1 = ri === 0 ? T + 15 : ri === 1 ? cy + 5 : B + 6;
+        parts.push(<path key={`v${ri}${i}`} d={`M${f(x)},${f(y0 + 1)} Q${f(x + (x - 50) * 0.15)},${f((y0 + y1) / 2)} ${f(x + (x - 50) * 0.08)},${f(y1 + 1)}`} stroke={scalp} strokeWidth="0.5" fill="none" opacity="0.55" />);
+      }));
+      const knots = rows.flatMap((r, ri) => r.xs.map((k, i) => {
+        const x = 50 + k * W, y = r.y;
+        return (
+          <g key={`k${ri}${i}`}>
+            <circle cx={x} cy={y} r="4.4" fill={base} />
+            <circle cx={x} cy={y} r="4.4" fill="none" stroke={deep} strokeWidth="0.5" opacity="0.6" />
+            <path d={`M${f(x + 3)},${f(y)} A3,3 0 1 1 ${f(x)},${f(y - 3)} A1.8,1.8 0 1 1 ${f(x - 1.4)},${f(y + 0.5)}`}
+              stroke={dark} strokeWidth="0.8" fill="none" opacity="0.85" />
+            <circle cx={x - 1.3} cy={y - 1.5} r="1.1" fill={light} opacity="0.35" />
+          </g>
+        );
+      }));
+      return { node: <g>{parts}{knots}</g>, clipToHead: true };
+    }
+    default:
+      return null;
+  }
 }

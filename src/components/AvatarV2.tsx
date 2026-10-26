@@ -1,6 +1,6 @@
 import { memo, useId, useMemo } from 'react';
 import { AvatarConfigV2 } from '../types/avatar-v2';
-import { renderHair } from '../renderers/hairRenderer';
+import { renderHair, renderHairBehind } from '../renderers/hairRenderer';
 import {
   outfitGradient, renderOutfitBody, renderOutfitFront, shade,
   renderHeadwear, headwearHairCut, renderFaceAccessory,
@@ -439,6 +439,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
     // Long hair fades out below the chin, where a game body takes over.
     const fadeId = `${uid}-fade`, napeId = `${uid}-nape`;
     const shortBack = SHORT_BACK.has(hairStyle);
+    const behind = view === 'back' ? renderHairBehind({ hairStyle, hairColor, hairHighlight: config.hairHighlight, skinTone, geometry: faceGeometry }) : null;
     const back = view === 'back';
     return (
       <svg viewBox="0 -4 100 104" className={className}>
@@ -467,7 +468,8 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
               {hairStyle !== 'bald' && <g clipPath={hatClip}>
                 <path d={faceOutlinePath(faceGeometry)} fill={hairColor}
                   opacity={CLOSE_CROP.has(hairStyle) ? 0.82 : 1} />
-                {!CLOSE_CROP.has(hairStyle) && hairStyle !== 'afro' && hairStyle !== 'high_puff' && (
+                {behind && <g clipPath={behind.clipToHead ? `url(#${faceClipId})` : undefined}>{behind.node}</g>}
+                {!behind && !CLOSE_CROP.has(hairStyle) && hairStyle !== 'afro' && hairStyle !== 'high_puff' && (
                   <g clipPath={`url(#${faceClipId})`}>
                     {/* Strands falling from the crown, and a sheen across it. */}
                     {Array.from({ length: 15 }, (_, i) => {
