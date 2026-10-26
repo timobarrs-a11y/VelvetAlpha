@@ -222,6 +222,11 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
         props: [{ kind: 'brush', side: 1 }, { kind: 'palette', side: -1 }],
       };
     }
+    // Poses that belong to one activity each: the activity's own clip.
+    case 'jacks': return ACT_CLIPS.yardWorkout(t, ph);
+    case 'snack': return ACT_CLIPS.snack(t, ph);
+    case 'meditate': return ACT_CLIPS.meditate(t, ph);
+    case 'jumprope': return ACT_CLIPS.jumprope(t, ph);
     default:
       return null;
   }
@@ -326,6 +331,101 @@ const ACT_CLIPS = {
     }
     return null;
   },
+  // ---- Everyday life ----
+  newspaper(t, ph) {
+    // Paper held open wide; a page turn now and then, a shake to straighten it.
+    const turn = pulse(t, 7, 0.14, ph), shake = pulse(t, 11, 0.06, ph + 3), sway = wave(t, 1.3, ph) * 0.012;
+    return {
+      hands: { 1: [0.24, 0.2, -0.12 + shake * 0.03 + sway], [-1]: [0.24, 0.2, -0.12 + shake * 0.03 + sway] },
+      props: [{ kind: 'paper', flip: turn }],
+    };
+  },
+  rakeYard(t, ph) {
+    // Long pulls toward the feet, then reach out again.
+    const u = ((t + ph) % 1.6) / 1.6, pull = u < 0.65 ? u / 0.65 : 1 - (u - 0.65) / 0.35;
+    return {
+      hands: { 1: [0.3 - pull * 0.14, 0.04, -0.2], [-1]: [0.24 - pull * 0.12, 0.0, -0.04] },
+      lean: 0.1 - pull * 0.05, legs: 'step', phase: 0,
+      props: [{ kind: 'rake', pull }],
+    };
+  },
+  yardWorkout(t, ph) {
+    // Jumping jacks: arms clap overhead as the feet jump apart.
+    const u = (1 - Math.cos(t * 6 + ph)) / 2;
+    return {
+      hands: { 1: [0.02, 0.26 - u * 0.14, -0.3 + u * 0.92], [-1]: [0.02, 0.26 - u * 0.14, -0.3 + u * 0.92] },
+      elbows: { 1: [0.02, 0.26 + u * 0.04, -0.12 + u * 0.4], [-1]: [0.02, 0.26 + u * 0.04, -0.12 + u * 0.4] },
+      legs: 'jack', spread: u * 0.2, bob: Math.abs(Math.sin(t * 6 + ph)) * 0.06,
+    };
+  },
+  phonePace(t, ph) {
+    // Walking in little circles on a call, the free hand talking too.
+    return {
+      legs: 'step', phase: t * 4 + ph,
+      hands: { 1: [0.03, 0.07, 0.27], [-1]: [0.16 + wave(t, 2.2, ph) * 0.06, 0.14, -0.14 + Math.abs(wave(t, 3, ph)) * 0.08] },
+      elbows: { 1: [0.08, 0.17, 0.0] },
+      talk: pulse(t, 4, 0.75, ph) > 0.05,
+      props: [{ kind: 'phone', side: 1 }],
+    };
+  },
+  snack(t, ph) {
+    // Standing at the fridge, an apple to the mouth every couple of seconds.
+    const bite = pulse(t, 2.4, 0.4, ph);
+    return { hands: { 1: [0.2 - bite * 0.12, 0.06, -0.16 + bite * 0.36], [-1]: [0.08, 0.14, -0.32] }, props: [{ kind: 'apple', side: 1 }] };
+  },
+  wipeCounter(t, ph) {
+    // Circles with a cloth, then a long wipe across.
+    const a = t * 4 + ph, across = Math.floor((t + ph) / 3) % 2;
+    const h1 = across ? [0.34, 0.05 + wave(t, 1.5, ph) * 0.18, -0.22] : [0.34 + Math.cos(a) * 0.06, 0.05 + Math.sin(a) * 0.08, -0.22];
+    return { hands: { 1: h1, [-1]: [0.26, 0.14, -0.24] }, lean: 0.07, props: [{ kind: 'rag', side: 1 }] };
+  },
+  soloDance: (t, ph) => danceClip(t, ph, Math.floor(ph) % 3),
+  journal(t, ph) {
+    // Writing in short bursts, stopping to think (pen to the chin).
+    const think = pulse(t, 9, 0.22, ph);
+    const scrib = think > 0.05 ? 0 : wave(t, 14, ph) * 0.012;
+    return {
+      hands: { 1: think > 0.05 ? [0.12, 0.04, 0.12] : [0.3 + scrib, 0.04 + Math.max(0, wave(t, 1.3, ph)) * 0.05, -0.21], [-1]: [0.3, 0.14, -0.22] },
+      headDown: think < 0.05, lean: 0.04,
+      props: [{ kind: 'pen', side: 1 }],
+    };
+  },
+  mirror(t, ph) {
+    // Fixing their hair, a tilt of the head, a last look.
+    const fix = wave(t, 3.2, ph);
+    return {
+      hands: { 1: [0.06, 0.1, 0.34 + fix * 0.04], [-1]: [0.04 + Math.max(0, fix) * 0.06, 0.12, 0.28] },
+      elbows: { 1: [0.06, 0.24, 0.12], [-1]: [0.04, 0.24, 0.1] },
+      bob: pulse(t, 5, 0.2, ph) * 0.01,
+      props: [{ kind: 'comb', side: 1 }],
+    };
+  },
+  foldClothes: (t, ph) => ACT_CLIPS.laundry(t, ph),
+  makeBed(t, ph) {
+    // Shake the duvet out across the bed, then smooth it flat.
+    const u = ((t + ph) % 2.8) / 2.8, shake = u < 0.4 ? Math.sin((u / 0.4) * Math.PI) : 0;
+    const smooth = u >= 0.4 ? wave(t, 2.4, ph) : 0;
+    return {
+      hands: { 1: [0.36, 0.2 + smooth * 0.1, -0.24 + shake * 0.3], [-1]: [0.36, 0.2 - smooth * 0.1, -0.24 + shake * 0.3] },
+      lean: 0.12 - shake * 0.06, drop: 0.04,
+      props: [{ kind: 'cloth', open: 0.5 + shake * 0.5 }],
+    };
+  },
+  meditate(t, ph) {
+    // Sitting cross-legged on the floor, hands on the knees, slow breaths.
+    const breath = (1 - Math.cos(t * 0.9 + ph)) / 2;
+    return { legs: 'crouch', drop: 0.42, hands: { 1: [0.16, 0.18, -0.46], [-1]: [0.16, 0.18, -0.46] }, bob: breath * 0.012, calm: true };
+  },
+  jumprope(t, ph) {
+    // Small hops as the rope comes round, hands turning it at the hips.
+    const a = t * 8 + ph;
+    return {
+      hands: { 1: [0.06 + Math.cos(a) * 0.03, 0.22, -0.3 + Math.sin(a) * 0.03], [-1]: [0.06 + Math.cos(a) * 0.03, 0.22, -0.3 + Math.sin(a) * 0.03] },
+      bob: Math.max(0, Math.sin(a)) * 0.07,
+      props: [{ kind: 'rope', turn: a }],
+    };
+  },
+  shadowbox: (t, ph) => ({ ...ACT_CLIPS.boxing(t, ph), props: [] }),
   dance: (t, ph) => danceClip(t, ph, 0),
   jukebox: (t, ph) => danceClip(t, ph, 1),
   danceTogether: (t, ph) => danceClip(t, ph, 2),
@@ -355,6 +455,7 @@ function danceClip(t, ph, style) {
 export const ANIMATED_POSES = [
   'cook', 'eat', 'eatOut', 'sip', 'shower', 'read', 'phone', 'tv', 'run', 'lift', 'stretch', 'switch',
   'reach', 'listen', 'arcade', 'desk', 'water', 'mop', 'pet', 'play', 'mow', 'swim', 'roll', 'wipe',
+  'jacks', 'snack', 'meditate', 'jumprope',
 ];
 
 export { TAU };

@@ -274,21 +274,35 @@ export function createDrawer(cb: DrawerCallbacks): {
 
   function renderDo(state: DrawerState): void {
     const sec = el.querySelector('[data-page="do"]')!;
-    const acts: { chain: string; label: string }[] = [
-      { chain: 'cookeat', label: 'Cook a meal' },
-      { chain: 'coffee', label: 'Make coffee' },
-      { chain: 'shower', label: 'Take a shower' },
-      { chain: 'tv', label: 'Watch TV' },
-      { chain: 'workout', label: 'Work out' },
-      { chain: 'read', label: 'Read a book' },
-      { chain: 'dance', label: 'Dance' },
-      { chain: 'clean', label: 'Clean up' },
-      { chain: 'sleep', label: 'Go to sleep' },
+    // Grouped by where it happens, so the whole house is on offer.
+    const groups: { floor: string; acts: { chain: string; label: string }[] }[] = [
+      { floor: 'Kitchen & living room', acts: [
+        { chain: 'cookeat', label: 'Cook a meal' }, { chain: 'coffee', label: 'Make coffee' },
+        { chain: 'snack', label: 'Grab a snack' }, { chain: 'wipeCounter', label: 'Wipe the counters' },
+        { chain: 'clean', label: 'Clean up' }, { chain: 'tv', label: 'Watch TV' },
+        { chain: 'read', label: 'Read a book' }, { chain: 'window', label: 'Look out the window' },
+        { chain: 'dance', label: 'Dance' }, { chain: 'soloDance', label: 'Dance around' },
+      ] },
+      { floor: 'Upstairs', acts: [
+        { chain: 'shower', label: 'Take a shower' }, { chain: 'mirror', label: 'Get ready' },
+        { chain: 'makeBed', label: 'Make the bed' }, { chain: 'foldClothes', label: 'Fold clothes' },
+        { chain: 'journal', label: 'Write in a journal' }, { chain: 'freelance', label: 'Freelance' },
+        { chain: 'meditate', label: 'Meditate' }, { chain: 'sleep', label: 'Go to sleep' },
+      ] },
+      { floor: 'Basement', acts: [
+        { chain: 'workout', label: 'Run & lift' }, { chain: 'jumprope', label: 'Skip rope' },
+        { chain: 'shadowbox', label: 'Shadowbox' }, { chain: 'stretch', label: 'Stretch' },
+        { chain: 'laundry', label: 'Do laundry' }, { chain: 'rummage', label: 'Go through boxes' },
+      ] },
+      { floor: 'Yard', acts: [
+        { chain: 'newspaper', label: 'Read the paper' }, { chain: 'tend', label: 'Tend the garden' },
+        { chain: 'rakeYard', label: 'Rake the yard' }, { chain: 'yardWorkout', label: 'Jumping jacks' },
+        { chain: 'phonePace', label: 'Call a friend' },
+      ] },
     ];
-    const buttons = acts.map(a =>
-      `<button data-order="${a.chain}" class="vh-order-btn">${a.label}</button>`
-    ).join('');
-    sec.innerHTML = `<div class="vh-do"><p>Tell ${state.simName} what to do:</p><div class="vh-order-grid">${buttons}</div></div>`;
+    const html = groups.map(g => `<h4 class="vh-order-floor">${g.floor}</h4><div class="vh-order-grid">${
+      g.acts.map(a => `<button data-order="${a.chain}" class="vh-order-btn">${a.label}</button>`).join('')}</div>`).join('');
+    sec.innerHTML = `<div class="vh-do"><p>Tell ${state.simName} what to do:</p>${html}</div>`;
     sec.querySelectorAll('[data-order]').forEach(b => {
       b.addEventListener('click', () => cb.onOrder((b as HTMLElement).dataset.order!));
     });

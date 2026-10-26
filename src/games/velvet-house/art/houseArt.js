@@ -1278,6 +1278,35 @@ export function createHouseArt(ctx0, opts = {}) {
         case 'parcel': { const a = hand[-1] || h, b = hand[1] || h; rr((a[0] + b[0]) / 2 - 5, (a[1] + b[1]) / 2 - 7, 10, 7, 1, '#C79A5B'); limb((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 7, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, '#E8D2A6', 1); break; }
         case 'cloth': { const a = hand[-1] || h, b = hand[1] || h; ctx.fillStyle = '#9EC5E8'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(b[0], b[1] + 4 + (p.open || 0) * 4); ctx.lineTo(a[0], a[1] + 4 + (p.open || 0) * 4); ctx.fill(); break; }
         case 'ball': circle(h[0] + 3, h[1] - 6, 2.4, '#E5484D'); break;
+        case 'paper': {
+          // A broadsheet held open in both hands; a page lifts when they turn it.
+          const a = hand[-1] || h, b = hand[1] || h, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+          rr(mx - 12, my - 10, 24, 12, 0.6, '#ECE8DF');
+          ctx.fillStyle = 'rgba(60,60,70,.35)'; for (let k = 0; k < 4; k++) ctx.fillRect(mx - 10 + (k % 2) * 11, my - 8 + Math.floor(k / 2) * 5, 9, 1.2);
+          ctx.fillStyle = 'rgba(60,60,70,.6)'; ctx.fillRect(mx - 10, my - 9.5, 20, 1.6);
+          if (p.flip > 0.05) { ctx.fillStyle = '#F6F3EC'; ctx.beginPath(); ctx.moveTo(mx, my - 10); ctx.lineTo(mx + 12 * (1 - p.flip * 2), my - 10 - p.flip * 4); ctx.lineTo(mx + 12 * (1 - p.flip * 2), my + 2 - p.flip * 4); ctx.lineTo(mx, my + 2); ctx.fill(); }
+          break;
+        }
+        case 'rake': {
+          const a = hand[-1] || h, end = local([0.75 - (p.pull || 0) * 0.25, 0, -1.04], 1);
+          limb(a[0], a[1], end[0], end[1], '#B08A5A', 1.6);
+          limb(end[0] - 6, end[1], end[0] + 6, end[1], '#6B6F7A', 1.6);
+          for (let k = -5; k <= 5; k += 2.5) limb(end[0] + k, end[1], end[0] + k, end[1] + 3, '#6B6F7A', 0.9);
+          // Leaves gathering in front of the rake.
+          for (let k = 0; k < 5; k++) circle(end[0] - 4 + k * 2.2, end[1] + 4 + (k % 2), 1.6, ['#D98F2B', '#C2632B', '#B5482A'][k % 3]);
+          break;
+        }
+        case 'apple': circle(h[0] + 1, h[1] - 3, 2.6, '#D2393E'); limb(h[0] + 1, h[1] - 5.6, h[0] + 1.6, h[1] - 7.2, '#5A3E2E', 0.8); break;
+        case 'rag': rr(h[0] - 3, h[1] - 1, 6, 3.5, 1, '#7FB2D9'); break;
+        case 'pen': limb(h[0], h[1], h[0] + 1.5, h[1] - 6, '#2E3B57', 1.1); break;
+        case 'comb': rr(h[0] - 0.8, h[1] - 6, 1.6, 7, 0.6, '#E48AAE'); break;
+        case 'rope': {
+          // The rope's loop, swinging over the head and under the feet.
+          const a = hand[-1] || h, b = hand[1] || h, mx = (a[0] + b[0]) / 2, s = Math.sin(p.turn || 0);
+          ctx.strokeStyle = '#E0A43A'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(a[0], a[1]);
+          ctx.quadraticCurveTo(mx, a[1] - s * 46 + 14, b[0], b[1]); ctx.stroke();
+          break;
+        }
         case 'book': {
           const a = hand[-1] || h, b = hand[1] || h, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
           rr(mx - 7, my - 6, 14, 8, 1, c.seed % 1 > 0.5 ? '#7A3B5C' : '#2F5D7C');
@@ -1419,6 +1448,12 @@ export function createHouseArt(ctx0, opts = {}) {
         return;
       }
       if (rig && rig.legs === 'swim') return; // underwater
+      if (rig && rig.legs === 'jack') {
+        // Jumping jacks: feet out to the sides and back together.
+        const out = (rig.spread || 0) * side, foot = P3(rx * out, ry * out, 0);
+        limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.8);
+        return;
+      }
 
       if (rig && rig.legs === 'tree' && side > 0) {
         // Tree pose: this foot rests against the other knee.
