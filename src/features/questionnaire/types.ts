@@ -1,4 +1,4 @@
-export type QuestionArchetype = 'tap' | 'preview' | 'grid' | 'swipe' | 'scrub' | 'beat';
+export type QuestionArchetype = 'tap' | 'preview' | 'grid' | 'swipe' | 'scrub' | 'beat' | 'tabs';
 
 export type ConfidenceTier = 'confirmed' | 'tapped' | 'play';
 
@@ -64,6 +64,8 @@ export interface BaseQuestion {
   chapter?: string;
   confidence?: ConfidenceTier;
   placeholder?: string;
+  /** Skip this question when true, going forward and back (a cusp question off a cusp, a birthday we already have). */
+  skipIf?: (ctx: QuestionContext) => boolean;
 }
 
 export interface TapQuestion extends BaseQuestion {
@@ -82,6 +84,27 @@ export interface GridQuestion extends BaseQuestion {
   minSelections?: number;
   allowCustom?: boolean;
   columns?: number;
+}
+
+/** One tab of a tabbed screen: its picks are saved under `answerKey`. */
+export interface TabsTab {
+  id: string;
+  label: string;
+  /** A line that brings a memory forward ("Something you'd regret never doing"). */
+  nudge?: string;
+  answerKey: string;
+  options: GridOption[];
+  allowCustom?: boolean;
+}
+
+/** Several multi-select groups on one screen, as tabs (interests, Someday). */
+export interface TabsQuestion extends BaseQuestion {
+  archetype: 'tabs';
+  subtitle?: string;
+  tabs: TabsTab[];
+  /** Picks needed across all tabs before Next; 0 makes the screen optional. */
+  minSelections?: number;
+  skipLabel?: string;
 }
 
 export interface SwipeQuestion extends BaseQuestion {
@@ -104,7 +127,7 @@ export interface BeatQuestion extends BaseQuestion {
   beat: BeatConfig;
 }
 
-export type Question = TapQuestion | GridQuestion | SwipeQuestion | ScrubQuestion | PreviewQuestion | BeatQuestion;
+export type Question = TapQuestion | GridQuestion | SwipeQuestion | ScrubQuestion | PreviewQuestion | BeatQuestion | TabsQuestion;
 
 export interface Chapter {
   id: string;
