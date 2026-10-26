@@ -4,7 +4,7 @@ import { migrateAvatarConfig } from '../../utils/avatarConfig';
 import type { AvatarConfigV2, HairStyle } from '../../types/avatar-v2';
 import { AvatarV2 } from '../../components/AvatarV2';
 import { handSvg, HAND_POSES } from '../../renderers/handRenderer';
-import { outfitItem, type AvatarUnlocks } from '../../data/avatarItems';
+import { outfitItem, resolveBottom, type AvatarUnlocks } from '../../data/avatarItems';
 import { resolveLookForDisplay } from '../../data/avatarCatalog';
 
 // What Velvet Sims needs to know about the player and their companion: names,
@@ -92,9 +92,6 @@ export function buildBodySprites(config: AvatarConfigV2): Record<string, string>
 const SIGNATURE_STYLE: Record<string, string> = {
   tee: 'tee', linen: 'linen', suit: 'blazer', chef: 'chef', labcoat: 'labcoat', pirate: 'pirate',
 };
-const SIGNATURE_BOTTOM: Record<string, string> = {
-  tee: '#3D5B8A', linen: '#6B5A45', chef: '#2B2B30', labcoat: '#3A4250', pirate: '#4A3A2A',
-};
 
 export function signatureOutfit(config: AvatarConfigV2) {
   const item = outfitItem(config.outfit);
@@ -103,7 +100,7 @@ export function signatureOutfit(config: AvatarConfigV2) {
   // A pirate is a linen shirt under a vest: the vest colour becomes the accent.
   const top = item.id === 'pirate' ? '#EFE6D2' : color;
   const second = item.id === 'pirate' ? color : accent;
-  const bottom = item.id === 'suit' ? color : SIGNATURE_BOTTOM[item.id] ?? '#3D5B8A';
+  const bottom = resolveBottom(config).color;
   const style = SIGNATURE_STYLE[item.id] ?? 'tee';
   return { style, color: top, accent: second, bottom, key: [style, top, second, bottom].join('|') };
 }
