@@ -1,6 +1,6 @@
 // Canvas rendering for one Momentum frame. Pure drawing: reads game state, never advances it
 // (apart from fading short-lived visual effects).
-import { MAX_BOOST_CHARGES, PLATFORM_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH } from './physics';
+import { MAX_BOOST_CHARGES, PLATFORM_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, PERFECT_WINDOW_FRAMES, OVERDRIVE_FRAMES, OVERDRIVE_SCORE_MULTIPLIER, comboMultiplier } from './physics';
 import { type Platform, type Orb, PHASE_CYCLE_FRAMES, PHASE_SOLID_FRAMES } from './levelGen';
 import { type GhostRun, ghostPositionAt } from './ghost';
 import type { Skin } from './skins';
@@ -24,6 +24,9 @@ export interface RenderState {
   isTouchDevice: boolean;
   chainRef: Ref<number>;
   comboRef: Ref<number>;
+  landingFrameRef: Ref<number>;
+  perfectedThisBounceRef: Ref<boolean>;
+  overdriveRef: Ref<number>;
   elapsedTimeRef: Ref<number>;
   endlessRef: Ref<unknown>;
   flashRef: Ref<number>;
@@ -49,7 +52,7 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
   const {
     GAME_WIDTH, GAME_HEIGHT, levelData, player, platforms, camY, isTrueFalling, isRisingFast,
     level, gameMode, timeRemaining, isTouchDevice,
-    chainRef, comboRef, elapsedTimeRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
+    chainRef, comboRef, elapsedTimeRef, landingFrameRef, perfectedThisBounceRef, overdriveRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
     orbsRef, particlesRef, popupRef, runModeRef, scoreRef, shakeRef, simFrameRef, skinRef, speedLinesRef,
     startYRef, tapFxRef, trailRef,
   } = r;
@@ -273,7 +276,29 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
       ctx.beginPath();
       ctx.ellipse(Math.min(Math.max(ballCenterX, target.x), target.x + target.width), target.y + camY - 1, PLAYER_WIDTH * 0.6, 3, 0, 0, Math.PI * 2);
       ctx.fill();
+      // Get-ready ring: closes in as touchdown approaches, so the perfect timing is readable
+      const framesToLand = player.vy > 0 ? dist / Math.max(1, player.vy) : Infinity;
+      if (framesToLand < 14) {
+        const k = framesToLand / 14;
+        ctx.strokeStyle = `rgba(255,224,102,${0.8 - k * 0.5})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ballCenterX, player.y + PLAYER_HEIGHT / 2 + camY, PLAYER_WIDTH * (0.7 + k * 1.3), 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
+  }
+
+  // Perfect window open: a bright ring on the ball until the window closes
+  const framesSinceTouchdown = simFrameRef.current - landingFrameRef.current;
+  if (framesSinceTouchdown >= 0 && framesSinceTouchdown <= PERFECT_WINDOW_FRAMES && !perfectedThisBounceRef.current) {
+    ctx.strokeStyle = '#ffe066';
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 1 - framesSinceTouchdown / (PERFECT_WINDOW_FRAMES + 1);
+    ctx.beginPath();
+    ctx.arc(player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT / 2 + camY, PLAYER_WIDTH * 0.75, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 
   const boostTint = levelData.boostTrailColor || '#00ffff';
@@ -349,7 +374,8 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
   }
 
   const skin = skinRef.current;
-  const skinFill = skin.rainbow ? `hsl(${(simFrameRef.current * 3) % 360}, 90%, 65%)` : skin.fill;
+  const inOverdrive = overdriveRef.current > 0;
+  const skinFill = skin.rainbow || inOverdrive ? `hsl(${(simFrameRef.current * (inOverdrive ? 8 : 3)) % 360}, 90%, 65%)` : skin.fill;
   ctx.fillStyle = player.isBoosting ? (skin.trail || levelData.boostTrailColor || '#00ffff') : (skinFill || levelData.playerColor || '#ffffff');
   ctx.beginPath();
   ctx.arc(0, 0, PLAYER_WIDTH/2, 0, Math.PI * 2);
@@ -404,7 +430,8 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
     ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
     ctx.globalAlpha = 0.7 + Math.sin(Date.now() * 0.01) * 0.3;
     ctx.font = 'bold 13px system-ui';
-    ctx.fillText(`${comboRef.current}x COMBO`, GAME_WIDTH - 40, 106);
+    const mult = comboMultiplier(comboRef.current) * (overdriveRef.current > 0 ? OVERDRIVE_SCORE_MULTIPLIER : 1);
+    ctx.fillText(`×${mult.toFixed(1)} COMBO`, GAME_WIDTH - 40, 106);
     ctx.globalAlpha = 1;
   }
 
@@ -455,6 +482,24 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
     ctx.globalAlpha = 1;
     return true;
   });
+
+  if (overdriveRef.current > 0) {
+    // Overdrive: pulsing rainbow frame and a countdown bar under the timer
+    const hue = (simFrameRef.current * 4) % 360;
+    const pulse = 0.45 + Math.sin(simFrameRef.current * 0.3) * 0.25;
+    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${pulse})`;
+    ctx.lineWidth = 10;
+    ctx.strokeRect(5, 5, GAME_WIDTH - 10, GAME_HEIGHT - 10);
+    const barW = 200;
+    const barX = (GAME_WIDTH - barW) / 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(barX, 44, barW, 6);
+    ctx.fillStyle = `hsl(${hue}, 100%, 62%)`;
+    ctx.fillRect(barX, 44, barW * Math.min(1, overdriveRef.current / OVERDRIVE_FRAMES), 6);
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('OVERDRIVE ×2', GAME_WIDTH / 2, 64);
+  }
 
   ctx.restore();
 
