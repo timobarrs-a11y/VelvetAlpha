@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 
 // The editors never touch the network here; the unlock, favourites and analytics modules are stubbed.
 vi.mock('../../hooks/useAvatarUnlocks', () => ({ useAvatarUnlocks: () => ({ member: false, earned: [], owned: [] }) }));
@@ -52,5 +52,45 @@ describe.each([
     expect(tokens(column)).toContain('flex-none');
     expect(tokens(column)).not.toContain('flex-1');
     expect(tokens(column)).toContain('lg:flex-1');
+  });
+});
+
+// Words must never be cut off on a phone. Four fixed columns squeeze each button to ~70px, which is
+// narrower than "Downturned", and `truncate` replaces the end of a description with "...".
+// Below the sm breakpoint option grids size by the width of a word; the fixed 3 and 4 columns
+// only apply from sm up, and labels wrap instead of truncating.
+describe('long words on a phone', () => {
+  const allTokens = (root: ParentNode) => [...root.querySelectorAll('*')].flatMap(e => (e.getAttribute('class') ?? '').split(/\s+/));
+  const check = (tokens: string[]) => {
+    expect(tokens.filter(t => /^grid-cols-[34]$/.test(t)), 'bare 3 or 4 column grid').toEqual([]);
+    expect(tokens.filter(t => t === 'truncate'), 'truncating label').toEqual([]);
+  };
+
+  it('AvatarCreatorV2: no tab uses a bare 3 or 4 column grid or truncates a label', () => {
+    const { container } = render(<AvatarCreatorV2 favoritesNamespace="t" unlocks={{ member: false, earned: [], owned: [] }} />);
+    let sawAutoFill = false;
+    for (const name of ['Presets', 'Face', 'Hair', 'Body', 'Wardrobe', 'Accessories']) {
+      const tab = [...container.querySelectorAll('button')].find(b => b.textContent?.replace('\u2726', '').trim() === name)!;
+      fireEvent.click(tab);
+      const tokens = allTokens(container);
+      check(tokens);
+      sawAutoFill ||= tokens.some(t => t.startsWith('grid-cols-[repeat(auto-fill'));
+    }
+    expect(sawAutoFill).toBe(true);
+  });
+
+  it('GuidedAvatarFlow: every step does the same', () => {
+    const { container } = render(<GuidedAvatarFlow config={migrateAvatarConfig({ gender: 'male' })} onChange={() => {}} onSwitchToAdvanced={() => {}} />);
+    for (let i = 0; i < 4; i++) {
+      check(allTokens(container));
+      const next = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Next');
+      if (next) fireEvent.click(next);
+    }
+  });
+
+  it('the tab row scrolls without a scrollbar and marks the open tab', () => {
+    const { container } = render(<AvatarCreatorV2 favoritesNamespace="t" unlocks={{ member: false, earned: [], owned: [] }} />);
+    expect(container.querySelector('.scrollbar-hide')).not.toBeNull();
+    expect(container.querySelectorAll('[data-active="true"]')).toHaveLength(1);
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Shuffle, Undo2, Redo2, RotateCcw, Bookmark, BookmarkCheck, X, Sparkles, Lock } from 'lucide-react';
 import { AvatarV2 } from './AvatarV2';
 import {
@@ -85,7 +85,7 @@ function OptionButton({
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 border ${
+      className={`px-3 py-2 rounded-lg text-sm font-medium leading-tight min-w-0 [overflow-wrap:anywhere] transition-all duration-150 border ${
         selected
           ? 'bg-sky-600 border-sky-500 text-white shadow-sm'
           : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
@@ -112,7 +112,7 @@ function LockableOption({
     <button
       disabled
       title={`Unlocks with: ${lockLabel(lock)}`}
-      className="px-3 py-2 rounded-lg text-sm font-medium border border-dashed border-white/10 bg-white/[0.02] text-gray-500 cursor-not-allowed flex flex-col items-center gap-0.5"
+      className="px-3 py-2 rounded-lg text-sm font-medium leading-tight min-w-0 [overflow-wrap:anywhere] border border-dashed border-white/10 bg-white/[0.02] text-gray-500 cursor-not-allowed flex flex-col items-center gap-0.5"
     >
       <span className="flex items-center gap-1"><Lock className="w-3 h-3" />{label}</span>
       <span className="text-[10px] text-amber-500/80 leading-none">{lockLabel(lock)}</span>
@@ -225,6 +225,18 @@ export function AvatarCreatorV2({
 
   const [config, setConfig] = useState<AvatarConfigV2>(getInitial);
   const [tab, setTab] = useState<Tab>('face');
+  // The tab row scrolls sideways on a phone: keep the chosen tab in view, and
+  // fade the right edge only while there are more tabs out of sight.
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [moreTabs, setMoreTabs] = useState(false);
+  const checkTabs = useCallback(() => {
+    const el = tabsRef.current;
+    if (el) setMoreTabs(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+  }, []);
+  useEffect(() => {
+    tabsRef.current?.querySelector('[data-active="true"]')?.scrollIntoView?.({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    checkTabs();
+  }, [tab, checkTabs]);
   const history = useRef<AvatarConfigV2[]>([getInitial()]);
   const historyIdx = useRef<number>(0);
 
@@ -317,10 +329,10 @@ export function AvatarCreatorV2({
           >
             <span className="text-xl flex-shrink-0 w-8 text-center">{preset.icon}</span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white group-hover:text-sky-300 transition-colors truncate">
+              <p className="text-sm font-semibold text-white group-hover:text-sky-300 transition-colors leading-snug">
                 {preset.name}
               </p>
-              <p className="text-xs text-gray-500 truncate">{preset.description}</p>
+              <p className="text-xs text-gray-500 leading-snug">{preset.description}</p>
             </div>
             <span className="text-xs text-sky-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
               Apply
@@ -352,7 +364,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Eye Shape">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {EYE_SHAPES.map(v => (
             <OptionButton key={v.value} label={v.label}
               selected={config.eyeShape === v.value} onClick={() => update({ eyeShape: v.value })} />
@@ -361,7 +373,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Eyebrows">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {(['natural', 'arched', 'straight', 'rounded', 'thick', 'bushy', 'thin'] as EyebrowShape[]).map(v => (
             <OptionButton key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
               selected={config.eyebrowShape === v} onClick={() => update({ eyebrowShape: v })} />
@@ -370,7 +382,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Nose Shape">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {NOSE_SHAPES.map(v => (
             <OptionButton key={v.value} label={v.label}
               selected={config.noseShape === v.value} onClick={() => update({ noseShape: v.value })} />
@@ -379,7 +391,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Face Shape">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {FACE_SHAPES.map(v => (
             <OptionButton key={v.value} label={v.label}
               selected={config.faceShape === v.value} onClick={() => update({ faceShape: v.value })} />
@@ -426,7 +438,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Eyeliner">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {([
             { value: 'none', label: 'None' },
             { value: 'thin', label: 'Thin' },
@@ -441,7 +453,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Freckles">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {([
             { value: 'none', label: 'None' },
             { value: 'light', label: 'Light' },
@@ -455,7 +467,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Blush">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {(['none', 'soft', 'bold'] as Blush[]).map(v => (
             <OptionButton key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
               selected={config.blush === v} onClick={() => update({ blush: v })} />
@@ -464,7 +476,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Lip Shape">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {(['natural', 'full', 'thin', 'heart'] as LipShape[]).map(v => (
             <OptionButton key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
               selected={config.lipShape === v} onClick={() => update({ lipShape: v })} />
@@ -490,7 +502,7 @@ export function AvatarCreatorV2({
           {HAIRSTYLE_GROUPS.map(group => (
             <div key={group.label}>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">{group.label}</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
                 {group.styles.map(value => (
                   <LockableOption key={value} label={hairstyles.find(h => h.value === value)?.label ?? value}
                     lock={canUse(itemId('hairStyle', value), unlocks)}
@@ -503,7 +515,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Hair Texture">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {HAIR_TEXTURES.map(v => (
             <OptionButton key={v.value} label={v.label}
               selected={config.hairTexture === v.value} onClick={() => update({ hairTexture: v.value })} />
@@ -536,7 +548,7 @@ export function AvatarCreatorV2({
       )}
 
       <Section label="Facial Hair">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([
             { value: 'none', label: 'None' },
             { value: 'stubble', label: 'Stubble' },
@@ -601,10 +613,10 @@ export function AvatarCreatorV2({
       >
         <span className={`text-xl flex-shrink-0 w-8 text-center ${lock.ok ? '' : 'grayscale opacity-60'}`}>{kit.icon}</span>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-semibold truncate ${lock.ok ? 'text-white group-hover:text-sky-300' : 'text-gray-500'}`}>
+          <p className={`text-sm font-semibold leading-snug ${lock.ok ? 'text-white group-hover:text-sky-300' : 'text-gray-500'}`}>
             {kit.label}
           </p>
-          <p className="text-xs text-gray-500 truncate">{kit.description}</p>
+          <p className="text-xs text-gray-500 leading-snug">{kit.description}</p>
         </div>
         {!lock.ok && (
           <span className="flex items-center gap-1 text-[11px] text-amber-500/80 flex-shrink-0">
@@ -630,7 +642,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Outfit">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {OUTFITS.map(o => (
             <LockableOption key={o.id} label={o.label} lock={canUse(itemId('outfit', o.id), unlocks)}
               selected={currentOutfit.id === o.id}
@@ -660,7 +672,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Headwear">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {HEADWEAR.map(h => (
             <LockableOption key={h.id} label={h.label} lock={canUse(itemId('headwear', h.id), unlocks)}
               selected={(config.headwear ?? 'none') === h.id}
@@ -670,7 +682,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Face">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {FACE_ACCESSORIES.map(f => (
             <LockableOption key={f.id} label={f.label} lock={canUse(itemId('faceAccessory', f.id), unlocks)}
               selected={(config.faceAccessory ?? 'none') === f.id}
@@ -684,7 +696,7 @@ export function AvatarCreatorV2({
   const accessoriesTab = (
     <div className="space-y-5">
       <Section label="Glasses">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([
             { value: 'none', label: 'None' },
             { value: 'round', label: 'Round' },
@@ -711,7 +723,7 @@ export function AvatarCreatorV2({
       )}
 
       <Section label="Earrings">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([
             { value: 'none', label: 'None' },
             { value: 'studs', label: 'Studs' },
@@ -726,7 +738,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Nose Piercing">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([
             { value: 'none', label: 'None' },
             { value: 'nostril_stud', label: 'Nostril Stud' },
@@ -753,7 +765,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Necklace">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([
             { value: 'none', label: 'None' },
             { value: 'chain', label: 'Chain' },
@@ -826,7 +838,7 @@ export function AvatarCreatorV2({
             ))}
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
             <button onClick={randomize} title="Randomize"
               className="flex items-center justify-center py-2 rounded-lg bg-sky-600/20 border border-sky-500/30 text-sky-400 hover:bg-sky-600/30 hover:text-sky-300 transition-all">
               <Shuffle className="w-4 h-4" />
@@ -934,11 +946,13 @@ export function AvatarCreatorV2({
               </button>
             </div>
           </div>
-          <div className="flex border-b border-white/5 flex-shrink-0 overflow-x-auto">
+          <div className="relative flex-shrink-0 border-b border-white/5">
+          <div ref={tabsRef} onScroll={checkTabs} className="flex overflow-x-auto scrollbar-hide">
             {TABS.map(t => (
               <button key={t.id}
+                data-active={tab === t.id}
                 onClick={() => setTab(t.id)}
-                className={`flex-shrink-0 lg:flex-1 lg:min-w-0 px-4 py-3.5 text-sm font-semibold tracking-wide transition-all border-b-2 whitespace-nowrap ${
+                className={`flex-shrink-0 lg:flex-1 lg:min-w-0 px-3 sm:px-4 py-3.5 text-sm font-semibold tracking-wide transition-all border-b-2 whitespace-nowrap ${
                   tab === t.id
                     ? t.id === 'presets'
                       ? 'text-amber-400 border-amber-500'
@@ -949,6 +963,10 @@ export function AvatarCreatorV2({
                 {t.id === 'presets' ? '✦ Presets' : t.label}
               </button>
             ))}
+          </div>
+          {moreTabs && (
+            <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#080d14] to-transparent lg:hidden" />
+          )}
           </div>
         </div>
 

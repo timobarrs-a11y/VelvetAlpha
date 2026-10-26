@@ -41,7 +41,7 @@ function OptionBtn({ label, selected, onClick }: { label: string; selected: bool
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 border ${
+      className={`px-3 py-2 rounded-lg text-sm font-medium leading-tight min-w-0 [overflow-wrap:anywhere] transition-all duration-150 border ${
         selected
           ? 'bg-sky-600 border-sky-500 text-white shadow-sm'
           : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
@@ -120,7 +120,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Eye Shape">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {EYE_SHAPES.map(v => (
             <OptionBtn key={v.value} label={v.label}
               selected={config.eyeShape === v.value} onClick={() => update({ eyeShape: v.value })} />
@@ -129,7 +129,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Eyebrows">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {(['natural', 'arched', 'straight', 'thick', 'thin'] as EyebrowShape[]).map(v => (
             <OptionBtn key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
               selected={config.eyebrowShape === v} onClick={() => update({ eyebrowShape: v })} />
@@ -138,7 +138,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Nose Shape">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {NOSE_SHAPES.map(v => (
             <OptionBtn key={v.value} label={v.label}
               selected={config.noseShape === v.value} onClick={() => update({ noseShape: v.value })} />
@@ -147,7 +147,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Face Shape">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {FACE_SHAPES.map(v => (
             <OptionBtn key={v.value} label={v.label}
               selected={config.faceShape === v.value} onClick={() => update({ faceShape: v.value })} />
@@ -156,7 +156,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Lip Shape">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {(['natural', 'full', 'thin', 'heart'] as LipShape[]).map(v => (
             <OptionBtn key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
               selected={config.lipShape === v} onClick={() => update({ lipShape: v })} />
@@ -183,7 +183,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Eyeliner">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {([
             { value: 'none', label: 'None' }, { value: 'thin', label: 'Thin' },
             { value: 'winged', label: 'Winged' }, { value: 'bold', label: 'Bold' },
@@ -196,7 +196,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Blush">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {(['none', 'soft', 'bold'] as Blush[]).map(v => (
             <OptionBtn key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
               selected={config.blush === v} onClick={() => update({ blush: v })} />
@@ -205,7 +205,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Freckles">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-4 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'light', label: 'Light' }, { value: 'heavy', label: 'Heavy' }, { value: 'beauty_mark', label: 'Beauty Mark' }] as Array<{ value: Freckles; label: string }>).map(o => (
             <OptionBtn key={o.value} label={o.label}
               selected={config.freckles === o.value} onClick={() => update({ freckles: o.value })} />
@@ -218,7 +218,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
   const hairContent = (
     <div className="space-y-5">
       <Sect label="Hairstyle">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {hairstyles.map(s => (
             <OptionBtn key={s.value} label={s.label}
               selected={config.hairStyle === s.value} onClick={() => update({ hairStyle: s.value as AvatarConfigV2['hairStyle'] })} />
@@ -227,7 +227,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Hair Texture">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {HAIR_TEXTURES.map(v => (
             <OptionBtn key={v.value} label={v.label}
               selected={config.hairTexture === v.value} onClick={() => update({ hairTexture: v.value })} />
@@ -245,7 +245,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Facial Hair">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'stubble', label: 'Stubble' }, { value: 'beard', label: 'Beard' }, { value: 'goatee', label: 'Goatee' }, { value: 'mustache', label: 'Mustache' }] as Array<{ value: FacialHair; label: string }>).map(o => (
             <OptionBtn key={o.value} label={o.label}
               selected={config.facialHair === o.value} onClick={() => update({ facialHair: o.value })} />
@@ -279,7 +279,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
   const accessoriesContent = (
     <div className="space-y-5">
       <Sect label="Glasses">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'round', label: 'Round' }, { value: 'square', label: 'Square' }, { value: 'cat-eye', label: 'Cat-Eye' }, { value: 'aviator', label: 'Aviator' }] as Array<{ value: Glasses; label: string }>).map(o => (
             <OptionBtn key={o.value} label={o.label}
               selected={config.glasses === o.value} onClick={() => update({ glasses: o.value })} />
@@ -300,7 +300,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       )}
 
       <Sect label="Earrings">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'studs', label: 'Studs' }, { value: 'hoops', label: 'Hoops' }, { value: 'dangles', label: 'Dangles' }, { value: 'gauges', label: 'Gauges' }] as Array<{ value: Earrings; label: string }>).map(o => (
             <OptionBtn key={o.value} label={o.label}
               selected={config.earrings === o.value} onClick={() => update({ earrings: o.value })} />
@@ -309,7 +309,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Nose Piercing">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'nostril_stud', label: 'Nostril Stud' }, { value: 'nose_ring', label: 'Nose Ring' }] as Array<{ value: NosePiercing; label: string }>).map(o => (
             <OptionBtn key={o.value} label={o.label}
               selected={config.nosePiercing === o.value} onClick={() => update({ nosePiercing: o.value })} />
@@ -327,7 +327,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
       </Sect>
 
       <Sect label="Necklace">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:grid-cols-3 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'chain', label: 'Chain' }, { value: 'choker', label: 'Choker' }, { value: 'pendant', label: 'Pendant' }, { value: 'pearls', label: 'Pearls' }] as Array<{ value: Necklace; label: string }>).map(o => (
             <OptionBtn key={o.value} label={o.label}
               selected={config.necklace === o.value} onClick={() => update({ necklace: o.value })} />
