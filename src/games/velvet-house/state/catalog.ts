@@ -4,6 +4,7 @@
  */
 
 import { CLOTHES, clothId } from './clothing';
+import { PICTURE_WALLS } from './pictureWalls';
 
 export interface CatalogEntry {
   id: string;
@@ -117,6 +118,9 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-blossom', 'Blossom', 'blossom', 100, ['soft', 'natural', 'playful']),
   wallpaper('paper-palms', 'Palms', 'palms', 100, ['natural', 'playful', 'cool']),
   wallpaper('paper-jungle-night', 'Jungle night', 'jungle-night', 120, ['bold', 'natural', 'cool']),
+
+  // Pictures on the wall: photos and gradients, the same ones as the app's wallpaper picker
+  ...PICTURE_WALLS.map(w => wallpaper(`paper-${w.id}`, w.name, w.id, w.price, w.tags)),
 
   // Floors
   floor('floor-wood', 'Oak plank', 'wood', 120, ['natural', 'warm', 'cozy']),

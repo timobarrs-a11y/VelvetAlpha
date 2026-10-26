@@ -60,6 +60,12 @@ export interface HouseArt {
   applyPaint(level: number, color: string): void;
   /** Sets the wallpaper pattern for a floor level. */
   applyWallpaper(level: number, pattern: string): void;
+  /** Makes pictures (photos by url, or gradients by colour stops) available as wallpaper ids. */
+  registerPictures(list: Array<{ id: string; base: string; url?: string; stops?: Array<[number, string]> }>): void;
+  /** The paint, wallpaper and floor of each level, for saving. */
+  getLooks(): Array<{ paint: string; paper: string | null; floor: string }>;
+  /** The drawing recipe for a wallpaper or floor id, for shop thumbnails. */
+  lookInfo(kind: 'paper' | 'floor', key: string): { pat?: string; kind?: string; base?: string; ink?: string; ink2?: string; a?: string; b?: string; line?: string; url?: string; stops?: Array<[number, string]> } | null;
   /** Sets the floor type for a floor level. */
   applyFloor(level: number, floor: string): void;
   toggleObjectLight(id: string): boolean;

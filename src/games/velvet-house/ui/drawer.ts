@@ -5,6 +5,7 @@
 import { CATALOG, TABS, itemsForTab, lockOf, type CatalogEntry } from '../state/catalog';
 import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals';
 import { careerTitle } from '../state/career';
+import { paperCss, floorCss, type LookInfo } from './swatch';
 
 import { clockText, season, weekday, DAYS } from '../state/time';
 import type { OwnedCloth } from '../state/clothing';
@@ -20,6 +21,8 @@ export interface DrawerCallbacks {
   onArrangeRotate?: () => void;
   onArrangeColour?: () => void;
   onArrangeFloor?: (level: number) => void;
+  // Shop: which floor Paint, Wallpaper and Floors are going on.
+  onPickFloor?: (level: number) => void;
   onBuy: (item: CatalogEntry, color?: string) => void;
   onOrder: (chain: string) => void;
   onPayBill: () => void;
@@ -67,6 +70,11 @@ export interface ArrangeState {
 }
 
 export interface DrawerState {
+  // The floor on screen, and how to draw a wallpaper or floor id as a preview.
+  level?: number;
+  lookInfo?: (kind: 'paper' | 'floor', key: string) => LookInfo | null;
+  pictureThumbs?: Record<string, string>;
+  levelNames?: string[];
   arrange?: ArrangeState | null;
   page: DrawerPage;
   shopTab: string;
@@ -238,6 +246,14 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelectorAll<HTMLElement>('[data-arr-floor]').forEach(b => b.addEventListener('click', () => cb.onArrangeFloor?.(Number(b.dataset.arrFloor))));
   }
 
+  let shopHtml = '';
+  function iconStyle(item: CatalogEntry, state: DrawerState): string {
+    if (item.icon === 'paint' && item.color) return `background:${item.color}`;
+    if (item.icon === 'paper' && item.pattern) return `background:${paperCss(state.lookInfo?.('paper', item.pattern) ?? null, state.pictureThumbs?.[item.pattern]).replace(/"/g, "'")}`;
+    if (item.icon === 'floor' && item.floor) return `background:${floorCss(state.lookInfo?.('floor', item.floor) ?? null)}`;
+    return '';
+  }
+
   function renderShop(state: DrawerState): void {
     const sec = el.querySelector('[data-page="shop"]')!;
     const tab = currentTab || state.shopTab || 'Today';
@@ -246,6 +262,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     ).join('');
 
     if (tab === SALON_TAB) {
+      shopHtml = '';
       renderSalon(sec, tabBtns, state);
       return;
     }
@@ -262,7 +279,7 @@ export function createDrawer(cb: DrawerCallbacks): {
         : '';
       const lockHint = locked ? `<span class="vh-lock">${lock!.hint}</span>` : '';
       return `<div class="vh-shop-card ${cls}" data-item="${item.id}">
-        <div class="vh-shop-icon" data-icon="${item.id}"></div>
+        <div class="vh-shop-icon" data-icon="${item.id}" style="${iconStyle(item, state)}"></div>
         <div class="vh-shop-info">
           <strong>${item.name}</strong>
           ${item.desc ? `<span class="vh-shop-desc">${item.desc}</span>` : ''}
@@ -276,7 +293,16 @@ export function createDrawer(cb: DrawerCallbacks): {
       </div>`;
     }).join('');
 
-    sec.innerHTML = `<div class="vh-shop-tabs">${tabBtns}</div><div class="vh-shop-list">${cards || '<p class="vh-empty">Nothing here yet.</p>'}</div>`;
+    const styling = tab === 'Paint' || tab === 'Wallpaper' || tab === 'Floors';
+    const floorPick = styling && state.levelNames
+      ? `<div class="vh-floorpick"><span>Goes on</span>${[0, 1, 2].map(l => `<button data-pickfloor="${l}" class="${state.level === l ? 'vh-active' : ''}">${esc(state.levelNames![l])}</button>`).join('')}</div>`
+      : '';
+    const html = `<div class="vh-shop-tabs">${tabBtns}</div>${floorPick}<div class="vh-shop-list">${cards || '<p class="vh-empty">Nothing here yet.</p>'}</div>`;
+    // Unchanged since the last refresh: leave it alone, so picture previews aren't reloaded several times a second.
+    if (html === shopHtml && sec.firstElementChild) return;
+    shopHtml = html;
+    sec.innerHTML = html;
+    sec.querySelectorAll<HTMLElement>('[data-pickfloor]').forEach(b => b.addEventListener('click', () => cb.onPickFloor?.(Number(b.dataset.pickfloor))));
 
     sec.querySelectorAll('[data-tab]').forEach(b => {
       b.addEventListener('click', () => { currentTab = (b as HTMLElement).dataset.tab!; render(state); });

@@ -34,6 +34,7 @@ import {
   talk, rememberChat, remember,
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
+import { PICTURE_WALLS } from './state/pictureWalls';
 import { createDrawer, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
 import { clothByKey, clothId, wearOnAgent, validOutfit, type OwnedCloth } from './state/clothing';
 import { validHeadSvgs, loadHeadImages } from './state/headSprites';
@@ -266,6 +267,8 @@ function boot(): void {
     deferredLights: () => deferredLights,
     quality: () => qualityManager.getTier(),
   });
+  art.registerPictures(PICTURE_WALLS);
+  const pictureThumbs: Record<string, string> = Object.fromEntries(PICTURE_WALLS.filter(w => w.thumb).map(w => [w.id, w.thumb]));
   art.applySave(save);
   const savedMode = (save as { wallMode?: string })?.wallMode;
   const view = {
@@ -366,6 +369,7 @@ function boot(): void {
     onArrangeRotate: () => rotateSelected(),
     onArrangeColour: () => recolourHeld(),
     onArrangeFloor: (lv) => carryTo(lv),
+    onPickFloor: (lv) => setLevel(lv),
     onBuy: (item, color) => handleBuy(item, color),
     onBuyAvatarItem: (id) => handleBuyAvatarItem(id),
     onOrder: (chain) => handleOrder(chain),
@@ -542,6 +546,8 @@ function boot(): void {
     selectedObj = o;
     if (!o) return;
     if (o.level !== view.level) { selectedObj = null; setLevel(o.level); selectedObj = o; }
+    // On a phone held upright the whole house is small: close in on the piece so it's easy to drag.
+    if (canvas.getBoundingClientRect().width < 560 && cam.tz < 1.6) cam.tz = 1.8;
     if (cam.tz > 1.05) {
       const [fw, fd] = [TYPES[o.type].W, TYPES[o.type].D];
       const [px, py] = art.project(o.x + fw / 2, o.y + fd / 2, (TYPES[o.type].h ?? 1) / 2);
@@ -884,6 +890,10 @@ function boot(): void {
 
   function handleBuy(item: CatalogEntry, color?: string): void {
     const price = item.price;
+    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor') && view.level === 3) {
+      log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
+      return;
+    }
     if (!spend(world.household, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
     log(`Bought ${item.name} for $${price}.`);
@@ -1030,7 +1040,7 @@ function boot(): void {
         mayaSpent: { day: world.day, amt: 0 },
         style, companion: companionCfg,
         changes: [], pets: [], dirt: [],
-        LOOKS: [], ROOMLOOK: [{},{},{},{}], WALLOBJS: [],
+        LOOKS: art.getLooks(), ROOMLOOK: [{},{},{},{}], WALLOBJS: [],
         support: 0, together: 0,
         dishes: world.household.dishes, petFood: 6, petSeq: 0,
         dirtId: 0, changeSeq: 0, projectAt: null,
@@ -1068,6 +1078,7 @@ function boot(): void {
     };
     const drawerState: DrawerState = {
       arrange: arranging ? arrangeState() : null,
+      level: view.level, levelNames: [...LEVEL_NAMES], lookInfo: art.lookInfo, pictureThumbs,
       page: drawerPage, shopTab: 'Today',
       money: world.household.money, bond, day: world.day,
       minutes: world.minutes, owned, careerLevel: 0, careerPerf: 0,

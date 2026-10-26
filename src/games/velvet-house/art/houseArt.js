@@ -691,8 +691,43 @@ export function createHouseArt(ctx0, opts = {}) {
 
   function wallPoint(plane, u, z) { return plane === 'L' ? [0, u, z] : plane === 'B' ? [u, 0, z] : plane === 'R' ? [WX, u, z] : [u, WY, z]; }
   const planeLen = (pl) => (pl === 'L' || pl === 'R' ? WY : WX);
+  // A picture hung across a whole wall (a photo or a gradient), cropped to the
+  // wall's shape and laid onto it. Photos load the first time a wall wants one.
+  function paperImage(S) {
+    if (S.img) return S.img;
+    if (S.stops) {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+      const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+      S.stops.forEach(([at, col]) => gr.addColorStop(at, col)); g.fillStyle = gr; g.fillRect(0, 0, 512, 256);
+      return (S.img = c);
+    }
+    if (S.url && !S.loading) {
+      S.loading = true;
+      const im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = () => { S.img = im; }; im.onerror = () => { S.loading = false; S.failed = true; };
+      im.src = S.url;
+    }
+    return null;
+  }
+  function drawImagePaper(S, plane, len) {
+    const im = paperImage(S); if (!im) return;
+    const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height; if (!w || !h) return;
+    // "Cover": the biggest slice of the picture with the wall's proportions.
+    const want = len / WH; let cw = w, ch = h; if (w / h > want) cw = h * want; else ch = w / want;
+    const cx = (w - cw) / 2, cy = (h - ch) / 2, ku = len / cw, kz = WH / ch;
+    const o = iso(...wallPoint(plane, 0, 0)), du = iso(...wallPoint(plane, 1, 0)), dz = iso(...wallPoint(plane, 0, 1));
+    const ux = du[0] - o[0], uy = du[1] - o[1], zx = dz[0] - o[0], zy = dz[1] - o[1];
+    ctx.save();
+    ctx.beginPath(); [[0, 0], [len, 0], [len, WH], [0, WH]].forEach(([u, z], i) => { const [sx, sy] = iso(...wallPoint(plane, u, z)); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.closePath(); ctx.clip();
+    ctx.transform(ux * ku, uy * ku, -zx * kz, -zy * kz, o[0] - ux * ku * cx + zx * kz * (cy + ch), o[1] - uy * ku * cx + zy * kz * (cy + ch));
+    ctx.drawImage(im, 0, 0);
+    ctx.restore();
+    // A little shade so it sits in the room rather than glowing.
+    poly([wallPoint(plane, 0, 0), wallPoint(plane, len, 0), wallPoint(plane, len, WH), wallPoint(plane, 0, WH)], 'rgba(20,14,24,.12)');
+  }
   function drawPattern(paper, plane, len) {
     const S = paper && PAPERS[paper]; if (!S) return;
+    if (S.pat === 'image') { drawImagePaper(S, plane, len); return; }
     const P = (u, z) => wallPoint(plane, u, z), pat = S.pat, ink = S.ink;
     const rect = (a, b, z0, z1, c, st, lw) => poly([P(a, z0), P(b, z0), P(b, z1), P(a, z1)], c, st, lw);
     const path = (pts, st, lw) => { ctx.beginPath(); pts.forEach(([u, z], i) => { const [sx, sy] = iso(...P(u, z)); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.strokeStyle = st; ctx.lineWidth = lw; ctx.stroke(); };
@@ -1684,6 +1719,10 @@ export function createHouseArt(ctx0, opts = {}) {
   function applyPaint(level, color) { if (LOOKS[level]) LOOKS[level].paint = color; }
   function applyWallpaper(level, pattern) { if (LOOKS[level]) LOOKS[level].paper = pattern; }
   function applyFloor(level, floor) { if (LOOKS[level]) LOOKS[level].floor = floor; }
+  // Pictures that can hang as wallpaper: { id, base (a matching tone, used while loading), url | stops }.
+  function registerPictures(list) { list.forEach(p => { if (p && p.id && !PAPERS[p.id]) PAPERS[p.id] = { pat: 'image', base: p.base, url: p.url, stops: p.stops }; }); }
+  const getLooks = () => LOOKS.map(l => Object.assign({}, l));
+  const lookInfo = (kind, key) => (kind === 'paper' ? PAPERS[key] : kind === 'floor' ? FLOORS[key] : null) || null;
   function toggleObjectLight(id) { const next = objectLights.get(id) !== true; objectLights.set(id, next); return next; }
   function toggleLightAt(level, sx, sy) {
     let best = null, bestDist = 34;
@@ -1791,5 +1830,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

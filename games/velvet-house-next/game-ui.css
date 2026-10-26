@@ -276,6 +276,16 @@
 /* Empty state */
 .vh-empty { color: #6B6570; font-size: 13px; text-align: center; padding: 20px; }
 
+/* Shop: which floor paint, wallpaper and floors are going on */
+.vh-floorpick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 12px; }
+.vh-floorpick span { font-size: 11px; color: #A9A1AE; margin-right: 4px; }
+.vh-floorpick button {
+  appearance: none; border: 0; border-radius: 8px; padding: 6px 10px; font: 600 11px/1.2 Inter, system-ui, sans-serif;
+  color: #A9A1AE; background: rgba(255,255,255,.06); cursor: pointer;
+}
+.vh-floorpick button.vh-active { background: #F2EEE8; color: #241B25; }
+.vh-shop-icon { box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+
 /* Arrange: a shop-like list of everything that can move, over the house */
 .vh-drawer[data-open="arrange"] { width: 340px; }
 .vh-arr { display: flex; flex-direction: column; gap: 12px; }
