@@ -18,7 +18,7 @@ import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
 import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult, type CoachingChange } from "../_shared/coachTools.ts";
 import { buildAssistantBehavioralInstructions } from "../_shared/assistantFramework.ts";
-import { weekOneQuestions, weekOneBlock, takeTraitMarkers, tastePicksLine } from "../_shared/companionWeekOne.ts";
+import { weekOneQuestions, weekOneBlock, takeTraitMarkers } from "../_shared/companionWeekOne.ts";
 import {
   webSearchTool, WEB_SEARCH_GUIDANCE, WEB_SEARCH_PRO_ONLY, textOf, parseSearchRequest, buildSearchBrief, type SearchSubject,
 } from "../_shared/webSearch.ts";
@@ -1958,8 +1958,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     const helperSearchBlock = isHelper ? `\n\n${WEB_SEARCH_GUIDANCE}` : '';
     // A companion's first week: it asks love language and "when it's hard" in conversation.
     const weekOneOpen = isCorrespondent ? [] : weekOneQuestions(companion);
-    const weekOneText = weekOneBlock(weekOneOpen, formattedHistory.filter(m => m.role === 'user').length)
-      + (isHelper || isCorrespondent ? '' : tastePicksLine(profile.taste_picks));
+    const weekOneText = weekOneBlock(weekOneOpen, formattedHistory.filter(m => m.role === 'user').length);
 
     const groundingBlock = correspondentStoriesBlock
       ? `\n\nRECENT STORIES (use these — do NOT invent stories):\n${correspondentStoriesBlock}\n`

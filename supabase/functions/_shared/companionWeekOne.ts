@@ -64,17 +64,3 @@ export function takeTraitMarkers(reply: string): { text: string; updates: TraitU
   }).trim();
   return { text, updates };
 }
-
-/** Their "this or that" picks from the feed, as one line for a companion. */
-export function tastePicksLine(picks: unknown): string {
-  if (!picks || typeof picks !== "object") return "";
-  const lines = Object.entries(picks as Record<string, unknown>)
-    .map(([pair, chosen]) => {
-      const [a, b] = pair.split(" / ");
-      if (typeof chosen !== "string" || !a || !b) return null;
-      const other = chosen === a ? b : chosen === b ? a : null;
-      return other ? `${chosen} over ${other}` : null;
-    })
-    .filter(Boolean);
-  return lines.length ? `\n\nLITTLE PREFERENCES (from "this or that" in their feed; bring up only when it fits): ${lines.join("; ")}.` : "";
-}
