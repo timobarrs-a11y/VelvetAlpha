@@ -239,6 +239,13 @@ export function createScripts(g: Game): Partial<Game> {
   return {
     scripts: engine,
     scriptUpdate: update,
-    scriptEmit(ev: GameEvent) { engine.emit(ev); },
+    scriptEmit(ev: GameEvent) {
+      // What the player has already done stays done: a chapter that waits for it moves on at once.
+      story[`did.${ev.type}`] = true;
+      if (ev.type === 'obj.placed') story[`did.placed.${ev.objType}`] = true;
+      if (ev.type === 'tab.opened') story[`did.tab.${ev.tab}`] = true;
+      if (ev.type === 'level.visited') story[`did.level.${ev.level}`] = true;
+      engine.emit(ev);
+    },
   };
 }

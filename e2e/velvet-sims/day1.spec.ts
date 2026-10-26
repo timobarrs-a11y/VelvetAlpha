@@ -17,7 +17,8 @@ test('the first day plays through from the move-in to free will', async ({ page 
 
   await game.locator('.vh-skip').click();
 
-  const deadline = Date.now() + 800_000;
+  const deadline = Date.now() + Number(process.env.DAY1_MS ?? 800_000);
+  let lastLog = 0;
   let flags = await story();
   while (!flags['tutorial.done'] && Date.now() < deadline) {
     // Lines of speech are tapped through; a choice takes its first option.
@@ -40,6 +41,7 @@ test('the first day plays through from the move-in to free will', async ({ page 
     else if (title === 'Make one room yours' && once('paint')) await inGame(page, "v.buy('paint-sage')");
     else if (title === 'Floors and the camera' && once('floors')) await inGame(page, 'v.setView(2)');
     else if (flags['tutorial.upstairs'] && !flags.tutorial) await inGame(page, 'v.setMinutes(15 * 60 + 5)');
+    if (Date.now() - lastLog > 15_000) { lastLog = Date.now(); console.log('PROGRESS', title, Object.keys(flags).filter((k) => k.startsWith('tutorial')).join(','), (await inGame<string>(page, 'v.scriptState()')).slice(0, 160)); }
     await page.waitForTimeout(400);
   }
 
