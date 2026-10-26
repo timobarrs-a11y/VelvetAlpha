@@ -119,10 +119,18 @@ time-of-day greeting):
 > Velvet exists to help people dream large and then actually see it through. Not just talking
 > about it: putting it on the calendar, with someone in your corner until it's done.
 >
-> So let's begin with you. Is there something you already have in mind, something you'd like
-> to accomplish or finally get round to?
+> So let's begin with you. Where do things stand?
 
-The person is always the first stop. He doesn't open with an interest or a Someday pick.
+Three chips appear under the question (they can also just type):
+
+| Chip | Who it's for | What Atlas does next |
+|---|---|---|
+| **"I'm already working on something. I need it mapped out and finished."** | They have a goal, often already under way. | "What is it, and how far along are you?" Then what's done, what's left and by when. No discovery; he goes straight to the next step and the calendar. |
+| **"I have an idea of what I want. I need help shaping it."** | They know the direction but not the goal. | "Tell me the idea, however rough." Then he shapes it into a goal: what done looks like, and by when. |
+| **"I don't have a goal yet. I'd like help finding one."** | They want Atlas to help them find it. | He goes to their Someday picks, then their interests (see "Where goals come from"). |
+
+If they type a goal instead of tapping, he treats it as the first chip. The person is always the
+first stop: he never opens with an interest or a Someday pick.
 
 ### Act 2, continued: probing for hidden goals
 
@@ -131,10 +139,10 @@ don't. They have things they keep meaning to do, things they've always been curi
 things they enjoy but rarely do. Atlas's job is to find those and make them real.
 
 **Where goals come from, in order:**
-1. **The person.** The opening asks what they already have in mind. While their answers give
-   him something to work with, he follows them and brings up nothing else.
-2. **Their Someday picks.** If they're unsure, or a couple of turns go by with nothing he can
-   turn into a plan, he picks up one thing from screen 8: "You marked tech as something you've
+1. **The person.** The opening asks where they stand. If they're working on something or have
+   an idea, he follows that and brings up nothing else.
+2. **Their Someday picks.** If they tapped "I don't have a goal yet", or a couple of turns go by
+   with nothing he can turn into a plan, he picks up one thing from screen 8: "You marked tech as something you've
    always been curious about. Is that idle curiosity, or something you'd act on, given a
    nudge?"
 3. **Their interests,** last. Only if Someday is empty or nothing there lands: "Basketball, I
@@ -232,7 +240,8 @@ and checks every reply for:
 - a relevant trait choice
 - no banned phrases
 - no list of their answers read back to them
-- the opening asks what they have in mind, not about an interest
+- the opening offers the three chips, and each choice leads to its own path (no discovery
+  questions for someone already working on something)
 - Someday picks and interests only come up once the person hasn't given him something to work
   with, and Someday before interests
 - correct markers
@@ -337,7 +346,7 @@ February shows on the 28th in other years.
 | Things they'd like to try but haven't | never asked | a Someday screen Atlas draws on when they're unsure of a goal |
 | Wavelength answers | a form, before the goal | asked by Atlas, chosen to fit the goal |
 | Atlas's tone | assistant ("With your personal interests out of the way…") | Alfred |
-| Atlas's opening | four questions at once | who he is, what Velvet is for, then what they have in mind |
+| Atlas's opening | four questions at once | who he is, what Velvet is for, then "Where do things stand?" with three chips |
 | What the chat produces | a coach match | a coach match and at least one dated plan on the calendar |
 | Home screen | the feed first | Today first, the feed below it |
 | Their own appointments, tasks and goals | only on the calendar page | in Today, added in a few taps |
@@ -348,7 +357,7 @@ February shows on the 28th in other years.
 
 | Phase | What ships | Size |
 |---|---|---|
-| A0 | **Atlas's voice:** the Alfred style guide and the new opening in `atlas-onboarding` (introduction, what Velvet is for, then what they already have in mind; no list of answers read back), a time-of-day greeting, `address_style`, and switching this conversation to Sonnet. | Small |
+| A0 | **Atlas's voice:** the Alfred style guide and the new opening in `atlas-onboarding` (introduction, what Velvet is for, then "Where do things stand?" with the three chips and their three paths; no list of answers read back), a time-of-day greeting, `address_style`, and switching this conversation to Sonnet. | Small |
 | A1 | **Act 1 order and saving:** reorder `personalBank.ts` to name → color → nickname → birthday → zodiac → gender → interests, with one tabbed interests screen. Save each answer as it's given (a per-field save from `onAnswer`) and resume at the first unanswered question. Move the four wavelength questions and the swipe deck out. Pass all six interest groups into Atlas's prompt. Add the Someday screen (8) and its `someday` column, and pass the picks to Atlas. | Small–Medium |
 | A2 | **Their color:** re-skin the questionnaire shell after question 2, and the Atlas chat (`--shell-*` tokens instead of the hard-coded gold). | Small |
 | A3 | **Atlas picks the right question:** the trait ledger, the choosing rule, tap chips, and `[PROFILE …]` marker parsing and validation in `atlas-onboarding`, plus the 15-person test script. | Medium |
