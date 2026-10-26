@@ -5,6 +5,6 @@ export const ARRIVAL_ROUTES = {
   questions: '/user-questionnaire',
   look: '/arrival/look',
   home: '/arrival/home',
-  town: '/arrival/town',
+  town: '/world?arrival=1',
   atlas: '/atlas-onboarding',
 } as const;

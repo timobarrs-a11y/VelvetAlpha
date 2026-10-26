@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Newspaper, PlayCircle, Calendar, FileText, Lightbulb, Bot, MapPin,
@@ -21,6 +21,9 @@ import { colorNameToHex } from '../utils/colorMapping';
 import { getCoachColor } from '../utils/coachColors';
 import { ensureCoachColors } from '../services/companionService';
 import { TodayCard } from '../features/today/TodayCard';
+import { ArrivalHighlights } from '../features/arrival/ArrivalHighlights';
+import { highlightsSeen } from '../features/arrival/arrivalUtils';
+import { FirstWeekCard } from '../features/arrival/FirstWeekCard';
 import type { CompanionWithLastMessage } from '../services/companionService';
 import { isHelper } from '../utils/relationshipType';
 
@@ -40,6 +43,9 @@ export function HomeV3Page() {
   const lobby = useLobbyData();
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [feedTab, setFeedTab] = useState<FeedTab>('feed');
+  // Just finished the arrival: show what else is here, once.
+  const [searchParams] = useSearchParams();
+  const [showHighlights, setShowHighlights] = useState(() => searchParams.get('arrived') === '1' && !highlightsSeen());
 
   const {
     companions,
@@ -322,6 +328,8 @@ export function HomeV3Page() {
           <div className="flex-1 overflow-y-auto">
             {/* What they're working on today, above everything else */}
             <TodayCard />
+            {showHighlights && <ArrivalHighlights onDone={() => setShowHighlights(false)} />}
+            {!lobby.setupResumeRoute && <FirstWeekCard />}
 
             {/* Feed / Your Lens toggle */}
             <div className="flex items-center justify-center px-4 py-2 border-b border-white/8">

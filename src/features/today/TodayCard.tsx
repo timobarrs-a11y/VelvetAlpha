@@ -8,6 +8,8 @@ import {
 } from '../../services/coachingService';
 import { realPeopleService, type RealPerson } from '../../services/realPeopleService';
 import { toast } from '../../shared/ui/Toast';
+import { supabase } from '../../shared/supabase/client';
+import { PAID_TIERS, type SubscriptionTier } from '../../types/subscription';
 import { birthdaysBetween, birthdayTitle, type BirthdayOccurrence } from './birthdays';
 import { QuickAddSheet } from './QuickAddSheet';
 import { PeopleSheet } from './PeopleSheet';
@@ -17,6 +19,8 @@ import {
 
 const MAX_ROWS = 5;
 const PEOPLE_PROMPT_KEY = 'velvet.today.peoplePromptDismissed';
+// After the first thing they tick off, once, a word about Velvet Plus for anyone not on it.
+const FIRST_DONE_KEY = 'velvet.today.firstDoneNoted';
 
 function readDismissed(): boolean {
   try { return localStorage.getItem(PEOPLE_PROMPT_KEY) === '1'; } catch { return false; }
@@ -42,6 +46,7 @@ export function TodayCard() {
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [peopleName, setPeopleName] = useState('');
   const [promptDismissed, setPromptDismissed] = useState(readDismissed);
+  const [plusNote, setPlusNote] = useState(false);
 
   // What's coming next, shown once nothing is left today.
   const loadNext = useCallback(async () => {
@@ -119,6 +124,20 @@ export function TodayCard() {
       return;
     }
     if (done && items?.every(i => i.key === item.key || i.done)) loadNext().catch(() => {});
+    if (done) noteFirstDone().catch(() => {});
+  };
+
+  /** Value first, then the offer: once, after their first completed step, if they're not a member. */
+  const noteFirstDone = async () => {
+    try {
+      if (localStorage.getItem(FIRST_DONE_KEY) === '1') return;
+      localStorage.setItem(FIRST_DONE_KEY, '1');
+    } catch {
+      return;
+    }
+    if (!userId) return;
+    const { data } = await supabase.from('user_profiles').select('subscription_tier').eq('id', userId).maybeSingle();
+    if (!PAID_TIERS.includes(data?.subscription_tier as SubscriptionTier)) setPlusNote(true);
   };
 
   const confirmTentative = async (item: TodayItem) => {
@@ -289,6 +308,18 @@ export function TodayCard() {
                 {weekAhead.length > 1 && <span style={{ color: 'var(--ds-ink-3)' }}> and {weekAhead.length - 1} more</span>}
               </span>
             </button>
+          )}
+
+          {plusNote && (
+            <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: 'var(--ds-surface-2)' }}>
+              <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--ds-accent-fg)' }} />
+              <button type="button" onClick={() => navigate('/pricing')} className="min-w-0 flex-1 text-left text-sm" style={{ color: 'var(--ds-ink)' }}>
+                Nicely done. With Velvet Plus, your team checks in between conversations. <span style={{ color: 'var(--ds-accent-fg)' }}>See plans</span>
+              </button>
+              <button type="button" onClick={() => setPlusNote(false)} aria-label="Dismiss" className="p-1 rounded-md hover:bg-white/5" style={{ color: 'var(--ds-ink-3)' }}>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           )}
 
           {showPeoplePrompt && (

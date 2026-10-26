@@ -121,7 +121,7 @@ describe('AtlasConciergePage', () => {
     await waitFor(() => expect(updates).toContainEqual({ table: 'user_goals', patch: { show_on_profile: true }, id: 'g1' }));
     expect(setupProgress).toHaveBeenCalledWith('u1', { step: 'complete' });
     fireEvent.click(await screen.findByText('Go to Today'));
-    expect(navigate).toHaveBeenCalledWith('/lobby', { replace: true });
+    expect(navigate).toHaveBeenCalledWith('/lobby?arrived=1', { replace: true });
   });
 
   it('creates the helper only once, even if Change anything and Continue are both pressed', async () => {

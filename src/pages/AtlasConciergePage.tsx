@@ -363,7 +363,7 @@ function AtlasConciergeInner() {
 
   const finish = () => {
     clearState();
-    navigate('/lobby', { replace: true });
+    navigate('/lobby?arrived=1', { replace: true });
   };
 
   const ease = manifest.motion.ease;

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Users, Search, Clock, X } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { ArrivalTownTour } from '../features/arrival/ArrivalTownTour';
+import { updateSetupProgress } from '../services/setupProgressService';
 import {
   localDay, getMyPlot, getDailyBlock, getCards, cardToPlot, markSeen,
   getTownSize, getTownPlots, findPlot, getLandmarkProgress,
@@ -88,6 +91,10 @@ function pickBlock(
 
 export function WorldPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  // Part of the arrival: a short look around, then on to Atlas.
+  const [searchParams] = useSearchParams();
+  const arriving = searchParams.get('arrival') === '1';
   const [myPlot, setMyPlot] = useState<MyPlot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -500,8 +507,17 @@ export function WorldPage() {
         </aside>
       )}
 
+      {arriving && (
+        <ArrivalTownTour
+          onContinue={() => {
+            if (user) updateSetupProgress(user.id, { step: 'arrival_atlas' });
+            navigate('/atlas-onboarding');
+          }}
+        />
+      )}
+
       {/* Hint */}
-      {!selectedPlot && !showFriends && (
+      {!selectedPlot && !showFriends && !arriving && (
         <p className="absolute left-4 bottom-4 z-4 rounded-2xl border border-white/10 px-3 py-2 text-[12.5px] text-white/50 max-w-[calc(100%-32px)]" style={{ background: 'rgba(24,19,34,0.78)', backdropFilter: 'blur(14px) saturate(1.2)' }}>
           {view === 'street' ? (
             <><b className="text-white/80">Drag</b> to walk the block · <b className="text-white/80">scroll or pinch</b> to zoom · <b className="text-white/80">tap a billboard</b> to meet the neighbor</>

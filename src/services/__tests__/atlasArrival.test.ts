@@ -48,7 +48,7 @@ describe('the remark on what they made', () => {
   });
 
   it('falls back to the house they chose', () => {
-    expect(pickRemark({ avatar: [], house: { style: 'aframe', chosen: true } })).toBe('An A-frame cabin. A person of taste.');
+    expect(pickRemark({ avatar: [], house: { style: 'cabin', chosen: true } })).toBe('An A-frame cabin. A person of taste.');
   });
 
   it('keeps it general when everything was randomized', () => {

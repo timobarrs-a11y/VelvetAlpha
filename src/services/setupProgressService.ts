@@ -8,7 +8,12 @@ export type SetupStep =
   | 'coach_ready'
   | 'companion_in_progress'
   | 'choose_conversation'
-  | 'complete';
+  | 'complete'
+  // The arrival (docs/onboarding/questionnaire-plan.md): your look, your home, the town, Atlas.
+  | 'arrival_look'
+  | 'arrival_home'
+  | 'arrival_town'
+  | 'arrival_atlas';
 
 export type SetupPath = 'coach_only' | 'coach_and_companion';
 
@@ -91,6 +96,14 @@ export function prepareResume(progress: SetupProgress | null, companions: Compan
   if (coach) sessionStorage.setItem('atlasCoachId', coach.id);
 
   switch (progress.step) {
+    case 'arrival_look':
+      return '/arrival/look';
+    case 'arrival_home':
+      return '/arrival/home';
+    case 'arrival_town':
+      return '/world?arrival=1';
+    case 'arrival_atlas':
+      return '/atlas-onboarding';
     case 'coach_avatar':
       if (!coach) return null;
       sessionStorage.setItem('atlasNextDestination', '/coach-ready');

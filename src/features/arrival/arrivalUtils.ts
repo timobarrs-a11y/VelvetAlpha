@@ -50,3 +50,47 @@ export function formatDay(day: string, withYear = false): string {
     ...(withYear ? { year: 'numeric' } : {}),
   });
 }
+
+// ─── Your look ───────────────────────────────────────────────────────────
+
+/** Avatar fields worth Atlas noticing when chosen by hand, most distinctive first. */
+export const REMARKABLE_FIELDS = [
+  'headwear', 'glasses', 'faceAccessory', 'tattoo', 'hairHighlight', 'necklace', 'earrings',
+  'nosePiercing', 'lipPiercing', 'facialHair', 'outfit', 'hairColor', 'hairStyle',
+] as const;
+
+/**
+ * What they changed by hand since the look they started from (the seeded one,
+ * or the last randomize). Choosing "none" isn't something to remark on.
+ */
+export function handPicked(
+  baseline: Record<string, unknown>,
+  current: Record<string, unknown>,
+): Array<{ field: string; value: string }> {
+  return REMARKABLE_FIELDS
+    .filter(f => current[f] !== undefined && current[f] !== baseline[f] && current[f] !== 'none')
+    .map(f => ({ field: f, value: String(current[f]) }));
+}
+
+/** The starting look: their gender from Act 1, in their favorite color. */
+export function seededAvatar<T extends { gender: string; outfitColor?: string }>(
+  defaults: { male: T; female: T },
+  gender: string | null | undefined,
+  favoriteColor: string | null | undefined,
+): T {
+  const base = (gender ?? '').toLowerCase() === 'male' ? defaults.male : defaults.female;
+  return favoriteColor ? { ...base, outfitColor: colorNameToHex(favoriteColor) } : { ...base };
+}
+
+// ─── The end of the arrival ──────────────────────────────────────────────
+
+const HIGHLIGHTS_SEEN_KEY = 'velvet.arrival.highlightsSeen';
+
+/** The home-screen highlights after the arrival are shown once. */
+export function highlightsSeen(): boolean {
+  try { return localStorage.getItem(HIGHLIGHTS_SEEN_KEY) === '1'; } catch { return false; }
+}
+
+export function markHighlightsSeen(): void {
+  try { localStorage.setItem(HIGHLIGHTS_SEEN_KEY, '1'); } catch { /* storage blocked */ }
+}

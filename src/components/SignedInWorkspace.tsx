@@ -73,6 +73,7 @@ const excludedPrefixes = [
   '/splash',
   '/welcome',
   '/onboarding',
+  '/arrival',
   '/create-user-avatar',
   '/age-verification',
   '/velvet-house',

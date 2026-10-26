@@ -102,22 +102,25 @@ const AVATAR_REMARKS: Array<[field: string, remark: string]> = [
 ];
 
 const HOUSE_NAMES: Record<string, string> = {
-  classic: "a classic house",
+  standard: "a classic house",
   cottage: "a cottage",
   bungalow: "a bungalow",
   ranch: "a ranch house",
-  aframe: "an A-frame cabin",
-  "a-frame": "an A-frame cabin",
+  cabin: "an A-frame cabin",
   craftsman: "a Craftsman",
   modern: "a modern house",
   colonial: "a brick colonial",
   victorian: "a Victorian",
   villa: "a villa",
+  lighthouse: "a lighthouse",
+  observatory: "an observatory",
+  treehouse: "a treehouse",
+  windmill: "a windmill",
+  castle: "a castle",
 };
 
 function houseName(style: string): string {
-  const key = style.toLowerCase().replace(/[\s_]+/g, "");
-  return HOUSE_NAMES[key] ?? HOUSE_NAMES[style.toLowerCase()] ?? "a house of your own";
+  return HOUSE_NAMES[style.toLowerCase()] ?? "a house of your own";
 }
 
 function capitalize(s: string): string {

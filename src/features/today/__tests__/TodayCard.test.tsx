@@ -27,6 +27,11 @@ const coaching = {
 };
 vi.mock('../../../services/coachingService', () => coaching);
 
+const tier = { value: 'free' };
+vi.mock('../../../shared/supabase/client', () => ({
+  supabase: { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { subscription_tier: tier.value } }) }) }) }) },
+}));
+
 const people = { getAll: vi.fn(), create: vi.fn() };
 vi.mock('../../../services/realPeopleService', () => ({ realPeopleService: people }));
 
@@ -193,5 +198,29 @@ describe('TodayCard', () => {
     render(<TodayCard />);
     fireEvent.click(await screen.findByLabelText('Add something to your days'));
     expect(await screen.findByText('Add to your days')).toBeTruthy();
+  });
+
+  it('mentions Velvet Plus once, after the first thing they tick off, if they are not a member', async () => {
+    tier.value = 'free';
+    calendar.getUserEvents.mockResolvedValue([event({ title: 'Walk in the park' })]);
+    const { unmount } = render(<TodayCard />);
+    fireEvent.click(await screen.findByLabelText('Mark "Walk in the park" done'));
+    expect(await screen.findByText(/With Velvet Plus/)).toBeTruthy();
+    unmount();
+
+    render(<TodayCard />);
+    fireEvent.click(await screen.findByLabelText('Mark "Walk in the park" done'));
+    await waitFor(() => expect(calendar.setCompleted).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/With Velvet Plus/)).toBeNull();
+  });
+
+  it('never mentions it to members', async () => {
+    tier.value = 'plus';
+    calendar.getUserEvents.mockResolvedValue([event({ title: 'Walk in the park' })]);
+    render(<TodayCard />);
+    fireEvent.click(await screen.findByLabelText('Mark "Walk in the park" done'));
+    await waitFor(() => expect(calendar.setCompleted).toHaveBeenCalled());
+    await new Promise(r => setTimeout(r, 20));
+    expect(screen.queryByText(/With Velvet Plus/)).toBeNull();
   });
 });

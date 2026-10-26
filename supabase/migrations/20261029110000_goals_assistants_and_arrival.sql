@@ -25,6 +25,9 @@ See docs/goals-and-coaches/plan.md and docs/onboarding/questionnaire-plan.md.
    - `user_profiles.arrival_choices` (jsonb, default '{}'): what they chose by hand while
      making their avatar and house, so Atlas can remark on one thing that's theirs:
      { avatar: [{ field, value }], house: { style, color, chosen } }.
+   - `user_profiles.setup_step` allows the arrival's steps ('arrival_look', 'arrival_home',
+     'arrival_town', 'arrival_atlas'), so someone who leaves part-way is brought back to the
+     same step.
 
 4. Security
    - `user_profiles` updates are limited to granted columns
@@ -49,3 +52,11 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS address_style text
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS arrival_choices jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 GRANT UPDATE (someday, address_style, arrival_choices) ON public.user_profiles TO authenticated;
+
+ALTER TABLE public.user_profiles DROP CONSTRAINT IF EXISTS user_profiles_setup_step_check;
+ALTER TABLE public.user_profiles ADD CONSTRAINT user_profiles_setup_step_check
+  CHECK (setup_step IS NULL OR setup_step IN (
+    'atlas', 'coach_avatar', 'coach_environment', 'coach_ready', 'companion_in_progress',
+    'choose_conversation', 'complete',
+    'arrival_look', 'arrival_home', 'arrival_town', 'arrival_atlas'
+  ));
