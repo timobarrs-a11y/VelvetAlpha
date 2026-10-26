@@ -1,12 +1,12 @@
 import { useState, lazy, Suspense, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Newspaper, PlayCircle, Calendar, FileText, Lightbulb, Bot, MapPin,
   Heart,
-  Plus, Sparkles, ArrowRight,
+  Plus,
   Target, CheckCircle2, UsersRound, Layers,
-  Sunrise, Zap, User, MessageSquare, BookOpen,
+  Sunrise, Zap, User, MessageSquare, BookOpen, Users,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { supabase } from '../shared/supabase/client';
@@ -29,8 +29,15 @@ import { isHelper } from '../utils/relationshipType';
 
 const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default: m.DailyFeedPage })));
 const VideoHistoryPage = lazy(() => import('./VideoHistoryPage').then(m => ({ default: m.VideoHistoryPage })));
+const YourFeed = lazy(() => import('../components/social/YourFeed').then(m => ({ default: m.YourFeed })));
 
-type FeedTab = 'feed' | 'videos';
+type FeedTab = 'feed' | 'videos' | 'friends';
+
+const FEED_TAB_LOADING: Record<FeedTab, string> = {
+  feed: 'Loading your feed...',
+  videos: 'Loading your lens...',
+  friends: 'Loading posts from your friends...',
+};
 
 interface CheckIn {
   companion_id: string;
@@ -112,7 +119,6 @@ export function HomeV3Page() {
 
 
   const checkInMap = new Map(checkIns.map(c => [c.companion_id, c]));
-  const topCheckIn = checkIns.find(c => c.is_important) ?? null;
 
   const getCompanionLine = (c: CompanionWithLastMessage): string | null => {
     const ci = checkInMap.get(c.id);
@@ -303,35 +309,13 @@ export function HomeV3Page() {
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {/* Quiet check-in note at top of feed */}
-          <AnimatePresence>
-            {topCheckIn && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="px-4 py-2.5 flex-shrink-0"
-                style={{ background: 'rgba(52, 211, 153, 0.06)' }}
-              >
-                <button
-                  onClick={() => navigate(`/chat?companion=${topCheckIn.companion_id}`)}
-                  className="flex items-center gap-3 w-full text-left group"
-                >
-                  <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <p className="text-sm text-emerald-200/80 truncate flex-1">{topCheckIn.message}</p>
-                  <ArrowRight className="w-4 h-4 text-emerald-400/50 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           <div className="flex-1 overflow-y-auto">
             {/* What they're working on today, above everything else */}
             <TodayCard />
             {showHighlights && <ArrivalHighlights onDone={() => setShowHighlights(false)} />}
             {!lobby.setupResumeRoute && <FirstWeekCard />}
 
-            {/* Feed / Your Lens toggle */}
+            {/* News / Your Lens / posts from your friends */}
             <div className="flex items-center justify-center px-4 py-2 border-b border-white/8">
               <Segmented
                 value={feedTab}
@@ -340,12 +324,13 @@ export function HomeV3Page() {
                 options={[
                   { value: 'feed', label: 'Feed', icon: <Newspaper className="w-3.5 h-3.5" /> },
                   { value: 'videos', label: 'Your Lens', icon: <PlayCircle className="w-3.5 h-3.5" /> },
+                  { value: 'friends', label: 'Friends', icon: <Users className="w-3.5 h-3.5" /> },
                 ]}
               />
             </div>
 
-            <Suspense fallback={<LoadingState label={`Loading your ${feedTab === 'feed' ? 'feed' : 'lens'}...`} />}>
-              {feedTab === 'feed' ? <DailyFeedPage /> : <VideoHistoryPage />}
+            <Suspense fallback={<LoadingState label={FEED_TAB_LOADING[feedTab]} />}>
+              {feedTab === 'feed' ? <DailyFeedPage /> : feedTab === 'videos' ? <VideoHistoryPage /> : <YourFeed />}
             </Suspense>
           </div>
         </div>
