@@ -216,11 +216,30 @@ function capPath(crown: Pt[], hairline: Pt[]): string {
   return `${smooth(crown, false)} L${pt(hairline[0])} ${smooth(hairline, false).replace(/^M[^C]*/, '')} Z`;
 }
 
+// Styles are drawn for the default face (half width 28, chin near 86). When
+// the face sliders change the head, volume and widths follow the face width,
+// and lengths stay the same distance from the chin, so hair keeps its
+// proportions instead of clashing with a wider jaw or a longer face.
+const BASE_W = 28, BASE_CHIN = 86;
+function fitToFace(spec: HairSpec, fr: Frame): HairSpec {
+  const k = fr.W / BASE_W, dy = fr.chin - BASE_CHIN;
+  return {
+    ...spec,
+    sv: spec.sv * k,
+    back: spec.back && { ...spec.back, length: spec.back.length + dy, spread: spec.back.spread * k },
+    locks: spec.locks && { ...spec.locks, length: spec.locks.length + dy, width: spec.locks.width * k },
+  };
+}
+
 // A strip that frames the face, from the temple down past the jaw.
 function lockPoints(fr: Frame, s: 1 | -1, width: number, length: number, startY: number, wave: number): { outline: Pt[]; spine: Pt[] } {
   const ys = [startY, fr.cy, fr.chin - 6, fr.chin + 4, (fr.chin + length) / 2, length];
+  // Hair falls straight from the widest point above it; it never tucks in to
+  // follow a narrow jaw onto the cheeks.
+  let widest = 0;
   const inner = ys.map((y, i) => {
-    const edge = y < fr.chin - 4 ? fr.hw(y) - 2.2 : fr.hw(fr.chin - 6) - 3 - (i - 3) * 0.6;
+    widest = Math.max(widest, fr.hw(Math.min(y, fr.chin - 6)));
+    const edge = y <= fr.cy ? fr.hw(y) - 2.2 : widest - 1.6 - Math.max(0, i - 3) * 0.4;
     return 50 + s * edge + (i > 2 ? Math.sin(i * 1.7) * wave * s : 0);
   });
   const widths = ys.map((_, i) => width * (i === 0 ? 0.7 : i === ys.length - 1 ? 0.35 : 1 + i * 0.06));
@@ -233,11 +252,11 @@ function lockPoints(fr: Frame, s: 1 | -1, width: number, length: number, startY:
 export function renderHair(p: HairRenderParams): { back: React.ReactNode; front: React.ReactNode } {
   if (p.hairStyle === 'bald') return { back: null, front: null };
   const g = p.geometry;
-  const s = withTexture(STYLES[p.hairStyle] ?? STYLES.short, p.hairTexture);
   const fr: Frame = {
     T: g.faceTop, W: g.fRx, cy: g.faceCenterY, chin: chinY(g),
     hw: (y: number) => faceHalfWidthAt(g, y),
   };
+  const s = fitToFace(withTexture(STYLES[p.hairStyle] ?? STYLES.short, p.hairTexture), fr);
   const base = p.hairColor;
   const dark = shade(base, -0.32);
   const deep = shade(base, -0.5);
