@@ -644,7 +644,9 @@ export async function getPlans(
   const planIds = plans.map(p => p.id);
   const { data: steps } = await supabase
     .from('coach_plan_steps')
-    .select('id, plan_id, commitment_id, title, description, order_index, status, resource_url, resource_note, completed_at, coach_proposed_title, user_set_title, coach_minimum, is_below_floor, minimum_value, target_unit, user_target_value, created_at, updated_at')
+    // All columns, so newer ones (phase, scheduled_for, duration_minutes) come
+    // through without breaking before their migration has run.
+    .select('*')
     .in('plan_id', planIds)
     .order('order_index', { ascending: true });
 
