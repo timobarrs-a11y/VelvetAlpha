@@ -1721,24 +1721,51 @@ export function createHouseArt(ctx0, opts = {}) {
   function drawArrangeOverlay(a, level) {
     ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(0, 0, W, H);
+    const pick = a.held || a.selected;
     OBJS.forEach(o => {
-      if (o.level !== level || !a.movable.includes(o.id) || o.id === a.held) return;
+      if (o.level !== level || !a.movable.includes(o.id) || o.id === pick) return;
       const hull = objHull(o), hot = o.id === a.hover;
       ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
       ctx.strokeStyle = hot ? 'rgba(214,74,122,.95)' : 'rgba(214,74,122,.35)'; ctx.lineWidth = hot ? 2 : 1; ctx.setLineDash(hot ? [] : [4, 4]); ctx.stroke();
     });
     ctx.setLineDash([]);
-    const o = a.held && OBJS.find(q => q.id === a.held);
+    const o = pick && OBJS.find(q => q.id === pick);
     if (o && o.level === level) {
-      const [fw, fd] = fp(o), col = a.valid ? '47,143,91' : '194,65,58';
-      poly([[o.x, o.y, 0.01], [o.x + fw, o.y, 0.01], [o.x + fw, o.y + fd, 0.01], [o.x, o.y + fd, 0.01]], `rgba(${col},.25)`, `rgba(${col},.9)`, 2);
+      // Picked up (being dragged) shows whether it fits; just selected glows
+      // gold with a slow pulse so it's clear which piece the next drag moves.
+      const dragging = a.held === o.id;
+      const pulse = 0.5 + 0.5 * Math.sin(animT * 4);
+      const [fw, fd] = fp(o), col = dragging ? (a.valid ? '47,143,91' : '194,65,58') : '255,200,70';
+      poly([[o.x, o.y, 0.01], [o.x + fw, o.y, 0.01], [o.x + fw, o.y + fd, 0.01], [o.x, o.y + fd, 0.01]], `rgba(${col},${dragging ? 0.25 : 0.16 + 0.1 * pulse})`, `rgba(${col},.9)`, 2);
       const st = T_OF(o).spots;
       if (st) Object.values(st).forEach(sp => { const [sx, sy] = xf(o, sp.stand[0], sp.stand[1]), [px, py] = iso(sx, sy, 0); ell(px, py, 6, 3, `rgba(${col},.85)`); ell(px, py, 2, 1, '#fff'); });
-      // A gentle lift, so the piece reads as carried.
-      const hull = objHull(o); ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1] - 3) : ctx.moveTo(p[0], p[1] - 3))); ctx.closePath();
-      ctx.strokeStyle = `rgba(${col},.95)`; ctx.lineWidth = 2; ctx.stroke();
+      // A gentle lift, so a carried piece reads as carried.
+      const lift = dragging ? 3 : 0;
+      const hull = objHull(o); ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1] - lift) : ctx.moveTo(p[0], p[1] - lift))); ctx.closePath();
+      if (!dragging) { ctx.fillStyle = `rgba(${col},${0.08 + 0.08 * pulse})`; ctx.fill(); ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(36,27,37,.55)'; ctx.lineWidth = 5; ctx.stroke(); }
+      ctx.strokeStyle = `rgba(${col},.98)`; ctx.lineWidth = dragging ? 2 : 3; ctx.stroke();
     }
     ctx.restore();
+  }
+
+  const inPoly = (px, py, poly) => { let inside = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside; } return inside; };
+
+  // Which piece is under a view-space point: the one in front when several
+  // overlap, a rug only when nothing else is there, and a little give around
+  // the point so a fingertip lands what it's aiming at. `ids` limits the search.
+  function hitObject(level, px, py, ids) {
+    const slop = [[0, 0], [9, 0], [-9, 0], [0, 9], [0, -9]];
+    let best = null, bestScore = -Infinity;
+    OBJS.forEach(o => {
+      if (o.level !== level || !TYPES[o.type] || (ids && !ids.includes(o.id))) return;
+      const hull = objHull(o);
+      const direct = inPoly(px, py, hull);
+      if (!direct && !slop.some(([dx, dy]) => inPoly(px + dx, py + dy, hull))) return;
+      const [fw, fd] = fp(o);
+      const score = (TYPES[o.type].rug ? 0 : 2 + (direct ? 1 : 0)) * 1000 + vs(o.x + fw / 2, o.y + fd / 2) * 10 + (direct ? 1 : 0);
+      if (score > bestScore) { bestScore = score; best = o; }
+    });
+    return best;
   }
 
   // Tapping an object brings it to life for a moment (or flips its switch).
@@ -1764,5 +1791,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

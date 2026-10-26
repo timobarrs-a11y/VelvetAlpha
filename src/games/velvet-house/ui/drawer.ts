@@ -9,10 +9,17 @@ import { careerTitle } from '../state/career';
 import { clockText, season, weekday, DAYS } from '../state/time';
 import type { OwnedCloth } from '../state/clothing';
 
-export type DrawerPage = 'shop' | 'goals' | 'do' | 'partner' | 'you' | 'home' | 'log' | '';
+export type DrawerPage = 'shop' | 'arrange' | 'goals' | 'do' | 'partner' | 'you' | 'home' | 'log' | '';
 
 export interface DrawerCallbacks {
   onClose: () => void;
+  // The open page changed (dock tap, close button, or opened from code).
+  onPage?: (page: DrawerPage) => void;
+  // Arrange mode's list: pick a piece, or act on the selected one.
+  onArrangePick?: (id: string) => void;
+  onArrangeRotate?: () => void;
+  onArrangeColour?: () => void;
+  onArrangeFloor?: (level: number) => void;
   onBuy: (item: CatalogEntry, color?: string) => void;
   onOrder: (chain: string) => void;
   onPayBill: () => void;
@@ -35,7 +42,32 @@ export interface SalonItem {
   swatch?: string;
 }
 
+// One movable piece in the Arrange list.
+export interface ArrangeItem {
+  id: string;
+  name: string;
+  room: string;
+  level: number;
+  color?: string;
+}
+
+export interface ArrangeState {
+  floors: string[];
+  // The floor on screen: its pieces are listed first.
+  level: number;
+  items: ArrangeItem[];
+  selected: null | {
+    id: string;
+    name: string;
+    where: string;
+    canColour: boolean;
+    // Floors it can be carried to.
+    moveTo: number[];
+  };
+}
+
 export interface DrawerState {
+  arrange?: ArrangeState | null;
   page: DrawerPage;
   shopTab: string;
   money: number;
@@ -69,8 +101,11 @@ export interface DrawerState {
 
 const SALON_TAB = 'Salon';
 
+const esc = (t: string): string => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
 const PAGE_TITLES: Record<string, string> = {
   shop: 'Shop',
+  arrange: 'Arrange',
   goals: 'Goals',
   do: 'Give an order',
   partner: 'Partner',
@@ -97,6 +132,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     </div>
     <div class="vh-drawer-body">
       <section data-page="shop"></section>
+      <section data-page="arrange"></section>
       <section data-page="goals"></section>
       <section data-page="do"></section>
       <section data-page="partner"></section>
@@ -107,8 +143,10 @@ export function createDrawer(cb: DrawerCallbacks): {
 
   const dock = document.createElement('nav');
   dock.className = 'vh-dock';
-  dock.innerHTML = ['shop', 'goals', 'do', 'partner', 'you', 'home', 'log']
-    .map(pg => `<button data-open="${pg}" aria-pressed="false">${PAGE_TITLES[pg]}</button>`)
+  // The dock is tight on a phone, so the long page titles get a short label.
+  const DOCK_LABELS: Record<string, string> = { do: 'Orders' };
+  dock.innerHTML = ['shop', 'arrange', 'goals', 'do', 'partner', 'you', 'home', 'log']
+    .map(pg => `<button data-open="${pg}" aria-pressed="false">${DOCK_LABELS[pg] ?? PAGE_TITLES[pg]}</button>`)
     .join('');
 
   const closeBtn = el.querySelector('.vh-drawer-close')!;
@@ -120,6 +158,7 @@ export function createDrawer(cb: DrawerCallbacks): {
   let currentTab = '';
 
   function openPage(pg: DrawerPage): void {
+    const changed = pg !== currentPage;
     currentPage = pg;
     el.hidden = pg === '';
     el.dataset.open = pg;
@@ -128,6 +167,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     dock.querySelectorAll<HTMLButtonElement>('button[data-open]').forEach(b => {
       b.setAttribute('aria-pressed', String(b.dataset.open === pg));
     });
+    if (changed) cb.onPage?.(pg);
   }
 
   dock.querySelectorAll<HTMLButtonElement>('button[data-open]').forEach(b => {
@@ -140,12 +180,62 @@ export function createDrawer(cb: DrawerCallbacks): {
   function render(state: DrawerState): void {
     if (state.page !== currentPage && state.page !== '') openPage(state.page);
     if (currentPage === 'shop') renderShop(state);
+    else if (currentPage === 'arrange') renderArrange(state);
     else if (currentPage === 'goals') renderGoals(state);
     else if (currentPage === 'do') renderDo(state);
     else if (currentPage === 'partner') renderPartner(state);
     else if (currentPage === 'you') renderYou(state);
     else if (currentPage === 'home') renderHome(state);
     else if (currentPage === 'log') renderLog(state);
+  }
+
+
+  // Arrange mode's list: every movable piece in the house, floor by floor.
+  // Tapping one jumps to its floor and selects it, ready to drag. Redrawn only
+  // when something changed, since this page is refreshed several times a second
+  // and a rebuild would reset the list's scroll and eat taps.
+  let arrangeSig = '';
+  let arrangeSelected: string | null = null;
+  function renderArrange(state: DrawerState): void {
+    const sec = el.querySelector('[data-page="arrange"]') as HTMLElement;
+    const a = state.arrange;
+    const sig = JSON.stringify(a ?? null);
+    if (sig === arrangeSig) return;
+    arrangeSig = sig;
+    if (!a) { sec.innerHTML = ''; return; }
+    const keep = sec.querySelector<HTMLElement>('.vh-arr-list');
+    const scroll = keep ? [keep.scrollLeft, keep.scrollTop] : [0, 0];
+    const sel = a.selected;
+    const bar = sel
+      ? `<div class="vh-arr-bar">
+          <div class="vh-arr-what"><strong>${esc(sel.name)}</strong><small>${esc(sel.where)}</small></div>
+          <div class="vh-arr-acts">
+            <button data-arr="rotate" title="Turn it (R)">Rotate</button>
+            ${sel.canColour ? '<button data-arr="colour" title="Change colour (C)">Colour</button>' : ''}
+          </div>
+          ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
+        </div>`
+      : `<p class="vh-arr-hint">Tap a piece below, or tap one in the house, then drag it where you want it.</p>`;
+    const order = [a.level, ...a.floors.map((_, l) => l).filter(l => l !== a.level)];
+    const groups = order.map((level) => {
+      const name = a.floors[level];
+      const items = a.items.filter(i => i.level === level);
+      if (!items.length) return '';
+      return `<div class="vh-arr-group"><h4 class="vh-order-floor">${esc(name)}</h4><div class="vh-arr-items">${
+        items.map(i => `<button class="vh-arr-item${i.id === sel?.id ? ' vh-sel' : ''}" data-arr-pick="${i.id}" aria-pressed="${i.id === sel?.id}">
+          <span class="vh-arr-dot"${i.color ? ` style="background:${i.color}"` : ''}></span>
+          <span class="vh-arr-name"><strong>${esc(i.name)}</strong><small>${esc(i.room)}</small></span>
+        </button>`).join('')}</div></div>`;
+    }).join('');
+    sec.innerHTML = `<div class="vh-arr">${bar}<div class="vh-arr-list">${groups || '<p class="vh-empty">Nothing here can be moved.</p>'}</div></div>`;
+    const list = sec.querySelector<HTMLElement>('.vh-arr-list')!;
+    list.scrollLeft = scroll[0]; list.scrollTop = scroll[1];
+    if (sel && sel.id !== arrangeSelected) sec.querySelector('.vh-sel')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    arrangeSelected = sel?.id ?? null;
+    sec.querySelectorAll<HTMLElement>('[data-arr-pick]').forEach(b => b.addEventListener('click', () => cb.onArrangePick?.(b.dataset.arrPick!)));
+    sec.querySelector('[data-arr="rotate"]')?.addEventListener('click', () => cb.onArrangeRotate?.());
+    sec.querySelector('[data-arr="colour"]')?.addEventListener('click', () => cb.onArrangeColour?.());
+    sec.querySelectorAll<HTMLElement>('[data-arr-floor]').forEach(b => b.addEventListener('click', () => cb.onArrangeFloor?.(Number(b.dataset.arrFloor))));
   }
 
   function renderShop(state: DrawerState): void {

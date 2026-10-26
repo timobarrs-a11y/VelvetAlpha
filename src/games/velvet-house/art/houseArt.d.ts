@@ -41,7 +41,7 @@ export interface HouseFrame {
   wallMode: WallMode;
   chars?: PersonFrame[];
   /** Arrange mode: what can move, what's carried, whether it fits, what's under the pointer. */
-  arrange?: { movable: string[]; held: string | null; valid: boolean; hover: string | null } | null;
+  arrange?: { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null } | null;
 }
 
 export interface HouseArt {
@@ -50,6 +50,10 @@ export interface HouseArt {
   objectPlaced(id: string): void;
   /** Where a world point lands in view coordinates (follows the current rotation). */
   project(x: number, y: number, z?: number): [number, number];
+  /** The world point (x, y on the floor) under a view coordinate; the opposite of project, following the rotation. */
+  unproject(sx: number, sy: number): [number, number];
+  /** The piece of furniture at a view point on a floor, front-most, optionally only among `ids`. */
+  hitObject(level: number, sx: number, sy: number, ids?: string[]): ObjectInstance | null;
   /** Restores paint, wallpaper, floors, wall decor, yard and household details from an original save. */
   applySave(save: unknown): void;
   /** Sets the paint color for a floor level. */

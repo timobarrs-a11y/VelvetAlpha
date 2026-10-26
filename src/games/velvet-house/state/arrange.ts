@@ -1,4 +1,4 @@
-import { TYPES, blocksOf, isRug, footprint, type ObjectInstance } from './objects';
+import { TYPES, blocksOf, isRug, isFixed, footprint, type ObjectInstance } from './objects';
 import { LEVELS, STAIRS, WX, WY } from './house';
 import { buildWorld } from './agents';
 import { cellOf, reachableSet, NY } from './pathfinding';
@@ -118,4 +118,51 @@ export function nextColour(o: ObjectInstance): string | null {
   if (!cols || cols.length < 2) return null;
   const i = cols.indexOf(o.col ?? cols[0]);
   return cols[(i + 1) % cols.length];
+}
+
+// Pieces too big (or too bolted down) to carry up and down the stairs.
+const HEAVY = new Set(['bed', 'dining', 'gym', 'tread', 'shelves', 'piano', 'aquarium', 'wardrobe', 'gclock']);
+const INDOOR_LEVELS = [0, 1, 2];
+
+/**
+ * The floors a piece can be carried to, other than the one it's on. Anything
+ * you could reasonably lift (chairs, lamps, plants, a couch) can go between
+ * the basement, main floor and upstairs; big furniture, appliances and
+ * everything in the backyard stay on their own floor.
+ */
+export function otherFloors(o: ObjectInstance): number[] {
+  if (!isMovable(o) || isFixed(o.type) || HEAVY.has(o.type) || TYPES[o.type].out) return [];
+  if (!INDOOR_LEVELS.includes(o.level)) return [];
+  return INDOOR_LEVELS.filter(lv => lv !== o.level);
+}
+
+export function canChangeFloor(o: ObjectInstance): boolean {
+  return otherFloors(o).length > 0;
+}
+
+/**
+ * Carry `o` to `level`, setting it down on the free spot nearest the middle
+ * of that floor (or nearest `near`). True when it found room: `o` is then
+ * already on its new floor, at its new spot. False when the floor is too full,
+ * and `o` is exactly as it was.
+ */
+export function relocate(
+  objs: ObjectInstance[], o: ObjectInstance, level: number,
+  people: Array<{ level: number; x: number; y: number }> = [],
+  near: [number, number] = [WX / 2, WY / 2],
+): boolean {
+  const orig = { level: o.level, x: o.x, y: o.y, rot: o.rot };
+  const spots: Array<[number, number]> = [];
+  for (let x = 0; x <= WX; x += 0.5) for (let y = 0; y <= WY; y += 0.5) spots.push([x, y]);
+  spots.sort((a, b) => Math.hypot(a[0] - near[0], a[1] - near[1]) - Math.hypot(b[0] - near[0], b[1] - near[1]));
+  o.level = level;
+  for (const turns of [0, 1]) {
+    o.rot = (orig.rot + turns) % 4;
+    for (const [cx, cy] of spots) {
+      centreAt(o, cx, cy);
+      if (checkPlacement(objs, o, people).ok) return true;
+    }
+  }
+  Object.assign(o, orig);
+  return false;
 }

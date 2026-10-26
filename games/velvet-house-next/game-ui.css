@@ -28,6 +28,7 @@
 .vh-drawer-body { flex: 1; overflow-y: auto; padding: 12px; }
 .vh-drawer-body section { display: none; }
 .vh-drawer[data-open="shop"] [data-page="shop"],
+.vh-drawer[data-open="arrange"] [data-page="arrange"],
 .vh-drawer[data-open="goals"] [data-page="goals"],
 .vh-drawer[data-open="do"] [data-page="do"],
 .vh-drawer[data-open="partner"] [data-page="partner"],
@@ -275,6 +276,57 @@
 /* Empty state */
 .vh-empty { color: #6B6570; font-size: 13px; text-align: center; padding: 20px; }
 
+/* Arrange: a shop-like list of everything that can move, over the house */
+.vh-drawer[data-open="arrange"] { width: 340px; }
+.vh-arr { display: flex; flex-direction: column; gap: 12px; }
+.vh-arr-hint { margin: 0; font-size: 12px; color: #A9A1AE; }
+.vh-arr-bar {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px 12px;
+  border-radius: 12px; background: rgba(224,164,58,.1); border: 1px solid rgba(224,164,58,.45);
+}
+.vh-arr-what { display: flex; flex-direction: column; min-width: 0; }
+.vh-arr-what strong { font-size: 14px; font-weight: 700; color: #F2EEE8; }
+.vh-arr-what small { font-size: 11px; color: #A9A1AE; }
+.vh-arr-acts, .vh-arr-floors { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.vh-arr-floors span { font-size: 11px; color: #A9A1AE; }
+.vh-arr-bar button {
+  appearance: none; border: 0; border-radius: 8px; padding: 7px 12px; min-height: 32px;
+  font: 700 12px/1.2 Inter, system-ui, sans-serif; background: #E0A43A; color: #241B25; cursor: pointer;
+  transition: background .15s ease, transform .12s ease;
+}
+.vh-arr-bar button:hover { background: #E8B547; }
+.vh-arr-bar button:active { transform: scale(.96); }
+.vh-arr-bar [data-arr-floor] { background: rgba(255,255,255,.1); color: #F2EEE8; }
+.vh-arr-bar [data-arr-floor]:hover { background: rgba(255,255,255,.18); }
+.vh-arr-list { display: flex; flex-direction: column; }
+.vh-arr-items { display: flex; flex-direction: column; gap: 6px; }
+.vh-arr-item {
+  appearance: none; display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border-radius: 12px; text-align: left; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.04); color: #F2EEE8;
+  font: 400 13px/1.3 Inter, system-ui, sans-serif;
+  transition: border-color .18s ease, background .18s ease;
+}
+.vh-arr-item:hover { border-color: rgba(255,255,255,.18); }
+.vh-arr-item.vh-sel { border-color: #E0A43A; background: rgba(224,164,58,.14); }
+.vh-arr-dot { width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0; background: rgba(255,255,255,.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.vh-arr-name { display: flex; flex-direction: column; min-width: 0; }
+.vh-arr-name strong { font-size: 13px; font-weight: 700; }
+.vh-arr-name small { font-size: 11px; color: #A9A1AE; }
+/* The panel sits beside the house, not over it. */
+@media (min-width: 561px) {
+  .vh-stage.vh-arranging { padding-right: 340px; box-sizing: border-box; }
+  .vh-stage.vh-arranging .vh-canvas { width: min(calc(100vw - 340px), calc(100dvh * 640 / 440)); }
+  .vh-stage.vh-arranging .vh-controls { left: calc(50% - 170px); }
+}
+@media (min-width: 561px) and (max-height: 500px) {
+  .vh-drawer[data-open="arrange"] { width: 280px; }
+  .vh-stage.vh-arranging { padding-right: 280px; }
+  .vh-stage.vh-arranging .vh-canvas { width: min(calc(100vw - 280px), calc(100dvh * 640 / 440)); }
+  .vh-stage.vh-arranging .vh-tools { display: none; }
+  .vh-stage.vh-arranging .vh-controls { left: calc(50% - 140px); }
+}
+
 /* Responsive: drawer becomes bottom sheet on phone */
 @media (max-width: 560px) {
   .vh-drawer {
@@ -292,4 +344,27 @@
   .vh-dock button { padding: 8px 10px; font-size: 11px; }
   .vh-shop-tabs button { padding: 6px 8px; font-size: 10px; }
   .vh-order-grid { grid-template-columns: 1fr; }
+  /* The bottom bar scrolls sideways instead of wrapping or clipping. */
+  .vh-dock { --vh-dock-h: 52px; padding-bottom: max(4px, env(safe-area-inset-bottom)); overflow-x: auto; scrollbar-width: none; }
+  .vh-dock::-webkit-scrollbar { display: none; }
+  .vh-dock button { flex: 0 0 auto; white-space: nowrap; }
+  /* Floors and speed controls ride just above it. */
+  .vh-controls { bottom: calc(var(--vh-dock-h, 52px) + max(0px, env(safe-area-inset-bottom)) + 8px) !important; }
+  /* Arrange: a short tray above the bar, so the house stays in view to drag around. */
+  .vh-drawer[data-open="arrange"] {
+    width: 100%; height: 216px; bottom: calc(var(--vh-dock-h, 52px) + max(0px, env(safe-area-inset-bottom)));
+    border-radius: 16px 16px 0 0;
+  }
+  .vh-drawer[data-open="arrange"] .vh-drawer-head { padding: 6px 14px; }
+  .vh-drawer[data-open="arrange"] .vh-drawer-body { padding: 8px 10px; }
+  .vh-stage.vh-arranging .vh-tools { display: none; }
+  .vh-stage.vh-arranging .vh-controls { bottom: calc(var(--vh-dock-h, 52px) + max(0px, env(safe-area-inset-bottom)) + 216px + 8px) !important; }
+  .vh-arr { gap: 8px; }
+  .vh-arr-bar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px; }
+  .vh-arr-what { flex: 1 1 120px; }
+  .vh-arr-list { flex-direction: row; gap: 14px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .vh-arr-group { flex: 0 0 auto; display: flex; flex-direction: column; }
+  .vh-arr-group .vh-order-floor { margin: 0 0 4px; }
+  .vh-arr-items { flex-direction: row; }
+  .vh-arr-item { width: auto; flex: 0 0 auto; white-space: nowrap; }
 }

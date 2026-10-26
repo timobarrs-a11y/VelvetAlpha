@@ -2,10 +2,10 @@ import { migrateSave } from './state/saveMigration';
 import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage } from './bridge/protocol';
 import { setOwnedAvatarItems, ownsAvatarItem, buyAvatarItem } from './bridge/avatarShop';
 import { simsShopItems, itemLabel } from '../../data/avatarCatalog';
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, type PlacementCheck } from './state/arrange';
+import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, type PlacementCheck } from './state/arrange';
 import { INITIAL_OBJS, TYPES, type ObjectInstance } from './state/objects';
 import { DAYS, weekday, clockText, season, absMin } from './state/time';
-import { LEVEL_NAMES } from './state/house';
+import { LEVEL_NAMES, roomName } from './state/house';
 import { NEED_KEYS, NEED_LABELS } from './state/needs';
 import { RNG } from './state/rng';
 import {
@@ -34,7 +34,7 @@ import {
   talk, rememberChat, remember,
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
-import { createDrawer, type DrawerPage, type DrawerState } from './ui/drawer';
+import { createDrawer, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
 import { clothByKey, clothId, wearOnAgent, validOutfit, type OwnedCloth } from './state/clothing';
 import { validHeadSvgs, loadHeadImages } from './state/headSprites';
 import { createDialogue, createTray, showDiscoveryCard, createTownSign, type TrayAction } from './ui/dialogue';
@@ -243,7 +243,6 @@ function boot(): void {
           <button data-act="speed" title="Game speed">1x</button>
           <button data-act="quality" title="Graphics quality">Auto</button>
           <button data-act="pause" title="Pause (Space)" aria-pressed="false">Pause</button>
-          <button data-act="arrange" title="Arrange furniture (A)" aria-pressed="false">Arrange</button>
         </div>
       </div>
     </div>`;
@@ -278,6 +277,15 @@ function boot(): void {
     t: 0,
     follow: null as AgentId | null,
   };
+
+  // Arrange mode: tap a piece to select it (it gets an outline), then drag it.
+  let arranging = false;
+  let selectedObj: ObjectInstance | null = null;
+  let heldObj: ObjectInstance | null = null; // the piece being dragged right now
+  let heldOrig: { x: number; y: number; rot: number } | null = null;
+  let heldGrab: [number, number] = [0, 0]; // where on the piece it was grabbed, so it doesn't jump under the finger
+  let dragCandidate: { id: number; obj: ObjectInstance; x: number; y: number } | null = null;
+  let wasPaused = false;
 
   const fit = (): void => {
     const ratio = qualityManager.resolveDpr(window.devicePixelRatio || 1);
@@ -353,6 +361,11 @@ function boot(): void {
   let drawerPage: DrawerPage = '';
   const drawer = createDrawer({
     onClose: () => { drawerPage = ''; try { localStorage.removeItem('velvet-drawer'); } catch {} },
+    onPage: (pg) => { if (pg === 'arrange') enterArrange(); else if (arranging) exitArrange(); },
+    onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) selectObject(o); },
+    onArrangeRotate: () => rotateSelected(),
+    onArrangeColour: () => recolourHeld(),
+    onArrangeFloor: (lv) => carryTo(lv),
     onBuy: (item, color) => handleBuy(item, color),
     onBuyAvatarItem: (id) => handleBuyAvatarItem(id),
     onOrder: (chain) => handleOrder(chain),
@@ -445,6 +458,7 @@ function boot(): void {
   };
   const setLevel = (lv: number, keepFollow = false): void => {
     if (lv !== view.level) softCut();
+    if (selectedObj && selectedObj.level !== lv) { cancelHold(); selectedObj = null; }
     view.level = lv;
     if (!keepFollow) view.follow = null;
     syncControls();
@@ -478,61 +492,106 @@ function boot(): void {
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     if (e.key >= '1' && e.key <= '4') setLevel(Number(e.key) - 1);
-    else if (e.key === 'r' || e.key === 'R') rotate();
+    else if (e.key === 'r' || e.key === 'R') { if (arranging) { rotateSelected(); e.preventDefault(); } else rotate(); }
     else if (e.key === 'w' || e.key === 'W') cycleWalls();
     else if (e.key === ' ') { e.preventDefault(); togglePause(); }
     else if (e.key === 'a' || e.key === 'A') { toggleArrange(); }
     if (arranging) {
-      if (e.key === 'r' || e.key === 'R') { rotateHeld(); e.preventDefault(); }
       if (e.key === 'c' || e.key === 'C') { recolourHeld(); }
-      if (e.key === 'Escape') { cancelHold(); }
+      if (e.key === 'Escape') { if (heldObj) cancelHold(); else selectedObj = null; }
     }
   });
   syncControls();
 
   // Arrange mode
-  let arranging = false;
-  let heldObj: ObjectInstance | null = null;
-  let heldOrig: { x: number; y: number; rot: number } | null = null;
-  let wasPaused = false;
-  function toggleArrange(): void {
-    arranging = !arranging;
-    const ab = btn('arrange');
-    ab.setAttribute('aria-pressed', String(arranging));
-    ab.textContent = arranging ? 'Done' : 'Arrange';
-    if (arranging) {
-      heldObj = null;
-      wasPaused = view.paused;
-      view.paused = true;
-      syncControls();
-    } else {
-      cancelHold();
-      view.paused = wasPaused;
-      syncControls();
-    }
+  const toggleArrange = (): void => { if (arranging) drawer.close(); else drawer.open('arrange'); };
+  function enterArrange(): void {
+    if (arranging) return;
+    arranging = true;
+    stage.classList.add('vh-arranging');
+    selectedObj = null;
+    heldObj = null;
+    wasPaused = view.paused;
+    view.paused = true;
+    syncControls();
+  }
+  function exitArrange(): void {
+    if (!arranging) return;
+    cancelHold();
+    arranging = false;
+    selectedObj = null;
+    dragCandidate = null;
+    hoverObj = null;
+    canvas.style.cursor = '';
+    stage.classList.remove('vh-arranging');
+    view.paused = wasPaused;
+    syncControls();
   }
   // Whether the carried piece fits where it is, and why not.
   let heldCheck: PlacementCheck = { ok: true };
   let hoverObj: ObjectInstance | null = null;
+  const peopleOnFloor = () => people.filter(p => !p.onStairs);
+  const nameOf = (o: ObjectInstance) => (TYPES[o.type]?.name ?? 'furniture').toLowerCase();
   function recheck(): void {
-    if (heldObj) heldCheck = checkPlacement(world.objs, heldObj, people.filter(p => !p.onStairs));
+    if (heldObj) heldCheck = checkPlacement(world.objs, heldObj, peopleOnFloor());
   }
-  function rotateHeld(): void {
-    if (!heldObj) return;
-    rotateAboutCentre(heldObj);
-    recheck();
+  const movableHere = (): string[] => world.objs.filter(o => o.level === view.level && isMovable(o)).map(o => o.id);
+  // Select a piece: jump to its floor, outline it, and bring it into frame.
+  function selectObject(o: ObjectInstance | null): void {
+    cancelHold();
+    selectedObj = o;
+    if (!o) return;
+    if (o.level !== view.level) { selectedObj = null; setLevel(o.level); selectedObj = o; }
+    if (cam.tz > 1.05) {
+      const [fw, fd] = [TYPES[o.type].W, TYPES[o.type].D];
+      const [px, py] = art.project(o.x + fw / 2, o.y + fd / 2, (TYPES[o.type].h ?? 1) / 2);
+      cam.tfx = px; cam.tfy = py;
+    }
+  }
+  // Set a piece down for good: the house learns where it is now.
+  function commitMove(o: ObjectInstance, verb = 'Moved'): void {
+    log(`${verb} the ${nameOf(o)}.`);
+    art.objectPlaced(o.id);
+    relearnLayout(o);
+  }
+  // Turn the selected piece a quarter, skipping turns that don't fit.
+  function rotateSelected(): void {
+    const o = heldObj ?? selectedObj;
+    if (!o) return;
+    const orig = { x: o.x, y: o.y, rot: o.rot };
+    if (o === heldObj) { rotateAboutCentre(o); recheck(); return; }
+    for (let i = 0; i < 3; i++) {
+      rotateAboutCentre(o);
+      if (checkPlacement(world.objs, o, peopleOnFloor()).ok) { commitMove(o, 'Turned'); return; }
+    }
+    Object.assign(o, orig);
+    log(`There's no room to turn the ${nameOf(o)} here.`);
   }
   function recolourHeld(): void {
-    const o = heldObj ?? hoverObj;
+    const o = heldObj ?? selectedObj ?? hoverObj;
     const col = o && nextColour(o);
     if (!o || !col) return;
     o.col = col;
-    log(`Changed the ${(TYPES[o.type]?.name ?? 'furniture').toLowerCase()}'s colour.`);
+    log(`Changed the ${nameOf(o)}'s colour.`);
   }
+  // Put a dragged piece back where it was picked up.
   function cancelHold(): void {
     if (heldObj && heldOrig) { heldObj.x = heldOrig.x; heldObj.y = heldOrig.y; heldObj.rot = heldOrig.rot; }
     heldObj = null;
     heldOrig = null;
+    dragCandidate = null;
+  }
+  // Carry the selected piece up or down the stairs to another floor.
+  function carryTo(level: number): void {
+    const o = selectedObj;
+    if (!o || !otherFloors(o).includes(level)) return;
+    const from = o.level;
+    if (!relocate(world.objs, o, level, peopleOnFloor())) { log(`There's no room for the ${nameOf(o)} on the ${LEVEL_NAMES[level].toLowerCase()}.`); return; }
+    selectedObj = null;
+    setLevel(level);
+    selectedObj = o;
+    log(`Carried the ${nameOf(o)} ${level > from ? 'up' : 'down'} to the ${LEVEL_NAMES[level].toLowerCase()}. Drag it where you want it.`);
+    commitMove(o, 'Set down');
   }
   // After a move, the household learns the new layout: the spots to stand at,
   // the walkable floor, and anyone heading to (or using) the moved piece
@@ -551,14 +610,36 @@ function boot(): void {
   function arrangeFrame() {
     if (!arranging) return null;
     return {
-      movable: world.objs.filter(o => o.level === view.level && isMovable(o)).map(o => o.id),
-      held: heldObj?.id ?? null, valid: heldCheck.ok, hover: hoverObj?.id ?? null,
+      movable: movableHere(),
+      held: heldObj?.id ?? null, selected: selectedObj?.id ?? null,
+      valid: heldCheck.ok, hover: hoverObj?.id ?? null,
     };
   }
-  function screenToWorld(sx: number, sy: number): [number, number] {
-    return [((sx - 288) / 32 + (sy - 128) / 16) / 2, ((sy - 128) / 16 - (sx - 288) / 32) / 2];
+  // The Arrange list: everything that can move, wherever it is in the house.
+  function arrangeState(): ArrangeState {
+    const items = world.objs.filter(isMovable).map((o) => {
+      const t = TYPES[o.type];
+      const [fw, fd] = t.W && o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
+      return { id: o.id, name: t.name ?? o.type, room: roomName(o.level, o.x + fw / 2, o.y + fd / 2), level: o.level, color: o.col };
+    }).sort((a, b) => a.name.localeCompare(b.name) || a.room.localeCompare(b.room));
+    const o = selectedObj;
+    return {
+      floors: [...LEVEL_NAMES],
+      level: view.level,
+      items,
+      selected: o ? {
+        id: o.id, name: TYPES[o.type]?.name ?? o.type,
+        where: `${LEVEL_NAMES[o.level]} · ${items.find(i => i.id === o.id)?.room ?? ''}`,
+        canColour: !!nextColour(o),
+        moveTo: otherFloors(o),
+      } : null,
+    };
   }
-  btn('arrange').addEventListener('click', toggleArrange);
+  const worldAt = (sx: number, sy: number): [number, number] => art.unproject(sx, sy);
+  const movableAt = (sx: number, sy: number): ObjectInstance | null => {
+    const o = art.hitObject(view.level, sx, sy, movableHere());
+    return o && isMovable(o) ? o : null;
+  };
 
   // Canvas click → interaction or arrange
   canvas.addEventListener('click', (e) => {
@@ -566,26 +647,9 @@ function boot(): void {
     const [sx, sy] = toView(e.clientX, e.clientY);
 
     if (arranging) {
-      // Arrange mode: tap a piece to pick it up, tap again to set it down.
-      if (heldObj) {
-        centreAt(heldObj, ...screenToWorld(sx, sy));
-        recheck();
-        if (!heldCheck.ok) { log(heldCheck.reason ?? "It doesn't fit there."); return; }
-        const placed = heldObj;
-        log(`Moved the ${(TYPES[placed.type]?.name ?? 'furniture').toLowerCase()}.`);
-        art.objectPlaced(placed.id);
-        heldObj = null;
-        heldOrig = null;
-        relearnLayout(placed);
-        return;
-      }
-      const obj = findObjectAt(sx, sy);
-      if (obj && isMovable(obj)) {
-        heldObj = obj;
-        heldOrig = { x: obj.x, y: obj.y, rot: obj.rot };
-        recheck();
-        log(`Picked up the ${(TYPES[obj.type]?.name ?? 'furniture').toLowerCase()}. R to turn it, C for colour, Esc to put it back.`);
-      }
+      // Arrange mode: pointer events do the work (select on press, drag to
+      // move). A tap on empty floor lets go of the selection.
+      if (!movableAt(sx, sy)) selectObject(null);
       return;
     }
 
@@ -633,14 +697,58 @@ function boot(): void {
     return parts.reduce((best, p) => Math.abs(p[1] - along) < Math.abs(best[1] - along) ? p : best)[0];
   }
 
-  // Arrange mode: the carried piece follows the pointer (mouse or finger),
-  // and whatever's under it is highlighted.
+  // Arrange mode: press a piece to select it and drag to carry it (mouse or
+  // finger). With a mouse, whatever's under the pointer is highlighted.
+  const DRAG_SLOP = 6;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!arranging || !e.isPrimary || e.button > 0) return;
+    const [sx, sy] = toView(e.clientX, e.clientY);
+    const o = movableAt(sx, sy);
+    if (!o) return;
+    selectObject(o);
+    const [wx, wy] = worldAt(sx, sy), [fw, fd] = [TYPES[o.type].W, TYPES[o.type].D];
+    const [cw, cd] = o.rot % 2 ? [fd, fw] : [fw, fd];
+    heldGrab = [wx - (o.x + cw / 2), wy - (o.y + cd / 2)];
+    dragCandidate = { id: e.pointerId, obj: o, x: e.clientX, y: e.clientY };
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* not capturable: drag still works while over the canvas */ }
+  });
   canvas.addEventListener('pointermove', (e) => {
     if (!arranging) return;
     const [sx, sy] = toView(e.clientX, e.clientY);
-    if (heldObj) { centreAt(heldObj, ...screenToWorld(sx, sy)); recheck(); }
-    else { const o = findObjectAt(sx, sy); hoverObj = o && isMovable(o) ? o : null; }
+    if (dragCandidate && dragCandidate.id === e.pointerId) {
+      if (!heldObj) {
+        if (Math.hypot(e.clientX - dragCandidate.x, e.clientY - dragCandidate.y) < DRAG_SLOP) return;
+        heldObj = dragCandidate.obj;
+        heldOrig = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot };
+        suppressClick = true;
+      }
+      const [wx, wy] = worldAt(sx, sy);
+      centreAt(heldObj, wx - heldGrab[0], wy - heldGrab[1]);
+      recheck();
+    } else if (!heldObj && e.pointerType === 'mouse') {
+      const o = movableAt(sx, sy);
+      hoverObj = o;
+      canvas.style.cursor = o ? (o === selectedObj ? 'grab' : 'pointer') : '';
+    }
   });
+  // Let go: it stays where it fits, or goes back to where it was.
+  const dropHeld = (e: PointerEvent): void => {
+    if (!dragCandidate || dragCandidate.id !== e.pointerId) return;
+    const o = heldObj;
+    dragCandidate = null;
+    if (!o) return;
+    recheck();
+    if (heldCheck.ok) {
+      heldObj = null; heldOrig = null;
+      commitMove(o);
+    } else {
+      log(`${heldCheck.reason ?? "It doesn't fit there."} Back it goes.`);
+      cancelHold();
+    }
+    heldCheck = { ok: true };
+  };
+  canvas.addEventListener('pointerup', dropHeld);
+  canvas.addEventListener('pointercancel', (e) => { if (dragCandidate?.id === e.pointerId) { cancelHold(); heldCheck = { ok: true }; } });
 
   // Zoom and pan: wheel, pinch, drag (when zoomed), double-tap to reset.
   let suppressClick = false;
@@ -652,8 +760,8 @@ function boot(): void {
   canvas.addEventListener('dblclick', () => { if (view.follow) toggleFollow(view.follow); resetCamera(); });
   canvas.addEventListener('pointerdown', (e) => {
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (touches.size === 1) dragFrom = { x: e.clientX, y: e.clientY, fx: cam.tfx, fy: cam.tfy };
-    if (touches.size === 2) { const [a, b] = [...touches.values()]; pinchFrom = Math.hypot(a.x - b.x, a.y - b.y); dragFrom = null; }
+    if (touches.size === 1) dragFrom = arranging && movableAt(...toView(e.clientX, e.clientY)) ? null : { x: e.clientX, y: e.clientY, fx: cam.tfx, fy: cam.tfy };
+    if (touches.size === 2) { const [a, b] = [...touches.values()]; pinchFrom = Math.hypot(a.x - b.x, a.y - b.y); dragFrom = null; if (heldObj) { cancelHold(); heldCheck = { ok: true }; } dragCandidate = null; }
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!touches.has(e.pointerId)) return;
@@ -662,7 +770,7 @@ function boot(): void {
       const [a, b] = [...touches.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
       zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinchFrom);
       pinchFrom = d; suppressClick = true;
-    } else if (dragFrom && cam.tz > 1.01 && !(arranging && heldObj)) {
+    } else if (dragFrom && cam.tz > 1.01) {
       const dx = e.clientX - dragFrom.x, dy = e.clientY - dragFrom.y;
       if (Math.hypot(dx, dy) > 6) {
         const rect = canvas.getBoundingClientRect(), k = VIEW_W / rect.width / cam.tz;
@@ -959,6 +1067,7 @@ function boot(): void {
       lawnLabel: 'Lush', lawnWeeds: 0,
     };
     const drawerState: DrawerState = {
+      arrange: arranging ? arrangeState() : null,
       page: drawerPage, shopTab: 'Today',
       money: world.household.money, bond, day: world.day,
       minutes: world.minutes, owned, careerLevel: 0, careerPerf: 0,
