@@ -36,6 +36,10 @@ Then deploy the changed edge functions: `chat-turn`, `atlas-onboarding`, `atlas-
 The two eval scripts need `ANTHROPIC_API_KEY` and call the live API:
 `scripts/atlas-arrival-eval.ts` and `scripts/coach-teaching-eval.ts`.
 
+## Later
+
+- **Free and paid in Velvet Sims:** the game is free without the AI; the live AI companion and the better jobs are paid. Plan and open decisions: `docs/velvet-house/free-and-paid.md`.
+
 ## Decisions (made by Tim, 26 October)
 
 | # | Decision | Answer |
