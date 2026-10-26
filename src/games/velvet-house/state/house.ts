@@ -1,4 +1,5 @@
 import type { StairDef } from './pathfinding';
+import { SCENES, FLOOR_ORDER, levelOfKind } from './scenes';
 
 export type WallSide = 'B' | 'F' | 'L' | 'R';
 
@@ -37,11 +38,10 @@ export const TH = 16;
 export const ZH = 34;
 export const WH = 2.6;
 
-export const LEVEL_NAMES = ['Basement', 'Main floor', 'Upstairs', 'Backyard', 'Attic'] as const;
-
-// The attic is a bought extra, so it comes last in the data but sits above Upstairs on screen.
-export const ATTIC = 4;
-export const FLOOR_ORDER = [0, 1, 2, ATTIC, 3] as const;
+// Names, floor-bar order and the attic's level come from the scene list (state/scenes.ts).
+export const LEVEL_NAMES: readonly string[] = SCENES.map((s) => s.name);
+export const ATTIC = levelOfKind('attic');
+export { FLOOR_ORDER };
 
 export const LEVELS: LevelDef[] = [
   {

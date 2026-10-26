@@ -15,7 +15,7 @@ describe('level data has one source', () => {
 
   it('only house.ts declares the level names', () => {
     const files = fs.readdirSync(path.join(root, 'state')).filter((f) => f.endsWith('.ts'));
-    const owners = files.filter((f) => /export const LEVEL_NAMES\s*=/.test(fs.readFileSync(path.join(root, 'state', f), 'utf8')));
+    const owners = files.filter((f) => /export const LEVEL_NAMES\b/.test(fs.readFileSync(path.join(root, 'state', f), 'utf8')));
     expect(owners).toEqual(['house.ts']);
   });
 });

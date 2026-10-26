@@ -1,4 +1,5 @@
 import type { RNG } from './rng';
+import { isOutdoor } from './scenes';
 
 export type DirtKind = 'floor' | 'wall';
 export type DirtType =
@@ -110,7 +111,7 @@ export function dirtNear(
   isFreeAt: (lv: number, x: number, y: number) => boolean,
   r = 0.5
 ): DirtSpot | null {
-  if (level === 3) return null;
+  if (isOutdoor(level)) return null;
   for (let k = 0; k < 8; k++) {
     const x = cx + (rng.next() - 0.5) * 2 * r;
     const y = cy + (rng.next() - 0.5) * 2 * r;

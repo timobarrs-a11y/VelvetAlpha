@@ -1,4 +1,5 @@
 import { ATTIC } from '../state/house';
+import { LEVEL_COUNT } from '../state/scenes';
 import { type AgentId } from '../state/agents';
 import { qualityManager } from '../engine/qualityTier';
 import { SPEEDS, WALL_MODES } from '../kernel/config';
@@ -65,7 +66,7 @@ export function createControls(g: Game): Partial<Game> {
 
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    if (e.key >= '1' && e.key <= '5' && (Number(e.key) - 1 !== ATTIC || hasAttic())) setLevel(Number(e.key) - 1);
+    if (e.key >= '1' && Number(e.key) <= LEVEL_COUNT && (Number(e.key) - 1 !== ATTIC || hasAttic())) setLevel(Number(e.key) - 1);
     else if (e.key === 'r' || e.key === 'R') { if (g.isArranging()) { g.rotateSelected(); e.preventDefault(); } else rotate(); }
     else if (e.key === 'w' || e.key === 'W') cycleWalls();
     else if (e.key === ' ') { e.preventDefault(); togglePause(); }

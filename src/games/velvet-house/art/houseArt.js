@@ -7,6 +7,7 @@ import { poseRig, idleRig } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
 import { handImage, HAND_SPRITE } from '../state/bodySprites';
 import { TYPES as STATE_TYPES } from '../state/objects';
+import { isOutdoor } from '../state/scenes';
 import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
@@ -778,7 +779,7 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (f.k === 'tiles') { for (let u = f.u[0]; u < f.u[1] - 0.01; u += 0.23) for (let z = f.z[0], k = 0; z < f.z[1] - 0.01; z += 0.24, k++) { poly([P(u, z), P(Math.min(u + 0.23, f.u[1]), z), P(Math.min(u + 0.23, f.u[1]), z + 0.24), P(u, z + 0.24)], (Math.round(u / 0.23) + k) % 2 ? '#D5E6EB' : '#C7DDE3', 'rgba(255,255,255,.55)', 0.6); } }
   }
   function drawWalls(level) {
-    if (level === 3) { drawYardBack(); return; }
+    if (isOutdoor(level)) { drawYardBack(); return; }
     const lk = LOOKS[level], c = wallTone(level), back = BACK[VR];
     const quad = (pl, z0, z1) => [wallPoint(pl, 0, z0), wallPoint(pl, planeLen(pl), z0), wallPoint(pl, planeLen(pl), z1), wallPoint(pl, 0, z1)];
     const segq = (pl, u0, u1, z0, z1) => [wallPoint(pl, u0, z0), wallPoint(pl, u1, z0), wallPoint(pl, u1, z1), wallPoint(pl, u0, z1)];
@@ -813,7 +814,7 @@ export function createHouseArt(ctx0, opts = {}) {
     [[2.4, 2.1], [6.2, 1.7]].forEach(([u, z]) => { const [x, y] = iso(0, u, z); ctx.strokeStyle = 'rgba(40,40,50,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 3, y - 4); ctx.lineTo(x + 3, y + 4); ctx.stroke(); });
   }
   function drawFloor(level) {
-    if (level === 3) { drawYardGround(); return; }
+    if (isOutdoor(level)) { drawYardGround(); return; }
     const f = FLOORS[LOOKS[level].floor] || FLOORS.wood;
     if (gOn && GLOSS_FLOORS.has(f.kind)) gMat = MATERIAL.gloss;
     for (let i = 0; i < WX; i++) for (let j = 0; j < WY; j++) floorTile(f, i, j);
@@ -914,7 +915,7 @@ export function createHouseArt(ctx0, opts = {}) {
   const isLit = (key) => (LA[key] || 0) > 0.35;
   const lightCv = document.createElement('canvas'), lctx = lightCv.getContext('2d');
 
-  function levelDark(level) { return Math.min(level === 0 ? 0.7 : 0.62, darkness() + (level === 0 ? 0.32 : 0) + (!power && level !== 3 ? 0.1 : 0) + (level === 3 && raining() ? 0.08 : 0)); }
+  function levelDark(level) { return Math.min(level === 0 ? 0.7 : 0.62, darkness() + (level === 0 ? 0.32 : 0) + (!power && !isOutdoor(level) ? 0.1 : 0) + (isOutdoor(level) && raining() ? 0.08 : 0)); }
   function wantLight(level, room, night, amb) {
     if (!power || levelDark(level) < 0.05) return 0;
     const now = absMin(), h = hour(), k = level + ':' + room;
@@ -998,7 +999,7 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   function extWindowColor(level) { if (levelDark(level) > 0.2) return Object.keys(LA).some(k => LA[k] > 0.35) && level !== 0 ? '#F3C77A' : '#2B2F45'; return raining() ? '#8E99A8' : '#A9C3D3'; }
   function drawFrontWalls(level) {
-    if (level === 3) return;
+    if (isOutdoor(level)) return;
     const h = easedH('front' + level, arranging || wallMode !== 'up' ? 0.32 : WH), sid = level === 0 ? '#8C8884' : '#D9CDBD', col = extWindowColor(level);
     FRONT[VR].forEach(pl => {
       const r = pl === 'F' ? [0, WY, WX + 0.16, WY + 0.16] : pl === 'R' ? [WX, -0.16, WX + 0.16, WY + 0.16] : pl === 'L' ? [-0.16, -0.16, 0, WY + 0.16] : [-0.16, -0.16, WX + 0.16, 0];
@@ -1164,7 +1165,7 @@ export function createHouseArt(ctx0, opts = {}) {
     });
     const frame = {
       view: [W, H], origin: [OX, OY], iso: [TW, TH, ZH],
-      darkA: a, night: level === 0 ? [0.14, 0.19, 0.34] : level === 3 ? [0.17, 0.2, 0.4] : [0.2, 0.18, 0.42], outdoor: level === 3, glow: Math.min(1, a / 0.35),
+      darkA: a, night: level === 0 ? [0.14, 0.19, 0.34] : isOutdoor(level) ? [0.17, 0.2, 0.4] : [0.2, 0.18, 0.42], outdoor: isOutdoor(level), glow: Math.min(1, a / 0.35),
       sunDir: [sa, sb, sun.dir[2]], sunCol: sun.col, sky: rgb(skyColor()).map(v => v / 255), daylight: 1 - dk, rain,
       grade: gradeTint(h, si), t: animT, quality: tier() === 'high' ? 'high' : 'medium', windows,
       lights: lights.map(l => { const [la, lb] = V(l.src[0], l.src[1]), [sx, sy] = iso(...l.src); return { a: la, b: lb, z: l.src[2], range: l.r / 30, s: l.s, col: l.col, sx, sy, glow: l.r, vis: l.vis }; }),
@@ -1805,9 +1806,9 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     const lights = activeLights(lv);
-    PFX.step(rdt, lv === 3 ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
+    PFX.step(rdt, isOutdoor(lv) ? [0.16 + (raining() ? 0.2 : 0), 0.06] : [0.015, 0], tier() === 'low' ? 0.5 : 1);
     // Fall: leaves blow across the yard from the trees' side.
-    if (lv === 3 && seasonIdx() === 2 && tier() !== 'low') {
+    if (isOutdoor(lv) && seasonIdx() === 2 && tier() !== 'low') {
       for (let i = 0; i < 3; i++) PFX.emit('leaves' + i, 'leaf', 3, 1 + i * 3.2, 0.6 + (i % 2) * 2.4, 2.2 + i * 0.3, 1);
     }
     const deferred = !!(G && opts.deferredLights && opts.deferredLights()) && tier() !== 'low';
@@ -1817,7 +1818,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && TYPES[o.type] && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
-    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && lv === 3) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (gOn) G.clearBase(); } }); });
+    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (gOn) G.clearBase(); } }); });
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     if (arrState) drawArrangeOverlay(arrState, lv);
@@ -1826,7 +1827,7 @@ export function createHouseArt(ctx0, opts = {}) {
     drawParticles(lv, false);
     lighting(lv, lights, deferred);
     drawParticles(lv, true);
-    if (lv === 3) drawRain();
+    if (isOutdoor(lv)) drawRain();
     ctx.restore();
     ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
   }

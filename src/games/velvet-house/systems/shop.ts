@@ -3,6 +3,7 @@ import { simsShopItems, itemLabel } from '../../../data/avatarCatalog';
 import { relocate } from '../state/arrange';
 import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, ATTIC } from '../state/house';
+import { isPaintable } from '../state/scenes';
 import { buildWorld } from '../state/agents';
 import { spend } from '../state/household';
 import { type CatalogEntry } from '../state/catalog';
@@ -26,7 +27,7 @@ export function createShop(g: Game): Partial<Game> {
   function handleBuy(item: CatalogEntry, color?: string): void {
     const price = item.price;
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }
-    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor') && view.level === 3) {
+    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor') && !isPaintable(view.level)) {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
