@@ -11,6 +11,19 @@ describe('avatar catalog', () => {
     expect(parseItemId('hairStyle:<script>')).toBeNull();
   });
 
+  it('treats pants like any other wardrobe slot', () => {
+    expect(parseItemId('bottom:leather')).toEqual({ slot: 'bottom', value: 'leather' });
+    expect(parseItemId('bottomColor:#17171b')).toEqual({ slot: 'bottomColor', value: '#17171b' });
+    expect(howToGet(itemId('bottom', 'leather'))).toEqual({ how: 'member' });
+    expect(howToGet(itemId('bottom', 'jeans'))).toEqual({ how: 'free' });
+    expect(howToGet(itemId('outfit', 'rockstar'))).toEqual({ how: 'member' });
+    expect(howToGet(itemId('headwear', 'snapback'))).toEqual({ how: 'member' });
+    expect(howToGet(itemId('headwear', 'nurse_cap'))).toEqual({ how: 'free' });
+    expect(lookItems({ outfit: 'rockstar', bottom: 'leather', headwear: 'bandana' })).toEqual([
+      'outfit:rockstar', 'bottom:leather', 'headwear:bandana',
+    ]);
+  });
+
   it('never makes who someone is into an item', () => {
     for (const slot of ['skinTone', 'eyeShape', 'noseShape', 'lipShape', 'faceShape', 'eyeColor']) {
       expect(parseItemId(`${slot}:anything`)).toBeNull();

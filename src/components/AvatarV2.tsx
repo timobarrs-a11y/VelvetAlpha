@@ -5,7 +5,8 @@ import {
   outfitGradient, renderOutfitBody, renderOutfitFront, shade,
   renderHeadwear, headwearHairCut, renderFaceAccessory,
 } from '../renderers/outfitRenderer';
-import { outfitItem } from '../data/avatarItems';
+import { outfitItem, resolveBottom } from '../data/avatarItems';
+import { renderLegs, renderWaist, renderArms, HIP_OFFSET, type FullBodyParams } from '../renderers/bodyRenderer';
 import { migrateAvatarConfig } from '../utils/avatarConfig';
 import { faceOutlinePath, buildFaceGeometry, FACE_PARAMS } from '../renderers/faceGeometry';
 import {
@@ -22,7 +23,8 @@ interface AvatarV2Props {
   // The mouth's expression. Neutral unless something (like a reaction) says otherwise.
   mood?: MouthMood;
   // 'head' draws only the head, cropped to it, for game sprites and small portraits.
-  part?: 'bust' | 'head';
+  // 'full' draws the whole body, head to shoes, to show a look with its pants.
+  part?: 'bust' | 'head' | 'full';
   // 'back' draws the back of the head (head part only), for walking away.
   view?: 'front' | 'back';
   eyesClosed?: boolean;
@@ -507,22 +509,41 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
     );
   }
 
+  // The full body is drawn a little narrower through the torso so the head stays the star.
+  const full = part === 'full';
+  const bodyScale = full ? torsoScaleX * 0.84 : torsoScaleX;
+  const pants = resolveBottom(config);
+  const bodyDrawParams: FullBodyParams = {
+    N: neckY, S: shoulderRx, sx: bodyScale, skin: skinTone,
+    outfit, outfitMain: outfitColor, outfitAccent,
+    bottom: pants.id, bottomColor: pants.color, bottomAccent: pants.accent, idPrefix: `${uid}-body`,
+  };
+  const torsoClipId = `${uid}-torsoclip`;
+
   return (
-    <svg viewBox="0 0 100 130" className={className}>
+    <svg viewBox={full ? `-6 0 112 ${neckY + 150}` : '0 0 100 130'} className={className}>
       {svgDefs}
+      {full && <defs><clipPath id={torsoClipId}><rect x="-20" y="-10" width="140" height={neckY + HIP_OFFSET + 10} /></clipPath></defs>}
+
+      {full && renderLegs(bodyDrawParams)}
 
       <g clipPath={hatClip}>{hair.back}</g>
 
-      <g transform={`translate(50,0) scale(${torsoScaleX},1) translate(-50,0)`}>
+      <g clipPath={full ? `url(#${torsoClipId})` : undefined}>
+      <g transform={`translate(50,0) scale(${bodyScale},1) translate(-50,0)`}>
         {renderOutfitBody(outfitParams)}
       </g>
 
       <rect x={50 - neckWidth} y={neckTopY} width={neckWidth * 2} height={neckY - neckTopY + 14}
         fill={`url(#${faceGradientId})`} rx="2" />
 
-      <g transform={`translate(50,0) scale(${torsoScaleX},1) translate(-50,0)`}>
+      <g transform={`translate(50,0) scale(${bodyScale},1) translate(-50,0)`}>
         {renderOutfitFront(outfitParams)}
       </g>
+      </g>
+
+      {full && renderWaist(bodyDrawParams, (shoulderRx + 13.5) * bodyScale)}
+      {full && renderArms(bodyDrawParams)}
 
       {renderNecklace()}
       {renderTattoo()}

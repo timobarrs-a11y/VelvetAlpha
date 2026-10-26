@@ -5,6 +5,7 @@ import { AvatarV2 } from '../AvatarV2';
 import { migrateAvatarConfig } from '../../utils/avatarConfig';
 import { HAIRSTYLES, FACE_SHAPES, EYE_SHAPES } from '../../types/avatar-v2';
 import { faceOutlinePath } from '../../renderers/faceGeometry';
+import { OUTFITS, BOTTOMS, HEADWEAR, PERSONAS } from '../../data/avatarItems';
 
 describe('AvatarV2', () => {
   it('draws the afro for both genders', () => {
@@ -91,5 +92,58 @@ describe('AvatarV2', () => {
       expect(closed).not.toContain('mouth-open');
       expect(grin).toContain('mouth-open');
     }
+  });
+});
+
+describe('AvatarV2 wardrobe', () => {
+  it('draws every shirt, pair of pants and hat, for both genders and every body type', () => {
+    for (const gender of ['male', 'female'] as const) {
+      for (const bodyType of ['slim', 'average', 'athletic', 'curvy'] as const) {
+        for (const outfit of OUTFITS) {
+          for (const part of ['bust', 'full'] as const) {
+            const html = renderToStaticMarkup(<AvatarV2 part={part} config={migrateAvatarConfig({ gender, bodyType, outfit: outfit.id })} />);
+            expect(html, `${outfit.id} ${part}`).toContain('<svg');
+            expect(html).not.toContain('undefined');
+            expect(html).not.toContain('NaN');
+          }
+        }
+        for (const bottom of BOTTOMS) {
+          const html = renderToStaticMarkup(<AvatarV2 part="full" config={migrateAvatarConfig({ gender, bodyType, bottom: bottom.id })} />);
+          expect(html, bottom.id).not.toContain('NaN');
+        }
+      }
+      for (const hat of HEADWEAR) {
+        for (const part of ['bust', 'head', 'full'] as const) {
+          const html = renderToStaticMarkup(<AvatarV2 part={part} config={migrateAvatarConfig({ gender, headwear: hat.id })} />);
+          expect(html, `${hat.id} ${part}`).not.toContain('NaN');
+        }
+      }
+    }
+  });
+
+  it('shows the whole body only on the full view, with room for the legs and shoes', () => {
+    const config = migrateAvatarConfig({ bottom: 'leather' });
+    const viewBox = (part: 'bust' | 'full') => renderToStaticMarkup(<AvatarV2 part={part} config={config} />).match(/viewBox="([^"]+)"/)![1].split(' ').map(Number);
+    expect(viewBox('bust')[3]).toBe(130);
+    expect(viewBox('full')[3]).toBeGreaterThan(200);
+  });
+
+  it('puts the pants a persona names on the full view, and follows the shirt when none are picked', () => {
+    const svgOf = (cfg: object) => renderToStaticMarkup(<AvatarV2 part="full" config={migrateAvatarConfig(cfg)} />);
+    // Chef pants carry a check pattern; plain jeans do not.
+    expect(svgOf({ outfit: 'chef' })).toContain('-check');
+    expect(svgOf({ outfit: 'chef', bottom: 'jeans' })).not.toContain('<rect fill="#f4f1ea" opacity="0.5"');
+    expect(svgOf(PERSONAS.find(p => p.id === 'rockstar')!.look)).not.toBe(svgOf({ outfit: 'rockstar', bottom: 'jeans' }));
+  });
+
+  it('gives each full-body avatar on a page its own ids', () => {
+    const { container } = render(
+      <>
+        <AvatarV2 part="full" config={migrateAvatarConfig({ outfit: 'cop' })} />
+        <AvatarV2 part="full" config={migrateAvatarConfig({ outfit: 'scrubs' })} />
+      </>,
+    );
+    const ids = [...container.querySelectorAll('[id]')].map(e => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

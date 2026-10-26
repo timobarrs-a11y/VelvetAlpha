@@ -13,7 +13,8 @@ export type BridgeMessageType =
   | 'velvet:restarted'
   | 'velvet:avatarItemBought'
   | 'velvet:avatarInventory'
-  | 'velvet:lookChanged';
+  | 'velvet:lookChanged'
+  | 'velvet:avatarLook';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -39,8 +40,12 @@ export interface GameLook {
   gender?: 'male' | 'female';
   // The real avatar head as SVG frames (see state/headSprites.ts).
   sprites?: Record<string, string>;
+  // The avatar's hands as SVG pieces (see state/bodySprites.ts).
+  body?: Record<string, string>;
   // The avatar's outfit, worn as the signature look (see state/clothing.ts).
-  outfit?: { style: string; color: string; accent: string; bottom: string; key: string };
+  outfit?: { style: string; color: string; accent: string; bottom: string; key: string; bottomStyle?: string; bottomAccent?: string };
+  // What the player may wear from the avatar wardrobe, and its personas (see state/clothing.ts).
+  wardrobe?: unknown;
 }
 
 export interface ProfileMessage extends BridgeMessage {
@@ -111,15 +116,42 @@ export interface LookChangedMessage extends BridgeMessage {
   type: 'velvet:lookChanged';
   game: 'velvet-house';
   who: 'player';
-  top: { style: string; color: string; accent?: string };
+  // Whichever pieces changed: a shirt, pants, or a hat (an avatar headwear id).
+  top?: { style: string; color: string; accent?: string };
+  bottom?: { style: string; color: string; accent?: string };
+  hat?: string;
 }
+
+const piece = (v: unknown): boolean => {
+  if (!v || typeof v !== 'object') return false;
+  const p = v as Record<string, unknown>;
+  return typeof p.style === 'string' && p.style.length <= 40 && typeof p.color === 'string' && p.color.length <= 9;
+};
 
 export function isLookChangedMessage(data: unknown): data is LookChangedMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;
-  const top = m.top as Record<string, unknown> | undefined;
-  return m.type === 'velvet:lookChanged' && m.who === 'player' && !!top
-    && typeof top.style === 'string' && typeof top.color === 'string';
+  if (m.type !== 'velvet:lookChanged' || m.who !== 'player') return false;
+  const hasTop = m.top !== undefined, hasBottom = m.bottom !== undefined, hasHat = m.hat !== undefined;
+  if (!hasTop && !hasBottom && !hasHat) return false;
+  if (hasTop && !piece(m.top)) return false;
+  if (hasBottom && !piece(m.bottom)) return false;
+  if (hasHat && (typeof m.hat !== 'string' || m.hat.length > 40)) return false;
+  return true;
+}
+
+// The host's answer after a look change that alters the head (a new hat): fresh head frames and hands.
+export interface AvatarLookMessage extends BridgeMessage {
+  type: 'velvet:avatarLook';
+  who: 'player';
+  sprites?: Record<string, string>;
+  body?: Record<string, string>;
+}
+
+export function isAvatarLookMessage(data: unknown): data is AvatarLookMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:avatarLook' && m.who === 'player' && typeof m.sprites === 'object' && m.sprites !== null;
 }
 
 export function isAvatarItemBoughtMessage(data: unknown): data is AvatarItemBoughtMessage {
@@ -211,7 +243,8 @@ const FIELD_WHITELISTS: Record<string, string[]> = {
   'velvet:restarted': ['type', 'game', 'day'],
   'velvet:avatarItemBought': ['type', 'game', 'itemId'],
   'velvet:avatarInventory': ['type', 'owned'],
-  'velvet:lookChanged': ['type', 'game', 'who', 'top'],
+  'velvet:lookChanged': ['type', 'game', 'who', 'top', 'bottom', 'hat'],
+  'velvet:avatarLook': ['type', 'who', 'sprites', 'body'],
 };
 
 export function sanitizeMessage(msg: Record<string, unknown>): Record<string, unknown> {

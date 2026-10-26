@@ -7,7 +7,7 @@ import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals
 import { careerTitle } from '../state/career';
 
 import { clockText, season, weekday, DAYS } from '../state/time';
-import type { OwnedCloth } from '../state/clothing';
+import type { OwnedCloth, WardrobePersona } from '../state/clothing';
 
 export type DrawerPage = 'shop' | 'goals' | 'do' | 'partner' | 'you' | 'home' | 'log' | '';
 
@@ -22,6 +22,8 @@ export interface DrawerCallbacks {
   onRestart: () => void;
   onPickLifeGoal: (goal: string) => void;
   onWear: (cloth: OwnedCloth) => void;
+  // A persona: a whole look (shirt, pants and hat) in one tap.
+  onWearPersona: (id: string) => void;
   // The salon: avatar items that are the player's everywhere once bought.
   onBuyAvatarItem: (itemId: string) => void;
 }
@@ -63,7 +65,8 @@ export interface DrawerState {
   deliveryPending: boolean;
   mayaStatus: string;
   closet: OwnedCloth[];
-  wearing: { top: string; topStyle: string; bottom: string };
+  personas: WardrobePersona[];
+  wearing: { top: string; topStyle: string; bottom: string; bottomStyle?: string; hat?: string };
   salon: SalonItem[];
 }
 
@@ -322,32 +325,61 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelector('[data-talk]')?.addEventListener('click', () => cb.onTalk());
   }
 
+  let youWardrobeHtml = '';
   function renderYou(state: DrawerState): void {
     const sec = el.querySelector('[data-page="you"]')!;
-    const closet = state.closet.map(c =>
-      `<button class="vh-wardrobe-item ${c.style === state.wearing.topStyle || c.col === state.wearing.top || c.col === state.wearing.bottom ? 'vh-worn' : ''}"
+    const w = state.wearing, same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+    const isWorn = (c: OwnedCloth): boolean =>
+      c.slot === 'top' ? c.style === w.topStyle && same(c.col, w.top)
+      : c.slot === 'bottom' ? c.style === (w.bottomStyle || 'pants') && same(c.col, w.bottom)
+      : c.slot === 'hat' ? c.style === w.hat : false;
+    const item = (c: OwnedCloth) =>
+      `<button class="vh-wardrobe-item ${isWorn(c) ? 'vh-worn' : ''}"
         data-wear="${c.id}" data-col="${c.col}" title="Wear ${c.name}">
-        <canvas class="vh-cloth-preview" width="36" height="36" data-col="${c.col}" data-style="${c.style}"></canvas>
+        <canvas class="vh-cloth-preview" width="36" height="36" data-col="${c.col}" data-style="${c.style}" data-slot="${c.slot}" data-accent="${c.accent ?? ''}"></canvas>
         <span>${c.name}</span>
-      </button>`).join('');
-    sec.innerHTML = `<div class="vh-you">
-      <h4>${state.simName}</h4>
+      </button>`;
+    // Shirts, pants and hats each get their own list, so any shirt can go with any pants.
+    const group = (title: string, slots: string[]) => {
+      const list = state.closet.filter(c => slots.includes(c.slot));
+      return list.length ? `<h5 class="vh-wardrobe-group">${title}</h5><div class="vh-wardrobe">${list.map(item).join('')}</div>` : '';
+    };
+    const closet = group('Shirts', ['top']) + group('Pants', ['bottom']) + group('Hats', ['hat']) + group('Shoes & more', ['shoes', 'glasses']);
+    const personas = state.personas.length
+      ? `<h5 class="vh-wardrobe-group">Personas</h5><div class="vh-personas">${state.personas.map(p =>
+        `<button class="vh-persona" data-persona="${p.id}" title="Change into the ${p.label} look: shirt, pants and hat"><span class="vh-persona-icon">${p.icon}</span><span>${p.label}</span></button>`).join('')}</div>
+        <p class="vh-wardrobe-hint">Or mix: any shirt with any pants and hat below.</p>`
+      : '';
+    // The page is rebuilt four times a second while the game runs, which would eat clicks on buttons.
+    // The clock and name are cheap text; the wardrobe is only rebuilt when something in it changes.
+    if (!sec.querySelector('.vh-you')) {
+      sec.innerHTML = `<div class="vh-you">
+        <div data-you-head></div>
+        <canvas class="vh-outfit-preview" width="140" height="120"></canvas>
+        <h4>Wardrobe</h4>
+        <div data-you-wardrobe></div>
+        <p class="vh-wardrobe-hint">Buy more clothes in the Shop's Clothes tab.</p>
+      </div>`;
+      youWardrobeHtml = '';
+    }
+    sec.querySelector('[data-you-head]')!.innerHTML = `<h4>${state.simName}</h4>
       <p>Day ${state.day}, ${DAYS[weekday(state.day)]}, ${clockText(state.minutes)}</p>
       <p>${season(state.day)}</p>
-      <p>Job: ${careerTitle({ level: state.careerLevel, perf: state.careerPerf })}</p>
-      <canvas class="vh-outfit-preview" width="140" height="120"></canvas>
-      <h4>Wardrobe</h4>
-      <div class="vh-wardrobe">${closet || '<p class="vh-empty">Nothing in the closet yet.</p>'}</div>
-      <p class="vh-wardrobe-hint">Buy more clothes in the Shop's Clothes tab.</p>
-    </div>`;
+      <p>Job: ${careerTitle({ level: state.careerLevel, perf: state.careerPerf })}</p>`;
     drawOutfitPreview(sec.querySelector('.vh-outfit-preview')!, state.wearing);
-    sec.querySelectorAll<HTMLCanvasElement>('.vh-cloth-preview').forEach(cv => drawSwatch(cv));
-    sec.querySelectorAll('[data-wear]').forEach(b => {
+    const wardrobeHtml = `${personas}${closet || '<p class="vh-empty">Nothing in the closet yet.</p>'}`;
+    if (wardrobeHtml === youWardrobeHtml) return;
+    youWardrobeHtml = wardrobeHtml;
+    const box = sec.querySelector('[data-you-wardrobe]')!;
+    box.innerHTML = wardrobeHtml;
+    box.querySelectorAll<HTMLCanvasElement>('.vh-cloth-preview').forEach(cv => drawSwatch(cv));
+    box.querySelectorAll('[data-wear]').forEach(b => {
       b.addEventListener('click', () => {
         const cloth = state.closet.find(c => c.id === (b as HTMLElement).dataset.wear && c.col === (b as HTMLElement).dataset.col);
         if (cloth) cb.onWear(cloth);
       });
     });
+    box.querySelectorAll('[data-persona]').forEach(b => b.addEventListener('click', () => cb.onWearPersona((b as HTMLElement).dataset.persona!)));
   }
 
   function renderHome(state: DrawerState): void {
@@ -387,7 +419,7 @@ export function createDrawer(cb: DrawerCallbacks): {
 }
 
 /** Draws the mini outfit preview: a torso wearing the current top with its fabric pattern. */
-function drawOutfitPreview(cv: HTMLCanvasElement, wearing: { top: string; topStyle: string; bottom: string }): void {
+function drawOutfitPreview(cv: HTMLCanvasElement, wearing: { top: string; topStyle: string; bottom: string; bottomStyle?: string }): void {
   const c = cv.getContext('2d');
   if (!c) return;
   const W = cv.width, H = cv.height;
@@ -404,9 +436,14 @@ function drawOutfitPreview(cv: HTMLCanvasElement, wearing: { top: string; topSty
   c.moveTo(W / 2 - 24, H - 8); c.lineTo(W / 2 - 18, 52); c.lineTo(W / 2 + 18, 52); c.lineTo(W / 2 + 24, H - 8);
   c.closePath(); c.fill();
   drawFabricPattern(c, W / 2 - 24, 52, 48, H - 60, wearing.topStyle);
-  // Legs (bottom color)
-  c.fillStyle = wearing.bottom;
+  // Legs (bottom color), or a skirt over bare legs
+  const skirt = wearing.bottomStyle === 'skirt' || wearing.bottomStyle === 'cheer_skirt';
+  c.fillStyle = skirt ? '#C68E6A' : wearing.bottom;
   c.fillRect(W / 2 - 16, H - 8, 12, 8); c.fillRect(W / 2 + 4, H - 8, 12, 8);
+  if (skirt) {
+    c.fillStyle = wearing.bottom;
+    c.beginPath(); c.moveTo(W / 2 - 19, H - 16); c.lineTo(W / 2 + 19, H - 16); c.lineTo(W / 2 + 25, H - 6); c.lineTo(W / 2 - 25, H - 6); c.closePath(); c.fill();
+  }
   c.restore();
 }
 
@@ -417,15 +454,62 @@ function drawSwatch(cv: HTMLCanvasElement): void {
   const col = cv.dataset.col || '#888';
   const style = cv.dataset.style || 'tee';
   c.clearRect(0, 0, cv.width, cv.height);
+  if (cv.dataset.slot === 'bottom') { drawPantsSwatch(c, col, style, cv.dataset.accent || '#ffffff'); return; }
+  if (cv.dataset.slot === 'hat') { drawHatSwatch(c, style); return; }
   c.fillStyle = col;
   c.beginPath();
   c.moveTo(8, 32); c.lineTo(11, 12); c.lineTo(25, 12); c.lineTo(28, 32);
   c.closePath(); c.fill();
-  drawFabricPattern(c, 8, 12, 20, 20, style);
+  drawFabricPattern(c, 8, 12, 20, 20, style, cv.dataset.accent);
+}
+
+/** A pair of pants (or a skirt) in its colour, with the trim that tells the cut apart. */
+function drawPantsSwatch(c: CanvasRenderingContext2D, col: string, style: string, accent: string): void {
+  c.fillStyle = col;
+  if (style === 'skirt' || style === 'cheer_skirt') {
+    c.beginPath(); c.moveTo(11, 8); c.lineTo(25, 8); c.lineTo(31, 26); c.lineTo(5, 26); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = 1;
+    for (let x = 9; x <= 27; x += 3.6) { c.beginPath(); c.moveTo(11 + (x - 5) * 0.2, 8); c.lineTo(x, 26); c.stroke(); }
+    if (style === 'cheer_skirt') { c.fillStyle = accent; c.fillRect(5, 24, 26, 2.4); }
+    return;
+  }
+  const wide = style === 'baggy' ? 2 : 0, short = style === 'shorts';
+  const bottom = short ? 20 : 32;
+  c.beginPath();
+  c.moveTo(9 - wide, 6); c.lineTo(27 + wide, 6); c.lineTo(28 + wide, bottom); c.lineTo(19.5, bottom); c.lineTo(18, 14); c.lineTo(16.5, bottom); c.lineTo(8 - wide, bottom);
+  c.closePath(); c.fill();
+  c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(9 - wide, 6, 18 + wide * 2, 2.4);
+  if (style === 'chef_pants') { c.fillStyle = accent; for (let y = 10; y < bottom; y += 5) for (let x = 10 + ((y / 5) % 2) * 2.5; x < 26; x += 5) c.fillRect(x, y, 2.5, 2.5); }
+  if (style === 'breeches') { c.fillStyle = accent; c.fillRect(8, 24, 8.5, 8); c.fillRect(19.5, 24, 8.5, 8); }
+  if (style === 'leather') { c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(11, 9, 1.6, 20); c.fillRect(22, 9, 1.6, 20); }
+}
+
+/** A hat, by its avatar name, in the colours it always has. */
+function drawHatSwatch(c: CanvasRenderingContext2D, style: string): void {
+  const dome = (fill: string, y = 22) => { c.fillStyle = fill; c.beginPath(); c.ellipse(18, y, 11, 10, 0, Math.PI, 0); c.closePath(); c.fill(); };
+  const brim = (fill: string, y: number, rx = 14) => { c.fillStyle = fill; c.beginPath(); c.ellipse(18, y, rx, 3, 0, 0, Math.PI * 2); c.fill(); };
+  switch (style) {
+    case 'chef_hat': c.fillStyle = '#F7F5F0'; [[11, 14], [18, 11], [25, 14]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 6.5, 0, 7); c.fill(); }); c.fillRect(9, 16, 18, 10); break;
+    case 'cop_cap': dome('#1D2B4A'); brim('#0D0F13', 24, 12); c.fillStyle = '#C9A24A'; c.fillRect(16, 14, 4, 4); break;
+    case 'nurse_cap': c.fillStyle = '#FBFBF9'; c.beginPath(); c.moveTo(7, 24); c.lineTo(10, 10); c.lineTo(26, 10); c.lineTo(29, 24); c.closePath(); c.fill(); c.fillStyle = '#C2262E'; c.fillRect(16.4, 11, 3.2, 10); c.fillRect(13, 14.4, 10, 3.2); break;
+    case 'hair_bow': c.fillStyle = '#C2262E'; c.beginPath(); c.moveTo(18, 18); c.lineTo(5, 10); c.lineTo(5, 26); c.closePath(); c.fill(); c.beginPath(); c.moveTo(18, 18); c.lineTo(31, 10); c.lineTo(31, 26); c.closePath(); c.fill(); c.fillStyle = '#E0353D'; c.beginPath(); c.arc(18, 18, 3.4, 0, 7); c.fill(); break;
+    case 'snapback': dome('#17171B', 22); brim('#C2262E', 23, 14); c.fillStyle = '#C9A24A'; c.fillRect(16.5, 13, 3, 3); break;
+    case 'bandana': dome('#A8322D', 22); c.fillStyle = '#F4EDE0'; [[12, 18], [18, 14], [24, 18]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 1.1, 0, 7); c.fill(); }); break;
+    case 'tricorn': c.fillStyle = '#332A26'; c.beginPath(); c.moveTo(3, 22); c.lineTo(18, 8); c.lineTo(33, 22); c.quadraticCurveTo(18, 28, 3, 22); c.fill(); c.strokeStyle = '#C9A24A'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(3, 22); c.quadraticCurveTo(18, 28, 33, 22); c.stroke(); break;
+    case 'top_hat': c.fillStyle = '#1B1B1F'; c.fillRect(10, 6, 16, 18); brim('#141417', 24, 14); c.fillStyle = '#7A1F2B'; c.fillRect(10, 19, 16, 3); break;
+    case 'beanie': dome('#3D6B73', 24); c.fillStyle = '#4E8590'; c.fillRect(7, 21, 22, 5); c.fillStyle = '#F0E9DC'; c.beginPath(); c.arc(18, 11, 3.4, 0, 7); c.fill(); break;
+    case 'baseball_cap': dome('#27406B', 22); brim('#1D3150', 24, 13); c.fillStyle = '#1D3150'; c.beginPath(); c.ellipse(24, 24, 11, 3, 0, 0, Math.PI); c.fill(); break;
+    case 'cowboy_hat': c.fillStyle = '#8A5A3B'; c.beginPath(); c.moveTo(11, 22); c.quadraticCurveTo(11, 8, 18, 12); c.quadraticCurveTo(25, 8, 25, 22); c.closePath(); c.fill(); brim('#6E4529', 23, 16); c.fillStyle = '#D4AF37'; c.fillRect(16.5, 19, 3, 2.4); break;
+    case 'beret': c.fillStyle = '#7A1F2B'; c.beginPath(); c.ellipse(19, 18, 13, 8, -0.12, 0, Math.PI * 2); c.fill(); c.fillStyle = '#5A1620'; c.fillRect(21, 9, 2, 3); break;
+    case 'headband': c.strokeStyle = '#E8707A'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.arc(18, 28, 14, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); break;
+    case 'bucket_hat': dome('#C9B88A', 21); brim('#B8A778', 23, 15); break;
+    case 'headwrap': dome('#D9A441', 22); c.fillStyle = '#7A1F2B'; [[12, 18], [18, 14], [24, 18], [15, 21], [22, 22]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 1, 0, 7); c.fill(); }); c.fillStyle = '#D9A441'; c.beginPath(); c.ellipse(14, 10, 5, 2.6, -0.4, 0, 7); c.ellipse(22, 10, 5, 2.6, 0.4, 0, 7); c.fill(); break;
+    default: c.strokeStyle = '#8E9C96'; c.lineWidth = 2; c.beginPath(); c.arc(18, 18, 9, 0, 7); c.moveTo(12, 24); c.lineTo(24, 12); c.stroke();
+  }
 }
 
 /** Fabric-pattern overlay shared by the outfit preview and wardrobe swatches. */
-function drawFabricPattern(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, style: string): void {
+function drawFabricPattern(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, style: string, accent?: string): void {
   if (!style || style === 'tee' || style === 'blazer') return;
   c.save();
   c.beginPath(); c.rect(x, y, w, h); c.clip();
@@ -450,6 +534,20 @@ function drawFabricPattern(c: CanvasRenderingContext2D, x: number, y: number, w:
   } else if (style === 'denim') {
     c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineWidth = 0.8;
     for (let yy = 0; yy < h; yy += 3) { c.beginPath(); c.moveTo(0, yy); c.lineTo(w, yy); c.stroke(); }
+  } else if (style === 'cheer') {
+    c.fillStyle = accent || '#F4F1EA'; c.fillRect(0, h * 0.5, w, 2.4); c.fillRect(0, h * 0.5 + 4, w, 1.2);
+  } else if (style === 'cop') {
+    c.fillStyle = accent || '#C9A24A'; c.fillRect(w * 0.55, h * 0.3, 3, 3.4);
+  } else if (style === 'scrubs') {
+    c.fillStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.moveTo(w * 0.3, 0); c.lineTo(w * 0.7, 0); c.lineTo(w * 0.5, h * 0.35); c.closePath(); c.fill();
+  } else if (style === 'rockstar') {
+    c.fillStyle = '#E9E9EE'; c.beginPath(); c.moveTo(w * 0.35, 0); c.lineTo(w * 0.65, 0); c.lineTo(w * 0.5, h * 0.5); c.closePath(); c.fill();
+  } else if (style === 'streetwear') {
+    c.fillStyle = accent || '#17171B'; c.beginPath(); c.arc(w * 0.5, h * 0.62, 2.6, 0, 7); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(0, 1); c.lineTo(w, 1); c.stroke();
+  } else if (style === 'president') {
+    c.fillStyle = '#F2EFE8'; c.beginPath(); c.moveTo(w * 0.3, 0); c.lineTo(w * 0.7, 0); c.lineTo(w * 0.5, h * 0.55); c.closePath(); c.fill();
+    c.fillStyle = accent || '#B3202F'; c.fillRect(w * 0.45, h * 0.12, w * 0.1, h * 0.4);
   }
   c.restore();
 }

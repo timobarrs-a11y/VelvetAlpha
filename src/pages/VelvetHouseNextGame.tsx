@@ -4,10 +4,11 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanion, getCompanions, type Companion } from '../services/companionService';
 import { loadAvatarUnlocks } from '../hooks/useAvatarUnlocks';
-import { buildProfile, type PlayerProfile } from '../features/velvet-sims/simProfile';
+import { buildProfile, avatarFromGameLook, buildAvatarLook, type PlayerProfile } from '../features/velvet-sims/simProfile';
+import { lookUnlock, resolveLookForDisplay } from '../data/avatarCatalog';
 import { isReadyMessage, isAvatarItemBoughtMessage, isLookChangedMessage } from '../games/velvet-house/bridge/protocol';
 import { announceAvatarSaved, onAvatarSaved } from '../stores/avatarEditorStore';
-import { applyAvatarChange } from '../utils/avatarConfig';
+import { applyAvatarChange, migrateAvatarConfig } from '../utils/avatarConfig';
 import { recordSimsPurchase } from '../services/avatarInventoryService';
 
 const GAME_PATH = '/games/velvet-house-next/index.html';
@@ -46,7 +47,7 @@ export function VelvetHouseNextGame() {
       // Changed clothes in the game: save it to their avatar, so the avatar
       // screen, toolbar and chats show what they're wearing.
       if (isLookChangedMessage(e.data)) {
-        await saveTopFromGame(e.data.top);
+        await saveLookFromGame(e.data, win);
         return;
       }
       if (!isReadyMessage(e.data)) return;
@@ -70,22 +71,24 @@ export function VelvetHouseNextGame() {
       if (!companion || cancelled) return;
       win.postMessage(buildProfile(player as PlayerProfile | null, companion as Companion, true, unlocks), window.location.origin);
     };
-    // The game's tops that the avatar has no match for come across as a tee in the same colour.
+    // The shirt, pants and hat they changed into. Anything they may not wear is ignored, and a new hat
+    // gets the game fresh head frames (the hat is part of the head).
     let savingFromGame = false;
-    const saveTopFromGame = async (top: { style: string; color: string; accent?: string }) => {
+    const saveLookFromGame = async (msg: Parameters<typeof avatarFromGameLook>[0], win: Window) => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !/^#[0-9a-f]{6}$/i.test(top.color)) return;
+      if (!user) return;
+      const change = avatarFromGameLook(msg);
+      if (Object.keys(change).length === 0) return;
+      const unlocks = await loadAvatarUnlocks();
+      if (!lookUnlock(change, unlocks).ok) return;
       const { data } = await supabase.from('user_profiles').select('avatar_config').eq('id', user.id).maybeSingle();
-      const outfit = top.style === 'blazer' ? 'suit' : ['linen', 'chef', 'labcoat', 'pirate'].includes(top.style) ? top.style as 'linen' : 'tee';
-      const config = applyAvatarChange(data?.avatar_config, {
-        outfit, outfitColor: top.color,
-        ...(top.accent && /^#[0-9a-f]{6}$/i.test(top.accent) ? { outfitAccent: top.accent } : {}),
-      });
+      const config = applyAvatarChange(data?.avatar_config, change);
       const { error } = await supabase.from('user_profiles').update({ avatar_config: config }).eq('id', user.id);
-      if (error) return;
+      if (error || cancelled) return;
       savingFromGame = true;
       announceAvatarSaved({ target: { kind: 'user' }, config });
       savingFromGame = false;
+      if (msg.hat !== undefined) win.postMessage(buildAvatarLook(resolveLookForDisplay(migrateAvatarConfig(config), unlocks)), window.location.origin);
     };
     // Edited an avatar while the game is open: the game shows it straight away.
     // (Not the save the game itself just asked for, or a hoodie would turn back into a tee.)

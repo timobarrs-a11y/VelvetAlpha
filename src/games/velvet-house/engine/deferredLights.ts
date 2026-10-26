@@ -154,7 +154,9 @@ float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.545
 float fall(float d) { float x = clamp(1.0 - d, 0.0, 1.0); return x * x * (3.0 - 2.0 * x); }
 float flicker(int i) { return uLC[i].w > 0.5 ? 1.0 + 0.07 * sin(uTime * 9.0 + float(i) * 1.7) + 0.04 * sin(uTime * 13.7 + float(i) * 3.4) : 1.0; }
 
-float shadow(vec3 P, vec3 dir, float len, float jit) {
+// recv: the material being shaded. A person never shadows themselves: their own upper pixels
+// would otherwise block the light with per-pixel jitter and speckle their hair and clothes.
+float shadow(vec3 P, vec3 dir, float len, float jit, int recv) {
   float vis = 1.0;
   for (int i = 0; i < 8; i++) {
     if (i >= uSteps) break;
@@ -163,6 +165,7 @@ float shadow(vec3 P, vec3 dir, float len, float jit) {
     if (!onScreen(s)) continue;
     vec4 d = dataAt(s);
     if (d.a < 0.5) continue;
+    if (recv == 4 && matOf(d.b) == 4) continue;
     float dz = d.r * uZMax - S.z;
     vis *= 1.0 - 0.78 * smoothstep(0.04, 0.22, dz) * (1.0 - smoothstep(0.9, 1.4, dz));
   }
@@ -220,7 +223,7 @@ float sunAt(vec3 P, vec3 N, int m, float jit) {
   if (wm < 0.01) return 0.0;
   float ndl = m == 4 ? 0.6 : max(dot(N, uSunDir), 0.0);
   if (ndl <= 0.0) return 0.0;
-  return wm * ndl * shadow(P, uSunDir, max(0.0, tHit - 0.05), jit);
+  return wm * ndl * shadow(P, uSunDir, max(0.0, tHit - 0.05), jit, m);
 }
 
 void main() {
@@ -251,7 +254,7 @@ void main() {
       float ndl = m == 4 ? 0.55 + 0.45 * dot(N, L) : max(dot(N, L) * 0.85 + 0.15, 0.0);
       float att = 1.0 - dist / rng;
       att *= att;
-      float sh = i < uShadowed ? shadow(Pn, L, max(0.0, dist - 0.12), jit) : 1.0;
+      float sh = i < uShadowed ? shadow(Pn, L, max(0.0, dist - 0.12), jit, m) : 1.0;
       light += uLC[i].rgb * flicker(i) * att * ndl * sh * 1.25;
     }
     light += uSunCol * sunAt(Pn, N, m, jit) * (uOut == 1 ? 1.8 : 1.0);
@@ -293,7 +296,7 @@ void main() {
     if (wm > 0.0) {
       // the beam runs from the window along the light direction; it fades with distance traveled
       float deep = clamp(1.0 - tWin * 0.16, 0.3, 1.0);
-      float sh = shadow(Pn, uSunDir, max(0.0, tWin - 0.05), jit);
+      float sh = shadow(Pn, uSunDir, max(0.0, tWin - 0.05), jit, m);
       add += uSunCol * wm * deep * sh * 0.12;
       vec2 drift = vec2(sin(uTime * 0.4) * 3.0, uTime * 3.5);
       vec2 cell = floor((s + drift) / 6.0);

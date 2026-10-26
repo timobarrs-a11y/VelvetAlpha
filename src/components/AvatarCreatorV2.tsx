@@ -15,8 +15,8 @@ import {
 } from '../types/avatar-v2';
 import { AVATAR_PRESETS } from '../data/avatarPresets';
 import {
-  AVATAR_KITS, OUTFITS, HEADWEAR, FACE_ACCESSORIES, OUTFIT_COLORS,
-  AvatarUnlocks, UnlockResult, kitTier, outfitItem,
+  PERSONAS, OUTFITS, BOTTOMS, HEADWEAR, FACE_ACCESSORIES, OUTFIT_COLORS,
+  AvatarUnlocks, UnlockResult, outfitItem, bottomItem, headwearItem, resolveBottom, personaOf,
 } from '../data/avatarItems';
 import { canUse, itemId, lookUnlock } from '../data/avatarCatalog';
 import { useAvatarUnlocks } from '../hooks/useAvatarUnlocks';
@@ -281,6 +281,7 @@ export function AvatarCreatorV2({
     const randomized = {
       ...coherentRandomize(),
       outfit: config.outfit, outfitColor: config.outfitColor, outfitAccent: config.outfitAccent,
+      bottom: config.bottom, bottomColor: config.bottomColor, bottomAccent: config.bottomAccent,
       headwear: config.headwear, faceAccessory: config.faceAccessory,
     };
     push(randomized);
@@ -585,18 +586,26 @@ export function AvatarCreatorV2({
   );
 
   const currentOutfit = outfitItem(config.outfit);
-  const kitButton = (kit: typeof AVATAR_KITS[number]) => {
+  const pants = resolveBottom(config);
+  const pantsItem = bottomItem(pants.id);
+  const hat = headwearItem(config.headwear);
+  const currentPersona = personaOf(config);
+  const kitButton = (kit: typeof PERSONAS[number]) => {
     const lock = lookUnlock(kit.look, unlocks);
+    const active = currentPersona?.id === kit.id;
     return (
       <button
         key={kit.id}
         disabled={!lock.ok}
         onClick={() => update(kit.look)}
         title={lock.ok ? kit.description : `Unlocks with: ${lockLabel(lock)}`}
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl text-left border transition-all group ${
-          lock.ok
-            ? 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-            : 'bg-white/[0.02] border-dashed border-white/10 cursor-not-allowed'
+        aria-pressed={active}
+        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left border transition-all group ${
+          !lock.ok
+            ? 'bg-white/[0.02] border-dashed border-white/10 cursor-not-allowed'
+            : active
+              ? 'bg-sky-500/10 border-sky-500/60'
+              : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
         }`}
       >
         <span className={`text-xl flex-shrink-0 w-8 text-center ${lock.ok ? '' : 'grayscale opacity-60'}`}>{kit.icon}</span>
@@ -617,19 +626,20 @@ export function AvatarCreatorV2({
 
   const wardrobeTab = (
     <div className="space-y-5">
-      <Section label="Work Looks">
-        <div className="grid grid-cols-1 gap-2">
-          {AVATAR_KITS.filter(k => kitTier(k) === 'starter').map(kitButton)}
+      <Section label="Personas">
+        <p className="text-xs text-gray-500">Tap one for the whole look: shirt, pants and hat. Then change any piece on its own below.</p>
+        <div className="grid grid-cols-2 gap-2">
+          {PERSONAS.map(kitButton)}
         </div>
       </Section>
 
-      <Section label="Costume Closet">
-        <div className="grid grid-cols-1 gap-2">
-          {AVATAR_KITS.filter(k => kitTier(k) !== 'starter').map(kitButton)}
-        </div>
-      </Section>
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3" data-testid="wearing">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Wearing</p>
+        <p className="text-sm font-semibold text-white">{currentPersona ? currentPersona.label : 'Custom mix'}</p>
+        <p className="text-xs text-gray-400">{currentOutfit.label} · {pantsItem.label}{pants.matched ? ' (matches shirt)' : ''} · {hat.id === 'none' ? 'No hat' : hat.label}</p>
+      </div>
 
-      <Section label="Outfit">
+      <Section label="Shirt">
         <div className="grid grid-cols-3 gap-2">
           {OUTFITS.map(o => (
             <LockableOption key={o.id} label={o.label} lock={canUse(itemId('outfit', o.id), unlocks)}
@@ -659,7 +669,39 @@ export function AvatarCreatorV2({
         </div>
       </Section>
 
-      <Section label="Headwear">
+      <Section label="Pants">
+        <div className="grid grid-cols-3 gap-2">
+          <OptionButton label="Match shirt" selected={!config.bottom}
+            onClick={() => update({ bottom: undefined, bottomColor: undefined, bottomAccent: undefined })} />
+          {BOTTOMS.map(b => (
+            <LockableOption key={b.id} label={b.label} lock={canUse(itemId('bottom', b.id), unlocks)}
+              selected={config.bottom === b.id}
+              onClick={() => update({ bottom: b.id, bottomColor: b.color, bottomAccent: b.accent })} />
+          ))}
+        </div>
+      </Section>
+
+      <Section label={pantsItem.colorLabel}>
+        <div className="flex flex-wrap gap-2">
+          {OUTFIT_COLORS.map(c => (
+            <ColorSwatch key={c.value} color={c.value} title={c.name}
+              selected={pants.color.toLowerCase() === c.value.toLowerCase()}
+              onClick={() => update({ bottom: pants.id, bottomColor: c.value, bottomAccent: config.bottom ? config.bottomAccent : pants.accent })} />
+          ))}
+        </div>
+      </Section>
+
+      <Section label={pantsItem.accentLabel}>
+        <div className="flex flex-wrap gap-2">
+          {OUTFIT_COLORS.map(c => (
+            <ColorSwatch key={c.value} color={c.value} title={c.name}
+              selected={pants.accent.toLowerCase() === c.value.toLowerCase()}
+              onClick={() => update({ bottom: pants.id, bottomColor: pants.color, bottomAccent: c.value })} />
+          ))}
+        </div>
+      </Section>
+
+      <Section label="Hat">
         <div className="grid grid-cols-3 gap-2">
           {HEADWEAR.map(h => (
             <LockableOption key={h.id} label={h.label} lock={canUse(itemId('headwear', h.id), unlocks)}
@@ -790,12 +832,14 @@ export function AvatarCreatorV2({
   };
 
   const zoom = TAB_ZOOM[tab];
-  const preview = (size: string) => (
-    <div className={`${size} rounded-2xl overflow-hidden flex-shrink-0
+  // Body and Wardrobe show the whole person, so pants, shoes and build can be seen.
+  const wholeBody = tab === 'body' || tab === 'wardrobe';
+  const preview = (size: string, tall: string) => (
+    <div className={`${wholeBody ? tall : size} rounded-2xl overflow-hidden flex-shrink-0
       bg-white shadow-[0_8px_30px_rgba(0,0,0,0.45)] flex items-center justify-center`}>
       <div className="w-full h-full transition-transform duration-300 ease-out"
         style={{ transform: `scale(${zoom.scale})`, transformOrigin: zoom.origin }}>
-        <AvatarV2 config={config} className="w-full h-full" />
+        <AvatarV2 config={config} part={wholeBody ? 'full' : 'bust'} className="w-full h-full" />
       </div>
     </div>
   );
@@ -808,7 +852,7 @@ export function AvatarCreatorV2({
         bg-gradient-to-b from-[#0d1117] to-[#070c14]
         border-t lg:border-t-0 lg:border-r border-white/5
         lg:sticky lg:top-0 lg:self-start lg:max-h-screen lg:overflow-y-auto">
-        <div className="hidden lg:block">{preview('w-64 h-64')}</div>
+        <div className="hidden lg:block">{preview('w-64 h-64', 'w-44 h-[22rem]')}</div>
 
         <div className="lg:mt-6 w-full space-y-3">
           <div className="grid grid-cols-2 gap-2">
@@ -918,7 +962,7 @@ export function AvatarCreatorV2({
         {/* On phones the avatar rides along at the top while you scroll the options. */}
         <div className="sticky top-0 z-20 bg-[#080d14] flex-shrink-0">
           <div className="lg:hidden flex items-center justify-center gap-4 pt-4 pb-3 px-4">
-            {preview('w-32 h-32')}
+            {preview('w-32 h-32', 'w-[4.5rem] h-36')}
             <div className="flex flex-col gap-2">
               <button onClick={randomize} title="Randomize"
                 className="flex items-center justify-center w-10 h-9 rounded-lg bg-sky-600/20 border border-sky-500/30 text-sky-400">

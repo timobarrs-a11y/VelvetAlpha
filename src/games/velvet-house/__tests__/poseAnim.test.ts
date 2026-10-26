@@ -51,6 +51,23 @@ describe('poseRig', () => {
     }
   });
 
+  it('moves the hands far enough to read at game size', () => {
+    // About 36px per world unit across the floor and 34px per unit of height.
+    const travel = (pose: string, act: string | null, side: number) => {
+      const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+      for (let t = 0; t < 8; t += 0.02) {
+        const h = poseRig(pose, t, 0.3, act)!.hands[side];
+        h.forEach((v: number, i: number) => { lo[i] = Math.min(lo[i], v); hi[i] = Math.max(hi[i], v); });
+      }
+      return Math.hypot((hi[0] - lo[0]) * 36, (hi[1] - lo[1]) * 36, (hi[2] - lo[2]) * 34);
+    };
+    const clips: [string, string | null, number, number][] = [
+      ['desk', null, 1, 4], ['desk', 'piano', 1, 6], ['stand', 'guitar', 1, 7], ['arcade', null, -1, 6],
+      ['cook', 'cook', 1, 5], ['cook', null, 1, 9], ['mop', null, 1, 12], ['phone', null, -1, 8], ['tv', null, 1, 15],
+    ];
+    for (const [pose, act, side, px] of clips) expect(travel(pose, act, side), `${pose}/${act}`).toBeGreaterThan(px);
+  });
+
   it('leaves plain standing alone', () => {
     expect(poseRig('stand', 1, 0)).toBeNull();
   });
