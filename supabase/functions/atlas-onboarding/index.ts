@@ -11,6 +11,7 @@ import {
   buildGoalPrompt,
   buildOpening,
   buildPlanPrompt,
+  checkReply,
   localToIso,
   nextWeekday,
   openingPath,
@@ -259,15 +260,30 @@ Deno.serve(async (req: Request) => {
       const firstAnswer = messages.find(m => m.role === "user")?.content ?? "";
       const system = buildGoalPrompt(profile, openingPath(firstAnswer), today, MAX_TURNS);
       const turnCount = messages.filter(m => m.role === "user").length;
-      const raw = await callClaude({
-        model: MODEL_CONFIG.SONNET,
-        maxTokens: 400,
-        system,
-        messages: messages.map(m => ({ role: m.role === "atlas" ? "assistant" : "user", content: m.content })),
-      });
+      const history = messages.map(m => ({ role: m.role === "atlas" ? "assistant" : "user", content: m.content }));
+      const raw = await callClaude({ model: MODEL_CONFIG.SONNET, maxTokens: 400, system, messages: history });
       if (raw === null) return json({ error: "AI service error" }, 502);
 
-      const parsed = parseReply(raw, today.date);
+      let parsed = parseReply(raw, today.date);
+      // A reply that breaks a rule gets one retry, told what it broke. The
+      // address it just settled on counts, so "Master Tim" after a yes to
+      // first names is caught.
+      const issuesOf = (p: typeof parsed) =>
+        checkReply(p.text, { profile: { ...profile, address_style: p.address ?? profile.address_style } });
+      const issues = issuesOf(parsed);
+      if (issues.length > 0) {
+        console.warn("[atlas-onboarding] Reply broke rules, retrying:", issues.join("; "));
+        const retry = await callClaude({
+          model: MODEL_CONFIG.SONNET,
+          maxTokens: 400,
+          system: `${system}\n\nYOUR DRAFT OF THIS REPLY BROKE THESE RULES:\n${issues.map(i => `- ${i}`).join("\n")}\n\nThe draft was:\n${raw}\n\nWrite the reply again, saying the same thing without breaking them.`,
+          messages: history,
+        });
+        if (retry !== null) {
+          const retried = parseReply(retry, today.date);
+          if (issuesOf(retried).length <= issues.length) parsed = retried;
+        }
+      }
 
       // Traits: merge what's newly clear into what's known; never overwrite with nothing.
       if (Object.keys(parsed.traits).length > 0) {
