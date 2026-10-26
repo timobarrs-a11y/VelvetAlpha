@@ -964,14 +964,25 @@ function boot(): void {
     }
     // Furniture: add to world
     if (item.type && item.icon === 'obj') {
+      // Attic finds go in the attic once it's built; everything else where you're looking.
+      const level = item.tab === 'Attic' && hasAttic() ? ATTIC : view.level;
       const newObj: ObjectInstance = {
         id: `${item.type}-${Date.now() & 0xffff}`,
-        type: item.type, level: view.level, x: 5, y: 5, rot: 0,
+        type: item.type, level, x: 5, y: 5, rot: 0,
         col: color || item.cols?.[0],
       };
       world.objs.push(newObj);
       flags.furniture = ((flags.furniture as number) ?? 0) + 1;
-      log(`${item.name} will be delivered.`);
+      // Set it down on free floor; if the floor is full it waits in storage.
+      if (relocate(world.objs, newObj, level, peopleOnFloor())) {
+        relearnLayout(newObj);
+        art.objectPlaced(newObj.id);
+        log(`${item.name} is in the ${LEVEL_NAMES[level].toLowerCase()}. Use Arrange to move it.`);
+      } else {
+        world.objs.pop();
+        storage.push(newObj);
+        log(`No room for the ${item.name.toLowerCase()} on the ${LEVEL_NAMES[level].toLowerCase()}, so it's in storage (Arrange).`);
+      }
     }
     // Clothing: add to the closet (same piece + color only once)
     if (item.icon === 'cloth' && item.cloth) {

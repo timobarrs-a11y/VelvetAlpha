@@ -184,6 +184,13 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   chesterfield: { W: 2.0, D: 0.95, h: 0.9, name: 'Chesterfield sofa', store: true, cols: ['#5A2E1E', '#2E3B57', '#3F5B4C', '#6E3C50'],
     spots: { s1: { stand: [0.6, 1.5], pos: [0.6, 0.58, 0.5], dir: [0, 1], tag: 'seat', base: 'base' }, s2: { stand: [1.4, 1.5], pos: [1.4, 0.58, 0.5], dir: [0, 1], tag: 'seat', base: 'base' } } },
   globe: { W: 0.5, D: 0.5, h: 1.15, name: 'Antique globe', store: true, cols: ['#9C6B45', '#2B2B30'] },
+  trunk: { W: 0.9, D: 0.55, h: 0.55, name: 'Steamer trunk', store: true, cols: ['#7A4E32', '#2E3B57', '#3F5B4C', '#8E5468'] },
+  dressform: { W: 0.5, D: 0.5, h: 1.5, name: 'Dress form', store: true, cols: ['#E8DCC8', '#B5476E', '#2E3B57'] },
+  gramophone: { W: 0.6, D: 0.6, h: 1.1, name: 'Gramophone', store: true, cols: ['#7A4E32', '#1B1A1F', '#C9A24A'],
+    spots: { r: { stand: [0.3, 1.1], dir: [0, -1], tag: 'records' } } },
+  floorcushion: { W: 1.1, D: 1.1, h: 0.25, name: 'Floor cushions', store: true, cols: ['#B5476E', '#4F6F74', '#C9A24A', '#E8DCC8', '#6E3C50'],
+    spots: { s: { stand: [0.55, 1.7], pos: [0.55, 0.55, 0.16], dir: [0, 1], tag: 'seat', base: 'base' } } },
+  crates: { W: 0.8, D: 0.5, h: 0.55, name: 'Book crates', store: true, cols: ['#B98A6A', '#3A2E2A', '#E4DDD2'] },
 };
 
 export interface ObjectInstance {
