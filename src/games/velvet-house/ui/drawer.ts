@@ -284,7 +284,15 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelectorAll<HTMLElement>('[data-arr-floor]').forEach(b => b.addEventListener('click', () => cb.onArrangeFloor?.(Number(b.dataset.arrFloor))));
   }
 
-  let shopHtml = '';
+  // Pages refresh several times a second. Rebuilding identical markup would swap out the button under a
+  // finger mid-tap (the tap then misses), so unchanged markup is left alone.
+  const lastHtml = new WeakMap<Element, string>();
+  function put(sec: Element, html: string): boolean {
+    if (lastHtml.get(sec) === html) return false;
+    lastHtml.set(sec, html);
+    sec.innerHTML = html;
+    return true;
+  }
   function iconStyle(item: CatalogEntry, state: DrawerState): string {
     if (item.icon === 'paint' && item.color) return `background:${item.color}`;
     if (item.icon === 'paper' && item.pattern) return `background:${paperCss(state.lookInfo?.('paper', item.pattern) ?? null, state.pictureThumbs?.[item.pattern]).replace(/"/g, "'")}`;
@@ -300,7 +308,6 @@ export function createDrawer(cb: DrawerCallbacks): {
     ).join('');
 
     if (tab === SALON_TAB) {
-      shopHtml = '';
       renderSalon(sec, tabBtns, state);
       return;
     }
@@ -337,9 +344,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       : '';
     const html = `<div class="vh-shop-tabs">${tabBtns}</div>${floorPick}<div class="vh-shop-list">${cards || '<p class="vh-empty">Nothing here yet.</p>'}</div>`;
     // Unchanged since the last refresh: leave it alone, so picture previews aren't reloaded several times a second.
-    if (html === shopHtml && sec.firstElementChild) return;
-    shopHtml = html;
-    sec.innerHTML = html;
+    if (!put(sec, html)) return;
     sec.querySelectorAll<HTMLElement>('[data-pickfloor]').forEach(b => b.addEventListener('click', () => cb.onPickFloor?.(Number(b.dataset.pickfloor))));
 
     sec.querySelectorAll('[data-tab]').forEach(b => {
@@ -383,7 +388,7 @@ export function createDrawer(cb: DrawerCallbacks): {
         </div>
       </div>`;
     }).join('');
-    sec.innerHTML = `<div class="vh-shop-tabs">${tabBtns}</div><div class="vh-shop-list">${cards || '<p class="vh-empty">The salon is restocking.</p>'}</div>`;
+    if (!put(sec, `<div class="vh-shop-tabs">${tabBtns}</div><div class="vh-shop-list">${cards || '<p class="vh-empty">The salon is restocking.</p>'}</div>`)) return;
     sec.querySelectorAll('[data-tab]').forEach(b => {
       b.addEventListener('click', () => { currentTab = (b as HTMLElement).dataset.tab!; render(state); });
     });
@@ -419,11 +424,11 @@ export function createDrawer(cb: DrawerCallbacks): {
       </div>`;
     })() : `<div class="vh-life-goal"><p>Choose a life goal to start earning rewards.</p></div>`;
 
-    sec.innerHTML = `<div class="vh-goals">
+    if (!put(sec, `<div class="vh-goals">
       <h4>Move-in checklist</h4>
       <ul class="vh-checklist">${settleItems}</ul>
       ${lifeGoalHtml}
-    </div>`;
+    </div>`)) return;
   }
 
   function renderDo(state: DrawerState): void {
@@ -456,7 +461,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     ];
     const html = groups.map(g => `<h4 class="vh-order-floor">${g.floor}</h4><div class="vh-order-grid">${
       g.acts.map(a => `<button data-order="${a.chain}" class="vh-order-btn">${a.label}</button>`).join('')}</div>`).join('');
-    sec.innerHTML = `<div class="vh-do"><p>Tell ${state.simName} what to do:</p>${html}</div>`;
+    if (!put(sec, `<div class="vh-do"><p>Tell ${state.simName} what to do:</p>${html}</div>`)) return;
     sec.querySelectorAll('[data-order]').forEach(b => {
       b.addEventListener('click', () => cb.onOrder((b as HTMLElement).dataset.order!));
     });
@@ -464,7 +469,7 @@ export function createDrawer(cb: DrawerCallbacks): {
 
   function renderPartner(state: DrawerState): void {
     const sec = el.querySelector('[data-page="partner"]')!;
-    sec.innerHTML = `<div class="vh-partner">
+    if (!put(sec, `<div class="vh-partner">
       <div class="vh-bond-bar">
         <span>Bond</span>
         <div class="vh-bar"><i style="width:${state.bond}%"></i></div>
@@ -472,7 +477,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       </div>
       <p class="vh-status">${state.mayaStatus}</p>
       <button data-talk class="vh-talk-btn">Talk to ${state.partnerName}</button>
-    </div>`;
+    </div>`)) return;
     sec.querySelector('[data-talk]')?.addEventListener('click', () => cb.onTalk());
   }
 
@@ -484,7 +489,7 @@ export function createDrawer(cb: DrawerCallbacks): {
         <canvas class="vh-cloth-preview" width="36" height="36" data-col="${c.col}" data-style="${c.style}"></canvas>
         <span>${c.name}</span>
       </button>`).join('');
-    sec.innerHTML = `<div class="vh-you">
+    if (!put(sec, `<div class="vh-you">
       <h4>${state.simName}</h4>
       <p>Day ${state.day}, ${DAYS[weekday(state.day)]}, ${clockText(state.minutes)}</p>
       <p>${season(state.day)}</p>
@@ -493,7 +498,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       <h4>Wardrobe</h4>
       <div class="vh-wardrobe">${closet || '<p class="vh-empty">Nothing in the closet yet.</p>'}</div>
       <p class="vh-wardrobe-hint">Buy more clothes in the Shop's Clothes tab.</p>
-    </div>`;
+    </div>`)) return;
     drawOutfitPreview(sec.querySelector('.vh-outfit-preview')!, state.wearing);
     sec.querySelectorAll<HTMLCanvasElement>('.vh-cloth-preview').forEach(cv => drawSwatch(cv));
     sec.querySelectorAll('[data-wear]').forEach(b => {
@@ -507,7 +512,7 @@ export function createDrawer(cb: DrawerCallbacks): {
   function renderHome(state: DrawerState): void {
     const sec = el.querySelector('[data-page="home"]')!;
     const sv = state.fridgeBasic + state.fridgeFresh;
-    sec.innerHTML = `<div class="vh-home">
+    if (!put(sec, `<div class="vh-home">
       <div class="vh-home-row"><span>Money</span><strong>$${state.money}</strong></div>
       <div class="vh-home-row"><span>Fridge</span><strong>${sv} meals</strong></div>
       <div class="vh-home-row"><span>Dishes</span><strong>${state.dishes}</strong></div>
@@ -519,7 +524,7 @@ export function createDrawer(cb: DrawerCallbacks): {
         <button data-groceries ${state.deliveryPending ? 'disabled' : ''}>Order groceries ($40)</button>
         <button data-takeout ${state.deliveryPending ? 'disabled' : ''}>Order takeout ($25)</button>
       </div>
-    </div>`;
+    </div>`)) return;
     sec.querySelector('[data-paybill]')?.addEventListener('click', () => cb.onPayBill());
     sec.querySelector('[data-groceries]')?.addEventListener('click', () => cb.onOrderGroceries());
     sec.querySelector('[data-takeout]')?.addEventListener('click', () => cb.onOrderTakeout());
@@ -528,7 +533,7 @@ export function createDrawer(cb: DrawerCallbacks): {
   function renderLog(state: DrawerState): void {
     const sec = el.querySelector('[data-page="log"]')!;
     const items = state.log.slice(0, 20).map(l => `<li>${l}</li>`).join('');
-    sec.innerHTML = `<ul class="vh-log-list">${items || '<li class="vh-empty">Nothing happening yet.</li>'}</ul>`;
+    if (!put(sec, `<ul class="vh-log-list">${items || '<li class="vh-empty">Nothing happening yet.</li>'}</ul>`)) return;
   }
 
   return {
