@@ -1244,6 +1244,21 @@ function boot(): void {
       set bond(v: number) { bond = v; },
       setSample: (f: SampleFn) => { sample = f; },
       doVidSearch,
+      // For the end-to-end tests (e2e/velvet-sims): read what is in the house, and find a piece on screen.
+      objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot })),
+      storedCount: () => storage.length,
+      resetCamera: () => resetCamera(),
+      level: () => view.level,
+      clientPosOf: (id: string): [number, number] | null => {
+        const o = world.objs.find(q => q.id === id);
+        if (!o) return null;
+        const t = TYPES[o.type];
+        const [fw, fd] = o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
+        const [vx, vy] = art.project(o.x + fw / 2, o.y + fd / 2, (t.h || 1) / 2);
+        const p = ctx.getTransform().transformPoint(new DOMPoint(vx, vy));
+        const r = canvas.getBoundingClientRect();
+        return [r.left + (p.x / canvas.width) * r.width, r.top + (p.y / canvas.height) * r.height];
+      },
     };
   }
 

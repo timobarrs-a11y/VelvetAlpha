@@ -26,8 +26,9 @@ new scope that the overhaul brief never covered.
 
 ## Combined order
 
-1. **Foundation** (architecture Phase 0). Step 0.1 (saves) is done. Next: the
-   end-to-end harness (0.7), the bridge and cloud save (0.5, 0.8), one source
+1. **Foundation** (architecture Phase 0). Steps 0.1 (saves) and 0.7 (the live
+   end-to-end harness, `npm run test:live`, no reference screenshots yet because
+   the animation work is still changing the look) are done. Next: the bridge and cloud save (0.5, 0.8), one source
    for level and object data (0.9), splitting `main.ts` (0.10), the scene list
    (0.11).
 2. **Overhaul Phase 6 = architecture Phase 1:** script engine, NPCs, the Dez
