@@ -1448,6 +1448,65 @@ export function createHouseArt(ctx0, opts = {}) {
     let rx = -dy, ry = dx;
     if (P3(rx, ry, 0)[0] < fx) { rx = -rx; ry = -ry; }
     const local = (v, side) => P3(dx * v[0] + rx * side * v[1], dy * v[0] + ry * side * v[1], shZ + v[2]);
+    // Shoes: a dark toe cap that points the way they face, so feet read as feet.
+    const fvx = P3(dx * 0.1, dy * 0.1, 0), shoeDir = Math.atan2(fvx[1] - fy, fvx[0] - fx), shoeLen = f.front ? 1.6 : 0.4;
+    const shoeAt = (x, y) => {
+      ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5, f.front ? 3.4 : 2.8, 2, L.shoes || '#2B2630', null, shoeDir);
+      ell(x + Math.cos(shoeDir) * shoeLen - 0.4, y + Math.sin(shoeDir) * shoeLen * 0.5 - 0.7, 1.5, 0.7, 'rgba(255,255,255,.18)', null, shoeDir);
+    };
+    const shin = (kx, ky, ax, ay) => { limb(kx, ky, ax, ay, L.bottom, 4.5); shoeAt(ax, ay); };
+    // Arms: shoulder, elbow and hand, worked out once per frame, then drawn
+    // behind the torso (the far arm) or in front of it.
+    const SLEEVES = { tank: 0, tee: 0.55, jersey: 0.5, dress: 0.4 };
+    const sleeve = L.topStyle ? (SLEEVES[L.topStyle] ?? 1) : 0.55;
+    const NOT_HELD = new Set(['notes', 'water', 'splash']), OPEN_KINDS = new Set(['book', 'plate', 'parcel', 'cloth', 'paper']);
+    // Props too wide to grip by a handle: no fingers drawn over them.
+    const NO_FINGERS = new Set(['guitar', 'gloves']);
+    const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+    const armGeo = (side) => {
+      const psA = poseState(c);
+      const sx0 = sh[0] + shift * 1.4 + side * 4.5, sy0 = sh[1] + 1;
+      const spec = rig && rig.hands ? rig.hands[side] : null;
+      let tx, ty, el = null;
+      if (rig && rig.hands) {
+        if (spec) { const h = local(spec, side); tx = h[0]; ty = h[1]; el = rig.elbows && rig.elbows[side] ? local(rig.elbows[side], side) : null; }
+        else { tx = sx0 + side * 2; ty = sy0 + 13; }
+      } else {
+        const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
+        [tx, ty] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
+      }
+      const e = ease2(psA, side, tx, ty, rdt);
+      if (!el) el = spec ? [(sx0 + e[0]) / 2 + side * 2.5, (sy0 + e[1]) / 2 + 3] : [(sx0 + e[0]) / 2, (sy0 + e[1]) / 2];
+      const held = rig && rig.props ? rig.props.find(q => !NOT_HELD.has(q.kind) && (q.side == null || q.side === side)) : null;
+      const grip = (rig && rig.grip && rig.grip[side]) || (held ? (OPEN_KINDS.has(held.kind) ? 'open' : 'fist') : spec && spec[2] > 0.3 ? 'open' : 'relaxed');
+      return { sx0, sy0, el, e, grip, reach: spec ? spec[0] : 0, fingers: !!held && !NO_FINGERS.has(held.kind) };
+    };
+    const arms = { [-1]: armGeo(-1), 1: armGeo(1) };
+    // The arm on the far side of the body sits behind the torso, unless it is reaching out front.
+    const sideY = (sd) => P3(rx * sd, ry * sd, 0)[1];
+    const farSide = Math.abs(sideY(1) - sideY(-1)) < 0.5 ? 0 : sideY(1) < sideY(-1) ? 1 : -1;
+    const armBehind = (sd) => sd === farSide && arms[sd].reach < 0.15;
+    const drawArm = (g, side) => {
+      const { sx0, sy0, el, e, grip } = g;
+      limb3(sx0, sy0, el[0], el[1], e[0], e[1], L.skin, 3.2);
+      if (sleeve > 0) {
+        const long = sleeve >= 1, from = long ? el : [sx0, sy0], end = long ? mix2(el, e, 0.8) : mix2([sx0, sy0], el, sleeve);
+        if (long) limb3(sx0, sy0, el[0], el[1], end[0], end[1], L.top, 4.1); else limb(sx0, sy0, end[0], end[1], L.top, 4.1);
+        const vx = end[0] - from[0], vy = end[1] - from[1], vl = Math.hypot(vx, vy) || 1;
+        limb(end[0] - vx / vl * 0.9, end[1] - vy / vl * 0.9, end[0], end[1], shade(L.top, -0.18), 4.3);
+      }
+      circle(sx0 - side * 0.4, sy0, 2.5, sleeve > 0 ? L.top : L.skin);
+      // The hand, pointing the way the forearm does.
+      let ax = e[0] - el[0], ay = e[1] - el[1];
+      const al = Math.hypot(ax, ay);
+      if (al < 0.5) { ax = 0; ay = 1; } else { ax /= al; ay /= al; }
+      const ang = Math.atan2(ay, ax), hx = e[0] + ax * 1.2, hy = e[1] + ay * 1.2, px = -ay, py = ax;
+      const fist = grip === 'fist';
+      ell(hx, hy, fist ? 2.4 : 2.8, fist ? 2.3 : 2.1, L.skin, null, ang);
+      const tn = side > 0 ? -1 : 1;
+      ell(hx + px * tn * 1.9 + ax * 0.5, hy + py * tn * 1.9 + ay * 0.5, 1.2, 0.85, L.skin, null, ang);
+      if (grip === 'open') [-1, 0, 1].forEach(k => ell(hx + ax * 2.5 + px * k * 1.15, hy + ay * 2.5 + py * k * 1.15, 1.05, 0.75, L.skin, null, ang));
+    };
     [-1, 1].forEach(side => {
       if (rig && rig.legs === 'pedal') {
         const p = rig.phase + (side > 0 ? 0 : Math.PI);
@@ -1456,22 +1515,22 @@ export function createHouseArt(ctx0, opts = {}) {
         const foot = P3(dx * (0.16 + Math.cos(p) * 0.1), dy * (0.16 + Math.cos(p) * 0.1), footZ + Math.sin(p) * 0.1);
         const knee = P3(dx * 0.3, dy * 0.3, kneeZ + Math.sin(p) * 0.06);
         limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
-        limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
-      if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5); limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
-      if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5); return; }
+      if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5); shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]); return; }
+      if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); shin(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1]); return; }
       if (rig && rig.legs === 'crouch') {
         const knee = P3(dx * 0.24, dy * 0.24, hipZ * 0.75), foot = P3(dx * 0.06, dy * 0.06, 0);
         limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 3, knee[1], L.bottom, 5);
-        limb(knee[0] + side * 3, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        shin(knee[0] + side * 3, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
       if (rig && rig.legs === 'swim') return; // underwater
       if (rig && rig.legs === 'jack') {
         // Jumping jacks: feet out to the sides and back together.
         const out = (rig.spread || 0) * side, foot = P3(rx * out, ry * out, 0);
-        limb(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.8);
+        shin(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
 
@@ -1479,13 +1538,13 @@ export function createHouseArt(ctx0, opts = {}) {
         // Tree pose: this foot rests against the other knee.
         const knee = P3(rx * 0.22, ry * 0.22, hipZ * 0.55), foot = P3(rx * 0.02, ry * 0.02, hipZ * 0.45);
         limb(hip[0] + 2.5, hip[1], knee[0] + 2.5, knee[1], L.bottom, 5);
-        limb(knee[0] + 2.5, knee[1], foot[0] + 1, foot[1], L.bottom, 4.5);
+        shin(knee[0] + 2.5, knee[1], foot[0] + 1, foot[1]);
         return;
       }
       if (rig && rig.legs === 'lunge') {
         const fw = side > 0 ? 0.3 : -0.26, knee = P3(dx * fw * (side > 0 ? 1 : 0.6), dy * fw * (side > 0 ? 1 : 0.6), hipZ * 0.5), foot = P3(dx * fw * 1.1, dy * fw * 1.1, 0);
         limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
-        limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
       if (rig && (rig.legs === 'run' || rig.legs === 'step')) {
@@ -1493,7 +1552,7 @@ export function createHouseArt(ctx0, opts = {}) {
         const sw = Math.sin(p) * (big ? 0.22 : 0.12), lift = Math.max(0, Math.sin(p)) * (big ? 0.15 : 0.06);
         const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), dy * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), hipZ * 0.5 + lift);
         limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
-        limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+        shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
       const off = side > 0 ? 0 : Math.PI;
@@ -1501,7 +1560,7 @@ export function createHouseArt(ctx0, opts = {}) {
       const foot = P3(dx * sw, dy * sw, lift);
       const knee = P3(dx * sw * 0.55, dy * sw * 0.55, hipZ * 0.5 + lift * 0.7);
       limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
-      limb(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1], L.bottom, 4.5);
+      shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
     });
     // Secondary motion: hair and hems trail the body on springs, so they
     // swing when someone moves, turns or bounces, then settle.
@@ -1522,6 +1581,7 @@ export function createHouseArt(ctx0, opts = {}) {
       ctx.moveTo(hip[0] + shift - 5, hip[1] - 2); ctx.lineTo(hip[0] + shift + 5, hip[1] - 2);
       ctx.lineTo(kz[0] + 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.lineTo(kz[0] - 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.closePath(); ctx.fill();
     }
+    [-1, 1].forEach(sd => { if (armBehind(sd)) drawArm(arms[sd], sd); });
     limb(hip[0] + shift, hip[1], sh[0] + shift * 1.4, sh[1], L.top, 11);
     // Fold shading: a soft shadow down the far side of the shirt, a highlight on the near side.
     limb(hip[0] + shift + 3.2, hip[1], sh[0] + shift * 1.4 + 3.2, sh[1] + 1, shade(L.top, -0.18), 3.2);
@@ -1586,25 +1646,14 @@ export function createHouseArt(ctx0, opts = {}) {
       ctx.restore();
     }
     const handAt = {};
-    if (rig && rig.hands) {
-      // Activity arms: shoulder, elbow, hand, eased so poses blend in and out.
-      const ps = poseState(c);
-      [-1, 1].forEach(side => {
-        const spec = rig.hands[side];
-        const sx0 = sh[0] + shift * 1.4 + side * 4.5, sy0 = sh[1] + 1;
-        if (!spec) { const e = ease2(ps, side, sx0 + side * 2, sy0 + 13, rdt); limb(sx0, sy0, e[0], e[1], L.skin, 3.2); handAt[side] = e; return; }
-        const h = local(spec, side), e = ease2(ps, side, h[0], h[1], rdt);
-        const el = rig.elbows && rig.elbows[side] ? local(rig.elbows[side], side) : [(sx0 + e[0]) / 2 + side * 2.5, (sy0 + e[1]) / 2 + 3];
-        limb3(sx0, sy0, el[0], el[1], e[0], e[1], L.skin, 3.2);
-        handAt[side] = e;
-      });
-      drawProps(rig, handAt, c, t, hd, local);
-    } else
-    [-1, 1].forEach(side => {
-      const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
-      const [ex, ey] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
-      const ps = poseState(c), e = ease2(ps, side, ex, ey, rdt);
-      limb(sh[0] + shift * 1.4 + side * 4.5, sh[1] + 1, e[0], e[1], L.skin, 3.2);
+    [-1, 1].forEach(sd => { handAt[sd] = arms[sd].e; if (!armBehind(sd)) drawArm(arms[sd], sd); });
+    if (rig && rig.hands) drawProps(rig, handAt, c, t, hd, local);
+    // Fingers curl over whatever they hold.
+    [-1, 1].forEach(sd => {
+      const g = arms[sd];
+      if (g.grip !== 'fist' || !g.fingers || armBehind(sd)) return;
+      let ax = g.e[0] - g.el[0], ay = g.e[1] - g.el[1]; const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al;
+      [-1, 1].forEach(k => ell(g.e[0] + ax * 1.6 - ay * k * 0.95, g.e[1] + ay * 1.6 + ax * k * 0.95, 0.95, 0.8, L.skin));
     });
     if (L.heads && L.heads.neutral) {
       const frame = headFrameFor({ front: f.front, talking: talking || !!rig?.talk, t, seed: c.seed, blink: bl > 0.5, expr: c.expr, mood }, L.heads);
