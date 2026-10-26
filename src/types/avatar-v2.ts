@@ -6,7 +6,8 @@ export type HairStyle =
   | 'buzz' | 'fade' | 'short' | 'short_wavy' | 'slick_back' | 'afro' | 'locs_short'
   | 'bun' | 'ponytail' | 'sleek' | 'wavy' | 'curly' | 'braids' | 'locs'
   | 'bald' | 'cornrows' | 'twists' | 'bantu_knots' | 'high_puff' | 'long_straight'
-  | 'bob' | 'pixie' | 'bangs' | 'top_knot' | 'undercut' | 'mohawk';
+  | 'bob' | 'pixie' | 'bangs' | 'top_knot' | 'undercut' | 'mohawk'
+  | 'boho_braids' | 'goddess_locs' | 'barrel_twists';
 
 export type LipShape = 'natural' | 'full' | 'thin' | 'heart';
 export type EyebrowShape = 'natural' | 'arched' | 'straight' | 'thick' | 'thin';
@@ -216,7 +217,7 @@ export const HAIR_FASHION_COLORS: Swatch[] = [
 // The hairstyle picker, in groups so a long list is easy to scan.
 export const HAIRSTYLE_GROUPS: Array<{ label: string; styles: HairStyle[] }> = [
   { label: 'Short & shaved', styles: ['bald', 'buzz', 'fade', 'undercut', 'mohawk', 'short', 'short_wavy', 'slick_back', 'pixie'] },
-  { label: 'Natural & protective', styles: ['afro', 'high_puff', 'curly', 'cornrows', 'bantu_knots', 'twists', 'braids', 'locs_short', 'locs'] },
+  { label: 'Natural & protective', styles: ['afro', 'high_puff', 'curly', 'cornrows', 'bantu_knots', 'twists', 'barrel_twists', 'braids', 'boho_braids', 'locs_short', 'locs', 'goddess_locs'] },
   { label: 'Medium & long', styles: ['bob', 'sleek', 'long_straight', 'bangs', 'wavy'] },
   { label: 'Tied up', styles: ['bun', 'top_knot', 'ponytail'] },
 ];
@@ -278,6 +279,9 @@ export const HAIRSTYLES: Array<{ value: HairStyle; label: string }> = [
   { value: 'top_knot', label: 'Top Knot' },
   { value: 'undercut', label: 'Undercut' },
   { value: 'mohawk', label: 'Mohawk' },
+  { value: 'boho_braids', label: 'Boho Braids' },
+  { value: 'goddess_locs', label: 'Goddess Locs' },
+  { value: 'barrel_twists', label: 'Barrel Twists' },
 ];
 
 export const EYE_SHAPES: Array<{ value: EyeShape; label: string }> = [

@@ -40,6 +40,7 @@ const GAME_HAIR: Partial<Record<HairStyle, string>> = {
   buzz: 'buzz', fade: 'fade', sleek: 'long', curly: 'long',
   bald: 'buzz', cornrows: 'braids', twists: 'locs', bantu_knots: 'bun', high_puff: 'afro',
   long_straight: 'long', bangs: 'long', top_knot: 'bun', undercut: 'fade', mohawk: 'fade',
+  boho_braids: 'braids', goddess_locs: 'locs', barrel_twists: 'locs',
 };
 
 export function toGameLook(raw: Record<string, unknown> | null | undefined, favoriteColor?: string | null): GameLook | undefined {

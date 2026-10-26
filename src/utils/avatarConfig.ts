@@ -64,7 +64,7 @@ export function applyAvatarChange(config: unknown, change: Partial<AvatarConfigV
 }
 
 function inferTextureFromStyle(style: string): HairTexture {
-  if (['afro', 'locs', 'locs_short', 'braids', 'curly', 'cornrows', 'twists', 'bantu_knots', 'high_puff'].includes(style)) {
+  if (['afro', 'locs', 'locs_short', 'braids', 'curly', 'cornrows', 'twists', 'bantu_knots', 'high_puff', 'boho_braids', 'goddess_locs', 'barrel_twists'].includes(style)) {
     return 'coily';
   }
   if (style === 'wavy' || style === 'short_wavy') {

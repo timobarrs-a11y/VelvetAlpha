@@ -134,7 +134,7 @@ function coherentRandomize(): AvatarConfigV2 {
   const hairTexture = pick(textures);
 
   const compatibleStyles = hairTexture === 'coily'
-    ? (g === 'male' ? ['afro', 'locs_short', 'fade', 'short', 'cornrows', 'twists', 'bald'] : ['afro', 'locs', 'braids', 'curly', 'high_puff', 'bantu_knots', 'twists', 'cornrows'])
+    ? (g === 'male' ? ['afro', 'locs_short', 'fade', 'short', 'cornrows', 'twists', 'bald', 'barrel_twists'] : ['afro', 'locs', 'braids', 'curly', 'high_puff', 'bantu_knots', 'twists', 'cornrows', 'boho_braids', 'goddess_locs'])
     : hairTexture === 'wavy'
     ? (g === 'male' ? ['short_wavy', 'short', 'slick_back', 'undercut'] : ['wavy', 'sleek', 'curly', 'ponytail', 'bob', 'bangs'])
     : (g === 'male' ? ['buzz', 'short', 'slick_back', 'fade', 'undercut', 'top_knot', 'bald'] : ['sleek', 'ponytail', 'bun', 'wavy', 'bob', 'pixie', 'long_straight', 'bangs']);

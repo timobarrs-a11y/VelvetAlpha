@@ -468,6 +468,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
               {hairStyle !== 'bald' && <g clipPath={hatClip}>
                 <path d={faceOutlinePath(faceGeometry)} fill={hairColor}
                   opacity={CLOSE_CROP.has(hairStyle) ? 0.82 : 1} />
+                {behind?.onHead && <g clipPath={`url(#${faceClipId})`}>{behind.onHead}</g>}
                 {behind && <g clipPath={behind.clipToHead ? `url(#${faceClipId})` : undefined}>{behind.node}</g>}
                 {!behind && !CLOSE_CROP.has(hairStyle) && hairStyle !== 'afro' && hairStyle !== 'high_puff' && (
                   <g clipPath={`url(#${faceClipId})`}>

@@ -37,6 +37,12 @@ interface HairSpec {
   extra?: 'ponytail' | 'bun' | 'fade' | 'afro' | 'puff' | 'knots' | 'topknot' | 'mohawk';
   sideburn?: boolean;
   opacity?: number;
+  // Rope styles: curly ends (boho braids, goddess locs), loose curly wisps
+  // between the ropes, criss-cross parts on the scalp, thicker ropes.
+  ends?: 'curly';
+  wisps?: boolean;
+  parts?: 'crisscross';
+  ropeScale?: number;
 }
 
 const STYLES: Record<HairStyle, HairSpec> = {
@@ -74,6 +80,12 @@ const STYLES: Record<HairStyle, HairSpec> = {
   undercut:   { v: 7, sv: 0, sideY: -4, hairline: 'sweep', texture: 'straight', extra: 'fade', sideburn: true },
   // A strip standing up down the middle; the sides are shaved.
   mohawk:     { v: 1, sv: 0, sideY: -4, hairline: 'natural', texture: 'buzz', extra: 'mohawk', opacity: 0.55 },
+  // Knotless braids that finish in loose curls, with curly pieces left out.
+  boho_braids:   { v: 2.6, sv: 1, sideY: 2, hairline: 'center', texture: 'braids', back: { length: 126, spread: 6, edge: 'soft' }, locks: { length: 118, width: 10 }, ends: 'curly', wisps: true },
+  // Soft locs with curly pieces along them and curly ends.
+  goddess_locs:  { v: 4, sv: 2.5, sideY: 2, hairline: 'part', texture: 'locs', back: { length: 126, spread: 6, edge: 'soft' }, locks: { length: 116, width: 10.5 }, ends: 'curly', wisps: true },
+  // Thick twisted locs from a criss-cross parted scalp.
+  barrel_twists: { v: 4, sv: 1.5, sideY: 1, hairline: 'natural', texture: 'twists', back: { length: 102, spread: 3, edge: 'soft' }, locks: { length: 98, width: 9 }, parts: 'crisscross', ropeScale: 1.5 },
 };
 
 // Long hair takes on its texture: wavy hair has more body, coily much more.
@@ -114,6 +126,8 @@ function twistedRope(key: string, d: string, w: number, c: RopeColors, period: n
   const half = `${f(period / 2)} ${f(period / 2)}`;
   return (
     <g key={key}>
+      {/* A dark edge all round, so each rope stands apart from the next and ends round. */}
+      <path d={d} stroke={shade(c.base, -0.62)} strokeWidth={w + 0.9} fill="none" strokeLinecap="round" opacity="0.85" />
       <path d={d} stroke={c.base} strokeWidth={w} fill="none" strokeLinecap="round" />
       <path d={d} stroke={c.dark} strokeWidth={w * 0.5} strokeDasharray={half} fill="none" opacity="0.75" transform={`translate(${f(-w * 0.22)} 0)`} />
       <path d={d} stroke={c.deep} strokeWidth={w * 0.5} strokeDasharray={half} strokeDashoffset={f(period / 2)} fill="none" opacity="0.6" transform={`translate(${f(w * 0.22)} 0)`} />
@@ -123,6 +137,35 @@ function twistedRope(key: string, d: string, w: number, c: RopeColors, period: n
 }
 
 const ROPE_PERIOD = { braids: 2.4, twists: 2.8, locs: 3.8 } as const;
+
+// A soft cluster of curls finishing a rope (boho braids, goddess locs).
+function curlyEnd(key: string, x: number, y: number, w: number, c: RopeColors): React.ReactNode {
+  return (
+    <g key={key}>
+      {[-1, 0, 1].map((k) => {
+        const cx = x + k * w * 0.55, cy = y + 1.2 + Math.abs(k) * -0.6, r = w * 0.55;
+        return <path key={k} d={`M${f(cx - r)},${f(cy - r)} a${f(r)},${f(r)} 0 1 0 ${f(r * 1.4)},${f(r * 1.6)} a${f(r * 0.6)},${f(r * 0.6)} 0 1 1 ${f(-r * 0.6)},${f(r * 1.2)}`}
+          stroke={k === 0 ? c.base : c.dark} strokeWidth={w * 0.42} fill="none" strokeLinecap="round" />;
+      })}
+    </g>
+  );
+}
+
+// A loose curly piece hanging beside the ropes.
+function curlyWisp(key: string, x: number, y0: number, y1: number, c: RopeColors, salt: number): React.ReactNode {
+  let d = `M${f(x)},${f(y0)}`;
+  const steps = Math.max(3, Math.round((y1 - y0) / 4));
+  for (let i = 1; i <= steps; i++) {
+    const y = y0 + ((y1 - y0) * i) / steps;
+    d += ` Q${f(x + (i % 2 ? 1.6 : -1.6))},${f(y - 2)} ${f(x + (seeded(i, salt) - 0.5) * 0.8)},${f(y)}`;
+  }
+  return (
+    <g key={key}>
+      <path d={d} stroke={c.dark} strokeWidth="1.1" fill="none" strokeLinecap="round" />
+      <path d={d} stroke={c.light} strokeWidth="0.35" fill="none" opacity="0.45" />
+    </g>
+  );
+}
 const isRope = (t: string): t is keyof typeof ROPE_PERIOD => t in ROPE_PERIOD;
 
 interface Frame {
@@ -274,13 +317,24 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
       const st = from(end);
       return `M${pt(st)} Q${f((st[0] + end[0]) / 2 + (end[0] - 50) * 0.18)},${f((st[1] + end[1]) / 2 - 2)} ${pt(end)}`;
     };
-    for (let i = 1; i < n; i++) {
-      capStrands.push(<path key={`pt${i}`} d={curve(at(i / n))} stroke={shade(p.skinTone, -0.1)} strokeWidth="0.45" fill="none" opacity="0.65" />);
+    if (s.parts === 'crisscross') {
+      // Parts crossing diagonally, so the scalp shows in diamonds.
+      for (let i = -4; i <= 4; i++) {
+        for (const dir of [-1, 1]) {
+          const x = 50 + i * 6;
+          capStrands.push(<path key={`x${i}${dir}`} d={`M${f(x - dir * 14)},${f(fr.T - s.v - 2)} L${f(x + dir * 14)},${f(sideY + 2)}`}
+            stroke={shade(p.skinTone, -0.1)} strokeWidth="0.6" opacity="0.75" />);
+        }
+      }
+    } else {
+      for (let i = 1; i < n; i++) {
+        capStrands.push(<path key={`pt${i}`} d={curve(at(i / n))} stroke={shade(p.skinTone, -0.1)} strokeWidth="0.45" fill="none" opacity="0.65" />);
+      }
     }
     for (let i = 0; i < n; i++) {
       // With highlights, every third rope carries the colour.
       const marked = !!streak && i % 3 === 1;
-      capStrands.push(twistedRope(`cr${i}`, curve(at((i + 0.5) / n)), 2.6, rope, ROPE_PERIOD[s.texture as keyof typeof ROPE_PERIOD], marked ? streak! : rope.light, marked));
+      capStrands.push(twistedRope(`cr${i}`, curve(at((i + 0.5) / n)), 2.6 * (s.ropeScale ? 1.25 : 1), rope, ROPE_PERIOD[s.texture as keyof typeof ROPE_PERIOD], marked ? streak! : rope.light, marked));
     }
   } else {
     const count = 26;
@@ -344,7 +398,14 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
       const y = length - (edge === 'curly' ? seeded(i, 11) * 6 : edge === 'soft' ? Math.sin(t * Math.PI * 3) * 2.5 : Math.sin(t * Math.PI) * 2);
       bottom.push([x, y]);
     }
-    const outline: Pt[] = [...top, [R + spread * 0.6, (sideY + length) / 2], ...bottom, [L - spread * 0.6, (sideY + length) / 2]];
+    const roped = isRope(s.texture);
+    // Rope styles: a short mass behind the head only, ending round at the jaw;
+    // below it every rope hangs on its own, with gaps between them.
+    const massEnd = roped ? Math.min(length, fr.chin + 2) : length;
+    const massBottom: Pt[] = roped
+      ? [[R + spread * 0.3, massEnd - 4], [50, massEnd + 2], [L - spread * 0.3, massEnd - 4]]
+      : bottom;
+    const outline: Pt[] = [...top, [R + spread * (roped ? 0.3 : 0.6), (sideY + massEnd) / 2], ...massBottom, [L - spread * (roped ? 0.3 : 0.6), (sideY + massEnd) / 2]];
     back.push(<path key="mass" d={smooth(outline, true, 0.9)} fill={p.fromBehind ? base : dark} />);
     if (p.fromBehind && s.texture !== 'locs' && s.texture !== 'braids' && s.texture !== 'twists') {
       for (let i = 0; i < 14; i++) {
@@ -356,14 +417,20 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
     // Ropes hanging inside the mass: they start within the head's width and
     // fan out only as far as the hair does, so none hang loose at the edges.
     // From behind, renderHairBehind draws them instead.
-    if ((s.texture === 'locs' || s.texture === 'braids' || s.texture === 'twists') && !p.fromBehind) {
-      const ropes = s.texture === 'twists' ? 12 : 9;
+    if (roped && !p.fromBehind) {
+      const scale = s.ropeScale ?? 1;
+      const w = (s.texture === 'locs' ? 4.2 : s.texture === 'twists' ? 3.2 : 3.4) * scale;
+      const count = Math.round(((R - L + spread) / (w + 1.1)));
       const half = (R - L) / 2 - 1.5;
-      for (let i = 0; i < ropes; i++) {
-        const k = ((i + 0.5) / ropes) * 2 - 1;
+      for (let i = 0; i < count; i++) {
+        const k = ((i + 0.5) / count) * 2 - 1;
         const x0 = 50 + k * half, x1 = 50 + k * (half + spread * 0.7);
-        const d = `M${f(x0)},${f(sideY - 4)} Q${f((x0 + x1) / 2)},${f((sideY + length) / 2)} ${f(x1)},${f(length - 5)}`;
-        back.push(twistedRope(`r${i}`, d, s.texture === 'locs' ? 5 : s.texture === 'twists' ? 3.4 : 4, rope, ROPE_PERIOD[s.texture as keyof typeof ROPE_PERIOD]));
+        // Lengths vary a little, so the ends make a soft, uneven line.
+        const end = length - 4 - seeded(i, 21) * 6;
+        const d = `M${f(x0)},${f(sideY - 4)} Q${f((x0 + x1) / 2)},${f((sideY + end) / 2)} ${f(x1)},${f(end)}`;
+        back.push(twistedRope(`r${i}`, d, w, rope, ROPE_PERIOD[s.texture as keyof typeof ROPE_PERIOD] * scale));
+        if (s.ends === 'curly') back.push(curlyEnd(`re${i}`, x1, end, w, rope));
+        if (s.wisps && i % 3 === 1) back.push(curlyWisp(`rw${i}`, (x0 + x1) / 2 + w * 0.6, fr.chin, end - 2, rope, i));
       }
     }
   }
@@ -514,30 +581,45 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
     const wave = s.texture === 'wavy' ? 1.6 : s.texture === 'coily' ? 2.4 : 0;
     for (const sd of [-1, 1] as const) {
       const { outline, spine } = lockPoints(fr, sd, s.locks.width, s.locks.length, fr.T + 10, wave);
+      if (isRope(s.texture)) {
+        // A bundle of separate ropes over the shoulder, side by side, each
+        // with its own rounded end at a slightly different length.
+        const n = s.texture === 'locs' ? 2 : 3;
+        const w = (s.locks.width / n) * 0.95 * (s.ropeScale && n === 3 ? 0.9 : 1);
+        const len = s.locks.length;
+        front.push(
+          <g key={`lock${sd}`}>
+            {Array.from({ length: n }, (_, i) => {
+              const k = ((i + 0.5) / n - 0.5) * s.locks!.width;
+              const drop = seeded(i + (sd > 0 ? 7 : 0), 22) * 7;
+              const pts = spine.map(([x, y]) => [x + k, y > fr.chin ? y - ((y - fr.chin) / (len - fr.chin)) * drop : y] as Pt);
+              const d = smooth(pts, false);
+              const highlighted = !!streak && i === (sd > 0 ? 0 : n - 1);
+              const endPt = pts[pts.length - 1];
+              return (
+                <g key={i}>
+                  {twistedRope(`l${i}`, d, w, rope, ROPE_PERIOD[s.texture as keyof typeof ROPE_PERIOD] * (s.ropeScale ?? 1), highlighted ? streak! : rope.light, highlighted)}
+                  {s.ends === 'curly' && curlyEnd(`le${i}`, endPt[0], endPt[1], w, rope)}
+                  {s.wisps && i === 1 && curlyWisp(`lw${i}`, endPt[0] + sd * w * 0.9, fr.chin + 3, endPt[1] - 4, rope, i + 3)}
+                </g>
+              );
+            })}
+          </g>,
+        );
+        continue;
+      }
       const lockId = id(`lock${sd}`);
       front.push(
         <g key={`lock${sd}`}>
           <defs><clipPath id={lockId}><path d={smooth(outline, true, 0.85)} /></clipPath></defs>
-          <path d={smooth(outline, true, 0.85)} fill={isRope(s.texture) ? deep : base} />
+          <path d={smooth(outline, true, 0.85)} fill={base} />
           <g clipPath={`url(#${lockId})`}>
-            {isRope(s.texture)
-              ? (() => {
-                // A bundle of ropes falling over the shoulder, side by side.
-                const n = s.texture === 'locs' ? 2 : 3;
-                const w = (s.locks!.width / n) * 1.1;
-                return Array.from({ length: n }, (_, i) => {
-                  const k = ((i + 0.5) / n - 0.5) * s.locks!.width;
-                  const d = smooth(spine.map(([x, y]) => [x + k, y] as Pt), false);
-                  const highlighted = !!streak && i === (sd > 0 ? 0 : n - 1);
-                  return twistedRope(`l${i}`, d, w, rope, ROPE_PERIOD[s.texture as keyof typeof ROPE_PERIOD], highlighted ? streak! : rope.light, highlighted);
-                });
-              })()
-              : [-0.35, -0.1, 0.15, 0.4].map((k, i) => (
-                <path key={k} d={smooth(spine.map(([x, y], j) => [x + k * s.locks!.width + (s.texture === 'coily' ? Math.sin(j * 2 + i) * 1.5 : 0), y] as Pt), false)}
-                  stroke={i % 3 === 0 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.55" />
-              ))}
-            {!isRope(s.texture) && <path d={smooth(spine.map(([x, y]) => [x - sd * s.locks!.width * 0.2, y] as Pt), false)}
-              stroke={light} strokeWidth={streak ? 2 : 1.4} fill="none" opacity={streak ? 0.55 : 0.25} />}
+            {[-0.35, -0.1, 0.15, 0.4].map((k, i) => (
+              <path key={k} d={smooth(spine.map(([x, y], j) => [x + k * s.locks!.width + (s.texture === 'coily' ? Math.sin(j * 2 + i) * 1.5 : 0), y] as Pt), false)}
+                stroke={i % 3 === 0 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.55" />
+            ))}
+            <path d={smooth(spine.map(([x, y]) => [x - sd * s.locks!.width * 0.2, y] as Pt), false)}
+              stroke={light} strokeWidth={streak ? 2 : 1.4} fill="none" opacity={streak ? 0.55 : 0.25} />
           </g>
         </g>,
       );
@@ -553,7 +635,7 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
 // Drawn over the hair-coloured head: cornrows and knots are clipped to it,
 // while long ropes carry on down past it. Null for every other style, which
 // keep the plain falling strands.
-export function renderHairBehind(p: { hairStyle: HairStyle; hairColor: string; hairHighlight?: string; skinTone: string; geometry: FaceGeometry }): { node: React.ReactNode; clipToHead: boolean } | null {
+export function renderHairBehind(p: { hairStyle: HairStyle; hairColor: string; hairHighlight?: string; skinTone: string; geometry: FaceGeometry }): { node: React.ReactNode; clipToHead: boolean; onHead?: React.ReactNode } | null {
   const { hairStyle, hairColor: base, skinTone } = p;
   const g = p.geometry;
   const T = g.faceTop, B = g.faceBottom, cy = g.faceCenterY, W = g.fRx;
@@ -562,16 +644,22 @@ export function renderHairBehind(p: { hairStyle: HairStyle; hairColor: string; h
   const scalp = shade(skinTone, -0.12);
 
   // Ropes from the crown. Long ones fan out a little as they fall.
-  const ropes = (count: number, end: number, width: number, period: number, parts: boolean, fan: number) => {
+  const colors: RopeColors = { base, dark, deep, light: shade(base, 0.28) };
+  const ropes = (count: number, end: number, width: number, period: number, parts: boolean, fan: number, extra: { curly?: boolean; wisps?: boolean; vary?: boolean } = {}) => {
     const out: React.ReactNode[] = [];
-    const path = (x: number) => `M${f(50 + (x - 50) * 0.3)},${f(T + 1)} Q${f(x)},${f(cy - 4)} ${f(x + (x - 50) * fan)},${f(end)}`;
+    const vary = extra.vary ?? end > B;
+    const endOf = (i: number) => end - (vary ? seeded(i, 23) * 6 : 0);
+    const path = (x: number, e = end) => `M${f(50 + (x - 50) * 0.3)},${f(T + 1)} Q${f(x)},${f(cy - 4)} ${f(x + (x - 50) * fan)},${f(e)}`;
     for (let i = 0; i < count; i++) {
       const x = 50 - W - 1 + ((i + 0.5) * (W * 2 + 2)) / count;
       if (parts && i > 0) {
         out.push(<path key={`p${i}`} d={path(50 - W - 1 + (i * (W * 2 + 2)) / count)} stroke={scalp} strokeWidth="0.5" fill="none" opacity="0.6" />);
       }
       const marked = !!streak && i % 3 === 1;
-      out.push(twistedRope(`r${i}`, path(x), width, { base, dark, deep, light: shade(base, 0.28) }, period, marked ? streak! : shade(base, 0.28), marked));
+      const e = endOf(i);
+      out.push(twistedRope(`r${i}`, path(x, e), width, colors, period, marked ? streak! : colors.light, marked));
+      if (extra.curly) out.push(curlyEnd(`e${i}`, x + (x - 50) * fan, e, width, colors));
+      if (extra.wisps && i % 3 === 1 && i < count - 1) out.push(curlyWisp(`w${i}`, x + (x - 50) * fan * 0.6 + width * 0.6, cy + 6, e - 3, colors, i));
     }
     return out;
   };
@@ -579,6 +667,18 @@ export function renderHairBehind(p: { hairStyle: HairStyle; hairColor: string; h
   switch (hairStyle) {
     case 'braids':
       return { node: <g>{ropes(11, 104, 3.4, ROPE_PERIOD.braids, false, 0.3)}</g>, clipToHead: false };
+    case 'boho_braids':
+      return { node: <g>{ropes(11, 102, 3.4, ROPE_PERIOD.braids, false, 0.32, { curly: true, wisps: true })}</g>, clipToHead: false };
+    case 'goddess_locs':
+      return { node: <g>{ropes(9, 102, 4.4, ROPE_PERIOD.locs, false, 0.32, { curly: true, wisps: true })}</g>, clipToHead: false };
+    case 'barrel_twists': {
+      // Thick twists from a criss-cross parted scalp.
+      const parts = Array.from({ length: 9 }, (_, i) => [-1, 1].map(dir => {
+        const x = 50 + (i - 4) * 6;
+        return <path key={`x${i}${dir}`} d={`M${f(x - dir * 14)},${f(T - 2)} L${f(x + dir * 14)},${f(cy + 10)}`} stroke={scalp} strokeWidth="0.6" opacity="0.7" />;
+      }));
+      return { onHead: <g>{parts}</g>, node: <g>{ropes(7, B + 18, 5.4, ROPE_PERIOD.twists * 1.5, false, 0.25)}</g>, clipToHead: false };
+    }
     case 'locs':
     case 'locs_short':
       return { node: <g>{ropes(9, 104, 4.4, ROPE_PERIOD.locs, false, 0.3)}</g>, clipToHead: false };
