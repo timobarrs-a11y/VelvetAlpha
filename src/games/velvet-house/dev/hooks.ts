@@ -32,6 +32,7 @@ export function installDevHooks(g: Game): void {
       closeChat: () => dialogue.close(),
       personLevel: (who: 'jordan' | 'maya') => (who === 'maya' ? people[1] : people[0]).level,
       level: () => view.level,
+      scriptState: () => { const e = g.scripts as unknown as { frames: { i: number }[]; blocking: unknown }; return JSON.stringify({ rt: g.scripts.state(), mode: g.s.scriptMode, at: e.frames.map((f) => f.i), blocking: e.blocking, trace: g.scripts.trace.join(' ') }); },
       // Where a household member is and what they're doing, with their spot on screen.
       agentState: (id: string) => {
         const p = people.find(q => q.id === id);

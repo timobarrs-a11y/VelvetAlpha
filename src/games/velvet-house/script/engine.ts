@@ -252,7 +252,12 @@ export class ScriptEngine {
   }
 
   /** Runs one step. Returns true when it has to wait (the engine stops until the wait is over). */
+  /** The last few steps that ran, for finding out what a story did. */
+  readonly trace: string[] = [];
+
   private exec(s: Step, skipping: boolean): boolean {
+    this.trace.push(`${this.cur?.id}:${s.do}${skipping ? '*' : ''}`);
+    if (this.trace.length > 40) this.trace.shift();
     const h = this.host;
     const block = (b: Blocking): true => { this.blocking = b; return true; };
     switch (s.do) {

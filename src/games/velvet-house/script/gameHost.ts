@@ -161,7 +161,7 @@ export function createScripts(g: Game): Partial<Game> {
           const inst: ObjectInstance = { id: o.id ?? `${o.type}-${Date.now() & 0xffff}`, type: o.type, level: at.level, x: at.x, y: at.y, rot: 0, ...(o.contents ? { contents: o.contents } : {}), ...(o.col ? { col: o.col } : {}) };
           if (!world.objs.some((q) => q.id === inst.id)) {
             world.objs.push(inst);
-            if (!relocate(world.objs, inst, at.level, people, [at.x, at.y])) { world.objs.pop(); return; }
+            if (!relocate(world.objs, inst, at.level, [], [at.x, at.y])) { world.objs.pop(); engine.trace.push('give-fail:' + inst.id + JSON.stringify(people.map((p) => [p.id, p.level, +p.x.toFixed(1), +p.y.toFixed(1)]))); return; }
             g.relearnLayout(inst);
             art.objectPlaced(inst.id);
           }

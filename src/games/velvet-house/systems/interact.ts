@@ -70,7 +70,7 @@ export function createInteract(g: Game): Partial<Game> {
     const was = obj.type;
     obj.type = type;
     delete obj.contents;
-    if (!relocate(world.objs, obj, obj.level, people, [obj.x, obj.y])) { obj.type = was; obj.contents = type; log('There is no room to unpack that here.'); return; }
+    if (!relocate(world.objs, obj, obj.level, [], [obj.x, obj.y])) { obj.type = was; obj.contents = type; log('There is no room to unpack that here.'); return; }
     g.relearnLayout(obj);
     art.objectPlaced(obj.id);
     log(`Unpacked the ${(TYPES[type]?.name ?? "piece").toLowerCase()}.`);
