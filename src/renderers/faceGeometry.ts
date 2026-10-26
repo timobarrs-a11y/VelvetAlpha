@@ -1,4 +1,4 @@
-import type { FaceShape } from '../types/avatar-v2';
+import { tuneOf, type FaceShape, type FaceTune } from '../types/avatar-v2';
 
 export interface FaceGeometry {
   faceShape: FaceShape;
@@ -89,4 +89,33 @@ export function faceHalfWidthAt(g: FaceGeometry, y: number): number {
     }
   }
   return g.fRx;
+}
+
+// The head each face shape starts from, before the sliders.
+export const FACE_PARAMS: Record<FaceShape, { rx: number; ry: number; chinW: number; jawY: number }> = {
+  oval:    { rx: 28, ry: 34, chinW: 20, jawY: 78 },
+  round:   { rx: 30, ry: 30, chinW: 26, jawY: 76 },
+  square:  { rx: 28, ry: 32, chinW: 24, jawY: 80 },
+  heart:   { rx: 30, ry: 32, chinW: 16, jawY: 78 },
+  diamond: { rx: 27, ry: 35, chinW: 15, jawY: 80 },
+  oblong:  { rx: 25, ry: 37, chinW: 18, jawY: 82 },
+};
+
+// The head as drawn: the shape, widened or narrowed by the face-width slider
+// and given a broader or tapered jaw by the jaw slider. Everything that sits
+// on the head (hair, hats, ears, beards) is built from this one description,
+// so it all follows the sliders together.
+export function buildFaceGeometry(faceShape: FaceShape, tune?: FaceTune): FaceGeometry {
+  const params = FACE_PARAMS[faceShape] ?? FACE_PARAMS.oval;
+  const faceCenterY = 52;
+  return {
+    faceShape,
+    fRx: params.rx * (1 + tuneOf(tune, 'faceWidth') * 0.1),
+    fRy: params.ry,
+    chinW: params.chinW,
+    faceTop: faceCenterY - params.ry,
+    faceBottom: faceCenterY + params.ry,
+    faceCenterY,
+    jaw: tuneOf(tune, 'jawWidth'),
+  };
 }
