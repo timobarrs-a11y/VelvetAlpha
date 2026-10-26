@@ -154,10 +154,10 @@ export const TUTORIAL: ScriptDef[] = [
   chapter('tutorial.ch10', { on: 'cond', cond: { flag: 'tutorial.groceries' } }, [
     { do: 'card', title: 'Needs', body: 'You and your partner both get hungry, tired and bored. Keep an eye on the bars under their names.', spotlight: 'needs' },
     say('maya', 'maya.ch10.cook'),
-    { do: 'card', title: 'Cook something', body: 'Tap the kitchen counter and choose Make a meal.', spotlight: 'objType:counter' },
+    { do: 'card', title: 'Cook something', body: 'Tap the kitchen counter and choose Cook, or open Orders and pick Cook a meal.', spotlight: 'objType:counter' },
     { do: 'wait', until: { event: 'meal.cooked' } },
     say('maya', 'maya.ch10.dishes'),
-    { do: 'card', title: 'Wash up', body: 'Tap the counter again and wash the dishes.' },
+    { do: 'card', title: 'Wash up', body: 'Tap the counter again and choose Wash dishes, or open Orders and pick Clean up.' },
     { do: 'wait', until: { event: 'dishes.washed' } },
     { do: 'highlight', target: null },
     { do: 'set', flag: 'tutorial.dishes', value: true },

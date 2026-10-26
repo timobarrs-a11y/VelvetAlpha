@@ -87,7 +87,7 @@ export function createInteract(g: Game): Partial<Game> {
       return;
     }
     const chainMap: Record<string, string> = {
-      stove: 'cookeat', coffee: 'coffee', shower: 'shower', tub: 'bath',
+      stove: 'cookeat', sink: 'clean', coffee: 'coffee', shower: 'shower', tub: 'bath',
       seat: 'tv', bedA: 'sleep', bedB: 'sleep', dine1: 'cookeat', dine2: 'cookeat',
       tread: 'workout', lift: 'workout', stretch: 'stretch',
       records: 'records', arcade: 'arcade', water: 'plants',

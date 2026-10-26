@@ -1,4 +1,5 @@
 import { TYPES } from '../state/objects';
+import { CATALOG } from '../state/catalog';
 import { isWalking, poseOf } from '../state/agents';
 import { type SampleFn } from '../state/companionAI';
 import type { Game } from '../kernel/game';
@@ -29,9 +30,16 @@ export function installDevHooks(g: Game): void {
         const r = canvas.getBoundingClientRect();
         return [r.left + (p.x / canvas.width) * r.width, r.top + (p.y / canvas.height) * r.height];
       },
+      openChat: () => g.openChat(),
       closeChat: () => dialogue.close(),
       personLevel: (who: 'jordan' | 'maya') => (who === 'maya' ? people[1] : people[0]).level,
       level: () => view.level,
+      story: () => JSON.stringify(g.flags.story ?? {}),
+      openTab: (t: string) => g.drawer.open(t as never),
+      closeDrawer: () => g.drawer.close(),
+      advance: (m: number) => { world.minutes = Math.min(1439, world.minutes + m); },
+      buy: (id: string) => { const it = CATALOG.find((c) => c.id === id); if (it) g.handleBuy(it); },
+      parcel: () => JSON.stringify(world.household.parcel),
       scriptState: () => { const e = g.scripts as unknown as { frames: { i: number }[]; blocking: unknown }; return JSON.stringify({ rt: g.scripts.state(), mode: g.s.scriptMode, at: e.frames.map((f) => f.i), blocking: e.blocking, trace: g.scripts.trace.join(' ') }); },
       // Where a household member is and what they're doing, with their spot on screen.
       agentState: (id: string) => {
