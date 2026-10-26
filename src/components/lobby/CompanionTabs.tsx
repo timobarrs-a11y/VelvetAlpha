@@ -18,7 +18,7 @@ interface CategoryConfig {
 
 const CATEGORIES: CategoryConfig[] = [
   { key: 'companions',    label: 'Companions',    icon: <Heart className="w-3 h-3" />,      color: '#f472b6', matchTypes: ['romantic', 'friend', null] },
-  { key: 'coaching',      label: 'Coaching',      icon: <Brain className="w-3 h-3" />,       color: '#34d399', matchTypes: ['mentor', 'assistant'] },
+  { key: 'coaching',      label: 'Your team',     icon: <Brain className="w-3 h-3" />,       color: '#34d399', matchTypes: ['mentor', 'assistant'] },
 ];
 
 interface Props {

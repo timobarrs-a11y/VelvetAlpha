@@ -204,6 +204,12 @@ yes.
   "Spanish lesson with Sofia" with a book icon.
 - **Goal board:** who's carrying it, with a link to their chat.
 
+*Built (G7):* the menu (`SignedInWorkspace`) now has **Goals** (active goals, each opening
+`/goal/:id`, then All progress; or "Set a goal with Atlas") and **Your team** (coaches and
+assistants with Coach and Assistant badges in different colors, Commitments, Plans, Library).
+The lobby tabs and the home shell say "Your team". Today marks a coach's items with a book and
+goal steps with a target.
+
 ## Data changes
 
 | Change | Why |

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, CalendarDays, Sparkles, Plus, Cake, X } from 'lucide-react';
+import { Check, ChevronRight, CalendarDays, Sparkles, Plus, Cake, X, Target, BookOpen } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
 import { calendarService } from '../../services/calendarService';
 import {
@@ -259,6 +259,8 @@ export function TodayCard() {
                         className={`block text-sm font-medium truncate ${item.done ? 'line-through' : ''}`}
                         style={{ color: item.done ? 'var(--ds-ink-4)' : 'var(--ds-ink)' }}
                       >
+                        {item.icon === 'goal' && <Target className="mr-1.5 inline h-3.5 w-3.5 align-[-2px]" aria-label="Goal step" style={{ color: 'var(--ds-accent-fg)' }} />}
+                        {item.icon === 'lesson' && <BookOpen className="mr-1.5 inline h-3.5 w-3.5 align-[-2px]" aria-label="Lesson" style={{ color: 'var(--ds-accent-fg)' }} />}
                         {item.title}
                       </span>
                       <span className="block text-xs truncate" style={{ color: 'var(--ds-ink-3)' }}>

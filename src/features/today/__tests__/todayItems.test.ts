@@ -94,3 +94,30 @@ describe('labels', () => {
     expect(nextLabel(new Date(2026, 10, 7, 9, 0), now)).toBe('Sat, Nov 7');
   });
 });
+
+describe('Today icons', () => {
+  it("marks a coach's commitment as a lesson, an assistant's as a goal step, and plain events with none", () => {
+    const items = buildTodayItems(
+      [event({ id: 'e1' })],
+      [
+        commitment({ id: 'c1', description: 'Spanish lesson', companion_relationship_type: 'mentor' }),
+        commitment({ id: 'c2', description: 'Check your credit score', companion_relationship_type: 'assistant' }),
+      ],
+      new Map(),
+      now,
+    );
+    const icon = (title: string) => items.find(i => i.title === title)?.icon;
+    expect(icon('Spanish lesson')).toBe('lesson');
+    expect(icon('Check your credit score')).toBe('goal');
+    expect(icon('Event')).toBeNull();
+  });
+});
+
+describe('helperRole', () => {
+  it('names coaches and assistants, and nobody else', async () => {
+    const { helperRole } = await import('../../../utils/relationshipType');
+    expect(helperRole('mentor')).toBe('Coach');
+    expect(helperRole('assistant')).toBe('Assistant');
+    expect(helperRole('friend')).toBeNull();
+  });
+});

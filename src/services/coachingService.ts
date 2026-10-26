@@ -19,6 +19,8 @@ export interface CoachingCommitment {
   extracted_from_message?: string | null;
   plan_step_id?: string | null;
   companion_color?: string | null;
+  /** mentor (a coach) or assistant, for showing lessons apart from goal steps. */
+  companion_relationship_type?: string | null;
   show_on_profile?: boolean;
 }
 
@@ -144,14 +146,19 @@ async function withCompanionInfo(commitments: CoachingCommitment[]): Promise<Coa
 
   const { data: companions } = await supabase
     .from('companions')
-    .select('id, custom_name, coach_color')
+    .select('id, custom_name, coach_color, relationship_type')
     .in('id', companionIds);
 
-  const infoMap = new Map((companions ?? []).map(c => [c.id, { name: c.custom_name, color: (c as Record<string, unknown>).coach_color as string | null }]));
+  const infoMap = new Map((companions ?? []).map(c => [c.id, {
+    name: c.custom_name,
+    color: (c as Record<string, unknown>).coach_color as string | null,
+    relationshipType: (c as Record<string, unknown>).relationship_type as string | null,
+  }]));
   return commitments.map(c => ({
     ...c,
     companion_name: c.companion_id ? (infoMap.get(c.companion_id)?.name ?? 'Coach') : 'You',
     companion_color: c.companion_id ? (infoMap.get(c.companion_id)?.color ?? null) : null,
+    companion_relationship_type: c.companion_id ? (infoMap.get(c.companion_id)?.relationshipType ?? null) : null,
   }));
 }
 

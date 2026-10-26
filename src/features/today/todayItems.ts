@@ -16,6 +16,8 @@ export interface TodayItem {
   goal: string | null;
   done: boolean;
   overdue: boolean;
+  /** A goal step (target), a lesson or practice from a coach (book), or a plain event. */
+  icon: 'goal' | 'lesson' | null;
   /** Proposed by Atlas and pencilled in, not yet confirmed. */
   tentative: boolean;
   sortTime: number;
@@ -41,6 +43,7 @@ function eventItem(event: UserEvent): TodayItem {
     timeLabel: event.all_day ? 'All day' : at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
     by: meta.source === 'atlas' ? 'Atlas' : null,
     goal: typeof meta.goal === 'string' && meta.goal.trim() ? meta.goal.trim() : null,
+    icon: meta.commitment_id ? 'goal' : null,
     done: event.completed,
     overdue: false,
     tentative: meta.tentative === true,
@@ -61,6 +64,7 @@ function commitmentItem(c: CoachingCommitment, goalTitles: Map<string, string>, 
     timeLabel: overdue ? 'Overdue' : 'Due today',
     by,
     goal: c.goal_id ? goalTitles.get(c.goal_id) ?? null : null,
+    icon: c.companion_relationship_type === 'mentor' ? 'lesson' : 'goal',
     done: c.status === 'completed',
     overdue,
     tentative: false,

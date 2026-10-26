@@ -58,7 +58,8 @@ import { SubscriptionBanner } from './SubscriptionBanner';
 import { useAudioScene } from '../hooks/useAudioScene';
 import { CustomizationPanel } from './CustomizationPanel';
 import { HomeLayoutSwitch } from '../shared/ui';
-import { isHelper } from '../utils/relationshipType';
+import { isHelper, helperRole, HELPER_BADGE_COLOR } from '../utils/relationshipType';
+import { getGoals, type CoachingGoal } from '../services/coachingService';
 
 interface SignedInWorkspaceProps {
   children: ReactNode;
@@ -300,7 +301,10 @@ function PersonRow({ companion, coach, pathname, onClick, inkColor, inkMuted }: 
       <button type="button" onClick={onClick} className="min-w-0 flex-1 text-left">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-[11px] font-semibold" style={{ color: inkColor }}>{companion.custom_name}</span>
-          {coach && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold text-emerald-300">Coach</span>}
+          {coach && helperRole(companion.relationship_type) && (() => {
+            const role = helperRole(companion.relationship_type)!;
+            return <span className="rounded-full px-1.5 py-0.5 text-[8px] font-bold" style={{ color: HELPER_BADGE_COLOR[role], background: `${HELPER_BADGE_COLOR[role]}26` }}>{role}</span>;
+          })()}
         </div>
         <p className="mt-0.5 truncate text-[10px] leading-tight" style={{ color: inkMuted }}>{line}</p>
       </button>
@@ -351,10 +355,25 @@ function ToolRow({ label, icon, tone, path, pathname, onNavigate, inkColor, inkM
   );
 }
 
+/** The user's active goals, for the Goals group in the menu. */
+function useActiveGoals(): CoachingGoal[] {
+  const { user } = useAuth();
+  const userId = user?.id;
+  const [goals, setGoals] = useState<CoachingGoal[]>([]);
+  useEffect(() => {
+    if (!userId) return;
+    let live = true;
+    getGoals(userId).then(all => { if (live) setGoals(all.filter(g => g.status === 'active')); }).catch(() => {});
+    return () => { live = false; };
+  }, [userId]);
+  return goals;
+}
+
 function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSubtle }: { pathname: string; lobby: LobbyData; onNavigate: (path: string) => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
   // Your coaches and companions, with their faces.
   const coaches = lobby.companions.filter(companion => isHelper(companion.relationship_type));
   const companions = lobby.companions.filter(companion => !isHelper(companion.relationship_type));
+  const goals = useActiveGoals();
   const coreTools = [
     { label: 'Daily Feed', path: '/daily-feed', tone: '#34d399', icon: <Newspaper className="h-3.5 w-3.5" /> },
     { label: 'Your Lens', path: '/videos', tone: '#fb7185', icon: <PlayCircle className="h-3.5 w-3.5" /> },
@@ -398,13 +417,22 @@ function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSu
         <MeSection pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
         <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
-          <SidebarLabel inkSubtle={inkSubtle}>Coaching</SidebarLabel>
+          <SidebarLabel inkSubtle={inkSubtle}>Goals</SidebarLabel>
+          {goals.slice(0, 5).map(goal => (
+            <ToolRow key={goal.id} label={goal.title} path={`/goal/${goal.id}`} tone={TONE_COLOR.coach} icon={<Target className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
+          ))}
+          {goals.length > 0
+            ? <ToolRow label="All progress" path="/coaching-progress" tone={TONE_COLOR.coach} icon={<Layers className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
+            : <ToolRow label="Set a goal with Atlas" path="/atlas" tone={TONE_COLOR.coach} icon={<Plus className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />}
+        </div>
+        <div className="my-3 border-t border-white/8" />
+        <div className="space-y-0.5">
+          <SidebarLabel inkSubtle={inkSubtle}>Your team</SidebarLabel>
           {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach pathname={pathname} onClick={() => lobby.openCompanion(coach)} inkColor={inkColor} inkMuted={inkMuted} />)}
-          <ToolRow label="Progress" path="/coaching-progress" tone={TONE_COLOR.coach} icon={<Target className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
           <ToolRow label="Commitments" path="/coaching-commitments" tone="#38bdf8" icon={<CheckCircle2 className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
           <ToolRow label="Plans" path="/coaching-commitments?view=plans" tone="#a78bfa" icon={<Layers className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
           <ToolRow label="Library" path="/coaching-library" tone="#94a3b8" icon={<BookOpen className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
-          <button type="button" onClick={lobby.handleNewCoach} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] transition-colors hover:bg-white/7" style={{ color: inkMuted }}><Plus className="h-3.5 w-3.5" />Add another coach</button>
+          <button type="button" onClick={lobby.handleNewCoach} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-[10px] transition-colors hover:bg-white/7" style={{ color: inkMuted }}><Plus className="h-3.5 w-3.5" />Add a coach</button>
         </div>
         <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
