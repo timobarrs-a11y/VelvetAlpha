@@ -28,9 +28,23 @@ new scope that the overhaul brief never covered.
 
 1. **Foundation** (architecture Phase 0). Steps 0.1 (saves) and 0.7 (the live
    end-to-end harness, `npm run test:live`, no reference screenshots yet because
-   the animation work is still changing the look) are done. Next: the bridge and cloud save (0.5, 0.8), one source
-   for level and object data (0.9), splitting `main.ts` (0.10), the scene list
-   (0.11).
+   the animation work is still changing the look) are done. Steps 0.5 and 0.8
+   are done in part:
+   - **Done:** server-side moderation on every reply; a daily reply allowance
+     (migration `20261027130000_velvet_game_budget.sql`, 40 free and 300 paid;
+     apply it before deploying the function, which fails open if it is missing);
+     in-voice canned replies when the AI can't answer; save v3 (`rev`,
+     `contentVersion`, looks-lost detection, `repairFromV1`); the live game's own
+     save slot (`velvet-sims:<id>`, carried across from the old slot on first
+     run); the newer of the cloud and local save wins; and the legacy copy drops
+     the attic so the old game still loads it.
+   - **Deferred:** the full typed bridge v2 (streaming replies, boot and save
+     messages), server-built prompts and structured replies, prompt caching, and
+     the additive v3 keys for scripts, daily list and jobs (each arrives with its
+     feature).
+
+   Next: one source for level and object data (0.9), splitting `main.ts`
+   (0.10) and the scene list (0.11), once the animation work is merged.
 2. **Overhaul Phase 6 = architecture Phase 1:** script engine, NPCs, the Dez
    opening, deliveries, tutorial chapters 7-15.
 3. **Architecture Phase 2 and 3 in parallel:** daily to-do list; character chat

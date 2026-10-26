@@ -31,7 +31,7 @@ import { CATALOG, type CatalogEntry } from './state/catalog';
 import { SETTLE, settleComplete, type GoalContext } from './state/goals';
 import { rollStyle, tasteOf, computeTasteNorm, type StyleProfile, type CatalogItem } from './state/taste';
 import {
-  talk, rememberChat, remember,
+  talk, rememberChat, remember, cannedFor,
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
 import { snapshot } from './state/save';
@@ -49,7 +49,10 @@ const VELVET_COMPANION_ID = (() => {
   try { return new URLSearchParams(location.search).get('companion') || ''; } catch { return ''; }
 })();
 
-const SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
+// The live game keeps its own save slot. The legacy game uses `velvet-house-v1:<id>`, and sharing it meant
+// each could overwrite the other's progress.
+const SAVE_KEY = VELVET_COMPANION_ID ? `velvet-sims:${VELVET_COMPANION_ID}` : 'velvet-sims';
+const LEGACY_SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
 const SPEEDS = [1, 3, 10];
 const WALL_MODES: { mode: WallMode; label: string }[] = [
   { mode: 'cut', label: 'Cutaway' },
@@ -99,6 +102,11 @@ function loadWorld(): World {
   let objs: ObjectInstance[] = INITIAL_OBJS.map((o) => ({ ...o }));
   let save: Record<string, unknown> | null = null;
   try {
+    // First run on the new slot: carry the house over from the old one (migrated, so the old copy stays as it was).
+    if (localStorage.getItem(SAVE_KEY) === null) {
+      const old = migrateSave(JSON.parse(localStorage.getItem(LEGACY_SAVE_KEY) ?? 'null'));
+      if (old) localStorage.setItem(SAVE_KEY, JSON.stringify(old));
+    }
     const raw = localStorage.getItem(SAVE_KEY);
     const s = raw ? migrateSave(JSON.parse(raw)) : null;
     if (s) {
@@ -1033,6 +1041,7 @@ function boot(): void {
     }
   }
 
+  let chatBudgetDay = -1;
   async function handleTalk(text: string): Promise<void> {
     if (!sample) { dialogue.showInput(); return; }
     dialogue.busy(true);
@@ -1059,11 +1068,15 @@ function boot(): void {
       coreMem, memories, pastMem,
     };
 
+    // Out of replies for today: don't ask the network again until tomorrow.
     let streamed = '';
-    const result = await talk(text, chatTurns, ctx, sample, (chunk) => {
+    const result = chatBudgetDay === world.day
+      ? { text: cannedFor('budget', companionCfg.preset), tag: null, turns: chatTurns }
+      : await talk(text, chatTurns, ctx, sample, (chunk) => {
       streamed += chunk;
       dialogue.showAI(streamed, true);
     });
+    if ('failed' in result && result.failed === 'budget') chatBudgetDay = world.day;
     chatTurns = result.turns;
     dialogue.showAI(result.text, true);
     dialogue.busy(false);
@@ -1083,11 +1096,12 @@ function boot(): void {
     setTimeout(() => dialogue.showInput(true), 600);
   }
 
+  let saveRev = typeof (world.save as { rev?: unknown } | null)?.rev === 'number' ? (world.save as { rev: number }).rev : 0;
   // Save: one serializer (state/save.ts). What the game models comes from live state; the rest is carried over from the loaded save.
   function doSave(): void {
     try {
       const data = snapshot({
-        day: world.day, minutes: world.minutes,
+        rev: ++saveRev, day: world.day, minutes: world.minutes,
         money: world.household.money, earnedToday: world.household.earnedToday, spentToday: world.household.spentToday,
         power: world.household.power, fridge: world.household.fridge, dishes: world.household.dishes, laundryPile: world.household.laundryPile,
         bill: world.household.bill, nextBillAt: world.household.nextBillAt,

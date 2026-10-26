@@ -1,18 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  loadVelvetHouseSave, saveVelvetHouseProgress, saveVelvetHouseHistory, maybeSnapshotHistory,
+  loadVelvetHouseSaveCopies, saveVelvetHouseProgress, saveVelvetHouseHistory, maybeSnapshotHistory, compareSaveProgress,
 } from '../services/velvetHouseDatabase';
+import { migrateSave, repairFromV1 } from '../games/velvet-house/state/saveMigration';
 
-// The game keeps its save in this browser (it has no account of its own). This
-// puts a copy of it in the player's account, and brings it back on a new
-// device: the cloud save is loaded into local storage before the game starts,
-// and local storage is copied up every 30 seconds and when leaving.
-const SAVE_KEY_PREFIX = 'velvet-house-v1';
-const RESTART_KEY_PREFIX = 'velvet-house-restart-pending';
+// The game keeps its save in this browser (it has no account of its own). This puts a copy of it in the
+// player's account, and brings it back on a new device: before the game starts, the newer of the cloud save and
+// this browser's save is put in the game's slot, and the slot is copied up every 30 seconds and when leaving.
+//
+// The live game has its own slot (`velvet-sims:<id>`). The legacy game's slot and restart flag are different
+// keys, so neither game can overwrite the other's local progress.
+const SAVE_KEY_PREFIX = 'velvet-sims';
+const RESTART_KEY_PREFIX = 'velvet-sims-restart-pending';
 const SYNC_INTERVAL_MS = 30_000;
 
 const saveKeyFor = (companionId: string) => `${SAVE_KEY_PREFIX}:${companionId}`;
 const restartKeyFor = (companionId: string) => `${RESTART_KEY_PREFIX}:${companionId}`;
+
+function readLocal(key: string): Record<string, unknown> | null {
+  try { return JSON.parse(localStorage.getItem(key) ?? 'null'); } catch { return null; }
+}
 
 /**
  * @param companionId whose house this is (null until known)
@@ -32,7 +39,8 @@ export function useVelvetHouseCloudSave(companionId: string | null, settled: boo
       if (restartPending) {
         // Restarted: keep the old house recoverable, then replace it with the fresh game.
         try {
-          const oldCloud = await loadVelvetHouseSave(companionId);
+          const old = await loadVelvetHouseSaveCopies(companionId);
+          const oldCloud = old?.v2 ?? old?.v1;
           if (oldCloud) await saveVelvetHouseHistory(companionId, oldCloud);
         } catch { /* best-effort backup */ }
         await saveVelvetHouseProgress(companionId, parsed, true);
@@ -62,19 +70,22 @@ export function useVelvetHouseCloudSave(companionId: string | null, settled: boo
       const key = saveKeyFor(companionId);
       try {
         if (localStorage.getItem(restartKeyFor(companionId)) !== '1') {
-          const save = await loadVelvetHouseSave(companionId);
-          if (save) {
-            // Before replacing a local save, keep it in history.
-            const prev = localStorage.getItem(key);
-            if (prev) { try { await saveVelvetHouseHistory(companionId, JSON.parse(prev)); } catch { /* non-fatal */ } }
-            localStorage.setItem(key, JSON.stringify(save));
-          } else if (!localStorage.getItem(key)) {
-            // Nothing in the cloud or for this companion yet. A house saved before saves were
-            // per companion lives under the plain key: adopt it rather than starting over.
-            const older = localStorage.getItem(SAVE_KEY_PREFIX);
-            if (older) localStorage.setItem(key, older);
+          const copies = await loadVelvetHouseSaveCopies(companionId);
+          const cloudRaw = copies ? (copies.v1 && copies.v2 ? (compareSaveProgress(copies.v1, copies.v2) > 0 ? copies.v1 : copies.v2) : copies.v2 ?? copies.v1) : null;
+          const cloud = cloudRaw ? migrateSave(cloudRaw) : null;
+          const local = migrateSave(readLocal(key));
+          // The newer one wins, so progress made offline is not thrown away by an older cloud copy.
+          let chosen = cloud && local ? (compareSaveProgress(local as never, cloud as never) > 0 ? local : cloud) : cloud ?? local;
+          if (chosen) {
+            const usedCloud = chosen === cloud;
+            // Anything the old save bug destroyed comes back from the cloud's v1 copy.
+            chosen = repairFromV1(chosen, copies?.v1 ?? null);
+            // Replacing a different local save: keep it in history.
+            if (usedCloud && local) { try { await saveVelvetHouseHistory(companionId, local as never); } catch { /* non-fatal */ } }
+            localStorage.setItem(key, JSON.stringify(chosen));
           }
-          // (A local save with nothing in the cloud is kept, and uploaded by the next sync.)
+          // With nothing in the cloud or the new slot, a house saved by the older page is brought across by the
+          // game itself on first load (LEGACY_SAVE_KEY in the game).
         }
       } catch { /* cloud unreachable: keep whatever is local */ }
       if (!cancelled) setSaveReady(true);

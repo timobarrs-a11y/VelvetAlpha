@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FrameLocator, Page } from '@playwright/test';
 
-export const SAVE_KEY = 'velvet-house-v1:e2e';
+export const SAVE_KEY = 'velvet-sims:e2e';
 const HOST = readFileSync(join(process.cwd(), 'e2e/velvet-sims/host.html'), 'utf-8');
 
 export interface Obj { id: string; type: string; level: number; x: number; y: number; rot: number }

@@ -6,13 +6,15 @@
  * older version added) is carried over from the save the game was loaded from,
  * so a save never loses data just because this version doesn't use it.
  */
-import { migrateSave, CURRENT_VERSION } from './saveMigration';
-import type { SaveDataV2 } from './types';
+import { migrateSave, CURRENT_VERSION, CONTENT_VERSION } from './saveMigration';
+import type { SaveDataV3 } from './types';
 import type { ObjectInstance } from './objects';
 import type { AgentLook } from './agents';
 import type { CharacterNeeds } from './types';
 
 export interface SaveContext {
+  /** How many saves this game has made, for choosing the newer of two copies. */
+  rev: number;
   day: number;
   minutes: number;
   money: number;
@@ -67,7 +69,7 @@ const lookOut = (l: AgentLook, gender: 'male' | 'female') => ({
 /**
  * @param prev the save the game was loaded from (already migrated), or null for a new game
  */
-export function snapshot(ctx: SaveContext, prev: Record<string, unknown> | null = null): SaveDataV2 {
+export function snapshot(ctx: SaveContext, prev: Record<string, unknown> | null = null): SaveDataV3 {
   const p = prev ?? {};
   const kept = <T>(key: string, fallback: T): T => (p[key] === undefined || p[key] === null ? fallback : p[key] as T);
   const person = (key: 'jordan' | 'maya', needs: CharacterNeeds) => {
@@ -81,6 +83,8 @@ export function snapshot(ctx: SaveContext, prev: Record<string, unknown> | null 
   return {
     ...p,
     v: CURRENT_VERSION,
+    rev: ctx.rev,
+    contentVersion: CONTENT_VERSION,
     setupDone: true,
     partnerName: ctx.partnerName,
     lifeGoal: ctx.lifeGoal,
@@ -148,7 +152,7 @@ export function snapshot(ctx: SaveContext, prev: Record<string, unknown> | null 
     support: kept('support', 0),
     together: kept('together', 0),
     ext: kept('ext', {}),
-  } as unknown as SaveDataV2;
+  } as unknown as SaveDataV3;
 }
 
 export function saveGame(key: string, ctx: SaveContext, prev: Record<string, unknown> | null = null): void {
@@ -159,7 +163,7 @@ export function saveGame(key: string, ctx: SaveContext, prev: Record<string, unk
   }
 }
 
-export function loadSave(key: string): SaveDataV2 | null {
+export function loadSave(key: string): SaveDataV3 | null {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;

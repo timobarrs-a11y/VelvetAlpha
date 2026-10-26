@@ -29,7 +29,7 @@ const needs = { energy: 60, food: 50, hygiene: 70, fun: 40, comfort: 55, social:
 
 function ctxWith(art: ReturnType<typeof createHouseArt>): SaveContext {
   return {
-    day: 3, minutes: 600, money: 700, earnedToday: 0, spentToday: 0, power: true,
+    rev: 1, day: 3, minutes: 600, money: 700, earnedToday: 0, spentToday: 0, power: true,
     fridge: { basic: 2, fresh: 1 }, dishes: 1, laundryPile: 2, bill: null, nextBillAt: null,
     objs: INITIAL_OBJS.map(o => ({ ...o })), storage: [], owned: ['couch'], closet: [], bond: 61, flags: {},
     simName: 'Sam', partnerName: 'Maya', look, mayaLook: look, needs: { jordan: needs, maya: needs },

@@ -33,6 +33,8 @@ export async function sampleGameTurn(companionId: string, input: unknown, signal
   }
 
   const data = await res.json().catch(() => null);
+  if (data?.error === 'budget') throw gameError('budget');
+  if (data?.error === 'blocked') throw gameError('blocked');
   if (res.status === 429 || data?.error === 'rate_limited') throw gameError('rate_limited');
   if (data?.error === 'refused') throw gameError('refused');
   if (!res.ok || typeof data?.text !== 'string') throw gameError('unavailable');
