@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildHeadSprites, signatureOutfit, buildProfile } from '../simProfile';
+import { buildHeadSprites, buildBodySprites, signatureOutfit, buildProfile } from '../simProfile';
 import { migrateAvatarConfig } from '../../../utils/avatarConfig';
 import { validHeadSvgs } from '../../../games/velvet-house/state/headSprites';
+import { validBodySvgs, HAND_SPRITE } from '../../../games/velvet-house/state/bodySprites';
 import { validOutfit } from '../../../games/velvet-house/state/clothing';
 import { STARTER_ONLY } from '../../../data/avatarItems';
 
@@ -12,6 +13,15 @@ describe('Velvet Sims profile', () => {
     const sprites = buildHeadSprites(migrateAvatarConfig(pirate));
     expect(Object.keys(validHeadSvgs(sprites) ?? {})).toHaveLength(7);
     expect(sprites.neutral.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
+  });
+
+  it('sends hands in the avatar\'s skin tone that the game accepts, sized the way the game draws them', () => {
+    const hands = buildBodySprites(migrateAvatarConfig({ ...pirate, skinTone: '#8d5524' }));
+    expect(Object.keys(validBodySvgs(hands) ?? {})).toHaveLength(4);
+    expect(hands.relaxed.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
+    expect(hands.fist).toContain('viewBox="0 0 ' + HAND_SPRITE.w + ' ' + HAND_SPRITE.h + '"');
+    // Shaded from the skin tone, so a different skin gives a different hand.
+    expect(hands.relaxed).not.toEqual(buildBodySprites(migrateAvatarConfig({ ...pirate, skinTone: '#f1c9a5' })).relaxed);
   });
 
   it('turns the wardrobe into a game outfit the game accepts', () => {

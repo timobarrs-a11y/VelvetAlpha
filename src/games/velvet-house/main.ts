@@ -37,6 +37,7 @@ import {
 import { createDrawer, type DrawerPage, type DrawerState } from './ui/drawer';
 import { clothByKey, clothId, wearOnAgent, validOutfit, type OwnedCloth } from './state/clothing';
 import { validHeadSvgs, loadHeadImages } from './state/headSprites';
+import { validBodySvgs, loadBodyImages } from './state/bodySprites';
 import { createDialogue, createTray, showDiscoveryCard, createTownSign, type TrayAction } from './ui/dialogue';
 
 const VIEW_W = 640;
@@ -1232,7 +1233,9 @@ function boot(): void {
   // The real avatar: its head frames, and its outfit as the signature look.
   // The signature goes on when it's new or changed; otherwise whatever they
   // last wore stays on. The player's is always in the closet to switch back to.
-  function applyAvatar(person: Agent, look: { sprites?: unknown; outfit?: unknown }, who: AgentId): void {
+  function applyAvatar(person: Agent, look: { sprites?: unknown; body?: unknown; outfit?: unknown }, who: AgentId): void {
+    const hands = validBodySvgs(look.body);
+    if (hands) loadBodyImages(hands).then((imgs) => { if (imgs.relaxed) person.look.body = imgs; }).catch(() => {});
     const svgs = validHeadSvgs(look.sprites);
     if (svgs) {
       loadHeadImages(svgs).then((imgs) => {

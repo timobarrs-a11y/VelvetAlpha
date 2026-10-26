@@ -1,4 +1,5 @@
 import type { HeadImages } from './headSprites';
+import type { BodyImages } from './bodySprites';
 import { TYPES, blocksOf, isRug, isWall, type ObjectInstance } from './objects';
 import { ACTIVITIES, GAIN_OF, chainOf } from './activities';
 import { NEED_KEYS, tickNeeds, weight, type NeedKey } from './needs';
@@ -41,6 +42,8 @@ export interface AgentLook {
   accent?: string;
   // The person's real avatar head, when the host sent one. Never saved.
   heads?: HeadImages;
+  // The person's real avatar hands, when the host sent them. Never saved.
+  body?: BodyImages;
 }
 
 export interface Agent {

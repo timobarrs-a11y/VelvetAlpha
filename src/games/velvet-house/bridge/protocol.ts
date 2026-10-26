@@ -39,6 +39,8 @@ export interface GameLook {
   gender?: 'male' | 'female';
   // The real avatar head as SVG frames (see state/headSprites.ts).
   sprites?: Record<string, string>;
+  // The avatar's hands as SVG pieces (see state/bodySprites.ts).
+  body?: Record<string, string>;
   // The avatar's outfit, worn as the signature look (see state/clothing.ts).
   outfit?: { style: string; color: string; accent: string; bottom: string; key: string };
 }

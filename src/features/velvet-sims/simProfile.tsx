@@ -3,6 +3,7 @@ import type { Companion } from '../../services/companionService';
 import { migrateAvatarConfig } from '../../utils/avatarConfig';
 import type { AvatarConfigV2, HairStyle } from '../../types/avatar-v2';
 import { AvatarV2 } from '../../components/AvatarV2';
+import { handSvg, HAND_POSES } from '../../renderers/handRenderer';
 import { outfitItem, type AvatarUnlocks } from '../../data/avatarItems';
 import { resolveLookForDisplay } from '../../data/avatarCatalog';
 
@@ -77,6 +78,16 @@ export function buildHeadSprites(config: AvatarConfigV2): Record<string, string>
   };
 }
 
+// The avatar's hands as SVG pieces in their skin tone (see the game's bodySprites.ts).
+export function buildBodySprites(config: AvatarConfigV2): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const pose of HAND_POSES) {
+    out[pose] = renderToStaticMarkup(handSvg(pose, config.skinTone, `hand-${pose}`))
+      .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+  }
+  return out;
+}
+
 // The avatar's outfit as a game top and trousers: the character's signature look.
 const SIGNATURE_STYLE: Record<string, string> = {
   tee: 'tee', linen: 'linen', suit: 'blazer', chef: 'chef', labcoat: 'labcoat', pirate: 'pirate',
@@ -104,7 +115,7 @@ function simLook(raw: Record<string, unknown> | null | undefined, favoriteColor:
   if (!base || !raw) return base;
   const config = resolveLookForDisplay(migrateAvatarConfig(raw), unlocks);
   const { top: _favorite, ...rest } = base;
-  return { ...rest, sprites: buildHeadSprites(config), outfit: signatureOutfit(config) };
+  return { ...rest, sprites: buildHeadSprites(config), body: buildBodySprites(config), outfit: signatureOutfit(config) };
 }
 
 // `avatar`: send the real avatar (heads and signature outfit), for the rebuilt game.

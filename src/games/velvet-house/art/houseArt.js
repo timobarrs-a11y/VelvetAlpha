@@ -5,6 +5,7 @@ import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
 import { poseRig, idleRig } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
+import { handImage, HAND_SPRITE } from '../state/bodySprites';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
 
@@ -1280,8 +1281,10 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // Things in hand for an activity, drawn over the arms.
   const PROP_ZOOM = { spoon: 1.5, fork: 1.6, cup: 1.4, phone: 1.5, knife: 1.5, brush: 1.5, pen: 1.5, comb: 1.5, spatula: 1.4, apple: 1.3, rag: 1.3, can: 1.3, ball: 1.3, roller: 1.2 };
-  function drawProps(rig, hand, c, t, hd, local) {
+  function drawProps(rig, hand, c, t, hd, local, pass) {
     (rig.props || []).forEach(p => {
+      // The guitar's body sits behind the hands that play it; everything else is held in front.
+      if ((p.kind === 'guitar') !== (pass === 'back')) return;
       const h = hand[p.side || 1] || hand[1];
       // Hand-sized props are drawn small; scale them up around the hand so they read.
       const zoom = PROP_ZOOM[p.kind];
@@ -1462,6 +1465,7 @@ export function createHouseArt(ctx0, opts = {}) {
     // Shoes: a dark toe cap that points the way they face, so feet read as feet.
     const fvx = P3(dx * 0.1, dy * 0.1, 0), shoeDir = Math.atan2(fvx[1] - fy, fvx[0] - fx), shoeLen = f.front ? 1.6 : 0.4;
     const shoeAt = (x, y) => {
+      ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5 + 0.9, f.front ? 3.5 : 2.9, 1.5, '#E9E4DC', null, shoeDir);
       ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5, f.front ? 3.4 : 2.8, 2, L.shoes || '#2B2630', null, shoeDir);
       ell(x + Math.cos(shoeDir) * shoeLen - 0.4, y + Math.sin(shoeDir) * shoeLen * 0.5 - 0.7, 1.5, 0.7, 'rgba(255,255,255,.18)', null, shoeDir);
     };
@@ -1503,6 +1507,14 @@ export function createHouseArt(ctx0, opts = {}) {
       if (sleeve > 0) {
         const long = sleeve >= 1, from = long ? el : [sx0, sy0], end = long ? mix2(el, e, 0.8) : mix2([sx0, sy0], el, sleeve);
         if (long) limb3(sx0, sy0, el[0], el[1], end[0], end[1], L.top, 4.1); else limb(sx0, sy0, end[0], end[1], L.top, 4.1);
+        // A shadowed underside and a lit top edge, like the shirt's folds.
+        const edge = (a, b) => {
+          const sx = b[0] - a[0], sy = b[1] - a[1], sl = Math.hypot(sx, sy) || 1; let nx = -sy / sl, ny = sx / sl;
+          if (ny < 0) { nx = -nx; ny = -ny; }
+          limb(a[0] + nx * 1.3, a[1] + ny * 1.3, b[0] + nx * 1.3, b[1] + ny * 1.3, shade(L.top, -0.2), 1.3);
+          limb(a[0] - nx * 1.1, a[1] - ny * 1.1, b[0] - nx * 1.1, b[1] - ny * 1.1, shade(L.top, 0.14), 0.9);
+        };
+        if (long) { edge([sx0, sy0], el); edge(el, end); } else edge([sx0, sy0], end);
         const vx = end[0] - from[0], vy = end[1] - from[1], vl = Math.hypot(vx, vy) || 1;
         limb(end[0] - vx / vl * 0.9, end[1] - vy / vl * 0.9, end[0], end[1], shade(L.top, -0.18), 4.3);
       }
@@ -1512,6 +1524,16 @@ export function createHouseArt(ctx0, opts = {}) {
       const al = Math.hypot(ax, ay);
       if (al < 0.5) { ax = 0; ay = 1; } else { ax /= al; ay /= al; }
       const ang = Math.atan2(ay, ax), hx = e[0] + ax * 1.2, hy = e[1] + ay * 1.2, px = -ay, py = ax;
+      const hand = handImage(grip, L.body);
+      if (hand) {
+        // The avatar's own hand, turned to the forearm and mirrored for the other side.
+        const K = 0.2, H = HAND_SPRITE;
+        ctx.save(); ctx.imageSmoothingQuality = 'high';
+        ctx.translate(e[0] - ax * 2, e[1] - ay * 2); ctx.rotate(ang); if (side > 0) ctx.scale(1, -1);
+        ctx.drawImage(hand, -H.wristX * K, -H.wristY * K, H.w * K, H.h * K);
+        ctx.restore();
+        return;
+      }
       const fist = grip === 'fist';
       ell(hx, hy, fist ? 2.4 : 2.8, fist ? 2.3 : 2.1, L.skin, null, ang);
       const tn = side > 0 ? -1 : 1;
@@ -1657,8 +1679,10 @@ export function createHouseArt(ctx0, opts = {}) {
       ctx.restore();
     }
     const handAt = {};
-    [-1, 1].forEach(sd => { handAt[sd] = arms[sd].e; if (!armBehind(sd)) drawArm(arms[sd], sd); });
-    if (rig && rig.hands) drawProps(rig, handAt, c, t, hd, local);
+    [-1, 1].forEach(sd => { handAt[sd] = arms[sd].e; });
+    if (rig && rig.hands) drawProps(rig, handAt, c, t, hd, local, 'back');
+    [-1, 1].forEach(sd => { if (!armBehind(sd)) drawArm(arms[sd], sd); });
+    if (rig && rig.hands) drawProps(rig, handAt, c, t, hd, local, 'front');
     // Fingers curl over whatever they hold.
     [-1, 1].forEach(sd => {
       const g = arms[sd];

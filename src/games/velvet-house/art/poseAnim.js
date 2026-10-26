@@ -130,7 +130,7 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
         elbows: { 1: [0, 0.1 + s * 0.06, 0.34], [-1]: [0, 0.1 - s * 0.06, 0.34] }, bob: 0.01 };
     }
     case 'switch':
-      return { hands: { 1: [0.34, 0.06, 0.05], [-1]: [0.06, 0.12, -0.32] } };
+      return { hands: { 1: [0.34, 0.06, 0.05], [-1]: [0.06, 0.12, -0.32] }, grip: { 1: 'point' } };
     case 'reach': {
       // Picking things up and putting them away, one hand then the other.
       const a = pulse(t, 2.4, 0.5, ph), b = pulse(t, 2.4, 0.5, ph + 1.2);
@@ -156,6 +156,7 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
           [-1]: [0.3, 0.07 + wave(t, 5, ph) * 0.1, -0.14 + Math.max(0, wave(t, 11, ph + 1)) * 0.05],
         },
         lean: 0.05 + wave(t, 7, ph) * 0.02, nod: wave(t, 9, ph) * 0.02, snap: true,
+        grip: { 1: 'point', [-1]: 'fist' },
       };
     case 'desk':
       // Typing: short taps in turn.
@@ -283,6 +284,7 @@ const ACT_CLIPS = {
         [-1]: [0.3, 0.14 - wave(t, 1.1, ph) * 0.1, -0.22 + Math.max(0, wave(t, 9, ph + 1)) * 0.07],
       },
       bob: Math.abs(wave(t, 2.2, ph)) * 0.02, lean: 0.02 + wave(t, 1.4, ph) * 0.02, nod: wave(t, 2.2, ph) * 0.025, snap: true,
+      grip: { 1: 'open', [-1]: 'open' },
     };
   },
   guitar(t, ph) {
@@ -290,6 +292,7 @@ const ACT_CLIPS = {
     return {
       hands: { 1: [0.16, 0.0, -0.3 + wave(t, 8, ph) * 0.13], [-1]: [0.22, 0.22 + wave(t, 0.8, ph) * 0.07, -0.12 + wave(t, 0.8, ph) * 0.04] },
       bob: Math.abs(wave(t, 4, ph)) * 0.035, lean: 0.02 + wave(t, 2, ph) * 0.02, nod: wave(t, 4, ph) * 0.025, snap: true,
+      grip: { 1: 'relaxed', [-1]: 'fist' },
       props: [{ kind: 'guitar' }],
     };
   },
@@ -340,7 +343,7 @@ const ACT_CLIPS = {
   phone(t, ph, m) {
     // Calls and scrolling take turns.
     if (Math.floor(m / 8) % 2 === 1) {
-      return { hands: { 1: [0.2, 0.04, -0.12], [-1]: [0.2, 0.08, -0.16] }, headDown: true, props: [{ kind: 'phone', side: 1, scroll: (t * 1.5) % 1 }] };
+      return { hands: { 1: [0.2, 0.04, -0.12], [-1]: [0.2, 0.08, -0.16] }, headDown: true, grip: { [-1]: 'point' }, props: [{ kind: 'phone', side: 1, scroll: (t * 1.5) % 1 }] };
     }
     return null;
   },
