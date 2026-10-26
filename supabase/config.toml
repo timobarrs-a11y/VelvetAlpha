@@ -163,6 +163,9 @@ verify_jwt = true
 [functions.resource-finder]
 verify_jwt = true
 
+[functions.companion-status]
+verify_jwt = true
+
 [functions.community-bot]
 verify_jwt = false
 
