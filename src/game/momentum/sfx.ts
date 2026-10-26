@@ -102,8 +102,10 @@ class MomentumSfx {
     this.tone(180, 0.2, 'sawtooth', 0.08, 520);
   }
 
-  perfect() {
-    [0, 4, 7, 12].forEach((s, i) => this.tone(660 * Math.pow(2, s / 12), 0.18, 'sine', 0.22, undefined, i * 0.04));
+  /** Rises a whole step with each perfect in a row. */
+  perfect(streak = 1) {
+    const base = 660 * Math.pow(2, (Math.min(streak, 8) - 1) * 2 / 12);
+    [0, 4, 7, 12].forEach((s, i) => this.tone(base * Math.pow(2, s / 12), 0.18, 'sine', 0.22, undefined, i * 0.04));
   }
 
   checkpoint() {

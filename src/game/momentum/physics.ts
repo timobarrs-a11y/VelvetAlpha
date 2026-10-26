@@ -56,3 +56,11 @@ export const nextChain = (
   if (landingY > prevLandingY + 5) return 0;
   return chain;
 };
+
+// Combo: grows with every new platform while you keep climbing, breaks when you fall or stall.
+export const MAX_COMBO_FOR_MULTIPLIER = 20;
+export const comboMultiplier = (combo: number): number => 1 + Math.min(combo, MAX_COMBO_FOR_MULTIPLIER) * 0.1;
+
+/** True when a landing loses the climb: lower than the previous landing, or too long since it. */
+export const climbBroken = (landingY: number, prevLandingY: number | null, framesSinceLanding: number): boolean =>
+  prevLandingY !== null && (landingY > prevLandingY + 5 || framesSinceLanding > CHAIN_WINDOW_FRAMES);

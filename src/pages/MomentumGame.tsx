@@ -15,6 +15,9 @@ import {
   boostVelocity,
   perfectBounceVelocity,
   nextChain,
+  MAX_CHAIN,
+  comboMultiplier,
+  climbBroken,
 } from '../game/momentum/physics';
 import {
   type TouchSettings,
@@ -152,6 +155,8 @@ export function MomentumGame() {
   const simFrameRef = useRef(0);
   const landingFrameRef = useRef(-9999);
   const boostPressFrameRef = useRef(0);
+  const perfectStreakRef = useRef(0);
+  const perfectedThisBounceRef = useRef(false);
   const [touchSettings, setTouchSettings] = useState<TouchSettings>(loadTouchSettings);
   const touchSettingsRef = useRef(touchSettings);
   touchSettingsRef.current = touchSettings;
@@ -202,7 +207,13 @@ export function MomentumGame() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const existingProgress = careerProgress.find(p => p.level_number === levelNum);
+      // Read the row fresh: careerProgress state can be stale when a run is retried right after a save
+      const { data: existingProgress } = await supabase
+        .from('momentum_career_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('level_number', levelNum)
+        .maybeSingle<CareerProgressRow>();
 
       if (existingProgress) {
         const shouldUpdate = !existingProgress.completed ||
@@ -290,6 +301,8 @@ export function MomentumGame() {
     hitStopRef.current = 0;
     simFrameRef.current = 0;
     landingFrameRef.current = -9999;
+    perfectStreakRef.current = 0;
+    perfectedThisBounceRef.current = false;
     carryVxRef.current = 0;
     ghostRecRef.current = [];
     shakeRef.current = 0;
@@ -411,7 +424,6 @@ export function MomentumGame() {
   // framesAgo lets a tap that is recognised on release count from when the finger went down
   const triggerBoost = (framesAgo = 0) => {
     momentumSfx.unlock();
-    if (playerRef.current.boostCharges === 0) momentumSfx.empty();
     boostBufferRef.current = BOOST_BUFFER_FRAMES;
     boostPressFrameRef.current = simFrameRef.current - framesAgo;
   };
@@ -582,10 +594,10 @@ export function MomentumGame() {
     if (touchX !== null) {
       const ballCenter = player.x + PLAYER_WIDTH / 2;
       player.vx = steerVelocity(player.vx, touchX, ballCenter, HORIZONTAL_SPEED);
-    } else if (keys.left) {
-      player.vx = -HORIZONTAL_SPEED;
-    } else if (keys.right) {
-      player.vx = HORIZONTAL_SPEED;
+    } else if (keys.left !== keys.right) {
+      // Ease toward full speed so keyboard steering feels like touch
+      const target = keys.left ? -HORIZONTAL_SPEED : HORIZONTAL_SPEED;
+      player.vx += (target - player.vx) * 0.4;
     } else {
       player.vx *= 0.82;
     }
@@ -604,23 +616,26 @@ export function MomentumGame() {
       const boostColor = levelData.boostTrailColor || '#00ffff';
       const pressAfterLanding = boostPressFrameRef.current - landingFrameRef.current;
       const isPerfect = pressAfterLanding >= -3 && pressAfterLanding <= PERFECT_WINDOW_FRAMES
-        && framesSinceLandingRef.current <= PERFECT_WINDOW_FRAMES + BOOST_BUFFER_FRAMES && player.vy < 0;
+        && framesSinceLandingRef.current <= PERFECT_WINDOW_FRAMES + BOOST_BUFFER_FRAMES && player.vy < 0
+        && !perfectedThisBounceRef.current;
       if (isPerfect) {
-        // Perfect bounce: pressing right after landing is free and launches much higher
+        // Perfect bounce: pressing right after landing is free, builds momentum and launches much higher
+        perfectStreakRef.current++;
+        perfectedThisBounceRef.current = true;
+        chainRef.current = Math.min(MAX_CHAIN, chainRef.current + 1);
         player.vy = Math.min(player.vy, perfectBounceVelocity(level, chainRef.current, lastLandingSpringRef.current));
         boostBufferRef.current = 0;
-        framesSinceLandingRef.current = 9999;
-        landingFrameRef.current = -9999;
         player.boostTimer = 30;
         player.isBoosting = true;
         hitStopRef.current = 3;
         shakeRef.current = 7;
         flashRef.current = 0.35;
-        popupRef.current = { text: 'PERFECT!', life: 1, color: '#ffe066' };
+        const streak = perfectStreakRef.current;
+        popupRef.current = { text: streak >= 2 ? `PERFECT x${streak}` : 'PERFECT!', life: 1, color: '#ffe066' };
         haptic(25);
-        momentumSfx.perfect();
+        momentumSfx.perfect(streak);
         updateStats(st => ({ perfects: st.perfects + 1 }));
-        scoreRef.current += 100 * (1 + chainRef.current);
+        scoreRef.current += Math.round(100 * streak * comboMultiplier(comboRef.current));
         spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, '#ffe066', 18, 14);
       } else if (player.boostCharges > 0 && boostCooldownRef.current === 0) {
         player.vy = boostVelocity(player.vy);
@@ -648,6 +663,8 @@ export function MomentumGame() {
         spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, boostColor, 14, 12);
       } else {
         boostBufferRef.current--;
+        // The press expired without a perfect or a charge to spend
+        if (boostBufferRef.current === 0) momentumSfx.empty();
       }
     }
 
@@ -713,7 +730,7 @@ export function MomentumGame() {
 
     if (player.y < highestYRef.current) {
       const heightGained = highestYRef.current - player.y;
-      scoreRef.current += Math.floor(heightGained * (1 + comboRef.current * 0.1));
+      scoreRef.current += Math.floor(heightGained * comboMultiplier(comboRef.current));
       highestYRef.current = player.y;
     }
 
@@ -740,6 +757,10 @@ export function MomentumGame() {
 
         const isSpring = platform.type === 'spring';
         const prevChain = chainRef.current;
+        if (climbBroken(player.y, prevLandingYRef.current, framesSinceLandingRef.current)) comboRef.current = 0;
+        // A landing that wasn't perfected ends the perfect streak
+        if (!perfectedThisBounceRef.current) perfectStreakRef.current = 0;
+        perfectedThisBounceRef.current = false;
         chainRef.current = nextChain(prevChain, player.y, prevLandingYRef.current, framesSinceLandingRef.current);
         prevLandingYRef.current = player.y;
         framesSinceLandingRef.current = 0;
@@ -774,8 +795,16 @@ export function MomentumGame() {
           if (!platform.touched) {
             platform.touched = true;
             player.boostCharges = Math.min(MAX_BOOST_CHARGES, player.boostCharges + 1);
-            const pointMultiplier = platform.type === 'spring' ? 2 : 1;
-            scoreRef.current += 50 * (1 + comboRef.current) * pointMultiplier;
+            const pointMultiplier = platform.type === 'spring' || platform.isFar ? 2 : 1;
+            scoreRef.current += Math.round(50 * comboMultiplier(comboRef.current) * pointMultiplier);
+
+            if (platform.isFar) {
+              // Sky hop: the fast side platforms are a risky shortcut, so pay out for them
+              player.boostCharges = Math.min(MAX_BOOST_CHARGES, player.boostCharges + 1);
+              popupRef.current = { text: 'SKY HOP +1', life: 0.8, color: levelData.boostTrailColor || '#00ffff' };
+              momentumSfx.orb();
+              haptic(10);
+            }
 
             if (platform.isCheckpoint) {
               player.boostCharges = MAX_BOOST_CHARGES;
@@ -893,7 +922,7 @@ export function MomentumGame() {
     renderFrame(ctx, {
       GAME_WIDTH, GAME_HEIGHT, levelData, player, platforms, camY, isTrueFalling, isRisingFast,
       level, gameMode, timeRemaining, isTouchDevice,
-      chainRef, comboRef, elapsedTimeRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
+      chainRef, comboRef, elapsedTimeRef, landingFrameRef, perfectedThisBounceRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
       orbsRef, particlesRef, popupRef, runModeRef, scoreRef, shakeRef, simFrameRef, skinRef, speedLinesRef,
       startYRef, tapFxRef, trailRef,
     });
