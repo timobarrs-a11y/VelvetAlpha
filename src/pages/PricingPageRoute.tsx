@@ -159,7 +159,7 @@ export function PricingPageRoute() {
       } else {
         throw new Error('No checkout URL returned');
       }
-    } catch (_error) {
+    } catch (error) {
       toast.error(error instanceof Error ? error.message : 'There was an error processing your request. Please try again.');
     }
   };
