@@ -10,7 +10,7 @@ export type HairStyle =
   | 'boho_braids' | 'goddess_locs' | 'barrel_twists';
 
 export type LipShape = 'natural' | 'full' | 'thin' | 'heart';
-export type EyebrowShape = 'natural' | 'arched' | 'straight' | 'thick' | 'thin';
+export type EyebrowShape = 'natural' | 'arched' | 'straight' | 'thick' | 'thin' | 'bushy' | 'rounded';
 export type FacialHair = 'none' | 'stubble' | 'beard' | 'goatee' | 'mustache';
 export type Eyelashes = 'none' | 'dramatic';
 export type Freckles = 'none' | 'light' | 'heavy' | 'beauty_mark';
@@ -20,7 +20,7 @@ export type NosePiercing = 'none' | 'nostril_stud' | 'nose_ring';
 export type LipPiercing = 'none' | 'labret' | 'lip_ring' | 'snake_bites';
 export type Necklace = 'none' | 'chain' | 'choker' | 'pendant' | 'pearls';
 
-export type EyeShape = 'almond' | 'round' | 'hooded' | 'wide' | 'monolid' | 'deepset' | 'upturned';
+export type EyeShape = 'almond' | 'round' | 'hooded' | 'wide' | 'monolid' | 'deepset' | 'upturned' | 'downturned' | 'narrow';
 export type NoseShape = 'button' | 'straight' | 'broad' | 'upturned' | 'aquiline' | 'hawk' | 'flat';
 export type FaceShape = 'oval' | 'round' | 'square' | 'heart' | 'diamond' | 'oblong';
 export type BodyType = 'slim' | 'average' | 'athletic' | 'curvy';
@@ -80,6 +80,42 @@ export interface AvatarConfigV2 {
   outfitAccent?: string;
   headwear?: Headwear;
   faceAccessory?: FaceAccessory;
+  // Fine-tuning on top of the shapes above, each from -1 to 1 (0 = as drawn).
+  faceTune?: FaceTune;
+}
+
+// Proportions that vary from person to person, in any combination, so any
+// real face can be built. No presets by heritage: just the features.
+export interface FaceTune {
+  faceWidth?: number;
+  jawWidth?: number;
+  eyeSize?: number;
+  eyeSpacing?: number;
+  eyeTilt?: number;
+  noseWidth?: number;
+  noseLength?: number;
+  noseBridge?: number;
+  mouthWidth?: number;
+  lipFullness?: number;
+}
+
+export const FACE_TUNE_SLIDERS: Array<{ key: keyof FaceTune; label: string; low: string; high: string }> = [
+  { key: 'faceWidth', label: 'Face width', low: 'Narrow', high: 'Wide' },
+  { key: 'jawWidth', label: 'Jaw', low: 'Tapered', high: 'Broad' },
+  { key: 'eyeSize', label: 'Eye size', low: 'Smaller', high: 'Larger' },
+  { key: 'eyeSpacing', label: 'Eye spacing', low: 'Close', high: 'Wide-set' },
+  { key: 'eyeTilt', label: 'Eye tilt', low: 'Down-turned', high: 'Up-turned' },
+  { key: 'noseWidth', label: 'Nose width', low: 'Narrow', high: 'Wide' },
+  { key: 'noseLength', label: 'Nose length', low: 'Short', high: 'Long' },
+  { key: 'noseBridge', label: 'Nose bridge', low: 'Low', high: 'High' },
+  { key: 'mouthWidth', label: 'Mouth width', low: 'Narrow', high: 'Wide' },
+  { key: 'lipFullness', label: 'Lip fullness', low: 'Thinner', high: 'Fuller' },
+];
+
+// A slider's value, kept within -1..1 whatever was stored.
+export function tuneOf(t: FaceTune | undefined, key: keyof FaceTune): number {
+  const v = Number(t?.[key] ?? 0);
+  return Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0;
 }
 
 const V3_REQUIRED: Pick<AvatarConfigV2, 'hairTexture'> = { hairTexture: 'straight' };
@@ -142,19 +178,25 @@ interface Swatch { name: string; value: string; }
 
 export const SKIN_TONES: Swatch[] = [
   { name: 'Porcelain', value: '#fde8d7' },
+  { name: 'Rosy', value: '#f2cbbb' },
   { name: 'Ivory', value: '#f5d6c0' },
   { name: 'Light', value: '#f4c2a0' },
   { name: 'Beige', value: '#e8b890' },
+  { name: 'Sand', value: '#dcb48e' },
   { name: 'Olive', value: '#d4a373' },
   { name: 'Golden', value: '#c69b6e' },
   { name: 'Tan', value: '#c68952' },
+  { name: 'Deep Olive', value: '#a88451' },
   { name: 'Bronze', value: '#b07a4e' },
   { name: 'Honey', value: '#a86f44' },
   { name: 'Caramel', value:'#9c6334' },
+  { name: 'Chestnut', value: '#875330' },
   { name: 'Brown', value: '#7d4a2e' },
   { name: 'Mahogany', value: '#6d4428' },
+  { name: 'Cocoa', value: '#5a3521' },
   { name: 'Espresso', value: '#4a2c1a' },
   { name: 'Ebony', value: '#3a2010' },
+  { name: 'Deep Ebony', value: '#2a170d' },
 ];
 
 export const SKIN_UNDERTONES: Record<string, 'warm' | 'cool' | 'neutral'> = {
@@ -172,6 +214,12 @@ export const SKIN_UNDERTONES: Record<string, 'warm' | 'cool' | 'neutral'> = {
   '#6d4428': 'cool',
   '#4a2c1a': 'cool',
   '#3a2010': 'cool',
+  '#f2cbbb': 'cool',
+  '#dcb48e': 'neutral',
+  '#a88451': 'neutral',
+  '#875330': 'warm',
+  '#5a3521': 'neutral',
+  '#2a170d': 'cool',
 };
 
 export function getSkinUndertone(tone: string): 'warm' | 'cool' | 'neutral' {
@@ -185,6 +233,11 @@ export const EYE_COLORS: Swatch[] = [
   { name: 'Hazel', value: '#9c7a4b' },
   { name: 'Gray', value: '#708090' },
   { name: 'Amber', value: '#cc8800' },
+  { name: 'Dark Brown', value: '#3b2416' },
+  { name: 'Near Black', value: '#22160f' },
+  { name: 'Light Brown', value: '#8a5a2b' },
+  { name: 'Blue-Gray', value: '#7b93a8' },
+  { name: 'Deep Blue', value: '#2c5a9e' },
 ];
 
 export const HAIR_COLORS: Swatch[] = [
@@ -292,6 +345,8 @@ export const EYE_SHAPES: Array<{ value: EyeShape; label: string }> = [
   { value: 'monolid', label: 'Monolid' },
   { value: 'deepset', label: 'Deep Set' },
   { value: 'upturned', label: 'Upturned' },
+  { value: 'downturned', label: 'Downturned' },
+  { value: 'narrow', label: 'Narrow' },
 ];
 
 export const NOSE_SHAPES: Array<{ value: NoseShape; label: string }> = [

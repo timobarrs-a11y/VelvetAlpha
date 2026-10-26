@@ -1,5 +1,5 @@
 import { memo, useId, useMemo } from 'react';
-import { AvatarConfigV2 } from '../types/avatar-v2';
+import { AvatarConfigV2, tuneOf } from '../types/avatar-v2';
 import { renderHair, renderHairBehind } from '../renderers/hairRenderer';
 import {
   outfitGradient, renderOutfitBody, renderOutfitFront, shade,
@@ -73,12 +73,17 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
     curvy:    { shoulderRx: 30, torsoScaleX: 1.14 },
   }[bodyType] ?? { shoulderRx: 30, torsoScaleX: 1.0 };
 
-  const { rx: fRx, ry: fRy, chinW } = faceParams;
+  // The fine-tune sliders widen or narrow the face and jaw; hair, ears and
+  // everything built on the face outline follow.
+  const tune = config.faceTune;
+  const fRx = faceParams.rx * (1 + tuneOf(tune, 'faceWidth') * 0.1);
+  const { chinW, ry: fRy } = faceParams;
+  const jaw = tuneOf(tune, 'jawWidth');
   const faceCenterY = 52;
   const faceTop = faceCenterY - fRy;
   const faceBottom = faceCenterY + fRy;
 
-  const faceGeometry = { faceShape, fRx, fRy, chinW, faceTop, faceBottom, faceCenterY };
+  const faceGeometry = { faceShape, fRx, fRy, chinW, faceTop, faceBottom, faceCenterY, jaw };
 
   const renderFaceShape = () => (
     <path d={faceOutlinePath(faceGeometry)} fill={`url(#${faceGradientId})`} />
@@ -173,7 +178,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
   const renderFacialHairLayer = () => {
     return renderFacialHair({
       facialHair, hairColor, geometry: faceGeometry,
-      mouth: mouthGeometry(lipShape, mood),
+      mouth: mouthGeometry(lipShape, mood, tune),
       idPrefix: uid,
     });
   };
@@ -489,16 +494,16 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
           ) : (
             <>
               {renderFaceShading()}
-              {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity)}
+              {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity, tune)}
               {renderBlush()}
-              {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed })}
-              {!eyesClosed && renderEyeliner(eyeliner, eyeShape)}
-              {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape)}
-              {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender)}
-              {renderNose(noseShape, skinTone)}
+              {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed, tune })}
+              {!eyesClosed && renderEyeliner(eyeliner, eyeShape, tune)}
+              {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape, tune)}
+              {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender, tune)}
+              {renderNose(noseShape, skinTone, tune)}
               {renderNosePiercing()}
               {renderFreckles()}
-              {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid })}
+              {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid, tune })}
               {renderLipPiercing()}
               {renderFacialHairLayer()}
               {renderEarrings()}
@@ -539,17 +544,17 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
       {renderFaceShading()}
       {renderSkinDetail()}
 
-      {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity)}
+      {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity, tune)}
       {renderBlush()}
-      {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed })}
-      {!eyesClosed && renderEyeliner(eyeliner, eyeShape)}
-      {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape)}
-      {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender)}
-      {renderNose(noseShape, skinTone)}
+      {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed, tune })}
+      {!eyesClosed && renderEyeliner(eyeliner, eyeShape, tune)}
+      {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape, tune)}
+      {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender, tune)}
+      {renderNose(noseShape, skinTone, tune)}
       {renderNosePiercing()}
       {renderFreckles()}
 
-      {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid })}
+      {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid, tune })}
 
       {renderLipPiercing()}
       {renderFacialHairLayer()}

@@ -4,6 +4,7 @@ import { AvatarV2 } from './AvatarV2';
 import {
   AvatarConfigV2, Gender, HairTexture,
   SKIN_TONES, EYE_COLORS, HAIR_COLORS, HAIR_FASHION_COLORS, HAIRSTYLE_GROUPS, LIP_COLORS, NECKLACE_COLORS,
+  FACE_TUNE_SLIDERS, tuneOf,
   HAIRSTYLES, AVATAR_CONFIG_VERSION,
   HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
   DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2,
@@ -166,7 +167,9 @@ function coherentRandomize(): AvatarConfigV2 {
     hairTexture,
     lipShape: pick(['natural', 'full', 'thin', 'heart'] as LipShape[]),
     lipColor: pick(lipColorPool),
-    eyebrowShape: pick(['natural', 'arched', 'straight', 'thick', 'thin'] as EyebrowShape[]),
+    eyebrowShape: pick(['natural', 'arched', 'straight', 'rounded', 'thick', 'bushy', 'thin'] as EyebrowShape[]),
+    // A little variety in proportions, never extreme.
+    faceTune: Object.fromEntries(FACE_TUNE_SLIDERS.map(sl => [sl.key, Math.round((Math.random() * 1.2 - 0.6) * 10) / 10])),
     eyeShape: pick(eyeShapes),
     noseShape: pick(noseShapes),
     faceShape: pick(faceShapes),
@@ -346,7 +349,7 @@ export function AvatarCreatorV2({
 
       <Section label="Eyebrows">
         <div className="grid grid-cols-3 gap-2">
-          {(['natural', 'arched', 'straight', 'thick', 'thin'] as EyebrowShape[]).map(v => (
+          {(['natural', 'arched', 'straight', 'rounded', 'thick', 'bushy', 'thin'] as EyebrowShape[]).map(v => (
             <OptionButton key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
               selected={config.eyebrowShape === v} onClick={() => update({ eyebrowShape: v })} />
           ))}
@@ -368,6 +371,35 @@ export function AvatarCreatorV2({
             <OptionButton key={v.value} label={v.label}
               selected={config.faceShape === v.value} onClick={() => update({ faceShape: v.value })} />
           ))}
+        </div>
+      </Section>
+
+      <Section label="Fine-tune">
+        <div className="space-y-3">
+          {FACE_TUNE_SLIDERS.map(sl => {
+            const value = tuneOf(config.faceTune, sl.key);
+            return (
+              <label key={sl.key} className="block">
+                <span className="mb-1 flex items-center justify-between text-xs text-gray-300">
+                  <span>{sl.label}</span>
+                  <span className="text-[10px] text-gray-500">{value === 0 ? '' : value < 0 ? sl.low : sl.high}</span>
+                </span>
+                <input
+                  type="range" min={-1} max={1} step={0.1} value={value}
+                  onChange={e => update({ faceTune: { ...config.faceTune, [sl.key]: Number(e.target.value) } })}
+                  className="w-full accent-sky-500"
+                  aria-label={`${sl.label}: ${sl.low} to ${sl.high}`}
+                />
+                <span className="flex justify-between text-[10px] text-gray-500"><span>{sl.low}</span><span>{sl.high}</span></span>
+              </label>
+            );
+          })}
+          {config.faceTune && Object.values(config.faceTune).some(v => v) && (
+            <button type="button" onClick={() => update({ faceTune: {} })}
+              className="text-xs font-medium text-sky-400 hover:text-sky-300">
+              Reset fine-tuning
+            </button>
+          )}
         </div>
       </Section>
 

@@ -8,6 +8,8 @@ export interface FaceGeometry {
   faceTop: number;
   faceBottom: number;
   faceCenterY: number;
+  // -1 (tapered) to 1 (broad): widens or narrows the jaw, below the cheekbones.
+  jaw?: number;
 }
 
 type Pt = [number, number];
@@ -36,7 +38,9 @@ function outlinePoints(g: FaceGeometry): Pt[] {
   const spec = SHAPES[g.faceShape] ?? SHAPES.oval;
   const top = g.faceTop;
   const h = chinY(g) - top;
-  const right: Pt[] = spec.side.map(([w, y]) => [50 + w * g.fRx, top + y * h]);
+  // The jaw setting grows from nothing at the cheekbones to its full amount at the chin.
+  const jaw = (y: number) => 1 + (g.jaw ?? 0) * 0.2 * Math.max(0, (y - 0.55) / 0.45);
+  const right: Pt[] = spec.side.map(([w, y]) => [50 + w * jaw(y) * g.fRx, top + y * h]);
   const left: Pt[] = [...right].reverse().map(([x, y]) => [100 - x, y]);
   return [[50, top], ...right, [50, top + h], ...left];
 }
