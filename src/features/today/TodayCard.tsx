@@ -1,0 +1,253 @@
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Check, ChevronRight, CalendarDays, Sparkles } from 'lucide-react';
+import { useAuth } from '../../auth/AuthProvider';
+import { calendarService } from '../../services/calendarService';
+import {
+  getGoals, getNextOpenCommitment, getTodayCommitments, updateCommitmentStatus,
+} from '../../services/coachingService';
+import { toast } from '../../shared/ui/Toast';
+import {
+  buildTodayItems, endOfDay, nextLabel, startOfDay, todayHeading, type TodayItem,
+} from './todayItems';
+
+const MAX_ROWS = 5;
+
+interface NextUp {
+  title: string;
+  when: Date;
+}
+
+/**
+ * Today, at the top of the home screen: what the user is working on today,
+ * from their calendar and their commitments, without opening either.
+ */
+export function TodayCard() {
+  const userId = useAuth().user?.id;
+  const navigate = useNavigate();
+  const [items, setItems] = useState<TodayItem[] | null>(null);
+  const [next, setNext] = useState<NextUp | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  // What's coming next, shown once nothing is left today.
+  const loadNext = useCallback(async () => {
+    if (!userId) return;
+    const end = endOfDay(new Date());
+    const [upcoming, nextCommitment] = await Promise.all([
+      calendarService.getUpcomingEvents(userId, 14),
+      getNextOpenCommitment(userId, end),
+    ]);
+    const nextEvent = upcoming.find(e => !e.completed && new Date(e.event_date) > end);
+    const candidates: NextUp[] = [];
+    if (nextEvent) candidates.push({ title: nextEvent.title, when: new Date(nextEvent.event_date) });
+    if (nextCommitment?.due_date) candidates.push({ title: nextCommitment.description, when: new Date(nextCommitment.due_date) });
+    candidates.sort((a, b) => a.when.getTime() - b.when.getTime());
+    setNext(candidates[0] ?? null);
+  }, [userId]);
+
+  const load = useCallback(async () => {
+    if (!userId) return;
+    const now = new Date();
+    const start = startOfDay(now);
+    const end = endOfDay(now);
+    const [events, commitments] = await Promise.all([
+      calendarService.getUserEvents(userId, start, end),
+      getTodayCommitments(userId, start, end),
+    ]);
+
+    const goalTitles = new Map<string, string>();
+    if (commitments.some(c => c.goal_id)) {
+      for (const g of await getGoals(userId)) goalTitles.set(g.id, g.title);
+    }
+    const today = buildTodayItems(events, commitments, goalTitles, now);
+    setItems(today);
+    if (today.every(i => i.done)) await loadNext();
+  }, [userId, loadNext]);
+
+  useEffect(() => {
+    load().catch(() => setItems([]));
+  }, [load]);
+
+  const replace = (key: string, patch: Partial<TodayItem>) =>
+    setItems(prev => prev?.map(i => (i.key === key ? { ...i, ...patch } : i)) ?? prev);
+
+  const toggleDone = async (item: TodayItem) => {
+    const done = !item.done;
+    replace(item.key, { done });
+    let ok = true;
+    if (item.event) {
+      ok = (await calendarService.setCompleted(item.event, done)) !== null;
+    } else if (item.commitment) {
+      await updateCommitmentStatus(item.commitment.id, done ? 'completed' : 'pending');
+    }
+    if (!ok) {
+      replace(item.key, { done: !done });
+      toast.error("Couldn't save that. Please try again.");
+      return;
+    }
+    if (done && items?.every(i => i.key === item.key || i.done)) loadNext().catch(() => {});
+  };
+
+  const confirmTentative = async (item: TodayItem) => {
+    if (!item.event) return;
+    setBusyKey(item.key);
+    const saved = await calendarService.updateEvent(item.event.id, {
+      metadata: { ...item.event.metadata, tentative: false },
+    });
+    setBusyKey(null);
+    if (saved) replace(item.key, { tentative: false });
+    else toast.error("Couldn't confirm that. Please try again.");
+  };
+
+  const dropTentative = async (item: TodayItem) => {
+    if (!item.event) return;
+    setBusyKey(item.key);
+    const ok = await calendarService.deleteEvent(item.event.id);
+    setBusyKey(null);
+    if (ok) setItems(prev => prev?.filter(i => i.key !== item.key) ?? prev);
+    else toast.error("Couldn't drop that. Please try again.");
+  };
+
+  const openItem = (item: TodayItem) =>
+    navigate(item.kind === 'commitment' ? '/coaching-commitments' : '/calendar');
+
+  const now = new Date();
+  const doneCount = items?.filter(i => i.done).length ?? 0;
+  const shown = items?.slice(0, MAX_ROWS) ?? [];
+  const more = (items?.length ?? 0) - shown.length;
+
+  return (
+    <section
+      aria-label="Today"
+      className="mx-4 mt-3 mb-2 rounded-2xl"
+      style={{ background: 'var(--ds-surface-1)', border: '1px solid var(--ds-border)' }}
+    >
+      <header className="flex items-center gap-3 px-4 pt-3.5 pb-2">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold" style={{ color: 'var(--ds-ink)' }}>Today</h2>
+          <p className="text-xs" style={{ color: 'var(--ds-ink-3)' }}>
+            {todayHeading(now)}
+            {items && items.length > 0 && ` · ${doneCount} of ${items.length} done`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/calendar')}
+          className="flex items-center gap-1 text-xs font-medium rounded-lg px-2 py-1 transition-colors hover:bg-white/5"
+          style={{ color: 'var(--ds-ink-2)' }}
+        >
+          See all <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </header>
+
+      {items === null ? (
+        <div className="px-4 pb-4 space-y-2" aria-hidden>
+          <div className="h-10 rounded-xl bg-white/5 animate-pulse" />
+          <div className="h-10 rounded-xl bg-white/5 animate-pulse" />
+        </div>
+      ) : (
+        <>
+          {shown.length > 0 && (
+            <ul className="px-2 pb-1">
+              {shown.map(item => (
+                <li key={item.key}>
+                  <div className="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-white/[0.03] transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => toggleDone(item)}
+                      aria-label={item.done ? `Mark "${item.title}" not done` : `Mark "${item.title}" done`}
+                      className="mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+                      style={{
+                        borderColor: item.done ? 'var(--ds-success)' : 'var(--ds-ink-4)',
+                        background: item.done ? 'var(--ds-success)' : 'transparent',
+                      }}
+                    >
+                      {item.done && <Check className="w-3 h-3 text-white" />}
+                    </button>
+
+                    <button type="button" onClick={() => openItem(item)} className="min-w-0 flex-1 text-left">
+                      <span
+                        className={`block text-sm font-medium truncate ${item.done ? 'line-through' : ''}`}
+                        style={{ color: item.done ? 'var(--ds-ink-4)' : 'var(--ds-ink)' }}
+                      >
+                        {item.title}
+                      </span>
+                      <span className="block text-xs truncate" style={{ color: 'var(--ds-ink-3)' }}>
+                        <span style={item.overdue && !item.done ? { color: 'var(--ds-warning)' } : undefined}>
+                          {item.timeLabel}
+                        </span>
+                        {item.by && ` · ${item.by}`}
+                        {item.goal && ` · ${item.goal}`}
+                      </span>
+                    </button>
+                  </div>
+
+                  {item.tentative && !item.done && (
+                    <div className="flex flex-wrap items-center gap-2 pl-10 pr-2 pb-2 -mt-1">
+                      <span className="text-[11px]" style={{ color: 'var(--ds-ink-3)' }}>Pencilled in</span>
+                      <TentativeButton disabled={busyKey === item.key} onClick={() => confirmTentative(item)}>Confirm</TentativeButton>
+                      <TentativeButton disabled={busyKey === item.key} onClick={() => navigate('/calendar')}>Move</TentativeButton>
+                      <TentativeButton disabled={busyKey === item.key} onClick={() => dropTentative(item)}>Drop</TentativeButton>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {more > 0 && (
+            <button
+              type="button"
+              onClick={() => navigate('/calendar')}
+              className="block w-full px-4 pb-3 text-left text-xs font-medium"
+              style={{ color: 'var(--ds-ink-2)' }}
+            >
+              +{more} more
+            </button>
+          )}
+
+          {items.every(i => i.done) && (
+            next ? (
+              <button
+                type="button"
+                onClick={() => navigate('/calendar')}
+                className="flex w-full items-center gap-2.5 px-4 pb-3.5 pt-1 text-left"
+              >
+                <CalendarDays className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--ds-ink-3)' }} />
+                <span className="min-w-0 flex-1 truncate text-sm" style={{ color: 'var(--ds-ink-2)' }}>
+                  <span style={{ color: 'var(--ds-ink-3)' }}>Next: {nextLabel(next.when, now)} · </span>
+                  {next.title}
+                </span>
+              </button>
+            ) : items.length === 0 && (
+              <button
+                type="button"
+                onClick={() => navigate('/atlas')}
+                className="flex w-full items-center gap-2.5 px-4 pb-3.5 pt-1 text-left"
+              >
+                <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--ds-accent-fg)' }} />
+                <span className="text-sm" style={{ color: 'var(--ds-ink-2)' }}>
+                  Nothing planned yet. <span style={{ color: 'var(--ds-accent-fg)' }}>Plan something with Atlas</span>
+                </span>
+              </button>
+            )
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function TentativeButton({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-50"
+      style={{ background: 'var(--ds-pill-bg)', border: '1px solid var(--ds-pill-border)', color: 'var(--ds-ink-2)' }}
+    >
+      {children}
+    </button>
+  );
+}

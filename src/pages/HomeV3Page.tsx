@@ -20,6 +20,7 @@ import { Avatar } from '../components/Avatar';
 import { colorNameToHex } from '../utils/colorMapping';
 import { getCoachColor } from '../utils/coachColors';
 import { ensureCoachColors } from '../services/companionService';
+import { TodayCard } from '../features/today/TodayCard';
 import type { CompanionWithLastMessage } from '../services/companionService';
 
 const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default: m.DailyFeedPage })));
@@ -317,24 +318,27 @@ export function HomeV3Page() {
             )}
           </AnimatePresence>
 
-          {/* Feed / Your Lens toggle */}
-          <div className="flex items-center justify-center px-4 py-2 flex-shrink-0 border-b border-white/8">
-            <Segmented
-              value={feedTab}
-              onChange={(v) => setFeedTab(v)}
-              size="md"
-              options={[
-                { value: 'feed', label: 'Feed', icon: <Newspaper className="w-3.5 h-3.5" /> },
-                { value: 'videos', label: 'Your Lens', icon: <PlayCircle className="w-3.5 h-3.5" /> },
-              ]}
-            />
-          </div>
+          <div className="flex-1 overflow-y-auto">
+            {/* What they're working on today, above everything else */}
+            <TodayCard />
 
-          <Suspense fallback={<LoadingState label={`Loading your ${feedTab === 'feed' ? 'feed' : 'lens'}...`} />}>
-            <div className="flex-1 overflow-y-auto">
-              {feedTab === 'feed' ? <DailyFeedPage /> : <VideoHistoryPage />}
+            {/* Feed / Your Lens toggle */}
+            <div className="flex items-center justify-center px-4 py-2 border-b border-white/8">
+              <Segmented
+                value={feedTab}
+                onChange={(v) => setFeedTab(v)}
+                size="md"
+                options={[
+                  { value: 'feed', label: 'Feed', icon: <Newspaper className="w-3.5 h-3.5" /> },
+                  { value: 'videos', label: 'Your Lens', icon: <PlayCircle className="w-3.5 h-3.5" /> },
+                ]}
+              />
             </div>
-          </Suspense>
+
+            <Suspense fallback={<LoadingState label={`Loading your ${feedTab === 'feed' ? 'feed' : 'lens'}...`} />}>
+              {feedTab === 'feed' ? <DailyFeedPage /> : <VideoHistoryPage />}
+            </Suspense>
+          </div>
         </div>
       </div>
 

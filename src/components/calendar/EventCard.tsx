@@ -7,7 +7,7 @@ interface EventCardProps {
   event: UserEvent;
   onEdit: (event: UserEvent) => void;
   onDelete: (eventId: string) => void;
-  onToggleComplete: (eventId: string, completed: boolean) => void;
+  onToggleComplete: (event: UserEvent, completed: boolean) => void;
 }
 
 const EVENT_TYPE_STYLES: Record<string, { bg: string; border: string; dot: string; label: string }> = {
@@ -45,7 +45,7 @@ export function EventCard({ event, onEdit, onDelete, onToggleComplete }: EventCa
     >
       <div className="flex items-start gap-3">
         <button
-          onClick={() => onToggleComplete(event.id, !event.completed)}
+          onClick={() => onToggleComplete(event, !event.completed)}
           className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
             event.completed
               ? 'bg-emerald-500 border-emerald-500'

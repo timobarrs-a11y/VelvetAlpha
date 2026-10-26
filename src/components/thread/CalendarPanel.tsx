@@ -17,6 +17,7 @@ import { calendarService, UserEvent, EventSuggestion, GiftSuggestion } from '../
 import { getCompanions, CompanionWithLastMessage } from '../../services/companionService';
 import { CalendarGrid } from '../calendar/CalendarGrid';
 import { EventCard } from '../calendar/EventCard';
+import { occurrenceKey, seriesOf } from '../../services/calendarRecurrence';
 import { EventModal } from '../calendar/EventModal';
 import { CalendarNaviPanel } from '../CalendarNaviPanel';
 
@@ -104,8 +105,8 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
     setUpcomingEvents(upcoming);
   };
 
-  const handleToggleComplete = async (eventId: string, completed: boolean) => {
-    await calendarService.updateEvent(eventId, { completed } as Partial<UserEvent>);
+  const handleToggleComplete = async (event: UserEvent, completed: boolean) => {
+    await calendarService.setCompleted(event, completed);
     await loadMonthEvents();
     const upcoming = await calendarService.getUpcomingEvents(userId, 14);
     setUpcomingEvents(upcoming);
@@ -285,13 +286,13 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
                             const d = new Date(event.event_date);
                             const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                             return (
-                              <div key={event.id}>
+                              <div key={occurrenceKey(event)}>
                                 <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
                                   {dayLabel}
                                 </span>
                                 <EventCard
                                   event={event}
-                                  onEdit={(e) => { setEditingEvent(e); setShowEventModal(true); }}
+                                  onEdit={(e) => { setEditingEvent(seriesOf(e)); setShowEventModal(true); }}
                                   onDelete={handleDeleteEvent}
                                   onToggleComplete={handleToggleComplete}
                                 />
@@ -325,9 +326,9 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
                         <div className="space-y-2">
                           {selectedDateEvents.map(event => (
                             <EventCard
-                              key={event.id}
+                              key={occurrenceKey(event)}
                               event={event}
-                              onEdit={(e) => { setEditingEvent(e); setShowEventModal(true); }}
+                              onEdit={(e) => { setEditingEvent(seriesOf(e)); setShowEventModal(true); }}
                               onDelete={handleDeleteEvent}
                               onToggleComplete={handleToggleComplete}
                             />
