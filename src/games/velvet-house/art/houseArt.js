@@ -1412,6 +1412,8 @@ export function createHouseArt(ctx0, opts = {}) {
   // A person's real avatar head (state/headSprites.ts), drawn about twice the
   // old head's size so faces read: classic big-head cartoon proportions.
   const HEAD_W = 24;
+  // Shoes follow the pants: white sneakers with jeans, brown boots with breeches, black boots with leather and uniforms.
+  const SHOE_COLOR = { jeans: '#EDE8E0', baggy: '#EDE8E0', shorts: '#EDE8E0', cheer_skirt: '#F6F6F4', scrub_pants: '#F4F4F2', breeches: '#3A2A1C', leather: '#101013', cop_pants: '#17171B' };
   function drawHeadImage(img, cx, chinY, w, mirror, rot) {
     const h = w * 1.04;
     ctx.save(); ctx.translate(cx, chinY);
@@ -1466,13 +1468,19 @@ export function createHouseArt(ctx0, opts = {}) {
     const fvx = P3(dx * 0.1, dy * 0.1, 0), shoeDir = Math.atan2(fvx[1] - fy, fvx[0] - fx), shoeLen = f.front ? 1.6 : 0.4;
     const shoeAt = (x, y) => {
       ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5 + 0.9, f.front ? 3.5 : 2.9, 1.5, '#E9E4DC', null, shoeDir);
-      ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5, f.front ? 3.4 : 2.8, 2, L.shoes || '#2B2630', null, shoeDir);
+      ell(x + Math.cos(shoeDir) * shoeLen, y + Math.sin(shoeDir) * shoeLen * 0.5, f.front ? 3.4 : 2.8, 2, L.shoes || SHOE_COLOR[L.bottomStyle] || '#2B2630', null, shoeDir);
       ell(x + Math.cos(shoeDir) * shoeLen - 0.4, y + Math.sin(shoeDir) * shoeLen * 0.5 - 0.7, 1.5, 0.7, 'rgba(255,255,255,.18)', null, shoeDir);
     };
-    const shin = (kx, ky, ax, ay) => { limb(kx, ky, ax, ay, L.bottom, 4.5); shoeAt(ax, ay); };
+    // The cut of the pants: bare legs below shorts and skirts, boots under breeches, wide baggy legs, slim leather.
+    const bs = L.bottomStyle || 'pants', skirty = bs === 'skirt' || bs === 'cheer_skirt', bareLegs = skirty || bs === 'shorts';
+    const thighCol = skirty ? L.skin : L.bottom, tw = bs === 'baggy' ? 6.6 : bs === 'leather' ? 4.2 : 5, sw = bs === 'baggy' ? 6.2 : bs === 'leather' ? 3.8 : 4.5;
+    const shinCol = bareLegs ? L.skin : bs === 'breeches' ? (L.bottomAccent || '#2b1d12') : L.bottom;
+    const checks = (x1, y1, x2, y2) => { if (bs === 'chef_pants') { ctx.save(); ctx.setLineDash([1.3, 1.3]); limb(x1, y1, x2, y2, L.bottomAccent || '#f4f1ea', 1.5); ctx.restore(); } };
+    const shin = (kx, ky, ax, ay) => { limb(kx, ky, ax, ay, shinCol, sw); checks(kx, ky, ax, ay); shoeAt(ax, ay); };
+    const thighLimb = (x1, y1, x2, y2) => { limb(x1, y1, x2, y2, thighCol, tw); checks(x1, y1, x2, y2); };
     // Arms: shoulder, elbow and hand, worked out once per frame, then drawn
     // behind the torso (the far arm) or in front of it.
-    const SLEEVES = { tank: 0, tee: 0.55, jersey: 0.5, dress: 0.4 };
+    const SLEEVES = { tank: 0, tee: 0.55, jersey: 0.5, dress: 0.4, cheer: 0, cop: 0.55, scrubs: 0.55 };
     const sleeve = L.topStyle ? (SLEEVES[L.topStyle] ?? 1) : 0.55;
     const NOT_HELD = new Set(['notes', 'water', 'splash']), OPEN_KINDS = new Set(['book', 'plate', 'parcel', 'cloth', 'paper']);
     // Props too wide to grip by a handle: no fingers drawn over them.
@@ -1547,15 +1555,15 @@ export function createHouseArt(ctx0, opts = {}) {
         const footZ = c.sit ? -c.z * 0.55 : 0.16, kneeZ = c.sit ? 0.04 : hipZ * 0.7;
         const foot = P3(dx * (0.16 + Math.cos(p) * 0.1), dy * (0.16 + Math.cos(p) * 0.1), footZ + Math.sin(p) * 0.1);
         const knee = P3(dx * 0.3, dy * 0.3, kneeZ + Math.sin(p) * 0.06);
-        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
+        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
         shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
-      if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5); shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]); return; }
+      if (c.sit) { const knee = P3(dx * 0.34, dy * 0.34, 0.06), foot = P3(dx * 0.4, dy * 0.4, -c.z); thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]); shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]); return; }
       if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); shin(hip[0] + side * 2.5, hip[1], foot[0] + side * 2.5, foot[1]); return; }
       if (rig && rig.legs === 'crouch') {
         const knee = P3(dx * 0.24, dy * 0.24, hipZ * 0.75), foot = P3(dx * 0.06, dy * 0.06, 0);
-        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 3, knee[1], L.bottom, 5);
+        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 3, knee[1]);
         shin(knee[0] + side * 3, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
@@ -1570,13 +1578,13 @@ export function createHouseArt(ctx0, opts = {}) {
       if (rig && rig.legs === 'tree' && side > 0) {
         // Tree pose: this foot rests against the other knee.
         const knee = P3(rx * 0.22, ry * 0.22, hipZ * 0.55), foot = P3(rx * 0.02, ry * 0.02, hipZ * 0.45);
-        limb(hip[0] + 2.5, hip[1], knee[0] + 2.5, knee[1], L.bottom, 5);
+        thighLimb(hip[0] + 2.5, hip[1], knee[0] + 2.5, knee[1]);
         shin(knee[0] + 2.5, knee[1], foot[0] + 1, foot[1]);
         return;
       }
       if (rig && rig.legs === 'lunge') {
         const fw = side > 0 ? 0.3 : -0.26, knee = P3(dx * fw * (side > 0 ? 1 : 0.6), dy * fw * (side > 0 ? 1 : 0.6), hipZ * 0.5), foot = P3(dx * fw * 1.1, dy * fw * 1.1, 0);
-        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
+        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
         shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
@@ -1584,7 +1592,7 @@ export function createHouseArt(ctx0, opts = {}) {
         const big = rig.legs === 'run', off = side > 0 ? 0 : Math.PI, p = rig.phase + off;
         const sw = Math.sin(p) * (big ? 0.22 : 0.12), lift = Math.max(0, Math.sin(p)) * (big ? 0.15 : 0.06);
         const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), dy * (sw * 0.5 + (big ? lift * 0.9 : 0.02)), hipZ * 0.5 + lift);
-        limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
+        thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
         shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
         return;
       }
@@ -1592,7 +1600,7 @@ export function createHouseArt(ctx0, opts = {}) {
       const sw = Math.sin(ph + off) * 0.17 * amp, lift = c.z < 0.05 ? Math.max(0, Math.sin(ph + off)) * 0.075 * amp : 0;
       const foot = P3(dx * sw, dy * sw, lift);
       const knee = P3(dx * sw * 0.55, dy * sw * 0.55, hipZ * 0.5 + lift * 0.7);
-      limb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1], L.bottom, 5);
+      thighLimb(hip[0] + side * 2.5, hip[1], knee[0] + side * 2.5, knee[1]);
       shin(knee[0] + side * 2.5, knee[1], foot[0] + side * 2.5, foot[1]);
     });
     // Secondary motion: hair and hems trail the body on springs, so they
@@ -1607,15 +1615,25 @@ export function createHouseArt(ctx0, opts = {}) {
       ell(hd[0] + sway * 0.7 + hair[0], hd[1] + 3 + hair[1] * 0.5, 4.6, 3.6, L.hair);
     };
     if (f.front && !L.heads) hairBack();
-    if (L.topStyle === 'dress' && !c.sit) {
-      // A skirt that flares and swings at the hem.
-      const kz = P3(0, 0, hipZ * 0.55);
-      ctx.fillStyle = L.top; ctx.beginPath();
+    if ((L.topStyle === 'dress' || skirty) && !c.sit) {
+      // A skirt that flares and swings at the hem: a dress's, or the skirt worn as pants (shorter, pleated for the cheer skirt).
+      const kz = P3(0, 0, hipZ * (skirty ? 0.66 : 0.55)), fl = skirty ? 7.6 : 7;
+      ctx.fillStyle = skirty ? L.bottom : L.top; ctx.beginPath();
       ctx.moveTo(hip[0] + shift - 5, hip[1] - 2); ctx.lineTo(hip[0] + shift + 5, hip[1] - 2);
-      ctx.lineTo(kz[0] + 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.lineTo(kz[0] - 7 + hem[0], kz[1] + hem[1] * 0.4); ctx.closePath(); ctx.fill();
+      ctx.lineTo(kz[0] + fl + hem[0], kz[1] + hem[1] * 0.4); ctx.lineTo(kz[0] - fl + hem[0], kz[1] + hem[1] * 0.4); ctx.closePath(); ctx.fill();
+      if (skirty) {
+        for (let k = -2; k <= 2; k++) limb(hip[0] + shift + k * 1.8, hip[1] - 1, kz[0] + k * fl * 0.42 + hem[0], kz[1] + hem[1] * 0.4 - 0.4, shade(L.bottom, -0.22), 0.7);
+        limb(kz[0] - fl + hem[0], kz[1] + hem[1] * 0.4, kz[0] + fl + hem[0], kz[1] + hem[1] * 0.4, L.bottomAccent || '#f4f1ea', bs === 'cheer_skirt' ? 1.6 : 0.8);
+      }
     }
     [-1, 1].forEach(sd => { if (armBehind(sd)) drawArm(arms[sd], sd); });
     limb(hip[0] + shift, hip[1], sh[0] + shift * 1.4, sh[1], L.top, 11);
+    if (!skirty && ['pants', 'jeans', 'trousers', 'cop_pants', 'leather', 'baggy', 'breeches'].includes(bs)) {
+      // A belt at the waist, with a buckle when you can see the front.
+      const belt = bs === 'cop_pants' ? '#17171b' : bs === 'leather' ? '#2a2a30' : bs === 'breeches' ? '#2b1d12' : shade(L.bottom, -0.38);
+      limb(hip[0] + shift - 5.2, hip[1] + 0.8, hip[0] + shift + 5.2, hip[1] + 0.8, belt, 1.9);
+      if (f.front) circle(hip[0] + shift, hip[1] + 0.8, 1.15, bs === 'cop_pants' ? '#c9a24a' : '#c8ccd2');
+    }
     // Fold shading: a soft shadow down the far side of the shirt, a highlight on the near side.
     limb(hip[0] + shift + 3.2, hip[1], sh[0] + shift * 1.4 + 3.2, sh[1] + 1, shade(L.top, -0.18), 3.2);
     limb(hip[0] + shift - 3, hip[1] - 1, sh[0] + shift * 1.4 - 3, sh[1] + 2, shade(L.top, 0.14), 1.6);
@@ -1674,6 +1692,40 @@ export function createHouseArt(ctx0, opts = {}) {
         } else if (pat === 'linen') {
           line([hl, -2], [hl - 5, 0], A || '#8a6a4a', 0.5); line([hl - 5, 0], [hl, 2], A || '#8a6a4a', 0.5);
           line([hl - 1.5, -1.4], [hl - 3, 1], A || '#8a6a4a', 0.4);
+        } else if (pat === 'cheer') {
+          // A V-neck with a trim, two stripes across the chest and a star.
+          tri([[hl, -3], [hl, 3], [hl - 7, 0]], L.skin);
+          line([hl, -3.2], [hl - 7.4, 0], A || '#f4f1ea', 0.9); line([hl, 3.2], [hl - 7.4, 0], A || '#f4f1ea', 0.9);
+          line([hl - 12, -5.5], [hl - 12, 5.5], A || '#f4f1ea', 1.4); line([hl - 14.6, -5.5], [hl - 14.6, 5.5], A || '#f4f1ea', 0.7);
+          ctx.fillStyle = A || '#f4f1ea'; ctx.beginPath(); ctx.arc(hl - 8.2, 0, 1.3, 0, 7); ctx.fill();
+        } else if (pat === 'cop') {
+          // Collar points, a black tie, a gold badge and a name tag.
+          tri([[hl, -3.2], [hl - 3.2, -2], [hl, -0.8]], shade(L.top, 0.2)); tri([[hl, 3.2], [hl - 3.2, 2], [hl, 0.8]], shade(L.top, 0.2));
+          line([hl - 1, 0], [hl - 14, 0], '#17171b', 1.5);
+          ctx.fillStyle = A || '#c9a24a'; ctx.fillRect(hl - 7.6, 2.2, 2.4, 2.6);
+          ctx.fillStyle = '#e8e8ec'; ctx.fillRect(hl - 7.2, -4.6, 1.2, 2.6);
+        } else if (pat === 'scrubs') {
+          tri([[hl, -2.8], [hl, 2.8], [hl - 8, 0]], L.skin);
+          line([hl, -3], [hl - 8.4, 0], A || '#e8f3f3', 0.9); line([hl, 3], [hl - 8.4, 0], A || '#e8f3f3', 0.9);
+          ctx.strokeStyle = shade(L.top, -0.3); ctx.lineWidth = 0.6; ctx.strokeRect(hl - 15, 1.2, 4.6, 3.6);
+        } else if (pat === 'rockstar') {
+          // The band tee between black lapels, with studs.
+          tri([[hl, -2.4], [hl, 2.4], [hl - 11, 0]], '#e9e9ee');
+          line([hl, -3.4], [hl - 11, -0.6], 'rgba(255,255,255,.32)', 0.7); line([hl, 3.4], [hl - 11, 0.6], 'rgba(255,255,255,.32)', 0.7);
+          [0.2, 0.5, 0.8].forEach(t => { ctx.fillStyle = A || '#b8bcc4'; [-1, 1].forEach(sd => { ctx.beginPath(); ctx.arc(hl - 11 * t, sd * (3.2 - 2.6 * t), 0.5, 0, 7); ctx.fill(); }); });
+          line([hl - 4, 0.5], [hl - 7.5, -0.6], '#c2262e', 0.9);
+        } else if (pat === 'streetwear') {
+          // The hood at the neck, drawstrings and a round logo.
+          line([hl, -4.6], [hl, 4.6], shade(L.top, -0.28), 2.2);
+          line([hl - 1.5, -1.3], [hl - 8.5, -1.5], A || '#17171b', 0.7); line([hl - 1.5, 1.3], [hl - 8.5, 1.5], A || '#17171b', 0.7);
+          ctx.fillStyle = A || '#17171b'; ctx.beginPath(); ctx.arc(hl - 14, 0, 1.9, 0, 7); ctx.fill();
+        } else if (pat === 'president') {
+          tri([[hl, -2.8], [hl, 2.8], [hl - 9, 0]], '#f2efe8');
+          ctx.fillStyle = A || '#b3202f'; ctx.fillRect(hl - 11, -0.8, 10, 1.6);
+          line([hl, -3.4], [hl - 11, -0.5], 'rgba(0,0,0,.35)', 0.8); line([hl, 3.4], [hl - 11, 0.5], 'rgba(0,0,0,.35)', 0.8);
+          ctx.fillStyle = '#f4f4f2'; ctx.fillRect(hl - 9.6, -4.3, 2.4, 1.6);
+          ctx.fillStyle = '#b3202f'; ctx.fillRect(hl - 9.6, -3.5, 2.4, 0.5); ctx.fillStyle = '#2a4a9a'; ctx.fillRect(hl - 9.6, -4.3, 1, 0.9);
+          ctx.fillStyle = '#c8ccd2'; [-1, 1].forEach(sd => { ctx.beginPath(); ctx.arc(hl - 17, sd * 2.4, 0.6, 0, 7); ctx.fill(); });
         }
       }
       ctx.restore();

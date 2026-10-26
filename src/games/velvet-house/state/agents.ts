@@ -40,6 +40,9 @@ export interface AgentLook {
   longHair: boolean;
   // Second colour for tops that have one: the tie, the shirt under a coat, a vest.
   accent?: string;
+  // The cut of the pants ('jeans', 'cheer_skirt', ...) and their trim; plain pants when unset.
+  bottomStyle?: string;
+  bottomAccent?: string;
   // The person's real avatar head, when the host sent one. Never saved.
   heads?: HeadImages;
   // The person's real avatar hands, when the host sent them. Never saved.
