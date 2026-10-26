@@ -1256,8 +1256,8 @@ export function createHouseArt(ctx0, opts = {}) {
     return ps;
   }
 
-  function ease2(ps, side, tx, ty, dt) {
-    const k = Math.min(1, dt * 9);
+  function ease2(ps, side, tx, ty, dt, rate = 9) {
+    const k = Math.min(1, dt * rate);
     let a = ps.a[side];
     if (!a) { a = ps.a[side] = [tx, ty]; }
     a[0] += (tx - a[0]) * k; a[1] += (ty - a[1]) * k;
@@ -1279,13 +1279,23 @@ export function createHouseArt(ctx0, opts = {}) {
   function setMood(v) { mood = Math.max(0, Math.min(1, Number(v) || 0)); }
 
   // Things in hand for an activity, drawn over the arms.
+  const PROP_ZOOM = { spoon: 1.5, fork: 1.6, cup: 1.4, phone: 1.5, knife: 1.5, brush: 1.5, pen: 1.5, comb: 1.5, spatula: 1.4, apple: 1.3, rag: 1.3, can: 1.3, ball: 1.3, roller: 1.2 };
   function drawProps(rig, hand, c, t, hd, local) {
     (rig.props || []).forEach(p => {
       const h = hand[p.side || 1] || hand[1];
+      // Hand-sized props are drawn small; scale them up around the hand so they read.
+      const zoom = PROP_ZOOM[p.kind];
+      if (zoom) { ctx.save(); ctx.translate(h[0], h[1]); ctx.scale(zoom, zoom); ctx.translate(-h[0], -h[1]); }
       switch (p.kind) {
         case 'spoon': limb(h[0], h[1], h[0] + 1.5, h[1] + 7, '#8A5A3B', 1.6); break;
-        case 'fork': limb(h[0], h[1], h[0] + 0.5, h[1] - 6, '#C9CED6', 1.2); break;
-        case 'cup': rr(h[0] - 2.5, h[1] - 4, 5, 6, 1.2, '#F4EFE6'); limb(h[0] + 2.5, h[1] - 2.5, h[0] + 4, h[1] - 1, '#F4EFE6', 1.2); break;
+        case 'fork':
+          limb(h[0], h[1], h[0] + 0.5, h[1] - 6, '#C9CED6', 1.2);
+          if (p.food) circle(h[0] + 0.5, h[1] - 7, 1.5, '#C2703D');
+          break;
+        case 'cup':
+          rr(h[0] - 2.5, h[1] - 4, 5, 6, 1.2, '#F4EFE6'); limb(h[0] + 2.5, h[1] - 2.5, h[0] + 4, h[1] - 1, '#F4EFE6', 1.2);
+          if (p.steam) for (let k = 0; k < 2; k++) { const u = (t * 0.9 + k * 0.5) % 1; ctx.globalAlpha = 0.55 * (1 - u); limb(h[0] - 1 + k * 2 + Math.sin(u * 6 + k) * 0.8, h[1] - 5 - u * 6, h[0] - 1 + k * 2 + Math.sin(u * 6 + k + 1) * 0.8, h[1] - 7 - u * 6, '#FFFFFF', 0.9); ctx.globalAlpha = 1; }
+          break;
         case 'phone': rr(h[0] - 1.6, h[1] - 3.5, 3.2, 6, 0.8, '#1E1B2E'); if (p.scroll != null) limb(h[0] - 0.6, h[1] - 2.6 + p.scroll * 4, h[0] + 0.6, h[1] - 2.6 + p.scroll * 4, '#7FB2FF', 0.8); break;
         case 'dumbbell': limb(h[0] - 4, h[1], h[0] + 4, h[1], '#3B3F4A', 1.8); circle(h[0] - 4, h[1], 2.2, '#2A2D35'); circle(h[0] + 4, h[1], 2.2, '#2A2D35'); break;
         case 'brush': limb(h[0], h[1], h[0] + 2, h[1] - 6, '#8A5A3B', 1.2); circle(h[0] + 2, h[1] - 6, 1.1, '#E48AAE'); break;
@@ -1293,8 +1303,8 @@ export function createHouseArt(ctx0, opts = {}) {
         case 'knife': limb(h[0], h[1], h[0] + 1, h[1] + 6, '#C9CED6', 1.4); limb(h[0], h[1], h[0] - 0.5, h[1] - 2, '#3B2A20', 2); break;
         case 'plate': { const a = hand[-1] || h, b = hand[1] || h; ell((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 1, 7, 2.6, '#F4EFE6'); ell((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 2, 3.5, 1.4, '#C2703D'); break; }
         case 'spatula': { const tip = [h[0] + 3, h[1] + 5 - (p.flip || 0) * 4]; limb(h[0], h[1], tip[0], tip[1], '#3B2A20', 1.4); rr(tip[0] - 2, tip[1] - 1, 4, 2.5, 0.5, '#C9CED6'); if (p.flip > 0.3) ell(tip[0], tip[1] - 5 * p.flip, 2.6, 1.2, '#8B4A2B'); break; }
-        case 'guitar': { const body = local([0.16, -0.02, -0.3], 1), neck = local([0.24, 0.26, -0.1], -1); limb(body[0], body[1], neck[0], neck[1], '#5A3A22', 2); ell(body[0], body[1], 5, 4, '#B5651D'); circle(body[0], body[1], 1.2, '#2A1A10'); break; }
-        case 'gloves': [-1, 1].forEach(sd => { const g = hand[sd]; if (g) circle(g[0], g[1], 2.6, '#D7263D'); }); break;
+        case 'guitar': { const body = local([0.16, -0.02, -0.3], 1), neck = local([0.24, 0.26, -0.1], -1); limb(body[0], body[1], neck[0], neck[1], '#5A3A22', 2.6); ell(body[0], body[1], 7.5, 5.5, '#B5651D'); ell(body[0] + 1.6, body[1] - 0.8, 3, 2, 'rgba(255,255,255,.14)'); circle(body[0], body[1], 1.9, '#2A1A10'); break; }
+        case 'gloves': [-1, 1].forEach(sd => { const g = hand[sd]; if (g) { circle(g[0], g[1], 3.5, '#D7263D'); ell(g[0] - 0.8, g[1] - 1.2, 1.3, 0.8, 'rgba(255,255,255,.35)'); } }); break;
         case 'parcel': { const a = hand[-1] || h, b = hand[1] || h; rr((a[0] + b[0]) / 2 - 5, (a[1] + b[1]) / 2 - 7, 10, 7, 1, '#C79A5B'); limb((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 7, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, '#E8D2A6', 1); break; }
         case 'cloth': { const a = hand[-1] || h, b = hand[1] || h; ctx.fillStyle = '#9EC5E8'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(b[0], b[1] + 4 + (p.open || 0) * 4); ctx.lineTo(a[0], a[1] + 4 + (p.open || 0) * 4); ctx.fill(); break; }
         case 'ball': circle(h[0] + 3, h[1] - 6, 2.4, '#E5484D'); break;
@@ -1342,9 +1352,9 @@ export function createHouseArt(ctx0, opts = {}) {
           break;
         }
         case 'mop': {
-          const a = hand[-1] || h, end = local([0.6, (p.sweep || 0) * 0.12, -1.04], 1);
-          limb(a[0], a[1], end[0], end[1], "#B08A5A", 1.8);
-          ell(end[0], end[1], 6, 2.4, '#C9CED6');
+          const a = hand[-1] || h, end = local([0.6, (p.sweep || 0) * 0.3, -1.04], 1);
+          limb(a[0], a[1], end[0], end[1], "#B08A5A", 2);
+          ell(end[0], end[1], 8, 3, '#C9CED6');
           break;
         }
         case 'roller': {
@@ -1372,6 +1382,7 @@ export function createHouseArt(ctx0, opts = {}) {
         }
         default: break;
       }
+      if (zoom) ctx.restore();
     });
   }
 
@@ -1441,7 +1452,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
     const dance = pose === 'dance' && !rig;
     const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.035 * amp;
-    const hipZ = (c.sit ? 0.03 : 0.62 - (rig?.drop || 0)) + bob + breathe + (rig?.bob || 0), shZ = hipZ + 0.42, hdZ = shZ + 0.14;
+    const hipZ = (c.sit ? 0.03 : 0.62 - (rig?.drop || 0)) + bob + breathe + (rig?.bob || 0), shZ = hipZ + 0.42, hdZ = shZ + 0.14 + (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0);
     const [dx, dy] = c.face, lean = rig?.lean || 0;
     const hip = P3(0, 0, hipZ), sh = P3(dx * lean, dy * lean, shZ), hd = P3(dx * lean * 1.25, dy * lean * 1.25, hdZ);
     // The body's own sideways axis, signed so side +1 is screen-right (matching the shoulders).
@@ -1475,7 +1486,7 @@ export function createHouseArt(ctx0, opts = {}) {
         const asw = c.walking ? Math.sin(ph + (side > 0 ? Math.PI : 0)) * 4 * amp : 0;
         [tx, ty] = dance ? [sh[0] + side * 9, sh[1] - 12 + Math.sin(t * 6 + side) * 3] : ['cook', 'reach', 'water', 'desk', 'arcade'].includes(pose) ? [sh[0] + side * 4 + f.flip * 5, sh[1] + 8] : ['phone', 'read', 'sip', 'eat'].includes(pose) ? [sh[0] + side * 2, sh[1] + 6] : [sh[0] + side * 6 + asw, sh[1] + 13 - Math.abs(asw) * 0.35];
       }
-      const e = ease2(psA, side, tx, ty, rdt);
+      const e = ease2(psA, side, tx, ty, rdt, rig && rig.hands ? (rig.snap ? 28 : 12) : 9);
       if (!el) el = spec ? [(sx0 + e[0]) / 2 + side * 2.5, (sy0 + e[1]) / 2 + 3] : [(sx0 + e[0]) / 2, (sy0 + e[1]) / 2];
       const held = rig && rig.props ? rig.props.find(q => !NOT_HELD.has(q.kind) && (q.side == null || q.side === side)) : null;
       const grip = (rig && rig.grip && rig.grip[side]) || (held ? (OPEN_KINDS.has(held.kind) ? 'open' : 'fist') : spec && spec[2] > 0.3 ? 'open' : 'relaxed');

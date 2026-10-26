@@ -26,6 +26,8 @@ function pulse(t, period, on, phase = 0) {
  *   drop: number    lower the hips (crouching)
  *   lean: number    lean forward (world units at the shoulder)
  *   headDown: bool  look down (reading, petting)
+ *   nod: number     head dip (world units, + up): nodding along, glancing at the work
+ *   snap: bool      arms follow the targets tightly, for fast taps and punches
  *   talk: bool      mouth moves (phone calls)
  *   props: [{ kind, side, ...}]  things in hand, drawn after the arms
  */
@@ -38,28 +40,29 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
   switch (pose) {
     case 'cook': {
       // One hand stirs a pot in small circles, the other steadies it.
-      const a = t * 5 + ph;
+      const a = t * 4.5 + ph;
       return {
-        hands: { 1: [0.32 + Math.cos(a) * 0.05, 0.02 + Math.sin(a) * 0.05, -0.2], [-1]: [0.3, 0.1, -0.22] },
-        lean: 0.03,
+        hands: { 1: [0.32 + Math.cos(a) * 0.12, 0.02 + Math.sin(a) * 0.12, -0.2 + Math.sin(a) * 0.03], [-1]: [0.3, 0.1, -0.22] },
+        lean: 0.04 + Math.sin(a) * 0.01, headDown: true,
         props: [{ kind: 'spoon', side: 1 }],
       };
     }
     case 'eat':
     case 'eatOut': {
       // Fork from the plate to the mouth every few seconds.
-      const lift = pulse(t, 3.2, 0.45, ph);
+      const lift = pulse(t, 3.2, 0.45, ph), cyc = ((t + ph) % 3.2) / 3.2;
       return {
         hands: { 1: [0.28 - lift * 0.18, 0.04 - lift * 0.02, -0.24 + lift * 0.44], [-1]: [0.26, 0.08, -0.26] },
-        headDown: lift < 0.2,
-        props: [{ kind: 'fork', side: 1 }],
+        headDown: lift < 0.2, nod: -lift * 0.03,
+        props: [{ kind: 'fork', side: 1, food: cyc < 0.225 }],
       };
     }
     case 'sip': {
       const lift = pulse(t, 4.5, 0.4, ph);
       return {
         hands: { 1: [0.2 - lift * 0.1, 0.03, -0.18 + lift * 0.38], [-1]: [0.16, 0.08, -0.26] },
-        props: [{ kind: 'cup', side: 1 }],
+        nod: lift * 0.03,
+        props: [{ kind: 'cup', side: 1, steam: lift < 0.15 }],
       };
     }
     case 'shower': {
@@ -73,23 +76,31 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
         props: [{ kind: 'water' }],
       };
     }
-    case 'read':
+    case 'read': {
+      const flip = pulse(t, 6, 0.12, ph);
       return {
-        hands: { 1: [0.24, 0.07, -0.16], [-1]: [0.24, 0.07, -0.16] },
-        headDown: true,
-        props: [{ kind: 'book', flip: pulse(t, 6, 0.12, ph) }],
+        hands: { 1: [0.24, 0.07 + flip * 0.1, -0.16 + flip * 0.12], [-1]: [0.24, 0.07, -0.16] },
+        headDown: true, nod: wave(t, 0.6, ph) * 0.012,
+        props: [{ kind: 'book', flip }],
       };
-    case 'phone':
+    }
+    case 'phone': {
+      // Talking with the free hand: it rises and falls with the speech.
+      const speaking = pulse(t, 5, 0.7, ph) > 0.05, gest = Math.max(0, wave(t, 2.6, ph)) * (speaking ? 1 : 0.2);
       return {
-        hands: { 1: [0.03, 0.07, 0.27], [-1]: [0.1, 0.1, -0.3] },
+        hands: { 1: [0.03, 0.07, 0.27], [-1]: [0.12 + gest * 0.1, 0.1 + gest * 0.06, -0.3 + gest * 0.28] },
         elbows: { 1: [0.08, 0.17, 0.0] },
-        talk: pulse(t, 5, 0.7, ph) > 0.05,
+        talk: speaking, nod: speaking ? wave(t, 3.4, ph) * 0.015 : 0,
         props: [{ kind: 'phone', side: 1 }],
       };
+    }
     case 'tv': {
       // Hands in the lap; a laugh now and then.
       const laugh = pulse(t, 9, 0.18, ph);
-      return { hands: { 1: [0.2, 0.05, -0.32], [-1]: [0.2, 0.05, -0.32] }, bob: laugh * 0.03 };
+      return {
+        hands: { 1: [0.2 - laugh * 0.14, 0.05, -0.32 + laugh * 0.55], [-1]: [0.2 - laugh * 0.14, 0.05, -0.32 + laugh * 0.55] },
+        bob: laugh * (0.025 + Math.abs(Math.sin(t * 14)) * 0.03), talk: laugh > 0.25,
+      };
     }
     case 'run': {
       // Treadmill: a full running cycle in place, arms pumping bent.
@@ -141,31 +152,33 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
       // Mashing buttons and jerking the stick.
       return {
         hands: {
-          1: [0.3, 0.06 + wave(t, 23, ph) * 0.015, -0.14 + Math.abs(wave(t, 17, ph)) * 0.025],
-          [-1]: [0.3, 0.07 + wave(t, 6, ph) * 0.03, -0.14],
+          1: [0.3, 0.06 + wave(t, 19, ph) * 0.08, -0.14 + Math.abs(wave(t, 14, ph)) * 0.1],
+          [-1]: [0.3, 0.07 + wave(t, 5, ph) * 0.1, -0.14 + Math.max(0, wave(t, 11, ph + 1)) * 0.05],
         },
-        lean: 0.05,
+        lean: 0.05 + wave(t, 7, ph) * 0.02, nod: wave(t, 9, ph) * 0.02, snap: true,
       };
     case 'desk':
       // Typing: short taps in turn.
       return {
         hands: {
-          1: [0.3, 0.05, -0.2 + Math.max(0, wave(t, 16, ph)) * 0.025],
-          [-1]: [0.3, 0.05, -0.2 + Math.max(0, wave(t, 16, ph + Math.PI)) * 0.025],
+          1: [0.3, 0.05 + wave(t, 1.1, ph) * 0.05, -0.2 + Math.max(0, wave(t, 16, ph)) * 0.1],
+          [-1]: [0.3, 0.05 - wave(t, 1.1, ph) * 0.05, -0.2 + Math.max(0, wave(t, 16, ph + Math.PI)) * 0.1],
         },
-        lean: 0.03,
+        lean: 0.03 + wave(t, 0.5, ph) * 0.012, nod: wave(t, 0.9, ph) * 0.018, snap: true,
       };
-    case 'water':
+    case 'water': {
+      const tip = pulse(t, 4, 0.6, ph);
       return {
-        hands: { 1: [0.3, 0.06, -0.12 + wave(t, 1.5, ph) * 0.03], [-1]: [0.12, 0.12, -0.3] },
+        hands: { 1: [0.3 + tip * 0.1, 0.06, -0.14 + tip * 0.22], [-1]: [0.12, 0.12, -0.3] },
         props: [{ kind: 'can', side: 1 }],
       };
+    }
     case 'mop': {
       // Both hands on the handle, sweeping side to side.
-      const sw = wave(t, 3, ph);
+      const sw = wave(t, 2.6, ph);
       return {
-        hands: { 1: [0.24, 0.02 + sw * 0.1, -0.22], [-1]: [0.2, 0.0 + sw * 0.1, -0.06] },
-        lean: 0.05,
+        hands: { 1: [0.24, 0.02 + sw * 0.22, -0.22], [-1]: [0.2, 0.0 + sw * 0.22, -0.06] },
+        lean: 0.05 + (1 - Math.abs(sw)) * 0.03, bob: Math.abs(sw) * 0.015,
         props: [{ kind: 'mop', sweep: sw }],
       };
     }
@@ -174,7 +187,7 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
       const st = wave(t, 2.6, ph);
       return {
         legs: 'crouch', drop: 0.26, lean: 0.08, headDown: true,
-        hands: { 1: [0.34 + st * 0.06, 0.06, -0.5], [-1]: [0.2, 0.12, -0.42] },
+        hands: { 1: [0.34 + st * 0.14, 0.06 + st * 0.04, -0.5 + Math.abs(st) * 0.05], [-1]: [0.2, 0.12, -0.42] },
       };
     }
     case 'play': {
@@ -218,7 +231,7 @@ export function poseRig(pose, t, seed = 0, act = null, actMin = 0) {
       // Painting at the easel: short brush strokes, palette in the other hand.
       const u = ((t + ph) % 0.9) / 0.9;
       return {
-        hands: { 1: [0.34, 0.04 + u * 0.08, -0.04 + Math.sin(u * Math.PI) * 0.08], [-1]: [0.16, 0.16, -0.22] },
+        hands: { 1: [0.34, 0.04 + u * 0.2, -0.04 + Math.sin(u * Math.PI) * 0.14], [-1]: [0.16, 0.16, -0.22] },
         props: [{ kind: 'brush', side: 1 }, { kind: 'palette', side: -1 }],
       };
     }
@@ -242,8 +255,8 @@ const ACT_CLIPS = {
     const step = Math.floor(m / 6) % 4;
     if (step === 0) {
       // Chop: knife hand taps down fast, other hand holds the food.
-      const chop = Math.abs(Math.sin(t * 9 + ph));
-      return { hands: { 1: [0.3, 0.04, -0.2 + chop * 0.08], [-1]: [0.3, 0.12, -0.24] }, lean: 0.04, props: [{ kind: 'knife', side: 1 }] };
+      const chop = Math.abs(Math.sin(t * 10 + ph));
+      return { hands: { 1: [0.3, 0.04, -0.2 + chop * 0.22], [-1]: [0.3, 0.12, -0.24] }, lean: 0.04, nod: -0.02 - chop * 0.02, snap: true, props: [{ kind: 'knife', side: 1 }] };
     }
     if (step === 2) {
       // Taste: spoon to the mouth, a little nod.
@@ -260,23 +273,23 @@ const ACT_CLIPS = {
   grill(t, ph) {
     // Flip with the spatula every couple of seconds.
     const flip = pulse(t, 2.2, 0.35, ph);
-    return { hands: { 1: [0.34, 0.04, -0.2 + flip * 0.16], [-1]: [0.2, 0.12, -0.3] }, lean: 0.03, props: [{ kind: 'spatula', side: 1, flip }] };
+    return { hands: { 1: [0.34, 0.04, -0.2 + flip * 0.3], [-1]: [0.2, 0.12, -0.3] }, lean: 0.03 + flip * 0.03, props: [{ kind: 'spatula', side: 1, flip }] };
   },
   piano(t, ph) {
     // Hands spread over the keys, playing in turn.
     return {
       hands: {
-        1: [0.3, 0.14 + wave(t, 1.3, ph) * 0.04, -0.22 + Math.max(0, wave(t, 11, ph)) * 0.03],
-        [-1]: [0.3, 0.14 - wave(t, 1.1, ph) * 0.04, -0.22 + Math.max(0, wave(t, 9, ph + 1)) * 0.03],
+        1: [0.3, 0.14 + wave(t, 1.3, ph) * 0.1, -0.22 + Math.max(0, wave(t, 11, ph)) * 0.07],
+        [-1]: [0.3, 0.14 - wave(t, 1.1, ph) * 0.1, -0.22 + Math.max(0, wave(t, 9, ph + 1)) * 0.07],
       },
-      bob: Math.abs(wave(t, 2.2, ph)) * 0.01,
+      bob: Math.abs(wave(t, 2.2, ph)) * 0.02, lean: 0.02 + wave(t, 1.4, ph) * 0.02, nod: wave(t, 2.2, ph) * 0.025, snap: true,
     };
   },
   guitar(t, ph) {
     // Strumming hand sweeps, fretting hand up the neck.
     return {
-      hands: { 1: [0.16, 0.0, -0.3 + wave(t, 8, ph) * 0.05], [-1]: [0.22, 0.22, -0.12 + wave(t, 0.8, ph) * 0.02] },
-      bob: Math.abs(wave(t, 4, ph)) * 0.015,
+      hands: { 1: [0.16, 0.0, -0.3 + wave(t, 8, ph) * 0.13], [-1]: [0.22, 0.22 + wave(t, 0.8, ph) * 0.07, -0.12 + wave(t, 0.8, ph) * 0.04] },
+      bob: Math.abs(wave(t, 4, ph)) * 0.035, lean: 0.02 + wave(t, 2, ph) * 0.02, nod: wave(t, 4, ph) * 0.025, snap: true,
       props: [{ kind: 'guitar' }],
     };
   },
@@ -292,7 +305,7 @@ const ACT_CLIPS = {
         1: [0.12 + cross * 0.32 + hook * 0.18, 0.08 - hook * 0.12, -0.04],
       },
       elbows: { [-1]: [0.04 + jab * 0.14, 0.16, -0.14], 1: [0.04 + cross * 0.14, 0.18 - hook * 0.04, -0.1 + hook * 0.06] },
-      legs: 'step', phase: t * 5 + ph, lean: 0.04 + (jab + cross) * 0.03,
+      legs: 'step', phase: t * 5 + ph, lean: 0.04 + (jab + cross) * 0.03, snap: true,
       props: [{ kind: 'gloves' }],
     };
   },
@@ -322,7 +335,7 @@ const ACT_CLIPS = {
   laundry(t, ph) {
     // Folding: hands meet and part.
     const f = (1 - Math.cos(t * 2.6 + ph)) / 2;
-    return { hands: { 1: [0.28, 0.04 + f * 0.12, -0.2], [-1]: [0.28, 0.04 + f * 0.12, -0.2] }, props: [{ kind: 'cloth', open: f }] };
+    return { hands: { 1: [0.28, 0.04 + f * 0.28, -0.2 - f * 0.03], [-1]: [0.28, 0.04 + f * 0.28, -0.2 - f * 0.03] }, lean: 0.03 + f * 0.03, props: [{ kind: 'cloth', open: f }] };
   },
   phone(t, ph, m) {
     // Calls and scrolling take turns.
@@ -334,9 +347,9 @@ const ACT_CLIPS = {
   // ---- Everyday life ----
   newspaper(t, ph) {
     // Paper held open wide; a page turn now and then, a shake to straighten it.
-    const turn = pulse(t, 7, 0.14, ph), shake = pulse(t, 11, 0.06, ph + 3), sway = wave(t, 1.3, ph) * 0.012;
+    const turn = pulse(t, 7, 0.14, ph), shake = pulse(t, 11, 0.06, ph + 3), sway = wave(t, 1.3, ph) * 0.03;
     return {
-      hands: { 1: [0.24, 0.2, -0.12 + shake * 0.03 + sway], [-1]: [0.24, 0.2, -0.12 + shake * 0.03 + sway] },
+      hands: { 1: [0.24, 0.2 - turn * 0.08, -0.12 + shake * 0.07 + sway + turn * 0.1], [-1]: [0.24, 0.2 - turn * 0.08, -0.12 + shake * 0.07 + sway + turn * 0.1] },
       props: [{ kind: 'paper', flip: turn }],
     };
   },
@@ -355,7 +368,7 @@ const ACT_CLIPS = {
     return {
       hands: { 1: [0.02, 0.26 - u * 0.14, -0.3 + u * 0.92], [-1]: [0.02, 0.26 - u * 0.14, -0.3 + u * 0.92] },
       elbows: { 1: [0.02, 0.26 + u * 0.04, -0.12 + u * 0.4], [-1]: [0.02, 0.26 + u * 0.04, -0.12 + u * 0.4] },
-      legs: 'jack', spread: u * 0.2, bob: Math.abs(Math.sin(t * 6 + ph)) * 0.06,
+      legs: 'jack', spread: u * 0.2, bob: Math.abs(Math.sin(t * 6 + ph)) * 0.06, snap: true,
     };
   },
   phonePace(t, ph) {
@@ -394,9 +407,9 @@ const ACT_CLIPS = {
     // Fixing their hair, a tilt of the head, a last look.
     const fix = wave(t, 3.2, ph);
     return {
-      hands: { 1: [0.06, 0.1, 0.34 + fix * 0.04], [-1]: [0.04 + Math.max(0, fix) * 0.06, 0.12, 0.28] },
+      hands: { 1: [0.06, 0.1, 0.34 + fix * 0.1], [-1]: [0.04 + Math.max(0, fix) * 0.1, 0.12, 0.28] },
       elbows: { 1: [0.06, 0.24, 0.12], [-1]: [0.04, 0.24, 0.1] },
-      bob: pulse(t, 5, 0.2, ph) * 0.01,
+      bob: pulse(t, 5, 0.2, ph) * 0.01, nod: wave(t, 1.6, ph) * 0.02,
       props: [{ kind: 'comb', side: 1 }],
     };
   },
@@ -414,14 +427,14 @@ const ACT_CLIPS = {
   meditate(t, ph) {
     // Sitting cross-legged on the floor, hands on the knees, slow breaths.
     const breath = (1 - Math.cos(t * 0.9 + ph)) / 2;
-    return { legs: 'crouch', drop: 0.42, hands: { 1: [0.16, 0.18, -0.46], [-1]: [0.16, 0.18, -0.46] }, bob: breath * 0.012, calm: true };
+    return { legs: 'crouch', drop: 0.42, hands: { 1: [0.16, 0.18, -0.46], [-1]: [0.16, 0.18, -0.46] }, bob: breath * 0.03, calm: true };
   },
   jumprope(t, ph) {
     // Small hops as the rope comes round, hands turning it at the hips.
     const a = t * 8 + ph;
     return {
       hands: { 1: [0.06 + Math.cos(a) * 0.03, 0.22, -0.3 + Math.sin(a) * 0.03], [-1]: [0.06 + Math.cos(a) * 0.03, 0.22, -0.3 + Math.sin(a) * 0.03] },
-      bob: Math.max(0, Math.sin(a)) * 0.07,
+      bob: Math.max(0, Math.sin(a)) * 0.07, snap: true,
       props: [{ kind: 'rope', turn: a }],
     };
   },
