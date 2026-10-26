@@ -21,6 +21,8 @@ export interface RenderState {
   level: number;
   gameMode: GameMode;
   timeRemaining: number;
+  hasTimeLimit: boolean;
+  splitRef: Ref<{ text: string; color: string; life: number } | null>;
   isTouchDevice: boolean;
   chainRef: Ref<number>;
   comboRef: Ref<number>;
@@ -51,7 +53,7 @@ export interface RenderState {
 export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
   const {
     GAME_WIDTH, GAME_HEIGHT, levelData, player, platforms, camY, isTrueFalling, isRisingFast,
-    level, gameMode, timeRemaining, isTouchDevice,
+    level, timeRemaining, hasTimeLimit, splitRef, isTouchDevice,
     chainRef, comboRef, elapsedTimeRef, landingFrameRef, perfectedThisBounceRef, overdriveRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
     orbsRef, particlesRef, popupRef, runModeRef, scoreRef, shakeRef, simFrameRef, skinRef, speedLinesRef,
     startYRef, tapFxRef, trailRef,
@@ -154,8 +156,22 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
 
     ctx.shadowColor = platform.glow || platform.color;
     ctx.shadowBlur = glowSize;
+    const isCharge = platform.type === 'charge' && !platform.touched;
+    const isDrain = platform.type === 'drain' && !platform.touched;
+    if (isCharge) {
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 22 + Math.sin(simFrameRef.current * 0.15) * 8;
+    } else if (isDrain) {
+      ctx.shadowColor = '#ff2a2a';
+      ctx.shadowBlur = 16;
+    }
 
-    if (platform.type === 'spring' && !platform.touched) {
+    if (isCharge) {
+      ctx.fillStyle = '#ffffff';
+    } else if (isDrain) {
+      // Dark body with a red rim reads as "bad" on any theme, even red ones
+      ctx.fillStyle = '#1c0306';
+    } else if (platform.type === 'spring' && !platform.touched) {
       ctx.fillStyle = '#00ff88';
     } else if (platform.type === 'crumbling' && !platform.touched) {
       ctx.fillStyle = platform.color;
@@ -199,6 +215,34 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
       ctx.font = 'bold 10px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('CHECKPOINT', platform.x + platform.width/2, screenY - 8);
+    }
+
+    if (isCharge || isDrain) {
+      // + gives a boost, - takes one away
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      if (isDrain) {
+        ctx.strokeStyle = '#ff3b3b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(platform.x, screenY, platform.width, PLATFORM_HEIGHT, 7);
+        ctx.stroke();
+      }
+      ctx.fillStyle = isCharge ? '#1a1a2e' : '#ff3b3b';
+      const cx = platform.x + platform.width / 2;
+      const cy = screenY + PLATFORM_HEIGHT / 2;
+      ctx.fillRect(cx - 5, cy - 1.5, 10, 3);
+      if (isCharge) ctx.fillRect(cx - 1.5, cy - 5, 3, 10);
+    }
+
+    if (platform.sectionLabel && !platform.touched) {
+      // Name the upcoming section so its pattern reads at a glance
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
+      ctx.globalAlpha = 0.75;
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(platform.sectionLabel, platform.x + platform.width / 2, screenY - (platform.isCheckpoint ? 22 : 10));
     }
 
     if (platform.isFar && !platform.touched) {
@@ -398,13 +442,14 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
   ctx.fillText(levelData.flavorText || '', 16, 58);
 
   ctx.textAlign = 'center';
-  if (gameMode === 'career') {
+  // Time is the headline: a countdown when there's a limit, otherwise the run clock
+  if (hasTimeLimit) {
     const isLowTime = timeRemaining < 10;
     const isVeryLowTime = timeRemaining < 5;
-    ctx.fillStyle = isVeryLowTime ? 'rgba(255,50,50,0.9)' : isLowTime ? 'rgba(255,150,50,0.9)' : 'rgba(255,255,255,0.9)';
-    ctx.font = isVeryLowTime ? 'bold 24px monospace' : isLowTime ? 'bold 18px monospace' : 'bold 16px monospace';
+    ctx.fillStyle = isVeryLowTime ? 'rgba(255,50,50,0.95)' : isLowTime ? 'rgba(255,150,50,0.95)' : 'rgba(255,255,255,0.95)';
+    ctx.font = isVeryLowTime ? 'bold 32px monospace' : isLowTime ? 'bold 28px monospace' : 'bold 24px monospace';
     const timeText = timeRemaining > 0 ? timeRemaining.toFixed(1) + 's' : 'TIME UP!';
-    ctx.fillText(timeText, GAME_WIDTH / 2, isVeryLowTime ? 32 : 26);
+    ctx.fillText(timeText, GAME_WIDTH / 2, 34);
 
     if (isVeryLowTime) {
       ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.02) * 0.3;
@@ -413,9 +458,19 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
       ctx.globalAlpha = 1;
     }
   } else {
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '12px monospace';
-    ctx.fillText(elapsedTimeRef.current.toFixed(1) + 's', GAME_WIDTH / 2, 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = 'bold 24px monospace';
+    ctx.fillText(elapsedTimeRef.current.toFixed(1) + 's', GAME_WIDTH / 2, 34);
+  }
+
+  const split = splitRef.current;
+  if (split) {
+    ctx.globalAlpha = Math.min(1, split.life);
+    ctx.fillStyle = split.color;
+    ctx.font = 'bold 20px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(split.text, GAME_WIDTH / 2, 92);
+    ctx.globalAlpha = 1;
   }
 
   ctx.textAlign = 'right';
@@ -436,13 +491,15 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
   }
 
   const boostColor = levelData.boostTrailColor || '#00ffff';
-  for (let i = 0; i < MAX_BOOST_CHARGES; i++) {
+  // Banked boosts: one pip each (up to the cap); an empty bank shows a single hollow pip
+  const pips = Math.max(1, Math.min(MAX_BOOST_CHARGES, player.boostCharges));
+  for (let i = 0; i < pips; i++) {
     const filled = i < player.boostCharges;
-    ctx.fillStyle = filled ? boostColor : 'rgba(255,255,255,0.12)';
+    ctx.fillStyle = filled ? '#ffffff' : 'rgba(255,255,255,0.12)';
     ctx.shadowColor = boostColor;
     ctx.shadowBlur = filled ? 10 : 0;
     ctx.beginPath();
-    ctx.arc(24 + i * 22, GAME_HEIGHT - 24, 7, 0, Math.PI * 2);
+    ctx.arc(24 + i * 18, GAME_HEIGHT - 24, 6, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.shadowBlur = 0;
@@ -453,10 +510,10 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
 
   if (chainRef.current > 0) {
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillText('MOMENTUM', 100, GAME_HEIGHT - 40);
+    ctx.fillText('MOMENTUM', 200, GAME_HEIGHT - 40);
     for (let i = 0; i < 6; i++) {
       ctx.fillStyle = i < chainRef.current ? boostColor : 'rgba(255,255,255,0.1)';
-      ctx.fillRect(100 + i * 12, GAME_HEIGHT - 30, 9, 10);
+      ctx.fillRect(200 + i * 12, GAME_HEIGHT - 30, 9, 10);
     }
   }
 
