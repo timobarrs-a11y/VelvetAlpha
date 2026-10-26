@@ -7,6 +7,7 @@ import { AvatarConfigV2, DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2 } from
 import { supabase } from '../shared/supabase/client';
 import { trackSaveAvatar, trackRandomize } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
+import { sanitizeAvatarConfigForSave } from '../services/avatarSaveService';
 import { getRandomName } from '../data/companionNames';
 
 async function resolveCompanionId(): Promise<string | null> {
@@ -92,9 +93,11 @@ export function CreateCompanionAvatarPage() {
         return;
       }
 
+      const sanitized = await sanitizeAvatarConfigForSave(avatarConfig);
+
       const { error } = await supabase
         .from('companions')
-        .update({ avatar_config: avatarConfig, custom_name: companionName || undefined })
+        .update({ avatar_config: sanitized, custom_name: companionName || undefined })
         .eq('id', companionId);
 
       if (error) {

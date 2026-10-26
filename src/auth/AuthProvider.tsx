@@ -67,6 +67,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setLoading(false);
+      // On sign-out, clear avatar drafts and saved looks left in localStorage
+      // so a different account on the same device never inherits them.
+      if (!newSession) {
+        try {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            if (key.startsWith('avatar_favorites_') || key.endsWith('-avatar-draft') || key === 'userAvatarConfig') {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch {}
+      }
       if (newSession) {
         referralService.redeemPendingReferral().catch(() => {});
         triggerNewsRefresh(newSession.user.id).catch(() => {});
