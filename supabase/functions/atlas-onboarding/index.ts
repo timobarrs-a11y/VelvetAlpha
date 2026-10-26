@@ -9,6 +9,7 @@ import {
 } from "../_shared/coachFramework.ts";
 import {
   buildGoalPrompt,
+  extractJson,
   buildOpening,
   buildPlanPrompt,
   checkReply,
@@ -146,15 +147,6 @@ async function callClaude(opts: {
     messages = continuePausedTurn(messages, data.content);
   }
   return text || null;
-}
-
-function parseModelJson(raw: string | null): unknown {
-  if (!raw) return null;
-  const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start < 0 || end < start) return null;
-  try { return JSON.parse(cleaned.slice(start, end + 1)); } catch { return null; }
 }
 
 function transcriptText(transcript: Array<{ role: string; content: string }>): string {
@@ -376,7 +368,7 @@ Return ONLY the JSON object.`;
         maxTokens: 300,
         messages: [{ role: "user", content: `${extractionPrompt}\n\n--- TRANSCRIPT ---\n${transcriptText(transcript)}\n--- END ---` }],
       });
-      const parsed = (parseModelJson(raw) ?? {}) as Record<string, unknown>;
+      const parsed = (extractJson(raw) ?? {}) as Record<string, unknown>;
 
       const goalText = typeof parsed.goalText === "string" && parsed.goalText.trim() ? parsed.goalText.trim() : "Your goal";
       const kind: "coach" | "assistant" = parsed.kind === "coach" ? "coach" : "assistant";
@@ -589,9 +581,18 @@ Write a 2-3 sentence instruction describing what the coach teaches, how (short l
         transcript: transcriptText(transcript),
         today,
       });
-      const raw = await callClaude({ model: MODEL_CONFIG.SONNET, maxTokens: 1500, messages: [{ role: "user", content: prompt }], webSearches: 3 });
-      const plan = validatePlan(parseModelJson(raw), today.date);
-      if (!plan) return json({ error: "Couldn't draft the plan" }, 502);
+      // With web search first, for real dates; if that reply can't be read, once more without it.
+      let raw = await callClaude({ model: MODEL_CONFIG.SONNET, maxTokens: 4000, messages: [{ role: "user", content: prompt }], webSearches: 3 });
+      let plan = validatePlan(extractJson(raw), today.date);
+      if (!plan) {
+        console.error("[atlas-onboarding] Plan reply unreadable, retrying without search:", (raw ?? "(no reply)").slice(0, 800));
+        raw = await callClaude({ model: MODEL_CONFIG.SONNET, maxTokens: 4000, messages: [{ role: "user", content: prompt }] });
+        plan = validatePlan(extractJson(raw), today.date);
+      }
+      if (!plan) {
+        console.error("[atlas-onboarding] Plan reply unreadable again:", (raw ?? "(no reply)").slice(0, 800));
+        return json({ error: "Couldn't draft the plan" }, 502);
+      }
       return json({ success: true, phase: "plan", plan, summary: summarizePlan(plan, today.date) });
     }
 

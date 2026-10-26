@@ -55,8 +55,8 @@ beforeEach(() => {
 describe('Your look', () => {
   it('explains why, starts from Act 1, and records only what they chose by hand', async () => {
     render(<ArrivalLookPage />);
-    expect(await screen.findByText('Now, you.')).toBeTruthy();
-    expect(screen.getByText(/on the community boards, in every chat/)).toBeTruthy();
+    expect(await screen.findByText('Now for the fun part.')).toBeTruthy();
+    expect(screen.getByText(/the community boards, in your chats/)).toBeTruthy();
     fireEvent.click(screen.getByText('Make my avatar'));
     expect(screen.getByText('seeded as male')).toBeTruthy();
 

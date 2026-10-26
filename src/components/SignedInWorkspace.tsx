@@ -75,6 +75,8 @@ const excludedPrefixes = [
   '/welcome',
   '/onboarding',
   '/arrival',
+  '/user-questionnaire',
+  '/atlas-onboarding',
   '/create-user-avatar',
   '/age-verification',
   '/velvet-house',
@@ -83,7 +85,9 @@ const excludedPrefixes = [
   '/velvet-house-legacy',
 ];
 
-function isExcludedPath(pathname: string): boolean {
+function isExcludedPath(pathname: string, search = ''): boolean {
+  // The look around town during onboarding is full screen too.
+  if (pathname === '/world' && new URLSearchParams(search).get('arrival') === '1') return true;
   return excludedPrefixes.some(prefix => pathname.startsWith(prefix));
 }
 
@@ -632,7 +636,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
 export function SignedInWorkspace({ children }: SignedInWorkspaceProps) {
   const { user } = useAuth();
   const location = useLocation();
-  const active = !!user && !isExcludedPath(location.pathname);
+  const active = !!user && !isExcludedPath(location.pathname, location.search);
   if (!active || !user) return <>{children}</>;
   return <ActiveWorkspace user={user} children={children} />;
 }

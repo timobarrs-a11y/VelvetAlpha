@@ -291,7 +291,10 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'nickname',
       archetype: 'tap',
       chapter: 'identity',
-      question: 'Good choice. Anything your friends call you?',
+      question: (ctx) => {
+        const name = (ctx.answers.name as string | undefined)?.trim();
+        return name ? `Do you go by ${name}, or something else?` : 'Do you go by another name?';
+      },
       confidence: 'confirmed',
       placeholder: 'A nickname (optional)',
       optional: true,

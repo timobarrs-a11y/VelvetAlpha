@@ -15,7 +15,7 @@ vi.mock('../../hooks/useTypingEffect', () => ({
   useTypingEffect: (text: string) => ({ displayedText: text, showCursor: false }),
   useWritingIndicator: () => 'Writing',
 }));
-vi.mock('../../shared/ui', () => ({ PageHeader: ({ title }: { title: string }) => <h1>{title}</h1> }));
+vi.mock('../../auth/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 vi.mock('../../components/Avatar', () => ({ Avatar: () => <div data-testid="avatar" /> }));
 vi.mock('../../components/AvatarCreatorV2', () => ({ coherentRandomize: (g: string) => ({ gender: g, glasses: 'none' }) }));
 vi.mock('../../services/avatarSaveService', () => ({ sanitizeAvatarConfigForSave: async (c: unknown) => c }));
@@ -83,6 +83,7 @@ beforeEach(() => {
   updates.length = 0;
   vi.clearAllMocks();
   sessionStorage.clear();
+  localStorage.clear();
   vi.stubGlobal('fetch', vi.fn(async (_url: string, init: { body: string }) => {
     const body = JSON.parse(init.body);
     requests.push(body);
