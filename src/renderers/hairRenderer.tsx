@@ -1,5 +1,5 @@
 import type { HairStyle, HairTexture } from '../types/avatar-v2';
-import { FaceGeometry, faceHalfWidthAt, chinY } from './faceGeometry';
+import { FaceGeometry, faceHalfWidthAt, faceOutlinePath, chinY } from './faceGeometry';
 import { shade } from './outfitRenderer';
 
 // Hair in two layers, so it sits on the head instead of behind it:
@@ -51,16 +51,21 @@ interface HairSpec {
   whorl?: { x: number; y: number };  // crown whorl: strands radiate from a real growth point
   stubble?: boolean;        // visible hair grain in the fade transition zone
   babyHair?: boolean;       // fine, irregular short strands along the hairline edge
+  // What the cut does at the sides: 'shaved' leaves skin with a shadow of stubble
+  // and a hard line where the top begins (undercut, mohawk); 'tapered' keeps a
+  // soft close crop (pixie). A fade is the gradient on the whole cap instead.
+  sides?: 'shaved' | 'tapered';
+  wave?: number;            // visible waves across the top, and a scalloped front edge (short wavy)
 }
 
 const STYLES: Record<HairStyle, HairSpec> = {
   buzz:       { v: 0.8, sv: 0.3, sideY: -4, hairline: 'natural', texture: 'buzz', sideburn: true, opacity: 0.85, babyHair: true },
   fade:       { v: 5.5, sv: 0, sideY: -4, hairline: 'natural', texture: 'straight', extra: 'fade', sideburn: true, topLift: 2.5, topWidth: 1.05, whorl: { x: 50, y: -2 }, stubble: true },
   short:      { v: 4.6, sv: 1, sideY: -3, hairline: 'part', texture: 'straight', sideburn: true, topLift: 1.2, topWidth: 1.02, whorl: { x: 52, y: -1 }, recess: 0.4 },
-  short_wavy: { v: 6.8, sv: 2.5, sideY: -1, hairline: 'sweep', texture: 'wavy', sideburn: true, topLift: 3, topWidth: 1.08, whorl: { x: 53, y: -2 } },
-  slick_back: { v: 4.2, sv: 1, sideY: -3, hairline: 'high', texture: 'slick', sideburn: true, topLift: 2.2, topWidth: 1.0, whorl: { x: 50, y: 0 }, peak: true, recess: 0.5 },
+  short_wavy: { v: 6.2, sv: 2, sideY: -1, hairline: 'sweep', texture: 'wavy', sideburn: true, topLift: 2.6, topWidth: 1.08, whorl: { x: 53, y: -2 }, wave: 2.6 },
+  slick_back: { v: 4.6, sv: 0.6, sideY: -3, hairline: 'high', texture: 'slick', sideburn: true, topLift: 2.6, topWidth: 1.0, whorl: { x: 50, y: 0 }, peak: true, recess: 0.5, sides: 'tapered' },
   afro:       { v: 14, sv: 10, sideY: 5, hairline: 'curly', texture: 'coily', extra: 'afro', babyHair: true },
-  locs_short: { v: 4, sv: 2, sideY: 2, hairline: 'natural', texture: 'locs', back: { length: 112, spread: 4, edge: 'blunt' }, locks: { length: 104, width: 9 } },
+  locs_short: { v: 4, sv: 2, sideY: 2, hairline: 'natural', texture: 'locs', back: { length: 98, spread: 4, edge: 'blunt' }, locks: { length: 96, width: 9 } },
   bun:        { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'bun' },
   ponytail:   { v: 2.6, sv: 0.8, sideY: -2, hairline: 'high', texture: 'slick', extra: 'ponytail' },
   sleek:      { v: 3, sv: 1.5, sideY: 2, hairline: 'center', texture: 'straight', back: { length: 122, spread: 4, edge: 'blunt' }, locks: { length: 110, width: 6.5 } },
@@ -75,11 +80,11 @@ const STYLES: Record<HairStyle, HairSpec> = {
   high_puff:  { v: 2.4, sv: 0.6, sideY: -2, hairline: 'curly', texture: 'coily', extra: 'puff', babyHair: true },
   long_straight: { v: 3.4, sv: 1.6, sideY: 2, hairline: 'sweep', texture: 'straight', back: { length: 130, spread: 4, edge: 'soft' }, locks: { length: 122, width: 7 } },
   bob:        { v: 4.4, sv: 2.6, sideY: 3, hairline: 'part', texture: 'straight', back: { length: 86, spread: 4, edge: 'blunt' }, locks: { length: 84, width: 8 } },
-  pixie:      { v: 5.2, sv: 1.4, sideY: -2, hairline: 'sweep', texture: 'straight', topLift: 3.5, topWidth: 1.1, whorl: { x: 54, y: -3 } },
+  pixie:      { v: 4.4, sv: 0.6, sideY: -2, hairline: 'sweep', texture: 'straight', topLift: 2.4, topWidth: 1.04, whorl: { x: 54, y: -3 }, sides: 'tapered', stubble: true },
   bangs:      { v: 3.6, sv: 1.8, sideY: 2, hairline: 'fringe', texture: 'straight', back: { length: 124, spread: 4, edge: 'blunt' }, locks: { length: 114, width: 6.5 } },
   top_knot:   { v: 3, sv: 0, sideY: -4, hairline: 'high', texture: 'slick', extra: 'topknot', sideburn: true, stubble: true, whorl: { x: 50, y: 0 } },
-  undercut:   { v: 8.5, sv: 0, sideY: -4, hairline: 'sweep', texture: 'straight', extra: 'fade', sideburn: true, topLift: 4, topWidth: 1.15, whorl: { x: 55, y: -4 }, stubble: true },
-  mohawk:     { v: 1, sv: 0, sideY: -4, hairline: 'natural', texture: 'buzz', extra: 'mohawk', opacity: 0.55, stubble: true },
+  undercut:   { v: 8.5, sv: 0, sideY: -4, hairline: 'sweep', texture: 'straight', topLift: 4, topWidth: 1.15, whorl: { x: 55, y: -4 }, sides: 'shaved', stubble: true },
+  mohawk:     { v: 1, sv: 0, sideY: -4, hairline: 'natural', texture: 'buzz', extra: 'mohawk', sides: 'shaved', stubble: true },
   // Knotless braids that finish in loose curls, with curly pieces left out.
   boho_braids:   { v: 2.6, sv: 1, sideY: 2, hairline: 'center', texture: 'braids', back: { length: 126, spread: 6, edge: 'soft' }, locks: { length: 118, width: 10 }, ends: 'curly', wisps: true },
   // Soft locs with curly pieces along them and curly ends.
@@ -99,6 +104,14 @@ function withTexture(spec: HairSpec, texture: HairTexture): HairSpec {
 function seeded(i: number, salt: number): number {
   const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
   return v - Math.floor(v);
+}
+
+// A colour part of the way from one hex colour to another.
+function mixHex(from: string, to: string, t: number): string {
+  const c = (h: string) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const [a, b] = [c(from), c(to)];
+  if (a.some(Number.isNaN) || b.some(Number.isNaN)) return from;
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, '0')).join('');
 }
 
 const f = (n: number) => n.toFixed(2);
@@ -170,6 +183,9 @@ const isRope = (t: string): t is keyof typeof ROPE_PERIOD => t in ROPE_PERIOD;
 
 interface Frame {
   T: number; W: number; cy: number; chin: number;
+  // How much wider (or narrower) than the default head this one is; anything
+  // with a fixed size (a bun, a puff, a crest) is multiplied by it.
+  k: number;
   hw: (y: number) => number;
 }
 
@@ -259,14 +275,38 @@ function lockPoints(fr: Frame, s: 1 | -1, width: number, length: number, startY:
   return { outline: [...out, ...inn.reverse()], spine };
 }
 
-export function renderHair(p: HairRenderParams): { back: React.ReactNode; front: React.ReactNode } {
-  if (p.hairStyle === 'bald') return { back: null, front: null };
-  const g = p.geometry;
+// Where a style's key points land on a particular head: the edge of the hair
+// over the crown, the hairline, and the whorl its strands grow from. This is
+// the one place hair is fitted to the face, so the face-width and jaw sliders
+// move the hair with the head. Exported so tests can check that every style
+// stays on the head at every slider position.
+export interface HairLayout {
+  fr: Frame; s: HairSpec; sideY: number; crown: Pt[]; hairline: Pt[]; part: number | null; origin: Pt;
+}
+export function layoutHair(style: HairStyle, texture: HairTexture, g: FaceGeometry): HairLayout {
   const fr: Frame = {
-    T: g.faceTop, W: g.fRx, cy: g.faceCenterY, chin: chinY(g),
+    T: g.faceTop, W: g.fRx, cy: g.faceCenterY, chin: chinY(g), k: g.fRx / BASE_W,
     hw: (y: number) => faceHalfWidthAt(g, y),
   };
-  const s = fitToFace(withTexture(STYLES[p.hairStyle] ?? STYLES.short, p.hairTexture), fr);
+  const s = fitToFace(withTexture(STYLES[style] ?? STYLES.short, texture), fr);
+  const sideY = fr.cy + s.sideY;
+  const crown = crownPoints(fr, s, sideY);
+  const { pts: edge, part } = hairlinePoints(fr, s.hairline, sideY, s.peak, s.recess);
+  // Waves scallop the front edge, so it isn't one smooth line.
+  const hairline: Pt[] = s.wave ? edge.map(([x, y], i) => (i === 0 || i === edge.length - 1 ? [x, y] : [x, y + (i % 2 ? s.wave! * 0.5 : -s.wave! * 0.25)] as Pt)) : edge;
+  // A crown whorl: strands radiate from a real growth point instead of one
+  // generic origin. whorl.x is a point on the head (50 is the middle), so it
+  // moves out from the middle in step with the face width. Long styles fall
+  // back to the part or crown centre.
+  const origin: Pt = s.whorl
+    ? [50 + (s.whorl.x - 50) * fr.k, fr.T + s.whorl.y]
+    : [part ?? 50, fr.T - s.v * 0.4];
+  return { fr, s, sideY, crown, hairline, part, origin };
+}
+
+export function renderHair(p: HairRenderParams): { back: React.ReactNode; front: React.ReactNode } {
+  if (p.hairStyle === 'bald') return { back: null, front: null };
+  const { fr, s, sideY, crown, hairline, part, origin } = layoutHair(p.hairStyle, p.hairTexture, p.geometry);
   const base = p.hairColor;
   const dark = shade(base, -0.32);
   const deep = shade(base, -0.5);
@@ -275,14 +315,7 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
   const light = streak ?? shade(base, 0.28);
   const rope: RopeColors = { base, dark, deep, light: shade(base, 0.28) };
   const id = (k: string) => `${p.idPrefix}-hair-${k}`;
-  const sideY = fr.cy + s.sideY;
-  const crown = crownPoints(fr, s, sideY);
-  const { pts: hairline, part } = hairlinePoints(fr, s.hairline, sideY, s.peak, s.recess);
   const cap = capPath(crown, hairline);
-  // A crown whorl: strands radiate from a real growth point instead of one
-  // generic origin. Falls back to the part or crown center for long styles.
-  const whorl = s.whorl ? [50 + s.whorl.x * (fr.W / BASE_W), fr.T + s.whorl.y] as Pt : [part ?? 50, fr.T - s.v * 0.4] as Pt;
-  const origin: Pt = whorl;
 
   // ---- texture inside the cap ----
   const capStrands: React.ReactNode[] = [];
@@ -372,9 +405,39 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
     // Strands flow from the crown whorl outward in the cut's direction:
     // forward at the front, back at the crown, down at the sides. This gives
     // short straight and wavy cuts a real growth pattern instead of a fan.
-    const count = 30;
+    const count = s.wave ? 14 : 30;
     const amp = s.texture === 'wavy' ? 1.8 : 0;
-    for (let i = 0; i <= count; i++) {
+    if (s.texture === 'slick') {
+      // Combed straight back: parallel lines from the hairline up and over the
+      // crown, drawing in toward the back of the head.
+      const top = fr.T - s.v - (s.topLift ?? 0) + 1;
+      for (let i = 0; i <= 24; i++) {
+        const t = i / 24;
+        const seg = t * (hairline.length - 1);
+        const a = hairline[Math.floor(seg)], b = hairline[Math.min(hairline.length - 1, Math.floor(seg) + 1)];
+        const kk = seg - Math.floor(seg);
+        const end: Pt = [a[0] + (b[0] - a[0]) * kk, a[1] + (b[1] - a[1]) * kk];
+        const tx = 50 + (end[0] - 50) * 0.55;
+        capStrands.push(<path key={`sl${i}`} d={`M${pt(end)} Q${f(end[0] + (tx - end[0]) * 0.35)},${f((end[1] + top) / 2)} ${f(tx)},${f(top)}`}
+          stroke={i % 4 === 0 ? light : dark} strokeWidth={i % 4 === 0 ? 0.9 : 0.7} fill="none" opacity={i % 4 === 0 ? 0.6 : 0.5} strokeLinecap="round" />);
+      }
+    }
+    if (s.wave) {
+      // Rows of waves across the top, each a little offset from the one above.
+      const x0 = 50 - fr.W - s.sv - 2, x1 = 50 + fr.W + s.sv + 2, seg = 7.5 * fr.k;
+      const top = fr.T - s.v * 0.55, rows = 4;
+      for (let r = 0; r < rows; r++) {
+        const y0 = top + ((sideY - top) * (r + 0.6)) / (rows + 0.4);
+        let d = `M${f(x0)},${f(y0)}`;
+        for (let x = x0, j = 0; x < x1; x += seg, j++) {
+          const dir = (j + r) % 2 ? 1 : -1;
+          d += ` Q${f(x + seg / 2)},${f(y0 + dir * s.wave * 1.6)} ${f(x + seg)},${f(y0)}`;
+        }
+        capStrands.push(<path key={`wv${r}`} d={d} stroke={dark} strokeWidth="1.3" fill="none" opacity="0.65" strokeLinecap="round" />);
+        capStrands.push(<path key={`wl${r}`} d={d} stroke={light} strokeWidth="0.6" fill="none" opacity="0.5" strokeLinecap="round" transform="translate(0 -0.9)" />);
+      }
+    }
+    for (let i = 0; i <= (s.texture === 'slick' ? -1 : count); i++) {
       const t = i / count;
       const seg = t * (hairline.length - 1);
       const a = hairline[Math.floor(seg)], b = hairline[Math.min(hairline.length - 1, Math.floor(seg) + 1)];
@@ -498,7 +561,7 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
 
   if (s.extra === 'puff') {
     // A round puff of coils on top, tied at its base.
-    const py = fr.T - s.v - 5.5, pr = 11;
+    const py = fr.T - s.v - 5.5 * fr.k, pr = 11 * fr.k;
     back.push(<circle key="puff" cx="50" cy={py} r={pr} fill={base} />);
     for (let i = 0; i < 30; i++) {
       const a = (i / 30) * Math.PI * 2;
@@ -510,7 +573,7 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
       back.push(<path key={`pc${i}`} d={`M${f(x - cr)},${f(y)} a${f(cr)},${f(cr)} 0 1 1 ${f(cr * 1.6)},${f(cr * 0.9)}`}
         stroke={i % 6 === 0 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.6" />);
     }
-    back.push(<rect key="pband" x="44" y={py + pr - 2.5} width="12" height="2.4" rx="1.1" fill={deep} />);
+    back.push(<rect key="pband" x={50 - 6 * fr.k} y={py + pr - 2.5} width={12 * fr.k} height="2.4" rx="1.1" fill={deep} />);
   }
 
   // Five coiled knots across the top of the head. Drawn in the back layer
@@ -521,7 +584,7 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
     knots.forEach(([x, y], i) => {
       knotNodes.push(
         <g key={`k${i}`}>
-          <circle cx={x} cy={y} r="5" fill={base} />
+          <circle cx={x} cy={y} r={5 * fr.k} fill={base} />
           <path d={`M${f(x + 3.4)},${f(y)} A3.4,3.4 0 1 1 ${f(x)},${f(y - 3.4)} A2,2 0 1 1 ${f(x - 1.6)},${f(y + 0.6)}`}
             stroke={dark} strokeWidth="0.8" fill="none" opacity="0.8" />
           <circle cx={x - 1.4} cy={y - 1.6} r="1.2" fill={light} opacity="0.35" />
@@ -532,40 +595,66 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
   }
 
   if (s.extra === 'mohawk') {
-    // The crest standing above the head, front to back.
-    const crest: Pt[] = [[50 - 5, fr.T + 10], [50 - 6.5, fr.T - 2], [50 - 4, fr.T - 12], [50, fr.T - 15], [50 + 4, fr.T - 12], [50 + 6.5, fr.T - 2], [50 + 5, fr.T + 10]];
-    back.push(<path key="crest" d={smooth(crest, true, 0.9)} fill={base} />);
-    for (let i = 0; i < 7; i++) {
-      const x = 50 - 4.5 + i * 1.5;
-      back.push(<path key={`cr${i}`} d={`M${f(x)},${f(fr.T + 6)} Q${f(x + (x - 50) * 0.2)},${f(fr.T - 6)} ${f(50 + (x - 50) * 0.5)},${f(fr.T - 13)}`}
-        stroke={i % 3 === 0 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.6" />);
+    // The crest standing above the head: a row of spikes, tallest in the middle.
+    const cw = 8.5 * fr.k, n = 5, step = (2 * cw) / (n - 1);
+    const crest: Pt[] = [[50 - cw, fr.T + 10]];
+    for (let i = 0; i < n; i++) {
+      const x = 50 - cw + step * i;
+      crest.push([x, fr.T - 11 - (2 - Math.abs(i - 2)) * 2.2 * fr.k]);
+      if (i < n - 1) crest.push([x + step / 2, fr.T - 6]);
+    }
+    crest.push([50 + cw, fr.T + 10]);
+    back.push(<path key="crest" d={`M${crest.map(pt).join(' L')} Z`} fill={base} stroke={deep} strokeWidth="0.4" strokeLinejoin="round" />);
+    for (let i = 0; i < n; i++) {
+      const x = 50 - cw + step * i;
+      back.push(<path key={`cr${i}`} d={`M${f(x)},${f(fr.T + 4)} L${f(x)},${f(fr.T - 9 - (2 - Math.abs(i - 2)) * 2 * fr.k)}`}
+        stroke={i % 3 === 0 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.6" strokeLinecap="round" />);
     }
   }
 
   if (s.extra === 'bun' || s.extra === 'topknot') {
     const small = s.extra === 'topknot';
-    const by = fr.T - s.v - (small ? 4.5 : 6.5);
-    back.push(<circle key="bun" cx="50" cy={by} r={small ? 6 : 9} fill={base} />);
+    const kk = fr.k, br = (small ? 6 : 9) * kk;
+    const by = fr.T - s.v - (small ? 4.5 : 6.5) * kk;
+    back.push(<circle key="bun" cx="50" cy={by} r={br} fill={base} />);
     for (let i = 0; i < 4; i++) {
-      back.push(<path key={`s${i}`} d={`M${f(43 + i)},${f(by + 3 - i)} Q50,${f(by - 9 + i * 1.5)} ${f(57 - i)},${f(by + 1 + i)}`}
+      back.push(<path key={`s${i}`} d={`M${f(50 + (i - 7) * kk)},${f(by + (3 - i) * kk)} Q50,${f(by + (-9 + i * 1.5) * kk)} ${f(50 + (7 - i) * kk)},${f(by + (1 + i) * kk)}`}
         stroke={i % 2 ? light : dark} strokeWidth="0.7" fill="none" opacity="0.6" />);
     }
-    back.push(<rect key="band" x={small ? 46 : 44} y={by + (small ? 4 : 6.5)} width={small ? 8 : 12} height="2.2" rx="1" fill={deep} />);
+    const bw = (small ? 8 : 12) * kk;
+    back.push(<rect key="band" x={50 - bw / 2} y={by + (small ? 4 : 6.5) * kk} width={bw} height="2.2" rx="1" fill={deep} />);
   }
 
   // ---- front layer ----
   const front: React.ReactNode[] = [];
-  const capClip = id('cap');
+  const capClip = id('cap'), solidClip = id('solid'), skullClip = id('skull');
   const isFade = s.extra === 'fade' || s.extra === 'topknot';
   const capFill = isFade ? `url(#${id('fade')})` : base;
+
+  // Cuts with shaved or close-cropped sides: the cap as a whole is only a
+  // shadow of stubble on the scalp, and the hair proper is the top section.
+  const shaved = s.sides === 'shaved';
+  const topPts: Pt[] = [];
+  if (s.sides) {
+    const templeY = fr.T + (sideY - fr.T) * (shaved ? 0.45 : 0.62);
+    // Where the hair meets the shaved side: inside the usual width, and never
+    // further out than the head itself, which on a diamond or oblong face is narrow up here.
+    const reach = Math.min(fr.W * (shaved ? 0.78 : 0.9) + s.sv * 0.3, fr.hw(templeY) + 0.4);
+    const tx = (sd: number): Pt => [50 + sd * reach, templeY];
+    topPts.push(tx(-1), crown[2], crown[3], crown[4], crown[5], crown[6], tx(1), hairline[1], hairline[2], hairline[3], hairline[4], hairline[5]);
+  }
+  const solidPath = s.sides && s.extra !== 'mohawk' ? smooth(topPts, true, 1) : cap;
 
   front.push(
     <defs key="defs">
       <clipPath id={capClip}><path d={cap} /></clipPath>
+      <clipPath id={solidClip}><path d={solidPath} /></clipPath>
+      <clipPath id={skullClip}><path d={faceOutlinePath(p.geometry)} /></clipPath>
       {isFade && (
         <linearGradient id={id('fade')} gradientUnits="userSpaceOnUse" x1="0" y1={fr.T} x2="0" y2={sideY}>
-          <stop offset="0.35" stopColor={base} stopOpacity="1" />
-          <stop offset="1" stopColor={base} stopOpacity="0.3" />
+          <stop offset="0.22" stopColor={base} stopOpacity="1" />
+          <stop offset="0.62" stopColor={base} stopOpacity="0.4" />
+          <stop offset="1" stopColor={base} stopOpacity="0.06" />
         </linearGradient>
       )}
     </defs>,
@@ -581,32 +670,46 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
       const ot = 50 + sd * (fr.hw(top) + 0.2), ob = 50 + sd * (fr.hw(bot) + 0.2);
       front.push(<path key={`sb${sd}`}
         d={`M${f(ot)},${f(top)} L${f(ot - sd * 2.4)},${f(top)} Q${f(ob - sd * 2)},${f((top + bot) / 2)} ${f(ob - sd * 0.5)},${f(bot)} L${f(ob)},${f(bot)} Z`}
-        fill={base} opacity={isFade ? 0.35 : 0.85} />);
+        fill={base} opacity={isFade || s.sides ? 0.35 : 0.85} />);
     }
   }
 
-  front.push(<path key="cap" d={cap} fill={capFill} opacity={s.opacity ?? 1} />);
+  // Skin grain: the grown-out stubble where a cut is faded, shaved or cropped.
+  const grain = (n: number, wholeCap: boolean): React.ReactNode => {
+    const stub: React.ReactNode[] = [];
+    for (let i = 0; i < n; i++) {
+      const x = 50 - fr.W - s.sv + seeded(i, 41) * (2 * (fr.W + s.sv));
+      const y0 = wholeCap ? fr.T - s.v : fr.cy - 4, y1 = wholeCap ? sideY : sideY + 4;
+      const y = y0 + seeded(i, 42) * (y1 - y0);
+      stub.push(<circle key={i} cx={x} cy={y} r="0.38" fill={i % 3 === 0 ? dark : deep} opacity="0.5" />);
+    }
+    // On the scalp only: inside the skull and inside the cap, never on the forehead.
+    return s.sides
+      ? <g key="stubble" clipPath={`url(#${skullClip})`}><g clipPath={`url(#${capClip})`}>{stub}</g></g>
+      : <g key="stubble" clipPath={`url(#${capClip})`}>{stub}</g>;
+  };
+  if (s.sides) {
+    // Kept inside the skull, so shaved sides never leave a halo past the head.
+    // A shaved scalp is skin in the shade of the hair under it, softer toward the top section.
+    front.push(<path key="scalp" d={cap} clipPath={`url(#${skullClip})`} fill={mixHex(p.skinTone, base, shaved ? 0.38 : 0.3)} opacity={shaved ? 0.9 : 0.8}
+      style={{ filter: 'blur(0.6px)' }} />);
+    if (s.stubble) front.push(grain(shaved ? 170 : 110, true));
+  }
+
+  if (s.extra !== 'mohawk') front.push(<path key="cap" d={solidPath} fill={capFill} opacity={s.opacity ?? 1} />);
   // A thin inner edge stroke so the silhouette is crisp at any zoom level.
   if (!isFade && s.texture !== 'buzz') {
-    front.push(<path key="edge" d={cap} fill="none" stroke={deep} strokeWidth="0.5" opacity="0.4" />);
+    front.push(<path key="edge" d={solidPath} fill="none" stroke={deep} strokeWidth={shaved ? 0.9 : 0.5} opacity={shaved ? 0.55 : 0.4} />);
   }
   front.push(
-    <g key="tex" clipPath={`url(#${capClip})`}>
+    <g key="tex" clipPath={`url(#${s.extra === 'mohawk' ? capClip : solidClip})`}>
       {capStrands}
       {sheen}
     </g>,
   );
   // Fade stubble: visible hair grain in the transition zone where skin shows
   // through, so a fresh fade reads as short hair, not a smudge.
-  if (s.stubble && isFade) {
-    const stub: React.ReactNode[] = [];
-    for (let i = 0; i < 80; i++) {
-      const x = 50 - fr.W - s.sv + seeded(i, 41) * (2 * (fr.W + s.sv));
-      const y = fr.cy - 4 + seeded(i, 42) * (sideY - fr.cy + 8);
-      stub.push(<circle key={i} cx={x} cy={y} r="0.38" fill={i % 3 === 0 ? dark : deep} opacity="0.5" />);
-    }
-    front.push(<g key="stubble" clipPath={`url(#${capClip})`}>{stub}</g>);
-  }
+  if (s.stubble && isFade) front.push(grain(80, false));
   if (partLine) front.push(<g key="part">{partLine}</g>);
 
   // Baby-hair wisps: fine, irregular short strands along the hairline edge,
@@ -628,12 +731,14 @@ export function renderHair(p: HairRenderParams): { back: React.ReactNode; front:
   if (knotNodes.length) front.push(<g key="knots">{knotNodes}</g>);
 
   if (s.extra === 'mohawk') {
-    // The strip running over the top of the head to the forehead.
-    const strip: Pt[] = [[50 - 4.5, fr.T + 9], [50 - 5.5, fr.T + 2], [50 - 4, fr.T - 3], [50, fr.T - 4.5], [50 + 4, fr.T - 3], [50 + 5.5, fr.T + 2], [50 + 4.5, fr.T + 9], [50, fr.T + 10]];
-    front.push(<path key="strip" d={smooth(strip, true, 0.9)} fill={base} />);
-    for (let i = 0; i < 6; i++) {
-      const x = 50 - 3.6 + i * 1.45;
-      front.push(<path key={`st${i}`} d={`M${f(x)},${f(fr.T + 9)} L${f(50 + (x - 50) * 0.7)},${f(fr.T - 3)}`}
+    // The strip running over the top of the head to the forehead, with the
+    // sides left shaved either side of it.
+    const sw = 8.5 * fr.k;
+    const strip: Pt[] = [[50 - sw, fr.T + 10], [50 - sw * 1.05, fr.T + 2], [50 - sw * 0.8, fr.T - 3], [50, fr.T - 5], [50 + sw * 0.8, fr.T - 3], [50 + sw * 1.05, fr.T + 2], [50 + sw, fr.T + 10], [50, fr.T + 11.5]];
+    front.push(<path key="strip" d={smooth(strip, true, 0.9)} fill={base} stroke={deep} strokeWidth="0.5" opacity="0.95" />);
+    for (let i = 0; i < 7; i++) {
+      const x = 50 - sw * 0.8 + (i * sw * 1.6) / 6;
+      front.push(<path key={`st${i}`} d={`M${f(x)},${f(fr.T + 10)} L${f(50 + (x - 50) * 0.7)},${f(fr.T - 4)}`}
         stroke={i % 3 === 0 ? light : dark} strokeWidth="0.6" opacity="0.55" />);
     }
   }

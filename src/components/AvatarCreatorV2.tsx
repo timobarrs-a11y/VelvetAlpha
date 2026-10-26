@@ -3,7 +3,7 @@ import { Shuffle, Undo2, Redo2, RotateCcw, Bookmark, BookmarkCheck, X, Sparkles,
 import { AvatarV2 } from './AvatarV2';
 import {
   AvatarConfigV2, Gender, HairTexture,
-  SKIN_TONES, EYE_COLORS, HAIR_COLORS, HAIR_FASHION_COLORS, HAIRSTYLE_GROUPS, LIP_COLORS, NECKLACE_COLORS,
+  SKIN_TONES, EYE_COLORS, HAIR_COLORS, HAIR_FASHION_COLORS, HAIRSTYLE_GROUPS, LIP_COLORS, NECKLACE_COLORS, GLASSES_COLORS, DEFAULT_GLASSES_COLOR,
   FACE_TUNE_SLIDERS, tuneOf,
   HAIRSTYLES, AVATAR_CONFIG_VERSION,
   HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
@@ -191,6 +191,7 @@ function coherentRandomize(): AvatarConfigV2 {
     freckles: pick(freckleOpts),
     blush: g === 'female' ? pick(blushOpts) : 'none',
     glasses: pick(glassesOpts),
+    glassesColor: pick(GLASSES_COLORS).value,
     earrings: pick(earringOpts),
     nosePiercing: pick(nosePiercingOpts),
     lipPiercing: pick(lipPiercingOpts),
@@ -697,6 +698,18 @@ export function AvatarCreatorV2({
         </div>
       </Section>
 
+      {config.glasses && config.glasses !== 'none' && (
+        <Section label="Frame Color">
+          <div className="flex flex-wrap gap-2">
+            {GLASSES_COLORS.map(c => (
+              <ColorSwatch key={c.value} color={c.value} title={c.name}
+                selected={(config.glassesColor ?? DEFAULT_GLASSES_COLOR) === c.value}
+                onClick={() => update({ glassesColor: c.value })} />
+            ))}
+          </div>
+        </Section>
+      )}
+
       <Section label="Earrings">
         <div className="grid grid-cols-3 gap-2">
           {([
@@ -779,8 +792,7 @@ export function AvatarCreatorV2({
   const zoom = TAB_ZOOM[tab];
   const preview = (size: string) => (
     <div className={`${size} rounded-2xl overflow-hidden flex-shrink-0
-      bg-[radial-gradient(ellipse_at_center,_#1e2a3a_0%,_#060a0f_100%)]
-      shadow-[0_0_40px_rgba(0,0,0,0.8)] flex items-center justify-center`}>
+      bg-white shadow-[0_8px_30px_rgba(0,0,0,0.45)] flex items-center justify-center`}>
       <div className="w-full h-full transition-transform duration-300 ease-out"
         style={{ transform: `scale(${zoom.scale})`, transformOrigin: zoom.origin }}>
         <AvatarV2 config={config} className="w-full h-full" />
@@ -865,8 +877,7 @@ export function AvatarCreatorV2({
                       }}
                       title={`Apply saved look ${i + 1}`}
                       className="w-full aspect-square rounded-xl overflow-hidden
-                        bg-[radial-gradient(ellipse_at_center,_#1e2a3a_0%,_#060a0f_100%)]
-                        ring-1 ring-white/10 hover:ring-sky-500/50 transition-all"
+                        bg-white ring-1 ring-white/10 hover:ring-sky-500/50 transition-all"
                     >
                       <AvatarV2 config={slot.config} className="w-full h-full" />
                     </button>

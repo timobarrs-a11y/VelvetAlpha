@@ -7,7 +7,7 @@ import {
   SKIN_TONES, EYE_COLORS, LIP_COLORS, HAIR_COLORS, HAIRSTYLES,
   HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
   LipShape, EyebrowShape, FacialHair, Eyelashes, Freckles, Blush, BodyType, Tattoo,
-  Glasses, Earrings, NosePiercing, LipPiercing, Necklace, Eyeliner, NECKLACE_COLORS,
+  Glasses, Earrings, NosePiercing, LipPiercing, Necklace, Eyeliner, NECKLACE_COLORS, GLASSES_COLORS, DEFAULT_GLASSES_COLOR,
 } from '../types/avatar-v2';
 import { applyAvatarChange } from '../utils/avatarConfig';
 
@@ -287,6 +287,18 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
         </div>
       </Sect>
 
+      {config.glasses && config.glasses !== 'none' && (
+        <Sect label="Frame Color">
+          <div className="flex flex-wrap gap-2">
+            {GLASSES_COLORS.map(c => (
+              <ColorSwatch key={c.value} color={c.value} title={c.name}
+                selected={(config.glassesColor ?? DEFAULT_GLASSES_COLOR) === c.value}
+                onClick={() => update({ glassesColor: c.value })} />
+            ))}
+          </div>
+        </Sect>
+      )}
+
       <Sect label="Earrings">
         <div className="grid grid-cols-3 gap-2">
           {([{ value: 'none', label: 'None' }, { value: 'studs', label: 'Studs' }, { value: 'hoops', label: 'Hoops' }, { value: 'dangles', label: 'Dangles' }, { value: 'gauges', label: 'Gauges' }] as Array<{ value: Earrings; label: string }>).map(o => (
@@ -349,8 +361,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
         bg-gradient-to-b from-[#0d1117] to-[#070c14]
         border-b lg:border-b-0 lg:border-r border-white/5">
         <div className="w-52 h-52 lg:w-64 lg:h-64 rounded-2xl overflow-hidden
-          bg-[radial-gradient(ellipse_at_center,_#1e2a3a_0%,_#060a0f_100%)]
-          shadow-[0_0_40px_rgba(0,0,0,0.8)] flex items-center justify-center">
+          bg-white shadow-[0_8px_30px_rgba(0,0,0,0.45)] flex items-center justify-center">
           <AvatarV2 config={config} className="w-full h-full" />
         </div>
 
