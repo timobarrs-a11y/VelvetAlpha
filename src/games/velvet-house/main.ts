@@ -375,6 +375,10 @@ function boot(): void {
       wearOnAgent(people[0].look, cloth);
       log(`Changed into the ${cloth.name}.`);
       refreshDrawer();
+      // A new top shows on the player's avatar outside the game too.
+      if (cloth.slot === 'top') {
+        postToParent({ type: 'velvet:lookChanged', game: 'velvet-house', who: 'player', top: { style: cloth.style, color: cloth.col, accent: cloth.accent } });
+      }
     },
   });
   stage.appendChild(drawer.el);
