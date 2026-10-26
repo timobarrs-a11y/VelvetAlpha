@@ -31,13 +31,27 @@ EXISTING: {existing}
 NEW: {new_data}
 
 Rules: Combine arrays (no duplicates), keep recent info, cap key_moments at 10, update ongoing_threads.
+- NEW is more recent. When EXISTING and NEW disagree, NEW wins; drop anything NEW shows is no longer true.
+- Do not invent or embellish. Only keep what one of the two inputs actually says.
 Return ONLY the merged JSON.`;
 
 const PROSE_PROMPT = `Convert this memory JSON to natural prose (under 400 words). Write as notes the companion reads about their user. Be warm, include nicknames and inside jokes naturally.
 
 {memory}
 
+CONFIRMED FACTS (the user's current memory store; it wins over the JSON, which is a rolling summary and can drift):
+{facts}
+
+- If the JSON contradicts a confirmed fact, follow the fact.
+- Do not add anything that is in neither input.
+
 Return ONLY the prose text.`;
+
+// Model output sometimes arrives fenced or with a preamble; take the outermost JSON object.
+function parseJsonObject(text: string): Record<string, unknown> {
+  const match = text.match(/\{[\s\S]*\}/);
+  return JSON.parse(match ? match[0] : text);
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -133,7 +147,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const extractionData = await extractionResponse.json();
-    const newMemoryJson = JSON.parse(extractionData.content[0].text);
+    const newMemoryJson = parseJsonObject(extractionData.content[0].text);
 
     const { data: existingMemory } = await supabase
       .from("companion_memories")
@@ -176,9 +190,22 @@ Deno.serve(async (req: Request) => {
       }
 
       const mergeData = await mergeResponse.json();
-      finalMemoryJson = JSON.parse(mergeData.content[0].text);
+      finalMemoryJson = parseJsonObject(mergeData.content[0].text);
       totalProcessed = (existingMemory.messages_processed || 0) + messages.length;
     }
+
+    // Ground the prose in the canonical store so a drifting rolling summary
+    // can't reintroduce facts the user has since corrected.
+    const { data: confirmedFacts } = await supabase
+      .from("memory_items")
+      .select("content")
+      .eq("user_id", user_id)
+      .eq("status", "active")
+      .in("kind", ["fact", "preference", "person", "boundary"])
+      .or(`companion_id.eq.${companion_id},and(companion_id.is.null,scope.eq.global)`)
+      .order("updated_at", { ascending: false })
+      .limit(60);
+    const factsList = (confirmedFacts ?? []).map((f: { content: string }) => `- ${f.content}`).join("\n") || "(none)";
 
     const proseResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -196,7 +223,7 @@ Deno.serve(async (req: Request) => {
             content: PROSE_PROMPT.replace(
               "{memory}",
               JSON.stringify(finalMemoryJson)
-            ),
+            ).replace("{facts}", factsList),
           },
         ],
       }),
@@ -221,6 +248,44 @@ Deno.serve(async (req: Request) => {
       },
       { onConflict: "user_id,companion_id" }
     );
+
+    // chat-turn reads the companion summary from memory_items (kind 'moment').
+    // Replace the previous one through the supersede chain so history is kept.
+    try {
+      const { data: currentMoment } = await supabase
+        .from("memory_items")
+        .select("id, version")
+        .eq("user_id", user_id)
+        .eq("companion_id", companion_id)
+        .eq("kind", "moment")
+        .eq("status", "active")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (currentMoment) {
+        await supabase.rpc("supersede_memory_item", {
+          p_id: currentMoment.id,
+          p_base_version: currentMoment.version,
+          p_patch: { content: memoryText, source: "inferred", confidence: 0.8 },
+          p_actor_type: "extractor",
+        });
+      } else {
+        await supabase.rpc("upsert_memory_item", {
+          p_payload: {
+            user_id,
+            companion_id,
+            scope: "companion",
+            kind: "moment",
+            content: memoryText,
+            confidence: 0.8,
+            source: "inferred",
+            actor_type: "extractor",
+          },
+        });
+      }
+    } catch (momentErr) {
+      console.error("Companion summary publish error:", momentErr);
+    }
 
     const messageIds = messages.map((m) => m.id);
     await supabase.from("conversations").update({ summarized: true }).in("id", messageIds);

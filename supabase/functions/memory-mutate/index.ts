@@ -86,7 +86,8 @@ Deno.serve(async (req: Request) => {
       const { data: result, error } = await admin.rpc("update_memory_item", {
         p_id: id,
         p_base_version: baseVersion,
-        p_patch: { content, source: "user_edited" },
+        // Text the user wrote themselves is the most trusted memory there is.
+        p_patch: { content, source: "user_edited", confidence: 1 },
         p_actor_type: "user",
       });
 

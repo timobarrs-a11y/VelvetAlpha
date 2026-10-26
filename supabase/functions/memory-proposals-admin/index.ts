@@ -92,28 +92,34 @@ Deno.serve(async (req: Request) => {
       const applyContent = editedAfter ?? proposal.after;
 
       try {
-        if (proposal.action === "retire") {
-          await admin.rpc("update_memory_item", {
+        let applied: { data: unknown; error: { message: string } | null } | null = null;
+        if (proposal.action === "retire" || proposal.action === "merge") {
+          applied = await admin.rpc("update_memory_item", {
             p_id: proposal.target_id,
             p_base_version: proposal.base_version ?? 0,
-            p_patch: { status: "retired" },
+            p_patch: { status: proposal.action === "merge" ? "superseded" : "retired" },
             p_actor_type: "admin",
           });
         } else if (proposal.action === "supersede" && applyContent) {
-          await admin.rpc("update_memory_item", {
+          // New active row with the corrected text; the old row stays as history.
+          applied = await admin.rpc("supersede_memory_item", {
             p_id: proposal.target_id,
             p_base_version: proposal.base_version ?? 0,
-            p_patch: { content: applyContent, status: "superseded" },
+            p_patch: { content: applyContent, source: "user_stated", confidence: 0.9 },
             p_actor_type: "admin",
           });
         } else if (proposal.action === "edit" && applyContent) {
-          await admin.rpc("update_memory_item", {
+          applied = await admin.rpc("update_memory_item", {
             p_id: proposal.target_id,
             p_base_version: proposal.base_version ?? 0,
             p_patch: { content: applyContent },
             p_actor_type: "admin",
           });
         }
+        if (!applied) throw new Error("Nothing to apply for this proposal");
+        if (applied.error) throw new Error(applied.error.message);
+        // NULL = the memory changed since the proposal was made (version conflict).
+        if (!applied.data) throw new Error("Memory changed since this proposal was made; re-run hygiene");
 
         await admin.from("memory_proposals").update({
           status: "approved",
