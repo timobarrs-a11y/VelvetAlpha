@@ -105,6 +105,8 @@ export interface Game {
   zoomAt(clientX: number, clientY: number, factor: number): void;
   resetCamera(): void;
   flingCamera(vx: number, vy: number): void;
+  shake(amount?: number): void;
+  cameraBeat(kind: 'closeup' | 'reveal', id?: AgentId, ms?: number): void;
   // controls
   syncControls(): void;
   setLevel(lv: number, keepFollow?: boolean): void;

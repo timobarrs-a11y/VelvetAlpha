@@ -1,3 +1,4 @@
+import type { AgentId } from '../state/agents';
 import { qualityManager } from '../engine/qualityTier';
 import { VIEW_W, VIEW_H } from '../kernel/config';
 import type { Game } from '../kernel/game';
@@ -40,7 +41,38 @@ export function createCamera(g: Game): Partial<Game> {
     const hw = VIEW_W / (2 * z), hh = VIEW_H / (2 * z);
     return [Math.max(hw, Math.min(VIEW_W - hw, fx)), Math.max(hh, Math.min(VIEW_H - hh, fy))];
   }
+  // A short shake for big moments (none when the player asks for reduced motion).
+  let shakeLeft = 0, shakeAmp = 0;
+  const SHAKE_TIME = 0.45;
+  const reducedMotion = (): boolean => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  function shake(amount = 1): void {
+    if (reducedMotion()) return;
+    shakeAmp = Math.max(shakeAmp, amount); shakeLeft = SHAKE_TIME;
+  }
+  // A held shot: a close-up on someone (trying something on) or a pull back to the whole house (a room finished).
+  // When it ends the camera returns to where the player had it.
+  let beat: { until: number; kind: 'closeup' | 'reveal'; id: AgentId; back: { tz: number; tfx: number; tfy: number } } | null = null;
+  function cameraBeat(kind: 'closeup' | 'reveal', id: AgentId = 'jordan', ms = 2400): void {
+    if (reducedMotion() || view.follow) return;
+    const back = beat ? beat.back : { tz: cam.tz, tfx: cam.tfx, tfy: cam.tfy };
+    beat = { until: performance.now() + ms, kind, id, back };
+  }
+  function runBeat(): boolean {
+    if (!beat) return false;
+    if (performance.now() > beat.until || view.follow) {
+      if (!view.follow) { cam.tz = beat.back.tz; cam.tfx = beat.back.tfx; cam.tfy = beat.back.tfy; }
+      beat = null;
+      return false;
+    }
+    const p = people.find((q) => q.id === beat!.id);
+    if (beat.kind === 'closeup' && p && p.level === view.level) {
+      const [ax, ay] = art.project(p.x, p.y, 0.9);
+      cam.tz = 2.3; cam.tfx = ax; cam.tfy = ay;
+    } else { cam.tz = 1; cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
+    return true;
+  }
   function cameraShot(): void {
+    if (runBeat()) return;
     const followed = view.follow && people.find((p) => p.id === view.follow);
     if (!followed || followed.level !== view.level) return;
     const other = people.find((p) => p.id !== followed.id);
@@ -70,7 +102,16 @@ export function createCamera(g: Game): Partial<Game> {
     cam.fx += (cam.tfx - cam.fx) * k; cam.fy += (cam.tfy - cam.fy) * k;
     [cam.fx, cam.fy] = clampFocus(cam.z, cam.fx, cam.fy);
     const w = canvas.width, h = canvas.height, sx = (w / VIEW_W) * cam.z, sy = (h / VIEW_H) * cam.z;
-    ctx!.setTransform(sx, 0, 0, sy, w / 2 - sx * cam.fx + basePan, h / 2 - sy * cam.fy);
+    let ox = 0, oy = 0;
+    if (shakeLeft > 0) {
+      if (frameDt > 0) shakeLeft -= frameDt;
+      if (shakeLeft <= 0) shakeAmp = 0;
+      else {
+        const k2 = (shakeLeft / SHAKE_TIME) * shakeAmp * (w / VIEW_W), now = performance.now();
+        ox = Math.sin(now * 0.09) * 2.4 * k2; oy = Math.cos(now * 0.11) * 1.8 * k2;
+      }
+    }
+    ctx!.setTransform(sx, 0, 0, sy, w / 2 - sx * cam.fx + basePan + ox, h / 2 - sy * cam.fy + oy);
   }
   /** A pointer position in game view coordinates, whatever the zoom. */
   function toView(clientX: number, clientY: number): [number, number] {
@@ -91,5 +132,5 @@ export function createCamera(g: Game): Partial<Game> {
   function resetCamera(): void { fling.vx = fling.vy = 0; cam.tz = 1; cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
   new ResizeObserver(fit).observe(canvas);
   fit();
-  return { cam, fit, applyCamera, toView, zoomAt, resetCamera, flingCamera };
+  return { cam, fit, applyCamera, toView, zoomAt, resetCamera, flingCamera, shake, cameraBeat };
 }

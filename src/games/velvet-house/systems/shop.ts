@@ -24,6 +24,12 @@ export function createShop(g: Game): Partial<Game> {
     g.refreshDrawer();
   }
 
+  // A room that has just been repainted or refloored: pull back to see all of it, with a little sparkle.
+  function roomReveal(): void {
+    g.cameraBeat('reveal');
+    art.burst(view.level, 5, 4, 0.6);
+  }
+
   function handleBuy(item: CatalogEntry, color?: string): void {
     const price = item.price;
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }
@@ -40,21 +46,25 @@ export function createShop(g: Game): Partial<Game> {
       Object.assign(house, buildWorld(world.objs));
       log('The attic is built! New stairs lead up from the Upstairs hall.');
       g.setLevel(ATTIC);
+      g.shake(1);
     }
 
     // Apply paint/wallpaper/floor
     if (item.icon === 'paint' && (color || item.color)) {
       art.applyPaint(view.level, color || item.color!);
+      roomReveal();
       flags.styled = true;
       if (!(flags.styledSet as number[])?.includes(view.level)) (flags.styledSet as number[]).push(view.level);
       log(`${LEVEL_NAMES[view.level]} painted ${(color || item.color)!}.`);
     }
     if (item.icon === 'paper' && item.pattern) {
       art.applyWallpaper(view.level, item.pattern);
+      roomReveal();
       flags.styled = true;
     }
     if (item.icon === 'floor' && item.floor) {
       art.applyFloor(view.level, item.floor);
+      roomReveal();
       flags.styled = true;
     }
     // Furniture: add to world

@@ -17,6 +17,12 @@ export function startGameLoop(g: Game): void {
   let simCache = { day: world.day, minutes: world.minutes, objs: [...world.objs], chars: people.map(g.toFrame) };
 
   let goalsTimer = 0;
+  // While Maya and the player talk, the art softens everything away from her.
+  const conversationFocus = () => {
+    if (g.dialogue.el.hidden || people[1].level !== view.level) return null;
+    const [x, y] = art.project(people[1].x, people[1].y, 0.9);
+    return { x, y, r: 95 };
+  };
   startFixedLoop(
     (dt) => {
       if (view.paused) return;
@@ -56,6 +62,7 @@ export function startGameLoop(g: Game): void {
         t: view.t, dt: frameDt, objs: world.objs, wallMode: WALL_MODES[view.wallIdx].mode,
         chars: people.map(g.toFrame),
         arrange: g.arrangeFrame(),
+        focus: conversationFocus(),
         house: { power: world.household.power, dishes: world.household.dishes, laundryPile: world.household.laundryPile, fridge: world.household.fridge, owned },
       });
       qualityManager.recordFrame(frameDt * 1000);

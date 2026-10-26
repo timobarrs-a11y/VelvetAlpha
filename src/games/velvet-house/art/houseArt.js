@@ -756,9 +756,23 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (pat === 'cork') { for (let k = 0; k < len * 40; k++) { const u = (k * 0.618 * 3.7) % len, z = 0.16 + ((k * 0.414 * 2.3) % (WH - 0.2)); const [sx, sy] = iso(...P(u, z)); circle(sx, sy, 0.6 + (k % 2) * 0.5, ink); } }
   }
   function featPoly(f, inset = 0, dz = 0) { const P = (u, z) => wallPoint(f.p, u, z); return [P(f.u[0] + inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[1] - inset), P(f.u[0] + inset, f.z[1] - inset)]; }
+  // Rain on a window: a few drops that gather at the top of the glass and slide down, each leaving a short trail.
+  function glassDrops(f, inset) {
+    const P = (u, z) => wallPoint(f.p, u, z), u0 = f.u[0] + inset, u1 = f.u[1] - inset, z0 = f.z[0] + inset, z1 = f.z[1] - inset;
+    const n = Math.max(3, Math.round((u1 - u0) * 5));
+    gMat = MATERIAL.window;
+    for (let i = 0; i < n; i++) {
+      const sd = Math.sin((f.u[0] + 1) * 12.9 + i * 78.2) * 43758.5453, r = sd - Math.floor(sd);
+      const ph = (animT * (0.05 + r * 0.07) + r * 5.3) % 1, u = u0 + (i + 0.3 + r * 0.4) / n * (u1 - u0), z = z1 - ph * ph * (z1 - z0);
+      line3(P(u, Math.min(z1, z + 0.22 * ph)), P(u, z), 'rgba(225,240,255,.35)', 1);
+      const [sx, sy] = iso(...P(u, z));
+      circle(sx, sy, 0.9 + r * 0.5, 'rgba(235,246,255,.8)');
+    }
+    gMat = MATERIAL.matte;
+  }
   function drawFeature(level, f) {
     const P = (u, z) => wallPoint(f.p, u, z);
-    if (f.k === 'window') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.08), skyColor()); gMat = MATERIAL.matte; const mu = (f.u[0] + f.u[1]) / 2, mz = (f.z[0] + f.z[1]) / 2; line3(P(mu, f.z[0] + 0.08), P(mu, f.z[1] - 0.08), '#F7F3EE', 2); line3(P(f.u[0] + 0.08, mz), P(f.u[1] - 0.08, mz), '#F7F3EE', 2); }
+    if (f.k === 'window') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.08), skyColor()); gMat = MATERIAL.matte; if (raining()) glassDrops(f, 0.08); const mu = (f.u[0] + f.u[1]) / 2, mz = (f.z[0] + f.z[1]) / 2; line3(P(mu, f.z[0] + 0.08), P(mu, f.z[1] - 0.08), '#F7F3EE', 2); line3(P(f.u[0] + 0.08, mz), P(f.u[1] - 0.08, mz), '#F7F3EE', 2); }
     else if (f.k === 'highwin') { poly(featPoly(f), '#E9E4DD', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.06), skyColor()); gMat = MATERIAL.matte; }
     else if (f.k === 'door') { poly([P(f.u[0] - 0.08, 0), P(f.u[1] + 0.08, 0), P(f.u[1] + 0.08, f.z[1] + 0.05), P(f.u[0] - 0.08, f.z[1] + 0.05)], '#EFE8DE', EDGE, 0.8); poly(featPoly(f), '#7A5236'); poly([P(f.u[0] + 0.1, 1.15), P(f.u[1] - 0.1, 1.15), P(f.u[1] - 0.1, 1.9), P(f.u[0] + 0.1, 1.9)], null, 'rgba(0,0,0,.25)', 1); poly([P(f.u[0] + 0.1, 0.2), P(f.u[1] - 0.1, 0.2), P(f.u[1] - 0.1, 0.95), P(f.u[0] + 0.1, 0.95)], null, 'rgba(0,0,0,.25)', 1); const [kx, ky] = iso(...P(f.u[0] + 0.15, 1.02)); circle(kx, ky, 2, '#E0B85A'); }
     else if (f.k === 'switch') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); const mid = (f.u[0] + f.u[1]) / 2; poly(party ? [P(mid - 0.03, 1.11), P(mid + 0.03, 1.11), P(mid + 0.03, 1.19), P(mid - 0.03, 1.19)] : [P(mid - 0.03, 1.03), P(mid + 0.03, 1.03), P(mid + 0.03, 1.11), P(mid - 0.03, 1.11)], party ? '#D24A7A' : '#9C9298'); }
@@ -1797,6 +1811,25 @@ export function createHouseArt(ctx0, opts = {}) {
     } else { ell(hd[0] + shift * 1.6 + sway * 0.5, hd[1] - 6.5, 6, 5.6, L.hair); hairBack(); }
   }
 
+  // Depth of field: while two people talk, everything away from them softens. The frame is shrunk and stretched
+  // back (a cheap blur that works in every browser), then a clear hole is cut around the focus.
+  let dofAmt = 0, dofSmall = null, dofBlur = null, lastFocus = null;
+  function drawDof(focus) {
+    const cvs = ctx.canvas, w = cvs.width, h = cvs.height;
+    if (!dofSmall) { dofSmall = document.createElement('canvas'); dofBlur = document.createElement('canvas'); }
+    const sw = Math.max(1, w >> 2), sh = Math.max(1, h >> 2);
+    if (dofSmall.width !== sw || dofSmall.height !== sh) { dofSmall.width = sw; dofSmall.height = sh; }
+    if (dofBlur.width !== w || dofBlur.height !== h) { dofBlur.width = w; dofBlur.height = h; }
+    const a = dofSmall.getContext('2d'), b = dofBlur.getContext('2d');
+    a.imageSmoothingQuality = 'high'; b.imageSmoothingQuality = 'high';
+    a.clearRect(0, 0, sw, sh); a.drawImage(cvs, 0, 0, w, h, 0, 0, sw, sh);
+    b.globalCompositeOperation = 'source-over'; b.clearRect(0, 0, w, h); b.drawImage(dofSmall, 0, 0, sw, sh, 0, 0, w, h);
+    const m = ctx.getTransform(), p = m.transformPoint(new DOMPoint(focus.x, focus.y)), r = focus.r * m.a;
+    const g = b.createRadialGradient(p.x, p.y, r * 0.35, p.x, p.y, r);
+    g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    b.globalCompositeOperation = 'destination-out'; b.fillStyle = g; b.fillRect(0, 0, w, h);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = Math.min(1, dofAmt); ctx.drawImage(dofBlur, 0, 0); ctx.restore();
+  }
   function render(s) {
     // What the household is doing to the house (the power, the dishes, the fridge) comes in with every frame, so the art never shows stale state.
     if (s.house) { power = s.house.power; dishes = s.house.dishes; laundryPile = s.house.laundryPile; fridge = s.house.fridge; if (s.house.owned) owned = s.house.owned; }
@@ -1829,6 +1862,9 @@ export function createHouseArt(ctx0, opts = {}) {
     lighting(lv, lights, deferred);
     drawParticles(lv, true);
     if (isOutdoor(lv)) drawRain();
+    dofAmt += ((s.focus && tier() === 'high' ? 0.85 : 0) - dofAmt) * Math.min(1, rdt * 3);
+    if (s.focus) lastFocus = s.focus;
+    if (dofAmt > 0.02 && lastFocus) drawDof(lastFocus);
     ctx.restore();
     ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
   }
@@ -1955,5 +1991,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

@@ -44,12 +44,16 @@ export interface HouseFrame {
   house?: { power: boolean; dishes: number; laundryPile: number; fridge: { basic: number; fresh: number }; owned?: Set<string> };
   /** Arrange mode: what can move, what's carried, whether it fits, what's under the pointer. */
   arrange?: { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null } | null;
+  /** A conversation: the point (in view coordinates) and reach that stay sharp while the rest of the frame softens. */
+  focus?: { x: number; y: number; r: number } | null;
 }
 
 export interface HouseArt {
   render(frame: HouseFrame): void;
   /** Furniture was just set down: it lands with a bounce and a puff of dust. */
   objectPlaced(id: string): void;
+  /** A few sparkles near a spot on a floor (a room just finished, say). */
+  burst(level: number, x: number, y: number, z?: number): void;
   /** Where a world point lands in view coordinates (follows the current rotation). */
   project(x: number, y: number, z?: number): [number, number];
   /** The world point (x, y on the floor) under a view coordinate; the opposite of project, following the rotation. */

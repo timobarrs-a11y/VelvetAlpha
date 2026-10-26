@@ -212,23 +212,28 @@
 
 /* Dialogue */
 .vh-dialogue {
+  /* The chat sits in a corner and lets taps through to the house, so Maya and the room stay in view. */
   position: absolute; inset: 0; z-index: 30;
-  display: flex; align-items: flex-end; justify-content: center;
-  background: rgba(0,0,0,.25);
-  padding: 20px;
+  display: flex; align-items: flex-end; justify-content: flex-start;
+  padding: 16px; pointer-events: none;
 }
 .vh-dialogue[hidden] { display: none; }
 /* The floor and speed controls sit where the chat opens; step them aside while it's up. */
-.vh-stage:has(.vh-dialogue:not([hidden])) .vh-controls { opacity: 0; pointer-events: none; }
+/* (the floor and speed controls now stay put: the chat no longer covers them) */
 .vh-controls { transition: opacity .2s ease; }
 .vh-dialogue-box {
   background: #FFFDF8;
   border-radius: 16px; padding: 20px 24px;
-  max-width: 560px; width: 100%;
+  max-width: 380px; width: 100%; position: relative; pointer-events: auto;
   box-shadow: 0 8px 32px rgba(0,0,0,.3);
   color: #241B25;
   font: 400 15px/1.5 Inter, system-ui, sans-serif;
 }
+.vh-dialogue-close {
+  position: absolute; top: 8px; right: 10px; width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: rgba(36,27,37,.08); color: #241B25; font: 400 20px/1 Inter, system-ui, sans-serif; cursor: pointer;
+}
+.vh-dialogue-close:hover { background: rgba(36,27,37,.16); }
 .vh-dialogue-name {
   font: 700 14px/1.2 Inter, system-ui, sans-serif;
   color: #8A2D54; margin-bottom: 8px;
@@ -250,6 +255,16 @@
 .vh-dialogue-input button:hover { background: #E8B547; }
 .vh-dialogue-input button:disabled { opacity: .5; cursor: default; }
 .vh-dialogue-hint { text-align: center; font-size: 12px; color: rgba(36,27,37,.4); margin-top: 4px; }
+
+/* On a phone the chat goes in the empty band above the house, under the clock chips. */
+@media (max-width: 560px) {
+  .vh-dialogue { align-items: flex-start; padding: 46px 8px 0; }
+  .vh-dialogue-box { max-width: none; padding: 10px 14px; max-height: 190px; overflow-y: auto; font-size: 14px; }
+  .vh-dialogue-input { margin-top: 6px; }
+  .vh-dialogue-input input { padding: 8px 12px; }
+  .vh-dialogue-input button { padding: 8px 16px; }
+  .vh-dialogue-hint { display: none; }
+}
 
 /* Tray */
 .vh-tray {

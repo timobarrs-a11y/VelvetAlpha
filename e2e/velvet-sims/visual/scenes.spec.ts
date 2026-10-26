@@ -30,13 +30,12 @@ test('the house turned a quarter, with the walls down', async ({ page }) => {
   await expect(page).toHaveScreenshot('main-rotated-walls-down.png');
 });
 
-test('arrange mode and the shop', async ({ page }) => {
-  const game = await openGame(page, { freeze: true });
-  await inGame(page, 'v.setMinutes(13 * 60)');
-  await game.locator('.vh-dock [data-open=arrange]').click();
-  await page.waitForTimeout(1200);
-  await expect(page).toHaveScreenshot('arrange-open.png');
-  await game.locator('.vh-dock [data-open=shop]').click();
-  await page.waitForTimeout(1200);
-  await expect(page).toHaveScreenshot('shop-open.png');
-});
+for (const page_ of ['arrange', 'shop']) {
+  test(`${page_} open`, async ({ page }) => {
+    const game = await openGame(page, { freeze: true });
+    await inGame(page, 'v.setMinutes(13 * 60)');
+    await game.locator(`.vh-dock [data-open=${page_}]`).click();
+    await page.waitForTimeout(1200);
+    await expect(page).toHaveScreenshot(`${page_}-open.png`);
+  });
+}

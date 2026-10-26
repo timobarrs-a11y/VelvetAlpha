@@ -42,6 +42,7 @@ export function createGoals(g: Game): Partial<Game> {
       log(`Goal complete: ${next.text}`);
       if (settleComplete(goalCtx)) {
         g.s.settleDone = true;
+        g.shake(0.7);
         g.s.freeWill = true;
         earn(world.household, 100);
         showDiscoveryCard('Welcome home!', `${townName} gave you a $100 welcome basket. The tutorial is over — make it yours.`);

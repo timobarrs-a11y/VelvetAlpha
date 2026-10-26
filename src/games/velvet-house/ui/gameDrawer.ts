@@ -45,6 +45,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onPickLifeGoal: (goal) => { g.s.lifeGoal = goal; log(`Life goal: ${goal}`); },
     onWear: (cloth) => {
       g.wearPiece(cloth);
+      g.cameraBeat('closeup', 'jordan');
       log(`Changed into the ${cloth.name}.`);
       g.refreshDrawer();
       // New clothes show on the player's avatar outside the game too.
@@ -58,6 +59,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
       if (!p || !top || !base || !hat) return;
       const bottom = p.bottomCol ? { ...base, col: p.bottomCol } : base;
       g.wearPiece(top); g.wearPiece(bottom); g.wearPiece(hat);
+      g.cameraBeat('closeup', 'jordan');
       log(`Changed into the ${p.label} look.`);
       g.refreshDrawer();
       g.tellHostLook(top, bottom, hat.style);

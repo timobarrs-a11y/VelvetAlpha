@@ -13,7 +13,7 @@ export default defineConfig({
   outputDir: './e2e/velvet-sims/test-results',
   timeout: 60_000,
   expect: { timeout: 10_000 },
-  testIgnore: '**/visual/**',
+  testIgnore: ['**/visual/**', '**/perf/**'],
   fullyParallel: false,
   retries: 0,
   workers: 1,

@@ -5,10 +5,12 @@ import { remember, compactMemory, condenserFrom } from '../state/memory';
 import type { Game } from '../kernel/game';
 
 export function createChat(g: Game): Partial<Game> {
-  const { world, simName, partnerName, townName, people, flags, style, memStore, companionCfg, log, logEntries, art, dialogue, coreMem, memories, pastMem } = g;
+  const { world, simName, partnerName, townName, people, flags, style, memStore, companionCfg, log, logEntries, art, drawer, dialogue, coreMem, memories, pastMem } = g;
   // Chat
   function openChat(): void {
     if (!g.s.sample) { log(`${partnerName} is not available right now.`); return; }
+    // The Partner page that started the chat would cover the house on a phone, so it closes.
+    drawer.close();
     dialogue.open();
     flags.talked = true;
     if (!(flags.settleSeen as string[])?.includes('talk')) (flags.settleSeen as string[]).push('talk');
