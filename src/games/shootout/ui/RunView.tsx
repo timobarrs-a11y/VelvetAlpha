@@ -57,7 +57,10 @@ export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunVi
   const [lost, setLost] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [showHint, setShowHint] = useState(true);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // The game draws on a canvas made fresh for each game (see the effect below);
+  // input lands on the stage that holds it.
+  const stageRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<GameLike | null>(null);
@@ -73,7 +76,14 @@ export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunVi
   };
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!stageRef.current) return;
+    // A new canvas every time: a finished game releases its graphics context for
+    // good, so reusing its canvas (React's dev double-mount, a restart after a
+    // reset) would leave nothing to draw with.
+    const canvas = document.createElement('canvas');
+    canvas.className = 'absolute inset-0 block h-full w-full';
+    stageRef.current.appendChild(canvas);
+    canvasRef.current = canvas;
     let alive = true;
     const finish = (r: RunResult) => { setTimeout(() => { if (alive) doneRef.current(r); }, 1800); };
     // Broadcast graphics react to what happens on the floor.
@@ -114,10 +124,10 @@ export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunVi
     };
     let game: GameLike;
     try {
-      game = new Shootout3D(canvasRef.current, level, moneyRack, { onEvent, onDone: finish }, opts);
+      game = new Shootout3D(canvas, level, moneyRack, { onEvent, onDone: finish }, opts);
     } catch {
       // No WebGL: fall back to the 2D court.
-      game = new Shootout(canvasRef.current, level, moneyRack, { onDone: finish });
+      game = new Shootout(canvas, level, moneyRack, { onDone: finish });
     }
     gameRef.current = game;
     if (import.meta.env.DEV) (window as unknown as { __shootout?: GameLike }).__shootout = game;
@@ -141,9 +151,9 @@ export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunVi
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => { alive = false; game.stop(); clearInterval(hudTimer); cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); gameRef.current = null; };
-    // The game is created once per mount (callers remount with a new key), or again
-    // on a fresh canvas after the graphics context was lost.
+    return () => { alive = false; game.stop(); canvas.remove(); canvasRef.current = null; clearInterval(hudTimer); cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); gameRef.current = null; };
+    // The game is created once per mount (callers remount with a new key), and
+    // again after the graphics context was lost.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
 
@@ -172,10 +182,9 @@ export function RunView({ level, moneyRack, opts, label, ticker, onDone }: RunVi
           <button className="rounded-full bg-amber-400 px-6 py-2 font-black text-[#2a1600]" onClick={() => { setLost(false); setAttempt(a => a + 1); }}>Restart run</button>
         </div>
       )}
-      <canvas
-        key={attempt}
-        ref={canvasRef}
-        className="absolute inset-0 h-full w-full"
+      <div
+        ref={stageRef}
+        className="absolute inset-0"
         onPointerDown={(e) => {
           unlockAudio();
           e.currentTarget.setPointerCapture(e.pointerId);
