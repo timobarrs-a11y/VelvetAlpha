@@ -95,6 +95,7 @@ export function WorldPage() {
   // Part of the arrival: a short look around, then on to Atlas.
   const [searchParams] = useSearchParams();
   const arriving = searchParams.get('arrival') === '1';
+  const arrivalFlown = useRef(false);
   const [myPlot, setMyPlot] = useState<MyPlot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -338,6 +339,17 @@ export function WorldPage() {
   }, [visitSlot]);
 
   const handleTower = useCallback(() => { controlRef.current?.tower(); }, []);
+
+  // The look around town opens on their own new house.
+  useEffect(() => {
+    if (!arriving || arrivalFlown.current || !townLayoutState || !myPlot) return;
+    const timer = setTimeout(() => {
+      if (!controlRef.current) return;
+      arrivalFlown.current = true;
+      controlRef.current.visit(myPlot.slot_index);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [arriving, townLayoutState, myPlot]);
 
   if (loading) {
     return (

@@ -50,7 +50,9 @@ export function ArrivalLookPage() {
         .maybeSingle();
       if (cancelled) return;
       const seeded = seededAvatar({ male: DEFAULT_MALE_AVATAR_V2, female: DEFAULT_FEMALE_AVATAR_V2 }, profile?.gender, profile?.favorite_color);
-      const start = profile?.avatar_config ? migrateAvatarConfig(profile.avatar_config) : seeded;
+      // Read the way the editor reads it (defaults filled in), so an untouched
+      // default like the outfit never counts as something they chose.
+      const start = migrateAvatarConfig(profile?.avatar_config ?? seeded);
       baseline.current = start;
       current.current = start;
       setLoaded({

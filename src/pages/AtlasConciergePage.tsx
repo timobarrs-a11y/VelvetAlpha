@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Compass, CalendarCheck } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { useAuth } from '../auth/AuthProvider';
+import { setHomeLayout } from '../hooks/useHomeLayout';
 import { useTypingEffect, useWritingIndicator } from '../hooks/useTypingEffect';
 import { ShellProvider, useShell } from '../shells/ShellProvider';
 import { ArrivalProgress } from '../features/arrival/ArrivalProgress';
@@ -372,6 +373,8 @@ function AtlasConciergeInner() {
 
   const finish = () => {
     if (userId) clearState(userId);
+    // Today lives on the V3 home; they've just picked interests, so its feed has what it needs.
+    setHomeLayout('v3');
     navigate('/lobby?arrived=1', { replace: true });
   };
 
