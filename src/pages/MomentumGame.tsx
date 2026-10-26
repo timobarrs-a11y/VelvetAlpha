@@ -44,6 +44,8 @@ import {
   lavaSpeed,
   PHASE_CYCLE_FRAMES,
   PHASE_SOLID_FRAMES,
+  LANDSCAPE_WIDTH,
+  PORTRAIT_WIDTH,
 } from '../game/momentum/levelGen';
 import { type GhostRun, GHOST_SAMPLE_STEPS, ghostPositionAt, loadLocalGhost, saveLocalGhostIfBest } from '../game/momentum/ghost';
 import { SKINS, loadStats, updateStats, loadSkinId, saveSkinId, skinById } from '../game/momentum/skins';
@@ -51,8 +53,19 @@ import { todayKey, submitRun, fetchLeaderboard } from '../game/momentum/leaderbo
 import { LeaderboardPanel } from '../components/games/momentum/LeaderboardPanel';
 import { analyticsService } from '../services/analyticsService';
 
-const GAME_WIDTH = 800;
-const GAME_HEIGHT = 600;
+// The playfield is chosen per run: landscape 800x600, or a taller, narrower world in portrait.
+let GAME_WIDTH = 800;
+let GAME_HEIGHT = 600;
+const choosePlayfield = () => {
+  const portrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth * 1.15;
+  if (portrait) {
+    GAME_WIDTH = PORTRAIT_WIDTH;
+    GAME_HEIGHT = Math.round(Math.min(1000, Math.max(720, PORTRAIT_WIDTH * (window.innerHeight / window.innerWidth))));
+  } else {
+    GAME_WIDTH = LANDSCAPE_WIDTH;
+    GAME_HEIGHT = 600;
+  }
+};
 const PLAYER_WIDTH = 22;
 const PLAYER_HEIGHT = 22;
 const GRAVITY = 0.55;
@@ -429,7 +442,7 @@ export function MomentumGame() {
     player.vy = 0;
     player.boostCharges = MAX_BOOST_CHARGES;
     resetMomentum();
-    cameraYRef.current = Math.max(0, GAME_HEIGHT / 2.5 - player.y);
+    cameraYRef.current = Math.max(0, GAME_HEIGHT * (GAME_HEIGHT > 600 ? 0.45 : 0.4) - player.y);
     comboRef.current = 0;
     lastPlatformYRef.current = player.y; // Reset last platform Y on respawn
     touchTargetXRef.current = null;
@@ -854,7 +867,7 @@ export function MomentumGame() {
       }
     }
 
-    const targetCameraY = Math.max(0, GAME_HEIGHT / 2.5 - player.y);
+    const targetCameraY = Math.max(0, GAME_HEIGHT * (GAME_HEIGHT > 600 ? 0.45 : 0.4) - player.y);
     cameraYRef.current += (targetCameraY - cameraYRef.current) * 0.06;
     const camY = cameraYRef.current;
 
@@ -1454,7 +1467,7 @@ export function MomentumGame() {
   };
 
   const ghostKeyFor = (mode: GameMode, careerLevel?: CareerLevel | null) =>
-    mode === 'career' && careerLevel ? `career-${careerLevel.number}` : mode === 'daily' ? `daily-${todayKey()}` : null;
+    mode === 'career' && careerLevel ? `career-${careerLevel.number}-${GAME_WIDTH}` : mode === 'daily' ? `daily-${todayKey()}-${GAME_WIDTH}` : null;
 
   // Builds a fresh run. Career and daily levels are seeded so they are identical every attempt.
   const startRun = (theme: ThemeColors, difficulty: number, mode: GameMode, careerLevel?: CareerLevel | null) => {
@@ -1465,18 +1478,19 @@ export function MomentumGame() {
         ? seedFromString(`daily-${todayKey()}`)
         : Math.floor(Math.random() * 2 ** 32);
     const rng = createRng(seed);
+    choosePlayfield();
 
     let platforms: Platform[];
     let orbs: Orb[];
     let goalY: number;
     if (mode === 'endless') {
-      const state = createEndlessState();
+      const state = createEndlessState(GAME_WIDTH);
       ({ platforms, orbs } = generateChunk(state, ENDLESS_CHUNK, 1, theme, rng, Number.MAX_SAFE_INTEGER));
       endlessRef.current = { state, rng, topY: state.y };
       goalY = -Infinity;
       lavaYRef.current = 520 + 420;
     } else {
-      ({ platforms, orbs, goalY } = generateLevel(difficulty, theme, rng));
+      ({ platforms, orbs, goalY } = generateLevel(difficulty, theme, rng, GAME_WIDTH));
       endlessRef.current = null;
       lavaYRef.current = Infinity;
     }
@@ -1516,8 +1530,11 @@ export function MomentumGame() {
     ghostRef.current = ghostKey ? loadLocalGhost(ghostKey) : null;
     if (mode === 'daily') {
       fetchLeaderboard('daily', todayKey(), 1).then(([top]) => {
-        if (top?.ghost && runModeRef.current === 'daily' && (!ghostRef.current || Number(top.time) < ghostRef.current.time)) {
-          ghostRef.current = { time: Number(top.time), path: top.ghost, name: top.display_name };
+        // Leaderboard ghosts start with -worldWidth so portrait and landscape runs are not mixed
+        const path = top?.ghost;
+        if (!path || path[0] !== -GAME_WIDTH || runModeRef.current !== 'daily') return;
+        if (!ghostRef.current || Number(top.time) < ghostRef.current.time) {
+          ghostRef.current = { time: Number(top.time), path: path.slice(1), name: top.display_name };
         }
       });
     }
@@ -1559,7 +1576,7 @@ export function MomentumGame() {
     const newBest = ghostKey ? saveLocalGhostIfBest(ghostKey, run) : false;
     setRunResult(r => ({ ...r, newBest }));
     if (mode === 'daily') {
-      submitRun('daily', todayKey(), scoreRef.current, time, run).then(() =>
+      submitRun('daily', todayKey(), scoreRef.current, time, { ...run, path: [-GAME_WIDTH, ...run.path] }).then(() =>
         setRunResult(r => ({ ...r, leaderboardKey: r.leaderboardKey + 1 })));
     }
     trackMomentum('complete', { mode, level: liveRef.current.level, time: Number(time.toFixed(2)), score: scoreRef.current });
@@ -1886,7 +1903,7 @@ export function MomentumGame() {
             height={GAME_HEIGHT}
             className="block rounded-lg shadow-2xl select-none"
             style={{
-              width: 'min(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 4 / 3), 1100px)',
+              width: `min(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * ${GAME_WIDTH} / ${GAME_HEIGHT}), 1100px)`,
               height: 'auto',
               touchAction: 'none',
             }}

@@ -1,7 +1,9 @@
 // Level generation for Momentum. Seeded so daily climbs, career levels and ghost replays
 // are identical for every player and every attempt.
 
-export const GAME_WIDTH = 800;
+/** Landscape world width; portrait play uses a narrower world. */
+export const LANDSCAPE_WIDTH = 800;
+export const PORTRAIT_WIDTH = 480;
 
 export type PlatformType = 'normal' | 'crumbling' | 'spring' | 'conveyor' | 'phase';
 
@@ -82,6 +84,7 @@ const pickType = (rng: Rng, level: number, index: number): PlatformType => {
 };
 
 interface ChunkState {
+  width: number;
   y: number;
   nextId: number;
   index: number;
@@ -111,7 +114,8 @@ export const generateChunk = (
     state.y -= gap;
 
     const width = Math.max(60, isFirst ? 150 : isCheckpoint ? 180 : 90 + rng() * Math.max(0, 40 - level));
-    const startX = isFirst ? 325 : isCheckpoint ? GAME_WIDTH / 2 - 90 : 50 + rng() * (GAME_WIDTH - 200 - width);
+    const W = state.width;
+    const startX = isFirst ? (W - 150) / 2 : isCheckpoint ? W / 2 - 90 : 50 + rng() * Math.max(0, W - 200 - width);
     const moveRange = isFirst ? 100 : isCheckpoint ? 60 : 100 + rng() * 100;
     const speed = isFirst ? 0.3 : isCheckpoint ? 0.35 : 0.4 + rng() * (0.3 + level * 0.05);
     const colorIndex = state.nextId % palette.platforms.length;
@@ -133,7 +137,7 @@ export const generateChunk = (
       isCheckpoint,
       touched: false,
       minX: Math.max(0, startX - moveRange / 2),
-      maxX: Math.min(GAME_WIDTH - width, startX + moveRange / 2),
+      maxX: Math.min(W - width, startX + moveRange / 2),
       type,
       crumbleTimer: 0,
       crumbled: false,
@@ -144,7 +148,7 @@ export const generateChunk = (
     if (!isFirst && !isCheckpoint && i > 3 && rng() < 0.4) {
       const farY = state.y - (80 + rng() * (70 + level * 5));
       const farWidth = 60 + rng() * 40;
-      const farStartX = 40 + rng() * (GAME_WIDTH - 120 - farWidth);
+      const farStartX = 40 + rng() * (W - 120 - farWidth);
       const farRange = 140 + rng() * 160;
       const farSpeed = (0.8 + level * 0.15) + rng() * (0.8 + level * 0.2);
       const farColor = state.nextId % palette.platforms.length;
@@ -164,7 +168,7 @@ export const generateChunk = (
         isCheckpoint: false,
         touched: false,
         minX: Math.max(0, farStartX - farRange / 2),
-        maxX: Math.min(GAME_WIDTH - farWidth, farStartX + farRange / 2),
+        maxX: Math.min(W - farWidth, farStartX + farRange / 2),
         type: 'normal',
         crumbleTimer: 0,
         crumbled: false,
@@ -174,7 +178,7 @@ export const generateChunk = (
 
       // Risky reward: an orb out at the edge of the fast platform's sweep
       if (rng() < 0.35) {
-        orbs.push({ x: rng() < 0.5 ? 30 + rng() * 60 : GAME_WIDTH - 90 + rng() * 60, y: farY - 40 - rng() * 40, collected: false });
+        orbs.push({ x: rng() < 0.5 ? 30 + rng() * 60 : W - 90 + rng() * 60, y: farY - 40 - rng() * 40, collected: false });
       }
     }
   }
@@ -182,14 +186,14 @@ export const generateChunk = (
   return { platforms, orbs };
 };
 
-export const generateLevel = (level: number, palette: LevelPalette, rng: Rng) => {
-  const state: ChunkState = { y: 520, nextId: 0, index: 0 };
+export const generateLevel = (level: number, palette: LevelPalette, rng: Rng, width = LANDSCAPE_WIDTH) => {
+  const state: ChunkState = { width, y: 520, nextId: 0, index: 0 };
   const { platforms, orbs } = generateChunk(state, 60 + level * 10, level, palette, rng);
   platforms.sort((a, b) => b.y - a.y);
   return { platforms, orbs, goalY: state.y - 50 };
 };
 
-export const createEndlessState = (): ChunkState => ({ y: 520, nextId: 0, index: 0 });
+export const createEndlessState = (width = LANDSCAPE_WIDTH): ChunkState => ({ width, y: 520, nextId: 0, index: 0 });
 
 /** Endless difficulty ramps with height climbed. */
 export const endlessDifficulty = (heightClimbed: number) => Math.min(10, 1 + Math.floor(heightClimbed / 2500));
