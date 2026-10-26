@@ -231,7 +231,8 @@ them. He introduces himself, says what Velvet is for, and then asks what *they* 
 
 **How he addresses people:** "Master" + name for men and "Miss" + name for women, as Alfred
 does. For anyone else, or anyone who'd rather not, it's just the first name. Early on he offers
-once: "Shall I keep the formalities, or would you prefer plain Tim?" The answer is saved
+once, as a remark so the message still asks only one question: "I'll keep the formalities,
+unless you'd rather plain Tim; just say the word." The answer is saved
 (`address_style`) and every AI in Velvet respects it after that.
 
 **First, a remark on what they just made.** Atlas's first line is about their avatar or their
@@ -511,7 +512,7 @@ February shows on the 28th in other years.
 | A1 | **Act 1 order and saving:** reorder `personalBank.ts` to name → color → nickname → birthday → zodiac → gender → interests, with one tabbed interests screen. Save each answer as it's given (a per-field save from `onAnswer`) and resume at the first unanswered question. Move the four wavelength questions and the swipe deck out. Pass all six interest groups into Atlas's prompt. Add the Someday screen (8) and its `someday` column, and pass the picks to Atlas. | Small–Medium |
 | A2 | **Their color:** re-skin the questionnaire shell after question 2, and the Atlas chat (`--shell-*` tokens instead of the hard-coded gold). | Small |
 | A3 | **Atlas picks the right question:** the trait ledger, the choosing rule, tap chips, and `[PROFILE …]` marker parsing and validation in `atlas-onboarding`, plus the 15-person test script. | Medium |
-| A4 | Swipe deck as a daily feed card; the companion asks love language and "when it's hard" in week 1. | Small *Built:* `ThisOrThatCard` at the top of the feed, one pair a day, saved to `user_profiles.taste_picks` and passed to companions; the two questions left the companion setup and are asked in conversation in the first week (`_shared/companionWeekOne.ts`), saved from a hidden `[TRAIT …]` marker. |
+| A4 | Swipe deck as a daily feed card; the companion asks love language and "when it's hard" in week 1. | Small *Built:* the two questions left the companion setup and are asked in conversation in the first week (`_shared/companionWeekOne.ts`), saved from a hidden `[TRAIT …]` marker. The "this or that" feed card was built, then removed (26 October): it cluttered the feed and added little. `user_profiles.taste_picks` is left unused. |
 | A5 | **Today on the home screen:** the Today section above the feed in `HomeV3Page`, with done, confirm, move and drop. No dependencies, so it can go first. | Small–Medium |
 | A6 | **Atlas makes plans:** the probing rules, the order goals come from (them, then Someday, then interests) and the proposal rules in his prompt, the `add_calendar_event` tool in `atlas-onboarding` with `tentative` in metadata, and the extra checks in the test script. | Medium |
 | A7 | **Repeating events that repeat:** the shared expand-repeats helper used by the calendar page and Today, done dates per occurrence, and all-day dates compared in local time. Fixes the calendar as it is today, so it should go before A8. | Small–Medium |

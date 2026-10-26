@@ -57,11 +57,13 @@ async function callClaude(system: string, messages: Array<{ role: string; conten
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": Deno.env.get("ANTHROPIC_API_KEY") ?? "", "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 400, system, messages }),
+    // Thinking off, as atlas-onboarding sends it: otherwise thinking can use the whole budget.
+    body: JSON.stringify({ model: MODEL, max_tokens: 400, thinking: { type: "between_tools" }, system, messages }),
   });
   if (!response.ok) throw new Error(`Anthropic ${response.status}: ${await response.text()}`);
   const data = await response.json();
-  return data.content?.[0]?.text ?? "";
+  // Sonnet thinks first, so the reply is in the text blocks, not content[0].
+  return (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("");
 }
 
 if (!Deno.env.get("ANTHROPIC_API_KEY")) {

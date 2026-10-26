@@ -7,6 +7,8 @@ import {
   STEP_MS,
   MAX_FRAME_MS,
   MAX_BOOST_CHARGES,
+  START_BOOST_CHARGES,
+  timeBudget,
   BOOST_BUFFER_FRAMES,
   BOOST_COOLDOWN_FRAMES,
   PERFECT_WINDOW_FRAMES,
@@ -39,7 +41,7 @@ import {
   markTutorialSeen,
 } from '../game/momentum/touchControls';
 import { momentumSfx } from '../game/momentum/sfx';
-import { loadTheme } from '../game/momentum/themes';
+import { loadTheme, reserveBoostWhite } from '../game/momentum/themes';
 import type { ThemeColors, PlayerState, Particle, TrailPoint, GameMode, CareerProgressRow } from '../game/momentum/types';
 import { renderFrame } from '../game/momentum/render';
 import { themePresets, type CareerLevel } from '../game/momentum/config';
@@ -115,7 +117,7 @@ export function MomentumGame() {
   const [starsEarned, setStarsEarned] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  const playerRef = useRef<PlayerState>({ x: 100, y: 300, prevY: 300, vx: 0, vy: 0, boostCharges: MAX_BOOST_CHARGES, isBoosting: false, boostTimer: 0 });
+  const playerRef = useRef<PlayerState>({ x: 100, y: 300, prevY: 300, vx: 0, vy: 0, boostCharges: START_BOOST_CHARGES, isBoosting: false, boostTimer: 0 });
   const trailRef = useRef<TrailPoint[]>([]);
   const platformsRef = useRef<Platform[]>([]);
   const particlesRef = useRef<Particle[]>([]);
@@ -163,6 +165,10 @@ export function MomentumGame() {
   const boostPressFrameRef = useRef(0);
   const perfectStreakRef = useRef(0);
   const overdriveRef = useRef(0);
+  // Seconds allowed for the run (Infinity = no limit); Free Play extends it at each checkpoint
+  const timeLimitRef = useRef(Infinity);
+  const checkpointBudgetsRef = useRef<number[]>([]);
+  const splitRef = useRef<{ text: string; color: string; life: number } | null>(null);
   const musicLevelRef = useRef(0);
   const perfectedThisBounceRef = useRef(false);
   const [touchSettings, setTouchSettings] = useState<TouchSettings>(loadTouchSettings);
@@ -391,7 +397,7 @@ export function MomentumGame() {
     player.prevY = player.y;
     player.vx = 0;
     player.vy = 0;
-    player.boostCharges = MAX_BOOST_CHARGES;
+    player.boostCharges = Math.max(1, player.boostCharges);
     resetMomentum();
     cameraYRef.current = Math.max(0, GAME_HEIGHT * (GAME_HEIGHT > 600 ? 0.45 : 0.4) - player.y);
     comboRef.current = 0;
@@ -545,11 +551,8 @@ export function MomentumGame() {
 
     elapsedTimeRef.current = (Date.now() - startTimeRef.current - pauseTimeRef.current) / 1000;
 
-    // Career timer is derived from the game clock so it pauses with the game
-    let timeRemaining = 0;
-    if (gameMode === 'career' && currentCareerLevel) {
-      timeRemaining = Math.max(0, currentCareerLevel.timeLimit - elapsedTimeRef.current);
-    }
+    // Countdown (Career and Free Play) is derived from the game clock so it pauses with the game
+    const timeRemaining = Math.max(0, timeLimitRef.current - elapsedTimeRef.current);
 
     const frameMs = lastFrameTimeRef.current === null ? STEP_MS : Math.min(MAX_FRAME_MS, now - lastFrameTimeRef.current);
     lastFrameTimeRef.current = now;
@@ -628,6 +631,10 @@ export function MomentumGame() {
     simFrameRef.current++;
     if (shakeRef.current > 0) shakeRef.current *= 0.85;
     if (flashRef.current > 0) flashRef.current = Math.max(0, flashRef.current - 0.06);
+    if (splitRef.current) {
+      splitRef.current.life -= 1 / 60;
+      if (splitRef.current.life <= 0) splitRef.current = null;
+    }
     if (popupRef.current) {
       popupRef.current.life -= 0.02;
       if (popupRef.current.life <= 0) popupRef.current = null;
@@ -861,20 +868,32 @@ export function MomentumGame() {
         if (lastPlatformRef.current !== platform.id) {
           if (!platform.touched) {
             platform.touched = true;
-            player.boostCharges = Math.min(MAX_BOOST_CHARGES, player.boostCharges + 1);
+            if (platform.type === 'charge') {
+              player.boostCharges = Math.min(MAX_BOOST_CHARGES, player.boostCharges + 1);
+              popupRef.current = { text: '+1 BOOST', life: 0.8, color: '#ffffff' };
+              momentumSfx.orb();
+              haptic(10);
+              spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, '#ffffff', 14, 10);
+            } else if (platform.type === 'drain') {
+              if (player.boostCharges > 0 && overdriveRef.current <= 0) {
+                player.boostCharges--;
+                popupRef.current = { text: '-1 BOOST', life: 0.8, color: '#ff4d4d' };
+                momentumSfx.drain();
+                haptic(30);
+                shakeRef.current = Math.max(shakeRef.current, 4);
+              }
+              spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, '#ff4d4d', 12, 10);
+            }
             const pointMultiplier = platform.type === 'spring' || platform.isFar ? 2 : 1;
             scoreRef.current += Math.round(50 * scoreMultiplier() * pointMultiplier);
 
-            if (platform.isFar) {
-              // Sky hop: the fast side platforms are a risky shortcut, so pay out for them
-              player.boostCharges = Math.min(MAX_BOOST_CHARGES, player.boostCharges + 1);
-              popupRef.current = { text: 'SKY HOP +1', life: 0.8, color: levelData.boostTrailColor || '#00ffff' };
-              momentumSfx.orb();
-              haptic(10);
+            if (platform.isFar && platform.type !== 'charge') {
+              // Sky hop: the fast side platforms are a risky shortcut, so pay out double points
+              popupRef.current = { text: 'SKY HOP ×2', life: 0.8, color: levelData.boostTrailColor || '#00ffff' };
             }
 
             if (platform.isCheckpoint) {
-              player.boostCharges = MAX_BOOST_CHARGES;
+              onCheckpoint(platform.y);
               haptic(30);
               momentumSfx.checkpoint();
               checkpointYRef.current = platform.y;
@@ -902,10 +921,12 @@ export function MomentumGame() {
       return p.life > 0;
     });
 
-    if (gameMode === 'career' && timeRemaining <= 0) {
+    if (Number.isFinite(timeLimitRef.current) && timeRemaining <= 0) {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      momentumSfx.fall();
+      trackMomentum('time_up', { mode: runModeRef.current, level, progress: Number(Math.min(1, (520 - highestYRef.current) / (520 - goalYRef.current)).toFixed(2)) });
       setGameState('careerFailed');
-      if (currentCareerLevel) {
+      if (gameMode === 'career' && currentCareerLevel) {
         saveCareerProgress(currentCareerLevel.number, false, 0, 0);
       }
       setScore(scoreRef.current);
@@ -988,7 +1009,7 @@ export function MomentumGame() {
 
     renderFrame(ctx, {
       GAME_WIDTH, GAME_HEIGHT, levelData, player, platforms, camY, isTrueFalling, isRisingFast,
-      level, gameMode, timeRemaining, isTouchDevice,
+      level, gameMode, timeRemaining, hasTimeLimit: Number.isFinite(timeLimitRef.current), splitRef, isTouchDevice,
       chainRef, comboRef, elapsedTimeRef, landingFrameRef, perfectedThisBounceRef, overdriveRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
       orbsRef, particlesRef, popupRef, runModeRef, scoreRef, shakeRef, simFrameRef, skinRef, speedLinesRef,
       startYRef, tapFxRef, trailRef,
@@ -1119,11 +1140,35 @@ export function MomentumGame() {
     }
   };
 
+  // First touch of a checkpoint: Free Play earns more time; ghost runs show a split
+  const onCheckpoint = (checkpointY: number) => {
+    const extension = checkpointBudgetsRef.current.shift();
+    if (runModeRef.current === 'freeplay' && extension) {
+      timeLimitRef.current += extension;
+      splitRef.current = { text: `+${extension}s`, color: '#7dffc4', life: 1.6 };
+      return;
+    }
+    const ghost = ghostRef.current;
+    if (!ghost) return;
+    for (let i = 1; i < ghost.path.length; i += 2) {
+      if (ghost.path[i] + PLAYER_HEIGHT <= checkpointY + 4) {
+        const delta = (simFrameRef.current - ((i - 1) / 2) * GHOST_SAMPLE_STEPS) / 60;
+        splitRef.current = {
+          text: `${delta <= 0 ? '-' : '+'}${Math.abs(delta).toFixed(1)}s`,
+          color: delta <= 0 ? '#7dffc4' : '#ff6b6b',
+          life: 1.6,
+        };
+        return;
+      }
+    }
+  };
+
   const ghostKeyFor = (mode: GameMode, careerLevel?: CareerLevel | null) =>
     mode === 'career' && careerLevel ? `career-${careerLevel.number}-${GAME_WIDTH}` : mode === 'daily' ? `daily-${todayKey()}-${GAME_WIDTH}` : null;
 
   // Builds a fresh run. Career and daily levels are seeded so they are identical every attempt.
-  const startRun = (theme: ThemeColors, difficulty: number, mode: GameMode, careerLevel?: CareerLevel | null) => {
+  const startRun = (rawTheme: ThemeColors, difficulty: number, mode: GameMode, careerLevel?: CareerLevel | null) => {
+    const theme = reserveBoostWhite(rawTheme);
     runModeRef.current = mode;
     const seed = mode === 'career' && careerLevel
       ? seedFromString(`career-${careerLevel.number}`)
@@ -1158,7 +1203,7 @@ export function MomentumGame() {
       prevY: 520 - PLAYER_HEIGHT - 2,
       vx: 0,
       vy: 0,
-      boostCharges: MAX_BOOST_CHARGES,
+      boostCharges: START_BOOST_CHARGES,
       isBoosting: false,
       boostTimer: 0
     };
@@ -1190,6 +1235,21 @@ export function MomentumGame() {
           ghostRef.current = { time: Number(top.time), path: path.slice(1), name: top.display_name };
         }
       });
+    }
+
+    // Time limits: Career has a fixed limit; Free Play is a time attack topped up at each checkpoint
+    splitRef.current = null;
+    if (mode === 'career' && careerLevel) {
+      timeLimitRef.current = careerLevel.timeLimit;
+      checkpointBudgetsRef.current = [];
+    } else if (mode === 'freeplay') {
+      const marks = [520, ...platforms.filter(pl => pl.isCheckpoint).map(pl => pl.y).sort((a, b) => b - a), goalY];
+      const budgets = marks.slice(1).map((y, i) => timeBudget(marks[i] - y, difficulty));
+      timeLimitRef.current = budgets[0];
+      checkpointBudgetsRef.current = budgets.slice(1);
+    } else {
+      timeLimitRef.current = Infinity;
+      checkpointBudgetsRef.current = [];
     }
 
     trackMomentum('run_start', { mode, difficulty, career_level: careerLevel?.number ?? null });
@@ -1386,6 +1446,7 @@ export function MomentumGame() {
             </div>
             <p className="text-white/60 text-sm mb-2">Everything works with one thumb.</p>
             <p className="text-white/60 text-sm mb-2">Climb higher each bounce to build momentum.</p>
+            <p className="text-white/60 text-sm mb-2">White ledges bank a boost, red ones take one away.</p>
             <p className="text-white/60 text-sm mb-2">Boost right as you land for a free PERFECT bounce.</p>
             <p className="text-white/60 text-sm mb-8">Hit a PERFECT at max momentum to trigger OVERDRIVE.</p>
             <button

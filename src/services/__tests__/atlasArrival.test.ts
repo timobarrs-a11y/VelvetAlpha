@@ -199,8 +199,8 @@ describe('the plan', () => {
 
 describe('buildGoalPrompt', () => {
   it('offers the formal address once only while they have not chosen', () => {
-    expect(buildGoalPrompt(profile(), 'working', { date: TODAY, weekday: 'Monday' }, 10)).toContain('Shall I keep the formalities');
-    expect(buildGoalPrompt(profile({ address_style: 'formal' }), 'working', { date: TODAY, weekday: 'Monday' }, 10)).not.toContain('Shall I keep the formalities');
+    expect(buildGoalPrompt(profile(), 'working', { date: TODAY, weekday: 'Monday' }, 10)).toContain('I\'ll keep the formalities');
+    expect(buildGoalPrompt(profile({ address_style: 'formal' }), 'working', { date: TODAY, weekday: 'Monday' }, 10)).not.toContain('I\'ll keep the formalities');
     expect(buildGoalPrompt(profile({ address_style: 'first_name' }), 'working', { date: TODAY, weekday: 'Monday' }, 10)).toContain('Never "Master" or "Miss"');
   });
 
