@@ -125,6 +125,10 @@ They can look around or tweak their house, then a **Continue to Atlas** button m
 The town's own first-visit welcome popup (`WorldWelcome.tsx`) never shows for these new
 members, because they've already done it all.
 
+**Velvet House is not part of onboarding.** Steps 4 and 5 are Velvet World, the town at
+`/world`. Velvet House (the game inside a home shared with a companion) is something they find
+later, as in "What waits" below.
+
 **What leaves the first session:** the coach avatar designer and the background picker as
 compulsory steps (step 7 replaces them), and the tour inside the coach chat (step 9 replaces it).
 
