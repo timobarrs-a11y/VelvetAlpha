@@ -8,14 +8,15 @@ const HOST = readFileSync(join(process.cwd(), 'e2e/velvet-sims/host.html'), 'utf
 export interface Obj { id: string; type: string; level: number; x: number; y: number; rot: number }
 
 /** Opens the game inside the stand-in host page and waits for it to be ready. */
-export async function openGame(page: Page, opts: { fresh?: boolean; seed?: (save: Record<string, unknown>) => void } = {}): Promise<FrameLocator> {
+export async function openGame(page: Page, opts: { fresh?: boolean; freeze?: boolean; seed?: (save: Record<string, unknown>) => void } = {}): Promise<FrameLocator> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   (page as unknown as { __errors: string[] }).__errors = errors;
-  await page.route('**/__e2e/host.html', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: HOST }));
-  await page.goto('/__e2e/host.html');
+  await page.route('**/__e2e/host.html*', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: HOST }));
+  const url = opts.freeze ? '/__e2e/host.html?freeze' : '/__e2e/host.html';
+  await page.goto(url);
   if (opts.fresh !== false) await page.evaluate((k) => localStorage.removeItem(k), SAVE_KEY);
-  await page.reload();
+  await page.goto(url);
   await waitReady(page);
   return page.frameLocator('#g');
 }

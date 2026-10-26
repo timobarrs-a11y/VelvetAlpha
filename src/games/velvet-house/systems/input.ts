@@ -53,6 +53,8 @@ export function createInput(g: Game): void {
   const touches = new Map<number, { x: number; y: number }>();
   let dragFrom: { x: number; y: number; fx: number; fy: number } | null = null;
   let pinchFrom = 0;
+  // How fast the finger was moving when it let go, so a quick drag glides on a little.
+  let lastMove: { t: number; x: number; y: number; vx: number; vy: number } | null = null;
   canvas.style.touchAction = 'none';
   canvas.addEventListener('wheel', (e) => { e.preventDefault(); g.zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
   canvas.addEventListener('dblclick', () => { if (view.follow) g.toggleFollow(view.follow); g.resetCamera(); });
@@ -75,10 +77,26 @@ export function createInput(g: Game): void {
         if (view.follow) g.toggleFollow(view.follow);
         cam.tfx = dragFrom.fx - dx * k; cam.tfy = dragFrom.fy - dy * k;
         g.s.suppressClick = true;
+        const now = performance.now();
+        if (lastMove && now > lastMove.t) {
+          const s = 1000 / (now - lastMove.t);
+          lastMove = { t: now, x: e.clientX, y: e.clientY, vx: lastMove.vx * 0.5 + (e.clientX - lastMove.x) * s * 0.5, vy: lastMove.vy * 0.5 + (e.clientY - lastMove.y) * s * 0.5 };
+        } else lastMove = { t: now, x: e.clientX, y: e.clientY, vx: 0, vy: 0 };
       }
     }
   });
-  const lift = (e: PointerEvent) => { touches.delete(e.pointerId); if (touches.size < 2) pinchFrom = 0; if (touches.size === 0) dragFrom = null; };
+  const lift = (e: PointerEvent) => {
+    touches.delete(e.pointerId);
+    if (touches.size < 2) pinchFrom = 0;
+    if (touches.size === 0) {
+      if (dragFrom && lastMove && performance.now() - lastMove.t < 80) {
+        const k = VIEW_W / canvas.getBoundingClientRect().width / cam.tz;
+        g.flingCamera(-lastMove.vx * k, -lastMove.vy * k);
+      }
+      dragFrom = null;
+      lastMove = null;
+    }
+  };
   canvas.addEventListener('pointerup', lift);
   canvas.addEventListener('pointercancel', lift);
 }

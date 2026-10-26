@@ -17,9 +17,9 @@ new scope that the overhaul brief never covered.
 
 | Overhaul phase | Status | Evidence |
 |---|---|---|
-| 1. Move into the repo as modules | **Done** | `src/games/velvet-house/` (state, art, ui, engine, bridge), served by `games/velvet-house-next` |
-| 2. Renderer (deferred lighting) | **Done** | `engine/gbuffer.ts`, `deferredLights.ts`, `gpuLights.ts`, quality tiers, tests |
-| 3. Animation | **Done, and extended by PR #48** | `art/poseAnim.js`; clips per activity, springs, expressions, camera close-ups; then hands, shaded sleeves, shoe soles, see-through heads fixed, and activities you can actually see |
+| 1. Move into the repo as modules | **Done, with two things left** | `src/games/velvet-house/` (state, art, ui, engine, bridge, plus `kernel`, `systems`, `view`, `dev` since the `main.ts` split), served by `games/velvet-house-next`. Typed save with migrations tested against a v1 fixture, seeded RNG (looks and dirt now draw from it too), Vitest on the pure logic, host messages checked and posted to the app's origin, a separate lazy chunk, live e2e (`npm run test:live`, 22 tests) and golden screenshots (`npm run test:visual`). **Left:** the legacy game is still served at `/velvet-house-legacy` until the parity checklist below is clear (the brief said delete it); the screenshots were taken after the animation work, not before the move, so they guard against regressions from here, not parity with the old game |
+| 2. Renderer (deferred lighting) | **Done, with three things left** | `engine/gbuffer.ts`, `deferredLights.ts`, `gpuLights.ts`, quality tiers with automatic detection and a player override. Soft shadows, ambient occlusion, window beams, bloom, time-of-day and season grade, wet yard, snow, material sheen, dust motes and pooled particles are all there. **Left:** depth of field during conversations and try-ons; rain droplets running down window glass; the "proof slice" write-up (screenshots at four times of day with frame-time numbers on desktop and phone). The screenshots exist now; the frame-time numbers do not |
+| 3. Animation | **Done and extended by PR #48, with gaps** | `art/poseAnim.js`: 30 activity clips on top of 31 poses, springs for hair and hems, blinks and eye darts, look-at, expressions from needs, idle fidgets, close-up and two-shot camera. **Left, all inside the animation code (another agent is changing it, so not touched here):** a crossfade between clips when the pose changes (the rig is applied directly), a turn-in-place step, screen shake for big moments. **Left in the camera:** shot types for a try-on mirror and a "room finished" reveal (they need those features first). **Added in this pass:** a drag that ends while moving now glides on and slows down |
 | 4. Clothing system and design generator | **Took a different route (PR #48)** | Instead of garment recipes, the game now wears the avatar app's own wardrobe: separate shirts, pants and hats that mix and match, personas (a whole look in one tap), full-body sprites (`state/bodySprites.ts`, `renderers/bodyRenderer`, `handRenderer`, `outfitRenderer`), six new shirts, four hats, pants and six personas, with migration `20261028120000_wardrobe_pants_personas.sql`. The garment-recipe format and the design generator from the brief are not built. **Decision: still wanted** (see Design Studio below) |
 | 5. Gardens and the outdoors | **Partly** | Grass, weeds, rain, seasons and a garden bed in the art. No plant species, growth stages or yard decorating. The `yard`, `dirt`, `pets`, `calendar` and `festivals` modules are not wired into the live game |
 | 6. Opening and tutorial | **Not started** | Design exists (`opening-sequence.md`); no script engine, no Dez, no scripted tutorial |
@@ -43,8 +43,7 @@ new scope that the overhaul brief never covered.
      the additive v3 keys for scripts, daily list and jobs (each arrives with its
      feature).
 
-   Next: one source for level and object data (0.9), splitting `main.ts`
-   (0.10) and the scene list (0.11), once the animation work is merged.
+   Steps 0.2 (memory is condensed, not dropped), 0.3 (taps follow the rotation), 0.4 (model IDs in one place), 0.9 (one source for level and object data), 0.10 (`main.ts` split into modules) and 0.11 (the scene list) are done. Foundation is complete apart from the deferred bridge v2 items above.
 2. **Overhaul Phase 6 = architecture Phase 1:** script engine, NPCs, the Dez
    opening, deliveries, tutorial chapters 7-15.
 3. **Architecture Phase 2 and 3 in parallel:** daily to-do list; character chat

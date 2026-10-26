@@ -28,6 +28,14 @@ export function createCamera(g: Game): Partial<Game> {
   let basePan = 0;
   const cam = { z: 1, fx: VIEW_W / 2, fy: VIEW_H / 2, tz: 1, tfx: VIEW_W / 2, tfy: VIEW_H / 2 };
   const CAM_MAX = 2.6;
+  // A drag that ends while still moving glides on and slows down (view units per second).
+  const fling = { vx: 0, vy: 0 };
+  function flingCamera(vx: number, vy: number): void {
+    const speed = Math.hypot(vx, vy);
+    if (speed < 20) return;
+    const cap = Math.min(1, 900 / speed);
+    fling.vx = vx * cap; fling.vy = vy * cap;
+  }
   function clampFocus(z: number, fx: number, fy: number): [number, number] {
     const hw = VIEW_W / (2 * z), hh = VIEW_H / (2 * z);
     return [Math.max(hw, Math.min(VIEW_W - hw, fx)), Math.max(hh, Math.min(VIEW_H - hh, fy))];
@@ -47,6 +55,15 @@ export function createCamera(g: Game): Partial<Game> {
   }
   function applyCamera(frameDt: number): void {
     cameraShot();
+    if (frameDt > 0 && (fling.vx || fling.vy)) {
+      if (view.follow) fling.vx = fling.vy = 0;
+      else {
+        cam.tfx += fling.vx * frameDt; cam.tfy += fling.vy * frameDt;
+        const decay = Math.exp(-frameDt * 4.5);
+        fling.vx *= decay; fling.vy *= decay;
+        if (Math.hypot(fling.vx, fling.vy) < 4) fling.vx = fling.vy = 0;
+      }
+    }
     const k = frameDt > 0 ? Math.min(1, frameDt * 6) : 1;
     cam.z += (cam.tz - cam.z) * k;
     [cam.tfx, cam.tfy] = clampFocus(cam.tz, cam.tfx, cam.tfy);
@@ -71,8 +88,8 @@ export function createCamera(g: Game): Partial<Game> {
     cam.tfy = py - (py - cam.tfy) * (cam.tz / nz);
     cam.tz = nz;
   }
-  function resetCamera(): void { cam.tz = 1; cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
+  function resetCamera(): void { fling.vx = fling.vy = 0; cam.tz = 1; cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
   new ResizeObserver(fit).observe(canvas);
   fit();
-  return { cam, fit, applyCamera, toView, zoomAt, resetCamera };
+  return { cam, fit, applyCamera, toView, zoomAt, resetCamera, flingCamera };
 }

@@ -8,6 +8,7 @@ import { headFrameFor } from '../state/headSprites';
 import { handImage, HAND_SPRITE } from '../state/bodySprites';
 import { TYPES as STATE_TYPES } from '../state/objects';
 import { isOutdoor } from '../state/scenes';
+import { rand } from '../state/rng';
 import { LEVELS, STAIRS, WALL_LIGHTS, LEVEL_NAMES, DOOR } from '../state/house';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
@@ -891,7 +892,7 @@ export function createHouseArt(ctx0, opts = {}) {
   const roomFor = (n) => (flags.house === 'craftsman' && ALIAS[n] ? ALIAS[n] : n);
   const LA = {}, occ = {}, occLevel = {};
   let rdt = 0.016;
-  const PFX = createParticles();
+  const PFX = createParticles(360, rand);
   function drawParticles(level, glow) {
     if (glow) ctx.globalCompositeOperation = 'lighter';
     PFX.forEach(level, (p, t) => {
@@ -925,12 +926,12 @@ export function createHouseArt(ctx0, opts = {}) {
     return night && levelDark(level) > 0.3 ? 0.35 : 0;
   }
   function ease(key, target) { const v = LA[key] || 0; LA[key] = v + (target - v) * Math.min(1, rdt * 5); return LA[key]; }
-  const MOTES = Array.from({ length: 54 }, () => ({ x: 40 + Math.random() * (W - 80), y: 70 + Math.random() * (H - 120), s: 0.4 + Math.random() * 1.1, ph: Math.random() * 6.28 }));
+  const MOTES = Array.from({ length: 54 }, () => ({ x: 40 + rand() * (W - 80), y: 70 + rand() * (H - 120), s: 0.4 + rand() * 1.1, ph: rand() * 6.28 }));
   function drawMotes(lights) {
     const pts = lights.map(l => { const [sx, sy] = iso(...l.src), [px, py] = iso(...l.pool); return { sx, sy, px, py, r: l.r, s: l.s }; });
     MOTES.forEach(m => {
       m.y -= rdt * 2.2 * m.s; m.x += Math.sin(animT * 0.4 + m.ph) * rdt * 3;
-      if (m.y < 50) { m.y = H - 40; m.x = 40 + Math.random() * (W - 80); }
+      if (m.y < 50) { m.y = H - 40; m.x = 40 + rand() * (W - 80); }
       let b = 0; pts.forEach(q => { const d1 = Math.hypot(m.x - q.sx, m.y - q.sy) / (q.r * 0.6), d2 = Math.hypot(m.x - q.px, (m.y - q.py) * 1.8) / q.r; b += q.s * Math.max(0, 1 - Math.min(d1, d2)); });
       const al = Math.min(0.75, 0.06 + b * 0.6) * (0.6 + 0.4 * Math.sin(animT * 1.3 + m.ph));
       if (al > 0.03) circle(m.x, m.y, 0.5 + m.s * 0.6, `rgba(255,238,210,${al})`);
@@ -1017,7 +1018,7 @@ export function createHouseArt(ctx0, opts = {}) {
   }
 
   const YARD = { tiles: [], rainAt: 0, rainUntil: 0, rainCheck: -1, rainLogged: false };
-  for (let i = 0; i < 10; i++) for (let j = 0; j < 8; j++) YARD.tiles.push({ i, j, len: 0.3 + Math.random() * 0.15, water: 0.6 + Math.random() * 0.2, weed: 0, seed: Math.random(), burn: 0, mowedAt: -9999, leaves: 0, snow: 0 });
+  for (let i = 0; i < 10; i++) for (let j = 0; j < 8; j++) YARD.tiles.push({ i, j, len: 0.3 + rand() * 0.15, water: 0.6 + rand() * 0.2, weed: 0, seed: rand(), burn: 0, mowedAt: -9999, leaves: 0, snow: 0 });
   const isPatio = (i, j) => i <= 2 && j >= 2 && j <= 4;
   const tileAt = (x, y) => YARD.tiles[Math.min(9, Math.max(0, Math.floor(x))) * 8 + Math.min(7, Math.max(0, Math.floor(y)))];
   const raining = () => absMin() >= YARD.rainAt && absMin() < YARD.rainUntil;

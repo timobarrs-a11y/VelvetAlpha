@@ -1,5 +1,5 @@
 import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
-import { RNG } from '../state/rng';
+import { RNG, setGlobalRNG } from '../state/rng';
 import { buildWorld, createAgent, type Agent, type AgentId } from '../state/agents';
 import { type CharacterNeeds } from '../state/types';
 import { createHouseArt, type PersonFrame } from '../art/houseArt.js';
@@ -104,6 +104,7 @@ export interface Game {
   toView(clientX: number, clientY: number): [number, number];
   zoomAt(clientX: number, clientY: number, factor: number): void;
   resetCamera(): void;
+  flingCamera(vx: number, vy: number): void;
   // controls
   syncControls(): void;
   setLevel(lv: number, keepFollow?: boolean): void;
@@ -175,6 +176,8 @@ export function createGame(app: HTMLElement): Game | null {
   const house = buildWorld(world.objs);
   const rngSeed = typeof save?.rngSeed === 'number' ? save.rngSeed : Date.now() & 0xffffffff;
   const rng = new RNG(rngSeed);
+  // Looks and small random choices (dust, grass, dirt spots) draw from their own stream, so the same save always looks the same.
+  setGlobalRNG(new RNG((rngSeed ^ 0x9e3779b9) >>> 0));
 
   // Game state
   const owned = new Set<string>(Array.isArray(save?.owned) ? save!.owned as string[] : []);
@@ -261,6 +264,9 @@ export function createGame(app: HTMLElement): Game | null {
 
   // The attic exists once its stairs have been built.
   const hasAttic = (): boolean => world.objs.some(o => o.id === ATTIC_STAIR_OBJS[0].id);
+
+  // Test pages start paused so screenshots are the same every time.
+  if (import.meta.env.DEV && new URLSearchParams(location.search).has('freeze')) view.paused = true;
 
   const s: GameState = {
     bond: typeof save?.bond === 'number' ? save.bond : 58,
