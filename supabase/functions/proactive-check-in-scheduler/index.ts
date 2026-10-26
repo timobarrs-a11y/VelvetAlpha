@@ -169,16 +169,19 @@ Deno.serve(async (req: Request) => {
 
     const now = new Date();
 
-    // Auto-retire threads older than 21 days
-    const twentyOneDaysAgo = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000).toISOString();
+    // Auto-retire threads a week past their follow-up date (or, with no
+    // date, 21 days after they were opened). Retiring by age alone killed
+    // threads whose follow-up was set further out than 21 days.
+    const DAY = 24 * 60 * 60 * 1000;
+    const weekAgo = new Date(now.getTime() - 7 * DAY).toISOString();
+    const twentyOneDaysAgo = new Date(now.getTime() - 21 * DAY).toISOString();
     await supabase
       .from('memory_items')
       .update({ status: 'retired' })
       .eq('kind', 'thread')
       .eq('status', 'active')
-      .lt('created_at', twentyOneDaysAgo)
-      .then(() => {})
-      .catch(() => {});
+      .or(`due_at.lt.${weekAgo},and(due_at.is.null,created_at.lt.${twentyOneDaysAgo})`)
+      .then(() => {}, () => {});
 
     const HOUR = 60 * 60 * 1000;
     const iso = (msAgo: number) => new Date(now.getTime() - msAgo).toISOString();
@@ -321,6 +324,8 @@ Deno.serve(async (req: Request) => {
         .eq('status', 'active')
         .in('kind', ['fact', 'person', 'thread'])
         .or(`and(scope.eq.global,companion_id.is.null),and(scope.eq.companion,companion_id.eq.${companion.id})`)
+        // Temporary states that have run out ("sick this week") aren't news anymore.
+        .or(`valid_until.is.null,valid_until.gt.${now.toISOString()}`)
         .order('updated_at', { ascending: false })
         .limit(15);
 
