@@ -21,6 +21,8 @@ import { InstallPWABanner } from './components/InstallPWABanner';
 import { SWUpdateToast } from './components/SWUpdateToast';
 
 import { SignedInWorkspace } from './components/SignedInWorkspace';
+import { CookieConsent } from './components/CookieConsent';
+import { AvatarEditorHost } from './components/AvatarEditorModal';
 import { WorldWelcomeMount } from './features/velvet-world/WorldWelcome';
 
 const GAME_PATHS = [
@@ -79,6 +81,9 @@ function GlobalEffects() {
       <TouchRippleCanvas
         animationStyle={customization?.animation_style ?? 'stars'}
         particleColors={activeCursorColor?.particles}
+        pointerSymbol={activePointerDef?.svg}
+        showTrail={customization?.show_trail ?? false}
+        trailColor={activeCursorColor?.primary}
       />
     );
   }
@@ -114,6 +119,8 @@ export function Router() {
             <InstallPWABanner />
             <AudioSceneSync />
             <GlobalEffects />
+            <AvatarEditorHost />
+            <CookieConsent />
 <SignedInWorkspace>
               <Routes>
                 {publicRoutes}

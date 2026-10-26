@@ -1,6 +1,6 @@
 import { memo, useId, useMemo } from 'react';
-import { AvatarConfigV2 } from '../types/avatar-v2';
-import { renderHair } from '../renderers/hairRenderer';
+import { AvatarConfigV2, tuneOf } from '../types/avatar-v2';
+import { renderHair, renderHairBehind } from '../renderers/hairRenderer';
 import {
   outfitGradient, renderOutfitBody, renderOutfitFront, shade,
   renderHeadwear, headwearHairCut, renderFaceAccessory,
@@ -29,7 +29,10 @@ interface AvatarV2Props {
 }
 
 // Styles short enough that the neck shows below them from behind.
-const SHORT_BACK = new Set(['buzz', 'fade', 'short', 'short_wavy', 'slick_back']);
+const SHORT_BACK = new Set(['buzz', 'fade', 'short', 'short_wavy', 'slick_back', 'bald', 'cornrows', 'bantu_knots',
+  'high_puff', 'pixie', 'top_knot', 'undercut', 'mohawk']);
+// Close to the scalp from behind: no falling strands, and some skin shows through.
+const CLOSE_CROP = new Set(['buzz', 'fade', 'top_knot', 'undercut', 'mohawk', 'cornrows', 'bantu_knots']);
 
 function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = 'bust', view = 'front', eyesClosed = false }: AvatarV2Props) {
   // Whatever comes in (a database row, an old draft, a v1 config) is brought
@@ -70,12 +73,17 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
     curvy:    { shoulderRx: 30, torsoScaleX: 1.14 },
   }[bodyType] ?? { shoulderRx: 30, torsoScaleX: 1.0 };
 
-  const { rx: fRx, ry: fRy, chinW } = faceParams;
+  // The fine-tune sliders widen or narrow the face and jaw; hair, ears and
+  // everything built on the face outline follow.
+  const tune = config.faceTune;
+  const fRx = faceParams.rx * (1 + tuneOf(tune, 'faceWidth') * 0.1);
+  const { chinW, ry: fRy } = faceParams;
+  const jaw = tuneOf(tune, 'jawWidth');
   const faceCenterY = 52;
   const faceTop = faceCenterY - fRy;
   const faceBottom = faceCenterY + fRy;
 
-  const faceGeometry = { faceShape, fRx, fRy, chinW, faceTop, faceBottom, faceCenterY };
+  const faceGeometry = { faceShape, fRx, fRy, chinW, faceTop, faceBottom, faceCenterY, jaw };
 
   const renderFaceShape = () => (
     <path d={faceOutlinePath(faceGeometry)} fill={`url(#${faceGradientId})`} />
@@ -170,7 +178,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
   const renderFacialHairLayer = () => {
     return renderFacialHair({
       facialHair, hairColor, geometry: faceGeometry,
-      mouth: mouthGeometry(lipShape, mood),
+      mouth: mouthGeometry(lipShape, mood, tune),
       idPrefix: uid,
     });
   };
@@ -426,7 +434,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
   const neckWidth = 11;
 
   const hair = renderHair({
-    hairStyle, hairTexture, hairColor, skinTone,
+    hairStyle, hairTexture, hairColor, skinTone, hairHighlight: config.hairHighlight,
     geometry: faceGeometry, idPrefix: uid,
     fromBehind: part === 'head' && view === 'back',
   });
@@ -436,6 +444,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
     // Long hair fades out below the chin, where a game body takes over.
     const fadeId = `${uid}-fade`, napeId = `${uid}-nape`;
     const shortBack = SHORT_BACK.has(hairStyle);
+    const behind = view === 'back' ? renderHairBehind({ hairStyle, hairColor, hairHighlight: config.hairHighlight, skinTone, geometry: faceGeometry }) : null;
     const back = view === 'back';
     return (
       <svg viewBox="0 -4 100 104" className={className}>
@@ -461,10 +470,12 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
           {back ? (
             // From behind, hair covers the head; short cuts stop at the nape.
             <g clipPath={shortBack ? `url(#${napeId})` : undefined}>
-              <g clipPath={hatClip}>
+              {hairStyle !== 'bald' && <g clipPath={hatClip}>
                 <path d={faceOutlinePath(faceGeometry)} fill={hairColor}
-                  opacity={hairStyle === 'buzz' || hairStyle === 'fade' ? 0.82 : 1} />
-                {hairStyle !== 'buzz' && hairStyle !== 'afro' && (
+                  opacity={CLOSE_CROP.has(hairStyle) ? 0.82 : 1} />
+                {behind?.onHead && <g clipPath={`url(#${faceClipId})`}>{behind.onHead}</g>}
+                {behind && <g clipPath={behind.clipToHead ? `url(#${faceClipId})` : undefined}>{behind.node}</g>}
+                {!behind && !CLOSE_CROP.has(hairStyle) && hairStyle !== 'afro' && hairStyle !== 'high_puff' && (
                   <g clipPath={`url(#${faceClipId})`}>
                     {/* Strands falling from the crown, and a sheen across it. */}
                     {Array.from({ length: 15 }, (_, i) => {
@@ -478,21 +489,21 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
                       stroke={shade(hairColor, 0.25)} strokeWidth="2.4" fill="none" opacity="0.3" strokeLinecap="round" />
                   </g>
                 )}
-              </g>
+              </g>}
             </g>
           ) : (
             <>
               {renderFaceShading()}
-              {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity)}
+              {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity, tune)}
               {renderBlush()}
-              {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed })}
-              {!eyesClosed && renderEyeliner(eyeliner, eyeShape)}
-              {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape)}
-              {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender)}
-              {renderNose(noseShape, skinTone)}
+              {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed, tune })}
+              {!eyesClosed && renderEyeliner(eyeliner, eyeShape, tune)}
+              {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape, tune)}
+              {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender, tune)}
+              {renderNose(noseShape, skinTone, tune)}
               {renderNosePiercing()}
               {renderFreckles()}
-              {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid })}
+              {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid, tune })}
               {renderLipPiercing()}
               {renderFacialHairLayer()}
               {renderEarrings()}
@@ -533,17 +544,17 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
       {renderFaceShading()}
       {renderSkinDetail()}
 
-      {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity)}
+      {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity, tune)}
       {renderBlush()}
-      {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed })}
-      {!eyesClosed && renderEyeliner(eyeliner, eyeShape)}
-      {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape)}
-      {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender)}
-      {renderNose(noseShape, skinTone)}
+      {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed, tune })}
+      {!eyesClosed && renderEyeliner(eyeliner, eyeShape, tune)}
+      {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape, tune)}
+      {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender, tune)}
+      {renderNose(noseShape, skinTone, tune)}
       {renderNosePiercing()}
       {renderFreckles()}
 
-      {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid })}
+      {renderMouth({ lipShape, lipColor, skinTone, mood, idPrefix: uid, tune })}
 
       {renderLipPiercing()}
       {renderFacialHairLayer()}

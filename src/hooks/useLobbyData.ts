@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { onAvatarSaved } from '../stores/avatarEditorStore';
 import { useNavigate } from 'react-router-dom';
 import {
   Crown, Cherry, Zap, Circle,
@@ -56,6 +57,12 @@ export function useLobbyData() {
   const [setupResumeRoute, setSetupResumeRoute] = useState<string | null>(null);
   const { subscriptionInfo } = useSubscription();
   const customizationHook = useCustomization();
+
+  // A face edited from anywhere updates the sidebar, cards and chat windows in place.
+  useEffect(() => onAvatarSaved(({ target, config }) => {
+    if (target.kind !== 'companion') return;
+    setCompanions(prev => prev.map(c => c.id === target.id ? { ...c, avatar_config: config as unknown as CompanionWithLastMessage['avatar_config'] } : c));
+  }), []);
 
   useEffect(() => { loadData(); }, []);
 

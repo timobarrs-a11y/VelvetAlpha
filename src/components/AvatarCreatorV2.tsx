@@ -3,7 +3,8 @@ import { Shuffle, Undo2, Redo2, RotateCcw, Bookmark, BookmarkCheck, X, Sparkles,
 import { AvatarV2 } from './AvatarV2';
 import {
   AvatarConfigV2, Gender, HairTexture,
-  SKIN_TONES, EYE_COLORS, HAIR_COLORS, LIP_COLORS, NECKLACE_COLORS,
+  SKIN_TONES, EYE_COLORS, HAIR_COLORS, HAIR_FASHION_COLORS, HAIRSTYLE_GROUPS, LIP_COLORS, NECKLACE_COLORS,
+  FACE_TUNE_SLIDERS, tuneOf,
   HAIRSTYLES, AVATAR_CONFIG_VERSION,
   HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
   DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2,
@@ -134,10 +135,10 @@ function coherentRandomize(): AvatarConfigV2 {
   const hairTexture = pick(textures);
 
   const compatibleStyles = hairTexture === 'coily'
-    ? (g === 'male' ? ['afro', 'locs_short', 'fade', 'short'] : ['afro', 'locs', 'braids', 'curly'])
+    ? (g === 'male' ? ['afro', 'locs_short', 'fade', 'short', 'cornrows', 'twists', 'bald', 'barrel_twists'] : ['afro', 'locs', 'braids', 'curly', 'high_puff', 'bantu_knots', 'twists', 'cornrows', 'boho_braids', 'goddess_locs'])
     : hairTexture === 'wavy'
-    ? (g === 'male' ? ['short_wavy', 'short', 'slick_back'] : ['wavy', 'sleek', 'curly', 'ponytail'])
-    : (g === 'male' ? ['buzz', 'short', 'slick_back', 'fade'] : ['sleek', 'ponytail', 'bun', 'wavy']);
+    ? (g === 'male' ? ['short_wavy', 'short', 'slick_back', 'undercut'] : ['wavy', 'sleek', 'curly', 'ponytail', 'bob', 'bangs'])
+    : (g === 'male' ? ['buzz', 'short', 'slick_back', 'fade', 'undercut', 'top_knot', 'bald'] : ['sleek', 'ponytail', 'bun', 'wavy', 'bob', 'pixie', 'long_straight', 'bangs']);
 
   const hairStyle = pick(compatibleStyles) as AvatarConfigV2['hairStyle'];
 
@@ -161,11 +162,14 @@ function coherentRandomize(): AvatarConfigV2 {
     skinTone,
     eyeColor: pick(EYE_COLORS).value,
     hairColor: pick(HAIR_COLORS).value,
+    hairHighlight: Math.random() < 0.15 ? pick([...HAIR_COLORS, ...HAIR_FASHION_COLORS]).value : 'none',
     hairStyle,
     hairTexture,
     lipShape: pick(['natural', 'full', 'thin', 'heart'] as LipShape[]),
     lipColor: pick(lipColorPool),
-    eyebrowShape: pick(['natural', 'arched', 'straight', 'thick', 'thin'] as EyebrowShape[]),
+    eyebrowShape: pick(['natural', 'arched', 'straight', 'rounded', 'thick', 'bushy', 'thin'] as EyebrowShape[]),
+    // A little variety in proportions, never extreme.
+    faceTune: Object.fromEntries(FACE_TUNE_SLIDERS.map(sl => [sl.key, Math.round((Math.random() * 1.2 - 0.6) * 10) / 10])),
     eyeShape: pick(eyeShapes),
     noseShape: pick(noseShapes),
     faceShape: pick(faceShapes),
@@ -345,7 +349,7 @@ export function AvatarCreatorV2({
 
       <Section label="Eyebrows">
         <div className="grid grid-cols-3 gap-2">
-          {(['natural', 'arched', 'straight', 'thick', 'thin'] as EyebrowShape[]).map(v => (
+          {(['natural', 'arched', 'straight', 'rounded', 'thick', 'bushy', 'thin'] as EyebrowShape[]).map(v => (
             <OptionButton key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
               selected={config.eyebrowShape === v} onClick={() => update({ eyebrowShape: v })} />
           ))}
@@ -367,6 +371,35 @@ export function AvatarCreatorV2({
             <OptionButton key={v.value} label={v.label}
               selected={config.faceShape === v.value} onClick={() => update({ faceShape: v.value })} />
           ))}
+        </div>
+      </Section>
+
+      <Section label="Fine-tune">
+        <div className="space-y-3">
+          {FACE_TUNE_SLIDERS.map(sl => {
+            const value = tuneOf(config.faceTune, sl.key);
+            return (
+              <label key={sl.key} className="block">
+                <span className="mb-1 flex items-center justify-between text-xs text-gray-300">
+                  <span>{sl.label}</span>
+                  <span className="text-[10px] text-gray-500">{value === 0 ? '' : value < 0 ? sl.low : sl.high}</span>
+                </span>
+                <input
+                  type="range" min={-1} max={1} step={0.1} value={value}
+                  onChange={e => update({ faceTune: { ...config.faceTune, [sl.key]: Number(e.target.value) } })}
+                  className="w-full accent-sky-500"
+                  aria-label={`${sl.label}: ${sl.low} to ${sl.high}`}
+                />
+                <span className="flex justify-between text-[10px] text-gray-500"><span>{sl.low}</span><span>{sl.high}</span></span>
+              </label>
+            );
+          })}
+          {config.faceTune && Object.values(config.faceTune).some(v => v) && (
+            <button type="button" onClick={() => update({ faceTune: {} })}
+              className="text-xs font-medium text-sky-400 hover:text-sky-300">
+              Reset fine-tuning
+            </button>
+          )}
         </div>
       </Section>
 
@@ -440,10 +473,17 @@ export function AvatarCreatorV2({
   const hairTab = (
     <div className="space-y-5">
       <Section label="Hairstyle">
-        <div className="grid grid-cols-3 gap-2">
-          {hairstyles.map(s => (
-            <OptionButton key={s.value} label={s.label}
-              selected={config.hairStyle === s.value} onClick={() => update({ hairStyle: s.value as AvatarConfigV2['hairStyle'] })} />
+        <div className="space-y-3">
+          {HAIRSTYLE_GROUPS.map(group => (
+            <div key={group.label}>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">{group.label}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {group.styles.map(value => (
+                  <OptionButton key={value} label={hairstyles.find(h => h.value === value)?.label ?? value}
+                    selected={config.hairStyle === value} onClick={() => update({ hairStyle: value })} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </Section>
@@ -459,12 +499,25 @@ export function AvatarCreatorV2({
 
       <Section label="Hair Color">
         <div className="flex flex-wrap gap-2">
-          {HAIR_COLORS.map(c => (
+          {[...HAIR_COLORS, ...HAIR_FASHION_COLORS].map(c => (
             <ColorSwatch key={c.value} color={c.value} selected={config.hairColor === c.value}
               onClick={() => update({ hairColor: c.value })} title={c.name} />
           ))}
         </div>
       </Section>
+
+      {config.hairStyle !== 'bald' && (
+        <Section label="Highlights">
+          <div className="flex flex-wrap gap-2">
+            <ColorSwatch color="transparent" selected={!config.hairHighlight || config.hairHighlight === 'none'}
+              onClick={() => update({ hairHighlight: 'none' })} title="No highlights" />
+            {[...HAIR_COLORS, ...HAIR_FASHION_COLORS].filter(c => c.value !== config.hairColor).map(c => (
+              <ColorSwatch key={c.value} color={c.value} selected={config.hairHighlight === c.value}
+                onClick={() => update({ hairHighlight: c.value })} title={c.name} />
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section label="Facial Hair">
         <div className="grid grid-cols-3 gap-2">

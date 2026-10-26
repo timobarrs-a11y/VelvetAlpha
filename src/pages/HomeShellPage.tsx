@@ -505,6 +505,8 @@ export function HomeShellPage() {
           onSetCursorColor={customizationHook.setCursorColor}
           onSetButtonHoverStyle={customizationHook.setButtonHoverStyle}
           onSetTranslucentUI={customizationHook.setTranslucentUI}
+          onSetToolbarBackgroundMode={customizationHook.setToolbarBackgroundMode}
+          onSetToolbarTextColor={customizationHook.setToolbarTextColor}
           onCompanionFontUpdated={(companionId, fontFamily) => {
             lobby.setCompanionsList(prev =>
               prev.map(c => c.id === companionId ? { ...c, font_family: fontFamily } : c)

@@ -1,5 +1,6 @@
-import type {
-  EyeShape, EyebrowShape, NoseShape, Eyeliner, EyeShadow, MakeupIntensity, Gender, LipShape,
+import {
+  type EyeShape, type EyebrowShape, type NoseShape, type Eyeliner, type EyeShadow, type MakeupIntensity, type Gender, type LipShape,
+  type FaceTune, tuneOf,
 } from '../types/avatar-v2';
 import { FaceGeometry, faceHalfWidthAt } from './faceGeometry';
 import { shade } from './outfitRenderer';
@@ -12,7 +13,12 @@ type Pt = [number, number];
 type Side = -1 | 1;
 
 const EYE_Y = 50;
-const EYES: Array<{ cx: number; side: Side }> = [{ cx: 38, side: -1 }, { cx: 62, side: 1 }];
+
+// Where the eyes sit: wider or closer set with the spacing slider.
+function eyesFor(t?: FaceTune): Array<{ cx: number; side: Side }> {
+  const d = tuneOf(t, 'eyeSpacing') * 2.6;
+  return [{ cx: 38 - d, side: -1 }, { cx: 62 + d, side: 1 }];
+}
 
 interface EyeSpec { w: number; up: number; lo: number; tilt: number; crease: 'normal' | 'none' | 'hood' | 'deep' }
 
@@ -24,7 +30,16 @@ const EYE_SPECS: Record<EyeShape, EyeSpec> = {
   monolid:  { w: 7.0, up: 3.1, lo: 2.3, tilt: 0.9, crease: 'none' },
   deepset:  { w: 6.4, up: 4.0, lo: 2.8, tilt: 0,   crease: 'deep' },
   upturned: { w: 6.8, up: 4.2, lo: 2.4, tilt: 2.2, crease: 'normal' },
+  downturned: { w: 6.8, up: 4.3, lo: 2.7, tilt: -1.4, crease: 'normal' },
+  narrow:   { w: 7.2, up: 3.0, lo: 1.9, tilt: 0.5, crease: 'normal' },
 };
+
+// An eye shape with the size and tilt sliders applied.
+function specFor(shape: EyeShape, t?: FaceTune): EyeSpec {
+  const s = EYE_SPECS[shape] ?? EYE_SPECS.almond;
+  const k = 1 + tuneOf(t, 'eyeSize') * 0.16;
+  return { ...s, w: s.w * k, up: s.up * k, lo: s.lo * k, tilt: s.tilt + tuneOf(t, 'eyeTilt') * 1.5 };
+}
 
 interface EyeGeom {
   cx: number; side: Side; spec: EyeSpec;
@@ -32,8 +47,8 @@ interface EyeGeom {
   upperC: [Pt, Pt]; lowerC: [Pt, Pt];
 }
 
-function eyeGeom(cx: number, side: Side, shape: EyeShape): EyeGeom {
-  const s = EYE_SPECS[shape] ?? EYE_SPECS.almond;
+function eyeGeom(cx: number, side: Side, shape: EyeShape, t?: FaceTune): EyeGeom {
+  const s = specFor(shape, t);
   const inner: Pt = [cx - side * s.w, EYE_Y + 0.4];
   const outer: Pt = [cx + side * s.w, EYE_Y - s.tilt];
   return {
@@ -63,13 +78,14 @@ export interface EyeParams {
   idPrefix: string;
   // Closed for a blink or sleep: the lid covers the eye, lashes along a soft curve.
   closed?: boolean;
+  tune?: FaceTune;
 }
 
-export function renderEyes({ eyeShape, eyeColor, skinTone, idPrefix, closed }: EyeParams): React.ReactNode {
+export function renderEyes({ eyeShape, eyeColor, skinTone, idPrefix, closed, tune }: EyeParams): React.ReactNode {
   const lidLine = '#2b1d18';
   const crease = shade(skinTone, -0.22);
-  return EYES.map(({ cx, side }) => {
-    const e = eyeGeom(cx, side, eyeShape);
+  return eyesFor(tune).map(({ cx, side }) => {
+    const e = eyeGeom(cx, side, eyeShape, tune);
     const s = e.spec;
     if (closed) {
       return (
@@ -122,9 +138,9 @@ export function renderEyes({ eyeShape, eyeColor, skinTone, idPrefix, closed }: E
   });
 }
 
-export function renderEyelashes(eyeShape: EyeShape): React.ReactNode {
-  return EYES.map(({ cx, side }) => {
-    const e = eyeGeom(cx, side, eyeShape);
+export function renderEyelashes(eyeShape: EyeShape, tune?: FaceTune): React.ReactNode {
+  return eyesFor(tune).map(({ cx, side }) => {
+    const e = eyeGeom(cx, side, eyeShape, tune);
     return (
       <g key={side} stroke="#1a1210" strokeWidth="0.8" fill="none" strokeLinecap="round">
         {[0.5, 0.62, 0.74, 0.85, 0.95].map((t, i) => {
@@ -137,13 +153,13 @@ export function renderEyelashes(eyeShape: EyeShape): React.ReactNode {
   });
 }
 
-export function renderEyeliner(eyeliner: Eyeliner | undefined, eyeShape: EyeShape): React.ReactNode {
+export function renderEyeliner(eyeliner: Eyeliner | undefined, eyeShape: EyeShape, tune?: FaceTune): React.ReactNode {
   if (!eyeliner || eyeliner === 'none') return null;
   const ink = '#0f0a09';
   const weight = { thin: 1.5, winged: 1.7, bold: 2.3 }[eyeliner];
   const wing = { thin: 0, winged: 3.6, bold: 4.8 }[eyeliner];
-  return EYES.map(({ cx, side }) => {
-    const e = eyeGeom(cx, side, eyeShape);
+  return eyesFor(tune).map(({ cx, side }) => {
+    const e = eyeGeom(cx, side, eyeShape, tune);
     const base = upperAt(e, 0.78);
     const tip: Pt = [e.outer[0] + side * wing, e.outer[1] - wing * 0.68 - e.spec.tilt * 0.3];
     return (
@@ -161,14 +177,14 @@ export function renderEyeliner(eyeliner: Eyeliner | undefined, eyeShape: EyeShap
   });
 }
 
-export function renderEyeShadow(eyeShadow: EyeShadow | undefined, eyeShape: EyeShape, intensity: MakeupIntensity | undefined): React.ReactNode {
+export function renderEyeShadow(eyeShadow: EyeShadow | undefined, eyeShape: EyeShape, intensity: MakeupIntensity | undefined, tune?: FaceTune): React.ReactNode {
   if (!eyeShadow || eyeShadow === 'none') return null;
   const color = { smoky: '#3a3446', natural: '#b07a62', colorful: '#8a4fa0' }[eyeShadow] ?? '#3a3446';
   const opacity = intensity === 'glam' ? 0.6 : intensity === 'subtle' ? 0.3 : 0.45;
   return (
     <g opacity={opacity}>
-      {EYES.map(({ cx, side }) => {
-        const s = EYE_SPECS[eyeShape] ?? EYE_SPECS.almond;
+      {eyesFor(tune).map(({ cx, side }) => {
+        const s = specFor(eyeShape, tune);
         return (
           <ellipse key={side} cx={cx + side * 1} cy={EYE_Y - s.up - 0.6} rx={s.w + 1.4} ry="3.4"
             fill={color} style={{ filter: 'blur(1.3px)' }} />
@@ -185,14 +201,16 @@ const BROWS: Record<EyebrowShape, BrowSpec> = {
   straight: { arch: 0.5, thick: 2.2, peak: 0.55, tailDrop: 0.6 },
   thick:    { arch: 2.0, thick: 3.4, peak: 0.6, tailDrop: 1.0 },
   thin:     { arch: 2.4, thick: 1.2, peak: 0.62, tailDrop: 1.0 },
+  bushy:    { arch: 1.6, thick: 4.2, peak: 0.58, tailDrop: 0.8 },
+  rounded:  { arch: 3.2, thick: 2.0, peak: 0.5, tailDrop: 2.4 },
 };
 
-export function renderEyebrows(shape: EyebrowShape, eyeShape: EyeShape, hairColor: string, gender: Gender): React.ReactNode {
+export function renderEyebrows(shape: EyebrowShape, eyeShape: EyeShape, hairColor: string, gender: Gender, tune?: FaceTune): React.ReactNode {
   const b = BROWS[shape] ?? BROWS.natural;
-  const eye = EYE_SPECS[eyeShape] ?? EYE_SPECS.almond;
+  const eye = specFor(eyeShape, tune);
   const t = b.thick * (gender === 'male' ? 1.15 : 1);
   const color = shade(hairColor, -0.15);
-  return EYES.map(({ cx, side }) => {
+  return eyesFor(tune).map(({ cx, side }) => {
     const base = EYE_Y - eye.up - 5.6;
     const xi = cx - side * (eye.w - 0.2), xt = cx + side * (eye.w + 2.6);
     const xp = xi + (xt - xi) * b.peak;
@@ -232,8 +250,19 @@ const NOSES: Record<NoseShape, NoseSpec> = {
   flat:     { tipY: 63.5, wide: 4.8, tip: 3.2, top: 58, hump: 0,   flare: 1.5 },
 };
 
-export function renderNose(shape: NoseShape, skinTone: string): React.ReactNode {
-  const n = NOSES[shape] ?? NOSES.straight;
+export function renderNose(shape: NoseShape, skinTone: string, tune?: FaceTune): React.ReactNode {
+  const base = NOSES[shape] ?? NOSES.straight;
+  // Width, length and bridge height from the sliders. The tip never comes
+  // down onto the upper lip.
+  const nw = tuneOf(tune, 'noseWidth'), nl = tuneOf(tune, 'noseLength'), nb = tuneOf(tune, 'noseBridge');
+  const n: NoseSpec = {
+    ...base,
+    wide: base.wide * (1 + nw * 0.35),
+    flare: base.flare * (1 + nw * 0.3),
+    tipY: Math.min(66.2, base.tipY + nl * 2.2),
+    top: base.top - nb * 2.6,
+  };
+  const bridgeOpacity = 0.45 + nb * 0.18;
   const shadow = shade(skinTone, -0.3);
   const deep = shade(skinTone, -0.5);
   const y = n.tipY;
@@ -242,7 +271,7 @@ export function renderNose(shape: NoseShape, skinTone: string): React.ReactNode 
   return (
     <g>
       <path d={`M51.2,${n.top} Q${52.4 + n.hump},${(n.top + y) / 2} ${50 + n.tip * 0.8},${y - 1.2}`}
-        stroke={shadow} strokeWidth="1.1" fill="none" opacity="0.45" strokeLinecap="round" style={{ filter: 'blur(0.3px)' }} />
+        stroke={shadow} strokeWidth="1.1" fill="none" opacity={bridgeOpacity} strokeLinecap="round" style={{ filter: 'blur(0.3px)' }} />
       <ellipse cx="49.3" cy={y - 1.4} rx={n.tip * 0.55} ry={n.tip * 0.45} fill={shade(skinTone, 0.16)} opacity="0.55" />
       {([-1, 1] as const).map((s) => (
         <g key={s}>
@@ -321,8 +350,15 @@ export interface MouthGeometry {
   top: number; bottom: number;
 }
 
-export function mouthGeometry(lipShape: LipShape, mood: MouthMood = 'neutral'): MouthGeometry {
+// A lip shape with the width and fullness sliders applied.
+function lipsFor(lipShape: LipShape, t?: FaceTune): LipSpec {
   const l = LIPS[lipShape] ?? LIPS.natural;
+  const full = 1 + tuneOf(t, 'lipFullness') * 0.38;
+  return { ...l, w: l.w * (1 + tuneOf(t, 'mouthWidth') * 0.16), up: l.up * full, lo: l.lo * full };
+}
+
+export function mouthGeometry(lipShape: LipShape, mood: MouthMood = 'neutral', tune?: FaceTune): MouthGeometry {
+  const l = lipsFor(lipShape, tune);
   const m = MOODS[mood];
   const M = MOUTH_Y;
   const L: Pt = [50 - l.w, M - m.lift], R: Pt = [50 + l.w, M - m.lift];
@@ -346,10 +382,11 @@ export interface MouthParams {
   skinTone: string;
   mood?: MouthMood;
   idPrefix: string;
+  tune?: FaceTune;
 }
 
-export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', idPrefix }: MouthParams): React.ReactNode {
-  const l = LIPS[lipShape] ?? LIPS.natural;
+export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', idPrefix, tune }: MouthParams): React.ReactNode {
+  const l = lipsFor(lipShape, tune);
   const m = MOODS[mood];
   const M = MOUTH_Y;
   const L: Pt = [50 - l.w, M - m.lift], R: Pt = [50 + l.w, M - m.lift];
@@ -360,7 +397,7 @@ export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', id
   const partingBack = `C${p(topC[1])} ${p(topC[0])} ${p(L)}`;
   const lowerTop = `M${p(L)} C${p(botC[0])} ${p(botC[1])} ${p(R)}`;
 
-  const geo = mouthGeometry(lipShape, mood);
+  const geo = mouthGeometry(lipShape, mood, tune);
   const peakY = geo.top;
   const upper = `${geo.upperTop} ${partingBack} Z`;
   const lowBottom = M + m.curve * 0.6 + m.open + l.lo * 1.25;

@@ -9,6 +9,7 @@ import { useMessages, useSendMessage } from '../../features/chat/hooks';
 import { safeRandomUUID } from '../../utils/uuid';
 import { supabase } from '../../shared/supabase/client';
 import { Avatar } from '../Avatar';
+import { useAvatarEditor } from '../../stores/avatarEditorStore';
 import { AtlasMarkdown } from '../AtlasMarkdown';
 import { companionAvatarConfig } from '../lobby';
 
@@ -99,6 +100,7 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
   const { user } = useAuth();
   const navigate = useNavigate();
   const isCoach = companion.relationship_type === 'mentor';
+  const openAvatarEditor = useAvatarEditor(s => s.open);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -187,9 +189,15 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
       <div className="flex items-center gap-2.5 border-b border-white/8 px-3 py-2.5">
-        <div className={`h-11 w-11 flex-shrink-0 overflow-hidden rounded-full border-2 ${isCoach ? 'border-emerald-400/70' : 'border-pink-400/60'}`}>
+        <button
+          type="button"
+          onClick={() => openAvatarEditor({ kind: 'companion', id: companion.id })}
+          title="Edit avatar"
+          aria-label={`Edit ${companion.custom_name}'s avatar`}
+          className={`h-11 w-11 flex-shrink-0 overflow-hidden rounded-full border-2 transition-shadow hover:ring-2 hover:ring-white/40 ${isCoach ? 'border-emerald-400/70' : 'border-pink-400/60'}`}
+        >
           <Avatar config={companionAvatarConfig(companion)} className="h-full w-full" />
-        </div>
+        </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-white">{companion.custom_name}</p>
           <p className="truncate text-[10px] text-white/55">
