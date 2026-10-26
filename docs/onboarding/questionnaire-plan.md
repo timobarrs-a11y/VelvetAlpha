@@ -213,6 +213,60 @@ around line 322). The Daily Feed moves below it.
 - It works with the calendar and commitments that already exist, so **it can ship before the
   rest of this plan**.
 
+### Their own plans in Today
+
+Today isn't only for what Atlas and the coaches set up. A doctor's appointment, a bill, a
+birthday, or a goal of their own shows up there too.
+
+**Quick add:** a **+** in the Today header opens a short sheet. They type what it is, pick the
+day (Today / Tomorrow / a date), optionally add a time, and pick a type with one tap: Task,
+Appointment, Birthday, Reminder, Goal. One Save. It goes into `user_events` through
+`calendarService.createEvent` with `metadata: { source: "user" }`, so it appears in Today and on
+the calendar. The calendar's full form (`EventModal`) stays for anything more detailed.
+
+**Goals of their own:** "Goal" in the same sheet creates a goal in `user_goals` with an
+optional target date. The target date becomes a `goal_deadline` event, and Today shows it in
+the days before ("Portfolio due Friday, 4 days").
+
+**Repeating events need fixing first.** The calendar can save a repeat (daily, weekly, monthly,
+yearly), but nothing repeats it. `calendarService.getUserEvents` only returns rows whose
+original `event_date` falls in the range asked for, and neither the calendar page nor
+`EventCard` expands repeats. So a yearly birthday only shows on the date it was first entered.
+The fix is one shared helper used by both the calendar and Today:
+- Fetch one-off events in the range, plus every repeating event that started on or before the
+  end of the range.
+- Expand each repeating event into its dates within the range.
+- Ticking off one day of a repeating task marks that day done (a list of done dates in
+  `metadata`), not every future one.
+
+**All-day dates are dates, not moments.** Birthdays and all-day items are compared by month and
+day in the person's own time zone. Otherwise a date saved as midnight UTC shows a day early for
+anyone west of London.
+
+### Birthdays of the people who matter
+
+**Asking for them:** a one-time card in Today, "Never miss the birthdays that matter. Add your
+people," and the same list under Profile → My people. The form is built for speed:
+- Name
+- Who they are, one tap: Best friend, Family, Partner, Friend, Colleague
+- Month and day, plus the year if they know it (optional)
+- "Add another" keeps the sheet open, so five people take under a minute.
+
+**Storing them:** each person is a `birthday` event in `user_events` with `recurring: "yearly"`
+and `all_day: true`. When they give the year, `event_date` is the actual birth date. When
+they don't, `event_date` uses the current year and `metadata.birth_year_known` is `false`, so
+no age is ever shown for them.
+`metadata` also keeps the person's name and relationship. No migration is needed.
+
+**Showing them:** with a year, Today works out the age: **"Queen's 57th birthday"**. They never
+typed 57; it's this year minus the year they gave, with the right ending (1st, 2nd, 3rd, 11th,
+12th, 13th, 21st, 22nd…). Without a year it's just "Queen's birthday". Someone born on 29
+February shows on the 28th in other years.
+
+**Seeing them coming:** birthdays also appear in Today's "coming up" line a week ahead
+("Queen's 57th birthday, Saturday"), so there's time to plan something. The existing
+`suggest-events-gifts` function can offer gift ideas from there later.
+
 ## Before and after
 
 | | Today | Arrival |
@@ -225,6 +279,8 @@ around line 322). The Daily Feed moves below it.
 | Atlas's opening | four questions at once | who he is, what Velvet is for, one probing question |
 | What the chat produces | a coach match | a coach match and at least one dated plan on the calendar |
 | Home screen | the feed first | Today first, the feed below it |
+| Their own appointments, tasks and goals | only on the calendar page | in Today, added in a few taps |
+| Birthdays | a yearly birthday never repeats | every year, with the age worked out ("Queen's 57th birthday") |
 | Look | gold for everyone | their color from question 2 on |
 
 ## Build phases for Bolt
@@ -238,6 +294,8 @@ around line 322). The Daily Feed moves below it.
 | A4 | Swipe deck as a daily feed card; the companion asks love language and "when it's hard" in week 1. | Small |
 | A5 | **Today on the home screen:** the Today section above the feed in `HomeV3Page`, with done, confirm, move and drop. No dependencies, so it can go first. | Small–Medium |
 | A6 | **Atlas makes plans:** the probing rules and proposal rules in his prompt, the `add_calendar_event` tool in `atlas-onboarding` with `tentative` in metadata, and the extra checks in the test script. | Medium |
+| A7 | **Repeating events that repeat:** the shared expand-repeats helper used by the calendar page and Today, done dates per occurrence, and all-day dates compared in local time. Fixes the calendar as it is today, so it should go before A8. | Small–Medium |
+| A8 | **Their own plans and their people:** quick add in Today (task, appointment, birthday, reminder, goal), the My people birthday form and the one-time Today card, ages worked out from the birth year, and birthdays a week ahead in "coming up". | Medium |
 
 ## Decisions for Tim
 
