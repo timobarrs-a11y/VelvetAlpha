@@ -42,6 +42,8 @@ export function startGameLoop(g: Game): void {
       if (world.day !== prevDay) { newDayReset(world.household, log); }
       tickAgent(house, people[0], people[1], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
       tickAgent(house, people[1], people[0], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
+      // Visitors a script has brought in (people after the two who live here).
+      for (const npc of people.slice(2)) tickAgent(house, npc, null, dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
       const followed = view.follow && people.find((p) => p.id === view.follow);
       if (followed && !followed.onStairs && followed.level !== view.level) g.setLevel(followed.level, true);
 

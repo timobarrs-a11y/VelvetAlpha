@@ -1499,6 +1499,52 @@ export function createHouseArt(ctx0, opts = {}) {
     return { v: out, e, active: ps.k < 1, prev: ps.prev };
   }
 
+  // What a visitor carries in their arms, drawn over the front of the torso.
+  function drawCarried(c) {
+    const [fx, fy] = iso(c.x, c.y, 0), f = facing(c.face), x = fx + f.flip * 2, y = fy - 17;
+    const rect = (px, py, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(px, py, w, h); };
+    ctx.save();
+    switch (c.carrying) {
+      case 'groceries':
+        rect(x - 7, y - 8, 14, 15, '#C9A06A'); rect(x - 7, y - 8, 14, 2.5, '#B58A55'); rect(x - 4, y - 12, 3, 6, '#7FB069'); rect(x + 1, y - 11, 3, 5, '#D9593D');
+        break;
+      case 'parcel':
+        rect(x - 8, y - 5, 16, 11, '#C9A06A'); rect(x - 8, y - 5, 16, 2, '#B58A55'); rect(x - 1, y - 5, 2, 11, '#F2EEE8');
+        break;
+      case 'paint':
+        rect(x - 5, y - 6, 10, 12, '#B9BEC6'); rect(x - 5, y - 6, 10, 3, '#E0A43A'); rect(x - 6, y - 7, 12, 1.6, '#8E939B');
+        break;
+      default: // 'pbox' and anything else: a moving box
+        rect(x - 9, y - 7, 18, 14, '#C9A06A'); rect(x - 9, y - 7, 18, 3, '#B58A55'); rect(x - 1.5, y - 7, 3, 14, '#E4D3B2');
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 0.8; ctx.strokeRect(x - 9, y - 7, 18, 14);
+    ctx.restore();
+  }
+  // A visitor's name, small, above their head.
+  function drawNameTag(c) {
+    const [fx, fy] = iso(c.x, c.y, 0);
+    ctx.save(); ctx.font = '600 8px Inter, system-ui, sans-serif'; ctx.textAlign = 'center';
+    const w = ctx.measureText(c.name).width + 8;
+    ctx.fillStyle = 'rgba(36,27,37,.72)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(fx - w / 2, fy - 64, w, 11, 5) : ctx.rect(fx - w / 2, fy - 64, w, 11); ctx.fill();
+    ctx.fillStyle = '#F7F3EE'; ctx.fillText(c.name, fx, fy - 56);
+    ctx.restore();
+  }
+  // A line said in passing, in a bubble that fades.
+  function drawBubble(c, t) {
+    const age = t - c.bubble.at;
+    if (age < 0 || age > 4) return;
+    const [fx, fy] = iso(c.x, c.y, 0);
+    ctx.save(); ctx.globalAlpha = Math.min(1, (4 - age) * 1.2); ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.textAlign = 'center';
+    const words = c.bubble.text.split(' '), lines = [''];
+    for (const w of words) { const cur = lines[lines.length - 1]; if (ctx.measureText(cur + ' ' + w).width > 120 && cur) lines.push(w); else lines[lines.length - 1] = (cur ? cur + ' ' : '') + w; }
+    const bw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 12, bh = lines.length * 11 + 8, bx = fx - bw / 2, by = fy - 70 - bh;
+    ctx.fillStyle = 'rgba(255,253,248,.96)'; ctx.strokeStyle = 'rgba(36,27,37,.35)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 6) : ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fx - 3, by + bh); ctx.lineTo(fx, by + bh + 5); ctx.lineTo(fx + 3, by + bh); ctx.fill();
+    ctx.fillStyle = '#241B25'; lines.forEach((l, i) => ctx.fillText(l, fx, by + 12 + i * 11));
+    ctx.restore();
+  }
+
   function drawPerson(c, t) {
     c = settle(c);
     const L = c.look, pose = c.pose, f = facing(c.face);
@@ -1913,7 +1959,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && TYPES[o.type] && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
-    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (gOn) G.clearBase(); } }); });
+    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (c.carrying) drawCarried(c); if (gOn) G.clearBase(); if (c.npc && c.name) drawNameTag(c); if (c.bubble) drawBubble(c, t); } }); });
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     if (arrState) drawArrangeOverlay(arrState, lv);

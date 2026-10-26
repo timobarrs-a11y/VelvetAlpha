@@ -51,7 +51,7 @@ export function createHud(g: Game): Partial<Game> {
 
   // People refresh
   const refreshPeople = (): void => {
-    people.forEach((p) => {
+    people.filter((p) => p.kind !== 'npc').forEach((p) => {
       const root = personEl(p.id);
       root.querySelector<HTMLElement>('[data-status]')!.textContent = statusText(p);
       root.querySelector<HTMLElement>('[data-where]')!.textContent = LEVEL_NAMES[p.level];

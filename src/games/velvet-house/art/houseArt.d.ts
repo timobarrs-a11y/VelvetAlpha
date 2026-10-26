@@ -27,6 +27,13 @@ export interface PersonFrame {
   expr?: string;
   /** A spot they're looking at (world x, y), e.g. the person they're talking to. */
   lookAt?: [number, number] | null;
+  /** A visitor (not one of the two who live here): shown with a name tag. */
+  npc?: boolean;
+  name?: string;
+  /** What they carry in their arms: 'pbox', 'groceries', 'parcel', 'paint'. */
+  carrying?: string;
+  /** A line said in passing; `at` is the animation time it was said. */
+  bubble?: { text: string; at: number };
   look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean; accent?: string; topGarment?: import('../state/garment').Garment; bottomGarment?: import('../state/garment').Garment; heads?: import('../state/headSprites').HeadImages; body?: import('../state/bodySprites').BodyImages };
 }
 

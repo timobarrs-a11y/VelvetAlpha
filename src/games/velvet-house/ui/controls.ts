@@ -24,7 +24,7 @@ export function createControls(g: Game): Partial<Game> {
     btn('quality').textContent = QUALITY_LABELS[g.s.qualityIdx];
     btn('pause').setAttribute('aria-pressed', String(view.paused));
     btn('pause').textContent = view.paused ? 'Play' : 'Pause';
-    people.forEach((p) => personEl(p.id).setAttribute('aria-pressed', String(view.follow === p.id)));
+    people.filter((p) => p.kind !== 'npc').forEach((p) => personEl(p.id).setAttribute('aria-pressed', String(view.follow === p.id)));
   };
   // Changing floors or turning the view crossfades instead of snapping.
   const softCut = (): void => {
@@ -51,7 +51,7 @@ export function createControls(g: Game): Partial<Game> {
   app.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((b) => {
     b.addEventListener('click', () => setLevel(Number(b.dataset.level)));
   });
-  people.forEach((p) => personEl(p.id).addEventListener('click', () => toggleFollow(p.id)));
+  people.filter((p) => p.kind !== 'npc').forEach((p) => personEl(p.id).addEventListener('click', () => toggleFollow(p.id)));
   btn('rotate').addEventListener('click', rotate);
   btn('walls').addEventListener('click', cycleWalls);
   btn('quality').addEventListener('click', () => {
