@@ -26,9 +26,16 @@ export type Fabric = typeof FABRICS[number];
 
 export const PATTERN_KINDS = [
   'stripes', 'pinstripe', 'plaid', 'gingham', 'polka', 'floral', 'camo', 'tie-dye', 'checker', 'argyle', 'leopard', 'zebra',
-  'color-block', 'graphic',
+  'color-block', 'graphic', 'pixel',
 ] as const;
 export type PatternKind = typeof PATTERN_KINDS[number];
+/** The kinds the generator and the studio's pattern list offer; a pixel design is drawn in its own editor. */
+export const GENERATED_KINDS = PATTERN_KINDS.filter((k) => k !== 'pixel') as Exclude<PatternKind, 'pixel'>[];
+
+/** A small picture the player draws: 8 or 16 cells square, up to 7 colours; cell value 0 is clear. */
+export interface PixelArt { w: number; h: number; palette: string[]; data: string }
+export const PIXEL_SIZES = [8, 16] as const;
+export const PIXEL_COLORS_MAX = 7;
 
 export const RARITIES = ['common', 'uncommon', 'rare', 'one-of-a-kind'] as const;
 export type Rarity = typeof RARITIES[number];
@@ -45,6 +52,8 @@ export interface Pattern {
   density?: number;
   seed: number;
   layer2?: Omit<Pattern, 'layer2'>;
+  /** For kind 'pixel': the picture. */
+  pixels?: PixelArt;
 }
 
 export interface GarmentDetails {
@@ -88,11 +97,25 @@ export function cleanName(v: unknown, fallback = 'Untitled'): string {
   return s || fallback;
 }
 
+export function validPixels(raw: unknown): PixelArt | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Record<string, unknown>;
+  const w = num(o.w, 0), h = num(o.h, 0);
+  if (!(PIXEL_SIZES as readonly number[]).includes(w) || w !== h) return undefined;
+  const palette = (Array.isArray(o.palette) ? o.palette : []).filter((c): c is string => typeof c === 'string' && HEX6.test(c)).slice(0, PIXEL_COLORS_MAX).map((c) => c.toLowerCase());
+  if (typeof o.data !== 'string' || o.data.length !== w * h || !/^[0-7]+$/.test(o.data)) return undefined;
+  // A cell can only point at a colour that exists.
+  const data = [...o.data].map((d) => (Number(d) > palette.length ? '0' : d)).join('');
+  return { w, h, palette, data };
+}
+
 function validPattern(raw: unknown, allowLayer2: boolean): Pattern | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const o = raw as Record<string, unknown>;
   if (typeof o.kind !== 'string' || !(PATTERN_KINDS as readonly string[]).includes(o.kind)) return undefined;
-  const colors = (Array.isArray(o.colors) ? o.colors : []).filter((c): c is string => typeof c === 'string' && HEX6.test(c)).slice(0, 3).map((c) => c.toLowerCase());
+  let colors = (Array.isArray(o.colors) ? o.colors : []).filter((c): c is string => typeof c === 'string' && HEX6.test(c)).slice(0, 3).map((c) => c.toLowerCase());
+  const pixels = o.kind === 'pixel' ? validPixels(o.pixels) : undefined;
+  if (o.kind === 'pixel') { if (!pixels) return undefined; colors = [pixels.palette[0] ?? '#000000']; }
   if (!colors.length) return undefined;
   const p: Pattern = {
     kind: o.kind as PatternKind,
@@ -101,7 +124,8 @@ function validPattern(raw: unknown, allowLayer2: boolean): Pattern | undefined {
     angle: Math.round(clamp(num(o.angle, 0), -90, 90)),
     seed: (Math.floor(num(o.seed, 1)) >>> 0),
   };
-  if (o.density !== undefined) p.density = Math.round(clamp(num(o.density, 0.5), 0, 1) * 100) / 100;
+  if (pixels) p.pixels = pixels;
+  p.density = Math.round(clamp(num(o.density, 0.5), 0, 1) * 100) / 100;
   if (allowLayer2 && o.layer2) {
     const l2 = validPattern(o.layer2, false);
     if (l2) p.layer2 = l2;
@@ -207,7 +231,7 @@ export const PALETTES: Palette[] = [
 
 /** What patterns suit which cloth: leather and satin stay plain or striped, rough cloth takes anything. */
 const PATTERNS_FOR: Record<Fabric, readonly PatternKind[]> = {
-  cotton: PATTERN_KINDS,
+  cotton: GENERATED_KINDS,
   denim: ['stripes', 'pinstripe', 'polka', 'camo', 'graphic', 'color-block', 'checker'],
   knit: ['stripes', 'argyle', 'checker', 'polka', 'color-block', 'graphic', 'floral'],
   flannel: ['plaid', 'gingham', 'checker', 'stripes'],
@@ -267,7 +291,7 @@ export function generateGarment(seed: number, opts: GenerateOptions = {}): Garme
   const g: Garment = { v: 1, slot, cut, fabric, base, tags: [], rarity, name: '' };
 
   if (rng.chance(PATTERN_CHANCE[rarity])) {
-    const kind = rng.pick(PATTERNS_FOR[fabric]);
+    const kind = rng.pick(PATTERNS_FOR[fabric].filter((k) => k !== 'pixel'));
     const others = palette.colors.filter((c) => c !== base);
     const colors = rng.shuffle(others).slice(0, kind === 'color-block' || kind === 'tie-dye' || kind === 'argyle' ? rng.int(2, 3) : rng.int(1, 2)).map((c) => withContrast(c, base));
     g.pattern = {
@@ -393,6 +417,19 @@ function writePattern(out: number[], p: Omit<Pattern, 'layer2'>): void {
   for (const c of p.colors) { const n = parseInt(c.slice(1), 16); out.push((n >> 16) & 255, (n >> 8) & 255, n & 255); }
   out.push(Math.round(p.scale * 40), p.angle + 90, Math.round((p.density ?? 0.5) * 100));
   out.push((p.seed >>> 24) & 255, (p.seed >>> 16) & 255, (p.seed >>> 8) & 255, p.seed & 255);
+  if (p.kind === 'pixel' && p.pixels) writePixels(out, p.pixels);
+}
+
+/** Cells are packed three bits each. */
+function writePixels(out: number[], px: PixelArt): void {
+  out.push(px.w, px.palette.length);
+  for (const c of px.palette) { const n = parseInt(c.slice(1), 16); out.push((n >> 16) & 255, (n >> 8) & 255, n & 255); }
+  let acc = 0, bits = 0;
+  for (const d of px.data) {
+    acc = (acc << 3) | Number(d); bits += 3;
+    while (bits >= 8) { out.push((acc >> (bits - 8)) & 255); bits -= 8; acc &= (1 << bits) - 1; }
+  }
+  if (bits > 0) out.push((acc << (8 - bits)) & 255);
 }
 
 export function encodeGarment(input: Garment): string {
@@ -459,7 +496,19 @@ function readGarment(b: number[]): Garment | null {
     const colors = Array.from({ length: n }, colour);
     const scale = take() / 40, angle = take() - 90, density = take() / 100;
     const seed = ((take() << 24) | (take() << 16) | (take() << 8) | take()) >>> 0;
-    return { kind, colors, scale, angle, density, seed };
+    const p: Omit<Pattern, 'layer2'> = { kind, colors, scale, angle, density, seed };
+    if (kind === 'pixel') p.pixels = readPixels();
+    return p;
+  };
+  const readPixels = (): PixelArt => {
+    const w = take(), n = take();
+    const palette = Array.from({ length: n }, colour);
+    let acc = 0, bits = 0, data = '';
+    while (data.length < w * w) {
+      if (bits < 3) { acc = (acc << 8) | take(); bits += 8; }
+      data += String((acc >> (bits - 3)) & 7); bits -= 3; acc &= (1 << bits) - 1;
+    }
+    return { w, h: w, palette, data };
   };
   const g: Record<string, unknown> = { v: 1, slot, cut, fabric, base, tags, rarity: RARITIES[(flags >> 3) & 3] };
   if (flags & 32) { const p: Pattern = pattern(); if (flags & 64) p.layer2 = pattern(); g.pattern = p; }

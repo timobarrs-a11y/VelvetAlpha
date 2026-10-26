@@ -1,7 +1,7 @@
 import type { Game } from '../kernel/game';
 import { spend } from '../state/household';
 import {
-  CUTS, FABRICS, PATTERN_KINDS, PALETTES, bodyPart, cutLabel, decodeGarment, encodeGarment, generateGarment, priceOf, validateGarment,
+  CUTS, FABRICS, GENERATED_KINDS, PALETTES, bodyPart, cutLabel, decodeGarment, encodeGarment, generateGarment, priceOf, validateGarment,
   type Garment, type GarmentSlot, type Pattern, type PatternKind,
 } from '../state/garment';
 import { describeGarment, DESCRIBE_MAX } from '../state/describeGarment';
@@ -15,7 +15,7 @@ import { OCCASIONS, OCCASION_LABEL, type Occasion, type SavedOutfit } from '../s
  * describe one in words, shop the daily boutique, or trade share codes. It builds its page once and updates it in
  * place, because the drawer around it is refreshed several times a second.
  */
-type Tab = 'make' | 'describe' | 'boutique' | 'outfits' | 'share';
+type Tab = 'make' | 'pixel' | 'describe' | 'boutique' | 'outfits' | 'share';
 
 const SLOT_LABEL: Partial<Record<GarmentSlot, string>> = { top: 'Top', outer: 'Jacket', dress: 'Dress', bottom: 'Bottoms' };
 const STUDIO_SLOTS: GarmentSlot[] = ['top', 'outer', 'dress', 'bottom'];
@@ -50,7 +50,7 @@ export function createStudio(g: Game): Partial<Game> {
       </div>
     </div>
     <div class="vh-st-tabs" role="tablist">
-      ${(['make', 'describe', 'boutique', 'outfits', 'share'] as Tab[]).map((t) => `<button type="button" role="tab" data-sttab="${t}">${t === 'make' ? 'Design' : t === 'describe' ? 'Describe' : t === 'boutique' ? 'Boutique' : t === 'outfits' ? 'Outfits' : 'Share'}</button>`).join('')}
+      ${(['make', 'pixel', 'describe', 'boutique', 'outfits', 'share'] as Tab[]).map((t) => `<button type="button" role="tab" data-sttab="${t}">${t === 'make' ? 'Design' : t === 'pixel' ? 'Pixels' : t === 'describe' ? 'Describe' : t === 'boutique' ? 'Boutique' : t === 'outfits' ? 'Outfits' : 'Share'}</button>`).join('')}
     </div>
     <div class="vh-st-msg" data-msg aria-live="polite"></div>
     <div class="vh-st-pane" data-pane></div>
@@ -137,7 +137,7 @@ export function createStudio(g: Game): Partial<Game> {
       <h5>Colour</h5>
       <div class="vh-st-row vh-st-swatches">${swatches.map((c) => `<button type="button" class="vh-st-swatch${c === cur.base ? ' vh-on' : ''}" data-base="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}${colourInput('data-basepick', cur.base, 'Pick a colour')}</div>
       <h5>Pattern</h5>
-      <div class="vh-st-row">${chip('None', 'data-kind', '', !p)}${PATTERN_KINDS.map((k) => chip(kindLabel(k), 'data-kind', k, p?.kind === k)).join('')}</div>
+      <div class="vh-st-row">${chip('None', 'data-kind', '', !p)}${GENERATED_KINDS.map((k) => chip(kindLabel(k), 'data-kind', k, p?.kind === k)).join('')}${p?.kind === 'pixel' ? chip('Pixel art', 'data-kind', 'pixel', true) : ''}</div>
       ${p ? `
         <div class="vh-st-row">${p.colors.map((c, i) => colourInput(`data-pcol="${i}"`, c, `Pattern colour ${i + 1}`)).join('')}
           ${p.colors.length < 3 ? '<button type="button" class="vh-st-chip" data-addcol>+ colour</button>' : ''}
@@ -190,6 +190,97 @@ export function createStudio(g: Game): Partial<Game> {
         <div class="vh-st-cardrow"><button type="button" data-wearoutfit="${o.id}">Wear</button><button type="button" data-deleteoutfit="${o.id}" aria-label="Delete ${esc(o.name)}">&times;</button></div></div>`).join('') : '<p class="vh-st-hint">Nothing saved yet.</p>'}`;
   }
 
+  // -- pixel art ------------------------------------------------------------------------------------------------
+  const DEFAULT_PALETTE = ['#2b2b30', '#f2eee8', '#c2413a', '#e0a43a', '#7fb069', '#4a5da8', '#d24a7a'];
+  const px = { w: 16, palette: [...DEFAULT_PALETTE], data: new Array<number>(256).fill(0), tool: 'pencil' as 'pencil' | 'erase' | 'fill', color: 1, mirror: false, undo: [] as number[][] };
+
+  function loadPixelsFromDesign(): void {
+    const art = cur.pattern?.kind === 'pixel' ? cur.pattern.pixels : undefined;
+    if (!art) return;
+    px.w = art.w;
+    px.palette = [...art.palette, ...DEFAULT_PALETTE.slice(art.palette.length)].slice(0, 7);
+    px.data = [...art.data].map(Number);
+    px.undo = [];
+  }
+
+  function pixelPane(): string {
+    const tool = (id: typeof px.tool, label: string) => chip(label, 'data-pxtool', id, px.tool === id);
+    return `<p class="vh-st-hint">Draw a small picture and wear it as a print. It repeats across the cloth.</p>
+      <canvas class="vh-st-pixgrid" width="256" height="256" data-pixgrid aria-label="Pixel canvas"></canvas>
+      <div class="vh-st-row vh-st-swatches">${px.palette.map((c, i) => `<button type="button" class="vh-st-swatch${px.color === i + 1 && px.tool !== 'erase' ? ' vh-on' : ''}" data-pxcolor="${i + 1}" style="background:${c}" aria-label="Colour ${i + 1}"></button>`).join('')}
+        ${colourInput('data-pxpick', px.palette[px.color - 1] ?? '#000000', 'Change this colour')}</div>
+      <div class="vh-st-row">${tool('pencil', 'Draw')}${tool('erase', 'Erase')}${tool('fill', 'Fill')}${chip('Mirror', 'data-pxmirror', '1', px.mirror)}</div>
+      <div class="vh-st-row">${chip('8 × 8', 'data-pxsize', '8', px.w === 8)}${chip('16 × 16', 'data-pxsize', '16', px.w === 16)}
+        <button type="button" class="vh-st-chip" data-pxundo ${px.undo.length ? '' : 'disabled'}>Undo</button><button type="button" class="vh-st-chip" data-pxclear>Clear</button></div>
+      ${slider('data-pxscale', 'Print size', 0.25, 4, 0.025, cur.pattern?.scale ?? 1)}`;
+  }
+
+  function drawPixelGrid(): void {
+    const cv = pane.querySelector<HTMLCanvasElement>('[data-pixgrid]');
+    const x = cv?.getContext('2d');
+    if (!cv || !x) return;
+    const cell = cv.width / px.w;
+    for (let j = 0; j < px.w; j++) for (let i = 0; i < px.w; i++) {
+      const v = px.data[j * px.w + i];
+      x.fillStyle = v ? px.palette[v - 1] : (i + j) % 2 ? '#d9d2c6' : '#ebe5da';
+      x.fillRect(i * cell, j * cell, cell, cell);
+    }
+    x.strokeStyle = 'rgba(0,0,0,.12)'; x.lineWidth = 1; x.beginPath();
+    for (let k = 0; k <= px.w; k++) { x.moveTo(k * cell + 0.5, 0); x.lineTo(k * cell + 0.5, cv.height); x.moveTo(0, k * cell + 0.5); x.lineTo(cv.width, k * cell + 0.5); }
+    x.stroke();
+  }
+
+  /** Puts the picture on the garment as an all-over print (or takes the print off when it is empty). */
+  function applyPixels(): void {
+    const used = px.data.reduce((m, v) => Math.max(m, v), 0);
+    if (!used) { if (cur.pattern?.kind === 'pixel') setPattern(undefined, false); return; }
+    const old = cur.pattern?.kind === 'pixel' ? cur.pattern : undefined;
+    const palette = px.palette.slice(0, used);
+    setPattern({ kind: 'pixel', colors: [palette[0]], scale: old?.scale ?? 1, angle: 0, density: 0.5, seed: 1, pixels: { w: px.w, h: px.w, palette, data: px.data.join('') } }, false);
+  }
+
+  function paintCell(i: number, j: number): void {
+    const set = (a: number, b: number) => { if (a >= 0 && b >= 0 && a < px.w && b < px.w) px.data[b * px.w + a] = px.tool === 'erase' ? 0 : px.color; };
+    set(i, j);
+    if (px.mirror) set(px.w - 1 - i, j);
+  }
+
+  function floodFill(i: number, j: number): void {
+    const target = px.data[j * px.w + i], to = px.color;
+    if (target === to) return;
+    const stack: [number, number][] = [[i, j]];
+    while (stack.length) {
+      const [a, b] = stack.pop()!;
+      if (a < 0 || b < 0 || a >= px.w || b >= px.w || px.data[b * px.w + a] !== target) continue;
+      px.data[b * px.w + a] = to;
+      stack.push([a + 1, b], [a - 1, b], [a, b + 1], [a, b - 1]);
+    }
+  }
+
+  const pushUndo = (): void => { px.undo.push([...px.data]); if (px.undo.length > 30) px.undo.shift(); };
+
+  function wirePixelGrid(): void {
+    const cv = pane.querySelector<HTMLCanvasElement>('[data-pixgrid]');
+    if (!cv) return;
+    let down = false;
+    const cellAt = (e: PointerEvent): [number, number] => {
+      const r = cv.getBoundingClientRect();
+      return [Math.min(px.w - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * px.w))), Math.min(px.w - 1, Math.max(0, Math.floor(((e.clientY - r.top) / r.height) * px.w)))];
+    };
+    cv.style.touchAction = 'none';
+    cv.addEventListener('pointerdown', (e) => {
+      down = true; cv.setPointerCapture?.(e.pointerId);
+      pushUndo();
+      const [i, j] = cellAt(e);
+      if (px.tool === 'fill') floodFill(i, j); else paintCell(i, j);
+      drawPixelGrid();
+    });
+    cv.addEventListener('pointermove', (e) => { if (!down || px.tool === 'fill') return; const [i, j] = cellAt(e); paintCell(i, j); drawPixelGrid(); });
+    const end = () => { if (!down) return; down = false; applyPixels(); const u = pane.querySelector<HTMLButtonElement>('[data-pxundo]'); if (u) u.disabled = !px.undo.length; };
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+  }
+
   function sharePane(): string {
     const code = encodeGarment(cur);
     return `<h5>This design</h5>
@@ -212,8 +303,9 @@ export function createStudio(g: Game): Partial<Game> {
   }
 
   function renderPane(): void {
-    pane.innerHTML = tab === 'make' ? makePane() : tab === 'boutique' ? boutiquePane() : tab === 'describe' ? describePane() : tab === 'outfits' ? outfitsPane() : sharePane();
+    pane.innerHTML = tab === 'make' ? makePane() : tab === 'boutique' ? boutiquePane() : tab === 'describe' ? describePane() : tab === 'outfits' ? outfitsPane() : tab === 'pixel' ? pixelPane() : sharePane();
     if (tab === 'boutique') drawBoutiquePreviews();
+    if (tab === 'pixel') { drawPixelGrid(); wirePixelGrid(); }
     syncHead();
   }
 
@@ -305,7 +397,17 @@ export function createStudio(g: Game): Partial<Game> {
     const t = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!t || !sec.contains(t)) return;
     const d = t.dataset;
-    if (d.sttab) { tab = d.sttab as Tab; renderPane(); return; }
+    if (d.sttab) { tab = d.sttab as Tab; if (tab === 'pixel') loadPixelsFromDesign(); renderPane(); return; }
+    if (d.pxtool) { px.tool = d.pxtool as typeof px.tool; renderPane(); return; }
+    if (d.pxcolor) { px.color = Number(d.pxcolor); if (px.tool === 'erase') px.tool = 'pencil'; renderPane(); return; }
+    if (d.pxmirror !== undefined) { px.mirror = !px.mirror; renderPane(); return; }
+    if (d.pxsize) {
+      const w = Number(d.pxsize);
+      if (w !== px.w) { const old = px.data, ow = px.w; px.data = new Array<number>(w * w).fill(0); for (let j = 0; j < Math.min(w, ow); j++) for (let i = 0; i < Math.min(w, ow); i++) px.data[j * w + i] = old[j * ow + i]; px.w = w; px.undo = []; applyPixels(); }
+      renderPane(); return;
+    }
+    if (d.pxundo !== undefined) { const prev = px.undo.pop(); if (prev) { px.data = prev; applyPixels(); renderPane(); } return; }
+    if (d.pxclear !== undefined) { pushUndo(); px.data.fill(0); applyPixels(); renderPane(); return; }
     if (d.st === 'make') return make();
     if (d.st === 'surprise') { cur = generateGarment(Math.floor(Math.random() * 0xffffff), { rarity: 'rare' }); cur = { ...cur, rarity: 'one-of-a-kind' }; renderPane(); drawPreview(performance.now() / 1000); say('Something new.'); return; }
     if (d.remix) {
@@ -319,6 +421,7 @@ export function createStudio(g: Game): Partial<Game> {
     if (d.fabric) return change({ fabric: d.fabric as Garment['fabric'] });
     if (d.base) return change({ base: d.base });
     if (d.kind !== undefined) {
+      if (d.kind === 'pixel') return;
       if (!d.kind) return setPattern(undefined);
       const old = cur.pattern;
       return setPattern({ kind: d.kind as PatternKind, colors: old?.colors ?? ['#f2eee8', '#2b2b30'], scale: old?.scale ?? 1.2, angle: old?.angle ?? 0, density: old?.density ?? 0.5, seed: old?.seed ?? 7, layer2: old?.layer2 });
@@ -359,6 +462,8 @@ export function createStudio(g: Game): Partial<Game> {
     const t = e.target as HTMLInputElement;
     const p = cur.pattern;
     if (t.dataset.auto !== undefined) { g.flags.autoOutfit = t.checked; return; }
+    if (t.dataset.pxpick !== undefined) { px.palette[px.color - 1] = t.value; drawPixelGrid(); applyPixels(); return; }
+    if (t.dataset.pxscale !== undefined) { if (p?.kind === 'pixel') setPattern({ ...p, scale: Number(t.value) }, false); return; }
     if (t === nameEl) { cur = { ...cur, name: t.value.slice(0, 24) }; return; }
     if (t.dataset.basepick !== undefined) return change({ base: t.value }, false);
     if (!p) { if (t.dataset.wash !== undefined || t.dataset.distress !== undefined) liveDetail(t); return; }

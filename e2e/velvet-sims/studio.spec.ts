@@ -113,3 +113,36 @@ test('the partner can design a gift once a day', async ({ page }) => {
   await game.locator('[data-mayagift]').click();
   await expect(game.locator('[data-msg]')).toContainText('already made you something today');
 });
+
+test('draw pixel art, wear it as a print, and keep it', async ({ page }) => {
+  const game = await openGame(page);
+  await setMoney(page, 900);
+  await game.locator('.vh-dock [data-open=studio]').click();
+  await game.locator('[data-sttab=pixel]').click();
+  const grid = game.locator('[data-pixgrid]');
+  await grid.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  const box = (await grid.boundingBox())!;
+  const at = (i: number, j: number) => [box.x + ((i + 0.5) / 16) * box.width, box.y + ((j + 0.5) / 16) * box.height] as const;
+  await game.locator('[data-pxcolor="3"]').click();
+  for (const [i, j] of [[3, 3], [4, 4], [5, 5], [6, 6]]) { const [x, y] = at(i, j); await page.mouse.click(x, y); }
+  await game.locator('[data-pxcolor="4"]').click();
+  await game.locator('[data-pxmirror]').click();
+  const [x1, y1] = at(2, 10); const [x2, y2] = at(6, 10);
+  await page.mouse.move(x1, y1); await page.mouse.down(); await page.mouse.move(x2, y2, { steps: 6 }); await page.mouse.up();
+  await game.locator('[data-sttab=make]').click();
+  await expect(game.locator('[data-kind=pixel]')).toHaveAttribute('aria-pressed', 'true');
+  await game.locator('[data-st=make]').click();
+  await saveNow(page);
+  const saved = await savedGame(page);
+  const art = saved.look.topGarment.pattern.pixels;
+  expect(art.w).toBe(16);
+  expect(art.data.length).toBe(256);
+  expect(art.palette.length).toBe(4);
+  // The diagonal is in colour 3 and the mirrored stroke is symmetric.
+  expect(art.data[3 * 16 + 3]).toBe('3');
+  expect(art.data[10 * 16 + 4]).toBe('4');
+  expect(art.data[10 * 16 + 11]).toBe('4');
+  await game.locator('[data-sttab=share]').click();
+  const code = await game.locator('[data-code]').inputValue();
+  expect(code.length).toBeGreaterThan(100);
+});

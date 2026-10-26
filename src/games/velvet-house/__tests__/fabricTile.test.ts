@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { patternOps, textureOps } from '../state/fabricTile';
-import { PATTERN_KINDS, FABRICS } from '../state/garment';
+import { GENERATED_KINDS as PATTERN_KINDS, FABRICS } from '../state/garment';
 
 const COLORS = ['#d24a7a', '#f6e3c3', '#3be3d0'];
 
@@ -42,5 +42,18 @@ describe('cloth textures', () => {
     const raw = textureOps('denim', 0) as { a: number }[];
     const light = textureOps('denim', 1) as { a: number }[];
     expect(light[0].a).toBeGreaterThan(raw[0].a);
+  });
+});
+
+describe('pixel art tiles', () => {
+  it('draws one square per filled cell, in its palette colour', () => {
+    const ops = patternOps({ kind: 'pixel', colors: ['#ff0000'], seed: 1, pixels: { w: 8, h: 8, palette: ['#ff0000', '#00ff00'], data: '1' + '0'.repeat(62) + '2' } });
+    expect(ops).toHaveLength(2);
+    expect(ops[0]).toMatchObject({ k: 'rect', c: '#ff0000', x: 0, y: 0 });
+    expect(ops[1]).toMatchObject({ c: '#00ff00' });
+    expect((ops[1] as { x: number }).x).toBeCloseTo(7 / 8);
+  });
+  it('draws nothing without a picture', () => {
+    expect(patternOps({ kind: 'pixel', colors: ['#ff0000'], seed: 1 })).toEqual([]);
   });
 });

@@ -442,7 +442,7 @@
 .vh-st-top {
   display: flex; gap: 10px; align-items: flex-start;
   /* The mannequin stays in view while the controls below scroll. */
-  position: sticky; top: -12px; z-index: 2; margin: -12px -12px 0; padding: 12px; background: rgba(23,21,29,.97);
+  position: sticky; top: -12px; z-index: 2; margin: -12px -12px 0; padding: 12px; background: #17151D;
 }
 .vh-st-preview { flex: 0 0 auto; width: 84px; height: 112px; border-radius: 12px; background: linear-gradient(180deg, #EFE7DA, #E2D7C6); }
 .vh-st-meta { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -494,3 +494,4 @@
 .vh-st-outfit { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; margin-bottom: 6px; border-radius: 10px; background: rgba(255,255,255,.06); }
 .vh-st-outfit div:first-child { display: flex; flex-direction: column; min-width: 0; font-size: 12px; }
 .vh-st-outfit span { color: #A9A1AE; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vh-st-pixgrid { display: block; width: min(100%, 256px); aspect-ratio: 1; margin: 6px auto 10px; border-radius: 8px; image-rendering: pixelated; cursor: crosshair; }

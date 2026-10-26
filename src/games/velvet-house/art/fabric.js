@@ -31,7 +31,7 @@ export function createFabric(makeCanvas = () => document.createElement('canvas')
     return c;
   }
 
-  const patternKey = (p) => `${p.kind}|${p.colors.join(',')}|${p.density ?? 0.5}|${p.seed}`;
+  const patternKey = (p) => `${p.kind}|${p.colors.join(',')}|${p.density ?? 0.5}|${p.seed}|${p.pixels ? p.pixels.palette.join(',') + p.pixels.data : ''}`;
   const patternTile = (p) => raster('p:' + patternKey(p), patternOps(p));
   const textureTile = (f, wash) => raster(`t:${f}:${f === 'denim' ? Math.round(wash * 10) : 0}`, textureOps(f, wash));
 
@@ -39,11 +39,15 @@ export function createFabric(makeCanvas = () => document.createElement('canvas')
   function fillPattern(ctx, p, bounds, offset) {
     const pat = ctx.createPattern(patternTile(p), 'repeat');
     if (!pat || !pat.setTransform) return;
-    const unit = (p.kind === 'graphic' ? 30 : 10) * p.scale;
+    const unit = (p.kind === 'graphic' ? 30 : p.kind === 'pixel' ? 14 : 10) * p.scale;
     const a = (p.angle * Math.PI) / 180, k = unit / TILE;
     pat.setTransform(new DOMMatrix([Math.cos(a) * k, Math.sin(a) * k, -Math.sin(a) * k, Math.cos(a) * k, offset[0], offset[1]]));
     ctx.fillStyle = pat;
+    // Pixel art stays crisp instead of blurring when it is scaled.
+    const smooth = ctx.imageSmoothingEnabled;
+    if (p.kind === 'pixel') ctx.imageSmoothingEnabled = false;
     ctx.fillRect(bounds[0], bounds[1], bounds[2], bounds[3]);
+    ctx.imageSmoothingEnabled = smooth;
   }
 
   function fillTexture(ctx, g, bounds) {

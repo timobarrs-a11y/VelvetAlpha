@@ -154,3 +154,35 @@ describe('the rest of the game', () => {
     expect(cleanName('  hi\n there ')).toBe('hi there');
   });
 });
+
+describe('pixel designs', () => {
+  const art = { w: 8, h: 8, palette: ['#ff0000', '#00ff00', '#0000ff'], data: Array.from({ length: 64 }, (_, i) => String(i % 4)).join('') };
+  const make = (pixels: unknown) => validateGarment({ slot: 'top', cut: 'tee', base: '#ffffff', name: 'Pixel tee', pattern: { kind: 'pixel', colors: ['#000000'], scale: 1, angle: 0, seed: 1, pixels } });
+
+  it('keeps a good picture and drops a pattern with a bad one', () => {
+    expect(make(art)!.pattern!.pixels).toEqual(art);
+    expect(make({ ...art, w: 9, h: 9 })!.pattern).toBeUndefined();
+    expect(make({ ...art, data: '1'.repeat(10) })!.pattern).toBeUndefined();
+    expect(make({ ...art, data: 'x'.repeat(64) })!.pattern).toBeUndefined();
+    expect(make(undefined)!.pattern).toBeUndefined();
+  });
+
+  it('points no cell at a colour that does not exist, and caps the palette at seven', () => {
+    const r = make({ ...art, palette: ['#ff0000'], data: '3'.repeat(64) })!.pattern!.pixels!;
+    expect(r.data).toBe('0'.repeat(64));
+    const many = make({ ...art, palette: Array.from({ length: 12 }, (_, i) => '#' + String(i).padStart(6, '1')) })!.pattern!.pixels!;
+    expect(many.palette).toHaveLength(7);
+  });
+
+  it('survives a share code, 8 and 16 cells square', () => {
+    for (const w of [8, 16]) {
+      const pixels = { w, h: w, palette: ['#ff0000', '#00ff00', '#0000ff', '#ffffff'], data: Array.from({ length: w * w }, (_, i) => String((i * 7 + (i >> 3)) % 5)).join('') };
+      const g = make(pixels)!;
+      expect(decodeGarment(encodeGarment(g))).toEqual(g);
+    }
+  });
+
+  it('is never made by the generator', () => {
+    for (const s of SEEDS) expect(generateGarment(s).pattern?.kind).not.toBe('pixel');
+  });
+});

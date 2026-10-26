@@ -20,7 +20,7 @@ function wrapped(ops: TileOp[], make: (dx: number, dy: number) => TileOp): void 
   for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) ops.push(make(dx, dy));
 }
 
-export function patternOps(p: Pick<Pattern, 'kind' | 'colors' | 'density' | 'seed'>): TileOp[] {
+export function patternOps(p: Pick<Pattern, 'kind' | 'colors' | 'density' | 'seed'> & { pixels?: Pattern['pixels'] }): TileOp[] {
   const rng = new RNG(p.seed);
   const [c0, c1 = c0, c2 = c1] = p.colors;
   const d = p.density ?? 0.5;
@@ -105,6 +105,15 @@ export function patternOps(p: Pick<Pattern, 'kind' | 'colors' | 'density' | 'see
     case 'color-block':
       ops.push({ k: 'rect', x: 0, y: 0, w: 1, h: 0.5, c: c0 }, { k: 'rect', x: 0, y: 0.5, w: 0.5, h: 0.5, c: c1 }, { k: 'rect', x: 0.5, y: 0.5, w: 0.5, h: 0.5, c: c2 });
       break;
+    case 'pixel': {
+      const px = p.pixels;
+      if (!px) break;
+      for (let y = 0; y < px.h; y++) for (let x = 0; x < px.w; x++) {
+        const v = Number(px.data[y * px.w + x]);
+        if (v > 0 && px.palette[v - 1]) ops.push({ k: 'rect', x: x / px.w, y: y / px.h, w: 1 / px.w + 0.002, h: 1 / px.h + 0.002, c: px.palette[v - 1] });
+      }
+      break;
+    }
     case 'graphic': {
       const pts: [number, number][] = Array.from({ length: 10 }, (_, i) => { const a = (i / 10) * TAU - Math.PI / 2, r = i % 2 ? 0.17 : 0.4; return [0.5 + Math.cos(a) * r, 0.5 + Math.sin(a) * r]; });
       ops.push({ k: 'poly', pts, c: c0 }, { k: 'circle', x: 0.5, y: 0.5, r: 0.09, c: c1 });
