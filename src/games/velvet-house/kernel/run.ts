@@ -25,9 +25,9 @@ export function startGameLoop(g: Game): void {
   };
   startFixedLoop(
     (dt) => {
+      g.scriptUpdate(dt);
       if (view.paused) return;
       view.t += dt;
-      g.scriptUpdate(dt);
       // In a cutscene or a guided step the day holds still; only the people a script is moving (and visitors) go on.
       if (g.s.scriptMode === 'cutscene' || g.s.scriptMode === 'guided') {
         for (const p of people) if (p.scripted || p.kind === 'npc') tickAgent(house, p, null, dt, 0, 1, world.minutes / 60, () => rng.next(), world.household);
@@ -48,6 +48,7 @@ export function startGameLoop(g: Game): void {
       if (world.day !== prevDay) { newDayReset(world.household, log); }
       tickAgent(house, people[0], people[1], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
       tickAgent(house, people[1], people[0], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
+      g.deliveriesTick();
       // Visitors a script has brought in (people after the two who live here).
       for (const npc of people.slice(2)) tickAgent(house, npc, null, dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
       const followed = view.follow && people.find((p) => p.id === view.follow);
@@ -71,7 +72,7 @@ export function startGameLoop(g: Game): void {
         chars: people.map(g.toFrame),
         arrange: g.arrangeFrame(),
         focus: conversationFocus(),
-        house: { power: world.household.power, dishes: world.household.dishes, laundryPile: world.household.laundryPile, fridge: world.household.fridge, owned },
+        house: { power: world.household.power, dishes: world.household.dishes, laundryPile: world.household.laundryPile, fridge: world.household.fridge, parcel: world.household.parcel && world.household.parcel.ready !== false ? world.household.parcel : null, owned },
       });
       qualityManager.recordFrame(frameDt * 1000);
 

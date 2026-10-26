@@ -1939,7 +1939,7 @@ export function createHouseArt(ctx0, opts = {}) {
   }
   function render(s) {
     // What the household is doing to the house (the power, the dishes, the fridge) comes in with every frame, so the art never shows stale state.
-    if (s.house) { power = s.house.power; dishes = s.house.dishes; laundryPile = s.house.laundryPile; fridge = s.house.fridge; if (s.house.owned) owned = s.house.owned; }
+    if (s.house) { power = s.house.power; dishes = s.house.dishes; laundryPile = s.house.laundryPile; fridge = s.house.fridge; parcel = s.house.parcel || null; if (s.house.owned) owned = s.house.owned; }
     sync(s);
     const t = animT, lv = viewLevel;
     const watching = [jordan, maya].some(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));

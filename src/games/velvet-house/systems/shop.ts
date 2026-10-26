@@ -68,7 +68,12 @@ export function createShop(g: Game): Partial<Game> {
       flags.styled = true;
     }
     // Furniture: add to world
-    if (item.type && item.icon === 'obj') {
+    if (item.type && item.icon === 'obj' && g.dezDeliveries()) {
+      // Once Dez is part of the story, the shop delivers: the piece comes in a box a little later.
+      g.orderDelivery({ id: `${item.type}-${Date.now() & 0xffff}`, category: item.tab === 'Decor' ? 'decor' : 'furniture', type: item.type, name: item.name, col: color || item.cols?.[0] }, 45);
+      flags.furniture = ((flags.furniture as number) ?? 0) + 1;
+      log(`${item.name} ordered. Dez will bring it by.`);
+    } else if (item.type && item.icon === 'obj') {
       // Attic finds go in the attic once it's built; everything else where you're looking.
       const level = item.tab === 'Attic' && hasAttic() ? ATTIC : view.level;
       const newObj: ObjectInstance = {
@@ -103,10 +108,14 @@ export function createShop(g: Game): Partial<Game> {
       }
     }
     // Bond boost from buying liked items
+    const styling = item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor';
+    let liked = false;
     if (item.tags) {
       const taste = tasteOf({ id: item.id, name: item.name, tags: item.tags }, style, tasteNorm);
+      liked = taste > 0;
       if (taste > 0) { g.s.bond = Math.min(100, g.s.bond + taste); log(`${partnerName} ${taste > 1 ? 'loves' : 'likes'} the ${item.name}.`); }
     }
+    if (styling) g.scriptEmit({ type: 'room.styled', liked });
     g.refreshDrawer();
   }
   return { handleBuy, handleBuyAvatarItem };

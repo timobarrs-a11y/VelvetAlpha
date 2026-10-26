@@ -34,7 +34,9 @@ export function createControls(g: Game): Partial<Game> {
   const setLevel = (lv: number, keepFollow = false): void => {
     if (lv !== view.level) softCut();
     g.dropSelectionIfOffFloor(lv);
+    const changed = lv !== view.level;
     view.level = lv;
+    if (changed) g.scriptEmit({ type: 'level.visited', level: lv });
     if (!keepFollow) view.follow = null;
     syncControls();
   };

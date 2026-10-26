@@ -1,5 +1,6 @@
 import { TYPES, type ObjectInstance } from '../state/objects';
 import { startChain } from '../state/agents';
+import { relocate } from '../state/arrange';
 import { type TrayAction } from '../ui/dialogue';
 import type { Game } from '../kernel/game';
 
@@ -26,6 +27,7 @@ export function createInteract(g: Game): Partial<Game> {
     const spots = TYPES[obj.type]?.spots;
     const isLight = Boolean(TYPES[obj.type]?.light);
     const acts: TrayAction[] = [];
+    if (obj.type === 'pbox' && obj.contents) acts.push({ act: 'unpack', label: 'Unpack', icon: '' });
     if (isLight) acts.push({ act: 'toggleLight', label: 'Turn light on/off', icon: '' });
     if (spots) {
       const tags = Object.values(spots).map(s => s.tag);
@@ -40,7 +42,7 @@ export function createInteract(g: Game): Partial<Game> {
     if (acts.length === 0) return;
     // A tap that brought the object to life shouldn't also send Jordan over:
     // offer the action instead of doing it.
-    if (acts.length === 1 && !poked) { handleObjectAction(obj, acts[0].act); return; }
+    if (acts.length === 1 && (!poked || acts[0].act === 'unpack')) { handleObjectAction(obj, acts[0].act); return; }
     tray.show(acts, x, y, (a) => handleObjectAction(obj, a.act));
   }
 
@@ -61,7 +63,24 @@ export function createInteract(g: Game): Partial<Game> {
     return labels[tag] ?? null;
   }
 
+  // A moving box becomes what was in it, on the same spot (or the nearest free one), ready to be placed.
+  function unpack(obj: ObjectInstance): void {
+    const type = obj.contents;
+    if (!type || !TYPES[type]) return;
+    const was = obj.type;
+    obj.type = type;
+    delete obj.contents;
+    if (!relocate(world.objs, obj, obj.level, people, [obj.x, obj.y])) { obj.type = was; obj.contents = type; log('There is no room to unpack that here.'); return; }
+    g.relearnLayout(obj);
+    art.objectPlaced(obj.id);
+    log(`Unpacked the ${(TYPES[type]?.name ?? "piece").toLowerCase()}.`);
+    g.scriptEmit({ type: 'obj.unpacked', objId: obj.id, objType: type });
+    g.drawer.open('arrange');
+    g.selectObject(obj);
+  }
+
   function handleObjectAction(obj: ObjectInstance, tag: string): void {
+    if (tag === 'unpack') { unpack(obj); return; }
     if (tag === 'toggleLight') {
       const on = art.toggleObjectLight(obj.id);
       log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);

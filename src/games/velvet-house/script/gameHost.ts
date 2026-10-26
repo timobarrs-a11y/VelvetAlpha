@@ -1,5 +1,5 @@
 import type { Game } from '../kernel/game';
-import { startGoto, placeAgent, startChain, createNpc, type Agent } from '../state/agents';
+import { startGoto, placeAgent, startChain, createNpc, buildWorld, type Agent } from '../state/agents';
 import { earn } from '../state/household';
 import { TYPES, type ObjectInstance } from '../state/objects';
 import { relocate } from '../state/arrange';
@@ -22,6 +22,7 @@ export function createScripts(g: Game): Partial<Game> {
   const { world, people, house, rng, view, flags, art, stage, log } = g;
   const ui = createScriptUi(stage);
   const story = (flags.story ??= {}) as Record<string, FlagValue>;
+  const hadRt = !!flags.scriptRt;
   const rt = ((flags.scriptRt as ScriptRuntime | undefined) ?? NEW_RUNTIME());
   flags.scriptRt = rt;
 
@@ -143,6 +144,11 @@ export function createScripts(g: Game): Partial<Game> {
     outline(s) {
       if (!s) { art.setGhost(null); return; }
       const at = resolve(s.at);
+      // A coloured outline is a placement lesson: bring up Arrange with that piece in hand.
+      if (s.color && !g.isArranging()) {
+        const o = world.objs.find((q) => q.type === s.objType);
+        if (o) { g.drawer.open('arrange'); g.selectObject(o); }
+      }
       if (at) art.setGhost({ type: s.objType, level: at.level, x: at.x, y: at.y, rot: s.rot, color: s.color });
     },
     give(step) {
@@ -152,7 +158,7 @@ export function createScripts(g: Game): Partial<Game> {
       if (o) {
         const at = resolve(o.at);
         if (at) {
-          const inst: ObjectInstance = { id: o.id ?? `${o.type}-${Date.now() & 0xffff}`, type: o.type, level: at.level, x: at.x, y: at.y, rot: 0, ...(o.contents ? { contents: o.contents } : {}) };
+          const inst: ObjectInstance = { id: o.id ?? `${o.type}-${Date.now() & 0xffff}`, type: o.type, level: at.level, x: at.x, y: at.y, rot: 0, ...(o.contents ? { contents: o.contents } : {}), ...(o.col ? { col: o.col } : {}) };
           if (!world.objs.some((q) => q.id === inst.id)) {
             world.objs.push(inst);
             if (!relocate(world.objs, inst, at.level, people, [at.x, at.y])) { world.objs.pop(); return; }
@@ -174,7 +180,18 @@ export function createScripts(g: Game): Partial<Game> {
     deliver(category, id) {
       switch (category) {
         case 'mayaUnpack': g.log(`${g.partnerName} unpacks a few boxes.`); break;
-        case 'chatLine': break;
+        case 'chatLine': {
+          const e = id ? LINE_BOOK.lines[id] : undefined;
+          const text = typeof e === 'string' ? e : e ? e[g.companionCfg.preset as keyof typeof e] ?? Object.values(e)[0] : undefined;
+          if (text) g.s.chatTurns.push({ role: 'assistant', content: text });
+          break;
+        }
+        case 'food': case 'takeout': { const p = world.household.parcel; if (p) p.ready = true; break; }
+        case 'furniture': case 'decor': {
+          const o = (flags.dezOrders as Record<string, { type: string; col?: string }> | undefined)?.[id ?? ''];
+          if (o) host.give({ object: { type: 'pbox', at: 'mark:entry.drop', id: `box.${id}`, contents: o.type, ...(o.col ? { col: o.col } : {}) } });
+          break;
+        }
         case 'lifeGoal': g.s.lifeGoal ??= 'a cozy life together'; break;
         case 'settle': g.s.settleDone = true; break;
         default: g.log(`A delivery arrives (${category}${id ? ' ' + id : ''}).`);
@@ -188,17 +205,24 @@ export function createScripts(g: Game): Partial<Game> {
 
   const engine = new ScriptEngine(host, SCRIPTS, LINE_BOOK, rt);
   ui.onSkip(() => engine.skip());
+  // "Set it down" ends the placing: the piece stays where it is and Arrange closes.
+  ui.onCardButton(() => { if (g.isArranging()) g.drawer.close(); });
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.
   const noScript = import.meta.env.DEV && new URLSearchParams(location.search).has('noscript');
   const isNew = world.save === null;
+  if (isNew && !noScript) {
+    // The first day's furniture arrives in boxes, so the house starts without it.
+    const gone = world.objs.filter((o) => o.id === 'sofa' || o.id === 'plant1' || o.id === 'lamp1');
+    for (const o of gone) world.objs.splice(world.objs.indexOf(o), 1);
+    Object.assign(house, buildWorld(world.objs));
+  }
   if (noScript) engine.markDone(['opening.', 'tutorial.']);
-  else if (!flags.scriptRt || (!isNew && !('seen' in rt))) {
+  else if (!hadRt) {
     if (isNew) engine.startNewGame();
     else engine.markDone(['opening.', 'tutorial.']);
   } else engine.resume();
-  (rt as ScriptRuntime & { seen?: boolean }).seen = true;
 
   function update(dt: number): void {
     engine.tick(dt);

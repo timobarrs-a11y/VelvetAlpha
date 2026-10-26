@@ -25,6 +25,7 @@ export function createChat(g: Game): Partial<Game> {
   }
 
   function handleCloseChat(): void {
+    g.scriptEmit({ type: 'chat.closed' });
     // Save memories from chat
     if (g.s.chatTurns.length > 2 && g.s.sample) {
       rememberChat(g.s.chatTurns, g.s.sample).then(mems => {

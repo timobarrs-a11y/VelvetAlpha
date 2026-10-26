@@ -15,6 +15,7 @@ import { createGoals } from './systems/goals';
 import { createAvatar } from './systems/avatar';
 import { createOutfit } from './systems/outfit';
 import { createStudio } from './ui/studio';
+import { createDeliveries } from './systems/deliveries';
 import { createScripts } from './script/gameHost';
 import { createFrame } from './view/frame';
 import { installDevHooks } from './dev/hooks';
@@ -45,6 +46,7 @@ function boot(): void {
   Object.assign(g, createAvatar(g));
   Object.assign(g, createFrame(g));
   Object.assign(g, createStudio(g));
+  Object.assign(g, createDeliveries(g));
   Object.assign(g, createScripts(g));
   installDevHooks(g);
   startGameLoop(g);

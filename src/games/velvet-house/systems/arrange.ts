@@ -69,6 +69,7 @@ export function createArrange(g: Game): Partial<Game> {
     log(`${verb} the ${nameOf(o)}.`);
     art.objectPlaced(o.id);
     relearnLayout(o);
+    g.scriptEmit({ type: 'obj.placed', objId: o.id, objType: o.type });
   }
   // Turn the selected piece a quarter, skipping turns that don't fit.
   function rotateSelected(): void {
@@ -199,6 +200,7 @@ export function createArrange(g: Game): Partial<Game> {
     const [sx, sy] = g.toView(e.clientX, e.clientY);
     const o = movableAt(sx, sy);
     if (!o) return;
+    if (g.s.scriptMode === 'guided' && !g.s.scriptAllow.some((a) => a === `obj:${o.id}` || a === `objType:${o.type}`)) return;
     selectObject(o);
     const [wx, wy] = worldAt(sx, sy), [fw, fd] = [TYPES[o.type].W, TYPES[o.type].D];
     const [cw, cd] = o.rot % 2 ? [fd, fw] : [fw, fd];

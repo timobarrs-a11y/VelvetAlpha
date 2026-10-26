@@ -16,7 +16,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
   // UI: Drawer
   const drawer = createDrawer({
     onClose: () => { g.s.drawerPage = ''; try { localStorage.removeItem('velvet-drawer'); } catch {} },
-    onPage: (pg) => { if (pg === 'arrange') g.enterArrange(); else if (g.isArranging()) g.exitArrange(); g.studioPage?.(pg); },
+    onPage: (pg) => { g.scriptEmit({ type: 'tab.opened', tab: pg }); if (pg === 'arrange') g.enterArrange(); else if (g.isArranging()) g.exitArrange(); g.studioPage?.(pg); },
     onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) g.selectObject(o); },
     onArrangeRotate: () => g.rotateSelected(),
     onArrangeColour: () => g.recolourHeld(),
@@ -29,7 +29,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onOrder: (chain) => g.handleOrder(chain),
     onPayBill: () => { payBill(world.household, absMin(world.day, world.minutes), log); },
     onOrderGroceries: () => {
-      if (spend(world.household, 40)) { orderGroceries(world.household, absMin(world.day, world.minutes), 6, false); log('Groceries ordered. Delivery in 30 min.'); }
+      if (spend(world.household, 40)) { orderGroceries(world.household, absMin(world.day, world.minutes), 6, false); log('Groceries ordered. Delivery in 30 min.'); g.scriptEmit({ type: 'groceries.ordered' }); }
       else log('Not enough money for groceries.');
     },
     onOrderTakeout: () => {

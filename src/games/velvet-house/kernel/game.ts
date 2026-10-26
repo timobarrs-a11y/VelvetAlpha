@@ -136,6 +136,9 @@ export interface Game {
   storeSelected(): void;
   unstore(id: string): void;
   relearnLayout(moved: ObjectInstance): void;
+  deliveriesTick(): void;
+  orderDelivery(o: { id: string; category: 'furniture' | 'decor'; type: string; name: string; col?: string }, afterMin: number): void;
+  dezDeliveries(): boolean;
   scripts: ScriptEngine;
   scriptUpdate(dt: number): void;
   scriptEmit(ev: GameEvent): void;

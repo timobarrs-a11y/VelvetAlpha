@@ -15,6 +15,7 @@ export interface ScriptUi {
   cardDone(): boolean;
   hideCard(): void;
   onSkip(fn: () => void): void;
+  onCardButton(fn: () => void): void;
   /** Marks the buttons and panels a script has pointed at. */
   spotlight(targets: UiTarget[]): void;
 }
@@ -50,7 +51,8 @@ export function createScriptUi(stage: Element): ScriptUi {
 
   let pick: number | null = null;
   let cardClosed = true;
-  cardBtn.addEventListener('click', () => { cardClosed = true; cardEl.hidden = true; });
+  let cardPress: () => void = () => {};
+  cardBtn.addEventListener('click', () => { cardClosed = true; cardEl.hidden = true; cardPress(); });
   let skip: () => void = () => {};
   skipBtn.addEventListener('click', () => skip());
 
@@ -95,6 +97,7 @@ export function createScriptUi(stage: Element): ScriptUi {
     cardDone: () => cardClosed,
     hideCard() { cardEl.hidden = true; cardClosed = true; },
     onSkip(fn) { skip = fn; },
+    onCardButton(fn) { cardPress = fn; },
     spotlight(targets) {
       marked.forEach((e) => e.classList.remove('vh-spot'));
       marked = [];
