@@ -25,6 +25,8 @@ import {
 import { updateCompanionFont } from '../services/companionService';
 import type { CompanionWithLastMessage } from '../services/companionService';
 
+type Tab = 'pointer' | 'effect' | 'rewards' | 'fonts' | 'toolbar';
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -279,6 +281,8 @@ export function CustomizationPanel({
   const streak = customization.current_streak;
   const fontUnlocked = customization.font_customization_unlocked;
   const { setPreviewStyle } = useButtonHoverPreview();
+  // Phones and tablets have no cursor: say where each setting shows up there.
+  const touch = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 
   React.useEffect(() => {
     setLocalCompanions(companions);
@@ -358,7 +362,11 @@ export function CustomizationPanel({
               exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
               className="space-y-4"
             >
-              <p className="text-xs text-ink-muted">Keep your daily streak going to unlock more symbols.</p>
+              <p className="text-xs text-ink-muted">
+                {touch
+                  ? 'On a touch screen your symbol appears wherever you tap, and the trail follows your finger.'
+                  : 'Your symbol follows your cursor and leaves a trail when the trail is on.'}
+              </p>
 
               <div className="grid grid-cols-5 gap-3">
                 {POINTER_SYMBOLS.map(sym => {
@@ -584,6 +592,7 @@ export function CustomizationPanel({
             >
               <div>
                 <p className="text-xs font-semibold text-ink-secondary mb-1">Button Hover Effects</p>
+                {touch && <p className="text-[11px] text-ink-muted mb-2">These play when a mouse hovers a button, so they show on a computer, not on touch.</p>}
                 <p className="text-xs text-ink-muted mb-4">Animated effects that play when you hover over buttons.</p>
                 <div className="grid grid-cols-2 gap-2">
                   {BUTTON_HOVER_STYLES.map(style => (

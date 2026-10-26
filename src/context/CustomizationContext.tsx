@@ -37,6 +37,9 @@ interface CustomizationContextValue {
   dismissUnlockNotice: () => void;
 }
 
+// The screen already shows the change; a failed save is logged so it can be traced.
+const logSaveError = (err: unknown) => console.warn('[customization] save failed', err);
+
 const CustomizationContext = createContext<CustomizationContextValue | null>(null);
 
 export function CustomizationProvider({ children }: { children: ReactNode }) {
@@ -92,61 +95,61 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
       return { ...prev, active_pointer: key };
     });
     const uid = userIdRef.current;
-    if (uid) updateActivePointer(uid, key).catch(() => {});
+    if (uid) updateActivePointer(uid, key).catch(logSaveError);
   }, []);
 
   const setShowTrail = useCallback(async (show: boolean) => {
     setCustomization(prev => prev ? { ...prev, show_trail: show } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { show_trail: show }).catch(() => {});
+    if (uid) updateCursorPrefs(uid, { show_trail: show }).catch(logSaveError);
   }, []);
 
   const setAnimationStyle = useCallback(async (style: string) => {
     setCustomization(prev => prev ? { ...prev, animation_style: style } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { animation_style: style }).catch(() => {});
+    if (uid) updateCursorPrefs(uid, { animation_style: style }).catch(logSaveError);
   }, []);
 
   const setTrailStyle = useCallback(async (style: string) => {
     setCustomization(prev => prev ? { ...prev, trail_style: style } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { trail_style: style }).catch(() => {});
+    if (uid) updateCursorPrefs(uid, { trail_style: style }).catch(logSaveError);
   }, []);
 
   const setCursorColor = useCallback(async (colorKey: string) => {
     setCustomization(prev => prev ? { ...prev, cursor_color: colorKey } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { cursor_color: colorKey }).catch(() => {});
+    if (uid) updateCursorPrefs(uid, { cursor_color: colorKey }).catch(logSaveError);
   }, []);
 
   const setButtonHoverStyle = useCallback(async (style: string) => {
     setCustomization(prev => prev ? { ...prev, button_hover_style: style } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { button_hover_style: style }).catch(() => {});
+    if (uid) updateCursorPrefs(uid, { button_hover_style: style }).catch(logSaveError);
   }, []);
 
   const setTranslucentUI = useCallback(async (enabled: boolean) => {
     setCustomization(prev => prev ? { ...prev, translucent_ui: enabled } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { translucent_ui: enabled }).catch(() => {});
+    if (uid) updateCursorPrefs(uid, { translucent_ui: enabled }).catch(logSaveError);
   }, []);
 
   const setLeftRailCollapsed = useCallback(async (collapsed: boolean) => {
     setCustomization(prev => prev ? { ...prev, left_rail_collapsed: collapsed } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { left_rail_collapsed: collapsed }).catch(() => {});
+    if (uid) updateCursorPrefs(uid, { left_rail_collapsed: collapsed }).catch(logSaveError);
   }, []);
 
   const setRightRailCollapsed = useCallback(async (collapsed: boolean) => {
     setCustomization(prev => prev ? { ...prev, right_rail_collapsed: collapsed } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { right_rail_collapsed: collapsed }).catch(() => {});
+    if (uid) updateCursorPrefs(uid, { right_rail_collapsed: collapsed }).catch(logSaveError);
   }, []);
 
   const setToolbarBackgroundMode = useCallback(async (mode: ToolbarBackgroundMode) => {
     setCustomization(prev => prev ? { ...prev, toolbar_background_mode: mode } : prev);
     const uid = userIdRef.current;
-    if (uid) updateCursorPrefs(uid, { toolbar_background_mode: mode }).catch(() => {});
+    if (uid) updateCursorPrefs(uid, { toolbar_background_mode: mode }).catch(logSaveError);
   }, []);
 
   const setToolbarTextColor = useCallback(async (key: ToolbarTextColorKey) => {

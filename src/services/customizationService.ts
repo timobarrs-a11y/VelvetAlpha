@@ -411,11 +411,24 @@ export async function performDailyCheckin(userId: string): Promise<UserCustomiza
   };
 }
 
-export async function updateActivePointer(userId: string, pointerKey: string): Promise<void> {
-  const { error } = await supabase.from('user_customization')
-    .update({ active_pointer: pointerKey, updated_at: new Date().toISOString() })
-    .eq('user_id', userId);
+// Saves onto the person's customization row, creating it if they have none
+// yet (it is otherwise only made by the first daily check-in, so a brand-new
+// player's changes used to vanish without a word).
+async function saveCustomization(userId: string, fields: Record<string, unknown>): Promise<void> {
+  const row = { ...fields, updated_at: new Date().toISOString() };
+  const { data, error } = await supabase.from('user_customization')
+    .update(row)
+    .eq('user_id', userId)
+    .select('user_id');
   if (error) throw error;
+  if (data && data.length > 0) return;
+  const { error: insertError } = await supabase.from('user_customization')
+    .insert({ user_id: userId, ...row });
+  if (insertError) throw insertError;
+}
+
+export async function updateActivePointer(userId: string, pointerKey: string): Promise<void> {
+  await saveCustomization(userId, { active_pointer: pointerKey });
 }
 
 export async function updateCursorPrefs(userId: string, prefs: Partial<{
@@ -430,8 +443,5 @@ export async function updateCursorPrefs(userId: string, prefs: Partial<{
   toolbar_background_mode: ToolbarBackgroundMode;
   toolbar_text_color:      ToolbarTextColorKey;
 }>): Promise<void> {
-  const { error } = await supabase.from('user_customization')
-    .update({ ...prefs, updated_at: new Date().toISOString() })
-    .eq('user_id', userId);
-  if (error) throw error;
+  await saveCustomization(userId, prefs);
 }

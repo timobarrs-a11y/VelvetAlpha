@@ -80,6 +80,9 @@ function GlobalEffects() {
       <TouchRippleCanvas
         animationStyle={customization?.animation_style ?? 'stars'}
         particleColors={activeCursorColor?.particles}
+        pointerSymbol={activePointerDef?.svg}
+        showTrail={customization?.show_trail ?? false}
+        trailColor={activeCursorColor?.primary}
       />
     );
   }
