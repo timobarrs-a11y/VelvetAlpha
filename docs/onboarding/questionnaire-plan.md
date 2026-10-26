@@ -32,14 +32,21 @@ in conversation.
 Velvet asks a lot of a new person: a profile, Atlas, a coach, an avatar, a companion, a house,
 community, games. Asked all at once, they quit before they see why any of it matters.
 
-**The rule: ask for something only at the moment it pays off.** The first session gets them
-to value in about five minutes. Everything else waits until they reach the feature that needs
-it, and nothing ever blocks the way, because every setup has a good default.
+**Velvet is more than AI coaching; it's a community, and you're in it as yourself.** Not your
+photo: an avatar that represents you on community boards, in chats and on your billboard in
+town. In a game, you make your character before you play, so the first session does the same.
+You make yourself, then your home, see the neighborhood, and only then meet Atlas.
+
+**The rule for everything else: ask for something only at the moment it pays off.** Anything
+not in the first session waits until they reach the feature that needs it, and nothing ever
+blocks the way, because every setup has a good default.
 
 **Value is three things**, and the first session shows all three:
-1. **Atlas sets goals with you,** and your first step is already in Today.
-2. **There are people here.** You've already joined spaces that match your interests.
-3. **There's plenty to do in between:** your house in Velvet World, games, companions.
+1. **There are people here.** You have a look, a home on a street, neighbors, and spaces that
+   match your interests.
+2. **Atlas sets goals with you,** and someone (an assistant or a coach) carries them with you.
+   Your first step is already in Today.
+3. **There's plenty to do in between:** the town, games, companions.
 
 ### Today: how it's wired now
 
@@ -58,30 +65,74 @@ That's roughly 35 steps before the lobby. Meanwhile:
 - **Velvet House** opens with the companion you last talked to, or the coach if there's no
   companion.
 
-### The first session (about five minutes)
+### The first session: one chain, about 10 to 12 minutes
+
+Every step leads into the next with a scripted transition, so it feels like one continuous
+arrival, not a series of forms. A progress strip runs across the top: **You · Your look ·
+Your home · Your goals**. Every step saves as it goes, so leaving and coming back resumes at
+the same place.
 
 | # | Step | Time |
 |---|---|---|
 | 1 | Sign up | |
 | 2 | **Act 1:** name, color, nickname, birthday, gender, interests, Someday | ~90 s |
-| 3 | **Atlas:** "Where do things stand?" → the goal → plan, commitments, progress, calendar | ~3 min |
-| 4 | A coach **only if the goal has a skill to learn.** The coach gets a generated look (from its style and the user's color) and the default background; both can be changed later from the chat. | one tap |
-| 5 | **Home**, with their first step at the top of Today | |
-| 6 | **"Here's what's yours,"** three highlights on the home screen: Today ("this is what you're on"), Community ("you're already in these spaces", from `join_spaces_from_interests`, which already runs after Act 1), and Velvet World and games ("your house is built; come by when you've a minute"). Then it's theirs. | ~20 s |
+| 3 | **Your look: the avatar creator** | 3–5 min |
+| 4 | **Your home: house and billboard** in Velvet World (the town) | 1–2 min |
+| 5 | **A look around the neighborhood:** inside the town, on their own block, then **Continue to Atlas** | ~30 s |
+| 6 | **Atlas:** a remark on what they just made, the Alfred introduction, "Where do things stand?", the goal | ~3 min |
+| 7 | **Meet your assistant or coach,** generated for the goal, with the option to change anything | ~20 s |
+| 8 | **The setup walkthrough:** plan, commitments, progress, then the calendar | ~1 min |
+| 9 | **Home**, with their first step at the top of Today, and two highlights: Community ("you're already in these spaces", from `join_spaces_from_interests`, which already runs after Act 1) and Games. Then it's theirs. | ~15 s |
 
-What moves out of the first session:
-- **The coach avatar designer and the background picker**, which become defaults.
-- **The tour inside the coach chat**, which moves to the home screen. The home screen is where
-  all three parts of the value are.
-- **The Velvet World welcome popup**, which becomes highlight 3: the house is already claimed
-  (`claimDefaultPlot`), so it's something they've got, not something to do.
+That's longer than a five-minute start, and it's a deliberate trade: the avatar creator is
+meant to pull people in, not hold them up. Three things keep it moving: the progress strip, the
+change of pace from questions to creating, and saving at every step.
+
+**Step 3: Your look.** A short screen first, explaining why:
+
+> **Now, you.**
+> In Velvet, you're not a profile picture. This is you on the community boards, in every
+> chat, and on your billboard in town. It's not about looks; make it feel like you.
+
+- The creator opens already set from Act 1: gender, and their favorite color on the outfit.
+  It never starts from a blank face.
+- **Randomize** stays, for anyone who wants to be done quickly.
+- The creator records which things they **chose by hand** after their last randomize (for
+  example glasses, headwear, hair color). Atlas uses this in step 6.
+
+**Step 4: Your home.** Straight on from the avatar:
+
+> **Every member has a home on the street.**
+> Your house is how the town sees you. Your billboard out front tells people who you are.
+
+- **House:** the starter styles and their colors, using the existing picker
+  (`src/features/velvet-world/Customizer.tsx`). Member and earned houses show as locked, with
+  how to unlock them, as the town design already requires.
+- **Billboard:** their name (from Act 1), a **headline** (one line, with tappable starters
+  like "Learning to cook, one disaster at a time" for anyone stuck), and the spaces they were
+  added to from their interests. **Their goal is added later:** at the end of step 8, Atlas
+  asks once whether to show it on their billboard (`user_goals.show_on_profile`).
+- Like the avatar, it records whether the house was chosen or left random.
+
+**Step 5: A look around.** They land in the town (`/world`) on their own block, their avatar
+outside their new house, with three short captions in turn:
+1. **"This is your block."** New neighbors every day, and some of them share your spaces.
+2. **"Tap any billboard"** to see who lives there, and **Add friend**. Friends are pinned
+   when you zoom out to the whole town.
+3. **"Change anything, any time."** Tapping their own house opens the editor again.
+
+They can look around or tweak their house, then a **Continue to Atlas** button moves them on.
+The town's own first-visit welcome popup (`WorldWelcome.tsx`) never shows for these new
+members, because they've already done it all.
+
+**What leaves the first session:** the coach avatar designer and the background picker as
+compulsory steps (step 7 replaces them), and the tour inside the coach chat (step 9 replaces it).
 
 ### What waits until it's needed
 
 | Setup | When it's asked | Default until then |
 |---|---|---|
-| **Their own avatar** | The first time they enter Velvet World or post in Community, where other people see it: "Make it look like you?" | One generated from gender and favorite color. |
-| **A companion** | When they open Velvet House (a home you share with a companion), or from a Today card in the first week: "Someone to talk to between goals." | None. Velvet House shows the invite instead of borrowing the coach. |
+| **A companion** | When they open Velvet House (the game inside a home you share with a companion), or from a Today card in the first week: "Someone to talk to between goals." | None. Velvet House shows the invite instead of borrowing the coach or assistant. |
 | **Companion look, voice and background** | Inside the companion setup, as today. | |
 | **Pricing** | After they've had value: their first completed step, or the first time they reach a paid feature. Not in the middle of creating a companion. | |
 | **Birthdays of their people** | The one-time card in Today. | |
@@ -89,8 +140,8 @@ What moves out of the first session:
 ### Keeping them coming back between goals
 
 - **A "Your first week" card** on the home screen, replacing `FinishSetupCard`. It lists five
-  optional things: make your avatar, visit your house, say something in a space, play a game,
-  meet a companion. Each is one tap away and ticks off when done. It disappears once all five
+  optional things: add a friend in town, say something in a space, play a game, meet a
+  companion, add your people's birthdays. Each is one tap away and ticks off when done. It disappears once all five
   are done or the week is over.
 - **Today always has something:** a goal step, a birthday, or a "between goals" suggestion
   (a game, a space that's busy, the companion).
@@ -179,10 +230,21 @@ does. For anyone else, or anyone who'd rather not, it's just the first name. Ear
 once: "Shall I keep the formalities, or would you prefer plain Tim?" The answer is saved
 (`address_style`) and every AI in Velvet respects it after that.
 
-**Opening: who he is, what Velvet is for, then what they already have in mind** (with a
+**First, a remark on what they just made.** Atlas's first line is about their avatar or their
+house, and only about something they **chose by hand** (steps 3 and 4 record this):
+- One thing, one sentence, lightly: "Splendid spectacles, if I may." / "An A-frame cabin.
+  A person of taste."
+- He prefers the most distinctive choice: an accessory or headwear over a hairstyle, a
+  chosen house over its color.
+- If they randomized everything, there's nothing of theirs to notice, so he keeps it general
+  ("You've settled in nicely, I see") or skips straight to the introduction.
+
+**Then the opening: who he is, what Velvet is for, then "Where do things stand?"** (with a
 time-of-day greeting):
 
-> Good evening, Master Tim. I'm Atlas. I look after things here at Velvet.
+> Good evening, Master Tim. Splendid spectacles, if I may.
+>
+> I'm Atlas. I look after things here at Velvet.
 >
 > Velvet exists to help people dream large and then actually see it through. Not just talking
 > about it: putting it on the calendar, with someone in your corner until it's done.
@@ -251,11 +313,18 @@ He uses one item at a time and never reads a list back to them.
 
 ### From conversation to calendar
 
-**A real goal gets the full setup first.** When the conversation lands on a goal with more than
-one step, Atlas builds it on screen and walks them through it in order: **plan → commitments →
-progress → calendar**. The calendar comes last, as the summary: estimated finish date, how long
-it runs, and which days hold what. After that, he only offers a coach if there's a skill to
-learn. The full design is in `docs/goals-and-coaches/plan.md`.
+**A real goal gets someone to carry it, then the full setup.** When the conversation lands on
+a goal with more than one step:
+1. **Atlas generates who'll carry it:** a **coach** if there's a skill to learn (Spanish,
+   coding), otherwise an **assistant** (planning a wedding, buying a home). They get a
+   randomized avatar and name, shown on a "Meet Maya" card with **Change anything** for anyone
+   who wants to design them by hand.
+2. **Atlas walks them through the setup** that person will run with them: **plan →
+   commitments → progress → calendar**. The calendar comes last, as the summary: estimated
+   finish date, how long it runs, and which days hold what.
+3. **He asks once whether to show the goal on their billboard.**
+
+The full design is in `docs/goals-and-coaches/plan.md`.
 
 **A small one-off plan** ("pick a game and buy tickets on Saturday") is just pencilled in:
 
@@ -423,7 +492,8 @@ February shows on the 28th in other years.
 | Wavelength answers | a form, before the goal | asked by Atlas, chosen to fit the goal |
 | Atlas's tone | assistant ("With your personal interests out of the way…") | Alfred |
 | Atlas's opening | four questions at once | who he is, what Velvet is for, then "Where do things stand?" with three chips |
-| What the chat produces | a coach match | a coach match and at least one dated plan on the calendar |
+| What the chat produces | a coach match | a goal with its plan on the calendar, and an assistant or coach to carry it |
+| Before Atlas | about 20 form screens | quick questions, then making their avatar and their home in town |
 | Home screen | the feed first | Today first, the feed below it |
 | Their own appointments, tasks and goals | only on the calendar page | in Today, added in a few taps |
 | Birthdays | a yearly birthday never repeats | every year, with the age worked out ("Queen's 57th birthday") |
@@ -442,7 +512,7 @@ February shows on the 28th in other years.
 | A6 | **Atlas makes plans:** the probing rules, the order goals come from (them, then Someday, then interests) and the proposal rules in his prompt, the `add_calendar_event` tool in `atlas-onboarding` with `tentative` in metadata, and the extra checks in the test script. | Medium |
 | A7 | **Repeating events that repeat:** the shared expand-repeats helper used by the calendar page and Today, done dates per occurrence, and all-day dates compared in local time. Fixes the calendar as it is today, so it should go before A8. | Small–Medium |
 | A8 | **Their own plans and their people:** quick add in Today (task, appointment, birthday, reminder, goal), the My people birthday form and the one-time Today card, ages worked out from the birth year, and birthdays a week ahead in "coming up". | Medium |
-| A9 | **The five-minute first session:** coach only when there is a skill, generated coach look and default background, the three home-screen highlights in place of the coach-chat tour, the World welcome folded into them, avatar and companion asked for at the point of use, pricing after the first completed step, and the "Your first week" card. | Medium |
+| A9 | **The first-session chain:** the progress strip and saving at each step; the "Now, you" screen and the avatar creator set from Act 1, recording what was chosen by hand; the house and billboard step with headline starters; the scripted look around the town with **Continue to Atlas**; Atlas's remark on a hand-picked choice; meet your assistant or coach (randomized, with Change anything); the billboard goal question; Community and Games highlights on home; avatar-free companion and pricing timing as in "What waits". | Medium–Large |
 
 ## Decisions for Tim
 
