@@ -801,9 +801,10 @@ export function AvatarCreatorV2({
   );
 
   return (
-    <div className="flex flex-col lg:flex-row gap-0 h-full min-h-0">
-      {/* On wide screens this column stays put while the options scroll past. */}
-      <div className="lg:w-72 xl:w-80 flex-shrink-0 flex flex-col items-center justify-start py-8 px-6
+    <div className="flex flex-col lg:flex-row gap-0 h-full min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible">
+      {/* On wide screens this column stays put while the options scroll past.
+          On phones it sits under the options, inside the same scroll. */}
+      <div className="lg:w-72 xl:w-80 flex-shrink-0 flex flex-col items-center justify-start py-5 lg:py-8 px-6
         bg-gradient-to-b from-[#0d1117] to-[#070c14]
         border-t lg:border-t-0 lg:border-r border-white/5
         lg:sticky lg:top-0 lg:self-start lg:max-h-screen lg:overflow-y-auto">
@@ -913,7 +914,7 @@ export function AvatarCreatorV2({
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0 bg-[#080d14] order-first lg:order-none">
+      <div className="flex-none lg:flex-1 flex flex-col lg:min-h-0 bg-[#080d14] order-first lg:order-none">
         {/* On phones the avatar rides along at the top while you scroll the options. */}
         <div className="sticky top-0 z-20 bg-[#080d14] flex-shrink-0">
           <div className="lg:hidden flex items-center justify-center gap-4 pt-4 pb-3 px-4">
@@ -951,7 +952,7 @@ export function AvatarCreatorV2({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="lg:flex-1 lg:overflow-y-auto p-5 space-y-5">
           {tabContent[tab]}
         </div>
       </div>

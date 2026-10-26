@@ -356,8 +356,8 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-0 h-full min-h-0">
-      <div className="lg:w-72 xl:w-80 flex-shrink-0 flex flex-col items-center justify-start py-8 px-6
+    <div className="flex flex-col lg:flex-row gap-0 h-full min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible">
+      <div className="lg:w-72 xl:w-80 flex-shrink-0 flex flex-col items-center justify-start py-5 lg:py-8 px-6
         bg-gradient-to-b from-[#0d1117] to-[#070c14]
         border-b lg:border-b-0 lg:border-r border-white/5">
         <div className="w-52 h-52 lg:w-64 lg:h-64 rounded-2xl overflow-hidden
@@ -407,7 +407,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0 bg-[#080d14]">
+      <div className="flex-none lg:flex-1 flex flex-col lg:min-h-0 bg-[#080d14]">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5 flex-shrink-0">
           <div>
             <h3 className="text-sm font-bold text-white">{currentStep.label}</h3>
@@ -438,7 +438,7 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="lg:flex-1 lg:overflow-y-auto p-5 space-y-5">
           {contentMap[currentStep.id]}
         </div>
       </div>
