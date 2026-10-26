@@ -1,5 +1,21 @@
 import { supabase } from '../shared/supabase/client';
 
+/** A pick from the Someday screen: something they've always wanted to try. */
+export interface SomedayPick {
+  tab: string;
+  value: string;
+  custom?: boolean;
+}
+
+/** How Atlas and every AI address them: "Master Tim" / "Miss Ana", or plain first names. */
+export type AddressStyle = 'formal' | 'first_name';
+
+/** What they chose by hand while making their avatar and house, for Atlas's first remark. */
+export interface ArrivalChoices {
+  avatar?: { field: string; value: string }[];
+  house?: { style: string; color?: string; chosen: boolean };
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -22,6 +38,9 @@ export interface UserProfile {
   subscription_tier: string | null;
   avatar_config: any;
   communication_profile: { conflict: string; connection: string; decisionStyle: string; motivation: string } | null;
+  someday?: SomedayPick[];
+  address_style?: AddressStyle | null;
+  arrival_choices?: ArrivalChoices;
   created_at: string;
 }
 
@@ -43,6 +62,9 @@ export interface UserProfileUpdate {
   political_leaning?: 'democrat' | 'republican' | 'independent' | null;
   profile_completed?: boolean;
   communication_profile?: { conflict: string; connection: string; decisionStyle: string; motivation: string } | null;
+  someday?: SomedayPick[];
+  address_style?: AddressStyle | null;
+  arrival_choices?: ArrivalChoices;
 }
 
 class UserProfileService {

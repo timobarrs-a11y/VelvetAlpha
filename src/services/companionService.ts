@@ -8,11 +8,14 @@ import { getEligibleFonts } from './customizationService';
 import { getCurrentStatus } from '../utils/statusHelper';
 import { seedVoiceBaseline } from './voiceFidelityService';
 
+/** mentor = a coach (teaches a skill); assistant = helps get a goal done. */
+export type RelationshipType = 'friend' | 'romantic' | 'mentor' | 'assistant';
+
 export interface Companion {
   id: string;
   user_id: string;
   gender: 'male' | 'female';
-  relationship_type: 'friend' | 'romantic' | 'mentor';
+  relationship_type: RelationshipType;
   font_family?: string | null;
   created_at: string;
   last_message_at: string;

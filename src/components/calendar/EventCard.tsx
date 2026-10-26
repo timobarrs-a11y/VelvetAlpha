@@ -33,7 +33,11 @@ const EVENT_TYPE_STYLES: Record<string, { bg: string; border: string; dot: strin
 
 export function EventCard({ event, onEdit, onDelete, onToggleComplete }: EventCardProps) {
   const [pendingDelete, setPendingDelete] = useState(false);
-  const style = EVENT_TYPE_STYLES[event.event_type] || EVENT_TYPE_STYLES.reminder;
+  // Commitments come from coaching; here they can only be ticked off.
+  const isCommitment = typeof event.metadata?.commitment_id === 'string';
+  const style = isCommitment
+    ? { ...EVENT_TYPE_STYLES.goal_deadline, label: 'Commitment' }
+    : EVENT_TYPE_STYLES[event.event_type] || EVENT_TYPE_STYLES.reminder;
   const eventDate = new Date(event.event_date);
   const timeStr = event.all_day ? 'All day' : eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -91,7 +95,7 @@ export function EventCard({ event, onEdit, onDelete, onToggleComplete }: EventCa
           </div>
         </div>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {!isCommitment && <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {pendingDelete ? (
             <>
               <button
@@ -123,7 +127,7 @@ export function EventCard({ event, onEdit, onDelete, onToggleComplete }: EventCa
               </button>
             </>
           )}
-        </div>
+        </div>}
       </div>
     </motion.div>
   );

@@ -154,8 +154,54 @@ class CalendarService {
     return expandOccurrences([...(oneOff.data || []), ...(repeating.data || [])], startDate, endDate);
   }
 
+  /**
+   * Commitments due between two dates, shaped as calendar items so the calendar
+   * shows a goal's steps beside events. They're read-only there apart from
+   * ticking off; `metadata.commitment_id` marks them.
+   */
+  async getCommitmentEvents(userId: string, startDate: Date, endDate: Date): Promise<UserEvent[]> {
+    const { data, error } = await supabase
+      .from('coaching_commitments')
+      .select('id, description, due_date, status, created_at')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'in_progress', 'completed'])
+      .gte('due_date', startDate.toISOString())
+      .lte('due_date', endDate.toISOString())
+      .order('due_date', { ascending: true });
+    if (error || !data) return [];
+    return data.map(c => ({
+      id: `commitment:${c.id}`,
+      user_id: userId,
+      companion_id: null,
+      title: c.description,
+      description: '',
+      event_type: 'task',
+      event_date: c.due_date,
+      reminder_time: null,
+      all_day: true,
+      location: null,
+      completed: c.status === 'completed',
+      recurring: 'none',
+      metadata: { commitment_id: c.id },
+      created_at: c.created_at,
+      updated_at: c.created_at,
+    }));
+  }
+
   /** Ticks an event off, or un-ticks it. For a repeating event, only that day. */
   async setCompleted(event: UserEvent, completed: boolean): Promise<UserEvent | null> {
+    const commitmentId = event.metadata?.commitment_id;
+    if (typeof commitmentId === 'string') {
+      const { error } = await supabase
+        .from('coaching_commitments')
+        .update({
+          status: completed ? 'completed' : 'pending',
+          completed_at: completed ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', commitmentId);
+      return error ? null : { ...event, completed };
+    }
     if (event.occurrence_date) {
       const { data, error } = await supabase
         .from('user_events')
@@ -199,6 +245,23 @@ class CalendarService {
       .delete()
       .eq('id', eventId);
     return !error;
+  }
+
+  /** For the calendar views: events and commitments between two dates, in time order. */
+  async getCalendarItems(userId: string, startDate: Date, endDate: Date): Promise<UserEvent[]> {
+    const [events, commitments] = await Promise.all([
+      this.getUserEvents(userId, startDate, endDate),
+      this.getCommitmentEvents(userId, startDate, endDate),
+    ]);
+    return [...events, ...commitments].sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
+  }
+
+  /** For the calendar views: the next few days' events and commitments. */
+  async getUpcomingCalendarItems(userId: string, daysAhead: number = 7): Promise<UserEvent[]> {
+    const now = new Date();
+    const future = new Date();
+    future.setDate(future.getDate() + daysAhead);
+    return this.getCalendarItems(userId, now, future);
   }
 
   async getUpcomingEvents(userId: string, daysAhead: number = 7): Promise<UserEvent[]> {

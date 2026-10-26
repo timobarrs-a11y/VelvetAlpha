@@ -2,6 +2,7 @@ import { supabase } from '../shared/supabase/client';
 import { MODEL_CONFIG } from './modelSelector';
 import type { ExpertConfig } from '../config/signatureExperts';
 import { buildCoachOpeningGuidance, buildCoachOpeningFallback } from '../config/coachFramework';
+import type { RelationshipType } from './companionService';
 
 export interface FirstMessageTemplate {
   greeting: string;
@@ -186,7 +187,7 @@ Write ONLY the message text, no quotation marks, no labels, no explanations.`;
     userBirthday?: string,
     expertDomain?: string,
     expertConfig?: ExpertConfig | null,
-    relationshipTypeOverride?: 'friend' | 'romantic' | 'mentor',
+    relationshipTypeOverride?: RelationshipType,
   ): Promise<string> {
     const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || sessionStorage.getItem('expertMatchAnswers') || '{}');
 

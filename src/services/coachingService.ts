@@ -579,6 +579,9 @@ export interface CoachPlanStep {
   minimum_value?: number | null;
   target_unit?: string | null;
   user_target_value?: number | null;
+  /** The day it's planned for, so the calendar shows which days hold what. */
+  scheduled_for?: string | null;
+  duration_minutes?: number | null;
 }
 
 export interface CoachPlan {

@@ -2,6 +2,7 @@ import { INTELLIGENCE_GUARDRAILS, CONVERSATION_QUALITY_RULES } from '../prompts/
 import { getVoiceById } from './signatureVoices';
 import type { ExpertConfig } from './signatureExperts';
 import { buildCoachBehavioralInstructions, buildPlanStandardBlock } from './coachFramework';
+import type { RelationshipType } from '../services/companionService';
 
 interface SystemPromptInput {
   companionName: string;
@@ -17,7 +18,7 @@ interface SystemPromptInput {
   favoriteColor?: string;
   musicGenre?: string;
   newsTopics?: string[] | string;
-  relationshipType?: 'friend' | 'romantic' | 'mentor';
+  relationshipType?: RelationshipType;
   signatureVoice: string;
   driftCorrection?: boolean;
   expertConfig?: ExpertConfig | null;

@@ -64,7 +64,7 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
     setUserId(user.id);
 
     const [upcoming, sug, companionList, giftList] = await Promise.all([
-      calendarService.getUpcomingEvents(user.id, 14),
+      calendarService.getUpcomingCalendarItems(user.id, 14),
       calendarService.getEventSuggestions(user.id),
       getCompanions(user.id),
       calendarService.getGiftSuggestions(user.id),
@@ -82,7 +82,7 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
     if (!userId) return;
     const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
-    const monthEvents = await calendarService.getUserEvents(userId, start, end);
+    const monthEvents = await calendarService.getCalendarItems(userId, start, end);
     setEvents(monthEvents);
   };
 
@@ -93,7 +93,7 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
       await calendarService.createEvent({ ...eventData, user_id: userId });
     }
     await loadMonthEvents();
-    const upcoming = await calendarService.getUpcomingEvents(userId, 14);
+    const upcoming = await calendarService.getUpcomingCalendarItems(userId, 14);
     setUpcomingEvents(upcoming);
     setEditingEvent(null);
   };
@@ -101,14 +101,14 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
   const handleDeleteEvent = async (eventId: string) => {
     await calendarService.deleteEvent(eventId);
     await loadMonthEvents();
-    const upcoming = await calendarService.getUpcomingEvents(userId, 14);
+    const upcoming = await calendarService.getUpcomingCalendarItems(userId, 14);
     setUpcomingEvents(upcoming);
   };
 
   const handleToggleComplete = async (event: UserEvent, completed: boolean) => {
     await calendarService.setCompleted(event, completed);
     await loadMonthEvents();
-    const upcoming = await calendarService.getUpcomingEvents(userId, 14);
+    const upcoming = await calendarService.getUpcomingCalendarItems(userId, 14);
     setUpcomingEvents(upcoming);
   };
 
@@ -116,7 +116,7 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
     await calendarService.acceptEventSuggestion(suggestion.id, userId);
     setSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
     await loadMonthEvents();
-    const upcoming = await calendarService.getUpcomingEvents(userId, 14);
+    const upcoming = await calendarService.getUpcomingCalendarItems(userId, 14);
     setUpcomingEvents(upcoming);
   };
 
@@ -476,7 +476,7 @@ export function CalendarPanel({ onClose }: CalendarPanelProps) {
                       upcomingEvents={upcomingEvents}
                       onEventAdded={async () => {
                         await loadMonthEvents();
-                        const upcoming = await calendarService.getUpcomingEvents(userId, 14);
+                        const upcoming = await calendarService.getUpcomingCalendarItems(userId, 14);
                         setUpcomingEvents(upcoming);
                       }}
                     />

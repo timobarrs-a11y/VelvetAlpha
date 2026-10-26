@@ -34,6 +34,7 @@ import {
   formatTemporalPromptContext
 } from './temporalAwarenessService';
 import { affectionService } from './affectionService';
+import type { RelationshipType } from './companionService';
 
 const USE_SERVER_PROMPT = true;
 
@@ -756,7 +757,7 @@ export class ChatService {
     };
   }
 
-  static async sendMessage(message: string, companionId?: string, _relationshipType: 'friend' | 'romantic' | 'mentor' = 'romantic'): Promise<string> {
+  static async sendMessage(message: string, companionId?: string, _relationshipType: RelationshipType = 'romantic'): Promise<string> {
     try {
       const userProfile = await this.getUserProfile();
       const defaultProfile: UserProfile = {
@@ -1095,7 +1096,7 @@ export class ChatService {
         favoriteColor: profile.favorite_color || companionData?.favorite_color,
         musicGenre: profile.music_genre || companionData?.music_genre,
         newsTopics: profile.news_categories || companionData?.news_categories,
-        relationshipType: connectionType as 'friend' | 'romantic' | 'mentor',
+        relationshipType: connectionType as RelationshipType,
         signatureVoice,
         expertConfig,
         relationshipDuration,
