@@ -7,13 +7,15 @@ import {
 import { describeGarment, DESCRIBE_MAX } from '../state/describeGarment';
 import { styleWords } from '../state/taste';
 import { createGarmentPreview } from './garmentPreview';
+import { clothToGarment } from '../state/legacyClothes';
+import { OCCASIONS, OCCASION_LABEL, type Occasion, type SavedOutfit } from '../state/outfits';
 
 /**
  * The Design Studio: make a garment (cut, cloth, colours, pattern and details) and see it on a mannequin as you go,
  * describe one in words, shop the daily boutique, or trade share codes. It builds its page once and updates it in
  * place, because the drawer around it is refreshed several times a second.
  */
-type Tab = 'make' | 'describe' | 'boutique' | 'share';
+type Tab = 'make' | 'describe' | 'boutique' | 'outfits' | 'share';
 
 const SLOT_LABEL: Partial<Record<GarmentSlot, string>> = { top: 'Top', outer: 'Jacket', dress: 'Dress', bottom: 'Bottoms' };
 const STUDIO_SLOTS: GarmentSlot[] = ['top', 'outer', 'dress', 'bottom'];
@@ -48,7 +50,7 @@ export function createStudio(g: Game): Partial<Game> {
       </div>
     </div>
     <div class="vh-st-tabs" role="tablist">
-      ${(['make', 'describe', 'boutique', 'share'] as Tab[]).map((t) => `<button type="button" role="tab" data-sttab="${t}">${t === 'make' ? 'Design' : t === 'describe' ? 'Describe it' : t === 'boutique' ? 'Boutique' : 'Share'}</button>`).join('')}
+      ${(['make', 'describe', 'boutique', 'outfits', 'share'] as Tab[]).map((t) => `<button type="button" role="tab" data-sttab="${t}">${t === 'make' ? 'Design' : t === 'describe' ? 'Describe' : t === 'boutique' ? 'Boutique' : t === 'outfits' ? 'Outfits' : 'Share'}</button>`).join('')}
     </div>
     <div class="vh-st-msg" data-msg aria-live="polite"></div>
     <div class="vh-st-pane" data-pane></div>
@@ -124,7 +126,9 @@ export function createStudio(g: Game): Partial<Game> {
     const swatches = [...new Set(PALETTES.flatMap((pl) => pl.colors))].slice(0, 18);
     const details = cur.details ?? {};
     const isBottom = cur.slot === 'bottom';
+    const remixable = g.closet.filter((c) => !c.recipe && clothToGarment(c));
     return `
+      ${remixable.length ? `<h5>Start from something you own</h5><div class="vh-st-row">${remixable.map((c) => `<button type="button" class="vh-st-chip" data-remix="${esc(c.id)}" data-remixcol="${esc(c.col)}">${esc(c.name)}</button>`).join('')}</div>` : ''}
       <h5>Piece</h5>
       <div class="vh-st-row">${STUDIO_SLOTS.map((s) => chip(SLOT_LABEL[s]!, 'data-slot', s, cur.slot === s)).join('')}</div>
       <div class="vh-st-row">${CUTS[cur.slot].map((c) => chip(cutLabel(c), 'data-cut', c, cur.cut === c)).join('')}</div>
@@ -154,12 +158,14 @@ export function createStudio(g: Game): Partial<Game> {
 
   function boutiquePane(): string {
     const items = g.boutiqueFor(world.day);
-    return `<p class="vh-st-hint">A fresh rack every day. Rarer pieces are one-offs.</p><div class="vh-st-boutique">${items.map((it, i) => `
+    return `<p class="vh-st-hint">A fresh rack every day. Rare pieces are ordered and arrive at 8 in the morning.</p>
+      <div class="vh-st-row"><button type="button" class="vh-st-chip" data-mayagift>Ask ${esc(g.partnerName)} to design something for you</button></div>
+      <div class="vh-st-boutique">${items.map((it, i) => `
       <div class="vh-st-card" data-card="${i}">
         <canvas width="66" height="88" data-bpreview="${i}"></canvas>
         <strong>${esc(it.garment.name)}</strong>
         <span class="vh-st-rarity" data-rarity="${it.garment.rarity}">${RARITY_LABEL[it.garment.rarity]}</span>
-        <div class="vh-st-cardrow"><button type="button" data-tryit="${i}">Try</button><button type="button" data-buyit="${i}" ${it.bought || world.household.money < it.price ? 'disabled' : ''}>${it.bought ? 'Owned' : `$${it.price}`}</button></div>
+        <div class="vh-st-cardrow"><button type="button" data-tryit="${i}">Try</button><button type="button" data-buyit="${i}" ${it.bought || g.isOrdered(it.id) || world.household.money < it.price ? 'disabled' : ''}>${it.bought ? 'Owned' : g.isOrdered(it.id) ? 'On its way' : g.needsOrder(it.garment) ? `Order $${it.price}` : `$${it.price}`}</button></div>
       </div>`).join('')}</div>`;
   }
 
@@ -167,6 +173,21 @@ export function createStudio(g: Game): Partial<Game> {
     return `<p class="vh-st-hint">Say what you want: "70s sunset over the ocean", "cozy cabin flannel", "something ${g.partnerName} would love".</p>
       <textarea class="vh-st-text" maxlength="${DESCRIBE_MAX}" rows="3" placeholder="Describe a garment…" data-describe-text></textarea>
       <div class="vh-st-row"><button type="button" class="vh-st-primary" data-describe ${busy ? 'disabled' : ''}>${busy ? 'Designing…' : 'Design it'}</button></div>`;
+  }
+
+  let occasion: Occasion = 'everyday';
+  function outfitsPane(): string {
+    const list = (g.flags.outfits ?? []) as SavedOutfit[];
+    const names = (o: SavedOutfit): string => [o.top, o.bottom].map((r) => g.closet.find((c) => c.id === r?.id && c.col === r?.col)?.name).filter(Boolean).join(' + ') || 'pieces gone';
+    return `<p class="vh-st-hint">Save what ${esc(g.simName)} has on for an occasion. ${esc(g.simName)} changes into it when the time comes.</p>
+      <label class="vh-st-check"><input type="checkbox" data-auto ${g.flags.autoOutfit === false ? '' : 'checked'} /> Change automatically</label>
+      <h5>Save what I'm wearing</h5>
+      <div class="vh-st-row">${OCCASIONS.map((o) => chip(OCCASION_LABEL[o], 'data-occasion', o, occasion === o)).join('')}</div>
+      <input class="vh-st-text" maxlength="24" placeholder="Name (optional)" data-outfit-name aria-label="Outfit name" />
+      <div class="vh-st-row"><button type="button" class="vh-st-primary" data-saveoutfit>Save outfit</button></div>
+      <h5>Saved outfits</h5>
+      ${list.length ? list.map((o) => `<div class="vh-st-outfit"><div><strong>${esc(o.name)}</strong><span>${OCCASION_LABEL[o.occasion]} · ${esc(names(o))}</span></div>
+        <div class="vh-st-cardrow"><button type="button" data-wearoutfit="${o.id}">Wear</button><button type="button" data-deleteoutfit="${o.id}" aria-label="Delete ${esc(o.name)}">&times;</button></div></div>`).join('') : '<p class="vh-st-hint">Nothing saved yet.</p>'}`;
   }
 
   function sharePane(): string {
@@ -191,7 +212,7 @@ export function createStudio(g: Game): Partial<Game> {
   }
 
   function renderPane(): void {
-    pane.innerHTML = tab === 'make' ? makePane() : tab === 'boutique' ? boutiquePane() : tab === 'describe' ? describePane() : sharePane();
+    pane.innerHTML = tab === 'make' ? makePane() : tab === 'boutique' ? boutiquePane() : tab === 'describe' ? describePane() : tab === 'outfits' ? outfitsPane() : sharePane();
     if (tab === 'boutique') drawBoutiquePreviews();
     syncHead();
   }
@@ -223,6 +244,15 @@ export function createStudio(g: Game): Partial<Game> {
     say(r.source === 'ai' ? 'Here is your design. Change anything you like.' : "Couldn't reach the designer, so here is one made from your words.");
   }
 
+  async function askGift(): Promise<void> {
+    if (busy) return;
+    busy = true; say(`${g.partnerName} is sketching…`); syncHead();
+    const r = await g.mayaGift();
+    busy = false;
+    say(r.ok ? `${g.partnerName} made you the ${r.garment!.name}.` : r.reason ?? '');
+    renderPane();
+  }
+
   function tryBoutique(i: number): void {
     const it = g.boutiqueFor(world.day)[i];
     if (!it) return;
@@ -234,7 +264,15 @@ export function createStudio(g: Game): Partial<Game> {
 
   function buyBoutique(i: number): void {
     const it = g.boutiqueFor(world.day)[i];
-    if (!it || it.bought) return;
+    if (!it || it.bought || g.isOrdered(it.id)) return;
+    if (g.needsOrder(it.garment)) {
+      if (!spend(world.household, it.price)) { say('Not enough money.'); return; }
+      g.orderGarment(it);
+      log(`Ordered the ${it.garment.name} for $${it.price}. It comes at 8 in the morning.`);
+      say(`Ordered. It arrives at 8 in the morning.`);
+      renderPane();
+      return;
+    }
     if (!spend(world.household, it.price)) { say('Not enough money.'); return; }
     g.markBought(world.day, it.id);
     const piece = g.ownGarment(it.garment);
@@ -270,6 +308,12 @@ export function createStudio(g: Game): Partial<Game> {
     if (d.sttab) { tab = d.sttab as Tab; renderPane(); return; }
     if (d.st === 'make') return make();
     if (d.st === 'surprise') { cur = generateGarment(Math.floor(Math.random() * 0xffffff), { rarity: 'rare' }); cur = { ...cur, rarity: 'one-of-a-kind' }; renderPane(); drawPreview(performance.now() / 1000); say('Something new.'); return; }
+    if (d.remix) {
+      const c = g.closet.find((x) => x.id === d.remix && x.col === d.remixcol);
+      const gm = c && clothToGarment(c);
+      if (gm) { cur = { ...gm, name: `Remix ${gm.name}`.slice(0, 24), rarity: 'one-of-a-kind' }; renderPane(); drawPreview(performance.now() / 1000); say(`Starting from the ${c!.name}.`); }
+      return;
+    }
     if (d.slot) { const slot = d.slot as GarmentSlot; change({ slot, cut: CUTS[slot][0] }); return; }
     if (d.cut) return change({ cut: d.cut });
     if (d.fabric) return change({ fabric: d.fabric as Garment['fabric'] });
@@ -292,6 +336,17 @@ export function createStudio(g: Game): Partial<Game> {
       else (dt as Record<string, unknown>)[d.detail] = !(dt as Record<string, unknown>)[d.detail] || undefined;
       return change({ details: dt });
     }
+    if (d.occasion) { occasion = d.occasion as Occasion; renderPane(); return; }
+    if (d.saveoutfit !== undefined) {
+      const name = (pane.querySelector('[data-outfit-name]') as HTMLInputElement).value;
+      const o = g.saveOutfit(name, occasion);
+      say(o ? `Saved ${o.name}.` : 'Put something on from your closet first.');
+      renderPane();
+      return;
+    }
+    if (d.wearoutfit) { const o = ((g.flags.outfits ?? []) as SavedOutfit[]).find((x) => x.id === d.wearoutfit); if (o) g.wearOutfit(o); return; }
+    if (d.deleteoutfit) { g.deleteOutfit(d.deleteoutfit); renderPane(); return; }
+    if (d.mayagift !== undefined) { void askGift(); return; }
     if (d.tryit) return tryBoutique(Number(d.tryit));
     if (d.buyit) return buyBoutique(Number(d.buyit));
     if (d.describe !== undefined) { void describe(); return; }
@@ -303,6 +358,7 @@ export function createStudio(g: Game): Partial<Game> {
   sec.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement;
     const p = cur.pattern;
+    if (t.dataset.auto !== undefined) { g.flags.autoOutfit = t.checked; return; }
     if (t === nameEl) { cur = { ...cur, name: t.value.slice(0, 24) }; return; }
     if (t.dataset.basepick !== undefined) return change({ base: t.value }, false);
     if (!p) { if (t.dataset.wash !== undefined || t.dataset.distress !== undefined) liveDetail(t); return; }

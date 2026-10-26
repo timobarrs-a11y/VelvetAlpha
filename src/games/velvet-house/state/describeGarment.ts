@@ -10,10 +10,12 @@ import type { SampleFn } from './companionAI';
 
 export const DESCRIBE_MAX = 120;
 
-export function describePreamble(opts: { wearerName?: string; styleWords?: string[] } = {}): string {
+export function describePreamble(opts: { wearerName?: string; styleWords?: string[]; designerName?: string; designerWords?: string[] } = {}): string {
   const shape = '{"slot":"top","cut":"hoodie","fabric":"flannel","base":"#a63a2c","pattern":{"kind":"plaid","colors":["#2e3b57","#e8dcc0"],"scale":1.2,"angle":0,"density":0.5,"seed":4},"details":{"pocket":true},"tags":["cozy","vintage"],"name":"Cabin Plaid"}';
   return [
-    'You are the clothing designer in a cozy life-sim game. The player describes a garment; you answer with ONE JSON object and nothing else: no words, no code fence.',
+    opts.designerName
+      ? `You are ${opts.designerName}, designing a gift for ${opts.wearerName ?? 'someone you love'} in a cozy life-sim game${opts.designerWords?.length ? `. You love ${opts.designerWords.join(', ')} things, and you choose what suits them and what you would be proud to give` : ''}. Answer with ONE JSON object and nothing else: no words, no code fence.`
+      : 'You are the clothing designer in a cozy life-sim game. The player describes a garment; you answer with ONE JSON object and nothing else: no words, no code fence.',
     `Shape (this is only an example of the format): ${shape}`,
     `slot: ${SLOTS.filter((s) => s !== 'shoes' && s !== 'hat').join(' | ')}. cut depends on slot: ${(['top', 'outer', 'dress', 'bottom'] as const).map((s) => `${s}: ${CUTS[s].join(', ')}`).join('; ')}.`,
     `fabric: ${FABRICS.join(', ')}. pattern.kind: ${PATTERN_KINDS.join(', ')} (leave pattern out for a plain garment). colors are 6-digit hex; pattern.colors has 1 to 3. scale 0.25 to 4, angle -90 to 90, density 0 to 1, seed any whole number.`,
@@ -73,7 +75,7 @@ export function fallbackGarment(text: string): Garment {
 export interface DescribeResult { garment: Garment; source: 'ai' | 'fallback' }
 
 export async function describeGarment(
-  text: string, sample: SampleFn | null, opts: { wearerName?: string; styleWords?: string[]; signal?: AbortSignal } = {},
+  text: string, sample: SampleFn | null, opts: { wearerName?: string; styleWords?: string[]; designerName?: string; designerWords?: string[]; tags?: readonly (typeof STYLE_TAGS)[number][]; signal?: AbortSignal } = {},
 ): Promise<DescribeResult> {
   const phrase = text.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, DESCRIBE_MAX);
   if (!phrase) return { garment: generateGarment(Date.now() & 0xffffff), source: 'fallback' };
@@ -84,5 +86,8 @@ export async function describeGarment(
       if (garment) return { garment, source: 'ai' };
     } catch { /* the friendly fallback below */ }
   }
-  return { garment: fallbackGarment(phrase), source: 'fallback' };
+  const fb = fallbackGarment(phrase);
+  // A gift falls back to something in the giver's taste rather than a plain guess.
+  if (opts.designerName && opts.tags?.length) return { garment: { ...generateGarment(seedOf(phrase), { tags: opts.tags, rarity: 'rare' }), rarity: 'one-of-a-kind' }, source: 'fallback' };
+  return { garment: fb, source: 'fallback' };
 }

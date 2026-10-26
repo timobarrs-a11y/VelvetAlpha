@@ -11,7 +11,7 @@ function stub(day = 3) {
   const g = {
     closet: [], flags: {}, log: (m: string) => logs.push(m), partnerName: 'Maya', simName: 'Jordan', style,
     tasteNorm: computeTasteNorm(CATALOG as never, style), memStore: { coreMem: [], memories: [], pastMem: [] },
-    world: { day }, s: { bond: 50 },
+    world: { day, minutes: 600 }, s: { bond: 50, sample: null }, refreshDrawer: () => {}, people: [{ look: {}, task: null }],
   } as unknown as Game;
   return { g, logs, api: createOutfit(g) as ReturnType<typeof createOutfit> & Record<string, (...a: never[]) => unknown> };
 }
@@ -73,5 +73,54 @@ describe('what the partner thinks', () => {
     for (let s = 1; s <= 40; s++) { api.reactToOutfit!(generateGarment(s, { rarity: 'rare' }), 'bought'); }
     expect(g.s.bond).toBeGreaterThanOrEqual(0);
     expect(g.s.bond).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('parcels', () => {
+  it('orders rare pieces for 8 in the morning, and delivers them then', () => {
+    const { g, logs, api } = stub(3);
+    const rare = generateGarment(5, { rarity: 'rare' });
+    expect(api.needsOrder!(rare)).toBe(true);
+    expect(api.needsOrder!(generateGarment(5, { rarity: 'common' }))).toBe(false);
+    const item = { id: api.outfitId!(rare), garment: rare, price: 100, bought: false };
+    expect(api.orderGarment!(item)).toBe(true);
+    expect(api.orderGarment!(item)).toBe(false);
+    expect(api.isOrdered!(item.id)).toBe(true);
+    // Ordered at 10:00 on day 3: it comes on day 4 at 8.
+    api.outfitTick!();
+    expect(g.closet).toHaveLength(0);
+    (g.world as { day: number; minutes: number }).day = 4; (g.world as { minutes: number }).minutes = 8 * 60 + 5;
+    api.outfitTick!();
+    expect(g.closet).toHaveLength(1);
+    expect(api.isOrdered!(item.id)).toBe(false);
+    expect(logs.some((l) => l.includes('parcel'))).toBe(true);
+  });
+
+  it('delivers the same morning when ordered before 8', () => {
+    const { g, api } = stub(3);
+    (g.world as { minutes: number }).minutes = 6 * 60;
+    const rare = generateGarment(9, { rarity: 'rare' });
+    api.orderGarment!({ id: api.outfitId!(rare), garment: rare, price: 1, bought: false });
+    (g.world as { minutes: number }).minutes = 8 * 60;
+    api.outfitTick!();
+    expect(g.closet).toHaveLength(1);
+  });
+});
+
+describe('a gift from the partner', () => {
+  it('needs some closeness, and comes once a day', async () => {
+    const { g, api } = stub(3);
+    g.s.bond = 20;
+    expect((await api.mayaGift!()).ok).toBe(false);
+    g.s.bond = 60;
+    const first = await api.mayaGift!();
+    expect(first.ok).toBe(true);
+    expect(g.closet).toHaveLength(1);
+    expect(g.s.bond).toBe(62);
+    const again = await api.mayaGift!();
+    expect(again.ok).toBe(false);
+    expect(g.closet).toHaveLength(1);
+    (g.world as { day: number }).day = 4;
+    expect((await api.mayaGift!()).ok).toBe(true);
   });
 });

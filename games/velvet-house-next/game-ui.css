@@ -490,3 +490,7 @@
 @media (max-width: 560px) {
   .vh-drawer[data-open="studio"] { height: 74%; }
 }
+.vh-st-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #E9E4EC; margin: 4px 0; }
+.vh-st-outfit { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; margin-bottom: 6px; border-radius: 10px; background: rgba(255,255,255,.06); }
+.vh-st-outfit div:first-child { display: flex; flex-direction: column; min-width: 0; font-size: 12px; }
+.vh-st-outfit span { color: #A9A1AE; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

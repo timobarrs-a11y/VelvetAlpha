@@ -67,3 +67,49 @@ test('the boutique has a fresh rack, and a piece can be bought and worn', async 
   await expect(game.locator('[data-buyit="0"]')).toHaveText('Owned');
   expect(await inGame<number>(page, 'v.money')).toBeLessThan(800);
 });
+
+test('save an outfit for an occasion and put it back on later', async ({ page }) => {
+  const game = await openGame(page);
+  await setMoney(page, 900);
+  await game.locator('.vh-dock [data-open=studio]').click();
+  await game.locator('[data-cut=hoodie]').click();
+  await game.locator('.vh-st-name').fill('Gym Hoodie');
+  await game.locator('.vh-st-name').dispatchEvent('change');
+  await game.locator('[data-st=make]').click();
+  await game.locator('[data-sttab=outfits]').click();
+  await game.locator('[data-occasion=workout]').click();
+  await game.locator('[data-outfit-name]').fill('Gym');
+  await game.locator('[data-saveoutfit]').click();
+  await expect(game.locator('.vh-st-outfit')).toHaveCount(1);
+  // Change into something else, then wear the saved outfit again.
+  await game.locator('[data-sttab=make]').click();
+  await game.locator('[data-cut=tank]').click();
+  await game.locator('.vh-st-name').fill('Plain Tank');
+  await game.locator('.vh-st-name').dispatchEvent('change');
+  await game.locator('[data-st=make]').click();
+  await saveNow(page);
+  expect((await savedGame(page)).look.topGarment.name).toBe('Plain Tank');
+  await game.locator('[data-sttab=outfits]').click();
+  await game.locator('[data-wearoutfit]').click();
+  await saveNow(page);
+  const saved = await savedGame(page);
+  expect(saved.look.topGarment.name).toBe('Gym Hoodie');
+  expect(saved.flags.outfits[0].occasion).toBe('workout');
+  await game.locator('[data-auto]').uncheck();
+  await saveNow(page);
+  expect((await savedGame(page)).flags.autoOutfit).toBe(false);
+});
+
+test('the partner can design a gift once a day', async ({ page }) => {
+  const game = await openGame(page);
+  await game.locator('.vh-dock [data-open=studio]').click();
+  await game.locator('[data-sttab=boutique]').click();
+  await game.locator('[data-mayagift]').click();
+  await expect(game.locator('[data-msg]')).toContainText('made you', { timeout: 15000 });
+  await saveNow(page);
+  const n = (await savedGame(page)).closet.filter((c: { recipe?: unknown }) => c.recipe).length;
+  expect(n).toBe(1);
+  await game.locator('.vh-dcard button').click();
+  await game.locator('[data-mayagift]').click();
+  await expect(game.locator('[data-msg]')).toContainText('already made you something today');
+});

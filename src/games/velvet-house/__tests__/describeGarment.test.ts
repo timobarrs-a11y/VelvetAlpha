@@ -69,6 +69,14 @@ describe('describeGarment', () => {
     expect(seen.length).toBe(120);
   });
 
+  it("writes a gift prompt from the giver's side, and falls back to the giver's taste", async () => {
+    const prompt = describePreamble({ wearerName: 'Jordan', designerName: 'Maya', designerWords: ['cozy'] });
+    expect(prompt).toContain('You are Maya, designing a gift for Jordan');
+    const r = await describeGarment('a gift for Jordan', null, { designerName: 'Maya', tags: ['cozy'] });
+    expect(r.source).toBe('fallback');
+    expect(r.garment.rarity).toBe('one-of-a-kind');
+  });
+
   it('names the wearer in the prompt when it knows them', () => {
     expect(describePreamble({ wearerName: 'Maya', styleWords: ['cozy', 'vintage'] })).toContain('Maya, who likes cozy, vintage things');
   });

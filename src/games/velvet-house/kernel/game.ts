@@ -19,6 +19,7 @@ import { type MemoryStore } from '../state/memory';
 import { validateGarment } from '../state/garment';
 import type { Garment } from '../state/garment';
 import type { BoutiqueItem } from '../systems/outfit';
+import type { Occasion, SavedOutfit } from '../state/outfits';
 import { mountShell } from '../ui/shell';
 import { loadWorld } from './config';
 
@@ -163,6 +164,14 @@ export interface Game {
   reactToOutfit(garment: Garment, verb: 'wears' | 'made' | 'bought'): void;
   wearOutfitPiece(piece: OwnedCloth): void;
   outfitId(garment: Garment): string;
+  saveOutfit(name: string, occasion: Occasion): SavedOutfit | null;
+  deleteOutfit(id: string): void;
+  wearOutfit(outfit: SavedOutfit): void;
+  outfitTick(): void;
+  orderGarment(item: BoutiqueItem): boolean;
+  isOrdered(id: string): boolean;
+  needsOrder(garment: Garment): boolean;
+  mayaGift(): Promise<{ ok: boolean; reason?: string; garment?: Garment }>;
   studioPage(pg: string): void;
   // avatar and host
   applyAvatar(person: Agent, look: { sprites?: unknown; body?: unknown; outfit?: unknown }, who: AgentId): void;
