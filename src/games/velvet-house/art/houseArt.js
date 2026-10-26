@@ -29,6 +29,7 @@ export function createHouseArt(ctx0, opts = {}) {
   let OBJS = [];
   const reserved = {};
   const arr = { hold: null, wHold: null, orig: null, valid: false, hover: null, mouse: null };
+  let arrState = null;
   const offstage = () => ({ name: '', away: true, level: -1, x: -10, y: -10, task: null, queue: [], needs: {} });
   let jordan = offstage(), maya = offstage();
   const GUESTS = [];
@@ -1215,6 +1216,14 @@ export function createHouseArt(ctx0, opts = {}) {
     wallMode = s.wallMode || 'cut';
     OBJS = s.objs;
     if (s.rot !== VR) { VR = s.rot; setOrigin(); }
+    // Who's doing what, where: the stove steams while someone cooks, the
+    // washer spins during laundry, the shower runs while they shower.
+    const who = (c, name) => c ? { name, away: !!c.hidden && false, level: c.level, x: c.x, y: c.y,
+      task: c.act ? { name: c.act, phase: 'do', slot: c.slot || null } : null, queue: [], needs: {} } : offstage();
+    if (s.chars) { jordan = who(s.chars[0], 'Jordan'); maya = who(s.chars[1], 'Maya'); }
+    // Arrange mode: walls come down, and the overlay below shows what can move.
+    arrState = s.arrange || null;
+    arranging = !!arrState;
   }
 
   function applySave(s) {
@@ -1661,6 +1670,7 @@ export function createHouseArt(ctx0, opts = {}) {
     (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && lv === 3) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (gOn) G.clearBase(); } }); });
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
+    if (arrState) drawArrangeOverlay(arrState, lv);
     drawSparkles(lv);
     } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
     drawParticles(lv, false);
@@ -1690,6 +1700,45 @@ export function createHouseArt(ctx0, opts = {}) {
     if (!best) return null;
     if (best.kind === 'wall') { const next = wallLightOverrides.get(best.index) !== true; wallLightOverrides.set(best.index, next); return next; }
     return toggleObjectLight(best.id);
+  }
+
+  // The outline of an object on screen: its footprint and its top, wrapped.
+  function objHull(o) {
+    const [fw, fd] = fp(o), h = T_OF(o).h || 1, pts = [];
+    [[o.x, o.y], [o.x + fw, o.y], [o.x + fw, o.y + fd], [o.x, o.y + fd]].forEach(([x, y]) => { pts.push(iso(x, y, 0)); pts.push(iso(x, y, h)); });
+    pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const cross = (q, a, b) => (a[0] - q[0]) * (b[1] - q[1]) - (a[1] - q[1]) * (b[0] - q[0]);
+    const lower = [], upper = [];
+    for (const p of pts) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p); }
+    for (const p of pts.slice().reverse()) { while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p); }
+    return lower.slice(0, -1).concat(upper.slice(0, -1));
+  }
+
+  // Arrange mode, the Animal Crossing part: every movable piece outlined, the
+  // one under your finger highlighted, and the one you're carrying showing a
+  // green (fits) or red (doesn't) footprint, with marks where people will
+  // stand to use it.
+  function drawArrangeOverlay(a, level) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(0, 0, W, H);
+    OBJS.forEach(o => {
+      if (o.level !== level || !a.movable.includes(o.id) || o.id === a.held) return;
+      const hull = objHull(o), hot = o.id === a.hover;
+      ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
+      ctx.strokeStyle = hot ? 'rgba(214,74,122,.95)' : 'rgba(214,74,122,.35)'; ctx.lineWidth = hot ? 2 : 1; ctx.setLineDash(hot ? [] : [4, 4]); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    const o = a.held && OBJS.find(q => q.id === a.held);
+    if (o && o.level === level) {
+      const [fw, fd] = fp(o), col = a.valid ? '47,143,91' : '194,65,58';
+      poly([[o.x, o.y, 0.01], [o.x + fw, o.y, 0.01], [o.x + fw, o.y + fd, 0.01], [o.x, o.y + fd, 0.01]], `rgba(${col},.25)`, `rgba(${col},.9)`, 2);
+      const st = T_OF(o).spots;
+      if (st) Object.values(st).forEach(sp => { const [sx, sy] = xf(o, sp.stand[0], sp.stand[1]), [px, py] = iso(sx, sy, 0); ell(px, py, 6, 3, `rgba(${col},.85)`); ell(px, py, 2, 1, '#fff'); });
+      // A gentle lift, so the piece reads as carried.
+      const hull = objHull(o); ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1] - 3) : ctx.moveTo(p[0], p[1] - 3))); ctx.closePath();
+      ctx.strokeStyle = `rgba(${col},.95)`; ctx.lineWidth = 2; ctx.stroke();
+    }
+    ctx.restore();
   }
 
   // Tapping an object brings it to life for a moment (or flips its switch).

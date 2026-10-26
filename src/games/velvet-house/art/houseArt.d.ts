@@ -21,6 +21,8 @@ export interface PersonFrame {
   act?: string | null;
   /** Game minutes into that activity, so clips can move through steps. */
   actMin?: number;
+  /** The furniture spot they're using ('objectId:spot'), so the object can react. */
+  slot?: string | null;
   /** How they feel, from their needs: happy, playful, neutral, tired, annoyed, sad. */
   expr?: string;
   /** A spot they're looking at (world x, y), e.g. the person they're talking to. */
@@ -38,6 +40,8 @@ export interface HouseFrame {
   objs: ObjectInstance[];
   wallMode: WallMode;
   chars?: PersonFrame[];
+  /** Arrange mode: what can move, what's carried, whether it fits, what's under the pointer. */
+  arrange?: { movable: string[]; held: string | null; valid: boolean; hover: string | null } | null;
 }
 
 export interface HouseArt {

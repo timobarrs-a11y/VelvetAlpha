@@ -2,6 +2,7 @@ import { migrateSave } from './state/saveMigration';
 import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage } from './bridge/protocol';
 import { setOwnedAvatarItems, ownsAvatarItem, buyAvatarItem } from './bridge/avatarShop';
 import { simsShopItems, itemLabel } from '../../data/avatarCatalog';
+import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, type PlacementCheck } from './state/arrange';
 import { INITIAL_OBJS, TYPES, type ObjectInstance } from './state/objects';
 import { DAYS, weekday, clockText, season, absMin } from './state/time';
 import { LEVEL_NAMES } from './state/house';
@@ -483,6 +484,7 @@ function boot(): void {
     else if (e.key === 'a' || e.key === 'A') { toggleArrange(); }
     if (arranging) {
       if (e.key === 'r' || e.key === 'R') { rotateHeld(); e.preventDefault(); }
+      if (e.key === 'c' || e.key === 'C') { recolourHeld(); }
       if (e.key === 'Escape') { cancelHold(); }
     }
   });
@@ -509,14 +511,52 @@ function boot(): void {
       syncControls();
     }
   }
+  // Whether the carried piece fits where it is, and why not.
+  let heldCheck: PlacementCheck = { ok: true };
+  let hoverObj: ObjectInstance | null = null;
+  function recheck(): void {
+    if (heldObj) heldCheck = checkPlacement(world.objs, heldObj, people.filter(p => !p.onStairs));
+  }
   function rotateHeld(): void {
     if (!heldObj) return;
-    heldObj.rot = (heldObj.rot + 1) % 4;
+    rotateAboutCentre(heldObj);
+    recheck();
+  }
+  function recolourHeld(): void {
+    const o = heldObj ?? hoverObj;
+    const col = o && nextColour(o);
+    if (!o || !col) return;
+    o.col = col;
+    log(`Changed the ${(TYPES[o.type]?.name ?? 'furniture').toLowerCase()}'s colour.`);
   }
   function cancelHold(): void {
     if (heldObj && heldOrig) { heldObj.x = heldOrig.x; heldObj.y = heldOrig.y; heldObj.rot = heldOrig.rot; }
     heldObj = null;
     heldOrig = null;
+  }
+  // After a move, the household learns the new layout: the spots to stand at,
+  // the walkable floor, and anyone heading to (or using) the moved piece
+  // starts over, so they walk to where it is now.
+  function relearnLayout(moved: ObjectInstance): void {
+    Object.assign(house, buildWorld(world.objs));
+    for (const p of people) {
+      if (p.task?.slot?.id.startsWith(moved.id + ':')) {
+        if (p.task.phase === 'do' && p.task.slot.pos) { [p.x, p.y] = p.task.slot.stand; p.z = 0; }
+        p.task = null;
+        p.idle = 0.2;
+      }
+    }
+  }
+  // What arrange mode tells the art to draw.
+  function arrangeFrame() {
+    if (!arranging) return null;
+    return {
+      movable: world.objs.filter(o => o.level === view.level && isMovable(o)).map(o => o.id),
+      held: heldObj?.id ?? null, valid: heldCheck.ok, hover: hoverObj?.id ?? null,
+    };
+  }
+  function screenToWorld(sx: number, sy: number): [number, number] {
+    return [((sx - 288) / 32 + (sy - 128) / 16) / 2, ((sy - 128) / 16 - (sx - 288) / 32) / 2];
   }
   btn('arrange').addEventListener('click', toggleArrange);
 
@@ -526,23 +566,25 @@ function boot(): void {
     const [sx, sy] = toView(e.clientX, e.clientY);
 
     if (arranging) {
-      // Click in arrange mode: pick up or place furniture
+      // Arrange mode: tap a piece to pick it up, tap again to set it down.
       if (heldObj) {
-        // Place: convert screen coords back to world coords
-        const wx = Math.round(((sx - 288) / 32 + (sy - 128) / 16) / 2 * 4) / 4;
-        const wy = Math.round(((sy - 128) / 16 - (sx - 288) / 32) / 2 * 4) / 4;
-        heldObj.x = Math.max(0, Math.min(10, wx));
-        heldObj.y = Math.max(0, Math.min(8, wy));
-        log(`Moved the ${TYPES[heldObj.type]?.name ?? 'furniture'}.`);
-        art.objectPlaced(heldObj.id);
+        centreAt(heldObj, ...screenToWorld(sx, sy));
+        recheck();
+        if (!heldCheck.ok) { log(heldCheck.reason ?? "It doesn't fit there."); return; }
+        const placed = heldObj;
+        log(`Moved the ${(TYPES[placed.type]?.name ?? 'furniture').toLowerCase()}.`);
+        art.objectPlaced(placed.id);
         heldObj = null;
         heldOrig = null;
+        relearnLayout(placed);
         return;
       }
       const obj = findObjectAt(sx, sy);
-      if (obj && !TYPES[obj.type]?.fixed) {
+      if (obj && isMovable(obj)) {
         heldObj = obj;
         heldOrig = { x: obj.x, y: obj.y, rot: obj.rot };
+        recheck();
+        log(`Picked up the ${(TYPES[obj.type]?.name ?? 'furniture').toLowerCase()}. R to turn it, C for colour, Esc to put it back.`);
       }
       return;
     }
@@ -591,14 +633,13 @@ function boot(): void {
     return parts.reduce((best, p) => Math.abs(p[1] - along) < Math.abs(best[1] - along) ? p : best)[0];
   }
 
-  // Mouse move in arrange mode: drag held object
-  canvas.addEventListener('mousemove', (e) => {
-    if (!arranging || !heldObj) return;
+  // Arrange mode: the carried piece follows the pointer (mouse or finger),
+  // and whatever's under it is highlighted.
+  canvas.addEventListener('pointermove', (e) => {
+    if (!arranging) return;
     const [sx, sy] = toView(e.clientX, e.clientY);
-    const wx = Math.round(((sx - 288) / 32 + (sy - 128) / 16) / 2 * 4) / 4;
-    const wy = Math.round(((sy - 128) / 16 - (sx - 288) / 32) / 2 * 4) / 4;
-    heldObj.x = Math.max(0, Math.min(10, wx));
-    heldObj.y = Math.max(0, Math.min(8, wy));
+    if (heldObj) { centreAt(heldObj, ...screenToWorld(sx, sy)); recheck(); }
+    else { const o = findObjectAt(sx, sy); hoverObj = o && isMovable(o) ? o : null; }
   });
 
   // Zoom and pan: wheel, pinch, drag (when zoomed), double-tap to reset.
@@ -1065,6 +1106,7 @@ function boot(): void {
       seed: seeds[p.id], look: p.look,
       act: p.task && p.task.phase === 'do' ? p.task.act : null,
       actMin: p.task && p.task.phase === 'do' ? p.task.time : 0,
+      slot: p.task && p.task.phase === 'do' ? p.task.slot?.id ?? null : null,
       expr: expressionFor(p.needs),
       lookAt: lookTargetOf(p),
     };
@@ -1111,6 +1153,7 @@ function boot(): void {
         level: view.level, rot: view.rot, minutes: interpMinutes, day: world.day,
         t: view.t, dt: frameDt, objs: world.objs, wallMode: WALL_MODES[view.wallIdx].mode,
         chars: people.map(toFrame),
+        arrange: arrangeFrame(),
       });
       qualityManager.recordFrame(frameDt * 1000);
 
