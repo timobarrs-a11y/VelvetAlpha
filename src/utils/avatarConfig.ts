@@ -47,6 +47,17 @@ export function migrateAvatarConfig(raw: unknown): AvatarConfigV2 {
     merged.hairTexture = inferTextureFromStyle(merged.hairStyle);
   }
 
+  // Clamp face-tune values to [-1, 1] so a malformed or hand-edited draft
+  // can never push facial proportions to an absurd or broken extreme.
+  if (merged.faceTune && typeof merged.faceTune === 'object') {
+    const clamped: Record<string, number> = {};
+    for (const [key, value] of Object.entries(merged.faceTune)) {
+      const num = Number(value);
+      clamped[key] = Number.isFinite(num) ? Math.max(-1, Math.min(1, num)) : 0;
+    }
+    merged.faceTune = clamped as unknown as AvatarConfigV2['faceTune'];
+  }
+
   // Version 4 opened every hairstyle to everyone. Three names used to mean a
   // short cut on male avatars; give those their own names so nothing changes.
   if ((Number(partial._version) || 0) < 4 && gender === 'male') {

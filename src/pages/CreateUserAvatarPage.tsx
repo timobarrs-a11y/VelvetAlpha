@@ -8,6 +8,7 @@ import { supabase } from '../shared/supabase/client';
 import { getCompanions } from '../services/companionService';
 import { trackOpenCustomizer, trackSaveAvatar, trackSkipAvatar } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
+import { sanitizeAvatarConfigForSave } from '../services/avatarSaveService';
 import { VELVET_THEME } from '../config/velvetTheme';
 
 const AMBIENT_ORBS = [
@@ -67,12 +68,14 @@ export function CreateUserAvatarPage() {
         return;
       }
 
+      const sanitized = await sanitizeAvatarConfigForSave(avatarConfig);
+
       const { error: updateError } = await supabase
         .from('user_profiles')
         .upsert({
           id: user.id,
           name: 'there',
-          avatar_config: avatarConfig
+          avatar_config: sanitized
         }, {
           onConflict: 'id'
         });
@@ -81,7 +84,7 @@ export function CreateUserAvatarPage() {
         throw updateError;
       }
 
-      localStorage.setItem('userAvatarConfig', JSON.stringify(avatarConfig));
+      localStorage.setItem('userAvatarConfig', JSON.stringify(sanitized));
       trackSaveAvatar('user');
       setShowReveal(true);
     } catch {

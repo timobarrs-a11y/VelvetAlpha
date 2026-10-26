@@ -246,12 +246,12 @@ export function AvatarCreatorV2({
   }, [draftKey, onChange]);
 
   const update = useCallback((partial: Partial<AvatarConfigV2>) => {
-    setConfig(prev => {
-      const next = applyAvatarChange(prev, partial);
-      push(next);
-      return next;
-    });
-  }, [push]);
+    // Compute the next config from the current config without nesting a
+    // second setState inside this updater. push() calls setConfig itself,
+    // so we only need the value here, not a state updater.
+    const next = applyAvatarChange(config, partial);
+    push(next);
+  }, [config, push]);
 
   const undo = () => {
     if (historyIdx.current <= 0) return;
