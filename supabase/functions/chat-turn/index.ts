@@ -1780,6 +1780,7 @@ Deno.serve(async (req: Request) => {
     if (companion.signature_expert) {
       try {
         let expertInstruction: string | null = null;
+        let expertTeaches: string | null = null;
 
         if (companion.signature_expert_source === 'user') {
           const { data: userExpert } = await supabaseAdmin
@@ -1822,12 +1823,14 @@ Deno.serve(async (req: Request) => {
                 expertInstruction = null;
               } else {
                 expertInstruction = curated.instruction;
+                expertTeaches = curated.teaches;
                 expertDomain = curated.domain;
                 expertAccountability = curated.accountabilityLevel;
                 expertCheckInStyle = curated.checkInStyle;
               }
             } else {
               expertInstruction = curated.instruction;
+              expertTeaches = curated.teaches;
               expertDomain = curated.domain;
               expertAccountability = curated.accountabilityLevel;
               expertCheckInStyle = curated.checkInStyle;
@@ -1852,7 +1855,7 @@ ${expertInstruction}
 === EXPERT LAYER: ${expertDomain.toUpperCase()} ===
 This companion has expert-level knowledge and focus in ${expertDomain}. In addition to your core personality, you apply this specialized expertise:
 
-${expertInstruction}
+${expertInstruction}${expertTeaches ? `\n\nWHAT YOU TEACH: ${expertTeaches}` : ''}
 
 Balance this domain expertise naturally with your relationship dynamic — bring it up when relevant, not in every message.`;
           }

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SIGNATURE_EXPERTS } from '../../config/signatureExperts';
-import { CURATED_EXPERT_MAP } from '../../../supabase/functions/_shared/coachFramework';
+import { CURATED_EXPERT_MAP, buildCoachBehavioralInstructions as buildEdgeCoach } from '../../../supabase/functions/_shared/coachFramework';
+import { buildCoachBehavioralInstructions as buildClientCoach } from '../../config/coachFramework';
 
 // Guards against drift between the client's canonical curated-expert catalog
 // (src/config/signatureExperts.ts) and the edge function's mirror
@@ -32,4 +33,24 @@ describe('curated expert catalog parity (client <-> edge)', () => {
     }
     expect(mismatches).toEqual([]);
   });
+
+  it('every curated coach says what it teaches', () => {
+    const missing = Object.entries(CURATED_EXPERT_MAP).filter(([, e]) => !e.teaches || e.teaches.length < 80).map(([id]) => id);
+    expect(missing).toEqual([]);
+  });
 });
+
+describe('every coach teaches', () => {
+  it('both copies of the framework carry the same teaching loop', () => {
+    const input = { coachName: 'Sofia', userName: 'Alex', domain: 'Spanish' };
+    const edge = buildEdgeCoach(input);
+    const client = buildClientCoach(input);
+    for (const step of ['FIND THEIR LEVEL', 'LAY OUT A CURRICULUM', 'TEACH IN SMALL LESSONS', 'FEEDBACK ON THEIR ATTEMPT', 'SET PRACTICE', "REVIEW WHAT'S FADING", 'CHECK UNDERSTANDING BY DOING']) {
+      expect(edge).toContain(step);
+      expect(client).toContain(step);
+    }
+    const loop = (s: string) => s.slice(s.indexOf('THE TEACHING LOOP'), s.indexOf('RESTATE THE PURPOSE'));
+    expect(loop(client)).toEqual(loop(edge));
+  });
+});
+

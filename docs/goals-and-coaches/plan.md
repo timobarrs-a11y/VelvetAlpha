@@ -172,6 +172,10 @@ The tough-love coaches keep their style. Firm or gentle is how a coach talks (th
 Both copies of the framework change together: `supabase/functions/_shared/coachFramework.ts`
 and `src/config/coachFramework.ts` (the comment says to keep them in sync).
 
+*Built (G6):* the teaching loop is in both copies of `buildCoachBehavioralInstructions`; every
+curated coach has `teaches` in `CURATED_EXPERT_MAP`, added to its expert layer in `chat-turn` as
+"WHAT YOU TEACH". `scripts/coach-teaching-eval.ts` runs the scripted learner (below).
+
 **Testing:** a script with a scripted learner for each coach checks that the first session
 places them, that sessions contain an explanation, an example, an attempt and feedback, and
 that practice ends up with dates. A matching script for assistants checks that a named goal
