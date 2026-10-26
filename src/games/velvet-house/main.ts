@@ -31,10 +31,11 @@ import { CATALOG, type CatalogEntry } from './state/catalog';
 import { SETTLE, settleComplete, type GoalContext } from './state/goals';
 import { rollStyle, tasteOf, computeTasteNorm, type StyleProfile, type CatalogItem } from './state/taste';
 import {
-  talk, rememberChat, remember, cannedFor,
+  talk, rememberChat, cannedFor,
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
 import { snapshot } from './state/save';
+import { remember, compactMemory, condenserFrom } from './state/memory';
 import { createHostSample } from './bridge/hostSample';
 import { PICTURE_WALLS } from './state/pictureWalls';
 import { createDrawer, dockTabHtml, DOCK_TABS, type ArrangeState, type DrawerPage, type DrawerState } from './ui/drawer';
@@ -192,6 +193,7 @@ function boot(): void {
   const coreMem: string[] = Array.isArray(save?.coreMem) ? [...save!.coreMem as string[]] : [];
   const memories: string[] = Array.isArray(save?.memories) ? [...save!.memories as string[]] : [];
   const pastMem: string[] = Array.isArray(save?.pastMem) ? [...save!.pastMem as string[]] : [];
+  const memStore = { coreMem, memories, pastMem };
 
   // Chat
   let chatTurns: ChatTurn[] = Array.isArray(save?.turns) ? [...save!.turns as ChatTurn[]] : [];
@@ -1052,7 +1054,9 @@ function boot(): void {
     // Save memories from chat
     if (chatTurns.length > 2 && sample) {
       rememberChat(chatTurns, sample).then(mems => {
-        for (const m of mems) remember(m.line, m.important, coreMem, memories);
+        for (const m of mems) remember(m.line, m.important, memStore);
+        // Over the caps: the oldest are condensed, not dropped.
+        compactMemory(memStore, sample ? condenserFrom(sample, partnerName) : undefined).catch(() => {});
       }).catch(() => {});
     }
   }
