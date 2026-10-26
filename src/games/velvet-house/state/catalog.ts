@@ -32,7 +32,7 @@ export interface CatalogEntry {
 export const TABS = [
   'Today', 'Groceries', 'Paint', 'Wallpaper', 'Floors',
   'Furniture', 'Wall', 'Decor', 'Plants', 'Hobbies',
-  'Outdoor', 'Clothes', 'Upgrades', 'Attic', 'Pets', 'Gifts', 'Homes',
+  'Outdoor', 'Clothes', 'Upgrades', 'Attic', 'Pets', 'Homes',
 ] as const;
 
 export type TabName = typeof TABS[number];

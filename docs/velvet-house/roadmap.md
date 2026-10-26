@@ -65,11 +65,11 @@ when every row is "ported" or "dropped".
 | Move-in day: mover brings boxes, unpacking | Missing (starts furnished) | Replaced by the Dez opening (architecture Phase 1) |
 | Pets: adopt, feed, litter, play (`adoptPet`, `PETS`) | Missing (4 shop items, no logic) | Port |
 | Dirt and cleaning (`DIRT`, `scrubTarget`) | Module exists, not wired | Port (daily-list source) |
-| Visitors: friends and family drop by (`GUESTS`, `inviteGuests`) | Missing | Port or drop |
-| Calendar, anniversary, birthday, gifts (`upcoming`, `giveGift`, Gifts tab) | Modules exist, not wired; Gifts tab empty | Port |
+| Visitors: friends and family drop by (`GUESTS`, `inviteGuests`) | Missing | **Dropped** (decided) |
+| Calendar, anniversary, birthday, gifts (`upcoming`, `giveGift`, Gifts tab) | Removed (`calendar.ts`, its tests and the Gifts tab deleted) | **Dropped** (decided) |
 | Careers for both: work, reviews, promotions (`career`, `mcareer`) | Missing (stubbed to level 0) | Replaced by Jobs (architecture Phase 4) |
-| Errands: going out the front door (`startErrand`) | Missing | Port or replace with Dez deliveries |
-| Wishes, noticing and sparks | Modules exist, not wired | Port or drop |
+| Errands: going out the front door (`startErrand`) | Missing | **Port, redesigned:** a way to get someone out of the house for a short, unseen trip. Unlike a job you can't watch it; they come back at a random time, and it never takes long (target: about 30 to 90 game minutes) |
+| Wishes, noticing and sparks (Maya's initiative: she asks for things, comments on what you do, starts conversations) | Modules exist, not wired | **Port** (recommended; see explanation below). Feeds the daily list and chat engine |
 | Offline catch-up and welcome-back recap (`offlineCatchup`, `showRecap`) | Missing | Port |
 | Second house, The Craftsman on Elm (`moveHouse`, Homes tab) | Missing | Port or drop |
 | Wall decor that hangs and slides along walls (17 types, `WALLOBJS`) | Art code exists, nothing in the shop places it | Port |
@@ -84,3 +84,30 @@ Ported or better in the live game: rendering and lighting, animation, 86 activit
 and free will, arrange (new design), outfits, avatar heads and the Salon, bills, grocery
 and takeout orders, TV videos, floors/attic/storage, picture wallpapers, chat (now through
 the host bridge), cloud save.
+
+## What wishes, noticing and sparks are
+
+Together they are how Maya acts like a person with her own moods, not a menu.
+They are cheap: the triggers are plain rules, and the AI is used only for the
+conversation that follows.
+
+- **Wishes:** Maya wants something small and says so ("Maya yawned and eyed the
+  coffee maker"). It lasts about two hours. If you do it with her (make her
+  coffee, dance with her, watch TV together), she's happier, the bond goes up
+  and she remembers it. If you ignore it, it fades. These are tiny objectives.
+- **Noticing:** Maya reacts to what you have been doing or how the house is. The
+  rules are things like "showered and cooked breakfast before work", "glued to
+  the TV for hours", "dishes piling up", "fridge empty", "power cut", "the lawn
+  is a jungle", "the pet is starving". She walks over and brings it up, and the
+  chat opens with that topic.
+- **Sparks:** every game hour there is a chance she starts a conversation on
+  her own, picked from a weighted list by the situation (morning means coffee,
+  evening means TV or dancing, low money means a money check, rain means
+  rain, plus small talk like a toast, her plant, or a call from her mom).
+
+## Decisions still open
+
+- **Festivals:** the old game had seasonal festivals. Calendar and gifts are
+  dropped; festivals were not mentioned. The opening doc has the mayor running
+  town events, so they could stay as a mayor-driven thing. Keep or drop?
+- **Second house (The Craftsman on Elm):** port or drop?
