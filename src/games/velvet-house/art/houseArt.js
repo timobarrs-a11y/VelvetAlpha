@@ -1963,6 +1963,7 @@ export function createHouseArt(ctx0, opts = {}) {
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     if (arrState) drawArrangeOverlay(arrState, lv);
+    drawGuides(lv, t);
     drawSparkles(lv);
     } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
     drawParticles(lv, false);
@@ -2007,6 +2008,29 @@ export function createHouseArt(ctx0, opts = {}) {
     if (!best) return null;
     if (best.kind === 'wall') { const next = wallLightOverrides.get(best.index) !== true; wallLightOverrides.set(best.index, next); return next; }
     return toggleObjectLight(best.id);
+  }
+
+  // Guides for scripts: a pulsing outline on the piece to tap, and a ghost of where a piece should go.
+  let spotIds = [], ghost = null;
+  function drawGuides(level, t) {
+    if (!spotIds.length && !ghost) return;
+    const pulse = 0.55 + 0.45 * Math.sin(t * 4.2);
+    ctx.save();
+    const trace = (o, col, w, dash) => {
+      const hull = objHull(o);
+      ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
+      ctx.setLineDash(dash); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+    };
+    OBJS.forEach(o => { if (o.level === level && spotIds.includes(o.id) && TYPES[o.type]) trace(o, `rgba(255,214,102,${pulse})`, 2.4, []); });
+    if (ghost && ghost.level === level && TYPES[ghost.type]) {
+      const col = ghost.color === 'partner' ? '214,74,122' : '120,200,150';
+      const o = { id: '_ghost', type: ghost.type, level, x: ghost.x, y: ghost.y, rot: ghost.rot || 0 };
+      const hull = objHull(o);
+      ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
+      ctx.fillStyle = `rgba(${col},${0.1 + 0.1 * pulse})`; ctx.fill();
+      ctx.setLineDash([6, 4]); ctx.lineDashOffset = -t * 14; ctx.strokeStyle = `rgba(${col},${0.55 + 0.4 * pulse})`; ctx.lineWidth = 2; ctx.stroke();
+    }
+    ctx.restore();
   }
 
   // The outline of an object on screen: its footprint and its top, wrapped.
@@ -2098,5 +2122,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

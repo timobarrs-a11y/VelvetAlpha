@@ -4,8 +4,9 @@
 <html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"></head><body style="margin:0">
 <iframe id="g" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe>
 <script>
+  // ?script plays the story; without it the story is switched off so the other tests start in a furnished house.
   // ?freeze starts the game paused, so a screenshot is the same every time.
-  document.getElementById('g').src = '/games/velvet-house-next/index.html?companion=e2e' + (location.search.includes('freeze') ? '&freeze=1' : '');
+  document.getElementById('g').src = '/games/velvet-house-next/index.html?companion=e2e' + (location.search.includes('freeze') ? '&freeze=1' : '') + (location.search.includes('script') ? '' : '&noscript=1');
 </script>
 <script>
 window.sampleLog = [];

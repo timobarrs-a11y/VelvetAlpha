@@ -9,6 +9,14 @@ export function createInput(g: Game): void {
     if (g.s.suppressClick) { g.s.suppressClick = false; return; }
     const [sx, sy] = g.toView(e.clientX, e.clientY);
 
+    // A cutscene takes no taps. A guided step only takes a tap on the thing it asks for.
+    if (g.s.scriptMode === 'cutscene') return;
+    if (g.s.scriptMode === 'guided' && !g.isArranging()) {
+      const hit = g.findObjectAt(sx, sy);
+      const ok = !!hit && g.s.scriptAllow.some((a) => a === `obj:${hit.id}` || a === `objType:${hit.type}`);
+      if (!ok) return;
+    }
+
     if (g.isArranging()) {
       // Arrange mode: pointer events do the work (select on press, drag to
       // move). A tap on empty floor lets go of the selection.

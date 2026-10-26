@@ -23,6 +23,8 @@ import type { BoutiqueItem } from '../systems/outfit';
 import type { Occasion, SavedOutfit } from '../state/outfits';
 import { mountShell } from '../ui/shell';
 import { loadWorld } from './config';
+import type { ScriptEngine } from '../script/engine';
+import type { GameEvent, Mode, UiTarget } from '../script/types';
 
 
 /** What the camera, the controls and the modules read and change while the game runs. */
@@ -51,6 +53,8 @@ export interface GameState {
   qualityIdx: number;
   saveRev: number;
   suppressClick: boolean;
+  scriptMode: Mode | null;
+  scriptAllow: UiTarget[];
 }
 
 export interface ArrangeFrame { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null }
@@ -132,6 +136,9 @@ export interface Game {
   storeSelected(): void;
   unstore(id: string): void;
   relearnLayout(moved: ObjectInstance): void;
+  scripts: ScriptEngine;
+  scriptUpdate(dt: number): void;
+  scriptEmit(ev: GameEvent): void;
   arrangeFrame(): ArrangeFrame | null;
   arrangeState(): ArrangeState;
   movableAt(sx: number, sy: number): ObjectInstance | null;
@@ -304,7 +311,7 @@ export function createGame(app: HTMLElement): Game | null {
     settleDone: typeof save?.settleDone === 'boolean' ? save!.settleDone : false,
     chatTurns: Array.isArray(save?.turns) ? [...save!.turns as ChatTurn[]] : [],
     sample: null as SampleFn | null,
-    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false,
+    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, scriptMode: null, scriptAllow: [],
     saveRev: typeof (world.save as { rev?: unknown } | null)?.rev === 'number' ? (world.save as { rev: number }).rev : 0,
   };
 

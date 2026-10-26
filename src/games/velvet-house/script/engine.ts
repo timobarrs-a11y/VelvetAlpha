@@ -23,7 +23,7 @@ type Blocking =
   | { k: 'card' };
 
 const MAX_STEPS_PER_TICK = 400;
-const EFFECT_STEPS = new Set(['set', 'give', 'unlock', 'despawn', 'place', 'clock', 'carry']);
+const EFFECT_STEPS = new Set(['set', 'give', 'deliver', 'unlock', 'despawn', 'place', 'clock', 'carry']);
 
 export const isEffectStep = (s: Step): boolean => EFFECT_STEPS.has(s.do);
 
@@ -52,6 +52,9 @@ export class ScriptEngine {
   }
 
   isActive(): boolean { return !!this.cur; }
+
+  /** Whether the player may skip what is playing. */
+  skippable(): boolean { return !!this.cur?.skippable; }
 
   /** Starts what should start on a brand new game. */
   startNewGame(): void {
@@ -284,6 +287,7 @@ export class ScriptEngine {
       case 'outline': h.outline({ objType: s.objType, at: s.at, rot: s.rot, color: s.color }); return false;
       case 'set': h.flags[s.flag] = s.value; return false;
       case 'give': h.give(s); return false;
+      case 'deliver': h.deliver(s.category, s.id); return false;
       case 'unlock': h.unlock(s.what); return false;
       case 'clock': h.setClock(s.day, s.minutes); return false;
       case 'wait':

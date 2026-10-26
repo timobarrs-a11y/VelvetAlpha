@@ -208,6 +208,8 @@ export interface ObjectInstance {
   art?: number;
   runUntil?: number;
   flash?: number;
+  /** A moving box: what comes out when it is unpacked (an object type). */
+  contents?: string;
 }
 
 export const INITIAL_OBJS: ObjectInstance[] = [

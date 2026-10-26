@@ -33,6 +33,7 @@ function fakeHost(preset: 'warm' | 'calm' | 'bubbly' | 'dry' = 'warm') {
     highlight: (t) => calls.push(`highlight:${t}`),
     outline: (s) => calls.push(`outline:${s ? s.objType : 'off'}`),
     give: (g) => calls.push(`give:${JSON.stringify(g)}`),
+    deliver: (c, id) => calls.push(`deliver:${c}:${id}`),
     unlock: (w) => calls.push(`unlock:${w}`),
     setClock: (d, m) => calls.push(`clock:${d}:${m}`),
     release: (w) => calls.push(`release:${w.sort().join(',')}`),

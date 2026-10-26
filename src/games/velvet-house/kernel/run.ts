@@ -27,6 +27,12 @@ export function startGameLoop(g: Game): void {
     (dt) => {
       if (view.paused) return;
       view.t += dt;
+      g.scriptUpdate(dt);
+      // In a cutscene or a guided step the day holds still; only the people a script is moving (and visitors) go on.
+      if (g.s.scriptMode === 'cutscene' || g.s.scriptMode === 'guided') {
+        for (const p of people) if (p.scripted || p.kind === 'npc') tickAgent(house, p, null, dt, 0, 1, world.minutes / 60, () => rng.next(), world.household);
+        return;
+      }
       const speed = SPEEDS[view.speedIdx];
       const before = world.minutes + world.day * 1440;
       Object.assign(world, advanceClock(world.day, world.minutes, dt, speed));

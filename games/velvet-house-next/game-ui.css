@@ -496,3 +496,37 @@
 .vh-st-outfit span { color: #A9A1AE; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vh-st-pixgrid { display: block; width: min(100%, 256px); aspect-ratio: 1; margin: 6px auto 10px; border-radius: 8px; image-rendering: pixelated; cursor: crosshair; }
 .vh-st-by { font-size: 11px; color: #A9A1AE; }
+
+/* Scripts: letterbox, the speaker's line, choices, cards */
+.vh-script { position: absolute; inset: 0; pointer-events: none; z-index: 28; }
+.vh-bar { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .35s ease; }
+.vh-bar-top { top: 0; } .vh-bar-bottom { bottom: 0; }
+.vh-stage[data-script="cutscene"] .vh-bar { height: 7%; }
+.vh-skip { position: absolute; right: 12px; bottom: calc(7% + 10px); pointer-events: auto; border: 0; border-radius: 999px; padding: 8px 16px; background: rgba(255,255,255,.16); color: #fff; font: 600 13px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+.vh-speech, .vh-choices, .vh-scard {
+  position: absolute; left: 16px; bottom: calc(7% + 14px); width: min(420px, calc(100% - 32px)); box-sizing: border-box;
+  background: #FFFDF8; color: #241B25; border-radius: 16px; padding: 14px 18px; box-shadow: 0 8px 32px rgba(0,0,0,.3);
+  font: 400 15px/1.45 Inter, system-ui, sans-serif; pointer-events: auto;
+}
+.vh-speech { cursor: pointer; min-height: 70px; }
+.vh-speech-name { font: 700 13px/1.2 Inter, system-ui, sans-serif; color: #8A2D54; margin-bottom: 4px; }
+.vh-speech-next { position: absolute; right: 14px; bottom: 8px; font-size: 11px; color: rgba(36,27,37,.45); animation: vh-bob 1s ease-in-out infinite; }
+@keyframes vh-bob { 50% { transform: translateY(3px); } }
+.vh-choices { display: flex; flex-direction: column; gap: 8px; background: transparent; box-shadow: none; padding: 0; }
+.vh-choices button { border: 0; border-radius: 12px; padding: 12px 16px; background: #FFFDF8; color: #241B25; font: 700 14px/1.2 Inter, system-ui, sans-serif; cursor: pointer; box-shadow: 0 4px 18px rgba(0,0,0,.28); text-align: left; }
+.vh-choices button:hover { background: #F6E6BF; }
+.vh-scard { bottom: auto; top: 54px; left: 50%; transform: translateX(-50%); background: rgba(23,21,29,.94); color: #F2EEE8; border: 1px solid rgba(255,255,255,.14); font-size: 13.5px; }
+.vh-scard strong { display: block; margin-bottom: 2px; color: #FFD666; }
+.vh-scard p { margin: 0; }
+.vh-scard button { margin-top: 10px; border: 0; border-radius: 10px; padding: 8px 14px; background: #E0A43A; color: #241B25; font: 700 13px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+/* While a script is running, only what it allows can be used. */
+.vh-stage[data-script="cutscene"] .vh-dock, .vh-stage[data-script="cutscene"] .vh-controls, .vh-stage[data-script="cutscene"] .vh-people,
+.vh-stage[data-script="guided"] .vh-dock, .vh-stage[data-script="guided"] .vh-controls, .vh-stage[data-script="guided"] .vh-people { pointer-events: none; opacity: .5; }
+.vh-stage[data-script] .vh-spot { pointer-events: auto !important; opacity: 1 !important; animation: vh-spot 1.2s ease-in-out infinite; position: relative; z-index: 3; }
+@keyframes vh-spot { 50% { box-shadow: 0 0 0 4px rgba(255,214,102,.75), 0 0 18px rgba(255,214,102,.6); } }
+.vh-stage[data-script="cutscene"] canvas.vh-canvas { pointer-events: none; }
+@media (max-width: 560px) {
+  .vh-speech, .vh-choices { bottom: auto; top: 46px; left: 8px; width: calc(100% - 16px); }
+  .vh-scard { top: auto; bottom: calc(var(--vh-dock-h, 68px) + 150px); width: calc(100% - 16px); }
+  .vh-skip { bottom: auto; top: 8px; right: 8px; }
+}

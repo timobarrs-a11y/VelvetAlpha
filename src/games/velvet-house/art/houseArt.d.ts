@@ -59,6 +59,10 @@ export interface HouseArt {
   render(frame: HouseFrame): void;
   /** Furniture was just set down: it lands with a bounce and a puff of dust. */
   objectPlaced(id: string): void;
+  /** Pulsing outlines on the pieces a script wants tapped (by object id). */
+  spotlight(ids: string[]): void;
+  /** A ghost of where a piece should go: its type, spot, turn and whose colour. Null clears it. */
+  setGhost(g: { type: string; level: number; x: number; y: number; rot?: number; color?: 'partner' | 'player' } | null): void;
   /** A few sparkles near a spot on a floor (a room just finished, say). */
   burst(level: number, x: number, y: number, z?: number): void;
   /** Where a world point lands in view coordinates (follows the current rotation). */
