@@ -183,6 +183,14 @@ He uses one item at a time and never reads a list back to them.
 
 ### From conversation to calendar
 
+**A real goal gets the full setup first.** When the conversation lands on a goal with more than
+one step, Atlas builds it on screen and walks them through it in order: **plan → commitments →
+progress → calendar**. The calendar comes last, as the summary: estimated finish date, how long
+it runs, and which days hold what. After that, he only offers a coach if there's a skill to
+learn. The full design is in `docs/goals-and-coaches/plan.md`.
+
+**A small one-off plan** ("pick a game and buy tickets on Saturday") is just pencilled in:
+
 - `atlas-onboarding` gets the same `add_calendar_event` tool that `atlas-agent` already has
   (`supabase/functions/atlas-agent/index.ts:182`). It writes to `user_events` with
   `metadata: { source: "atlas", tentative: true, goal: "<their words>" }`.
