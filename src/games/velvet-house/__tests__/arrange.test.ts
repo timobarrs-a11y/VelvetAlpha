@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { INITIAL_OBJS, type ObjectInstance } from '../state/objects';
 import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore } from '../state/arrange';
 import { buildWorld } from '../state/agents';
+import { ATTIC_STAIR_OBJS } from '../state/objects';
+import { levelPath } from '../state/pathfinding';
+import { STAIRS, ATTIC } from '../state/house';
 
 const fresh = () => INITIAL_OBJS.map(o => ({ ...o }));
 
@@ -49,9 +52,9 @@ describe('arrange mode', () => {
   it('lets light pieces be carried between the indoor floors, but not heavy or yard ones', () => {
     const objs = fresh();
     const get = (id: string) => objs.find(o => o.id === id)!;
-    expect(otherFloors(get('sofa'))).toEqual([0, 2]);
-    expect(otherFloors(get('desk'))).toEqual([0, 1]);
-    expect(otherFloors(get('lamp0'))).toEqual([1, 2]);
+    expect(otherFloors(get('sofa'))).toEqual([0, 2, 4]);
+    expect(otherFloors(get('desk'))).toEqual([0, 1, 4]);
+    expect(otherFloors(get('lamp0'))).toEqual([1, 2, 4]);
     expect(otherFloors(get('bed'))).toEqual([]);
     expect(otherFloors(get('laundry'))).toEqual([]);
     expect(otherFloors(get('bench'))).toEqual([]);
@@ -85,5 +88,17 @@ describe('arrange mode', () => {
     expect(canStore(get('bed'))).toBe(true);
     expect(canStore(get('fridge'))).toBe(false);
     expect(canStore(get('stair01'))).toBe(false);
+  });
+
+  it('builds the attic: stairs lead up from the hall, and its floor takes furniture', () => {
+    const objs = [...fresh(), ...ATTIC_STAIR_OBJS.map(o => ({ ...o }))];
+    // Main floor to attic is two flights.
+    expect(levelPath(STAIRS, 1, ATTIC).map(l => l.st.id)).toEqual(['S12', 'S24']);
+    for (const o of objs.filter(isMovable)) expect(checkPlacement(objs, o), o.id).toEqual({ ok: true });
+    const desk = objs.find(o => o.id === 'desk')!;
+    expect(otherFloors(desk)).toContain(ATTIC);
+    expect(relocate(objs, desk, ATTIC)).toBe(true);
+    expect(desk.level).toBe(ATTIC);
+    expect(buildWorld(objs).slots.some(s => s.id.startsWith('desk:') && s.level === ATTIC)).toBe(true);
   });
 });

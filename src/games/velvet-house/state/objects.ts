@@ -237,6 +237,12 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'plant2', type: 'plant', level: 2, x: 9.2, y: 7.3, rot: 2, pot: '#E4DDD2' },
 ];
 
+// Building the attic puts a staircase in the upstairs hall and an opening above it.
+export const ATTIC_STAIR_OBJS: ObjectInstance[] = [
+  { id: 'stair24', type: 'flightX', level: 2, x: 3.3, y: 7.0, rot: 0 },
+  { id: 'open24', type: 'holeX', level: 4, x: 4.5, y: 7.0, rot: 0 },
+];
+
 export function footprint(o: ObjectInstance): [number, number] {
   const t = TYPES[o.type];
   return o.rot % 2 ? [t.D, t.W] : [t.W, t.D];

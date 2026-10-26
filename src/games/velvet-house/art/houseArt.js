@@ -127,8 +127,8 @@ export function createHouseArt(ctx0, opts = {}) {
     if (h >= night0 || h < dawn0) return 0.42; if (h >= dusk0) return (h - dusk0) / (night0 - dusk0) * 0.42; if (h < light0) return (light0 - h) / (light0 - dawn0) * 0.42; return 0; }
   function skyColor() { const h = hour(); if (raining() && darkness() < 0.3) return seasonIdx() === 3 ? '#D2D8E0' : '#9AA6B5'; if (darkness() > 0.3) return '#2A2F55'; if (h >= 17.5 && h < 21) return '#F0B98E'; if (h < 7.5) return '#E9C7B5'; return '#BFE2F0'; }
 
-  const LEVEL_NAMES = ['Basement', 'Main floor', 'Upstairs', 'Backyard'];
-  const LOOKS = [{ paint: '#B9B4AF', paper: 'block', floor: 'concrete' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#D9CDBD', paper: null, floor: 'wood' }];
+  const LEVEL_NAMES = ['Basement', 'Main floor', 'Upstairs', 'Backyard', 'Attic'];
+  const LOOKS = [{ paint: '#B9B4AF', paper: 'block', floor: 'concrete' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#D9CDBD', paper: null, floor: 'wood' }, { paint: '#E4D6C2', paper: 'shiplap', floor: 'wood' }];
   const FLOORS = {
     wood: { kind: 'plank', a: '#C9A27A', b: '#C09670', line: 'rgba(90,60,30,.22)' },
     concrete: { kind: 'flat', a: '#A7A29D', b: '#A7A29D', line: 'rgba(0,0,0,.06)' },
@@ -177,7 +177,7 @@ export function createHouseArt(ctx0, opts = {}) {
     'velvet-tuft': { pat: 'tuft', base: '#6E3C50', ink: 'rgba(0,0,0,.25)' }, blossom: { pat: 'blossom', base: '#F7EEE6' }, palms: { pat: 'palms', base: '#D7EDE4' }, leaves: { pat: 'leaves', base: '#F3E6D0' }, snow: { pat: 'snow', base: '#D9E6F2' }, 'sunset-mural': { pat: 'sunset' }, cork: { pat: 'cork', base: '#B88B5A', ink: 'rgba(80,50,25,.4)' }
   };
   // rooms can override their floor's paint, wallpaper and floor
-  const ROOMLOOK = [{}, {}, {}, {}];
+  const ROOMLOOK = [{}, {}, {}, {}, {}];
   const lookAt = (level, room) => (room && ROOMLOOK[level][room] ? Object.assign({}, LOOKS[level], ROOMLOOK[level][room]) : LOOKS[level]);
   const toneOf = (lk) => { const pp = lk.paper && PAPERS[lk.paper]; return (pp && pp.base) || lk.paint; };
   const wallTone = (level, room) => toneOf(lookAt(level, room));
@@ -263,14 +263,18 @@ export function createHouseArt(ctx0, opts = {}) {
       rug: [0.6, 0.0, 0, 0], anchor: [3.8, 4.2] },
     { rooms: [{ n: 'Backyard', r: [0, 0, 10, 8] }], walls: [], yard: true,
       feats: [{ p: 'L', u: [3.2, 4.0], z: [0, 2.05], k: 'door' }, { p: 'L', u: [0.8, 2.0], z: [1.1, 2.0], k: 'extwin' }, { p: 'L', u: [5.2, 6.4], z: [1.1, 2.0], k: 'extwin' }],
-      rug: [0, 0, 0, 0], anchor: [1.2, 3.6] }
+      rug: [0, 0, 0, 0], anchor: [1.2, 3.6] },
+    { rooms: [{ n: 'Attic', r: [0, 0, 10, 8] }], walls: [],
+      feats: [{ p: 'B', u: [1.2, 2.4], z: [1.25, 2.2], k: 'window' }, { p: 'B', u: [7.4, 8.6], z: [1.25, 2.2], k: 'window' }, { p: 'R', u: [3.0, 4.2], z: [1.0, 2.0], k: 'window' }],
+      rug: [0, 0, 0, 0], anchor: [5.0, 4.0] }
   ];
   const STAIRS = [
     // Hard-coded stair cores. Each flight sits in a corner, runs along an outside edge and climbs toward the back of the
     // house, so on screen the steps always rise up the page. The top landing is floor on the level above.
     { id: 'S01', lower: 0, upper: 1, lowerNode: [9.5, 3.7], bottom: [9.5, 3.25], top: [9.5, 1.25], upperNode: [9.5, 0.75] },
     { id: 'S12', lower: 1, upper: 2, lowerNode: [3.7, 7.5], bottom: [3.25, 7.5], top: [1.25, 7.5], upperNode: [0.75, 7.5] },
-    { id: 'D13', lower: 1, upper: 3, lowerNode: [0.7, 3.6], upperNode: [0.75, 3.6], door: true }
+    { id: 'D13', lower: 1, upper: 3, lowerNode: [0.7, 3.6], upperNode: [0.75, 3.6], door: true },
+    { id: 'S24', lower: 2, upper: 4, lowerNode: [7.0, 7.5], bottom: [6.55, 7.5], top: [4.55, 7.5], upperNode: [4.05, 7.5] }
   ];
   const DOOR = [0.6, 5.05], PARCEL = { stand: [1.5, 6.0], box: [0.55, 5.75] };
   function roomName(level, x, y) { x = Math.min(9.99, Math.max(0.01, x)); y = Math.min(7.99, Math.max(0.01, y)); const r = LEVELS[level].rooms.find(rm => x >= rm.r[0] && x <= rm.r[2] && y >= rm.r[1] && y <= rm.r[3]); return r ? r.n : LEVEL_NAMES[level]; }

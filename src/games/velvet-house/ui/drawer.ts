@@ -58,6 +58,8 @@ export interface ArrangeItem {
 
 export interface ArrangeState {
   floors: string[];
+  // Floor numbers in the order to list them (the attic only once built).
+  order: number[];
   // The floor on screen: its pieces are listed first.
   level: number;
   items: ArrangeItem[];
@@ -80,6 +82,8 @@ export interface DrawerState {
   lookInfo?: (kind: 'paper' | 'floor', key: string) => LookInfo | null;
   pictureThumbs?: Record<string, string>;
   levelNames?: string[];
+  // The floors paint, wallpaper and floors can go on, in order.
+  shopLevels?: number[];
   arrange?: ArrangeState | null;
   page: DrawerPage;
   shopTab: string;
@@ -230,7 +234,7 @@ export function createDrawer(cb: DrawerCallbacks): {
           ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
         </div>`
       : `<p class="vh-arr-hint">Tap a piece below, or tap one in the house, then drag it where you want it.</p>`;
-    const order = [a.level, ...a.floors.map((_, l) => l).filter(l => l !== a.level)];
+    const order = [a.level, ...a.order.filter(l => l !== a.level)];
     const groups = order.map((level) => {
       const name = a.floors[level];
       const items = a.items.filter(i => i.level === level);
@@ -309,7 +313,7 @@ export function createDrawer(cb: DrawerCallbacks): {
 
     const styling = tab === 'Paint' || tab === 'Wallpaper' || tab === 'Floors';
     const floorPick = styling && state.levelNames
-      ? `<div class="vh-floorpick"><span>Goes on</span>${[0, 1, 2].map(l => `<button data-pickfloor="${l}" class="${state.level === l ? 'vh-active' : ''}">${esc(state.levelNames![l])}</button>`).join('')}</div>`
+      ? `<div class="vh-floorpick"><span>Goes on</span>${(state.shopLevels ?? [0, 1, 2]).map(l => `<button data-pickfloor="${l}" class="${state.level === l ? 'vh-active' : ''}">${esc(state.levelNames![l])}</button>`).join('')}</div>`
       : '';
     const html = `<div class="vh-shop-tabs">${tabBtns}</div>${floorPick}<div class="vh-shop-list">${cards || '<p class="vh-empty">Nothing here yet.</p>'}</div>`;
     // Unchanged since the last refresh: leave it alone, so picture previews aren't reloaded several times a second.

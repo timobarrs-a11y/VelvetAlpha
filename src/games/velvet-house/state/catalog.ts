@@ -11,7 +11,7 @@ export interface CatalogEntry {
   name: string;
   desc?: string;
   price: number;
-  icon: 'paint' | 'paper' | 'floor' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
+  icon: 'paint' | 'paper' | 'floor' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
   tab: string;
   tags?: string[];
   type?: string;
@@ -118,6 +118,9 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-blossom', 'Blossom', 'blossom', 100, ['soft', 'natural', 'playful']),
   wallpaper('paper-palms', 'Palms', 'palms', 100, ['natural', 'playful', 'cool']),
   wallpaper('paper-jungle-night', 'Jungle night', 'jungle-night', 120, ['bold', 'natural', 'cool']),
+
+  // Upgrades
+  { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
   // Pictures on the wall: photos and gradients, the same ones as the app's wallpaper picker
   ...PICTURE_WALLS.map(w => wallpaper(`paper-${w.id}`, w.name, w.id, w.price, w.tags)),

@@ -3,9 +3,9 @@ import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isA
 import { setOwnedAvatarItems, ownsAvatarItem, buyAvatarItem } from './bridge/avatarShop';
 import { simsShopItems, itemLabel } from '../../data/avatarCatalog';
 import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, type PlacementCheck } from './state/arrange';
-import { INITIAL_OBJS, TYPES, type ObjectInstance } from './state/objects';
+import { INITIAL_OBJS, ATTIC_STAIR_OBJS, TYPES, type ObjectInstance } from './state/objects';
 import { DAYS, weekday, clockText, season, absMin } from './state/time';
-import { LEVEL_NAMES, roomName } from './state/house';
+import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, roomName } from './state/house';
 import { NEED_KEYS, NEED_LABELS } from './state/needs';
 import { RNG } from './state/rng';
 import {
@@ -236,7 +236,7 @@ function boot(): void {
       <ul class="vh-log" aria-live="polite"></ul>
       <div class="vh-controls">
         <div class="vh-floors" role="tablist" aria-label="Floors">
-          ${LEVEL_NAMES.map((n, i) => `<button role="tab" data-level="${i}">${n}</button>`).join('')}
+          ${FLOOR_ORDER.map((i) => `<button role="tab" data-level="${i}"${i === ATTIC ? ' hidden' : ''}>${LEVEL_NAMES[i]}</button>`).join('')}
         </div>
         <div class="vh-tools">
           <button data-act="rotate" title="Turn the house (R)" aria-label="Turn the house">&#8635;</button>
@@ -289,6 +289,9 @@ function boot(): void {
   let heldGrab: [number, number] = [0, 0]; // where on the piece it was grabbed, so it doesn't jump under the finger
   let dragCandidate: { id: number; obj: ObjectInstance; x: number; y: number } | null = null;
   let wasPaused = false;
+
+  // The attic exists once its stairs have been built.
+  const hasAttic = (): boolean => world.objs.some(o => o.id === ATTIC_STAIR_OBJS[0].id);
 
   const fit = (): void => {
     const ratio = qualityManager.resolveDpr(window.devicePixelRatio || 1);
@@ -449,6 +452,7 @@ function boot(): void {
   const syncControls = (): void => {
     app.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((b) => {
       b.setAttribute('aria-selected', String(Number(b.dataset.level) === view.level));
+      if (Number(b.dataset.level) === ATTIC) b.hidden = !hasAttic();
     });
     btn('walls').textContent = WALL_MODES[view.wallIdx].label;
     btn('speed').textContent = `${SPEEDS[view.speedIdx]}x`;
@@ -497,7 +501,7 @@ function boot(): void {
 
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    if (e.key >= '1' && e.key <= '4') setLevel(Number(e.key) - 1);
+    if (e.key >= '1' && e.key <= '5' && (Number(e.key) - 1 !== ATTIC || hasAttic())) setLevel(Number(e.key) - 1);
     else if (e.key === 'r' || e.key === 'R') { if (arranging) { rotateSelected(); e.preventDefault(); } else rotate(); }
     else if (e.key === 'w' || e.key === 'W') cycleWalls();
     else if (e.key === ' ') { e.preventDefault(); togglePause(); }
@@ -593,7 +597,7 @@ function boot(): void {
   // Carry the selected piece up or down the stairs to another floor.
   function carryTo(level: number): void {
     const o = selectedObj;
-    if (!o || !otherFloors(o).includes(level)) return;
+    if (!o || !otherFloors(o).includes(level) || (level === ATTIC && !hasAttic())) return;
     const from = o.level;
     if (!relocate(world.objs, o, level, peopleOnFloor())) { log(`There's no room for the ${nameOf(o)} on the ${LEVEL_NAMES[level].toLowerCase()}.`); return; }
     selectedObj = null;
@@ -665,6 +669,7 @@ function boot(): void {
     const o = selectedObj;
     return {
       floors: [...LEVEL_NAMES],
+      order: FLOOR_ORDER.filter(l => l !== ATTIC || hasAttic()),
       stored: storage.map(o => ({ id: o.id, name: TYPES[o.type]?.name ?? o.type, color: o.col })),
       level: view.level,
       items,
@@ -673,7 +678,7 @@ function boot(): void {
         where: `${LEVEL_NAMES[o.level]} · ${items.find(i => i.id === o.id)?.room ?? ''}`,
         canColour: !!nextColour(o),
         canStore: canStore(o),
-        moveTo: otherFloors(o),
+        moveTo: otherFloors(o).filter(l => l !== ATTIC || hasAttic()),
       } : null,
     };
   }
@@ -926,6 +931,7 @@ function boot(): void {
 
   function handleBuy(item: CatalogEntry, color?: string): void {
     const price = item.price;
+    if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }
     if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor') && view.level === 3) {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
@@ -933,6 +939,13 @@ function boot(): void {
     if (!spend(world.household, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
     log(`Bought ${item.name} for $${price}.`);
+
+    if (item.icon === 'upgrade' && item.id === 'upgrade-attic') {
+      world.objs.push(...ATTIC_STAIR_OBJS.map(o => ({ ...o })));
+      Object.assign(house, buildWorld(world.objs));
+      log('The attic is built! New stairs lead up from the Upstairs hall.');
+      setLevel(ATTIC);
+    }
 
     // Apply paint/wallpaper/floor
     if (item.icon === 'paint' && (color || item.color)) {
@@ -1115,7 +1128,7 @@ function boot(): void {
     };
     const drawerState: DrawerState = {
       arrange: arranging ? arrangeState() : null,
-      level: view.level, levelNames: [...LEVEL_NAMES], lookInfo: art.lookInfo, pictureThumbs,
+      level: view.level, levelNames: [...LEVEL_NAMES], shopLevels: FLOOR_ORDER.filter(l => l !== 3 && (l !== ATTIC || hasAttic())), lookInfo: art.lookInfo, pictureThumbs,
       page: drawerPage, shopTab: 'Today',
       money: world.household.money, bond, day: world.day,
       minutes: world.minutes, owned, careerLevel: 0, careerPerf: 0,

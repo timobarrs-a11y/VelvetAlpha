@@ -15,8 +15,8 @@ import {
 
 describe('house', () => {
   describe('LEVELS', () => {
-    it('has 4 levels', () => {
-      expect(LEVELS).toHaveLength(4);
+    it('has 5 levels (the attic is the last)', () => {
+      expect(LEVELS).toHaveLength(5);
     });
 
     it('level 0 is basement with 3 rooms', () => {
@@ -55,8 +55,8 @@ describe('house', () => {
   });
 
   describe('STAIRS', () => {
-    it('has 3 stair connections', () => {
-      expect(STAIRS).toHaveLength(3);
+    it('has 4 stair connections (the attic stairs are the last)', () => {
+      expect(STAIRS).toHaveLength(4);
     });
 
     it('connects basement to main floor', () => {
@@ -117,8 +117,8 @@ describe('house', () => {
   });
 
   describe('LEVEL_NAMES', () => {
-    it('matches the 4 levels', () => {
-      expect(LEVEL_NAMES).toEqual(['Basement', 'Main floor', 'Upstairs', 'Backyard']);
+    it('matches the 5 levels', () => {
+      expect(LEVEL_NAMES).toEqual(['Basement', 'Main floor', 'Upstairs', 'Backyard', 'Attic']);
     });
   });
 

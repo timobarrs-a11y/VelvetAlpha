@@ -37,7 +37,11 @@ export const TH = 16;
 export const ZH = 34;
 export const WH = 2.6;
 
-export const LEVEL_NAMES = ['Basement', 'Main floor', 'Upstairs', 'Backyard'] as const;
+export const LEVEL_NAMES = ['Basement', 'Main floor', 'Upstairs', 'Backyard', 'Attic'] as const;
+
+// The attic is a bought extra, so it comes last in the data but sits above Upstairs on screen.
+export const ATTIC = 4;
+export const FLOOR_ORDER = [0, 1, 2, ATTIC, 3] as const;
 
 export const LEVELS: LevelDef[] = [
   {
@@ -125,12 +129,25 @@ export const LEVELS: LevelDef[] = [
     rug: [0, 0, 0, 0],
     anchor: [1.2, 3.6],
   },
+  {
+    rooms: [{ n: 'Attic', r: [0, 0, 10, 8] }],
+    walls: [],
+    feats: [
+      { p: 'B', u: [1.2, 2.4], z: [1.25, 2.2], k: 'window' },
+      { p: 'B', u: [7.4, 8.6], z: [1.25, 2.2], k: 'window' },
+      { p: 'R', u: [3.0, 4.2], z: [1.0, 2.0], k: 'window' },
+    ],
+    rug: [0, 0, 0, 0],
+    anchor: [5.0, 4.0],
+  },
 ];
 
 export const STAIRS: StairDef[] = [
   { id: 'S01', lower: 0, upper: 1, lowerNode: [9.5, 3.7], upperNode: [9.5, 0.75] },
   { id: 'S12', lower: 1, upper: 2, lowerNode: [3.7, 7.5], upperNode: [0.75, 7.5] },
   { id: 'D13', lower: 1, upper: 3, lowerNode: [0.7, 3.6], upperNode: [0.75, 3.6], door: true },
+  // Only exists once the attic has been built (see ATTIC_STAIR_OBJS).
+  { id: 'S24', lower: 2, upper: ATTIC, lowerNode: [7.0, 7.5], upperNode: [4.05, 7.5] },
 ];
 
 export const DOOR: [number, number] = [0.6, 5.05];

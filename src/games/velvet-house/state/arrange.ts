@@ -86,6 +86,8 @@ export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, peo
     }
   }
   for (const st of STAIRS) {
+    // The attic's stairs only exist once it's been built.
+    if (st.id === 'S24' && !objs.some(o => o.id === 'stair24')) continue;
     for (const [lv, node] of [[st.lower, st.lowerNode], [st.upper, st.upperNode]] as const) {
       if (lv === held.level && !reachable(node[0], node[1])) return { ok: false, reason: 'That blocks the stairs.' };
     }
@@ -122,7 +124,7 @@ export function nextColour(o: ObjectInstance): string | null {
 
 // Pieces too big (or too bolted down) to carry up and down the stairs.
 const HEAVY = new Set(['bed', 'dining', 'gym', 'tread', 'shelves', 'piano', 'aquarium', 'wardrobe', 'gclock']);
-const INDOOR_LEVELS = [0, 1, 2];
+const INDOOR_LEVELS = [0, 1, 2, 4];
 
 /**
  * The floors a piece can be carried to, other than the one it's on. Anything

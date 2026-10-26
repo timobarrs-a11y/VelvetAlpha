@@ -23,7 +23,7 @@ describe('household agents', () => {
   it('builds usable spots from the starting furniture', () => {
     const { world } = setup();
     expect(world.slots.length).toBeGreaterThan(5);
-    expect(world.grids).toHaveLength(4);
+    expect(world.grids).toHaveLength(5);
     for (const s of world.slots) {
       expect(Number.isFinite(s.stand[0]) && Number.isFinite(s.stand[1])).toBe(true);
     }
