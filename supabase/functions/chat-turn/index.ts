@@ -18,6 +18,7 @@ import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
 import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult, type CoachingChange } from "../_shared/coachTools.ts";
 import { buildAssistantBehavioralInstructions } from "../_shared/assistantFramework.ts";
+import { webSearchTool, WEB_SEARCH_GUIDANCE, textOf } from "../_shared/webSearch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -474,6 +475,14 @@ async function generateResponseWithValidation(
         data = await anthropicResponse.json();
         const blocks: Array<{ type?: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }> =
           Array.isArray(data.content) ? data.content : [];
+
+        // A long web search can pause the turn; hand it back so the API carries on.
+        if (toolRunner && data.stop_reason === 'pause_turn' && round < 3) {
+          collectedText += textOf(data.content);
+          convo.push({ role: 'assistant', content: data.content });
+          data = undefined;
+          continue;
+        }
 
         if (!toolRunner || data.stop_reason !== 'tool_use') break;
 
@@ -1937,6 +1946,8 @@ Balance this domain expertise naturally with your relationship dynamic — bring
             voiceDescription: getCuratedCorrespondent(companion.correspondent_id)?.voiceDescription,
           })
         : BEHAVIORAL_INSTRUCTIONS;
+    // Coaches and assistants can look things up (see the web search tool below).
+    const helperSearchBlock = isHelper ? `\n\n${WEB_SEARCH_GUIDANCE}` : '';
 
     const groundingBlock = correspondentStoriesBlock
       ? `\n\nRECENT STORIES (use these — do NOT invent stories):\n${correspondentStoriesBlock}\n`
@@ -1971,7 +1982,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     // per-turn) layers so Anthropic prompt caching actually works.
     const frozenPrompt = `${personaLayer}
 
-${behavioralBlock}${expertLayer}
+${behavioralBlock}${helperSearchBlock}${expertLayer}
 
 CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - NEVER ask a question you already asked in this conversation
@@ -2108,7 +2119,7 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isHelper ? coachSurface
 
     const toolRunner: CoachToolRunner | undefined = isHelper
       ? {
-          tools: COACH_TOOLS,
+          tools: [...COACH_TOOLS, webSearchTool(3)],
           maxCalls: isFirstSession ? 12 : 6,
           executed: false,
           run: async (name, input) => {

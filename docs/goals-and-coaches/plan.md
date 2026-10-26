@@ -114,6 +114,12 @@ fills in:
 - Proactive follow-ups through what already exists: `proactive-check-in-scheduler` for nudges
   before and after due dates, and the morning brief for "today on your goals".
 
+*Built (G5):* coaches and assistants get the web search tool in `chat-turn` (up to 3 searches a
+reply, with guidance to search only for current or specific facts); Atlas's plan draft can look
+up real dates; `atlas-agent` falls back to it when no Brave key is set. The scheduler adds
+"step pencilled in today" and "due tomorrow" reasons after missed and due-today; the morning
+brief now includes open commitments and today's plan steps.
+
 ## 3. Setting up a goal: plan, commitments, progress, then the calendar
 
 When a goal is mapped out and its assistant or coach is chosen (in onboarding or any time

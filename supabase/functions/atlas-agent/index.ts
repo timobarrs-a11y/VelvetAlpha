@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
+import { webSearchTool } from "../_shared/webSearch.ts";
 import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 
 const corsHeaders = {
@@ -471,7 +472,8 @@ Deno.serve(async (req: Request) => {
             model: selectedModel,
             max_tokens: 2000,
             system: systemPrompt,
-            tools: [CALENDAR_TOOL],
+            // Without a Brave key, Atlas searches with Anthropic's own web search tool.
+            tools: braveKey ? [CALENDAR_TOOL] : [CALENDAR_TOOL, webSearchTool(3)],
             messages,
           };
 

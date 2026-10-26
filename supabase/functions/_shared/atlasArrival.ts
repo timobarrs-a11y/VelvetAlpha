@@ -566,7 +566,7 @@ export function buildPlanPrompt(input: {
 
 The user's goal: "${goalText}". ${helper.name}, their ${helper.kind}, will carry it with them (${helper.domain}).
 
-From the conversation below, write a realistic plan. Use what they said about their situation, budget, time and deadline. Where they didn't say, choose sensible defaults for someone starting now. Never invent specifics you can't know (prices, venues, fixture dates); write the step that finds them out instead.
+From the conversation below, write a realistic plan. Use what they said about their situation, budget, time and deadline. Where they didn't say, choose sensible defaults for someone starting now. When a real date or fact shapes the plan (an event or race date, an application deadline, a typical lead time or price), you can search the web for it and use what you find. Never invent specifics you couldn't find; write the step that finds them out instead.
 
 Return ONLY this JSON, no commentary:
 {

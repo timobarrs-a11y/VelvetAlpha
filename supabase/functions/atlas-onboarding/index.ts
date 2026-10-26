@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
+import { webSearchTool, textOf, continuePausedTurn } from "../_shared/webSearch.ts";
 import {
   CURATED_EXPERT_MAP,
   getCuratedExpert,
@@ -107,29 +108,40 @@ async function callClaude(opts: {
   maxTokens: number;
   system?: string;
   messages: Array<{ role: string; content: string }>;
+  /** Let the model search the web, up to this many times. */
+  webSearches?: number;
 }): Promise<string | null> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) return null;
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: opts.model,
-      max_tokens: opts.maxTokens,
-      ...(opts.system ? { system: opts.system } : {}),
-      messages: opts.messages,
-    }),
-  });
-  if (!response.ok) {
-    console.error("[atlas-onboarding] Anthropic API error:", response.status, await response.text());
-    return null;
+  let messages: Array<{ role: string; content: unknown }> = opts.messages;
+  let text = "";
+  // A long search can pause the turn; hand it back (at most twice) so it carries on.
+  for (let round = 0; round < 3; round++) {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: opts.model,
+        max_tokens: opts.maxTokens,
+        ...(opts.system ? { system: opts.system } : {}),
+        messages,
+        ...(opts.webSearches ? { tools: [webSearchTool(opts.webSearches)] } : {}),
+      }),
+    });
+    if (!response.ok) {
+      console.error("[atlas-onboarding] Anthropic API error:", response.status, await response.text());
+      return null;
+    }
+    const data = await response.json();
+    text += textOf(data.content);
+    if (data.stop_reason !== "pause_turn") break;
+    messages = continuePausedTurn(messages, data.content);
   }
-  const data = await response.json();
-  return data.content?.[0]?.text ?? null;
+  return text || null;
 }
 
 function parseModelJson(raw: string | null): unknown {
@@ -556,7 +568,7 @@ Write a 2-3 sentence instruction describing what the coach teaches, how (short l
         transcript: transcriptText(transcript),
         today,
       });
-      const raw = await callClaude({ model: MODEL_CONFIG.SONNET, maxTokens: 1500, messages: [{ role: "user", content: prompt }] });
+      const raw = await callClaude({ model: MODEL_CONFIG.SONNET, maxTokens: 1500, messages: [{ role: "user", content: prompt }], webSearches: 3 });
       const plan = validatePlan(parseModelJson(raw), today.date);
       if (!plan) return json({ error: "Couldn't draft the plan" }, 502);
       return json({ success: true, phase: "plan", plan, summary: summarizePlan(plan, today.date) });

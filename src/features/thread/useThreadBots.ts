@@ -154,6 +154,7 @@ export function useThreadBots({ companionId: _companionId, onBotMessage, onBrief
           if (ctx.hasCalendar)    contextParts.push(ctx.calendar);
           if (ctx.hasSchedule)    contextParts.push(ctx.schedule);
           if (ctx.hasGoals)       contextParts.push(ctx.goals);
+          if (ctx.hasCommitments) contextParts.push(ctx.commitments);
           if (ctx.hasNationalDay) contextParts.push(ctx.nationalDay);
           if (ctx.hasNews)        contextParts.push(ctx.news);
           if ((ctx as any).hasPolitics) contextParts.push((ctx as any).politics);

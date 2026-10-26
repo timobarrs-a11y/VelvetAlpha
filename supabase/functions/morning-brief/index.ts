@@ -46,6 +46,7 @@ Deno.serve(async (req: Request) => {
 Rules:
 - Never open with "Good morning!" or a generic greeting
 - Lead with what's actually happening today (events, deadlines, goals)
+- If plan steps or commitments are due today, name them in one short "Today on your goals" line
 - Weave in news naturally — don't just list headlines
 - Keep it scannable: 150-250 words max
 - Tone: concise, warm, intelligent. Like texting someone who gets it
