@@ -355,6 +355,24 @@ export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', id
   const lowBottom = M + m.curve * 0.6 + m.open + l.lo * 1.25;
   const lower = `${lowerTop} C${p([50 + l.w * 0.55, lowBottom])} ${p([50 - l.w * 0.55, lowBottom])} ${p(L)} Z`;
 
+  // Teeth for an open mouth, built along the curves of the opening.
+  const along = (c: [Pt, Pt], t: number) => bezierAt(L, c[0], c[1], R, t);
+  const TEETH = 6;
+  let upperTeeth = `M${p(L)} C${p(topC[0])} ${p(topC[1])} ${p(R)}`;
+  for (let i = TEETH; i > 0; i--) {
+    const t0 = i / TEETH, t1 = (i - 1) / TEETH, tm = (t0 + t1) / 2;
+    const depth = (t: number) => 2.7 * Math.pow(Math.sin(Math.PI * t), 0.6);
+    const [x1, y1] = along(topC, t1), [xm, ym] = along(topC, tm);
+    upperTeeth += ` Q${p([xm, ym + depth(tm) + 0.6])} ${p([x1, y1 + depth(t1)])}`;
+  }
+  upperTeeth += ' Z';
+  let lowerTeeth = `M${p(along(botC, 0.18))}`;
+  for (let i = 0; i <= 8; i++) {
+    const t = 0.18 + (0.64 * i) / 8;
+    const [x, y] = along(botC, t);
+    lowerTeeth += ` L${p([x, y - 1.3 * Math.sin(Math.PI * t)])}`;
+  }
+  lowerTeeth += ` L${p(along(botC, 0.82))} Z`;
   const lipDark = shade(lipColor, -0.14);
   const line = shade(lipColor, -0.58);
   const skinShadow = shade(skinTone, -0.28);
@@ -371,13 +389,16 @@ export function renderMouth({ lipShape, lipColor, skinTone, mood = 'neutral', id
       {m.open > 0 && (
         <>
           <defs><clipPath id={openId}><path d={`${parting} C${p(botC[1])} ${p(botC[0])} ${p(L)} Z`} /></clipPath></defs>
-          <path d={`${parting} C${p(botC[1])} ${p(botC[0])} ${p(L)} Z`} fill="#4a2226" />
+          <path d={`${parting} C${p(botC[1])} ${p(botC[0])} ${p(L)} Z`} fill="#3b1a1e" />
           <g clipPath={`url(#${openId})`}>
-            {/* The top row of teeth follows the curve of the smile. */}
-            <path d={`${parting} L${p([R[0], R[1] + 2])} C${p([topC[1][0], topC[1][1] + 2.9])} ${p([topC[0][0], topC[0][1] + 2.9])} ${p([L[0], L[1] + 2])} Z`}
-              fill="#f7f3ee" />
-            <path d={`M50,${M + m.curve * 0.7} L50,${M + m.curve * 0.7 + 2.2}`} stroke="#ddd5cb" strokeWidth="0.3" />
-            <ellipse cx="50" cy={M + m.curve + m.open + 0.9} rx={l.w * 0.42} ry="1.3" fill="#c0606a" opacity="0.75" />
+            {/* Tongue, low and soft at the back of the mouth. */}
+            <ellipse cx="50" cy={M + m.curve + m.open + 1.4} rx={l.w * 0.5} ry="1.9" fill="#a8505a" opacity="0.7" />
+            {/* Lower teeth just showing along the bottom. */}
+            <path d={lowerTeeth} fill="#e4dbcf" />
+            {/* Upper teeth: one row, each tooth its own soft bump. */}
+            <path d={upperTeeth} fill="#f4eee5" />
+            {/* The upper lip shades the top of the teeth. */}
+            <path d={parting} stroke="#5a2a2e" strokeWidth="1.8" strokeOpacity="0.28" fill="none" />
           </g>
         </>
       )}
