@@ -135,17 +135,38 @@ Weekends have no work: he wakes at 8 and the day is his.
   - the companion notices ("You've been busy").
   Coming back always has something to sort out.
 
-## 6. Open decisions
+## 6. How fast a day goes (like The Sims)
 
-1. **How fast game time runs,** and what happens while they're away. My recommendation: the
-   clock runs while they play. When they come back, the days they missed are simulated (routine,
-   pay, bills due, offers expiring), capped at 7 days, with a "While you were away" summary. The
-   game already simulates the work day without rendering for "Skip to 3 PM".
-2. **A taste of the AI for free:** none, or a small allowance (a few live conversations, or the
+The clock already runs like The Sims: at 1x, **one game minute is one real second**, so a full
+day is 24 real minutes (`BASE_MIN_PER_SEC = 1`, speeds 1x, 3x and 10x). The plan keeps that
+and skips the parts nobody wants to watch, as The Sims does:
+
+| Part of the day | Game time | What happens | Real time |
+|---|---|---|---|
+| Morning, 6:00–8:00 | 2 h | Jordan's routine plays out; they can step in | about 2 min at 1x, or 40 s at 3x |
+| Work, 8:00–5:00 | 9 h | Jordan is away. **Skip to 5 PM** (the game already has a skip that simulates the work day without drawing it) | a few seconds |
+| Evening, 5:00–12:00 | 7 h | The part they play: side jobs, bills, chores, the companion | about 7 min at 1x, 2–3 min at 3x |
+| Night, 12:00–6:00 | 6 h | Everyone asleep: the clock jumps ahead automatically, like The Sims' sleep speed-up | a few seconds |
+
+So **a weekday is about 10 minutes of real play**, and a weekend day (no work) about 15–20.
+A side job fits in an evening: building a website (3 game hours) takes 3 real minutes at 1x or
+1 minute at 3x. A game week, with its bills, is about an hour and a half of play.
+
+**When the game is closed, time stops**, as in The Sims. Nothing is lost while they're away.
+Things pile up inside the game: if they speed through days without paying attention, Jordan
+keeps to his routine and his job, but bills go late, offers expire and chores stack up.
+
+**What brings them back each real day** isn't the clock. It's things tied to the real date:
+the companion's daily message, a daily side-job offer that's on the real calendar, and Today in
+Velvet. Earnings are per game day, so playing more game days earns more.
+
+## 7. Open decisions
+
+1. **A taste of the AI for free:** none, or a small allowance (a few live conversations, or the
    first week).
-3. **Late rent:** after the warning, what's the worst that happens? My recommendation: no
+2. **Late rent:** after the warning, what's the worst that happens? My recommendation: no
    eviction, just a growing fee and an awkward landlord. Losing the house would drive people away.
-4. **Which paid tier unlocks the live game:** Essential, Plus or Elite (`src/types/subscription.ts`),
+3. **Which paid tier unlocks the live game:** Essential, Plus or Elite (`src/types/subscription.ts`),
    or a game-only add-on.
-5. **One clear offer:** how this fits with Velvet's other paid features (coaches, assistants,
+4. **One clear offer:** how this fits with Velvet's other paid features (coaches, assistants,
    the web search button) so it's one subscription, not several small ones.
