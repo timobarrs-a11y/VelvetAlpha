@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type TouchEvent as ReactTouchEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -15,6 +15,19 @@ import {
   perfectBounceVelocity,
   nextChain,
 } from '../game/momentum/physics';
+import {
+  type TouchSettings,
+  type SteerSensitivity,
+  zoneForX,
+  steerTarget,
+  steerVelocity,
+  haptic,
+  isCoarsePointer,
+  loadTouchSettings,
+  saveTouchSettings,
+  hasSeenTutorial,
+  markTutorialSeen,
+} from '../game/momentum/touchControls';
 
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
@@ -23,7 +36,6 @@ const PLAYER_HEIGHT = 22;
 const GRAVITY = 0.55;
 const HORIZONTAL_SPEED = 4.5;
 const PLATFORM_HEIGHT = 14;
-const TOUCH_SENSITIVITY = 1.6;
 
 const themePresets = [
   { name: 'Neon Cityscape', icon: '🌃', hint: 'Cyberpunk rooftops' },
@@ -249,7 +261,6 @@ export function MomentumGame() {
   const pauseStartRef = useRef(0);
   // Latest render values for the rAF loop, which is not recreated on every state change
   const liveRef = useRef({ isPaused, gameMode, currentCareerLevel, level });
-  liveRef.current = { isPaused, gameMode, currentCareerLevel, level };
   const cameraYRef = useRef(0);
   const gameLoopRef = useRef<number>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -268,7 +279,16 @@ export function MomentumGame() {
   const lastPlatformYRef = useRef(520); // Track last successful platform landing
   const bounceYRef = useRef<number | null>(null); // Y position at moment of bounce, null when not recently bounced
   const touchTargetXRef = useRef<number | null>(null);
-  const touchInfoRef = useRef<{ startClientX: number; startBallCenter: number; moved: boolean; startTime: number } | null>(null);
+  // Steering finger (one at a time); boost taps are handled independently so both thumbs work together
+  const steerPointerRef = useRef<{ id: number; startClientX: number; startBallCenter: number } | null>(null);
+  const boostPointersRef = useRef<Set<number>>(new Set());
+  const [touchSettings, setTouchSettings] = useState<TouchSettings>(loadTouchSettings);
+  const touchSettingsRef = useRef(touchSettings);
+  touchSettingsRef.current = touchSettings;
+  const [isTouchDevice] = useState(isCoarsePointer);
+  const [boostPressed, setBoostPressed] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  liveRef.current = { isPaused: isPaused || showTutorial, gameMode, currentCareerLevel, level };
 
   useEffect(() => {
     if (gameMode === 'career') {
@@ -508,6 +528,7 @@ export function MomentumGame() {
     comboRef.current = 0;
     lastPlatformYRef.current = player.y; // Reset last platform Y on respawn
     touchTargetXRef.current = null;
+    steerPointerRef.current = null;
   };
 
   const saveGameStats = async (completed: boolean) => {
@@ -546,45 +567,63 @@ export function MomentumGame() {
     boostBufferRef.current = BOOST_BUFFER_FRAMES;
   };
 
-  const handleCanvasTouchStart = (e: ReactTouchEvent<HTMLCanvasElement>) => {
-    if (gameState !== 'playing' || isPaused) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    touchInfoRef.current = {
-      startClientX: touch.clientX,
-      startBallCenter: playerRef.current.x + PLAYER_WIDTH / 2,
-      moved: false,
-      startTime: Date.now(),
-    };
+  const updateTouchSettings = (patch: Partial<TouchSettings>) => {
+    const next = { ...touchSettingsRef.current, ...patch };
+    setTouchSettings(next);
+    saveTouchSettings(next);
   };
 
-  const handleCanvasTouchMove = (e: ReactTouchEvent<HTMLCanvasElement>) => {
-    if (gameState !== 'playing' || isPaused) return;
-    const touch = e.touches[0];
-    if (!touch || !touchInfoRef.current) return;
+  const dismissTutorial = () => {
+    markTutorialSeen();
+    pauseTimeRef.current += Date.now() - pauseStartRef.current;
+    lastFrameTimeRef.current = null;
+    setShowTutorial(false);
+  };
+
+  const pointerToCanvasX = (clientX: number) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return 0;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = GAME_WIDTH / rect.width;
-    const touchCanvasX = (touch.clientX - rect.left) * scaleX;
-    const startCanvasX = (touchInfoRef.current.startClientX - rect.left) * scaleX;
-    const dragDelta = touchCanvasX - startCanvasX;
-    if (Math.abs(dragDelta) > 8) {
-      touchInfoRef.current.moved = true;
-    }
-    touchTargetXRef.current = touchInfoRef.current.startBallCenter + dragDelta;
+    return clientX * (GAME_WIDTH / rect.width);
   };
 
-  const handleCanvasTouchEnd = () => {
-    if (!touchInfoRef.current) return;
-    const info = touchInfoRef.current;
-    const elapsed = Date.now() - info.startTime;
-    // Quick tap (minimal movement, short duration) = boost
-    if (!info.moved && elapsed < 250) {
+  // The whole screen is the controller: one zone steers by relative drag, the other boosts.
+  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') return;
+    if (gameState !== 'playing' || liveRef.current.isPaused) return;
+    if ((e.target as HTMLElement).closest('button')) return;
+    const zone = zoneForX(e.clientX / window.innerWidth, touchSettingsRef.current.leftHanded);
+    if (zone === 'boost') {
+      boostPointersRef.current.add(e.pointerId);
       triggerBoost();
+      haptic(8);
+      setBoostPressed(true);
+    } else if (!steerPointerRef.current) {
+      steerPointerRef.current = {
+        id: e.pointerId,
+        startClientX: e.clientX,
+        startBallCenter: playerRef.current.x + PLAYER_WIDTH / 2,
+      };
+      touchTargetXRef.current = steerPointerRef.current.startBallCenter;
     }
-    touchTargetXRef.current = null;
-    touchInfoRef.current = null;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const steer = steerPointerRef.current;
+    if (!steer || steer.id !== e.pointerId) return;
+    const drag = pointerToCanvasX(e.clientX) - pointerToCanvasX(steer.startClientX);
+    touchTargetXRef.current = steerTarget(steer.startBallCenter, drag, touchSettingsRef.current.sensitivity);
+  };
+
+  const handlePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (steerPointerRef.current?.id === e.pointerId) {
+      steerPointerRef.current = null;
+      touchTargetXRef.current = null;
+    }
+    if (boostPointersRef.current.delete(e.pointerId) && boostPointersRef.current.size === 0) {
+      setBoostPressed(false);
+    }
   };
 
   const gameLoop = useCallback((now: number) => {
@@ -676,12 +715,7 @@ export function MomentumGame() {
     const touchX = touchTargetXRef.current;
     if (touchX !== null) {
       const ballCenter = player.x + PLAYER_WIDTH / 2;
-      const delta = touchX - ballCenter;
-      if (Math.abs(delta) > 4) {
-        player.vx = Math.max(-HORIZONTAL_SPEED, Math.min(HORIZONTAL_SPEED, delta * TOUCH_SENSITIVITY));
-      } else {
-        player.vx *= 0.6;
-      }
+      player.vx = steerVelocity(player.vx, touchX, ballCenter, HORIZONTAL_SPEED);
     } else if (keys.left) {
       player.vx = -HORIZONTAL_SPEED;
     } else if (keys.right) {
@@ -713,6 +747,7 @@ export function MomentumGame() {
         shakeRef.current = 7;
         flashRef.current = 0.35;
         popupRef.current = { text: 'PERFECT!', life: 1, color: '#ffe066' };
+        haptic(25);
         scoreRef.current += 100 * (1 + chainRef.current);
         spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, '#ffe066', 18, 14);
       } else if (player.boostCharges > 0 && boostCooldownRef.current === 0) {
@@ -729,6 +764,7 @@ export function MomentumGame() {
           if (keys.right) player.vx += BOOST_HORIZONTAL;
         }
         player.boostCharges--;
+        haptic(12);
         player.isBoosting = true;
         player.boostTimer = 25;
         boostBufferRef.current = 0;
@@ -826,6 +862,7 @@ export function MomentumGame() {
 
             if (platform.isCheckpoint) {
               player.boostCharges = MAX_BOOST_CHARGES;
+              haptic(30);
               checkpointYRef.current = platform.y;
               spawnParticles(player.x + PLAYER_WIDTH/2, player.y + PLAYER_HEIGHT, levelData.checkpointGlow, 20, 15);
             }
@@ -1185,7 +1222,7 @@ export function MomentumGame() {
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.font = '9px system-ui';
     ctx.textAlign = 'left';
-    ctx.fillText('BOOST [SPACE]', 16, GAME_HEIGHT - 40);
+    ctx.fillText(isTouchDevice ? 'BOOST' : 'BOOST [SPACE]', 16, GAME_HEIGHT - 40);
 
     if (chainRef.current > 0) {
       ctx.fillStyle = 'rgba(255,255,255,0.35)';
@@ -1214,7 +1251,20 @@ export function MomentumGame() {
     }
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, levelData, level]);
+  }, [gameState, levelData, isTouchDevice]);
+
+  useEffect(() => {
+    if (gameState === 'playing' && isTouchDevice && !hasSeenTutorial()) {
+      pauseStartRef.current = Date.now();
+      setShowTutorial(true);
+    }
+    if (gameState !== 'playing') {
+      steerPointerRef.current = null;
+      touchTargetXRef.current = null;
+      boostPointersRef.current.clear();
+      setBoostPressed(false);
+    }
+  }, [gameState, isTouchDevice]);
 
   useEffect(() => {
     if (gameState === 'playing') {
@@ -1529,17 +1579,31 @@ export function MomentumGame() {
 
   if (gameState === 'playing') {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div
+        className="fixed inset-0 bg-black flex items-center justify-center select-none overflow-hidden"
+        style={{
+          touchAction: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+          padding: 'env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px)',
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <div className="relative">
           <canvas
             ref={canvasRef}
             width={GAME_WIDTH}
             height={GAME_HEIGHT}
             className="block rounded-lg shadow-2xl select-none"
-            style={{ touchAction: 'none' }}
-            onTouchStart={handleCanvasTouchStart}
-            onTouchMove={handleCanvasTouchMove}
-            onTouchEnd={handleCanvasTouchEnd}
+            style={{
+              width: 'min(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 4 / 3), 1100px)',
+              height: 'auto',
+              touchAction: 'none',
+            }}
           />
 
           {isPaused && (
@@ -1566,17 +1630,47 @@ export function MomentumGame() {
                   Exit
                 </button>
               </div>
-              <p className="text-white/30 text-xs mt-8">Press ESC to resume</p>
+              {isTouchDevice ? (
+                <div className="mt-8 flex flex-col items-center gap-3 text-xs text-white/60">
+                  <div className="flex items-center gap-2">
+                    <span className="w-20 text-right">Steer feel</span>
+                    {(['low', 'medium', 'high'] as SteerSensitivity[]).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => updateTouchSettings({ sensitivity: s })}
+                        className={`px-3 py-2 rounded-full border ${touchSettings.sensitivity === s ? 'bg-white/20 border-white/40 text-white' : 'border-white/10'}`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-20 text-right">Boost side</span>
+                    {[false, true].map((left) => (
+                      <button
+                        key={String(left)}
+                        onClick={() => updateTouchSettings({ leftHanded: left })}
+                        className={`px-3 py-2 rounded-full border ${touchSettings.leftHanded === left ? 'bg-white/20 border-white/40 text-white' : 'border-white/10'}`}
+                      >
+                        {left ? 'left' : 'right'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-white/30 text-xs mt-8">Press ESC to resume</p>
+              )}
             </div>
           )}
 
           {!isPaused && (
-            <div className="absolute top-4 right-4 flex gap-2">
+            <div className="fixed z-10 flex gap-1" style={{ top: 'max(8px, env(safe-area-inset-top, 0px))', right: 'max(8px, env(safe-area-inset-right, 0px))' }}>
               <button
                 onClick={pauseGame}
-                className="px-4 py-2 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-lg transition-all text-xs backdrop-blur-sm border border-white/10"
+                aria-label="Pause"
+                className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-lg transition-all text-xs backdrop-blur-sm border border-white/10"
               >
-                PAUSE
+                ❚❚
               </button>
               <button
                 onClick={() => {
@@ -1587,25 +1681,52 @@ export function MomentumGame() {
                     setGameState('menu');
                   }
                 }}
-                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-lg transition-all text-xs backdrop-blur-sm border border-red-500/20"
+                aria-label="Exit"
+                className="w-9 h-9 flex items-center justify-center bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-lg transition-all text-xs backdrop-blur-sm border border-red-500/20"
               >
-                EXIT
+                ✕
               </button>
             </div>
           )}
 
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center md:hidden pointer-events-none">
-            <button
-              onPointerDown={(e) => { e.preventDefault(); triggerBoost(); }}
-              className="pointer-events-auto px-10 py-4 rounded-full bg-cyan-500/20 active:bg-cyan-500/40 text-cyan-300 text-sm font-medium tracking-wider border border-cyan-500/30 select-none"
+        </div>
+
+        {isTouchDevice && !isPaused && !showTutorial && (
+          <div
+            className={`fixed bottom-0 ${touchSettings.leftHanded ? 'left-0' : 'right-0'} pointer-events-none flex items-end ${touchSettings.leftHanded ? 'justify-start' : 'justify-end'}`}
+            style={{ width: '35vw', height: '100dvh', padding: 'max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px))' }}
+          >
+            <div
+              className={`w-24 h-24 rounded-full border-2 flex items-center justify-center text-xs font-semibold tracking-widest transition-transform duration-75 ${boostPressed ? 'scale-90 bg-cyan-400/40 border-cyan-300 text-white' : 'bg-cyan-500/10 border-cyan-400/40 text-cyan-200/80'}`}
             >
               BOOST
+            </div>
+          </div>
+        )}
+
+        {showTutorial && (
+          <div className="fixed inset-0 z-20 bg-black/85 flex flex-col items-center justify-center px-6 text-center" onPointerDown={(e) => e.stopPropagation()}>
+            <h2 className="text-2xl font-light text-white mb-6 tracking-wider">How to play</h2>
+            <div className={`flex w-full max-w-md gap-3 mb-6 ${touchSettings.leftHanded ? 'flex-row-reverse' : ''}`}>
+              <div className="flex-[65] rounded-2xl border border-white/20 p-4 text-white/80 text-sm">
+                <div className="text-3xl mb-2">👈 👉</div>
+                Drag anywhere here to steer
+              </div>
+              <div className="flex-[35] rounded-2xl border border-cyan-400/40 bg-cyan-500/10 p-4 text-cyan-100 text-sm">
+                <div className="text-3xl mb-2">👆</div>
+                Tap to boost
+              </div>
+            </div>
+            <p className="text-white/60 text-sm mb-2">Climb higher each bounce to build momentum.</p>
+            <p className="text-white/60 text-sm mb-8">Boost right as you land for a free PERFECT bounce.</p>
+            <button
+              onClick={dismissTutorial}
+              className="px-12 py-3 bg-white/15 text-white rounded-full text-sm border border-white/30"
+            >
+              Let's go
             </button>
           </div>
-          <p className="absolute bottom-20 left-0 right-0 text-center text-white/30 text-xs md:hidden pointer-events-none select-none">
-            Swipe to steer · Tap to boost
-          </p>
-        </div>
+        )}
       </div>
     );
   }
