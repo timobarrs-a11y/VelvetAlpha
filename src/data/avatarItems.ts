@@ -42,6 +42,15 @@ export const HEADWEAR: HeadwearItem[] = [
   { id: 'bandana', label: 'Bandana', tier: 'member', fallback: 'none' },
   { id: 'tricorn', label: 'Tricorn', tier: 'member', fallback: 'none' },
   { id: 'top_hat', label: 'Top hat', tier: 'earned', medal: 'hat-trick', fallback: 'none' },
+  // Everyday hats are free for everyone. Keep new starter items out of the
+  // member/earned lists in sanitize_avatar_config unless the database changes with them.
+  { id: 'beanie', label: 'Beanie', tier: 'starter', fallback: 'none' },
+  { id: 'baseball_cap', label: 'Baseball cap', tier: 'starter', fallback: 'none' },
+  { id: 'bucket_hat', label: 'Bucket hat', tier: 'starter', fallback: 'none' },
+  { id: 'headband', label: 'Headband', tier: 'starter', fallback: 'none' },
+  { id: 'headwrap', label: 'Head wrap', tier: 'starter', fallback: 'none' },
+  { id: 'beret', label: 'Beret', tier: 'starter', fallback: 'none' },
+  { id: 'cowboy_hat', label: 'Cowboy hat', tier: 'starter', fallback: 'none' },
 ];
 
 export const FACE_ACCESSORIES: FaceAccessoryItem[] = [

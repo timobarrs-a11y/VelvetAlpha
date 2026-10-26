@@ -36,7 +36,9 @@ export type SkinDetail = 'none' | 'smooth' | 'textured';
 
 // Wardrobe. Which of these a person may wear lives in src/data/avatarItems.ts.
 export type Outfit = 'tee' | 'linen' | 'suit' | 'chef' | 'labcoat' | 'pirate';
-export type Headwear = 'none' | 'chef_hat' | 'bandana' | 'tricorn' | 'top_hat';
+export type Headwear =
+  | 'none' | 'chef_hat' | 'bandana' | 'tricorn' | 'top_hat'
+  | 'beanie' | 'baseball_cap' | 'cowboy_hat' | 'beret' | 'headband' | 'bucket_hat' | 'headwrap';
 export type FaceAccessory = 'none' | 'eyepatch';
 
 export const AVATAR_CONFIG_VERSION = 4 as const;
@@ -64,6 +66,8 @@ export interface AvatarConfigV2 {
   freckles: Freckles;
   blush: Blush;
   glasses: Glasses;
+  // The colour of the frames, as #rrggbb. Unset means the classic black.
+  glassesColor?: string;
   earrings: Earrings;
   nosePiercing: NosePiercing;
   lipPiercing: LipPiercing;
@@ -288,6 +292,23 @@ export const LIP_COLORS: Swatch[] = [
   { name: 'Berry', value: '#c75f7e' },
   { name: 'Plum', value: '#8b4876' },
   { name: 'Red', value: '#c73e3a' },
+];
+
+export const DEFAULT_GLASSES_COLOR = '#1a1a1a';
+
+export const GLASSES_COLORS: Swatch[] = [
+  { name: 'Black', value: '#1a1a1a' },
+  { name: 'Tortoiseshell', value: '#7b4a2d' },
+  { name: 'Gold', value: '#d4af37' },
+  { name: 'Silver', value: '#c0c0c0' },
+  { name: 'Rose Gold', value: '#e0bfb8' },
+  { name: 'White', value: '#f5f5f5' },
+  { name: 'Red', value: '#c73e3a' },
+  { name: 'Pink', value: '#e07a9f' },
+  { name: 'Purple', value: '#6a3fa0' },
+  { name: 'Blue', value: '#2f6fd6' },
+  { name: 'Teal', value: '#1f9a96' },
+  { name: 'Green', value: '#3f7a52' },
 ];
 
 export const NECKLACE_COLORS: Swatch[] = [
