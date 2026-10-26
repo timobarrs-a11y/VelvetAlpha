@@ -4,7 +4,9 @@ export type Gender = 'male' | 'female';
 // 'locs' meant a short cut on a male avatar; migrateAvatarConfig renames those.
 export type HairStyle =
   | 'buzz' | 'fade' | 'short' | 'short_wavy' | 'slick_back' | 'afro' | 'locs_short'
-  | 'bun' | 'ponytail' | 'sleek' | 'wavy' | 'curly' | 'braids' | 'locs';
+  | 'bun' | 'ponytail' | 'sleek' | 'wavy' | 'curly' | 'braids' | 'locs'
+  | 'bald' | 'cornrows' | 'twists' | 'bantu_knots' | 'high_puff' | 'long_straight'
+  | 'bob' | 'pixie' | 'bangs' | 'top_knot' | 'undercut' | 'mohawk';
 
 export type LipShape = 'natural' | 'full' | 'thin' | 'heart';
 export type EyebrowShape = 'natural' | 'arched' | 'straight' | 'thick' | 'thin';
@@ -45,6 +47,8 @@ export interface AvatarConfigV2 {
   skinTone: string;
   eyeColor: string;
   hairColor: string;
+  // Streaks of a second colour through the hair; 'none' (or unset) for none.
+  hairHighlight?: string;
   hairStyle: HairStyle;
   hairTexture: HairTexture;
   lipShape: LipShape;
@@ -195,6 +199,28 @@ export const HAIR_COLORS: Swatch[] = [
   { name: 'White', value: '#e0e0e0' },
 ];
 
+// Dyed colours, for the whole head or as highlights.
+export const HAIR_FASHION_COLORS: Swatch[] = [
+  { name: 'Rose Pink', value: '#e07a9f' },
+  { name: 'Hot Pink', value: '#d63c86' },
+  { name: 'Lavender', value: '#a98bd6' },
+  { name: 'Violet', value: '#6a3fa0' },
+  { name: 'Electric Blue', value: '#2f6fd6' },
+  { name: 'Teal', value: '#1f9a96' },
+  { name: 'Mint', value: '#7fcfae' },
+  { name: 'Copper', value: '#c4642d' },
+  { name: 'Honey', value: '#c9933e' },
+  { name: 'Cherry', value: '#9e1f35' },
+];
+
+// The hairstyle picker, in groups so a long list is easy to scan.
+export const HAIRSTYLE_GROUPS: Array<{ label: string; styles: HairStyle[] }> = [
+  { label: 'Short & shaved', styles: ['bald', 'buzz', 'fade', 'undercut', 'mohawk', 'short', 'short_wavy', 'slick_back', 'pixie'] },
+  { label: 'Natural & protective', styles: ['afro', 'high_puff', 'curly', 'cornrows', 'bantu_knots', 'twists', 'braids', 'locs_short', 'locs'] },
+  { label: 'Medium & long', styles: ['bob', 'sleek', 'long_straight', 'bangs', 'wavy'] },
+  { label: 'Tied up', styles: ['bun', 'top_knot', 'ponytail'] },
+];
+
 export const LIP_COLORS: Swatch[] = [
   { name: 'Warm Nude', value: '#c4917c' },
   { name: 'Tan Nude', value: '#b07a5e' },
@@ -240,6 +266,18 @@ export const HAIRSTYLES: Array<{ value: HairStyle; label: string }> = [
   { value: 'curly', label: 'Curly' },
   { value: 'braids', label: 'Braids' },
   { value: 'locs', label: 'Long Locs' },
+  { value: 'bald', label: 'Bald' },
+  { value: 'cornrows', label: 'Cornrows' },
+  { value: 'twists', label: 'Twists' },
+  { value: 'bantu_knots', label: 'Bantu Knots' },
+  { value: 'high_puff', label: 'High Puff' },
+  { value: 'long_straight', label: 'Long, Side Part' },
+  { value: 'bob', label: 'Bob' },
+  { value: 'pixie', label: 'Pixie' },
+  { value: 'bangs', label: 'Long with Bangs' },
+  { value: 'top_knot', label: 'Top Knot' },
+  { value: 'undercut', label: 'Undercut' },
+  { value: 'mohawk', label: 'Mohawk' },
 ];
 
 export const EYE_SHAPES: Array<{ value: EyeShape; label: string }> = [

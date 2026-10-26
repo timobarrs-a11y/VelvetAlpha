@@ -29,7 +29,10 @@ interface AvatarV2Props {
 }
 
 // Styles short enough that the neck shows below them from behind.
-const SHORT_BACK = new Set(['buzz', 'fade', 'short', 'short_wavy', 'slick_back']);
+const SHORT_BACK = new Set(['buzz', 'fade', 'short', 'short_wavy', 'slick_back', 'bald', 'cornrows', 'bantu_knots',
+  'high_puff', 'pixie', 'top_knot', 'undercut', 'mohawk']);
+// Close to the scalp from behind: no falling strands, and some skin shows through.
+const CLOSE_CROP = new Set(['buzz', 'fade', 'top_knot', 'undercut', 'mohawk', 'cornrows', 'bantu_knots']);
 
 function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = 'bust', view = 'front', eyesClosed = false }: AvatarV2Props) {
   // Whatever comes in (a database row, an old draft, a v1 config) is brought
@@ -426,7 +429,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
   const neckWidth = 11;
 
   const hair = renderHair({
-    hairStyle, hairTexture, hairColor, skinTone,
+    hairStyle, hairTexture, hairColor, skinTone, hairHighlight: config.hairHighlight,
     geometry: faceGeometry, idPrefix: uid,
     fromBehind: part === 'head' && view === 'back',
   });
@@ -461,10 +464,10 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
           {back ? (
             // From behind, hair covers the head; short cuts stop at the nape.
             <g clipPath={shortBack ? `url(#${napeId})` : undefined}>
-              <g clipPath={hatClip}>
+              {hairStyle !== 'bald' && <g clipPath={hatClip}>
                 <path d={faceOutlinePath(faceGeometry)} fill={hairColor}
-                  opacity={hairStyle === 'buzz' || hairStyle === 'fade' ? 0.82 : 1} />
-                {hairStyle !== 'buzz' && hairStyle !== 'afro' && (
+                  opacity={CLOSE_CROP.has(hairStyle) ? 0.82 : 1} />
+                {!CLOSE_CROP.has(hairStyle) && hairStyle !== 'afro' && hairStyle !== 'high_puff' && (
                   <g clipPath={`url(#${faceClipId})`}>
                     {/* Strands falling from the crown, and a sheen across it. */}
                     {Array.from({ length: 15 }, (_, i) => {
@@ -478,7 +481,7 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
                       stroke={shade(hairColor, 0.25)} strokeWidth="2.4" fill="none" opacity="0.3" strokeLinecap="round" />
                   </g>
                 )}
-              </g>
+              </g>}
             </g>
           ) : (
             <>

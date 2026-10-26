@@ -3,7 +3,7 @@ import { Shuffle, Undo2, Redo2, RotateCcw, Bookmark, BookmarkCheck, X, Sparkles,
 import { AvatarV2 } from './AvatarV2';
 import {
   AvatarConfigV2, Gender, HairTexture,
-  SKIN_TONES, EYE_COLORS, HAIR_COLORS, LIP_COLORS, NECKLACE_COLORS,
+  SKIN_TONES, EYE_COLORS, HAIR_COLORS, HAIR_FASHION_COLORS, HAIRSTYLE_GROUPS, LIP_COLORS, NECKLACE_COLORS,
   HAIRSTYLES, AVATAR_CONFIG_VERSION,
   HAIR_TEXTURES, EYE_SHAPES, NOSE_SHAPES, FACE_SHAPES,
   DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2,
@@ -134,10 +134,10 @@ function coherentRandomize(): AvatarConfigV2 {
   const hairTexture = pick(textures);
 
   const compatibleStyles = hairTexture === 'coily'
-    ? (g === 'male' ? ['afro', 'locs_short', 'fade', 'short'] : ['afro', 'locs', 'braids', 'curly'])
+    ? (g === 'male' ? ['afro', 'locs_short', 'fade', 'short', 'cornrows', 'twists', 'bald'] : ['afro', 'locs', 'braids', 'curly', 'high_puff', 'bantu_knots', 'twists', 'cornrows'])
     : hairTexture === 'wavy'
-    ? (g === 'male' ? ['short_wavy', 'short', 'slick_back'] : ['wavy', 'sleek', 'curly', 'ponytail'])
-    : (g === 'male' ? ['buzz', 'short', 'slick_back', 'fade'] : ['sleek', 'ponytail', 'bun', 'wavy']);
+    ? (g === 'male' ? ['short_wavy', 'short', 'slick_back', 'undercut'] : ['wavy', 'sleek', 'curly', 'ponytail', 'bob', 'bangs'])
+    : (g === 'male' ? ['buzz', 'short', 'slick_back', 'fade', 'undercut', 'top_knot', 'bald'] : ['sleek', 'ponytail', 'bun', 'wavy', 'bob', 'pixie', 'long_straight', 'bangs']);
 
   const hairStyle = pick(compatibleStyles) as AvatarConfigV2['hairStyle'];
 
@@ -161,6 +161,7 @@ function coherentRandomize(): AvatarConfigV2 {
     skinTone,
     eyeColor: pick(EYE_COLORS).value,
     hairColor: pick(HAIR_COLORS).value,
+    hairHighlight: Math.random() < 0.15 ? pick([...HAIR_COLORS, ...HAIR_FASHION_COLORS]).value : 'none',
     hairStyle,
     hairTexture,
     lipShape: pick(['natural', 'full', 'thin', 'heart'] as LipShape[]),
@@ -440,10 +441,17 @@ export function AvatarCreatorV2({
   const hairTab = (
     <div className="space-y-5">
       <Section label="Hairstyle">
-        <div className="grid grid-cols-3 gap-2">
-          {hairstyles.map(s => (
-            <OptionButton key={s.value} label={s.label}
-              selected={config.hairStyle === s.value} onClick={() => update({ hairStyle: s.value as AvatarConfigV2['hairStyle'] })} />
+        <div className="space-y-3">
+          {HAIRSTYLE_GROUPS.map(group => (
+            <div key={group.label}>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">{group.label}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {group.styles.map(value => (
+                  <OptionButton key={value} label={hairstyles.find(h => h.value === value)?.label ?? value}
+                    selected={config.hairStyle === value} onClick={() => update({ hairStyle: value })} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </Section>
@@ -459,12 +467,25 @@ export function AvatarCreatorV2({
 
       <Section label="Hair Color">
         <div className="flex flex-wrap gap-2">
-          {HAIR_COLORS.map(c => (
+          {[...HAIR_COLORS, ...HAIR_FASHION_COLORS].map(c => (
             <ColorSwatch key={c.value} color={c.value} selected={config.hairColor === c.value}
               onClick={() => update({ hairColor: c.value })} title={c.name} />
           ))}
         </div>
       </Section>
+
+      {config.hairStyle !== 'bald' && (
+        <Section label="Highlights">
+          <div className="flex flex-wrap gap-2">
+            <ColorSwatch color="transparent" selected={!config.hairHighlight || config.hairHighlight === 'none'}
+              onClick={() => update({ hairHighlight: 'none' })} title="No highlights" />
+            {[...HAIR_COLORS, ...HAIR_FASHION_COLORS].filter(c => c.value !== config.hairColor).map(c => (
+              <ColorSwatch key={c.value} color={c.value} selected={config.hairHighlight === c.value}
+                onClick={() => update({ hairHighlight: c.value })} title={c.name} />
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section label="Facial Hair">
         <div className="grid grid-cols-3 gap-2">
