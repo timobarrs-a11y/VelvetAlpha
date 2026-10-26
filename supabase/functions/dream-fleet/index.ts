@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireCronAuth } from "../_shared/cronAuth.ts";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,8 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const SONNET_MODEL = "claude-sonnet-5-5";
-const HAIKU_MODEL = "claude-haiku-4-5";
+const SONNET_MODEL = MODEL_CONFIG.SONNET;
+const HAIKU_MODEL = MODEL_CONFIG.HAIKU;
 const CONCURRENCY = 5;
 
 interface FleetSignal {

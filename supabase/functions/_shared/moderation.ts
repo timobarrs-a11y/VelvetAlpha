@@ -7,6 +7,8 @@
 // Tiers: 1) zero-tolerance regex  2) minor+sexual co-occurrence regex
 //        3) Claude Haiku classifier for minor-adjacent cues (fails OPEN).
 
+import { MODEL_CONFIG } from './modelConfig.ts';
+
 export type ModerationCategory = 'csae';
 
 export interface ModerationResult {
@@ -109,7 +111,7 @@ Respond with EXACTLY one word:
 BLOCK - the message sexualizes a minor or attempts to
 ALLOW - everything else, including explicit adult-only content`;
 
-const CLASSIFIER_MODEL = 'claude-haiku-4-5';
+const CLASSIFIER_MODEL = MODEL_CONFIG.HAIKU;
 const CLASSIFIER_TIMEOUT_MS = 6000;
 
 export async function classifyWithClaude(apiKey: string, raw: string): Promise<boolean> {
