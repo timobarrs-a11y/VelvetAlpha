@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { migrateSave, CURRENT_VERSION } from '../state/saveMigration';
+import { migrateSave, migrateV2toV3, repairFromV1, CURRENT_VERSION } from '../state/saveMigration';
 import type { SaveDataV1 } from '../state/types';
 
 function makeV1Save(overrides: Partial<SaveDataV1> = {}): SaveDataV1 {
@@ -72,11 +72,11 @@ function makeV1Save(overrides: Partial<SaveDataV1> = {}): SaveDataV1 {
 }
 
 describe('saveMigration', () => {
-  it('migrates a valid v1 save to v2', () => {
+  it('migrates a valid v1 save up to the current version', () => {
     const v1 = makeV1Save();
     const result = migrateSave(v1);
     expect(result).not.toBeNull();
-    expect(result!.v).toBe(2);
+    expect(result!.v).toBe(3);
     expect(result!.rngSeed).toBe(v1.savedAt >>> 0);
     // v1 fields preserved
     expect(result!.money).toBe(500);
@@ -102,16 +102,57 @@ describe('saveMigration', () => {
     expect(migrateSave({ v: 99 })).toBeNull();
   });
 
-  it('passes through v2 saves unchanged', () => {
+  it('passes through current-version saves unchanged', () => {
     const v1 = makeV1Save();
     const v2 = migrateSave(v1)!;
     const result = migrateSave(v2);
     expect(result).not.toBeNull();
-    expect(result!.v).toBe(2);
+    expect(result!.v).toBe(3);
     expect(result!.rngSeed).toBe(v2.rngSeed);
   });
 
-  it('CURRENT_VERSION is 2', () => {
-    expect(CURRENT_VERSION).toBe(2);
+  it('CURRENT_VERSION is 3', () => {
+    expect(CURRENT_VERSION).toBe(3);
+  });
+});
+
+describe('v3 and repair', () => {
+  const house = (paint: string) => ({ paint, paper: null, floor: 'wood' });
+
+  it('migrates v2 to v3 and keeps real looks', () => {
+    const v2 = { ...migrateSave(makeV1Save())!, v: 2, ext: {}, LOOKS: [house('#111'), house('#222'), house('#333'), house('#444'), house('#555')] } as never;
+    const v3 = migrateV2toV3(v2);
+    expect(v3.v).toBe(3);
+    expect(v3.rev).toBe(0);
+    expect((v3 as unknown as { LOOKS: unknown[] }).LOOKS).toHaveLength(5);
+    expect(v3.ext.looksLost).toBeUndefined();
+  });
+
+  it('flags looks lost to the old save bug (empty, or character looks in the slot)', () => {
+    const empty = migrateV2toV3({ ...migrateSave(makeV1Save())!, v: 2, LOOKS: [] } as never);
+    expect(empty.ext.looksLost).toBe(true);
+    const chars = migrateV2toV3({ ...migrateSave(makeV1Save())!, v: 2, LOOKS: [{ skin: '#c68e6a', gender: 'male' }, { skin: '#fff' }] } as never);
+    expect(chars.ext.looksLost).toBe(true);
+    expect((chars as unknown as { LOOKS: unknown[] }).LOOKS).toEqual([]);
+  });
+
+  it('restores lost looks, pets and career from the cloud v1 copy, without touching real data', () => {
+    const lost = migrateV2toV3({ ...migrateSave(makeV1Save())!, v: 2, LOOKS: [], pets: [], career: { level: 0, perf: 0 } } as never);
+    const cloud = { LOOKS: [house('#A'), house('#B'), house('#C'), house('#D')], ROOMLOOK: [{}, {}, {}, {}], pets: [{ id: 'p1' }], career: { level: 2, perf: 3 }, mcareer: { level: 1, perf: 0 } };
+    const fixed = repairFromV1(lost, cloud) as unknown as Record<string, unknown>;
+    expect((fixed.LOOKS as { paint: string }[])[0].paint).toBe('#A');
+    expect(fixed.pets).toEqual([{ id: 'p1' }]);
+    expect(fixed.career).toEqual({ level: 2, perf: 3 });
+    expect((fixed.ext as Record<string, unknown>).looksLost).toBeUndefined();
+
+    // A save that already has data keeps it.
+    const mine = migrateV2toV3({ ...migrateSave(makeV1Save())!, v: 2, LOOKS: [], pets: [{ id: 'mine' }], career: { level: 3, perf: 1 } } as never);
+    const kept = repairFromV1(mine, cloud) as unknown as Record<string, unknown>;
+    expect(kept.pets).toEqual([{ id: 'mine' }]);
+    expect(kept.career).toEqual({ level: 3, perf: 1 });
+  });
+
+  it('leaves saves from a newer game alone', () => {
+    expect(migrateSave({ v: 4 })).toBeNull();
   });
 });

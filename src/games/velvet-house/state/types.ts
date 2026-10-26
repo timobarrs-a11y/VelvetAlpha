@@ -339,4 +339,16 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'v'> {
   ext: Record<string, unknown>;
 }
 
-export type SaveData = SaveDataV1 | SaveDataV2;
+/**
+ * v3 stays flat and additive on top of v2 (the legacy game still loads a v1 copy of it, see
+ * services/velvetHouseDatabase.ts). Later features add their own top-level keys here.
+ */
+export interface SaveDataV3 extends Omit<SaveDataV2, 'v'> {
+  v: 3;
+  /** +1 for every save; the tie-breaker after (day, minutes) when choosing the newer of two saves. */
+  rev: number;
+  /** Bumped when content ids are renamed, so a migration can tell. */
+  contentVersion: number;
+}
+
+export type SaveData = SaveDataV1 | SaveDataV2 | SaveDataV3;

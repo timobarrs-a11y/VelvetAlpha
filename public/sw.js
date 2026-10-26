@@ -162,3 +162,44 @@ self.addEventListener('message', (event) => {
     });
   }
 });
+
+// ---- Phone notifications ----
+// The server sends { title, body, tag, url, data }. A browser requires every push to show something, so this
+// always does; the server already skips people who are looking at the app.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { /* not JSON */ }
+  const title = data.title || 'Velvet';
+  event.waitUntil((async () => {
+    const tag = data.tag || 'velvet';
+    // Several messages in the same chat become one notification ("3 new messages") instead of a stack.
+    const existing = await self.registration.getNotifications({ tag });
+    const count = existing.length ? ((existing[0].data && existing[0].data.count) || 1) + 1 : 1;
+    await self.registration.showNotification(title, {
+      body: count > 1 ? count + ' new messages' : (data.body || ''),
+      tag,
+      renotify: true,
+      icon: '/icon-192.png',
+      badge: '/icon-96.png',
+      data: Object.assign({}, data.data, { url: data.url || '/lobby', count }),
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const d = event.notification.data || {};
+  const url = d.url || '/lobby';
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // The app is already open: bring it forward and tell it which chat to open, without reloading.
+    for (const w of windows) {
+      if ('focus' in w) {
+        await w.focus();
+        w.postMessage({ type: 'velvet:open-im', conversationId: d.conversationId, senderId: d.senderId, senderName: d.senderName });
+        return;
+      }
+    }
+    if (self.clients.openWindow) await self.clients.openWindow(url);
+  })());
+});

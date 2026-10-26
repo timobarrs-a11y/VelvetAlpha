@@ -224,3 +224,23 @@ describe('toV1Compatible', () => {
     expect((back.maya as Record<string, unknown>).friendsDay).toBe(true);
   });
 });
+
+describe('the v1 copy the legacy game reads, from a v3 save', () => {
+  it('drops the attic, new bookkeeping and storage so the legacy game still loads it', () => {
+    const v3 = {
+      v: 3, rev: 12, contentVersion: 1, rngSeed: 5, ext: {}, storage: [{ id: 'x' }],
+      LOOKS: [{ paint: '1' }, { paint: '2' }, { paint: '3' }, { paint: '4' }, { paint: '5' }],
+      ROOMLOOK: [{}, {}, {}, {}, {}],
+      objs: [{ id: 'sofa', level: 1 }, { id: 'desk', level: 4 }, { id: 'tree', level: 3 }],
+      career: { level: 2, perf: 1 },
+    };
+    const v1 = toV1Compatible(v3) as Record<string, unknown>;
+    expect(v1.v).toBe(1);
+    expect(v1).not.toHaveProperty('rev');
+    expect(v1).not.toHaveProperty('storage');
+    expect(v1.LOOKS).toHaveLength(4);
+    expect(v1.ROOMLOOK).toHaveLength(4);
+    expect((v1.objs as { id: string }[]).map(o => o.id)).toEqual(['sofa', 'tree']);
+    expect(v1.career).toEqual({ level: 2, perf: 1 });
+  });
+});

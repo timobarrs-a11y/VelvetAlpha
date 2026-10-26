@@ -18,6 +18,36 @@ Branch read: `claude/stoic-bohr-azcrgu` at `f4080f0` (same as `main`).
 
 ---
 
+## 0.5 Reconciliation with `claude/great-shannon-2gnmm0` (added after this plan was written)
+
+This plan was written against `f4080f0`. The working branch moved on before the
+plan landed, so some findings are already fixed or partly fixed. The sections
+above are unchanged; read them with this table.
+
+| Plan item | Status on `great-shannon` | What is left |
+|---|---|---|
+| §0.1 `jobs.md` missing | **Exists:** `docs/velvet-house/jobs.md` (IT Help Desk cast, tickets, work-day model, five jobs) | Treat it as the content source for step 4.1; the cast and tickets in §2.7 are the fallback |
+| §0.2 No attic | **Built:** level 4, bought from the Upgrades tab ($1,200), stairs from Upstairs, wallpaper/floor/Arrange/storage support, an Attic shop tab with 5 new pieces. Plain walls, no sloped ceiling | It was added the old way (edited `state/` and `houseArt.js` separately). Step 0.9/0.11 must keep it working: it is now the real regression test for the single-source-of-truth refactor |
+| R1 Save drops data | **Fixed (step 0.1 done):** one serializer, `state/save.ts snapshot()`. The art exports its looks, per-room looks, wall decor and yard (`art.exportLooks()`); anything the game doesn't model (career, pets, dirt, skills, mood, unknown fields) is carried over from the loaded save. The art now draws the real power, dishes, laundry, fridge and purchases from every frame | None for R1. Career and pets are still not *used* by the game (later phases), only kept |
+| R2 Chat not connected | **Partly fixed:** a `velvet:sample` bridge (game to host page) with a converter from the game's strings to `{role, content}` messages, tested with a stand-in host; replies now stay on screen | Not done: moderation in `velvet-game-turn`, budget and rate limits, streaming, prompt caching, the typed v2 contract, the server-built prompts. Steps 0.5/0.6/3.2 replace the interim bridge. The converter and `sampleGameTurn` service (`src/services/velvetGameTurn.ts`) are reusable |
+| R3 Taps wrong when rotated | **Fixed for Arrange only:** `art.unproject` and `art.hitObject` follow the rotation | The ordinary tap code (Maya/Jordan/object taps in `main.ts`) still hard-codes the unrotated origin. Step 0.3 reduces to moving those onto the same calls |
+| R3 Duplicated data | Not fixed (and the attic added more of it) | Step 0.9 |
+| R4 `main.ts` closure | Not fixed (now ~1,500 lines) | Step 0.10 |
+| R5 Memory compaction | Not fixed | Step 0.2 |
+| R6 Tests | 705 unit tests pass; no e2e for the live game | Step 0.7 |
+| R7 Shared save key | **Worse:** the live page now also loads and uploads the cloud save (`src/hooks/useVelvetHouseCloudSave.ts`), still on the shared key `velvet-house-v1:<id>`, so the legacy page can overwrite a live save | Step 0.8 (own key `velvet-sims:<id>`, v3, `repairFromV1`) is now more urgent |
+
+Other work on that branch the plan does not mention: Arrange mode redesign (tap to
+select, drag, list of every movable piece, carry between floors, storage), wallpaper
+and floor previews with a floor picker, 15 picture wallpapers, the colour bottom bar,
+and a fix so drawer pages no longer rebuild their buttons every refresh.
+
+**Effect on the order of §5:** do 0.1 (finish the save fix) first, then 0.7 (e2e
+harness), then 0.5/0.8 on top of the interim bridge and cloud save, then 0.9-0.11.
+Step 0.11 loses its "add the attic" part and instead proves the attic survives.
+
+---
+
 ## 1. Verdict on the foundation
 
 **Short version: it's a sound base for the simulation, but not for saving,

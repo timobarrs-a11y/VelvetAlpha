@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { moderateInput } from "../_shared/moderation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,11 @@ const MODEL = "claude-haiku-4-5";
 const MAX_TURNS = 20;
 const MAX_TURN_CHARS = 4000;
 const MAX_SYSTEM_CHARS = 14000;
+
+// Replies a person can have each day (UTC). Background helper calls (memory extraction) are free.
+const DAILY_REPLIES_FREE = 40;
+const DAILY_REPLIES_PAID = 300;
+const HELPER_PREAMBLE = "You are a background helper for the game.";
 
 type Turn = { role: "user" | "assistant"; content: string };
 
@@ -99,6 +105,29 @@ Deno.serve(async (req: Request) => {
     const turns = normalizeTurns(gamePersona ? raw.slice(1) : raw);
     if (!turns.length || turns[turns.length - 1].role !== "user") return json({ error: "bad_request" }, 400);
 
+    // Content moderation runs on what the player typed, as in every other chat in the app, before anything is sent on.
+    const apiKeyForChecks = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+    const verdict = await moderateInput(supabase, apiKeyForChecks, user.id, turns[turns.length - 1].content);
+    if (verdict.action === "block") return json({ error: "blocked" }, 403);
+
+    // The daily allowance. A reply costs one credit; helper calls cost nothing. If the allowance function is not
+    // installed yet, the call is allowed (and logged) rather than breaking chat.
+    const isHelper = gamePersona.startsWith(HELPER_PREAMBLE);
+    let budget: { remaining: number; limit: number } | null = null;
+    if (!isHelper) {
+      const { data: tierRow } = await supabase.from("user_profiles").select("subscription_tier, is_super_user").eq("id", user.id).maybeSingle();
+      const paid = tierRow?.is_super_user === true || !["free", "", null, undefined].includes(tierRow?.subscription_tier);
+      const limit = paid ? DAILY_REPLIES_PAID : DAILY_REPLIES_FREE;
+      const { data: spent, error: spendErr } = await supabase.rpc("velvet_game_spend", { p_user_id: user.id, p_cost: 1, p_limit: limit });
+      if (spendErr) {
+        console.error("velvet-game-turn allowance unavailable", spendErr.message);
+      } else {
+        const row = Array.isArray(spent) ? spent[0] : spent;
+        if (row && row.ok === false) return json({ error: "budget", budget: { remaining: 0, limit } }, 429);
+        if (row) budget = { remaining: row.remaining, limit };
+      }
+    }
+
     const playerName = clip(profile.nickname || profile.name || "the player", 40);
     const companionName = clip(companion.custom_name || "your companion", 40);
 
@@ -157,7 +186,7 @@ Deno.serve(async (req: Request) => {
       : "";
     if (!text) return json({ error: "refused" }, 200);
 
-    return json({ text });
+    return json(budget ? { text, budget } : { text });
   } catch (err) {
     console.error("velvet-game-turn error", err);
     return json({ error: "unavailable" }, 500);

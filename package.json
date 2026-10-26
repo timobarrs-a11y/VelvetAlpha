@@ -12,7 +12,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "test:goldens": "playwright test --config playwright.config.ts"
+    "test:goldens": "playwright test --config playwright.config.ts",
+    "test:live": "playwright test --config playwright.live.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",

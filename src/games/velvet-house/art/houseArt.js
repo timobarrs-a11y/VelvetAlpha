@@ -128,8 +128,8 @@ export function createHouseArt(ctx0, opts = {}) {
     if (h >= night0 || h < dawn0) return 0.42; if (h >= dusk0) return (h - dusk0) / (night0 - dusk0) * 0.42; if (h < light0) return (light0 - h) / (light0 - dawn0) * 0.42; return 0; }
   function skyColor() { const h = hour(); if (raining() && darkness() < 0.3) return seasonIdx() === 3 ? '#D2D8E0' : '#9AA6B5'; if (darkness() > 0.3) return '#2A2F55'; if (h >= 17.5 && h < 21) return '#F0B98E'; if (h < 7.5) return '#E9C7B5'; return '#BFE2F0'; }
 
-  const LEVEL_NAMES = ['Basement', 'Main floor', 'Upstairs', 'Backyard'];
-  const LOOKS = [{ paint: '#B9B4AF', paper: 'block', floor: 'concrete' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#D9CDBD', paper: null, floor: 'wood' }];
+  const LEVEL_NAMES = ['Basement', 'Main floor', 'Upstairs', 'Backyard', 'Attic'];
+  const LOOKS = [{ paint: '#B9B4AF', paper: 'block', floor: 'concrete' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#E9DCCB', paper: null, floor: 'wood' }, { paint: '#D9CDBD', paper: null, floor: 'wood' }, { paint: '#E4D6C2', paper: 'shiplap', floor: 'wood' }];
   const FLOORS = {
     wood: { kind: 'plank', a: '#C9A27A', b: '#C09670', line: 'rgba(90,60,30,.22)' },
     concrete: { kind: 'flat', a: '#A7A29D', b: '#A7A29D', line: 'rgba(0,0,0,.06)' },
@@ -178,7 +178,7 @@ export function createHouseArt(ctx0, opts = {}) {
     'velvet-tuft': { pat: 'tuft', base: '#6E3C50', ink: 'rgba(0,0,0,.25)' }, blossom: { pat: 'blossom', base: '#F7EEE6' }, palms: { pat: 'palms', base: '#D7EDE4' }, leaves: { pat: 'leaves', base: '#F3E6D0' }, snow: { pat: 'snow', base: '#D9E6F2' }, 'sunset-mural': { pat: 'sunset' }, cork: { pat: 'cork', base: '#B88B5A', ink: 'rgba(80,50,25,.4)' }
   };
   // rooms can override their floor's paint, wallpaper and floor
-  const ROOMLOOK = [{}, {}, {}, {}];
+  const ROOMLOOK = [{}, {}, {}, {}, {}];
   const lookAt = (level, room) => (room && ROOMLOOK[level][room] ? Object.assign({}, LOOKS[level], ROOMLOOK[level][room]) : LOOKS[level]);
   const toneOf = (lk) => { const pp = lk.paper && PAPERS[lk.paper]; return (pp && pp.base) || lk.paint; };
   const wallTone = (level, room) => toneOf(lookAt(level, room));
@@ -264,14 +264,18 @@ export function createHouseArt(ctx0, opts = {}) {
       rug: [0.6, 0.0, 0, 0], anchor: [3.8, 4.2] },
     { rooms: [{ n: 'Backyard', r: [0, 0, 10, 8] }], walls: [], yard: true,
       feats: [{ p: 'L', u: [3.2, 4.0], z: [0, 2.05], k: 'door' }, { p: 'L', u: [0.8, 2.0], z: [1.1, 2.0], k: 'extwin' }, { p: 'L', u: [5.2, 6.4], z: [1.1, 2.0], k: 'extwin' }],
-      rug: [0, 0, 0, 0], anchor: [1.2, 3.6] }
+      rug: [0, 0, 0, 0], anchor: [1.2, 3.6] },
+    { rooms: [{ n: 'Attic', r: [0, 0, 10, 8] }], walls: [],
+      feats: [{ p: 'B', u: [1.2, 2.4], z: [1.25, 2.2], k: 'window' }, { p: 'B', u: [7.4, 8.6], z: [1.25, 2.2], k: 'window' }, { p: 'R', u: [3.0, 4.2], z: [1.0, 2.0], k: 'window' }],
+      rug: [0, 0, 0, 0], anchor: [5.0, 4.0] }
   ];
   const STAIRS = [
     // Hard-coded stair cores. Each flight sits in a corner, runs along an outside edge and climbs toward the back of the
     // house, so on screen the steps always rise up the page. The top landing is floor on the level above.
     { id: 'S01', lower: 0, upper: 1, lowerNode: [9.5, 3.7], bottom: [9.5, 3.25], top: [9.5, 1.25], upperNode: [9.5, 0.75] },
     { id: 'S12', lower: 1, upper: 2, lowerNode: [3.7, 7.5], bottom: [3.25, 7.5], top: [1.25, 7.5], upperNode: [0.75, 7.5] },
-    { id: 'D13', lower: 1, upper: 3, lowerNode: [0.7, 3.6], upperNode: [0.75, 3.6], door: true }
+    { id: 'D13', lower: 1, upper: 3, lowerNode: [0.7, 3.6], upperNode: [0.75, 3.6], door: true },
+    { id: 'S24', lower: 2, upper: 4, lowerNode: [7.0, 7.5], bottom: [6.55, 7.5], top: [4.55, 7.5], upperNode: [4.05, 7.5] }
   ];
   const DOOR = [0.6, 5.05], PARCEL = { stand: [1.5, 6.0], box: [0.55, 5.75] };
   function roomName(level, x, y) { x = Math.min(9.99, Math.max(0.01, x)); y = Math.min(7.99, Math.max(0.01, y)); const r = LEVELS[level].rooms.find(rm => x >= rm.r[0] && x <= rm.r[2] && y >= rm.r[1] && y <= rm.r[3]); return r ? r.n : LEVEL_NAMES[level]; }
@@ -663,6 +667,20 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: (o) => { const c = cl(o); return [B(0, 0, 0, 2.0, 0.95, 0.4, shade(c, -0.1), { name: 'base' }), B(0, 0, 0.4, 2.0, 0.26, 0.45, c), B(0, 0, 0, 0.2, 0.95, 0.75, c), B(1.8, 0, 0, 0.2, 0.95, 0.75, c), B(0.2, 0.26, 0.4, 0.8, 0.66, 0.1, shade(c, 0.08)), B(1.0, 0.26, 0.4, 0.8, 0.66, 0.1, shade(c, 0.08)),
         F(0, 0, 2.0, 0.27, (T) => { for (let k = 0; k < 8; k++) for (let m = 0; m < 2; m++) { const [x, y] = T.P(0.25 + k * 0.215 + m * 0.1, 0.261, 0.55 + m * 0.15); circle(x, y, 1.1, 'rgba(0,0,0,.35)'); } }, { onTop: true })]; },
       spots: { s1: { stand: [0.6, 1.5], pos: [0.6, 0.58, 0.5], dir: [0, 1], tag: 'seat', base: 'base' }, s2: { stand: [1.4, 1.5], pos: [1.4, 0.58, 0.5], dir: [0, 1], tag: 'seat', base: 'base' } } },
+    trunk: { W: 0.9, D: 0.55, h: 0.55, name: 'Steamer trunk', store: true, cols: ['#7A4E32', '#2E3B57', '#3F5B4C', '#8E5468'],
+      parts: (o) => { const c = cl(o); return [B(0, 0, 0, 0.9, 0.55, 0.38, c), B(0, 0, 0.38, 0.9, 0.55, 0.12, shade(c, -0.15)), B(0.12, 0, 0, 0.07, 0.55, 0.5, '#C9A24A'), B(0.71, 0, 0, 0.07, 0.55, 0.5, '#C9A24A'),
+        F(0, 0, 0.9, 0.55, (T) => { const [x, y] = T.P(0.45, 0.0, 0.36); rr(x - 3, y - 3, 6, 6, 1, '#C9A24A'); }, { onTop: true })]; } },
+    dressform: { W: 0.5, D: 0.5, h: 1.5, name: 'Dress form', store: true, cols: ['#E8DCC8', '#B5476E', '#2E3B57'],
+      parts: (o) => [F(0, 0, 0.5, 0.5, (T) => { const c = cl(o); T.box(0.15, 0.15, 0, 0.2, 0.2, 0.04, '#2B2B30'); T.line([0.25, 0.25, 0.04], [0.25, 0.25, 0.75], '#9AA3A8', 2.5); const [x, y] = T.P(0.25, 0.25, 1.0); ell(x, y, 13, 22, c, shade(c, -0.3)); ell(x + 3, y + 2, 8, 16, shade(c, 0.12)); circle(x, y - 26, 3, '#9AA3A8'); })] },
+    gramophone: { W: 0.6, D: 0.6, h: 1.1, name: 'Gramophone', store: true, cols: ['#7A4E32', '#1B1A1F', '#C9A24A'],
+      parts: (o) => { const c = cl(o); return [B(0.08, 0.08, 0, 0.44, 0.44, 0.55, c), F(0, 0, 0.6, 0.6, (T, ob, t) => { const spin = usingSlot(ob.id + ':r') ? t * 6 : 0; const [dx, dy] = T.P(0.3, 0.3, 0.57); ell(dx, dy, 11, 5, '#1B1A1F'); ell(dx + Math.cos(spin) * 5, dy + Math.sin(spin) * 2.2, 1.6, 0.9, '#C9A24A'); T.line([0.3, 0.3, 0.57], [0.3, 0.42, 0.95], '#C9A24A', 2.5); const [hx, hy] = T.P(0.3, 0.45, 1.02); ell(hx, hy, 14, 10, '#C9A24A', shade('#C9A24A', -0.3), -0.4); ell(hx + 2, hy + 2, 9, 6, '#3A2E2A'); })]; },
+      spots: { r: { stand: [0.3, 1.1], dir: [0, -1], tag: 'records' } } },
+    floorcushion: { W: 1.1, D: 1.1, h: 0.25, name: 'Floor cushions', store: true, cols: ['#B5476E', '#4F6F74', '#C9A24A', '#E8DCC8', '#6E3C50'],
+      parts: (o) => { const c = cl(o); return [B(0.05, 0.05, 0, 1.0, 1.0, 0.14, c, { name: 'base' }), B(0.12, 0.12, 0.14, 0.5, 0.5, 0.1, shade(c, 0.14)), B(0.55, 0.5, 0.14, 0.4, 0.4, 0.09, shade(c, -0.12))]; },
+      spots: { s: { stand: [0.55, 1.7], pos: [0.55, 0.55, 0.16], dir: [0, 1], tag: 'seat', base: 'base' } } },
+    crates: { W: 0.8, D: 0.5, h: 0.55, name: 'Book crates', store: true, cols: ['#B98A6A', '#3A2E2A', '#E4DDD2'],
+      parts: (o) => { const c = cl(o); return [B(0, 0, 0, 0.8, 0.5, 0.28, c), B(0.05, 0.05, 0.28, 0.7, 0.4, 0.2, shade(c, -0.12)),
+        F(0, 0, 0.8, 0.5, (T) => { const pal = ['#C2413A', '#4A5DA8', '#E0A43A', '#3F5B4C', '#F2EEE8']; for (let k = 0; k < 6; k++) { const x = 0.1 + k * 0.11; T.poly([[x, 0.1, 0.49], [x + 0.08, 0.1, 0.49], [x + 0.08, 0.4, 0.49], [x, 0.4, 0.49]], pal[k % 5], 'rgba(0,0,0,.25)', 0.6); } }, { onTop: true })]; } },
     globe: { W: 0.5, D: 0.5, h: 1.15, name: 'Antique globe', store: true, cols: ['#9C6B45', '#2B2B30'],
       parts: (o) => [F(0, 0, 0.5, 0.5, (T, ob, t) => { const c = cl(o); [[0.08, 0.08], [0.42, 0.08], [0.25, 0.45]].forEach(([x, y]) => T.line([x, y, 0], [0.25, 0.25, 0.55], c, 2.4)); const [x, y] = T.P(0.25, 0.25, 0.85); circle(x, y, 13, '#D9C9A0'); const r = t * 0.3; [[-4, -3, 5, 4], [5, 4, 4, 3], [-2, 6, 3, 2]].forEach(([dx, dy, rx, ry]) => ell(x + ((dx + r * 6) % 22 + 22) % 22 - 11, y + dy, rx, ry, '#7A9A6A')); ctx.strokeStyle = '#C9A24A'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 15, Math.PI * 0.6, Math.PI * 2.1); ctx.stroke(); })] }
 
@@ -692,8 +710,43 @@ export function createHouseArt(ctx0, opts = {}) {
 
   function wallPoint(plane, u, z) { return plane === 'L' ? [0, u, z] : plane === 'B' ? [u, 0, z] : plane === 'R' ? [WX, u, z] : [u, WY, z]; }
   const planeLen = (pl) => (pl === 'L' || pl === 'R' ? WY : WX);
+  // A picture hung across a whole wall (a photo or a gradient), cropped to the
+  // wall's shape and laid onto it. Photos load the first time a wall wants one.
+  function paperImage(S) {
+    if (S.img) return S.img;
+    if (S.stops) {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+      const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+      S.stops.forEach(([at, col]) => gr.addColorStop(at, col)); g.fillStyle = gr; g.fillRect(0, 0, 512, 256);
+      return (S.img = c);
+    }
+    if (S.url && !S.loading) {
+      S.loading = true;
+      const im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = () => { S.img = im; }; im.onerror = () => { S.loading = false; S.failed = true; };
+      im.src = S.url;
+    }
+    return null;
+  }
+  function drawImagePaper(S, plane, len) {
+    const im = paperImage(S); if (!im) return;
+    const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height; if (!w || !h) return;
+    // "Cover": the biggest slice of the picture with the wall's proportions.
+    const want = len / WH; let cw = w, ch = h; if (w / h > want) cw = h * want; else ch = w / want;
+    const cx = (w - cw) / 2, cy = (h - ch) / 2, ku = len / cw, kz = WH / ch;
+    const o = iso(...wallPoint(plane, 0, 0)), du = iso(...wallPoint(plane, 1, 0)), dz = iso(...wallPoint(plane, 0, 1));
+    const ux = du[0] - o[0], uy = du[1] - o[1], zx = dz[0] - o[0], zy = dz[1] - o[1];
+    ctx.save();
+    ctx.beginPath(); [[0, 0], [len, 0], [len, WH], [0, WH]].forEach(([u, z], i) => { const [sx, sy] = iso(...wallPoint(plane, u, z)); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.closePath(); ctx.clip();
+    ctx.transform(ux * ku, uy * ku, -zx * kz, -zy * kz, o[0] - ux * ku * cx + zx * kz * (cy + ch), o[1] - uy * ku * cx + zy * kz * (cy + ch));
+    ctx.drawImage(im, 0, 0);
+    ctx.restore();
+    // A little shade so it sits in the room rather than glowing.
+    poly([wallPoint(plane, 0, 0), wallPoint(plane, len, 0), wallPoint(plane, len, WH), wallPoint(plane, 0, WH)], 'rgba(20,14,24,.12)');
+  }
   function drawPattern(paper, plane, len) {
     const S = paper && PAPERS[paper]; if (!S) return;
+    if (S.pat === 'image') { drawImagePaper(S, plane, len); return; }
     const P = (u, z) => wallPoint(plane, u, z), pat = S.pat, ink = S.ink;
     const rect = (a, b, z0, z1, c, st, lw) => poly([P(a, z0), P(b, z0), P(b, z1), P(a, z1)], c, st, lw);
     const path = (pts, st, lw) => { ctx.beginPath(); pts.forEach(([u, z], i) => { const [sx, sy] = iso(...P(u, z)); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.strokeStyle = st; ctx.lineWidth = lw; ctx.stroke(); };
@@ -1784,6 +1837,8 @@ export function createHouseArt(ctx0, opts = {}) {
   }
 
   function render(s) {
+    // What the household is doing to the house (the power, the dishes, the fridge) comes in with every frame, so the art never shows stale state.
+    if (s.house) { power = s.house.power; dishes = s.house.dishes; laundryPile = s.house.laundryPile; fridge = s.house.fridge; if (s.house.owned) owned = s.house.owned; }
     sync(s);
     const t = animT, lv = viewLevel;
     const watching = [jordan, maya].some(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
@@ -1820,6 +1875,18 @@ export function createHouseArt(ctx0, opts = {}) {
   function applyPaint(level, color) { if (LOOKS[level]) LOOKS[level].paint = color; }
   function applyWallpaper(level, pattern) { if (LOOKS[level]) LOOKS[level].paper = pattern; }
   function applyFloor(level, floor) { if (LOOKS[level]) LOOKS[level].floor = floor; }
+  // Pictures that can hang as wallpaper: { id, base (a matching tone, used while loading), url | stops }.
+  function registerPictures(list) { list.forEach(p => { if (p && p.id && !PAPERS[p.id]) PAPERS[p.id] = { pat: 'image', base: p.base, url: p.url, stops: p.stops }; }); }
+  const getLooks = () => LOOKS.map(l => Object.assign({}, l));
+  // Everything the art owns that has to survive a reload: house looks (paint, wallpaper, floors, per-room
+  // overrides), wall decor, and the yard's grass, weeds, burns and rain. The mirror image of applySave.
+  const exportLooks = () => ({
+    LOOKS: getLooks(),
+    ROOMLOOK: ROOMLOOK.map(r => JSON.parse(JSON.stringify(r))),
+    WALLOBJS: WALLOBJS.map(w => Object.assign({}, w)),
+    yard: { t: YARD.tiles.map(t => [t.len, t.water, t.weed, t.burn, t.mowedAt]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck },
+  });
+  const lookInfo = (kind, key) => (kind === 'paper' ? PAPERS[key] : kind === 'floor' ? FLOORS[key] : null) || null;
   function toggleObjectLight(id) { const next = objectLights.get(id) !== true; objectLights.set(id, next); return next; }
   function toggleLightAt(level, sx, sy) {
     let best = null, bestDist = 34;
@@ -1857,24 +1924,51 @@ export function createHouseArt(ctx0, opts = {}) {
   function drawArrangeOverlay(a, level) {
     ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(0, 0, W, H);
+    const pick = a.held || a.selected;
     OBJS.forEach(o => {
-      if (o.level !== level || !a.movable.includes(o.id) || o.id === a.held) return;
+      if (o.level !== level || !a.movable.includes(o.id) || o.id === pick) return;
       const hull = objHull(o), hot = o.id === a.hover;
       ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
       ctx.strokeStyle = hot ? 'rgba(214,74,122,.95)' : 'rgba(214,74,122,.35)'; ctx.lineWidth = hot ? 2 : 1; ctx.setLineDash(hot ? [] : [4, 4]); ctx.stroke();
     });
     ctx.setLineDash([]);
-    const o = a.held && OBJS.find(q => q.id === a.held);
+    const o = pick && OBJS.find(q => q.id === pick);
     if (o && o.level === level) {
-      const [fw, fd] = fp(o), col = a.valid ? '47,143,91' : '194,65,58';
-      poly([[o.x, o.y, 0.01], [o.x + fw, o.y, 0.01], [o.x + fw, o.y + fd, 0.01], [o.x, o.y + fd, 0.01]], `rgba(${col},.25)`, `rgba(${col},.9)`, 2);
+      // Picked up (being dragged) shows whether it fits; just selected glows
+      // gold with a slow pulse so it's clear which piece the next drag moves.
+      const dragging = a.held === o.id;
+      const pulse = 0.5 + 0.5 * Math.sin(animT * 4);
+      const [fw, fd] = fp(o), col = dragging ? (a.valid ? '47,143,91' : '194,65,58') : '255,200,70';
+      poly([[o.x, o.y, 0.01], [o.x + fw, o.y, 0.01], [o.x + fw, o.y + fd, 0.01], [o.x, o.y + fd, 0.01]], `rgba(${col},${dragging ? 0.25 : 0.16 + 0.1 * pulse})`, `rgba(${col},.9)`, 2);
       const st = T_OF(o).spots;
       if (st) Object.values(st).forEach(sp => { const [sx, sy] = xf(o, sp.stand[0], sp.stand[1]), [px, py] = iso(sx, sy, 0); ell(px, py, 6, 3, `rgba(${col},.85)`); ell(px, py, 2, 1, '#fff'); });
-      // A gentle lift, so the piece reads as carried.
-      const hull = objHull(o); ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1] - 3) : ctx.moveTo(p[0], p[1] - 3))); ctx.closePath();
-      ctx.strokeStyle = `rgba(${col},.95)`; ctx.lineWidth = 2; ctx.stroke();
+      // A gentle lift, so a carried piece reads as carried.
+      const lift = dragging ? 3 : 0;
+      const hull = objHull(o); ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1] - lift) : ctx.moveTo(p[0], p[1] - lift))); ctx.closePath();
+      if (!dragging) { ctx.fillStyle = `rgba(${col},${0.08 + 0.08 * pulse})`; ctx.fill(); ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(36,27,37,.55)'; ctx.lineWidth = 5; ctx.stroke(); }
+      ctx.strokeStyle = `rgba(${col},.98)`; ctx.lineWidth = dragging ? 2 : 3; ctx.stroke();
     }
     ctx.restore();
+  }
+
+  const inPoly = (px, py, poly) => { let inside = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside; } return inside; };
+
+  // Which piece is under a view-space point: the one in front when several
+  // overlap, a rug only when nothing else is there, and a little give around
+  // the point so a fingertip lands what it's aiming at. `ids` limits the search.
+  function hitObject(level, px, py, ids) {
+    const slop = [[0, 0], [9, 0], [-9, 0], [0, 9], [0, -9]];
+    let best = null, bestScore = -Infinity;
+    OBJS.forEach(o => {
+      if (o.level !== level || !TYPES[o.type] || (ids && !ids.includes(o.id))) return;
+      const hull = objHull(o);
+      const direct = inPoly(px, py, hull);
+      if (!direct && !slop.some(([dx, dy]) => inPoly(px + dx, py + dy, hull))) return;
+      const [fw, fd] = fp(o);
+      const score = (TYPES[o.type].rug ? 0 : 2 + (direct ? 1 : 0)) * 1000 + vs(o.x + fw / 2, o.y + fd / 2) * 10 + (direct ? 1 : 0);
+      if (score > bestScore) { bestScore = score; best = o; }
+    });
+    return best;
   }
 
   // Tapping an object brings it to life for a moment (or flips its switch).
@@ -1900,5 +1994,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

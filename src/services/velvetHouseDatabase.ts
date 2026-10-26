@@ -23,7 +23,10 @@ export function compareSaveProgress(
   if (aDay !== bDay) return aDay - bDay;
   const aMin = typeof a.minutes === 'number' ? a.minutes : 0;
   const bMin = typeof b.minutes === 'number' ? b.minutes : 0;
-  return aMin - bMin;
+  if (aMin !== bMin) return aMin - bMin;
+  const aRev = typeof a.rev === 'number' ? a.rev : 0;
+  const bRev = typeof b.rev === 'number' ? b.rev : 0;
+  return aRev - bRev;
 }
 
 /**
@@ -33,14 +36,17 @@ export function compareSaveProgress(
 export function toV1Compatible(saveData: Record<string, unknown>): Record<string, unknown> {
   const v1: Record<string, unknown> = {};
   // Copy all v1-known fields, skip v2-only extensions
-  const V2_ONLY_KEYS = new Set(['v', 'rngSeed', 'player', 'partner', 'ext']);
+  const V2_ONLY_KEYS = new Set(['v', 'rngSeed', 'player', 'partner', 'ext', 'rev', 'contentVersion', 'storage']);
   for (const [key, value] of Object.entries(saveData)) {
     if (!V2_ONLY_KEYS.has(key)) {
       v1[key] = value;
     }
   }
-  // The legacy game requires v === 1 to load a save
+  // The legacy game requires v === 1 to load a save, and knows only the four original floors:
+  // the attic's looks and anything standing on it stay out of this copy.
   v1.v = 1;
+  for (const k of ['LOOKS', 'ROOMLOOK']) if (Array.isArray(v1[k])) v1[k] = (v1[k] as unknown[]).slice(0, 4);
+  if (Array.isArray(v1.objs)) v1.objs = (v1.objs as Array<{ level?: number }>).filter(o => (o?.level ?? 0) <= 3);
 
   // Extract grouped player/partner back to v1 flat fields if present.
   // Merge needs, skills and mood into the existing jordan/maya objects
@@ -72,6 +78,20 @@ function filterUndef(obj: Record<string, unknown>): Record<string, unknown> {
     if (v !== undefined) out[k] = v;
   }
   return out;
+}
+
+/** Both copies in the cloud: `v1` (what the legacy game reads) and `v2` (the full save, v2 or newer). */
+export async function loadVelvetHouseSaveCopies(companionId: string): Promise<{ v1: Record<string, unknown> | null; v2: Record<string, unknown> | null } | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from('velvet_house_saves')
+    .select('save_data, save_data_v2')
+    .eq('user_id', user.id)
+    .eq('companion_id', companionId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return { v1: (data.save_data as Record<string, unknown> | null) ?? null, v2: (data.save_data_v2 as Record<string, unknown> | null) ?? null };
 }
 
 export async function loadVelvetHouseSave(companionId: string): Promise<Record<string, unknown> | null> {
@@ -119,7 +139,7 @@ export async function saveVelvetHouseProgress(companionId: string, saveData: Rec
   // True dual-write: save_data always holds a v1-compatible save,
   // save_data_v2 holds the v2 save (if the game produced one).
   // This way save_data is never corrupted by a v2 overwrite.
-  const isV2 = saveData.v === 2;
+  const isV2 = typeof saveData.v === 'number' && saveData.v >= 2;
   const upsertPayload: Record<string, unknown> = {
     user_id: user.id,
     companion_id: companionId,
