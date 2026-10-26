@@ -32,7 +32,8 @@ import {
   type ChatTurn, type CompanionConfig, type PersonaContext, type SampleFn,
 } from './state/companionAI';
 import { createDrawer, type DrawerPage, type DrawerState } from './ui/drawer';
-import { clothByKey, clothId, wearOn, type OwnedCloth } from './state/clothing';
+import { clothByKey, clothId, wearOnAgent, validOutfit, type OwnedCloth } from './state/clothing';
+import { validHeadSvgs, loadHeadImages } from './state/headSprites';
 import { createDialogue, createTray, showDiscoveryCard, createTownSign, type TrayAction } from './ui/dialogue';
 
 const VIEW_W = 640;
@@ -64,7 +65,8 @@ function lookFrom(saved: unknown, fallback: AgentLook): AgentLook {
     hair: HEX.test(l.hairColor ?? '') ? l.hairColor! : fallback.hair,
     top: HEX.test(l.top ?? '') ? l.top! : fallback.top,
     topStyle: typeof (l as { topStyle?: unknown }).topStyle === 'string' ? (l as { topStyle: string }).topStyle : fallback.topStyle,
-    bottom: fallback.bottom,
+    bottom: HEX.test((l as { bottom?: string }).bottom ?? '') ? (l as { bottom: string }).bottom : fallback.bottom,
+    accent: HEX.test((l as { accent?: string }).accent ?? '') ? (l as { accent: string }).accent : undefined,
     longHair: typeof l.hair === 'string' ? /long|wav|curl|bun|pony|braid|loc/i.test(l.hair) : fallback.longHair,
   };
 }
@@ -145,7 +147,7 @@ function boot(): void {
   const owned = new Set<string>(Array.isArray(save?.owned) ? save!.owned as string[] : []);
   // Closet: default pieces plus anything bought from the Clothes tab
   const closet: OwnedCloth[] = Array.isArray(save?.closet)
-    ? (save!.closet as OwnedCloth[]).filter(c => clothByKey(c.id.slice(2)))
+    ? (save!.closet as OwnedCloth[]).filter(c => c.id.startsWith('sig-') || clothByKey(c.id.slice(2)))
     : [
       { slot: 'top', style: 'tee', col: people[0].look.top, name: 'Old tee', id: clothId('tee') },
       { slot: 'top', style: 'tee', col: people[1].look.top, name: 'Shared tee', id: clothId('tee') },
@@ -367,7 +369,7 @@ function boot(): void {
     },
     onPickLifeGoal: (g) => { lifeGoal = g; log(`Life goal: ${g}`); },
     onWear: (cloth) => {
-      wearOn(people[0].look, cloth);
+      wearOnAgent(people[0].look, cloth);
       log(`Changed into the ${cloth.name}.`);
       refreshDrawer();
     },
@@ -852,8 +854,8 @@ function boot(): void {
         jordan: { needs: people[0].needs, skills: { cooking: 0, fitness: 0, logic: 0, creativity: 0, charisma: 0 }, mood: { happy: 50, sad: 0, angry: 0, tired: 0, playful: 30, affectionate: 40 }, workedDay: false, friendsDay: false },
         maya: { needs: people[1].needs, skills: { cooking: 0, fitness: 0, logic: 0, creativity: 0, charisma: 0 }, mood: { happy: 50, sad: 0, angry: 0, tired: 0, playful: 30, affectionate: 40 }, workedDay: false, friendsDay: false },
         turns: chatTurns,
-        look: { skin: people[0].look.skin, hair: '', hairColor: people[0].look.hair, top: people[0].look.top, eyeColor: '', facialHair: '', glasses: '', gender: 'male' },
-        mayaLook: { skin: people[1].look.skin, hair: '', hairColor: people[1].look.hair, top: people[1].look.top, eyeColor: '', facialHair: '', glasses: '', gender: 'female' },
+        look: { skin: people[0].look.skin, hair: '', hairColor: people[0].look.hair, top: people[0].look.top, topStyle: people[0].look.topStyle, bottom: people[0].look.bottom, accent: people[0].look.accent, eyeColor: '', facialHair: '', glasses: '', gender: 'male' },
+        mayaLook: { skin: people[1].look.skin, hair: '', hairColor: people[1].look.hair, top: people[1].look.top, topStyle: people[1].look.topStyle, bottom: people[1].look.bottom, accent: people[1].look.accent, eyeColor: '', facialHair: '', glasses: '', gender: 'female' },
         TASTE: style, CHANGES: [], ext: {},
         player: { name: simName, look: {} },
         partner: { name: partnerName, look: {} },
@@ -1108,13 +1110,15 @@ function boot(): void {
         const cl = d.companion.look;
         if (cl.skin) people[1].look.skin = cl.skin;
         if (cl.hairColor) people[1].look.hair = cl.hairColor;
-        if (cl.top) people[1].look.top = cl.top;
+        if (cl.top && !cl.outfit) people[1].look.top = cl.top;
+        applyAvatar(people[1], cl, 'maya');
       }
       if (d.player?.look) {
         const pl = d.player.look;
         if (pl.skin) people[0].look.skin = pl.skin;
         if (pl.hairColor) people[0].look.hair = pl.hairColor;
-        if (pl.top) people[0].look.top = pl.top;
+        if (pl.top && !pl.outfit) people[0].look.top = pl.top;
+        applyAvatar(people[0], pl, 'jordan');
       }
       const wasFromGame = companionCfg.source === 'game';
       companionCfg.source = 'velvet';
@@ -1135,6 +1139,34 @@ function boot(): void {
       if (d.seq === vidSearchSeq && vidSearchCb) vidSearchCb(d.videos as { id: string; title: string; channelTitle: string; thumbnail: string }[]);
     }
   });
+
+  // The real avatar: its head frames, and its outfit as the signature look.
+  // The signature goes on when it's new or changed; otherwise whatever they
+  // last wore stays on. The player's is always in the closet to switch back to.
+  function applyAvatar(person: Agent, look: { sprites?: unknown; outfit?: unknown }, who: AgentId): void {
+    const svgs = validHeadSvgs(look.sprites);
+    if (svgs) {
+      loadHeadImages(svgs).then((imgs) => {
+        if (!imgs.neutral) return;
+        person.look.heads = imgs;
+        if (person === people[1]) dialogue.setPortraitImages(imgs);
+      }).catch(() => {});
+    }
+    const outfit = validOutfit(look.outfit);
+    if (!outfit) return;
+    if (who === 'jordan') {
+      for (let i = closet.length - 1; i >= 0; i--) if (closet[i].id.startsWith('sig-')) closet.splice(i, 1);
+      closet.unshift(
+        { slot: 'top', style: outfit.style, col: outfit.color, accent: outfit.accent, name: 'Signature look', id: 'sig-top' },
+        { slot: 'bottom', style: 'pants', col: outfit.bottom, name: 'Signature bottoms', id: 'sig-bottom' },
+      );
+    }
+    const keys = (flags.signature ?? (flags.signature = {})) as Record<string, string>;
+    if (keys[who] !== outfit.key) {
+      Object.assign(person.look, { topStyle: outfit.style, top: outfit.color, accent: outfit.accent, bottom: outfit.bottom });
+      keys[who] = outfit.key;
+    }
+  }
 
   // Video search: game sends vidSearch to parent, parent responds with vidResults
   let vidSearchSeq = 0;

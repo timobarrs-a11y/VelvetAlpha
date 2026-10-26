@@ -7,7 +7,14 @@ All avatar configs carry an optional `_version` field (integer).
 | Version | Description |
 |---------|-------------|
 | 1 (legacy) | `AvatarConfig` (v1 SVG, `src/types/avatar.ts`) |
-| 2 (current) | `AvatarConfigV2` (`src/types/avatar-v2.ts`) |
+| 2–3 | `AvatarConfigV2` (`src/types/avatar-v2.ts`) |
+| 4 (current) | Every option open to every gender. Male `sleek`/`wavy`/`locs` became `slick_back`/`short_wavy`/`locs_short`. |
+
+`AvatarV2` migrates whatever it is given, so any stored config (a database
+row, an old draft, a v1 config) draws correctly. Edits go through
+`applyAvatarChange`, which reads an old config the old way before applying
+the change and stamping the current version. The legacy `Avatar` component is
+now a thin wrapper over `AvatarV2`.
 
 ### Adding a new field
 
@@ -94,7 +101,62 @@ When a WebGL/Three.js renderer is ready:
 
 ---
 
-## 4. Performance Notes
+## 4. How a face is drawn
+
+The renderers in `src/renderers/` draw in this order, back to front:
+back hair, body, neck, collar, ears, face, features, facial hair, earrings,
+front hair, glasses, headwear.
+
+- **Face shape** (`faceGeometry.ts`): each shape is a list of widths down the
+  side of the head, joined by a smooth curve, so every shape has a rounded
+  crown and its own jaw. `faceHalfWidthAt` reads the width at any height for
+  things that sit against the edge (ears, sideburns, framing locks), and the
+  beard clips to the same outline.
+- **Features** (`faceFeatures.tsx`): lidded eyes with the iris tucked under
+  the upper lid, eyeliner built from each eye's own lid line, tapered brows,
+  a nose made of a shadow and a highlight, and ears behind the face.
+- **Hair** (`hairRenderer.tsx`): a back layer (volume behind the head, long
+  lengths, ponytails, buns) and a front layer (the cap over the crown down to
+  a real hairline, sideburns, locks that frame the face). Each style is a
+  spec: volume, hairline, texture, lengths. Hats clip both layers.
+- All texture is seeded, never random, so an avatar draws the same way on
+  every render.
+
+## 5. Wardrobe
+
+Outfits, headwear and face accessories (eyepatch) are optional config fields
+(`outfit`, `outfitColor`, `outfitAccent`, `headwear`, `faceAccessory`). Older
+configs migrate to the navy `tee` every avatar wore before.
+
+- **Catalogue:** `src/data/avatarItems.ts` lists every item with its tier, and
+  the medal for earned items. The creator's locks and the display rule both
+  read it. Kits (`AVATAR_KITS`) are whole looks; a kit is as locked as its most
+  locked item.
+- **Tiers:** the same as the Velvet World houses. `starter` is for everyone.
+  `member` needs a paid plan. `earned` needs one medal, is never for sale, and
+  is never locked by a lapsed plan.
+- **Lapsed plans:** `resolveAvatarForDisplay(config, unlocks)` swaps each locked
+  item for its `fallback` (always a starter item) and never changes the saved
+  config, so rejoining restores the look.
+- **Drawing:** `src/renderers/outfitRenderer.tsx`. A garment is drawn once on the
+  shared torso, and the body-type stretch fits it to every build. The body sits
+  behind the neck; collars, lapels and ties sit in front. A hat names the line
+  above which hair is tucked away (`headwearHairCut`).
+- **Ids:** anything in `<defs>` that differs per avatar takes its id from
+  `useId`, so several avatars on one page never borrow each other's clip or
+  colours.
+
+### Adding an item
+
+1. Add the id to the type in `src/types/avatar-v2.ts`.
+2. Add it to the catalogue with a tier, a starter fallback, and a medal if earned.
+3. Draw it in `outfitRenderer.tsx`.
+4. Optionally add or extend a kit.
+
+Not built yet: the server check on save, and the stored "what others see" copy
+that the display rule fills in when a plan lapses.
+
+## 6. Performance Notes
 
 ### Current hot paths (PERF-NOTE comments in source)
 

@@ -1,8 +1,10 @@
 export type Gender = 'male' | 'female';
 
-export type MaleHairStyle = 'buzz' | 'short' | 'wavy' | 'sleek' | 'afro' | 'locs' | 'fade';
-export type FemaleHairStyle = 'sleek' | 'wavy' | 'curly' | 'braids' | 'ponytail' | 'afro' | 'locs' | 'bun';
-export type HairStyle = MaleHairStyle | FemaleHairStyle;
+// Every style is open to everyone. Before version 4, 'sleek', 'wavy' and
+// 'locs' meant a short cut on a male avatar; migrateAvatarConfig renames those.
+export type HairStyle =
+  | 'buzz' | 'fade' | 'short' | 'short_wavy' | 'slick_back' | 'afro' | 'locs_short'
+  | 'bun' | 'ponytail' | 'sleek' | 'wavy' | 'curly' | 'braids' | 'locs';
 
 export type LipShape = 'natural' | 'full' | 'thin' | 'heart';
 export type EyebrowShape = 'natural' | 'arched' | 'straight' | 'thick' | 'thin';
@@ -29,7 +31,12 @@ export type EyeShadow = 'none' | 'smoky' | 'natural' | 'colorful';
 export type Eyeliner = 'none' | 'thin' | 'winged' | 'bold';
 export type SkinDetail = 'none' | 'smooth' | 'textured';
 
-export const AVATAR_CONFIG_VERSION = 3 as const;
+// Wardrobe. Which of these a person may wear lives in src/data/avatarItems.ts.
+export type Outfit = 'tee' | 'linen' | 'suit' | 'chef' | 'labcoat' | 'pirate';
+export type Headwear = 'none' | 'chef_hat' | 'bandana' | 'tricorn' | 'top_hat';
+export type FaceAccessory = 'none' | 'eyepatch';
+
+export const AVATAR_CONFIG_VERSION = 4 as const;
 export type AvatarConfigVersion = typeof AVATAR_CONFIG_VERSION;
 
 export interface AvatarConfigV2 {
@@ -63,6 +70,11 @@ export interface AvatarConfigV2 {
   eyeShadow?: EyeShadow;
   eyeliner?: Eyeliner;
   skinDetail?: SkinDetail;
+  outfit?: Outfit;
+  outfitColor?: string;
+  outfitAccent?: string;
+  headwear?: Headwear;
+  faceAccessory?: FaceAccessory;
 }
 
 const V3_REQUIRED: Pick<AvatarConfigV2, 'hairTexture'> = { hairTexture: 'straight' };
@@ -213,25 +225,21 @@ export const HAIR_TEXTURES: Array<{ value: HairTexture; label: string }> = [
   { value: 'coily', label: 'Coily' },
 ];
 
-export const MALE_HAIRSTYLES: Array<{ value: MaleHairStyle; label: string }> = [
+export const HAIRSTYLES: Array<{ value: HairStyle; label: string }> = [
   { value: 'buzz', label: 'Buzz Cut' },
-  { value: 'short', label: 'Short' },
-  { value: 'wavy', label: 'Wavy' },
-  { value: 'sleek', label: 'Sleek' },
-  { value: 'afro', label: 'Afro' },
-  { value: 'locs', label: 'Locs' },
   { value: 'fade', label: 'Fade' },
-];
-
-export const FEMALE_HAIRSTYLES: Array<{ value: FemaleHairStyle; label: string }> = [
-  { value: 'sleek', label: 'Sleek' },
-  { value: 'wavy', label: 'Wavy' },
+  { value: 'short', label: 'Short' },
+  { value: 'short_wavy', label: 'Short Wavy' },
+  { value: 'slick_back', label: 'Slicked Back' },
+  { value: 'afro', label: 'Afro' },
+  { value: 'locs_short', label: 'Short Locs' },
+  { value: 'bun', label: 'Bun' },
+  { value: 'ponytail', label: 'Ponytail' },
+  { value: 'sleek', label: 'Long Straight' },
+  { value: 'wavy', label: 'Long Wavy' },
   { value: 'curly', label: 'Curly' },
   { value: 'braids', label: 'Braids' },
-  { value: 'ponytail', label: 'Ponytail' },
-  { value: 'afro', label: 'Afro' },
-  { value: 'locs', label: 'Locs' },
-  { value: 'bun', label: 'Bun' },
+  { value: 'locs', label: 'Long Locs' },
 ];
 
 export const EYE_SHAPES: Array<{ value: EyeShape; label: string }> = [

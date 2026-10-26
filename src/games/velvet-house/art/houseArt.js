@@ -4,6 +4,7 @@ import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
 import { poseRig, idleRig } from './poseAnim.js';
+import { headFrameFor } from '../state/headSprites';
 
 const GLOSS_FLOORS = new Set(['plank', 'check', 'marble', 'herring', 'parquet', 'tile', 'hex', 'mosaic']);
 
@@ -1345,6 +1346,18 @@ export function createHouseArt(ctx0, opts = {}) {
     return [s.ox, s.oy];
   }
 
+  // A person's real avatar head (state/headSprites.ts), drawn about twice the
+  // old head's size so faces read: classic big-head cartoon proportions.
+  const HEAD_W = 24;
+  function drawHeadImage(img, cx, chinY, w, mirror, rot) {
+    const h = w * 1.04;
+    ctx.save(); ctx.translate(cx, chinY);
+    if (rot) ctx.rotate(rot);
+    if (mirror) ctx.scale(-1, 1);
+    ctx.drawImage(img, -w / 2, -h * (90 / 104), w, h);
+    ctx.restore();
+  }
+
   function drawPerson(c, t) {
     const L = c.look, pose = c.pose, f = facing(c.face);
     const P3 = (dx, dy, dz) => iso(c.x + dx, c.y + dy, c.z + dz);
@@ -1356,8 +1369,11 @@ export function createHouseArt(ctx0, opts = {}) {
       const head = P3(0, 0, 0.16), mid = P3(lx * 0.3, ly * 0.3, 0.14 + breath), feet = P3(lx * 1.45, ly * 1.45, 0.12);
       limb(mid[0], mid[1], feet[0], feet[1], shade(L.top, 0.25), 15 + breath * 60);
       limb(mid[0] + tilt * 3, mid[1] - 2, mid[0] + tilt * 1, mid[1] + 1, shade(L.top, 0.35), 4);
-      if (L.longHair) ell(head[0] - 3, head[1] - 1, 7, 4, L.hair);
-      circle(head[0], head[1] - 2, 5.5, L.skin); ell(head[0] - 1, head[1] - 5, 6, 3.5, L.hair);
+      if (L.heads && L.heads.neutral) drawHeadImage(L.heads.blink || L.heads.neutral, head[0], head[1] + 4, HEAD_W * 0.9, tilt < 0, tilt * -1.1);
+      else {
+        if (L.longHair) ell(head[0] - 3, head[1] - 1, 7, 4, L.hair);
+        circle(head[0], head[1] - 2, 5.5, L.skin); ell(head[0] - 1, head[1] - 5, 6, 3.5, L.hair);
+      }
       const zz = (t * 0.6 + c.seed) % 1; ctx.globalAlpha = 1 - zz; ctx.fillStyle = '#F2EEE8'; ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.fillText('z', head[0] + 6 + zz * 6, head[1] - 10 - zz * 12); ctx.globalAlpha = 1;
       return;
     }
@@ -1443,7 +1459,7 @@ export function createHouseArt(ctx0, opts = {}) {
       // The ends swing a little further than the rest.
       ell(hd[0] + sway * 0.7 + hair[0], hd[1] + 3 + hair[1] * 0.5, 4.6, 3.6, L.hair);
     };
-    if (f.front) hairBack();
+    if (f.front && !L.heads) hairBack();
     if (L.topStyle === 'dress' && !c.sit) {
       // A skirt that flares and swings at the hem.
       const kz = P3(0, 0, hipZ * 0.55);
@@ -1487,6 +1503,30 @@ export function createHouseArt(ctx0, opts = {}) {
       } else if (pat === 'denim') {
         ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 0.7;
         for (let i = -14; i <= 14; i += 2.6) { ctx.beginPath(); ctx.moveTo(-7, i); ctx.lineTo(7, i); ctx.stroke(); }
+      } else {
+        // Signature outfits from the avatar wardrobe. +x runs up to the neckline.
+        const hl = half - 5.5, A = L.accent;
+        const tri = (pts, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(q => ctx.lineTo(q[0], q[1])); ctx.closePath(); ctx.fill(); };
+        const line = (a, b, col, lw) => { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); };
+        if (pat === 'blazer') {
+          tri([[hl, -2.8], [hl, 2.8], [hl - 8, 0]], '#f2efe8');
+          ctx.fillStyle = A || '#8a2d3b'; ctx.fillRect(hl - 9, -0.8, 8.5, 1.6);
+          line([hl, -3.2], [hl - 9, -0.6], 'rgba(0,0,0,.35)', 0.8); line([hl, 3.2], [hl - 9, 0.6], 'rgba(0,0,0,.35)', 0.8);
+        } else if (pat === 'chef') {
+          ctx.fillStyle = A || '#1f2937';
+          [hl - 3, hl - 6.5, hl - 10].forEach(x => [-2.2, 2.2].forEach(y => { ctx.beginPath(); ctx.arc(x, y, 0.7, 0, 7); ctx.fill(); }));
+        } else if (pat === 'labcoat') {
+          tri([[hl, -3], [hl, 3], [hl - 11, 0]], A || '#9cc3e6');
+          line([hl, -3.2], [-hl, -1.4], 'rgba(0,0,0,.22)', 0.7); line([hl, 3.2], [-hl, 1.4], 'rgba(0,0,0,.22)', 0.7);
+        } else if (pat === 'pirate') {
+          ctx.fillStyle = A || '#5a1f2b';
+          ctx.fillRect(-hl - 6, -5.5, hl * 2 + 5, 3.9); ctx.fillRect(-hl - 6, 1.6, hl * 2 + 5, 3.9);
+          line([-hl - 6, -1.6], [hl - 1, -1.6], '#c9a24a', 0.6); line([-hl - 6, 1.6], [hl - 1, 1.6], '#c9a24a', 0.6);
+          line([hl, -1.2], [hl - 4, 1.2], '#5b4632', 0.5); line([hl, 1.2], [hl - 4, -1.2], '#5b4632', 0.5);
+        } else if (pat === 'linen') {
+          line([hl, -2], [hl - 5, 0], A || '#8a6a4a', 0.5); line([hl - 5, 0], [hl, 2], A || '#8a6a4a', 0.5);
+          line([hl - 1.5, -1.4], [hl - 3, 1], A || '#8a6a4a', 0.4);
+        }
       }
       ctx.restore();
     }
@@ -1511,6 +1551,11 @@ export function createHouseArt(ctx0, opts = {}) {
       const ps = poseState(c), e = ease2(ps, side, ex, ey, rdt);
       limb(sh[0] + shift * 1.4 + side * 4.5, sh[1] + 1, e[0], e[1], L.skin, 3.2);
     });
+    if (L.heads && L.heads.neutral) {
+      const frame = headFrameFor({ front: f.front, talking: talking || !!rig?.talk, t, seed: c.seed, blink: bl > 0.5, expr: c.expr, mood }, L.heads);
+      drawHeadImage(L.heads[frame] || L.heads.neutral, hd[0] + shift * 1.6, hd[1] + 1.2, HEAD_W, f.flip < 0, 0);
+      return;
+    }
     circle(hd[0] + shift * 1.6, hd[1] - 5, 5.6, L.skin);
     if (f.front) {
       ell(hd[0] + shift * 1.6 + sway * 0.3, hd[1] - 9, 6, 3.6, L.hair);

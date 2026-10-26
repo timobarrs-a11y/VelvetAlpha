@@ -34,8 +34,8 @@ export const GAMES: GameEntry[] = [
   { id: 'stellar',      name: 'Stellar Pursuit', description: 'Space shooter — navigate 9 sectors to rescue your family',          icon: Rocket,    iconBg: 'from-slate-600 to-slate-900',    path: '/stellar-pursuit' },
   { id: 'money-grab',   name: 'Money Grab',      description: 'Race to collect cash while dodging hammers and your companion',      icon: Cherry,    iconBg: 'from-yellow-400 to-orange-500',  requiresCompanion: true },
   { id: 'social-combat',  name: 'Social Combat',   description: 'Read emotions and master the art of conversation',                           icon: Brain,   iconBg: 'from-violet-500 to-indigo-600', path: '/social-combat' },
-  { id: 'velvet-house',    name: 'Velvet House',    description: 'An interactive story where your companion comes alive in a cozy mystery',     icon: Home,    iconBg: 'from-rose-500 to-pink-700',      path: '/velvet-house', requiresCompanion: true },
-  { id: 'velvet-house-next', name: 'Velvet House (Preview)', description: 'The rebuilt Velvet House — new engine, richer simulation. Work in progress.', icon: Home,    iconBg: 'from-amber-500 to-orange-600',   path: '/velvet-house-next' },
+  { id: 'velvet-house',    name: 'Velvet Sims',     description: 'An interactive story where your companion comes alive in a cozy mystery',     icon: Home,    iconBg: 'from-rose-500 to-pink-700',      path: '/velvet-house', requiresCompanion: true },
+  { id: 'velvet-house-next', name: 'Velvet Sims (Preview)', description: 'The rebuilt Velvet Sims — new engine, richer simulation. Work in progress.', icon: Home,    iconBg: 'from-amber-500 to-orange-600',   path: '/velvet-house-next' },
 ];
 
 export interface ConfirmModal {

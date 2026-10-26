@@ -34,6 +34,10 @@ export interface GameLook {
   facialHair?: string;
   glasses?: string;
   gender?: 'male' | 'female';
+  // The real avatar head as SVG frames (see state/headSprites.ts).
+  sprites?: Record<string, string>;
+  // The avatar's outfit, worn as the signature look (see state/clothing.ts).
+  outfit?: { style: string; color: string; accent: string; bottom: string; key: string };
 }
 
 export interface ProfileMessage extends BridgeMessage {

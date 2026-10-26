@@ -16,6 +16,8 @@ export interface OwnedCloth {
   col: string;
   name: string;
   id: string;
+  // Second colour, for signature tops (the tie, the vest).
+  accent?: string;
 }
 
 export interface LookState {
@@ -73,6 +75,26 @@ export function wearOn(look: LookState, pc: OwnedCloth): void {
     case 'hat': look.hat = pc.style; look.hatColor = pc.col; break;
     case 'glasses': look.glasses = pc.style; look.glassColor = pc.col; break;
   }
+}
+
+// Putting a closet piece on a game character (its look keeps colours, not styles, for legs).
+export function wearOnAgent(look: { top: string; topStyle: string; bottom: string; accent?: string }, pc: OwnedCloth): void {
+  if (pc.slot === 'top') { look.topStyle = pc.style; look.top = pc.col; look.accent = pc.accent; }
+  if (pc.slot === 'bottom') look.bottom = pc.col;
+}
+
+// The avatar's outfit, sent by the host: worn by default, kept in the closet.
+export interface SignatureOutfit { style: string; color: string; accent: string; bottom: string; key: string }
+export const SIGNATURE_STYLES = new Set(['tee', 'linen', 'blazer', 'chef', 'labcoat', 'pirate']);
+const HEX6 = /^#[0-9a-f]{6}$/i;
+
+export function validOutfit(raw: unknown): SignatureOutfit | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.style !== 'string' || !SIGNATURE_STYLES.has(o.style)) return null;
+  if (![o.color, o.accent, o.bottom].every(c => typeof c === 'string' && HEX6.test(c))) return null;
+  if (typeof o.key !== 'string' || o.key.length > 200) return null;
+  return { style: o.style, color: o.color as string, accent: o.accent as string, bottom: o.bottom as string, key: o.key };
 }
 
 export function defaultCloset(look: LookState, mayaLook: LookState, pantsCol: string, shoeCol: string): OwnedCloth[] {

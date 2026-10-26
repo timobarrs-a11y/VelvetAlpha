@@ -4,11 +4,13 @@ import {
   DEFAULT_MALE_AVATAR_V2,
   DEFAULT_FEMALE_AVATAR_V2,
   HairTexture,
+  HairStyle,
 } from '../types/avatar-v2';
 
 const V3_OPTIONAL_DEFAULTS: Required<Pick<
   AvatarConfigV2,
   '_version' | 'hairLength' | 'makeupIntensity' | 'eyeShadow' | 'eyeliner' | 'skinDetail'
+  | 'outfit' | 'outfitColor' | 'outfitAccent' | 'headwear' | 'faceAccessory'
 >> = {
   _version: AVATAR_CONFIG_VERSION,
   hairLength: 'medium',
@@ -16,6 +18,12 @@ const V3_OPTIONAL_DEFAULTS: Required<Pick<
   eyeShadow: 'none',
   eyeliner: 'none',
   skinDetail: 'none',
+  // The navy tee every avatar wore before the wardrobe existed.
+  outfit: 'tee',
+  outfitColor: '#1e293b',
+  outfitAccent: '#2d3748',
+  headwear: 'none',
+  faceAccessory: 'none',
 };
 
 export function migrateAvatarConfig(raw: unknown): AvatarConfigV2 {
@@ -39,14 +47,27 @@ export function migrateAvatarConfig(raw: unknown): AvatarConfigV2 {
     merged.hairTexture = inferTextureFromStyle(merged.hairStyle);
   }
 
+  // Version 4 opened every hairstyle to everyone. Three names used to mean a
+  // short cut on male avatars; give those their own names so nothing changes.
+  if ((Number(partial._version) || 0) < 4 && gender === 'male') {
+    const renamed: Record<string, HairStyle> = { sleek: 'slick_back', wavy: 'short_wavy', locs: 'locs_short' };
+    merged.hairStyle = renamed[merged.hairStyle] ?? merged.hairStyle;
+  }
+
   return merged;
 }
 
+// Apply an edit to any stored config: bring it up to date first, so an old
+// config's names are read the old way, then stamp the current version.
+export function applyAvatarChange(config: unknown, change: Partial<AvatarConfigV2>): AvatarConfigV2 {
+  return { ...migrateAvatarConfig(config), ...change, _version: AVATAR_CONFIG_VERSION };
+}
+
 function inferTextureFromStyle(style: string): HairTexture {
-  if (style === 'afro' || style === 'locs' || style === 'braids' || style === 'curly') {
+  if (style === 'afro' || style === 'locs' || style === 'locs_short' || style === 'braids' || style === 'curly') {
     return 'coily';
   }
-  if (style === 'wavy') {
+  if (style === 'wavy' || style === 'short_wavy') {
     return 'wavy';
   }
   return 'straight';

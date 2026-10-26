@@ -181,8 +181,11 @@
   padding: 20px;
 }
 .vh-dialogue[hidden] { display: none; }
+/* The floor and speed controls sit where the chat opens; step them aside while it's up. */
+.vh-stage:has(.vh-dialogue:not([hidden])) .vh-controls { opacity: 0; pointer-events: none; }
+.vh-controls { transition: opacity .2s ease; }
 .vh-dialogue-box {
-  background: rgba(255,253,248,.96);
+  background: #FFFDF8;
   border-radius: 16px; padding: 20px 24px;
   max-width: 560px; width: 100%;
   box-shadow: 0 8px 32px rgba(0,0,0,.3);

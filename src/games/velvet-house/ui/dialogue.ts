@@ -2,6 +2,7 @@
  * Dialogue box — Pokémon-style chat with the companion.
  * Shows text with a typewriter effect, tap-to-advance.
  */
+import { headFrameFor, type HeadImages } from '../state/headSprites';
 export interface DialogueCallbacks {
   onSend: (text: string) => void;
   onClose: () => void;
@@ -16,6 +17,7 @@ export function createDialogue(cb: DialogueCallbacks): {
   busy: (b: boolean) => void;
   setPortraitLook: (l: { skin: string; hair: string; longHair: boolean } | null) => void;
   setPortraitTalking: (v: boolean) => void;
+  setPortraitImages: (imgs: HeadImages | null) => void;
 } {
   const el = document.createElement('div');
   el.className = 'vh-dialogue';
@@ -42,6 +44,9 @@ export function createDialogue(cb: DialogueCallbacks): {
   let talking = false, blinkT = Math.random() * 3;
   function setPortraitLook(l: { skin: string; hair: string; longHair: boolean } | null): void { look = l; }
   function setPortraitTalking(v: boolean): void { talking = Boolean(v); }
+  // The companion's real avatar head, when the host sent one.
+  let images: HeadImages | null = null;
+  function setPortraitImages(imgs: HeadImages | null): void { images = imgs; }
   let last = performance.now();
   function frame(ts: number): void {
     const dt = Math.min(0.1, (ts - last) / 1000); last = ts;
@@ -49,7 +54,10 @@ export function createDialogue(cb: DialogueCallbacks): {
       blinkT = (blinkT + dt) % 3.5;
       const blink = blinkT > 3.3;
       pctx.clearRect(0, 0, 64, 64);
-      if (look) {
+      if (images?.neutral) {
+        const frame = headFrameFor({ front: true, talking, t: ts / 1000, seed: 0.3, blink, mood: 0.5 }, images);
+        pctx.drawImage((images[frame] || images.neutral)!, 0, -1, 64, 66.5);
+      } else if (look) {
         if (look.longHair) { pctx.fillStyle = look.hair; pctx.beginPath(); pctx.ellipse(32, 32, 22, 23, 0, 0, Math.PI * 2); pctx.fill(); }
         pctx.fillStyle = look.skin; pctx.beginPath(); pctx.arc(32, 35, 17, 0, Math.PI * 2); pctx.fill();
         pctx.fillStyle = look.hair; pctx.beginPath(); pctx.ellipse(32, 21, 18, 9, 0, 0, Math.PI * 2); pctx.fill();
@@ -150,7 +158,7 @@ export function createDialogue(cb: DialogueCallbacks): {
     if (e.target === el) close();
   });
 
-  return { el, open, close, showAI, showInput, busy, setPortraitLook, setPortraitTalking };
+  return { el, open, close, showAI, showInput, busy, setPortraitLook, setPortraitTalking, setPortraitImages };
 }
 
 /**
