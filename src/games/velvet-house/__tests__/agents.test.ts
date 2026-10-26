@@ -29,6 +29,29 @@ describe('household agents', () => {
     }
   });
 
+  it('someone with everything they need still finds something to do, all over the house', () => {
+    const { world, j, rng } = setup();
+    const chosen = new Set<string>();
+    for (let i = 0; i < 300; i++) {
+      j.needs = { energy: 95, food: 95, hygiene: 95, fun: 95, comfort: 95, social: 95 };
+      j.lastChain = null;
+      const c = chooseChain(world, j, null, 10 + (i % 10), () => rng.next());
+      expect(c, 'never just stands there').not.toBeNull();
+      chosen.add(c!);
+    }
+    // Plenty of variety, from the starter house alone.
+    expect(chosen.size).toBeGreaterThanOrEqual(12);
+  });
+
+  it('everyday activities each have somewhere to happen in the starter house', () => {
+    const { world, j, m, rng } = setup();
+    for (const chain of ['newspaper', 'tend', 'rakeYard', 'yardWorkout', 'phonePace', 'window', 'snack', 'wipeCounter',
+      'soloDance', 'journal', 'freelance', 'mirror', 'foldClothes', 'makeBed', 'meditate', 'laundry', 'rummage', 'lift', 'jumprope', 'shadowbox']) {
+      j.task = null;
+      expect(startChain(world, j, chain, m, () => rng.next()), chain).toBe(true);
+    }
+  });
+
   it('a hungry person chooses to cook and eat', () => {
     const { world, j, rng } = setup();
     j.needs = { energy: 90, food: 5, hygiene: 90, fun: 90, comfort: 90, social: 90 };

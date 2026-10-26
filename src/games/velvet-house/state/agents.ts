@@ -56,6 +56,8 @@ export interface Agent {
   idle: number;
   onStairs: boolean;
   lastChain: string | null;
+  // The last few things they did, newest first: they avoid repeating them.
+  recent?: string[];
   look: AgentLook;
 }
 
@@ -83,12 +85,21 @@ const ACT_TAGS: Record<string, string[]> = {
   piano: ['piano'], easel: ['easel'], aquarium: ['aquarium'], guitar: ['guitar'],
   massage: ['massage'], hammock: ['hammock'], jukebox: ['jukebox'], bike: ['bike'],
   boxing: ['boxbag'], stargaze: ['stars'], fire: ['fireside'], swim: ['swim'],
+  // Everyday life (see activities.ts); `open` ones need no object.
+  newspaper: ['seat'], snack: ['fridge'], wipeCounter: ['sink'], journal: ['desk'], freelance: ['desk'],
+  mirror: ['mirror'], foldClothes: ['dresser'], makeBed: ['makebed'], laundry: ['washer'],
+  rummage: ['rummage'], tend: ['garden'],
 };
 
 const CHOICES = [
   'sleep', 'nap', 'cookeat', 'coffee', 'shower', 'bath', 'read', 'phone', 'tv',
   'workout', 'stretch', 'records', 'arcade', 'plants', 'piano', 'easel', 'aquarium',
   'guitar', 'massage', 'hammock', 'jukebox', 'bike', 'boxing', 'stargaze', 'fire', 'swim',
+  // Everyday life on every floor, chosen even when nothing is urgent.
+  'newspaper', 'tend', 'rakeYard', 'yardWorkout', 'phonePace',
+  'window', 'snack', 'wipeCounter', 'soloDance',
+  'journal', 'freelance', 'mirror', 'foldClothes', 'makeBed', 'meditate',
+  'laundry', 'rummage', 'lift', 'jumprope', 'shadowbox',
 ];
 
 export const SITTING_POSES = new Set(['tv', 'read', 'phone', 'desk', 'eat', 'sip', 'eatOut']);
@@ -200,7 +211,8 @@ function chainScore(ch: Agent, chain: string, hourF: number): number {
   if (chain === 'nap' && ch.needs.energy > 40) return -1;
   const gain = ACTIVITIES[GAIN_OF[chain] ?? chain];
   if (!gain?.gives) return -1;
-  let s = 0;
+  // What it does for their needs, plus how much they simply like doing it.
+  let s = gain.appeal ?? 0;
   for (const [k, g] of Object.entries(gain.gives) as [NeedKey, number][]) s += weight(ch.needs[k]) * g;
   return ch.lastChain === chain ? s * 0.4 : s;
 }
@@ -209,17 +221,33 @@ function takenBy(other: Agent | null): Set<string> {
   return new Set(other?.task?.slot ? [other.task.slot.id] : []);
 }
 
+// A need this pressing is handled first, whatever else is on offer.
+const URGENT = 20;
+// How many recent activities someone remembers, and avoids repeating.
+const RECENT = 4;
+
 export function chooseChain(world: HouseWorld, ch: Agent, other: Agent | null, hourF: number, rng: () => number): string | null {
   const taken = takenBy(other);
-  let best: string | null = null;
-  let bs = 2.5;
+  const options: Array<{ chain: string; score: number }> = [];
   for (const c of CHOICES) {
-    const sc = chainScore(ch, c, hourF);
+    let sc = chainScore(ch, c, hourF);
     if (sc < 0) continue;
-    const noisy = sc + rng() * 4;
-    if (noisy > bs && chainAvailable(world, ch, c, taken)) { bs = noisy; best = c; }
+    // Something they did a moment ago is less tempting.
+    if (ch.recent?.includes(c)) sc *= 0.35;
+    const noisy = sc + rng() * 2;
+    if (noisy > 2.5 && chainAvailable(world, ch, c, taken)) options.push({ chain: c, score: noisy });
   }
-  return best;
+  if (!options.length) return null;
+  options.sort((a, b) => b.score - a.score);
+  // Hungry, filthy or exhausted: deal with it. Otherwise, like a Sim, pick
+  // among the good options, the better ones more often, so a content day is
+  // full of different things instead of the same favourite on repeat.
+  if (options[0].score >= URGENT) return options[0].chain;
+  const pool = options.slice(0, 8);
+  const total = pool.reduce((s, o) => s + o.score * o.score, 0);
+  let r = rng() * total;
+  for (const o of pool) { r -= o.score * o.score; if (r <= 0) return o.chain; }
+  return pool[0].chain;
 }
 
 function routeTo(world: HouseWorld, ch: Agent, level: number, x: number, y: number): RouteLeg[] {
@@ -232,7 +260,11 @@ function startAct(world: HouseWorld, ch: Agent, act: string, next: string[], oth
   const meta = ACTIVITIES[act];
   let goal: [number, number, number];
   if (slot) goal = [slot.level, slot.stand[0], slot.stand[1]];
-  else {
+  else if (meta?.open && meta.level !== undefined) {
+    // Anywhere free on its floor: the yard, the living room, the basement.
+    const [gx, gy] = randomFree(world.grids[meta.level], rng, LEVELS[meta.level].anchor);
+    goal = [meta.level, gx, gy];
+  } else {
     const [gx, gy] = randomFree(world.grids[ch.level], rng, LEVELS[ch.level].anchor);
     goal = [ch.level, gx, gy];
   }
@@ -244,6 +276,7 @@ export function startChain(world: HouseWorld, ch: Agent, chain: string, other: A
   const [first, ...rest] = chainOf(chain);
   if (!startAct(world, ch, first, rest, other, rng)) return false;
   ch.lastChain = chain;
+  ch.recent = [chain, ...(ch.recent ?? []).filter(c => c !== chain)].slice(0, RECENT);
   return true;
 }
 

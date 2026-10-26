@@ -561,10 +561,19 @@ function boot(): void {
       const jy = 128 + (jordan.x + jordan.y) * 16 - jordan.z * 34;
       if (Math.hypot(sx - jx, sy - jy) < 30) { toggleFollow('jordan'); return; }
     }
-    // Try clicking on objects
+    // Try clicking on objects. Touch one and it comes alive: the TV flickers
+    // on, the washer spins, the fridge swings open. This comes before the
+    // room's lights, so tapping the TV doesn't switch on the lamp beside it.
+    // Then, as before, you can ask Jordan to use it.
+    const obj = findObjectAt(sx, sy);
+    const reaction = obj ? art.poke(obj, counterPartAt(obj, sx, sy)) : null;
+    if (obj && reaction) {
+      log(reaction);
+      showObjectActions(obj, e.clientX, e.clientY, true);
+      return;
+    }
     const lightState = art.toggleLightAt(view.level, sx, sy);
     if (lightState !== null) { log(`Light turned ${lightState ? 'on' : 'off'}.`); return; }
-    const obj = findObjectAt(sx, sy);
     if (obj && TYPES[obj.type]?.light) {
       const on = art.toggleObjectLight(obj.id);
       log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);
@@ -572,6 +581,15 @@ function boot(): void {
     }
     if (obj) { showObjectActions(obj, e.clientX, e.clientY); return; }
   });
+
+  // Which part of the kitchen counter was tapped: the sink, the stove or the coffee machine.
+  function counterPartAt(obj: ObjectInstance, sx: number, sy: number): string {
+    if (obj.type !== 'counter') return '';
+    const wx = ((sx - 288) / 32 + (sy - 128) / 16) / 2, wy = ((sy - 128) / 16 - (sx - 288) / 32) / 2;
+    const along = obj.rot % 2 ? wy - obj.y : wx - obj.x;
+    const parts: [string, number][] = [['sink', 0.65], ['stove', 1.65], ['coffee', 2.45]];
+    return parts.reduce((best, p) => Math.abs(p[1] - along) < Math.abs(best[1] - along) ? p : best)[0];
+  }
 
   // Mouse move in arrange mode: drag held object
   canvas.addEventListener('mousemove', (e) => {
@@ -634,7 +652,7 @@ function boot(): void {
     return best;
   }
 
-  function showObjectActions(obj: ObjectInstance, x: number, y: number): void {
+  function showObjectActions(obj: ObjectInstance, x: number, y: number, poked = false): void {
     const spots = TYPES[obj.type]?.spots;
     const isLight = Boolean(TYPES[obj.type]?.light);
     const acts: TrayAction[] = [];
@@ -650,7 +668,9 @@ function boot(): void {
       }
     }
     if (acts.length === 0) return;
-    if (acts.length === 1) { handleObjectAction(obj, acts[0].act); return; }
+    // A tap that brought the object to life shouldn't also send Jordan over:
+    // offer the action instead of doing it.
+    if (acts.length === 1 && !poked) { handleObjectAction(obj, acts[0].act); return; }
     tray.show(acts, x, y, (a) => handleObjectAction(obj, a.act));
   }
 

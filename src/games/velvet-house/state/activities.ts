@@ -31,6 +31,12 @@ export interface ActivityMeta {
   fixed?: boolean;
   rug?: boolean;
   wall?: boolean;
+  // How much someone just likes doing this, whatever their needs. Gives a
+  // content character something to do instead of standing around, the way
+  // a Sim with full needs still potters, tidies and plays.
+  appeal?: number;
+  // Done anywhere free on its level (`level`), not at an object.
+  open?: boolean;
 }
 
 export const ACTIVITIES: Record<string, ActivityMeta> = {
@@ -106,7 +112,32 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
   jukebox: { pose: 'dance', dur: 20, gives: { fun: 45, energy: -4 }, verb: 'Dancing to the jukebox' },
   guitar: { pose: 'listen', dur: 25, gives: { fun: 35 }, verb: 'Playing guitar' },
   scoop: { pose: 'reach', dur: 5, gives: {}, verb: 'Scooping the litter box' },
+
+  // ---- Everyday life around the house: things to do when nothing's urgent ----
+  // Yard
+  newspaper: { pose: 'read', dur: 30, gives: { comfort: 20, fun: 15 }, verb: 'Reading the paper on the bench', level: 3, appeal: 6 },
+  rakeYard: { pose: 'mop', dur: 20, gives: { comfort: 10, fun: 4 }, verb: 'Raking the yard', level: 3, open: true, appeal: 3 },
+  yardWorkout: { pose: 'jacks', dur: 15, gives: { fun: 12, energy: -8, hygiene: -12 }, verb: 'Doing jumping jacks in the yard', level: 3, open: true, appeal: 3 },
+  phonePace: { pose: 'phone', dur: 20, gives: { social: 22, fun: 8 }, verb: 'Pacing the yard on a call', level: 3, open: true, appeal: 4 },
+  // Main floor
+  snack: { pose: 'snack', dur: 8, gives: { food: 22, fun: 5 }, verb: 'Grabbing a snack', appeal: 2 },
+  wipeCounter: { pose: 'wipe', dur: 12, gives: { comfort: 12 }, verb: 'Wiping down the counters', appeal: 4 },
+  soloDance: { pose: 'dance', dur: 20, gives: { fun: 35, energy: -5 }, verb: 'Dancing around the living room', level: 1, open: true, appeal: 3 },
+  // Upstairs
+  journal: { pose: 'desk', dur: 25, gives: { comfort: 15, fun: 15 }, verb: 'Writing in a journal', appeal: 5 },
+  mirror: { pose: 'stand', dur: 10, gives: { hygiene: 10, comfort: 10 }, verb: 'Getting ready at the mirror', appeal: 4 },
+  foldClothes: { pose: 'reach', dur: 12, gives: { comfort: 12 }, verb: 'Folding clothes', appeal: 4 },
+  makeBed: { pose: 'reach', dur: 8, gives: { comfort: 15 }, verb: 'Making the bed', appeal: 4 },
+  meditate: { pose: 'meditate', dur: 20, gives: { comfort: 30, energy: 5 }, verb: 'Meditating', level: 2, open: true, appeal: 4 },
+  // Basement
+  jumprope: { pose: 'jumprope', dur: 12, gives: { fun: 15, energy: -8, hygiene: -12 }, verb: 'Skipping rope', level: 0, open: true, appeal: 3 },
+  shadowbox: { pose: 'arcade', dur: 12, gives: { fun: 15, energy: -6, hygiene: -10 }, verb: 'Shadowboxing', level: 0, open: true, appeal: 3 },
 };
+
+// Everyday activities that already existed, now also chosen on their own.
+for (const [act, appeal] of Object.entries({ tend: 6, window: 4, freelance: 3, laundry: 4, rummage: 3, lift: 3, plants: 3 })) {
+  ACTIVITIES[act] = { ...ACTIVITIES[act], appeal };
+}
 
 export const CHAINS: Record<string, string[]> = {
   cookeat: ['cook', 'eat'],

@@ -24,6 +24,18 @@ describe('poseRig', () => {
     }
   });
 
+  it('animates every everyday activity, with hands that move over time', () => {
+    const everyday = ['newspaper', 'rakeYard', 'yardWorkout', 'phonePace', 'snack', 'wipeCounter', 'soloDance',
+      'journal', 'mirror', 'foldClothes', 'makeBed', 'meditate', 'jumprope', 'shadowbox'];
+    for (const act of everyday) {
+      const pose = ACTIVITIES[act].pose;
+      const frames = [0.1, 0.45, 0.9, 1.7, 2.6].map(t => poseRig(pose, t, 0.3, act));
+      expect(frames.every(Boolean), act).toBe(true);
+      const moved = frames.some((f, i) => i > 0 && [1, -1].some(s => f!.hands[s].some((v: number, k: number) => Math.abs(v - frames[0]!.hands[s][k]) > 0.004)) || (f!.bob ?? 0) !== (frames[0]!.bob ?? 0));
+      expect(moved, act).toBe(true);
+    }
+  });
+
   it('moves over time, so you can watch the activity', () => {
     for (const pose of ['cook', 'run', 'lift', 'mop', 'roll', 'swim', 'desk']) {
       const a = poseRig(pose, 0.2, 0.1)!.hands[1], b = poseRig(pose, 0.55, 0.1)!.hands[1];
