@@ -84,6 +84,10 @@ verify_jwt = true
 [functions.proactive-check-in-scheduler]
 verify_jwt = false
 
+# Called by a database trigger with the cron credentials; checks them itself.
+[functions.push-notify]
+verify_jwt = false
+
 [functions.process-scheduled-callbacks]
 verify_jwt = false
 
