@@ -22,6 +22,17 @@ export interface DrawerCallbacks {
   onRestart: () => void;
   onPickLifeGoal: (goal: string) => void;
   onWear: (cloth: OwnedCloth) => void;
+  // The salon: avatar items that are the player's everywhere once bought.
+  onBuyAvatarItem: (itemId: string) => void;
+}
+
+// One thing for sale in the salon (see src/data/avatarCatalog.ts).
+export interface SalonItem {
+  id: string;
+  name: string;
+  price: number;
+  owned: boolean;
+  swatch?: string;
 }
 
 export interface DrawerState {
@@ -53,7 +64,10 @@ export interface DrawerState {
   mayaStatus: string;
   closet: OwnedCloth[];
   wearing: { top: string; topStyle: string; bottom: string };
+  salon: SalonItem[];
 }
+
+const SALON_TAB = 'Salon';
 
 const PAGE_TITLES: Record<string, string> = {
   shop: 'Shop',
@@ -101,6 +115,9 @@ export function createDrawer(cb: DrawerCallbacks): {
   closeBtn.addEventListener('click', (e) => { e.stopPropagation(); cb.onClose(); openPage(''); });
 
   let currentPage: DrawerPage = '';
+  // The shop tab stays where the player left it across refreshes (a purchase
+  // redraws the drawer, and shouldn't bounce them back to the first tab).
+  let currentTab = '';
 
   function openPage(pg: DrawerPage): void {
     currentPage = pg;
@@ -133,10 +150,15 @@ export function createDrawer(cb: DrawerCallbacks): {
 
   function renderShop(state: DrawerState): void {
     const sec = el.querySelector('[data-page="shop"]')!;
-    const tab = state.shopTab || 'Today';
-    const tabBtns = TABS.map(t =>
+    const tab = currentTab || state.shopTab || 'Today';
+    const tabBtns = [...TABS, SALON_TAB].map(t =>
       `<button data-tab="${t}" class="${t === tab ? 'vh-active' : ''}">${t}</button>`
     ).join('');
+
+    if (tab === SALON_TAB) {
+      renderSalon(sec, tabBtns, state);
+      return;
+    }
 
     const items = itemsForTab(tab);
     const cards = items.map(item => {
@@ -167,7 +189,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.innerHTML = `<div class="vh-shop-tabs">${tabBtns}</div><div class="vh-shop-list">${cards || '<p class="vh-empty">Nothing here yet.</p>'}</div>`;
 
     sec.querySelectorAll('[data-tab]').forEach(b => {
-      b.addEventListener('click', () => { state.shopTab = (b as HTMLElement).dataset.tab!; render(state); });
+      b.addEventListener('click', () => { currentTab = (b as HTMLElement).dataset.tab!; render(state); });
     });
     sec.querySelectorAll('[data-buy]').forEach(b => {
       b.addEventListener('click', (e) => {
@@ -183,6 +205,38 @@ export function createDrawer(cb: DrawerCallbacks): {
         const card = (s.closest('.vh-shop-card') as HTMLElement)?.dataset.item;
         const item = CATALOG.find(c => c.id === card);
         if (item) cb.onBuy(item, (s as HTMLElement).dataset.color);
+      });
+    });
+  }
+
+  // The salon sells looks for the player's own avatar. Bought here, they're
+  // theirs outside the game too: in the avatar creator and everywhere their
+  // face appears.
+  function renderSalon(sec: Element, tabBtns: string, state: DrawerState): void {
+    const cards = state.salon.map(item => {
+      const tooExpensive = !item.owned && item.price > state.money;
+      const cls = item.owned ? 'vh-owned' : tooExpensive ? 'vh-poor' : '';
+      const swatch = item.swatch ? `<div class="vh-swatches"><span class="vh-swatch" style="background:${item.swatch}"></span></div>` : '';
+      return `<div class="vh-shop-card ${cls}" data-salon-item="${item.id}">
+        <div class="vh-shop-info">
+          <strong>${item.name}</strong>
+          <span class="vh-shop-desc">${item.owned ? 'Yours, in the game and out of it.' : 'Wear it in Velvet too, not just here.'}</span>
+          ${swatch}
+        </div>
+        <div class="vh-shop-actions">
+          <span class="vh-price">$${item.price}</span>
+          <button data-salon-buy="${item.id}" ${item.owned ? 'disabled' : ''}>${item.owned ? 'Owned' : 'Buy'}</button>
+        </div>
+      </div>`;
+    }).join('');
+    sec.innerHTML = `<div class="vh-shop-tabs">${tabBtns}</div><div class="vh-shop-list">${cards || '<p class="vh-empty">The salon is restocking.</p>'}</div>`;
+    sec.querySelectorAll('[data-tab]').forEach(b => {
+      b.addEventListener('click', () => { currentTab = (b as HTMLElement).dataset.tab!; render(state); });
+    });
+    sec.querySelectorAll('[data-salon-buy]').forEach(b => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cb.onBuyAvatarItem((b as HTMLElement).dataset.salonBuy!);
       });
     });
   }

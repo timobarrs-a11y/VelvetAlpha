@@ -12,7 +12,8 @@ export type BridgeMessageType =
   | 'velvet:vidResults'
   | 'velvet:restarted'
   | 'velvet:avatarItemBought'
-  | 'velvet:avatarInventory';
+  | 'velvet:avatarInventory'
+  | 'velvet:lookChanged';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -104,6 +105,23 @@ export interface AvatarInventoryMessage extends BridgeMessage {
   owned: string[];
 }
 
+// The player changed clothes in the game: the host saves it to their avatar,
+// so the avatar screen, toolbar and chats match what they're wearing.
+export interface LookChangedMessage extends BridgeMessage {
+  type: 'velvet:lookChanged';
+  game: 'velvet-house';
+  who: 'player';
+  top: { style: string; color: string; accent?: string };
+}
+
+export function isLookChangedMessage(data: unknown): data is LookChangedMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  const top = m.top as Record<string, unknown> | undefined;
+  return m.type === 'velvet:lookChanged' && m.who === 'player' && !!top
+    && typeof top.style === 'string' && typeof top.color === 'string';
+}
+
 export function isAvatarItemBoughtMessage(data: unknown): data is AvatarItemBoughtMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;
@@ -193,6 +211,7 @@ const FIELD_WHITELISTS: Record<string, string[]> = {
   'velvet:restarted': ['type', 'game', 'day'],
   'velvet:avatarItemBought': ['type', 'game', 'itemId'],
   'velvet:avatarInventory': ['type', 'owned'],
+  'velvet:lookChanged': ['type', 'game', 'who', 'top'],
 };
 
 export function sanitizeMessage(msg: Record<string, unknown>): Record<string, unknown> {

@@ -5,7 +5,9 @@ import { supabase } from '../shared/supabase/client';
 import { getCompanion, getCompanions, type Companion } from '../services/companionService';
 import { loadAvatarUnlocks } from '../hooks/useAvatarUnlocks';
 import { buildProfile, type PlayerProfile } from '../features/velvet-sims/simProfile';
-import { isReadyMessage, isAvatarItemBoughtMessage } from '../games/velvet-house/bridge/protocol';
+import { isReadyMessage, isAvatarItemBoughtMessage, isLookChangedMessage } from '../games/velvet-house/bridge/protocol';
+import { announceAvatarSaved, onAvatarSaved } from '../stores/avatarEditorStore';
+import { applyAvatarChange } from '../utils/avatarConfig';
 import { recordSimsPurchase } from '../services/avatarInventoryService';
 
 const GAME_PATH = '/games/velvet-house-next/index.html';
@@ -41,8 +43,18 @@ export function VelvetHouseNextGame() {
         if (await recordSimsPurchase(e.data.itemId)) sendInventory(win);
         return;
       }
+      // Changed clothes in the game: save it to their avatar, so the avatar
+      // screen, toolbar and chats show what they're wearing.
+      if (isLookChangedMessage(e.data)) {
+        await saveTopFromGame(e.data.top);
+        return;
+      }
       if (!isReadyMessage(e.data)) return;
       sendInventory(win);
+      sendProfile(win);
+    };
+    // Who's playing, with their avatars as they are right now.
+    const sendProfile = async (win: Window) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || cancelled) return;
       const pickCompanion = async () => {
@@ -58,8 +70,31 @@ export function VelvetHouseNextGame() {
       if (!companion || cancelled) return;
       win.postMessage(buildProfile(player as PlayerProfile | null, companion as Companion, true, unlocks), window.location.origin);
     };
+    // The game's tops that the avatar has no match for come across as a tee in the same colour.
+    let savingFromGame = false;
+    const saveTopFromGame = async (top: { style: string; color: string; accent?: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !/^#[0-9a-f]{6}$/i.test(top.color)) return;
+      const { data } = await supabase.from('user_profiles').select('avatar_config').eq('id', user.id).maybeSingle();
+      const outfit = top.style === 'blazer' ? 'suit' : ['linen', 'chef', 'labcoat', 'pirate'].includes(top.style) ? top.style as 'linen' : 'tee';
+      const config = applyAvatarChange(data?.avatar_config, {
+        outfit, outfitColor: top.color,
+        ...(top.accent && /^#[0-9a-f]{6}$/i.test(top.accent) ? { outfitAccent: top.accent } : {}),
+      });
+      const { error } = await supabase.from('user_profiles').update({ avatar_config: config }).eq('id', user.id);
+      if (error) return;
+      savingFromGame = true;
+      announceAvatarSaved({ target: { kind: 'user' }, config });
+      savingFromGame = false;
+    };
+    // Edited an avatar while the game is open: the game shows it straight away.
+    // (Not the save the game itself just asked for, or a hoodie would turn back into a tee.)
+    const offSaved = onAvatarSaved(() => {
+      const win = iframeRef.current?.contentWindow;
+      if (win && !savingFromGame) sendProfile(win);
+    });
     window.addEventListener('message', onMessage);
-    return () => { cancelled = true; window.removeEventListener('message', onMessage); };
+    return () => { cancelled = true; offSaved(); window.removeEventListener('message', onMessage); };
   }, [companionId]);
 
   const handleExit = () => {
