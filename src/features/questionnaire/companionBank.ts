@@ -8,7 +8,9 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
     { id: 'connection', label: 'How you connect', questionIds: ['relationshipType', 'connectionType'] },
     { id: 'energy', label: 'Who {she} is', questionIds: ['energy', 'voice', 'beat1'] },
     { id: 'warmth', label: 'How {she} loves', questionIds: ['warmth', 'interests'] },
-    { id: 'depth', label: 'The bond', questionIds: ['whenItsHard', 'loveLanguage', 'companionName', 'beat2'] },
+    // Love language and "when it's hard" are asked by the companion in its first week
+    // (supabase/functions/_shared/companionWeekOne.ts), not here.
+    { id: 'depth', label: 'The bond', questionIds: ['companionName', 'beat2'] },
   ],
   questions: [
     {
@@ -169,34 +171,6 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
         { label: 'Adventure & travel', value: 'adventure', icon: 'Compass' },
         { label: 'Music & art', value: 'music', icon: 'Music' },
         { label: 'Tech & gaming', value: 'tech', icon: 'Gamepad2' },
-      ],
-    },
-    {
-      id: 'whenItsHard',
-      archetype: 'tap',
-      chapter: 'depth',
-      question: (ctx) => tpl(`When things get tense between you two, how should {she} handle it?`, ctx),
-      confidence: 'tapped',
-      autoAdvance: true,
-      options: [
-        { text: 'Lighten the mood with humor', value: 'humor' },
-        { text: 'Calm, rational discussion', value: 'rational' },
-        { text: 'Focus on understanding feelings', value: 'feelings' },
-        { text: 'Be direct and move forward', value: 'direct' },
-      ],
-    },
-    {
-      id: 'loveLanguage',
-      archetype: 'tap',
-      chapter: 'depth',
-      question: 'How do you like to feel cared about?',
-      confidence: 'tapped',
-      autoAdvance: true,
-      options: [
-        { text: 'Words of affirmation', value: 'words' },
-        { text: 'Quality time & deep talks', value: 'time' },
-        { text: 'Thoughtful gestures', value: 'gifts' },
-        { text: 'Acts of service', value: 'service' },
       ],
     },
     {

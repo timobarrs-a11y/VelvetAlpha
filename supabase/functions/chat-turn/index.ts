@@ -18,6 +18,7 @@ import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
 import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult, type CoachingChange } from "../_shared/coachTools.ts";
 import { buildAssistantBehavioralInstructions } from "../_shared/assistantFramework.ts";
+import { weekOneQuestions, weekOneBlock, takeTraitMarkers, tastePicksLine } from "../_shared/companionWeekOne.ts";
 import {
   webSearchTool, WEB_SEARCH_GUIDANCE, WEB_SEARCH_PRO_ONLY, textOf, parseSearchRequest, buildSearchBrief, type SearchSubject,
 } from "../_shared/webSearch.ts";
@@ -1955,6 +1956,10 @@ Balance this domain expertise naturally with your relationship dynamic — bring
         : BEHAVIORAL_INSTRUCTIONS;
     // Coaches and assistants can look things up (see the web search tool below).
     const helperSearchBlock = isHelper ? `\n\n${WEB_SEARCH_GUIDANCE}` : '';
+    // A companion's first week: it asks love language and "when it's hard" in conversation.
+    const weekOneOpen = isCorrespondent ? [] : weekOneQuestions(companion);
+    const weekOneText = weekOneBlock(weekOneOpen, formattedHistory.filter(m => m.role === 'user').length)
+      + (isHelper || isCorrespondent ? '' : tastePicksLine(profile.taste_picks));
 
     const groundingBlock = correspondentStoriesBlock
       ? `\n\nRECENT STORIES (use these — do NOT invent stories):\n${correspondentStoriesBlock}\n`
@@ -1989,7 +1994,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     // per-turn) layers so Anthropic prompt caching actually works.
     const frozenPrompt = `${personaLayer}
 
-${behavioralBlock}${helperSearchBlock}${expertLayer}
+${behavioralBlock}${helperSearchBlock}${weekOneText}${expertLayer}
 
 CRITICAL MEMORY RULES - READ THIS CAREFULLY:
 - NEVER ask a question you already asked in this conversation
@@ -2194,6 +2199,16 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isHelper ? coachSurface
 
     let assistantMessage = result.message;
     const apiUsage = result.usage;
+
+    // Save what the companion learned in its first week, and hide the marker.
+    if (weekOneOpen.length > 0 || assistantMessage.includes('[TRAIT')) {
+      const { text, updates } = takeTraitMarkers(assistantMessage);
+      assistantMessage = text;
+      if (Object.keys(updates).length > 0) {
+        const { error: traitErr } = await supabaseAdmin.from('companions').update(updates).eq('id', companionId).eq('user_id', user.id);
+        if (traitErr) console.error(`[${traceId}] Week-one trait save failed:`, traitErr);
+      }
+    }
 
     const latencyMs = Date.now() - startTime;
 

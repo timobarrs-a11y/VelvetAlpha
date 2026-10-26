@@ -14,6 +14,7 @@ import { ArticleDiscussPanel } from '../components/ArticleDiscussPanel';
 import { TimeAwareSlot, getBucketTintClass, type TimeOfDayBucket } from '../components/TimeAwareSlot';
 import { getUserLocalDateParts } from '../services/temporalAwarenessService';
 import { calendarService, type UserEvent } from '../services/calendarService';
+import { ThisOrThatCard } from '../features/feed/ThisOrThatCard';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -665,6 +666,7 @@ export function DailyFeedPage({ initialTab: _initialTab }: { initialTab?: 'news'
           companion={activeCompanion}
           companionNarrative={companionNarrative}
         />
+        <ThisOrThatCard />
         {filteredArticles.length === 0 ? (
           !initialFetchDone ? (
             <div className="text-center py-24">
