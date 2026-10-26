@@ -62,7 +62,7 @@ describe('ArrivalTownTour', () => {
   it('walks through three captions, with Continue to Atlas always there', () => {
     const onContinue = vi.fn();
     render(<ArrivalTownTour onContinue={onContinue} />);
-    expect(screen.getByText('This is your block.')).toBeTruthy();
+    expect(screen.getByText('This is your house.')).toBeTruthy();
     fireEvent.click(screen.getByText('Next'));
     expect(screen.getByText('Tap any billboard')).toBeTruthy();
     fireEvent.click(screen.getByText('Next'));
