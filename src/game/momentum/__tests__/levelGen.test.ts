@@ -54,3 +54,40 @@ describe('momentum level generation', () => {
     expect(ghostPositionAt(ghost, 4)).toBeNull();
   });
 });
+
+describe('designed sections', () => {
+  const mainPath = (platforms: ReturnType<typeof generateLevel>['platforms']) =>
+    platforms.filter(p => !p.isFar).sort((a, b) => b.y - a.y);
+
+  it('every main-path jump is reachable in one bounce', () => {
+    for (const width of [800, 480]) {
+      for (let level = 1; level <= 10; level++) {
+        for (let seed = 1; seed <= 20; seed++) {
+          const path = mainPath(generateLevel(level, palette, createRng(seed), width).platforms);
+          for (let i = 1; i < path.length; i++) {
+            const prev = path[i - 1];
+            const next = path[i];
+            const gap = prev.y - next.y;
+            expect(gap).toBeLessThanOrEqual(prev.type === 'spring' ? 160 : 110);
+            // Horizontal reach: closest edges (allowing for each platform's sweep) within ~1 bounce of travel
+            const prevMin = prev.minX, prevMax = prev.maxX + prev.width;
+            const nextMin = next.minX, nextMax = next.maxX + next.width;
+            const edgeGap = Math.max(0, nextMin - prevMax, prevMin - nextMax);
+            expect(edgeGap).toBeLessThan(260);
+          }
+        }
+      }
+    }
+  });
+
+  it('uses a mix of sections and rests after hard ones', () => {
+    const labels = new Set<string>();
+    for (let seed = 1; seed <= 10; seed++) {
+      generateLevel(6, palette, createRng(seed)).platforms.forEach(p => p.sectionLabel && labels.add(p.sectionLabel));
+    }
+    expect(labels.size).toBeGreaterThanOrEqual(4);
+    expect(labels.has('PHASE GAUNTLET')).toBe(true);
+    const early = generateLevel(1, palette, createRng(1)).platforms;
+    expect(early.some(p => p.sectionLabel === 'PHASE GAUNTLET' || p.sectionLabel === 'CONVEYOR RUN')).toBe(false);
+  });
+});

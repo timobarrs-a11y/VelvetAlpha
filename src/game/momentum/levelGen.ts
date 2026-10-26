@@ -29,6 +29,8 @@ export interface Platform {
   springBounce: number;
   /** conveyor: push direction; phase: cycle offset in frames */
   param: number;
+  /** Set on the first platform of a designed section so it can be labelled */
+  sectionLabel?: string;
 }
 
 export interface Orb {
@@ -83,12 +85,143 @@ const pickType = (rng: Rng, level: number, index: number): PlatformType => {
   return 'normal';
 };
 
+// Levels are built from short designed sections so pacing comes in waves: a hard
+// section is always followed by a rest ledge. 'scatter' is the original free-form layout.
+export type SectionKind = 'scatter' | 'zigzag' | 'staircase' | 'springTower' | 'conveyorRun' | 'phaseGauntlet' | 'rest';
+
+const SECTION_LABELS: Partial<Record<SectionKind, string>> = {
+  zigzag: 'ZIGZAG',
+  staircase: 'STAIRWAY',
+  springTower: 'SPRING TOWER',
+  conveyorRun: 'CONVEYOR RUN',
+  phaseGauntlet: 'PHASE GAUNTLET',
+};
+
+const HARD_SECTIONS = new Set<SectionKind>(['springTower', 'conveyorRun', 'phaseGauntlet']);
+
+interface SectionState {
+  kind: SectionKind;
+  remaining: number;
+  /** position within the section */
+  k: number;
+  /** staircase / zigzag direction */
+  dir: number;
+}
+
 interface ChunkState {
   width: number;
   y: number;
   nextId: number;
   index: number;
+  section?: SectionState;
+  prevWasSpring?: boolean;
+  /** centre x of the previous main-path platform */
+  prevCenterX?: number;
 }
+
+const pickSection = (rng: Rng, level: number, previous: SectionKind | undefined): SectionState => {
+  const dir = rng() < 0.5 ? -1 : 1;
+  if (previous && HARD_SECTIONS.has(previous)) return { kind: 'rest', remaining: 2, k: 0, dir };
+  const options: Array<[SectionKind, number]> = [
+    ['scatter', 3],
+    ['zigzag', 2],
+    ['staircase', 2],
+    ['springTower', level >= 1 ? 1.2 : 0],
+    ['conveyorRun', level >= 2 ? 1.2 : 0],
+    ['phaseGauntlet', level >= 3 ? 1.2 : 0],
+  ];
+  const candidates = options.filter(([kind, w]) => w > 0 && kind !== previous);
+  const total = candidates.reduce((sum, [, w]) => sum + w, 0);
+  let roll = rng() * total;
+  let kind: SectionKind = 'scatter';
+  for (const [k, w] of candidates) {
+    roll -= w;
+    if (roll <= 0) { kind = k; break; }
+  }
+  const lengths: Record<SectionKind, [number, number]> = {
+    scatter: [5, 8], zigzag: [6, 8], staircase: [6, 8], springTower: [4, 6], conveyorRun: [4, 5], phaseGauntlet: [4, 6], rest: [2, 2],
+  };
+  const [lo, hi] = lengths[kind];
+  return { kind, remaining: lo + Math.floor(rng() * (hi - lo + 1)), k: 0, dir };
+};
+
+interface PlatformSpec {
+  gap: number;
+  width: number;
+  startX: number;
+  moveRange: number;
+  speed: number;
+  type: PlatformType;
+  param: number;
+  allowFar: boolean;
+  orbAbove?: boolean;
+}
+
+const clampX = (x: number, width: number, W: number) => Math.max(20, Math.min(W - width - 20, x));
+
+/** Max centre-to-centre distance between consecutive main-path platforms. */
+const MAX_REACH_X = 240;
+
+/** Layout for the next main-path platform within the current section. */
+const sectionSpec = (sec: SectionState, state: ChunkState, rng: Rng, level: number, index: number): PlatformSpec => {
+  const W = state.width;
+  const prevCx = state.prevCenterX ?? W / 2;
+  const k = sec.k;
+  switch (sec.kind) {
+    case 'zigzag': {
+      // Alternate sides of the centre, within one bounce's reach
+      const width = 100;
+      const cx = W / 2 + (k % 2 === 0 ? -1 : 1) * sec.dir * W * 0.18;
+      return { gap: 85 + rng() * 15, width, startX: clampX(cx - width / 2, width, W), moveRange: 30, speed: 0.3, type: 'normal', param: 0, allowFar: false };
+    }
+    case 'staircase': {
+      // Short, quick steps marching one way: ideal for building momentum
+      const width = 75;
+      let cx = prevCx + sec.dir * 60;
+      if (cx < width || cx > W - width) { sec.dir *= -1; cx = prevCx + sec.dir * 60; }
+      return { gap: 55 + rng() * 10, width, startX: clampX(cx - width / 2, width, W), moveRange: 20, speed: 0.25, type: 'normal', param: 0, allowFar: k % 3 === 2 };
+    }
+    case 'springTower': {
+      // Springs alternate with normal ledges; the gap above a spring is big
+      const width = 110;
+      const isSpring = k % 2 === 0;
+      const cx = W / 2 + (rng() - 0.5) * W * 0.2;
+      return { gap: state.prevWasSpring ? 140 + rng() * 20 : 80 + rng() * 10, width, startX: clampX(cx - width / 2, width, W), moveRange: 40, speed: 0.3, type: isSpring ? 'spring' : 'normal', param: 0, allowFar: false };
+    }
+    case 'conveyorRun': {
+      // Each conveyor pushes toward the next platform on the other side
+      const width = 120;
+      const side = k % 2 === 0 ? -1 : 1;
+      const cx = W / 2 + side * sec.dir * W * 0.2;
+      return { gap: 80 + rng() * 10, width, startX: clampX(cx - width / 2, width, W), moveRange: 20, speed: 0.2, type: 'conveyor', param: -side * sec.dir, allowFar: false };
+    }
+    case 'phaseGauntlet': {
+      // Phase platforms whose cycles are staggered, so the safe route moves upward
+      const width = 120;
+      const cx = W / 2 + (rng() - 0.5) * W * 0.3;
+      return { gap: 75 + rng() * 10, width, startX: clampX(cx - width / 2, width, W), moveRange: 30, speed: 0.25, type: 'phase', param: (PHASE_CYCLE_FRAMES - k * 40 + PHASE_CYCLE_FRAMES * 4) % PHASE_CYCLE_FRAMES, allowFar: false };
+    }
+    case 'rest': {
+      // Wide, calm ledges with a boost orb as a breather
+      const width = 160;
+      return { gap: 70, width, startX: clampX(W / 2 - width / 2 + (rng() - 0.5) * 80, width, W), moveRange: 30, speed: 0.2, type: 'normal', param: 0, allowFar: false, orbAbove: k === 1 };
+    }
+    default: {
+      const width = Math.max(60, 90 + rng() * Math.max(0, 40 - level));
+      const type = pickType(rng, level, index);
+      return {
+        gap: 60 + rng() * 40,
+        width,
+        startX: 50 + rng() * Math.max(0, W - 200 - width),
+        moveRange: 100 + rng() * 100,
+        speed: 0.4 + rng() * (0.3 + level * 0.05),
+        type,
+        param: type === 'conveyor' ? (rng() > 0.5 ? 1 : -1) : type === 'phase' ? Math.floor(rng() * PHASE_CYCLE_FRAMES) : 0,
+        allowFar: true,
+      };
+    }
+  }
+};
 
 /**
  * Appends `count` main-path platforms (plus optional fast "far" platforms and boost orbs)
@@ -110,17 +243,35 @@ export const generateChunk = (
     const isFirst = i === 0;
     const isCheckpoint = i > 0 && i % checkpointEvery === 0;
 
-    const gap = isFirst ? 0 : isCheckpoint ? 65 : 60 + rng() * 40;
-    state.y -= gap;
-
-    const width = Math.max(60, isFirst ? 150 : isCheckpoint ? 180 : 90 + rng() * Math.max(0, 40 - level));
     const W = state.width;
-    const startX = isFirst ? (W - 150) / 2 : isCheckpoint ? W / 2 - 90 : 50 + rng() * Math.max(0, W - 200 - width);
-    const moveRange = isFirst ? 100 : isCheckpoint ? 60 : 100 + rng() * 100;
-    const speed = isFirst ? 0.3 : isCheckpoint ? 0.35 : 0.4 + rng() * (0.3 + level * 0.05);
+    let spec: PlatformSpec;
+    let sectionLabel: string | undefined;
+    if (isFirst || isCheckpoint) {
+      const width = isFirst ? 150 : 180;
+      spec = { gap: isFirst ? 0 : 65, width, startX: isFirst ? (W - 150) / 2 : W / 2 - 90, moveRange: isFirst ? 100 : 60, speed: isFirst ? 0.3 : 0.35, type: 'normal', param: 0, allowFar: false };
+    } else {
+      // The first few platforms stay free-form so a run always starts gently
+      if (i > 5 && (!state.section || state.section.remaining <= 0)) {
+        state.section = pickSection(rng, level, state.section?.kind);
+        sectionLabel = SECTION_LABELS[state.section.kind];
+      }
+      const sec = state.section && i > 5 ? state.section : { kind: 'scatter' as SectionKind, remaining: 1, k: 0, dir: 1 };
+      spec = sectionSpec(sec, state, rng, level, i);
+      sec.k++;
+      sec.remaining--;
+      // Keep every jump within one bounce of travel, including across section boundaries
+      if (state.prevCenterX !== undefined) {
+        const cx = spec.startX + spec.width / 2;
+        const limited = Math.max(state.prevCenterX - MAX_REACH_X, Math.min(state.prevCenterX + MAX_REACH_X, cx));
+        spec.startX = clampX(limited - spec.width / 2, spec.width, W);
+      }
+    }
+    state.y -= spec.gap;
+    const { width, startX, moveRange, speed, type } = spec;
     const colorIndex = state.nextId % palette.platforms.length;
-    const type = isFirst || isCheckpoint ? 'normal' : pickType(rng, level, i);
     const direction = rng() > 0.5 ? 1 : -1;
+    state.prevWasSpring = type === 'spring';
+    state.prevCenterX = startX + width / 2;
 
     platforms.push({
       id: state.nextId++,
@@ -142,10 +293,15 @@ export const generateChunk = (
       crumbleTimer: 0,
       crumbled: false,
       springBounce: 0,
-      param: type === 'conveyor' ? (rng() > 0.5 ? 1 : -1) : type === 'phase' ? Math.floor(rng() * PHASE_CYCLE_FRAMES) : 0,
+      param: spec.param,
+      sectionLabel,
     });
 
-    if (!isFirst && !isCheckpoint && i > 3 && rng() < 0.4) {
+    if (spec.orbAbove) {
+      orbs.push({ x: startX + width / 2, y: state.y - 55, collected: false });
+    }
+
+    if (!isFirst && !isCheckpoint && i > 3 && spec.allowFar && rng() < 0.4) {
       const farY = state.y - (80 + rng() * (70 + level * 5));
       const farWidth = 60 + rng() * 40;
       const farStartX = 40 + rng() * (W - 120 - farWidth);

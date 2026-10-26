@@ -201,6 +201,16 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
       ctx.fillText('CHECKPOINT', platform.x + platform.width/2, screenY - 8);
     }
 
+    if (platform.sectionLabel && !platform.touched) {
+      // Name the upcoming section so its pattern reads at a glance
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
+      ctx.globalAlpha = 0.75;
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(platform.sectionLabel, platform.x + platform.width / 2, screenY - (platform.isCheckpoint ? 22 : 10));
+    }
+
     if (platform.isFar && !platform.touched) {
       ctx.shadowBlur = 0;
       ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
