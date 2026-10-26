@@ -20,7 +20,7 @@ new scope that the overhaul brief never covered.
 | 1. Move into the repo as modules | **Done** | `src/games/velvet-house/` (state, art, ui, engine, bridge), served by `games/velvet-house-next` |
 | 2. Renderer (deferred lighting) | **Done** | `engine/gbuffer.ts`, `deferredLights.ts`, `gpuLights.ts`, quality tiers, tests |
 | 3. Animation | **Done, and extended by PR #48** | `art/poseAnim.js`; clips per activity, springs, expressions, camera close-ups; then hands, shaded sleeves, shoe soles, see-through heads fixed, and activities you can actually see |
-| 4. Clothing system and design generator | **Took a different route (PR #48)** | Instead of garment recipes, the game now wears the avatar app's own wardrobe: separate shirts, pants and hats that mix and match, personas (a whole look in one tap), full-body sprites (`state/bodySprites.ts`, `renderers/bodyRenderer`, `handRenderer`, `outfitRenderer`), six new shirts, four hats, pants and six personas, with migration `20261028120000_wardrobe_pants_personas.sql`. The garment-recipe format and the design generator from the brief are not built: decide whether they are still wanted |
+| 4. Clothing system and design generator | **Took a different route (PR #48)** | Instead of garment recipes, the game now wears the avatar app's own wardrobe: separate shirts, pants and hats that mix and match, personas (a whole look in one tap), full-body sprites (`state/bodySprites.ts`, `renderers/bodyRenderer`, `handRenderer`, `outfitRenderer`), six new shirts, four hats, pants and six personas, with migration `20261028120000_wardrobe_pants_personas.sql`. The garment-recipe format and the design generator from the brief are not built. **Decision: still wanted** (see Design Studio below) |
 | 5. Gardens and the outdoors | **Partly** | Grass, weeds, rain, seasons and a garden bed in the art. No plant species, growth stages or yard decorating. The `yard`, `dirt`, `pets`, `calendar` and `festivals` modules are not wired into the live game |
 | 6. Opening and tutorial | **Not started** | Design exists (`opening-sequence.md`); no script engine, no Dez, no scripted tutorial |
 
@@ -143,3 +143,20 @@ Effect on the plan: none of the architecture steps change. Two notes:
 - The avatar wardrobe makes work outfits for each job (step 4.1 onwards) mostly a content job, not a
   rendering job.
 - The worn hat is not saved; the host sends it at boot.
+
+## Design Studio (overhaul Phase 4, kept)
+
+The idea, in the style of Animal Crossing custom designs: players make their own patterns and
+apply them to clothes, floors, wallpaper and rugs, and share them.
+
+- **Recipes (procedural):** a small data object (cut, fabric, base colour, pattern kind and
+  colours) the game draws live. Cheap, no moderation problem, and it is what the brief asked
+  for. Floors and wallpaper already work this way (`FLOORS` and `PAPERS` in the art).
+- **Pixel designs (player-made):** a small grid (for example 32 by 32, up to 16 colours) painted
+  in an editor, stored as a short code, and applied as a texture: tiled on a floor, hung on a
+  wall (the picture-wallpaper code already maps an image onto a wall), or wrapped on a shirt.
+- **Sharing:** a design code that can be pasted into a message (the messaging system exists), with
+  friends-only first. A public gallery is the last step and needs moderation and reporting before
+  it opens, because player-made images can be offensive.
+- **Order:** recipes first, then the pixel editor with private and friends-only sharing, then a
+  public gallery.
