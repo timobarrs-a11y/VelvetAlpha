@@ -1298,7 +1298,8 @@ export class Shootout3D {
     }
     this.updateCamera(real);
     if (!this.renderer.shadowMap.autoUpdate && this.perf.frame % 3 === 0) this.renderer.shadowMap.needsUpdate = true;
-    if (!this.noDraw) this.composer.render();
+    // Never draw on a lost context (the loss event can arrive a frame late).
+    if (!this.noDraw && !this.renderer.getContext().isContextLost()) this.composer.render();
   }
 
   /**
