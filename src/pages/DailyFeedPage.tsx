@@ -102,63 +102,66 @@ function HeroCard({ article, onClick, isNew, openers, companions, onDiscuss }: {
 }) {
   const primaryCat = article.categories?.[0];
   const [expanded, setExpanded] = useState(false);
+  // A square picture beside the headline rather than one stretched across
+  // the page: feed images are often small, and they look sharp at this size.
   return (
     <div
       onClick={onClick}
-      className="relative cursor-pointer rounded-2xl overflow-hidden border border-white/10 hover:border-white/20 transition-colors shadow-2xl"
-      style={{ minHeight: 420 }}
+      className="relative cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-2xl transition-colors hover:border-white/20 hover:bg-white/8"
     >
-      {article.image_url ? (
-        <>
-          <ArticleImage
-            src={article.image_url}
-            alt={article.title}
-            className="absolute inset-0 w-full h-full object-cover"
-            eager
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-        </>
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
-      )}
-
-      {openers.length > 0 && (
-        <div className="absolute top-4 right-4 z-10">
-          <RelevanceBadge matches={openers} expanded={expanded} onToggle={() => setExpanded(e => !e)} />
-        </div>
-      )}
-
-      <div className="relative h-full flex flex-col justify-end p-8" style={{ minHeight: 420 }}>
-        <div className="flex items-center gap-2 mb-4">
-          {isNew && (
-            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500 text-white border border-emerald-400/50">
-              <Zap className="w-3 h-3" />
-              New
-            </span>
+      <div className="flex flex-col sm:flex-row">
+        <div className="relative w-full flex-shrink-0 overflow-hidden bg-slate-800 aspect-[4/3] sm:aspect-square sm:w-60 lg:w-72">
+          {article.image_url ? (
+            <ArticleImage
+              src={article.image_url}
+              alt={article.title}
+              className="absolute inset-0 h-full w-full object-cover"
+              eager
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />
           )}
-          {primaryCat && (
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getCategoryColor(primaryCat)}`}>
-              {primaryCat}
-            </span>
+          {openers.length > 0 && (
+            <div className="absolute right-3 top-3 z-10">
+              <RelevanceBadge matches={openers} expanded={expanded} onToggle={() => setExpanded(e => !e)} />
+            </div>
           )}
-          <span className="flex items-center gap-1 text-white/50 text-xs">
-            <Clock className="w-3 h-3" />
-            {formatTimeAgo(article.published_at)}
-          </span>
         </div>
 
-        <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight mb-4" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
-          {article.title}
-        </h2>
+        <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 p-5 sm:p-6">
+          <div>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {isNew && (
+                <span className="flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                  <Zap className="h-3 w-3" />
+                  New
+                </span>
+              )}
+              {primaryCat && (
+                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getCategoryColor(primaryCat)}`}>
+                  {primaryCat}
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-xs text-white/50">
+                <Clock className="h-3 w-3" />
+                {formatTimeAgo(article.published_at)}
+              </span>
+            </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-white/50 text-sm font-medium">{article.source}</span>
-          <div className="flex items-center gap-3">
-            <DiscussWithAffordance companions={companions} onPick={(c) => onDiscuss(article, c)} />
-            <span className="flex items-center gap-1.5 text-white/60 text-sm">
-              Read story
-              <ChevronRight className="w-4 h-4" />
-            </span>
+            <h2 className="text-xl font-bold leading-tight text-white md:text-2xl">
+              {article.title}
+            </h2>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-medium text-white/50">{article.source}</span>
+            <div className="flex items-center gap-3">
+              <DiscussWithAffordance companions={companions} onPick={(c) => onDiscuss(article, c)} />
+              <span className="flex items-center gap-1.5 text-sm text-white/60">
+                Read story
+                <ChevronRight className="h-4 w-4" />
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -191,7 +194,7 @@ function ArticleCard({ article, onClick, seen, openers, companions, onDiscuss }:
           : 'bg-white/5 hover:bg-white/8 border-white/10 hover:border-white/20 transition-colors'
       }`}
     >
-      <div className="w-full h-44 overflow-hidden bg-slate-800 flex-shrink-0 relative">
+      <div className="w-full aspect-[4/3] overflow-hidden bg-slate-800 flex-shrink-0 relative">
         {article.image_url ? (
           <ArticleImage
             src={article.image_url}
@@ -208,7 +211,7 @@ function ArticleCard({ article, onClick, seen, openers, companions, onDiscuss }:
         )}
       </div>
 
-      <div className="p-4 flex flex-col flex-1">
+      <div className="p-3 sm:p-4 flex flex-col flex-1">
         {primaryCat && (
           <span className={`self-start px-2.5 py-0.5 rounded-full text-xs font-semibold border mb-2.5 ${getCategoryColor(primaryCat)}`}>
             {primaryCat}
@@ -219,8 +222,8 @@ function ArticleCard({ article, onClick, seen, openers, companions, onDiscuss }:
           {article.title}
         </h3>
 
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-          <span className="text-white/40 text-xs">{article.source}</span>
+        <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-white/5">
+          <span className="min-w-0 truncate text-white/40 text-xs">{article.source}</span>
           <div className="flex items-center gap-2">
             <DiscussWithAffordance companions={companions} onPick={(c) => onDiscuss(article, c)} />
             <span className="text-white/40 text-xs flex items-center gap-1">
@@ -725,7 +728,7 @@ export function DailyFeedPage({ initialTab: _initialTab }: { initialTab?: 'news'
                   <div className="w-1.5 h-5 rounded-full bg-blue-400" />
                   <span className="text-white/50 text-xs font-semibold uppercase tracking-widest">Latest Stories</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] sm:gap-4">
                   {gridArticles.map((article) => (
                     <ArticleCard
                       key={article.id}
