@@ -19,6 +19,12 @@ export function createHouseArt(ctx0, opts = {}) {
   const cam = { z: 1, x: W / 2, y: H / 2 };
   let minutes = 380, day = 1, viewLevel = 1, animT = 0;
   let party = false, partyF = 0, tvF = 0, dishes = 0, power = true, laundryPile = 0;
+  // Things you've just tapped: 'objectId:part' -> animT until which it runs.
+  const liveUntil = new Map();
+  const live = (id, part = '') => (liveUntil.get(id + ':' + part) || 0) > animT;
+  // Switches you flip by tapping: the TV, and the fireplace (lit by default).
+  let tvOn = false;
+  const fireOut = new Set();
   let parcel = null, flags = {}, owned = new Set(), arranging = false, wallMode = 'cut', tapFocus = null;
   let OBJS = [];
   const reserved = {};
@@ -344,15 +350,16 @@ export function createHouseArt(ctx0, opts = {}) {
         [0.12, 0.52, 0.92, 1.32].forEach((z, r) => { T.line([0, 0.381, z], [1.4, 0.381, z], 'rgba(0,0,0,.35)', 1.2); for (let i = 0; i < 9; i++) { const x = 0.06 + i * 0.145; if ((i * 3 + r) % 7 === 6) continue; const hh = 0.28 + (i % 3) * 0.03; T.poly([[x, 0.382, z + 0.02], [x + 0.11, 0.382, z + 0.02], [x + 0.11, 0.382, z + hh], [x, 0.382, z + hh]], cols[(i + r * 2) % 7]); } }); })] },
     records: { W: 0.85, D: 0.45, h: 0.7, name: 'Record player',
       parts: () => [F(0, 0, 0.85, 0.45, (T, o, t) => { T.box(0, 0, 0, 0.85, 0.45, 0.55, '#5A3E2E'); [0.17, 0.67].forEach(x => { const [sx, sy] = T.P(x, 0.46, 0.27); circle(sx, sy, 4, '#2B2B30'); circle(sx, sy, 1.6, '#4A4450'); });
-        const [px, py] = T.P(0.42, 0.22, 0.56); ell(px, py, 10, 5, '#1B1A1F'); ell(px, py, 3.5, 1.8, '#D24A7A'); if (usingSlot(o.id + ':r')) limb(px + Math.cos(t * 6) * 6, py + Math.sin(t * 6) * 3, px, py, 'rgba(255,255,255,.4)', 1); })],
+        const [px, py] = T.P(0.42, 0.22, 0.56); ell(px, py, 10, 5, '#1B1A1F'); ell(px, py, 3.5, 1.8, '#D24A7A'); if (usingSlot(o.id + ':r') || live(o.id)) limb(px + Math.cos(t * 6) * 6, py + Math.sin(t * 6) * 3, px, py, 'rgba(255,255,255,.4)', 1);
+        if (live(o.id)) for (let k = 0; k < 3; k++) { const u = (t * 0.6 + k / 3) % 1; ctx.globalAlpha = 1 - u; ctx.fillStyle = ['#E48AAE', '#7FB2FF', '#E0A43A'][k]; ctx.font = '700 9px Inter, system-ui, sans-serif'; ctx.fillText('♪', px - 6 + k * 6 + Math.sin(u * 6 + k) * 3, py - 8 - u * 26); ctx.globalAlpha = 1; } })],
       spots: { r: { stand: [0.42, 1.05], dir: [0, -1], tag: 'records' } } },
     arcade: { W: 0.56, D: 0.5, h: 1.3, name: 'Arcade cabinet',
-      parts: () => [F(0, 0, 0.56, 0.5, (T, o, t) => { T.box(0, 0, 0, 0.56, 0.5, 1.3, '#2B2440'); T.poly([[0.05, 0.501, 0.72], [0.51, 0.501, 0.72], [0.51, 0.501, 1.12], [0.05, 0.501, 1.12]], power ? `hsl(${(t * 80) % 360},70%,55%)` : '#1B1A1F'); T.box(0.02, 0.45, 0.62, 0.52, 0.18, 0.06, '#C2413A'); T.poly([[0, 0.501, 1.16], [0.56, 0.501, 1.16], [0.56, 0.501, 1.28], [0, 0.501, 1.28]], '#E0A43A'); })],
+      parts: () => [F(0, 0, 0.56, 0.5, (T, o, t) => { T.box(0, 0, 0, 0.56, 0.5, 1.3, '#2B2440'); T.poly([[0.05, 0.501, 0.72], [0.51, 0.501, 0.72], [0.51, 0.501, 1.12], [0.05, 0.501, 1.12]], power ? `hsl(${(t * (live(o.id) ? 400 : 80)) % 360},${live(o.id) ? 90 : 70}%,${live(o.id) ? 62 + Math.sin(t * 20) * 10 : 55}%)` : '#1B1A1F'); T.box(0.02, 0.45, 0.62, 0.52, 0.18, 0.06, '#C2413A'); T.poly([[0, 0.501, 1.16], [0.56, 0.501, 1.16], [0.56, 0.501, 1.28], [0, 0.501, 1.28]], '#E0A43A'); })],
       spots: { a: { stand: [0.28, 1.05], dir: [0, -1], tag: 'arcade' } } },
     tread: { W: 1.35, D: 0.62, h: 1.2, name: 'Treadmill',
-      parts: () => [B(0, 0, 0, 1.35, 0.62, 0.16, '#2E2A33', { name: 'deck' }), F(0.07, 0.05, 1.2, 0.57, (T, o, t) => { T.poly([[0.07, 0.05, 0.161], [1.2, 0.05, 0.161], [1.2, 0.57, 0.161], [0.07, 0.57, 0.161]], '#18161B'); const run = usingSlot(o.id + ':t');
+      parts: () => [B(0, 0, 0, 1.35, 0.62, 0.16, '#2E2A33', { name: 'deck' }), F(0.07, 0.05, 1.2, 0.57, (T, o, t) => { T.poly([[0.07, 0.05, 0.161], [1.2, 0.05, 0.161], [1.2, 0.57, 0.161], [0.07, 0.57, 0.161]], '#18161B'); const run = usingSlot(o.id + ':t') || live(o.id);
         for (let i = 0; i < 6; i++) { const x = 0.07 + ((i * 0.19 + (run ? -t * 0.9 : 0)) % 1.13 + 1.13) % 1.13; T.line([x, 0.07, 0.162], [x, 0.55, 0.162], 'rgba(255,255,255,.12)', 1); } }, { onTop: true }),
-        F(1.17, 0, 1.39, 0.68, (T, o) => { T.box(1.25, 0.03, 0.16, 0.06, 0.06, 0.95, '#4A4450'); T.box(1.25, 0.51, 0.16, 0.06, 0.06, 0.95, '#4A4450'); T.box(1.17, 0, 1.08, 0.22, 0.62, 0.1, '#3A3340'); T.poly([[1.18, 0.2, 1.181], [1.37, 0.2, 1.181], [1.37, 0.46, 1.181], [1.18, 0.46, 1.181]], usingSlot(o.id + ':t') && power ? '#5CC48A' : '#23402E'); })],
+        F(1.17, 0, 1.39, 0.68, (T, o) => { T.box(1.25, 0.03, 0.16, 0.06, 0.06, 0.95, '#4A4450'); T.box(1.25, 0.51, 0.16, 0.06, 0.06, 0.95, '#4A4450'); T.box(1.17, 0, 1.08, 0.22, 0.62, 0.1, '#3A3340'); T.poly([[1.18, 0.2, 1.181], [1.37, 0.2, 1.181], [1.37, 0.46, 1.181], [1.18, 0.46, 1.181]], (usingSlot(o.id + ':t') || live(o.id)) && power ? '#5CC48A' : '#23402E'); })],
       spots: { t: { stand: [-0.45, 0.31], pos: [0.6, 0.31, 0.18], dir: [1, 0], tag: 'tread', base: 'deck' } } },
     gym: { W: 1.45, D: 1.0, h: 0.6, name: 'Weights and mat', blocks: [[1.1, 0.1, 1.45, 0.9]],
       parts: () => [F(0, 0, 1.1, 1.0, (T) => { T.poly([[0, 0, 0.01], [1.1, 0, 0.01], [1.1, 1.0, 0.01], [0, 1.0, 0.01]], '#3D6B73'); T.poly([[0.1, 0.1, 0.012], [1.0, 0.1, 0.012], [1.0, 0.9, 0.012], [0.1, 0.9, 0.012]], null, 'rgba(255,255,255,.25)', 1); }, { decal: true }),
@@ -382,6 +389,9 @@ export function createHouseArt(ctx0, opts = {}) {
         const b1 = T.P(1.45, 0.23, 0.94), b2 = T.P(1.85, 0.5, 0.94); ell(b1[0], b1[1], 9, 4.5, '#1E1A20', '#6B6170'); ell(b2[0], b2[1], 8, 4, '#1E1A20', '#6B6170');
         if (has('espresso')) { T.box(2.3, 0.04, 0.93, 0.34, 0.32, 0.46, '#C9CED6'); T.box(2.3, 0.04, 1.32, 0.34, 0.32, 0.06, '#C2413A'); } else { T.box(2.3, 0.04, 0.93, 0.32, 0.3, 0.44, '#2B2B30'); T.box(2.34, 0.35, 0.93, 0.24, 0.14, 0.18, '#6B4A35'); }
         if (has('plants')) { T.box(0.05, 0.12, 0.93, 0.18, 0.18, 0.15, '#C26B4A'); const [px, py] = T.P(0.14, 0.21, 1.15); ell(px - 3, py - 3, 3, 7, '#4F9460', null, -0.4); ell(px + 3, py - 4, 3, 7, '#3F7D4E', null, 0.4); }
+        if (live(o.id, 'stove') && !usingSlot(o.id + ':stove', ['cook'])) { const g = 0.6 + Math.sin(t * 9) * 0.2; ell(b1[0], b1[1], 7, 3.4, `rgba(255,${(90 + g * 60) | 0},40,${0.55 + g * 0.3})`); }
+        if (live(o.id, 'sink')) { const [fx, fy] = T.P(0.65, 0.2, 1.12); for (let k = 0; k < 4; k++) { const u = (t * 3 + k / 4) % 1; limb(fx, fy + u * 10, fx, fy + u * 10 + 3, `rgba(170,215,245,${0.9 - u * 0.5})`, 1.6); } }
+        if (live(o.id, 'coffee')) steamAt(T, 2.46, 0.19, 1.4, t, 4, 1);
         if (usingSlot(o.id + ':stove', ['cook'])) { ell(b1[0], b1[1] - 2, 10, 5, '#3B3B40'); limb(b1[0] + 8, b1[1] - 2, b1[0] + 20, b1[1] + 3, '#3B3B40', 2.4); ell(b1[0], b1[1] - 3, 7, 3.2, '#D9822B'); steamAt(T, 1.45, 0.23, 1.0, t, 5, 0.9); }
         if (usingSlot(o.id + ':coffee', ['coffee'])) steamAt(T, 2.46, 0.19, 1.4, t);
         if (usingSlot(o.id + ':sink', ['wash'])) for (let i = 0; i < 5; i++) { const ph = (t * 0.8 + i / 5) % 1; const [sx, sy] = T.P(0.65 + Math.sin(i * 7) * 0.15, 0.36, 0.95 + ph * 0.25); circle(sx, sy, 1.5 + ph * 1.5, `rgba(255,255,255,${0.9 - ph * 0.8})`); }
@@ -389,17 +399,18 @@ export function createHouseArt(ctx0, opts = {}) {
       spots: { sink: { stand: [0.65, 1.23], dir: [0, -1], tag: 'sink', group: 'counterL' }, window: { stand: [0.95, 1.23], dir: [0, -1], tag: 'window', group: 'counterL' }, stove: { stand: [1.65, 1.23], dir: [0, -1], tag: 'stove' }, coffee: { stand: [2.45, 1.23], dir: [0, -1], tag: 'coffee' } } },
     fridge: { W: 0.9, D: 0.85, h: 1.95, fixed: true,
       parts: () => [F(0, 0, 0.9, 0.85, (T) => { T.box(0, 0, 0, 0.9, 0.85, 1.95, '#DCE3E6'); T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(60,70,80,.3)', 1); T.line([0.78, 0.85, 0.7], [0.78, 0.85, 1.15], '#8E979C', 2); T.line([0.78, 0.85, 1.42], [0.78, 0.85, 1.75], '#8E979C', 2);
-        const n = fridge.basic + fridge.fresh; T.poly([[0.08, 0.851, 1.45], [0.32, 0.851, 1.45], [0.32, 0.851, 1.68], [0.08, 0.851, 1.68]], n === 0 ? '#C2413A' : '#E0A43A'); })],
+        const n = fridge.basic + fridge.fresh; T.poly([[0.08, 0.851, 1.45], [0.32, 0.851, 1.45], [0.32, 0.851, 1.68], [0.08, 0.851, 1.68]], n === 0 ? '#C2413A' : '#E0A43A');
+        if (live(T.o.id)) { T.poly([[0.04, 0.851, 0.05], [0.86, 0.851, 0.05], [0.86, 0.851, 1.25], [0.04, 0.851, 1.25]], 'rgba(255,248,220,.95)'); [0.4, 0.75].forEach(z => T.line([0.06, 0.852, z], [0.84, 0.852, z], 'rgba(150,160,170,.6)', 1)); [[0.2, 0.42, '#C2413A'], [0.5, 0.42, '#7FB069'], [0.3, 0.77, '#F2EEE8'], [0.62, 0.77, '#E0A43A']].forEach(([x, z, col]) => { const [cx, cy] = T.P(x, 0.853, z + 0.06); rr(cx - 3, cy - 5, 6, 6, 1, col); }); T.poly([[0.86, 0.851, 0.05], [0.86, 1.6, 0.05], [0.86, 1.6, 1.25], [0.86, 0.851, 1.25]], '#DCE3E6', 'rgba(60,70,80,.3)', 1); } })],
       spots: { f: { stand: [0.45, 1.45], dir: [0, -1], tag: 'fridge' } } },
     tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true,
       parts: () => [F(0, 0, 1.6, 0.45, (T) => { T.box(0, 0, 0, 1.6, 0.45, 0.42, '#3A3340'); T.line([0.8, 0.45, 0.06], [0.8, 0.45, 0.36], 'rgba(255,255,255,.12)', 1); if (!has('bigtv')) { T.box(0.1, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); T.box(1.32, 0.08, 0.42, 0.18, 0.18, 0.3, '#2B2B30'); } })] },
     shower: { W: 1.18, D: 1.18, h: 2.1, fixed: true,
-      parts: () => [F(0, 0, 1.18, 1.18, (T) => { T.box(0, 0, 0, 1.18, 1.18, 0.1, '#E6ECEE'); const [dx, dy] = T.P(0.6, 0.58, 0.1); ell(dx, dy, 3, 1.5, '#9AA3A8'); T.line([0.57, 0, 2.15], [0.57, 0.2, 2.15], '#9AA3A8', 2.5); const [hx, hy] = T.P(0.57, 0.22, 2.1); ell(hx, hy, 5, 2.5, '#9AA3A8'); if (usingSlot(T.o.id + ':s')) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.57, 0.22); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      parts: () => [F(0, 0, 1.18, 1.18, (T) => { T.box(0, 0, 0, 1.18, 1.18, 0.1, '#E6ECEE'); const [dx, dy] = T.P(0.6, 0.58, 0.1); ell(dx, dy, 3, 1.5, '#9AA3A8'); T.line([0.57, 0, 2.15], [0.57, 0.2, 2.15], '#9AA3A8', 2.5); const [hx, hy] = T.P(0.57, 0.22, 2.1); ell(hx, hy, 5, 2.5, '#9AA3A8'); if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.57, 0.22); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
           T.poly([[0, 0, 0.1], [0, 1.18, 0.1], [0, 1.18, 2.1], [0, 0, 2.1]], 'rgba(186,222,232,.22)', 'rgba(140,180,195,.7)', 1); }, { name: 'tray' }),
         F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.1], [1.18, 1.18, 0.1], [1.18, 1.18, 2.1], [0, 1.18, 2.1]], 'rgba(186,222,232,.26)', 'rgba(140,180,195,.7)', 1); T.line([0.2, 1.18, 1.9], [0.65, 1.18, 1.2], 'rgba(255,255,255,.55)', 2); }),
         F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0, 0.1], [1.18, 1.18, 0.1], [1.18, 1.18, 2.1], [1.18, 0, 2.1]], 'rgba(186,222,232,.22)', 'rgba(140,180,195,.7)', 1); })],
       spots: { s: { stand: [0.6, 1.7], pos: [0.6, 0.6, 0.1], dir: [0, 1], tag: 'shower', base: 'tray' } } },
-    toilet: { W: 0.42, D: 0.62, h: 0.8, fixed: true, parts: () => [F(0, 0, 0.42, 0.62, (T) => { T.box(0.03, 0, 0.3, 0.36, 0.16, 0.42, '#F2EEE8'); T.box(0.06, 0.14, 0, 0.3, 0.42, 0.36, '#F2EEE8'); const [sx, sy] = T.P(0.21, 0.38, 0.37); ell(sx, sy, 6, 3.5, '#E1DCD5'); })] },
+    toilet: { W: 0.42, D: 0.62, h: 0.8, fixed: true, parts: () => [F(0, 0, 0.42, 0.62, (T) => { T.box(0.03, 0, 0.3, 0.36, 0.16, 0.42, '#F2EEE8'); T.box(0.06, 0.14, 0, 0.3, 0.42, 0.36, '#F2EEE8'); const [sx, sy] = T.P(0.21, 0.38, 0.37); ell(sx, sy, 6, 3.5, '#E1DCD5'); if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } })] },
     vanity: { W: 1.0, D: 0.5, h: 0.95, fixed: true, parts: () => [F(0, 0, 1.0, 0.5, (T) => { T.box(0, 0, 0, 1.0, 0.5, 0.8, '#7A5236'); T.box(-0.02, -0.02, 0.8, 1.04, 0.54, 0.05, '#E4DDD2'); const [sx, sy] = T.P(0.5, 0.25, 0.86); ell(sx, sy, 8, 4, '#B9C3C8'); T.line([0.5, 0.03, 0.85], [0.5, 0.03, 1.0], '#AEB6BB', 2); })] },
     flightY: { W: 1, D: 3.16, h: 2.7, fixed: true, parts: () => flightParts('y') },
     flightX: { W: 3.16, D: 1, h: 2.7, fixed: true, parts: () => flightParts('x') },
@@ -429,7 +440,7 @@ export function createHouseArt(ctx0, opts = {}) {
       })] },
     laundry: { W: 1.5, D: 0.75, h: 1.05, fixed: true, name: 'Washer and dryer',
       parts: () => [F(0, 0, 1.5, 0.75, (T, o, t) => {
-        const on = usingSlot(o.id + ':w') || (o.runUntil && absMin() < o.runUntil), wob = on ? Math.sin(t * 30) * 0.6 : 0;
+        const on = usingSlot(o.id + ':w') || (o.runUntil && absMin() < o.runUntil) || live(o.id), wob = on ? Math.sin(t * 30) * 0.6 : 0;
         [0, 0.76].forEach((x, i) => { T.box(x, 0, 0, 0.74, 0.72, 0.92, '#F2EEE8'); T.box(x, 0, 0.92, 0.74, 0.16, 0.12, '#E4DDD2'); const [cx, cy] = T.P(x + 0.37, 0.721, 0.46); ell(cx + (i ? 0 : wob), cy, 9, 9, '#9AA3A8'); ell(cx + (i ? 0 : wob), cy, 7, 7, i ? '#3A3F4A' : '#4A88B8');
           if (on && !i) for (let k = 0; k < 4; k++) { const a = t * 6 + k * 1.6; circle(cx + Math.cos(a) * 4 + wob, cy + Math.sin(a) * 4, 2.2, ['#C2413A', '#E0A43A', '#F2EEE8', '#4A5DA8'][k]); }
           const [px, py] = T.P(x + 0.6, 0.73, 0.98); circle(px, py, 1.4, on && !i ? '#5CC48A' : '#8B8189'); });
@@ -467,11 +478,11 @@ export function createHouseArt(ctx0, opts = {}) {
     fireplace: { W: 1.3, D: 0.55, h: 2.6, fixed: true, name: 'Fireplace',
       parts: () => [F(0, 0, 1.3, 0.55, (T, o, t) => { T.box(0.15, 0, 1.25, 1.0, 0.4, WH - 1.25, '#9A8F86'); T.box(0, 0, 0, 1.3, 0.5, 1.2, '#B5A99E'); T.box(-0.05, 0, 1.2, 1.4, 0.58, 0.08, '#6B4A35');
         T.poly([[0.3, 0.501, 0.12], [1.0, 0.501, 0.12], [1.0, 0.501, 0.85], [0.3, 0.501, 0.85]], '#1E1A20');
-        const lit = power || true, fl = Math.sin(t * 9) * 0.5 + Math.sin(t * 13.7) * 0.3; if (lit && (darkness() > 0.05 || seasonIdx() === 3)) { const [fx, fy] = T.P(0.65, 0.48, 0.2); ell(fx, fy - 6 - fl, 9, 10 + fl * 2, 'rgba(240,120,40,.9)'); ell(fx - 3, fy - 4, 5, 7 + fl, 'rgba(255,200,90,.95)'); ell(fx + 4, fy - 3, 4, 6 - fl, 'rgba(255,170,60,.9)'); const [ex, ey] = T.W(0.65, 0.4); PFX.emit(o.id + ':ember', 'ember', o.level, ex, ey, 0.2, 0.45); }
+        const lit = !fireOut.has(o.id), fl = Math.sin(t * 9) * 0.5 + Math.sin(t * 13.7) * 0.3; if (lit && (darkness() > 0.05 || seasonIdx() === 3)) { const [fx, fy] = T.P(0.65, 0.48, 0.2); ell(fx, fy - 6 - fl, 9, 10 + fl * 2, 'rgba(240,120,40,.9)'); ell(fx - 3, fy - 4, 5, 7 + fl, 'rgba(255,200,90,.95)'); ell(fx + 4, fy - 3, 4, 6 - fl, 'rgba(255,170,60,.9)'); const [ex, ey] = T.W(0.65, 0.4); PFX.emit(o.id + ':ember', 'ember', o.level, ex, ey, 0.2, 0.45); }
         [[0.4, 0.3], [0.9, 0.3]].forEach(([x, y]) => T.line([x, y, 0.13], [x + 0.2, y + 0.1, 0.13], '#5A3E2E', 3)); })],
       spots: { f: { stand: [0.65, 1.25], dir: [0, -1], tag: 'fireside' } }, light: { at: [0.65, 0.6, 0.5], r: 160, col: '255,150,70' } },
     bathtub: { W: 1.6, D: 0.8, h: 0.7, fixed: true, name: 'Clawfoot tub',
-      parts: () => [F(0, 0, 1.6, 0.8, (T, o) => { T.box(0.05, 0.05, 0.08, 1.5, 0.7, 0.5, '#F2EEE8'); T.poly([[0.15, 0.15, 0.581], [1.45, 0.15, 0.581], [1.45, 0.65, 0.581], [0.15, 0.65, 0.581]], usingSlot(o.id + ':b') ? '#BFE2F0' : '#E6ECEE'); if (usingSlot(o.id + ':b')) { steamAt(T, 0.5, 0.4, 0.6, 0, 3, 0.7); steamAt(T, 1.1, 0.4, 0.6, 0, 3, 0.7); } [[0.1, 0.1], [1.5, 0.1], [0.1, 0.7], [1.5, 0.7]].forEach(([x, y]) => { const [sx, sy] = T.P(x, y, 0.04); circle(sx, sy, 2.5, '#C9A24A'); }); }, { name: 'basin' })],
+      parts: () => [F(0, 0, 1.6, 0.8, (T, o) => { T.box(0.05, 0.05, 0.08, 1.5, 0.7, 0.5, '#F2EEE8'); T.poly([[0.15, 0.15, 0.581], [1.45, 0.15, 0.581], [1.45, 0.65, 0.581], [0.15, 0.65, 0.581]], usingSlot(o.id + ':b') || live(o.id) ? '#BFE2F0' : '#E6ECEE'); if (usingSlot(o.id + ':b') || live(o.id)) { steamAt(T, 0.5, 0.4, 0.6, 0, 3, 0.7); steamAt(T, 1.1, 0.4, 0.6, 0, 3, 0.7); } [[0.1, 0.1], [1.5, 0.1], [0.1, 0.7], [1.5, 0.7]].forEach(([x, y]) => { const [sx, sy] = T.P(x, y, 0.04); circle(sx, sy, 2.5, '#C9A24A'); }); }, { name: 'basin' })],
       spots: { b: { stand: [0.8, 1.3], pos: [0.8, 0.4, 0.35], dir: [0, 1], tag: 'tub', base: 'basin' } } },
     bar: { W: 1.8, D: 0.6, h: 1.2, fixed: true, name: 'Basement bar',
       parts: () => [F(0, 0, 1.8, 0.6, (T, o, t) => { T.box(0, 0, 0, 1.8, 0.6, 1.05, '#5A3E2E'); T.box(-0.05, -0.05, 1.05, 1.9, 0.7, 0.06, '#2B2830'); [0.3, 0.7, 1.1, 1.5].forEach((x, k) => T.box(x, 0.2, 1.11, 0.08, 0.08, 0.22 + (k % 2) * 0.06, ['#4F9460', '#C2413A', '#E0A43A', '#4A88B8'][k])); const [lx, ly] = T.P(0.9, 0.61, 0.6); ctx.fillStyle = 'rgba(224,164,58,.35)'; ctx.fillRect(lx - 30, ly - 2, 60, 2); })],
@@ -1630,6 +1641,8 @@ export function createHouseArt(ctx0, opts = {}) {
   function render(s) {
     sync(s);
     const t = animT, lv = viewLevel;
+    const watching = [jordan, maya].some(c => c && c.task && c.task.phase === 'do' && (c.task.name === 'tv' || c.task.name === 'movie'));
+    tvF += ((power && (watching || tvOn) ? 1 : 0) - tvF) * Math.min(1, rdt * 4);
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     const lights = activeLights(lv);
@@ -1679,5 +1692,28 @@ export function createHouseArt(ctx0, opts = {}) {
     return toggleObjectLight(best.id);
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, project: (x, y, z = 0) => iso(x, y, z), TYPES, WTYPES };
+  // Tapping an object brings it to life for a moment (or flips its switch).
+  // Returns what happened, for the log, or null if it does nothing on a tap.
+  function poke(o, part = '') {
+    const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
+    switch (o.type) {
+      case 'tvunit': tvOn = !tvOn; return tvOn ? 'The TV flickers on.' : 'TV off.';
+      case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
+      case 'laundry': return run(12, 'The washer churns into a spin cycle.');
+      case 'records': return run(14, 'The needle drops. A record starts spinning.');
+      case 'arcade': return run(6, 'The arcade lights up: INSERT COIN.');
+      case 'tread': return run(8, 'The treadmill belt whirs to life.');
+      case 'shower': return run(8, 'The shower hisses on, then off.');
+      case 'bathtub': return run(10, 'The tub fills with steaming water.');
+      case 'toilet': return run(3, 'Flush.');
+      case 'fridge': return run(3, 'The fridge door swings open. Snacks.');
+      case 'counter': {
+        const msg = { sink: 'The faucet runs.', stove: 'Click, click, whoomph: the burner lights.', coffee: 'The coffee machine gurgles.' }[part];
+        return msg ? run(part === 'stove' ? 8 : 5, msg) : null;
+      }
+      default: return null;
+    }
+  }
+
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, project: (x, y, z = 0) => iso(x, y, z), TYPES, WTYPES };
 }

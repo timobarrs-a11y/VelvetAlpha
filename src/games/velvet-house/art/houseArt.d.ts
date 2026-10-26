@@ -56,6 +56,8 @@ export interface HouseArt {
   applyFloor(level: number, floor: string): void;
   toggleObjectLight(id: string): boolean;
   toggleLightAt(level: number, sx: number, sy: number): boolean | null;
+  // Tap an object to bring it to life (or flip its switch); what happened, or null.
+  poke(o: { id: string; type: string }, part?: string): string | null;
   /** Sets whether the partner's mouth animates (talking). */
   setTalking(v: boolean): void;
   /** Sets the partner's mood, 0-1, for facial expression. */
