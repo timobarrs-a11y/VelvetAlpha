@@ -201,9 +201,9 @@ yes.
 | G6 | **Coaches teach:** the teaching loop, a "what you teach" section for each of the 20 coaches, and the scripted-learner test. | Medium–Large |
 | G7 | **Show them apart:** Goals and Your team in the home menu, labels and badges, and Today icons. | Small |
 
-## Decisions for Tim
+## Decisions (made by Tim, 26 October)
 
-1. **Web search:** worth adding? It's what makes "buy a home" current and specific, and costs a
-   little per search.
-2. **Can one person have several assistants?** One per goal (recommended: each has a face and
-   a focus), or one assistant who handles every non-learning goal?
+1. **Web search** is added, for assistants, Atlas and coaches.
+2. **One assistant per goal.** Each assistant's memory and chat stay focused on one goal,
+   which keeps what it has to remember small and relevant. A new goal without a skill to learn
+   gets a new assistant; a goal with a skill gets a coach.

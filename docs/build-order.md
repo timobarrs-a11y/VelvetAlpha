@@ -2,7 +2,7 @@
 
 One order for the phases in `docs/onboarding/questionnaire-plan.md` (A0–A9) and
 `docs/goals-and-coaches/plan.md` (G1–G7). Things that show value soonest and depend on nothing
-come first. Each step lists the decisions it needs; a step waiting on a decision can't start.
+come first. All decisions are made (see the end), so nothing is blocked.
 
 ## Done
 
@@ -13,7 +13,7 @@ come first. Each step lists the decisions it needs; a step waiting on a decision
 
 ## Next, in order
 
-| # | Phase | What | Needs first | Decisions needed |
+| # | Phase | What | Needs first | Decided |
 |---|---|---|---|---|
 | 1 | **A8** | Quick add in Today (task, appointment, birthday, reminder, goal); My people birthdays with ages | A5, A7 (done) | none |
 | 2 | **G1** | Data: `assistant` relationship type; dates and durations on plan steps; the calendar shows commitments (Today already does) | | none |
@@ -29,14 +29,14 @@ come first. Each step lists the decisions it needs; a step waiting on a decision
 | 12 | **G7** | Goals and Your team in the home menu, labels and badges | G2 | none |
 | 13 | **A4** | Swipe deck as a feed card; the companion asks love language and "when it's hard" in week 1 | | none |
 
-## Decisions still open
+## Decisions (made by Tim, 26 October)
 
-| # | Decision | Recommended |
+| # | Decision | Answer |
 |---|---|---|
 | 1 | Atlas says "Master" and "Miss" by default, with a one-time offer to use first names | Yes |
 | 2 | Atlas's onboarding chat runs on Sonnet, not Haiku | Yes |
 | 3 | Zodiac worked out from the birthday with a one-tap confirm | Yes |
 | 4 | The Someday screen in Act 1, or later in the first week | In Act 1 |
-| 5 | Atlas's plans go straight onto the calendar as pencilled in once they say yes, or wait in a suggestions list | Straight on, pencilled in |
+| 5 | Atlas's plans go straight onto the calendar as pencilled in once they say yes | Yes |
 | 6 | Add web search | Yes, for assistants, Atlas and coaches |
-| 7 | One assistant per goal, or one for all non-learning goals | One per goal |
+| 7 | One assistant per goal, or one for all non-learning goals | One per goal, so each assistant's memory stays focused |

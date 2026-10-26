@@ -518,14 +518,11 @@ February shows on the 28th in other years.
 | A8 | **Their own plans and their people:** quick add in Today (task, appointment, birthday, reminder, goal), the My people birthday form and the one-time Today card, ages worked out from the birth year, and birthdays a week ahead in "coming up". | Medium |
 | A9 | **The first-session chain:** the progress strip and saving at each step; the "Now, you" screen and the avatar creator set from Act 1, recording what was chosen by hand; the house and billboard step with headline starters; the scripted look around the town with **Continue to Atlas**; Atlas's remark on a hand-picked choice; meet your assistant or coach (randomized, with Change anything); the billboard goal question; Community and Games highlights on home; avatar-free companion and pricing timing as in "What waits". | Medium–Large |
 
-## Decisions for Tim
+## Decisions (made by Tim, 26 October)
 
-1. **"Master" and "Miss":** keep them as the default with the one-time "shall I keep the
-   formalities?" offer (recommended), or first names only?
-2. **Sonnet for Atlas's onboarding chat:** about 10 turns once per person. Recommended; Haiku
-   will struggle to pick the right question and hold the voice.
-3. **Zodiac:** worked out from the birthday with a one-tap confirm (recommended), or asked outright?
-4. **Someday screen:** in Act 1 as screen 8 (recommended, because it's Atlas's main backup
-   when someone is unsure), or offered later in the first week to keep Act 1 shorter?
-5. **Atlas's plans:** go straight onto the calendar as pencilled in once they say yes
-   (recommended, because it shows up immediately), or wait in a suggestions list until confirmed?
+1. **"Master" and "Miss"** are the default, with the one-time "shall I keep the formalities?"
+   offer.
+2. **Atlas's onboarding chat runs on Sonnet.**
+3. **Zodiac** is worked out from the birthday, with a one-tap confirm.
+4. **The Someday screen** is in Act 1, as screen 8.
+5. **Atlas's plans** go straight onto the calendar as pencilled in once they say yes.
