@@ -69,13 +69,16 @@ export const OUTFIT_COLORS: Array<{ name: string; value: string }> = [
 export interface AvatarUnlocks {
   member: boolean;
   earned: string[];
+  // Items this person owns (avatar_inventory): bought in Velvet Sims, won, or granted.
+  owned?: string[];
 }
 
-export const STARTER_ONLY: AvatarUnlocks = { member: false, earned: [] };
+export const STARTER_ONLY: AvatarUnlocks = { member: false, earned: [], owned: [] };
 
 export interface UnlockResult {
   ok: boolean;
-  need?: 'membership' | string;
+  // 'membership', a medal slug, 'sims' (the Velvet Sims shop) or 'reward'.
+  need?: 'membership' | 'sims' | 'reward' | string;
 }
 
 export function itemUnlock(item: { tier: ItemTier; medal?: string }, unlocks: AvatarUnlocks): UnlockResult {
@@ -100,9 +103,11 @@ export function resolveAvatarForDisplay(config: AvatarConfigV2, unlocks: AvatarU
   const outfit = outfitItem(config.outfit);
   const headwear = headwearItem(config.headwear);
   const face = faceAccessoryItem(config.faceAccessory);
-  const outfitOk = itemUnlock(outfit, unlocks).ok;
-  const headwearOk = itemUnlock(headwear, unlocks).ok;
-  const faceOk = itemUnlock(face, unlocks).ok;
+  // Owning an item outright (a gift, a reward) counts whatever its tier.
+  const owns = (slot: string, id: string) => !!unlocks.owned?.includes(`${slot}:${id}`);
+  const outfitOk = owns('outfit', outfit.id) || itemUnlock(outfit, unlocks).ok;
+  const headwearOk = owns('headwear', headwear.id) || itemUnlock(headwear, unlocks).ok;
+  const faceOk = owns('faceAccessory', face.id) || itemUnlock(face, unlocks).ok;
   if (outfitOk && headwearOk && faceOk) return config;
 
   const next = { ...config };

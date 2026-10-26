@@ -16,8 +16,9 @@ import {
 import { AVATAR_PRESETS } from '../data/avatarPresets';
 import {
   AVATAR_KITS, OUTFITS, HEADWEAR, FACE_ACCESSORIES, OUTFIT_COLORS,
-  AvatarUnlocks, UnlockResult, itemUnlock, kitUnlock, kitTier, outfitItem,
+  AvatarUnlocks, UnlockResult, kitTier, outfitItem,
 } from '../data/avatarItems';
+import { canUse, itemId, lookUnlock } from '../data/avatarCatalog';
 import { useAvatarUnlocks } from '../hooks/useAvatarUnlocks';
 import { migrateAvatarConfig, applyAvatarChange } from '../utils/avatarConfig';
 import { useAvatarFavorites } from '../hooks/useAvatarFavorites';
@@ -49,8 +50,17 @@ interface AvatarCreatorV2Props {
 }
 
 function ColorSwatch({
-  color, selected, onClick, title,
-}: { color: string; selected: boolean; onClick: () => void; title?: string }) {
+  color, selected, onClick, title, lock,
+}: { color: string; selected: boolean; onClick: () => void; title?: string; lock?: UnlockResult }) {
+  if (lock && !lock.ok) {
+    return (
+      <button disabled title={`${title ? `${title}: ` : ''}unlocks with ${lockLabel(lock)}`}
+        className="relative w-10 h-10 rounded-full ring-1 ring-dashed ring-white/10 cursor-not-allowed opacity-40"
+        style={{ backgroundColor: color }}>
+        <Lock className="absolute inset-0 m-auto w-3.5 h-3.5 text-white" />
+      </button>
+    );
+  }
   return (
     <button
       onClick={onClick}
@@ -89,6 +99,8 @@ function OptionButton({
 function lockLabel(u: UnlockResult): string {
   if (u.ok) return '';
   if (u.need === 'membership') return 'Members';
+  if (u.need === 'sims') return 'Velvet Sims shop';
+  if (u.need === 'reward') return 'Reward';
   return (u.need ?? 'medal').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' medal';
 }
 
@@ -479,7 +491,8 @@ export function AvatarCreatorV2({
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">{group.label}</p>
               <div className="grid grid-cols-3 gap-2">
                 {group.styles.map(value => (
-                  <OptionButton key={value} label={hairstyles.find(h => h.value === value)?.label ?? value}
+                  <LockableOption key={value} label={hairstyles.find(h => h.value === value)?.label ?? value}
+                    lock={canUse(itemId('hairStyle', value), unlocks)}
                     selected={config.hairStyle === value} onClick={() => update({ hairStyle: value })} />
                 ))}
               </div>
@@ -501,6 +514,7 @@ export function AvatarCreatorV2({
         <div className="flex flex-wrap gap-2">
           {[...HAIR_COLORS, ...HAIR_FASHION_COLORS].map(c => (
             <ColorSwatch key={c.value} color={c.value} selected={config.hairColor === c.value}
+              lock={canUse(itemId('hairColor', c.value), unlocks)}
               onClick={() => update({ hairColor: c.value })} title={c.name} />
           ))}
         </div>
@@ -513,6 +527,7 @@ export function AvatarCreatorV2({
               onClick={() => update({ hairHighlight: 'none' })} title="No highlights" />
             {[...HAIR_COLORS, ...HAIR_FASHION_COLORS].filter(c => c.value !== config.hairColor).map(c => (
               <ColorSwatch key={c.value} color={c.value} selected={config.hairHighlight === c.value}
+                lock={canUse(itemId('hairHighlight', c.value), unlocks)}
                 onClick={() => update({ hairHighlight: c.value })} title={c.name} />
             ))}
           </div>
@@ -570,7 +585,7 @@ export function AvatarCreatorV2({
 
   const currentOutfit = outfitItem(config.outfit);
   const kitButton = (kit: typeof AVATAR_KITS[number]) => {
-    const lock = kitUnlock(kit, unlocks);
+    const lock = lookUnlock(kit.look, unlocks);
     return (
       <button
         key={kit.id}
@@ -616,7 +631,7 @@ export function AvatarCreatorV2({
       <Section label="Outfit">
         <div className="grid grid-cols-3 gap-2">
           {OUTFITS.map(o => (
-            <LockableOption key={o.id} label={o.label} lock={itemUnlock(o, unlocks)}
+            <LockableOption key={o.id} label={o.label} lock={canUse(itemId('outfit', o.id), unlocks)}
               selected={currentOutfit.id === o.id}
               onClick={() => update({ outfit: o.id, outfitColor: o.color, outfitAccent: o.accent })} />
           ))}
@@ -646,7 +661,7 @@ export function AvatarCreatorV2({
       <Section label="Headwear">
         <div className="grid grid-cols-3 gap-2">
           {HEADWEAR.map(h => (
-            <LockableOption key={h.id} label={h.label} lock={itemUnlock(h, unlocks)}
+            <LockableOption key={h.id} label={h.label} lock={canUse(itemId('headwear', h.id), unlocks)}
               selected={(config.headwear ?? 'none') === h.id}
               onClick={() => update({ headwear: h.id })} />
           ))}
@@ -656,7 +671,7 @@ export function AvatarCreatorV2({
       <Section label="Face">
         <div className="grid grid-cols-3 gap-2">
           {FACE_ACCESSORIES.map(f => (
-            <LockableOption key={f.id} label={f.label} lock={itemUnlock(f, unlocks)}
+            <LockableOption key={f.id} label={f.label} lock={canUse(itemId('faceAccessory', f.id), unlocks)}
               selected={(config.faceAccessory ?? 'none') === f.id}
               onClick={() => update({ faceAccessory: f.id })} />
           ))}

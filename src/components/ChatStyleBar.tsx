@@ -407,6 +407,9 @@ export interface ChatStyleBarProps {
   onCompanionTextColorChange?: (key: string) => void;
   onCustomizationUpdate?: (prefs: Partial<UserCustomization>) => void;
   onOpenWallpaper?: () => void;
+  // Phones: one Style button that opens the four tools in a tray above it,
+  // so the message box keeps its room.
+  compact?: boolean;
 }
 
 type ActivePanel = 'font' | 'color' | 'mouse' | null;
@@ -549,8 +552,9 @@ export function ChatStyleTileStrip(props: ChatStyleBarProps) {
 }
 
 // ─── Compact icon bar (mobile) ────────────────────────────────────────────────
+// The same 40px square as the send button and the pet toggle beside it.
 const BTN = `
-  flex items-center justify-center w-8 h-8 rounded-xl border transition-all duration-150 flex-shrink-0
+  relative flex items-center justify-center w-10 h-10 rounded-xl border transition-all duration-150 flex-shrink-0
 `;
 
 export function ChatStyleBar(props: ChatStyleBarProps) {
@@ -560,10 +564,11 @@ export function ChatStyleBar(props: ChatStyleBarProps) {
     currentCompanionBubbleColor, currentCompanionTextColor,
     customization, onFontChange, onBubbleColorChange, onTextColorChange,
     onCompanionBubbleColorChange, onCompanionTextColorChange,
-    onCustomizationUpdate, onOpenWallpaper,
+    onCustomizationUpdate, onOpenWallpaper, compact = false,
   } = props;
 
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
+  const [trayOpen, setTrayOpen] = useState(false);
   const toggle = (panel: ActivePanel) => setActivePanel(prev => prev === panel ? null : panel);
 
   const handleFontSelect = async (fontFamily: string) => {
@@ -602,8 +607,8 @@ export function ChatStyleBar(props: ChatStyleBarProps) {
         : 'bg-white/90 border-gray-200/80 text-gray-500 hover:border-gray-300 hover:text-gray-700'
     }`;
 
-  return (
-    <div className="flex items-center gap-1 relative">
+  const tools = (
+    <>
       {onOpenWallpaper && (
         <button
           onClick={onOpenWallpaper}
@@ -611,7 +616,7 @@ export function ChatStyleBar(props: ChatStyleBarProps) {
           className={`${BTN} bg-white/90 border-gray-200/80 text-gray-500 hover:border-teal-300 hover:text-teal-600`}
           style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}
         >
-          <Image size={14} />
+          <Image size={16} />
         </button>
       )}
 
@@ -622,7 +627,7 @@ export function ChatStyleBar(props: ChatStyleBarProps) {
           className={iconClass(activePanel === 'font')}
           style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}
         >
-          <Type size={14} />
+          <Type size={16} />
           {hasCustomFont && (
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-400 border border-white" />
           )}
@@ -641,7 +646,7 @@ export function ChatStyleBar(props: ChatStyleBarProps) {
           className={iconClass(activePanel === 'color')}
           style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}
         >
-          <Palette size={14} />
+          <Palette size={16} />
           {hasCustomColor && (
             <span
               className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white"
@@ -674,7 +679,7 @@ export function ChatStyleBar(props: ChatStyleBarProps) {
           className={iconClass(activePanel === 'mouse')}
           style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}
         >
-          <Sparkles size={14} />
+          <Sparkles size={16} />
           {hasCustomMouse && (
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 border border-white" />
           )}
@@ -689,6 +694,35 @@ export function ChatStyleBar(props: ChatStyleBarProps) {
           )}
         </AnimatePresence>
       </div>
+    </>
+  );
+
+  if (!compact) return <div className="flex items-center gap-1.5 relative">{tools}</div>;
+
+  const customised = hasCustomFont || hasCustomColor || hasCustomMouse;
+  return (
+    <div className="relative">
+      <button
+        onClick={() => { setTrayOpen(o => !o); setActivePanel(null); }}
+        title="Chat style"
+        aria-label="Chat style"
+        aria-expanded={trayOpen}
+        className={iconClass(trayOpen)}
+        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}
+      >
+        <Palette size={16} />
+        {customised && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-400 border border-white" />}
+      </button>
+      <AnimatePresence>
+        {trayOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+            className="absolute bottom-full right-0 mb-2 z-[250] flex items-center gap-1.5 rounded-2xl border border-gray-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur"
+          >
+            {tools}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

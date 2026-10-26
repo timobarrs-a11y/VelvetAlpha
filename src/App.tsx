@@ -1342,7 +1342,7 @@ function AppInner() {
           <button
             data-tour-id="tour-pet-toggle"
             onClick={petToggle}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl transition-all duration-200 flex-shrink-0"
+            className="flex items-center gap-1.5 h-10 px-3 rounded-xl transition-all duration-200 flex-shrink-0"
             style={{
               background: petEnabled ? 'rgba(251,146,60,0.15)' : 'rgba(0,0,0,0.04)',
               border: `1.5px solid ${petEnabled ? 'rgba(251,146,60,0.45)' : 'rgba(0,0,0,0.08)'}`,
@@ -1390,12 +1390,12 @@ function AppInner() {
         </div>
 
         {/* Mobile layout */}
-        <div className="lg:hidden flex items-end py-2 gap-2 px-3">
-          {/* Mochi toggle — icon only on mobile */}
+        <div className="lg:hidden flex items-end py-2 gap-1.5 px-3">
+          {/* Mochi toggle — icon only on mobile, the same 40px square as everything in this row */}
           <button
             data-tour-id="tour-pet-toggle"
             onClick={petToggle}
-            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all"
             style={{
               background: petEnabled ? 'rgba(251,146,60,0.15)' : 'rgba(0,0,0,0.04)',
               border: `1.5px solid ${petEnabled ? 'rgba(251,146,60,0.45)' : 'rgba(0,0,0,0.08)'}`,
@@ -1447,6 +1447,7 @@ function AppInner() {
                   if (prefs.animation_style !== undefined) setAnimationStyle(prefs.animation_style);
                 }}
                 onOpenWallpaper={() => setShowWallpaperModal(true)}
+                compact
               />
             </div>
           )}

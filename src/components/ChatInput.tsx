@@ -76,7 +76,7 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
   }, [input]);
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3 items-end flex-1">
+    <form onSubmit={handleSubmit} className="m-0 flex gap-1.5 sm:gap-2 items-end flex-1">
       {showNavRadial && (
         <div className="flex-shrink-0 pb-1">
           <AppNavRadial
@@ -104,7 +104,7 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
           }
           disabled={disabled}
           rows={1}
-          className={`w-full px-4 sm:px-5 py-2.5 rounded-2xl border transition-all duration-200 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none resize-none overflow-y-auto ${
+          className={`block w-full min-h-[40px] px-4 sm:px-5 py-2 leading-6 rounded-xl border transition-all duration-200 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none resize-none overflow-y-auto scrollbar-hide ${
             isFocused
               ? 'border-rose-300 bg-white shadow-lg shadow-rose-100/40 ring-2 ring-rose-50'
               : 'border-black/8 bg-white/85 hover:border-black/12 shadow-sm'
@@ -117,9 +117,9 @@ export const ChatInput = ({ onSend, disabled, characterName, companionId, lastMe
         type="submit"
         disabled={disabled || !input.trim()}
         size="md"
-        className="!p-2.5 !rounded-2xl flex-shrink-0"
+        className="!p-0 !h-10 !w-10 !rounded-xl flex-shrink-0 flex items-center justify-center"
       >
-        <Send className="w-5 h-5" />
+        <Send className="w-[18px] h-[18px]" />
       </Button>
     </form>
   );

@@ -3,7 +3,8 @@ import type { Companion } from '../../services/companionService';
 import { migrateAvatarConfig } from '../../utils/avatarConfig';
 import type { AvatarConfigV2, HairStyle } from '../../types/avatar-v2';
 import { AvatarV2 } from '../../components/AvatarV2';
-import { resolveAvatarForDisplay, outfitItem, type AvatarUnlocks } from '../../data/avatarItems';
+import { outfitItem, type AvatarUnlocks } from '../../data/avatarItems';
+import { resolveLookForDisplay } from '../../data/avatarCatalog';
 
 // What Velvet Sims needs to know about the player and their companion: names,
 // personality, and how they look. Shared by both versions of the game.
@@ -101,7 +102,7 @@ export function signatureOutfit(config: AvatarConfigV2) {
 function simLook(raw: Record<string, unknown> | null | undefined, favoriteColor: string | null | undefined, unlocks: AvatarUnlocks) {
   const base = toGameLook(raw, favoriteColor);
   if (!base || !raw) return base;
-  const config = resolveAvatarForDisplay(migrateAvatarConfig(raw), unlocks);
+  const config = resolveLookForDisplay(migrateAvatarConfig(raw), unlocks);
   const { top: _favorite, ...rest } = base;
   return { ...rest, sprites: buildHeadSprites(config), outfit: signatureOutfit(config) };
 }
