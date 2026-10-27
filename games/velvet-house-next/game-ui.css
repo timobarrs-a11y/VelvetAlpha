@@ -560,7 +560,7 @@
 @keyframes vh-spot { 50% { box-shadow: 0 0 0 4px rgba(255,214,102,.75), 0 0 18px rgba(255,214,102,.6); } }
 .vh-stage[data-script="cutscene"] canvas.vh-canvas { pointer-events: none; }
 @media (max-width: 560px) {
-  .vh-speech { bottom: auto; top: 46px; left: 8px; width: calc(100% - 16px); }
+  .vh-speech { bottom: auto; top: calc(7% + 10px); left: 8px; width: calc(100% - 16px); z-index: 3; }
   /* The lesson card sits below the picture, just above the floor and speed buttons, so it never covers the house
      (the camera frames the house in whatever the panels leave free). A short card keeps that gap small. */
   .vh-scard { top: auto; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 114px); width: calc(100% - 16px); padding: 8px 12px; font-size: 12.5px; line-height: 1.35; }
