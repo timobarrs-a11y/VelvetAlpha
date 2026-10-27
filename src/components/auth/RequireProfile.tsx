@@ -40,11 +40,16 @@ export function RequireProfile({ children }: { children: React.ReactNode }) {
     (async () => {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('profile_completed, nickname, name, birthday, gender, setup_step, age_verified_at')
+        .select('profile_completed, nickname, name, birthday, gender, setup_step, age_verified_at, terms_accepted_at')
         .eq('id', userId)
         .maybeSingle();
       if (cancelled) return;
       if (error) { setState({ kind: 'ok' }); return; }
+      // Signing in with Google skips the sign-up form, so the Terms get accepted here, once.
+      if (!data?.terms_accepted_at && user?.app_metadata?.provider && user.app_metadata.provider !== 'email') {
+        setState({ kind: 'go', to: '/accept-terms' });
+        return;
+      }
       if (!isProfileComplete(data)) { setState({ kind: 'go', to: '/user-questionnaire' }); return; }
       // Members from before age checks confirm their birthday (it comes with the questions) before going on.
       if (!data?.age_verified_at) { setState({ kind: 'go', to: '/user-questionnaire' }); return; }
@@ -60,7 +65,7 @@ export function RequireProfile({ children }: { children: React.ReactNode }) {
       setState({ kind: 'ok' });
     })().catch(() => { if (!cancelled) setState({ kind: 'ok' }); });
     return () => { cancelled = true; };
-  }, [userId, pathname]);
+  }, [userId, pathname, user?.app_metadata?.provider]);
 
   if (state.kind === 'checking') return <AuthSpinner />;
   if (state.kind === 'go') return <Navigate to={state.to} replace />;

@@ -5,9 +5,10 @@ import { authService } from '../services/authService';
 import { referralService } from '../services/referralService';
 import { storePendingAgeVerification } from '../services/accessService';
 import { Button, Input } from '../shared/ui';
+import { TERMS_VERSION } from '../shared/auth/termsVersion';
+import { GoogleButton } from '../components/auth/GoogleButton';
 import { passwordProblem, isBreachedPassword, passwordErrorMessage, BREACHED_PASSWORD_MESSAGE, MIN_PASSWORD_LENGTH } from '../shared/auth/passwordPolicy';
 
-const TERMS_VERSION = '2026-01-28';
 const VELVET_BG = 'var(--ds-bg-page)';
 const VELVET_RADIAL = `radial-gradient(ellipse 90% 50% at 50% -5%, rgba(80,100,255,0.30) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 20% 110%, rgba(244,63,107,0.12) 0%, transparent 50%)`;
 
@@ -178,6 +179,11 @@ export default function SignUpPage() {
               We use your email to create your account and your date of birth to verify you are 18+. We never share your data with third parties. You can export or delete all your data anytime in Settings.
             </p>
           </div>
+
+          <GoogleButton onError={setError} />
+          <p className="-mt-3 mb-6 text-center text-[11px] text-ink-muted">
+            With Google you'll confirm your birthday (18+) and accept the <Link to="/terms" className="underline">Terms</Link> and <Link to="/privacy" className="underline">Privacy Policy</Link> next.
+          </p>
 
           <form onSubmit={handleSignUp} className="space-y-5">
             {error && (

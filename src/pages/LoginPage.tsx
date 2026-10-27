@@ -5,6 +5,7 @@ import { AlertCircle, Heart, Target, Newspaper, Users, Flame, Trophy, Check, Cir
 import { authService } from '../services/authService';
 import { useAuth } from '../auth/AuthProvider';
 import { Button, Input } from '../shared/ui';
+import { GoogleButton } from '../components/auth/GoogleButton';
 
 const VELVET_BG = 'var(--ds-bg-page)';
 const VELVET_RADIAL = `radial-gradient(ellipse 90% 50% at 50% -5%, rgba(80,100,255,0.30) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 20% 110%, rgba(244,63,107,0.12) 0%, transparent 50%)`;
@@ -257,6 +258,8 @@ export default function LoginPage() {
             <h2 className="text-2xl font-bold text-white font-display mb-1">Welcome back</h2>
             <p className="text-ink-secondary text-sm">{greeting()}. Sign in to pick up where you left off.</p>
           </div>
+
+          <GoogleButton onError={setError} />
 
           <form onSubmit={handleLogin} className="space-y-5">
             {error && (

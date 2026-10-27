@@ -3,6 +3,7 @@ import { Navigate, Route } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 
+const AcceptTermsPage = lazy(() => import('../pages/AcceptTermsPage').then(m => ({ default: m.AcceptTermsPage })));
 const QuestionnairePage = lazy(() => import('../pages/QuestionnairePageV2').then(m => ({ default: m.QuestionnairePageV2 })));
 const UserProfileQuestionnairePage = lazy(() => import('../pages/UserProfileQuestionnairePageV2').then(m => ({ default: m.UserProfileQuestionnairePageV2 })));
 const CompanionPathSelectPage = lazy(() => import('../pages/CompanionPathSelectPage').then(m => ({ default: m.CompanionPathSelectPage })));
@@ -34,6 +35,7 @@ function wrap(el: React.ReactNode) {
 export const onboardingRoutes = [
   <Route key="atlas-onboarding" path="/atlas-onboarding" element={wrap(<AtlasConciergePage />)} />,
   <Route key="coach-avatar" path="/coach-avatar" element={wrap(<CoachAvatarPage />)} />,
+  <Route key="accept-terms" path="/accept-terms" element={wrap(<AcceptTermsPage />)} />,
   <Route key="user-questionnaire" path="/user-questionnaire" element={wrap(<UserProfileQuestionnairePage />)} />,
   <Route key="arrival-look" path="/arrival/look" element={wrap(<ArrivalLookPage />)} />,
   <Route key="arrival-home" path="/arrival/home" element={wrap(<ArrivalHomePage />)} />,
