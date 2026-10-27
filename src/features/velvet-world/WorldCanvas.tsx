@@ -11,6 +11,24 @@ import {
 
 export type ViewMode = 'street' | 'town';
 
+/** A small "LIVE" pill just above a house: a real person lives here. */
+function drawLiveMarker(ctx: CanvasRenderingContext2D, pts: [number, number][], zoom: number, t: number, still: boolean) {
+  let top = Infinity, minX = Infinity, maxX = -Infinity;
+  for (const [x, y] of pts) { if (y < top) top = y; if (x < minX) minX = x; if (x > maxX) maxX = x; }
+  const k = 1 / Math.max(zoom, 0.35), cx = (minX + maxX) / 2, bob = still ? 0 : Math.sin(t * 2.2) * 1.5 * k;
+  const h = 14 * k, w = 40 * k, x = cx - w / 2, y = top - 20 * k - h + bob;
+  ctx.save();
+  ctx.fillStyle = 'rgba(20,18,42,0.88)';
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill();
+  ctx.lineWidth = 1 * k; ctx.strokeStyle = 'rgba(89,201,138,0.7)'; ctx.stroke();
+  const pulse = still ? 1 : 0.65 + 0.35 * Math.sin(t * 3.4);
+  ctx.fillStyle = `rgba(89,201,138,${pulse})`;
+  ctx.beginPath(); ctx.arc(x + 9 * k, y + h / 2, 2.6 * k, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#E9FFF1'; ctx.font = `800 ${8 * k}px ${FONTS.ui}`; ctx.textBaseline = 'middle';
+  ctx.fillText('LIVE', x + 15 * k, y + h / 2 + 0.5 * k);
+  ctx.restore();
+}
+
 /** Camera moves the page can ask for. Slots are permanent plot numbers (slot_index). */
 export interface WorldControl {
   showStreet: () => void;
@@ -419,6 +437,12 @@ export function WorldCanvas(props: WorldCanvasProps) {
       if (lowVisible.length) drawTownLightsLow(ctx, lowVisible, t, env, vr);
       if (view === 'street') drawTownLights(ctx, props.plots.length, t, env, ground, front);
       else drawTownLights(ctx, 0, t, env, square, { lamps: [] });
+
+      // "LIVE" over the houses of real people
+      detailed.forEach(([, c]) => {
+        const pts = c.meta?.hit.house;
+        if (c.e.profile.live && pts?.length) drawLiveMarker(ctx, pts, cam.zoom, t, env.reducedMotion);
+      });
 
       // selection ring around the chosen billboard
       if (props.selectedId) {

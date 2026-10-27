@@ -5,6 +5,8 @@ export interface WorldCard {
   user_id: string; slot_index: number; house: PlotConfig['house']; sign: PlotConfig['sign']; yard: Omit<PlotConfig, 'house' | 'sign'>;
   is_member: boolean; earned: string[]; is_public: boolean; display_name: string; headline: string | null;
   goal_label: string | null; goal_pct: number | null; medals: string[]; medal_count: number; spaces: string[]; new_neighbor: boolean;
+  /** A real person with a visible profile (not a seeded or bot profile). Absent until the migration is applied. */
+  is_live?: boolean;
 }
 export interface MyPlot {
   slot_index: number; house: PlotConfig['house']; sign: PlotConfig['sign']; yard: Omit<PlotConfig, 'house' | 'sign'>;
@@ -172,6 +174,7 @@ export function cardToPlot(c: WorldCard): Plot {
       medalCount: c.medal_count,
       spaces: c.spaces,
       newNeighbor: c.new_neighbor,
+      live: c.is_live === true,
       address: slot.address,
     },
   };

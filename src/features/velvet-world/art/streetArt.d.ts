@@ -31,6 +31,7 @@ export interface PlotProfile {
   medalCount?: number;
   spaces?: string[];
   newNeighbor?: boolean;
+  live?: boolean;           // a real person, so the town marks the house "live"
   address?: string;
   crew?: string | null;
 }
