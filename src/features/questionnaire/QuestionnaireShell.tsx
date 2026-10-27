@@ -23,7 +23,7 @@ import type {
 import { resolveQuestionText } from './companionBank';
 import { tpl } from './pronouns';
 import { getColorHex } from './personalBank';
-import { suggestNicknames } from './nicknames';
+import { pickNickname } from './nicknames';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
@@ -671,8 +671,6 @@ function TapTextRenderer({
   const invalid = trimmed.length > 0 ? question.validate?.(textInput) ?? null : null;
   const tooShort = !question.validate && minLen ? trimmed.length > 0 && trimmed.length < minLen : false;
   const canSubmit = isDate ? !!textInput : trimmed.length >= (minLen ?? 1) && !(question.validate?.(textInput));
-  // Nickname ideas: a few to tap, more on request, or one picked for them.
-  const [ideas, setIdeas] = useState<string[]>(() => (question.suggestNicknames ? suggestNicknames(3) : []));
 
   const focusBorder = accentColor
     ? { borderColor: `${accentColor}99`, boxShadow: `0 0 0 4px ${accentColor}26` }
@@ -698,33 +696,15 @@ function TapTextRenderer({
       )}
       {invalid && <p role="alert" className="text-sm text-rose-400/80 text-center">{invalid}</p>}
       {hint && !invalid && <p className="text-sm text-gray-400 text-center">{hint}</p>}
-      {question.suggestNicknames && (
-        <div className="space-y-3">
-          <p className="text-center text-xs uppercase tracking-widest text-gray-500">Need an idea?</p>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {ideas.map(idea => (
-              <button
-                key={idea}
-                type="button"
-                onClick={() => setTextInput(idea)}
-                className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-gray-200 transition-colors"
-              >
-                {idea}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center justify-center gap-4 text-sm">
-            <button type="button" onClick={() => setIdeas(suggestNicknames(3))} className="text-gray-400 hover:text-white underline underline-offset-4">
-              Show me more
-            </button>
-            <button
-              type="button"
-              onClick={() => setTextInput(suggestNicknames(1)[0])}
-              className="text-gray-400 hover:text-white underline underline-offset-4"
-            >
-              I don&apos;t have one, pick for me
-            </button>
-          </div>
+      {question.pickForMe && (
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setTextInput(pickNickname(textInput))}
+            className="px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-gray-200 transition-colors"
+          >
+            Pick one for me
+          </button>
         </div>
       )}
       <div className="flex items-center justify-center gap-3">

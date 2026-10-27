@@ -44,24 +44,18 @@ export const NICKNAME_MIN = 2;
 export const NICKNAME_MAX = 24;
 
 /**
- * A few distinct ideas, mixing funny, classic, screen-name and cozy ones so there is always
- * something to pick from. Pass a seeded random in tests.
+ * One random nickname from the bank, different from `exclude` (so pressing the button again
+ * gives a new one). The kind is picked first, so funny, classic, screen-name and cozy ones
+ * all turn up. Pass a seeded random in tests.
  */
-export function suggestNicknames(count = 3, random: () => number = Math.random): string[] {
-  const out: string[] = [];
-  const pool = (kind: NicknameKind) => NICKNAME_BANK[kind];
-  // Start on a random kind and rotate, so the suggestions are never all one flavor.
-  let k = Math.floor(random() * KINDS.length);
-  let guard = 0;
-  while (out.length < count && guard++ < count * 40) {
-    const list = pool(KINDS[k % KINDS.length]);
+export function pickNickname(exclude = '', random: () => number = Math.random): string {
+  for (let i = 0; i < 20; i++) {
+    const kind = KINDS[Math.floor(random() * KINDS.length)];
+    const list = NICKNAME_BANK[kind];
     const pick = list[Math.floor(random() * list.length)];
-    if (!out.includes(pick)) {
-      out.push(pick);
-      k++;
-    }
+    if (pick.toLowerCase() !== exclude.trim().toLowerCase()) return pick;
   }
-  return out;
+  return NICKNAME_BANK.classic[0];
 }
 
 /**

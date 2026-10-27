@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { callName, publicName, realNameOf } from '../names';
-import { NICKNAME_BANK, suggestNicknames, validateNickname } from '../../../features/questionnaire/nicknames';
+import { NICKNAME_BANK, pickNickname, validateNickname } from '../../../features/questionnaire/nicknames';
 
 describe('what we call people', () => {
   it('uses the nickname everywhere, and shows only the nickname to other people', () => {
@@ -38,18 +38,23 @@ describe('the nickname bank', () => {
     expect(NICKNAME_BANK.classic).toContain('Ace');
   });
 
-  it('suggests distinct nicknames from the bank, mixing flavors', () => {
-    const ideas = suggestNicknames(3);
-    expect(ideas).toHaveLength(3);
-    expect(new Set(ideas).size).toBe(3);
-    for (const idea of ideas) expect(all).toContain(idea);
-    const kinds = new Set(ideas.map(i => (Object.keys(NICKNAME_BANK) as (keyof typeof NICKNAME_BANK)[]).find(k => NICKNAME_BANK[k].includes(i))));
-    expect(kinds.size).toBe(3);
+  it('picks one from the bank, never the one it was asked to avoid', () => {
+    for (let i = 0; i < 50; i++) {
+      const pick = pickNickname('Ace');
+      expect(all).toContain(pick);
+      expect(pick.toLowerCase()).not.toBe('ace');
+    }
   });
 
-  it('is repeatable with a seeded random', () => {
+  it('turns up every flavor over time, and is repeatable with a seeded random', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      const pick = pickNickname();
+      seen.add((Object.keys(NICKNAME_BANK) as (keyof typeof NICKNAME_BANK)[]).find(k => NICKNAME_BANK[k].includes(pick))!);
+    }
+    expect(seen.size).toBe(4);
     const seeded = () => { let n = 7; return () => ((n = (n * 9301 + 49297) % 233280) / 233280); };
-    expect(suggestNicknames(3, seeded())).toEqual(suggestNicknames(3, seeded()));
+    expect(pickNickname('', seeded())).toEqual(pickNickname('', seeded()));
   });
 });
 

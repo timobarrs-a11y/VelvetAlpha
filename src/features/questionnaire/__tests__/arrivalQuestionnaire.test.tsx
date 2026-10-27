@@ -15,11 +15,11 @@ describe('Act 1 order', () => {
   });
 
   it('asks for a nickname first, and requires one', () => {
-    const q = PERSONAL_QUESTIONNAIRE.questions[0] as { id: string; question: string; optional?: boolean; suggestNicknames?: boolean; validate?: (t: string) => string | null };
+    const q = PERSONAL_QUESTIONNAIRE.questions[0] as { id: string; question: string; optional?: boolean; pickForMe?: boolean; validate?: (t: string) => string | null };
     expect(q.id).toBe('nickname');
-    expect(q.question).toMatch(/don't call people by their first names/);
+    expect(q.question).toBe("We don't like to call people by their first names here, what do people call you?");
     expect(q.optional).toBeFalsy();
-    expect(q.suggestNicknames).toBe(true);
+    expect(q.pickForMe).toBe(true);
     expect(q.validate!('me@mail.com')).not.toBeNull();
     expect(q.validate!('Sunny Otter')).toBeNull();
   });
@@ -29,12 +29,12 @@ describe('Act 1 order', () => {
     expect(q.id).toBe('name');
     expect(q.optional).toBe(true);
     expect(q.skipLabel).toBe('Skip for now');
-    expect(q.hint).toMatch(/only show your real name to people if you choose to/);
+    expect(q.hint).toMatch(/Optional/);
   });
 
   it('greets them by nickname', () => {
     const q = PERSONAL_QUESTIONNAIRE.questions[1] as { question: (c: unknown) => string };
-    expect(q.question({ ...ctx, answers: { nickname: 'Ace' } })).toBe("Nice to meet you, Ace. What's your real name?");
+    expect(q.question({ ...ctx, answers: { nickname: 'Ace' } })).toBe("Nice to meet you, Ace. We won't show this to anyone without your permission, but what's your real name?");
   });
 
   it('no longer asks the wavelength questions or the swipe deck', () => {
@@ -127,16 +127,27 @@ describe('the nickname screen in the shell', () => {
     <QuestionnaireShell definition={definition} context={ctx} onAnswer={onAnswer} onComplete={onComplete} />,
   );
 
-  it('offers ideas to tap, more on request, and one picked for them', () => {
+  it('has one "Pick one for me" button, no list of ideas, and a hint for people without a nickname', () => {
+    renderIt();
+    expect(screen.getByText(/No nickname\? Create one now!/)).toBeTruthy();
+    expect(screen.queryByText(/Show me more/)).toBeNull();
+    expect(screen.queryByText(/Need an idea/)).toBeNull();
+    const box = screen.getByPlaceholderText('Your nickname') as HTMLInputElement;
+    expect(box.value).toBe('');
+    fireEvent.click(screen.getByText('Pick one for me'));
+    const first = box.value;
+    expect(first.length).toBeGreaterThan(1);
+    expect((screen.getByText('Next') as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByText('Pick one for me'));
+    expect(box.value).not.toBe(first);
+  });
+
+  it('lets them change the picked nickname', () => {
     renderIt();
     const box = screen.getByPlaceholderText('Your nickname') as HTMLInputElement;
-    const ideas = screen.getAllByRole('button').filter(b => b.className.includes('rounded-full') && !/Next|more|pick/i.test(b.textContent ?? ''));
-    expect(ideas.length).toBe(3);
-    fireEvent.click(ideas[0]);
-    expect(box.value).toBe(ideas[0].textContent);
-    fireEvent.change(box, { target: { value: '' } });
-    fireEvent.click(screen.getByText(/pick for me/));
-    expect(box.value.length).toBeGreaterThan(1);
+    fireEvent.click(screen.getByText('Pick one for me'));
+    fireEvent.change(box, { target: { value: 'Ace' } });
+    expect(box.value).toBe('Ace');
   });
 
   it('will not accept an email or link, and says why', () => {

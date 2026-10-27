@@ -15,6 +15,9 @@ import { toast } from '../shared/ui/Toast';
 import { SMILIES, smilieUrl } from '../config/smilieRegistry';
 import { PublicProfileImage } from './PublicProfileImage';
 import { ReachControls, type ReachValues } from './ReachControls';
+import { userProfileService } from '../services/userProfileService';
+import { syncDiscoveryFromProfile } from '../shared/supabase/queries/messaging';
+import { pickNickname, validateNickname } from '../features/questionnaire/nicknames';
 
 const DEFAULT_REACH: ReachValues = { share_accomplishments: true, profile_mode: 'friends', who_can_message: 'everyone', accepts_friend_requests: true, accepts_mail: true, comments_from: 'everyone' };
 
@@ -75,6 +78,16 @@ export function PublicProfileSettings() {
       toast.error('Choose a smiley for your public profile picture.');
       return;
     }
+    // Changing the nickname is allowed any time; it has to follow the same rules as the first one.
+    const nickname = displayName.trim();
+    const nicknameChanged = nickname !== '' && nickname !== (profile?.display_name ?? '');
+    if (nicknameChanged) {
+      const problem = validateNickname(nickname);
+      if (problem) {
+        toast.error(problem);
+        return;
+      }
+    }
     setSaving(true);
     try {
       // Only send reach settings that changed, so saving a bio never depends on them.
@@ -91,6 +104,11 @@ export function PublicProfileSettings() {
         profile_image_type: profileImageType,
         profile_smilie_code: profileImageType === 'smilie' ? profileSmilieCode : null,
       });
+      if (nicknameChanged) {
+        // The nickname is the name people see everywhere, so keep it in step.
+        await userProfileService.updateProfile({ nickname });
+        syncDiscoveryFromProfile({ nickname }).catch(() => {});
+      }
       setProfile(updated);
       toast.success('Public profile saved.');
     } catch {
@@ -193,15 +211,25 @@ export function PublicProfileSettings() {
       {/* Profile fields */}
       <div className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-white/40 uppercase tracking-wide mb-1.5">Display name</label>
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={40}
-            className="w-full rounded-xl px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white outline-none focus:border-pink-400/40"
-            placeholder="Your nickname"
-          />
+          <label htmlFor="profile-nickname" className="block text-xs font-semibold text-white/40 uppercase tracking-wide mb-1.5">Nickname</label>
+          <div className="flex gap-2">
+            <input
+              id="profile-nickname"
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={40}
+              className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white outline-none focus:border-pink-400/40"
+              placeholder="Your nickname"
+            />
+            <button
+              type="button"
+              onClick={() => setDisplayName(pickNickname(displayName))}
+              className="flex-shrink-0 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white/70 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              Pick one for me
+            </button>
+          </div>
           <p className="mt-1.5 text-xs text-white/35">
             A nickname is what people see. We only show your real name to people if you choose to.
           </p>

@@ -259,14 +259,14 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'nickname',
       archetype: 'tap',
       chapter: 'identity',
-      question: "We don't call people by their first names here. What's your nickname?",
+      question: "We don't like to call people by their first names here, what do people call you?",
       confidence: 'confirmed',
       placeholder: 'Your nickname',
       required: true,
       minLength: NICKNAME_MIN,
       validate: validateNickname,
-      suggestNicknames: true,
-      hint: "It's what people will see. Nothing that gives away who you are.",
+      pickForMe: true,
+      hint: "No nickname? Create one now! It's what people will see, so keep it free of anything that gives away who you are.",
     },
     {
       // Optional, and the same id as before so saved answers and resuming keep working.
@@ -275,14 +275,16 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       chapter: 'identity',
       question: (ctx) => {
         const nick = (ctx.answers.nickname as string | undefined)?.trim();
-        return nick ? `Nice to meet you, ${nick}. What's your real name?` : "What's your real name?";
+        return nick
+          ? `Nice to meet you, ${nick}. We won't show this to anyone without your permission, but what's your real name?`
+          : "We won't show this to anyone without your permission, but what's your real name?";
       },
       confidence: 'confirmed',
       placeholder: 'Your real name (optional)',
       minLength: 2,
       optional: true,
       skipLabel: 'Skip for now',
-      hint: "We only show your real name to people if you choose to. You can skip this, and add it later.",
+      hint: "Optional. You can skip this and add it later.",
     },
     {
       id: 'favoriteColor',
