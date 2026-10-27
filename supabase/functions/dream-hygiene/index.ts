@@ -122,6 +122,10 @@ Deno.serve(async (req: Request) => {
     //    to quiet users aren't built on stale states.
     const { data: expiredCount } = await supabaseAdmin.rpc("retire_expired_memories");
 
+    // 1b. A dispute (a protected memory the verifier saw contradicted once) that never got a second signal lapses.
+    const { data: lapsedDisputes } = await supabaseAdmin.rpc("resolve_memory_disputes", { p_days: 14 });
+    if (lapsedDisputes) console.log(`[dream-hygiene] ${lapsedDisputes} lapsed disputes cleared`);
+
     // 2. Embed rows that have no vector, or one from an older model.
     const { data: unembedded } = await supabaseAdmin
       .from("memory_items")

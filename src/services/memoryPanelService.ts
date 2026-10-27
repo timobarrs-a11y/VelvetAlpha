@@ -59,6 +59,32 @@ class MemoryPanelService {
     if (!res.ok) throw new Error(`Forget failed (${res.status})`);
   }
 
+  /** Memories retired in the last 30 days, newest first. */
+  async listRemoved(companionId?: string): Promise<MemoryItem[]> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(MEMORY_MUTATE_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action: 'removed', companionId }),
+    });
+    if (!res.ok) throw new Error(`Failed to load removed memories (${res.status})`);
+    const data = await res.json();
+    return data.items ?? [];
+  }
+
+  /** Brings a removed memory back. Throws with the server's outcome ('duplicate', 'expired', ...) when it can't. */
+  async restore(id: string): Promise<void> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(MEMORY_MUTATE_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action: 'restore', id }),
+    });
+    if (res.ok) return;
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.outcome ?? `Restore failed (${res.status})`);
+  }
+
   async pin(id: string, pinned: boolean, companionId?: string): Promise<void> {
     const headers = await getAuthHeaders();
     const res = await fetch(MEMORY_MUTATE_URL, {

@@ -73,6 +73,47 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // REMOVED — memories retired in the last 30 days, so a wrong retirement can be undone. Forgotten and cleared rows
+    // are scrubbed placeholders and expired temporary states are not "removed", so neither is listed.
+    if (action === "removed") {
+      const { companionId } = body;
+      const since = new Date(Date.now() - 30 * 86400000).toISOString();
+      let query = admin
+        .from("memory_items")
+        .select("id, content, kind, scope, status, importance, source, version, companion_id, created_at, updated_at")
+        .eq("user_id", user.id)
+        .eq("status", "retired")
+        .gte("updated_at", since)
+        .not("content", "like", "[%")
+        .or(`valid_until.is.null,valid_until.gt.${new Date().toISOString()}`)
+        .order("updated_at", { ascending: false })
+        .limit(50);
+      if (companionId) query = query.eq("companion_id", companionId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return new Response(JSON.stringify({ items: data as MemoryItem[] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // RESTORE — undo a retirement or supersede (30-day window, see restore_memory_item).
+    if (action === "restore") {
+      const { id } = body;
+      if (!id) {
+        return new Response(JSON.stringify({ error: "Missing id" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: outcome, error } = await admin.rpc("restore_memory_item", { p_id: id, p_user_id: user.id });
+      if (error) throw error;
+      const ok = outcome === "restored";
+      return new Response(JSON.stringify({ success: ok, outcome }), {
+        status: ok ? 200 : outcome === "not_found" ? 404 : 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // EDIT — update content via optimistic-concurrency RPC
     if (action === "edit") {
       const { id, content, baseVersion } = body;
