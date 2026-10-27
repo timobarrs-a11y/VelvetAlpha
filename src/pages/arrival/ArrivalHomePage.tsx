@@ -86,8 +86,8 @@ export function ArrivalHomePage() {
         display_name: loaded.name || 'Member',
         ...(withHeadline ? { headline: headline.trim() || null } : {}),
       });
-      await updateSetupProgress(loaded.userId, { step: 'arrival_town' });
-      navigate(ARRIVAL_ROUTES.town);
+      await updateSetupProgress(loaded.userId, { step: 'arrival_atlas' });
+      navigate(ARRIVAL_ROUTES.atlas);
     } catch {
       setError("Couldn't save your billboard. Please try again.");
       setSaving(false);

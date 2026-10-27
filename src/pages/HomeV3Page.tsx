@@ -52,7 +52,7 @@ export function HomeV3Page() {
   const [feedTab, setFeedTab] = useState<FeedTab>('feed');
   // Just finished the arrival: show what else is here, once.
   const [searchParams] = useSearchParams();
-  const [showHighlights, setShowHighlights] = useState(() => searchParams.get('arrived') === '1' && !highlightsSeen());
+  const [showHighlights, setShowHighlights] = useState(() => searchParams.get('arrived') === '1' && !searchParams.get('coach') && !highlightsSeen());
 
   const {
     companions,

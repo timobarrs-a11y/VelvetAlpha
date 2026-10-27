@@ -11,8 +11,8 @@ const ctx = makeContext({}, '', 'user');
 const ids = PERSONAL_QUESTIONNAIRE.questions.map(q => q.id);
 
 describe('Act 1 order', () => {
-  it('goes nickname, real name, color, birthday, zodiac, gender, interests, Someday', () => {
-    expect(ids).toEqual(['nickname', 'name', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday']);
+  it('goes nickname, color, birthday, zodiac, gender, interests, Someday, then the real name', () => {
+    expect(ids).toEqual(['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday', 'name']);
   });
 
   it('asks for a nickname first, and requires one', () => {
@@ -25,8 +25,8 @@ describe('Act 1 order', () => {
     expect(q.validate!('Sunny Otter')).toBeNull();
   });
 
-  it('asks for the real name second, as optional, and says it is only shown if they choose', () => {
-    const q = PERSONAL_QUESTIONNAIRE.questions[1] as { id: string; optional?: boolean; skipLabel?: string; hint?: string | ((c: unknown) => string) };
+  it('asks for the real name last, as optional', () => {
+    const q = PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === 'name') as unknown as { id: string; optional?: boolean; skipLabel?: string; hint?: string | ((c: unknown) => string) };
     expect(q.id).toBe('name');
     expect(q.optional).toBe(true);
     expect(q.skipLabel).toBe('Skip for now');
@@ -34,8 +34,11 @@ describe('Act 1 order', () => {
   });
 
   it('greets them by nickname', () => {
-    const q = PERSONAL_QUESTIONNAIRE.questions[1] as { question: (c: unknown) => string };
-    expect(q.question({ ...ctx, answers: { nickname: 'Ace' } })).toBe("Nice to meet you, Ace. We won't show this to anyone without your permission, but what's your real name?");
+    const q = PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === 'name') as unknown as { question: (c: unknown) => string };
+    const text = q.question({ ...ctx, answers: { nickname: 'Ace' } });
+    expect(text).toMatch(/^Last one, Ace\. What's your real name\?/);
+    expect(text).toMatch(/Only Atlas uses it/);
+    expect(text).toMatch(/Master Tim, Miss Ana/);
   });
 
   it('no longer asks the wavelength questions or the swipe deck', () => {

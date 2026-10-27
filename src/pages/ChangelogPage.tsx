@@ -14,6 +14,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { ReportActivity } from '../features/objectives/ReportActivity';
 import { fetchChangelog, markEntryRead } from '../services/changelogService';
 import type { ChangelogEntryWithRead, ChangelogCategory } from '../types/changelog';
 import { CATEGORY_META } from '../types/changelog';
@@ -112,6 +113,7 @@ export default function ChangelogPage() {
           'linear-gradient(170deg, #060d1f 0%, #0a1326 35%, #0a1628 65%, #071020 100%)',
       }}
     >
+      <ReportActivity activity="see_whats_new" />
       {/* Grain texture */}
       <div
         className="fixed inset-0 pointer-events-none z-[1] opacity-[0.025]"

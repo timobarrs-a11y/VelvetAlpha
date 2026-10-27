@@ -3,6 +3,7 @@ import { Users, Search, Clock, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { ArrivalTownTour } from '../features/arrival/ArrivalTownTour';
+import { ReportActivity } from '../features/objectives/ReportActivity';
 import { updateSetupProgress } from '../services/setupProgressService';
 import {
   localDay, getMyPlot, getDailyBlock, getCards, cardToPlot, markSeen,
@@ -95,7 +96,7 @@ function pickBlock(
 export function WorldPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  // Part of the arrival: a short look around, then on to Atlas.
+  // Part of the arrival: a short look around once the plan is saved, then on to Today.
   const [searchParams] = useSearchParams();
   const arriving = searchParams.get('arrival') === '1';
   const [myPlot, setMyPlot] = useState<MyPlot | null>(null);
@@ -382,6 +383,7 @@ export function WorldPage() {
 
   return (
     <div className="relative h-screen overflow-hidden bg-[#9DAE97]" style={{ colorScheme: 'dark' }}>
+      <ReportActivity activity="visit_town" />
       {townLayoutState && (
         <WorldCanvas
           plots={block}
@@ -528,13 +530,15 @@ export function WorldPage() {
 
       {arriving && (
         <ArrivalTownTour
-          onContinue={() => {
-            if (user) updateSetupProgress(user.id, { step: 'arrival_atlas' });
-            navigate('/atlas-onboarding');
+          onContinue={async () => {
+            // Wait for it: the app checks this step on the way into Today.
+            if (user) await updateSetupProgress(user.id, { step: 'complete' });
+            navigate('/lobby?arrived=1', { replace: true });
           }}
         />
       )}
 
+      {mailOpen && <ReportActivity activity="open_mailbox" />}
       {mailOpen && user && (
         <MailboxSheet myId={user.id} myName={block.find((p) => p.id === user.id)?.profile.name || 'neighbor'} canSend={isAdmin} onClose={() => setMailOpen(false)} onUnreadChange={setMailUnread} />
       )}

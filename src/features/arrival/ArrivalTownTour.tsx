@@ -9,7 +9,7 @@ const CAPTIONS = [
 
 /**
  * The look around town in the arrival: three short captions over the real
- * town, and a way on to Atlas whenever they're ready.
+ * town, and a way on to Today whenever they're ready.
  */
 export function ArrivalTownTour({ onContinue }: { onContinue: () => void }) {
   const [i, setI] = useState(0);
@@ -39,7 +39,7 @@ export function ArrivalTownTour({ onContinue }: { onContinue: () => void }) {
             onClick={onContinue}
             className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 px-4 py-2 text-sm font-bold text-white"
           >
-            Continue to Atlas <ArrowRight className="h-4 w-4" />
+            Go to Today <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       </div>

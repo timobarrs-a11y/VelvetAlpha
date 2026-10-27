@@ -242,16 +242,17 @@ export function answersFromSomeday(picks: SomedayPick[]): Record<string, string[
 }
 
 // ─── Act 1: the quick questionnaire ─────────────────────────────────────
-// nickname → real name (optional) → color → birthday → zodiac → gender → interests → Someday.
+// nickname → color → birthday → zodiac → gender → interests → Someday → real name (optional).
 // Each answer is saved as it's given. The "wavelength" questions are asked by
 // Atlas in conversation now.
 
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 10,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'name', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
     { id: 'taste', label: 'What you love', questionIds: ['interests'] },
     { id: 'someday', label: 'Someday', questionIds: ['someday'] },
+    { id: 'name', label: 'Your name', questionIds: ['name'] },
   ],
   questions: [
     {
@@ -268,24 +269,6 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       nicknameBank: true,
       skipLabel: 'Skip, pick one for me',
       hint: "No nickname? Create one now! It's what people will see, so keep it free of anything that gives away who you are.",
-    },
-    {
-      // Optional, and the same id as before so saved answers and resuming keep working.
-      id: 'name',
-      archetype: 'tap',
-      chapter: 'identity',
-      question: (ctx) => {
-        const nick = (ctx.answers.nickname as string | undefined)?.trim();
-        return nick
-          ? `Nice to meet you, ${nick}. We won't show this to anyone without your permission, but what's your real name?`
-          : "We won't show this to anyone without your permission, but what's your real name?";
-      },
-      confidence: 'confirmed',
-      placeholder: 'Your real name (optional)',
-      minLength: 2,
-      optional: true,
-      skipLabel: 'Skip for now',
-      hint: "Optional. You can skip this and add it later.",
     },
     {
       id: 'favoriteColor',
@@ -408,6 +391,22 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
         options: tab.options.map(o => ({ label: o, value: o })),
         allowCustom: true,
       })),
+    },
+    {
+      // Optional, and the same id as before so saved answers and resuming keep working.
+      id: 'name',
+      archetype: 'tap',
+      chapter: 'name',
+      question: (ctx) => {
+        const nick = (ctx.answers.nickname as string | undefined)?.trim();
+        return `${nick ? `Last one, ${nick}. ` : ''}What's your real name? It stays private. Only Atlas uses it, because he likes to address people properly: Master Tim, Miss Ana.`;
+      },
+      confidence: 'confirmed',
+      placeholder: 'Your real name (optional)',
+      minLength: 2,
+      optional: true,
+      skipLabel: 'Skip for now',
+      hint: "Optional. You can skip this and add it later.",
     },
   ],
 };
