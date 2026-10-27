@@ -32,6 +32,8 @@ export interface PersonFrame {
   name?: string;
   /** What they carry in their arms: 'pbox', 'groceries', 'parcel', 'paint'. */
   carrying?: string;
+  /** On a flight of stairs: how far along it (0 at the bottom end of the flight going up), and where the flight runs. */
+  stair?: { s: number; up: boolean; bx: number; by: number; tx: number; ty: number; low: number; high: number };
   /** A line said in passing; `at` is the animation time it was said. */
   bubble?: { text: string; at: number };
   look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean; accent?: string; topGarment?: import('../state/garment').Garment; bottomGarment?: import('../state/garment').Garment; heads?: import('../state/headSprites').HeadImages; body?: import('../state/bodySprites').BodyImages };

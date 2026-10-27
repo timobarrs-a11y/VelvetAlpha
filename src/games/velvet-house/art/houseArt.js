@@ -265,30 +265,77 @@ export function createHouseArt(ctx0, opts = {}) {
   const doing = (ch, name) => ch.task && ch.task.name === name && ch.task.phase === 'do';
   const usingSlot = (sid, names) => [jordan, maya].some(c => c.task && c.task.phase === 'do' && c.task.slot === sid && (!names || names.includes(c.task.name)));
   function steamAt(T, lx, ly, lz, t, n = 4, rise = 0.8) { const [x, y] = T.W(lx, ly); PFX.emit(`${T.o.id}:${lx},${ly}`, 'steam', T.o.level, x, y, lz, (n / 4) * (rise / 0.8)); }
-  const FL = { L: 1.2, N: 7, RUN: 0.28, RISE: 0.22, TOP: 1.76 };
+  // A flight of stairs. The same numbers draw it from below (a flight rising to the floor above) and from above (the
+  // stairwell cut into that floor, seen going down), so the two views are the same stairs. TOP is the height of a floor.
+  const FL = { L: 1.2, N: 7, RUN: 0.28, RISE: 0.325, TOP: 2.6 };
   function flightParts(axis) {
-    const { L, N, RUN, RISE, TOP } = FL, Y = axis === 'y', rail = '#5A3E2E';
+    const { L, N, RUN, RISE, TOP } = FL, Y = axis === 'y', rail = '#5A3E2E', wood = '#8A6A50', dark = '#4A3626';
     const R = (u0, u1, v0, v1) => (Y ? [v0, u0, v1, u1] : [u0, v0, u1, v1]);
     const P = (u, v, z) => (Y ? [v, u, z] : [u, v, z]);
     const BX = (T, u0, u1, v0, v1, z, h, c) => { const r = R(u0, u1, v0, v1); T.box(r[0], r[1], z, r[2] - r[0], r[3] - r[1], h, c); };
-    const ps = [F(...R(0, L, 0, 1), (T) => { BX(T, 0, L, 0, 1, 0, TOP - 0.04, '#7E6048'); BX(T, 0, L, 0, 1, TOP - 0.04, 0.04, '#B08B68'); T.line(P(0, 0.04, TOP + 0.9), P(L, 0.04, TOP + 0.9), rail, 2); [0.02, 0.4, 0.8].forEach(u => T.line(P(u, 0.04, TOP), P(u, 0.04, TOP + 0.9), rail, 1.4)); })];
+    // The top: the edge of the floor above, as a slab on four posts, so there is something to climb up to and the room
+    // under it can be seen. It carries the handrail round.
+    const ps = [F(...R(0, L, 0, 1), (T) => {
+      [[0.02, 0.02], [0.02, 0.88], [L - 0.12, 0.02], [L - 0.12, 0.88]].forEach(([u, v]) => BX(T, u, u + 0.1, v, v + 0.1, 0, TOP - 0.16, dark));
+      BX(T, 0, L, 0, 1, TOP - 0.16, 0.16, '#B9936C');
+      T.poly([P(0.04, 0.04, TOP + 0.002), P(L, 0.04, TOP + 0.002), P(L, 0.96, TOP + 0.002), P(0.04, 0.96, TOP + 0.002)], '#C9A27A');
+      for (let u = 0.3; u < L; u += 0.3) T.line(P(u, 0.04, TOP + 0.004), P(u, 0.96, TOP + 0.004), 'rgba(90,60,30,.25)', 1);
+      T.line(P(0, 0.04, TOP + 0.9), P(L, 0.04, TOP + 0.9), rail, 2); [0.02, 0.4, 0.8].forEach(u => T.line(P(u, 0.04, TOP), P(u, 0.04, TOP + 0.9), rail, 1.4));
+      T.line(P(0, 0.04, TOP + 0.9), P(0, 0.96, TOP + 0.9), rail, 2); T.line(P(0, 0.96, TOP), P(0, 0.96, TOP + 0.9), rail, 1.4);
+    })];
     for (let i = 0; i < N; i++) {
       const u0 = L + i * RUN, u1 = u0 + RUN, h = TOP - (i + 1) * RISE, hp = TOP - i * RISE, um = u0 + RUN / 2, last = i === N - 1;
       ps.push(F(...R(u0, u1, 0, 1), (T) => {
-        BX(T, u0, u1, 0, 1, 0, h - 0.035, i % 2 ? '#8A6A50' : '#94735A'); BX(T, u0, u1, 0, 1, h - 0.035, 0.035, '#B08B68');
+        // A solid stringer under each tread, a tread with a lighter nosing, and the rail climbing with the flight.
+        BX(T, u0, u1, 0, 1, 0, h - 0.045, i % 2 ? wood : shade(wood, 0.06)); BX(T, u0 - 0.03, u1, 0, 1, h - 0.045, 0.045, '#BE9A74');
         T.line(P(i === 0 ? L : um - RUN, 0.04, hp + 0.9), P(um, 0.04, h + 0.9), rail, 2);
         T.line(P(um, 0.04, h), P(um, 0.04, h + 0.9), rail, last ? 3.2 : 1.4);
       }));
     }
     return ps;
   }
+  // The stairwell in the floor above a flight: a clean opening with the slab's thickness showing, walls dropping away to
+  // the floor below, and the steps going down into the shadow.
   function holeParts(axis) {
-    const { N, RUN } = FL, Y = axis === 'y', len = 2.0, rail = '#5A3E2E';
+    // Looking straight down a deep shaft shows only its far wall, so the well is drawn shallower than the real drop and fades
+    // into dark: the steps still read as going down.
+    const { N, RUN } = FL, TOP = 1.45, RISE = TOP / (N + 1.4), Y = axis === 'y', len = 2.0, rail = '#5A3E2E', wood = '#B08B68';
     const R = (u0, u1, v0, v1) => (Y ? [v0, u0, v1, u1] : [u0, v0, u1, v1]);
     const P = (u, v, z) => (Y ? [v, u, z] : [u, v, z]);
     const quad = (u0, u1, v0, v1, z) => [P(u0, v0, z), P(u1, v0, z), P(u1, v1, z), P(u0, v1, z)];
     return [
-      F(...R(0, len, 0, 1), (T) => { T.poly(quad(0, len, 0, 1, 0.004), '#231D29'); for (let i = 0; i < N; i++) T.poly(quad(i * RUN + 0.03, i * RUN + RUN * 0.6, 0.06, 0.94, 0.006), `rgba(176,139,104,${0.62 - i * 0.08})`); T.poly(quad(0, len, 0, 0.07, 0.007), 'rgba(0,0,0,.25)'); }, { decal: true }),
+      F(...R(0, len, 0, 1), (T) => {
+        const Q = quad(0, len, 0, 1, 0).map(([a, b, c]) => T.P(a, b, c));
+        const cy = (Q[0][1] + Q[1][1] + Q[2][1] + Q[3][1]) / 4;
+        ctx.save();
+        ctx.beginPath(); Q.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.clip();
+        ctx.fillStyle = '#141018'; ctx.fillRect(Q[0][0] - 400, Q[0][1] - 400, 800, 800);
+        // The floor at the bottom, faintly lit.
+        T.poly(quad(0, len, 0, 1, -TOP), '#34303B');
+        // The walls of the opening that face us: the slab's cut edge, then plain wall falling into the dark.
+        for (let e = 0; e < 4; e++) {
+          const A = Q[e], B = Q[(e + 1) % 4], pa = quad(0, len, 0, 1, 0)[e], pb = quad(0, len, 0, 1, 0)[(e + 1) % 4];
+          if (cy <= (A[1] + B[1]) / 2) continue;
+          const dA = T.P(pa[0], pa[1], -TOP), dB = T.P(pb[0], pb[1], -TOP), sA = T.P(pa[0], pa[1], -0.16), sB = T.P(pb[0], pb[1], -0.16);
+          const g = ctx.createLinearGradient(0, A[1], 0, dA[1]); g.addColorStop(0, '#6F6670'); g.addColorStop(0.5, '#3A343E'); g.addColorStop(1, '#17131B');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineTo(dB[0], dB[1]); ctx.lineTo(dA[0], dA[1]); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#BE9A74'; ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineTo(sB[0], sB[1]); ctx.lineTo(sA[0], sA[1]); ctx.closePath(); ctx.fill();
+        }
+        // The steps, far ones first, each darker the deeper it is.
+        const order = [];
+        for (let i = 0; i < N; i++) { const [mx, my] = T.P(...[...R(i * RUN, i * RUN + RUN, 0.5, 0.5)].slice(0, 2), -(i + 1) * RISE); order.push([my, i]); }
+        order.sort((p, q) => p[0] - q[0]).forEach(([, i]) => {
+          const [x0, y0, x1, y1] = R(i * RUN, (i + 1) * RUN, 0.06, 0.94), top = -(i + 1) * RISE;
+          T.box(x0, y0, -TOP, x1 - x0, y1 - y0, TOP + top, shade(wood, -0.1 - 0.72 * ((i + 1) / N)));
+        });
+        // A little light coming up from the floor below, pooled at the foot of the steps.
+        const [lx, ly] = T.P(...[...R(len - 0.12, len - 0.12, 0.5, 0.5)].slice(0, 2), -TOP);
+        const gl = ctx.createRadialGradient(lx, ly, 0, lx, ly, 38); gl.addColorStop(0, 'rgba(255,214,150,.28)'); gl.addColorStop(1, 'rgba(255,214,150,0)');
+        ctx.fillStyle = gl; ctx.fillRect(lx - 40, ly - 40, 80, 80);
+        ctx.restore();
+        // The trim round the opening.
+        ctx.strokeStyle = '#B79D83'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath(); Q.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.stroke();
+      }, { decal: true }),
       F(...R(0, len, 0, 0.05), (T) => { T.line(P(0, 0.02, 0.9), P(len, 0.02, 0.9), rail, 2); for (let u = 0; u <= len + 0.01; u += 0.4) T.line(P(u, 0.02, 0), P(u, 0.02, 0.9), rail, 1.4); }),
       F(...R(len - 0.05, len, 0, 1), (T) => { T.line(P(len, 0.02, 0.9), P(len, 1, 0.9), rail, 2); for (let v = 0.25; v <= 1.01; v += 0.25) T.line(P(len, v, 0), P(len, v, 0.9), rail, 1.4); })
     ];
@@ -1993,7 +2040,25 @@ export function createHouseArt(ctx0, opts = {}) {
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && TYPES[o.type] && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
-    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (c.carrying) drawCarried(c); if (gOn) G.clearBase(); if (c.npc && c.name) drawNameTag(c); if (c.bubble) drawBubble(c, t); } }); });
+    (s.chars || []).forEach(c0 => {
+      // Someone on the stairs climbs the flight on the floor below, and comes up out of the stairwell on the floor above.
+      let c = c0, pit = null;
+      if (c0.stair && !c0.hidden) {
+        const st = c0.stair, k = Math.max(0, Math.min(1, st.s)), up = st.up;
+        const x = st.bx + (st.tx - st.bx) * k, y = st.by + (st.ty - st.by) * k;
+        const steps = FL.N + 1, step = Math.floor(k * steps), within = k * steps - step;
+        const z = (step + Math.min(1, within * 1.6)) * (FL.TOP / steps);
+        const dx = st.tx - st.bx, dy = st.ty - st.by, dl = Math.hypot(dx, dy) || 1, fdir = up ? [dx / dl, dy / dl] : [-dx / dl, -dy / dl];
+        if (lv === st.low) c = Object.assign({}, c0, { level: lv, x, y, z, face: fdir, walking: true });
+        else if (lv === st.high && z > FL.TOP * 0.62) {
+          const hole = OBJS.find(o => o.level === lv && (o.type === 'holeX' || o.type === 'holeY') && Math.hypot(o.x + (TYPES[o.type].W || 1) / 2 - st.tx, o.y + (TYPES[o.type].D || 1) / 2 - st.ty) < 3);
+          if (!hole) return;
+          pit = hole; c = Object.assign({}, c0, { level: lv, x, y, z: z - FL.TOP, face: fdir, walking: true });
+        } else return;
+      } else if (c0.level !== lv || c0.hidden) return;
+      const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); if (pit) { const W = TYPES[pit.type].W, D = TYPES[pit.type].D, P = [iso(pit.x, pit.y, 0), iso(pit.x + W, pit.y, 0), iso(pit.x + W, pit.y + D, 0), iso(pit.x, pit.y + D, 0)], lo = P.slice().sort((a, b) => a[0] - b[0]), bot = P.reduce((m, q) => (q[1] > m[1] ? q : m)); ctx.save(); ctx.beginPath(); ctx.moveTo(lo[0][0], lo[0][1]); ctx.lineTo(bot[0], bot[1]); ctx.lineTo(lo[3][0], lo[3][1]); ctx.lineTo(lo[3][0], -2000); ctx.lineTo(lo[0][0], -2000); ctx.closePath(); ctx.clip(); }
+        drawPerson(c, t); if (c.carrying) drawCarried(c); if (gOn) G.clearBase(); if (c.npc && c.name) drawNameTag(c); if (c.bubble) drawBubble(c, t);
+        if (pit) ctx.restore(); } }); });
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     if (arrState) drawArrangeOverlay(arrState, lv);

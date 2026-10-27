@@ -1,7 +1,7 @@
 import { TYPES } from '../state/objects';
 import { checkPlacement } from '../state/arrange';
 import { CATALOG } from '../state/catalog';
-import { isWalking, poseOf } from '../state/agents';
+import { isWalking, poseOf, startGoto } from '../state/agents';
 import { type SampleFn } from '../state/companionAI';
 import type { Game } from '../kernel/game';
 
@@ -12,6 +12,8 @@ export function installDevHooks(g: Game): void {
   if (isDev) {
     (window as unknown as { __velvet?: Record<string, unknown> }).__velvet = {
       setView: (lv: number) => g.setLevel(lv),
+      // Send someone somewhere (a test for the stairs).
+      goto: (who: 'jordan' | 'maya', level: number, x: number, y: number) => { const p = who === 'maya' ? people[1] : people[0]; p.scripted = true; startGoto(g.house, p, { level, x, y }); },
       setMinutes: (m: number) => { world.minutes = m; },
       saveGame: g.doSave,
       get money() { return world.household.money; },
