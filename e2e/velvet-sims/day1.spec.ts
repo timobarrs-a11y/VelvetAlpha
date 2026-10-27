@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame, objects, inGame, pageErrors, drag } from './helpers';
+import { openGame, objects, inGame, pageErrors, dragToMark } from './helpers';
 
 /**
  * The whole first day, played the way a new player would: tap through the cutscene, then do what each card asks (unpack and
@@ -28,9 +28,7 @@ test('the first day plays through from the move-in to free will', async ({ page 
     if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
     return game.locator('.vh-scard-go:visible').count();
   }, { timeout: 30_000, intervals: [300] }).toBeGreaterThan(0);
-  await page.waitForTimeout(800);
-  await drag(page, await inGame<[number, number]>(page, "v.clientPosOf('box.couch')"), await inGame<[number, number]>(page, "v.markClientPos('living.couchTv', 'sofa', 2)"));
-  await game.locator('.vh-scard-go').click();
+  await dragToMark(page, 'box.couch', 'living.couchTv', 'sofa', 2);
   await expect.poll(async () => JSON.parse(await inGame<string>(page, 'v.story()'))['opening.done'], { timeout: 15_000 }).toBe(true);
 
   const deadline = Date.now() + Number(process.env.DAY1_MS ?? 800_000);
@@ -49,12 +47,8 @@ test('the first day plays through from the move-in to free will', async ({ page 
       // Open the box, set the lamp down where the card says (twice), then turn it on.
       const box = (await objects(page)).find((o) => o.id === 'box.lamp' && o.type === 'pbox');
       if ((title === 'The corner' || title === 'By the couch') && once('place:' + title)) {
-        // Drag the lamp into the outline the card points at, then set it down.
-        await page.waitForTimeout(800);
-        const from = await inGame<[number, number] | null>(page, "v.clientPosOf('box.lamp')");
-        const to = await inGame<[number, number] | null>(page, `v.markClientPos('${title === 'The corner' ? 'living.lampCorner' : 'living.lamp'}', 'lamp', 0)`);
-        if (from && to) await drag(page, from, to);
-        await game.locator('.vh-scard-go').click().catch(() => {});
+        // Drag the lamp into the outline the card points at; the lesson ends when it is there.
+        await dragToMark(page, 'box.lamp', title === 'The corner' ? 'living.lampCorner' : 'living.lamp', 'lamp', 0).catch((e) => console.log(String(e)));
       }
       else if (title === 'Let there be light' && once('light:' + Math.floor(Date.now() / 5000))) { await page.waitForTimeout(800); const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
       else if (box && title === 'Open the box') {

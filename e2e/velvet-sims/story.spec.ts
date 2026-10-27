@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame, objects, pageErrors, inGame, drag } from './helpers';
+import { openGame, objects, pageErrors, inGame, dragToMark } from './helpers';
 
 test.setTimeout(240_000);
 test('a new game opens with the move-in and nothing can skip it', async ({ page }) => {
@@ -33,11 +33,8 @@ test('watching the move-in: tap the box, drag the couch into the outline, and th
   expect(JSON.parse(await inGame<string>(page, 'v.story()'))['opening.done']).toBeUndefined();
   await expect(game.locator('.vh-scard-go')).toBeVisible();
   // Drag it into the outline by the TV; it snaps and faces the TV, and only then does the opening end.
-  await page.waitForTimeout(800);
-  const from = await inGame<[number, number]>(page, "v.clientPosOf('box.couch')");
-  const to = await inGame<[number, number]>(page, "v.markClientPos('living.couchTv', 'sofa', 2)");
-  await drag(page, from, to);
-  await game.locator('.vh-scard-go').click();
+  await dragToMark(page, 'box.couch', 'living.couchTv', 'sofa', 2);
+  // In the outline, the lesson ends by itself: no button needed.
   await expect.poll(async () => JSON.parse(await inGame<string>(page, 'v.story()'))['opening.done'], { timeout: 15_000 }).toBe(true);
   const sofa = (await objects(page)).find((o) => o.id === 'box.couch')!;
   expect(sofa.type).toBe('sofa');

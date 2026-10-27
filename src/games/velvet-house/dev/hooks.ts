@@ -69,6 +69,7 @@ export function installDevHooks(g: Game): void {
         return [r.left + (p.x / canvas.width) * r.width, r.top + (p.y / canvas.height) * r.height];
       },
       lightOn: (id: string) => art.objectLightOn(id),
+      marks: () => MARKS,
       clientPosOf: (id: string): [number, number] | null => {
         const o = world.objs.find(q => q.id === id);
         if (!o) return null;
