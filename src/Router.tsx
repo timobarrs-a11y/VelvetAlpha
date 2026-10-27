@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
 import { ToastContainer } from './shared/ui/Toast';
 import { FirstPostWatcher } from './components/FirstPostWatcher';
 import { RootRedirect } from './routes/rootRedirect';
@@ -59,6 +59,21 @@ function AudioSceneSync() {
   return null;
 }
 
+/**
+ * A new page starts at the top. Without this the next page opens at whatever scroll the last one
+ * had (tapping "Create an account" low on the home page dropped people at the password field).
+ * Back and forward keep where they were, and a link to a part of a page (#section) is left alone.
+ */
+export function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  const type = useNavigationType();
+  useEffect(() => {
+    if (type === 'POP' || hash) return;
+    window.scrollTo(0, 0);
+  }, [pathname, hash, type]);
+  return null;
+}
+
 const isTouchOnly = () => window.matchMedia('(pointer: coarse)').matches;
 
 function GlobalEffects() {
@@ -107,6 +122,7 @@ export function Router() {
             <WorldWelcomeMount />
             <SWUpdateToast />
             <InstallPWABanner />
+            <ScrollToTop />
             <AudioSceneSync />
             <GlobalEffects />
             <AvatarEditorHost />
