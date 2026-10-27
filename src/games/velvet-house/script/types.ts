@@ -116,7 +116,7 @@ export interface LineBook {
 export interface ScriptHost {
   flags: Record<string, FlagValue>;
   clock(): { day: number; minutes: number };
-  names(): { player: string; partner: string; town: string; preset: Preset; humor?: string; communication?: string };
+  names(): { player: string; partner: string; town: string; preset: Preset; humor?: string; communication?: string; relationship?: string };
   setMode(mode: Mode | null, allow: UiTarget[]): void;
   spawn(npc: string, at: PlaceRef, carrying?: string): void;
   despawn(npc: string): void;

@@ -41,6 +41,11 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   bed: { W: 2.5, D: 1.6, h: 1.0, name: 'Bed',
     spots: { a: { stand: [1.3, 2.05], pos: [0.52, 0.42, 0.56], lie: [1, 0], tag: 'bedA', base: 'mattress' }, b: { stand: [1.9, 2.05], pos: [0.52, 1.18, 0.56], lie: [1, 0], tag: 'bedB', base: 'mattress' },
       make: { stand: [1.6, 2.05], dir: [0, -1], tag: 'makebed' } } },
+  // Two friends sharing a place sleep in a bed each: the partner's side is A and the player's is B.
+  bedA: { W: 2.5, D: 0.9, h: 1.0, name: 'Bed',
+    spots: { a: { stand: [2.9, 0.45], pos: [0.52, 0.45, 0.56], lie: [1, 0], tag: 'bedA', base: 'mattress' }, make: { stand: [2.9, 0.45], dir: [-1, 0], tag: 'makebed' } } },
+  bedB: { W: 2.5, D: 0.9, h: 1.0, name: 'Bed',
+    spots: { b: { stand: [2.9, 0.45], pos: [0.52, 0.45, 0.56], lie: [1, 0], tag: 'bedB', base: 'mattress' }, make: { stand: [2.9, 0.45], dir: [-1, 0], tag: 'makebed' } } },
   dining: { W: 1.3, D: 2.5, h: 1.1, name: 'Dining set', light: { at: [0.65, 1.24, 1.8], r: 130 },
     spots: { c1: { stand: [0.65, -0.45], pos: [0.65, 0.3, 0.49], dir: [0, 1], tag: 'dine1', base: 'seat1' }, c2: { stand: [0.65, 2.95], pos: [0.65, 2.18, 0.49], dir: [0, -1], tag: 'dine2', base: 'seat2' }, clear: { stand: [1.75, 1.24], dir: [-1, 0], tag: 'clear' } } },
   lamp: { W: 0.4, D: 0.4, h: 1.75, name: 'Floor lamp', store: true, light: { at: [0.2, 0.2, 1.5], r: 140 } },

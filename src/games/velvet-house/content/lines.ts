@@ -1,12 +1,11 @@
-import type { LineBook, Preset } from '../script/types';
+import type { LineBook } from '../script/types';
 import { BANKS } from './banks';
 
 /**
- * What people say in the story. `{player}`, `{partner}` and `{town}` are filled in. The partner's lines come in four
- * voices (warm, calm, bubbly, dry); Dez says the same thing to everyone, in his own.
+ * What people say in the story. `{player}`, `{partner}` and `{town}` are filled in. Lines that follow the partner's
+ * humor or communication style live in banks.ts; Dez says the same thing to everyone, in his own. A line can have a
+ * `.friend` version ("line.friend") for a friend who has moved in as a roommate.
  */
-const v = (warm: string, calm: string, bubbly: string, dry: string): Record<Preset, string> => ({ warm, calm, bubbly, dry });
-
 export const LINE_BOOK: LineBook = {
   banks: BANKS,
   lines: {
@@ -15,6 +14,8 @@ export const LINE_BOOK: LineBook = {
     'dez.brushOff': "Ha! Roads are more of a suggestion 'round here. Anywho! We're mighty glad to have the two of ya!",
     'dez.intro.2': "It's a small town, but it's growing every day! Soon as I leave here I got another delivery! That reminds me, I forgot to mention I'm the mayor of this little town, and also the mover! Not that ya asked, but I run the food delivery service too.",
     'dez.intro.3': "Now, I know what y'all are thinkin, but me and my family have lived here for ages, and we've started a few businesses 'round town, so don't hesitate to holler if ya need help!",
+    // Only said to a friend who has moved in: two people splitting a place.
+    'dez.roommates': "Now I hear y'all are roommates! Best kind of arrangement. Nobody argues over who sleeps on which side. Just who forgot to buy toilet paper.",
     'dez.intro.4': "I've got some boxes in the truck with your names on 'em, so I'm gonna start bringing them in. Time to get 'er done!",
 
     // -- Dez, in general --------------------------------------------------------------------------------------------
@@ -31,11 +32,6 @@ export const LINE_BOOK: LineBook = {
     'dez.ch8.groceries': "Now I'd start with groceries if I were you. Y'all look hungry, and that fridge looks emptier'n a church on Super Bowl Sunday.",
 
     // -- Chapter 9: groceries -----------------------------------------------------------------------------------------
-    'maya.ch9.fridge': v(
-      'Babe. The fridge is empty. Like, echo empty.',
-      "We have nothing to eat. Let's order something in.",
-      "Fridge is EMPTY. I'm going to perish. Order snacks. Order everything.",
-      'The fridge contains one ice tray. No ice.'),
     'dez.ch9.arrive': "Dupree Delivers! Fresh from my cousin Darla's farm stand. Well, second cousin. Well, Darla.",
     'dez.ch9.putaway': "Y'all put them cold things away now, y'hear?",
 
@@ -59,6 +55,7 @@ export const LINE_BOOK: LineBook = {
     // -- Chapter 13: upstairs -----------------------------------------------------------------------------------------
     'maya.ch13.call': 'Come look at the bedroom! Up here!',
     'maya.ch13.bed': "Bed's still in a box somewhere. We're sleeping on the floor tonight, aren't we.",
+    'maya.ch13.bed.friend': 'Two beds, one room, zero privacy. We will make it work. Come see!',
 
     // -- Chapter 14: rent ---------------------------------------------------------------------------------------------
     'dez.ch14.1': "Evenin'! Mayor business this time. Just makin' the rounds, welcomin' new folks.",
@@ -70,6 +67,8 @@ export const LINE_BOOK: LineBook = {
     'dez.ch15.1': "Well I'll be. Look at this place! Y'all made it a home in one day.",
     'dez.ch15.2': "Town of {town}'d like to give y'all a little welcome. Here's a check for a hundred. Don't spend it all at Dupree's. …Actually, do.",
     'dez.ch15.3': 'Anything y\'all need, you know who to call.',
+    'maya.ch15.kept.friend': 'So… what do we want this place to look like?',
+    'maya.ch15.moved.friend': 'So… what do we want this place to look like? I like where we started.',
     'maya.ch15.kept': 'So… what do we want this life to look like?',
     'maya.ch15.moved': 'So… what do we want this life to look like? I like where we started.',
   },

@@ -347,6 +347,11 @@ export function createHouseArt(ctx0, opts = {}) {
     ];
   }
   const cl = (o) => o.col || (TYPES[o.type].cols || ['#8A6A50'])[0];
+  function singleBed(cover, edge) {
+    const lux = has('bed'), z = lux ? 0.56 : 0.5;
+    return [B(0, 0, 0, 0.14, 0.9, lux ? 1.3 : 1.0, lux ? '#6E4A5E' : C.dark), B(0.14, 0, 0, 2.36, 0.9, 0.32, lux ? '#5A3E4C' : C.wood), B(0.18, 0.04, 0.32, 2.28, 0.82, lux ? 0.24 : 0.18, '#F1ECE4', { name: 'mattress' }),
+      B(0.23, 0.16, z, 0.5, 0.58, 0.12, '#FFFFFF'), B(0.95, 0, z, 1.55, 0.9, 0.07, lux ? '#C9A24A' : cover, { cover: true }), B(0.95, 0, z + 0.07, 0.2, 0.9, 0.02, lux ? '#E0C26E' : edge, { cover: true })];
+  }
   const DRAWN = {
     sofa: {    
       parts: (o) => { const s1 = usingSlot(o.id + ':s1') ? 1 : 0, s2 = usingSlot(o.id + ':s2') ? 1 : 0;
@@ -359,6 +364,9 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: () => { const lux = has('bed'), z = lux ? 0.56 : 0.5; return [B(0, 0, 0, 0.14, 1.6, lux ? 1.3 : 1.0, lux ? '#6E4A5E' : C.dark), B(0.14, 0, 0, 2.36, 1.6, 0.32, lux ? '#5A3E4C' : C.wood), B(0.18, 0.04, 0.32, 2.28, 1.52, lux ? 0.24 : 0.18, '#F1ECE4', { name: 'mattress' }),
         B(0.23, 0.12, z, 0.5, 0.58, 0.12, '#FFFFFF'), B(0.23, 0.9, z, 0.5, 0.58, 0.12, '#FFFFFF'), B(0.95, 0, z, 1.55, 1.6, 0.07, lux ? '#C9A24A' : '#3D6B73', { cover: true }), B(0.95, 0, z + 0.07, 0.2, 1.6, 0.02, lux ? '#E0C26E' : '#5E8A92', { cover: true })]; },
        },
+    // The single beds two friends sleep in: the same bed, one pillow wide.
+    bedA: { parts: () => singleBed('#3D6B73', '#5E8A92') },
+    bedB: { parts: () => singleBed('#7E4458', '#9A5C72') },
     dining: {    
       parts: () => {
         const ps = [];

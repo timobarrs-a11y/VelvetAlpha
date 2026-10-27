@@ -130,7 +130,7 @@ export function nextColour(o: ObjectInstance): string | null {
 }
 
 // Pieces too big (or too bolted down) to carry up and down the stairs.
-const HEAVY = new Set(['bed', 'dining', 'gym', 'tread', 'shelves', 'piano', 'aquarium', 'wardrobe', 'gclock']);
+const HEAVY = new Set(['bed', 'bedA', 'bedB', 'dining', 'gym', 'tread', 'shelves', 'piano', 'aquarium', 'wardrobe', 'gclock']);
 const INDOOR_LEVELS = [0, 1, 2, 4];
 
 /**

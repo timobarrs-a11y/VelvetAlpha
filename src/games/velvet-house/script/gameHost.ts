@@ -57,7 +57,7 @@ export function createScripts(g: Game): Partial<Game> {
   const host: ScriptHost = {
     flags: story,
     clock: () => ({ day: world.day, minutes: world.minutes }),
-    names: () => ({ player: g.simName, partner: g.partnerName, town: g.townName, preset: g.companionCfg.preset, humor: g.s.voice.humor, communication: g.s.voice.communication }),
+    names: () => ({ player: g.simName, partner: g.partnerName, town: g.townName, preset: g.companionCfg.preset, humor: g.s.voice.humor, communication: g.s.voice.communication, relationship: g.s.voice.relationship }),
 
     setMode(mode, allow) {
       g.s.scriptMode = mode;
@@ -239,6 +239,8 @@ export function createScripts(g: Game): Partial<Game> {
   } else engine.resume();
 
   function update(dt: number): void {
+    // What they are to the player, for scripts that branch on it (a friend moving in is a roommate).
+    story.rel = g.s.voice.relationship;
     engine.tick(dt);
     // Skipping the opening ends the drive-up too.
     if (arrival && !engine.isActive()) { arrival.cancel(); arrival = null; }

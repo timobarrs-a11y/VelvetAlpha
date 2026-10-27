@@ -7,6 +7,8 @@ import { validBodySvgs, loadBodyImages } from '../state/bodySprites';
 import type { Game } from '../kernel/game';
 import { createHostDesigns } from './hostDesigns';
 import { humorKey, commKey } from '../content/banks';
+import { checkPlacement } from '../state/arrange';
+import type { ObjectInstance } from '../state/objects';
 
 export function createHostBridge(g: Game): Partial<Game> {
   const { world, people, companionCfg } = g;
@@ -17,6 +19,20 @@ export function createHostBridge(g: Game): Partial<Game> {
   const allowedOrigins: string[] = (() => {
     try { const origin = new URL(document.referrer).origin; return origin ? [origin] : []; } catch { return []; }
   })();
+
+  // A friend who moves in is a roommate: the double bed becomes a single bed each, on day one of a new house.
+  function roommateBeds(): void {
+    if (g.flags.roommateBeds || world.day > 1) return;
+    const i = world.objs.findIndex((o) => o.id === 'bed' && o.type === 'bed');
+    if (i < 0) return;
+    const bed = world.objs[i];
+    const a: ObjectInstance = { id: 'bedA', type: 'bedA', level: bed.level, x: bed.x, y: bed.y, rot: bed.rot };
+    const b: ObjectInstance = { id: 'bedB', type: 'bedB', level: bed.level, x: bed.x, y: bed.y + 1.15, rot: bed.rot };
+    world.objs.splice(i, 1, a, b);
+    if (!checkPlacement(world.objs, a, []).ok || !checkPlacement(world.objs, b, []).ok) { world.objs.splice(i, 2, bed); return; }
+    g.flags.roommateBeds = true;
+    g.relearnLayout(a);
+  }
 
   window.addEventListener('message', (e: MessageEvent) => {
     if (!isValidOrigin(e.origin, allowedOrigins)) return;
@@ -44,10 +60,13 @@ export function createHostBridge(g: Game): Partial<Game> {
       const cName = d.companion?.name;
       if (pName) people[0].name = pName.slice(0, 16);
       if (cName) people[1].name = cName.slice(0, 16);
+      // The story says these names too, so it has to know them (it read the defaults when the game started).
+      g.simName = people[0].name;
+      g.partnerName = people[1].name;
       if (d.companion?.pronoun) companionCfg.pronoun = d.companion.pronoun;
       if (d.companion?.humor) g.s.voice.humor = humorKey(d.companion.humor);
       if (d.companion?.communication) g.s.voice.communication = commKey(d.companion.communication);
-      if (d.companion?.relationship) g.s.voice.relationship = d.companion.relationship;
+      if (d.companion?.relationship) { g.s.voice.relationship = d.companion.relationship; if (d.companion.relationship === 'friend') roommateBeds(); }
       if (d.companion?.personality) companionCfg.preset = d.companion.personality as 'warm' | 'calm' | 'bubbly' | 'dry';
       if (d.companion?.look) {
         const cl = d.companion.look;

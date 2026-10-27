@@ -41,6 +41,7 @@ export const OPENING: ScriptDef = {
     { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'truckOffRoad' } },
     { do: 'camera', focus: 'dez', zoom: 1.8 },
     say('dez', 'dez.brushOff'),
+    { do: 'if', cond: { flag: 'rel', equals: 'friend' }, then: [say('dez', 'dez.roommates')] },
     say('dez', 'dez.intro.2'), say('dez', 'dez.intro.3'), say('dez', 'dez.intro.4'),
     { do: 'camera', focus: 'wide' },
     ...leave,
@@ -182,7 +183,7 @@ export const TUTORIAL: ScriptDef[] = [
   ]),
   // 9. Echo fridge: order groceries, wait for Dez, they get put away.
   chapter('tutorial.ch9', { on: 'cond', cond: { flag: 'tutorial.shop' } }, [
-    say('maya', 'maya.ch9.fridge'),
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'fridgeEmpty' } },
     { do: 'card', title: 'Order groceries', body: 'Open Household and order groceries. Time keeps moving while you wait: use the speed button to skip ahead.', spotlight: 'tab:home' },
     { do: 'wait', until: { any: [{ flag: 'did.groceries.ordered' }, { event: 'groceries.ordered' }] } },
     { do: 'highlight', target: null },

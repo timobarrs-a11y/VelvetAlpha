@@ -384,10 +384,11 @@ export class ScriptEngine {
 
   /** The words of a line, for whoever is playing: the right voice for the partner, names filled in. */
   text(ref: LineRef): string {
-    const { player, partner, town, preset, humor, communication } = this.host.names();
+    const { player, partner, town, preset, humor, communication, relationship } = this.host.names();
     let raw: string;
     if (typeof ref === 'string') {
-      const entry = this.book.lines[ref];
+      // A friend who moves in gets their own version of a line where there is one ("line.friend").
+      const entry = (relationship === 'friend' ? this.book.lines[ref + '.friend'] : undefined) ?? this.book.lines[ref];
       raw = typeof entry === 'string' ? entry : entry ? entry[preset] ?? entry.warm ?? Object.values(entry)[0] ?? ref : ref;
     } else if ('byPreset' in ref) raw = ref.byPreset[preset];
     else if ('bank' in ref) {
