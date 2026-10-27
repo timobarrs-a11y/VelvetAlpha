@@ -118,6 +118,10 @@ export const BANKS: LineBank = {
   },
   communication: {
     direct: {
+      bedNotThere: "Bed goes against the wall, in the outline.",
+      fridgeNotThere: "Fridge goes in the kitchen, where the outline is.",
+      tableNotThere: "Table goes in the kitchen. The outline, please.",
+      gearNotThere: "Treadmill goes in the outline. We're not working out in the hallway.",
       couchPlace: {
         m: "Couch goes in the living room, against the TV wall. I'll tell you if it's off.",
         f: "Couch goes in the living room, against the TV wall. I'll tell you if it's off.",
@@ -136,6 +140,10 @@ export const BANKS: LineBank = {
       },
     },
     diplomatic: {
+      bedNotThere: "Could we try the bed in the outline against the wall? I think we'd sleep better there.",
+      fridgeNotThere: "I think the fridge wants to be in the kitchen, where the outline is, if that's alright.",
+      tableNotThere: "Would you mind trying the table in the outline? It'd be nice to eat in the kitchen.",
+      gearNotThere: "Could the treadmill go in the outline? It'll be easier to use down there.",
       couchPlace: {
         m: "Could you help me get the couch into the living room? Over by the TV would be great, if that works for you.",
         f: "Could you help me get the couch into the living room? Over by the TV would be great, if that works for you.",
@@ -154,6 +162,10 @@ export const BANKS: LineBank = {
       },
     },
     playful: {
+      bedNotThere: "A bed in the middle of the room is a bold lifestyle. The outline is right there.",
+      fridgeNotThere: "The fridge is wandering. Fridges live in kitchens. Outline, please.",
+      tableNotThere: "Unless we're eating standing up, the table goes in the outline.",
+      gearNotThere: "Treadmill's lost. It wants the outline, not the scenic route.",
       couchPlace: {
         m: "Okay, the couch. Living room, by the TV. It is the only thing standing between us and sitting on the floor.",
         f: "Okay, the couch. Living room, by the TV. It is the only thing standing between us and sitting on the floor.",
@@ -172,6 +184,10 @@ export const BANKS: LineBank = {
       },
     },
     subtle: {
+      bedNotThere: "Hm. I'd have pictured the bed against the wall, where that outline is.",
+      fridgeNotThere: "Funny, I keep looking for the fridge in the kitchen. Where the outline is.",
+      tableNotThere: "The kitchen looks like it's missing a table. Right where the outline sits, maybe.",
+      gearNotThere: "The outline down here looks like it's waiting for the treadmill, doesn't it?",
       couchPlace: {
         m: "That wall by the TV looks like it is waiting for something. Wonder what could go there.",
         f: "That wall by the TV looks like it is waiting for something. Wonder what could go there.",

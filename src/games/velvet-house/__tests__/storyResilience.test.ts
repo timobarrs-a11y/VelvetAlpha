@@ -48,6 +48,7 @@ function worldHost() {
       if (w.exists !== undefined) return !!o === w.exists;
       if (!o) return false;
       if (w.is && o.type !== w.is) return false;
+      if (w.level !== undefined && o.level !== w.level) return false;
       if (w.at) { const s = spot(w.at); if (o.level !== s.level || Math.hypot(o.x - s.x, o.y - s.y) > (w.within ?? 0.6)) return false; }
       if (w.rot !== undefined && o.rot !== w.rot) return false;
       if (w.lightOn !== undefined && !!o.lightOn !== w.lightOn) return false;
@@ -59,6 +60,7 @@ function worldHost() {
     const o = objs.get(w.obj);
     if (!o) return;
     if (w.is) { o.type = w.is; delete o.contents; }
+    if (w.level !== undefined) o.level = w.level;
     if (w.at) { const s = spot(w.at); Object.assign(o, { level: s.level, x: s.x, y: s.y }); }
     if (w.rot !== undefined) o.rot = w.rot;
     if (w.lightOn !== undefined) o.lightOn = w.lightOn;

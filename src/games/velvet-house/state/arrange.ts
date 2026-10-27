@@ -218,7 +218,6 @@ export function nextColour(o: ObjectInstance): string | null {
 }
 
 // Pieces too big (or too bolted down) to carry up and down the stairs.
-const HEAVY = new Set(['bed', 'bedA', 'bedB', 'dining', 'gym', 'tread', 'shelves', 'piano', 'aquarium', 'wardrobe', 'gclock']);
 const INDOOR_LEVELS = [0, 1, 2, 4];
 
 /**
@@ -228,7 +227,8 @@ const INDOOR_LEVELS = [0, 1, 2, 4];
  * everything in the backyard stay on their own floor.
  */
 export function otherFloors(o: ObjectInstance): number[] {
-  if (!isMovable(o) || isFixed(o.type) || HEAVY.has(o.type) || TYPES[o.type].out) return [];
+  // Heavy pieces and the fridge go up and down too: that is how the bed gets upstairs and the gym to the basement.
+  if (!isMovable(o) || (isFixed(o.type) && o.type !== 'fridge') || TYPES[o.type].out) return [];
   if (!INDOOR_LEVELS.includes(o.level)) return [];
   return INDOOR_LEVELS.filter(lv => lv !== o.level);
 }
