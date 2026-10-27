@@ -89,7 +89,7 @@ export function createControls(g: Game): Partial<Game> {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     // A cutscene takes no keys; a guided lesson only the ones that help place the piece.
     if (g.s.scriptMode === 'cutscene') return;
-    if (g.s.scriptMode === 'guided' && !['r', 'R', 'Escape'].includes(e.key)) return;
+    if (g.s.scriptMode === 'guided' && !['r', 'R', 'Enter', 'Escape'].includes(e.key)) return;
     if (e.key >= '1' && Number(e.key) <= LEVEL_COUNT && (Number(e.key) - 1 !== ATTIC || hasAttic())) setLevel(Number(e.key) - 1);
     else if (e.key === 'r' || e.key === 'R') { if (g.isArranging()) { g.rotateSelected(); e.preventDefault(); } else rotate(); }
     else if (e.key === 'w' || e.key === 'W') cycleWalls();
@@ -97,6 +97,7 @@ export function createControls(g: Game): Partial<Game> {
     else if (e.key === 'a' || e.key === 'A') { g.toggleArrange(); }
     if (g.isArranging()) {
       if (e.key === 'c' || e.key === 'C') { g.recolourHeld(); }
+      if (e.key === 'Enter') { g.setDown(); e.preventDefault(); }
       if (e.key === 'Escape') g.escapeArrange();
     }
   });

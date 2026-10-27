@@ -22,6 +22,8 @@ export interface DrawerCallbacks {
   // Arrange mode's list: pick a piece, or act on the selected one.
   onArrangePick?: (id: string) => void;
   onArrangeRotate?: () => void;
+  onArrangeSet?: () => void;
+  onArrangeBack?: () => void;
   onArrangeColour?: () => void;
   onArrangeFloor?: (level: number) => void;
   onArrangeStore?: () => void;
@@ -78,6 +80,10 @@ export interface ArrangeState {
   // Put away: not in the house until placed.
   stored: Array<{ id: string; name: string; color?: string }>;
   selected: null | {
+    /** Let go of but not set down yet; `fits` and `reason` say whether it can stay where it is. */
+    loose: boolean;
+    fits: boolean;
+    reason?: string;
     canStore: boolean;
     id: string;
     name: string;
@@ -268,11 +274,14 @@ export function createDrawer(cb: DrawerCallbacks): {
       ? `<div class="vh-arr-bar">
           <div class="vh-arr-what"><strong>${esc(sel.name)}</strong><small>${esc(sel.where)}</small></div>
           <div class="vh-arr-acts">
+            <button data-arr="set" class="vh-arr-primary" title="Set it down (Enter)">Set it down</button>
             <button data-arr="rotate" title="Turn it (R)">Rotate</button>
+            ${sel.loose ? '<button data-arr="back" title="Put it back where it was (Esc)">Put it back</button>' : ''}
             ${sel.canColour ? '<button data-arr="colour" title="Change colour (C)">Colour</button>' : ''}
             ${sel.canStore ? '<button data-arr="store" title="Put it in storage">Store</button>' : ''}
           </div>
           ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
+          ${sel.loose && !sel.fits ? `<p class="vh-arr-why">${esc(sel.reason ?? "It doesn't fit there.")} Move it, or put it back.</p>` : sel.loose ? '<p class="vh-arr-why vh-arr-ok">Drag it, turn it, then tap Set it down.</p>' : ''}
         </div>`
       : `<p class="vh-arr-hint">Tap a piece below, or tap one in the house, then drag it where you want it.</p>`;
     const order = [a.level, ...a.order.filter(l => l !== a.level)];
@@ -301,6 +310,8 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelector('[data-arr="store"]')?.addEventListener('click', () => cb.onArrangeStore?.());
     sec.querySelectorAll<HTMLElement>('[data-arr-unstore]').forEach(b => b.addEventListener('click', () => cb.onArrangeUnstore?.(b.dataset.arrUnstore!)));
     sec.querySelector('[data-arr="rotate"]')?.addEventListener('click', () => cb.onArrangeRotate?.());
+    sec.querySelector('[data-arr="set"]')?.addEventListener('click', () => cb.onArrangeSet?.());
+    sec.querySelector('[data-arr="back"]')?.addEventListener('click', () => cb.onArrangeBack?.());
     sec.querySelector('[data-arr="colour"]')?.addEventListener('click', () => cb.onArrangeColour?.());
     sec.querySelectorAll<HTMLElement>('[data-arr-floor]').forEach(b => b.addEventListener('click', () => cb.onArrangeFloor?.(Number(b.dataset.arrFloor))));
   }

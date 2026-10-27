@@ -35,6 +35,8 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onPage: (pg) => { g.scriptEmit({ type: 'tab.opened', tab: pg }); if (pg === 'arrange') g.enterArrange(); else if (g.isArranging()) g.exitArrange(); g.studioPage?.(pg); },
     onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) g.selectObject(o); },
     onArrangeRotate: () => g.rotateSelected(),
+    onArrangeSet: () => g.setDown(),
+    onArrangeBack: () => g.putBack(),
     onArrangeColour: () => g.recolourHeld(),
     onArrangeFloor: (lv) => g.carryTo(lv),
     onArrangeStore: () => g.storeSelected(),

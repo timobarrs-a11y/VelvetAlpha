@@ -6,6 +6,13 @@ import type { ScriptDef, Step } from '../script/types';
  * runs; the opening is a cutscene. See script/types.ts for what each step does.
  */
 const say = (who: string, line: string): Step => ({ do: 'say', who, line });
+/**
+ * How the partner reacts to something the player did, so it never feels like a reflex: the room settles first, she
+ * turns to look, a "!" hangs on its own, and only then does she speak. Each part is short; together they read as her
+ * noticing, not as a timer.
+ */
+const settle: Step = { do: 'wait', seconds: 0.7 };
+const noticed = (what: string): Step[] => [settle, { do: 'face', who: 'maya', toward: what }, { do: 'wait', seconds: 0.4 }, { do: 'emote', who: 'maya', emote: 'alert' }, { do: 'wait', seconds: 1.0 }];
 const knockIn = (carrying?: string): Step[] => [
   { do: 'spawn', npc: 'dez', at: 'door', ...(carrying ? { carrying } : {}) },
   { do: 'walk', who: 'dez', to: 'mark:entry.inside' },
@@ -65,12 +72,20 @@ export const OPENING: ScriptDef = {
     { do: 'mode', mode: 'guided', allow: ['obj:box.couch'] },
     { do: 'card', title: 'Open the box', body: '**Tap** the box to open it.', spotlight: 'obj:box.couch' },
     { do: 'wait', until: { any: [{ event: 'obj.unpacked', match: { objId: 'box.couch' } }, { world: { obj: 'box.couch', is: 'sofa' } }] } },
-    // A8. Lesson: place the couch where the partner asks. The beat ends when it stands in the outline, facing the TV;
-    // set down anywhere else, the partner says so and the lesson stays open.
+    // A8. Lesson: place the couch where the partner asks. Letting go leaves it loose; Set it down in the Arrange bar
+    // keeps it. Set down anywhere else, the partner says so and the lesson stays open. Then a turn, with Rotate, so it
+    // faces the TV: the lesson ends when it stands in the outline facing the TV.
+    settle,
+    { do: 'face', who: 'maya', toward: 'obj:box.couch' },
+    { do: 'wait', seconds: 0.5 },
     { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'couchPlace' } },
     { do: 'outline', objType: 'sofa', at: 'mark:living.couchTv', rot: 2, color: 'player' },
-    { do: 'card', title: 'Put it where it goes', body: 'Drag to move · ↻ to turn it. Tap Set it down when it is in the outline.', button: 'Set it down', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'couchNotThere' } } },
-    { do: 'wait', until: { world: { obj: 'box.couch', is: 'sofa', at: 'mark:living.couchTv', within: 0.6, rot: 2 } } },
+    { do: 'card', title: 'Put it where it goes', body: 'Drag the couch into the outline, then tap **Set it down** in the Arrange bar.', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'couchNotThere' } } },
+    { do: 'wait', until: { world: { obj: 'box.couch', is: 'sofa', at: 'mark:living.couchTv', within: 0.6 } } },
+    { do: 'if', cond: { not: { world: { obj: 'box.couch', is: 'sofa', at: 'mark:living.couchTv', within: 0.6, rot: 2 } } }, then: [
+      { do: 'card', title: 'Turn it', body: 'Tap **Rotate** in the Arrange bar until the couch faces the TV, then **Set it down**.' },
+      { do: 'wait', until: { world: { obj: 'box.couch', is: 'sofa', at: 'mark:living.couchTv', within: 0.6, rot: 2 } } },
+    ] },
     // A9. The couch is down; the next knock at the door is the lamp.
     { do: 'set', flag: 'opening.done', value: true },
     { do: 'set', flag: 'dez.deliveries', value: true },
@@ -119,27 +134,23 @@ export const TUTORIAL: ScriptDef[] = [
     // B3. The partner notices: a "!" with her and the lamp both in frame, then she asks for the corner by the TV.
     { do: 'mode', mode: 'cutscene' },
     { do: 'camera', focus: ['maya', 'obj:box.lamp'], zoom: 1.6 },
-    { do: 'face', who: 'maya', toward: 'obj:box.lamp' },
-    { do: 'emote', who: 'maya', emote: 'alert' },
-    { do: 'wait', seconds: 1 },
+    ...noticed('obj:box.lamp'),
     { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'lampCorner' } },
     // B4. Lesson: the corner by the TV.
     { do: 'mode', mode: 'guided', allow: ['obj:box.lamp'] },
     { do: 'outline', objType: 'lamp', at: 'mark:living.lampCorner', rot: 0, color: 'player' },
-    { do: 'card', title: 'The corner', body: 'Drag the lamp into the outline by the TV. Tap Set it down when it is there.', button: 'Set it down', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'lampNotThere' } } },
+    { do: 'card', title: 'The corner', body: 'Drag the lamp into the outline by the TV, then tap **Set it down**.', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'lampNotThere' } } },
     { do: 'wait', until: { world: { obj: 'box.lamp', is: 'lamp', at: 'mark:living.lampCorner', within: 0.6 } } },
     // B5. She sees it there and changes her mind: by the couch, to read at night.
     { do: 'mode', mode: 'cutscene' },
     { do: 'camera', focus: ['maya', 'obj:box.lamp'], zoom: 1.6 },
-    { do: 'face', who: 'maya', toward: 'obj:box.lamp' },
-    { do: 'emote', who: 'maya', emote: 'alert' },
-    { do: 'wait', seconds: 1 },
+    ...noticed('obj:box.lamp'),
     { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'lampByCouch' } },
     // B6. Lesson: beside the couch. Evening comes up, so the lamp has something to light.
     { do: 'dim', amount: 0.38 },
     { do: 'mode', mode: 'guided', allow: ['obj:box.lamp'] },
     { do: 'outline', objType: 'lamp', at: 'mark:living.lamp', rot: 0, color: 'player' },
-    { do: 'card', title: 'By the couch', body: 'Move the lamp to the right-hand end of the couch, then tap Set it down.', button: 'Set it down', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'lampNotThere' } } },
+    { do: 'card', title: 'By the couch', body: 'Move the lamp to the right-hand end of the couch, then tap **Set it down**.', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'lampNotThere' } } },
     { do: 'wait', until: { world: { obj: 'box.lamp', is: 'lamp', at: 'mark:living.lamp', within: 0.6 } } },
     // B7. Lesson: lights are yours to switch.
     { do: 'card', title: 'Let there be light', body: 'Lights can be switched on and off by hand: tap the lamp.', spotlight: 'obj:box.lamp' },
@@ -148,6 +159,9 @@ export const TUTORIAL: ScriptDef[] = [
     { do: 'highlight', target: null },
     { do: 'mode', mode: 'cutscene' },
     { do: 'camera', focus: ['maya', 'obj:box.lamp'], zoom: 1.6 },
+    settle,
+    { do: 'face', who: 'maya', toward: 'obj:box.lamp' },
+    { do: 'wait', seconds: 0.6 },
     { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'lampOn' } },
     { do: 'wait', seconds: 1.5 },
     { do: 'dim', amount: 0 },

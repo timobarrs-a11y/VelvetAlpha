@@ -157,6 +157,7 @@ export function createScripts(g: Game): Partial<Game> {
     },
     cardDone: () => ui.cardDone(),
     highlight(target) {
+      if (!target) misplacedLine = null;
       spot = target ? [target] : [];
       ui.spotlight([...spot, ...(g.s.scriptAllow ?? []).filter((a) => !a.startsWith('obj'))]);
       if (!target) { art.spotlight([]); ui.hideCard(); }
@@ -235,6 +236,8 @@ export function createScripts(g: Game): Partial<Game> {
       const o = world.objs.find((q) => q.id === w.obj);
       if (w.exists !== undefined) return !!o === w.exists;
       if (!o) return false;
+      // A piece in hand, or let go of but not set down, is nowhere yet.
+      if (g.inHand() === o.id) return false;
       if (w.is && o.type !== w.is) return false;
       if (w.at) {
         const s = resolve(w.at);
@@ -250,19 +253,8 @@ export function createScripts(g: Game): Partial<Game> {
   if (problems.length && import.meta.env.DEV) console.warn('Story content problems:\n' + problems.join('\n'));
 
   const engine = new ScriptEngine(host, SCRIPTS, LINE_BOOK, rt);
-  // "Set it down" snaps the piece into the outline when it is close and closes Arrange. It never ends the beat: the
-  // script waits on the world, so a piece set down elsewhere leaves the lesson open (and the card with it).
-  ui.onCardButton(() => {
-    if (!g.isArranging()) return;
-    g.snapSelectedToOutline();
-    const w = engine.pendingWait();
-    const placed = !w || engine.eval(w, 0);
-    if (placed) { g.drawer.close(); return; }
-    ui.reopenCard();
-    // The partner says, in her own way, that this is not the spot: a bubble, so the piece stays in hand.
-    if (misplacedLine) host.say(misplacedLine.who, misplacedLine.text, false);
-    g.scriptEmit({ type: 'lesson.misplaced' });
-  });
+  // The card's button (when a card has one) is the same as the Arrange bar's Set it down.
+  ui.onCardButton(() => { if (g.isArranging()) g.setDown(); });
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.
@@ -308,6 +300,12 @@ export function createScripts(g: Game): Partial<Game> {
     scripts: engine,
     scriptUpdate: update,
     scriptEmit(ev: GameEvent) {
+      // A piece set down somewhere other than where the lesson asks: the partner says so, in her own way, and the
+      // lesson stays open (the wait on the world is still there).
+      if (ev.type === 'obj.placed' && misplacedLine) {
+        const w = engine.pendingWait();
+        if (w && !engine.eval(w, 0)) { host.say(misplacedLine.who, misplacedLine.text, false); story['did.lesson.misplaced'] = true; }
+      }
       // What the player has already done stays done: a chapter that waits for it moves on at once.
       story[`did.${ev.type}`] = true;
       if (ev.type === 'obj.placed') story[`did.placed.${ev.objType}`] = true;

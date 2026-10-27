@@ -16,6 +16,12 @@ export function createArrange(g: Game): Partial<Game> {
   let heldKids: Array<{ o: ObjectInstance; x: number; y: number; rot: number; level: number }> = [];
   let heldGrab: [number, number] = [0, 0]; // where on the piece it was grabbed, so it doesn't jump under the finger
   let dragCandidate: { id: number; obj: ObjectInstance; x: number; y: number } | null = null;
+  // A piece let go of but not set down yet: it stays where it was dropped, red or green, until Set it down (or Put it
+  // back). Letting go of a drag never sets anything.
+  let floating: ObjectInstance | null = null;
+  let floatOrig: { x: number; y: number; rot: number; level: number; on?: string; z?: number } | null = null;
+  let floatKids: Array<{ o: ObjectInstance; x: number; y: number; rot: number; level: number }> = [];
+  let floatCheck: PlacementCheck = { ok: true };
   let wasPaused = false;
   let ghost: { x: number; y: number; h: number; level: number } | null = null;
   // The lesson's outline as the piece itself would be set: where its corner goes and how it faces.
@@ -42,6 +48,7 @@ export function createArrange(g: Game): Partial<Game> {
   function exitArrange(): void {
     if (!arranging) return;
     cancelHold();
+    settleFloating();
     arranging = false;
     selectedObj = null;
     dragCandidate = null;
@@ -64,6 +71,7 @@ export function createArrange(g: Game): Partial<Game> {
   // Select a piece: jump to its floor, outline it, and bring it into frame.
   function selectObject(o: ObjectInstance | null): void {
     cancelHold();
+    if (floating && o !== floating) settleFloating();
     selectedObj = o;
     if (!o) return;
     if (o.level !== view.level) { selectedObj = null; g.setLevel(o.level); selectedObj = o; }
@@ -93,47 +101,65 @@ export function createArrange(g: Game): Partial<Game> {
     const [fw, fd] = (t.rot ?? 0) % 2 ? [T.D, T.W] : [T.W, T.D];
     ghost = { level: t.level, x: t.x + fw / 2, y: t.y + fd / 2, h: (T.h ?? 1) / 2 };
   }
-  // Set a piece down for good: the house learns where it is now.
-  // A lesson's piece is set exactly where the outline is, facing the way it shows (the couch faces the TV), once it is
-  // close; if that does not fit, it stays where the player put it.
+  // A lesson's piece is set exactly on the outline's spot once it is close. Only its place moves: how it faces is the
+  // player's to change with Rotate (the lesson teaches that).
   function snapToOutline(o: ObjectInstance, within = 2.5): boolean {
     const s = ghostSpec;
     if (!s || s.type !== o.type || s.level !== o.level) return false;
     if (Math.hypot(o.x - s.x, o.y - s.y) > within) return false;
-    const was = { x: o.x, y: o.y, rot: o.rot };
-    Object.assign(o, { x: s.x, y: s.y, rot: s.rot });
+    const was = { x: o.x, y: o.y };
+    Object.assign(o, { x: s.x, y: s.y });
     if (checkPlacement(world.objs, o, peopleOnFloor()).ok) return true;
     Object.assign(o, was);
     return false;
   }
-  function snapSelectedToOutline(): void {
-    const o = selectedObj ?? heldObj;
-    if (!o) return;
+  /** The piece in hand or set loose, if any: it does not count as placed until it is set down. */
+  const inHand = (): string | null => heldObj?.id ?? floating?.id ?? null;
+  /** Set it down: the loose (or selected) piece stays for good if it fits; if not, it stays loose and says why. */
+  function setDown(): void {
     cancelHold();
-    if (snapToOutline(o, 4)) commitMove(o);
+    const o = floating ?? selectedObj;
+    if (!o) return;
+    const was = { x: o.x, y: o.y };
+    snapToOutline(o, 2.5);
+    const check = checkPlacement(world.objs, o, peopleOnFloor());
+    if (!check.ok) { Object.assign(o, was); floatCheck = check; log(`${check.reason ?? "It doesn't fit there."} Move it, or tap Put it back.`); return; }
+    floating = null; floatOrig = null; floatKids = []; floatCheck = { ok: true };
+    commitMove(o, 'Set down');
   }
+  /** Put it back: the loose piece returns to where it was picked up. */
+  function putBack(): void {
+    cancelHold();
+    if (!floating || !floatOrig) return;
+    const o = floating;
+    Object.assign(o, { x: floatOrig.x, y: floatOrig.y, rot: floatOrig.rot, level: floatOrig.level });
+    if (floatOrig.on) { o.on = floatOrig.on; o.z = floatOrig.z; } else takeOff(o);
+    for (const k of floatKids) Object.assign(k.o, { x: k.x, y: k.y, rot: k.rot, level: k.level });
+    floating = null; floatOrig = null; floatKids = []; floatCheck = { ok: true };
+    relearnLayout(o);
+    log(`Put the ${nameOf(o)} back.`);
+  }
+  /** Leaving a loose piece behind (closing Arrange, picking another): it stays if it fits, else it goes back. */
+  function settleFloating(): void {
+    if (!floating) return;
+    if (checkPlacement(world.objs, floating, peopleOnFloor()).ok) setDown(); else putBack();
+  }
+  const snapSelectedToOutline = (): void => setDown();
   function commitMove(o: ObjectInstance, verb = 'Moved'): void {
     log(`${verb} the ${nameOf(o)}.`);
     art.objectPlaced(o.id);
     relearnLayout(o);
     g.scriptEmit({ type: 'obj.placed', objId: o.id, objType: o.type });
   }
-  // Turn the selected piece a quarter, skipping turns that don't fit.
+  // Turn the piece a quarter where it stands. A piece that was set is loose again afterwards: Set it down keeps it.
   function rotateSelected(): void {
-    const o = heldObj ?? selectedObj;
+    const o = heldObj ?? floating ?? selectedObj;
     if (!o) return;
-    const orig = { x: o.x, y: o.y, rot: o.rot };
-    const kids = world.objs.filter((k) => k.on === o.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot }));
-    if (o === heldObj) { const prev: Pose = { x: o.x, y: o.y, rot: o.rot }; rotateAboutCentre(o); carryOnTop(world.objs, o, prev); recheck(); return; }
-    for (let i = 0; i < 3; i++) {
-      const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
-      rotateAboutCentre(o);
-      carryOnTop(world.objs, o, prev);
-      if (checkPlacement(world.objs, o, peopleOnFloor()).ok) { commitMove(o, 'Turned'); return; }
-    }
-    Object.assign(o, orig);
-    for (const k of kids) Object.assign(k.o, { x: k.x, y: k.y, rot: k.rot });
-    log(`There's no room to turn the ${nameOf(o)} here.`);
+    if (o !== heldObj && o !== floating) { floating = o; floatOrig = { x: o.x, y: o.y, rot: o.rot, level: o.level, on: o.on, z: o.z }; floatKids = world.objs.filter((k) => k.on === o.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot, level: k.level })); }
+    const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
+    rotateAboutCentre(o);
+    carryOnTop(world.objs, o, prev);
+    if (o === heldObj) recheck(); else floatCheck = checkPlacement(world.objs, o, peopleOnFloor());
   }
   function recolourHeld(): void {
     const o = heldObj ?? selectedObj ?? hoverObj;
@@ -222,8 +248,8 @@ export function createArrange(g: Game): Partial<Game> {
     if (!arranging) return null;
     return {
       movable: movableHere(),
-      held: heldObj?.id ?? null, selected: selectedObj?.id ?? null,
-      valid: heldCheck.ok, hover: hoverObj?.id ?? null,
+      held: heldObj?.id ?? floating?.id ?? null, selected: selectedObj?.id ?? null,
+      valid: heldObj ? heldCheck.ok : floating ? floatCheck.ok : true, hover: hoverObj?.id ?? null,
     };
   }
   // The Arrange list: everything that can move, wherever it is in the house.
@@ -246,6 +272,7 @@ export function createArrange(g: Game): Partial<Game> {
         canColour: !!nextColour(o),
         canStore: canStore(o),
         moveTo: otherFloors(o).filter(l => l !== ATTIC || hasAttic()),
+        loose: o === floating, fits: o === floating ? floatCheck.ok : true, reason: o === floating && !floatCheck.ok ? floatCheck.reason : undefined,
       } : null,
     };
   }
@@ -278,8 +305,10 @@ export function createArrange(g: Game): Partial<Game> {
       if (!heldObj) {
         if (Math.hypot(e.clientX - dragCandidate.x, e.clientY - dragCandidate.y) < DRAG_SLOP) return;
         heldObj = dragCandidate.obj;
-        heldOrig = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot, on: heldObj.on, z: heldObj.z };
-        heldKids = world.objs.filter((k) => k.on === heldObj!.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot, level: k.level }));
+        const again = floating === heldObj && floatOrig;
+        heldOrig = again ? { x: floatOrig!.x, y: floatOrig!.y, rot: floatOrig!.rot, on: floatOrig!.on, z: floatOrig!.z } : { x: heldObj.x, y: heldObj.y, rot: heldObj.rot, on: heldObj.on, z: heldObj.z };
+        heldKids = again ? floatKids : world.objs.filter((k) => k.on === heldObj!.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot, level: k.level }));
+        if (again) { floating = null; floatOrig = null; floatKids = []; }
         g.s.suppressClick = true;
       }
       const [wx, wy] = worldAt(sx, sy);
@@ -306,14 +335,10 @@ export function createArrange(g: Game): Partial<Game> {
     // A tap (no drag) on a moving box opens it, even while arranging: boxes are for opening.
     if (!o) { if (tapped.type === 'pbox' && tapped.contents) g.handleObjectAction(tapped, 'unpack'); return; }
     recheck();
-    if (heldCheck.ok) {
-      heldObj = null; heldOrig = null;
-      snapToOutline(o);
-      commitMove(o);
-    } else {
-      log(`${heldCheck.reason ?? "It doesn't fit there."} Back it goes.`);
-      cancelHold();
-    }
+    // Let go: the piece stays where it is, loose, until Set it down. Red means it does not fit yet.
+    floating = o; floatOrig = heldOrig ? { ...heldOrig, level: o.level } : { x: o.x, y: o.y, rot: o.rot, level: o.level }; floatKids = heldKids; floatCheck = heldCheck;
+    heldObj = null; heldOrig = null; heldKids = [];
+    if (!floatCheck.ok) log(`${floatCheck.reason ?? "It doesn't fit there."} Move it, or tap Put it back.`);
     heldCheck = { ok: true };
   };
   canvas.addEventListener('pointerup', dropHeld);
@@ -322,13 +347,13 @@ export function createArrange(g: Game): Partial<Game> {
 
   const isArranging = (): boolean => arranging;
   function dropSelectionIfOffFloor(lv: number): void {
-    if (selectedObj && selectedObj.level !== lv) { cancelHold(); selectedObj = null; }
+    if (selectedObj && selectedObj.level !== lv) { cancelHold(); settleFloating(); selectedObj = null; }
   }
-  function escapeArrange(): void { if (heldObj) cancelHold(); else selectedObj = null; }
+  function escapeArrange(): void { if (heldObj) cancelHold(); else if (floating) putBack(); else selectedObj = null; }
   /** A second finger came down: let go of whatever is being dragged. */
   function abortDrag(): void {
     if (heldObj) { cancelHold(); heldCheck = { ok: true }; }
     dragCandidate = null;
   }
-  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
+  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
 }

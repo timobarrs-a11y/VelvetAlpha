@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame, objects, pageErrors, inGame, dragToMark } from './helpers';
+import { openGame, objects, pageErrors, inGame, dragToMark, rotateTo } from './helpers';
 
 test.setTimeout(240_000);
 test('a new game opens with the move-in and nothing can skip it', async ({ page }) => {
@@ -25,16 +25,19 @@ test('watching the move-in: tap the box, drag the couch into the outline, and th
   // Your partner asks for the couch first; tap through that to get the placement card.
   await expect.poll(async () => {
     if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
-    return game.locator('.vh-scard-go:visible').count();
-  }, { timeout: 30_000, intervals: [300] }).toBeGreaterThan(0);
-  // Set it down with the couch still in the entry: the lesson stays open and the story has not moved on.
-  await game.locator('.vh-scard-go').click();
+    return (await game.locator('.vh-scard:visible').count()) && (await game.locator('.vh-scard strong').innerText()) === 'Put it where it goes';
+  }, { timeout: 30_000, intervals: [300] }).toBeTruthy();
+  // Set it down with the couch still in the entry: the partner says it is not the spot and the lesson stays open.
+  await game.locator('[data-arr="set"]').click();
   await page.waitForTimeout(1500);
   expect(JSON.parse(await inGame<string>(page, 'v.story()'))['opening.done']).toBeUndefined();
-  await expect(game.locator('.vh-scard-go')).toBeVisible();
-  // Drag it into the outline by the TV; it snaps and faces the TV, and only then does the opening end.
+  expect(JSON.parse(await inGame<string>(page, 'v.story()'))['did.lesson.misplaced']).toBe(true);
+  await expect(game.locator('.vh-scard')).toBeVisible();
+  // Drag it into the outline by the TV and set it down. It is facing the wrong way, so the lesson asks for a turn.
   await dragToMark(page, 'box.couch', 'living.couchTv', 'sofa', 2);
-  // In the outline, the lesson ends by itself: no button needed.
+  await expect.poll(async () => (await game.locator('.vh-scard:visible').count()) ? game.locator('.vh-scard strong').innerText() : '', { timeout: 15_000 }).toBe('Turn it');
+  expect(JSON.parse(await inGame<string>(page, 'v.story()'))['opening.done']).toBeUndefined();
+  await rotateTo(page, 'box.couch', 2);
   await expect.poll(async () => JSON.parse(await inGame<string>(page, 'v.story()'))['opening.done'], { timeout: 15_000 }).toBe(true);
   const sofa = (await objects(page)).find((o) => o.id === 'box.couch')!;
   expect(sofa.type).toBe('sofa');
@@ -57,11 +60,10 @@ test('a reload after the box is open resumes at the placement lesson instead of 
   await expect.poll(async () => (await objects(page)).some((o) => o.id === 'box.couch' && o.type === 'sofa')).toBe(true);
   await inGame(page, 'v.saveGame()');
   await openGame(page, { script: true, fresh: false });
-  // Back in the lesson: the partner's ask, then the placement card with its button; the "open the box" card is gone.
+  // Back in the lesson: the partner's ask, then the placement card; the "open the box" card is gone.
   await expect.poll(async () => {
     if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
-    return game.locator('.vh-scard-go:visible').count();
-  }, { timeout: 30_000, intervals: [300] }).toBeGreaterThan(0);
-  expect(await game.locator('.vh-scard strong').innerText()).toBe('Put it where it goes');
+    return (await game.locator('.vh-scard:visible').count()) ? game.locator('.vh-scard strong').innerText() : '';
+  }, { timeout: 30_000, intervals: [300] }).toBe('Put it where it goes');
   expect(pageErrors(page)).toEqual([]);
 });

@@ -381,6 +381,11 @@
 .vh-arr-bar button:hover { background: #E8B547; }
 .vh-arr-bar button:active { transform: scale(.96); }
 .vh-arr-bar [data-arr-floor] { background: rgba(255,255,255,.1); color: #F2EEE8; }
+.vh-arr-bar .vh-arr-primary { background: #5BAE7C; color: #10231A; font-weight: 800; }
+.vh-arr-bar .vh-arr-primary:hover { background: #6DC18E; }
+.vh-arr-bar [data-arr="back"] { background: rgba(255,255,255,.1); color: #F2EEE8; }
+.vh-arr-why { margin: 0; font-size: 12px; color: #F2A7A0; }
+.vh-arr-why.vh-arr-ok { color: #A9A1AE; }
 .vh-arr-bar [data-arr-floor]:hover { background: rgba(255,255,255,.18); }
 .vh-arr-list { display: flex; flex-direction: column; }
 .vh-arr-items { display: flex; flex-direction: column; gap: 6px; }
