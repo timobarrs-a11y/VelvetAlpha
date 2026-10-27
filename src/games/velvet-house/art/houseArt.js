@@ -1530,8 +1530,24 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.restore();
   }
   // A line said in passing, in a bubble that fades.
+  // A "!" that pops over someone's head when they notice something, like a handheld RPG: it jumps up, settles and hops once.
+  function drawAlert(c, age) {
+    if (age < 0 || age > 1.6) return;
+    const [fx, fy] = iso(c.x, c.y, 0);
+    const pop = age < 0.14 ? (age / 0.14) * 1.4 : age < 0.28 ? 1.4 - 0.4 * ((age - 0.14) / 0.14) : 1;
+    const hop = age > 0.45 && age < 0.7 ? Math.sin(((age - 0.45) / 0.25) * Math.PI) * 4 : 0;
+    ctx.save(); ctx.globalAlpha = Math.min(1, (1.6 - age) * 4);
+    ctx.translate(fx, fy - 68 - hop); ctx.scale(pop, pop);
+    ctx.fillStyle = '#FFFDF8'; ctx.strokeStyle = '#241B25'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-8, -24, 16, 22, 5) : ctx.rect(-8, -24, 16, 22); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-3, -2); ctx.lineTo(0, 4); ctx.lineTo(3, -2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#E8384F'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-2, -20, 4, 11, 2) : ctx.rect(-2, -20, 4, 11); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -5, 2.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
   function drawBubble(c, t) {
     const age = t - c.bubble.at;
+    if (c.bubble.text === '!') { drawAlert(c, age); return; }
     if (age < 0 || age > 4) return;
     const [fx, fy] = iso(c.x, c.y, 0);
     ctx.save(); ctx.globalAlpha = Math.min(1, (4 - age) * 1.2); ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.textAlign = 'center';

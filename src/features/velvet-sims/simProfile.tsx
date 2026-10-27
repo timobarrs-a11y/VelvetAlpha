@@ -213,6 +213,9 @@ export function buildProfile(player: PlayerProfile | null, companion: Companion,
       pronoun: companion.gender === 'male' ? 'he' : companion.gender === 'female' ? 'she' : 'they',
       gender: companion.gender,
       personality: personality || 'warm, curious, playful',
+      humor: companion.humor_style ?? undefined,
+      communication: companion.communication_style ?? undefined,
+      relationship: companion.relationship_type,
       look: includeLooks
         ? look(companion.avatar_config as Record<string, unknown> | undefined, companion.favorite_color)
         : undefined,

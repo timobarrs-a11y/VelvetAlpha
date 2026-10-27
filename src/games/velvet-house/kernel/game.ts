@@ -56,6 +56,8 @@ export interface GameState {
   suppressClick: boolean;
   /** The player's house in town, for the drive-up that opens a new game (null: a plain starter house). */
   plot: ArrivalPlot | null;
+  /** How the companion jokes and talks (what the story's word banks are keyed by), and what they are to the player. */
+  voice: { humor: string; communication: string; relationship: string };
   /** Skipping ahead through the work day ("Skip to 5 PM"). */
   skipping: boolean;
   scriptMode: Mode | null;
@@ -334,7 +336,7 @@ export function createGame(app: HTMLElement): Game | null {
     settleDone: typeof save?.settleDone === 'boolean' ? save!.settleDone : false,
     chatTurns: Array.isArray(save?.turns) ? [...save!.turns as ChatTurn[]] : [],
     sample: null as SampleFn | null,
-    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, plot: null, skipping: false, scriptMode: null, scriptAllow: [],
+    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, plot: null, voice: { humor: 'warm', communication: 'diplomatic', relationship: 'romantic' }, skipping: false, scriptMode: null, scriptAllow: [],
     saveRev: typeof (world.save as { rev?: unknown } | null)?.rev === 'number' ? (world.save as { rev: number }).rev : 0,
   };
 

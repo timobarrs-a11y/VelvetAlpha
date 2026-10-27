@@ -37,6 +37,10 @@ export function validateContent(defs: ScriptDef[], book: LineBook, npcs: string[
           if (entry && typeof entry !== 'string') for (const p of PRESETS) if (!entry[p]) errors.push(`${d.id}: line "${ref}" has no ${p} version`);
         } else if ('pool' in ref) {
           if (!ref.pool.includes('$') && !(book.pools[ref.pool]?.length)) errors.push(`${d.id}: pool "${ref.pool}" is empty or missing`);
+        } else if ('bank' in ref) {
+          const styles = Object.entries(book.banks?.[ref.bank] ?? {});
+          if (!styles.length) errors.push(`${d.id}: there is no ${ref.bank} bank`);
+          for (const [style, slots] of styles) if (!slots[ref.slot]) errors.push(`${d.id}: ${ref.bank} bank "${style}" has no "${ref.slot}" line`);
         } else for (const p of PRESETS) if (!ref.byPreset[p]) errors.push(`${d.id}: a line has no ${p} version`);
       }
     }

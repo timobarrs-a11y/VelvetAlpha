@@ -6,6 +6,7 @@ import { validHeadSvgs, loadHeadImages } from '../state/headSprites';
 import { validBodySvgs, loadBodyImages } from '../state/bodySprites';
 import type { Game } from '../kernel/game';
 import { createHostDesigns } from './hostDesigns';
+import { humorKey, commKey } from '../content/banks';
 
 export function createHostBridge(g: Game): Partial<Game> {
   const { world, people, companionCfg } = g;
@@ -44,6 +45,9 @@ export function createHostBridge(g: Game): Partial<Game> {
       if (pName) people[0].name = pName.slice(0, 16);
       if (cName) people[1].name = cName.slice(0, 16);
       if (d.companion?.pronoun) companionCfg.pronoun = d.companion.pronoun;
+      if (d.companion?.humor) g.s.voice.humor = humorKey(d.companion.humor);
+      if (d.companion?.communication) g.s.voice.communication = commKey(d.companion.communication);
+      if (d.companion?.relationship) g.s.voice.relationship = d.companion.relationship;
       if (d.companion?.personality) companionCfg.preset = d.companion.personality as 'warm' | 'calm' | 'bubbly' | 'dry';
       if (d.companion?.look) {
         const cl = d.companion.look;

@@ -1,4 +1,5 @@
 import type { LineBook, Preset } from '../script/types';
+import { BANKS } from './banks';
 
 /**
  * What people say in the story. `{player}`, `{partner}` and `{town}` are filled in. The partner's lines come in four
@@ -7,43 +8,14 @@ import type { LineBook, Preset } from '../script/types';
 const v = (warm: string, calm: string, bubbly: string, dry: string): Record<Preset, string> => ({ warm, calm, bubbly, dry });
 
 export const LINE_BOOK: LineBook = {
+  banks: BANKS,
   lines: {
     // -- The opening ------------------------------------------------------------------------------------------------
-    'opening.echo': v(
-      'So this is it. Our place. It echoes, babe. Listen. Hellooo.',
-      "It's quieter than I pictured. I like it. Feels like a page nobody's written on yet.",
-      "Okay okay okay. We live here. We LIVE here. I'm going to cry, ignore me.",
-      'Huh. Smaller without furniture. Or bigger. One of those.'),
-    'opening.moversLate': v(
-      "Movers said nine. It's nine. If they're late I'm sitting on the floor in protest.",
-      'The movers should be here any minute. Everything we own, on one truck. Strange thought.',
-      'Where ARE they? I need the couch. I need the kettle. I need my plant babies.',
-      'The movers are late. Our whole lives are in a truck somewhere. Very relaxing.'),
-    'dez.intro.1': "Hey y'all! I'm Dez! Welcome to {town}! We're mighty glad to have the two of ya!",
-    'dez.intro.2': "I'm the mayor of this quaint little town, but I'm also the mover! Not that ya asked, but I run the food delivery service too.",
-    'dez.intro.3': "Me and my family have lived here for ages, and we've started a few businesses 'round town, so don't hesitate to holler if ya need help!",
-    'dez.intro.4': "Now, this paper here says your names are {player} and {partner}.",
-    'dez.intro.5': "I've got some boxes in the truck with your names on 'em, so I'm gonna start bringing them in. Time to get 'er done!",
-    'opening.mayorCarriedCouch': v(
-      'Did the mayor just carry our couch? I love it here already.',
-      'He seems… sweet. A lot. But sweet.',
-      'THE MAYOR carried our COUCH. Best town. Best day.',
-      'So one man runs the whole town. Cool. Cool cool cool.'),
-    'opening.windowAsk': v(
-      'Okay, hear me out. What if it\'s under the window instead? Sunday mornings, coffee, sun on our feet.',
-      "Can I ask something? I'd sit here more if the light hit it. Would you mind trying it by the window?",
-      'WAIT. The window! Look at that light! Can we put it there? I know I just said TV. I contain multitudes.',
-      "So. The window. The light's good. The couch should be in it. I'm aware I just agreed to the TV wall."),
-    'opening.keepIt': v(
-      "Mm. Fine. FINE. But I'm stealing the window for something else, watch me.",
-      "Okay. That's fair. I'll find the light somewhere else.",
-      "TV couch! Also great. Everything's great. I'm putting a plant there though.",
-      'Bold. Wrong, but bold. I\'ll allow it.'),
-    'opening.movedIt': v(
-      "Look at that. Look at US. Okay, that's perfect. Don't let it go to your head.",
-      "Thank you. Really. That's going to be my favorite spot.",
-      'AAAH. Okay sit, sit with me. Ten seconds. Then more boxes.',
-      "See? Better. I'd say I told you so, but I only told you thirty seconds ago."),
+    'dez.welcome': "Come on in, {player} and {partner}! Welcome to your new home!",
+    'dez.brushOff': "Ha! Roads are more of a suggestion 'round here. Anywho! We're mighty glad to have the two of ya!",
+    'dez.intro.2': "It's a small town, but it's growing every day! Soon as I leave here I got another delivery! That reminds me, I forgot to mention I'm the mayor of this little town, and also the mover! Not that ya asked, but I run the food delivery service too.",
+    'dez.intro.3': "Now, I know what y'all are thinkin, but me and my family have lived here for ages, and we've started a few businesses 'round town, so don't hesitate to holler if ya need help!",
+    'dez.intro.4': "I've got some boxes in the truck with your names on 'em, so I'm gonna start bringing them in. Time to get 'er done!",
 
     // -- Dez, in general --------------------------------------------------------------------------------------------
     'dez.getErDone': "Get 'er done!",

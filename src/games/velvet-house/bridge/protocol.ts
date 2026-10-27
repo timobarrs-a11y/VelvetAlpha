@@ -65,6 +65,10 @@ export interface ProfileMessage extends BridgeMessage {
     pronoun: 'she' | 'he' | 'they';
     gender: 'male' | 'female';
     personality: string;
+    /** What they picked when they were made: how they joke, how they say things, and what they are to the player. */
+    humor?: string;
+    communication?: string;
+    relationship?: string;
     look?: GameLook | undefined;
     memories: never[];
     likes: string[];

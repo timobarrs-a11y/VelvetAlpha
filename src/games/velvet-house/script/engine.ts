@@ -383,12 +383,18 @@ export class ScriptEngine {
 
   /** The words of a line, for whoever is playing: the right voice for the partner, names filled in. */
   text(ref: LineRef): string {
-    const { player, partner, town, preset } = this.host.names();
+    const { player, partner, town, preset, humor, communication } = this.host.names();
     let raw: string;
     if (typeof ref === 'string') {
       const entry = this.book.lines[ref];
       raw = typeof entry === 'string' ? entry : entry ? entry[preset] ?? entry.warm ?? Object.values(entry)[0] ?? ref : ref;
     } else if ('byPreset' in ref) raw = ref.byPreset[preset];
+    else if ('bank' in ref) {
+      // The companion's own style, then the plainest style in the bank, so a missing slot never goes silent.
+      const styles = this.book.banks?.[ref.bank];
+      const mine = ref.bank === 'humor' ? humor : communication;
+      raw = (mine && styles?.[mine]?.[ref.slot]) ?? Object.values(styles ?? {}).find((s) => s[ref.slot])?.[ref.slot] ?? ref.slot;
+    }
     else raw = this.fromPool(ref.pool);
     return raw.replace(/\{player\}/g, player).replace(/\{partner\}/g, partner).replace(/\{town\}/g, town);
   }

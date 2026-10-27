@@ -12,6 +12,9 @@ export const MARKS: Record<string, Spot> = {
   'entry.inside': { level: 1, x: 1.7, y: 5.3 },
   // Where a delivery is set down, and the stack of boxes that waits by the door.
   // The gap in the wall between the entry and the kitchen: in plain view with the walls down.
+  // Where the player and their partner stand while Dez shows them in.
+  'entry.you': { level: 1, x: 2.6, y: 5.4 },
+  'entry.partner': { level: 1, x: 2.2, y: 6.5 },
   'entry.drop': { level: 1, x: 2.3, y: 4.1 },
   'entry.stack1': { level: 1, x: 3.7, y: 6.3 },
   'entry.stack2': { level: 1, x: 4.4, y: 5.9 },

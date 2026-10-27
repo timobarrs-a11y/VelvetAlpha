@@ -13,7 +13,10 @@ export type Actor = string;
 export type PlaceRef = string | { level: number; x: number; y: number };
 
 /** What a line says: a key into the line book, a variant per companion voice, or the next from a pool that does not repeat. */
-export type LineRef = string | { byPreset: Record<Preset, string> } | { pool: string };
+export type LineRef = string | { byPreset: Record<Preset, string> } | { pool: string } | { bank: 'humor' | 'communication'; slot: string };
+
+/** Lines by how the companion talks: bank (humor or communication) → style → slot → line. */
+export type LineBank = Record<'humor' | 'communication', Record<string, Record<string, string>>>;
 
 /** Things on screen a script can spotlight or allow. */
 export type UiTarget = `tab:${string}` | 'floorbar' | 'camera' | 'wallet' | 'bill' | 'needs' | `obj:${string}` | `objType:${string}`;
@@ -103,13 +106,15 @@ export interface LineBook {
   lines: Record<string, string | Partial<Record<Preset, string>>>;
   /** Pools of lines for a visitor who comes often. */
   pools: Record<string, string[]>;
+  /** Lines that follow the companion's humor or communication style. */
+  banks?: LineBank;
 }
 
 /** What the engine asks the world to do. The game implements it; tests use a fake. */
 export interface ScriptHost {
   flags: Record<string, FlagValue>;
   clock(): { day: number; minutes: number };
-  names(): { player: string; partner: string; town: string; preset: Preset };
+  names(): { player: string; partner: string; town: string; preset: Preset; humor?: string; communication?: string };
   setMode(mode: Mode | null, allow: UiTarget[]): void;
   spawn(npc: string, at: PlaceRef, carrying?: string): void;
   despawn(npc: string): void;

@@ -57,7 +57,7 @@ export function createScripts(g: Game): Partial<Game> {
   const host: ScriptHost = {
     flags: story,
     clock: () => ({ day: world.day, minutes: world.minutes }),
-    names: () => ({ player: g.simName, partner: g.partnerName, town: g.townName, preset: g.companionCfg.preset }),
+    names: () => ({ player: g.simName, partner: g.partnerName, town: g.townName, preset: g.companionCfg.preset, humor: g.s.voice.humor, communication: g.s.voice.communication }),
 
     setMode(mode, allow) {
       g.s.scriptMode = mode;
