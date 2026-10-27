@@ -545,6 +545,13 @@
 .vh-scard { bottom: auto; top: 54px; left: 50%; transform: translateX(-50%); background: rgba(23,21,29,.94); color: #F2EEE8; border: 1px solid rgba(255,255,255,.14); font-size: 13.5px; }
 .vh-scard strong { display: block; margin-bottom: 2px; color: #FFD666; }
 .vh-scard p { margin: 0; }
+.vh-scard p b { color: #FFD666; font-weight: 800; }
+.vh-scard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.vh-scard-head strong { margin: 0; }
+.vh-scard .vh-scard-min { margin: 0; padding: 4px 10px; background: rgba(255,255,255,.12); color: #F2EEE8; border-radius: 999px; font-size: 13px; line-height: 1; transition: transform .2s ease; }
+.vh-scard[data-min] .vh-scard-min { transform: rotate(180deg); }
+.vh-scard[data-min] p { display: none; }
+.vh-scard[data-min] .vh-scard-go { margin-top: 6px; }
 .vh-scard button { margin-top: 10px; border: 0; border-radius: 10px; padding: 8px 14px; background: #E0A43A; color: #241B25; font: 700 13px/1 Inter, system-ui, sans-serif; cursor: pointer; }
 /* While a script is running, only what it allows can be used. */
 .vh-stage[data-script="cutscene"] .vh-dock, .vh-stage[data-script="cutscene"] .vh-controls, .vh-stage[data-script="cutscene"] .vh-people,

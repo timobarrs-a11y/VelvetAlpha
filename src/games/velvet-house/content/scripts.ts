@@ -56,7 +56,7 @@ export const OPENING: ScriptDef = {
     { do: 'checkpoint' },
     // 3. Touch: only the box can be tapped
     { do: 'mode', mode: 'guided', allow: ['obj:box.couch'] },
-    { do: 'card', title: 'Tap anything', body: 'Tap anything in your home to see what you can do with it.', spotlight: 'obj:box.couch' },
+    { do: 'card', title: 'Open the box', body: '**Tap** to open the box.', spotlight: 'obj:box.couch' },
     { do: 'wait', until: { event: 'obj.unpacked', match: { objId: 'box.couch' } } },
     // 4. Placement
     { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'couchPlace' } },
@@ -138,7 +138,7 @@ export const TUTORIAL: ScriptDef[] = [
     // Maya wants it in the corner, in her own way.
     { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'lampCorner' } },
     { do: 'mode', mode: 'guided', allow: ['obj:box.lamp'] },
-    { do: 'card', title: 'Open the box', body: 'Tap the box to open it.', spotlight: 'obj:box.lamp' },
+    { do: 'card', title: 'Open the box', body: '**Tap** to open the box.', spotlight: 'obj:box.lamp' },
     { do: 'wait', until: { event: 'obj.unpacked', match: { objId: 'box.lamp' } } },
     { do: 'outline', objType: 'lamp', at: 'mark:living.lampCorner', rot: 0, color: 'player' },
     { do: 'card', title: 'The corner', body: 'Drag the lamp into the outline. Tap Set it down when it is there.', button: 'Set it down' },

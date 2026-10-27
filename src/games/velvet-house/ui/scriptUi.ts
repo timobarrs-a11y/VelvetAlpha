@@ -13,6 +13,8 @@ export interface ScriptUi {
   choiceMade(): number | null;
   card(title: string, body: string, button?: string): void;
   cardDone(): boolean;
+  /** Folds the card down to its title bar (and its button, if it has one). */
+  minimizeCard(): void;
   hideCard(): void;
   onSkip(fn: () => void): void;
   onCardButton(fn: () => void): void;
@@ -29,14 +31,17 @@ export function createScriptUi(stage: Element): ScriptUi {
     <div class="vh-bar vh-bar-top"></div><div class="vh-bar vh-bar-bottom"></div>
     <button type="button" class="vh-skip" hidden>Skip</button>
     <div class="vh-speech" hidden role="dialog" aria-live="polite"><div class="vh-speech-name"></div><div class="vh-speech-text"></div><div class="vh-choices" hidden></div><div class="vh-speech-next" aria-hidden="true">&#9660;</div></div>
-    <div class="vh-scard" hidden><strong></strong><p></p><button type="button" hidden></button></div>`;
+    <div class="vh-scard" hidden><div class="vh-scard-head"><strong></strong><button type="button" class="vh-scard-min" aria-label="Minimize" aria-expanded="true">&#9662;</button></div><p></p><button type="button" class="vh-scard-go" hidden></button></div>`;
   stage.appendChild(root);
   const speech = root.querySelector('.vh-speech') as HTMLElement;
   const nameEl = root.querySelector('.vh-speech-name') as HTMLElement;
   const textEl = root.querySelector('.vh-speech-text') as HTMLElement;
   const choices = root.querySelector('.vh-choices') as HTMLElement;
   const cardEl = root.querySelector('.vh-scard') as HTMLElement;
-  const cardBtn = cardEl.querySelector('button') as HTMLButtonElement;
+  const cardBtn = cardEl.querySelector('.vh-scard-go') as HTMLButtonElement;
+  const cardMin = cardEl.querySelector('.vh-scard-min') as HTMLButtonElement;
+  const setMin = (min: boolean) => { if (min) cardEl.dataset.min = '1'; else delete cardEl.dataset.min; cardMin.setAttribute('aria-expanded', String(!min)); };
+  cardMin.addEventListener('click', () => setMin(!cardEl.dataset.min));
   const skipBtn = root.querySelector('.vh-skip') as HTMLButtonElement;
 
   // A line is typed out; a tap finishes it, and the next tap goes on.
@@ -100,14 +105,16 @@ export function createScriptUi(stage: Element): ScriptUi {
     choiceMade: () => pick,
     card(title, body, button) {
       (cardEl.querySelector('strong') as HTMLElement).textContent = title;
-      (cardEl.querySelector('p') as HTMLElement).textContent = body;
+      (cardEl.querySelector('p') as HTMLElement).innerHTML = esc(body).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
       cardBtn.hidden = !button;
       cardBtn.textContent = button ?? '';
       cardClosed = !button;
+      setMin(false);
       cardEl.hidden = false;
     },
     cardDone: () => cardClosed,
     hideCard() { cardEl.hidden = true; cardClosed = true; },
+    minimizeCard() { setMin(true); },
     onSkip(fn) { skip = fn; },
     onCardButton(fn) { cardPress = fn; },
     spotlight(targets) {

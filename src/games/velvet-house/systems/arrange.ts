@@ -27,6 +27,9 @@ export function createArrange(g: Game): Partial<Game> {
     if (arranging) return;
     arranging = true;
     stage.classList.add('vh-arranging');
+    // On a phone the lesson card folds to its title bar so the house has room; its button stays.
+    const lesson = stage.querySelector<HTMLElement>('.vh-scard');
+    if (lesson && !lesson.hidden && !lesson.dataset.min && window.matchMedia('(max-width: 560px)').matches) lesson.querySelector<HTMLButtonElement>('.vh-scard-min')?.click();
     selectedObj = null;
     heldObj = null;
     wasPaused = view.paused;

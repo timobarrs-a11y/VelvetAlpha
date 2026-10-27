@@ -137,7 +137,7 @@ export function createScripts(g: Game): Partial<Game> {
       ui.spotlight([...spot, ...(g.s.scriptAllow ?? []).filter((a) => !a.startsWith('obj'))]);
       if (spotlight?.startsWith('obj:')) art.spotlight([spotlight.slice(4)]);
       // A card with no button goes away by itself after a while.
-      if (!button) setTimeout(() => { if (!engine.isActive() || ui.cardDone()) ui.hideCard(); }, 9000);
+      if (!button) setTimeout(() => { if (!engine.isActive() || ui.cardDone()) ui.minimizeCard(); }, 9000);
     },
     cardDone: () => ui.cardDone(),
     highlight(target) {
