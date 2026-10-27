@@ -15,6 +15,18 @@ function list(answer: string | string[] | undefined): string[] {
   return [];
 }
 
+const TRAIT_ANSWERS = { conflictResponse: 'conflict', connection: 'connection', decisionStyle: 'decisionStyle', motivation: 'motivation' } as const;
+
+/** The traits answered so far, as the profile stores them. Atlas fills in any left blank. */
+function communicationProfileFrom(answers: Answers): NonNullable<UserProfileUpdate['communication_profile']> {
+  const out: Record<string, string> = {};
+  for (const [id, key] of Object.entries(TRAIT_ANSWERS)) {
+    const v = answers[id];
+    if (typeof v === 'string' && v) out[key] = v;
+  }
+  return out;
+}
+
 /**
  * The profile columns one answer writes, or null for answers that save nothing
  * (the birthday is set at sign-up and can't be written by the app).
@@ -30,6 +42,10 @@ export function profileUpdateFor(questionId: string, answer: string | string[], 
     case 'zodiacCusp':
     case 'zodiacConfirm': return { zodiac_sign: text && text !== 'none' ? text : null };
     case 'gender': return text ? { gender: text } : null;
+    case 'conflictResponse':
+    case 'connection':
+    case 'decisionStyle':
+    case 'motivation': return { communication_profile: communicationProfileFrom(all) };
     case 'hobbies': return { hobbies: list(answer) };
     case 'musicGenre': return { music_genre: list(answer).join(', ') || null };
     case 'entertainmentInterests': return { entertainment_interests: list(answer) };
@@ -56,6 +72,13 @@ export function answersFromProfile(profile: Partial<UserProfile> | null): Answer
     out.zodiacConfirm = profile.zodiac_sign;
   }
   if (profile.gender) out.gender = profile.gender;
+  const traits = profile.communication_profile;
+  if (traits) {
+    for (const [id, key] of Object.entries(TRAIT_ANSWERS)) {
+      const v = (traits as Record<string, string | undefined>)[key];
+      if (v) out[id] = v;
+    }
+  }
   const interests: Record<(typeof INTEREST_KEYS)[number], string[]> = {
     hobbies: list(profile.hobbies as string[] | string | undefined),
     musicGenre: list(profile.music_genre ?? undefined),

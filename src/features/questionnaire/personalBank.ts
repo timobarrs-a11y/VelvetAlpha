@@ -242,9 +242,10 @@ export function answersFromSomeday(picks: SomedayPick[]): Record<string, string[
 }
 
 // ─── Act 1: the quick questionnaire ─────────────────────────────────────
-// nickname → color → birthday → zodiac → gender → interests → Someday → favorite hero → real name (optional).
-// Each answer is saved as it's given. The "wavelength" questions are asked by
-// Atlas in conversation now.
+// nickname → color → birthday → zodiac → gender → interests → Someday → four "wavelength" questions →
+// favorite hero → real name (optional). Each answer is saved as it's given. The wavelength answers shape
+// how a coach or assistant works with them (when to push, how to talk, what to do when they're upset), so
+// they are asked here, by Dez, and nowhere else.
 
 /** Suggestions for the favorite superhero question; anyone else can be typed in. */
 export const HERO_BANK = [
@@ -268,6 +269,7 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
     { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
     { id: 'taste', label: 'What you love', questionIds: ['interests'] },
     { id: 'someday', label: 'Someday', questionIds: ['someday'] },
+    { id: 'wavelength', label: 'How you tick', questionIds: ['conflictResponse', 'connection', 'decisionStyle', 'motivation'] },
     { id: 'finish', label: 'Last bits', questionIds: ['favoriteHero', 'name'] },
   ],
   questions: [
@@ -413,6 +415,54 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
         options: tab.options.map(o => ({ label: o, value: o })),
         allowCustom: true,
       })),
+    },
+    {
+      id: 'conflictResponse',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: "Four quick ones about how you tick, so your coach gets you right. When you're upset, what helps more?",
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Logical solutions: help me figure it out', value: 'solutions' },
+        { text: 'Emotional understanding: hear me out first', value: 'empathy' },
+      ],
+    },
+    {
+      id: 'connection',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'And how do you like to talk with folks?',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Deep, proper one-on-one conversation', value: 'deep' },
+        { text: 'Lively back-and-forth banter', value: 'lively' },
+      ],
+    },
+    {
+      id: 'decisionStyle',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'Big decision coming up. What do you trust?',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'My gut: I know the right call when I feel it', value: 'intuitive' },
+        { text: 'Research: I want every option laid out first', value: 'analytical' },
+      ],
+    },
+    {
+      id: 'motivation',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'Last of the four. What gets you moving on something hard?',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: "My own drive: I do it because I want to", value: 'internal' },
+        { text: 'Someone counting on me', value: 'external' },
+      ],
     },
     {
       // Shown on their profile card and the billboard outside their house: another thing to bond over.

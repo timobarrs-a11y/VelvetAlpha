@@ -11,8 +11,8 @@ const ctx = makeContext({}, '', 'user');
 const ids = PERSONAL_QUESTIONNAIRE.questions.map(q => q.id);
 
 describe('Act 1 order', () => {
-  it('goes nickname, color, birthday, zodiac, gender, interests, Someday, favorite hero, then the real name', () => {
-    expect(ids).toEqual(['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday', 'favoriteHero', 'name']);
+  it('goes nickname, color, birthday, zodiac, gender, interests, Someday, the four wavelength questions, favorite hero, then the real name', () => {
+    expect(ids).toEqual(['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday', 'conflictResponse', 'connection', 'decisionStyle', 'motivation', 'favoriteHero', 'name']);
   });
 
   it('asks for a nickname first, and requires one', () => {
@@ -39,8 +39,8 @@ describe('Act 1 order', () => {
     expect(text).toBe('Alright, Ace, last question. Atlas needs to know your first name.');
   });
 
-  it('no longer asks the wavelength questions or the swipe deck', () => {
-    for (const gone of ['conflictResponse', 'connection', 'decisionStyle', 'motivation', 'tasteDeck']) expect(ids).not.toContain(gone);
+  it('no longer has the swipe deck (the wavelength questions are back, in Dez\'s voice)', () => {
+    expect(ids).not.toContain('tasteDeck');
   });
 
   it('skips the birthday when sign-up already gave it, and shows only the right zodiac question', () => {
@@ -109,6 +109,7 @@ describe('resuming', () => {
     const answers = answersFromProfile({
       nickname: 'Ace', favorite_color: 'Teal', birthday: '1990-10-29', zodiac_sign: 'Scorpio', gender: 'Male',
       hobbies: ['Hiking', 'Cooking', 'Reading'], someday: [{ tab: 'Work', value: 'Tech & IT' }],
+      communication_profile: { conflict: 'solutions', connection: 'deep', decisionStyle: 'intuitive', motivation: 'internal' },
     } as never);
     expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('favoriteHero');
   });
@@ -339,5 +340,32 @@ describe('Dez hosting the questions', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('the wavelength questions (how you tick)', () => {
+  it('are two-way taps that save into the profile as they are answered, and come back on resume', () => {
+    const q = (id: string) => PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === id) as unknown as { options: { value: string }[]; autoAdvance?: boolean };
+    expect(q('conflictResponse').options.map(o => o.value)).toEqual(['solutions', 'empathy']);
+    expect(q('connection').options.map(o => o.value)).toEqual(['deep', 'lively']);
+    expect(q('decisionStyle').options.map(o => o.value)).toEqual(['intuitive', 'analytical']);
+    expect(q('motivation').options.map(o => o.value)).toEqual(['internal', 'external']);
+
+    expect(profileUpdateFor('conflictResponse', 'empathy', { conflictResponse: 'empathy' })).toEqual({ communication_profile: { conflict: 'empathy' } });
+    expect(profileUpdateFor('motivation', 'external', { conflictResponse: 'empathy', motivation: 'external' }))
+      .toEqual({ communication_profile: { conflict: 'empathy', motivation: 'external' } });
+
+    const back = answersFromProfile({ communication_profile: { conflict: 'solutions', decisionStyle: 'analytical' } } as never);
+    expect(back).toMatchObject({ conflictResponse: 'solutions', decisionStyle: 'analytical' });
+    expect(back.connection).toBeUndefined();
+  });
+
+  it('use the same values Atlas and the coaches read', async () => {
+    const { TRAITS } = await import('../../../../supabase/functions/_shared/atlasArrival');
+    const q = (id: string) => (PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === id) as unknown as { options: { value: string }[] }).options.map(o => o.value);
+    expect(q('conflictResponse')).toEqual(TRAITS.conflict.values);
+    expect(q('connection')).toEqual(TRAITS.connection.values);
+    expect(q('decisionStyle')).toEqual(TRAITS.decisionStyle.values);
+    expect(q('motivation')).toEqual(TRAITS.motivation.values);
   });
 });
