@@ -26,7 +26,11 @@ test('watching the move-in: tap the box, place the couch, and carry on to the ch
   const pos = await inGame<[number, number] | null>(page, "v.clientPosOf('box.couch')");
   await page.mouse.click(pos![0], pos![1]);
   await expect.poll(async () => (await objects(page)).some((o) => o.id === 'box.couch' && o.type === 'sofa')).toBe(true);
-  await expect(game.locator('.vh-scard button')).toBeVisible();
+  // Your partner asks for the couch first; tap through that to get the placement card.
+  await expect.poll(async () => {
+    if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
+    return game.locator('.vh-scard button:visible').count();
+  }, { timeout: 30_000, intervals: [300] }).toBeGreaterThan(0);
   await game.locator('.vh-scard button').click();
   // Back to the cutscene, and eventually the choice.
   await expect.poll(async () => {
