@@ -556,6 +556,11 @@
   .vh-scard { top: auto; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 114px); width: calc(100% - 16px); padding: 8px 12px; font-size: 12.5px; line-height: 1.35; }
   .vh-scard button { margin-top: 6px; padding: 7px 14px; }
   .vh-skip { bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 122px); top: auto; right: 16px; z-index: 2; }
+  /* The Skip button sits on the card's lower right: keep the words clear of it. */
+  .vh-stage[data-script="cutscene"] .vh-scard, .vh-stage[data-script="guided"] .vh-scard { padding-right: 84px; }
+  /* The town sign rides above the floor buttons, not over the dock; it steps aside while a panel or a lesson needs the room. */
+  .vh-town-sign { bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 112px); left: 12px; }
+  .vh-stage.vh-arranging .vh-town-sign, .vh-stage[data-script="cutscene"] .vh-town-sign, .vh-stage[data-script="guided"] .vh-town-sign { display: none; }
 }
 
 /* The title screen: it sits over the living house, so the backdrop is only a soft vignette and the buttons are glass. */
