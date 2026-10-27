@@ -440,7 +440,7 @@ export function CompanionPathSelectPage() {
           )}
 
           {phase === 'reveal' && (
-            <RevealScreen onContinue={() => navigate(`/questionnaire?mode=velvet&gender=${selectedGender}`)} isFriend={isFriend} />
+            <RevealScreen onContinue={() => navigate(`/questionnaire?mode=velvet&gender=${selectedGender}&type=${isFriend ? 'friend' : 'romantic'}`)} isFriend={isFriend} />
           )}
         </AnimatePresence>
       </div>

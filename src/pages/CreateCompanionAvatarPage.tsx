@@ -5,7 +5,7 @@ import { Heart, Shuffle, Check, RotateCcw } from 'lucide-react';
 import { AvatarCreatorV2, coherentRandomize } from '../components/AvatarCreatorV2';
 import { AvatarConfigV2, DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2 } from '../types/avatar-v2';
 import { supabase } from '../shared/supabase/client';
-import { trackSaveAvatar, trackRandomize } from '../services/avatarAnalytics';
+import { trackSaveAvatar } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
 import { sanitizeAvatarConfigForSave } from '../services/avatarSaveService';
 import { getRandomName } from '../data/companionNames';
@@ -38,47 +38,48 @@ export function CreateCompanionAvatarPage() {
   const [saving, setSaving] = useState(false);
   const [companionName, setCompanionName] = useState('');
   const [companionGender, setCompanionGender] = useState<'male' | 'female'>('female');
+  const [companionKey, setCompanionKey] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const [showReveal, setShowReveal] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const hasRandomized = useRef(false);
+  // They picked "from inside the Velvet Rope": the look is chosen for them too, then they can shuffle or tweak it.
+  const randomized = useRef(sessionStorage.getItem('companionRandomized') === '1').current;
 
   useEffect(() => {
-    const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || '{}');
-    const selectedGender = matchData.relationshipType === 'Male' ? 'male' : 'female';
-    const name = matchData.companionName || '';
-
-    setCompanionName(name);
-    setCompanionGender(selectedGender);
-    setAvatarConfig(
-      selectedGender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2
-    );
-
     (async () => {
-      const companionId = await resolveCompanionId();
-      if (!companionId) return;
-      const { data } = await supabase
-        .from('companions')
-        .select('custom_name, gender, avatar_config')
-        .eq('id', companionId)
-        .maybeSingle();
-      if (!data) return;
-      if (!name && data.custom_name) setCompanionName(data.custom_name);
-      if (data.gender === 'male' || data.gender === 'female') setCompanionGender(data.gender);
-      if (data.avatar_config && !matchData.relationshipType) {
-        setAvatarConfig(data.avatar_config as AvatarConfigV2);
-      }
-    })();
-  }, []);
+      const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || '{}');
+      let gender: 'male' | 'female' = matchData.relationshipType === 'Male' ? 'male' : 'female';
+      let name: string = matchData.companionName || '';
+      let existingLook: AvatarConfigV2 | null = null;
 
-  const handleRandomize = () => {
-    trackRandomize();
-    const randomized = coherentRandomize();
-    setAvatarConfig(randomized);
-    if (!companionName) {
-      setCompanionName(getRandomName(randomized.gender));
-    }
-    hasRandomized.current = true;
-  };
+      // The companion itself is the source of truth for who this is: their gender decides the face.
+      const companionId = await resolveCompanionId();
+      if (companionId) {
+        const { data } = await supabase
+          .from('companions')
+          .select('custom_name, gender, avatar_config')
+          .eq('id', companionId)
+          .maybeSingle();
+        if (data) {
+          if (data.gender === 'male' || data.gender === 'female') gender = data.gender;
+          if (!name && data.custom_name) name = data.custom_name;
+          if (data.avatar_config && !matchData.relationshipType) existingLook = data.avatar_config as AvatarConfigV2;
+        }
+      }
+
+      // Drafts are kept per companion: one left behind for an earlier companion must not show up here.
+      const key = `companion-avatar-draft:${companionId ?? 'new'}`;
+      if (randomized) { try { localStorage.removeItem(key); } catch { /* storage blocked */ } }
+
+      const look = existingLook
+        ?? (randomized ? coherentRandomize(gender) : gender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2);
+      setCompanionName(name);
+      setCompanionGender(gender);
+      setCompanionKey(key);
+      setAvatarConfig({ ...look, gender });
+      setReady(true);
+    })();
+  }, [randomized]);
 
   const handleNameChange = (name: string) => {
     setCompanionName(name);
@@ -119,6 +120,7 @@ export function CreateCompanionAvatarPage() {
 
   const handleRevealContinue = () => {
     setShowReveal(false);
+    sessionStorage.removeItem('companionRandomized');
     // Met a companion because the house needs one: finish setting up, then go home.
     sessionStorage.setItem('envSetupNextRoute', takeReturnToHouse() ? HOUSE_ROUTE : '/who-to-talk');
     sessionStorage.setItem('envSetupBackRoute', '/create-companion-avatar');
@@ -150,11 +152,13 @@ export function CreateCompanionAvatarPage() {
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Design {companionName || 'Your Companion'}
+            {randomized ? `Meet ${companionName || 'your match'}` : `Design ${companionName || 'Your Companion'}`}
           </h1>
 
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Give {companionName || 'them'} a unique look. Customize every detail, or hit Randomize to get a complete face instantly.
+            {randomized
+              ? `We picked a look for ${companionName || 'them'}. Hit the shuffle button for another, or change anything you like.`
+              : `Give ${companionName || 'them'} a unique look. Customize every detail, or hit the shuffle button to get a complete face instantly.`}
           </p>
         </motion.div>
 
@@ -164,16 +168,14 @@ export function CreateCompanionAvatarPage() {
           transition={{ delay: 0.2 }}
           className="bg-gray-800/50 border border-gray-700 rounded-2xl p-8 mb-8"
         >
-          <AvatarCreatorV2
-            initialConfig={avatarConfig}
-            onChange={setAvatarConfig}
-            draftKey="companion-avatar-draft"
-            onRandomize={(cfg) => {
-              if (!companionName) {
-                setCompanionName(getRandomName(cfg.gender));
-              }
-            }}
-          />
+          {ready && (
+            <AvatarCreatorV2
+              initialConfig={avatarConfig}
+              onChange={setAvatarConfig}
+              draftKey={companionKey ?? undefined}
+              lockGender
+            />
+          )}
         </motion.div>
 
         <motion.div
@@ -220,16 +222,6 @@ export function CreateCompanionAvatarPage() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md">
-            <button
-              onClick={handleRandomize}
-              disabled={saving}
-              className="flex-1 px-6 py-3 bg-sky-600/20 border border-sky-500/30 text-sky-400
-                hover:bg-sky-600/30 hover:text-sky-300 rounded-lg font-semibold transition-all
-                inline-flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <Shuffle className="w-5 h-5" />
-              Randomize Face
-            </button>
 
             <button
               onClick={handleSave}
