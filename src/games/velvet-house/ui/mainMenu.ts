@@ -29,12 +29,12 @@ export function saveSummary(): SaveSummary | null {
   return { day, when: `${DAYS[weekday(day)]} ${clockText(minutes)}`, money: typeof raw.money === 'number' ? raw.money : 0, names };
 }
 
-export function showMainMenu(app: HTMLElement): Promise<LaunchChoice> {
+export function showMainMenu(): Promise<LaunchChoice> {
   return new Promise((resolve) => {
     const summary = saveSummary();
     const root = document.createElement('div');
     root.className = 'vh-menu';
-    const done = (choice: LaunchChoice): void => { root.classList.add('vh-menu-out'); setTimeout(() => root.remove(), 320); resolve(choice); };
+    const done = (choice: LaunchChoice): void => { root.classList.add('vh-menu-out'); setTimeout(() => resolve(choice), 320); };
 
     const home = (): void => {
       root.innerHTML = `
@@ -91,7 +91,6 @@ export function showMainMenu(app: HTMLElement): Promise<LaunchChoice> {
     };
 
     home();
-    void app;
     document.body.appendChild(root);
     (root.querySelector('.vh-menu-primary') as HTMLElement | null)?.focus();
   });

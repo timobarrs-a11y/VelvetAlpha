@@ -21,12 +21,14 @@ import { createFrame } from './view/frame';
 import { installDevHooks } from './dev/hooks';
 import { createHostBridge } from './bridge/hostBridge';
 import { showMainMenu } from './ui/mainMenu';
+import { startAttract } from './ui/attract';
+import { run } from './kernel/config';
 
 /**
  * Starts the game. The data and the page come from `createGame`; each module below adds the part it owns to the
  * same `g` object and reaches the others through it (see kernel/game.ts).
  */
-function boot(): void {
+function boot(attract: boolean): void {
   const app = document.getElementById('app');
   if (!app) return;
   const g = createGame(app);
@@ -49,8 +51,9 @@ function boot(): void {
   Object.assign(g, createStudio(g));
   Object.assign(g, createDeliveries(g));
   Object.assign(g, createScripts(g));
-  installDevHooks(g);
+  if (!attract) installDevHooks(g);
   startGameLoop(g);
+  if (attract) { startAttract(g); return; }
   Object.assign(g, createHostBridge(g));
 
   // Open the page the player left the drawer on (every module exists by now).
@@ -58,12 +61,21 @@ function boot(): void {
   if (g.s.drawerPage) g.drawer.open(g.s.drawerPage);
 }
 
-/** The title screen comes first. (The tests start the game directly with ?nomenu.) */
+/**
+ * The title screen comes first: the house plays behind it as a throwaway backdrop, and choosing Continue or New Game
+ * reloads the page into the real game (the `#launch` mark says the menu has been done). The tests start the game
+ * directly with ?nomenu.
+ */
 async function launch(): Promise<void> {
-  const app = document.getElementById('app');
   const skip = import.meta.env.DEV && new URLSearchParams(location.search).has('nomenu');
-  if (app && !skip) await showMainMenu(app);
-  boot();
+  const launched = location.hash === '#launch';
+  if (launched) history.replaceState(null, '', location.pathname + location.search);
+  if (skip || launched) { boot(false); return; }
+  run.attract = true;
+  boot(true);
+  await showMainMenu();
+  location.hash = 'launch';
+  location.reload();
 }
 
 void launch();

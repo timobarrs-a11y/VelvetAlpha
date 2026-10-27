@@ -1,11 +1,12 @@
 import { snapshot } from '../state/save';
-import { SAVE_KEY, WALL_MODES } from '../kernel/config';
+import { SAVE_KEY, WALL_MODES, run } from '../kernel/config';
 import type { Game } from '../kernel/game';
 
 export function createPersist(g: Game): Partial<Game> {
   const { world, simName, partnerName, townName, people, rngSeed, view, owned, closet, flags, style, companionCfg, art, storage, coreMem, memories, pastMem } = g;
   // Save: one serializer (state/save.ts). What the game models comes from live state; the rest is carried over from the loaded save.
   function doSave(): void {
+    if (run.attract) return;
     try {
       const data = snapshot({
         rev: ++g.s.saveRev, day: world.day, minutes: world.minutes,
@@ -24,9 +25,11 @@ export function createPersist(g: Game): Partial<Game> {
     } catch { /* non-fatal */ }
   }
 
-  // Auto-save
-  setInterval(doSave, 15000);
-  window.addEventListener('pagehide', doSave);
-  document.addEventListener('visibilitychange', () => { if (document.hidden) doSave(); });
+  // Auto-save (the title screen's backdrop is a throwaway house and never saves)
+  if (!run.attract) {
+    setInterval(doSave, 15000);
+    window.addEventListener('pagehide', doSave);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) doSave(); });
+  }
   return { doSave };
 }

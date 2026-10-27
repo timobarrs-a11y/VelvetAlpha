@@ -65,6 +65,9 @@ export interface World {
   household: HouseholdState;
 }
 
+/** How this page is running. `attract` is the title screen's living backdrop: a throwaway house that never saves. */
+export const run = { attract: false };
+
 export function loadWorld(): World {
   let day = 1;
   let minutes = 6 * 60 + 20;
@@ -72,11 +75,11 @@ export function loadWorld(): World {
   let save: Record<string, unknown> | null = null;
   try {
     // First run on the new slot: carry the house over from the old one (migrated, so the old copy stays as it was).
-    if (localStorage.getItem(SAVE_KEY) === null) {
+    if (!run.attract && localStorage.getItem(SAVE_KEY) === null) {
       const old = migrateSave(JSON.parse(localStorage.getItem(LEGACY_SAVE_KEY) ?? 'null'));
       if (old) localStorage.setItem(SAVE_KEY, JSON.stringify(old));
     }
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = run.attract ? null : localStorage.getItem(SAVE_KEY);
     const migrated = raw ? migrateSave(JSON.parse(raw)) : null;
     // A house from before the story is not carried over: everyone starts again with the move-in.
     const s = isCurrentContent(migrated) ? migrated : null;

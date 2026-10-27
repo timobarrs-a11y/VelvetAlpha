@@ -10,6 +10,7 @@ import { LINE_BOOK } from '../content/lines';
 import { validateContent } from './validate';
 import { ScriptEngine } from './engine';
 import { NEW_RUNTIME, type FlagValue, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget } from './types';
+import { run } from '../kernel/config';
 import { createScriptUi } from '../ui/scriptUi';
 
 /**
@@ -210,7 +211,7 @@ export function createScripts(g: Game): Partial<Game> {
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.
-  const noScript = import.meta.env.DEV && new URLSearchParams(location.search).has('noscript');
+  const noScript = run.attract || (import.meta.env.DEV && new URLSearchParams(location.search).has('noscript'));
   const isNew = world.save === null;
   if (isNew && !noScript) {
     // The first day's furniture arrives in boxes, so the house starts without it.
