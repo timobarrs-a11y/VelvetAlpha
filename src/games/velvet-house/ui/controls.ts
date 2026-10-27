@@ -1,5 +1,5 @@
 import { ATTIC } from '../state/house';
-import { LEVEL_COUNT } from '../state/scenes';
+import { LEVEL_COUNT, FLOOR_ORDER } from '../state/scenes';
 import { type AgentId } from '../state/agents';
 import { qualityManager } from '../engine/qualityTier';
 import { SPEEDS, WALL_MODES } from '../kernel/config';
@@ -31,8 +31,26 @@ export function createControls(g: Game): Partial<Game> {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     canvas.animate?.([{ opacity: 0.35 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
   };
+  // Going up or down a floor, the picture slides the way you are going: the old floor leaves as the new one arrives.
+  const slideFloors = (to: number): void => {
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const parent = canvas.parentElement;
+    const dir = Math.sign(FLOOR_ORDER.indexOf(to) - FLOOR_ORDER.indexOf(view.level)) || 1;
+    if (reduced || !parent || !canvas.animate || !canvas.width) return softCut();
+    const old = document.createElement('canvas');
+    old.width = canvas.width; old.height = canvas.height;
+    old.className = 'vh-floor-slide';
+    old.getContext('2d')?.drawImage(canvas, 0, 0);
+    old.style.cssText = `position:absolute;left:${canvas.offsetLeft}px;top:${canvas.offsetTop}px;width:${canvas.offsetWidth}px;height:${canvas.offsetHeight}px;pointer-events:none;z-index:1`;
+    parent.insertBefore(old, canvas.nextSibling);
+    const opts = { duration: 420, easing: 'cubic-bezier(.3,.7,.2,1)' };
+    // Up: the old floor drops away below and the new one comes down from above (the view rises). Down: the other way.
+    const gone = old.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(${dir * 16}%)`, opacity: 0 }], opts);
+    gone.onfinish = () => old.remove();
+    canvas.animate([{ transform: `translateY(${-dir * 16}%)`, opacity: 0.15 }, { transform: 'translateY(0)', opacity: 1 }], opts);
+  };
   const setLevel = (lv: number, keepFollow = false): void => {
-    if (lv !== view.level) softCut();
+    if (lv !== view.level) slideFloors(lv);
     g.dropSelectionIfOffFloor(lv);
     const changed = lv !== view.level;
     view.level = lv;
