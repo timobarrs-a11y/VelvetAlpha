@@ -143,12 +143,13 @@ export function createScripts(g: Game): Partial<Game> {
       if (!target) { art.spotlight([]); ui.hideCard(); }
     },
     outline(s) {
-      if (!s) { art.setGhost(null); return; }
+      if (!s) { art.setGhost(null); g.setGhostTarget(null); return; }
       const at = resolve(s.at);
-      // A coloured outline is a placement lesson: bring up Arrange with that piece in hand.
-      if (s.color && !g.isArranging()) {
+      if (at) g.setGhostTarget({ type: s.objType, level: at.level, x: at.x, y: at.y, rot: s.rot });
+      // A coloured outline is a placement lesson: bring up Arrange with that piece in hand, framed with its outline.
+      if (s.color) {
         const o = world.objs.find((q) => q.type === s.objType);
-        if (o) { g.drawer.open('arrange'); g.selectObject(o); }
+        if (o) { if (!g.isArranging()) g.drawer.open('arrange'); g.selectObject(o); }
       }
       if (at) art.setGhost({ type: s.objType, level: at.level, x: at.x, y: at.y, rot: s.rot, color: s.color });
     },

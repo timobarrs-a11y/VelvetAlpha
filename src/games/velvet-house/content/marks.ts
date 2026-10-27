@@ -11,7 +11,8 @@ export const MARKS: Record<string, Spot> = {
   door: { level: 1, x: 0.5, y: DOOR[1] },
   'entry.inside': { level: 1, x: 1.7, y: 5.3 },
   // Where a delivery is set down, and the stack of boxes that waits by the door.
-  'entry.drop': { level: 1, x: 2.9, y: 5.6 },
+  // The gap in the wall between the entry and the kitchen: in plain view with the walls down.
+  'entry.drop': { level: 1, x: 2.3, y: 4.1 },
   'entry.stack1': { level: 1, x: 3.7, y: 6.3 },
   'entry.stack2': { level: 1, x: 4.4, y: 5.9 },
   'entry.stack3': { level: 1, x: 3.2, y: 6.9 },

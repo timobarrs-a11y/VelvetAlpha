@@ -115,6 +115,10 @@ export interface Game {
   toView(clientX: number, clientY: number): [number, number];
   zoomAt(clientX: number, clientY: number, factor: number): void;
   resetCamera(): void;
+  /** Frame these view points (and the space the panels leave free) as closely as fits. */
+  frameView(points: Array<[number, number]>, maxZoom?: number, pad?: number): void;
+  /** Keep the piece being dragged in frame, looking ahead of the finger. */
+  trackHeld(dt: number): void;
   flingCamera(vx: number, vy: number): void;
   shake(amount?: number): void;
   cameraBeat(kind: 'closeup' | 'reveal', id?: AgentId, ms?: number): void;
@@ -156,6 +160,11 @@ export interface Game {
   peopleOnFloor(): Agent[];
   nameOf(o: ObjectInstance): string;
   isArranging(): boolean;
+  /** The piece being dragged: its centre on the floor (world units) and its height. */
+  heldCentre(): { x: number; y: number; h: number } | null;
+  /** Where a script wants the piece to end up (the outline), so the camera can frame both. */
+  ghostTarget(): { x: number; y: number; h: number; level: number } | null;
+  setGhostTarget(t: { type: string; level: number; x: number; y: number; rot?: number } | null): void;
   dropSelectionIfOffFloor(lv: number): void;
   escapeArrange(): void;
   abortDrag(): void;
@@ -299,7 +308,8 @@ export function createGame(app: HTMLElement): Game | null {
   const view = {
     level: 1,
     rot: 0,
-    wallIdx: Math.max(0, WALL_MODES.findIndex((w) => w.mode === savedMode)),
+    // No save yet: walls down, so nothing in the house is hidden behind a wall on the first day.
+    wallIdx: Math.max(0, WALL_MODES.findIndex((w) => w.mode === (savedMode ?? 'down'))),
     speedIdx: 0,
     paused: false,
     t: 0,
