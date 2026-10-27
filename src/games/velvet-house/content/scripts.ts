@@ -22,6 +22,7 @@ export const OPENING: ScriptDef = {
   mode: 'cutscene',
   skippable: true,
   steps: [
+    { do: 'intro', kind: 'arrival' },
     { do: 'clock', day: 1, minutes: 9 * 60 },
     { do: 'camera', focus: 'wide', level: 1 },
     { do: 'place', who: 'jordan', at: 'mark:living.center' },

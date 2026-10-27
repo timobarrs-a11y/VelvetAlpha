@@ -19,6 +19,8 @@ import { applyAvatarChange, migrateAvatarConfig } from '../utils/avatarConfig';
 import { recordSimsPurchase } from '../services/avatarInventoryService';
 import { isHelper } from '../utils/relationshipType';
 import { SOMEONE_NEW_ROUTE } from '../services/setupProgressService';
+import { getMyPlot } from '../services/worldService';
+import { townSlot } from '../features/velvet-world/art/streetArt.js';
 
 const GAME_PATH = '/games/velvet-house-next/index.html';
 
@@ -116,6 +118,15 @@ export function VelvetHouseNextGame() {
     const sendProfile = async (win: Window) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || cancelled) return;
+      // Their house in town goes first, so the drive-up that opens a new game can show it.
+      getMyPlot().then((mine) => {
+        if (!mine || cancelled) return;
+        const slot = townSlot(mine.slot_index);
+        win.postMessage({
+          type: 'velvet:plot',
+          plot: { member: mine.is_member, config: { house: mine.house, sign: mine.sign, ...(mine.yard ?? {}) }, earned: mine.earned, address: slot.address },
+        }, window.location.origin);
+      }).catch(() => { /* no plot yet: the drive-up shows a starter house */ });
       const pickCompanion = async () => {
         if (companionId) return getCompanion(companionId);
         const all = await getCompanions(user.id);

@@ -19,7 +19,8 @@ export type BridgeMessageType =
   | 'velvet:sampleResult'
   | 'velvet:designs'
   | 'velvet:designsResult'
-  | 'velvet:avatarLook';
+  | 'velvet:avatarLook'
+  | 'velvet:plot';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -245,6 +246,19 @@ export interface AvatarLookMessage extends BridgeMessage {
   who: 'player';
   sprites?: Record<string, string>;
   body?: Record<string, string>;
+}
+
+/** The player's own house in town, as the street kit draws it (the host sends it so the move-in can start with the drive-up). */
+export interface PlotMessage extends BridgeMessage {
+  type: 'velvet:plot';
+  plot: { member: boolean; config: Record<string, unknown>; earned?: string[]; address?: string };
+}
+
+export function isPlotMessage(data: unknown): data is PlotMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  const p = m.plot as Record<string, unknown> | null;
+  return m.type === 'velvet:plot' && typeof p === 'object' && p !== null && typeof p.config === 'object' && p.config !== null;
 }
 
 export function isAvatarLookMessage(data: unknown): data is AvatarLookMessage {

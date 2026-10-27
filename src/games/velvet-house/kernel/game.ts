@@ -1,3 +1,4 @@
+import type { ArrivalPlot } from '../ui/arrivalIntro';
 import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
 import { RNG, setGlobalRNG } from '../state/rng';
 import { buildWorld, createAgent, type Agent, type AgentId } from '../state/agents';
@@ -53,6 +54,8 @@ export interface GameState {
   qualityIdx: number;
   saveRev: number;
   suppressClick: boolean;
+  /** The player's house in town, for the drive-up that opens a new game (null: a plain starter house). */
+  plot: ArrivalPlot | null;
   /** Skipping ahead through the work day ("Skip to 5 PM"). */
   skipping: boolean;
   scriptMode: Mode | null;
@@ -218,7 +221,7 @@ export function createGame(app: HTMLElement): Game | null {
   // Names and looks from save or defaults
   const simName = nameFrom(save?.simName, 'Jordan');
   const partnerName = nameFrom(save?.partnerName, 'Maya');
-  const townName = nameFrom(save?.townName, 'Honeysuckle Hollow');
+  const townName = nameFrom(save?.townName, 'Honeysuckle Hollow', 24);
 
   const people: Agent[] = [
     createAgent('jordan', simName, (save?.jordan as { needs?: Partial<CharacterNeeds> })?.needs, lookFrom(save?.look, DEFAULT_LOOKS.jordan)),
@@ -331,7 +334,7 @@ export function createGame(app: HTMLElement): Game | null {
     settleDone: typeof save?.settleDone === 'boolean' ? save!.settleDone : false,
     chatTurns: Array.isArray(save?.turns) ? [...save!.turns as ChatTurn[]] : [],
     sample: null as SampleFn | null,
-    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, skipping: false, scriptMode: null, scriptAllow: [],
+    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, plot: null, skipping: false, scriptMode: null, scriptAllow: [],
     saveRev: typeof (world.save as { rev?: unknown } | null)?.rev === 'number' ? (world.save as { rev: number }).rev : 0,
   };
 

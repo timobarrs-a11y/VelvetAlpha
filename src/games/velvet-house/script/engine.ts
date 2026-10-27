@@ -20,7 +20,8 @@ type Blocking =
   | { k: 'act'; who: Actor }
   | { k: 'say'; hold: number | null }
   | { k: 'choice'; options: ChoiceOption[] }
-  | { k: 'card' };
+  | { k: 'card' }
+  | { k: 'intro' };
 
 const MAX_STEPS_PER_TICK = 400;
 const EFFECT_STEPS = new Set(['set', 'give', 'deliver', 'unlock', 'despawn', 'place', 'clock', 'carry']);
@@ -220,6 +221,7 @@ export class ScriptEngine {
         if (b.hold !== null) { b.hold -= dt; return b.hold <= 0; }
         return this.host.sayDone();
       case 'card': return this.host.cardDone();
+      case 'intro': return this.host.introDone?.() ?? true;
       case 'choice': {
         const n = this.host.choiceMade();
         if (n === null) return false;
@@ -288,6 +290,10 @@ export class ScriptEngine {
       case 'card':
         h.showCard(s.title, s.body, s.spotlight, s.button);
         return s.button ? block({ k: 'card' }) : false;
+      case 'intro':
+        if (skipping || !h.intro) return false;
+        h.intro(s.kind);
+        return block({ k: 'intro' });
       case 'highlight': h.highlight(s.target); return false;
       case 'outline': h.outline({ objType: s.objType, at: s.at, rot: s.rot, color: s.color }); return false;
       case 'set': h.flags[s.flag] = s.value; return false;

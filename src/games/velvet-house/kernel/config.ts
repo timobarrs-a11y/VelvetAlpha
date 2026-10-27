@@ -50,8 +50,8 @@ export function lookFrom(saved: unknown, fallback: AgentLook): AgentLook {
   };
 }
 
-export function nameFrom(v: unknown, fallback: string): string {
-  return typeof v === 'string' && v.trim() ? v.trim().slice(0, 16) : fallback;
+export function nameFrom(v: unknown, fallback: string, max = 16): string {
+  return typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : fallback;
 }
 
 export function escapeHtml(s: string): string {

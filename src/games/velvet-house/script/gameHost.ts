@@ -12,6 +12,8 @@ import { ScriptEngine } from './engine';
 import { NEW_RUNTIME, type FlagValue, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget } from './types';
 import { run } from '../kernel/config';
 import { createScriptUi } from '../ui/scriptUi';
+import { playArrival, type Arrival } from '../ui/arrivalIntro';
+import { season as seasonOf } from '../state/time';
 
 /**
  * Connects the script engine to the running game: who a name means, where a place is, and what each step does to the
@@ -51,6 +53,7 @@ export function createScripts(g: Game): Partial<Game> {
   let camFocus: { who: string; zoom: number } | null = null;
   let spot: UiTarget[] = [];
 
+  let arrival: Arrival | null = null;
   const host: ScriptHost = {
     flags: story,
     clock: () => ({ day: world.day, minutes: world.minutes }),
@@ -175,6 +178,14 @@ export function createScripts(g: Game): Partial<Game> {
       (flags.unlocked as Record<string, boolean>)[what] = true;
       if (what === 'freeWill') g.s.freeWill = true;
     },
+    intro() {
+      arrival?.cancel();
+      arrival = playArrival(stage, {
+        plot: g.s.plot, season: seasonOf(world.day), town: g.townName,
+        reducedMotion: !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+      });
+    },
+    introDone: () => !arrival || arrival.done(),
     setClock(day, minutes) {
       if (day !== undefined) world.day = day;
       if (minutes !== undefined) world.minutes = minutes;
@@ -228,6 +239,8 @@ export function createScripts(g: Game): Partial<Game> {
 
   function update(dt: number): void {
     engine.tick(dt);
+    // Skipping the opening ends the drive-up too.
+    if (arrival && !engine.isActive()) { arrival.cancel(); arrival = null; }
     if (camFocus) {
       const a = actor(camFocus.who);
       if (a && !view.follow) {

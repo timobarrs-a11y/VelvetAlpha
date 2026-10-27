@@ -60,6 +60,8 @@ export type Step =
   | { do: 'deliver'; category: string; id?: string }
   | { do: 'unlock'; what: string }
   | { do: 'clock'; day?: number; minutes?: number }
+  /** A full-screen opening shot (the drive up to the house); waits until it ends. */
+  | { do: 'intro'; kind: 'arrival' }
   | { do: 'wait'; seconds?: number; until?: Cond }
   | { do: 'if'; cond: Cond; then: Step[]; else?: Step[] }
   | { do: 'run'; script: string }
@@ -137,6 +139,9 @@ export interface ScriptHost {
   deliver(category: string, id?: string): void;
   unlock(what: string): void;
   setClock(day?: number, minutes?: number): void;
+  /** Starts a full-screen opening shot; `introDone` is true once it has ended. */
+  intro?(kind: 'arrival'): void;
+  introDone?(): boolean;
   /** The script is done with these people: free will and idle choices are theirs again. */
   release(who: Actor[]): void;
 }
