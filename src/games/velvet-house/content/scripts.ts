@@ -123,7 +123,6 @@ export const TUTORIAL: ScriptDef[] = [
     { do: 'walk', who: 'dez', to: 'mark:entry.drop' },
     { do: 'give', object: { type: 'pbox', at: 'mark:entry.drop', id: 'box.lamp', contents: 'lamp' } },
     { do: 'carry', who: 'dez', carrying: null },
-    { do: 'give', object: { type: 'pbox', at: 'mark:entry.stack1', id: 'box.plant', contents: 'plant' } },
     say('dez', 'dez.ch7.noLabel'),
     ...exitLine,
     { do: 'camera', focus: 'wide' },
