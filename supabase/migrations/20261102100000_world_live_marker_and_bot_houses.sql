@@ -1,14 +1,12 @@
-/*
-  # Mark human neighbors "live"; open every house to the bots
-
-  1. world_cards gains is_live: true when the plot belongs to a person (not a seeded
-     or bot profile) whose profile is visible to the viewer. The town draws a small
-     "LIVE" marker over those houses.
-  2. Seeded and bot profiles can live in any house style, so the street looks varied:
-     world_cards and get_town_plots report them as members, and (for the earned
-     styles) as holding the medal that unlocks each. This is display only. It does not
-     touch plans or medals, and people's access to houses is unchanged.
-*/
+-- Mark human neighbors "live"; open every house to the bots
+--
+-- 1. world_cards gains is_live: true when the plot belongs to a person (not a seeded
+-- or bot profile) whose profile is visible to the viewer. The town draws a small
+-- "LIVE" marker over those houses.
+-- 2. Seeded and bot profiles can live in any house style, so the street looks varied:
+-- world_cards and get_town_plots report them as members, and (for the earned
+-- styles) as holding the medal that unlocks each. This is display only. It does not
+-- touch plans or medals, and people's access to houses is unchanged.
 
 CREATE OR REPLACE FUNCTION public.world_is_bot(p_user_id uuid)
 RETURNS boolean

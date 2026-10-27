@@ -1,24 +1,22 @@
-/*
-  # Town mail
-
-  One-way letters that land in a mailbox on every house. Members can read their own
-  mail and nothing else; they cannot reply or send. Only an admin can send, to
-  everyone with a house or to chosen people. The town lights up the mailbox
-  when there is unread mail.
-
-  ## Table
-  - town_letters   one row per letter per recipient
-
-  ## RPCs
-  - get_my_mail(p_limit)            my letters, unread first, then newest
-  - get_my_unread_mail_count()      how many unread
-  - mark_letter_read(p_id)          mark one of mine read
-  - mark_all_mail_read()            mark all of mine read
-  - send_town_letter(...)           admin only; to everyone with a house, or to p_user_ids
-
-  Letters are private: RLS lets a person select their own rows, and there are no
-  insert, update or delete policies, so every change goes through the RPCs above.
-*/
+-- Town mail
+--
+-- One-way letters that land in a mailbox on every house. Members can read their own
+-- mail and nothing else; they cannot reply or send. Only an admin can send, to
+-- everyone with a house or to chosen people. The town lights up the mailbox
+-- when there is unread mail.
+--
+-- Table
+-- - town_letters   one row per letter per recipient
+--
+-- RPCs
+-- - get_my_mail(p_limit)            my letters, unread first, then newest
+-- - get_my_unread_mail_count()      how many unread
+-- - mark_letter_read(p_id)          mark one of mine read
+-- - mark_all_mail_read()            mark all of mine read
+-- - send_town_letter(...)           admin only; to everyone with a house, or to p_user_ids
+--
+-- Letters are private: RLS lets a person select their own rows, and there are no
+-- insert, update or delete policies, so every change goes through the RPCs above.
 
 CREATE TABLE IF NOT EXISTS public.town_letters (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
