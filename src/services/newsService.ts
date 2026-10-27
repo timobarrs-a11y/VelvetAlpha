@@ -1,5 +1,5 @@
 import { supabase } from '../shared/supabase/client';
-import { voiceNewsFor, type VoiceNewsConfig } from '../config/voiceNewsCategories';
+import { VOICE_NEWS_CATEGORIES, VoiceNewsConfig } from '../config/voiceNewsCategories';
 
 export interface NewsArticle {
   id: string;
@@ -319,7 +319,7 @@ function isCacheValid(entry: CacheEntry): boolean {
 }
 
 export async function fetchCompanionNews(signatureVoiceId: string): Promise<CompanionNewsArticle[]> {
-  const voiceConfig = voiceNewsFor(signatureVoiceId);
+  const voiceConfig = VOICE_NEWS_CATEGORIES[signatureVoiceId];
 
   if (!voiceConfig || !voiceConfig.categories || voiceConfig.categories.length === 0) {
     return [];

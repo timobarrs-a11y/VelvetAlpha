@@ -76,8 +76,8 @@ export function GuidedAvatarFlow({ config, onChange, onSwitchToAdvanced }: Guide
   }, [config, onChange]);
 
   const randomize = useCallback(() => {
-    onChange(coherentRandomize(config.gender));
-  }, [onChange, config.gender]);
+    onChange(coherentRandomize());
+  }, [onChange]);
 
   const hairstyles = HAIRSTYLES;
 

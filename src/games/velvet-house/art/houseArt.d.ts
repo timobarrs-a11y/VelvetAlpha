@@ -97,9 +97,6 @@ export interface HouseArt {
   /** Sets the floor type for a floor level. */
   applyFloor(level: number, floor: string): void;
   toggleObjectLight(id: string): boolean;
-  /** Whether a lamp or other lit object is switched on. */
-  objectLightOn(id: string): boolean;
-  setObjectLight(id: string, on: boolean): void;
   toggleLightAt(level: number, sx: number, sy: number): boolean | null;
   /** The id of the piece whose light `toggleLightAt` just switched (null for a wall light). */
   lastToggledLight(): string | null;

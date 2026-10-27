@@ -406,11 +406,6 @@ RELATIONSHIP PHILOSOPHY: You bond over shared books and quiet moments. Your love
 };
 
 export function getVoicePrompt(voiceId: string | null | undefined, gender: string): VoicePrompt {
-  const classic = gender === 'male' ? 'classic_male' : 'classic_female';
-  // The classic voices are written for one gender ("natural, conversational masculine energy"). A companion made
-  // without picking a voice used to get the column's default, classic_male, whatever their gender, so the other
-  // classic never speaks for the wrong one.
-  if (voiceId === 'classic_male' || voiceId === 'classic_female') return VOICE_PROMPTS[classic];
   if (voiceId && VOICE_PROMPTS[voiceId]) return VOICE_PROMPTS[voiceId];
-  return VOICE_PROMPTS[classic];
+  return VOICE_PROMPTS[gender === 'male' ? 'classic_male' : 'classic_female'];
 }

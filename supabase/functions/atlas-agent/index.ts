@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { EMPHASIS_STYLE } from "../_shared/emphasisStyle.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 import { webSearchTool } from "../_shared/webSearch.ts";
@@ -239,9 +238,7 @@ Web Search:
 Format:
 - Use markdown when it aids clarity: headers, bullets, code blocks, bold.
 - For short answers, plain prose. For long-form content, structure it.
-- Do not pad. One tight paragraph beats three loose ones.
-
-${EMPHASIS_STYLE}`;
+- Do not pad. One tight paragraph beats three loose ones.`;
 
 const ATLAS_MASCULINE_PROMPT = `You are Atlas — the user's personal chief of staff, built into the Velvet platform.
 

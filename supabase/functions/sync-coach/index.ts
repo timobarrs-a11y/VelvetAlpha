@@ -128,7 +128,6 @@ Deno.serve(async (req: Request) => {
       .insert({
         user_id: user.id,
         gender,
-        signature_voice: gender === "male" ? "classic_male" : "classic_female",
         relationship_type: "mentor",
         custom_name: finalCoachName,
         signature_expert: resolvedExpertId,

@@ -10,9 +10,11 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 export default function SignatureVoiceSelectionPage() {
   const navigate = useNavigate();
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(false);
   const [companionGender, setCompanionGender] = useState<'male' | 'female'>('female');
   const [availableVoices, setAvailableVoices] = useState<SignatureVoice[]>([]);
+  const isTestingMode = import.meta.env.DEV && import.meta.env.VITE_TESTING_MODE === 'true';
 
   useEffect(() => {
     loadData();
@@ -29,20 +31,35 @@ export default function SignatureVoiceSelectionPage() {
       voice.gender === gender || voice.gender === 'neutral'
     );
     setAvailableVoices(filtered);
+
+    await checkPremiumStatus();
+  };
+
+  const checkPremiumStatus = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('subscription_tier')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const tier = profile?.subscription_tier;
+    setIsPremium(tier === 'trial' || tier === 'unlimited' || tier === 'starter' || tier === 'plus' || tier === 'elite');
   };
 
   const handleVoiceClick = (voiceId: string) => {
     setSelectedVoice(voiceId);
   };
 
-  // Skipping keeps the plain classic voice for their gender; "surprise me" picks any of them.
-  const handleSkip = async () => {
-    await saveVoiceAndContinue(companionGender === 'male' ? 'classic_male' : 'classic_female');
+  const handleContinueFree = async () => {
+    const defaultVoice = companionGender === 'male' ? 'classic_male' : 'classic_female';
+    await saveVoiceAndContinue(defaultVoice);
   };
 
-  const handleSurprise = async () => {
-    const pick = availableVoices[Math.floor(Math.random() * availableVoices.length)];
-    if (pick) await saveVoiceAndContinue(pick.id);
+  const handleUpgrade = () => {
+    navigate('/pricing');
   };
 
   const handleContinueWithSelected = async () => {
@@ -154,40 +171,75 @@ export default function SignatureVoiceSelectionPage() {
           </p>
         </div>
 
-        <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 mb-8 text-center">
-          <h2 className="text-xl font-bold mb-2">
-            Pick a signature voice
-          </h2>
+        {isTestingMode && (
+          <div className="bg-yellow-900/30 border border-yellow-500 rounded-xl p-4 mb-6 text-center">
+            <p className="text-yellow-300 font-semibold">
+              Testing Mode Active - All Premium Voices Unlocked
+            </p>
+          </div>
+        )}
 
-          <p className="text-gray-300 text-sm mb-4">
-            All {availableVoices.length} voices for your {companionGender} companion are open to you. Tap one to hear how they'd sound.
-          </p>
+        <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 mb-8 text-center">
+          {!isTestingMode && (
+            <>
+              <h2 className="text-xl font-bold mb-2">
+                Most Signature Voices are premium.
+              </h2>
+
+              <p className="text-gray-300 text-sm mb-4">
+                You have {availableVoices.filter(v => !v.premium).length} free voices available, or upgrade to unlock all {availableVoices.length} signature voices for your {companionGender} companion.
+              </p>
+            </>
+          )}
+
+          {isTestingMode && (
+            <>
+              <h2 className="text-xl font-bold mb-2">
+                Select Your Voice
+              </h2>
+
+              <p className="text-gray-300 text-sm mb-4">
+                Testing mode enabled - all voices are available for testing.
+              </p>
+            </>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={handleContinueWithSelected}
-              disabled={loading || !selectedVoice}
-              className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-lg font-semibold transition-all inline-flex items-center justify-center gap-2 disabled:opacity-40"
-            >
-              {loading ? 'Saving...' : selectedVoice ? 'Continue with this voice' : 'Choose a voice to continue'}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleSurprise}
-              disabled={loading}
-              className="px-6 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all text-sm disabled:opacity-40"
-            >
-              Surprise me
-            </button>
+            {selectedVoice ? (
+              <button
+                onClick={handleContinueWithSelected}
+                disabled={loading}
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-lg font-semibold transition-all inline-flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Continue with Selected Voice'}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleUpgrade}
+                  disabled={loading}
+                  className="px-6 py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 rounded-lg font-semibold transition-all text-sm"
+                >
+                  Upgrade to Premium
+                </button>
+
+                <button
+                  onClick={handleContinueFree}
+                  disabled={loading}
+                  className="px-6 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-all text-sm"
+                >
+                  Continue Free
+                </button>
+              </>
+            )}
           </div>
 
-          <button
-            onClick={handleSkip}
-            disabled={loading}
-            className="mt-3 text-xs text-gray-400 hover:text-gray-200 transition-colors disabled:opacity-40"
-          >
-            Skip, use the classic voice
-          </button>
+          {!isPremium && !isTestingMode && (
+            <p className="mt-3 text-xs text-gray-400">
+              You can always upgrade later in settings to unlock all premium voices.
+            </p>
+          )}
         </div>
 
         <div className="space-y-8 mb-12">

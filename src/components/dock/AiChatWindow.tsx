@@ -87,7 +87,7 @@ interface AiChatWindowProps {
   surface?: CoachSurface;
   quickPrompts?: string[];
   onCoachChanged?: (ids: string[]) => void;
-  pending: { text: string; nonce: number; mode?: 'send' | 'draft' } | null;
+  pending: { text: string; nonce: number } | null;
   onConsumePending: () => void;
   onMinimize: () => void;
   onClose: () => void;
@@ -107,7 +107,6 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
   const [error, setError] = useState<string | null>(null);
   const [outOfMessages, setOutOfMessages] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const { data: messages, appendOptimistic, replaceOptimistic, removeOptimistic, setMessages } = useMessages(user?.id, companion.id);
   const messageCallbacks = useMemo(() => ({ appendOptimistic, replaceOptimistic, removeOptimistic }), [appendOptimistic, replaceOptimistic, removeOptimistic]);
@@ -182,22 +181,8 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
   }, [user, companion.id, isCoach, sending, saveMessage, surface, onCoachChanged]);
 
   // Something on the page asked this companion a question: send it once.
-  // The nonce is remembered because the effect can run twice before the page clears the request
-  // (React's strict mode does it in development), which sent the question twice.
-  const sentNonce = useRef<number | null>(null);
   useEffect(() => {
-    if (!pending || sentNonce.current === pending.nonce) return;
-    // A draft is only typed into the box (it can be waiting while a reply is on its way); a question is sent.
-    if (pending.mode === 'draft') {
-      sentNonce.current = pending.nonce;
-      setDraft(pending.text);
-      onConsumePending();
-      // Ready to edit: focus once the text is in the box.
-      setTimeout(() => inputRef.current?.focus(), 50);
-      return;
-    }
-    if (sending) return;
-    sentNonce.current = pending.nonce;
+    if (!pending || sending) return;
     onConsumePending();
     send(pending.text);
   }, [pending, sending, onConsumePending, send]);
@@ -291,11 +276,6 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
 
       <form onSubmit={e => { e.preventDefault(); send(draft); }} className="flex items-end gap-2 border-t border-white/8 p-2.5">
         <textarea
-          ref={el => {
-            inputRef.current = el;
-            // Grows with what is typed (a prefilled question is several lines), up to the max height.
-            if (el) { el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 128)}px`; }
-          }}
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => {

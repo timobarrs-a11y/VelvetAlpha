@@ -51,6 +51,70 @@ interface Companion {
   created_at: string;
 }
 
+interface VoiceNewsConfig {
+  categories: string[];
+  keywords: string[];
+  sources: string[];
+  personality_filter: string;
+}
+
+const VOICE_NEWS_CATEGORIES: Record<string, VoiceNewsConfig> = {
+  jock: {
+    categories: ['sports'],
+    keywords: ['NFL', 'NBA', 'MLB', 'UFC', 'ESPN', 'game', 'playoffs', 'Super Bowl', 'championship', 'trade', 'draft'],
+    sources: ['espn', 'bleacher-report', 'the-sport-bible'],
+    personality_filter: 'This character cares deeply about sports, fitness, competition. They have strong opinions about games, players, and athletic achievement.'
+  },
+  homie: {
+    categories: ['entertainment', 'general'],
+    keywords: ['viral', 'trending', 'hip-hop', 'rap', 'culture', 'meme', 'celebrity', 'music'],
+    sources: ['complex', 'tmz', 'buzzfeed'],
+    personality_filter: 'This character is plugged into pop culture, street culture, music, and social media trends. They know what is going on and have takes.'
+  },
+  nerd: {
+    categories: ['technology', 'science'],
+    keywords: ['AI', 'space', 'NASA', 'gaming', 'tech', 'startup', 'research', 'discovery'],
+    sources: ['techcrunch', 'the-verge', 'wired', 'ars-technica'],
+    personality_filter: 'This character is passionate about technology, science, gaming, and intellectual pursuits. They get excited about discoveries and innovations.'
+  },
+  artist: {
+    categories: ['entertainment', 'general'],
+    keywords: ['art', 'music', 'film', 'album', 'gallery', 'creative', 'design', 'fashion'],
+    sources: ['rolling-stone', 'pitchfork', 'the-guardian'],
+    personality_filter: 'This character lives for creative expression — art, music, film, fashion, design. They have aesthetic opinions and emotional responses to creative work.'
+  },
+  shakespearean: {
+    categories: ['general', 'science', 'entertainment'],
+    keywords: ['philosophy', 'literature', 'history', 'poetry', 'theater', 'debate', 'politics'],
+    sources: ['the-new-york-times', 'bbc-news', 'the-guardian'],
+    personality_filter: 'This character sees the world through a dramatic, literary, philosophical lens. They find the poetic and profound in current events.'
+  },
+  lawyer: {
+    categories: ['general', 'business'],
+    keywords: ['law', 'court', 'ruling', 'policy', 'regulation', 'case', 'legal', 'justice', 'Supreme Court'],
+    sources: ['reuters', 'associated-press', 'the-new-york-times'],
+    personality_filter: 'This character analyzes everything through a logical, argumentative, evidence-based lens. They love debate and have strong opinions backed by reasoning.'
+  },
+  sweetheart: {
+    categories: ['entertainment', 'health', 'general'],
+    keywords: ['wellness', 'self-care', 'relationship', 'heartwarming', 'community', 'kindness', 'feel-good'],
+    sources: ['buzzfeed', 'today', 'good-morning-america'],
+    personality_filter: 'This character is warm, caring, emotionally attuned. They notice the human side of every story and care about peoples wellbeing.'
+  },
+  adventurer: {
+    categories: ['general', 'science'],
+    keywords: ['travel', 'adventure', 'explore', 'nature', 'outdoor', 'expedition', 'destination', 'extreme'],
+    sources: ['national-geographic', 'bbc-news', 'the-guardian'],
+    personality_filter: 'This character craves new experiences, exploration, and pushing boundaries. They are restless, curious, and always planning the next adventure.'
+  },
+  classic: {
+    categories: ['general'],
+    keywords: ['news', 'world', 'local', 'community'],
+    sources: ['bbc-news', 'the-guardian'],
+    personality_filter: 'This character has balanced, thoughtful perspectives on current events and everyday life.'
+  }
+};
+
 const newsCache = new Map<string, { data: any[]; timestamp: number }>();
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000;
 
@@ -68,9 +132,9 @@ function isCacheValid(entry: { timestamp: number }): boolean {
 }
 
 async function fetchCompanionNews(signatureVoiceId: string): Promise<any[]> {
-  const voiceConfig = voiceNewsFor(signatureVoiceId);
+  const voiceConfig = VOICE_NEWS_CATEGORIES[signatureVoiceId];
 
-  if (!voiceConfig.categories || voiceConfig.categories.length === 0) {
+  if (!voiceConfig || !voiceConfig.categories || voiceConfig.categories.length === 0) {
     return [];
   }
 
@@ -510,14 +574,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const [newsArticles, conversationMemory, companionMemory, relationshipDays] = await Promise.all([
-      fetchCompanionNews(companion.signature_voice ?? ''),
+      fetchCompanionNews(companion.signature_voice || 'classic'),
       fetchRecentConversationMemory(supabase, userId, companionId),
       fetchCompanionMemory(supabase, userId, companionId),
       calculateRelationshipDuration(supabase, userId, companionId)
     ]);
 
-    const voiceConfig = voiceNewsFor(companion.signature_voice);
-    const newsContext = formatNewsForPrompt(newsArticles, voiceConfig);
+    const voiceConfig = VOICE_NEWS_CATEGORIES[companion.signature_voice || 'classic'];
+    const newsContext = voiceConfig
+      ? formatNewsForPrompt(newsArticles, voiceConfig)
+      : "No specific real-world events to reference today. Generate the day based on the character's typical interests.";
 
     const systemPrompt = buildSystemPrompt(
       companion,

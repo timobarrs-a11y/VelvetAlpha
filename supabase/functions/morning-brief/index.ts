@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { EMPHASIS_STYLE } from "../_shared/emphasisStyle.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
@@ -52,7 +51,7 @@ Rules:
 - Keep it scannable: 150-250 words max
 - Tone: concise, warm, intelligent. Like texting someone who gets it
 - Use line breaks between sections for readability
-- End with one short, energizing thought or question\n\n${EMPHASIS_STYLE}`;
+- End with one short, energizing thought or question`;
 
     const contextBlock = context && context.trim()
       ? `\n\nPersonalized context for ${userName || "this user"}:\n${context}`

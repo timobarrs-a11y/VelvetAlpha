@@ -1,13 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, PenLine, ChevronRight, Shuffle, Lock, Star, Zap, Heart, Brain, MessageCircle, ArrowLeft } from 'lucide-react';
-import { createRandomCompanion, type RandomCompanion } from '../services/randomCompanionService';
-import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
-import { toast } from '../shared/ui/Toast';
 
-// The order is fixed: friend or companion (the screen before), then male or female, then create your own or random.
-type Phase = 'gender' | 'choose' | 'scanning' | 'reveal';
+type Phase = 'choose' | 'gender' | 'scanning' | 'reveal';
 type Gender = 'Female' | 'Male';
 
 const SCAN_NAMES_FEMALE = [
@@ -161,64 +157,90 @@ function ScanningScreen({ onReveal, gender }: { onReveal: () => void; gender: Ge
   );
 }
 
+function RevealScreen({ onContinue, isFriend }: { onContinue: () => void; isFriend: boolean }) {
+  const noun = isFriend ? 'friend' : 'companion';
+  return (
+    <motion.div
+      className="w-full max-w-lg mx-auto text-center"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+    >
+      <motion.div
+        className="relative inline-flex items-center justify-center w-28 h-28 mb-6"
+        initial={{ scale: 0.5 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+      >
+        <div className="absolute inset-0 rounded-full bg-amber-500/20 animate-ping" />
+        <div className="absolute inset-0 rounded-full bg-amber-500/10 border-2 border-amber-500/40" />
+        <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-amber-500/30 to-orange-500/30 border border-amber-500/50 flex items-center justify-center">
+          <Star className="w-10 h-10 text-amber-400" />
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <h2 className="text-3xl font-black text-white mb-3">Match Found.</h2>
+        <p className="text-gray-400 mb-2 leading-relaxed max-w-sm mx-auto">
+          Your {noun} has been generated from inside the Velvet Rope — a one-of-a-kind personality crafted just for you.
+        </p>
+        <p className="text-gray-600 text-sm mb-8">
+          Now it's time to give them a face.
+        </p>
+
+        <motion.button
+          onClick={onContinue}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-base shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 transition-all"
+        >
+          <Sparkles className="w-5 h-5" />
+          Design Their Look
+          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export function CompanionPathSelectPage() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<Phase>('gender');
+  const [phase, setPhase] = useState<Phase>('choose');
   const [selectedGender, setSelectedGender] = useState<Gender>('Female');
   const [transitioning, setTransitioning] = useState(false);
-  const [match, setMatch] = useState<RandomCompanion | null>(null);
-  // The companion is made while the search plays, so the reveal waits for both.
-  const creating = useRef<Promise<RandomCompanion> | null>(null);
 
-  const kind = sessionStorage.getItem('onboardingRelationshipType');
-  const isFriend = kind === 'friend';
-  const connection: 'friend' | 'romantic' = isFriend ? 'friend' : 'romantic';
+  const isFriend = sessionStorage.getItem('onboardingRelationshipType') === 'friend';
   const noun = isFriend ? 'Friend' : 'Companion';
   const nounLower = isFriend ? 'friend' : 'companion';
 
-  // Friend or companion is chosen on the screen before; without it, start there.
-  useEffect(() => {
-    if (kind !== 'friend' && kind !== 'romantic') navigate('/intent-select?people=1', { replace: true });
-  }, [kind, navigate]);
-
-  const handleGenderSelect = (g: Gender) => {
-    setSelectedGender(g);
-    setPhase('choose');
-  };
-
   const handleBuildOwn = () => {
     setTransitioning(true);
-    setTimeout(() => navigate(`/questionnaire?gender=${selectedGender}&type=${connection}`), 700);
+    setTimeout(() => navigate('/questionnaire?mode=companion'), 700);
   };
 
   const handleVelvet = () => {
     setTransitioning(true);
     setTimeout(() => {
       setTransitioning(false);
-      creating.current = createRandomCompanion(selectedGender === 'Male' ? 'male' : 'female', connection);
-      // Failures are handled when the search ends; keep an early one from being reported as unhandled.
-      creating.current.catch(() => {});
-      setPhase('scanning');
+      setPhase('gender');
     }, 700);
   };
 
-  const handleScanDone = useCallback(async () => {
-    try {
-      setMatch(await creating.current!);
-      setPhase('reveal');
-    } catch (err) {
-      console.error('[companion] random match failed:', err);
-      toast.error('We couldn\'t create your match. Please try again.');
-      setPhase('choose');
-    }
-  }, []);
+  const handleGenderSelect = (g: Gender) => {
+    setSelectedGender(g);
+    setPhase('scanning');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-gray-900 to-slate-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
-        {(phase === 'gender' || phase === 'choose') && (
+        {phase === 'choose' && (
           <button
-            onClick={() => (phase === 'choose' ? setPhase('gender') : navigate(-1))}
+            onClick={() => navigate(-1)}
             className="mb-6 flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
           >
             <ArrowLeft size={18} />
@@ -361,14 +383,14 @@ export function CompanionPathSelectPage() {
                   transition={{ delay: 0.1, duration: 0.4 }}
                   className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-semibold tracking-widest uppercase mb-5"
                 >
-                  <Heart className="w-3 h-3" />
-                  {noun}
+                  <Zap className="w-3 h-3" />
+                  Velvet Rope
                 </motion.div>
                 <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
                   Who Are You Looking For?
                 </h2>
                 <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
-                  Pick who you have in mind. Next you choose how to make your {nounLower}.
+                  We'll match the Velvet Roster to exactly who you have in mind.
                 </p>
               </div>
 
@@ -401,21 +423,24 @@ export function CompanionPathSelectPage() {
                 ))}
               </div>
 
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                onClick={() => setPhase('choose')}
+                className="mt-6 w-full text-center text-sm text-gray-600 hover:text-gray-400 transition-colors py-2"
+              >
+                Back
+              </motion.button>
             </motion.div>
           )}
 
           {phase === 'scanning' && (
-            <ScanningScreen onReveal={handleScanDone} gender={selectedGender} />
+            <ScanningScreen onReveal={() => setPhase('reveal')} gender={selectedGender} />
           )}
 
-          {phase === 'reveal' && match && (
-            <AvatarSaveReveal
-              config={match.avatar}
-              companionName={match.name}
-              isCompanion={true}
-              onContinue={() => navigate(match.to, { replace: true })}
-              autoDismissMs={2500}
-            />
+          {phase === 'reveal' && (
+            <RevealScreen onContinue={() => navigate(`/questionnaire?mode=velvet&gender=${selectedGender}`)} isFriend={isFriend} />
           )}
         </AnimatePresence>
       </div>

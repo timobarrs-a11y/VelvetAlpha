@@ -1,5 +1,4 @@
 import { getRandomName } from '../data/companionNames';
-import { SIGNATURE_VOICES } from '../config/signatureVoices';
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -7,8 +6,6 @@ function pick<T>(arr: T[]): T {
 
 export interface RandomCompanionProfile {
   gender: 'male' | 'female';
-  /** A signature voice that suits the gender (every one is open to everyone). */
-  signatureVoice: string;
   relationshipType: 'friend' | 'romantic';
   customName: string;
   energyPreference: string;
@@ -56,12 +53,6 @@ export function deriveUserInterests(interestPreference: string): { hobbies: stri
   return INTEREST_TO_PROFILE[interestPreference] ?? INTEREST_TO_PROFILE['Pop Culture/Social Media'];
 }
 
-/** Any signature voice that suits this gender (a neutral one too). All of them are open to everyone. */
-export function randomVoice(gender: 'male' | 'female'): string {
-  const pool = SIGNATURE_VOICES.filter(v => v.gender === gender || v.gender === 'neutral');
-  return pick(pool.length ? pool : SIGNATURE_VOICES).id;
-}
-
 export function generateRandomCompanionProfile(
   gender: 'male' | 'female',
   relationshipType: 'friend' | 'romantic'
@@ -69,7 +60,6 @@ export function generateRandomCompanionProfile(
   return {
     gender,
     relationshipType,
-    signatureVoice: randomVoice(gender),
     customName: getRandomName(gender),
     energyPreference: pick(['The Life Of The Party', 'Somewhere In Between', gender === 'female' ? 'Lives In Her Own World' : 'In His Own World']),
     flirtingStyle: pick(['Direct & Bold', 'Playful Teasing', 'Subtle & Sweet', 'Mysterious & Reserved']),
@@ -110,26 +100,5 @@ export function generateRandomCompanionProfile(
       gender === 'female' ? 'She Follows Your Lead' : 'He Follows Your Lead',
       'Spontaneous & Random',
     ]),
-  };
-}
-
-/**
- * A random match, in the words the setup questionnaire (companionBank) uses, for the gender and kind of
- * connection they chose: how lively, how they text, how they show they care, what they love, a name and a
- * signature voice. The look is chosen on the next page. A friend is never given the flirty way of showing care.
- */
-export function randomMatchAnswers(gender: 'male' | 'female', connection: 'friend' | 'romantic'): Record<string, string | string[]> {
-  const own = gender === 'male' ? 'In his own world' : 'In her own world';
-  const interests = ['pop', 'books', 'wellness', 'adventure', 'music', 'tech'];
-  const first = pick(interests);
-  const second = pick(interests.filter(i => i !== first));
-  return {
-    relationshipType: gender === 'male' ? 'Male' : 'Female',
-    connectionType: connection,
-    energy: pick(['Life of the party', 'Somewhere in between', own]),
-    warmth: pick(connection === 'friend' ? ['sweet', 'banter', 'deep'] : ['bold', 'sweet', 'banter', 'deep']),
-    interests: [first, second],
-    companionName: getRandomName(gender),
-    signatureVoice: randomVoice(gender),
   };
 }

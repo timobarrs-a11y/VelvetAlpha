@@ -1,5 +1,4 @@
 import { getVoicePrompt, type VoicePrompt } from "./signatureVoicePrompts.ts";
-import { EMPHASIS_STYLE } from "./emphasisStyle.ts";
 
 interface CompanionRow {
   custom_name: string | null;
@@ -301,7 +300,7 @@ function buildMentorUserContext(companion: CompanionRow, userName: string): stri
 }
 
 function buildMentorTextingRhythm(): string {
-  return `RESPONSE RHYTHM: As long as it needs to be, never longer. Use markdown — lists, headers, and fenced code blocks when they help you explain or correct. Be clear and structured when the topic warrants it (code review, step-by-step plans, corrections). Be brief when the user just needs a nudge or a check-in. Never perform personality — live it.\n\n${EMPHASIS_STYLE}`;
+  return `RESPONSE RHYTHM: As long as it needs to be, never longer. Use markdown — lists, headers, and fenced code blocks when they help you explain or correct. Be clear and structured when the topic warrants it (code review, step-by-step plans, corrections). Be brief when the user just needs a nudge or a check-in. Never perform personality — live it.`;
 }
 
 function buildTextingRhythm(): string {

@@ -48,8 +48,6 @@ export interface SaveContext {
   freeWill: boolean;
   style: Record<string, number>;
   companion: Record<string, unknown> | null;
-  /** How the companion talks (humor, communication, relationship), so the story keeps its voice without the host. */
-  voice?: { humor: string; communication: string; relationship: string; gender: string };
   wallMode: string;
   /** From the art: house looks, per-room looks, wall decor and the yard. */
   looks: {
@@ -122,7 +120,6 @@ export function snapshot(ctx: SaveContext, prev: Record<string, unknown> | null 
     style: ctx.style,
     TASTE: ctx.style,
     companion: ctx.companion ?? {},
-    voice: ctx.voice ?? kept('voice', null),
     dishes: ctx.dishes,
     turns: ctx.turns,
     storage: ctx.storage.map(o => ({ ...o })),

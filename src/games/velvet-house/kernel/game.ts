@@ -57,13 +57,11 @@ export interface GameState {
   /** The player's house in town, for the drive-up that opens a new game (null: a plain starter house). */
   plot: ArrivalPlot | null;
   /** How the companion jokes and talks (what the story's word banks are keyed by), and what they are to the player. */
-  voice: { humor: string; communication: string; relationship: string; gender: string };
+  voice: { humor: string; communication: string; relationship: string };
   /** Skipping ahead through the work day ("Skip to 5 PM"). */
   skipping: boolean;
   scriptMode: Mode | null;
   scriptAllow: UiTarget[];
-  /** What the host page has sent since boot; a new game's opening waits for these (see ScriptDef.needs). */
-  hostReady: { profile: boolean; plot: boolean };
 }
 
 export interface ArrangeFrame { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null }
@@ -219,12 +217,6 @@ export interface Game {
   toFrame(p: Agent): PersonFrame;
 }
 
-/** How the companion talks, as saved; defaults until the host has said. */
-function voiceFrom(v: unknown): GameState['voice'] {
-  const o = (v && typeof v === 'object' ? v : {}) as Partial<GameState['voice']>;
-  return { humor: typeof o.humor === 'string' ? o.humor : 'warm', communication: typeof o.communication === 'string' ? o.communication : 'diplomatic', relationship: typeof o.relationship === 'string' ? o.relationship : 'romantic', gender: typeof o.gender === 'string' ? o.gender : 'female' };
-}
-
 /** Loads the save and builds the data and the page. The modules are added on top by main.ts. */
 export function createGame(app: HTMLElement): Game | null {
   const world = loadWorld();
@@ -346,7 +338,7 @@ export function createGame(app: HTMLElement): Game | null {
     settleDone: typeof save?.settleDone === 'boolean' ? save!.settleDone : false,
     chatTurns: Array.isArray(save?.turns) ? [...save!.turns as ChatTurn[]] : [],
     sample: null as SampleFn | null,
-    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, plot: null, voice: voiceFrom(save?.voice), skipping: false, scriptMode: null, scriptAllow: [], hostReady: { profile: false, plot: false },
+    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, plot: null, voice: { humor: 'warm', communication: 'diplomatic', relationship: 'romantic' }, skipping: false, scriptMode: null, scriptAllow: [],
     saveRev: typeof (world.save as { rev?: unknown } | null)?.rev === 'number' ? (world.save as { rev: number }).rev : 0,
   };
 

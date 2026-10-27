@@ -7,7 +7,7 @@ import {
 /**
  * The drive-up that opens a new game: Dez pulls up to the player's own house, the one they built in town, drawn by the
  * same street kit the town uses. Plain canvas on top of the game; it ends by fading away to the house inside, and
- * the move-in script carries on from there.
+ * the move-in script carries on from there. A tap finishes it early.
  */
 export interface ArrivalPlot { member: boolean; config: PlotConfig; earned?: string[]; address?: string }
 export interface Arrival { done(): boolean; cancel(): void }
@@ -152,7 +152,7 @@ export function playArrival(
     root.remove();
     opts.onDone?.();
   };
-  // The drive-up plays to its end: a story animation is never skipped.
+  root.addEventListener('pointerdown', () => { if (t < total - FADE_OUT) t = total - FADE_OUT; });
 
   function frame(now: number): void {
     if (finished) return;

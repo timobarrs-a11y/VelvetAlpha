@@ -73,11 +73,11 @@ export function CoachAvatarPage() {
 
   const handleRandomize = () => {
     trackRandomize();
-    // The coach's gender was chosen already: shuffling the look never changes it.
-    const randomized = coherentRandomize(coachGender);
+    const randomized = coherentRandomize();
     setAvatarConfig(randomized);
+    setCoachGender(randomized.gender);
     if (!coachName) {
-      setCoachName(getRandomName(coachGender));
+      setCoachName(getRandomName(randomized.gender));
     }
     hasRandomized.current = true;
   };

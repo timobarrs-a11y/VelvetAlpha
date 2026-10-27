@@ -1,11 +1,11 @@
-import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2, Circle, AlertCircle, Trophy,
   Calendar, Plus, X, Trash2, Loader2, Target,
   Clock, PlayCircle, RotateCcw, Sparkles, Layers, ChevronDown, ChevronRight,
-  ListChecks, ExternalLink, Pencil, Check, MessageCircle, CalendarPlus, Download, NotebookPen,
+  ListChecks, ExternalLink, Pencil, Check,
 } from 'lucide-react';
 import { PageHeader, PageShell, LoadingState, Badge, EmptyState, Card, Button } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
@@ -20,9 +20,7 @@ import {
 } from '../services/coachingService';
 import { getCoachColor } from '../utils/coachColors';
 import { useAuth } from '../auth/AuthProvider';
-import { useDock, useDockCoach } from '../components/dock/DockContext';
-import { buildIcs, downloadIcs, googleCalendarUrl, taskHelpPrompt } from '../features/coaching/taskTools';
-import { noteCountsByTask } from '../services/goalNotesService';
+import { useDockCoach } from '../components/dock/DockContext';
 import { useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/coachingHooks';
 
 const COACHING_TABLES = ['user_goals', 'coach_plans', 'coach_plan_steps', 'coaching_commitments'];
@@ -30,17 +28,6 @@ const COACHING_TABLES = ['user_goals', 'coach_plans', 'coach_plan_steps', 'coach
 const ASK_GOAL = "Let's set my goal. Ask me what I want to achieve and by when.";
 const ASK_PLAN = 'Build me a plan for my goal, with concrete steps.';
 const ASK_COMMITMENTS = "Turn my plan's next steps into commitments for this week, with dates.";
-
-/** What a task row can do beyond tracking it: take it to the coach, put it on a calendar. */
-interface TaskTools {
-  coachName: (task: CoachingCommitment) => string;
-  ask: (task: CoachingCommitment) => void;
-  calendarUrl: (task: CoachingCommitment) => string;
-  /** How many notes this task has (what the coach turned up about it). */
-  noteCount: (task: CoachingCommitment) => number;
-  openNotes: (task: CoachingCommitment) => void;
-}
-const TaskToolsContext = createContext<TaskTools | null>(null);
 
 type Filter = 'active' | 'completed' | 'all';
 
@@ -359,34 +346,6 @@ export function CoachingCommitmentsPage() {
     onCoachChanged: handleCoachChanged,
   });
 
-  // Taking a task to its own coach (the one who set it) when they are in the dock, else the page's coach.
-  const dock = useDock();
-  const [noteCounts, setNoteCounts] = useState<Record<string, number>>({});
-  useEffect(() => { noteCountsByTask().then(setNoteCounts).catch(() => {}); }, []);
-  const taskTools = useMemo<TaskTools>(() => {
-    const goalTitle = (task: CoachingCommitment) => goals.find(g => g.id === task.goal_id)?.title ?? goals[0]?.title ?? null;
-    const ownCoach = (task: CoachingCommitment) => (task.companion_id && dock.companions.some(c => c.id === task.companion_id) ? task.companion_id : null);
-    return {
-      coachName: (task) => (ownCoach(task) && task.companion_name && task.companion_name !== 'You' ? task.companion_name : companionName) || 'your coach',
-      ask: (task) => {
-        const prompt = taskHelpPrompt(task, goalTitle(task));
-        const own = ownCoach(task);
-        // Typed into the chat box rather than sent, so they can read it, change it and send it when ready.
-        if (own) dock.draftToCompanion(own, prompt);
-        else coach.draft(prompt);
-      },
-      calendarUrl: (task) => googleCalendarUrl(task, goalTitle(task), `${window.location.origin}/coaching-commitments`),
-      noteCount: (task) => noteCounts[task.id] ?? 0,
-      openNotes: (task) => navigate(`/notes?task=${task.id}`),
-    };
-  }, [goals, dock, coach, companionName, noteCounts, navigate]);
-
-  const downloadCalendar = () => {
-    const open = activeCommitments.map(c => ({ ...c, goalTitle: goals.find(g => g.id === c.goal_id)?.title ?? goals[0]?.title ?? null }));
-    downloadIcs('velvet-tasks.ics', buildIcs(open, `${window.location.origin}/coaching-commitments`));
-    toast.success('Calendar file saved. Open it to add your tasks to Google Calendar, Apple or Outlook.');
-  };
-
   if (loading) {
     return (
       <PageShell center>
@@ -396,7 +355,6 @@ export function CoachingCommitmentsPage() {
   }
 
   return (
-    <TaskToolsContext.Provider value={taskTools}>
     <PageShell
       header={
         <PageHeader
@@ -405,12 +363,6 @@ export function CoachingCommitmentsPage() {
           icon={view === 'plans' ? Layers : CheckCircle2}
           accent="var(--ds-success, #10b981)"
           back={false}
-          actions={
-            <button type="button" onClick={() => navigate('/notes')} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-ink-muted hover:bg-white/5 hover:text-ink transition-colors">
-              <NotebookPen className="w-3.5 h-3.5" />
-              Notes
-            </button>
-          }
         />
       }
     >
@@ -490,18 +442,6 @@ export function CoachingCommitmentsPage() {
           Add a commitment from your plan
         </button>
       </div>
-      {activeCommitments.length > 0 && (
-        <div className="mb-6 -mt-3 flex justify-end">
-          <button
-            type="button"
-            onClick={downloadCalendar}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Save all as a calendar file
-          </button>
-        </div>
-      )}
 
       {commitments.length === 0 ? (
         <EmptyState
@@ -687,7 +627,6 @@ export function CoachingCommitmentsPage() {
         </>
       )}
     </PageShell>
-    </TaskToolsContext.Provider>
   );
 }
 
@@ -821,7 +760,6 @@ function CommitmentRow({
   const showActions = isPending || isMissed || isInProgress;
   const tone = commitmentStatusColor(commitment.status);
   const coachColor = getCoachColor(commitment.companion_color);
-  const tools = useContext(TaskToolsContext);
 
   return (
     <motion.div
@@ -873,38 +811,6 @@ function CommitmentRow({
               </>
             )}
           </div>
-          {tools && showActions && (
-            <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => tools.ask(commitment)}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors hover:brightness-125"
-                style={{ background: coachColor.soft, color: coachColor.text, border: `1px solid ${coachColor.border}` }}
-              >
-                <MessageCircle className="w-3.5 h-3.5" />
-                Get help from {tools.coachName(commitment)}
-              </button>
-              <a
-                href={tools.calendarUrl(commitment)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
-              >
-                <CalendarPlus className="w-3.5 h-3.5" />
-                Add to Google Calendar
-              </a>
-              {tools.noteCount(commitment) > 0 && (
-                <button
-                  type="button"
-                  onClick={() => tools.openNotes(commitment)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
-                >
-                  <NotebookPen className="w-3.5 h-3.5" />
-                  {tools.noteCount(commitment)} {tools.noteCount(commitment) === 1 ? 'note' : 'notes'}
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
         {showActions && (

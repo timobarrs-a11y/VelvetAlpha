@@ -1,7 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
-import { captureGoalNote } from "../_shared/goalNotes.ts";
 import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
 import {
   getCuratedExpert,
@@ -2460,23 +2459,6 @@ ${groundingBlock}${memoryBusBlock}${hallucinationGuard}${isHelper ? coachSurface
     }
 
     EdgeRuntime.waitUntil(Promise.allSettled([signalPromise, memoryPromise]));
-
-    // What a coach or assistant uncovers about the goal (requirements, steps, fees) is kept as a note, not left in the chat.
-    if (isHelper) {
-      EdgeRuntime.waitUntil(
-        captureGoalNote({
-          admin: supabaseAdmin,
-          anthropicKey: apiKey,
-          model: MODEL_CONFIG.HAIKU,
-          userId: user.id,
-          companionId,
-          userMessage: message,
-          assistantMessage,
-        })
-          .then(outcome => { if (outcome === 'saved') console.log(`[${traceId}] Goal note saved`); })
-          .catch((err: unknown) => console.error(`[${traceId}] Goal note failed:`, err))
-      );
-    }
 
     const response: ChatTurnResponse & { calendarEvent?: CalendarEventDetected | null; navigationIntent?: NavigationIntent | null } = {
       assistantMessage,

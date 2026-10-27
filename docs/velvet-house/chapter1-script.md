@@ -1,7 +1,5 @@
 # Chapter 1: the move-in, as it plays now
 
-> **Changed:** the opening no longer has the couch-by-the-window ask or the Keep it / Move it choice. It ends when the couch is set down, then Dez brings the lamp. Ignore the window-ask and "moved it" parts below.
-
 Source: `src/games/velvet-house/content/scripts.ts` (`OPENING`) and `content/lines.ts`. The player (Jordan) says nothing yet.
 Maya's lines come in four voices: **warm / calm / bubbly / dry** (all four are shown). `{town}`, `{player}`, `{partner}` are filled in.
 

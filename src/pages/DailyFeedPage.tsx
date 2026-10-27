@@ -321,7 +321,7 @@ export function DailyFeedPage({ initialTab: _initialTab, onBack: _onBack }: { in
       if (!user) { navigate('/login'); return; }
 
       const profile = await userProfileService.getCurrentProfile();
-      if (!profile) { navigate('/user-questionnaire'); return; }
+      if (!profile) { navigate('/questionnaire'); return; }
 
       const categories = profile.news_categories || [];
       setNewsCategories(categories);

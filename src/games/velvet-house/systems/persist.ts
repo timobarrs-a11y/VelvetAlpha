@@ -17,7 +17,7 @@ export function createPersist(g: Game): Partial<Game> {
         simName, partnerName, look: people[0].look, mayaLook: people[1].look,
         needs: { jordan: people[0].needs, maya: people[1].needs },
         memories, coreMem, pastMem, townName, turns: g.s.chatTurns, rngSeed,
-        lifeGoal: g.s.lifeGoal, settleDone: g.s.settleDone, freeWill: g.s.freeWill, style, companion: companionCfg as unknown as Record<string, unknown>, voice: g.s.voice,
+        lifeGoal: g.s.lifeGoal, settleDone: g.s.settleDone, freeWill: g.s.freeWill, style, companion: companionCfg as unknown as Record<string, unknown>,
         wallMode: WALL_MODES[view.wallIdx].mode,
         looks: art.exportLooks(),
         life: world.life,

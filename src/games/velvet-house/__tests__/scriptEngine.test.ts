@@ -6,12 +6,12 @@ import { NEW_RUNTIME, type FlagValue, type LineBook, type ScriptDef, type Script
 /** A world that only records what it is asked, and lets a test decide when things finish. */
 function fakeHost(preset: 'warm' | 'calm' | 'bubbly' | 'dry' = 'warm') {
   const calls: string[] = [];
-  const state = { walking: new Set<string>(), acting: new Set<string>(), sayOpen: false, choiceIdx: null as number | null, cardOpen: false, introOpen: false, mode: null as string | null, day: 1, minutes: 540, ready: { profile: false, plot: false }, humor: 'dry', gender: 'female', world: {} as Record<string, { type: string; at?: string; lightOn?: boolean }> };
+  const state = { walking: new Set<string>(), acting: new Set<string>(), sayOpen: false, choiceIdx: null as number | null, cardOpen: false, introOpen: false, mode: null as string | null, day: 1, minutes: 540 };
   const flags: Record<string, FlagValue> = {};
   const host: ScriptHost = {
     flags,
     clock: () => ({ day: state.day, minutes: state.minutes }),
-    names: () => ({ player: 'Jordan', partner: 'Maya', town: 'Honeysuckle Hollow', preset, humor: state.humor, gender: state.gender }),
+    names: () => ({ player: 'Jordan', partner: 'Maya', town: 'Honeysuckle Hollow', preset }),
     setMode: (m) => { state.mode = m; calls.push(`mode:${m}`); },
     spawn: (n, at, c) => calls.push(`spawn:${n}@${JSON.stringify(at)}${c ? ':' + c : ''}`),
     despawn: (n) => calls.push(`despawn:${n}`),
@@ -39,9 +39,6 @@ function fakeHost(preset: 'warm' | 'calm' | 'bubbly' | 'dry' = 'warm') {
     intro: (k) => { calls.push(`intro:${k}`); state.introOpen = true; },
     introDone: () => !state.introOpen,
     release: (w) => calls.push(`release:${w.sort().join(',')}`),
-    hold: (w) => calls.push(`hold:${w.join(',')}`),
-    ready: (what) => state.ready[what],
-    check: (w) => { const o = state.world[w.obj]; if (w.exists !== undefined) return !!o === w.exists; if (!o) return false; return (!w.is || o.type === w.is) && (!w.at || o.at === w.at) && (w.lightOn === undefined || o.lightOn === w.lightOn); },
   };
   return { host, calls, state, flags };
 }
@@ -52,10 +49,6 @@ const BOOK: LineBook = {
     voiced: { warm: 'warm line', calm: 'calm line', bubbly: 'bubbly line', dry: 'dry line' },
   },
   pools: { greet: ['a', 'b', 'c'] },
-  banks: {
-    humor: { dry: { joke: { m: 'his dry joke', f: 'her dry joke' } }, warm: { joke: 'a warm joke for anyone' } },
-    communication: { direct: { ask: 'do it' } },
-  },
 };
 
 const make = (defs: ScriptDef[], preset?: 'warm' | 'calm' | 'bubbly' | 'dry', rt?: ScriptRuntime) => {
@@ -137,6 +130,15 @@ describe('running steps', () => {
     expect(t.flags.a).toBe(1);
   });
 
+  it('skipping a script that opens with a shot does not wait for it', () => {
+    const t = make([base('s', [{ do: 'intro', kind: 'arrival' }, { do: 'set', flag: 'a', value: 1 }], { skippable: true, onSkip: [{ do: 'set', flag: 'skipped', value: true }] })]);
+    t.engine.startNewGame();
+    t.tick(2);
+    t.engine.skip();
+    expect(t.flags.skipped).toBe(true);
+    expect(t.engine.isActive()).toBe(false);
+  });
+
   it('branches on a condition', () => {
     const t = make([base('s', [{ do: 'set', flag: 'x', value: 'yes' }, { do: 'if', cond: { flag: 'x', equals: 'yes' }, then: [{ do: 'set', flag: 'r', value: 'then' }], else: [{ do: 'set', flag: 'r', value: 'else' }] }])]);
     t.engine.startNewGame();
@@ -172,14 +174,14 @@ describe('lines', () => {
   });
 });
 
-describe('choices', () => {
+describe('choices and skipping', () => {
   const script = base('s', [
     { do: 'choice', options: [
       { label: 'Keep', default: true, set: { couch: 'mine' }, steps: [{ do: 'set', flag: 'kept', value: true }] },
       { label: 'Move', set: { couch: 'theirs' }, steps: [{ do: 'set', flag: 'moved', value: true }] },
     ] },
     { do: 'set', flag: 'done', value: true },
-  ]);
+  ], { skippable: true, onSkip: [{ do: 'set', flag: 'couch', value: 'mine' }, { do: 'set', flag: 'kept', value: true }, { do: 'set', flag: 'done', value: true }] });
 
   it('takes the option picked, sets its flags and plays its steps', () => {
     const t = make([script]);
@@ -191,6 +193,22 @@ describe('choices', () => {
     expect(t.flags).toEqual({ couch: 'theirs', moved: true, done: true });
   });
 
+  it('skipping gives the same end state as choosing the default', () => {
+    const watched = make([script]);
+    watched.engine.startNewGame(); watched.tick(2); watched.state.choiceIdx = 0; watched.tick(3);
+    const skipped = make([script]);
+    skipped.engine.startNewGame(); skipped.tick(2); skipped.engine.skip();
+    expect(skipped.flags).toEqual(watched.flags);
+    expect(skipped.engine.rt.done).toEqual(['s']);
+    expect(skipped.engine.isActive()).toBe(false);
+  });
+
+  it('cannot skip a script that is not skippable', () => {
+    const t = make([base('s', [{ do: 'say', who: 'maya', line: 'hello' }, { do: 'set', flag: 'a', value: 1 }])]);
+    t.engine.startNewGame(); t.tick(2); t.engine.skip();
+    expect(t.engine.isActive()).toBe(true);
+    expect(t.flags.a).toBeUndefined();
+  });
 });
 
 describe('saving mid-script', () => {
@@ -320,11 +338,13 @@ describe('content checks', () => {
   it('reports every kind of mistake in plain words', () => {
     const bad: ScriptDef[] = [
       base('dup', []), base('dup', []),
+      base('skip', [], { skippable: true }),
+      base('fx', [], { skippable: true, onSkip: [{ do: 'say', who: 'maya', line: 'hello' }] }),
       base('nodefault', [{ do: 'choice', options: [{ label: 'a' }, { label: 'b' }] }]),
       base('missing', [{ do: 'say', who: 'maya', line: 'nope' }, { do: 'say', who: 'maya', line: { pool: 'empty' } }, { do: 'run', script: 'ghost' }, { do: 'spawn', npc: 'stranger', at: 'door' }]),
     ];
     const errors = validateContent(bad, BOOK, ['dez']).join('\n');
-    for (const piece of ['id used twice', 'exactly one default', '"nope" is not in the line book', 'pool "empty"', '"ghost", which does not exist', 'not a known visitor']) {
+    for (const piece of ['id used twice', 'skippable but has no onSkip', 'not an effect', 'exactly one default', '"nope" is not in the line book', 'pool "empty"', '"ghost", which does not exist', 'not a known visitor']) {
       expect(errors).toContain(piece);
     }
   });
@@ -332,144 +352,5 @@ describe('content checks', () => {
   it('wants every companion voice', () => {
     const book: LineBook = { lines: { half: { warm: 'x' } }, pools: {} };
     expect(validateContent([base('s', [{ do: 'say', who: 'maya', line: 'half' }])], book, []).join()).toContain('no calm version');
-  });
-});
-
-describe('bank lines by style and gender', () => {
-  it('picks the feminine or masculine version of a style\'s line, and a plain line for anyone', () => {
-    const t = make([base('s', [{ do: 'say', who: 'maya', line: { bank: 'humor', slot: 'joke' } }], { mode: 'beat' })]);
-    expect(t.engine.text({ bank: 'humor', slot: 'joke' })).toBe('her dry joke');
-    t.state.gender = 'male';
-    expect(t.engine.text({ bank: 'humor', slot: 'joke' })).toBe('his dry joke');
-    t.state.humor = 'warm';
-    expect(t.engine.text({ bank: 'humor', slot: 'joke' })).toBe('a warm joke for anyone');
-    expect(t.engine.text({ bank: 'communication', slot: 'ask' })).toBe('do it');
-  });
-
-  it('the validator wants both versions of a gendered line', () => {
-    const book: LineBook = { lines: {}, pools: {}, banks: { humor: { dry: { joke: { m: 'only his' } as never } }, communication: {} } };
-    expect(validateContent([base('s', [{ do: 'say', who: 'maya', line: { bank: 'humor', slot: 'joke' } }])], book, []).join()).toContain('needs both a masculine and a feminine line');
-  });
-});
-
-describe('rules that keep a scene honest', () => {
-  it('a card with a button steps aside when the world already satisfies the wait after it', () => {
-    const t = make([base('s', [
-      { do: 'card', title: 'Place it', body: 'x', button: 'Set it down' },
-      { do: 'wait', until: { world: { obj: 'box.couch', is: 'sofa', at: 'mark:tv' } } },
-      { do: 'set', flag: 'placed', value: 1 },
-    ])]);
-    t.engine.startNewGame(); t.tick(2);
-    expect(t.engine.blockedOn()).toBe('card');
-    t.state.world['box.couch'] = { type: 'sofa', at: 'mark:tv' }; t.tick(2);
-    expect(t.flags.placed).toBe(1);
-    expect(t.calls).toContain('highlight:null');
-  });
-
-  it('a wait on the world ends when the house is right, however it got there', () => {
-    const t = make([base('s', [{ do: 'wait', until: { world: { obj: 'box.couch', is: 'sofa', at: 'mark:tv' } } }, { do: 'set', flag: 'placed', value: 1 }])]);
-    t.engine.startNewGame(); t.tick(3);
-    expect(t.flags.placed).toBeUndefined();
-    t.state.world['box.couch'] = { type: 'sofa', at: 'mark:kitchen' }; t.tick(2);
-    expect(t.flags.placed).toBeUndefined();
-    t.state.world['box.couch'].at = 'mark:tv'; t.tick(2);
-    expect(t.flags.placed).toBe(1);
-  });
-
-  it('a reload comes back at the last mode step, so the card and the allowed taps are rebuilt, and a wait that already holds passes', () => {
-    const steps: Step[] = [
-      { do: 'say', who: 'dez', line: 'hello' },
-      { do: 'mode', mode: 'guided', allow: ['obj:box.couch'] },
-      { do: 'card', title: 'Open the box', body: 'x' },
-      { do: 'wait', until: { any: [{ event: 'obj.unpacked' }, { world: { obj: 'box.couch', is: 'sofa' } }] } },
-      { do: 'set', flag: 'opened', value: 1 },
-    ];
-    const first = make([base('s', steps)]);
-    first.engine.startNewGame(); first.tick(2); first.state.sayOpen = false; first.tick(3);
-    expect(first.calls.filter((c) => c.startsWith('card:'))).toEqual(['card:Open the box']);
-    // The player opens the box; the game saves before the engine sees the event.
-    first.state.world['box.couch'] = { type: 'sofa' };
-    const saved = JSON.parse(JSON.stringify(first.engine.rt)) as ScriptRuntime;
-    expect(saved.active).toMatchObject({ id: 's', redo: true });
-    const second = make([base('s', steps)], 'warm', saved);
-    second.state.world['box.couch'] = { type: 'sofa' };
-    second.engine.resume(); second.tick(3);
-    expect(second.calls).toContain('mode:guided');
-    expect(second.calls).toContain('card:Open the box');
-    expect(second.calls.filter((c) => c.startsWith('say:'))).toEqual([]);
-    expect(second.flags.opened).toBe(1);
-    expect(second.engine.rt.done).toEqual(['s']);
-  });
-
-  it('a wait before any mode step is a resume point itself', () => {
-    const steps: Step[] = [{ do: 'set', flag: 'a', value: 1 }, { do: 'wait', until: { flag: 'go' } }, { do: 'set', flag: 'b', value: 1 }];
-    const first = make([base('s', steps, { mode: 'beat' })]);
-    first.engine.startNewGame(); first.tick(2);
-    const saved = JSON.parse(JSON.stringify(first.engine.rt)) as ScriptRuntime;
-    const second = make([base('s', steps, { mode: 'beat' })], 'warm', saved);
-    second.flags.a = 1; second.engine.resume(); second.tick(2);
-    expect(second.flags.b).toBeUndefined();
-    second.flags.go = true; second.tick(2);
-    expect(second.flags.b).toBe(1);
-  });
-
-  it('waits for the host before starting a script that needs it, but not forever', () => {
-    const t = make([base('s', [{ do: 'set', flag: 'ran', value: 1 }], { needs: { host: ['profile'], timeoutMs: 1000 } })]);
-    t.engine.startNewGame(); t.tick(3);
-    expect(t.flags.ran).toBeUndefined();
-    t.state.ready.profile = true; t.tick(1);
-    expect(t.flags.ran).toBe(1);
-    const late = make([base('s', [{ do: 'set', flag: 'ran', value: 1 }], { needs: { host: ['plot'], timeoutMs: 500 } })]);
-    late.engine.startNewGame(); late.tick(4);
-    expect(late.flags.ran).toBeUndefined();
-    late.tick(3);
-    expect(late.flags.ran).toBe(1);
-  });
-
-  it('holds the residents it names from the first step and lets them go at the end', () => {
-    const t = make([base('s', [{ do: 'set', flag: 'a', value: 1 }], { needs: { hold: ['jordan', 'maya'] } })]);
-    t.engine.startNewGame(); t.tick(2);
-    expect(t.calls[1]).toBe('hold:jordan,maya');
-    expect(t.calls).toContain('release:jordan,maya');
-  });
-
-  it('waits for several walkers at once', () => {
-    const t = make([base('s', [{ do: 'walk', who: 'jordan', to: 'a', wait: false }, { do: 'walk', who: 'maya', to: 'b', wait: false }, { do: 'wait', arrive: ['jordan', 'maya'] }, { do: 'set', flag: 'in', value: 1 }])]);
-    t.engine.startNewGame(); t.tick(2);
-    expect(t.flags.in).toBeUndefined();
-    t.state.walking.delete('jordan'); t.tick(2);
-    expect(t.flags.in).toBeUndefined();
-    t.state.walking.delete('maya'); t.tick(2);
-    expect(t.flags.in).toBe(1);
-  });
-
-  it('a guided lesson is not interrupted by a delivery; a beat is, and comes back at its last mode step', () => {
-    const lesson = base('lesson', [{ do: 'mode', mode: 'guided', allow: ['obj:box'] }, { do: 'wait', until: { flag: 'opened' } }], { mode: 'beat', priority: 1 });
-    const delivery = base('delivery', [{ do: 'set', flag: 'delivered', value: 1 }], { trigger: { on: 'cond', cond: { event: 'delivery.due' } }, mode: 'beat', once: false, priority: 5 });
-    const t = make([lesson, delivery]);
-    t.engine.startNewGame(); t.tick(2);
-    t.engine.emit({ type: 'delivery.due' }); t.tick(3);
-    expect(t.flags.delivered).toBeUndefined();
-    expect(t.engine.state()?.id).toBe('lesson');
-  });
-
-  it('the validator insists on a fallback beside an event, a wait after a button, and silence while walking', () => {
-    const bad: ScriptDef[] = [
-      base('bare', [{ do: 'wait', until: { event: 'obj.unpacked' } }]),
-      base('button', [{ do: 'card', title: 'Place it', body: 'x', button: 'Set it down' }, { do: 'set', flag: 'x', value: 1 }]),
-      base('talking', [{ do: 'walk', who: 'maya', to: 'x', wait: false }, { do: 'say', who: 'dez', line: 'hello' }]),
-    ];
-    const errors = validateContent(bad, BOOK, ['dez']).join('\n');
-    expect(errors).toContain('a wait on "obj.unpacked" has no flag or world condition');
-    expect(errors).toContain('the card "Place it" has a button but no wait after it');
-    expect(errors).toContain('"dez" speaks while maya is still walking');
-    const good: ScriptDef[] = [
-      base('ok', [
-        { do: 'walk', who: 'maya', to: 'x', wait: false }, { do: 'wait', arrive: ['maya'] }, { do: 'say', who: 'dez', line: 'hello' },
-        { do: 'card', title: 'Place it', body: 'x', button: 'Set it down' }, { do: 'wait', until: { any: [{ event: 'obj.placed' }, { world: { obj: 'box', is: 'sofa' } }] } },
-      ]),
-      base('beatTalk', [{ do: 'walk', who: 'maya', to: 'x', wait: false }, { do: 'say', who: 'maya', line: 'hello' }], { mode: 'beat' }),
-    ];
-    expect(validateContent(good, BOOK, ['dez'])).toEqual([]);
   });
 });
