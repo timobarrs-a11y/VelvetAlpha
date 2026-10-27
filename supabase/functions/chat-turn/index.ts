@@ -17,7 +17,7 @@ import {
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import {
   EMBEDDING_MODEL, embedTexts, toPgVector, selectMemories, formatMemoryLine, estimateTokens, isGroundedIn,
-  looksLikeInstruction, isNearDuplicate, DEFAULT_FACT_SELECTION, DEFAULT_THREAD_SELECTION, type MemoryCandidate,
+  looksLikeInstruction, isNearDuplicate, memoryRelatesTo, DEFAULT_FACT_SELECTION, DEFAULT_THREAD_SELECTION, type MemoryCandidate,
 } from "../_shared/memoryEngine.ts";
 import { buildCoachingStateBlock, markSignalsRaised, acknowledgeTickEvents } from "../_shared/coachingState.ts";
 import { COACH_TOOLS, executeCoachTool, type CoachArtifactResult, type CoachingChange } from "../_shared/coachTools.ts";
@@ -1064,6 +1064,7 @@ FACT OPS
 - confirm: the message restates something already stored. Use this instead of adding a reworded copy.
 - update: the message changes or corrects a stored memory ("I moved to Boulder", "no, I'm reading it, not writing it"). Give the target id and the full corrected memory.
 - retract: the user says a stored memory is wrong and gives no replacement.
+- Check every stored memory against what the user says, even when they don't say "wrong". If the message contradicts one ("I'm just reading it, not writing it" against a stored "has written it"), that is a correction: update it. If several stored memories assert the same wrong thing, update or retract each of them, not just one.
 - add: a new durable thing about the user (identity, job, relationships, people and pets by name, preferences, health, goals, plans, important events). One idea per memory, one standalone third-person sentence starting with "User".
 - Prefer update/confirm over add whenever a stored memory covers the same subject. Never add something that is already stored in other words.
 - durability "temporary" for states that will soon stop being true (moods, who is over tonight, being sick this week, a trip this weekend), with expires_in_days.
@@ -1071,7 +1072,7 @@ FACT OPS
 
 THREAD OPS
 - A thread is something unresolved worth following up on later (an appointment, an interview, a decision pending). Not general topics or interests.
-- update an existing thread rather than adding a reworded one; close a thread the user says is resolved.
+- update an existing thread rather than adding a reworded one; close a thread only when the user says that very thing is resolved. A message about something else never closes it, even an emotional or important one.
 
 EVIDENCE (required on every op)
 - Copy the exact words from the LATEST user message. Earlier messages and the companion's reply are context only: never record anything only they say.
@@ -1298,6 +1299,12 @@ async function extractMemoryServerSide(
         const dueAt = new Date(Date.now() + clampInt(op.follow_up_in_days, 21, 60) * 86400000).toISOString();
 
         if (op.op === 'close' && target) {
+          // A thread is one specific topic, so a message that shares no word with it is not about it. (Facts are
+          // different: "I'm just reading it" corrects "is an author" with no shared word, so they aren't gated.)
+          if (!memoryRelatesTo(target.content, op.evidence)) {
+            console.warn('[chat-turn] Dropped thread close: the message is not about that thread', target.id.slice(0, 8));
+            continue;
+          }
           const { data: row } = await supabaseAdmin
             .from('memory_items').select('version').eq('id', target.id).eq('status', 'active').maybeSingle();
           if (row) {
@@ -1310,6 +1317,7 @@ async function extractMemoryServerSide(
             }).then(() => {}, () => {});
           }
         } else if (op.op === 'update' && target && content) {
+          if (!memoryRelatesTo(target.content, content, op.evidence)) continue;
           await supersede(target.id, { content, source: 'inferred', confidence: 0.8, evidence: op.evidence, source_message_ids: sourceMessageIds, ...vectorFor(content) });
         } else if (op.op === 'add' && content) {
           const twin = threads.find(t => isNearDuplicate(t.content, content));

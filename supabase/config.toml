@@ -180,3 +180,6 @@ verify_jwt = true
 
 [functions.memory-eval-run]
 verify_jwt = false
+
+[functions.extractor-eval]
+verify_jwt = false

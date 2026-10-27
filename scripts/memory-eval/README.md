@@ -38,3 +38,10 @@ Scored on the server by `supabase/functions/memory-eval-run` (returns only pass/
 **32 / 41 pass**, with or without query vectors. Failing: F01 F02 F03 F05 F06 F09 F10 F13 F16, all in the book-series pair.
 The remaining failures are mostly data the extractor should have corrected (denied authorship rows and a stale plan row
 still active), not retrieval scoring; see REVIEW_2026-10-26.md findings 3, 4 and 8.
+
+## Write-path probe (invented data)
+
+`extractor_cases.json` holds 8 invented conversations for the memory extractor (implicit correction, off-topic and grief
+messages that must not touch open threads, a real close, restatement, filler). `supabase/functions/extractor-eval` runs
+them against one or more prompt variants with the real extractor model and reports the ops and whether the thread guard
+would block each. See `docs/memory-engine-handoff-2026-10-27.md` for results.

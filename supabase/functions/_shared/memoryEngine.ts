@@ -191,6 +191,23 @@ export function selectMemories<T extends Pick<MemoryCandidate, 'id' | 'content' 
   return chosen.map(s => s.c);
 }
 
+/**
+ * The user's words and a stored memory share at least one content word.
+ * The extractor must quote the user as evidence for every retract, close and
+ * update, but a quote that is the whole message passes the grounding check
+ * whatever it is about. This asks the cheaper question: is the message even
+ * about the memory it wants to change? ("my sister turns 30" can't close a
+ * fitness goal; "no, I'm only reading it" can retire "has written it".)
+ */
+export function memoryRelatesTo(memory: string, ...texts: Array<string | null | undefined>): boolean {
+  const memoryTokens = contentTokens(memory);
+  if (memoryTokens.size === 0) return false;
+  for (const text of texts) {
+    for (const word of contentTokens(text ?? '')) if (memoryTokens.has(word)) return true;
+  }
+  return false;
+}
+
 /** "as of Oct 19" style date so the model can reason about staleness. */
 export function formatAsOf(iso: string | null | undefined, now: Date = new Date()): string {
   if (!iso) return '';

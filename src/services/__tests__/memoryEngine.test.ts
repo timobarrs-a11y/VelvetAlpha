@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   normalizeMemoryText, isNearDuplicate, mayContradict, selectMemories, formatMemoryLine, formatAsOf, isGroundedIn,
-  looksLikeInstruction, findDuplicateGroups, embedTexts, toPgVector, DEFAULT_FACT_SELECTION,
+  looksLikeInstruction, findDuplicateGroups, memoryRelatesTo, embedTexts, toPgVector, DEFAULT_FACT_SELECTION,
   EMBEDDING_DIMENSIONS, type MemoryCandidate,
 } from '../../../supabase/functions/_shared/memoryEngine';
 
@@ -166,6 +166,24 @@ describe('findDuplicateGroups', () => {
       { id: 'b', kind: 'fact', content: 'User lives in Boulder', source: 'inferred', created_at: '2026-10-02T00:00:00Z', embedding: [0.999, 0.01, 0] },
     ]);
     expect(groups).toHaveLength(0);
+  });
+});
+
+describe('memoryRelatesTo (is the message about the memory it wants to change?)', () => {
+  it('lets a real correction through', () => {
+    expect(memoryRelatesTo('User has written a murder mystery series', "I'm just reading the series, I didn't write it")).toBe(true);
+    expect(memoryRelatesTo('User works at Google as a data analyst', "I don't work at Google anymore")).toBe(true);
+    expect(memoryRelatesTo('User lives in Denver', 'User lives in Boulder', 'I moved to Boulder')).toBe(true);
+    expect(memoryRelatesTo('Reading a mystery series, plans to finish it', 'I finished the series!')).toBe(true);
+  });
+  it('blocks a message about something else, however important', () => {
+    expect(memoryRelatesTo('Six-pack fitness goal: learning that fat loss matters more than situps', "my sister is turning 30 next week and I'm flying to Denver")).toBe(false);
+    expect(memoryRelatesTo('Mind-opening exercises goal with a deadline of end of November', 'my dad passed away yesterday, I am not ok')).toBe(false);
+    expect(memoryRelatesTo('User recently completed reading an entire series', "I'm not the author, I never wrote anything")).toBe(false);
+  });
+  it('is false for empty input', () => {
+    expect(memoryRelatesTo('', 'anything')).toBe(false);
+    expect(memoryRelatesTo('User likes tea', undefined, null, '')).toBe(false);
   });
 });
 
