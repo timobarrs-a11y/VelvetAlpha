@@ -61,9 +61,13 @@ Retired (`status='retired'`), 8 rows:
 - `77b1c5a7`, `baa86556`, `24f5007a` facts and `e9c1e030` thread: authorship claims the user denied.
 - `522f5b7a` fact and `b3ed24ed` thread: "plans to read the series", superseded by completion.
 
-Observation: fact `b8e24ec9` (true: user finished the series) was **retired by the extractor itself** at
-00:37 UTC on 10-27 (`memory_history` shows op UPDATE, actor `extractor`, no proposal). The triggering message was
-not inspected. It is not reproduced; it is the live example of a wrongful extractor retirement. Not fixed.
+Step 0 finding (corrects an earlier version of this note): fact `b8e24ec9` ("user finished the series") was retired
+by the extractor at 00:37 UTC on 10-27 (`memory_history`: op UPDATE, actor `extractor`, no proposal), and that was
+a **correct** retraction. The owner approved reading the one message: the stored correction event's evidence is
+"I didn't finish the whole series yet", so the fact was false. It is not an example of a wrongful retirement.
+Consequence: `522f5b7a` and `b3ed24ed` ("plans to read the series") were retired at 00:59 on the premise that the
+series was completed. That premise was wrong (the user had said otherwise at 00:37). Impact is low, since both are
+redundant with active rows `b93f6f3e` and `89da6782`, but they can be restored (status change, needs owner OK).
 
 ## 6. Code changes (commit on the branch)
 
@@ -110,7 +114,8 @@ that file changes.
 | After retiring `efd7fb30`, `44edef98`, embedding all rows | 32/41 | F01 F02 F03 F05 F06 F09 F10 F13 F16 (same with and without query vectors) |
 | After retiring 6 more wrong/stale rows | 38/41 | F02 F05 F13 |
 
-Remaining failures: F02 and F13 need `b8e24ec9` (wrongly retired by the extractor, see 5). F05 ("in the mood
+Remaining failures: F02 and F13 expect `b8e24ec9` to be retrieved, but it is now correctly retired, so those two
+expectations are stale (the eval has no as-of/time dimension; Fable's eval should add one). F05 ("in the mood
 for some ice cream") selects 5 rows scored relevant against a limit of 2. The gain from 28 to 38 came from data
 cleanup, not scoring changes; retrieval scoring (findings 2, 7, 8, 10) is untouched.
 With vectors the relevance scores shift a lot (e.g. the correct series row from ~0.4 to 0.96) but the pass set did
@@ -121,14 +126,21 @@ not change until the data was cleaned.
 `extractor-eval`. All reject callers that don't present the service credential. `embedding-check` and
 `memory-eval-candidates` should be deleted; the latter two are committed to the repo.
 
+### Frozen baseline (step 0, 2026-10-27, counts only)
+- Retrieval eval live: 38/41 (F02, F13 stale expectations; F05 real).
+- `memory_events`: correction 4, correction/retracted 1, correction/updated 1, reference 22, thread_closed 5.
+- `memory_history` destructive ops: extractor to retired 14, extractor to superseded 3, dream to retired 4.
+- `memory_items`: facts active 28 / retired 10 / superseded 1; threads active 13 / retired 9 / superseded 2.
+- All 46 active rows have embeddings.
+
 ## 8. Not done / open for the reviewer
 1. Retrieval scoring: rarity-weighted lexical relevance, relative gate, MMR normalisation, 500-newest candidate window,
    background tier (findings 2, 7, 8, 10).
 2. Corrections following visibility: a correction in one companion's chat can't reach the other companions' copies
    (finding 3's mechanism); deterministic supersede from analyzer correction events (finding 4's fallback).
 3. Hygiene: dedupe keys from `content_tsv`, forced tool use for its LLM pass, protecting goal rows (finding 9).
-4. Wrongful fact retraction by the extractor (`b8e24ec9`): cause unknown; options include requiring a second
-   consistent signal or turning fact retractions into proposals.
+4. Fact retractions by the extractor are ungated: `b8e24ec9` turned out to be correct, but nothing verifies a
+   retraction in general. Options: a verifier call, a second consistent signal, or proposals for reinforced rows.
 5. Third-party/sensitive data (`sensitivity` column, scrubbing `memory_proposals.rationale`), companion summary
    trigger by time, trace observability (findings 11, 12, 13).
 6. 20 pending proposals still await a human decision.
