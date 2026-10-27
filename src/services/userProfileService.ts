@@ -47,6 +47,7 @@ export interface UserProfile {
 export interface UserProfileUpdate {
   name?: string;
   nickname?: string | null;
+  welcome_seen?: boolean;
   birthday?: string | null;
   gender?: string | null;
   favorite_color?: string | null;

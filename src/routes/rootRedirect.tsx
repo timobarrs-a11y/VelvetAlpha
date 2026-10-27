@@ -21,7 +21,7 @@ export function RootRedirect() {
       }
 
       if (!user) {
-        setDestination('/welcome');
+        setDestination('/splash');
         return;
       }
 
