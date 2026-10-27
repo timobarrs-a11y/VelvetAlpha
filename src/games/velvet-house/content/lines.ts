@@ -42,13 +42,11 @@ export const LINE_BOOK: LineBook = {
 
     // -- Chapter 11: talking ------------------------------------------------------------------------------------------
     'maya.ch11.kept': 'So you and the TV. Should I be worried?',
-    'maya.ch11.moved': 'I keep looking at the couch. Thank you for that.',
 
     // -- Chapter 12: paint --------------------------------------------------------------------------------------------
     'maya.ch12.walls': 'These walls are so sad. Primer white. Can we make one room ours today? Just one.',
     'dez.ch12.1': 'Dupree Construction, at your service! Same fella, different hat.',
     'dez.ch12.2': "Paint, floors, wallpaper, all the fixin's. Y'all pick it, my boys'll have it on the walls 'fore lunch.",
-    'maya.ch12.handOver': "You let me have the window. You pick the color. I won't say a word.",
     'maya.ch12.likes': 'Okay, that? Yes. Yes yes yes.',
     'maya.ch12.hides': "…It's a choice.",
 
@@ -68,9 +66,7 @@ export const LINE_BOOK: LineBook = {
     'dez.ch15.2': "Town of {town}'d like to give y'all a little welcome. Here's a check for a hundred. Don't spend it all at Dupree's. …Actually, do.",
     'dez.ch15.3': 'Anything y\'all need, you know who to call.',
     'maya.ch15.kept.friend': 'So… what do we want this place to look like?',
-    'maya.ch15.moved.friend': 'So… what do we want this place to look like? I like where we started.',
     'maya.ch15.kept': 'So… what do we want this life to look like?',
-    'maya.ch15.moved': 'So… what do we want this life to look like? I like where we started.',
   },
 
   pools: {

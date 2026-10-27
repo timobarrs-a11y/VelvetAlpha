@@ -51,7 +51,7 @@ then the cold open etc. Dez's lines stay the same for everyone. The truck-off-th
 2. `opening.moversLate`: movers are late
 3. `opening.truckOffRoad` (new): the truck drove off the road, a quick back and forth with Dez
 4. `opening.mayorCarriedCouch`
-5. `opening.windowAsk`: wants the couch by the window
+5. (removed: the opening no longer asks for the couch by the window; it ends when the couch is set down and the lamp delivery follows)
 6. `opening.keepIt` / `opening.movedIt`: reaction to the choice
 7. Player lines (`jordan`): a handful, only here at the start; after this the player types their own
 
