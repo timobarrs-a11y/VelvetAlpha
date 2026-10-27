@@ -5,7 +5,7 @@ import {
   ArrowRight, Heart, Sparkles, ShieldCheck, BadgeCheck, Flag,
   Compass, CalendarDays, MapPin, Target, ClipboardCheck, TrendingUp,
   Users, UserPlus, PenLine, Newspaper, Home, MessageCircle,
-  Lightbulb, Sunrise,
+  Gamepad2, Lightbulb, Sunrise,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -62,7 +62,7 @@ const PILLARS: Pillar[] = [
     blurb: 'Velvet already knows what you are into, so it puts you where your crowd is.',
     accent: '56,189,248',
     items: [
-      { icon: Users, name: 'Community Board', text: 'Spaces with live rooms and posts, matched to your interests from day one.' },
+      { icon: Users, name: 'Spaces', text: 'Live rooms and posts, matched to your interests from day one.' },
       { icon: UserPlus, name: 'Meet people', text: 'Find members who share your interests and goals. Follow, message, and start a crew.' },
       { icon: MessageCircle, name: 'Statuses & Your Feed', text: 'Post what you are up to. Friends like and comment, and your wins show up alongside.' },
     ],
@@ -118,7 +118,7 @@ const MORE: { icon: LucideIcon; color: string; name: string; text: string }[] = 
   { icon: MapPin, color: TONE.coach, name: 'Navi', text: 'finds local events, restaurants and things to do.' },
   { icon: Compass, color: TONE.gold, name: 'Discover', text: 'matches you with people who share your interests.' },
   { icon: Heart, color: TONE.pink, name: 'Companion', text: 'is a friend who chats with you and remembers what matters.' },
-  { icon: Home, color: TONE.pink, name: 'Velvet House & Town', text: 'give you a home on a real street, plus a cozy life sim inside.' },
+  { icon: Gamepad2, color: TONE.pink, name: 'Games', text: 'like Velvet Sims in your own house, 3-Point Shootout, Momentum and The Town.' },
   { icon: Lightbulb, color: TONE.gold, name: 'Insights', text: 'shows your streaks and the patterns behind them.' },
   { icon: Sunrise, color: TONE.gold, name: 'Morning Journal', text: 'starts your day with intention.' },
 ];
@@ -289,7 +289,7 @@ export function SplashPage() {
           <nav className="hidden md:flex items-center gap-7 text-sm text-gray-400">
             <button onClick={() => scrollTo('inside')} className="hover:text-white transition-colors">What's inside</button>
             <button onClick={() => scrollTo('home')} className="hover:text-white transition-colors">Velvet House</button>
-            <button onClick={() => scrollTo('community')} className="hover:text-white transition-colors">Community Board</button>
+            <button onClick={() => scrollTo('community')} className="hover:text-white transition-colors">Spaces</button>
             <button onClick={() => scrollTo('how')} className="hover:text-white transition-colors">How it works</button>
           </nav>
           <div className="flex items-center gap-2">
@@ -455,7 +455,7 @@ export function SplashPage() {
         <section id="community" className="relative scroll-mt-20 py-24" style={{ background: 'linear-gradient(180deg, transparent, rgba(56,189,248,0.04) 30%, rgba(244,114,182,0.04) 70%, transparent)' }}>
           <div className="max-w-6xl mx-auto px-5 grid lg:grid-cols-[1fr_1.15fr] gap-12 items-center">
             <motion.div {...rise()}>
-              <Eyebrow accent="56,189,248">The Community Board</Eyebrow>
+              <Eyebrow accent="56,189,248">Spaces</Eyebrow>
               <SectionTitle>Pull up a chair. Your spaces are already waiting.</SectionTitle>
               <p className="mt-5 text-gray-300 text-lg leading-relaxed max-w-lg">
                 Your interests place you in the right spaces from day one. Each one has live rooms, a board for longer posts,

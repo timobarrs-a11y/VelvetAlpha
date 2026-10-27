@@ -586,7 +586,7 @@ const SLIDES: Slide[] = [
   { id: 'atlas', icon: Compass, label: 'Atlas', title: 'Atlas', caption: 'Your assistant. Searches, plans, and books it on your calendar.', accent: '192,132,252', Screen: AtlasScreen },
   { id: 'coach', icon: Target, label: 'Coaches', title: 'Your coach', caption: 'Turns a goal into a plan, then checks in so you follow through.', accent: '52,211,153', Screen: CoachScreen },
   { id: 'feed', icon: Newspaper, label: 'Daily Feed', title: 'Today', caption: 'Your morning brief and stories picked for what you care about.', accent: '251,191,36', Screen: FeedScreen },
-  { id: 'board', icon: Users, label: 'Community Board', title: 'Community Board', caption: 'Spaces with live rooms, already matched to your interests.', accent: '56,189,248', Screen: HouseScreen },
+  { id: 'board', icon: Users, label: 'Spaces', title: 'Spaces', caption: 'Live rooms and boards, already matched to your interests.', accent: '56,189,248', Screen: HouseScreen },
   { id: 'people', icon: UserPlus, label: 'Meet people', title: 'Discover', caption: 'Real people who are into the same things you are.', accent: '244,114,182', Screen: PeopleScreen },
   { id: 'coauthor', icon: PenLine, label: 'Co-Author', title: 'Co-Author', caption: 'Write stories, scripts, and worlds with a partner who never runs dry.', accent: '52,211,153', Screen: CoAuthorScreen },
   { id: 'navi', icon: MapPin, label: 'Navi', title: 'Navi', caption: 'Local events, restaurants, and things to do, filtered to your taste.', accent: '45,212,191', Screen: NaviScreen },
