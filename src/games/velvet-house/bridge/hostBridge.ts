@@ -48,6 +48,7 @@ export function createHostBridge(g: Game): Partial<Game> {
     if (isCompanionsMessage(e.data)) { setCompanionCount(e.data.count, e.data.houses ?? 0); return; }
     if (isPlotMessage(e.data)) {
       const p = e.data.plot;
+      g.s.hostReady.plot = true;
       g.s.plot = { member: !!p.member, config: p.config as never, earned: Array.isArray(p.earned) ? p.earned.filter((x): x is string => typeof x === 'string') : [], ...(typeof p.address === 'string' ? { address: p.address.slice(0, 40) } : {}) };
       return;
     }
@@ -66,6 +67,8 @@ export function createHostBridge(g: Game): Partial<Game> {
       g.simName = people[0].name;
       g.partnerName = people[1].name;
       if (d.companion?.pronoun) companionCfg.pronoun = d.companion.pronoun;
+      // The voice the story's lines are written in: masculine or feminine, from the companion's gender (or pronoun).
+      g.s.voice.gender = d.companion?.gender === 'male' || d.companion?.gender === 'female' ? d.companion.gender : d.companion?.pronoun === 'he' ? 'male' : d.companion?.pronoun === 'she' ? 'female' : 'they';
       if (d.companion?.humor) g.s.voice.humor = humorKey(d.companion.humor);
       if (d.companion?.communication) g.s.voice.communication = commKey(d.companion.communication);
       if (d.companion?.relationship) { g.s.voice.relationship = d.companion.relationship; if (d.companion.relationship === 'friend') roommateBeds(); }
@@ -84,6 +87,7 @@ export function createHostBridge(g: Game): Partial<Game> {
         if (pl.top && !pl.outfit) people[0].look.top = pl.top;
         g.applyAvatar(people[0], pl, 'jordan');
       }
+      g.s.hostReady.profile = true;
       const wasFromGame = companionCfg.source === 'game';
       companionCfg.source = 'velvet';
       postToParent({

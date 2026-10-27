@@ -10,6 +10,13 @@ import {
  * ones that take time (a walk, a line the player must tap through, a wait). `tick(dt)` is called every frame with real
  * seconds, so a cutscene plays while the game clock is stopped. Events from the game (`emit`) end waits and start
  * scripts. Everything the world does goes through the host.
+ *
+ * Three rules keep a scene honest, whoever writes it:
+ * - A wait ends when its condition is true. Conditions can be about the world itself (`world`), so a lesson ends when
+ *   the couch is where it should be, not when a button was pressed.
+ * - Every `mode` step and every `wait until` is a resume point. A reload comes back at the last `mode` step and runs
+ *   from there, so the card, the outline and the allowed taps are rebuilt; a wait whose condition already holds passes.
+ * - Nothing is skipped. A story animation plays to its end, like a handheld RPG; only dialogue is tapped through.
  */
 interface Frame { steps: Step[]; i: number; branch?: PathItem['branch']; script?: string }
 
@@ -17,6 +24,7 @@ type Blocking =
   | { k: 'time'; left: number }
   | { k: 'until'; cond: Cond; since: number }
   | { k: 'walk'; who: Actor }
+  | { k: 'arrive'; who: Actor[] }
   | { k: 'act'; who: Actor }
   | { k: 'say'; hold: number | null }
   | { k: 'choice'; options: ChoiceOption[] }
@@ -24,10 +32,7 @@ type Blocking =
   | { k: 'intro' };
 
 const MAX_STEPS_PER_TICK = 400;
-const EFFECT_STEPS = new Set(['set', 'give', 'deliver', 'unlock', 'despawn', 'place', 'clock', 'carry']);
-
-export const isEffectStep = (s: Step): boolean => EFFECT_STEPS.has(s.do);
-
+const DEFAULT_HOST_TIMEOUT_MS = 1500;
 export class ScriptEngine {
   private defs = new Map<string, ScriptDef>();
   private frames: Frame[] = [];
@@ -40,6 +45,8 @@ export class ScriptEngine {
   private resumeSince: number | null = null;
   private mode: Mode | null = null;
   private allow: UiTarget[] = [];
+  /** Where a reload or an interruption picks the script up: the last mode step (redo) or checkpoint. */
+  private mark: { path: PathItem[]; redo: boolean } | null = null;
 
   constructor(private host: ScriptHost, defs: ScriptDef[], private book: LineBook, public rt: ScriptRuntime = NEW_RUNTIME()) {
     for (const d of defs) this.defs.set(d.id, d);
@@ -54,8 +61,23 @@ export class ScriptEngine {
 
   isActive(): boolean { return !!this.cur; }
 
-  /** Whether the player may skip what is playing. */
-  skippable(): boolean { return !!this.cur?.skippable; }
+  /** The condition the script is waiting on, if it is waiting on one (tests and tools read this). */
+  waitingOn(): Cond | null { return this.blocking?.k === 'until' ? this.blocking.cond : null; }
+
+  /**
+   * The world condition the script is waiting on, or is about to wait on: while a card with a button is up, the wait
+   * that follows it. The card's button asks this to know whether the lesson is done.
+   */
+  pendingWait(): Cond | null {
+    if (this.blocking?.k === 'until') return this.blocking.cond;
+    if (this.blocking?.k !== 'card') return null;
+    const f = this.frames[this.frames.length - 1];
+    const next = f && (this.sub(f.steps[f.i]) as Step | undefined);
+    return next?.do === 'wait' && next.until ? next.until : null;
+  }
+
+  /** What kind of thing the script is waiting for right now, or null. */
+  blockedOn(): Blocking['k'] | null { return this.blocking?.k ?? null; }
 
   /** Starts what should start on a brand new game. */
   startNewGame(): void {
@@ -74,7 +96,7 @@ export class ScriptEngine {
     const def = this.defs.get(a.id);
     this.rt.active = null;
     if (!def) return;
-    this.begin(def, a.vars, a.path);
+    this.begin(def, a.vars, a.path, a.redo ?? false);
   }
 
   emit(ev: GameEvent): void {
@@ -90,26 +112,16 @@ export class ScriptEngine {
   tick(dt: number): void {
     if (!this.cur) {
       this.checkTriggers();
-      this.startNext();
+      this.startNext(dt);
     } else {
       this.checkTriggers();
-      this.interruptIfUrgent();
+      this.interruptIfUrgent(dt);
     }
     if (!this.cur) return;
     if (this.blocking && !this.cleared(dt)) return;
     this.blocking = null;
     this.run();
     if (this.cur && !this.frames.length) this.finish();
-  }
-
-  /** The player skips: the script's end state is set without the scenes. */
-  skip(): void {
-    const d = this.cur;
-    if (!d || !d.skippable) return;
-    for (const s of d.onSkip ?? []) this.exec(this.sub(s) as Step, true);
-    // Scripts it was in the middle of running are done too.
-    for (const f of this.frames) if (f.script) this.childDone(f.script);
-    this.finish();
   }
 
   // -- starting and ending ----------------------------------------------------------------------------------------
@@ -132,10 +144,24 @@ export class ScriptEngine {
     }
   }
 
-  private startNext(): void {
+  /** Whether a queued script may start now: the host has sent what it needs, or it has waited long enough. */
+  private needsMet(q: ScriptRuntime['queue'][number], dt: number): boolean {
+    const d = this.defs.get(q.id);
+    const wants = d?.needs?.host ?? [];
+    if (!wants.length) return true;
+    if (wants.every((w) => this.host.ready?.(w) ?? true)) return true;
+    q.heldMs = (q.heldMs ?? 0) + dt * 1000;
+    return q.heldMs >= (d?.needs?.timeoutMs ?? DEFAULT_HOST_TIMEOUT_MS);
+  }
+
+  private startNext(dt: number): void {
     if (!this.rt.queue.length) return;
-    let best = 0;
-    this.rt.queue.forEach((q, i) => { if ((this.defs.get(q.id)?.priority ?? 0) > (this.defs.get(this.rt.queue[best].id)?.priority ?? 0)) best = i; });
+    let best = -1;
+    this.rt.queue.forEach((q, i) => {
+      if (!this.needsMet(q, dt)) return;
+      if (best < 0 || (this.defs.get(q.id)?.priority ?? 0) > (this.defs.get(this.rt.queue[best].id)?.priority ?? 0)) best = i;
+    });
+    if (best < 0) return;
     const [next] = this.rt.queue.splice(best, 1);
     const def = this.defs.get(next.id);
     if (def) { this.begin(def, next.vars, next.path, next.redo); this.resumeSince = next.since ?? null; }
@@ -147,9 +173,12 @@ export class ScriptEngine {
     this.blocking = null;
     this.touched.clear();
     this.frames = [{ steps: def.steps, i: 0 }];
+    this.mark = null;
     this.setMode(def.mode, []);
+    const hold = def.needs?.hold ?? [];
+    if (hold.length) { this.host.hold?.(hold); for (const who of hold) this.touched.add(who); }
     if (path?.length) this.restore(path, redo);
-    this.rt.active = { id: def.id, path: path ?? [], vars };
+    this.rt.active = { id: def.id, path: path ?? [], vars, ...(redo ? { redo: true } : {}) };
   }
 
   private restore(path: PathItem[], redo: boolean): void {
@@ -172,40 +201,47 @@ export class ScriptEngine {
     const d = this.cur;
     if (!d) return;
     if (d.once !== false && !this.rt.done.includes(d.id)) this.rt.done.push(d.id);
-    // Sub-scripts that ran inside are done as well.
     this.host.release([...this.touched]);
     this.host.highlight(null);
     this.host.outline(null);
     this.cur = null;
     this.frames = [];
     this.blocking = null;
+    this.mark = null;
     this.rt.active = null;
     this.setMode(null, []);
   }
 
   /**
    * A story beat that is only waiting for the player to do something steps aside for a more urgent script (a delivery
-   * at the door) and picks up again, at the same wait, afterwards. A cutscene is never interrupted.
+   * at the door) and picks up again afterwards, from its last mode step so its card and outline come back. A cutscene
+   * or a guided lesson (the live mode, not the script's declared one) is never interrupted.
    */
-  private interruptIfUrgent(): void {
+  private interruptIfUrgent(dt: number): void {
     const d = this.cur;
-    if (!d || d.mode === 'cutscene' || this.blocking?.k !== 'until' || !this.rt.queue.length) return;
-    const urgent = this.rt.queue.some((q) => (this.defs.get(q.id)?.priority ?? 0) > (d.priority ?? 0));
+    if (!d || this.mode !== 'beat' || this.blocking?.k !== 'until' || !this.rt.queue.length) return;
+    const urgent = this.rt.queue.some((q) => (this.defs.get(q.id)?.priority ?? 0) > (d.priority ?? 0) && this.needsMet(q, 0));
     if (!urgent) return;
-    const path = this.pathNow();
+    const at = this.mark ?? { path: this.pathNow(), redo: true };
     this.host.release([...this.touched]);
     this.host.highlight(null);
     this.host.outline(null);
-    this.rt.queue.push({ id: d.id, vars: this.vars, path, redo: true, since: (this.blocking as { since: number }).since });
-    this.cur = null; this.frames = []; this.blocking = null; this.rt.active = null;
+    this.rt.queue.push({ id: d.id, vars: this.vars, path: at.path, redo: at.redo, since: (this.blocking as { since: number }).since });
+    this.cur = null; this.frames = []; this.blocking = null; this.mark = null; this.rt.active = null;
     this.setMode(null, []);
-    this.startNext();
+    this.startNext(dt);
   }
 
   private setMode(mode: Mode | null, allow: UiTarget[]): void {
     this.mode = mode;
     this.allow = allow;
     this.host.setMode(mode, allow);
+  }
+
+  /** Records where a reload picks the script up. */
+  private setMark(redo: boolean): void {
+    this.mark = { path: this.pathNow(), redo };
+    this.rt.active = { id: this.cur!.id, path: this.mark.path, vars: this.vars, ...(redo ? { redo: true } : {}) };
   }
 
   // -- running steps ----------------------------------------------------------------------------------------------
@@ -216,21 +252,33 @@ export class ScriptEngine {
       case 'time': b.left -= dt; return b.left <= 0;
       case 'until': return this.eval(b.cond, b.since);
       case 'walk': return this.host.arrived(b.who);
+      case 'arrive': return b.who.every((w) => this.host.arrived(w));
       case 'act': return this.host.actDone(b.who);
       case 'say':
         if (b.hold !== null) { b.hold -= dt; return b.hold <= 0; }
         return this.host.sayDone();
-      case 'card': return this.host.cardDone();
+      case 'card': {
+        if (this.host.cardDone()) return true;
+        // The button is a convenience: if the world is already the way the wait after the card asks, the lesson is done.
+        const w = this.pendingWait();
+        if (w && this.eval(w, 0)) { this.host.highlight(null); return true; }
+        return false;
+      }
       case 'intro': return this.host.introDone?.() ?? true;
       case 'choice': {
         const n = this.host.choiceMade();
         if (n === null) return false;
-        const opt = b.options[n] ?? b.options.find((o) => o.default) ?? b.options[0];
-        for (const [k, v] of Object.entries(opt.set ?? {})) this.host.flags[k] = v;
-        if (opt.steps?.length) this.frames.push({ steps: opt.steps, i: 0, branch: b.options.indexOf(opt) });
+        this.pickChoice(b.options, n);
         return true;
       }
     }
+  }
+
+  /** Applies a choice: its flags, then its steps. */
+  private pickChoice(options: ChoiceOption[], n: number): void {
+    const opt = options[n] ?? options.find((o) => o.default) ?? options[0];
+    for (const [k, v] of Object.entries(opt.set ?? {})) this.host.flags[k] = v;
+    if (opt.steps?.length) this.frames.push({ steps: opt.steps, i: 0, branch: options.indexOf(opt) });
   }
 
   private run(): void {
@@ -244,7 +292,7 @@ export class ScriptEngine {
         continue;
       }
       const step = this.sub(f.steps[f.i++]) as Step;
-      if (this.exec(step, false)) return;
+      if (this.exec(step)) return;
     }
   }
 
@@ -253,28 +301,31 @@ export class ScriptEngine {
     if (d && d.once !== false && !this.rt.done.includes(id)) this.rt.done.push(id);
   }
 
-  /** Runs one step. Returns true when it has to wait (the engine stops until the wait is over). */
   /** The last few steps that ran, for finding out what a story did. */
   readonly trace: string[] = [];
 
-  private exec(s: Step, skipping: boolean): boolean {
-    this.trace.push(`${this.cur?.id}:${s.do}${skipping ? '*' : ''}`);
+  /** Runs one step. Returns true when it has to wait (the engine stops until the wait is over). */
+  private exec(s: Step): boolean {
+    this.trace.push(`${this.cur?.id}:${s.do}`);
     if (this.trace.length > 40) this.trace.shift();
     const h = this.host;
     const block = (b: Blocking): true => { this.blocking = b; return true; };
     switch (s.do) {
-      case 'mode': this.setMode(s.mode, s.allow ?? []); return false;
+      case 'mode':
+        this.setMode(s.mode, s.allow ?? []);
+        this.setMark(true);
+        return false;
       case 'spawn': h.spawn(s.npc, s.at, s.carrying); this.touched.add(s.npc); return false;
       case 'despawn': h.despawn(s.npc); this.touched.delete(s.npc); return false;
       case 'carry': h.carry(s.who, s.carrying); return false;
       case 'place': h.place(s.who, s.at, s.face); this.touched.add(s.who); return false;
       case 'walk':
         h.walk(s.who, s.to); this.touched.add(s.who);
-        return s.wait === false || skipping ? false : block({ k: 'walk', who: s.who });
+        return s.wait === false ? false : block({ k: 'walk', who: s.who });
       case 'face': h.face(s.who, s.toward); return false;
       case 'act':
         h.act(s.who, s.act, s.at); this.touched.add(s.who);
-        return s.wait === false || skipping ? false : block({ k: 'act', who: s.who });
+        return s.wait === false ? false : block({ k: 'act', who: s.who });
       case 'emote': h.emote(s.who, s.emote); return false;
       case 'camera': h.camera(s.focus, s.zoom, s.level); return false;
       case 'say': {
@@ -288,10 +339,10 @@ export class ScriptEngine {
         return block({ k: 'choice', options: s.options });
       }
       case 'card':
-        h.showCard(s.title, s.body, s.spotlight, s.button);
+        h.showCard(s.title, s.body, s.spotlight, s.button, s.misplaced ? { who: s.misplaced.who, text: this.text(s.misplaced.line) } : undefined);
         return s.button ? block({ k: 'card' }) : false;
       case 'intro':
-        if (skipping || !h.intro) return false;
+        if (!h.intro) return false;
         h.intro(s.kind);
         return block({ k: 'intro' });
       case 'dim': h.dim?.(s.amount); return false;
@@ -304,11 +355,14 @@ export class ScriptEngine {
       case 'clock': h.setClock(s.day, s.minutes); return false;
       case 'wait':
         if (s.until) {
+          // A wait is a resume point too, when no mode step has been one yet.
+          if (!this.mark) this.setMark(true);
           // Picking up an interrupted wait: what happened meanwhile still counts.
           const since = this.resumeSince ?? this.seq;
           this.resumeSince = null;
           return this.eval(s.until, since) ? false : block({ k: 'until', cond: s.until, since });
         }
+        if (s.arrive?.length) return s.arrive.every((w) => h.arrived(w)) ? false : block({ k: 'arrive', who: s.arrive });
         return (s.seconds ?? 0) > 0 ? block({ k: 'time', left: s.seconds! }) : false;
       case 'if': {
         const yes = this.eval(s.cond, 0);
@@ -325,7 +379,7 @@ export class ScriptEngine {
         return false;
       }
       case 'checkpoint':
-        this.rt.active = { id: this.cur!.id, path: this.pathNow(), vars: this.vars };
+        this.setMark(false);
         return false;
     }
   }
@@ -342,6 +396,7 @@ export class ScriptEngine {
     if ('all' in c) return c.all.every((x) => this.eval(x, since));
     if ('any' in c) return c.any.some((x) => this.eval(x, since));
     if ('not' in c) return !this.eval(c.not, since);
+    if ('world' in c) return this.host.check?.(c.world) ?? false;
     if ('flag' in c) {
       const v = this.host.flags[c.flag];
       if (c.exists !== undefined) return (v !== undefined) === c.exists;
@@ -384,7 +439,7 @@ export class ScriptEngine {
 
   /** The words of a line, for whoever is playing: the right voice for the partner, names filled in. */
   text(ref: LineRef): string {
-    const { player, partner, town, preset, humor, communication, relationship } = this.host.names();
+    const { player, partner, town, preset, humor, communication, relationship, gender } = this.host.names();
     let raw: string;
     if (typeof ref === 'string') {
       // A friend who moves in gets their own version of a line where there is one ("line.friend").
@@ -395,7 +450,9 @@ export class ScriptEngine {
       // The companion's own style, then the plainest style in the bank, so a missing slot never goes silent.
       const styles = this.book.banks?.[ref.bank];
       const mine = ref.bank === 'humor' ? humor : communication;
-      raw = (mine && styles?.[mine]?.[ref.slot]) ?? Object.values(styles ?? {}).find((s) => s[ref.slot])?.[ref.slot] ?? ref.slot;
+      const line = (mine && styles?.[mine]?.[ref.slot]) ?? Object.values(styles ?? {}).find((s) => s[ref.slot])?.[ref.slot];
+      // In the companion's own voice: masculine, feminine, or the neutral version when there is one.
+      raw = line === undefined ? ref.slot : typeof line === 'string' ? line : gender === 'female' ? line.f : gender === 'male' ? line.m : line.n ?? line.m;
     }
     else raw = this.fromPool(ref.pool);
     return raw.replace(/\{player\}/g, player).replace(/\{partner\}/g, partner).replace(/\{town\}/g, town);
@@ -413,9 +470,17 @@ export class ScriptEngine {
   }
 }
 
-function hasEvent(c: Cond): boolean {
+export function hasEvent(c: Cond): boolean {
   if ('all' in c) return c.all.some(hasEvent);
   if ('any' in c) return c.any.some(hasEvent);
   if ('not' in c) return hasEvent(c.not);
   return 'event' in c;
+}
+
+/** Whether a condition can become true with no new event: a flag, the world, a finished script, the clock. */
+export function canPassWithoutEvent(c: Cond): boolean {
+  if ('all' in c) return c.all.every(canPassWithoutEvent);
+  if ('any' in c) return c.any.some(canPassWithoutEvent);
+  if ('not' in c) return true;
+  return !('event' in c);
 }

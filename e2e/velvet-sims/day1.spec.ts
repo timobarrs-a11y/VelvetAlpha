@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { openGame, objects, inGame, pageErrors } from './helpers';
+import { openGame, objects, inGame, pageErrors, dragToMark } from './helpers';
 
 /**
- * The whole first day, played the way a new player would: skip the cutscene, then do what each card asks (unpack and
+ * The whole first day, played the way a new player would: tap through the cutscene, then do what each card asks (unpack and
  * place the lamp, open the shop, order groceries and let Dez bring them, cook, wash up, talk, paint, go upstairs, be told
  * about the rent) until the tutorial is over and the household looks after itself.
  */
@@ -15,7 +15,21 @@ test('the first day plays through from the move-in to free will', async ({ page 
   const done: string[] = [];
   const once = (key: string): boolean => (done.includes(key) ? false : (done.push(key), true));
 
-  await game.locator('.vh-skip').click();
+  // There is no Skip: the opening is tapped through like a player would, then the couch is unpacked and dragged into
+  // the outline by the TV.
+  await expect.poll(async () => {
+    if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
+    return game.locator('.vh-scard:visible').count();
+  }, { timeout: 200_000, intervals: [300] }).toBeGreaterThan(0);
+  const couchPos = await inGame<[number, number] | null>(page, "v.clientPosOf('box.couch')");
+  await page.mouse.click(couchPos![0], couchPos![1]);
+  await expect.poll(async () => (await objects(page)).some((o) => o.id === 'box.couch' && o.type === 'sofa')).toBe(true);
+  await expect.poll(async () => {
+    if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
+    return game.locator('.vh-scard-go:visible').count();
+  }, { timeout: 30_000, intervals: [300] }).toBeGreaterThan(0);
+  await dragToMark(page, 'box.couch', 'living.couchTv', 'sofa', 2);
+  await expect.poll(async () => JSON.parse(await inGame<string>(page, 'v.story()'))['opening.done'], { timeout: 15_000 }).toBe(true);
 
   const deadline = Date.now() + Number(process.env.DAY1_MS ?? 800_000);
   let lastLog = 0;
@@ -32,7 +46,10 @@ test('the first day plays through from the move-in to free will', async ({ page 
     if (!flags['tutorial.lamp']) {
       // Open the box, set the lamp down where the card says (twice), then turn it on.
       const box = (await objects(page)).find((o) => o.id === 'box.lamp' && o.type === 'pbox');
-      if (title === 'The corner' || title === 'By the couch') await game.locator('.vh-scard-go').click().catch(() => {});
+      if ((title === 'The corner' || title === 'By the couch') && once('place:' + title)) {
+        // Drag the lamp into the outline the card points at; the lesson ends when it is there.
+        await dragToMark(page, 'box.lamp', title === 'The corner' ? 'living.lampCorner' : 'living.lamp', 'lamp', 0).catch((e) => console.log(String(e)));
+      }
       else if (title === 'Let there be light' && once('light:' + Math.floor(Date.now() / 5000))) { await page.waitForTimeout(800); const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
       else if (box && title === 'Open the box') {
         // Jordan wandering to another floor takes the view with him; come back and let the camera settle before tapping.
