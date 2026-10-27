@@ -5,7 +5,7 @@ import type { FrameLocator, Page } from '@playwright/test';
 export const SAVE_KEY = 'velvet-sims:e2e';
 const HOST = readFileSync(join(process.cwd(), 'e2e/velvet-sims/host.html'), 'utf-8');
 
-export interface Obj { id: string; type: string; level: number; x: number; y: number; rot: number }
+export interface Obj { id: string; type: string; level: number; x: number; y: number; rot: number; on?: string; z?: number }
 
 /** Opens the game inside the stand-in host page and waits for it to be ready. */
 export async function openGame(page: Page, opts: { fresh?: boolean; freeze?: boolean; script?: boolean; menu?: boolean; seed?: (save: Record<string, unknown>) => void } = {}): Promise<FrameLocator> {

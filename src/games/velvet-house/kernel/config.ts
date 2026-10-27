@@ -91,6 +91,8 @@ export function loadWorld(): World {
       if (typeof s.day === 'number') day = s.day;
       if (typeof s.minutes === 'number') minutes = s.minutes;
       if (Array.isArray(s.objs) && s.objs.length) objs = s.objs as unknown as ObjectInstance[];
+      // A small piece whose table is gone goes back on the floor.
+      for (const o of objs) if (o.on && !objs.some((h) => h.id === o.on)) { delete o.on; delete o.z; }
     }
   } catch { /* start fresh */ }
   const household = createHousehold();

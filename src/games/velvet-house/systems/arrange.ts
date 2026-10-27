@@ -1,4 +1,4 @@
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, type PlacementCheck } from '../state/arrange';
+import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, type PlacementCheck, type Pose } from '../state/arrange';
 import { TYPES, footprint, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
 import { buildWorld } from '../state/agents';
@@ -11,7 +11,9 @@ export function createArrange(g: Game): Partial<Game> {
   let arranging = false;
   let selectedObj: ObjectInstance | null = null;
   let heldObj: ObjectInstance | null = null; // the piece being dragged right now
-  let heldOrig: { x: number; y: number; rot: number } | null = null;
+  let heldOrig: { x: number; y: number; rot: number; on?: string; z?: number } | null = null;
+  // What was on the piece being carried when it was picked up, so putting it back puts those back too.
+  let heldKids: Array<{ o: ObjectInstance; x: number; y: number; rot: number; level: number }> = [];
   let heldGrab: [number, number] = [0, 0]; // where on the piece it was grabbed, so it doesn't jump under the finger
   let dragCandidate: { id: number; obj: ObjectInstance; x: number; y: number } | null = null;
   let wasPaused = false;
@@ -118,12 +120,16 @@ export function createArrange(g: Game): Partial<Game> {
     const o = heldObj ?? selectedObj;
     if (!o) return;
     const orig = { x: o.x, y: o.y, rot: o.rot };
-    if (o === heldObj) { rotateAboutCentre(o); recheck(); return; }
+    const kids = world.objs.filter((k) => k.on === o.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot }));
+    if (o === heldObj) { const prev: Pose = { x: o.x, y: o.y, rot: o.rot }; rotateAboutCentre(o); carryOnTop(world.objs, o, prev); recheck(); return; }
     for (let i = 0; i < 3; i++) {
+      const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
       rotateAboutCentre(o);
+      carryOnTop(world.objs, o, prev);
       if (checkPlacement(world.objs, o, peopleOnFloor()).ok) { commitMove(o, 'Turned'); return; }
     }
     Object.assign(o, orig);
+    for (const k of kids) Object.assign(k.o, { x: k.x, y: k.y, rot: k.rot });
     log(`There's no room to turn the ${nameOf(o)} here.`);
   }
   function recolourHeld(): void {
@@ -135,9 +141,14 @@ export function createArrange(g: Game): Partial<Game> {
   }
   // Put a dragged piece back where it was picked up.
   function cancelHold(): void {
-    if (heldObj && heldOrig) { heldObj.x = heldOrig.x; heldObj.y = heldOrig.y; heldObj.rot = heldOrig.rot; }
+    if (heldObj && heldOrig) {
+      heldObj.x = heldOrig.x; heldObj.y = heldOrig.y; heldObj.rot = heldOrig.rot;
+      if (heldOrig.on) { heldObj.on = heldOrig.on; heldObj.z = heldOrig.z; } else takeOff(heldObj);
+      for (const k of heldKids) Object.assign(k.o, { x: k.x, y: k.y, rot: k.rot, level: k.level });
+    }
     heldObj = null;
     heldOrig = null;
+    heldKids = [];
     dragCandidate = null;
   }
   // Carry the selected piece up or down the stairs to another floor.
@@ -145,7 +156,9 @@ export function createArrange(g: Game): Partial<Game> {
     const o = selectedObj;
     if (!o || !otherFloors(o).includes(level) || (level === ATTIC && !hasAttic())) return;
     const from = o.level;
+    const before: Pose = { x: o.x, y: o.y, rot: o.rot };
     if (!relocate(world.objs, o, level, peopleOnFloor())) { log(`There's no room for the ${nameOf(o)} on the ${LEVEL_NAMES[level].toLowerCase()}.`); return; }
+    carryOnTop(world.objs, o, before);
     selectedObj = null;
     g.setLevel(level);
     selectedObj = o;
@@ -162,7 +175,12 @@ export function createArrange(g: Game): Partial<Game> {
     cancelHold();
     const i = world.objs.indexOf(o);
     if (i < 0) return;
-    world.objs.splice(i, 1);
+    // Whatever was on it is set down on the floor nearby.
+    for (const k of world.objs.filter((q) => q.on === o.id)) {
+      takeOff(k);
+      if (!relocate(world.objs, k, o.level, peopleOnFloor(), [o.x, o.y])) { world.objs.splice(world.objs.indexOf(k), 1); storage.push(k); }
+    }
+    world.objs.splice(world.objs.indexOf(o), 1);
     storage.push(o);
     selectedObj = null;
     relearnLayout(o);
@@ -257,11 +275,18 @@ export function createArrange(g: Game): Partial<Game> {
       if (!heldObj) {
         if (Math.hypot(e.clientX - dragCandidate.x, e.clientY - dragCandidate.y) < DRAG_SLOP) return;
         heldObj = dragCandidate.obj;
-        heldOrig = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot };
+        heldOrig = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot, on: heldObj.on, z: heldObj.z };
+        heldKids = world.objs.filter((k) => k.on === heldObj!.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot, level: k.level }));
         g.s.suppressClick = true;
       }
       const [wx, wy] = worldAt(sx, sy);
+      const prev: Pose = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot };
       centreAt(heldObj, wx - heldGrab[0], wy - heldGrab[1]);
+      // A small piece over a table or shelf sits on it; anything on a piece being carried goes along.
+      if (TYPES[heldObj.type].small) {
+        const host = surfaceUnder(world.objs, heldObj, wx, wy);
+        if (host) putOn(heldObj, host); else takeOff(heldObj);
+      } else carryOnTop(world.objs, heldObj, prev);
       recheck();
     } else if (!heldObj && e.pointerType === 'mouse') {
       const o = movableAt(sx, sy);

@@ -713,6 +713,41 @@ export function createHouseArt(ctx0, opts = {}) {
         [[0.07, 0.07], [0.33, 0.07], [0.07, 0.33], [0.33, 0.33]].forEach(([x, y]) => T.box(x, y, 0, 0.05, 0.05, 0.46, shade(c, -0.18)));
         T.box(0.04, 0.04, 0.46, 0.37, 0.37, 0.07, c);
       })] },
+    flowervase: {
+      parts: (o) => [F(0, 0, 0.3, 0.3, (T, ob, t) => {
+        const c = cl(o);
+        T.box(0.08, 0.08, 0, 0.14, 0.14, 0.2, c); T.box(0.1, 0.1, 0.2, 0.1, 0.1, 0.08, shade(c, -0.1));
+        const [x, y] = T.P(0.15, 0.15, 0.3);
+        [[-10, -22, '#E8798E'], [0, -30, '#F2C14E'], [10, -23, '#F2EEE8'], [-4, -16, '#B5476E'], [5, -14, '#E8798E']].forEach(([dx, dy, col], k) => {
+          const sw = Math.sin(t * 0.9 + k) * 0.8;
+          limb(x, y, x + dx * 0.8 + sw, y + dy * 0.8 + 3, '#4F9460', 1); circle(x + dx + sw, y + dy, 3.4, col); circle(x + dx + sw, y + dy, 1.2, '#F2C14E');
+        });
+      })] },
+    succulents: {
+      parts: (o) => [F(0, 0, 0.35, 0.35, (T) => {
+        const c = cl(o);
+        [[0.05, 0.12, 0.17, 0.16], [0.2, 0.05, 0.13, 0.12], [0.18, 0.2, 0.15, 0.14]].forEach(([x, y, s, h], k) => {
+          T.box(x, y, 0, s, s, h, k === 1 ? shade(c, 0.12) : c);
+          const [px, py] = T.P(x + s / 2, y + s / 2, h);
+          for (let j = 0; j < 6; j++) { const a = j / 6 * Math.PI * 2; ell(px + Math.cos(a) * 3.4, py - 1 + Math.sin(a) * 1.6, 2.6, 4, j % 2 ? '#6FA079' : '#8DBB8F', null, a); }
+          ell(px, py - 2, 2.2, 3, '#A9D2A2');
+        });
+      })] },
+    desklamp: {
+      parts: (o) => [F(0, 0, 0.3, 0.3, (T, ob) => {
+        const c = cl(o), on = isLit(ob.id);
+        T.box(0.06, 0.06, 0, 0.18, 0.18, 0.04, c);
+        T.line([0.15, 0.15, 0.04], [0.15, 0.15, 0.34], c, 2.2); T.line([0.15, 0.15, 0.34], [0.2, 0.2, 0.5], c, 2);
+        T.box(0.14, 0.14, 0.44, 0.14, 0.14, 0.1, on ? 'rgba(255,226,160,.98)' : shade(c, 0.15));
+      })] },
+    photoframes: {
+      parts: (o) => [F(0, 0, 0.4, 0.15, (T) => {
+        const c = cl(o);
+        [[0.02, 0.2, 0.28, '#9EC1C9'], [0.17, 0.2, 0.22, '#E8B39A'], [0.3, 0.2, 0.16, '#B7C79B']].forEach(([x, h, w, pic]) => {
+          T.box(x, 0.04, 0, w * 0.45, 0.06, h + 0.06, c);
+          T.poly([[x + 0.012, 0.1 + 0.001, 0.03], [x + w * 0.45 - 0.012, 0.1 + 0.001, 0.03], [x + w * 0.45 - 0.012, 0.1 + 0.001, h + 0.045], [x + 0.012, 0.1 + 0.001, h + 0.045]], pic);
+        });
+      })] },
     umbrella: {
       parts: (o) => [F(0, 0, 0.4, 0.4, (T) => {
         const c = cl(o);
@@ -852,12 +887,14 @@ export function createHouseArt(ctx0, opts = {}) {
   function fp(o) { const t = T_OF(o); return o.rot % 2 ? [t.D, t.W] : [t.W, t.D]; }
   function xrect(o, r) { const a = xf(o, r[0], r[1]), b = xf(o, r[2], r[3]); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]; }
   function makeT(o) {
+    // A piece sitting on a table or shelf is drawn that much higher.
+    const up = o.z || 0;
     return {
       o, W: (lx, ly) => xf(o, lx, ly),
-      P: (lx, ly, lz) => { const [x, y] = xf(o, lx, ly); return iso(x, y, lz); },
-      box: (lx, ly, lz, w, d, h, c) => { const r = xrect(o, [lx, ly, lx + w, ly + d]); box(r[0], r[1], lz, r[2] - r[0], r[3] - r[1], h, c); },
-      poly: (pts, fill, stroke, lw) => poly(pts.map(p => { const [x, y] = xf(o, p[0], p[1]); return [x, y, p[2]]; }), fill, stroke, lw),
-      line: (a, b, c, w) => { const [ax, ay] = xf(o, a[0], a[1]), [bx, by] = xf(o, b[0], b[1]); line3([ax, ay, a[2]], [bx, by, b[2]], c, w); }
+      P: (lx, ly, lz) => { const [x, y] = xf(o, lx, ly); return iso(x, y, lz + up); },
+      box: (lx, ly, lz, w, d, h, c) => { const r = xrect(o, [lx, ly, lx + w, ly + d]); box(r[0], r[1], lz + up, r[2] - r[0], r[3] - r[1], h, c); },
+      poly: (pts, fill, stroke, lw) => poly(pts.map(p => { const [x, y] = xf(o, p[0], p[1]); return [x, y, p[2] + up]; }), fill, stroke, lw),
+      line: (a, b, c, w) => { const [ax, ay] = xf(o, a[0], a[1]), [bx, by] = xf(o, b[0], b[1]); line3([ax, ay, a[2] + up], [bx, by, b[2] + up], c, w); }
     };
   }
   const facing = (d) => { const [a, b] = VD(d[0], d[1]); return { front: a + b > 0.01, flip: a - b >= 0 ? 1 : -1 }; };
@@ -1146,7 +1183,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function activeLights(level) {
     const out = [];
     WALL_LIGHTS.forEach((L, i) => { if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const manual = wallLightOverrides.get(i); const target = manual === true ? 1 : manual === false ? 0 : wantLight(level, roomFor(L.room), L.night, L.amb); const s = ease('w' + i, target); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r, s, col: L.col, vis: BACK[VR].includes(L.p) }); });
-    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2]], pool: [x, y, 0], r: lt.r, s, col: lt.col, vis: true }); });
+    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2] + (o.z || 0)], pool: [x, y, 0], r: lt.r, s, col: lt.col, vis: true }); });
     return out;
   }
   function drawWallLights(level) {
@@ -1274,7 +1311,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (playing) { const a = iso(6.0, 0.01, 1.9), b = iso(8.0, 0.01, 1.9), c = iso(8.0, 0.01, 0.8), d = iso(6.0, 0.01, 0.8); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(190,210,255,.07)'; ctx.beginPath(); ctx.moveTo(px - 5, py + 1); ctx.lineTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); ctx.restore(); }
   }
 
-  const BOX_LABEL = { tablelamp: 'LAMP', candelabra: 'CANDLES', blanketladder: 'LADDER', plantstand: 'PLANT', woodstool: 'STOOL', candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
+  const BOX_LABEL = { flowervase: 'VASE', succulents: 'PLANTS', desklamp: 'LAMP', photoframes: 'PHOTOS', tablelamp: 'LAMP', candelabra: 'CANDLES', blanketladder: 'LADDER', plantstand: 'PLANT', woodstool: 'STOOL', candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
 
   // Just-placed furniture lands with a squash and a little bounce.
   // Three ways a piece arrives: it lands with a squash (set down), pops out of its box (revealed) or drops from above (delivered).
@@ -1325,7 +1362,7 @@ export function createHouseArt(ctx0, opts = {}) {
     parts.forEach(p => {
       if (p.decal) return;
       const r = p.box ? [p.box[0], p.box[1], p.box[0] + p.box[3], p.box[1] + p.box[4]] : p.rect, w = xrect(o, r);
-      let key = vs((w[0] + w[2]) / 2, (w[1] + w[3]) / 2) + (p.onTop ? 0.002 : 0) + (p.box ? p.box[2] * 0.001 : 0);
+      let key = vs((w[0] + w[2]) / 2, (w[1] + w[3]) / 2) + (p.onTop ? 0.002 : 0) + (p.box ? p.box[2] * 0.001 : 0) + (o.on ? 0.4 + o.z * 0.01 : 0);
       let rect = w;
       if (p.cover) { key = maxSit + 0.05; rect = xrect(o, [0, 0, T_OF(o).W, T_OF(o).D]); }
       const draw = p.box ? () => T.box(p.box[0], p.box[1], p.box[2], p.box[3], p.box[4], p.box[5], typeof p.c === 'function' ? p.c(o) : p.c) : () => { if (gOn) G.billboard(iso((w[0] + w[2]) / 2, (w[1] + w[3]) / 2, 0)[1], ZH, MATERIAL.matte); p.fn(T, o, t); if (gOn) G.clearBase(); };
@@ -2258,7 +2295,7 @@ export function createHouseArt(ctx0, opts = {}) {
     });
     OBJS.forEach(o => {
       const lt = T_OF(o).light; if (!lt || o.level !== level) return;
-      const [x, y] = xf(o, lt.at[0], lt.at[1]), q = iso(x, y, lt.at[2]), d = Math.hypot(sx - q[0], sy - q[1]);
+      const [x, y] = xf(o, lt.at[0], lt.at[1]), q = iso(x, y, lt.at[2] + (o.z || 0)), d = Math.hypot(sx - q[0], sy - q[1]);
       if (d < bestDist) { bestDist = d; best = { kind: 'object', id: o.id }; }
     });
     if (!best) return null;
@@ -2292,8 +2329,8 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // The outline of an object on screen: its footprint and its top, wrapped.
   function objHull(o) {
-    const [fw, fd] = fp(o), h = T_OF(o).h || 1, pts = [];
-    [[o.x, o.y], [o.x + fw, o.y], [o.x + fw, o.y + fd], [o.x, o.y + fd]].forEach(([x, y]) => { pts.push(iso(x, y, 0)); pts.push(iso(x, y, h)); });
+    const [fw, fd] = fp(o), up = o.z || 0, h = (T_OF(o).h || 1) + up, pts = [];
+    [[o.x, o.y], [o.x + fw, o.y], [o.x + fw, o.y + fd], [o.x, o.y + fd]].forEach(([x, y]) => { pts.push(iso(x, y, up)); pts.push(iso(x, y, h)); });
     pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
     const cross = (q, a, b) => (a[0] - q[0]) * (b[1] - q[1]) - (a[1] - q[1]) * (b[0] - q[0]);
     const lower = [], upper = [];
@@ -2350,7 +2387,7 @@ export function createHouseArt(ctx0, opts = {}) {
       const direct = inPoly(px, py, hull);
       if (!direct && !slop.some(([dx, dy]) => inPoly(px + dx, py + dy, hull))) return;
       const [fw, fd] = fp(o);
-      const score = (TYPES[o.type].rug ? 0 : 2 + (direct ? 1 : 0)) * 1000 + vs(o.x + fw / 2, o.y + fd / 2) * 10 + (direct ? 1 : 0);
+      const score = (TYPES[o.type].rug ? 0 : 2 + (direct ? 1 : 0)) * 1000 + vs(o.x + fw / 2, o.y + fd / 2) * 10 + (direct ? 1 : 0) + (o.on ? 3000 : 0);
       if (score > bestScore) { bestScore = score; best = o; }
     });
     return best;
