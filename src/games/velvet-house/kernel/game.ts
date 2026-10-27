@@ -57,7 +57,7 @@ export interface GameState {
   /** The player's house in town, for the drive-up that opens a new game (null: a plain starter house). */
   plot: ArrivalPlot | null;
   /** How the companion jokes and talks (what the story's word banks are keyed by), and what they are to the player. */
-  voice: { humor: string; communication: string; relationship: string };
+  voice: { humor: string; communication: string; relationship: string; gender: string };
   /** Skipping ahead through the work day ("Skip to 5 PM"). */
   skipping: boolean;
   scriptMode: Mode | null;
@@ -222,7 +222,7 @@ export interface Game {
 /** How the companion talks, as saved; defaults until the host has said. */
 function voiceFrom(v: unknown): GameState['voice'] {
   const o = (v && typeof v === 'object' ? v : {}) as Partial<GameState['voice']>;
-  return { humor: typeof o.humor === 'string' ? o.humor : 'warm', communication: typeof o.communication === 'string' ? o.communication : 'diplomatic', relationship: typeof o.relationship === 'string' ? o.relationship : 'romantic' };
+  return { humor: typeof o.humor === 'string' ? o.humor : 'warm', communication: typeof o.communication === 'string' ? o.communication : 'diplomatic', relationship: typeof o.relationship === 'string' ? o.relationship : 'romantic', gender: typeof o.gender === 'string' ? o.gender : 'female' };
 }
 
 /** Loads the save and builds the data and the page. The modules are added on top by main.ts. */

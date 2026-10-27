@@ -6,12 +6,12 @@ import { NEW_RUNTIME, type FlagValue, type LineBook, type ScriptDef, type Script
 /** A world that only records what it is asked, and lets a test decide when things finish. */
 function fakeHost(preset: 'warm' | 'calm' | 'bubbly' | 'dry' = 'warm') {
   const calls: string[] = [];
-  const state = { walking: new Set<string>(), acting: new Set<string>(), sayOpen: false, choiceIdx: null as number | null, cardOpen: false, introOpen: false, mode: null as string | null, day: 1, minutes: 540, ready: { profile: false, plot: false }, world: {} as Record<string, { type: string; at?: string; lightOn?: boolean }> };
+  const state = { walking: new Set<string>(), acting: new Set<string>(), sayOpen: false, choiceIdx: null as number | null, cardOpen: false, introOpen: false, mode: null as string | null, day: 1, minutes: 540, ready: { profile: false, plot: false }, humor: 'dry', gender: 'female', world: {} as Record<string, { type: string; at?: string; lightOn?: boolean }> };
   const flags: Record<string, FlagValue> = {};
   const host: ScriptHost = {
     flags,
     clock: () => ({ day: state.day, minutes: state.minutes }),
-    names: () => ({ player: 'Jordan', partner: 'Maya', town: 'Honeysuckle Hollow', preset }),
+    names: () => ({ player: 'Jordan', partner: 'Maya', town: 'Honeysuckle Hollow', preset, humor: state.humor, gender: state.gender }),
     setMode: (m) => { state.mode = m; calls.push(`mode:${m}`); },
     spawn: (n, at, c) => calls.push(`spawn:${n}@${JSON.stringify(at)}${c ? ':' + c : ''}`),
     despawn: (n) => calls.push(`despawn:${n}`),
@@ -52,6 +52,10 @@ const BOOK: LineBook = {
     voiced: { warm: 'warm line', calm: 'calm line', bubbly: 'bubbly line', dry: 'dry line' },
   },
   pools: { greet: ['a', 'b', 'c'] },
+  banks: {
+    humor: { dry: { joke: { m: 'his dry joke', f: 'her dry joke' } }, warm: { joke: 'a warm joke for anyone' } },
+    communication: { direct: { ask: 'do it' } },
+  },
 };
 
 const make = (defs: ScriptDef[], preset?: 'warm' | 'calm' | 'bubbly' | 'dry', rt?: ScriptRuntime) => {
@@ -328,6 +332,23 @@ describe('content checks', () => {
   it('wants every companion voice', () => {
     const book: LineBook = { lines: { half: { warm: 'x' } }, pools: {} };
     expect(validateContent([base('s', [{ do: 'say', who: 'maya', line: 'half' }])], book, []).join()).toContain('no calm version');
+  });
+});
+
+describe('bank lines by style and gender', () => {
+  it('picks the feminine or masculine version of a style\'s line, and a plain line for anyone', () => {
+    const t = make([base('s', [{ do: 'say', who: 'maya', line: { bank: 'humor', slot: 'joke' } }], { mode: 'beat' })]);
+    expect(t.engine.text({ bank: 'humor', slot: 'joke' })).toBe('her dry joke');
+    t.state.gender = 'male';
+    expect(t.engine.text({ bank: 'humor', slot: 'joke' })).toBe('his dry joke');
+    t.state.humor = 'warm';
+    expect(t.engine.text({ bank: 'humor', slot: 'joke' })).toBe('a warm joke for anyone');
+    expect(t.engine.text({ bank: 'communication', slot: 'ask' })).toBe('do it');
+  });
+
+  it('the validator wants both versions of a gendered line', () => {
+    const book: LineBook = { lines: {}, pools: {}, banks: { humor: { dry: { joke: { m: 'only his' } as never } }, communication: {} } };
+    expect(validateContent([base('s', [{ do: 'say', who: 'maya', line: { bank: 'humor', slot: 'joke' } }])], book, []).join()).toContain('needs both a masculine and a feminine line');
   });
 });
 

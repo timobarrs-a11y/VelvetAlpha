@@ -67,6 +67,8 @@ export function createHostBridge(g: Game): Partial<Game> {
       g.simName = people[0].name;
       g.partnerName = people[1].name;
       if (d.companion?.pronoun) companionCfg.pronoun = d.companion.pronoun;
+      // The voice the story's lines are written in: masculine or feminine, from the companion's gender (or pronoun).
+      g.s.voice.gender = d.companion?.gender === 'male' || d.companion?.gender === 'female' ? d.companion.gender : d.companion?.pronoun === 'he' ? 'male' : d.companion?.pronoun === 'she' ? 'female' : 'they';
       if (d.companion?.humor) g.s.voice.humor = humorKey(d.companion.humor);
       if (d.companion?.communication) g.s.voice.communication = commKey(d.companion.communication);
       if (d.companion?.relationship) { g.s.voice.relationship = d.companion.relationship; if (d.companion.relationship === 'friend') roommateBeds(); }

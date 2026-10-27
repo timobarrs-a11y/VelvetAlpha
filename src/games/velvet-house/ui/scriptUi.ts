@@ -43,17 +43,30 @@ export function createScriptUi(stage: Element): ScriptUi {
   const setMin = (min: boolean) => { if (min) cardEl.dataset.min = '1'; else delete cardEl.dataset.min; cardMin.setAttribute('aria-expanded', String(!min)); };
   cardMin.addEventListener('click', () => setMin(!cardEl.dataset.min));
 
-  // A line is typed out; a tap finishes it, and the next tap goes on.
-  let full = '', shown = 0, typing: ReturnType<typeof setInterval> | null = null, lineDone = true;
+  // A line is typed out; a tap finishes it, and the next tap goes on. `**words**` in a line are shown bold (the town's
+  // name in green), typed out like the rest.
+  type Seg = { text: string; bold: boolean };
+  const segments = (text: string): Seg[] => text.split(/\*\*/).map((t, i) => ({ text: t, bold: i % 2 === 1 })).filter((p) => p.text);
+  const renderShown = (segs: Seg[], n: number): void => {
+    textEl.textContent = '';
+    let left = n;
+    for (const p of segs) {
+      if (left <= 0) break;
+      const part = p.text.slice(0, left); left -= part.length;
+      if (p.bold) { const b = document.createElement('b'); b.textContent = part; textEl.appendChild(b); } else textEl.appendChild(document.createTextNode(part));
+    }
+  };
+  let full = '', segs: Seg[] = [], total = 0, shown = 0, typing: ReturnType<typeof setInterval> | null = null, lineDone = true;
   const stopTyping = () => { if (typing) { clearInterval(typing); typing = null; } };
   speech.addEventListener('click', () => {
     // A this-or-that is answered with its buttons, not by tapping the box.
     if (!choices.hidden) return;
-    if (typing) { stopTyping(); textEl.textContent = full; shown = full.length; return; }
+    if (typing) { stopTyping(); renderShown(segs, total); shown = total; return; }
     lineDone = true;
     speech.hidden = true;
   });
 
+  void full;
   let pick: number | null = null;
   let cardClosed = true;
   let cardPress: () => void = () => {};
@@ -69,14 +82,14 @@ export function createScriptUi(stage: Element): ScriptUi {
     },
     say(name, text) {
       nameEl.textContent = name;
-      full = text; shown = 0; lineDone = false;
+      full = text; segs = segments(text); total = segs.reduce((n, p) => n + p.text.length, 0); shown = 0; lineDone = false;
       textEl.textContent = '';
       speech.hidden = false;
       stopTyping();
       typing = setInterval(() => {
-        shown = Math.min(full.length, shown + 2);
-        textEl.textContent = full.slice(0, shown);
-        if (shown >= full.length) stopTyping();
+        shown = Math.min(total, shown + 2);
+        renderShown(segs, shown);
+        if (shown >= total) stopTyping();
       }, 28);
     },
     sayDone: () => lineDone,
@@ -85,8 +98,8 @@ export function createScriptUi(stage: Element): ScriptUi {
     choose(labels) {
       pick = null;
       stopTyping();
-      textEl.textContent = full;
-      shown = full.length;
+      renderShown(segs, total);
+      shown = total;
       choices.innerHTML = labels.map((l, i) => `<button type="button" data-pick="${i}">${esc(l)}</button>`).join('');
       choices.hidden = false;
       speech.dataset.choosing = '1';

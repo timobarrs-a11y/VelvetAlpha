@@ -49,7 +49,7 @@ export interface SaveContext {
   style: Record<string, number>;
   companion: Record<string, unknown> | null;
   /** How the companion talks (humor, communication, relationship), so the story keeps its voice without the host. */
-  voice?: { humor: string; communication: string; relationship: string };
+  voice?: { humor: string; communication: string; relationship: string; gender: string };
   wallMode: string;
   /** From the art: house looks, per-room looks, wall decor and the yard. */
   looks: {

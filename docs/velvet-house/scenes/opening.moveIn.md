@@ -154,9 +154,9 @@ the tap again. The Set it down button snaps the piece when it is close and close
 ## 8. Optional interactions and permitted variations
 
 Gender and style variants of every companion line (4 × 4 × 2 for humor slots, 4 × 2 for communication slots; a
-`they` companion falls back to the neutral wording the banks already have). Camera pinch and drag during guided
-beats. The friend companion gets no separate lines (decision 8); `dez.roommates` is dropped unless the director
-wants it back (§13 q3). One plant box stays by the door (§13).
+`they` companion gets the masculine wording unless a slot has a neutral one). Camera pinch and drag during guided
+beats. The friend companion gets Dez's roommates line and no separate companion lines (decision 8). One plant box
+stays by the door (§13).
 
 ## 9. Completion and control handoff
 
@@ -233,10 +233,13 @@ Decided 2026-10-27 (second round):
   depends on the camera rotation: confirm with a screenshot during implementation and adjust.
 - Chapter 7 keeps **one** plant box by the door, not two.
 
+Taken while building (easy to reverse): Dez's roommates line for a friend companion stays (it is Dez's line, not a
+companion variant, and the director said to keep his script); companion lines carry masculine and feminine versions
+and no relationship versions.
+
 Still open (working assumption in brackets):
 
-1. Keep the roommates line for friend companions, or drop it with the other relationship variants? [drop]
-2. Residents switching lamps on and off themselves: build with this scene or afterwards? [afterwards]
+1. Residents switching lamps on and off themselves: build with this scene or afterwards? [afterwards]
 
 ## 14. Verified
 

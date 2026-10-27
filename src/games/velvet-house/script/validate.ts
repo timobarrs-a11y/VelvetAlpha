@@ -47,15 +47,28 @@ export function validateContent(defs: ScriptDef[], book: LineBook, npcs: string[
           if (entry && typeof entry !== 'string') for (const p of PRESETS) if (!entry[p]) errors.push(`${d.id}: line "${ref}" has no ${p} version`);
         } else if ('pool' in ref) {
           if (!ref.pool.includes('$') && !(book.pools[ref.pool]?.length)) errors.push(`${d.id}: pool "${ref.pool}" is empty or missing`);
-        } else if ('bank' in ref) {
-          const styles = Object.entries(book.banks?.[ref.bank] ?? {});
-          if (!styles.length) errors.push(`${d.id}: there is no ${ref.bank} bank`);
-          for (const [style, slots] of styles) if (!slots[ref.slot]) errors.push(`${d.id}: ${ref.bank} bank "${style}" has no "${ref.slot}" line`);
-        } else for (const p of PRESETS) if (!ref.byPreset[p]) errors.push(`${d.id}: a line has no ${p} version`);
+        } else if ('bank' in ref) checkBank(d, ref, book, errors);
+        else for (const p of PRESETS) if (!ref.byPreset[p]) errors.push(`${d.id}: a line has no ${p} version`);
+      }
+      if (s.do === 'card' && s.misplaced) {
+        const ref = s.misplaced.line;
+        if (typeof ref === 'string') { if (!(ref in book.lines)) errors.push(`${d.id}: misplaced line "${ref}" is not in the line book`); }
+        else if ('bank' in ref) checkBank(d, ref, book, errors);
       }
     }
   }
   return errors;
+}
+
+/** A bank slot has to exist for every style, and a gendered line needs both its versions. */
+function checkBank(d: ScriptDef, ref: { bank: 'humor' | 'communication'; slot: string }, book: LineBook, errors: string[]): void {
+  const styles = Object.entries(book.banks?.[ref.bank] ?? {});
+  if (!styles.length) errors.push(`${d.id}: there is no ${ref.bank} bank`);
+  for (const [style, slots] of styles) {
+    const line = slots[ref.slot];
+    if (!line) errors.push(`${d.id}: ${ref.bank} bank "${style}" has no "${ref.slot}" line`);
+    else if (typeof line !== 'string' && (!line.m || !line.f)) errors.push(`${d.id}: ${ref.bank} bank "${style}" "${ref.slot}" needs both a masculine and a feminine line`);
+  }
 }
 
 /** Rules that depend on the order of steps in a block: the button rule and the nobody-talks-while-walking rule. */

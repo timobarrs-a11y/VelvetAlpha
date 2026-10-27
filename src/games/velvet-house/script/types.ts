@@ -15,8 +15,10 @@ export type PlaceRef = string | { level: number; x: number; y: number };
 /** What a line says: a key into the line book, a variant per companion voice, or the next from a pool that does not repeat. */
 export type LineRef = string | { byPreset: Record<Preset, string> } | { pool: string } | { bank: 'humor' | 'communication'; slot: string };
 
+/** A bank line: the same for everyone, or a masculine and a feminine version (`n`: for a companion who is neither). */
+export type BankLine = string | { m: string; f: string; n?: string };
 /** Lines by how the companion talks: bank (humor or communication) → style → slot → line. */
-export type LineBank = Record<'humor' | 'communication', Record<string, Record<string, string>>>;
+export type LineBank = Record<'humor' | 'communication', Record<string, Record<string, BankLine>>>;
 
 /** Things on screen a script can spotlight or allow. */
 export type UiTarget = `tab:${string}` | 'floorbar' | 'camera' | 'wallet' | 'bill' | 'needs' | `obj:${string}` | `objType:${string}`;
@@ -63,10 +65,12 @@ export type Step =
   | { do: 'face'; who: Actor; toward: Actor | PlaceRef }
   | { do: 'act'; who: Actor; act: string; at?: PlaceRef; wait?: boolean }
   | { do: 'emote'; who: Actor; emote: 'alert' | 'laugh' | 'wave' | 'heart' | 'think' }
-  | { do: 'camera'; focus: Actor | PlaceRef | 'wide'; zoom?: number; level?: number }
+  /** `focus` as a list frames all of them together (the partner and the lamp). */
+  | { do: 'camera'; focus: Actor | PlaceRef | 'wide' | Array<Actor | PlaceRef>; zoom?: number; level?: number }
   | { do: 'say'; who: Actor; line: LineRef }
   | { do: 'choice'; options: ChoiceOption[] }
-  | { do: 'card'; title: string; body: string; spotlight?: UiTarget; button?: string }
+  /** `misplaced`: what the partner says when the button is pressed but the piece is not where the wait after the card asks. */
+  | { do: 'card'; title: string; body: string; spotlight?: UiTarget; button?: string; misplaced?: { who: Actor; line: LineRef } }
   | { do: 'highlight'; target: UiTarget | null }
   | { do: 'outline'; objType: string; at: PlaceRef; rot?: number; color?: 'partner' | 'player' } 
   | { do: 'set'; flag: string; value: FlagValue }
@@ -131,7 +135,7 @@ export interface LineBook {
 export interface ScriptHost {
   flags: Record<string, FlagValue>;
   clock(): { day: number; minutes: number };
-  names(): { player: string; partner: string; town: string; preset: Preset; humor?: string; communication?: string; relationship?: string };
+  names(): { player: string; partner: string; town: string; preset: Preset; humor?: string; communication?: string; relationship?: string; gender?: string };
   setMode(mode: Mode | null, allow: UiTarget[]): void;
   spawn(npc: string, at: PlaceRef, carrying?: string): void;
   despawn(npc: string): void;
@@ -144,7 +148,7 @@ export interface ScriptHost {
   act(who: Actor, act: string, at?: PlaceRef): void;
   actDone(who: Actor): boolean;
   emote(who: Actor, emote: string): void;
-  camera(focus: Actor | PlaceRef | 'wide', zoom?: number, level?: number): void;
+  camera(focus: Actor | PlaceRef | 'wide' | Array<Actor | PlaceRef>, zoom?: number, level?: number): void;
   /** Shows a line. `blocking`: wait for the player to tap through it. Returns how long to hold it when not blocking (seconds). */
   say(who: Actor, text: string, blocking: boolean): number;
   /** True once the player has dismissed the line shown by `say`. */
@@ -152,7 +156,7 @@ export interface ScriptHost {
   showChoice(labels: string[]): void;
   /** The index chosen, or null while waiting. */
   choiceMade(): number | null;
-  showCard(title: string, body: string, spotlight?: UiTarget, button?: string): void;
+  showCard(title: string, body: string, spotlight?: UiTarget, button?: string, misplaced?: { who: Actor; text: string }): void;
   cardDone(): boolean;
   highlight(target: UiTarget | null): void;
   outline(spec: { objType: string; at: PlaceRef; rot?: number; color?: 'partner' | 'player' } | null): void;

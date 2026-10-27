@@ -10,21 +10,21 @@ export const LINE_BOOK: LineBook = {
   banks: BANKS,
   lines: {
     // -- The opening ------------------------------------------------------------------------------------------------
-    'dez.welcome': "Come on in, {player} and {partner}! Welcome to your new home!",
+    // `**...**` is shown bold, in green: the town's name stands out.
+    'dez.welcome': "Come on in guys! Welcome to **{town}**!",
     'dez.brushOff': "Ha! Roads are more of a suggestion 'round here. Anywho! We're mighty glad to have the two of ya!",
     'dez.intro.2': "It's a small town, but it's growing every day! Soon as I leave here I got another delivery! That reminds me, I forgot to mention I'm the mayor of this little town, and also the mover! Not that ya asked, but I run the food delivery service too.",
     'dez.intro.3': "Now, I know what y'all are thinkin, but me and my family have lived here for ages, and we've started a few businesses 'round town, so don't hesitate to holler if ya need help!",
     // Only said to a friend who has moved in: two people splitting a place.
     'dez.roommates': "Now I hear y'all are roommates! Best kind of arrangement. Nobody argues over who sleeps on which side. Just who forgot to buy toilet paper.",
-    'dez.intro.4': "I've got some boxes in the truck with your names on 'em, so I'm gonna start bringing them in. Time to get 'er done!",
+    'dez.names': "Now let's see here... your names were {player} and {partner}, right?",
+    'dez.firstBox': "Alright, here's your first box. I'll go grab some more.",
 
     // -- Dez, in general --------------------------------------------------------------------------------------------
     'dez.getErDone': "Get 'er done!",
 
     // -- Chapter 7: the rest of the truck ----------------------------------------------------------------------------
-    'dez.ch7.lamp': "Got your lamp here. Fragile-ish. Y'all know the drill by now.",
-    'dez.ch7.stack': "I'll stack the rest of 'em right by the door. Holler if you need me. Well, don't holler, I'll be in the truck.",
-    'maya.ch7.unpacked': "I did one! Don't move it. …You can move it. But don't.",
+    'dez.ch7.noLabel': "This one doesn't have a label!",
 
     // -- Chapter 8: Dez's card -----------------------------------------------------------------------------------------
     'dez.ch8.card': "Oh! 'Fore I forget. That there's how you reach me. Anything y'all want, you order it, and I'll bring it right on over.",

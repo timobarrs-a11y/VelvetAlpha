@@ -333,7 +333,7 @@ export class ScriptEngine {
         return block({ k: 'choice', options: s.options });
       }
       case 'card':
-        h.showCard(s.title, s.body, s.spotlight, s.button);
+        h.showCard(s.title, s.body, s.spotlight, s.button, s.misplaced ? { who: s.misplaced.who, text: this.text(s.misplaced.line) } : undefined);
         return s.button ? block({ k: 'card' }) : false;
       case 'intro':
         if (!h.intro) return false;
@@ -433,7 +433,7 @@ export class ScriptEngine {
 
   /** The words of a line, for whoever is playing: the right voice for the partner, names filled in. */
   text(ref: LineRef): string {
-    const { player, partner, town, preset, humor, communication, relationship } = this.host.names();
+    const { player, partner, town, preset, humor, communication, relationship, gender } = this.host.names();
     let raw: string;
     if (typeof ref === 'string') {
       // A friend who moves in gets their own version of a line where there is one ("line.friend").
@@ -444,7 +444,9 @@ export class ScriptEngine {
       // The companion's own style, then the plainest style in the bank, so a missing slot never goes silent.
       const styles = this.book.banks?.[ref.bank];
       const mine = ref.bank === 'humor' ? humor : communication;
-      raw = (mine && styles?.[mine]?.[ref.slot]) ?? Object.values(styles ?? {}).find((s) => s[ref.slot])?.[ref.slot] ?? ref.slot;
+      const line = (mine && styles?.[mine]?.[ref.slot]) ?? Object.values(styles ?? {}).find((s) => s[ref.slot])?.[ref.slot];
+      // In the companion's own voice: masculine, feminine, or the neutral version when there is one.
+      raw = line === undefined ? ref.slot : typeof line === 'string' ? line : gender === 'female' ? line.f : gender === 'male' ? line.m : line.n ?? line.m;
     }
     else raw = this.fromPool(ref.pool);
     return raw.replace(/\{player\}/g, player).replace(/\{partner\}/g, partner).replace(/\{town\}/g, town);

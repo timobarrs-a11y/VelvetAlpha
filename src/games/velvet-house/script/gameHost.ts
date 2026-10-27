@@ -54,10 +54,12 @@ export function createScripts(g: Game): Partial<Game> {
   let spot: UiTarget[] = [];
 
   let arrival: Arrival | null = null;
+  /** What the partner says if Set it down is pressed with the piece somewhere else (from the card step). */
+  let misplacedLine: { who: string; text: string } | null = null;
   const host: ScriptHost = {
     flags: story,
     clock: () => ({ day: world.day, minutes: world.minutes }),
-    names: () => ({ player: g.simName, partner: g.partnerName, town: g.townName, preset: g.companionCfg.preset, humor: g.s.voice.humor, communication: g.s.voice.communication, relationship: g.s.voice.relationship }),
+    names: () => ({ player: g.simName, partner: g.partnerName, town: g.townName, preset: g.companionCfg.preset, humor: g.s.voice.humor, communication: g.s.voice.communication, relationship: g.s.voice.relationship, gender: g.s.voice.gender }),
 
     setMode(mode, allow) {
       g.s.scriptMode = mode;
@@ -117,6 +119,18 @@ export function createScripts(g: Game): Partial<Game> {
     camera(focus, zoom, level) {
       if (level !== undefined) g.setLevel(level, true);
       if (focus === 'wide') { camFocus = null; g.resetCamera(); return; }
+      // Several things at once (the partner and the lamp): frame them all, as close as fits.
+      if (Array.isArray(focus)) {
+        camFocus = null;
+        const pts: Array<[number, number]> = [];
+        for (const f of focus) {
+          const a = typeof f === 'string' ? actor(f) : undefined;
+          const s = a ? { x: a.x, y: a.y, level: a.level } : resolve(f);
+          if (s && s.level === view.level) pts.push(art.project(s.x, s.y, 0.7));
+        }
+        if (pts.length) g.frameView(pts, zoom ?? 1.8, 0.6);
+        return;
+      }
       const who = typeof focus === 'string' && actor(focus) ? focus : null;
       if (who) { camFocus = { who, zoom: zoom ?? 1.8 }; return; }
       const s = resolve(focus);
@@ -132,8 +146,9 @@ export function createScripts(g: Game): Partial<Game> {
     sayDone: () => ui.sayDone(),
     showChoice: (labels) => ui.choose(labels),
     choiceMade: () => ui.choiceMade(),
-    showCard(title, body, spotlight, button) {
+    showCard(title, body, spotlight, button, misplaced) {
       ui.card(title, body, button);
+      misplacedLine = misplaced ?? null;
       spot = spotlight && !spotlight.startsWith('obj') ? [spotlight] : [];
       ui.spotlight([...spot, ...(g.s.scriptAllow ?? []).filter((a) => !a.startsWith('obj'))]);
       if (spotlight?.startsWith('obj:')) art.spotlight([spotlight.slice(4)]);
@@ -242,8 +257,11 @@ export function createScripts(g: Game): Partial<Game> {
     g.snapSelectedToOutline();
     const w = engine.pendingWait();
     const placed = !w || engine.eval(w, 0);
-    if (placed) g.drawer.close();
-    else { ui.reopenCard(); g.scriptEmit({ type: 'lesson.misplaced' }); }
+    if (placed) { g.drawer.close(); return; }
+    ui.reopenCard();
+    // The partner says, in her own way, that this is not the spot: a bubble, so the piece stays in hand.
+    if (misplacedLine) host.say(misplacedLine.who, misplacedLine.text, false);
+    g.scriptEmit({ type: 'lesson.misplaced' });
   });
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of

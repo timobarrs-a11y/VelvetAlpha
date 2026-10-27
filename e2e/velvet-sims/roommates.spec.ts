@@ -30,8 +30,9 @@ test('a friend companion gets the roommates opening', async ({ page }) => {
   }, { timeout: 60_000, intervals: [250], message: () => said.join(' / ') }).toBe(true);
   const all = said.join(' | ');
   console.log(all);
-  expect(all).toMatch(/Come on in, Sam and Riley! Welcome to your new home/);
-  expect(all).toMatch(/Great\. The mover can't stay on the road/); // Riley's dry humor
+  expect(all).toMatch(/Come on in guys! Welcome to Honeysuckle Hollow!/);
+  expect(all).toMatch(/your names were Sam and Riley, right\?/);
+  expect(all).toMatch(/Great\. The mover can't stay on the road\. He did, however, beat the tree/); // Riley's dry, feminine humor
   expect(all).not.toMatch(/babe/i);
   expect(pageErrors(page)).toEqual([]);
   expect(await inGame<number>(page, 'v.level()')).toBeGreaterThan(-1);
