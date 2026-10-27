@@ -1,4 +1,4 @@
-import { helperPronouns } from '../features/arrival/helperPronouns';
+import { handoffLine } from '../features/arrival/handoffLine';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -186,10 +186,9 @@ function AtlasConciergeInner() {
       return true;
     }
     applyJob(job);
-    const name = job.recommendation.helperName;
-    const role = job.recommendation.kind === 'coach' ? 'coach' : 'assistant';
+    const rec = job.recommendation;
     addAtlas(
-      `Splendid work. Your plan is ready for you to look over. You want this done properly, so I've brought you the best there is: ${name}, your ${role}. There is none better for this. Whatever you need, take it to ${helperPronouns(job.recommendation.helperGender).object}.`,
+      handoffLine({ name: rec.helperName, gender: rec.helperGender, kind: rec.kind, domain: rec.expertDomain }),
       { highlight: ['plan'] },
     );
     setPhase('meet');
