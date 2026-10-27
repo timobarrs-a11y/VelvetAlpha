@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { moderateInput } from "../_shared/moderation.ts";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const MODEL = "claude-haiku-4-5";
+const MODEL = MODEL_CONFIG.HAIKU;
 const MAX_TURNS = 20;
 const MAX_TURN_CHARS = 4000;
 const MAX_SYSTEM_CHARS = 14000;

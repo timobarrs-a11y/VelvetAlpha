@@ -1,4 +1,5 @@
 import type { RNG } from './rng';
+import { isOutdoor } from './scenes';
 
 export interface YardTile {
   i: number;
@@ -225,7 +226,7 @@ export function weedTargetTiles(tiles: YardTile[], cx: number, cy: number, level
   const cands = tiles.filter(t => t.weed > WEED_THRESHOLD && !t.claim && !isPatio(t.i, t.j));
   if (!cands.length) return null;
   cands.sort((a, b) =>
-    Math.hypot(a.i + 0.5 - cx, a.j + 0.5 - cy) + (level === 3 ? 0 : 5) -
+    Math.hypot(a.i + 0.5 - cx, a.j + 0.5 - cy) + (isOutdoor(level) ? 0 : 5) -
     Math.hypot(b.i + 0.5 - cx, b.j + 0.5 - cy)
   );
   const t = cands[0];

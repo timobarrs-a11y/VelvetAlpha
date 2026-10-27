@@ -2,7 +2,12 @@
 <!-- A stand-in for the Velvet app page that wraps the game. It answers the game's AI requests with a canned reply
      and records what the game asked for, so the tests need no account or backend. -->
 <html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"></head><body style="margin:0">
-<iframe id="g" src="/games/velvet-house-next/index.html?companion=e2e" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe>
+<iframe id="g" style="position:fixed;inset:0;width:100%;height:100%;border:0"></iframe>
+<script>
+  // ?script plays the story; without it the story is switched off so the other tests start in a furnished house.
+  // ?freeze starts the game paused, so a screenshot is the same every time.
+  document.getElementById('g').src = '/games/velvet-house-next/index.html?companion=e2e' + (location.search.includes('freeze') ? '&freeze=1' : '') + (location.search.includes('menu') ? '' : '&nomenu=1') + (location.search.includes('script') ? '' : '&noscript=1');
+</script>
 <script>
 window.sampleLog = [];
 window.reply = 'Hey you. I was just thinking about you.';
@@ -11,6 +16,38 @@ addEventListener('message', (e) => {
   if (!d || d.type !== 'velvet:sample') return;
   window.sampleLog.push(d.input);
   setTimeout(() => e.source.postMessage({ type: 'velvet:sampleResult', seq: d.seq, text: window.reply }, location.origin), 100);
+});
+
+// Sharing designs: a small in-memory stand-in for the database. Tests set window.friendDesigns, window.pendingDesigns and
+// window.moderator before opening the Community tab.
+window.designsLog = [];
+window.friendDesigns = [];
+window.pendingDesigns = [];
+window.moderator = false;
+const mine = [];
+addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d || d.type !== 'velvet:designs') return;
+  window.designsLog.push({ op: d.op, args: d.args });
+  const answer = (body) => setTimeout(() => e.source.postMessage({ type: 'velvet:designsResult', seq: d.seq, ...body }, location.origin), 50);
+  const a = d.args || {};
+  switch (d.op) {
+    case 'caps': return answer({ ok: true, data: { moderator: window.moderator } });
+    case 'friends': return answer({ ok: true, data: window.friendDesigns });
+    case 'gallery': return answer({ ok: true, data: [] });
+    case 'mine': return answer({ ok: true, data: mine });
+    case 'publish': {
+      if (/bad/i.test(a.name)) return answer({ ok: false, error: 'blocked' });
+      const row = { id: 'd' + (mine.length + 1), name: a.name, code: a.code, visibility: a.visibility, status: a.visibility === 'public' ? 'pending' : 'approved', report_count: 0 };
+      mine.push(row);
+      return answer({ ok: true, data: { id: row.id, status: row.status } });
+    }
+    case 'delete': { const i = mine.findIndex((m) => m.id === a.id); if (i >= 0) mine.splice(i, 1); return answer({ ok: i >= 0, data: i >= 0 }); }
+    case 'report': return answer({ ok: true, data: 'approved' });
+    case 'pending': return answer({ ok: true, data: window.pendingDesigns });
+    case 'review': window.pendingDesigns = window.pendingDesigns.filter((p) => p.id !== a.id); return answer({ ok: true, data: a.approve ? 'approved' : 'rejected' });
+    default: return answer({ ok: false, error: 'unavailable' });
+  }
 });
 </script>
 </body></html>

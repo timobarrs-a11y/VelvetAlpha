@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { requireCronAuth } from "../_shared/cronAuth.ts";
+import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -224,7 +225,7 @@ Rules:
             'anthropic-version': '2023-06-01',
           },
           body: JSON.stringify({
-            model: 'claude-3-5-haiku-20241022',
+            model: MODEL_CONFIG.HAIKU,
             max_tokens: 400,
             messages: [{ role: 'user', content: prompt }],
           }),

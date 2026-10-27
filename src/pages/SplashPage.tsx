@@ -105,7 +105,7 @@ const INTERESTS = [
 
 const TRUST = [
   { icon: ShieldCheck, title: 'Private by design', text: 'Your conversations are encrypted. Export or delete everything anytime from Settings.' },
-  { icon: BadgeCheck, title: 'AI is always labeled', text: 'Bots in the community wear a badge, so you always know when you are talking to a person.' },
+  { icon: BadgeCheck, title: 'Authored characters are always labeled', text: 'Characters Velvet writes wear an Authored badge, so you always know when you are talking to a person.' },
   { icon: Flag, title: 'Spaces that stay kind', text: 'Moderation, reporting, and blocking are built in. Crews can lock their doors.' },
 ];
 

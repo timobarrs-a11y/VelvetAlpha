@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { INITIAL_OBJS } from '../state/objects';
 import { RNG } from '../state/rng';
-import { buildWorld, createAgent, tickAgent, chooseChain, startChain, isAsleep, isWalking, statusText, turnToward, type Agent } from '../state/agents';
+import { buildWorld, createAgent, createNpc, startGoto, placeAgent, tickAgent, chooseChain, startChain, isAsleep, isWalking, statusText, turnToward, type Agent } from '../state/agents';
 
 const LOOK = { skin: '#C68E6A', hair: '#2B1D16', top: '#3E6E8E', bottom: '#2F3542', longHair: false };
 
@@ -143,5 +143,53 @@ describe('household agents', () => {
     const a = createAgent('maya', 'Maya', { food: Number.NaN, fun: 250 }, LOOK);
     expect(a.needs.food).toBe(70);
     expect(a.needs.fun).toBe(100);
+  });
+});
+
+describe('visitors and scripted walks', () => {
+  it('a visitor walks from the door to a spot inside, then waits', () => {
+    const { world, rng } = setup();
+    const dez = createNpc('dez', 'Dez', LOOK, { level: 1, x: 0.6, y: 5.05 });
+    expect(startGoto(world, dez, { level: 1, x: 3.0, y: 6.0 })).toBe(true);
+    expect(dez.task!.act).toBe('goto');
+    for (let i = 0; i < 400 && dez.task; i++) tickAgent(world, dez, null, 0.05, 0, 1, 10, () => rng.next());
+    expect(dez.task).toBeNull();
+    expect(Math.hypot(dez.x - 3.0, dez.y - 6.0)).toBeLessThan(0.3);
+    // Left alone, a scripted visitor stays where they are instead of wandering off.
+    const { x, y } = dez;
+    for (let i = 0; i < 200; i++) tickAgent(world, dez, null, 0.05, 0.15, 3, 10, () => rng.next());
+    expect(dez.task).toBeNull();
+    expect([dez.x, dez.y]).toEqual([x, y]);
+  });
+
+  it('walks up and down stairs with the clock stopped (game minutes 0)', () => {
+    const { world, rng } = setup();
+    const dez = createNpc('dez', 'Dez', LOOK, { level: 1, x: 2, y: 6 });
+    startGoto(world, dez, { level: 2, x: 4, y: 5 });
+    for (let i = 0; i < 800 && dez.task; i++) tickAgent(world, dez, null, 0.05, 0, 1, 10, () => rng.next());
+    expect(dez.task).toBeNull();
+    expect(dez.level).toBe(2);
+  });
+
+  it('a visitor has no needs that tick, and a household member can be scripted too', () => {
+    const { world, j, rng } = setup();
+    const dez = createNpc('dez', 'Dez', LOOK, { level: 1, x: 2, y: 6 });
+    const before = { ...dez.needs };
+    for (let i = 0; i < 100; i++) tickAgent(world, dez, null, 0.05, 5, 3, 10, () => rng.next());
+    expect(dez.needs).toEqual(before);
+    j.scripted = true;
+    for (let i = 0; i < 100; i++) tickAgent(world, j, null, 0.05, 0.15, 3, 10, () => rng.next());
+    expect(j.task).toBeNull();
+    j.scripted = false;
+    j.idle = 0;
+    tickAgent(world, j, null, 0.05, 0.15, 3, 10, () => rng.next());
+    expect(j.task).not.toBeNull();
+  });
+
+  it('places someone at once, facing a way', () => {
+    const { j } = setup();
+    placeAgent(j, { level: 2, x: 4, y: 4 }, [1, 0]);
+    expect([j.level, j.x, j.y, j.face]).toEqual([2, 4, 4, [1, 0]]);
+    expect(j.task).toBeNull();
   });
 });

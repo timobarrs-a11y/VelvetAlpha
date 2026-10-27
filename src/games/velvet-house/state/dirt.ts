@@ -1,4 +1,6 @@
 import type { RNG } from './rng';
+import { isOutdoor } from './scenes';
+import { rand } from './rng';
 
 export type DirtKind = 'floor' | 'wall';
 export type DirtType =
@@ -73,7 +75,7 @@ export function addDirt(
 ): DirtSpot | null {
   const here = dirt.filter(d => d.level === level);
   if (here.length >= MAX_DIRT_PER_LEVEL) {
-    const d = here[Math.floor(Math.random() * here.length)];
+    const d = here[Math.floor(rand() * here.length)];
     d.max = Math.min(1.4, d.max + 0.2);
     return null;
   }
@@ -110,7 +112,7 @@ export function dirtNear(
   isFreeAt: (lv: number, x: number, y: number) => boolean,
   r = 0.5
 ): DirtSpot | null {
-  if (level === 3) return null;
+  if (isOutdoor(level)) return null;
   for (let k = 0; k < 8; k++) {
     const x = cx + (rng.next() - 0.5) * 2 * r;
     const y = cy + (rng.next() - 0.5) * 2 * r;

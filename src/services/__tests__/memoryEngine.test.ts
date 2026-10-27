@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   normalizeMemoryText, isNearDuplicate, mayContradict, selectMemories, formatMemoryLine, formatAsOf, isGroundedIn,
-  looksLikeInstruction, findDuplicateGroups, embedTexts, toPgVector, DEFAULT_FACT_SELECTION,
+  looksLikeInstruction, findDuplicateGroups, memoryRelatesTo, embedTexts, toPgVector, DEFAULT_FACT_SELECTION,
   EMBEDDING_DIMENSIONS, type MemoryCandidate,
 } from '../../../supabase/functions/_shared/memoryEngine';
 
@@ -169,6 +169,24 @@ describe('findDuplicateGroups', () => {
   });
 });
 
+describe('memoryRelatesTo (is the message about the memory it wants to change?)', () => {
+  it('lets a real correction through', () => {
+    expect(memoryRelatesTo('User has written a murder mystery series', "I'm just reading the series, I didn't write it")).toBe(true);
+    expect(memoryRelatesTo('User works at Google as a data analyst', "I don't work at Google anymore")).toBe(true);
+    expect(memoryRelatesTo('User lives in Denver', 'User lives in Boulder', 'I moved to Boulder')).toBe(true);
+    expect(memoryRelatesTo('Reading a mystery series, plans to finish it', 'I finished the series!')).toBe(true);
+  });
+  it('blocks a message about something else, however important', () => {
+    expect(memoryRelatesTo('Six-pack fitness goal: learning that fat loss matters more than situps', "my sister is turning 30 next week and I'm flying to Denver")).toBe(false);
+    expect(memoryRelatesTo('Mind-opening exercises goal with a deadline of end of November', 'my dad passed away yesterday, I am not ok')).toBe(false);
+    expect(memoryRelatesTo('User recently completed reading an entire series', "I'm not the author, I never wrote anything")).toBe(false);
+  });
+  it('is false for empty input', () => {
+    expect(memoryRelatesTo('', 'anything')).toBe(false);
+    expect(memoryRelatesTo('User likes tea', undefined, null, '')).toBe(false);
+  });
+});
+
 describe('embedTexts', () => {
   it('returns null without a key or on failure', async () => {
     expect(await embedTexts(['x'], undefined)).toBeNull();
@@ -176,6 +194,33 @@ describe('embedTexts', () => {
     expect(await embedTexts(['x'], 'k', 1000, failing as unknown as typeof fetch)).toBeNull();
     const throwing = vi.fn().mockRejectedValue(new Error('net'));
     expect(await embedTexts(['x'], 'k', 1000, throwing as unknown as typeof fetch)).toBeNull();
+  });
+  it('says why it failed, without leaking the key or the text', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await embedTexts(['secret memory text'], undefined);
+      expect(warn).toHaveBeenLastCalledWith(expect.stringContaining('OPENAI_API_KEY is not set'));
+
+      const noCredit = vi.fn().mockResolvedValue({ ok: false, status: 429, text: async () => JSON.stringify({ error: { code: 'insufficient_quota', message: 'You exceeded your current quota' } }) });
+      await embedTexts(['secret memory text'], 'sk-very-secret', 1000, noCredit as unknown as typeof fetch);
+      const line = String(warn.mock.calls.at(-1)?.[0]);
+      expect(line).toContain('429');
+      expect(line).toContain('insufficient_quota');
+
+      const badKey = vi.fn().mockResolvedValue({ ok: false, status: 401, text: async () => 'not json' });
+      await embedTexts(['secret memory text'], 'sk-very-secret', 1000, badKey as unknown as typeof fetch);
+      expect(String(warn.mock.calls.at(-1)?.[0])).toContain('401');
+
+      const down = vi.fn().mockRejectedValue(new Error('connection refused'));
+      await embedTexts(['secret memory text'], 'sk-very-secret', 1000, down as unknown as typeof fetch);
+      expect(String(warn.mock.calls.at(-1)?.[0])).toContain('connection refused');
+
+      const logged = warn.mock.calls.map(c => c.join(' ')).join('\n');
+      expect(logged).not.toContain('sk-very-secret');
+      expect(logged).not.toContain('secret memory text');
+    } finally {
+      warn.mockRestore();
+    }
   });
   it('orders results by index and checks dimensions', async () => {
     const e = (n: number) => new Array(EMBEDDING_DIMENSIONS).fill(n);

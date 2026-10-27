@@ -43,7 +43,6 @@ import { usePopoverPosition } from './usePopoverPosition';
 import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
-import { Avatar } from './Avatar';
 import { LiveAvatar } from './LiveAvatar';
 import { useAvatarEditor } from '../stores/avatarEditorStore';
 import { useMyAvatar } from '../hooks/useMyAvatar';
@@ -118,8 +117,6 @@ function WorkspaceToolbar({
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const myAvatar = useMyAvatar();
-  const openAvatarEditor = useAvatarEditor(s => s.open);
   const { muted, toggleMute } = useAudioScene();
 
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Your space';
@@ -174,26 +171,12 @@ function WorkspaceToolbar({
           <LayoutGrid className="h-4 w-4" />
           {waiting > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#fff7fa] bg-rose-500" />}
         </button>
-        {/* Your own face: a shortcut to your avatar editor. */}
-        <button
-          type="button"
-          onClick={() => openAvatarEditor({ kind: 'user' })}
-          className="group relative h-9 w-9 flex-shrink-0 overflow-hidden rounded-full border border-pink-200 bg-pink-100 transition-shadow hover:ring-2 hover:ring-pink-300"
-          title="Edit your avatar"
-          aria-label="Edit your avatar"
-        >
-          {myAvatar
-            ? <Avatar config={myAvatar} className="h-full w-full" />
-            : <Sparkles className="mx-auto h-4 w-4 text-pink-600" />}
-          <span className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100">
-            <Pencil className="h-3.5 w-3.5 text-white" />
-          </span>
-        </button>
         <button
           type="button"
           onClick={() => navigate('/lobby')}
-          className="flex min-w-0 items-center gap-2.5 text-left"
+          className="flex min-w-0 items-center gap-2.5 rounded-lg px-1 text-left transition-colors hover:bg-pink-50"
           title="Velvet home"
+          aria-label="Velvet home"
         >
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold text-[#2a1424]">Velvet</span>
@@ -373,7 +356,7 @@ function useActiveGoals(): CoachingGoal[] {
   return goals;
 }
 
-function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSubtle }: { pathname: string; lobby: LobbyData; onNavigate: (path: string) => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
+function SidebarContent({ pathname, lobby, onNavigate, onSelect, inkColor, inkMuted, inkSubtle }: { pathname: string; lobby: LobbyData; onNavigate: (path: string) => void; onSelect: () => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
   // Your coaches and companions, with their faces.
   const coaches = lobby.companions.filter(companion => isHelper(companion.relationship_type));
   const companions = lobby.companions.filter(companion => !isHelper(companion.relationship_type));
@@ -398,7 +381,9 @@ function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSu
     { label: 'Velvet Rope', path: '/real-or-not', tone: '#f472b6', icon: <Zap className="h-3.5 w-3.5" /> },
   ];
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    // Picking anything in the toolbar puts it away: a page, a person, a game, your avatar, setup. (Handlers on the
+    // button run first; this only closes the toolbar after.)
+    <div className="flex min-h-0 flex-1 flex-col" onClick={(e) => { if ((e.target as HTMLElement).closest('button, a')) onSelect(); }}>
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         <div className="flex items-center justify-between px-2 pb-1 pt-1">
           <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: inkSubtle }}>Navigate</p>
@@ -480,7 +465,7 @@ function WorkspaceNavigation({ open, onMinimize, lobby, wallpaperStyle, wallpape
     )}
     <div className="relative z-10 flex h-full flex-col bg-[rgba(12,10,30,0.6)]">
       <div className="flex items-center justify-end px-3"><button type="button" onClick={onMinimize} className="rounded-lg p-2 transition-colors hover:bg-white/8" style={{ color: inkMuted }} aria-label="Hide navigation" title="Hide navigation"><ChevronLeft className="h-4 w-4" /></button></div>
-      <SidebarContent pathname={location.pathname} lobby={lobby} onNavigate={navigate} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
+      <SidebarContent pathname={location.pathname} lobby={lobby} onNavigate={navigate} onSelect={onMinimize} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
     </div>
   </aside>;
 }
@@ -510,10 +495,10 @@ function MobileNavDrawer({ open, onClose, lobby, wallpaperStyle, wallpaperClass,
         )}
         <div className={`relative z-10 flex h-full flex-col px-3 py-4 ${wallpaperClass || wallpaperStyle ? 'bg-[rgba(12,10,30,0.6)]' : ''}`}>
         <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/15 text-rose-300"><Sparkles className="h-4 w-4" /></span><span className="text-sm font-semibold" style={{ color: inkColor }}>Velvet</span></div>
+          <button type="button" onClick={() => { navigate('/lobby'); onClose(); }} className="flex items-center gap-2 rounded-lg transition-colors hover:bg-white/8" title="Velvet home" aria-label="Velvet home"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/15 text-rose-300"><Sparkles className="h-4 w-4" /></span><span className="text-sm font-semibold" style={{ color: inkColor }}>Velvet</span></button>
           <button type="button" onClick={onClose} className="rounded-lg p-2 transition-colors hover:bg-white/8" style={{ color: inkMuted }} aria-label="Close navigation"><ChevronLeft className="h-4 w-4" /></button>
         </div>
-        <div className="mt-4 flex min-h-0 flex-1 flex-col"><SidebarContent pathname={location.pathname} lobby={lobby} onNavigate={(path) => { navigate(path); onClose(); }} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} /></div>
+        <div className="mt-4 flex min-h-0 flex-1 flex-col"><SidebarContent pathname={location.pathname} lobby={lobby} onNavigate={(path) => { navigate(path); onClose(); }} onSelect={onClose} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} /></div>
       </div>
       </div>
     </div>

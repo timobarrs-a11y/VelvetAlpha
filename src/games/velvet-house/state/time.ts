@@ -79,5 +79,4 @@ export function skyColor(hourFloat: number, isRaining: boolean, darknessVal: num
   return '#BFE2F0';
 }
 
-/** Levels in the house, indexed by level number. */
-export const LEVEL_NAMES = ['Basement', 'Main floor', 'Upstairs', 'Backyard', 'Attic'] as const;
+export { LEVEL_NAMES } from './house';

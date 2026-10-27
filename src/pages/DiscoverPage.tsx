@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Compass, Target, Users, Loader2, UserPlus, UserMinus, Bot, Sparkles,
+  Compass, Target, Users, Loader2, UserPlus, UserMinus, Sparkles,
 } from 'lucide-react';
 import { PublicProfileImage } from '../components/PublicProfileImage';
 import {
@@ -14,6 +14,7 @@ import { GOAL_TYPE_LABELS } from '../services/coachingService';
 import { PageShell } from '../shared/ui/PageShell';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
+import { AuthoredBadge } from '../components/social/AuthoredBadge';
 
 const GOAL_TYPES = Object.entries(GOAL_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 
@@ -47,10 +48,7 @@ function MemberCard({ member, index, following, onToggleFollow }: {
               {member.display_name}
             </button>
             {member.is_bot && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[10px] font-semibold">
-                <Bot className="w-2.5 h-2.5" />
-                Bot
-              </span>
+              <AuthoredBadge size="sm" />
             )}
           </div>
           {member.headline && (

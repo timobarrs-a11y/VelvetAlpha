@@ -1,12 +1,14 @@
 import { SubscriptionTier } from './chatService';
 import { isPremiumTier } from '../types/subscription';
+// One source for model ids, shared with the edge functions (a plain constants file).
+import { MODEL_CONFIG as MODEL_IDS } from '../../supabase/functions/_shared/modelConfig';
 
-export type ModelType = 'claude-haiku-4-5' | 'claude-sonnet-5-5';
+export type ModelType = typeof MODEL_IDS.HAIKU | typeof MODEL_IDS.SONNET;
 export type ComplexityLevel = 'simple' | 'complex';
 
 export const MODEL_CONFIG = {
-  CHEAP_MODEL: 'claude-haiku-4-5' as const,
-  PREMIUM_MODEL: 'claude-sonnet-5-5' as const,
+  CHEAP_MODEL: MODEL_IDS.HAIKU,
+  PREMIUM_MODEL: MODEL_IDS.SONNET,
 };
 
 export const MODEL_COSTS = {

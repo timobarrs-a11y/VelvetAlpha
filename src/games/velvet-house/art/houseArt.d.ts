@@ -27,7 +27,14 @@ export interface PersonFrame {
   expr?: string;
   /** A spot they're looking at (world x, y), e.g. the person they're talking to. */
   lookAt?: [number, number] | null;
-  look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean; accent?: string; heads?: import('../state/headSprites').HeadImages; body?: import('../state/bodySprites').BodyImages };
+  /** A visitor (not one of the two who live here): shown with a name tag. */
+  npc?: boolean;
+  name?: string;
+  /** What they carry in their arms: 'pbox', 'groceries', 'parcel', 'paint'. */
+  carrying?: string;
+  /** A line said in passing; `at` is the animation time it was said. */
+  bubble?: { text: string; at: number };
+  look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean; accent?: string; topGarment?: import('../state/garment').Garment; bottomGarment?: import('../state/garment').Garment; heads?: import('../state/headSprites').HeadImages; body?: import('../state/bodySprites').BodyImages };
 }
 
 export interface HouseFrame {
@@ -41,15 +48,23 @@ export interface HouseFrame {
   wallMode: WallMode;
   chars?: PersonFrame[];
   /** The household's state, so the art always draws the real power, dishes, laundry, fridge and purchases. */
-  house?: { power: boolean; dishes: number; laundryPile: number; fridge: { basic: number; fresh: number }; owned?: Set<string> };
+  house?: { power: boolean; dishes: number; laundryPile: number; fridge: { basic: number; fresh: number }; parcel?: { kind: string } | null; owned?: Set<string> };
   /** Arrange mode: what can move, what's carried, whether it fits, what's under the pointer. */
   arrange?: { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null } | null;
+  /** A conversation: the point (in view coordinates) and reach that stay sharp while the rest of the frame softens. */
+  focus?: { x: number; y: number; r: number } | null;
 }
 
 export interface HouseArt {
   render(frame: HouseFrame): void;
   /** Furniture was just set down: it lands with a bounce and a puff of dust. */
   objectPlaced(id: string): void;
+  /** Pulsing outlines on the pieces a script wants tapped (by object id). */
+  spotlight(ids: string[]): void;
+  /** A ghost of where a piece should go: its type, spot, turn and whose colour. Null clears it. */
+  setGhost(g: { type: string; level: number; x: number; y: number; rot?: number; color?: 'partner' | 'player' } | null): void;
+  /** A few sparkles near a spot on a floor (a room just finished, say). */
+  burst(level: number, x: number, y: number, z?: number): void;
   /** Where a world point lands in view coordinates (follows the current rotation). */
   project(x: number, y: number, z?: number): [number, number];
   /** The world point (x, y on the floor) under a view coordinate; the opposite of project, following the rotation. */

@@ -31,6 +31,19 @@ export const MODEL_CONFIG = {
 } as const;
 
 /**
+ * The one place model ids live. Nothing else in the app (edge functions or the web app) may write a `claude-...`
+ * id: the test src/services/__tests__/modelIds.test.ts fails if one appears. Moving to a newer model is a
+ * one-line change here. Callers ask for a tier, not a model:
+ *   small    background characters, summaries, classifiers, short replies (Haiku)
+ *   standard the companion, main characters and anything that needs more care (Sonnet)
+ */
+export type ModelTier = 'small' | 'standard';
+
+export function modelForTier(tier: ModelTier): string {
+  return tier === 'standard' ? MODEL_CONFIG.SONNET : MODEL_CONFIG.HAIKU;
+}
+
+/**
  * Helper function to get the appropriate model based on task complexity
  * @param complexity - 'high' for complex reasoning tasks, 'low' for simple tasks
  * @returns The appropriate model identifier
