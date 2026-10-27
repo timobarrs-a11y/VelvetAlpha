@@ -6,10 +6,9 @@ import {
   Film, Dumbbell, Sprout, Compass, ShoppingBag, Cpu, Puzzle, Wrench,
   TrendingUp, Trophy, Tv, Wine, Building, Moon, Car, Home, Sunrise,
   Clapperboard, Laugh, Drama, Mic, Youtube, Code, Coins, Rocket, Atom,
-  Newspaper, Leaf, Cat,
+  Newspaper, Leaf, Cat, type LucideIcon,
 } from 'lucide-react';
 import type {
-  Question,
   QuestionContext,
   QuestionnaireDefinition,
   TapQuestion,
@@ -26,7 +25,7 @@ import { getColorHex } from './personalBank';
 import { NICKNAME_BANK, pickNickname, type NicknameKind } from './nicknames';
 import { HostDialogue, type QuestionnaireHost } from './HostDialogue';
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
   Film, Dumbbell, Heart, Sprout, Compass, ShoppingBag, Cpu, Puzzle, Wrench,
   TrendingUp, Trophy, Tv, Wine, Building, Moon, Car, Home, Sunrise,
@@ -36,7 +35,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: 
 
 const NEXT_BUTTON_CLASS = 'inline-flex items-center justify-center h-12 w-48 max-w-full px-8 text-white text-base font-bold rounded-full shadow-lg transition-all duration-200';
 
-function loadIcon(name: string): React.ComponentType<{ className?: string; size?: number }> | null {
+function loadIcon(name: string): LucideIcon | null {
   return ICON_MAP[name] || null;
 }
 
@@ -702,7 +701,7 @@ function TapTextRenderer({
   onSubmit: () => void;
   onSkip?: () => void;
   hint?: string;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement>;
   accentColor?: string;
 }) {
   const isDate = question.id === 'birthday';
@@ -713,9 +712,6 @@ function TapTextRenderer({
   const canSubmit = isDate ? !!textInput && !question.validate?.(textInput) : trimmed.length >= (minLen ?? 1) && !(question.validate?.(textInput));
   const [bankKind, setBankKind] = useState<NicknameKind>('funny');
 
-  const focusBorder = accentColor
-    ? { borderColor: `${accentColor}99`, boxShadow: `0 0 0 4px ${accentColor}26` }
-    : undefined;
 
   return (
     <div className="space-y-4">
@@ -827,7 +823,7 @@ function TapOptionsRenderer({
   const options = typeof question.options === 'function' ? question.options(ctx) : question.options;
   return (
     <div className="space-y-3">
-      {options.map((option, index) => (
+      {(options ?? []).map((option, index) => (
         <button
           key={index}
           onClick={() => onOptionClick(index, option.value || option.text)}
@@ -1052,7 +1048,7 @@ function ScrubRenderer({
   value: number;
   onChange: (v: number) => void;
   onSubmit: () => void;
-  trackRef: React.RefObject<HTMLDivElement | null>;
+  trackRef: React.RefObject<HTMLDivElement>;
   ctx: QuestionContext;
 }) {
   const { config } = question;
@@ -1187,7 +1183,7 @@ function SwipeRenderer({
   onDragMove: (x: number) => void;
   onDragEnd: () => void;
   onSwipe: (dir: 'left' | 'right') => void;
-  cardRef: React.RefObject<HTMLDivElement | null>;
+  cardRef: React.RefObject<HTMLDivElement>;
 }) {
   const card = question.cards[cardIndex];
   if (!card) return null;
@@ -1256,8 +1252,6 @@ function SwipeRenderer({
 function BeatRenderer({
   text,
   visible,
-  showOrb,
-  renderOrb,
   confirmLabel,
   accentColor,
   progress,

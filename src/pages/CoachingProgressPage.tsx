@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Target, CheckCircle2, Circle, Clock, Flame, TrendingUp,
-  Calendar, Brain, Trophy, AlertCircle, ChevronRight, Plus,
-  Sparkles, X, Activity, ArrowUp, ArrowDown, Minus, Lock,
+  Calendar, Brain, Trophy, AlertCircle, ChevronRight, Sparkles, X, Activity, ArrowUp, ArrowDown, Minus, Lock,
 } from 'lucide-react';
 import { PageHeader, PageShell, Card, Badge, EmptyState, LoadingState } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
@@ -14,7 +13,7 @@ import { SUBSCRIPTION_PLANS } from '../types/subscription';
 import {
   getCommitments, getGoals, updateCommitmentStatus, updateGoalStatus,
   getWeeklyStats, commitmentDueLabel, commitmentStatusColor,
-  goalProgressPercent, goalDaysRemaining, GOAL_TYPE_LABELS,
+  goalProgressPercent, GOAL_TYPE_LABELS,
   getLatestWeeklyReview, markReviewRead,
   getConfidenceChecks, addConfidenceCheck, confidenceTrend, getPlans,
   type CoachingCommitment, type CoachingGoal, type CommitmentStatus,

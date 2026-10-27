@@ -2,11 +2,10 @@ import { useState, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Newspaper, Calendar, FileText, Lightbulb, Video, PlayCircle,
+  Newspaper, Calendar, FileText, Lightbulb, PlayCircle,
   Bot, MapPin, Zap, UsersRound, Users, Gamepad2, Heart,
   Volume2, VolumeX, Wand2, User, LogOut, HelpCircle,
-  Flame, Sparkles, MessageCircle, Info, ChevronRight,
-  PanelLeftClose, PanelLeftOpen, Brain,
+  Sparkles, MessageCircle, PanelLeftClose, PanelLeftOpen, Brain,
   Plus, Trash2, Target,
 } from 'lucide-react';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
@@ -15,7 +14,6 @@ import {
   Button, ModalShell, EmptyState, LoadingState,
   PageShell, Pill, Badge, HomeLayoutSwitch, Segmented,
 } from '../shared/ui';
-import { toast } from '../shared/ui/Toast';
 import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { CustomizationPanel } from '../components/CustomizationPanel';
 import { CreateGroupChatModal } from '../components/CreateGroupChatModal';
@@ -74,7 +72,6 @@ export function HomeShellPage() {
 
   const {
     companions,
-    groupChats,
     loading,
     showGameModal,
     showCreateGroupModal,
@@ -113,9 +110,6 @@ export function HomeShellPage() {
     );
   }
 
-  const handleGameNav = (path: string) => {
-    navigate(path);
-  };
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -395,7 +389,7 @@ export function HomeShellPage() {
                   />
                 )}
                 {activeTab === 'chat' && activeCompanionId && (
-                  <EmbeddedChat companionId={activeCompanionId} onBack={() => setActiveTab(companionCategory)} />
+                  <EmbeddedChat companionId={activeCompanionId} onBack={() => setActiveTab('companion-list')} />
                 )}
               </motion.div>
             </AnimatePresence>

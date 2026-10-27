@@ -2,18 +2,17 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen, Plus, X, Loader2,
-  CheckCircle2, Clock, FileText, Dumbbell, ClipboardList,
-  Lightbulb, Video, TrendingUp, Archive,
+  BookOpen, X, Loader2,
+  CheckCircle2, FileText, Dumbbell, ClipboardList,
+  Video, TrendingUp, Archive,
 } from 'lucide-react';
-import { PageHeader, PageShell, LoadingState, Badge, EmptyState, Card, Button } from '../shared/ui';
+import { PageHeader, PageShell, LoadingState, EmptyState, Card, Button } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
 import { supabase } from '../shared/supabase/client';
 import {
   getArtifacts, updateArtifactStatus, deleteArtifact,
   ARTIFACT_TYPE_LABELS,
   type CoachArtifact,
-  type ArtifactStatus,
 } from '../services/coachingService';
 import { getCoachColor } from '../utils/coachColors';
 import { useAuth } from '../auth/AuthProvider';
@@ -200,7 +199,7 @@ function ArtifactCard({
   const icon = ARTIFACT_ICONS[artifact.artifact_type] ?? <FileText className="w-4 h-4" />;
   const tone = ARTIFACT_TONES[artifact.artifact_type] ?? 'var(--ds-accent, #3b82f6)';
   const isProposed = artifact.status === 'proposed';
-  const content = artifact.content || {};
+  const content: Record<string, any> = artifact.content || {};
   const coachColor = getCoachColor(artifact.companion_color);
 
   return (

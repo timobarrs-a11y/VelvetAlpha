@@ -360,9 +360,8 @@ const OPP_SPECIFIC_DLG: Record<string, Partial<Record<OppAction, string[]>>> = {
     jab:        ["You wouldn't have done it this well. You know that, right?", "I fixed your work. You're welcome."],
   },
   hothead: {
-    escalate:   ["Oh, you want to push me? PUSH ME. See what happens!", "I swear to God, if you say one more word —"],
+    escalate:   ["Oh, you want to push me? PUSH ME. See what happens!", "I swear to God, if you say one more word —", "You know what? This is EXACTLY why I didn't want to work with you!"],
     jab:        ["Yeah? SAY IT TO MY FACE.", "You always do this. You always push until I snap."],
-    escalate2:  ["You know what? This is EXACTLY why I didn't want to work with you!"],
   },
   manipulator: {
     guilt_trip: ["I chose you for this project because I trusted you. Some trust this is.", "I gave you this opportunity. Remember that."],
@@ -583,7 +582,6 @@ const genAscentRun = (): { stages: StageDef[] } => {
   const [o1, o2, o3, o4] = shuffled.slice(0, 4);
   const boss = rnd(BOSSES);
   const cs = [rnd(CONFLICTS), rnd(CONFLICTS), rnd(CONFLICTS), rnd(CONFLICTS)];
-  const scripts = cs.map(c => SCENARIO_SCRIPTS[`${c.id}_${shuffled[cs.indexOf(c)]?.id}`]);
   const mkStage = (idx: number, o: typeof OPPONENTS[number], hp: number, stageNum: number): StageDef => {
     const c = cs[idx];
     const sid = `${c.id}_${o.id}`;
@@ -693,7 +691,7 @@ const pickOppAction = (opp: OpponentState, round: number): OppAction | null => {
 
 const executeOppAction = (state: GameState, action: OppAction): { next: GameState; events: GameEvent[] } => {
   const def = OPP_ACTIONS[action];
-  const { player, opponent, dialogue, scenario } = state;
+  const { player, opponent, dialogue } = state;
   const events: GameEvent[] = [];
   const perks = player.perks || [];
 

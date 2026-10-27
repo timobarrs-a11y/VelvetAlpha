@@ -4,13 +4,13 @@ import {
   TrendingUp, MessageCircle, Calendar, Heart, Target, Lightbulb,
   Clock, Flame, BarChart3, Sparkles, CheckCircle2, Circle, ChevronDown,
   ChevronUp, FlaskConical, PenLine, Activity, Info, TrendingDown, Minus,
-  Brain, Shield, Users, Star, Compass, Layers, Music, Dumbbell, Cpu
+  Brain, Shield, Users, Star, Compass, Layers
 } from 'lucide-react';
 import { PageHeader, Pill, Segmented } from '../shared/ui';
 import { LoadingState } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { useSubscription } from '../hooks/useSubscription';
-import { generateInsights, generateInsightsWithProfile } from '../features/insights/engine';
+import { generateInsightsWithProfile } from '../features/insights/engine';
 import type { InsightCard, InsightConfidence, ReflectionAtom } from '../features/insights/types';
 import { INSIGHT_TEMPLATE_DESCRIPTIONS } from '../features/insights/templates';
 import { buildProfileSnapshot, type ProfileSnapshot } from '../features/insights/profileInsights';
@@ -193,7 +193,9 @@ export function InsightsPage() {
         music_genre: profile.music_genre, hobbies: profile.hobbies || [], sports: profile.sports || [],
         sports_interests: profile.sports_interests || [], entertainment_interests: profile.entertainment_interests || [],
         tech_interests: profile.tech_interests || [], lifestyle_interests: profile.lifestyle_interests || [],
-        communication_profile: profile.communication_profile,
+        communication_profile: profile.communication_profile
+          ? { conflict: '', connection: '', decisionStyle: '', motivation: '', ...profile.communication_profile }
+          : null,
       } : null;
 
       if (profileForInsights) {
@@ -252,7 +254,9 @@ export function InsightsPage() {
       music_genre: profile.music_genre, hobbies: profile.hobbies || [], sports: profile.sports || [],
       sports_interests: profile.sports_interests || [], entertainment_interests: profile.entertainment_interests || [],
       tech_interests: profile.tech_interests || [], lifestyle_interests: profile.lifestyle_interests || [],
-      communication_profile: profile.communication_profile,
+      communication_profile: profile.communication_profile
+          ? { conflict: '', connection: '', decisionStyle: '', motivation: '', ...profile.communication_profile }
+          : null,
     } : null;
     return {
       totalConversations: 0,
@@ -1021,7 +1025,7 @@ export function InsightsPage() {
               <Target className="w-4 h-4 text-sky-400" />
               <h2 className="text-sm font-semibold text-white">{companionName} Remembers</h2>
             </div>
-            {insights.factsLearned.length > 0 ? (
+            {insights && insights.factsLearned.length > 0 ? (
               <div
                 className="space-y-2 max-h-80 overflow-y-auto pr-1"
                 style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}

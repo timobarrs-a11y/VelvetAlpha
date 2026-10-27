@@ -7,7 +7,6 @@ import {
   PHOTO_WALLPAPER_PRESETS,
   LIVE_WALLPAPER_PRESETS,
   buildWallpaperMeta,
-  saveWorkspaceWallpaper,
   uploadWorkspaceWallpaperImage,
   generateAIWallpaper,
   WallpaperPreset,

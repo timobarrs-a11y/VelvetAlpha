@@ -234,6 +234,8 @@ function calculateAge(birthday: string): number | undefined {
 export interface UserProfile {
   id: string;
   name: string;
+  nickname?: string | null;
+  communication_profile?: Record<string, string> | null;
   gender?: string;
   birthday?: string;
   interests: string[];
@@ -767,7 +769,7 @@ export class ChatService {
         id: 'anonymous',
         name: 'babe',
         interests: [],
-        subscription_tier: 'unlimited',
+        subscription_tier: 'unlimited' as SubscriptionTier,
         created_at: new Date().toISOString(),
         onboarding_completed: false,
       };
@@ -800,11 +802,6 @@ export class ChatService {
         const now = new Date();
         const userTimezone = (userProfile as any).timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-        const conversationHistory = await this.getConversationHistory(50);
-        const formattedHistory = conversationHistory.map(msg => ({
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content,
-        }));
 
         const { data: companionData } = await supabase
           .from('companions')
@@ -1156,7 +1153,7 @@ export class ChatService {
 
       const adjustedMaxTokens = getMoodBasedMaxTokens(moodAnalysis.detectedMood, maxTokens);
 
-      const isStarterPlus = subscriptionTier === 'starter' || subscriptionTier === 'plus' || subscriptionTier === 'elite' || subscriptionTier === 'trial';
+      const isStarterPlus = (subscriptionTier as string) === 'starter' || subscriptionTier === 'plus' || subscriptionTier === 'elite' || subscriptionTier === 'trial';
       const isPlusOrElite = subscriptionTier === 'plus' || subscriptionTier === 'elite' || subscriptionTier === 'trial';
 
       let companionLifeMemoryContext = '';

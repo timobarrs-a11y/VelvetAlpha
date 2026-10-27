@@ -1916,7 +1916,7 @@ function VRChatView({ target, onClose }: { target: VRChatTarget; onClose: () => 
         try {
           const aiMsg = await requestAIVelvetRopeReply(
             target.conversationId,
-            [...messages, msg].filter(Boolean).map(m => ({
+            [...messages, msg].filter((m): m is NonNullable<typeof m> => Boolean(m)).map(m => ({
               senderId: m.sender_id,
               content: m.content,
             })),

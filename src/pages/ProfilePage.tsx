@@ -574,7 +574,7 @@ export function ProfilePage() {
                   <CreditCard className="w-5 h-5 text-gray-400" />
                   <div>
                     <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">Subscription</span>
-                    <p className="text-lg text-white font-medium capitalize mt-0.5">{tier === 'unlimited' ? 'Velvet Essential' : tier === 'starter' ? 'Velvet Plus' : tier === 'plus' ? 'Velvet Pro' : tier === 'elite' ? 'Velvet Elite' : tier}</p>
+                    <p className="text-lg text-white font-medium capitalize mt-0.5">{(tier as string) === 'unlimited' ? 'Velvet Essential' : (tier as string) === 'starter' ? 'Velvet Plus' : tier === 'plus' ? 'Velvet Pro' : tier === 'elite' ? 'Velvet Elite' : tier}</p>
                   </div>
                 </div>
                 <button

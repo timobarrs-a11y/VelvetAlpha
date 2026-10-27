@@ -4,7 +4,7 @@ import { getFriends, type FriendPeer } from '../../shared/supabase/queries/messa
 import { getSpaceMembers, addFriendToSpace } from '../../services/spacesService';
 import { toast } from '../../shared/ui/Toast';
 import type { SpaceMember } from '../../types/spaces';
-import { UserPlus, Check } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -35,7 +35,7 @@ export function AddFriendsModal({ isOpen, onClose, boardId }: Props) {
     try {
       await addFriendToSpace(boardId, friendId);
       toast.success('Friend added to space!');
-      setMembers(prev => [...prev, { user_id: friendId, display_name: friends.find(f => f.user_id === friendId)?.display_name ?? 'Member', avatar_config: null, role: 'member', is_bot: false, joined_at: new Date().toISOString() }]);
+      setMembers(prev => [...prev, { user_id: friendId, display_name: friends.find(f => f.user_id === friendId)?.display_name ?? 'Member', avatar_config: null, role: 'member', is_bot: false, joined_at: new Date().toISOString(), tags: [] }]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to add');
     } finally {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../../shared/supabase/client';
 
-interface MessageRow {
+export interface MessageRow {
   id: string;
   user_id: string;
   companion_id: string;

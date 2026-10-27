@@ -52,8 +52,8 @@ export function EmbeddedChat({ companionId, onBack }: EmbeddedChatProps) {
   const [wallpaperId, setWallpaperId] = useState<string | null>(null);
   const [wallpaperUrl, setWallpaperUrl] = useState<string | null>(null);
 
-  const { data: rawMessages, isLoading } = useMessages(userId, companionId);
-  const sendMessageMutation = useSendMessage();
+  const { data: rawMessages, isLoading, appendOptimistic, replaceOptimistic, removeOptimistic } = useMessages(userId, companionId);
+  const sendMessage = useSendMessage({ appendOptimistic, replaceOptimistic, removeOptimistic });
 
   const messages: Message[] = (rawMessages ?? []).map((msg: any) => ({
     id: msg.id,
@@ -66,6 +66,7 @@ export function EmbeddedChat({ companionId, onBack }: EmbeddedChatProps) {
 
   useEffect(() => {
     getCompanion(companionId).then(c => {
+      if (!c) return;
       setCompanion(c);
       setWallpaperId(c.chat_wallpaper ?? null);
       setWallpaperUrl(c.chat_wallpaper_url ?? null);
@@ -88,7 +89,7 @@ export function EmbeddedChat({ companionId, onBack }: EmbeddedChatProps) {
     setSendError(null);
 
     try {
-      await sendMessageMutation.mutateAsync({
+      await sendMessage({
         userId, companionId, role: 'user', content,
         clientMessageId: safeRandomUUID(),
       });
@@ -114,7 +115,7 @@ export function EmbeddedChat({ companionId, onBack }: EmbeddedChatProps) {
       await new Promise(r => setTimeout(r, Math.min(response.length * 15, 3000)));
       setIsTyping(false);
 
-      await sendMessageMutation.mutateAsync({
+      await sendMessage({
         userId, companionId, role: 'assistant',
         content: response, clientMessageId: safeRandomUUID(),
       });
@@ -142,7 +143,7 @@ export function EmbeddedChat({ companionId, onBack }: EmbeddedChatProps) {
         }
       }
 
-      await sendMessageMutation.mutateAsync({
+      await sendMessage({
         userId, companionId, role: 'assistant',
         content: errorContent, clientMessageId: safeRandomUUID(),
       });

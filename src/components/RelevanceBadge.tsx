@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, ChevronDown } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { companionAvatarConfig } from './lobby/lobbyUtils';
-import type { ArticleOpenerMatch } from '../../services/articleOpenerService';
-import type { CompanionWithLastMessage } from '../../services/companionService';
+import type { ArticleOpenerMatch } from '../services/articleOpenerService';
+import type { CompanionWithLastMessage } from '../services/companionService';
 
 interface RelevanceBadgeProps {
   matches: ArticleOpenerMatch[];

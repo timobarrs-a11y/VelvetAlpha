@@ -1,5 +1,5 @@
 import { supabase } from '../shared/supabase/client';
-import { SubscriptionTier, SUBSCRIPTION_PLANS, normalizeSubscriptionTier, isPaidTier } from '../types/subscription';
+import { SubscriptionTier, SUBSCRIPTION_PLANS, normalizeSubscriptionTier } from '../types/subscription';
 
 export interface MessageTrackingInfo {
   messagesRemaining: number;

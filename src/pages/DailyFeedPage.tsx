@@ -292,7 +292,7 @@ function ListArticleCard({ article, onClick, seen, openers, companions, onDiscus
   );
 }
 
-export function DailyFeedPage({ initialTab: _initialTab }: { initialTab?: 'news' | 'video' } = {}) {
+export function DailyFeedPage({ initialTab: _initialTab, onBack: _onBack }: { initialTab?: 'news' | 'video'; onBack?: () => void } = {}) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState<NewsArticle[]>([]);

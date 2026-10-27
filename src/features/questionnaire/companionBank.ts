@@ -203,5 +203,5 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
 
 export function resolveQuestionText(q: Question, ctx: QuestionContext): string {
   if (typeof q.question === 'function') return q.question(ctx);
-  return tpl(q.question, ctx);
+  return tpl(q.question ?? '', ctx);
 }

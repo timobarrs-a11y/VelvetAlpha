@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../shared/supabase/client';
-import { getCategoryColor } from '../config/articleCategoryColors';
 import { PageHeader } from '../shared/ui/PageHeader';
 
 interface NewsArticle {
@@ -167,7 +166,6 @@ export function ArticleDetailPage() {
     );
   }
 
-  const primaryCat = article.categories?.[0];
 
   return (
     <div className="ds-page flex flex-col">

@@ -154,7 +154,7 @@ export function PlanTab({ userId, companionId, highlightIds, onBack }: Props) {
 
               {plan.steps && plan.steps.length > 0 && (
                 <div className="divide-y divide-gray-50">
-                  {plan.steps.map((step, i) => {
+                  {plan.steps.map((step) => {
                     const isDone = step.status === 'completed';
                     const isSkipped = step.status === 'skipped';
                     const isHighlightedStep = highlightIds?.includes(step.id);

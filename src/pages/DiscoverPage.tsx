@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Compass, Target, Users, Loader2, UserPlus, UserMinus, Sparkles, Trophy,
+  Compass, Target, Users, UserPlus, UserMinus, Sparkles, Trophy,
 } from 'lucide-react';
 import { PublicProfileImage } from '../components/PublicProfileImage';
 import {
   discoverMembersByGoalType,
   DiscoverableMember,
 } from '../services/discoveryService';
-import { followUser, unfollowUser, isFollowing, getFollowingIds } from '../services/memberProfileService';
+import { followUser, unfollowUser, getFollowingIds } from '../services/memberProfileService';
 import { GOAL_TYPE_LABELS } from '../services/coachingService';
 import { PageShell } from '../shared/ui/PageShell';
 import { LoadingState } from '../shared/ui/LoadingState';

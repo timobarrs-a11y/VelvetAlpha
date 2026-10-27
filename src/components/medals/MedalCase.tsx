@@ -20,7 +20,7 @@ interface Props {
   isOwn?: boolean;
 }
 
-export function MedalCase({ medals, isOwn = false }: Props) {
+export function MedalCase({ medals }: Props) {
   const [selected, setSelected] = useState<UserMedal | null>(null);
 
   const grouped = CATEGORY_ORDER.reduce<Record<string, UserMedal[]>>((acc, cat) => {

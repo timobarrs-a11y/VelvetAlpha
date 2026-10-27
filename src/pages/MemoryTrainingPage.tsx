@@ -464,7 +464,6 @@ function RoleplayPanel({
 
 function ReviewPanel({
   extraction,
-  scenario,
   correctedText,
   onCorrectedTextChange,
   onConfirm,

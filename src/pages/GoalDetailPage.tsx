@@ -3,27 +3,25 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Target, Layers, CheckCircle2, BookOpen, TrendingUp, ChevronRight,
-  Circle, Clock, Flame, AlertCircle, Calendar, Plus, X, ArrowLeft,
-  Sparkles, Lock, Activity, Eye, EyeOff,
+  Circle, Clock, Flame, AlertCircle, Calendar, X, Sparkles, Lock, Eye, EyeOff,
 } from 'lucide-react';
-import { PageShell, PageHeader, Card, EmptyState, LoadingState, Badge } from '../shared/ui';
+import { PageShell, PageHeader, Card, EmptyState, LoadingState } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
 import { supabase } from '../shared/supabase/client';
 import { useSubscription } from '../hooks/useSubscription';
-import { SUBSCRIPTION_PLANS } from '../types/subscription';
+import { SUBSCRIPTION_PLANS, type SubscriptionTier } from '../types/subscription';
 import {
   getGoalById, getCommitments, getPlans, getArtifacts,
   updateCommitmentStatus, updatePlanStepStatus, updatePlanStepTitle,
   respondToPlan, updateGoalDeadline, updateGoalStatus, deletePlan,
-  getWeeklyStats, commitmentDueLabel, goalProgressPercent, goalDaysRemaining,
-  GOAL_TYPE_LABELS, planProgressPercent,
+  getWeeklyStats, commitmentDueLabel, goalProgressPercent, GOAL_TYPE_LABELS, planProgressPercent,
   ARTIFACT_TYPE_LABELS, updateArtifactStatus, deleteArtifact,
   createTickEvent,
   type CoachingGoal, type CoachingCommitment, type CoachPlan, type CoachPlanStep,
   type CoachArtifact, type CommitmentStatus, type PlanStatus, type StepStatus,
 } from '../services/coachingService';
 import { getCoachColor, formatDeadline, daysToDeadline, deadlineUrgency, type CoachColorPalette } from '../utils/coachColors';
-import { toggleGoalShowOnProfile, toggleCommitmentShowOnProfile } from '../services/publicProfileService';
+import { toggleGoalShowOnProfile } from '../services/publicProfileService';
 import { GoalBoard, type GoalHelper } from '../features/goals/GoalBoard';
 import { phasesOf } from '../features/goals/goalBoard';
 
@@ -88,7 +86,6 @@ export function GoalDetailPage() {
   const activeCommitments = commitments.filter(c =>
     c.status === 'pending' || c.status === 'in_progress' || c.status === 'missed'
   );
-  const stats = getWeeklyStats(commitments);
   const daysLeft = daysToDeadline(goal?.target_date ?? null, goal?.deadline_precision);
   const urgency = deadlineUrgency(goal?.target_date ?? null, goal?.deadline_precision);
 
@@ -790,14 +787,14 @@ function CommitmentRow({
 // =====================================================
 
 function ProgressTab({
-  goal, commitments, plans, coachColor, tier, planLimits,
+  goal, commitments, plans, coachColor, tier,
 }: {
   goal: CoachingGoal;
   commitments: CoachingCommitment[];
   plans: CoachPlan[];
   coachColor: CoachColorPalette;
   tier: string;
-  planLimits: typeof SUBSCRIPTION_PLANS[string];
+  planLimits: typeof SUBSCRIPTION_PLANS[SubscriptionTier];
 }) {
   const stats = getWeeklyStats(commitments);
   const pct = goalProgressPercent(goal);

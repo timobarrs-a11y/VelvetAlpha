@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Check } from 'lucide-react';
 import { ModalShell } from '../../shared/ui';
 import { MedalBadge } from './MedalBadge';
 import type { UserMedal } from '../../services/medalsService';
@@ -63,7 +62,7 @@ export function ShowcasePicker({ isOpen, onClose, medals, onSaved }: Props) {
       <p className="text-xs text-ink-muted mb-4">Pick up to 3 earned medals to display on your profile. They'll show in the order you select them.</p>
       <div className="space-y-1.5">
         {earned.map(medal => {
-          const selected = picked.includes(medal);
+          const selected = picked.includes(medal.slug);
           const order = picked.indexOf(medal.slug);
           return (
             <button

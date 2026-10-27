@@ -66,7 +66,6 @@ export const COACH_COLORS: Record<CoachColorKey, CoachColorPalette> = {
 
 export const COACH_COLOR_KEYS: CoachColorKey[] = ['blue', 'green', 'amber', 'coral', 'teal'];
 
-const usedColors = new Set<string>();
 
 export function assignCoachColor(takenColors: string[] = []): CoachColorKey {
   const available = COACH_COLOR_KEYS.filter(k => !takenColors.includes(k));
@@ -109,7 +108,7 @@ export function formatDeadline(
 
 export function daysToDeadline(
   targetDate: string | null,
-  precision: string | null | undefined,
+  _precision: string | null | undefined,
 ): number | null {
   if (!targetDate) return null;
   return Math.ceil((new Date(targetDate).getTime() - Date.now()) / 86400000);

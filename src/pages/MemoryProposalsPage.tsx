@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, X, Edit3, Filter, RefreshCw, Brain, AlertTriangle, Clock, Zap } from 'lucide-react';
+import { Check, X, Edit3, Filter, RefreshCw, Brain, AlertTriangle, Clock, Zap } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { PageHeader } from '../shared/ui';
 

@@ -24,7 +24,7 @@ test('the first day plays through from the move-in to free will', async ({ page 
   while (!flags['tutorial.done'] && Date.now() < deadline) {
     // Lines of speech are tapped through; a choice takes its first option.
     if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click().catch(() => {});
-    if (await game.locator('.vh-choices:visible button').count()) await game.locator('.vh-choices button').first().click().catch(() => {});
+    if (await game.locator('.vh-choices:visible button').count()) await game.locator('.vh-choices:visible button').first().click().catch(() => {});
     const title = await card();
     flags = await story();
     if (title && once('log:' + title)) console.log('STEP', Math.round((Date.now() - t0) / 1000), title);

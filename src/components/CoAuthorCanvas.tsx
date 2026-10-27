@@ -531,7 +531,6 @@ Generate 4-6 sections that make sense for this type of document. Be specific to 
 
   const handleOutlineSectionClick = (section: OutlineSection) => {
     const header = `\n\n## ${section.title}\n\n`;
-    const cursorPos = editorRef.current?.getCursorPosition() ?? documentContent.length;
     editorRef.current?.insertAtCursor(header);
     setHasUnsavedChanges(true);
 
