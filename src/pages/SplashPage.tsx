@@ -105,7 +105,7 @@ const INTERESTS = [
 
 const TRUST = [
   { icon: ShieldCheck, title: 'Private by design', text: 'Your conversations are encrypted. Export or delete everything anytime from Settings.' },
-  { icon: BadgeCheck, title: 'AI is always labeled', text: 'Bots in the community wear a badge, so you always know when you are talking to a person.' },
+  { icon: BadgeCheck, title: 'Authored characters are always labeled', text: 'Characters Velvet writes wear an Authored badge, so you always know when you are talking to a person.' },
   { icon: Flag, title: 'Spaces that stay kind', text: 'Moderation, reporting, and blocking are built in. Crews can lock their doors.' },
 ];
 
@@ -328,9 +328,13 @@ export function SplashPage() {
             </h1>
 
             <p className="mt-6 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
-              Atlas helps you get things done, and your coaches keep you on track. Play games with friends and cheer on
-              their progress, then meet new people through Discover, the town around your Velvet House, and spaces built
-              around what you're into. Start a conversation about anything and let the community pitch in.
+              Atlas helps you find and map out your goals, and your coaches keep you on track with actionable plans
+              created per user to accomplish tasks by the time you want them done. A suite of other features, like
+              Co-Author for any literary task and a daily feed focused entirely on what you like, comes along too.
+            </p>
+            <p className="mt-4 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
+              It's all backed by a community of amazing people just like you, here to do the same thing: accomplish
+              their goals and cheer each other on. Make new friends with people who share your interests, every day!
             </p>
 
             <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
