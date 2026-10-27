@@ -257,7 +257,13 @@ export class ScriptEngine {
       case 'say':
         if (b.hold !== null) { b.hold -= dt; return b.hold <= 0; }
         return this.host.sayDone();
-      case 'card': return this.host.cardDone();
+      case 'card': {
+        if (this.host.cardDone()) return true;
+        // The button is a convenience: if the world is already the way the wait after the card asks, the lesson is done.
+        const w = this.pendingWait();
+        if (w && this.eval(w, 0)) { this.host.highlight(null); return true; }
+        return false;
+      }
       case 'intro': return this.host.introDone?.() ?? true;
       case 'choice': {
         const n = this.host.choiceMade();

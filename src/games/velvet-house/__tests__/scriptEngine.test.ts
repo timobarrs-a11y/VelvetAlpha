@@ -353,6 +353,19 @@ describe('bank lines by style and gender', () => {
 });
 
 describe('rules that keep a scene honest', () => {
+  it('a card with a button steps aside when the world already satisfies the wait after it', () => {
+    const t = make([base('s', [
+      { do: 'card', title: 'Place it', body: 'x', button: 'Set it down' },
+      { do: 'wait', until: { world: { obj: 'box.couch', is: 'sofa', at: 'mark:tv' } } },
+      { do: 'set', flag: 'placed', value: 1 },
+    ])]);
+    t.engine.startNewGame(); t.tick(2);
+    expect(t.engine.blockedOn()).toBe('card');
+    t.state.world['box.couch'] = { type: 'sofa', at: 'mark:tv' }; t.tick(2);
+    expect(t.flags.placed).toBe(1);
+    expect(t.calls).toContain('highlight:null');
+  });
+
   it('a wait on the world ends when the house is right, however it got there', () => {
     const t = make([base('s', [{ do: 'wait', until: { world: { obj: 'box.couch', is: 'sofa', at: 'mark:tv' } } }, { do: 'set', flag: 'placed', value: 1 }])]);
     t.engine.startNewGame(); t.tick(3);
