@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
+import { RequireProfile } from '../components/auth/RequireProfile';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 
 const App = lazy(() => import('../App'));
@@ -47,7 +48,9 @@ const JoinInvitePage = lazy(() => import('../pages/JoinInvitePage'));
 function P(el: React.ReactNode) {
   return (
     <ProtectedRoute>
-      <Suspense fallback={<RouteFallback />}>{el}</Suspense>
+      <RequireProfile>
+        <Suspense fallback={<RouteFallback />}>{el}</Suspense>
+      </RequireProfile>
     </ProtectedRoute>
   );
 }
