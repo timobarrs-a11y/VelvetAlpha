@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
 import { ToastContainer } from './shared/ui/Toast';
 import { FirstPostWatcher } from './components/FirstPostWatcher';
+import { GoalNotesWatcher } from './components/GoalNotesWatcher';
 import { RootRedirect } from './routes/rootRedirect';
 import { publicRoutes } from './routes/publicRoutes';
 import { onboardingRoutes } from './routes/onboardingRoutes';
@@ -119,6 +120,7 @@ export function Router() {
           <TutorialDirectorProvider>
             <ToastContainer />
             <FirstPostWatcher />
+            <GoalNotesWatcher />
             <WorldWelcomeMount />
             <SWUpdateToast />
             <InstallPWABanner />

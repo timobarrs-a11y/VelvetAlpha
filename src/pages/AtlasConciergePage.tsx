@@ -1,4 +1,6 @@
 import { handoffLine } from '../features/arrival/handoffLine';
+import { stashCoachDraft } from '../features/coaching/coachDraft';
+import { taskHelpPrompt } from '../features/coaching/taskTools';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -311,6 +313,23 @@ function AtlasConciergeInner() {
     }
   };
 
+  // One of the first steps was tapped: save the plan, finish arriving, and go to the coach's chat with the question typed in.
+  const handleAskAbout = async (commitment: { description: string; dueDate: string }) => {
+    if (!plan || !provisioned) return;
+    setIsThinking(true);
+    setError('');
+    try {
+      await callAtlas({ phase: 'commit_plan', goalId: provisioned.goalId, helperId: provisioned.helperId, plan });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await updateSetupProgress(user.id, { step: 'complete' });
+      stashCoachDraft(provisioned.helperId, taskHelpPrompt({ description: commitment.description, due_date: commitment.dueDate, progress_note: null }, plan.goal.title));
+      finish();
+    } catch {
+      setError("I couldn't set that up just now. Please try again.");
+      setIsThinking(false);
+    }
+  };
+
   const handleBillboard = async (answer: string) => {
     if (!provisioned) return;
     const show = answer === BILLBOARD_CHIPS[0];
@@ -474,6 +493,7 @@ function AtlasConciergeInner() {
                     commitments: p.commitments.map((c, j) => (j === i ? { ...c, dueDate: date } : c)),
                   }))}
                   onConfirm={handleCommitPlan}
+                  onAsk={handleAskAbout}
                   busy={isThinking}
                 />
               )}

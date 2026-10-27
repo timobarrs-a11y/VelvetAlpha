@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, CalendarDays, Sparkles, Plus, Cake, X, Target, BookOpen } from 'lucide-react';
+import { Check, ChevronRight, CalendarDays, Sparkles, Plus, Cake, X, Target, BookOpen, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
+import { useDockOptional } from '../../components/dock/DockContext';
+import { taskHelpPrompt } from '../coaching/taskTools';
 import { calendarService } from '../../services/calendarService';
 import {
   getGoals, getNextOpenCommitment, getTodayCommitments, updateCommitmentStatus,
@@ -39,6 +41,7 @@ interface NextUp {
 export function TodayCard() {
   const userId = useAuth().user?.id;
   const navigate = useNavigate();
+  const dock = useDockOptional();
   const [items, setItems] = useState<TodayItem[] | null>(null);
   const [next, setNext] = useState<NextUp | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -279,6 +282,25 @@ export function TodayCard() {
                       </span>
                     </button>
                   </div>
+
+                  {dock && item.commitment && !item.done && !item.tentative && (() => {
+                    const task = item.commitment;
+                    const helper = task.companion_id && dock.companions.some(c => c.id === task.companion_id) ? task.companion_id : null;
+                    if (!helper) return null;
+                    return (
+                      <div className="pl-10 pr-2 pb-2 -mt-1">
+                        <button
+                          type="button"
+                          onClick={() => dock.draftToCompanion(helper, taskHelpPrompt(task, item.goal))}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors hover:brightness-125"
+                          style={{ background: 'var(--ds-accent-soft, rgba(255,255,255,0.06))', color: 'var(--ds-accent-fg)' }}
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          Get help from {item.by ?? 'your coach'}
+                        </button>
+                      </div>
+                    );
+                  })()}
 
                   {item.tentative && !item.done && (
                     <div className="flex flex-wrap items-center gap-2 pl-10 pr-2 pb-2 -mt-1">

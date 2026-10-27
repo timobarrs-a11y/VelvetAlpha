@@ -5,7 +5,7 @@ import {
   CheckCircle2, Circle, AlertCircle, Trophy,
   Calendar, Plus, X, Trash2, Loader2, Target,
   Clock, PlayCircle, RotateCcw, Sparkles, Layers, ChevronDown, ChevronRight,
-  ListChecks, ExternalLink, Pencil, Check, MessageCircle, CalendarPlus, Download,
+  ListChecks, ExternalLink, Pencil, Check, MessageCircle, CalendarPlus, Download, NotebookPen,
 } from 'lucide-react';
 import { PageHeader, PageShell, LoadingState, Badge, EmptyState, Card, Button } from '../shared/ui';
 import { toast } from '../shared/ui/Toast';
@@ -22,6 +22,7 @@ import { getCoachColor } from '../utils/coachColors';
 import { useAuth } from '../auth/AuthProvider';
 import { useDock, useDockCoach } from '../components/dock/DockContext';
 import { buildIcs, downloadIcs, googleCalendarUrl, taskHelpPrompt } from '../features/coaching/taskTools';
+import { noteCountsByTask } from '../services/goalNotesService';
 import { useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/coachingHooks';
 
 const COACHING_TABLES = ['user_goals', 'coach_plans', 'coach_plan_steps', 'coaching_commitments'];
@@ -35,6 +36,9 @@ interface TaskTools {
   coachName: (task: CoachingCommitment) => string;
   ask: (task: CoachingCommitment) => void;
   calendarUrl: (task: CoachingCommitment) => string;
+  /** How many notes this task has (what the coach turned up about it). */
+  noteCount: (task: CoachingCommitment) => number;
+  openNotes: (task: CoachingCommitment) => void;
 }
 const TaskToolsContext = createContext<TaskTools | null>(null);
 
@@ -357,6 +361,8 @@ export function CoachingCommitmentsPage() {
 
   // Taking a task to its own coach (the one who set it) when they are in the dock, else the page's coach.
   const dock = useDock();
+  const [noteCounts, setNoteCounts] = useState<Record<string, number>>({});
+  useEffect(() => { noteCountsByTask().then(setNoteCounts).catch(() => {}); }, []);
   const taskTools = useMemo<TaskTools>(() => {
     const goalTitle = (task: CoachingCommitment) => goals.find(g => g.id === task.goal_id)?.title ?? goals[0]?.title ?? null;
     const ownCoach = (task: CoachingCommitment) => (task.companion_id && dock.companions.some(c => c.id === task.companion_id) ? task.companion_id : null);
@@ -365,12 +371,15 @@ export function CoachingCommitmentsPage() {
       ask: (task) => {
         const prompt = taskHelpPrompt(task, goalTitle(task));
         const own = ownCoach(task);
-        if (own) dock.openCompanion(own, prompt);
-        else coach.ask(prompt);
+        // Typed into the chat box rather than sent, so they can read it, change it and send it when ready.
+        if (own) dock.draftToCompanion(own, prompt);
+        else coach.draft(prompt);
       },
       calendarUrl: (task) => googleCalendarUrl(task, goalTitle(task), `${window.location.origin}/coaching-commitments`),
+      noteCount: (task) => noteCounts[task.id] ?? 0,
+      openNotes: (task) => navigate(`/notes?task=${task.id}`),
     };
-  }, [goals, dock, coach, companionName]);
+  }, [goals, dock, coach, companionName, noteCounts, navigate]);
 
   const downloadCalendar = () => {
     const open = activeCommitments.map(c => ({ ...c, goalTitle: goals.find(g => g.id === c.goal_id)?.title ?? goals[0]?.title ?? null }));
@@ -396,6 +405,12 @@ export function CoachingCommitmentsPage() {
           icon={view === 'plans' ? Layers : CheckCircle2}
           accent="var(--ds-success, #10b981)"
           back={false}
+          actions={
+            <button type="button" onClick={() => navigate('/notes')} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-ink-muted hover:bg-white/5 hover:text-ink transition-colors">
+              <NotebookPen className="w-3.5 h-3.5" />
+              Notes
+            </button>
+          }
         />
       }
     >
@@ -878,6 +893,16 @@ function CommitmentRow({
                 <CalendarPlus className="w-3.5 h-3.5" />
                 Add to Google Calendar
               </a>
+              {tools.noteCount(commitment) > 0 && (
+                <button
+                  type="button"
+                  onClick={() => tools.openNotes(commitment)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
+                >
+                  <NotebookPen className="w-3.5 h-3.5" />
+                  {tools.noteCount(commitment)} {tools.noteCount(commitment) === 1 ? 'note' : 'notes'}
+                </button>
+              )}
             </div>
           )}
         </div>

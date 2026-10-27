@@ -1,3 +1,4 @@
+import { AtlasMarkdown } from './AtlasMarkdown';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { callName } from '../shared/profile/names';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -237,7 +238,7 @@ export function CalendarNaviPanel({ userId, upcomingEvents, onEventAdded }: Prop
                           : 'bg-teal-500/30 text-teal-100 rounded-tr-sm'
                       }`}
                     >
-                      {msg.content}
+                      {msg.role === 'navi' ? <AtlasMarkdown content={msg.content} /> : msg.content}
                       {msg.isStreaming && !msg.content && (
                         <span className="inline-flex gap-0.5 ml-1">
                           {[0, 100, 200].map(d => (
