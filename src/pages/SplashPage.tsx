@@ -5,7 +5,7 @@ import {
   ArrowRight, Heart, Sparkles, ShieldCheck, BadgeCheck, Flag,
   Compass, CalendarDays, MapPin, Target, ClipboardCheck, TrendingUp,
   Users, UserPlus, PenLine, Newspaper, Home, MessageCircle,
-  Zap, UsersRound, Lightbulb, Sunrise, Award,
+  Lightbulb, Sunrise,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -117,14 +117,10 @@ const MORE: { icon: LucideIcon; color: string; name: string; text: string }[] = 
   { icon: CalendarDays, color: TONE.orange, name: 'Calendar', text: 'keeps your events and reminders in one place.' },
   { icon: MapPin, color: TONE.coach, name: 'Navi', text: 'finds local events, restaurants and things to do.' },
   { icon: Compass, color: TONE.gold, name: 'Discover', text: 'matches you with people who share your interests.' },
-  { icon: Sparkles, color: TONE.pink, name: 'Your Feed', text: 'is where friends post what they are up to.' },
+  { icon: Heart, color: TONE.pink, name: 'Companion', text: 'is a friend who chats with you and remembers what matters.' },
   { icon: Home, color: TONE.pink, name: 'Velvet House & Town', text: 'give you a home on a real street, plus a cozy life sim inside.' },
-  { icon: Zap, color: TONE.pink, name: 'Velvet Rope', text: 'is a chat with a stranger. Person or AI?' },
-  { icon: UsersRound, color: TONE.teal, name: 'Group Chat', text: 'keeps a conversation going with several people.' },
   { icon: Lightbulb, color: TONE.gold, name: 'Insights', text: 'shows your streaks and the patterns behind them.' },
   { icon: Sunrise, color: TONE.gold, name: 'Morning Journal', text: 'starts your day with intention.' },
-  { icon: Award, color: TONE.gold, name: 'Medals & Crews', text: 'reward progress and build private crews.' },
-  { icon: Heart, color: TONE.lens, name: 'Relationship Briefs', text: 'nudge you about the people you care about.' },
 ];
 
 function Feat({ color, children }: { color: string; children: ReactNode }) {
