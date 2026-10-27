@@ -236,13 +236,11 @@ id, `set` is a plain write). Authors then never place checkpoints by hand. Trade
 of dialogue; that is far better than the soft-lock in 2.2 and removes the need to throw away saves when the opening
 changes (2.5).
 
-### 3.3 Skip is fast-forward
+### 3.3 No Skip (director's decision, 2026-10-27)
 
-Replace the fixed `onSkip` list with "run the remaining steps as effects": walks, acts, waits, says, cards and
-choices are skipped (choice takes its default), `give`/`set`/`deliver`/`despawn`/`clock`/`mode` apply. The engine
-already runs steps with `skipping = true` for walks and acts; this generalises it. Result: skipping at any point
-yields the same world as watching from that point, so no second couch (2.3). `onSkip` stays available for the
-rare effect that must happen *only* when skipped.
+The director removed skipping altogether: a story animation plays to its end, like a handheld RPG, and only
+dialogue is tapped through. The Skip button, the `skippable` and `onSkip` fields, the engine's skip path and the
+drive-up's tap-to-end are gone. This closes 2.3 by removing the feature.
 
 ### 3.4 Scenes declare presence and the host readiness they need
 
@@ -355,7 +353,7 @@ a few days together; each item is one PR with its test.
    `story.spec.ts` asserts the sofa position. Fixes 2.1.
 2. Resume safety (3.2): `did.*` fallbacks for the three bare event waits now; engine auto-resume-point at `mode`
    and `wait.until` next. Headless reload test at every wait. Fixes 2.2.
-3. Skip as fast-forward (3.3). Headless skip test at every wait. Fixes 2.3.
+3. Skip removed (3.3). Fixes 2.3.
 4. Host readiness gate and `hold` (3.4); save `voice`; e2e host sends a profile. Fixes 2.4 and the wandering.
 5. The director approves `scenes/opening.moveIn.md` (decisions in its section 13); the three old documents are
    removed; dead steps and `Preset` leftovers deleted. Fixes 2.5.

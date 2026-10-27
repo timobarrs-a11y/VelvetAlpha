@@ -25,9 +25,20 @@ export type Mode = 'cutscene' | 'guided' | 'beat';
 
 export interface GameEvent { type: string; [key: string]: FlagValue | undefined }
 
+/**
+ * Something true about the house itself, checked by the host: an object's type, where it stands (within `within` of a
+ * mark, default 0.6), how it faces, whether its light is on. A beat that waits on this ends when the world is right, not
+ * when a button was pressed.
+ */
+export interface WorldCond { obj: string; exists?: boolean; is?: string; at?: PlaceRef; within?: number; rot?: number; lightOn?: boolean }
+
+/** What the host page sends after the game starts; a script can wait for it (`needs.host`). */
+export type HostNeed = 'profile' | 'plot';
+
 export type Cond =
   | { flag: string; equals?: FlagValue; exists?: boolean }
   | { event: string; match?: Record<string, FlagValue> }
+  | { world: WorldCond }
   | { time: { day?: number; weekday?: number; after?: number; before?: number } }
   | { scriptDone: string }
   | { all: Cond[] }
@@ -67,7 +78,8 @@ export type Step =
   | { do: 'intro'; kind: 'arrival' }
   /** Pulls the room toward evening (0 to 0.42) without moving the clock, so the lights can be seen; 0 puts it back. */
   | { do: 'dim'; amount: number }
-  | { do: 'wait'; seconds?: number; until?: Cond }
+  /** `arrive`: wait until these people have stopped walking (for walks started with `wait: false`). */
+  | { do: 'wait'; seconds?: number; until?: Cond; arrive?: Actor[] }
   | { do: 'if'; cond: Cond; then: Step[]; else?: Step[] }
   | { do: 'run'; script: string }
   | { do: 'checkpoint' };
@@ -80,20 +92,23 @@ export interface ScriptDef {
   once?: boolean;
   /** Higher starts first when several are waiting. */
   priority?: number;
-  skippable?: boolean;
-  /** Required when skippable: effect-only steps that leave the world as if the script had played. */
-  onSkip?: Step[];
   /** Values taken from the event that triggered it: `{ category: '$event.category' }`. */
   vars?: Record<string, string>;
+  /**
+   * What must be in place before the script starts: `host` messages applied (or `timeoutMs` passed, default 1500), and
+   * `hold`: residents the script keeps for itself from start to finish, so free will never moves them mid-scene.
+   */
+  needs?: { host?: HostNeed[]; timeoutMs?: number; hold?: Actor[] };
   steps: Step[];
 }
 
 /** What is saved. */
 export interface ScriptRuntime {
   done: string[];
-  active: { id: string; path: PathItem[]; vars: Record<string, FlagValue> } | null;
+  /** The script playing and where to pick it up (`redo`: run the step at `path` again, used for mode steps so the screen is rebuilt). */
+  active: { id: string; path: PathItem[]; vars: Record<string, FlagValue>; redo?: boolean } | null;
   /** Waiting to start; a script a more urgent one interrupted carries where it was (`path`, `redo`: run that step again). */
-  queue: { id: string; vars: Record<string, FlagValue>; path?: PathItem[]; redo?: boolean; since?: number }[];
+  queue: { id: string; vars: Record<string, FlagValue>; path?: PathItem[]; redo?: boolean; since?: number; heldMs?: number }[];
   /** Per line pool: the indices used so far, so a line does not repeat until the pool has been through. */
   pools: Record<string, number[]>;
 }
@@ -152,4 +167,10 @@ export interface ScriptHost {
   introDone?(): boolean;
   /** The script is done with these people: free will and idle choices are theirs again. */
   release(who: Actor[]): void;
+  /** Keep these people for the script from its first step (see `ScriptDef.needs.hold`). */
+  hold?(who: Actor[]): void;
+  /** Is this true of the house right now? */
+  check?(w: WorldCond): boolean;
+  /** Has the host page sent this yet? */
+  ready?(what: HostNeed): boolean;
 }

@@ -48,6 +48,7 @@ export function createHostBridge(g: Game): Partial<Game> {
     if (isCompanionsMessage(e.data)) { setCompanionCount(e.data.count, e.data.houses ?? 0); return; }
     if (isPlotMessage(e.data)) {
       const p = e.data.plot;
+      g.s.hostReady.plot = true;
       g.s.plot = { member: !!p.member, config: p.config as never, earned: Array.isArray(p.earned) ? p.earned.filter((x): x is string => typeof x === 'string') : [], ...(typeof p.address === 'string' ? { address: p.address.slice(0, 40) } : {}) };
       return;
     }
@@ -84,6 +85,7 @@ export function createHostBridge(g: Game): Partial<Game> {
         if (pl.top && !pl.outfit) people[0].look.top = pl.top;
         g.applyAvatar(people[0], pl, 'jordan');
       }
+      g.s.hostReady.profile = true;
       const wasFromGame = companionCfg.source === 'game';
       companionCfg.source = 'velvet';
       postToParent({

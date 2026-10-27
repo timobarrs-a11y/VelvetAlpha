@@ -26,6 +26,9 @@ Sources read: `src/games/velvet-house/content/scripts.ts`, `content/lines.ts`, `
 | 8 | Line variants | Lines vary by humor style, communication style **and the companion's gender** (masculine and feminine versions of each). No separate roommate versions; wording is written without pet names so it fits a partner or a friend. |
 | 9 | Saves when the opening changes | New game for everyone (keep the `MIN_CONTENT_VERSION` bump). Reload safety within one version still has to work (§10). |
 
+Added 2026-10-27 (third round): **there is no Skip.** A story animation plays to its end, as in a handheld
+RPG; only dialogue is tapped through. The Skip button, the skippable flag and the drive-up's tap-to-end are gone.
+
 Also raised by the director and recorded as requirements: the Set it down affordance is unclear and the couch
 sometimes lands facing the wrong way (§11 items 9–10); the "this or that" choice buttons are not wanted anywhere in
 the introduction; residents should switch lamps on and off by themselves in free play (§12, new system, not part of
@@ -58,7 +61,7 @@ introduction; the companion's chat is not reachable until chapter 11.
 
 | Beat | What happens (director's words where given) | Tag | Exit condition (game terms) | Resume-safe fallback |
 |---|---|---|---|---|
-| A0 | Drive-up. Dez's truck comes down Maple Street, **runs over a tree** on the way, pulls up at the house. Tap to end early. | Required beat; the tree knock-down is Flexible presentation until built (§12) | `introDone` or tap | none (no world effect) |
+| A0 | Drive-up. Dez's truck comes down Maple Street, **runs over a tree** on the way, pulls up at the house. Plays to the end; no tap ends it. | Required beat; the tree knock-down is Flexible presentation until built (§12) | `introDone` | none (no world effect) |
 | A1 | Dez walks in first **carrying the couch box**, the player and companion follow. He sets the box down in the entry gap. Nobody speaks until all three are standing. | Required beat | Dez, player and companion all `arrived`; `box.couch` exists at `entry.drop` | world: `box.couch` exists (box or sofa) and the three are inside |
 | A2 | Dez: "Come on in guys! Welcome to **{town}**!" (town bold, green) then the mayor passage: mayor, mover, food delivery, the family's businesses. | Required beat; the identity facts are Invariant | last passage line dismissed | `did.beat.A2` (new) |
 | A3 | The companion reacts to the drive in her humor style (`truckOffRoad`). | Required beat (bank: humor × gender) | line dismissed | `did.beat.A3` |
@@ -157,7 +160,7 @@ wants it back (§13 q3). One plant box stays by the door (§13).
 
 ## 9. Completion and control handoff
 
-A9: people released, highlight, outline and spotlight cleared, mode off, Skip hidden, clock running at 09:00 speed
+A9: people released, highlight, outline and spotlight cleared, mode off, clock running at 09:00 speed
 1; `tutorial.ch7` starts on `opening.done` **with the residents still held** (new `hold` need, see the audit §3.4)
 so Dez's lamp visit is not interrupted by free will. B8: the same release; the clock runs; chapter 8 follows on
 `tutorial.lamp` as today.
@@ -168,8 +171,7 @@ so Dez's lamp visit is not interrupted by free will. B8: the same release; the c
 |---|---|
 | Reload during A0–A6 or B1 | Replay the cutscene from its start; boxes are not duplicated (`give` guarded by id) |
 | Reload during a lesson (A7, A8, B2, B4, B6, B7) | Resume at the lesson with its mode, card, outline and allow-list rebuilt; if the predicate is already true, move on at once. **Today: soft-lock after A7 or B2 (confirmed in play)** |
-| Skip during Part A | Fast-forward: one couch, at `living.couchTv` facing the TV, flags set, Dez gone. **Today: two couches when skipped after A7 (confirmed in play)** |
-| Skip during Part B | Not offered today (chapter 7 is not skippable). Keep it that way unless the director asks |
+| Skip | Not possible: there is no Skip (decided). The old Skip left two couches when used after A7 (confirmed in play before it was removed) |
 | Pause (Space) during a cutscene | Not possible, or scripted walkers keep walking |
 | Delivery interrupts chapter 7 | Cannot happen while the residents are held and the dock is disabled; if it does, resume rebuilds the lesson |
 | Profile not yet applied | The new-game script waits up to 1.5 s for it; after that, defaults and the saved values |
@@ -187,19 +189,19 @@ S = source, A = automated, P = played on desktop **and** phone.
 5. A5 is a plain tap, with no choice buttons anywhere in Parts A and B. (A e2e)
 6. Only the current lesson object is tappable; dock, keyboard shortcuts, other objects and the companion are not. (A e2e)
 7. Pressing Set it down with the couch (or lamp) outside the outline shows the companion's "not there" line and the lesson stays open; inside the outline, the piece snaps and the beat ends. (A e2e; P)
-8. After A9 and after B8 the clock runs, the dock works, Skip is hidden and both residents act on their own. (A e2e)
+8. After A9 and after B8 the clock runs, the dock works and both residents act on their own. (A e2e)
 9. **Set it down is obvious**: a visible control near the piece or the card, not folded away on phones. (P, both sizes)
 10. **The couch never lands facing away from the TV**: whatever rotation the player drags it in with, the snapped result faces the TV, and the outline shows that facing. Reproduce the reported wrong-facing case first. (A e2e; P)
 11. On B3 and B5 the `!` and the companion are on screen when they fire, together with the lamp. (P; screenshot)
 12. Reload at every lesson resumes without a soft-lock and without a second box, couch or lamp. (A headless + e2e)
-13. Skip at every point in Part A gives one couch at the mark and the same flags as watching. (A headless)
+13. There is no Skip button, no `skippable` script, and the drive-up cannot be ended early. (A e2e)
 14. No page errors through both parts. (A e2e)
 
 ## 12. Assets
 
 **Existing and reused:** Dez (`content/characters.ts`), `pbox` with `contents`, `sofa`, `lamp` (with light),
 marks `door`, `entry.inside/you/partner/drop`, `living.couchTv`, `living.lampCorner`, `living.lamp`, carried
-box prop, `!` bubble, speech box, cards, ghost outline, canvas spotlight, letterbox, Skip, drive-up and street
+box prop, `!` bubble, speech box, cards, ghost outline, canvas spotlight, letterbox, drive-up and street
 kit, poof/burst/drop effects, evening dim, banks for `truckOffRoad`, `couchCarried` (no longer used), `couchPlace`,
 `lampCorner`, `lampByCouch`, `lampOn`, Dez's `welcome`, `brushOff`, `intro.2`, `intro.3`.
 

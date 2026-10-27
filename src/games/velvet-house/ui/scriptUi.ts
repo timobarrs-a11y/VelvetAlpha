@@ -1,11 +1,11 @@
 import type { UiTarget } from '../script/types';
 
 /**
- * What a script puts on screen: letterbox bars, the speaker's line (tap to go on), choices, a card, a Skip button.
+ * What a script puts on screen: letterbox bars, the speaker's line (tap to go on), choices, a card. Nothing skips a scene.
  * Plain DOM, added to the game stage; the engine talks to it through the script host.
  */
 export interface ScriptUi {
-  setMode(mode: 'cutscene' | 'guided' | 'beat' | null, skippable: boolean): void;
+  setMode(mode: 'cutscene' | 'guided' | 'beat' | null): void;
   say(name: string, text: string): void;
   sayDone(): boolean;
   hideSay(): void;
@@ -15,8 +15,9 @@ export interface ScriptUi {
   cardDone(): boolean;
   /** Folds the card down to its title bar (and its button, if it has one). */
   minimizeCard(): void;
+  /** The button was pressed but the lesson is not done: the card stays, and waits for the button again. */
+  reopenCard(): void;
   hideCard(): void;
-  onSkip(fn: () => void): void;
   onCardButton(fn: () => void): void;
   /** Marks the buttons and panels a script has pointed at. */
   spotlight(targets: UiTarget[]): void;
@@ -29,7 +30,6 @@ export function createScriptUi(stage: Element): ScriptUi {
   root.className = 'vh-script';
   root.innerHTML = `
     <div class="vh-bar vh-bar-top"></div><div class="vh-bar vh-bar-bottom"></div>
-    <button type="button" class="vh-skip" hidden>Skip</button>
     <div class="vh-speech" hidden role="dialog" aria-live="polite"><div class="vh-speech-name"></div><div class="vh-speech-text"></div><div class="vh-choices" hidden></div><div class="vh-speech-next" aria-hidden="true">&#9660;</div></div>
     <div class="vh-scard" hidden><div class="vh-scard-head"><strong></strong><button type="button" class="vh-scard-min" aria-label="Minimize" aria-expanded="true">&#9662;</button></div><p></p><button type="button" class="vh-scard-go" hidden></button></div>`;
   stage.appendChild(root);
@@ -42,7 +42,6 @@ export function createScriptUi(stage: Element): ScriptUi {
   const cardMin = cardEl.querySelector('.vh-scard-min') as HTMLButtonElement;
   const setMin = (min: boolean) => { if (min) cardEl.dataset.min = '1'; else delete cardEl.dataset.min; cardMin.setAttribute('aria-expanded', String(!min)); };
   cardMin.addEventListener('click', () => setMin(!cardEl.dataset.min));
-  const skipBtn = root.querySelector('.vh-skip') as HTMLButtonElement;
 
   // A line is typed out; a tap finishes it, and the next tap goes on.
   let full = '', shown = 0, typing: ReturnType<typeof setInterval> | null = null, lineDone = true;
@@ -59,16 +58,13 @@ export function createScriptUi(stage: Element): ScriptUi {
   let cardClosed = true;
   let cardPress: () => void = () => {};
   cardBtn.addEventListener('click', () => { cardClosed = true; cardEl.hidden = true; cardPress(); });
-  let skip: () => void = () => {};
-  skipBtn.addEventListener('click', () => skip());
 
   const stageEl = stage as HTMLElement;
   let marked: Element[] = [];
 
   return {
-    setMode(mode, skippable) {
+    setMode(mode) {
       if (mode) stageEl.dataset.script = mode; else delete stageEl.dataset.script;
-      skipBtn.hidden = !(skippable && (mode === 'cutscene' || mode === 'guided'));
       if (!mode) { speech.hidden = true; choices.hidden = true; choices.innerHTML = ''; delete speech.dataset.choosing; cardEl.hidden = true; stopTyping(); lineDone = true; }
     },
     say(name, text) {
@@ -115,7 +111,7 @@ export function createScriptUi(stage: Element): ScriptUi {
     cardDone: () => cardClosed,
     hideCard() { cardEl.hidden = true; cardClosed = true; },
     minimizeCard() { setMin(true); },
-    onSkip(fn) { skip = fn; },
+    reopenCard() { cardClosed = false; cardEl.hidden = false; },
     onCardButton(fn) { cardPress = fn; },
     spotlight(targets) {
       marked.forEach((e) => e.classList.remove('vh-spot'));

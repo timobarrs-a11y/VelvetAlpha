@@ -9,7 +9,7 @@ import { SCRIPTS } from '../content/scripts';
 import { LINE_BOOK } from '../content/lines';
 import { validateContent } from './validate';
 import { ScriptEngine } from './engine';
-import { NEW_RUNTIME, type FlagValue, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget } from './types';
+import { NEW_RUNTIME, type FlagValue, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget, type WorldCond } from './types';
 import { run } from '../kernel/config';
 import { createScriptUi } from '../ui/scriptUi';
 import { playArrival, type Arrival } from '../ui/arrivalIntro';
@@ -62,10 +62,11 @@ export function createScripts(g: Game): Partial<Game> {
     setMode(mode, allow) {
       g.s.scriptMode = mode;
       g.s.scriptAllow = allow;
-      ui.setMode(mode, engine.skippable());
+      ui.setMode(mode);
       ui.spotlight([...spot, ...allow.filter((a) => !a.startsWith('obj'))]);
       art.spotlight(allow.filter((a) => a.startsWith('obj:')).map((a) => a.slice(4)));
-      if (mode === 'cutscene') g.drawer.close();
+      // A lesson that ends because the piece is where it belongs closes Arrange too, not only the button.
+      if (mode !== 'guided' && g.isArranging()) g.drawer.close();
       if (!mode) { camFocus = null; }
     },
     spawn(npc, at, carrying) {
@@ -212,15 +213,38 @@ export function createScripts(g: Game): Partial<Game> {
       }
     },
     release(who) { for (const id of who) { const a = actor(id); if (a && a.kind !== 'npc') a.scripted = false; } },
+    hold(who) { for (const id of who) { const a = actor(id); if (a && a.kind !== 'npc') { a.scripted = true; a.task = null; } } },
+    ready: (what) => g.s.hostReady[what],
+    // Is the house the way a beat needs it?
+    check(w: WorldCond) {
+      const o = world.objs.find((q) => q.id === w.obj);
+      if (w.exists !== undefined) return !!o === w.exists;
+      if (!o) return false;
+      if (w.is && o.type !== w.is) return false;
+      if (w.at) {
+        const s = resolve(w.at);
+        if (!s || o.level !== s.level || Math.hypot(o.x - s.x, o.y - s.y) > (w.within ?? 0.6)) return false;
+      }
+      if (w.rot !== undefined && o.rot !== w.rot) return false;
+      if (w.lightOn !== undefined && art.objectLightOn(o.id) !== w.lightOn) return false;
+      return true;
+    },
   };
 
   const problems = validateContent(SCRIPTS, LINE_BOOK, NPC_IDS);
   if (problems.length && import.meta.env.DEV) console.warn('Story content problems:\n' + problems.join('\n'));
 
   const engine = new ScriptEngine(host, SCRIPTS, LINE_BOOK, rt);
-  ui.onSkip(() => engine.skip());
-  // "Set it down" ends the placing: the piece stays where it is and Arrange closes.
-  ui.onCardButton(() => { if (g.isArranging()) { g.snapSelectedToOutline(); g.drawer.close(); } });
+  // "Set it down" snaps the piece into the outline when it is close and closes Arrange. It never ends the beat: the
+  // script waits on the world, so a piece set down elsewhere leaves the lesson open (and the card with it).
+  ui.onCardButton(() => {
+    if (!g.isArranging()) return;
+    g.snapSelectedToOutline();
+    const w = engine.waitingOn();
+    const placed = !w || engine.eval(w, 0);
+    if (placed) g.drawer.close();
+    else { ui.reopenCard(); g.scriptEmit({ type: 'lesson.misplaced' }); }
+  });
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.
@@ -242,7 +266,6 @@ export function createScripts(g: Game): Partial<Game> {
     // What they are to the player, for scripts that branch on it (a friend moving in is a roommate).
     story.rel = g.s.voice.relationship;
     engine.tick(dt);
-    // Skipping the opening ends the drive-up too.
     if (arrival && !engine.isActive()) { arrival.cancel(); arrival = null; }
     if (camFocus) {
       const a = actor(camFocus.who);

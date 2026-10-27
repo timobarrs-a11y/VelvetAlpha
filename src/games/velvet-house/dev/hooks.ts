@@ -3,6 +3,7 @@ import { checkPlacement } from '../state/arrange';
 import { CATALOG } from '../state/catalog';
 import { isWalking, poseOf, startGoto } from '../state/agents';
 import { type SampleFn } from '../state/companionAI';
+import { MARKS } from '../content/marks';
 import type { Game } from '../kernel/game';
 
 export function installDevHooks(g: Game): void {
@@ -56,6 +57,18 @@ export function installDevHooks(g: Game): void {
         const r = canvas.getBoundingClientRect();
         return { level: p.level, face: p.face, turning: !!p.turning, walking: isWalking(p), pose: poseOf(p), act: p.task?.act ?? null, screen: [r.left + (q.x / canvas.width) * r.width, r.top + (q.y / canvas.height) * r.height] };
       },
+      // Where a story mark is on screen, so a test can drag a piece to it (its centre, as a piece of that type would sit there).
+      markClientPos: (name: string, type = 'sofa', rot = 0): [number, number] | null => {
+        const m = MARKS[name];
+        if (!m || m.level !== view.level) return null;
+        const t = TYPES[type];
+        const [fw, fd] = rot % 2 ? [t.D, t.W] : [t.W, t.D];
+        const [vx, vy] = art.project(m.x + fw / 2, m.y + fd / 2, (t.h || 1) / 2);
+        const p = ctx.getTransform().transformPoint(new DOMPoint(vx, vy));
+        const r = canvas.getBoundingClientRect();
+        return [r.left + (p.x / canvas.width) * r.width, r.top + (p.y / canvas.height) * r.height];
+      },
+      lightOn: (id: string) => art.objectLightOn(id),
       clientPosOf: (id: string): [number, number] | null => {
         const o = world.objs.find(q => q.id === id);
         if (!o) return null;

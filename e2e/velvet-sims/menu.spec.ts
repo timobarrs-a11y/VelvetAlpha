@@ -13,15 +13,13 @@ test('a first launch shows only Start and Settings, and Start begins the move-in
   await m.locator('[data-m=new]').click();
   await waitReady(page);
   await expect(game.locator('.vh-menu')).toHaveCount(0);
-  await expect(game.locator('.vh-skip')).toBeVisible();
+  await expect(game.locator('.vh-stage[data-script="cutscene"]')).toHaveCount(1);
   expect(pageErrors(page)).toEqual([]);
 });
 
 test('with a saved house: Continue picks it up, New Game asks first and then starts over', async ({ page }) => {
-  // Make a house to continue: skip the opening so the couch is in, then save.
-  const first = await openGame(page, { script: true });
-  await first.locator('.vh-skip').click();
-  await expect.poll(async () => (await objects(page)).some((o) => o.type === 'sofa')).toBe(true);
+  // Make a house to continue: with the story off the house starts furnished and the opening counts as done; save it.
+  await openGame(page);
   await saveNow(page);
 
   await openGame(page, { menu: true, script: true, fresh: false });
@@ -43,13 +41,11 @@ test('with a saved house: Continue picks it up, New Game asks first and then sta
   await m.locator('[data-m=continue]').click();
   await waitReady(page);
   expect((await objects(page)).some((o) => o.type === 'sofa')).toBe(true);
-  await expect(game.locator('.vh-skip')).toBeHidden();
+  await expect(game.locator('.vh-stage[data-script]')).toHaveCount(0);
 });
 
 test('starting over from the menu begins the move-in again', async ({ page }) => {
-  const first = await openGame(page, { script: true });
-  await first.locator('.vh-skip').click();
-  await expect.poll(async () => (await objects(page)).some((o) => o.type === 'sofa')).toBe(true);
+  await openGame(page);
   await saveNow(page);
 
   await openGame(page, { menu: true, script: true, fresh: false });
@@ -58,5 +54,5 @@ test('starting over from the menu begins the move-in again', async ({ page }) =>
   await game.locator('[data-m=yes]').click();
   await waitReady(page);
   expect((await objects(page)).some((o) => o.type === 'sofa')).toBe(false);
-  await expect(game.locator('.vh-skip')).toBeVisible();
+  await expect(game.locator('.vh-stage[data-script="cutscene"]')).toHaveCount(1);
 });
