@@ -47,7 +47,7 @@ test('the first day plays through from the move-in to free will', async ({ page 
     else if (title === 'Make one room yours' && once('paint')) await inGame(page, "v.buy('paint-sage')");
     else if (title === 'Floors and the camera' && once('floors')) await inGame(page, 'v.setView(2)');
     else if (flags['tutorial.upstairs'] && !flags.tutorial) await inGame(page, 'v.setMinutes(15 * 60 + 5)');
-    if (Date.now() - lastLog > 15_000) { lastLog = Date.now(); console.log('PROGRESS', title, Object.keys(flags).filter((k) => k.startsWith('tutorial')).join(','), JSON.stringify((await objects(page)).filter((o) => o.id === 'box.lamp')), await game.locator('.vh-stage.vh-arranging').count(), await inGame<number>(page, 'v.level()'), Object.keys(flags).filter((k) => k.startsWith('did.')).join(',')); }
+    if (Date.now() - lastLog > 15_000) { lastLog = Date.now(); console.log('PROGRESS', title, Object.keys(flags).filter((k) => k.startsWith('tutorial')).join(','), (await inGame<string>(page, 'v.scriptState()')).replace(/"trace":"[^"]*?(\\S+ \\S+ \\S+)"/, '"tail":"$1"').slice(0, 260), await game.locator('.vh-stage.vh-arranging').count(), await inGame<number>(page, 'v.level()'), Object.keys(flags).filter((k) => k.startsWith('did.')).join(',')); }
     await page.waitForTimeout(400);
   }
 
