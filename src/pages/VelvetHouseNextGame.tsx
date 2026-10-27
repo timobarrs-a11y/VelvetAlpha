@@ -20,6 +20,7 @@ import { recordSimsPurchase } from '../services/avatarInventoryService';
 import { isHelper } from '../utils/relationshipType';
 import { SOMEONE_NEW_ROUTE } from '../services/setupProgressService';
 import { getMyPlot } from '../services/worldService';
+import { markReturnToHouse, clearReturnToHouse } from '../services/velvetHouseReturn';
 import { townSlot } from '../features/velvet-world/art/streetArt.js';
 
 const GAME_PATH = '/games/velvet-house-next/index.html';
@@ -35,6 +36,8 @@ export function VelvetHouseNextGame() {
   const companionId = queryCompanionId ?? pickedId;
   const { saveReady, noteRestart } = useVelvetHouseCloudSave(companionId, settled);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Back in the house with a companion: the trip out is over.
+  useEffect(() => { if (companionId) clearReturnToHouse(); }, [companionId]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -184,12 +187,12 @@ export function VelvetHouseNextGame() {
           <div className="mt-6 flex flex-col gap-2">
             <button
               type="button"
-              onClick={() => navigate(SOMEONE_NEW_ROUTE)}
+              onClick={() => { markReturnToHouse(); navigate(SOMEONE_NEW_ROUTE); }}
               className="rounded-full bg-gradient-to-r from-rose-500 to-pink-600 py-3 font-bold"
             >
               Meet a companion
             </button>
-            <button type="button" onClick={() => navigate('/lobby')} className="py-2 text-sm text-white/60 hover:text-white">
+            <button type="button" onClick={() => { clearReturnToHouse(); navigate('/lobby'); }} className="py-2 text-sm text-white/60 hover:text-white">
               Not now
             </button>
           </div>

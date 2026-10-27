@@ -9,6 +9,7 @@ import { trackSaveAvatar, trackRandomize } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
 import { sanitizeAvatarConfigForSave } from '../services/avatarSaveService';
 import { getRandomName } from '../data/companionNames';
+import { takeReturnToHouse, HOUSE_ROUTE } from '../services/velvetHouseReturn';
 
 async function resolveCompanionId(): Promise<string | null> {
   const stored = sessionStorage.getItem('currentCompanionId');
@@ -118,7 +119,8 @@ export function CreateCompanionAvatarPage() {
 
   const handleRevealContinue = () => {
     setShowReveal(false);
-    sessionStorage.setItem('envSetupNextRoute', '/who-to-talk');
+    // Met a companion because the house needs one: finish setting up, then go home.
+    sessionStorage.setItem('envSetupNextRoute', takeReturnToHouse() ? HOUSE_ROUTE : '/who-to-talk');
     sessionStorage.setItem('envSetupBackRoute', '/create-companion-avatar');
     navigate('/environment-setup');
   };
