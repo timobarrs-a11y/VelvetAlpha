@@ -2,9 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useMemo, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowRight, Sparkles, ShieldCheck, BadgeCheck, Flag,
+  ArrowRight, Heart, Sparkles, ShieldCheck, BadgeCheck, Flag,
   Compass, CalendarDays, MapPin, Target, ClipboardCheck, TrendingUp,
   Users, UserPlus, PenLine, Newspaper, Home, MessageCircle,
+  Zap, UsersRound, Lightbulb, Sunrise, Award,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -108,6 +109,27 @@ const TRUST = [
   { icon: BadgeCheck, title: 'Authored characters are always labeled', text: 'Characters Velvet writes wear an Authored badge, so you always know when you are talking to a person.' },
   { icon: Flag, title: 'Spaces that stay kind', text: 'Moderation, reporting, and blocking are built in. Crews can lock their doors.' },
 ];
+
+// Feature colors match the icons in the app's toolbar.
+const TONE = { coach: '#34d399', lens: '#fb7185', gold: '#fbbf24', sky: '#38bdf8', blue: '#60a5fa', pink: '#f472b6', orange: '#fb923c', teal: '#2dd4bf' };
+
+const MORE: { icon: LucideIcon; color: string; name: string; text: string }[] = [
+  { icon: CalendarDays, color: TONE.orange, name: 'Calendar', text: 'keeps your events and reminders in one place.' },
+  { icon: MapPin, color: TONE.coach, name: 'Navi', text: 'finds local events, restaurants and things to do.' },
+  { icon: Compass, color: TONE.gold, name: 'Discover', text: 'matches you with people who share your interests.' },
+  { icon: Sparkles, color: TONE.pink, name: 'Your Feed', text: 'is where friends post what they are up to.' },
+  { icon: Home, color: TONE.pink, name: 'Velvet House & Town', text: 'give you a home on a real street, plus a cozy life sim inside.' },
+  { icon: Zap, color: TONE.pink, name: 'Velvet Rope', text: 'is a chat with a stranger. Person or AI?' },
+  { icon: UsersRound, color: TONE.teal, name: 'Group Chat', text: 'keeps a conversation going with several people.' },
+  { icon: Lightbulb, color: TONE.gold, name: 'Insights', text: 'shows your streaks and the patterns behind them.' },
+  { icon: Sunrise, color: TONE.gold, name: 'Morning Journal', text: 'starts your day with intention.' },
+  { icon: Award, color: TONE.gold, name: 'Medals & Crews', text: 'reward progress and build private crews.' },
+  { icon: Heart, color: TONE.lens, name: 'Relationship Briefs', text: 'nudge you about the people you care about.' },
+];
+
+function Feat({ color, children }: { color: string; children: ReactNode }) {
+  return <strong className="font-bold" style={{ color }}>{children}</strong>;
+}
 
 function Eyebrow({ children, accent = '192,132,252' }: { children: ReactNode; accent?: string }) {
   return (
@@ -329,15 +351,26 @@ export function SplashPage() {
 
             <div className="mt-6 space-y-4 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
               <p>
-                Atlas helps you map out your goals. Coaches keep you on track with actionable plans built just for you.
-                Stay current on the things you love with news and YouTube wired right into your profile.
+                <Feat color="#cbd5e1">Atlas</Feat> helps you map out your goals. <Feat color={TONE.coach}>Coaches</Feat> keep you on
+                track with actionable plans built just for you. Stay current on your <Feat color={TONE.coach}>Daily Feed</Feat> with
+                real time news and <Feat color={TONE.lens}>YouTube</Feat> wired right into each profile!
               </p>
               <p>
-                While you&apos;re here, connect and compete with new or existing friends on the leaderboards, or just hang
-                out and talk about things you like in Spaces.
+                Connect and compete with new or old friends on the <Feat color={TONE.gold}>leaderboards</Feat>, or just hang out and
+                talk about things you like in <Feat color={TONE.sky}>Spaces</Feat>. You like writing? Try{' '}
+                <Feat color={TONE.blue}>Co-Author</Feat> for anyone with writer&apos;s block.
               </p>
-              <p>And there&apos;s so much more!</p>
+              <p className="!mb-0">And so much more like:</p>
             </div>
+
+            <ul className="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-2.5 max-w-xl mx-auto lg:mx-0 text-left">
+              {MORE.map(m => (
+                <li key={m.name} className="flex items-start gap-2.5 text-[14.5px] leading-snug text-gray-300">
+                  <m.icon className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: m.color }} />
+                  <span><Feat color={m.color}>{m.name}</Feat> <span className="text-gray-400">{m.text}</span></span>
+                </li>
+              ))}
+            </ul>
 
             <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               {primaryCta('Create your free account')}
