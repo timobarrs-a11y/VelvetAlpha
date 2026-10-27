@@ -52,6 +52,7 @@ export function createInput(g: Game): void {
     if (obj && TYPES[obj.type]?.light) {
       const on = art.toggleObjectLight(obj.id);
       log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);
+      g.scriptEmit({ type: 'light.toggled', objId: obj.id, objType: obj.type, on });
       return;
     }
     if (obj) { g.showObjectActions(obj, e.clientX, e.clientY); return; }
