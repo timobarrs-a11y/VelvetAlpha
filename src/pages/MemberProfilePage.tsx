@@ -86,9 +86,9 @@ export default function MemberProfilePage() {
   if (!data) {
     return (
       <div className="ds-page flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-white/40 text-sm">This member's profile is not public.</p>
-        <button onClick={() => navigate('/feed')} className="mt-4 text-pink-400 text-sm">
-          Back to feed
+        <p className="text-white/40 text-sm">This member hasn&apos;t set up a public profile yet.</p>
+        <button onClick={() => navigate(-1)} className="mt-4 text-pink-400 text-sm">
+          Go back
         </button>
       </div>
     );

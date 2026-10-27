@@ -21,4 +21,11 @@ describe('cardToPlot live marker', () => {
   it('is not live before the migration adds the column', () => {
     expect(cardToPlot(card()).profile.live).toBe(false);
   });
+
+  it('labels a visible seeded profile as authored, but never a person or a private house', () => {
+    expect(cardToPlot(card({ is_live: false, is_public: true })).profile.authored).toBe(true);
+    expect(cardToPlot(card({ is_live: true, is_public: true })).profile.authored).toBe(false);
+    expect(cardToPlot(card({ is_live: false, is_public: false })).profile.authored).toBe(false);
+    expect(cardToPlot(card({ is_public: true })).profile.authored).toBe(false);
+  });
 });

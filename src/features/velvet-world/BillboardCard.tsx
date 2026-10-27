@@ -8,6 +8,7 @@ import {
 import { sendFriendRequest, getFriends, getOutgoingRequests, type FriendPeer } from '../../shared/supabase/queries/messaging';
 import { getCardDetails, recordVisit, type CardDetails } from '../../services/worldService';
 import { Avatar } from '../../components/Avatar';
+import { AuthoredBadge } from '../../components/social/AuthoredBadge';
 
 interface BillboardCardProps {
   plot: Plot;
@@ -197,7 +198,8 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanion
         {/* Chips */}
         <div className="flex flex-wrap gap-1.5">
           {isYou && <Chip bg="rgba(240,106,155,0.16)" color="#F06A9B">Your house</Chip>}
-          {resolved.member && <Chip bg="rgba(245,184,46,0.16)" color="#F5B82E">★ Member</Chip>}
+          {prof.authored && <AuthoredBadge size="sm" />}
+          {resolved.member && !prof.authored && <Chip bg="rgba(245,184,46,0.16)" color="#F5B82E">★ Member</Chip>}
           {prof.newNeighbor && <Chip bg="rgba(89,201,138,0.16)" color="#59C98A">New neighbor</Chip>}
           {isFriend && <Chip bg="rgba(89,201,138,0.16)" color="#59C98A">Friend</Chip>}
           {(prof.spaces || []).map((s) => (
