@@ -4,7 +4,7 @@ import { isCurrentContent } from '../state/saveMigration';
 import { qualityManager } from '../engine/qualityTier';
 import { postToParent } from '../bridge/protocol';
 import { clockText, DAYS, weekday } from '../state/time';
-import { hasChoice, askWhoMovesIn, listenForCompanions } from '../bridge/companions';
+import { hasChoice, anyHouse, askWho, listenForCompanions, onCompanionsChanged } from '../bridge/companions';
 
 /**
  * The title screen: what the player sees before the house. Continue picks up the saved house, New Game starts the
@@ -33,34 +33,49 @@ export function saveSummary(): SaveSummary | null {
 export function showMainMenu(): Promise<LaunchChoice> {
   listenForCompanions();
   return new Promise((resolve) => {
+    let onHome = false;
     const summary = saveSummary();
     const root = document.createElement('div');
     root.className = 'vh-menu';
     const done = (choice: LaunchChoice): void => { root.classList.add('vh-menu-out'); setTimeout(() => resolve(choice), 320); };
 
     const home = (): void => {
+      onHome = true;
+      // With several companions, someone else's house may be the one to go back to.
+      const canContinue = !!summary || (hasChoice() && anyHouse());
       root.innerHTML = `
         <div class="vh-menu-card">
           <h1 class="vh-menu-title">Velvet House</h1>
-          <p class="vh-menu-sub">${summary ? 'Welcome home.' : 'A cozy life, together.'}</p>
-          ${summary ? `<button class="vh-menu-btn vh-menu-primary" data-m="continue"><span>Continue</span><small>${esc(summary.names ? summary.names + ' · ' : '')}Day ${summary.day} · ${esc(summary.when)} · $${summary.money}</small></button>` : ''}
-          <button class="vh-menu-btn ${summary ? '' : 'vh-menu-primary'}" data-m="new"><span>${summary ? 'New Game' : 'Start'}</span></button>
+          <p class="vh-menu-sub">${canContinue ? 'Welcome home.' : 'A cozy life, together.'}</p>
+          ${canContinue ? `<button class="vh-menu-btn vh-menu-primary" data-m="continue"><span>Continue</span><small>${summary ? `${esc(summary.names ? summary.names + ' · ' : '')}Day ${summary.day} · ${esc(summary.when)} · $${summary.money}` : 'Choose whose house'}</small></button>` : ''}
+          <button class="vh-menu-btn ${canContinue ? '' : 'vh-menu-primary'}" data-m="new"><span>${canContinue ? 'New Game' : 'Start'}</span></button>
           <button class="vh-menu-btn" data-m="settings"><span>Settings</span></button>
         </div>`;
-      root.querySelector('[data-m=continue]')?.addEventListener('click', () => done('continue'));
+      root.querySelector('[data-m=continue]')?.addEventListener('click', () => { void beginContinue(); });
       root.querySelector('[data-m=new]')?.addEventListener('click', () => { void beginNew(); });
       root.querySelector('[data-m=settings]')?.addEventListener('click', settings);
     };
 
-    // Starting a house: with more than one companion to choose from, the host asks who is moving in first.
+    // With more than one companion to choose from, the host asks who first: whose house to go back to, or who is moving in.
+    const asking = (title: string, text: string): void => {
+      onHome = false;
+      root.innerHTML = `
+        <div class="vh-menu-card">
+          <h2 class="vh-menu-h">${title}</h2>
+          <p class="vh-menu-sub">${text}</p>
+        </div>`;
+    };
+    const beginContinue = async (): Promise<void> => {
+      if (hasChoice()) {
+        asking('Whose house?', 'Pick the house to go back to.');
+        if ((await askWho('continue')) === 'cancel') { home(); return; }
+      }
+      done('continue');
+    };
     const beginNew = async (): Promise<void> => {
       if (hasChoice()) {
-        root.innerHTML = `
-          <div class="vh-menu-card">
-            <h2 class="vh-menu-h">Who's moving in?</h2>
-            <p class="vh-menu-sub">Pick who you'll share the house with.</p>
-          </div>`;
-        if ((await askWhoMovesIn()) === 'cancel') { home(); return; }
+        asking("Who's moving in?", "Pick who you'll share the house with.");
+        if ((await askWho('new')) === 'cancel') { home(); return; }
       }
       if (summary) confirmNew(); else start();
     };
@@ -105,6 +120,7 @@ export function showMainMenu(): Promise<LaunchChoice> {
       root.querySelector('[data-m=back]')?.addEventListener('click', home);
     };
 
+    onCompanionsChanged(() => { if (onHome) home(); });
     home();
     document.body.appendChild(root);
     (root.querySelector('.vh-menu-primary') as HTMLElement | null)?.focus();

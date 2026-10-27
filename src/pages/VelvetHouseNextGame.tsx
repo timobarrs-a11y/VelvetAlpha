@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanion, getCompanions, type Companion } from '../services/companionService';
 import { CompanionPicker } from '../features/velvet-sims/CompanionPicker';
+import { houseDay } from '../features/velvet-sims/houseDays';
 import { loadAvatarUnlocks } from '../hooks/useAvatarUnlocks';
 import { buildProfile, avatarFromGameLook, buildAvatarLook, type PlayerProfile } from '../features/velvet-sims/simProfile';
 import { lookUnlock, resolveLookForDisplay } from '../data/avatarCatalog';
@@ -36,8 +37,9 @@ export function VelvetHouseNextGame() {
   const [settled, setSettled] = useState(!!queryCompanionId);
   // With more than one companion, Start asks who is moving in; picking someone other than who the page opened with
   // replaces the game with a fresh house for them.
-  const [chosen, setChosen] = useState<{ id: string } | null>(null);
-  const [choosing, setChoosing] = useState(false);
+  const [chosen, setChosen] = useState<{ id: string; start: 'new' | 'continue' } | null>(null);
+  const [choosing, setChoosing] = useState<'new' | 'continue' | null>(null);
+  const [days, setDays] = useState<Record<string, number | null>>({});
   const [options, setOptions] = useState<Companion[]>([]);
   const optionsReady = useRef<Promise<Companion[]>>(Promise.resolve([]));
   const companionId = chosen?.id ?? queryCompanionId ?? pickedId;
@@ -55,8 +57,9 @@ export function VelvetHouseNextGame() {
         const { data: { user } } = await supabase.auth.getUser();
         const all = user ? await getCompanions(user.id) : [];
         const list = all.filter(c => !isHelper(c.relationship_type)) as Companion[];
-        if (!cancelled) setOptions(list);
-        return list;
+        const reached = Object.fromEntries(await Promise.all(list.map(async (c) => [c.id, await houseDay(c.id)] as const)));
+        if (!cancelled) { setOptions(list); setDays(reached); }
+        return list.map(c => ({ ...c, __day: reached[c.id] })) as Companion[];
       } catch { return []; }
     })();
     return () => { cancelled = true; };
@@ -136,10 +139,13 @@ export function VelvetHouseNextGame() {
         return;
       }
       // The game's title screen: Start with more than one companion asks who is moving in.
-      if (isStartRequestedMessage(e.data)) { setChoosing(true); return; }
+      if (isStartRequestedMessage(e.data)) { setChoosing(e.data.mode); return; }
       // The title screen is up (no bridge yet), and the game itself says ready: both want to know who there is to pick.
       if (isMenuReadyMessage(e.data) || isReadyMessage(e.data)) {
-        optionsReady.current.then((list) => { if (!cancelled) win.postMessage({ type: 'velvet:companions', count: list.length }, window.location.origin); });
+        optionsReady.current.then((list) => {
+          const houses = list.filter((c) => (c as Companion & { __day?: number | null }).__day != null).length;
+          if (!cancelled) win.postMessage({ type: 'velvet:companions', count: list.length, houses }, window.location.origin);
+        });
       }
       if (!isReadyMessage(e.data)) return;
       sendInventory(win);
@@ -247,12 +253,16 @@ export function VelvetHouseNextGame() {
         <CompanionPicker
           companions={options}
           currentId={companionId}
+          mode={choosing}
+          days={days}
           onPick={(id) => {
-            setChoosing(false);
+            const mode = choosing;
+            setChoosing(null);
             if (id === companionId) iframeRef.current?.contentWindow?.postMessage({ type: 'velvet:startGo' }, window.location.origin);
-            else { setLoading(true); setChosen({ id }); }
+            // Someone else: back to their house if they have one and that is what was asked, otherwise a new one.
+            else { setLoading(true); setChosen({ id, start: mode === 'continue' && days[id] != null ? 'continue' : 'new' }); }
           }}
-          onCancel={() => { setChoosing(false); iframeRef.current?.contentWindow?.postMessage({ type: 'velvet:startCancel' }, window.location.origin); }}
+          onCancel={() => { setChoosing(null); iframeRef.current?.contentWindow?.postMessage({ type: 'velvet:startCancel' }, window.location.origin); }}
         />
       )}
 
@@ -269,7 +279,7 @@ export function VelvetHouseNextGame() {
       <iframe
         ref={iframeRef}
         key={chosen?.id ?? 'initial'}
-        src={`${GAME_PATH}${companionId ? `?companion=${encodeURIComponent(companionId)}${chosen ? '&start=new' : ''}` : ''}`}
+        src={`${GAME_PATH}${companionId ? `?companion=${encodeURIComponent(companionId)}${chosen ? `&start=${chosen.start}` : ''}` : ''}`}
         title="Velvet Sims (Preview)"
         className="flex-1 w-full border-0"
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"

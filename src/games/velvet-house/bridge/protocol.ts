@@ -271,7 +271,7 @@ export function isPlotMessage(data: unknown): data is PlotMessage {
 }
 
 /** Host to game: how many companions the player could move in with (more than one means Start asks the host who). */
-export interface CompanionsMessage extends BridgeMessage { type: 'velvet:companions'; count: number }
+export interface CompanionsMessage extends BridgeMessage { type: 'velvet:companions'; count: number; /** How many of them already have a house. */ houses?: number }
 export function isCompanionsMessage(data: unknown): data is CompanionsMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;
@@ -289,8 +289,10 @@ export function isMenuReadyMessage(data: unknown): data is BridgeMessage & { typ
   return isBridgeMessage(data) && (data as Record<string, unknown>).type === 'velvet:menuReady';
 }
 
-export function isStartRequestedMessage(data: unknown): data is BridgeMessage & { type: 'velvet:startRequested' } {
-  return isBridgeMessage(data) && (data as Record<string, unknown>).type === 'velvet:startRequested';
+export type StartMode = 'new' | 'continue';
+export function isStartRequestedMessage(data: unknown): data is BridgeMessage & { type: 'velvet:startRequested'; mode: StartMode } {
+  return isBridgeMessage(data) && (data as Record<string, unknown>).type === 'velvet:startRequested'
+    && ((data as Record<string, unknown>).mode === 'new' || (data as Record<string, unknown>).mode === 'continue');
 }
 
 export function isAvatarLookMessage(data: unknown): data is AvatarLookMessage {
