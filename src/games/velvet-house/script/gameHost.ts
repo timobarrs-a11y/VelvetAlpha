@@ -151,7 +151,7 @@ export function createScripts(g: Game): Partial<Game> {
       if (at) g.setGhostTarget({ type: s.objType, level: at.level, x: at.x, y: at.y, rot: s.rot });
       // A coloured outline is a placement lesson: bring up Arrange with that piece in hand, framed with its outline.
       if (s.color) {
-        const o = world.objs.find((q) => q.type === s.objType);
+        const o = world.objs.find((q) => q.type === s.objType && (!at || q.level === at.level));
         if (o) { if (!g.isArranging()) g.drawer.open('arrange'); g.selectObject(o); }
       }
       if (at) art.setGhost({ type: s.objType, level: at.level, x: at.x, y: at.y, rot: s.rot, color: s.color });
@@ -185,6 +185,7 @@ export function createScripts(g: Game): Partial<Game> {
         reducedMotion: !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
       });
     },
+    dim(amount) { art.setDim(amount); },
     introDone: () => !arrival || arrival.done(),
     setClock(day, minutes) {
       if (day !== undefined) world.day = day;
@@ -219,7 +220,7 @@ export function createScripts(g: Game): Partial<Game> {
   const engine = new ScriptEngine(host, SCRIPTS, LINE_BOOK, rt);
   ui.onSkip(() => engine.skip());
   // "Set it down" ends the placing: the piece stays where it is and Arrange closes.
-  ui.onCardButton(() => { if (g.isArranging()) g.drawer.close(); });
+  ui.onCardButton(() => { if (g.isArranging()) { g.snapSelectedToOutline(); g.drawer.close(); } });
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.

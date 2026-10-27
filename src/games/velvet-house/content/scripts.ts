@@ -123,6 +123,8 @@ export const TUTORIAL: ScriptDef[] = [
   // 7. The rest of the truck: the player unpacks alone, and Maya unpacks one on her own.
   chapter('tutorial.ch7', { on: 'cond', cond: { flag: 'opening.done' } }, [
     { do: 'wait', seconds: 2 },
+    // The camera goes back to the door for the next delivery.
+    { do: 'camera', focus: 'mark:entry.inside', zoom: 1.6, level: 1 },
     ...knockIn('pbox'),
     { do: 'give', object: { type: 'pbox', at: 'mark:entry.drop', id: 'box.lamp', contents: 'lamp' } },
     { do: 'carry', who: 'dez', carrying: null },
@@ -131,10 +133,38 @@ export const TUTORIAL: ScriptDef[] = [
     { do: 'give', object: { type: 'pbox', at: 'mark:entry.stack2', id: 'box.plant2', contents: 'plant' } },
     say('dez', 'dez.ch7.stack'),
     ...exitLine,
+    { do: 'camera', focus: 'wide' },
+    // Maya wants it in the corner, in her own way.
+    { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'lampCorner' } },
+    { do: 'mode', mode: 'guided', allow: ['obj:box.lamp'] },
+    { do: 'card', title: 'Open the box', body: 'Tap the box to open it.', spotlight: 'obj:box.lamp' },
+    { do: 'wait', until: { event: 'obj.unpacked', match: { objId: 'box.lamp' } } },
+    { do: 'outline', objType: 'lamp', at: 'mark:living.lampCorner', rot: 0, color: 'player' },
+    { do: 'card', title: 'The corner', body: 'Drag the lamp into the outline. Tap Set it down when it is there.', button: 'Set it down' },
+    { do: 'outline', objType: 'lamp', at: 'mark:living.lampCorner', rot: 0 },
+    { do: 'mode', mode: 'cutscene' },
+    // She sits on the couch, sees it from there, and changes her mind.
+    { do: 'walk', who: 'maya', to: 'mark:living.center' },
+    { do: 'act', who: 'maya', act: 'tv', wait: false },
+    { do: 'wait', seconds: 2 },
+    { do: 'emote', who: 'maya', emote: 'alert' },
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'lampByCouch' } },
+    // Evening comes up, so the lamp has something to light.
+    { do: 'dim', amount: 0.38 },
+    { do: 'mode', mode: 'guided', allow: ['obj:box.lamp'] },
+    { do: 'outline', objType: 'lamp', at: 'mark:living.lamp', rot: 0, color: 'player' },
+    { do: 'card', title: 'By the couch', body: 'Move the lamp next to the couch, then tap Set it down.', button: 'Set it down' },
+    { do: 'outline', objType: 'lamp', at: 'mark:living.lamp', rot: 0 },
+    { do: 'card', title: 'Let there be light', body: 'Tap the lamp and choose Turn light on/off.', spotlight: 'obj:box.lamp' },
+    { do: 'wait', until: { event: 'light.toggled', match: { objType: 'lamp' } } },
+    { do: 'highlight', target: null },
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'lampOn' } },
+    { do: 'wait', seconds: 1.5 },
+    { do: 'dim', amount: 0 },
+    { do: 'mode', mode: 'beat' },
     { do: 'act', who: 'maya', act: 'unpack', wait: true },
     { do: 'deliver', category: 'mayaUnpack' },
     say('maya', 'maya.ch7.unpacked'),
-    { do: 'wait', until: { any: [{ flag: 'did.placed.lamp' }, { event: 'obj.placed', match: { objType: 'lamp' } }] } },
     { do: 'set', flag: 'tutorial.lamp', value: true },
   ]),
   // 8. Dez's card: the store.

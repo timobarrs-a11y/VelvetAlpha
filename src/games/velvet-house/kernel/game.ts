@@ -165,6 +165,8 @@ export interface Game {
   peopleOnFloor(): Agent[];
   nameOf(o: ObjectInstance): string;
   isArranging(): boolean;
+  /** Set the selected piece exactly in a lesson's outline when it is close. */
+  snapSelectedToOutline(): void;
   /** The piece being dragged: its centre on the floor (world units) and its height. */
   heldCentre(): { x: number; y: number; h: number } | null;
   /** Where a script wants the piece to end up (the outline), so the camera can frame both. */

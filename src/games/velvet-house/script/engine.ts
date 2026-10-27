@@ -294,6 +294,7 @@ export class ScriptEngine {
         if (skipping || !h.intro) return false;
         h.intro(s.kind);
         return block({ k: 'intro' });
+      case 'dim': h.dim?.(s.amount); return false;
       case 'highlight': h.highlight(s.target); return false;
       case 'outline': h.outline({ objType: s.objType, at: s.at, rot: s.rot, color: s.color }); return false;
       case 'set': h.flags[s.flag] = s.value; return false;

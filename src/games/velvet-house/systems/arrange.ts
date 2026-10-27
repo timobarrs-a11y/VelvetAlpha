@@ -16,6 +16,8 @@ export function createArrange(g: Game): Partial<Game> {
   let dragCandidate: { id: number; obj: ObjectInstance; x: number; y: number } | null = null;
   let wasPaused = false;
   let ghost: { x: number; y: number; h: number; level: number } | null = null;
+  // The lesson's outline as the piece itself would be set: where its corner goes and how it faces.
+  let ghostSpec: { type: string; level: number; x: number; y: number; rot: number } | null = null;
 
   // Arrange mode
   const toggleArrange = (): void => { if (arranging) drawer.close(); else drawer.open('arrange'); };
@@ -81,11 +83,30 @@ export function createArrange(g: Game): Partial<Game> {
   }
   function setGhostTarget(t: { type: string; level: number; x: number; y: number; rot?: number } | null): void {
     const T = t && TYPES[t.type];
-    if (!t || !T) { ghost = null; return; }
+    if (!t || !T) { ghost = null; ghostSpec = null; return; }
+    ghostSpec = { type: t.type, level: t.level, x: t.x, y: t.y, rot: t.rot ?? 0 };
     const [fw, fd] = (t.rot ?? 0) % 2 ? [T.D, T.W] : [T.W, T.D];
     ghost = { level: t.level, x: t.x + fw / 2, y: t.y + fd / 2, h: (T.h ?? 1) / 2 };
   }
   // Set a piece down for good: the house learns where it is now.
+  // A lesson's piece is set exactly where the outline is, facing the way it shows (the couch faces the TV), once it is
+  // close; if that does not fit, it stays where the player put it.
+  function snapToOutline(o: ObjectInstance, within = 2.5): boolean {
+    const s = ghostSpec;
+    if (!s || s.type !== o.type || s.level !== o.level) return false;
+    if (Math.hypot(o.x - s.x, o.y - s.y) > within) return false;
+    const was = { x: o.x, y: o.y, rot: o.rot };
+    Object.assign(o, { x: s.x, y: s.y, rot: s.rot });
+    if (checkPlacement(world.objs, o, peopleOnFloor()).ok) return true;
+    Object.assign(o, was);
+    return false;
+  }
+  function snapSelectedToOutline(): void {
+    const o = selectedObj ?? heldObj;
+    if (!o) return;
+    cancelHold();
+    if (snapToOutline(o, 4)) commitMove(o);
+  }
   function commitMove(o: ObjectInstance, verb = 'Moved'): void {
     log(`${verb} the ${nameOf(o)}.`);
     art.objectPlaced(o.id);
@@ -257,6 +278,7 @@ export function createArrange(g: Game): Partial<Game> {
     recheck();
     if (heldCheck.ok) {
       heldObj = null; heldOrig = null;
+      snapToOutline(o);
       commitMove(o);
     } else {
       log(`${heldCheck.reason ?? "It doesn't fit there."} Back it goes.`);
@@ -278,5 +300,5 @@ export function createArrange(g: Game): Partial<Game> {
     if (heldObj) { cancelHold(); heldCheck = { ok: true }; }
     dragCandidate = null;
   }
-  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
+  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
 }

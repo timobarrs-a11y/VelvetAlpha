@@ -44,7 +44,7 @@ export function createHouseArt(ctx0, opts = {}) {
   const cv = ctx0.canvas;
   const SLOTS = {};
   const PETS = [];
-  let DIRT = [], sparkles = [];
+  let DIRT = [], sparkles = [], poofs = [];
   let fridge = { basic: 4, fresh: 0 };
   const lightSkipped = () => false;
 
@@ -130,7 +130,10 @@ export function createHouseArt(ctx0, opts = {}) {
   const seasonIdx = (d = day) => Math.floor((d - 1) / 7) % 4;
   const season = () => SEASONS[seasonIdx()];
   const seasonDay = () => ((day - 1) % 7) + 1;
-  function darkness() { const h = hour(), si = seasonIdx(), eve = [0, 1, -1, -2.5][si], morn = [0, -0.5, 0.4, 0.8][si], night0 = 21 + eve, dusk0 = 18 + eve, dawn0 = 5.5 + morn, light0 = 7.5 + morn;
+  // A scene can pull the room toward evening without moving the clock, to show off the lights (see setDim).
+  let dimTarget = 0, dimNow = 0;
+  function darkness() { const base = baseDarkness(); return dimNow > base ? dimNow : base; }
+  function baseDarkness() { const h = hour(), si = seasonIdx(), eve = [0, 1, -1, -2.5][si], morn = [0, -0.5, 0.4, 0.8][si], night0 = 21 + eve, dusk0 = 18 + eve, dawn0 = 5.5 + morn, light0 = 7.5 + morn;
     if (h >= night0 || h < dawn0) return 0.42; if (h >= dusk0) return (h - dusk0) / (night0 - dusk0) * 0.42; if (h < light0) return (light0 - h) / (light0 - dawn0) * 0.42; return 0; }
   function skyColor() { const h = hour(); if (raining() && darkness() < 0.3) return seasonIdx() === 3 ? '#D2D8E0' : '#9AA6B5'; if (darkness() > 0.3) return '#2A2F55'; if (h >= 17.5 && h < 21) return '#F0B98E'; if (h < 7.5) return '#E9C7B5'; return '#BFE2F0'; }
 
@@ -895,6 +898,20 @@ export function createHouseArt(ctx0, opts = {}) {
       else { for (let i = 0; i < 3; i++) { const [sx, sy] = at((rnd() - 0.5) * 0.25, (rnd() - 0.5) * 0.15); ell(sx, sy, 8 + rnd() * 5, 4 + rnd() * 3, `rgba(90,78,78,${A(0.2)})`, null, rot); } }
     });
   }
+  // The cloud that hides a moving box for a moment while what was inside takes its place.
+  function drawPoofs(level) {
+    for (let i = poofs.length - 1; i >= 0; i--) {
+      const f = poofs[i]; f.t += rdt; if (f.t > 0.9) { poofs.splice(i, 1); continue; } if (f.level !== level) continue;
+      const u = f.t / 0.9, grow = Math.min(1, u * 2.6), al = u < 0.5 ? 1 : 1 - (u - 0.5) / 0.5;
+      const [cx, cy] = iso(f.x, f.y, 0.4);
+      ctx.save(); ctx.globalAlpha = al * 0.95;
+      for (const [dx, dy, r] of [[0, 0, 15], [-13, 3, 11], [13, 3, 11], [-7, -8, 11], [8, -9, 10], [0, 6, 12]]) {
+        ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = 'rgba(120,110,130,.45)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx + dx * grow * 1.5, cy + dy * grow * 1.2 - u * 8, r * (0.5 + grow * 0.7), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
   function drawSparkles(level) {
     for (let i = sparkles.length - 1; i >= 0; i--) {
       const s = sparkles[i]; s.t += rdt; if (s.t > 1.2) { sparkles.splice(i, 1); continue; } if (s.level !== level) continue;
@@ -1245,6 +1262,7 @@ export function createHouseArt(ctx0, opts = {}) {
 
   function sync(s) {
     minutes = s.minutes; day = s.day; viewLevel = s.level; animT = s.t; rdt = s.dt;
+    dimNow += (dimTarget - dimNow) * Math.min(1, rdt * 1.6);
     wallMode = s.wallMode || 'cut';
     OBJS = s.objs;
     if (s.rot !== VR) { VR = s.rot; setOrigin(); }
@@ -1980,6 +1998,7 @@ export function createHouseArt(ctx0, opts = {}) {
     drawFrontWalls(lv); drawProjector(lv);
     if (arrState) drawArrangeOverlay(arrState, lv);
     drawGuides(lv, t);
+    drawPoofs(lv);
     drawSparkles(lv);
     } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
     drawParticles(lv, false);
@@ -2138,5 +2157,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

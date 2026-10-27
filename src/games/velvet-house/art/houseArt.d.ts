@@ -65,6 +65,10 @@ export interface HouseArt {
   setGhost(g: { type: string; level: number; x: number; y: number; rot?: number; color?: 'partner' | 'player' } | null): void;
   /** A few sparkles near a spot on a floor (a room just finished, say). */
   burst(level: number, x: number, y: number, z?: number): void;
+  /** A cartoon cloud over a spot: a moving box is opened. */
+  poof(level: number, x: number, y: number): void;
+  /** Pull the room toward evening (0 to 0.42) without moving the clock; 0 puts it back. */
+  setDim(amount: number): void;
   /** Where a world point lands in view coordinates (follows the current rotation). */
   project(x: number, y: number, z?: number): [number, number];
   /** The world point (x, y on the floor) under a view coordinate; the opposite of project, following the rotation. */

@@ -65,6 +65,8 @@ export type Step =
   | { do: 'clock'; day?: number; minutes?: number }
   /** A full-screen opening shot (the drive up to the house); waits until it ends. */
   | { do: 'intro'; kind: 'arrival' }
+  /** Pulls the room toward evening (0 to 0.42) without moving the clock, so the lights can be seen; 0 puts it back. */
+  | { do: 'dim'; amount: number }
   | { do: 'wait'; seconds?: number; until?: Cond }
   | { do: 'if'; cond: Cond; then: Step[]; else?: Step[] }
   | { do: 'run'; script: string }
@@ -145,6 +147,7 @@ export interface ScriptHost {
   unlock(what: string): void;
   setClock(day?: number, minutes?: number): void;
   /** Starts a full-screen opening shot; `introDone` is true once it has ended. */
+  dim?(amount: number): void;
   intro?(kind: 'arrival'): void;
   introDone?(): boolean;
   /** The script is done with these people: free will and idle choices are theirs again. */
