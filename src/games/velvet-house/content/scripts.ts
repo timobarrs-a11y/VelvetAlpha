@@ -65,7 +65,6 @@ export const OPENING: ScriptDef = {
     { do: 'outline', objType: 'sofa', at: 'mark:living.couchTv', rot: 2 },
     { do: 'checkpoint' },
     // The couch is down; the next knock at the door is the lamp.
-    { do: 'set', flag: 'couch', value: 'mine' },
     { do: 'set', flag: 'opening.done', value: true },
     { do: 'set', flag: 'dez.deliveries', value: true },
   ],
@@ -73,7 +72,6 @@ export const OPENING: ScriptDef = {
     { do: 'clock', day: 1, minutes: 9 * 60 + 20 },
     { do: 'despawn', npc: 'dez' },
     { do: 'give', object: { type: 'sofa', at: 'mark:living.couchTv', id: 'sofa' } },
-    { do: 'set', flag: 'couch', value: 'mine' },
     { do: 'set', flag: 'opening.done', value: true },
     { do: 'set', flag: 'dez.deliveries', value: true },
   ],
@@ -186,7 +184,7 @@ export const TUTORIAL: ScriptDef[] = [
   chapter('tutorial.ch11', { on: 'cond', cond: { flag: 'tutorial.dishes' } }, [
     { do: 'walk', who: 'maya', to: 'mark:living.center', wait: false },
     { do: 'emote', who: 'maya', emote: 'alert' },
-    { do: 'if', cond: { flag: 'couch', equals: 'theirs' }, then: [{ do: 'deliver', category: 'chatLine', id: 'maya.ch11.moved' }], else: [{ do: 'deliver', category: 'chatLine', id: 'maya.ch11.kept' }] },
+    { do: 'deliver', category: 'chatLine', id: 'maya.ch11.kept' },
     { do: 'card', title: 'Talk to your partner', body: 'Tap your partner to talk. You can say anything, not just things about the house. They remember what you tell them.' },
     { do: 'wait', until: { any: [{ flag: 'did.chat.closed' }, { event: 'chat.closed' }] } },
     { do: 'set', flag: 'tutorial.talked', value: true },
@@ -199,7 +197,6 @@ export const TUTORIAL: ScriptDef[] = [
     say('dez', 'dez.ch12.1'),
     say('dez', 'dez.ch12.2'),
     ...exitLine,
-    { do: 'if', cond: { flag: 'couch', equals: 'theirs' }, then: [say('maya', 'maya.ch12.handOver')] },
     { do: 'card', title: 'Make one room yours', body: 'Open the Shop and pick a paint, a wallpaper or a floor. Your partner has their own taste, so watch what they love, or ask them.', spotlight: 'tab:shop' },
     { do: 'wait', until: { any: [{ flag: 'did.room.styled' }, { event: 'room.styled' }] } },
     { do: 'if', cond: { event: 'room.styled', match: { liked: true } }, then: [say('maya', 'maya.ch12.likes')], else: [say('maya', 'maya.ch12.hides')] },
@@ -236,7 +233,7 @@ export const TUTORIAL: ScriptDef[] = [
     { do: 'give', money: 100 },
     say('dez', 'dez.ch15.3'),
     ...exitLine,
-    { do: 'if', cond: { flag: 'couch', equals: 'theirs' }, then: [say('maya', 'maya.ch15.moved')], else: [say('maya', 'maya.ch15.kept')] },
+    say('maya', 'maya.ch15.kept'),
     { do: 'mode', mode: 'guided' },
     {
       do: 'choice',

@@ -24,7 +24,6 @@ export const MARKS: Record<string, Spot> = {
   'living.tvWall': { level: 1, x: 5.6, y: 3.3 },
   // The two spots the couch can go: against the wall facing the TV, or by the window.
   'living.couchTv': { level: 1, x: 5.6, y: 3.3 },
-  'living.couchWindow': { level: 1, x: 7.0, y: 6.8 },
   // Out of the way in the far front corner of the living room, where Maya first asks for the lamp.
   'living.lampCorner': { level: 1, x: 9.3, y: 7.2 },
   // On the right-hand side of the couch as you look at the room (the far end of its length).
