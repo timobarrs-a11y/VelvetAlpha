@@ -11,6 +11,39 @@ import {
 
 export type ViewMode = 'street' | 'town';
 
+
+/** Unread mail: the flag goes up and the mailbox glows. */
+function drawMailLight(ctx: CanvasRenderingContext2D, mb: { top: [number, number]; flag: [number, number] }, zoom: number, t: number, still: boolean) {
+  const k = Math.max(1, 0.7 / Math.max(zoom, 0.2)), pulse = still ? 1 : 0.7 + 0.3 * Math.sin(t * 3.2);
+  const [tx, ty] = mb.top, [fx, fy] = mb.flag;
+  ctx.save();
+  const r = 15 * k, g = ctx.createRadialGradient(tx, ty, 0, tx, ty, r);
+  g.addColorStop(0, `rgba(255,214,120,${0.75 * pulse})`); g.addColorStop(1, 'rgba(255,214,120,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(tx, ty, r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = `rgba(255,236,170,${0.7 + 0.3 * pulse})`; ctx.beginPath(); ctx.arc(tx, ty - 3 * k, 2.4 * k, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#D9D5CE'; ctx.lineWidth = 1.1 * k; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 9 * k); ctx.stroke();
+  ctx.fillStyle = '#F0436B'; ctx.fillRect(fx, fy - 9 * k, 6 * k, 4 * k);
+  ctx.restore();
+}
+
+/** A small "LIVE" pill just above a house: a real person lives here. */
+function drawLiveMarker(ctx: CanvasRenderingContext2D, pts: [number, number][], zoom: number, t: number, still: boolean) {
+  let top = Infinity, minX = Infinity, maxX = -Infinity;
+  for (const [x, y] of pts) { if (y < top) top = y; if (x < minX) minX = x; if (x > maxX) maxX = x; }
+  const k = 1 / Math.max(zoom, 0.35), cx = (minX + maxX) / 2, bob = still ? 0 : Math.sin(t * 2.2) * 1.5 * k;
+  const h = 14 * k, w = 40 * k, x = cx - w / 2, y = top - 20 * k - h + bob;
+  ctx.save();
+  ctx.fillStyle = 'rgba(20,18,42,0.88)';
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill();
+  ctx.lineWidth = 1 * k; ctx.strokeStyle = 'rgba(89,201,138,0.7)'; ctx.stroke();
+  const pulse = still ? 1 : 0.65 + 0.35 * Math.sin(t * 3.4);
+  ctx.fillStyle = `rgba(89,201,138,${pulse})`;
+  ctx.beginPath(); ctx.arc(x + 9 * k, y + h / 2, 2.6 * k, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#E9FFF1'; ctx.font = `800 ${8 * k}px ${FONTS.ui}`; ctx.textBaseline = 'middle';
+  ctx.fillText('LIVE', x + 15 * k, y + h / 2 + 0.5 * k);
+  ctx.restore();
+}
+
 /** Camera moves the page can ask for. Slots are permanent plot numbers (slot_index). */
 export interface WorldControl {
   showStreet: () => void;
@@ -25,6 +58,11 @@ interface WorldCanvasProps {
   plots: Plot[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** Someone tapped a mailbox. */
+  onMailbox?: (id: string) => void;
+  /** Your own user id and how many letters are waiting: your mailbox lights up. */
+  myId?: string;
+  mailUnread?: number;
   season: Season;
   hour: number;
   view: ViewMode;
@@ -270,6 +308,13 @@ export function WorldCanvas(props: WorldCanvasProps) {
       const [x, y] = toWorld(sx, sy);
       const cache = view === 'street' ? streetCache : townCache;
       let hit: string | null = null;
+      // mailboxes first: they stand in front of everything else on the lot
+      for (const [, c] of cache) {
+        const m = c.meta && c.meta.hit.mailbox;
+        if (!m) continue;
+        const xs = m.map((q) => q[0]), ys = m.map((q) => q[1]);
+        if (x > Math.min(...xs) && x < Math.max(...xs) && y > Math.min(...ys) && y < Math.max(...ys)) { P().onMailbox?.(c.e.id); return; }
+      }
       for (const [, c] of cache) if (c.meta && c.meta.hit.sign && inside(c.meta.hit.sign, x, y)) hit = c.e.id;
       if (!hit) {
         for (const [, c] of cache) {
@@ -419,6 +464,18 @@ export function WorldCanvas(props: WorldCanvasProps) {
       if (lowVisible.length) drawTownLightsLow(ctx, lowVisible, t, env, vr);
       if (view === 'street') drawTownLights(ctx, props.plots.length, t, env, ground, front);
       else drawTownLights(ctx, 0, t, env, square, { lamps: [] });
+
+      // "LIVE" over the houses of real people
+      detailed.forEach(([, c]) => {
+        const pts = c.meta?.hit.house;
+        if (c.e.profile.live && pts?.length) drawLiveMarker(ctx, pts, cam.zoom, t, env.reducedMotion);
+      });
+
+      // a lit mailbox: unread mail is waiting
+      detailed.forEach(([, c]) => {
+        const mb = c.meta?.mailbox;
+        if (mb && c.e.id === P().myId && (P().mailUnread ?? 0) > 0) drawMailLight(ctx, mb, cam.zoom, t, env.reducedMotion);
+      });
 
       // selection ring around the chosen billboard
       if (props.selectedId) {

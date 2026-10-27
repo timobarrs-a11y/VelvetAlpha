@@ -2,9 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useMemo, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowRight, Sparkles, ShieldCheck, BadgeCheck, Flag,
+  ArrowRight, Heart, Sparkles, ShieldCheck, BadgeCheck, Flag,
   Compass, CalendarDays, MapPin, Target, ClipboardCheck, TrendingUp,
   Users, UserPlus, PenLine, Newspaper, Home, MessageCircle,
+  Gamepad2, Lightbulb, Sunrise,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -61,7 +62,7 @@ const PILLARS: Pillar[] = [
     blurb: 'Velvet already knows what you are into, so it puts you where your crowd is.',
     accent: '56,189,248',
     items: [
-      { icon: Users, name: 'Community Board', text: 'Spaces with live rooms and posts, matched to your interests from day one.' },
+      { icon: Users, name: 'Spaces', text: 'Live rooms and posts, matched to your interests from day one.' },
       { icon: UserPlus, name: 'Meet people', text: 'Find members who share your interests and goals. Follow, message, and start a crew.' },
       { icon: MessageCircle, name: 'Statuses & Your Feed', text: 'Post what you are up to. Friends like and comment, and your wins show up alongside.' },
     ],
@@ -108,6 +109,23 @@ const TRUST = [
   { icon: BadgeCheck, title: 'Authored characters are always labeled', text: 'Characters Velvet writes wear an Authored badge, so you always know when you are talking to a person.' },
   { icon: Flag, title: 'Spaces that stay kind', text: 'Moderation, reporting, and blocking are built in. Crews can lock their doors.' },
 ];
+
+// Feature colors match the icons in the app's toolbar.
+const TONE = { coach: '#34d399', lens: '#fb7185', gold: '#fbbf24', sky: '#38bdf8', blue: '#60a5fa', pink: '#f472b6', orange: '#fb923c', teal: '#2dd4bf' };
+
+const MORE: { icon: LucideIcon; color: string; name: string; text: string }[] = [
+  { icon: CalendarDays, color: TONE.orange, name: 'Calendar', text: 'keeps your events and reminders in one place.' },
+  { icon: MapPin, color: TONE.coach, name: 'Navi', text: 'finds local events, restaurants and things to do.' },
+  { icon: Compass, color: TONE.gold, name: 'Discover', text: 'matches you with people who share your interests.' },
+  { icon: Heart, color: TONE.pink, name: 'Companion', text: 'is a friend who chats with you and remembers what matters.' },
+  { icon: Gamepad2, color: TONE.pink, name: 'Games', text: 'like Velvet Sims in your own house, 3-Point Shootout, Momentum and The Town.' },
+  { icon: Lightbulb, color: TONE.gold, name: 'Insights', text: 'shows your streaks and the patterns behind them.' },
+  { icon: Sunrise, color: TONE.gold, name: 'Morning Journal', text: 'starts your day with intention.' },
+];
+
+function Feat({ color, children }: { color: string; children: ReactNode }) {
+  return <strong className="font-bold" style={{ color }}>{children}</strong>;
+}
 
 function Eyebrow({ children, accent = '192,132,252' }: { children: ReactNode; accent?: string }) {
   return (
@@ -271,7 +289,7 @@ export function SplashPage() {
           <nav className="hidden md:flex items-center gap-7 text-sm text-gray-400">
             <button onClick={() => scrollTo('inside')} className="hover:text-white transition-colors">What's inside</button>
             <button onClick={() => scrollTo('home')} className="hover:text-white transition-colors">Velvet House</button>
-            <button onClick={() => scrollTo('community')} className="hover:text-white transition-colors">Community Board</button>
+            <button onClick={() => scrollTo('community')} className="hover:text-white transition-colors">Spaces</button>
             <button onClick={() => scrollTo('how')} className="hover:text-white transition-colors">How it works</button>
           </nav>
           <div className="flex items-center gap-2">
@@ -329,15 +347,26 @@ export function SplashPage() {
 
             <div className="mt-6 space-y-4 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
               <p>
-                Atlas helps you map out your goals. Coaches keep you on track with actionable plans built just for you.
-                Stay current on the things you love with news and YouTube wired right into your profile.
+                <Feat color="#cbd5e1">Atlas</Feat> helps you map out your goals. <Feat color={TONE.coach}>Coaches</Feat> keep you on
+                track with actionable plans built just for you. Stay current on your <Feat color={TONE.coach}>Daily Feed</Feat> with
+                real time news and <Feat color={TONE.lens}>YouTube</Feat> wired right into each profile!
               </p>
               <p>
-                While you&apos;re here, connect and compete with new or existing friends on the leaderboards, or just hang
-                out and talk about things you like in Spaces.
+                Connect and compete with new or old friends on the <Feat color={TONE.gold}>leaderboards</Feat>, or just hang out and
+                talk about things you like in <Feat color={TONE.sky}>Spaces</Feat>. You like writing? Try{' '}
+                <Feat color={TONE.blue}>Co-Author</Feat> for anyone with writer&apos;s block.
               </p>
-              <p>And there&apos;s so much more!</p>
+              <p className="!mb-0">And so much more like:</p>
             </div>
+
+            <ul className="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-2.5 max-w-xl mx-auto lg:mx-0 text-left">
+              {MORE.map(m => (
+                <li key={m.name} className="flex items-start gap-2.5 text-[14.5px] leading-snug text-gray-300">
+                  <m.icon className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: m.color }} />
+                  <span><Feat color={m.color}>{m.name}</Feat> <span className="text-gray-400">{m.text}</span></span>
+                </li>
+              ))}
+            </ul>
 
             <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               {primaryCta('Create your free account')}
@@ -426,7 +455,7 @@ export function SplashPage() {
         <section id="community" className="relative scroll-mt-20 py-24" style={{ background: 'linear-gradient(180deg, transparent, rgba(56,189,248,0.04) 30%, rgba(244,114,182,0.04) 70%, transparent)' }}>
           <div className="max-w-6xl mx-auto px-5 grid lg:grid-cols-[1fr_1.15fr] gap-12 items-center">
             <motion.div {...rise()}>
-              <Eyebrow accent="56,189,248">The Community Board</Eyebrow>
+              <Eyebrow accent="56,189,248">Spaces</Eyebrow>
               <SectionTitle>Pull up a chair. Your spaces are already waiting.</SectionTitle>
               <p className="mt-5 text-gray-300 text-lg leading-relaxed max-w-lg">
                 Your interests place you in the right spaces from day one. Each one has live rooms, a board for longer posts,
