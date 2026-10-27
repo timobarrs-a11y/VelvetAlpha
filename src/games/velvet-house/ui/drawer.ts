@@ -563,7 +563,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       <div class="vh-home-row"><span>Money</span><strong>$${state.money}</strong></div>
       <div class="vh-home-row"><span>Fridge</span><strong>${sv} meals</strong></div>
       <div class="vh-home-row"><span>Dishes</span><strong>${state.dishes}</strong></div>
-      <div class="vh-home-row"><span>Laundry</span><strong>${state.laundryPile}/6</strong></div>
+      <div class="vh-home-row"><span>Laundry</span><strong>${Math.floor(state.laundryPile)}/6</strong></div>
       <div class="vh-home-row"><span>Power</span><strong>${state.power ? 'On' : 'OFF'}</strong></div>
       ${state.billAmount !== null ? `<div class="vh-home-row vh-bill"><span>Bill due</span><strong>$${state.billAmount}${state.billOverdue ? ' (OVERDUE)' : ''}</strong></div>` : ''}
       <div class="vh-home-actions">
