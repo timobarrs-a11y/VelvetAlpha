@@ -3,6 +3,7 @@ import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { RequireProfile } from '../components/auth/RequireProfile';
 import { RouteFallback } from '../shared/ui/RouteFallback';
+import { ReportActivity } from '../features/objectives/ReportActivity';
 
 const CheckersGame = lazy(() => import('../pages/CheckersGame').then(m => ({ default: m.CheckersGame })));
 const PacmanGame = lazy(() => import('../pages/PacmanGame').then(m => ({ default: m.PacmanGame })));
@@ -18,6 +19,7 @@ function game(el: React.ReactNode) {
   return (
     <ProtectedRoute>
       <RequireProfile>
+        <ReportActivity activity="play_game" />
         <Suspense fallback={<RouteFallback />}>{el}</Suspense>
       </RequireProfile>
     </ProtectedRoute>

@@ -3,6 +3,7 @@ import { Users, Search, Clock, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { ArrivalTownTour } from '../features/arrival/ArrivalTownTour';
+import { ReportActivity } from '../features/objectives/ReportActivity';
 import { updateSetupProgress } from '../services/setupProgressService';
 import {
   localDay, getMyPlot, getDailyBlock, getCards, cardToPlot, markSeen,
@@ -382,6 +383,7 @@ export function WorldPage() {
 
   return (
     <div className="relative h-screen overflow-hidden bg-[#9DAE97]" style={{ colorScheme: 'dark' }}>
+      <ReportActivity activity="visit_town" />
       {townLayoutState && (
         <WorldCanvas
           plots={block}

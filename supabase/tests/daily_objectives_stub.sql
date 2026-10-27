@@ -1,0 +1,28 @@
+-- Stand-ins for the app's tables, only so daily_objectives_behaviour.sql can run on a scratch Postgres.
+do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
+do $$ begin create role anon; exception when duplicate_object then null; end $$;
+create schema auth;
+create table auth.users (id uuid primary key);
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
+grant usage on schema public, auth to authenticated;
+create table public.user_profiles (id uuid primary key, nickname text, name text, is_bot boolean default false, is_banned boolean default false);
+create table public.member_profiles (user_id uuid primary key, display_name text, is_bot boolean default false);
+create table public.im_blocks (blocker_id uuid, blocked_id uuid);
+create function public.users_blocked(a uuid, b uuid) returns boolean language sql stable as $$ select exists (select 1 from public.im_blocks k where (k.blocker_id = a and k.blocked_id = b) or (k.blocker_id = b and k.blocked_id = a)) $$;
+create table public.community_posts (id uuid primary key default gen_random_uuid(), author_id uuid, created_at timestamptz default now());
+create table public.community_comments (id uuid primary key default gen_random_uuid(), author_id uuid, created_at timestamptz default now());
+create table public.community_reactions (id uuid primary key default gen_random_uuid(), user_id uuid, target_type text, target_id uuid, created_at timestamptz default now());
+create table public.progress_post_likes (id uuid primary key default gen_random_uuid(), user_id uuid, post_id uuid, created_at timestamptz default now());
+create table public.coaching_commitments (id uuid primary key default gen_random_uuid(), user_id uuid, status text, is_user_created boolean default false, completed_at timestamptz);
+create table public.user_daily_checkins (user_id uuid, checkin_date date);
+create table public.user_goals (id uuid primary key default gen_random_uuid(), user_id uuid, status text, current_value numeric, target_value numeric);
+create table public.user_customization (user_id uuid, longest_streak int);
+create table public.im_friendships (requester_id uuid, addressee_id uuid, status text);
+create table public.referrals (referrer_id uuid, status text);
+create table public.community_board_members (user_id uuid, board_id uuid, source text);
+create table public.community_room_messages (author_id uuid, deleted_at timestamptz);
+create table public.medals (slug text primary key, name text, description text, category text, tier text, icon text, metric text, threshold int, is_hidden boolean default false, sort_order int, is_active boolean default true);
+create table public.refresh_calls (user_id uuid);
+create function public.refresh_user_medals(u uuid, a boolean) returns int language plpgsql as $$ begin insert into public.refresh_calls values (u); return 0; end $$;
+grant select on all tables in schema public to authenticated;
+grant execute on all functions in schema public to authenticated;

@@ -44,6 +44,7 @@ const HousePage = lazy(() => import('../pages/HousePage'));
 const WorldPage = lazy(() => import('../pages/WorldPage').then(m => ({ default: m.WorldPage })));
 const BrowseSpacesPage = lazy(() => import('../pages/BrowseSpacesPage'));
 const MedalsPage = lazy(() => import('../pages/MedalsPage'));
+const ObjectivesLeaderboardPage = lazy(() => import('../pages/ObjectivesLeaderboardPage'));
 const JoinInvitePage = lazy(() => import('../pages/JoinInvitePage'));
 function P(el: React.ReactNode) {
   return (
@@ -99,5 +100,6 @@ export const appRoutes = [
   <Route key="house-browse" path="/house/browse" element={P(<BrowseSpacesPage />)} />,
   <Route key="world" path="/world" element={P(<WorldPage />)} />,
   <Route key="medals" path="/medals" element={P(<MedalsPage />)} />,
+  <Route key="leaderboard" path="/leaderboard" element={P(<ObjectivesLeaderboardPage />)} />,
   <Route key="join" path="/join/:code" element={P(<JoinInvitePage />)} />,
 ];

@@ -38,6 +38,7 @@ import { supabase } from '../shared/supabase/client';
 import { Dock } from './dock/Dock';
 import { DockProvider, useDock } from './dock/DockContext';
 import { AddFriendButton } from './AddFriendButton';
+import { ObjectivesButton } from '../features/objectives/ObjectivesButton';
 import { usePopoverPosition } from './usePopoverPosition';
 import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
@@ -195,6 +196,7 @@ function WorkspaceToolbar({
           </button>
         )}
         <AddFriendButton onAdd={dock.addFriendByCode} />
+        <ObjectivesButton />
       </div>
 
       <div className="relative z-10 flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
