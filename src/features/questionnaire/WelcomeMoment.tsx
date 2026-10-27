@@ -52,16 +52,16 @@ export function WelcomeMoment({ onDone }: { onDone: () => void }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       >
-        You&apos;re in.
+        You&apos;re moved in!
       </motion.h1>
 
       <motion.p
-        className="mt-5 max-w-sm text-lg text-gray-300"
+        className="mt-5 max-w-md text-lg text-gray-300"
         initial={reduce ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.1, duration: 0.6 }}
       >
-        A few quick questions, and your world is ready.
+        Welcome to <b style={{ color: '#f472b6' }}>Town</b>! You&apos;ll see your place in a bit. But first, let&apos;s set up your profile.
       </motion.p>
 
       <motion.p

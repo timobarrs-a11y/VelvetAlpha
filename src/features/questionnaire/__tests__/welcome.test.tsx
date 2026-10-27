@@ -30,9 +30,9 @@ describe('WelcomeMoment', () => {
   it('says you are in, in the brand, and what comes next', () => {
     render(<WelcomeMoment onDone={() => {}} />);
     expect(screen.getByRole('dialog', { name: 'Welcome to Project Velvet' })).toBeTruthy();
-    expect(screen.getByText("You're in.")).toBeTruthy();
+    expect(screen.getByText("You're moved in!")).toBeTruthy();
     expect(screen.getByText(/Project/)).toBeTruthy();
-    expect(screen.getByText(/A few quick questions/)).toBeTruthy();
+    expect(screen.getByText(/set up your profile/)).toBeTruthy();
   });
 
   it('closes when tapped', () => {
