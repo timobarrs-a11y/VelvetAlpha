@@ -328,8 +328,9 @@ export function SplashPage() {
             </h1>
 
             <p className="mt-6 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
-              Project Velvet gives you Atlas, an assistant that gets things done, and coaches that keep you on track.
-              Then it connects you with real people who are into the same things you are.
+              Atlas gets things done and your coaches keep you on track. Catch up on a daily feed made for your interests,
+              share wins with friends and a community of people into the same things, then take a break with games you
+              can play together.
             </p>
 
             <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
