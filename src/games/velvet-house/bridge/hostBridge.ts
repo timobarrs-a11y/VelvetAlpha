@@ -1,4 +1,5 @@
-import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage, isAvatarLookMessage, isPlotMessage } from '../bridge/protocol';
+import { postToParent, isProfileMessage, isValidOrigin, isVidResultsMessage, isAvatarInventoryMessage, isAvatarLookMessage, isPlotMessage, isCompanionsMessage } from '../bridge/protocol';
+import { setCompanionCount } from './companions';
 import { setOwnedAvatarItems } from '../bridge/avatarShop';
 import { type SampleFn } from '../state/companionAI';
 import { createHostSample } from '../bridge/hostSample';
@@ -44,6 +45,7 @@ export function createHostBridge(g: Game): Partial<Game> {
       if (hands) loadBodyImages(hands).then((imgs) => { if (imgs.relaxed) people[0].look.body = imgs; }).catch(() => {});
       return;
     }
+    if (isCompanionsMessage(e.data)) { setCompanionCount(e.data.count); return; }
     if (isPlotMessage(e.data)) {
       const p = e.data.plot;
       g.s.plot = { member: !!p.member, config: p.config as never, earned: Array.isArray(p.earned) ? p.earned.filter((x): x is string => typeof x === 'string') : [], ...(typeof p.address === 'string' ? { address: p.address.slice(0, 40) } : {}) };

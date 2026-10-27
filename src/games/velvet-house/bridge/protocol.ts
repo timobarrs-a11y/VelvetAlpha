@@ -20,7 +20,12 @@ export type BridgeMessageType =
   | 'velvet:designs'
   | 'velvet:designsResult'
   | 'velvet:avatarLook'
-  | 'velvet:plot';
+  | 'velvet:plot'
+  | 'velvet:companions'
+  | 'velvet:menuReady'
+  | 'velvet:startRequested'
+  | 'velvet:startGo'
+  | 'velvet:startCancel';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -263,6 +268,29 @@ export function isPlotMessage(data: unknown): data is PlotMessage {
   const m = data as Record<string, unknown>;
   const p = m.plot as Record<string, unknown> | null;
   return m.type === 'velvet:plot' && typeof p === 'object' && p !== null && typeof p.config === 'object' && p.config !== null;
+}
+
+/** Host to game: how many companions the player could move in with (more than one means Start asks the host who). */
+export interface CompanionsMessage extends BridgeMessage { type: 'velvet:companions'; count: number }
+export function isCompanionsMessage(data: unknown): data is CompanionsMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:companions' && typeof m.count === 'number';
+}
+/** The host's answer to Start: go on with this companion, or the player backed out. */
+export function isStartAnswerMessage(data: unknown): data is BridgeMessage & { type: 'velvet:startGo' | 'velvet:startCancel' } {
+  if (!isBridgeMessage(data)) return false;
+  const t = (data as Record<string, unknown>).type;
+  return t === 'velvet:startGo' || t === 'velvet:startCancel';
+}
+/** Game to host: the player chose Start and there is more than one companion to pick from. */
+/** Game to host: the title screen is up (there is no host bridge yet), so tell me how many companions there are. */
+export function isMenuReadyMessage(data: unknown): data is BridgeMessage & { type: 'velvet:menuReady' } {
+  return isBridgeMessage(data) && (data as Record<string, unknown>).type === 'velvet:menuReady';
+}
+
+export function isStartRequestedMessage(data: unknown): data is BridgeMessage & { type: 'velvet:startRequested' } {
+  return isBridgeMessage(data) && (data as Record<string, unknown>).type === 'velvet:startRequested';
 }
 
 export function isAvatarLookMessage(data: unknown): data is AvatarLookMessage {

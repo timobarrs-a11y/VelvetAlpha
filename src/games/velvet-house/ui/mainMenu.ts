@@ -4,6 +4,7 @@ import { isCurrentContent } from '../state/saveMigration';
 import { qualityManager } from '../engine/qualityTier';
 import { postToParent } from '../bridge/protocol';
 import { clockText, DAYS, weekday } from '../state/time';
+import { hasChoice, askWhoMovesIn, listenForCompanions } from '../bridge/companions';
 
 /**
  * The title screen: what the player sees before the house. Continue picks up the saved house, New Game starts the
@@ -30,6 +31,7 @@ export function saveSummary(): SaveSummary | null {
 }
 
 export function showMainMenu(): Promise<LaunchChoice> {
+  listenForCompanions();
   return new Promise((resolve) => {
     const summary = saveSummary();
     const root = document.createElement('div');
@@ -46,8 +48,21 @@ export function showMainMenu(): Promise<LaunchChoice> {
           <button class="vh-menu-btn" data-m="settings"><span>Settings</span></button>
         </div>`;
       root.querySelector('[data-m=continue]')?.addEventListener('click', () => done('continue'));
-      root.querySelector('[data-m=new]')?.addEventListener('click', () => (summary ? confirmNew() : start()));
+      root.querySelector('[data-m=new]')?.addEventListener('click', () => { void beginNew(); });
       root.querySelector('[data-m=settings]')?.addEventListener('click', settings);
+    };
+
+    // Starting a house: with more than one companion to choose from, the host asks who is moving in first.
+    const beginNew = async (): Promise<void> => {
+      if (hasChoice()) {
+        root.innerHTML = `
+          <div class="vh-menu-card">
+            <h2 class="vh-menu-h">Who's moving in?</h2>
+            <p class="vh-menu-sub">Pick who you'll share the house with.</p>
+          </div>`;
+        if ((await askWhoMovesIn()) === 'cancel') { home(); return; }
+      }
+      if (summary) confirmNew(); else start();
     };
 
     const start = (): void => {
