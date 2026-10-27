@@ -181,8 +181,12 @@ export function AiChatWindow({ companion, surface, quickPrompts = [], onCoachCha
   }, [user, companion.id, isCoach, sending, saveMessage, surface, onCoachChanged]);
 
   // Something on the page asked this companion a question: send it once.
+  // The nonce is remembered because the effect can run twice before the page clears the request
+  // (React's strict mode does it in development), which sent the question twice.
+  const sentNonce = useRef<number | null>(null);
   useEffect(() => {
-    if (!pending || sending) return;
+    if (!pending || sending || sentNonce.current === pending.nonce) return;
+    sentNonce.current = pending.nonce;
     onConsumePending();
     send(pending.text);
   }, [pending, sending, onConsumePending, send]);
