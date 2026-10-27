@@ -7,10 +7,10 @@
 import type { SaveData, SaveDataV1, SaveDataV2, SaveDataV3 } from './types';
 
 const CURRENT_VERSION = 3 as const;
-/** 1 = before the story and Dez. 2 = the first save that has them. 3 = walls down from the start and the box in the kitchen gap (every earlier house starts over). 4 = the opening ends at the couch (a save part-way through the old opening would resume in the wrong place). */
-export const CONTENT_VERSION = 4;
+/** 1 = before the story and Dez. 2 = the first save that has them. 3 = walls down from the start and the box in the kitchen gap (every earlier house starts over). 4 = the opening ends at the couch (a save part-way through the old opening would resume in the wrong place). 5 = the move-in as directed: Dez walks in with the box, the lamp by the TV, no Skip (every earlier house starts over). */
+export const CONTENT_VERSION = 5;
 /** Saves older than this are not carried over: everyone starts again with the move-in. */
-export const MIN_CONTENT_VERSION = 4;
+export const MIN_CONTENT_VERSION = 5;
 /** The content version a save was made with (anything older than the story counts as 1). */
 export const isCurrentContent = (s: { contentVersion?: unknown } | null | undefined): boolean => !!s && typeof s.contentVersion === 'number' && s.contentVersion >= MIN_CONTENT_VERSION;
 
