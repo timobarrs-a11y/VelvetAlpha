@@ -11,9 +11,19 @@ select pg_temp.must((select (public.confirm_birthday(date '1990-10-29') ->> 'suc
 select pg_temp.must((select birthday from public.user_profiles where id = 'c0000000-0000-0000-0000-00000000000c') = date '1990-10-29', 'birthday saved');
 select pg_temp.must((select age_verified_at is not null from public.user_profiles where id = 'c0000000-0000-0000-0000-00000000000c'), 'age_verified_at set');
 
+-- first verification of an account whose welcome window ended starts a new one with the new-member allowance
+select pg_temp.must((select welcome_window_expires_at > now() + interval '47 hours' from public.user_profiles where id = 'c0000000-0000-0000-0000-00000000000c'), 'fresh welcome window');
+select pg_temp.must((select messages_remaining = 8000 and haiku_model_enabled and sonnet_model_enabled from public.user_profiles where id = 'c0000000-0000-0000-0000-00000000000c'), 'welcome allowance');
+
+-- a window still running is left alone
+select pg_temp.as_user('e0000000-0000-0000-0000-00000000000e');
+select pg_temp.must((select public.confirm_birthday(date '1991-02-02') ->> 'success')::boolean, 'running window ok');
+select pg_temp.must((select welcome_window_expires_at < now() + interval '2 days' and messages_remaining = 7 from public.user_profiles where id = 'e0000000-0000-0000-0000-00000000000e'), 'running window untouched');
+
 -- a mistake can be corrected, and the first verification date stays
 select pg_temp.as_user('d0000000-0000-0000-0000-00000000000d');
 select pg_temp.must((select public.confirm_birthday(date '1985-01-02') ->> 'success')::boolean, 'correction ok');
+select pg_temp.must((select welcome_window_expires_at < now() and messages_remaining = 5 from public.user_profiles where id = 'd0000000-0000-0000-0000-00000000000d'), 'already verified: no new window');
 select pg_temp.must((select birthday from public.user_profiles where id = 'd0000000-0000-0000-0000-00000000000d') = date '1985-01-02', 'corrected');
 
 -- minors, nonsense and signed-out callers are refused and nothing changes

@@ -1,3 +1,4 @@
+import { handoffLine } from '../features/arrival/handoffLine';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -185,10 +186,9 @@ function AtlasConciergeInner() {
       return true;
     }
     applyJob(job);
-    const name = job.recommendation.helperName;
-    const role = job.recommendation.kind === 'coach' ? 'coach' : 'assistant';
+    const rec = job.recommendation;
     addAtlas(
-      `Splendid work. Your plan is ready for you to look over. And I'd like you to meet ${name}, your ${role}. ${name} will be your point man on this from here, so you can take it straight to them.`,
+      job.handoff || handoffLine({ name: rec.helperName, gender: rec.helperGender, kind: rec.kind, domain: rec.expertDomain }),
       { highlight: ['plan'] },
     );
     setPhase('meet');

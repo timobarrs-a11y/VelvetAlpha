@@ -376,7 +376,8 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
         const month = birthMonthName(ctx.answers.birthday as string);
         const pair = monthSigns(ctx.answers.birthday as string);
         if (!month || !pair) return 'Which sign are you?';
-        return `${month}, huh? That makes you a ${pair[0]} or a ${pair[1]}. Which one's you?`;
+        const a = (sign: string) => (/^[AEIOU]/.test(sign) ? 'an' : 'a');
+        return `${month}, huh? That makes you ${a(pair[0])} ${pair[0]} or ${a(pair[1])} ${pair[1]}. Which one's you?`;
       },
       confidence: 'confirmed',
       autoAdvance: true,

@@ -51,6 +51,7 @@ describe('Act 1 order', () => {
     expect(q('zodiac').skipIf!({ ...ctx, answers: {} })).toBe(true);
     const zodiac = q('zodiac') as unknown as { question: (c: unknown) => string; options: (c: unknown) => { value: string }[] };
     expect(zodiac.question(withBirthday)).toBe("October, huh? That makes you a Libra or a Scorpio. Which one's you?");
+    expect(zodiac.question({ ...ctx, answers: { birthday: '1990-01-15' } })).toBe("January, huh? That makes you a Capricorn or an Aquarius. Which one's you?");
     expect(zodiac.options(withBirthday).map(o => o.value)).toEqual(['Libra', 'Scorpio', 'none']);
   });
 });

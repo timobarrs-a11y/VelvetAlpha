@@ -371,6 +371,67 @@ export function checkReply(text: string, opts: { profile?: ArrivalProfile } = {}
   return issues;
 }
 
+// ─── Dates and weekdays ──────────────────────────────────────────────────
+// A model is unreliable at "which weekday is January 25th", so the server works it out: the dates
+// the person mentions go into the prompt with their weekdays, and a reply that puts a wrong weekday
+// beside a date is sent back to be rewritten.
+
+const MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+const MONTH_WORDS = "january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec";
+const MONTH_FIRST = new RegExp(`\\b(${MONTH_WORDS})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4})\\b)?`, "gi");
+const DAY_FIRST = new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?(${MONTH_WORDS})\\b(?:,?\\s+(\\d{4})\\b)?`, "gi");
+
+export interface DateMention { start: number; end: number; text: string; iso: string; weekday: string }
+
+function monthIndex(word: string): number {
+  const w = word.toLowerCase();
+  return MONTH_NAMES.findIndex(m => m === w || (w.length >= 3 && m.startsWith(w.slice(0, 3)) && w.length <= 4));
+}
+
+/** "January 25th" or "25th of January" in a text, as dates: the next one on or after today unless a year is given. */
+export function dateMentions(text: string, todayIso: string): DateMention[] {
+  const [ty] = todayIso.split("-").map(Number);
+  const found: DateMention[] = [];
+  const add = (m: RegExpExecArray, monthWord: string, dayStr: string, yearStr: string | undefined) => {
+    const mi = monthIndex(monthWord);
+    const day = Number(dayStr);
+    if (mi < 0 || day < 1 || day > 31) return;
+    const make = (y: number) => new Date(Date.UTC(y, mi, day));
+    const valid = (d: Date) => d.getUTCMonth() === mi && d.getUTCDate() === day;
+    let year = yearStr ? Number(yearStr) : ty;
+    let d = make(year);
+    if (!valid(d)) return;
+    const iso = (x: Date) => x.toISOString().slice(0, 10);
+    if (!yearStr && iso(d) < todayIso) { year += 1; d = make(year); if (!valid(d)) return; }
+    found.push({ start: m.index, end: m.index + m[0].length, text: m[0], iso: iso(d), weekday: WEEKDAYS[d.getUTCDay()] });
+  };
+  for (const m of text.matchAll(MONTH_FIRST)) add(m as RegExpExecArray, m[1], m[2], m[3]);
+  for (const m of text.matchAll(DAY_FIRST)) add(m as RegExpExecArray, m[2], m[1], m[3]);
+  return found.sort((a, b) => a.start - b.start);
+}
+
+/** The prompt lines for dates the person has written, with their weekdays; empty when there are none. */
+export function dateNotes(userTexts: string[], todayIso: string): string {
+  const lines = new Map<string, string>();
+  for (const t of userTexts) {
+    for (const d of dateMentions(t, todayIso)) lines.set(d.iso, `- ${d.text.trim()} is ${d.weekday}, ${d.iso}`);
+  }
+  return [...lines.values()].join("\n");
+}
+
+/** Replies that put a weekday beside a date that is not on that weekday. */
+export function weekdayIssues(reply: string, todayIso: string): string[] {
+  const issues: string[] = [];
+  for (const d of dateMentions(reply, todayIso)) {
+    const around = reply.slice(Math.max(0, d.start - 18), Math.min(reply.length, d.end + 24));
+    const named = WEEKDAYS.filter(w => new RegExp(`\\b${w}s?\\b`, "i").test(around));
+    if (named.length === 1 && named[0] !== d.weekday) {
+      issues.push(`wrong weekday: ${d.text.trim()} is a ${d.weekday}, not a ${named[0]}`);
+    }
+  }
+  return issues;
+}
+
 // ─── The plan Atlas sets up after the goal ───────────────────────────────
 
 export interface PlanStep {
@@ -553,6 +614,7 @@ export function buildGoalPrompt(
   path: OpeningPath,
   today: { date: string; weekday: string },
   maxTurns: number,
+  dateNotes = "",
 ): string {
   const first = firstName(profile);
   const formal = formalAddress(profile);
@@ -585,6 +647,7 @@ YOUR VOICE: Alfred Pennyworth in manner, never in name.
 HOW TO ADDRESS THEM: ${addressRule}
 
 TODAY: ${today.weekday}, ${today.date}. Use it to work out dates; never guess them.
+WEEKDAYS: name the weekday of a date only if it is listed below or you worked it out from today's weekday. If you are not certain, give the date without a weekday.${dateNotes ? `\nDATES THEY MENTIONED (the weekdays here are correct):\n${dateNotes}` : ""}
 
 ${PATH_GUIDANCE[path]}
 
@@ -608,14 +671,14 @@ ENDING: as soon as you have all three (the goal, the deadline, the mission), say
 /** The prompt that turns the conversation into the plan Atlas walks them through. */
 export function buildPlanPrompt(input: {
   goalText: string;
-  helper: { name: string; kind: "coach" | "assistant"; domain: string };
+  helper: { name: string; kind: "coach" | "assistant"; domain: string; gender?: "male" | "female" | null };
   transcript: string;
   today: { date: string; weekday: string };
 }): string {
   const { goalText, helper, transcript, today } = input;
   return `You plan goals for Velvet. Today is ${today.weekday}, ${today.date}.
 
-The user's goal: "${goalText}". ${helper.name}, their ${helper.kind}, will carry it with them (${helper.domain}).
+The user's goal: "${goalText}". ${helper.name}, their ${helper.kind}, will carry it with them (${helper.domain}).${helper.gender === "male" ? ` ${helper.name} is a man: any pronoun for ${helper.name} is he/him/his.` : helper.gender === "female" ? ` ${helper.name} is a woman: any pronoun for ${helper.name} is she/her.` : ` Refer to ${helper.name} by name rather than with a pronoun.`}
 
 From the conversation below, write a realistic plan. Use what they said about their situation, budget, time and deadline. Where they didn't say, choose sensible defaults for someone starting now. When a real date or fact shapes the plan (an event or race date, an application deadline, a typical lead time or price), you can search the web for it and use what you find. Never invent specifics you couldn't find; write the step that finds them out instead.
 
@@ -643,6 +706,58 @@ Rules:
 --- CONVERSATION ---
 ${transcript}
 --- END ---`;
+}
+
+/** The prompt for Atlas's hand-over: back to their goal, then why this coach or assistant, and how they will help. */
+export function buildHandoffPrompt(input: {
+  goalText: string;
+  helper: { name: string; kind: "coach" | "assistant"; domain: string; gender?: "male" | "female" | null };
+  plan: ArrivalPlan;
+  address: string | null;
+  userWords: string;
+  today: { date: string; weekday: string };
+}): string {
+  const { goalText, helper, plan, address, userWords, today } = input;
+  const pronoun = helper.gender === "male" ? "he/him/his" : helper.gender === "female" ? "she/her" : null;
+  const role = helper.kind === "coach" ? "coach" : "assistant";
+  const does = helper.kind === "coach"
+    ? `${helper.name} is a ${helper.domain} coach: teaches one lesson at a time, keeps them practising until it sticks, and keeps count of their progress.`
+    : `${helper.name} is an assistant for this goal: sees the plan through with them, keeps the dates, and answers whatever they need to know along the way.`;
+  const steps = plan.commitments.slice(0, 3).map(c => `- ${c.description} (${c.dueDate})`).join("\n") || "- (none)";
+  const rhythm = plan.weeklyRhythm.map(r => `- ${r.day}: ${r.what}`).join("\n") || "- (none)";
+  const phases = plan.phases.map(p => p.title).join("; ");
+  return `You are Atlas, the host of Velvet, in the manner of Alfred Pennyworth: impeccably courteous, warm underneath, dry and understated, quietly devoted to their ambition. The person has just finished making their avatar and house, and their plan is drafted. You are handing them over to ${helper.name}, their ${role}. This is a referral to the best there is, not a goodbye: it must feel purposeful, the plan and the person carrying it are one thing.
+
+What they said, in their words:
+${userWords}
+
+Their goal: "${goalText}"${plan.goal.targetDate ? `, by ${plan.goal.targetDate}` : ""}.
+The plan's phases: ${phases}.
+This week's first steps:
+${steps}
+The weekly rhythm:
+${rhythm}
+Check-ins: ${plan.checkIns || "regular"}.
+${does}
+
+Write the message in three or four sentences, plain text:
+1. Say the plan is ready for them to look over, and tie it back to their goal and the reason they gave (one honest echo of their own words, not a list).
+2. Say you have chosen ${helper.name} for exactly this, the best there is for it, and why that fits this goal.
+3. Say concretely how ${helper.name} will help them, using the plan above (the first steps, the rhythm, the check-ins). Promise nothing beyond what is described here.
+4. Close by sending them to meet ${helper.name}, without a question.
+
+RULES: ${pronoun ? `Refer to ${helper.name} with ${pronoun} when you use a pronoun.` : `Refer to ${helper.name} by name; no pronouns.`} ${address ? `If you use their name, use exactly "${address}".` : "Do not use their name."} Today is ${today.weekday}, ${today.date}; name a weekday only if it is in the plan above. No exclamation marks, no emoji, no lists, no questions. Never say "journey", "Absolutely", "I'd be happy to", "Feel free to" or "As an AI". Under 90 words. Return only the message.`;
+}
+
+/** A hand-over message that follows the rules, or the reasons it doesn't. */
+export function handoffIssues(text: string, helperName: string, todayIso: string): string[] {
+  const issues = checkReply(text);
+  if (!text.includes(helperName)) issues.push(`never names ${helperName}`);
+  if (text.includes("?")) issues.push("asks a question");
+  if (text.length > 700) issues.push("too long");
+  if (text.length < 80) issues.push("too short");
+  issues.push(...weekdayIssues(text, todayIso));
+  return issues;
 }
 
 // ─── Dates in the user's own time zone ───────────────────────────────────

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  addressName, buildGoalPrompt, buildOpening, checkReply, firstName, formalAddress, openingPath,
+  addressName, buildGoalPrompt, buildOpening, buildHandoffPrompt, buildPlanPrompt, checkReply, handoffIssues, dateMentions, dateNotes, weekdayIssues, firstName, formalAddress, openingPath,
   parseReply, pickRemark, summarizePlan, timeOfDayGreeting, unknownTraits, validTraits, validatePlan,
   OPENING_CHIPS, type ArrivalProfile,
 } from '../../../supabase/functions/_shared/atlasArrival';
@@ -279,5 +279,85 @@ describe('extractJson', async () => {
   it('gives null for a reply cut off mid-JSON', () => {
     expect(extractJson('{"goal":{"title":"Help desk"},"phases":[{"title":"Stu')).toBeNull();
     expect(extractJson(null)).toBeNull();
+  });
+});
+
+describe('weekdays', () => {
+  // 2026-10-27 is a Tuesday; January 25th, 2027 is a Monday.
+  const today = '2026-10-27';
+
+  it('finds dates written either way round and gives their weekday', () => {
+    const found = dateMentions('The race is on January 25th, or maybe the 30th of January.', today);
+    expect(found.map(d => [d.iso, d.weekday])).toEqual([['2027-01-25', 'Monday'], ['2027-01-30', 'Saturday']]);
+  });
+
+  it('takes the year given, and the next year when the date has passed', () => {
+    expect(dateMentions('March 3, 2028', today)[0].iso).toBe('2028-03-03');
+    expect(dateMentions('October 1st', today)[0].iso).toBe('2027-10-01');
+    expect(dateMentions('October 27', today)[0].iso).toBe('2026-10-27');
+  });
+
+  it('ignores things that are not dates', () => {
+    expect(dateMentions('I run 3 times, may be 25 minutes. February 31.', today)).toEqual([]);
+  });
+
+  it('puts the weekdays of their dates in the prompt, for Atlas to use', () => {
+    const notes = dateNotes(['The race is on January 25th'], today);
+    expect(notes).toContain('January 25th is Monday, 2027-01-25');
+    const prompt = buildGoalPrompt(profile(), openingPath('I have an idea'), { date: today, weekday: 'Tuesday' }, 6, notes);
+    expect(prompt).toContain('DATES THEY MENTIONED');
+    expect(prompt).toContain('January 25th is Monday');
+    expect(buildGoalPrompt(profile(), openingPath('x'), { date: today, weekday: 'Tuesday' }, 6)).not.toContain('DATES THEY MENTIONED');
+  });
+
+  it('catches a reply that gets the weekday wrong, whichever side it is on', () => {
+    expect(weekdayIssues('The 25th of January it is, a Sunday, and a charity race.', today)).toEqual(['wrong weekday: 25th of January is a Monday, not a Sunday']);
+    expect(weekdayIssues('Sunday, January 25th, then.', today)).toHaveLength(1);
+  });
+
+  it('lets right weekdays and unrelated ones through', () => {
+    expect(weekdayIssues('Monday, January 25th it is.', today)).toEqual([]);
+    expect(weekdayIssues('The 25th of January it is. Shall we run on Sundays?', today)).toEqual([]);
+    expect(weekdayIssues('Three months from today lands on Wednesday, the 27th of January.', today)).toEqual([]);
+  });
+});
+
+describe('what the plan prompt says about the helper', () => {
+  const base = { goalText: 'Run a 5K', transcript: 't', today: { date: '2026-10-27', weekday: 'Tuesday' } };
+  it('uses the right pronouns for a man or a woman, else none', () => {
+    expect(buildPlanPrompt({ ...base, helper: { name: 'Marcus', kind: 'coach', domain: 'fitness', gender: 'male' } })).toContain('he/him/his');
+    expect(buildPlanPrompt({ ...base, helper: { name: 'Dana', kind: 'coach', domain: 'fitness', gender: 'female' } })).toContain('she/her');
+    expect(buildPlanPrompt({ ...base, helper: { name: 'Sam', kind: 'coach', domain: 'fitness' } })).toContain('by name rather than with a pronoun');
+  });
+});
+
+describe('the hand-over to the coach or assistant', () => {
+  const plan = {
+    goal: { title: 'Run my first 5K', targetDate: '2027-01-25', measure: null },
+    phases: [{ title: 'Build endurance', steps: [] }],
+    commitments: [{ description: 'Get fitted for running shoes', dueDate: '2026-10-31' }],
+    weeklyRhythm: [{ day: 'Tuesday', what: 'Morning run' }],
+    checkIns: 'Every Sunday evening and Thursday',
+  };
+  const input = { goalText: 'Run my first 5K', plan, address: 'Master Tester', userWords: '- I want to feel healthier', today: { date: '2026-10-27', weekday: 'Tuesday' } };
+
+  it('is built from their goal, the plan and what the helper does', () => {
+    const coach = buildHandoffPrompt({ ...input, helper: { name: 'Dana', kind: 'coach', domain: '5K running training', gender: 'female' } });
+    expect(coach).toContain('Run my first 5K');
+    expect(coach).toContain('Get fitted for running shoes');
+    expect(coach).toContain('Every Sunday evening and Thursday');
+    expect(coach).toContain('I want to feel healthier');
+    expect(coach).toContain('she/her');
+    expect(coach).toContain('use exactly "Master Tester"');
+    const assistant = buildHandoffPrompt({ ...input, helper: { name: 'Owen', kind: 'assistant', domain: 'x', gender: 'male' } });
+    expect(assistant).toContain('he/him/his');
+    expect(assistant).toContain('sees the plan through');
+  });
+
+  it('accepts a good message and sends back one that breaks the rules', () => {
+    const good = 'Your plan is ready to look over, and it rests on the reason you gave me: to feel healthier and to prove you can stick with something. For that I have chosen Dana, the finest running coach I know. She will see you through the first steps this week, starting with the shoes, and check in every Sunday evening and Thursday. Do go and meet her.';
+    expect(handoffIssues(good, 'Dana', '2026-10-27')).toEqual([]);
+    expect(handoffIssues('Meet Dana! Shall we?', 'Dana', '2026-10-27').length).toBeGreaterThan(0);
+    expect(handoffIssues(good.replace(/Dana/g, 'Someone'), 'Dana', '2026-10-27')).toContain('never names Dana');
   });
 });

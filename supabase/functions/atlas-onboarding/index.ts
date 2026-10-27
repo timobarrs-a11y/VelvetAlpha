@@ -13,7 +13,12 @@ import {
   buildHelperWelcome,
   buildOpening,
   buildPlanPrompt,
+  addressName,
+  buildHandoffPrompt,
   checkReply,
+  dateNotes,
+  handoffIssues,
+  weekdayIssues,
   localToIso,
   nextWeekday,
   openingPath,
@@ -254,7 +259,8 @@ Deno.serve(async (req: Request) => {
       }
 
       const firstAnswer = messages.find(m => m.role === "user")?.content ?? "";
-      const system = buildGoalPrompt(profile, openingPath(firstAnswer), today, MAX_TURNS);
+      const notes = dateNotes(messages.filter(m => m.role !== "atlas").map(m => String(m.content ?? "")), today.date);
+      const system = buildGoalPrompt(profile, openingPath(firstAnswer), today, MAX_TURNS, notes);
       const turnCount = messages.filter(m => m.role === "user").length;
       const history = messages.map(m => ({ role: m.role === "atlas" ? "assistant" : "user", content: m.content }));
       // Sonnet thinks by default, which can use the whole 400 tokens and leave no reply.
@@ -266,7 +272,10 @@ Deno.serve(async (req: Request) => {
       // address it just settled on counts, so "Master Tim" after a yes to
       // first names is caught.
       const issuesOf = (p: typeof parsed) =>
-        checkReply(p.text, { profile: { ...profile, address_style: p.address ?? profile.address_style } });
+        [
+          ...checkReply(p.text, { profile: { ...profile, address_style: p.address ?? profile.address_style } }),
+          ...weekdayIssues(p.text, today.date),
+        ];
       const issues = issuesOf(parsed);
       if (issues.length > 0) {
         console.warn("[atlas-onboarding] Reply broke rules, retrying:", issues.join("; "));
@@ -578,6 +587,7 @@ Write a 2-3 sentence instruction describing what the coach teaches, how (short l
           name: typeof helper.name === "string" ? helper.name : "Your assistant",
           kind: helper.kind === "coach" ? "coach" : "assistant",
           domain: typeof helper.domain === "string" ? helper.domain : "",
+          gender: helper.gender === "male" || helper.gender === "female" ? helper.gender : null,
         },
         transcript: transcriptText(transcript),
         today,
@@ -594,7 +604,37 @@ Write a 2-3 sentence instruction describing what the coach teaches, how (short l
         console.error("[atlas-onboarding] Plan reply unreadable again:", (raw ?? "(no reply)").slice(0, 800));
         return json({ error: "Couldn't draft the plan" }, 502);
       }
-      return json({ success: true, phase: "plan", plan, summary: summarizePlan(plan, today.date) });
+      // Atlas hands them to the coach or assistant in words about their own goal and plan. A message
+      // that breaks the rules is rewritten once; failing that the page uses its plain version.
+      const helperName = typeof helper.name === "string" ? helper.name : "Your assistant";
+      const helperGender: "male" | "female" | null = helper.gender === "male" || helper.gender === "female" ? helper.gender : null;
+      const profile = await fetchArrivalProfile(supabaseAdmin, user.id);
+      const handoffPrompt = buildHandoffPrompt({
+        goalText: typeof body.goalText === "string" ? body.goalText : "Your goal",
+        helper: { name: helperName, kind: helper.kind === "coach" ? "coach" : "assistant", domain: typeof helper.domain === "string" ? helper.domain : "", gender: helperGender },
+        plan,
+        address: addressName(profile),
+        userWords: transcript.filter(m => m.role !== "atlas").map(m => `- ${String(m.content ?? "").slice(0, 300)}`).join("\n"),
+        today,
+      });
+      let handoff: string | null = null;
+      try {
+        let draft = (await callClaude({ model: MODEL_CONFIG.SONNET, maxTokens: 300, noThinking: true, messages: [{ role: "user", content: handoffPrompt }] }))?.trim() ?? "";
+        let issues = draft ? handoffIssues(draft, helperName, today.date) : ["no reply"];
+        if (issues.length > 0) {
+          console.warn("[atlas-onboarding] Hand-off broke rules, retrying:", issues.join("; "));
+          const again = (await callClaude({
+            model: MODEL_CONFIG.SONNET, maxTokens: 300, noThinking: true,
+            messages: [{ role: "user", content: `${handoffPrompt}\n\nYOUR DRAFT BROKE THESE RULES:\n${issues.map(i => `- ${i}`).join("\n")}\n\nThe draft was:\n${draft}\n\nWrite it again without breaking them.` }],
+          }))?.trim() ?? "";
+          const againIssues = again ? handoffIssues(again, helperName, today.date) : ["no reply"];
+          if (againIssues.length === 0) { draft = again; issues = againIssues; }
+        }
+        if (issues.length === 0) handoff = draft;
+      } catch (err) {
+        console.error("[atlas-onboarding] Hand-off failed, using the plain one:", err);
+      }
+      return json({ success: true, phase: "plan", plan, summary: summarizePlan(plan, today.date), handoff });
     }
 
     // ── Phase: commit_plan (save the plan they saw) ─────────────────────
