@@ -376,6 +376,53 @@ a few days together; each item is one PR with its test.
 
 ---
 
+## 7. Story cohesion beyond the opening
+
+Asked by the director on 2026-10-27: is there a cohesive story tying this together? Checked against
+`content/scripts.ts`, `systems/goals.ts`, `state/goals.ts`, the `wishes`/`sparks`/`noticing` modules and the
+roadmap (S).
+
+**What holds together.** Day 1 is a clean tutorial chain: chapters 7 to 15 each teach one system, and Dez is the
+thread through all of them (mover, delivery, construction, mayor with the rent, the welcome check). The
+"introduce, do, companion reacts" loop from the brief is the spine, and the deliveries script makes Dez a recurring
+character after the tutorial. This part is coherent and implemented.
+
+**Where it frays.**
+
+- **Payoffs without setups.** The chapter-11 chat opener "So you and the TV. Should I be worried?" and the
+  chapter-15 line were written as callbacks to the couch choice. The choice was removed; the callbacks stayed.
+- **The story stops at the end of day 1.** After chapter 15 the only authored progression is the life goal, and
+  most of its steps are unreachable: careers are stubbed at level 0, and the `danced`, `mowed` and `harvests`
+  flags are never set by the live game (only `furniture` is, in `systems/shop.ts`). "Career climber" and "Green
+  thumb" are dead ends today.
+- **The connective tissue is built but unplugged.** Wishes, noticing and sparks (the companion wanting things,
+  commenting on the house, starting conversations) exist as tested modules and are not wired into the live game
+  (roadmap confirms; no system imports them). These are what make the world feel inhabited between authored
+  beats without scripting every moment, and they are also the natural source of the future chat's context.
+- **Threads that could pay off cheaply and do not.** She asks for the lamp so she can read at night; nothing ever
+  has her read by it in the evening. Dez's driving is a joke in the opening only; none of his delivery lines
+  mention it.
+- **No story model the player (or you) can see.** Progress lives in `did.*` flags and `rt.done`; there is no
+  chapter or act concept, no journal, no "what happened so far". Testing the story means reading flags.
+
+**Recommendation, in the same spirit as §3: small and declarative.**
+
+1. A one-page **story spine** (`docs/velvet-house/story-spine.md`): acts (day 1 the move-in; week 1 settling in,
+   with Monday's rent as its deadline; the town through Dez), the running threads (the Dupree dynasty, the
+   companion's taste, the lamp and reading, the driving), and the payoffs for each thread written as optional
+   moments with conditions. Every later scene gets a contract that names which threads it advances.
+2. Fix the orphan payoffs now: rewrite the chapter-11 opener around something that did happen (the lamp), or make
+   it the companion's own words via the chat context.
+3. Wire noticing and wishes as the layer between chapters, driven by the same flags and household state, so the
+   companion comments on the lamp, the empty fridge and the unpaid bill without a script for each.
+4. Make life goals reachable or cut the dead steps until their systems exist.
+5. A small "so far" page built from `rt.done` and `did.*`, useful to the player and essential for testing.
+
+The spine is the director's call on content; the audit can draft the skeleton with today's threads filled in and
+the gaps marked, as it did for the opening.
+
+---
+
 ## Appendix A: verification log
 
 Run in this container on 2026-10-27 against `7a8394a`.

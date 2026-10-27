@@ -75,7 +75,7 @@ introduction; the companion's chat is not reachable until chapter 11.
 |---|---|---|---|---|
 | B1 | Dez comes in with a box, sets it down: "This one doesn't have a label!" and walks back out. Dialogue only once he has stopped. | Required beat | `box.lamp` exists; Dez despawned | world: `box.lamp` exists (box or lamp) |
 | B2 | Control returns. The player opens the box (tap). | Required beat (guided: only the box) | world: `box.lamp.type === 'lamp'` | same |
-| B3 | The moment it opens: `!` over the companion. **The camera moves or zooms out so both the lamp and the companion are on screen while the `!` shows.** After about a second she asks, in her communication style, for the lamp in the upper-right corner (`lampCorner`). | Required beat; camera framing is Invariant for this beat | line dismissed | `did.beat.B3` |
+| B3 | The moment it opens: `!` over the companion. **The camera moves or zooms out so both the lamp and the companion are on screen while the `!` shows.** After about a second she asks, in her communication style, for the lamp in the corner by the TV (`lampCorner`; the mark moves, §13). | Required beat; camera framing is Invariant for this beat | line dismissed | `did.beat.B3` |
 | B4 | Place the lamp in the corner outline (`living.lampCorner`). Elsewhere: `lampNotThere` loop as in A8. | Required beat (guided, loop) | world: lamp within tolerance of the corner mark | same |
 | B5 | `!` over the companion again (camera frames her), then she says she would rather have it by the couch to read at night (`lampByCouch`, humor × gender). | Required beat | line dismissed | `did.beat.B5` |
 | B6 | Move the lamp to the right-hand side of the couch (`living.lamp`, computed from where the couch actually is). Elsewhere: loop. | Required beat (guided, loop) | world: lamp within tolerance of the couch-side mark | same |
@@ -83,8 +83,8 @@ introduction; the companion's chat is not reachable until chapter 11.
 | B8 | The companion reacts to the light (`lampOn`); evening dim lifts; control returns; `tutorial.lamp` set. | Required beat | flag set | idempotent |
 
 Removed from today's chapter 7 because the director does not want them: the companion sitting to watch TV before
-she changes her mind (replaced by the `!` and camera beat B5), the companion "unpacking a box on her own" (the log
-line only), and the plant boxes stacked by the door (not mentioned; see §13 q4).
+she changes her mind (replaced by the `!` and camera beat B5) and the companion "unpacking a box on her own" (the log
+line only). Of the two plant boxes Dez stacks by the door, one stays (decided, §13).
 
 ## 4. Character presence, positions and behaviour
 
@@ -153,7 +153,7 @@ the tap again. The Set it down button snaps the piece when it is close and close
 Gender and style variants of every companion line (4 × 4 × 2 for humor slots, 4 × 2 for communication slots; a
 `they` companion falls back to the neutral wording the banks already have). Camera pinch and drag during guided
 beats. The friend companion gets no separate lines (decision 8); `dez.roommates` is dropped unless the director
-wants it back (§13 q3). The plant boxes by the door are an open question (§13 q4).
+wants it back (§13 q3). One plant box stays by the door (§13).
 
 ## 9. Completion and control handoff
 
@@ -219,18 +219,22 @@ few leaves, timed to the truck's x. Free plots have no tree today, so the drive-
 residents switching lamps on and off by themselves (a free-will rule in `state/agents.ts`, separate feature);
 sound (decided: none).
 
-## 13. Still open (working assumptions in brackets)
+## 13. Still open and newly decided
 
-1. Does the mayor passage keep today's "me and my family have lived here for ages…" line? [yes, merged after
-   `intro.2`]
-2. Does Dez set the box down the moment he arrives, or after "here's your first box"? [on arrival, so he speaks
-   empty-handed and gestures at it]
-3. Keep the roommates line for friend companions, or drop it with the other relationship variants? [drop]
-4. Keep the two plant boxes Dez stacks by the door in chapter 7? [drop; they were not mentioned and complicate the
-   lamp lesson]
-5. "Upper right corner": the corner mark `living.lampCorner` is at (9.3, 7.2). Its screen position depends on
-   the camera rotation; confirm with a screenshot during implementation and move the mark if needed. [verify in P]
-6. Residents switching lamps themselves: build with this scene or as its own small feature afterwards? [afterwards]
+Decided 2026-10-27 (second round):
+
+- The mayor passage keeps the family-businesses line (`dez.intro.3`), merged after `dez.intro.2`.
+- Dez sets the couch box down where he does today: the gap between the entry and the kitchen (`entry.drop`).
+- "Upper corner" for the lamp means **the TV wall, to the right of the TV**. The TV unit sits at (6.0, 0.12) on
+  the living room's back wall (room x 4.7–10, y 0–8), so the corner mark moves from today's `living.lampCorner`
+  (9.3, 7.2), which is the opposite front corner, to about (8.8, 0.25) beside the TV. Which side reads as "right"
+  depends on the camera rotation: confirm with a screenshot during implementation and adjust.
+- Chapter 7 keeps **one** plant box by the door, not two.
+
+Still open (working assumption in brackets):
+
+1. Keep the roommates line for friend companions, or drop it with the other relationship variants? [drop]
+2. Residents switching lamps on and off themselves: build with this scene or afterwards? [afterwards]
 
 ## 14. Verified
 
