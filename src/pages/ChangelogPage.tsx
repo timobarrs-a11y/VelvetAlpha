@@ -146,7 +146,7 @@ export default function ChangelogPage() {
         }}
       >
         <button
-          onClick={() => navigate('/welcome')}
+          onClick={() => navigate('/')}
           className="text-white text-sm font-bold tracking-[0.18em] uppercase"
           style={{ letterSpacing: '0.18em' }}
         >

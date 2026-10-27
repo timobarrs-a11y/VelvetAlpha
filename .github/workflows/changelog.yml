@@ -1,0 +1,27 @@
+name: Publish changelog
+
+# When a pull request is merged into main, post its "What's new" section to the in-app
+# changelog. Setup is in scripts/changelog/README.md.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Post to the changelog
+        run: node scripts/changelog/publish.mjs
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          CHANGELOG_INGEST_SECRET: ${{ secrets.CHANGELOG_INGEST_SECRET }}

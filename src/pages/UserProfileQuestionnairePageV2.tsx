@@ -8,13 +8,16 @@ import { toast } from '../shared/ui/Toast';
 import { supabase } from '../shared/supabase/client';
 import { AuthSpinner } from '../components/auth/AuthSpinner';
 import { ARRIVAL_ROUTES } from '../features/arrival/arrivalRoutes';
+import { WelcomeMoment } from '../features/questionnaire/WelcomeMoment';
+import { rememberWelcomeSeen, shouldShowWelcome } from '../features/questionnaire/welcome';
 
 /** Where Act 1 leads: making their avatar, the next step of the arrival. */
 const AFTER_QUESTIONNAIRE_ROUTE = ARRIVAL_ROUTES.look;
 
 function buildBridgeLines(answers: Record<string, string | string[]>): { text: string }[] {
   const lines: { text: string }[] = [];
-  const name = answers.name as string;
+  // Private to them, but still their nickname first.
+  const name = ((answers.nickname as string) || (answers.name as string)) ?? '';
   const music = answers.musicGenre;
   const hobbies = answers.hobbies as string[];
 
@@ -41,6 +44,8 @@ export function UserProfileQuestionnairePageV2() {
   const [showBridge, setShowBridge] = useState(false);
   const [bridgeAnswers, setBridgeAnswers] = useState<Record<string, string | string[]>>({});
   const [resume, setResume] = useState<{ answers: Record<string, string | string[]>; index: number } | null>(null);
+  // A short branded welcome, once, before the very first question.
+  const [welcome, setWelcome] = useState<{ userId?: string } | null>(null);
 
   const ctx = useMemo(() => makeContext({}, '', 'user'), []);
 
@@ -55,7 +60,9 @@ export function UserProfileQuestionnairePageV2() {
         return;
       }
       const answers = answersFromProfile(profile);
-      setResume({ answers, index: resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx) });
+      const index = resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx);
+      setResume({ answers, index });
+      if (shouldShowWelcome(profile, index)) setWelcome({ userId: profile?.id });
     })();
     return () => { cancelled = true; };
   }, [ctx, navigate]);
@@ -114,9 +121,17 @@ export function UserProfileQuestionnairePageV2() {
     );
   }
 
+  const closeWelcome = () => {
+    rememberWelcomeSeen(welcome?.userId);
+    userProfileService.updateProfile({ welcome_seen: true }).catch(() => {});
+    setWelcome(null);
+  };
+
   if (!resume) return <AuthSpinner />;
 
   return (
+    <>
+    {welcome && <WelcomeMoment onDone={closeWelcome} />}
     <QuestionnaireShell
       definition={PERSONAL_QUESTIONNAIRE}
       context={ctx}
@@ -126,5 +141,6 @@ export function UserProfileQuestionnairePageV2() {
       onComplete={handleComplete}
       onBack={() => navigate(-1)}
     />
+    </>
   );
 }
