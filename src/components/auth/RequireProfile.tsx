@@ -40,12 +40,14 @@ export function RequireProfile({ children }: { children: React.ReactNode }) {
     (async () => {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('profile_completed, nickname, name, birthday, gender, setup_step')
+        .select('profile_completed, nickname, name, birthday, gender, setup_step, age_verified_at')
         .eq('id', userId)
         .maybeSingle();
       if (cancelled) return;
       if (error) { setState({ kind: 'ok' }); return; }
       if (!isProfileComplete(data)) { setState({ kind: 'go', to: '/user-questionnaire' }); return; }
+      // Members from before age checks confirm their birthday (it comes with the questions) before going on.
+      if (!data?.age_verified_at) { setState({ kind: 'go', to: '/user-questionnaire' }); return; }
       const step = (data?.setup_step ?? null) as SetupStep | null;
       if (step && ARRIVAL_STEPS.includes(step)) {
         const to = prepareResume({ step, path: null }, []);

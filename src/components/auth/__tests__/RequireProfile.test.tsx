@@ -41,9 +41,14 @@ describe('RequireProfile', () => {
     await waitFor(() => expect(screen.getByText('questions')).toBeTruthy());
   });
   it('lets a finished profile through', async () => {
-    row = { profile_completed: true };
+    row = { profile_completed: true, age_verified_at: '2026-01-01T00:00:00Z' };
     renderAt();
     await waitFor(() => expect(screen.getByText('lobby')).toBeTruthy());
+  });
+  it('sends a finished member whose age was never checked back through the questions', async () => {
+    row = { profile_completed: true, age_verified_at: null };
+    renderAt();
+    await waitFor(() => expect(screen.getByText('questions')).toBeTruthy());
   });
   it('does not lock anyone out when the lookup fails', async () => {
     failed = true;

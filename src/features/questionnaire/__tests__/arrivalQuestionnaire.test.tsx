@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { PERSONAL_QUESTIONNAIRE, resolveZodiac, somedayFromAnswers, answersFromSomeday, SOMEDAY_TABS } from '../personalBank';
+import { PERSONAL_QUESTIONNAIRE, resolveZodiac, monthSigns, birthMonthName, validateBirthday, somedayFromAnswers, answersFromSomeday, SOMEDAY_TABS } from '../personalBank';
 import { answersFromProfile, profileUpdateFor, resumeIndex } from '../arrivalAnswers';
 import { QuestionnaireShell } from '../QuestionnaireShell';
 import { makeContext } from '../pronouns';
@@ -12,7 +12,7 @@ const ids = PERSONAL_QUESTIONNAIRE.questions.map(q => q.id);
 
 describe('Act 1 order', () => {
   it('goes nickname, color, birthday, zodiac, gender, interests, Someday, the four wavelength questions, favorite hero, then the real name', () => {
-    expect(ids).toEqual(['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday', 'conflictResponse', 'connection', 'decisionStyle', 'motivation', 'favoriteHero', 'name']);
+    expect(ids).toEqual(['nickname', 'favoriteColor', 'birthday', 'zodiac', 'gender', 'interests', 'someday', 'conflictResponse', 'connection', 'decisionStyle', 'motivation', 'favoriteHero', 'name']);
   });
 
   it('asks for a nickname first, and requires one', () => {
@@ -43,20 +43,50 @@ describe('Act 1 order', () => {
     expect(ids).not.toContain('tasteDeck');
   });
 
-  it('skips the birthday when sign-up already gave it, and shows only the right zodiac question', () => {
+  it('always asks the birthday, even when sign-up gave it, then the two signs of that month', () => {
     const q = (id: string) => PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === id)!;
-    const onCusp = { ...ctx, answers: { birthday: '1990-03-20' } };
-    const offCusp = { ...ctx, answers: { birthday: '1990-10-29' } };
-    expect(q('birthday').skipIf!(offCusp)).toBe(true);
-    expect(q('birthday').skipIf!({ ...ctx, answers: {} })).toBe(false);
-    expect([q('zodiacCusp').skipIf!(onCusp), q('zodiacConfirm').skipIf!(onCusp)]).toEqual([false, true]);
-    expect([q('zodiacCusp').skipIf!(offCusp), q('zodiacConfirm').skipIf!(offCusp)]).toEqual([true, false]);
+    const withBirthday = { ...ctx, answers: { birthday: '1990-10-29' } };
+    expect(q('birthday').skipIf).toBeUndefined();
+    expect(q('zodiac').skipIf!(withBirthday)).toBe(false);
+    expect(q('zodiac').skipIf!({ ...ctx, answers: {} })).toBe(true);
+    const zodiac = q('zodiac') as unknown as { question: (c: unknown) => string; options: (c: unknown) => { value: string }[] };
+    expect(zodiac.question(withBirthday)).toBe("October, huh? That makes you a Libra or a Scorpio. Which one's you?");
+    expect(zodiac.options(withBirthday).map(o => o.value)).toEqual(['Libra', 'Scorpio', 'none']);
+  });
+});
+
+describe('birth months and signs', () => {
+  it('gives the sign carried from the month before and the one that starts in it', () => {
+    expect(monthSigns('1990-01-15')).toEqual(['Capricorn', 'Aquarius']);
+    expect(monthSigns('1990-03-20')).toEqual(['Pisces', 'Aries']);
+    expect(monthSigns('1990-12-05')).toEqual(['Sagittarius', 'Capricorn']);
+    expect(monthSigns('')).toBeNull();
+  });
+
+  it('names the month', () => {
+    expect(birthMonthName('1990-10-29')).toBe('October');
+    expect(birthMonthName('nope')).toBeNull();
+  });
+});
+
+describe('validateBirthday', () => {
+  const today = new Date(Date.UTC(2026, 9, 27));
+  it('accepts adults, including someone turning 18 today', () => {
+    expect(validateBirthday('1990-10-29', today)).toBeNull();
+    expect(validateBirthday('2008-10-27', today)).toBeNull();
+  });
+  it('refuses minors, the future and impossible dates', () => {
+    expect(validateBirthday('2008-10-28', today)).toMatch(/18/);
+    expect(validateBirthday('2030-01-01', today)).toMatch(/hasn't happened/);
+    expect(validateBirthday('1990-02-31', today)).toMatch(/real date/);
+    expect(validateBirthday('1850-01-01', today)).toMatch(/real date/);
   });
 });
 
 describe('resolveZodiac', () => {
-  it('uses the sign chosen on a cusp (it used to be ignored)', () => {
-    expect(resolveZodiac({ birthday: '1990-03-20', zodiacCusp: 'Aries' })).toBe('Aries');
+  it('uses the sign picked for their birth month, or none when they opt out', () => {
+    expect(resolveZodiac({ birthday: '1990-03-20', zodiac: 'Aries' })).toBe('Aries');
+    expect(resolveZodiac({ birthday: '1990-03-20', zodiac: 'none' })).toBeNull();
   });
 
   it('uses the confirmed sign, or none when they opt out', () => {
@@ -88,13 +118,13 @@ describe('saving each answer', () => {
   it('writes the matching profile column', () => {
     expect(profileUpdateFor('name', 'Tim', {})).toEqual({ name: 'Tim' });
     expect(profileUpdateFor('nickname', '  ', {})).toEqual({ nickname: null });
-    expect(profileUpdateFor('zodiacConfirm', 'none', {})).toEqual({ zodiac_sign: null });
+    expect(profileUpdateFor('zodiac', 'none', {})).toEqual({ zodiac_sign: null });
     expect(profileUpdateFor('musicGenre', ['Jazz', 'Pop'], {})).toEqual({ music_genre: 'Jazz, Pop' });
     expect(profileUpdateFor('sportsInterests', ['Basketball'], {})).toEqual({ sports_interests: ['Basketball'], sports: ['Basketball'] });
     expect(profileUpdateFor('someday_body', ['Run a 5K'], { someday_body: ['Run a 5K'] })).toEqual({ someday: [{ tab: 'Body', value: 'Run a 5K' }] });
   });
 
-  it('never writes the birthday, which only sign-up may set', () => {
+  it('leaves the birthday to confirm_birthday, which checks the age', () => {
     expect(profileUpdateFor('birthday', '1990-10-29', {})).toBeNull();
   });
 });
@@ -102,7 +132,7 @@ describe('saving each answer', () => {
 describe('resuming', () => {
   it('starts at the first question not yet answered', () => {
     const answers = answersFromProfile({ nickname: 'Ace', favorite_color: 'Teal', birthday: '1990-10-29' } as never);
-    expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('zodiacConfirm');
+    expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('birthday');
   });
 
   it('asks the favorite hero next once everything before it is answered', () => {
@@ -292,15 +322,6 @@ describe('going back to change a pick', () => {
     } finally {
       vi.useRealTimers();
     }
-  });
-});
-
-describe('the sign-up birthday questions say where the birthday came from', () => {
-  const q = (id: string) => PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === id) as unknown as { question: string | ((c: unknown) => string) };
-  it('names the sign-up birthday on the cusp and the confirm questions', () => {
-    expect(q('zodiacCusp').question).toMatch(/birthday you gave at sign-up/);
-    const confirm = (q('zodiacConfirm').question as (c: unknown) => string)({ ...ctx, answers: { birthday: '1990-10-29' } });
-    expect(confirm).toBe("Going by your sign-up birthday, you're a Scorpio ♏. Sound right?");
   });
 });
 

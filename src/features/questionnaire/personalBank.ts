@@ -58,15 +58,53 @@ const ZODIAC_SYMBOLS: Record<string, string> = {
   Libra: '♎', Scorpio: '♏', Sagittarius: '♐', Capricorn: '♑', Aquarius: '♒', Pisces: '♓',
 };
 
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/** The month in a birthday ("2026-10-29" gives "October"), or null. */
+export function birthMonthName(birthday: string): string | null {
+  const m = /^\d{4}-(\d{2})-\d{2}/.exec(birthday ?? '');
+  const n = m ? Number(m[1]) : 0;
+  return n >= 1 && n <= 12 ? MONTH_NAMES[n - 1] : null;
+}
+
+/**
+ * The two signs a birth month can be: the one carried over from the month before and the one that
+ * starts in it. Asking beats working it out from the day, since sign dates shift a day between sources.
+ */
+export function monthSigns(birthday: string): [string, string] | null {
+  const m = /^\d{4}-(\d{2})-\d{2}/.exec(birthday ?? '');
+  const month = m ? Number(m[1]) : 0;
+  if (month < 1 || month > 12) return null;
+  const starts = ZODIAC_RANGES.find(([sm]) => sm === month)?.[2];
+  const prev = month === 1 ? 12 : month - 1;
+  const carried = ZODIAC_RANGES.find(([sm]) => sm === prev)?.[2];
+  return starts && carried ? [carried, starts] : null;
+}
+
+/** Why a birthday is not allowed, or null when it is fine. Velvet is for adults. */
+export function validateBirthday(text: string, today: Date = new Date()): string | null {
+  if (!text) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!m) return 'Pick your birthday from the calendar.';
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(y, mo - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d || y < 1900) return "That doesn't look like a real date.";
+  let age = today.getUTCFullYear() - y;
+  if (today.getUTCMonth() + 1 < mo || (today.getUTCMonth() + 1 === mo && today.getUTCDate() < d)) age -= 1;
+  if (age < 0) return "That date hasn't happened yet.";
+  if (age < 18) return 'Velvet is for people 18 and over.';
+  return null;
+}
+
 /** "none" means they'd rather not have a sign. */
 const NO_SIGN = 'none';
 
 /**
- * Their sign: the one they picked on a cusp, else the one they confirmed,
- * else the one their birthday gives.
+ * Their sign: the one they picked for their birth month, else the one they
+ * confirmed or picked on a cusp in the old questions, else the one their birthday gives.
  */
 export function resolveZodiac(answers: Record<string, string | string[]>): string | null {
-  for (const key of ['zodiacCusp', 'zodiacConfirm', 'zodiacSign']) {
+  for (const key of ['zodiac', 'zodiacCusp', 'zodiacConfirm', 'zodiacSign']) {
     const picked = answers[key];
     if (typeof picked === 'string' && picked.trim()) return picked === NO_SIGN ? null : picked;
   }
@@ -266,7 +304,7 @@ export function validateHero(text: string): string | null {
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 10,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'favoriteColor', 'birthday', 'zodiac', 'gender'] },
     { id: 'taste', label: 'What you love', questionIds: ['interests'] },
     { id: 'someday', label: 'Someday', questionIds: ['someday'] },
     { id: 'wavelength', label: 'How you tick', questionIds: ['conflictResponse', 'connection', 'decisionStyle', 'motivation'] },
@@ -319,47 +357,35 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       chapter: 'identity',
       question: (ctx) => {
         const who = (ctx.answers.nickname as string | undefined)?.trim();
-        return who ? `When's your birthday, ${who}?` : "When's your birthday?";
+        return who
+          ? `When's your birthday, ${who}? It's filled in from sign-up. Fix it if it's off.`
+          : "When's your birthday? It's filled in from sign-up. Fix it if it's off.";
       },
       confidence: 'confirmed',
       placeholder: 'Select your birthday',
-      // Sign-up already asks for it (for the age check), so this is rarely shown.
-      skipIf: (ctx) => !!ctx.answers.birthday,
+      // Always asked: it corrects a sign-up mistake and is how older accounts get their age checked.
+      // A birthday already on the profile is only a starting point, so it does not count as progress.
+      prefilled: true,
+      validate: (text) => validateBirthday(text),
     },
     {
-      id: 'zodiacCusp',
-      archetype: 'tap',
-      chapter: 'identity',
-      question: "That birthday you gave at sign-up lands you right on a cusp. Which sign feels more you?",
-      confidence: 'confirmed',
-      autoAdvance: true,
-      skipIf: (ctx) => !getCuspSigns(ctx.answers.birthday as string),
-      options: (ctx) => {
-        const cusp = getCuspSigns(ctx.answers.birthday as string);
-        if (!cusp) return [];
-        return [
-          { text: `${cusp[0]} ${ZODIAC_SYMBOLS[cusp[0]] ?? ''}`.trim(), value: cusp[0] },
-          { text: `${cusp[1]} ${ZODIAC_SYMBOLS[cusp[1]] ?? ''}`.trim(), value: cusp[1] },
-        ];
-      },
-    },
-    {
-      id: 'zodiacConfirm',
+      id: 'zodiac',
       archetype: 'tap',
       chapter: 'identity',
       question: (ctx) => {
-        const sign = deriveZodiac(ctx.answers.birthday as string);
-        return sign ? `Going by your sign-up birthday, you're a ${sign} ${ZODIAC_SYMBOLS[sign] ?? ''}. Sound right?`.replace(/ \./, '.') : 'Your sign?';
+        const month = birthMonthName(ctx.answers.birthday as string);
+        const pair = monthSigns(ctx.answers.birthday as string);
+        if (!month || !pair) return 'Which sign are you?';
+        return `${month}, huh? That makes you a ${pair[0]} or a ${pair[1]}. Which one's you?`;
       },
       confidence: 'confirmed',
       autoAdvance: true,
-      // Shown when the birthday gives one sign; cusp birthdays choose above.
-      skipIf: (ctx) => !deriveZodiac(ctx.answers.birthday as string) || !!getCuspSigns(ctx.answers.birthday as string),
+      skipIf: (ctx) => !monthSigns(ctx.answers.birthday as string),
       options: (ctx) => {
-        const sign = deriveZodiac(ctx.answers.birthday as string);
-        if (!sign) return [];
+        const pair = monthSigns(ctx.answers.birthday as string);
+        if (!pair) return [];
         return [
-          { text: "That's me", value: sign },
+          ...pair.map(sign => ({ text: `${sign} ${ZODIAC_SYMBOLS[sign] ?? ''}`.trim(), value: sign })),
           { text: "I don't follow the stars", value: NO_SIGN },
         ];
       },

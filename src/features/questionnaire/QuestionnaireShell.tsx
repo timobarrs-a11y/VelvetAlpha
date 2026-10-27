@@ -710,7 +710,7 @@ function TapTextRenderer({
   const trimmed = textInput.trim();
   const invalid = trimmed.length > 0 ? question.validate?.(textInput) ?? null : null;
   const tooShort = !question.validate && minLen ? trimmed.length > 0 && trimmed.length < minLen : false;
-  const canSubmit = isDate ? !!textInput : trimmed.length >= (minLen ?? 1) && !(question.validate?.(textInput));
+  const canSubmit = isDate ? !!textInput && !question.validate?.(textInput) : trimmed.length >= (minLen ?? 1) && !(question.validate?.(textInput));
   const [bankKind, setBankKind] = useState<NicknameKind>('funny');
 
   const focusBorder = accentColor

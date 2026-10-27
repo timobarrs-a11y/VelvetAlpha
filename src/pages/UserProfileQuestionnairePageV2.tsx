@@ -46,6 +46,9 @@ export function UserProfileQuestionnairePageV2() {
   const navigate = useNavigate();
   const [showBridge, setShowBridge] = useState(false);
   const [bridgeAnswers, setBridgeAnswers] = useState<Record<string, string | string[]>>({});
+  // Members from before age checks go through the questions again to confirm a birthday; they are not
+  // new, so they skip the arrival and land in the lobby afterwards.
+  const [verifyOnly, setVerifyOnly] = useState(false);
   const [resume, setResume] = useState<{ answers: Record<string, string | string[]>; index: number } | null>(null);
   // A short branded welcome, once, before the very first question.
   const [welcome, setWelcome] = useState<{ userId?: string } | null>(null);
@@ -58,7 +61,8 @@ export function UserProfileQuestionnairePageV2() {
     (async () => {
       const profile = await userProfileService.getCurrentProfile().catch(() => null);
       if (cancelled) return;
-      if (profile?.profile_completed) {
+      const needsAgeCheck = !!profile?.profile_completed && !profile.age_verified_at;
+      if (profile?.profile_completed && !needsAgeCheck) {
         // Wherever they got to in the arrival; anyone who finished it all goes to the lobby.
         const progress = profile.id ? await getSetupProgress(profile.id) : null;
         const next = progress?.step && ARRIVAL_STEPS.includes(progress.step) ? prepareResume(progress, []) : null;
@@ -66,7 +70,9 @@ export function UserProfileQuestionnairePageV2() {
         return;
       }
       const answers = answersFromProfile(profile);
-      const index = resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx);
+      // An age check starts from the top, with everything they already said filled in.
+      const index = needsAgeCheck ? 0 : resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx);
+      setVerifyOnly(needsAgeCheck);
       setResume({ answers, index });
       if (shouldShowWelcome(profile, index)) setWelcome({ userId: profile?.id });
     })();
@@ -75,6 +81,17 @@ export function UserProfileQuestionnairePageV2() {
 
   // Each answer is saved as it's given, so nothing is lost if they leave.
   const handleAnswer = useCallback((questionId: string, answer: string | string[], all: Record<string, string | string[]>) => {
+    if (questionId === 'birthday') {
+      // The server checks the age and marks the account verified; the app can't write either itself.
+      supabase.rpc('confirm_birthday', { p_birthday: String(answer) }).then(({ data, error }) => {
+        const result = data as { success?: boolean; reason?: string } | null;
+        if (error || !result?.success) {
+          console.error('[questionnaire] birthday not saved:', error ?? result);
+          toast.error(result?.reason === 'underage' ? 'Velvet is for people 18 and over.' : "We couldn't save your birthday. Check it and try again.");
+        }
+      }, err => console.error('[questionnaire] birthday not saved:', err));
+      return;
+    }
     const update = profileUpdateFor(questionId, answer, all);
     if (!update) return;
     userProfileService.updateProfile(update).catch(err => console.error('[questionnaire] save failed:', questionId, err));
@@ -104,7 +121,7 @@ export function UserProfileQuestionnairePageV2() {
       await userProfileService.updateProfile({ someday: somedayFromAnswers(finalAnswers) });
       // From here the first session is under way, so the app sends them back to it until it's done.
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) await updateSetupProgress(user.id, { step: 'arrival_goal' });
+      if (user && !verifyOnly) await updateSetupProgress(user.id, { step: 'arrival_goal' });
     } catch {
       toast.error('Something went wrong saving your profile. Please try again.');
       return;
@@ -114,11 +131,11 @@ export function UserProfileQuestionnairePageV2() {
 
     setBridgeAnswers(finalAnswers);
     setShowBridge(true);
-  }, []);
+  }, [verifyOnly]);
 
   const handleBridgeComplete = useCallback(() => {
-    navigate(AFTER_QUESTIONNAIRE_ROUTE, { replace: true });
-  }, [navigate]);
+    navigate(verifyOnly ? '/lobby' : AFTER_QUESTIONNAIRE_ROUTE, { replace: true });
+  }, [navigate, verifyOnly]);
 
   if (showBridge) {
     return (

@@ -24,6 +24,7 @@ export interface UserProfile {
   gender: string | null;
   favorite_color: string | null;
   favorite_superhero?: string | null;
+  age_verified_at?: string | null;
   zodiac_sign: string | null;
   music_genre: string | null;
   hobbies: string[];
