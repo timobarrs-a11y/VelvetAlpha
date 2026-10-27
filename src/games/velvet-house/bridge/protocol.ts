@@ -151,7 +151,7 @@ export interface SampleResultMessage extends BridgeMessage {
   error?: string;
 }
 
-// Sharing garment designs (see supabase/migrations/20261029100000_velvet_designs.sql). The game asks the host to
+// Sharing garment designs (see supabase/migrations/20261029100001_velvet_designs.sql). The game asks the host to
 // publish, list, report, delete or review; the host runs it with the player's account and answers with the same seq.
 export const DESIGN_OPS = ['caps', 'friends', 'gallery', 'mine', 'publish', 'delete', 'report', 'pending', 'review'] as const;
 export type DesignOp = typeof DESIGN_OPS[number];

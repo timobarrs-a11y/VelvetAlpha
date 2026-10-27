@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, Target, Newspaper, Users, UserPlus, PenLine, Home,
   Search, CalendarCheck, Check, Circle, Hash, Sparkles, DoorOpen,
+  MapPin, MessageCircle, TrendingUp, Trophy, Eye, Award, BookOpen, Flame, Heart,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -356,6 +357,231 @@ function VelvetHouseScreen() {
   );
 }
 
+function NaviScreen() {
+  const a = '45,212,191';
+  const spots = [
+    { name: 'Sunday Farmers Market', meta: 'Today · 9 AM · 0.8 mi', tag: 'Food' },
+    { name: 'Open-mic Jazz Night', meta: 'Fri · 8 PM · 1.4 mi', tag: 'Music' },
+    { name: 'Lakefront Trail Meetup', meta: 'Sat · 7 AM · 2.1 mi', tag: 'Running' },
+  ];
+  return (
+    <div className="flex flex-col gap-2.5">
+      <motion.p {...item(0)} className="text-[11px] font-semibold uppercase tracking-[0.14em] flex items-center gap-1.5" style={{ color: `rgb(${a})` }}>
+        <MapPin className="w-3 h-3" /> Near you · picked for your taste
+      </motion.p>
+      {spots.map((s, i) => (
+        <motion.div
+          key={s.name}
+          {...item(i + 1)}
+          className="flex items-center gap-3 p-2.5 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="w-11 h-11 rounded-lg flex-shrink-0 flex items-center justify-center" style={{ background: `rgba(${a},0.14)` }}>
+            <MapPin className="w-4 h-4" style={{ color: `rgb(${a})` }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-white text-[12.5px] font-semibold truncate">{s.name}</p>
+            <p className="text-[10.5px] text-gray-500">{s.meta}</p>
+          </div>
+          <Chip icon={Sparkles} accent={a}>{s.tag}</Chip>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function StatusScreen() {
+  const a = '244,114,182';
+  const posts = [
+    { name: 'Marcus', hue: 190, text: 'Finally hit a 5K without stopping. Day 18.', likes: 12, comments: 4 },
+    { name: 'Lena', hue: 30, text: 'Made the sourdough from scratch. It rose. 🍞', likes: 27, comments: 9 },
+  ];
+  return (
+    <div className="flex flex-col gap-3">
+      <motion.div
+        {...item(0)}
+        className="px-3.5 py-2.5 rounded-xl text-[12px] text-gray-500"
+        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        What are you up to?
+      </motion.div>
+      {posts.map((p, i) => (
+        <motion.div
+          key={p.name}
+          {...item(i + 1)}
+          className="p-3 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center gap-2.5">
+            <Initials name={p.name} hue={p.hue} />
+            <p className="text-white text-[12.5px] font-semibold">{p.name}</p>
+          </div>
+          <p className="mt-2 text-[12.5px] text-gray-300 leading-relaxed">{p.text}</p>
+          <div className="mt-2 flex items-center gap-4 text-[11px] text-gray-500">
+            <span className="inline-flex items-center gap-1" style={{ color: `rgb(${a})` }}><Heart className="w-3 h-3" />{p.likes}</span>
+            <span className="inline-flex items-center gap-1"><MessageCircle className="w-3 h-3" />{p.comments}</span>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function InsightsScreen() {
+  const a = '52,211,153';
+  const bars = [40, 55, 35, 70, 60, 85, 75];
+  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  return (
+    <div className="flex flex-col gap-3">
+      <motion.div {...item(0)} className="grid grid-cols-3 gap-2">
+        {[
+          { label: 'Streak', value: '12 days', icon: Flame, c: '251,146,60' },
+          { label: 'Goals', value: '3 active', icon: TrendingUp, c: a },
+          { label: 'Check-ins', value: '9 / 10', icon: Check, c: '56,189,248' },
+        ].map(t => (
+          <div key={t.label} className="rounded-xl p-2.5" style={{ background: `rgba(${t.c},0.08)`, border: `1px solid rgba(${t.c},0.2)` }}>
+            <t.icon className="w-3.5 h-3.5 mb-1" style={{ color: `rgb(${t.c})` }} />
+            <p className="text-white text-[13px] font-semibold">{t.value}</p>
+            <p className="text-[10px] text-gray-500">{t.label}</p>
+          </div>
+        ))}
+      </motion.div>
+      <motion.div {...item(1)} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <p className="text-[11px] text-gray-400 mb-2">This week</p>
+        <div className="flex items-end gap-2 h-20">
+          {bars.map((h, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              <motion.div
+                className="w-full rounded-md"
+                style={{ background: `linear-gradient(180deg, rgb(${a}), rgba(${a},0.3))` }}
+                initial={{ height: 0 }}
+                animate={{ height: `${h}%` }}
+                transition={{ delay: 0.5 + i * 0.06, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              />
+              <span className="text-[9.5px] text-gray-500">{days[i]}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+      <motion.p {...item(2)} className="text-[12px] text-gray-300 leading-relaxed">
+        You follow through most on Saturday mornings. Want Maya to schedule your hardest session then?
+      </motion.p>
+    </div>
+  );
+}
+
+function LeaderboardScreen() {
+  const a = '251,191,36';
+  const rows = [
+    { rank: 1, name: 'Dre', hue: 200, score: '48,210', game: 'Momentum' },
+    { rank: 2, name: 'You', hue: 320, score: '44,980', game: 'Momentum', me: true },
+    { rank: 3, name: 'Sam', hue: 140, score: '41,305', game: 'Momentum' },
+    { rank: 4, name: 'Jules', hue: 330, score: '38,760', game: 'Momentum' },
+  ];
+  return (
+    <div className="flex flex-col gap-2.5">
+      <motion.p {...item(0)} className="text-[11px] font-semibold uppercase tracking-[0.14em] flex items-center gap-1.5" style={{ color: `rgb(${a})` }}>
+        <Trophy className="w-3 h-3" /> Friends leaderboard · this week
+      </motion.p>
+      {rows.map((r, i) => (
+        <motion.div
+          key={r.name}
+          {...item(i + 1)}
+          className="flex items-center gap-3 p-2.5 rounded-xl"
+          style={r.me
+            ? { background: `rgba(${a},0.1)`, border: `1px solid rgba(${a},0.35)` }
+            : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <span className="w-5 text-center text-[13px] font-bold" style={{ color: r.rank === 1 ? `rgb(${a})` : '#9ca3af' }}>{r.rank}</span>
+          <Initials name={r.name} hue={r.hue} />
+          <p className="text-white text-[12.5px] font-semibold flex-1">{r.name}</p>
+          <div className="text-right">
+            <p className="text-white text-[12.5px] font-semibold">{r.score}</p>
+            <p className="text-[10px] text-gray-500">{r.game}</p>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function RealOrNotScreen() {
+  const a = '56,189,248';
+  return (
+    <div className="flex flex-col gap-3">
+      <motion.div {...item(0)} className="flex items-center justify-between">
+        <p className="text-white text-[13px] font-semibold">Chat with a stranger</p>
+        <span className="text-[10.5px] text-gray-500">2:14 left</span>
+      </motion.div>
+      <motion.div {...item(1)}><Bubble from="them" accent={a}>ok hot take: pineapple on pizza is fine, actually</Bubble></motion.div>
+      <motion.div {...item(2)}><Bubble from="me" accent={a}>bold. what&apos;s the worst thing you&apos;ve ever eaten on purpose?</Bubble></motion.div>
+      <motion.div {...item(3)} className="grid grid-cols-2 gap-2 mt-1">
+        <span className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[12px] font-semibold text-white" style={{ background: 'rgba(52,211,153,0.18)', border: '1px solid rgba(52,211,153,0.35)' }}>
+          <Eye className="w-3.5 h-3.5" />Real person
+        </span>
+        <span className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[12px] font-semibold text-white" style={{ background: 'rgba(192,132,252,0.18)', border: '1px solid rgba(192,132,252,0.35)' }}>
+          <Sparkles className="w-3.5 h-3.5" />AI
+        </span>
+      </motion.div>
+      <motion.p {...item(4)} className="text-[11px] text-gray-500 text-center">Make your guess, then see who it really was.</motion.p>
+    </div>
+  );
+}
+
+function JournalScreen() {
+  const a = '251,191,36';
+  return (
+    <div className="flex flex-col gap-3">
+      <motion.div {...item(0)}>
+        <p className="text-[10.5px] uppercase tracking-[0.14em] text-gray-500 font-semibold flex items-center gap-1.5"><BookOpen className="w-3 h-3" />Morning Journal</p>
+        <p className="text-white text-[15px] font-semibold mt-1">What would make today a good day?</p>
+      </motion.div>
+      <motion.div
+        {...item(1)}
+        className="rounded-xl p-3 text-[12.5px] leading-relaxed text-gray-300"
+        style={{ background: `rgba(${a},0.06)`, border: `1px solid rgba(${a},0.2)` }}
+      >
+        Get the draft out the door before lunch, then take a real walk. Call Mom back.
+      </motion.div>
+      <motion.div {...item(2)} className="flex flex-wrap gap-2">
+        <Chip icon={Check} accent="52,211,153">3 priorities set</Chip>
+        <Chip icon={Flame} accent={a}>7-day streak</Chip>
+      </motion.div>
+    </div>
+  );
+}
+
+function MedalsScreen() {
+  const medals = [
+    { name: 'Iron Will', c: '251,191,36' },
+    { name: 'Coachable', c: '52,211,153' },
+    { name: 'Hat Trick', c: '56,189,248' },
+    { name: 'Early Bird', c: '244,114,182' },
+  ];
+  return (
+    <div className="flex flex-col gap-3">
+      <motion.div {...item(0)} className="grid grid-cols-4 gap-2">
+        {medals.map(m => (
+          <div key={m.name} className="flex flex-col items-center gap-1.5 py-2.5 rounded-xl" style={{ background: `rgba(${m.c},0.08)`, border: `1px solid rgba(${m.c},0.22)` }}>
+            <Award className="w-5 h-5" style={{ color: `rgb(${m.c})` }} />
+            <span className="text-[10px] text-white text-center leading-tight">{m.name}</span>
+          </div>
+        ))}
+      </motion.div>
+      <motion.div {...item(1)} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="flex items-center justify-between">
+          <p className="text-white text-[13px] font-semibold">Sunrise Runners</p>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', color: '#cac5f0' }}>Private crew</span>
+        </div>
+        <p className="text-[11.5px] text-gray-400 mt-1">5 members · Priya just finished week 5</p>
+      </motion.div>
+      <motion.div {...item(2)} className="flex items-center gap-2 text-[12px] text-gray-300">
+        <Flame className="w-3.5 h-3.5 text-orange-300" /> Cheer each other on in the progress feed.
+      </motion.div>
+    </div>
+  );
+}
+
 const SLIDES: Slide[] = [
   { id: 'atlas', icon: Compass, label: 'Atlas', title: 'Atlas', caption: 'Your assistant. Searches, plans, and books it on your calendar.', accent: '192,132,252', Screen: AtlasScreen },
   { id: 'coach', icon: Target, label: 'Coaches', title: 'Your coach', caption: 'Turns a goal into a plan, then checks in so you follow through.', accent: '52,211,153', Screen: CoachScreen },
@@ -363,6 +589,13 @@ const SLIDES: Slide[] = [
   { id: 'board', icon: Users, label: 'Community Board', title: 'Community Board', caption: 'Spaces with live rooms, already matched to your interests.', accent: '56,189,248', Screen: HouseScreen },
   { id: 'people', icon: UserPlus, label: 'Meet people', title: 'Discover', caption: 'Real people who are into the same things you are.', accent: '244,114,182', Screen: PeopleScreen },
   { id: 'coauthor', icon: PenLine, label: 'Co-Author', title: 'Co-Author', caption: 'Write stories, scripts, and worlds with a partner who never runs dry.', accent: '52,211,153', Screen: CoAuthorScreen },
+  { id: 'navi', icon: MapPin, label: 'Navi', title: 'Navi', caption: 'Local events, restaurants, and things to do, filtered to your taste.', accent: '45,212,191', Screen: NaviScreen },
+  { id: 'status', icon: MessageCircle, label: 'Your Feed', title: 'Statuses & Your Feed', caption: 'Post what you are up to. Friends like, comment, and cheer you on.', accent: '244,114,182', Screen: StatusScreen },
+  { id: 'insights', icon: TrendingUp, label: 'Goals & Insights', title: 'Goals & Insights', caption: 'Streaks, check-ins, and the patterns behind your progress.', accent: '52,211,153', Screen: InsightsScreen },
+  { id: 'journal', icon: BookOpen, label: 'Journal', title: 'Morning Journal', caption: 'Start the day with intention and keep your streak going.', accent: '251,191,36', Screen: JournalScreen },
+  { id: 'leaderboards', icon: Trophy, label: 'Leaderboards', title: 'Leaderboards & Games', caption: 'Compete with friends in games and climb the board.', accent: '251,191,36', Screen: LeaderboardScreen },
+  { id: 'ron', icon: Eye, label: 'Real or Not', title: 'Real or Not', caption: 'Chat with a stranger, then guess: person or AI?', accent: '56,189,248', Screen: RealOrNotScreen },
+  { id: 'medals', icon: Award, label: 'Medals & Crews', title: 'Medals & Crews', caption: 'Earn medals and build private crews that cheer you on.', accent: '244,114,182', Screen: MedalsScreen },
   { id: 'home', icon: Home, label: 'Velvet House', title: 'Velvet House', caption: 'Your house in town. Tap Look inside to play Velvet Sims.', accent: '251,146,60', Screen: VelvetHouseScreen },
 ];
 
@@ -439,7 +672,11 @@ export function SplashShowcase({ lite, still }: { lite: boolean; still: boolean 
       </div>
 
       {/* Tab rail */}
-      <div className="mt-5 flex flex-wrap justify-center gap-1.5" role="tablist" aria-label="Preview a feature">
+      <div
+        className="mt-5 flex gap-1.5 overflow-x-auto pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="tablist"
+        aria-label="Preview a feature"
+      >
         {SLIDES.map((s, i) => {
           const active = i === index;
           const TabIcon = s.icon;
@@ -449,7 +686,8 @@ export function SplashShowcase({ lite, still }: { lite: boolean; still: boolean 
               role="tab"
               aria-selected={active}
               onClick={() => setIndex(i)}
-              className="relative overflow-hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors"
+              ref={el => { if (active && el) el.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }); }}
+              className="relative overflow-hidden inline-flex flex-shrink-0 snap-center items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors"
               style={{
                 background: active ? `rgba(${s.accent},0.12)` : 'rgba(255,255,255,0.03)',
                 border: `1px solid ${active ? `rgba(${s.accent},0.35)` : 'rgba(255,255,255,0.08)'}`,

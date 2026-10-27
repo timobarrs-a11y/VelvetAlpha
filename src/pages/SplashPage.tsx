@@ -327,16 +327,17 @@ export function SplashPage() {
               </span>
             </h1>
 
-            <p className="mt-6 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
-              Atlas helps you find and map out your goals, and your coaches keep you on track with actionable plans
-              created per user to accomplish tasks by the time you want them done. A suite of other features, like
-              Co-Author for any literary task and a daily feed focused entirely on what you like, comes along too.
-            </p>
-            <p className="mt-4 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
-              It's all backed by a community of amazing people just like you, here to do the same thing: accomplish
-              their goals and cheer each other on. Make new friends with people who share your interests every day,
-              and then compete with them online for supremacy of the leaderboards!
-            </p>
+            <div className="mt-6 space-y-4 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
+              <p>
+                Atlas helps you map out your goals. Coaches keep you on track with actionable plans built just for you.
+                Stay current on the things you love with news and YouTube wired right into your profile.
+              </p>
+              <p>
+                While you&apos;re here, connect and compete with new or existing friends on the leaderboards, or just hang
+                out and talk about things you like in Spaces.
+              </p>
+              <p>And there&apos;s so much more!</p>
+            </div>
 
             <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               {primaryCta('Create your free account')}

@@ -1,5 +1,5 @@
--- Behaviour checks for 20261029100000_velvet_designs.sql, run against a scratch Postgres with stand-ins for the
--- app's tables:  psql -d scratch -f velvet_designs_stub.sql -f ../migrations/20261029100000_velvet_designs.sql -f velvet_designs_behaviour.sql
+-- Behaviour checks for 20261029100001_velvet_designs.sql, run against a scratch Postgres with stand-ins for the
+-- app's tables:  psql -d scratch -f velvet_designs_stub.sql -f ../migrations/20261029100001_velvet_designs.sql -f velvet_designs_behaviour.sql
 -- Every line prints PASS or stops with FAILED.
 \set ON_ERROR_STOP 1
 insert into auth.users (id) values ('00000000-0000-0000-0000-00000000000a'),('00000000-0000-0000-0000-00000000000b'),('00000000-0000-0000-0000-00000000000c'),('00000000-0000-0000-0000-00000000000d'),('00000000-0000-0000-0000-00000000000e'),('00000000-0000-0000-0000-00000000000f'),('00000000-0000-0000-0000-000000000010');
