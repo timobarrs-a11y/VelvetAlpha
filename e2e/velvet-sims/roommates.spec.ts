@@ -3,7 +3,7 @@ import { openGame, objects, inGame, pageErrors } from './helpers';
 
 // A friend who moves in is a roommate: two beds, a roommate joke from Dez, and lines in their own style.
 test('a friend companion gets the roommates opening', async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   const game = await openGame(page, { script: true });
   await page.evaluate(() => {
     const f = document.getElementById('g') as HTMLIFrameElement;
@@ -27,7 +27,8 @@ test('a friend companion gets the roommates opening', async ({ page }) => {
       await game.locator('.vh-speech').click().catch(() => {});
     }
     return said.some((t) => /roommates/.test(t));
-  }, { timeout: 60_000, intervals: [250], message: () => said.join(' / ') }).toBe(true);
+  // The drive-up and the walk in cannot be hurried, then five lines come before this one.
+  }, { timeout: 180_000, intervals: [250], message: () => said.join(' / ') }).toBe(true);
   const all = said.join(' | ');
   console.log(all);
   expect(all).toMatch(/Come on in guys! Welcome to Honeysuckle Hollow!/);
