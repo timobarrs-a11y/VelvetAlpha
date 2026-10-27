@@ -13,6 +13,7 @@ import { PAID_TIERS, type SubscriptionTier } from '../../types/subscription';
 import { birthdaysBetween, birthdayTitle, type BirthdayOccurrence } from './birthdays';
 import { QuickAddSheet } from './QuickAddSheet';
 import { PeopleSheet } from './PeopleSheet';
+import { TodayClimate } from './TodayClimate';
 import {
   buildTodayItems, endOfDay, nextLabel, startOfDay, todayHeading, type TodayItem,
 } from './todayItems';
@@ -190,6 +191,7 @@ export function TodayCard() {
           <h2 className="text-base font-semibold" style={{ color: 'var(--ds-ink)' }}>Today</h2>
           <p className="text-xs" style={{ color: 'var(--ds-ink-3)' }}>
             {todayHeading(now)}
+            <TodayClimate />
             {items && items.length > 0 && ` · ${doneCount} of ${items.length} done`}
           </p>
         </div>
