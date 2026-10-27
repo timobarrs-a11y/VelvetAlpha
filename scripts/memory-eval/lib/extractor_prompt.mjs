@@ -94,7 +94,8 @@ export function buildExtractorInput(stored, message, earlierTurns = '') {
   return { content, factIds, threadIds, facts, threads };
 }
 
-if (process.argv.includes('--check')) {
+// Self-check only when run directly: importers (the suite runner) have their own --check.
+if (process.argv.includes('--check') && process.argv[1] && (await import('node:url')).pathToFileURL(process.argv[1]).href === import.meta.url) {
   const { readFileSync } = await import('node:fs');
   const { resolve, dirname } = await import('node:path');
   const { fileURLToPath } = await import('node:url');

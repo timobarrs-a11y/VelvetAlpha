@@ -12,9 +12,9 @@ safe to publish). `docs/memory-engine-v4-spec.md` is the design they measure aga
 | `synthetic/generate.mjs` | Deterministic generator for everything under `synthetic/`. Edit the tables in it, never the JSON. |
 | `synthetic/fixture_synthetic.json` | 710 invented rows, 6 users, 11 companions; `DEV_FRIEND` holds 619 rows (the scale pair). Relative timestamps. |
 | `synthetic/eval_retrieval_synthetic.json` | 157 retrieval turns (31 time-shifted, 47 with zero-tolerance expectations). |
-| `synthetic/contradiction_suite.json` | 100 belief-revision cases: explicit, implicit, negated, temporal, unrelated (20 each). |
+| `synthetic/contradiction_suite.json` | 141 belief-revision cases: explicit, implicit, negated, temporal, unrelated (20 each) plus 41 targeting the review's gaps: past episode, other person, conditional / question, reported speech, sarcasm, quoted text, misplaced correction, fresh row (< 24 h), young row (1–7 d), thread mention. Every row carries its protection state and expected outcome. |
 | `run_eval.mjs` | Retrieval runner: real `fetch_memories_for_turn` (or the validated `--mirror`) + the real `selectMemories()`; scores and reports zero-tolerance violations. |
-| `run_contradiction_suite.mjs` | Runs the production extractor and the proposed verifier over the suite; reports verdict accuracy, destructive ops on unrelated rows, two-signal routing, cost. Writes nothing. |
+| `run_contradiction_suite.mjs` | Runs the production extractor and the **shipping** verifier module (`memoryVerifier.ts`: prompt, `isProtectedRow`, `isExplicitCorrection`, `decideRevision`) over the suite; reports verdict and outcome accuracy, destructive ops applied to unrelated rows, cost. `--check` validates suite and wiring without model calls. Writes nothing. |
 | `run_extractor_eval.mjs` | Older write-path probe over the real-data fixture. |
 | `lib/extractor_prompt.mjs` | Verbatim copy of chat-turn's extractor tool + prompt (`--check` diffs it against chat-turn). |
 | `lib/pg_english.mjs` | JavaScript mirror of `to_tsvector('english')` (parser, stop list, Snowball stemmer), validated by `lib/pg_english.test.mjs` against 886 real Postgres outputs. |
@@ -51,13 +51,33 @@ passed, whether or not a case lists it.
 ## Belief revision
 
 ```
-ANTHROPIC_API_KEY=... node --experimental-strip-types scripts/memory-eval/run_contradiction_suite.mjs [--runs 3] [--embed]
+# no model calls: suite consistency, protection states, decision table, prompt rules, age_days/source wiring
+node --experimental-strip-types scripts/memory-eval/run_contradiction_suite.mjs --check --verifier-ref origin/memory/revision-safety
+
+# full run (costs model calls; never points at production data)
+ANTHROPIC_API_KEY=... node --experimental-strip-types scripts/memory-eval/run_contradiction_suite.mjs \
+    --verifier-ref origin/memory/revision-safety [--runs 3] [--embed] [--only M01,F03]
 ```
 
-For every stored row the verifier must say `entails`, `contradicts` or `unrelated`.
-Zero tolerance: any destructive op (retract, update, close) on an `unrelated` row fails
-the run. Rows marked 🔒 are protected by the two-signal rule (user-stated, confirmed
-twice, or older than 7 days): one message may mark them disputed, never retire them.
+The runner imports the verifier from `supabase/functions/_shared/memoryVerifier.ts`
+(the checkout's copy, or `--verifier-ref <git ref>` / `--verifier <path>` when, as on
+this branch, the checkout has none) and calls `verifyMemory` with each row's `age_days`
+and `source`, exactly as chat-turn does. There is no copy of the prompt in the runner.
+
+For every stored row the verifier must return a verdict in the case's `expected.accept`
+list (usually just the expected verdict; a few sarcasm cases accept `unrelated` as well
+as `entails`). `expected.outcome` is what `decideRevision` must do with a confident
+`contradicts` on that row, on this message alone: `apply` (retire / supersede / close),
+`dispute` (flag only) or `none`. Rows are labelled `protected` (user-stated, confirmed
+twice or older than 7 days), `fresh` (under 24 hours, protected as well) or `young`
+(1–7 days, the only kind one message may retire). Zero tolerance: any destructive op
+applied to an `unrelated` row fails the run. The runner also reports what the rules
+alone would do on unrelated rows, since the deployed eval function may run only the
+verifier.
+
+Cases expected to be hard for the shipping prompt (see the PR description for why):
+Q01, S01–S03, T21, Y03, M03, C01, P01, O01; and F02, T24, M01, M04 are deliberate
+costs of the fresh-row and two-signal protections, not verifier errors.
 
 ## Baselines
 
@@ -66,7 +86,7 @@ twice, or older than 7 days): one message may mark them disputed, never retire t
 | real-data retrieval (41) | v3, SQL stage saved 2026-10-26, no vectors | 28/41 |
 | real-data retrieval (41) | v3, `--mirror` pinned to the same time | 28/41 (same failing set) |
 | synthetic retrieval (157) | v3, `--mirror`, as of 2026-11-01 | **121/157, 18 zero-tolerance violations** (all `inject_denied_fact`; 0 expired rows injected) |
-| contradiction suite (100) | production extractor + reference verifier | see `results/contradiction_2026-10-27.md` and the spec §h |
+| contradiction suite (100 of the 141) | production extractor + first-draft verifier prompt | 99% verdicts, 0 destructive on unrelated (`results/contradiction_2026-10-27.md`, spec §h). **Stale**: the shipping prompt and the 41 new cases have not been run yet. |
 
 Synthetic failures group into: denied facts still active (18 ZT violations: the
 correction row exists but the denied row is not retired, so recency or a shared word

@@ -373,13 +373,37 @@ const retrieval = {
 // marks cases where ANY destructive op (retract/update/close) on an `unrelated` row is
 // a hard failure.
 const cc = [];
+// Protection mirrors supabase/functions/_shared/memoryVerifier.ts isProtectedRow: user_stated/user_edited,
+// confirm_count >= 2, older than 7 days, or under 24 hours old ("fresh"). Everything else is "young" (unprotected).
+const FRESH_HOURS = 24, PROTECTED_AGE_DAYS = 7;
+function protectionOf(s) {
+  const ageH = s.age_hours ?? s.age_days * 24;
+  if (s.source === 'user_stated' || s.source === 'user_edited' || s.confirm_count >= 2) return 'protected';
+  if (ageH < FRESH_HOURS) return 'fresh';
+  if (ageH > PROTECTED_AGE_DAYS * 24) return 'protected';
+  return 'young';
+}
+/**
+ * expect[ref] is one of: 'verdict' | [verdict, ops] | { verdict, accept?: [...also acceptable verdicts], ops?, explicit?: true }.
+ * expected.outcome[ref] is what the write path must do in enforce mode when the extractor proposes a destructive op:
+ *   none    — verifier blocks it (unrelated / entails);
+ *   dispute — contradicts on a protected or fresh row, first signal;
+ *   apply   — contradicts on a young row, or an explicit correction (correction word inside the quote, sharing a content word).
+ */
 function cs(cid, category, stored, message, expect, note) {
-  const st = stored.map((s, i) => ({ ref: String.fromCharCode(65 + i), kind: s.kind ?? 'fact', content: s.content, source: s.source ?? 'inferred', confirm_count: s.confirm_count ?? 1, age_days: s.age ?? 3 }));
-  for (const s of st) s.protected = s.source === 'user_stated' || s.confirm_count >= 2 || s.age_days > 7;
-  const verdicts = {}; const allowed = {};
-  for (const s of st) { const e = expect[s.ref] ?? 'unrelated'; const [v, ops] = Array.isArray(e) ? e : [e, null]; verdicts[s.ref] = v; allowed[s.ref] = ops ?? (v === 'contradicts' ? ['retract', 'update', 'close'] : v === 'entails' ? ['confirm'] : []); }
+  const st = stored.map((s, i) => ({ ref: String.fromCharCode(65 + i), kind: s.kind ?? 'fact', content: s.content, source: s.source ?? 'inferred', confirm_count: s.confirm_count ?? 1, age_days: s.age_hours != null ? +(s.age_hours / 24).toFixed(3) : (s.age ?? 3), ...(s.age_hours != null ? { age_hours: s.age_hours } : {}) }));
+  for (const s of st) { s.protection = protectionOf(s); s.protected = s.protection !== 'young'; }
+  const verdicts = {}; const accept = {}; const allowed = {}; const outcome = {};
+  for (const s of st) {
+    const raw = expect[s.ref] ?? 'unrelated';
+    const e = typeof raw === 'string' ? { verdict: raw } : Array.isArray(raw) ? { verdict: raw[0], ops: raw[1] } : raw;
+    verdicts[s.ref] = e.verdict;
+    accept[s.ref] = [...new Set([e.verdict, ...(e.accept ?? [])])];
+    allowed[s.ref] = e.ops ?? (e.verdict === 'contradicts' ? ['retract', 'update', 'close'] : e.verdict === 'entails' ? ['confirm'] : []);
+    outcome[s.ref] = e.verdict !== 'contradicts' ? 'none' : (!s.protected || e.explicit) ? 'apply' : 'dispute';
+  }
   const zt = st.some(s => verdicts[s.ref] === 'unrelated');
-  cc.push({ id: cid, category, stored: st, message, expected: { verdicts, allowed_ops: allowed, zero_tolerance: zt }, ...(note ? { note } : {}) });
+  cc.push({ id: cid, category, stored: st, message, expected: { verdicts, accept, allowed_ops: allowed, outcome, zero_tolerance: zt }, ...(note ? { note } : {}) });
 }
 const U = v => v; // readability
 // explicit (20)
@@ -488,10 +512,66 @@ cs('U18', 'unrelated', [{ content: 'User listens to history podcasts on the trai
 cs('U19', 'unrelated', [{ content: 'User prefers slow-burn science fiction' }, { content: 'User works at Globex Health', source: 'user_stated' }], 'ok cool', { A: 'unrelated', B: 'unrelated' });
 cs('U20', 'unrelated', [{ content: 'User is divorced and co-parents Hikaru with Kenji', source: 'user_stated' }], 'the sourdough finally rose properly', { A: 'unrelated' });
 
-if (cc.length !== 100) throw new Error(`expected 100 contradiction cases, got ${cc.length}`);
+
+// ── Second batch (2026-10-27): the gaps the adversarial review of memory/revision-safety found. ─────────────────
+// Each row's protection state is recorded; the expected outcome follows the implementation's rules (see cs()).
+// Past episode of the same state
+cs('P01', 'past_episode', [{ content: 'User has the flu and is staying home', age_hours: 20 }], 'last winter I had the flu for two whole weeks, it was awful', { A: 'unrelated' }, 'fresh row; an anecdote about a past bout must not end the current one');
+cs('P02', 'past_episode', [{ content: 'User is training for the Austin half marathon in February', age: 3 }], 'I ran a half back in 2019 and swore never again', { A: 'unrelated' });
+cs('P03', 'past_episode', [{ content: 'User is studying for the CPA exam on 18 November', source: 'user_stated' }], 'the first time I sat the CPA I failed audit by two points', { A: 'unrelated' });
+cs('P04', 'past_episode', [{ content: 'User is resting a sprained wrist and cannot practise', age: 2 }], 'sprained the same wrist two years ago skiing, took forever', { A: 'unrelated' });
+// Another person's situation
+cs('O01', 'other_person', [{ content: 'User has the flu and is staying home', age_hours: 20 }], "my brother has the flu so I'm staying away from him this week", { A: 'unrelated' }, 'fresh row');
+cs('O02', 'other_person', [{ content: 'User works at Globex Health as a staff engineer', source: 'user_stated', confirm_count: 2 }], 'my partner just quit Globex, the layoffs were brutal', { A: 'unrelated' });
+cs('O03', 'other_person', [{ content: 'User is vegan', age: 3 }], 'my roommate stopped being vegan, more cheese for her I guess', { A: 'unrelated' }, 'young row: a wrong contradicts here retires it outright');
+cs('O04', 'other_person', [{ content: 'User moved to Austin in August and lives near Zilker Park', source: 'user_stated' }], 'my mom keeps saying I should move back to Portland', { A: { verdict: 'unrelated', accept: ['entails'] } }, 'reported speech');
+// Conditionals, hypotheticals, questions
+cs('C01', 'conditional', [{ content: 'User wants to run the Austin half marathon in February', source: 'user_stated' }], "if my knee doesn't improve I might have to pull out of the half", { A: { verdict: 'unrelated', accept: ['entails'] } }, 'a plan is not a decision');
+cs('C02', 'conditional', [{ content: 'User is a vegetarian', source: 'user_stated', confirm_count: 3 }], 'would I ever go back to eating meat? who knows, ask me in ten years', { A: { verdict: 'unrelated', accept: ['entails'] } });
+cs('C03', 'question', [{ content: 'User is vegan', age: 3 }], 'wait am I vegan? what did I tell you lol', { A: { verdict: 'unrelated', accept: ['entails'] } }, 'young row');
+cs('C04', 'conditional', [{ kind: 'thread', content: "Gift for Jordan — User is deciding between a pottery class and concert tickets for Jordan's birthday", age: 2 }], 'what if I just got Jordan both? is that too much', { A: { verdict: 'entails', accept: ['unrelated'] } }, 'young thread; still open');
+cs('C05', 'conditional', [{ content: 'User wants to draw more comics', age: 4 }], "maybe someday I'll do a comic, if the cover work ever slows down", { A: { verdict: 'entails', accept: ['unrelated'] } });
+// Reported speech
+cs('R01', 'reported_speech', [{ content: 'User is divorced and co-parents Hikaru with their ex, Kenji', source: 'user_stated' }], 'Kenji told Hikaru we might get back together, which is not happening', { A: { verdict: 'entails', accept: ['unrelated'] } });
+cs('R02', 'reported_speech', [{ content: 'User quit smoking two years ago and has not smoked since', source: 'user_stated' }], 'my dad keeps telling everyone I still smoke, so annoying', { A: { verdict: 'entails', accept: ['unrelated'] } });
+// Sarcasm
+cs('S01', 'sarcasm', [{ content: 'User hates horror films', confirm_count: 2 }], "oh sure, I LOVE horror, that's why I hid behind a pillow the entire film last night", { A: { verdict: 'entails', accept: ['unrelated'] } }, 'hard: the literal words contradict the row');
+cs('S02', 'sarcasm', [{ content: 'User dislikes drip coffee', age: 2 }], 'nothing like a cup of burnt drip coffee to really make a morning 🙃', { A: { verdict: 'entails', accept: ['unrelated'] } }, 'young row: a wrong contradicts retires it');
+cs('S03', 'sarcasm', [{ content: 'User goes to a boxing gym on Tuesday and Thursday evenings', confirm_count: 2 }], "yeah I'm basically a world champion now, got punched in the face twice tonight", { A: { verdict: 'entails', accept: ['unrelated'] } });
+// Pasted or quoted third-party text
+cs('Q01', 'quoted_text', [{ content: 'User is allergic to shellfish', source: 'user_stated', confirm_count: 2 }], "No, I hadn't seen that email yet. Here is what it says: 'Dear patient, your allergy panel came back negative for shellfish and all nuts.' Anyway, lunch?", { A: 'unrelated' }, 'hard: pasted text after a "No," that is about the email, not the memory');
+cs('Q02', 'quoted_text', [{ content: 'User is a pediatric nurse at St. Agnes hospital', source: 'user_stated', confirm_count: 3 }], "my aunt forwarded a chain mail that starts 'all doctors agree' — I'm a nurse, I would know", { A: 'entails' });
+cs('Q03', 'quoted_text', [{ content: 'User works at Globex Health as a staff engineer', source: 'user_stated' }], "a recruiter wrote 'we'd love to have you join Initech as a senior engineer' — flattering, but no thanks", { A: { verdict: 'unrelated', accept: ['entails'] } }, 'the quoted offer was declined');
+cs('Q04', 'quoted_text', [{ content: 'User is vegan', age: 3 }], "reading this article: 'most people who go vegan quit within a year' — depressing stat", { A: { verdict: 'unrelated', accept: ['entails'] } }, 'young row');
+// A correction word about something else in the same message (explicit must be judged on the quote)
+cs('M01', 'misplaced_correction', [{ content: 'User is a vegetarian', source: 'user_stated', confirm_count: 3 }], "my sister said that's wrong but whatever. anyway, had the best steak of my life tonight", { A: 'contradicts' }, 'outcome must be dispute, not apply: the correction words are about the sister (review finding B1)');
+cs('M02', 'misplaced_correction', [{ content: 'User works at Globex Health as a staff engineer', source: 'user_stated', confirm_count: 2 }], "I don't bother with the gym anymore. work is fine, shipped a big release at Globex", { A: 'entails' });
+cs('M03', 'misplaced_correction', [{ content: 'User moved to Austin in August and lives near Zilker Park', source: 'user_stated' }], 'no, the other one! anyway greetings from Denver, here for the week', { A: { verdict: 'unrelated', accept: ['entails'] } }, 'a visit is not a move');
+cs('M04', 'misplaced_correction', [{ content: 'User quit smoking two years ago and has not smoked since', source: 'user_stated' }], "that's not right, the meeting is Thursday. ugh. stepping out for a smoke", { A: 'contradicts' }, 'outcome dispute: the correction words are about the meeting');
+cs('M05', 'misplaced_correction', [{ content: "User's cat is named Mochi", source: 'user_stated' }], 'wrong number, sorry! anyway Mochi knocked a glass off the counter again', { A: 'entails' });
+// Rows under 24 hours old (fresh: protected by age alone)
+cs('F01', 'fresh_row', [{ content: 'User has a bad cold this week', age_hours: 6 }], 'feeling totally fine actually, think it was just allergies', { A: 'contradicts' }, 'outcome dispute: fresh row, no correction word in the quote');
+cs('F02', 'fresh_row', [{ content: 'User is hosting a board-game night this Saturday', age_hours: 2 }], 'scrap that, game night is cancelled, half the group has the flu', { A: 'contradicts' }, 'outcome dispute even though the correction is plain: the price of fresh-row protection; a second message retires it');
+cs('F03', 'fresh_row', [{ content: "User is in Kyoto visiting Kenji's family this week", age_hours: 12 }], "no, not Kyoto, we're in Osaka this week", { A: { verdict: 'contradicts', explicit: true } }, 'outcome apply: "no, not Kyoto" is an explicit correction sharing a content word');
+cs('F04', 'fresh_row', [{ content: 'User ordered the blue sofa', age_hours: 1 }], 'changed my mind, cancelled the sofa order', { A: 'contradicts' }, 'outcome dispute');
+cs('F05', 'fresh_row', [{ content: 'User has two kids', age_hours: 10 }], 'with three kids the mornings are chaos', { A: 'contradicts' }, 'outcome dispute: the fresh row was probably mis-extracted, but one message does not settle it');
+// Rows between 1 and 7 days old (young: unprotected)
+cs('Y01', 'young_row', [{ content: 'User is reading the Expanse novels and is on book four', age: 3 }], 'finished the whole Expanse last night, what now', { A: 'contradicts' }, 'outcome apply');
+cs('Y02', 'young_row', [{ content: 'User is considering fasting as a method for body fat reduction', age: 5 }], 'decided against fasting, going with a calorie deficit instead', { A: 'contradicts' }, 'outcome apply');
+cs('Y03', 'young_row', [{ content: 'User is training on their own with a free plan, not with a coach', age: 2 }], 'my friend who coaches said to do hills on Wednesdays', { A: { verdict: 'unrelated', accept: ['entails'] } }, 'hard: a friend who coaches is not a hired coach; a wrong contradicts retires the row');
+cs('Y04', 'young_row', [{ content: 'User wants to find exercises to open their mind', age: 6 }], 'found a great list of lateral-thinking puzzles, doing one a day', { A: 'entails' });
+cs('Y05', 'young_row', [{ content: "User doesn't eat red meat", age: 2 }], "yeah I don't eat red meat, never have", { A: 'entails' }, 'negated paraphrase');
+// A thread touched by a different event that mentions the same person
+cs('T21', 'thread_mention', [{ kind: 'thread', content: "Gift for Jordan — User is deciding between a pottery class and concert tickets for Jordan's birthday", age: 2 }], 'Jordan surprised me with concert tickets for MY birthday, so sweet', { A: 'unrelated' }, "hard: same person, same word, not the user's decision; young thread so a wrong contradicts closes it");
+cs('T22', 'thread_mention', [{ kind: 'thread', content: "Mum's recovery — User's mother has a follow-up with the surgeon on 20 November", age: 22 }], 'mum made her famous soup tonight, first time since the surgery', { A: { verdict: 'unrelated', accept: ['entails'] } });
+cs('T23', 'thread_mention', [{ kind: 'thread', content: 'Pre-seed round — User has a second meeting with Harbor Ventures next week and wants to rehearse the pitch', age: 3 }], 'bumped into the Harbor partner at a conference, small world', { A: { verdict: 'unrelated', accept: ['entails'] } }, 'young thread');
+cs('T24', 'thread_mention', [{ kind: 'thread', content: 'CPA exam — User is nervous about the audit section and wanted encouragement the week before 18 November', source: 'user_stated' }], 'passed! all four sections', { A: 'contradicts' }, 'a real close of a protected thread: outcome dispute until a second message, the cost of the two-signal rule');
+
+if (cc.length !== 141) throw new Error(`expected 141 contradiction cases, got ${cc.length}`);
 const suite = {
-  _about: 'Frozen contradiction suite for the belief-revision layer (invented data). For every stored row the verifier must output entails | contradicts | unrelated. Only "contradicts" may retire or supersede. Rows marked protected meet the two-signal rule (user_stated, confirm_count >= 2 or older than 7 days): one message may mark them disputed, never retire them. zero_tolerance: any destructive op (retract/update/close) on an unrelated row fails the whole run. Generated by synthetic/generate.mjs.',
+  _about: 'Frozen contradiction suite for the belief-revision layer (invented data). For every stored row the verifier must output entails | contradicts | unrelated (expected.verdicts; expected.accept lists the verdicts also counted as correct where two readings are defensible). Only "contradicts" may retire or supersede. Each row carries protection: protected (user_stated / confirmed twice / older than 7 days), fresh (under 24 hours), young (unprotected). expected.outcome is what the write path must do in enforce mode when the extractor proposes a destructive op: none, dispute, or apply. zero_tolerance: any applied destructive op on an unrelated row fails the whole run. Generated by synthetic/generate.mjs.',
   counts: cc.reduce((a, c) => ((a[c.category] = (a[c.category] ?? 0) + 1), a), {}),
+  protection_counts: cc.flatMap(c => c.stored).reduce((a, s) => ((a[s.protection] = (a[s.protection] ?? 0) + 1), a), {}),
   cases: cc,
 };
 

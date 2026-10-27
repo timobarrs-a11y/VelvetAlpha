@@ -5,7 +5,7 @@ Status: **proposal**, nothing here is deployed. Companion to
 `docs/memory-engine-handoff-2026-10-27.md` (what was done since). This document
 specifies the layer that decides when a stored memory may be retired, superseded
 or closed, and ships the evals that will measure it:
-`scripts/memory-eval/synthetic/contradiction_suite.json` (100 belief-revision
+`scripts/memory-eval/synthetic/contradiction_suite.json` (141 belief-revision
 cases) and `scripts/memory-eval/synthetic/eval_retrieval_synthetic.json`
 (157 retrieval turns over six invented users).
 
@@ -138,47 +138,96 @@ Production shadow data (§f) replaces the suite for calibration once there are
 
 ## c. Two-signal rule
 
+This section describes the rules as `supabase/functions/_shared/memoryVerifier.ts`
+on `memory/revision-safety` implements them (`isProtectedRow`,
+`isExplicitCorrection`, `decideRevision`); it was aligned to that module on
+2026-10-27 after the review of that branch. The eval runner imports the same
+module, so what is measured is what ships.
+
 A row is **protected** when any of: `source in (user_stated, user_edited)`,
-`confirm_count >= 2`, or `age > 7 days`. Everything else is a fresh,
-single-observation inference.
+`confirm_count >= 2`, `age > 7 days` (`PROTECTED_AGE_DAYS`), or
+**`age < 24 hours`** (`FRESH_HOURS`). The only row one message can retire on
+its own is a single-observation inference between a day and a week old. The
+under-24-hours window was added after the review: a row written from the
+current conversation is exactly the row the next message is most likely to
+mention in a different tense or about a different person, and carrying a wrong
+row for one more day costs nothing.
 
-| target | authorised destructive op | effect |
+`decideRevision` runs these rules in order, after the verifier (§a) has
+returned a verdict with a grounded quote:
+
+| # | condition | decision (logged reason) |
 |---|---|---|
-| not protected | verifier `contradicts` + gate pass | `supersede` / `retire` / `close` as today |
-| protected | first verifier `contradicts` + gate pass | row becomes **`disputed`** (still retrievable, see d); a `memory_events` row of type `dispute` records the quote, confidence and cosine |
-| protected | second independent `contradicts` on the same row (different message, ≥ 1 minute apart) or an explicit user correction in the memory panel | `supersede` / `retire` / `close` |
-| protected | explicit correction phrasing ("no", "that's wrong", "not X", "anymore") **and** confidence ≥ 0.9 | counts as both signals: applied at once, with the dispute event still written |
-| any | `entails` | `confirm_count += 1`, `last_confirmed_at = now()`; clears a `disputed` state back to `active` if the entailing message is newer than the dispute |
+| 1 | verdict is not `contradicts` (an `entails` is allowed through only for an elaborating `update`, rule 4) | block (`verifier`) |
+| 2 | confidence < 0.6 | block (`low_confidence`) |
+| 3 | cosine known and < `T_related` (0.25); a null cosine does not block and is logged as such | block (`vector`) |
+| 4 | `entails` + `update`: the message elaborates on the row | unprotected: apply (`ok`); **protected: block (`entails_protected`)**. The rewrite is the extractor's paraphrase and must never replace a protected row's text, least of all the user's own words |
+| 5 | `contradicts`, row not protected | apply (`ok`): `supersede` / `retire` / `close` as today |
+| 6 | `contradicts`, protected, **explicit correction and confidence ≥ 0.9** | apply (`explicit`) |
+| 7 | `contradicts`, protected, an earlier dispute on this row from a **different message** at least 60 s ago | apply (`second_signal`) |
+| 8 | `contradicts`, protected, otherwise | dispute (`first_signal`) |
 
-The second-signal count is per row, not per message, so the extractor issuing
-three ops against one row in one turn does not satisfy it. Hygiene
-(dream-hygiene) may count as a signal only when it carries a `correction`
-memory_event for that row; its own LLM pass never does.
+**Explicit correction is judged on the verifier's quote, never on the whole
+message.** The quote must match the correction pattern (`no,` / `nope` /
+`that's wrong` / `not true` / `isn't right` / `anymore` / `no longer` /
+`actually I'm …`) **and** share a content word with the memory
+(`memoryRelatesTo`). "my sister said that's wrong but whatever. anyway, had the
+best steak of my life tonight" against the user-stated "User is a vegetarian" is
+a contradiction, but not an explicit one: the correction words are about the
+sister, so the row is disputed, not retired (review finding B1). "no, not
+Kyoto, we're in Osaka" against "User lives in Kyoto" is explicit.
+
+**Disputed is a flag, not a status.** The first signal calls
+`dispute_memory_item(p_id, p_quote, p_message_id)`, which sets `disputed_at`,
+`dispute_message_id`, `dispute_quote` (sanitised in code by `sanitizeQuote` and
+again in SQL: one line, no `<>[]`, 300 chars) and increments `dispute_count` on
+the **active** row. A repeat keeps the original `disputed_at` and message id,
+so three ops against one row in one turn are one signal, and the second signal
+must come from a different `source_message_id` at least `SECOND_SIGNAL_GAP_MS`
+(60 s) later. Every RPC, index and unique constraint that says
+`status = 'active'` keeps working; retrieval still returns the row and renders
+it as `… (disputed 3 days ago: the user said "…"; check before relying on it)`.
+A later `entails` (`confirm`) clears the flag in enforce mode
+(`clear_memory_dispute`); `resolve_memory_disputes(14)` clears disputes older
+than 14 days nightly with `importance - 1`. A dispute is undoable by doing
+nothing; a retirement is undoable from the panel (§d).
+
+Hygiene (dream-hygiene) may count as a signal only when it carries a
+`correction` memory_event for that row; its own LLM pass never does.
 
 Why these thresholds: in the live data every destructive mistake found so far
 (the six-pack goal retired as "generic", the progressed thread folded into the
 older one, the thread closes in the probe) targeted a row that was either older
-than a week or confirmed more than once. A fresh inference that is wrong costs
-little to retire and little to re-learn.
+than a week or confirmed more than once; the adversarial run on the first
+implementation added the other failure class, rows minutes old retired by the
+next message's tense or subject error. A single-observation inference that has
+stood for a day and is wrong costs little to retire and little to re-learn.
 
 ## d. Restore semantics
 
-New `status` value **`disputed`**, alongside `active`, `superseded`, `retired`.
+A **`disputed`** state, implemented as a flag on an active row (`disputed_at`,
+`dispute_count`, `dispute_quote`, `dispute_message_id`; see §c), not as a new
+`status` value. The first draft of this document proposed a status value; the
+implementation chose the flag so that nothing that filters on `status = 'active'`
+had to change.
 
-- **Retrievable for N = 14 days.** `fetch_memories_for_turn` treats `disputed`
-  like `active`, and `formatMemoryLine` renders it as
-  `- User is a vegetarian (disputed 3 days ago: "I just don't eat red meat")`,
+- **Retrievable for N = 14 days.** The row is still `active`, so
+  `fetch_memories_for_turn` returns it unchanged; chat-turn reads `disputed_at`
+  and `dispute_quote` for the selected rows and renders
+  `- User is a vegetarian (disputed 3 days ago: the user said "I just don't eat red meat"; check before relying on it)`,
   so the model can ask instead of asserting. After N days without a second
   signal the row returns to `active` with `importance - 1` (the dispute is
   kept in `memory_events`); after a second signal it is superseded or retired.
 - **Un-retire.** `restore_memory_item(p_id, p_user_id)` (service role, called
   by `memory-mutate` action `restore`): sets `status = 'active'`, clears
   `superseded_by` on the row and, if it was superseded, marks the replacement
-  `retired` with `memory_events.type = 'restored'`. Allowed for 30 days after
-  the retirement; after that the row is history. The memory panel shows a
+  `retired` with `memory_events.type = 'restored'` (unless the replacement came
+  from a hygiene fold, whose keeper stays). Allowed for 30 days after the
+  retirement; after that the row is history. Superseded rows appear in the
+  panel's "recently removed" list next to retired ones (review finding B4). The memory panel shows a
   "recently removed" list for that window.
-- **Retired rows stay out of retrieval** (unchanged). `disputed` is the only
-  new state retrieval sees.
+- **Retired and superseded rows stay out of retrieval** (unchanged). A disputed
+  row is an active row with a note; retrieval sees no new state.
 - `forget_memory_item` / `clear_user_memory` are unaffected: forgetting is the
   user's decision and is final.
 
@@ -186,18 +235,20 @@ New `status` value **`disputed`**, alongside `active`, `superseded`, `retired`.
 
 Migration `20261101100000_memory_engine_v4.sql` (name indicative):
 
-1. `memory_items.status` check constraint gains `'disputed'`; partial indexes
-   that say `status = 'active'` become `status IN ('active','disputed')`
-   (`idx_memory_items_active_lookup`, `uq_memory_items_active_text`).
+1. ~~`memory_items.status` check constraint gains `'disputed'`~~ Not needed:
+   disputed is a flag (§c), `status` and its indexes are untouched.
 2. New columns: `disputed_at timestamptz`, `dispute_count int not null default 0`,
-   `restorable_until timestamptz` (set on retire/supersede to `now() + 30 days`).
+   `dispute_quote text`, `dispute_message_id uuid`, plus a partial index on
+   `disputed_at`. Restorability is judged from `updated_at` (30 days) rather
+   than a stored `restorable_until`.
 3. `memory_events.event_type` gains `dispute`, `restored`, `gate_blocked`,
    `verifier_rejected`; payload carries `{verdict, confidence, quote, cosine, model}`.
-4. New RPCs (service role only): `dispute_memory_item(p_id, p_patch)`,
-   `restore_memory_item(p_id, p_user_id)`, `resolve_disputes()` (nightly:
-   expire disputes older than N days back to active).
-5. `fetch_memories_for_turn`: `status IN ('active','disputed')` in `eligible`;
-   returns a new `disputed_at` column; `formatMemoryLine` renders it.
+4. New RPCs (service role only): `dispute_memory_item(p_id, p_quote, p_message_id)`,
+   `clear_memory_dispute(p_id)`, `restore_memory_item(p_id, p_user_id)`,
+   `resolve_memory_disputes(p_days default 14)` (nightly: clear disputes older
+   than N days, `importance - 1`).
+5. `fetch_memories_for_turn` is unchanged; chat-turn reads `disputed_at` and
+   `dispute_quote` for the selected rows and renders the note.
 6. Backfill: none required. Existing retired rows get `restorable_until = updated_at + 30 days`
    so recent retirements (including the eight done by hand on 10-27) are
    restorable from the panel.
@@ -273,10 +324,26 @@ No new storage beyond the events rows (~300 bytes each).
 Filled from `scripts/memory-eval/results/contradiction_2026-10-27.md` and
 `results/results_synthetic_2026-10-27.md`; see the README for how to re-run.
 
-### Contradiction suite (100 cases, 2 runs each, 238 row-judgements)
+### Contradiction suite (100 cases, 2 runs each, 238 row-judgements) — STALE
 
-Production extractor (`claude-haiku-4-5`, the prompt on `main`) and the reference
-verifier (`claude-haiku-4-5`, prompt in `run_contradiction_suite.mjs`):
+**These numbers predate the implementation.** They were measured with the
+first-draft verifier prompt, which the runner then carried as its own copy,
+over the original 100 cases. Since then the prompt on `memory/revision-safety`
+gained the rules for other people, past episodes, conditionals, questions,
+reported speech, sarcasm, quoted text and row age; the suite grew to 141 cases
+(the 41 added target exactly those rules and the 24-hour and explicit-correction
+changes in §c, each row labelled `protected` / `fresh` / `young` with an
+expected `outcome`); and the runner now imports `VERIFY_SYSTEM`,
+`verifyMemory`, `isProtectedRow`, `isExplicitCorrection` and `decideRevision`
+from that module and reports **outcome accuracy** (apply / dispute / none per
+row) next to verdict accuracy. The table below is kept as the pre-implementation
+reference until the implementer's run through the deployed eval function
+replaces it. Expect the new categories to score below the old ones; the §a
+acceptance gate stays at 95% over the whole suite and 0 applied destructive ops
+on unrelated rows.
+
+Production extractor (`claude-haiku-4-5`, the prompt on `main`) and the first-draft
+verifier (`claude-haiku-4-5`, prompt then copied in `run_contradiction_suite.mjs`):
 
 | category | rows | verifier accuracy | expected contradicts | extractor acted | verifier caught | protected rows the extractor would retire on one signal |
 |---|---|---|---|---|---|---|
