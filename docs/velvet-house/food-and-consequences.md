@@ -7,7 +7,16 @@ player says: 'omg we're STARVING, can you order some food?', you say 'later', sh
 house stats are good she's happy and content; when bills stop being paid, the house stops being cleaned, she reacts
 in character. That's your consequence. Otherwise, why would a player care not to keep the fridge stocked?"
 
-Not built yet. This page is the design, with the questions that decide it.
+Decided by the director on 2026-10-27 (answers to the questions at the end): bond drops; nothing ends the game; a
+**hard pass** exists where she refuses to talk until food is bought or the rent is paid; food is put away in Arrange
+by moving it onto the fridge, which opens and takes it; a **fitness** bar follows the treadmill; the moving bars live
+in an always-on HUD in the bottom-left; and the household's health, the companion's and the house's are **one
+sliding system** that shapes how she responds.
+
+**Built (PR #87):** the bag at the door, opened by a tap into a crate of food; dropping the food on the fridge in
+Arrange puts it away (stock up, crate gone, fridge door swings); food grazes down one serving every eight game hours
+besides meals; fitness (treadmill and weights raise it, time lowers it); the vitals panel bottom-left with Food,
+Fitness, Tidy, Bills and the bond. **Next:** the concerns below, with the hard pass.
 
 ## What exists
 
@@ -56,17 +65,20 @@ A **concern** is a rule about the house that the simulation evaluates, with a th
 This stays inside the boundary in the audit §4: the simulation owns the stock, the concern and the mood; the chat
 only receives them and speaks.
 
-## Questions for the director
+## The hard pass (decided)
 
-1. **How hard do consequences bite?** Words and mood only (she is visibly unhappy and says so), or also mechanics:
-   she stops cooking and cleaning when upset; bond drops; a very long neglect leads somewhere (she goes to stay with
-   her mom for a day)? [recommendation: words and mood first, plus "she stops doing things for you"; nothing that
-   ends the game]
-2. **Where does the food bar live:** the HUD chip's place (top left), or in the People panel next to the needs?
-   [HUD, where the chip is]
-3. **Putting food away:** always the player (drag into the fridge), or may a resident do it when the player ignores
-   the bag for a while? [the player during the tutorial; afterwards a resident after an hour, so free play is not
-   chores]
+When a concern has escalated and been ignored for another day, she stops talking: opening the chat shows one line in
+her voice ("I'm not talking to you till you buy us food" / "...till the rent's paid"), the input stays closed, and
+every spark and wish pauses. It lifts the moment the house changes (food in the fridge, the bill paid), with a line
+that acknowledges it. Bond falls a point per game hour a concern is escalated, never below 10, and recovers a point
+per good hour. Nothing ends the game.
+
+## Questions for the director (answered where marked)
+
+1. **How hard do consequences bite?** Answered: bond drops; the hard pass above; nothing ends the game.
+2. **Where does the food bar live:** Answered: an always-on panel in the bottom-left, with every moving bar together.
+3. **Putting food away:** Answered: the player, in Arrange, by moving the food onto the fridge. [open: whether a
+   resident may do it after an hour in free play; today nobody does]
 4. **Does takeout also come in a bag**, eaten at once, no fridge? [yes, as today, in a bag]
 5. **How does an upset companion look and sound** between conversations: a face only, or also idle lines in the log
    ("Maya looked in the empty fridge again")? [both]

@@ -7,7 +7,8 @@ import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
 import { qualityManager } from '../engine/qualityTier';
 import { LayerCache } from '../engine/layerCache';
-import { deliveryTick, dirtTick, laundryTick, newDayReset, servings } from '../state/household';
+import { deliveryTick, dirtTick, laundryTick, newDayReset } from '../state/household';
+import { tickFitness, snackTick } from '../state/vitals';
 import { SPEEDS, WALL_MODES } from '../kernel/config';
 import type { Game } from '../kernel/game';
 
@@ -66,6 +67,10 @@ export function startGameLoop(g: Game): void {
         g.s.settleDone ? { nightStart: nightStart(world.life.routine), wakeAt: wakeHour(world.life.routine, world.day) } : undefined);
       g.tickSideJob(gameMin);
       tickAgent(house, people[1], people[0], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
+      // The house's vital signs: the treadmill and the weights build fitness; time wears it; the household grazes.
+      const jt = people[0].task;
+      tickFitness(g.flags, gameMin, !!jt && jt.phase === 'do' && (jt.act === 'workout' || jt.act === 'lift'));
+      if (snackTick(world.household, g.flags, gameMin)) log('Somebody raided the fridge for a snack.');
       g.deliveriesTick();
       // Visitors a script has brought in (people after the two who live here).
       for (const npc of people.slice(2)) tickAgent(house, npc, null, dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
@@ -102,8 +107,7 @@ export function startGameLoop(g: Game): void {
         el('season').textContent = season(world.day);
         el('money').textContent = `$${world.household.money}`;
         g.btn('skipwork').hidden = !people[0].away || g.s.skipping;
-        const sv = servings(world.household);
-        el('fridge').textContent = sv === 0 ? 'Fridge empty' : `${sv} meals`;
+        g.refreshVitals();
         g.refreshPeople();
         g.refreshDrawer();
       }

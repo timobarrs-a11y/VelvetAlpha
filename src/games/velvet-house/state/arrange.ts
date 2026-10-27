@@ -227,8 +227,9 @@ const INDOOR_LEVELS = [0, 1, 2, 4];
  * everything in the backyard stay on their own floor.
  */
 export function otherFloors(o: ObjectInstance): number[] {
-  // Heavy pieces and the fridge go up and down too: that is how the bed gets upstairs and the gym to the basement.
-  if (!isMovable(o) || (isFixed(o.type) && o.type !== 'fridge') || TYPES[o.type].out) return [];
+  // Nothing is fixed: the bed goes upstairs, the gym to the basement, the kitchen sink wherever they like. Only the
+  // stairs and floor openings stay, and yard pieces stay outside.
+  if (!isMovable(o) || TYPES[o.type].out) return [];
   if (!INDOOR_LEVELS.includes(o.level)) return [];
   return INDOOR_LEVELS.filter(lv => lv !== o.level);
 }
@@ -264,7 +265,20 @@ export function relocate(
   return false;
 }
 
-/** Anything that isn't built into the house can be put away in storage. */
+/** Anything that isn't built into the house can be put away in storage (a toilet or a counter can move, not vanish). */
 export function canStore(o: ObjectInstance): boolean {
   return isMovable(o) && !isFixed(o.type);
+}
+
+/** The fridge this piece of food is being set down on, if it overlaps one on its floor. */
+export function fridgeUnder(objs: ObjectInstance[], food: ObjectInstance): ObjectInstance | null {
+  if (food.type !== 'food') return null;
+  const [fw, fd] = footprint(food);
+  const cx = food.x + fw / 2, cy = food.y + fd / 2;
+  for (const o of objs) {
+    if (o.type !== 'fridge' || o.level !== food.level) continue;
+    const [w, d] = footprint(o);
+    if (cx >= o.x - 0.3 && cx <= o.x + w + 0.3 && cy >= o.y - 0.3 && cy <= o.y + d + 0.3) return o;
+  }
+  return null;
 }

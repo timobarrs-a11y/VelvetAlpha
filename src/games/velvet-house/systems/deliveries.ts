@@ -1,5 +1,6 @@
 import { startChain } from '../state/agents';
 import { stockFridge } from '../state/household';
+import { relocate } from '../state/arrange';
 import type { Game } from '../kernel/game';
 
 /** An order waiting for Dez: the shop's furniture, and later anything else that comes in a box. */
@@ -39,7 +40,21 @@ export function createDeliveries(g: Game): Partial<Game> {
       g.scriptEmit({ type: 'delivery.due', category: o.category, deliveryId: o.id, carry: 'pbox' });
     }
 
-    // Someone free fetches what is on the doorstep.
+    // Groceries at the door become a bag on the floor: the player opens it and carries the food to the fridge.
+    if (h.parcel && h.parcel.kind === 'groceries' && h.parcel.ready !== false) {
+      const id = `bag.${(flags.bagSeq = ((flags.bagSeq as number) ?? 0) + 1)}`;
+      const bag = { id, type: 'bag', level: 1, x: 0.55, y: 5.75, rot: 0, contents: 'food' };
+      world.objs.push(bag);
+      if (!relocate(world.objs, bag, 1, [], [0.55, 5.75])) world.objs.pop();
+      else {
+        ((flags.bags ??= {}) as Record<string, { servings: number; fresh: boolean }>)[id] = { servings: h.parcel.servings, fresh: !!h.parcel.fresh };
+        g.relearnLayout(bag);
+        g.scriptEmit({ type: 'bag.arrived', objId: id });
+      }
+      h.parcel = null;
+    }
+
+    // Someone free fetches takeout from the doorstep.
     if (!fetching && h.parcel && h.parcel.ready !== false) {
       const who = people.slice(0, 2).find((p) => !p.scripted && !p.task && !p.onStairs);
       if (who) {
@@ -53,6 +68,7 @@ export function createDeliveries(g: Game): Partial<Game> {
         if (h.parcel) {
           if (fetching.kind === 'groceries') { stockFridge(h, log); g.scriptEmit({ type: 'groceries.putaway' }); } else h.parcel = null;
         }
+        void stockFridge;
         fetching = null;
       }
     }

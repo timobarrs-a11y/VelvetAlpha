@@ -34,7 +34,6 @@ export function mountShell(app: HTMLElement, people: Agent[], logEl: HTMLElement
         <div class="vh-chip"><span data-el="when"></span><strong data-el="clock"></strong></div>
         <div class="vh-chip vh-season" data-el="season"></div>
         <div class="vh-chip vh-money" data-el="money"></div>
-        <div class="vh-chip vh-fridge" data-el="fridge"></div>
       </div>
       <div class="vh-people" aria-label="Who is home">${people.map(card).join('')}</div>
       <ul class="vh-log" aria-live="polite"></ul>

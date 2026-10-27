@@ -1,7 +1,8 @@
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, type PlacementCheck, type Pose } from '../state/arrange';
+import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, fridgeUnder, type PlacementCheck, type Pose } from '../state/arrange';
 import { TYPES, footprint, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
 import { buildWorld } from '../state/agents';
+import { addFood } from '../state/vitals';
 import { type ArrangeState } from '../ui/drawer';
 import type { Game } from '../kernel/game';
 
@@ -65,7 +66,8 @@ export function createArrange(g: Game): Partial<Game> {
   const peopleOnFloor = () => people.filter(p => !p.onStairs);
   const nameOf = (o: ObjectInstance) => (TYPES[o.type]?.name ?? 'furniture').toLowerCase();
   function recheck(): void {
-    if (heldObj) heldCheck = checkPlacement(world.objs, heldObj, peopleOnFloor());
+    if (!heldObj) return;
+    heldCheck = heldObj.type === 'food' && fridgeUnder(world.objs, heldObj) ? { ok: true } : checkPlacement(world.objs, heldObj, peopleOnFloor());
   }
   const movableHere = (): string[] => world.objs.filter(o => o.level === view.level && isMovable(o)).map(o => o.id);
   // Select a piece: jump to its floor, outline it, and bring it into frame.
@@ -120,6 +122,7 @@ export function createArrange(g: Game): Partial<Game> {
     cancelHold();
     const o = floating ?? selectedObj;
     if (!o) return;
+    if (o.type === 'food') { const fridge = fridgeUnder(world.objs, o); if (fridge) { floating = null; floatOrig = null; floatKids = []; floatCheck = { ok: true }; g.putFoodAway(o, fridge); return; } }
     const was = { x: o.x, y: o.y };
     snapToOutline(o, 2.5);
     const check = checkPlacement(world.objs, o, peopleOnFloor());
@@ -145,6 +148,21 @@ export function createArrange(g: Game): Partial<Game> {
     if (checkPlacement(world.objs, floating, peopleOnFloor()).ok) setDown(); else putBack();
   }
   const snapSelectedToOutline = (): void => setDown();
+  /** Food set down on the fridge: the door swings open, the groceries go in, the crate is gone. */
+  function putFoodAway(food: ObjectInstance, fridge: ObjectInstance): void {
+    const bags = (g.flags.bags ?? {}) as Record<string, { servings: number; fresh: boolean }>;
+    const what = bags[food.id] ?? { servings: 6, fresh: false };
+    delete bags[food.id];
+    const i = world.objs.indexOf(food);
+    if (i >= 0) world.objs.splice(i, 1);
+    if (selectedObj === food) selectedObj = null;
+    addFood(world.household, what.servings, what.fresh);
+    art.poke(fridge, '');
+    art.burst(fridge.level, fridge.x + 0.45, fridge.y + 0.4, 0.9);
+    relearnLayout(fridge);
+    log(`Put the groceries away: ${what.servings} ${what.fresh ? 'fresh ' : ''}meals in the fridge.`);
+    g.scriptEmit({ type: 'groceries.putaway', servings: what.servings });
+  }
   function commitMove(o: ObjectInstance, verb = 'Moved'): void {
     log(`${verb} the ${nameOf(o)}.`);
     art.objectPlaced(o.id);
@@ -333,8 +351,10 @@ export function createArrange(g: Game): Partial<Game> {
     const tapped = dragCandidate.obj;
     dragCandidate = null;
     // A tap (no drag) on a moving box opens it, even while arranging: boxes are for opening.
-    if (!o) { if (tapped.type === 'pbox' && tapped.contents) g.handleObjectAction(tapped, 'unpack'); return; }
+    if (!o) { if ((tapped.type === 'pbox' || tapped.type === 'bag') && tapped.contents) g.handleObjectAction(tapped, 'unpack'); return; }
     recheck();
+    // Food let go of on the fridge goes straight in: the door swings open and the groceries are put away.
+    if (o.type === 'food') { const fridge = fridgeUnder(world.objs, o); if (fridge) { heldObj = null; heldOrig = null; heldKids = []; heldCheck = { ok: true }; g.putFoodAway(o, fridge); return; } }
     // Let go: the piece stays where it is, loose, until Set it down. Red means it does not fit yet.
     floating = o; floatOrig = heldOrig ? { ...heldOrig, level: o.level } : { x: o.x, y: o.y, rot: o.rot, level: o.level }; floatKids = heldKids; floatCheck = heldCheck;
     heldObj = null; heldOrig = null; heldKids = [];
@@ -355,5 +375,5 @@ export function createArrange(g: Game): Partial<Game> {
     if (heldObj) { cancelHold(); heldCheck = { ok: true }; }
     dragCandidate = null;
   }
-  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
+  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, putFoodAway, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
 }

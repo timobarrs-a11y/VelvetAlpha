@@ -5,6 +5,7 @@ import { createCamera } from './engine/camera';
 import { createGameDrawer } from './ui/gameDrawer';
 import { createControls } from './ui/controls';
 import { createHud } from './ui/hud';
+import { createVitals } from './ui/vitals';
 import { createArrange } from './systems/arrange';
 import { createInteract } from './systems/interact';
 import { createInput } from './systems/input';
@@ -47,6 +48,7 @@ function boot(attract: boolean): void {
   Object.assign(g, createChat(g));
   Object.assign(g, createPersist(g));
   Object.assign(g, createHud(g));
+  Object.assign(g, createVitals(g));
   Object.assign(g, createGoals(g));
   Object.assign(g, createAvatar(g));
   Object.assign(g, createFrame(g));

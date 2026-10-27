@@ -617,3 +617,23 @@
 /* On a wide screen the menu keeps to the left, so the house and whoever the camera is on stay clear. */
 @media (min-width: 820px) { .vh-menu { justify-content: flex-start; padding-left: 8vw; } .vh-menu-card { margin-top: 0; } }
 @media (prefers-reduced-motion: reduce) { .vh-menu, .vh-menu-title, .vh-menu-btn { animation: none; transition: none; } }
+
+/* The house's vital signs, bottom-left, always showing. */
+.vh-vitals { position: absolute; left: 16px; bottom: 52px; width: 228px; padding: 10px 12px 8px; border-radius: 14px; background: rgba(23,21,29,.84); backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.06); color: #E9E4EC; font: 500 11px/1.3 Inter, system-ui, sans-serif; pointer-events: none; z-index: 17; }
+.vh-vitals-title { font: 700 11px/1 Inter, system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #A9A1AE; margin-bottom: 8px; }
+.vh-vital { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 8px; margin: 5px 0; }
+.vh-vital-label { color: #F2EEE8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vh-vital-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+.vh-vital-bar i { display: block; height: 100%; border-radius: 3px; background: #5BAE7C; transition: width .5s ease, background-color .5s ease; }
+.vh-vital-bar i[data-tone="mid"] { background: #E0A43A; }
+.vh-vital-bar i[data-tone="low"] { background: #D0544A; }
+.vh-vital-value { font-variant-numeric: tabular-nums; color: #A9A1AE; min-width: 44px; text-align: right; white-space: nowrap; }
+.vh-vital[data-overdue="1"] .vh-vital-value { color: #F2A7A0; font-weight: 700; }
+.vh-log { bottom: 200px !important; }
+.vh-stage.vh-arranging .vh-vitals, .vh-stage[data-script="cutscene"] .vh-vitals, .vh-stage[data-script="guided"] .vh-vitals, .vh-stage.vh-attract .vh-vitals { display: none; }
+@media (max-width: 760px) {
+  .vh-vitals { left: 8px; right: auto; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 136px); width: 168px; padding: 8px 10px 6px; }
+  .vh-vital { grid-template-columns: 44px 1fr; gap: 6px; margin: 4px 0; }
+  .vh-vital-value { display: none; }
+  .vh-vitals-title { display: none; }
+}

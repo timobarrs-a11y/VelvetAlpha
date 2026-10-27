@@ -277,6 +277,7 @@ export const TUTORIAL: ScriptDef[] = [
     { do: 'card', title: 'Order groceries', body: 'Open Household and order groceries. Time keeps moving while you wait: use the speed button to skip ahead.', spotlight: 'tab:home' },
     { do: 'wait', until: { any: [{ flag: 'did.groceries.ordered' }, { event: 'groceries.ordered' }] } },
     { do: 'highlight', target: null },
+    { do: 'card', title: 'Dupree Delivers', body: 'Dez brings the groceries in a bag. When it is at the door, **tap** it to open it, then in Arrange drag the food onto the fridge: it goes right in.' },
     { do: 'wait', until: { any: [{ flag: 'did.groceries.putaway' }, { event: 'groceries.putaway' }] } },
     { do: 'set', flag: 'tutorial.groceries', value: true },
   ]),

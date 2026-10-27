@@ -173,6 +173,10 @@ export interface Game {
   setDown(): void;
   putBack(): void;
   inHand(): string | null;
+  /** Food set down on the fridge goes in. */
+  putFoodAway(food: ObjectInstance, fridge: ObjectInstance): void;
+  /** The vital signs panel. */
+  refreshVitals(): void;
   /** The piece being dragged: its centre on the floor (world units) and its height. */
   heldCentre(): { x: number; y: number; h: number } | null;
   /** Where a script wants the piece to end up (the outline), so the camera can frame both. */

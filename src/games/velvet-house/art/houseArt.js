@@ -503,6 +503,13 @@ export function createHouseArt(ctx0, opts = {}) {
     pbox: {    
       parts: () => [F(0, 0, 0.62, 0.52, (T, o) => { T.box(0, 0, 0, 0.62, 0.52, 0.55, '#C49A68'); T.line([0.31, 0, 0.551], [0.31, 0.52, 0.551], 'rgba(240,230,200,.9)', 3); T.line([0.31, 0.521, 0.55], [0.31, 0.521, 0.38], 'rgba(240,230,200,.9)', 3);
         const [lx, ly] = T.P(0.31, 0.521, 0.2); ctx.fillStyle = '#3A3340'; ctx.font = '700 7px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.fillText((BOX_LABEL[o.contains && o.contains.type] || 'STUFF'), lx, ly + 2); ctx.textAlign = 'start'; })] },
+    // A brown paper bag of groceries, folded shut, something green poking out; and the groceries once it is opened.
+    bag: {
+      parts: () => [F(0, 0, 0.42, 0.36, (T) => { T.box(0.02, 0.02, 0, 0.38, 0.32, 0.44, '#C8A06A'); T.box(0, 0, 0.44, 0.42, 0.36, 0.07, '#B88D5A'); const [gx, gy] = T.P(0.21, 0.1, 0.56); ell(gx, gy - 2, 3, 6, '#4F9460', null, -0.3); })],
+    },
+    food: {
+      parts: () => [F(0, 0, 0.5, 0.42, (T) => { T.box(0, 0, 0, 0.5, 0.42, 0.22, '#B98A57'); T.box(0.04, 0.04, 0.22, 0.2, 0.16, 0.12, '#F2EEE8'); T.box(0.27, 0.05, 0.22, 0.18, 0.14, 0.09, '#D9593D'); const [gx, gy] = T.P(0.16, 0.3, 0.36); ell(gx, gy, 5, 4, '#4F9460'); const [bx, by] = T.P(0.38, 0.3, 0.3); ell(bx, by, 4, 3, '#E0A43A'); })],
+    },
     // ---- backyard ----
     tree: {      
       parts: () => [F(0.3, 0.3, 1.1, 1.1, (T, o, t) => { const [bx, by] = T.P(0.7, 0.7, 0), [, ty] = T.P(0.7, 0.7, 2.0); ell(bx + 6, by + 2, 46, 20, 'rgba(30,50,20,.18)'); rr(bx - 5, ty, 10, by - ty, 3, '#6B4A35'); limb(bx, ty + 14, bx - 14, ty - 4, '#6B4A35', 4); limb(bx, ty + 10, bx + 16, ty - 8, '#6B4A35', 3.5);
@@ -1311,7 +1318,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (playing) { const a = iso(6.0, 0.01, 1.9), b = iso(8.0, 0.01, 1.9), c = iso(8.0, 0.01, 0.8), d = iso(6.0, 0.01, 0.8); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(190,210,255,.07)'; ctx.beginPath(); ctx.moveTo(px - 5, py + 1); ctx.lineTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); ctx.restore(); }
   }
 
-  const BOX_LABEL = { flowervase: 'VASE', succulents: 'PLANTS', desklamp: 'LAMP', photoframes: 'PHOTOS', tablelamp: 'LAMP', candelabra: 'CANDLES', blanketladder: 'LADDER', plantstand: 'PLANT', woodstool: 'STOOL', candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
+  const BOX_LABEL = { flowervase: 'VASE', succulents: 'PLANTS', desklamp: 'LAMP', photoframes: 'PHOTOS', tablelamp: 'LAMP', candelabra: 'CANDLES', blanketladder: 'LADDER', plantstand: 'PLANT', woodstool: 'STOOL', candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', bed: 'BED', fridge: 'FRIDGE', dining: 'TABLE', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
 
   // Just-placed furniture lands with a squash and a little bounce.
   // Three ways a piece arrives: it lands with a squash (set down), pops out of its box (revealed) or drops from above (delivered).
