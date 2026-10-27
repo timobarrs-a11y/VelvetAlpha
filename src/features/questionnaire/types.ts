@@ -134,7 +134,8 @@ export interface PreviewQuestion extends BaseQuestion {
   bubbles: PreviewBubble[];
 }
 
-export interface BeatQuestion extends BaseQuestion {
+export interface BeatQuestion extends Omit<BaseQuestion, 'question'> {
+  question?: string;
   archetype: 'beat';
   beat: BeatConfig;
 }

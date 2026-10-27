@@ -389,7 +389,7 @@ export function HomeShellPage() {
                   />
                 )}
                 {activeTab === 'chat' && activeCompanionId && (
-                  <EmbeddedChat companionId={activeCompanionId} onBack={() => setActiveTab(companionCategory)} />
+                  <EmbeddedChat companionId={activeCompanionId} onBack={() => setActiveTab('companion-list')} />
                 )}
               </motion.div>
             </AnimatePresence>

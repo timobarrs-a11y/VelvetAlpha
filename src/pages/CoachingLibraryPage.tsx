@@ -199,7 +199,7 @@ function ArtifactCard({
   const icon = ARTIFACT_ICONS[artifact.artifact_type] ?? <FileText className="w-4 h-4" />;
   const tone = ARTIFACT_TONES[artifact.artifact_type] ?? 'var(--ds-accent, #3b82f6)';
   const isProposed = artifact.status === 'proposed';
-  const content = artifact.content || {};
+  const content: Record<string, any> = artifact.content || {};
   const coachColor = getCoachColor(artifact.companion_color);
 
   return (

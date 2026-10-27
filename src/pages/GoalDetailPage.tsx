@@ -9,7 +9,7 @@ import { PageShell, PageHeader, Card, EmptyState, LoadingState } from '../shared
 import { toast } from '../shared/ui/Toast';
 import { supabase } from '../shared/supabase/client';
 import { useSubscription } from '../hooks/useSubscription';
-import { SUBSCRIPTION_PLANS } from '../types/subscription';
+import { SUBSCRIPTION_PLANS, type SubscriptionTier } from '../types/subscription';
 import {
   getGoalById, getCommitments, getPlans, getArtifacts,
   updateCommitmentStatus, updatePlanStepStatus, updatePlanStepTitle,
@@ -794,7 +794,7 @@ function ProgressTab({
   plans: CoachPlan[];
   coachColor: CoachColorPalette;
   tier: string;
-  planLimits: typeof SUBSCRIPTION_PLANS[string];
+  planLimits: typeof SUBSCRIPTION_PLANS[SubscriptionTier];
 }) {
   const stats = getWeeklyStats(commitments);
   const pct = goalProgressPercent(goal);

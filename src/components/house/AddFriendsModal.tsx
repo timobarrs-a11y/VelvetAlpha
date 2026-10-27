@@ -35,7 +35,7 @@ export function AddFriendsModal({ isOpen, onClose, boardId }: Props) {
     try {
       await addFriendToSpace(boardId, friendId);
       toast.success('Friend added to space!');
-      setMembers(prev => [...prev, { user_id: friendId, display_name: friends.find(f => f.user_id === friendId)?.display_name ?? 'Member', avatar_config: null, role: 'member', is_bot: false, joined_at: new Date().toISOString() }]);
+      setMembers(prev => [...prev, { user_id: friendId, display_name: friends.find(f => f.user_id === friendId)?.display_name ?? 'Member', avatar_config: null, role: 'member', is_bot: false, joined_at: new Date().toISOString(), tags: [] }]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to add');
     } finally {

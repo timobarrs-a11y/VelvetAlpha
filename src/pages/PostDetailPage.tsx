@@ -632,7 +632,7 @@ function CommentBody({ text }: { text: string }) {
 
 function updateAggregates(
   aggregates: SmilieReactionAggregate[] | undefined,
-  oldReaction: string | null,
+  oldReaction: string | null | undefined,
   newReaction: string | null,
 ): SmilieReactionAggregate[] {
   const map = new Map<string, number>();
