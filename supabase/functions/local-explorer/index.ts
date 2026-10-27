@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { EMPHASIS_STYLE } from "../_shared/emphasisStyle.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 import { moderateInput, MODERATION_REFUSAL } from "../_shared/moderation.ts";
@@ -647,6 +648,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const systemPrompt = `${LOCAL_EXPLORER_SYSTEM}
+
+${EMPHASIS_STYLE}
 
 ${nameRef}The user's home city is: ${resolvedCity}${coordsNote}.
 ${personContext}The current search area is: ${searchAreaLabel}.

@@ -430,6 +430,8 @@ Return ONLY the JSON object.`;
       const baseHelper = {
         user_id: user.id,
         gender,
+        // Without this the column's default (classic_male) went to every helper, women included.
+        signature_voice: gender === "male" ? "classic_male" : "classic_female",
         custom_name: helperName,
         hobbies: [],
         sports: [],
