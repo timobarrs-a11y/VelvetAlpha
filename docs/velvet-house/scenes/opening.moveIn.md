@@ -252,30 +252,35 @@ Content and small host changes only; no engine rewrite. Each step is one PR with
 5. Delete `opening-sequence.md` Part 1, `chapter1-script.md` and the opening part of
    `companion-voices-and-openings.md`; this contract is the single source.
 
-## 13. Unresolved: decisions for the director
+## 13. Unresolved: questions for the director
 
-Each with the audit's recommendation; nothing is built until answered.
+Nothing in this list is built until it is answered. The audit's pick is noted, not decided. Questions 1, 4 and 5
+decide what gets built first.
 
-1. **Which first beat is canon?** The brief's cold open (partner alone, two lines, a knock) or the current walk-in
-   with Dez. Recommendation: keep the walk-in (it exists and tests pass), and decide whether the two cold-open lines
-   are wanted as an optional moment before Dez speaks.
-2. **Dez's intro text.** The brief's five lines or the code's `welcome / brushOff / intro.2–4`. Recommendation:
-   pick one and delete the other from the docs.
-3. **Line timing.** May Dez's first line start while the residents are still walking in? Recommendation: no;
-   await all three (`wait: true`).
-4. **Companion voice key.** Four presets (brief), humor × communication banks (code), or signature voice (33 tone
-   sets, companion-voices doc). Recommendation: banks now (they are what the app can send), signature voice later
-   if the chat engine will use it.
-5. **Placement rule for B6.** (a) Enforce: the couch must land in the outline; (b) respect: wherever the player
-   sets it down counts, and Maya reacts to where it is; (c) hybrid: enforce in the opening only. Recommendation:
-   (a) for the opening, since later beats (Maya sits to watch TV, the lamp "by the couch" mark) assume the TV wall.
-6. **Knock, clipboard, thud.** Should audio be introduced for these, or is the `!` the agreed stand-in?
-7. **Player lines.** Are Jordan's spoken lines (chapter1-script "where the player can speak") wanted now?
-8. **Roommates.** Are three friend-specific lines enough, or does every slot need a roommate version as the
-   companion-voices doc proposes?
-9. **Save compatibility.** When the opening changes again, do players mid-opening start over (today: yes, by
-   bumping `MIN_CONTENT_VERSION`) or resume? Recommendation: resume once recovery (section 10) is fixed, and
-   reserve content bumps for finished-house changes.
+1. **When the game starts, what is the first thing the player sees inside the house?**
+   (a) The partner alone in the empty room saying two lines, then a knock (the brief). (b) The player, the partner
+   and Dez walking in through the front door together (the game today). Pick: (b), with the two empty-room lines
+   as an optional extra if still wanted.
+2. **Which version of Dez's introduction is the real one?** (a) The five lines in the brief ("Hey y'all! I'm
+   Dez! Welcome to {town}!..."). (b) The lines in the game now (`dez.welcome`, `dez.brushOff`, `dez.intro.2-4`).
+   Only one survives; the other is deleted from the docs.
+3. **May Dez start talking while the player and partner are still walking in, or must everyone be standing still
+   first?** Today he can start early. Pick: standing still first.
+4. **What decides how the partner's lines sound?** (a) Four fixed tones (warm, calm, bubbly, dry): the brief, but
+   the app has no such setting. (b) The companion's humor and communication styles from the app: the game today.
+   (c) The companion's signature voice: about 33 line sets. Pick: (b) now, (c) only if the chat engine uses it too.
+5. **When the player is told to put the couch by the TV, what happens if they put it somewhere else?** (a) The
+   step does not finish until the couch is in the outlined spot. (b) Wherever they put it counts, and the partner
+   reacts to where it is. (c) Strict in the opening only. Today neither: the step ends on the button even if the
+   couch never moved. Pick: (a), because later scenes assume the couch at the TV wall.
+6. **Is sound wanted for the knock, the box thud and Dez's clipboard, or is the `!` bubble an acceptable stand-in
+   for now?** The game has no sound system; a clipboard would draw as a moving box.
+7. **Should the player character speak lines out loud during the opening, or stay silent?** The chapter 1 script
+   marks spots; no lines exist.
+8. **For a friend companion, is it enough that three lines change to roommate wording, or should every line in
+   the opening have a roommate version?**
+9. **When the opening changes again, should players partway through it start a new game or pick up where they
+   were?** Today they start over, which also discards finished houses. Pick: pick up, once the resume fixes land.
 
 ## 14. Verified
 
