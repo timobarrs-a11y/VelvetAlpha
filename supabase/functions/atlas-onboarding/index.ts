@@ -14,6 +14,8 @@ import {
   buildOpening,
   buildPlanPrompt,
   checkReply,
+  dateNotes,
+  weekdayIssues,
   localToIso,
   nextWeekday,
   openingPath,
@@ -254,7 +256,8 @@ Deno.serve(async (req: Request) => {
       }
 
       const firstAnswer = messages.find(m => m.role === "user")?.content ?? "";
-      const system = buildGoalPrompt(profile, openingPath(firstAnswer), today, MAX_TURNS);
+      const notes = dateNotes(messages.filter(m => m.role !== "atlas").map(m => String(m.content ?? "")), today.date);
+      const system = buildGoalPrompt(profile, openingPath(firstAnswer), today, MAX_TURNS, notes);
       const turnCount = messages.filter(m => m.role === "user").length;
       const history = messages.map(m => ({ role: m.role === "atlas" ? "assistant" : "user", content: m.content }));
       // Sonnet thinks by default, which can use the whole 400 tokens and leave no reply.
@@ -266,7 +269,10 @@ Deno.serve(async (req: Request) => {
       // address it just settled on counts, so "Master Tim" after a yes to
       // first names is caught.
       const issuesOf = (p: typeof parsed) =>
-        checkReply(p.text, { profile: { ...profile, address_style: p.address ?? profile.address_style } });
+        [
+          ...checkReply(p.text, { profile: { ...profile, address_style: p.address ?? profile.address_style } }),
+          ...weekdayIssues(p.text, today.date),
+        ];
       const issues = issuesOf(parsed);
       if (issues.length > 0) {
         console.warn("[atlas-onboarding] Reply broke rules, retrying:", issues.join("; "));
@@ -578,6 +584,7 @@ Write a 2-3 sentence instruction describing what the coach teaches, how (short l
           name: typeof helper.name === "string" ? helper.name : "Your assistant",
           kind: helper.kind === "coach" ? "coach" : "assistant",
           domain: typeof helper.domain === "string" ? helper.domain : "",
+          gender: helper.gender === "male" || helper.gender === "female" ? helper.gender : null,
         },
         transcript: transcriptText(transcript),
         today,

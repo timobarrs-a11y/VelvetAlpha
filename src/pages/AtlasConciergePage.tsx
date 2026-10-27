@@ -1,3 +1,4 @@
+import { helperPronouns } from '../features/arrival/helperPronouns';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -188,7 +189,7 @@ function AtlasConciergeInner() {
     const name = job.recommendation.helperName;
     const role = job.recommendation.kind === 'coach' ? 'coach' : 'assistant';
     addAtlas(
-      `Splendid work. Your plan is ready for you to look over. And I'd like you to meet ${name}, your ${role}. ${name} will be your point man on this from here, so you can take it straight to them.`,
+      `Splendid work. Your plan is ready for you to look over. And I'd like you to meet ${name}, your ${role}. ${name} is your ${role} from here on, so take anything about this straight to ${helperPronouns(job.recommendation.helperGender).object}.`,
       { highlight: ['plan'] },
     );
     setPhase('meet');

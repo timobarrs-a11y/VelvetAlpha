@@ -99,7 +99,7 @@ async function run(userId: string, start: PlanJob, deps: JobDeps): Promise<PlanJ
         phase: 'plan',
         transcript,
         goalText: job.provisioned.goalText,
-        helper: { name: job.recommendation.helperName, kind: job.recommendation.kind, domain: job.recommendation.expertDomain },
+        helper: { name: job.recommendation.helperName, kind: job.recommendation.kind, domain: job.recommendation.expertDomain, gender: job.recommendation.helperGender },
       });
       job.plan = data.plan as ArrivalPlan;
       job.summary = data.summary as PlanSummary;
