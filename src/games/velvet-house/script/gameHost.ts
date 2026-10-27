@@ -240,7 +240,7 @@ export function createScripts(g: Game): Partial<Game> {
   ui.onCardButton(() => {
     if (!g.isArranging()) return;
     g.snapSelectedToOutline();
-    const w = engine.waitingOn();
+    const w = engine.pendingWait();
     const placed = !w || engine.eval(w, 0);
     if (placed) g.drawer.close();
     else { ui.reopenCard(); g.scriptEmit({ type: 'lesson.misplaced' }); }

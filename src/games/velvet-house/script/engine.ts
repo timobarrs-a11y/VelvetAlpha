@@ -64,6 +64,18 @@ export class ScriptEngine {
   /** The condition the script is waiting on, if it is waiting on one (tests and tools read this). */
   waitingOn(): Cond | null { return this.blocking?.k === 'until' ? this.blocking.cond : null; }
 
+  /**
+   * The world condition the script is waiting on, or is about to wait on: while a card with a button is up, the wait
+   * that follows it. The card's button asks this to know whether the lesson is done.
+   */
+  pendingWait(): Cond | null {
+    if (this.blocking?.k === 'until') return this.blocking.cond;
+    if (this.blocking?.k !== 'card') return null;
+    const f = this.frames[this.frames.length - 1];
+    const next = f && (this.sub(f.steps[f.i]) as Step | undefined);
+    return next?.do === 'wait' && next.until ? next.until : null;
+  }
+
   /** What kind of thing the script is waiting for right now, or null. */
   blockedOn(): Blocking['k'] | null { return this.blocking?.k ?? null; }
 

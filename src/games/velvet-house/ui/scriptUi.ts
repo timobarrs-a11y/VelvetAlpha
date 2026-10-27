@@ -15,7 +15,7 @@ export interface ScriptUi {
   cardDone(): boolean;
   /** Folds the card down to its title bar (and its button, if it has one). */
   minimizeCard(): void;
-  /** The button was pressed but the lesson is not done: the card stays, and waits for the button again. */
+  /** The button was pressed but the lesson is not done: the card stays in view until the world is right. */
   reopenCard(): void;
   hideCard(): void;
   onCardButton(fn: () => void): void;
@@ -111,7 +111,8 @@ export function createScriptUi(stage: Element): ScriptUi {
     cardDone: () => cardClosed,
     hideCard() { cardEl.hidden = true; cardClosed = true; },
     minimizeCard() { setMin(true); },
-    reopenCard() { cardClosed = false; cardEl.hidden = false; },
+    // The button counts as pressed (the script moves on to its wait on the world); the card just stays in view.
+    reopenCard() { cardEl.hidden = false; },
     onCardButton(fn) { cardPress = fn; },
     spotlight(targets) {
       marked.forEach((e) => e.classList.remove('vh-spot'));
