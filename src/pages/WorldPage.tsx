@@ -19,6 +19,9 @@ import {
 import { WorldCanvas, type WorldControl } from '../features/velvet-world/WorldCanvas';
 import { BillboardCard } from '../features/velvet-world/BillboardCard';
 import { Customizer } from '../features/velvet-world/Customizer';
+import { MailboxSheet } from '../features/velvet-world/MailboxSheet';
+import { getUnreadMailCount } from '../services/townMailService';
+import { useRole } from '../hooks/useRole';
 import { MoveInSheet } from '../features/velvet-world/MoveInSheet';
 import { FriendsPopover, type FriendRow } from '../features/velvet-world/FriendsPopover';
 
@@ -119,6 +122,10 @@ export function WorldPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ user_id: string; slot_index: number; display_name: string }[]>([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [mailOpen, setMailOpen] = useState(false);
+  const [mailUnread, setMailUnread] = useState(0);
+  const [mailNote, setMailNote] = useState<string | null>(null);
+  const { isAdmin } = useRole();
   const controlRef = useRef<WorldControl | null>(null);
   const cardMapRef = useRef<Map<string, WorldCard>>(new Map());
   // Full plots (with names) placed at their town lots, for the close-up town view.
@@ -162,6 +169,7 @@ export function WorldPage() {
         return;
       }
       setMyPlot(plot);
+      getUnreadMailCount().then(setMailUnread);
 
       const [candidates, companionList, friendList, townSize, landmark] = await Promise.all([
         getDailyBlock(day, 16),
@@ -362,6 +370,14 @@ export function WorldPage() {
     return <MoveInSheet onMoved={() => { reloadKey.current++; loadPage(); }} />;
   }
 
+  // Tapping your own mailbox opens it; anyone else's is theirs alone.
+  const onMailbox = (id: string) => {
+    if (user && id === user.id) { setMailOpen(true); return; }
+    const owner = block.find((p) => p.id === id) ?? detailRef.current.get(id);
+    setMailNote(`${owner?.profile.name || 'A neighbor'}'s mailbox. Only they can open it.`);
+    window.setTimeout(() => setMailNote(null), 2600);
+  };
+
   const narrow = typeof window !== 'undefined' && window.innerWidth < 760;
 
   return (
@@ -381,6 +397,9 @@ export function WorldPage() {
           townLayout={townLayoutState}
           landmarkPct={landmarkPct}
           homeSlot={myPlot.slot_index}
+          myId={user?.id}
+          mailUnread={mailUnread}
+          onMailbox={onMailbox}
           pins={pins}
           controlRef={controlRef}
         />
@@ -514,6 +533,15 @@ export function WorldPage() {
             navigate('/atlas-onboarding');
           }}
         />
+      )}
+
+      {mailOpen && user && (
+        <MailboxSheet myId={user.id} myName={block.find((p) => p.id === user.id)?.profile.name || 'neighbor'} canSend={isAdmin} onClose={() => setMailOpen(false)} onUnreadChange={setMailUnread} />
+      )}
+      {mailNote && (
+        <p role="status" className="absolute left-1/2 -translate-x-1/2 bottom-16 z-20 rounded-full border border-white/12 px-4 py-2 text-[12.5px] text-white/80" style={{ background: 'rgba(24,19,34,0.9)' }}>
+          {mailNote}
+        </p>
       )}
 
       {/* Hint */}

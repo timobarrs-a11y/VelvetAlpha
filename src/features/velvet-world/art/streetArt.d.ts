@@ -53,9 +53,11 @@ export interface ResolvedPlot {
   pet: { kind: string; coat: string } | null;
   lawn: string; tree: string; extras: NonNullable<PlotConfig['extras']>; profile: PlotProfile;
 }
+export interface MailboxMeta { top: [number, number]; flag: [number, number] }
 export interface PlotMeta {
+  mailbox?: MailboxMeta;
   resolved: ResolvedPlot;
-  hit: { sign?: [number, number][]; house?: [number, number][]; [k: string]: [number, number][] | undefined };
+  hit: { sign?: [number, number][]; house?: [number, number][]; mailbox?: [number, number][]; [k: string]: [number, number][] | undefined };
   lights: unknown[]; chimneys: unknown[]; strips: unknown[]; number: number;
 }
 export interface Env { season: Season; hour: number; night: number; reducedMotion: boolean; zoom?: number }

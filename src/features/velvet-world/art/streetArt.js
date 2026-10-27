@@ -1252,6 +1252,8 @@ function fountainBase(d, x, y, env, meta) {
 // Billboards: the clickable piece of every plot
 // ---------------------------------------------------------------------------------------------
 const SIGN_Y = 7.68;
+// Where the mailbox stands: the right side of the lot, opposite the billboard.
+const MAILBOX = { x: 8.35, y: 7.78 };
 const SIGN_BOX = {
   post: { x0: 0.45, x1: 2.85, z0: 0.48, z1: 1.66 },
   classic: { x0: 0.25, x1: 3.15, z0: 1.05, z1: 2.75 },
@@ -1452,10 +1454,16 @@ export function drawPlot(ctx, plot, i, layer, env) {
   } else {
     // front layer: billboard, mailbox, side hedge
     drawBillboard(d, r, env, meta);
-    const L = meta.layout || HOUSE_LAYOUT.standard, mx = L.doorX > 5.5 ? L.doorX - 0.85 : L.doorX + 0.85, my = 7.75;
-    d.box(mx - 0.03, my - 0.03, 0, 0.06, 0.06, 0.55, '#3A3340');
-    d.box(mx - 0.14, my - 0.2, 0.55, 0.28, 0.4, 0.2, r.member ? r.house.door : '#3A3340', { top: env.season === 'winter' ? SNOW : undefined });
-    d.front(mx - 0.14, my + 0.2, 0.75, (map) => { ctx.fillStyle = '#F2EEE8'; ctx.font = `700 4.2px ${FONTS.ui}`; ctx.fillText(String(meta.number), 1.6, 5.2); });
+    // The mailbox stands opposite the billboard, by the road. Tap it to open the mail.
+    const mx = MAILBOX.x, my = MAILBOX.y, post = '#3A3340', boxColor = r.member ? r.house.door : '#4F6FA8';
+    d.shadowBlob(mx, my, 0.3, 0.3, 0.14);
+    d.box(mx - 0.035, my - 0.035, 0, 0.07, 0.07, 0.62, post);
+    d.box(mx - 0.18, my - 0.24, 0.62, 0.36, 0.48, 0.26, boxColor, { top: env.season === 'winter' ? SNOW : undefined });
+    d.box(mx - 0.14, my - 0.2, 0.88, 0.28, 0.4, 0.06, boxColor, { top: env.season === 'winter' ? SNOW : undefined });
+    d.front(mx - 0.14, my + 0.24, 0.7, (map) => { ctx.fillStyle = '#F2EEE8'; ctx.font = `700 4.2px ${FONTS.ui}`; ctx.fillText(String(meta.number), 2.2, 5.2); });
+    d.box(mx + 0.18, my - 0.03, 0.72, 0.04, 0.06, 0.1, '#A8A29E');
+    meta.hit.mailbox = [[-0.5, -0.55, 0], [0.5, -0.55, 0], [0.5, 0.55, 0], [-0.5, 0.55, 0], [-0.5, -0.55, 1.15], [0.5, -0.55, 1.15], [0.5, 0.55, 1.15], [-0.5, 0.55, 1.15]].map(([x, y, z]) => d.P(mx + x, my + y, z));
+    meta.mailbox = { top: d.P(mx, my, 0.98), flag: d.P(mx + 0.2, my, 0.78) };
     const winter = env.season === 'winter';
     for (let y = 0.4; y < STREET.lawnFront - 0.2; y += 0.42) { const [sx, sy] = d.P(LOT_W - 0.3, y, 0); circ(ctx, sx, sy - 5, 6.2, winter ? '#6E8A6E' : '#3F6E34'); circ(ctx, sx - 1.6, sy - 7, 4, winter ? '#F2F6F9' : '#558A44'); }
   }
