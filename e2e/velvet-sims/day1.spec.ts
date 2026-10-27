@@ -32,7 +32,7 @@ test('the first day plays through from the move-in to free will', async ({ page 
     if (!flags['tutorial.lamp']) {
       // Open the box, set the lamp down where the card says (twice), then turn it on.
       const box = (await objects(page)).find((o) => o.id === 'box.lamp' && o.type === 'pbox');
-      if (title === 'The corner' || title === 'By the couch') await game.locator('.vh-scard button').click().catch(() => {});
+      if (title === 'The corner' || title === 'By the couch') await game.locator('.vh-scard-go').click().catch(() => {});
       else if (title === 'Let there be light' && once('light:' + Math.floor(Date.now() / 5000))) { await page.waitForTimeout(800); const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
       else if (box && title === 'Open the box') {
         // Jordan wandering to another floor takes the view with him; come back and let the camera settle before tapping.
