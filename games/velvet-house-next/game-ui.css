@@ -530,3 +530,26 @@
   .vh-scard { top: auto; bottom: calc(var(--vh-dock-h, 68px) + 150px); width: calc(100% - 16px); }
   .vh-skip { bottom: 196px; top: auto; right: 8px; }
 }
+
+/* The title screen. */
+.vh-menu { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+  background: radial-gradient(120% 90% at 50% 35%, #3a3046 0%, #17151d 72%); transition: opacity .3s ease; }
+.vh-menu-out { opacity: 0; pointer-events: none; }
+.vh-menu-card { width: min(360px, 100%); display: flex; flex-direction: column; gap: 10px; text-align: center; color: #F2EEE8; font-family: Inter, system-ui, sans-serif; }
+.vh-menu-title { margin: 0; font: 800 44px/1.05 'Baloo 2', Inter, system-ui, sans-serif; color: #FFE3B3; letter-spacing: .5px; text-shadow: 0 4px 24px rgba(224,164,58,.35); }
+.vh-menu-h { margin: 0; font: 700 24px/1.2 'Baloo 2', Inter, system-ui, sans-serif; }
+.vh-menu-sub { margin: 0 0 8px; font-size: 14px; line-height: 1.45; color: #B9B1BF; }
+.vh-menu-btn { appearance: none; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 14px 16px; min-height: 52px; background: rgba(255,255,255,.07); color: #F2EEE8; font: 600 16px/1.2 Inter, system-ui, sans-serif; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; transition: background .18s ease, transform .12s ease; }
+.vh-menu-btn small { font-weight: 400; font-size: 12px; color: #C9C1CE; }
+.vh-menu-btn:hover { background: rgba(255,255,255,.14); }
+.vh-menu-btn:active { transform: scale(.98); }
+.vh-menu-btn:focus-visible { outline: 2px solid #E0A43A; outline-offset: 2px; }
+.vh-menu-primary { background: #E0A43A; border-color: #E0A43A; color: #241B25; }
+.vh-menu-primary small { color: #4a3a22; }
+.vh-menu-primary:hover { background: #EBB24C; }
+.vh-menu-danger { background: transparent; border-color: #C2523F; color: #F2B8AE; }
+.vh-menu-row { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-bottom: 4px; }
+.vh-menu-seg { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.07); }
+.vh-menu-seg button { appearance: none; border: 0; border-radius: 9px; padding: 9px 14px; min-height: 40px; background: transparent; color: #E9E4EC; font: 600 14px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+.vh-menu-seg button[aria-pressed="true"] { background: #F2EEE8; color: #241B25; }
+@media (prefers-reduced-motion: reduce) { .vh-menu { transition: none; } }

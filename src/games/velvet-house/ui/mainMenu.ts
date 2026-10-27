@@ -1,0 +1,98 @@
+import { SAVE_KEY } from '../kernel/config';
+import { loadSave } from '../state/save';
+import { isCurrentContent } from '../state/saveMigration';
+import { qualityManager } from '../engine/qualityTier';
+import { postToParent } from '../bridge/protocol';
+import { clockText, DAYS, weekday } from '../state/time';
+
+/**
+ * The title screen: what the player sees before the house. Continue picks up the saved house, New Game starts the
+ * move-in (after a warning when it would replace a house), Settings holds what is not part of the game itself. The
+ * game starts once one of the first two is chosen.
+ */
+export type LaunchChoice = 'continue' | 'new';
+
+const QUALITY = [['Auto', null], ['High', 'high'], ['Medium', 'medium'], ['Low', 'low']] as const;
+const esc = (t: string): string => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+interface SaveSummary { day: number; when: string; money: number; names: string }
+
+/** What the saved house looks like from the menu, or null when there is no house to continue. */
+export function saveSummary(): SaveSummary | null {
+  const s = loadSave(SAVE_KEY);
+  if (!s || !isCurrentContent(s)) return null;
+  const raw = s as unknown as Record<string, unknown>;
+  const day = typeof raw.day === 'number' ? raw.day : 1;
+  const minutes = typeof raw.minutes === 'number' ? raw.minutes : 0;
+  const names = [(raw.player as { name?: string } | undefined)?.name ?? raw.simName, (raw.partner as { name?: string } | undefined)?.name ?? raw.partnerName]
+    .filter((n): n is string => typeof n === 'string' && n.length > 0).join(' & ');
+  return { day, when: `${DAYS[weekday(day)]} ${clockText(minutes)}`, money: typeof raw.money === 'number' ? raw.money : 0, names };
+}
+
+export function showMainMenu(app: HTMLElement): Promise<LaunchChoice> {
+  return new Promise((resolve) => {
+    const summary = saveSummary();
+    const root = document.createElement('div');
+    root.className = 'vh-menu';
+    const done = (choice: LaunchChoice): void => { root.classList.add('vh-menu-out'); setTimeout(() => root.remove(), 320); resolve(choice); };
+
+    const home = (): void => {
+      root.innerHTML = `
+        <div class="vh-menu-card">
+          <h1 class="vh-menu-title">Velvet House</h1>
+          <p class="vh-menu-sub">${summary ? 'Welcome home.' : 'A cozy life, together.'}</p>
+          ${summary ? `<button class="vh-menu-btn vh-menu-primary" data-m="continue"><span>Continue</span><small>${esc(summary.names ? summary.names + ' · ' : '')}Day ${summary.day} · ${esc(summary.when)} · $${summary.money}</small></button>` : ''}
+          <button class="vh-menu-btn ${summary ? '' : 'vh-menu-primary'}" data-m="new"><span>${summary ? 'New Game' : 'Start'}</span></button>
+          <button class="vh-menu-btn" data-m="settings"><span>Settings</span></button>
+        </div>`;
+      root.querySelector('[data-m=continue]')?.addEventListener('click', () => done('continue'));
+      root.querySelector('[data-m=new]')?.addEventListener('click', () => (summary ? confirmNew() : start()));
+      root.querySelector('[data-m=settings]')?.addEventListener('click', settings);
+    };
+
+    const start = (): void => {
+      // A fresh house replaces whatever the account kept; the host backs the old one up (see useVelvetHouseCloudSave).
+      if (summary) {
+        try { localStorage.removeItem(SAVE_KEY); } catch { /* storage blocked */ }
+        postToParent({ type: 'velvet:restarted', game: 'velvet-house', day: 1 });
+      }
+      done('new');
+    };
+
+    const confirmNew = (): void => {
+      root.innerHTML = `
+        <div class="vh-menu-card">
+          <h2 class="vh-menu-h">Start over?</h2>
+          <p class="vh-menu-sub">This begins a new house and the move-in again. Your current house is put away and no longer the one you play.</p>
+          <button class="vh-menu-btn vh-menu-danger" data-m="yes"><span>Start a new game</span></button>
+          <button class="vh-menu-btn vh-menu-primary" data-m="no"><span>Keep my house</span></button>
+        </div>`;
+      root.querySelector('[data-m=yes]')?.addEventListener('click', start);
+      root.querySelector('[data-m=no]')?.addEventListener('click', home);
+    };
+
+    const settings = (): void => {
+      let idx = 0;
+      try { idx = Math.max(0, Math.min(3, Number(localStorage.getItem('velvet-quality')) || 0)); } catch { /* none */ }
+      root.innerHTML = `
+        <div class="vh-menu-card">
+          <h2 class="vh-menu-h">Settings</h2>
+          <div class="vh-menu-row"><span>Graphics</span><div class="vh-menu-seg">${QUALITY.map(([label], i) => `<button data-q="${i}" aria-pressed="${i === idx}">${label}</button>`).join('')}</div></div>
+          <p class="vh-menu-sub">Auto lowers the detail by itself if the game runs slowly. Pick Low on an older phone.</p>
+          <button class="vh-menu-btn vh-menu-primary" data-m="back"><span>Back</span></button>
+        </div>`;
+      root.querySelectorAll<HTMLButtonElement>('[data-q]').forEach((b) => b.addEventListener('click', () => {
+        const i = Number(b.dataset.q);
+        try { localStorage.setItem('velvet-quality', String(i)); } catch { /* none */ }
+        qualityManager.setPlayerOverride(QUALITY[i][1]);
+        root.querySelectorAll('[data-q]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      }));
+      root.querySelector('[data-m=back]')?.addEventListener('click', home);
+    };
+
+    home();
+    void app;
+    document.body.appendChild(root);
+    (root.querySelector('.vh-menu-primary') as HTMLElement | null)?.focus();
+  });
+}

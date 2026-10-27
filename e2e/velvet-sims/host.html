@@ -6,7 +6,7 @@
 <script>
   // ?script plays the story; without it the story is switched off so the other tests start in a furnished house.
   // ?freeze starts the game paused, so a screenshot is the same every time.
-  document.getElementById('g').src = '/games/velvet-house-next/index.html?companion=e2e' + (location.search.includes('freeze') ? '&freeze=1' : '') + (location.search.includes('script') ? '' : '&noscript=1');
+  document.getElementById('g').src = '/games/velvet-house-next/index.html?companion=e2e' + (location.search.includes('freeze') ? '&freeze=1' : '') + (location.search.includes('menu') ? '' : '&nomenu=1') + (location.search.includes('script') ? '' : '&noscript=1');
 </script>
 <script>
 window.sampleLog = [];

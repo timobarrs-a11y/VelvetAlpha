@@ -20,6 +20,7 @@ import { createScripts } from './script/gameHost';
 import { createFrame } from './view/frame';
 import { installDevHooks } from './dev/hooks';
 import { createHostBridge } from './bridge/hostBridge';
+import { showMainMenu } from './ui/mainMenu';
 
 /**
  * Starts the game. The data and the page come from `createGame`; each module below adds the part it owns to the
@@ -57,4 +58,12 @@ function boot(): void {
   if (g.s.drawerPage) g.drawer.open(g.s.drawerPage);
 }
 
-boot();
+/** The title screen comes first. (The tests start the game directly with ?nomenu.) */
+async function launch(): Promise<void> {
+  const app = document.getElementById('app');
+  const skip = import.meta.env.DEV && new URLSearchParams(location.search).has('nomenu');
+  if (app && !skip) await showMainMenu(app);
+  boot();
+}
+
+void launch();
