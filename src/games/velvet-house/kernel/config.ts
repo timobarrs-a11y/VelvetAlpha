@@ -1,5 +1,5 @@
 import { validateGarment } from '../state/garment';
-import { migrateSave } from '../state/saveMigration';
+import { migrateSave, isCurrentContent } from '../state/saveMigration';
 import { INITIAL_OBJS, type ObjectInstance } from '../state/objects';
 import { type AgentId, type AgentLook } from '../state/agents';
 import { type CharacterLook } from '../state/types';
@@ -77,7 +77,10 @@ export function loadWorld(): World {
       if (old) localStorage.setItem(SAVE_KEY, JSON.stringify(old));
     }
     const raw = localStorage.getItem(SAVE_KEY);
-    const s = raw ? migrateSave(JSON.parse(raw)) : null;
+    const migrated = raw ? migrateSave(JSON.parse(raw)) : null;
+    // A house from before the story is not carried over: everyone starts again with the move-in.
+    const s = isCurrentContent(migrated) ? migrated : null;
+    if (migrated && !s) localStorage.removeItem(SAVE_KEY);
     if (s) {
       save = s as unknown as Record<string, unknown>;
       if (typeof s.day === 'number') day = s.day;
