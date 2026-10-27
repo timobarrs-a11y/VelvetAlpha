@@ -351,7 +351,7 @@ export function PublicProfileSettings() {
       {profile?.is_bot && (
         <div className="flex items-center gap-2 text-xs text-sky-300/60 justify-center">
           <Bot className="w-3.5 h-3.5" />
-          This is a bot account
+          This account is written by Velvet, not a member
         </div>
       )}
     </div>

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Loader2, Send, Sparkles } from 'lucide-react';
+import { MessageCircle, Loader2, Send } from 'lucide-react';
 import { Avatar } from '../Avatar';
+import { AuthoredBadge } from './AuthoredBadge';
 import { companionAvatarConfig } from '../lobby/lobbyUtils';
 import { timeAgo } from '../../utils/timeAgo';
 import { toast } from '../../shared/ui/Toast';
@@ -71,10 +72,7 @@ export function CompanionStatusCard({ post, index, companion, companions, initia
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-semibold text-white truncate" style={{ fontFamily: companion?.font_family ?? undefined }}>{name}</span>
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 text-[10px] font-semibold">
-              <Sparkles className="w-2.5 h-2.5" />
-              Companion
-            </span>
+            <AuthoredBadge size="sm" />
           </div>
           <p className="text-[11px] text-white/35 mt-0.5">{timeAgo(post.visible_at)}</p>
         </div>

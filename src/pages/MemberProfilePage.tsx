@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Users, Bot, Target, TrendingUp, CheckCircle2,
+  ArrowLeft, Users, Target, TrendingUp, CheckCircle2,
   Loader2, UserPlus, UserMinus, Trophy, Flame,
 } from 'lucide-react';
 import { PublicProfileImage } from '../components/PublicProfileImage';
@@ -17,6 +17,7 @@ import { GOAL_TYPE_LABELS } from '../services/coachingService';
 import { MedalShowcase } from '../components/medals/MedalShowcase';
 import { MedalBadge } from '../components/medals/MedalBadge';
 import { ProfilePosts } from '../components/social/ProfilePosts';
+import { AuthoredBadge } from '../components/social/AuthoredBadge';
 
 function goalProgressPercent(goal: PublicGoal): number {
   if (!goal.target_value || goal.target_value <= 0) return 0;
@@ -119,10 +120,7 @@ export default function MemberProfilePage() {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-white truncate">{profile.display_name}</h1>
               {profile.is_bot && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 text-xs font-semibold">
-                  <Bot className="w-3 h-3" />
-                  Bot
-                </span>
+                <AuthoredBadge size="md" />
               )}
             </div>
             {profile.headline && (

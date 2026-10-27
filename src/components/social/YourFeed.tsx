@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Globe, TrendingUp, Sparkles, Bot } from 'lucide-react';
+import { Users, Globe, TrendingUp, Sparkles } from 'lucide-react';
 import { PublicProfileImage } from '../PublicProfileImage';
 import { getFeedPosts, getPublicFeed, getTrendingPosts, type ProgressPostWithAuthor } from '../../services/progressFeedService';
 import { isHelper } from '../../utils/relationshipType';
@@ -15,6 +15,7 @@ import { CompanionStatusCard } from './CompanionStatusCard';
 import { refreshCompanionStatuses, loadCompanionStatuses, type CompanionStatusFeed, type CompanionStatusPost } from '../../services/companionStatusService';
 import { StatusComposer } from './StatusComposer';
 import { useFeedPosts } from './useFeedPosts';
+import { AuthoredBadge } from './AuthoredBadge';
 
 type Scope = 'following' | 'everyone' | 'trending';
 
@@ -76,10 +77,7 @@ function IntroductionCard({ intro, onFollow }: {
               {intro.display_name}
             </button>
             {intro.is_bot && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[10px] font-semibold">
-                <Bot className="w-2.5 h-2.5" />
-                Bot
-              </span>
+              <AuthoredBadge size="sm" />
             )}
           </div>
           {intro.headline && <p className="text-xs text-white/40 truncate mt-0.5">{intro.headline}</p>}
