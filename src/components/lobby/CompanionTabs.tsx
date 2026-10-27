@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Brain, Plus, Trash2, Users } from 'lucide-react';
+import { Heart, Brain, Plus, Trash2 } from 'lucide-react';
 import { Avatar } from '../Avatar';
 import { companionAvatarConfig } from './lobbyUtils';
 import type { CompanionWithLastMessage } from '../../services/companionService';

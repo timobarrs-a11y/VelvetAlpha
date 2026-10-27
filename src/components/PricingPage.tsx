@@ -1,4 +1,4 @@
-import { SUBSCRIPTION_PLANS, SubscriptionTier, PAID_TIERS } from '../types/subscription';
+import { SUBSCRIPTION_PLANS, SubscriptionTier } from '../types/subscription';
 import { X, Check } from 'lucide-react';
 import { useState } from 'react';
 import { createCheckoutSession } from '../services/stripeService';
@@ -52,11 +52,6 @@ export function PricingPage({ currentTier, onClose }: PricingPageProps) {
             const plan = SUBSCRIPTION_PLANS[tier];
             const isCurrent = currentTier === tier;
             const isRecommended = tier === 'essential';
-            const accentGradient = tier === 'essential'
-              ? 'from-teal-500 to-cyan-600'
-              : tier === 'plus'
-                ? 'from-blue-500 to-indigo-600'
-                : 'from-amber-500 to-orange-600';
             const borderColor = tier === 'essential'
               ? 'border-teal-500/50'
               : tier === 'plus'

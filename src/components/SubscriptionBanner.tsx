@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Crown, Sparkles, Zap, Flame, Star, Clock } from 'lucide-react';
+import { Crown, Sparkles, Zap, Star, Clock } from 'lucide-react';
 import { SubscriptionTier } from '../types/subscription';
 
 interface SubscriptionBannerProps {

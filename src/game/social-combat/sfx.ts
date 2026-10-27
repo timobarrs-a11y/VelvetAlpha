@@ -51,7 +51,6 @@ class SfxEngine {
   play(name: SfxName) {
     const ctx = this.ensureCtx();
     if (!ctx || !this.master) return;
-    const now = ctx.currentTime;
     switch (name) {
       case 'hit':       this.blip(ctx, 320, 0.12, 'square', 0.18); break;
       case 'super':     this.sweep(ctx, 420, 880, 0.18, 'sawtooth', 0.2); break;

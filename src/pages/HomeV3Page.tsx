@@ -2,13 +2,10 @@ import { useState, lazy, Suspense, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Newspaper, PlayCircle, Calendar, FileText, Lightbulb, Bot, MapPin,
-  Heart,
-  Plus,
-  Target, CheckCircle2, UsersRound, Layers,
-  Sunrise, Zap, User, MessageSquare, BookOpen, Users,
+  Newspaper, PlayCircle, Heart,
+  Target, UsersRound, Users,
 } from 'lucide-react';
-import { useLobbyData, GAMES } from '../hooks/useLobbyData';
+import { useLobbyData } from '../hooks/useLobbyData';
 import { supabase } from '../shared/supabase/client';
 import {
   LoadingState, PageShell, Badge, Segmented,
@@ -17,15 +14,11 @@ import {
 import { companionAvatarConfig, TONE_COLOR, FinishSetupCard } from '../components/lobby';
 import { NoCompanionCard } from '../components/lobby/NoCompanionCard';
 import { Avatar } from '../components/Avatar';
-import { colorNameToHex } from '../utils/colorMapping';
-import { getCoachColor } from '../utils/coachColors';
 import { ensureCoachColors } from '../services/companionService';
 import { TodayCard } from '../features/today/TodayCard';
 import { ArrivalHighlights } from '../features/arrival/ArrivalHighlights';
 import { highlightsSeen } from '../features/arrival/arrivalUtils';
 import { FirstWeekCard } from '../features/arrival/FirstWeekCard';
-import type { CompanionWithLastMessage } from '../services/companionService';
-import { isHelper } from '../utils/relationshipType';
 
 const DailyFeedPage = lazy(() => import('./DailyFeedPage').then(m => ({ default: m.DailyFeedPage })));
 const VideoHistoryPage = lazy(() => import('./VideoHistoryPage').then(m => ({ default: m.VideoHistoryPage })));
@@ -48,7 +41,7 @@ interface CheckIn {
 export function HomeV3Page() {
   const navigate = useNavigate();
   const lobby = useLobbyData();
-  const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+  const [, setCheckIns] = useState<CheckIn[]>([]);
   const [feedTab, setFeedTab] = useState<FeedTab>('feed');
   // Just finished the arrival: show what else is here, once.
   const [searchParams] = useSearchParams();
@@ -59,9 +52,6 @@ export function HomeV3Page() {
     loading,
   } = lobby;
 
-  const coaches = companions.filter(c => isHelper(c.relationship_type));
-  const coach = coaches[0];
-  const voices = companions.filter(c => !isHelper(c.relationship_type));
 
   const companionsKey = companions.map(c => c.id).join(',');
   const loadCheckIns = useCallback(async () => {
@@ -118,184 +108,14 @@ export function HomeV3Page() {
   }
 
 
-  const checkInMap = new Map(checkIns.map(c => [c.companion_id, c]));
 
-  const getCompanionLine = (c: CompanionWithLastMessage): string | null => {
-    const ci = checkInMap.get(c.id);
-    if (ci) return ci.message;
-    if (c.last_message_text && c.last_message_role === 'assistant') return c.last_message_text;
-    if (c.last_message_text) return c.last_message_text;
-    return null;
-  };
 
-  const renderPersonRow = (c: CompanionWithLastMessage, isCoach = false) => {
-    const line = getCompanionLine(c);
-    const hasCheckIn = checkInMap.has(c.id);
-    const coachColor = isCoach ? getCoachColor(c.coach_color) : null;
-    return (
-      <button
-        key={c.id}
-        onClick={() => handleNavigate(`/chat?companion=${c.id}`)}
-        className={`v3-person-row w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${hasCheckIn ? 'bg-white/5' : ''}`}
-        style={{
-          '--v3-person-color': colorNameToHex(c.favorite_color ?? ''),
-          ...(coachColor ? { borderLeft: `2px solid ${coachColor.base}` } : {}),
-        } as React.CSSProperties}
-      >
-        <div className={`relative ${isCoach ? 'w-11 h-11' : 'w-9 h-9'} rounded-full overflow-hidden flex-shrink-0`}>
-          <Avatar config={companionAvatarConfig(c)} className="w-full h-full" />
-          {hasCheckIn && (
-            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0d0d1a]" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <p className="text-sm font-semibold text-white/90 truncate" style={{ fontFamily: c.font_family ?? undefined }}>
-              {c.custom_name}
-            </p>
-            {isCoach && (
-              <Badge size="xs" tone={coachColor?.base ?? TONE_COLOR.coach}>Coach</Badge>
-            )}
-          </div>
-          {line ? (
-            <p className="text-xs text-white/50 truncate leading-tight mt-0.5">{line}</p>
-          ) : (
-            <p className="text-xs text-white/25 truncate leading-tight mt-0.5">
-              {c.last_message_at ? new Date(c.last_message_at).toLocaleDateString() : 'Say hello'}
-            </p>
-          )}
-        </div>
-      </button>
-    );
-  };
 
-  const renderToolRow = (label: string, icon: React.ReactNode, color: string, path: string) => (
-    <button
-      onClick={() => handleNavigate(path)}
-      className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
-    >
-      <span className={`flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0 ${color}`} style={{ background: 'rgba(255,255,255,0.05)' }}>
-        {icon}
-      </span>
-      <span className="text-[11.5px] font-semibold text-white/70">{label}</span>
-    </button>
-  );
 
-  const renderSubRow = (label: string, icon: React.ReactNode, path: string) => (
-    <button
-      onClick={() => handleNavigate(path)}
-      className="w-full flex items-center gap-2 pl-8 pr-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
-    >
-      <span className="flex items-center justify-center w-6 h-6 rounded-lg flex-shrink-0 text-white/40" style={{ background: 'rgba(255,255,255,0.03)' }}>
-        {icon}
-      </span>
-      <span className="text-[11px] font-medium text-white/60">{label}</span>
-    </button>
-  );
 
-  const sidebarStyle = {
-    background: 'rgba(255,255,255,0.04)',
-    backdropFilter: 'blur(12px)' as const,
-  };
 
-  const GroupLabel = ({ children }: { children: React.ReactNode }) => (
-    <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 select-none px-2 pt-1 pb-1">{children}</p>
-  );
 
-  const handleNavigate = (path: string) => {
-    navigate(path);
-  };
 
-  const sidebarContent = (
-    <>
-      <div className="px-3 pt-3 pb-2 flex-shrink-0">
-        <p className="text-[10px] font-bold tracking-widest uppercase text-white/40 select-none">Navigate</p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-3">
-        {/* ── Coaching ── */}
-        <div className="flex flex-col gap-0.5">
-          <GroupLabel>Coaching</GroupLabel>
-          {coaches.length > 0 ? (
-            <>
-              {coaches.map(c => renderPersonRow(c, true))}
-              {renderSubRow('Progress', <Target className="w-3.5 h-3.5" />, '/coaching-progress')}
-              {renderSubRow('Commitments', <CheckCircle2 className="w-3.5 h-3.5" />, '/coaching-commitments')}
-              {renderSubRow('Plans', <Layers className="w-3.5 h-3.5" />, '/coaching-commitments?view=plans')}
-              {renderSubRow('Library', <BookOpen className="w-3.5 h-3.5" />, '/coaching-library')}
-              <button
-                onClick={() => handleNavigate('/expert-selection')}
-                className="w-full flex items-center gap-2 pl-8 pr-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
-              >
-                <span className="flex items-center justify-center w-6 h-6 rounded-lg flex-shrink-0 text-white/40" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  <Plus className="w-3.5 h-3.5" />
-                </span>
-                <span className="text-[11px] font-medium text-white/40">Add another coach</span>
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => handleNavigate('/expert-selection')}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add a coach
-            </button>
-          )}
-        </div>
-
-        {/* ── Companion ── */}
-        <div className="flex flex-col gap-0.5">
-          <GroupLabel>Companion</GroupLabel>
-          {voices.map(c => renderPersonRow(c))}
-          <button
-            onClick={() => { lobby.handleNewCompanion(); }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors mt-1"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Someone new
-          </button>
-        </div>
-
-        {/* ── Core ── */}
-        <div className="flex flex-col gap-0.5">
-          <GroupLabel>Core</GroupLabel>
-          {renderToolRow('Daily Feed', <Newspaper className="w-3.5 h-3.5" />, 'text-emerald-400', '/daily-feed')}
-          {renderToolRow('Calendar', <Calendar className="w-3.5 h-3.5" />, 'text-orange-400', '/calendar')}
-          {renderToolRow('Co-Author', <FileText className="w-3.5 h-3.5" />, 'text-blue-400', '/co-author')}
-          {renderToolRow('Insights', <Lightbulb className="w-3.5 h-3.5" />, 'text-amber-400', '/insights')}
-          {renderToolRow('Morning Journal', <Sunrise className="w-3.5 h-3.5" />, 'text-amber-400', '/morning-journal')}
-          {renderToolRow('Profile', <User className="w-3.5 h-3.5" />, 'text-slate-300', '/profile')}
-        </div>
-
-        {/* ── Connect ── */}
-        <div className="flex flex-col gap-0.5">
-          <GroupLabel>Connect</GroupLabel>
-          {renderToolRow('Atlas', <Bot className="w-3.5 h-3.5" />, 'text-slate-300', '/atlas')}
-          {renderToolRow('Navi', <MapPin className="w-3.5 h-3.5" />, 'text-emerald-400', '/local-explorer')}
-          {renderToolRow('Group Chat', <UsersRound className="w-3.5 h-3.5" />, 'text-teal-400', '/group-chat')}
-          {renderToolRow('Velvet Rope', <Zap className="w-3.5 h-3.5" />, 'text-pink-400', '/real-or-not')}
-          {renderToolRow('Community', <MessageSquare className="w-3.5 h-3.5" />, 'text-blue-400', '/community')}
-          {/* Games */}
-          <div className="mt-1">
-            <p className="text-[9px] font-bold tracking-widest uppercase text-white/30 px-2 pt-1 pb-1 select-none">Games</p>
-            {GAMES.map(game => (
-              <button
-                key={game.id}
-                onClick={() => { lobby.handleGameClick(game); }}
-                className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left transition-colors hover:bg-white/8"
-              >
-                <span className={`flex items-center justify-center w-7 h-7 rounded-xl flex-shrink-0 bg-gradient-to-br ${game.iconBg}`}>
-                  <game.icon className="w-3.5 h-3.5 text-white" />
-                </span>
-                <span className="text-[11.5px] font-semibold text-white/60">{game.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </>
-  );
 
   return (
     <div className="ds-page flex min-h-full min-w-0 flex-col overflow-hidden text-white">

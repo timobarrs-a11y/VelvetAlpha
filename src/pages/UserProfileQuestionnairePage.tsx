@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Plus, X, Sparkles, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { userProfileService } from '../services/userProfileService';
@@ -323,7 +322,6 @@ const QUESTIONS: QuestionData[] = [
 ];
 
 export function UserProfileQuestionnairePage() {
-  const navigate = useNavigate();
   const [showPopup, setShowPopup] = useState(false);
   const [popupDone, setPopupDone] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);

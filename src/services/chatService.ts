@@ -800,11 +800,6 @@ export class ChatService {
         const now = new Date();
         const userTimezone = (userProfile as any).timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-        const conversationHistory = await this.getConversationHistory(50);
-        const formattedHistory = conversationHistory.map(msg => ({
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content,
-        }));
 
         const { data: companionData } = await supabase
           .from('companions')

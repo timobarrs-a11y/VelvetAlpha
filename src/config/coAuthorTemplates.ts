@@ -1,5 +1,5 @@
 import {
-  Briefcase, FileText, PenLine, Mail, GraduationCap,
+  Briefcase, PenLine, Mail, GraduationCap,
   Presentation, BookOpen, Newspaper, type LucideIcon,
 } from 'lucide-react';
 

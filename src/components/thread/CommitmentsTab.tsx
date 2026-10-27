@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Check, Circle, Undo2, X, Calendar, Plus, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, Check, Circle, Undo2, X, Calendar, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../../shared/supabase/client';
 import {
   getCommitments,

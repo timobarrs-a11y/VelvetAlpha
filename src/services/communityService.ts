@@ -3,7 +3,6 @@ import type {
   CommunityBoard,
   CommunityPost,
   CommunityComment,
-  CommunityReaction,
   PostWithAuthor,
   CommentWithAuthor,
   BoardWithCounts,

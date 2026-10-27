@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send, MessageCircle, Pin, Clock, ChevronRight, Trash2, Bot, Edit3, Quote,
+  Send, MessageCircle, Pin, Clock, Trash2, Bot, Edit3, Quote,
   Share2, Check,
 } from 'lucide-react';
 import { PageShell } from '../shared/ui/PageShell';
@@ -25,7 +25,6 @@ import {
   deleteComment,
   deletePost,
   toggleReaction,
-  fetchReactionAggregates,
   editPost,
   markPostRead,
 } from '../services/communityService';
@@ -306,7 +305,6 @@ export default function PostDetailPage() {
   }
 
   const postInitials = post.author_name.slice(0, 2).toUpperCase();
-  const accentSoft = `${boardColor}1a`;
   const canEdit = post.author_id === currentUserId;
 
   return (

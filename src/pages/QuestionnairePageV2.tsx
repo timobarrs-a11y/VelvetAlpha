@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QuestionnaireShell, HonestBridge, PresenceOrb, COMPANION_QUESTIONNAIRE, makeContext, tpl } from '../features/questionnaire';
+import { QuestionnaireShell, HonestBridge, PresenceOrb, COMPANION_QUESTIONNAIRE, makeContext } from '../features/questionnaire';
 import { supabase } from '../shared/supabase/client';
 import { createCompanion } from '../services/companionService';
 import { userProfileService } from '../services/userProfileService';
@@ -72,7 +72,6 @@ export function QuestionnairePageV2() {
     const chips: string[] = [];
     const voice = liveAnswers.voice as string;
     const warmth = liveAnswers.warmth as string;
-    const name = liveAnswers.companionName as string;
 
     if (voice) chips.push(voice);
     if (warmth) chips.push(warmth);
@@ -91,7 +90,7 @@ export function QuestionnairePageV2() {
     setShowBridge(true);
   }, []);
 
-  const handleAnswer = useCallback((questionId: string, _answer: string | string[], allAnswers: Record<string, string | string[]>) => {
+  const handleAnswer = useCallback((_questionId: string, _answer: string | string[], allAnswers: Record<string, string | string[]>) => {
     setLiveAnswers(allAnswers);
   }, []);
 

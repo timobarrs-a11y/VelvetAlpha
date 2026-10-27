@@ -116,7 +116,7 @@ export class GiftService {
   }
 
   async generateGiftPrompt(
-    characterId: string,
+    _characterId: string,
     userProfile: UserProfile,
     relationshipDays: number,
     companionName: string

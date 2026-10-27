@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sunrise, ArrowRight, ArrowLeft, Sparkles, BookOpen, Calendar, Send, Loader2 } from 'lucide-react';
+import { Sunrise, ArrowRight, ArrowLeft, Sparkles, BookOpen, Calendar, Loader2 } from 'lucide-react';
 import { PageHeader } from '../shared/ui/PageHeader';
 import { LoadingState } from '../shared/ui/LoadingState';
-import { journalService, type JournalSessionWithQA, type JournalQA } from '../services/journalService';
+import { journalService, type JournalSessionWithQA } from '../services/journalService';
 
 type Phase = 'loading' | 'questions' | 'ratings' | 'generating' | 'revealed' | 'history';
 

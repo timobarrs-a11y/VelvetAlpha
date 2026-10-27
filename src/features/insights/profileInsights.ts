@@ -54,7 +54,6 @@ function joinList(items: string[], max: number = 3): string {
 
 export function generateProfileInsights(profile: ProfileData): InsightCard[] {
   const cards: InsightCard[] = [];
-  const name = profile.nickname || profile.name || 'You';
 
   // Card 1: Interests & hobbies map
   const allInterests = [

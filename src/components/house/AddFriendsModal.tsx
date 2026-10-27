@@ -4,7 +4,7 @@ import { getFriends, type FriendPeer } from '../../shared/supabase/queries/messa
 import { getSpaceMembers, addFriendToSpace } from '../../services/spacesService';
 import { toast } from '../../shared/ui/Toast';
 import type { SpaceMember } from '../../types/spaces';
-import { UserPlus, Check } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;

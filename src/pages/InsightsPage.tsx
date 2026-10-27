@@ -4,13 +4,13 @@ import {
   TrendingUp, MessageCircle, Calendar, Heart, Target, Lightbulb,
   Clock, Flame, BarChart3, Sparkles, CheckCircle2, Circle, ChevronDown,
   ChevronUp, FlaskConical, PenLine, Activity, Info, TrendingDown, Minus,
-  Brain, Shield, Users, Star, Compass, Layers, Music, Dumbbell, Cpu
+  Brain, Shield, Users, Star, Compass, Layers
 } from 'lucide-react';
 import { PageHeader, Pill, Segmented } from '../shared/ui';
 import { LoadingState } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { useSubscription } from '../hooks/useSubscription';
-import { generateInsights, generateInsightsWithProfile } from '../features/insights/engine';
+import { generateInsightsWithProfile } from '../features/insights/engine';
 import type { InsightCard, InsightConfidence, ReflectionAtom } from '../features/insights/types';
 import { INSIGHT_TEMPLATE_DESCRIPTIONS } from '../features/insights/templates';
 import { buildProfileSnapshot, type ProfileSnapshot } from '../features/insights/profileInsights';

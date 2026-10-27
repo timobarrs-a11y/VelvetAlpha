@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Clock, CreditCard, Crown, ArrowRight, X } from 'lucide-react';
 import { useState } from 'react';
 
-const VELVET_BG = 'var(--ds-bg-page)';
 
 export function LockScreen() {
   const navigate = useNavigate();

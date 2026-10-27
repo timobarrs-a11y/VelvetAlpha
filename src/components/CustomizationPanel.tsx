@@ -279,7 +279,6 @@ export function CustomizationPanel({
   const [localTextColor, setLocalTextColor] = useState<ToolbarTextColorKey>(customization.toolbar_text_color ?? 'light');
   const [textColorSaved, setTextColorSaved] = useState(false);
   const streak = customization.current_streak;
-  const fontUnlocked = customization.font_customization_unlocked;
   const { setPreviewStyle } = useButtonHoverPreview();
   // Phones and tablets have no cursor: say where each setting shows up there.
   const touch = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;

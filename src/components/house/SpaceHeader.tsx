@@ -1,6 +1,5 @@
 import { Lock, LogIn, LogOut, Users, MessageSquare, Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import type { MySpace, SpaceRole } from '../../types/spaces';
+import type { MySpace } from '../../types/spaces';
 import { SpaceIcon } from './SpaceIcon';
 
 interface Props {
@@ -14,8 +13,6 @@ interface Props {
 }
 
 export function SpaceHeader({ space, onJoin, onLeave, onAddFriends, onOpenSettings, activeTab, onTabChange }: Props) {
-  const navigate = useNavigate();
-  const isMember = space.role !== ('member' as SpaceRole) || space.role === 'member';
   const canModerate = space.role === 'owner' || space.role === 'mod';
   const joined = space.role === 'owner' || space.role === 'mod' || space.role === 'member';
 

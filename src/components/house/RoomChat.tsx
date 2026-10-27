@@ -22,7 +22,7 @@ const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
 const MENTION_RE = /<@([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})>/gi;
 
-function renderBody(body: string, memberMap: Map<string, SpaceMember>, currentUserId: string | undefined): { text: string; isMention: boolean } {
+function renderBody(body: string, _memberMap: Map<string, SpaceMember>, currentUserId: string | undefined): { text: string; isMention: boolean } {
   const mentionsMe = currentUserId && body.includes(`<@${currentUserId}>`);
   return { text: body, isMention: !!mentionsMe };
 }

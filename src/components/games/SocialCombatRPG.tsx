@@ -583,7 +583,6 @@ const genAscentRun = (): { stages: StageDef[] } => {
   const [o1, o2, o3, o4] = shuffled.slice(0, 4);
   const boss = rnd(BOSSES);
   const cs = [rnd(CONFLICTS), rnd(CONFLICTS), rnd(CONFLICTS), rnd(CONFLICTS)];
-  const scripts = cs.map(c => SCENARIO_SCRIPTS[`${c.id}_${shuffled[cs.indexOf(c)]?.id}`]);
   const mkStage = (idx: number, o: typeof OPPONENTS[number], hp: number, stageNum: number): StageDef => {
     const c = cs[idx];
     const sid = `${c.id}_${o.id}`;
@@ -693,7 +692,7 @@ const pickOppAction = (opp: OpponentState, round: number): OppAction | null => {
 
 const executeOppAction = (state: GameState, action: OppAction): { next: GameState; events: GameEvent[] } => {
   const def = OPP_ACTIONS[action];
-  const { player, opponent, dialogue, scenario } = state;
+  const { player, opponent, dialogue } = state;
   const events: GameEvent[] = [];
   const perks = player.perks || [];
 

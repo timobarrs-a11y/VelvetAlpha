@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Check } from 'lucide-react';
 import { ModalShell } from '../../shared/ui';
 import { MedalBadge } from './MedalBadge';
 import type { UserMedal } from '../../services/medalsService';

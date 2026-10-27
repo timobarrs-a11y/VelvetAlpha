@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageCircle, Heart, Users, Crown, Cherry, Zap, Circle,
-  Rocket, Gamepad2, Lightbulb, FileText,
+  MessageCircle, Heart, Users, Zap, Gamepad2, Lightbulb, FileText,
   UsersRound, Calendar, Youtube, Newspaper, MessageSquare,
-  Info, Plus,
+  Plus,
   Sparkles, Flame, Bot, MapPin, Brain,
 } from 'lucide-react';
 import {
@@ -26,15 +25,6 @@ import { NoCompanionCard } from '../components/lobby/NoCompanionCard';
 import { useLobbyData, GAMES } from '../hooks/useLobbyData';
 import { isHelper } from '../utils/relationshipType';
 
-interface GameEntry {
-  id: string;
-  name: string;
-  description: string;
-  icon: typeof Crown;
-  iconBg: string;
-  path?: string;
-  requiresCompanion?: boolean;
-}
 
 interface HubTileDef {
   id: string;

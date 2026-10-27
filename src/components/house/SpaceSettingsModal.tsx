@@ -7,9 +7,9 @@ import {
 import {
   getSpaceMembers, getJoinRequests, decideJoinRequest, createSpaceInvite,
   getInvites, revokeInvite, setMemberRole, transferSpaceOwnership,
-  removeSpaceMember, unbanSpaceMember, updateSpaceSettings,
+  removeSpaceMember, updateSpaceSettings,
   getRoleTags, createRoleTag, deleteRoleTag, assignMemberTag, removeMemberTag,
-  getRooms, createRoom, deleteRoom, updateRoom, reorderRoom,
+  getRooms, createRoom, deleteRoom, reorderRoom,
 } from '../../services/spacesService';
 import type { SpaceMember, JoinRequest, InviteRow, RoleTag, SpaceRoom, SpaceVisibility } from '../../types/spaces';
 import { SpaceIcon } from './SpaceIcon';

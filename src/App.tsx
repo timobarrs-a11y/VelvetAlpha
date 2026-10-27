@@ -92,7 +92,7 @@ function AppInner() {
   const { subscriptionInfo, refreshSubscription } = useSubscription();
   const { playSound } = useSound();
   const { customization, setPointer, setShowTrail, setTrailStyle, setAnimationStyle, setCursorColor, setButtonHoverStyle, setTranslucentUI, setRightRailCollapsed, setToolbarBackgroundMode, setToolbarTextColor } = useCustomization();
-  const [currentStatus, setCurrentStatus] = useState<string>('');
+  const [, setCurrentStatus] = useState<string>('');
   const [dailyExperience, setDailyExperience] = useState<any>(null);
 
   const [showWallpaperModal, setShowWallpaperModal] = useState(false);
@@ -127,7 +127,7 @@ function AppInner() {
 
   // Conversation threads + feature tabs
   const [activeThread, setActiveThread] = useState<ActiveThread>('companion');
-  const [openFeatures, setOpenFeatures] = useState<Array<'calendar' | 'co-author' | 'daily-feed' | 'your-lens' | 'plan' | 'commitments'>>([]);
+  const [, setOpenFeatures] = useState<Array<'calendar' | 'co-author' | 'daily-feed' | 'your-lens' | 'plan' | 'commitments'>>([]);
   const [coachingHighlightIds, setCoachingHighlightIds] = useState<string[]>([]);
   const [atlasMessages, setAtlasMessages] = useState<Message[]>([]);
   const [naviMessages, setNaviMessages] = useState<Message[]>([]);
@@ -470,33 +470,6 @@ function AppInner() {
     }
   }, [userId, companionId, companion]);
 
-  const handleCloseThread = useCallback(async (thread: Exclude<ActiveThread, 'companion'>) => {
-    // Feature tabs — just remove from open set
-    if (thread === 'calendar' || thread === 'co-author' || thread === 'daily-feed' || thread === 'your-lens' || thread === 'plan' || thread === 'commitments') {
-      setOpenFeatures(prev => prev.filter(f => f !== thread));
-      setActiveThread('companion');
-      return;
-    }
-    // Bot threads
-    if (thread === 'atlas') {
-      if (userId && companionId && atlasMessagesRef.current.length > 1) {
-        const { saveThreadSignals } = await import('./services/threadSignalService');
-        const msgs = atlasMessagesRef.current.map(m => ({ role: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.content }));
-        saveThreadSignals(userId, companionId, msgs, 'atlas').catch(console.error);
-      }
-      atlasMessagesRef.current = [];
-      setAtlasMessages([]);
-    } else {
-      if (userId && companionId && naviMessagesRef.current.length > 1) {
-        const { saveThreadSignals } = await import('./services/threadSignalService');
-        const msgs = naviMessagesRef.current.map(m => ({ role: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.content }));
-        saveThreadSignals(userId, companionId, msgs, 'navi').catch(console.error);
-      }
-      naviMessagesRef.current = [];
-      setNaviMessages([]);
-    }
-    setActiveThread('companion');
-  }, [userId, companionId]);
 
   const handleThreadSend = useCallback(async (content: string) => {
     if (!content.trim() || !companionId) return;
@@ -792,7 +765,6 @@ function AppInner() {
       let navigationIntent: { destination: string; route: string; seedText?: string } | null = null;
       let articleIds: string[] | undefined;
       let coachArtifacts: Array<{ id: string; artifactType: string; title: string; content: Record<string, unknown> }> | undefined;
-      let coachingChanges: Array<{ entityType: string; entityId: string; action: string }> | undefined;
       let uiActions: Array<{ tab: 'plan' | 'commitments'; highlightIds: string[] }> | undefined;
 
       if (userProfile && companionId) {
@@ -802,7 +774,6 @@ function AppInner() {
         navigationIntent = result.navigationIntent || null;
         articleIds = result.article_ids;
         coachArtifacts = result.coachArtifacts;
-        coachingChanges = result.coachingChanges;
         uiActions = result.uiActions;
       } else {
         response = await ChatService.sendMessage(content, companionId, companion.relationship_type);
@@ -971,7 +942,6 @@ function AppInner() {
     playSound();
   };
 
-  const handleReset = () => setShowResetConfirm(true);
   const confirmReset = async () => {
     setShowResetConfirm(false);
     try {
@@ -986,7 +956,6 @@ function AppInner() {
     }
   };
 
-  const handleStartOver = () => setShowStartOverConfirm(true);
   const confirmStartOver = async () => {
     if (!userId || !companionId || !companion) return;
     setIsStartingOver(true);
