@@ -611,6 +611,72 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: (o) => [F(0, 0, 0.42, 0.42, (T, ob, t) => { const c = cl(o); T.box(0.06, 0.06, 0, 0.3, 0.3, 0.55, c); const [x, y] = T.P(0.21, 0.21, 0.55); [[-14, -38, -0.3], [0, -46, 0], [12, -40, 0.3], [-7, -32, -0.15], [7, -34, 0.15]].forEach(([dx, dy, r], k) => { const sw = Math.sin(t * 0.7 + k) * 1.5; limb(x, y, x + dx * 0.7 + sw, y + dy * 0.75, '#A88E6A', 1); ell(x + dx + sw, y + dy, 4, 11, 'rgba(236,222,196,.95)', null, r); }); })] },
     lantern: {      
       parts: (o) => [F(0, 0, 0.36, 0.36, (T, ob) => { const c = cl(o), on = isLit(ob.id); T.box(0.03, 0.03, 0, 0.3, 0.3, 0.06, c); T.box(0.06, 0.06, 0.06, 0.24, 0.24, 0.42, on ? 'rgba(255,214,140,.9)' : 'rgba(220,210,190,.6)'); [[0.06, 0.06], [0.28, 0.06], [0.06, 0.28], [0.28, 0.28]].forEach(([x, y]) => T.line([x + 0.01, y + 0.01, 0.06], [x + 0.01, y + 0.01, 0.48], c, 1.6)); T.box(0.03, 0.03, 0.48, 0.3, 0.3, 0.05, c); const [hx, hy] = T.P(0.18, 0.18, 0.62); ell(hx, hy, 4, 3, null, c); })],  },
+    candles: {
+      parts: (o) => [F(0, 0, 0.5, 0.4, (T, ob, t) => {
+        const c = cl(o), on = isLit(ob.id);
+        T.box(0.04, 0.04, 0, 0.42, 0.32, 0.04, '#C9A24A');
+        [[0.1, 0.1, 0.38], [0.28, 0.12, 0.5], [0.2, 0.24, 0.28]].forEach(([x, y, h], k) => {
+          T.box(x, y, 0.04, 0.11, 0.11, h - 0.04, k === 1 ? shade(c, -0.08) : c);
+          const [fx, fy] = T.P(x + 0.055, y + 0.055, h + 0.03);
+          if (on) { const fl = Math.sin(t * 9 + k * 2.1) * 0.7; ell(fx, fy - 3, 2.3, 4 + fl * 0.4, 'rgba(255,190,80,.95)'); ell(fx, fy - 2, 1.1, 2.2, 'rgba(255,246,210,.95)'); }
+          else ell(fx, fy, 0.9, 1.2, '#2B2B30');
+        });
+      })] },
+    basket: {
+      parts: (o) => [F(0, 0, 0.8, 0.8, (T) => {
+        const c = cl(o);
+        T.box(0.08, 0.08, 0, 0.64, 0.64, 0.4, c);
+        for (let z = 0.08; z < 0.4; z += 0.1) { T.line([0.08, 0.72, z], [0.72, 0.72, z], shade(c, -0.25), 1); T.line([0.72, 0.08, z], [0.72, 0.72, z], shade(c, -0.3), 1); }
+        T.box(0.06, 0.06, 0.4, 0.68, 0.68, 0.05, shade(c, 0.1));
+        // A throw blanket heaped in it, one corner trailing over the rim.
+        const [bx, by] = T.P(0.4, 0.4, 0.5);
+        ell(bx, by, 19, 9, '#C9A9A0'); ell(bx - 3, by - 2, 13, 6, '#E4D3CB'); ell(bx + 4, by + 1, 9, 4, '#B5476E');
+        T.poly([[0.62, 0.72, 0.42], [0.8, 0.72, 0.34], [0.78, 0.76, 0.12], [0.6, 0.76, 0.2]], '#C9A9A0');
+      })] },
+    coatrack: {
+      parts: (o) => [F(0, 0, 0.45, 0.45, (T) => {
+        const c = cl(o);
+        T.box(0.1, 0.1, 0, 0.25, 0.25, 0.05, shade(c, -0.1));
+        T.line([0.225, 0.225, 0.05], [0.225, 0.225, 1.75], c, 3);
+        [[-0.16, -0.1], [0.16, -0.1], [0, 0.16], [0, -0.16]].forEach(([dx, dy], k) => { T.line([0.225, 0.225, 1.62 - (k % 2) * 0.08], [0.225 + dx, 0.225 + dy, 1.7 - (k % 2) * 0.08], c, 2); });
+        // A coat and a scarf hanging from it.
+        T.poly([[0.12, 0.38, 1.58], [0.34, 0.38, 1.58], [0.36, 0.38, 0.85], [0.1, 0.38, 0.85]], '#3F5B4C');
+        T.poly([[0.1, 0.4, 1.3], [0.2, 0.4, 1.3], [0.2, 0.4, 0.8], [0.1, 0.4, 0.8]], '#B5476E');
+      })] },
+    bookstack: {
+      parts: (o) => [F(0, 0, 0.45, 0.35, (T) => {
+        const c = cl(o);
+        [[0.02, 0.04, 0, 0.4, 0.3, 0.1, c], [0.05, 0.06, 0.1, 0.36, 0.26, 0.09, '#2E3B57'], [0.0, 0.05, 0.19, 0.38, 0.27, 0.1, '#C9A24A'], [0.06, 0.07, 0.29, 0.32, 0.24, 0.09, '#3F5B4C'], [0.03, 0.06, 0.38, 0.34, 0.24, 0.08, '#B5476E']]
+          .forEach(([x, y, z, w, d, h, col]) => { T.box(x, y, z, w, d, h, col); T.line([x + 0.02, y + d, z + h / 2], [x + w - 0.02, y + d, z + h / 2], 'rgba(255,255,255,.35)', 1); });
+      })] },
+    eucalyptus: {
+      parts: (o) => [F(0, 0, 0.42, 0.42, (T, ob, t) => {
+        const c = cl(o);
+        T.box(0.08, 0.08, 0, 0.26, 0.26, 0.5, c); T.box(0.12, 0.12, 0.5, 0.18, 0.18, 0.1, shade(c, -0.12));
+        const [x, y] = T.P(0.21, 0.21, 0.6);
+        [[-16, -64, -0.2], [-4, -86, 0], [12, -72, 0.25], [-9, -48, -0.3], [7, -54, 0.2], [20, -52, 0.5]].forEach(([dx, dy, r], k) => {
+          const sw = Math.sin(t * 0.8 + k) * 1.6;
+          limb(x, y, x + dx + sw * 0.5, y + dy, '#7F8F70', 1.2);
+          for (let j = 1; j <= 4; j++) { const f = j / 4; ell(x + dx * f + (j % 2 ? 3 : -3) + sw * f, y + dy * f, 3.2, 5, j % 2 ? '#9AB09E' : '#8AA391', null, r + (j % 2 ? 0.6 : -0.6)); }
+        });
+      })] },
+    bust: {
+      parts: (o) => [F(0, 0, 0.5, 0.5, (T) => {
+        const c = cl(o);
+        T.box(0.1, 0.1, 0, 0.3, 0.3, 0.9, '#E4DDD2'); T.box(0.07, 0.07, 0.9, 0.36, 0.36, 0.06, '#CFC7BA'); T.box(0.07, 0.07, 0, 0.36, 0.36, 0.05, '#CFC7BA');
+        const [x, y] = T.P(0.25, 0.25, 0.96);
+        ell(x, y - 6, 12, 7, c); rr(x - 4, y - 16, 8, 12, 3, c); ell(x, y - 24, 8, 10, c); ell(x - 3, y - 26, 3, 4, shade(c, 0.35));
+        ell(x + 2, y - 10, 5, 4, shade(c, -0.12));
+      })] },
+    umbrella: {
+      parts: (o) => [F(0, 0, 0.4, 0.4, (T) => {
+        const c = cl(o);
+        T.box(0.06, 0.06, 0, 0.28, 0.28, 0.5, c); T.box(0.04, 0.04, 0.5, 0.32, 0.32, 0.04, shade(c, -0.2));
+        [['#2B2B30', 0.13, 0.15, 0.78], ['#B5476E', 0.25, 0.2, 0.72], ['#2E3B57', 0.2, 0.28, 0.66]].forEach(([col, ux, uy, h]) => {
+          T.line([ux, uy, 0.3], [ux, uy, h], col, 2.2);
+          const [hx, hy] = T.P(ux, uy, h); ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(hx + 3, hy, 3, Math.PI, Math.PI * 2.2); ctx.stroke();
+        });
+      })] },
     // ---- plants (they all need watering) ----
     fern: {      
       parts: (o) => [F(0, 0, 0.55, 0.55, (T, ob, t) => { T.box(0.08, 0.08, 0, 0.4, 0.4, 0.42, cl(o)); const [x, y] = T.P(0.27, 0.27, 0.45); for (let k = 0; k < 9; k++) { const a = -Math.PI + k / 8 * Math.PI, sw = Math.sin(t * 0.8 + k) * 0.05, ex = x + Math.cos(a + sw) * 22, ey = y - 6 + Math.sin(a + sw) * 12 + 6; ctx.strokeStyle = k % 2 ? '#3F7D4E' : '#4F9460'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo((x + ex) / 2, y - 20, ex, ey); ctx.stroke(); } })],
@@ -1163,7 +1229,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (playing) { const a = iso(6.0, 0.01, 1.9), b = iso(8.0, 0.01, 1.9), c = iso(8.0, 0.01, 0.8), d = iso(6.0, 0.01, 0.8); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(190,210,255,.07)'; ctx.beginPath(); ctx.moveTo(px - 5, py + 1); ctx.lineTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); ctx.restore(); }
   }
 
-  const BOX_LABEL = { sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
+  const BOX_LABEL = { candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
 
   // Just-placed furniture lands with a squash and a little bounce.
   // Three ways a piece arrives: it lands with a squash (set down), pops out of its box (revealed) or drops from above (delivered).
