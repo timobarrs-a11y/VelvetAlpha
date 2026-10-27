@@ -177,6 +177,33 @@ describe('embedTexts', () => {
     const throwing = vi.fn().mockRejectedValue(new Error('net'));
     expect(await embedTexts(['x'], 'k', 1000, throwing as unknown as typeof fetch)).toBeNull();
   });
+  it('says why it failed, without leaking the key or the text', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await embedTexts(['secret memory text'], undefined);
+      expect(warn).toHaveBeenLastCalledWith(expect.stringContaining('OPENAI_API_KEY is not set'));
+
+      const noCredit = vi.fn().mockResolvedValue({ ok: false, status: 429, text: async () => JSON.stringify({ error: { code: 'insufficient_quota', message: 'You exceeded your current quota' } }) });
+      await embedTexts(['secret memory text'], 'sk-very-secret', 1000, noCredit as unknown as typeof fetch);
+      const line = String(warn.mock.calls.at(-1)?.[0]);
+      expect(line).toContain('429');
+      expect(line).toContain('insufficient_quota');
+
+      const badKey = vi.fn().mockResolvedValue({ ok: false, status: 401, text: async () => 'not json' });
+      await embedTexts(['secret memory text'], 'sk-very-secret', 1000, badKey as unknown as typeof fetch);
+      expect(String(warn.mock.calls.at(-1)?.[0])).toContain('401');
+
+      const down = vi.fn().mockRejectedValue(new Error('connection refused'));
+      await embedTexts(['secret memory text'], 'sk-very-secret', 1000, down as unknown as typeof fetch);
+      expect(String(warn.mock.calls.at(-1)?.[0])).toContain('connection refused');
+
+      const logged = warn.mock.calls.map(c => c.join(' ')).join('\n');
+      expect(logged).not.toContain('sk-very-secret');
+      expect(logged).not.toContain('secret memory text');
+    } finally {
+      warn.mockRestore();
+    }
+  });
   it('orders results by index and checks dimensions', async () => {
     const e = (n: number) => new Array(EMBEDDING_DIMENSIONS).fill(n);
     const ok = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [{ index: 1, embedding: e(2) }, { index: 0, embedding: e(1) }] }) });
