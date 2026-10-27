@@ -1,3 +1,4 @@
+import type { Garment } from './garment';
 export type ClothSlot = 'top' | 'bottom' | 'shoes' | 'hat' | 'glasses';
 
 export interface ClothDef {
@@ -18,6 +19,8 @@ export interface OwnedCloth {
   id: string;
   // Second colour, for signature tops (the tie, the vest).
   accent?: string;
+  // A designed garment (state/garment.ts); `style` and `col` hold its cut's style name and base colour.
+  recipe?: Garment;
 }
 
 export interface LookState {
@@ -80,12 +83,13 @@ export function wearOn(look: LookState, pc: OwnedCloth): void {
 // Putting a closet piece on a game character. A top brings its style, colour and accent; pants bring theirs.
 export interface WornLook {
   top: string; topStyle: string; bottom: string; accent?: string;
+  topGarment?: Garment; bottomGarment?: Garment;
   // The pants' cut ('jeans', 'cheer_skirt', ...) and their trim; plain pants when unset.
   bottomStyle?: string; bottomAccent?: string;
 }
 export function wearOnAgent(look: WornLook, pc: OwnedCloth): void {
-  if (pc.slot === 'top') { look.topStyle = pc.style; look.top = pc.col; look.accent = pc.accent; }
-  if (pc.slot === 'bottom') { look.bottom = pc.col; look.bottomStyle = pc.style; look.bottomAccent = pc.accent; }
+  if (pc.slot === 'top') { look.topStyle = pc.style; look.top = pc.col; look.accent = pc.accent; look.topGarment = pc.recipe; }
+  if (pc.slot === 'bottom') { look.bottom = pc.col; look.bottomStyle = pc.style; look.bottomAccent = pc.accent; look.bottomGarment = pc.recipe; }
 }
 
 // The avatar's outfit, sent by the host: worn by default, kept in the closet.

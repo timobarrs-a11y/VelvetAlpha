@@ -7,7 +7,12 @@
 import type { SaveData, SaveDataV1, SaveDataV2, SaveDataV3 } from './types';
 
 const CURRENT_VERSION = 3 as const;
-export const CONTENT_VERSION = 1;
+/** 1 = before the story and Dez. 2 = the first save that has them. */
+export const CONTENT_VERSION = 2;
+/** Saves older than this are not carried over: everyone starts again with the move-in. */
+export const MIN_CONTENT_VERSION = 2;
+/** The content version a save was made with (anything older than the story counts as 1). */
+export const isCurrentContent = (s: { contentVersion?: unknown } | null | undefined): boolean => !!s && typeof s.contentVersion === 'number' && s.contentVersion >= MIN_CONTENT_VERSION;
 
 export function migrateSave(raw: unknown): SaveDataV3 | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -27,7 +32,7 @@ const isHouseLook = (l: unknown): boolean => !!l && typeof l === 'object' && 'fl
  * flagged (`ext.looksLost`) so the host can restore them from the cloud copy (see repairFromV1).
  */
 export function migrateV2toV3(s: SaveDataV2): SaveDataV3 {
-  const out = { ...s, v: 3, rev: 0, contentVersion: CONTENT_VERSION } as unknown as SaveDataV3;
+  const out = { ...s, v: 3, rev: 0, contentVersion: 1 } as unknown as SaveDataV3;
   const looks = (s as unknown as { LOOKS?: unknown[] }).LOOKS;
   const lost = !Array.isArray(looks) || looks.length === 0 || !looks.every(isHouseLook);
   if (lost) {

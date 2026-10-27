@@ -13,6 +13,9 @@ export interface StairDef {
   upper: number;
   lowerNode: [number, number];
   upperNode: [number, number];
+  /** Where the visible flight starts and ends (drawing only). */
+  bottom?: [number, number];
+  top?: [number, number];
   door?: boolean;
 }
 

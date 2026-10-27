@@ -93,7 +93,14 @@ export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, peo
     }
   }
   for (const p of people) {
-    if (p.level === held.level && !reachable(p.x, p.y)) return { ok: false, reason: 'Someone would be trapped behind it.' };
+    if (p.level !== held.level || reachable(p.x, p.y)) continue;
+    // Someone who could not get around even without this piece (standing somewhere odd, mid-activity) is not trapped
+    // by it, and must not make every spot in the house impossible.
+    const without = buildWorld(objs.filter((o) => o !== held));
+    const reachWithout = reachableSet(without.grids[held.level], anchor);
+    const [i, j] = cellOf(p.x, p.y);
+    const wasFree = !!without.grids[held.level][i]?.[j] && reachWithout.has(i * NY + j);
+    if (wasFree) return { ok: false, reason: 'Someone would be trapped behind it.' };
   }
   return { ok: true };
 }

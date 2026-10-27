@@ -17,6 +17,8 @@ export type BridgeMessageType =
   | 'velvet:sample'
   | 'velvet:sampleCancel'
   | 'velvet:sampleResult'
+  | 'velvet:designs'
+  | 'velvet:designsResult'
   | 'velvet:avatarLook';
 
 export interface BridgeMessage {
@@ -147,6 +149,51 @@ export interface SampleResultMessage extends BridgeMessage {
   text?: string;
   // 'unavailable' | 'rate_limited' | 'refused' | 'cancelled'
   error?: string;
+}
+
+// Sharing garment designs (see supabase/migrations/20261029100000_velvet_designs.sql). The game asks the host to
+// publish, list, report, delete or review; the host runs it with the player's account and answers with the same seq.
+export const DESIGN_OPS = ['caps', 'friends', 'gallery', 'mine', 'publish', 'delete', 'report', 'pending', 'review'] as const;
+export type DesignOp = typeof DESIGN_OPS[number];
+
+export interface DesignsRequestMessage extends BridgeMessage {
+  type: 'velvet:designs';
+  game: 'velvet-house';
+  seq: number;
+  op: DesignOp;
+  args?: Record<string, string | number | boolean>;
+}
+
+export interface DesignsResultMessage extends BridgeMessage {
+  type: 'velvet:designsResult';
+  seq: number;
+  ok: boolean;
+  data?: unknown;
+  // 'unavailable' | 'blocked' | 'slow_down' | 'too_many' | 'bad_request' | 'banned' | 'not_allowed'
+  error?: string;
+}
+
+const DESIGN_ARG_LIMITS: Record<string, number> = { name: 24, code: 700, visibility: 10, id: 40, reason: 200 };
+
+export function isDesignsRequestMessage(data: unknown): data is DesignsRequestMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  if (m.type !== 'velvet:designs' || typeof m.seq !== 'number' || typeof m.op !== 'string') return false;
+  if (!(DESIGN_OPS as readonly string[]).includes(m.op)) return false;
+  if (m.args === undefined) return true;
+  if (!m.args || typeof m.args !== 'object' || Array.isArray(m.args)) return false;
+  return Object.entries(m.args as Record<string, unknown>).every(([k, v]) => {
+    if (typeof v === 'boolean') return k === 'approve';
+    if (typeof v === 'number') return k === 'offset' && Number.isFinite(v) && v >= 0 && v < 10000;
+    return typeof v === 'string' && k in DESIGN_ARG_LIMITS && v.length <= DESIGN_ARG_LIMITS[k];
+  });
+}
+
+export function isDesignsResultMessage(data: unknown): data is DesignsResultMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:designsResult' && typeof m.seq === 'number' && typeof m.ok === 'boolean'
+    && (m.error === undefined || typeof m.error === 'string');
 }
 
 const MAX_SAMPLE_LINES = 40;
@@ -299,6 +346,8 @@ const FIELD_WHITELISTS: Record<string, string[]> = {
   'velvet:sample': ['type', 'game', 'seq', 'input'],
   'velvet:sampleCancel': ['type', 'game', 'seq'],
   'velvet:sampleResult': ['type', 'seq', 'text', 'error'],
+  'velvet:designs': ['type', 'game', 'seq', 'op', 'args'],
+  'velvet:designsResult': ['type', 'seq', 'ok', 'data', 'error'],
   'velvet:avatarLook': ['type', 'who', 'sprites', 'body'],
 };
 

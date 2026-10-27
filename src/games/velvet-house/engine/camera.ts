@@ -1,0 +1,136 @@
+import type { AgentId } from '../state/agents';
+import { qualityManager } from '../engine/qualityTier';
+import { VIEW_W, VIEW_H } from '../kernel/config';
+import type { Game } from '../kernel/game';
+import { SOCIAL_ACTS } from '../view/social';
+
+export function createCamera(g: Game): Partial<Game> {
+  const { view, people, canvas, ctx, art } = g;
+  const fit = (): void => {
+    const ratio = qualityManager.resolveDpr(window.devicePixelRatio || 1);
+    const box = canvas.getBoundingClientRect();
+    const isNarrow = box.width < 560;
+    let w: number, h: number;
+    if (isNarrow) {
+      h = Math.max(1, Math.round(box.height * ratio));
+      w = Math.max(1, Math.round((h * VIEW_W) / VIEW_H));
+    } else {
+      w = Math.max(1, Math.round(box.width * ratio));
+      h = Math.max(1, Math.round((w * VIEW_H) / VIEW_W));
+    }
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    basePan = isNarrow ? -((w - Math.round(box.width * ratio)) / 2) * (w / VIEW_W) / w : 0;
+    applyCamera(0);
+  };
+
+  // Camera: zoom and focus on top of the fitted view. Following someone frames
+  // them in a close-up (a two-shot when they're with the other person);
+  // otherwise scroll or pinch to zoom, drag to pan, double-tap to reset.
+  let basePan = 0;
+  const cam = { z: 1, fx: VIEW_W / 2, fy: VIEW_H / 2, tz: 1, tfx: VIEW_W / 2, tfy: VIEW_H / 2 };
+  const CAM_MAX = 2.6;
+  // A drag that ends while still moving glides on and slows down (view units per second).
+  const fling = { vx: 0, vy: 0 };
+  function flingCamera(vx: number, vy: number): void {
+    const speed = Math.hypot(vx, vy);
+    if (speed < 20) return;
+    const cap = Math.min(1, 900 / speed);
+    fling.vx = vx * cap; fling.vy = vy * cap;
+  }
+  function clampFocus(z: number, fx: number, fy: number): [number, number] {
+    const hw = VIEW_W / (2 * z), hh = VIEW_H / (2 * z);
+    return [Math.max(hw, Math.min(VIEW_W - hw, fx)), Math.max(hh, Math.min(VIEW_H - hh, fy))];
+  }
+  // A short shake for big moments (none when the player asks for reduced motion).
+  let shakeLeft = 0, shakeAmp = 0;
+  const SHAKE_TIME = 0.45;
+  const reducedMotion = (): boolean => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  function shake(amount = 1): void {
+    if (reducedMotion()) return;
+    shakeAmp = Math.max(shakeAmp, amount); shakeLeft = SHAKE_TIME;
+  }
+  // A held shot: a close-up on someone (trying something on) or a pull back to the whole house (a room finished).
+  // When it ends the camera returns to where the player had it.
+  let beat: { until: number; kind: 'closeup' | 'reveal'; id: AgentId; back: { tz: number; tfx: number; tfy: number } } | null = null;
+  function cameraBeat(kind: 'closeup' | 'reveal', id: AgentId = 'jordan', ms = 2400): void {
+    if (reducedMotion() || view.follow) return;
+    const back = beat ? beat.back : { tz: cam.tz, tfx: cam.tfx, tfy: cam.tfy };
+    beat = { until: performance.now() + ms, kind, id, back };
+  }
+  function runBeat(): boolean {
+    if (!beat) return false;
+    if (performance.now() > beat.until || view.follow) {
+      if (!view.follow) { cam.tz = beat.back.tz; cam.tfx = beat.back.tfx; cam.tfy = beat.back.tfy; }
+      beat = null;
+      return false;
+    }
+    const p = people.find((q) => q.id === beat!.id);
+    if (beat.kind === 'closeup' && p && p.level === view.level) {
+      const [ax, ay] = art.project(p.x, p.y, 0.9);
+      cam.tz = 2.3; cam.tfx = ax; cam.tfy = ay;
+    } else { cam.tz = 1; cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
+    return true;
+  }
+  function cameraShot(): void {
+    if (runBeat()) return;
+    const followed = view.follow && people.find((p) => p.id === view.follow);
+    if (!followed || followed.level !== view.level) return;
+    const other = people.find((p) => p.id !== followed.id);
+    const together = other && other.level === followed.level && followed.task && SOCIAL_ACTS.has(followed.task.act);
+    const [ax, ay] = art.project(followed.x, followed.y, 0.7);
+    if (together && other) {
+      const [bx, by] = art.project(other.x, other.y, 0.7);
+      cam.tz = 1.7; cam.tfx = (ax + bx) / 2; cam.tfy = (ay + by) / 2;
+    } else {
+      cam.tz = 2.1; cam.tfx = ax; cam.tfy = ay;
+    }
+  }
+  function applyCamera(frameDt: number): void {
+    cameraShot();
+    if (frameDt > 0 && (fling.vx || fling.vy)) {
+      if (view.follow) fling.vx = fling.vy = 0;
+      else {
+        cam.tfx += fling.vx * frameDt; cam.tfy += fling.vy * frameDt;
+        const decay = Math.exp(-frameDt * 4.5);
+        fling.vx *= decay; fling.vy *= decay;
+        if (Math.hypot(fling.vx, fling.vy) < 4) fling.vx = fling.vy = 0;
+      }
+    }
+    const k = frameDt > 0 ? Math.min(1, frameDt * 6) : 1;
+    cam.z += (cam.tz - cam.z) * k;
+    [cam.tfx, cam.tfy] = clampFocus(cam.tz, cam.tfx, cam.tfy);
+    cam.fx += (cam.tfx - cam.fx) * k; cam.fy += (cam.tfy - cam.fy) * k;
+    [cam.fx, cam.fy] = clampFocus(cam.z, cam.fx, cam.fy);
+    const w = canvas.width, h = canvas.height, sx = (w / VIEW_W) * cam.z, sy = (h / VIEW_H) * cam.z;
+    let ox = 0, oy = 0;
+    if (shakeLeft > 0) {
+      if (frameDt > 0) shakeLeft -= frameDt;
+      if (shakeLeft <= 0) shakeAmp = 0;
+      else {
+        const k2 = (shakeLeft / SHAKE_TIME) * shakeAmp * (w / VIEW_W), now = performance.now();
+        ox = Math.sin(now * 0.09) * 2.4 * k2; oy = Math.cos(now * 0.11) * 1.8 * k2;
+      }
+    }
+    ctx!.setTransform(sx, 0, 0, sy, w / 2 - sx * cam.fx + basePan + ox, h / 2 - sy * cam.fy + oy);
+  }
+  /** A pointer position in game view coordinates, whatever the zoom. */
+  function toView(clientX: number, clientY: number): [number, number] {
+    const rect = canvas.getBoundingClientRect();
+    const px = ((clientX - rect.left) / rect.width) * canvas.width, py = ((clientY - rect.top) / rect.height) * canvas.height;
+    const p = ctx!.getTransform().inverse().transformPoint(new DOMPoint(px, py));
+    return [p.x, p.y];
+  }
+  function zoomAt(clientX: number, clientY: number, factor: number): void {
+    if (view.follow) g.toggleFollow(view.follow); // taking the camera back from a follow
+    const [px, py] = toView(clientX, clientY);
+    const nz = Math.max(1, Math.min(CAM_MAX, cam.tz * factor));
+    // Keep the spot under the finger or cursor where it is.
+    cam.tfx = px - (px - cam.tfx) * (cam.tz / nz);
+    cam.tfy = py - (py - cam.tfy) * (cam.tz / nz);
+    cam.tz = nz;
+  }
+  function resetCamera(): void { fling.vx = fling.vy = 0; cam.tz = 1; cam.tfx = VIEW_W / 2; cam.tfy = VIEW_H / 2; }
+  new ResizeObserver(fit).observe(canvas);
+  fit();
+  return { cam, fit, applyCamera, toView, zoomAt, resetCamera, flingCamera, shake, cameraBeat };
+}

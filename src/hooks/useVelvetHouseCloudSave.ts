@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   loadVelvetHouseSaveCopies, saveVelvetHouseProgress, saveVelvetHouseHistory, maybeSnapshotHistory, compareSaveProgress,
 } from '../services/velvetHouseDatabase';
-import { migrateSave, repairFromV1 } from '../games/velvet-house/state/saveMigration';
+import { migrateSave, repairFromV1, isCurrentContent } from '../games/velvet-house/state/saveMigration';
 
 // The game keeps its save in this browser (it has no account of its own). This puts a copy of it in the
 // player's account, and brings it back on a new device: before the game starts, the newer of the cloud save and
@@ -72,14 +72,20 @@ export function useVelvetHouseCloudSave(companionId: string | null, settled: boo
         if (localStorage.getItem(restartKeyFor(companionId)) !== '1') {
           const copies = await loadVelvetHouseSaveCopies(companionId);
           const cloudRaw = copies ? (copies.v1 && copies.v2 ? (compareSaveProgress(copies.v1, copies.v2) > 0 ? copies.v1 : copies.v2) : copies.v2 ?? copies.v1) : null;
-          const cloud = cloudRaw ? migrateSave(cloudRaw) : null;
-          const local = migrateSave(readLocal(key));
+          const cloudAny = cloudRaw ? migrateSave(cloudRaw) : null;
+          const localAny = migrateSave(readLocal(key));
+          // A house from before the story (Dez, the move-in) is not carried over: everyone starts again. The old
+          // cloud copy is kept in history when the new game's first save replaces it.
+          const cloud = isCurrentContent(cloudAny) ? cloudAny : null;
+          const local = isCurrentContent(localAny) ? localAny : null;
+          if (localAny && !local) localStorage.removeItem(key);
+          if ((cloudRaw || copies?.v1) && !cloud) localStorage.setItem(restartKeyFor(companionId), '1');
           // The newer one wins, so progress made offline is not thrown away by an older cloud copy.
           let chosen = cloud && local ? (compareSaveProgress(local as never, cloud as never) > 0 ? local : cloud) : cloud ?? local;
           if (chosen) {
             const usedCloud = chosen === cloud;
             // Anything the old save bug destroyed comes back from the cloud's v1 copy.
-            chosen = repairFromV1(chosen, copies?.v1 ?? null);
+            chosen = isCurrentContent(copies?.v1 as never) ? repairFromV1(chosen, copies?.v1 ?? null) : chosen;
             // Replacing a different local save: keep it in history.
             if (usedCloud && local) { try { await saveVelvetHouseHistory(companionId, local as never); } catch { /* non-fatal */ } }
             localStorage.setItem(key, JSON.stringify(chosen));

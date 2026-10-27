@@ -356,7 +356,7 @@ function useActiveGoals(): CoachingGoal[] {
   return goals;
 }
 
-function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSubtle }: { pathname: string; lobby: LobbyData; onNavigate: (path: string) => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
+function SidebarContent({ pathname, lobby, onNavigate, onSelect, inkColor, inkMuted, inkSubtle }: { pathname: string; lobby: LobbyData; onNavigate: (path: string) => void; onSelect: () => void; inkColor: string; inkMuted: string; inkSubtle: string }) {
   // Your coaches and companions, with their faces.
   const coaches = lobby.companions.filter(companion => isHelper(companion.relationship_type));
   const companions = lobby.companions.filter(companion => !isHelper(companion.relationship_type));
@@ -381,7 +381,9 @@ function SidebarContent({ pathname, lobby, onNavigate, inkColor, inkMuted, inkSu
     { label: 'Velvet Rope', path: '/real-or-not', tone: '#f472b6', icon: <Zap className="h-3.5 w-3.5" /> },
   ];
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    // Picking anything in the toolbar puts it away: a page, a person, a game, your avatar, setup. (Handlers on the
+    // button run first; this only closes the toolbar after.)
+    <div className="flex min-h-0 flex-1 flex-col" onClick={(e) => { if ((e.target as HTMLElement).closest('button, a')) onSelect(); }}>
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         <div className="flex items-center justify-between px-2 pb-1 pt-1">
           <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: inkSubtle }}>Navigate</p>
@@ -463,7 +465,7 @@ function WorkspaceNavigation({ open, onMinimize, lobby, wallpaperStyle, wallpape
     )}
     <div className="relative z-10 flex h-full flex-col bg-[rgba(12,10,30,0.6)]">
       <div className="flex items-center justify-end px-3"><button type="button" onClick={onMinimize} className="rounded-lg p-2 transition-colors hover:bg-white/8" style={{ color: inkMuted }} aria-label="Hide navigation" title="Hide navigation"><ChevronLeft className="h-4 w-4" /></button></div>
-      <SidebarContent pathname={location.pathname} lobby={lobby} onNavigate={navigate} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
+      <SidebarContent pathname={location.pathname} lobby={lobby} onNavigate={navigate} onSelect={onMinimize} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
     </div>
   </aside>;
 }
@@ -496,7 +498,7 @@ function MobileNavDrawer({ open, onClose, lobby, wallpaperStyle, wallpaperClass,
           <button type="button" onClick={() => { navigate('/lobby'); onClose(); }} className="flex items-center gap-2 rounded-lg transition-colors hover:bg-white/8" title="Velvet home" aria-label="Velvet home"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/15 text-rose-300"><Sparkles className="h-4 w-4" /></span><span className="text-sm font-semibold" style={{ color: inkColor }}>Velvet</span></button>
           <button type="button" onClick={onClose} className="rounded-lg p-2 transition-colors hover:bg-white/8" style={{ color: inkMuted }} aria-label="Close navigation"><ChevronLeft className="h-4 w-4" /></button>
         </div>
-        <div className="mt-4 flex min-h-0 flex-1 flex-col"><SidebarContent pathname={location.pathname} lobby={lobby} onNavigate={(path) => { navigate(path); onClose(); }} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} /></div>
+        <div className="mt-4 flex min-h-0 flex-1 flex-col"><SidebarContent pathname={location.pathname} lobby={lobby} onNavigate={(path) => { navigate(path); onClose(); }} onSelect={onClose} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} /></div>
       </div>
       </div>
     </div>

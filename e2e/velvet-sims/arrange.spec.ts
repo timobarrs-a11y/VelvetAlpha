@@ -58,7 +58,8 @@ test('build the attic, carry the desk up, and it is still there after a reload',
   await game.locator('[data-tab=Upgrades]').click();
   await game.locator('[data-buy=upgrade-attic]').click();
   await expect(game.locator('[data-level="4"]')).toBeVisible();
-  await game.locator('.vh-drawer-close').click();
+  // The purchase puts the shop away by itself.
+  await expect(game.locator('.vh-drawer')).toBeHidden();
   await game.locator('.vh-dock [data-open=arrange]').click();
   await game.locator('[data-arr-pick=desk]').click();
   await game.locator('[data-arr-floor="4"]').click();

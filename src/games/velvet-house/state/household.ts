@@ -15,6 +15,8 @@ export interface ParcelState {
   kind: 'groceries' | 'takeout';
   servings: number;
   fresh: boolean;
+  /** False while it is still in someone's arms on the way in; unset means it is on the doorstep. */
+  ready?: boolean;
 }
 
 export interface DeliveryState {

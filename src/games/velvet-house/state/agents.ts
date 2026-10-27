@@ -1,3 +1,4 @@
+import type { Garment } from './garment';
 import type { HeadImages } from './headSprites';
 import type { BodyImages } from './bodySprites';
 import { TYPES, blocksOf, isRug, isWall, type ObjectInstance } from './objects';
@@ -9,7 +10,8 @@ import type { CharacterNeeds } from './types';
 import type { HouseholdState } from './household';
 import { consumeMeal, washDishes, scrubDirt, worstDirt } from './household';
 
-export type AgentId = 'jordan' | 'maya';
+/** 'jordan' and 'maya' live in the house; any other id is a visitor a script brings in (Dez, the movers). */
+export type AgentId = string;
 
 export interface Slot {
   id: string;
@@ -43,6 +45,9 @@ export interface AgentLook {
   // The cut of the pants ('jeans', 'cheer_skirt', ...) and their trim; plain pants when unset.
   bottomStyle?: string;
   bottomAccent?: string;
+  // A designed garment worn on the body or legs (state/garment.ts); it is drawn over `top` and `bottom`, which hold its base colour.
+  topGarment?: Garment;
+  bottomGarment?: Garment;
   // The person's real avatar head, when the host sent one. Never saved.
   heads?: HeadImages;
   // The person's real avatar hands, when the host sent them. Never saved.
@@ -51,6 +56,14 @@ export interface AgentLook {
 
 export interface Agent {
   id: AgentId;
+  /** 'npc': a visitor a script spawned. Needs don't tick and free will never picks their next move. */
+  kind?: 'household' | 'npc';
+  /** True while a script owns them: free will and idle picking are skipped, and they keep moving while the clock is paused. */
+  scripted?: boolean;
+  /** What they carry in their arms (a prop the art draws): 'pbox', 'groceries', 'parcel'. */
+  carrying?: string;
+  /** A line shown over their head for a moment (a bark), with the time it was said. */
+  bubble?: { text: string; at: number };
   name: string;
   level: number;
   x: number;
@@ -202,6 +215,31 @@ export function buildWorld(objs: ObjectInstance[]): HouseWorld {
     return buildGrid(blocks, WX, WY);
   });
   return { slots: buildSlots(objs), grids };
+}
+
+/** A visitor: spawned by a script, no needs, drawn like anyone else. */
+export function createNpc(id: string, name: string, look: AgentLook, at: { level: number; x: number; y: number }): Agent {
+  return {
+    id, kind: 'npc', scripted: true, name, level: at.level, x: at.x, y: at.y, z: 0, face: [0, 1],
+    needs: { energy: 100, food: 100, hygiene: 100, fun: 100, comfort: 100, social: 100 },
+    task: null, idle: 0, onStairs: false, lastChain: null, look,
+  };
+}
+
+/**
+ * Walks to a place with nothing to do at the end (scripts, a visitor arriving). The walk is a task like any other, so
+ * stairs, doors and turning on the spot all work; it is finished when `ch.task` is null again.
+ */
+export function startGoto(world: HouseWorld, ch: Agent, to: { level: number; x: number; y: number }): boolean {
+  const route = routeTo(world, ch, to.level, to.x, to.y);
+  ch.task = { act: 'goto', slot: null, phase: 'walk', route, time: 0, dur: 0, next: [] };
+  return true;
+}
+
+/** Puts someone at a spot at once (setting a scene up). */
+export function placeAgent(ch: Agent, at: { level: number; x: number; y: number }, face?: [number, number]): void {
+  ch.level = at.level; ch.x = at.x; ch.y = at.y; ch.z = 0; ch.onStairs = false; ch.task = null; ch.turning = false;
+  if (face) ch.face = face;
 }
 
 export function createAgent(id: AgentId, name: string, needs: Partial<CharacterNeeds> | undefined, look: AgentLook): Agent {
@@ -426,13 +464,15 @@ export function tickAgent(
   }
   const t = ch.task;
   const doingAct = t && t.phase === 'do' ? ACTIVITIES[t.act] : null;
-  ch.needs = tickNeeds(ch.needs, {
+  if (ch.kind !== 'npc') ch.needs = tickNeeds(ch.needs, {
     away: false, asleep: isAsleep(ch), fitness: 0, starving: ch.needs.food < 15, messLevel: 0, hasBed: true,
     activity: doingAct ? { gives: doingAct.gives, rate: doingAct.rate, dur: doingAct.dur } : null,
     activityName: t?.act ?? null, foodScale: 1, coffeeBoost: 1, hasBigTv: false, hasBookshelf: false, hasRecords: false,
   }, gameMin).needs;
 
   if (!t) {
+    // Someone a script is directing waits for the next instruction instead of choosing something to do.
+    if (ch.scripted) return;
     ch.idle -= dt * walkMul;
     if (ch.idle > 0) return;
     const chain = chooseChain(world, ch, other, hourF, rng, sleep);

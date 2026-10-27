@@ -1,3 +1,5 @@
+import { sameCloth, validateGarment, type Garment } from '../state/garment';
+import { createGarmentPreview } from './garmentPreview';
 /**
  * Drawer UI — the sidebar/bottom-sheet with pages: Shop, Goals, Do, Partner, You, Home, Log.
  * Pure DOM manipulation, called from main.ts.
@@ -11,7 +13,7 @@ import { phoneHtml, phoneStructure, patchPhone, animateMoney, type PhoneTab, typ
 import { clockText, season, weekday, DAYS } from '../state/time';
 import type { OwnedCloth, WardrobePersona } from '../state/clothing';
 
-export type DrawerPage = 'shop' | 'arrange' | 'goals' | 'do' | 'phone' | 'partner' | 'you' | 'home' | 'log' | '';
+export type DrawerPage = 'shop' | 'arrange' | 'goals' | 'do' | 'phone' | 'partner' | 'you' | 'studio' | 'home' | 'log' | '';
 
 export interface DrawerCallbacks {
   onClose: () => void;
@@ -123,7 +125,7 @@ export interface DrawerState {
   mayaStatus: string;
   closet: OwnedCloth[];
   personas: WardrobePersona[];
-  wearing: { top: string; topStyle: string; bottom: string; bottomStyle?: string; hat?: string };
+  wearing: { top: string; topStyle: string; bottom: string; bottomStyle?: string; hat?: string; topGarment?: Garment; bottomGarment?: Garment };
   salon: SalonItem[];
   phone?: PhoneView;
 }
@@ -141,6 +143,7 @@ export const DOCK_TABS: Record<string, { color: string; label?: string; icon: st
   do: { color: '#F2805C', label: 'Orders', icon: svg('<rect x="5.5" y="4" width="13" height="17" rx="2.5"/><path d="M9 3.5h6v3H9zM9 11h6M9 15h4"/>') },
   partner: { color: '#EC5F90', icon: svg('<path d="M12 20.5s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7.6a4.2 4.2 0 0 1 7.5 2.6c0 5.7-7.5 10.3-7.5 10.3z"/>') },
   you: { color: '#5FA2F2', icon: svg('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.2c1.2 1.8 5.8 1.8 7 0M9 9.5h.01M15 9.5h.01"/>') },
+  studio: { color: '#E36CC1', icon: svg('<path d="M4 20 14 10M14 10l-2-5 4-1 3 3-1 4zM6.5 17.5l1.8 1.8"/><circle cx="6" cy="6" r="2.2"/><path d="M7.6 7.6 12 12"/>') },
   home: { color: '#DDA663', icon: svg('<path d="M3.5 11 12 4l8.5 7M5.5 9.5V20h13V9.5M10 20v-5h4v5"/>') },
   log: { color: '#A2AABE', label: 'Today', icon: svg('<rect x="4" y="5" width="16" height="16" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/>') },
 };
@@ -161,6 +164,7 @@ const PAGE_TITLES: Record<string, string> = {
   phone: 'Phone',
   partner: 'Partner',
   you: 'You',
+  studio: 'Design Studio',
   home: 'Household',
   log: 'Today',
 };
@@ -189,6 +193,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       <section data-page="phone"></section>
       <section data-page="partner"></section>
       <section data-page="you"></section>
+      <section data-page="studio"></section>
       <section data-page="home"></section>
       <section data-page="log"></section>
     </div>`;
@@ -196,7 +201,7 @@ export function createDrawer(cb: DrawerCallbacks): {
   const dock = document.createElement('nav');
   dock.className = 'vh-dock';
   // The dock is tight on a phone, so the long page titles get a short label.
-  dock.innerHTML = ['shop', 'arrange', 'goals', 'do', 'phone', 'partner', 'you', 'home', 'log']
+  dock.innerHTML = ['shop', 'arrange', 'goals', 'do', 'phone', 'partner', 'you', 'studio', 'home', 'log']
     .map(pg => `<button data-open="${pg}" aria-pressed="false" style="--tab:${DOCK_TABS[pg].color}">${dockTabHtml(pg, DOCK_TABS[pg].label ?? PAGE_TITLES[pg])}</button>`)
     .join('');
 
@@ -502,13 +507,16 @@ export function createDrawer(cb: DrawerCallbacks): {
     const sec = el.querySelector('[data-page="you"]')!;
     const w = state.wearing, same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
     const isWorn = (c: OwnedCloth): boolean =>
-      c.slot === 'top' ? c.style === w.topStyle && same(c.col, w.top)
+      c.recipe ? (c.slot === 'top' ? !!w.topGarment && sameCloth(c.recipe, w.topGarment) : !!w.bottomGarment && sameCloth(c.recipe, w.bottomGarment))
+      : c.slot === 'top' ? c.style === w.topStyle && same(c.col, w.top)
       : c.slot === 'bottom' ? c.style === (w.bottomStyle || 'pants') && same(c.col, w.bottom)
       : c.slot === 'hat' ? c.style === w.hat : false;
     const item = (c: OwnedCloth) =>
       `<button class="vh-wardrobe-item ${isWorn(c) ? 'vh-worn' : ''}"
         data-wear="${c.id}" data-col="${c.col}" title="Wear ${c.name}">
-        <canvas class="vh-cloth-preview" width="36" height="36" data-col="${c.col}" data-style="${c.style}" data-slot="${c.slot}" data-accent="${c.accent ?? ''}"></canvas>
+        ${c.recipe
+          ? `<canvas class="vh-cloth-preview vh-cloth-recipe" width="36" height="48" data-recipe="${c.id}"></canvas>`
+          : `<canvas class="vh-cloth-preview" width="36" height="36" data-col="${c.col}" data-style="${c.style}" data-slot="${c.slot}" data-accent="${c.accent ?? ''}"></canvas>`}
         <span>${c.name}</span>
       </button>`;
     // Shirts, pants and hats each get their own list, so any shirt can go with any pants.
@@ -544,7 +552,14 @@ export function createDrawer(cb: DrawerCallbacks): {
     youWardrobeHtml = wardrobeHtml;
     const box = sec.querySelector('[data-you-wardrobe]')!;
     box.innerHTML = wardrobeHtml;
-    box.querySelectorAll<HTMLCanvasElement>('.vh-cloth-preview').forEach(cv => drawSwatch(cv));
+    box.querySelectorAll<HTMLCanvasElement>('.vh-cloth-preview:not(.vh-cloth-recipe)').forEach(cv => drawSwatch(cv));
+    box.querySelectorAll<HTMLCanvasElement>('.vh-cloth-recipe').forEach(cv => {
+      const piece = state.closet.find(c => c.id === cv.dataset.recipe);
+      if (!piece?.recipe) return;
+      const plain = (slot: 'top' | 'bottom', base: string) => validateGarment({ slot, cut: slot === 'top' ? 'tee' : 'straight', fabric: 'cotton', base, name: 'x' });
+      const top = piece.slot === 'top' ? piece.recipe : plain('top', state.wearing.top), bottom = piece.slot === 'bottom' ? piece.recipe : plain('bottom', state.wearing.bottom);
+      createGarmentPreview(cv).draw(top, bottom, 0);
+    });
     box.querySelectorAll('[data-wear]').forEach(b => {
       b.addEventListener('click', () => {
         const cloth = state.closet.find(c => c.id === (b as HTMLElement).dataset.wear && c.col === (b as HTMLElement).dataset.col);
@@ -595,7 +610,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       <div class="vh-home-row"><span>Money</span><strong>$${state.money}</strong></div>
       <div class="vh-home-row"><span>Fridge</span><strong>${sv} meals</strong></div>
       <div class="vh-home-row"><span>Dishes</span><strong>${state.dishes}</strong></div>
-      <div class="vh-home-row"><span>Laundry</span><strong>${state.laundryPile}/6</strong></div>
+      <div class="vh-home-row"><span>Laundry</span><strong>${Math.floor(state.laundryPile)}/6</strong></div>
       <div class="vh-home-row"><span>Power</span><strong>${state.power ? 'On' : 'OFF'}</strong></div>
       ${state.phone ? `<div class="vh-home-row"><span>Water</span><strong>${state.phone.services.water ? 'On' : 'OFF'}</strong></div>
       <div class="vh-home-row"><span>Internet</span><strong>${state.phone.services.internet ? 'On' : 'OFF'}</strong></div>` : ''}

@@ -5,6 +5,7 @@
 import { pronounSwap } from './companion';
 import { styleWords, type StyleProfile } from './taste';
 import { season, clockText, weekday, DAYS } from './time';
+import { memoryBrief } from './memory';
 
 export interface ChatTurn {
   role: 'user' | 'assistant';
@@ -53,10 +54,8 @@ export interface PersonaContext {
   pastMem: string[];
 }
 
-export const CORE_CAP = 24;
-export const RECENT_CAP = 30;
-export const PAST_CAP = 8;
-export const MEM_BUDGET = 8000;
+// The memory tiers live in ./memory; these are re-exported for the code that imported them from here.
+export { CORE_CAP, RECENT_CAP, PAST_CAP, MEM_BUDGET, remember, memoryBrief } from './memory';
 export const MAX_TURNS = 16;
 
 export type SampleFn = (input: string[], opts?: { modelTier?: string; cache?: boolean; signal?: AbortSignal; onText?: (chunk: string) => void }) => Promise<string>;
@@ -79,16 +78,8 @@ export function persona(ctx: PersonaContext): string {
   p += `${partnerName} is ${ctx.mayaStatus} (${ctx.mayaWhere}). `;
   if (ctx.recentLog.length) p += `Recent events: ${ctx.recentLog.slice(-5).join('; ')}. `;
 
-  p += `\n\nMemory (never forget these):\n${ctx.coreMem.map(m => `- ${m}`).join('\n')}`;
-  const recentBudget = MEM_BUDGET - ctx.coreMem.join('').length;
-  const recent = ctx.memories.filter(() => true).slice(-RECENT_CAP);
-  const recentText = recent.join('\n');
-  if (recentText.length < recentBudget) {
-    p += `\n\nRecent memories:\n${recentText}`;
-  }
-  if (ctx.pastMem.length) {
-    p += `\n\nOlder summaries:\n${ctx.pastMem.join('\n')}`;
-  }
+  const brief = memoryBrief({ coreMem: ctx.coreMem, memories: ctx.memories, pastMem: ctx.pastMem });
+  if (brief) p += `\n\n${brief}`;
 
   p += `\n\nReply rules:`;
   p += ` 1) Stay in character. 2) Keep it short (1-3 sentences unless asked for more).`;
@@ -128,45 +119,6 @@ export function parseTag(full: string): { text: string; tag: MoodTag | null } {
     pick: m[6].trim().toLowerCase(),
   };
   return { text, tag };
-}
-
-/** Adds a memory to the appropriate tier and triggers compaction. */
-export function remember(
-  text: string,
-  important: boolean,
-  coreMem: string[],
-  memories: string[],
-): void {
-  if (important) {
-    coreMem.push(text);
-    if (coreMem.length > CORE_CAP) {
-      // condense oldest 8 into 1-3 sentences (simplified: keep newest)
-      coreMem.splice(0, coreMem.length - CORE_CAP);
-    }
-  } else {
-    memories.push(text);
-    if (memories.length > RECENT_CAP) {
-      // move oldest 12 to pastMem (simplified: drop)
-      memories.splice(0, memories.length - RECENT_CAP);
-    }
-  }
-}
-
-/** Builds the memory brief for the persona, capped to MEM_BUDGET chars. */
-export function memoryBrief(coreMem: string[], memories: string[], pastMem: string[]): string {
-  const core = coreMem.slice(-CORE_CAP);
-  let budget = MEM_BUDGET;
-  const coreText = core.map(m => `- ${m}`).join('\n');
-  budget -= coreText.length;
-  const recent = memories.slice(-RECENT_CAP);
-  let recentText = recent.map(m => `- ${m}`).join('\n');
-  if (recentText.length > budget) recentText = recentText.slice(0, budget);
-  budget -= recentText.length;
-  const pastText = pastMem.slice(-PAST_CAP).join('\n');
-  let result = coreText;
-  if (recentText) result += '\n' + recentText;
-  if (pastText && result.length + pastText.length < MEM_BUDGET) result += '\n' + pastText;
-  return result;
 }
 
 // What she says when the AI can't answer, in her own voice. `budget` is the daily allowance running out.

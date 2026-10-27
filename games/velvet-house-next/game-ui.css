@@ -33,6 +33,7 @@
 .vh-drawer[data-open="do"] [data-page="do"],
 .vh-drawer[data-open="partner"] [data-page="partner"],
 .vh-drawer[data-open="you"] [data-page="you"],
+.vh-drawer[data-open="studio"] [data-page="studio"],
 .vh-drawer[data-open="home"] [data-page="home"],
 .vh-drawer[data-open="log"] [data-page="log"] { display: block; }
 .vh-drawer[data-open="phone"] [data-page="phone"] { display: block; }
@@ -236,23 +237,28 @@
 
 /* Dialogue */
 .vh-dialogue {
+  /* The chat sits in a corner and lets taps through to the house, so Maya and the room stay in view. */
   position: absolute; inset: 0; z-index: 30;
-  display: flex; align-items: flex-end; justify-content: center;
-  background: rgba(0,0,0,.25);
-  padding: 20px;
+  display: flex; align-items: flex-end; justify-content: flex-start;
+  padding: 16px; pointer-events: none;
 }
 .vh-dialogue[hidden] { display: none; }
 /* The floor and speed controls sit where the chat opens; step them aside while it's up. */
-.vh-stage:has(.vh-dialogue:not([hidden])) .vh-controls { opacity: 0; pointer-events: none; }
+/* (the floor and speed controls now stay put: the chat no longer covers them) */
 .vh-controls { transition: opacity .2s ease; }
 .vh-dialogue-box {
   background: #FFFDF8;
   border-radius: 16px; padding: 20px 24px;
-  max-width: 560px; width: 100%;
+  max-width: 380px; width: 100%; position: relative; pointer-events: auto;
   box-shadow: 0 8px 32px rgba(0,0,0,.3);
   color: #241B25;
   font: 400 15px/1.5 Inter, system-ui, sans-serif;
 }
+.vh-dialogue-close {
+  position: absolute; top: 8px; right: 10px; width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: rgba(36,27,37,.08); color: #241B25; font: 400 20px/1 Inter, system-ui, sans-serif; cursor: pointer;
+}
+.vh-dialogue-close:hover { background: rgba(36,27,37,.16); }
 .vh-dialogue-name {
   font: 700 14px/1.2 Inter, system-ui, sans-serif;
   color: #8A2D54; margin-bottom: 8px;
@@ -274,6 +280,16 @@
 .vh-dialogue-input button:hover { background: #E8B547; }
 .vh-dialogue-input button:disabled { opacity: .5; cursor: default; }
 .vh-dialogue-hint { text-align: center; font-size: 12px; color: rgba(36,27,37,.4); margin-top: 4px; }
+
+/* On a phone the chat goes in the empty band above the house, under the clock chips. */
+@media (max-width: 560px) {
+  .vh-dialogue { align-items: flex-start; padding: 46px 8px 0; }
+  .vh-dialogue-box { max-width: none; padding: 10px 14px; max-height: 190px; overflow-y: auto; font-size: 14px; }
+  .vh-dialogue-input { margin-top: 6px; }
+  .vh-dialogue-input input { padding: 8px 12px; }
+  .vh-dialogue-input button { padding: 8px 16px; }
+  .vh-dialogue-hint { display: none; }
+}
 
 /* Tray */
 .vh-tray {
@@ -424,21 +440,151 @@
   .vh-dock button[aria-pressed="true"] { transform: translateY(-3px); }
   /* Floors and speed controls ride just above it. */
   .vh-controls { bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 8px) !important; }
-  /* Arrange: a short tray above the bar, so the house stays in view to drag around. */
+  /* Arrange: a compact panel in the empty band above the house (below the clock chips), so the whole house
+     stays in view to drag around, and the floor and rotate buttons keep their usual place. */
   .vh-drawer[data-open="arrange"] {
-    width: 100%; height: 216px; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)));
-    border-radius: 16px 16px 0 0;
+    top: 46px; bottom: auto; left: 8px; right: 8px; width: auto; height: auto; max-height: 168px;
+    border: 1px solid rgba(255,255,255,.1); border-radius: 14px;
   }
-  .vh-drawer[data-open="arrange"] .vh-drawer-head { padding: 6px 14px; }
-  .vh-drawer[data-open="arrange"] .vh-drawer-body { padding: 8px 10px; }
-  .vh-stage.vh-arranging .vh-tools { display: none; }
-  .vh-stage.vh-arranging .vh-controls { bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 216px + 8px) !important; }
-  .vh-arr { gap: 8px; }
-  .vh-arr-bar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px; }
+  .vh-drawer[data-open="arrange"] .vh-drawer-head { padding: 4px 12px; }
+  .vh-drawer[data-open="arrange"] .vh-drawer-head strong { font-size: 13px; }
+  .vh-drawer[data-open="arrange"] .vh-drawer-body { padding: 6px 8px; }
+  .vh-arr { gap: 4px; }
+  .vh-arr-bar { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px 10px; padding: 4px 10px; }
+  .vh-arr-bar button { padding: 6px 12px; }
+  .vh-arr-item { padding: 5px 8px; }
   .vh-arr-what { flex: 1 1 120px; }
   .vh-arr-list { flex-direction: row; gap: 14px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-  .vh-arr-group { flex: 0 0 auto; display: flex; flex-direction: column; }
-  .vh-arr-group .vh-order-floor { margin: 0 0 4px; }
+  .vh-arr-group { flex: 0 0 auto; display: flex; flex-direction: row; align-items: center; gap: 6px; }
+  .vh-arr-group .vh-order-floor { margin: 0; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 9px; }
   .vh-arr-items { flex-direction: row; }
   .vh-arr-item { width: auto; flex: 0 0 auto; white-space: nowrap; }
 }
+
+/* Design Studio */
+.vh-studio { display: flex; flex-direction: column; gap: 8px; }
+.vh-st-top {
+  display: flex; gap: 10px; align-items: flex-start;
+  /* The mannequin stays in view while the controls below scroll. */
+  position: sticky; top: -12px; z-index: 2; margin: -12px -12px 0; padding: 12px; background: #17151D;
+}
+.vh-st-preview { flex: 0 0 auto; width: 84px; height: 112px; border-radius: 12px; background: linear-gradient(180deg, #EFE7DA, #E2D7C6); }
+.vh-st-meta { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.vh-st-name, .vh-st-text, .vh-st-code {
+  width: 100%; box-sizing: border-box; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; padding: 8px 10px;
+  background: rgba(255,255,255,.06); color: #F2EEE8; font: 600 14px/1.3 Inter, system-ui, sans-serif; outline: none; resize: none;
+}
+.vh-st-text, .vh-st-code { font-weight: 400; font-size: 13px; }
+.vh-st-code { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; }
+.vh-st-name:focus, .vh-st-text:focus { border-color: var(--tab); }
+.vh-st-price { font-size: 12px; color: #B9B1BE; }
+.vh-st-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.vh-studio button { font: 600 12.5px/1.2 Inter, system-ui, sans-serif; cursor: pointer; }
+.vh-st-actions button, .vh-st-primary {
+  border: 0; border-radius: 10px; padding: 8px 12px; background: rgba(255,255,255,.12); color: #F2EEE8;
+}
+.vh-studio .vh-st-primary { background: var(--tab); color: #241B25; font-weight: 700; }
+.vh-studio button:disabled { opacity: .45; cursor: default; }
+.vh-st-tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.vh-st-tabs button { flex: 1; border: 0; background: transparent; color: #A9A1AE; padding: 8px 4px; border-bottom: 2px solid transparent; }
+.vh-st-tabs button[aria-selected="true"] { color: #fff; border-bottom-color: var(--tab); }
+.vh-st-msg { min-height: 16px; font-size: 12px; color: #E8C9E0; }
+.vh-st-pane h5 { margin: 10px 0 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #A9A1AE; }
+.vh-st-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+.vh-st-chip { border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: #E9E4EC; border-radius: 999px; padding: 6px 11px; }
+.vh-st-chip.vh-on { background: var(--tab); border-color: var(--tab); color: #241B25; }
+.vh-st-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.2); padding: 0; }
+.vh-st-swatch.vh-on { border-color: #fff; box-shadow: 0 0 0 2px var(--tab); }
+.vh-st-colour input { width: 34px; height: 30px; border: 0; padding: 0; background: none; cursor: pointer; }
+.vh-st-slider { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #B9B1BE; }
+.vh-st-slider span { width: 64px; }
+.vh-st-slider input { flex: 1; accent-color: var(--tab); }
+.vh-st-hint { font-size: 12px; color: #A9A1AE; margin: 0 0 8px; }
+.vh-st-boutique { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.vh-st-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border-radius: 12px; background: rgba(255,255,255,.06); text-align: center; font-size: 12px; }
+.vh-st-card canvas { width: 66px; height: 88px; border-radius: 8px; background: #EAE1D3; }
+.vh-st-rarity { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.1); }
+.vh-st-rarity[data-rarity="uncommon"] { background: #2f6f8f; }
+.vh-st-rarity[data-rarity="rare"] { background: #8a4fbf; }
+.vh-st-rarity[data-rarity="one-of-a-kind"] { background: #c9922a; color: #241B25; }
+.vh-st-cardrow { display: flex; gap: 4px; }
+.vh-st-cardrow button { border: 0; border-radius: 8px; padding: 6px 9px; background: rgba(255,255,255,.12); color: #F2EEE8; }
+.vh-st-cardrow button[data-buyit] { background: var(--tab); color: #241B25; }
+.vh-cloth-recipe { width: 36px; height: 48px; border-radius: 6px; background: #EAE1D3; }
+@media (max-width: 560px) {
+  .vh-drawer[data-open="studio"] { height: 74%; }
+}
+.vh-st-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #E9E4EC; margin: 4px 0; }
+.vh-st-outfit { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; margin-bottom: 6px; border-radius: 10px; background: rgba(255,255,255,.06); }
+.vh-st-outfit div:first-child { display: flex; flex-direction: column; min-width: 0; font-size: 12px; }
+.vh-st-outfit span { color: #A9A1AE; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vh-st-pixgrid { display: block; width: min(100%, 256px); aspect-ratio: 1; margin: 6px auto 10px; border-radius: 8px; image-rendering: pixelated; cursor: crosshair; }
+.vh-st-by { font-size: 11px; color: #A9A1AE; }
+
+/* Scripts: letterbox, the speaker's line, choices, cards */
+.vh-script { position: absolute; inset: 0; pointer-events: none; z-index: 28; }
+.vh-bar { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .35s ease; }
+.vh-bar-top { top: 0; } .vh-bar-bottom { bottom: 0; }
+.vh-stage[data-script="cutscene"] .vh-bar { height: 7%; }
+.vh-skip { position: absolute; right: 12px; bottom: calc(7% + 10px); pointer-events: auto; border: 0; border-radius: 999px; padding: 8px 16px; background: rgba(255,255,255,.16); color: #fff; font: 600 13px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+.vh-speech, .vh-choices, .vh-scard {
+  position: absolute; left: 16px; bottom: calc(7% + 14px); width: min(420px, calc(100% - 32px)); box-sizing: border-box;
+  background: #FFFDF8; color: #241B25; border-radius: 16px; padding: 14px 18px; box-shadow: 0 8px 32px rgba(0,0,0,.3);
+  font: 400 15px/1.45 Inter, system-ui, sans-serif; pointer-events: auto;
+}
+.vh-speech { cursor: pointer; min-height: 70px; }
+.vh-speech-name { font: 700 13px/1.2 Inter, system-ui, sans-serif; color: #8A2D54; margin-bottom: 4px; }
+.vh-speech-next { position: absolute; right: 14px; bottom: 8px; font-size: 11px; color: rgba(36,27,37,.45); animation: vh-bob 1s ease-in-out infinite; }
+@keyframes vh-bob { 50% { transform: translateY(3px); } }
+.vh-choices { display: flex; flex-direction: column; gap: 8px; background: transparent; box-shadow: none; padding: 0; }
+.vh-choices button { border: 0; border-radius: 12px; padding: 12px 16px; background: #FFFDF8; color: #241B25; font: 700 14px/1.2 Inter, system-ui, sans-serif; cursor: pointer; box-shadow: 0 4px 18px rgba(0,0,0,.28); text-align: left; }
+.vh-choices button:hover { background: #F6E6BF; }
+.vh-scard { bottom: auto; top: 54px; left: 50%; transform: translateX(-50%); background: rgba(23,21,29,.94); color: #F2EEE8; border: 1px solid rgba(255,255,255,.14); font-size: 13.5px; }
+.vh-scard strong { display: block; margin-bottom: 2px; color: #FFD666; }
+.vh-scard p { margin: 0; }
+.vh-scard button { margin-top: 10px; border: 0; border-radius: 10px; padding: 8px 14px; background: #E0A43A; color: #241B25; font: 700 13px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+/* While a script is running, only what it allows can be used. */
+.vh-stage[data-script="cutscene"] .vh-dock, .vh-stage[data-script="cutscene"] .vh-controls, .vh-stage[data-script="cutscene"] .vh-people,
+.vh-stage[data-script="guided"] .vh-dock, .vh-stage[data-script="guided"] .vh-controls, .vh-stage[data-script="guided"] .vh-people { pointer-events: none; opacity: .5; }
+.vh-stage[data-script] .vh-spot { pointer-events: auto !important; opacity: 1 !important; animation: vh-spot 1.2s ease-in-out infinite; position: relative; z-index: 3; }
+@keyframes vh-spot { 50% { box-shadow: 0 0 0 4px rgba(255,214,102,.75), 0 0 18px rgba(255,214,102,.6); } }
+.vh-stage[data-script="cutscene"] canvas.vh-canvas { pointer-events: none; }
+@media (max-width: 560px) {
+  .vh-speech, .vh-choices { bottom: auto; top: 46px; left: 8px; width: calc(100% - 16px); }
+  .vh-scard { top: auto; bottom: calc(var(--vh-dock-h, 68px) + 150px); width: calc(100% - 16px); }
+  .vh-skip { bottom: 196px; top: auto; right: 8px; }
+}
+
+/* The title screen: it sits over the living house, so the backdrop is only a soft vignette and the buttons are glass. */
+.vh-stage.vh-attract .vh-hud, .vh-stage.vh-attract .vh-controls, .vh-stage.vh-attract .vh-people, .vh-stage.vh-attract .vh-dock,
+.vh-stage.vh-attract .vh-log, .vh-stage.vh-attract .vh-town-sign, .vh-stage.vh-attract .vh-script, .vh-stage.vh-attract .vh-tray { display: none !important; }
+.vh-stage.vh-attract canvas.vh-canvas { pointer-events: none; }
+.vh-menu { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+  background: radial-gradient(90% 70% at 50% 45%, rgba(23,21,29,0) 0%, rgba(23,21,29,.35) 55%, rgba(14,12,20,.82) 100%), linear-gradient(180deg, rgba(14,12,20,.55) 0%, rgba(14,12,20,0) 30%, rgba(14,12,20,0) 55%, rgba(14,12,20,.7) 100%);
+  animation: vh-menu-in 1.1s ease both; transition: opacity .3s ease; }
+@keyframes vh-menu-in { from { opacity: 0; } to { opacity: 1; } }
+.vh-menu-out { opacity: 0; pointer-events: none; }
+.vh-menu-card { width: min(360px, 100%); display: flex; flex-direction: column; gap: 10px; text-align: center; color: #F2EEE8; font-family: Inter, system-ui, sans-serif; margin-top: 22vh; }
+.vh-menu-title { margin: 0; font: 800 clamp(44px, 11vw, 72px)/1 'Baloo 2', Inter, system-ui, sans-serif; color: #FFE3B3; letter-spacing: .5px;
+  text-shadow: 0 2px 0 rgba(120,70,20,.5), 0 6px 34px rgba(224,164,58,.55); animation: vh-menu-float 5s ease-in-out infinite; }
+@keyframes vh-menu-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.vh-menu-h { margin: 0; font: 700 26px/1.2 'Baloo 2', Inter, system-ui, sans-serif; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.vh-menu-sub { margin: 0 0 10px; font-size: 14px; line-height: 1.45; color: #E4DCEA; text-shadow: 0 1px 8px rgba(0,0,0,.7); }
+.vh-menu-btn { appearance: none; border: 1px solid rgba(255,255,255,.22); border-radius: 14px; padding: 14px 16px; min-height: 52px; background: rgba(23,21,29,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: #F8F4F0; font: 600 16px/1.2 Inter, system-ui, sans-serif; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-shadow: 0 6px 22px rgba(0,0,0,.35); transition: background .18s ease, transform .12s ease, border-color .18s ease; animation: vh-menu-rise .6s ease both; }
+.vh-menu-btn:nth-of-type(2) { animation-delay: .12s; } .vh-menu-btn:nth-of-type(3) { animation-delay: .24s; }
+@keyframes vh-menu-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.vh-menu-btn small { font-weight: 400; font-size: 12px; color: #E4DCEA; }
+.vh-menu-btn:hover { background: rgba(60,52,72,.68); border-color: rgba(255,255,255,.4); }
+.vh-menu-btn:active { transform: scale(.98); }
+.vh-menu-btn:focus-visible { outline: 2px solid #E0A43A; outline-offset: 2px; }
+.vh-menu-primary { background: rgba(224,164,58,.92); border-color: #F2C26A; color: #241B25; box-shadow: 0 6px 26px rgba(224,164,58,.4); }
+.vh-menu-primary small { color: #4a3a22; }
+.vh-menu-primary:hover { background: #EBB24C; }
+.vh-menu-danger { background: rgba(60,20,16,.55); border-color: #C2523F; color: #F7C6BD; }
+.vh-menu-row { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-bottom: 4px; }
+.vh-menu-seg { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(23,21,29,.5); backdrop-filter: blur(10px); }
+.vh-menu-seg button { appearance: none; border: 0; border-radius: 9px; padding: 9px 14px; min-height: 40px; background: transparent; color: #E9E4EC; font: 600 14px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+.vh-menu-seg button[aria-pressed="true"] { background: #F2EEE8; color: #241B25; }
+/* On a wide screen the menu keeps to the left, so the house and whoever the camera is on stay clear. */
+@media (min-width: 820px) { .vh-menu { justify-content: flex-start; padding-left: 8vw; } .vh-menu-card { margin-top: 0; } }
+@media (prefers-reduced-motion: reduce) { .vh-menu, .vh-menu-title, .vh-menu-btn { animation: none; transition: none; } }

@@ -25,6 +25,7 @@ export function createDialogue(cb: DialogueCallbacks): {
   el.hidden = true;
   el.innerHTML = `
     <div class="vh-dialogue-box">
+      <button type="button" class="vh-dialogue-close" aria-label="Close chat">&times;</button>
       <canvas class="vh-dialogue-portrait" width="64" height="64" aria-hidden="true"></canvas>
       <div class="vh-dialogue-name"></div>
       <div class="vh-dialogue-text"></div>
@@ -153,6 +154,8 @@ export function createDialogue(cb: DialogueCallbacks): {
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); doSend(); }
   });
+
+  el.querySelector('.vh-dialogue-close')!.addEventListener('click', (e) => { e.stopPropagation(); close(); });
 
   el.addEventListener('click', (e) => {
     if (typing) { typing = false; if (typeTimer) clearTimeout(typeTimer); return; }

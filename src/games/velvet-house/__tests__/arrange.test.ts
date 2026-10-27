@@ -9,6 +9,16 @@ import { STAIRS, ATTIC } from '../state/house';
 const fresh = () => INITIAL_OBJS.map(o => ({ ...o }));
 
 describe('arrange mode', () => {
+  it('does not let someone who could not get around anyway make every spot impossible', () => {
+    const objs = fresh();
+    const lamp = objs.find((o) => o.id === 'lamp1')!;
+    // A person standing inside the kitchen counter: unreachable with or without the lamp.
+    const stuck = { level: 1, x: 0.7, y: 0.3 };
+    const w = buildWorld(objs);
+    void w;
+    expect(checkPlacement(objs, lamp, [stuck])).toEqual({ ok: true });
+  });
+
   it('accepts the starter house exactly as it is', () => {
     const objs = fresh();
     for (const o of objs.filter(isMovable)) expect(checkPlacement(objs, o), o.id).toEqual({ ok: true });
