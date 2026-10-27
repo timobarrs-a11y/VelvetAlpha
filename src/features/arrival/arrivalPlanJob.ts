@@ -75,7 +75,10 @@ async function run(userId: string, start: PlanJob, deps: JobDeps): Promise<PlanJ
       const data = await deps.call({ phase: 'confirm', transcript });
       const rec = data.recommendation as Recommendation;
       const preset = helperPresetFor(rec);
-      job.recommendation = { ...rec, helperName: preset.name, helperGender: preset.gender };
+      // The server picked a name for them and wrote its introduction with it; the ready-made coach has
+      // their own name, so the introduction must say that one.
+      const intro = rec.helperName ? (rec.recommendationText ?? '').split(rec.helperName).join(preset.name) : rec.recommendationText;
+      job.recommendation = { ...rec, helperName: preset.name, helperGender: preset.gender, recommendationText: intro };
       job.helperAvatar = preset.avatar;
       save(userId, job);
     }

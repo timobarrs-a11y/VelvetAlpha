@@ -68,6 +68,8 @@ export interface BaseQuestion {
   required?: boolean;
   /** Skip this question when true, going forward and back (a cusp question off a cusp, a birthday we already have). */
   skipIf?: (ctx: QuestionContext) => boolean;
+  /** Its answer starts out filled in from the profile (the sign-up birthday), so it says nothing about how far they got. */
+  prefilled?: boolean;
 }
 
 export interface TapQuestion extends BaseQuestion {
@@ -83,6 +85,8 @@ export interface TapQuestion extends BaseQuestion {
   validate?: (text: string) => string | null;
   /** Show the nickname bank to choose one from (or they type their own); the skip button gives them a random one. */
   nicknameBank?: boolean;
+  /** Tappable suggestions that fill the answer box; they can still type their own. */
+  suggestions?: string[];
 }
 
 export interface GridQuestion extends BaseQuestion {

@@ -79,6 +79,8 @@ function respond(body: Record<string, unknown>) {
 
 // jsdom doesn't lay anything out, so it has no scrollIntoView.
 Element.prototype.scrollIntoView = vi.fn();
+const scrollTo = vi.fn();
+Element.prototype.scrollTo = scrollTo as never;
 
 beforeEach(() => {
   requests.length = 0;
@@ -118,10 +120,14 @@ describe('AtlasConciergePage', () => {
     expect((requests.find(r => r.phase === 'provisioning') as { helperName: string }).helperName).not.toBe('Maya');
     first.unmount();
 
-    // Back from the avatar and house: the plan is there, with who carries it.
+    // Back from the avatar and house: the plan is there, with who carries it, and the chat is already
+    // scrolled to the newest words, not left at the top for them to scroll down.
     currentStep = 'arrival_atlas';
+    scrollTo.mockClear();
     render(<AtlasConciergePage />);
     expect(await screen.findByText('Meet your assistant')).toBeTruthy();
+    expect(scrollTo).toHaveBeenCalled();
+    expect(scrollTo.mock.calls.every(([arg]) => (arg as { top: number }).top === 0 || typeof (arg as { top: number }).top === 'number')).toBe(true);
     expect(screen.queryByText('Change anything')).toBeNull();
     fireEvent.click(screen.getByText('Continue'));
     expect(await screen.findByText(/whole road/)).toBeTruthy();

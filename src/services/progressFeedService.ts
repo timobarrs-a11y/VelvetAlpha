@@ -70,7 +70,7 @@ export const STATUS_MAX_LENGTH = 500;
 
 const STATUS_ERRORS: Record<string, string> = {
   not_signed_in: 'Sign in to post.',
-  no_access: 'Posting opens up once your membership or trial is active.',
+  no_access: 'Verify your age to post.',
   banned: "Your account can't post right now.",
   empty: 'Write something first.',
   too_long: `Keep it under ${STATUS_MAX_LENGTH} characters.`,

@@ -62,12 +62,12 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('name')
+      .select('name, nickname')
       .eq('id', user.id)
       .maybeSingle();
 
     const userName = profile?.name || null;
-    const personaLayer = buildPersonaLayer(companion, userName);
+    const personaLayer = buildPersonaLayer(companion, userName, profile?.nickname);
 
     let truncatedText = pastedText;
     let truncatedNote = '';

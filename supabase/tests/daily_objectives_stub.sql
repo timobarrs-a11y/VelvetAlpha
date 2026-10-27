@@ -20,7 +20,7 @@ create table public.user_customization (user_id uuid, longest_streak int);
 create table public.im_friendships (requester_id uuid, addressee_id uuid, status text, created_at timestamptz default now());
 create table public.referrals (referrer_id uuid, status text);
 create table public.community_board_members (user_id uuid, board_id uuid, source text, joined_at timestamptz default now());
-create table public.community_room_messages (author_id uuid, deleted_at timestamptz);
+create table public.community_room_messages (author_id uuid, deleted_at timestamptz, created_at timestamptz default now());
 create table public.medals (slug text primary key, name text, description text, category text, tier text, icon text, metric text, threshold int, is_hidden boolean default false, sort_order int, is_active boolean default true);
 create table public.progress_post_comments (id uuid primary key default gen_random_uuid(), user_id uuid, is_bot boolean default false, created_at timestamptz default now());
 create table public.im_messages (id uuid primary key default gen_random_uuid(), sender_id uuid, created_at timestamptz default now());

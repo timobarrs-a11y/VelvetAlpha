@@ -205,6 +205,7 @@ function AvatarEditorModal({ target, onClose }: { target: AvatarEditTarget; onCl
                 initialConfig={loaded.config ?? undefined}
                 onChange={handleChange}
                 favoritesNamespace={namespace}
+                contained
               />
             ) : (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-2 text-sm text-gray-500">

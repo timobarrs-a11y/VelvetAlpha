@@ -102,6 +102,8 @@ export interface ProfileCard {
     is_bot: boolean;
     interests: string[];
     favorite_color: string | null;
+    /** Their favorite superhero, if they said. Absent until the migration is applied. */
+    favorite_hero?: string | null;
     zodiac_sign: string | null;
     /** Goal types only (for example "fitness"), never the goals themselves. */
     goal_areas: string[];

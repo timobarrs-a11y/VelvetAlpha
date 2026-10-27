@@ -7,6 +7,8 @@ export interface WorldCard {
   goal_label: string | null; goal_pct: number | null; medals: string[]; medal_count: number; spaces: string[]; new_neighbor: boolean;
   /** A real person with a visible profile (not a seeded or bot profile). Absent until the migration is applied. */
   is_live?: boolean;
+  /** Their favorite superhero, shown on the billboard. Absent until the migration is applied. */
+  hero?: string | null;
 }
 export interface MyPlot {
   slot_index: number; house: PlotConfig['house']; sign: PlotConfig['sign']; yard: Omit<PlotConfig, 'house' | 'sign'>;
@@ -175,6 +177,7 @@ export function cardToPlot(c: WorldCard): Plot {
       spaces: c.spaces,
       newNeighbor: c.new_neighbor,
       live: c.is_live === true,
+      hero: c.hero ?? null,
       // a visible profile that is not a real person (a seeded account): always labeled
       authored: c.is_public && c.is_live === false,
       address: slot.address,

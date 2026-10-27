@@ -166,8 +166,6 @@ export default function MemberProfilePage() {
           </div>
         </motion.div>
 
-        {card && <ProfileFrontCard card={card.card} />}
-
         {/* Follow button */}
         {!data.is_owner && (
           <div className="mb-8">
@@ -194,7 +192,50 @@ export default function MemberProfilePage() {
                 </>
               )}
             </button>
+            <p className="mt-2 text-center text-[11px] text-white/35">
+              Following puts their wins in your feed. Friends can also chat and play together.
+            </p>
           </div>
+        )}
+
+        {/* What people come here for first: their posts */}
+        <div className="mb-8">
+          <ProfilePosts userId={data.profile.user_id} isOwn={false} fullAccess={hasFullAccess} />
+        </div>
+
+
+        {!hasFullAccess && (
+          <section aria-label="Full page" className="mb-8 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/6 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-4 h-4 text-white/50" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-semibold text-white">Their full page is for friends</h2>
+                <p className="text-xs text-white/45 mt-0.5">
+                  Add {profile.display_name} to see their posts, goals and more. Their wins are always here for you to cheer on.
+                </p>
+                {card && !card.reach.accepts_friend_requests ? (
+                  <p className="mt-3 text-xs text-amber-200/90">{profile.display_name} isn&apos;t accepting friend requests right now.</p>
+                ) : requestState === 'sent' ? (
+                  <p className="mt-3 text-xs text-white/60">Friend request sent.</p>
+                ) : requestState === 'received' ? (
+                  <p className="mt-3 text-xs text-white/60">{profile.display_name} sent you a friend request. Find it in your requests.</p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleFriendRequest}
+                    disabled={requesting}
+                    className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-pink-500/80 hover:bg-pink-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {requesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                    Add as friend
+                  </button>
+                )}
+                {requestError && <p role="alert" className="mt-2 text-xs text-amber-200/90">{requestError}</p>}
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Progress counts */}
@@ -229,6 +270,8 @@ export default function MemberProfilePage() {
             )}
           </div>
         </div>
+
+        {card && <ProfileFrontCard card={card.card} />}
 
         {/* Bio */}
         {profile.bio && (
@@ -352,41 +395,6 @@ export default function MemberProfilePage() {
 
         </>)}
 
-        {!hasFullAccess && (
-          <section aria-label="Full page" className="mb-8 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/6 flex items-center justify-center flex-shrink-0">
-                <Lock className="w-4 h-4 text-white/50" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-sm font-semibold text-white">Their full page is for friends</h2>
-                <p className="text-xs text-white/45 mt-0.5">
-                  Add {profile.display_name} to see their posts, goals and more. Their wins are always here for you to cheer on.
-                </p>
-                {card && !card.reach.accepts_friend_requests ? (
-                  <p className="mt-3 text-xs text-amber-200/90">{profile.display_name} isn&apos;t accepting friend requests right now.</p>
-                ) : requestState === 'sent' ? (
-                  <p className="mt-3 text-xs text-white/60">Friend request sent.</p>
-                ) : requestState === 'received' ? (
-                  <p className="mt-3 text-xs text-white/60">{profile.display_name} sent you a friend request. Find it in your requests.</p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleFriendRequest}
-                    disabled={requesting}
-                    className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-pink-500/80 hover:bg-pink-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
-                  >
-                    {requesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-                    Add as friend
-                  </button>
-                )}
-                {requestError && <p role="alert" className="mt-2 text-xs text-amber-200/90">{requestError}</p>}
-              </div>
-            </div>
-          </section>
-        )}
-
-        <ProfilePosts userId={data.profile.user_id} isOwn={false} fullAccess={hasFullAccess} />
       </div>
     </div>
   );

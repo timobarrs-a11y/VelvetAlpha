@@ -10,7 +10,6 @@ import {
 import {
   buildGoalPrompt,
   extractJson,
-  addressName,
   buildHelperWelcome,
   buildOpening,
   buildPlanPrompt,
@@ -724,7 +723,8 @@ Write a 2-3 sentence instruction describing what the coach teaches, how (short l
           role: "assistant",
           content: buildHelperWelcome({
             helperName: (helper as { custom_name: string | null }).custom_name || "your helper",
-            address: addressName(profile),
+            // a coach or assistant only ever uses the nickname (the "Master Tim" address is Atlas's alone)
+            address: profile.nickname?.trim() || null,
             goalTitle,
             finishDate: summarizePlan(plan, today.date).finishDate,
             firstStep: firstCommitment,

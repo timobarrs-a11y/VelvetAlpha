@@ -47,6 +47,12 @@ interface AvatarCreatorV2Props {
   onRandomize?: (config: AvatarConfigV2) => void;
   // Defaults to the signed-in person's own membership and medals.
   unlocks?: AvatarUnlocks;
+  // True only when it fills a box of fixed height (the editor popup) and should scroll inside it.
+  // Left out, it sits in the page and the page scrolls: an inner scroller that cannot actually scroll
+  // swallows a finger's swipe, and the avatar riding along at the top never sticks.
+  contained?: boolean;
+  // Lets the avatar blink now and then (the preview only).
+  blink?: boolean;
 }
 
 function ColorSwatch({
@@ -210,6 +216,8 @@ export function AvatarCreatorV2({
   favoritesNamespace = 'default',
   onRandomize,
   unlocks: unlocksProp,
+  contained = false,
+  blink = true,
 }: AvatarCreatorV2Props) {
   const ownUnlocks = useAvatarUnlocks();
   const unlocks = unlocksProp ?? ownUnlocks;
@@ -840,13 +848,13 @@ export function AvatarCreatorV2({
       bg-white shadow-[0_8px_30px_rgba(0,0,0,0.45)] flex items-center justify-center`}>
       <div className="w-full h-full transition-transform duration-300 ease-out"
         style={{ transform: `scale(${zoom.scale})`, transformOrigin: zoom.origin }}>
-        <AvatarV2 config={config} part={wholeBody ? 'full' : 'bust'} className="w-full h-full" />
+        <AvatarV2 config={config} part={wholeBody ? 'full' : 'bust'} className="w-full h-full" blink={blink} />
       </div>
     </div>
   );
 
   return (
-    <div className="flex flex-col lg:flex-row gap-0 h-full min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible">
+    <div className={`flex flex-col lg:flex-row gap-0 ${contained ? 'h-full min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible' : ''}`}>
       {/* On wide screens this column stays put while the options scroll past.
           On phones it sits under the options, inside the same scroll. */}
       <div className="lg:w-72 xl:w-80 flex-shrink-0 flex flex-col items-center justify-start py-5 lg:py-8 px-6

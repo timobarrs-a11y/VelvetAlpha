@@ -23,6 +23,8 @@ export interface UserProfile {
   birthday: string | null;
   gender: string | null;
   favorite_color: string | null;
+  favorite_superhero?: string | null;
+  age_verified_at?: string | null;
   zodiac_sign: string | null;
   music_genre: string | null;
   hobbies: string[];
@@ -37,7 +39,7 @@ export interface UserProfile {
   profile_completed: boolean;
   subscription_tier: string | null;
   avatar_config: any;
-  communication_profile: { conflict: string; connection: string; decisionStyle: string; motivation: string } | null;
+  communication_profile: { conflict?: string; connection?: string; decisionStyle?: string; motivation?: string } | null;
   someday?: SomedayPick[];
   address_style?: AddressStyle | null;
   arrival_choices?: ArrivalChoices;
@@ -51,6 +53,7 @@ export interface UserProfileUpdate {
   birthday?: string | null;
   gender?: string | null;
   favorite_color?: string | null;
+  favorite_superhero?: string | null;
   zodiac_sign?: string | null;
   music_genre?: string | null;
   hobbies?: string[];
@@ -62,7 +65,7 @@ export interface UserProfileUpdate {
   news_categories?: string[];
   political_leaning?: 'democrat' | 'republican' | 'independent' | null;
   profile_completed?: boolean;
-  communication_profile?: { conflict: string; connection: string; decisionStyle: string; motivation: string } | null;
+  communication_profile?: { conflict?: string; connection?: string; decisionStyle?: string; motivation?: string } | null;
   someday?: SomedayPick[];
   address_style?: AddressStyle | null;
   arrival_choices?: ArrivalChoices;

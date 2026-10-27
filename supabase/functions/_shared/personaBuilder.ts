@@ -324,11 +324,16 @@ export function buildPersonaLayer(companion: CompanionRow, userName: string | nu
   const isCorrespondent = relationshipType === 'correspondent';
   const isRomantic = !isMentor && !isFriend && !isCorrespondent;
 
+  // Coaches and assistants only ever use the nickname. The real name is for Atlas, who asks for it; it is
+  // never shown to anyone else, and never "Master" or "Miss" either. Without a nickname (an account from before
+  // nicknames) the name they gave is all there is.
   const namePrefLine = effectiveNickname
     ? isMentor
-      ? `\nNAME PREFERENCE: Address them by their real name (${effectiveUserName}). Do NOT use their nickname (${effectiveNickname}).`
+      ? `\nNAME PREFERENCE: Always address them by their nickname (${effectiveNickname}), nothing else. Never use their real name, and never "Master" or "Miss", even if you know them.`
       : `\nNAME PREFERENCE: Use their nickname (${effectiveNickname}) as your default way of addressing them. Use their real name (${effectiveUserName}) only in serious or formal moments.`
     : '';
+  // The name a coach or assistant works with everywhere in their prompt.
+  const mentorName = isMentor && effectiveNickname ? effectiveNickname : effectiveUserName;
 
   const gender = companion.gender || 'female';
   const voice: VoicePrompt = getVoicePrompt(companion.signature_voice, gender);
@@ -339,16 +344,16 @@ export function buildPersonaLayer(companion: CompanionRow, userName: string | nu
     : '';
 
   if (isMentor) {
-    const roleLine = buildRoleLine(companion, effectiveUserName, isRomantic, isMentor, isFriend, isCorrespondent);
+    const roleLine = buildRoleLine(companion, mentorName, isRomantic, isMentor, isFriend, isCorrespondent);
     const traitBlock = buildMentorTraitBlock(companion);
-    const userContext = buildMentorUserContext(companion, effectiveUserName);
+    const userContext = buildMentorUserContext(companion, mentorName);
     const textingRhythm = buildMentorTextingRhythm();
     const userContextBlock = userContext ? `\n\n${userContext}` : '';
 
     return `=== WHO YOU ARE: ${name.toUpperCase()} ===
 ${roleLine}${namePrefLine}
 
-YOUR COACHING CHARACTER (built by ${effectiveUserName || 'the user'} — honor every trait, every session):
+YOUR COACHING CHARACTER (built by ${mentorName || 'the user'} — honor every trait, every session):
 ${traitBlock}
 
 === YOUR VOICE: ${voice.name} ===

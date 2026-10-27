@@ -42,12 +42,19 @@ describe('WelcomeMoment', () => {
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('closes by itself after a few seconds, so nobody waits', () => {
+  it('never closes by itself: it waits until they click it', () => {
     const onDone = vi.fn();
     render(<WelcomeMoment onDone={onDone} />);
-    act(() => { vi.advanceTimersByTime(2000); });
+    act(() => { vi.advanceTimersByTime(60_000); });
     expect(onDone).not.toHaveBeenCalled();
-    act(() => { vi.advanceTimersByTime(1500); });
+  });
+
+  it('has a Let\'s go button, and Enter works too', () => {
+    const onDone = vi.fn();
+    render(<WelcomeMoment onDone={onDone} />);
+    fireEvent.click(screen.getByRole('button', { name: "Let's go" }));
     expect(onDone).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(onDone).toHaveBeenCalledTimes(2);
   });
 });

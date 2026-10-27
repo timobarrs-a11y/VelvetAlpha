@@ -15,9 +15,21 @@ function list(answer: string | string[] | undefined): string[] {
   return [];
 }
 
+const TRAIT_ANSWERS = { conflictResponse: 'conflict', connection: 'connection', decisionStyle: 'decisionStyle', motivation: 'motivation' } as const;
+
+/** The traits answered so far, as the profile stores them. Atlas fills in any left blank. */
+function communicationProfileFrom(answers: Answers): NonNullable<UserProfileUpdate['communication_profile']> {
+  const out: Record<string, string> = {};
+  for (const [id, key] of Object.entries(TRAIT_ANSWERS)) {
+    const v = answers[id];
+    if (typeof v === 'string' && v) out[key] = v;
+  }
+  return out;
+}
+
 /**
  * The profile columns one answer writes, or null for answers that save nothing
- * (the birthday is set at sign-up and can't be written by the app).
+ * (the birthday goes through confirm_birthday, which also checks the age, so the page does that one).
  */
 export function profileUpdateFor(questionId: string, answer: string | string[], all: Answers): UserProfileUpdate | null {
   const text = typeof answer === 'string' ? answer.trim() : '';
@@ -25,9 +37,16 @@ export function profileUpdateFor(questionId: string, answer: string | string[], 
     case 'name': return text ? { name: text } : null;
     case 'nickname': return { nickname: text || null };
     case 'favoriteColor': return text ? { favorite_color: text } : null;
+    // Skipping clears it, so a changed mind sticks.
+    case 'favoriteHero': return { favorite_superhero: text || null };
+    case 'zodiac':
     case 'zodiacCusp':
     case 'zodiacConfirm': return { zodiac_sign: text && text !== 'none' ? text : null };
     case 'gender': return text ? { gender: text } : null;
+    case 'conflictResponse':
+    case 'connection':
+    case 'decisionStyle':
+    case 'motivation': return { communication_profile: communicationProfileFrom(all) };
     case 'hobbies': return { hobbies: list(answer) };
     case 'musicGenre': return { music_genre: list(answer).join(', ') || null };
     case 'entertainmentInterests': return { entertainment_interests: list(answer) };
@@ -46,13 +65,18 @@ export function answersFromProfile(profile: Partial<UserProfile> | null): Answer
   const out: Answers = {};
   if (profile.name && !PLACEHOLDER_NAMES.has(profile.name.toLowerCase())) out.name = profile.name;
   if (profile.favorite_color) out.favoriteColor = profile.favorite_color;
+  if (profile.favorite_superhero) out.favoriteHero = profile.favorite_superhero;
   if (profile.nickname) out.nickname = profile.nickname;
   if (profile.birthday) out.birthday = profile.birthday;
-  if (profile.zodiac_sign) {
-    out.zodiacCusp = profile.zodiac_sign;
-    out.zodiacConfirm = profile.zodiac_sign;
-  }
+  if (profile.zodiac_sign) out.zodiac = profile.zodiac_sign;
   if (profile.gender) out.gender = profile.gender;
+  const traits = profile.communication_profile;
+  if (traits) {
+    for (const [id, key] of Object.entries(TRAIT_ANSWERS)) {
+      const v = (traits as Record<string, string | undefined>)[key];
+      if (v) out[id] = v;
+    }
+  }
   const interests: Record<(typeof INTEREST_KEYS)[number], string[]> = {
     hobbies: list(profile.hobbies as string[] | string | undefined),
     musicGenre: list(profile.music_genre ?? undefined),
@@ -85,10 +109,10 @@ export function resumeIndex(definition: QuestionnaireDefinition, answers: Answer
   // Only answers they gave count: a skipped question (the birthday from
   // sign-up) says nothing about how far they got.
   let lastAnswered = -1;
-  questions.forEach((q, i) => { if (answered(q.id) && !q.skipIf?.(ctx)) lastAnswered = i; });
+  questions.forEach((q, i) => { if (answered(q.id) && !q.prefilled && !q.skipIf?.(ctx)) lastAnswered = i; });
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
-    if (q.skipIf?.(ctx) || answered(q.id)) continue;
+    if (q.skipIf?.(ctx) || (answered(q.id) && !q.prefilled)) continue;
     if (i < lastAnswered && !q.required) continue; // optional, already passed
     return i;
   }

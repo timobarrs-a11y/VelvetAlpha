@@ -91,6 +91,12 @@ describe('objectives service', () => {
     }
   });
 
+  it('sends the Space objectives to Spaces (the chat rooms), the same place as the toolbar', () => {
+    expect(OBJECTIVE_DEFS.comment_in_space.to).toBe('/house');
+    expect(OBJECTIVE_DEFS.browse_spaces.to).toBe('/house');
+    expect(OBJECTIVE_DEFS.join_a_space.to).toBe('/house/browse');
+  });
+
   it('asks for today by the user\'s own midnight', async () => {
     renderButton();
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('get_daily_objectives', { p_day_start: localDayStart() }));

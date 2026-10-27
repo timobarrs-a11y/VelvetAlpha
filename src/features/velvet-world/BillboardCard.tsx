@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type ReactNode } from 'react';
-import { X, Footprints, Users, Flame, Award, UserPlus, Check, Clock } from 'lucide-react';
+import { X, Footprints, Users, Flame, Award, UserPlus, Check, Clock, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   resolvePlot, houseInfo, MEDALS, TIER_COLORS, glyph,
@@ -217,6 +217,13 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanion
             {prof.headline && <p className="m-0 text-[15.5px] font-semibold leading-snug text-white">{prof.headline}</p>}
             {bio && <p className="m-0 text-[13.5px] leading-relaxed text-white/65">{bio}</p>}
           </div>
+        )}
+
+        {prof.hero && (
+          <p className="m-0 flex items-center gap-1.5 text-[13px] text-white/70">
+            <Zap className="h-3.5 w-3.5 flex-shrink-0 text-amber-300" aria-hidden />
+            Favorite hero: <b className="font-semibold text-white">{prof.hero}</b>
+          </p>
         )}
 
         {/* Stats */}
