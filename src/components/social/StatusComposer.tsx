@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Loader2, Send } from 'lucide-react';
-import { createStatus, STATUS_MAX_LENGTH } from '../../services/progressFeedService';
+import { Globe, Loader2, Send, Users } from 'lucide-react';
+import { createStatus, STATUS_MAX_LENGTH, type PostAudience } from '../../services/progressFeedService';
 import { toast } from '../../shared/ui/Toast';
 
 /** "What's on your mind?" box. Calls `onPosted` after a status is saved. */
@@ -10,6 +10,8 @@ export function StatusComposer({ onPosted, placeholder = "What's on your mind?" 
 }) {
   const [text, setText] = useState('');
   const [posting, setPosting] = useState(false);
+  // Like a feed: pick who sees each post. Everyone makes it public; Friends keeps it to your friends.
+  const [audience, setAudience] = useState<PostAudience>('everyone');
   const trimmed = text.trim();
   const left = STATUS_MAX_LENGTH - text.length;
 
@@ -17,7 +19,7 @@ export function StatusComposer({ onPosted, placeholder = "What's on your mind?" 
     if (!trimmed || posting) return;
     setPosting(true);
     try {
-      await createStatus(trimmed);
+      await createStatus(trimmed, audience);
       setText('');
       onPosted();
     } catch (err) {
@@ -40,9 +42,26 @@ export function StatusComposer({ onPosted, placeholder = "What's on your mind?" 
         className="w-full resize-none bg-transparent text-[15px] text-white placeholder:text-white/30 outline-none leading-relaxed"
       />
       <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
-        <span className={`text-[11px] tabular-nums ${left < 40 ? 'text-amber-300' : 'text-white/25'}`}>
-          {text.length > 0 ? `${left} left` : 'Friends can like and comment'}
-        </span>
+        <div className="flex items-center gap-2 min-w-0">
+          <div role="radiogroup" aria-label="Who can see this post" className="flex rounded-full bg-white/5 p-0.5">
+            {([['everyone', 'Everyone', Globe], ['friends', 'Friends', Users]] as const).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={audience === id}
+                onClick={() => setAudience(id)}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${audience === id ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/70'}`}
+              >
+                <Icon className="w-3 h-3" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className={`text-[11px] tabular-nums truncate ${left < 40 ? 'text-amber-300' : 'text-white/25'}`}>
+            {text.length > 0 ? `${left} left` : audience === 'friends' ? 'Only your friends will see this' : 'Anyone can see this'}
+          </span>
+        </div>
         <button
           onClick={submit}
           disabled={!trimmed || posting}

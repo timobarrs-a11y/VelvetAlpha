@@ -404,7 +404,7 @@ export async function sendFriendRequest(
   if (error) {
     // Unique-pair index may fire if a row already exists in any state.
     if (error.code === '23505') return;
-    throw new Error(`Failed to send request: ${error.message}`);
+    throw new Error(error.code === '42501' ? error.message : `Failed to send request: ${error.message}`);
   }
 }
 
@@ -667,7 +667,8 @@ export async function sendMessage(conversationId: string, content: string): Prom
     .insert({ conversation_id: conversationId, content })
     .select('id, conversation_id, sender_id, content, read_at, created_at')
     .maybeSingle();
-  if (error) throw new Error(`Failed to send message: ${error.message}`);
+  // 42501 is a member's reach setting speaking: show their words, not a database error.
+  if (error) throw new Error(error.code === '42501' ? error.message : `Failed to send message: ${error.message}`);
 
   // Keep last_message_at fresh for conversation list ordering.
   await supabase

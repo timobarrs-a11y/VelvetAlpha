@@ -14,6 +14,18 @@ import { toggleGoalShowOnProfile, toggleCommitmentShowOnProfile } from '../servi
 import { toast } from '../shared/ui/Toast';
 import { SMILIES, smilieUrl } from '../config/smilieRegistry';
 import { PublicProfileImage } from './PublicProfileImage';
+import { ReachControls, type ReachValues } from './ReachControls';
+
+const DEFAULT_REACH: ReachValues = { who_can_message: 'everyone', accepts_friend_requests: true, accepts_mail: true, comments_from: 'everyone' };
+
+function reachOf(p: MemberProfile | null): ReachValues {
+  return {
+    who_can_message: p?.who_can_message ?? 'everyone',
+    accepts_friend_requests: p?.accepts_friend_requests ?? true,
+    accepts_mail: p?.accepts_mail ?? true,
+    comments_from: p?.comments_from ?? 'everyone',
+  };
+}
 
 export function PublicProfileSettings() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
@@ -27,6 +39,7 @@ export function PublicProfileSettings() {
   const [bio, setBio] = useState('');
   const [isPublic, setIsPublic] = useState(true);
   const [discoverable, setDiscoverable] = useState(true);
+  const [reach, setReach] = useState<ReachValues>(DEFAULT_REACH);
   const [profileImageType, setProfileImageType] = useState<'avatar' | 'smilie'>('avatar');
   const [profileSmilieCode, setProfileSmilieCode] = useState<string | null>(null);
   const [smilieSearch, setSmilieSearch] = useState('');
@@ -48,6 +61,7 @@ export function PublicProfileSettings() {
       setBio(p.bio ?? '');
       setIsPublic(p.is_public);
       setDiscoverable(p.discoverable);
+      setReach(reachOf(p));
       setProfileImageType(p.profile_image_type ?? 'avatar');
       setProfileSmilieCode(p.profile_smilie_code ?? null);
     }
@@ -63,7 +77,13 @@ export function PublicProfileSettings() {
     }
     setSaving(true);
     try {
+      // Only send reach settings that changed, so saving a bio never depends on them.
+      const before = reachOf(profile);
+      const reachChanges = Object.fromEntries(
+        (Object.keys(reach) as (keyof ReachValues)[]).filter(k => reach[k] !== before[k]).map(k => [k, reach[k]]),
+      ) as Partial<ReachValues>;
       const updated = await upsertMyMemberProfile({
+        ...reachChanges,
         display_name: displayName || 'Member',
         headline: headline || null,
         bio: bio || null,
@@ -260,6 +280,8 @@ export function PublicProfileSettings() {
           </button>
         </div>
       </div>
+
+      <ReachControls values={reach} onChange={setReach} />
 
       {/* Goal visibility */}
       <div>

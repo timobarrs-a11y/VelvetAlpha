@@ -1,5 +1,8 @@
 import { supabase } from '../shared/supabase/client';
 
+export type MessagePolicy = 'everyone' | 'friends' | 'nobody';
+export type CommentPolicy = 'everyone' | 'friends';
+
 export interface MemberProfile {
   user_id: string;
   display_name: string;
@@ -13,6 +16,11 @@ export interface MemberProfile {
   follower_count: number;
   following_count: number;
   discoverable: boolean;
+  /** How people can reach this member. Everyone can see that they exist. */
+  who_can_message: MessagePolicy;
+  accepts_friend_requests: boolean;
+  accepts_mail: boolean;
+  comments_from: CommentPolicy;
   is_bot: boolean;
   created_at: string;
   updated_at: string;
@@ -62,6 +70,10 @@ export async function upsertMyMemberProfile(updates: {
   is_public?: boolean;
   shared_goal_ids?: string[];
   discoverable?: boolean;
+  who_can_message?: MessagePolicy;
+  accepts_friend_requests?: boolean;
+  accepts_mail?: boolean;
+  comments_from?: CommentPolicy;
 }): Promise<MemberProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');

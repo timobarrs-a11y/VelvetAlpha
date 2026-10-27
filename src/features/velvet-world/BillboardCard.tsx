@@ -95,6 +95,7 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanion
   const [friends, setFriends] = useState<FriendPeer[]>([]);
   const [outgoing, setOutgoing] = useState<FriendPeer[]>([]);
   const [sent, setSent] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [details, setDetails] = useState<CardDetails | null>(null);
 
@@ -108,6 +109,7 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanion
     let live = true;
     setDetails(null);
     setSent(false);
+    setRequestError(null);
     const visit = isYou ? Promise.resolve() : recordVisit(plot.id).then(() => {}, () => {});
     visit.then(() => getCardDetails(plot.id)).then((d) => { if (live) setDetails(d); }).catch(() => {});
     return () => { live = false; };
@@ -155,11 +157,13 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanion
   const handleAddFriend = async () => {
     if (sending || alreadySent) return;
     setSending(true);
+    setRequestError(null);
     try {
       await sendFriendRequest(plot.id);
       setSent(true);
-    } catch {
-      // silently ignore duplicates
+    } catch (e) {
+      // Their reach settings can say no; say so instead of failing silently.
+      setRequestError(e instanceof Error && /not accepting/i.test(e.message) ? `${firstName} isn't accepting friend requests right now.` : null);
     }
     setSending(false);
   };
@@ -300,6 +304,7 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanion
             </button>
           </div>
         ) : !isPrivate && (
+          <div className="grid gap-2">
           <div className="flex gap-2">
             <button
               onClick={handleAddFriend}
@@ -320,6 +325,8 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanion
             >
               Profile
             </button>
+          </div>
+          {requestError && <p role="alert" className="m-0 text-[12.5px] text-amber-200/90">{requestError}</p>}
           </div>
         )}
       </div>
