@@ -20,7 +20,7 @@ test('one companion: Start goes straight in, with no question', async ({ page })
   const game = await openGame(page, { menu: true, script: true });
   await game.locator('[data-m=new]').click();
   await waitReady(page);
-  await expect(game.locator('.vh-skip')).toBeVisible();
+  await expect(game.locator('.vh-stage[data-script="cutscene"]')).toHaveCount(1);
   expect(await requests(page)).toBe(0);
 });
 
@@ -29,7 +29,7 @@ test('two companions: Start asks who is moving in, and the current one carries o
   await expect(game.locator('.vh-menu')).toBeVisible();
   await game.locator('[data-m=new]').click();
   await waitReady(page);
-  await expect(game.locator('.vh-skip')).toBeVisible();
+  await expect(game.locator('.vh-stage[data-script="cutscene"]')).toHaveCount(1);
   expect(await requests(page)).toBe(1);
   expect(pageErrors(page)).toEqual([]);
 });
@@ -46,7 +46,7 @@ test('two companions: picking someone else starts a new house for them', async (
   const game = await openWithCompanions(page, 'other');
   await game.locator('[data-m=new]').click();
   await waitReady(page);
-  await expect(game.locator('.vh-skip')).toBeVisible(); // the move-in begins, with no title screen
+  await expect(game.locator('.vh-stage[data-script="cutscene"]')).toHaveCount(1); // the move-in begins, with no title screen
   const search = await page.evaluate(() => (document.getElementById('g') as HTMLIFrameElement).contentWindow!.location.search);
   expect(search).toContain('companion=e2e-b');
   expect(search).not.toContain('start=new'); // a reload of the game never starts over again
@@ -54,9 +54,7 @@ test('two companions: picking someone else starts a new house for them', async (
 
 test('two companions, one with a house: Continue asks whose house and goes back to theirs', async ({ page }) => {
   // The other companion's house: play the first one to the couch, save it, and file the save under them.
-  const first = await openGame(page, { script: true });
-  await first.locator('.vh-skip').click();
-  await expect.poll(async () => (await objects(page)).some((o) => o.type === 'sofa')).toBe(true);
+  await openGame(page);
   await saveNow(page);
   await page.evaluate((k) => { localStorage.setItem('velvet-sims:e2e-b', localStorage.getItem(k)!); }, SAVE_KEY);
   // Leave the game (it saves on the way out), then take the first companion's house away: they have none, the other does.
@@ -69,7 +67,7 @@ test('two companions, one with a house: Continue asks whose house and goes back 
   await waitReady(page);
   expect(await page.evaluate(() => (window as unknown as { startModes: string[] }).startModes)).toEqual(['continue']);
   expect((await objects(page)).some((o) => o.type === 'sofa')).toBe(true); // their house, not a fresh move-in
-  await expect(game.locator('.vh-skip')).toBeHidden();
+  await expect(game.locator('.vh-stage[data-script]')).toHaveCount(0);
   const search = await page.evaluate(() => (document.getElementById('g') as HTMLIFrameElement).contentWindow!.location.search);
   expect(search).toContain('companion=e2e-b');
 });

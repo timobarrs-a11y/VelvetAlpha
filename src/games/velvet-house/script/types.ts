@@ -15,8 +15,10 @@ export type PlaceRef = string | { level: number; x: number; y: number };
 /** What a line says: a key into the line book, a variant per companion voice, or the next from a pool that does not repeat. */
 export type LineRef = string | { byPreset: Record<Preset, string> } | { pool: string } | { bank: 'humor' | 'communication'; slot: string };
 
+/** A bank line: the same for everyone, or a masculine and a feminine version (`n`: for a companion who is neither). */
+export type BankLine = string | { m: string; f: string; n?: string };
 /** Lines by how the companion talks: bank (humor or communication) → style → slot → line. */
-export type LineBank = Record<'humor' | 'communication', Record<string, Record<string, string>>>;
+export type LineBank = Record<'humor' | 'communication', Record<string, Record<string, BankLine>>>;
 
 /** Things on screen a script can spotlight or allow. */
 export type UiTarget = `tab:${string}` | 'floorbar' | 'camera' | 'wallet' | 'bill' | 'needs' | `obj:${string}` | `objType:${string}`;
@@ -25,9 +27,20 @@ export type Mode = 'cutscene' | 'guided' | 'beat';
 
 export interface GameEvent { type: string; [key: string]: FlagValue | undefined }
 
+/**
+ * Something true about the house itself, checked by the host: an object's type, where it stands (within `within` of a
+ * mark, default 0.6), how it faces, whether its light is on. A beat that waits on this ends when the world is right, not
+ * when a button was pressed.
+ */
+export interface WorldCond { obj: string; exists?: boolean; is?: string; at?: PlaceRef; within?: number; rot?: number; lightOn?: boolean }
+
+/** What the host page sends after the game starts; a script can wait for it (`needs.host`). */
+export type HostNeed = 'profile' | 'plot';
+
 export type Cond =
   | { flag: string; equals?: FlagValue; exists?: boolean }
   | { event: string; match?: Record<string, FlagValue> }
+  | { world: WorldCond }
   | { time: { day?: number; weekday?: number; after?: number; before?: number } }
   | { scriptDone: string }
   | { all: Cond[] }
@@ -52,10 +65,12 @@ export type Step =
   | { do: 'face'; who: Actor; toward: Actor | PlaceRef }
   | { do: 'act'; who: Actor; act: string; at?: PlaceRef; wait?: boolean }
   | { do: 'emote'; who: Actor; emote: 'alert' | 'laugh' | 'wave' | 'heart' | 'think' }
-  | { do: 'camera'; focus: Actor | PlaceRef | 'wide'; zoom?: number; level?: number }
+  /** `focus` as a list frames all of them together (the partner and the lamp). */
+  | { do: 'camera'; focus: Actor | PlaceRef | 'wide' | Array<Actor | PlaceRef>; zoom?: number; level?: number }
   | { do: 'say'; who: Actor; line: LineRef }
   | { do: 'choice'; options: ChoiceOption[] }
-  | { do: 'card'; title: string; body: string; spotlight?: UiTarget; button?: string }
+  /** `misplaced`: what the partner says when the button is pressed but the piece is not where the wait after the card asks. */
+  | { do: 'card'; title: string; body: string; spotlight?: UiTarget; button?: string; misplaced?: { who: Actor; line: LineRef } }
   | { do: 'highlight'; target: UiTarget | null }
   | { do: 'outline'; objType: string; at: PlaceRef; rot?: number; color?: 'partner' | 'player' } 
   | { do: 'set'; flag: string; value: FlagValue }
@@ -67,7 +82,8 @@ export type Step =
   | { do: 'intro'; kind: 'arrival' }
   /** Pulls the room toward evening (0 to 0.42) without moving the clock, so the lights can be seen; 0 puts it back. */
   | { do: 'dim'; amount: number }
-  | { do: 'wait'; seconds?: number; until?: Cond }
+  /** `arrive`: wait until these people have stopped walking (for walks started with `wait: false`). */
+  | { do: 'wait'; seconds?: number; until?: Cond; arrive?: Actor[] }
   | { do: 'if'; cond: Cond; then: Step[]; else?: Step[] }
   | { do: 'run'; script: string }
   | { do: 'checkpoint' };
@@ -80,20 +96,23 @@ export interface ScriptDef {
   once?: boolean;
   /** Higher starts first when several are waiting. */
   priority?: number;
-  skippable?: boolean;
-  /** Required when skippable: effect-only steps that leave the world as if the script had played. */
-  onSkip?: Step[];
   /** Values taken from the event that triggered it: `{ category: '$event.category' }`. */
   vars?: Record<string, string>;
+  /**
+   * What must be in place before the script starts: `host` messages applied (or `timeoutMs` passed, default 1500), and
+   * `hold`: residents the script keeps for itself from start to finish, so free will never moves them mid-scene.
+   */
+  needs?: { host?: HostNeed[]; timeoutMs?: number; hold?: Actor[] };
   steps: Step[];
 }
 
 /** What is saved. */
 export interface ScriptRuntime {
   done: string[];
-  active: { id: string; path: PathItem[]; vars: Record<string, FlagValue> } | null;
+  /** The script playing and where to pick it up (`redo`: run the step at `path` again, used for mode steps so the screen is rebuilt). */
+  active: { id: string; path: PathItem[]; vars: Record<string, FlagValue>; redo?: boolean } | null;
   /** Waiting to start; a script a more urgent one interrupted carries where it was (`path`, `redo`: run that step again). */
-  queue: { id: string; vars: Record<string, FlagValue>; path?: PathItem[]; redo?: boolean; since?: number }[];
+  queue: { id: string; vars: Record<string, FlagValue>; path?: PathItem[]; redo?: boolean; since?: number; heldMs?: number }[];
   /** Per line pool: the indices used so far, so a line does not repeat until the pool has been through. */
   pools: Record<string, number[]>;
 }
@@ -116,7 +135,7 @@ export interface LineBook {
 export interface ScriptHost {
   flags: Record<string, FlagValue>;
   clock(): { day: number; minutes: number };
-  names(): { player: string; partner: string; town: string; preset: Preset; humor?: string; communication?: string; relationship?: string };
+  names(): { player: string; partner: string; town: string; preset: Preset; humor?: string; communication?: string; relationship?: string; gender?: string };
   setMode(mode: Mode | null, allow: UiTarget[]): void;
   spawn(npc: string, at: PlaceRef, carrying?: string): void;
   despawn(npc: string): void;
@@ -129,7 +148,7 @@ export interface ScriptHost {
   act(who: Actor, act: string, at?: PlaceRef): void;
   actDone(who: Actor): boolean;
   emote(who: Actor, emote: string): void;
-  camera(focus: Actor | PlaceRef | 'wide', zoom?: number, level?: number): void;
+  camera(focus: Actor | PlaceRef | 'wide' | Array<Actor | PlaceRef>, zoom?: number, level?: number): void;
   /** Shows a line. `blocking`: wait for the player to tap through it. Returns how long to hold it when not blocking (seconds). */
   say(who: Actor, text: string, blocking: boolean): number;
   /** True once the player has dismissed the line shown by `say`. */
@@ -137,7 +156,7 @@ export interface ScriptHost {
   showChoice(labels: string[]): void;
   /** The index chosen, or null while waiting. */
   choiceMade(): number | null;
-  showCard(title: string, body: string, spotlight?: UiTarget, button?: string): void;
+  showCard(title: string, body: string, spotlight?: UiTarget, button?: string, misplaced?: { who: Actor; text: string }): void;
   cardDone(): boolean;
   highlight(target: UiTarget | null): void;
   outline(spec: { objType: string; at: PlaceRef; rot?: number; color?: 'partner' | 'player' } | null): void;
@@ -152,4 +171,10 @@ export interface ScriptHost {
   introDone?(): boolean;
   /** The script is done with these people: free will and idle choices are theirs again. */
   release(who: Actor[]): void;
+  /** Keep these people for the script from its first step (see `ScriptDef.needs.hold`). */
+  hold?(who: Actor[]): void;
+  /** Is this true of the house right now? */
+  check?(w: WorldCond): boolean;
+  /** Has the host page sent this yet? */
+  ready?(what: HostNeed): boolean;
 }

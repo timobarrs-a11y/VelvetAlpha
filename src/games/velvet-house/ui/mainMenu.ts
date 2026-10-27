@@ -1,6 +1,6 @@
 import { SAVE_KEY } from '../kernel/config';
 import { loadSave } from '../state/save';
-import { isCurrentContent } from '../state/saveMigration';
+import { isCurrentContent, CONTENT_VERSION } from '../state/saveMigration';
 import { qualityManager } from '../engine/qualityTier';
 import { postToParent } from '../bridge/protocol';
 import { clockText, DAYS, weekday } from '../state/time';
@@ -50,6 +50,7 @@ export function showMainMenu(): Promise<LaunchChoice> {
           ${canContinue ? `<button class="vh-menu-btn vh-menu-primary" data-m="continue"><span>Continue</span><small>${summary ? `${esc(summary.names ? summary.names + ' · ' : '')}Day ${summary.day} · ${esc(summary.when)} · $${summary.money}` : 'Choose whose house'}</small></button>` : ''}
           <button class="vh-menu-btn ${canContinue ? '' : 'vh-menu-primary'}" data-m="new"><span>${canContinue ? 'New Game' : 'Start'}</span></button>
           <button class="vh-menu-btn" data-m="settings"><span>Settings</span></button>
+          <p class="vh-menu-build">Build ${esc(typeof __VELVET_BUILD__ === 'string' ? __VELVET_BUILD__ : 'dev')} · story ${CONTENT_VERSION}</p>
         </div>`;
       root.querySelector('[data-m=continue]')?.addEventListener('click', () => { void beginContinue(); });
       root.querySelector('[data-m=new]')?.addEventListener('click', () => { void beginNew(); });
