@@ -26,7 +26,8 @@ const optionsList = (root: ParentNode) => {
 };
 
 describe.each([
-  ['AvatarCreatorV2', () => <AvatarCreatorV2 favoritesNamespace="t" unlocks={{ member: false, earned: [], owned: [] }} />],
+  // The popup gives the editor a box of fixed height, so there it scrolls inside the box.
+  ['AvatarCreatorV2', () => <AvatarCreatorV2 contained favoritesNamespace="t" unlocks={{ member: false, earned: [], owned: [] }} />],
   ['GuidedAvatarFlow', () => <GuidedAvatarFlow config={migrateAvatarConfig({ gender: 'male' })} onChange={() => {}} onSwitchToAdvanced={() => {}} />],
 ])('%s on a phone', (_name, ui) => {
   it('scrolls as a whole, so every option can be reached', () => {
@@ -52,5 +53,30 @@ describe.each([
     expect(tokens(column)).toContain('flex-none');
     expect(tokens(column)).not.toContain('flex-1');
     expect(tokens(column)).toContain('lg:flex-1');
+  });
+});
+
+// On a page (the arrival, the avatar pages) the editor has no box of its own. If it were a scroller anyway,
+// it could not scroll (it is as tall as its content) yet it would still swallow a finger's swipe, so only the
+// strip beside it scrolled the page; and the avatar riding along at the top could not stick to the screen.
+describe('AvatarCreatorV2 sitting in a page', () => {
+  const root = () => render(<AvatarCreatorV2 favoritesNamespace="t" unlocks={{ member: false, earned: [], owned: [] }} />).container.firstElementChild!;
+
+  it('is not a scroller, so the page scrolls wherever a finger lands', () => {
+    const list = tokens(root());
+    expect(list).not.toContain('overflow-y-auto');
+    expect(list).not.toContain('overscroll-contain');
+    expect(list).not.toContain('h-full');
+  });
+
+  it('keeps the avatar and the tabs stuck to the top of the screen while the options scroll', () => {
+    const el = root();
+    const sticky = [...el.querySelectorAll('div')].find(d => tokens(d).includes('sticky') && tokens(d).includes('top-0') && tokens(d).includes('z-20'));
+    expect(sticky).toBeTruthy();
+    expect(sticky!.querySelector('svg')).not.toBeNull();
+    // and nothing between it and the page is a scroller that would stop it sticking
+    for (let n: Element | null = sticky!.parentElement; n; n = n.parentElement) {
+      expect(tokens(n)).not.toContain('overflow-y-auto');
+    }
   });
 });

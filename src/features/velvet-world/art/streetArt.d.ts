@@ -31,7 +31,9 @@ export interface PlotProfile {
   medalCount?: number;
   spaces?: string[];
   newNeighbor?: boolean;
+  authored?: boolean;       // written by Velvet, not a member: the billboard says so
   live?: boolean;           // a real person, so the town marks the house "live"
+  hero?: string | null;     // favorite superhero, shown on the billboard
   address?: string;
   crew?: string | null;
 }

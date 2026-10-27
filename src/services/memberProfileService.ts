@@ -1,5 +1,10 @@
 import { supabase } from '../shared/supabase/client';
 
+export type MessagePolicy = 'everyone' | 'friends' | 'nobody';
+export type CommentPolicy = 'everyone' | 'friends';
+/** friends: the full page is for friends. open: public-facing, everyone may see it. */
+export type ProfileMode = 'friends' | 'open';
+
 export interface MemberProfile {
   user_id: string;
   display_name: string;
@@ -13,6 +18,14 @@ export interface MemberProfile {
   follower_count: number;
   following_count: number;
   discoverable: boolean;
+  /** How people can reach this member. Everyone can see that they exist. */
+  profile_mode: ProfileMode;
+  /** Finished goals, tasks and commitments show up in Discover. On by default. */
+  share_accomplishments: boolean;
+  who_can_message: MessagePolicy;
+  accepts_friend_requests: boolean;
+  accepts_mail: boolean;
+  comments_from: CommentPolicy;
   is_bot: boolean;
   created_at: string;
   updated_at: string;
@@ -26,12 +39,13 @@ export async function getMyMemberProfile(): Promise<MemberProfile | null> {
 
   const { data: userProfile } = await supabase
     .from('user_profiles')
-    .select('name, avatar_config')
+    .select('nickname, avatar_config')
     .eq('id', user.id)
     .maybeSingle();
 
   return upsertMyMemberProfile({
-    display_name: userProfile?.name || 'Member',
+    // The nickname is what other people see; a real name is never used here.
+    display_name: userProfile?.nickname?.trim() || 'Member',
     avatar_config: userProfile?.avatar_config ?? null,
     is_public: true,
     discoverable: true,
@@ -62,6 +76,12 @@ export async function upsertMyMemberProfile(updates: {
   is_public?: boolean;
   shared_goal_ids?: string[];
   discoverable?: boolean;
+  profile_mode?: ProfileMode;
+  share_accomplishments?: boolean;
+  who_can_message?: MessagePolicy;
+  accepts_friend_requests?: boolean;
+  accepts_mail?: boolean;
+  comments_from?: CommentPolicy;
 }): Promise<MemberProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');

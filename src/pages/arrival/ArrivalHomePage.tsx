@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { publicName } from '../../shared/profile/names';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MoveInPanel } from '../../features/velvet-world/MoveInSheet';
@@ -51,13 +52,14 @@ export function ArrivalHomePage() {
         return;
       }
       const [{ data: profile }, plot] = await Promise.all([
-        supabase.from('user_profiles').select('name, favorite_color, arrival_choices').eq('id', user.id).maybeSingle(),
+        supabase.from('user_profiles').select('nickname, favorite_color, arrival_choices').eq('id', user.id).maybeSingle(),
         getMyPlot().catch(() => null),
       ]);
       if (cancelled) return;
       setLoaded({
         userId: user.id,
-        name: profile?.name ?? '',
+        // Their billboard is public, so it carries the nickname, never a real name.
+        name: publicName(profile) ?? '',
         accent: profile?.favorite_color ? colorNameToHex(profile.favorite_color) : undefined,
         existingHouse: plot?.house ?? null,
         arrivalChoices: (profile?.arrival_choices as Record<string, unknown>) ?? {},
@@ -84,8 +86,8 @@ export function ArrivalHomePage() {
         display_name: loaded.name || 'Member',
         ...(withHeadline ? { headline: headline.trim() || null } : {}),
       });
-      await updateSetupProgress(loaded.userId, { step: 'arrival_town' });
-      navigate(ARRIVAL_ROUTES.town);
+      await updateSetupProgress(loaded.userId, { step: 'arrival_atlas' });
+      navigate(ARRIVAL_ROUTES.atlas);
     } catch {
       setError("Couldn't save your billboard. Please try again.");
       setSaving(false);

@@ -178,6 +178,20 @@
   }
 }
 
+/* An avatar's blink: the eyes squash flat and open again, once every few seconds. */
+@keyframes avatarBlink {
+  0%, 91%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.06); }
+}
+.avatar-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: avatarBlink 4.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-blink { animation: none; }
+}
+
 @keyframes starTwinkle {
   0%, 100% { opacity: 0.15; }
   50% { opacity: 0.6; }

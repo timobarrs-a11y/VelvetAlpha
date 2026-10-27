@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowDown, Loader2, Trash2, Reply } from 'lucide-react';
 import type { RoomMessage, SpaceMember, SpaceRoom, RoleTag } from '../../types/spaces';
 import {
@@ -67,6 +68,7 @@ function RoleTagPill({ tag }: { tag: RoleTag }) {
 
 export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialAccessError }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -308,9 +310,15 @@ export function RoomChat({ room, boardId, isMember, canModerate, onJoin, socialA
           return (
             <div key={gi} className={`group/msg rounded-lg ${groupMentionsMe ? 'bg-pink-500/[0.06] -mx-1 px-1' : ''}`}>
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs font-medium ${first.author_is_bot ? 'text-violet-400' : isMe ? 'text-pink-300' : 'text-ink'}`}>
+                <button
+                  type="button"
+                  onClick={() => first.author_id && navigate(isMe ? '/my-profile' : `/member/${first.author_id}`)}
+                  disabled={!first.author_id}
+                  title={`View ${authorName}'s profile`}
+                  className={`text-xs font-medium hover:underline ${first.author_is_bot ? 'text-violet-400' : isMe ? 'text-pink-300' : 'text-ink'}`}
+                >
                   {authorName}
-                </span>
+                </button>
                 {first.author_is_bot && (
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-semibold">AI</span>
                 )}

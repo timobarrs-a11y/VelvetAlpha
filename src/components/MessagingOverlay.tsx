@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   MessageSquare,
@@ -175,6 +176,12 @@ function relativeTime(iso: string | null): string {
 
 export function MessagingOverlay({ onClose, onMinimize, embedded = false, initialView = 'conversations', initialFriendCode = null, onOpenChat }: { onClose: () => void; onMinimize?: () => void; embedded?: boolean; initialView?: View; initialFriendCode?: string | null; /** In the dock, chats open as their own window instead of inside Messages; `game` opens that game and invites them. */ onOpenChat?: (target: ChatTarget, game?: FriendGameId) => void }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  /** Tapping a person's face goes to their profile (their statuses, with likes and comments). */
+  const openProfile = (userId: string) => {
+    navigate(`/member/${userId}`);
+    if (!embedded) onClose();
+  };
   const [view, setView] = useState<View>(initialView);
   const [friends, setFriends] = useState<FriendPeer[]>([]);
   const [incoming, setIncoming] = useState<FriendPeer[]>([]);
@@ -506,10 +513,24 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
               <Sparkles className="w-5 h-5 text-rose-400" />
             </div>
           )}
+          {view === 'chat' && chatTarget ? (
+            <button
+              type="button"
+              onClick={() => openProfile(chatTarget.peerId)}
+              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl p-1 text-left transition-colors hover:bg-white/5"
+              title={`View ${chatTarget.peerName}'s profile`}
+              aria-label={`View ${chatTarget.peerName}'s profile`}
+            >
+              <PeerAvatar name={chatTarget.peerName} avatarUrl={chatTarget.peerAvatarUrl} size={36} />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-ink">{chatTarget.peerName}</span>
+                <span className="block text-[10px] text-ink-muted">View profile</span>
+              </span>
+            </button>
+          ) : (
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-semibold text-ink truncate">
-              {view === 'chat' && chatTarget ? chatTarget.peerName
-                : view === 'vr-chat' && vrChatTarget ? vrChatTarget.peerHandle
+              {view === 'vr-chat' && vrChatTarget ? vrChatTarget.peerHandle
                 : view === 'friends' ? 'Buddy List'
                 : view === 'games' ? 'Games'
                 : view === 'discover' ? 'Discover people'
@@ -518,11 +539,11 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
                 : 'Friends HQ'}
             </h2>
             <p className="text-[10px] text-ink-muted">
-              {view === 'chat' && chatTarget ? 'Instant Messenger'
-                : view === 'vr-chat' && vrChatTarget ? 'Velvet Rope'
+              {view === 'vr-chat' && vrChatTarget ? 'Velvet Rope'
                 : 'Stay connected'}
             </p>
           </div>
+          )}
           {onMinimize && (
             <button
               onClick={onMinimize}
@@ -666,6 +687,7 @@ export function MessagingOverlay({ onClose, onMinimize, embedded = false, initia
             <FriendsView
               friends={filteredFriends}
               onOpenChat={(f) => handleOpenConversation(f)}
+              onOpenProfile={openProfile}
               onUnfriend={handleUnfriend}
             />
           )}
@@ -889,13 +911,15 @@ function GamesView({ friends, onInvite }: { friends: FriendPeer[]; onInvite: (f:
 // ---------------------------------------------------------------------------
 // Friends list
 // ---------------------------------------------------------------------------
-function FriendsView({
+export function FriendsView({
   friends,
   onOpenChat,
+  onOpenProfile,
   onUnfriend,
 }: {
   friends: FriendPeer[];
   onOpenChat: (f: FriendPeer) => void;
+  onOpenProfile: (userId: string) => void;
   onUnfriend: (friendshipId: string) => void;
 }) {
   if (friends.length === 0) {
@@ -919,7 +943,7 @@ function FriendsView({
   return (
     <div className="py-1">
       {groups.map(g => (
-        <BuddyGroup key={g.key} group={g} onOpenChat={onOpenChat} onUnfriend={onUnfriend} />
+        <BuddyGroup key={g.key} group={g} onOpenChat={onOpenChat} onOpenProfile={onOpenProfile} onUnfriend={onUnfriend} />
       ))}
     </div>
   );
@@ -930,10 +954,12 @@ const PRESENCE_DOT: Record<Presence, string> = { online: '#22c55e', away: '#f59e
 function BuddyGroup({
   group,
   onOpenChat,
+  onOpenProfile,
   onUnfriend,
 }: {
   group: { key: Presence; label: string; people: FriendPeer[] };
   onOpenChat: (f: FriendPeer) => void;
+  onOpenProfile: (userId: string) => void;
   onUnfriend: (friendshipId: string) => void;
 }) {
   // Offline starts folded, like a buddy list; online and away start open.
@@ -951,11 +977,17 @@ function BuddyGroup({
       </button>
       {open && group.people.map((f) => (
         <div key={f.user_id} className="group flex w-full items-center gap-2.5 px-3 py-1.5 hover:bg-white/5 transition-colors">
-          <button type="button" onClick={() => onOpenChat(f)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left" title={`Message ${f.display_name}`}>
-            <span className="relative flex-shrink-0">
-              <PeerAvatar name={f.display_name} avatarUrl={f.avatar_url} size={32} />
-              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2" style={{ background: PRESENCE_DOT[group.key], borderColor: 'var(--ds-surface, #1a1a2e)' }} />
-            </span>
+          <button
+            type="button"
+            onClick={() => onOpenProfile(f.user_id)}
+            className="relative flex-shrink-0 rounded-full transition-transform hover:scale-105"
+            title={`View ${f.display_name}'s profile`}
+            aria-label={`View ${f.display_name}'s profile`}
+          >
+            <PeerAvatar name={f.display_name} avatarUrl={f.avatar_url} size={32} />
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2" style={{ background: PRESENCE_DOT[group.key], borderColor: 'var(--ds-surface, #1a1a2e)' }} />
+          </button>
+          <button type="button" onClick={() => onOpenChat(f)} className="flex min-w-0 flex-1 items-center text-left" title={`Message ${f.display_name}`}>
             <span className="min-w-0">
               <span className={`block truncate text-sm ${group.key === 'offline' ? 'text-ink-muted' : 'font-medium text-ink'}`}>{f.display_name}</span>
               <span className="block truncate text-[11px] text-ink-muted">
@@ -1268,14 +1300,14 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
           // Bootstrap from user_profiles so the user doesn't start empty.
           const { data: up } = await supabase
             .from('user_profiles')
-            .select('name, interests, avatar_config')
+            .select('nickname, interests, avatar_config')
             .eq('id', user.id)
             .maybeSingle();
           if (up) {
-            setDisplayName(up.name ?? '');
+            setDisplayName(up.nickname ?? '');
             setInterests((up.interests as string[]) ?? []);
             await syncDiscoveryFromProfile({
-              name: up.name,
+              nickname: up.nickname,
               interests: up.interests as string[] | null,
             }).catch(() => {});
           }

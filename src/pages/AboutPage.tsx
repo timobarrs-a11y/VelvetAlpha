@@ -56,7 +56,7 @@ export default function AboutPage() {
         }}
       >
         <button
-          onClick={() => navigate('/welcome')}
+          onClick={() => navigate('/')}
           className="text-white text-sm font-bold tracking-[0.18em] uppercase"
           style={{ letterSpacing: '0.18em' }}
         >

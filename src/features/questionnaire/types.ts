@@ -64,8 +64,12 @@ export interface BaseQuestion {
   chapter?: string;
   confidence?: ConfidenceTier;
   placeholder?: string;
+  /** Resuming never passes over this question, even when later ones are answered. */
+  required?: boolean;
   /** Skip this question when true, going forward and back (a cusp question off a cusp, a birthday we already have). */
   skipIf?: (ctx: QuestionContext) => boolean;
+  /** Its answer starts out filled in from the profile (the sign-up birthday), so it says nothing about how far they got. */
+  prefilled?: boolean;
 }
 
 export interface TapQuestion extends BaseQuestion {
@@ -75,6 +79,14 @@ export interface TapQuestion extends BaseQuestion {
   minLength?: number;
   optional?: boolean;
   skipLabel?: string;
+  /** A small line under the answer box (what we do with it, why it is optional). */
+  hint?: string | ((ctx: QuestionContext) => string);
+  /** Why an answer is not allowed, or null when it is fine. The Next button waits for null. */
+  validate?: (text: string) => string | null;
+  /** Show the nickname bank to choose one from (or they type their own); the skip button gives them a random one. */
+  nicknameBank?: boolean;
+  /** Tappable suggestions that fill the answer box; they can still type their own. */
+  suggestions?: string[];
 }
 
 export interface GridQuestion extends BaseQuestion {

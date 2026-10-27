@@ -17,11 +17,14 @@ vi.mock('../../hooks/useTypingEffect', () => ({
 }));
 vi.mock('../../auth/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 vi.mock('../../components/Avatar', () => ({ Avatar: () => <div data-testid="avatar" /> }));
-vi.mock('../../components/AvatarCreatorV2', () => ({ coherentRandomize: (g: string) => ({ gender: g, glasses: 'none' }) }));
 vi.mock('../../services/avatarSaveService', () => ({ sanitizeAvatarConfigForSave: async (c: unknown) => c }));
 vi.mock('../../features/arrival/ArrivalTheme', () => ({ ArrivalTheme: ({ children }: { children: ReactNode }) => <>{children}</> }));
 const setupProgress = vi.fn();
-vi.mock('../../services/setupProgressService', () => ({ updateSetupProgress: (...a: unknown[]) => setupProgress(...a) }));
+let currentStep: string | null = 'arrival_goal';
+vi.mock('../../services/setupProgressService', () => ({
+  updateSetupProgress: (...a: unknown[]) => setupProgress(...a),
+  getSetupProgress: async () => ({ step: currentStep, path: null }),
+}));
 
 const updates: Array<{ table: string; patch: unknown; id: unknown }> = [];
 vi.mock('../../shared/supabase/client', () => ({
@@ -54,9 +57,8 @@ function respond(body: Record<string, unknown>) {
         return { reply: 'Good evening, Master Tim.\n\nWhere do things stand?', chips: ["I'm already working on something.", 'I have an idea.', "I don't have a goal yet."] };
       }
       return {
-        reply: 'A home of your own. I know just the person.',
+        reply: 'A home of your own, by next September, so your family has roots. Splendid.',
         chips: [],
-        pencilled: [{ title: 'Check your credit score', date: '2099-10-29' }],
         isComplete: true,
       };
     case 'confirm':
@@ -77,11 +79,14 @@ function respond(body: Record<string, unknown>) {
 
 // jsdom doesn't lay anything out, so it has no scrollIntoView.
 Element.prototype.scrollIntoView = vi.fn();
+const scrollTo = vi.fn();
+Element.prototype.scrollTo = scrollTo as never;
 
 beforeEach(() => {
   requests.length = 0;
   updates.length = 0;
   vi.clearAllMocks();
+  currentStep = 'arrival_goal';
   sessionStorage.clear();
   localStorage.clear();
   vi.stubGlobal('fetch', vi.fn(async (_url: string, init: { body: string }) => {
@@ -94,48 +99,52 @@ beforeEach(() => {
 const { AtlasConciergePage } = await import('../AtlasConciergePage');
 
 describe('AtlasConciergePage', () => {
-  it('runs the whole arrival: opening, the goal, meet, the plan, the calendar, the billboard, Today', async () => {
-    render(<AtlasConciergePage />);
+  it('visits twice: locks the goal and drafts the plan while they make an avatar, then returns with it', async () => {
+    const first = render(<AtlasConciergePage />);
 
     // The opening, with the three choices; it sends where and when the user is.
     fireEvent.click(await screen.findByText("I'm already working on something."));
     expect(requests[0]).toMatchObject({ phase: 'goal', messages: [] });
     expect(requests[0]).toEqual(expect.objectContaining({ localHour: expect.any(Number), localDate: expect.any(String), tzOffset: expect.any(Number) }));
 
-    // Atlas replies, pencils something in, and finds who'll carry it.
-    expect(await screen.findByText(/Pencilled in: Check your credit score/)).toBeTruthy();
-    expect(await screen.findByText('Meet your assistant')).toBeTruthy();
-    expect(screen.getByText('Maya')).toBeTruthy();
+    // The goal is locked: Atlas says he's drafting the plan, and sends them to make an avatar.
+    expect(await screen.findByText(/get working on a/)).toBeTruthy();
+    expect(setupProgress).toHaveBeenCalledWith('u1', { step: 'arrival_look' });
+    fireEvent.click(await screen.findByText('Create my avatar'));
+    expect(navigate).toHaveBeenCalledWith('/arrival/look');
 
-    // Continue creates Maya and the goal, then drafts the plan.
+    // Meanwhile the helper (a ready-made one) and the plan are made in the background.
+    await waitFor(() => expect(requests.map(r => r.phase)).toContain('plan'));
+    expect(requests.find(r => r.phase === 'provisioning')).toMatchObject({ avatarConfig: { gender: 'female' } });
+    expect(typeof (requests.find(r => r.phase === 'provisioning') as { helperName: string }).helperName).toBe('string');
+    expect((requests.find(r => r.phase === 'provisioning') as { helperName: string }).helperName).not.toBe('Maya');
+    first.unmount();
+
+    // Back from the avatar and house: the plan is there, with who carries it, and the chat is already
+    // scrolled to the newest words, not left at the top for them to scroll down.
+    currentStep = 'arrival_atlas';
+    scrollTo.mockClear();
+    render(<AtlasConciergePage />);
+    expect(await screen.findByText('Meet your assistant')).toBeTruthy();
+    expect(scrollTo).toHaveBeenCalled();
+    expect(scrollTo.mock.calls.every(([arg]) => (arg as { top: number }).top === 0 || typeof (arg as { top: number }).top === 'number')).toBe(true);
+    expect(screen.queryByText('Change anything')).toBeNull();
     fireEvent.click(screen.getByText('Continue'));
     expect(await screen.findByText(/whole road/)).toBeTruthy();
-    expect(requests.find(r => r.phase === 'provisioning')).toMatchObject({ helperName: 'Maya', avatarConfig: { gender: 'female' } });
+    expect(requests.filter(r => r.phase === 'provisioning')).toHaveLength(1);
 
     // Through the walkthrough to the calendar.
     for (let i = 0; i < 3; i++) fireEvent.click(await screen.findByText('Looks right'));
     fireEvent.click(await screen.findByText('Put it on my calendar'));
     await waitFor(() => expect(requests.find(r => r.phase === 'commit_plan')).toMatchObject({ goalId: 'g1', helperId: 'h1', plan: PLAN }));
 
-    // The billboard question, then off to Today.
+    // The billboard question, then straight to Today.
     fireEvent.click(await screen.findByText('Yes, put it up'));
     await waitFor(() => expect(updates).toContainEqual({ table: 'user_goals', patch: { show_on_profile: true }, id: 'g1' }));
     expect(setupProgress).toHaveBeenCalledWith('u1', { step: 'complete' });
     fireEvent.click(await screen.findByText('Go to Today'));
-    expect(navigate).toHaveBeenCalledWith('/lobby?arrived=1', { replace: true });
-  });
-
-  it('creates the helper only once, even if Change anything and Continue are both pressed', async () => {
-    render(<AtlasConciergePage />);
-    fireEvent.click(await screen.findByText("I'm already working on something."));
-    await screen.findByText('Meet your assistant');
-
-    fireEvent.click(screen.getByText('Change anything'));
-    await screen.findByText('Change their look');
-    fireEvent.click(screen.getByText('Done'));
-    fireEvent.click(screen.getByText('Continue'));
-    await screen.findByText(/whole road/);
-
-    expect(requests.filter(r => r.phase === 'provisioning')).toHaveLength(1);
+    // First time home: the V3 lobby, with the coach's chat popping up.
+    expect(localStorage.getItem('velvet.home_layout')).toBe('v3');
+    expect(navigate).toHaveBeenCalledWith('/lobby?arrived=1&coach=h1', { replace: true });
   });
 });

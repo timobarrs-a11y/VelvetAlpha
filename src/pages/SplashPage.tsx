@@ -356,7 +356,7 @@ export function SplashPage() {
                 talk about things you like in <Feat color={TONE.sky}>Spaces</Feat>. You like writing? Try{' '}
                 <Feat color={TONE.blue}>Co-Author</Feat> for anyone with writer&apos;s block.
               </p>
-              <p className="!mb-0">And so much more like:</p>
+              <p className="!mb-0">And so much more!</p>
             </div>
 
             <ul className="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-2.5 max-w-xl mx-auto lg:mx-0 text-left">

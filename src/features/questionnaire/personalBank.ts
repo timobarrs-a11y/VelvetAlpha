@@ -1,4 +1,5 @@
 import type { GridOption, QuestionnaireDefinition } from './types';
+import { NICKNAME_MIN, validateNickname } from './nicknames';
 
 const COLOR_HEX_MAP: Record<string, string> = {
   Red: '#ef4444', Pink: '#ec4899', Orange: '#f97316', Yellow: '#eab308',
@@ -57,15 +58,53 @@ const ZODIAC_SYMBOLS: Record<string, string> = {
   Libra: '♎', Scorpio: '♏', Sagittarius: '♐', Capricorn: '♑', Aquarius: '♒', Pisces: '♓',
 };
 
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/** The month in a birthday ("2026-10-29" gives "October"), or null. */
+export function birthMonthName(birthday: string): string | null {
+  const m = /^\d{4}-(\d{2})-\d{2}/.exec(birthday ?? '');
+  const n = m ? Number(m[1]) : 0;
+  return n >= 1 && n <= 12 ? MONTH_NAMES[n - 1] : null;
+}
+
+/**
+ * The two signs a birth month can be: the one carried over from the month before and the one that
+ * starts in it. Asking beats working it out from the day, since sign dates shift a day between sources.
+ */
+export function monthSigns(birthday: string): [string, string] | null {
+  const m = /^\d{4}-(\d{2})-\d{2}/.exec(birthday ?? '');
+  const month = m ? Number(m[1]) : 0;
+  if (month < 1 || month > 12) return null;
+  const starts = ZODIAC_RANGES.find(([sm]) => sm === month)?.[2];
+  const prev = month === 1 ? 12 : month - 1;
+  const carried = ZODIAC_RANGES.find(([sm]) => sm === prev)?.[2];
+  return starts && carried ? [carried, starts] : null;
+}
+
+/** Why a birthday is not allowed, or null when it is fine. Velvet is for adults. */
+export function validateBirthday(text: string, today: Date = new Date()): string | null {
+  if (!text) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!m) return 'Pick your birthday from the calendar.';
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(y, mo - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d || y < 1900) return "That doesn't look like a real date.";
+  let age = today.getUTCFullYear() - y;
+  if (today.getUTCMonth() + 1 < mo || (today.getUTCMonth() + 1 === mo && today.getUTCDate() < d)) age -= 1;
+  if (age < 0) return "That date hasn't happened yet.";
+  if (age < 18) return 'Velvet is for people 18 and over.';
+  return null;
+}
+
 /** "none" means they'd rather not have a sign. */
 const NO_SIGN = 'none';
 
 /**
- * Their sign: the one they picked on a cusp, else the one they confirmed,
- * else the one their birthday gives.
+ * Their sign: the one they picked for their birth month, else the one they
+ * confirmed or picked on a cusp in the old questions, else the one their birthday gives.
  */
 export function resolveZodiac(answers: Record<string, string | string[]>): string | null {
-  for (const key of ['zodiacCusp', 'zodiacConfirm', 'zodiacSign']) {
+  for (const key of ['zodiac', 'zodiacCusp', 'zodiacConfirm', 'zodiacSign']) {
     const picked = answers[key];
     if (typeof picked === 'string' && picked.trim()) return picked === NO_SIGN ? null : picked;
   }
@@ -241,34 +280,59 @@ export function answersFromSomeday(picks: SomedayPick[]): Record<string, string[
 }
 
 // ─── Act 1: the quick questionnaire ─────────────────────────────────────
-// name → color → nickname → birthday → zodiac → gender → interests → Someday.
-// Each answer is saved as it's given. The "wavelength" questions are asked by
-// Atlas in conversation now.
+// nickname → color → birthday → zodiac → gender → interests → Someday → four "wavelength" questions →
+// favorite hero → real name (optional). Each answer is saved as it's given. The wavelength answers shape
+// how a coach or assistant works with them (when to push, how to talk, what to do when they're upset), so
+// they are asked here, by Dez, and nowhere else.
+
+/** Suggestions for the favorite superhero question; anyone else can be typed in. */
+export const HERO_BANK = [
+  'Spider-Man', 'Batman', 'Superman', 'Wonder Woman', 'Iron Man', 'Captain America', 'Black Panther', 'Thor',
+  'Hulk', 'Black Widow', 'Wolverine', 'Storm', 'Deadpool', 'The Flash', 'Aquaman', 'Green Lantern',
+  'Batgirl', 'Catwoman', 'Ms. Marvel', 'Captain Marvel', 'Doctor Strange', 'Scarlet Witch', 'Ant-Man', 'Daredevil',
+  'Nightwing', 'Supergirl', 'Mr. Incredible', 'Elastigirl', 'Hellboy', 'Spawn',
+] as const;
+
+/** Why a favorite hero answer is not allowed, or null when it is fine. */
+export function validateHero(text: string): string | null {
+  const t = text.trim();
+  if (t.length > 60) return 'Keep it under 60 characters.';
+  if (/@|https?:|www\./i.test(t)) return "Just the hero's name, please.";
+  return null;
+}
 
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 10,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['name', 'favoriteColor', 'nickname', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'favoriteColor', 'birthday', 'zodiac', 'gender'] },
     { id: 'taste', label: 'What you love', questionIds: ['interests'] },
     { id: 'someday', label: 'Someday', questionIds: ['someday'] },
+    { id: 'wavelength', label: 'How you tick', questionIds: ['conflictResponse', 'connection', 'decisionStyle', 'motivation'] },
+    { id: 'finish', label: 'Last bits', questionIds: ['favoriteHero', 'name'] },
   ],
   questions: [
     {
-      id: 'name',
+      // Nicknames come first: it is how people see you in Spaces and when they reach out.
+      id: 'nickname',
       archetype: 'tap',
       chapter: 'identity',
-      question: 'First things first -- what should I call you?',
+      question: "Hey, I'm Dez! We don't call ya by your first name around here, what do people call you?",
       confidence: 'confirmed',
-      placeholder: 'Enter your name',
-      minLength: 2,
+      placeholder: 'Your nickname',
+      required: true,
+      minLength: NICKNAME_MIN,
+      validate: validateNickname,
+      nicknameBank: true,
+      skipLabel: 'Skip, pick one for me',
+      hint: "No nickname? Create one now! It's what people will see, so keep it free of anything that gives away who you are.",
     },
     {
       id: 'favoriteColor',
       archetype: 'grid',
       chapter: 'identity',
       question: (ctx) => {
-        const name = ctx.answers.name as string;
-        return name ? `Nice to meet you, ${name}. What's your favorite color?` : "What's your favorite color?";
+        const who = (ctx.answers.nickname as string | undefined)?.trim();
+        return who ? `${who}! Now that's a name I can work with. What's your favorite color?` : "What's your favorite color?";
       },
       confidence: 'tapped',
       columns: 4,
@@ -288,65 +352,40 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       ],
     },
     {
-      id: 'nickname',
-      archetype: 'tap',
-      chapter: 'identity',
-      question: (ctx) => {
-        const name = (ctx.answers.name as string | undefined)?.trim();
-        return name ? `Do you go by ${name}, or something else?` : 'Do you go by another name?';
-      },
-      confidence: 'confirmed',
-      placeholder: 'A nickname (optional)',
-      optional: true,
-      skipLabel: 'Skip',
-    },
-    {
       id: 'birthday',
       archetype: 'tap',
       chapter: 'identity',
       question: (ctx) => {
-        const name = ctx.answers.name as string;
-        return name ? `When were you born, ${name}?` : 'When were you born?';
+        const who = (ctx.answers.nickname as string | undefined)?.trim();
+        return who
+          ? `When's your birthday, ${who}? It's filled in from sign-up. Fix it if it's off.`
+          : "When's your birthday? It's filled in from sign-up. Fix it if it's off.";
       },
       confidence: 'confirmed',
       placeholder: 'Select your birthday',
-      // Sign-up already asks for it (for the age check), so this is rarely shown.
-      skipIf: (ctx) => !!ctx.answers.birthday,
+      // Always asked: it corrects a sign-up mistake and is how older accounts get their age checked.
+      // A birthday already on the profile is only a starting point, so it does not count as progress.
+      prefilled: true,
+      validate: (text) => validateBirthday(text),
     },
     {
-      id: 'zodiacCusp',
-      archetype: 'tap',
-      chapter: 'identity',
-      question: "You're born on a cusp. Which sign feels more you?",
-      confidence: 'confirmed',
-      autoAdvance: true,
-      skipIf: (ctx) => !getCuspSigns(ctx.answers.birthday as string),
-      options: (ctx) => {
-        const cusp = getCuspSigns(ctx.answers.birthday as string);
-        if (!cusp) return [];
-        return [
-          { text: `${cusp[0]} ${ZODIAC_SYMBOLS[cusp[0]] ?? ''}`.trim(), value: cusp[0] },
-          { text: `${cusp[1]} ${ZODIAC_SYMBOLS[cusp[1]] ?? ''}`.trim(), value: cusp[1] },
-        ];
-      },
-    },
-    {
-      id: 'zodiacConfirm',
+      id: 'zodiac',
       archetype: 'tap',
       chapter: 'identity',
       question: (ctx) => {
-        const sign = deriveZodiac(ctx.answers.birthday as string);
-        return sign ? `${sign} ${ZODIAC_SYMBOLS[sign] ?? ''}, sound right?`.replace(' ,', ',') : 'Your sign?';
+        const month = birthMonthName(ctx.answers.birthday as string);
+        const pair = monthSigns(ctx.answers.birthday as string);
+        if (!month || !pair) return 'Which sign are you?';
+        return `${month}, huh? That makes you a ${pair[0]} or a ${pair[1]}. Which one's you?`;
       },
       confidence: 'confirmed',
       autoAdvance: true,
-      // Shown when the birthday gives one sign; cusp birthdays choose above.
-      skipIf: (ctx) => !deriveZodiac(ctx.answers.birthday as string) || !!getCuspSigns(ctx.answers.birthday as string),
+      skipIf: (ctx) => !monthSigns(ctx.answers.birthday as string),
       options: (ctx) => {
-        const sign = deriveZodiac(ctx.answers.birthday as string);
-        if (!sign) return [];
+        const pair = monthSigns(ctx.answers.birthday as string);
+        if (!pair) return [];
         return [
-          { text: "That's me", value: sign },
+          ...pair.map(sign => ({ text: `${sign} ${ZODIAC_SYMBOLS[sign] ?? ''}`.trim(), value: sign })),
           { text: "I don't follow the stars", value: NO_SIGN },
         ];
       },
@@ -355,7 +394,7 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'gender',
       archetype: 'tap',
       chapter: 'identity',
-      question: 'How do you identify?',
+      question: 'Now, how do you identify?',
       confidence: 'confirmed',
       autoAdvance: true,
       options: [
@@ -369,8 +408,11 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'interests',
       archetype: 'tabs',
       chapter: 'taste',
-      question: 'What are you into?',
-      subtitle: 'Tap anything that\'s you. A few picks are enough for your feed to know where to start.',
+      question: (ctx) => {
+        const who = (ctx.answers.nickname as string | undefined)?.trim();
+        return who ? `So what are you into, ${who}?` : 'So what are you into?';
+      },
+      subtitle: "Tap anything that's you. Even try out some things you may not think you like.",
       confidence: 'tapped',
       minSelections: 3,
       tabs: [
@@ -386,7 +428,7 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'someday',
       archetype: 'tabs',
       chapter: 'someday',
-      question: "Things you've always been curious about",
+      question: "What have you always been curious about?",
       subtitle: 'Not what you do now. What you\'d try if someone handed you the time. Tap anything that makes you think "one day…"',
       confidence: 'tapped',
       minSelections: 0,
@@ -399,6 +441,84 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
         options: tab.options.map(o => ({ label: o, value: o })),
         allowCustom: true,
       })),
+    },
+    {
+      id: 'conflictResponse',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: "Four quick ones about how you tick, so your coach gets you right. When you're upset, what helps more?",
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Logical solutions: help me figure it out', value: 'solutions' },
+        { text: 'Emotional understanding: hear me out first', value: 'empathy' },
+      ],
+    },
+    {
+      id: 'connection',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'And how do you like to talk with folks?',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'Deep, proper one-on-one conversation', value: 'deep' },
+        { text: 'Lively back-and-forth banter', value: 'lively' },
+      ],
+    },
+    {
+      id: 'decisionStyle',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'Big decision coming up. What do you trust?',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: 'My gut: I know the right call when I feel it', value: 'intuitive' },
+        { text: 'Research: I want every option laid out first', value: 'analytical' },
+      ],
+    },
+    {
+      id: 'motivation',
+      archetype: 'tap',
+      chapter: 'wavelength',
+      question: 'Last of the four. What gets you moving on something hard?',
+      confidence: 'confirmed',
+      autoAdvance: true,
+      options: [
+        { text: "My own drive: I do it because I want to", value: 'internal' },
+        { text: 'Someone counting on me', value: 'external' },
+      ],
+    },
+    {
+      // Shown on their profile card and the billboard outside their house: another thing to bond over.
+      id: 'favoriteHero',
+      archetype: 'tap',
+      chapter: 'finish',
+      question: "Every town needs its heroes. Who's your favorite superhero?",
+      confidence: 'tapped',
+      placeholder: 'Type a hero, or pick one below',
+      optional: true,
+      skipLabel: 'Skip for now',
+      hint: 'It shows on your profile and your billboard, so neighbors can find their fellow fans.',
+      validate: validateHero,
+      suggestions: [...HERO_BANK],
+    },
+    {
+      // Optional, and the same id as before so saved answers and resuming keep working.
+      id: 'name',
+      archetype: 'tap',
+      chapter: 'finish',
+      question: (ctx) => {
+        const nick = (ctx.answers.nickname as string | undefined)?.trim();
+        return `Alright, ${nick || 'friend'}, last question. Atlas needs to know your first name.`;
+      },
+      confidence: 'confirmed',
+      placeholder: 'Your first name',
+      minLength: 2,
+      optional: true,
+      skipLabel: 'Skip for now',
+      hint: "Only Atlas uses it, and it's never shown to anyone. You can skip this and add it later.",
     },
   ],
 };

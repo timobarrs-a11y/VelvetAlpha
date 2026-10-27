@@ -502,6 +502,38 @@ export function summarizePlan(plan: ArrivalPlan, today: string): { finishDate: s
   return { finishDate, runTime };
 }
 
+// ─── The helper's first words ────────────────────────────────────────────
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** "2027-06-01" as "June 1, 2027". */
+export function longDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+/**
+ * What the coach or assistant says first, when the plan is saved: a short confirmation of the plan,
+ * then a pointer to the objectives button in the top bar. Written here rather than by the model,
+ * so it is instant and always says the same true things.
+ */
+export function buildHelperWelcome(input: {
+  helperName: string;
+  address: string | null;
+  goalTitle: string;
+  finishDate: string | null;
+  firstStep: string | null;
+  checkIns: string;
+}): string {
+  const { helperName, address, goalTitle, finishDate, firstStep, checkIns } = input;
+  const plan = [
+    `Hello${address ? `, ${address}` : ""}. I'm ${helperName}, and from here I'm your point person on this.`,
+    `Your plan is saved: ${goalTitle}${finishDate ? `, with the finish line on ${longDate(finishDate)}` : ""}.${firstStep ? ` First up: ${firstStep}.` : ""}${checkIns.trim() ? ` I'll check in ${checkIns.trim().replace(/^[A-Z]/, c => c.toLowerCase())}.` : ""}`,
+  ].join(" ");
+  const objectives = "One more thing before you look around. See the button in the top bar, next to Add friend? Those are your objectives. Five to start you off, and each one takes you somewhere on Velvet. Finish them and a fresh set opens up every day, with medals to earn and a place on the leaderboard. Have a look.";
+  return `${plan}\n\n${objectives}`;
+}
+
 // ─── Atlas's conversation prompt ─────────────────────────────────────────
 
 const PATH_GUIDANCE: Record<OpeningPath, string> = {
@@ -541,14 +573,6 @@ export function buildGoalPrompt(
     profile.sports_interests.length ? `sports they follow: ${profile.sports_interests.join(", ")}` : "",
   ].filter(Boolean);
 
-  const unknown = unknownTraits(profile.communication_profile);
-  const ledger = unknown.length
-    ? unknown.map(k => {
-      const t = TRAITS[k];
-      return `- ${k}: "${t.values[0]}" (${t.meaning[0]}) or "${t.values[1]}" (${t.meaning[1]}). Decides ${t.purpose}.`;
-    }).join("\n")
-    : "(all known; ask none)";
-
   return `You are Atlas, the host of Velvet. You've just introduced yourself and asked where things stand.
 
 YOUR VOICE: Alfred Pennyworth in manner, never in name.
@@ -572,13 +596,13 @@ Move to 2 only if they're unsure or a couple of turns go by with nothing you can
 
 HOW YOU PROBE: listen for wishes ("I keep meaning to", "I used to", "one day"). For a Someday pick, ask what draws them to it and what's stopped them. For an interest, ask when they last did it and what got in the way.
 
-TRAITS STILL UNKNOWN (each shapes how their coach or assistant works with them):
-${ledger}
-Once there's a goal, after each answer pick the single unknown trait that would most change how someone helps with THIS goal, and ask about it in the language of the goal. If their words already show a trait, record it without asking. Record a trait only when it's clear, on its own line: [PROFILE {"decisionStyle":"intuitive"}]. When you ask about a trait, offer the two answers as tap choices on their own line: [CHIPS "First answer" | "Second answer"].
+WHAT YOU NEED, AND NOTHING ELSE: three things, each in the person's own words.
+1. THE GOAL: what they want, broad is fine ("run a marathon", "buy a home").
+2. THE DEADLINE: by when. Every goal needs one. If they have none, help them choose a realistic date and get a yes.
+3. THE MISSION: why it matters to them, the thing it is for. One honest sentence from them is enough.
+Do not draw up the plan, break the goal into steps, pick dates for steps, or ask about how they like to be coached. A plan is drafted for them straight after this conversation, and who will carry it is decided then. Never pencil anything in.
 
-SMALL PLANS: when something small and real comes up (pick a game and buy tickets, a walk in the park on Sunday), propose one dated step: "Shall I pencil it in for Saturday?" If they ask you to pencil something in, or agree to a day before you've proposed one, that is the clear yes: pencil it in now as the next real step, and don't ask again. Only after a clear yes, add on its own line: [PLAN {"title":"Pick a game and buy tickets","date":"YYYY-MM-DD","type":"task","goal":"See a game live"}] (type is task, appointment, reminder or date_idea; add "time":"HH:MM" only if they gave one). Never invent fixture dates, venues or prices: when you don't know the detail, the plan is the next real step. One proposal per message.
-
-ENDING: when you have a goal with more than one step (what they want, and roughly by when), say in one or two sentences that you know just the person to see it through with them, then add [GOAL_COMPLETE] on its own line. Reach that within ${maxTurns} exchanges; if it's going nowhere, settle on the most promising goal and end.`;
+ENDING: as soon as you have all three (the goal, the deadline, the mission), say in one or two sentences that you have what you need (name the goal and the date), then add [GOAL_COMPLETE] on its own line. Do not say who will help or what happens next; the page says that. Reach it within ${maxTurns} exchanges; if it's going nowhere, settle on the most promising goal with a sensible deadline and end.`;
 }
 
 /** The prompt that turns the conversation into the plan Atlas walks them through. */

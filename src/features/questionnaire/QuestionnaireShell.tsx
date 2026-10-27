@@ -23,6 +23,8 @@ import type {
 import { resolveQuestionText } from './companionBank';
 import { tpl } from './pronouns';
 import { getColorHex } from './personalBank';
+import { NICKNAME_BANK, pickNickname, type NicknameKind } from './nicknames';
+import { HostDialogue, type QuestionnaireHost } from './HostDialogue';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
@@ -50,6 +52,8 @@ interface QuestionnaireShellProps {
   initialAnswers?: Record<string, string | string[]>;
   /** The question to start on when resuming. */
   initialIndex?: number;
+  /** A character who asks the questions, typed out like dialogue. Without one it is a plain form. */
+  host?: QuestionnaireHost;
 }
 
 export function QuestionnaireShell({
@@ -62,6 +66,7 @@ export function QuestionnaireShell({
   renderOrb,
   initialAnswers,
   initialIndex = 0,
+  host,
 }: QuestionnaireShellProps) {
   const [currentIdx, setCurrentIdx] = useState(Math.min(Math.max(initialIndex, 0), definition.questions.length - 1));
   const [answers, setAnswers] = useState<Record<string, string | string[]>>(initialAnswers ?? {});
@@ -75,10 +80,16 @@ export function QuestionnaireShell({
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [swipeDragX, setSwipeDragX] = useState(0);
   const [beatVisible, setBeatVisible] = useState(false);
+  // With a host, the answer controls wait until the line has been said.
+  const [lineDone, setLineDone] = useState(!host);
+  useEffect(() => { setLineDone(!host); }, [currentIdx, host]);
   const dragStartRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const scrubTrackRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const currentIdxRef = useRef(0);
+  const questionIdx = useRef<Record<string, number>>({});
+  const handleAnswerRef = useRef<(answer: string | string[]) => void>(() => {});
 
   const questions = definition.questions;
   const question = questions[currentIdx];
@@ -87,6 +98,8 @@ export function QuestionnaireShell({
   const progress = startProgress + ((currentIdx + 1) / totalQuestions) * (100 - startProgress);
 
   const ctx: QuestionContext = { ...context, answers };
+  currentIdxRef.current = currentIdx;
+  questions.forEach((q, i) => { questionIdx.current[q.id] = i; });
 
   const currentChapter = definition.chapters.find(ch =>
     ch.questionIds.includes(question?.id)
@@ -164,6 +177,8 @@ export function QuestionnaireShell({
     setTimeout(() => advance(newAnswers), question.archetype === 'tap' ? 350 : 100);
   };
 
+  handleAnswerRef.current = handleAnswer;
+
   const handleBack = () => {
     if (currentIdx > 0) {
       let prevIdx = currentIdx - 1;
@@ -196,7 +211,20 @@ export function QuestionnaireShell({
   const handleGridToggle = (index: number) => {
     const gridQ = question as GridQuestion;
     if (!gridQ.multiSelect) {
-      setSelectedGridOptions(prev => prev.includes(index) ? [] : [index]);
+      const already = selectedGridOptions.includes(index);
+      setSelectedGridOptions(already ? [] : [index]);
+      // A single pick moves on by itself, but only when the person just made it. Going back restores the
+      // old pick without advancing, so the answer can be changed.
+      if (!already) {
+        const questionId = question.id;
+        const value = gridQ.options[index]?.value;
+        window.setTimeout(() => {
+          if (currentIdxRef.current !== questionIdx.current[questionId] || !value) return;
+          setSelectedGridOptions([]);
+          setCustomEntries([]);
+          handleAnswerRef.current(value);
+        }, 350);
+      }
       return;
     }
     setSelectedGridOptions(prev =>
@@ -352,15 +380,25 @@ export function QuestionnaireShell({
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
-              <motion.h2
-                className="text-2xl md:text-3xl font-bold text-center mb-8 tracking-tight leading-snug"
-                style={{ color: accentColor || '#ffffff' }}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08 }}
+              {host ? (
+                <HostDialogue key={currentIdx} host={host} text={questionText} accentColor={accentColor} onDone={() => setLineDone(true)} />
+              ) : (
+                <motion.h2
+                  className="text-2xl md:text-3xl font-bold text-center mb-8 tracking-tight leading-snug"
+                  style={{ color: accentColor || '#ffffff' }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.08 }}
+                >
+                  {questionText}
+                </motion.h2>
+              )}
+
+              <div
+                className={host ? 'transition-opacity duration-300' : undefined}
+                style={host ? { opacity: lineDone ? 1 : 0, pointerEvents: lineDone ? 'auto' : 'none' } : undefined}
+                aria-hidden={host && !lineDone ? true : undefined}
               >
-                {questionText}
-              </motion.h2>
 
               {question.archetype === 'tap' && !(question as TapQuestion).options && (
                 <TapTextRenderer
@@ -370,9 +408,11 @@ export function QuestionnaireShell({
                   onSubmit={() => {
                     const minLen = (question as TapQuestion).minLength;
                     if (minLen && textInput.trim().length < minLen) return;
+                    if ((question as TapQuestion).validate?.(textInput)) return;
                     handleAnswer(textInput.trim());
                   }}
-                  onSkip={(question as TapQuestion).optional ? () => handleAnswer('') : undefined}
+                  onSkip={(question as TapQuestion).optional ? () => handleAnswer('') : (question as TapQuestion).nicknameBank ? () => handleAnswer(pickNickname(textInput)) : undefined}
+                  hint={typeof (question as TapQuestion).hint === 'function' ? ((question as TapQuestion).hint as (c: typeof ctx) => string)(ctx) : (question as TapQuestion).hint as string | undefined}
                   inputRef={inputRef}
                   accentColor={accentColor}
                 />
@@ -445,6 +485,7 @@ export function QuestionnaireShell({
                   cardRef={cardRef}
                 />
               )}
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>
@@ -643,12 +684,15 @@ function ProgressBar({
   );
 }
 
+const NICKNAME_KIND_LABELS: Record<NicknameKind, string> = { funny: 'Funny', classic: 'Classic', screen: 'Screen names', cozy: 'Cozy' };
+
 function TapTextRenderer({
   question,
   textInput,
   setTextInput,
   onSubmit,
   onSkip,
+  hint,
   inputRef,
   accentColor,
 }: {
@@ -657,14 +701,17 @@ function TapTextRenderer({
   setTextInput: (v: string) => void;
   onSubmit: () => void;
   onSkip?: () => void;
+  hint?: string;
   inputRef: React.RefObject<HTMLInputElement | null>;
   accentColor?: string;
 }) {
   const isDate = question.id === 'birthday';
   const minLen = question.minLength;
   const trimmed = textInput.trim();
-  const tooShort = minLen ? trimmed.length > 0 && trimmed.length < minLen : false;
-  const canSubmit = isDate ? !!textInput : trimmed.length >= (minLen ?? 1);
+  const invalid = trimmed.length > 0 ? question.validate?.(textInput) ?? null : null;
+  const tooShort = !question.validate && minLen ? trimmed.length > 0 && trimmed.length < minLen : false;
+  const canSubmit = isDate ? !!textInput && !question.validate?.(textInput) : trimmed.length >= (minLen ?? 1) && !(question.validate?.(textInput));
+  const [bankKind, setBankKind] = useState<NicknameKind>('funny');
 
   const focusBorder = accentColor
     ? { borderColor: `${accentColor}99`, boxShadow: `0 0 0 4px ${accentColor}26` }
@@ -687,6 +734,60 @@ function TapTextRenderer({
         <p className="text-sm text-rose-400/80 text-center">
           {minLen} letters minimum
         </p>
+      )}
+      {invalid && <p role="alert" className="text-sm text-rose-400/80 text-center">{invalid}</p>}
+      {hint && !invalid && <p className="text-sm text-gray-400 text-center">{hint}</p>}
+      {question.nicknameBank && (
+        <div className="space-y-3">
+          <p className="text-center text-xs uppercase tracking-widest text-gray-500">Pick one, or type your own</p>
+          <div role="tablist" aria-label="Nickname styles" className="flex flex-wrap items-center justify-center gap-1.5">
+            {(Object.keys(NICKNAME_BANK) as NicknameKind[]).map(kind => (
+              <button
+                key={kind}
+                type="button"
+                role="tab"
+                aria-selected={bankKind === kind}
+                onClick={() => setBankKind(kind)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${bankKind === kind ? 'bg-white/15 border-white/30 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}
+              >
+                {NICKNAME_KIND_LABELS[kind]}
+              </button>
+            ))}
+          </div>
+          <div role="listbox" aria-label="Nicknames" className="flex flex-wrap items-center justify-center gap-2 max-h-44 overflow-y-auto px-1 py-1">
+            {NICKNAME_BANK[bankKind].map(nick => (
+              <button
+                key={nick}
+                type="button"
+                role="option"
+                aria-selected={trimmed === nick}
+                onClick={() => setTextInput(nick)}
+                className={`px-3.5 py-1.5 rounded-full text-sm border transition-colors ${trimmed === nick ? 'bg-rose-500/25 border-rose-400/60 text-white' : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10'}`}
+              >
+                {nick}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {question.suggestions && question.suggestions.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-center text-xs uppercase tracking-widest text-gray-500">Pick one, or type your own</p>
+          <div role="listbox" aria-label="Suggestions" className="flex flex-wrap items-center justify-center gap-2 max-h-44 overflow-y-auto px-1 py-1">
+            {question.suggestions.map(s => (
+              <button
+                key={s}
+                type="button"
+                role="option"
+                aria-selected={trimmed === s}
+                onClick={() => setTextInput(s)}
+                className={`px-3.5 py-1.5 rounded-full text-sm border transition-colors ${trimmed === s ? 'bg-rose-500/25 border-rose-400/60 text-white' : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10'}`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
       <div className="flex items-center justify-center gap-3">
         <button
@@ -774,13 +875,6 @@ function GridRenderer({
   const canSkip = minSel === 0 && totalSelected === 0;
   const cols = question.columns ?? 3;
   const gridClass = cols === 4 ? 'grid grid-cols-2 sm:grid-cols-4' : cols === 2 ? 'grid grid-cols-2' : 'grid grid-cols-2 sm:grid-cols-3';
-
-  useEffect(() => {
-    if (autoSubmit && selectedOptions.length === 1) {
-      const timer = setTimeout(() => onSubmit(), 350);
-      return () => clearTimeout(timer);
-    }
-  }, [autoSubmit, selectedOptions, onSubmit]);
 
   const selectedBorder = accentColor ? `${accentColor}99` : 'rgb(244 63 94 / 0.6)';
   const selectedBg = accentColor ? `${accentColor}33` : 'rgb(136 19 55 / 0.2)';

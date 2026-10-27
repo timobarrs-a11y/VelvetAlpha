@@ -128,7 +128,7 @@ export default function SignUpPage() {
         formRenderedAt: formRenderedAt.current,
       });
       await referralService.redeemPendingReferral();
-      navigate('/welcome');
+      navigate('/user-questionnaire');
     } catch (err: any) {
       setError(passwordErrorMessage(err, 'Failed to create account. Please try again.'));
     } finally {

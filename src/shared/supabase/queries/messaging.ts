@@ -122,15 +122,16 @@ export async function setMyDiscoveryIdentity(alias: string, ageRange: string | n
   }
 }
 
-// Mirror interests + name from user_profiles into im_discovery_profiles so
+// Mirror interests + nickname from user_profiles into im_discovery_profiles so
 // discovery queries have everything they need without joining auth-gated tables.
+// Only the nickname is shown to other people; a real name is never copied here.
 export async function syncDiscoveryFromProfile(profile: {
-  name?: string | null;
+  nickname?: string | null;
   avatar_config?: any;
   interests?: string[] | null;
 }) {
   const updates: Record<string, unknown> = {};
-  if (profile.name !== undefined) updates.display_name = profile.name ?? '';
+  if (profile.nickname !== undefined) updates.display_name = profile.nickname?.trim() ?? '';
   if (profile.interests !== undefined) updates.interests = profile.interests ?? [];
   if (Object.keys(updates).length === 0) return;
   const { error } = await supabase
@@ -404,7 +405,7 @@ export async function sendFriendRequest(
   if (error) {
     // Unique-pair index may fire if a row already exists in any state.
     if (error.code === '23505') return;
-    throw new Error(`Failed to send request: ${error.message}`);
+    throw new Error(error.code === '42501' ? error.message : `Failed to send request: ${error.message}`);
   }
 }
 
@@ -667,7 +668,8 @@ export async function sendMessage(conversationId: string, content: string): Prom
     .insert({ conversation_id: conversationId, content })
     .select('id, conversation_id, sender_id, content, read_at, created_at')
     .maybeSingle();
-  if (error) throw new Error(`Failed to send message: ${error.message}`);
+  // 42501 is a member's reach setting speaking: show their words, not a database error.
+  if (error) throw new Error(error.code === '42501' ? error.message : `Failed to send message: ${error.message}`);
 
   // Keep last_message_at fresh for conversation list ordering.
   await supabase

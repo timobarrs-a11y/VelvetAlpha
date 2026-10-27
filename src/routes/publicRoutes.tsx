@@ -1,11 +1,10 @@
 import React, { lazy, Suspense } from 'react';
-import { Route } from 'react-router-dom';
+import { Navigate, Route } from 'react-router-dom';
 import { SplashPage } from '../pages/SplashPage';
 import LoginPage from '../pages/LoginPage';
 import SignUpPage from '../pages/SignUpPage';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 
-const WelcomePage = lazy(() => import('../pages/WelcomePage').then(m => ({ default: m.WelcomePage })));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 const TermsOfServicePage = lazy(() => import('../pages/TermsOfServicePage'));
 const PrivacyPolicyPage = lazy(() => import('../pages/PrivacyPolicyPage'));
@@ -22,7 +21,8 @@ function S(el: React.ReactNode) {
 
 export const publicRoutes = [
   <Route key="splash" path="/splash" element={<SplashPage />} />,
-  <Route key="welcome-public" path="/welcome" element={S(<WelcomePage />)} />,
+  // The old welcome page is gone: old links go home (the splash page if signed out).
+  <Route key="welcome-public" path="/welcome" element={<Navigate to="/" replace />} />,
   <Route key="login" path="/login" element={<LoginPage />} />,
   <Route key="add-friend" path="/add/:code" element={S(<AddFriendPage />)} />,
   <Route key="signup" path="/signup" element={<SignUpPage />} />,

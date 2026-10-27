@@ -10,6 +10,7 @@ import {
 import {
   buildGoalPrompt,
   extractJson,
+  buildHelperWelcome,
   buildOpening,
   buildPlanPrompt,
   checkReply,
@@ -39,7 +40,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const MAX_TURNS = 10;
+const MAX_TURNS = 8;
 
 const CURATED_EXPERT_IDS = Object.keys(CURATED_EXPERT_MAP);
 
@@ -606,7 +607,7 @@ Write a 2-3 sentence instruction describing what the coach teaches, how (short l
 
       const [{ data: goal }, { data: helper }] = await Promise.all([
         supabaseAdmin.from("user_goals").select("id, title").eq("id", goalId).eq("user_id", user.id).maybeSingle(),
-        supabaseAdmin.from("companions").select("id, relationship_type").eq("id", helperId).eq("user_id", user.id).maybeSingle(),
+        supabaseAdmin.from("companions").select("id, relationship_type, custom_name").eq("id", helperId).eq("user_id", user.id).maybeSingle(),
       ]);
       if (!goal || !helper) return json({ error: "Goal or helper not found" }, 404);
       const goalTitle = (goal as { title: string }).title;
@@ -711,6 +712,29 @@ Write a 2-3 sentence instruction describing what the coach teaches, how (short l
         }] : []),
       ];
       if (events.length > 0) await supabaseAdmin.from("user_events").insert(events);
+
+      // The helper's first words, waiting in their chat: the plan confirmed, and the objectives button.
+      try {
+        const profile = await fetchArrivalProfile(supabaseAdmin, user.id);
+        const firstCommitment = plan.commitments[0]?.description ?? stepList[0]?.title ?? null;
+        await supabaseAdmin.from("conversations").insert({
+          user_id: user.id,
+          companion_id: helperId,
+          role: "assistant",
+          content: buildHelperWelcome({
+            helperName: (helper as { custom_name: string | null }).custom_name || "your helper",
+            // a coach or assistant only ever uses the nickname (the "Master Tim" address is Atlas's alone)
+            address: profile.nickname?.trim() || null,
+            goalTitle,
+            finishDate: summarizePlan(plan, today.date).finishDate,
+            firstStep: firstCommitment,
+            checkIns: plan.checkIns,
+          }),
+          metadata: { type: "welcome" },
+        });
+      } catch (err) {
+        console.error("[atlas-onboarding] Couldn't leave the welcome message:", err);
+      }
 
       return json({ success: true, phase: "commit_plan", planId });
     }

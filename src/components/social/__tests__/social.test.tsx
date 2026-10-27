@@ -44,11 +44,19 @@ describe('createStatus', () => {
     expect(rpc).toHaveBeenCalledWith('create_status_post', { p_body: 'hello' });
   });
 
+  it('names the audience only when a post is friends-only', async () => {
+    rpc.mockResolvedValue({ data: { success: true, id: 'p2' }, error: null });
+    await createStatus('just for friends', 'friends');
+    expect(rpc).toHaveBeenLastCalledWith('create_status_post', { p_body: 'just for friends', p_audience: 'friends' });
+    await createStatus('for everyone', 'everyone');
+    expect(rpc).toHaveBeenLastCalledWith('create_status_post', { p_body: 'for everyone' });
+  });
+
   it('turns server refusals into readable messages', async () => {
     rpc.mockResolvedValue({ data: { success: false, error: 'rate_limited' }, error: null });
     await expect(createStatus('hello')).rejects.toThrow(/posted a lot/);
     rpc.mockResolvedValue({ data: { success: false, error: 'no_access' }, error: null });
-    await expect(createStatus('hello')).rejects.toThrow(/membership or trial/);
+    await expect(createStatus('hello')).rejects.toThrow(/Verify your age/);
   });
 });
 
@@ -65,6 +73,19 @@ describe('StatusComposer', () => {
     expect(box.value).toBe('');
   });
 
+  it('lets you choose who sees a post, like a feed', async () => {
+    rpc.mockResolvedValue({ data: { success: true, id: 'p3' }, error: null });
+    const onPosted = vi.fn();
+    render(<StatusComposer onPosted={onPosted} />);
+    expect(screen.getByText('Anyone can see this')).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: /Friends/ }));
+    expect(screen.getByText('Only your friends will see this')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Write a status'), { target: { value: 'Rough week' } });
+    fireEvent.click(screen.getByText('Post'));
+    await waitFor(() => expect(onPosted).toHaveBeenCalled());
+    expect(rpc).toHaveBeenCalledWith('create_status_post', { p_body: 'Rough week', p_audience: 'friends' });
+  });
+
   it('keeps the text and shows the reason when posting fails', async () => {
     rpc.mockResolvedValue({ data: { success: false, error: 'too_long' }, error: null });
     const onPosted = vi.fn();
@@ -75,6 +96,16 @@ describe('StatusComposer', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/under 500/)));
     expect(onPosted).not.toHaveBeenCalled();
     expect(box.value).toBe('hello');
+  });
+});
+
+describe('friends-only posts', () => {
+  it('say so on the post', async () => {
+    rpc.mockResolvedValue({ data: { success: true, posts: [post('f', { audience: 'friends' }), post('e', { audience: 'everyone' })] }, error: null });
+    interactions.getLikedPostIds.mockResolvedValue(new Set());
+    render(<MemoryRouter><ProfilePosts userId="friend" isOwn={false} /></MemoryRouter>);
+    await screen.findByText('post f');
+    expect(screen.getAllByTitle('Only friends can see this')).toHaveLength(1);
   });
 });
 

@@ -3,6 +3,7 @@ import { COLORS, STYLE_DEFAULTS, houseUnlock, type HouseStyle, type HouseConfig 
 import { claimPlot, getUnlocks, saveHouse } from '../../services/worldService';
 import { HousePicker } from './HousePicker';
 import { drawHouseTile, tilePlot } from './houseTiles';
+import { PinnedPreview } from '../../shared/ui/PinnedPreview';
 
 /**
  * Pick a house and its colors, then move in. Used by the welcome popup and by /world on a
@@ -56,11 +57,15 @@ export function MoveInPanel({ onMoved, compact = false, initial, submitLabel = '
   };
 
   return (
-    <div className="grid gap-5">
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#9DAE97]/20" style={{ height: compact ? 190 : 240 }}>
-        <canvas ref={previewRef} width={640} height={compact ? 190 : 240} className="h-full w-full object-contain" />
-      </div>
-
+    // The house stays pinned at the top while the picker and the color swatches scroll under it.
+    <PinnedPreview
+      className="grid gap-5"
+      preview={(
+        <div className={`w-full overflow-hidden rounded-2xl border border-white/10 bg-[#9DAE97] ${compact ? 'h-[140px] sm:h-[190px]' : 'h-[140px] sm:h-[240px]'}`}>
+          <canvas ref={previewRef} width={640} height={compact ? 190 : 240} aria-label="Your house" className="h-full w-full object-contain" />
+        </div>
+      )}
+    >
       <HousePicker value={house} onChange={pickHouse} isMember={unlocks.is_member} earned={unlocks.earned} colors={colors} />
 
       <div className="grid gap-3">
@@ -79,7 +84,7 @@ export function MoveInPanel({ onMoved, compact = false, initial, submitLabel = '
       >
         {moving ? 'Saving…' : submitLabel}
       </button>
-    </div>
+    </PinnedPreview>
   );
 }
 

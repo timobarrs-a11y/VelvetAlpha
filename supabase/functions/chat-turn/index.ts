@@ -2088,7 +2088,8 @@ Balance this domain expertise naturally with your relationship dynamic — bring
     const behavioralBlock = isMentor
       ? buildCoachBehavioralInstructions({
           coachName: companionName,
-          userName: profile.name,
+          // coaches and assistants only use the nickname
+          userName: profile.nickname?.trim() || profile.name,
           domain: expertDomain,
           goalText: discoveredGoalText,
           accountabilityLevel: expertAccountability,
@@ -2097,7 +2098,7 @@ Balance this domain expertise naturally with your relationship dynamic — bring
       : isAssistant
         ? buildAssistantBehavioralInstructions({
             assistantName: companionName,
-            userName: profile.name,
+            userName: profile.nickname?.trim() || profile.name,
             goalText: discoveredGoalText,
             accountabilityLevel: expertAccountability,
             checkInStyle: expertCheckInStyle,

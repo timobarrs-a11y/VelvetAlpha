@@ -9,11 +9,16 @@ import { ShellProvider, useShell } from '../shells/ShellProvider';
 import { ArrivalProgress } from '../features/arrival/ArrivalProgress';
 import { AtlasFadeTyping } from '../shells/slots/AtlasFadeTyping';
 import { AtlasBackgroundScene } from '../shells/slots/AtlasBackgroundScene';
-import { updateSetupProgress } from '../services/setupProgressService';
-import { coherentRandomize } from '../components/AvatarCreatorV2';
+import { getSetupProgress, updateSetupProgress } from '../services/setupProgressService';
 import { sanitizeAvatarConfigForSave } from '../services/avatarSaveService';
-import { useAvatarEditor, onAvatarSaved } from '../stores/avatarEditorStore';
 import type { AvatarConfigV2 } from '../types/avatar-v2';
+import { callAtlas } from '../features/arrival/atlasApi';
+import { ARRIVAL_ROUTES } from '../features/arrival/arrivalRoutes';
+import { setHomeLayout } from '../hooks/useHomeLayout';
+import { Highlighted } from '../features/arrival/Highlighted';
+import {
+  clearPlanJob, loadPlanJob, resumePlanJob, startPlanJob, type JobDeps, type PlanJob, type Provisioned, type Recommendation,
+} from '../features/arrival/arrivalPlanJob';
 import { MeetCard } from '../features/arrival/MeetCard';
 import { PlanWalkthrough, type PlanSummary } from '../features/arrival/PlanWalkthrough';
 import { formatDay } from '../features/arrival/arrivalUtils';
@@ -26,31 +31,17 @@ interface ChatMessage {
   id: number;
   chips?: string[];
   pencilled?: { title: string; date: string }[];
+  /** Feature words to bold and colour, like "plan". */
+  highlight?: string[];
 }
 
-// goal: the conversation · meet: who'll carry it · walkthrough: plan to calendar
+// The arrival visits Atlas twice, with the avatar and house in between:
+// goal: the conversation, ending when the goal, its deadline and why are clear
+// handoff: the goal is locked and the plan is being drafted; off to make an avatar
+// meet: back with the plan drafted, and who'll carry it · walkthrough: plan to calendar
 // billboard: one last question · done: off to Today
-type Phase = 'goal' | 'meet' | 'walkthrough' | 'billboard' | 'done';
+type Phase = 'goal' | 'handoff' | 'meet' | 'walkthrough' | 'billboard' | 'done';
 
-interface Recommendation {
-  helperName: string;
-  helperGender: 'male' | 'female';
-  kind: 'coach' | 'assistant';
-  expertDomain: string;
-  expertId: string | null;
-  isCustomExpert: boolean;
-  accountabilityLevel: string;
-  goalText: string;
-  recommendationText: string;
-}
-
-interface Provisioned {
-  helperId: string;
-  goalId: string;
-  goalText: string;
-}
-
-const FUNCTION_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ATLAS_STATE_KEY = 'atlas_arrival_state';
 
 interface SavedState {
@@ -90,35 +81,15 @@ function clearState(userId: string) {
   try { localStorage.removeItem(stateKey(userId)); } catch { /* storage blocked */ }
 }
 
-/** Where the user is: their hour for the greeting, their date and offset for scheduling. */
-function localContext() {
-  const now = new Date();
-  return {
-    localHour: now.getHours(),
-    localDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
-    tzOffset: now.getTimezoneOffset(),
-  };
-}
-
-async function callAtlas(body: Record<string, unknown>) {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Not signed in');
-  const response = await fetch(`${FUNCTION_BASE}/atlas-onboarding`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-    body: JSON.stringify({ ...localContext(), ...body }),
-  });
-  if (!response.ok) throw new Error(`atlas-onboarding ${body.phase}: ${response.status}`);
-  return response.json();
-}
+const jobDeps: JobDeps = { call: callAtlas, sanitizeAvatar: sanitizeAvatarConfigForSave };
 
 let msgIdCounter = 0;
 
-function StreamingAtlasMessage({ content, isLatest }: { content: string; isLatest: boolean }) {
+function StreamingAtlasMessage({ content, isLatest, highlight = [] }: { content: string; isLatest: boolean; highlight?: string[] }) {
   const { displayedText, showCursor } = useTypingEffect(content, isLatest, { speed: 45 });
   return (
     <span className="whitespace-pre-line">
-      {displayedText}
+      <Highlighted text={displayedText} words={highlight} />
       {showCursor && (
         <motion.span
           className="inline-block w-[2px] h-[1.1em] ml-0.5 align-text-bottom rounded-full"
@@ -153,12 +124,35 @@ function AtlasConciergeInner() {
   const hasInitialized = useRef(false);
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const provisioning = useRef<Promise<Provisioned | null> | null>(null);
+  const [needsRetry, setNeedsRetry] = useState(false);
   const writingLabel = useWritingIndicator(isThinking, 4000);
 
+  // Keep the newest words in view. The chat sits at the bottom whenever it is opened, restored or added
+  // to, and stays there as the line types out and the cards below it appear (which change its height
+  // after the first scroll). Someone who scrolls up to reread is left where they are until the next message.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
+  const toBottom = useCallback((smooth = false) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    else el.scrollTop = el.scrollHeight;
+  }, []);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isThinking, phase]);
+    stickToBottom.current = true;
+    toBottom(messages.length > 1);
+    messagesEndRef.current?.scrollIntoView?.({ block: 'end', behavior: 'auto' });
+  }, [messages.length, isThinking, phase, toBottom]);
+
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => { if (stickToBottom.current) toBottom(); });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [toBottom]);
 
   const addAtlas = useCallback((content: string, extra: Partial<ChatMessage> = {}) => {
     const id = ++msgIdCounter;
@@ -168,41 +162,74 @@ function AtlasConciergeInner() {
     setLatestAtlasId(id);
   }, []);
 
+  const applyJob = useCallback((job: PlanJob) => {
+    setRecommendation(job.recommendation ?? null);
+    setHelperAvatar(job.helperAvatar ?? null);
+    setProvisioned(job.provisioned ?? null);
+    setPlan(job.plan ?? null);
+    setSummary(job.summary ?? null);
+  }, []);
+
+  /** Back from the avatar and house: the plan that was drafted meanwhile, and who will carry it. */
+  const bringBack = useCallback(async (uid: string): Promise<boolean> => {
+    const pending = resumePlanJob(uid, jobDeps);
+    if (!pending) return false;
+    setError('');
+    setNeedsRetry(false);
+    setIsThinking(true);
+    const job = await pending;
+    setIsThinking(false);
+    if (job.status !== 'ready' || !job.recommendation) {
+      setError("I couldn't finish your plan just now.");
+      setNeedsRetry(true);
+      return true;
+    }
+    applyJob(job);
+    const name = job.recommendation.helperName;
+    const role = job.recommendation.kind === 'coach' ? 'coach' : 'assistant';
+    addAtlas(
+      `Splendid work. Your plan is ready for you to look over. And I'd like you to meet ${name}, your ${role}. ${name} will be your point man on this from here, so you can take it straight to them.`,
+      { highlight: ['plan'] },
+    );
+    setPhase('meet');
+    return true;
+  }, [addAtlas, applyJob]);
+
   // Start, or pick up where they left off in this tab.
   useEffect(() => {
     if (hasInitialized.current || !userId) return;
     hasInitialized.current = true;
 
-    const saved = loadState(userId);
-    if (saved) {
-      msgIdCounter = saved.msgIdCounter;
-      transcriptRef.current = saved.messages;
-      setMessages(saved.messages);
-      setLatestAtlasId(saved.latestAtlasId);
-      setPhase(saved.phase);
-      setRecommendation(saved.recommendation);
-      setHelperAvatar(saved.helperAvatar);
-      setProvisioned(saved.provisioned);
-      setPlan(saved.plan);
-      setSummary(saved.summary);
-      return;
-    }
-
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          navigate('/splash', { replace: true });
+        const progress = await getSetupProgress(userId);
+        const returning = progress?.step === 'arrival_atlas' && !!loadPlanJob(userId);
+        const saved = loadState(userId);
+        if (saved) {
+          msgIdCounter = saved.msgIdCounter;
+          transcriptRef.current = saved.messages;
+          setMessages(saved.messages);
+          setLatestAtlasId(saved.latestAtlasId);
+          setPhase(saved.phase);
+          setRecommendation(saved.recommendation);
+          setHelperAvatar(saved.helperAvatar);
+          setProvisioned(saved.provisioned);
+          setPlan(saved.plan);
+          setSummary(saved.summary);
+          if (returning && (saved.phase === 'goal' || saved.phase === 'handoff')) await bringBack(userId);
           return;
         }
+
+        if (returning && (await bringBack(userId))) return;
+
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('profile_completed, name, birthday, gender')
-          .eq('id', session.user.id)
+          .select('profile_completed, name, nickname, birthday, gender')
+          .eq('id', userId)
           .maybeSingle();
         const profileComplete = !!(
           profile?.profile_completed ||
-          (profile?.name && profile.name !== 'babe' && profile.name !== 'there' && profile?.birthday && profile?.gender)
+          ((profile?.nickname?.trim() || (profile?.name && profile.name !== 'babe' && profile.name !== 'there')) && profile?.birthday && profile?.gender)
         );
         if (!profileComplete) {
           navigate('/user-questionnaire', { replace: true });
@@ -214,32 +241,28 @@ function AtlasConciergeInner() {
         setError('Something went wrong starting the conversation. Please refresh.');
       }
     })();
-  }, [navigate, addAtlas, userId]);
+  }, [navigate, addAtlas, bringBack, userId]);
 
   useEffect(() => {
     if (messages.length === 0) return;
     if (userId) saveState(userId, { messages, phase, recommendation, helperAvatar, provisioned, plan, summary, latestAtlasId, msgIdCounter });
   }, [messages, phase, recommendation, helperAvatar, provisioned, plan, summary, latestAtlasId, userId]);
 
-  // A look changed in the avatar editor shows on the Meet card straight away.
-  useEffect(() => onAvatarSaved(saved => {
-    if (saved.target.kind === 'companion' && saved.target.id === provisioned?.helperId) setHelperAvatar(saved.config);
-  }), [provisioned?.helperId]);
-
+  /**
+   * The goal, its deadline and why it matters are clear. Atlas starts drafting the plan in the
+   * background and sends them off to make their avatar and pick their house; he is waiting with
+   * it when they get back.
+   */
   const handleGoalComplete = async () => {
-    setIsThinking(true);
-    try {
-      const transcript = transcriptRef.current.filter(m => m.content).map(({ role, content }) => ({ role, content }));
-      const data = await callAtlas({ phase: 'confirm', transcript });
-      const rec = data.recommendation as Recommendation;
-      setRecommendation(rec);
-      setHelperAvatar(coherentRandomize(rec.helperGender));
-      setPhase('meet');
-    } catch {
-      setError("I couldn't find the right person just now. Please try sending your last message again.");
-    } finally {
-      setIsThinking(false);
-    }
+    if (!userId) return;
+    const transcript = transcriptRef.current.filter(m => m.content).map(({ role, content }) => ({ role, content }));
+    startPlanJob(userId, transcript, jobDeps).catch(() => {});
+    await updateSetupProgress(userId, { step: 'arrival_look' });
+    addAtlas(
+      "Very good. I'll get working on a plan for this for you right now. In the meantime, it's time to create your digital avatar.",
+      { highlight: ['plan'] },
+    );
+    setPhase('handoff');
   };
 
   const send = async (text: string) => {
@@ -265,79 +288,8 @@ function AtlasConciergeInner() {
     }
   };
 
-  /** Creates the assistant or coach and the goal, once. */
-  const ensureProvisioned = (): Promise<Provisioned | null> => {
-    if (provisioned) return Promise.resolve(provisioned);
-    if (provisioning.current) return provisioning.current;
-    if (!recommendation) return Promise.resolve(null);
-    provisioning.current = (async () => {
-      try {
-        const avatarConfig = helperAvatar ? await sanitizeAvatarConfigForSave(helperAvatar) : null;
-        const transcript = transcriptRef.current.filter(m => m.content).map(({ role, content }) => ({ role, content }));
-        const data = await callAtlas({
-          phase: 'provisioning',
-          transcript,
-          recommendation,
-          helperName: recommendation.helperName,
-          avatarConfig,
-        });
-        const result = { helperId: data.helperId as string, goalId: data.goalId as string, goalText: data.goalText as string };
-        setProvisioned(result);
-        if (data.helperId) sessionStorage.setItem('atlasCoachId', data.helperId);
-        return result;
-      } catch {
-        setError("Something went wrong setting them up. Please try again.");
-        return null;
-      } finally {
-        provisioning.current = null;
-      }
-    })();
-    return provisioning.current;
-  };
-
-  const handleContinue = async () => {
-    if (!recommendation) return;
-    setIsThinking(true);
-    setError('');
-    const ready = await ensureProvisioned();
-    if (!ready) {
-      setIsThinking(false);
-      return;
-    }
-    try {
-      const transcript = transcriptRef.current.filter(m => m.content).map(({ role, content }) => ({ role, content }));
-      const data = await callAtlas({
-        phase: 'plan',
-        transcript,
-        goalText: ready.goalText,
-        helper: { name: recommendation.helperName, kind: recommendation.kind, domain: recommendation.expertDomain },
-      });
-      setPlan(data.plan);
-      setSummary(data.summary);
-      setPhase('walkthrough');
-    } catch {
-      setError("I couldn't draft the plan just now. Tap Continue to try again.");
-    } finally {
-      setIsThinking(false);
-    }
-  };
-
-  const handleRename = async (name: string) => {
-    if (!recommendation) return;
-    setRecommendation({ ...recommendation, helperName: name });
-    const ready = await ensureProvisioned();
-    if (ready) await supabase.from('companions').update({ custom_name: name }).eq('id', ready.helperId);
-  };
-
-  const handleChangeLook = () => {
-    if (provisioned) useAvatarEditor.getState().open({ kind: 'companion', id: provisioned.helperId });
-  };
-
-  const handleRefine = () => {
-    setRecommendation(null);
-    setHelperAvatar(null);
-    setPhase('goal');
-    addAtlas("Of course. Tell me what I've got wrong, and we'll set it right.");
+  const handleContinue = () => {
+    if (plan && summary) setPhase('walkthrough');
   };
 
   const handleCommitPlan = async () => {
@@ -371,8 +323,10 @@ function AtlasConciergeInner() {
   };
 
   const finish = () => {
-    if (userId) clearState(userId);
-    navigate('/lobby?arrived=1', { replace: true });
+    if (userId) { clearState(userId); clearPlanJob(userId); }
+    // First time home: the V3 lobby, with their coach's chat popping up.
+    setHomeLayout('v3');
+    navigate(`/lobby?arrived=1${provisioned ? `&coach=${provisioned.helperId}` : ''}`, { replace: true });
   };
 
   const ease = manifest.motion.ease;
@@ -404,15 +358,7 @@ function AtlasConciergeInner() {
       {/* The last step of the arrival: Atlas, introduced in the middle, under the progress strip. */}
       <header className="relative z-10 w-full max-w-2xl mx-auto px-4 sm:px-6 pt-6">
         <div className="relative">
-          <ArrivalProgress step={3} accent="var(--shell-accent)" />
-          <button
-            type="button"
-            onClick={() => navigate('/lobby')}
-            className="absolute right-0 -top-1 text-xs font-medium hover:underline"
-            style={{ color: 'var(--shell-text-muted)' }}
-          >
-            Finish later
-          </button>
+          <ArrivalProgress step={phase === 'goal' || phase === 'handoff' ? 0 : 3} accent="var(--shell-accent)" />
         </div>
         <div className="mt-6 flex flex-col items-center text-center">
           <span
@@ -438,7 +384,16 @@ function AtlasConciergeInner() {
             className="rounded-[1.75rem] overflow-hidden flex flex-col"
             style={{ border: '1px solid var(--shell-border)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)' }}
           >
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3" style={{ maxHeight: 'calc(100dvh - 260px)' }}>
+            <div
+              ref={scrollRef}
+              onScroll={e => {
+                const el = e.currentTarget;
+                stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+              }}
+              className="flex-1 overflow-y-auto p-4 sm:p-6"
+              style={{ maxHeight: 'calc(100dvh - 260px)' }}
+            >
+              <div ref={contentRef} className="space-y-3">
               <AnimatePresence>
                 {messages.map(msg => {
                   const isUser = msg.role === 'user';
@@ -459,7 +414,7 @@ function AtlasConciergeInner() {
                           backdropFilter: isUser ? 'none' : 'blur(12px)',
                         }}
                       >
-                        {isUser ? msg.content : <StreamingAtlasMessage content={msg.content} isLatest={msg.id === latestAtlasId} />}
+                        {isUser ? msg.content : <StreamingAtlasMessage content={msg.content} isLatest={msg.id === latestAtlasId} highlight={msg.highlight} />}
                       </div>
                       {msg.pencilled?.map(p => (
                         <p key={p.title} className="mt-1.5 flex items-center gap-1.5 text-xs" style={{ color: 'var(--shell-text-muted)' }}>
@@ -498,10 +453,6 @@ function AtlasConciergeInner() {
                   busy={isThinking}
                   created={!!provisioned}
                   onContinue={handleContinue}
-                  onChangeAnything={() => { ensureProvisioned(); }}
-                  onChangeLook={handleChangeLook}
-                  onRename={handleRename}
-                  onRefine={handleRefine}
                 />
               )}
 
@@ -517,6 +468,32 @@ function AtlasConciergeInner() {
                   onConfirm={handleCommitPlan}
                   busy={isThinking}
                 />
+              )}
+
+              {phase === 'handoff' && (
+                <div className="flex justify-start pt-1">
+                  <button
+                    type="button"
+                    onClick={() => navigate(ARRIVAL_ROUTES.look)}
+                    className="rounded-xl px-4 py-2.5 text-sm font-semibold"
+                    style={{ background: 'var(--shell-accent)', color: 'var(--shell-bg)' }}
+                  >
+                    Create my avatar
+                  </button>
+                </div>
+              )}
+
+              {needsRetry && !isThinking && userId && (
+                <div className="flex justify-start pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { bringBack(userId); }}
+                    className="rounded-xl px-4 py-2.5 text-sm font-semibold"
+                    style={{ background: 'var(--shell-accent)', color: 'var(--shell-bg)' }}
+                  >
+                    Try again
+                  </button>
+                </div>
               )}
 
               {phase === 'done' && (
@@ -547,6 +524,7 @@ function AtlasConciergeInner() {
               )}
 
               <div ref={messagesEndRef} />
+              </div>
             </div>
 
             {phase === 'goal' && (

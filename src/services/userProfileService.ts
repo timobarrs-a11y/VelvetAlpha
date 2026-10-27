@@ -23,6 +23,8 @@ export interface UserProfile {
   birthday: string | null;
   gender: string | null;
   favorite_color: string | null;
+  favorite_superhero?: string | null;
+  age_verified_at?: string | null;
   zodiac_sign: string | null;
   music_genre: string | null;
   hobbies: string[];
@@ -37,7 +39,7 @@ export interface UserProfile {
   profile_completed: boolean;
   subscription_tier: string | null;
   avatar_config: any;
-  communication_profile: { conflict: string; connection: string; decisionStyle: string; motivation: string } | null;
+  communication_profile: { conflict?: string; connection?: string; decisionStyle?: string; motivation?: string } | null;
   someday?: SomedayPick[];
   address_style?: AddressStyle | null;
   arrival_choices?: ArrivalChoices;
@@ -47,9 +49,11 @@ export interface UserProfile {
 export interface UserProfileUpdate {
   name?: string;
   nickname?: string | null;
+  welcome_seen?: boolean;
   birthday?: string | null;
   gender?: string | null;
   favorite_color?: string | null;
+  favorite_superhero?: string | null;
   zodiac_sign?: string | null;
   music_genre?: string | null;
   hobbies?: string[];
@@ -61,7 +65,7 @@ export interface UserProfileUpdate {
   news_categories?: string[];
   political_leaning?: 'democrat' | 'republican' | 'independent' | null;
   profile_completed?: boolean;
-  communication_profile?: { conflict: string; connection: string; decisionStyle: string; motivation: string } | null;
+  communication_profile?: { conflict?: string; connection?: string; decisionStyle?: string; motivation?: string } | null;
   someday?: SomedayPick[];
   address_style?: AddressStyle | null;
   arrival_choices?: ArrivalChoices;
@@ -113,10 +117,9 @@ class UserProfileService {
     if (!profile) return false;
     if (profile.profile_completed) return true;
 
+    // A nickname is enough to know who someone is; the real name is optional.
     const hasCore = !!(
-      profile.name &&
-      profile.name !== 'babe' &&
-      profile.name !== 'there' &&
+      (profile.nickname?.trim() || (profile.name && profile.name !== 'babe' && profile.name !== 'there')) &&
       profile.birthday &&
       profile.gender
     );
@@ -151,7 +154,8 @@ class UserProfileService {
       : (answers.newsTopics ? answers.newsTopics.split(',').map(n => n.trim()).filter(n => n) : []);
 
     return this.updateProfile({
-      name: answers.name,
+      // The real name is optional: leave it as it is when they skipped it.
+      ...(answers.name.trim() ? { name: answers.name.trim() } : {}),
       nickname: answers.nickname || null,
       // birthday is set by verify_age_and_consent at sign-up; the app can't write it (and
       // sending it makes the whole save fail with "permission denied")
@@ -223,7 +227,7 @@ class UserProfileService {
     }
 
     if (hasUpdates) {
-      const hasCore = !!(profile.name && profile.name !== 'babe' && profile.birthday && profile.gender);
+      const hasCore = !!((profile.nickname?.trim() || (profile.name && profile.name !== 'babe')) && profile.birthday && profile.gender);
       if (hasCore) {
         updates.profile_completed = true;
       }

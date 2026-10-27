@@ -138,7 +138,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('name')
+      .select('name, nickname')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -146,8 +146,10 @@ Deno.serve(async (req: Request) => {
       throw new Error('User profile not found');
     }
 
-    const userName = profile.name && profile.name !== 'there' ? profile.name : '';
     const isMentor = companion.relationship_type === 'mentor' || companion.relationship_type === 'assistant';
+    // Coaches and assistants only ever use the nickname; everyone else keeps the name they gave.
+    const realName = profile.name && profile.name !== 'there' ? profile.name : '';
+    const userName = isMentor && profile.nickname?.trim() ? profile.nickname.trim() : realName;
     const isCorrespondent = companion.relationship_type === 'correspondent' && companion.correspondent_id;
     const isFirstMatch = situation === 'first_match';
 
@@ -197,7 +199,7 @@ Deno.serve(async (req: Request) => {
     const personaLayer = isCorrespondent && companion.correspondent_id
       ? (() => {
           const corr = getCuratedCorrespondent(companion.correspondent_id);
-          if (!corr) return buildPersonaLayer(companion, userName);
+          if (!corr) return buildPersonaLayer(companion, userName, profile.nickname);
           return buildCorrespondentBehavioralInstructions({
             correspondentName: companion.custom_name,
             userName,
@@ -206,7 +208,7 @@ Deno.serve(async (req: Request) => {
             voiceDescription: corr.voiceDescription,
           });
         })()
-      : buildPersonaLayer(companion, userName);
+      : buildPersonaLayer(companion, userName, profile.nickname);
 
     const taskLine = isCorrespondent
       ? CORRESPONDENT_TASK_LINES[situation]
