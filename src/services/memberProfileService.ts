@@ -2,6 +2,8 @@ import { supabase } from '../shared/supabase/client';
 
 export type MessagePolicy = 'everyone' | 'friends' | 'nobody';
 export type CommentPolicy = 'everyone' | 'friends';
+/** friends: the full page is for friends. open: public-facing, everyone may see it. */
+export type ProfileMode = 'friends' | 'open';
 
 export interface MemberProfile {
   user_id: string;
@@ -17,6 +19,9 @@ export interface MemberProfile {
   following_count: number;
   discoverable: boolean;
   /** How people can reach this member. Everyone can see that they exist. */
+  profile_mode: ProfileMode;
+  /** Finished goals, tasks and commitments show up in Discover. On by default. */
+  share_accomplishments: boolean;
   who_can_message: MessagePolicy;
   accepts_friend_requests: boolean;
   accepts_mail: boolean;
@@ -70,6 +75,8 @@ export async function upsertMyMemberProfile(updates: {
   is_public?: boolean;
   shared_goal_ids?: string[];
   discoverable?: boolean;
+  profile_mode?: ProfileMode;
+  share_accomplishments?: boolean;
   who_can_message?: MessagePolicy;
   accepts_friend_requests?: boolean;
   accepts_mail?: boolean;

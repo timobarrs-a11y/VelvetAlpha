@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Compass, Target, Users, Loader2, UserPlus, UserMinus, Sparkles,
+  Compass, Target, Users, Loader2, UserPlus, UserMinus, Sparkles, Trophy,
 } from 'lucide-react';
 import { PublicProfileImage } from '../components/PublicProfileImage';
 import {
@@ -15,6 +15,7 @@ import { PageShell } from '../shared/ui/PageShell';
 import { LoadingState } from '../shared/ui/LoadingState';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { AuthoredBadge } from '../components/social/AuthoredBadge';
+import { DiscoverWins } from '../components/social/DiscoverWins';
 
 const GOAL_TYPES = Object.entries(GOAL_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 
@@ -89,6 +90,8 @@ function MemberCard({ member, index, following, onToggleFollow }: {
 
 export default function DiscoverPage() {
   const navigate = useNavigate();
+  // Wins first: Discover is about people getting things done.
+  const [tab, setTab] = useState<'wins' | 'people'>('wins');
   const [members, setMembers] = useState<DiscoverableMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedGoalType, setSelectedGoalType] = useState<string | undefined>(undefined);
@@ -141,9 +144,24 @@ export default function DiscoverPage() {
             <Compass className="w-5 h-5 text-pink-400" />
             <h1 className="text-lg font-bold text-white">Discover</h1>
           </div>
+          <div role="tablist" aria-label="Discover" className="flex rounded-xl bg-white/5 p-0.5">
+            {([['wins', 'Wins', Trophy], ['people', 'People', Users]] as const).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-colors ${tab === id ? 'bg-pink-500/80 text-white' : 'text-white/50 hover:text-white'}`}
+              >
+                <Icon className="w-3.5 h-3.5" /> {label}
+              </button>
+            ))}
+          </div>
         </div>
       }
     >
+      {tab === 'wins' ? <DiscoverWins /> : (<>
       {/* Goal type filter */}
       <div className="px-4 py-3 border-b border-white/8">
         <div className="flex items-center gap-2 mb-2">
@@ -184,7 +202,7 @@ export default function DiscoverPage() {
             description={
               selectedGoalType
                 ? `No public members working on ${GOAL_TYPE_LABELS[selectedGoalType] ?? selectedGoalType} yet. Try a different goal or check back later.`
-                : 'No public members to discover yet. Be the first to make your profile public in Settings!'
+                : 'No one to discover yet. Check back soon.'
             }
             action={{ label: 'Go to feed', onClick: () => navigate('/feed') }}
           />
@@ -200,6 +218,7 @@ export default function DiscoverPage() {
           ))
         )}
       </div>
+      </>)}
     </PageShell>
   );
 }

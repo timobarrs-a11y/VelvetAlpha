@@ -61,6 +61,11 @@ export async function getPublicFeed(limit = 30, offset = 0): Promise<ProgressPos
   return callFeedRpc('get_public_feed', { p_limit: limit, p_offset: offset });
 }
 
+/** Recent wins from members who share them (not yours): the Discover feed. */
+export async function getDiscoverAccomplishments(limit = 30, offset = 0): Promise<ProgressPostWithAuthor[]> {
+  return callFeedRpc('get_discover_accomplishments', { p_limit: limit, p_offset: offset });
+}
+
 export const STATUS_MAX_LENGTH = 500;
 
 const STATUS_ERRORS: Record<string, string> = {

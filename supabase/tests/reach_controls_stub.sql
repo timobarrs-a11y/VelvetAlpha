@@ -1,27 +1,27 @@
 -- Stand-ins for the app's tables, only so reach_controls_behaviour.sql can run on a scratch Postgres.
+-- Stand-ins for the app's tables, only so reach_controls_behaviour.sql can run on a scratch Postgres.
 do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
 do $$ begin create role anon; exception when duplicate_object then null; end $$;
 create schema auth;
-create table auth.users (id uuid primary key);
+create table auth.users (id uuid primary key, email text);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
 grant usage on schema public, auth to authenticated;
-create table public.member_profiles (user_id uuid primary key references auth.users, display_name text default 'Member', avatar_config jsonb, profile_image_type text, profile_smilie_code text, is_bot boolean not null default false, is_public boolean not null default true, discoverable boolean not null default true);
+create table public.member_profiles (user_id uuid primary key references auth.users, display_name text default 'Member', headline text, bio text, avatar_config jsonb, profile_image_type text, profile_smilie_code text, is_bot boolean not null default false, is_public boolean not null default true, discoverable boolean not null default true, follower_count int not null default 0, following_count int not null default 0);
 create table public.im_conversations (id uuid primary key default gen_random_uuid(), user_a_id uuid, user_b_id uuid);
 create table public.im_messages (id uuid primary key default gen_random_uuid(), conversation_id uuid, sender_id uuid, body text);
 create table public.im_friendships (id uuid primary key default gen_random_uuid(), requester_id uuid, addressee_id uuid, status text not null default 'pending');
 create table public.im_blocks (blocker_id uuid, blocked_id uuid);
-create table public.user_profiles (id uuid primary key, is_banned boolean default false);
+create table public.user_profiles (id uuid primary key, is_banned boolean default false, nickname text, name text, favorite_color text, zodiac_sign text, birthday date, interests text[], hobbies text[], sports_interests text[], entertainment_interests text[], tech_interests text[], lifestyle_interests text[], music_genre text);
 create table public.rate_limits (user_id uuid, endpoint text);
 create table public.progress_posts (id uuid primary key default gen_random_uuid(), user_id uuid, post_type text, title text, body text, ref_target_type text, ref_target_id uuid, is_auto_generated boolean default false, goal_id uuid, like_count int default 0, comment_count int default 0, deleted_at timestamptz, created_at timestamptz default now());
 create table public.progress_post_comments (id uuid primary key default gen_random_uuid(), post_id uuid, user_id uuid, body text);
 create table public.progress_post_likes (id uuid primary key default gen_random_uuid(), post_id uuid, user_id uuid);
 create table public.world_plots (user_id uuid primary key);
 create table public.town_letters (id uuid primary key default gen_random_uuid(), user_id uuid, sender_label text, subject text, body text);
-create function public.users_blocked(a uuid, b uuid) returns boolean language sql stable as $$ select false $$;
+create function public.users_blocked(a uuid, b uuid) returns boolean language sql stable as $$ select exists (select 1 from public.im_blocks k where (k.blocker_id = a and k.blocked_id = b) or (k.blocker_id = b and k.blocked_id = a)) $$;
 create function public.get_post_owner(p uuid) returns uuid language sql stable security definer as $$ select user_id from public.progress_posts where id = p $$;
 create function public.can_use_social(u uuid) returns boolean language sql as $$ select true $$;
 create function public.check_rate_limit(u uuid, e text, a int, b int) returns boolean language sql as $$ select true $$;
-create function public.progress_post_title(pp public.progress_posts, v uuid) returns text language sql as $$ select 'x' $$;
 create function public.is_admin() returns boolean language sql as $$ select current_setting('test.admin', true) = '1' $$;
 alter table public.progress_post_comments enable row level security;
 alter table public.progress_post_likes enable row level security;
@@ -30,3 +30,13 @@ create policy insert_own_comment on public.progress_post_comments for insert to 
 create policy insert_own_like on public.progress_post_likes for insert to authenticated with check (auth.uid() = user_id);
 grant select, insert on all tables in schema public to authenticated;
 grant execute on all functions in schema public to authenticated;
+
+create table public.user_goals (id uuid primary key default gen_random_uuid(), user_id uuid, title text, goal_type text, status text default 'active', show_on_profile boolean default false, current_value numeric, target_value numeric, unit text, target_date date, created_at timestamptz default now());
+create table public.coaching_commitments (id uuid primary key default gen_random_uuid(), user_id uuid, goal_id uuid, description text, due_date date, status text default 'active', completed_at timestamptz, created_at timestamptz default now(), show_on_profile boolean default false);
+create table public.coach_plans (id uuid primary key default gen_random_uuid(), user_id uuid);
+create table public.coach_plan_steps (id uuid primary key default gen_random_uuid(), plan_id uuid, commitment_id uuid, title text, user_set_title text, status text default 'pending');
+create table public.milestone_achievements (id uuid primary key default gen_random_uuid(), user_id uuid, achievement_name text);
+create table public.user_customization (user_id uuid primary key, current_streak int default 0);
+create function public.post_exists_for_target(u uuid, t text, i uuid, pt text) returns boolean language sql stable as $$ select exists (select 1 from public.progress_posts where user_id = u and ref_target_type = t and ref_target_id = i and post_type = pt) $$;
+grant select, insert, update on all tables in schema public to authenticated;
+create function public.progress_post_title(pp public.progress_posts, p_viewer_uid uuid) returns text language sql as $$ select 'x' $$;

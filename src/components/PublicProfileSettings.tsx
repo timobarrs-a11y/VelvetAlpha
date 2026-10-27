@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Loader2, Eye, EyeOff, Target, Check, Users, Bot, Search, UserRound, CheckCircle2,
+  Loader2, Target, Check, Users, Bot, Search, UserRound, CheckCircle2,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import {
@@ -16,10 +16,12 @@ import { SMILIES, smilieUrl } from '../config/smilieRegistry';
 import { PublicProfileImage } from './PublicProfileImage';
 import { ReachControls, type ReachValues } from './ReachControls';
 
-const DEFAULT_REACH: ReachValues = { who_can_message: 'everyone', accepts_friend_requests: true, accepts_mail: true, comments_from: 'everyone' };
+const DEFAULT_REACH: ReachValues = { share_accomplishments: true, profile_mode: 'friends', who_can_message: 'everyone', accepts_friend_requests: true, accepts_mail: true, comments_from: 'everyone' };
 
 function reachOf(p: MemberProfile | null): ReachValues {
   return {
+    share_accomplishments: p?.share_accomplishments ?? true,
+    profile_mode: p?.profile_mode ?? 'friends',
     who_can_message: p?.who_can_message ?? 'everyone',
     accepts_friend_requests: p?.accepts_friend_requests ?? true,
     accepts_mail: p?.accepts_mail ?? true,
@@ -37,7 +39,6 @@ export function PublicProfileSettings() {
   const [displayName, setDisplayName] = useState('');
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
   const [discoverable, setDiscoverable] = useState(true);
   const [reach, setReach] = useState<ReachValues>(DEFAULT_REACH);
   const [profileImageType, setProfileImageType] = useState<'avatar' | 'smilie'>('avatar');
@@ -59,7 +60,6 @@ export function PublicProfileSettings() {
       setDisplayName(p.display_name);
       setHeadline(p.headline ?? '');
       setBio(p.bio ?? '');
-      setIsPublic(p.is_public);
       setDiscoverable(p.discoverable);
       setReach(reachOf(p));
       setProfileImageType(p.profile_image_type ?? 'avatar');
@@ -87,7 +87,6 @@ export function PublicProfileSettings() {
         display_name: displayName || 'Member',
         headline: headline || null,
         bio: bio || null,
-        is_public: isPublic,
         discoverable,
         profile_image_type: profileImageType,
         profile_smilie_code: profileImageType === 'smilie' ? profileSmilieCode : null,
@@ -139,34 +138,8 @@ export function PublicProfileSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Public toggle */}
-      <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: isPublic ? 'rgba(244,114,182,0.15)' : 'rgba(255,255,255,0.05)' }}>
-              {isPublic ? <Eye className="w-5 h-5 text-pink-400" /> : <EyeOff className="w-5 h-5 text-white/40" />}
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">Public profile</h3>
-              <p className="text-xs text-white/40 mt-0.5">
-                {isPublic ? 'Other members can see your profile' : 'Your profile is private'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsPublic(!isPublic)}
-            className="relative w-11 h-6 rounded-full transition-colors flex-shrink-0"
-            style={{ background: isPublic ? 'rgba(244,114,182,0.80)' : 'rgba(255,255,255,0.12)' }}
-          >
-            <motion.div
-              animate={{ x: isPublic ? 22 : 2 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md"
-            />
-          </button>
-        </div>
-      </div>
+      {/* Your wins, your full page and how people reach you. First, so it is easy to find. */}
+      <ReachControls values={reach} onChange={setReach} />
 
       {/* Profile picture */}
       <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
@@ -280,8 +253,6 @@ export function PublicProfileSettings() {
           </button>
         </div>
       </div>
-
-      <ReachControls values={reach} onChange={setReach} />
 
       {/* Goal visibility */}
       <div>

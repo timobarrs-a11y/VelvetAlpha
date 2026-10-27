@@ -1,4 +1,4 @@
--- Behaviour checks for 20261103100000_reach_controls_and_status_audience.sql, run against a scratch
+-- Behaviour checks for 20261103100000_profile_levels_and_reach_controls.sql, run against a scratch
 -- Postgres with stand-ins for the app's tables (from the supabase/tests folder):
 --   psql -d scratch -f reach_controls_stub.sql -f reach_controls_behaviour.sql
 -- Stops at the first failure and prints "ALL PASSED" at the end.
@@ -11,33 +11,55 @@ begin
   end;
   raise exception 'expected an error for [%] but it succeeded', q;
 end $$;
+create function pg_temp.as_user(u text) returns void language sql as $$ select set_config('test.uid', u, false) $$;
 
-insert into auth.users values ('a0000000-0000-0000-0000-00000000000a'),('b0000000-0000-0000-0000-00000000000b'),('c0000000-0000-0000-0000-00000000000c');
-insert into public.member_profiles (user_id) select id from auth.users;
-insert into public.user_profiles (id) select id from auth.users;
+-- A and B are friends; C is a stranger; D has a profile but is blocked by A
+insert into auth.users values ('a0000000-0000-0000-0000-00000000000a'),('b0000000-0000-0000-0000-00000000000b'),('c0000000-0000-0000-0000-00000000000c'),('d0000000-0000-0000-0000-00000000000d');
+insert into public.member_profiles (user_id, display_name, bio) select id, 'Member', 'secret bio' from auth.users;
+insert into public.user_profiles (id, nickname, name) values
+ ('a0000000-0000-0000-0000-00000000000a','Ace','Alex Real'),('b0000000-0000-0000-0000-00000000000b','','Bea Real'),
+ ('c0000000-0000-0000-0000-00000000000c','','there'),('d0000000-0000-0000-0000-00000000000d','Dee','Dana');
 insert into public.world_plots select id from auth.users;
--- A and B are friends; C is a stranger
 insert into public.im_friendships (requester_id, addressee_id, status) values ('a0000000-0000-0000-0000-00000000000a','b0000000-0000-0000-0000-00000000000b','accepted');
 insert into public.im_conversations (id, user_a_id, user_b_id) values
  ('11111111-0000-0000-0000-000000000001','a0000000-0000-0000-0000-00000000000a','b0000000-0000-0000-0000-00000000000b'),
  ('11111111-0000-0000-0000-000000000002','b0000000-0000-0000-0000-00000000000b','c0000000-0000-0000-0000-00000000000c');
--- default: everyone can message (migration ran after these rows exist, so test it explicitly below)
-\i ../migrations/20261103100000_reach_controls_and_status_audience.sql
+-- A says the user's profile was private before: existence must not depend on is_public
+update public.member_profiles set is_public = false where user_id = 'a0000000-0000-0000-0000-00000000000a';
+\i ../migrations/20261103100000_profile_levels_and_reach_controls.sql
+create trigger t_goal after update on public.user_goals for each row execute function public.create_post_on_goal_completed();
+create trigger t_commit after update on public.coaching_commitments for each row execute function public.create_post_on_commitment_completed();
+create trigger t_step after update on public.coach_plan_steps for each row execute function public.create_post_on_plan_step_completed();
+create trigger t_mile after insert on public.milestone_achievements for each row execute function public.create_post_on_milestone();
+
+\echo == every new member gets a profile
+insert into auth.users values ('e0000000-0000-0000-0000-00000000000e');
+insert into public.user_profiles (id, nickname, name) values ('e0000000-0000-0000-0000-00000000000e', 'Eli', 'Eliot Real');
+do $$ begin
+  assert (select display_name from public.member_profiles where user_id='e0000000-0000-0000-0000-00000000000e') = 'Eli', 'new member gets a profile named by their nickname';
+  assert (select is_public and profile_mode = 'friends' and share_accomplishments from public.member_profiles where user_id='e0000000-0000-0000-0000-00000000000e'), 'new profile defaults';
+end $$;
+delete from public.member_profiles where user_id='e0000000-0000-0000-0000-00000000000e';
+delete from public.user_profiles where id='e0000000-0000-0000-0000-00000000000e';
+delete from auth.users where id='e0000000-0000-0000-0000-00000000000e';
+
+\echo == defaults
+do $$ begin
+  assert (select profile_mode from public.member_profiles where user_id='a0000000-0000-0000-0000-00000000000a') = 'friends', 'profiles start friends-only (full page needs a friend)';
+  assert (select share_accomplishments from public.member_profiles where user_id='a0000000-0000-0000-0000-00000000000a'), 'wins are shared by default';
+  assert (select is_public from public.member_profiles where user_id='a0000000-0000-0000-0000-00000000000a'), 'existence is always public';
+end $$;
 
 \echo == messages
 update public.member_profiles set who_can_message='friends' where user_id='b0000000-0000-0000-0000-00000000000b';
-select set_config('test.uid','a0000000-0000-0000-0000-00000000000a',false);
+select pg_temp.as_user('a0000000-0000-0000-0000-00000000000a');
 insert into public.im_messages (conversation_id, sender_id, body) values ('11111111-0000-0000-0000-000000000001','a0000000-0000-0000-0000-00000000000a','hi from a friend');
-select set_config('test.uid','c0000000-0000-0000-0000-00000000000c',false);
+select pg_temp.as_user('c0000000-0000-0000-0000-00000000000c');
 select pg_temp.expect_error($$insert into public.im_messages (conversation_id, sender_id, body) values ('11111111-0000-0000-0000-000000000002','c0000000-0000-0000-0000-00000000000c','hi stranger')$$, 'not taking messages');
 update public.member_profiles set who_can_message='nobody' where user_id='b0000000-0000-0000-0000-00000000000b';
 select pg_temp.expect_error($$insert into public.im_messages (conversation_id, sender_id, body) values ('11111111-0000-0000-0000-000000000001','a0000000-0000-0000-0000-00000000000a','friend, but nobody')$$, 'not taking messages');
 update public.member_profiles set who_can_message='everyone' where user_id='b0000000-0000-0000-0000-00000000000b';
 insert into public.im_messages (conversation_id, sender_id, body) values ('11111111-0000-0000-0000-000000000002','c0000000-0000-0000-0000-00000000000c','now everyone is allowed');
--- the setting protects the recipient: C takes friends only, B is a stranger to C
-update public.member_profiles set who_can_message='friends' where user_id='c0000000-0000-0000-0000-00000000000c';
-select pg_temp.expect_error($$insert into public.im_messages (conversation_id, sender_id, body) values ('11111111-0000-0000-0000-000000000002','b0000000-0000-0000-0000-00000000000b','b is a stranger to c')$$, 'not taking messages');
-update public.member_profiles set who_can_message='everyone' where user_id='c0000000-0000-0000-0000-00000000000c';
 
 \echo == friend requests
 update public.member_profiles set accepts_friend_requests=false where user_id='b0000000-0000-0000-0000-00000000000b';
@@ -45,57 +67,140 @@ select pg_temp.expect_error($$insert into public.im_friendships (requester_id, a
 update public.member_profiles set accepts_friend_requests=true where user_id='b0000000-0000-0000-0000-00000000000b';
 insert into public.im_friendships (requester_id, addressee_id) values ('c0000000-0000-0000-0000-00000000000c','b0000000-0000-0000-0000-00000000000b');
 
-\echo == status audience and feeds
-select set_config('test.uid','a0000000-0000-0000-0000-00000000000a',false);
-select (public.create_status_post('friends only note','friends')->>'success') = 'true' as ok \gset
-\if :ok \else \echo FAIL create friends status \quit \endif
-select (public.create_status_post('public note')->>'success') = 'true' as ok2 \gset
-\if :ok2 \else \echo FAIL create default status \quit \endif
+\echo == statuses: friends-only profile vs public-facing profile
+select pg_temp.as_user('a0000000-0000-0000-0000-00000000000a');
+select (public.create_status_post('public note')->>'success') = 'true' as ok \gset
+\if :ok \else \echo FAIL create status \quit \endif
+select (public.create_status_post('friends note','friends')->>'success') = 'true' as ok2 \gset
+\if :ok2 \else \echo FAIL create friends status \quit \endif
 select (public.create_status_post('x','everybody')->>'error') = 'bad_audience' as ok3 \gset
-\if :ok3 \else \echo FAIL bad audience accepted \quit \endif
+\if :ok3 \else \echo FAIL bad audience \quit \endif
 create function pg_temp.visible(viewer uuid) returns text language sql as $$
-  select coalesce(string_agg(p->>'body', ',' order by p->>'body'), '') from jsonb_array_elements(public.get_member_posts_inner(array['a0000000-0000-0000-0000-00000000000a'::uuid], viewer, 50, 0)->'posts') p $$;
-select 'author sees: ' || pg_temp.visible('a0000000-0000-0000-0000-00000000000a');
-select 'friend sees: ' || pg_temp.visible('b0000000-0000-0000-0000-00000000000b');
-select 'stranger sees: ' || pg_temp.visible('c0000000-0000-0000-0000-00000000000c');
+  select coalesce(string_agg(p->>'body', ',' order by p->>'body'), '') from jsonb_array_elements(public.get_member_posts_inner(array['a0000000-0000-0000-0000-00000000000a'::uuid], viewer, 50, 0)->'posts') p where p->>'post_type' = 'status' $$;
 do $$ begin
-  assert pg_temp.visible('a0000000-0000-0000-0000-00000000000a') = 'friends only note,public note', 'author should see both';
-  assert pg_temp.visible('b0000000-0000-0000-0000-00000000000b') = 'friends only note,public note', 'friend should see both';
-  assert pg_temp.visible('c0000000-0000-0000-0000-00000000000c') = 'public note', 'stranger should only see the public note';
+  assert pg_temp.visible('a0000000-0000-0000-0000-00000000000a') = 'friends note,public note', 'author sees both';
+  assert pg_temp.visible('b0000000-0000-0000-0000-00000000000b') = 'friends note,public note', 'friend sees both';
+  assert pg_temp.visible('c0000000-0000-0000-0000-00000000000c') = '', 'stranger sees no statuses from a friends-only profile';
 end $$;
-select jsonb_path_exists(public.get_member_posts_inner(array['a0000000-0000-0000-0000-00000000000a'::uuid],'a0000000-0000-0000-0000-00000000000a',5,0), '$.posts[*].audience') as has_audience_field;
-select (public.get_trending_posts_inner(array['a0000000-0000-0000-0000-00000000000a'::uuid],'c0000000-0000-0000-0000-00000000000c',10, now() - interval '1 day')::text like '%friends only note%') as trending_leaks;
+update public.member_profiles set profile_mode='open' where user_id='a0000000-0000-0000-0000-00000000000a';
+do $$ begin
+  assert pg_temp.visible('c0000000-0000-0000-0000-00000000000c') = 'public note', 'stranger sees only the everyone status on a public-facing profile';
+end $$;
+select (public.get_trending_posts_inner(array['a0000000-0000-0000-0000-00000000000a'::uuid],'c0000000-0000-0000-0000-00000000000c',10, now() - interval '1 day')::text like '%friends note%') as trending_leaks;
+update public.member_profiles set profile_mode='friends' where user_id='a0000000-0000-0000-0000-00000000000a';
 
-\echo == comments and likes (row level security as a signed-in member)
-create temp table ids as select (select id from public.progress_posts where body='friends only note') as friends_post, (select id from public.progress_posts where body='public note') as public_post;
+\echo == accomplishments post for everyone, and say what was done
+insert into public.user_goals (id, user_id, title, goal_type) values ('90000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-00000000000a','Run a 5K','fitness'),('90000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-00000000000a','Learn guitar','creative');
+update public.user_goals set status='completed' where id='90000000-0000-0000-0000-000000000001';
+do $$ begin
+  assert (select count(*) from public.progress_posts where post_type='goal_completed') = 1, 'finishing a goal posts a win even though is_public is false';
+end $$;
+insert into public.coaching_commitments (id, user_id, goal_id, description) values ('91000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-00000000000a','90000000-0000-0000-0000-000000000002','Practice 20 minutes');
+update public.coaching_commitments set status='completed' where id='91000000-0000-0000-0000-000000000001';
+insert into public.coach_plans (id, user_id) values ('92000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-00000000000a');
+insert into public.coach_plan_steps (id, plan_id, commitment_id, title) values ('93000000-0000-0000-0000-000000000001','92000000-0000-0000-0000-000000000001','91000000-0000-0000-0000-000000000001','First chords');
+update public.coach_plan_steps set status='completed' where id='93000000-0000-0000-0000-000000000001';
+insert into public.milestone_achievements (user_id, achievement_name) values ('a0000000-0000-0000-0000-00000000000a','First week');
+create function pg_temp.wins(viewer uuid) returns text language sql as $$
+  select coalesce(string_agg(p->>'title', ' | ' order by p->>'title'), '') from jsonb_array_elements(public.get_member_posts_inner(array['a0000000-0000-0000-0000-00000000000a'::uuid], viewer, 50, 0)->'posts') p where p->>'post_type' <> 'status' $$;
+select 'stranger sees wins: ' || pg_temp.wins('c0000000-0000-0000-0000-00000000000c');
+do $$ begin
+  assert pg_temp.wins('c0000000-0000-0000-0000-00000000000c') = 'Completed: First chords (toward Learn guitar) | Finished Run a 5K 🏆 | Kept a commitment: Practice 20 minutes | Milestone unlocked: First week', 'a stranger sees every win, with what was done';
+  assert pg_temp.wins('b0000000-0000-0000-0000-00000000000b') = pg_temp.wins('c0000000-0000-0000-0000-00000000000c'), 'a friend sees the same wins';
+end $$;
+
+\echo == discover
+select pg_temp.as_user('c0000000-0000-0000-0000-00000000000c');
+do $$ declare r jsonb; begin
+  r := public.get_discover_accomplishments(30, 0);
+  assert jsonb_array_length(r->'posts') = 4, 'discover lists all four wins for a stranger, got ' || jsonb_array_length(r->'posts');
+  assert (select bool_and(p->>'author_name' = 'Ace') from jsonb_array_elements(r->'posts') p), 'discover shows the nickname, not the real name';
+  assert not (r::text like '%Alex Real%'), 'real name leaked into discover';
+  assert not (r::text like '%friends note%' or r::text like '%public note%'), 'statuses are not in discover';
+end $$;
+select pg_temp.as_user('a0000000-0000-0000-0000-00000000000a');
+do $$ begin assert jsonb_array_length(public.get_discover_accomplishments(30,0)->'posts') = 0, 'you do not see your own wins in discover'; end $$;
+update public.member_profiles set share_accomplishments=false where user_id='a0000000-0000-0000-0000-00000000000a';
+select pg_temp.as_user('c0000000-0000-0000-0000-00000000000c');
+do $$ begin
+  assert jsonb_array_length(public.get_discover_accomplishments(30,0)->'posts') = 0, 'turned off: nothing in discover';
+  assert pg_temp.wins('c0000000-0000-0000-0000-00000000000c') = '', 'turned off: a stranger sees no wins';
+  assert pg_temp.wins('b0000000-0000-0000-0000-00000000000b') <> '', 'turned off: friends still see wins';
+end $$;
+update public.member_profiles set share_accomplishments=true where user_id='a0000000-0000-0000-0000-00000000000a';
+insert into public.im_blocks values ('a0000000-0000-0000-0000-00000000000a','d0000000-0000-0000-0000-00000000000d');
+select pg_temp.as_user('d0000000-0000-0000-0000-00000000000d');
+do $$ begin assert jsonb_array_length(public.get_discover_accomplishments(30,0)->'posts') = 0, 'a blocked member sees nothing from the blocker'; end $$;
+
+\echo == reacting and commenting on wins (row level security)
+create temp table ids as select (select id from public.progress_posts where post_type='goal_completed') as win, (select id from public.progress_posts where body='friends note') as friends_post;
 grant select on ids to authenticated;
 set role authenticated;
-select set_config('test.uid','c0000000-0000-0000-0000-00000000000c',false);
+select pg_temp.as_user('c0000000-0000-0000-0000-00000000000c');
+insert into public.progress_post_likes (post_id, user_id) select win, 'c0000000-0000-0000-0000-00000000000c' from ids;
+insert into public.progress_post_comments (post_id, user_id, body) select win, 'c0000000-0000-0000-0000-00000000000c', 'Congrats!' from ids;
 select pg_temp.expect_error($$insert into public.progress_post_comments (post_id, user_id, body) select friends_post, 'c0000000-0000-0000-0000-00000000000c', 'sneaky' from ids$$, 'row-level security');
 select pg_temp.expect_error($$insert into public.progress_post_likes (post_id, user_id) select friends_post, 'c0000000-0000-0000-0000-00000000000c' from ids$$, 'row-level security');
-insert into public.progress_post_comments (post_id, user_id, body) select public_post, 'c0000000-0000-0000-0000-00000000000c', 'hello public' from ids;
-select set_config('test.uid','b0000000-0000-0000-0000-00000000000b',false);
-insert into public.progress_post_comments (post_id, user_id, body) select friends_post, 'b0000000-0000-0000-0000-00000000000b', 'hi from friend' from ids;
-insert into public.progress_post_likes (post_id, user_id) select friends_post, 'b0000000-0000-0000-0000-00000000000b' from ids;
-select 'stranger can read comments on the friends post: ' || count(*) from public.progress_post_comments c, ids where c.post_id = ids.friends_post and auth.uid() = 'c0000000-0000-0000-0000-00000000000c';
-select set_config('test.uid','c0000000-0000-0000-0000-00000000000c',false);
-do $$ begin assert (select count(*) from public.progress_post_comments c join ids on c.post_id = ids.friends_post) = 0, 'stranger can read friends-post comments'; end $$;
+do $$ begin assert (select count(*) from public.progress_post_comments c join ids on c.post_id = ids.friends_post) = 0, 'stranger reads friends-post comments'; end $$;
 reset role;
-
-\echo == comments_from
 update public.member_profiles set comments_from='friends' where user_id='a0000000-0000-0000-0000-00000000000a';
-select set_config('test.uid','c0000000-0000-0000-0000-00000000000c',false);
-select pg_temp.expect_error($$insert into public.progress_post_comments (post_id, user_id, body) select public_post, 'c0000000-0000-0000-0000-00000000000c', 'stranger comment' from ids$$, 'Only friends can comment');
-insert into public.progress_post_comments (post_id, user_id, body) select public_post, 'b0000000-0000-0000-0000-00000000000b', 'friend comment' from ids;
-insert into public.progress_post_comments (post_id, user_id, body) select public_post, 'a0000000-0000-0000-0000-00000000000a', 'author reply' from ids;
+select pg_temp.expect_error($$insert into public.progress_post_comments (post_id, user_id, body) select win, 'c0000000-0000-0000-0000-00000000000c', 'second' from ids$$, 'Only friends can comment');
+insert into public.progress_post_comments (post_id, user_id, body) select win, 'b0000000-0000-0000-0000-00000000000b', 'friend comment' from ids;
+update public.member_profiles set comments_from='everyone' where user_id='a0000000-0000-0000-0000-00000000000a';
+
+\echo == the front card
+update public.user_profiles set favorite_color='teal', birthday='1990-07-30', interests=array['Running','Jazz','running'], hobbies=array['Cooking'], music_genre='Lo-fi' where id='a0000000-0000-0000-0000-00000000000a';
+select pg_temp.as_user('c0000000-0000-0000-0000-00000000000c');
+do $$ declare r jsonb; begin
+  r := public.get_profile_card('a0000000-0000-0000-0000-00000000000a');
+  assert (r->>'success')::boolean, 'card for a stranger';
+  assert r->'card'->>'display_name' = 'Ace', 'nickname, not real name';
+  assert not (r::text like '%Alex Real%'), 'real name must not appear when a nickname exists';
+  assert r->'card'->>'favorite_color' = 'teal', 'favorite color';
+  assert r->'card'->>'zodiac_sign' = 'Leo', 'zodiac derived from birthday';
+  assert (r->'card'->'interests') ?| array['Running'] and jsonb_array_length(r->'card'->'interests') = 4, 'interests merged and de-duplicated: ' || (r->'card'->'interests')::text;
+  assert r->'card'->'goal_areas' = '["creative"]'::jsonb or r->'card'->'goal_areas' = '["creative"]', 'only active goal areas, never titles: ' || (r->'card'->'goal_areas')::text;
+  assert not (r::text like '%Learn guitar%' or r::text like '%Run a 5K%'), 'goal titles must not be on the card';
+  assert (r->'relation'->>'has_full_access')::boolean = false, 'a stranger does not have the full page';
+  assert r->'relation'->>'friend_request' = 'none', 'no request yet';
+  r := public.get_profile_card('b0000000-0000-0000-0000-00000000000b');
+  assert r->'card'->>'display_name' = 'Bea Real', 'real name only when nothing else was given';
+  assert r->'relation'->>'friend_request' = 'sent', 'pending request is reported';
+  r := public.get_profile_card('c0000000-0000-0000-0000-00000000000c');
+  assert r->'card'->>'display_name' = 'Member', 'placeholder name never shows a made-up real name';
+end $$;
+select pg_temp.as_user('a0000000-0000-0000-0000-00000000000a');
+do $$ begin assert not (public.get_profile_card('d0000000-0000-0000-0000-00000000000d')->>'success')::boolean, 'a blocked member has no card'; end $$;
+select pg_temp.as_user('b0000000-0000-0000-0000-00000000000b');
+do $$ begin assert (public.get_profile_card('a0000000-0000-0000-0000-00000000000a')->'relation'->>'has_full_access')::boolean, 'a friend has the full page'; end $$;
+
+\echo == the full page
+select pg_temp.as_user('c0000000-0000-0000-0000-00000000000c');
+do $$ declare r jsonb; begin
+  r := public.get_public_profile('a0000000-0000-0000-0000-00000000000a');
+  assert (r->>'success')::boolean, 'profile page exists even with is_public false';
+  assert r->'profile'->>'bio' is null, 'no bio for a stranger';
+  assert jsonb_array_length(r->'goals') = 0, 'no goals for a stranger';
+  assert not (r->>'has_full_access')::boolean, 'stranger has no full access';
+end $$;
+select pg_temp.as_user('b0000000-0000-0000-0000-00000000000b');
+do $$ declare r jsonb; begin
+  r := public.get_public_profile('a0000000-0000-0000-0000-00000000000a');
+  assert r->'profile'->>'bio' = 'secret bio', 'a friend sees the bio';
+  assert (r->>'has_full_access')::boolean, 'a friend has full access';
+end $$;
+update public.member_profiles set profile_mode='open' where user_id='a0000000-0000-0000-0000-00000000000a';
+select pg_temp.as_user('c0000000-0000-0000-0000-00000000000c');
+do $$ begin assert (public.get_public_profile('a0000000-0000-0000-0000-00000000000a')->>'has_full_access')::boolean, 'public-facing: everyone has the full page'; end $$;
+update public.member_profiles set profile_mode='friends' where user_id='a0000000-0000-0000-0000-00000000000a';
 
 \echo == mail
 update public.member_profiles set accepts_mail=false where user_id='b0000000-0000-0000-0000-00000000000b';
-select set_config('test.uid','a0000000-0000-0000-0000-00000000000a',false);
+select pg_temp.as_user('a0000000-0000-0000-0000-00000000000a');
 select set_config('test.admin','1',false);
 select 'letters sent: ' || public.send_town_letter('Hello','body');
 do $$ begin
-  assert (select count(*) from public.town_letters) = 2, 'expected 2 letters (B opted out)';
+  assert (select count(*) from public.town_letters) = 3, 'expected 3 letters (B opted out)';
   assert not exists (select 1 from public.town_letters where user_id='b0000000-0000-0000-0000-00000000000b'), 'B opted out but got a letter';
 end $$;
 select set_config('test.admin','0',false);
