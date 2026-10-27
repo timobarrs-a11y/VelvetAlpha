@@ -73,25 +73,41 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // REMOVED — memories retired in the last 30 days, so a wrong retirement can be undone. Forgotten and cleared rows
-    // are scrubbed placeholders and expired temporary states are not "removed", so neither is listed.
+    // REMOVED — memories retired or replaced in the last 30 days, so a wrong change can be undone. Forgotten and cleared
+    // rows are scrubbed placeholders, expired temporary states are not "removed", and a duplicate folded into an
+    // identical keeper is housekeeping, so none of those are listed.
     if (action === "removed") {
       const { companionId } = body;
       const since = new Date(Date.now() - 30 * 86400000).toISOString();
       let query = admin
         .from("memory_items")
-        .select("id, content, kind, scope, status, importance, source, version, companion_id, created_at, updated_at")
+        .select("id, content, kind, scope, status, importance, source, version, companion_id, created_at, updated_at, superseded_by")
         .eq("user_id", user.id)
-        .eq("status", "retired")
+        .in("status", ["retired", "superseded"])
         .gte("updated_at", since)
         .not("content", "like", "[%")
         .or(`valid_until.is.null,valid_until.gt.${new Date().toISOString()}`)
         .order("updated_at", { ascending: false })
-        .limit(50);
+        .limit(80);
       if (companionId) query = query.eq("companion_id", companionId);
       const { data, error } = await query;
       if (error) throw error;
-      return new Response(JSON.stringify({ items: data as MemoryItem[] }), {
+
+      const norm = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+      const replacementIds = [...new Set((data ?? []).map((r) => r.superseded_by).filter(Boolean))] as string[];
+      const replacements = new Map<string, string>();
+      if (replacementIds.length > 0) {
+        const { data: reps } = await admin.from("memory_items").select("id, content").in("id", replacementIds);
+        for (const r of reps ?? []) replacements.set(r.id, r.content);
+      }
+      const items = (data ?? [])
+        .filter((r) => {
+          const rep = r.superseded_by ? replacements.get(r.superseded_by) : undefined;
+          return !(rep !== undefined && norm(rep) === norm(r.content));
+        })
+        .slice(0, 50)
+        .map(({ superseded_by: _s, ...rest }) => rest);
+      return new Response(JSON.stringify({ items: items as MemoryItem[] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

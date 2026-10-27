@@ -16,7 +16,7 @@ import {
 } from "../_shared/correspondentFramework.ts";
 import {
   verifierMode, verifyMemory, decideRevision, wouldHave, isProtectedRow, isExplicitCorrection, parsePgVector,
-  relatednessCosine, DEFAULT_T_RELATED, MAX_VERIFIER_CALLS_PER_TURN,
+  relatednessCosine, sanitizeQuote, DEFAULT_T_RELATED, MAX_VERIFIER_CALLS_PER_TURN,
 } from "../_shared/memoryVerifier.ts";
 import { buildPersonaLayer } from "../_shared/personaBuilder.ts";
 import {
@@ -1229,7 +1229,8 @@ async function extractMemoryServerSide(
     // Safe belief revision (docs/memory-engine-v4-spec.md). The extractor proposes; this decides. MEMORY_VERIFIER_MODE:
     // off = as before, shadow = run and log what would have happened but apply as before, enforce = binding.
     const revisionMode = verifierMode(Deno.env.get('MEMORY_VERIFIER_MODE'));
-    const tRelated = Number(Deno.env.get('MEMORY_VERIFIER_T_RELATED')) || DEFAULT_T_RELATED;
+    const tRaw = Deno.env.get('MEMORY_VERIFIER_T_RELATED');
+    const tRelated = tRaw !== undefined && tRaw !== '' && Number.isFinite(Number(tRaw)) ? Number(tRaw) : DEFAULT_T_RELATED;
     let verifierCalls = 0;
     const reviewRevision = async (
       target: MemoryCandidate,
@@ -1249,36 +1250,42 @@ async function extractMemoryServerSide(
           return enforcing ? 'skip' : 'apply';
         }
         verifierCalls++;
-        const v = await verifyMemory({ apiKey, model: MODEL_CONFIG.HAIKU, kind: target.kind, content: target.content, message: userMessage });
+        const v = await verifyMemory({ apiKey, model: MODEL_CONFIG.HAIKU, kind: target.kind, content: target.content, message: userMessage,
+          ageDays: (Date.now() - new Date(target.created_at).getTime()) / 86400000, source: target.source });
         if (!v) {
           await logRevision('verifier_rejected', { reason: 'verifier_error', applied: !enforcing });
           return enforcing ? 'skip' : 'apply';
         }
         let cosine: number | null = null;
+        let cosineNote = 'no_quote';
         if (v.verdict !== 'unrelated' && v.quote) {
           const [quoteVecs, { data: vecRow }] = await Promise.all([
             embedTexts([v.quote], Deno.env.get('OPENAI_API_KEY')),
             supabaseAdmin.from('memory_items').select('embedding').eq('id', target.id).maybeSingle(),
           ]);
-          cosine = relatednessCosine(quoteVecs?.[0], parsePgVector(vecRow?.embedding));
+          const targetVec = parsePgVector(vecRow?.embedding);
+          cosine = relatednessCosine(quoteVecs?.[0], targetVec);
+          cosineNote = cosine !== null ? 'ok' : !quoteVecs ? 'embed_failed' : !targetVec ? 'target_has_no_vector' : 'size_mismatch';
         }
-        const { data: disputeRow } = await supabaseAdmin.from('memory_items').select('disputed_at').eq('id', target.id).maybeSingle();
+        const { data: disputeRow } = await supabaseAdmin.from('memory_items').select('disputed_at, dispute_message_id').eq('id', target.id).maybeSingle();
         const decision = decideRevision({
           verdict: v.verdict, confidence: v.confidence, cosine, tRelated, allowEntails,
           protectedRow: isProtectedRow({ source: target.source, confirm_count: target.confirm_count, created_at: target.created_at }),
-          explicit: isExplicitCorrection(userMessage),
+          explicit: isExplicitCorrection(v.quote, target.content),
           priorDisputeAt: disputeRow?.disputed_at ?? null,
+          priorDisputeMessageId: disputeRow?.dispute_message_id ?? null,
+          currentMessageId: sourceMessageIds[0] ?? null,
         });
         const applied = !enforcing || decision.action === 'apply';
         await logRevision(
           !enforcing ? 'shadow_verdict' : decision.action === 'block' ? 'gate_blocked' : decision.action === 'dispute' ? 'dispute' : 'revision_verified',
           {
             verdict: v.verdict, raw_verdict: v.rawVerdict, confidence: v.confidence, quote: v.quote, reason: v.reason,
-            cosine, t_related: tRelated, decision: decision.action, why: decision.reason, would_have: wouldHave(decision), applied,
+            cosine, cosine_note: cosineNote, t_related: tRelated, decision: decision.action, why: decision.reason, would_have: wouldHave(decision), applied,
           },
         );
         if (enforcing && decision.action === 'dispute') {
-          await supabaseAdmin.rpc('dispute_memory_item', { p_id: target.id, p_quote: v.quote });
+          await supabaseAdmin.rpc('dispute_memory_item', { p_id: target.id, p_quote: sanitizeQuote(v.quote), p_message_id: sourceMessageIds[0] ?? null });
         }
         return applied ? 'apply' : 'skip';
       } catch (err) {
@@ -1623,7 +1630,8 @@ async function fetchScopedMemories(
     }
     const withDispute = (m: { id: string }, line: string) => {
       const d = disputed.get(m.id);
-      return d ? `${line} (disputed ${formatAsOf(d.disputed_at, now)}${d.dispute_quote ? `: the user said "${d.dispute_quote.replace(/"/g, "'")}"` : ''}; check before relying on it)` : line;
+      const q = sanitizeQuote(d?.dispute_quote).replace(/"/g, "'");
+      return d ? `${line} (disputed ${formatAsOf(d.disputed_at, now)}${q ? `: the user said "${q}"` : ''}; check before relying on it)` : line;
     };
     const factLines = selectedFacts.map(f => withDispute(f, formatMemoryLine(f, now)));
     const threadLines = threads.map(t => withDispute(t, formatMemoryLine(t, now)));

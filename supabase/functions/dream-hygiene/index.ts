@@ -124,7 +124,7 @@ Deno.serve(async (req: Request) => {
 
     // 1b. A dispute (a protected memory the verifier saw contradicted once) that never got a second signal lapses.
     const { data: lapsedDisputes } = await supabaseAdmin.rpc("resolve_memory_disputes", { p_days: 14 });
-    if (lapsedDisputes) console.log(`[dream-hygiene] ${lapsedDisputes} lapsed disputes cleared`);
+    console.log(`[dream-hygiene] ${lapsedDisputes ?? 0} lapsed disputes cleared`);
 
     // 2. Embed rows that have no vector, or one from an older model.
     const { data: unembedded } = await supabaseAdmin

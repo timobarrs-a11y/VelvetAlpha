@@ -18,12 +18,14 @@
 ALTER TABLE memory_items ADD COLUMN IF NOT EXISTS disputed_at timestamptz;
 ALTER TABLE memory_items ADD COLUMN IF NOT EXISTS dispute_count int NOT NULL DEFAULT 0;
 ALTER TABLE memory_items ADD COLUMN IF NOT EXISTS dispute_quote text;
+ALTER TABLE memory_items ADD COLUMN IF NOT EXISTS dispute_message_id uuid;
 
 CREATE INDEX IF NOT EXISTS idx_memory_items_disputed
   ON memory_items (disputed_at) WHERE disputed_at IS NOT NULL;
 
--- First signal: mark the row. A repeat keeps the ORIGINAL disputed_at, which is what the second-signal gap measures from.
-CREATE OR REPLACE FUNCTION dispute_memory_item(p_id uuid, p_quote text)
+-- First signal: mark the row. A repeat keeps the ORIGINAL disputed_at and message, which is what the second-signal
+-- check measures from. The quote goes back into prompts, so it is stored as one clean line.
+CREATE OR REPLACE FUNCTION dispute_memory_item(p_id uuid, p_quote text, p_message_id uuid DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -35,8 +37,9 @@ BEGIN
   EXECUTE format('SET LOCAL app.actor_type = %L', 'extractor');
   UPDATE memory_items
   SET disputed_at = COALESCE(disputed_at, now()),
+      dispute_message_id = CASE WHEN disputed_at IS NULL THEN p_message_id ELSE dispute_message_id END,
       dispute_count = dispute_count + 1,
-      dispute_quote = left(COALESCE(p_quote, ''), 300)
+      dispute_quote = left(btrim(regexp_replace(regexp_replace(COALESCE(p_quote, ''), '[<>\[\]]', '', 'g'), '\s+', ' ', 'g')), 300)
   WHERE id = p_id AND status = 'active'
   RETURNING jsonb_build_object('id', id, 'disputed_at', disputed_at, 'dispute_count', dispute_count) INTO v_result;
   RETURN v_result;
@@ -53,7 +56,7 @@ AS $$
 DECLARE
   v_n int;
 BEGIN
-  UPDATE memory_items SET disputed_at = NULL, dispute_quote = NULL
+  UPDATE memory_items SET disputed_at = NULL, dispute_quote = NULL, dispute_message_id = NULL
   WHERE id = p_id AND disputed_at IS NOT NULL;
   GET DIAGNOSTICS v_n = ROW_COUNT;
   RETURN v_n > 0;
@@ -72,7 +75,7 @@ DECLARE
 BEGIN
   EXECUTE format('SET LOCAL app.actor_type = %L', 'dream');
   UPDATE memory_items
-  SET disputed_at = NULL, dispute_quote = NULL, importance = GREATEST(importance - 1, 1)
+  SET disputed_at = NULL, dispute_quote = NULL, dispute_message_id = NULL, importance = GREATEST(importance - 1, 1)
   WHERE status = 'active' AND disputed_at IS NOT NULL AND disputed_at < now() - make_interval(days => p_days);
   GET DIAGNOSTICS v_n = ROW_COUNT;
   RETURN v_n;
@@ -88,6 +91,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_old memory_items%ROWTYPE;
+  v_by_hygiene boolean := false;
 BEGIN
   SELECT * INTO v_old FROM memory_items WHERE id = p_id AND user_id = p_user_id FOR UPDATE;
   IF NOT FOUND THEN
@@ -111,14 +115,20 @@ BEGIN
   EXECUTE format('SET LOCAL app.actor_type = %L', 'user');
   EXECUTE format('SET LOCAL app.actor_id = %L', p_user_id::text);
 
-  -- Undoing a supersede also withdraws the replacement, so the two versions don't both claim to be current.
-  IF v_old.status = 'superseded' AND v_old.superseded_by IS NOT NULL THEN
+  -- Undoing a correction also withdraws its replacement, so the two versions don't both claim to be current. A
+  -- duplicate that nightly hygiene folded into a keeper is different: the keeper is canonical and stays.
+  SELECT h.actor_type = 'dream' INTO v_by_hygiene
+  FROM memory_history h
+  WHERE h.memory_id = p_id AND h.op = 'UPDATE' AND h.after->>'status' = 'superseded'
+  ORDER BY h.created_at DESC LIMIT 1;
+
+  IF v_old.status = 'superseded' AND v_old.superseded_by IS NOT NULL AND NOT COALESCE(v_by_hygiene, false) THEN
     UPDATE memory_items SET status = 'retired'
     WHERE id = v_old.superseded_by AND user_id = p_user_id AND status = 'active';
   END IF;
 
   UPDATE memory_items
-  SET status = 'active', superseded_by = NULL, disputed_at = NULL, dispute_quote = NULL,
+  SET status = 'active', superseded_by = NULL, disputed_at = NULL, dispute_quote = NULL, dispute_message_id = NULL,
       last_confirmed_at = now()
   WHERE id = p_id;
 
@@ -131,11 +141,11 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION dispute_memory_item(uuid, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION dispute_memory_item(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION clear_memory_dispute(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION resolve_memory_disputes(int) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION restore_memory_item(uuid, uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION dispute_memory_item(uuid, text) TO service_role;
+GRANT EXECUTE ON FUNCTION dispute_memory_item(uuid, text, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION clear_memory_dispute(uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION resolve_memory_disputes(int) TO service_role;
 GRANT EXECUTE ON FUNCTION restore_memory_item(uuid, uuid) TO service_role;
