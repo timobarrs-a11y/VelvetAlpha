@@ -360,9 +360,8 @@ const OPP_SPECIFIC_DLG: Record<string, Partial<Record<OppAction, string[]>>> = {
     jab:        ["You wouldn't have done it this well. You know that, right?", "I fixed your work. You're welcome."],
   },
   hothead: {
-    escalate:   ["Oh, you want to push me? PUSH ME. See what happens!", "I swear to God, if you say one more word —"],
+    escalate:   ["Oh, you want to push me? PUSH ME. See what happens!", "I swear to God, if you say one more word —", "You know what? This is EXACTLY why I didn't want to work with you!"],
     jab:        ["Yeah? SAY IT TO MY FACE.", "You always do this. You always push until I snap."],
-    escalate2:  ["You know what? This is EXACTLY why I didn't want to work with you!"],
   },
   manipulator: {
     guilt_trip: ["I chose you for this project because I trusted you. Some trust this is.", "I gave you this opportunity. Remember that."],

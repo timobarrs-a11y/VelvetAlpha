@@ -13,7 +13,7 @@ interface CategoryConfig {
   label: string;
   icon: React.ReactNode;
   color: string;
-  matchTypes: string[];
+  matchTypes: (string | null)[];
 }
 
 const CATEGORIES: CategoryConfig[] = [

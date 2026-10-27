@@ -73,7 +73,7 @@ export function MemoryPanel() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const comps = await getCompanions(user.id);
-        const companionList = comps.map(c => ({ id: c.id, name: c.custom_name || c.name || 'Companion' }));
+        const companionList = comps.map(c => ({ id: c.id, name: c.custom_name || 'Companion' }));
         setCompanions(companionList);
         if (companionList.length > 0 && !selectedCompanionId) {
           setSelectedCompanionId(companionList[0].id);

@@ -1,6 +1,6 @@
 import type { InsightCard } from './types';
 
-interface ProfileData {
+export interface ProfileData {
   name: string | null;
   nickname: string | null;
   favorite_color: string | null;

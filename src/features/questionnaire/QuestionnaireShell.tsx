@@ -701,7 +701,7 @@ function TapTextRenderer({
   onSubmit: () => void;
   onSkip?: () => void;
   hint?: string;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement>;
   accentColor?: string;
 }) {
   const isDate = question.id === 'birthday';
@@ -823,7 +823,7 @@ function TapOptionsRenderer({
   const options = typeof question.options === 'function' ? question.options(ctx) : question.options;
   return (
     <div className="space-y-3">
-      {options.map((option, index) => (
+      {(options ?? []).map((option, index) => (
         <button
           key={index}
           onClick={() => onOptionClick(index, option.value || option.text)}
@@ -1048,7 +1048,7 @@ function ScrubRenderer({
   value: number;
   onChange: (v: number) => void;
   onSubmit: () => void;
-  trackRef: React.RefObject<HTMLDivElement | null>;
+  trackRef: React.RefObject<HTMLDivElement>;
   ctx: QuestionContext;
 }) {
   const { config } = question;
@@ -1183,7 +1183,7 @@ function SwipeRenderer({
   onDragMove: (x: number) => void;
   onDragEnd: () => void;
   onSwipe: (dir: 'left' | 'right') => void;
-  cardRef: React.RefObject<HTMLDivElement | null>;
+  cardRef: React.RefObject<HTMLDivElement>;
 }) {
   const card = question.cards[cardIndex];
   if (!card) return null;
