@@ -1,5 +1,7 @@
 # Velvet House: Opening & Tutorial
 
+> **Changed:** the opening no longer has the couch-by-the-window ask or the Keep it / Move it choice. It ends when the couch is set down, then Dez brings the lamp. Ignore the window-ask and "moved it" parts below.
+
 *Design doc: new-game cold open through the end of the tutorial*
 
 ---
