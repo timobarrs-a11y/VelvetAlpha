@@ -9,6 +9,14 @@ import { Button, Input } from '../shared/ui';
 const VELVET_BG = 'var(--ds-bg-page)';
 const VELVET_RADIAL = `radial-gradient(ellipse 90% 50% at 50% -5%, rgba(80,100,255,0.30) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 20% 110%, rgba(244,63,107,0.12) 0%, transparent 50%)`;
 
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 5) return 'We missed you';
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 // What is waiting inside. Illustrative only: nothing here is read from an account.
 const WAITING: { icon: LucideIcon; color: string; title: string; text: string }[] = [
   { icon: Target, color: '52,211,153', title: 'Your coach', text: 'Check-ins and the next step of your plan.' },
@@ -111,7 +119,7 @@ export default function LoginPage() {
         >
           <div className="text-center mb-7">
             <h2 className="text-2xl font-bold text-white font-display mb-1">Welcome back</h2>
-            <p className="text-ink-secondary text-sm">We missed you. Sign in to pick up where you left off.</p>
+            <p className="text-ink-secondary text-sm">{greeting()}. Sign in to pick up where you left off.</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
