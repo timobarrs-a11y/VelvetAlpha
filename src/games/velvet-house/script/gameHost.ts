@@ -1,6 +1,6 @@
 import type { Game } from '../kernel/game';
 import { startGoto, placeAgent, startChain, createNpc, buildWorld, type Agent } from '../state/agents';
-import { earn } from '../state/household';
+import { deposit } from '../state/finance';
 import { TYPES, type ObjectInstance } from '../state/objects';
 import { relocate } from '../state/arrange';
 import { npcDef, NPC_IDS } from '../content/characters';
@@ -153,7 +153,7 @@ export function createScripts(g: Game): Partial<Game> {
       if (at) art.setGhost({ type: s.objType, level: at.level, x: at.x, y: at.y, rot: s.rot, color: s.color });
     },
     give(step) {
-      if (step.money) { earn(world.household, step.money); log(`+$${step.money}`); }
+      if (step.money) { deposit(world.household, world.life, world.day, world.minutes, 'Welcome check from Dez', step.money); log(`+$${step.money}`); }
       for (const item of step.items ?? []) g.owned.add(item);
       const o = step.object;
       if (o) {

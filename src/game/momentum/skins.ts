@@ -8,6 +8,7 @@ export interface LifetimeStats {
   bestEndlessHeight: number;
   dailyCompletions: number;
   levelsCompleted: number;
+  overdrives: number;
 }
 
 export interface Skin {
@@ -28,11 +29,12 @@ export const SKINS: Skin[] = [
   { id: 'gold', name: 'Gold', fill: '#ffd447', trail: '#fff1a8', requirement: 'Earn 10 career stars', isUnlocked: (_s, stars) => stars >= 10 },
   { id: 'void', name: 'Void', fill: '#1b0033', trail: '#b46bff', requirement: 'Climb 5,000 in Endless', isUnlocked: (s) => s.bestEndlessHeight >= 5000 },
   { id: 'daily', name: 'Sunrise', fill: '#ff9ec7', trail: '#ffd6a5', requirement: 'Finish 3 Daily Climbs', isUnlocked: (s) => s.dailyCompletions >= 3 },
+  { id: 'nova', name: 'Nova', fill: '#ff4fd8', trail: '#7df9ff', requirement: 'Trigger Overdrive 3 times', isUnlocked: (s) => s.overdrives >= 3 },
   { id: 'prism', name: 'Prism', fill: null, trail: null, rainbow: true, requirement: 'Earn 25 career stars', isUnlocked: (_s, stars) => stars >= 25 },
 ];
 
 export const loadStats = (): LifetimeStats => {
-  const base: LifetimeStats = { perfects: 0, bestEndlessHeight: 0, dailyCompletions: 0, levelsCompleted: 0 };
+  const base: LifetimeStats = { perfects: 0, bestEndlessHeight: 0, dailyCompletions: 0, levelsCompleted: 0, overdrives: 0 };
   try {
     return { ...base, ...JSON.parse(localStorage.getItem(STATS_KEY) || '{}') };
   } catch {

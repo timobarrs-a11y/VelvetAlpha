@@ -1,4 +1,4 @@
-import { earn } from '../state/household';
+import { deposit } from '../state/finance';
 import { SETTLE, settleComplete, type GoalContext } from '../state/goals';
 import { showDiscoveryCard } from '../ui/dialogue';
 import type { Game } from '../kernel/game';
@@ -20,12 +20,14 @@ export function createGoals(g: Game): Partial<Game> {
         const result = checkLifeGoalSimple(g.s.lifeGoal, goalCtx);
         if (result) {
           flags.lifeStep = (flags.lifeStep as number) + 1;
-          earn(world.household, result.reward);
+          deposit(world.household, world.life, world.day, world.minutes, 'Life goal reward', result.reward);
           log(`Life goal step complete: ${result.stepText} (+$${result.reward})`);
         }
       }
       return;
     }
+    // Once Dez is part of the story, the tutorial chapters (content/scripts.ts) decide when the settling-in is done.
+    if ((flags.story as Record<string, unknown> | undefined)?.['dez.deliveries']) return;
     const goalCtx: GoalContext = {
       flags: flags as never,
       career: { level: 0, perf: 0 } as never,
@@ -44,7 +46,7 @@ export function createGoals(g: Game): Partial<Game> {
         g.s.settleDone = true;
         g.shake(0.7);
         g.s.freeWill = true;
-        earn(world.household, 100);
+        deposit(world.household, world.life, world.day, world.minutes, `Welcome basket from ${townName}`, 100);
         showDiscoveryCard('Welcome home!', `${townName} gave you a $100 welcome basket. The tutorial is over — make it yours.`);
         log('Settled in! +$100 welcome bonus. Free will is on.');
       }

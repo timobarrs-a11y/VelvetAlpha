@@ -19,7 +19,7 @@ export function createFrame(g: Game): Partial<Game> {
     const pose = poseOf(p);
     return {
       level: p.level, x: p.x, y: p.y, z: p.z, face: p.face, pose,
-      walking: isWalking(p), sit: SITTING_POSES.has(pose) && p.z > 0.05, hidden: p.onStairs,
+      walking: isWalking(p), sit: SITTING_POSES.has(pose) && p.z > 0.05, hidden: p.onStairs || !!p.away,
       seed: seedOf(p.id), look: p.look,
       ...(p.kind === 'npc' ? { npc: true, name: p.name } : {}),
       ...(p.carrying ? { carrying: p.carrying } : {}),

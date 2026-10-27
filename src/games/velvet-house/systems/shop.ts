@@ -5,7 +5,6 @@ import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, ATTIC } from '../state/house';
 import { isPaintable } from '../state/scenes';
 import { buildWorld } from '../state/agents';
-import { spend } from '../state/household';
 import { type CatalogEntry } from '../state/catalog';
 import { tasteOf } from '../state/taste';
 import { clothByKey } from '../state/clothing';
@@ -18,7 +17,7 @@ export function createShop(g: Game): Partial<Game> {
   function handleBuyAvatarItem(id: string): void {
     const item = simsShopItems().find(i => i.id === id);
     if (!item || ownsAvatarItem(id)) return;
-    if (!spend(world.household, item.price)) { log('Not enough money.'); return; }
+    if (!g.spendOn(`Salon: ${itemLabel(item.id)}`, item.price)) { log('Not enough money.'); return; }
     buyAvatarItem(id);
     log(`Bought ${itemLabel(item.id)} for $${item.price}. It's yours in Velvet too.`);
     g.refreshDrawer();
@@ -37,7 +36,7 @@ export function createShop(g: Game): Partial<Game> {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
-    if (!spend(world.household, price)) { log('Not enough money.'); return; }
+    if (!g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
     log(`Bought ${item.name} for $${price}.`);
 

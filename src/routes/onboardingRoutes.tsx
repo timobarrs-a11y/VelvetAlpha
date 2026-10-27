@@ -22,6 +22,8 @@ const ExpertBuilderPage = lazy(() => import('../pages/ExpertBuilderPage').then(m
 const CoachReadyPage = lazy(() => import('../pages/CoachReadyPage').then(m => ({ default: m.CoachReadyPage })));
 const WhoToTalkPage = lazy(() => import('../pages/WhoToTalkPage').then(m => ({ default: m.WhoToTalkPage })));
 const EnvironmentSetupPage = lazy(() => import('../pages/EnvironmentSetupPage').then(m => ({ default: m.EnvironmentSetupPage })));
+const ArrivalLookPage = lazy(() => import('../pages/arrival/ArrivalLookPage').then(m => ({ default: m.ArrivalLookPage })));
+const ArrivalHomePage = lazy(() => import('../pages/arrival/ArrivalHomePage').then(m => ({ default: m.ArrivalHomePage })));
 
 function wrap(el: React.ReactNode) {
   return (
@@ -35,6 +37,8 @@ export const onboardingRoutes = [
   <Route key="atlas-onboarding" path="/atlas-onboarding" element={wrap(<AtlasConciergePage />)} />,
   <Route key="coach-avatar" path="/coach-avatar" element={wrap(<CoachAvatarPage />)} />,
   <Route key="user-questionnaire" path="/user-questionnaire" element={wrap(<UserProfileQuestionnairePage />)} />,
+  <Route key="arrival-look" path="/arrival/look" element={wrap(<ArrivalLookPage />)} />,
+  <Route key="arrival-home" path="/arrival/home" element={wrap(<ArrivalHomePage />)} />,
   <Route key="create-user-avatar" path="/create-user-avatar" element={wrap(<CreateUserAvatarPage />)} />,
   <Route key="intent-select" path="/intent-select" element={wrap(<IntentSelectPage />)} />,
   <Route key="companion-path" path="/companion-path" element={wrap(<CompanionPathSelectPage />)} />,

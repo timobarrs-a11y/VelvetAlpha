@@ -1,6 +1,7 @@
 import { TYPES, type ObjectInstance } from '../state/objects';
 import { startChain } from '../state/agents';
 import { relocate } from '../state/arrange';
+import { CORNER_MARKET } from '../state/routine';
 import { type TrayAction } from '../ui/dialogue';
 import type { Game } from '../kernel/game';
 
@@ -105,6 +106,8 @@ export function createInteract(g: Game): Partial<Game> {
 
   function handleOrder(chain: string): void {
     const jordan = people[0];
+    if (jordan.away) { log(`${jordan.name} is at work until ${CORNER_MARKET.end - 12} PM.`); return; }
+    world.life.working = null;
     startChain(house, jordan, chain, people[1], () => rng.next());
     view.follow = 'jordan';
     if (jordan.level !== view.level) g.setLevel(jordan.level, true);

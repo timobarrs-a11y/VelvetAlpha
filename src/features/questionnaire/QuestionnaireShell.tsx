@@ -18,10 +18,11 @@ import type {
   ScrubQuestion,
   PreviewQuestion,
   BeatQuestion,
+  TabsQuestion,
 } from './types';
 import { resolveQuestionText } from './companionBank';
 import { tpl } from './pronouns';
-import { getColorHex, getCuspSigns } from './personalBank';
+import { getColorHex } from './personalBank';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
@@ -45,6 +46,10 @@ interface QuestionnaireShellProps {
   onBack?: () => void;
   showOrb?: boolean;
   renderOrb?: () => ReactNode;
+  /** Answers saved earlier, so a returning person picks up where they left off. */
+  initialAnswers?: Record<string, string | string[]>;
+  /** The question to start on when resuming. */
+  initialIndex?: number;
 }
 
 export function QuestionnaireShell({
@@ -55,9 +60,11 @@ export function QuestionnaireShell({
   onBack,
   showOrb = false,
   renderOrb,
+  initialAnswers,
+  initialIndex = 0,
 }: QuestionnaireShellProps) {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+  const [currentIdx, setCurrentIdx] = useState(Math.min(Math.max(initialIndex, 0), definition.questions.length - 1));
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>(initialAnswers ?? {});
   const [textInput, setTextInput] = useState('');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [selectedGridOptions, setSelectedGridOptions] = useState<number[]>([]);
@@ -128,20 +135,18 @@ export function QuestionnaireShell({
     if (question?.archetype === 'beat') {
       setBeatVisible(true);
     }
-    if (question?.id === 'zodiacCusp') {
-      const birthday = answers.birthday as string;
-      const cusp = getCuspSigns(birthday);
-      if (!cusp) {
-        const timer = setTimeout(() => advance(), 50);
-        return () => clearTimeout(timer);
-      }
+    if (question?.skipIf?.({ ...context, answers })) {
+      const timer = setTimeout(() => advance(), 50);
+      return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx]);
 
-  const advance = useCallback(() => {
+  // Pass the answers just given: state set in the same tick hasn't landed yet,
+  // and finishing with the old answers would drop the last screen's.
+  const advance = useCallback((latest?: Record<string, string | string[]>) => {
     if (currentIdx >= totalQuestions - 1) {
-      onComplete(answers);
+      onComplete(latest ?? answers);
     } else {
       setCurrentIdx(currentIdx + 1);
       setTextInput('');
@@ -156,13 +161,13 @@ export function QuestionnaireShell({
     const newAnswers = { ...answers, [question.id]: answer };
     setAnswers(newAnswers);
     onAnswer?.(question.id, answer, newAnswers);
-    setTimeout(() => advance(), question.archetype === 'tap' ? 350 : 100);
+    setTimeout(() => advance(newAnswers), question.archetype === 'tap' ? 350 : 100);
   };
 
   const handleBack = () => {
     if (currentIdx > 0) {
       let prevIdx = currentIdx - 1;
-      while (prevIdx > 0 && (questions[prevIdx].archetype === 'beat' || questions[prevIdx].id === 'zodiacCusp')) {
+      while (prevIdx > 0 && (questions[prevIdx].archetype === 'beat' || questions[prevIdx].skipIf?.(ctx))) {
         prevIdx--;
       }
       const prevQuestion = questions[prevIdx];
@@ -213,6 +218,15 @@ export function QuestionnaireShell({
     setCustomEntries([]);
   };
 
+  /** A tabbed screen saves each tab under its own key. */
+  const handleTabsSubmit = (picks: Record<string, string[]>) => {
+    const newAnswers = { ...answers, ...picks, [question.id]: Object.values(picks).flat() };
+    setAnswers(newAnswers);
+    for (const [key, values] of Object.entries(picks)) onAnswer?.(key, values, newAnswers);
+    onAnswer?.(question.id, newAnswers[question.id] as string[], newAnswers);
+    setTimeout(() => advance(newAnswers), 100);
+  };
+
   const handleScrubChange = (value: number) => {
     setScrubValue(value);
   };
@@ -235,7 +249,7 @@ export function QuestionnaireShell({
     setSwipeDirection(direction);
     setTimeout(() => {
       if (swipeIdx + 1 >= swipeQ.cards.length) {
-        advance();
+        advance(newAnswers);
       } else {
         setSwipeIdx(swipeIdx + 1);
         setSwipeDirection(null);
@@ -292,8 +306,14 @@ export function QuestionnaireShell({
   return (
     <div className="min-h-screen bg-[#080b14] flex flex-col items-center justify-center p-6 relative">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full bg-rose-600/5 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[400px] rounded-full bg-pink-600/5 blur-[100px]" />
+        <div
+          className={`absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full blur-[120px] ${accentColor ? '' : 'bg-rose-600/5'}`}
+          style={accentColor ? { backgroundColor: `${accentColor}14` } : undefined}
+        />
+        <div
+          className={`absolute bottom-[-10%] right-[10%] w-[500px] h-[400px] rounded-full blur-[100px] ${accentColor ? '' : 'bg-pink-600/5'}`}
+          style={accentColor ? { backgroundColor: `${accentColor}0f` } : undefined}
+        />
       </div>
 
       {showOrb && renderOrb && (
@@ -382,6 +402,16 @@ export function QuestionnaireShell({
                 />
               )}
 
+              {question.archetype === 'tabs' && (
+                <TabsRenderer
+                  key={question.id}
+                  question={question as TabsQuestion}
+                  answers={answers}
+                  onSubmit={handleTabsSubmit}
+                  accentColor={accentColor}
+                />
+              )}
+
               {question.archetype === 'preview' && (
                 <PreviewRenderer
                   question={question as PreviewQuestion}
@@ -418,6 +448,158 @@ export function QuestionnaireShell({
             </motion.div>
           </AnimatePresence>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Several multi-select groups on one screen, as tabs, each with an optional
+ * nudge. Picks are chips rather than cards so a tab of ten options fits.
+ */
+function TabsRenderer({
+  question,
+  answers,
+  onSubmit,
+  accentColor,
+}: {
+  question: TabsQuestion;
+  answers: Record<string, string | string[]>;
+  onSubmit: (picks: Record<string, string[]>) => void;
+  accentColor?: string;
+}) {
+  const [activeTab, setActiveTab] = useState(0);
+  const [picks, setPicks] = useState<Record<string, string[]>>(() =>
+    Object.fromEntries(question.tabs.map(t => {
+      const existing = answers[t.answerKey];
+      const list = Array.isArray(existing)
+        ? existing
+        : typeof existing === 'string' && existing ? existing.split(',').map(v => v.trim()).filter(Boolean) : [];
+      return [t.answerKey, list];
+    })),
+  );
+  const [customInput, setCustomInput] = useState('');
+  const tab = question.tabs[activeTab];
+  const selected = picks[tab.answerKey] ?? [];
+  const total = Object.values(picks).reduce((n, list) => n + list.length, 0);
+  const minSel = question.minSelections ?? 0;
+  const tone = accentColor ?? '#f43f5e';
+
+  const toggle = (value: string) => {
+    setPicks(prev => {
+      const list = prev[tab.answerKey] ?? [];
+      return { ...prev, [tab.answerKey]: list.includes(value) ? list.filter(v => v !== value) : [...list, value] };
+    });
+  };
+
+  const addCustom = () => {
+    const value = customInput.trim();
+    if (!value) return;
+    setPicks(prev => {
+      const list = prev[tab.answerKey] ?? [];
+      return list.includes(value) ? prev : { ...prev, [tab.answerKey]: [...list, value] };
+    });
+    setCustomInput('');
+  };
+
+  const customs = selected.filter(v => !tab.options.some(o => o.value === v));
+  const chipStyle = (on: boolean) => on
+    ? { borderColor: `${tone}99`, backgroundColor: `${tone}33` }
+    : { borderColor: 'rgba(255,255,255,0.10)', backgroundColor: 'rgba(255,255,255,0.03)' };
+
+  return (
+    <div className="space-y-4">
+      {question.subtitle && <p className="text-sm text-gray-400 text-center -mt-4">{question.subtitle}</p>}
+
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" role="tablist">
+        {question.tabs.map((t, i) => {
+          const count = (picks[t.answerKey] ?? []).length;
+          const isActive = i === activeTab;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => { setActiveTab(i); setCustomInput(''); }}
+              className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-colors"
+              style={isActive
+                ? { borderColor: tone, backgroundColor: `${tone}26`, color: '#fff' }
+                : { borderColor: 'rgba(255,255,255,0.12)', color: 'rgb(156 163 175)' }}
+            >
+              {t.label}{count > 0 && <span className="ml-1.5 opacity-80">{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab.nudge && <p className="text-sm italic text-gray-400">{tab.nudge}</p>}
+
+      <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto pr-1 custom-scroll">
+        {tab.options.map(option => {
+          const isSelected = selected.includes(option.value);
+          return (
+            <button
+              key={option.value}
+              onClick={() => toggle(option.value)}
+              aria-pressed={isSelected}
+              className="rounded-full px-3.5 py-2 text-sm border-2 transition-all duration-150 text-white"
+              style={chipStyle(isSelected)}
+            >
+              {isSelected && <Check className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />}
+              {option.label}
+            </button>
+          );
+        })}
+        {customs.map(value => (
+          <button
+            key={value}
+            onClick={() => toggle(value)}
+            aria-pressed
+            aria-label={`Remove ${value}`}
+            className="rounded-full px-3.5 py-2 text-sm border-2 text-white"
+            style={chipStyle(true)}
+          >
+            <X className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
+            {value}
+          </button>
+        ))}
+      </div>
+
+      {tab.allowCustom && (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={customInput}
+            onChange={e => setCustomInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addCustom()}
+            placeholder="Something else..."
+            aria-label={`Add your own to ${tab.label}`}
+            className="flex-1 px-4 py-2.5 text-sm bg-white/5 border-2 border-white/10 text-white placeholder-gray-600 rounded-xl focus:outline-none transition-all"
+          />
+          <button
+            onClick={addCustom}
+            disabled={!customInput.trim()}
+            aria-label="Add"
+            className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl disabled:bg-white/10 disabled:cursor-not-allowed text-white"
+            style={customInput.trim() ? { backgroundColor: tone } : undefined}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-col items-center gap-2 pt-1">
+        {minSel > 0 && total < minSel && <p className="text-sm text-gray-500">Pick {minSel - total} more</p>}
+        <button
+          onClick={() => onSubmit(picks)}
+          disabled={total < minSel}
+          className={`${NEXT_BUTTON_CLASS} disabled:cursor-not-allowed`}
+          style={total < minSel
+            ? { background: 'rgb(55 65 81)' }
+            : { background: accentColor ? `linear-gradient(to right, ${accentColor}, ${accentColor}dd)` : 'linear-gradient(to right, rgb(244 63 94), rgb(219 39 119))' }}
+        >
+          {total === 0 && minSel === 0 ? (question.skipLabel ?? 'Skip') : 'Next'}
+        </button>
       </div>
     </div>
   );
@@ -1007,8 +1189,14 @@ function BeatRenderer({
   return (
     <div className="min-h-screen bg-[#080b14] flex flex-col items-center justify-center p-6 relative">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full bg-rose-600/5 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[400px] rounded-full bg-pink-600/5 blur-[100px]" />
+        <div
+          className={`absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full blur-[120px] ${accentColor ? '' : 'bg-rose-600/5'}`}
+          style={accentColor ? { backgroundColor: `${accentColor}14` } : undefined}
+        />
+        <div
+          className={`absolute bottom-[-10%] right-[10%] w-[500px] h-[400px] rounded-full blur-[100px] ${accentColor ? '' : 'bg-pink-600/5'}`}
+          style={accentColor ? { backgroundColor: `${accentColor}0f` } : undefined}
+        />
       </div>
 
       <div className="max-w-2xl w-full relative z-10">

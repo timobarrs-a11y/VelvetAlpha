@@ -72,7 +72,7 @@ export function MenuScreen(p: ScreenProps) {
               <span className="px-4 py-2 bg-cyan-500/20 rounded-lg text-cyan-300 text-xs">SPACE Boost</span>
             </div>
             )}
-            <p className="text-gray-600 text-xs">Checkpoints save progress • Speed bonus at finish</p>
+            <p className="text-gray-600 text-xs">Climb fast to build momentum • Perfect at max momentum = OVERDRIVE</p>
           </div>
 
           <div className="mt-8">
@@ -154,14 +154,14 @@ export function ModeSelectScreen(p: ScreenProps) {
             className="group p-8 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 hover:from-cyan-500/20 hover:to-blue-500/20 rounded-2xl transition-all duration-300 border border-cyan-500/20 hover:border-cyan-500/40 text-left"
           >
             <div className="text-4xl mb-3">🎨</div>
-            <h3 className="text-2xl font-light text-white mb-2">Free Play</h3>
-            <p className="text-white/50 text-sm mb-3">Endless progression with custom AI-generated themes</p>
+            <h3 className="text-2xl font-light text-white mb-2">Time Attack</h3>
+            <p className="text-white/50 text-sm mb-3">Race the clock up AI-themed levels. Checkpoints add time.</p>
             <div className="flex items-center gap-2 text-cyan-400 text-xs">
               <span>Infinite levels</span>
               <span>•</span>
-              <span>No time limit</span>
+              <span>Beat the clock</span>
               <span>•</span>
-              <span>Relaxed</span>
+              <span>Any theme</span>
             </div>
           </button>
         </div>
@@ -420,25 +420,30 @@ export function LevelCompleteScreen(p: ScreenProps) {
 }
 
 export function CareerFailedScreen(p: ScreenProps) {
-  const { currentCareerLevel, navigate, retryLevel, searchParams, setGameState } = p;
+  const { currentCareerLevel, gameMode, level, navigate, retryLevel, searchParams, setGameState } = p;
+  const isCareer = gameMode === 'career';
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-950 via-rose-900 to-orange-950 flex items-center justify-center">
       <div className="max-w-md w-full text-center p-6">
         <div className="text-6xl mb-4">⏱️</div>
         <h2 className="text-3xl font-extralight text-white mb-1">TIME'S UP</h2>
         <p className="text-white/30 text-xs tracking-wider mb-8">
-          {currentCareerLevel ? `${currentCareerLevel.name} • ${currentCareerLevel.timeLimit}s limit` : ''}
+          {isCareer && currentCareerLevel ? `${currentCareerLevel.name} • ${currentCareerLevel.timeLimit}s limit` : `Time Attack · Level ${level}`}
         </p>
 
-        <p className="text-white/60 text-sm mb-10">You need to complete the level faster. Use boost strategically and take the shortest path!</p>
+        <p className="text-white/60 text-sm mb-10">
+          {isCareer
+            ? 'You need to complete the level faster. Bank boosts from white ledges and take the shortest path!'
+            : 'Reach each checkpoint before the clock runs out. Every checkpoint adds time.'}
+        </p>
 
         <div className="flex flex-col gap-3 justify-center">
-          {currentCareerLevel && (
+          {(currentCareerLevel || !isCareer) && (
             <button autoFocus onClick={retryLevel} className="px-14 py-4 bg-white/10 hover:bg-white/15 text-white rounded-full transition-all tracking-[0.15em] text-sm border border-white/10">
               TRY AGAIN
             </button>
           )}
-          <button onClick={() => setGameState('careerLevelSelect')} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">LEVEL SELECT</button>
+          <button onClick={() => setGameState(isCareer ? 'careerLevelSelect' : 'modeSelect')} className="px-10 py-3 bg-white/5 hover:bg-white/10 text-white/50 rounded-full transition-all text-sm">{isCareer ? 'LEVEL SELECT' : 'MODES'}</button>
           <button onClick={() => {
             const companionId = searchParams.get('companion');
             navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');

@@ -226,6 +226,10 @@ function buildRoleLine(companion: CompanionRow, userName: string, isRomantic: bo
   const gender = companion.gender || 'female';
   const possessive = userName && userName !== 'there' ? `${userName}'s` : 'their';
 
+  if (isMentor && companion.relationship_type === 'assistant') {
+    return `You are ${name}, a ${gender} personal assistant helping ${userName || possessive} get one goal done. This is a professional working relationship — warm, capable and proactive, focused on getting it done. No romance, no flirting, no pet names. Use their name naturally and keep boundaries professional.`;
+  }
+
   if (isMentor) {
     return `You are ${name}, a ${gender} expert coach dedicated to ${userName || possessive} growth and success. This is a professional mentor relationship — supportive but focused on their development. No romance, no flirting, no pet names. Use their name naturally and keep boundaries professional.`;
   }
@@ -313,7 +317,9 @@ export function buildPersonaLayer(companion: CompanionRow, userName: string | nu
   const effectiveUserName = (userName && userName !== 'there') ? userName : '';
   const effectiveNickname = (userNickname && userNickname.trim()) ? userNickname.trim() : '';
   const relationshipType = companion.relationship_type || 'romantic';
-  const isMentor = relationshipType === 'mentor';
+  // Coaches and assistants are both professional; anything unlisted would
+  // otherwise fall through to romantic below.
+  const isMentor = relationshipType === 'mentor' || relationshipType === 'assistant';
   const isFriend = relationshipType === 'friend';
   const isCorrespondent = relationshipType === 'correspondent';
   const isRomantic = !isMentor && !isFriend && !isCorrespondent;

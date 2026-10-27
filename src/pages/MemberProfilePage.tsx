@@ -16,6 +16,7 @@ import { getUserMedals, type UserMedal } from '../services/medalsService';
 import { GOAL_TYPE_LABELS } from '../services/coachingService';
 import { MedalShowcase } from '../components/medals/MedalShowcase';
 import { MedalBadge } from '../components/medals/MedalBadge';
+import { ProfilePosts } from '../components/social/ProfilePosts';
 
 function goalProgressPercent(goal: PublicGoal): number {
   if (!goal.target_value || goal.target_value <= 0) return 0;
@@ -320,6 +321,8 @@ export default function MemberProfilePage() {
             </div>
           </div>
         )}
+
+        <ProfilePosts userId={data.profile.user_id} isOwn={false} />
       </div>
     </div>
   );

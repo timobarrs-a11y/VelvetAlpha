@@ -8,6 +8,7 @@ import { Avatar } from '../components/Avatar';
 import { companionAvatarConfig } from '../components/lobby/lobbyUtils';
 import { VELVET_THEME } from '../config/velvetTheme';
 import { advanceSetupStepIf } from '../services/setupProgressService';
+import { isHelper } from '../utils/relationshipType';
 
 interface Person {
   id: string;
@@ -55,8 +56,8 @@ export function WhoToTalkPage() {
       }
 
       const newestId = sessionStorage.getItem('currentCompanionId');
-      const coach = data.find(c => c.relationship_type === 'mentor');
-      const others = data.filter(c => c.relationship_type !== 'mentor');
+      const coach = data.find(c => isHelper(c.relationship_type));
+      const others = data.filter(c => !isHelper(c.relationship_type));
       const newest = others.find(c => c.id === newestId) ?? others[0];
       const picks = [coach, newest].filter((p): p is Person => !!p);
 

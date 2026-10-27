@@ -64,6 +64,7 @@ export function createControls(g: Game): Partial<Game> {
     syncControls();
   });
   btn('pause').addEventListener('click', togglePause);
+  btn('skipwork').addEventListener('click', () => { if (people[0].away) { g.s.skipping = true; btn('skipwork').hidden = true; } });
   btn('speed').addEventListener('click', () => { view.speedIdx = (view.speedIdx + 1) % SPEEDS.length; syncControls(); });
 
   window.addEventListener('keydown', (e) => {

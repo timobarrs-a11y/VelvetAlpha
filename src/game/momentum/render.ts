@@ -1,6 +1,6 @@
 // Canvas rendering for one Momentum frame. Pure drawing: reads game state, never advances it
 // (apart from fading short-lived visual effects).
-import { MAX_BOOST_CHARGES, PLATFORM_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH } from './physics';
+import { MAX_BOOST_CHARGES, PLATFORM_HEIGHT, PLAYER_HEIGHT, PLAYER_WIDTH, PERFECT_WINDOW_FRAMES, OVERDRIVE_FRAMES, OVERDRIVE_SCORE_MULTIPLIER, comboMultiplier } from './physics';
 import { type Platform, type Orb, PHASE_CYCLE_FRAMES, PHASE_SOLID_FRAMES } from './levelGen';
 import { type GhostRun, ghostPositionAt } from './ghost';
 import type { Skin } from './skins';
@@ -21,9 +21,14 @@ export interface RenderState {
   level: number;
   gameMode: GameMode;
   timeRemaining: number;
+  hasTimeLimit: boolean;
+  splitRef: Ref<{ text: string; color: string; life: number } | null>;
   isTouchDevice: boolean;
   chainRef: Ref<number>;
   comboRef: Ref<number>;
+  landingFrameRef: Ref<number>;
+  perfectedThisBounceRef: Ref<boolean>;
+  overdriveRef: Ref<number>;
   elapsedTimeRef: Ref<number>;
   endlessRef: Ref<unknown>;
   flashRef: Ref<number>;
@@ -48,8 +53,8 @@ export interface RenderState {
 export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
   const {
     GAME_WIDTH, GAME_HEIGHT, levelData, player, platforms, camY, isTrueFalling, isRisingFast,
-    level, gameMode, timeRemaining, isTouchDevice,
-    chainRef, comboRef, elapsedTimeRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
+    level, timeRemaining, hasTimeLimit, splitRef, isTouchDevice,
+    chainRef, comboRef, elapsedTimeRef, landingFrameRef, perfectedThisBounceRef, overdriveRef, endlessRef, flashRef, ghostRef, goalYRef, highestYRef, lavaYRef,
     orbsRef, particlesRef, popupRef, runModeRef, scoreRef, shakeRef, simFrameRef, skinRef, speedLinesRef,
     startYRef, tapFxRef, trailRef,
   } = r;
@@ -151,8 +156,22 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
 
     ctx.shadowColor = platform.glow || platform.color;
     ctx.shadowBlur = glowSize;
+    const isCharge = platform.type === 'charge' && !platform.touched;
+    const isDrain = platform.type === 'drain' && !platform.touched;
+    if (isCharge) {
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 22 + Math.sin(simFrameRef.current * 0.15) * 8;
+    } else if (isDrain) {
+      ctx.shadowColor = '#ff2a2a';
+      ctx.shadowBlur = 16;
+    }
 
-    if (platform.type === 'spring' && !platform.touched) {
+    if (isCharge) {
+      ctx.fillStyle = '#ffffff';
+    } else if (isDrain) {
+      // Dark body with a red rim reads as "bad" on any theme, even red ones
+      ctx.fillStyle = '#1c0306';
+    } else if (platform.type === 'spring' && !platform.touched) {
       ctx.fillStyle = '#00ff88';
     } else if (platform.type === 'crumbling' && !platform.touched) {
       ctx.fillStyle = platform.color;
@@ -196,6 +215,34 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
       ctx.font = 'bold 10px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('CHECKPOINT', platform.x + platform.width/2, screenY - 8);
+    }
+
+    if (isCharge || isDrain) {
+      // + gives a boost, - takes one away
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      if (isDrain) {
+        ctx.strokeStyle = '#ff3b3b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(platform.x, screenY, platform.width, PLATFORM_HEIGHT, 7);
+        ctx.stroke();
+      }
+      ctx.fillStyle = isCharge ? '#1a1a2e' : '#ff3b3b';
+      const cx = platform.x + platform.width / 2;
+      const cy = screenY + PLATFORM_HEIGHT / 2;
+      ctx.fillRect(cx - 5, cy - 1.5, 10, 3);
+      if (isCharge) ctx.fillRect(cx - 1.5, cy - 5, 3, 10);
+    }
+
+    if (platform.sectionLabel && !platform.touched) {
+      // Name the upcoming section so its pattern reads at a glance
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
+      ctx.globalAlpha = 0.75;
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(platform.sectionLabel, platform.x + platform.width / 2, screenY - (platform.isCheckpoint ? 22 : 10));
     }
 
     if (platform.isFar && !platform.touched) {
@@ -273,7 +320,29 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
       ctx.beginPath();
       ctx.ellipse(Math.min(Math.max(ballCenterX, target.x), target.x + target.width), target.y + camY - 1, PLAYER_WIDTH * 0.6, 3, 0, 0, Math.PI * 2);
       ctx.fill();
+      // Get-ready ring: closes in as touchdown approaches, so the perfect timing is readable
+      const framesToLand = player.vy > 0 ? dist / Math.max(1, player.vy) : Infinity;
+      if (framesToLand < 14) {
+        const k = framesToLand / 14;
+        ctx.strokeStyle = `rgba(255,224,102,${0.8 - k * 0.5})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ballCenterX, player.y + PLAYER_HEIGHT / 2 + camY, PLAYER_WIDTH * (0.7 + k * 1.3), 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
+  }
+
+  // Perfect window open: a bright ring on the ball until the window closes
+  const framesSinceTouchdown = simFrameRef.current - landingFrameRef.current;
+  if (framesSinceTouchdown >= 0 && framesSinceTouchdown <= PERFECT_WINDOW_FRAMES && !perfectedThisBounceRef.current) {
+    ctx.strokeStyle = '#ffe066';
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 1 - framesSinceTouchdown / (PERFECT_WINDOW_FRAMES + 1);
+    ctx.beginPath();
+    ctx.arc(player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT / 2 + camY, PLAYER_WIDTH * 0.75, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 
   const boostTint = levelData.boostTrailColor || '#00ffff';
@@ -349,7 +418,8 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
   }
 
   const skin = skinRef.current;
-  const skinFill = skin.rainbow ? `hsl(${(simFrameRef.current * 3) % 360}, 90%, 65%)` : skin.fill;
+  const inOverdrive = overdriveRef.current > 0;
+  const skinFill = skin.rainbow || inOverdrive ? `hsl(${(simFrameRef.current * (inOverdrive ? 8 : 3)) % 360}, 90%, 65%)` : skin.fill;
   ctx.fillStyle = player.isBoosting ? (skin.trail || levelData.boostTrailColor || '#00ffff') : (skinFill || levelData.playerColor || '#ffffff');
   ctx.beginPath();
   ctx.arc(0, 0, PLAYER_WIDTH/2, 0, Math.PI * 2);
@@ -372,13 +442,14 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
   ctx.fillText(levelData.flavorText || '', 16, 58);
 
   ctx.textAlign = 'center';
-  if (gameMode === 'career') {
+  // Time is the headline: a countdown when there's a limit, otherwise the run clock
+  if (hasTimeLimit) {
     const isLowTime = timeRemaining < 10;
     const isVeryLowTime = timeRemaining < 5;
-    ctx.fillStyle = isVeryLowTime ? 'rgba(255,50,50,0.9)' : isLowTime ? 'rgba(255,150,50,0.9)' : 'rgba(255,255,255,0.9)';
-    ctx.font = isVeryLowTime ? 'bold 24px monospace' : isLowTime ? 'bold 18px monospace' : 'bold 16px monospace';
+    ctx.fillStyle = isVeryLowTime ? 'rgba(255,50,50,0.95)' : isLowTime ? 'rgba(255,150,50,0.95)' : 'rgba(255,255,255,0.95)';
+    ctx.font = isVeryLowTime ? 'bold 32px monospace' : isLowTime ? 'bold 28px monospace' : 'bold 24px monospace';
     const timeText = timeRemaining > 0 ? timeRemaining.toFixed(1) + 's' : 'TIME UP!';
-    ctx.fillText(timeText, GAME_WIDTH / 2, isVeryLowTime ? 32 : 26);
+    ctx.fillText(timeText, GAME_WIDTH / 2, 34);
 
     if (isVeryLowTime) {
       ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.02) * 0.3;
@@ -387,9 +458,19 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
       ctx.globalAlpha = 1;
     }
   } else {
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '12px monospace';
-    ctx.fillText(elapsedTimeRef.current.toFixed(1) + 's', GAME_WIDTH / 2, 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = 'bold 24px monospace';
+    ctx.fillText(elapsedTimeRef.current.toFixed(1) + 's', GAME_WIDTH / 2, 34);
+  }
+
+  const split = splitRef.current;
+  if (split) {
+    ctx.globalAlpha = Math.min(1, split.life);
+    ctx.fillStyle = split.color;
+    ctx.font = 'bold 20px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(split.text, GAME_WIDTH / 2, 92);
+    ctx.globalAlpha = 1;
   }
 
   ctx.textAlign = 'right';
@@ -404,18 +485,21 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
     ctx.fillStyle = levelData.boostTrailColor || '#00ffff';
     ctx.globalAlpha = 0.7 + Math.sin(Date.now() * 0.01) * 0.3;
     ctx.font = 'bold 13px system-ui';
-    ctx.fillText(`${comboRef.current}x COMBO`, GAME_WIDTH - 40, 106);
+    const mult = comboMultiplier(comboRef.current) * (overdriveRef.current > 0 ? OVERDRIVE_SCORE_MULTIPLIER : 1);
+    ctx.fillText(`×${mult.toFixed(1)} COMBO`, GAME_WIDTH - 40, 106);
     ctx.globalAlpha = 1;
   }
 
   const boostColor = levelData.boostTrailColor || '#00ffff';
-  for (let i = 0; i < MAX_BOOST_CHARGES; i++) {
+  // Banked boosts: one pip each (up to the cap); an empty bank shows a single hollow pip
+  const pips = Math.max(1, Math.min(MAX_BOOST_CHARGES, player.boostCharges));
+  for (let i = 0; i < pips; i++) {
     const filled = i < player.boostCharges;
-    ctx.fillStyle = filled ? boostColor : 'rgba(255,255,255,0.12)';
+    ctx.fillStyle = filled ? '#ffffff' : 'rgba(255,255,255,0.12)';
     ctx.shadowColor = boostColor;
     ctx.shadowBlur = filled ? 10 : 0;
     ctx.beginPath();
-    ctx.arc(24 + i * 22, GAME_HEIGHT - 24, 7, 0, Math.PI * 2);
+    ctx.arc(24 + i * 18, GAME_HEIGHT - 24, 6, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.shadowBlur = 0;
@@ -426,10 +510,10 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
 
   if (chainRef.current > 0) {
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillText('MOMENTUM', 100, GAME_HEIGHT - 40);
+    ctx.fillText('MOMENTUM', 200, GAME_HEIGHT - 40);
     for (let i = 0; i < 6; i++) {
       ctx.fillStyle = i < chainRef.current ? boostColor : 'rgba(255,255,255,0.1)';
-      ctx.fillRect(100 + i * 12, GAME_HEIGHT - 30, 9, 10);
+      ctx.fillRect(200 + i * 12, GAME_HEIGHT - 30, 9, 10);
     }
   }
 
@@ -455,6 +539,24 @@ export const renderFrame = (ctx: CanvasRenderingContext2D, r: RenderState) => {
     ctx.globalAlpha = 1;
     return true;
   });
+
+  if (overdriveRef.current > 0) {
+    // Overdrive: pulsing rainbow frame and a countdown bar under the timer
+    const hue = (simFrameRef.current * 4) % 360;
+    const pulse = 0.45 + Math.sin(simFrameRef.current * 0.3) * 0.25;
+    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${pulse})`;
+    ctx.lineWidth = 10;
+    ctx.strokeRect(5, 5, GAME_WIDTH - 10, GAME_HEIGHT - 10);
+    const barW = 200;
+    const barX = (GAME_WIDTH - barW) / 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(barX, 44, barW, 6);
+    ctx.fillStyle = `hsl(${hue}, 100%, 62%)`;
+    ctx.fillRect(barX, 44, barW * Math.min(1, overdriveRef.current / OVERDRIVE_FRAMES), 6);
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('OVERDRIVE ×2', GAME_WIDTH / 2, 64);
+  }
 
   ctx.restore();
 

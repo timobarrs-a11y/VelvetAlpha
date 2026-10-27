@@ -7,7 +7,7 @@ export interface TouchSettings {
 }
 
 // A touch counts as a tap (boost) when it is short and barely moves; anything else is a steer.
-export const TAP_MAX_MS = 220;
+export const TAP_MAX_MS = 180;
 export const TAP_MAX_MOVE_PX = 12;
 export const SENSITIVITY_MULTIPLIER: Record<SteerSensitivity, number> = { low: 1.2, medium: 1.8, high: 2.6 };
 const STEER_GAIN = 0.35; // canvas px of offset -> px/step of desired velocity

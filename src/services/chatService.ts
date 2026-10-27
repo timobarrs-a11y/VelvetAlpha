@@ -34,6 +34,9 @@ import {
   formatTemporalPromptContext
 } from './temporalAwarenessService';
 import { affectionService } from './affectionService';
+import type { RelationshipType } from './companionService';
+import { isHelper } from '../utils/relationshipType';
+import type { HelperSearchRequest } from '../features/search/searchTopics';
 
 const USE_SERVER_PROMPT = true;
 
@@ -707,6 +710,7 @@ export class ChatService {
     companionId: string,
     userProfile: UserProfile,
     surface?: CoachSurface,
+    search?: HelperSearchRequest,
   ): Promise<{
     assistantMessage: string;
     calendarEvent?: { title: string; event_type: string; event_date: string } | null;
@@ -726,7 +730,7 @@ export class ChatService {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat', timezone: userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', ...(surface ? { surface } : {}) }),
+      body: JSON.stringify({ userId: userProfile.id, companionId, message, mode: 'chat', timezone: userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', ...(surface ? { surface } : {}), ...(search ? { search } : {}) }),
     });
 
     if (!response.ok) {
@@ -756,7 +760,7 @@ export class ChatService {
     };
   }
 
-  static async sendMessage(message: string, companionId?: string, _relationshipType: 'friend' | 'romantic' | 'mentor' = 'romantic'): Promise<string> {
+  static async sendMessage(message: string, companionId?: string, _relationshipType: RelationshipType = 'romantic'): Promise<string> {
     try {
       const userProfile = await this.getUserProfile();
       const defaultProfile: UserProfile = {
@@ -809,7 +813,7 @@ export class ChatService {
           .maybeSingle();
 
         const connectionType = companionData?.relationship_type || 'romantic';
-        const isMentorCompanion = connectionType === 'mentor';
+        const isMentorCompanion = isHelper(connectionType);
 
         if (!isMentorCompanion) {
           try {
@@ -943,7 +947,7 @@ export class ChatService {
       let temporalContextString: string | undefined;
       let affectionContextString: string | undefined;
 
-      const isMentorCompanion = connectionType === 'mentor';
+      const isMentorCompanion = isHelper(connectionType);
 
       try {
         if (!companionId) throw new Error('companionId required');
@@ -1095,7 +1099,7 @@ export class ChatService {
         favoriteColor: profile.favorite_color || companionData?.favorite_color,
         musicGenre: profile.music_genre || companionData?.music_genre,
         newsTopics: profile.news_categories || companionData?.news_categories,
-        relationshipType: connectionType as 'friend' | 'romantic' | 'mentor',
+        relationshipType: connectionType as RelationshipType,
         signatureVoice,
         expertConfig,
         relationshipDuration,

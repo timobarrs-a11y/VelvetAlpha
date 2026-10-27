@@ -2,6 +2,7 @@ import { INTELLIGENCE_GUARDRAILS, CONVERSATION_QUALITY_RULES } from '../prompts/
 import { getVoiceById } from './signatureVoices';
 import type { ExpertConfig } from './signatureExperts';
 import { buildCoachBehavioralInstructions, buildPlanStandardBlock } from './coachFramework';
+import type { RelationshipType } from '../services/companionService';
 
 interface SystemPromptInput {
   companionName: string;
@@ -17,7 +18,7 @@ interface SystemPromptInput {
   favoriteColor?: string;
   musicGenre?: string;
   newsTopics?: string[] | string;
-  relationshipType?: 'friend' | 'romantic' | 'mentor';
+  relationshipType?: RelationshipType;
   signatureVoice: string;
   driftCorrection?: boolean;
   expertConfig?: ExpertConfig | null;
@@ -49,18 +50,46 @@ interface SystemPromptInput {
     initiative?: string;
   };
   dislikeFeedback?: string[];
-  communicationProfile?: {
-    conflict: string;
-    connection: string;
-    decisionStyle: string;
-    motivation: string;
-  } | null;
+  // Any trait can be missing: Atlas records them one at a time.
+  communicationProfile?: CommunicationProfile | null;
 }
 
 const arrayOrStringToString = (value: string[] | string | undefined): string => {
   if (!value) return '';
   return Array.isArray(value) ? value.join(', ') : value;
 };
+
+type CommunicationProfile = { conflict?: string; connection?: string; decisionStyle?: string; motivation?: string };
+
+/**
+ * How to talk to them, from the traits we know. Atlas records these one at a
+ * time during onboarding, so any of them can be missing: a missing trait gets
+ * no line, rather than the other answer's guidance.
+ */
+export function communicationProfileBlock(profile: CommunicationProfile | null | undefined): string {
+  if (!profile) return '';
+  const lines: string[] = [];
+  if (profile.conflict === 'solutions' || profile.conflict === 'empathy') {
+    lines.push(`CONFLICT RESPONSE: ${profile.conflict === 'solutions' ? 'When they\'re upset, lead with the fix. Empathy is fine but brief — they want actionable help, not just validation. "Okay, here\'s what we can do about that."' : 'When they\'re upset, lead with empathy. Hold space for their feelings before offering any solutions. "That sounds really hard. I hear you." Solutions can come later, only after they feel understood.'}`);
+  }
+  if (profile.connection === 'deep' || profile.connection === 'lively') {
+    lines.push(`CONNECTION: ${profile.connection === 'deep' ? 'They connect through deep one-on-one conversation. Go beneath the surface — ask about feelings, motivations, the why behind things. They want substance over banter.' : 'They connect through lively back-and-forth banter. Keep it playful, quick, fun. Light teasing and rapid exchanges build the bond — don\'t get too heavy too fast.'}`);
+  }
+  if (profile.decisionStyle === 'intuitive' || profile.decisionStyle === 'analytical') {
+    lines.push(`DECISION STYLE: ${profile.decisionStyle === 'intuitive' ? 'They trust their gut. When they\'re weighing something, don\'t overload them with data — validate their instincts and help them feel confident in their intuition. "What does your gut tell you?"' : 'They research before deciding. When they\'re weighing something, give them specifics — options, trade-offs, concrete details. Don\'t rush them to a decision before they\'ve had time to think it through.'}`);
+  }
+  if (profile.motivation === 'internal' || profile.motivation === 'external') {
+    lines.push(`MOTIVATION: ${profile.motivation === 'internal' ? 'They\'re self-driven. Don\'t lean on external pressure or guilt — appeal to their own reasons for wanting to do it. "You said this matters to you — what\'s stopping you?"' : 'They respond to accountability. Someone else counting on them is what gets them moving. Set check-ins, follow up on commitments, be the person they don\'t want to let down. "You said you\'d have this done by Friday — I\'m checking in."'}`);
+  }
+  if (lines.length === 0) return '';
+  return `=== USER COMMUNICATION PROFILE (HOW TO TALK TO THEM) ===
+
+What we know about how they like to be talked to. Use it to shape HOW you communicate with them — not what you talk about, but the style and energy of your responses.
+
+${lines.join('\n\n')}
+
+`;
+}
 
 export const buildSystemPrompt = (input: SystemPromptInput): string => {
   const {
@@ -91,7 +120,8 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
   } = input;
 
   const voice = getVoiceById(signatureVoice);
-  const isMentor = relationshipType === 'mentor';
+  // Coaches and assistants both keep it professional.
+  const isMentor = relationshipType === 'mentor' || relationshipType === 'assistant';
   const isFriend = relationshipType === 'friend';
   const isRomantic = !isMentor && !isFriend;
 
@@ -147,7 +177,7 @@ ${userNickname ? `- Nickname: ${userNickname}` : ''}
 ${userGender ? `- Gender: ${userGender}` : ''}
 ${userAge ? `- Age: ${userAge} years old` : ''}
 ${userBirthday ? `- Birthday: ${userBirthday} (remember to wish them happy birthday!)` : ''}
-${relationshipType ? `- Relationship Type: ${relationshipType === 'friend' ? 'Friend (NOT romantic)' : relationshipType === 'mentor' ? 'Expert/Mentor (professional, no romance)' : 'Romantic partner'}` : ''}
+${relationshipType ? `- Relationship Type: ${relationshipType === 'friend' ? 'Friend (NOT romantic)' : relationshipType === 'assistant' ? 'Assistant (helps get their goal done; professional, no romance)' : relationshipType === 'mentor' ? 'Expert/Mentor (professional, no romance)' : 'Romantic partner'}` : ''}
 - Interests: ${arrayOrStringToString(interests) || 'getting to know you'}
 ${arrayOrStringToString(hobbies) ? `- Favorite Hobbies: ${arrayOrStringToString(hobbies)}` : ''}
 ${arrayOrStringToString(sports) ? `- Favorite Sports: ${arrayOrStringToString(sports)}` : ''}
@@ -377,19 +407,7 @@ ${isMentor ? buildCoachBehavioralInstructions({
   accountabilityLevel: expertConfig?.accountabilityLevel,
   checkInStyle: expertConfig?.checkInStyle,
 }) : ''}${isMentor ? '\n' + buildPlanStandardBlock(expertConfig?.domain) : ''}
-${communicationProfile ? `=== USER COMMUNICATION PROFILE (HOW TO TALK TO THEM) ===
-
-The user answered four calibration questions during onboarding. Use these to shape HOW you communicate with them — not what you talk about, but the style and energy of your responses.
-
-CONFLICT RESPONSE: ${communicationProfile.conflict === 'solutions' ? 'When they\'re upset, lead with the fix. Empathy is fine but brief — they want actionable help, not just validation. "Okay, here\'s what we can do about that."' : 'When they\'re upset, lead with empathy. Hold space for their feelings before offering any solutions. "That sounds really hard. I hear you." Solutions can come later, only after they feel understood.'}
-
-CONNECTION: ${communicationProfile.connection === 'deep' ? 'They connect through deep one-on-one conversation. Go beneath the surface — ask about feelings, motivations, the why behind things. They want substance over banter.' : 'They connect through lively back-and-forth banter. Keep it playful, quick, fun. Light teasing and rapid exchanges build the bond — don\'t get too heavy too fast.'}
-
-DECISION STYLE: ${communicationProfile.decisionStyle === 'intuitive' ? 'They trust their gut. When they\'re weighing something, don\'t overload them with data — validate their instincts and help them feel confident in their intuition. "What does your gut tell you?"' : 'They research before deciding. When they\'re weighing something, give them specifics — options, trade-offs, concrete details. Don\'t rush them to a decision before they\'ve had time to think it through.'}
-
-MOTIVATION: ${communicationProfile.motivation === 'internal' ? 'They\'re self-driven. Don\'t lean on external pressure or guilt — appeal to their own reasons for wanting to do it. "You said this matters to you — what\'s stopping you?"' : 'They respond to accountability. Someone else counting on them is what gets them moving. Set check-ins, follow up on commitments, be the person they don\'t want to let down. "You said you\'d have this done by Friday — I\'m checking in."'}
-
-` : ''}=== COMMUNICATION STYLE ===
+${communicationProfileBlock(communicationProfile)}=== COMMUNICATION STYLE ===
 
 Tone:
 - Casual, conversational

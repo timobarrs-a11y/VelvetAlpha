@@ -33,9 +33,11 @@ export interface SemanticMemoryResult {
 
 export class SemanticMemoryService {
   /**
-   * Generate embedding vector for text using OpenAI's embeddings API
+   * Generate embedding vector for text using OpenAI's embeddings API.
+   * Returns null when embeddings are unavailable: a zero vector stored or
+   * searched with would have no direction and match nothing (or everything).
    */
-  static async generateEmbedding(text: string): Promise<number[]> {
+  static async generateEmbedding(text: string): Promise<number[] | null> {
     try {
       // Call edge function to generate embedding
       const { data, error } = await supabase.functions.invoke('generate-embedding', {
@@ -43,11 +45,12 @@ export class SemanticMemoryService {
       });
 
       if (error) throw error;
-      return data.embedding;
+      const embedding = data?.embedding;
+      if (!Array.isArray(embedding) || embedding.every((v: number) => v === 0)) return null;
+      return embedding;
     } catch (error) {
       console.error('Error generating embedding:', error);
-      // Return zero vector as fallback
-      return new Array(1536).fill(0);
+      return null;
     }
   }
 
@@ -62,6 +65,7 @@ export class SemanticMemoryService {
   ): Promise<SemanticMemoryResult[]> {
     try {
       const queryEmbedding = await this.generateEmbedding(queryText);
+      if (!queryEmbedding) return [];
 
       // Use pgvector's cosine similarity search
       const { data, error } = await supabase.rpc('search_memories_by_similarity', {

@@ -24,6 +24,8 @@ import {
 } from '../services/coachingService';
 import { getCoachColor, formatDeadline, daysToDeadline, deadlineUrgency, type CoachColorPalette } from '../utils/coachColors';
 import { toggleGoalShowOnProfile, toggleCommitmentShowOnProfile } from '../services/publicProfileService';
+import { GoalBoard, type GoalHelper } from '../features/goals/GoalBoard';
+import { phasesOf } from '../features/goals/goalBoard';
 
 type Tab = 'plans' | 'commitments' | 'progress' | 'library';
 
@@ -41,6 +43,7 @@ export function GoalDetailPage() {
   const [tab, setTab] = useState<Tab>('plans');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showDeadlineEditor, setShowDeadlineEditor] = useState(false);
+  const [helper, setHelper] = useState<GoalHelper | null>(null);
 
   const loadData = useCallback(async () => {
     if (!goalId) return;
@@ -56,10 +59,20 @@ export function GoalDetailPage() {
 
     setGoal(g);
     setCommitments(comms.filter(c => c.goal_id === goalId));
+    // A plan belongs to this goal by its goal_id; older plans only by the coach.
     setPlans(plns.filter(p => {
+      if (p.goal_id) return p.goal_id === goalId;
       if (p.companion_id && g?.source_companion_id) return p.companion_id === g.source_companion_id;
       return false;
     }));
+    if (g?.source_companion_id) {
+      const { data: c } = await supabase
+        .from('companions')
+        .select('id, custom_name, relationship_type')
+        .eq('id', g.source_companion_id)
+        .maybeSingle();
+      setHelper(c ? { id: c.id, name: c.custom_name || 'Your coach', kind: c.relationship_type === 'assistant' ? 'assistant' : 'coach' } : null);
+    }
     setArtifacts(arts.filter(a => a.goal_id === goalId));
   }, [goalId, navigate]);
 
@@ -294,6 +307,16 @@ export function GoalDetailPage() {
         </PageHeader>
       }
     >
+      <GoalBoard
+        goal={goal}
+        plans={plans}
+        commitments={commitments}
+        helper={helper}
+        coachColor={coachColor}
+        onComplete={handleCompleteCommitment}
+        updatingId={updatingId}
+      />
+
       <AnimatePresence mode="wait">
         <motion.div
           key={tab}
@@ -543,9 +566,12 @@ function PlanCard({
       {/* Steps */}
       {expanded && plan.steps && plan.steps.length > 0 && (
         <div className="border-t border-white/5 px-4 sm:px-5 py-3 space-y-1">
-          {plan.steps.map(step => (
+          {phasesOf(plan.steps).map(group => group.steps.map((step, i) => (
+            <div key={step.id}>
+            {i === 0 && group.phase && (
+              <h4 className="pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: coachColor.text }}>{group.phase}</h4>
+            )}
             <div
-              key={step.id}
               className="flex items-start gap-2.5 py-1.5 group"
             >
               <button
@@ -611,8 +637,14 @@ function PlanCard({
                   </>
                 )}
               </div>
+              {step.scheduled_for && (
+                <span className="flex-shrink-0 text-[11px] text-ink-muted">
+                  {new Date(`${step.scheduled_for}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
             </div>
-          ))}
+            </div>
+          )))}
         </div>
       )}
 

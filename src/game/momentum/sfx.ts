@@ -35,6 +35,12 @@ class MomentumSfx {
     return this.ctx;
   }
 
+  /** Shared audio graph for the music engine, so mute and volume cover both. */
+  output(): { ctx: AudioContext; master: GainNode } | null {
+    const ctx = this.ensureCtx();
+    return ctx && this.master ? { ctx, master: this.master } : null;
+  }
+
   /** Call from a user gesture so mobile browsers allow audio. */
   unlock() {
     this.ensureCtx();
@@ -102,8 +108,10 @@ class MomentumSfx {
     this.tone(180, 0.2, 'sawtooth', 0.08, 520);
   }
 
-  perfect() {
-    [0, 4, 7, 12].forEach((s, i) => this.tone(660 * Math.pow(2, s / 12), 0.18, 'sine', 0.22, undefined, i * 0.04));
+  /** Rises a whole step with each perfect in a row. */
+  perfect(streak = 1) {
+    const base = 660 * Math.pow(2, (Math.min(streak, 8) - 1) * 2 / 12);
+    [0, 4, 7, 12].forEach((s, i) => this.tone(base * Math.pow(2, s / 12), 0.18, 'sine', 0.22, undefined, i * 0.04));
   }
 
   checkpoint() {
@@ -114,12 +122,25 @@ class MomentumSfx {
     this.tone(990, 0.12, 'sine', 0.2, 1480);
   }
 
+  drain() {
+    this.tone(420, 0.3, 'sawtooth', 0.12, 110);
+  }
+
   empty() {
     this.tone(160, 0.08, 'square', 0.06);
   }
 
   fall() {
     this.tone(500, 0.6, 'triangle', 0.2, 80);
+  }
+
+  overdrive() {
+    this.noise(0.6, 0.3, 300, 6000);
+    [0, 7, 12, 16, 19, 24].forEach((st, i) => this.tone(220 * Math.pow(2, st / 12), 0.5, 'sawtooth', 0.07, undefined, i * 0.05));
+  }
+
+  overdriveEnd() {
+    this.tone(880, 0.4, 'triangle', 0.12, 330);
   }
 
   win() {

@@ -1,6 +1,9 @@
 import { postToParent } from '../bridge/protocol';
 import { absMin } from '../state/time';
-import { spend, payBill, orderGroceries, orderTakeout } from '../state/household';
+import { payBill, orderGroceries, orderTakeout } from '../state/household';
+import { payBill as payOneBill } from '../state/finance';
+import { takeOffer, SIDE_JOBS } from '../state/sideJobs';
+import { clampRoutine } from '../state/routine';
 import { createDrawer, dockTabHtml, DOCK_TABS } from '../ui/drawer';
 import { AVATAR_HATS } from '../state/clothing';
 import { createDialogue, createTray, createTownSign } from '../ui/dialogue';
@@ -28,12 +31,31 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onBuyAvatarItem: (id) => g.handleBuyAvatarItem(id),
     onOrder: (chain) => g.handleOrder(chain),
     onPayBill: () => { payBill(world.household, absMin(world.day, world.minutes), log); },
+    onPayBillId: (id) => { payOneBill(world.household, world.life, id, world.day, world.minutes, log); g.refreshDrawer(); },
+    onTakeOffer: (id) => {
+      const t = takeOffer(world.life, id);
+      if (t) log(`Took the job: ${SIDE_JOBS[t.job].title.toLowerCase()} for ${t.client}.`);
+      else log('Finish a job first: three can wait at once.');
+      g.refreshDrawer();
+    },
+    onWorkJob: (id) => g.workOnJob(id),
+    onRoutine: (key, delta) => {
+      const r = world.life.routine;
+      if (key === 'shower') r.shower = !r.shower;
+      else world.life.routine = clampRoutine({ ...r, [key]: r[key] + delta });
+      g.refreshDrawer();
+    },
+    onCallIn: () => {
+      world.life.today.calledIn = true;
+      log(`${people[0].name} is staying home today. No pay for today.`);
+      g.refreshDrawer();
+    },
     onOrderGroceries: () => {
-      if (spend(world.household, 40)) { orderGroceries(world.household, absMin(world.day, world.minutes), 6, false); log('Groceries ordered. Delivery in 30 min.'); g.scriptEmit({ type: 'groceries.ordered' }); }
+      if (g.spendOn('Groceries', 40)) { orderGroceries(world.household, absMin(world.day, world.minutes), 6, false); log('Groceries ordered. Delivery in 30 min.'); g.scriptEmit({ type: 'groceries.ordered' }); }
       else log('Not enough money for groceries.');
     },
     onOrderTakeout: () => {
-      if (spend(world.household, 25)) { orderTakeout(world.household, absMin(world.day, world.minutes)); log('Takeout ordered. Delivery in 35 min.'); }
+      if (g.spendOn('Takeout', 25)) { orderTakeout(world.household, absMin(world.day, world.minutes)); log('Takeout ordered. Delivery in 35 min.'); }
       else log('Not enough money for takeout.');
     },
     onTalk: () => g.openChat(),

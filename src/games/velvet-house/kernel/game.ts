@@ -53,6 +53,8 @@ export interface GameState {
   qualityIdx: number;
   saveRev: number;
   suppressClick: boolean;
+  /** Skipping ahead through the work day ("Skip to 5 PM"). */
+  skipping: boolean;
   scriptMode: Mode | null;
   scriptAllow: UiTarget[];
 }
@@ -136,6 +138,11 @@ export interface Game {
   storeSelected(): void;
   unstore(id: string): void;
   relearnLayout(moved: ObjectInstance): void;
+  /** Every purchase goes through the bank, so it shows in the transactions. */
+  spendOn(label: string, amount: number): boolean;
+  workOnJob(id: string): void;
+  runRoutine(hourF: number): void;
+  tickSideJob(gameMin: number): void;
   deliveriesTick(): void;
   orderDelivery(o: { id: string; category: 'furniture' | 'decor'; type: string; name: string; col?: string }, afterMin: number): void;
   dezDeliveries(): boolean;
@@ -314,7 +321,7 @@ export function createGame(app: HTMLElement): Game | null {
     settleDone: typeof save?.settleDone === 'boolean' ? save!.settleDone : false,
     chatTurns: Array.isArray(save?.turns) ? [...save!.turns as ChatTurn[]] : [],
     sample: null as SampleFn | null,
-    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, scriptMode: null, scriptAllow: [],
+    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, skipping: false, scriptMode: null, scriptAllow: [],
     saveRev: typeof (world.save as { rev?: unknown } | null)?.rev === 'number' ? (world.save as { rev: number }).rev : 0,
   };
 

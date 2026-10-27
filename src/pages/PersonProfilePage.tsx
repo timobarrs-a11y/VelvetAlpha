@@ -10,6 +10,7 @@ import {
   RealPerson,
 } from '../services/realPeopleService';
 import { getAvatarStyle, getInitials } from '../components/PeoplePanel';
+import { parseDateOnly } from '../features/today/birthdays';
 import { PageHeader } from '../shared/ui/PageHeader';
 
 const RELATIONSHIPS = [
@@ -180,7 +181,7 @@ export function PersonProfilePage() {
         {/* Quick info grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           {person.birthday && (
-            <InfoCard icon={<Cake className="w-4 h-4" />} label="Birthday" value={formatBirthday(person.birthday)} />
+            <InfoCard icon={<Cake className="w-4 h-4" />} label="Birthday" value={formatBirthday(person.birthday, person.birthday_year_known !== false)} />
           )}
           {person.city && (
             <InfoCard icon={<MapPin className="w-4 h-4" />} label="Location" value={`${person.city}${person.state ? `, ${person.state}` : ''}`} />
@@ -226,9 +227,15 @@ export function PersonProfilePage() {
   );
 }
 
-function formatBirthday(birthday: string): string {
-  const date = new Date(birthday);
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+// Read as a plain date: new Date('1969-03-12') is UTC midnight, which shows the
+// day before anywhere west of London.
+function formatBirthday(birthday: string, yearKnown: boolean): string {
+  const parts = parseDateOnly(birthday);
+  if (!parts) return birthday;
+  const date = new Date(parts.year, parts.month, parts.day);
+  return date.toLocaleDateString('en-US', yearKnown
+    ? { month: 'long', day: 'numeric', year: 'numeric' }
+    : { month: 'long', day: 'numeric' });
 }
 
 function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -356,7 +363,7 @@ function EditForm({
             {RELATIONSHIPS.map(r => <option key={r} value={r} className="capitalize">{r}</option>)}
           </select>
         </div>
-        <TextField label="Birthday" type="date" value={editForm.birthday || ''} onChange={v => setEditForm(prev => ({ ...prev, birthday: v }))} />
+        <TextField label="Birthday" type="date" value={editForm.birthday || ''} onChange={v => setEditForm(prev => ({ ...prev, birthday: v, birthday_year_known: true }))} />
         <TextField label="City" value={editForm.city || ''} onChange={v => setEditForm(prev => ({ ...prev, city: v }))} placeholder="e.g. Orlando" />
         <TextField label="State" value={editForm.state || ''} onChange={v => setEditForm(prev => ({ ...prev, state: v }))} placeholder="e.g. FL" />
         <TextField label="Favorite color" value={editForm.favorite_color || ''} onChange={v => setEditForm(prev => ({ ...prev, favorite_color: v }))} placeholder="e.g. Blue" />

@@ -5,6 +5,7 @@ import { type AgentId, type AgentLook } from '../state/agents';
 import { type CharacterLook } from '../state/types';
 import { type WallMode } from '../art/houseArt.js';
 import { createHousehold, type HouseholdState } from '../state/household';
+import { parseLife, type LifeState } from '../state/life';
 import { BOTTOM_STYLES } from '../state/clothing';
 
 export const VIEW_W = 640;
@@ -63,6 +64,7 @@ export interface World {
   objs: ObjectInstance[];
   save: Record<string, unknown> | null;
   household: HouseholdState;
+  life: LifeState;
 }
 
 /** How this page is running. `attract` is the title screen's living backdrop: a throwaway house that never saves. */
@@ -107,5 +109,9 @@ export function loadWorld(): World {
     }
     if (typeof save.nextBillAt === 'number') household.nextBillAt = save.nextBillAt;
   }
-  return { day, minutes, objs, save, household };
+  // Bills are separate now (state/finance.ts): the old single bill is retired.
+  household.bill = null;
+  household.nextBillAt = null;
+  const life = parseLife(save?.life, day);
+  return { day, minutes, objs, save, household, life };
 }

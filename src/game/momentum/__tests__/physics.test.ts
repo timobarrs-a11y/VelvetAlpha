@@ -39,3 +39,48 @@ describe('momentum physics', () => {
     expect(nextChain(0, 400, null, 0)).toBe(0);
   });
 });
+
+describe('combo and career timing', () => {
+  it('combo multiplier grows and caps', async () => {
+    const { comboMultiplier } = await import('../physics');
+    expect(comboMultiplier(0)).toBe(1);
+    expect(comboMultiplier(5)).toBeCloseTo(1.5);
+    expect(comboMultiplier(100)).toBe(comboMultiplier(20));
+  });
+
+  it('climb breaks on falling or stalling, not on climbing', async () => {
+    const { climbBroken, CHAIN_WINDOW_FRAMES } = await import('../physics');
+    expect(climbBroken(400, 480, 30)).toBe(false);
+    expect(climbBroken(480, 480, 30)).toBe(false);
+    expect(climbBroken(560, 480, 30)).toBe(true);
+    expect(climbBroken(400, 480, CHAIN_WINDOW_FRAMES + 1)).toBe(true);
+    expect(climbBroken(400, null, 9999)).toBe(false);
+  });
+
+  it('career time limits scale with level length and keep tiers ordered', async () => {
+    const { careerLevels } = await import('../config');
+    for (const l of careerLevels) {
+      expect(l.threeStarTime).toBeLessThan(l.twoStarTime);
+      expect(l.twoStarTime).toBeLessThan(l.timeLimit);
+    }
+    expect(careerLevels[9].timeLimit).toBeGreaterThan(careerLevels[0].timeLimit);
+  });
+});
+
+describe('overdrive and music', () => {
+  it('magnet pulls toward a nearby platform and ignores far ones', async () => {
+    const { magnetVx } = await import('../physics');
+    expect(magnetVx(0, 100, 160)).toBeGreaterThan(0);
+    expect(magnetVx(0, 200, 140)).toBeLessThan(0);
+    expect(magnetVx(1, 100, 500)).toBe(1);
+  });
+
+  it('music intensity follows momentum and peaks in overdrive', async () => {
+    const { musicIntensity } = await import('../music');
+    expect(musicIntensity(0, false)).toBe(0);
+    expect(musicIntensity(2, false)).toBe(1);
+    expect(musicIntensity(4, false)).toBe(2);
+    expect(musicIntensity(6, false)).toBe(3);
+    expect(musicIntensity(0, true)).toBe(4);
+  });
+});

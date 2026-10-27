@@ -32,18 +32,24 @@ interface MemoryItem {
 type Reason =
   | { kind: 'commitment_missed'; detail: string }
   | { kind: 'commitment_due_today'; detail: string }
+  | { kind: 'commitment_due_tomorrow'; detail: string }
+  | { kind: 'step_today'; detail: string }
   | { kind: 'plan_awaiting'; detail: string }
   | { kind: 'follow_up'; detail: string }
   | { kind: 'long_gap'; detail: string; gapDays: number };
 
 // Most important first: when several companions have a reason, only the top one writes.
-const REASON_PRIORITY: Reason['kind'][] = ['commitment_missed', 'commitment_due_today', 'follow_up', 'plan_awaiting', 'long_gap'];
+const REASON_PRIORITY: Reason['kind'][] = ['commitment_missed', 'commitment_due_today', 'step_today', 'commitment_due_tomorrow', 'follow_up', 'plan_awaiting', 'long_gap'];
 
 const REASON_INSTRUCTION: Record<Reason['kind'], string> = {
   commitment_missed:
     'They missed a commitment they made with you. Reach out with empathy, no guilt. Ask what got in the way and offer to make the next step smaller or move it.',
   commitment_due_today:
     'They have a commitment due today. Give a short, encouraging nudge that names it, and offer help if something is in the way.',
+  commitment_due_tomorrow:
+    'They have a commitment due tomorrow. A light heads-up that names it, so they can make room for it. Offer to make it smaller if the timing is bad.',
+  step_today:
+    'A step from their plan is pencilled in for today. Name it, say roughly how long it takes, and make starting feel easy. Offer to move it if today is full.',
   plan_awaiting:
     'You proposed a plan that they have not accepted yet. Check whether it fits, and offer to adjust anything before they commit.',
   follow_up:
@@ -59,8 +65,8 @@ async function generateCheckInMessage(
   openCommitments: Array<{ description: string; due_date: string | null; status: string }>,
   companionNameMap: Map<string, string>,
 ): Promise<string> {
-  const isMentor = companion.relationship_type === 'mentor';
-  const companionName = companion.custom_name || (isMentor ? 'your coach' : 'your friend');
+  const isMentor = companion.relationship_type === 'mentor' || companion.relationship_type === 'assistant';
+  const companionName = companion.custom_name || (isMentor ? (companion.relationship_type === 'assistant' ? 'your assistant' : 'your coach') : 'your friend');
   // Build the context for the LLM
   const memoryLines: string[] = [];
   for (const m of memories) {
@@ -164,16 +170,19 @@ Deno.serve(async (req: Request) => {
 
     const now = new Date();
 
-    // Auto-retire threads older than 21 days
-    const twentyOneDaysAgo = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000).toISOString();
+    // Auto-retire threads a week past their follow-up date (or, with no
+    // date, 21 days after they were opened). Retiring by age alone killed
+    // threads whose follow-up was set further out than 21 days.
+    const DAY = 24 * 60 * 60 * 1000;
+    const weekAgo = new Date(now.getTime() - 7 * DAY).toISOString();
+    const twentyOneDaysAgo = new Date(now.getTime() - 21 * DAY).toISOString();
     await supabase
       .from('memory_items')
       .update({ status: 'retired' })
       .eq('kind', 'thread')
       .eq('status', 'active')
-      .lt('created_at', twentyOneDaysAgo)
-      .then(() => {})
-      .catch(() => {});
+      .or(`due_at.lt.${weekAgo},and(due_at.is.null,created_at.lt.${twentyOneDaysAgo})`)
+      .then(() => {}, () => {});
 
     const HOUR = 60 * 60 * 1000;
     const iso = (msAgo: number) => new Date(now.getTime() - msAgo).toISOString();
@@ -218,8 +227,8 @@ Deno.serve(async (req: Request) => {
       const candidates: Array<{ companion: Companion; reason: Reason }> = [];
 
       for (const companion of companions) {
-        const isMentor = companion.relationship_type === 'mentor';
-        // Coach check-ins are a paid feature.
+        const isMentor = companion.relationship_type === 'mentor' || companion.relationship_type === 'assistant';
+        // Coach and assistant check-ins are a paid feature.
         if (isMentor && tier === 'free') continue;
 
         const [{ data: lastProactive }, { data: lastUserMsg }] = await Promise.all([
@@ -250,10 +259,26 @@ Deno.serve(async (req: Request) => {
           const missed = list.find(c => c.status === 'missed' && c.updated_at && new Date(c.updated_at).getTime() > now.getTime() - 48 * HOUR);
           const today = now.toISOString().slice(0, 10);
           const dueToday = list.find(c => c.status !== 'missed' && c.due_date && c.due_date.slice(0, 10) === today);
+          const tomorrow = new Date(now.getTime() + 24 * HOUR).toISOString().slice(0, 10);
+          const dueTomorrow = list.find(c => c.status !== 'missed' && c.due_date && c.due_date.slice(0, 10) === tomorrow);
+          let stepToday: { title: string; duration_minutes: number | null } | undefined;
+          if (!missed && !dueToday) {
+            const { data: steps } = await supabase
+              .from('coach_plan_steps')
+              .select('title, duration_minutes, coach_plans!inner(user_id, companion_id, status)')
+              .eq('coach_plans.user_id', userId).eq('coach_plans.companion_id', companion.id).eq('coach_plans.status', 'active')
+              .eq('scheduled_for', today).in('status', ['pending', 'in_progress'])
+              .limit(1);
+            stepToday = (steps ?? [])[0] as { title: string; duration_minutes: number | null } | undefined;
+          }
           if (missed) {
             reason = { kind: 'commitment_missed', detail: `the missed commitment was "${missed.description}"` };
           } else if (dueToday) {
             reason = { kind: 'commitment_due_today', detail: `today's commitment is "${dueToday.description}"` };
+          } else if (stepToday) {
+            reason = { kind: 'step_today', detail: `today's step is "${stepToday.title}"${stepToday.duration_minutes ? `, about ${stepToday.duration_minutes} minutes` : ''}` };
+          } else if (dueTomorrow) {
+            reason = { kind: 'commitment_due_tomorrow', detail: `tomorrow's commitment is "${dueTomorrow.description}"` };
           } else {
             const { data: waiting } = await supabase
               .from('coach_plans').select('title')
@@ -300,6 +325,8 @@ Deno.serve(async (req: Request) => {
         .eq('status', 'active')
         .in('kind', ['fact', 'person', 'thread'])
         .or(`and(scope.eq.global,companion_id.is.null),and(scope.eq.companion,companion_id.eq.${companion.id})`)
+        // Temporary states that have run out ("sick this week") aren't news anymore.
+        .or(`valid_until.is.null,valid_until.gt.${now.toISOString()}`)
         .order('updated_at', { ascending: false })
         .limit(15);
 
@@ -323,7 +350,7 @@ Deno.serve(async (req: Request) => {
       }
 
       let openCommitments: Array<{ description: string; due_date: string | null; status: string }> = [];
-      if (companion.relationship_type === 'mentor') {
+      if (companion.relationship_type === 'mentor' || companion.relationship_type === 'assistant') {
         const { data: commitments } = await supabase
           .from('coaching_commitments')
           .select('description, due_date, status')

@@ -1,12 +1,19 @@
 import { DAYS, weekday, clockText, season } from '../state/time';
-import { tickAgent } from '../state/agents';
+import { tickAgent, isAsleep } from '../state/agents';
+import { financeTick } from '../state/finance';
+import { sideJobsTick } from '../state/sideJobs';
+import { rollDay, nightStart, wakeHour } from '../state/routine';
 import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
 import { qualityManager } from '../engine/qualityTier';
 import { LayerCache } from '../engine/layerCache';
-import { billTick, deliveryTick, dirtTick, laundryTick, newDayReset, servings } from '../state/household';
+import { deliveryTick, dirtTick, laundryTick, newDayReset, servings } from '../state/household';
 import { SPEEDS, WALL_MODES } from '../kernel/config';
 import type { Game } from '../kernel/game';
+
+// The Sims' fast-forwards: skipping the work day, and the night while everyone sleeps.
+const SKIP_SPEED = 180;
+const NIGHT_SPEED = 60;
 
 export function startGameLoop(g: Game): void {
   const { world, people, house, rng, view, owned, log, canvas, el, art } = g;
@@ -33,7 +40,11 @@ export function startGameLoop(g: Game): void {
         for (const p of people) if (p.scripted || p.kind === 'npc') tickAgent(house, p, null, dt, 0, 1, world.minutes / 60, () => rng.next(), world.household);
         return;
       }
-      const speed = SPEEDS[view.speedIdx];
+      // Like The Sims: the work day can be skipped, and the night runs fast when everyone's asleep.
+      const jordanAway = !!people[0].away;
+      const allAsleep = !jordanAway && people.slice(0, 2).every((p) => isAsleep(p));
+      if (!jordanAway) g.s.skipping = false;
+      const speed = g.s.skipping ? SKIP_SPEED : allAsleep ? NIGHT_SPEED : SPEEDS[view.speedIdx];
       const before = world.minutes + world.day * 1440;
       Object.assign(world, advanceClock(world.day, world.minutes, dt, speed));
       const gameMin = world.minutes + world.day * 1440 - before;
@@ -41,12 +52,19 @@ export function startGameLoop(g: Game): void {
       const walkMul = Math.min(speed, 6);
       const absM = world.minutes + world.day * 1440;
       const prevDay = world.day;
-      billTick(world.household, absM, log);
+      if (g.s.settleDone) {
+        rollDay(world.life, world.day);
+        financeTick(world.household, world.life, world.day, world.minutes, log);
+        sideJobsTick(world.life, world.day, world.minutes, () => rng.next(), log);
+        g.runRoutine(hourF);
+      }
       deliveryTick(world.household, absM, log);
       dirtTick(world.household, gameMin);
       laundryTick(world.household, gameMin);
       if (world.day !== prevDay) { newDayReset(world.household, log); }
-      tickAgent(house, people[0], people[1], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
+      tickAgent(house, people[0], people[1], dt, gameMin, walkMul, hourF, () => rng.next(), world.household,
+        g.s.settleDone ? { nightStart: nightStart(world.life.routine), wakeAt: wakeHour(world.life.routine, world.day) } : undefined);
+      g.tickSideJob(gameMin);
       tickAgent(house, people[1], people[0], dt, gameMin, walkMul, hourF, () => rng.next(), world.household);
       g.deliveriesTick();
       // Visitors a script has brought in (people after the two who live here).
@@ -83,6 +101,7 @@ export function startGameLoop(g: Game): void {
         el('clock').textContent = clockText(world.minutes);
         el('season').textContent = season(world.day);
         el('money').textContent = `$${world.household.money}`;
+        g.btn('skipwork').hidden = !people[0].away || g.s.skipping;
         const sv = servings(world.household);
         el('fridge').textContent = sv === 0 ? 'Fridge empty' : `${sv} meals`;
         g.refreshPeople();

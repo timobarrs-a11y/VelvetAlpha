@@ -6,6 +6,7 @@ import { NEED_KEYS } from '../state/needs';
 import { statusText } from '../state/agents';
 import { type GoalContext } from '../state/goals';
 import { type DrawerState } from '../ui/drawer';
+import { phoneView } from '../ui/phone';
 import type { Game } from '../kernel/game';
 
 export function createHud(g: Game): Partial<Game> {
@@ -32,6 +33,7 @@ export function createHud(g: Game): Partial<Game> {
       fridgeBasic: world.household.fridge.basic,
       fridgeFresh: world.household.fridge.fresh,
       power: world.household.power,
+      phone: phoneView(world.household, world.life, world.day, world.minutes, !!people[0].away),
       billAmount: world.household.bill?.amount ?? null,
       billOverdue: world.household.bill?.overdue ?? false,
       petCount: 0, log: logEntries,

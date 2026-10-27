@@ -338,6 +338,30 @@ export const morningBriefService = {
       commitmentsText = '';
     }
 
+    // Plan steps pencilled in for today, so the brief can say "today on your goals".
+    try {
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const { data: steps } = await supabase
+        .from('coach_plan_steps')
+        .select('title, duration_minutes, status, coach_plans!inner(user_id, title, status)')
+        .eq('coach_plans.user_id', userId)
+        .eq('scheduled_for', today)
+        .in('status', ['pending', 'in_progress'])
+        .eq('coach_plans.status', 'active')
+        .limit(5);
+      if (steps && steps.length > 0) {
+        const lines = (steps as Array<{ title: string; duration_minutes: number | null }>).map(
+          s => `- ${s.title}${s.duration_minutes ? ` (about ${s.duration_minutes} min)` : ''}`,
+        );
+        commitmentsText = [commitmentsText, `Today on their goals, these plan steps are pencilled in:\n${lines.join('\n')}`]
+          .filter(Boolean).join('\n\n');
+        hasCommitments = true;
+      }
+    } catch {
+      // skip plan steps if unavailable
+    }
+
     // National days are client-side — no async needed
     const nationalDayStr = formatNationalDaysForBrief(new Date());
     if (nationalDayStr) {

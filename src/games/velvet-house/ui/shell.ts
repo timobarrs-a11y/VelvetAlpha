@@ -46,6 +46,7 @@ export function mountShell(app: HTMLElement, people: Agent[], logEl: HTMLElement
           <button data-act="rotate" title="Turn the house (R)" aria-label="Turn the house">&#8635;</button>
           <button data-act="walls" title="Change how walls show (W)">Cutaway</button>
           <button data-act="speed" title="Game speed">1x</button>
+          <button data-act="skipwork" title="Skip ahead to when he's home" hidden>Skip to 5 PM</button>
           <button data-act="quality" title="Graphics quality">Auto</button>
           <button data-act="pause" title="Pause (Space)" aria-pressed="false">Pause</button>
         </div>

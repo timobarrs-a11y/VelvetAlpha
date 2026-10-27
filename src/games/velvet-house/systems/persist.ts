@@ -20,6 +20,7 @@ export function createPersist(g: Game): Partial<Game> {
         lifeGoal: g.s.lifeGoal, settleDone: g.s.settleDone, freeWill: g.s.freeWill, style, companion: companionCfg as unknown as Record<string, unknown>,
         wallMode: WALL_MODES[view.wallIdx].mode,
         looks: art.exportLooks(),
+        life: world.life,
       }, world.save);
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch { /* non-fatal */ }

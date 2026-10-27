@@ -6,6 +6,8 @@ export interface RealPerson {
   name: string;
   relationship: string;
   birthday: string | null;
+  /** False when the user didn't give the birth year; the stored year is then a placeholder. */
+  birthday_year_known?: boolean;
   city: string | null;
   state: string | null;
   favorite_color: string | null;
@@ -50,13 +52,18 @@ export const realPeopleService = {
     return (data || []) as RealPerson[];
   },
 
-  async create(name: string, relationship: string): Promise<RealPerson> {
+  async create(
+    name: string,
+    relationship: string,
+    birthday?: { date: string; yearKnown: boolean },
+  ): Promise<RealPerson> {
     const { data, error } = await supabase
       .from('real_people')
       .insert({
         name,
         relationship,
         avatar_color: randomAvatarColor(),
+        ...(birthday ? { birthday: birthday.date, birthday_year_known: birthday.yearKnown } : {}),
       })
       .select()
       .single();
