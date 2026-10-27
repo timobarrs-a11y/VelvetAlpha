@@ -59,7 +59,7 @@ describe('resuming the arrival from the lobby', () => {
 });
 
 describe('ArrivalTownTour', () => {
-  it('walks through three captions, with Continue to Atlas always there', () => {
+  it('walks through three captions, with Go to Today always there', () => {
     const onContinue = vi.fn();
     render(<ArrivalTownTour onContinue={onContinue} />);
     expect(screen.getByText('This is your block.')).toBeTruthy();
@@ -68,7 +68,7 @@ describe('ArrivalTownTour', () => {
     fireEvent.click(screen.getByText('Next'));
     expect(screen.getByText('Change anything, any time.')).toBeTruthy();
     expect(screen.queryByText('Next')).toBeNull();
-    fireEvent.click(screen.getByText('Continue to Atlas'));
+    fireEvent.click(screen.getByText('Go to Today'));
     expect(onContinue).toHaveBeenCalled();
   });
 });

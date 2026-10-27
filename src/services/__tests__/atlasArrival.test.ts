@@ -204,17 +204,18 @@ describe('buildGoalPrompt', () => {
     expect(buildGoalPrompt(profile({ address_style: 'first_name' }), 'working', { date: TODAY, weekday: 'Monday' }, 10)).toContain('Never "Master" or "Miss"');
   });
 
-  it('lists only unknown traits and the backup material in order', () => {
+  it('lists the backup material in order, and asks only for the goal, a deadline and the mission', () => {
     const prompt = buildGoalPrompt(
-      profile({ communication_profile: { motivation: 'internal' }, someday: [{ tab: 'Work', value: 'Tech & IT' }] }),
+      profile({ someday: [{ tab: 'Work', value: 'Tech & IT' }] }),
       'none', { date: TODAY, weekday: 'Monday' }, 10,
     );
     expect(prompt).toContain("THEY DON'T HAVE A GOAL YET");
     expect(prompt).toContain('Tech & IT');
     expect(prompt).toContain('sports they follow: formula one');
-    expect(prompt).not.toMatch(/- motivation:/);
-    expect(prompt).toMatch(/- decisionStyle:/);
     expect(prompt).toContain('TODAY: Monday, 2026-10-26');
+    expect(prompt).toContain('THE DEADLINE');
+    expect(prompt).toContain('THE MISSION');
+    expect(prompt).not.toMatch(/TRAITS STILL UNKNOWN|SMALL PLANS|\[PLAN /);
   });
 });
 

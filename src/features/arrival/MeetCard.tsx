@@ -13,10 +13,11 @@ interface Props {
   /** True once they've been created, so their look can be changed. */
   created: boolean;
   onContinue: () => void;
-  onChangeAnything: () => void;
-  onChangeLook: () => void;
-  onRename: (name: string) => void;
-  onRefine: () => void;
+  /** Leave these out and the card is just an introduction: ready-made helpers aren't redesigned here. */
+  onChangeAnything?: () => void;
+  onChangeLook?: () => void;
+  onRename?: (name: string) => void;
+  onRefine?: () => void;
 }
 
 /**
@@ -34,12 +35,12 @@ export function MeetCard({
   const startEditing = () => {
     setDraftName(name);
     setEditing(true);
-    onChangeAnything();
+    onChangeAnything?.();
   };
 
   const finishEditing = () => {
     const next = draftName.trim();
-    if (next && next !== name) onRename(next);
+    if (next && next !== name) onRename?.(next);
     setEditing(false);
   };
 
@@ -78,7 +79,7 @@ export function MeetCard({
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={onChangeLook} disabled={!created} className="rounded-xl px-3.5 py-2 text-sm disabled:opacity-50" style={{ border: '1px solid var(--shell-border)', color: 'var(--shell-text-primary)' }}>
+            <button type="button" onClick={() => onChangeLook?.()} disabled={!created} className="rounded-xl px-3.5 py-2 text-sm disabled:opacity-50" style={{ border: '1px solid var(--shell-border)', color: 'var(--shell-text-primary)' }}>
               {created ? 'Change their look' : 'Getting them ready…'}
             </button>
             <button type="button" onClick={finishEditing} className="rounded-xl px-3.5 py-2 text-sm font-semibold" style={{ background: 'var(--shell-accent)', color: 'var(--shell-bg)' }}>
@@ -91,10 +92,12 @@ export function MeetCard({
           <button type="button" onClick={onContinue} disabled={busy} className="rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: 'var(--shell-accent)', color: 'var(--shell-bg)' }}>
             Continue
           </button>
-          <button type="button" onClick={startEditing} disabled={busy} className="rounded-xl px-4 py-2 text-sm disabled:opacity-60" style={{ border: '1px solid var(--shell-border)', color: 'var(--shell-text-primary)' }}>
-            Change anything
-          </button>
-          {!created && (
+          {onChangeAnything && (
+            <button type="button" onClick={startEditing} disabled={busy} className="rounded-xl px-4 py-2 text-sm disabled:opacity-60" style={{ border: '1px solid var(--shell-border)', color: 'var(--shell-text-primary)' }}>
+              Change anything
+            </button>
+          )}
+          {!created && onRefine && (
             <button type="button" onClick={onRefine} disabled={busy} className="ml-auto text-xs disabled:opacity-60" style={{ color: 'var(--shell-text-muted)' }}>
               Not quite the goal
             </button>

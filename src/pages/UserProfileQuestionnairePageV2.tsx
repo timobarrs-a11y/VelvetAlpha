@@ -6,13 +6,15 @@ import { somedayFromAnswers } from '../features/questionnaire/personalBank';
 import { userProfileService } from '../services/userProfileService';
 import { toast } from '../shared/ui/Toast';
 import { supabase } from '../shared/supabase/client';
+import { ARRIVAL_STEPS, getSetupProgress, prepareResume, updateSetupProgress } from '../services/setupProgressService';
 import { AuthSpinner } from '../components/auth/AuthSpinner';
 import { ARRIVAL_ROUTES } from '../features/arrival/arrivalRoutes';
 import { WelcomeMoment } from '../features/questionnaire/WelcomeMoment';
 import { rememberWelcomeSeen, shouldShowWelcome } from '../features/questionnaire/welcome';
 
 /** Where Act 1 leads: making their avatar, the next step of the arrival. */
-const AFTER_QUESTIONNAIRE_ROUTE = ARRIVAL_ROUTES.look;
+// Straight on to the goal with Atlas; the avatar and house come while his plan is being drafted.
+const AFTER_QUESTIONNAIRE_ROUTE = ARRIVAL_ROUTES.atlas;
 
 function buildBridgeLines(answers: Record<string, string | string[]>): { text: string }[] {
   const lines: { text: string }[] = [];
@@ -56,7 +58,10 @@ export function UserProfileQuestionnairePageV2() {
       const profile = await userProfileService.getCurrentProfile().catch(() => null);
       if (cancelled) return;
       if (profile?.profile_completed) {
-        navigate(AFTER_QUESTIONNAIRE_ROUTE, { replace: true });
+        // Wherever they got to in the arrival; anyone who finished it all goes to the lobby.
+        const progress = profile.id ? await getSetupProgress(profile.id) : null;
+        const next = progress?.step && ARRIVAL_STEPS.includes(progress.step) ? prepareResume(progress, []) : null;
+        navigate(next ?? '/lobby', { replace: true });
         return;
       }
       const answers = answersFromProfile(profile);
@@ -96,6 +101,9 @@ export function UserProfileQuestionnairePageV2() {
         sportsInterests: asList(finalAnswers.sportsInterests),
       });
       await userProfileService.updateProfile({ someday: somedayFromAnswers(finalAnswers) });
+      // From here the first session is under way, so the app sends them back to it until it's done.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await updateSetupProgress(user.id, { step: 'arrival_goal' });
     } catch {
       toast.error('Something went wrong saving your profile. Please try again.');
       return;

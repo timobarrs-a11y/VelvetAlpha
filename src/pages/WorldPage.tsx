@@ -95,7 +95,7 @@ function pickBlock(
 export function WorldPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  // Part of the arrival: a short look around, then on to Atlas.
+  // Part of the arrival: a short look around once the plan is saved, then on to Today.
   const [searchParams] = useSearchParams();
   const arriving = searchParams.get('arrival') === '1';
   const [myPlot, setMyPlot] = useState<MyPlot | null>(null);
@@ -528,9 +528,10 @@ export function WorldPage() {
 
       {arriving && (
         <ArrivalTownTour
-          onContinue={() => {
-            if (user) updateSetupProgress(user.id, { step: 'arrival_atlas' });
-            navigate('/atlas-onboarding');
+          onContinue={async () => {
+            // Wait for it: the app checks this step on the way into Today.
+            if (user) await updateSetupProgress(user.id, { step: 'complete' });
+            navigate('/lobby?arrived=1', { replace: true });
           }}
         />
       )}

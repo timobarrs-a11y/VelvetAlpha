@@ -39,7 +39,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const MAX_TURNS = 10;
+const MAX_TURNS = 8;
 
 const CURATED_EXPERT_IDS = Object.keys(CURATED_EXPERT_MAP);
 

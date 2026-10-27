@@ -9,7 +9,9 @@ export type SetupStep =
   | 'companion_in_progress'
   | 'choose_conversation'
   | 'complete'
-  // The arrival (docs/onboarding/questionnaire-plan.md): your look, your home, the town, Atlas.
+  // The arrival (docs/onboarding/questionnaire-plan.md): the goal with Atlas, your look, your home,
+  // Atlas back with the plan, then the town.
+  | 'arrival_goal'
   | 'arrival_look'
   | 'arrival_home'
   | 'arrival_town'
@@ -21,6 +23,9 @@ export interface SetupProgress {
   step: SetupStep | null;
   path: SetupPath | null;
 }
+
+/** The first session's steps, in order. Someone at one of these has not finished arriving. */
+export const ARRIVAL_STEPS: SetupStep[] = ['arrival_goal', 'arrival_look', 'arrival_home', 'arrival_atlas', 'arrival_town'];
 
 export const SOMEONE_NEW_ROUTE = '/intent-select?people=1';
 
@@ -96,6 +101,8 @@ export function prepareResume(progress: SetupProgress | null, companions: Compan
   if (coach) sessionStorage.setItem('atlasCoachId', coach.id);
 
   switch (progress.step) {
+    case 'arrival_goal':
+      return '/atlas-onboarding';
     case 'arrival_look':
       return '/arrival/look';
     case 'arrival_home':
