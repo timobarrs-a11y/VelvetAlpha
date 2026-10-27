@@ -528,5 +528,5 @@
 @media (max-width: 560px) {
   .vh-speech, .vh-choices { bottom: auto; top: 46px; left: 8px; width: calc(100% - 16px); }
   .vh-scard { top: auto; bottom: calc(var(--vh-dock-h, 68px) + 150px); width: calc(100% - 16px); }
-  .vh-skip { bottom: auto; top: 8px; right: 8px; }
+  .vh-skip { bottom: 196px; top: auto; right: 8px; }
 }
