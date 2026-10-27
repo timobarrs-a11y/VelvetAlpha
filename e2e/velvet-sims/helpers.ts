@@ -68,21 +68,37 @@ export async function drag(page: Page, from: [number, number], to: [number, numb
 }
 
 /**
- * Drags a piece into a story mark's outline the way a player does: in passes, re-reading where things are on screen
- * each time, because the camera follows the piece while it is carried. Returns the piece's final place.
+ * Drags a piece into a story mark's outline the way a player does: holding it and steering toward the mark while the
+ * camera follows the carried piece, re-reading where the mark is on screen at every step, and letting go once the
+ * piece's place in the room is within `within` of the mark. Returns the piece's final place.
  */
-export async function dragToMark(page: Page, id: string, mark: string, type: string, rot: number, within = 0.6, passes = 6): Promise<Obj> {
-  const m = await inGame<{ x: number; y: number } | null>(page, `(${JSON.stringify(mark)} in v.marks() ? v.marks()[${JSON.stringify(mark)}] : null)`);
+export async function dragToMark(page: Page, id: string, mark: string, type: string, rot: number, within = 0.5, maxSteps = 60): Promise<Obj> {
+  const m = await inGame<{ x: number; y: number } | null>(page, `(v.marks()[${JSON.stringify(mark)}] ?? null)`);
   if (!m) throw new Error(`no such mark: ${mark}`);
-  let piece = (await objects(page)).find((o) => o.id === id)!;
-  for (let i = 0; i < passes && Math.hypot(piece.x - m.x, piece.y - m.y) > within; i++) {
-    await page.waitForTimeout(700);
-    const from = await inGame<[number, number] | null>(page, `v.clientPosOf(${JSON.stringify(id)})`);
+  const where = async (): Promise<Obj> => (await objects(page)).find((o) => o.id === id)!;
+  const from = await inGame<[number, number] | null>(page, `v.clientPosOf(${JSON.stringify(id)})`);
+  if (!from) throw new Error(`cannot see ${id} on screen`);
+  await page.mouse.move(from[0], from[1]);
+  await page.mouse.down();
+  let at: [number, number] = from;
+  // A first nudge past the drag threshold, so the piece is in hand.
+  at = [at[0] + 10, at[1] + 10]; await page.mouse.move(at[0], at[1]); await page.waitForTimeout(50);
+  let piece = await where();
+  for (let i = 0; i < maxSteps && Math.hypot(piece.x - m.x, piece.y - m.y) > within; i++) {
     const to = await inGame<[number, number] | null>(page, `v.markClientPos(${JSON.stringify(mark)}, ${JSON.stringify(type)}, ${rot})`);
-    if (!from || !to) throw new Error(`cannot see ${id} or ${mark} on screen`);
-    await drag(page, from, to);
-    piece = (await objects(page)).find((o) => o.id === id)!;
-    console.log(`drag ${id} -> ${mark}: pass ${i + 1}, now at (${piece.x.toFixed(2)}, ${piece.y.toFixed(2)}) rot ${piece.rot}; mark (${m.x}, ${m.y})`);
+    if (!to) break;
+    // Where the piece is on screen now versus where the mark is: move the pointer by that difference, in part.
+    const now = await inGame<[number, number] | null>(page, `v.clientPosOf(${JSON.stringify(id)})`);
+    if (!now) break;
+    const k = 0.5;
+    at = [at[0] + (to[0] - now[0]) * k, at[1] + (to[1] - now[1]) * k];
+    await page.mouse.move(at[0], at[1]);
+    await page.waitForTimeout(60);
+    piece = await where();
   }
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  piece = await where();
+  console.log(`drag ${id} -> ${mark}: let go at (${piece.x.toFixed(2)}, ${piece.y.toFixed(2)}) rot ${piece.rot}; mark (${m.x}, ${m.y})`);
   return piece;
 }
