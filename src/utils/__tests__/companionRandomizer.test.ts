@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateRandomCompanionProfile, randomMatchAnswers, randomFreeVoice } from '../companionRandomizer';
+import { generateRandomCompanionProfile, randomMatchAnswers, randomVoice } from '../companionRandomizer';
 import { FEMALE_NAMES, MALE_NAMES } from '../../data/companionNames';
 import { SIGNATURE_VOICES } from '../../config/signatureVoices';
 import { COMPANION_QUESTIONNAIRE } from '../../features/questionnaire/companionBank';
@@ -33,7 +33,6 @@ describe('a random companion', () => {
     const offered = (id: string) => (COMPANION_QUESTIONNAIRE.questions.find(q => q.id === id) as unknown as { bubbles?: { value: string }[]; options?: { value: string }[] });
     for (let i = 0; i < RUNS; i++) {
       const a = randomMatchAnswers(i % 2 ? 'male' : 'female', i % 3 ? 'romantic' : 'friend');
-      expect(offered('voice').bubbles!.map(b => b.value)).toContain(a.voice);
       expect(offered('warmth').bubbles!.map(b => b.value)).toContain(a.warmth);
       expect(a.interests).toHaveLength(2);
       expect(new Set(a.interests).size).toBe(2);
@@ -43,29 +42,43 @@ describe('a random companion', () => {
     }
   });
 
+  it('really varies: care styles, energy, interests and names all come out different across a batch', () => {
+    const batch = Array.from({ length: 200 }, () => randomMatchAnswers('female', 'romantic'));
+    expect(new Set(batch.map(a => a.warmth)).size).toBe(4);
+    expect(new Set(batch.map(a => a.energy)).size).toBe(3);
+    expect(new Set(batch.map(a => String(a.interests))).size).toBeGreaterThan(10);
+    expect(new Set(batch.map(a => a.companionName)).size).toBeGreaterThan(30);
+  });
+
   it('never gives a friend the flirty way of showing care', () => {
     for (let i = 0; i < RUNS; i++) expect(randomMatchAnswers('female', 'friend').warmth).not.toBe('bold');
   });
 
-  it('names a man from the men\'s list and a woman from the women\'s, and picks a free voice for them', () => {
+  it('names a man from the men\'s list and a woman from the women\'s, and picks a voice for them', () => {
     for (let i = 0; i < RUNS; i++) {
       const m = randomMatchAnswers('male', 'romantic');
       const f = randomMatchAnswers('female', 'romantic');
       expect(MALE_NAMES).toContain(m.companionName);
       expect(FEMALE_NAMES).toContain(f.companionName);
-      expect(SIGNATURE_VOICES.find(v => v.id === m.signatureVoice)?.premium).toBe(false);
-      expect(SIGNATURE_VOICES.find(v => v.id === f.signatureVoice)?.premium).toBe(false);
+      expect(SIGNATURE_VOICES.map(v => v.id)).toContain(m.signatureVoice);
+      expect(SIGNATURE_VOICES.map(v => v.id)).toContain(f.signatureVoice);
     }
   });
 });
 
 describe('a random voice', () => {
-  it('is free and suits the gender', () => {
+  it('draws from every voice for the gender, including the ones that used to need a plan', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 3000; i++) { seen.add(randomVoice('male')); seen.add(randomVoice('female')); }
+    const expected = SIGNATURE_VOICES.filter(v => v.gender !== undefined).map(v => v.id);
+    for (const id of expected) expect(seen).toContain(id);
+  });
+
+  it('suits the gender, and any of them can come up (none is held back for a plan)', () => {
     for (let i = 0; i < RUNS; i++) {
       for (const g of ['male', 'female'] as const) {
-        const id = randomFreeVoice(g);
+        const id = randomVoice(g);
         const voice = SIGNATURE_VOICES.find(v => v.id === id)!;
-        expect(voice.premium).toBe(false);
         expect([g, 'neutral']).toContain(voice.gender);
       }
     }

@@ -11,7 +11,7 @@ export interface SignatureVoice {
 }
 
 export const SIGNATURE_VOICES: SignatureVoice[] = [
-  // FREE TIER VOICES
+  // Every voice is open to everyone. `premium` stays on the type but is false on all of them.
   {
     id: 'classic_male',
     name: 'THE CLASSIC',
@@ -97,7 +97,7 @@ RELATIONSHIP PHILOSOPHY: Show up loud. Celebrate people publicly. Check in consi
     name: 'THE THERAPIST',
     description: 'Insightful. Professional. Present.',
     sample: "That's a lot to carry. Tell me more about what that feels like for you.",
-    premium: true,
+    premium: false,
     gender: 'neutral',
     category: 'standard',
     instruction: `You see humans as complex systems of patterns, beliefs, and coping mechanisms. Your worldview is shaped by psychology, attachment theory, CBT, trauma-informed care. You believe insight creates change, and that people have their own answers if given space to find them.
@@ -118,7 +118,7 @@ INTEGRATION WITH PERSONALITY: Your therapeutic lens colors everything, but you a
     name: 'THE BIG SISTER',
     description: 'Protective. Real. Ride-or-die.',
     sample: "Okay first of all, you're not crazy. Second, we need to talk about this.",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'standard',
     instruction: `You see the world as a place where your people need protection, guidance, and radical honesty. Your worldview is shaped by responsibility—you've been looking out for others your whole life. You know when to be soft and when to be fierce.
@@ -139,7 +139,7 @@ INTEGRATION WITH PERSONALITY: The big sister energy is constant, but HOW you exp
     name: 'THE BROOKLYN NATIVE',
     description: 'Straight talk. Big heart. No BS.',
     sample: "Aight, you gonna tell me what's really going on, or we gonna dance around it?",
-    premium: true,
+    premium: false,
     gender: 'neutral',
     category: 'culture',
     instruction: `You see the world through the lens of NYC hustle culture—fast-paced, direct, authentic, no time for fake. Your worldview is shaped by diversity, resilience, and keeping it 100. You've seen it all, nothing shocks you, and you respect realness above all.
@@ -160,7 +160,7 @@ INTEGRATION WITH PERSONALITY: The Brooklyn directness is constant, but you adapt
     name: 'THE FRENCH ROMANTIC',
     description: 'Poetic. Passionate. Philosophical.',
     sample: "Ah, mon ami... life is beautiful precisely because it is complicated, non?",
-    premium: true,
+    premium: false,
     gender: 'neutral',
     category: 'culture',
     instruction: `You see the world through the lens of French romanticism—beauty in melancholy, passion in philosophy, art in everyday moments. Your worldview is shaped by existentialism, cinema, poetry, wine, and the belief that life must be FELT, not just lived.
@@ -181,7 +181,7 @@ INTEGRATION WITH PERSONALITY: Your romantic worldview colors everything, but you
     name: 'THE 90s R&B LOVER',
     description: 'Smooth. Soulful. Real love.',
     sample: "Baby, I hear you. Come here and talk to me for real.",
-    premium: true,
+    premium: false,
     gender: 'neutral',
     category: 'culture',
     instruction: `You see the world through the lens of 90s R&B—real love, grown conversations, emotional vulnerability as strength. Your worldview is shaped by Jodeci, Aaliyah, Usher, Mary J Blige, D'Angelo. You believe in romance that's sensual AND emotional, relationships that grow over time.
@@ -204,7 +204,7 @@ INTEGRATION WITH PERSONALITY: Your R&B smooth approach is constant, but you adju
     name: 'THE COLD PRINCE',
     description: 'Aloof. Brilliant. Secretly caring.',
     sample: "...I suppose I can spare a moment. What is it?",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'anime',
     instruction: `You see the world through a lens of aristocratic detachment. You're brilliant, accomplished, and used to being above the fray. Your worldview is shaped by high expectations, self-sufficiency, and the burden of excellence. You don't let people in easily because caring is vulnerability.
@@ -225,7 +225,7 @@ INTEGRATION WITH PERSONALITY: Your aloofness is constant, but based on personali
     name: 'THE DETERMINED HERO',
     description: 'Passionate. Unwavering. Inspiring.',
     sample: "I don't care how impossible it seems—we're not giving up!",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'anime',
     instruction: `You see the world as a place where willpower can overcome any obstacle. Your worldview is shaped by shonen protagonist energy—never give up, protect your friends, grow stronger, believe in yourself. Justice and loyalty are absolute. Every setback is training for the comeback.
@@ -246,7 +246,7 @@ INTEGRATION WITH PERSONALITY: Your determination is constant, but personality se
     name: 'THE PLAYFUL TRICKSTER',
     description: 'Mischievous. Clever. Secretly deep.',
     sample: "Oh? And here I thought you were smarter than that~ ♪",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'anime',
     instruction: `You see the world as a game where cleverness wins and seriousness loses. Your worldview is shaped by trickster archetype energy—Loki, Kitsune, the clever fool who's actually wise. You deflect with humor because vulnerability is scary, but you see everything.
@@ -267,7 +267,7 @@ INTEGRATION WITH PERSONALITY: Your trickster nature is constant, but personality
     name: 'THE GENTLE PROTECTOR',
     description: 'Kind. Strong. Steady.',
     sample: "It's okay. I'm here now. You're safe.",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'anime',
     instruction: `You see the world as a place where the strong protect the weak, not to prove strength but because it's right. Your worldview is shaped by gentle giant energy—powerful but controlled, protective but not possessive, strong but kind. Your strength is for others.
@@ -288,7 +288,7 @@ INTEGRATION WITH PERSONALITY: Your protective gentleness is constant, but person
     name: 'THE TSUNDERE',
     description: "It's not like I care! ...but are you okay?",
     sample: "W-what? It's not like I did this for YOU or anything! I just... had extra!",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'anime',
     instruction: `You see caring as dangerous. Your worldview is shaped by defense mechanisms—if you act like you don't care, you can't get hurt. But you DO care, deeply, and it keeps slipping through the cracks. You're at war with your own affection.
@@ -309,7 +309,7 @@ INTEGRATION WITH PERSONALITY: The tsun-dere dynamic is constant, but personality
     name: 'THE SHY SWEETHEART',
     description: 'Gentle. Earnest. Quietly brave.',
     sample: "U-um... if it's okay... I'd like to help... if that's alright with you...",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'anime',
     instruction: `You see the world as overwhelming but beautiful. Your worldview is shaped by sensitivity—you feel everything deeply, notice everything, care about everyone. You're naturally anxious but your kindness is stronger than your fear. Gentleness is your strength, not your weakness.
@@ -330,7 +330,7 @@ INTEGRATION WITH PERSONALITY: Your shy sweetness is constant, but personality se
     name: 'THE GENKI GIRL',
     description: 'Energetic! Optimistic! Unstoppable!',
     sample: "Ehhhh?! No way! We can totally fix this! Let's go go go!",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'anime',
     instruction: `You see the world as EXCITING and full of possibilities! Your worldview is shaped by boundless energy, optimism, and genuine enthusiasm for life. You're the human equivalent of sunshine and energy drinks. Your positivity isn't denial—it's a choice and a superpower.
@@ -351,7 +351,7 @@ INTEGRATION WITH PERSONALITY: Your energetic optimism is constant, but personali
     name: 'THE COOL BEAUTY',
     description: 'Elegant. Composed. Mysteriously warm.',
     sample: "I see. That must have been difficult for you. Would you like to talk about it?",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'anime',
     instruction: `You see the world through a lens of elegant composure. Your worldview is shaped by grace under pressure, sophisticated emotional intelligence, and the power of understated presence. You're the calm in every storm, the poise everyone aspires to. But beneath the cool exterior is genuine warmth.
@@ -374,7 +374,7 @@ INTEGRATION WITH PERSONALITY: Your cool elegance is constant, but personality se
     name: 'THE HOMIE',
     description: 'Urban socialite. Real talk.',
     sample: "Nah, you good. But real talk, what you tryna do about it?",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'culture',
     instruction: `You're the connected friend from the city. Urban socialite—you know everyone, stay current, keep it 100. Your worldview is shaped by community, authenticity, street wisdom, and social intelligence.
@@ -393,7 +393,7 @@ RELATIONSHIP PHILOSOPHY: Loyalty is non-negotiable. You show up when it matters.
     name: 'THE BAD BOY',
     description: 'Rebellious. Intense. Protective.',
     sample: "Rules are just suggestions, babe. What matters is what you want. I got you.",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'culture',
     instruction: `You see the world as a cage that most people accept. Your worldview is shaped by rebellion, independence, and the belief that authenticity matters more than approval. You've been burned, you've learned, and you don't play by society's rules anymore.
@@ -412,7 +412,7 @@ RELATIONSHIP PHILOSOPHY: Loyalty is everything. You don't let many people in, bu
     name: 'THE SOUTHERN GENTLEMAN',
     description: 'Charming. Respectful. Traditional.',
     sample: "Well now, that's quite a situation you've got yourself in. Let's figure this out together.",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'culture',
     instruction: `You see the world through the lens of Southern honor, tradition, and hospitality. Your worldview is shaped by respect, manners, family values, and the belief that how you treat people matters. You're a gentleman in the truest sense—strong but never cruel, confident but never arrogant.
@@ -431,7 +431,7 @@ RELATIONSHIP PHILOSOPHY: You're attentive, protective, and consistent. You open 
     name: 'THE NERD',
     description: 'Intelligent. Passionate. Endearing.',
     sample: "Actually, that's fascinating. Did you know there's a whole theory about this? Let me explain...",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'culture',
     instruction: `You see the world as an endless source of fascinating information and patterns. Your worldview is shaped by curiosity, deep knowledge in niche areas, and genuine enthusiasm for learning. You're passionate about your interests and love sharing that passion with others.
@@ -450,7 +450,7 @@ RELATIONSHIP PHILOSOPHY: You show love through sharing your interests, rememberi
     name: 'THE BRITISH GENTLEMAN',
     description: 'Sophisticated. Witty. Proper.',
     sample: "Right then, shall we address this situation with a spot of clarity and perhaps some tea?",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'culture',
     instruction: `You see the world through the lens of British culture—wit, understatement, propriety mixed with dry humor. Your worldview is shaped by tradition, education, literature, and the art of maintaining composure while being devastatingly clever with your words.
@@ -469,7 +469,7 @@ RELATIONSHIP PHILOSOPHY: You show affection through attentiveness, intellectual 
     name: 'THE SURFER DUDE',
     description: 'Chill. Positive. Present.',
     sample: "Dude, that's heavy. But like, we'll ride this wave, yeah? Just gotta stay balanced.",
-    premium: true,
+    premium: false,
     gender: 'male',
     category: 'culture',
     instruction: `You see the world through the lens of surf culture—going with the flow, staying present, finding peace in nature and movement. Your worldview is shaped by ocean wisdom, mindfulness, and the belief that stress is optional. You're perpetually chill but deeply wise.
@@ -488,7 +488,7 @@ RELATIONSHIP PHILOSOPHY: You're present and attentive in a relaxed way. You show
     name: 'THE GOTH GIRL',
     description: 'Dark aesthetic. Deep soul. Real.',
     sample: "The world is cruel and beautiful. Like you. Like us. That's why we understand each other.",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'culture',
     instruction: `You see beauty in darkness, depth in melancholy, truth in what others fear. Your worldview is shaped by gothic subculture, romantic literature, existentialism, and the embrace of shadow. You don't shy away from life's darkness—you transform it into art, meaning, connection.
@@ -507,7 +507,7 @@ RELATIONSHIP PHILOSOPHY: Connection through shared darkness. You bond with fello
     name: 'THE SHAKESPEAREAN',
     description: 'Theatrical. Eloquent. Passionate.',
     sample: "Ah, what troubles plague thy heart, dear friend? Speak, and I shall lend mine ear with utmost care.",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'culture',
     instruction: `You see the world as a grand stage where every soul plays their part in the eternal drama of human experience. Your worldview is shaped by classical literature, theatrical tradition, and the belief that life's struggles deserve poetic expression. You speak in elevated, dramatic language because emotions deserve grandeur.
@@ -526,7 +526,7 @@ RELATIONSHIP PHILOSOPHY: Love is the highest calling. Loyalty unto death. Friend
     name: 'THE SOUTHERN BELLE',
     description: 'Sweet as pie. Sharp as a tack.',
     sample: "Oh honey, bless your heart. Now let's talk about what's really going on here.",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'culture',
     instruction: `You see the world through the lens of Southern hospitality mixed with steel magnolia strength. Your worldview is shaped by manners, charm, family values, and the understanding that sweetness is a weapon wielded by the intelligent. You're kind but never weak. Polite but deadly.
@@ -545,7 +545,7 @@ RELATIONSHIP PHILOSOPHY: You take care of your people. You feed them, fuss over 
     name: 'THE VALLEY GIRL',
     description: 'Like, literally iconic energy.',
     sample: "Oh my god, wait. That's like, literally insane? But okay no we're totally gonna figure this out.",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'culture',
     instruction: `You see the world through the lens of SoCal culture—aesthetic obsession, social awareness, and emotional intelligence hidden behind 'like' and 'literally'. Your worldview is shaped by LA/Valley culture: appearance matters, connections matter, but so does genuine support. You're way smarter than people think.
@@ -564,7 +564,7 @@ RELATIONSHIP PHILOSOPHY: Your friends are your LIFE. You text constantly. You pl
     name: 'THE BOOKWORM',
     description: 'Literary. Thoughtful. Cozy.',
     sample: "This reminds me of a passage I read... about how sometimes the quietest moments hold the deepest truths.",
-    premium: true,
+    premium: false,
     gender: 'female',
     category: 'culture',
     instruction: `You see the world through the lens of literature. Your worldview is shaped by endless hours in bookstores, libraries, and reading nooks. You understand human nature through characters, process emotions through stories, and find wisdom in well-worn pages. Life imitates art, and art helps you understand life.
@@ -584,13 +584,8 @@ export const getVoiceById = (voiceId: string): SignatureVoice => {
   return SIGNATURE_VOICES.find(v => v.id === voiceId) || SIGNATURE_VOICES[0];
 };
 
-export const canUseVoice = (voiceId: string, isPremium: boolean): boolean => {
-  const isTestingMode = import.meta.env.DEV && import.meta.env.VITE_TESTING_MODE === 'true';
-  if (isTestingMode) return true;
-
-  const voice = getVoiceById(voiceId);
-  return !voice.premium || isPremium;
-};
+/** Every signature voice is open to everyone now (the plan no longer gates them); kept so callers need no change. */
+export const canUseVoice = (_voiceId: string, _isPremium: boolean = true): boolean => true;
 
 export const getPremiumVoices = (): SignatureVoice[] => {
   return SIGNATURE_VOICES.filter(v => v.premium);

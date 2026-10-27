@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Heart, Shuffle, Check, RotateCcw } from 'lucide-react';
-import { AvatarCreatorV2, coherentRandomize } from '../components/AvatarCreatorV2';
+import { AvatarCreatorV2 } from '../components/AvatarCreatorV2';
 import { AvatarConfigV2, DEFAULT_MALE_AVATAR_V2, DEFAULT_FEMALE_AVATAR_V2 } from '../types/avatar-v2';
 import { supabase } from '../shared/supabase/client';
 import { trackSaveAvatar } from '../services/avatarAnalytics';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
 import { sanitizeAvatarConfigForSave } from '../services/avatarSaveService';
 import { getRandomName } from '../data/companionNames';
-import { takeReturnToHouse, HOUSE_ROUTE } from '../services/velvetHouseReturn';
+import { companionDestination, finishCompanionPipeline } from '../services/randomCompanionService';
 
 async function resolveCompanionId(): Promise<string | null> {
   const stored = sessionStorage.getItem('currentCompanionId');
@@ -42,8 +42,6 @@ export function CreateCompanionAvatarPage() {
   const [ready, setReady] = useState(false);
   const [showReveal, setShowReveal] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // They picked "from inside the Velvet Rope": the look is chosen for them too, then they can shuffle or tweak it.
-  const randomized = useRef(sessionStorage.getItem('companionRandomized') === '1').current;
 
   useEffect(() => {
     (async () => {
@@ -69,17 +67,15 @@ export function CreateCompanionAvatarPage() {
 
       // Drafts are kept per companion: one left behind for an earlier companion must not show up here.
       const key = `companion-avatar-draft:${companionId ?? 'new'}`;
-      if (randomized) { try { localStorage.removeItem(key); } catch { /* storage blocked */ } }
 
-      const look = existingLook
-        ?? (randomized ? coherentRandomize(gender) : gender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2);
+      const look = existingLook ?? (gender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2);
       setCompanionName(name);
       setCompanionGender(gender);
       setCompanionKey(key);
       setAvatarConfig({ ...look, gender });
       setReady(true);
     })();
-  }, [randomized]);
+  }, []);
 
   const handleNameChange = (name: string) => {
     setCompanionName(name);
@@ -118,13 +114,15 @@ export function CreateCompanionAvatarPage() {
     }
   };
 
-  const handleRevealContinue = () => {
+  // Their look is the last step: the pipeline ends in the chat with them (or back in the house they came from).
+  // Chat styling can be changed from the chat itself, and there is nobody left to choose between.
+  const handleRevealContinue = async () => {
     setShowReveal(false);
-    sessionStorage.removeItem('companionRandomized');
-    // Met a companion because the house needs one: finish setting up, then go home.
-    sessionStorage.setItem('envSetupNextRoute', takeReturnToHouse() ? HOUSE_ROUTE : '/who-to-talk');
-    sessionStorage.setItem('envSetupBackRoute', '/create-companion-avatar');
-    navigate('/environment-setup');
+    const companionId = await resolveCompanionId();
+    const { data: { user } } = await supabase.auth.getUser();
+    const to = companionId ? companionDestination(companionId) : '/lobby';
+    if (user) await finishCompanionPipeline(user.id);
+    navigate(to, { replace: true });
   };
 
   const revealConfig = avatarConfig;
@@ -152,13 +150,11 @@ export function CreateCompanionAvatarPage() {
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            {randomized ? `Meet ${companionName || 'your match'}` : `Design ${companionName || 'Your Companion'}`}
+            Design {companionName || 'Your Companion'}
           </h1>
 
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            {randomized
-              ? `We picked a look for ${companionName || 'them'}. Hit the shuffle button for another, or change anything you like.`
-              : `Give ${companionName || 'them'} a unique look. Customize every detail, or hit the shuffle button to get a complete face instantly.`}
+            Give {companionName || 'them'} a unique look. Customize every detail, or hit the shuffle button to get a complete face instantly.
           </p>
         </motion.div>
 

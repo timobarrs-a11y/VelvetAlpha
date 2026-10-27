@@ -33,7 +33,11 @@ export function makeContext(
 }
 
 export function tpl(template: string, ctx: QuestionContext): string {
+  const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
   return template
+    // Capitalised at the start of a sentence: {She}'s ready.
+    .replace(/\{She\}/g, cap(ctx.pronouns.she))
+    .replace(/\{Her\}/g, cap(ctx.pronouns.her))
     .replace(/\{she\}/g, ctx.pronouns.she)
     .replace(/\{her\}/g, ctx.pronouns.her)
     .replace(/\{hers\}/g, ctx.pronouns.hers)
