@@ -23,7 +23,8 @@ import { installDevHooks } from './dev/hooks';
 import { createHostBridge } from './bridge/hostBridge';
 import { showMainMenu } from './ui/mainMenu';
 import { startAttract } from './ui/attract';
-import { run } from './kernel/config';
+import { run, SAVE_KEY } from './kernel/config';
+import { postToParent } from './bridge/protocol';
 
 /**
  * Starts the game. The data and the page come from `createGame`; each module below adds the part it owns to the
@@ -72,6 +73,19 @@ async function launch(): Promise<void> {
   const skip = import.meta.env.DEV && new URLSearchParams(location.search).has('nomenu');
   const launched = location.hash === '#launch';
   if (launched) history.replaceState(null, '', location.pathname + location.search);
+  // The host picked a different companion: start a new house for them (`new`) or go back to theirs (`continue`), with
+  // no title screen. The parameter is dropped at once so a reload of this page never starts over again.
+  const params = new URLSearchParams(location.search);
+  const start = params.get('start');
+  if (start === 'new' || start === 'continue') {
+    params.delete('start');
+    history.replaceState(null, '', location.pathname + (params.toString() ? `?${params}` : ''));
+    try {
+      if (start === 'new' && localStorage.getItem(SAVE_KEY) !== null) { localStorage.removeItem(SAVE_KEY); postToParent({ type: 'velvet:restarted', game: 'velvet-house', day: 1 }); }
+    } catch { /* storage blocked */ }
+    boot(false);
+    return;
+  }
   if (skip || launched) { boot(false); return; }
   run.attract = true;
   boot(true);

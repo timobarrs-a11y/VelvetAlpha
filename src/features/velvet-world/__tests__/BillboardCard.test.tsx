@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+
+const navigate = vi.fn();
+vi.mock('react-router-dom', async (orig) => ({ ...(await orig<typeof import('react-router-dom')>()), useNavigate: () => navigate }));
 
 const recordVisit = vi.fn();
 const getCardDetails = vi.fn();
@@ -31,16 +34,17 @@ const plot = {
   profile: { name: 'Maya Lee', headline: 'Learning to paint', address: '4 Velvet Lane', medalCount: 2, medals: [] },
 } as never;
 
-function renderCard(isYou: boolean) {
+function renderCard(isYou: boolean, mainCompanionId: string | null = null) {
   return render(
     <MemoryRouter>
-      <BillboardCard plot={plot} isYou={isYou} onClose={() => {}} onCustomize={() => {}} />
+      <BillboardCard plot={plot} isYou={isYou} onClose={() => {}} onCustomize={() => {}} mainCompanionId={mainCompanionId} />
     </MemoryRouter>,
   );
 }
 
 describe('BillboardCard', () => {
   beforeEach(() => {
+    navigate.mockReset();
     recordVisit.mockReset().mockResolvedValue(13);
     getCardDetails.mockReset().mockResolvedValue({
       visitors: 13, visitors_week: 4, friends: 7, streak: 12, mutual_friends: 2,
@@ -69,6 +73,18 @@ describe('BillboardCard', () => {
     expect(recordVisit).not.toHaveBeenCalled();
     expect(await screen.findByText('4 new visitors this week')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Customize my plot' })).toBeTruthy();
+  });
+
+  it('your own house has a way inside, for your main companion', async () => {
+    renderCard(true, 'comp-1');
+    fireEvent.click(await screen.findByRole('button', { name: /Look inside/ }));
+    expect(navigate).toHaveBeenCalledWith('/velvet-house?companion=comp-1');
+  });
+
+  it("someone else's house has no way inside", async () => {
+    renderCard(false);
+    await screen.findByText('13');
+    expect(screen.queryByRole('button', { name: /Look inside/ })).toBeNull();
   });
 });
 

@@ -12,6 +12,8 @@ import { ScriptEngine } from './engine';
 import { NEW_RUNTIME, type FlagValue, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget } from './types';
 import { run } from '../kernel/config';
 import { createScriptUi } from '../ui/scriptUi';
+import { playArrival, type Arrival } from '../ui/arrivalIntro';
+import { season as seasonOf } from '../state/time';
 
 /**
  * Connects the script engine to the running game: who a name means, where a place is, and what each step does to the
@@ -51,10 +53,11 @@ export function createScripts(g: Game): Partial<Game> {
   let camFocus: { who: string; zoom: number } | null = null;
   let spot: UiTarget[] = [];
 
+  let arrival: Arrival | null = null;
   const host: ScriptHost = {
     flags: story,
     clock: () => ({ day: world.day, minutes: world.minutes }),
-    names: () => ({ player: g.simName, partner: g.partnerName, town: g.townName, preset: g.companionCfg.preset }),
+    names: () => ({ player: g.simName, partner: g.partnerName, town: g.townName, preset: g.companionCfg.preset, humor: g.s.voice.humor, communication: g.s.voice.communication, relationship: g.s.voice.relationship }),
 
     setMode(mode, allow) {
       g.s.scriptMode = mode;
@@ -143,12 +146,13 @@ export function createScripts(g: Game): Partial<Game> {
       if (!target) { art.spotlight([]); ui.hideCard(); }
     },
     outline(s) {
-      if (!s) { art.setGhost(null); return; }
+      if (!s) { art.setGhost(null); g.setGhostTarget(null); return; }
       const at = resolve(s.at);
-      // A coloured outline is a placement lesson: bring up Arrange with that piece in hand.
-      if (s.color && !g.isArranging()) {
-        const o = world.objs.find((q) => q.type === s.objType);
-        if (o) { g.drawer.open('arrange'); g.selectObject(o); }
+      if (at) g.setGhostTarget({ type: s.objType, level: at.level, x: at.x, y: at.y, rot: s.rot });
+      // A coloured outline is a placement lesson: bring up Arrange with that piece in hand, framed with its outline.
+      if (s.color) {
+        const o = world.objs.find((q) => q.type === s.objType && (!at || q.level === at.level));
+        if (o) { if (!g.isArranging()) g.drawer.open('arrange'); g.selectObject(o); }
       }
       if (at) art.setGhost({ type: s.objType, level: at.level, x: at.x, y: at.y, rot: s.rot, color: s.color });
     },
@@ -164,7 +168,7 @@ export function createScripts(g: Game): Partial<Game> {
             world.objs.push(inst);
             if (!relocate(world.objs, inst, at.level, [], [at.x, at.y])) { world.objs.pop(); engine.trace.push('give-fail:' + inst.id + JSON.stringify(people.map((p) => [p.id, p.level, +p.x.toFixed(1), +p.y.toFixed(1)]))); return; }
             g.relearnLayout(inst);
-            art.objectPlaced(inst.id);
+            if (inst.type === 'pbox') art.drop(inst.id); else art.objectPlaced(inst.id);
           }
         }
       }
@@ -174,6 +178,15 @@ export function createScripts(g: Game): Partial<Game> {
       (flags.unlocked as Record<string, boolean>)[what] = true;
       if (what === 'freeWill') g.s.freeWill = true;
     },
+    intro() {
+      arrival?.cancel();
+      arrival = playArrival(stage, {
+        plot: g.s.plot, season: seasonOf(world.day), town: g.townName,
+        reducedMotion: !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+      });
+    },
+    dim(amount) { art.setDim(amount); },
+    introDone: () => !arrival || arrival.done(),
     setClock(day, minutes) {
       if (day !== undefined) world.day = day;
       if (minutes !== undefined) world.minutes = minutes;
@@ -207,7 +220,7 @@ export function createScripts(g: Game): Partial<Game> {
   const engine = new ScriptEngine(host, SCRIPTS, LINE_BOOK, rt);
   ui.onSkip(() => engine.skip());
   // "Set it down" ends the placing: the piece stays where it is and Arrange closes.
-  ui.onCardButton(() => { if (g.isArranging()) g.drawer.close(); });
+  ui.onCardButton(() => { if (g.isArranging()) { g.snapSelectedToOutline(); g.drawer.close(); } });
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.
@@ -226,7 +239,11 @@ export function createScripts(g: Game): Partial<Game> {
   } else engine.resume();
 
   function update(dt: number): void {
+    // What they are to the player, for scripts that branch on it (a friend moving in is a roommate).
+    story.rel = g.s.voice.relationship;
     engine.tick(dt);
+    // Skipping the opening ends the drive-up too.
+    if (arrival && !engine.isActive()) { arrival.cancel(); arrival = null; }
     if (camFocus) {
       const a = actor(camFocus.who);
       if (a && !view.follow) {

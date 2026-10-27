@@ -3,12 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import { getCompanion, getCompanions, type Companion } from '../services/companionService';
+import { CompanionPicker } from '../features/velvet-sims/CompanionPicker';
+import { houseDay } from '../features/velvet-sims/houseDays';
 import { loadAvatarUnlocks } from '../hooks/useAvatarUnlocks';
 import { buildProfile, avatarFromGameLook, buildAvatarLook, type PlayerProfile } from '../features/velvet-sims/simProfile';
 import { lookUnlock, resolveLookForDisplay } from '../data/avatarCatalog';
 import {
   isReadyMessage, isAvatarItemBoughtMessage, isLookChangedMessage, isRestartedMessage,
-  isSampleRequestMessage, isSampleCancelMessage, isDesignsRequestMessage,
+  isSampleRequestMessage, isSampleCancelMessage, isDesignsRequestMessage, isStartRequestedMessage, isMenuReadyMessage,
 } from '../games/velvet-house/bridge/protocol';
 import { toGameTurnInput } from '../games/velvet-house/bridge/chatInput';
 import { sampleGameTurn } from '../services/velvetGameTurn';
@@ -19,6 +21,9 @@ import { applyAvatarChange, migrateAvatarConfig } from '../utils/avatarConfig';
 import { recordSimsPurchase } from '../services/avatarInventoryService';
 import { isHelper } from '../utils/relationshipType';
 import { SOMEONE_NEW_ROUTE } from '../services/setupProgressService';
+import { getMyPlot } from '../services/worldService';
+import { markReturnToHouse, clearReturnToHouse } from '../services/velvetHouseReturn';
+import { townSlot } from '../features/velvet-world/art/streetArt.js';
 
 const GAME_PATH = '/games/velvet-house-next/index.html';
 
@@ -30,10 +35,35 @@ export function VelvetHouseNextGame() {
   // talked to, preferring a companion over a coach.
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [settled, setSettled] = useState(!!queryCompanionId);
-  const companionId = queryCompanionId ?? pickedId;
+  // With more than one companion, Start asks who is moving in; picking someone other than who the page opened with
+  // replaces the game with a fresh house for them.
+  const [chosen, setChosen] = useState<{ id: string; start: 'new' | 'continue' } | null>(null);
+  const [choosing, setChoosing] = useState<'new' | 'continue' | null>(null);
+  const [days, setDays] = useState<Record<string, number | null>>({});
+  const [options, setOptions] = useState<Companion[]>([]);
+  const optionsReady = useRef<Promise<Companion[]>>(Promise.resolve([]));
+  const companionId = chosen?.id ?? queryCompanionId ?? pickedId;
   const { saveReady, noteRestart } = useVelvetHouseCloudSave(companionId, settled);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Back in the house with a companion: the trip out is over.
+  useEffect(() => { if (companionId) clearReturnToHouse(); }, [companionId]);
   const [loading, setLoading] = useState(true);
+
+  // Everyone who could move in: companions, not coaches or assistants.
+  useEffect(() => {
+    let cancelled = false;
+    optionsReady.current = (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const all = user ? await getCompanions(user.id) : [];
+        const list = all.filter(c => !isHelper(c.relationship_type)) as Companion[];
+        const reached = Object.fromEntries(await Promise.all(list.map(async (c) => [c.id, await houseDay(c.id)] as const)));
+        if (!cancelled) { setOptions(list); setDays(reached); }
+        return list.map(c => ({ ...c, __day: reached[c.id] })) as Companion[];
+      } catch { return []; }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (queryCompanionId) return;
@@ -108,6 +138,15 @@ export function VelvetHouseNextGame() {
         await saveLookFromGame(e.data, win);
         return;
       }
+      // The game's title screen: Start with more than one companion asks who is moving in.
+      if (isStartRequestedMessage(e.data)) { setChoosing(e.data.mode); return; }
+      // The title screen is up (no bridge yet), and the game itself says ready: both want to know who there is to pick.
+      if (isMenuReadyMessage(e.data) || isReadyMessage(e.data)) {
+        optionsReady.current.then((list) => {
+          const houses = list.filter((c) => (c as Companion & { __day?: number | null }).__day != null).length;
+          if (!cancelled) win.postMessage({ type: 'velvet:companions', count: list.length, houses }, window.location.origin);
+        });
+      }
       if (!isReadyMessage(e.data)) return;
       sendInventory(win);
       sendProfile(win);
@@ -116,6 +155,15 @@ export function VelvetHouseNextGame() {
     const sendProfile = async (win: Window) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || cancelled) return;
+      // Their house in town goes first, so the drive-up that opens a new game can show it.
+      getMyPlot().then((mine) => {
+        if (!mine || cancelled) return;
+        const slot = townSlot(mine.slot_index);
+        win.postMessage({
+          type: 'velvet:plot',
+          plot: { member: mine.is_member, config: { house: mine.house, sign: mine.sign, ...(mine.yard ?? {}) }, earned: mine.earned, address: slot.address },
+        }, window.location.origin);
+      }).catch(() => { /* no plot yet: the drive-up shows a starter house */ });
       const pickCompanion = async () => {
         if (companionId) return getCompanion(companionId);
         const all = await getCompanions(user.id);
@@ -173,12 +221,12 @@ export function VelvetHouseNextGame() {
           <div className="mt-6 flex flex-col gap-2">
             <button
               type="button"
-              onClick={() => navigate(SOMEONE_NEW_ROUTE)}
+              onClick={() => { markReturnToHouse(); navigate(SOMEONE_NEW_ROUTE); }}
               className="rounded-full bg-gradient-to-r from-rose-500 to-pink-600 py-3 font-bold"
             >
               Meet a companion
             </button>
-            <button type="button" onClick={() => navigate('/lobby')} className="py-2 text-sm text-white/60 hover:text-white">
+            <button type="button" onClick={() => { clearReturnToHouse(); navigate('/lobby'); }} className="py-2 text-sm text-white/60 hover:text-white">
               Not now
             </button>
           </div>
@@ -201,6 +249,23 @@ export function VelvetHouseNextGame() {
         <div className="w-16" />
       </div>
 
+      {choosing && (
+        <CompanionPicker
+          companions={options}
+          currentId={companionId}
+          mode={choosing}
+          days={days}
+          onPick={(id) => {
+            const mode = choosing;
+            setChoosing(null);
+            if (id === companionId) iframeRef.current?.contentWindow?.postMessage({ type: 'velvet:startGo' }, window.location.origin);
+            // Someone else: back to their house if they have one and that is what was asked, otherwise a new one.
+            else { setLoading(true); setChosen({ id, start: mode === 'continue' && days[id] != null ? 'continue' : 'new' }); }
+          }}
+          onCancel={() => { setChoosing(null); iframeRef.current?.contentWindow?.postMessage({ type: 'velvet:startCancel' }, window.location.origin); }}
+        />
+      )}
+
       {loading && (
         <div className="absolute inset-0 top-12 flex items-center justify-center bg-[#0a0a0f] z-10">
           <div className="flex flex-col items-center gap-3">
@@ -213,7 +278,8 @@ export function VelvetHouseNextGame() {
       {saveReady && (
       <iframe
         ref={iframeRef}
-        src={`${GAME_PATH}${companionId ? `?companion=${encodeURIComponent(companionId)}` : ''}`}
+        key={chosen?.id ?? 'initial'}
+        src={`${GAME_PATH}${companionId ? `?companion=${encodeURIComponent(companionId)}${chosen ? `&start=${chosen.start}` : ''}` : ''}`}
         title="Velvet Sims (Preview)"
         className="flex-1 w-full border-0"
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"

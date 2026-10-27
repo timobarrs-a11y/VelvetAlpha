@@ -98,7 +98,7 @@ export interface HouseWorld {
 }
 
 const WALK_SPEED = 1.5;
-const STAIR_SPEED = 0.9;
+const STAIR_SPEED = 0.6;
 // Turning: how fast they swing round (radians per second). Someone more than TURN_STOP off the
 // way they're heading stops and turns on the spot, and starts walking again once within TURN_GO.
 const TURN_RATE = 9;
@@ -204,7 +204,7 @@ export function buildWorld(objs: ObjectInstance[]): HouseWorld {
     );
     for (const o of objs) {
       const t = TYPES[o.type];
-      if (o.level !== level || !t || isRug(o.type) || isWall(o.type)) continue;
+      if (o.level !== level || o.on || !t || isRug(o.type) || isWall(o.type)) continue;
       const rects = blocksOf(o.type).length ? blocksOf(o.type) : [[0, 0, t.W, t.D] as [number, number, number, number]];
       for (const r of rects) {
         const a = xf(o, r[0], r[1]);

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type ReactNode } from 'react';
-import { X, Footprints, Users, Flame, Award, UserPlus, Check, Clock, Zap } from 'lucide-react';
+import { X, Footprints, Users, Flame, Award, UserPlus, Check, Clock, DoorOpen, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   resolvePlot, houseInfo, MEDALS, TIER_COLORS, glyph,
@@ -295,19 +295,21 @@ export function BillboardCard({ plot, isYou, onClose, onCustomize, mainCompanion
         {/* Buttons */}
         {isYou ? (
           <div className="flex flex-wrap gap-2">
+            {/* Only on your own house: the inside is the Velvet Sims game. It is the main thing to do here. */}
+            <button
+              type="button"
+              onClick={() => navigate(mainCompanionId ? `/velvet-house?companion=${encodeURIComponent(mainCompanionId)}` : '/velvet-house')}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-[12px] px-3.5 py-2.5 font-bold text-[15px] transition-colors hover:brightness-110"
+              style={{ background: '#F06A9B', color: '#2A0F1C' }}
+            >
+              <DoorOpen className="h-4 w-4" />
+              Look inside
+            </button>
             <button
               onClick={onCustomize}
               className="rounded-[12px] bg-white/10 px-3.5 py-2.5 font-bold text-[14px] text-white hover:bg-white/15 transition-colors"
             >
               Customize my plot
-            </button>
-            {/* Only on your own house: the inside is the Velvet Sims game */}
-            <button
-              type="button"
-              onClick={() => navigate(mainCompanionId ? `/velvet-house?companion=${encodeURIComponent(mainCompanionId)}` : '/velvet-house')}
-              className="rounded-[12px] border border-white/15 bg-transparent px-3.5 py-2.5 font-bold text-[14px] text-white/70 hover:text-white hover:border-white/30 transition-colors"
-            >
-              Look inside
             </button>
           </div>
         ) : !isPrivate && (

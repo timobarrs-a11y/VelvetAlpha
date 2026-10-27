@@ -33,6 +33,10 @@ export interface ObjectTypeDef {
   cols?: string[];
   light?: LightDef;
   spots?: Record<string, SpotDef>;
+  /** A small piece that can sit on a surface (a table, a shelf) instead of the floor. */
+  small?: boolean;
+  /** What can be put on this piece: the height of its top, and the part of it that is flat (local coordinates). */
+  surface?: { z: number; rect: [number, number, number, number] };
 }
 
 export const TYPES: Record<string, ObjectTypeDef> = {
@@ -41,12 +45,17 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   bed: { W: 2.5, D: 1.6, h: 1.0, name: 'Bed',
     spots: { a: { stand: [1.3, 2.05], pos: [0.52, 0.42, 0.56], lie: [1, 0], tag: 'bedA', base: 'mattress' }, b: { stand: [1.9, 2.05], pos: [0.52, 1.18, 0.56], lie: [1, 0], tag: 'bedB', base: 'mattress' },
       make: { stand: [1.6, 2.05], dir: [0, -1], tag: 'makebed' } } },
+  // Two friends sharing a place sleep in a bed each: the partner's side is A and the player's is B.
+  bedA: { W: 2.5, D: 0.9, h: 1.0, name: 'Bed',
+    spots: { a: { stand: [2.9, 0.45], pos: [0.52, 0.45, 0.56], lie: [1, 0], tag: 'bedA', base: 'mattress' }, make: { stand: [2.9, 0.45], dir: [-1, 0], tag: 'makebed' } } },
+  bedB: { W: 2.5, D: 0.9, h: 1.0, name: 'Bed',
+    spots: { b: { stand: [2.9, 0.45], pos: [0.52, 0.45, 0.56], lie: [1, 0], tag: 'bedB', base: 'mattress' }, make: { stand: [2.9, 0.45], dir: [-1, 0], tag: 'makebed' } } },
   dining: { W: 1.3, D: 2.5, h: 1.1, name: 'Dining set', light: { at: [0.65, 1.24, 1.8], r: 130 },
     spots: { c1: { stand: [0.65, -0.45], pos: [0.65, 0.3, 0.49], dir: [0, 1], tag: 'dine1', base: 'seat1' }, c2: { stand: [0.65, 2.95], pos: [0.65, 2.18, 0.49], dir: [0, -1], tag: 'dine2', base: 'seat2' }, clear: { stand: [1.75, 1.24], dir: [-1, 0], tag: 'clear' } } },
   lamp: { W: 0.4, D: 0.4, h: 1.75, name: 'Floor lamp', store: true, light: { at: [0.2, 0.2, 1.5], r: 140 } },
   plant: { W: 0.5, D: 0.5, h: 1.1, name: 'Plant',
     spots: { w: { stand: [0.25, 1.05], dir: [0, -1], tag: 'water' } } },
-  bookshelf: { W: 1.4, D: 0.38, h: 1.6, name: 'Bookshelf' },
+  bookshelf: { W: 1.4, D: 0.38, h: 1.6, name: 'Bookshelf' , surface: { z: 1.6, rect: [0.06, 0.04, 1.34, 0.34] } },
   records: { W: 0.85, D: 0.45, h: 0.7, name: 'Record player',
     spots: { r: { stand: [0.42, 1.05], dir: [0, -1], tag: 'records' } } },
   arcade: { W: 0.56, D: 0.5, h: 1.3, name: 'Arcade cabinet',
@@ -116,10 +125,10 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { s: { stand: [0.4, 1.5], pos: [0.4, 0.55, 0.52], dir: [0, 1], tag: 'seat', base: 'base' } } },
   accent: { W: 0.72, D: 0.72, h: 0.9, name: 'Accent chair', store: true, cols: ['#E0A43A', '#B5476E', '#5E8187', '#F2EEE8', '#2B2B30'],
     spots: { s: { stand: [0.36, 1.25], pos: [0.36, 0.42, 0.5], dir: [0, 1], tag: 'seat', base: 'seat' } } },
-  ottoman: { W: 0.6, D: 0.6, h: 0.42, name: 'Ottoman', store: true, cols: ['#C9A24A', '#8E5468', '#4F6F74', '#E8DCC8', '#3A3340'] },
-  coffeetable: { W: 1.2, D: 0.65, h: 0.45, name: 'Coffee table', store: true, cols: ['#9C6B45', '#3A2E2A', '#E4DDD2', '#B98A6A'] },
-  sidetable: { W: 0.5, D: 0.5, h: 0.62, name: 'Side table', store: true, cols: ['#B98A6A', '#3A2E2A', '#F2EEE8', '#3F5B4C'] },
-  console: { wall: true, W: 1.3, D: 0.38, h: 0.85, name: 'Console table', store: true, cols: ['#3A2E2A', '#9C6B45', '#E4DDD2', '#C9A24A'] },
+  ottoman: { W: 0.6, D: 0.6, h: 0.42, name: 'Ottoman', store: true, cols: ['#C9A24A', '#8E5468', '#4F6F74', '#E8DCC8', '#3A3340'] , surface: { z: 0.42, rect: [0.05, 0.05, 0.55, 0.55] } },
+  coffeetable: { W: 1.2, D: 0.65, h: 0.45, name: 'Coffee table', store: true, cols: ['#9C6B45', '#3A2E2A', '#E4DDD2', '#B98A6A'] , surface: { z: 0.45, rect: [0.08, 0.06, 1.12, 0.59] } },
+  sidetable: { W: 0.5, D: 0.5, h: 0.62, name: 'Side table', store: true, cols: ['#B98A6A', '#3A2E2A', '#F2EEE8', '#3F5B4C'] , surface: { z: 0.62, rect: [0.05, 0.05, 0.45, 0.45] } },
+  console: { wall: true, W: 1.3, D: 0.38, h: 0.85, name: 'Console table', store: true, cols: ['#3A2E2A', '#9C6B45', '#E4DDD2', '#C9A24A'] , surface: { z: 0.85, rect: [0.05, 0.04, 1.25, 0.34] } },
   cabinet: { wall: true, W: 1.0, D: 0.45, h: 1.05, name: 'Cabinet', store: true, cols: ['#B98A6A', '#3F5B4C', '#2E3B57', '#F2EEE8', '#8E5468'] },
   wardrobe: { wall: true, W: 1.2, D: 0.6, h: 2.05, name: 'Wardrobe', store: true, cols: ['#E4DDD2', '#9C6B45', '#3A2E2A', '#8E9C96'] },
   cubeshelf: { wall: true, W: 1.0, D: 0.35, h: 1.0, name: 'Cube shelf', store: true, cols: ['#F2EEE8', '#2B2B30', '#B98A6A'] },
@@ -129,6 +138,24 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   floormirror: { wall: true, W: 0.7, D: 0.18, h: 1.8, name: 'Floor mirror', store: true, cols: ['#C9A24A', '#2B2B30', '#F2EEE8', '#9C6B45'] },
   gclock: { wall: true, W: 0.55, D: 0.38, h: 2.1, name: 'Grandfather clock', store: true, cols: ['#5A3E2E', '#2B2B30', '#E4DDD2'] },
   pampas: { W: 0.42, D: 0.42, h: 1.4, name: 'Pampas vase', store: true, cols: ['#E8DCC8', '#2B2B30', '#C27A5A', '#9EC1C9'] },
+  // Small things that sit on a table or a shelf as well as on the floor.
+  flowervase: { W: 0.3, D: 0.3, h: 0.55, name: 'Flower vase', store: true, small: true, cols: ['#F2EEE8', '#2B2B30', '#C27A5A', '#9EC1C9'] },
+  succulents: { W: 0.35, D: 0.35, h: 0.3, name: 'Succulent pots', store: true, small: true, cols: ['#C27A5A', '#E4DDD2', '#2B2B30'] },
+  desklamp: { W: 0.3, D: 0.3, h: 0.55, name: 'Desk lamp', store: true, small: true, cols: ['#2B2B30', '#C9A24A', '#E4DDD2', '#B5476E'], light: { at: [0.15, 0.15, 0.5], r: 90 } },
+  photoframes: { W: 0.4, D: 0.15, h: 0.3, name: 'Photo frames', store: true, small: true, cols: ['#9C6B45', '#2B2B30', '#C9A24A', '#E4DDD2'] },
+  // Small things that make a room look lived in.
+  candles: { W: 0.5, D: 0.4, h: 0.5, name: 'Pillar candles', store: true, small: true, cols: ['#F2EEE8', '#C9A24A', '#B5476E', '#3F5B4C'], light: { at: [0.25, 0.2, 0.4], r: 70, col: '255,190,110' } },
+  basket: { W: 0.8, D: 0.8, h: 0.55, name: 'Blanket basket', store: true, cols: ['#B98A6A', '#3A2E2A', '#E4DDD2'] },
+  coatrack: { W: 0.45, D: 0.45, h: 1.8, name: 'Coat rack', store: true, cols: ['#2B2B30', '#7A4E32', '#C9A24A'] },
+  bookstack: { W: 0.45, D: 0.35, h: 0.5, name: 'Stacked books', store: true, small: true, cols: ['#B5476E', '#3F5B4C', '#2E3B57', '#C9A24A'] },
+  eucalyptus: { W: 0.42, D: 0.42, h: 1.7, name: 'Eucalyptus vase', store: true, cols: ['#F2EEE8', '#2B2B30', '#C27A5A', '#9EC1C9'] },
+  bust: { W: 0.5, D: 0.5, h: 1.5, name: 'Bust on a pedestal', store: true, cols: ['#E8DCC8', '#2B2B30', '#9C6B45'] },
+  tablelamp: { W: 0.5, D: 0.5, h: 1.15, name: 'Lamp table', store: true, cols: ['#9C6B45', '#2B2B30', '#E4DDD2', '#3F5B4C'], light: { at: [0.25, 0.25, 1.0], r: 120 } },
+  candelabra: { W: 0.4, D: 0.4, h: 1.5, name: 'Candelabra', store: true, cols: ['#C9A24A', '#2B2B30', '#B9B4AC'], light: { at: [0.2, 0.2, 1.4], r: 100, col: '255,190,110' } },
+  blanketladder: { W: 0.7, D: 0.25, h: 1.6, name: 'Blanket ladder', store: true, cols: ['#B98A6A', '#3A2E2A', '#E4DDD2'] },
+  plantstand: { W: 0.5, D: 0.5, h: 1.15, name: 'Plant stand', store: true, cols: ['#9C6B45', '#2B2B30', '#E4DDD2'] },
+  woodstool: { W: 0.45, D: 0.45, h: 0.55, name: 'Wooden stool', store: true, cols: ['#B98A6A', '#3A2E2A', '#E4DDD2', '#7A4E32'] },
+  umbrella: { W: 0.4, D: 0.4, h: 0.8, name: 'Umbrella stand', store: true, cols: ['#2B2B30', '#7A4E32', '#3F5B4C', '#B5476E'] },
   lantern: { W: 0.36, D: 0.36, h: 0.65, name: 'Floor lantern', store: true, cols: ['#2B2B30', '#C9A24A', '#F2EEE8'], light: { at: [0.18, 0.18, 0.3], r: 95 } },
   fern: { W: 0.55, D: 0.55, h: 1.0, name: 'Fern', store: true, cols: ['#C26B4A', '#E4DDD2', '#2B2B30', '#7FA7C9'],
     spots: { w: { stand: [0.27, 1.05], dir: [0, -1], tag: 'water' } } },
@@ -210,6 +237,9 @@ export interface ObjectInstance {
   flash?: number;
   /** A moving box: what comes out when it is unpacked (an object type). */
   contents?: string;
+  /** A small piece sitting on another (the id of what it is on), and the height of its base above the floor. */
+  on?: string;
+  z?: number;
 }
 
 export const INITIAL_OBJS: ObjectInstance[] = [

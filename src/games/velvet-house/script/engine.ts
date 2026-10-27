@@ -20,7 +20,8 @@ type Blocking =
   | { k: 'act'; who: Actor }
   | { k: 'say'; hold: number | null }
   | { k: 'choice'; options: ChoiceOption[] }
-  | { k: 'card' };
+  | { k: 'card' }
+  | { k: 'intro' };
 
 const MAX_STEPS_PER_TICK = 400;
 const EFFECT_STEPS = new Set(['set', 'give', 'deliver', 'unlock', 'despawn', 'place', 'clock', 'carry']);
@@ -220,6 +221,7 @@ export class ScriptEngine {
         if (b.hold !== null) { b.hold -= dt; return b.hold <= 0; }
         return this.host.sayDone();
       case 'card': return this.host.cardDone();
+      case 'intro': return this.host.introDone?.() ?? true;
       case 'choice': {
         const n = this.host.choiceMade();
         if (n === null) return false;
@@ -288,6 +290,11 @@ export class ScriptEngine {
       case 'card':
         h.showCard(s.title, s.body, s.spotlight, s.button);
         return s.button ? block({ k: 'card' }) : false;
+      case 'intro':
+        if (skipping || !h.intro) return false;
+        h.intro(s.kind);
+        return block({ k: 'intro' });
+      case 'dim': h.dim?.(s.amount); return false;
       case 'highlight': h.highlight(s.target); return false;
       case 'outline': h.outline({ objType: s.objType, at: s.at, rot: s.rot, color: s.color }); return false;
       case 'set': h.flags[s.flag] = s.value; return false;
@@ -377,12 +384,19 @@ export class ScriptEngine {
 
   /** The words of a line, for whoever is playing: the right voice for the partner, names filled in. */
   text(ref: LineRef): string {
-    const { player, partner, town, preset } = this.host.names();
+    const { player, partner, town, preset, humor, communication, relationship } = this.host.names();
     let raw: string;
     if (typeof ref === 'string') {
-      const entry = this.book.lines[ref];
+      // A friend who moves in gets their own version of a line where there is one ("line.friend").
+      const entry = (relationship === 'friend' ? this.book.lines[ref + '.friend'] : undefined) ?? this.book.lines[ref];
       raw = typeof entry === 'string' ? entry : entry ? entry[preset] ?? entry.warm ?? Object.values(entry)[0] ?? ref : ref;
     } else if ('byPreset' in ref) raw = ref.byPreset[preset];
+    else if ('bank' in ref) {
+      // The companion's own style, then the plainest style in the bank, so a missing slot never goes silent.
+      const styles = this.book.banks?.[ref.bank];
+      const mine = ref.bank === 'humor' ? humor : communication;
+      raw = (mine && styles?.[mine]?.[ref.slot]) ?? Object.values(styles ?? {}).find((s) => s[ref.slot])?.[ref.slot] ?? ref.slot;
+    }
     else raw = this.fromPool(ref.pool);
     return raw.replace(/\{player\}/g, player).replace(/\{partner\}/g, partner).replace(/\{town\}/g, town);
   }

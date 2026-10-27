@@ -10,6 +10,19 @@
 </script>
 <script>
 window.sampleLog = [];
+// More than one companion to choose from: set window.companionCount before the game asks, and window.startAnswer to
+// 'go' (carry on), 'cancel', or 'other' (move in with a different companion, as the app does).
+window.companionCount = 0; window.houseCount = 0; window.startAnswer = 'go'; window.startRequests = 0; window.startModes = [];
+addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d) return;
+  if ((d.type === 'velvet:ready' || d.type === 'velvet:menuReady') && window.companionCount > 0) e.source.postMessage({ type: 'velvet:companions', count: window.companionCount, houses: window.houseCount }, location.origin);
+  if (d.type !== 'velvet:startRequested') return;
+  window.startRequests++; window.startModes.push(d.mode);
+  if (window.startAnswer === 'go') e.source.postMessage({ type: 'velvet:startGo' }, location.origin);
+  else if (window.startAnswer === 'cancel') e.source.postMessage({ type: 'velvet:startCancel' }, location.origin);
+  else document.getElementById('g').src = '/games/velvet-house-next/index.html?companion=e2e-b&start=' + (window.startAnswer === 'other-continue' ? 'continue' : 'new') + (location.search.includes('script') ? '' : '&noscript=1');
+});
 window.reply = 'Hey you. I was just thinking about you.';
 addEventListener('message', (e) => {
   const d = e.data;

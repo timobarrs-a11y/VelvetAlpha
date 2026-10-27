@@ -24,6 +24,7 @@ import {
 } from '../components/ChatStyleBar';
 import { getEligibleFonts } from '../services/customizationService';
 import { VELVET_THEME } from '../config/velvetTheme';
+import { HOUSE_ROUTE } from '../services/velvetHouseReturn';
 
 type Tab = 'presets' | 'wallpaper' | 'font' | 'colors';
 type ColorTab = 'you' | 'companion';
@@ -201,7 +202,7 @@ export function EnvironmentSetupPage() {
     if (user) {
       if (nextRoute === '/coach-ready') {
         await advanceSetupStepIf(user.id, ['coach_avatar', 'coach_environment'], 'coach_ready');
-      } else if (nextRoute === '/who-to-talk') {
+      } else if (nextRoute === '/who-to-talk' || nextRoute === HOUSE_ROUTE) {
         await advanceSetupStepIf(user.id, ['companion_in_progress'], 'choose_conversation');
       }
     }

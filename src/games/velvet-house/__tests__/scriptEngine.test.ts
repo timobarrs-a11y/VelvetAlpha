@@ -6,7 +6,7 @@ import { NEW_RUNTIME, type FlagValue, type LineBook, type ScriptDef, type Script
 /** A world that only records what it is asked, and lets a test decide when things finish. */
 function fakeHost(preset: 'warm' | 'calm' | 'bubbly' | 'dry' = 'warm') {
   const calls: string[] = [];
-  const state = { walking: new Set<string>(), acting: new Set<string>(), sayOpen: false, choiceIdx: null as number | null, cardOpen: false, mode: null as string | null, day: 1, minutes: 540 };
+  const state = { walking: new Set<string>(), acting: new Set<string>(), sayOpen: false, choiceIdx: null as number | null, cardOpen: false, introOpen: false, mode: null as string | null, day: 1, minutes: 540 };
   const flags: Record<string, FlagValue> = {};
   const host: ScriptHost = {
     flags,
@@ -36,6 +36,8 @@ function fakeHost(preset: 'warm' | 'calm' | 'bubbly' | 'dry' = 'warm') {
     deliver: (c, id) => calls.push(`deliver:${c}:${id}`),
     unlock: (w) => calls.push(`unlock:${w}`),
     setClock: (d, m) => calls.push(`clock:${d}:${m}`),
+    intro: (k) => { calls.push(`intro:${k}`); state.introOpen = true; },
+    introDone: () => !state.introOpen,
     release: (w) => calls.push(`release:${w.sort().join(',')}`),
   };
   return { host, calls, state, flags };
@@ -115,6 +117,26 @@ describe('running steps', () => {
     t.state.cardOpen = false;
     t.tick(2);
     expect(t.flags.a).toBe(1);
+  });
+
+  it('an opening shot plays first and the script waits for it to end', () => {
+    const t = make([base('s', [{ do: 'intro', kind: 'arrival' }, { do: 'set', flag: 'a', value: 1 }])]);
+    t.engine.startNewGame();
+    t.tick(3);
+    expect(t.calls).toContain('intro:arrival');
+    expect(t.flags.a).toBeUndefined();
+    t.state.introOpen = false;
+    t.tick(2);
+    expect(t.flags.a).toBe(1);
+  });
+
+  it('skipping a script that opens with a shot does not wait for it', () => {
+    const t = make([base('s', [{ do: 'intro', kind: 'arrival' }, { do: 'set', flag: 'a', value: 1 }], { skippable: true, onSkip: [{ do: 'set', flag: 'skipped', value: true }] })]);
+    t.engine.startNewGame();
+    t.tick(2);
+    t.engine.skip();
+    expect(t.flags.skipped).toBe(true);
+    expect(t.engine.isActive()).toBe(false);
   });
 
   it('branches on a condition', () => {

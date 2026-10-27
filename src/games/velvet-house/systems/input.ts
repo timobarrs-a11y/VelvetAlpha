@@ -48,10 +48,16 @@ export function createInput(g: Game): void {
       return;
     }
     const lightState = art.toggleLightAt(view.level, sx, sy);
-    if (lightState !== null) { log(`Light turned ${lightState ? 'on' : 'off'}.`); return; }
+    if (lightState !== null) {
+      log(`Light turned ${lightState ? 'on' : 'off'}.`);
+      const lit = g.world.objs.find((o) => o.id === art.lastToggledLight());
+      g.scriptEmit({ type: 'light.toggled', ...(lit ? { objId: lit.id, objType: lit.type } : {}), on: lightState });
+      return;
+    }
     if (obj && TYPES[obj.type]?.light) {
       const on = art.toggleObjectLight(obj.id);
       log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);
+      g.scriptEmit({ type: 'light.toggled', objId: obj.id, objType: obj.type, on });
       return;
     }
     if (obj) { g.showObjectActions(obj, e.clientX, e.clientY); return; }

@@ -13,7 +13,10 @@ export type Actor = string;
 export type PlaceRef = string | { level: number; x: number; y: number };
 
 /** What a line says: a key into the line book, a variant per companion voice, or the next from a pool that does not repeat. */
-export type LineRef = string | { byPreset: Record<Preset, string> } | { pool: string };
+export type LineRef = string | { byPreset: Record<Preset, string> } | { pool: string } | { bank: 'humor' | 'communication'; slot: string };
+
+/** Lines by how the companion talks: bank (humor or communication) → style → slot → line. */
+export type LineBank = Record<'humor' | 'communication', Record<string, Record<string, string>>>;
 
 /** Things on screen a script can spotlight or allow. */
 export type UiTarget = `tab:${string}` | 'floorbar' | 'camera' | 'wallet' | 'bill' | 'needs' | `obj:${string}` | `objType:${string}`;
@@ -60,6 +63,10 @@ export type Step =
   | { do: 'deliver'; category: string; id?: string }
   | { do: 'unlock'; what: string }
   | { do: 'clock'; day?: number; minutes?: number }
+  /** A full-screen opening shot (the drive up to the house); waits until it ends. */
+  | { do: 'intro'; kind: 'arrival' }
+  /** Pulls the room toward evening (0 to 0.42) without moving the clock, so the lights can be seen; 0 puts it back. */
+  | { do: 'dim'; amount: number }
   | { do: 'wait'; seconds?: number; until?: Cond }
   | { do: 'if'; cond: Cond; then: Step[]; else?: Step[] }
   | { do: 'run'; script: string }
@@ -101,13 +108,15 @@ export interface LineBook {
   lines: Record<string, string | Partial<Record<Preset, string>>>;
   /** Pools of lines for a visitor who comes often. */
   pools: Record<string, string[]>;
+  /** Lines that follow the companion's humor or communication style. */
+  banks?: LineBank;
 }
 
 /** What the engine asks the world to do. The game implements it; tests use a fake. */
 export interface ScriptHost {
   flags: Record<string, FlagValue>;
   clock(): { day: number; minutes: number };
-  names(): { player: string; partner: string; town: string; preset: Preset };
+  names(): { player: string; partner: string; town: string; preset: Preset; humor?: string; communication?: string; relationship?: string };
   setMode(mode: Mode | null, allow: UiTarget[]): void;
   spawn(npc: string, at: PlaceRef, carrying?: string): void;
   despawn(npc: string): void;
@@ -137,6 +146,10 @@ export interface ScriptHost {
   deliver(category: string, id?: string): void;
   unlock(what: string): void;
   setClock(day?: number, minutes?: number): void;
+  /** Starts a full-screen opening shot; `introDone` is true once it has ended. */
+  dim?(amount: number): void;
+  intro?(kind: 'arrival'): void;
+  introDone?(): boolean;
   /** The script is done with these people: free will and idle choices are theirs again. */
   release(who: Actor[]): void;
 }

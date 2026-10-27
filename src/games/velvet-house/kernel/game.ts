@@ -1,3 +1,4 @@
+import type { ArrivalPlot } from '../ui/arrivalIntro';
 import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
 import { RNG, setGlobalRNG } from '../state/rng';
 import { buildWorld, createAgent, type Agent, type AgentId } from '../state/agents';
@@ -53,6 +54,10 @@ export interface GameState {
   qualityIdx: number;
   saveRev: number;
   suppressClick: boolean;
+  /** The player's house in town, for the drive-up that opens a new game (null: a plain starter house). */
+  plot: ArrivalPlot | null;
+  /** How the companion jokes and talks (what the story's word banks are keyed by), and what they are to the player. */
+  voice: { humor: string; communication: string; relationship: string };
   /** Skipping ahead through the work day ("Skip to 5 PM"). */
   skipping: boolean;
   scriptMode: Mode | null;
@@ -115,6 +120,10 @@ export interface Game {
   toView(clientX: number, clientY: number): [number, number];
   zoomAt(clientX: number, clientY: number, factor: number): void;
   resetCamera(): void;
+  /** Frame these view points (and the space the panels leave free) as closely as fits. */
+  frameView(points: Array<[number, number]>, maxZoom?: number, pad?: number): void;
+  /** Keep the piece being dragged in frame, looking ahead of the finger. */
+  trackHeld(dt: number): void;
   flingCamera(vx: number, vy: number): void;
   shake(amount?: number): void;
   cameraBeat(kind: 'closeup' | 'reveal', id?: AgentId, ms?: number): void;
@@ -156,6 +165,13 @@ export interface Game {
   peopleOnFloor(): Agent[];
   nameOf(o: ObjectInstance): string;
   isArranging(): boolean;
+  /** Set the selected piece exactly in a lesson's outline when it is close. */
+  snapSelectedToOutline(): void;
+  /** The piece being dragged: its centre on the floor (world units) and its height. */
+  heldCentre(): { x: number; y: number; h: number } | null;
+  /** Where a script wants the piece to end up (the outline), so the camera can frame both. */
+  ghostTarget(): { x: number; y: number; h: number; level: number } | null;
+  setGhostTarget(t: { type: string; level: number; x: number; y: number; rot?: number } | null): void;
   dropSelectionIfOffFloor(lv: number): void;
   escapeArrange(): void;
   abortDrag(): void;
@@ -209,7 +225,7 @@ export function createGame(app: HTMLElement): Game | null {
   // Names and looks from save or defaults
   const simName = nameFrom(save?.simName, 'Jordan');
   const partnerName = nameFrom(save?.partnerName, 'Maya');
-  const townName = nameFrom(save?.townName, 'Honeysuckle Hollow');
+  const townName = nameFrom(save?.townName, 'Honeysuckle Hollow', 24);
 
   const people: Agent[] = [
     createAgent('jordan', simName, (save?.jordan as { needs?: Partial<CharacterNeeds> })?.needs, lookFrom(save?.look, DEFAULT_LOOKS.jordan)),
@@ -299,7 +315,8 @@ export function createGame(app: HTMLElement): Game | null {
   const view = {
     level: 1,
     rot: 0,
-    wallIdx: Math.max(0, WALL_MODES.findIndex((w) => w.mode === savedMode)),
+    // No save yet: walls down, so nothing in the house is hidden behind a wall on the first day.
+    wallIdx: Math.max(0, WALL_MODES.findIndex((w) => w.mode === (savedMode ?? 'down'))),
     speedIdx: 0,
     paused: false,
     t: 0,
@@ -321,7 +338,7 @@ export function createGame(app: HTMLElement): Game | null {
     settleDone: typeof save?.settleDone === 'boolean' ? save!.settleDone : false,
     chatTurns: Array.isArray(save?.turns) ? [...save!.turns as ChatTurn[]] : [],
     sample: null as SampleFn | null,
-    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, skipping: false, scriptMode: null, scriptAllow: [],
+    chatBudgetDay: -1, drawerPage: '', qualityIdx: 0, suppressClick: false, plot: null, voice: { humor: 'warm', communication: 'diplomatic', relationship: 'romantic' }, skipping: false, scriptMode: null, scriptAllow: [],
     saveRev: typeof (world.save as { rev?: unknown } | null)?.rev === 'number' ? (world.save as { rev: number }).rev : 0,
   };
 

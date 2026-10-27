@@ -50,6 +50,7 @@ export interface PlacementCheck {
  * `people` are where the characters are now, so a move never traps anyone.
  */
 export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, people: Array<{ level: number; x: number; y: number }> = []): PlacementCheck {
+  if (held.on) return checkOnSurface(objs, held);
   const [fw, fd] = footprint(held);
   if (held.x < 0.08 || held.y < 0.08 || held.x + fw > WX - 0.05 || held.y + fd > WY - 0.05) {
     return { ok: false, reason: 'That would poke through the wall.' };
@@ -58,7 +59,7 @@ export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, peo
   // Rugs lie under everything; everything else needs its own floor space.
   if (!isRug(held.type)) {
     for (const o of objs) {
-      if (o === held || o.level !== held.level || isRug(o.type) || !TYPES[o.type]) continue;
+      if (o === held || o.on || o.level !== held.level || isRug(o.type) || !TYPES[o.type]) continue;
       const other = TYPES[o.type].wall && TYPES[held.type].wall ? rectsOf(o) : TYPES[o.type].wall ? [] : rectsOf(o);
       if (mine.some(m => other.some(r => overlaps(m, r)))) return { ok: false, reason: `It bumps into the ${(TYPES[o.type].name ?? 'furniture').toLowerCase()}.` };
     }
@@ -105,6 +106,93 @@ export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, peo
   return { ok: true };
 }
 
+// ---- small pieces on surfaces ------------------------------------------------------------------------------------------
+
+/** Where the flat top of a piece is, in the house (a rectangle), if it has one. */
+export function surfaceRect(host: ObjectInstance): Rect | null {
+  const t = TYPES[host.type];
+  if (!t?.surface) return null;
+  const [x0, y0, x1, y1] = t.surface.rect;
+  const xf = (lx: number, ly: number): [number, number] => {
+    switch (host.rot) {
+      case 1: return [host.x + (t.D - ly), host.y + lx];
+      case 2: return [host.x + (t.W - lx), host.y + (t.D - ly)];
+      case 3: return [host.x + ly, host.y + (t.W - lx)];
+      default: return [host.x + lx, host.y + ly];
+    }
+  };
+  const a = xf(x0, y0), b = xf(x1, y1);
+  return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
+}
+
+const footRect = (o: ObjectInstance): Rect => { const [w, d] = footprint(o); return [o.x, o.y, o.x + w, o.y + d]; };
+
+/** Is the small piece sitting fully on its surface, with nothing else in the way? */
+function checkOnSurface(objs: ObjectInstance[], held: ObjectInstance): PlacementCheck {
+  const host = objs.find((o) => o.id === held.on);
+  const area = host && host.level === held.level ? surfaceRect(host) : null;
+  if (!host || !area) return { ok: false, reason: 'There is nothing to put it on.' };
+  const r = footRect(held), eps = 0.001;
+  if (r[0] < area[0] - eps || r[1] < area[1] - eps || r[2] > area[2] + eps || r[3] > area[3] + eps) {
+    return { ok: false, reason: `It doesn't fit on the ${(TYPES[host.type].name ?? 'surface').toLowerCase()}.` };
+  }
+  for (const o of objs) {
+    if (o === held || o.on !== held.on) continue;
+    if (overlaps(r, footRect(o), 0.01)) return { ok: false, reason: `There's no room left on the ${(TYPES[host.type].name ?? 'surface').toLowerCase()}.` };
+  }
+  return { ok: true };
+}
+
+/** The surface under a small piece's centre, if any (the highest, when they stack up in the picture). */
+export function surfaceUnder(objs: ObjectInstance[], held: ObjectInstance, cx: number, cy: number): ObjectInstance | null {
+  if (!TYPES[held.type]?.small) return null;
+  let best: ObjectInstance | null = null;
+  for (const o of objs) {
+    if (o === held || o.on || o.level !== held.level) continue;
+    const a = surfaceRect(o);
+    if (a && cx >= a[0] && cx <= a[2] && cy >= a[1] && cy <= a[3] && (!best || TYPES[o.type].surface!.z > TYPES[best.type].surface!.z)) best = o;
+  }
+  return best;
+}
+
+/** Sit a small piece on a surface: its base is the height of the top, and it stays inside the flat part. */
+export function putOn(held: ObjectInstance, host: ObjectInstance): void {
+  const a = surfaceRect(host)!, [w, d] = footprint(held);
+  held.on = host.id;
+  held.z = TYPES[host.type].surface!.z;
+  held.x = Math.max(a[0], Math.min(a[2] - w, held.x));
+  held.y = Math.max(a[1], Math.min(a[3] - d, held.y));
+}
+
+export function takeOff(held: ObjectInstance): void {
+  delete held.on;
+  delete held.z;
+}
+
+export interface Pose { x: number; y: number; rot: number }
+
+/**
+ * Whatever is on a piece moves, turns and changes floor with it. `from` is where the piece was; the piece itself is
+ * already where it is now.
+ */
+export function carryOnTop(objs: ObjectInstance[], host: ObjectInstance, from: Pose): void {
+  const kids = objs.filter((o) => o.on === host.id);
+  if (!kids.length) return;
+  const t = TYPES[host.type];
+  const [w0, d0] = from.rot % 2 ? [t.D, t.W] : [t.W, t.D], [w1, d1] = footprint(host);
+  const c0: [number, number] = [from.x + w0 / 2, from.y + d0 / 2], c1: [number, number] = [host.x + w1 / 2, host.y + d1 / 2];
+  const turns = (host.rot - from.rot + 4) % 4;
+  for (const k of kids) {
+    const [kw, kd] = footprint(k);
+    let rel: [number, number] = [k.x + kw / 2 - c0[0], k.y + kd / 2 - c0[1]];
+    for (let i = 0; i < turns; i++) rel = [-rel[1], rel[0]];
+    k.level = host.level;
+    k.rot = (k.rot + turns) % 4;
+    centreAt(k, c1[0] + rel[0], c1[1] + rel[1]);
+    putOn(k, host);
+  }
+}
+
 // Move a held piece so its centre sits under the pointer, snapped to a
 // quarter tile.
 export function centreAt(o: ObjectInstance, wx: number, wy: number): void {
@@ -130,7 +218,7 @@ export function nextColour(o: ObjectInstance): string | null {
 }
 
 // Pieces too big (or too bolted down) to carry up and down the stairs.
-const HEAVY = new Set(['bed', 'dining', 'gym', 'tread', 'shelves', 'piano', 'aquarium', 'wardrobe', 'gclock']);
+const HEAVY = new Set(['bed', 'bedA', 'bedB', 'dining', 'gym', 'tread', 'shelves', 'piano', 'aquarium', 'wardrobe', 'gclock']);
 const INDOOR_LEVELS = [0, 1, 2, 4];
 
 /**

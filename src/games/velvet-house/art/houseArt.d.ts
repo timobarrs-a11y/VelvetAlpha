@@ -32,6 +32,8 @@ export interface PersonFrame {
   name?: string;
   /** What they carry in their arms: 'pbox', 'groceries', 'parcel', 'paint'. */
   carrying?: string;
+  /** On a flight of stairs: how far along it (0 at the bottom end of the flight going up), and where the flight runs. */
+  stair?: { s: number; up: boolean; bx: number; by: number; tx: number; ty: number; low: number; high: number };
   /** A line said in passing; `at` is the animation time it was said. */
   bubble?: { text: string; at: number };
   look: { skin: string; hair: string; top: string; topStyle?: string; bottom: string; longHair: boolean; accent?: string; topGarment?: import('../state/garment').Garment; bottomGarment?: import('../state/garment').Garment; heads?: import('../state/headSprites').HeadImages; body?: import('../state/bodySprites').BodyImages };
@@ -65,6 +67,14 @@ export interface HouseArt {
   setGhost(g: { type: string; level: number; x: number; y: number; rot?: number; color?: 'partner' | 'player' } | null): void;
   /** A few sparkles near a spot on a floor (a room just finished, say). */
   burst(level: number, x: number, y: number, z?: number): void;
+  /** A piece springs out of its box. */
+  reveal(id: string): void;
+  /** A piece is dropped off from above (a delivery). */
+  drop(id: string): void;
+  /** A cartoon cloud over a spot: a moving box is opened. */
+  poof(level: number, x: number, y: number): void;
+  /** Pull the room toward evening (0 to 0.42) without moving the clock; 0 puts it back. */
+  setDim(amount: number): void;
   /** Where a world point lands in view coordinates (follows the current rotation). */
   project(x: number, y: number, z?: number): [number, number];
   /** The world point (x, y on the floor) under a view coordinate; the opposite of project, following the rotation. */
@@ -88,6 +98,8 @@ export interface HouseArt {
   applyFloor(level: number, floor: string): void;
   toggleObjectLight(id: string): boolean;
   toggleLightAt(level: number, sx: number, sy: number): boolean | null;
+  /** The id of the piece whose light `toggleLightAt` just switched (null for a wall light). */
+  lastToggledLight(): string | null;
   // Tap an object to bring it to life (or flip its switch); what happened, or null.
   poke(o: { id: string; type: string }, part?: string): string | null;
   /** Sets whether the partner's mouth animates (talking). */

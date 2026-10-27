@@ -69,12 +69,12 @@ export const LEVELS: LevelDef[] = [
       { n: 'Entry', r: [0, 4.1, 4.7, 8] },
       { n: 'Living room', r: [4.7, 0, 10, 8] },
     ],
+    // The entry is open to the kitchen on its left and to the living room at the foot of the stairs: no wall behind the
+    // staircase or beside its bottom step, so there is room to walk round it.
     walls: [
-      { y: 4.1, a: 0, b: 1.8 },
       { y: 4.1, a: 2.8, b: 4.7 },
       { x: 4.7, a: 0, b: 1.2 },
       { x: 4.7, a: 2.4, b: 5.4 },
-      { x: 4.7, a: 6.6, b: 8 },
     ],
     feats: [
       { p: 'B', u: [0.6, 1.6], z: [1.25, 2.2], k: 'window' },

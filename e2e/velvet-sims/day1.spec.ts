@@ -30,13 +30,14 @@ test('the first day plays through from the move-in to free will', async ({ page 
     if (title && once('log:' + title)) console.log('STEP', Math.round((Date.now() - t0) / 1000), title);
 
     if (!flags['tutorial.lamp']) {
-      const arranging = await game.locator('.vh-stage.vh-arranging').count();
+      // Open the box, set the lamp down where the card says (twice), then turn it on.
       const box = (await objects(page)).find((o) => o.id === 'box.lamp' && o.type === 'pbox');
-      if (arranging) { await game.getByRole('button', { name: 'Rotate' }).first().click().catch(() => {}); await inGame(page, 'v.closeDrawer()'); }
-      else if (box) {
+      if (title === 'The corner' || title === 'By the couch') await game.locator('.vh-scard button').click().catch(() => {});
+      else if (title === 'Let there be light' && once('light:' + Math.floor(Date.now() / 5000))) { await page.waitForTimeout(800); const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
+      else if (box && title === 'Open the box') {
         // Jordan wandering to another floor takes the view with him; come back and let the camera settle before tapping.
         if ((await inGame<number>(page, 'v.level()')) !== 1) { await inGame(page, 'v.setView(1)'); await page.waitForTimeout(1500); }
-        else { const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
+        else { await page.waitForTimeout(1500); const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
       }
     } else if (title === 'The shop' && once('shop')) await inGame(page, "v.openTab('shop')");
     else if (title === 'Order groceries' && once('groceries')) { await inGame(page, "v.openTab('home')"); await game.locator('[data-groceries]').click(); await inGame(page, 'v.closeDrawer()'); }

@@ -44,7 +44,7 @@ export function createHouseArt(ctx0, opts = {}) {
   const cv = ctx0.canvas;
   const SLOTS = {};
   const PETS = [];
-  let DIRT = [], sparkles = [];
+  let DIRT = [], sparkles = [], poofs = [];
   let fridge = { basic: 4, fresh: 0 };
   const lightSkipped = () => false;
 
@@ -130,7 +130,10 @@ export function createHouseArt(ctx0, opts = {}) {
   const seasonIdx = (d = day) => Math.floor((d - 1) / 7) % 4;
   const season = () => SEASONS[seasonIdx()];
   const seasonDay = () => ((day - 1) % 7) + 1;
-  function darkness() { const h = hour(), si = seasonIdx(), eve = [0, 1, -1, -2.5][si], morn = [0, -0.5, 0.4, 0.8][si], night0 = 21 + eve, dusk0 = 18 + eve, dawn0 = 5.5 + morn, light0 = 7.5 + morn;
+  // A scene can pull the room toward evening without moving the clock, to show off the lights (see setDim).
+  let dimTarget = 0, dimNow = 0;
+  function darkness() { const base = baseDarkness(); return dimNow > base ? dimNow : base; }
+  function baseDarkness() { const h = hour(), si = seasonIdx(), eve = [0, 1, -1, -2.5][si], morn = [0, -0.5, 0.4, 0.8][si], night0 = 21 + eve, dusk0 = 18 + eve, dawn0 = 5.5 + morn, light0 = 7.5 + morn;
     if (h >= night0 || h < dawn0) return 0.42; if (h >= dusk0) return (h - dusk0) / (night0 - dusk0) * 0.42; if (h < light0) return (light0 - h) / (light0 - dawn0) * 0.42; return 0; }
   function skyColor() { const h = hour(); if (raining() && darkness() < 0.3) return seasonIdx() === 3 ? '#D2D8E0' : '#9AA6B5'; if (darkness() > 0.3) return '#2A2F55'; if (h >= 17.5 && h < 21) return '#F0B98E'; if (h < 7.5) return '#E9C7B5'; return '#BFE2F0'; }
 
@@ -262,35 +265,93 @@ export function createHouseArt(ctx0, opts = {}) {
   const doing = (ch, name) => ch.task && ch.task.name === name && ch.task.phase === 'do';
   const usingSlot = (sid, names) => [jordan, maya].some(c => c.task && c.task.phase === 'do' && c.task.slot === sid && (!names || names.includes(c.task.name)));
   function steamAt(T, lx, ly, lz, t, n = 4, rise = 0.8) { const [x, y] = T.W(lx, ly); PFX.emit(`${T.o.id}:${lx},${ly}`, 'steam', T.o.level, x, y, lz, (n / 4) * (rise / 0.8)); }
-  const FL = { L: 1.2, N: 7, RUN: 0.28, RISE: 0.22, TOP: 1.76 };
+  // A flight of stairs. The same numbers draw it from below (a flight rising to the floor above) and from above (the
+  // stairwell cut into that floor, seen going down), so the two views are the same stairs. TOP is the height of a floor.
+  const FL = { L: 1.2, N: 7, RUN: 0.28, RISE: 0.325, TOP: 2.6 };
   function flightParts(axis) {
-    const { L, N, RUN, RISE, TOP } = FL, Y = axis === 'y', rail = '#5A3E2E';
+    const { L, N, RUN, RISE, TOP } = FL, Y = axis === 'y', rail = '#5A3E2E', wood = '#8A6A50', dark = '#4A3626';
     const R = (u0, u1, v0, v1) => (Y ? [v0, u0, v1, u1] : [u0, v0, u1, v1]);
     const P = (u, v, z) => (Y ? [v, u, z] : [u, v, z]);
     const BX = (T, u0, u1, v0, v1, z, h, c) => { const r = R(u0, u1, v0, v1); T.box(r[0], r[1], z, r[2] - r[0], r[3] - r[1], h, c); };
-    const ps = [F(...R(0, L, 0, 1), (T) => { BX(T, 0, L, 0, 1, 0, TOP - 0.04, '#7E6048'); BX(T, 0, L, 0, 1, TOP - 0.04, 0.04, '#B08B68'); T.line(P(0, 0.04, TOP + 0.9), P(L, 0.04, TOP + 0.9), rail, 2); [0.02, 0.4, 0.8].forEach(u => T.line(P(u, 0.04, TOP), P(u, 0.04, TOP + 0.9), rail, 1.4)); })];
+    // The top: the edge of the floor above, over a closed base, with the handrail along the open side and a door at the
+    // end where the flight goes through the wall.
+    const ps = [F(...R(0, L, 0, 1), (T) => {
+      BX(T, 0, L, 0, 1, 0, TOP - 0.16, '#7E6048');
+      BX(T, 0, L, 0, 1, TOP - 0.16, 0.16, '#B9936C');
+      T.poly([P(0.04, 0.04, TOP + 0.002), P(L, 0.04, TOP + 0.002), P(L, 0.96, TOP + 0.002), P(0.04, 0.96, TOP + 0.002)], '#C9A27A');
+      for (let u = 0.3; u < L; u += 0.3) T.line(P(u, 0.04, TOP + 0.004), P(u, 0.96, TOP + 0.004), 'rgba(90,60,30,.25)', 1);
+      T.line(P(0, 0.04, TOP + 0.9), P(L, 0.04, TOP + 0.9), rail, 2); [0.02, 0.4, 0.8].forEach(u => T.line(P(u, 0.04, TOP), P(u, 0.04, TOP + 0.9), rail, 1.4));
+      // The door, in the wall the flight runs into: a white frame, a panelled door and a knob.
+      const du = 0.03, v0 = 0.14, v1 = 0.86, dh = 1.95, DQ = (a, b, z0, z1) => [P(du, a, TOP + z0), P(du, b, TOP + z0), P(du, b, TOP + z1), P(du, a, TOP + z1)];
+      T.poly(DQ(v0 - 0.07, v1 + 0.07, 0, dh + 0.07), '#EFE8DC');
+      T.poly(DQ(v0, v1, 0, dh), '#7A4C32');
+      T.poly(DQ(v0 + 0.08, v1 - 0.08, 1.0, dh - 0.12), null, '#5A3A28', 1.4);
+      T.poly(DQ(v0 + 0.08, v1 - 0.08, 0.12, 0.86), null, '#5A3A28', 1.4);
+      const k = P(du + 0.01, v1 - 0.12, TOP + 0.95); T.poly([[k[0] - 0.025, k[1] - 0.025, k[2]], [k[0] + 0.025, k[1] - 0.025, k[2]], [k[0] + 0.025, k[1] + 0.025, k[2]], [k[0] - 0.025, k[1] + 0.025, k[2]]], '#D9B64A');
+    })];
     for (let i = 0; i < N; i++) {
       const u0 = L + i * RUN, u1 = u0 + RUN, h = TOP - (i + 1) * RISE, hp = TOP - i * RISE, um = u0 + RUN / 2, last = i === N - 1;
       ps.push(F(...R(u0, u1, 0, 1), (T) => {
-        BX(T, u0, u1, 0, 1, 0, h - 0.035, i % 2 ? '#8A6A50' : '#94735A'); BX(T, u0, u1, 0, 1, h - 0.035, 0.035, '#B08B68');
+        // A solid stringer under each tread, a tread with a lighter nosing, and the rail climbing with the flight.
+        BX(T, u0, u1, 0, 1, 0, h - 0.045, i % 2 ? wood : shade(wood, 0.06)); BX(T, u0 - 0.03, u1, 0, 1, h - 0.045, 0.045, '#BE9A74');
         T.line(P(i === 0 ? L : um - RUN, 0.04, hp + 0.9), P(um, 0.04, h + 0.9), rail, 2);
         T.line(P(um, 0.04, h), P(um, 0.04, h + 0.9), rail, last ? 3.2 : 1.4);
       }));
     }
     return ps;
   }
+  // The stairwell in the floor above a flight: a clean opening with the slab's thickness showing, walls dropping away to
+  // the floor below, and the steps going down into the shadow.
   function holeParts(axis) {
-    const { N, RUN } = FL, Y = axis === 'y', len = 2.0, rail = '#5A3E2E';
+    // Looking straight down a deep shaft shows only its far wall, so the well is drawn shallower than the real drop and fades
+    // into dark: the steps still read as going down.
+    const { N, RUN } = FL, TOP = 1.45, RISE = TOP / (N + 1.4), Y = axis === 'y', len = 2.0, rail = '#5A3E2E', wood = '#B08B68';
     const R = (u0, u1, v0, v1) => (Y ? [v0, u0, v1, u1] : [u0, v0, u1, v1]);
     const P = (u, v, z) => (Y ? [v, u, z] : [u, v, z]);
     const quad = (u0, u1, v0, v1, z) => [P(u0, v0, z), P(u1, v0, z), P(u1, v1, z), P(u0, v1, z)];
     return [
-      F(...R(0, len, 0, 1), (T) => { T.poly(quad(0, len, 0, 1, 0.004), '#231D29'); for (let i = 0; i < N; i++) T.poly(quad(i * RUN + 0.03, i * RUN + RUN * 0.6, 0.06, 0.94, 0.006), `rgba(176,139,104,${0.62 - i * 0.08})`); T.poly(quad(0, len, 0, 0.07, 0.007), 'rgba(0,0,0,.25)'); }, { decal: true }),
+      F(...R(0, len, 0, 1), (T) => {
+        const Q = quad(0, len, 0, 1, 0).map(([a, b, c]) => T.P(a, b, c));
+        const cy = (Q[0][1] + Q[1][1] + Q[2][1] + Q[3][1]) / 4;
+        ctx.save();
+        ctx.beginPath(); Q.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.clip();
+        ctx.fillStyle = '#141018'; ctx.fillRect(Q[0][0] - 400, Q[0][1] - 400, 800, 800);
+        // The floor at the bottom, faintly lit.
+        T.poly(quad(0, len, 0, 1, -TOP), '#34303B');
+        // The walls of the opening that face us: the slab's cut edge, then plain wall falling into the dark.
+        for (let e = 0; e < 4; e++) {
+          const A = Q[e], B = Q[(e + 1) % 4], pa = quad(0, len, 0, 1, 0)[e], pb = quad(0, len, 0, 1, 0)[(e + 1) % 4];
+          if (cy <= (A[1] + B[1]) / 2) continue;
+          const dA = T.P(pa[0], pa[1], -TOP), dB = T.P(pb[0], pb[1], -TOP), sA = T.P(pa[0], pa[1], -0.16), sB = T.P(pb[0], pb[1], -0.16);
+          const g = ctx.createLinearGradient(0, A[1], 0, dA[1]); g.addColorStop(0, '#6F6670'); g.addColorStop(0.5, '#3A343E'); g.addColorStop(1, '#17131B');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineTo(dB[0], dB[1]); ctx.lineTo(dA[0], dA[1]); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#BE9A74'; ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineTo(sB[0], sB[1]); ctx.lineTo(sA[0], sA[1]); ctx.closePath(); ctx.fill();
+        }
+        // The steps, far ones first, each darker the deeper it is.
+        const order = [];
+        for (let i = 0; i < N; i++) { const [mx, my] = T.P(...[...R(i * RUN, i * RUN + RUN, 0.5, 0.5)].slice(0, 2), -(i + 1) * RISE); order.push([my, i]); }
+        order.sort((p, q) => p[0] - q[0]).forEach(([, i]) => {
+          const [x0, y0, x1, y1] = R(i * RUN, (i + 1) * RUN, 0.06, 0.94), top = -(i + 1) * RISE;
+          T.box(x0, y0, -TOP, x1 - x0, y1 - y0, TOP + top, shade(wood, -0.1 - 0.72 * ((i + 1) / N)));
+        });
+        // A little light coming up from the floor below, pooled at the foot of the steps.
+        const [lx, ly] = T.P(...[...R(len - 0.12, len - 0.12, 0.5, 0.5)].slice(0, 2), -TOP);
+        const gl = ctx.createRadialGradient(lx, ly, 0, lx, ly, 38); gl.addColorStop(0, 'rgba(255,214,150,.28)'); gl.addColorStop(1, 'rgba(255,214,150,0)');
+        ctx.fillStyle = gl; ctx.fillRect(lx - 40, ly - 40, 80, 80);
+        ctx.restore();
+        // The trim round the opening.
+        ctx.strokeStyle = '#B79D83'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath(); Q.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.stroke();
+      }, { decal: true }),
       F(...R(0, len, 0, 0.05), (T) => { T.line(P(0, 0.02, 0.9), P(len, 0.02, 0.9), rail, 2); for (let u = 0; u <= len + 0.01; u += 0.4) T.line(P(u, 0.02, 0), P(u, 0.02, 0.9), rail, 1.4); }),
       F(...R(len - 0.05, len, 0, 1), (T) => { T.line(P(len, 0.02, 0.9), P(len, 1, 0.9), rail, 2); for (let v = 0.25; v <= 1.01; v += 0.25) T.line(P(len, v, 0), P(len, v, 0.9), rail, 1.4); })
     ];
   }
   const cl = (o) => o.col || (TYPES[o.type].cols || ['#8A6A50'])[0];
+  function singleBed(cover, edge) {
+    const lux = has('bed'), z = lux ? 0.56 : 0.5;
+    return [B(0, 0, 0, 0.14, 0.9, lux ? 1.3 : 1.0, lux ? '#6E4A5E' : C.dark), B(0.14, 0, 0, 2.36, 0.9, 0.32, lux ? '#5A3E4C' : C.wood), B(0.18, 0.04, 0.32, 2.28, 0.82, lux ? 0.24 : 0.18, '#F1ECE4', { name: 'mattress' }),
+      B(0.23, 0.16, z, 0.5, 0.58, 0.12, '#FFFFFF'), B(0.95, 0, z, 1.55, 0.9, 0.07, lux ? '#C9A24A' : cover, { cover: true }), B(0.95, 0, z + 0.07, 0.2, 0.9, 0.02, lux ? '#E0C26E' : edge, { cover: true })];
+  }
   const DRAWN = {
     sofa: {    
       parts: (o) => { const s1 = usingSlot(o.id + ':s1') ? 1 : 0, s2 = usingSlot(o.id + ':s2') ? 1 : 0;
@@ -303,6 +364,9 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: () => { const lux = has('bed'), z = lux ? 0.56 : 0.5; return [B(0, 0, 0, 0.14, 1.6, lux ? 1.3 : 1.0, lux ? '#6E4A5E' : C.dark), B(0.14, 0, 0, 2.36, 1.6, 0.32, lux ? '#5A3E4C' : C.wood), B(0.18, 0.04, 0.32, 2.28, 1.52, lux ? 0.24 : 0.18, '#F1ECE4', { name: 'mattress' }),
         B(0.23, 0.12, z, 0.5, 0.58, 0.12, '#FFFFFF'), B(0.23, 0.9, z, 0.5, 0.58, 0.12, '#FFFFFF'), B(0.95, 0, z, 1.55, 1.6, 0.07, lux ? '#C9A24A' : '#3D6B73', { cover: true }), B(0.95, 0, z + 0.07, 0.2, 1.6, 0.02, lux ? '#E0C26E' : '#5E8A92', { cover: true })]; },
        },
+    // The single beds two friends sleep in: the same bed, one pillow wide.
+    bedA: { parts: () => singleBed('#3D6B73', '#5E8A92') },
+    bedB: { parts: () => singleBed('#7E4458', '#9A5C72') },
     dining: {    
       parts: () => {
         const ps = [];
@@ -547,6 +611,152 @@ export function createHouseArt(ctx0, opts = {}) {
       parts: (o) => [F(0, 0, 0.42, 0.42, (T, ob, t) => { const c = cl(o); T.box(0.06, 0.06, 0, 0.3, 0.3, 0.55, c); const [x, y] = T.P(0.21, 0.21, 0.55); [[-14, -38, -0.3], [0, -46, 0], [12, -40, 0.3], [-7, -32, -0.15], [7, -34, 0.15]].forEach(([dx, dy, r], k) => { const sw = Math.sin(t * 0.7 + k) * 1.5; limb(x, y, x + dx * 0.7 + sw, y + dy * 0.75, '#A88E6A', 1); ell(x + dx + sw, y + dy, 4, 11, 'rgba(236,222,196,.95)', null, r); }); })] },
     lantern: {      
       parts: (o) => [F(0, 0, 0.36, 0.36, (T, ob) => { const c = cl(o), on = isLit(ob.id); T.box(0.03, 0.03, 0, 0.3, 0.3, 0.06, c); T.box(0.06, 0.06, 0.06, 0.24, 0.24, 0.42, on ? 'rgba(255,214,140,.9)' : 'rgba(220,210,190,.6)'); [[0.06, 0.06], [0.28, 0.06], [0.06, 0.28], [0.28, 0.28]].forEach(([x, y]) => T.line([x + 0.01, y + 0.01, 0.06], [x + 0.01, y + 0.01, 0.48], c, 1.6)); T.box(0.03, 0.03, 0.48, 0.3, 0.3, 0.05, c); const [hx, hy] = T.P(0.18, 0.18, 0.62); ell(hx, hy, 4, 3, null, c); })],  },
+    candles: {
+      parts: (o) => [F(0, 0, 0.5, 0.4, (T, ob, t) => {
+        const c = cl(o), on = isLit(ob.id);
+        T.box(0.04, 0.04, 0, 0.42, 0.32, 0.04, '#C9A24A');
+        [[0.1, 0.1, 0.38], [0.28, 0.12, 0.5], [0.2, 0.24, 0.28]].forEach(([x, y, h], k) => {
+          T.box(x, y, 0.04, 0.11, 0.11, h - 0.04, k === 1 ? shade(c, -0.08) : c);
+          const [fx, fy] = T.P(x + 0.055, y + 0.055, h + 0.03);
+          if (on) { const fl = Math.sin(t * 9 + k * 2.1) * 0.7; ell(fx, fy - 3, 2.3, 4 + fl * 0.4, 'rgba(255,190,80,.95)'); ell(fx, fy - 2, 1.1, 2.2, 'rgba(255,246,210,.95)'); }
+          else ell(fx, fy, 0.9, 1.2, '#2B2B30');
+        });
+      })] },
+    basket: {
+      parts: (o) => [F(0, 0, 0.8, 0.8, (T) => {
+        const c = cl(o);
+        T.box(0.08, 0.08, 0, 0.64, 0.64, 0.4, c);
+        for (let z = 0.08; z < 0.4; z += 0.1) { T.line([0.08, 0.72, z], [0.72, 0.72, z], shade(c, -0.25), 1); T.line([0.72, 0.08, z], [0.72, 0.72, z], shade(c, -0.3), 1); }
+        T.box(0.06, 0.06, 0.4, 0.68, 0.68, 0.05, shade(c, 0.1));
+        // A throw blanket heaped in it, one corner trailing over the rim.
+        const [bx, by] = T.P(0.4, 0.4, 0.5);
+        ell(bx, by, 19, 9, '#C9A9A0'); ell(bx - 3, by - 2, 13, 6, '#E4D3CB'); ell(bx + 4, by + 1, 9, 4, '#B5476E');
+        T.poly([[0.62, 0.72, 0.42], [0.8, 0.72, 0.34], [0.78, 0.76, 0.12], [0.6, 0.76, 0.2]], '#C9A9A0');
+      })] },
+    coatrack: {
+      parts: (o) => [F(0, 0, 0.45, 0.45, (T) => {
+        const c = cl(o);
+        T.box(0.1, 0.1, 0, 0.25, 0.25, 0.05, shade(c, -0.1));
+        T.line([0.225, 0.225, 0.05], [0.225, 0.225, 1.75], c, 3);
+        [[-0.16, -0.1], [0.16, -0.1], [0, 0.16], [0, -0.16]].forEach(([dx, dy], k) => { T.line([0.225, 0.225, 1.62 - (k % 2) * 0.08], [0.225 + dx, 0.225 + dy, 1.7 - (k % 2) * 0.08], c, 2); });
+        // A coat and a scarf hanging from it.
+        T.poly([[0.12, 0.38, 1.58], [0.34, 0.38, 1.58], [0.36, 0.38, 0.85], [0.1, 0.38, 0.85]], '#3F5B4C');
+        T.poly([[0.1, 0.4, 1.3], [0.2, 0.4, 1.3], [0.2, 0.4, 0.8], [0.1, 0.4, 0.8]], '#B5476E');
+      })] },
+    bookstack: {
+      parts: (o) => [F(0, 0, 0.45, 0.35, (T) => {
+        const c = cl(o);
+        [[0.02, 0.04, 0, 0.4, 0.3, 0.1, c], [0.05, 0.06, 0.1, 0.36, 0.26, 0.09, '#2E3B57'], [0.0, 0.05, 0.19, 0.38, 0.27, 0.1, '#C9A24A'], [0.06, 0.07, 0.29, 0.32, 0.24, 0.09, '#3F5B4C'], [0.03, 0.06, 0.38, 0.34, 0.24, 0.08, '#B5476E']]
+          .forEach(([x, y, z, w, d, h, col]) => { T.box(x, y, z, w, d, h, col); T.line([x + 0.02, y + d, z + h / 2], [x + w - 0.02, y + d, z + h / 2], 'rgba(255,255,255,.35)', 1); });
+      })] },
+    eucalyptus: {
+      parts: (o) => [F(0, 0, 0.42, 0.42, (T, ob, t) => {
+        const c = cl(o);
+        T.box(0.08, 0.08, 0, 0.26, 0.26, 0.5, c); T.box(0.12, 0.12, 0.5, 0.18, 0.18, 0.1, shade(c, -0.12));
+        const [x, y] = T.P(0.21, 0.21, 0.6);
+        [[-16, -64, -0.2], [-4, -86, 0], [12, -72, 0.25], [-9, -48, -0.3], [7, -54, 0.2], [20, -52, 0.5]].forEach(([dx, dy, r], k) => {
+          const sw = Math.sin(t * 0.8 + k) * 1.6;
+          limb(x, y, x + dx + sw * 0.5, y + dy, '#7F8F70', 1.2);
+          for (let j = 1; j <= 4; j++) { const f = j / 4; ell(x + dx * f + (j % 2 ? 3 : -3) + sw * f, y + dy * f, 3.2, 5, j % 2 ? '#9AB09E' : '#8AA391', null, r + (j % 2 ? 0.6 : -0.6)); }
+        });
+      })] },
+    bust: {
+      parts: (o) => [F(0, 0, 0.5, 0.5, (T) => {
+        const c = cl(o);
+        T.box(0.1, 0.1, 0, 0.3, 0.3, 0.9, '#E4DDD2'); T.box(0.07, 0.07, 0.9, 0.36, 0.36, 0.06, '#CFC7BA'); T.box(0.07, 0.07, 0, 0.36, 0.36, 0.05, '#CFC7BA');
+        const [x, y] = T.P(0.25, 0.25, 0.96);
+        ell(x, y - 6, 12, 7, c); rr(x - 4, y - 16, 8, 12, 3, c); ell(x, y - 24, 8, 10, c); ell(x - 3, y - 26, 3, 4, shade(c, 0.35));
+        ell(x + 2, y - 10, 5, 4, shade(c, -0.12));
+      })] },
+    tablelamp: {
+      parts: (o) => [F(0, 0, 0.5, 0.5, (T, ob) => {
+        const c = cl(o), on = isLit(ob.id);
+        [[0.06, 0.06], [0.4, 0.06], [0.06, 0.4], [0.4, 0.4]].forEach(([x, y]) => T.box(x, y, 0, 0.05, 0.05, 0.55, shade(c, -0.15)));
+        T.box(0.03, 0.03, 0.55, 0.44, 0.44, 0.05, c);
+        T.box(0.2, 0.2, 0.6, 0.1, 0.1, 0.22, '#C9A24A');
+        T.box(0.12, 0.12, 0.82, 0.26, 0.26, 0.3, on ? 'rgba(255,226,160,.96)' : 'rgba(240,232,214,.95)');
+      })] },
+    candelabra: {
+      parts: (o) => [F(0, 0, 0.4, 0.4, (T, ob, t) => {
+        const c = cl(o), on = isLit(ob.id);
+        T.box(0.08, 0.08, 0, 0.24, 0.24, 0.05, c); T.line([0.2, 0.2, 0.05], [0.2, 0.2, 1.1], c, 3);
+        T.line([0.2, 0.2, 1.1], [0.06, 0.2, 1.3], c, 2); T.line([0.2, 0.2, 1.1], [0.34, 0.2, 1.3], c, 2); T.line([0.2, 0.2, 1.1], [0.2, 0.2, 1.38], c, 2);
+        [[0.06, 0.2, 1.3], [0.34, 0.2, 1.3], [0.2, 0.2, 1.38]].forEach(([x, y, z], k) => {
+          T.box(x - 0.03, y - 0.03, z, 0.06, 0.06, 0.1, '#F2EEE8');
+          const [fx, fy] = T.P(x, y, z + 0.13);
+          if (on) { const fl = Math.sin(t * 9 + k * 2) * 0.7; ell(fx, fy - 2, 2, 3.8 + fl * 0.4, 'rgba(255,190,80,.95)'); ell(fx, fy - 1, 0.9, 2, 'rgba(255,246,210,.95)'); }
+        });
+      })] },
+    blanketladder: {
+      parts: (o) => [F(0, 0, 0.7, 0.25, (T) => {
+        const c = cl(o);
+        T.line([0.1, 0.1, 0], [0.16, 0.14, 1.6], c, 3); T.line([0.6, 0.1, 0], [0.54, 0.14, 1.6], c, 3);
+        [0.35, 0.7, 1.05, 1.4].forEach((z) => T.line([0.12, 0.12, z], [0.58, 0.12, z], c, 2.4));
+        // Blankets draped over the rungs.
+        T.poly([[0.1, 0.17, 1.4], [0.6, 0.17, 1.4], [0.6, 0.17, 0.98], [0.1, 0.17, 0.98]], '#C9A9A0');
+        T.poly([[0.12, 0.19, 1.05], [0.58, 0.19, 1.05], [0.58, 0.19, 0.62], [0.12, 0.19, 0.62]], '#B5476E');
+        T.poly([[0.16, 0.21, 0.7], [0.54, 0.21, 0.7], [0.54, 0.21, 0.4], [0.16, 0.21, 0.4]], '#3F5B4C');
+        T.line([0.1, 0.17, 1.2], [0.6, 0.17, 1.2], 'rgba(255,255,255,.35)', 1);
+      })] },
+    plantstand: {
+      parts: (o) => [F(0, 0, 0.5, 0.5, (T, ob, t) => {
+        const c = cl(o);
+        T.box(0.12, 0.12, 0, 0.05, 0.05, 0.62, c); T.box(0.33, 0.12, 0, 0.05, 0.05, 0.62, c); T.box(0.12, 0.33, 0, 0.05, 0.05, 0.62, c); T.box(0.33, 0.33, 0, 0.05, 0.05, 0.62, c);
+        T.box(0.08, 0.08, 0.62, 0.34, 0.34, 0.05, c);
+        T.box(0.14, 0.14, 0.67, 0.22, 0.22, 0.2, '#C27A5A');
+        const [x, y] = T.P(0.25, 0.25, 0.9);
+        for (let k = 0; k < 7; k++) { const a = -Math.PI + k / 6 * Math.PI, sw = Math.sin(t * 0.9 + k) * 0.05; ctx.strokeStyle = k % 2 ? '#3F7D4E' : '#4F9460'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + Math.cos(a + sw) * 12, y - 14, x + Math.cos(a + sw) * 20, y + 6 + (k % 3) * 8); ctx.stroke(); ell(x + Math.cos(a + sw) * 20, y + 8 + (k % 3) * 8, 3, 4, '#4F9460'); }
+      })] },
+    woodstool: {
+      parts: (o) => [F(0, 0, 0.45, 0.45, (T) => {
+        const c = cl(o);
+        [[0.07, 0.07], [0.33, 0.07], [0.07, 0.33], [0.33, 0.33]].forEach(([x, y]) => T.box(x, y, 0, 0.05, 0.05, 0.46, shade(c, -0.18)));
+        T.box(0.04, 0.04, 0.46, 0.37, 0.37, 0.07, c);
+      })] },
+    flowervase: {
+      parts: (o) => [F(0, 0, 0.3, 0.3, (T, ob, t) => {
+        const c = cl(o);
+        T.box(0.08, 0.08, 0, 0.14, 0.14, 0.2, c); T.box(0.1, 0.1, 0.2, 0.1, 0.1, 0.08, shade(c, -0.1));
+        const [x, y] = T.P(0.15, 0.15, 0.3);
+        [[-10, -22, '#E8798E'], [0, -30, '#F2C14E'], [10, -23, '#F2EEE8'], [-4, -16, '#B5476E'], [5, -14, '#E8798E']].forEach(([dx, dy, col], k) => {
+          const sw = Math.sin(t * 0.9 + k) * 0.8;
+          limb(x, y, x + dx * 0.8 + sw, y + dy * 0.8 + 3, '#4F9460', 1); circle(x + dx + sw, y + dy, 3.4, col); circle(x + dx + sw, y + dy, 1.2, '#F2C14E');
+        });
+      })] },
+    succulents: {
+      parts: (o) => [F(0, 0, 0.35, 0.35, (T) => {
+        const c = cl(o);
+        [[0.05, 0.12, 0.17, 0.16], [0.2, 0.05, 0.13, 0.12], [0.18, 0.2, 0.15, 0.14]].forEach(([x, y, s, h], k) => {
+          T.box(x, y, 0, s, s, h, k === 1 ? shade(c, 0.12) : c);
+          const [px, py] = T.P(x + s / 2, y + s / 2, h);
+          for (let j = 0; j < 6; j++) { const a = j / 6 * Math.PI * 2; ell(px + Math.cos(a) * 3.4, py - 1 + Math.sin(a) * 1.6, 2.6, 4, j % 2 ? '#6FA079' : '#8DBB8F', null, a); }
+          ell(px, py - 2, 2.2, 3, '#A9D2A2');
+        });
+      })] },
+    desklamp: {
+      parts: (o) => [F(0, 0, 0.3, 0.3, (T, ob) => {
+        const c = cl(o), on = isLit(ob.id);
+        T.box(0.06, 0.06, 0, 0.18, 0.18, 0.04, c);
+        T.line([0.15, 0.15, 0.04], [0.15, 0.15, 0.34], c, 2.2); T.line([0.15, 0.15, 0.34], [0.2, 0.2, 0.5], c, 2);
+        T.box(0.14, 0.14, 0.44, 0.14, 0.14, 0.1, on ? 'rgba(255,226,160,.98)' : shade(c, 0.15));
+      })] },
+    photoframes: {
+      parts: (o) => [F(0, 0, 0.4, 0.15, (T) => {
+        const c = cl(o);
+        [[0.02, 0.2, 0.28, '#9EC1C9'], [0.17, 0.2, 0.22, '#E8B39A'], [0.3, 0.2, 0.16, '#B7C79B']].forEach(([x, h, w, pic]) => {
+          T.box(x, 0.04, 0, w * 0.45, 0.06, h + 0.06, c);
+          T.poly([[x + 0.012, 0.1 + 0.001, 0.03], [x + w * 0.45 - 0.012, 0.1 + 0.001, 0.03], [x + w * 0.45 - 0.012, 0.1 + 0.001, h + 0.045], [x + 0.012, 0.1 + 0.001, h + 0.045]], pic);
+        });
+      })] },
+    umbrella: {
+      parts: (o) => [F(0, 0, 0.4, 0.4, (T) => {
+        const c = cl(o);
+        T.box(0.06, 0.06, 0, 0.28, 0.28, 0.5, c); T.box(0.04, 0.04, 0.5, 0.32, 0.32, 0.04, shade(c, -0.2));
+        [['#2B2B30', 0.13, 0.15, 0.78], ['#B5476E', 0.25, 0.2, 0.72], ['#2E3B57', 0.2, 0.28, 0.66]].forEach(([col, ux, uy, h]) => {
+          T.line([ux, uy, 0.3], [ux, uy, h], col, 2.2);
+          const [hx, hy] = T.P(ux, uy, h); ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(hx + 3, hy, 3, Math.PI, Math.PI * 2.2); ctx.stroke();
+        });
+      })] },
     // ---- plants (they all need watering) ----
     fern: {      
       parts: (o) => [F(0, 0, 0.55, 0.55, (T, ob, t) => { T.box(0.08, 0.08, 0, 0.4, 0.4, 0.42, cl(o)); const [x, y] = T.P(0.27, 0.27, 0.45); for (let k = 0; k < 9; k++) { const a = -Math.PI + k / 8 * Math.PI, sw = Math.sin(t * 0.8 + k) * 0.05, ex = x + Math.cos(a + sw) * 22, ey = y - 6 + Math.sin(a + sw) * 12 + 6; ctx.strokeStyle = k % 2 ? '#3F7D4E' : '#4F9460'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo((x + ex) / 2, y - 20, ex, ey); ctx.stroke(); } })],
@@ -677,12 +887,14 @@ export function createHouseArt(ctx0, opts = {}) {
   function fp(o) { const t = T_OF(o); return o.rot % 2 ? [t.D, t.W] : [t.W, t.D]; }
   function xrect(o, r) { const a = xf(o, r[0], r[1]), b = xf(o, r[2], r[3]); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]; }
   function makeT(o) {
+    // A piece sitting on a table or shelf is drawn that much higher.
+    const up = o.z || 0;
     return {
       o, W: (lx, ly) => xf(o, lx, ly),
-      P: (lx, ly, lz) => { const [x, y] = xf(o, lx, ly); return iso(x, y, lz); },
-      box: (lx, ly, lz, w, d, h, c) => { const r = xrect(o, [lx, ly, lx + w, ly + d]); box(r[0], r[1], lz, r[2] - r[0], r[3] - r[1], h, c); },
-      poly: (pts, fill, stroke, lw) => poly(pts.map(p => { const [x, y] = xf(o, p[0], p[1]); return [x, y, p[2]]; }), fill, stroke, lw),
-      line: (a, b, c, w) => { const [ax, ay] = xf(o, a[0], a[1]), [bx, by] = xf(o, b[0], b[1]); line3([ax, ay, a[2]], [bx, by, b[2]], c, w); }
+      P: (lx, ly, lz) => { const [x, y] = xf(o, lx, ly); return iso(x, y, lz + up); },
+      box: (lx, ly, lz, w, d, h, c) => { const r = xrect(o, [lx, ly, lx + w, ly + d]); box(r[0], r[1], lz + up, r[2] - r[0], r[3] - r[1], h, c); },
+      poly: (pts, fill, stroke, lw) => poly(pts.map(p => { const [x, y] = xf(o, p[0], p[1]); return [x, y, p[2] + up]; }), fill, stroke, lw),
+      line: (a, b, c, w) => { const [ax, ay] = xf(o, a[0], a[1]), [bx, by] = xf(o, b[0], b[1]); line3([ax, ay, a[2] + up], [bx, by, b[2] + up], c, w); }
     };
   }
   const facing = (d) => { const [a, b] = VD(d[0], d[1]); return { front: a + b > 0.01, flip: a - b >= 0 ? 1 : -1 }; };
@@ -895,6 +1107,20 @@ export function createHouseArt(ctx0, opts = {}) {
       else { for (let i = 0; i < 3; i++) { const [sx, sy] = at((rnd() - 0.5) * 0.25, (rnd() - 0.5) * 0.15); ell(sx, sy, 8 + rnd() * 5, 4 + rnd() * 3, `rgba(90,78,78,${A(0.2)})`, null, rot); } }
     });
   }
+  // The cloud that hides a moving box for a moment while what was inside takes its place.
+  function drawPoofs(level) {
+    for (let i = poofs.length - 1; i >= 0; i--) {
+      const f = poofs[i]; f.t += rdt; if (f.t > 0.9) { poofs.splice(i, 1); continue; } if (f.level !== level) continue;
+      const u = f.t / 0.9, grow = Math.min(1, u * 2.6), al = u < 0.5 ? 1 : 1 - (u - 0.5) / 0.5;
+      const [cx, cy] = iso(f.x, f.y, 0.4);
+      ctx.save(); ctx.globalAlpha = al * 0.95;
+      for (const [dx, dy, r] of [[0, 0, 15], [-13, 3, 11], [13, 3, 11], [-7, -8, 11], [8, -9, 10], [0, 6, 12]]) {
+        ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = 'rgba(120,110,130,.45)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx + dx * grow * 1.5, cy + dy * grow * 1.2 - u * 8, r * (0.5 + grow * 0.7), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
   function drawSparkles(level) {
     for (let i = sparkles.length - 1; i >= 0; i--) {
       const s = sparkles[i]; s.t += rdt; if (s.t > 1.2) { sparkles.splice(i, 1); continue; } if (s.level !== level) continue;
@@ -957,7 +1183,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function activeLights(level) {
     const out = [];
     WALL_LIGHTS.forEach((L, i) => { if (L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const manual = wallLightOverrides.get(i); const target = manual === true ? 1 : manual === false ? 0 : wantLight(level, roomFor(L.room), L.night, L.amb); const s = ease('w' + i, target); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r, s, col: L.col, vis: BACK[VR].includes(L.p) }); });
-    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2]], pool: [x, y, 0], r: lt.r, s, col: lt.col, vis: true }); });
+    OBJS.forEach(o => { const lt = T_OF(o).light; if (!lt || o.level !== level) return; const [x, y] = xf(o, lt.at[0], lt.at[1]); const manual = objectLights.get(o.id); const target = manual === true ? Math.max(0.75, wantLight(level, roomName(level, x, y))) : manual === false ? 0 : wantLight(level, roomName(level, x, y)); const s = ease(o.id, target); if (s < 0.02) return; out.push({ src: [x, y, lt.at[2] + (o.z || 0)], pool: [x, y, 0], r: lt.r, s, col: lt.col, vis: true }); });
     return out;
   }
   function drawWallLights(level) {
@@ -1085,27 +1311,42 @@ export function createHouseArt(ctx0, opts = {}) {
     if (playing) { const a = iso(6.0, 0.01, 1.9), b = iso(8.0, 0.01, 1.9), c = iso(8.0, 0.01, 0.8), d = iso(6.0, 0.01, 0.8); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(190,210,255,.07)'; ctx.beginPath(); ctx.moveTo(px - 5, py + 1); ctx.lineTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); ctx.restore(); }
   }
 
-  const BOX_LABEL = { sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
+  const BOX_LABEL = { flowervase: 'VASE', succulents: 'PLANTS', desklamp: 'LAMP', photoframes: 'PHOTOS', tablelamp: 'LAMP', candelabra: 'CANDLES', blanketladder: 'LADDER', plantstand: 'PLANT', woodstool: 'STOOL', candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
 
   // Just-placed furniture lands with a squash and a little bounce.
+  // Three ways a piece arrives: it lands with a squash (set down), pops out of its box (revealed) or drops from above (delivered).
   const placedAt = new Map();
+  const ARRIVAL = { land: 0.5, pop: 0.6, drop: 0.7 };
   function bouncy(o, draw) {
-    const at = placedAt.get(o.id);
-    if (at == null) return draw;
-    const u = (animT - at) / 0.5;
+    const a = placedAt.get(o.id);
+    if (a == null) return draw;
+    const dur = ARRIVAL[a.kind], u = (animT - a.t) / dur;
     if (u < 0 || u >= 1) { if (u >= 1) placedAt.delete(o.id); return draw; }
-    const b = Math.sin(u * Math.PI * 2.5) * (1 - u);
     return () => {
       const T = T_OF(o), [cx, cy] = xf(o, T.W / 2, T.D / 2), [bx, by] = iso(cx, cy, 0);
-      ctx.save(); ctx.translate(bx, by); ctx.scale(1 + b * 0.07, 1 - b * 0.1); ctx.translate(-bx, -by);
+      ctx.save();
+      if (a.kind === 'land') {
+        const b = Math.sin(u * Math.PI * 2.5) * (1 - u);
+        ctx.translate(bx, by); ctx.scale(1 + b * 0.07, 1 - b * 0.1); ctx.translate(-bx, -by);
+      } else if (a.kind === 'pop') {
+        // Springs up out of the box: small, overshoots, settles.
+        const e = 1 - Math.pow(1 - Math.min(1, u * 1.5), 3), s = 0.25 + 0.75 * e + Math.sin(Math.min(1, u * 1.4) * Math.PI) * 0.14;
+        ctx.globalAlpha = Math.min(1, u * 5); ctx.translate(bx, by); ctx.scale(s, s * (1 + (1 - e) * 0.25)); ctx.translate(-bx, -by);
+      } else {
+        // Falls from above, hits the floor and squashes once.
+        const f = 0.62;
+        if (u < f) { const k = u / f; ctx.translate(0, -52 * (1 - k * k)); ctx.globalAlpha = Math.min(1, u * 8); }
+        else { const k = (u - f) / (1 - f), sq = Math.sin(k * Math.PI) * (1 - k) * 0.9; ctx.translate(bx, by); ctx.scale(1 + sq * 0.12, 1 - sq * 0.16); ctx.translate(-bx, -by); }
+      }
       draw();
       ctx.restore();
     };
   }
+  function arrive(id, kind) { if (OBJS.some(x => x.id === id)) placedAt.set(id, { t: animT, kind }); }
   function objectPlaced(id) {
     const o = OBJS.find(x => x.id === id);
     if (!o) return;
-    placedAt.set(id, animT);
+    placedAt.set(id, { t: animT, kind: 'land' });
     const T = T_OF(o);
     // A puff of dust where it lands.
     for (let i = 0; i < 4; i++) {
@@ -1121,7 +1362,7 @@ export function createHouseArt(ctx0, opts = {}) {
     parts.forEach(p => {
       if (p.decal) return;
       const r = p.box ? [p.box[0], p.box[1], p.box[0] + p.box[3], p.box[1] + p.box[4]] : p.rect, w = xrect(o, r);
-      let key = vs((w[0] + w[2]) / 2, (w[1] + w[3]) / 2) + (p.onTop ? 0.002 : 0) + (p.box ? p.box[2] * 0.001 : 0);
+      let key = vs((w[0] + w[2]) / 2, (w[1] + w[3]) / 2) + (p.onTop ? 0.002 : 0) + (p.box ? p.box[2] * 0.001 : 0) + (o.on ? 0.4 + o.z * 0.01 : 0);
       let rect = w;
       if (p.cover) { key = maxSit + 0.05; rect = xrect(o, [0, 0, T_OF(o).W, T_OF(o).D]); }
       const draw = p.box ? () => T.box(p.box[0], p.box[1], p.box[2], p.box[3], p.box[4], p.box[5], typeof p.c === 'function' ? p.c(o) : p.c) : () => { if (gOn) G.billboard(iso((w[0] + w[2]) / 2, (w[1] + w[3]) / 2, 0)[1], ZH, MATERIAL.matte); p.fn(T, o, t); if (gOn) G.clearBase(); };
@@ -1245,6 +1486,7 @@ export function createHouseArt(ctx0, opts = {}) {
 
   function sync(s) {
     minutes = s.minutes; day = s.day; viewLevel = s.level; animT = s.t; rdt = s.dt;
+    dimNow += (dimTarget - dimNow) * Math.min(1, rdt * 1.6);
     wallMode = s.wallMode || 'cut';
     OBJS = s.objs;
     if (s.rot !== VR) { VR = s.rot; setOrigin(); }
@@ -1501,7 +1743,8 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // What a visitor carries in their arms, drawn over the front of the torso.
   function drawCarried(c) {
-    const [fx, fy] = iso(c.x, c.y, 0), f = facing(c.face), x = fx + f.flip * 2, y = fy - 17;
+    // Whoever is carrying walks with a little bob.
+    const [fx, fy] = iso(c.x, c.y, 0), f = facing(c.face), x = fx + f.flip * 2, y = fy - 17 + (c.walking ? Math.sin(animT * 11) * 1.3 : 0);
     const rect = (px, py, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(px, py, w, h); };
     ctx.save();
     switch (c.carrying) {
@@ -1530,8 +1773,38 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.restore();
   }
   // A line said in passing, in a bubble that fades.
+  // A "!" that pops over someone's head when they notice something, like a handheld RPG: it jumps up, settles and hops once.
+  function drawAlert(c, age) {
+    if (age < 0 || age > 1.6) return;
+    const [fx, fy] = iso(c.x, c.y, 0);
+    const pop = age < 0.14 ? (age / 0.14) * 1.4 : age < 0.28 ? 1.4 - 0.4 * ((age - 0.14) / 0.14) : 1;
+    const hop = age > 0.45 && age < 0.7 ? Math.sin(((age - 0.45) / 0.25) * Math.PI) * 4 : 0;
+    ctx.save(); ctx.globalAlpha = Math.min(1, (1.6 - age) * 4);
+    ctx.translate(fx, fy - 68 - hop); ctx.scale(pop, pop);
+    ctx.fillStyle = '#FFFDF8'; ctx.strokeStyle = '#241B25'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-8, -24, 16, 22, 5) : ctx.rect(-8, -24, 16, 22); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-3, -2); ctx.lineTo(0, 4); ctx.lineTo(3, -2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#E8384F'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-2, -20, 4, 11, 2) : ctx.rect(-2, -20, 4, 11); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -5, 2.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  // Little hearts that float up from someone who is pleased.
+  function drawHearts(c, age) {
+    if (age < 0 || age > 2.2) return;
+    const [fx, fy] = iso(c.x, c.y, 0);
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      const a = age - i * 0.22; if (a < 0 || a > 1.6) continue;
+      const rise = a * 26, sway = Math.sin(a * 5 + i * 2) * 5 + (i - 1) * 7, s = 0.55 + 0.35 * Math.min(1, a * 3);
+      ctx.globalAlpha = Math.min(1, a * 5) * Math.min(1, (1.6 - a) * 2.5);
+      heart(fx + sway, fy - 62 - rise, s, i === 1 ? '#F0436B' : '#F58AA6');
+    }
+    ctx.restore();
+  }
   function drawBubble(c, t) {
     const age = t - c.bubble.at;
+    if (c.bubble.text === '!') { drawAlert(c, age); return; }
+    if (c.bubble.text === '♥') { drawHearts(c, age); return; }
     if (age < 0 || age > 4) return;
     const [fx, fy] = iso(c.x, c.y, 0);
     ctx.save(); ctx.globalAlpha = Math.min(1, (4 - age) * 1.2); ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.textAlign = 'center';
@@ -1959,11 +2232,30 @@ export function createHouseArt(ctx0, opts = {}) {
     const items = [];
     wallItemsFull(lv, items);
     OBJS.forEach(o => { if (o.level === lv && TYPES[o.type] && !(arr.hold && arr.hold === o)) objItems(o, items, t); });
-    (s.chars || []).forEach(c => { if (c.level !== lv || c.hidden) return; const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); drawPerson(c, t); if (c.carrying) drawCarried(c); if (gOn) G.clearBase(); if (c.npc && c.name) drawNameTag(c); if (c.bubble) drawBubble(c, t); } }); });
+    (s.chars || []).forEach(c0 => {
+      // Someone on the stairs climbs the flight on the floor below, and comes up out of the stairwell on the floor above.
+      let c = c0, pit = null;
+      if (c0.stair && !c0.hidden) {
+        const st = c0.stair, k = Math.max(0, Math.min(1, st.s)), up = st.up;
+        const x = st.bx + (st.tx - st.bx) * k, y = st.by + (st.ty - st.by) * k;
+        const steps = FL.N + 1, step = Math.floor(k * steps), within = k * steps - step;
+        const z = (step + Math.min(1, within * 1.6)) * (FL.TOP / steps);
+        const dx = st.tx - st.bx, dy = st.ty - st.by, dl = Math.hypot(dx, dy) || 1, fdir = up ? [dx / dl, dy / dl] : [-dx / dl, -dy / dl];
+        if (lv === st.low) c = Object.assign({}, c0, { level: lv, x, y, z, face: fdir, walking: true });
+        else if (lv === st.high && z > FL.TOP * 0.62) {
+          const hole = OBJS.find(o => o.level === lv && (o.type === 'holeX' || o.type === 'holeY') && Math.hypot(o.x + (TYPES[o.type].W || 1) / 2 - st.tx, o.y + (TYPES[o.type].D || 1) / 2 - st.ty) < 3);
+          if (!hole) return;
+          pit = hole; c = Object.assign({}, c0, { level: lv, x, y, z: z - FL.TOP, face: fdir, walking: true });
+        } else return;
+      } else if (c0.level !== lv || c0.hidden) return;
+      const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); if (pit) { const W = TYPES[pit.type].W, D = TYPES[pit.type].D, P = [iso(pit.x, pit.y, 0), iso(pit.x + W, pit.y, 0), iso(pit.x + W, pit.y + D, 0), iso(pit.x, pit.y + D, 0)], lo = P.slice().sort((a, b) => a[0] - b[0]), bot = P.reduce((m, q) => (q[1] > m[1] ? q : m)); ctx.save(); ctx.beginPath(); ctx.moveTo(lo[0][0], lo[0][1]); ctx.lineTo(bot[0], bot[1]); ctx.lineTo(lo[3][0], lo[3][1]); ctx.lineTo(lo[3][0], -2000); ctx.lineTo(lo[0][0], -2000); ctx.closePath(); ctx.clip(); }
+        drawPerson(c, t); if (c.carrying) drawCarried(c); if (gOn) G.clearBase(); if (c.npc && c.name) drawNameTag(c); if (c.bubble) drawBubble(c, t);
+        if (pit) ctx.restore(); } }); });
     depthSort(items).forEach(it => it.d());
     drawFrontWalls(lv); drawProjector(lv);
     if (arrState) drawArrangeOverlay(arrState, lv);
     drawGuides(lv, t);
+    drawPoofs(lv);
     drawSparkles(lv);
     } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
     drawParticles(lv, false);
@@ -1993,6 +2285,7 @@ export function createHouseArt(ctx0, opts = {}) {
   });
   const lookInfo = (kind, key) => (kind === 'paper' ? PAPERS[key] : kind === 'floor' ? FLOORS[key] : null) || null;
   function toggleObjectLight(id) { const next = objectLights.get(id) !== true; objectLights.set(id, next); return next; }
+  let lastToggled = null;
   function toggleLightAt(level, sx, sy) {
     let best = null, bestDist = 34;
     WALL_LIGHTS.forEach((L, i) => {
@@ -2002,10 +2295,11 @@ export function createHouseArt(ctx0, opts = {}) {
     });
     OBJS.forEach(o => {
       const lt = T_OF(o).light; if (!lt || o.level !== level) return;
-      const [x, y] = xf(o, lt.at[0], lt.at[1]), q = iso(x, y, lt.at[2]), d = Math.hypot(sx - q[0], sy - q[1]);
+      const [x, y] = xf(o, lt.at[0], lt.at[1]), q = iso(x, y, lt.at[2] + (o.z || 0)), d = Math.hypot(sx - q[0], sy - q[1]);
       if (d < bestDist) { bestDist = d; best = { kind: 'object', id: o.id }; }
     });
     if (!best) return null;
+    lastToggled = best.kind === 'object' ? best.id : null;
     if (best.kind === 'wall') { const next = wallLightOverrides.get(best.index) !== true; wallLightOverrides.set(best.index, next); return next; }
     return toggleObjectLight(best.id);
   }
@@ -2035,8 +2329,8 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // The outline of an object on screen: its footprint and its top, wrapped.
   function objHull(o) {
-    const [fw, fd] = fp(o), h = T_OF(o).h || 1, pts = [];
-    [[o.x, o.y], [o.x + fw, o.y], [o.x + fw, o.y + fd], [o.x, o.y + fd]].forEach(([x, y]) => { pts.push(iso(x, y, 0)); pts.push(iso(x, y, h)); });
+    const [fw, fd] = fp(o), up = o.z || 0, h = (T_OF(o).h || 1) + up, pts = [];
+    [[o.x, o.y], [o.x + fw, o.y], [o.x + fw, o.y + fd], [o.x, o.y + fd]].forEach(([x, y]) => { pts.push(iso(x, y, up)); pts.push(iso(x, y, h)); });
     pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
     const cross = (q, a, b) => (a[0] - q[0]) * (b[1] - q[1]) - (a[1] - q[1]) * (b[0] - q[0]);
     const lower = [], upper = [];
@@ -2093,7 +2387,7 @@ export function createHouseArt(ctx0, opts = {}) {
       const direct = inPoly(px, py, hull);
       if (!direct && !slop.some(([dx, dy]) => inPoly(px + dx, py + dy, hull))) return;
       const [fw, fd] = fp(o);
-      const score = (TYPES[o.type].rug ? 0 : 2 + (direct ? 1 : 0)) * 1000 + vs(o.x + fw / 2, o.y + fd / 2) * 10 + (direct ? 1 : 0);
+      const score = (TYPES[o.type].rug ? 0 : 2 + (direct ? 1 : 0)) * 1000 + vs(o.x + fw / 2, o.y + fd / 2) * 10 + (direct ? 1 : 0) + (o.on ? 3000 : 0);
       if (score > bestScore) { bestScore = score; best = o; }
     });
     return best;
@@ -2122,5 +2416,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

@@ -1,20 +1,25 @@
-import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, type PlacementCheck } from '../state/arrange';
-import { TYPES, type ObjectInstance } from '../state/objects';
-import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, roomName } from '../state/house';
+import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, type PlacementCheck, type Pose } from '../state/arrange';
+import { TYPES, footprint, type ObjectInstance } from '../state/objects';
+import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
 import { buildWorld } from '../state/agents';
 import { type ArrangeState } from '../ui/drawer';
 import type { Game } from '../kernel/game';
 
 export function createArrange(g: Game): Partial<Game> {
-  const { world, save, people, house, view, log, canvas, stage, art, hasAttic, cam, drawer } = g;
+  const { world, save, people, house, view, log, canvas, stage, art, hasAttic, drawer } = g;
   // Arrange mode: tap a piece to select it (it gets an outline), then drag it.
   let arranging = false;
   let selectedObj: ObjectInstance | null = null;
   let heldObj: ObjectInstance | null = null; // the piece being dragged right now
-  let heldOrig: { x: number; y: number; rot: number } | null = null;
+  let heldOrig: { x: number; y: number; rot: number; on?: string; z?: number } | null = null;
+  // What was on the piece being carried when it was picked up, so putting it back puts those back too.
+  let heldKids: Array<{ o: ObjectInstance; x: number; y: number; rot: number; level: number }> = [];
   let heldGrab: [number, number] = [0, 0]; // where on the piece it was grabbed, so it doesn't jump under the finger
   let dragCandidate: { id: number; obj: ObjectInstance; x: number; y: number } | null = null;
   let wasPaused = false;
+  let ghost: { x: number; y: number; h: number; level: number } | null = null;
+  // The lesson's outline as the piece itself would be set: where its corner goes and how it faces.
+  let ghostSpec: { type: string; level: number; x: number; y: number; rot: number } | null = null;
 
   // Arrange mode
   const toggleArrange = (): void => { if (arranging) drawer.close(); else drawer.open('arrange'); };
@@ -27,6 +32,9 @@ export function createArrange(g: Game): Partial<Game> {
     wasPaused = view.paused;
     view.paused = true;
     g.syncControls();
+    // Whole house in the band the panel leaves free (selecting a piece frames that instead).
+    const corners: Array<[number, number]> = [[0, 0], [WX, 0], [0, WY], [WX, WY]].map(([x, y]) => art.project(x, y, 0));
+    g.frameView(corners, 1, 0.3);
   }
   function exitArrange(): void {
     if (!arranging) return;
@@ -56,15 +64,51 @@ export function createArrange(g: Game): Partial<Game> {
     selectedObj = o;
     if (!o) return;
     if (o.level !== view.level) { selectedObj = null; g.setLevel(o.level); selectedObj = o; }
-    // On a phone held upright the whole house is small: close in on the piece so it's easy to drag.
-    if (canvas.getBoundingClientRect().width < 560 && cam.tz < 1.6) cam.tz = 1.8;
-    if (cam.tz > 1.05) {
-      const [fw, fd] = [TYPES[o.type].W, TYPES[o.type].D];
-      const [px, py] = art.project(o.x + fw / 2, o.y + fd / 2, (TYPES[o.type].h ?? 1) / 2);
-      cam.tfx = px; cam.tfy = py;
-    }
+    // Frame the piece, and the spot it is headed for when a lesson has marked one, in the space the panels leave.
+    // On a phone held upright the whole house is small, so close in on the piece; on a big screen leave the view alone
+    // unless a lesson has marked a spot to frame.
+    const phone = canvas.getBoundingClientRect().width < 560;
+    const pts: Array<[number, number]> = [pieceView(o)];
+    const lesson = ghost && ghost.level === o.level;
+    if (lesson) pts.push(art.project(ghost!.x, ghost!.y, ghost!.h));
+    if (lesson) g.frameView(pts, phone ? 1.8 : 2);
+    else if (phone || g.cam.tz > 1.05) g.frameView(pts, Math.max(g.cam.tz, phone ? 1.8 : 1));
+  }
+  const pieceView = (o: ObjectInstance): [number, number] => {
+    const [fw, fd] = footprint(o);
+    return art.project(o.x + fw / 2, o.y + fd / 2, (TYPES[o.type].h ?? 1) / 2);
+  };
+  function heldCentre() {
+    if (!heldObj) return null;
+    const [fw, fd] = footprint(heldObj);
+    return { x: heldObj.x + fw / 2, y: heldObj.y + fd / 2, h: (TYPES[heldObj.type].h ?? 1) / 2 };
+  }
+  function setGhostTarget(t: { type: string; level: number; x: number; y: number; rot?: number } | null): void {
+    const T = t && TYPES[t.type];
+    if (!t || !T) { ghost = null; ghostSpec = null; return; }
+    ghostSpec = { type: t.type, level: t.level, x: t.x, y: t.y, rot: t.rot ?? 0 };
+    const [fw, fd] = (t.rot ?? 0) % 2 ? [T.D, T.W] : [T.W, T.D];
+    ghost = { level: t.level, x: t.x + fw / 2, y: t.y + fd / 2, h: (T.h ?? 1) / 2 };
   }
   // Set a piece down for good: the house learns where it is now.
+  // A lesson's piece is set exactly where the outline is, facing the way it shows (the couch faces the TV), once it is
+  // close; if that does not fit, it stays where the player put it.
+  function snapToOutline(o: ObjectInstance, within = 2.5): boolean {
+    const s = ghostSpec;
+    if (!s || s.type !== o.type || s.level !== o.level) return false;
+    if (Math.hypot(o.x - s.x, o.y - s.y) > within) return false;
+    const was = { x: o.x, y: o.y, rot: o.rot };
+    Object.assign(o, { x: s.x, y: s.y, rot: s.rot });
+    if (checkPlacement(world.objs, o, peopleOnFloor()).ok) return true;
+    Object.assign(o, was);
+    return false;
+  }
+  function snapSelectedToOutline(): void {
+    const o = selectedObj ?? heldObj;
+    if (!o) return;
+    cancelHold();
+    if (snapToOutline(o, 4)) commitMove(o);
+  }
   function commitMove(o: ObjectInstance, verb = 'Moved'): void {
     log(`${verb} the ${nameOf(o)}.`);
     art.objectPlaced(o.id);
@@ -76,12 +120,16 @@ export function createArrange(g: Game): Partial<Game> {
     const o = heldObj ?? selectedObj;
     if (!o) return;
     const orig = { x: o.x, y: o.y, rot: o.rot };
-    if (o === heldObj) { rotateAboutCentre(o); recheck(); return; }
+    const kids = world.objs.filter((k) => k.on === o.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot }));
+    if (o === heldObj) { const prev: Pose = { x: o.x, y: o.y, rot: o.rot }; rotateAboutCentre(o); carryOnTop(world.objs, o, prev); recheck(); return; }
     for (let i = 0; i < 3; i++) {
+      const prev: Pose = { x: o.x, y: o.y, rot: o.rot };
       rotateAboutCentre(o);
+      carryOnTop(world.objs, o, prev);
       if (checkPlacement(world.objs, o, peopleOnFloor()).ok) { commitMove(o, 'Turned'); return; }
     }
     Object.assign(o, orig);
+    for (const k of kids) Object.assign(k.o, { x: k.x, y: k.y, rot: k.rot });
     log(`There's no room to turn the ${nameOf(o)} here.`);
   }
   function recolourHeld(): void {
@@ -93,9 +141,14 @@ export function createArrange(g: Game): Partial<Game> {
   }
   // Put a dragged piece back where it was picked up.
   function cancelHold(): void {
-    if (heldObj && heldOrig) { heldObj.x = heldOrig.x; heldObj.y = heldOrig.y; heldObj.rot = heldOrig.rot; }
+    if (heldObj && heldOrig) {
+      heldObj.x = heldOrig.x; heldObj.y = heldOrig.y; heldObj.rot = heldOrig.rot;
+      if (heldOrig.on) { heldObj.on = heldOrig.on; heldObj.z = heldOrig.z; } else takeOff(heldObj);
+      for (const k of heldKids) Object.assign(k.o, { x: k.x, y: k.y, rot: k.rot, level: k.level });
+    }
     heldObj = null;
     heldOrig = null;
+    heldKids = [];
     dragCandidate = null;
   }
   // Carry the selected piece up or down the stairs to another floor.
@@ -103,7 +156,9 @@ export function createArrange(g: Game): Partial<Game> {
     const o = selectedObj;
     if (!o || !otherFloors(o).includes(level) || (level === ATTIC && !hasAttic())) return;
     const from = o.level;
+    const before: Pose = { x: o.x, y: o.y, rot: o.rot };
     if (!relocate(world.objs, o, level, peopleOnFloor())) { log(`There's no room for the ${nameOf(o)} on the ${LEVEL_NAMES[level].toLowerCase()}.`); return; }
+    carryOnTop(world.objs, o, before);
     selectedObj = null;
     g.setLevel(level);
     selectedObj = o;
@@ -120,7 +175,12 @@ export function createArrange(g: Game): Partial<Game> {
     cancelHold();
     const i = world.objs.indexOf(o);
     if (i < 0) return;
-    world.objs.splice(i, 1);
+    // Whatever was on it is set down on the floor nearby.
+    for (const k of world.objs.filter((q) => q.on === o.id)) {
+      takeOff(k);
+      if (!relocate(world.objs, k, o.level, peopleOnFloor(), [o.x, o.y])) { world.objs.splice(world.objs.indexOf(k), 1); storage.push(k); }
+    }
+    world.objs.splice(world.objs.indexOf(o), 1);
     storage.push(o);
     selectedObj = null;
     relearnLayout(o);
@@ -215,11 +275,18 @@ export function createArrange(g: Game): Partial<Game> {
       if (!heldObj) {
         if (Math.hypot(e.clientX - dragCandidate.x, e.clientY - dragCandidate.y) < DRAG_SLOP) return;
         heldObj = dragCandidate.obj;
-        heldOrig = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot };
+        heldOrig = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot, on: heldObj.on, z: heldObj.z };
+        heldKids = world.objs.filter((k) => k.on === heldObj!.id).map((k) => ({ o: k, x: k.x, y: k.y, rot: k.rot, level: k.level }));
         g.s.suppressClick = true;
       }
       const [wx, wy] = worldAt(sx, sy);
+      const prev: Pose = { x: heldObj.x, y: heldObj.y, rot: heldObj.rot };
       centreAt(heldObj, wx - heldGrab[0], wy - heldGrab[1]);
+      // A small piece over a table or shelf sits on it; anything on a piece being carried goes along.
+      if (TYPES[heldObj.type].small) {
+        const host = surfaceUnder(world.objs, heldObj, wx, wy);
+        if (host) putOn(heldObj, host); else takeOff(heldObj);
+      } else carryOnTop(world.objs, heldObj, prev);
       recheck();
     } else if (!heldObj && e.pointerType === 'mouse') {
       const o = movableAt(sx, sy);
@@ -231,11 +298,14 @@ export function createArrange(g: Game): Partial<Game> {
   const dropHeld = (e: PointerEvent): void => {
     if (!dragCandidate || dragCandidate.id !== e.pointerId) return;
     const o = heldObj;
+    const tapped = dragCandidate.obj;
     dragCandidate = null;
-    if (!o) return;
+    // A tap (no drag) on a moving box opens it, even while arranging: boxes are for opening.
+    if (!o) { if (tapped.type === 'pbox' && tapped.contents) g.handleObjectAction(tapped, 'unpack'); return; }
     recheck();
     if (heldCheck.ok) {
       heldObj = null; heldOrig = null;
+      snapToOutline(o);
       commitMove(o);
     } else {
       log(`${heldCheck.reason ?? "It doesn't fit there."} Back it goes.`);
@@ -257,5 +327,5 @@ export function createArrange(g: Game): Partial<Game> {
     if (heldObj) { cancelHold(); heldCheck = { ok: true }; }
     dragCandidate = null;
   }
-  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, dropSelectionIfOffFloor, escapeArrange, abortDrag };
+  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
 }

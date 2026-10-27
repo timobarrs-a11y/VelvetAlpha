@@ -65,19 +65,30 @@ export function createInteract(g: Game): Partial<Game> {
   }
 
   // A moving box becomes what was in it, on the same spot (or the nearest free one), ready to be placed.
+  const unpacking = new Set<string>();
   function unpack(obj: ObjectInstance): void {
     const type = obj.contents;
     if (!type || !TYPES[type]) return;
-    const was = obj.type;
-    obj.type = type;
-    delete obj.contents;
-    if (!relocate(world.objs, obj, obj.level, [], [obj.x, obj.y])) { obj.type = was; obj.contents = type; log('There is no room to unpack that here.'); return; }
-    g.relearnLayout(obj);
-    art.objectPlaced(obj.id);
-    log(`Unpacked the ${(TYPES[type]?.name ?? "piece").toLowerCase()}.`);
-    g.scriptEmit({ type: 'obj.unpacked', objId: obj.id, objType: type });
-    g.drawer.open('arrange');
-    g.selectObject(obj);
+    if (unpacking.has(obj.id)) return;
+    // A cloud covers the box for a moment, and what was inside is there when it clears.
+    const [bw, bd] = [TYPES[obj.type]?.W ?? 0.6, TYPES[obj.type]?.D ?? 0.5];
+    art.poof(obj.level, obj.x + bw / 2, obj.y + bd / 2);
+    unpacking.add(obj.id);
+    setTimeout(() => {
+      unpacking.delete(obj.id);
+      if (!world.objs.includes(obj) || obj.contents !== type) return;
+      const was = obj.type;
+      obj.type = type;
+      delete obj.contents;
+      if (!relocate(world.objs, obj, obj.level, [], [obj.x, obj.y])) { obj.type = was; obj.contents = type; log('There is no room to unpack that here.'); return; }
+      g.relearnLayout(obj);
+      art.reveal(obj.id);
+      art.burst(obj.level, obj.x + (TYPES[type]?.W ?? 0.6) / 2, obj.y + (TYPES[type]?.D ?? 0.5) / 2, 0.8);
+      log(`Unpacked the ${(TYPES[type]?.name ?? "piece").toLowerCase()}.`);
+      g.scriptEmit({ type: 'obj.unpacked', objId: obj.id, objType: type });
+      g.drawer.open('arrange');
+      g.selectObject(obj);
+    }, 380);
   }
 
   function handleObjectAction(obj: ObjectInstance, tag: string): void {
@@ -85,6 +96,7 @@ export function createInteract(g: Game): Partial<Game> {
     if (tag === 'toggleLight') {
       const on = art.toggleObjectLight(obj.id);
       log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);
+      g.scriptEmit({ type: 'light.toggled', objId: obj.id, objType: obj.type, on });
       return;
     }
     const chainMap: Record<string, string> = {

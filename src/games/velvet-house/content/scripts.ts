@@ -22,19 +22,27 @@ export const OPENING: ScriptDef = {
   mode: 'cutscene',
   skippable: true,
   steps: [
+    { do: 'intro', kind: 'arrival' },
     { do: 'clock', day: 1, minutes: 9 * 60 },
     { do: 'camera', focus: 'wide', level: 1 },
     { do: 'place', who: 'jordan', at: 'mark:living.center' },
     { do: 'place', who: 'maya', at: 'mark:living.window', face: 'jordan' },
-    // 1. Cold open
-    say('maya', 'opening.echo'),
-    say('maya', 'opening.moversLate'),
-    { do: 'emote', who: 'maya', emote: 'alert' },
-    // 2. The mover
+    // 1. Arrival: they walk in together behind Dez, who has already driven off the road once today
+    { do: 'place', who: 'jordan', at: 'door' },
+    { do: 'place', who: 'maya', at: 'door' },
     { do: 'spawn', npc: 'dez', at: 'door' },
+    { do: 'walk', who: 'jordan', to: 'mark:entry.you', wait: false },
+    { do: 'walk', who: 'maya', to: 'mark:entry.partner', wait: false },
     { do: 'walk', who: 'dez', to: 'mark:entry.inside' },
     { do: 'camera', focus: 'dez', zoom: 1.8 },
-    say('dez', 'dez.intro.1'), say('dez', 'dez.intro.2'), say('dez', 'dez.intro.3'), say('dez', 'dez.intro.4'), say('dez', 'dez.intro.5'),
+    say('dez', 'dez.welcome'),
+    { do: 'camera', focus: 'wide' },
+    { do: 'emote', who: 'maya', emote: 'alert' },
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'truckOffRoad' } },
+    { do: 'camera', focus: 'dez', zoom: 1.8 },
+    say('dez', 'dez.brushOff'),
+    { do: 'if', cond: { flag: 'rel', equals: 'friend' }, then: [say('dez', 'dez.roommates')] },
+    say('dez', 'dez.intro.2'), say('dez', 'dez.intro.3'), say('dez', 'dez.intro.4'),
     { do: 'camera', focus: 'wide' },
     ...leave,
     { do: 'wait', seconds: 1 },
@@ -43,13 +51,15 @@ export const OPENING: ScriptDef = {
     { do: 'give', object: { type: 'pbox', at: 'mark:entry.drop', id: 'box.couch', contents: 'sofa' } },
     { do: 'carry', who: 'dez', carrying: null },
     ...leave,
-    say('maya', 'opening.mayorCarriedCouch'),
+    { do: 'emote', who: 'maya', emote: 'alert' },
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'couchCarried' } },
     { do: 'checkpoint' },
     // 3. Touch: only the box can be tapped
     { do: 'mode', mode: 'guided', allow: ['obj:box.couch'] },
     { do: 'card', title: 'Tap anything', body: 'Tap anything in your home to see what you can do with it.', spotlight: 'obj:box.couch' },
     { do: 'wait', until: { event: 'obj.unpacked', match: { objId: 'box.couch' } } },
     // 4. Placement
+    { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'couchPlace' } },
     { do: 'outline', objType: 'sofa', at: 'mark:living.couchTv', rot: 2, color: 'player' },
     { do: 'card', title: 'Put it where it goes', body: 'Drag to move · ↻ to turn it. Tap Set it down when it is just right.', button: 'Set it down' },
     { do: 'outline', objType: 'sofa', at: 'mark:living.couchTv', rot: 2 },
@@ -58,12 +68,12 @@ export const OPENING: ScriptDef = {
     { do: 'mode', mode: 'cutscene' },
     { do: 'act', who: 'maya', act: 'tv', wait: false },
     { do: 'wait', seconds: 2.5 },
-    say('maya', 'opening.windowAsk'),
+    { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'windowAsk' } },
     // 6. The first choice
     {
       do: 'choice',
       options: [
-        { label: 'Keep it by the TV', default: true, set: { couch: 'mine' }, steps: [say('maya', 'opening.keepIt')] },
+        { label: 'Keep it by the TV', default: true, set: { couch: 'mine' }, steps: [{ do: 'say', who: 'maya', line: { bank: 'humor', slot: 'keepIt' } }] },
         {
           label: 'Move it to the window', set: { couch: 'theirs' },
           steps: [
@@ -71,7 +81,7 @@ export const OPENING: ScriptDef = {
             { do: 'outline', objType: 'sofa', at: 'mark:living.couchWindow', rot: 0, color: 'partner' },
             { do: 'card', title: 'By the window', body: 'Drag the couch into the pink outline. Tap Set it down when it is there.', button: 'Set it down' },
             { do: 'mode', mode: 'cutscene' },
-            say('maya', 'opening.movedIt'),
+            { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'movedIt' } },
           ],
         },
       ],
@@ -114,6 +124,8 @@ export const TUTORIAL: ScriptDef[] = [
   // 7. The rest of the truck: the player unpacks alone, and Maya unpacks one on her own.
   chapter('tutorial.ch7', { on: 'cond', cond: { flag: 'opening.done' } }, [
     { do: 'wait', seconds: 2 },
+    // The camera goes back to the door for the next delivery.
+    { do: 'camera', focus: 'mark:entry.inside', zoom: 1.6, level: 1 },
     ...knockIn('pbox'),
     { do: 'give', object: { type: 'pbox', at: 'mark:entry.drop', id: 'box.lamp', contents: 'lamp' } },
     { do: 'carry', who: 'dez', carrying: null },
@@ -122,10 +134,38 @@ export const TUTORIAL: ScriptDef[] = [
     { do: 'give', object: { type: 'pbox', at: 'mark:entry.stack2', id: 'box.plant2', contents: 'plant' } },
     say('dez', 'dez.ch7.stack'),
     ...exitLine,
+    { do: 'camera', focus: 'wide' },
+    // Maya wants it in the corner, in her own way.
+    { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'lampCorner' } },
+    { do: 'mode', mode: 'guided', allow: ['obj:box.lamp'] },
+    { do: 'card', title: 'Open the box', body: 'Tap the box to open it.', spotlight: 'obj:box.lamp' },
+    { do: 'wait', until: { event: 'obj.unpacked', match: { objId: 'box.lamp' } } },
+    { do: 'outline', objType: 'lamp', at: 'mark:living.lampCorner', rot: 0, color: 'player' },
+    { do: 'card', title: 'The corner', body: 'Drag the lamp into the outline. Tap Set it down when it is there.', button: 'Set it down' },
+    { do: 'outline', objType: 'lamp', at: 'mark:living.lampCorner', rot: 0 },
+    { do: 'mode', mode: 'cutscene' },
+    // She sits on the couch, sees it from there, and changes her mind.
+    { do: 'walk', who: 'maya', to: 'mark:living.center' },
+    { do: 'act', who: 'maya', act: 'tv', wait: false },
+    { do: 'wait', seconds: 2 },
+    { do: 'emote', who: 'maya', emote: 'alert' },
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'lampByCouch' } },
+    // Evening comes up, so the lamp has something to light.
+    { do: 'dim', amount: 0.38 },
+    { do: 'mode', mode: 'guided', allow: ['obj:box.lamp'] },
+    { do: 'outline', objType: 'lamp', at: 'mark:living.lamp', rot: 0, color: 'player' },
+    { do: 'card', title: 'By the couch', body: 'Move the lamp next to the couch, then tap Set it down.', button: 'Set it down' },
+    { do: 'outline', objType: 'lamp', at: 'mark:living.lamp', rot: 0 },
+    { do: 'card', title: 'Let there be light', body: 'Tap the lamp and choose Turn light on/off.', spotlight: 'obj:box.lamp' },
+    { do: 'wait', until: { event: 'light.toggled', match: { objType: 'lamp' } } },
+    { do: 'highlight', target: null },
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'lampOn' } },
+    { do: 'wait', seconds: 1.5 },
+    { do: 'dim', amount: 0 },
+    { do: 'mode', mode: 'beat' },
     { do: 'act', who: 'maya', act: 'unpack', wait: true },
     { do: 'deliver', category: 'mayaUnpack' },
     say('maya', 'maya.ch7.unpacked'),
-    { do: 'wait', until: { any: [{ flag: 'did.placed.lamp' }, { event: 'obj.placed', match: { objType: 'lamp' } }] } },
     { do: 'set', flag: 'tutorial.lamp', value: true },
   ]),
   // 8. Dez's card: the store.
@@ -143,7 +183,7 @@ export const TUTORIAL: ScriptDef[] = [
   ]),
   // 9. Echo fridge: order groceries, wait for Dez, they get put away.
   chapter('tutorial.ch9', { on: 'cond', cond: { flag: 'tutorial.shop' } }, [
-    say('maya', 'maya.ch9.fridge'),
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'fridgeEmpty' } },
     { do: 'card', title: 'Order groceries', body: 'Open Household and order groceries. Time keeps moving while you wait: use the speed button to skip ahead.', spotlight: 'tab:home' },
     { do: 'wait', until: { any: [{ flag: 'did.groceries.ordered' }, { event: 'groceries.ordered' }] } },
     { do: 'highlight', target: null },
