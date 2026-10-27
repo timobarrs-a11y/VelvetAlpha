@@ -239,6 +239,7 @@ export function createScripts(g: Game): Partial<Game> {
       // A piece in hand, or let go of but not set down, is nowhere yet.
       if (g.inHand() === o.id) return false;
       if (w.is && o.type !== w.is) return false;
+      if (w.level !== undefined && o.level !== w.level) return false;
       if (w.at) {
         const s = resolve(w.at);
         if (!s || o.level !== s.level || Math.hypot(o.x - s.x, o.y - s.y) > (w.within ?? 0.6)) return false;
@@ -262,9 +263,12 @@ export function createScripts(g: Game): Partial<Game> {
   const isNew = world.save === null;
   if (isNew && !noScript) {
     // The first day's furniture arrives in boxes, so the house starts without it.
-    const gone = world.objs.filter((o) => o.id === 'sofa' || o.id === 'plant1' || o.id === 'lamp1');
+    const boxed = new Set(['sofa', 'plant1', 'lamp1', 'bed', 'fridge', 'dining', 'tread']);
+    const gone = world.objs.filter((o) => boxed.has(o.id));
     for (const o of gone) world.objs.splice(world.objs.indexOf(o), 1);
     Object.assign(house, buildWorld(world.objs));
+    // Nothing to eat yet: the first order is a lesson.
+    world.household.fridge.basic = 0; world.household.fridge.fresh = 0;
   }
   if (noScript) engine.markDone(['opening.', 'tutorial.']);
   else if (!hadRt) {

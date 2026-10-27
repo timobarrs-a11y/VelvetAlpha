@@ -29,5 +29,10 @@ export const MARKS: Record<string, Spot> = {
   // On the right-hand side of the couch as you look at the room (the far end of its length).
   'living.lamp': { level: 1, x: 8.15, y: 3.5 },
   'kitchen.stove': { level: 1, x: 1.2, y: 1.2 },
+  // Where the boxed pieces go: the fridge and the dining set in the kitchen, the bed in the bedroom, the gym below.
+  'kitchen.fridge': { level: 1, x: 3.35, y: 0.12 },
+  'kitchen.table': { level: 1, x: 1.0, y: 1.9 },
   'upstairs.bedroom': { level: 2, x: 3.0, y: 2.2 },
+  'upstairs.bed': { level: 2, x: 0.12, y: 1.0 },
+  'basement.gear': { level: 0, x: 1.2, y: 1.2 },
 };

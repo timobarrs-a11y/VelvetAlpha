@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings as SettingsIcon, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Users, MessageSquareWarning, Sparkles } from 'lucide-react';
 import { PageHeader, HomeLayoutSwitch } from '../shared/ui';
@@ -361,6 +361,16 @@ export function SettingsPage() {
     { id: 'data', label: 'My Data', icon: Download },
   ];
 
+  // On a phone the list and the chosen section stack in one column, with the section below the whole list: a tap
+  // scrolls to what it opened, so choosing a setting visibly does something.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const openTab = (id: typeof activeTab) => {
+    setActiveTab(id);
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      requestAnimationFrame(() => contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
+  };
+
   return (
     <div className="ds-page">
       <PageHeader
@@ -382,7 +392,7 @@ export function SettingsPage() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => openTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition text-left ${
                       active
                         ? 'bg-[var(--ds-accent-soft)] text-ink border border-[var(--ds-accent-line)]'
@@ -454,7 +464,7 @@ export function SettingsPage() {
             </nav>
           </aside>
 
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0" ref={contentRef}>
             <div className="ds-card overflow-hidden">
 
               {activeTab === 'notifications' && (

@@ -59,13 +59,14 @@ describe('arrange mode', () => {
     expect(nextColour(o)).toBeNull();
   });
 
-  it('lets light pieces be carried between the indoor floors, but not heavy or yard ones', () => {
+  it('lets pieces be carried between the indoor floors, the heavy ones and the fridge too, but not fixtures or yard ones', () => {
     const objs = fresh();
     const get = (id: string) => objs.find(o => o.id === id)!;
     expect(otherFloors(get('sofa'))).toEqual([0, 2, 4]);
     expect(otherFloors(get('desk'))).toEqual([0, 1, 4]);
     expect(otherFloors(get('lamp0'))).toEqual([1, 2, 4]);
-    expect(otherFloors(get('bed'))).toEqual([]);
+    expect(otherFloors(get('bed'))).toEqual([0, 1, 4]); // the bed box goes upstairs with Carry to
+    expect(otherFloors(get('fridge'))).toEqual([0, 2, 4]);
     expect(otherFloors(get('laundry'))).toEqual([]);
     expect(otherFloors(get('bench'))).toEqual([]);
     expect(otherFloors(get('stair01'))).toEqual([]);

@@ -32,7 +32,7 @@ export interface GameEvent { type: string; [key: string]: FlagValue | undefined 
  * mark, default 0.6), how it faces, whether its light is on. A beat that waits on this ends when the world is right, not
  * when a button was pressed.
  */
-export interface WorldCond { obj: string; exists?: boolean; is?: string; at?: PlaceRef; within?: number; rot?: number; lightOn?: boolean }
+export interface WorldCond { obj: string; exists?: boolean; is?: string; at?: PlaceRef; within?: number; rot?: number; lightOn?: boolean; level?: number }
 
 /** What the host page sends after the game starts; a script can wait for it (`needs.host`). */
 export type HostNeed = 'profile' | 'plot';
