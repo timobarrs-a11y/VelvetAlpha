@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Check, Layers, Target, Trophy, Flame, Heart, MessageCircle, MessageSquare,
-  Bot, Loader2, Send, Trash2,
+  Loader2, Send, Trash2,
 } from 'lucide-react';
 import { PublicProfileImage } from '../PublicProfileImage';
 import { Avatar } from '../Avatar';
 import { migrateAvatarConfig } from '../../utils/avatarConfig';
 import type { AvatarConfigV2 } from '../../types/avatar-v2';
+import { timeAgo } from '../../utils/timeAgo';
 import { ProgressPostWithAuthor, POST_TYPE_LABELS, deletePost } from '../../services/progressFeedService';
 import {
   toggleLike,
@@ -17,6 +18,7 @@ import {
   deleteComment,
   PostComment,
 } from '../../services/postInteractionService';
+import { AuthoredBadge } from './AuthoredBadge';
 
 const POST_ICONS: Record<string, React.ElementType> = {
   check: Check,
@@ -26,20 +28,6 @@ const POST_ICONS: Record<string, React.ElementType> = {
   flame: Flame,
   message: MessageSquare,
 };
-
-function timeAgo(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const mins = Math.floor(seconds / 60);
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 function CommentItem({ comment, currentUserId, onDelete }: {
   comment: PostComment;
@@ -62,10 +50,7 @@ function CommentItem({ comment, currentUserId, onDelete }: {
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-semibold text-white">{comment.author_name}</span>
           {comment.is_bot && (
-            <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[9px] font-semibold">
-              <Bot className="w-2 h-2" />
-              Bot
-            </span>
+            <AuthoredBadge size="xs" />
           )}
           <span className="text-[10px] text-white/25">{timeAgo(comment.created_at)}</span>
         </div>
@@ -187,10 +172,7 @@ export function PostCard({ post, index, liked, currentUserId, onLikeChange, onDe
               {post.author_name}
             </button>
             {post.author_is_bot && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[10px] font-semibold">
-                <Bot className="w-2.5 h-2.5" />
-                Bot
-              </span>
+              <AuthoredBadge size="sm" />
             )}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">

@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Globe, TrendingUp, Sparkles, Bot } from 'lucide-react';
+import { Users, Globe, TrendingUp, Sparkles } from 'lucide-react';
 import { PublicProfileImage } from '../PublicProfileImage';
-import { getFeedPosts, getPublicFeed, getTrendingPosts } from '../../services/progressFeedService';
+import { getFeedPosts, getPublicFeed, getTrendingPosts, type ProgressPostWithAuthor } from '../../services/progressFeedService';
+import { isHelper } from '../../utils/relationshipType';
 import { getAtlasIntroductions, AtlasIntroduction } from '../../services/atlasIntroductionsService';
 import { followUser } from '../../services/memberProfileService';
 import { Segmented } from '../../shared/ui/Pill';
 import { LoadingState } from '../../shared/ui/LoadingState';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { PostCard } from './PostCard';
+import { CompanionStatusCard } from './CompanionStatusCard';
+import { refreshCompanionStatuses, loadCompanionStatuses, type CompanionStatusFeed, type CompanionStatusPost } from '../../services/companionStatusService';
 import { StatusComposer } from './StatusComposer';
 import { useFeedPosts } from './useFeedPosts';
+import { AuthoredBadge } from './AuthoredBadge';
 
 type Scope = 'following' | 'everyone' | 'trending';
 
@@ -73,10 +77,7 @@ function IntroductionCard({ intro, onFollow }: {
               {intro.display_name}
             </button>
             {intro.is_bot && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[10px] font-semibold">
-                <Bot className="w-2.5 h-2.5" />
-                Bot
-              </span>
+              <AuthoredBadge size="sm" />
             )}
           </div>
           {intro.headline && <p className="text-xs text-white/40 truncate mt-0.5">{intro.headline}</p>}
@@ -106,6 +107,32 @@ export function YourFeed() {
   const [introductions, setIntroductions] = useState<AtlasIntroduction[]>([]);
   const load = useCallback(() => LOADERS[scope](), [scope]);
   const { posts, likedIds, loading, currentUserId, reload, onLikeChange, onDeleted } = useFeedPosts(load);
+
+  // Your companions' own statuses sit in the feed you follow, in time order with everyone else's.
+  const [companionFeed, setCompanionFeed] = useState<CompanionStatusFeed | null>(null);
+  useEffect(() => {
+    if (scope !== 'following') { setCompanionFeed(null); return; }
+    let live = true;
+    loadCompanionStatuses().then(f => { if (live) setCompanionFeed(f); }).catch(() => {});
+    // Post whatever has come due, then show it.
+    refreshCompanionStatuses()
+      .then(() => loadCompanionStatuses())
+      .then(f => { if (live) setCompanionFeed(f); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [scope]);
+
+  const timeline = useMemo(() => {
+    const items: Array<{ at: number; post?: ProgressPostWithAuthor; status?: CompanionStatusPost }> = posts.map(post => ({ at: new Date(post.created_at).getTime(), post }));
+    if (scope === 'following') {
+      for (const status of companionFeed?.posts ?? []) items.push({ at: new Date(status.visible_at).getTime(), status });
+    }
+    return items.sort((a, b) => b.at - a.at);
+  }, [posts, companionFeed, scope]);
+  const mentionable = useMemo(
+    () => [...(companionFeed?.companions.values() ?? [])].filter(c => !isHelper(c.relationship_type)),
+    [companionFeed],
+  );
 
   useEffect(() => {
     if (scope !== 'following') { setIntroductions([]); return; }
@@ -142,9 +169,9 @@ export function YourFeed() {
         </div>
       )}
 
-      {loading && posts.length === 0 ? (
+      {loading && timeline.length === 0 ? (
         <LoadingState label="Loading your feed..." />
-      ) : posts.length === 0 ? (
+      ) : timeline.length === 0 ? (
         <EmptyState
           icon={<Sparkles className="w-7 h-7" />}
           title={scope === 'trending' ? 'Nothing trending yet' : 'No posts yet'}
@@ -156,12 +183,21 @@ export function YourFeed() {
           action={scope === 'following' ? { label: 'See everyone', onClick: () => setScope('everyone') } : undefined}
         />
       ) : (
-        posts.map((post, i) => (
-          <PostCard
-            key={post.id}
-            post={post}
+        timeline.map((item, i) => item.status ? (
+          <CompanionStatusCard
+            key={`companion-${item.status.id}`}
+            post={item.status}
             index={i}
-            liked={likedIds.has(post.id)}
+            companion={companionFeed?.companions.get(item.status.companion_id)}
+            companions={mentionable}
+            initialComments={(companionFeed?.comments ?? []).filter(c => c.post_id === item.status!.id)}
+          />
+        ) : (
+          <PostCard
+            key={item.post!.id}
+            post={item.post!}
+            index={i}
+            liked={likedIds.has(item.post!.id)}
             currentUserId={currentUserId}
             onLikeChange={onLikeChange}
             onDeleted={onDeleted}
@@ -169,7 +205,7 @@ export function YourFeed() {
         ))
       )}
 
-      {!loading && scope === 'following' && posts.length > 0 && (
+      {!loading && scope === 'following' && timeline.length > 0 && (
         <p className="text-center text-xs text-white/30 pt-2">
           Want more here?{' '}
           <button onClick={() => navigate('/discover')} className="underline hover:text-white/60">Find people to follow</button>

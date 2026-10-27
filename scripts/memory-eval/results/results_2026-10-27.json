@@ -1,0 +1,2673 @@
+{
+  "engine": "/tmp/claude-0/-home-user-VelvetAlpha/7076106d-693c-5ab4-9767-4a9ee8ab68fa/scratchpad/evalwork2/supabase/functions/_shared/memoryEngine.ts",
+  "evalPath": "/tmp/claude-0/-home-user-VelvetAlpha/7076106d-693c-5ab4-9767-4a9ee8ab68fa/scratchpad/evalwork2/scripts/memory-eval/eval_set.json",
+  "fixturePath": "/tmp/claude-0/-home-user-VelvetAlpha/7076106d-693c-5ab4-9767-4a9ee8ab68fa/scratchpad/evalwork2/scripts/memory-eval/fixtures/memory_items_2026-10-26.json",
+  "ran_at": "2026-10-27T00:29:50.982Z",
+  "passed": 28,
+  "total": 41,
+  "results": [
+    {
+      "id": "F01",
+      "category": "contradiction / old-vs-new name",
+      "query": "What's the name of the book series I've been reading?",
+      "pass": false,
+      "fails": [
+        "selected excluded 6193f04a \"User has written a murder mystery series where the\""
+      ],
+      "candidates": 25,
+      "selected_facts": 11,
+      "selected_threads": 4,
+      "relevant_selected": 9,
+      "dup_pairs": 0,
+      "tokens": 397,
+      "selected": [
+        {
+          "id": "cac97d53",
+          "kind": "fact",
+          "rel": 0.5,
+          "score": 0.572,
+          "content": "User plans to read the entire series"
+        },
+        {
+          "id": "bfd18700",
+          "kind": "fact",
+          "rel": 0.5,
+          "score": 0.572,
+          "content": "User thinks the book series is amazing"
+        },
+        {
+          "id": "5b2c9d21",
+          "kind": "fact",
+          "rel": 0.375,
+          "score": 0.504,
+          "content": "User enjoys reading a book series called 'A Deadly Inside Scoop'"
+        },
+        {
+          "id": "1eda6cfb",
+          "kind": "fact",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "Currently reading an Ice Cream Social murder mystery book series"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0.167,
+          "score": 0.398,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0.4,
+          "score": 0.526,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "03316fc0",
+          "kind": "fact",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "User enjoys the book series and finds it fun and amazing"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "0101b5d2",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "Enjoys mystery novels/series"
+        },
+        {
+          "id": "6193f04a",
+          "kind": "fact",
+          "rel": 0.056,
+          "score": 0.328,
+          "content": "User has written a murder mystery series where the protagonist owns an ice cream shop"
+        },
+        {
+          "id": "7698b3ce",
+          "kind": "thread",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "User is reading the Ice Cream Social series, not the author"
+        },
+        {
+          "id": "f5938f5f",
+          "kind": "thread",
+          "rel": 0.273,
+          "score": 0.447,
+          "content": "Reading 'A Deadly Inside Scoop' series — User is reading a book series they find fun and intends to complete the entire series."
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0.25,
+          "score": 0.444,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "category": "staleness / old-vs-new state",
+      "query": "Did I ever finish that series?",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 162,
+      "selected": [
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0.167,
+          "score": 0.398,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.361,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "bfd18700",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User thinks the book series is amazing"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "7698b3ce",
+          "kind": "thread",
+          "rel": 0.083,
+          "score": 0.343,
+          "content": "User is reading the Ice Cream Social series, not the author"
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0.063,
+          "score": 0.341,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "category": "contradiction / denied fact",
+      "query": "Remind me, am I writing a book or something?",
+      "pass": false,
+      "fails": [
+        "none of 7698b3ce selected",
+        "selected excluded 2040b4ea \"User's book is called an 'Ice Cream Social book'\"",
+        "selected excluded 2d796bfd \"User is an author\"",
+        "selected excluded 9c428adf \"User's published/completed book project — User has\""
+      ],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 196,
+      "selected": [
+        {
+          "id": "bfd18700",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User thinks the book series is amazing"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.352,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "f5938f5f",
+          "kind": "thread",
+          "rel": 0.045,
+          "score": 0.322,
+          "content": "Reading 'A Deadly Inside Scoop' series — User is reading a book series they find fun and intends to complete the entire series."
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0.031,
+          "score": 0.315,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "category": "nothing relevant / lexical false positive",
+      "query": "I'm feeling social tonight, want to go out",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 172,
+      "selected": [
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.352,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "03316fc0",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User enjoys the book series and finds it fun and amazing"
+        },
+        {
+          "id": "7698b3ce",
+          "kind": "thread",
+          "rel": 0.083,
+          "score": 0.343,
+          "content": "User is reading the Ice Cream Social series, not the author"
+        },
+        {
+          "id": "abd7cce1",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.297,
+          "content": "Reading 'A Deadly Inside Scoop' series — User is currently reading a book series they find amazing and fun, with plans to complete the entire series."
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "category": "vague / topical overlap",
+      "query": "I'm in the mood for some ice cream",
+      "pass": false,
+      "fails": [
+        "selected excluded 6193f04a \"User has written a murder mystery series where the\"",
+        "selected excluded 2040b4ea \"User's book is called an 'Ice Cream Social book'\"",
+        "4 relevant rows > 2"
+      ],
+      "candidates": 25,
+      "selected_facts": 8,
+      "selected_threads": 3,
+      "relevant_selected": 4,
+      "dup_pairs": 0,
+      "tokens": 325,
+      "selected": [
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0.4,
+          "score": 0.517,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "6193f04a",
+          "kind": "fact",
+          "rel": 0.222,
+          "score": 0.42,
+          "content": "User has written a murder mystery series where the protagonist owns an ice cream shop"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "03316fc0",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User enjoys the book series and finds it fun and amazing"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "37f5fd70",
+          "kind": "fact",
+          "rel": 0.2,
+          "score": 0.407,
+          "content": "User's last book was an Ice Cream Social book—a murder mystery series that includes ice cream recipes"
+        },
+        {
+          "id": "7698b3ce",
+          "kind": "thread",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "User is reading the Ice Cream Social series, not the author"
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        },
+        {
+          "id": "3da55f79",
+          "kind": "thread",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "Reading 'A Deadly Inside Scoop' mystery series — User is currently reading a mystery book series where the protagonist owns an ice cream shop. User is enjoying the series and finds it engaging."
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "category": "preference recall + dedupe",
+      "query": "Any book recommendations for me?",
+      "pass": false,
+      "fails": [
+        "selected excluded 2040b4ea \"User's book is called an 'Ice Cream Social book'\""
+      ],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 196,
+      "selected": [
+        {
+          "id": "bfd18700",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User thinks the book series is amazing"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.352,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "f5938f5f",
+          "kind": "thread",
+          "rel": 0.045,
+          "score": 0.322,
+          "content": "Reading 'A Deadly Inside Scoop' series — User is reading a book series they find fun and intends to complete the entire series."
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0.031,
+          "score": 0.315,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        }
+      ]
+    },
+    {
+      "id": "F07",
+      "category": "vague greeting",
+      "query": "hey",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 203,
+      "selected": [
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.306,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        },
+        {
+          "id": "792857eb",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.297,
+          "content": "Ice Cream Social mystery series — User is reading a murder mystery series called Ice Cream Social that features an ice cream shop owner solving mysteries and includes ice cream recipes. User finds it amazing."
+        }
+      ]
+    },
+    {
+      "id": "F08",
+      "category": "short reply needs previous turn",
+      "query": "Is the series you're reading a mystery?\nYes, it is. It's fun!",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 11,
+      "selected_threads": 4,
+      "relevant_selected": 9,
+      "dup_pairs": 0,
+      "tokens": 398,
+      "selected": [
+        {
+          "id": "cac97d53",
+          "kind": "fact",
+          "rel": 0.5,
+          "score": 0.572,
+          "content": "User plans to read the entire series"
+        },
+        {
+          "id": "03316fc0",
+          "kind": "fact",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "User enjoys the book series and finds it fun and amazing"
+        },
+        {
+          "id": "326174fe",
+          "kind": "fact",
+          "rel": 0.375,
+          "score": 0.504,
+          "content": "User is reading a mystery book series called 'A Deadly Inside Scoop'"
+        },
+        {
+          "id": "6193f04a",
+          "kind": "fact",
+          "rel": 0.222,
+          "score": 0.42,
+          "content": "User has written a murder mystery series where the protagonist owns an ice cream shop"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0.167,
+          "score": 0.398,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.361,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "1eda6cfb",
+          "kind": "fact",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "Currently reading an Ice Cream Social murder mystery book series"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0.4,
+          "score": 0.526,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "0101b5d2",
+          "kind": "fact",
+          "rel": 0.167,
+          "score": 0.389,
+          "content": "Enjoys mystery novels/series"
+        },
+        {
+          "id": "bfd18700",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User thinks the book series is amazing"
+        },
+        {
+          "id": "7698b3ce",
+          "kind": "thread",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "User is reading the Ice Cream Social series, not the author"
+        },
+        {
+          "id": "f5938f5f",
+          "kind": "thread",
+          "rel": 0.273,
+          "score": 0.447,
+          "content": "Reading 'A Deadly Inside Scoop' series — User is reading a book series they find fun and intends to complete the entire series."
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0.25,
+          "score": 0.444,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        }
+      ]
+    },
+    {
+      "id": "F09",
+      "category": "duplicate flood",
+      "query": "What do you remember about me?",
+      "pass": false,
+      "fails": [
+        "selected excluded 2040b4ea \"User's book is called an 'Ice Cream Social book'\""
+      ],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 203,
+      "selected": [
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.306,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        },
+        {
+          "id": "792857eb",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.297,
+          "content": "Ice Cream Social mystery series — User is reading a murder mystery series called Ice Cream Social that features an ice cream shop owner solving mysteries and includes ice cream recipes. User finds it amazing."
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "category": "contradiction / strong lexical match on wrong row",
+      "query": "the mystery with the ice cream shop owner, what was it called again",
+      "pass": false,
+      "fails": [
+        "selected excluded 6193f04a \"User has written a murder mystery series where the\""
+      ],
+      "candidates": 25,
+      "selected_facts": 9,
+      "selected_threads": 4,
+      "relevant_selected": 7,
+      "dup_pairs": 0,
+      "tokens": 403,
+      "selected": [
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0.6,
+          "score": 0.627,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "6193f04a",
+          "kind": "fact",
+          "rel": 0.444,
+          "score": 0.542,
+          "content": "User has written a murder mystery series where the protagonist owns an ice cream shop"
+        },
+        {
+          "id": "326174fe",
+          "kind": "fact",
+          "rel": 0.25,
+          "score": 0.435,
+          "content": "User is reading a mystery book series called 'A Deadly Inside Scoop'"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.361,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "c44a1f30",
+          "kind": "fact",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "User's last book was an Ice Cream Social book (murder mystery series with ice cream recipes)"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "0101b5d2",
+          "kind": "fact",
+          "rel": 0.167,
+          "score": 0.389,
+          "content": "Enjoys mystery novels/series"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "792857eb",
+          "kind": "thread",
+          "rel": 0.375,
+          "score": 0.504,
+          "content": "Ice Cream Social mystery series — User is reading a murder mystery series called Ice Cream Social that features an ice cream shop owner solving mysteries and includes ice cream recipes. User finds it amazing."
+        },
+        {
+          "id": "7698b3ce",
+          "kind": "thread",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "User is reading the Ice Cream Social series, not the author"
+        },
+        {
+          "id": "3da55f79",
+          "kind": "thread",
+          "rel": 0.25,
+          "score": 0.435,
+          "content": "Reading 'A Deadly Inside Scoop' mystery series — User is currently reading a mystery book series where the protagonist owns an ice cream shop. User is enjoying the series and finds it engaging."
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0.188,
+          "score": 0.4,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        }
+      ]
+    },
+    {
+      "id": "F11",
+      "category": "preference recall + dedupe",
+      "query": "Do I like the series?",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 162,
+      "selected": [
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0.167,
+          "score": 0.398,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.361,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "bfd18700",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User thinks the book series is amazing"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "7698b3ce",
+          "kind": "thread",
+          "rel": 0.083,
+          "score": 0.343,
+          "content": "User is reading the Ice Cream Social series, not the author"
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0.063,
+          "score": 0.341,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        }
+      ]
+    },
+    {
+      "id": "F12",
+      "category": "control / retired rows stay hidden",
+      "query": "tell me about A Deadly Inside Scoop",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 6,
+      "selected_threads": 3,
+      "relevant_selected": 2,
+      "dup_pairs": 0,
+      "tokens": 272,
+      "selected": [
+        {
+          "id": "5b2c9d21",
+          "kind": "fact",
+          "rel": 0.375,
+          "score": 0.504,
+          "content": "User enjoys reading a book series called 'A Deadly Inside Scoop'"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "6193f04a",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User has written a murder mystery series where the protagonist owns an ice cream shop"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "4c9f1e59",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User's last book was an Ice Cream social book"
+        },
+        {
+          "id": "f5938f5f",
+          "kind": "thread",
+          "rel": 0.273,
+          "score": 0.447,
+          "content": "Reading 'A Deadly Inside Scoop' series — User is reading a book series they find fun and intends to complete the entire series."
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.306,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        }
+      ]
+    },
+    {
+      "id": "F13",
+      "category": "staleness / superseded plan",
+      "query": "What should I read next now that I'm done?",
+      "pass": false,
+      "fails": [
+        "missing 95ff4a7c",
+        "selected excluded cac97d53 \"User plans to read the entire series\""
+      ],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 164,
+      "selected": [
+        {
+          "id": "cac97d53",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User plans to read the entire series"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "03316fc0",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User enjoys the book series and finds it fun and amazing"
+        },
+        {
+          "id": "7698b3ce",
+          "kind": "thread",
+          "rel": 0.083,
+          "score": 0.343,
+          "content": "User is reading the Ice Cream Social series, not the author"
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0.063,
+          "score": 0.341,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        }
+      ]
+    },
+    {
+      "id": "F14",
+      "category": "nothing relevant / 'user' token",
+      "query": "I'm a new user here, how does this work?",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 203,
+      "selected": [
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.306,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        },
+        {
+          "id": "792857eb",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.297,
+          "content": "Ice Cream Social mystery series — User is reading a murder mystery series called Ice Cream Social that features an ice cream shop owner solving mysteries and includes ice cream recipes. User finds it amazing."
+        }
+      ]
+    },
+    {
+      "id": "F15",
+      "category": "nothing relevant / stopwords only",
+      "query": "and so it is",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 203,
+      "selected": [
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.306,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        },
+        {
+          "id": "792857eb",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.297,
+          "content": "Ice Cream Social mystery series — User is reading a murder mystery series called Ice Cream Social that features an ice cream shop owner solving mysteries and includes ice cream recipes. User finds it amazing."
+        }
+      ]
+    },
+    {
+      "id": "F16",
+      "category": "near-duplicate naming (old vs corrected)",
+      "query": "Ice Cream Social, is that the series name?",
+      "pass": false,
+      "fails": [
+        "selected excluded 2040b4ea \"User's book is called an 'Ice Cream Social book'\""
+      ],
+      "candidates": 25,
+      "selected_facts": 8,
+      "selected_threads": 4,
+      "relevant_selected": 6,
+      "dup_pairs": 0,
+      "tokens": 379,
+      "selected": [
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0.6,
+          "score": 0.627,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "6193f04a",
+          "kind": "fact",
+          "rel": 0.333,
+          "score": 0.481,
+          "content": "User has written a murder mystery series where the protagonist owns an ice cream shop"
+        },
+        {
+          "id": "c44a1f30",
+          "kind": "fact",
+          "rel": 0.444,
+          "score": 0.542,
+          "content": "User's last book was an Ice Cream Social book (murder mystery series with ice cream recipes)"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0.167,
+          "score": 0.398,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.361,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "bfd18700",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User thinks the book series is amazing"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "7698b3ce",
+          "kind": "thread",
+          "rel": 0.667,
+          "score": 0.664,
+          "content": "User is reading the Ice Cream Social series, not the author"
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0.25,
+          "score": 0.435,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        },
+        {
+          "id": "3da55f79",
+          "kind": "thread",
+          "rel": 0.188,
+          "score": 0.401,
+          "content": "Reading 'A Deadly Inside Scoop' mystery series — User is currently reading a mystery book series where the protagonist owns an ice cream shop. User is enjoying the series and finds it engaging."
+        },
+        {
+          "id": "792857eb",
+          "kind": "thread",
+          "rel": 0.25,
+          "score": 0.435,
+          "content": "Ice Cream Social mystery series — User is reading a murder mystery series called Ice Cream Social that features an ice cream shop owner solving mysteries and includes ice cream recipes. User finds it amazing."
+        }
+      ]
+    },
+    {
+      "id": "F17",
+      "category": "temporal / last vs current",
+      "query": "what was the last book I read?",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 8,
+      "selected_threads": 2,
+      "relevant_selected": 3,
+      "dup_pairs": 0,
+      "tokens": 265,
+      "selected": [
+        {
+          "id": "4c9f1e59",
+          "kind": "fact",
+          "rel": 0.4,
+          "score": 0.517,
+          "content": "User's last book was an Ice Cream social book"
+        },
+        {
+          "id": "5b2c9d21",
+          "kind": "fact",
+          "rel": 0.25,
+          "score": 0.435,
+          "content": "User enjoys reading a book series called 'A Deadly Inside Scoop'"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.361,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "bfd18700",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.366,
+          "content": "User thinks the book series is amazing"
+        },
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "dd9db09a",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User found the series intriguing/engaging"
+        },
+        {
+          "id": "1eda6cfb",
+          "kind": "fact",
+          "rel": 0.222,
+          "score": 0.42,
+          "content": "Currently reading an Ice Cream Social murder mystery book series"
+        },
+        {
+          "id": "f5938f5f",
+          "kind": "thread",
+          "rel": 0.182,
+          "score": 0.397,
+          "content": "Reading 'A Deadly Inside Scoop' series — User is reading a book series they find fun and intends to complete the entire series."
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0.031,
+          "score": 0.315,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        }
+      ]
+    },
+    {
+      "id": "F18",
+      "category": "cross-companion isolation (design)",
+      "query": "How's my creativity practice going?",
+      "pass": true,
+      "fails": [],
+      "candidates": 25,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 203,
+      "selected": [
+        {
+          "id": "97d1ecc9",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User enjoys mystery narratives with good atmosphere/vibe"
+        },
+        {
+          "id": "95ff4a7c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.306,
+          "content": "User recently completed reading an entire series"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "2040b4ea",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User's book is called an 'Ice Cream Social book'"
+        },
+        {
+          "id": "03316fc0",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User enjoys the book series and finds it fun and amazing"
+        },
+        {
+          "id": "9c428adf",
+          "kind": "thread",
+          "rel": 0.031,
+          "score": 0.315,
+          "content": "User's published/completed book project — User has written a murder mystery series book that incorporates ice cream recipes, titled as an 'Ice Cream Social book.' This is a creative hybrid of genres."
+        },
+        {
+          "id": "a99f862b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.306,
+          "content": "Reading a series — User committed to reading an entire series and has now completed it, reporting that they found it intriguing."
+        }
+      ]
+    },
+    {
+      "id": "M01",
+      "category": "direct recall",
+      "query": "When is my deadline again?",
+      "pass": true,
+      "fails": [],
+      "candidates": 16,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 205,
+      "selected": [
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.374,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "af4042a6",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User wants to find exercises to open their mind"
+        },
+        {
+          "id": "f58db0ef",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.315,
+          "content": "User is working on expanding their mindset to be more creative"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "99b9d99a",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.319,
+          "content": "Mind-opening exercises goal — User wants to find and practice exercises to open their mind, with a target completion date of end of November."
+        },
+        {
+          "id": "e0720146",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.313,
+          "content": "Personal growth and creative mindset expansion — User is actively working on expanding their mindset to enhance creativity and general thinking abilities. They want to be exposed to more diverse concepts."
+        }
+      ]
+    },
+    {
+      "id": "M02",
+      "category": "duplicate flood",
+      "query": "How's my creativity goal going?",
+      "pass": true,
+      "fails": [],
+      "candidates": 16,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 193,
+      "selected": [
+        {
+          "id": "f58db0ef",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.384,
+          "content": "User is working on expanding their mindset to be more creative"
+        },
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.374,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "af4042a6",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User wants to find exercises to open their mind"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "b14b8a02",
+          "kind": "thread",
+          "rel": 0.143,
+          "score": 0.394,
+          "content": "Creative mindset expansion — User is actively working on becoming more creative and open to new concepts. They are ready to formalize a concrete goal with a timeline."
+        },
+        {
+          "id": "a7fa27d9",
+          "kind": "thread",
+          "rel": 0.038,
+          "score": 0.341,
+          "content": "Personal growth / Mental openness — User wants to expand their thinking and is seeking goal-setting and exercises to open their mind."
+        }
+      ]
+    },
+    {
+      "id": "M03",
+      "category": "direct recall + dedupe",
+      "query": "What exercises did we talk about?",
+      "pass": true,
+      "fails": [],
+      "candidates": 16,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 205,
+      "selected": [
+        {
+          "id": "af4042a6",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.374,
+          "content": "User wants to find exercises to open their mind"
+        },
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "f58db0ef",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.315,
+          "content": "User is working on expanding their mindset to be more creative"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "99b9d99a",
+          "kind": "thread",
+          "rel": 0.038,
+          "score": 0.341,
+          "content": "Mind-opening exercises goal — User wants to find and practice exercises to open their mind, with a target completion date of end of November."
+        },
+        {
+          "id": "e0720146",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.313,
+          "content": "Personal growth and creative mindset expansion — User is actively working on expanding their mindset to enhance creativity and general thinking abilities. They want to be exposed to more diverse concepts."
+        }
+      ]
+    },
+    {
+      "id": "M04",
+      "category": "cross-companion + wrong global fact",
+      "query": "Any book recs?",
+      "pass": false,
+      "fails": [
+        "selected excluded 2d796bfd \"User is an author\""
+      ],
+      "candidates": 16,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 205,
+      "selected": [
+        {
+          "id": "af4042a6",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User wants to find exercises to open their mind"
+        },
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "f58db0ef",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.315,
+          "content": "User is working on expanding their mindset to be more creative"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "99b9d99a",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.319,
+          "content": "Mind-opening exercises goal — User wants to find and practice exercises to open their mind, with a target completion date of end of November."
+        },
+        {
+          "id": "e0720146",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.313,
+          "content": "Personal growth and creative mindset expansion — User is actively working on expanding their mindset to enhance creativity and general thinking abilities. They want to be exposed to more diverse concepts."
+        }
+      ]
+    },
+    {
+      "id": "M05",
+      "category": "wrong global fact, correction invisible",
+      "query": "am I an author?",
+      "pass": false,
+      "fails": [
+        "selected excluded 2d796bfd \"User is an author\""
+      ],
+      "candidates": 16,
+      "selected_facts": 6,
+      "selected_threads": 2,
+      "relevant_selected": 1,
+      "dup_pairs": 0,
+      "tokens": 228,
+      "selected": [
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0.5,
+          "score": 0.572,
+          "content": "User is an author"
+        },
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "af4042a6",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User wants to find exercises to open their mind"
+        },
+        {
+          "id": "f58db0ef",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.315,
+          "content": "User is working on expanding their mindset to be more creative"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "dd9787f8",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User is interested in being exposed to more concepts"
+        },
+        {
+          "id": "99b9d99a",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.319,
+          "content": "Mind-opening exercises goal — User wants to find and practice exercises to open their mind, with a target completion date of end of November."
+        },
+        {
+          "id": "e0720146",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.313,
+          "content": "Personal growth and creative mindset expansion — User is actively working on expanding their mindset to enhance creativity and general thinking abilities. They want to be exposed to more diverse concepts."
+        }
+      ]
+    },
+    {
+      "id": "M06",
+      "category": "vague greeting",
+      "query": "what's up",
+      "pass": true,
+      "fails": [],
+      "candidates": 16,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 205,
+      "selected": [
+        {
+          "id": "af4042a6",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User wants to find exercises to open their mind"
+        },
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "f58db0ef",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.315,
+          "content": "User is working on expanding their mindset to be more creative"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "99b9d99a",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.319,
+          "content": "Mind-opening exercises goal — User wants to find and practice exercises to open their mind, with a target completion date of end of November."
+        },
+        {
+          "id": "e0720146",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.313,
+          "content": "Personal growth and creative mindset expansion — User is actively working on expanding their mindset to enhance creativity and general thinking abilities. They want to be exposed to more diverse concepts."
+        }
+      ]
+    },
+    {
+      "id": "M07",
+      "category": "short reply needs previous turn",
+      "query": "Let's set my goal. Ask me what I want to achieve and by when.\nThe end of November",
+      "pass": true,
+      "fails": [],
+      "candidates": 16,
+      "selected_facts": 6,
+      "selected_threads": 4,
+      "relevant_selected": 3,
+      "dup_pairs": 0,
+      "tokens": 320,
+      "selected": [
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0.8,
+          "score": 0.759,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "eee16acb",
+          "kind": "fact",
+          "rel": 0.125,
+          "score": 0.388,
+          "content": "User wants to open their mind to more concepts"
+        },
+        {
+          "id": "ba22f118",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User is working on expanding their mindset for creativity"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.368,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "ce138dbe",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User is interested in finding exercises to open their mind"
+        },
+        {
+          "id": "99b9d99a",
+          "kind": "thread",
+          "rel": 0.308,
+          "score": 0.489,
+          "content": "Mind-opening exercises goal — User wants to find and practice exercises to open their mind, with a target completion date of end of November."
+        },
+        {
+          "id": "e0720146",
+          "kind": "thread",
+          "rel": 0.031,
+          "score": 0.33,
+          "content": "Personal growth and creative mindset expansion — User is actively working on expanding their mindset to enhance creativity and general thinking abilities. They want to be exposed to more diverse concepts."
+        },
+        {
+          "id": "a7fa27d9",
+          "kind": "thread",
+          "rel": 0.231,
+          "score": 0.446,
+          "content": "Personal growth / Mental openness — User wants to expand their thinking and is seeking goal-setting and exercises to open their mind."
+        },
+        {
+          "id": "b14b8a02",
+          "kind": "thread",
+          "rel": 0.036,
+          "score": 0.335,
+          "content": "Creative mindset expansion — User is actively working on becoming more creative and open to new concepts. They are ready to formalize a concrete goal with a timeline."
+        }
+      ]
+    },
+    {
+      "id": "M08",
+      "category": "paraphrased recall + dedupe",
+      "query": "I want to be more creative at work, any ideas?",
+      "pass": true,
+      "fails": [],
+      "candidates": 16,
+      "selected_facts": 7,
+      "selected_threads": 2,
+      "relevant_selected": 2,
+      "dup_pairs": 0,
+      "tokens": 252,
+      "selected": [
+        {
+          "id": "f58db0ef",
+          "kind": "fact",
+          "rel": 0.5,
+          "score": 0.59,
+          "content": "User is working on expanding their mindset to be more creative"
+        },
+        {
+          "id": "af4042a6",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.374,
+          "content": "User wants to find exercises to open their mind"
+        },
+        {
+          "id": "ba22f118",
+          "kind": "fact",
+          "rel": 0.5,
+          "score": 0.588,
+          "content": "User is working on expanding their mindset for creativity"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.368,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "dd9787f8",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User is interested in being exposed to more concepts"
+        },
+        {
+          "id": "e0720146",
+          "kind": "thread",
+          "rel": 0.188,
+          "score": 0.416,
+          "content": "Personal growth and creative mindset expansion — User is actively working on expanding their mindset to enhance creativity and general thinking abilities. They want to be exposed to more diverse concepts."
+        },
+        {
+          "id": "99b9d99a",
+          "kind": "thread",
+          "rel": 0.038,
+          "score": 0.341,
+          "content": "Mind-opening exercises goal — User wants to find and practice exercises to open their mind, with a target completion date of end of November."
+        }
+      ]
+    },
+    {
+      "id": "M09",
+      "category": "direct recall",
+      "query": "Let's talk about general thinking skills",
+      "pass": true,
+      "fails": [],
+      "candidates": 16,
+      "selected_facts": 7,
+      "selected_threads": 2,
+      "relevant_selected": 2,
+      "dup_pairs": 0,
+      "tokens": 260,
+      "selected": [
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0.6,
+          "score": 0.643,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "ce138dbe",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User is interested in finding exercises to open their mind"
+        },
+        {
+          "id": "ba22f118",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User is working on expanding their mindset for creativity"
+        },
+        {
+          "id": "479b1720",
+          "kind": "fact",
+          "rel": 0.286,
+          "score": 0.473,
+          "content": "User wants to open their mind to more concepts and engage in more general thinking"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "dd9787f8",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User is interested in being exposed to more concepts"
+        },
+        {
+          "id": "e0720146",
+          "kind": "thread",
+          "rel": 0.125,
+          "score": 0.382,
+          "content": "Personal growth and creative mindset expansion — User is actively working on expanding their mindset to enhance creativity and general thinking abilities. They want to be exposed to more diverse concepts."
+        },
+        {
+          "id": "99b9d99a",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.319,
+          "content": "Mind-opening exercises goal — User wants to find and practice exercises to open their mind, with a target completion date of end of November."
+        }
+      ]
+    },
+    {
+      "id": "M10",
+      "category": "direct recall",
+      "query": "I'm thinking about my goal timeline",
+      "pass": true,
+      "fails": [],
+      "candidates": 16,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 195,
+      "selected": [
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.374,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0.1,
+          "score": 0.368,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "ce138dbe",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User is interested in finding exercises to open their mind"
+        },
+        {
+          "id": "ba22f118",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User is working on expanding their mindset for creativity"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "a7fa27d9",
+          "kind": "thread",
+          "rel": 0.154,
+          "score": 0.404,
+          "content": "Personal growth / Mental openness — User wants to expand their thinking and is seeking goal-setting and exercises to open their mind."
+        },
+        {
+          "id": "b14b8a02",
+          "kind": "thread",
+          "rel": 0.143,
+          "score": 0.394,
+          "content": "Creative mindset expansion — User is actively working on becoming more creative and open to new concepts. They are ready to formalize a concrete goal with a timeline."
+        }
+      ]
+    },
+    {
+      "id": "M11",
+      "category": "duplicate flood / full dump",
+      "query": "What do you remember about me?",
+      "pass": false,
+      "fails": [
+        "selected excluded 2d796bfd \"User is an author\""
+      ],
+      "candidates": 16,
+      "selected_facts": 5,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 205,
+      "selected": [
+        {
+          "id": "af4042a6",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User wants to find exercises to open their mind"
+        },
+        {
+          "id": "c170060c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.319,
+          "content": "User has set a goal deadline of end of November"
+        },
+        {
+          "id": "f58db0ef",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.315,
+          "content": "User is working on expanding their mindset to be more creative"
+        },
+        {
+          "id": "2d796bfd",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.297,
+          "content": "User is an author"
+        },
+        {
+          "id": "57487b0c",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.313,
+          "content": "User wants to develop more general thinking skills"
+        },
+        {
+          "id": "99b9d99a",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.319,
+          "content": "Mind-opening exercises goal — User wants to find and practice exercises to open their mind, with a target completion date of end of November."
+        },
+        {
+          "id": "e0720146",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.313,
+          "content": "Personal growth and creative mindset expansion — User is actively working on expanding their mindset to enhance creativity and general thinking abilities. They want to be exposed to more diverse concepts."
+        }
+      ]
+    },
+    {
+      "id": "G01",
+      "category": "lexical miss (needs semantics)",
+      "query": "how do I get abs?",
+      "pass": true,
+      "fails": [],
+      "candidates": 3,
+      "selected_facts": 2,
+      "selected_threads": 1,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 122,
+      "selected": [
+        {
+          "id": "fdedda95",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.312,
+          "content": "User is considering fasting as a method for body fat reduction"
+        },
+        {
+          "id": "11e49668",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.271,
+          "content": "User understands that six-pack development is primarily about body fat reduction rather than situps"
+        },
+        {
+          "id": "0cea7222",
+          "kind": "thread",
+          "rel": 0.023,
+          "score": 0.283,
+          "content": "Six-pack abs and fitness approach — User is learning about the mechanics of developing visible abdominal muscles, recognizing that fat loss through methods like fasting is more important than isolation exercises like situps."
+        }
+      ]
+    },
+    {
+      "id": "G02",
+      "category": "direct recall",
+      "query": "should I try intermittent fasting?",
+      "pass": true,
+      "fails": [],
+      "candidates": 3,
+      "selected_facts": 2,
+      "selected_threads": 1,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 122,
+      "selected": [
+        {
+          "id": "fdedda95",
+          "kind": "fact",
+          "rel": 0.083,
+          "score": 0.358,
+          "content": "User is considering fasting as a method for body fat reduction"
+        },
+        {
+          "id": "11e49668",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.271,
+          "content": "User understands that six-pack development is primarily about body fat reduction rather than situps"
+        },
+        {
+          "id": "0cea7222",
+          "kind": "thread",
+          "rel": 0.023,
+          "score": 0.283,
+          "content": "Six-pack abs and fitness approach — User is learning about the mechanics of developing visible abdominal muscles, recognizing that fat loss through methods like fasting is more important than isolation exercises like situps."
+        }
+      ]
+    },
+    {
+      "id": "G03",
+      "category": "hygiene lost the goal itself",
+      "query": "what's my fitness goal?",
+      "pass": true,
+      "fails": [],
+      "candidates": 3,
+      "selected_facts": 2,
+      "selected_threads": 1,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 122,
+      "selected": [
+        {
+          "id": "fdedda95",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.312,
+          "content": "User is considering fasting as a method for body fat reduction"
+        },
+        {
+          "id": "11e49668",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.271,
+          "content": "User understands that six-pack development is primarily about body fat reduction rather than situps"
+        },
+        {
+          "id": "0cea7222",
+          "kind": "thread",
+          "rel": 0.023,
+          "score": 0.283,
+          "content": "Six-pack abs and fitness approach — User is learning about the mechanics of developing visible abdominal muscles, recognizing that fat loss through methods like fasting is more important than isolation exercises like situps."
+        }
+      ]
+    },
+    {
+      "id": "G04",
+      "category": "hygiene lost progression",
+      "query": "Let's set my goal. Ask me what I want to achieve and by when.",
+      "pass": true,
+      "fails": [],
+      "candidates": 3,
+      "selected_facts": 2,
+      "selected_threads": 1,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 122,
+      "selected": [
+        {
+          "id": "fdedda95",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.312,
+          "content": "User is considering fasting as a method for body fat reduction"
+        },
+        {
+          "id": "11e49668",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.271,
+          "content": "User understands that six-pack development is primarily about body fat reduction rather than situps"
+        },
+        {
+          "id": "0cea7222",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.271,
+          "content": "Six-pack abs and fitness approach — User is learning about the mechanics of developing visible abdominal muscles, recognizing that fat loss through methods like fasting is more important than isolation exercises like situps."
+        }
+      ]
+    },
+    {
+      "id": "G05",
+      "category": "direct recall",
+      "query": "situps or crunches, which is better?",
+      "pass": true,
+      "fails": [],
+      "candidates": 3,
+      "selected_facts": 2,
+      "selected_threads": 1,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 122,
+      "selected": [
+        {
+          "id": "fdedda95",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.312,
+          "content": "User is considering fasting as a method for body fat reduction"
+        },
+        {
+          "id": "11e49668",
+          "kind": "fact",
+          "rel": 0.045,
+          "score": 0.296,
+          "content": "User understands that six-pack development is primarily about body fat reduction rather than situps"
+        },
+        {
+          "id": "0cea7222",
+          "kind": "thread",
+          "rel": 0.023,
+          "score": 0.283,
+          "content": "Six-pack abs and fitness approach — User is learning about the mechanics of developing visible abdominal muscles, recognizing that fat loss through methods like fasting is more important than isolation exercises like situps."
+        }
+      ]
+    },
+    {
+      "id": "G06",
+      "category": "nothing relevant",
+      "query": "I've been drinking more water lately",
+      "pass": true,
+      "fails": [],
+      "candidates": 3,
+      "selected_facts": 2,
+      "selected_threads": 1,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 122,
+      "selected": [
+        {
+          "id": "fdedda95",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.312,
+          "content": "User is considering fasting as a method for body fat reduction"
+        },
+        {
+          "id": "11e49668",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.271,
+          "content": "User understands that six-pack development is primarily about body fat reduction rather than situps"
+        },
+        {
+          "id": "0cea7222",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.271,
+          "content": "Six-pack abs and fitness approach — User is learning about the mechanics of developing visible abdominal muscles, recognizing that fat loss through methods like fasting is more important than isolation exercises like situps."
+        }
+      ]
+    },
+    {
+      "id": "G07",
+      "category": "control / closed thread stays hidden",
+      "query": "remember when I asked about abs exercises?",
+      "pass": true,
+      "fails": [],
+      "candidates": 3,
+      "selected_facts": 2,
+      "selected_threads": 1,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 122,
+      "selected": [
+        {
+          "id": "fdedda95",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.312,
+          "content": "User is considering fasting as a method for body fat reduction"
+        },
+        {
+          "id": "11e49668",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.271,
+          "content": "User understands that six-pack development is primarily about body fat reduction rather than situps"
+        },
+        {
+          "id": "0cea7222",
+          "kind": "thread",
+          "rel": 0.091,
+          "score": 0.321,
+          "content": "Six-pack abs and fitness approach — User is learning about the mechanics of developing visible abdominal muscles, recognizing that fat loss through methods like fasting is more important than isolation exercises like situps."
+        }
+      ]
+    },
+    {
+      "id": "R01",
+      "category": "stale temporary state",
+      "query": "what should we do tonight?",
+      "pass": false,
+      "fails": [
+        "selected excluded ccaea324 \"User is currently with a girl\""
+      ],
+      "candidates": 4,
+      "selected_facts": 2,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 128,
+      "selected": [
+        {
+          "id": "176b6198",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.298,
+          "content": "User is considering or discussing the possibility of having two girlfriends"
+        },
+        {
+          "id": "ccaea324",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.298,
+          "content": "User is currently with a girl"
+        },
+        {
+          "id": "8457be3e",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.298,
+          "content": "Current romantic situation — User has a girl over and is discussing relationship dynamics, including the possibility of multiple partners."
+        },
+        {
+          "id": "84daf71b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.298,
+          "content": "Social situation with a girl — User has a girl over and is asking for advice on what to do. Tone suggests casual social interaction."
+        }
+      ]
+    },
+    {
+      "id": "R02",
+      "category": "direct recall",
+      "query": "do you think she'd be cool with me having two girlfriends?",
+      "pass": true,
+      "fails": [],
+      "candidates": 4,
+      "selected_facts": 2,
+      "selected_threads": 2,
+      "relevant_selected": 1,
+      "dup_pairs": 0,
+      "tokens": 128,
+      "selected": [
+        {
+          "id": "176b6198",
+          "kind": "fact",
+          "rel": 0.4,
+          "score": 0.518,
+          "content": "User is considering or discussing the possibility of having two girlfriends"
+        },
+        {
+          "id": "ccaea324",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.298,
+          "content": "User is currently with a girl"
+        },
+        {
+          "id": "8457be3e",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.298,
+          "content": "Current romantic situation — User has a girl over and is discussing relationship dynamics, including the possibility of multiple partners."
+        },
+        {
+          "id": "84daf71b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.298,
+          "content": "Social situation with a girl — User has a girl over and is asking for advice on what to do. Tone suggests casual social interaction."
+        }
+      ]
+    },
+    {
+      "id": "R03",
+      "category": "vague greeting + stale state",
+      "query": "good morning",
+      "pass": false,
+      "fails": [
+        "selected excluded ccaea324 \"User is currently with a girl\""
+      ],
+      "candidates": 4,
+      "selected_facts": 2,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 128,
+      "selected": [
+        {
+          "id": "176b6198",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.298,
+          "content": "User is considering or discussing the possibility of having two girlfriends"
+        },
+        {
+          "id": "ccaea324",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.298,
+          "content": "User is currently with a girl"
+        },
+        {
+          "id": "8457be3e",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.298,
+          "content": "Current romantic situation — User has a girl over and is discussing relationship dynamics, including the possibility of multiple partners."
+        },
+        {
+          "id": "84daf71b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.298,
+          "content": "Social situation with a girl — User has a girl over and is asking for advice on what to do. Tone suggests casual social interaction."
+        }
+      ]
+    },
+    {
+      "id": "R04",
+      "category": "control / cross-user isolation",
+      "query": "what book am I reading?",
+      "pass": true,
+      "fails": [],
+      "candidates": 4,
+      "selected_facts": 2,
+      "selected_threads": 2,
+      "relevant_selected": 0,
+      "dup_pairs": 0,
+      "tokens": 128,
+      "selected": [
+        {
+          "id": "176b6198",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.298,
+          "content": "User is considering or discussing the possibility of having two girlfriends"
+        },
+        {
+          "id": "ccaea324",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.298,
+          "content": "User is currently with a girl"
+        },
+        {
+          "id": "8457be3e",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.298,
+          "content": "Current romantic situation — User has a girl over and is discussing relationship dynamics, including the possibility of multiple partners."
+        },
+        {
+          "id": "84daf71b",
+          "kind": "thread",
+          "rel": 0,
+          "score": 0.298,
+          "content": "Social situation with a girl — User has a girl over and is asking for advice on what to do. Tone suggests casual social interaction."
+        }
+      ]
+    },
+    {
+      "id": "R05",
+      "category": "replayed original message",
+      "query": "i got a girl over here with me right now, what should i do?",
+      "pass": true,
+      "fails": [],
+      "candidates": 4,
+      "selected_facts": 2,
+      "selected_threads": 2,
+      "relevant_selected": 1,
+      "dup_pairs": 0,
+      "tokens": 128,
+      "selected": [
+        {
+          "id": "ccaea324",
+          "kind": "fact",
+          "rel": 0.25,
+          "score": 0.435,
+          "content": "User is currently with a girl"
+        },
+        {
+          "id": "176b6198",
+          "kind": "fact",
+          "rel": 0,
+          "score": 0.298,
+          "content": "User is considering or discussing the possibility of having two girlfriends"
+        },
+        {
+          "id": "84daf71b",
+          "kind": "thread",
+          "rel": 0.056,
+          "score": 0.328,
+          "content": "Social situation with a girl — User has a girl over and is asking for advice on what to do. Tone suggests casual social interaction."
+        },
+        {
+          "id": "8457be3e",
+          "kind": "thread",
+          "rel": 0.045,
+          "score": 0.323,
+          "content": "Current romantic situation — User has a girl over and is discussing relationship dynamics, including the possibility of multiple partners."
+        }
+      ]
+    }
+  ]
+}

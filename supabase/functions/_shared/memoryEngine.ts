@@ -191,6 +191,23 @@ export function selectMemories<T extends Pick<MemoryCandidate, 'id' | 'content' 
   return chosen.map(s => s.c);
 }
 
+/**
+ * The user's words and a stored memory share at least one content word.
+ * The extractor must quote the user as evidence for every retract, close and
+ * update, but a quote that is the whole message passes the grounding check
+ * whatever it is about. This asks the cheaper question: is the message even
+ * about the memory it wants to change? ("my sister turns 30" can't close a
+ * fitness goal; "no, I'm only reading it" can retire "has written it".)
+ */
+export function memoryRelatesTo(memory: string, ...texts: Array<string | null | undefined>): boolean {
+  const memoryTokens = contentTokens(memory);
+  if (memoryTokens.size === 0) return false;
+  for (const text of texts) {
+    for (const word of contentTokens(text ?? '')) if (memoryTokens.has(word)) return true;
+  }
+  return false;
+}
+
 /** "as of Oct 19" style date so the model can reason about staleness. */
 export function formatAsOf(iso: string | null | undefined, now: Date = new Date()): string {
   if (!iso) return '';
@@ -327,7 +344,9 @@ export function findDuplicateGroups(
 /**
  * Embed texts with OpenAI. Returns null (never throws) when the key is
  * missing, the call fails or it takes longer than `timeoutMs`; callers fall
- * back to full-text retrieval.
+ * back to full-text retrieval. Every failure logs its reason (never the key
+ * or the text), because a silent null looks the same as "vector search is
+ * working" from the outside.
  */
 export async function embedTexts(
   texts: string[],
@@ -335,7 +354,11 @@ export async function embedTexts(
   timeoutMs = 2500,
   fetchImpl: typeof fetch = fetch,
 ): Promise<number[][] | null> {
-  if (!apiKey || texts.length === 0) return null;
+  if (texts.length === 0) return null;
+  if (!apiKey) {
+    console.warn('[embedTexts] OPENAI_API_KEY is not set; vector search is off');
+    return null;
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -345,15 +368,31 @@ export async function embedTexts(
       body: JSON.stringify({ model: EMBEDDING_MODEL, input: texts.map(t => t.slice(0, 8000)) }),
       signal: controller.signal,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // OpenAI explains itself: invalid_api_key, insufficient_quota, model_not_found, rate_limit_exceeded.
+      const detail = await (typeof res.text === 'function' ? res.text() : Promise.resolve('')).then(t => {
+        try { const e = JSON.parse(t)?.error; return `${e?.code ?? e?.type ?? 'error'}: ${String(e?.message ?? '').slice(0, 160)}`; }
+        catch { return t.slice(0, 160) || 'no details'; }
+      }).catch(() => 'unreadable body');
+      console.warn(`[embedTexts] OpenAI answered ${res.status} (${detail})`);
+      return null;
+    }
     const json = await res.json();
     const rows = (json?.data ?? []) as Array<{ index: number; embedding: number[] }>;
-    if (rows.length !== texts.length) return null;
+    if (rows.length !== texts.length) {
+      console.warn(`[embedTexts] asked for ${texts.length} embeddings, got ${rows.length}`);
+      return null;
+    }
     const out: number[][] = new Array(texts.length);
     for (const r of rows) out[r.index] = r.embedding;
-    if (out.some(e => !Array.isArray(e) || e.length !== EMBEDDING_DIMENSIONS)) return null;
+    if (out.some(e => !Array.isArray(e) || e.length !== EMBEDDING_DIMENSIONS)) {
+      console.warn(`[embedTexts] unexpected embedding size (wanted ${EMBEDDING_DIMENSIONS}); is ${EMBEDDING_MODEL} still the right model?`);
+      return null;
+    }
     return out;
-  } catch {
+  } catch (err) {
+    const timedOut = err instanceof Error && err.name === 'AbortError';
+    console.warn(`[embedTexts] ${timedOut ? `timed out after ${timeoutMs}ms` : `request failed: ${err instanceof Error ? err.message : 'unknown'}`}`);
     return null;
   } finally {
     clearTimeout(timer);
