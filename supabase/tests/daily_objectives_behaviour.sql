@@ -1,7 +1,7 @@
--- Behaviour checks for 20261105100000_daily_objectives.sql, run against a scratch Postgres with the
+-- Behaviour checks for the daily objectives migrations (20261105100000, 20261106100000, 20261107120000), run against a scratch Postgres with the
 -- stand-ins in daily_objectives_stub.sql:
 --   psql -d scratch -f daily_objectives_stub.sql -f ../migrations/20261105100000_daily_objectives.sql \
---        -f ../migrations/20261106100000_objective_xp.sql -f daily_objectives_behaviour.sql
+--        -f ../migrations/20261106100000_objective_xp.sql -f ../migrations/20261107120000_space_chat_counts.sql -f daily_objectives_behaviour.sql
 -- Stops at the first failure and prints "ALL PASSED" at the end.
 \set ON_ERROR_STOP on
 create function pg_temp.as_user(u text) returns void language sql as $$ select set_config('test.uid', u, false) $$;
@@ -85,6 +85,17 @@ reset role;
 -- give A a friend and a plan so any pick is possible, then complete whatever was picked by reporting/inserting
 insert into public.objective_days values ('a0000000-0000-0000-0000-00000000000a', current_date - 1, 5, 5, 50);
 select pg_temp.must((public.medal_stats('a0000000-0000-0000-0000-00000000000a') ->> 'objective_days')::int = 1, 'a full day counts');
+
+-- chatting in a Space room counts as leaving a comment in a Space; a deleted message does not
+reset role;
+insert into public.community_room_messages (author_id) values ('d0000000-0000-0000-0000-00000000000d');
+insert into public.community_room_messages (author_id, deleted_at) values ('c0000000-0000-0000-0000-00000000000c', now());
+set role authenticated;
+select pg_temp.as_user('d0000000-0000-0000-0000-00000000000d');
+select pg_temp.must((select done from public.get_daily_objectives(date_trunc('day', now())) where key = 'comment_in_space'), 'a room message ticks the Space comment objective');
+select pg_temp.as_user('c0000000-0000-0000-0000-00000000000c');
+select pg_temp.must((select not done from public.get_daily_objectives(date_trunc('day', now())) where key = 'comment_in_space'), 'a deleted room message does not');
+reset role;
 
 -- leaderboard: people only, nicknames only, bots out, you wherever you are
 delete from public.objective_days; delete from public.objective_core_done;
