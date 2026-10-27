@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../shared/supabase/client';
 import { useAuth } from '../../auth/AuthProvider';
 import { getSpaceMembers } from '../../services/spacesService';
@@ -18,6 +19,7 @@ interface PresenceEntry {
 
 export function HereNow({ boardId, myDisplayName }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [hereNow, setHereNow] = useState<PresenceEntry[]>([]);
   const [members, setMembers] = useState<SpaceMember[]>([]);
   const [medalCache, setMedalCache] = useState<Record<string, UserMedal | null>>({});
@@ -91,9 +93,13 @@ export function HereNow({ boardId, myDisplayName }: Props) {
       <div className="flex-1 overflow-y-auto px-2 py-2 min-h-0">
         <p className="text-[10px] uppercase tracking-wider text-ink-muted/60 font-semibold px-2 py-1.5">Members</p>
         {sorted.map(member => (
-          <div
+          <button
+            type="button"
             key={member.user_id}
-            className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            onClick={() => navigate(member.user_id === user?.id ? '/my-profile' : `/member/${member.user_id}`)}
+            title={`View ${member.display_name}'s profile`}
+            aria-label={`View ${member.display_name}'s profile`}
+            className="flex w-full items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left hover:bg-white/5 transition-colors"
           >
             <span className="relative flex-shrink-0">
               <span className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center text-[11px] text-white font-bold">
@@ -117,7 +123,7 @@ export function HereNow({ boardId, myDisplayName }: Props) {
                 {member.role === 'owner' ? 'Owner' : member.role === 'mod' ? 'Moderator' : 'Member'}
               </span>
             </div>
-          </div>
+          </button>
         ))}
         {members.length === 0 && (
           <p className="text-xs text-ink-muted text-center py-4">No members yet.</p>
