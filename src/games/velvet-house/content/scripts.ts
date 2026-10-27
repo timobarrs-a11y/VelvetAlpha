@@ -168,8 +168,36 @@ export const TUTORIAL: ScriptDef[] = [
     say('maya', 'maya.ch7.unpacked'),
     { do: 'set', flag: 'tutorial.lamp', value: true },
   ]),
+  // 7b. The rest of the heavy stuff: a rug, a coffee table, a bookshelf, a side table and an armchair. The player opens
+  // them all and puts them where they like; the room comes together.
+  chapter('tutorial.ch7b', { on: 'cond', cond: { flag: 'tutorial.lamp' } }, [
+    { do: 'wait', seconds: 2 },
+    { do: 'camera', focus: 'mark:entry.inside', zoom: 1.6, level: 1 },
+    ...knockIn('pbox'),
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.drop', id: 'box.rug', contents: 'rugrect' } },
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.truck3', id: 'box.coffee', contents: 'coffeetable' } },
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.truck1', id: 'box.shelf', contents: 'bookshelf' } },
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.truck4', id: 'box.side', contents: 'sidetable' } },
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.truck2', id: 'box.chair', contents: 'armchair' } },
+    { do: 'carry', who: 'dez', carrying: null },
+    say('dez', 'dez.ch7b.more'),
+    ...exitLine,
+    { do: 'camera', focus: 'wide' },
+    { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'moreBoxes' } },
+    { do: 'card', title: 'Unpack the rest', body: 'Tap each box to open it, then drag each piece where you want it. This is your home now.' },
+    {
+      do: 'wait',
+      until: {
+        all: ['box.rug', 'box.coffee', 'box.shelf', 'box.side', 'box.chair'].map((objId) => ({ event: 'obj.unpacked', match: { objId } })),
+      },
+    },
+    { do: 'wait', seconds: 3 },
+    { do: 'emote', who: 'maya', emote: 'heart' },
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'roomTogether' } },
+    { do: 'set', flag: 'tutorial.truck', value: true },
+  ]),
   // 8. Dez's card: the store.
-  chapter('tutorial.ch8', { on: 'cond', cond: { flag: 'tutorial.lamp' } }, [
+  chapter('tutorial.ch8', { on: 'cond', cond: { flag: 'tutorial.truck' } }, [
     { do: 'wait', seconds: 2 },
     ...knockIn(),
     say('dez', 'dez.ch8.card'),

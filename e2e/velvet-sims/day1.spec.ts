@@ -39,6 +39,13 @@ test('the first day plays through from the move-in to free will', async ({ page 
         if ((await inGame<number>(page, 'v.level()')) !== 1) { await inGame(page, 'v.setView(1)'); await page.waitForTimeout(1500); }
         else { await page.waitForTimeout(1500); const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
       }
+    } else if (!flags['tutorial.truck'] && title === 'Unpack the rest') {
+      // Open every box (tapping works while Arrange is up), then put the pieces down.
+      for (const id of ['box.shelf', 'box.chair', 'box.coffee', 'box.side', 'box.rug']) {
+        if (!(await objects(page)).some((o) => o.id === id && o.type === 'pbox')) continue;
+        const p = await inGame<[number, number]>(page, `v.clientPosOf('${id}')`);
+        await page.mouse.click(p[0], p[1]); await page.waitForTimeout(900);
+      }
     } else if (title === 'The shop' && once('shop')) await inGame(page, "v.openTab('shop')");
     else if (title === 'Order groceries' && once('groceries')) { await inGame(page, "v.openTab('home')"); await game.locator('[data-groceries]').click(); await inGame(page, 'v.closeDrawer()'); }
     else if (flags['tutorial.shop'] && !flags['tutorial.groceries'] && !(await inGame<string>(page, 'v.parcel()')).includes('"ready":false')) await inGame(page, 'v.advance(5)');

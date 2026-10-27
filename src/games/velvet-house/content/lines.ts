@@ -23,6 +23,7 @@ export const LINE_BOOK: LineBook = {
 
     // -- Chapter 7: the rest of the truck ----------------------------------------------------------------------------
     'dez.ch7.lamp': "Got your lamp here. Fragile-ish. Y'all know the drill by now.",
+    'dez.ch7b.more': "Last of the heavy stuff! A rug, a coffee table, a bookshelf and a couple chairs. Lift with the legs, y'all. Or don't. I won't tell.",
     'dez.ch7.stack': "I'll stack the rest of 'em right by the door. Holler if you need me. Well, don't holler, I'll be in the truck.",
     'maya.ch7.unpacked': "I did one! Don't move it. …You can move it. But don't.",
 

@@ -82,7 +82,8 @@ export function createInteract(g: Game): Partial<Game> {
       delete obj.contents;
       if (!relocate(world.objs, obj, obj.level, [], [obj.x, obj.y])) { obj.type = was; obj.contents = type; log('There is no room to unpack that here.'); return; }
       g.relearnLayout(obj);
-      art.objectPlaced(obj.id);
+      art.reveal(obj.id);
+      art.burst(obj.level, obj.x + (TYPES[type]?.W ?? 0.6) / 2, obj.y + (TYPES[type]?.D ?? 0.5) / 2, 0.8);
       log(`Unpacked the ${(TYPES[type]?.name ?? "piece").toLowerCase()}.`);
       g.scriptEmit({ type: 'obj.unpacked', objId: obj.id, objType: type });
       g.drawer.open('arrange');

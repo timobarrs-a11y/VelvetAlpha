@@ -273,8 +273,10 @@ export function createArrange(g: Game): Partial<Game> {
   const dropHeld = (e: PointerEvent): void => {
     if (!dragCandidate || dragCandidate.id !== e.pointerId) return;
     const o = heldObj;
+    const tapped = dragCandidate.obj;
     dragCandidate = null;
-    if (!o) return;
+    // A tap (no drag) on a moving box opens it, even while arranging: boxes are for opening.
+    if (!o) { if (tapped.type === 'pbox' && tapped.contents) g.handleObjectAction(tapped, 'unpack'); return; }
     recheck();
     if (heldCheck.ok) {
       heldObj = null; heldOrig = null;

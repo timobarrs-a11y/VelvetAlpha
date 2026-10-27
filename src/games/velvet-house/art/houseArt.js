@@ -1166,24 +1166,39 @@ export function createHouseArt(ctx0, opts = {}) {
   const BOX_LABEL = { sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
 
   // Just-placed furniture lands with a squash and a little bounce.
+  // Three ways a piece arrives: it lands with a squash (set down), pops out of its box (revealed) or drops from above (delivered).
   const placedAt = new Map();
+  const ARRIVAL = { land: 0.5, pop: 0.6, drop: 0.7 };
   function bouncy(o, draw) {
-    const at = placedAt.get(o.id);
-    if (at == null) return draw;
-    const u = (animT - at) / 0.5;
+    const a = placedAt.get(o.id);
+    if (a == null) return draw;
+    const dur = ARRIVAL[a.kind], u = (animT - a.t) / dur;
     if (u < 0 || u >= 1) { if (u >= 1) placedAt.delete(o.id); return draw; }
-    const b = Math.sin(u * Math.PI * 2.5) * (1 - u);
     return () => {
       const T = T_OF(o), [cx, cy] = xf(o, T.W / 2, T.D / 2), [bx, by] = iso(cx, cy, 0);
-      ctx.save(); ctx.translate(bx, by); ctx.scale(1 + b * 0.07, 1 - b * 0.1); ctx.translate(-bx, -by);
+      ctx.save();
+      if (a.kind === 'land') {
+        const b = Math.sin(u * Math.PI * 2.5) * (1 - u);
+        ctx.translate(bx, by); ctx.scale(1 + b * 0.07, 1 - b * 0.1); ctx.translate(-bx, -by);
+      } else if (a.kind === 'pop') {
+        // Springs up out of the box: small, overshoots, settles.
+        const e = 1 - Math.pow(1 - Math.min(1, u * 1.5), 3), s = 0.25 + 0.75 * e + Math.sin(Math.min(1, u * 1.4) * Math.PI) * 0.14;
+        ctx.globalAlpha = Math.min(1, u * 5); ctx.translate(bx, by); ctx.scale(s, s * (1 + (1 - e) * 0.25)); ctx.translate(-bx, -by);
+      } else {
+        // Falls from above, hits the floor and squashes once.
+        const f = 0.62;
+        if (u < f) { const k = u / f; ctx.translate(0, -52 * (1 - k * k)); ctx.globalAlpha = Math.min(1, u * 8); }
+        else { const k = (u - f) / (1 - f), sq = Math.sin(k * Math.PI) * (1 - k) * 0.9; ctx.translate(bx, by); ctx.scale(1 + sq * 0.12, 1 - sq * 0.16); ctx.translate(-bx, -by); }
+      }
       draw();
       ctx.restore();
     };
   }
+  function arrive(id, kind) { if (OBJS.some(x => x.id === id)) placedAt.set(id, { t: animT, kind }); }
   function objectPlaced(id) {
     const o = OBJS.find(x => x.id === id);
     if (!o) return;
-    placedAt.set(id, animT);
+    placedAt.set(id, { t: animT, kind: 'land' });
     const T = T_OF(o);
     // A puff of dust where it lands.
     for (let i = 0; i < 4; i++) {
@@ -1580,7 +1595,8 @@ export function createHouseArt(ctx0, opts = {}) {
 
   // What a visitor carries in their arms, drawn over the front of the torso.
   function drawCarried(c) {
-    const [fx, fy] = iso(c.x, c.y, 0), f = facing(c.face), x = fx + f.flip * 2, y = fy - 17;
+    // Whoever is carrying walks with a little bob.
+    const [fx, fy] = iso(c.x, c.y, 0), f = facing(c.face), x = fx + f.flip * 2, y = fy - 17 + (c.walking ? Math.sin(animT * 11) * 1.3 : 0);
     const rect = (px, py, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(px, py, w, h); };
     ctx.save();
     switch (c.carrying) {
@@ -1624,9 +1640,23 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.beginPath(); ctx.arc(0, -5, 2.3, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
+  // Little hearts that float up from someone who is pleased.
+  function drawHearts(c, age) {
+    if (age < 0 || age > 2.2) return;
+    const [fx, fy] = iso(c.x, c.y, 0);
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      const a = age - i * 0.22; if (a < 0 || a > 1.6) continue;
+      const rise = a * 26, sway = Math.sin(a * 5 + i * 2) * 5 + (i - 1) * 7, s = 0.55 + 0.35 * Math.min(1, a * 3);
+      ctx.globalAlpha = Math.min(1, a * 5) * Math.min(1, (1.6 - a) * 2.5);
+      heart(fx + sway, fy - 62 - rise, s, i === 1 ? '#F0436B' : '#F58AA6');
+    }
+    ctx.restore();
+  }
   function drawBubble(c, t) {
     const age = t - c.bubble.at;
     if (c.bubble.text === '!') { drawAlert(c, age); return; }
+    if (c.bubble.text === '♥') { drawHearts(c, age); return; }
     if (age < 0 || age > 4) return;
     const [fx, fy] = iso(c.x, c.y, 0);
     ctx.save(); ctx.globalAlpha = Math.min(1, (4 - age) * 1.2); ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.textAlign = 'center';
@@ -2107,6 +2137,7 @@ export function createHouseArt(ctx0, opts = {}) {
   });
   const lookInfo = (kind, key) => (kind === 'paper' ? PAPERS[key] : kind === 'floor' ? FLOORS[key] : null) || null;
   function toggleObjectLight(id) { const next = objectLights.get(id) !== true; objectLights.set(id, next); return next; }
+  let lastToggled = null;
   function toggleLightAt(level, sx, sy) {
     let best = null, bestDist = 34;
     WALL_LIGHTS.forEach((L, i) => {
@@ -2120,6 +2151,7 @@ export function createHouseArt(ctx0, opts = {}) {
       if (d < bestDist) { bestDist = d; best = { kind: 'object', id: o.id }; }
     });
     if (!best) return null;
+    lastToggled = best.kind === 'object' ? best.id : null;
     if (best.kind === 'wall') { const next = wallLightOverrides.get(best.index) !== true; wallLightOverrides.set(best.index, next); return next; }
     return toggleObjectLight(best.id);
   }
@@ -2236,5 +2268,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

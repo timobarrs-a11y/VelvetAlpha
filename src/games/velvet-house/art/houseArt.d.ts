@@ -67,6 +67,10 @@ export interface HouseArt {
   setGhost(g: { type: string; level: number; x: number; y: number; rot?: number; color?: 'partner' | 'player' } | null): void;
   /** A few sparkles near a spot on a floor (a room just finished, say). */
   burst(level: number, x: number, y: number, z?: number): void;
+  /** A piece springs out of its box. */
+  reveal(id: string): void;
+  /** A piece is dropped off from above (a delivery). */
+  drop(id: string): void;
   /** A cartoon cloud over a spot: a moving box is opened. */
   poof(level: number, x: number, y: number): void;
   /** Pull the room toward evening (0 to 0.42) without moving the clock; 0 puts it back. */
@@ -94,6 +98,8 @@ export interface HouseArt {
   applyFloor(level: number, floor: string): void;
   toggleObjectLight(id: string): boolean;
   toggleLightAt(level: number, sx: number, sy: number): boolean | null;
+  /** The id of the piece whose light `toggleLightAt` just switched (null for a wall light). */
+  lastToggledLight(): string | null;
   // Tap an object to bring it to life (or flip its switch); what happened, or null.
   poke(o: { id: string; type: string }, part?: string): string | null;
   /** Sets whether the partner's mouth animates (talking). */

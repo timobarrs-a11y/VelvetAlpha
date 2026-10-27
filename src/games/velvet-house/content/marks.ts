@@ -19,6 +19,12 @@ export const MARKS: Record<string, Spot> = {
   'entry.stack1': { level: 1, x: 3.7, y: 6.3 },
   'entry.stack2': { level: 1, x: 4.4, y: 5.9 },
   'entry.stack3': { level: 1, x: 3.2, y: 6.9 },
+  // The second load of boxes is spread over the entry, tall things toward the back, so none hides behind a piece
+  // unpacked from another.
+  'entry.truck1': { level: 1, x: 0.9, y: 4.4 },
+  'entry.truck2': { level: 1, x: 3.3, y: 4.6 },
+  'entry.truck3': { level: 1, x: 4.2, y: 5.1 },
+  'entry.truck4': { level: 1, x: 1.3, y: 5.6 },
   'living.center': { level: 1, x: 7.0, y: 4.6 },
   'living.window': { level: 1, x: 8.2, y: 1.2 },
   'living.tvWall': { level: 1, x: 5.6, y: 3.3 },

@@ -168,7 +168,7 @@ export function createScripts(g: Game): Partial<Game> {
             world.objs.push(inst);
             if (!relocate(world.objs, inst, at.level, [], [at.x, at.y])) { world.objs.pop(); engine.trace.push('give-fail:' + inst.id + JSON.stringify(people.map((p) => [p.id, p.level, +p.x.toFixed(1), +p.y.toFixed(1)]))); return; }
             g.relearnLayout(inst);
-            art.objectPlaced(inst.id);
+            if (inst.type === 'pbox') art.drop(inst.id); else art.objectPlaced(inst.id);
           }
         }
       }
