@@ -139,12 +139,16 @@ function AtlasConciergeInner() {
     if (!el) return;
     if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
     else el.scrollTop = el.scrollHeight;
+    // The page itself too: on a phone the chat box and the bar under it are taller than the screen, so
+    // coming back from the avatar and house (a new page, opening at the top) left the newest words, the
+    // coach card and the box to type in below the fold.
+    const page = document.scrollingElement;
+    if (page) page.scrollTop = page.scrollHeight;
   }, []);
 
   useEffect(() => {
     stickToBottom.current = true;
     toBottom(messages.length > 1);
-    messagesEndRef.current?.scrollIntoView?.({ block: 'end', behavior: 'auto' });
   }, [messages.length, isThinking, phase, toBottom]);
 
   useEffect(() => {
@@ -378,7 +382,11 @@ function AtlasConciergeInner() {
         </div>
       </header>
 
-      <div className="relative z-10 flex-1 flex flex-col max-w-2xl w-full mx-auto px-4 sm:px-6 pt-4 pb-6">
+      {/* Room under the chat bar: on a phone the browser's address bar sits right below it, and a tap that lands on it takes them out of the page. */}
+      <div
+        className="relative z-10 flex-1 flex flex-col max-w-2xl w-full mx-auto px-4 sm:px-6 pt-4"
+        style={{ paddingBottom: 'max(3rem, calc(env(safe-area-inset-bottom) + 2.5rem))' }}
+      >
         <main className="w-full flex flex-col">
           <div
             className="rounded-[1.75rem] overflow-hidden flex flex-col"
@@ -391,7 +399,7 @@ function AtlasConciergeInner() {
                 stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
               }}
               className="flex-1 overflow-y-auto p-4 sm:p-6"
-              style={{ maxHeight: 'calc(100dvh - 260px)' }}
+              style={{ maxHeight: 'calc(100dvh - 320px)' }}
             >
               <div ref={contentRef} className="space-y-3">
               <AnimatePresence>
@@ -529,7 +537,10 @@ function AtlasConciergeInner() {
 
             {phase === 'goal' && (
               <div className="p-3 sm:p-4" style={{ borderTop: '1px solid var(--shell-border)' }}>
-                <div className="flex items-end gap-2">
+                <div
+                  className="flex items-end gap-2 rounded-2xl p-2"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--shell-border)' }}
+                >
                   <textarea
                     value={input}
                     onChange={e => setInput(e.target.value)}
@@ -544,16 +555,16 @@ function AtlasConciergeInner() {
                     disabled={isThinking}
                     aria-label="Message Atlas"
                     className="flex-1 bg-transparent border-0 px-3 py-2 text-[15px] leading-relaxed resize-none focus:outline-none"
-                    style={{ color: 'var(--shell-text-primary)', minHeight: '54px', maxHeight: '120px' }}
+                    style={{ color: 'var(--shell-text-primary)', minHeight: '72px', maxHeight: '140px' }}
                   />
                   <button
                     onClick={() => send(input)}
                     disabled={!input.trim() || isThinking}
                     aria-label="Send to Atlas"
-                    className="flex-shrink-0 w-11 h-11 mb-0.5 rounded-xl flex items-center justify-center transition-all hover:scale-[1.03] disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center transition-all hover:scale-[1.03] disabled:opacity-30 disabled:cursor-not-allowed"
                     style={{ background: 'var(--shell-accent)', color: 'var(--shell-bg)' }}
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-5 h-5" />
                   </button>
                 </div>
               </div>
