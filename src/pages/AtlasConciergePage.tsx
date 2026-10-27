@@ -188,7 +188,7 @@ function AtlasConciergeInner() {
     applyJob(job);
     const rec = job.recommendation;
     addAtlas(
-      handoffLine({ name: rec.helperName, gender: rec.helperGender, kind: rec.kind, domain: rec.expertDomain }),
+      job.handoff || handoffLine({ name: rec.helperName, gender: rec.helperGender, kind: rec.kind, domain: rec.expertDomain }),
       { highlight: ['plan'] },
     );
     setPhase('meet');

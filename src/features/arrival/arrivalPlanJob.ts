@@ -37,6 +37,8 @@ export interface PlanJob {
   provisioned?: Provisioned;
   plan?: ArrivalPlan;
   summary?: PlanSummary;
+  /** Atlas's own words handing them to the coach or assistant, written about their goal and plan. */
+  handoff?: string | null;
   startedAt: number;
 }
 
@@ -103,6 +105,7 @@ async function run(userId: string, start: PlanJob, deps: JobDeps): Promise<PlanJ
       });
       job.plan = data.plan as ArrivalPlan;
       job.summary = data.summary as PlanSummary;
+      job.handoff = typeof data.handoff === 'string' && data.handoff.trim() ? data.handoff.trim() : null;
     }
     job.status = 'ready';
   } catch (err) {

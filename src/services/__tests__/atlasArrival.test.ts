@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  addressName, buildGoalPrompt, buildOpening, buildPlanPrompt, checkReply, dateMentions, dateNotes, weekdayIssues, firstName, formalAddress, openingPath,
+  addressName, buildGoalPrompt, buildOpening, buildHandoffPrompt, buildPlanPrompt, checkReply, handoffIssues, dateMentions, dateNotes, weekdayIssues, firstName, formalAddress, openingPath,
   parseReply, pickRemark, summarizePlan, timeOfDayGreeting, unknownTraits, validTraits, validatePlan,
   OPENING_CHIPS, type ArrivalProfile,
 } from '../../../supabase/functions/_shared/atlasArrival';
@@ -328,5 +328,36 @@ describe('what the plan prompt says about the helper', () => {
     expect(buildPlanPrompt({ ...base, helper: { name: 'Marcus', kind: 'coach', domain: 'fitness', gender: 'male' } })).toContain('he/him/his');
     expect(buildPlanPrompt({ ...base, helper: { name: 'Dana', kind: 'coach', domain: 'fitness', gender: 'female' } })).toContain('she/her');
     expect(buildPlanPrompt({ ...base, helper: { name: 'Sam', kind: 'coach', domain: 'fitness' } })).toContain('by name rather than with a pronoun');
+  });
+});
+
+describe('the hand-over to the coach or assistant', () => {
+  const plan = {
+    goal: { title: 'Run my first 5K', targetDate: '2027-01-25', measure: null },
+    phases: [{ title: 'Build endurance', steps: [] }],
+    commitments: [{ description: 'Get fitted for running shoes', dueDate: '2026-10-31' }],
+    weeklyRhythm: [{ day: 'Tuesday', what: 'Morning run' }],
+    checkIns: 'Every Sunday evening and Thursday',
+  };
+  const input = { goalText: 'Run my first 5K', plan, address: 'Master Tester', userWords: '- I want to feel healthier', today: { date: '2026-10-27', weekday: 'Tuesday' } };
+
+  it('is built from their goal, the plan and what the helper does', () => {
+    const coach = buildHandoffPrompt({ ...input, helper: { name: 'Dana', kind: 'coach', domain: '5K running training', gender: 'female' } });
+    expect(coach).toContain('Run my first 5K');
+    expect(coach).toContain('Get fitted for running shoes');
+    expect(coach).toContain('Every Sunday evening and Thursday');
+    expect(coach).toContain('I want to feel healthier');
+    expect(coach).toContain('she/her');
+    expect(coach).toContain('use exactly "Master Tester"');
+    const assistant = buildHandoffPrompt({ ...input, helper: { name: 'Owen', kind: 'assistant', domain: 'x', gender: 'male' } });
+    expect(assistant).toContain('he/him/his');
+    expect(assistant).toContain('sees the plan through');
+  });
+
+  it('accepts a good message and sends back one that breaks the rules', () => {
+    const good = 'Your plan is ready to look over, and it rests on the reason you gave me: to feel healthier and to prove you can stick with something. For that I have chosen Dana, the finest running coach I know. She will see you through the first steps this week, starting with the shoes, and check in every Sunday evening and Thursday. Do go and meet her.';
+    expect(handoffIssues(good, 'Dana', '2026-10-27')).toEqual([]);
+    expect(handoffIssues('Meet Dana! Shall we?', 'Dana', '2026-10-27').length).toBeGreaterThan(0);
+    expect(handoffIssues(good.replace(/Dana/g, 'Someone'), 'Dana', '2026-10-27')).toContain('never names Dana');
   });
 });

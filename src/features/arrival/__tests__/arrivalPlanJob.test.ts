@@ -32,6 +32,18 @@ describe('plan job', () => {
     expect(loadPlanJob('u')?.status).toBe('ready');
   });
 
+  it('keeps the hand-over Atlas wrote, and the gender the plan was told about', async () => {
+    const { d, call } = deps({ plan: () => ({ plan: { goal: { title: 'x' } }, summary: {}, handoff: '  Your plan is ready.  ' }) });
+    const job = await startPlanJob('u', transcript, d);
+    expect(job.handoff).toBe('Your plan is ready.');
+    expect(call.mock.calls[2][0].helper.gender).toBe('male');
+  });
+
+  it('has no hand-over when the server sent none, so the page uses its plain one', async () => {
+    const { d } = deps({ plan: () => ({ plan: { goal: { title: 'x' } }, summary: {}, handoff: null }) });
+    expect((await startPlanJob('u', transcript, d)).handoff).toBeNull();
+  });
+
   it('shares the work when started twice', async () => {
     const { d, call } = deps();
     await Promise.all([startPlanJob('u', transcript, d), startPlanJob('u', transcript, d)]);

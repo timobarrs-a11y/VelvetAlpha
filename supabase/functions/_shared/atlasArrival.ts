@@ -708,6 +708,58 @@ ${transcript}
 --- END ---`;
 }
 
+/** The prompt for Atlas's hand-over: back to their goal, then why this coach or assistant, and how they will help. */
+export function buildHandoffPrompt(input: {
+  goalText: string;
+  helper: { name: string; kind: "coach" | "assistant"; domain: string; gender?: "male" | "female" | null };
+  plan: ArrivalPlan;
+  address: string | null;
+  userWords: string;
+  today: { date: string; weekday: string };
+}): string {
+  const { goalText, helper, plan, address, userWords, today } = input;
+  const pronoun = helper.gender === "male" ? "he/him/his" : helper.gender === "female" ? "she/her" : null;
+  const role = helper.kind === "coach" ? "coach" : "assistant";
+  const does = helper.kind === "coach"
+    ? `${helper.name} is a ${helper.domain} coach: teaches one lesson at a time, keeps them practising until it sticks, and keeps count of their progress.`
+    : `${helper.name} is an assistant for this goal: sees the plan through with them, keeps the dates, and answers whatever they need to know along the way.`;
+  const steps = plan.commitments.slice(0, 3).map(c => `- ${c.description} (${c.dueDate})`).join("\n") || "- (none)";
+  const rhythm = plan.weeklyRhythm.map(r => `- ${r.day}: ${r.what}`).join("\n") || "- (none)";
+  const phases = plan.phases.map(p => p.title).join("; ");
+  return `You are Atlas, the host of Velvet, in the manner of Alfred Pennyworth: impeccably courteous, warm underneath, dry and understated, quietly devoted to their ambition. The person has just finished making their avatar and house, and their plan is drafted. You are handing them over to ${helper.name}, their ${role}. This is a referral to the best there is, not a goodbye: it must feel purposeful, the plan and the person carrying it are one thing.
+
+What they said, in their words:
+${userWords}
+
+Their goal: "${goalText}"${plan.goal.targetDate ? `, by ${plan.goal.targetDate}` : ""}.
+The plan's phases: ${phases}.
+This week's first steps:
+${steps}
+The weekly rhythm:
+${rhythm}
+Check-ins: ${plan.checkIns || "regular"}.
+${does}
+
+Write the message in three or four sentences, plain text:
+1. Say the plan is ready for them to look over, and tie it back to their goal and the reason they gave (one honest echo of their own words, not a list).
+2. Say you have chosen ${helper.name} for exactly this, the best there is for it, and why that fits this goal.
+3. Say concretely how ${helper.name} will help them, using the plan above (the first steps, the rhythm, the check-ins). Promise nothing beyond what is described here.
+4. Close by sending them to meet ${helper.name}, without a question.
+
+RULES: ${pronoun ? `Refer to ${helper.name} with ${pronoun} when you use a pronoun.` : `Refer to ${helper.name} by name; no pronouns.`} ${address ? `If you use their name, use exactly "${address}".` : "Do not use their name."} Today is ${today.weekday}, ${today.date}; name a weekday only if it is in the plan above. No exclamation marks, no emoji, no lists, no questions. Never say "journey", "Absolutely", "I'd be happy to", "Feel free to" or "As an AI". Under 90 words. Return only the message.`;
+}
+
+/** A hand-over message that follows the rules, or the reasons it doesn't. */
+export function handoffIssues(text: string, helperName: string, todayIso: string): string[] {
+  const issues = checkReply(text);
+  if (!text.includes(helperName)) issues.push(`never names ${helperName}`);
+  if (text.includes("?")) issues.push("asks a question");
+  if (text.length > 700) issues.push("too long");
+  if (text.length < 80) issues.push("too short");
+  issues.push(...weekdayIssues(text, todayIso));
+  return issues;
+}
+
 // ─── Dates in the user's own time zone ───────────────────────────────────
 // The server runs in UTC, so the page sends its local date and its offset
 // (Date.getTimezoneOffset(): minutes behind UTC, e.g. 420 in California).
