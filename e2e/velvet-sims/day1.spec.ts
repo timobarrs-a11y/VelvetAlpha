@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame, objects, inGame, pageErrors, dragToMark } from './helpers';
+import { openGame, objects, inGame, pageErrors, dragToMark, rotateTo } from './helpers';
 
 /**
  * The whole first day, played the way a new player would: tap through the cutscene, then do what each card asks (unpack and
@@ -26,9 +26,10 @@ test('the first day plays through from the move-in to free will', async ({ page 
   await expect.poll(async () => (await objects(page)).some((o) => o.id === 'box.couch' && o.type === 'sofa')).toBe(true);
   await expect.poll(async () => {
     if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
-    return game.locator('.vh-scard-go:visible').count();
-  }, { timeout: 30_000, intervals: [300] }).toBeGreaterThan(0);
+    return (await game.locator('.vh-scard:visible').count()) && (await game.locator('.vh-scard strong').innerText()) === 'Put it where it goes';
+  }, { timeout: 30_000, intervals: [300] }).toBeTruthy();
   await dragToMark(page, 'box.couch', 'living.couchTv', 'sofa', 2);
+  await rotateTo(page, 'box.couch', 2);
   await expect.poll(async () => JSON.parse(await inGame<string>(page, 'v.story()'))['opening.done'], { timeout: 15_000 }).toBe(true);
 
   const deadline = Date.now() + Number(process.env.DAY1_MS ?? 800_000);

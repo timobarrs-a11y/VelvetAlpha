@@ -26,6 +26,16 @@ Sources read: `src/games/velvet-house/content/scripts.ts`, `content/lines.ts`, `
 | 8 | Line variants | Lines vary by humor style, communication style **and the companion's gender** (masculine and feminine versions of each). No separate roommate versions; wording is written without pet names so it fits a partner or a friend. |
 | 9 | Saves when the opening changes | New game for everyone (keep the `MIN_CONTENT_VERSION` bump). Reload safety within one version still has to work (§10). |
 
+Added 2026-10-27 (fourth round, after the director played it):
+- **Arrange sets nothing on letting go.** A dragged piece stays where it was dropped, loose, red or green. **Set it
+  down** in the Arrange bar keeps it (and refuses with a reason if it does not fit); **Put it back** returns it;
+  **Rotate** turns it in place. No auto-rotation: the couch lesson adds a short turn step using Rotate, and ends only
+  when the couch faces the TV. The lesson cards have no buttons.
+- **A piece in hand never counts as placed.** The lamp's "glitch back to the entryway" was the lesson's condition
+  coming true mid-drag; Arrange then closed itself and closing Arrange put the held piece back where it was picked up.
+- **Reactions are a sequence, not a timer:** the room settles (0.7 s), the partner turns to what changed (0.4 s),
+  the `!` hangs on its own (1.0 s), then the line. Where she asks rather than notices (the couch), no `!`.
+
 Added 2026-10-27 (third round): **there is no Skip.** A story animation plays to its end, as in a handheld
 RPG; only dialogue is tapped through. The Skip button, the skippable flag and the drive-up's tap-to-end are gone.
 
@@ -190,8 +200,8 @@ S = source, A = automated, P = played on desktop **and** phone.
 6. Only the current lesson object is tappable; dock, keyboard shortcuts, other objects and the companion are not. (A e2e)
 7. Pressing Set it down with the couch (or lamp) outside the outline shows the companion's "not there" line and the lesson stays open; inside the outline, the piece snaps and the beat ends. (A e2e; P)
 8. After A9 and after B8 the clock runs, the dock works and both residents act on their own. (A e2e)
-9. **Set it down is obvious**: a visible control near the piece or the card, not folded away on phones. (P, both sizes)
-10. **The couch never lands facing away from the TV**: whatever rotation the player drags it in with, the snapped result faces the TV, and the outline shows that facing. Reproduce the reported wrong-facing case first. (A e2e; P)
+9. **Set it down is obvious**: the Arrange bar's green Set it down button, with Put it back beside it when a piece is loose. (P, both sizes)
+10. **Facing is the player's**: nothing auto-rotates; the couch lesson's Turn it step ends only when it faces the TV. (A e2e; P)
 11. On B3 and B5 the `!` and the companion are on screen when they fire, together with the lamp. (P; screenshot)
 12. Reload at every lesson resumes without a soft-lock and without a second box, couch or lamp. (A headless + e2e)
 13. There is no Skip button, no `skippable` script, and the drive-up cannot be ended early. (A e2e)

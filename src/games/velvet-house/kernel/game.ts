@@ -169,6 +169,10 @@ export interface Game {
   isArranging(): boolean;
   /** Set the selected piece exactly in a lesson's outline when it is close. */
   snapSelectedToOutline(): void;
+  /** Arrange: the loose piece stays for good if it fits; Put it back returns it; `inHand` is the piece not yet set down. */
+  setDown(): void;
+  putBack(): void;
+  inHand(): string | null;
   /** The piece being dragged: its centre on the floor (world units) and its height. */
   heldCentre(): { x: number; y: number; h: number } | null;
   /** Where a script wants the piece to end up (the outline), so the camera can frame both. */

@@ -108,7 +108,20 @@ export async function dragToMark(page: Page, id: string, mark: string, type: str
   }
   await page.mouse.up();
   await page.waitForTimeout(400);
+  // Letting go leaves it loose; Set it down in the Arrange bar keeps it.
+  await page.frameLocator('#g').locator('[data-arr="set"]').click();
+  await page.waitForTimeout(400);
   piece = await where();
-  console.log(`drag ${id} -> ${mark}: let go at (${piece.x.toFixed(2)}, ${piece.y.toFixed(2)}) rot ${piece.rot}; mark (${m.x}, ${m.y})`);
+  console.log(`drag ${id} -> ${mark}: set down at (${piece.x.toFixed(2)}, ${piece.y.toFixed(2)}) rot ${piece.rot}; mark (${m.x}, ${m.y})`);
   return piece;
+}
+
+/** Turns the selected piece with the Arrange bar's Rotate until it faces `rot`, then sets it down. */
+export async function rotateTo(page: Page, id: string, rot: number): Promise<Obj> {
+  const game = page.frameLocator('#g');
+  const where = async (): Promise<Obj> => (await objects(page)).find((o) => o.id === id)!;
+  for (let i = 0; i < 4 && (await where()).rot !== rot; i++) { await game.locator('[data-arr="rotate"]').click(); await page.waitForTimeout(250); }
+  await game.locator('[data-arr="set"]').click();
+  await page.waitForTimeout(400);
+  return where();
 }
