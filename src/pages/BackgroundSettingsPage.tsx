@@ -58,7 +58,7 @@ export function BackgroundSettingsPage() {
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState(false);
-  const [textColor, setTextColor] = useState<ToolbarTextColorKey>(customization?.toolbar_text_color ?? 'dark');
+  const [textColor, setTextColor] = useState<ToolbarTextColorKey>(customization?.toolbar_text_color ?? 'light');
   const [isSavingTextColor, setIsSavingTextColor] = useState(false);
   const [textColorSaved, setTextColorSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -243,7 +243,7 @@ export function BackgroundSettingsPage() {
             <button
               type="button"
               onClick={handleTextColorSave}
-              disabled={isSavingTextColor || textColor === (customization?.toolbar_text_color ?? 'dark')}
+              disabled={isSavingTextColor || textColor === (customization?.toolbar_text_color ?? 'light')}
               className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSavingTextColor ? 'Saving...' : textColorSaved ? <><Check size={14} /> Saved</> : 'Save text color'}

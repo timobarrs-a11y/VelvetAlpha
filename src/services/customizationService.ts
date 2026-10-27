@@ -362,7 +362,7 @@ export async function getDailyCheckinStatus(userId: string): Promise<{
         left_rail_collapsed:         customRow.left_rail_collapsed ?? false,
         right_rail_collapsed:        customRow.right_rail_collapsed ?? false,
         toolbar_background_mode:     (customRow.toolbar_background_mode as ToolbarBackgroundMode) ?? 'glass',
-        toolbar_text_color:          (customRow.toolbar_text_color as ToolbarTextColorKey) ?? 'dark',
+        toolbar_text_color:          (customRow.toolbar_text_color as ToolbarTextColorKey) ?? 'light',
         workspace_wallpaper_id:      (customRow.tile_colors as Record<string, string>)?.__workspace_wallpaper_id || null,
         workspace_wallpaper_url:     (customRow.tile_colors as Record<string, string>)?.__workspace_wallpaper_url || null,
       }
@@ -405,7 +405,7 @@ export async function performDailyCheckin(userId: string): Promise<UserCustomiza
     left_rail_collapsed:         existing?.left_rail_collapsed   ?? false,
     right_rail_collapsed:        existing?.right_rail_collapsed  ?? false,
     toolbar_background_mode:     (existing?.toolbar_background_mode as ToolbarBackgroundMode) ?? 'glass',
-    toolbar_text_color:          (existing?.toolbar_text_color as ToolbarTextColorKey) ?? 'dark',
+    toolbar_text_color:          (existing?.toolbar_text_color as ToolbarTextColorKey) ?? 'light',
     workspace_wallpaper_id:      (existing?.tile_colors as Record<string, string>)?.__workspace_wallpaper_id || null,
     workspace_wallpaper_url:     (existing?.tile_colors as Record<string, string>)?.__workspace_wallpaper_url || null,
   };
