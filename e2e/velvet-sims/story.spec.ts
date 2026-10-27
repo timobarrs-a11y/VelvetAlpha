@@ -35,8 +35,8 @@ test('watching the move-in: tap the box, place the couch, and carry on to the ch
   // Back to the cutscene, and eventually the choice.
   await expect.poll(async () => {
     if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
-    return game.locator('.vh-choices button').count();
+    return game.locator('.vh-choices:visible button').count();
   }, { timeout: 150_000, intervals: [300] }).toBeGreaterThan(0);
-  await game.locator('.vh-choices button').first().click();
+  await game.locator('.vh-choices:visible button').first().click();
   expect(pageErrors(page)).toEqual([]);
 });

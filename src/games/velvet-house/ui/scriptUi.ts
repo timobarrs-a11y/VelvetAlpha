@@ -28,8 +28,7 @@ export function createScriptUi(stage: Element): ScriptUi {
   root.innerHTML = `
     <div class="vh-bar vh-bar-top"></div><div class="vh-bar vh-bar-bottom"></div>
     <button type="button" class="vh-skip" hidden>Skip</button>
-    <div class="vh-speech" hidden role="dialog" aria-live="polite"><div class="vh-speech-name"></div><div class="vh-speech-text"></div><div class="vh-speech-next" aria-hidden="true">&#9660;</div></div>
-    <div class="vh-choices" hidden></div>
+    <div class="vh-speech" hidden role="dialog" aria-live="polite"><div class="vh-speech-name"></div><div class="vh-speech-text"></div><div class="vh-choices" hidden></div><div class="vh-speech-next" aria-hidden="true">&#9660;</div></div>
     <div class="vh-scard" hidden><strong></strong><p></p><button type="button" hidden></button></div>`;
   stage.appendChild(root);
   const speech = root.querySelector('.vh-speech') as HTMLElement;
@@ -44,6 +43,8 @@ export function createScriptUi(stage: Element): ScriptUi {
   let full = '', shown = 0, typing: ReturnType<typeof setInterval> | null = null, lineDone = true;
   const stopTyping = () => { if (typing) { clearInterval(typing); typing = null; } };
   speech.addEventListener('click', () => {
+    // A this-or-that is answered with its buttons, not by tapping the box.
+    if (!choices.hidden) return;
     if (typing) { stopTyping(); textEl.textContent = full; shown = full.length; return; }
     lineDone = true;
     speech.hidden = true;
@@ -63,7 +64,7 @@ export function createScriptUi(stage: Element): ScriptUi {
     setMode(mode, skippable) {
       if (mode) stageEl.dataset.script = mode; else delete stageEl.dataset.script;
       skipBtn.hidden = !(skippable && (mode === 'cutscene' || mode === 'guided'));
-      if (!mode) { speech.hidden = true; choices.hidden = true; cardEl.hidden = true; stopTyping(); lineDone = true; }
+      if (!mode) { speech.hidden = true; choices.hidden = true; choices.innerHTML = ''; delete speech.dataset.choosing; cardEl.hidden = true; stopTyping(); lineDone = true; }
     },
     say(name, text) {
       nameEl.textContent = name;
@@ -79,11 +80,22 @@ export function createScriptUi(stage: Element): ScriptUi {
     },
     sayDone: () => lineDone,
     hideSay() { speech.hidden = true; lineDone = true; stopTyping(); },
+    // The choices sit in the dialogue box, under the line that asked: the box comes back with that line and its buttons.
     choose(labels) {
       pick = null;
+      stopTyping();
+      textEl.textContent = full;
+      shown = full.length;
       choices.innerHTML = labels.map((l, i) => `<button type="button" data-pick="${i}">${esc(l)}</button>`).join('');
       choices.hidden = false;
-      choices.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('click', () => { pick = Number(b.dataset.pick); choices.hidden = true; }));
+      speech.dataset.choosing = '1';
+      speech.hidden = false;
+      choices.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('click', () => {
+        pick = Number(b.dataset.pick);
+        choices.hidden = true; choices.innerHTML = '';
+        delete speech.dataset.choosing;
+        speech.hidden = true; lineDone = true;
+      }));
     },
     choiceMade: () => pick,
     card(title, body, button) {
