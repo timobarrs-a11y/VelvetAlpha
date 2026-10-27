@@ -1,288 +1,237 @@
-# Scene contract: `opening.moveIn` (the move-in)
+# Scene contract: the move-in (`opening.moveIn` and `tutorial.ch7`)
 
-Status: **proposed, not approved**. This is the audit's reading of the opening as it plays today, lined up against
-the three documents that describe it, with the gaps marked. Nothing here has been built. Section 13 lists the
-decisions that need the director; the contract is finalised after those answers.
+Status: **direction approved by the director on 2026-10-27** (answers recorded in §0). Implementation has not
+started; it begins when the director says go. Section 13 holds the small questions still open; each has a working
+assumption so none of them blocks the start.
 
-Sources read: `src/games/velvet-house/content/scripts.ts` (`OPENING`), `content/lines.ts`, `content/banks.ts`,
-`content/marks.ts`, `script/gameHost.ts`, `script/engine.ts`, `docs/velvet-house/opening-sequence.md` (the brief),
-`docs/velvet-house/chapter1-script.md` ("as it plays now"), `docs/velvet-house/companion-voices-and-openings.md`
-(the "new first beat"), `docs/velvet-house/architecture-plan.md` §2.5 (the worked example the engine was built from).
+This contract covers two scripts because the director describes them as one continuous introduction: the arrival
+and the couch (`opening.moveIn`) and the lamp (`tutorial.ch7`). The hand-off between them is a continuity point and
+is specified here.
 
-## What actually happens today (traced through the code, then confirmed in play)
+Sources read: `src/games/velvet-house/content/scripts.ts`, `content/lines.ts`, `content/banks.ts`,
+`content/marks.ts`, `script/gameHost.ts`, `script/engine.ts`, `ui/arrivalIntro.ts`, the director's brief
+(`opening-sequence.md`) and the director's answers of 2026-10-27.
 
-Verified in play: the repository's `e2e/velvet-sims/story.spec.ts` (both tests pass in this container) and the
-probe described in `scene-reliability-audit.md` §A. "Code" below means confirmed by reading only.
+## 0. Decisions taken
 
-1. **Title screen.** The house runs behind a menu; Continue or New Game reloads the page (`main.ts` `launch`).
-2. **Boot.** A new game removes the starter sofa, plant and lamp from the house and queues `opening.moveIn`
-   (`gameHost.ts` 229–237). The host page is told the game is ready and sends names, voice, relationship and the
-   town plot *afterwards*, over `postMessage` (`hostBridge.ts`, `VelvetHouseNextGame.tsx` `sendProfile`).
-3. **Drive-up.** On the first tick the cutscene starts: letterbox bars, dock and canvas disabled, Skip shown. The
-   drive-up canvas plays for about 8 seconds (a tap ends it). It reads the plot once, when it starts, so unless the
-   host's plot message beat the first frame it shows the starter house (code).
-4. **Setup.** Clock set to day 1, 9:00. Jordan is placed in the living room and Maya by the window, then both are
-   immediately placed at the door again (two dead steps left from the old cold open: `scripts.ts` 28–32).
-5. **Arrival.** Dez spawns at the door; Jordan and Maya walk to their entry marks without waiting; Dez walks inside
-   and the camera closes in on him. Dez: "Come on in, {player} and {partner}! Welcome to your new home!" (tap).
-   Camera wide; Maya gets a `!` and says the truck-off-the-road line for her humor style (tap). Dez brushes it off;
-   if the companion is a friend, the roommates line; then `dez.intro.2`, `.3`, `.4` (taps). Dez walks out.
-6. **The couch box.** After 1 s Dez re-enters carrying a box, walks to the gap between entry and kitchen, the box
-   appears there (`give`, id `box.couch`, contents `sofa`), Dez leaves. Maya `!` and the "mayor carried our couch"
-   line for her humor style (tap). **Checkpoint.**
-7. **Lesson 1, guided.** Only the box can be tapped. Card "Open the box". Waits for the event `obj.unpacked` on
-   `box.couch`. Tapping the box runs a 380 ms poof, then the box becomes a sofa, Arrange opens with it selected.
-8. **Lesson 2, guided.** Maya asks for the couch by the TV in her communication style (tap). A player-coloured
-   outline appears at `living.couchTv`; card "Put it where it goes" with a **Set it down** button. The button snaps
-   the couch to the outline if it is within 4 units and closes Arrange. **The beat ends on the button, whatever the
-   couch's position** (`gameHost.ts` 223, `arrange.ts` 109–114). Checkpoint; flags `opening.done` and
-   `dez.deliveries` set; the script finishes (people released, card and outline cleared, mode off, clock runs).
-9. **Hand-off.** `tutorial.ch7` triggers on `opening.done` as a `beat` chapter: after 2 s Dez brings the lamp box
-   and two plant boxes, and the lamp lesson begins. That is a separate scene and gets its own contract.
+| # | Question | Decision |
+|---|---|---|
+| 1 | First thing seen inside | Dez, the player and the companion walk in together. The truck-off-the-road joke stays and is a **required beat**; the drive-up should visibly run over a tree so the joke lands on something the player saw. |
+| 2 | Dez's introduction | The current lines, reworked as in §3 B2–B5: "Welcome to {town}" with the town name bold and green; the companion leads with the driving remark; Dez brushes it off; Dez confirms the names (one tap); Dez points at the first box and leaves. |
+| 3 | Lines while walking | Never. Handheld-RPG rule: a dialogue box appears only when every mover involved has stopped. Dez enters first carrying the box, the player and companion follow; the speech starts when all three stand at their marks. |
+| 4 | Companion voice key | Hard-coded line banks keyed by the companion's **humor style × communication style** (4 × 4), complete for every slot. Live generation is for later. |
+| 5 | Couch placed elsewhere | The step does not end. The companion says, in her communication style, that this is not where she wants it, and the lesson stays open until the couch is in the outline. Same rule for both lamp placements. |
+| 6 | Sound | None. The `!` bubble and visual effects are the stand-in. |
+| 7 | Player lines | None. The player character never speaks in scripted scenes. |
+| 8 | Line variants | Lines vary by humor style, communication style **and the companion's gender** (masculine and feminine versions of each). No separate roommate versions; wording is written without pet names so it fits a partner or a friend. |
+| 9 | Saves when the opening changes | New game for everyone (keep the `MIN_CONTENT_VERSION` bump). Reload safety within one version still has to work (§10). |
 
-What the brief describes and the game does **not** do: the cold open (two partner lines alone in the empty room,
-then a knock), Dez's original five intro lines, the four personality voices, Maya sitting and looking at the window,
-the TV-or-window ask and the Keep it / Move it choice (removed on 2026-10-27, and the docs were given a banner
-rather than rewritten), the "Tap anything in your home" wording, and the radial menu with one option (a single
-action runs at once; the tray only appears for two or more).
+Also raised by the director and recorded as requirements: the Set it down affordance is unclear and the couch
+sometimes lands facing the wrong way (§11 items 9–10); the "this or that" choice buttons are not wanted anywhere in
+the introduction; residents should switch lamps on and off by themselves in free play (§12, new system, not part of
+this scene).
 
 ## 1. Purpose and intended player experience
 
-From the brief: "a new-game cold open through the end of the tutorial"; the player meets Dez, learns that
-tapping things is how you act in the house, and places the first piece of furniture; "the companion is how the
-store becomes part of the world"; "the relationship is the product". The intended feeling (overhaul brief §10):
-"the satisfying thud and dust when a box lands; the companion turning to look at them."
+From the brief: meet Dez, the mayor who does everything; learn that tapping things is how you act; place the first
+two pieces of furniture while the companion shows she has opinions of her own. The player should laugh once at the
+driving, feel the box thud, and see the companion turn and react in real time.
 
 ## 2. Initial conditions
 
 | Condition | Tag | How the game knows | Today |
 |---|---|---|---|
-| A brand-new save (no `velvet-sims:<id>` slot, or Start chosen) | Invariant | `world.save === null` | Yes |
-| The starter sofa, plant and lamp are not in the house | Invariant | `gameHost.ts` removes them for a new game | Yes |
-| Clock day 1, 09:00, paused for the cutscene | Invariant | `clock` step; cutscene holds the day | Yes |
-| Main floor shown, walls down, camera wide | Required | `camera` step; `wallIdx` default `down` | Yes |
-| Player and partner names known | Invariant for lines | `g.simName`, `g.partnerName` from the host profile | **Race:** read at line time; defaults are Jordan and Maya |
-| Companion humor and communication style known | Required | `g.s.voice` from the host profile | **Race:** defaults `warm`/`diplomatic`; not saved |
-| Relationship (romantic or friend) known | Required for the roommates branch | `story.rel`, copied from `g.s.voice` every tick | **Race** |
-| The player's town plot, for the drive-up | Flexible | `g.s.plot` from the host | **Race:** read once, usually `null` |
-| Nobody stands on the drop mark | Required | `give` fails and traces `give-fail` | Not handled by the story |
+| Brand-new save | Invariant | `world.save === null` | yes |
+| Starter sofa, plant and lamp absent | Invariant | removed in `gameHost.ts` for a new game | yes |
+| Clock day 1, 09:00, held during cutscene and guided steps | Invariant | `clock` step; `run.ts` holds the day | yes |
+| Main floor, walls down, camera wide | Required | `camera` step; `wallIdx` default | yes |
+| Host profile applied: names, humor, communication, gender, relationship | Invariant for lines | `hostBridge.ts` profile message | **race**: not awaited; `voice` not saved |
+| Plot known, or the fallback house | Flexible | `g.s.plot` | **race**: read once at start |
+| `entry.drop` free when a box lands | Required | `give` fails otherwise | not handled |
 
-## 3. Required story beats, in order
+## 3. Beats, in order
 
-| Beat | Director's words (brief) | Tag | Exit condition (game terms) | Resume-safe fallback |
+Tags: Invariant · Required beat · Flexible presentation · Optional moment. No open-ended interaction exists in the
+introduction; the companion's chat is not reachable until chapter 11.
+
+### Part A: `opening.moveIn`
+
+| Beat | What happens (director's words where given) | Tag | Exit condition (game terms) | Resume-safe fallback |
 |---|---|---|---|---|
-| B0 | Drive-up: Dez's truck pulls up at the player's house (chapter1-script §0) | Flexible presentation | `introDone()` or a tap | none needed (no world effect) |
-| B1 | The player and the companion walk in with Dez (companion-voices "new first beat") | Required beat | all three `arrived` at their marks | world: Dez exists inside, both at entry marks |
-| B2 | Dez welcomes them and introduces himself: mayor, mover, delivery | Required beat; the three facts are **Invariant** | last intro line dismissed | `did.say.dez.intro.4` (new) |
-| B2a | The truck-off-the-road joke | Optional moment (humor bank) | line dismissed | – |
-| B2b | Roommates line when the companion is a friend | Optional moment, cond `rel = friend` | line dismissed | – |
-| B3 | Dez fetches the couch box, sets it down in the entry gap, leaves | Required beat | `box.couch` exists, Dez despawned | world: `box.couch` exists (as box or sofa) |
-| B4 | The companion reacts: the mayor carried our couch | Required beat | line dismissed | `did.say.couchCarried` (new) |
-| B5 | Tap the box: "Tap anything in your home to see what you can do with it." | Required beat (guided) | event `obj.unpacked box.couch` | world: `box.couch.type === 'sofa'` |
-| B6 | Place the couch where the partner asks, against the wall facing the TV | Required beat (guided) | **decision 13.5**: sofa within tolerance of `living.couchTv`, or sofa set down anywhere | world predicate on `box.couch` position |
-| B7 | Opening complete; Dez's deliveries begin | Invariant | flags `opening.done`, `dez.deliveries`; mode off; people released | idempotent `set` steps |
+| A0 | Drive-up. Dez's truck comes down Maple Street, **runs over a tree** on the way, pulls up at the house. Tap to end early. | Required beat; the tree knock-down is Flexible presentation until built (§12) | `introDone` or tap | none (no world effect) |
+| A1 | Dez walks in first **carrying the couch box**, the player and companion follow. He sets the box down in the entry gap. Nobody speaks until all three are standing. | Required beat | Dez, player and companion all `arrived`; `box.couch` exists at `entry.drop` | world: `box.couch` exists (box or sofa) and the three are inside |
+| A2 | Dez: "Come on in guys! Welcome to **{town}**!" (town bold, green) then the mayor passage: mayor, mover, food delivery, the family's businesses. | Required beat; the identity facts are Invariant | last passage line dismissed | `did.beat.A2` (new) |
+| A3 | The companion reacts to the drive in her humor style (`truckOffRoad`). | Required beat (bank: humor × gender) | line dismissed | `did.beat.A3` |
+| A4 | Dez brushes it off (`dez.brushOff`, unchanged). | Required beat | line dismissed | `did.beat.A4` |
+| A5 | Dez checks the clipboard: "Now let's see here, your names were {player} and {partner}, right?" The player taps to confirm. | Required beat (one tap; no choice buttons) | line dismissed | `did.beat.A5` |
+| A6 | Dez: "Alright, here's your first box. I'll go grab some more." He walks out. | Required beat | Dez despawned | world: Dez not in `people` |
+| A7 | Lesson: open the box. Card "Tap the box to open it". Only the box is tappable. | Required beat (guided) | world: `box.couch.type === 'sofa'` | same predicate |
+| A8 | Lesson: place the couch. The companion asks for it by the TV in her communication style (`couchPlace`). Outline at `living.couchTv`. Setting it down anywhere else: the companion says it is not where she wants it (`couchNotThere`, communication × gender) and the lesson continues. | Required beat (guided, loop) | world: sofa within tolerance of `living.couchTv`, facing the TV | same predicate |
+| A9 | Opening complete. Flags `opening.done`, `dez.deliveries`; control returns; the clock runs. | Invariant | flags set, script finished | idempotent |
 
-Beats the brief has that are **not** in the game, awaiting decision 13.1: the cold open (partner alone in the empty
-room, two lines, the knock). Beats the game has that the brief does not: B1 as a walk-in with Dez, B2a.
+### Part B: `tutorial.ch7`, the lamp
+
+| Beat | What happens | Tag | Exit condition | Resume-safe fallback |
+|---|---|---|---|---|
+| B1 | Dez comes in with a box, sets it down: "This one doesn't have a label!" and walks back out. Dialogue only once he has stopped. | Required beat | `box.lamp` exists; Dez despawned | world: `box.lamp` exists (box or lamp) |
+| B2 | Control returns. The player opens the box (tap). | Required beat (guided: only the box) | world: `box.lamp.type === 'lamp'` | same |
+| B3 | The moment it opens: `!` over the companion. **The camera moves or zooms out so both the lamp and the companion are on screen while the `!` shows.** After about a second she asks, in her communication style, for the lamp in the upper-right corner (`lampCorner`). | Required beat; camera framing is Invariant for this beat | line dismissed | `did.beat.B3` |
+| B4 | Place the lamp in the corner outline (`living.lampCorner`). Elsewhere: `lampNotThere` loop as in A8. | Required beat (guided, loop) | world: lamp within tolerance of the corner mark | same |
+| B5 | `!` over the companion again (camera frames her), then she says she would rather have it by the couch to read at night (`lampByCouch`, humor × gender). | Required beat | line dismissed | `did.beat.B5` |
+| B6 | Move the lamp to the right-hand side of the couch (`living.lamp`, computed from where the couch actually is). Elsewhere: loop. | Required beat (guided, loop) | world: lamp within tolerance of the couch-side mark | same |
+| B7 | Card: lights can be switched on and off by tapping them. Waits for the lamp to be switched on. | Required beat (guided: only the lamp) | world: the lamp's light is on | same |
+| B8 | The companion reacts to the light (`lampOn`); evening dim lifts; control returns; `tutorial.lamp` set. | Required beat | flag set | idempotent |
+
+Removed from today's chapter 7 because the director does not want them: the companion sitting to watch TV before
+she changes her mind (replaced by the `!` and camera beat B5), the companion "unpacking a box on her own" (the log
+line only), and the plant boxes stacked by the door (not mentioned; see §13 q4).
 
 ## 4. Character presence, positions and behaviour
 
-| Beat | Jordan (player) | Partner | Dez | Who controls |
+| Beat | Player | Companion | Dez | Control |
 |---|---|---|---|---|
-| B0 | off stage | off stage | in the truck (drawn) | drive-up canvas |
-| B1 | door → `entry.you` | door → `entry.partner` | door → `entry.inside`, carrying nothing | script (all three `scripted`) |
-| B2 | stands at `entry.you` | stands at `entry.partner`, `!` on B2a | `entry.inside`, faces the room | script |
-| B3 | same | same | out, then in with `pbox`, to `entry.drop`, out | script |
-| B4 | same | same, `!` | gone | script |
-| B5–B6 | frozen in place (scripted, no task) | frozen | gone | player (taps/drag on the allowed object only) |
-| B7 | released; free will from here | released | – | simulation |
+| A0 | off | off | in the truck | drive-up |
+| A1 | door → `entry.you` (waits) | door → `entry.partner` (waits) | door → `entry.drop` carrying `pbox`, sets it down (waits) | script |
+| A2–A5 | standing | standing; `!` on A3 | standing at `entry.inside`, facing the two | script |
+| A6 | standing | standing | → door, despawn (waits) | script |
+| A7–A8 | held still (`scripted`, no task) | held still | gone | player: allowed object only |
+| A9 | released | released | – | simulation |
+| B1 | **held still** (no wandering while Dez is in) | held still | door → `entry.drop` with `pbox`, line, → door | script |
+| B2–B7 | held still | held still; `!` on B3 and B5; turns to face the lamp | gone | player: allowed object only |
+| B8 | released | released | – | simulation |
 
-Invariant: during B1–B6 neither resident may wander, and nobody may stand on `entry.drop` when the box lands.
-Today the second half holds only by luck (`give-fail` trace).
+Invariant: from A1 to A9 and from B1 to B8 the residents never choose their own actions (today chapter 7 runs in
+`beat` mode for its first seconds and Jordan can wander off the floor). Nobody stands on `entry.drop` when a box
+lands: the script places the residents on marks that keep it clear.
 
 ## 5. Animation, presentation and dialogue
 
-| Beat | Mode | Camera | Poses, props, effects | Lines (how chosen) |
+| Beat | Mode | Camera | Poses, props, effects | Lines and how they are chosen |
 |---|---|---|---|---|
-| B0 | cutscene | drive-up canvas | truck, street kit, plot; fade in/out; tap to end | none |
-| B1 | cutscene | wide, then close on Dez 1.8× | walk clips; Dez name tag | – |
-| B2 | cutscene | close on Dez; wide for the partner's line | `!` alert bubble | `dez.welcome`, `dez.brushOff`, `dez.intro.2–4` (fixed); `humor.truckOffRoad` (bank); `dez.roommates` (fixed, cond) |
-| B3 | cutscene | wide | Dez carries a box (default carried prop); `art.drop` thud dust on landing | none |
-| B4 | cutscene | wide | `!` | `humor.couchCarried` (bank) |
-| B5 | guided | as is | canvas spotlight on the box; card; poof + burst on unpack | none |
-| B6 | guided | Arrange framing (piece + outline) | ghost outline in player colour; card with button | `communication.couchPlace` (bank) |
+| A0 | cutscene | drive-up canvas | truck, tree knock-down (new), exhaust, fade | none |
+| A1 | cutscene | wide | walk clips; Dez carries a box; `art.drop` thud and dust | none until all stand |
+| A2 | cutscene | close on Dez | – | `dez.welcome` with `{town}` styled bold green (new speech-box markup), then the mayor passage (today's `dez.intro.2` + `dez.intro.3`, merged, §13 q1) |
+| A3 | cutscene | wide enough for the companion | `!` | bank `humor.<style>.<gender>.truckOffRoad` |
+| A4 | cutscene | close on Dez | – | `dez.brushOff` |
+| A5 | cutscene | close on Dez | clipboard pose if one exists, else none (§12) | `dez.names` (new): "Now let's see here, your names were {player} and {partner}, right?" |
+| A6 | cutscene | wide | Dez walks out | `dez.firstBox` (new): "Alright, here's your first box. I'll go grab some more." |
+| A7 | guided | as is | spotlight on the box; poof and burst on open | card "Open the box" |
+| A8 | guided | Arrange framing of piece and outline | outline, player colour; **clear Set it down affordance** on phone and desktop (§11) | bank `communication.<style>.<gender>.couchPlace`; loop line `couchNotThere` as a bubble, not a blocking box |
+| B1 | cutscene | door | Dez carries a box; thud | `dez.ch7.noLabel` (new): "This one doesn't have a label!" |
+| B2 | guided | as is | spotlight; poof | card "Open the box" |
+| B3 | cutscene for the `!`, then the line | **frame lamp and companion together** | `!`, companion turns toward the lamp | bank `communication.<style>.<gender>.lampCorner` |
+| B4 | guided | Arrange framing | outline at the corner | loop line `lampNotThere` |
+| B5 | cutscene | frame the companion | `!` | bank `humor.<style>.<gender>.lampByCouch` |
+| B6 | guided | Arrange framing | outline beside the couch, evening dim 0.38 so the light shows | loop line `lampNotThere` |
+| B7 | guided | as is | spotlight on the lamp | card "Let there be light" |
+| B8 | beat | wide | dim lifts | bank `humor.<style>.<gender>.lampOn` |
 
-Flexible: the exact zoom values, the hold time of bubbles, the typewriter speed. Not flexible: a line is never
-shown before its speaker is on stage and standing (today `dez.welcome` can start while Jordan and Maya are still
-walking; acceptable only if the director says so, see 13.3).
+Invariant (decision 3): a `say` never starts while its speaker or any other mover named in the beat is walking.
+Every `walk` in these two scripts waits; the validator should reject a `say` after a `walk` with `wait: false`.
 
 ## 6. Advancing between beats
 
-Today: B1 ends when Dez's walk ends (the residents' walks are not awaited); B2/B4 end on taps; B3 on Dez's walks;
-B5 on the `obj.unpacked` event only; B6 on the card button only. Proposed: B5 and B6 end on world predicates (the
-box is a sofa; the sofa is at the mark within tolerance or, per 13.5, has been set down by the player with
-`obj.placed`), with the button as a convenience that snaps and closes Arrange but does not end the beat.
+All lesson beats (A7, A8, B2, B4, B6, B7) end on a world predicate evaluated by the host, not on a card button or
+a one-shot event: the object's type, its distance and rotation relative to a mark, or its light state. Spoken
+beats end on the tap that dismisses the line, with a `did.beat.<id>` flag written so a reload does not require
+the tap again. The Set it down button snaps the piece when it is close and closes Arrange; it never ends a beat.
 
 ## 7. State changes and events recorded
 
-| What | When | Today |
+| What | Beat | Today |
 |---|---|---|
-| `box.couch` created (pbox, contents sofa) at `entry.drop` | B3 | yes, guarded by id |
-| `box.couch` becomes `sofa` | B5 | yes (`interact.ts` unpack) |
-| sofa position | B6 | written by Arrange; not checked by the story |
-| flags `opening.done`, `dez.deliveries` | B7 | yes |
-| `rt.done` gets `opening.moveIn` | B7 | yes |
-| `did.obj.unpacked`, `did.placed.sofa`, `did.tab.arrange` | B5/B6 | yes, but the opening's own waits do not use them |
-| Must not change: bond, needs, money, memories, chat turns | all | holds (no step touches them) |
+| `box.couch` (pbox, contents sofa) at `entry.drop` | A1 | yes (given later, by Dez's second trip) |
+| `box.couch` → `sofa`; sofa at `living.couchTv` facing the TV | A7–A8 | type yes; position unchecked |
+| `opening.done`, `dez.deliveries`; `rt.done` += `opening.moveIn` | A9 | yes |
+| `box.lamp` at `entry.drop`; → `lamp`; at corner; at couch side; light on | B1–B7 | partly; waits are one-shot |
+| `tutorial.lamp` | B8 | yes |
+| `did.beat.*` for every spoken beat | all | **new** |
+| Must not change: bond, needs, money, memories, chat turns | all | holds |
 
 ## 8. Optional interactions and permitted variations
 
-Friend companion: `dez.roommates` and roommate beds (`hostBridge.ts roommateBeds`, only when the profile arrives on
-day 1). Humor and communication banks: 4 × 4 styles for the three partner lines. Camera: the player cannot move it
-during the cutscene; in guided beats pinch and drag still work. Pausing with Space during the cutscene is possible
-and freezes the walkers (see recovery).
+Gender and style variants of every companion line (4 × 4 × 2 for humor slots, 4 × 2 for communication slots; a
+`they` companion falls back to the neutral wording the banks already have). Camera pinch and drag during guided
+beats. The friend companion gets no separate lines (decision 8); `dez.roommates` is dropped unless the director
+wants it back (§13 q3). The plant boxes by the door are an open question (§13 q4).
 
 ## 9. Completion and control handoff
 
-Done when B7's flags are set and the script finishes: people released, highlight and outline cleared, mode off (UI
-back, Skip hidden), clock running at 09:00, speed 1. Next: `tutorial.ch7` on `opening.done`. Camera: left where
-Arrange put it until ch7's camera step. Today this hand-off is correct.
+A9: people released, highlight, outline and spotlight cleared, mode off, Skip hidden, clock running at 09:00 speed
+1; `tutorial.ch7` starts on `opening.done` **with the residents still held** (new `hold` need, see the audit §3.4)
+so Dez's lamp visit is not interrupted by free will. B8: the same release; the clock runs; chapter 8 follows on
+`tutorial.lamp` as today.
 
 ## 10. Recovery behaviour
 
-| Case | Expected | Today (code; A = confirmed in play) |
-|---|---|---|
-| Reload during B0–B4 | Replay from the start of the cutscene, no duplicate box | Replays from the top; `give` guarded by id, so one box |
-| Reload after unpacking (B5 done, B6 not) | Resume at B6 | **Soft-lock:** resumes at the checkpoint before B5 and waits for `obj.unpacked`, which can never fire again (A) |
-| Reload during B6 | Resume at B6 with outline and card | Same soft-lock as above |
-| Skip during B0–B4 | Couch by the TV, flags set, Dez gone | Yes (`onSkip`) |
-| Skip after unpacking | One couch, by the TV or where it is | **Two couches:** `onSkip` gives `sofa` while `box.couch` is already a sofa (A) |
-| Pause (Space) during the cutscene | Not possible, or walkers keep walking | Walkers freeze; the cutscene waits with no hint (`run.ts` 36 returns before the scripted branch) |
-| Profile arrives after the first line | Lines use real names and voice | Default names and `warm`/`diplomatic` until it arrives; `rel` branch missed |
-| Plot arrives after the drive-up starts | Drive-up shows the player's house | Starter house |
-| Someone stands on `entry.drop` | Box lands nearby | `give` fails silently; the lesson waits on a box that does not exist |
-| Drive-up cancelled by Skip | Overlay removed | Yes (`update` cancels it) |
+| Case | Expected |
+|---|---|
+| Reload during A0–A6 or B1 | Replay the cutscene from its start; boxes are not duplicated (`give` guarded by id) |
+| Reload during a lesson (A7, A8, B2, B4, B6, B7) | Resume at the lesson with its mode, card, outline and allow-list rebuilt; if the predicate is already true, move on at once. **Today: soft-lock after A7 or B2 (confirmed in play)** |
+| Skip during Part A | Fast-forward: one couch, at `living.couchTv` facing the TV, flags set, Dez gone. **Today: two couches when skipped after A7 (confirmed in play)** |
+| Skip during Part B | Not offered today (chapter 7 is not skippable). Keep it that way unless the director asks |
+| Pause (Space) during a cutscene | Not possible, or scripted walkers keep walking |
+| Delivery interrupts chapter 7 | Cannot happen while the residents are held and the dock is disabled; if it does, resume rebuilds the lesson |
+| Profile not yet applied | The new-game script waits up to 1.5 s for it; after that, defaults and the saved values |
+| Box cannot land | `give` relocates to the nearest free spot (today's behaviour) and the script frames the box so the player can find it |
+| Content version bumped | Everyone starts a new game (decision 9) |
 
 ## 11. Acceptance criteria
 
-S = source, A = automated, P = played. The opening is accepted only when every A and P item passes on desktop and phone.
+S = source, A = automated, P = played on desktop **and** phone.
 
-1. A new game shows the drive-up with the player's own plot when the host has one; a tap ends it. (P)
-2. B1–B4 play in order; no line is shown while its speaker is off stage. (A headless, P)
-3. Dez's three identity facts are said, in his words, to every player. (A content test)
-4. After B3 exactly one couch source exists (`box.couch`), at `entry.drop`. (A)
-5. Only `box.couch` is tappable during B5; the dock, other objects and the partner are not. (A e2e)
-6. Unpacking turns the box into a sofa and opens Arrange with it selected. (A e2e)
-7. B6 ends only when the sofa satisfies the agreed placement rule (13.5); pressing Set it down with the couch
-   elsewhere does not end the opening. (A e2e, P)
-8. After B7 the clock runs, the dock works, Skip is hidden, both residents move on their own. (A e2e)
-9. Reload at every wait (after B4, after B5, during B6) resumes without a soft-lock and without a second box or
-   couch. (A headless + e2e)
-10. Skip at every wait leaves exactly one couch and the same flags as watching. (A headless)
-11. Names, voice and relationship in the lines match the host profile when it arrives within 1.5 s; after that
-   the game uses the saved values. (A e2e with a profile-sending host, P)
-12. No page errors during the whole opening. (A e2e)
+1. The drive-up shows the player's plot when the host has one and the truck visibly runs over a tree. (P)
+2. Dez enters carrying the box, the two follow, and no dialogue box appears until all three stand still. (A headless; P)
+3. The town name in Dez's welcome is bold and green; the mayor passage states mayor, mover, delivery. (A content; P)
+4. The companion's driving remark and both lamp remarks match her humor style and gender; the couch and corner asks match her communication style and gender; all 16 × 2 humor and 4 × 2 communication variants exist for every slot. (A content test)
+5. A5 is a plain tap, with no choice buttons anywhere in Parts A and B. (A e2e)
+6. Only the current lesson object is tappable; dock, keyboard shortcuts, other objects and the companion are not. (A e2e)
+7. Pressing Set it down with the couch (or lamp) outside the outline shows the companion's "not there" line and the lesson stays open; inside the outline, the piece snaps and the beat ends. (A e2e; P)
+8. After A9 and after B8 the clock runs, the dock works, Skip is hidden and both residents act on their own. (A e2e)
+9. **Set it down is obvious**: a visible control near the piece or the card, not folded away on phones. (P, both sizes)
+10. **The couch never lands facing away from the TV**: whatever rotation the player drags it in with, the snapped result faces the TV, and the outline shows that facing. Reproduce the reported wrong-facing case first. (A e2e; P)
+11. On B3 and B5 the `!` and the companion are on screen when they fire, together with the lamp. (P; screenshot)
+12. Reload at every lesson resumes without a soft-lock and without a second box, couch or lamp. (A headless + e2e)
+13. Skip at every point in Part A gives one couch at the mark and the same flags as watching. (A headless)
+14. No page errors through both parts. (A e2e)
 
 ## 12. Assets
 
-**Existing and reused:** Dez (`content/characters.ts`), `pbox` with `contents`, `sofa`, marks `door`,
-`entry.inside/you/partner/drop`, `living.couchTv`, carried-box prop (`houseArt.js drawCarried` default case), `!`
-alert and speech bubbles, speech box with typewriter and ▼ (`scriptUi.ts`), cards with optional button, ghost
-outline (`art.setGhost`), canvas spotlight, letterbox bars, Skip button, drive-up (`arrivalIntro.ts` + the town
-street kit), poof/burst/drop effects, humor and communication banks for `truckOffRoad`, `couchCarried`,
-`couchPlace`, Dez's fixed lines.
+**Existing and reused:** Dez (`content/characters.ts`), `pbox` with `contents`, `sofa`, `lamp` (with light),
+marks `door`, `entry.inside/you/partner/drop`, `living.couchTv`, `living.lampCorner`, `living.lamp`, carried
+box prop, `!` bubble, speech box, cards, ghost outline, canvas spotlight, letterbox, Skip, drive-up and street
+kit, poof/burst/drop effects, evening dim, banks for `truckOffRoad`, `couchCarried` (no longer used), `couchPlace`,
+`lampCorner`, `lampByCouch`, `lampOn`, Dez's `welcome`, `brushOff`, `intro.2`, `intro.3`.
 
-**Required by the brief and missing:** a knock (no sound system in the game: no Howler, no AudioContext use under
-`src/games/velvet-house`; no door animation; the `!` bubble stands in), a clipboard for Dez (`carrying:
-'clipboard'` would draw as a moving box), a thud sound, the four personality voices (the app has no such field),
-player spoken lines (`say('jordan', …)` works but no lines exist), Maya sitting and looking toward the window
-(removed with the ask), a radial menu with a single "Unpack" option (a single action runs immediately).
+**New content (writing only):** `dez.names`, `dez.firstBox`, `dez.ch7.noLabel`; bank slots `couchNotThere`,
+`lampNotThere`; a gender dimension for every bank slot (today the banks have no gender axis); the reworked
+`dez.welcome` with `{town}` markup.
 
-**Should be removed or rewritten:** the two dead `place` steps (`scripts.ts` 28–29); the `Preset` plumbing the
-validator still demands (`validate.ts` 4, 37, 44) when no line in the book uses presets.
+**New code (small):** bold-green `{town}` in the speech box (`scriptUi.say` uses `textContent` today); a
+`world` condition kind (object type, position within tolerance of a mark, light on); `hold` for residents across a
+script; a host-readiness gate; the loop line as a non-blocking bubble; a couch-relative `living.lamp` mark.
 
-## 12a. Scene-state transition map
+**New animation (medium):** the tree knock-down in the drive-up. The street is drawn once as a still image
+(`arrivalIntro.ts` 116); the tree would have to be drawn by the drive-up as a moving element with a fall and a
+few leaves, timed to the truck's x. Free plots have no tree today, so the drive-up needs its own verge tree.
 
-One row per state the opening can be in. "Resume" is what a reload in that state should do; "Skip" what Skip
-should leave behind. Today's behaviour is in §10; this is the target.
+**Named by the director and not in the game:** a clipboard for Dez (would draw as a box; omit or add a prop);
+residents switching lamps on and off by themselves (a free-will rule in `state/agents.ts`, separate feature);
+sound (decided: none).
 
-| State | Entered when | Prerequisites checked on entry | Exit → next | Resume | Skip |
-|---|---|---|---|---|---|
-| `NEW` | brand-new save | starter sofa/plant/lamp removed; host profile and plot applied, or 1.5 s passed | start → `DRIVEUP` | restart | – |
-| `DRIVEUP` | first tick | plot known or fallback house | `introDone` or tap → `ARRIVAL` | restart (no world effect) | fast-forward to `DONE` |
-| `ARRIVAL` | drive-up over | clock 09:00, camera wide L1, all three at `door`, Dez spawned | all three arrived → `INTRO` | re-place all three at door, replay | fast-forward |
-| `INTRO` | arrival | Dez at `entry.inside`; names and voice known | `dez.intro.4` dismissed → `COUCH_DELIVERY` | replay from `ARRIVAL` (lines repeat; acceptable) | fast-forward |
-| `COUCH_DELIVERY` | intro done | `entry.drop` free; Dez outside | `box.couch` exists and Dez despawned → `REACT` | if `box.couch` exists skip the give; else replay | fast-forward: `box.couch` as `sofa` at `living.couchTv` only if no couch exists |
-| `REACT` | box down | Maya on stage | `couchCarried` dismissed → `LESSON_TAP` | replay the line | fast-forward |
-| `LESSON_TAP` | react done | mode guided, allow `obj:box.couch`, card shown | `box.couch.type === 'sofa'` (world) → `LESSON_PLACE` | rebuild mode/card; if already a sofa, exit at once | fast-forward |
-| `LESSON_PLACE` | unpacked | Arrange open with the sofa selected, outline at `living.couchTv`, card with button | sofa satisfies the placement rule (13.5) → `DONE` | rebuild mode/outline/card; if rule already true, exit at once | fast-forward: snap the sofa to the mark |
-| `DONE` | placed | – | flags `opening.done`, `dez.deliveries`; release; mode off; `rt.done` → `tutorial.ch7` | nothing (script finished) | – |
+## 13. Still open (working assumptions in brackets)
 
-Invariants across every state: exactly one couch source; nobody but the script moves Jordan or Maya until
-`DONE`; the clock reads 09:00 until `DONE`; Skip is visible only in `DRIVEUP`–`LESSON_PLACE`.
-
-## 12b. Continuity checklist
-
-Checked at `DONE` and again at the start of `tutorial.ch7`:
-
-- [ ] One object of type `sofa` on level 1, id `box.couch` (or the skip id), no `pbox` with `contents: sofa` left.
-- [ ] If rule 13.5(a): the sofa is within tolerance of `living.couchTv`, rot 2.
-- [ ] Dez is not in `people`; `people` is the two residents only.
-- [ ] Jordan and Maya are on level 1, `scripted === false`, with no task left from the script.
-- [ ] Clock day 1, 09:00; `view.paused` false; `scriptMode` null; `scriptAllow` empty; no card, outline, spotlight or letterbox showing.
-- [ ] Flags: `opening.done`, `dez.deliveries` true; `rt.done` includes `opening.moveIn`; `rt.active` null.
-- [ ] Names and voice in the save match the host profile; `rel` matches the companion's relationship.
-- [ ] Bond, needs, money, memories and chat turns unchanged from the new-game values.
-- [ ] No `give-fail` entry in the engine trace.
-- [ ] A save written now and reloaded reaches `tutorial.ch7` without replaying the opening.
-
-## 12c. Minimal implementation plan (after approval)
-
-Content and small host changes only; no engine rewrite. Each step is one PR with its test.
-
-1. `scripts.ts`: remove the two dead `place` steps; await the residents' walks in B1 (13.3); replace the B5 wait
-   with a `did.obj.unpacked`-or-world fallback and the B6 button-ending with a `wait until` world condition (new
-   `world` cond kind in `types.ts`/`engine.ts`, evaluated by the host in `gameHost.ts`).
-2. `engine.ts`: skip as fast-forward of the remaining steps; keep `onSkip` optional. `validate.ts`: reject bare
-   event waits and buttons not followed by a wait.
-3. `main.ts`/`gameHost.ts`: start the new-game script after the profile and plot are applied or 1.5 s; save
-   `voice`; drive-up reads the plot at start (unchanged) which now works.
-4. `e2e/velvet-sims/host.html` sends a profile; `story.spec.ts` asserts the sofa position and the single couch after
-   Skip; a headless `opening.test.ts` plays the beats against a world model with reload and skip at every wait.
-5. Delete `opening-sequence.md` Part 1, `chapter1-script.md` and the opening part of
-   `companion-voices-and-openings.md`; this contract is the single source.
-
-## 13. Unresolved: questions for the director
-
-Nothing in this list is built until it is answered. The audit's pick is noted, not decided. Questions 1, 4 and 5
-decide what gets built first.
-
-1. **When the game starts, what is the first thing the player sees inside the house?**
-   (a) The partner alone in the empty room saying two lines, then a knock (the brief). (b) The player, the partner
-   and Dez walking in through the front door together (the game today). Pick: (b), with the two empty-room lines
-   as an optional extra if still wanted.
-2. **Which version of Dez's introduction is the real one?** (a) The five lines in the brief ("Hey y'all! I'm
-   Dez! Welcome to {town}!..."). (b) The lines in the game now (`dez.welcome`, `dez.brushOff`, `dez.intro.2-4`).
-   Only one survives; the other is deleted from the docs.
-3. **May Dez start talking while the player and partner are still walking in, or must everyone be standing still
-   first?** Today he can start early. Pick: standing still first.
-4. **What decides how the partner's lines sound?** (a) Four fixed tones (warm, calm, bubbly, dry): the brief, but
-   the app has no such setting. (b) The companion's humor and communication styles from the app: the game today.
-   (c) The companion's signature voice: about 33 line sets. Pick: (b) now, (c) only if the chat engine uses it too.
-5. **When the player is told to put the couch by the TV, what happens if they put it somewhere else?** (a) The
-   step does not finish until the couch is in the outlined spot. (b) Wherever they put it counts, and the partner
-   reacts to where it is. (c) Strict in the opening only. Today neither: the step ends on the button even if the
-   couch never moved. Pick: (a), because later scenes assume the couch at the TV wall.
-6. **Is sound wanted for the knock, the box thud and Dez's clipboard, or is the `!` bubble an acceptable stand-in
-   for now?** The game has no sound system; a clipboard would draw as a moving box.
-7. **Should the player character speak lines out loud during the opening, or stay silent?** The chapter 1 script
-   marks spots; no lines exist.
-8. **For a friend companion, is it enough that three lines change to roommate wording, or should every line in
-   the opening have a roommate version?**
-9. **When the opening changes again, should players partway through it start a new game or pick up where they
-   were?** Today they start over, which also discards finished houses. Pick: pick up, once the resume fixes land.
+1. Does the mayor passage keep today's "me and my family have lived here for ages…" line? [yes, merged after
+   `intro.2`]
+2. Does Dez set the box down the moment he arrives, or after "here's your first box"? [on arrival, so he speaks
+   empty-handed and gestures at it]
+3. Keep the roommates line for friend companions, or drop it with the other relationship variants? [drop]
+4. Keep the two plant boxes Dez stacks by the door in chapter 7? [drop; they were not mentioned and complicate the
+   lamp lesson]
+5. "Upper right corner": the corner mark `living.lampCorner` is at (9.3, 7.2). Its screen position depends on
+   the camera rotation; confirm with a screenshot during implementation and move the mark if needed. [verify in P]
+6. Residents switching lamps themselves: build with this scene or as its own small feature afterwards? [afterwards]
 
 ## 14. Verified
 
-Not yet: this contract is a proposal. The "Today" columns record what the audit found; see
-`scene-reliability-audit.md` for how each was checked.
+Not yet. Filled in after implementation with commit hashes and the S/A/P results per item in §11.
