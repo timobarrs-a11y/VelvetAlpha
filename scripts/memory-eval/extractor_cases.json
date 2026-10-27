@@ -1,0 +1,113 @@
+{
+ "_about": "Invented conversations for the memory extractor (no real data). Run with supabase/functions/extractor-eval: POST {tool, variants:{name: systemPrompt}, runs, cases}. See scripts/memory-eval/README.md.",
+ "cases": [
+  {
+   "id": "S01 implicit correction, 3 wrong rows",
+   "stored": [
+    {
+     "kind": "fact",
+     "content": "User has written a murder mystery series about an ice cream shop owner"
+    },
+    {
+     "kind": "fact",
+     "content": "User's book is called 'Frozen Treats Social'"
+    },
+    {
+     "kind": "fact",
+     "content": "User is an author"
+    },
+    {
+     "kind": "fact",
+     "content": "User enjoys mystery novels"
+    }
+   ],
+   "message": "I'm just reading the series. It's pretty amazing."
+  },
+  {
+   "id": "S02 off-topic must not close",
+   "stored": [
+    {
+     "kind": "thread",
+     "content": "Six-pack fitness goal — user is learning fat loss matters more than situps and wants to set a goal with a timeline"
+    },
+    {
+     "kind": "thread",
+     "content": "Mind-opening exercises goal — wants exercises to open their mind by end of November"
+    }
+   ],
+   "message": "my sister Maya is turning 30 next week and I'm flying to Denver for the party"
+  },
+  {
+   "id": "S03 grief must not close",
+   "stored": [
+    {
+     "kind": "thread",
+     "content": "Six-pack fitness goal — user is learning fat loss matters more than situps and wants to set a goal with a timeline"
+    },
+    {
+     "kind": "thread",
+     "content": "Mind-opening exercises goal — wants exercises to open their mind by end of November"
+    }
+   ],
+   "message": "my dad passed away yesterday, I am not ok"
+  },
+  {
+   "id": "S04 real close + update",
+   "stored": [
+    {
+     "kind": "thread",
+     "content": "Reading a mystery series — user plans to finish the entire series"
+    },
+    {
+     "kind": "fact",
+     "content": "User plans to read the entire series"
+    }
+   ],
+   "message": "I finished the series! It was great"
+  },
+  {
+   "id": "S05 retract bait",
+   "stored": [
+    {
+     "kind": "fact",
+     "content": "User recently completed reading an entire series"
+    },
+    {
+     "kind": "fact",
+     "content": "User enjoys mystery novels"
+    }
+   ],
+   "message": "I'm not the author, I just read the books"
+  },
+  {
+   "id": "S06 plain correction",
+   "stored": [
+    {
+     "kind": "fact",
+     "content": "User lives in Denver"
+    }
+   ],
+   "message": "I moved to Boulder last month"
+  },
+  {
+   "id": "S07 restatement",
+   "stored": [
+    {
+     "kind": "fact",
+     "content": "User works as a data analyst"
+    }
+   ],
+   "message": "yeah I'm a data analyst"
+  },
+  {
+   "id": "S08 filler",
+   "stored": [
+    {
+     "kind": "fact",
+     "content": "User works as a data analyst"
+    }
+   ],
+   "message": "ok cool"
+  }
+ ]
+}

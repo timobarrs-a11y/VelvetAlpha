@@ -163,6 +163,9 @@ verify_jwt = true
 [functions.resource-finder]
 verify_jwt = true
 
+[functions.companion-status]
+verify_jwt = true
+
 [functions.community-bot]
 verify_jwt = false
 
@@ -177,3 +180,9 @@ verify_jwt = true
 
 [functions.velvet-design-share]
 verify_jwt = true
+
+[functions.memory-eval-run]
+verify_jwt = false
+
+[functions.extractor-eval]
+verify_jwt = false

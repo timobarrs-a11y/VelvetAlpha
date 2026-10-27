@@ -67,10 +67,11 @@ Deno.serve(async (req: Request) => {
     let sent = 0;
     for (const s of subs ?? []) {
       try {
+        // "high" so Android delivers it straight away; with "normal" a sleeping phone can hold a message for a long time.
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           JSON.stringify(payload),
-          { TTL: 60 * 60 * 24, urgency: "normal", topic: payload.tag.slice(0, 32).replace(/[^A-Za-z0-9_-]/g, "") },
+          { TTL: 60 * 60 * 24, urgency: "high", topic: payload.tag.slice(0, 32).replace(/[^A-Za-z0-9_-]/g, "") },
         );
         sent++;
         await supabase.from("push_subscriptions").update({ last_success_at: new Date().toISOString(), failure_count: 0 }).eq("id", s.id);
