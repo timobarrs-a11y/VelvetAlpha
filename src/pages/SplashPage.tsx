@@ -334,7 +334,8 @@ export function SplashPage() {
             </p>
             <p className="mt-4 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
               It's all backed by a community of amazing people just like you, here to do the same thing: accomplish
-              their goals and cheer each other on. Make new friends with people who share your interests, every day!
+              their goals and cheer each other on. Make new friends with people who share your interests every day,
+              and then compete with them online for supremacy of the leaderboards!
             </p>
 
             <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
