@@ -7,6 +7,8 @@ import { isPaintable } from '../state/scenes';
 import { buildWorld } from '../state/agents';
 import { type CatalogEntry } from '../state/catalog';
 import { tasteOf } from '../state/taste';
+import { skinTarget, skinColour, wearSkin } from '../state/skins';
+import { displayName, TYPES } from '../state/objects';
 import { clothByKey } from '../state/clothing';
 import type { Game } from '../kernel/game';
 
@@ -36,6 +38,10 @@ export function createShop(g: Game): Partial<Game> {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
+    // A look restyles the piece already on the main floor, so its one good spot stays; buying what it already wears costs nothing.
+    const target = item.icon === 'obj' ? skinTarget(world.objs, item) : null;
+    const lookCol = item.skin ? skinColour(item, color) : undefined;
+    if (target && target.skin === item.skin && (target.col ?? undefined) === lookCol) { log(`The ${displayName(target).toLowerCase()} already looks like that.`); return; }
     if (!g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
     log(`Bought ${item.name} for $${price}.`);
@@ -67,9 +73,13 @@ export function createShop(g: Game): Partial<Game> {
       flags.styled = true;
     }
     // Furniture: add to world
-    if (item.type && item.icon === 'obj' && g.dezDeliveries()) {
+    if (target && item.skin) {
+      wearSkin(target, item.skin, lookCol);
+      roomReveal();
+      log(`The ${TYPES[target.type]?.name?.toLowerCase() ?? 'piece'} is now the ${item.name.toLowerCase()}.`);
+    } else if (item.type && item.icon === 'obj' && g.dezDeliveries()) {
       // Once Dez is part of the story, the shop delivers: the piece comes in a box a little later.
-      g.orderDelivery({ id: `${item.type}-${Date.now() & 0xffff}`, category: item.tab === 'Decor' ? 'decor' : 'furniture', type: item.type, name: item.name, col: color || item.cols?.[0] }, 45);
+      g.orderDelivery({ id: `${item.type}-${Date.now() & 0xffff}`, category: item.tab === 'Decor' ? 'decor' : 'furniture', type: item.type, name: item.name, col: color || item.cols?.[0], skin: item.skin }, 45);
       flags.furniture = ((flags.furniture as number) ?? 0) + 1;
       log(`${item.name} ordered. Dez will bring it by.`);
     } else if (item.type && item.icon === 'obj') {
@@ -79,6 +89,7 @@ export function createShop(g: Game): Partial<Game> {
         id: `${item.type}-${Date.now() & 0xffff}`,
         type: item.type, level, x: 5, y: 5, rot: 0,
         col: color || item.cols?.[0],
+        ...(item.skin ? { skin: item.skin } : {}),
       };
       world.objs.push(newObj);
       flags.furniture = ((flags.furniture as number) ?? 0) + 1;

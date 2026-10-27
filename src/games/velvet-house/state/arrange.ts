@@ -1,4 +1,4 @@
-import { TYPES, blocksOf, isRug, isFixed, footprint, type ObjectInstance } from './objects';
+import { TYPES, blocksOf, isRug, isFixed, footprint, colsOf, type ObjectInstance } from './objects';
 import { LEVELS, STAIRS, WX, WY } from './house';
 import { buildWorld } from './agents';
 import { cellOf, reachableSet, NY } from './pathfinding';
@@ -211,7 +211,7 @@ export function rotateAboutCentre(o: ObjectInstance): void {
 
 // The next colour the piece comes in, if it comes in several.
 export function nextColour(o: ObjectInstance): string | null {
-  const cols = TYPES[o.type]?.cols;
+  const cols = colsOf(o);
   if (!cols || cols.length < 2) return null;
   const i = cols.indexOf(o.col ?? cols[0]);
   return cols[(i + 1) % cols.length];

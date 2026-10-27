@@ -180,7 +180,7 @@ export function createScripts(g: Game): Partial<Game> {
       if (o) {
         const at = resolve(o.at);
         if (at) {
-          const inst: ObjectInstance = { id: o.id ?? `${o.type}-${Date.now() & 0xffff}`, type: o.type, level: at.level, x: at.x, y: at.y, rot: 0, ...(o.contents ? { contents: o.contents } : {}), ...(o.col ? { col: o.col } : {}) };
+          const inst: ObjectInstance = { id: o.id ?? `${o.type}-${Date.now() & 0xffff}`, type: o.type, level: at.level, x: at.x, y: at.y, rot: 0, ...(o.contents ? { contents: o.contents } : {}), ...(o.col ? { col: o.col } : {}), ...(o.skin ? { skin: o.skin } : {}) };
           if (!world.objs.some((q) => q.id === inst.id)) {
             world.objs.push(inst);
             if (!relocate(world.objs, inst, at.level, [], [at.x, at.y])) { world.objs.pop(); engine.trace.push('give-fail:' + inst.id + JSON.stringify(people.map((p) => [p.id, p.level, +p.x.toFixed(1), +p.y.toFixed(1)]))); return; }
@@ -219,8 +219,8 @@ export function createScripts(g: Game): Partial<Game> {
         }
         case 'food': case 'takeout': { const p = world.household.parcel; if (p) p.ready = true; break; }
         case 'furniture': case 'decor': {
-          const o = (flags.dezOrders as Record<string, { type: string; col?: string }> | undefined)?.[id ?? ''];
-          if (o) host.give({ object: { type: 'pbox', at: 'mark:entry.drop', id: `box.${id}`, contents: o.type, ...(o.col ? { col: o.col } : {}) } });
+          const o = (flags.dezOrders as Record<string, { type: string; col?: string; skin?: string }> | undefined)?.[id ?? ''];
+          if (o) host.give({ object: { type: 'pbox', at: 'mark:entry.drop', id: `box.${id}`, contents: o.type, ...(o.col ? { col: o.col } : {}), ...(o.skin ? { skin: o.skin } : {}) } });
           break;
         }
         case 'lifeGoal': g.s.lifeGoal ??= 'a cozy life together'; break;

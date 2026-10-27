@@ -1,5 +1,5 @@
 import { checkPlacement, isMovable, centreAt, rotateAboutCentre, nextColour, otherFloors, relocate, canStore, surfaceUnder, putOn, takeOff, carryOnTop, type PlacementCheck, type Pose } from '../state/arrange';
-import { TYPES, footprint, type ObjectInstance } from '../state/objects';
+import { TYPES, footprint, displayName, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, FLOOR_ORDER, ATTIC, WX, WY, roomName } from '../state/house';
 import { buildWorld } from '../state/agents';
 import { type ArrangeState } from '../ui/drawer';
@@ -257,17 +257,17 @@ export function createArrange(g: Game): Partial<Game> {
     const items = world.objs.filter(isMovable).map((o) => {
       const t = TYPES[o.type];
       const [fw, fd] = t.W && o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
-      return { id: o.id, name: t.name ?? o.type, room: roomName(o.level, o.x + fw / 2, o.y + fd / 2), level: o.level, color: o.col };
+      return { id: o.id, name: displayName(o), room: roomName(o.level, o.x + fw / 2, o.y + fd / 2), level: o.level, color: o.col };
     }).sort((a, b) => a.name.localeCompare(b.name) || a.room.localeCompare(b.room));
     const o = selectedObj;
     return {
       floors: [...LEVEL_NAMES],
       order: FLOOR_ORDER.filter(l => l !== ATTIC || hasAttic()),
-      stored: storage.map(o => ({ id: o.id, name: TYPES[o.type]?.name ?? o.type, color: o.col })),
+      stored: storage.map(o => ({ id: o.id, name: displayName(o), color: o.col })),
       level: view.level,
       items,
       selected: o ? {
-        id: o.id, name: TYPES[o.type]?.name ?? o.type,
+        id: o.id, name: displayName(o),
         where: `${LEVEL_NAMES[o.level]} · ${items.find(i => i.id === o.id)?.room ?? ''}`,
         canColour: !!nextColour(o),
         canStore: canStore(o),

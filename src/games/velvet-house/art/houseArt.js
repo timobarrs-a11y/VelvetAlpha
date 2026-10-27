@@ -6,7 +6,7 @@ import { createParticles } from '../engine/particles';
 import { poseRig, idleRig } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
 import { handImage, HAND_SPRITE } from '../state/bodySprites';
-import { TYPES as STATE_TYPES } from '../state/objects';
+import { TYPES as STATE_TYPES, skinOf, colsOf } from '../state/objects';
 import { isOutdoor } from '../state/scenes';
 import { rand } from '../state/rng';
 import { createFabric } from './fabric.js';
@@ -346,7 +346,9 @@ export function createHouseArt(ctx0, opts = {}) {
       F(...R(len - 0.05, len, 0, 1), (T) => { T.line(P(len, 0.02, 0.9), P(len, 1, 0.9), rail, 2); for (let v = 0.25; v <= 1.01; v += 0.25) T.line(P(len, v, 0), P(len, v, 0.9), rail, 1.4); })
     ];
   }
-  const cl = (o) => o.col || (TYPES[o.type].cols || ['#8A6A50'])[0];
+  const cl = (o) => o.col || (colsOf(o) || ['#8A6A50'])[0];
+  // Which look a drawer branches on: the skin id, or undefined for the stock look (also for a skin the type does not have).
+  const skinId = (o) => (skinOf(o) ? o.skin : undefined);
   function singleBed(cover, edge) {
     const lux = has('bed'), z = lux ? 0.56 : 0.5;
     return [B(0, 0, 0, 0.14, 0.9, lux ? 1.3 : 1.0, lux ? '#6E4A5E' : C.dark), B(0.14, 0, 0, 2.36, 0.9, 0.32, lux ? '#5A3E4C' : C.wood), B(0.18, 0.04, 0.32, 2.28, 0.82, lux ? 0.24 : 0.18, '#F1ECE4', { name: 'mattress' }),

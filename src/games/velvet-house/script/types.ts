@@ -74,7 +74,7 @@ export type Step =
   | { do: 'highlight'; target: UiTarget | null }
   | { do: 'outline'; objType: string; at: PlaceRef; rot?: number; color?: 'partner' | 'player' } 
   | { do: 'set'; flag: string; value: FlagValue }
-  | { do: 'give'; money?: number; items?: string[]; object?: { type: string; at: PlaceRef; id?: string; contents?: string; col?: string } }
+  | { do: 'give'; money?: number; items?: string[]; object?: { type: string; at: PlaceRef; id?: string; contents?: string; col?: string; skin?: string } }
   | { do: 'deliver'; category: string; id?: string }
   | { do: 'unlock'; what: string }
   | { do: 'clock'; day?: number; minutes?: number }
@@ -160,7 +160,7 @@ export interface ScriptHost {
   cardDone(): boolean;
   highlight(target: UiTarget | null): void;
   outline(spec: { objType: string; at: PlaceRef; rot?: number; color?: 'partner' | 'player' } | null): void;
-  give(step: { money?: number; items?: string[]; object?: { type: string; at: PlaceRef; id?: string; contents?: string; col?: string } }): void;
+  give(step: { money?: number; items?: string[]; object?: { type: string; at: PlaceRef; id?: string; contents?: string; col?: string; skin?: string } }): void;
   /** What a visitor was carrying is set down: groceries at the door, or a moving box with a purchase in it. */
   deliver(category: string, id?: string): void;
   unlock(what: string): void;

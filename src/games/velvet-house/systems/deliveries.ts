@@ -3,7 +3,7 @@ import { stockFridge } from '../state/household';
 import type { Game } from '../kernel/game';
 
 /** An order waiting for Dez: the shop's furniture, and later anything else that comes in a box. */
-export interface Order { id: string; category: 'furniture' | 'decor'; due: number; type: string; name: string; col?: string }
+export interface Order { id: string; category: 'furniture' | 'decor'; due: number; type: string; name: string; col?: string; skin?: string }
 
 /**
  * Everything that arrives at the door, and what the household does with it. Groceries and takeout are fetched by
@@ -35,7 +35,7 @@ export function createDeliveries(g: Game): Partial<Game> {
     for (const o of [...orders()]) {
       if (absM < o.due) continue;
       orders().splice(orders().indexOf(o), 1);
-      ((flags.dezOrders ??= {}) as Record<string, { type: string; col?: string }>)[o.id] = { type: o.type, col: o.col };
+      ((flags.dezOrders ??= {}) as Record<string, { type: string; col?: string; skin?: string }>)[o.id] = { type: o.type, col: o.col, skin: o.skin };
       g.scriptEmit({ type: 'delivery.due', category: o.category, deliveryId: o.id, carry: 'pbox' });
     }
 
