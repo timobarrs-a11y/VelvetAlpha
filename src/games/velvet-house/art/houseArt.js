@@ -668,6 +668,51 @@ export function createHouseArt(ctx0, opts = {}) {
         ell(x, y - 6, 12, 7, c); rr(x - 4, y - 16, 8, 12, 3, c); ell(x, y - 24, 8, 10, c); ell(x - 3, y - 26, 3, 4, shade(c, 0.35));
         ell(x + 2, y - 10, 5, 4, shade(c, -0.12));
       })] },
+    tablelamp: {
+      parts: (o) => [F(0, 0, 0.5, 0.5, (T, ob) => {
+        const c = cl(o), on = isLit(ob.id);
+        [[0.06, 0.06], [0.4, 0.06], [0.06, 0.4], [0.4, 0.4]].forEach(([x, y]) => T.box(x, y, 0, 0.05, 0.05, 0.55, shade(c, -0.15)));
+        T.box(0.03, 0.03, 0.55, 0.44, 0.44, 0.05, c);
+        T.box(0.2, 0.2, 0.6, 0.1, 0.1, 0.22, '#C9A24A');
+        T.box(0.12, 0.12, 0.82, 0.26, 0.26, 0.3, on ? 'rgba(255,226,160,.96)' : 'rgba(240,232,214,.95)');
+      })] },
+    candelabra: {
+      parts: (o) => [F(0, 0, 0.4, 0.4, (T, ob, t) => {
+        const c = cl(o), on = isLit(ob.id);
+        T.box(0.08, 0.08, 0, 0.24, 0.24, 0.05, c); T.line([0.2, 0.2, 0.05], [0.2, 0.2, 1.1], c, 3);
+        T.line([0.2, 0.2, 1.1], [0.06, 0.2, 1.3], c, 2); T.line([0.2, 0.2, 1.1], [0.34, 0.2, 1.3], c, 2); T.line([0.2, 0.2, 1.1], [0.2, 0.2, 1.38], c, 2);
+        [[0.06, 0.2, 1.3], [0.34, 0.2, 1.3], [0.2, 0.2, 1.38]].forEach(([x, y, z], k) => {
+          T.box(x - 0.03, y - 0.03, z, 0.06, 0.06, 0.1, '#F2EEE8');
+          const [fx, fy] = T.P(x, y, z + 0.13);
+          if (on) { const fl = Math.sin(t * 9 + k * 2) * 0.7; ell(fx, fy - 2, 2, 3.8 + fl * 0.4, 'rgba(255,190,80,.95)'); ell(fx, fy - 1, 0.9, 2, 'rgba(255,246,210,.95)'); }
+        });
+      })] },
+    blanketladder: {
+      parts: (o) => [F(0, 0, 0.7, 0.25, (T) => {
+        const c = cl(o);
+        T.line([0.1, 0.1, 0], [0.16, 0.14, 1.6], c, 3); T.line([0.6, 0.1, 0], [0.54, 0.14, 1.6], c, 3);
+        [0.35, 0.7, 1.05, 1.4].forEach((z) => T.line([0.12, 0.12, z], [0.58, 0.12, z], c, 2.4));
+        // Blankets draped over the rungs.
+        T.poly([[0.1, 0.17, 1.4], [0.6, 0.17, 1.4], [0.6, 0.17, 0.98], [0.1, 0.17, 0.98]], '#C9A9A0');
+        T.poly([[0.12, 0.19, 1.05], [0.58, 0.19, 1.05], [0.58, 0.19, 0.62], [0.12, 0.19, 0.62]], '#B5476E');
+        T.poly([[0.16, 0.21, 0.7], [0.54, 0.21, 0.7], [0.54, 0.21, 0.4], [0.16, 0.21, 0.4]], '#3F5B4C');
+        T.line([0.1, 0.17, 1.2], [0.6, 0.17, 1.2], 'rgba(255,255,255,.35)', 1);
+      })] },
+    plantstand: {
+      parts: (o) => [F(0, 0, 0.5, 0.5, (T, ob, t) => {
+        const c = cl(o);
+        T.box(0.12, 0.12, 0, 0.05, 0.05, 0.62, c); T.box(0.33, 0.12, 0, 0.05, 0.05, 0.62, c); T.box(0.12, 0.33, 0, 0.05, 0.05, 0.62, c); T.box(0.33, 0.33, 0, 0.05, 0.05, 0.62, c);
+        T.box(0.08, 0.08, 0.62, 0.34, 0.34, 0.05, c);
+        T.box(0.14, 0.14, 0.67, 0.22, 0.22, 0.2, '#C27A5A');
+        const [x, y] = T.P(0.25, 0.25, 0.9);
+        for (let k = 0; k < 7; k++) { const a = -Math.PI + k / 6 * Math.PI, sw = Math.sin(t * 0.9 + k) * 0.05; ctx.strokeStyle = k % 2 ? '#3F7D4E' : '#4F9460'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + Math.cos(a + sw) * 12, y - 14, x + Math.cos(a + sw) * 20, y + 6 + (k % 3) * 8); ctx.stroke(); ell(x + Math.cos(a + sw) * 20, y + 8 + (k % 3) * 8, 3, 4, '#4F9460'); }
+      })] },
+    woodstool: {
+      parts: (o) => [F(0, 0, 0.45, 0.45, (T) => {
+        const c = cl(o);
+        [[0.07, 0.07], [0.33, 0.07], [0.07, 0.33], [0.33, 0.33]].forEach(([x, y]) => T.box(x, y, 0, 0.05, 0.05, 0.46, shade(c, -0.18)));
+        T.box(0.04, 0.04, 0.46, 0.37, 0.37, 0.07, c);
+      })] },
     umbrella: {
       parts: (o) => [F(0, 0, 0.4, 0.4, (T) => {
         const c = cl(o);
@@ -1229,7 +1274,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (playing) { const a = iso(6.0, 0.01, 1.9), b = iso(8.0, 0.01, 1.9), c = iso(8.0, 0.01, 0.8), d = iso(6.0, 0.01, 0.8); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(190,210,255,.07)'; ctx.beginPath(); ctx.moveTo(px - 5, py + 1); ctx.lineTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); ctx.restore(); }
   }
 
-  const BOX_LABEL = { candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
+  const BOX_LABEL = { tablelamp: 'LAMP', candelabra: 'CANDLES', blanketladder: 'LADDER', plantstand: 'PLANT', woodstool: 'STOOL', candles: 'CANDLES', basket: 'BASKET', floormirror: 'MIRROR', coatrack: 'COAT RACK', bookstack: 'BOOKS', eucalyptus: 'VASE', bust: 'BUST', umbrella: 'UMBRELLAS', coffeetable: 'TABLE', sidetable: 'TABLE', bookshelf: 'SHELF', armchair: 'CHAIR', rugrect: 'RUG', sofa: 'COUCH', lamp: 'LAMP', plant: 'PLANT', desk: 'DESK', dresser: 'DRESSER', nightstand: 'NIGHTSTAND', tread: 'TREADMILL', gym: 'WEIGHTS', bench: 'BENCH', boxes: 'MISC', rug: 'RUG' };
 
   // Just-placed furniture lands with a squash and a little bounce.
   // Three ways a piece arrives: it lands with a squash (set down), pops out of its box (revealed) or drops from above (delivered).

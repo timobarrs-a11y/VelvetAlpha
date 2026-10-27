@@ -13,8 +13,8 @@ describe('the shop', () => {
   });
   it('stocks the Decor tab with more than a handful of pieces', () => {
     const decor = CATALOG.filter((e) => e.tab === 'Decor');
-    expect(decor.length).toBeGreaterThanOrEqual(10);
-    for (const t of ['candles', 'basket', 'coatrack', 'bookstack', 'eucalyptus', 'bust', 'umbrella']) expect(decor.some((e) => e.type === t), t).toBe(true);
+    expect(decor.length).toBeGreaterThanOrEqual(15);
+    for (const t of ['candles', 'basket', 'coatrack', 'bookstack', 'eucalyptus', 'bust', 'umbrella', 'tablelamp', 'candelabra', 'blanketladder', 'plantstand', 'woodstool']) expect(decor.some((e) => e.type === t), t).toBe(true);
   });
   it('sells the dining set, desk, treadmill and weights that come with the house, for a second one', () => {
     for (const t of ['dining', 'desk', 'tread', 'gym']) expect(CATALOG.some((e) => e.type === t), t).toBe(true);
