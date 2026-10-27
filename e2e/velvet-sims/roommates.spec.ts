@@ -26,12 +26,14 @@ test('a friend companion gets the roommates opening', async ({ page }) => {
       if (!said.includes(t)) { said.push(t); console.log('SAID', t.slice(0, 90)); }
       await game.locator('.vh-speech').click().catch(() => {});
     }
-    return said.some((t) => /roommates/.test(t));
+    // The names line comes after the roommates line; stop once it has been said.
+    return said.some((t) => /your names were/.test(t));
   // The drive-up and the walk in cannot be hurried, then five lines come before this one.
   }, { timeout: 180_000, intervals: [250], message: () => said.join(' / ') }).toBe(true);
   const all = said.join(' | ');
   console.log(all);
   expect(all).toMatch(/Come on in guys! Welcome to Honeysuckle Hollow!/);
+  expect(all).toMatch(/roommates/);
   expect(all).toMatch(/your names were Sam and Riley, right\?/);
   expect(all).toMatch(/Great\. The mover can't stay on the road\. He did, however, beat the tree/); // Riley's dry, feminine humor
   expect(all).not.toMatch(/babe/i);
