@@ -2,7 +2,7 @@ import { supabase } from '../shared/supabase/client';
 import type { DesignOp } from '../games/velvet-house/bridge/protocol';
 
 // Sharing Velvet Sims garment designs: the database functions in
-// supabase/migrations/20261029100000_velvet_designs.sql and the `velvet-design-share` edge function.
+// supabase/migrations/20261029100001_velvet_designs.sql and the `velvet-design-share` edge function.
 
 const SHARE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/velvet-design-share`;
 

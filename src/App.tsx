@@ -1055,7 +1055,7 @@ function AppInner() {
 
   // Sticky toolbar appearance — universal setting (independent of per-companion chat wallpaper)
   const toolbarBgMode = customization?.toolbar_background_mode ?? 'glass';
-  const toolbarTextColorKey = customization?.toolbar_text_color ?? 'dark';
+  const toolbarTextColorKey = customization?.toolbar_text_color ?? 'light';
   const toolbarTextColor =
     toolbarTextColorKey === 'light' ? '#f8fafc'
     : toolbarTextColorKey === 'rose' ? '#fb7185'

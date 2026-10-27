@@ -153,7 +153,7 @@ Built, in this order:
 - **Sharing:** share codes anyone can paste. Designs can be shared with friends (they show under Community straight away)
   or offered to the public gallery, where a moderator approves each one first. Members can report a design; three
   different reporters hide it until a moderator looks. Moderators (accounts with `is_super_user`) get a Review list in
-  the same tab. Backend: migration `20261029100000_velvet_designs.sql` (tables closed to members, everything through
+  the same tab. Backend: migration `20261029100001_velvet_designs.sql` (tables closed to members, everything through
   functions that check who is asking) and the edge function `velvet-design-share` (checks the name with the app's
   moderation, then publishes). The migration's rules are checked against a real Postgres by
   `supabase/tests/velvet_designs_behaviour.sql`. **Switched on** (migration applied and `velvet-design-share` deployed, both checked on the live project). To make someone a moderator, set `is_super_user` on their profile.

@@ -276,7 +276,7 @@ export function CustomizationPanel({
   }, [isOpen, initialTab]);
   const [editingCompanion, setEditingCompanion] = useState<CompanionWithLastMessage | null>(null);
   const [localCompanions, setLocalCompanions] = useState<CompanionWithLastMessage[]>(companions);
-  const [localTextColor, setLocalTextColor] = useState<ToolbarTextColorKey>(customization.toolbar_text_color ?? 'dark');
+  const [localTextColor, setLocalTextColor] = useState<ToolbarTextColorKey>(customization.toolbar_text_color ?? 'light');
   const [textColorSaved, setTextColorSaved] = useState(false);
   const streak = customization.current_streak;
   const fontUnlocked = customization.font_customization_unlocked;
@@ -295,7 +295,7 @@ export function CustomizationPanel({
   }, [isOpen, tab, setPreviewStyle]);
 
   useEffect(() => {
-    setLocalTextColor(customization.toolbar_text_color ?? 'dark');
+    setLocalTextColor(customization.toolbar_text_color ?? 'light');
   }, [customization.toolbar_text_color]);
 
   useEffect(() => {
@@ -729,7 +729,7 @@ export function CustomizationPanel({
                       onSetToolbarTextColor(localTextColor);
                       setTextColorSaved(true);
                     }}
-                    disabled={localTextColor === (customization.toolbar_text_color ?? 'dark')}
+                    disabled={localTextColor === (customization.toolbar_text_color ?? 'light')}
                     className="flex items-center gap-1.5"
                   >
                     {textColorSaved ? (
@@ -744,7 +744,7 @@ export function CustomizationPanel({
                       </>
                     )}
                   </Button>
-                  {localTextColor !== (customization.toolbar_text_color ?? 'dark') && !textColorSaved && (
+                  {localTextColor !== (customization.toolbar_text_color ?? 'light') && !textColorSaved && (
                     <span className="text-xs text-ink-muted">Unsaved changes</span>
                   )}
                 </div>

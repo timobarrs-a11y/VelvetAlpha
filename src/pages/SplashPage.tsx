@@ -105,7 +105,7 @@ const INTERESTS = [
 
 const TRUST = [
   { icon: ShieldCheck, title: 'Private by design', text: 'Your conversations are encrypted. Export or delete everything anytime from Settings.' },
-  { icon: BadgeCheck, title: 'AI is always labeled', text: 'Bots in the community wear a badge, so you always know when you are talking to a person.' },
+  { icon: BadgeCheck, title: 'Authored characters are always labeled', text: 'Characters Velvet writes wear an Authored badge, so you always know when you are talking to a person.' },
   { icon: Flag, title: 'Spaces that stay kind', text: 'Moderation, reporting, and blocking are built in. Crews can lock their doors.' },
 ];
 
@@ -327,10 +327,17 @@ export function SplashPage() {
               </span>
             </h1>
 
-            <p className="mt-6 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
-              Project Velvet gives you Atlas, an assistant that gets things done, and coaches that keep you on track.
-              Then it connects you with real people who are into the same things you are.
-            </p>
+            <div className="mt-6 space-y-4 text-gray-300 max-w-xl mx-auto lg:mx-0" style={{ fontSize: 'clamp(17px, 1.6vw, 20px)', lineHeight: 1.6 }}>
+              <p>
+                Atlas helps you map out your goals. Coaches keep you on track with actionable plans built just for you.
+                Stay current on the things you love with news and YouTube wired right into your profile.
+              </p>
+              <p>
+                While you&apos;re here, connect and compete with new or existing friends on the leaderboards, or just hang
+                out and talk about things you like in Spaces.
+              </p>
+              <p>And there&apos;s so much more!</p>
+            </div>
 
             <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               {primaryCta('Create your free account')}
