@@ -175,6 +175,8 @@ export function cardToPlot(c: WorldCard): Plot {
       spaces: c.spaces,
       newNeighbor: c.new_neighbor,
       live: c.is_live === true,
+      // a visible profile that is not a real person (a seeded account): always labeled
+      authored: c.is_public && c.is_live === false,
       address: slot.address,
     },
   };

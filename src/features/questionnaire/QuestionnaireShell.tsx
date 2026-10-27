@@ -23,6 +23,7 @@ import type {
 import { resolveQuestionText } from './companionBank';
 import { tpl } from './pronouns';
 import { getColorHex } from './personalBank';
+import { NICKNAME_BANK, pickNickname, type NicknameKind } from './nicknames';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
@@ -370,9 +371,11 @@ export function QuestionnaireShell({
                   onSubmit={() => {
                     const minLen = (question as TapQuestion).minLength;
                     if (minLen && textInput.trim().length < minLen) return;
+                    if ((question as TapQuestion).validate?.(textInput)) return;
                     handleAnswer(textInput.trim());
                   }}
-                  onSkip={(question as TapQuestion).optional ? () => handleAnswer('') : undefined}
+                  onSkip={(question as TapQuestion).optional ? () => handleAnswer('') : (question as TapQuestion).nicknameBank ? () => handleAnswer(pickNickname(textInput)) : undefined}
+                  hint={typeof (question as TapQuestion).hint === 'function' ? ((question as TapQuestion).hint as (c: typeof ctx) => string)(ctx) : (question as TapQuestion).hint as string | undefined}
                   inputRef={inputRef}
                   accentColor={accentColor}
                 />
@@ -643,12 +646,15 @@ function ProgressBar({
   );
 }
 
+const NICKNAME_KIND_LABELS: Record<NicknameKind, string> = { funny: 'Funny', classic: 'Classic', screen: 'Screen names', cozy: 'Cozy' };
+
 function TapTextRenderer({
   question,
   textInput,
   setTextInput,
   onSubmit,
   onSkip,
+  hint,
   inputRef,
   accentColor,
 }: {
@@ -657,14 +663,17 @@ function TapTextRenderer({
   setTextInput: (v: string) => void;
   onSubmit: () => void;
   onSkip?: () => void;
+  hint?: string;
   inputRef: React.RefObject<HTMLInputElement | null>;
   accentColor?: string;
 }) {
   const isDate = question.id === 'birthday';
   const minLen = question.minLength;
   const trimmed = textInput.trim();
-  const tooShort = minLen ? trimmed.length > 0 && trimmed.length < minLen : false;
-  const canSubmit = isDate ? !!textInput : trimmed.length >= (minLen ?? 1);
+  const invalid = trimmed.length > 0 ? question.validate?.(textInput) ?? null : null;
+  const tooShort = !question.validate && minLen ? trimmed.length > 0 && trimmed.length < minLen : false;
+  const canSubmit = isDate ? !!textInput : trimmed.length >= (minLen ?? 1) && !(question.validate?.(textInput));
+  const [bankKind, setBankKind] = useState<NicknameKind>('funny');
 
   const focusBorder = accentColor
     ? { borderColor: `${accentColor}99`, boxShadow: `0 0 0 4px ${accentColor}26` }
@@ -687,6 +696,41 @@ function TapTextRenderer({
         <p className="text-sm text-rose-400/80 text-center">
           {minLen} letters minimum
         </p>
+      )}
+      {invalid && <p role="alert" className="text-sm text-rose-400/80 text-center">{invalid}</p>}
+      {hint && !invalid && <p className="text-sm text-gray-400 text-center">{hint}</p>}
+      {question.nicknameBank && (
+        <div className="space-y-3">
+          <p className="text-center text-xs uppercase tracking-widest text-gray-500">Pick one, or type your own</p>
+          <div role="tablist" aria-label="Nickname styles" className="flex flex-wrap items-center justify-center gap-1.5">
+            {(Object.keys(NICKNAME_BANK) as NicknameKind[]).map(kind => (
+              <button
+                key={kind}
+                type="button"
+                role="tab"
+                aria-selected={bankKind === kind}
+                onClick={() => setBankKind(kind)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${bankKind === kind ? 'bg-white/15 border-white/30 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}
+              >
+                {NICKNAME_KIND_LABELS[kind]}
+              </button>
+            ))}
+          </div>
+          <div role="listbox" aria-label="Nicknames" className="flex flex-wrap items-center justify-center gap-2 max-h-44 overflow-y-auto px-1 py-1">
+            {NICKNAME_BANK[bankKind].map(nick => (
+              <button
+                key={nick}
+                type="button"
+                role="option"
+                aria-selected={trimmed === nick}
+                onClick={() => setTextInput(nick)}
+                className={`px-3.5 py-1.5 rounded-full text-sm border transition-colors ${trimmed === nick ? 'bg-rose-500/25 border-rose-400/60 text-white' : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10'}`}
+              >
+                {nick}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
       <div className="flex items-center justify-center gap-3">
         <button

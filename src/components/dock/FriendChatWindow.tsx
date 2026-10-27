@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Minus, X } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
 import { FRIEND_GAMES, gameInvite, sendMessage, type FriendGameId } from '../../shared/supabase/queries/messaging';
@@ -21,6 +22,7 @@ export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
   onClose: () => void;
 }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [playing, setPlaying] = useState<Game | null>(null);
   // Games stay mounted once opened (hidden behind chat) so they keep receiving moves.
@@ -41,15 +43,24 @@ export function FriendChatWindow({ friend, gameRequest, onMinimize, onClose }: {
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
       <div className="flex items-center gap-2.5 border-b border-amber-300/25 bg-amber-300/[0.07] px-3 py-2.5">
-        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-amber-300/80 bg-amber-300/15 text-base font-bold text-amber-200">
-          {friend.peerAvatarUrl
-            ? <img src={friend.peerAvatarUrl} alt="" className="h-full w-full object-cover" />
-            : friend.peerName.charAt(0).toUpperCase()}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-amber-100">{friend.peerName}</p>
-          <p className="truncate text-[10px] text-amber-200/70">Friend</p>
-        </div>
+        {/* Their face and name: tap to see their profile, statuses and comments. */}
+        <button
+          type="button"
+          onClick={() => navigate(`/member/${friend.peerId}`)}
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl text-left transition-colors hover:bg-white/5"
+          title={`View ${friend.peerName}'s profile`}
+          aria-label={`View ${friend.peerName}'s profile`}
+        >
+          <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-amber-300/80 bg-amber-300/15 text-base font-bold text-amber-200">
+            {friend.peerAvatarUrl
+              ? <img src={friend.peerAvatarUrl} alt="" className="h-full w-full object-cover" />
+              : friend.peerName.charAt(0).toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-amber-100">{friend.peerName}</span>
+            <span className="block truncate text-[10px] text-amber-200/70">Friend · View profile</span>
+          </span>
+        </button>
         <div className="relative">
           <button
             type="button"

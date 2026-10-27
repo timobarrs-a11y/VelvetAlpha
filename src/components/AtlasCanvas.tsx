@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { callName } from '../shared/profile/names';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Plus, Loader2, AlertCircle, X, CreditCard as Edit2, Check, Globe, CalendarPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -194,12 +195,11 @@ export function AtlasCanvas({ conversationId, voice, onNewConversation, onBack }
       if (user) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('name')
+          .select('name, nickname')
           .eq('id', user.id)
           .maybeSingle();
-        if (profile?.name) {
-          firstName = profile.name.split(' ')[0];
-        }
+        // Their nickname, or a real first name if that is all they gave.
+        firstName = callName(profile) ?? '';
 
         const { count } = await supabase
           .from('atlas_conversations')

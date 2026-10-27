@@ -20,7 +20,11 @@ export interface ProgressPost {
   author_is_bot?: boolean;
 }
 
+export type PostAudience = 'everyone' | 'friends';
+
 export interface ProgressPostWithAuthor extends ProgressPost {
+  /** Who can see it. Absent on older rows and before the audience column exists. */
+  audience?: PostAudience;
   author_name: string;
   author_avatar_config: Record<string, unknown> | null;
   author_profile_image_type: string;
@@ -57,6 +61,11 @@ export async function getPublicFeed(limit = 30, offset = 0): Promise<ProgressPos
   return callFeedRpc('get_public_feed', { p_limit: limit, p_offset: offset });
 }
 
+/** Recent wins from members who share them (not yours): the Discover feed. */
+export async function getDiscoverAccomplishments(limit = 30, offset = 0): Promise<ProgressPostWithAuthor[]> {
+  return callFeedRpc('get_discover_accomplishments', { p_limit: limit, p_offset: offset });
+}
+
 export const STATUS_MAX_LENGTH = 500;
 
 const STATUS_ERRORS: Record<string, string> = {
@@ -66,11 +75,14 @@ const STATUS_ERRORS: Record<string, string> = {
   empty: 'Write something first.',
   too_long: `Keep it under ${STATUS_MAX_LENGTH} characters.`,
   rate_limited: "You've posted a lot in the last hour. Try again a bit later.",
+  bad_audience: 'Choose who can see this post.',
 };
 
 /** Post a status. Resolves to the new post's id, or throws with a message to show. */
-export async function createStatus(body: string): Promise<string> {
-  const { data, error } = await supabase.rpc('create_status_post', { p_body: body });
+export async function createStatus(body: string, audience: PostAudience = 'everyone'): Promise<string> {
+  // Public is the default, so the plain call keeps working; a friends-only post names its audience.
+  const params = audience === 'everyone' ? { p_body: body } : { p_body: body, p_audience: audience };
+  const { data, error } = await supabase.rpc('create_status_post', params);
   if (error) {
     console.error('[progressFeedService] create_status_post error:', error.message);
     throw new Error("Couldn't post that. Try again.");

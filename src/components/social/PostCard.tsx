@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Check, Layers, Target, Trophy, Flame, Heart, MessageCircle, MessageSquare,
-  Loader2, Send, Trash2,
+  Loader2, Lock, Send, Trash2,
 } from 'lucide-react';
 import { PublicProfileImage } from '../PublicProfileImage';
 import { Avatar } from '../Avatar';
@@ -181,6 +181,11 @@ export function PostCard({ post, index, liked, currentUserId, onLikeChange, onDe
               {meta.label}
             </span>
             <span className="text-xs text-white/30">{timeAgo(post.created_at)}</span>
+            {post.audience === 'friends' && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-white/35" title="Only friends can see this">
+                <Lock className="w-3 h-3" /> Friends
+              </span>
+            )}
           </div>
         </div>
         {isOwn && isStatus && onDeleted && (

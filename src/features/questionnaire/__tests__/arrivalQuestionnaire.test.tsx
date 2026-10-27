@@ -4,14 +4,38 @@ import { PERSONAL_QUESTIONNAIRE, resolveZodiac, somedayFromAnswers, answersFromS
 import { answersFromProfile, profileUpdateFor, resumeIndex } from '../arrivalAnswers';
 import { QuestionnaireShell } from '../QuestionnaireShell';
 import { makeContext } from '../pronouns';
+import { validateNickname } from '../nicknames';
 import type { QuestionnaireDefinition } from '../types';
 
 const ctx = makeContext({}, '', 'user');
 const ids = PERSONAL_QUESTIONNAIRE.questions.map(q => q.id);
 
 describe('Act 1 order', () => {
-  it('goes name, color, nickname, birthday, zodiac, gender, interests, Someday', () => {
-    expect(ids).toEqual(['name', 'favoriteColor', 'nickname', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday']);
+  it('goes nickname, real name, color, birthday, zodiac, gender, interests, Someday', () => {
+    expect(ids).toEqual(['nickname', 'name', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday']);
+  });
+
+  it('asks for a nickname first, and requires one', () => {
+    const q = PERSONAL_QUESTIONNAIRE.questions[0] as { id: string; question: string; optional?: boolean; nicknameBank?: boolean; validate?: (t: string) => string | null };
+    expect(q.id).toBe('nickname');
+    expect(q.question).toBe("We don't like to call people by their first names here, what do people call you?");
+    expect(q.optional).toBeFalsy();
+    expect(q.nicknameBank).toBe(true);
+    expect(q.validate!('me@mail.com')).not.toBeNull();
+    expect(q.validate!('Sunny Otter')).toBeNull();
+  });
+
+  it('asks for the real name second, as optional, and says it is only shown if they choose', () => {
+    const q = PERSONAL_QUESTIONNAIRE.questions[1] as { id: string; optional?: boolean; skipLabel?: string; hint?: string | ((c: unknown) => string) };
+    expect(q.id).toBe('name');
+    expect(q.optional).toBe(true);
+    expect(q.skipLabel).toBe('Skip for now');
+    expect(q.hint).toMatch(/Optional/);
+  });
+
+  it('greets them by nickname', () => {
+    const q = PERSONAL_QUESTIONNAIRE.questions[1] as { question: (c: unknown) => string };
+    expect(q.question({ ...ctx, answers: { nickname: 'Ace' } })).toBe("Nice to meet you, Ace. We won't show this to anyone without your permission, but what's your real name?");
   });
 
   it('no longer asks the wavelength questions or the swipe deck', () => {
@@ -76,17 +100,83 @@ describe('saving each answer', () => {
 
 describe('resuming', () => {
   it('starts at the first question not yet answered', () => {
+    const answers = answersFromProfile({ nickname: 'Ace', favorite_color: 'Teal', birthday: '1990-10-29' } as never);
+    expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('zodiacConfirm');
+  });
+
+  it('sends someone who only gave a real name back to choose a nickname', () => {
     const answers = answersFromProfile({ name: 'Tim', favorite_color: 'Teal', birthday: '1990-10-29' } as never);
     expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('nickname');
   });
 
-  it('treats a skipped nickname as done once a later answer exists', () => {
-    const answers = answersFromProfile({ name: 'Tim', favorite_color: 'Teal', birthday: '1990-10-29', zodiac_sign: 'Scorpio', gender: 'Male' } as never);
+  it('treats a skipped real name as done once a later answer exists', () => {
+    const answers = answersFromProfile({ nickname: 'Ace', favorite_color: 'Teal', birthday: '1990-10-29', zodiac_sign: 'Scorpio', gender: 'Male' } as never);
     expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('interests');
   });
 
   it('ignores placeholder names', () => {
     expect(answersFromProfile({ name: 'there' } as never).name).toBeUndefined();
+  });
+});
+
+describe('the nickname screen in the shell', () => {
+  const definition: QuestionnaireDefinition = {
+    chapters: [{ id: 'c', label: 'Chapter', questionIds: ['nickname'] }],
+    questions: [PERSONAL_QUESTIONNAIRE.questions[0]],
+  };
+  const renderIt = (onAnswer = vi.fn(), onComplete = vi.fn()) => render(
+    <QuestionnaireShell definition={definition} context={ctx} onAnswer={onAnswer} onComplete={onComplete} />,
+  );
+
+  it('shows the nickname bank to pick one from, by flavor', () => {
+    renderIt();
+    expect(screen.getByText(/No nickname\? Create one now!/)).toBeTruthy();
+    const tabs = screen.getAllByRole('tab').map(t => t.textContent);
+    expect(tabs).toEqual(['Funny', 'Classic', 'Screen names', 'Cozy']);
+    expect(screen.getByRole('option', { name: 'Captain Snacks' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Classic' }));
+    expect(screen.getByRole('option', { name: 'Ace' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: 'Captain Snacks' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Screen names' }));
+    expect(screen.getByRole('option', { name: 'NightOwl' })).toBeTruthy();
+  });
+
+  it('picks the one they tap, and they can still change it', () => {
+    renderIt();
+    const box = screen.getByPlaceholderText('Your nickname') as HTMLInputElement;
+    fireEvent.click(screen.getByRole('option', { name: 'Captain Snacks' }));
+    expect(box.value).toBe('Captain Snacks');
+    expect(screen.getByRole('option', { name: 'Captain Snacks' }).getAttribute('aria-selected')).toBe('true');
+    expect((screen.getByText('Next') as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.change(box, { target: { value: 'Ace' } });
+    expect(box.value).toBe('Ace');
+  });
+
+  it('gives them a random nickname and moves on when they skip', async () => {
+    const onAnswer = vi.fn();
+    renderIt(onAnswer);
+    fireEvent.click(screen.getByText('Skip, pick one for me'));
+    await waitFor(() => expect(onAnswer).toHaveBeenCalled());
+    const [id, nickname] = onAnswer.mock.calls[0];
+    expect(id).toBe('nickname');
+    expect(String(nickname).length).toBeGreaterThan(1);
+    expect(validateNickname(String(nickname))).toBeNull();
+  });
+
+  it('will not accept an email or link, and says why', () => {
+    renderIt();
+    const box = screen.getByPlaceholderText('Your nickname');
+    fireEvent.change(box, { target: { value: 'me@mail.com' } });
+    expect(screen.getByRole('alert').textContent).toMatch(/Leave out emails/);
+    expect((screen.getByText('Next') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('saves the nickname they typed', async () => {
+    const onAnswer = vi.fn();
+    renderIt(onAnswer);
+    fireEvent.change(screen.getByPlaceholderText('Your nickname'), { target: { value: 'Ace' } });
+    fireEvent.click(screen.getByText('Next'));
+    await waitFor(() => expect(onAnswer).toHaveBeenCalledWith('nickname', 'Ace', expect.anything()));
   });
 });
 

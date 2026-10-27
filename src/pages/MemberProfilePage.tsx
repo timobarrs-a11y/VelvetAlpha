@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Users, Target, TrendingUp, CheckCircle2,
-  Loader2, UserPlus, UserMinus, Trophy, Flame,
+  Loader2, UserPlus, UserMinus, Trophy, Flame, Lock,
 } from 'lucide-react';
 import { PublicProfileImage } from '../components/PublicProfileImage';
 import {
@@ -11,7 +11,9 @@ import {
   unfollowUser,
   isFollowing,
 } from '../services/memberProfileService';
-import { getPublicProfile, PublicProfileData, PublicGoal } from '../services/publicProfileService';
+import { getPublicProfile, getProfileCard, PublicProfileData, PublicGoal, type ProfileCard } from '../services/publicProfileService';
+import { sendFriendRequest } from '../shared/supabase/queries/messaging';
+import { ProfileFrontCard } from '../components/ProfileFrontCard';
 import { getUserMedals, type UserMedal } from '../services/medalsService';
 import { GOAL_TYPE_LABELS } from '../services/coachingService';
 import { MedalShowcase } from '../components/medals/MedalShowcase';
@@ -41,21 +43,43 @@ export default function MemberProfilePage() {
   const [followLoading, setFollowLoading] = useState(false);
   const [medals, setMedals] = useState<UserMedal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [card, setCard] = useState<ProfileCard | null>(null);
+  const [requested, setRequested] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requesting, setRequesting] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
-    const [p, isFollowingResult] = await Promise.all([
+    const [p, isFollowingResult, c] = await Promise.all([
       getPublicProfile(userId),
       isFollowing(userId),
+      getProfileCard(userId),
     ]);
     setData(p);
+    setCard(c);
+    setRequested(false);
+    setRequestError(null);
     setFollowing(isFollowingResult);
     getUserMedals(userId).then(setMedals).catch(() => {});
     setLoading(false);
   }, [userId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleFriendRequest = async () => {
+    if (!userId || requesting) return;
+    setRequesting(true);
+    setRequestError(null);
+    try {
+      await sendFriendRequest(userId);
+      setRequested(true);
+    } catch (e) {
+      setRequestError(e instanceof Error ? e.message : 'Could not send the request.');
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   const handleToggleFollow = async () => {
     if (!userId) return;
@@ -86,15 +110,18 @@ export default function MemberProfilePage() {
   if (!data) {
     return (
       <div className="ds-page flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-white/40 text-sm">This member's profile is not public.</p>
-        <button onClick={() => navigate('/feed')} className="mt-4 text-pink-400 text-sm">
-          Back to feed
+        <p className="text-white/40 text-sm">This member hasn&apos;t set up a public profile yet.</p>
+        <button onClick={() => navigate(-1)} className="mt-4 text-pink-400 text-sm">
+          Go back
         </button>
       </div>
     );
   }
 
   const { profile, counts, goals, commitments } = data;
+  // The full page is for friends, yourself, or a public-facing profile. Older databases do not say, so assume yes.
+  const hasFullAccess = data.has_full_access ?? true;
+  const requestState = requested ? 'sent' : card?.relation.friend_request ?? 'none';
 
   return (
     <div className="ds-page text-white">
@@ -138,6 +165,8 @@ export default function MemberProfilePage() {
             </div>
           </div>
         </motion.div>
+
+        {card && <ProfileFrontCard card={card.card} />}
 
         {/* Follow button */}
         {!data.is_owner && (
@@ -227,6 +256,7 @@ export default function MemberProfilePage() {
           </div>
         )}
 
+        {hasFullAccess && (<>
         {/* Shown goals */}
         <div className="mb-8">
           <h2 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3 flex items-center gap-1.5">
@@ -320,7 +350,43 @@ export default function MemberProfilePage() {
           </div>
         )}
 
-        <ProfilePosts userId={data.profile.user_id} isOwn={false} />
+        </>)}
+
+        {!hasFullAccess && (
+          <section aria-label="Full page" className="mb-8 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/6 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-4 h-4 text-white/50" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-semibold text-white">Their full page is for friends</h2>
+                <p className="text-xs text-white/45 mt-0.5">
+                  Add {profile.display_name} to see their posts, goals and more. Their wins are always here for you to cheer on.
+                </p>
+                {card && !card.reach.accepts_friend_requests ? (
+                  <p className="mt-3 text-xs text-amber-200/90">{profile.display_name} isn&apos;t accepting friend requests right now.</p>
+                ) : requestState === 'sent' ? (
+                  <p className="mt-3 text-xs text-white/60">Friend request sent.</p>
+                ) : requestState === 'received' ? (
+                  <p className="mt-3 text-xs text-white/60">{profile.display_name} sent you a friend request. Find it in your requests.</p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleFriendRequest}
+                    disabled={requesting}
+                    className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-pink-500/80 hover:bg-pink-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {requesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                    Add as friend
+                  </button>
+                )}
+                {requestError && <p role="alert" className="mt-2 text-xs text-amber-200/90">{requestError}</p>}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <ProfilePosts userId={data.profile.user_id} isOwn={false} fullAccess={hasFullAccess} />
       </div>
     </div>
   );

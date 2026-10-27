@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { callName } from '../shared/profile/names';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, MapPin, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
@@ -110,10 +111,10 @@ export function CalendarNaviPanel({ userId, upcomingEvents, onEventAdded }: Prop
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('name')
+        .select('name, nickname')
         .eq('id', userId)
         .maybeSingle();
-      const userName = profile?.name || undefined;
+      const userName = callName(profile);
 
       // Inject user context into the first message
       const context = historyArr.length === 0 ? await buildNaviContext() : '';

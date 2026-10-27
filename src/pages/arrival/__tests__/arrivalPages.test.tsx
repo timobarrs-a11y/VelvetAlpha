@@ -33,7 +33,7 @@ vi.mock('../../../services/setupProgressService', () => ({ updateSetupProgress: 
 vi.mock('../../../components/auth/AuthSpinner', () => ({ AuthSpinner: () => <p>Loading</p> }));
 
 const updates: Array<Record<string, unknown>> = [];
-const profile = { gender: 'Male', favorite_color: 'Teal', avatar_config: null, arrival_choices: {}, name: 'Tim' };
+const profile = { gender: 'Male', favorite_color: 'Teal', avatar_config: null, arrival_choices: {}, nickname: 'Ace', name: 'Tim Real' };
 vi.mock('../../../shared/supabase/client', () => ({
   supabase: {
     auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },
@@ -83,7 +83,8 @@ describe('Your home', () => {
     fireEvent.click(screen.getByText('Put it up'));
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/world?arrival=1'));
-    expect(upsertMember).toHaveBeenCalledWith({ display_name: 'Tim', headline: 'Always planning the next trip' });
+    // The billboard is public: it carries the nickname, never the real name.
+    expect(upsertMember).toHaveBeenCalledWith({ display_name: 'Ace', headline: 'Always planning the next trip' });
     expect(setupProgress).toHaveBeenCalledWith('u1', { step: 'arrival_town' });
   });
 });

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Loader2, Eye, EyeOff, Target, Check, Users, Bot, Search, UserRound, CheckCircle2,
+  Loader2, Target, Check, Users, Bot, Search, UserRound, CheckCircle2,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
 import {
@@ -14,6 +14,23 @@ import { toggleGoalShowOnProfile, toggleCommitmentShowOnProfile } from '../servi
 import { toast } from '../shared/ui/Toast';
 import { SMILIES, smilieUrl } from '../config/smilieRegistry';
 import { PublicProfileImage } from './PublicProfileImage';
+import { ReachControls, type ReachValues } from './ReachControls';
+import { userProfileService } from '../services/userProfileService';
+import { syncDiscoveryFromProfile } from '../shared/supabase/queries/messaging';
+import { pickNickname, validateNickname } from '../features/questionnaire/nicknames';
+
+const DEFAULT_REACH: ReachValues = { share_accomplishments: true, profile_mode: 'friends', who_can_message: 'everyone', accepts_friend_requests: true, accepts_mail: true, comments_from: 'everyone' };
+
+function reachOf(p: MemberProfile | null): ReachValues {
+  return {
+    share_accomplishments: p?.share_accomplishments ?? true,
+    profile_mode: p?.profile_mode ?? 'friends',
+    who_can_message: p?.who_can_message ?? 'everyone',
+    accepts_friend_requests: p?.accepts_friend_requests ?? true,
+    accepts_mail: p?.accepts_mail ?? true,
+    comments_from: p?.comments_from ?? 'everyone',
+  };
+}
 
 export function PublicProfileSettings() {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
@@ -25,8 +42,8 @@ export function PublicProfileSettings() {
   const [displayName, setDisplayName] = useState('');
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
   const [discoverable, setDiscoverable] = useState(true);
+  const [reach, setReach] = useState<ReachValues>(DEFAULT_REACH);
   const [profileImageType, setProfileImageType] = useState<'avatar' | 'smilie'>('avatar');
   const [profileSmilieCode, setProfileSmilieCode] = useState<string | null>(null);
   const [smilieSearch, setSmilieSearch] = useState('');
@@ -46,8 +63,8 @@ export function PublicProfileSettings() {
       setDisplayName(p.display_name);
       setHeadline(p.headline ?? '');
       setBio(p.bio ?? '');
-      setIsPublic(p.is_public);
       setDiscoverable(p.discoverable);
+      setReach(reachOf(p));
       setProfileImageType(p.profile_image_type ?? 'avatar');
       setProfileSmilieCode(p.profile_smilie_code ?? null);
     }
@@ -61,17 +78,37 @@ export function PublicProfileSettings() {
       toast.error('Choose a smiley for your public profile picture.');
       return;
     }
+    // Changing the nickname is allowed any time; it has to follow the same rules as the first one.
+    const nickname = displayName.trim();
+    const nicknameChanged = nickname !== '' && nickname !== (profile?.display_name ?? '');
+    if (nicknameChanged) {
+      const problem = validateNickname(nickname);
+      if (problem) {
+        toast.error(problem);
+        return;
+      }
+    }
     setSaving(true);
     try {
+      // Only send reach settings that changed, so saving a bio never depends on them.
+      const before = reachOf(profile);
+      const reachChanges = Object.fromEntries(
+        (Object.keys(reach) as (keyof ReachValues)[]).filter(k => reach[k] !== before[k]).map(k => [k, reach[k]]),
+      ) as Partial<ReachValues>;
       const updated = await upsertMyMemberProfile({
+        ...reachChanges,
         display_name: displayName || 'Member',
         headline: headline || null,
         bio: bio || null,
-        is_public: isPublic,
         discoverable,
         profile_image_type: profileImageType,
         profile_smilie_code: profileImageType === 'smilie' ? profileSmilieCode : null,
       });
+      if (nicknameChanged) {
+        // The nickname is the name people see everywhere, so keep it in step.
+        await userProfileService.updateProfile({ nickname });
+        syncDiscoveryFromProfile({ nickname }).catch(() => {});
+      }
       setProfile(updated);
       toast.success('Public profile saved.');
     } catch {
@@ -119,34 +156,8 @@ export function PublicProfileSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Public toggle */}
-      <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: isPublic ? 'rgba(244,114,182,0.15)' : 'rgba(255,255,255,0.05)' }}>
-              {isPublic ? <Eye className="w-5 h-5 text-pink-400" /> : <EyeOff className="w-5 h-5 text-white/40" />}
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">Public profile</h3>
-              <p className="text-xs text-white/40 mt-0.5">
-                {isPublic ? 'Other members can see your profile' : 'Your profile is private'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsPublic(!isPublic)}
-            className="relative w-11 h-6 rounded-full transition-colors flex-shrink-0"
-            style={{ background: isPublic ? 'rgba(244,114,182,0.80)' : 'rgba(255,255,255,0.12)' }}
-          >
-            <motion.div
-              animate={{ x: isPublic ? 22 : 2 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md"
-            />
-          </button>
-        </div>
-      </div>
+      {/* Your wins, your full page and how people reach you. First, so it is easy to find. */}
+      <ReachControls values={reach} onChange={setReach} />
 
       {/* Profile picture */}
       <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
@@ -200,15 +211,28 @@ export function PublicProfileSettings() {
       {/* Profile fields */}
       <div className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-white/40 uppercase tracking-wide mb-1.5">Display name</label>
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={40}
-            className="w-full rounded-xl px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white outline-none focus:border-pink-400/40"
-            placeholder="Your public name"
-          />
+          <label htmlFor="profile-nickname" className="block text-xs font-semibold text-white/40 uppercase tracking-wide mb-1.5">Nickname</label>
+          <div className="flex gap-2">
+            <input
+              id="profile-nickname"
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={40}
+              className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white outline-none focus:border-pink-400/40"
+              placeholder="Your nickname"
+            />
+            <button
+              type="button"
+              onClick={() => setDisplayName(pickNickname(displayName))}
+              className="flex-shrink-0 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-white/70 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              Pick one for me
+            </button>
+          </div>
+          <p className="mt-1.5 text-xs text-white/35">
+            A nickname is what people see. We only show your real name to people if you choose to.
+          </p>
         </div>
         <div>
           <label className="block text-xs font-semibold text-white/40 uppercase tracking-wide mb-1.5">Headline</label>
