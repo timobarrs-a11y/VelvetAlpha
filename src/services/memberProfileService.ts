@@ -39,12 +39,13 @@ export async function getMyMemberProfile(): Promise<MemberProfile | null> {
 
   const { data: userProfile } = await supabase
     .from('user_profiles')
-    .select('name, avatar_config')
+    .select('nickname, avatar_config')
     .eq('id', user.id)
     .maybeSingle();
 
   return upsertMyMemberProfile({
-    display_name: userProfile?.name || 'Member',
+    // The nickname is what other people see; a real name is never used here.
+    display_name: userProfile?.nickname?.trim() || 'Member',
     avatar_config: userProfile?.avatar_config ?? null,
     is_public: true,
     discoverable: true,

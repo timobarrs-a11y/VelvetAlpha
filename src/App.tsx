@@ -60,6 +60,7 @@ import { CommitmentsTab } from './components/thread/CommitmentsTab';
 import { RatingValue, getRatingsForMessages, clearConversationMessages, markRatingRegenerated } from './services/ratingService';
 import { safeRandomUUID } from './utils/uuid';
 import { isHelper } from './utils/relationshipType';
+import { callName } from './shared/profile/names';
 
 function AppInner() {
   const navigate = useNavigate();
@@ -435,8 +436,8 @@ function AppInner() {
         if (ritualResult.shouldSendMessage && ritualResult.message) return;
 
         resumptionFiredRef.current = fireKey;
-        const { data: profile } = await supabase.from('user_profiles').select('name').eq('id', userId).maybeSingle();
-        const userName = profile?.name || 'there';
+        const { data: profile } = await supabase.from('user_profiles').select('name, nickname').eq('id', userId).maybeSingle();
+        const userName = callName(profile) || 'there';
 
         const { SessionResumptionService } = await import('./services/sessionResumptionService');
         const resumptionMessage = await SessionResumptionService.handleSessionResumption(
@@ -702,8 +703,8 @@ function AppInner() {
       if (!claimed) return;
       if (!user) return;
 
-      const { data: profile } = await supabase.from('user_profiles').select('name, birthday').eq('id', user.id).maybeSingle();
-      const userName = profile?.name || 'there';
+      const { data: profile } = await supabase.from('user_profiles').select('name, nickname, birthday').eq('id', user.id).maybeSingle();
+      const userName = callName(profile) || 'there';
       const userBirthday = profile?.birthday || undefined;
       const matchData = JSON.parse(sessionStorage.getItem('matchAnswers') || '{}');
       const { firstMessageService } = await import('./services/firstMessageService');

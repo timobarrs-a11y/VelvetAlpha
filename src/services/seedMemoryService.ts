@@ -1,4 +1,5 @@
 import { supabase } from '../shared/supabase/client';
+import { callName } from '../shared/profile/names';
 
 export interface QuestionnaireData {
   userName: string;
@@ -43,7 +44,7 @@ async function enrichWithProfileData(
 
   return {
     ...data,
-    userName: data.userName || profile.name || '',
+    userName: data.userName || callName(profile) || '',
     userBirthday: data.userBirthday || profile.birthday || '',
     userGender: data.userGender || profile.gender || '',
     favoriteColor: data.favoriteColor || profile.favorite_color || '',

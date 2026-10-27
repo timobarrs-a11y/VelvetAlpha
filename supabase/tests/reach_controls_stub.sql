@@ -6,7 +6,7 @@ create schema auth;
 create table auth.users (id uuid primary key, email text);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
 grant usage on schema public, auth to authenticated;
-create table public.member_profiles (user_id uuid primary key references auth.users, display_name text default 'Member', headline text, bio text, avatar_config jsonb, profile_image_type text, profile_smilie_code text, is_bot boolean not null default false, is_public boolean not null default true, discoverable boolean not null default true, follower_count int not null default 0, following_count int not null default 0);
+create table public.member_profiles (user_id uuid primary key references auth.users, display_name text default 'Member', headline text, bio text, avatar_config jsonb, profile_image_type text, profile_smilie_code text, is_bot boolean not null default false, is_public boolean not null default true, discoverable boolean not null default true, follower_count int not null default 0, following_count int not null default 0, updated_at timestamptz default now());
 create table public.im_conversations (id uuid primary key default gen_random_uuid(), user_a_id uuid, user_b_id uuid);
 create table public.im_messages (id uuid primary key default gen_random_uuid(), conversation_id uuid, sender_id uuid, body text);
 create table public.im_friendships (id uuid primary key default gen_random_uuid(), requester_id uuid, addressee_id uuid, status text not null default 'pending');
@@ -40,3 +40,4 @@ create table public.user_customization (user_id uuid primary key, current_streak
 create function public.post_exists_for_target(u uuid, t text, i uuid, pt text) returns boolean language sql stable as $$ select exists (select 1 from public.progress_posts where user_id = u and ref_target_type = t and ref_target_id = i and post_type = pt) $$;
 grant select, insert, update on all tables in schema public to authenticated;
 create function public.progress_post_title(pp public.progress_posts, p_viewer_uid uuid) returns text language sql as $$ select 'x' $$;
+create table public.im_discovery_profiles (user_id uuid primary key, display_name text);

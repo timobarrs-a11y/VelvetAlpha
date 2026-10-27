@@ -89,7 +89,7 @@ export function resumeIndex(definition: QuestionnaireDefinition, answers: Answer
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
     if (q.skipIf?.(ctx) || answered(q.id)) continue;
-    if (i < lastAnswered) continue; // optional, already passed
+    if (i < lastAnswered && !q.required) continue; // optional, already passed
     return i;
   }
   return questions.length - 1;

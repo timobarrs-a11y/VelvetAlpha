@@ -1300,14 +1300,14 @@ function DiscoverySettingsView({ onSaved }: { onSaved: () => void }) {
           // Bootstrap from user_profiles so the user doesn't start empty.
           const { data: up } = await supabase
             .from('user_profiles')
-            .select('name, interests, avatar_config')
+            .select('nickname, interests, avatar_config')
             .eq('id', user.id)
             .maybeSingle();
           if (up) {
-            setDisplayName(up.name ?? '');
+            setDisplayName(up.nickname ?? '');
             setInterests((up.interests as string[]) ?? []);
             await syncDiscoveryFromProfile({
-              name: up.name,
+              nickname: up.nickname,
               interests: up.interests as string[] | null,
             }).catch(() => {});
           }

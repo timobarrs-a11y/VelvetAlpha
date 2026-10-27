@@ -64,6 +64,8 @@ export interface BaseQuestion {
   chapter?: string;
   confidence?: ConfidenceTier;
   placeholder?: string;
+  /** Resuming never passes over this question, even when later ones are answered. */
+  required?: boolean;
   /** Skip this question when true, going forward and back (a cusp question off a cusp, a birthday we already have). */
   skipIf?: (ctx: QuestionContext) => boolean;
 }
@@ -75,6 +77,12 @@ export interface TapQuestion extends BaseQuestion {
   minLength?: number;
   optional?: boolean;
   skipLabel?: string;
+  /** A small line under the answer box (what we do with it, why it is optional). */
+  hint?: string | ((ctx: QuestionContext) => string);
+  /** Why an answer is not allowed, or null when it is fine. The Next button waits for null. */
+  validate?: (text: string) => string | null;
+  /** Offer nickname ideas, and a button to pick one for them. */
+  suggestNicknames?: boolean;
 }
 
 export interface GridQuestion extends BaseQuestion {

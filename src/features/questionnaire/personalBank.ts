@@ -1,4 +1,5 @@
 import type { GridOption, QuestionnaireDefinition } from './types';
+import { NICKNAME_MIN, validateNickname } from './nicknames';
 
 const COLOR_HEX_MAP: Record<string, string> = {
   Red: '#ef4444', Pink: '#ec4899', Orange: '#f97316', Yellow: '#eab308',
@@ -241,35 +242,53 @@ export function answersFromSomeday(picks: SomedayPick[]): Record<string, string[
 }
 
 // ─── Act 1: the quick questionnaire ─────────────────────────────────────
-// name → color → nickname → birthday → zodiac → gender → interests → Someday.
+// nickname → real name (optional) → color → birthday → zodiac → gender → interests → Someday.
 // Each answer is saved as it's given. The "wavelength" questions are asked by
 // Atlas in conversation now.
 
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 10,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['name', 'favoriteColor', 'nickname', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'name', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
     { id: 'taste', label: 'What you love', questionIds: ['interests'] },
     { id: 'someday', label: 'Someday', questionIds: ['someday'] },
   ],
   questions: [
     {
+      // Nicknames come first: it is how people see you in Spaces and when they reach out.
+      id: 'nickname',
+      archetype: 'tap',
+      chapter: 'identity',
+      question: "We don't call people by their first names here. What's your nickname?",
+      confidence: 'confirmed',
+      placeholder: 'Your nickname',
+      required: true,
+      minLength: NICKNAME_MIN,
+      validate: validateNickname,
+      suggestNicknames: true,
+      hint: "It's what people will see. Nothing that gives away who you are.",
+    },
+    {
+      // Optional, and the same id as before so saved answers and resuming keep working.
       id: 'name',
       archetype: 'tap',
       chapter: 'identity',
-      question: 'First things first -- what should I call you?',
+      question: (ctx) => {
+        const nick = (ctx.answers.nickname as string | undefined)?.trim();
+        return nick ? `Nice to meet you, ${nick}. What's your real name?` : "What's your real name?";
+      },
       confidence: 'confirmed',
-      placeholder: 'Enter your name',
+      placeholder: 'Your real name (optional)',
       minLength: 2,
+      optional: true,
+      skipLabel: 'Skip for now',
+      hint: "We only show your real name to people if you choose to. You can skip this, and add it later.",
     },
     {
       id: 'favoriteColor',
       archetype: 'grid',
       chapter: 'identity',
-      question: (ctx) => {
-        const name = ctx.answers.name as string;
-        return name ? `Nice to meet you, ${name}. What's your favorite color?` : "What's your favorite color?";
-      },
+      question: () => "What's your favorite color?",
       confidence: 'tapped',
       columns: 4,
       options: [
@@ -288,25 +307,12 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       ],
     },
     {
-      id: 'nickname',
-      archetype: 'tap',
-      chapter: 'identity',
-      question: (ctx) => {
-        const name = (ctx.answers.name as string | undefined)?.trim();
-        return name ? `Do you go by ${name}, or something else?` : 'Do you go by another name?';
-      },
-      confidence: 'confirmed',
-      placeholder: 'A nickname (optional)',
-      optional: true,
-      skipLabel: 'Skip',
-    },
-    {
       id: 'birthday',
       archetype: 'tap',
       chapter: 'identity',
       question: (ctx) => {
-        const name = ctx.answers.name as string;
-        return name ? `When were you born, ${name}?` : 'When were you born?';
+        const who = (ctx.answers.nickname as string | undefined)?.trim();
+        return who ? `When were you born, ${who}?` : 'When were you born?';
       },
       confidence: 'confirmed',
       placeholder: 'Select your birthday',

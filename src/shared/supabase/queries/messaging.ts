@@ -122,15 +122,16 @@ export async function setMyDiscoveryIdentity(alias: string, ageRange: string | n
   }
 }
 
-// Mirror interests + name from user_profiles into im_discovery_profiles so
+// Mirror interests + nickname from user_profiles into im_discovery_profiles so
 // discovery queries have everything they need without joining auth-gated tables.
+// Only the nickname is shown to other people; a real name is never copied here.
 export async function syncDiscoveryFromProfile(profile: {
-  name?: string | null;
+  nickname?: string | null;
   avatar_config?: any;
   interests?: string[] | null;
 }) {
   const updates: Record<string, unknown> = {};
-  if (profile.name !== undefined) updates.display_name = profile.name ?? '';
+  if (profile.nickname !== undefined) updates.display_name = profile.nickname?.trim() ?? '';
   if (profile.interests !== undefined) updates.interests = profile.interests ?? [];
   if (Object.keys(updates).length === 0) return;
   const { error } = await supabase

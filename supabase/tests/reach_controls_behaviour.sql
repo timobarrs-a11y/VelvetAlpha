@@ -37,11 +37,27 @@ insert into auth.users values ('e0000000-0000-0000-0000-00000000000e');
 insert into public.user_profiles (id, nickname, name) values ('e0000000-0000-0000-0000-00000000000e', 'Eli', 'Eliot Real');
 do $$ begin
   assert (select display_name from public.member_profiles where user_id='e0000000-0000-0000-0000-00000000000e') = 'Eli', 'new member gets a profile named by their nickname';
+  assert not exists (select 1 from public.member_profiles where display_name like '%Eliot%'), 'real name must not be used';
   assert (select is_public and profile_mode = 'friends' and share_accomplishments from public.member_profiles where user_id='e0000000-0000-0000-0000-00000000000e'), 'new profile defaults';
 end $$;
 delete from public.member_profiles where user_id='e0000000-0000-0000-0000-00000000000e';
 delete from public.user_profiles where id='e0000000-0000-0000-0000-00000000000e';
 delete from auth.users where id='e0000000-0000-0000-0000-00000000000e';
+
+\echo == nicknames are the name people see
+insert into auth.users values ('f0000000-0000-0000-0000-00000000000f');
+insert into public.user_profiles (id, nickname, name) values ('f0000000-0000-0000-0000-00000000000f', '', 'Frankie Real');
+do $$ begin assert (select display_name from public.member_profiles where user_id='f0000000-0000-0000-0000-00000000000f') = 'Member', 'no nickname yet: a placeholder, never the real name'; end $$;
+update public.user_profiles set nickname = 'Fizz' where id='f0000000-0000-0000-0000-00000000000f';
+do $$ begin assert (select display_name from public.member_profiles where user_id='f0000000-0000-0000-0000-00000000000f') = 'Fizz', 'picking a nickname sets the display name'; end $$;
+update public.user_profiles set nickname = 'Fizzy' where id='f0000000-0000-0000-0000-00000000000f';
+do $$ begin assert (select display_name from public.member_profiles where user_id='f0000000-0000-0000-0000-00000000000f') = 'Fizzy', 'changing it follows'; end $$;
+update public.member_profiles set display_name = 'Custom Name' where user_id='f0000000-0000-0000-0000-00000000000f';
+update public.user_profiles set nickname = 'Other' where id='f0000000-0000-0000-0000-00000000000f';
+do $$ begin assert (select display_name from public.member_profiles where user_id='f0000000-0000-0000-0000-00000000000f') = 'Custom Name', 'a display name they set themselves is left alone'; end $$;
+delete from public.member_profiles where user_id='f0000000-0000-0000-0000-00000000000f';
+delete from public.user_profiles where id='f0000000-0000-0000-0000-00000000000f';
+delete from auth.users where id='f0000000-0000-0000-0000-00000000000f';
 
 \echo == defaults
 do $$ begin
@@ -164,7 +180,8 @@ do $$ declare r jsonb; begin
   assert (r->'relation'->>'has_full_access')::boolean = false, 'a stranger does not have the full page';
   assert r->'relation'->>'friend_request' = 'none', 'no request yet';
   r := public.get_profile_card('b0000000-0000-0000-0000-00000000000b');
-  assert r->'card'->>'display_name' = 'Bea Real', 'real name only when nothing else was given';
+  assert r->'card'->>'display_name' = 'Member', 'a real name is never shown, even when it is all they gave';
+  assert not (r::text like '%Bea Real%'), 'real name must not appear on the card';
   assert r->'relation'->>'friend_request' = 'sent', 'pending request is reported';
   r := public.get_profile_card('c0000000-0000-0000-0000-00000000000c');
   assert r->'card'->>'display_name' = 'Member', 'placeholder name never shows a made-up real name';

@@ -200,8 +200,11 @@ export function PublicProfileSettings() {
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={40}
             className="w-full rounded-xl px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white outline-none focus:border-pink-400/40"
-            placeholder="Your public name"
+            placeholder="Your nickname"
           />
+          <p className="mt-1.5 text-xs text-white/35">
+            A nickname is what people see. We only show your real name to people if you choose to.
+          </p>
         </div>
         <div>
           <label className="block text-xs font-semibold text-white/40 uppercase tracking-wide mb-1.5">Headline</label>

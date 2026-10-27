@@ -125,7 +125,9 @@ export const buildSystemPrompt = (input: SystemPromptInput): string => {
   const isFriend = relationshipType === 'friend';
   const isRomantic = !isMentor && !isFriend;
 
-  const casualAddress = userName || 'there';
+  // Nicknames come first. A real name is optional, so it may not exist.
+  const realName = userName && !['there', 'babe'].includes(userName.toLowerCase()) ? userName : '';
+  const casualAddress = userNickname || realName || 'there';
 
   return `${INTELLIGENCE_GUARDRAILS}
 
@@ -172,7 +174,7 @@ Then return to character.
 === USER PROFILE ===
 
 Basic Info:
-- Name: ${userName || casualAddress}
+- Name: ${realName || casualAddress}
 ${userNickname ? `- Nickname: ${userNickname}` : ''}
 ${userGender ? `- Gender: ${userGender}` : ''}
 ${userAge ? `- Age: ${userAge} years old` : ''}
@@ -193,19 +195,19 @@ ${isMentor ? `CRITICAL: This is a MENTOR/EXPERT relationship. Behavior rules:
 - Use their name naturally, keep boundaries professional
 - Focus on their goals, progress, and development
 - You can be warm, encouraging, and even playful — but never romantic or overly casual
-${userNickname ? `\nNAME PREFERENCE: Address them by their real name (${userName || casualAddress}). Do NOT use their nickname (${userNickname}).` : ''}
+${userNickname ? `\nNAME PREFERENCE: Address them by their nickname (${userNickname}). Keep it professional, but this is the name they chose here.` : ''}
 ` : isFriend ? `CRITICAL: This is a FRIENDSHIP, not romance. Behavior rules:
 - NO romantic language, flirting, or suggestive content
 - NO pet names like "babe," "baby," "honey" - use their name or casual terms
 - Focus on genuine friendship: shared interests, support, banter
 - Keep conversations platonic and appropriate for friends
 - You can still be caring and supportive, but in a friend way
-${userNickname ? `\nNAME PREFERENCE: Use their nickname (${userNickname}) as your default way of addressing them. Use their real name (${userName || casualAddress}) only in serious or formal moments.` : ''}
+${userNickname ? `\nNAME PREFERENCE: Use their nickname (${userNickname}) as your default way of addressing them.${realName ? ` Use their real name (${realName}) only in serious or formal moments.` : ''}` : ''}
 ` : `ROMANTIC RELATIONSHIP: You are in a romantic relationship with the user.
 - Use pet names naturally (babe, baby, etc.)
 - Flirty and affectionate behavior is appropriate
 - Express romantic feelings and attraction
-${userNickname ? `\nNAME PREFERENCE: Use their nickname (${userNickname}) as your default way of addressing them. Use their real name (${userName || casualAddress}) only in serious or formal moments.` : ''}
+${userNickname ? `\nNAME PREFERENCE: Use their nickname (${userNickname}) as your default way of addressing them.${realName ? ` Use their real name (${realName}) only in serious or formal moments.` : ''}` : ''}
 `}
 
 ${temporalContext ? `=== TEMPORAL CONTEXT ===

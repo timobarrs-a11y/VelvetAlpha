@@ -1,7 +1,7 @@
 -- Profile levels, shared wins, reach controls and status audience
 --
 -- Everyone exists in the community. Every member has a FRONT CARD that anyone can see:
--- display name (never the real name unless none was given), interests, favorite color,
+-- display name (their nickname: a real name is never shown unless they put it there themselves), interests, favorite color,
 -- zodiac and a broad outline of what they are working on.
 --
 -- The FULL PAGE (bio, goals, commitments, statuses, and commenting) is for friends. A member
@@ -30,6 +30,7 @@
 --   * send_town_letter skips members who turned mail off
 --
 -- Every new user_profiles row also gets a member profile, and anyone who has none now gets one.
+-- Nicknames are the name people see; a real name is never shown unless they put it there.
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -583,7 +584,7 @@ BEGIN
       'is_auto_generated', pp.is_auto_generated,
       'created_at', pp.created_at,
       'audience', pp.audience,
-      'author_name', COALESCE(NULLIF(NULLIF(btrim(mp.display_name), ''), 'Member'), NULLIF(btrim(up.nickname), ''), NULLIF(NULLIF(btrim(up.name), ''), 'there'), 'Member'),
+      'author_name', COALESCE(NULLIF(NULLIF(btrim(mp.display_name), ''), 'Member'), NULLIF(btrim(up.nickname), ''), 'Member'),
       'author_avatar_config', mp.avatar_config,
       'author_profile_image_type', COALESCE(mp.profile_image_type, 'avatar'),
       'author_profile_smilie_code', mp.profile_smilie_code,
@@ -650,7 +651,7 @@ BEGIN
 
   SELECT mp.user_id, mp.display_name, mp.headline, mp.profile_image_type, mp.profile_smilie_code, mp.is_bot,
          mp.profile_mode, mp.who_can_message, mp.accepts_friend_requests, mp.share_accomplishments,
-         up.nickname, up.name, up.favorite_color, up.zodiac_sign, up.birthday, up.interests, up.hobbies,
+         up.nickname, up.favorite_color, up.zodiac_sign, up.birthday, up.interests, up.hobbies,
          up.sports_interests, up.entertainment_interests, up.tech_interests, up.lifestyle_interests, up.music_genre
     INTO v_row
   FROM public.member_profiles mp
@@ -695,8 +696,8 @@ BEGIN
     'success', true,
     'card', jsonb_build_object(
       'user_id', v_row.user_id,
-      -- the name they chose; their real name only when they gave nothing else
-      'display_name', COALESCE(NULLIF(NULLIF(btrim(v_row.display_name), ''), 'Member'), NULLIF(btrim(v_row.nickname), ''), NULLIF(NULLIF(btrim(v_row.name), ''), 'there'), 'Member'),
+      -- the name they chose: never their real name
+      'display_name', COALESCE(NULLIF(NULLIF(btrim(v_row.display_name), ''), 'Member'), NULLIF(btrim(v_row.nickname), ''), 'Member'),
       'headline', v_row.headline,
       'profile_image_type', COALESCE(v_row.profile_image_type, 'avatar'),
       'profile_smilie_code', v_row.profile_smilie_code,
@@ -755,7 +756,7 @@ BEGIN
 
   SELECT jsonb_build_object(
     'user_id', mp.user_id,
-    'display_name', COALESCE(NULLIF(NULLIF(btrim(mp.display_name), ''), 'Member'), NULLIF(btrim(up.nickname), ''), NULLIF(NULLIF(btrim(up.name), ''), 'there'), 'Member'),
+    'display_name', COALESCE(NULLIF(NULLIF(btrim(mp.display_name), ''), 'Member'), NULLIF(btrim(up.nickname), ''), 'Member'),
     'headline', mp.headline,
     'bio', CASE WHEN v_access THEN mp.bio END,
     'profile_image_type', COALESCE(mp.profile_image_type, 'avatar'),
@@ -826,7 +827,7 @@ BEGIN
   INSERT INTO public.member_profiles (user_id, display_name, is_public, discoverable)
   VALUES (
     NEW.id,
-    COALESCE(NULLIF(btrim(NEW.nickname), ''), NULLIF(NULLIF(btrim(NEW.name), ''), 'there'), 'Member'),
+    COALESCE(NULLIF(btrim(NEW.nickname), ''), 'Member'),
     true,
     true
   )
@@ -844,10 +845,49 @@ CREATE TRIGGER user_profiles_create_member_profile
 -- Backfill: anyone without one gets a public profile.
 INSERT INTO public.member_profiles (user_id, display_name, is_public, is_bot, discoverable)
 SELECT u.id,
-       COALESCE(NULLIF(btrim(up.nickname), ''), NULLIF(NULLIF(btrim(up.name), ''), 'there'), 'Member'),
+       COALESCE(NULLIF(btrim(up.nickname), ''), 'Member'),
        true,
        u.email LIKE '%@community.local',
        true
 FROM auth.users u
 LEFT JOIN public.user_profiles up ON up.id = u.id
 WHERE NOT EXISTS (SELECT 1 FROM public.member_profiles mp WHERE mp.user_id = u.id);
+
+-- ---------------------------------------------------------------------------
+-- Nicknames are the name people see
+-- ---------------------------------------------------------------------------
+-- When someone picks or changes their nickname, their public display name follows it, unless
+-- they have set a different display name themselves.
+CREATE OR REPLACE FUNCTION public.sync_member_display_name()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  IF NULLIF(btrim(NEW.nickname), '') IS NOT NULL AND NEW.nickname IS DISTINCT FROM OLD.nickname THEN
+    UPDATE public.member_profiles mp
+       SET display_name = btrim(NEW.nickname), updated_at = now()
+     WHERE mp.user_id = NEW.id
+       AND (btrim(mp.display_name) IN ('', 'Member') OR mp.display_name = OLD.nickname);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.sync_member_display_name() FROM anon, authenticated, public;
+
+DROP TRIGGER IF EXISTS user_profiles_sync_member_display_name ON public.user_profiles;
+CREATE TRIGGER user_profiles_sync_member_display_name
+  AFTER UPDATE OF nickname ON public.user_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.sync_member_display_name();
+
+-- Instant-message names: a chosen display name, then the nickname. Never a real name.
+CREATE OR REPLACE FUNCTION public.im_member_display_name(p_user_id uuid)
+RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $$
+  SELECT COALESCE(
+    (SELECT NULLIF(btrim(display_name), '') FROM public.im_discovery_profiles WHERE user_id = p_user_id),
+    (SELECT NULLIF(NULLIF(btrim(display_name), ''), 'Member') FROM public.member_profiles WHERE user_id = p_user_id),
+    (SELECT NULLIF(btrim(nickname), '') FROM public.user_profiles WHERE id = p_user_id),
+    'Velvet member'
+  );
+$$;
