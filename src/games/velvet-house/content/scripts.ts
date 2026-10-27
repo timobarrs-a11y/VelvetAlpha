@@ -64,28 +64,8 @@ export const OPENING: ScriptDef = {
     { do: 'card', title: 'Put it where it goes', body: 'Drag to move · ↻ to turn it. Tap Set it down when it is just right.', button: 'Set it down' },
     { do: 'outline', objType: 'sofa', at: 'mark:living.couchTv', rot: 2 },
     { do: 'checkpoint' },
-    // 5. The ask
-    { do: 'mode', mode: 'cutscene' },
-    { do: 'act', who: 'maya', act: 'tv', wait: false },
-    { do: 'wait', seconds: 2.5 },
-    { do: 'say', who: 'maya', line: { bank: 'communication', slot: 'windowAsk' } },
-    // 6. The first choice
-    {
-      do: 'choice',
-      options: [
-        { label: 'Keep it by the TV', default: true, set: { couch: 'mine' }, steps: [{ do: 'say', who: 'maya', line: { bank: 'humor', slot: 'keepIt' } }] },
-        {
-          label: 'Move it to the window', set: { couch: 'theirs' },
-          steps: [
-            { do: 'mode', mode: 'guided', allow: ['objType:sofa'] },
-            { do: 'outline', objType: 'sofa', at: 'mark:living.couchWindow', rot: 0, color: 'partner' },
-            { do: 'card', title: 'By the window', body: 'Drag the couch into the pink outline. Tap Set it down when it is there.', button: 'Set it down' },
-            { do: 'mode', mode: 'cutscene' },
-            { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'movedIt' } },
-          ],
-        },
-      ],
-    },
+    // The couch is down; the next knock at the door is the lamp.
+    { do: 'set', flag: 'couch', value: 'mine' },
     { do: 'set', flag: 'opening.done', value: true },
     { do: 'set', flag: 'dez.deliveries', value: true },
   ],

@@ -15,7 +15,7 @@ test('a new game opens with the move-in; skipping it leaves the couch by the TV 
   expect(pageErrors(page)).toEqual([]);
 });
 
-test('watching the move-in: tap the box, place the couch, and carry on to the choice', async ({ page }) => {
+test('watching the move-in: tap the box, place the couch, and the lamp arrives next', async ({ page }) => {
   test.setTimeout(420_000);
   const game = await openGame(page, { script: true });
   // Tap through the cutscene lines until the guided step asks for the box.
@@ -29,14 +29,10 @@ test('watching the move-in: tap the box, place the couch, and carry on to the ch
   // Your partner asks for the couch first; tap through that to get the placement card.
   await expect.poll(async () => {
     if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
-    return game.locator('.vh-scard button:visible').count();
+    return game.locator('.vh-scard-go:visible').count();
   }, { timeout: 30_000, intervals: [300] }).toBeGreaterThan(0);
-  await game.locator('.vh-scard button').click();
-  // Back to the cutscene, and eventually the choice.
-  await expect.poll(async () => {
-    if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
-    return game.locator('.vh-choices:visible button').count();
-  }, { timeout: 150_000, intervals: [300] }).toBeGreaterThan(0);
-  await game.locator('.vh-choices:visible button').first().click();
+  await game.locator('.vh-scard-go').click();
+  // The couch is down and the next delivery is the lamp.
+  await expect.poll(async () => (await objects(page)).some((o) => o.id === 'box.lamp'), { timeout: 150_000, intervals: [1000] }).toBe(true);
   expect(pageErrors(page)).toEqual([]);
 });
