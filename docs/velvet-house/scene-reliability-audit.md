@@ -445,3 +445,27 @@ Probe results (P):
 
 Not verified: a human playing on a phone; chapters 7 to 15 in play (the 15-minute `day1.spec.ts` was not run);
 the host-data race under real network latency (reasoned from code only); the legacy game.
+
+## Appendix B: P0 implementation log (2026-10-27, branch `claude/festive-mendel-lytptr`)
+
+What was built after the director approved the engine rules, and how each piece was checked.
+
+| Change | Where | Checked |
+|---|---|---|
+| `world` condition (type, place within tolerance, facing, light) evaluated by the host | `script/types.ts`, `engine.ts`, `gameHost.ts check()`, `art/houseArt.js objectLightOn` | A: engine test; A: live story test asserts the couch at (5.6, 3.3) rot 2 |
+| Every `mode` step and `wait until` is a resume point; a reload re-runs from the last mode step | `engine.ts setMark/resume` | A: engine tests; A: `storyResilience.test.ts` reloads every script at every wait; A: live reload test resumes at "Put it where it goes" |
+| `wait arrive` for several walkers; validator: no line while walking in a cutscene or lesson | `engine.ts`, `validate.ts`, `content/scripts.ts` | A: engine and validator tests; A: `storyContent.test.ts` |
+| Validator: an event wait needs a flag or world fallback; a card button needs a wait after it | `validate.ts` | A: tests; the opening and chapter 7 content updated to pass |
+| Set it down snaps and closes only when the piece is in the outline; the card stays otherwise; a drag into the outline ends the lesson by itself | `gameHost.ts onCardButton`, `engine.ts pendingWait`, `scriptUi.ts reopenCard` | A: live story test (misplaced press leaves `opening.done` unset; drag ends it); P: probe |
+| `needs.host` gate (profile, plot; 1.5 s) and `needs.hold` for the residents | `engine.ts`, `gameHost.ts`, `hostBridge.ts`, `kernel/game.ts hostReady` | A: engine tests; live tests still pass with no profile sent |
+| Voice saved with the game | `state/save.ts`, `systems/persist.ts`, `kernel/game.ts` | S; A: typecheck, save tests |
+| Keyboard shortcuts gated by script mode | `ui/controls.ts` | S |
+| Skip removed: button, `skippable`/`onSkip`, engine skip path, drive-up tap-to-end, CSS | `scriptUi.ts`, `engine.ts`, `types.ts`, `arrivalIntro.ts`, `game-ui.css` | A: live test asserts no Skip button and the cutscene on |
+| Interruptions use the live mode (a guided lesson is never interrupted) | `engine.ts interruptIfUrgent` | A: engine test |
+| Generic resilience test over every script | `__tests__/storyResilience.test.ts` | A: 20 tests |
+| Live tests drive the game like a player: tap through, steer a carried piece to the mark while the camera follows it | `e2e/velvet-sims/helpers.ts dragToMark`, `story.spec.ts`, `day1.spec.ts`, `menu.spec.ts`, `companions.spec.ts` | A |
+| `CLAUDE.md` with the scene rules; `Checks` workflow (typecheck, unit tests, short live specs) on pull requests | repo root, `.github/workflows/checks.yml` | S; the workflow runs on the first PR |
+
+Found while doing it: the camera follows a carried piece (`trackHeld`), so any automation that drags to a
+pre-read screen point overshoots; the helper now re-aims each step. Not yet run: `day1.spec.ts` (15 minutes) with the
+new lamp drags; the content rewrite of the opening to the approved beat order is the next step and is not in this log.
