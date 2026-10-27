@@ -219,6 +219,27 @@ describe('buildGoalPrompt', () => {
   });
 });
 
+describe('the helper\'s first words', () => {
+  it('confirms the plan, then points at the objectives button', async () => {
+    const { buildHelperWelcome, longDate } = await import('../../../supabase/functions/_shared/atlasArrival');
+    expect(longDate('2027-06-01')).toBe('June 1, 2027');
+    const text = buildHelperWelcome({ helperName: 'Marcus', address: 'Master Tim', goalTitle: 'Run a marathon', finishDate: '2027-06-01', firstStep: 'Run 2 miles', checkIns: 'Every Monday and Thursday' });
+    expect(text).toContain("Hello, Master Tim. I'm Marcus");
+    expect(text).toContain('Run a marathon, with the finish line on June 1, 2027');
+    expect(text).toContain('First up: Run 2 miles.');
+    expect(text).toContain("I'll check in every Monday and Thursday.");
+    expect(text).toMatch(/top bar, next to Add friend\? Those are your objectives/);
+    expect(text).not.toMatch(/!|\p{Extended_Pictographic}/u);
+  });
+
+  it('copes with a missing name, finish date and step', async () => {
+    const { buildHelperWelcome } = await import('../../../supabase/functions/_shared/atlasArrival');
+    const text = buildHelperWelcome({ helperName: 'Maya', address: null, goalTitle: 'Buy a home', finishDate: null, firstStep: null, checkIns: '' });
+    expect(text.startsWith("Hello. I'm Maya")).toBe(true);
+    expect(text).toContain('Your plan is saved: Buy a home.');
+  });
+});
+
 describe('dates in the user\'s time zone', () => {
   it('works out today and its weekday from the page', async () => {
     const { todayFrom } = await import('../../../supabase/functions/_shared/atlasArrival');

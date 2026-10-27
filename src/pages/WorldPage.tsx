@@ -538,6 +538,7 @@ export function WorldPage() {
         />
       )}
 
+      {mailOpen && <ReportActivity activity="open_mailbox" />}
       {mailOpen && user && (
         <MailboxSheet myId={user.id} myName={block.find((p) => p.id === user.id)?.profile.name || 'neighbor'} canSend={isAdmin} onClose={() => setMailOpen(false)} onUnreadChange={setMailUnread} />
       )}

@@ -137,6 +137,8 @@ describe('AtlasConciergePage', () => {
     await waitFor(() => expect(updates).toContainEqual({ table: 'user_goals', patch: { show_on_profile: true }, id: 'g1' }));
     expect(setupProgress).toHaveBeenCalledWith('u1', { step: 'complete' });
     fireEvent.click(await screen.findByText('Go to Today'));
-    expect(navigate).toHaveBeenCalledWith('/lobby?arrived=1', { replace: true });
+    // First time home: the V3 lobby, with the coach's chat popping up.
+    expect(localStorage.getItem('velvet.home_layout')).toBe('v3');
+    expect(navigate).toHaveBeenCalledWith('/lobby?arrived=1&coach=h1', { replace: true });
   });
 });

@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Trophy } from 'lucide-react';
 import {
-  getObjectiveLeaderboard, OBJECTIVES, type LeaderboardPeriod, type LeaderboardRow,
+  getObjectiveLeaderboard, XP_PER_OBJECTIVE, type LeaderboardPeriod, type LeaderboardRow,
 } from '../services/dailyObjectivesService';
 import { useDailyObjectives } from '../features/objectives/useDailyObjectives';
+import { ReportActivity } from '../features/objectives/ReportActivity';
 
 const PERIODS: Array<{ id: LeaderboardPeriod; label: string }> = [
   { id: 'week', label: 'This week' },
@@ -33,6 +34,7 @@ export default function ObjectivesLeaderboardPage() {
 
   return (
     <div className="ds-page text-white h-full overflow-y-auto">
+      <ReportActivity activity="check_leaderboard" />
       <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6">
         <button onClick={() => navigate('/lobby')} className="mb-4 inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
@@ -42,7 +44,7 @@ export default function ObjectivesLeaderboardPage() {
           <Trophy className="h-7 w-7 text-amber-400" />
           <div>
             <h1 className="text-2xl font-bold leading-tight">Leaderboard</h1>
-            <p className="text-sm text-ink-muted">A point for every daily objective you finish. You&apos;re on {count}/{total} today.</p>
+            <p className="text-sm text-ink-muted">Every objective you finish earns {XP_PER_OBJECTIVE} XP, easy or hard. You&apos;re on {count}/{total}.</p>
           </div>
         </div>
 
@@ -67,7 +69,7 @@ export default function ObjectivesLeaderboardPage() {
         {rows && !failed && rows.length === 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
             <p className="font-semibold">Nobody&apos;s on the board yet.</p>
-            <p className="mt-1 text-sm text-ink-muted">Finish one of today&apos;s objectives ({OBJECTIVES.map(o => o.label.toLowerCase()).join(', ')}) and you&apos;ll be first.</p>
+            <p className="mt-1 text-sm text-ink-muted">Finish an objective from the top bar and you&apos;ll be first.</p>
           </div>
         )}
 
@@ -89,7 +91,7 @@ export default function ObjectivesLeaderboardPage() {
                     <span className={`w-7 text-center text-sm font-bold ${PODIUM[r.rank - 1] ?? 'text-ink-muted'}`}>{r.rank}</span>
                     <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{r.nickname}{r.is_you && <span className="ml-2 text-xs font-medium text-pink-300">you</span>}</span>
                     {r.full_days > 0 && <span className="text-[11px] text-ink-muted">{r.full_days} full {r.full_days === 1 ? 'day' : 'days'}</span>}
-                    <span className="w-14 text-right text-sm font-bold">{r.points}<span className="ml-0.5 text-[10px] font-medium text-ink-muted">pts</span></span>
+                    <span className="w-14 text-right text-sm font-bold">{r.xp}<span className="ml-0.5 text-[10px] font-medium text-ink-muted">XP</span></span>
                   </button>
                 </li>
               );

@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useHomeLayout } from '../hooks/useHomeLayout';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useDock } from '../components/dock/DockContext';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 import { useHasInterests } from '../hooks/useHasInterests';
 
@@ -23,7 +24,27 @@ function readSlowFlag(): boolean {
   try { return sessionStorage.getItem(SLOW_KEY) === '1'; } catch { return false; }
 }
 
+/**
+ * Just finished the arrival: the coach's chat pops up with their first words waiting (the plan
+ * confirmed, and a pointer to the objectives button), once.
+ */
+function ArrivalCoachPopup({ coachId }: { coachId: string }) {
+  const dock = useDock();
+  const [, setParams] = useSearchParams();
+  const opened = useRef(false);
+  const known = dock.companions.some(c => c.id === coachId);
+  useEffect(() => {
+    if (opened.current || !known) return;
+    opened.current = true;
+    dock.openCompanion(coachId);
+    setParams(p => { const next = new URLSearchParams(p); next.delete('coach'); return next; }, { replace: true });
+  }, [known, coachId, dock, setParams]);
+  return null;
+}
+
 export function HomeSwitcher() {
+  const [searchParams] = useSearchParams();
+  const arrivalCoach = searchParams.get('arrived') === '1' ? searchParams.get('coach') : null;
   const [layout] = useHomeLayout();
   const navigate = useNavigate();
   // V3 is a feed built on interests; without any, Classic is the useful home.
@@ -47,6 +68,7 @@ export function HomeSwitcher() {
 
   return (
     <Suspense fallback={<RouteFallback />}>
+      {arrivalCoach && <ArrivalCoachPopup coachId={arrivalCoach} />}
       {needsInterests && (
         <div className="flex items-center justify-between gap-3 border-b border-white/8 bg-white/[0.03] px-4 py-2 text-xs text-white/70">
           <span>Pick a few interests to unlock your V3 feed.</span>

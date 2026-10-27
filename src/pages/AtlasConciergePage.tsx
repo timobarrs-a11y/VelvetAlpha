@@ -14,6 +14,7 @@ import { sanitizeAvatarConfigForSave } from '../services/avatarSaveService';
 import type { AvatarConfigV2 } from '../types/avatar-v2';
 import { callAtlas } from '../features/arrival/atlasApi';
 import { ARRIVAL_ROUTES } from '../features/arrival/arrivalRoutes';
+import { setHomeLayout } from '../hooks/useHomeLayout';
 import { Highlighted } from '../features/arrival/Highlighted';
 import {
   clearPlanJob, loadPlanJob, resumePlanJob, startPlanJob, type JobDeps, type PlanJob, type Provisioned, type Recommendation,
@@ -300,7 +301,9 @@ function AtlasConciergeInner() {
 
   const finish = () => {
     if (userId) { clearState(userId); clearPlanJob(userId); }
-    navigate('/lobby?arrived=1', { replace: true });
+    // First time home: the V3 lobby, with their coach's chat popping up.
+    setHomeLayout('v3');
+    navigate(`/lobby?arrived=1${provisioned ? `&coach=${provisioned.helperId}` : ''}`, { replace: true });
   };
 
   const ease = manifest.motion.ease;

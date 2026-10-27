@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  getDailyObjectives, OBJECTIVES, OBJECTIVES_CHANGED, type ObjectiveKey,
+  getDailyObjectives, OBJECTIVES_CHANGED, type ObjectiveRow,
 } from '../../services/dailyObjectivesService';
 
 const REFRESH_MS = 60_000;
 
 /**
- * Which of today's objectives are done, kept fresh: on load, whenever they move to another page
+ * The objectives on offer and how far along they are, kept fresh: on load, whenever they move to another page
  * (usually right after doing one), when the tab comes back into view, when the app reports
  * something, and once a minute.
  */
 export function useDailyObjectives(enabled = true) {
   const { pathname } = useLocation();
-  const [done, setDone] = useState<Set<ObjectiveKey>>(new Set());
+  const [rows, setRows] = useState<ObjectiveRow[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
-      setDone(await getDailyObjectives());
+      setRows(await getDailyObjectives());
       setLoaded(true);
     } catch {
       /* the button just keeps what it had */
@@ -42,5 +42,6 @@ export function useDailyObjectives(enabled = true) {
     };
   }, [enabled, refresh]);
 
-  return { done, count: done.size, total: OBJECTIVES.length, loaded, refresh };
+  const count = rows.filter(r => r.done).length;
+  return { rows, count, total: rows.length, core: rows.length > 0 && rows[0].core, loaded, refresh };
 }

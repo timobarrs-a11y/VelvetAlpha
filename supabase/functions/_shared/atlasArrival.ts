@@ -502,6 +502,38 @@ export function summarizePlan(plan: ArrivalPlan, today: string): { finishDate: s
   return { finishDate, runTime };
 }
 
+// ─── The helper's first words ────────────────────────────────────────────
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** "2027-06-01" as "June 1, 2027". */
+export function longDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+/**
+ * What the coach or assistant says first, when the plan is saved: a short confirmation of the plan,
+ * then a pointer to the objectives button in the top bar. Written here rather than by the model,
+ * so it is instant and always says the same true things.
+ */
+export function buildHelperWelcome(input: {
+  helperName: string;
+  address: string | null;
+  goalTitle: string;
+  finishDate: string | null;
+  firstStep: string | null;
+  checkIns: string;
+}): string {
+  const { helperName, address, goalTitle, finishDate, firstStep, checkIns } = input;
+  const plan = [
+    `Hello${address ? `, ${address}` : ""}. I'm ${helperName}, and from here I'm your point person on this.`,
+    `Your plan is saved: ${goalTitle}${finishDate ? `, with the finish line on ${longDate(finishDate)}` : ""}.${firstStep ? ` First up: ${firstStep}.` : ""}${checkIns.trim() ? ` I'll check in ${checkIns.trim().replace(/^[A-Z]/, c => c.toLowerCase())}.` : ""}`,
+  ].join(" ");
+  const objectives = "One more thing before you look around. See the button in the top bar, next to Add friend? Those are your objectives. Five to start you off, and each one takes you somewhere on Velvet. Finish them and a fresh set opens up every day, with medals to earn and a place on the leaderboard. Have a look.";
+  return `${plan}\n\n${objectives}`;
+}
+
 // ─── Atlas's conversation prompt ─────────────────────────────────────────
 
 const PATH_GUIDANCE: Record<OpeningPath, string> = {
