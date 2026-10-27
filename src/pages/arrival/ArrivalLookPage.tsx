@@ -111,7 +111,7 @@ export function ArrivalLookPage() {
           </p>
           <p className="mt-3 text-lg leading-relaxed text-white/80">
             Next you'll make the digital you, or whoever you like. Explore the options and have fun with it:
-            you'll be seeing your avatar on the community boards, in your chats and on your billboard in town.
+            you'll be seeing your avatar in Spaces, in your chats and on your billboard in town.
           </p>
           <button
             type="button"

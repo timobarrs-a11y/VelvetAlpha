@@ -27,7 +27,6 @@ import {
   VolumeX,
   Wifi,
   WifiOff,
-  Home,
   Building2,
   Wand2,
   HelpCircle,
@@ -371,7 +370,7 @@ function SidebarContent({ pathname, lobby, onNavigate, onSelect, inkColor, inkMu
     { label: 'Morning Journal', path: '/morning-journal', tone: '#fbbf24', icon: <Sunrise className="h-3.5 w-3.5" /> },
   ];
   const connectTools = [
-    { label: 'House', path: '/house', tone: '#f472b6', icon: <Home className="h-3.5 w-3.5" /> },
+    { label: 'Spaces', path: '/house', tone: '#f472b6', icon: <UsersRound className="h-3.5 w-3.5" /> },
     { label: 'Town', path: '/world', tone: '#f472b6', icon: <Building2 className="h-3.5 w-3.5" /> },
     { label: 'Feed', path: '/feed', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
     { label: 'Discover', path: '/discover', tone: '#fbbf24', icon: <Compass className="h-3.5 w-3.5" /> },
