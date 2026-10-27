@@ -71,3 +71,25 @@ describe('a member profile you are not friends with', () => {
     expect(screen.getByText('Posts')).toBeTruthy();
   });
 });
+
+describe('the order of a member profile', () => {
+  it('goes follow button, posts, goals and streak, then interests', async () => {
+    getPublicProfile.mockResolvedValue({ profile, counts: { ...counts, current_streak: 3 }, goals: [], commitments: [], is_owner: false, has_full_access: true });
+    getProfileCard.mockResolvedValue(card({ relation: { is_self: false, is_friend: true, has_full_access: true, friend_request: 'none' } }));
+    renderPage();
+    const follow = await screen.findByText('Follow');
+    const posts = screen.getByText('Posts');
+    const streak = screen.getByText(/-day streak/);
+    const interests = screen.getByText('Running');
+    const before = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(follow, posts)).toBe(true);
+    expect(before(posts, streak)).toBe(true);
+    expect(before(streak, interests)).toBe(true);
+  });
+
+  it('explains what following is, next to the button', async () => {
+    getProfileCard.mockResolvedValue(card());
+    renderPage();
+    expect(await screen.findByText(/Following puts their wins in your feed/)).toBeTruthy();
+  });
+});
