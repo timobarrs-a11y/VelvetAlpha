@@ -9,7 +9,7 @@ import { SCRIPTS } from '../content/scripts';
 import { LINE_BOOK } from '../content/lines';
 import { validateContent } from './validate';
 import { ScriptEngine } from './engine';
-import { NEW_RUNTIME, type FlagValue, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget, type WorldCond } from './types';
+import { NEW_RUNTIME, type Cond, type FlagValue, type GameEvent, type PlaceRef, type ScriptHost, type ScriptRuntime, type UiTarget, type WorldCond } from './types';
 import { run } from '../kernel/config';
 import { createScriptUi } from '../ui/scriptUi';
 import { playArrival, type Arrival } from '../ui/arrivalIntro';
@@ -280,10 +280,19 @@ export function createScripts(g: Game): Partial<Game> {
     else engine.markDone(['opening.', 'tutorial.']);
   } else engine.resume();
 
+  /** Whether a condition asks for a piece to be somewhere: the waits that Arrange stays open for. */
+  const asksForAPlace = (c: Cond): boolean => ('world' in c ? !!c.world.at : 'all' in c ? c.all.some(asksForAPlace) : 'any' in c ? c.any.some(asksForAPlace) : 'not' in c ? asksForAPlace(c.not) : false);
+
   function update(dt: number): void {
     // What they are to the player, for scripts that branch on it (a friend moving in is a roommate).
     story.rel = g.s.voice.relationship;
     engine.tick(dt);
+    // Arrange is open for a placement lesson only: once the piece is where it belongs and the scene has moved on to
+    // something else (tap the lamp, a line), it closes by itself, so the next tap reaches the house.
+    if (g.isArranging() && g.s.scriptMode === 'guided') {
+      const w = engine.pendingWait();
+      if (!w || !asksForAPlace(w)) g.drawer.close();
+    }
     if (arrival && !engine.isActive()) { arrival.cancel(); arrival = null; }
     if (camFocus) {
       const a = actor(camFocus.who);

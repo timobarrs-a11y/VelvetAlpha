@@ -76,13 +76,23 @@ export async function dragToMark(page: Page, id: string, mark: string, type: str
   const m = await inGame<{ x: number; y: number } | null>(page, `(v.marks()[${JSON.stringify(mark)}] ?? null)`);
   if (!m) throw new Error(`no such mark: ${mark}`);
   const where = async (): Promise<Obj> => (await objects(page)).find((o) => o.id === id)!;
-  const from = await inGame<[number, number] | null>(page, `v.clientPosOf(${JSON.stringify(id)})`);
-  if (!from) throw new Error(`cannot see ${id} on screen`);
-  await page.mouse.move(from[0], from[1]);
-  await page.mouse.down();
-  let at: [number, number] = from;
-  // A first nudge past the drag threshold, so the piece is in hand.
-  at = [at[0] + 10, at[1] + 10]; await page.mouse.move(at[0], at[1]); await page.waitForTimeout(50);
+  // The camera is still settling on the piece when the lesson opens; press only once the piece holds still on screen,
+  // and check it is really in hand (the piece follows the pointer), trying again if the press missed.
+  let at: [number, number] = [0, 0];
+  let held = false;
+  for (let attempt = 0; attempt < 4 && !held; attempt++) {
+    await page.waitForTimeout(900);
+    const from = await inGame<[number, number] | null>(page, `v.clientPosOf(${JSON.stringify(id)})`);
+    if (!from) throw new Error(`cannot see ${id} on screen`);
+    const before = await where();
+    await page.mouse.move(from[0], from[1]);
+    await page.mouse.down();
+    at = [from[0] + 14, from[1] + 14]; await page.mouse.move(at[0], at[1]); await page.waitForTimeout(80);
+    const after = await where();
+    held = after.x !== before.x || after.y !== before.y;
+    if (!held) { await page.mouse.up(); await page.waitForTimeout(300); }
+  }
+  if (!held) throw new Error(`could not pick up ${id}`);
   let piece = await where();
   for (let i = 0; i < maxSteps && Math.hypot(piece.x - m.x, piece.y - m.y) > within; i++) {
     const to = await inGame<[number, number] | null>(page, `v.markClientPos(${JSON.stringify(mark)}, ${JSON.stringify(type)}, ${rot})`);
