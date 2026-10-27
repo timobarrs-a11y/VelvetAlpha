@@ -7,6 +7,9 @@ test('paint, floors and a carried-over career survive a reload', async ({ page }
   await game.locator('.vh-dock [data-open=shop]').click();
   await game.locator('[data-tab=Paint]').click();
   await game.locator('[data-buy=paint-wine]').click();
+  // A purchase puts the shop away, so open it again for the floor.
+  await expect(game.locator('.vh-drawer')).toBeHidden();
+  await game.locator('.vh-dock [data-open=shop]').click();
   await game.locator('[data-tab=Floors]').click();
   await game.locator('[data-buy=floor-herring]').click();
   await saveNow(page);

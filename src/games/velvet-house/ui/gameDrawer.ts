@@ -17,7 +17,20 @@ export function createGameDrawer(g: Game): Partial<Game> {
   townSign.textContent = townName;
 
   // UI: Drawer
-  const drawer = createDrawer({
+  // Picking something from a page (an order, a purchase, an outfit, a job) puts the page away, so the house is in
+  // view while it happens. Arrange and the Design Studio are workbenches, and the steppers on the phone are settings:
+  // those stay open until the player closes them.
+  const CLOSE_AFTER = ['onBuy', 'onBuyAvatarItem', 'onOrder', 'onPayBill', 'onPayBillId', 'onTakeOffer', 'onWorkJob', 'onCallIn',
+    'onOrderGroceries', 'onOrderTakeout', 'onTalk', 'onPickLifeGoal', 'onWear', 'onWearPersona'] as const;
+  const closing = (cbs: Parameters<typeof createDrawer>[0]): Parameters<typeof createDrawer>[0] => {
+    const out = { ...cbs } as Record<string, unknown>;
+    for (const k of CLOSE_AFTER) {
+      const f = out[k] as ((...a: unknown[]) => void) | undefined;
+      if (f) out[k] = (...a: unknown[]) => { f(...a); drawer.close(); };
+    }
+    return out as unknown as Parameters<typeof createDrawer>[0];
+  };
+  const drawer = createDrawer(closing({
     onClose: () => { g.s.drawerPage = ''; try { localStorage.removeItem('velvet-drawer'); } catch {} },
     onPage: (pg) => { g.scriptEmit({ type: 'tab.opened', tab: pg }); if (pg === 'arrange') g.enterArrange(); else if (g.isArranging()) g.exitArrange(); g.studioPage?.(pg); },
     onArrangePick: (id) => { const o = world.objs.find(q => q.id === id); if (o) g.selectObject(o); },
@@ -84,7 +97,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
       g.refreshDrawer();
       g.tellHostLook(top, bottom, hat.style);
     },
-  });
+  }));
   stage.appendChild(drawer.el);
   stage.appendChild(drawer.dock);
 
@@ -102,6 +115,12 @@ export function createGameDrawer(g: Game): Partial<Game> {
     const show = peopleEl.hidden;
     peopleEl.hidden = !show;
     peopleBtn.setAttribute('aria-pressed', String(show));
+  });
+  // Following someone from the list puts the list away too.
+  peopleEl.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement).closest('.vh-person')) return;
+    peopleEl.hidden = true;
+    peopleBtn.setAttribute('aria-pressed', 'false');
   });
   drawer.dock.prepend(peopleBtn);
   stage.appendChild(townSign);

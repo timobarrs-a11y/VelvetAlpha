@@ -32,3 +32,16 @@ test('tapping Maya opens the chat at every rotation', async ({ page }) => {
     await page.waitForTimeout(700);
   }
 });
+
+test('picking something from a page puts the page away; Arrange stays open', async ({ page }) => {
+  const game = await openGame(page);
+  await inGame(page, '(v.money = 500)');
+  await game.locator('.vh-dock [data-open=do]').click();
+  await expect(game.locator('.vh-drawer')).toBeVisible();
+  await game.getByRole('button', { name: 'Watch TV' }).first().click();
+  await expect(game.locator('.vh-drawer')).toBeHidden();
+  await game.locator('.vh-dock [data-open=arrange]').click();
+  await expect(game.locator('.vh-drawer')).toBeVisible();
+  await page.waitForTimeout(800);
+  await expect(game.locator('.vh-drawer')).toBeVisible();
+});
