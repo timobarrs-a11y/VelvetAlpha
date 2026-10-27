@@ -83,6 +83,8 @@ export interface TapQuestion extends BaseQuestion {
   validate?: (text: string) => string | null;
   /** Show the nickname bank to choose one from (or they type their own); the skip button gives them a random one. */
   nicknameBank?: boolean;
+  /** Tappable suggestions that fill the answer box; they can still type their own. */
+  suggestions?: string[];
 }
 
 export interface GridQuestion extends BaseQuestion {

@@ -18,6 +18,7 @@ import { ReachControls, type ReachValues } from './ReachControls';
 import { userProfileService } from '../services/userProfileService';
 import { syncDiscoveryFromProfile } from '../shared/supabase/queries/messaging';
 import { pickNickname, validateNickname } from '../features/questionnaire/nicknames';
+import { HERO_BANK, validateHero } from '../features/questionnaire/personalBank';
 
 const DEFAULT_REACH: ReachValues = { share_accomplishments: true, profile_mode: 'friends', who_can_message: 'everyone', accepts_friend_requests: true, accepts_mail: true, comments_from: 'everyone' };
 
@@ -41,6 +42,8 @@ export function PublicProfileSettings() {
 
   const [displayName, setDisplayName] = useState('');
   const [headline, setHeadline] = useState('');
+  const [hero, setHero] = useState('');
+  const [heroSaved, setHeroSaved] = useState('');
   const [bio, setBio] = useState('');
   const [discoverable, setDiscoverable] = useState(true);
   const [reach, setReach] = useState<ReachValues>(DEFAULT_REACH);
@@ -68,6 +71,12 @@ export function PublicProfileSettings() {
       setProfileImageType(p.profile_image_type ?? 'avatar');
       setProfileSmilieCode(p.profile_smilie_code ?? null);
     }
+    // The favorite hero lives on the main profile, not the public one.
+    try {
+      const mine = await userProfileService.getCurrentProfile();
+      setHero(mine?.favorite_superhero ?? '');
+      setHeroSaved(mine?.favorite_superhero ?? '');
+    } catch { /* leave it blank */ }
     setLoading(false);
   }, []);
 
@@ -83,6 +92,14 @@ export function PublicProfileSettings() {
     const nicknameChanged = nickname !== '' && nickname !== (profile?.display_name ?? '');
     if (nicknameChanged) {
       const problem = validateNickname(nickname);
+      if (problem) {
+        toast.error(problem);
+        return;
+      }
+    }
+    const heroChanged = hero.trim() !== heroSaved;
+    if (heroChanged) {
+      const problem = validateHero(hero);
       if (problem) {
         toast.error(problem);
         return;
@@ -108,6 +125,10 @@ export function PublicProfileSettings() {
         // The nickname is the name people see everywhere, so keep it in step.
         await userProfileService.updateProfile({ nickname });
         syncDiscoveryFromProfile({ nickname }).catch(() => {});
+      }
+      if (heroChanged) {
+        await userProfileService.updateProfile({ favorite_superhero: hero.trim() || null });
+        setHeroSaved(hero.trim());
       }
       setProfile(updated);
       toast.success('Public profile saved.');
@@ -244,6 +265,23 @@ export function PublicProfileSettings() {
             className="w-full rounded-xl px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white outline-none focus:border-pink-400/40"
             placeholder="One line about you"
           />
+        </div>
+        <div>
+          <label htmlFor="favorite-hero" className="block text-xs font-semibold text-white/40 uppercase tracking-wide mb-1.5">Favorite superhero</label>
+          <input
+            id="favorite-hero"
+            type="text"
+            list="hero-suggestions"
+            value={hero}
+            onChange={(e) => setHero(e.target.value)}
+            maxLength={60}
+            className="w-full rounded-xl px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white outline-none focus:border-pink-400/40"
+            placeholder="Who do you root for?"
+          />
+          <datalist id="hero-suggestions">
+            {HERO_BANK.map(h => <option key={h} value={h} />)}
+          </datalist>
+          <p className="mt-1.5 text-xs text-white/35">Shows on your profile and the billboard outside your house.</p>
         </div>
         <div>
           <label className="block text-xs font-semibold text-white/40 uppercase tracking-wide mb-1.5">Bio (max 500 chars)</label>

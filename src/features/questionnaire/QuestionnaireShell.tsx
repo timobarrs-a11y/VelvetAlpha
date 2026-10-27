@@ -732,6 +732,25 @@ function TapTextRenderer({
           </div>
         </div>
       )}
+      {question.suggestions && question.suggestions.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-center text-xs uppercase tracking-widest text-gray-500">Pick one, or type your own</p>
+          <div role="listbox" aria-label="Suggestions" className="flex flex-wrap items-center justify-center gap-2 max-h-44 overflow-y-auto px-1 py-1">
+            {question.suggestions.map(s => (
+              <button
+                key={s}
+                type="button"
+                role="option"
+                aria-selected={trimmed === s}
+                onClick={() => setTextInput(s)}
+                className={`px-3.5 py-1.5 rounded-full text-sm border transition-colors ${trimmed === s ? 'bg-rose-500/25 border-rose-400/60 text-white' : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10'}`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-center gap-3">
         <button
           onClick={onSubmit}

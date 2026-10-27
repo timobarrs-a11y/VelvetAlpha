@@ -25,6 +25,8 @@ export function profileUpdateFor(questionId: string, answer: string | string[], 
     case 'name': return text ? { name: text } : null;
     case 'nickname': return { nickname: text || null };
     case 'favoriteColor': return text ? { favorite_color: text } : null;
+    // Skipping clears it, so a changed mind sticks.
+    case 'favoriteHero': return { favorite_superhero: text || null };
     case 'zodiacCusp':
     case 'zodiacConfirm': return { zodiac_sign: text && text !== 'none' ? text : null };
     case 'gender': return text ? { gender: text } : null;
@@ -46,6 +48,7 @@ export function answersFromProfile(profile: Partial<UserProfile> | null): Answer
   const out: Answers = {};
   if (profile.name && !PLACEHOLDER_NAMES.has(profile.name.toLowerCase())) out.name = profile.name;
   if (profile.favorite_color) out.favoriteColor = profile.favorite_color;
+  if (profile.favorite_superhero) out.favoriteHero = profile.favorite_superhero;
   if (profile.nickname) out.nickname = profile.nickname;
   if (profile.birthday) out.birthday = profile.birthday;
   if (profile.zodiac_sign) {

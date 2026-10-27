@@ -23,6 +23,7 @@ export interface UserProfile {
   birthday: string | null;
   gender: string | null;
   favorite_color: string | null;
+  favorite_superhero?: string | null;
   zodiac_sign: string | null;
   music_genre: string | null;
   hobbies: string[];
@@ -51,6 +52,7 @@ export interface UserProfileUpdate {
   birthday?: string | null;
   gender?: string | null;
   favorite_color?: string | null;
+  favorite_superhero?: string | null;
   zodiac_sign?: string | null;
   music_genre?: string | null;
   hobbies?: string[];

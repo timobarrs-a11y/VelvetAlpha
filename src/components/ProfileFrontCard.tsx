@@ -1,4 +1,4 @@
-import { Sparkles, Target } from 'lucide-react';
+import { Sparkles, Target, Zap } from 'lucide-react';
 import { GOAL_TYPE_LABELS } from '../services/coachingService';
 import type { ProfileCard } from '../services/publicProfileService';
 
@@ -14,11 +14,11 @@ function usableColor(value: string): string | null {
 export function ProfileFrontCard({ card }: { card: ProfileCard['card'] }) {
   const color = card.favorite_color ? usableColor(card.favorite_color) : null;
   const areas = card.goal_areas.map(a => GOAL_TYPE_LABELS[a] ?? a);
-  if (!card.zodiac_sign && !card.favorite_color && card.interests.length === 0 && areas.length === 0) return null;
+  if (!card.zodiac_sign && !card.favorite_color && !card.favorite_hero && card.interests.length === 0 && areas.length === 0) return null;
 
   return (
     <section aria-label="About" className="mb-8 rounded-xl border border-white/8 bg-white/[0.02] p-4 space-y-3">
-      {(card.zodiac_sign || card.favorite_color) && (
+      {(card.zodiac_sign || card.favorite_color || card.favorite_hero) && (
         <div className="flex flex-wrap items-center gap-2">
           {card.zodiac_sign && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-400/20 text-violet-200 text-xs font-medium">
@@ -29,6 +29,11 @@ export function ProfileFrontCard({ card }: { card: ProfileCard['card'] }) {
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/70 text-xs font-medium">
               {color && <span aria-hidden className="w-3 h-3 rounded-full border border-white/30" style={{ background: color }} />}
               Favorite color: {card.favorite_color}
+            </span>
+          )}
+          {card.favorite_hero && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/25 text-amber-100 text-xs font-medium">
+              <Zap className="w-3 h-3 text-amber-300" /> Favorite hero: {card.favorite_hero}
             </span>
           )}
         </div>

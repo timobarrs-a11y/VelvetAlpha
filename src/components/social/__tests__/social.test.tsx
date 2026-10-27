@@ -56,7 +56,7 @@ describe('createStatus', () => {
     rpc.mockResolvedValue({ data: { success: false, error: 'rate_limited' }, error: null });
     await expect(createStatus('hello')).rejects.toThrow(/posted a lot/);
     rpc.mockResolvedValue({ data: { success: false, error: 'no_access' }, error: null });
-    await expect(createStatus('hello')).rejects.toThrow(/membership or trial/);
+    await expect(createStatus('hello')).rejects.toThrow(/Verify your age/);
   });
 });
 

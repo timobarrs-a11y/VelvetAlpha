@@ -14,6 +14,11 @@ describe('ProfileFrontCard', () => {
     expect(screen.getByText(/Working on/)).toBeTruthy();
   });
 
+  it('shows the favorite hero, even when it is the only thing there', () => {
+    render(<ProfileFrontCard card={{ ...base, favorite_hero: 'Storm' }} />);
+    expect(screen.getByText(/Favorite hero: Storm/)).toBeTruthy();
+  });
+
   it('renders nothing when there is nothing to show', () => {
     const { container } = render(<ProfileFrontCard card={base} />);
     expect(container.firstChild).toBeNull();

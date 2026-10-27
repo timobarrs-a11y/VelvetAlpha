@@ -11,8 +11,8 @@ const ctx = makeContext({}, '', 'user');
 const ids = PERSONAL_QUESTIONNAIRE.questions.map(q => q.id);
 
 describe('Act 1 order', () => {
-  it('goes nickname, color, birthday, zodiac, gender, interests, Someday, then the real name', () => {
-    expect(ids).toEqual(['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday', 'name']);
+  it('goes nickname, color, favorite hero, birthday, zodiac, gender, interests, Someday, then the real name', () => {
+    expect(ids).toEqual(['nickname', 'favoriteColor', 'favoriteHero', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday', 'name']);
   });
 
   it('asks for a nickname first, and requires one', () => {
@@ -103,8 +103,13 @@ describe('saving each answer', () => {
 
 describe('resuming', () => {
   it('starts at the first question not yet answered', () => {
-    const answers = answersFromProfile({ nickname: 'Ace', favorite_color: 'Teal', birthday: '1990-10-29' } as never);
+    const answers = answersFromProfile({ nickname: 'Ace', favorite_color: 'Teal', favorite_superhero: 'Storm', birthday: '1990-10-29' } as never);
     expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('zodiacConfirm');
+  });
+
+  it('asks the favorite hero next when the color is the last thing answered', () => {
+    const answers = answersFromProfile({ nickname: 'Ace', favorite_color: 'Teal', birthday: '1990-10-29' } as never);
+    expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('favoriteHero');
   });
 
   it('sends someone who only gave a real name back to choose a nickname', () => {
@@ -223,5 +228,40 @@ describe('a tabbed screen in the shell', () => {
     render(<QuestionnaireShell definition={definition} context={ctx} onComplete={vi.fn()} initialAnswers={{ hobbies: ['Hiking'], musicGenre: ['Jazz'] }} />);
     expect(screen.getByText('Hiking').closest('button')!.getAttribute('aria-pressed')).toBe('true');
     expect((screen.getByText('Next') as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe('the favorite superhero question', () => {
+  const q = () => PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === 'favoriteHero') as unknown as { question: string; optional?: boolean; suggestions?: string[]; validate?: (t: string) => string | null; hint?: string };
+
+  it('is optional, suggests heroes, and says where it shows', () => {
+    expect(q().question).toBe("Who's your favorite superhero?");
+    expect(q().optional).toBe(true);
+    expect(q().suggestions).toContain('Wonder Woman');
+    expect(q().suggestions!.length).toBeGreaterThanOrEqual(24);
+    expect(q().hint).toMatch(/profile and your billboard/);
+  });
+
+  it('takes any hero but not emails or links, or an essay', () => {
+    expect(q().validate!('Squirrel Girl')).toBeNull();
+    expect(q().validate!('me@mail.com')).not.toBeNull();
+    expect(q().validate!('https://example.com')).not.toBeNull();
+    expect(q().validate!('x'.repeat(61))).not.toBeNull();
+  });
+
+  it('saves with the profile and comes back when resuming, and skipping clears it', () => {
+    expect(profileUpdateFor('favoriteHero', ' Storm ', {})).toEqual({ favorite_superhero: 'Storm' });
+    expect(profileUpdateFor('favoriteHero', '', {})).toEqual({ favorite_superhero: null });
+    expect(answersFromProfile({ favorite_superhero: 'Storm' } as never).favoriteHero).toBe('Storm');
+  });
+
+  it('shows suggestions on the screen and fills the box when one is tapped', async () => {
+    const def: QuestionnaireDefinition = { startProgress: 10, chapters: [{ id: 'c', label: 'C', questionIds: ['favoriteHero'] }], questions: [PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === 'favoriteHero')!] };
+    const onAnswer = vi.fn();
+    render(<QuestionnaireShell definition={def} context={ctx} onAnswer={onAnswer} onComplete={() => {}} />);
+    fireEvent.click(await screen.findByText('Wonder Woman'));
+    expect((screen.getByPlaceholderText('Type a hero, or pick one below') as HTMLInputElement).value).toBe('Wonder Woman');
+    fireEvent.click(screen.getByText('Next'));
+    await waitFor(() => expect(onAnswer).toHaveBeenCalledWith('favoriteHero', 'Wonder Woman', expect.anything()));
   });
 });

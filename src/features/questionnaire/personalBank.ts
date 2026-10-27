@@ -242,14 +242,30 @@ export function answersFromSomeday(picks: SomedayPick[]): Record<string, string[
 }
 
 // ─── Act 1: the quick questionnaire ─────────────────────────────────────
-// nickname → color → birthday → zodiac → gender → interests → Someday → real name (optional).
+// nickname → color → favorite hero → birthday → zodiac → gender → interests → Someday → real name (optional).
 // Each answer is saved as it's given. The "wavelength" questions are asked by
 // Atlas in conversation now.
+
+/** Suggestions for the favorite superhero question; anyone else can be typed in. */
+export const HERO_BANK = [
+  'Spider-Man', 'Batman', 'Superman', 'Wonder Woman', 'Iron Man', 'Captain America', 'Black Panther', 'Thor',
+  'Hulk', 'Black Widow', 'Wolverine', 'Storm', 'Deadpool', 'The Flash', 'Aquaman', 'Green Lantern',
+  'Batgirl', 'Catwoman', 'Ms. Marvel', 'Captain Marvel', 'Doctor Strange', 'Scarlet Witch', 'Ant-Man', 'Daredevil',
+  'Nightwing', 'Supergirl', 'Mr. Incredible', 'Elastigirl', 'Hellboy', 'Spawn',
+] as const;
+
+/** Why a favorite hero answer is not allowed, or null when it is fine. */
+export function validateHero(text: string): string | null {
+  const t = text.trim();
+  if (t.length > 60) return 'Keep it under 60 characters.';
+  if (/@|https?:|www\./i.test(t)) return "Just the hero's name, please.";
+  return null;
+}
 
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 10,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'favoriteColor', 'favoriteHero', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
     { id: 'taste', label: 'What you love', questionIds: ['interests'] },
     { id: 'someday', label: 'Someday', questionIds: ['someday'] },
     { id: 'name', label: 'Your name', questionIds: ['name'] },
@@ -291,6 +307,20 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
         { label: 'White', value: 'White', color: '#f8fafc' },
         { label: 'Black', value: 'Black', color: '#1e293b' },
       ],
+    },
+    {
+      // Shown on their profile card and the billboard outside their house: another thing to bond over.
+      id: 'favoriteHero',
+      archetype: 'tap',
+      chapter: 'identity',
+      question: "Who's your favorite superhero?",
+      confidence: 'tapped',
+      placeholder: 'Type a hero, or pick one below',
+      optional: true,
+      skipLabel: 'Skip for now',
+      hint: 'It shows on your profile and your billboard, so neighbors can find their fellow fans.',
+      validate: validateHero,
+      suggestions: [...HERO_BANK],
     },
     {
       id: 'birthday',
