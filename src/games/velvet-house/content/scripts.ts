@@ -144,7 +144,7 @@ export const TUTORIAL: ScriptDef[] = [
   // 9. Echo fridge: order groceries, wait for Dez, they get put away.
   chapter('tutorial.ch9', { on: 'cond', cond: { flag: 'tutorial.shop' } }, [
     say('maya', 'maya.ch9.fridge'),
-    { do: 'card', title: 'Order groceries', body: 'Open Orders and order groceries. Time keeps moving while you wait: use the speed button to skip ahead.', spotlight: 'tab:do' },
+    { do: 'card', title: 'Order groceries', body: 'Open Household and order groceries. Time keeps moving while you wait: use the speed button to skip ahead.', spotlight: 'tab:home' },
     { do: 'wait', until: { any: [{ flag: 'did.groceries.ordered' }, { event: 'groceries.ordered' }] } },
     { do: 'highlight', target: null },
     { do: 'wait', until: { any: [{ flag: 'did.groceries.putaway' }, { event: 'groceries.putaway' }] } },

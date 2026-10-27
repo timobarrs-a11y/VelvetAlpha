@@ -39,7 +39,7 @@ test('the first day plays through from the move-in to free will', async ({ page 
         else { const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
       }
     } else if (title === 'The shop' && once('shop')) await inGame(page, "v.openTab('shop')");
-    else if (title === 'Order groceries' && once('groceries')) { await inGame(page, "v.openTab('do')"); await game.locator('[data-groceries]').click(); await inGame(page, 'v.closeDrawer()'); }
+    else if (title === 'Order groceries' && once('groceries')) { await inGame(page, "v.openTab('home')"); await game.locator('[data-groceries]').click(); await inGame(page, 'v.closeDrawer()'); }
     else if (flags['tutorial.shop'] && !flags['tutorial.groceries'] && !(await inGame<string>(page, 'v.parcel()')).includes('"ready":false')) await inGame(page, 'v.advance(5)');
     else if (title === 'Cook something' && once('cook')) { await inGame(page, "v.openTab('do')"); await game.getByRole('button', { name: 'Cook a meal' }).first().click(); await inGame(page, 'v.closeDrawer()'); }
     else if (title === 'Wash up' && once('wash')) { await inGame(page, "v.openTab('do')"); await game.getByRole('button', { name: 'Clean up' }).first().click(); await inGame(page, 'v.closeDrawer()'); }
