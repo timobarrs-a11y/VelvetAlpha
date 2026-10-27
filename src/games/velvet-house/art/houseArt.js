@@ -273,15 +273,21 @@ export function createHouseArt(ctx0, opts = {}) {
     const R = (u0, u1, v0, v1) => (Y ? [v0, u0, v1, u1] : [u0, v0, u1, v1]);
     const P = (u, v, z) => (Y ? [v, u, z] : [u, v, z]);
     const BX = (T, u0, u1, v0, v1, z, h, c) => { const r = R(u0, u1, v0, v1); T.box(r[0], r[1], z, r[2] - r[0], r[3] - r[1], h, c); };
-    // The top: the edge of the floor above, as a slab on four posts, so there is something to climb up to and the room
-    // under it can be seen. It carries the handrail round.
+    // The top: the edge of the floor above, over a closed base, with the handrail along the open side and a door at the
+    // end where the flight goes through the wall.
     const ps = [F(...R(0, L, 0, 1), (T) => {
-      [[0.02, 0.02], [0.02, 0.88], [L - 0.12, 0.02], [L - 0.12, 0.88]].forEach(([u, v]) => BX(T, u, u + 0.1, v, v + 0.1, 0, TOP - 0.16, dark));
+      BX(T, 0, L, 0, 1, 0, TOP - 0.16, '#7E6048');
       BX(T, 0, L, 0, 1, TOP - 0.16, 0.16, '#B9936C');
       T.poly([P(0.04, 0.04, TOP + 0.002), P(L, 0.04, TOP + 0.002), P(L, 0.96, TOP + 0.002), P(0.04, 0.96, TOP + 0.002)], '#C9A27A');
       for (let u = 0.3; u < L; u += 0.3) T.line(P(u, 0.04, TOP + 0.004), P(u, 0.96, TOP + 0.004), 'rgba(90,60,30,.25)', 1);
       T.line(P(0, 0.04, TOP + 0.9), P(L, 0.04, TOP + 0.9), rail, 2); [0.02, 0.4, 0.8].forEach(u => T.line(P(u, 0.04, TOP), P(u, 0.04, TOP + 0.9), rail, 1.4));
-      T.line(P(0, 0.04, TOP + 0.9), P(0, 0.96, TOP + 0.9), rail, 2); T.line(P(0, 0.96, TOP), P(0, 0.96, TOP + 0.9), rail, 1.4);
+      // The door, in the wall the flight runs into: a white frame, a panelled door and a knob.
+      const du = 0.03, v0 = 0.14, v1 = 0.86, dh = 1.95, DQ = (a, b, z0, z1) => [P(du, a, TOP + z0), P(du, b, TOP + z0), P(du, b, TOP + z1), P(du, a, TOP + z1)];
+      T.poly(DQ(v0 - 0.07, v1 + 0.07, 0, dh + 0.07), '#EFE8DC');
+      T.poly(DQ(v0, v1, 0, dh), '#7A4C32');
+      T.poly(DQ(v0 + 0.08, v1 - 0.08, 1.0, dh - 0.12), null, '#5A3A28', 1.4);
+      T.poly(DQ(v0 + 0.08, v1 - 0.08, 0.12, 0.86), null, '#5A3A28', 1.4);
+      const k = P(du + 0.01, v1 - 0.12, TOP + 0.95); T.poly([[k[0] - 0.025, k[1] - 0.025, k[2]], [k[0] + 0.025, k[1] - 0.025, k[2]], [k[0] + 0.025, k[1] + 0.025, k[2]], [k[0] - 0.025, k[1] + 0.025, k[2]]], '#D9B64A');
     })];
     for (let i = 0; i < N; i++) {
       const u0 = L + i * RUN, u1 = u0 + RUN, h = TOP - (i + 1) * RISE, hp = TOP - i * RISE, um = u0 + RUN / 2, last = i === N - 1;
