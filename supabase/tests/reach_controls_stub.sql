@@ -3,7 +3,7 @@
 do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
 do $$ begin create role anon; exception when duplicate_object then null; end $$;
 create schema auth;
-create table auth.users (id uuid primary key, email text);
+create table auth.users (id uuid primary key, email text, created_at timestamptz default now());
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
 grant usage on schema public, auth to authenticated;
 create table public.member_profiles (user_id uuid primary key references auth.users, display_name text default 'Member', headline text, bio text, avatar_config jsonb, profile_image_type text, profile_smilie_code text, is_bot boolean not null default false, is_public boolean not null default true, discoverable boolean not null default true, follower_count int not null default 0, following_count int not null default 0, updated_at timestamptz default now());
@@ -16,7 +16,7 @@ create table public.rate_limits (user_id uuid, endpoint text);
 create table public.progress_posts (id uuid primary key default gen_random_uuid(), user_id uuid, post_type text, title text, body text, ref_target_type text, ref_target_id uuid, is_auto_generated boolean default false, goal_id uuid, like_count int default 0, comment_count int default 0, deleted_at timestamptz, created_at timestamptz default now());
 create table public.progress_post_comments (id uuid primary key default gen_random_uuid(), post_id uuid, user_id uuid, body text);
 create table public.progress_post_likes (id uuid primary key default gen_random_uuid(), post_id uuid, user_id uuid);
-create table public.world_plots (user_id uuid primary key);
+create table public.world_plots (user_id uuid primary key references auth.users, slot_index int not null unique, house jsonb not null default '{"style": "standard"}', sign jsonb not null default '{}', yard jsonb not null default '{}', moved_in_at timestamptz default now());
 create table public.town_letters (id uuid primary key default gen_random_uuid(), user_id uuid, sender_label text, subject text, body text);
 create function public.users_blocked(a uuid, b uuid) returns boolean language sql stable as $$ select exists (select 1 from public.im_blocks k where (k.blocker_id = a and k.blocked_id = b) or (k.blocker_id = b and k.blocked_id = a)) $$;
 create function public.get_post_owner(p uuid) returns uuid language sql stable security definer as $$ select user_id from public.progress_posts where id = p $$;

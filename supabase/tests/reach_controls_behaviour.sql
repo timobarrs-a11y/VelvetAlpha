@@ -19,7 +19,10 @@ insert into public.member_profiles (user_id, display_name, bio) select id, 'Memb
 insert into public.user_profiles (id, nickname, name) values
  ('a0000000-0000-0000-0000-00000000000a','Ace','Alex Real'),('b0000000-0000-0000-0000-00000000000b','','Bea Real'),
  ('c0000000-0000-0000-0000-00000000000c','','there'),('d0000000-0000-0000-0000-00000000000d','Dee','Dana');
-insert into public.world_plots select id from auth.users;
+insert into public.world_plots (user_id, slot_index) select id, (row_number() over (order by id) - 1)::int from auth.users;
+-- G has no house yet, and X is a community bot: the migration should house G and skip X
+insert into auth.users values ('a1000000-0000-0000-0000-0000000000a1', 'g@example.com');
+insert into auth.users values ('a2000000-0000-0000-0000-0000000000a2', 'x-bot@community.local');
 insert into public.im_friendships (requester_id, addressee_id, status) values ('a0000000-0000-0000-0000-00000000000a','b0000000-0000-0000-0000-00000000000b','accepted');
 insert into public.im_conversations (id, user_a_id, user_b_id) values
  ('11111111-0000-0000-0000-000000000001','a0000000-0000-0000-0000-00000000000a','b0000000-0000-0000-0000-00000000000b'),
@@ -32,6 +35,28 @@ create trigger t_commit after update on public.coaching_commitments for each row
 create trigger t_step after update on public.coach_plan_steps for each row execute function public.create_post_on_plan_step_completed();
 create trigger t_mile after insert on public.milestone_achievements for each row execute function public.create_post_on_milestone();
 
+\echo == everyone has a house
+do $$ begin
+  assert exists (select 1 from public.world_plots where user_id='a1000000-0000-0000-0000-0000000000a1'), 'an account with no house was given one';
+  assert not exists (select 1 from public.world_plots where user_id='a2000000-0000-0000-0000-0000000000a2'), 'community bot accounts are skipped';
+  assert (select count(distinct slot_index) from public.world_plots) = (select count(*) from public.world_plots), 'every house has its own slot';
+  assert (select max(slot_index) + 1 from public.world_plots) = (select count(*) from public.world_plots), 'slots are consecutive, no gaps';
+  assert (select house->>'style' from public.world_plots where user_id='a1000000-0000-0000-0000-0000000000a1') = 'standard', 'a starter house';
+end $$;
+insert into auth.users values ('e1000000-0000-0000-0000-0000000000e1');
+insert into public.user_profiles (id, nickname) values ('e1000000-0000-0000-0000-0000000000e1', 'Newbie');
+do $$ declare s1 int; begin
+  select slot_index into s1 from public.world_plots where user_id='e1000000-0000-0000-0000-0000000000e1';
+  assert s1 is not null, 'a new sign-up is housed straight away';
+  assert s1 = (select max(slot_index) from public.world_plots), 'new houses go on the end of the street';
+  assert public.ensure_world_plot('e1000000-0000-0000-0000-0000000000e1') = s1, 'asking again changes nothing';
+  assert (select count(*) from public.world_plots where user_id='e1000000-0000-0000-0000-0000000000e1') = 1, 'one house each';
+end $$;
+delete from public.world_plots where user_id='e1000000-0000-0000-0000-0000000000e1';
+delete from public.member_profiles where user_id='e1000000-0000-0000-0000-0000000000e1';
+delete from public.user_profiles where id='e1000000-0000-0000-0000-0000000000e1';
+delete from auth.users where id='e1000000-0000-0000-0000-0000000000e1';
+
 \echo == every new member gets a profile
 insert into auth.users values ('e0000000-0000-0000-0000-00000000000e');
 insert into public.user_profiles (id, nickname, name) values ('e0000000-0000-0000-0000-00000000000e', 'Eli', 'Eliot Real');
@@ -42,6 +67,7 @@ do $$ begin
 end $$;
 delete from public.member_profiles where user_id='e0000000-0000-0000-0000-00000000000e';
 delete from public.user_profiles where id='e0000000-0000-0000-0000-00000000000e';
+delete from public.world_plots where user_id='e0000000-0000-0000-0000-00000000000e';
 delete from auth.users where id='e0000000-0000-0000-0000-00000000000e';
 
 \echo == nicknames are the name people see
@@ -57,6 +83,7 @@ update public.user_profiles set nickname = 'Other' where id='f0000000-0000-0000-
 do $$ begin assert (select display_name from public.member_profiles where user_id='f0000000-0000-0000-0000-00000000000f') = 'Custom Name', 'a display name they set themselves is left alone'; end $$;
 delete from public.member_profiles where user_id='f0000000-0000-0000-0000-00000000000f';
 delete from public.user_profiles where id='f0000000-0000-0000-0000-00000000000f';
+delete from public.world_plots where user_id='f0000000-0000-0000-0000-00000000000f';
 delete from auth.users where id='f0000000-0000-0000-0000-00000000000f';
 
 \echo == defaults
@@ -217,7 +244,7 @@ select pg_temp.as_user('a0000000-0000-0000-0000-00000000000a');
 select set_config('test.admin','1',false);
 select 'letters sent: ' || public.send_town_letter('Hello','body');
 do $$ begin
-  assert (select count(*) from public.town_letters) = 3, 'expected 3 letters (B opted out)';
+  assert (select count(*) from public.town_letters) = 4, 'expected 4 letters (everyone with a house except B, who opted out)';
   assert not exists (select 1 from public.town_letters where user_id='b0000000-0000-0000-0000-00000000000b'), 'B opted out but got a letter';
 end $$;
 select set_config('test.admin','0',false);

@@ -265,7 +265,8 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       required: true,
       minLength: NICKNAME_MIN,
       validate: validateNickname,
-      pickForMe: true,
+      nicknameBank: true,
+      skipLabel: 'Skip, pick one for me',
       hint: "No nickname? Create one now! It's what people will see, so keep it free of anything that gives away who you are.",
     },
     {

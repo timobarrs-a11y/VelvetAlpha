@@ -4,6 +4,7 @@ import { PERSONAL_QUESTIONNAIRE, resolveZodiac, somedayFromAnswers, answersFromS
 import { answersFromProfile, profileUpdateFor, resumeIndex } from '../arrivalAnswers';
 import { QuestionnaireShell } from '../QuestionnaireShell';
 import { makeContext } from '../pronouns';
+import { validateNickname } from '../nicknames';
 import type { QuestionnaireDefinition } from '../types';
 
 const ctx = makeContext({}, '', 'user');
@@ -15,11 +16,11 @@ describe('Act 1 order', () => {
   });
 
   it('asks for a nickname first, and requires one', () => {
-    const q = PERSONAL_QUESTIONNAIRE.questions[0] as { id: string; question: string; optional?: boolean; pickForMe?: boolean; validate?: (t: string) => string | null };
+    const q = PERSONAL_QUESTIONNAIRE.questions[0] as { id: string; question: string; optional?: boolean; nicknameBank?: boolean; validate?: (t: string) => string | null };
     expect(q.id).toBe('nickname');
     expect(q.question).toBe("We don't like to call people by their first names here, what do people call you?");
     expect(q.optional).toBeFalsy();
-    expect(q.pickForMe).toBe(true);
+    expect(q.nicknameBank).toBe(true);
     expect(q.validate!('me@mail.com')).not.toBeNull();
     expect(q.validate!('Sunny Otter')).toBeNull();
   });
@@ -127,27 +128,39 @@ describe('the nickname screen in the shell', () => {
     <QuestionnaireShell definition={definition} context={ctx} onAnswer={onAnswer} onComplete={onComplete} />,
   );
 
-  it('has one "Pick one for me" button, no list of ideas, and a hint for people without a nickname', () => {
+  it('shows the nickname bank to pick one from, by flavor', () => {
     renderIt();
     expect(screen.getByText(/No nickname\? Create one now!/)).toBeTruthy();
-    expect(screen.queryByText(/Show me more/)).toBeNull();
-    expect(screen.queryByText(/Need an idea/)).toBeNull();
-    const box = screen.getByPlaceholderText('Your nickname') as HTMLInputElement;
-    expect(box.value).toBe('');
-    fireEvent.click(screen.getByText('Pick one for me'));
-    const first = box.value;
-    expect(first.length).toBeGreaterThan(1);
-    expect((screen.getByText('Next') as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(screen.getByText('Pick one for me'));
-    expect(box.value).not.toBe(first);
+    const tabs = screen.getAllByRole('tab').map(t => t.textContent);
+    expect(tabs).toEqual(['Funny', 'Classic', 'Screen names', 'Cozy']);
+    expect(screen.getByRole('option', { name: 'Captain Snacks' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Classic' }));
+    expect(screen.getByRole('option', { name: 'Ace' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: 'Captain Snacks' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Screen names' }));
+    expect(screen.getByRole('option', { name: 'NightOwl' })).toBeTruthy();
   });
 
-  it('lets them change the picked nickname', () => {
+  it('picks the one they tap, and they can still change it', () => {
     renderIt();
     const box = screen.getByPlaceholderText('Your nickname') as HTMLInputElement;
-    fireEvent.click(screen.getByText('Pick one for me'));
+    fireEvent.click(screen.getByRole('option', { name: 'Captain Snacks' }));
+    expect(box.value).toBe('Captain Snacks');
+    expect(screen.getByRole('option', { name: 'Captain Snacks' }).getAttribute('aria-selected')).toBe('true');
+    expect((screen.getByText('Next') as HTMLButtonElement).disabled).toBe(false);
     fireEvent.change(box, { target: { value: 'Ace' } });
     expect(box.value).toBe('Ace');
+  });
+
+  it('gives them a random nickname and moves on when they skip', async () => {
+    const onAnswer = vi.fn();
+    renderIt(onAnswer);
+    fireEvent.click(screen.getByText('Skip, pick one for me'));
+    await waitFor(() => expect(onAnswer).toHaveBeenCalled());
+    const [id, nickname] = onAnswer.mock.calls[0];
+    expect(id).toBe('nickname');
+    expect(String(nickname).length).toBeGreaterThan(1);
+    expect(validateNickname(String(nickname))).toBeNull();
   });
 
   it('will not accept an email or link, and says why', () => {

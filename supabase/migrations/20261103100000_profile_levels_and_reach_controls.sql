@@ -29,7 +29,8 @@
 --     require a public profile, which most accounts never had)
 --   * send_town_letter skips members who turned mail off
 --
--- Every new user_profiles row also gets a member profile, and anyone who has none now gets one.
+-- Every new user_profiles row also gets a member profile and a starter house in town, and anyone
+-- who has none now gets them.
 -- Nicknames are the name people see; a real name is never shown unless they put it there.
 
 -- ---------------------------------------------------------------------------
@@ -890,4 +891,66 @@ AS $$
     (SELECT NULLIF(btrim(nickname), '') FROM public.user_profiles WHERE id = p_user_id),
     'Velvet member'
   );
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Everyone has a house in town
+-- ---------------------------------------------------------------------------
+-- A plot used to exist only once someone finished the move-in step, so most accounts were
+-- missing from the town. Every real account now gets a starter house at sign-up (and the
+-- ones who have none get one now). People still pick or change their house in onboarding
+-- and in the customizer: this only makes sure nobody is left out.
+CREATE OR REPLACE FUNCTION public.ensure_world_plot(p_user_id uuid)
+RETURNS integer
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  v_slot int;
+BEGIN
+  SELECT slot_index INTO v_slot FROM public.world_plots WHERE user_id = p_user_id;
+  IF FOUND THEN RETURN v_slot; END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtext('world_plots_slot'));
+  SELECT slot_index INTO v_slot FROM public.world_plots WHERE user_id = p_user_id;
+  IF FOUND THEN RETURN v_slot; END IF;
+
+  SELECT COALESCE(max(slot_index) + 1, 0) INTO v_slot FROM public.world_plots;
+  INSERT INTO public.world_plots (user_id, slot_index, house)
+  VALUES (p_user_id, v_slot, '{"style": "standard"}'::jsonb)
+  ON CONFLICT (user_id) DO NOTHING;
+  RETURN v_slot;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.ensure_world_plot(uuid) FROM anon, authenticated, public;
+
+CREATE OR REPLACE FUNCTION public.ensure_world_plot_for_new_user()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  PERFORM public.ensure_world_plot(NEW.id);
+  RETURN NEW;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.ensure_world_plot_for_new_user() FROM anon, authenticated, public;
+
+DROP TRIGGER IF EXISTS user_profiles_ensure_world_plot ON public.user_profiles;
+CREATE TRIGGER user_profiles_ensure_world_plot
+  AFTER INSERT ON public.user_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.ensure_world_plot_for_new_user();
+
+-- Everyone who is missing one, oldest account first (community bot accounts are skipped).
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT u.id FROM auth.users u
+    WHERE NOT EXISTS (SELECT 1 FROM public.world_plots wp WHERE wp.user_id = u.id)
+      AND COALESCE(u.email, '') NOT LIKE '%@community.local'
+    ORDER BY u.created_at, u.id
+  LOOP
+    PERFORM public.ensure_world_plot(r.id);
+  END LOOP;
+END;
 $$;

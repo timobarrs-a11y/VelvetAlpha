@@ -81,8 +81,8 @@ export interface TapQuestion extends BaseQuestion {
   hint?: string | ((ctx: QuestionContext) => string);
   /** Why an answer is not allowed, or null when it is fine. The Next button waits for null. */
   validate?: (text: string) => string | null;
-  /** A "Pick one for me" button that fills in a random nickname (they can press it again, or type their own). */
-  pickForMe?: boolean;
+  /** Show the nickname bank to choose one from (or they type their own); the skip button gives them a random one. */
+  nicknameBank?: boolean;
 }
 
 export interface GridQuestion extends BaseQuestion {
