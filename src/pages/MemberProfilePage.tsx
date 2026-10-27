@@ -271,11 +271,7 @@ export default function MemberProfilePage() {
           </div>
         </div>
 
-        {card && (
-          <div className="mb-8">
-            <ProfileFrontCard card={card.card} />
-          </div>
-        )}
+        {card && <ProfileFrontCard card={card.card} />}
 
         {/* Bio */}
         {profile.bio && (
