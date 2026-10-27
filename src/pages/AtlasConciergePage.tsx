@@ -189,7 +189,7 @@ function AtlasConciergeInner() {
     const name = job.recommendation.helperName;
     const role = job.recommendation.kind === 'coach' ? 'coach' : 'assistant';
     addAtlas(
-      `Splendid work. Your plan is ready for you to look over. And I'd like you to meet ${name}, your ${role}. From here, ${name} is the one to ask about all of this, and I rather think you'll find ${helperPronouns(job.recommendation.helperGender).object} good company.`,
+      `Splendid work. Your plan is ready for you to look over. You want this done properly, so I've brought you the best there is: ${name}, your ${role}. There is none better for this. Whatever you need, take it to ${helperPronouns(job.recommendation.helperGender).object}.`,
       { highlight: ['plan'] },
     );
     setPhase('meet');
