@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { PERSONAL_QUESTIONNAIRE, resolveZodiac, somedayFromAnswers, answersFromSomeday, SOMEDAY_TABS } from '../personalBank';
 import { answersFromProfile, profileUpdateFor, resumeIndex } from '../arrivalAnswers';
 import { QuestionnaireShell } from '../QuestionnaireShell';
@@ -11,14 +11,14 @@ const ctx = makeContext({}, '', 'user');
 const ids = PERSONAL_QUESTIONNAIRE.questions.map(q => q.id);
 
 describe('Act 1 order', () => {
-  it('goes nickname, color, favorite hero, birthday, zodiac, gender, interests, Someday, then the real name', () => {
-    expect(ids).toEqual(['nickname', 'favoriteColor', 'favoriteHero', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday', 'name']);
+  it('goes nickname, color, birthday, zodiac, gender, interests, Someday, favorite hero, then the real name', () => {
+    expect(ids).toEqual(['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender', 'interests', 'someday', 'favoriteHero', 'name']);
   });
 
   it('asks for a nickname first, and requires one', () => {
     const q = PERSONAL_QUESTIONNAIRE.questions[0] as { id: string; question: string; optional?: boolean; nicknameBank?: boolean; validate?: (t: string) => string | null };
     expect(q.id).toBe('nickname');
-    expect(q.question).toBe("We don't like to call people by their first names here, what do people call you?");
+    expect(q.question).toBe("Hey, I'm Dez! We don't call ya by your first name around here, what do people call you?");
     expect(q.optional).toBeFalsy();
     expect(q.nicknameBank).toBe(true);
     expect(q.validate!('me@mail.com')).not.toBeNull();
@@ -30,15 +30,13 @@ describe('Act 1 order', () => {
     expect(q.id).toBe('name');
     expect(q.optional).toBe(true);
     expect(q.skipLabel).toBe('Skip for now');
-    expect(q.hint).toMatch(/Optional/);
+    expect(q.hint).toMatch(/Only Atlas uses it/);
   });
 
   it('greets them by nickname', () => {
     const q = PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === 'name') as unknown as { question: (c: unknown) => string };
     const text = q.question({ ...ctx, answers: { nickname: 'Ace' } });
-    expect(text).toMatch(/^Last one, Ace\. What's your real name\?/);
-    expect(text).toMatch(/Only Atlas uses it/);
-    expect(text).toMatch(/Master Tim, Miss Ana/);
+    expect(text).toBe('Alright, Ace, last question. Atlas needs to know your first name.');
   });
 
   it('no longer asks the wavelength questions or the swipe deck', () => {
@@ -103,12 +101,15 @@ describe('saving each answer', () => {
 
 describe('resuming', () => {
   it('starts at the first question not yet answered', () => {
-    const answers = answersFromProfile({ nickname: 'Ace', favorite_color: 'Teal', favorite_superhero: 'Storm', birthday: '1990-10-29' } as never);
+    const answers = answersFromProfile({ nickname: 'Ace', favorite_color: 'Teal', birthday: '1990-10-29' } as never);
     expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('zodiacConfirm');
   });
 
-  it('asks the favorite hero next when the color is the last thing answered', () => {
-    const answers = answersFromProfile({ nickname: 'Ace', favorite_color: 'Teal', birthday: '1990-10-29' } as never);
+  it('asks the favorite hero next once everything before it is answered', () => {
+    const answers = answersFromProfile({
+      nickname: 'Ace', favorite_color: 'Teal', birthday: '1990-10-29', zodiac_sign: 'Scorpio', gender: 'Male',
+      hobbies: ['Hiking', 'Cooking', 'Reading'], someday: [{ tab: 'Work', value: 'Tech & IT' }],
+    } as never);
     expect(PERSONAL_QUESTIONNAIRE.questions[resumeIndex(PERSONAL_QUESTIONNAIRE, answers, ctx)].id).toBe('favoriteHero');
   });
 
@@ -235,7 +236,7 @@ describe('the favorite superhero question', () => {
   const q = () => PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === 'favoriteHero') as unknown as { question: string; optional?: boolean; suggestions?: string[]; validate?: (t: string) => string | null; hint?: string };
 
   it('is optional, suggests heroes, and says where it shows', () => {
-    expect(q().question).toBe("Who's your favorite superhero?");
+    expect(q().question).toBe("Every town needs its heroes. Who's your favorite superhero?");
     expect(q().optional).toBe(true);
     expect(q().suggestions).toContain('Wonder Woman');
     expect(q().suggestions!.length).toBeGreaterThanOrEqual(24);
@@ -263,5 +264,80 @@ describe('the favorite superhero question', () => {
     expect((screen.getByPlaceholderText('Type a hero, or pick one below') as HTMLInputElement).value).toBe('Wonder Woman');
     fireEvent.click(screen.getByText('Next'));
     await waitFor(() => expect(onAnswer).toHaveBeenCalledWith('favoriteHero', 'Wonder Woman', expect.anything()));
+  });
+});
+
+describe('going back to change a pick', () => {
+  it('lets you change the color: going back does not push you forward again', async () => {
+    vi.useFakeTimers();
+    try {
+      const onAnswer = vi.fn();
+      const def: QuestionnaireDefinition = { ...PERSONAL_QUESTIONNAIRE, questions: PERSONAL_QUESTIONNAIRE.questions.slice(0, 3) };
+      render(<QuestionnaireShell definition={def} context={ctx} initialAnswers={{ nickname: 'Ace' }} initialIndex={1} onAnswer={onAnswer} onComplete={() => {}} />);
+      expect(screen.getByText(/favorite color/)).toBeTruthy();
+
+      fireEvent.click(screen.getByText('Teal'));
+      act(() => { vi.advanceTimersByTime(1200); });
+      expect(onAnswer).toHaveBeenCalledWith('favoriteColor', 'Teal', expect.anything());
+      // Back to the color: the old pick is shown, and nothing moves on without a new pick.
+      fireEvent.click(screen.getByText('Back'));
+      act(() => { vi.advanceTimersByTime(3000); });
+      expect(screen.getByText(/favorite color/)).toBeTruthy();
+      expect(onAnswer).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByText('Blue'));
+      act(() => { vi.advanceTimersByTime(1200); });
+      expect(onAnswer).toHaveBeenLastCalledWith('favoriteColor', 'Blue', expect.anything());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('the sign-up birthday questions say where the birthday came from', () => {
+  const q = (id: string) => PERSONAL_QUESTIONNAIRE.questions.find(x => x.id === id) as unknown as { question: string | ((c: unknown) => string) };
+  it('names the sign-up birthday on the cusp and the confirm questions', () => {
+    expect(q('zodiacCusp').question).toMatch(/birthday you gave at sign-up/);
+    const confirm = (q('zodiacConfirm').question as (c: unknown) => string)({ ...ctx, answers: { birthday: '1990-10-29' } });
+    expect(confirm).toBe("Going by your sign-up birthday, you're a Scorpio ♏. Sound right?");
+  });
+});
+
+describe('Dez hosting the questions', () => {
+  const host = { name: 'Dez', title: 'Mayor of Town', portrait: <span>portrait</span> };
+  const def: QuestionnaireDefinition = { startProgress: 10, chapters: [{ id: 'c', label: 'C', questionIds: ['nickname'] }], questions: [PERSONAL_QUESTIONNAIRE.questions[0]] };
+
+  it('types the line out, keeps the answer controls back until it is said, and tapping finishes it', () => {
+    vi.useFakeTimers();
+    try {
+      render(<QuestionnaireShell definition={def} context={ctx} host={host} onComplete={() => {}} />);
+      // everyone can read the whole line from the start; the visible text types out
+      expect(screen.getByText("Hey, I'm Dez! We don't call ya by your first name around here, what do people call you?")).toBeTruthy();
+      expect(screen.getByText('Dez')).toBeTruthy();
+      expect(screen.getByText('Mayor of Town')).toBeTruthy();
+      const controls = screen.getByPlaceholderText('Your nickname').closest('div[style]') as HTMLElement;
+      expect(controls.style.opacity).toBe('0');
+      expect(controls.style.pointerEvents).toBe('none');
+
+      act(() => { vi.advanceTimersByTime(800); });
+      expect(controls.style.opacity).toBe('0');
+
+      fireEvent.click(screen.getByTestId('host-dialogue'));
+      expect(controls.style.opacity).toBe('1');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reveals the controls by itself once the line has been typed', () => {
+    vi.useFakeTimers();
+    try {
+      render(<QuestionnaireShell definition={def} context={ctx} host={host} onComplete={() => {}} />);
+      act(() => { vi.advanceTimersByTime(8000); });
+      const controls = screen.getByPlaceholderText('Your nickname').closest('div[style]') as HTMLElement;
+      expect(controls.style.opacity).toBe('1');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

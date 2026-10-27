@@ -2,19 +2,18 @@ import { useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Heart } from 'lucide-react';
 
-const DURATION_MS = 3200;
-
 /**
- * A short branded moment before the first question: you're in. It closes on its own after a
- * few seconds, or when they tap it, so it never makes anyone wait.
+ * A short branded moment before the first question: you're in. It stays until they tap it (or press
+ * Enter or Space), so nobody misses it.
  */
 export function WelcomeMoment({ onDone }: { onDone: () => void }) {
   const reduce = useReducedMotion() ?? false;
 
   useEffect(() => {
-    const t = window.setTimeout(onDone, reduce ? 2000 : DURATION_MS);
-    return () => window.clearTimeout(t);
-  }, [onDone, reduce]);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDone(); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onDone]);
 
   return (
     <motion.div
@@ -64,14 +63,19 @@ export function WelcomeMoment({ onDone }: { onDone: () => void }) {
         Welcome to <b style={{ color: '#f472b6' }}>Town</b>! You&apos;ll see your place in a bit. But first, let&apos;s set up your profile.
       </motion.p>
 
-      <motion.p
-        className="absolute bottom-8 text-xs text-gray-500"
-        initial={reduce ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.6 }}
+      <motion.button
+        type="button"
+        className="mt-10 inline-flex h-12 items-center justify-center rounded-full px-10 text-base font-bold text-white shadow-lg"
+        style={{ background: 'linear-gradient(to right, rgb(244 63 94), rgb(219 39 119))' }}
+        initial={reduce ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.6, duration: 0.5 }}
+        onClick={(e) => { e.stopPropagation(); onDone(); }}
+        autoFocus
       >
-        Tap anywhere to begin
-      </motion.p>
+        Let&apos;s go
+      </motion.button>
+      <p className="absolute bottom-8 text-xs text-gray-600">Tap anywhere to begin</p>
     </motion.div>
   );
 }

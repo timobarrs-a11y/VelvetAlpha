@@ -24,6 +24,7 @@ import { resolveQuestionText } from './companionBank';
 import { tpl } from './pronouns';
 import { getColorHex } from './personalBank';
 import { NICKNAME_BANK, pickNickname, type NicknameKind } from './nicknames';
+import { HostDialogue, type QuestionnaireHost } from './HostDialogue';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   BookOpen, Gamepad2, Utensils, MapPin, Camera, Palette, PenTool, Music,
@@ -51,6 +52,8 @@ interface QuestionnaireShellProps {
   initialAnswers?: Record<string, string | string[]>;
   /** The question to start on when resuming. */
   initialIndex?: number;
+  /** A character who asks the questions, typed out like dialogue. Without one it is a plain form. */
+  host?: QuestionnaireHost;
 }
 
 export function QuestionnaireShell({
@@ -63,6 +66,7 @@ export function QuestionnaireShell({
   renderOrb,
   initialAnswers,
   initialIndex = 0,
+  host,
 }: QuestionnaireShellProps) {
   const [currentIdx, setCurrentIdx] = useState(Math.min(Math.max(initialIndex, 0), definition.questions.length - 1));
   const [answers, setAnswers] = useState<Record<string, string | string[]>>(initialAnswers ?? {});
@@ -76,10 +80,16 @@ export function QuestionnaireShell({
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [swipeDragX, setSwipeDragX] = useState(0);
   const [beatVisible, setBeatVisible] = useState(false);
+  // With a host, the answer controls wait until the line has been said.
+  const [lineDone, setLineDone] = useState(!host);
+  useEffect(() => { setLineDone(!host); }, [currentIdx, host]);
   const dragStartRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const scrubTrackRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const currentIdxRef = useRef(0);
+  const questionIdx = useRef<Record<string, number>>({});
+  const handleAnswerRef = useRef<(answer: string | string[]) => void>(() => {});
 
   const questions = definition.questions;
   const question = questions[currentIdx];
@@ -88,6 +98,8 @@ export function QuestionnaireShell({
   const progress = startProgress + ((currentIdx + 1) / totalQuestions) * (100 - startProgress);
 
   const ctx: QuestionContext = { ...context, answers };
+  currentIdxRef.current = currentIdx;
+  questions.forEach((q, i) => { questionIdx.current[q.id] = i; });
 
   const currentChapter = definition.chapters.find(ch =>
     ch.questionIds.includes(question?.id)
@@ -165,6 +177,8 @@ export function QuestionnaireShell({
     setTimeout(() => advance(newAnswers), question.archetype === 'tap' ? 350 : 100);
   };
 
+  handleAnswerRef.current = handleAnswer;
+
   const handleBack = () => {
     if (currentIdx > 0) {
       let prevIdx = currentIdx - 1;
@@ -197,7 +211,20 @@ export function QuestionnaireShell({
   const handleGridToggle = (index: number) => {
     const gridQ = question as GridQuestion;
     if (!gridQ.multiSelect) {
-      setSelectedGridOptions(prev => prev.includes(index) ? [] : [index]);
+      const already = selectedGridOptions.includes(index);
+      setSelectedGridOptions(already ? [] : [index]);
+      // A single pick moves on by itself, but only when the person just made it. Going back restores the
+      // old pick without advancing, so the answer can be changed.
+      if (!already) {
+        const questionId = question.id;
+        const value = gridQ.options[index]?.value;
+        window.setTimeout(() => {
+          if (currentIdxRef.current !== questionIdx.current[questionId] || !value) return;
+          setSelectedGridOptions([]);
+          setCustomEntries([]);
+          handleAnswerRef.current(value);
+        }, 350);
+      }
       return;
     }
     setSelectedGridOptions(prev =>
@@ -353,15 +380,25 @@ export function QuestionnaireShell({
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
-              <motion.h2
-                className="text-2xl md:text-3xl font-bold text-center mb-8 tracking-tight leading-snug"
-                style={{ color: accentColor || '#ffffff' }}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08 }}
+              {host ? (
+                <HostDialogue key={currentIdx} host={host} text={questionText} accentColor={accentColor} onDone={() => setLineDone(true)} />
+              ) : (
+                <motion.h2
+                  className="text-2xl md:text-3xl font-bold text-center mb-8 tracking-tight leading-snug"
+                  style={{ color: accentColor || '#ffffff' }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.08 }}
+                >
+                  {questionText}
+                </motion.h2>
+              )}
+
+              <div
+                className={host ? 'transition-opacity duration-300' : undefined}
+                style={host ? { opacity: lineDone ? 1 : 0, pointerEvents: lineDone ? 'auto' : 'none' } : undefined}
+                aria-hidden={host && !lineDone ? true : undefined}
               >
-                {questionText}
-              </motion.h2>
 
               {question.archetype === 'tap' && !(question as TapQuestion).options && (
                 <TapTextRenderer
@@ -448,6 +485,7 @@ export function QuestionnaireShell({
                   cardRef={cardRef}
                 />
               )}
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>
@@ -837,13 +875,6 @@ function GridRenderer({
   const canSkip = minSel === 0 && totalSelected === 0;
   const cols = question.columns ?? 3;
   const gridClass = cols === 4 ? 'grid grid-cols-2 sm:grid-cols-4' : cols === 2 ? 'grid grid-cols-2' : 'grid grid-cols-2 sm:grid-cols-3';
-
-  useEffect(() => {
-    if (autoSubmit && selectedOptions.length === 1) {
-      const timer = setTimeout(() => onSubmit(), 350);
-      return () => clearTimeout(timer);
-    }
-  }, [autoSubmit, selectedOptions, onSubmit]);
 
   const selectedBorder = accentColor ? `${accentColor}99` : 'rgb(244 63 94 / 0.6)';
   const selectedBg = accentColor ? `${accentColor}33` : 'rgb(136 19 55 / 0.2)';

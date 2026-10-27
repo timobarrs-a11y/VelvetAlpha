@@ -146,4 +146,34 @@ describe('AvatarV2 wardrobe', () => {
     const ids = [...container.querySelectorAll('[id]')].map(e => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  describe('blinking', () => {
+    const cfg = migrateAvatarConfig({ gender: 'female', eyelashes: 'dramatic' });
+
+    it('wraps the eyes in a blinking group only when asked', () => {
+      expect(render(<AvatarV2 config={cfg} />).container.querySelector('.avatar-blink')).toBeNull();
+      const { container } = render(<AvatarV2 config={cfg} blink />);
+      const group = container.querySelector('.avatar-blink');
+      expect(group).not.toBeNull();
+      // the liner and lashes blink with the eyes
+      expect(group!.children.length).toBeGreaterThan(1);
+    });
+
+    it('does not blink eyes that are already closed', () => {
+      expect(render(<AvatarV2 config={cfg} blink eyesClosed />).container.querySelector('.avatar-blink')).toBeNull();
+    });
+
+    it('blinks on the full-body and head drawings too', () => {
+      for (const part of ['bust', 'head', 'full'] as const) {
+        expect(render(<AvatarV2 config={cfg} part={part} blink />).container.querySelector('.avatar-blink')).not.toBeNull();
+      }
+    });
+
+    it('gives each avatar its own beat, so a row of them does not blink in unison', () => {
+      const { container } = render(<><AvatarV2 config={cfg} blink /><AvatarV2 config={cfg} blink /><AvatarV2 config={cfg} blink /></>);
+      const delays = [...container.querySelectorAll<SVGGElement>('.avatar-blink')].map(g => g.style.animationDelay);
+      expect(delays).toHaveLength(3);
+      expect(new Set(delays).size).toBeGreaterThan(1);
+    });
+  });
 });

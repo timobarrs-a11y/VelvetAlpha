@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { clearPlanJob, loadPlanJob, resumePlanJob, startPlanJob, type JobDeps, type TranscriptLine } from '../arrivalPlanJob';
 
 const transcript: TranscriptLine[] = [{ role: 'user', content: 'Run a marathon by June' }];
-const rec = { helperName: 'Random', helperGender: 'male', kind: 'coach', expertDomain: 'fitness', expertId: 'fitness_hype', isCustomExpert: false, accountabilityLevel: 'moderate', goalText: 'Run a marathon', recommendationText: '' };
+const rec = { helperName: 'Sofia', helperGender: 'female', kind: 'coach', expertDomain: 'fitness', expertId: 'fitness_hype', isCustomExpert: false, accountabilityLevel: 'moderate', goalText: 'Run a marathon', recommendationText: 'I know just the person. Sofia will teach you, one lesson at a time. Sofia is patient.' };
 
 function deps(overrides: Partial<Record<string, () => unknown>> = {}) {
   const call = vi.fn(async (body: Record<string, unknown>) => {
@@ -25,6 +25,8 @@ describe('plan job', () => {
     expect(job.status).toBe('ready');
     expect(call.mock.calls.map(c => c[0].phase)).toEqual(['confirm', 'provisioning', 'plan']);
     expect(job.recommendation?.helperName).toBe('Marcus');
+    // the introduction names the coach they will actually meet, not the name the server first picked
+    expect(job.recommendation?.recommendationText).toBe('I know just the person. Marcus will teach you, one lesson at a time. Marcus is patient.');
     expect(call.mock.calls[1][0].helperName).toBe('Marcus');
     expect(job.plan).toBeTruthy();
     expect(loadPlanJob('u')?.status).toBe('ready');

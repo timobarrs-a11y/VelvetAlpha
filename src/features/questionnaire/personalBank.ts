@@ -242,7 +242,7 @@ export function answersFromSomeday(picks: SomedayPick[]): Record<string, string[
 }
 
 // ─── Act 1: the quick questionnaire ─────────────────────────────────────
-// nickname → color → favorite hero → birthday → zodiac → gender → interests → Someday → real name (optional).
+// nickname → color → birthday → zodiac → gender → interests → Someday → favorite hero → real name (optional).
 // Each answer is saved as it's given. The "wavelength" questions are asked by
 // Atlas in conversation now.
 
@@ -265,10 +265,10 @@ export function validateHero(text: string): string | null {
 export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 10,
   chapters: [
-    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'favoriteColor', 'favoriteHero', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
+    { id: 'identity', label: 'Who you are', questionIds: ['nickname', 'favoriteColor', 'birthday', 'zodiacCusp', 'zodiacConfirm', 'gender'] },
     { id: 'taste', label: 'What you love', questionIds: ['interests'] },
     { id: 'someday', label: 'Someday', questionIds: ['someday'] },
-    { id: 'name', label: 'Your name', questionIds: ['name'] },
+    { id: 'finish', label: 'Last bits', questionIds: ['favoriteHero', 'name'] },
   ],
   questions: [
     {
@@ -276,7 +276,7 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'nickname',
       archetype: 'tap',
       chapter: 'identity',
-      question: "We don't like to call people by their first names here, what do people call you?",
+      question: "Hey, I'm Dez! We don't call ya by your first name around here, what do people call you?",
       confidence: 'confirmed',
       placeholder: 'Your nickname',
       required: true,
@@ -290,7 +290,10 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'favoriteColor',
       archetype: 'grid',
       chapter: 'identity',
-      question: () => "What's your favorite color?",
+      question: (ctx) => {
+        const who = (ctx.answers.nickname as string | undefined)?.trim();
+        return who ? `${who}! Now that's a name I can work with. What's your favorite color?` : "What's your favorite color?";
+      },
       confidence: 'tapped',
       columns: 4,
       options: [
@@ -309,26 +312,12 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       ],
     },
     {
-      // Shown on their profile card and the billboard outside their house: another thing to bond over.
-      id: 'favoriteHero',
-      archetype: 'tap',
-      chapter: 'identity',
-      question: "Who's your favorite superhero?",
-      confidence: 'tapped',
-      placeholder: 'Type a hero, or pick one below',
-      optional: true,
-      skipLabel: 'Skip for now',
-      hint: 'It shows on your profile and your billboard, so neighbors can find their fellow fans.',
-      validate: validateHero,
-      suggestions: [...HERO_BANK],
-    },
-    {
       id: 'birthday',
       archetype: 'tap',
       chapter: 'identity',
       question: (ctx) => {
         const who = (ctx.answers.nickname as string | undefined)?.trim();
-        return who ? `When were you born, ${who}?` : 'When were you born?';
+        return who ? `When's your birthday, ${who}?` : "When's your birthday?";
       },
       confidence: 'confirmed',
       placeholder: 'Select your birthday',
@@ -339,7 +328,7 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'zodiacCusp',
       archetype: 'tap',
       chapter: 'identity',
-      question: "You're born on a cusp. Which sign feels more you?",
+      question: "That birthday you gave at sign-up lands you right on a cusp. Which sign feels more you?",
       confidence: 'confirmed',
       autoAdvance: true,
       skipIf: (ctx) => !getCuspSigns(ctx.answers.birthday as string),
@@ -358,7 +347,7 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       chapter: 'identity',
       question: (ctx) => {
         const sign = deriveZodiac(ctx.answers.birthday as string);
-        return sign ? `${sign} ${ZODIAC_SYMBOLS[sign] ?? ''}, sound right?`.replace(' ,', ',') : 'Your sign?';
+        return sign ? `Going by your sign-up birthday, you're a ${sign} ${ZODIAC_SYMBOLS[sign] ?? ''}. Sound right?`.replace(/ \./, '.') : 'Your sign?';
       },
       confidence: 'confirmed',
       autoAdvance: true,
@@ -377,7 +366,7 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'gender',
       archetype: 'tap',
       chapter: 'identity',
-      question: 'How do you identify?',
+      question: 'Now, how do you identify?',
       confidence: 'confirmed',
       autoAdvance: true,
       options: [
@@ -391,8 +380,11 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'interests',
       archetype: 'tabs',
       chapter: 'taste',
-      question: 'What are you into?',
-      subtitle: 'Tap anything that\'s you. A few picks are enough for your feed to know where to start.',
+      question: (ctx) => {
+        const who = (ctx.answers.nickname as string | undefined)?.trim();
+        return who ? `So what are you into, ${who}?` : 'So what are you into?';
+      },
+      subtitle: "Tap anything that's you. Even try out some things you may not think you like.",
       confidence: 'tapped',
       minSelections: 3,
       tabs: [
@@ -408,7 +400,7 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       id: 'someday',
       archetype: 'tabs',
       chapter: 'someday',
-      question: "Things you've always been curious about",
+      question: "What have you always been curious about?",
       subtitle: 'Not what you do now. What you\'d try if someone handed you the time. Tap anything that makes you think "one day…"',
       confidence: 'tapped',
       minSelections: 0,
@@ -423,20 +415,34 @@ export const PERSONAL_QUESTIONNAIRE: QuestionnaireDefinition = {
       })),
     },
     {
+      // Shown on their profile card and the billboard outside their house: another thing to bond over.
+      id: 'favoriteHero',
+      archetype: 'tap',
+      chapter: 'finish',
+      question: "Every town needs its heroes. Who's your favorite superhero?",
+      confidence: 'tapped',
+      placeholder: 'Type a hero, or pick one below',
+      optional: true,
+      skipLabel: 'Skip for now',
+      hint: 'It shows on your profile and your billboard, so neighbors can find their fellow fans.',
+      validate: validateHero,
+      suggestions: [...HERO_BANK],
+    },
+    {
       // Optional, and the same id as before so saved answers and resuming keep working.
       id: 'name',
       archetype: 'tap',
-      chapter: 'name',
+      chapter: 'finish',
       question: (ctx) => {
         const nick = (ctx.answers.nickname as string | undefined)?.trim();
-        return `${nick ? `Last one, ${nick}. ` : ''}What's your real name? It stays private. Only Atlas uses it, because he likes to address people properly: Master Tim, Miss Ana.`;
+        return `Alright, ${nick || 'friend'}, last question. Atlas needs to know your first name.`;
       },
       confidence: 'confirmed',
-      placeholder: 'Your real name (optional)',
+      placeholder: 'Your first name',
       minLength: 2,
       optional: true,
       skipLabel: 'Skip for now',
-      hint: "Optional. You can skip this and add it later.",
+      hint: "Only Atlas uses it, and it's never shown to anyone. You can skip this and add it later.",
     },
   ],
 };

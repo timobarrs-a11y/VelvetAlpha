@@ -9,6 +9,7 @@ import { supabase } from '../shared/supabase/client';
 import { ARRIVAL_STEPS, getSetupProgress, prepareResume, updateSetupProgress } from '../services/setupProgressService';
 import { AuthSpinner } from '../components/auth/AuthSpinner';
 import { ARRIVAL_ROUTES } from '../features/arrival/arrivalRoutes';
+import { DEZ } from '../features/questionnaire/dez';
 import { WelcomeMoment } from '../features/questionnaire/WelcomeMoment';
 import { rememberWelcomeSeen, shouldShowWelcome } from '../features/questionnaire/welcome';
 
@@ -148,6 +149,7 @@ export function UserProfileQuestionnairePageV2() {
       onAnswer={handleAnswer}
       onComplete={handleComplete}
       onBack={() => navigate(-1)}
+      host={DEZ}
     />
     </>
   );

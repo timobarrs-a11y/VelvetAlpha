@@ -11,7 +11,6 @@ import { gamesRoutes } from './routes/gamesRoutes';
 import { useCustomization } from './hooks/useCustomization';
 import { ButtonHoverCanvas } from './components/ButtonHoverCanvas';
 import { MouseTrail } from './components/MouseTrail';
-import { TouchRippleCanvas } from './components/TouchRippleCanvas';
 import { useAuth } from './auth/AuthProvider';
 import { ButtonHoverPreviewProvider, useButtonHoverPreview } from './context/ButtonHoverPreviewContext';
 import { TutorialDirectorProvider } from './context/TutorialDirectorContext';
@@ -75,18 +74,9 @@ function GlobalEffects() {
   // disable effects by passing safe defaults when inactive.
   const active = !!user && !isGame;
 
-  if (touchOnly) {
-    if (!active) return null;
-    return (
-      <TouchRippleCanvas
-        animationStyle={customization?.animation_style ?? 'stars'}
-        particleColors={activeCursorColor?.particles}
-        pointerSymbol={activePointerDef?.svg}
-        showTrail={customization?.show_trail ?? false}
-        trailColor={activeCursorColor?.primary}
-      />
-    );
-  }
+  // Phones and tablets get no cursor or touch effects: they look worse on a touch screen, and a
+  // full-screen canvas is one more thing between a finger and the page.
+  if (touchOnly) return null;
 
   return (
     <>

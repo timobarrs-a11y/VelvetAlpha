@@ -127,9 +127,32 @@ function AtlasConciergeInner() {
   const [needsRetry, setNeedsRetry] = useState(false);
   const writingLabel = useWritingIndicator(isThinking, 4000);
 
+  // Keep the newest words in view. The chat sits at the bottom whenever it is opened, restored or added
+  // to, and stays there as the line types out and the cards below it appear (which change its height
+  // after the first scroll). Someone who scrolls up to reread is left where they are until the next message.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
+  const toBottom = useCallback((smooth = false) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    else el.scrollTop = el.scrollHeight;
+  }, []);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isThinking, phase]);
+    stickToBottom.current = true;
+    toBottom(messages.length > 1);
+    messagesEndRef.current?.scrollIntoView?.({ block: 'end', behavior: 'auto' });
+  }, [messages.length, isThinking, phase, toBottom]);
+
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => { if (stickToBottom.current) toBottom(); });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [toBottom]);
 
   const addAtlas = useCallback((content: string, extra: Partial<ChatMessage> = {}) => {
     const id = ++msgIdCounter;
@@ -361,7 +384,16 @@ function AtlasConciergeInner() {
             className="rounded-[1.75rem] overflow-hidden flex flex-col"
             style={{ border: '1px solid var(--shell-border)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)' }}
           >
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3" style={{ maxHeight: 'calc(100dvh - 260px)' }}>
+            <div
+              ref={scrollRef}
+              onScroll={e => {
+                const el = e.currentTarget;
+                stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+              }}
+              className="flex-1 overflow-y-auto p-4 sm:p-6"
+              style={{ maxHeight: 'calc(100dvh - 260px)' }}
+            >
+              <div ref={contentRef} className="space-y-3">
               <AnimatePresence>
                 {messages.map(msg => {
                   const isUser = msg.role === 'user';
@@ -492,6 +524,7 @@ function AtlasConciergeInner() {
               )}
 
               <div ref={messagesEndRef} />
+              </div>
             </div>
 
             {phase === 'goal' && (

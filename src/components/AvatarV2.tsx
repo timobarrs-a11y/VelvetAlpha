@@ -1,4 +1,4 @@
-import { memo, useId, useMemo } from 'react';
+import { memo, useId, useMemo, type ReactNode } from 'react';
 import { AvatarConfigV2, DEFAULT_GLASSES_COLOR } from '../types/avatar-v2';
 import { renderHair, renderHairBehind } from '../renderers/hairRenderer';
 import {
@@ -28,6 +28,8 @@ interface AvatarV2Props {
   // 'back' draws the back of the head (head part only), for walking away.
   view?: 'front' | 'back';
   eyesClosed?: boolean;
+  // The eyes blink now and then (not when they are already closed, or if reduced motion is asked for).
+  blink?: boolean;
 }
 
 // Styles short enough that the neck shows below them from behind.
@@ -36,7 +38,7 @@ const SHORT_BACK = new Set(['buzz', 'fade', 'short', 'short_wavy', 'slick_back',
 // Close to the scalp from behind: no falling strands, and some skin shows through.
 const CLOSE_CROP = new Set(['buzz', 'fade', 'top_knot', 'undercut', 'mohawk', 'cornrows', 'bantu_knots']);
 
-function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = 'bust', view = 'front', eyesClosed = false }: AvatarV2Props) {
+function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = 'bust', view = 'front', eyesClosed = false, blink = false }: AvatarV2Props) {
   // Whatever comes in (a database row, an old draft, a v1 config) is brought
   // up to date first, so every caller draws the same avatar.
   const config = migrateAvatarConfig(raw);
@@ -54,6 +56,11 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
   // Ids for <defs> that differ per avatar must be unique per instance, or
   // several avatars on one page all borrow the first one's clip and colours.
   const uid = useId().replace(/:/g, '');
+  // The eyes (with their liner and lashes) can blink: squashed flat and back, each avatar on its own beat.
+  const blinkDelay = useMemo(() => -(Math.random() * 4).toFixed(2), []);
+  const eyeGroup = (eyes: ReactNode) => (blink && !eyesClosed
+    ? <g className="avatar-blink" style={{ animationDelay: `${blinkDelay}s` }}>{eyes}</g>
+    : eyes);
   const faceClipId = `${uid}-face`;
   const outfitGradientId = `${uid}-outfit`;
   const hairClipId = `${uid}-hair`;
@@ -487,9 +494,13 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
               {renderFaceShading()}
               {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity, tune)}
               {renderBlush()}
-              {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed, tune })}
-              {!eyesClosed && renderEyeliner(eyeliner, eyeShape, tune)}
-              {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape, tune)}
+              {eyeGroup(
+                <>
+                  {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed, tune })}
+                  {!eyesClosed && renderEyeliner(eyeliner, eyeShape, tune)}
+                  {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape, tune)}
+                </>,
+              )}
               {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender, tune)}
               {renderNose(noseShape, skinTone, tune)}
               {renderNosePiercing()}
@@ -556,9 +567,13 @@ function AvatarV2Inner({ config: raw, className = '', mood = 'neutral', part = '
 
       {renderEyeShadow(eyeShadow, eyeShape, makeupIntensity, tune)}
       {renderBlush()}
-      {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed, tune })}
-      {!eyesClosed && renderEyeliner(eyeliner, eyeShape, tune)}
-      {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape, tune)}
+      {eyeGroup(
+        <>
+          {renderEyes({ eyeShape, eyeColor, skinTone, idPrefix: uid, closed: eyesClosed, tune })}
+          {!eyesClosed && renderEyeliner(eyeliner, eyeShape, tune)}
+          {!eyesClosed && eyelashes === 'dramatic' && renderEyelashes(eyeShape, tune)}
+        </>,
+      )}
       {renderEyebrows(eyebrowShape, eyeShape, hairColor, gender, tune)}
       {renderNose(noseShape, skinTone, tune)}
       {renderNosePiercing()}
@@ -583,5 +598,6 @@ export const AvatarV2 = memo(AvatarV2Inner, (prev, next) =>
   prev.part === next.part &&
   prev.view === next.view &&
   prev.eyesClosed === next.eyesClosed &&
+  prev.blink === next.blink &&
   JSON.stringify(prev.config) === JSON.stringify(next.config)
 );
