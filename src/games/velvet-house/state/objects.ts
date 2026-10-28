@@ -21,7 +21,7 @@ export type BlockRect = [number, number, number, number];
 
 /** What a look is mostly made of, and the theme set it belongs to. */
 export type Material = 'wood' | 'metal' | 'laminate' | 'stone' | 'fabric' | 'glass';
-export type Theme = 'retro' | 'farmhouse' | 'modern' | 'scandi' | 'industrial' | 'beach';
+export type Theme = 'retro' | 'farmhouse' | 'modern' | 'scandi' | 'industrial';
 
 /**
  * One look of a piece. A look only changes how the piece is drawn, named, priced and coloured; the footprint, height
@@ -58,7 +58,7 @@ export interface ObjectTypeDef {
 }
 
 export const TYPES: Record<string, ObjectTypeDef> = {
-  sofa: { W: 2.4, D: 1.0, h: 0.95, name: 'Couch', skins: { scandi: { name: 'Linen sofa on ash legs', material: 'fabric', theme: 'scandi', cols: ['#D9CDB9', '#B9C2B6', '#C7B8C9'] }, industrial: { name: 'Tufted leather sofa', material: 'fabric', theme: 'industrial', cols: ['#6B3A2A', '#2B2B30', '#4A5A4A'] }, beach: { name: 'Slipcover sofa with navy stripes', material: 'fabric', theme: 'beach', cols: ['#F7F5EF', '#E8DCC2', '#DDE8EA'] }, retro: { name: 'Davenport', material: 'laminate', theme: 'retro', cols: ['#E5A33B', '#5FB3A6', '#E58F8F'] }, farmhouse: { name: 'Slipcover sofa', material: 'fabric', theme: 'farmhouse', cols: ['#E8DCC8', '#D8C9AE', '#B7BFB2'] }, modern: { name: 'Low-profile sofa', material: 'fabric', theme: 'modern', cols: ['#5E646B', '#2B2B30', '#C9CED6'] } },
+  sofa: { W: 2.4, D: 1.0, h: 0.95, name: 'Couch',
     spots: { s1: { stand: [0.85, 1.6], pos: [0.85, 0.6, 0.48], dir: [0, 1], tag: 'seat', base: 'base' }, s2: { stand: [1.6, 1.6], pos: [1.6, 0.6, 0.48], dir: [0, 1], tag: 'seat', base: 'base' } } },
   bed: { W: 2.5, D: 1.6, h: 1.0, name: 'Bed',
     spots: { a: { stand: [1.3, 2.05], pos: [0.52, 0.42, 0.56], lie: [1, 0], tag: 'bedA', base: 'mattress' }, b: { stand: [1.9, 2.05], pos: [0.52, 1.18, 0.56], lie: [1, 0], tag: 'bedB', base: 'mattress' },
@@ -68,10 +68,10 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { a: { stand: [2.9, 0.45], pos: [0.52, 0.45, 0.56], lie: [1, 0], tag: 'bedA', base: 'mattress' }, make: { stand: [2.9, 0.45], dir: [-1, 0], tag: 'makebed' } } },
   bedB: { W: 2.5, D: 0.9, h: 1.0, name: 'Bed',
     spots: { b: { stand: [2.9, 0.45], pos: [0.52, 0.45, 0.56], lie: [1, 0], tag: 'bedB', base: 'mattress' }, make: { stand: [2.9, 0.45], dir: [-1, 0], tag: 'makebed' } } },
-  dining: { W: 1.3, D: 2.5, h: 1.1, name: 'Dining set', skins: { scandi: { name: 'Wishbone dining set', material: 'wood', theme: 'scandi', cols: ['#D8C7A8', '#C9B693', '#EDE4D3'] }, industrial: { name: 'Pipe and plank table set', material: 'wood', theme: 'industrial', cols: ['#8A5E3B', '#6B4A35', '#A87E48'] }, beach: { name: 'Driftwood dining set', material: 'wood', theme: 'beach', cols: ['#C9B9A2', '#DAD0C0', '#B9ADA0'] }, retro: { name: 'Boomerang table set', material: 'laminate', theme: 'retro', cols: ['#E58F8F', '#6FBFB0', '#F2C75C'] }, farmhouse: { name: 'Farm table set', material: 'wood', theme: 'farmhouse', cols: ['#B98A6A', '#8A5E3B', '#E4DDD2'] }, modern: { name: 'Glass-top dining set', material: 'glass', theme: 'modern', cols: ['#2B2B30', '#E8EAEC', '#5E646B'] } }, light: { at: [0.65, 1.24, 1.8], r: 130 },
+  dining: { W: 1.3, D: 2.5, h: 1.1, name: 'Dining set', light: { at: [0.65, 1.24, 1.8], r: 130 },
     spots: { c1: { stand: [0.65, -0.45], pos: [0.65, 0.3, 0.49], dir: [0, 1], tag: 'dine1', base: 'seat1' }, c2: { stand: [0.65, 2.95], pos: [0.65, 2.18, 0.49], dir: [0, -1], tag: 'dine2', base: 'seat2' }, clear: { stand: [1.75, 1.24], dir: [-1, 0], tag: 'clear' } } },
-  lamp: { W: 0.4, D: 0.4, h: 1.75, name: 'Floor lamp', skins: { scandi: { name: 'Paper lantern lamp', material: 'wood', theme: 'scandi', cols: ['#F7F3EA', '#E9DDC7', '#D8E0DA'] }, industrial: { name: 'Cage bulb lamp', material: 'metal', theme: 'industrial', cols: ['#2B2B30', '#7B4A3A', '#8E939A'] }, beach: { name: 'Rope-wound lamp', material: 'wood', theme: 'beach', cols: ['#F2E6DA', '#DDE8EA', '#E8DCC2'] }, retro: { name: 'Atomic lamp', material: 'metal', theme: 'retro', cols: ['#F08A6B', '#6FBFB0', '#F2C75C'] }, farmhouse: { name: 'Tripod lamp', material: 'wood', theme: 'farmhouse', cols: ['#B98A6A', '#8A5E3B', '#E4DDD2'] }, modern: { name: 'Slim torchiere', material: 'metal', theme: 'modern', cols: ['#2B2B30', '#C9CED6', '#E8EAEC'] } }, store: true, light: { at: [0.2, 0.2, 1.5], r: 140 } },
-  plant: { W: 0.5, D: 0.5, h: 1.1, name: 'Plant', skins: { scandi: { name: 'Ceramic pot on an ash stand', material: 'wood', theme: 'scandi', cols: ['#F6F4EE', '#9DB3A5', '#D5C3B2', '#3A3A40'] }, industrial: { name: 'Galvanized bucket planter', material: 'metal', theme: 'industrial', cols: ['#B9BEC3', '#2B2B30', '#7B4A3A', '#4A5A4A'] }, beach: { name: 'Seagrass basket planter', material: 'fabric', theme: 'beach', cols: ['#D2B48C', '#C9B9A2', '#E8DCC2', '#B9ADA0'] }, retro: { name: 'Atomic planter', material: 'laminate', theme: 'retro', cols: ['#F08A6B', '#6FBFB0', '#F2C75C', '#E58F8F'] }, farmhouse: { name: 'Crate and pail planter', material: 'metal', theme: 'farmhouse', cols: ['#C9CED6', '#F1E8D2', '#9DB3C6', '#3A3340'] }, modern: { name: 'Slab planter', material: 'stone', theme: 'modern', cols: ['#2B2B30', '#E8EAEC', '#9AA0A6', '#C9B79C'] } },
+  lamp: { W: 0.4, D: 0.4, h: 1.75, name: 'Floor lamp', store: true, light: { at: [0.2, 0.2, 1.5], r: 140 } },
+  plant: { W: 0.5, D: 0.5, h: 1.1, name: 'Plant',
     spots: { w: { stand: [0.25, 1.05], dir: [0, -1], tag: 'water' } } },
   bookshelf: { W: 1.4, D: 0.38, h: 1.6, name: 'Bookshelf' , surface: { z: 1.6, rect: [0.06, 0.04, 1.34, 0.34] } },
   records: { W: 0.85, D: 0.45, h: 0.7, name: 'Record player',
@@ -87,9 +87,9 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   dresser: { W: 1.2, D: 0.5, h: 0.85, name: 'Dresser',
     spots: { f: { stand: [0.6, 0.95], dir: [0, -1], tag: 'dresser' } } },
   nightstand: { W: 0.45, D: 0.45, h: 0.75, name: 'Nightstand', light: { at: [0.22, 0.22, 0.8], r: 100 } },
-  counter: { W: 2.8, D: 0.8, h: 1.1, fixed: true, name: 'Kitchen counter', skins: { scandi: { name: 'Ash slab counter', material: 'wood', theme: 'scandi', cols: ['#D8C7A8', '#E3D6BD', '#C9B693'] }, industrial: { name: 'Concrete and steel counter', material: 'stone', theme: 'industrial', cols: ['#2B2B30', '#4A4D52', '#7B4A3A'] }, beach: { name: 'Whitewashed shiplap counter', material: 'wood', theme: 'beach', cols: ['#F7F5EF', '#DDE8EA', '#E8DCC2'] }, retro: { name: 'Diner counter', material: 'laminate', theme: 'retro', cols: ['#9ED8C6', '#F3B6C4', '#F6E3A1'] }, farmhouse: { name: 'Butcher-block counter', material: 'wood', theme: 'farmhouse', cols: ['#F1E8D2', '#B9CBB5', '#9DB3C6'] }, modern: { name: 'Slab counter', material: 'stone', theme: 'modern', cols: ['#2B2B30', '#E8EAEC', '#5E646B'] } },
+  counter: { W: 2.8, D: 0.8, h: 1.1, fixed: true, name: 'Kitchen counter',
     spots: { sink: { stand: [0.65, 1.23], dir: [0, -1], tag: 'sink', group: 'counterL' }, window: { stand: [0.95, 1.23], dir: [0, -1], tag: 'window', group: 'counterL' }, stove: { stand: [1.65, 1.23], dir: [0, -1], tag: 'stove' }, coffee: { stand: [2.45, 1.23], dir: [0, -1], tag: 'coffee' } } },
-  fridge: { W: 0.9, D: 0.85, h: 1.95, fixed: true, name: 'Fridge', skins: { scandi: { name: 'Ash-handled fridge', material: 'metal', theme: 'scandi', cols: ['#F4F2EC', '#DDE3DF', '#F1E6D8'] }, industrial: { name: 'Riveted steel fridge', material: 'metal', theme: 'industrial', cols: ['#5A5E66', '#2B2B30', '#7B4A3A'] }, beach: { name: 'Sea-glass fridge', material: 'metal', theme: 'beach', cols: ['#7FB8C9', '#F7F5EF', '#E8907A'] }, retro: { name: 'Pastel icebox', material: 'metal', theme: 'retro', cols: ['#9ED8C6', '#F3B6C4', '#F6E3A1'] }, farmhouse: { name: 'Cream enamel icebox', material: 'metal', theme: 'farmhouse', cols: ['#F1E8D2', '#B9CBB5', '#F2DFA0'] }, modern: { name: 'Brushed steel fridge', material: 'metal', theme: 'modern', cols: ['#B9BEC3', '#2B2B30', '#E8EAEC'] } },
+  fridge: { W: 0.9, D: 0.85, h: 1.95, fixed: true, name: 'Fridge',
     spots: { f: { stand: [0.45, 1.45], dir: [0, -1], tag: 'fridge' } } },
   tvunit: { W: 1.6, D: 0.45, h: 0.75, fixed: true, name: 'TV unit' },
   shower: { W: 1.18, D: 1.18, h: 2.1, fixed: true, name: 'Shower',
@@ -153,9 +153,6 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   cabinet: { wall: true, W: 1.0, D: 0.45, h: 1.05, name: 'Cabinet', store: true, cols: ['#B98A6A', '#3F5B4C', '#2E3B57', '#F2EEE8', '#8E5468'] },
   wardrobe: { wall: true, W: 1.2, D: 0.6, h: 2.05, name: 'Wardrobe', store: true, cols: ['#E4DDD2', '#9C6B45', '#3A2E2A', '#8E9C96'] },
   cubeshelf: { wall: true, W: 1.0, D: 0.35, h: 1.0, name: 'Cube shelf', store: true, cols: ['#F2EEE8', '#2B2B30', '#B98A6A'] },
-  // The rugs the house comes with (they used to be painted on the floor): pieces like any other, so they can be moved, stored or carried upstairs.
-  rugwide: { W: 3.3, D: 1.9, h: 0.02, name: 'Living room rug', rug: true, blocks: [], cols: ['#B5476E', '#3D6B73', '#C9A24A', '#E8DCC8', '#2E3B57', '#7FB069'] },
-  rugsquare: { W: 2.0, D: 2.1, h: 0.02, name: 'Bedroom rug', rug: true, blocks: [], cols: ['#C8B6C9', '#B5476E', '#3D6B73', '#E8DCC8'] },
   rugrect: { W: 2.4, D: 1.6, h: 0.02, name: 'Area rug', store: true, rug: true, blocks: [], cols: ['#B5476E', '#3D6B73', '#C9A24A', '#E8DCC8', '#2E3B57', '#7FB069'] },
   rugrunner: { W: 2.8, D: 0.8, h: 0.02, name: 'Runner rug', store: true, rug: true, blocks: [], cols: ['#A63A2C', '#4A5DA8', '#D8C9AE', '#3F5B4C'] },
   ruground: { W: 1.8, D: 1.8, h: 0.02, name: 'Round rug', store: true, rug: true, blocks: [], cols: ['#E8DCC8', '#D24A7A', '#8E9C96', '#2B2B30', '#E0A43A'] },
@@ -268,9 +265,6 @@ export interface ObjectInstance {
   z?: number;
 }
 
-/** The house's own rugs. A house saved before they were pieces gets them once (see `kernel/config.ts`). */
-export const STARTER_RUG_IDS = ['rug1', 'rug2'];
-
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
   { id: 'tread', type: 'tread', level: 0, x: 1.2, y: 1.2, rot: 0 },
@@ -295,8 +289,6 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'plant1', type: 'plant', level: 1, x: 4.95, y: 0.15, rot: 0 },
   { id: 'lamp1', type: 'lamp', level: 1, x: 5.1, y: 3.4, rot: 0 },
   { id: 'open12', type: 'holeX', level: 2, x: 1.2, y: 7.0, rot: 0 },
-  { id: 'rug1', type: 'rugwide', level: 1, x: 5.3, y: 1.0, rot: 0 },
-  { id: 'rug2', type: 'rugsquare', level: 2, x: 2.6, y: 0.9, rot: 0 },
   { id: 'bed', type: 'bed', level: 2, x: 0.12, y: 1.0, rot: 0 },
   { id: 'night', type: 'nightstand', level: 2, x: 0.15, y: 0.35, rot: 0 },
   { id: 'dresser', type: 'dresser', level: 2, x: 3.0, y: 0.12, rot: 0 },

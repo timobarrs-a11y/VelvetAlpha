@@ -24,37 +24,12 @@ export function createVitals(g: Game): Partial<Game> {
   const values = Object.fromEntries(ROWS.map((r) => [r.key, el.querySelector<HTMLElement>(`[data-vital="${r.key}"] .vh-vital-value`)!])) as Record<keyof Vitals, HTMLElement>;
   const rows = Object.fromEntries(ROWS.map((r) => [r.key, el.querySelector<HTMLElement>(`[data-vital="${r.key}"]`)!])) as Record<keyof Vitals, HTMLElement>;
   let last = '';
-  // One row per pet, under the house's own: who, their lowest need as the bar, what they are up to.
-  const petRows = new Map<string, HTMLElement>();
-  function refreshPets(views: ReturnType<Game['petViews']>): void {
-    for (const [id, row] of petRows) if (!views.some(p => p.id === id)) { row.remove(); petRows.delete(id); }
-    for (const p of views) {
-      let row = petRows.get(p.id);
-      if (!row) {
-        row = document.createElement('div');
-        row.className = 'vh-vital vh-vital-pet';
-        row.dataset.vital = 'pet';
-        row.innerHTML = `<span class="vh-vital-label"></span><span class="vh-vital-bar"><i></i></span><span class="vh-vital-value"></span>`;
-        el.appendChild(row);
-        petRows.set(p.id, row);
-      }
-      const low = Math.round(Math.min(...Object.values(p.needs)));
-      row.querySelector<HTMLElement>('.vh-vital-label')!.textContent = p.name;
-      const bar = row.querySelector<HTMLElement>('i')!;
-      bar.style.width = `${low}%`;
-      bar.dataset.tone = low < 25 ? 'low' : low < 55 ? 'mid' : 'ok';
-      row.querySelector<HTMLElement>('.vh-vital-value')!.textContent = p.status;
-    }
-  }
 
   function refreshVitals(): void {
     const v = vitals(world.household, world.life, flags, world.day, g.s.bond);
-    // The pets module is wired after this one, so the first refresh may run without it.
-    const pv = g.petViews ? g.petViews() : [];
-    const sig = JSON.stringify(v) + g.concernMood() + JSON.stringify(pv);
+    const sig = JSON.stringify(v) + g.concernMood();
     if (sig === last) return;
     last = sig;
-    refreshPets(pv);
     for (const key of ['food', 'fitness', 'tidy', 'bond'] as const) {
       const n = Math.round(v[key]);
       bars[key].style.width = `${n}%`;
