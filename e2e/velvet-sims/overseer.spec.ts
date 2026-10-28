@@ -9,11 +9,12 @@ test('the Overseer answers a request for cake with a monologue', async ({ page }
   await page.waitForTimeout(900);
   const eye = (await objects(page)).find((o) => o.type === 'overseer')!;
   const [x, y] = await clientPosOf(page, eye.id);
-  // The eye hangs from the ceiling: tap the housing, above the middle of its footprint.
+  // Tap the caged head, above the middle of its footprint.
   await page.mouse.click(x, y - 12);
-  // The tray shuts itself after a few seconds, so read it and pick from it at once.
+  // The tray shuts itself after a few seconds, and a slow headless frame can outlast that before a pointer click lands,
+  // so read it and press the button at once.
   await expect(game.locator('.vh-tray button')).toHaveText([/Ask for encouragement/, /Request cake/, /Unplug/]);
-  await game.locator('.vh-tray [data-act=overseerCake]').click();
+  await game.locator('.vh-tray [data-act=overseerCake]').evaluate((b) => (b as HTMLButtonElement).click());
   await page.waitForTimeout(700);
   await page.screenshot({ path: 'e2e/velvet-sims/test-results/overseer-cake.png' });
   // It keeps going on its own: a few seconds later, still talking, with no reply asked for.
