@@ -80,8 +80,14 @@ export class ScriptEngine {
   upcomingWait(): Cond | null {
     if (this.blocking?.k === 'until') return this.blocking.cond;
     const f = this.frames[this.frames.length - 1];
-    const next = f && (this.sub(f.steps[f.i]) as Step | undefined);
-    return next?.do === 'wait' && next.until ? next.until : null;
+    if (!f) return null;
+    // Past what only changes the screen (a spotlight, an outline, the camera), to the wait the card is about.
+    for (let i = f.i; i < f.steps.length; i++) {
+      const next = this.sub(f.steps[i]) as Step;
+      if (next.do === 'highlight' || next.do === 'outline' || next.do === 'camera') continue;
+      return next.do === 'wait' && next.until ? next.until : null;
+    }
+    return null;
   }
 
   /** What kind of thing the script is waiting for right now, or null. */

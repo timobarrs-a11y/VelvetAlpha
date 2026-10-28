@@ -154,6 +154,9 @@ export function createScripts(g: Game): Partial<Game> {
       ui.card(title, body, button);
       // What the card asks for: the wait that follows it. Once that is done, the card and its objective bar go.
       cardWait = engine.upcomingWait();
+      // A new objective that is not about moving a piece (tap the lamp, open a box) closes Arrange once, so the tap
+      // reaches the house instead of picking the piece up. Carrying to another floor or into an outline keeps it open.
+      if (cardWait && !asksToMove(cardWait) && g.isArranging()) g.drawer.close();
       misplacedLine = misplaced ?? null;
       spot = spotlight && !spotlight.startsWith('obj') ? [spotlight] : [];
       ui.spotlight([...spot, ...(g.s.scriptAllow ?? []).filter((a) => !a.startsWith('obj'))]);
@@ -259,6 +262,8 @@ export function createScripts(g: Game): Partial<Game> {
   if (problems.length && import.meta.env.DEV) console.warn('Story content problems:\n' + problems.join('\n'));
 
   const engine = new ScriptEngine(host, SCRIPTS, LINE_BOOK, rt);
+  /** Whether a condition asks for a piece to be somewhere: a mark, or another floor. */
+  const asksToMove = (c: Cond): boolean => ('world' in c ? !!c.world.at || c.world.level !== undefined : 'all' in c ? c.all.some(asksToMove) : 'any' in c ? c.any.some(asksToMove) : 'not' in c ? asksToMove(c.not) : false);
   const sameCond = (a: Cond | null, b: Cond | null): boolean => !!a && !!b && JSON.stringify(a) === JSON.stringify(b);
   /** Whether the objective the card asked for is still open. */
   const objectiveOpen = (): boolean => !!cardWait && sameCond(engine.waitingOn(), cardWait);
