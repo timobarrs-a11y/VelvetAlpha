@@ -57,6 +57,33 @@ test('the first day plays through from the move-in to free will', async ({ page 
         if ((await inGame<number>(page, 'v.level()')) !== 1) { await inGame(page, 'v.setView(1)'); await page.waitForTimeout(1500); }
         else { await page.waitForTimeout(1500); const p = await inGame<[number, number]>(page, "v.clientPosOf('box.lamp')"); await page.mouse.click(p[0], p[1]); }
       }
+    } else if (!flags['tutorial.truck']) {
+      // The rest of the truck: the plant anywhere, the bed upstairs, then the fridge, the table and the treadmill.
+      const boxes: Record<string, [string, string, string, number, number | null]> = {
+        'You know the drill': ['box.plant', 'plant', 'living.center', 0, null],
+        'The bed': ['box.bed', 'bed', 'upstairs.bed', 0, 2],
+        'The fridge': ['box.fridge', 'fridge', 'kitchen.fridge', 0, null],
+        'The table': ['box.table', 'dining', 'kitchen.table', 1, null],
+        'For downstairs': ['box.gear', 'tread', 'basement.gear', 0, 0],
+      };
+      const tapBox = async (id: string) => { await page.waitForTimeout(1200); const p = await inGame<[number, number] | null>(page, `v.clientPosOf(${JSON.stringify(id)})`); if (p) await page.mouse.click(p[0], p[1]); };
+      const entry = boxes[title];
+      if (entry && once('open:' + title)) {
+        const [id, type, mark, rot, floor] = entry;
+        if ((await inGame<number>(page, 'v.level()')) !== 1) { await inGame(page, 'v.setView(1)'); await page.waitForTimeout(1200); }
+        await tapBox(id);
+        await expect.poll(async () => (await objects(page)).some((o) => o.id === id && o.type === type), { timeout: 15_000 }).toBe(true);
+        if (floor !== null) {
+          // Carry to another floor from the Arrange bar, then the view follows.
+          await page.waitForTimeout(1500);
+          await game.locator(`[data-arr-floor="${floor}"]`).click();
+          await expect.poll(async () => (await objects(page)).find((o) => o.id === id)?.level, { timeout: 15_000 }).toBe(floor);
+          await page.waitForTimeout(1500);
+        }
+        await page.waitForTimeout(1500);
+        await dragToMark(page, id, mark, type, rot).catch((e) => console.log(String(e)));
+        if (rot) await rotateTo(page, id, rot);
+      }
     } else if (title === 'The shop' && once('shop')) await inGame(page, "v.openTab('shop')");
     else if (title === 'Order groceries' && once('groceries')) { await inGame(page, "v.openTab('home')"); await game.locator('[data-groceries]').click(); await inGame(page, 'v.closeDrawer()'); }
     else if (flags['tutorial.shop'] && !flags['tutorial.groceries'] && !(await inGame<string>(page, 'v.parcel()')).includes('"ready":false')) await inGame(page, 'v.advance(5)');

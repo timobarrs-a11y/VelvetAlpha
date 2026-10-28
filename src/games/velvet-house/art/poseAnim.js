@@ -476,6 +476,57 @@ export const ANIMATED_POSES = [
 
 export { TAU };
 
+// ---- The walk and the seat: the parts of the rig every character shares ----
+
+/** Leg bones in world units: hip to knee, knee to ankle, and how far the hips sit above a seat. */
+export const LEG = { thigh: 0.31, shin: 0.31, hipRise: 0.03, sink: 0.08, stretch: 1.25 };
+/** Arm reach from the shoulder, and the foot's length, in world units. */
+export const ARM = { length: 0.42 };
+export const FOOT = { length: 0.22, heel: 0.3 };
+
+/**
+ * Walking arms, in the character's own frame (f forward, s outward, z from the shoulder).
+ * Each arm swings opposite the leg on its side (the leg uses sin(phase) for side +1 and
+ * sin(phase + PI) for side -1), pivoting at the shoulder so the hand stays an arm's length
+ * away, with the elbow bent a little forward. amp 0..1 fades the swing out as a walk ends,
+ * leaving the arms hanging straight down.
+ */
+export function walkRig(phase, amp = 1) {
+  const L = ARM.length;
+  const arm = (side) => {
+    const sw = -Math.sin(phase + (side > 0 ? 0 : Math.PI)) * amp;
+    const ang = sw * 0.55; // up to ~32 degrees forward and back
+    const hand = [Math.sin(ang) * L, 0.13, -Math.cos(ang) * L + 0.02];
+    // The elbow sits halfway up, pushed forward as the arm swings back (the forearm folds), and a touch outward.
+    const elbow = [Math.sin(ang) * L * 0.5 + 0.03 + Math.max(0, -sw) * 0.05, 0.15, -Math.cos(ang) * L * 0.5];
+    return { hand, elbow };
+  };
+  const r = arm(1), l = arm(-1);
+  return { hands: { 1: r.hand, [-1]: l.hand }, elbows: { 1: r.elbow, [-1]: l.elbow } };
+}
+
+/**
+ * Sitting legs for a seat `seat` high, as [forward, z] from the hip's footprint on the seat.
+ * The hip sinks a little into the cushion; the thigh runs forward to the knee; the shin
+ * drops to the floor when it can (stretching a shade on tall seats, as cartoon legs do) and
+ * otherwise the feet hang. On a low seat the knees rise so the feet still stand flat.
+ */
+export function seatLegs(seat) {
+  const { thigh, shin, hipRise, sink, stretch } = LEG;
+  const hipZ = hipRise - sink;
+  // Knee height above the seat: level with the hip on a chair, rising on a low seat so a shin's length reaches the floor.
+  const kneeZ = Math.max(hipZ - 0.06, Math.min(thigh * 0.85, shin - seat));
+  const kneeF = Math.sqrt(Math.max(0.02, thigh * thigh - (kneeZ - hipZ) ** 2));
+  const drop = seat + kneeZ; // the knee's height above the floor
+  const reach = shin * stretch;
+  if (drop > reach) {
+    // Too tall a seat: the feet dangle, toes forward.
+    return { hip: [0, hipZ], knee: [kneeF, kneeZ], foot: [kneeF + 0.05, kneeZ - Math.sqrt(reach * reach - 0.0025)], dangle: true };
+  }
+  const len = Math.max(shin, drop);
+  return { hip: [0, hipZ], knee: [kneeF, kneeZ], foot: [kneeF + Math.sqrt(Math.max(0, len * len - drop * drop)), -seat], dangle: false };
+}
+
 /**
  * Idle life: while standing around, a character fidgets every few seconds
  * instead of freezing. Picks a fidget per window of time; mood tilts the

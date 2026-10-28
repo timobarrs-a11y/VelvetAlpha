@@ -67,7 +67,8 @@ describe('arrange mode', () => {
     expect(otherFloors(get('lamp0'))).toEqual([1, 2, 3, 4]);
     expect(otherFloors(get('bed'))).toEqual([0, 1, 3, 4]);
     expect(otherFloors(get('tread'))).toEqual([1, 2, 3, 4]);
-    expect(otherFloors(get('laundry'))).toEqual([1, 2, 3, 4]);
+    expect(otherFloors(get('fridge'))).toEqual([0, 2, 3, 4]);
+    expect(otherFloors(get('laundry'))).toEqual([1, 2, 3, 4]); // nothing is fixed
     expect(otherFloors(get('bench'))).toEqual([0, 1, 2, 4]);
     expect(otherFloors(get('stair01'))).toEqual([]);
   });

@@ -5,6 +5,7 @@ import { createCamera } from './engine/camera';
 import { createGameDrawer } from './ui/gameDrawer';
 import { createControls } from './ui/controls';
 import { createHud } from './ui/hud';
+import { createVitals } from './ui/vitals';
 import { createArrange } from './systems/arrange';
 import { createInteract } from './systems/interact';
 import { createInput } from './systems/input';
@@ -17,6 +18,7 @@ import { createOutfit } from './systems/outfit';
 import { createStudio } from './ui/studio';
 import { createLifeSim } from './systems/lifeSim';
 import { createDeliveries } from './systems/deliveries';
+import { createConcerns } from './systems/concerns';
 import { createScripts } from './script/gameHost';
 import { createFrame } from './view/frame';
 import { installDevHooks } from './dev/hooks';
@@ -47,6 +49,9 @@ function boot(attract: boolean): void {
   Object.assign(g, createChat(g));
   Object.assign(g, createPersist(g));
   Object.assign(g, createHud(g));
+  // Before the vitals: the HUD asks for the partner's mood the moment it is drawn.
+  Object.assign(g, createConcerns(g));
+  Object.assign(g, createVitals(g));
   Object.assign(g, createGoals(g));
   Object.assign(g, createAvatar(g));
   Object.assign(g, createFrame(g));

@@ -123,7 +123,6 @@ export const TUTORIAL: ScriptDef[] = [
     { do: 'walk', who: 'dez', to: 'mark:entry.drop' },
     { do: 'give', object: { type: 'pbox', at: 'mark:entry.drop', id: 'box.lamp', contents: 'lamp' } },
     { do: 'carry', who: 'dez', carrying: null },
-    { do: 'give', object: { type: 'pbox', at: 'mark:entry.stack1', id: 'box.plant', contents: 'plant' } },
     say('dez', 'dez.ch7.noLabel'),
     ...exitLine,
     { do: 'camera', focus: 'wide' },
@@ -169,8 +168,94 @@ export const TUTORIAL: ScriptDef[] = [
     { do: 'mode', mode: 'beat' },
     { do: 'set', flag: 'tutorial.lamp', value: true },
   ], { mode: 'cutscene', needs: { hold: ['jordan', 'maya'] } }),
+  // 7b. The rest of the truck, one box per visit: the plant (no help), the bed (carried upstairs), then three at once
+  // (the kitchen, and something for the basement). See docs/velvet-house/scenes/tutorial.restOfTruck.md.
+  chapter('tutorial.ch7b', { on: 'cond', cond: { flag: 'tutorial.lamp' } }, [
+    // P1. The plant: open it and put it anywhere on this floor.
+    { do: 'wait', seconds: 2 },
+    { do: 'camera', focus: 'mark:entry.inside', zoom: 1.6, level: 1 },
+    ...knockIn('pbox'),
+    { do: 'walk', who: 'dez', to: 'mark:entry.drop' },
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.drop', id: 'box.plant', contents: 'plant' } },
+    { do: 'carry', who: 'dez', carrying: null },
+    say('dez', 'dez.ch7.plant'),
+    ...exitLine,
+    { do: 'camera', focus: 'wide' },
+    { do: 'mode', mode: 'guided', allow: ['obj:box.plant'] },
+    { do: 'card', title: 'You know the drill', body: 'Open the box and put the plant wherever you like on this floor, then tap **Set it down**.', spotlight: 'obj:box.plant' },
+    { do: 'wait', until: { any: [{ event: 'obj.placed', match: { objId: 'box.plant' } }, { all: [{ world: { obj: 'box.plant', is: 'plant', level: 1 } }, { flag: 'did.placed.plant' }] }] } },
+    { do: 'highlight', target: null },
+    // B1. The bed, in a box too big for the entry: it goes upstairs with Carry to.
+    { do: 'mode', mode: 'cutscene' },
+    { do: 'wait', seconds: 2 },
+    { do: 'camera', focus: 'mark:entry.inside', zoom: 1.6, level: 1 },
+    ...knockIn('pbox'),
+    { do: 'walk', who: 'dez', to: 'mark:entry.drop' },
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.drop', id: 'box.bed', contents: 'bed' } },
+    { do: 'carry', who: 'dez', carrying: null },
+    say('dez', 'dez.ch7.bed'),
+    ...leave,
+    { do: 'camera', focus: 'wide' },
+    // B2. Open it, then carry it upstairs from the Arrange bar.
+    { do: 'mode', mode: 'guided', allow: ['obj:box.bed'] },
+    { do: 'card', title: 'The bed', body: '**Tap** the box to open it.', spotlight: 'obj:box.bed' },
+    { do: 'wait', until: { any: [{ event: 'obj.unpacked', match: { objId: 'box.bed' } }, { world: { obj: 'box.bed', is: 'bed' } }] } },
+    { do: 'card', title: 'Carry it upstairs', body: 'Big pieces move between floors from the Arrange bar: with the bed selected, tap **Carry to → Upstairs**.' },
+    { do: 'wait', until: { world: { obj: 'box.bed', is: 'bed', level: 2 } } },
+    // B3. Upstairs: the bedroom outline.
+    { do: 'camera', focus: 'mark:upstairs.bed', zoom: 1.4, level: 2 },
+    { do: 'outline', objType: 'bed', at: 'mark:upstairs.bed', rot: 0, color: 'player' },
+    { do: 'card', title: 'Put it where it goes', body: 'Drag the bed into the outline, then tap **Set it down**.', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'bedNotThere' } } },
+    { do: 'wait', until: { world: { obj: 'box.bed', is: 'bed', at: 'mark:upstairs.bed', within: 0.6 } } },
+    { do: 'highlight', target: null },
+    // B4. A beat, then Dez calls from downstairs.
+    { do: 'mode', mode: 'cutscene' },
+    settle,
+    { do: 'wait', seconds: 1.3 },
+    { do: 'spawn', npc: 'dez', at: 'door', carrying: 'pbox' },
+    { do: 'walk', who: 'dez', to: 'mark:entry.inside' },
+    { do: 'camera', focus: 'dez', zoom: 1.6, level: 1 },
+    say('dez', 'dez.ch7.comeDown'),
+    // K1. Three boxes on the floor by the door: the fridge, the dining set, and the gym.
+    { do: 'walk', who: 'dez', to: 'mark:entry.drop' },
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.drop', id: 'box.fridge', contents: 'fridge' } },
+    { do: 'carry', who: 'dez', carrying: null },
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.stack1', id: 'box.table', contents: 'dining' } },
+    { do: 'give', object: { type: 'pbox', at: 'mark:entry.stack2', id: 'box.gear', contents: 'tread' } },
+    say('dez', 'dez.ch7.threeBoxes'),
+    ...leave,
+    { do: 'camera', focus: 'wide' },
+    // K2. The fridge, into the kitchen.
+    { do: 'mode', mode: 'guided', allow: ['obj:box.fridge'] },
+    { do: 'card', title: 'The fridge', body: '**Tap** the box to open it.', spotlight: 'obj:box.fridge' },
+    { do: 'wait', until: { any: [{ event: 'obj.unpacked', match: { objId: 'box.fridge' } }, { world: { obj: 'box.fridge', is: 'fridge' } }] } },
+    { do: 'outline', objType: 'fridge', at: 'mark:kitchen.fridge', rot: 0, color: 'player' },
+    { do: 'card', title: 'Into the kitchen', body: 'Drag the fridge into the outline, then tap **Set it down**.', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'fridgeNotThere' } } },
+    { do: 'wait', until: { world: { obj: 'box.fridge', is: 'fridge', at: 'mark:kitchen.fridge', within: 0.6 } } },
+    // K3. The dining set.
+    { do: 'mode', mode: 'guided', allow: ['obj:box.table'] },
+    { do: 'card', title: 'The table', body: '**Tap** the box to open it.', spotlight: 'obj:box.table' },
+    { do: 'wait', until: { any: [{ event: 'obj.unpacked', match: { objId: 'box.table' } }, { world: { obj: 'box.table', is: 'dining' } }] } },
+    { do: 'outline', objType: 'dining', at: 'mark:kitchen.table', rot: 1, color: 'player' },
+    { do: 'card', title: 'Somewhere to eat', body: 'Drag the table into the outline. Turn it with **Rotate** if it needs it, then tap **Set it down**.', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'tableNotThere' } } },
+    { do: 'wait', until: { world: { obj: 'box.table', is: 'dining', at: 'mark:kitchen.table', within: 0.6 } } },
+    // K4. The treadmill goes down to the basement.
+    { do: 'mode', mode: 'guided', allow: ['obj:box.gear'] },
+    { do: 'card', title: 'For downstairs', body: '**Tap** the box to open it.', spotlight: 'obj:box.gear' },
+    { do: 'wait', until: { any: [{ event: 'obj.unpacked', match: { objId: 'box.gear' } }, { world: { obj: 'box.gear', is: 'tread' } }] } },
+    { do: 'card', title: 'Carry it down', body: 'With the treadmill selected, tap **Carry to → Basement** in the Arrange bar.' },
+    { do: 'wait', until: { world: { obj: 'box.gear', is: 'tread', level: 0 } } },
+    { do: 'camera', focus: 'mark:basement.gear', zoom: 1.4, level: 0 },
+    { do: 'outline', objType: 'tread', at: 'mark:basement.gear', rot: 0, color: 'player' },
+    { do: 'card', title: 'The gym', body: 'Drag it into the outline, then tap **Set it down**.', misplaced: { who: 'maya', line: { bank: 'communication', slot: 'gearNotThere' } } },
+    { do: 'wait', until: { world: { obj: 'box.gear', is: 'tread', at: 'mark:basement.gear', within: 0.6 } } },
+    { do: 'highlight', target: null },
+    { do: 'camera', focus: 'wide', level: 1 },
+    { do: 'mode', mode: 'beat' },
+    { do: 'set', flag: 'tutorial.truck', value: true },
+  ], { mode: 'cutscene', needs: { hold: ['jordan', 'maya'] } }),
   // 8. Dez's card: the store.
-  chapter('tutorial.ch8', { on: 'cond', cond: { flag: 'tutorial.lamp' } }, [
+  chapter('tutorial.ch8', { on: 'cond', cond: { flag: 'tutorial.truck' } }, [
     { do: 'wait', seconds: 2 },
     ...knockIn(),
     say('dez', 'dez.ch8.card'),
@@ -184,10 +269,15 @@ export const TUTORIAL: ScriptDef[] = [
   ]),
   // 9. Echo fridge: order groceries, wait for Dez, they get put away.
   chapter('tutorial.ch9', { on: 'cond', cond: { flag: 'tutorial.shop' } }, [
+    // The fridge is in, and empty: a beat, she looks at it, then the idea.
+    settle,
+    { do: 'face', who: 'maya', toward: 'obj:box.fridge' },
+    { do: 'wait', seconds: 1.3 },
     { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'fridgeEmpty' } },
     { do: 'card', title: 'Order groceries', body: 'Open Household and order groceries. Time keeps moving while you wait: use the speed button to skip ahead.', spotlight: 'tab:home' },
     { do: 'wait', until: { any: [{ flag: 'did.groceries.ordered' }, { event: 'groceries.ordered' }] } },
     { do: 'highlight', target: null },
+    { do: 'card', title: 'Dupree Delivers', body: 'Dez brings the groceries in a bag. When it is at the door, **tap** it to open it, then in Arrange drag the food onto the fridge: it goes right in.' },
     { do: 'wait', until: { any: [{ flag: 'did.groceries.putaway' }, { event: 'groceries.putaway' }] } },
     { do: 'set', flag: 'tutorial.groceries', value: true },
   ]),
@@ -275,4 +365,37 @@ export const TUTORIAL: ScriptDef[] = [
   ]),
 ];
 
-export const SCRIPTS: ScriptDef[] = [OPENING, DEZ_DELIVERY, ...TUTORIAL];
+/**
+ * The house talking back through her (state/concerns.ts): when a concern is raised she comes over, a "!", and the chat
+ * opens with her line; the hard pass is a closed door instead. When it clears, a line of relief.
+ */
+export const CONCERN_NOTICE: ScriptDef = {
+  id: 'concern.notice',
+  trigger: { on: 'cond', cond: { event: 'concern.raised' } },
+  mode: 'beat',
+  once: false,
+  priority: 2,
+  vars: { kind: '$event.kind', level: '$event.level' },
+  steps: [
+    { do: 'walk', who: 'maya', to: 'jordan' },
+    { do: 'face', who: 'maya', toward: 'jordan' },
+    { do: 'emote', who: 'maya', emote: 'alert' },
+    { do: 'wait', seconds: 1 },
+    { do: 'deliver', category: 'concernChat', id: '$kind.$level' },
+  ],
+};
+
+export const CONCERN_RELIEF: ScriptDef = {
+  id: 'concern.relief',
+  trigger: { on: 'cond', cond: { event: 'concern.cleared' } },
+  mode: 'beat',
+  once: false,
+  priority: 1,
+  vars: { kind: '$event.kind' },
+  steps: [
+    { do: 'emote', who: 'maya', emote: 'heart' },
+    { do: 'say', who: 'maya', line: { bank: 'humor', slot: 'relief.$kind' } },
+  ],
+};
+
+export const SCRIPTS: ScriptDef[] = [OPENING, DEZ_DELIVERY, ...TUTORIAL, CONCERN_NOTICE, CONCERN_RELIEF];

@@ -132,7 +132,7 @@ export function createScriptUi(stage: Element): ScriptUi {
       marked = [];
       for (const t of targets) {
         const sel = t.startsWith('tab:') ? `.vh-dock [data-open="${t.slice(4)}"]` : t === 'floorbar' ? '.vh-floors' : t === 'camera' ? '[data-act=rotate]'
-          : t === 'wallet' ? '[data-el=money]' : t === 'bill' ? '[data-el=fridge]' : t === 'needs' ? '.vh-dock [data-people]' : '';
+          : t === 'wallet' ? '[data-el=money]' : t === 'bill' ? '.vh-vitals [data-vital=bills]' : t === 'needs' ? '.vh-dock [data-people]' : '';
         if (!sel) continue;
         stageEl.querySelectorAll(sel).forEach((e) => { e.classList.add('vh-spot'); marked.push(e); });
       }

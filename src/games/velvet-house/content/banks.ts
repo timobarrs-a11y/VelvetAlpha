@@ -28,6 +28,20 @@ export function commKey(raw: unknown): CommKey {
 export const BANKS: LineBank = {
   humor: {
     witty: {
+      'concern.food.1': { m: "Quick survey: what are we eating tonight? Because the fridge says 'nothing' and it sounds confident.", f: "Quick survey: what are we eating tonight? Because the fridge says 'nothing' and it sounds very sure of itself." },
+      'concern.food.2': { m: "Day two of the empty fridge. I've started naming the ice cubes. Can we order food?", f: "Day two of the empty fridge. I've named the ice tray. Can we please order food?" },
+      'concern.food.3': { m: "I'm not talking to you till there's food in this house. I'll be over here, eating air.", f: "I'm not talking to you till there's food in this house. I'll be over here, dramatically." },
+      'concern.bills.1': { m: "So the rent's late. Dez owns the power company. I'd like to keep the lights.", f: "So the rent's late. Dez owns the power company, and I like lights. Just saying." },
+      'concern.bills.2': { m: "The bill's still sitting there. At some point 'late' becomes a lifestyle. Can we pay it?", f: "The bill's still sitting there. 'Late' is turning into a lifestyle. Can we pay it?" },
+      'concern.bills.3': { m: "Not talking to you till the rent's paid. Ask the dark what I think.", f: "Not talking to you till the rent's paid. The dark can keep you company." },
+      'concern.dishes.1': { m: "The sink has become a sculpture. Bold work. Could we wash it?", f: "The sink is doing an art installation. Very brave. Could we wash it?" },
+      'concern.dishes.2': { m: "The dishes have a second day on them now. They're practically a roommate.", f: "The dishes are on day two. They're practically a roommate, and they don't pay rent." },
+      'concern.laundry.1': { m: "The laundry pile is taller than the lamp. That's a milestone. Not a good one.", f: "The laundry pile just passed the lamp in height. A milestone. Not a proud one." },
+      'concern.laundry.2': { m: "Still the laundry. I'm running out of socks and jokes.", f: "Still the laundry. I'm out of clean socks and nearly out of jokes." },
+      'relief.food': { m: "Food. Actual food. I take back the ice cube names.", f: "Food. Actual food. I formally un-name the ice tray." },
+      'relief.bills': { m: "Rent's paid. The lights live to shine another day.", f: "Rent's paid. The lights get to stay. I like the lights." },
+      'relief.dishes': { m: "Clean sink. The sculpture is gone and I'm fine with that.", f: "Clean sink. The art installation has closed, and good." },
+      'relief.laundry': { m: "The laundry's done. The lamp is the tallest thing again.", f: "The laundry's done. The lamp has reclaimed its title." },
       truckOffRoad: {
         m: "Bold parking, Dez. Is the curb optional in {town}, or just the road? Asking for the tree.",
         f: "Bold parking, Dez. Is the curb optional in {town}, or just the road? That tree had a family.",
@@ -50,6 +64,20 @@ export const BANKS: LineBank = {
       },
     },
     goofy: {
+      'concern.food.1': { m: "The fridge is EMPTY. I opened it three times to be sure. Still empty! Food? Food!", f: "The fridge is EMPTY. I checked three times in case it was shy. Food? FOOD?" },
+      'concern.food.2': { m: "Two days of no food and I've eaten a condiment. A WHOLE condiment. Please order something.", f: "Two days of no food and I ate a condiment. Just the condiment. Please order something." },
+      'concern.food.3': { m: "Nope. Not talking. Starving people don't talk. Buy food and I'll un-nope.", f: "Nope. Not talking. Starving ladies don't chat. Buy food and I'll un-nope." },
+      'concern.bills.1': { m: "The rent is late and Dez has a BIG switch. I've seen it. It's labelled OFF.", f: "The rent is late and Dez has a BIG switch. I've seen it. It just says OFF." },
+      'concern.bills.2': { m: "The bill is STILL there! It's growing! I think it has a late fee for a hat!", f: "The bill is STILL there and it's wearing a late fee like a hat! Pay it!" },
+      'concern.bills.3': { m: "I'm on strike until the rent's paid. Strike snacks: none. Because no food either, probably.", f: "I'm on strike until the rent's paid. I made a sign. It just says RENT." },
+      'concern.dishes.1': { m: "The dishes are stacking up like a game of Jenga. Please don't let it fall.", f: "The dishes are doing Jenga in the sink. Somebody's going to lose." },
+      'concern.dishes.2': { m: "Day two of dish Jenga. Something's growing in there. I've named it Gerald.", f: "Day two of dish Jenga. Something's growing in there. Her name is Patricia." },
+      'concern.laundry.1': { m: "The laundry pile moved. I'm almost sure it moved. Can we wash it before it walks?", f: "The laundry pile moved. I saw it. Can we wash it before it gets ideas?" },
+      'concern.laundry.2': { m: "The laundry has officially become furniture. I sat on it. Please.", f: "The laundry is furniture now. I sat on it. It was comfy, and that's the problem." },
+      'relief.food': { m: "FOOD! We have food! I'm going to look at it for a while!", f: "FOOD! We have food! I'm going to look at it lovingly for a bit!" },
+      'relief.bills': { m: "Rent paid! Dez's big switch stays OFF-off! Wait. ON. The good one.", f: "Rent paid! The big switch stays the good way! Lights!" },
+      'relief.dishes': { m: "Gerald is gone. The sink is a sink again. Beautiful.", f: "Patricia is gone. The sink is a sink again. Gorgeous." },
+      'relief.laundry': { m: "The laundry is clean and no longer a chair!", f: "The laundry is clean and has stopped being a chair!" },
       truckOffRoad: {
         m: "Did anyone else see the truck go full off-road? Because I did, and I want a ride.",
         f: "Did anyone else see the truck go full off-road? That tree never saw it coming. Neither did I. Amazing.",
@@ -72,6 +100,20 @@ export const BANKS: LineBank = {
       },
     },
     dry: {
+      'concern.food.1': { m: "There's no food. I checked the fridge. Then I checked it again, in case. There's no food.", f: "There's no food. I checked the fridge twice, in case it had changed its mind. It hadn't." },
+      'concern.food.2': { m: "Still no food. It's been a day. I'm not going to make this interesting. Order some.", f: "Still no food. A whole day. I'm not going to dress this up. Order some." },
+      'concern.food.3': { m: "I'm not talking to you until there's food in this house. That was the sentence.", f: "I'm not talking to you until there's food in this house. That's the whole sentence." },
+      'concern.bills.1': { m: "The rent's late. Dez will cut the power. He'll be polite about it. It'll still be dark.", f: "The rent's late. Dez will cut the power, politely. It'll still be dark." },
+      'concern.bills.2': { m: "The bill's still unpaid. Now with a fee. Great value.", f: "The bill's still unpaid, now with a late fee. Excellent value." },
+      'concern.bills.3': { m: "Not talking until the rent's paid. Enjoy the quiet.", f: "Not talking until the rent's paid. Enjoy the quiet." },
+      'concern.dishes.1': { m: "The dishes. I'm not going to describe them.", f: "The dishes. I'm not going to describe them." },
+      'concern.dishes.2': { m: "The dishes are still there. They've started a family.", f: "The dishes are still there. They've started a family." },
+      'concern.laundry.1': { m: "The laundry pile is a load-bearing wall now. Wash it.", f: "The laundry pile is load-bearing now. Wash it." },
+      'concern.laundry.2': { m: "Still the laundry. I'm wearing a towel as a shirt. Not a joke.", f: "Still the laundry. I'm wearing a towel as a dress. Not a joke." },
+      'relief.food': { m: "Food. Good. I was this close to eating a candle.", f: "Food. Good. I was this close to eating a candle." },
+      'relief.bills': { m: "Rent's paid. The lights stay. Fine. Good.", f: "Rent's paid. The lights stay. Fine. Good." },
+      'relief.dishes': { m: "Clean sink. I'll allow it.", f: "Clean sink. I'll allow it." },
+      'relief.laundry': { m: "The laundry's done. I have a shirt again. Progress.", f: "The laundry's done. I have a shirt again. Progress." },
       truckOffRoad: {
         m: "Great. The mover can't stay on the road. Our couch is in excellent hands.",
         f: "Great. The mover can't stay on the road. He did, however, beat the tree. Our couch is in excellent hands.",
@@ -94,6 +136,20 @@ export const BANKS: LineBank = {
       },
     },
     warm: {
+      'concern.food.1': { m: "Hey, there's nothing in the fridge. Could we order some food? I'm starting to feel it.", f: "Hey, there's nothing in the fridge. Could we order some food? I'm starting to feel it." },
+      'concern.food.2': { m: "It's been a whole day with no food in the house. I'm not mad, I'm hungry. Please order something.", f: "It's been a whole day with no food in the house. I'm not mad, I'm hungry. Please order something." },
+      'concern.food.3': { m: "I don't want to talk right now. Not until there's food here. I'm sorry. I mean it.", f: "I don't want to talk right now. Not until there's food here. I'm sorry, but I mean it." },
+      'concern.bills.1': { m: "The rent's late, love. Dez won't wait forever, and I'd hate to sit in the dark.", f: "The rent's late. Dez won't wait forever, and I'd hate to sit in the dark." },
+      'concern.bills.2': { m: "That bill's still unpaid and now there's a fee. Can we sort it today? Please?", f: "That bill's still unpaid and now there's a fee. Can we sort it today? Please?" },
+      'concern.bills.3': { m: "I'm not going to talk until the rent's paid. I can't keep pretending it's fine.", f: "I'm not going to talk until the rent's paid. I can't keep pretending it's fine." },
+      'concern.dishes.1': { m: "The sink's full again. Could we do the dishes together later?", f: "The sink's full again. Could we do the dishes together later?" },
+      'concern.dishes.2': { m: "The dishes have been there two days now. It's getting to me. Can we wash up?", f: "The dishes have been there two days now. It's getting to me. Can we wash up?" },
+      'concern.laundry.1': { m: "The laundry's piling up. A load today would be lovely.", f: "The laundry's piling up. A load today would be lovely." },
+      'concern.laundry.2': { m: "Still the laundry. I'm down to the last clean shirt. Could we?", f: "Still the laundry. I'm down to my last clean shirt. Could we?" },
+      'relief.food': { m: "Oh, thank goodness. Food. Thank you.", f: "Oh, thank goodness. Food. Thank you." },
+      'relief.bills': { m: "Rent's paid. That's a weight off. Thank you.", f: "Rent's paid. That's a weight off. Thank you." },
+      'relief.dishes': { m: "A clean sink. That's so much better.", f: "A clean sink. That's so much better." },
+      'relief.laundry': { m: "Clean laundry. I could hug you.", f: "Clean laundry. I could hug you." },
       truckOffRoad: {
         m: "Aw, Dez, that was quite the arrival! Please tell me the boxes are okay. And the tree.",
         f: "Aw, Dez, that was quite the arrival! Please tell me the boxes are okay. Poor tree.",
@@ -118,6 +174,10 @@ export const BANKS: LineBank = {
   },
   communication: {
     direct: {
+      bedNotThere: "Bed goes against the wall, in the outline.",
+      fridgeNotThere: "Fridge goes in the kitchen, where the outline is.",
+      tableNotThere: "Table goes in the kitchen. The outline, please.",
+      gearNotThere: "Treadmill goes in the outline. We're not working out in the hallway.",
       couchPlace: {
         m: "Couch goes in the living room, against the TV wall. I'll tell you if it's off.",
         f: "Couch goes in the living room, against the TV wall. I'll tell you if it's off.",
@@ -136,6 +196,10 @@ export const BANKS: LineBank = {
       },
     },
     diplomatic: {
+      bedNotThere: "Could we try the bed in the outline against the wall? I think we'd sleep better there.",
+      fridgeNotThere: "I think the fridge wants to be in the kitchen, where the outline is, if that's alright.",
+      tableNotThere: "Would you mind trying the table in the outline? It'd be nice to eat in the kitchen.",
+      gearNotThere: "Could the treadmill go in the outline? It'll be easier to use down there.",
       couchPlace: {
         m: "Could you help me get the couch into the living room? Over by the TV would be great, if that works for you.",
         f: "Could you help me get the couch into the living room? Over by the TV would be great, if that works for you.",
@@ -154,6 +218,10 @@ export const BANKS: LineBank = {
       },
     },
     playful: {
+      bedNotThere: "A bed in the middle of the room is a bold lifestyle. The outline is right there.",
+      fridgeNotThere: "The fridge is wandering. Fridges live in kitchens. Outline, please.",
+      tableNotThere: "Unless we're eating standing up, the table goes in the outline.",
+      gearNotThere: "Treadmill's lost. It wants the outline, not the scenic route.",
       couchPlace: {
         m: "Okay, the couch. Living room, by the TV. It is the only thing standing between us and sitting on the floor.",
         f: "Okay, the couch. Living room, by the TV. It is the only thing standing between us and sitting on the floor.",
@@ -172,6 +240,10 @@ export const BANKS: LineBank = {
       },
     },
     subtle: {
+      bedNotThere: "Hm. I'd have pictured the bed against the wall, where that outline is.",
+      fridgeNotThere: "Funny, I keep looking for the fridge in the kitchen. Where the outline is.",
+      tableNotThere: "The kitchen looks like it's missing a table. Right where the outline sits, maybe.",
+      gearNotThere: "The outline down here looks like it's waiting for the treadmill, doesn't it?",
       couchPlace: {
         m: "That wall by the TV looks like it is waiting for something. Wonder what could go there.",
         f: "That wall by the TV looks like it is waiting for something. Wonder what could go there.",

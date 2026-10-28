@@ -226,6 +226,8 @@ const CARRY_LEVELS = [0, 1, 2, 3, 4];
  * in the bedroom or on the lawn). Only the stairs stay put.
  */
 export function otherFloors(o: ObjectInstance): number[] {
+  // Nothing is fixed: the bed goes upstairs, the gym to the basement, the kitchen sink wherever they like, the treadmill onto
+  // the lawn. Only the stairs and floor openings stay put.
   if (!isMovable(o) || !CARRY_LEVELS.includes(o.level)) return [];
   return CARRY_LEVELS.filter(lv => lv !== o.level);
 }
@@ -261,7 +263,20 @@ export function relocate(
   return false;
 }
 
-/** Anything that isn't built into the house can be put away in storage. */
+/** Anything that isn't built into the house can be put away in storage (a toilet or a counter can move, not vanish). */
 export function canStore(o: ObjectInstance): boolean {
   return isMovable(o) && !isFixed(o.type);
+}
+
+/** The fridge this piece of food is being set down on, if it overlaps one on its floor. */
+export function fridgeUnder(objs: ObjectInstance[], food: ObjectInstance): ObjectInstance | null {
+  if (food.type !== 'food') return null;
+  const [fw, fd] = footprint(food);
+  const cx = food.x + fw / 2, cy = food.y + fd / 2;
+  for (const o of objs) {
+    if (o.type !== 'fridge' || o.level !== food.level) continue;
+    const [w, d] = footprint(o);
+    if (cx >= o.x - 0.3 && cx <= o.x + w + 0.3 && cy >= o.y - 0.3 && cy <= o.y + d + 0.3) return o;
+  }
+  return null;
 }

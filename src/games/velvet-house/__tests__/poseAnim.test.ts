@@ -92,7 +92,101 @@ describe('poseRig', () => {
   });
 });
 
-import { idleRig, expressionFor } from '../art/poseAnim.js';
+import { idleRig, expressionFor, walkRig, seatLegs, LEG, ARM } from '../art/poseAnim.js';
+
+describe('the walk', () => {
+  const len = (v: number[]) => Math.hypot(v[0], v[2]);
+
+  it('keeps each hand an arm\'s length from the shoulder through the whole stride', () => {
+    for (let ph = 0; ph < Math.PI * 2; ph += 0.1) {
+      const r = walkRig(ph, 1);
+      for (const side of [1, -1]) expect(len(r.hands[side])).toBeCloseTo(ARM.length, 1);
+    }
+  });
+
+  it('swings the arms forward and back, opposite the leg on the same side, never out to the side', () => {
+    // The legs: side +1 is forward when sin(phase) > 0, side -1 when sin(phase + PI) > 0.
+    const r = walkRig(Math.PI / 2, 1);
+    expect(r.hands[1][0], 'right arm back while the right leg is forward').toBeLessThan(-0.1);
+    expect(r.hands[-1][0], 'left arm forward while the left leg is back').toBeGreaterThan(0.1);
+    for (let ph = 0; ph < Math.PI * 2; ph += 0.1) {
+      const w = walkRig(ph, 1);
+      for (const side of [1, -1]) {
+        expect(w.hands[side][1]).toBeCloseTo(0.13, 2); // the sideways offset never changes
+        expect(w.hands[side][2], 'hands stay below the shoulder').toBeLessThan(-0.3);
+      }
+    }
+  });
+
+  it('is a stride, not a flail: the hands travel far enough to read and no further', () => {
+    const reach = Math.max(...Array.from({ length: 64 }, (_, i) => Math.abs(walkRig(i / 10, 1).hands[1][0])));
+    expect(reach).toBeGreaterThan(0.18);
+    expect(reach).toBeLessThan(0.26);
+  });
+
+  it('lets the arms hang when the walk fades out', () => {
+    const r = walkRig(1.3, 0);
+    for (const side of [1, -1]) {
+      expect(Math.abs(r.hands[side][0])).toBeLessThan(0.001);
+      expect(r.hands[side][2]).toBeCloseTo(-ARM.length + 0.02, 3);
+    }
+  });
+
+  it('bends the elbow forward, between the shoulder and the hand', () => {
+    for (const ph of [0, 1, 2, 3, 4, 5]) {
+      const r = walkRig(ph, 1);
+      for (const side of [1, -1]) {
+        const e = r.elbows[side], h = r.hands[side];
+        expect(e[2]).toBeGreaterThan(h[2]);
+        expect(e[2]).toBeLessThan(0);
+        expect(e[0]).toBeGreaterThan(Math.min(0, h[0]) - 0.001);
+      }
+    }
+  });
+});
+
+describe('the seat', () => {
+  const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+
+  it('keeps the thigh its own length on every seat', () => {
+    for (const seat of [0.1, 0.18, 0.3, 0.48, 0.49, 0.56, 0.7]) {
+      const s = seatLegs(seat);
+      expect(dist(s.hip, s.knee), `seat ${seat}`).toBeCloseTo(LEG.thigh, 2);
+    }
+  });
+
+  it('never stretches the shin past its cartoon allowance, and never shortens it', () => {
+    for (const seat of [0.1, 0.18, 0.3, 0.48, 0.49, 0.56, 0.7]) {
+      const s = seatLegs(seat), shin = dist(s.knee, s.foot);
+      expect(shin, `seat ${seat}`).toBeGreaterThanOrEqual(LEG.shin - 0.001);
+      expect(shin, `seat ${seat}`).toBeLessThanOrEqual(LEG.shin * LEG.stretch + 0.001);
+    }
+  });
+
+  it('puts the feet on the floor from a couch or a chair, and lets them hang from a bar stool', () => {
+    for (const seat of [0.48, 0.49]) {
+      const s = seatLegs(seat);
+      expect(s.dangle, `seat ${seat}`).toBe(false);
+      expect(s.foot[1], `seat ${seat}`).toBeCloseTo(-seat, 5); // floor level
+      expect(s.foot[0], 'feet under or ahead of the knees').toBeGreaterThanOrEqual(s.knee[0] - 1e-9);
+    }
+    const stool = seatLegs(0.7);
+    expect(stool.dangle).toBe(true);
+    expect(stool.foot[1]).toBeGreaterThan(-0.7); // above the floor
+  });
+
+  it('raises the knees on a low seat so the feet still stand flat', () => {
+    const low = seatLegs(0.12), chair = seatLegs(0.48);
+    expect(low.knee[1]).toBeGreaterThan(chair.knee[1] + 0.1);
+    expect(low.foot[1]).toBeCloseTo(-0.12, 5);
+  });
+
+  it('sinks the hips a little into the cushion, and no more', () => {
+    const s = seatLegs(0.48);
+    expect(s.hip[1]).toBeLessThan(0);
+    expect(s.hip[1]).toBeGreaterThan(-0.08);
+  });
+});
 
 describe('idle life and expressions', () => {
   it('fidgets now and then while standing, but never all the time', () => {

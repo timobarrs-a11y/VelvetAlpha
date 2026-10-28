@@ -62,6 +62,7 @@ export function validateContent(defs: ScriptDef[], book: LineBook, npcs: string[
 
 /** A bank slot has to exist for every style, and a gendered line needs both its versions. */
 function checkBank(d: ScriptDef, ref: { bank: 'humor' | 'communication'; slot: string }, book: LineBook, errors: string[]): void {
+  if (ref.slot.includes('$')) return;
   const styles = Object.entries(book.banks?.[ref.bank] ?? {});
   if (!styles.length) errors.push(`${d.id}: there is no ${ref.bank} bank`);
   for (const [style, slots] of styles) {

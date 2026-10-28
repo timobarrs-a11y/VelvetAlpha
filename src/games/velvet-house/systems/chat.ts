@@ -12,12 +12,19 @@ export function createChat(g: Game): Partial<Game> {
     // The Partner page that started the chat would cover the house on a phone, so it closes.
     drawer.close();
     dialogue.open();
+    // The hard pass: she has closed the door until the house is put right. Her line, and no way to answer.
+    const shut = g.hardPass();
+    if (shut) {
+      dialogue.showAI(g.scripts.text({ bank: 'humor', slot: `concern.${shut}.3` }));
+      g.scriptEmit({ type: 'chat.refused', kind: shut });
+      return;
+    }
     flags.talked = true;
     if (!(flags.settleSeen as string[])?.includes('talk')) (flags.settleSeen as string[]).push('talk');
-    // Show a greeting or the last exchange
+    // Show a greeting or the last exchange; after her line, the box comes back so the player can answer.
     if (g.s.chatTurns.length > 0) {
       const last = g.s.chatTurns[g.s.chatTurns.length - 1];
-      if (last.role === 'assistant') dialogue.showAI(last.content);
+      if (last.role === 'assistant') { dialogue.showAI(last.content); setTimeout(() => { if (!dialogue.el.hidden) dialogue.showInput(true); }, 500 + last.content.length * 20); }
       else dialogue.showInput();
     } else {
       dialogue.showInput();
@@ -60,6 +67,8 @@ export function createChat(g: Game): Partial<Game> {
       jordanWhere: LEVEL_NAMES[people[0].level],
       recentLog: logEntries.slice(0, 5).reverse(),
       coreMem, memories, pastMem,
+      concern: g.concernContext(),
+      mood: g.concernMood(),
     };
 
     // Out of replies for today: don't ask the network again until tomorrow.

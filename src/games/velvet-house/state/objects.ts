@@ -109,6 +109,9 @@ export const TYPES: Record<string, ObjectTypeDef> = {
     spots: { r: { stand: [0.8, 1.0], dir: [0, -1], tag: 'rummage' } } },
   boxes: { W: 0.9, D: 0.6, h: 0.9, name: 'Moving boxes' },
   pbox: { W: 0.62, D: 0.52, h: 0.62, name: 'Moving box' },
+  /** Groceries at the door, and what is inside once opened: carried to the fridge in Arrange. */
+  bag: { W: 0.42, D: 0.36, h: 0.52, name: 'Grocery bag' },
+  food: { W: 0.5, D: 0.42, h: 0.38, name: 'Groceries' },
   tree: { W: 1.4, D: 1.4, h: 4, fixed: true, name: 'Maple tree', blocks: [[0.5, 0.5, 0.9, 0.9]] },
   garden: { W: 2.0, D: 1.0, h: 0.7, name: 'Garden bed',
     spots: { t: { stand: [1.0, 1.5], dir: [0, -1], tag: 'garden' } } },

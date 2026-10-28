@@ -38,6 +38,9 @@ export function createScripts(g: Game): Partial<Game> {
     if (typeof ref !== 'string') return ref;
     const key = ref.startsWith('mark:') ? ref.slice(5) : ref;
     if (MARKS[key]) return MARKS[key];
+    // A person is a place: next to them.
+    const who = actor(ref);
+    if (who) return { level: who.level, x: who.x + 0.6, y: who.y + 0.2 };
     const m = /^(obj|objType):(.+)$/.exec(ref);
     if (m) {
       const o = m[1] === 'obj' ? world.objs.find((q) => q.id === m[2]) : world.objs.find((q) => q.type === m[2]);
@@ -223,6 +226,7 @@ export function createScripts(g: Game): Partial<Game> {
           if (o) host.give({ object: { type: 'pbox', at: 'mark:entry.drop', id: `box.${id}`, contents: o.type, ...(o.col ? { col: o.col } : {}), ...(o.skin ? { skin: o.skin } : {}) } });
           break;
         }
+        case 'concernChat': g.openConcernChat(id ?? ''); break;
         case 'lifeGoal': g.s.lifeGoal ??= 'a cozy life together'; break;
         case 'settle': g.s.settleDone = true; break;
         default: g.log(`A delivery arrives (${category}${id ? ' ' + id : ''}).`);
@@ -239,6 +243,7 @@ export function createScripts(g: Game): Partial<Game> {
       // A piece in hand, or let go of but not set down, is nowhere yet.
       if (g.inHand() === o.id) return false;
       if (w.is && o.type !== w.is) return false;
+      if (w.level !== undefined && o.level !== w.level) return false;
       if (w.at) {
         const s = resolve(w.at);
         if (!s || o.level !== s.level || Math.hypot(o.x - s.x, o.y - s.y) > (w.within ?? 0.6)) return false;
@@ -262,9 +267,12 @@ export function createScripts(g: Game): Partial<Game> {
   const isNew = world.save === null;
   if (isNew && !noScript) {
     // The first day's furniture arrives in boxes, so the house starts without it.
-    const gone = world.objs.filter((o) => o.id === 'sofa' || o.id === 'plant1' || o.id === 'lamp1');
+    const boxed = new Set(['sofa', 'plant1', 'lamp1', 'bed', 'fridge', 'dining', 'tread']);
+    const gone = world.objs.filter((o) => boxed.has(o.id));
     for (const o of gone) world.objs.splice(world.objs.indexOf(o), 1);
     Object.assign(house, buildWorld(world.objs));
+    // Nothing to eat yet: the first order is a lesson.
+    world.household.fridge.basic = 0; world.household.fridge.fresh = 0;
   }
   if (noScript) engine.markDone(['opening.', 'tutorial.']);
   else if (!hadRt) {

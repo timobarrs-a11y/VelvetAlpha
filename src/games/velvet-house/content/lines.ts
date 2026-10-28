@@ -25,6 +25,10 @@ export const LINE_BOOK: LineBook = {
 
     // -- Chapter 7: the rest of the truck ----------------------------------------------------------------------------
     'dez.ch7.noLabel': "This one doesn't have a label!",
+    'dez.ch7.plant': "One more. Y'all know the drill by now.",
+    'dez.ch7.bed': "Heavy one, this. Y'all figure out where it goes, I'll go catch my breath.",
+    'dez.ch7.comeDown': "Y'all come on down when you're ready, I got the rest of it!",
+    'dez.ch7.threeBoxes': "That's the lot. Kitchen stuff, and somethin' for downstairs. Get 'er done!",
 
     // -- Chapter 8: Dez's card -----------------------------------------------------------------------------------------
     'dez.ch8.card': "Oh! 'Fore I forget. That there's how you reach me. Anything y'all want, you order it, and I'll bring it right on over.",
