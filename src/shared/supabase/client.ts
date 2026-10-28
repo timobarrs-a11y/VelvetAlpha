@@ -28,3 +28,15 @@ export const supabase = createClient(clientUrl, supabaseAnonKey, {
     lock: processLock,
   },
 });
+
+// auth.getUser() asks the auth server who is signed in, a network round trip (about 0.2s) every time, and the app calls
+// it before most of its queries: on some pages two or three times in a row before anything loads. The signed-in user
+// is already in the session this client keeps, so answer from that, and only ask the server when there's no session
+// (or for a specific token). The database still checks the token on every request, so nothing is trusted that wasn't.
+const serverGetUser = supabase.auth.getUser.bind(supabase.auth);
+supabase.auth.getUser = (async (jwt?: string) => {
+  if (jwt) return serverGetUser(jwt);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) return { data: { user: session.user }, error: null };
+  return serverGetUser();
+}) as typeof supabase.auth.getUser;

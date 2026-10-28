@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { onAvatarSaved } from '../stores/avatarEditorStore';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -46,7 +46,8 @@ export interface ConfirmModal {
   onConfirm: () => Promise<void>;
 }
 
-export function useLobbyData() {
+export function useLobbyData(opts: { load?: boolean } = {}) {
+  const shouldLoad = opts.load !== false;
   const navigate = useNavigate();
   const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,9 +66,10 @@ export function useLobbyData() {
     setCompanions(prev => prev.map(c => c.id === target.id ? { ...c, avatar_config: config as unknown as CompanionWithLastMessage['avatar_config'] } : c));
   }), []);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { if (shouldLoad) loadData(); }, []);
   // Someone was deleted elsewhere (Settings → Your team): the list here loads again.
   useEffect(() => {
+    if (!shouldLoad) return;
     const reload = () => { loadData(); };
     window.addEventListener(COMPANIONS_CHANGED, reload);
     return () => window.removeEventListener(COMPANIONS_CHANGED, reload);
@@ -222,4 +224,16 @@ export function useLobbyData() {
     openCompanion,
     openGroup,
   };
+}
+
+export type LobbyData = ReturnType<typeof useLobbyData>;
+
+/** The signed-in workspace's lobby data, for pages inside it (the menu already loaded the companions). */
+export const LobbyContext = createContext<LobbyData | null>(null);
+
+/** The workspace's lobby data when there is one, so a page doesn't load the same companions again; otherwise its own. */
+export function useLobby(): LobbyData {
+  const shared = useContext(LobbyContext);
+  const own = useLobbyData({ load: !shared });
+  return shared ?? own;
 }

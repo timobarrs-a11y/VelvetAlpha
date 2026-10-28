@@ -5,7 +5,7 @@ import {
   Newspaper, PlayCircle, Heart,
   Target, UsersRound, Users,
 } from 'lucide-react';
-import { useLobbyData } from '../hooks/useLobbyData';
+import { useLobby } from '../hooks/useLobbyData';
 import { supabase } from '../shared/supabase/client';
 import {
   LoadingState, PageShell, Badge, Segmented,
@@ -40,7 +40,8 @@ interface CheckIn {
 
 export function HomeV3Page() {
   const navigate = useNavigate();
-  const lobby = useLobbyData();
+  // The menu around this page already loaded the companions: share them rather than loading them again.
+  const lobby = useLobby();
   const [, setCheckIns] = useState<CheckIn[]>([]);
   const [feedTab, setFeedTab] = useState<FeedTab>('feed');
   // Just finished the arrival: show what else is here, once.
