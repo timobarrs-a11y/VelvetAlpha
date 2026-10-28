@@ -173,6 +173,10 @@ export function createHouseArt(ctx0, opts = {}) {
     nordic: { kind: 'plank', a: '#E8DFCF', b: '#E1D6C3', line: 'rgba(120,100,70,.14)' },
     poured: { kind: 'stone', a: '#6E7074', b: '#66686C', line: 'rgba(0,0,0,.08)' },
     driftwood: { kind: 'plank', a: '#D9CFBE', b: '#CEC2AE', line: 'rgba(255,255,255,.4)' },
+    ivorygold: { kind: 'marble', a: '#F2EAD8', b: '#E9E0CC', line: 'rgba(0,0,0,.06)', vein: 'rgba(201,162,74,.55)' },
+    tatami: { kind: 'sisal', a: '#D5CBA6', b: '#D5CBA6', line: 'rgba(0,0,0,.06)' },
+    jute: { kind: 'sisal', a: '#C9B28A', b: '#C9B28A', line: 'rgba(0,0,0,.05)' },
+    moon: { kind: 'tile', a: '#E6E9EE', b: '#DDE1E7', line: 'rgba(255,255,255,.6)' },
     rubber: { kind: 'speck', a: '#3A3A3F', b: '#3A3A3F', line: 'rgba(255,255,255,.04)', pal: ['#5A5A62', '#4C4C54', '#6E6E76', '#55555D'] }
   };
   // wallpapers: a pattern drawn over the paint, or with its own base color
@@ -189,6 +193,10 @@ export function createHouseArt(ctx0, opts = {}) {
     birch: { pat: 'birch', base: '#F3EFE6', ink: 'rgba(255,255,255,.9)', ink2: 'rgba(60,50,45,.5)' },
     'brick-white': { pat: 'brick', base: '#E9E3DB', ink: 'rgba(0,0,0,.2)', tones: ['#EDE8E1', '#E4DED6', '#F1ECE5', '#E8E2DA'] },
     'stripe-nautical': { pat: 'stripes', base: '#F6F3EC', ink: 'rgba(46,59,87,.75)' },
+    'deco-emerald': { pat: 'deco', base: '#1F5E4A', ink: 'rgba(224,194,110,.85)' },
+    shoji: { pat: 'grid', base: '#F4EFE5', ink: 'rgba(70,55,40,.45)' },
+    'arches-terracotta': { pat: 'arches', base: '#F1E8D2', ink: 'rgba(194,107,74,.8)' },
+    orbit: { pat: 'dots', base: '#1B1A24', ink: 'rgba(91,227,230,.8)' },
     'gingham-sage': { pat: 'gingham', base: '#F4F1E8', ink: 'rgba(110,150,115,.3)' },
     'starburst-mint': { pat: 'starburst', base: '#CFEBDD', ink: 'rgba(224,122,92,.75)', ink2: 'rgba(224,122,92,.9)' },
     'wainscot-white': { pat: 'wainscot', ink: '#F4F1EA' }, 'wainscot-navy': { pat: 'wainscot', ink: '#2E3B57' }, subway: { pat: 'subway', base: '#F5F5F2', ink: 'rgba(0,0,0,.14)' },
@@ -550,9 +558,207 @@ export function createHouseArt(ctx0, opts = {}) {
     const on = isLit(o.id), [px, py] = T.P(0.65, 1.24, 1.86);
     if (style === 'lantern') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.98], SC.charcoal, 1); if (on) ell(px, py, 14, 14, 'rgba(255,226,168,.18)'); ell(px, py, 10, 10.5, on ? '#FFF1D2' : SC.paper, 'rgba(0,0,0,.12)'); for (let k = -2; k <= 2; k++) ell(px, py + k * 3.4, 10 * Math.sqrt(Math.max(0.05, 1 - (k * 3.4 / 10.5) ** 2)), 0.5, 'rgba(0,0,0,.08)'); return; }
     if (style === 'cage') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.96], IN.iron, 1.4); if (on) ell(px, py, 11, 11, 'rgba(255,178,74,.2)'); ell(px, py + 1, 4, 5.2, on ? IN.edison : '#D9C9A8', 'rgba(0,0,0,.25)'); for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.ellipse(px, py, 6, 8.5, k * 0.28, 0, Math.PI * 2); ctx.strokeStyle = IN.iron; ctx.lineWidth = 0.9; ctx.stroke(); } return; }
+    if (style === 'tiered') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.98], DE.lacquer, 1.2); [[12, 0], [9, -4], [6, -8]].forEach(([r, dy]) => { ell(px, py + dy, r, r * 0.4, DE.gold, 'rgba(0,0,0,.2)'); }); ell(px, py + 1, 11, 3.6, on ? '#FFF1C9' : DE.alabaster); if (on) ell(px, py + 5, 14, 6, 'rgba(255,226,168,.18)'); return; }
+    if (style === 'washi') { T.line([0.65, 1.24, WH], [0.65, 1.24, 2.05], JA.ink, 1); if (on) ell(px, py - 6, 12, 16, 'rgba(255,226,168,.16)'); const [tx, ty] = T.P(0.65, 1.24, 2.04); ctx.beginPath(); ctx.moveTo(tx - 7, ty); ctx.lineTo(tx + 7, ty); ctx.lineTo(px + 7, py); ctx.lineTo(px - 7, py); ctx.closePath(); ctx.fillStyle = on ? '#FFF3DA' : JA.paper; ctx.fill(); for (let k = 1; k < 6; k++) { const yy = ty + (py - ty) * k / 6; limb(tx - 7, yy, tx + 7, yy, 'rgba(90,70,40,.25)', 1); } ell(px, py, 7, 2.6, on ? '#FFF1C9' : shade(JA.paper, -0.1)); return; }
+    if (style === 'macrame') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.96], BO.jute, 1.6); ctx.beginPath(); ctx.ellipse(px, py - 2, 12, 9, 0, Math.PI, 0); ctx.fillStyle = BO.macrame; ctx.fill(); for (let k = -4; k <= 4; k++) limb(px + k * 2.6, py - 2, px + k * 2.6 + (k % 2 ? 1 : -1), py + 8, BO.macrame, 1); ell(px, py - 2, 12, 4, on ? '#FFF1C9' : BO.jute); return; }
+    if (style === 'saucer') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.94], SA.chrome, 1.4); ell(px, py - 3, 13, 4, SA.chrome, 'rgba(0,0,0,.2)'); ell(px, py - 6, 6, 3.5, SA.white); ell(px, py - 1, 11, 3, on ? '#FFF1C9' : '#4A4450'); for (let k = -2; k <= 2; k++) circle(px + k * 5, py + 1, 1.2, on ? SA.neon : '#3A3F4A'); if (on) ell(px, py + 5, 15, 6, 'rgba(91,227,230,.14)'); return; }
     if (style === 'woven') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], BE.rope, 1.6); ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI, 0); ctx.fillStyle = BE.rattan; ctx.fill(); for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI + k * 0.6, Math.PI + k * 0.6 + 0.3); ctx.strokeStyle = 'rgba(90,60,30,.35)'; ctx.lineWidth = 1; ctx.stroke(); } ell(px, py - 2, 11, 4, on ? '#FFF1C9' : '#B9A07A'); return; }
     T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], '#3A3340', 1.2); ctx.beginPath(); ctx.ellipse(px, py, 10, 9, 0, Math.PI, 0); ctx.fillStyle = '#2B2B30'; ctx.fill(); ell(px, py, 10, 3.8, on ? '#FFF1C9' : '#4A4450');
   }, { onTop: true });
+
+  // ---- Four more: Art Deco, Japandi, Boho and Space Age ----
+  const DE = { lacquer: '#1B1A1F', gold: '#C9A24A', goldLight: '#E0C26E', emerald: '#1F5E4A', ivory: '#F2EAD8', burgundy: '#6E2A3A', mirror: '#DCE4EA', alabaster: '#F6EFE0' };
+  const JA = { walnut: '#4A3A2E', walnutLight: '#6B5444', ash: '#E6DCCB', stone: '#B9B4AC', stoneDark: '#8E8A84', paper: '#F7F3EA', ink: '#2B2B30', moss: '#7A8A6A', clay: '#B07A5A', bone: '#EDE6D6' };
+  const BO = { terracotta: '#C26B4A', mustard: '#D9A84A', rust: '#A85A40', cream: '#F1E8D2', rattan: '#D2B48C', rattanDark: '#A8865A', macrame: '#EFE4D2', teal: '#3D6B73', jute: '#C9B28A', wood: '#9C6B45' };
+  const SA = { white: '#F4F6F8', chrome: '#D5DAE0', chromeDark: '#9AA0A6', orange: '#F26A2E', neon: '#5BE3E6', violet: '#7A5CFF', dark: '#1B1A24', glass: '#2A2F3A' };
+  /** A fan of rays from a point, in screen space: the deco sunburst. */
+  const sunburst = (x, y, r, n, col, w = 1) => { for (let k = 0; k <= n; k++) { const a = Math.PI + (k / n) * Math.PI; limb(x, y, x + Math.cos(a) * r, y + Math.sin(a) * r, col, w); } };
+  /** Macrame fringe: short hanging threads along a line, in the piece's frame. */
+  const fringe = (T, from, to, n, drop, col) => { for (let k = 0; k <= n; k++) { const u = k / n, x = from[0] + (to[0] - from[0]) * u, y = from[1] + (to[1] - from[1]) * u; T.line([x, y, from[2]], [x, y, from[2] - drop - (k % 2) * 0.02], col, 1); } };
+  Object.assign(LOOK_DRAWERS.sofa, {
+    // Art Deco: emerald velvet with channel tufting, a gold plinth and gold piping.
+    deco: (o, s1, s2) => { const v = cl(o), vc = shade(v, 0.08); return [
+      B(0.02, 0.02, 0, 2.36, 0.96, 0.08, DE.gold), B(0, 0, 0.08, 2.4, 1.0, 0.3, v, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.58, v), B(0, 0, 0.38, 0.22, 1.0, 0.3, v), B(2.18, 0, 0.38, 0.22, 1.0, 0.3, v),
+      B(0.22, 0.3, 0.38 - s1 * 0.018, 0.98, 0.66, 0.1 - s1 * 0.035, vc), B(1.2, 0.3, 0.38 - s2 * 0.018, 0.98, 0.66, 0.1 - s2 * 0.035, vc),
+      F(0, 0, 2.4, 1.0, (T) => {
+        for (let x = 0.12; x < 2.4; x += 0.16) T.line([x, 0.301, 0.42], [x, 0.301, 0.94], shade(v, -0.22), 1.6);
+        T.line([0, 1.001, 0.38], [2.4, 1.001, 0.38], DE.gold, 1.6); T.line([0, 1.002, 0.08], [2.4, 1.002, 0.08], DE.goldLight, 1.2);
+        [[0.22, 0.68], [2.18, 0.68]].forEach(([x, z]) => T.line([x, 0.0, z], [x, 1.0, z], DE.gold, 1.4));
+      }, { onTop: true })]; },
+    // Japandi: a low walnut platform with a bone cushion, a flat back and no arms to speak of.
+    japandi: (o, s1, s2) => { const w = cl(o), cushion = JA.bone; return [
+      B(0, 0, 0, 2.4, 1.0, 0.16, w), B(0.06, 0.1, 0.16, 2.28, 0.86, 0.22, cushion, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.22, 0.46, w), B(0.06, 0.22, 0.38, 2.28, 0.12, 0.36, cushion),
+      B(0.1, 0.34, 0.38 - s1 * 0.018, 1.08, 0.6, 0.08 - s1 * 0.035, shade(cushion, 0.05)), B(1.22, 0.34, 0.38 - s2 * 0.018, 1.08, 0.6, 0.08 - s2 * 0.035, shade(cushion, 0.05)),
+      B(0.3, 0.36, 0.46, 0.4, 0.12, 0.3, JA.moss), B(1.7, 0.36, 0.46, 0.4, 0.12, 0.3, JA.stone),
+      F(0, 0, 2.4, 1.0, (T) => { T.line([0, 1.001, 0.08], [2.4, 1.001, 0.08], 'rgba(0,0,0,.3)', 1.2); T.line([0.06, 0.961, 0.16], [2.34, 0.961, 0.16], 'rgba(0,0,0,.12)', 1); }, { onTop: true })]; },
+    // Boho: a cream sofa with rattan arms, kilim cushions and a fringe along the base.
+    boho: (o, s1, s2) => { const v = cl(o), vc = shade(v, 0.06); return [
+      ...[[0.06, 0.06], [2.26, 0.06], [0.06, 0.86], [2.26, 0.86]].map(([x, y]) => B(x, y, 0, 0.08, 0.08, 0.12, BO.rattanDark)),
+      B(0, 0, 0.12, 2.4, 1.0, 0.26, v, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.56, v), B(0, 0, 0.38, 0.18, 1.0, 0.3, BO.rattan), B(2.22, 0, 0.38, 0.18, 1.0, 0.3, BO.rattan),
+      B(0.18, 0.3, 0.38 - s1 * 0.018, 1.02, 0.64, 0.1 - s1 * 0.035, vc), B(1.2, 0.3, 0.38 - s2 * 0.018, 1.02, 0.64, 0.1 - s2 * 0.035, vc),
+      B(0.26, 0.34, 0.48, 0.42, 0.14, 0.32, BO.cream), B(1.72, 0.34, 0.48, 0.42, 0.14, 0.32, BO.cream),
+      F(0, 0, 2.4, 1.0, (T) => {
+        [[0.26, BO.rust], [1.72, BO.teal]].forEach(([x, c]) => { for (let z = 0.54; z < 0.78; z += 0.08) { const pts = []; for (let k = 0; k <= 6; k++) pts.push(T.P(x + 0.02 + k * 0.063, 0.481, z + (k % 2) * 0.04)); ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.strokeStyle = c; ctx.lineWidth = 1.4; ctx.stroke(); } });
+        fringe(T, [0.02, 1.001, 0.12], [2.38, 1.001, 0.12], 30, 0.08, BO.macrame);
+        [[0.09, 0.0], [2.31, 0.0]].forEach(([x]) => { for (let y = 0.05; y < 1.0; y += 0.08) T.line([x, y, 0.4], [x, y, 0.66], 'rgba(90,60,20,.22)', 1); });
+      }, { onTop: true })]; },
+    // Space Age: a white pod on a chrome ring, round arms and orange cushions.
+    space: (o, s1, s2) => { const v = cl(o), vc = shade(v, 0.05); return [
+      B(0.3, 0.2, 0, 1.8, 0.6, 0.1, SA.chromeDark), B(0, 0, 0.1, 2.4, 1.0, 0.28, v, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.52, v), B(0, 0, 0.38, 0.24, 1.0, 0.36, v), B(2.16, 0, 0.38, 0.24, 1.0, 0.36, v),
+      B(0.24, 0.3, 0.38 - s1 * 0.018, 0.96, 0.66, 0.1 - s1 * 0.035, SA.orange), B(1.2, 0.3, 0.38 - s2 * 0.018, 0.96, 0.66, 0.1 - s2 * 0.035, SA.orange),
+      F(0, 0, 2.4, 1.0, (T) => {
+        [[0.12, 0.5], [2.28, 0.5]].forEach(([x, y]) => { const [ax, ay] = T.P(x, y, 0.74); ell(ax, ay, 7, 4, vc, 'rgba(0,0,0,.08)'); });
+        T.line([0.02, 1.001, 0.1], [2.38, 1.001, 0.1], SA.chrome, 2.2); T.line([0.3, 1.002, 0.1], [2.1, 1.002, 0.1], 'rgba(255,255,255,.6)', 0.8);
+        T.line([0.24, 0.301, 0.9], [2.16, 0.301, 0.9], SA.neon, 1.2);
+      }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.dining, {
+    // Art Deco: an ivory marble top on a gold pedestal, fan-back velvet chairs and a tiered gold pendant.
+    deco: (o) => { const ps = [], velvet = cl(o);
+      const chair = (y0, back) => { ps.push(B(0.6, y0 + 0.24, 0, 0.1, 0.1, 0.42, DE.gold), B(0.5, y0 + 0.14, 0, 0.3, 0.3, 0.03, DE.gold));
+        ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, velvet, { name: y0 === 0 ? 'seat1' : 'seat2' }));
+        ps.push(F(0.35, back - 0.02, 0.95, back + 0.08, (T) => { const [cx, cy] = T.P(0.65, back + 0.03, 0.5); ctx.beginPath(); ctx.ellipse(cx, cy, 11, 13, 0, Math.PI, 0); ctx.fillStyle = velvet; ctx.fill(); sunburst(cx, cy, 12, 7, shade(velvet, -0.3), 1); ctx.beginPath(); ctx.ellipse(cx, cy, 11, 13, 0, Math.PI, 0); ctx.strokeStyle = DE.gold; ctx.lineWidth = 1; ctx.stroke(); }, { onTop: true })); };
+      chair(0, 0); chair(1.89, 2.42);
+      ps.push(B(0.45, 1.04, 0, 0.4, 0.4, 0.06, DE.gold), B(0.55, 1.14, 0.06, 0.2, 0.2, 0.64, DE.lacquer), B(0.5, 1.09, 0.5, 0.3, 0.3, 0.2, DE.gold));
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, DE.ivory, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T) => { T.line([0, 0.74, 0.7], [1.3, 0.74, 0.7], DE.gold, 1.4); T.line([0, 1.74, 0.7], [1.3, 1.74, 0.7], DE.gold, 1.4); T.line([0.08, 0.84, 0.772], [0.6, 1.3, 0.772], 'rgba(201,162,74,.4)', 1); T.line([0.7, 0.9, 0.772], [1.2, 1.6, 0.772], 'rgba(201,162,74,.3)', 1); }, { onTop: true }));
+      ps.push(diningLife(), diningLight('tiered'));
+      return ps; },
+    // Japandi: a low dark table, slatted low-back chairs with a cushion, and a tall paper lantern.
+    japandi: (o) => { const ps = [], w = cl(o);
+      const chair = (y0, back) => { [[0.39, y0 + 0.04], [0.83, y0 + 0.04], [0.39, y0 + 0.48], [0.83, y0 + 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.05, 0.05, 0.42, w)));
+        ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, w, { name: y0 === 0 ? 'seat1' : 'seat2' }), B(0.38, y0 + 0.08, 0.49, 0.54, 0.44, 0.05, JA.bone), B(0.35, back, 0.49, 0.6, 0.06, 0.4, w));
+        ps.push(F(0.35, back - 0.02, 0.95, back + 0.08, (T) => { const yb = back + 0.065; for (let z = 0.56; z < 0.9; z += 0.07) T.line([0.37, yb, z], [0.93, yb, z], 'rgba(0,0,0,.35)', 1); }, { onTop: true })); };
+      chair(0, 0); chair(1.89, 2.42);
+      [[0.1, 0.84], [1.12, 0.84], [0.1, 1.56], [1.12, 1.56]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.08, 0.08, 0.7, w)));
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, w, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T) => { T.poly([[0.35, 0.74, 0.772], [0.95, 0.74, 0.772], [0.95, 1.74, 0.772], [0.35, 1.74, 0.772]], JA.bone); const [bx, by] = T.P(0.95, 1.05, 0.775); ell(bx, by, 4, 2.2, JA.clay); ell(bx, by - 5, 3, 3.4, JA.moss); ell(bx + 2, by - 7, 2.2, 2, JA.moss); limb(bx, by - 1, bx + 1, by - 5, JA.walnut, 1); }, { onTop: true }));
+      ps.push(diningLife(), diningLight('washi'));
+      return ps; },
+    // Boho: a live-edge table, peacock rattan chairs and a macrame pendant with a fringe.
+    boho: (o) => { const ps = [], wood = cl(o);
+      const chair = (y0, back) => { [[0.39, y0 + 0.04], [0.83, y0 + 0.04], [0.39, y0 + 0.48], [0.83, y0 + 0.48]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.05, 0.05, 0.42, BO.rattanDark)));
+        ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, BO.rattan, { name: y0 === 0 ? 'seat1' : 'seat2' }));
+        ps.push(F(0.35, back - 0.02, 0.95, back + 0.08, (T) => { const [cx, cy] = T.P(0.65, back + 0.03, 0.5); ctx.beginPath(); ctx.ellipse(cx, cy - 2, 13, 15, 0, Math.PI, 0); ctx.fillStyle = BO.rattan; ctx.fill(); sunburst(cx, cy - 2, 14, 10, BO.rattanDark, 1); ctx.beginPath(); ctx.ellipse(cx, cy - 2, 13, 15, 0, Math.PI, 0); ctx.strokeStyle = BO.rattanDark; ctx.lineWidth = 1.4; ctx.stroke(); }, { onTop: true })); };
+      chair(0, 0); chair(1.89, 2.42);
+      [[0.1, 0.82], [1.12, 0.82], [0.1, 1.6], [1.12, 1.6]].forEach(([x, y]) => ps.push(B(x, y, 0, 0.08, 0.08, 0.7, BO.rattanDark)));
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, wood, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T) => { const pts = []; for (let x = 0; x <= 1.3; x += 0.1) pts.push(T.P(x, 1.74 - Math.abs(Math.sin(x * 7)) * 0.05, 0.772)); ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.strokeStyle = shade(wood, -0.3); ctx.lineWidth = 1.6; ctx.stroke(); for (let y = 0.9; y < 1.7; y += 0.2) T.line([0.05, y, 0.772], [1.25, y + 0.03, 0.772], 'rgba(0,0,0,.14)', 1); }, { onTop: true }));
+      ps.push(diningLife(), diningLight('macrame'));
+      return ps; },
+    // Space Age: a white tulip table on a pedestal, tulip chairs with shell backs, and a saucer light.
+    space: (o) => { const ps = [], shell = cl(o);
+      const chair = (y0, back) => { ps.push(B(0.55, y0 + 0.19, 0, 0.2, 0.2, 0.04, SA.chrome), B(0.62, y0 + 0.26, 0.04, 0.06, 0.06, 0.38, SA.chrome));
+        ps.push(B(0.35, y0, 0.42, 0.6, 0.58, 0.07, shell, { name: y0 === 0 ? 'seat1' : 'seat2' }));
+        ps.push(F(0.35, back - 0.02, 0.95, back + 0.08, (T) => { const [cx, cy] = T.P(0.65, back + 0.03, 0.49); ctx.beginPath(); ctx.ellipse(cx, cy, 11, 12, 0, Math.PI, 0); ctx.fillStyle = shell; ctx.fill(); ctx.beginPath(); ctx.ellipse(cx, cy, 11, 12, 0, Math.PI, 0); ctx.strokeStyle = 'rgba(0,0,0,.12)'; ctx.lineWidth = 1; ctx.stroke(); ell(cx, cy - 2, 7, 4, SA.orange); }, { onTop: true })); };
+      chair(0, 0); chair(1.89, 2.42);
+      ps.push(B(0.35, 0.94, 0, 0.6, 0.6, 0.05, SA.chrome), B(0.57, 1.16, 0.05, 0.16, 0.16, 0.65, SA.white));
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, SA.white, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T) => { const [cx, cy] = T.P(0.65, 1.24, 0.771); ell(cx, cy, 24, 12, null, 'rgba(0,0,0,.08)'); T.line([0, 0.74, 0.7], [1.3, 0.74, 0.7], 'rgba(0,0,0,.1)', 1.4); }, { onTop: true }));
+      ps.push(diningLife(), diningLight('saucer'));
+      return ps; },
+  });
+  Object.assign(LOOK_DRAWERS.lamp, {
+    // Art Deco: a black stem on a stepped gold base, a fan of gold rays round an alabaster bowl.
+    deco: (T, o) => { const lit = isLit(o.id), g = cl(o);
+      T.box(0.04, 0.04, 0, 0.32, 0.32, 0.04, g); T.box(0.1, 0.1, 0.04, 0.2, 0.2, 0.04, g); T.line([0.2, 0.2, 0.08], [0.2, 0.2, 1.4], DE.lacquer, 2.6);
+      const [px, py] = T.P(0.2, 0.2, 1.52); if (lit) ell(px, py, 14, 14, 'rgba(255,226,168,.2)');
+      sunburst(px, py + 2, 13, 8, g, 1.4); ell(px, py, 8, 4, lit ? '#FFF1D2' : DE.alabaster, 'rgba(0,0,0,.12)'); ell(px, py + 1.5, 8, 2.4, shade(DE.alabaster, -0.08)); circle(px, py + 7, 2, g); },
+    // Japandi: a tall paper column with ribs on a dark base; the whole column glows.
+    japandi: (T, o) => { const lit = isLit(o.id), paper = cl(o);
+      T.box(0.08, 0.08, 0, 0.24, 0.24, 0.04, JA.ink);
+      if (lit) { const [gx, gy] = T.P(0.2, 0.2, 0.9); ell(gx, gy, 16, 30, 'rgba(255,226,168,.14)'); }
+      T.box(0.06, 0.06, 0.04, 0.28, 0.28, 1.66, lit ? '#FFF3DA' : paper);
+      for (let z = 0.14; z < 1.68; z += 0.1) { T.line([0.06, 0.341, z], [0.34, 0.341, z], 'rgba(90,70,40,.22)', 1); T.line([0.341, 0.06, z], [0.341, 0.34, z], 'rgba(90,70,40,.22)', 1); } },
+    // Boho: a rattan tripod with a macrame shade and a fringe hanging from it.
+    boho: (T, o) => { const lit = isLit(o.id), shadeCol = cl(o);
+      [[0.05, 0.05], [0.35, 0.05], [0.2, 0.35]].forEach(([x, y]) => T.line([x, y, 0], [0.2, 0.2, 1.36], BO.rattanDark, 2.4));
+      T.box(0.03, 0.03, 1.38, 0.34, 0.34, 0.3, lit ? '#FFE9B8' : shadeCol);
+      for (let z = 1.42; z < 1.68; z += 0.08) { const pts = []; for (let x = 0.03; x <= 0.37; x += 0.04) pts.push(T.P(x, 0.371, z + ((Math.round(x * 100) % 8 < 4) ? 0.03 : 0))); ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.strokeStyle = 'rgba(120,90,50,.35)'; ctx.lineWidth = 1; ctx.stroke(); }
+      fringe(T, [0.03, 0.372, 1.38], [0.37, 0.372, 1.38], 9, 0.12, BO.macrame); fringe(T, [0.372, 0.03, 1.38], [0.372, 0.37, 1.38], 9, 0.12, BO.macrame); },
+    // Space Age: a chrome stem with a wide mushroom dome that glows underneath.
+    space: (T, o) => { const lit = isLit(o.id), dome = cl(o);
+      T.box(0.06, 0.06, 0, 0.28, 0.28, 0.05, SA.chrome); T.line([0.2, 0.2, 0.05], [0.2, 0.2, 1.46], SA.chrome, 2.6);
+      const [px, py] = T.P(0.2, 0.2, 1.5); if (lit) ell(px, py + 6, 16, 8, 'rgba(255,226,168,.22)');
+      ell(px, py + 2, 14, 5, lit ? '#FFF1C9' : shade(dome, -0.25)); ctx.beginPath(); ctx.ellipse(px, py + 2, 14, 12, 0, Math.PI, 0); ctx.fillStyle = dome; ctx.fill(); ell(px - 4, py - 5, 4, 2, 'rgba(255,255,255,.35)'); },
+  });
+  Object.assign(LOOK_DRAWERS.plant, {
+    // Art Deco: a fluted gold planter on a black base.
+    deco: (T, o) => { const g = cl(o); T.box(0.02, 0.02, 0, 0.46, 0.46, 0.05, DE.lacquer); T.box(0.06, 0.06, 0.05, 0.38, 0.38, 0.37, g); for (let x = 0.08; x < 0.44; x += 0.05) T.line([x, 0.441, 0.07], [x, 0.441, 0.4], 'rgba(0,0,0,.2)', 1); for (let y = 0.08; y < 0.44; y += 0.05) T.line([0.441, y, 0.07], [0.441, y, 0.4], 'rgba(0,0,0,.2)', 1); },
+    // Japandi: a matte stoneware pot with a moss top.
+    japandi: (T, o) => { const g = cl(o); T.box(0.05, 0.05, 0, 0.4, 0.4, 0.4, g); T.line([0.05, 0.451, 0.34], [0.45, 0.451, 0.34], 'rgba(255,255,255,.2)', 1.4); T.box(0.06, 0.06, 0.4, 0.38, 0.38, 0.03, JA.moss); },
+    // Boho: a painted clay pot with stripes and dots on a jute coaster.
+    boho: (T, o) => { const g = cl(o); T.box(0, 0, 0, 0.5, 0.5, 0.03, BO.jute); T.box(0.05, 0.05, 0.03, 0.4, 0.4, 0.39, g);
+      [0.14, 0.3].forEach(z => { T.line([0.05, 0.451, z], [0.45, 0.451, z], BO.cream, 1.6); T.line([0.451, 0.05, z], [0.451, 0.45, z], BO.cream, 1.6); });
+      for (let x = 0.1; x < 0.45; x += 0.08) { const [dx, dy] = T.P(x, 0.452, 0.22); circle(dx, dy, 1, BO.cream); } },
+    // Space Age: a white egg of a pot on a chrome stand with a violet glow ring.
+    space: (T, o) => { const g = cl(o); T.box(0.1, 0.1, 0, 0.3, 0.3, 0.03, SA.chrome); T.line([0.25, 0.25, 0.03], [0.25, 0.25, 0.12], SA.chrome, 2); T.box(0.06, 0.06, 0.12, 0.38, 0.38, 0.3, g); const [rx, ry] = T.P(0.25, 0.25, 0.13); ell(rx, ry, 8, 4, null, SA.violet, 1.4); ctx.beginPath(); ctx.ellipse(rx, ry, 8, 4, 0, 0, Math.PI * 2); ctx.strokeStyle = SA.violet; ctx.lineWidth = 1.6; ctx.stroke(); },
+  });
+  Object.assign(LOOK_DRAWERS.counter, {
+    // Art Deco: black lacquer fronts with gold fluting, a mirrored top, a white basin with a gold tap, and a cocktail set at the end.
+    deco: (T, o) => { const l = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, l); for (let x = 0.08; x < 2.8; x += 0.12) T.line([x, 0.801, 0.1], [x, 0.801, 0.78], DE.gold, 1);
+      [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.04], [x, 0.802, 0.84], 'rgba(0,0,0,.6)', 1.6)); T.box(0, 0, 0, 2.8, 0.8, 0.05, DE.gold);
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, DE.mirror); [[0.2, 0.7, 0.8, 0.1], [1.5, 0.75, 2.2, 0.05], [2.3, 0.6, 2.8, 0.2]].forEach(([x0, y0, x1, y1]) => T.line([x0, y0, 0.931], [x1, y1, 0.931], 'rgba(255,255,255,.7)', 1.2)); T.line([-0.05, 0.84, 0.86], [2.85, 0.84, 0.86], DE.gold, 1.6);
+      T.poly([[0.3, 0.13, 0.932], [1.0, 0.13, 0.932], [1.0, 0.6, 0.932], [0.3, 0.6, 0.932]], '#FBFBF8', DE.gold, 1); T.poly([[0.38, 0.2, 0.933], [0.92, 0.2, 0.933], [0.92, 0.53, 0.933], [0.38, 0.53, 0.933]], '#EEF2F2');
+      T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.18], DE.gold, 2.2); T.line([0.65, 0.04, 1.18], [0.65, 0.24, 1.12], DE.gold, 2.2);
+      T.box(0.08, 0.1, 0.93, 0.12, 0.12, 0.3, DE.gold); T.box(0.06, 0.08, 1.23, 0.16, 0.16, 0.03, DE.gold); [0.26, 0.36].forEach((x, k) => { const [gx, gy] = T.P(x, 0.2 + k * 0.15, 1.0); ell(gx, gy, 2.6, 1.4, 'rgba(255,255,255,.7)'); limb(gx, gy, gx, gy + 4, 'rgba(255,255,255,.7)', 0.8); }); },
+    // Japandi: dark walnut fronts with a slatted band, a black stone top, a square black basin and a bonsai at the end.
+    japandi: (T, o) => { const w = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, w); for (let x = 0.04; x < 2.8; x += 0.06) T.line([x, 0.801, 0.3], [x, 0.801, 0.62], 'rgba(0,0,0,.35)', 1.2);
+      [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.04], [x, 0.802, 0.84], 'rgba(0,0,0,.45)', 1.2));
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.06, JA.ink); T.line([-0.05, 0.84, 0.86], [2.85, 0.84, 0.86], 'rgba(255,255,255,.12)', 1);
+      T.poly([[0.3, 0.13, 0.921], [1.0, 0.13, 0.921], [1.0, 0.6, 0.921], [0.3, 0.6, 0.921]], '#3A3A40', 'rgba(255,255,255,.18)', 1); T.poly([[0.36, 0.19, 0.922], [0.94, 0.19, 0.922], [0.94, 0.54, 0.922], [0.36, 0.54, 0.922]], '#26262B');
+      T.line([0.65, 0.04, 0.92], [0.65, 0.04, 1.26], JA.ink, 2.2); T.line([0.65, 0.04, 1.26], [0.65, 0.26, 1.22], JA.ink, 2.2);
+      T.box(0.06, 0.1, 0.92, 0.22, 0.16, 0.06, JA.clay); const [bx, by] = T.P(0.17, 0.18, 0.98); limb(bx, by, bx + 2, by - 6, JA.walnut, 1.4); limb(bx + 2, by - 4, bx + 6, by - 6, JA.walnut, 1); ell(bx + 1, by - 8, 5, 2.4, JA.moss); ell(bx + 6, by - 7, 3, 1.6, JA.moss); },
+    // Boho: woven rattan fronts, a cream tile top with blue motifs, a brass tap and pampas grass at the end.
+    boho: (T, o) => { const r = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, r); for (let x = 0.06; x < 2.8; x += 0.1) T.line([x, 0.801, 0.06], [x, 0.801, 0.8], 'rgba(90,60,20,.22)', 1); for (let z = 0.12; z < 0.84; z += 0.1) T.line([0, 0.802, z], [2.8, 0.802, z], 'rgba(90,60,20,.2)', 1);
+      [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.803, 0.04], [x, 0.803, 0.84], 'rgba(60,40,20,.4)', 1.4));
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, BO.cream); for (let x = 0.15; x < 2.8; x += 0.35) for (let y = 0.1; y < 0.8; y += 0.35) { const [dx, dy] = T.P(x, y, 0.931); ctx.beginPath(); ctx.moveTo(dx, dy - 3); ctx.lineTo(dx + 4, dy); ctx.lineTo(dx, dy + 3); ctx.lineTo(dx - 4, dy); ctx.closePath(); ctx.fillStyle = BO.teal; ctx.fill(); }
+      T.poly([[0.3, 0.13, 0.932], [1.0, 0.13, 0.932], [1.0, 0.6, 0.932], [0.3, 0.6, 0.932]], '#FBFBF8', 'rgba(0,0,0,.2)', 1);
+      T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.18], SC.brass, 2.2); T.line([0.65, 0.04, 1.18], [0.65, 0.24, 1.12], SC.brass, 2.2);
+      T.box(0.08, 0.12, 0.93, 0.14, 0.14, 0.2, BO.terracotta); const [px, py] = T.P(0.15, 0.19, 1.13); [[-2, -0.3], [0, 0], [2, 0.3]].forEach(([dx, rot]) => { limb(px, py, px + dx * 2, py - 12, BO.jute, 1); ell(px + dx * 2.4, py - 14, 2.2, 5, BO.macrame, null, rot); }); },
+    // Space Age: white fronts with chrome lines, a dark glass top with a neon edge, a round steel basin and console buttons.
+    space: (T, o) => { const w = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, w); [0.3, 0.6].forEach(z => T.line([0, 0.801, z], [2.8, 0.801, z], SA.chrome, 1.6));
+      [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.04], [x, 0.802, 0.84], 'rgba(0,0,0,.2)', 1.2));
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, SA.glass); T.line([-0.05, 0.84, 0.93], [2.85, 0.84, 0.93], SA.neon, 1.6); T.line([-0.05, 0.84, 0.86], [2.85, 0.84, 0.86], SA.chrome, 1);
+      const [sx, sy] = T.P(0.65, 0.37, 0.931); ell(sx, sy, 12, 6.5, SA.chromeDark, 'rgba(255,255,255,.3)'); ell(sx, sy + 0.8, 9, 4.6, '#6B7078');
+      T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.2], SA.chrome, 2.4); T.line([0.65, 0.04, 1.2], [0.65, 0.26, 1.13], SA.chrome, 2.4);
+      [[0.1, SA.neon], [0.18, SA.orange], [0.26, SA.violet], [0.34, SA.neon]].forEach(([x, c], k) => { const [bx, by] = T.P(x, 0.7, 0.935); circle(bx, by, 1.4, c); if (k % 2) circle(bx, by, 2.6, c.replace(')', ',.25)').replace('#', 'rgba(') === c ? 'rgba(255,255,255,.15)' : 'rgba(255,255,255,.15)'); }); },
+  });
+  Object.assign(LOOK_DRAWERS.fridge, {
+    // Art Deco: black lacquer with a gold sunburst on the door, gold handles, a gold cap and base. Returns the open door's colour.
+    deco: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 0.07, DE.gold); T.box(0, 0, 0.07, 0.9, 0.85, 1.8, body); T.box(0, 0, 1.87, 0.9, 0.85, 0.08, DE.gold);
+      T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], DE.gold, 1.4);
+      [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], DE.gold, 3.2));
+      const [bx, by] = T.P(0.4, 0.851, 0.42); sunburst(bx, by + 2, 12, 8, DE.gold, 1); ell(bx, by + 2, 12, 2, DE.gold);
+      return body; },
+    // Japandi: an ivory body with a walnut shoji grid on the door and a slim black handle. Returns the open door's colour.
+    japandi: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 1.95, body); T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(0,0,0,.2)', 1.2);
+      [0.22, 0.45, 0.68].forEach(x => T.line([x, 0.851, 0.1], [x, 0.851, 1.25], JA.walnut, 1.4)); [0.35, 0.65, 0.95].forEach(z => T.line([0.08, 0.851, z], [0.82, 0.851, z], JA.walnut, 1.4));
+      [0.22, 0.45, 0.68].forEach(x => T.line([x, 0.851, 1.36], [x, 0.851, 1.88], JA.walnut, 1.4)); [1.6].forEach(z => T.line([0.08, 0.851, z], [0.82, 0.851, z], JA.walnut, 1.4));
+      T.line([0.78, 0.855, 0.6], [0.78, 0.855, 1.25], JA.ink, 2.4); T.line([0.78, 0.855, 1.42], [0.78, 0.855, 1.8], JA.ink, 2.4);
+      return body; },
+    // Boho: terracotta enamel with a cream geometric band and rattan handles. Returns the open door's colour.
+    boho: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 1.87, body); T.box(0, 0, 1.87, 0.9, 0.85, 0.08, BO.rattan);
+      T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], 'rgba(0,0,0,.25)', 1.2);
+      for (let x = 0.08; x < 0.78; x += 0.14) { const [ax, ay] = T.P(x, 0.851, 0.95), [bx, by] = T.P(x + 0.07, 0.851, 1.1), [cx, cy] = T.P(x + 0.14, 0.851, 0.95); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx, cy); ctx.closePath(); ctx.fillStyle = BO.cream; ctx.fill(); }
+      T.line([0.06, 0.851, 0.88], [0.84, 0.851, 0.88], BO.cream, 1.4); T.line([0.06, 0.851, 1.16], [0.84, 0.851, 1.16], BO.cream, 1.4);
+      [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => { T.line([0.78, 0.855, z0], [0.78, 0.855, z1], BO.rattanDark, 3.6); for (let z = z0; z < z1; z += 0.06) T.line([0.76, 0.856, z], [0.8, 0.856, z + 0.02], BO.rattan, 1); });
+      return body; },
+    // Space Age: a white pod with a chrome cap, a glowing porthole on the door and an orange handle. Returns the open door's colour.
+    space: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 0.06, SA.chrome); T.box(0, 0, 0.06, 0.9, 0.85, 1.81, body); T.box(0, 0, 1.87, 0.9, 0.85, 0.08, SA.chrome);
+      T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], SA.chrome, 1.4);
+      [[0.7, 1.15], [1.42, 1.78]].forEach(([z0, z1]) => T.line([0.78, 0.855, z0], [0.78, 0.855, z1], SA.orange, 3.4));
+      const [px, py] = T.P(0.4, 0.851, 0.7); circle(px, py, 8, SA.chrome); circle(px, py, 6.4, power ? SA.neon : '#3A3F4A'); if (power) circle(px, py, 9.5, 'rgba(91,227,230,.18)'); circle(px - 2, py - 2, 1.6, 'rgba(255,255,255,.6)');
+      return body; },
+  });
   const DRAWN = {
     sofa: {    
       parts: (o) => { const s1 = usingSlot(o.id + ':s1') ? 1 : 0, s2 = usingSlot(o.id + ':s2') ? 1 : 0;

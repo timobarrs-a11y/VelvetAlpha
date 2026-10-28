@@ -131,6 +131,10 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-birch', 'Birch forest', 'birch', 90, ['soft', 'minimal', 'natural']),
   wallpaper('paper-brick-white', 'Painted brick', 'brick-white', 110, ['industrial', 'bold', 'cool']),
   wallpaper('paper-stripe-nautical', 'Nautical stripe', 'stripe-nautical', 90, ['cool', 'natural', 'playful']),
+  wallpaper('paper-deco-emerald', 'Emerald deco', 'deco-emerald', 120, ['luxe', 'bold', 'vintage']),
+  wallpaper('paper-shoji', 'Shoji screen', 'shoji', 90, ['minimal', 'natural', 'cool']),
+  wallpaper('paper-arches-terracotta', 'Terracotta arches', 'arches-terracotta', 100, ['warm', 'natural', 'playful']),
+  wallpaper('paper-orbit', 'Orbit', 'orbit', 110, ['modern', 'bold', 'playful']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
   wallpaper('paper-stars-night', 'Starry night', 'stars-night', 120, ['playful', 'cool', 'bold']),
@@ -157,6 +161,18 @@ export const CATALOG: CatalogEntry[] = [
 
   bundle('set-beach', 'Beach house kitchen and living room', 'Driftwood, rope and sea glass: the sea-glass fridge, whitewashed shiplap counter, driftwood dining set, striped slipcover sofa, rope-wound lamp and a seagrass basket, with nautical stripes and bleached boards.',
     ['look-fridge-beach', 'look-counter-beach', 'look-dining-beach', 'look-sofa-beach', 'look-lamp-beach', 'look-plant-beach', 'paper-stripe-nautical', 'floor-driftwood'], ['cool', 'natural', 'playful']),
+
+  bundle('set-deco', 'Art Deco kitchen and living room', 'Black lacquer, gold and emerald velvet: the lacquered icebox, lacquer and gold counter, sunburst dining set, emerald velvet sofa, tiered gold lamp and a gold urn, with emerald deco walls and ivory marble veined in gold.',
+    ['look-fridge-deco', 'look-counter-deco', 'look-dining-deco', 'look-sofa-deco', 'look-lamp-deco', 'look-plant-deco', 'paper-deco-emerald', 'floor-ivorygold'], ['luxe', 'bold', 'vintage']),
+
+  bundle('set-japandi', 'Japandi kitchen and living room', 'Walnut, stone and paper: the paper-white fridge, walnut and stone counter, low walnut dining set, low walnut sofa, washi lamp and a bonsai in a stone bowl, with shoji walls and tatami underfoot.',
+    ['look-fridge-japandi', 'look-counter-japandi', 'look-dining-japandi', 'look-sofa-japandi', 'look-lamp-japandi', 'look-plant-japandi', 'paper-shoji', 'floor-tatami'], ['minimal', 'natural', 'cool']),
+
+  bundle('set-boho', 'Boho kitchen and living room', 'Terracotta, rattan and mustard: the terracotta fridge, rattan-front counter, carved wood dining set, rattan-arm sofa with kilim cushions, macrame lamp and a pot in a hanging sling, with terracotta arches on the walls and jute on the floor.',
+    ['look-fridge-boho', 'look-counter-boho', 'look-dining-boho', 'look-sofa-boho', 'look-lamp-boho', 'look-plant-boho', 'paper-arches-terracotta', 'floor-jute'], ['warm', 'natural', 'playful']),
+
+  bundle('set-space', 'Space Age kitchen and living room', 'White moulded plastic, orange and ink: the capsule fridge, moulded pod counter, tulip dining set, pod sofa, saucer lamp and a capsule planter, with an orbit of stars on the walls and moon tile underfoot.',
+    ['look-fridge-space', 'look-counter-space', 'look-dining-space', 'look-sofa-space', 'look-lamp-space', 'look-plant-space', 'paper-orbit', 'floor-moon'], ['modern', 'bold', 'playful']),
 
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
@@ -197,6 +213,10 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-nordic', 'Pale wide plank', 'nordic', 140, ['soft', 'minimal', 'natural']),
   floor('floor-poured', 'Poured concrete', 'poured', 170, ['industrial', 'bold', 'cool']),
   floor('floor-driftwood', 'Bleached boards', 'driftwood', 140, ['cool', 'natural', 'playful']),
+  floor('floor-ivorygold', 'Ivory marble, gold vein', 'ivorygold', 180, ['luxe', 'bold', 'vintage']),
+  floor('floor-tatami', 'Tatami mat', 'tatami', 130, ['minimal', 'natural', 'cool']),
+  floor('floor-jute', 'Jute weave', 'jute', 130, ['warm', 'natural', 'playful']),
+  floor('floor-moon', 'Moon tile', 'moon', 170, ['modern', 'bold', 'playful']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
   floor('floor-navy-carpet', 'Navy carpet', 'navy', 100, ['cool', 'modern', 'cozy']),
@@ -284,6 +304,34 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-beach', 'sofa', 'beach', 'Slipcover sofa with navy stripes', 'A white slipcover on driftwood feet, rope piping, two navy-striped cushions and a few shells underneath.', 380, ['cool', 'natural', 'playful'], ['#F7F5EF', '#E8DCC2', '#DDE8EA']),
   look('look-lamp-beach', 'lamp', 'beach', 'Rope-wound lamp', 'A driftwood post wound with rope and a woven drum shade.', 90, ['cool', 'natural', 'playful'], ['#F2E6DA', '#DDE8EA', '#E8DCC2']),
   look('look-plant-beach', 'plant', 'beach', 'Seagrass basket planter', 'Your plant in a woven seagrass basket with a rope rim.', 50, ['cool', 'natural', 'playful'], ['#D2B48C', '#C9B9A2', '#E8DCC2', '#B9ADA0']),
+
+  look('look-fridge-deco', 'fridge', 'deco', 'Lacquered icebox', 'Black lacquer with an emerald door panel, a gold sunburst and a stepped gold handle.', 520, ['luxe', 'bold', 'vintage'], ['#1B1A1F', '#1F5E4A', '#6E2A3A']),
+  look('look-counter-deco', 'counter', 'deco', 'Black lacquer and gold counter', 'Black lacquer fronts with gold fluting, a gold rail, an ivory marble top and a brass basin.', 600, ['luxe', 'bold', 'vintage'], ['#1B1A1F', '#C9A24A', '#1F5E4A']),
+  look('look-dining-deco', 'dining', 'deco', 'Sunburst dining set', 'An ivory marble top on a gold pedestal, fan-back velvet chairs and a tiered gold pendant.', 540, ['luxe', 'bold', 'vintage'], ['#1F5E4A', '#6E2A3A', '#2E3B57']),
+  look('look-sofa-deco', 'sofa', 'deco', 'Emerald velvet sofa', 'Channel-tufted emerald velvet on a gold plinth, with wine and navy cushions.', 560, ['luxe', 'bold', 'vintage'], ['#1F5E4A', '#6E2A3A', '#2E3B57']),
+  look('look-lamp-deco', 'lamp', 'deco', 'Tiered gold lamp', 'A fluted gold column under a stepped, tiered shade.', 160, ['luxe', 'bold', 'vintage'], ['#C9A24A', '#E0C26E', '#B9BEC3']),
+  look('look-plant-deco', 'plant', 'deco', 'Gold urn planter', 'Your plant in a fluted gold urn on a black plinth.', 110, ['luxe', 'bold', 'vintage'], ['#C9A24A', '#E0C26E', '#B9BEC3', '#1B1A1F']),
+
+  look('look-fridge-japandi', 'fridge', 'japandi', 'Paper-white fridge', 'Matte paper-white with a slim walnut handle and a stone grey cap.', 360, ['minimal', 'natural', 'cool'], ['#F7F3EA', '#B9B4AC', '#7A8A6A']),
+  look('look-counter-japandi', 'counter', 'japandi', 'Walnut and stone counter', 'Slatted walnut fronts under a grey stone top, with a deep stone basin.', 430, ['minimal', 'natural', 'cool'], ['#4A3A2E', '#6B5444', '#B9B4AC']),
+  look('look-dining-japandi', 'dining', 'japandi', 'Low walnut dining set', 'A long, low walnut table, bench seating and a washi paper pendant.', 350, ['minimal', 'natural', 'cool'], ['#4A3A2E', '#6B5444', '#2B2B30']),
+  look('look-sofa-japandi', 'sofa', 'japandi', 'Low walnut sofa', 'A walnut frame low to the floor with stone-grey cushions and two bolsters.', 380, ['minimal', 'natural', 'cool'], ['#4A3A2E', '#6B5444', '#B9B4AC']),
+  look('look-lamp-japandi', 'lamp', 'japandi', 'Washi paper lamp', 'A tall washi paper column glowing on a walnut base.', 90, ['minimal', 'natural', 'cool'], ['#F7F3EA', '#EDE6D6', '#E6DCCB']),
+  look('look-plant-japandi', 'plant', 'japandi', 'Stone bowl bonsai', 'A bonsai in a shallow stone bowl on a walnut stand.', 60, ['minimal', 'natural', 'cool'], ['#B9B4AC', '#B07A5A', '#8E8A84', '#2B2B30']),
+
+  look('look-fridge-boho', 'fridge', 'boho', 'Terracotta fridge', 'Terracotta enamel with a mustard band, a teal handle and a hanging plant on top.', 350, ['warm', 'natural', 'playful'], ['#C26B4A', '#D9A84A', '#3D6B73']),
+  look('look-counter-boho', 'counter', 'boho', 'Rattan-front counter', 'Woven rattan fronts, a warm wood top, a terracotta basin and a brass tap.', 420, ['warm', 'natural', 'playful'], ['#D2B48C', '#A8865A', '#C9B28A']),
+  look('look-dining-boho', 'dining', 'boho', 'Carved wood dining set', 'A carved wood table, rattan-back chairs and a macrame pendant over it.', 340, ['warm', 'natural', 'playful'], ['#9C6B45', '#A85A40', '#C9B28A']),
+  look('look-sofa-boho', 'sofa', 'boho', 'Rattan-arm sofa with kilim cushions', 'A cream sofa with rattan arms, kilim cushions and a fringe along the base.', 380, ['warm', 'natural', 'playful'], ['#F1E8D2', '#D9A84A', '#C26B4A']),
+  look('look-lamp-boho', 'lamp', 'boho', 'Macrame shade lamp', 'A knotted macrame shade with a fringe, on a rattan post.', 90, ['warm', 'natural', 'playful'], ['#EFE4D2', '#D2B48C', '#C9B28A']),
+  look('look-plant-boho', 'plant', 'boho', 'Terracotta pot in a hanging sling', 'Your plant in a terracotta pot, held in a macrame sling from a wooden hook.', 60, ['warm', 'natural', 'playful'], ['#C26B4A', '#D9A84A', '#3D6B73', '#F1E8D2']),
+
+  look('look-fridge-space', 'fridge', 'space', 'Capsule fridge', 'A white capsule with rounded corners, an orange porthole door and an ink base.', 520, ['modern', 'bold', 'playful'], ['#F4F6F8', '#1B1A24', '#F26A2E']),
+  look('look-counter-space', 'counter', 'space', 'Moulded pod counter', 'One moulded white shell with a glowing button strip, an ink top and a round basin.', 600, ['modern', 'bold', 'playful'], ['#F4F6F8', '#1B1A24', '#D5DAE0']),
+  look('look-dining-space', 'dining', 'space', 'Tulip dining set', 'A white tulip table on a single stem, orange tulip chairs and a saucer pendant.', 540, ['modern', 'bold', 'playful'], ['#F4F6F8', '#F26A2E', '#1B1A24']),
+  look('look-sofa-space', 'sofa', 'space', 'Pod sofa', 'A moulded white pod on an ink ring base with cyan-piped cushions.', 560, ['modern', 'bold', 'playful'], ['#F4F6F8', '#1B1A24', '#5BE3E6']),
+  look('look-lamp-space', 'lamp', 'space', 'Saucer lamp', 'An orange saucer shade hovering on a slim white stem over a violet glow.', 160, ['modern', 'bold', 'playful'], ['#F26A2E', '#F4F6F8', '#7A5CFF']),
+  look('look-plant-space', 'plant', 'space', 'Capsule planter', 'Your plant in a white capsule pod with a cyan ring, on an ink base.', 110, ['modern', 'bold', 'playful'], ['#F4F6F8', '#1B1A24', '#5BE3E6', '#7A5CFF']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
