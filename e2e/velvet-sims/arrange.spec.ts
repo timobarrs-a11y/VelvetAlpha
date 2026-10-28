@@ -124,3 +124,12 @@ test('Arrange has no title bar or close button; the Arrange button in the bottom
   await expect(game.locator('.vh-drawer')).toBeHidden();
   expect(await inGame<boolean>(page, 'v.isArranging ? v.isArranging() : false')).toBe(false);
 });
+
+test('the Arrange action buttons are all the same size', async ({ page }) => {
+  const game = await openGame(page);
+  await game.locator('.vh-dock [data-open=arrange]').click();
+  await game.locator('[data-arr-pick=sofa]').click();
+  const boxes = await game.locator('.vh-arr-acts > button').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
+  expect(boxes.length).toBeGreaterThanOrEqual(3);
+  for (const b of boxes) expect(b).toEqual(boxes[0]);
+});
