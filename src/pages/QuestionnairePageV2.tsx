@@ -53,6 +53,8 @@ export function QuestionnairePageV2() {
   }, [genderParam, typeParam]);
   const hasChosen = !!chosen.relationshipType && !!chosen.connectionType;
 
+  // Two or three remarks in the whole of making someone: one on the first screens (see CompanionPathSelectPage), one or two here.
+  const buildRemarks = useMemo(() => (Math.random() < 0.5 ? 1 : 2), []);
   const [showBridge, setShowBridge] = useState(false);
   const [bridgeAnswers, setBridgeAnswers] = useState<Record<string, string | string[]>>({});
   const [liveAnswers, setLiveAnswers] = useState<Record<string, string | string[]>>(chosen);
@@ -144,6 +146,7 @@ export function QuestionnairePageV2() {
   return (
     <QuestionnaireShell
       host={DEZ}
+      reactionCount={buildRemarks}
       definition={WITHOUT_CHOSEN}
       context={ctx}
       initialAnswers={chosen}

@@ -53,6 +53,11 @@ interface QuestionnaireShellProps {
   initialIndex?: number;
   /** A character who asks the questions, typed out like dialogue. Without one it is a plain form. */
   host?: QuestionnaireHost;
+  /**
+   * How many of the questions that have a remark the host actually remarks on this time, picked at random. Without it
+   * he remarks on all of them. Said on every answer it wears thin, and the same few every time would too.
+   */
+  reactionCount?: number;
 }
 
 export function QuestionnaireShell({
@@ -66,6 +71,7 @@ export function QuestionnaireShell({
   initialAnswers,
   initialIndex = 0,
   host,
+  reactionCount,
 }: QuestionnaireShellProps) {
   const [currentIdx, setCurrentIdx] = useState(Math.min(Math.max(initialIndex, 0), definition.questions.length - 1));
   const [answers, setAnswers] = useState<Record<string, string | string[]>>(initialAnswers ?? {});
@@ -84,6 +90,13 @@ export function QuestionnaireShell({
   // The host's remark on the answer just given, shown before the next question comes up.
   const [reaction, setReaction] = useState<{ text: string; answers: Record<string, string | string[]> } | null>(null);
   const [reactionDone, setReactionDone] = useState(false);
+  // Which questions he remarks on this time, chosen once.
+  const [remarkOn] = useState<Set<string> | null>(() => {
+    if (reactionCount === undefined) return null;
+    const ids = definition.questions.filter(q => q.reaction).map(q => q.id);
+    for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+    return new Set(ids.slice(0, Math.max(0, reactionCount)));
+  });
   useEffect(() => { setLineDone(!host); }, [currentIdx, host]);
   const dragStartRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -176,7 +189,8 @@ export function QuestionnaireShell({
     const newAnswers = { ...answers, [question.id]: answer };
     setAnswers(newAnswers);
     onAnswer?.(question.id, answer, newAnswers);
-    const remark = host ? question.reaction?.(answer, { ...context, answers: newAnswers }) : null;
+    const said = host && (!remarkOn || remarkOn.has(question.id)) ? question.reaction?.(answer, { ...context, answers: newAnswers }) : null;
+    const remark = Array.isArray(said) ? said[Math.floor(Math.random() * said.length)] : said;
     if (remark) {
       setTimeout(() => { setReactionDone(false); setReaction({ text: remark, answers: newAnswers }); }, question.archetype === 'tap' ? 350 : 100);
       return;

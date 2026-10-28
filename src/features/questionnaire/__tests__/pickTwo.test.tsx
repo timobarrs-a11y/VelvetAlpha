@@ -47,23 +47,48 @@ describe('the humor question', () => {
   });
 });
 
-describe('Dez\'s remark after an answer', () => {
+describe('Dez\'s remarks', () => {
   const host = { name: 'Dez', title: 'Mayor of Town', portrait: null };
   const def = {
     startProgress: 0,
     chapters: [{ id: 'c', label: 'Who', questionIds: ['directness', 'care'] }],
     questions: ['directness', 'care'].map(id => COMPANION_QUESTIONNAIRE.questions.find(q => q.id === id)!),
   };
+  const mount = (reactionCount?: number) =>
+    render(<QuestionnaireShell definition={def} host={host} reactionCount={reactionCount} context={makeContext({}, 'Female', 'companion')} onComplete={vi.fn()} />);
+  const seen = (re: RegExp) => screen.queryAllByText(re).length > 0;
 
-  it('is said, then the next question comes up; and without a host there is no remark', async () => {
+  it('say one line from the pool after an answer, then the next question comes up', async () => {
     vi.setConfig({ testTimeout: 30000 });
-    const onComplete = vi.fn();
-    render(<QuestionnaireShell definition={def} host={host} context={makeContext({}, 'Female', 'companion')} onComplete={onComplete} />);
-    // the first question, and its slider answer
+    vi.spyOn(Math, 'random').mockReturnValue(0); // the first line in each pool
+    try {
+      mount();
+      expect((await screen.findAllByText(/haircut/, {}, { timeout: 8000 })).length).toBeGreaterThan(0);
+      fireEvent.click(await screen.findByText('Next', {}, { timeout: 8000 }));
+      expect((await screen.findAllByText(/Tactful but honest\. Hardest kind to be/, {}, { timeout: 8000 })).length).toBeGreaterThan(0);
+      expect((await screen.findAllByText(/wrecked after a bad day/, {}, { timeout: 12000 })).length).toBeGreaterThan(0);
+    } finally { vi.restoreAllMocks(); }
+  });
+
+  it('are only said on as many questions as were asked for, picked at random', async () => {
+    vi.setConfig({ testTimeout: 30000 });
+    // With the dice at zero the one remark lands on the second question, so the first goes straight on.
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      mount(1);
+      expect((await screen.findAllByText(/haircut/, {}, { timeout: 8000 })).length).toBeGreaterThan(0);
+      fireEvent.click(await screen.findByText('Next', {}, { timeout: 8000 }));
+      expect((await screen.findAllByText(/wrecked after a bad day/, {}, { timeout: 8000 })).length).toBeGreaterThan(0);
+      expect(seen(/Tactful but honest/)).toBe(false);
+    } finally { vi.restoreAllMocks(); }
+  });
+
+  it('never say anything when none are asked for', async () => {
+    vi.setConfig({ testTimeout: 30000 });
+    mount(0);
     expect((await screen.findAllByText(/haircut/, {}, { timeout: 8000 })).length).toBeGreaterThan(0);
     fireEvent.click(await screen.findByText('Next', {}, { timeout: 8000 }));
-    // the remark for "tactful, but honest" (the slider's middle), then the next question
-    expect((await screen.findAllByText(/Tactful but honest/, {}, { timeout: 8000 })).length).toBeGreaterThan(0);
-    expect((await screen.findAllByText(/wrecked after a bad day/, {}, { timeout: 12000 })).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/wrecked after a bad day/, {}, { timeout: 8000 })).length).toBeGreaterThan(0);
+    expect(seen(/Tactful but honest|straight shooter|Hints and teasing/)).toBe(false);
   });
 });

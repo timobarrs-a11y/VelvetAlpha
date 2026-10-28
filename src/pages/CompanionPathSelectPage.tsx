@@ -101,6 +101,7 @@ export function CompanionPathSelectPage() {
   return (
     <QuestionnaireShell
       host={DEZ}
+      reactionCount={1}
       definition={COMPANION_START}
       context={ctx}
       initialAnswers={initialAnswers}

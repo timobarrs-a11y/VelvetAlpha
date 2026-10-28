@@ -22,24 +22,15 @@ asked here; the companion asks them in conversation in its first week (`companio
 
 ## Dez's remarks
 
-After every answer Dez says one short line, typed out like the rest of his dialogue, and then the next question comes
-up. The lines are the same for everyone; only the companion's pronouns change. Humor with two picks gets "A mix. That's
-how real folks are." The old "taking shape" screens are gone, since his remarks do that job. Remarks live next to each
-question in `companionBank.ts` (`reaction`) and are only said when a host is set.
+Dez does not answer everything: said on every answer it wears thin. Making someone has **two or three** remarks in all,
+one on the first three screens and one or two on the rest, on questions picked at random each time. Each remark is
+drawn from a pool of three lines per answer, so someone who goes through it again does not get the same ones.
+The lines are typed out like the rest of his dialogue, then he holds a beat and the next question comes up.
 
-| After | Dez says (she/he shown as she) |
-|---|---|
-| Female / Male | "A woman, then. I know a few worth meeting." / "A fella, then. I know a few of those too." |
-| Friend / companion | "A friend first. Best way to start anything." / "Something more. Now we're talking." |
-| Build / surprise | "A builder. I like it. Let's make her just right." / "Feeling lucky. Hold onto your hat." |
-| Energy | "Hoo, she's the loud one. No dull nights with her." / "Could go either way, depending on the day. Smart." / "The quiet type. Bet she's thinking about something good." |
-| Humor | "Sharp. Hope you've had your coffee." / "A clown. I respect that." / "Deadpan. Takes you a second, then you're gone." / "Kind humor. Rare as hen's teeth." |
-| Directness | "A straight shooter. You'll always know where you stand." / "Tactful but honest. The hardest kind to be." / "Hints and teasing. You'll be guessing, and loving it." |
-| Openness | "Hard to crack. Worth the effort, though." / "She'll open up in her own time. Can't rush that." / "Wears her heart on her sleeve. That takes nerve." |
-| Care | "A fixer. Sleeves up first, questions after." / "Listens first, then helps. That's the order that works." / "Just stays with you. Sometimes that's all anybody needs." |
-| Flirt | "Bold. No guesswork there." / "Sweet and subtle. It's the little things." / "Banter. Flirting with a sharp edge." / "Quiet and deep. Notices everything." |
-| Interests | "Good taste. Never a shortage to talk about." |
-| Name | "{Name}. That suits her. Let me go and fetch her." |
+He is a country feller: plain-spoken, funny, a little folksy, light on the drawl (no phonetic spelling, no "y'all").
+Samples: "Dry as a creek in August. Love it." / "Slow to open, then all in. I like that." / "Surprise it is. I once got a
+surprise goat. This'll be better." The pools live next to each question in `companionBank.ts` (`reaction`) and are only
+said when a host is set. `reactionCount` on the shell (1 on the first screens, 1 or 2 on the build) sets how many.
 
 ## Who wins against the signature voice
 
