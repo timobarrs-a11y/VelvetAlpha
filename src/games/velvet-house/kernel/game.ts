@@ -148,6 +148,7 @@ export interface Game {
   commitMove(o: ObjectInstance, verb?: string): void;
   rotateSelected(): void;
   runCheat(input: string): string;
+  tryDevMoney(text: string): boolean;
   recolourHeld(): void;
   useLook(skin: string): void;
   cancelHold(): void;

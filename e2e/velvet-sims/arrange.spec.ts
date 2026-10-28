@@ -101,3 +101,26 @@ test('nothing is too heavy or too indoors: the treadmill can go to the backyard 
   await game.locator('[data-arr-floor="2"]').click();
   expect((await piece(page, 'tread')).level).toBe(2);
 });
+
+test('Arrange has no title bar or close button; the Arrange button in the bottom bar turns it on and off', async ({ page }) => {
+  const game = await openGame(page);
+  const dock = game.locator('.vh-dock [data-open=arrange]');
+  await dock.click();
+  await expect(game.locator('.vh-drawer[data-open=arrange]')).toBeVisible();
+  // The title bar is not on the page at all (not just hidden).
+  await expect(game.locator('.vh-drawer[data-open=arrange] .vh-drawer-head')).toHaveCount(0);
+  await expect(game.locator('.vh-drawer[data-open=arrange] .vh-drawer-close')).toHaveCount(0);
+  // The controls and the list are still there.
+  await game.locator('[data-arr-pick=sofa]').click();
+  await expect(game.locator('.vh-arr-bar [data-arr=set]')).toBeVisible();
+  // Other pages keep their title bar and close button.
+  await game.locator('.vh-dock [data-open=shop]').click();
+  await expect(game.locator('.vh-drawer[data-open=shop] .vh-drawer-head')).toBeVisible();
+  await game.locator('.vh-drawer[data-open=shop] .vh-drawer-close').click();
+  // The same button turns Arrange off again.
+  await dock.click();
+  await expect(game.locator('.vh-drawer[data-open=arrange]')).toBeVisible();
+  await dock.click();
+  await expect(game.locator('.vh-drawer')).toBeHidden();
+  expect(await inGame<boolean>(page, 'v.isArranging ? v.isArranging() : false')).toBe(false);
+});
