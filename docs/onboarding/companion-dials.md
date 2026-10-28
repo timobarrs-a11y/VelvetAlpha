@@ -27,9 +27,10 @@ one on the first three screens and one or two on the rest, on questions picked a
 drawn from a pool of three lines per answer, so someone who goes through it again does not get the same ones.
 The lines are typed out like the rest of his dialogue, then he holds a beat and the next question comes up.
 
-He is a country feller: plain-spoken, funny, a little folksy, light on the drawl (no phonetic spelling, no "y'all").
-Samples: "Dry as a creek in August. Love it." / "Slow to open, then all in. I like that." / "Surprise it is. I once got a
-surprise goat. This'll be better." The pools live next to each question in `companionBank.ts` (`reaction`) and are only
+He is a country feller, the same Dez as in the life sim: plain-spoken, funny, says "y'all", drops the odd g ("meetin'",
+"gettin'"), "'round", "dang", and signs off "Get 'er done!". Used lightly, a few to a line at most, never spelled out
+phonetically. The intro button is "Let's get 'er done". Samples: "Dry as a creek in August. Love it." / "Hope y'all got
+time." / "Surprise it is. I once got a surprise goat. This'll be better." The pools live next to each question in `companionBank.ts` (`reaction`) and are only
 said when a host is set. `reactionCount` on the shell (1 on the first screens, 1 or 2 on the build) sets how many.
 
 ## Who wins against the signature voice

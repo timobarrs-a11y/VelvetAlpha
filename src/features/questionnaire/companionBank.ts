@@ -4,7 +4,8 @@ import type { QuestionContext } from './types';
 
 /**
  * Dez's remarks: a few lines per answer to pick from at random (so a second run does not read the same), with the
- * companion's pronouns filled in. He is a country feller, funny, plain-spoken, not heavy on the drawl. The shell only
+ * companion's pronouns filled in. He is a country feller, funny and plain-spoken, who says "y'all" and drops the odd g the
+ * way he does in the life sim (content/lines.ts), without laying the accent on thick. The shell only
  * has him say one on a couple of the questions each time.
  */
 const remarks = (lines: Record<string, string[]>) =>
@@ -34,8 +35,8 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       chapter: 'connection',
       question: 'Who are you looking for?',
       reaction: remarks({
-        Female: ["A lady, huh. I know a few worth meeting.", "Female it is. I've met some fine ones.", "A woman. Smartest call you'll make all day."],
-        Male: ["A fella, then. I know a few. Some even wipe their boots.", "Male it is. I know a good one who owes me a favor.", "A man, then. Let me see who still has his manners."],
+        Female: ["A lady, huh. I know a few worth meetin'.", "Female it is. I've met some fine ones 'round here.", "A woman. Smartest call you'll make all day."],
+        Male: ["A fella, then. I know a few. Some even wipe their boots.", "Male it is. Know a good one who owes me a favor.", "A man, then. Let me see who still has his manners."],
       }),
       confidence: 'tapped',
       autoAdvance: true,
@@ -53,8 +54,8 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
         return `What kind of ${word} do you want?`;
       },
       reaction: remarks({
-        friend: ["A friend. Best kind of trouble.", "Friends first. Everything good starts there.", "Just a friend. No shame in it, I've got about four."],
-        romantic: ["Something more. Well, now we're getting somewhere.", "Romance. I'll try to look away.", "Something more, huh. I'll pretend I didn't hear that."],
+        friend: ["A friend. Best kind of trouble.", "Friends first. Y'all start there, the rest follows.", "Just a friend. No shame in it, I've got about four."],
+        romantic: ["Something more. Well now, y'all are gettin' somewhere.", "Romance. I'll try to look away.", "Something more, huh. I'll pretend I didn't hear that."],
       }),
       confidence: 'tapped',
       autoAdvance: true,
@@ -69,7 +70,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       chapter: 'energy',
       question: (ctx) => tpl(`Picture {her} walking into a party. Does {she} work the room, or find the quiet corner?`, ctx),
       reaction: remarks({
-        'Life of the party': ["Hoo, {she}'s the loud one. I can hear {her} from the next county.", "Life of the party. {She}'ll have the whole block dancing.", "Big energy. Better stretch first."],
+        'Life of the party': ["Hoo, {she}'s the loud one. I can hear {her} from the next county, I swear.", "Life of the party. {She}'ll have the whole block dancing.", "Big energy. Better stretch first."],
         'Somewhere in between': ["Could go either way, depending on the day. Smart.", "In between. Like a good porch swing.", "A little of both. Hard to bore a person like that."],
         'In her own world': ["The quiet type. Bet {she}'s thinking something good.", "Keeps to {herself}. Still waters, as they say.", "Own world. Nice place, I hear. Good weather."],
         'In his own world': ["The quiet type. Bet {she}'s thinking something good.", "Keeps to {herself}. Still waters, as they say.", "Own world. Nice place, I hear. Good weather."],
@@ -96,9 +97,9 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       question: (ctx) => tpl(`You burn the toast and set off the smoke alarm. What does {she} say?`, ctx),
       reaction: (answer, ctx) => {
         const picks = Array.isArray(answer) ? answer : [answer];
-        if (picks.length > 1) return ["A mix. That's how real folks are.", "Little of this, little of that. Like a good stew.", "Can't be boxed in. Good."].map(l => tpl(l, ctx));
+        if (picks.length > 1) return ["A mix. That's how real folks are, y'all.", "Little of this, little of that. Like a good stew.", "Can't be boxed in. Good."].map(l => tpl(l, ctx));
         return remarks({
-          witty: ["Sharp as a tack. Hope you've had your coffee.", "A wit. You'll need to keep up.", "Quick tongue. I'll watch my back."],
+          witty: ["Sharp as a tack. Hope y'all had your coffee.", "A wit. You'll need to keep up.", "Quick tongue. I'll watch my back."],
           goofy: ["A clown. I respect that.", "Goofy. Best company there is, and the worst at funerals.", "Silly. I like {her} already."],
           dry: ["Deadpan. Takes you a second, then you're gone.", "Dry as a creek in August. Love it.", "Says it with a straight face. Hard to beat."],
           warm: ["Kind humor. Rare as hen's teeth.", "Makes a joke and a casserole. Warm one.", "Gentle laughs. Easy to be around."],
@@ -120,7 +121,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       chapter: 'treats',
       question: (ctx) => tpl(`You ask {her} how the new haircut looks, and it is not great. What happens?`, ctx),
       reaction: remarks({
-        'Very Direct & Straightforward': ["A straight shooter. You always know where you stand.", "Says it plain. Stings a minute, helps for years.", "No sugar on it. Fine by me."],
+        'Very Direct & Straightforward': ["A straight shooter. Y'all always know where you stand.", "Says it plain. Stings a minute, helps for years.", "No sugar on it. Fine by me."],
         'Diplomatic & Tactful': ["Tactful but honest. Hardest kind to be.", "Tells the truth with a soft landing. Takes skill.", "Honest, but kind about it. I'll take two."],
         'Playfully Indirect': ["Hints and teasing. You'll be guessing, and loving it.", "Plays it sideways. You'll never be bored.", "Says it with a wink. Keeps a fella on his toes."],
       }),
@@ -141,7 +142,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       reaction: remarks({
         'Private & Guarded': ["Hard to crack. Worth the effort, though.", "Keeps {their} cards close. Smart, and a little stubborn.", "Takes time. Good things usually do."],
         'Opens Up Over Time': ["{She}'ll open up in {their} own time. Can't rush that.", "Slow to open, then all in. I like that.", "Gets there when {she}'s ready. Like a good biscuit."],
-        'Open Book': ["Wears {their} heart on {their} sleeve. Takes nerve.", "Tells you everything. Hope you've got time.", "Open book. No guessing, no games."],
+        'Open Book': ["Wears {their} heart on {their} sleeve. Takes nerve.", "Tells you everything. Hope y'all got time.", "Open book. No guessing, no games."],
       }),
       confidence: 'tapped',
       config: {
@@ -158,7 +159,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       chapter: 'treats',
       question: (ctx) => tpl(`You come home wrecked after a bad day. What does {she} do?`, ctx),
       reaction: remarks({
-        'Offers Solutions & Helps You Fix It': ["A fixer. Sleeves up first, questions after.", "Grabs a wrench before you finish the sentence. I know the type.", "Tries to solve it. Might even fix the sink."],
+        'Offers Solutions & Helps You Fix It': ["A fixer. Sleeves up first, questions after.", "Grabs a wrench 'fore you finish the sentence. I know the type.", "Tries to solve it. Might even fix the dang sink."],
         'Listens First, Then Helps': ["Listens first, then helps. That's the right order.", "Hears you out, then pitches in. Wise.", "Ears first, hands second. Good system."],
         'Just Listens & Validates': ["Just stays with you. Sometimes that's all anybody needs.", "Sits with you. No fixing. Rare gift.", "A good listener. Worth more than gold."],
       }),
@@ -225,7 +226,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       archetype: 'grid',
       chapter: 'warmth',
       question: (ctx) => tpl(`What is {she} into? Pick a few.`, ctx),
-      reaction: () => ["Good taste. Never a shortage to talk about.", "That'll keep a conversation going all winter.", "Plenty to talk about. Dinner'll run long."],
+      reaction: () => ["Good taste. Never a shortage to talk about.", "That'll keep a conversation goin' all winter, y'all.", "Plenty to talk about. Dinner'll run long."],
       confidence: 'tapped',
       multiSelect: true,
       minSelections: 1,
@@ -249,7 +250,7 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
         return "What's the perfect name?";
       },
       reaction: (answer, ctx) => (typeof answer === 'string' && answer
-        ? [`${answer}. That suits {her}. Let me go fetch {her}.`, `${answer}, huh. I like it. One minute.`, `${answer}. Say it enough and it sticks. Hold tight.`].map(l => tpl(l, ctx))
+        ? [`${answer}. That suits {her}. Let me go fetch {her}. Get 'er done!`, `${answer}, huh. I like it. One minute.`, `${answer}. Say it enough and it sticks. Hold tight.`].map(l => tpl(l, ctx))
         : null),
       confidence: 'confirmed',
       placeholder: 'Type a name...',
@@ -274,9 +275,9 @@ export const COMPANION_START: QuestionnaireDefinition = {
       id: 'dezIntro',
       archetype: 'tap',
       chapter: 'start',
-      question: "Well, hey there. You know me: Dez, mayor of Town, and I drive the delivery truck. Turns out I'm also the matchmaker. Let's find you somebody.",
+      question: "Well hey there, y'all! You know me: Dez, mayor of Town, and I drive the delivery truck. Turns out I'm also the matchmaker. Let's find you somebody.",
       autoAdvance: true,
-      options: [{ text: "Let's do it", value: 'ready' }],
+      options: [{ text: "Let's get 'er done", value: 'ready' }],
     },
     { ...byId('relationshipType'), chapter: 'start' },
     { ...byId('connectionType'), chapter: 'start', skipIf: (ctx) => ctx.answers.kindPreset === '1' } as Question,
@@ -286,8 +287,8 @@ export const COMPANION_START: QuestionnaireDefinition = {
       chapter: 'start',
       question: (ctx) => `Do you want to build your ${ctx.subject === 'friend' ? 'friend' : 'companion'}, or be surprised?`,
       reaction: remarks({
-        own: ["A builder. I like a person who reads the manual.", "Doing it yourself. Good. I don't trust folks who don't.", "Custom job, then. Wipe your hands, we're going in."],
-        random: ["Feeling lucky. Hold onto your hat.", "Surprise it is. I once got a surprise goat. This'll be better.", "Leave it to me, then. What could go wrong."],
+        own: ["A builder. I like a person who reads the manual. Let's get 'er done.", "Doing it yourself. Good. I don't trust folks who don't.", "Custom job, then. Wipe your hands, we're going in."],
+        random: ["Feelin' lucky. Hold onto your hat, y'all.", "Surprise it is. I once got a surprise goat. This'll be better.", "Leave it to me, then. What could go wrong."],
       }),
       confidence: 'tapped',
       autoAdvance: true,

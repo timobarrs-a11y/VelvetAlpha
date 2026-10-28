@@ -44,7 +44,7 @@ describe('making someone: gender, then friend or companion, then build or surpri
     mount('/companion-path', <CompanionPathSelectPage />);
     // Dez opens, the same for everyone, then asks
     expect(screen.getAllByText(/I'm also the matchmaker/).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByText("Let's do it"));
+    fireEvent.click(screen.getByText("Let's get 'er done"));
     expect((await screen.findAllByText('Who are you looking for?', {}, { timeout: 9000 })).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText('Male'));
     expect((await screen.findAllByText(/What kind of relationship do you want\?/, {}, { timeout: 9000 })).length).toBeGreaterThan(0);
@@ -54,7 +54,7 @@ describe('making someone: gender, then friend or companion, then build or surpri
 
   it('does not ask friend or companion again when it was chosen on the way in', async () => {
     mount('/companion-path?kind=friend', <CompanionPathSelectPage />);
-    fireEvent.click(screen.getByText("Let's do it"));
+    fireEvent.click(screen.getByText("Let's get 'er done"));
     fireEvent.click(await screen.findByText('Female', {}, { timeout: 9000 }));
     expect((await screen.findAllByText(/build your friend, or be surprised/, {}, { timeout: 9000 })).length).toBeGreaterThan(0);
     expect(screen.queryByText(/What kind of/)).toBeNull();
@@ -62,7 +62,7 @@ describe('making someone: gender, then friend or companion, then build or surpri
 
   it('"build them myself" carries the gender and the kind to the questionnaire', async () => {
     mount('/companion-path', <CompanionPathSelectPage />);
-    fireEvent.click(screen.getByText("Let's do it"));
+    fireEvent.click(screen.getByText("Let's get 'er done"));
     fireEvent.click(await screen.findByText('Female', {}, { timeout: 9000 }));
     fireEvent.click(await screen.findByText('Something more...', {}, { timeout: 9000 }));
     fireEvent.click(await screen.findByText('Build them myself', {}, { timeout: 9000 }));
@@ -72,7 +72,7 @@ describe('making someone: gender, then friend or companion, then build or surpri
   it('"surprise me" makes the companion for that gender and kind, shows them with a button, and never opens the questionnaire', async () => {
     createRandomCompanion.mockResolvedValue({ id: 'c1', name: 'Levi', avatar: {}, to: '/chat?companion=c1' });
     mount('/companion-path?kind=friend', <CompanionPathSelectPage />);
-    fireEvent.click(screen.getByText("Let's do it"));
+    fireEvent.click(screen.getByText("Let's get 'er done"));
     fireEvent.click(await screen.findByText('Male', {}, { timeout: 9000 }));
     fireEvent.click(await screen.findByText('Surprise me', {}, { timeout: 9000 }));
     await waitFor(() => expect(createRandomCompanion).toHaveBeenCalledWith('male', 'friend'), { timeout: 9000 });
