@@ -18,7 +18,9 @@ describe('AdminPromoCodesPage', () => {
     expect(screen.getByText(/Cuddle Clouds kitchen and living room \+ Cuddle Clouds finishing touches · 13 pieces, free/)).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
     expect(screen.getByText(/Latest: Ana/)).toBeTruthy();
-    expect(screen.getAllByText('Copy')).toHaveLength(1);
+    expect(screen.getByText('iluv2dance')).toBeTruthy();
+    expect(screen.getByText('Nana')).toBeTruthy();
+    expect(screen.getAllByText('Copy')).toHaveLength(2);
     expect(screen.getByText('oldcode')).toBeTruthy();
     expect(screen.getByText('Retired')).toBeTruthy();
   });

@@ -80,6 +80,16 @@ function CoachingPage({ onChanged }: { onChanged: (ids: string[]) => void }) {
   return <button onClick={() => coach.ask('Set my goal')}>page ask</button>;
 }
 
+function DraftPage() {
+  const coach = useDockCoach({ surface: 'commitments', quickPrompts: [], onCoachChanged: () => {} });
+  return (
+    <>
+      <button onClick={() => coach.draft('Help me with this task')}>page draft</button>
+      <button onClick={() => coach.ask('Send this now')}>page send</button>
+    </>
+  );
+}
+
 function renderDock(page?: React.ReactNode) {
   return render(
     <MemoryRouter initialEntries={['/coaching-commitments']}>
@@ -125,7 +135,8 @@ describe('Dock', () => {
     fireEvent.click(screen.getByTitle('Friends HQ'));
     fireEvent.click(screen.getByTitle('Andre'));
     expect(await screen.findByText('friends inbox')).toBeTruthy();
-    expect(screen.getByText('Earlier with buddy')).toBeTruthy();
+    // The windows load on demand (Dock.tsx), so each appears once its code has arrived.
+    expect(await screen.findByText('Earlier with buddy')).toBeTruthy();
     expect(await screen.findByText('2')).toBeTruthy(); // unread badge
   });
 
@@ -137,8 +148,8 @@ describe('Dock', () => {
     fireEvent.click(screen.getByTitle('Friends HQ'));
     await screen.findByText('friends inbox');
     expect(screen.queryByText('Earlier with friendly')).toBeNull();
-    expect(screen.getByText('Earlier with coach')).toBeTruthy();
-    expect(screen.getByText('Earlier with buddy')).toBeTruthy();
+    expect(await screen.findByText('Earlier with coach')).toBeTruthy();
+    expect(await screen.findByText('Earlier with buddy')).toBeTruthy();
   });
 
   it('shows one window at a time on a phone', async () => {
@@ -168,6 +179,31 @@ describe('Dock', () => {
     // Done cards summarise what the coach made.
     expect(screen.getByText('Goal created')).toBeTruthy();
     expect(screen.getByText('2 steps created')).toBeTruthy();
+  });
+
+  it('puts a drafted question in the box without sending it, and sends only when asked to', async () => {
+    renderDock(<DraftPage />);
+    await screen.findByText('Earlier with coach');
+    fireEvent.click(screen.getByText('page draft'));
+    const box = (await screen.findByPlaceholderText('Message Coach Kim…')) as HTMLTextAreaElement;
+    await waitFor(() => expect(box.value).toBe('Help me with this task'));
+    expect(sendMessageWithSignals).not.toHaveBeenCalled();
+
+    // They can change it, and it goes when they send it.
+    fireEvent.change(box, { target: { value: 'Help me with this task, I only have a weekend' } });
+    fireEvent.submit(box.closest('form')!);
+    await waitFor(() => expect(sendMessageWithSignals).toHaveBeenCalledWith('Help me with this task, I only have a weekend', 'coach', { id: 'u1' }, 'commitments'));
+  });
+
+  it('a drafted question is not typed in twice', async () => {
+    renderDock(<DraftPage />);
+    await screen.findByText('Earlier with coach');
+    fireEvent.click(screen.getByText('page draft'));
+    const box = (await screen.findByPlaceholderText('Message Coach Kim…')) as HTMLTextAreaElement;
+    await waitFor(() => expect(box.value).toBe('Help me with this task'));
+    fireEvent.change(box, { target: { value: '' } });
+    await new Promise(r => setTimeout(r, 100));
+    expect(box.value).toBe('');
   });
 
   it('does not tag a companion chat with the coaching page', async () => {

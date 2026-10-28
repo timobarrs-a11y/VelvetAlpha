@@ -7,7 +7,7 @@ import { createShop } from '../systems/shop';
 import type { Game } from '../kernel/game';
 
 // What every themed set must be. A new theme adds a line here and its own looks, and is held to the same rules.
-interface ThemeSpec { theme: Theme; tags: string[]; materials: Material[]; paper: { id: string; pattern: string }; floor: { id: string; floor: string }; paperRange: [number, number]; floorRange: [number, number]; ladder: [number, number] }
+interface ThemeSpec { theme: Theme; tags: string[]; materials: Material[]; paper: { id: string; pattern: string }; floor: { id: string; floor: string }; extra?: string[]; paperRange: [number, number]; floorRange: [number, number]; ladder: [number, number] }
 const THEMES: ThemeSpec[] = [
   { theme: 'farmhouse', tags: ['cozy', 'natural', 'warm'], materials: ['wood', 'stone', 'metal', 'fabric'], paper: { id: 'paper-gingham-sage', pattern: 'gingham-sage' }, floor: { id: 'floor-barnwood', floor: 'barnwood' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'modern', tags: ['modern', 'minimal', 'cool'], materials: ['metal', 'glass', 'stone', 'fabric'], paper: { id: 'paper-pin-slate', pattern: 'pin-slate' }, floor: { id: 'floor-charcoal', floor: 'charcoal' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
@@ -26,6 +26,7 @@ const THEMES: ThemeSpec[] = [
   { theme: 'adobe', tags: ['warm', 'natural', 'cozy'], materials: ['metal', 'stone', 'wood', 'fabric'], paper: { id: 'paper-serape-adobe', pattern: 'serape-adobe' }, floor: { id: 'floor-saltillo', floor: 'saltillo' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'neon', tags: ['bold', 'modern', 'industrial'], materials: ['metal', 'glass', 'fabric'], paper: { id: 'paper-circuit', pattern: 'circuit' }, floor: { id: 'floor-grate', floor: 'grate' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
   { theme: 'candy', tags: ['soft', 'playful', 'warm'], materials: ['metal', 'laminate', 'fabric', 'stone'], paper: { id: 'paper-sprinkles', pattern: 'sprinkles' }, floor: { id: 'floor-checkpink', floor: 'checkpink' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'nana', extra: ['look-rug-nana', 'drapes-nana'], tags: ['soft', 'playful', 'cozy'], materials: ['metal', 'laminate', 'fabric', 'stone', 'wood'], paper: { id: 'paper-nana-sky', pattern: 'nana-sky' }, floor: { id: 'floor-nanaplush', floor: 'nanaplush' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'cuddle', tags: ['soft', 'playful', 'cozy'], materials: ['metal', 'laminate', 'fabric', 'stone'], paper: { id: 'paper-clouds-sky', pattern: 'clouds-sky' }, floor: { id: 'floor-skycheck', floor: 'skycheck' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'arcade', tags: ['playful', 'bold', 'vintage'], materials: ['metal', 'laminate', 'fabric'], paper: { id: 'paper-pixel-invaders', pattern: 'pixel-invaders' }, floor: { id: 'floor-arcadecarpet', floor: 'arcadecarpet' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
   { theme: 'spring', tags: ['soft', 'natural', 'playful'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-blossom-mint', pattern: 'blossom-mint' }, floor: { id: 'floor-birch', floor: 'birchplank' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
@@ -52,7 +53,7 @@ beforeAll(() => {
 });
 
 for (const T of THEMES) {
-  const ids = [...PIECES.map((p) => `look-${p}-${T.theme}`), T.paper.id, T.floor.id];
+  const ids = [...PIECES.map((p) => `look-${p}-${T.theme}`), T.paper.id, T.floor.id, ...(T.extra ?? [])];
   describe(`the ${T.theme} set`, () => {
     it('has a look for the fridge, counter, dining set, sofa, lamp and plant, a wallpaper, a floor and a bundle; not the TV unit', () => {
       for (const id of ids) expect(catalogById(id), id).toBeDefined();
@@ -132,7 +133,7 @@ for (const T of THEMES) {
       const paid: number[] = [], applied: string[] = [];
       const g = {
         world: { objs }, partnerName: 'Maya', house: {}, view: { level: 1 }, owned: new Set<string>(), closet: [], flags: { styledSet: [] }, style: {}, tasteNorm: { key: '', mean: 0, sd: 1 },
-        log: () => {}, art: { burst: () => {}, objectPlaced: () => {}, applyWallpaper: (_l: number, p: string) => applied.push(p), applyFloor: (_l: number, f: string) => applied.push(f) }, hasAttic: () => false, storage: [],
+        log: () => {}, art: { burst: () => {}, objectPlaced: () => {}, applyWallpaper: (_l: number, p: string) => applied.push(p), applyFloor: (_l: number, f: string) => applied.push(f), applyDrapes: (_l: number, d: string) => applied.push(`drapes:${d}`) }, hasAttic: () => false, storage: [],
         s: { bond: 50 }, cameraBeat: () => {}, scriptEmit: () => {}, refreshDrawer: () => {}, dezDeliveries: () => false, spendOn: (_: string, n: number) => { paid.push(n); return true; }, peopleOnFloor: () => [], relearnLayout: () => {},
       } as unknown as Game;
       const before = objs.filter((o) => o.level === 1).map((o) => [o.id, o.x, o.y, o.rot]);
@@ -147,7 +148,8 @@ for (const T of THEMES) {
       createShop(g).handleBuy!(set);
       expect(paid).toEqual(set.promo ? [] : [setQuote(set, new Set()).cost]);
       for (const id of ['fridge', 'counter', 'dining', 'sofa', 'lamp1', 'plant1']) expect(objs.find((o) => o.id === id)!.skin, id).toBe(T.theme);
-      expect(applied).toEqual([T.paper.pattern, T.floor.floor]);
+      expect(applied).toEqual([T.paper.pattern, T.floor.floor, ...(T.extra ?? []).filter((e) => e.startsWith('drapes-')).map((e) => `drapes:${e.slice(7)}`)]);
+      if (T.extra?.includes('look-rug-nana')) expect(objs.find((o) => o.id === 'rug1')!.skin).toBe('nana');
       expect(objs.filter((o) => o.level === 1).map((o) => [o.id, o.x, o.y, o.rot])).toEqual(before);
     });
   });

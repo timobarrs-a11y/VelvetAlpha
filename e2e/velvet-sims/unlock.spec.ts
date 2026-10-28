@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { openGame, inGame, objects, savedGame, saveNow, SAVE_KEY } from './helpers';
+import { readFileSync } from 'node:fs';
+import { openGame, inGame, objects, savedGame, saveNow, waitReady, SAVE_KEY } from './helpers';
 
 test('a promo code said to Maya gives the promo pack, free, and is not a message', async ({ page }) => {
+  // A long walk through the shop, the chat, the pop-up and the Sets tab: past a minute on a desktop-size view with no GPU.
+  test.slow();
   const game = await openGame(page);
   await inGame(page, 'v.settle()');
   const money = await inGame<number>(page, 'v.money');
@@ -20,7 +23,8 @@ test('a promo code said to Maya gives the promo pack, free, and is not a message
   }
   // The Promo tab lists the promo packs.
   await game.locator('[data-tab=Promo]').click();
-  await expect(game.locator('.vh-shop-list .vh-shop-card')).toHaveCount(2);
+  await expect(game.locator('.vh-shop-list .vh-shop-card')).toHaveCount(3);
+  await expect(game.locator('[data-item=set-nana]')).toHaveClass(/vh-promo-locked/);
   await expect(game.locator('[data-item=set-cuddle]')).toHaveClass(/vh-promo-locked/);
   await game.locator('.vh-drawer[data-open=shop] .vh-drawer-close').click();
 
@@ -29,11 +33,14 @@ test('a promo code said to Maya gives the promo pack, free, and is not a message
   await input.fill('rainbowhugs');
   await input.press('Enter');
   await expect(input).toHaveValue('');
-  // A pop-up says what they got, with a picture of the pack.
+  // The game stops and a pop-up says what they unlocked, with Apply it now or Not now.
   const pop = game.locator('.vh-celebrate');
   await expect(pop).toContainText('Cuddle Clouds', { timeout: 10000 });
-  await expect(pop).toContainText('Congrats, you just unlocked');
-  await expect(pop).toContainText('Try it out today!');
+  await expect(pop).toContainText('You unlocked');
+  await expect(pop.getByRole('button', { name: 'Not now' })).toBeVisible();
+  await pop.getByRole('button', { name: 'Apply it now' }).click();
+  // It goes on, then a picture of it.
+  await expect(pop).toContainText('Here it is', { timeout: 10000 });
   await expect(pop.locator('img')).toHaveAttribute('src', /^data:image/);
   await pop.locator('.vh-celebrate-btn').click();
   await expect(pop).toHaveCount(0);
@@ -55,18 +62,37 @@ test('a promo code said to Maya gives the promo pack, free, and is not a message
   expect(JSON.stringify((await savedGame(page)).turns ?? [])).not.toContain('rainbowhugs');
 });
 
-test('a promo code already used in another house on the account gives nothing here, and says why', async ({ page }) => {
+test('a code redeemed on the account in another house: this house has it too, and asks before putting it on', async ({ page }) => {
+  // The account redeemed rainbowhugs in another house; this one opens fresh.
+  await page.addInitScript(() => {
+    if (window.top === window) (window as unknown as { accountPromos: string[] }).accountPromos = ['rainbowhugs'];
+  });
+  const game = await openGame(page);
+  // Both packs are this house's as soon as it opens (the log line saying so is soon pushed out by the next one).
+  await expect.poll(() => inGame<boolean>(page, "v.owns('set-cuddle') && v.owns('touches-cuddle')")).toBe(true);
+  await inGame(page, 'v.settle()');
+  // Once moved in, the pop-up asks; Not now leaves it in Sets as an Apply, with nothing put on.
+  const pop = game.locator('.vh-celebrate');
+  await expect(pop).toContainText('Cuddle Clouds', { timeout: 10000 });
+  await pop.getByRole('button', { name: 'Not now' }).click();
+  await expect(pop).toHaveCount(0);
+  expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).not.toBe('cuddle');
+  await game.locator('.vh-dock [data-open=shop]').click();
+  await game.locator('[data-tab=Sets]').click();
+  await expect(game.locator('[data-item=set-cuddle]')).not.toHaveClass(/vh-promo-locked/);
+  await expect(game.locator('[data-item=set-cuddle] [data-buy]')).toHaveText('Apply');
+  await game.locator('[data-item=set-cuddle] [data-buy]').click();
+  await expect.poll(async () => (await objects(page)).find((o) => o.id === 'fridge')!.skin).toBe('cuddle');
+});
+
+test('a code typed in the house is reported to the app for the account', async ({ page }) => {
   const game = await openGame(page);
   await inGame(page, 'v.settle()');
-  await page.evaluate(() => { (window as unknown as { promoUsed: Record<string, string> }).promoUsed.rainbowhugs = 'another-house'; });
   await inGame(page, 'v.openChat()');
   const input = game.locator('.vh-dialogue input');
-  await input.fill('rainbowhugs');
+  await input.fill('RainbowHugs');
   await input.press('Enter');
-  await expect(game.locator('.vh-log')).toContainText('already been used on your account', { timeout: 10000 });
-  expect(await page.evaluate(() => (window as unknown as { promoLog: string[] }).promoLog)).toEqual(['rainbowhugs']);
-  await expect(game.locator('.vh-celebrate')).toHaveCount(0);
-  expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).not.toBe('cuddle');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { promoLog: string[] }).promoLog)).toEqual(['rainbowhugs']);
 });
 
 test('the start menu has a Cheats screen that takes unlock codes and saves them for the house', async ({ page }) => {
@@ -91,6 +117,8 @@ test('the start menu has a Cheats screen that takes unlock codes and saves them 
   await expect(game.locator('.vh-menu-codemsg')).toContainText('Code accepted');
   const saved = await page.evaluate(() => Object.entries(localStorage).filter(([k]) => k.endsWith(':codes')).map(([, v]) => JSON.parse(v)));
   expect(saved.flat()).toEqual(['rainbowhugs', 'xoxotimoisgodxoxo']);
+  // The promo code was given to the account at once (the money phrase stays in this browser).
+  expect(await page.evaluate(() => (window as unknown as { promoLog: string[] }).promoLog)).toEqual(['rainbowhugs']);
   await game.locator('[data-m=back]').click();
   await expect(game.locator('[data-m=cheats]')).toBeVisible();
   void SAVE_KEY;
@@ -119,8 +147,35 @@ test('codes saved on the start menu are redeemed in the house: the pack and the 
   const again = await openGame(page, { fresh: false });
   await inGame(page, 'v.settle()');
   await expect(again.locator('.vh-celebrate')).toContainText('Cuddle Clouds', { timeout: 15000 });
-  await again.locator('.vh-celebrate-btn').click();
+  await again.locator('.vh-celebrate').getByRole('button', { name: 'Apply it now' }).click();
   await expect(again.locator('.vh-log')).toContainText('Cuddle Clouds is yours', { timeout: 15000 });
   expect(await inGame<number>(page, 'v.money')).toBeGreaterThanOrEqual(500000);
   expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).toBe('cuddle');
+});
+
+test('a code typed on the Cheats screen reaches the house even when Start moves in with a different companion', async ({ page }) => {
+  // The bug Tim hit: the menu opened with one companion, the code was saved for that house, and the player moved in
+  // with another, so the code never arrived. Now it is the account's (and the browser's saved codes are for any house).
+  test.slow();
+  await page.route('**/__e2e/host.html*', (r) => r.fulfill({
+    status: 200, contentType: 'text/html',
+    body: readFileSync('e2e/velvet-sims/host.html', 'utf-8').replace("window.companionCount = 0; window.houseCount = 0; window.startAnswer = 'go';", "window.companionCount = 2; window.houseCount = 0; window.startAnswer = 'other';"),
+  }));
+  await page.goto('/__e2e/host.html?menu');
+  const game = page.frameLocator('#g');
+  await game.locator('[data-m=cheats]').click();
+  const input = game.locator('.vh-menu-code input');
+  await input.fill('Iluv2dance');
+  await input.press('Enter');
+  await expect(game.locator('.vh-menu-codemsg')).toContainText('Code accepted');
+  await game.locator('[data-m=back]').click();
+  await game.locator('[data-m=new]').click();
+  await waitReady(page);
+  expect(await page.evaluate(() => (document.getElementById('g') as HTMLIFrameElement).contentWindow!.location.search)).toContain('companion=e2e-b');
+  await inGame(page, 'v.settle()');
+  const pop = game.locator('.vh-celebrate');
+  await expect(pop).toContainText('Nana', { timeout: 15000 });
+  await expect(pop).toContainText('You unlocked');
+  await pop.getByRole('button', { name: 'Apply it now' }).click();
+  await expect.poll(async () => (await objects(page)).find((o) => o.id === 'fridge')!.skin, { timeout: 15000 }).toBe('nana');
 });

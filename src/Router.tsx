@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
 import { ToastContainer } from './shared/ui/Toast';
 import { FirstPostWatcher } from './components/FirstPostWatcher';
+import { GoalNotesWatcher } from './components/GoalNotesWatcher';
 import { RootRedirect } from './routes/rootRedirect';
 import { publicRoutes } from './routes/publicRoutes';
 import { onboardingRoutes } from './routes/onboardingRoutes';
@@ -9,8 +10,6 @@ import { appRoutes } from './routes/appRoutes';
 import { adminRoutes } from './routes/adminRoutes';
 import { gamesRoutes } from './routes/gamesRoutes';
 import { useCustomization } from './hooks/useCustomization';
-import { ButtonHoverCanvas } from './components/ButtonHoverCanvas';
-import { MouseTrail } from './components/MouseTrail';
 import { useAuth } from './auth/AuthProvider';
 import { ButtonHoverPreviewProvider, useButtonHoverPreview } from './context/ButtonHoverPreviewContext';
 import { TutorialDirectorProvider } from './context/TutorialDirectorContext';
@@ -21,8 +20,13 @@ import { SWUpdateToast } from './components/SWUpdateToast';
 
 import { SignedInWorkspace } from './components/SignedInWorkspace';
 import { CookieConsent } from './components/CookieConsent';
-import { AvatarEditorHost } from './components/AvatarEditorModal';
-import { WorldWelcomeMount } from './features/velvet-world/WorldWelcome';
+import { AvatarEditorHost } from './components/AvatarEditorHost';
+
+// Not needed for the first paint: the cursor effects, and the town's "we built you a house" pop-up (which brings the
+// town's street art). They load just after.
+const ButtonHoverCanvas = lazy(() => import('./components/ButtonHoverCanvas').then(m => ({ default: m.ButtonHoverCanvas })));
+const MouseTrail = lazy(() => import('./components/MouseTrail').then(m => ({ default: m.MouseTrail })));
+const WorldWelcomeMount = lazy(() => import('./features/velvet-world/WorldWelcome').then(m => ({ default: m.WorldWelcomeMount })));
 
 const GAME_PATHS = [
   '/checkers', '/pacman', '/momentum', '/slime-soccer',
@@ -59,6 +63,21 @@ function AudioSceneSync() {
   return null;
 }
 
+/**
+ * A new page starts at the top. Without this the next page opens at whatever scroll the last one
+ * had (tapping "Create an account" low on the home page dropped people at the password field).
+ * Back and forward keep where they were, and a link to a part of a page (#section) is left alone.
+ */
+export function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  const type = useNavigationType();
+  useEffect(() => {
+    if (type === 'POP' || hash) return;
+    window.scrollTo(0, 0);
+  }, [pathname, hash, type]);
+  return null;
+}
+
 const isTouchOnly = () => window.matchMedia('(pointer: coarse)').matches;
 
 function GlobalEffects() {
@@ -79,7 +98,7 @@ function GlobalEffects() {
   if (touchOnly) return null;
 
   return (
-    <>
+    <Suspense fallback={null}>
       <ButtonHoverCanvas
         hoverStyle={active ? (customization?.button_hover_style ?? 'none') : 'none'}
         particleColors={activeCursorColor.particles}
@@ -93,7 +112,7 @@ function GlobalEffects() {
         trailColor={activeCursorColor?.primary}
         particleColors={activeCursorColor?.particles}
       />
-    </>
+    </Suspense>
   );
 }
 
@@ -104,9 +123,11 @@ export function Router() {
           <TutorialDirectorProvider>
             <ToastContainer />
             <FirstPostWatcher />
-            <WorldWelcomeMount />
+            <GoalNotesWatcher />
+            <Suspense fallback={null}><WorldWelcomeMount /></Suspense>
             <SWUpdateToast />
             <InstallPWABanner />
+            <ScrollToTop />
             <AudioSceneSync />
             <GlobalEffects />
             <AvatarEditorHost />

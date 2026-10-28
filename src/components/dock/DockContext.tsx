@@ -61,6 +61,8 @@ export interface CoachSurfaceRegistration {
 interface PendingSend {
   text: string;
   nonce: number;
+  /** 'send' asks the companion now; 'draft' only fills the message box, for the person to edit and send. */
+  mode?: 'send' | 'draft';
 }
 
 interface DockApi {
@@ -87,6 +89,8 @@ interface DockApi {
   /** Open Messages and add someone by friend code. */
   addFriendByCode: (code: string) => void;
   openCompanion: (companionId: string, send?: string) => void;
+  /** Open a companion's chat with a message already typed in the box, not sent. */
+  draftToCompanion: (companionId: string, text: string) => void;
   minimize: (key: string) => void;
   restore: (key: string) => void;
   close: (key: string) => void;
@@ -316,7 +320,13 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
   const openCompanion = useCallback((companionId: string, send?: string) => {
     const key = aiKey(companionId);
     bringToFront(key, companionId);
-    if (send) setPending(prev => ({ ...prev, [key]: { text: send, nonce: Date.now() } }));
+    if (send) setPending(prev => ({ ...prev, [key]: { text: send, nonce: Date.now(), mode: 'send' } }));
+  }, [bringToFront]);
+
+  const draftToCompanion = useCallback((companionId: string, text: string) => {
+    const key = aiKey(companionId);
+    bringToFront(key, companionId);
+    if (text) setPending(prev => ({ ...prev, [key]: { text, nonce: Date.now(), mode: 'draft' } }));
   }, [bringToFront]);
 
   const minimize = useCallback((key: string) => {
@@ -366,11 +376,16 @@ export function DockProvider({ companions, children }: { companions: CompanionWi
 
   const api = useMemo<DockApi>(() => ({
     windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, friendUnread, recentFriends, toast, dismissToast, openFriend,
-    openMessages, addFriendByCode, openCompanion, minimize, restore, close,
+    openMessages, addFriendByCode, openCompanion, draftToCompanion, minimize, restore, close,
     pendingFor, consumePending, registerCoachSurface: setCoachSurface,
-  }), [windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, friendUnread, recentFriends, toast, dismissToast, openFriend, openMessages, addFriendByCode, openCompanion, minimize, restore, close, pendingFor, consumePending]);
+  }), [windows, companions, messagesView, pendingFriendCode, coachSurface, pageCoachId, unread, clearUnread, friendUnread, recentFriends, toast, dismissToast, openFriend, openMessages, addFriendByCode, openCompanion, draftToCompanion, minimize, restore, close, pendingFor, consumePending]);
 
   return <DockContext.Provider value={api}>{children}</DockContext.Provider>;
+}
+
+/** The dock when there is one, else null: for pieces that also render outside the signed-in workspace. */
+export function useDockOptional(): DockApi | null {
+  return useContext(DockContext);
 }
 
 export function useDock(): DockApi {
@@ -387,7 +402,7 @@ export function useDock(): DockApi {
 export function useDockCoach(reg: CoachSurfaceRegistration) {
   const dock = useDock();
   const navigate = useNavigate();
-  const { registerCoachSurface, openCompanion, pageCoachId, windows } = dock;
+  const { registerCoachSurface, openCompanion, draftToCompanion, pageCoachId, windows } = dock;
   const regRef = useRef(reg);
   regRef.current = reg;
 
@@ -427,7 +442,18 @@ export function useDockCoach(reg: CoachSurfaceRegistration) {
     navigate('/expert-selection');
   }, [pageCoachId, openCompanion, navigate]);
 
-  return { ask, hasCoach: !!pageCoachId };
+  /** Like ask, but the message is only typed into the box, for the person to read, change and send. */
+  const draft = useCallback((text: string) => {
+    if (pageCoachId) {
+      draftToCompanion(pageCoachId, text);
+      return;
+    }
+    sessionStorage.setItem('onboardingIntent', 'coaches');
+    sessionStorage.setItem('onboardingRelationshipType', 'mentor');
+    navigate('/expert-selection');
+  }, [pageCoachId, draftToCompanion, navigate]);
+
+  return { ask, draft, hasCoach: !!pageCoachId };
 }
 
 /** Remember that the user closed the coach so pages stop auto-opening it this session. */

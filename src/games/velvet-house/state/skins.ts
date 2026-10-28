@@ -8,6 +8,10 @@ import { CATALOG, type CatalogEntry } from './catalog';
 /** The floor of the house the one good spot of each piece is on. */
 export const MAIN_FLOOR = 1;
 
+/** The pieces the upstairs packs restyle: the bedroom's and the bathroom's. */
+export const UPSTAIRS_TYPES: ReadonlySet<string> = new Set(['bed', 'nightstand', 'dresser', 'wardrobe', 'toilet', 'vanity', 'shower', 'bathtub']);
+const UPSTAIRS = 2;
+
 /**
  * Whether a model of this type takes the place of the piece of its kind that stands in the house, rather than being set
  * down as one more: true for a fixed piece with more than one model (the fridge, in its one good spot).
@@ -17,16 +21,18 @@ export function swapsInPlace(type: string): boolean {
 }
 
 /**
- * The piece on the main floor a catalog entry restyles, or null if nothing of it is standing there (then it is placed as
- * new). A look restyles a piece of its type; a model of a fixed piece (the chest freezer) takes the place of whichever
- * model of that kind stands there.
+ * The piece a catalog entry restyles, or null if nothing of it is standing there (then it is placed as new). A look
+ * restyles a piece of its type; a model of a fixed piece (the chest freezer) takes the place of whichever model of that
+ * kind stands there. The bedroom and bath pieces live upstairs, so their looks restyle the ones there; everything else,
+ * the main floor's.
  */
 export function skinTarget(objs: ObjectInstance[], item: Pick<CatalogEntry, 'type' | 'skin'>): ObjectInstance | null {
   if (!item.type) return null;
   const swaps = swapsInPlace(item.type);
   if (!item.skin && !swaps) return null;
   const kind = kindOf(item.type);
-  const here = objs.filter((o) => (swaps ? kindOf(o.type) === kind : o.type === item.type) && o.level === MAIN_FLOOR);
+  const floor = UPSTAIRS_TYPES.has(kind) ? UPSTAIRS : MAIN_FLOOR;
+  const here = objs.filter((o) => (swaps ? kindOf(o.type) === kind : o.type === item.type) && o.level === floor);
   // Prefer a piece that does not wear the look yet, so a second purchase restyles the next one rather than the same one.
   return here.find((o) => o.type !== item.type || o.skin !== item.skin) ?? here[0] ?? null;
 }

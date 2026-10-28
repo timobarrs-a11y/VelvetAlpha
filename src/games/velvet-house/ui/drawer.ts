@@ -396,6 +396,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       const paper = setQuote(item, new Set()).members.find((m) => m.icon === 'paper');
       if (paper?.pattern) return `background:${paperCss(state.lookInfo?.('paper', paper.pattern) ?? null).replace(/"/g, "'")}`;
     }
+    if (item.wallLamp) return 'background:radial-gradient(circle at 50% 45%,#FFF0C4 0 26%,#E9C877 28% 38%,#6B5648 40% 100%)';
     if (item.icon === 'paint' && item.color) return `background:${item.color}`;
     if (item.icon === 'paper' && item.pattern) return `background:${paperCss(state.lookInfo?.('paper', item.pattern) ?? null, state.pictureThumbs?.[item.pattern]).replace(/"/g, "'")}`;
     if (item.icon === 'floor' && item.floor) return `background:${floorCss(state.lookInfo?.('floor', item.floor) ?? null)}`;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Users, MessageSquareWarning, Sparkles } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Shield, Palette, Lock, Download, Trash2, ChevronRight, Check, AlertTriangle, Eye, EyeOff, LogOut, Mail, Smartphone, Moon, Sun, Monitor, Globe, Key, User, Compass, Play, Brain, Plus, CreditCard as Edit3, BarChart3, Activity, Users, MessageSquareWarning, Sparkles, UsersRound } from 'lucide-react';
+import { YourTeamPanel } from '../components/settings/YourTeamPanel';
 import { PageHeader, HomeLayoutSwitch } from '../shared/ui';
 import { supabase } from '../shared/supabase/client';
 import { gdprService } from '../services/gdprService';
@@ -14,7 +15,8 @@ import { PublicProfileSettings } from '../components/PublicProfileSettings';
 import { pushSupport, isPushSubscribed, enablePush, disablePush, type PushSupport } from '../services/pushService';
 import { passwordProblem, isBreachedPassword, passwordErrorMessage, BREACHED_PASSWORD_MESSAGE, PASSWORD_RULE } from '../shared/auth/passwordPolicy';
 
-type Tab = 'notifications' | 'privacy' | 'appearance' | 'experts' | 'tour' | 'security' | 'data' | 'public-profile';
+type Tab = 'team' | 'notifications' | 'privacy' | 'appearance' | 'experts' | 'tour' | 'security' | 'data' | 'public-profile';
+const TAB_IDS: Tab[] = ['team', 'notifications', 'privacy', 'appearance', 'experts', 'tour', 'security', 'data', 'public-profile'];
 
 interface NotificationSettings {
   push_enabled: boolean;
@@ -58,7 +60,11 @@ const DEFAULT_PRIVACY: PrivacySettings = {
 export function SettingsPage() {
   const navigate = useNavigate();
   const { isManagerOrAbove } = useRole();
-  const [activeTab, setActiveTab] = useState<Tab>('notifications');
+  // /settings?tab=team opens a section directly (the menu links to Your team).
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const t = new URLSearchParams(window.location.search).get('tab') as Tab | null;
+    return t && TAB_IDS.includes(t) ? t : 'notifications';
+  });
   const [notifications, setNotifications] = useState<NotificationSettings>(DEFAULT_NOTIFICATIONS);
   // Phone notifications are per device: what this browser can do, and whether it is subscribed.
   const [pushState, setPushState] = useState<{ support: PushSupport; on: boolean; busy: boolean; message: string | null }>({ support: 'ok', on: false, busy: false, message: null });
@@ -351,6 +357,7 @@ export function SettingsPage() {
   };
 
   const TABS: { id: Tab; label: string; icon: typeof Bell }[] = [
+    { id: 'team', label: 'Your team', icon: UsersRound },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'public-profile', label: 'Public Profile', icon: Users },
     { id: 'privacy', label: 'Privacy', icon: Shield },
@@ -466,6 +473,8 @@ export function SettingsPage() {
 
           <div className="flex-1 min-w-0" ref={contentRef}>
             <div className="ds-card overflow-hidden">
+
+              {activeTab === 'team' && <YourTeamPanel />}
 
               {activeTab === 'notifications' && (
                 <div className="p-6">

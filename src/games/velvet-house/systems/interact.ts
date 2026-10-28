@@ -1,5 +1,6 @@
 import { TYPES, type ObjectInstance } from '../state/objects';
 import { startChain } from '../state/agents';
+import { chainOf } from '../state/activities';
 import { relocate } from '../state/arrange';
 import { CORNER_MARKET } from '../state/routine';
 import { type TrayAction } from '../ui/dialogue';
@@ -30,7 +31,12 @@ export function createInteract(g: Game): Partial<Game> {
     const acts: TrayAction[] = [];
     if (obj.type === 'pbox' && obj.contents) acts.push({ act: 'unpack', label: 'Unpack', icon: '' });
     if (obj.type === 'bag' && obj.contents) acts.push({ act: 'unpack', label: 'Open', icon: '' });
-    if (isLight) acts.push({ act: 'toggleLight', label: 'Turn light on/off', icon: '' });
+    if (obj.type === 'tallcandelabra') acts.push({ act: 'candles', label: art.candlesOn(obj.id) ? 'Snuff the candles' : 'Light the candles', icon: '' });
+    else if (isLight) acts.push({ act: 'toggleLight', label: obj.type === 'woodstove' ? 'Light or bank the stove' : obj.type === 'starprojector' ? 'Turn the stars on/off' : 'Turn light on/off', icon: '' });
+    if (obj.type === 'servicebell') acts.push({ act: 'ringBell', label: 'Ring for room service', icon: '' });
+    if (obj.type === 'overseer') {
+      acts.push({ act: 'overseerTalk', label: 'Ask for encouragement', icon: '' }, { act: 'overseerCake', label: 'Request cake', icon: '' }, { act: 'overseerUnplug', label: 'Unplug', icon: '' });
+    }
     if (spots) {
       const tags = Object.values(spots).map(s => s.tag);
       const seen = new Set<string>();
@@ -53,7 +59,7 @@ export function createInteract(g: Game): Partial<Game> {
       seat: 'Sit', bedA: 'Sleep', bedB: 'Sleep', dine1: 'Eat', dine2: 'Eat',
       stove: 'Cook', coffee: 'Make coffee', sink: 'Wash dishes', window: 'Look out',
       shower: 'Shower', tub: 'Bathe', tread: 'Run', lift: 'Lift weights', stretch: 'Stretch',
-      records: 'Play records', arcade: 'Play arcade', claw: 'Try the claw', pinball: 'Play pinball', swing: 'Swing', vr: 'Try VR', fortune: 'Ask the fortune teller', gumball: 'Get a gumball', tiki: 'Mix a drink', water: 'Water plants',
+      records: 'Play records', arcade: 'Play arcade', claw: 'Try the claw', pinball: 'Play pinball', swing: 'Swing', vr: 'Try VR', fortune: 'Ask the fortune teller', gumball: 'Get a gumball', tiki: 'Mix a drink', diffuse: 'Breathe in the mist', musicbox: 'Wind the music box', glam: 'Get glam', zen: 'Meditate by the fountain', water: 'Water plants',
       tv: 'Watch TV', desk: 'Work', phone: 'Check phone', read: 'Read',
       piano: 'Play piano', easel: 'Paint', guitar: 'Play guitar',
       stars: 'Stargaze', boxbag: 'Box', bike: 'Ride bike', massage: 'Massage chair',
@@ -94,6 +100,9 @@ export function createInteract(g: Game): Partial<Game> {
 
   function handleObjectAction(obj: ObjectInstance, tag: string): void {
     if (tag === 'unpack') { unpack(obj); return; }
+    if (tag.startsWith('overseer')) { g.overseerAction(obj, tag); return; }
+    if (tag === 'ringBell') { g.ringBell(obj); return; }
+    if (tag === 'candles') { const on = !art.candlesOn(obj.id); art.candles(obj.id, on); log(on ? 'One by one, the candles catch.' : 'One by one, the candles go out.'); return; }
     if (tag === 'toggleLight') {
       const on = art.toggleObjectLight(obj.id);
       log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);
@@ -104,7 +113,7 @@ export function createInteract(g: Game): Partial<Game> {
       stove: 'cookeat', sink: 'clean', coffee: 'coffee', shower: 'shower', tub: 'bath',
       seat: 'tv', bedA: 'sleep', bedB: 'sleep', dine1: 'cookeat', dine2: 'cookeat',
       tread: 'workout', lift: 'workout', stretch: 'stretch',
-      records: 'records', arcade: 'arcade', claw: 'claw', pinball: 'pinball', swing: 'swing', vr: 'vr', fortune: 'fortune', gumball: 'gumball', tiki: 'tiki', water: 'plants',
+      records: 'records', arcade: 'arcade', claw: 'claw', pinball: 'pinball', swing: 'swing', vr: 'vr', fortune: 'fortune', gumball: 'gumball', tiki: 'tiki', diffuse: 'diffuse', musicbox: 'musicbox', glam: 'glam', zen: 'zen', water: 'plants',
       tv: 'tv', desk: 'freelance', phone: 'phone', read: 'read',
       piano: 'piano', easel: 'easel', guitar: 'guitar',
       stars: 'stargaze', boxbag: 'boxing', bike: 'bike',
@@ -120,16 +129,23 @@ export function createInteract(g: Game): Partial<Game> {
       return;
     }
     const chain = chainMap[tag];
-    if (chain) handleOrder(chain);
+    if (chain) handleOrder(chain, obj);
   }
 
-  function handleOrder(chain: string): void {
-    const jordan = people[0];
+  // An order for a piece the other person is only walking to takes it over: they find something else to do. One they
+  // are already using is said, not silently dropped.
+  function handleOrder(chain: string, obj?: ObjectInstance): void {
+    const jordan = people[0], other = people[1];
     if (jordan.away) { log(`${jordan.name} is at work until ${CORNER_MARKET.end - 12} PM.`); return; }
     world.life.working = null;
-    if (!startChain(house, jordan, chain, people[1], () => rng.next()) && chain === 'tv' && !house.screens.length) {
-      log('There is no TV in the house. The shop has some (Furniture).');
-      return;
+    const onPiece = (p: typeof other) => !!obj && !!p?.task?.slot?.id.startsWith(obj.id + ':');
+    if (!startChain(house, jordan, chain, other, () => rng.next())) {
+      if (onPiece(other) && other.task!.phase === 'walk' && !other.scripted) { other.task = null; other.idle = 0.5; startChain(house, jordan, chain, other, () => rng.next()); }
+      if (jordan.task?.act !== chainOf(chain)[0]) {
+        log(chain === 'tv' && !house.screens.length ? 'There is no TV in the house. The shop has some (Furniture).'
+          : onPiece(other) ? `${other.name} is using the ${(TYPES[obj!.type]?.name ?? 'piece').toLowerCase()} right now.` : `${jordan.name} can't do that right now.`);
+        return;
+      }
     }
     view.follow = 'jordan';
     if (jordan.level !== view.level) g.setLevel(jordan.level, true);

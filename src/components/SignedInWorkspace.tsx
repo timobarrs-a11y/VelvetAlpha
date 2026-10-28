@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -37,6 +37,11 @@ import {
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
 import { fetchChangelog } from '../services/changelogService';
+import { prefetchRoute, prefetchCommon } from '../routes/prefetch';
+const CustomizationPanel = lazy(() => import('./CustomizationPanel').then(m => ({ default: m.CustomizationPanel })));
+
+/** Start fetching a page's code as soon as a pointer or finger lands on the link to it. */
+const prefetchOn = (path: string) => ({ onPointerEnter: () => prefetchRoute(path), onTouchStart: () => prefetchRoute(path), onFocus: () => prefetchRoute(path) });
 import { Dock } from './dock/Dock';
 import { DockProvider, useDock } from './dock/DockContext';
 import { AddFriendButton } from './AddFriendButton';
@@ -44,7 +49,7 @@ import { ObjectivesButton } from '../features/objectives/ObjectivesButton';
 import { usePopoverPosition } from './usePopoverPosition';
 import { MedalToastHost } from './medals/MedalToast';
 import { setAvailableToChat, getMyFriendCode, formatFriendCode } from '../shared/supabase/queries/messaging';
-import { useLobbyData, GAMES } from '../hooks/useLobbyData';
+import { useLobbyData, LobbyContext, GAMES } from '../hooks/useLobbyData';
 import { LiveAvatar } from './LiveAvatar';
 import { useAvatarEditor } from '../stores/avatarEditorStore';
 import { useMyAvatar } from '../hooks/useMyAvatar';
@@ -57,7 +62,6 @@ import { useAccess } from '../hooks/useAccess';
 import { LockScreen } from './LockScreen';
 import { SubscriptionBanner } from './SubscriptionBanner';
 import { useAudioScene } from '../hooks/useAudioScene';
-import { CustomizationPanel } from './CustomizationPanel';
 import { HomeLayoutSwitch } from '../shared/ui';
 import { isHelper, helperRole, HELPER_BADGE_COLOR } from '../utils/relationshipType';
 import { getGoals, type CoachingGoal } from '../services/coachingService';
@@ -286,7 +290,7 @@ function PersonRow({ companion, coach, pathname, onClick, inkColor, inkMuted }: 
     </div>
   );
   return (
-    <div className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2 py-2 transition-colors ${active ? 'bg-emerald-400/10' : 'hover:bg-white/7'}`}>
+    <div {...prefetchOn('/chat')} className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2 py-2 transition-colors ${active ? 'bg-emerald-400/10' : 'hover:bg-white/7'}`}>
       <button type="button" onClick={edit} className="group/face flex-shrink-0" aria-label={`Edit ${companion.custom_name}'s avatar`} title="Edit avatar">{face}</button>
       <button type="button" onClick={onClick} className="min-w-0 flex-1 text-left">
         <div className="flex items-center gap-1.5">
@@ -337,7 +341,7 @@ function MeSection({ pathname, onNavigate, inkColor, inkMuted, inkSubtle }: { pa
 function ToolRow({ label, icon, tone, path, pathname, onNavigate, inkColor, inkMuted }: { label: string; icon: ReactNode; tone: string; path: string; pathname: string; onNavigate: (path: string) => void; inkColor: string; inkMuted: string }) {
   const active = pathname === path || pathname.startsWith(`${path}/`);
   return (
-    <button type="button" onClick={() => onNavigate(path)} className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${active ? 'bg-rose-500/15' : 'hover:bg-white/7'}`} style={{ color: active ? inkColor : inkMuted }}>
+    <button type="button" onClick={() => onNavigate(path)} {...prefetchOn(path)} className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${active ? 'bg-rose-500/15' : 'hover:bg-white/7'}`} style={{ color: active ? inkColor : inkMuted }}>
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-white/5" style={{ color: tone }}>{icon}</span>
       <span className="truncate text-[11px] font-semibold" style={{ color: active ? inkColor : inkMuted }}>{label}</span>
       {active && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-rose-400" />}
@@ -345,14 +349,21 @@ function ToolRow({ label, icon, tone, path, pathname, onNavigate, inkColor, inkM
   );
 }
 
-/** How many updates I haven't read; checked again whenever I move to another page (so it clears after reading). */
+/**
+ * How many updates I haven't read: checked when the app opens, every few minutes, and right after leaving the Updates
+ * page (so the count clears after reading). Not on every page change: that was two queries per click.
+ */
 function useUnreadUpdates(pathname: string): number {
   const [count, setCount] = useState(0);
+  const onUpdates = pathname === '/updates';
   useEffect(() => {
+    if (onUpdates) return;
     let live = true;
-    fetchChangelog().then(entries => { if (live) setCount(entries.filter(e => !e.is_read).length); }).catch(() => {});
-    return () => { live = false; };
-  }, [pathname]);
+    const check = () => { fetchChangelog().then(entries => { if (live) setCount(entries.filter(e => !e.is_read).length); }).catch(() => {}); };
+    check();
+    const timer = setInterval(check, 5 * 60_000);
+    return () => { live = false; clearInterval(timer); };
+  }, [onUpdates]);
   return count;
 }
 
@@ -431,7 +442,10 @@ function SidebarContent({ pathname, lobby, onNavigate, onSelect, inkColor, inkMu
         </div>
         <div className="my-3 border-t border-white/8" />
         <div className="space-y-0.5">
-          <SidebarLabel inkSubtle={inkSubtle}>Your team</SidebarLabel>
+          <div className="flex items-center justify-between pr-1">
+            <SidebarLabel inkSubtle={inkSubtle}>Your team</SidebarLabel>
+            <button type="button" onClick={() => onNavigate('/settings?tab=team')} className="rounded-md px-1.5 py-0.5 text-[9px] font-semibold transition-colors hover:bg-white/8" style={{ color: inkSubtle }} title="Delete or replace companions and coaches">Manage</button>
+          </div>
           {coaches.map(coach => <PersonRow key={coach.id} companion={coach} coach pathname={pathname} onClick={() => lobby.openCompanion(coach)} inkColor={inkColor} inkMuted={inkMuted} />)}
           <ToolRow label="Commitments" path="/coaching-commitments" tone="#38bdf8" icon={<CheckCircle2 className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
           <ToolRow label="Plans" path="/coaching-commitments?view=plans" tone="#a78bfa" icon={<Layers className="h-3.5 w-3.5" />} pathname={pathname} onNavigate={onNavigate} inkColor={inkColor} inkMuted={inkMuted} />
@@ -458,7 +472,7 @@ function SidebarContent({ pathname, lobby, onNavigate, onSelect, inkColor, inkMu
         </div>
       </div>
       <div className="flex-shrink-0 border-t border-white/8 px-2 py-2">
-        <button type="button" onClick={() => onNavigate('/updates')} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname === '/updates' ? 'bg-sky-500/15' : 'hover:bg-white/7'}`} style={{ color: pathname === '/updates' ? inkColor : inkMuted }}>
+        <button type="button" onClick={() => onNavigate('/updates')} {...prefetchOn('/updates')} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname === '/updates' ? 'bg-sky-500/15' : 'hover:bg-white/7'}`} style={{ color: pathname === '/updates' ? inkColor : inkMuted }}>
           <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400"><Megaphone className="h-3.5 w-3.5" /></span>
           <span className="flex-1 truncate text-[11px] font-semibold" style={{ color: pathname === '/updates' ? inkColor : inkMuted }}>Updates</span>
           {unreadUpdates > 0 && <span className="flex-shrink-0 rounded-full bg-sky-500 px-1.5 text-[10px] font-bold leading-[18px] text-white" aria-label={`${unreadUpdates} new`}>{unreadUpdates > 99 ? '99+' : unreadUpdates}</span>}
@@ -551,6 +565,8 @@ function useAvailability(user: { id: string } | null | undefined) {
 function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: string } }) {
   const location = useLocation();
   const lobby = useLobbyData();
+  // Signed in: get the most-used pages' code while the browser is idle, so going to them doesn't show a spinner.
+  useEffect(() => { prefetchCommon(); }, []);
   const {
     customization,
     setPointer,
@@ -565,6 +581,9 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   } = useCustomization();
   const { showLockScreen } = useAccess();
   const [showRewards, setShowRewards] = useState(false);
+  // The panel's code loads the first time it's opened, then stays (so it can animate closed).
+  const [rewardsOpened, setRewardsOpened] = useState(false);
+  useEffect(() => { if (showRewards) setRewardsOpened(true); }, [showRewards]);
   const textColorKey: ToolbarTextColorKey = customization?.toolbar_text_color ?? 'light';
   const textColorDef = TOOLBAR_TEXT_COLOR_PRESETS.find(p => p.key === textColorKey) ?? TOOLBAR_TEXT_COLOR_PRESETS[0];
   const inkColor = textColorDef.color;
@@ -596,6 +615,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   const wpClass = hasWallpaper ? wallpaperMeta.className : '';
 
   return (
+    <LobbyContext.Provider value={lobby}>
     <DockProvider companions={lobby.companions}>
     <div className="fixed inset-0 overflow-hidden bg-[#070914] p-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] pl-[max(0.375rem,env(safe-area-inset-left))] pr-[max(0.375rem,env(safe-area-inset-right))] sm:p-2.5 lg:p-4 [@media(max-height:500px)]:p-1 [@media(max-height:500px)]:pl-[max(0.25rem,env(safe-area-inset-left))] [@media(max-height:500px)]:pr-[max(0.25rem,env(safe-area-inset-right))]">
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-[var(--ds-bg-base,#090c1e)] shadow-[0_18px_70px_rgba(0,0,0,0.45)]">
@@ -606,7 +626,8 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
         </div>
         <div className="relative z-20 flex-shrink-0"><Dock /></div>
         <MedalToastHost />
-        {customization && (
+        {customization && (rewardsOpened || showRewards) && (
+          <Suspense fallback={null}>
           <CustomizationPanel
             isOpen={showRewards}
             onClose={() => setShowRewards(false)}
@@ -627,6 +648,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
               );
             }}
           />
+          </Suspense>
         )}
         <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
       </div>
@@ -635,6 +657,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
       )}
     </div>
     </DockProvider>
+    </LobbyContext.Provider>
   );
 }
 

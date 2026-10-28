@@ -23,28 +23,28 @@ lock the codes per account, so one per account, that should be fine".
   usual tab (Sets, Furniture, Wallpaper...) and the packs are also listed in the **Promo** tab. Buying one is refused
   (`systems/shop.ts`). Once a code has given it, it is an ordinary owned item with a Promo tag; a pack's card shows
   **Apply**.
-- **Once per account:** inside the app the game asks the host to claim the code (`velvet:promo`, answered with
-  `velvet:promoResult`), which records it in `velvet_promo_redemptions` through `claim_velvet_promo()`. The first use
-  works; the same house (companion) again works (a restart gets it back); another house on the same account is told the
-  code has been used. No limit on how many accounts use a code. If the claim can't be checked (offline), the code works.
-  Standalone (no app around the game, as in the live tests) there is no account and the code just works.
+- **The account's, for every house:** a code redeemed in one house opens the packs in every house on that account,
+  including houses made later, without typing it again (Tim, 28 October: "the intent is open it up for every house they
+  want after"). The game tells the host it redeemed a code (`velvet:promo`), which records it in
+  `velvet_promo_redemptions` through `claim_velvet_promo()`. Whenever a house opens, the host sends the account's codes
+  (`velvet:promos`) and the game gives that house the packs quietly: they wait in the Sets tab with **Apply**, so a house
+  that already has its own look isn't redecorated. There's no limit on how many accounts use a code. Standalone (no app
+  around the game, as in the live tests) there is no account and a code just works in the house it was typed in.
 
 The codes (also on the admin **Promo codes** page, with a copy button and how many accounts have used each):
 
 | Code | Gives |
 |---|---|
 | `rainbowhugs` | **Cuddle Clouds**: the kitchen and living room (six looks, the clouds wallpaper, the sky-check floor) and its finishing touches (cloud rug, rainbow arch, cloud night light, plush pile, cloud swing) |
-| `luv2dance` | **Nana** (reserved: the pack is still being made on `claude/nana-pack`; the line goes in when it lands) |
+| `iluv2dance` | **Nana**, the soft-girl era: the kitchen and living room (six looks in pastel pink, lilac and butter, the pink sky wallpaper, the blush carpet, a plush cloud rug and breezy drapes), plus a cloud nook set out to curl up in and two cloud wall lamps in storage |
 
 It gives everything, puts it on if they are looking at a floor of the house, and the packs then show in the **Sets**
 tab with an **Apply** button. In chat it is caught in `handleTalk` before anything goes to the AI or the chat history.
 
-**When Nana lands** (`claude/nana-pack`): wrap the set and every piece in `promo(...)` (not `secret(...)`, which is gone),
-add `luv2dance: { setIds: ['set-nana'], packName: 'Nana', welcome: '...' }` to `UNLOCK_CODES`, and drop that branch's
-own shop lock (`isLockedPromo` and its card in `ui/drawer.ts`): the promo card and the Promo tab here cover it.
-
 To add one: mark the pack and every piece in it `promo(...)` in `state/catalog.ts` (look drawers in `art/houseArt.js`),
-then a line in `UNLOCK_CODES` in `state/unlockCodes.ts` naming the sets it gives. Code: `state/unlockCodes.ts`,
+then a line in `UNLOCK_CODES` in `state/unlockCodes.ts` naming the sets it gives. A code can also give wall lamps
+(`lamps`, put in storage), furniture (`objects`, set out when the pack goes on) and other catalog ids (`also`, which the
+Promo tab treats as part of the pack). Code: `state/unlockCodes.ts`,
 `systems/unlocks.ts`, `bridge/hostPromo.ts`, and the host side in `pages/VelvetHouseNextGame.tsx`.
 
 **The list of codes lives in the game's code**, so someone who digs through the page can find them. That is fine for the

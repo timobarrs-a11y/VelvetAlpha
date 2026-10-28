@@ -35,6 +35,7 @@ const BackgroundSettingsPage = lazy(() => import('../pages/BackgroundSettingsPag
 const BillingPage = lazy(() => import('../pages/BillingPage').then(m => ({ default: m.BillingPage })));
 const CoAuthorPage = lazy(() => import('../pages/CoAuthorPage').then(m => ({ default: m.CoAuthorPage })));
 const CoachingProgressPage = lazy(() => import('../pages/CoachingProgressPage').then(m => ({ default: m.CoachingProgressPage })));
+const GoalNotesPage = lazy(() => import('../pages/GoalNotesPage').then(m => ({ default: m.GoalNotesPage })));
 const CoachingCommitmentsPage = lazy(() => import('../pages/CoachingCommitmentsPage').then(m => ({ default: m.CoachingCommitmentsPage })));
 const CoachingLibraryPage = lazy(() => import('../pages/CoachingLibraryPage').then(m => ({ default: m.CoachingLibraryPage })));
 const GoalDetailPage = lazy(() => import('../pages/GoalDetailPage').then(m => ({ default: m.GoalDetailPage })));
@@ -84,6 +85,7 @@ export const appRoutes = [
   <Route key="pricing" path="/pricing" element={P(<PricingPageRoute />)} />,
   <Route key="coaching-progress" path="/coaching-progress" element={P(<CoachingProgressPage />, 'view_progress')} />,
   <Route key="coaching-commitments" path="/coaching-commitments" element={P(<CoachingCommitmentsPage />)} />,
+  <Route key="notes" path="/notes" element={P(<GoalNotesPage />)} />,
   <Route key="coaching-library" path="/coaching-library" element={P(<CoachingLibraryPage />, 'coaching_library')} />,
   <Route key="goal-detail" path="/goal/:goalId" element={P(<GoalDetailPage />)} />,
   <Route key="co-author" path="/co-author" element={P(<CoAuthorPage />, 'use_co_author')} />,

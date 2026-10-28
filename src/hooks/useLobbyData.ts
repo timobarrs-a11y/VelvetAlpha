@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { onAvatarSaved } from '../stores/avatarEditorStore';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -6,7 +6,7 @@ import {
   Rocket, Brain, Home, Target,
 } from 'lucide-react';
 import { supabase } from '../shared/supabase/client';
-import { getCompanions, CompanionWithLastMessage } from '../services/companionService';
+import { getCompanions, deleteCompanion, COMPANIONS_CHANGED, CompanionWithLastMessage } from '../services/companionService';
 import { authService } from '../services/authService';
 import { useSubscription } from './useSubscription';
 import { useCustomization } from './useCustomization';
@@ -46,7 +46,8 @@ export interface ConfirmModal {
   onConfirm: () => Promise<void>;
 }
 
-export function useLobbyData() {
+export function useLobbyData(opts: { load?: boolean } = {}) {
+  const shouldLoad = opts.load !== false;
   const navigate = useNavigate();
   const [companions, setCompanions] = useState<CompanionWithLastMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +66,15 @@ export function useLobbyData() {
     setCompanions(prev => prev.map(c => c.id === target.id ? { ...c, avatar_config: config as unknown as CompanionWithLastMessage['avatar_config'] } : c));
   }), []);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { if (shouldLoad) loadData(); }, []);
+  // Someone was deleted elsewhere (Settings → Your team): the list here loads again.
+  useEffect(() => {
+    if (!shouldLoad) return;
+    const reload = () => { loadData(); };
+    window.addEventListener(COMPANIONS_CHANGED, reload);
+    return () => window.removeEventListener(COMPANIONS_CHANGED, reload);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -130,14 +139,13 @@ export function useLobbyData() {
   const handleDeleteCompanion = useCallback((companionId: string, companionName: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setConfirmModal({
-      title: 'Delete Companion',
-      message: `Delete ${companionName}? This will remove all conversation history.`,
+      title: `Delete ${companionName} permanently?`,
+      message: `Your chats with ${companionName} and everything they remember about you are deleted. This is permanent and can't be undone.`,
       onConfirm: async () => {
         try {
-          const { error } = await supabase.from('companions').delete().eq('id', companionId);
-          if (error) throw error;
+          const err = await deleteCompanion(companionId);
+          if (err) throw new Error(err);
           setConfirmModal(null);
-          await loadData();
         } catch {
           setConfirmModal(null);
           toast.error('Failed to delete companion. Please try again.');
@@ -216,4 +224,16 @@ export function useLobbyData() {
     openCompanion,
     openGroup,
   };
+}
+
+export type LobbyData = ReturnType<typeof useLobbyData>;
+
+/** The signed-in workspace's lobby data, for pages inside it (the menu already loaded the companions). */
+export const LobbyContext = createContext<LobbyData | null>(null);
+
+/** The workspace's lobby data when there is one, so a page doesn't load the same companions again; otherwise its own. */
+export function useLobby(): LobbyData {
+  const shared = useContext(LobbyContext);
+  const own = useLobbyData({ load: !shared });
+  return shared ?? own;
 }

@@ -6,7 +6,6 @@ import { affectionService } from './affectionService';
 import type { RelationshipIntent, RelationshipStatus } from './affectionService';
 import { getEligibleFonts } from './customizationService';
 import { getCurrentStatus } from '../utils/statusHelper';
-import { seedVoiceBaseline } from './voiceFidelityService';
 
 import type { RelationshipType } from '../utils/relationshipType';
 export type { RelationshipType } from '../utils/relationshipType';
@@ -233,7 +232,8 @@ export async function createCompanion(options: CreateCompanionOptions): Promise<
 
   if (data) {
     const voiceId = options.signatureVoice || (options.gender === 'male' ? 'classic_male' : 'classic_female');
-    seedVoiceBaseline(data.id, voiceId, options.gender).catch(console.error);
+    // Loaded here, not up front: it brings the full voice list, and only creating a companion needs it.
+    import('./voiceFidelityService').then(({ seedVoiceBaseline }) => seedVoiceBaseline(data.id, voiceId, options.gender)).catch(console.error);
   }
 
   if (data) {
@@ -391,6 +391,26 @@ export async function deactivateCompanion(companionId: string): Promise<void> {
   if (error) {
     return;
   }
+}
+
+/** Told when a companion or coach is deleted, so lists elsewhere (the menu, the lobby) load again. */
+export const COMPANIONS_CHANGED = 'velvet:companions-changed';
+
+/**
+ * Delete a companion or coach for good: the row goes, and with it (in the database) their chats, memories, insights,
+ * rituals, commitments and Velvet Sims house. Goals, plans and notes they carried stay, with no one on them. Their
+ * house's copy in this browser goes too. Returns an error message, or null.
+ */
+export async function deleteCompanion(companionId: string): Promise<string | null> {
+  const { error } = await supabase.from('companions').delete().eq('id', companionId);
+  if (error) return error.message;
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key === `velvet-sims:${companionId}` || key.startsWith(`velvet-sims:${companionId}:`) || key === `velvet-house-v1:${companionId}`) localStorage.removeItem(key);
+    }
+  } catch { /* storage unavailable: nothing to clear */ }
+  window.dispatchEvent(new Event(COMPANIONS_CHANGED));
+  return null;
 }
 
 export async function getUserDefaultCompanion(userId: string): Promise<Companion | null> {
