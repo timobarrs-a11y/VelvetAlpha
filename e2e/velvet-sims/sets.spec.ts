@@ -17,3 +17,18 @@ test('the Sets tab sells a whole look for less, through its Buy button', async (
   await expect(card).toContainText('You have all of it');
   await expect(card.locator('[data-buy]')).toBeDisabled();
 });
+
+test('on day 1 every set is in the shop, priced, and the starting money does not cover it; buying changes nothing', async ({ page }) => {
+  const game = await openGame(page);
+  await game.locator('.vh-dock [data-open=shop]').click();
+  await game.locator('[data-tab=Sets]').click();
+  for (const id of ['retro', 'farmhouse', 'modern', 'spring', 'summer', 'fall', 'winter']) {
+    const card = game.locator(`[data-item=set-${id}]`);
+    await expect(card).toBeVisible();
+    await expect(card.locator('.vh-price')).toContainText('$');
+    await expect(card).not.toHaveClass(/vh-locked/);
+  }
+  const before = JSON.stringify(await objects(page));
+  await game.locator('[data-item=set-fall] [data-buy]').click();
+  expect(JSON.stringify(await objects(page))).toBe(before);
+});
