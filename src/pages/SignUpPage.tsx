@@ -180,10 +180,7 @@ export default function SignUpPage() {
             </p>
           </div>
 
-          <GoogleButton onError={setError} />
-          <p className="-mt-3 mb-6 text-center text-[11px] text-ink-muted">
-            With Google you'll confirm your birthday (18+) and accept the <Link to="/terms" className="underline">Terms</Link> and <Link to="/privacy" className="underline">Privacy Policy</Link> next.
-          </p>
+          <GoogleButton onError={setError} note={<>With Google you'll confirm your birthday (18+) and accept the <Link to="/terms" className="underline">Terms</Link> and <Link to="/privacy" className="underline">Privacy Policy</Link> next.</>} />
 
           <form onSubmit={handleSignUp} className="space-y-5">
             {error && (

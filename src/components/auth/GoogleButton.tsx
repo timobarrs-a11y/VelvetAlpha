@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { authService } from '../../services/authService';
 
 function GoogleMark() {
@@ -13,8 +13,10 @@ function GoogleMark() {
 }
 
 /** "Continue with Google", for the login and sign-up pages, with an "or" divider above the email form. */
-export function GoogleButton({ onError }: { onError: (message: string) => void }) {
+export function GoogleButton({ onError, note }: { onError: (message: string) => void; note?: ReactNode }) {
   const [busy, setBusy] = useState(false);
+  // Off until Google sign-in is set up in Supabase (set VITE_GOOGLE_SIGNIN_ENABLED=true to show it).
+  if (import.meta.env.VITE_GOOGLE_SIGNIN_ENABLED !== 'true') return null;
   const go = async () => {
     setBusy(true);
     try {
@@ -35,6 +37,7 @@ export function GoogleButton({ onError }: { onError: (message: string) => void }
         <GoogleMark />
         {busy ? 'Opening Google…' : 'Continue with Google'}
       </button>
+      {note && <p className="mt-3 text-center text-[11px] text-ink-muted">{note}</p>}
       <div className="flex items-center gap-3 mt-6 text-xs text-ink-muted">
         <span className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.12)' }} />
         or use email
