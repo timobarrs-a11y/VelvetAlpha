@@ -128,6 +128,9 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-pin-slate', 'Slate pinstripe', 'pin-slate', 100, ['modern', 'minimal', 'cool']),
   wallpaper('paper-gingham-sage', 'Sage gingham', 'gingham-sage', 90, ['cozy', 'natural', 'warm']),
   wallpaper('paper-starburst-mint', 'Atomic mint', 'starburst-mint', 100, ['vintage', 'playful', 'bold']),
+  wallpaper('paper-birch', 'Birch forest', 'birch', 90, ['soft', 'minimal', 'natural']),
+  wallpaper('paper-brick-white', 'Painted brick', 'brick-white', 110, ['industrial', 'bold', 'cool']),
+  wallpaper('paper-stripe-nautical', 'Nautical stripe', 'stripe-nautical', 90, ['cool', 'natural', 'playful']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
   wallpaper('paper-stars-night', 'Starry night', 'stars-night', 120, ['playful', 'cool', 'bold']),
@@ -145,6 +148,15 @@ export const CATALOG: CatalogEntry[] = [
 
   bundle('set-modern', 'Modern kitchen and living room', 'The brushed steel fridge, slab counter, glass-top dining set, low-profile sofa, slim torchiere and slab planter, with slate pinstripe walls and a charcoal microcement floor.',
     ['look-fridge-modern', 'look-counter-modern', 'look-dining-modern', 'look-sofa-modern', 'look-lamp-modern', 'look-plant-modern', 'paper-pin-slate', 'floor-charcoal'], ['modern', 'minimal', 'cool']),
+
+  bundle('set-scandi', 'Scandi kitchen and living room', 'Pale ash and linen: the ash-handled fridge, ash slab counter, wishbone dining set, linen sofa, paper lantern and a pot on an ash stand, with birch walls and pale wide planks.',
+    ['look-fridge-scandi', 'look-counter-scandi', 'look-dining-scandi', 'look-sofa-scandi', 'look-lamp-scandi', 'look-plant-scandi', 'paper-birch', 'floor-nordic'], ['soft', 'minimal', 'natural']),
+
+  bundle('set-industrial', 'Industrial kitchen and living room', 'Steel, concrete and old wood: the riveted fridge, concrete and steel counter, pipe and plank table, tufted leather sofa, cage bulb lamp and a galvanized bucket, with painted brick and a poured concrete floor.',
+    ['look-fridge-industrial', 'look-counter-industrial', 'look-dining-industrial', 'look-sofa-industrial', 'look-lamp-industrial', 'look-plant-industrial', 'paper-brick-white', 'floor-poured'], ['industrial', 'bold', 'cool']),
+
+  bundle('set-beach', 'Beach house kitchen and living room', 'Driftwood, rope and sea glass: the sea-glass fridge, whitewashed shiplap counter, driftwood dining set, striped slipcover sofa, rope-wound lamp and a seagrass basket, with nautical stripes and bleached boards.',
+    ['look-fridge-beach', 'look-counter-beach', 'look-dining-beach', 'look-sofa-beach', 'look-lamp-beach', 'look-plant-beach', 'paper-stripe-nautical', 'floor-driftwood'], ['cool', 'natural', 'playful']),
 
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
@@ -182,6 +194,9 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-charcoal', 'Charcoal microcement', 'charcoal', 170, ['modern', 'minimal', 'cool']),
   floor('floor-barnwood', 'Barnwood plank', 'barnwood', 140, ['cozy', 'natural', 'warm']),
   floor('floor-linoleum', 'Diner linoleum', 'linoleum', 160, ['vintage', 'playful', 'bold']),
+  floor('floor-nordic', 'Pale wide plank', 'nordic', 140, ['soft', 'minimal', 'natural']),
+  floor('floor-poured', 'Poured concrete', 'poured', 170, ['industrial', 'bold', 'cool']),
+  floor('floor-driftwood', 'Bleached boards', 'driftwood', 140, ['cool', 'natural', 'playful']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
   floor('floor-navy-carpet', 'Navy carpet', 'navy', 100, ['cool', 'modern', 'cozy']),
@@ -245,6 +260,30 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-modern', 'sofa', 'modern', 'Low-profile sofa', 'Tight cushions, square arms and a lot of floor showing underneath.', 520, ['modern', 'minimal', 'cool'], ['#5E646B', '#2B2B30', '#C9CED6']),
   look('look-lamp-modern', 'lamp', 'modern', 'Slim torchiere', 'A thin pole and a round white head that washes the ceiling.', 110, ['modern', 'minimal', 'cool'], ['#2B2B30', '#C9CED6', '#E8EAEC']),
   look('look-plant-modern', 'plant', 'modern', 'Slab planter', 'A square matte planter with pale gravel on top.', 70, ['modern', 'minimal', 'cool'], ['#2B2B30', '#E8EAEC', '#9AA0A6', '#C9B79C']),
+
+  // Scandi: pale ash, linen and paper, and nothing shouting.
+  look('look-fridge-scandi', 'fridge', 'scandi', 'Ash-handled fridge', 'A quiet white fridge with an ash cap and ash handles, and one small brass dot.', 350, ['soft', 'minimal', 'natural'], ['#F4F2EC', '#DDE3DF', '#F1E6D8']),
+  look('look-counter-scandi', 'counter', 'scandi', 'Ash slab counter', 'Ash fronts you open with a finger, a white quartz top, a round sink and a brass tap.', 410, ['soft', 'minimal', 'natural'], ['#D8C7A8', '#E3D6BD', '#C9B693']),
+  look('look-dining-scandi', 'dining', 'scandi', 'Wishbone dining set', 'An ash table with the grain showing, splayed legs, wishbone chairs and a paper lantern over it.', 330, ['soft', 'minimal', 'natural'], ['#D8C7A8', '#C9B693', '#EDE4D3']),
+  look('look-sofa-scandi', 'sofa', 'scandi', 'Linen sofa on ash legs', 'Oatmeal linen on a frame you can see, a bolster, and a knitted throw over one arm.', 370, ['soft', 'minimal', 'natural'], ['#D9CDB9', '#B9C2B6', '#C7B8C9']),
+  look('look-lamp-scandi', 'lamp', 'scandi', 'Paper lantern lamp', 'A big paper lantern on an ash tripod. The whole thing glows.', 85, ['soft', 'minimal', 'natural'], ['#F7F3EA', '#E9DDC7', '#D8E0DA']),
+  look('look-plant-scandi', 'plant', 'scandi', 'Ceramic pot on an ash stand', 'A white ceramic pot lifted off the floor on crossed ash legs.', 50, ['soft', 'minimal', 'natural'], ['#F6F4EE', '#9DB3A5', '#D5C3B2', '#3A3A40']),
+
+  // Industrial: steel, concrete and old wood, with the bolts showing.
+  look('look-fridge-industrial', 'fridge', 'industrial', 'Riveted steel fridge', 'Gunmetal with rivets down both edges, a steel kick plate and a latch you have to mean.', 470, ['industrial', 'bold', 'cool'], ['#5A5E66', '#2B2B30', '#7B4A3A']),
+  look('look-counter-industrial', 'counter', 'industrial', 'Concrete and steel counter', 'An open steel frame with a reclaimed shelf, a concrete top, a steel trough sink and a brass gooseneck.', 580, ['industrial', 'bold', 'cool'], ['#2B2B30', '#4A4D52', '#7B4A3A']),
+  look('look-dining-industrial', 'dining', 'industrial', 'Pipe and plank table set', 'Three reclaimed planks on black pipe legs with flanges, and metal stools to perch on.', 500, ['industrial', 'bold', 'cool'], ['#8A5E3B', '#6B4A35', '#A87E48']),
+  look('look-sofa-industrial', 'sofa', 'industrial', 'Tufted leather sofa', 'Buttoned leather on a black pipe frame, with brass studs along the arms.', 540, ['industrial', 'bold', 'cool'], ['#6B3A2A', '#2B2B30', '#4A5A4A']),
+  look('look-lamp-industrial', 'lamp', 'industrial', 'Cage bulb lamp', 'A pipe stand, an elbow, a wire cage and an Edison bulb that glows amber.', 120, ['industrial', 'bold', 'cool'], ['#2B2B30', '#7B4A3A', '#8E939A']),
+  look('look-plant-industrial', 'plant', 'industrial', 'Galvanized bucket planter', 'Your plant in a ribbed steel bucket with a wire handle.', 65, ['industrial', 'bold', 'cool'], ['#B9BEC3', '#2B2B30', '#7B4A3A', '#4A5A4A']),
+
+  // Beach: driftwood, rope and sea glass, like the house is on holiday.
+  look('look-fridge-beach', 'fridge', 'beach', 'Sea-glass fridge', 'Sea-glass enamel with a white cap, rope handles and a shell on the door.', 360, ['cool', 'natural', 'playful'], ['#7FB8C9', '#F7F5EF', '#E8907A']),
+  look('look-counter-beach', 'counter', 'beach', 'Whitewashed shiplap counter', 'Whitewashed shiplap fronts with rope pulls, a driftwood top, a white basin and a brass tap.', 420, ['cool', 'natural', 'playful'], ['#F7F5EF', '#DDE8EA', '#E8DCC2']),
+  look('look-dining-beach', 'dining', 'beach', 'Driftwood dining set', 'A bleached driftwood table, rattan chairs and a woven shade hanging over it.', 340, ['cool', 'natural', 'playful'], ['#C9B9A2', '#DAD0C0', '#B9ADA0']),
+  look('look-sofa-beach', 'sofa', 'beach', 'Slipcover sofa with navy stripes', 'A white slipcover on driftwood feet, rope piping, two navy-striped cushions and a few shells underneath.', 380, ['cool', 'natural', 'playful'], ['#F7F5EF', '#E8DCC2', '#DDE8EA']),
+  look('look-lamp-beach', 'lamp', 'beach', 'Rope-wound lamp', 'A driftwood post wound with rope and a woven drum shade.', 90, ['cool', 'natural', 'playful'], ['#F2E6DA', '#DDE8EA', '#E8DCC2']),
+  look('look-plant-beach', 'plant', 'beach', 'Seagrass basket planter', 'Your plant in a woven seagrass basket with a rope rim.', 50, ['cool', 'natural', 'playful'], ['#D2B48C', '#C9B9A2', '#E8DCC2', '#B9ADA0']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
