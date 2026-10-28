@@ -163,12 +163,12 @@ export default function HousePage() {
   }, [spaces.length, activeRoom, refreshSpaces]);
 
   const handleSelectSpace = useCallback((id: string) => {
-    navigate(`/house/${id}`);
+    navigate(`/spaces/${id}`);
   }, [navigate]);
 
   const handleSelectRoom = useCallback((room: SpaceRoom) => {
     if (activeSpace) {
-      navigate(`/house/${activeSpace.board_id}/${room.name}`);
+      navigate(`/spaces/${activeSpace.board_id}/${room.name}`);
     }
     setActiveRoom(room);
     setMobileView('chat');
@@ -190,7 +190,7 @@ export default function HousePage() {
     if (!activeSpace) return;
     try {
       await leaveSpace(activeSpace.board_id);
-      navigate('/house');
+      navigate('/spaces');
       const updated = await getMySpaces();
       setSpaces(updated);
       loadSuggestions();
@@ -297,7 +297,7 @@ export default function HousePage() {
           </button>
         )}
         <h1 className="text-sm font-bold flex-1">
-          {mobileView === 'spaces' && 'The House'}
+          {mobileView === 'spaces' && 'Spaces'}
           {mobileView === 'rooms' && activeSpace?.name}
           {mobileView === 'chat' && `#${activeRoom?.name ?? ''}`}
         </h1>
@@ -325,7 +325,7 @@ export default function HousePage() {
               <p className="text-sm text-ink-muted mb-4 max-w-xs">
                 This space doesn't exist, or it's hidden. Hidden spaces open with an invite link from a member.
               </p>
-              <button onClick={() => navigate('/house/browse')} className="text-xs text-pink-400 hover:text-pink-300 transition-colors">
+              <button onClick={() => navigate('/spaces/browse')} className="text-xs text-pink-400 hover:text-pink-300 transition-colors">
                 Browse spaces →
               </button>
             </div>

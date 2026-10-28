@@ -80,7 +80,7 @@ export default function CommunitySearchPage() {
         <div className="px-4 sm:px-6 py-4 border-b border-white/8 bg-[var(--ds-surface-2)]/60 backdrop-blur-md">
           <div className="flex items-center gap-3 mb-3">
             <button
-              onClick={() => navigate('/community')}
+              onClick={() => navigate('/spaces/browse')}
               className="flex items-center gap-1.5 text-sm text-white/50 hover:text-white/80 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -169,7 +169,7 @@ export default function CommunitySearchPage() {
                 onClick={() =>
                   result.result_type === 'post'
                     ? navigate(`/community/post/${result.id}`)
-                    : navigate(`/house/${result.id}`)
+                    : navigate(`/spaces/${result.id}`)
                 }
                 className="w-full text-left rounded-xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/15 p-4 transition-all group"
               >

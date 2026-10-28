@@ -214,7 +214,7 @@ export default function PostDetailPage() {
     const ok = await deletePost(postId);
     if (ok) {
       toast.success('Post deleted.');
-      navigate(boardId ? `/house/${boardId}?tab=posts` : '/community');
+      navigate(boardId ? `/spaces/${boardId}?tab=posts` : '/spaces');
     } else {
       toast.error('Could not delete post.');
     }
@@ -285,7 +285,7 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <PageShell width="lg" header={<PostDetailHeader back="/community" backLabel="Community" />}>
+      <PageShell width="lg" header={<PostDetailHeader back="/spaces" backLabel="Spaces" />}>
         <LoadingState label="Loading post..." />
       </PageShell>
     );
@@ -293,10 +293,10 @@ export default function PostDetailPage() {
 
   if (!post) {
     return (
-      <PageShell width="lg" header={<PostDetailHeader back="/community" backLabel="Community" />}>
+      <PageShell width="lg" header={<PostDetailHeader back="/spaces" backLabel="Spaces" />}>
         <div className="text-center py-16 text-white/50">
           <p>This post may have been deleted.</p>
-          <Button variant="secondary" size="sm" className="mt-4" onClick={() => navigate('/community')}>
+          <Button variant="secondary" size="sm" className="mt-4" onClick={() => navigate('/spaces')}>
             Back to community
           </Button>
         </div>
@@ -315,7 +315,7 @@ export default function PostDetailPage() {
           boardName={boardName || undefined}
           boardId={boardId}
           accent={boardColor}
-          back={boardId ? `/house/${boardId}?tab=posts` : '/community'}
+          back={boardId ? `/spaces/${boardId}?tab=posts` : '/spaces'}
           backLabel={boardName || 'Board'}
         />
       }

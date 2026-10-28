@@ -321,7 +321,7 @@ export async function reorderRoom(roomId: string, direction: 'up' | 'down'): Pro
   await supabase.from('community_rooms').update({ sort_order: room.sort_order }).eq('id', swap.id);
 }
 
-/** One space or crew as the House shows it, member or not. Null when it doesn't exist or is hidden from me. */
+/** One space or crew as Spaces shows it, member or not. Null when it doesn't exist or is hidden from me. */
 export async function getSpaceCard(boardId: string): Promise<SpaceView | null> {
   const { data, error } = await supabase.rpc('get_space_card', { p_board_id: boardId });
   if (error) throw new Error(error.message);

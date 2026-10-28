@@ -170,7 +170,7 @@ export function HomeShellPage() {
     {
       id: 'community', label: 'Community', sub: 'Boards & posts',
       icon: <MessageCircle className="w-3.5 h-3.5" />, color: 'text-blue-400',
-      group: 'connect', action: () => navigate('/house'),
+      group: 'connect', action: () => navigate('/spaces'),
     },
     {
       id: 'arcade', label: 'The Arcade', sub: 'Play together',

@@ -33,7 +33,7 @@ export interface ObjectiveDef {
 export const OBJECTIVE_DEFS: Record<ObjectiveKey, ObjectiveDef> = {
   // The core five
   visit_town: { label: 'Visit the Town', hint: 'Take a stroll down your street', to: '/world' },
-  comment_in_space: { label: 'Leave a comment in a Space', hint: 'Chat in a room, or comment on a post', to: '/house' },
+  comment_in_space: { label: 'Leave a comment in a Space', hint: 'Chat in a room, or comment on a post', to: '/spaces' },
   create_companion: { label: 'Create a companion', hint: 'Someone to talk to between goals', to: '/intent-select?people=1' },
   play_velvet_sims: { label: 'Play Velvet Sims', hint: 'Step into your cozy mystery', to: '/velvet-house' },
   read_feed: { label: 'Check out your Daily Feed', hint: 'News and videos picked for you', to: '/daily-feed' },
@@ -44,10 +44,10 @@ export const OBJECTIVE_DEFS: Record<ObjectiveKey, ObjectiveDef> = {
   check_leaderboard: { label: 'See where you stand', hint: 'Check the leaderboard', to: '/leaderboard' },
   view_medals: { label: 'Admire your medals', hint: 'See what you have and what\'s next', to: '/medals' },
   // Spaces and Discover
-  browse_spaces: { label: 'Browse the Spaces', hint: 'See what people are talking about', to: '/house' },
-  join_a_space: { label: 'Join a new Space', hint: 'Find one that suits you', to: '/house/browse' },
-  react_in_space: { label: 'React to posts in Spaces', hint: 'Show some love', to: '/community' },
-  post_in_space: { label: 'Start a conversation', hint: 'Make a post in a Space', to: '/community' },
+  browse_spaces: { label: 'Browse the Spaces', hint: 'See what people are talking about', to: '/spaces' },
+  join_a_space: { label: 'Join a new Space', hint: 'Find one that suits you', to: '/spaces/browse' },
+  react_in_space: { label: 'React to posts in Spaces', hint: 'Show some love', to: '/spaces' },
+  post_in_space: { label: 'Start a conversation', hint: 'Make a post in a Space', to: '/spaces' },
   discover_people: { label: 'Meet someone new', hint: 'Look around Discover', to: '/discover' },
   cheer_a_win: { label: 'Cheer on wins', hint: 'React to neighbors\' wins in Discover', to: '/discover' },
   comment_on_wins: { label: 'Encourage your neighbors', hint: 'Comment on their progress and statuses', to: '/discover' },

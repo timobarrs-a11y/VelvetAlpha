@@ -59,7 +59,7 @@ export function SpaceCrews({ space, onChanged, embedded = false }: Props) {
         {!loading && crews.map(c => (
           <div key={c.board_id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/8">
             <button
-              onClick={() => navigate(`/house/${c.board_id}`)}
+              onClick={() => navigate(`/spaces/${c.board_id}`)}
               className="flex items-center gap-3 flex-1 min-w-0 text-left"
             >
               <span className="flex-shrink-0 w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center">
@@ -95,7 +95,7 @@ export function SpaceCrews({ space, onChanged, embedded = false }: Props) {
           onCreated={id => {
             setShowStart(false);
             onChanged();
-            navigate(`/house/${id}`);
+            navigate(`/spaces/${id}`);
           }}
         />
       )}

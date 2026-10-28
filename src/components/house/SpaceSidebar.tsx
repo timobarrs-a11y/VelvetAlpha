@@ -117,7 +117,7 @@ export function SpaceSidebar({ spaces, activeBoardId, onSelect, loading }: Props
             {joinable.map(c => (
               <button
                 key={c.board_id}
-                onClick={() => navigate(`/house/${c.board_id}`)}
+                onClick={() => navigate(`/spaces/${c.board_id}`)}
                 className="w-full flex items-center gap-2.5 pl-10 pr-2.5 py-1.5 rounded-lg transition-colors text-left hover:bg-white/5"
               >
                 <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center">
@@ -142,7 +142,7 @@ export function SpaceSidebar({ spaces, activeBoardId, onSelect, loading }: Props
       <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
         <h2 className="text-sm font-semibold text-ink">My Spaces</h2>
         <button
-          onClick={() => navigate('/house/browse')}
+          onClick={() => navigate('/spaces/browse')}
           className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors"
           title="Browse spaces"
         >
@@ -158,7 +158,7 @@ export function SpaceSidebar({ spaces, activeBoardId, onSelect, loading }: Props
           <div className="px-3 py-6 text-center">
             <p className="text-xs text-ink-muted mb-3">You haven't joined any spaces yet.</p>
             <button
-              onClick={() => navigate('/house/browse')}
+              onClick={() => navigate('/spaces/browse')}
               className="text-xs text-pink-400 hover:text-pink-300 transition-colors"
             >
               Browse spaces →
@@ -170,7 +170,7 @@ export function SpaceSidebar({ spaces, activeBoardId, onSelect, loading }: Props
 
       <div className="flex-shrink-0 p-2 border-t border-white/5">
         <button
-          onClick={() => navigate('/house/browse')}
+          onClick={() => navigate('/spaces/browse')}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-ink-muted hover:text-ink"
         >
           <Search className="w-4 h-4" /> Browse all spaces

@@ -42,7 +42,7 @@ export function FirstWeekCard() {
   const open = (key: keyof FirstWeekProgress) => {
     switch (key) {
       case 'friend': navigate('/world'); break;
-      case 'space': navigate('/community'); break;
+      case 'space': navigate('/spaces'); break;
       case 'game':
         noteGamePlayed();
         setProgress({ ...progress, game: true });

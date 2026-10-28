@@ -7,7 +7,7 @@ export interface MySpace {
   unread_count: number; last_message_at: string | null;
   parent_board_id: string | null; parent_name: string | null; sub_space_count: number;
 }
-/** Any space or crew the House can show: one of mine, or a preview of one I'm not in. */
+/** Any space or crew Spaces can show: one of mine, or a preview of one I'm not in. */
 export interface SpaceView {
   board_id: string; name: string; description: string | null; icon: string; color: string;
   category: string; visibility: SpaceVisibility; member_count: number; role: SpaceRole | null;

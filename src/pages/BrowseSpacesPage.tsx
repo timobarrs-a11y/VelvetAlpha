@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Users } from 'lucide-react';
+import { ArrowLeft, Clock, Plus, Search, Users } from 'lucide-react';
 import { getSpaceDirectory } from '../services/spacesService';
+import { fetchBoards } from '../services/communityService';
+import { CreateBoardModal } from '../components/community/CommunityComponents';
 import type { DirectorySpace } from '../types/spaces';
 import { SpaceIcon } from '../components/house/SpaceIcon';
 import { DoorAction, DoorChip, DoorIcon } from '../components/house/doors';
 
 /**
- * Finding new spaces. Every space and crew opens in the House (crews live in each space's Crews
- * tab); hidden ones never appear here unless you're already in them.
+ * Finding new spaces. Every space and crew opens in Spaces (crews live in each space's Crews
+ * tab); hidden ones never appear here unless you're already in them. This page also took over
+ * the old Community page: featured spaces, proposing a space, and your proposal's status.
  */
 export default function BrowseSpacesPage() {
   const navigate = useNavigate();
@@ -17,13 +20,23 @@ export default function BrowseSpacesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<DirectorySpace[]>([]);
   const [searching, setSearching] = useState(false);
+  const [pinned, setPinned] = useState<Set<string>>(new Set());
+  const [myPending, setMyPending] = useState<string[]>([]);
+  const [showPropose, setShowPropose] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     getSpaceDirectory(null, null)
       .then(setTopLevel)
       .catch(() => setTopLevel([]))
       .finally(() => setLoading(false));
+    // Featured (pinned) spaces, and spaces I proposed that are still waiting for approval.
+    fetchBoards().then(boards => {
+      setPinned(new Set(boards.filter(b => b.is_pinned && b.is_approved).map(b => b.id)));
+      setMyPending(boards.filter(b => !b.is_approved && b.is_owner).map(b => b.name));
+    });
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -52,7 +65,8 @@ export default function BrowseSpacesPage() {
     setSearchResults(apply);
   };
 
-  const grouped = topLevel.reduce<Record<string, DirectorySpace[]>>((acc, s) => {
+  const featured = topLevel.filter(s => pinned.has(s.board_id));
+  const grouped = topLevel.filter(s => !pinned.has(s.board_id)).reduce<Record<string, DirectorySpace[]>>((acc, s) => {
     (acc[s.category] ??= []).push(s);
     return acc;
   }, {});
@@ -62,7 +76,7 @@ export default function BrowseSpacesPage() {
   const renderSpaceCard = (space: DirectorySpace) => (
     <div key={space.board_id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/8">
       <button
-        onClick={() => navigate(`/house/${space.board_id}`)}
+        onClick={() => navigate(`/spaces/${space.board_id}`)}
         className="flex items-center gap-3 flex-1 min-w-0 text-left"
       >
         <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
@@ -99,13 +113,19 @@ export default function BrowseSpacesPage() {
     <div className="ds-page text-white flex flex-col h-full overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8 flex-shrink-0">
         <button
-          onClick={() => navigate('/house')}
+          onClick={() => navigate('/spaces')}
           className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-          aria-label="Back to the House"
+          aria-label="Back to Spaces"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-base font-bold flex-1">Browse Spaces</h1>
+        <button
+          onClick={() => setShowPropose(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-pink-500/20 hover:bg-pink-500/30 text-xs text-pink-300 border border-pink-500/30 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> Propose a space
+        </button>
       </div>
 
       <div className="flex-shrink-0 px-4 py-3 border-b border-white/8">
@@ -118,6 +138,12 @@ export default function BrowseSpacesPage() {
             className="w-full bg-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-ink placeholder:text-ink-muted/60 outline-none focus:bg-white/8 transition-colors"
           />
         </div>
+        <button
+          onClick={() => navigate('/community/search')}
+          className="mt-2 text-[11px] text-ink-muted hover:text-ink transition-colors"
+        >
+          Looking for a post? Search posts →
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
@@ -135,6 +161,20 @@ export default function BrowseSpacesPage() {
 
         {!loading && !showSearch && (
           <div className="max-w-2xl mx-auto space-y-6">
+            {myPending.length > 0 && (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/8 text-sm text-ink-muted">
+                <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                <span>
+                  Your space <span className="font-semibold text-ink">{myPending[0]}</span> is waiting for approval.
+                </span>
+              </div>
+            )}
+            {featured.length > 0 && (
+              <div>
+                <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Featured</h2>
+                <div className="space-y-2">{featured.map(renderSpaceCard)}</div>
+              </div>
+            )}
             {categories.map(cat => (
               <div key={cat}>
                 <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">{cat}</h2>
@@ -146,6 +186,12 @@ export default function BrowseSpacesPage() {
           </div>
         )}
       </div>
+
+      <CreateBoardModal
+        isOpen={showPropose}
+        onClose={() => setShowPropose(false)}
+        onCreated={() => { setShowPropose(false); load(); }}
+      />
     </div>
   );
 }

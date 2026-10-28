@@ -69,7 +69,7 @@ export function DoorAction({ space, onChanged }: {
   if (space.is_member) {
     return (
       <button
-        onClick={() => navigate(`/house/${space.board_id}`)}
+        onClick={() => navigate(`/spaces/${space.board_id}`)}
         className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-ink transition-colors"
       >
         Open

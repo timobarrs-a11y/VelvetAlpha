@@ -47,7 +47,7 @@ applied yet**. Never re-run an earlier phase after a later one.
 | **Room** | A row in `community_rooms`: a live chat channel inside a space (`#general`, `#looking-for-group`). |
 | **Posts** | The existing forum posts in a board (`community_posts`). They stay, as the space's Posts tab. |
 | **Crew** | A space with `parent_board_id` set (lives inside another space) and usually `request` or `invite` visibility. |
-| **House** | The new `/house` page: your spaces, who's here, what's unread, all on one screen. |
+| **Spaces** | The `/spaces` page (it was House at `/house`; the name is retired and old links redirect): your spaces, who's here, what's unread, all on one screen. The community boards' posts live here too, as each space's Posts tab. |
 | **Medal** | A row in `medals`; a user's progress is in `user_medals`. |
 
 ## What already exists (don't rebuild it)
@@ -90,20 +90,26 @@ reporting works inside hidden spaces as everywhere else. One rule, `can_see_boar
 visibility for the board policy, the directory, search, suggestions and `can_read_board()`.
 
 **One view.** Spaces and crews used to read as two UIs: crews were only on the Browse page,
-Posts left the House for the old forum page, and a space or crew you weren't in didn't open at
+Posts left Spaces for the old forum page, and a space or crew you weren't in didn't open at
 all. Now:
 
 | Before | Now |
 |---|---|
-| Crews listed only on `/house/browse`, behind a drill-in | A **Crews** tab in every space (`?tab=crews`), with Join/Request and **Start a crew** |
-| Posts opened `/community/board/:id`, a different page | A **Posts** tab inside the House (`?tab=posts`); old board links redirect there |
+| Crews listed only on Browse, behind a drill-in | A **Crews** tab in every space (`?tab=crews`), with Join/Request and **Start a crew** |
+| Posts opened `/community/board/:id`, a different page | A **Posts** tab inside Spaces (`?tab=posts`); old board links redirect there |
 | A space you weren't in fell back to the overview | Open spaces show their rooms with Join; closed doors show a card with Request, "Use invite" or "Members only", plus their crews |
 | Sidebar showed crews only after a lookup that often never ran | Crews you're in nest under their space (unread rolls up when folded); unfolding also lists crews you can join |
 | Crews didn't say where they live | A breadcrumb (`Gaming Lounge › Crew`) on the header and door card |
 
 `get_my_spaces()` and `get_space_directory()` now return `parent_board_id`, `parent_name` and
-a `sub_space_count` of crews you can see; `get_space_card(id)` returns one space as the House
+a `sub_space_count` of crews you can see; `get_space_card(id)` returns one space as Spaces
 shows it.
+
+**The old Community page is retired.** `/community` redirects to Browse, which took over what
+only that page had: the Featured row, **Propose a space** (top-level spaces still wait for
+approval; crews don't), and the note that your proposal is waiting. The approval queue itself
+moved to the admin Moderation page. Post cards in the Posts tab use the same row style as rooms
+and crews.
 
 ## Ideas for after Phase 4 (not scheduled)
 
@@ -115,4 +121,4 @@ shows it.
 - **Learned interests:** `threadSignalService.ts` adds interests from chat
   over time. Use `get_space_suggestions()` to offer "There's a 2K27 crew with
   14 people. Want in?" when a new interest appears.
-- **Fold Feed, Discover and Velvet Rope into House** so social has one door.
+- **Fold Feed, Discover and Velvet Rope into Spaces** so social has one door.

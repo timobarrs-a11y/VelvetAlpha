@@ -456,7 +456,7 @@ export function PostDetailHeader({
               <>
                 <ChevronRight className="w-3.5 h-3.5 text-white/20 flex-shrink-0" />
                 <button
-                  onClick={() => navigate(boardId ? `/house/${boardId}?tab=posts` : '/community')}
+                  onClick={() => navigate(boardId ? `/spaces/${boardId}?tab=posts` : '/spaces')}
                   className="flex items-center gap-1.5 text-white/70 hover:text-white transition-colors truncate"
                 >
                   <span

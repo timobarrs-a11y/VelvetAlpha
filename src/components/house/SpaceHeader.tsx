@@ -31,7 +31,7 @@ export function SpaceHeader({ space, onJoin, onLeave, onAddFriends, onOpenSettin
     <div className="flex-shrink-0 px-4 py-3 border-b border-white/8">
       {space.parent_board_id && space.parent_name && (
         <Link
-          to={`/house/${space.parent_board_id}?tab=crews`}
+          to={`/spaces/${space.parent_board_id}?tab=crews`}
           className="inline-flex items-center gap-1 mb-1.5 text-[11px] text-ink-muted hover:text-ink transition-colors"
         >
           {space.parent_name} <ChevronRight className="w-3 h-3" /> <span className="text-ink/80">Crew</span>

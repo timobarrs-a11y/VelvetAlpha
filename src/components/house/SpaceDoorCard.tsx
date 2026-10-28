@@ -42,7 +42,7 @@ export function SpaceDoorCard({ space, onRequested, children }: Props) {
       <div className="w-full max-w-sm my-auto rounded-2xl bg-white/5 border border-white/8 p-6 text-center">
         {space.parent_board_id && space.parent_name && (
           <Link
-            to={`/house/${space.parent_board_id}?tab=crews`}
+            to={`/spaces/${space.parent_board_id}?tab=crews`}
             className="inline-flex items-center gap-1 mb-3 text-[11px] text-ink-muted hover:text-ink transition-colors"
           >
             {space.parent_name} <ChevronRight className="w-3 h-3" /> Crew
