@@ -17,9 +17,40 @@ interface Props {
   companionId?: string | null;
   highlightIds?: string[];
   onBack: () => void;
+  /** Walk them through a plan they never said yes to (they were brought back here to accept it: features/resume). */
+  walkthrough?: boolean;
 }
 
-export function PlanTab({ userId, companionId, highlightIds, onBack }: Props) {
+/** The plan walkthrough, a step at a time, above a plan that is waiting for a yes. */
+const WALKTHROUGH = [
+  { title: 'This is your plan', body: 'Your coach drafted it from what you told them: the steps, in order, toward your goal.' },
+  { title: 'Make it yours', body: 'Read the steps through. Anything that does not fit, say so to your coach in the chat and it changes.' },
+  { title: 'Say yes to start', body: 'Tap **Let\'s go** and the first commitments go on your calendar. **Not for me** starts it over with your coach.' },
+];
+
+function PlanWalkthroughStrip({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState(0);
+  const s = WALKTHROUGH[step];
+  const last = step === WALKTHROUGH.length - 1;
+  return (
+    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-5 py-4" role="region" aria-label="Plan walkthrough">
+      <div className="mb-2 flex gap-1.5">
+        {WALKTHROUGH.map((_, i) => <span key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-emerald-500' : 'bg-emerald-100'}`} />)}
+      </div>
+      <p className="text-sm font-semibold text-gray-900">{s.title}</p>
+      <p className="mt-1 text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: s.body.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>') }} />
+      <div className="mt-3 flex gap-2">
+        <button onClick={() => (last ? onDone() : setStep(step + 1))} className="rounded-lg bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600">
+          {last ? 'Got it' : 'Next'}
+        </button>
+        {!last && <button onClick={onDone} className="rounded-lg px-3 py-1.5 text-xs text-gray-500 hover:bg-white">Skip the tour</button>}
+      </div>
+    </div>
+  );
+}
+
+export function PlanTab({ userId, companionId, highlightIds, onBack, walkthrough }: Props) {
+  const [touring, setTouring] = useState(!!walkthrough);
   const [plans, setPlans] = useState<CoachPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingStep, setEditingStep] = useState<string | null>(null);
@@ -103,6 +134,7 @@ export function PlanTab({ userId, companionId, highlightIds, onBack }: Props) {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+        {touring && plans.some(p => p.status === 'proposed') && <PlanWalkthroughStrip onDone={() => setTouring(false)} />}
         {plans.length === 0 && (
           <div className="text-center py-20">
             <p className="text-gray-400 text-sm">No plans yet. Your coach will create one in your next conversation.</p>

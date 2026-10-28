@@ -1,3 +1,4 @@
+import { ResumeGate } from '../features/resume/ResumeGate';
 import React, { lazy, Suspense } from 'react';
 import { Navigate, Route, useLocation, useParams } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
@@ -66,7 +67,9 @@ function P(el: React.ReactNode, activity?: ReportedKey) {
     <ProtectedRoute>
       <RequireProfile>
         {activity && <ReportActivity activity={activity} />}
-        <Suspense fallback={<RouteFallback />}>{el}</Suspense>
+        <ResumeGate>
+          <Suspense fallback={<RouteFallback />}>{el}</Suspense>
+        </ResumeGate>
       </RequireProfile>
     </ProtectedRoute>
   );

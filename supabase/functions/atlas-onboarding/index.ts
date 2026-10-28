@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { firstSentences } from "../_shared/resumePickup.ts";
 import { MODEL_CONFIG } from "../_shared/modelConfig.ts";
 import { webSearchTool, textOf, continuePausedTurn } from "../_shared/webSearch.ts";
 import {
@@ -262,6 +263,15 @@ Deno.serve(async (req: Request) => {
       const notes = dateNotes(messages.filter(m => m.role !== "atlas").map(m => String(m.content ?? "")), today.date);
       const system = buildGoalPrompt(profile, openingPath(firstAnswer), today, MAX_TURNS, notes);
       const turnCount = messages.filter(m => m.role === "user").length;
+      // Their own words: the first two or three sentences they wrote about their goals and dreams, kept word for word
+      // (once) so Atlas and their coach can pick up from them later (resume-pickup, coachingState).
+      if (turnCount <= 2) {
+        const words = firstSentences(messages.filter(m => m.role === "user").map(m => String(m.content ?? "")));
+        if (words) {
+          await supabaseAdmin.from("user_own_words").upsert({ user_id: user.id, words }, { onConflict: "user_id", ignoreDuplicates: true })
+            .then(({ error }) => { if (error) console.error("[atlas-onboarding] Couldn't keep their words:", error.message); });
+        }
+      }
       const history = messages.map(m => ({ role: m.role === "atlas" ? "assistant" : "user", content: m.content }));
       // Sonnet thinks by default, which can use the whole 400 tokens and leave no reply.
       const raw = await callClaude({ model: MODEL_CONFIG.SONNET, maxTokens: 400, noThinking: true, system, messages: history });
