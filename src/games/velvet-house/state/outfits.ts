@@ -21,7 +21,7 @@ const ACT_OCCASION: Record<string, Occasion> = {
   sleep: 'sleep', nap: 'sleep',
   workout: 'workout', lift: 'workout', stretch: 'workout', boxing: 'workout', shadowbox: 'workout', bike: 'workout', jumprope: 'workout', yardWorkout: 'workout', swim: 'workout',
   freelance: 'work', work: 'work',
-  dance: 'party', danceTogether: 'party', soloDance: 'party', gDance: 'party', jukebox: 'party', mixDrinks: 'party',
+  dance: 'party', danceTogether: 'party', soloDance: 'party', gDance: 'party', jukebox: 'party', mixDrinks: 'party', glam: 'party',
   eatOut: 'date', movie: 'date',
 };
 

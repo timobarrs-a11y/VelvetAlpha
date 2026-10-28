@@ -186,6 +186,7 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    whiteherring: { kind: 'herring', a: '#F1EDE6', b: '#E3DCD1', line: 'rgba(120,105,90,.22)' },
     walnutparquet: { kind: 'parquet', a: '#8A5A36', b: '#7A4E2D', line: 'rgba(40,20,8,.32)' },
     paintedpine: { kind: 'plank', a: '#EDE3D0', b: '#E4D8C2', line: 'rgba(120,95,60,.22)' },
     marblecheck: { kind: 'check', a: '#F2EEE6', b: '#26262B', line: 'rgba(0,0,0,.08)' },
@@ -221,6 +222,7 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    'banana-leaf': { pat: 'monstera', base: '#F7F1EC', ink: 'rgba(63,140,92,.85)', ink2: 'rgba(38,104,66,.85)' },
     'starburst-amber': { pat: 'starburst', base: '#F3E6CC', ink: 'rgba(210,105,58,.7)', ink2: 'rgba(63,127,122,.85)' },
     'ditsy-cream': { pat: 'ditsy', base: '#F8F1E1', ink: 'rgba(232,160,168,.9)', pal: ['#E8A0A8', '#F2D98A', '#9DB7D5', '#A9BFA0'] },
     'pinstripe-gold': { pat: 'pinstripe2', base: '#EFE6D2', ink: 'rgba(201,162,74,.6)' },
@@ -923,6 +925,73 @@ export function createHouseArt(ctx0, opts = {}) {
       }, { name: 'tray' }),
       F(0, 1.16, 1.18, 1.2, (T) => { const open = usingSlot(T.o.id + ':s') ? 0.55 : 0; T.line([0, 1.18, 2.02], [1.18, 1.18, 2.02], MC.chrome, 2);
         [[0, 0.6], [0.58, 1.18]].forEach(([a, b], k) => { const s0 = k ? a - open : a, s1 = k ? b - open : b; T.poly([[s0, 1.18, 0.06], [s1, 1.18, 0.06], [s1, 1.18, 2.0], [s0, 1.18, 2.0]], 'rgba(220,235,238,.55)', MC.chrome, 1.2); for (let u = s0 + 0.03; u < s1; u += 0.04) T.line([u, 1.18, 0.1], [u, 1.18, 1.96], 'rgba(255,255,255,.35)', 0.7); }); })],
+  });
+
+  // Hollywood Regency: blush velvet, black lacquer, mirror, gold and a white orchid.
+  const RG = { black: '#151517', white: '#FAF7F2', gold: '#D4AF37', goldLite: '#EBD27A', mirror: '#DCE6EE', mirrorDark: '#B9C8D4', marble: '#F1EEE9' };
+  const glint = (T, x, y, z0, z1) => T.line([x, y, z0], [x, y, z1], 'rgba(255,255,255,.7)', 1.4);
+  const mirrorFace = (T, a, b, z0, z1, y) => { T.poly([[a, y, z0], [b, y, z0], [b, y, z1], [a, y, z1]], RG.mirror, RG.mirrorDark, 1); T.line([a + (b - a) * 0.2, y + 0.001, z0 + (z1 - z0) * 0.2], [a + (b - a) * 0.45, y + 0.001, z0 + (z1 - z0) * 0.8], 'rgba(255,255,255,.75)', 1.4); };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A towering channel-tufted headboard in the piece's colour with a gold scalloped crest, black lacquer base on gold
+    // feet, white bedding with a black border, and a lumbar cushion to match the headboard.
+    regency: (o) => { const c = cl(o); return [
+      F(0, 0, 0.16, 1.6, (T) => { T.box(0, 0, 0, 0.16, 1.6, 1.6, c); for (let k = 1; k < 12; k++) T.line([0.161, 1.6 * k / 12, 0.36], [0.161, 1.6 * k / 12, 1.54], 'rgba(0,0,0,.2)', 1.2);
+        // The crest: six gold scallops standing on the top edge, drawn along the headboard so they follow it at any rotation.
+        for (let k = 0; k < 6; k++) { const y0 = k * 1.6 / 6, pts = []; for (let m = 0; m <= 10; m++) { const f = m / 10; pts.push([0.08, y0 + f * 1.6 / 6, 1.6 + Math.sin(f * Math.PI) * 0.12]); }
+          T.poly([...pts, [0.08, y0 + 1.6 / 6, 1.6], [0.08, y0, 1.6]], 'rgba(212,175,55,.25)'); for (let m = 1; m < pts.length; m++) T.line(pts[m - 1], pts[m], RG.gold, 2); }
+        T.line([0.162, 0, 1.6], [0.162, 1.6, 1.6], RG.gold, 2.2); T.line([0.162, 0.005, 0.36], [0.162, 0.005, 1.6], RG.gold, 1.6); T.line([0.162, 1.595, 0.36], [0.162, 1.595, 1.6], RG.gold, 1.6); }),
+      F(0.16, 0, 2.5, 1.6, (T) => [[0.22, 0.06], [2.44, 0.06], [0.22, 1.54], [2.44, 1.54]].forEach(([x, y]) => T.box(x - 0.03, y - 0.03, 0, 0.06, 0.06, 0.1, RG.gold))),
+      B(0.16, 0.02, 0.1, 2.34, 1.56, 0.22, RG.black), B(0.16, 0.02, 0.32, 2.34, 1.56, 0.015, RG.gold),
+      B(0.18, 0.05, 0.335, 2.3, 1.5, 0.18, RG.white, { name: 'mattress' }),
+      pillowsOn([0.18, 0.05, 0.335, 2.3, 1.5], [[0.18, 0.05, 0.515, 0.16, 0.74, 0.3, RG.white], [0.18, 0.81, 0.515, 0.16, 0.74, 0.3, RG.white], [0.36, 0.45, 0.515, 0.16, 0.7, 0.18, c]]),
+      B(0.9, 0.05, 0.515, 1.58, 1.5, 0.06, RG.white), B(0.9, 0.05, 0.575, 1.58, 1.5, 0.01, RG.white, { cover: true }),
+      F(0.9, 0, 2.5, 1.6, (T) => { [[2.3, 2.36], [2.4, 2.44]].forEach(([a, b]) => T.poly([[a, 0.05, 0.586], [b, 0.05, 0.586], [b, 1.55, 0.586], [a, 1.55, 0.586]], RG.black)); T.poly([[0.9, 1.55, 0.585], [2.48, 1.55, 0.585], [2.48, 1.55, 0.45], [0.9, 1.55, 0.45]], RG.white, 'rgba(0,0,0,.1)', 0.6); T.line([0.9, 1.551, 0.47], [2.48, 1.551, 0.47], RG.black, 1.6); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A mirrored nightstand with a gold ring pull, on gold feet, and a gold gourd lamp with a white drum shade.
+    regency: (T, o) => { const lit = isLit(o.id);
+      [[0.05, 0.05], [0.38, 0.05], [0.05, 0.38], [0.38, 0.38]].forEach(([x, y]) => T.box(x - 0.02, y - 0.02, 0, 0.04, 0.04, 0.06, RG.gold));
+      T.box(0.02, 0.02, 0.06, 0.41, 0.41, 0.44, RG.mirrorDark); mirrorFace(T, 0.04, 0.41, 0.09, 0.47, 0.431); mirrorFace(T, 0.04, 0.41, 0.09, 0.47, 0.431);
+      const [rx, ry] = T.P(0.22, 0.432, 0.3); ctx.strokeStyle = RG.gold; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(rx, ry, 2.6, 0, Math.PI * 2); ctx.stroke();
+      T.box(0.02, 0.02, 0.5, 0.41, 0.41, 0.01, RG.gold);
+      const [gx, gy] = T.P(0.17, 0.17, 0.56); ell(gx, gy, 5, 5, RG.gold, shade(RG.gold, -0.3)); T.line([0.17, 0.17, 0.6], [0.17, 0.17, 0.7], RG.gold, 1.4);
+      const [sx, sy] = T.P(0.17, 0.17, 0.76); if (lit) ell(sx, sy + 6, 14, 8, 'rgba(255,226,168,.3)'); rr(sx - 8, sy - 6, 16, 11, 1.5, lit ? '#FFF6E6' : RG.white); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A mirrored chest of three drawers on gold legs, gold ring pulls, a gold tray and a white orchid.
+    regency: (T, o) => {
+      [[0.06, 0.06], [1.14, 0.06], [0.06, 0.44], [1.14, 0.44]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.14], RG.gold, 2.6));
+      T.box(0, 0, 0.14, 1.2, 0.5, 0.68, RG.mirrorDark); [[0.16, 0.36], [0.38, 0.58], [0.6, 0.8]].forEach(([z0, z1]) => { mirrorFace(T, 0.02, 1.18, z0 + 0.01, z1 - 0.01, 0.501); const [rx, ry] = T.P(0.6, 0.502, (z0 + z1) / 2); ctx.strokeStyle = RG.gold; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(rx, ry, 2.8, 0, Math.PI * 2); ctx.stroke(); });
+      T.box(-0.01, -0.01, 0.82, 1.22, 0.52, 0.02, RG.mirror); T.box(0.15, 0.12, 0.84, 0.36, 0.24, 0.015, RG.gold);
+      T.box(0.88, 0.2, 0.84, 0.1, 0.1, 0.08, RG.white); T.line([0.93, 0.25, 0.92], [0.95, 0.24, 1.2], '#4E7A3A', 1.2); [[0, -2], [5, 1], [-4, 3], [2, 6]].forEach(([dx, dy]) => { const [fx, fy] = T.P(0.95, 0.24, 1.14); ell(fx + dx, fy + dy, 3, 2.2, '#FFFFFF', '#E6C4D8'); circle(fx + dx, fy + dy, 0.8, '#C2417A'); }); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A black toilet with a gold flush plate.
+    regency: (T, o) => {
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.38, RG.black); T.box(0.02, -0.01, 0.74, 0.38, 0.18, 0.03, RG.black); T.poly([[0.15, 0.161, 0.58], [0.27, 0.161, 0.58], [0.27, 0.161, 0.66], [0.15, 0.161, 0.66]], RG.gold);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, RG.black); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, RG.black, '#000000');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, '#2A2A2E'); ell(sx, sy, 5, 2.8, '#C8D2D8');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // Black lacquer on gold legs, a white marble top, a gold tap, and a blush hand towel on a gold ring.
+    regency: (T, o) => { const c = cl(o);
+      [[0.05, 0.05], [0.95, 0.05], [0.05, 0.45], [0.95, 0.45]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.32], RG.gold, 2.4));
+      T.box(0, 0, 0.32, 1.0, 0.5, 0.46, RG.black); T.line([0.5, 0.501, 0.34], [0.5, 0.501, 0.76], 'rgba(255,255,255,.15)', 1); [0.44, 0.56].forEach((x) => { const [kx, ky] = T.P(x, 0.502, 0.55); circle(kx, ky, 1.8, RG.gold); });
+      T.box(-0.02, -0.02, 0.78, 1.04, 0.54, 0.04, RG.marble); T.line([0.1, 0.0, 0.821], [0.5, 0.5, 0.821], 'rgba(120,110,100,.3)', 0.8);
+      const [vx, vy] = T.P(0.5, 0.27, 0.821); ell(vx, vy, 9, 4.5, '#FFFFFF', 'rgba(0,0,0,.15)'); T.line([0.5, 0.05, 0.82], [0.5, 0.05, 1.0], RG.gold, 2.2); T.line([0.5, 0.05, 1.0], [0.5, 0.18, 0.97], RG.gold, 2.2);
+      const [tx, ty] = T.P(1.0, 0.25, 0.7); ctx.strokeStyle = RG.gold; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI * 2); ctx.stroke(); T.poly([[1.002, 0.17, 0.66], [1.002, 0.33, 0.66], [1.002, 0.33, 0.4], [1.002, 0.17, 0.4]], c); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // Black subway tile with white grout, gold fixtures and a gold-framed glass door, on a white floor with black dots.
+    regency: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, RG.white); for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) { const [dx, dy] = T.P(0.07 + i * 0.13, 0.07 + j * 0.13, 0.061); ell(dx, dy, 1.6, 0.9, RG.black); }
+        T.box(0, 0, 0.06, 1.18, 0.06, 2.04, RG.black); for (let z = 0.06, r = 0; z < 2.1; z += 0.1, r++) { T.line([0, 0.061, z], [1.18, 0.061, z], 'rgba(255,255,255,.4)', 0.7); for (let u = (r % 2) * 0.1; u < 1.18; u += 0.2) T.line([u, 0.061, z], [u, 0.061, Math.min(2.1, z + 0.1)], 'rgba(255,255,255,.4)', 0.7); }
+        T.line([0.6, 0.06, 2.08], [0.6, 0.45, 2.08], RG.gold, 2.4); const [hx, hy] = T.P(0.6, 0.5, 2.06); ell(hx, hy, 9, 4.5, RG.gold, shade(RG.gold, -0.3)); [[0.48, 1.05], [0.72, 1.05]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.062, z); circle(kx, ky, 2.4, RG.gold); });
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [0, 1.18, 2.06]], 'rgba(200,226,232,.2)', RG.gold, 1.8); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.06], RG.gold, 1.4); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], RG.gold, 2.2); T.line([0.2, 1.18, 1.9], [0.45, 1.18, 1.4], 'rgba(255,255,255,.5)', 2); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [1.18, 0, 2.06]], 'rgba(200,226,232,.18)', RG.gold, 1.8); })],
   });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
@@ -2394,6 +2463,20 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    glamtable: {
+      // A Hollywood dressing table: a blush-skirted table with a gold-legged stool, a tall mirror ringed with round bulbs.
+      // Tapped, the bulbs light one after another until all are on; getting glam, they blaze and sparkles flash round it.
+      parts: (o) => [F(0, 0, 1.1, 0.5, (T, ob, t) => { const c = cl(o), on = isLit(ob.id), glam = usingSlot(ob.id + ':g'), chase = live(ob.id);
+        T.box(0.02, 0.02, 0, 1.06, 0.44, 0.72, c); for (let k = 0; k <= 14; k++) T.line([0.04 + k * 0.073, 0.461, 0.02], [0.04 + k * 0.073, 0.461, 0.7], 'rgba(255,255,255,.3)', 1); T.box(0, 0, 0.72, 1.1, 0.48, 0.04, RG.white); T.line([0, 0.481, 0.74], [1.1, 0.481, 0.74], RG.gold, 1.4);
+        T.box(0.2, 0.06, 0.76, 0.7, 0.06, 0.95, RG.white); T.poly([[0.27, 0.121, 0.83], [0.83, 0.121, 0.83], [0.83, 0.121, 1.64], [0.27, 0.121, 1.64]], RG.mirror, RG.mirrorDark, 1); T.line([0.35, 0.122, 0.95], [0.5, 0.122, 1.5], 'rgba(255,255,255,.75)', 1.6);
+        const bulbs = []; for (let k = 0; k <= 4; k++) bulbs.push([0.23, 0.83 + k * 0.2], [0.87, 0.83 + k * 0.2]); for (let k = 1; k < 4; k++) bulbs.push([0.23 + k * 0.16, 1.68]);
+        const lit = chase ? Math.floor((t * 6) % (bulbs.length + 4)) : on || glam ? bulbs.length : 0;
+        bulbs.forEach(([x, z], k) => { const [bx, by] = T.P(x, 0.125, z), b = k < lit; if (b) circle(bx, by, glam ? 7 : 5, 'rgba(255,236,190,.35)'); circle(bx, by, 2.6, b ? '#FFF7E0' : '#E8E2D6', b ? null : 'rgba(0,0,0,.2)'); });
+        T.box(0.3, 0.3, 0.76, 0.1, 0.08, 0.06, RG.gold); T.box(0.75, 0.25, 0.76, 0.06, 0.06, 0.1, '#F2C4CE'); const [px, py] = T.P(0.6, 0.3, 0.77); ell(px, py, 4, 2, RG.gold);
+        if (glam) for (let k = 0; k < 5; k++) { const a = (t * 1.5 + k * 1.3) % 6.28, [sx, sy] = T.P(0.55 + Math.cos(a) * 0.45, 0.4, 1.2 + Math.sin(a * 1.3) * 0.4); ctx.fillStyle = '#FFF7C8'; ctx.beginPath(); ctx.moveTo(sx, sy - 4); ctx.lineTo(sx + 1, sy - 1); ctx.lineTo(sx + 4, sy); ctx.lineTo(sx + 1, sy + 1); ctx.lineTo(sx, sy + 4); ctx.lineTo(sx - 1, sy + 1); ctx.lineTo(sx - 4, sy); ctx.lineTo(sx - 1, sy - 1); ctx.closePath(); ctx.fill(); }
+      }),
+      F(0.35, 0.55, 0.75, 0.9, (T, ob) => { const c = cl(o); [[0.42, 0.62], [0.68, 0.62], [0.42, 0.84], [0.68, 0.84]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.42], RG.gold, 1.8)); const [sx, sy] = T.P(0.55, 0.73, 0.46); ell(sx, sy, 11, 6, shade(c, -0.08), 'rgba(0,0,0,.15)'); ell(sx, sy - 1, 9, 4.5, c); })],
+    },
     hificonsole: {
       // A long walnut hi-fi on splayed legs: woven speaker grilles either end, a turntable under a smoked lid in the middle.
       // Playing, the lid lifts, the record spins, notes rise, and its amber light comes on and fills the room.
@@ -4297,6 +4380,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
       case 'overseer': return 'The eye turns toward you.';
+      case 'glamtable': return run(4, 'The bulbs light up one after another round the mirror.');
       case 'hificonsole': return run(40, 'The lid lifts, the needle drops, and the room goes amber.');
       case 'musicbox': return run(30, 'The lid opens and a tinkly little tune starts to play.');
       case 'servicebell': return run(1.2, 'Ding!');
