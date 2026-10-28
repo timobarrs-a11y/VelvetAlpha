@@ -2,6 +2,7 @@ import { unlockFor, UNLOCK_CODES, type UnlockCode } from '../state/unlockCodes';
 import { catalogById, setQuote } from '../state/catalog';
 import { isPaintable } from '../state/scenes';
 import { run } from '../kernel/config';
+import { TYPES } from '../state/objects';
 import type { Game } from '../kernel/game';
 
 /** How long the new look gets to show (camera pull-back and sparkle) before the picture is taken. */
@@ -20,6 +21,8 @@ export function createUnlocks(g: Game): Partial<Game> {
     presenting = true;
     if (!isPaintable(g.view.level)) g.setLevel(1);
     for (const m of setQuote(set, new Set()).members) g.handleBuy(m, undefined, true);
+    // The pack's furniture is set out with it (it waits in storage until then).
+    for (const type of code.objects ?? []) g.unstore(`${type}-gift`);
     setTimeout(() => {
       let image: string | undefined;
       try { image = g.canvas.toDataURL('image/jpeg', 0.88); } catch { /* no picture: the pop-up still says what they got */ }
@@ -47,6 +50,7 @@ export function createUnlocks(g: Game): Partial<Game> {
     owned.add(set.id);
     for (const id of code.also ?? []) owned.add(id);
     if (code.lamps?.length) g.stockLamps(code.lamps);
+    for (const type of code.objects ?? []) if (TYPES[type] && !g.storage.some((o) => o.id === `${type}-gift`) && !g.world.objs.some((o) => o.id === `${type}-gift`)) g.storage.push({ id: `${type}-gift`, type, level: 1, x: 5, y: 5, rot: 0 });
     if (ready()) present(code);
     else { pending().push(set.id); log(`${code.packName} is yours. It will be waiting once you have moved in.`); }
     g.refreshDrawer();

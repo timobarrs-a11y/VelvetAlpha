@@ -16,6 +16,8 @@ export interface UnlockCode {
   welcome: string;
   /** Wall lamps that come with the pack, put in storage to hang (a style from state/wallLamps.ts). */
   lamps?: string[];
+  /** Pieces of furniture that come with the pack: put in storage, then set out when the pack goes on (a type from state/objects.ts). */
+  objects?: string[];
   /** Catalog ids the pack makes the player an owner of besides its set (so they can be bought again). */
   also?: string[];
 }
@@ -24,7 +26,7 @@ export interface UnlockCode {
 export const UNLOCK_CODES: Record<string, UnlockCode> = {
   rainbowhugs: { setId: 'set-cuddle', packName: 'Cuddle Clouds', welcome: 'Cuddle Clouds is yours, free: bears, clouds and rainbows. It is in your Sets tab, and Arrange can switch any piece to it.' },
   // A placeholder: the real promo phrase is the director's to choose and hand out (change the key, nothing else).
-  'nana-promo': { setId: 'set-nana', packName: 'Nana', lamps: ['cloud', 'cloud'], also: ['lamp-cloud'], welcome: 'Nana is yours, free: pastel pink, lilac and butter, ruffles, bows, breezy drapes and a plush rug. Two cloud wall lamps are in storage: hang them from Arrange. The set is in your Sets tab.' },
+  'nana-promo': { setId: 'set-nana', packName: 'Nana', lamps: ['cloud', 'cloud'], objects: ['cloudnook'], also: ['lamp-cloud', 'nook-nana'], welcome: 'Nana is yours, free: pastel pink, lilac and butter, ruffles, bows, breezy drapes and a plush rug. The cloud nook is set out for you to curl up in, and two cloud wall lamps are in storage to hang from Arrange. The set is in your Sets tab.' },
 };
 
 /** The code the text is exactly, or null (so it goes on to the partner as an ordinary message). */
