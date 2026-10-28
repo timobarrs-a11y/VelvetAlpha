@@ -91,3 +91,13 @@ test('the Arrange bar is never cut off: Set it down, Rotate and Store are fully 
     if (page.viewportSize()!.width <= 560) expect(piece[1]).toBeGreaterThan(Math.min(panel.y + panel.height, canvas.y + canvas.height));
   }
 });
+
+test('nothing is too heavy or too indoors: the treadmill can go to the backyard and up to the bedroom', async ({ page }) => {
+  const game = await openGame(page);
+  await game.locator('.vh-dock [data-open=arrange]').click();
+  await game.locator('[data-arr-pick=tread]').click();
+  await game.locator('[data-arr-floor="3"]').click();
+  expect((await piece(page, 'tread')).level).toBe(3);
+  await game.locator('[data-arr-floor="2"]').click();
+  expect((await piece(page, 'tread')).level).toBe(2);
+});

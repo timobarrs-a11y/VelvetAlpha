@@ -217,18 +217,17 @@ export function nextColour(o: ObjectInstance): string | null {
   return cols[(i + 1) % cols.length];
 }
 
-const INDOOR_LEVELS = [0, 1, 2, 4];
+const CARRY_LEVELS = [0, 1, 2, 3, 4];
 
 /**
  * The floors a piece can be carried to, other than the one it's on. Any piece
- * can go to any floor inside the house (the carrying isn't shown, so nothing is
- * "too heavy": the treadmill can live in the bedroom). Only the backyard is a
- * different place: what belongs outside stays out, and the stairs stay put.
+ * can go to any floor, the backyard included (the carrying isn't shown, so
+ * nothing is "too heavy" and nothing "belongs" somewhere: the treadmill can live
+ * in the bedroom or on the lawn). Only the stairs stay put.
  */
 export function otherFloors(o: ObjectInstance): number[] {
-  if (!isMovable(o) || TYPES[o.type].out) return [];
-  if (!INDOOR_LEVELS.includes(o.level)) return [];
-  return INDOOR_LEVELS.filter(lv => lv !== o.level);
+  if (!isMovable(o) || !CARRY_LEVELS.includes(o.level)) return [];
+  return CARRY_LEVELS.filter(lv => lv !== o.level);
 }
 
 export function canChangeFloor(o: ObjectInstance): boolean {

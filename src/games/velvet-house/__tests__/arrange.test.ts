@@ -59,16 +59,16 @@ describe('arrange mode', () => {
     expect(nextColour(o)).toBeNull();
   });
 
-  it('lets any piece be carried between the indoor floors (nothing is too heavy), but not yard ones or the stairs', () => {
+  it('lets any piece be carried between the indoor floors (nothing is too heavy), the yard included, but not the stairs', () => {
     const objs = fresh();
     const get = (id: string) => objs.find(o => o.id === id)!;
-    expect(otherFloors(get('sofa'))).toEqual([0, 2, 4]);
-    expect(otherFloors(get('desk'))).toEqual([0, 1, 4]);
-    expect(otherFloors(get('lamp0'))).toEqual([1, 2, 4]);
-    expect(otherFloors(get('bed'))).toEqual([0, 1, 4]);
-    expect(otherFloors(get('tread'))).toEqual([1, 2, 4]);
-    expect(otherFloors(get('laundry'))).toEqual([1, 2, 4]);
-    expect(otherFloors(get('bench'))).toEqual([]);
+    expect(otherFloors(get('sofa'))).toEqual([0, 2, 3, 4]);
+    expect(otherFloors(get('desk'))).toEqual([0, 1, 3, 4]);
+    expect(otherFloors(get('lamp0'))).toEqual([1, 2, 3, 4]);
+    expect(otherFloors(get('bed'))).toEqual([0, 1, 3, 4]);
+    expect(otherFloors(get('tread'))).toEqual([1, 2, 3, 4]);
+    expect(otherFloors(get('laundry'))).toEqual([1, 2, 3, 4]);
+    expect(otherFloors(get('bench'))).toEqual([0, 1, 2, 4]);
     expect(otherFloors(get('stair01'))).toEqual([]);
   });
 
@@ -80,6 +80,17 @@ describe('arrange mode', () => {
     expect(checkPlacement(objs, desk)).toEqual({ ok: true });
     // The rest of the house still works with it in its new home.
     for (const o of objs.filter(isMovable)) expect(checkPlacement(objs, o), o.id).toEqual({ ok: true });
+  });
+
+  it('puts a treadmill on the lawn and a garden bench in the living room', () => {
+    const objs = fresh();
+    const tread = objs.find(o => o.id === 'tread')!;
+    expect(relocate(objs, tread, 3)).toBe(true);
+    expect(tread.level).toBe(3);
+    expect(checkPlacement(objs, tread)).toEqual({ ok: true });
+    const bench = objs.find(o => o.id === 'bench')!;
+    expect(relocate(objs, bench, 1)).toBe(true);
+    expect(checkPlacement(objs, bench)).toEqual({ ok: true });
   });
 
   it('leaves a piece untouched when the other floor has no room for it', () => {
