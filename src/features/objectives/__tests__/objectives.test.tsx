@@ -92,9 +92,9 @@ describe('objectives service', () => {
   });
 
   it('sends the Space objectives to Spaces (the chat rooms), the same place as the toolbar', () => {
-    expect(OBJECTIVE_DEFS.comment_in_space.to).toBe('/house');
-    expect(OBJECTIVE_DEFS.browse_spaces.to).toBe('/house');
-    expect(OBJECTIVE_DEFS.join_a_space.to).toBe('/house/browse');
+    expect(OBJECTIVE_DEFS.comment_in_space.to).toBe('/spaces');
+    expect(OBJECTIVE_DEFS.browse_spaces.to).toBe('/spaces');
+    expect(OBJECTIVE_DEFS.join_a_space.to).toBe('/spaces/browse');
   });
 
   it('asks for today by the user\'s own midnight', async () => {

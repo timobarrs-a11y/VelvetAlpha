@@ -12,6 +12,9 @@ export function createArrange(g: Game): Partial<Game> {
   // Arrange mode: tap a piece to select it (it gets an outline), then drag it.
   let arranging = false;
   let selectedObj: ObjectInstance | null = null;
+  // A wall piece picked in Arrange, and the drag that slides it along its wall.
+  let selectedWall: string | null = null;
+  let wallDrag: { id: number; wall: string; x: number; y: number; moving: boolean; grab: [number, number] } | null = null;
   let heldObj: ObjectInstance | null = null; // the piece being dragged right now
   let heldOrig: { x: number; y: number; rot: number; on?: string; z?: number } | null = null;
   // What was on the piece being carried when it was picked up, so putting it back puts those back too.
@@ -39,6 +42,7 @@ export function createArrange(g: Game): Partial<Game> {
     const lesson = stage.querySelector<HTMLElement>('.vh-scard');
     if (lesson && !lesson.hidden && !lesson.dataset.min && window.matchMedia('(max-width: 560px)').matches) lesson.querySelector<HTMLButtonElement>('.vh-scard-min')?.click();
     selectedObj = null;
+    selectedWall = null;
     heldObj = null;
     wasPaused = view.paused;
     view.paused = true;
@@ -53,6 +57,8 @@ export function createArrange(g: Game): Partial<Game> {
     settleFloating();
     arranging = false;
     selectedObj = null;
+    selectedWall = null;
+    wallDrag = null;
     dragCandidate = null;
     hoverObj = null;
     canvas.style.cursor = '';
@@ -75,6 +81,7 @@ export function createArrange(g: Game): Partial<Game> {
   function selectObject(o: ObjectInstance | null): void {
     cancelHold();
     if (floating && o !== floating) settleFloating();
+    selectedWall = null;
     selectedObj = o;
     if (!o) return;
     if (o.level !== view.level) { selectedObj = null; g.setLevel(o.level); selectedObj = o; }
@@ -269,6 +276,34 @@ export function createArrange(g: Game): Partial<Game> {
       }
     }
   }
+  // Wall pieces: picked by a tap on the wall or from the list; they slide along their wall; Take it down stores them.
+  const wallAt = (sx: number, sy: number): string | null => (arranging ? art.hitWallObj(view.level, sx, sy) : null);
+  function selectWall(id: string | null): void {
+    cancelHold();
+    settleFloating();
+    selectedObj = null;
+    selectedWall = id;
+    if (!id) return;
+    const w = art.wallObjsAll().find((x) => x.id === id);
+    if (w && w.level !== view.level) g.setLevel(w.level);
+    const p = art.wallObjView(id);
+    const phone = canvas.getBoundingClientRect().width < 560;
+    if (p && (phone || g.cam.tz > 1.05)) g.frameView([p], Math.max(g.cam.tz, phone ? 1.8 : 1));
+  }
+  function takeDownWall(): void {
+    if (!selectedWall) return;
+    const name = art.takeDownWallObj(selectedWall);
+    selectedWall = null;
+    if (name) log(`Took the ${name.toLowerCase()} down. It's in storage.`);
+  }
+  function rehangWall(id: string): void {
+    const w = art.storedWallObjs().find((x) => x.id === id);
+    if (!w) return;
+    if (!art.rehangWallObj(id, view.level)) { log(`There's no wall for the ${w.name.toLowerCase()} here.`); return; }
+    selectObject(null);
+    selectedWall = id;
+    log(`Hung the ${w.name.toLowerCase()} in the ${LEVEL_NAMES[view.level].toLowerCase()}. Drag it along the wall.`);
+  }
   // What arrange mode tells the art to draw.
   function arrangeFrame() {
     if (!arranging) return null;
@@ -276,6 +311,7 @@ export function createArrange(g: Game): Partial<Game> {
       movable: movableHere(),
       held: heldObj?.id ?? floating?.id ?? null, selected: selectedObj?.id ?? null,
       valid: heldObj ? heldCheck.ok : floating ? floatCheck.ok : true, hover: hoverObj?.id ?? null,
+      wall: selectedWall, wallValid: selectedWall ? art.wallObjClear(selectedWall) : true,
     };
   }
   // The Arrange list: everything that can move, wherever it is in the house.
@@ -285,14 +321,19 @@ export function createArrange(g: Game): Partial<Game> {
       const [fw, fd] = t.W && o.rot % 2 ? [t.D, t.W] : [t.W, t.D];
       return { id: o.id, name: displayName(o), room: roomName(o.level, o.x + fw / 2, o.y + fd / 2), level: o.level, color: o.col };
     }).sort((a, b) => a.name.localeCompare(b.name) || a.room.localeCompare(b.room));
+    const walls = art.wallObjsAll().map((w) => ({ id: w.id, name: w.name, room: 'On the wall', level: w.level, color: w.col }));
     const o = selectedObj;
+    const wall = selectedWall ? walls.find((w) => w.id === selectedWall) ?? null : null;
     return {
       floors: [...LEVEL_NAMES],
       order: FLOOR_ORDER.filter(l => l !== ATTIC || hasAttic()),
-      stored: storage.map(o => ({ id: o.id, name: displayName(o), color: o.col })),
+      stored: [...storage.map(o => ({ id: o.id, name: displayName(o), color: o.col })), ...art.storedWallObjs().map((w) => ({ id: w.id, name: w.name, color: w.col }))],
       level: view.level,
-      items,
-      selected: o ? {
+      items: [...items, ...walls],
+      selected: wall ? {
+        id: wall.id, name: wall.name, where: `${LEVEL_NAMES[wall.level]} · on the wall`, wall: true,
+        canColour: false, looks: [], canStore: false, moveTo: [], loose: false, fits: true,
+      } : o ? {
         id: o.id, name: displayName(o),
         where: `${LEVEL_NAMES[o.level]} · ${items.find(i => i.id === o.id)?.room ?? ''}`,
         canColour: !!nextColour(o),
@@ -316,7 +357,16 @@ export function createArrange(g: Game): Partial<Game> {
     if (!arranging || !e.isPrimary || e.button > 0) return;
     const [sx, sy] = g.toView(e.clientX, e.clientY);
     const o = movableAt(sx, sy);
-    if (!o) return;
+    if (!o) {
+      // Nothing on the floor there: maybe a wall piece, which slides along its wall.
+      const wid = g.s.scriptMode === 'guided' ? null : wallAt(sx, sy);
+      if (!wid) return;
+      selectWall(wid);
+      const c = art.wallObjView(wid) ?? [sx, sy];
+      wallDrag = { id: e.pointerId, wall: wid, x: e.clientX, y: e.clientY, moving: false, grab: [sx - c[0], sy - c[1]] };
+      try { canvas.setPointerCapture(e.pointerId); } catch { /* not capturable: drag still works while over the canvas */ }
+      return;
+    }
     if (g.s.scriptMode === 'guided' && !g.s.scriptAllow.some((a) => a === `obj:${o.id}` || a === `objType:${o.type}`)) return;
     selectObject(o);
     const [wx, wy] = worldAt(sx, sy), [fw, fd] = [TYPES[o.type].W, TYPES[o.type].D];
@@ -328,6 +378,11 @@ export function createArrange(g: Game): Partial<Game> {
   canvas.addEventListener('pointermove', (e) => {
     if (!arranging) return;
     const [sx, sy] = g.toView(e.clientX, e.clientY);
+    if (wallDrag && wallDrag.id === e.pointerId) {
+      if (!wallDrag.moving) { if (Math.hypot(e.clientX - wallDrag.x, e.clientY - wallDrag.y) < DRAG_SLOP) return; wallDrag.moving = true; g.s.suppressClick = true; }
+      art.moveWallObj(wallDrag.wall, sx, sy, wallDrag.grab);
+      return;
+    }
     if (dragCandidate && dragCandidate.id === e.pointerId) {
       if (!heldObj) {
         if (Math.hypot(e.clientX - dragCandidate.x, e.clientY - dragCandidate.y) < DRAG_SLOP) return;
@@ -350,11 +405,17 @@ export function createArrange(g: Game): Partial<Game> {
     } else if (!heldObj && e.pointerType === 'mouse') {
       const o = movableAt(sx, sy);
       hoverObj = o;
-      canvas.style.cursor = o ? (o === selectedObj ? 'grab' : 'pointer') : '';
+      canvas.style.cursor = o ? (o === selectedObj ? 'grab' : 'pointer') : wallAt(sx, sy) ? 'grab' : '';
     }
   });
   // Let go: it stays where it fits, or goes back to where it was.
   const dropHeld = (e: PointerEvent): void => {
+    if (wallDrag && wallDrag.id === e.pointerId) {
+      const w = art.wallObjsAll().find((x) => x.id === wallDrag!.wall);
+      if (wallDrag.moving && w) log(art.wallObjClear(w.id) ? `Moved the ${w.name.toLowerCase()}.` : `The ${w.name.toLowerCase()} overlaps something. Slide it along a little.`);
+      wallDrag = null;
+      return;
+    }
     if (!dragCandidate || dragCandidate.id !== e.pointerId) return;
     const o = heldObj;
     const tapped = dragCandidate.obj;
@@ -371,18 +432,19 @@ export function createArrange(g: Game): Partial<Game> {
     heldCheck = { ok: true };
   };
   canvas.addEventListener('pointerup', dropHeld);
-  canvas.addEventListener('pointercancel', (e) => { if (dragCandidate?.id === e.pointerId) { cancelHold(); heldCheck = { ok: true }; } });
+  canvas.addEventListener('pointercancel', (e) => { if (wallDrag?.id === e.pointerId) wallDrag = null; if (dragCandidate?.id === e.pointerId) { cancelHold(); heldCheck = { ok: true }; } });
 
 
   const isArranging = (): boolean => arranging;
   function dropSelectionIfOffFloor(lv: number): void {
     if (selectedObj && selectedObj.level !== lv) { cancelHold(); settleFloating(); selectedObj = null; }
   }
-  function escapeArrange(): void { if (heldObj) cancelHold(); else if (floating) putBack(); else selectedObj = null; }
+  function escapeArrange(): void { if (heldObj) cancelHold(); else if (floating) putBack(); else { selectedObj = null; selectedWall = null; } }
   /** A second finger came down: let go of whatever is being dragged. */
   function abortDrag(): void {
     if (heldObj) { cancelHold(); heldCheck = { ok: true }; }
     dragCandidate = null;
+    wallDrag = null;
   }
-  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, commitMove, rotateSelected, recolourHeld, useLook, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, putFoodAway, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
+  return { storage, toggleArrange, enterArrange, exitArrange, selectObject, wallAt, selectWall, takeDownWall, rehangWall, commitMove, rotateSelected, recolourHeld, useLook, cancelHold, carryTo, storeSelected, unstore, relearnLayout, arrangeFrame, arrangeState, movableAt, worldAt, peopleOnFloor, nameOf, isArranging, snapSelectedToOutline, setDown, putBack, putFoodAway, inHand, heldCentre, setGhostTarget, ghostTarget: () => ghost, dropSelectionIfOffFloor, escapeArrange, abortDrag };
 }

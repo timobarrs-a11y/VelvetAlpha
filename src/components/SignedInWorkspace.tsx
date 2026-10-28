@@ -32,9 +32,11 @@ import {
   HelpCircle,
   Heart,
   PlayCircle,
+  Megaphone,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
+import { fetchChangelog } from '../services/changelogService';
 import { Dock } from './dock/Dock';
 import { DockProvider, useDock } from './dock/DockContext';
 import { AddFriendButton } from './AddFriendButton';
@@ -343,6 +345,17 @@ function ToolRow({ label, icon, tone, path, pathname, onNavigate, inkColor, inkM
   );
 }
 
+/** How many updates I haven't read; checked again whenever I move to another page (so it clears after reading). */
+function useUnreadUpdates(pathname: string): number {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let live = true;
+    fetchChangelog().then(entries => { if (live) setCount(entries.filter(e => !e.is_read).length); }).catch(() => {});
+    return () => { live = false; };
+  }, [pathname]);
+  return count;
+}
+
 /** The user's active goals, for the Goals group in the menu. */
 function useActiveGoals(): CoachingGoal[] {
   const { user } = useAuth();
@@ -362,6 +375,7 @@ function SidebarContent({ pathname, lobby, onNavigate, onSelect, inkColor, inkMu
   const coaches = lobby.companions.filter(companion => isHelper(companion.relationship_type));
   const companions = lobby.companions.filter(companion => !isHelper(companion.relationship_type));
   const goals = useActiveGoals();
+  const unreadUpdates = useUnreadUpdates(pathname);
   const coreTools = [
     { label: 'Daily Feed', path: '/daily-feed', tone: '#34d399', icon: <Newspaper className="h-3.5 w-3.5" /> },
     { label: 'Your Lens', path: '/videos', tone: '#fb7185', icon: <PlayCircle className="h-3.5 w-3.5" /> },
@@ -372,7 +386,7 @@ function SidebarContent({ pathname, lobby, onNavigate, onSelect, inkColor, inkMu
     { label: 'Morning Journal', path: '/morning-journal', tone: '#fbbf24', icon: <Sunrise className="h-3.5 w-3.5" /> },
   ];
   const connectTools = [
-    { label: 'Spaces', path: '/house', tone: '#f472b6', icon: <UsersRound className="h-3.5 w-3.5" /> },
+    { label: 'Spaces', path: '/spaces', tone: '#f472b6', icon: <UsersRound className="h-3.5 w-3.5" /> },
     { label: 'Town', path: '/world', tone: '#f472b6', icon: <Building2 className="h-3.5 w-3.5" /> },
     { label: 'Feed', path: '/feed', tone: '#f472b6', icon: <Sparkles className="h-3.5 w-3.5" /> },
     { label: 'Discover', path: '/discover', tone: '#fbbf24', icon: <Compass className="h-3.5 w-3.5" /> },
@@ -444,6 +458,11 @@ function SidebarContent({ pathname, lobby, onNavigate, onSelect, inkColor, inkMu
         </div>
       </div>
       <div className="flex-shrink-0 border-t border-white/8 px-2 py-2">
+        <button type="button" onClick={() => onNavigate('/updates')} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname === '/updates' ? 'bg-sky-500/15' : 'hover:bg-white/7'}`} style={{ color: pathname === '/updates' ? inkColor : inkMuted }}>
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400"><Megaphone className="h-3.5 w-3.5" /></span>
+          <span className="flex-1 truncate text-[11px] font-semibold" style={{ color: pathname === '/updates' ? inkColor : inkMuted }}>Updates</span>
+          {unreadUpdates > 0 && <span className="flex-shrink-0 rounded-full bg-sky-500 px-1.5 text-[10px] font-bold leading-[18px] text-white" aria-label={`${unreadUpdates} new`}>{unreadUpdates > 99 ? '99+' : unreadUpdates}</span>}
+        </button>
         <button type="button" onClick={() => onNavigate('/support')} className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${pathname === '/support' ? 'bg-amber-500/15 text-amber-200' : 'hover:bg-amber-500/10 hover:text-amber-200'}`} style={pathname === '/support' ? undefined : { color: inkMuted }}>
           <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400"><Sparkles className="h-3.5 w-3.5" /></span>
           <span className="truncate text-[11px] font-semibold" style={{ color: pathname === '/support' ? '#fcd34d' : inkMuted }}>Support Velvet</span>

@@ -49,6 +49,9 @@ export function installDevHooks(g: Game): void {
       closeDrawer: () => g.drawer.close(),
       advance: (m: number) => { world.minutes = Math.min(1439, world.minutes + m); },
       buy: (id: string) => { const it = CATALOG.find((c) => c.id === id); if (it) g.handleBuy(it); },
+      // Give an item (and a set's pieces) as a promo code would, without the pop-up: for tests of promo packs.
+      owns: (id: string) => g.owned.has(id),
+      own: (id: string) => { const it = CATALOG.find((c) => c.id === id); if (!it) return; g.owned.add(it.id); for (const m of it.set?.items ?? []) g.owned.add(m); },
       parcel: () => JSON.stringify(world.household.parcel),
       scriptState: () => { const e = g.scripts as unknown as { frames: { i: number }[]; blocking: unknown }; return JSON.stringify({ rt: g.scripts.state(), mode: g.s.scriptMode, at: e.frames.map((f) => f.i), blocking: e.blocking, trace: g.scripts.trace.join(' ') }); },
       // Where a household member is and what they're doing, with their spot on screen.

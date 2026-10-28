@@ -93,6 +93,15 @@
 .vh-shop-tabs button:hover { background: rgba(255,255,255,.12); color: #E9E4EC; }
 .vh-shop-tabs button.vh-active { background: #E0A43A; color: #241B25; }
 .vh-shop-list { display: flex; flex-direction: column; gap: 8px; }
+/* Sets: a row of feels to filter by, then one group per theme with its set and its finishing touches. */
+.vh-set-filter { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.vh-set-filter button { appearance: none; border: 0; border-radius: 999px; padding: 4px 9px; font: 600 10px/1.2 Inter, system-ui, sans-serif; color: #A9A1AE; background: rgba(255,255,255,.06); cursor: pointer; text-transform: capitalize; transition: background .15s ease, color .15s ease; }
+.vh-set-filter button:hover { background: rgba(255,255,255,.12); color: #E9E4EC; }
+.vh-set-filter button.vh-active { background: #8FD9A8; color: #241B25; }
+.vh-set-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.vh-set-theme { margin: 2px 0 0; font: 700 12px/1.2 Inter, system-ui, sans-serif; color: #F2EEE8; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.vh-set-theme small { font-weight: 500; font-size: 10px; color: #A9A1AE; text-transform: capitalize; }
+.vh-set-group .vh-shop-card + .vh-shop-card { margin-left: 14px; border-left: 2px solid rgba(143,217,168,.35); }
 .vh-shop-card {
   display: flex; align-items: center; gap: 10px;
   padding: 10px; border-radius: 12px;
@@ -111,6 +120,8 @@
 .vh-swatch { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,.15); }
 .vh-swatch:hover { transform: scale(1.15); }
 .vh-lock { font-size: 10px; color: #D0544A; }
+.vh-promo-icon { display: flex; align-items: center; justify-content: center; color: #C7A8F0; background: rgba(199,168,240,.12); border: 1px dashed rgba(199,168,240,.4); }
+.vh-promo-tag { align-self: flex-start; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #C7A8F0; background: rgba(199,168,240,.14); border-radius: 4px; padding: 1px 5px; }
 .vh-shop-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 .vh-price { font: 700 13px/1 Inter, system-ui, sans-serif; color: #5BAE7C; }
 .vh-shop-actions button {
@@ -760,10 +771,6 @@
 /* On a phone the panel holds the top of the screen: the bar sits in the clear band above the floor buttons. */
 @media (max-width: 560px) { .vh-lampbar { top: auto; bottom: 190px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); } }
 
-/* A promo pack on the shelf: its name and description show, its picture is locked. */
+/* A promo item on the shelf that the player doesn't have: a soft pink card (the lock and tag styles are with the shop cards above). */
 .vh-shop-card.vh-promo-locked { border-color: rgba(247, 198, 217, .35); background: linear-gradient(135deg, rgba(247, 198, 217, .08), rgba(201, 184, 240, .08)); }
-.vh-promo-lock { position: relative; overflow: hidden; background: linear-gradient(135deg, #5b4a78, #7b5a86) !important; }
-.vh-promo-lock::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 30% 35%, rgba(255, 255, 255, .35), transparent 55%), radial-gradient(circle at 70% 70%, rgba(247, 198, 217, .4), transparent 50%); filter: blur(5px); }
-.vh-promo-lock::after { content: "🔒"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 18px; }
-.vh-promo-tag { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; letter-spacing: .02em; color: #F7C6D9; }
 .vh-shop-card.vh-promo-locked button[data-buy] { opacity: .55; cursor: not-allowed; }

@@ -268,14 +268,14 @@ export function CreateBoardModal({ isOpen, onClose, onCreated }: CreateBoardModa
     });
     setSubmitting(false);
     if (board) {
-      toast.success(board.is_approved ? 'Board created!' : 'Board submitted for approval.');
+      toast.success(board.is_approved ? 'Space created!' : 'Space sent for approval.');
       setName('');
       setDescription('');
       setColor('blue');
       onCreated();
       onClose();
     } else {
-      toast.error('Could not create board. Try again.');
+      toast.error('Could not create the space. Try again.');
     }
   };
 
@@ -283,20 +283,20 @@ export function CreateBoardModal({ isOpen, onClose, onCreated }: CreateBoardModa
     <ModalShell
       isOpen={isOpen}
       onClose={onClose}
-      title="Create a board"
+      title="Propose a space"
       size="md"
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button size="sm" isLoading={submitting} onClick={handleSubmit} disabled={!name.trim()}>
-            Create board
+            Propose space
           </Button>
         </div>
       }
     >
       <div className="flex flex-col gap-4">
         <Input
-          label="Board name"
+          label="Space name"
           placeholder="e.g. Late Night Thoughts"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -304,7 +304,7 @@ export function CreateBoardModal({ isOpen, onClose, onCreated }: CreateBoardModa
         />
         <Textarea
           label="Description"
-          placeholder="What is this board about?"
+          placeholder="What is this space about?"
           rows={3}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -328,8 +328,8 @@ export function CreateBoardModal({ isOpen, onClose, onCreated }: CreateBoardModa
         </div>
         <div className="rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2.5">
           <p className="text-xs text-white/40 leading-relaxed">
-            New boards require moderator approval before becoming visible to the community.
-            You'll be able to see your board while it's pending, but no one can post in it until it's approved.
+            New spaces need moderator approval before the community can see them.
+            You'll see yours while it waits, but no one can post in it until it's approved. (To start a crew inside a space you're in, use its Crews tab: crews don't need approval.)
           </p>
         </div>
       </div>

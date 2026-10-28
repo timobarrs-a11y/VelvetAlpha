@@ -604,7 +604,7 @@ export function SplashPage() {
           <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-500">
             {[
               { label: 'About', to: '/about' },
-              { label: 'Changelog', to: '/changelog' },
+              { label: 'Updates', to: '/updates' },
               { label: 'Support us', to: '/support' },
               { label: 'Terms', to: '/terms' },
               { label: 'Privacy', to: '/privacy' },

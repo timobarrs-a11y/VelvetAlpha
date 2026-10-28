@@ -11,10 +11,12 @@ import { lookUnlock, resolveLookForDisplay } from '../data/avatarCatalog';
 import {
   isReadyMessage, isAvatarItemBoughtMessage, isLookChangedMessage, isRestartedMessage,
   isSampleRequestMessage, isSampleCancelMessage, isDesignsRequestMessage, isStartRequestedMessage, isMenuReadyMessage,
+  isPromoRedeemedMessage,
 } from '../games/velvet-house/bridge/protocol';
 import { toGameTurnInput } from '../games/velvet-house/bridge/chatInput';
 import { sampleGameTurn } from '../services/velvetGameTurn';
 import { runDesignsOp } from '../services/velvetDesigns';
+import { recordVelvetPromo, myVelvetPromoCodes } from '../services/velvetPromo';
 import { useVelvetHouseCloudSave } from '../hooks/useVelvetHouseCloudSave';
 import { announceAvatarSaved, onAvatarSaved } from '../stores/avatarEditorStore';
 import { applyAvatarChange, migrateAvatarConfig } from '../utils/avatarConfig';
@@ -126,6 +128,11 @@ export function VelvetHouseNextGame() {
         win.postMessage({ type: 'velvet:designsResult', seq, ...r }, window.location.origin);
         return;
       }
+      // A promo code redeemed in the game: it's the account's now, for every house.
+      if (isPromoRedeemedMessage(e.data)) {
+        await recordVelvetPromo(e.data.code, companionId);
+        return;
+      }
       if (isRestartedMessage(e.data)) { noteRestart(); return; }
       // Bought in the game: it's theirs everywhere now.
       if (isAvatarItemBoughtMessage(e.data)) {
@@ -150,6 +157,10 @@ export function VelvetHouseNextGame() {
       if (!isReadyMessage(e.data)) return;
       sendInventory(win);
       sendProfile(win);
+      // Promo packs redeemed on the account in any house are this house's too.
+      myVelvetPromoCodes().then((codes) => {
+        if (!cancelled && codes.length) win.postMessage({ type: 'velvet:promos', codes }, window.location.origin);
+      }).catch(() => {});
     };
     // Who's playing, with their avatars as they are right now.
     const sendProfile = async (win: Window) => {

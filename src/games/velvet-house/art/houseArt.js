@@ -278,6 +278,64 @@ export function createHouseArt(ctx0, opts = {}) {
       draw: (W) => { const pts = []; for (let k = 0; k <= 10; k++) { const u = k * 0.15; pts.push([u, 0.42 - Math.sin(k / 10 * Math.PI) * 0.12]); } W.pl(pts, '#3A3340', 1); [0.2, 0.5, 0.8, 1.1, 1.35].forEach((u, k) => { const z = 0.42 - Math.sin(u / 1.5 * Math.PI) * 0.12; W.r(u - 0.08, z - 0.24, u + 0.08, z - 0.02, '#FBF8F2'); W.r(u - 0.065, z - 0.17, u + 0.065, z - 0.04, ['#9EC1F5', '#F2B48A', '#7FB069', '#D24A7A', '#E0A43A'][k]); }); } },
     plates: { name: 'Plate wall', w: 1.0, h: 0.75, cols: ['#4A88B8', '#C2413A', '#4F9460'], tags: 'vintage cozy',
       draw: (W, o) => { const c = o.col || '#4A88B8'; [[0.22, 0.52, 0.2], [0.65, 0.55, 0.15], [0.45, 0.17, 0.16], [0.86, 0.2, 0.12]].forEach(([u, z, r]) => { W.e(u, z, r, r, '#F7F3EE', 'rgba(0,0,0,.15)'); W.e(u, z, r * 0.7, r * 0.7, null, c); W.e(u, z, r * 0.25, r * 0.25, c); }); } },
+    marquee: { name: 'Marquee sign', w: 1.2, h: 0.5, cols: ['#F4C430', '#FF2E9A', '#19E6F0'], tags: 'playful bold vintage',
+      // A lightbox that says PLAY in pixels, ringed with bulbs that chase while the power is on.
+      draw: (W, o, t) => { const c = o.col || '#F4C430', on = power; W.r(0, 0, 1.2, 0.5, '#15121F'); W.r(0.05, 0.05, 1.15, 0.45, on ? c : shade(c, -0.55));
+        const px = 0.05, letters = { P: ['111', '101', '111', '100', '100'], L: ['100', '100', '100', '100', '111'], A: ['111', '101', '111', '101', '101'], Y: ['101', '101', '111', '010', '010'] };
+        ['P', 'L', 'A', 'Y'].forEach((ch, i) => { const u0 = 0.22 + i * 0.22; letters[ch].forEach((row, r) => { for (let k = 0; k < 3; k++) if (row[k] === '1') W.r(u0 + k * px, 0.375 - (r + 1) * px, u0 + (k + 1) * px, 0.375 - r * px, on ? '#15121F' : '#2A2535'); }); });
+        const step = Math.floor(t * 6); for (let k = 0; k <= 12; k++) { const u = 0.05 + k * (1.1 / 12), lit = on && (k + step) % 3 === 0; [0.025, 0.475].forEach((z) => W.circ(u, z, 0.018, lit ? '#FFF6C8' : on ? '#F4C430' : '#4A4036')); } } },
+    pixelprint: { name: 'Pixel art print', w: 0.7, h: 0.7, cols: ['#19E6F0', '#FF2E9A', '#39D353'], tags: 'playful bold vintage',
+      // A framed pixel invader with a pixel heart in the corner.
+      draw: (W, o) => { const c = o.col || '#19E6F0'; W.r(0, 0, 0.7, 0.7, '#15121F', 'rgba(255,255,255,.45)'); W.r(0.05, 0.05, 0.65, 0.65, '#1E1A2E', 'rgba(255,255,255,.25)'); const px = 0.05;
+        INVADER.forEach((row, r) => { for (let k = 0; k < row.length; k++) if (row[k] === '1') W.r(0.175 + k * px, 0.55 - (r + 1) * px, 0.175 + (k + 1) * px, 0.55 - r * px, c); });
+        PIXHEART.forEach((row, r) => { for (let k = 0; k < row.length; k++) if (row[k] === '1') W.r(0.5 + k * 0.03, 0.2 - (r + 1) * 0.03, 0.5 + (k + 1) * 0.03, 0.2 - r * 0.03, '#FF2E9A'); }); } },
+    rainbowarch: { name: 'Rainbow arch', w: 1.2, h: 0.7, cols: ['#F58A8A', '#AEDDF7'], tags: 'soft playful cozy',
+      // A rainbow between two clouds.
+      draw: (W) => { CC.bands.forEach((c, k) => { const r = 0.52 - k * 0.06, pts = []; for (let i = 0; i <= 16; i++) { const a = Math.PI * i / 16; pts.push([0.6 - Math.cos(a) * r, 0.1 + Math.sin(a) * r]); } W.pl(pts, c, 5); });
+        [[0.14, 0.12], [1.06, 0.12]].forEach(([u, z]) => { W.e(u, z, 0.13, 0.08, '#FFFFFF'); W.e(u - 0.08, z + 0.03, 0.07, 0.06, '#FFFFFF'); W.e(u + 0.08, z + 0.04, 0.07, 0.06, '#FFFFFF'); W.e(u, z + 0.08, 0.08, 0.07, '#FFFFFF'); }); } },
+    cloudlight: { name: 'Cloud night light', w: 0.7, h: 0.45, cols: ['#FFFFFF', '#F9E27A'], tags: 'soft playful cozy',
+      // A cloud that glows with the power on, with three stars that twinkle.
+      draw: (W, o, t) => { const on = power, c = on ? '#FFFDF2' : '#E4ECF6'; if (on) W.e(0.35, 0.2, 0.42, 0.3, 'rgba(255,241,201,.22)'); W.e(0.35, 0.16, 0.3, 0.12, c); W.e(0.2, 0.2, 0.14, 0.13, c); W.e(0.38, 0.26, 0.17, 0.16, c); W.e(0.54, 0.2, 0.13, 0.12, c);
+        [[0.08, 0.4, 0], [0.62, 0.42, 1], [0.1, 0.06, 2]].forEach(([u, z, k]) => { const tw = on ? 0.5 + Math.sin(t * 3 + k * 2) * 0.5 : 0; W.circ(u, z, 0.018 + tw * 0.01, on ? '#F9E27A' : '#C9D3E0'); }); } },
+    neonbolt: { name: 'Neon bolt', w: 0.6, h: 0.9, cols: ['#19E6F0', '#FF2E9A', '#FFB020'], tags: 'bold modern industrial',
+      // A lightning bolt in neon tube that flickers now and then while the power is on.
+      draw: (W, o, t) => { const c = o.col || '#19E6F0', on = power && Math.sin(t * 17) > -0.92, pts = [[0.38, 0.9], [0.14, 0.48], [0.3, 0.48], [0.2, 0.0], [0.5, 0.46], [0.34, 0.46]];
+        W.r(0.02, 0.02, 0.58, 0.88, 'rgba(0,0,0,.25)'); if (on) { W.p(pts, hexA(c, 0.18)); W.p(pts, null, hexA(c, 0.5)); } W.p(pts, on ? c : shade(c, -0.55), on ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.15)'); } },
+    holoposter: { name: 'Holo poster', w: 0.8, h: 1.1, cols: ['#111118', '#19E6F0', '#FF2E9A'], tags: 'bold modern industrial',
+      // A dark panel of circuit lines and scanlines with a magenta ring and a cyan diamond; a scan bar rolls down it with the power on.
+      draw: (W, o, t) => { const on = power; W.r(0, 0, 0.8, 1.1, '#111118', NE.steel); for (let z = 0.08; z < 1.05; z += 0.08) W.l([0.04, z], [0.76, z], 'rgba(255,255,255,.05)', 1);
+        for (let u = 0.15; u < 0.8; u += 0.25) W.l([u, 0.05], [u, 1.05], on ? hexA(NE.cyan, 0.5) : 'rgba(25,230,240,.15)', 1); for (let z = 0.2; z < 1.05; z += 0.3) W.l([0.05, z], [0.75, z], on ? hexA(NE.cyan, 0.5) : 'rgba(25,230,240,.15)', 1);
+        if (on) { const yy = 0.15 + ((t * 0.15) % 0.8); W.r(0.04, yy, 0.76, yy + 0.04, 'rgba(25,230,240,.25)'); }
+        W.e(0.4, 0.6, 0.18, 0.18, null, on ? NE.magenta : shade(NE.magenta, -0.5)); W.e(0.4, 0.6, 0.1, 0.1, on ? hexA(NE.magenta, 0.5) : '#2A1A24'); W.p([[0.4, 0.35], [0.56, 0.6], [0.4, 0.85], [0.24, 0.6]], null, on ? NE.cyan : shade(NE.cyan, -0.5)); } },
+    stainedglass: { name: 'Stained glass panel', w: 0.7, h: 1.1, cols: ['#8E2E3C', '#2E4C9A', '#C9A24A'], tags: 'luxe vintage cozy',
+      // A pointed-arch panel of coloured panes with lead lines; the panes glow with the power on.
+      draw: (W) => { const on = power, pts = [[0.05, 0.05], [0.65, 0.05], [0.65, 0.7]]; for (let k = 1; k <= 8; k++) { const a = Math.PI * k / 8; pts.push([0.35 + Math.cos(a) * 0.3, 0.7 + Math.sin(a) * 0.36]); } pts.push([0.05, 0.7]);
+        W.p(pts, '#2A2224'); const pane = (poly, col) => W.p(poly, on ? col : shade(col, -0.45), 'rgba(20,15,20,.8)');
+        pane([[0.1, 0.1], [0.35, 0.1], [0.35, 0.45], [0.1, 0.45]], GO.panes[0]); pane([[0.35, 0.1], [0.6, 0.1], [0.6, 0.45], [0.35, 0.45]], GO.panes[1]); pane([[0.1, 0.45], [0.35, 0.45], [0.35, 0.72], [0.1, 0.72]], GO.panes[2]); pane([[0.35, 0.45], [0.6, 0.45], [0.6, 0.72], [0.35, 0.72]], GO.panes[3]);
+        pane([[0.1, 0.72], [0.6, 0.72], [0.6, 0.8], [0.35, 1.0], [0.1, 0.8]], GO.panes[1]); W.e(0.35, 0.78, 0.1, 0.1, on ? GO.panes[2] : shade(GO.panes[2], -0.45), 'rgba(20,15,20,.8)'); W.e(0.35, 0.78, 0.04, 0.04, on ? '#FFF1C9' : GO.panes[0]);
+        W.l([0.1, 0.28], [0.6, 0.28], 'rgba(20,15,20,.6)', 1); W.l([0.22, 0.1], [0.22, 0.72], 'rgba(20,15,20,.6)', 1); W.l([0.48, 0.1], [0.48, 0.72], 'rgba(20,15,20,.6)', 1); if (on) W.p(pts, 'rgba(255,230,180,.08)'); } },
+    sconce: { name: 'Candle sconce', w: 0.4, h: 0.6, cols: ['#2A2224', '#B08D57'], tags: 'luxe vintage cozy',
+      // An iron bracket holding two candles whose flames waver.
+      draw: (W, o, t) => { const c = o.col || '#2A2224'; W.l([0.2, 0.0], [0.2, 0.3], c, 2.4); W.pl([[0.2, 0.3], [0.08, 0.34], [0.06, 0.4]], c, 2); W.pl([[0.2, 0.3], [0.32, 0.34], [0.34, 0.4]], c, 2); W.e(0.2, 0.05, 0.05, 0.03, GO.brass);
+        [0.06, 0.34].forEach((u, k) => { W.r(u - 0.03, 0.4, u + 0.03, 0.52, '#F6EFE0'); const fl = Math.sin(t * 9 + k * 2) * 0.008; W.e(u, 0.55 + fl, 0.02, 0.035 + fl, 'rgba(255,190,80,.95)'); W.e(u, 0.545, 0.01, 0.018, 'rgba(255,246,210,.95)'); W.e(u, 0.55, 0.06, 0.07, 'rgba(255,200,120,.14)'); }); } },
+    lollipops: { name: 'Lollipop wall', w: 1.0, h: 0.8, cols: ['#F6B7CC', '#BFE8D6', '#D6C4F0'], tags: 'soft playful warm',
+      // Three lollipops crossed, each with a white swirl.
+      draw: (W) => { [[0.22, 0.6, CA.pink, 0.1], [0.5, 0.65, CA.mint, 0], [0.78, 0.6, CA.lilac, -0.1]].forEach(([u, z, col, lean]) => { W.l([u + lean * 2, 0.02], [u, z], '#FFFFFF', 3); W.e(u, z, 0.14, 0.14, col, 'rgba(0,0,0,.08)'); const pts = []; for (let a = 0; a < Math.PI * 4; a += 0.25) pts.push([u + Math.cos(a) * a * 0.01, z + Math.sin(a) * a * 0.01]); W.pl(pts, 'rgba(255,255,255,.85)', 1.6); W.e(u - 0.05, z + 0.05, 0.03, 0.02, 'rgba(255,255,255,.6)'); }); } },
+    candysign: { name: 'Sweet shop sign', w: 1.1, h: 0.5, cols: ['#F6B7CC', '#FFF8F0', '#E04A6A'], tags: 'soft playful warm',
+      // A pink sign with a scalloped top, a cupcake on it and bulbs that chase along the bottom.
+      draw: (W, o, t) => { const c = o.col || '#F6B7CC', on = power; W.r(0, 0.08, 1.1, 0.42, c, 'rgba(0,0,0,.08)'); for (let u = 0.08; u < 1.1; u += 0.16) W.e(u, 0.42, 0.08, 0.06, c);
+        W.r(0.38, 0.14, 0.52, 0.26, CA.butter); W.e(0.45, 0.3, 0.09, 0.06, '#FFFFFF'); W.e(0.45, 0.34, 0.06, 0.05, '#FFFFFF'); W.circ(0.45, 0.4, 0.02, CA.cherry);
+        W.e(0.72, 0.26, 0.09, 0.09, CA.mint, 'rgba(0,0,0,.08)'); W.e(0.72, 0.26, 0.04, 0.04, 'rgba(255,255,255,.7)'); W.r(0.12, 0.18, 0.26, 0.34, CA.lilac, 'rgba(0,0,0,.08)'); W.l([0.12, 0.26], [0.26, 0.26], 'rgba(255,255,255,.6)', 1);
+        const step = Math.floor(t * 6); for (let k = 0; k <= 10; k++) { const u = 0.05 + k * 0.1, lit = on && (k + step) % 3 === 0; W.circ(u, 0.04, 0.018, lit ? '#FFF6C8' : on ? CA.butter : '#C9B8A8'); } } },
+    tikimasks: { name: 'Tiki masks', w: 0.9, h: 0.9, cols: ['#8A5A3A', '#D9BE82', '#F08AA0'], tags: 'playful natural bold',
+      // Two carved wooden masks with cream eyes and a pink feather each.
+      draw: (W, o) => { const c = o.col || '#8A5A3A'; [[0.24, 0.0], [0.66, 0.1]].forEach(([u, dz], k) => { const z = 0.1 + dz; W.p([[u - 0.18, z], [u + 0.18, z], [u + 0.2, z + 0.5], [u, z + 0.62], [u - 0.2, z + 0.5]], c, 'rgba(0,0,0,.25)'); W.p([[u - 0.1, z + 0.36], [u - 0.03, z + 0.4], [u - 0.1, z + 0.44]], '#F7F1E3'); W.p([[u + 0.1, z + 0.36], [u + 0.03, z + 0.4], [u + 0.1, z + 0.44]], '#F7F1E3');
+        W.r(u - 0.1, z + 0.12, u + 0.1, z + 0.2, '#F7F1E3'); for (let x = u - 0.08; x < u + 0.1; x += 0.04) W.l([x, z + 0.12], [x, z + 0.2], c, 1); W.l([u - 0.14, z + 0.28], [u + 0.14, z + 0.28], 'rgba(0,0,0,.3)', 1); W.e(u + (k ? -0.1 : 0.1), z + 0.68, 0.03, 0.09, TR.pink, null); W.e(u, z + 0.66, 0.03, 0.08, TR.coral, null); }); } },
+    flamingoneon: { name: 'Flamingo neon', w: 0.7, h: 0.9, cols: ['#F08AA0', '#19E6F0', '#F9E27A'], tags: 'playful natural bold',
+      // A flamingo in pink neon tube on a dark board, glowing with the power on.
+      draw: (W, o, t) => { const c = o.col || '#F08AA0', on = power && Math.sin(t * 11) > -0.95; W.r(0.02, 0.02, 0.68, 0.88, 'rgba(0,0,0,.25)');
+        const body = [[0.2, 0.3], [0.28, 0.22], [0.42, 0.22], [0.5, 0.32], [0.46, 0.42], [0.34, 0.46], [0.22, 0.42], [0.18, 0.36], [0.2, 0.3]], neck = [[0.44, 0.42], [0.5, 0.56], [0.48, 0.7], [0.4, 0.78], [0.3, 0.78], [0.26, 0.72]], legs = [[0.32, 0.22], [0.32, 0.08], [0.26, 0.04]], leg2 = [[0.38, 0.22], [0.38, 0.12]];
+        [body, neck, legs, leg2].forEach((pts) => { if (on) W.pl(pts, hexA(c, 0.35), 6); W.pl(pts, on ? c : shade(c, -0.5), 2); if (on) W.pl(pts, 'rgba(255,255,255,.6)', 0.8); }); W.e(0.42, 0.75, 0.025, 0.025, on ? '#111118' : '#2A2F3A'); W.l([0.26, 0.72], [0.22, 0.66], on ? '#111118' : '#2A2F3A', 2); } },
     // ---- rotation and seasonal pieces (only in the daily shop) ----
     neon: { name: 'Neon heart', w: 0.9, h: 0.7, cols: ['#FF5FA2', '#5FE3FF', '#FFD25F'], tags: 'bold playful modern', rot: 'rare',
       draw: (W, o, t) => { const c = o.col || '#FF5FA2', pts = []; for (let k = 0; k <= 30; k++) { const a = k / 30 * Math.PI * 2, x = 16 * Math.pow(Math.sin(a), 3), y = 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a); pts.push([0.45 + x * 0.025, 0.38 + y * 0.025]); } ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = 10 + Math.sin(t * 3) * 2; W.pl(pts, c, 3); ctx.restore(); W.pl(pts, '#FFFFFF', 1); } },
@@ -306,6 +364,64 @@ export function createHouseArt(ctx0, opts = {}) {
     return H;
   }
   function drawWallObj(w, t) { const T = WTYPES[w.type]; if (!T) return; ctx.save(); const sh = wallHelper(Object.assign({}, w, { u: w.u + 0.03, z: w.z - 0.04 })); sh.r(0, 0, T.w, T.h, 'rgba(0,0,0,.08)'); ctx.restore(); T.draw(wallHelper(w), w, t || animT); }
+  // Wall pieces taken down in Arrange: off the wall, still the player's, saved with the house.
+  const WALLSTORE = [];
+  let wallSeq = 0;
+  const wallId = () => `wall-${++wallSeq}-${(Date.now() + wallSeq * 7919) & 0xffff}`;
+  /** Whether a wall piece sits clear of the others on its wall and of the windows and doors (with a little air round each). */
+  function wallClear(w) {
+    const T = WTYPES[w.type]; if (!T) return false;
+    const over = (a0, a1, b0, b1, pad) => !(a1 + pad < b0 || a0 > b1 + pad);
+    if (WALLOBJS.some((o) => o !== w && o.level === w.level && o.p === w.p && WTYPES[o.type] && over(w.u, w.u + T.w, o.u, o.u + WTYPES[o.type].w, 0.1) && over(w.z, w.z + T.h, o.z, o.z + WTYPES[o.type].h, 0.1))) return false;
+    return !(LEVELS[w.level].feats || []).some((f) => f.p === w.p && Array.isArray(f.u) && Array.isArray(f.z) && over(w.u, w.u + T.w, f.u[0], f.u[1], 0.1) && over(w.z, w.z + T.h, f.z[0], f.z[1], 0.1));
+  }
+  /** Hangs a bought wall piece on one of the level's back walls, at eye height, on the first free stretch nearest the middle. */
+  function hangWallObj(level, type, col, id) {
+    const T = WTYPES[type]; if (!T) return false;
+    const z = Math.max(0.9, Math.min(WH - T.h - 0.15, 1.55 - T.h / 2));
+    const piece = { id: id || wallId(), type, level, p: 'B', u: 0, z, col };
+    // The long back wall first, from its middle outward; then the side wall from its far corner (the stairs take its near end).
+    for (const pl of ['B', 'L']) {
+      const len = planeLen(pl), mid = (len - T.w) / 2, cands = [];
+      if (pl === 'B') for (let d = 0; mid - d >= 0.3; d += 0.25) { cands.push(mid - d); if (d > 0 && mid + d <= len - T.w - 0.3) cands.push(mid + d); }
+      else for (let u = 0.4; u <= len - T.w - 0.3; u += 0.25) cands.push(u);
+      for (const u of cands) { piece.p = pl; piece.u = u; if (wallClear(piece)) { WALLOBJS.push(piece); return true; } }
+    }
+    piece.p = BACK[0][1]; piece.u = (planeLen(BACK[0][1]) - T.w) / 2;
+    WALLOBJS.push(piece);
+    return true;
+  }
+  // ---- Wall pieces in Arrange: find one under the pointer, slide it along its wall, take it down, hang it again ----
+  const wallQuad = (w) => { const T = WTYPES[w.type]; return [[0, 0], [T.w, 0], [T.w, T.h], [0, T.h]].map(([du, dz]) => iso(...wallPoint(w.p, w.u + du, w.z + dz))); };
+  const wallName = (w) => (WTYPES[w.type] ? WTYPES[w.type].name : w.type);
+  /** The wall pieces on a level, on the walls the view shows, for the Arrange list. */
+  function wallObjsOn(level) { return WALLOBJS.filter((w) => w.level === level && WTYPES[w.type]).map((w) => ({ id: w.id, type: w.type, name: wallName(w), level: w.level, p: w.p, u: w.u, z: w.z, col: w.col, shown: BACK[VR].includes(w.p) })); }
+  /** Every wall piece in the house, for the Arrange list. */
+  function wallObjsAll() { return WALLOBJS.filter((w) => WTYPES[w.type]).map((w) => ({ id: w.id, type: w.type, name: wallName(w), level: w.level, col: w.col })); }
+  /** The id of the wall piece under a view point on the walls the view shows, if any. */
+  function hitWallObj(level, sx, sy) { let hit = null; WALLOBJS.forEach((w) => { if (w.level === level && WTYPES[w.type] && BACK[VR].includes(w.p) && inPoly(sx, sy, wallQuad(w))) hit = w; }); return hit ? hit.id : null; }
+  /** The view point at a wall piece's centre, for framing and tests. */
+  function wallObjView(id) { const w = WALLOBJS.find((x) => x.id === id); if (!w || !WTYPES[w.type]) return null; const T = WTYPES[w.type]; return iso(...wallPoint(w.p, w.u + T.w / 2, w.z + T.h / 2)); }
+  /** Slides a wall piece so its centre follows a view point (less where it was grabbed), kept on its wall and off the floor and ceiling. */
+  function moveWallObj(id, sx, sy, grab = [0, 0]) {
+    const w = WALLOBJS.find((x) => x.id === id); if (!w || !WTYPES[w.type]) return false;
+    const T = WTYPES[w.type];
+    // The wall is a plane in view space: a point on it is p0 + u * au + z * az. Solve the two for the point under the pointer.
+    const p0 = iso(...wallPoint(w.p, 0, 0)), pu = iso(...wallPoint(w.p, 1, 0)), pz = iso(...wallPoint(w.p, 0, 1));
+    const au = [pu[0] - p0[0], pu[1] - p0[1]], az = [pz[0] - p0[0], pz[1] - p0[1]];
+    const det = au[0] * az[1] - au[1] * az[0]; if (Math.abs(det) < 1e-6) return false;
+    const dx = sx - grab[0] - p0[0], dy = sy - grab[1] - p0[1];
+    const u = (dx * az[1] - dy * az[0]) / det - T.w / 2, z = (au[0] * dy - au[1] * dx) / det - T.h / 2;
+    w.u = Math.max(0.1, Math.min(planeLen(w.p) - T.w - 0.1, u));
+    w.z = Math.max(0.3, Math.min(WH - T.h - 0.1, z));
+    return true;
+  }
+  const wallObjClear = (id) => { const w = WALLOBJS.find((x) => x.id === id); return !!w && wallClear(w); };
+  /** Takes a wall piece down into storage. Returns its name, or null. */
+  function takeDownWallObj(id) { const i = WALLOBJS.findIndex((x) => x.id === id); if (i < 0) return null; const [w] = WALLOBJS.splice(i, 1); WALLSTORE.push(w); return wallName(w); }
+  function storedWallObjs() { return WALLSTORE.map((w) => ({ id: w.id, type: w.type, name: wallName(w), col: w.col })); }
+  /** Hangs a stored wall piece on a level's back wall again. */
+  function rehangWallObj(id, level) { const i = WALLSTORE.findIndex((x) => x.id === id); if (i < 0) return false; const w = WALLSTORE[i]; if (!hangWallObj(level, w.type, w.col, w.id)) return false; WALLSTORE.splice(i, 1); return true; }
   function drawWallDecor(level, back) { WALLOBJS.forEach(w => { if (w.level === level && back.includes(w.p) && !(arranging && arr.wHold === w)) drawWallObj(w); }); }
 
   const PARCEL = { stand: [1.5, 6.0], box: [0.55, 5.75] };
@@ -1583,7 +1699,7 @@ export function createHouseArt(ctx0, opts = {}) {
     LOOK_DRAWERS.sofa[sk] = seasonSofa(sk); LOOK_DRAWERS.lamp[sk] = seasonLamp(sk); LOOK_DRAWERS.plant[sk] = seasonPlant(sk);
   }
 
-  // ---- Cloud Nine (a secret pastel pack, unlocked by a code): clouds, rainbows, stars and hearts ----
+  // ---- Cloud Nine (a pastel shop pack): clouds, rainbows, stars and hearts ----
   const CN = { rainbow: ['#F27C8D', '#F6B26B', '#F6E06B', '#8FD3A0', '#7FB7E8'], white: '#FFFFFF', pink: '#F9C6DA', blue: '#BFE3F5', yellow: '#FFF2B8', lilac: '#E2D3F7' };
   const cloudPuff = (cx, cy, k = 1) => { circle(cx - 3.2 * k, cy + 0.6 * k, 2.6 * k, CN.white); circle(cx, cy - 1.2 * k, 3.2 * k, CN.white); circle(cx + 3.4 * k, cy + 0.6 * k, 2.4 * k, CN.white); };
   const rainbowArc = (cx, cy, r) => { ctx.lineCap = 'round'; CN.rainbow.forEach((c, i) => { ctx.strokeStyle = c; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.ellipse(cx, cy, r - i * 1.8, (r - i * 1.8) * 0.8, 0, Math.PI, 0); ctx.stroke(); }); };
@@ -2324,6 +2440,150 @@ export function createHouseArt(ctx0, opts = {}) {
        },
     blossomvase: {      
       parts: (o) => [F(0, 0, 0.45, 0.45, (T, ob, t) => { T.box(0.08, 0.08, 0, 0.3, 0.3, 0.5, cl(o)); const [x, y] = T.P(0.22, 0.22, 0.5); [[-16, -52], [4, -62], [18, -46], [-6, -40]].forEach(([dx, dy], k) => { limb(x, y, x + dx, y + dy, '#5A3E2E', 1.6); for (let m = 0; m < 5; m++) { const f = 0.45 + m * 0.13; circle(x + dx * f + Math.sin(k + m) * 3, y + dy * f + Math.cos(k * m) * 2, 2.6, m % 2 ? '#F3B6C8' : '#F7D0DC'); } }); })] },
+    rugarcade: {
+      // The arcade carpet as a rug: ink with a yellow border, neon confetti and three invaders.
+      parts: (o) => [F(0, 0, 2.4, 1.6, (T) => { const c = cl(o); T.poly([[0, 0, 0.008], [2.4, 0, 0.008], [2.4, 1.6, 0.008], [0, 1.6, 0.008]], c); T.poly([[0.1, 0.1, 0.009], [2.3, 0.1, 0.009], [2.3, 1.5, 0.009], [0.1, 1.5, 0.009]], null, AR.yellow, 2.4); T.poly([[0.2, 0.2, 0.009], [2.2, 0.2, 0.009], [2.2, 1.4, 0.009], [0.2, 1.4, 0.009]], null, AR.cyan, 1);
+        for (let k = 0; k < 60; k++) { const x = 0.2 + ((k * 0.618 * 5.3) % 2.0), y = 0.2 + ((k * 0.414 * 3.1) % 1.2); const [sx, sy] = T.P(x, y, 0.01); circle(sx, sy, 1.4, [AR.magenta, AR.cyan, AR.yellow, AR.violet][k % 4]); }
+        [[0.6, 0.8, AR.cyan], [1.2, 0.5, AR.magenta], [1.8, 0.95, AR.green]].forEach(([x, y, col]) => { const [sx, sy] = T.P(x, y, 0.011); sprite(sx, sy, 1.8, INVADER, col); }); }, { decal: true })] },
+    cartridges: {
+      // Three game cartridges stacked, labels up, and one standing against them.
+      parts: (o) => { const c = cl(o), grey = '#B9BEC3', dark = '#8E939A'; return [B(0.02, 0.04, 0, 0.3, 0.28, 0.07, grey), B(0.04, 0.05, 0.07, 0.3, 0.27, 0.07, dark), B(0.01, 0.03, 0.14, 0.3, 0.28, 0.07, grey), B(0.36, 0.04, 0, 0.08, 0.28, 0.26, dark),
+        F(0, 0, 0.45, 0.35, (T) => { [[0.21, c], [0.14, AR.cyan], [0.07, AR.magenta]].forEach(([z, col]) => T.poly([[0.07, 0.1, z + 0.001], [0.26, 0.1, z + 0.001], [0.26, 0.26, z + 0.001], [0.07, 0.26, z + 0.001]], col)); T.poly([[0.441, 0.08, 0.06], [0.441, 0.24, 0.06], [0.441, 0.24, 0.2], [0.441, 0.08, 0.2]], AR.yellow); const [sx, sy] = T.P(0.165, 0.18, 0.212); sprite(sx, sy, 0.9, INVADER, '#15121F'); }, { onTop: true })]; } },
+    pinball: {
+      // A pinball machine: a dark base with chrome legs, a cabinet in its colour, a glass playfield with lane guides, slingshots, drop targets, a
+      // ramp, bumpers that flash, flippers that flip and a ball that flies about while someone plays, and a backbox with a glowing screen and a
+      // marquee of chasing bulbs. The player stands at the near end (high y). The F part shares the cabinet's footprint so it sorts after it.
+      parts: (o) => { const c = cl(o); return [
+        B(0.08, 0.1, 0, 0.59, 1.35, 0.62, '#2B2B30'), B(0, 0.05, 0.62, 0.75, 1.45, 0.3, c), B(0, 0, 0.92, 0.75, 0.22, 0.98, c),
+        F(0, 0.05, 0.75, 1.5, (T, ob, t) => { const playing = usingSlot(ob.id + ':p') || live(ob.id), hot = (k) => playing && Math.floor(t * 5 + k) % 3 === 0;
+          // Chrome legs on the base's faces, and the coin door on the front.
+          [0.14, 0.61].forEach((x) => { T.line([x, 1.451, 0.02], [x, 1.451, 0.6], AR.chrome, 2.4); }); [0.2, 1.3].forEach((y) => { T.line([0.671, y, 0.02], [0.671, y, 0.6], AR.chrome, 2.4); });
+          T.poly([[0.22, 1.501, 0.68], [0.53, 1.501, 0.68], [0.53, 1.501, 0.86], [0.22, 1.501, 0.86]], '#2B2B30', AR.chrome, 1); const [qx, qy] = T.P(0.3, 1.502, 0.77); circle(qx, qy, 1.6, AR.yellow); T.line([0.4, 1.502, 0.74], [0.4, 1.502, 0.8], AR.chrome, 1.4); const [rx, ry] = T.P(0.48, 1.502, 0.77); circle(rx, ry, 1.8, AR.red);
+          // The playfield under glass: a navy field with a cyan rim, lane guides down both sides and the shooter lane on the right.
+          T.poly([[0.04, 0.28, 0.921], [0.71, 0.28, 0.921], [0.71, 1.46, 0.921], [0.04, 1.46, 0.921]], '#141226', AR.cyan, 1);
+          T.line([0.64, 0.34, 0.923], [0.64, 1.44, 0.923], AR.chrome, 1); T.line([0.1, 0.34, 0.923], [0.1, 1.1, 0.923], AR.magenta, 1); T.line([0.58, 0.34, 0.923], [0.58, 1.1, 0.923], AR.magenta, 1);
+          // A ramp curling over the top, drop targets across it, and a spinner.
+          const ramp = []; for (let k = 0; k <= 10; k++) { const a = Math.PI * k / 10; ramp.push(T.P(0.34 + Math.cos(a) * 0.24, 0.62 - Math.sin(a) * 0.26, 0.93)); } ctx.beginPath(); ramp.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.strokeStyle = AR.cyan; ctx.lineWidth = 1.6; ctx.stroke();
+          [0.22, 0.3, 0.38, 0.46].forEach((x, k) => T.poly([[x, 0.4, 0.924], [x + 0.06, 0.4, 0.924], [x + 0.06, 0.46, 0.924], [x, 0.46, 0.924]], hot(k) ? '#FFF6C8' : AR.yellow));
+          T.line([0.46, 0.7, 0.924], [0.54, 0.7, 0.924], playing ? (Math.floor(t * 10) % 2 ? AR.chrome : AR.yellow) : AR.chrome, 1.6);
+          // Lane lights down the left, the three bumpers, and the slingshots either side of the flippers.
+          for (let y = 0.5; y < 1.1; y += 0.12) { const [lx, ly] = T.P(0.15, y, 0.923); circle(lx, ly, 1, hot(Math.round(y * 10)) ? '#FFF6C8' : AR.cyan); }
+          [[0.25, 0.68, AR.red], [0.47, 0.62, AR.cyan], [0.36, 0.86, AR.yellow]].forEach(([x, y, col], k) => { const [bx, by] = T.P(x, y, 0.925); if (hot(k)) circle(bx, by, 8, 'rgba(255,246,200,.25)'); circle(bx, by, 4.5, hot(k) ? '#FFF6C8' : col, 'rgba(255,255,255,.35)'); circle(bx, by, 2, hot(k) ? AR.yellow : '#15121F'); });
+          T.poly([[0.12, 1.08, 0.924], [0.22, 1.08, 0.924], [0.12, 1.26, 0.924]], AR.yellow, AR.chrome, 0.8); T.poly([[0.56, 1.08, 0.924], [0.46, 1.08, 0.924], [0.56, 1.26, 0.924]], AR.yellow, AR.chrome, 0.8);
+          const fl = playing ? Math.abs(Math.sin(t * 7)) * 0.12 : 0; T.line([0.2, 1.3, 0.926], [0.33, 1.4 - fl, 0.926], AR.yellow, 2.8); T.line([0.52, 1.3, 0.926], [0.39, 1.4 - fl, 0.926], AR.yellow, 2.8); T.line([0.2, 1.3, 0.927], [0.33, 1.4 - fl, 0.927], AR.red, 1);  T.line([0.52, 1.3, 0.927], [0.39, 1.4 - fl, 0.927], AR.red, 1);
+          if (playing) { const [sx, sy] = T.P(0.36 + Math.sin(t * 3.1) * 0.22, 0.85 + Math.sin(t * 2.3 + 1) * 0.4, 0.93); circle(sx, sy, 2.4, '#E8EAEC'); circle(sx - 0.8, sy - 0.8, 0.9, '#FFFFFF'); }
+          T.line([0.675, 1.47, 0.9], [0.675, 1.47 + (playing ? 0.05 : 0.1), 0.9], AR.red, 3); const [gx0, gy0] = T.P(0.675, 1.47 + (playing ? 0.05 : 0.1), 0.9); circle(gx0, gy0, 2, AR.red);
+          // Glass glint across the field.
+          T.line([0.1, 0.5, 0.95], [0.5, 1.3, 0.95], 'rgba(255,255,255,.14)', 1.2);
+          // The backbox: a glowing screen with an invader, the marquee and the bulbs round the top.
+          T.poly([[0.06, 0.221, 1.0], [0.69, 0.221, 1.0], [0.69, 0.221, 1.62], [0.06, 0.221, 1.62]], screenHue(t, playing), AR.chrome, 1); const [gx, gy] = T.P(0.375, 0.222, 1.36); sprite(gx, gy, 2.2, INVADER, 'rgba(0,0,0,.45)'); const [hx, hy] = T.P(0.375, 0.222, 1.1); sprite(hx, hy, 1.4, PIXHEART, 'rgba(255,255,255,.55)');
+          T.poly([[0.1, 0.222, 1.66], [0.65, 0.222, 1.66], [0.65, 0.222, 1.84], [0.1, 0.222, 1.84]], AR.yellow); const [ax, ay] = T.P(0.12, 0.223, 1.75), [bx, by] = T.P(0.63, 0.223, 1.75); chaser(ax, ay, bx, by, 8, ob.id, power);
+          const [cx, cy] = T.P(0.04, 0.223, 1.9), [dx, dy] = T.P(0.71, 0.223, 1.9); chaser(cx, cy, dx, dy, 9, ob.id, power); const [ex, ey] = T.P(0.751, 0.02, 1.9), [fx, fy] = T.P(0.751, 0.2, 1.9); chaser(ex, ey, fx, fy, 2, ob.id, power);
+          // Side art on the cabinet and the backbox.
+          T.poly([[0.751, 0.3, 0.66], [0.751, 1.4, 0.66], [0.751, 1.4, 0.88], [0.751, 0.3, 0.88]], AR.magenta); const [ix, iy] = T.P(0.752, 0.85, 0.77); sprite(ix, iy, 1.8, INVADER, AR.yellow); T.line([0.752, 0.35, 0.72], [0.752, 1.35, 0.72], AR.cyan, 1); T.line([0.752, 0.35, 0.82], [0.752, 1.35, 0.82], AR.cyan, 1);
+          T.poly([[0.751, 0.02, 1.0], [0.751, 0.2, 1.0], [0.751, 0.2, 1.7], [0.751, 0.02, 1.7]], AR.magenta); const [jx, jy] = T.P(0.752, 0.11, 1.35); sprite(jx, jy, 1.2, PIXHEART, AR.yellow);
+        }, { onTop: true })]; } },
+    rugcloud: {
+      // A cloud-shaped rug with a rainbow band across it.
+      parts: (o) => [F(0, 0, 2.2, 1.6, (T) => { const c = cl(o); const blob = (x, y, rx, ry) => { const pts = []; for (let k = 0; k < 20; k++) { const a = k / 20 * Math.PI * 2; pts.push([x + Math.cos(a) * rx, y + Math.sin(a) * ry, 0.009]); } T.poly(pts, c); };
+        [[1.1, 0.9, 1.0, 0.5], [0.5, 0.6, 0.48, 0.42], [1.1, 0.42, 0.6, 0.42], [1.7, 0.62, 0.48, 0.4], [0.7, 1.15, 0.5, 0.4], [1.5, 1.18, 0.55, 0.38]].forEach(([x, y, rx, ry]) => blob(x, y, rx, ry));
+        CC.bands.forEach((col, k) => T.line([0.45, 0.78 + k * 0.07, 0.011], [1.75, 0.78 + k * 0.07, 0.011], col, 2.2)); }, { decal: true })] },
+    rugneon: {
+      // A black rug ruled in cyan and magenta, edged in neon that lights with the power.
+      parts: (o) => [F(0, 0, 2.4, 1.6, (T) => { const c = cl(o); T.poly([[0, 0, 0.008], [2.4, 0, 0.008], [2.4, 1.6, 0.008], [0, 1.6, 0.008]], c); for (let x = 0.3; x < 2.4; x += 0.3) T.line([x, 0.05, 0.009], [x, 1.55, 0.009], 'rgba(25,230,240,.35)', 1); for (let y = 0.3; y < 1.6; y += 0.3) T.line([0.05, y, 0.009], [2.35, y, 0.009], 'rgba(255,46,154,.35)', 1);
+        neon(T, [0.06, 0.06, 0.01], [2.34, 0.06, 0.01], NE.cyan, power); neon(T, [2.34, 0.06, 0.01], [2.34, 1.54, 0.01], NE.cyan, power); neon(T, [2.34, 1.54, 0.01], [0.06, 1.54, 0.01], NE.magenta, power); neon(T, [0.06, 1.54, 0.01], [0.06, 0.06, 0.01], NE.magenta, power); }, { decal: true })] },
+    plushpile: {
+      // A heap of three pastel bear plushies with a star on top.
+      parts: (o) => [B(0.1, 0.1, 0, 0.6, 0.5, 0.1, '#F6EEF2'), F(0.1, 0.1, 0.7, 0.6, (T) => { const c = cl(o); [[0.3, 0.45, CC.bearBlue, 0.3], [0.55, 0.45, CC.bearYellow, -0.3], [0.42, 0.25, c, 0]].forEach(([x, y, col, rot]) => { const [px, py] = T.P(x, y, 0.14); ell(px, py + 2, 8, 6, col); ell(px - 6, py + 3, 3, 4, col, null, rot); ell(px + 6, py + 3, 3, 4, col, null, -rot); bearFace(px, py - 7, 6, col); heart(px, py + 2, 0.7, CC.pinkDeep); }); const [sx, sy] = T.P(0.42, 0.5, 0.34); star5(sx, sy, 3, CC.yellow); }, { onTop: true })] },
+    serverstack: {
+      // A little black server tower whose rows of lights blink with the power on.
+      parts: (o) => [B(0.05, 0.05, 0, 0.35, 0.35, 0.42, cl(o)), F(0.05, 0.05, 0.4, 0.4, (T, ob, t) => { for (let z = 0.06; z < 0.4; z += 0.08) { T.line([0.06, 0.401, z], [0.39, 0.401, z], NE.steel, 1); for (let k = 0; k < 4; k++) { const [lx, ly] = T.P(0.1 + k * 0.08, 0.402, z + 0.03); const on = power && Math.floor(t * 7 + k * 3 + z * 50) % 4 !== 0; circle(lx, ly, 0.9, on ? (k % 2 ? NE.cyan : NE.magenta) : '#2A2F3A'); } } T.line([0.401, 0.06, 0.4], [0.401, 0.39, 0.4], NE.steel, 1); }, { onTop: true })] },
+    cloudswing: {
+      // A swing seat hanging from a cloud on a pole: the cloud bobs and glows as a lamp, hearts float up while someone swings.
+      parts: (o) => { const c = cl(o); return [B(0.45, 0.02, 0, 0.3, 0.26, 0.06, CC.sky), B(0.3, 0.3, 0.42, 0.6, 0.42, 0.08, c, { name: 'seat' }),
+        F(0.3, 0.3, 0.9, 0.72, (T, ob, t) => { const lit = isLit(ob.id), using = usingSlot(ob.id + ':s'), bob = Math.sin(t * 1.2) * 0.02;
+          T.line([0.6, 0.15, 0.06], [0.6, 0.15, 1.75], CC.sky, 3.4); T.line([0.6, 0.15, 1.75], [0.6, 0.5, 1.78], CC.sky, 3.4);
+          [[0.34, 0.34], [0.86, 0.34], [0.34, 0.68], [0.86, 0.68]].forEach(([x, y]) => T.line([x, y, 0.5], [0.6 + (x - 0.6) * 0.5, 0.5 + (y - 0.5) * 0.4, 1.74 + bob], CC.cloudShade, 1.2));
+          T.line([0.3, 0.721, 0.46], [0.9, 0.721, 0.46], CC.pinkDeep, 1.2);
+          const [cx, cy] = T.P(0.6, 0.5, 1.8 + bob); if (lit) ell(cx, cy + 4, 24, 12, 'rgba(255,241,201,.25)'); cloud(cx, cy, 20, lit ? '#FFFDF2' : CC.cloud); star5(cx, cy - 16, 4, lit ? CC.yellow : CC.cloudShade);
+          if (using) for (let k = 0; k < 3; k++) { const ph = (t * 0.6 + k / 3) % 1; const [hx, hy] = T.P(0.6 + Math.sin(ph * 6 + k) * 0.15, 0.5, 0.8 + ph * 0.8); heart(hx, hy, 0.6 + (1 - ph) * 0.3, `rgba(238,143,174,${(1 - ph).toFixed(2)})`); }
+        }, { onTop: true })]; } },
+    vrpod: {
+      // A reclined pod: a steel base ringed in light, a seat with armrests and a footrest, a shell with a screen panel that pulses, a headrest,
+      // and a visor on an arm. While someone is in it the visor lights and a holo cube spins above. Armrests and footrest are drawn in the
+      // detail part so their lights sit on top of them.
+      parts: (o) => { const c = cl(o); return [B(0.1, 0.1, 0, 0.8, 1.4, 0.2, NE.steel), B(0.15, 0.45, 0.2, 0.7, 0.75, 0.25, '#1E2230', { name: 'seat' }), B(0.1, 0.05, 0.2, 0.8, 0.42, 0.78, c),
+        F(0.15, 0.45, 0.85, 1.2, (T, ob, t) => { const using = usingSlot(ob.id + ':s') || live(ob.id), pulse = using ? 0.6 + Math.sin(t * 6) * 0.4 : 0;
+          // Ring lights round the base and along the shell's top edge.
+          neon(T, [0.1, 1.501, 0.19], [0.9, 1.501, 0.19], NE.cyan, power); neon(T, [0.901, 0.1, 0.19], [0.901, 1.5, 0.19], NE.cyan, power); neon(T, [0.1, 0.05, 0.98], [0.9, 0.05, 0.98], NE.magenta, power); neon(T, [0.9, 0.05, 0.98], [0.9, 0.47, 0.98], NE.magenta, power);
+          // The screen panel on the shell, facing the seat: a cyan frame, scanlines and a pulse of light while someone is in.
+          T.poly([[0.2, 0.471, 0.5], [0.8, 0.471, 0.5], [0.8, 0.471, 0.9], [0.2, 0.471, 0.9]], using && power ? hexA(NE.cyan, 0.25 + pulse * 0.2) : '#0E1016', power ? NE.cyan : NE.steel, 1); for (let z = 0.55; z < 0.9; z += 0.06) T.line([0.22, 0.472, z], [0.78, 0.472, z], 'rgba(255,255,255,.06)', 1);
+          if (power) { const [ax, ay] = T.P(0.5, 0.473, 0.7); circle(ax, ay, 4, null); ctx.beginPath(); ctx.ellipse(ax, ay, 6, 3, 0, 0, Math.PI * 2); ctx.strokeStyle = using ? NE.magenta : hexA(NE.magenta, 0.5); ctx.lineWidth = 1.2; ctx.stroke(); }
+          // Headrest, armrests with a glowing button each, and the footrest.
+          T.box(0.3, 0.1, 0.98, 0.4, 0.3, 0.12, '#1E2230'); T.line([0.3, 0.401, 1.04], [0.7, 0.401, 1.04], NE.steel, 1);
+          T.box(0.1, 0.45, 0.45, 0.1, 0.7, 0.12, c); T.box(0.8, 0.45, 0.45, 0.1, 0.7, 0.12, c); [[0.15, 1.0], [0.85, 1.0]].forEach(([x, y], k) => { const [bx, by] = T.P(x, y, 0.575); circle(bx, by, 1.8, power ? (k ? NE.magenta : NE.cyan) : '#2A2F3A'); if (power) circle(bx, by, 3.5, hexA(k ? NE.magenta : NE.cyan, 0.25)); });
+          T.box(0.25, 1.2, 0.2, 0.5, 0.25, 0.12, '#1E2230'); for (let x = 0.3; x < 0.75; x += 0.1) T.line([x, 1.451, 0.22], [x, 1.451, 0.3], NE.steel, 1);
+          // The visor on its arm over the seat.
+          T.line([0.5, 0.3, 1.1], [0.5, 0.72, 1.28], NE.steel, 2.6); const [vx, vy] = T.P(0.5, 0.75, 1.24); ell(vx, vy, 8, 4.5, '#111118', NE.steel); ell(vx, vy, 6, 2.4, using && power ? NE.cyan : '#2A2F3A'); if (using && power) ell(vx, vy + 6, 9, 4, hexA(NE.cyan, 0.2));
+          // Side vents on the shell.
+          for (let y = 0.12; y < 0.44; y += 0.08) T.line([0.901, y, 0.4], [0.901, y + 0.04, 0.72], 'rgba(255,255,255,.1)', 1.2);
+          // The holo cube.
+          if (using && power) { const [hx, hy] = T.P(0.5, 0.8, 1.75); circle(hx, hy, 14, hexA(NE.cyan, 0.12 + pulse * 0.1)); const a = t * 2, r = 7; [[0, NE.cyan], [-8, NE.magenta]].forEach(([dy, col]) => { ctx.beginPath(); for (let k = 0; k <= 4; k++) { const ang = a + k * Math.PI / 2; const x = hx + Math.cos(ang) * r, y = hy + dy + Math.sin(ang) * r * 0.5; k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.stroke(); }); for (let k = 0; k < 4; k++) { const ang = a + k * Math.PI / 2; limb(hx + Math.cos(ang) * r, hy + Math.sin(ang) * r * 0.5, hx + Math.cos(ang) * r, hy - 8 + Math.sin(ang) * r * 0.5, hexA(NE.cyan, 0.7), 1); } }
+        }, { onTop: true })]; } },
+    ruggothic: {
+      // An oxblood rug with an ebony border and brass damask motifs.
+      parts: (o) => [F(0, 0, 2.4, 1.6, (T) => { const c = cl(o); T.poly([[0, 0, 0.008], [2.4, 0, 0.008], [2.4, 1.6, 0.008], [0, 1.6, 0.008]], GO.ebony); T.poly([[0.12, 0.12, 0.009], [2.28, 0.12, 0.009], [2.28, 1.48, 0.009], [0.12, 1.48, 0.009]], c); T.poly([[0.2, 0.2, 0.0095], [2.2, 0.2, 0.0095], [2.2, 1.4, 0.0095], [0.2, 1.4, 0.0095]], null, GO.brass, 1);
+        for (let y = 0.5, r = 0; y < 1.3; y += 0.4, r++) for (let x = 0.5 + (r % 2) * 0.3; x < 2.0; x += 0.6) { T.poly([[x, y - 0.14, 0.01], [x + 0.08, y, 0.01], [x, y + 0.14, 0.01], [x - 0.08, y, 0.01]], GO.brass); const [sx, sy] = T.P(x, y, 0.01); ell(sx - 6, sy, 2, 4, GO.brass, null, 0.5); ell(sx + 6, sy, 2, 4, GO.brass, null, -0.5); } }, { decal: true })] },
+    rugcandy: {
+      // A round lollipop rug: pink and white rings with a swirl.
+      parts: (o) => [F(0, 0, 1.8, 1.8, (T) => { const c = cl(o); [[0.9, c], [0.72, '#FFFFFF'], [0.54, c], [0.36, '#FFFFFF'], [0.18, c]].forEach(([r, col]) => { const pts = []; for (let k = 0; k < 28; k++) { const a = k / 28 * Math.PI * 2; pts.push([0.9 + Math.cos(a) * r, 0.9 + Math.sin(a) * r, 0.009]); } T.poly(pts, col); });
+        const sw = []; for (let a = 0; a < Math.PI * 6; a += 0.2) sw.push(T.P(0.9 + Math.cos(a) * a * 0.045, 0.9 + Math.sin(a) * a * 0.045, 0.01)); ctx.beginPath(); sw.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.strokeStyle = CA.cherry; ctx.lineWidth = 1.4; ctx.stroke(); }, { decal: true })] },
+    rugtropical: {
+      // A cream rug with a pink border and big monstera leaves.
+      parts: (o) => [F(0, 0, 2.4, 1.6, (T) => { const c = cl(o); T.poly([[0, 0, 0.008], [2.4, 0, 0.008], [2.4, 1.6, 0.008], [0, 1.6, 0.008]], c); T.poly([[0.1, 0.1, 0.009], [2.3, 0.1, 0.009], [2.3, 1.5, 0.009], [0.1, 1.5, 0.009]], null, TR.pink, 2.2);
+        [[0.6, 0.6, TR.leaf, 0.3], [1.3, 1.0, TR.leafLight, -0.4], [1.9, 0.5, TR.leaf, 0.9], [0.9, 1.25, TR.leafLight, 2.2]].forEach(([x, y, col, rot]) => { const [sx, sy] = T.P(x, y, 0.01); monstera(sx, sy, 11, col, c, rot); }); }, { decal: true })] },
+    grimoires: {
+      // Three dark tomes with brass clasps, and a quill.
+      parts: (o) => [B(0.02, 0.04, 0, 0.36, 0.28, 0.08, cl(o)), B(0.05, 0.03, 0.08, 0.34, 0.27, 0.07, '#2E3B57'), B(0.0, 0.05, 0.15, 0.36, 0.26, 0.08, GO.ebony),
+        F(0.0, 0.03, 0.38, 0.33, (T) => { [[0.04, 0.38], [0.11, 0.39], [0.19, 0.36]].forEach(([z, x]) => { T.line([x, 0.05, z], [x, 0.3, z], GO.brass, 2); const [bx, by] = T.P(x, 0.18, z); circle(bx, by, 1.2, GO.brassLight); }); T.line([0.02, 0.321, 0.02], [0.02, 0.321, 0.22], GO.brassLight, 1); const [qx, qy] = T.P(0.3, 0.1, 0.23); limb(qx, qy, qx + 6, qy - 14, '#F6EFE0', 1.2); ell(qx + 5, qy - 12, 2.2, 6, '#F6EFE0', null, 0.4); }, { onTop: true })] },
+    candyjars: {
+      // Three glass jars of sweets with pink lids.
+      parts: (o) => [B(0.0, 0.04, 0, 0.5, 0.32, 0.03, '#FFFFFF'), F(0.0, 0.04, 0.5, 0.36, (T) => { const c = cl(o); [[0.06, 0.08, 0.3, CA.cherry], [0.22, 0.1, 0.22, CA.mint], [0.36, 0.08, 0.26, CA.lilac]].forEach(([x, y, h, col]) => { T.box(x, y, 0.03, 0.13, 0.13, h, 'rgba(225,240,250,.55)'); for (let k = 0; k < 5; k++) { const [px, py] = T.P(x + 0.03 + (k % 3) * 0.04, y + 0.131, 0.07 + Math.floor(k / 3) * 0.06 + (k % 2) * 0.02); circle(px, py, 1.5, [col, CA.butter, c][k % 3]); } T.box(x - 0.01, y - 0.01, 0.03 + h, 0.15, 0.15, 0.03, c); }); }, { onTop: true })] },
+    coconuts: {
+      // Two coconut drinks with straws and paper umbrellas.
+      parts: (o) => [B(0.05, 0.05, 0, 0.4, 0.3, 0.02, TR.rattan), F(0.05, 0.05, 0.45, 0.35, (T) => { const c = cl(o); [[0.16, 0.2, 0.3], [0.34, 0.18, -0.3]].forEach(([x, y, lean], k) => { const [px, py] = T.P(x, y, 0.12); ell(px, py, 7, 6, c, 'rgba(0,0,0,.2)'); ell(px, py - 4, 5, 2.5, '#F7F1E3'); limb(px + 2, py - 4, px + 4 + lean * 6, py - 16, k ? TR.pink : TR.coral, 1.4); ctx.beginPath(); ctx.moveTo(px - 3 - lean * 10, py - 14); ctx.lineTo(px - 11 - lean * 10, py - 10); ctx.lineTo(px + 5 - lean * 10, py - 10); ctx.closePath(); ctx.fillStyle = k ? CA.butter : TR.pink; ctx.fill(); limb(px - 3 - lean * 10, py - 14, px - 3 - lean * 10, py - 6, '#F7F1E3', 1); }); }, { onTop: true })] },
+    fortuneteller: {
+      // A fortune-telling machine: an oxblood cabinet with brass trim, a glass case with a turbaned teller over a crystal ball that glows
+      // while someone asks, and a card that drops from the slot.
+      parts: (o) => { const c = cl(o); return [B(0, 0, 0, 0.8, 0.6, 0.9, c), B(0.05, 0.05, 0.9, 0.7, 0.5, 0.8, 'rgba(180,230,255,.14)'), B(0, 0, 1.7, 0.8, 0.6, 0.2, GO.brass),
+        F(0, 0, 0.8, 0.6, (T, ob, t) => { const asking = usingSlot(ob.id + ':f') || live(ob.id), glow = power ? (asking ? 0.5 + Math.sin(t * 5) * 0.3 : 0.2) : 0;
+          T.line([0, 0.601, 0.9], [0.8, 0.601, 0.9], GO.brass, 1.6); T.line([0, 0.601, 0.05], [0.8, 0.601, 0.05], GO.brass, 1.6); [[0.05, 0.05], [0.75, 0.05], [0.05, 0.55], [0.75, 0.55]].forEach(([x, y]) => T.line([x, y, 0.9], [x, y, 1.7], GO.brass, 1.4));
+          const [ax, ay] = T.P(0.4, 0.601, 0.5); arch(ax, ay, 9, 18, null, GO.brass, 1); T.poly([[0.28, 0.602, 0.22], [0.52, 0.602, 0.22], [0.52, 0.602, 0.26], [0.28, 0.602, 0.26]], GO.ebony); if (asking) T.poly([[0.32, 0.603, 0.14], [0.48, 0.603, 0.14], [0.48, 0.603, 0.24], [0.32, 0.603, 0.24]], '#F6EFE0');
+          const [bx, by] = T.P(0.4, 0.42, 1.0); if (glow) circle(bx, by - 2, 12, `rgba(201,162,74,${glow.toFixed(2)})`); circle(bx, by - 2, 6, power ? '#E8DCC8' : '#8E8A84'); circle(bx - 2, by - 4, 2, 'rgba(255,255,255,.7)'); ell(bx, by + 4, 7, 2.5, GO.brass);
+          const [hx, hy] = T.P(0.4, 0.3, 1.42); ell(hx, hy + 10, 11, 9, GO.oxblood); ell(hx, hy, 6, 7, '#C68E62'); ell(hx, hy - 7, 8, 5, '#2E4C9A'); circle(hx, hy - 10, 2, GO.brass); limb(hx - 4, hy + 2, hx + 4, hy + 2, '#2A2224', 1.4); circle(hx - 2.5, hy - 1, 0.8, '#2A2224'); circle(hx + 2.5, hy - 1, 0.8, '#2A2224');
+          const sway = asking ? Math.sin(t * 4) * 3 : 0; ell(bx - 9 + sway, by - 6, 3, 2, '#C68E62'); ell(bx + 9 - sway, by - 6, 3, 2, '#C68E62');
+          const [mx, my] = T.P(0.4, 0.601, 1.8); sunburst(mx, my + 2, 10, 7, GO.brassLight, 1); for (let k = 0; k < 5; k++) { const [sx, sy] = T.P(0.1 + k * 0.15, 0.601, 1.75); star5(sx, sy, 2, power && (Math.floor(t * 4) + k) % 2 ? '#FFF1C9' : GO.ebony); }
+        }, { onTop: true })]; } },
+    gumball: {
+      // A gumball machine: a red base with a chrome dial, a glass globe full of gumballs and a chrome cap; a gumball rattles down the chute when used.
+      parts: (o) => { const c = cl(o); return [B(0.1, 0.1, 0, 0.3, 0.3, 0.5, c), F(0.1, 0.1, 0.4, 0.4, (T, ob, t) => { const using = usingSlot(ob.id + ':g') || live(ob.id);
+          T.line([0.1, 0.401, 0.48], [0.4, 0.401, 0.48], '#B9BEC3', 1.4); const [dx, dy] = T.P(0.25, 0.402, 0.3); circle(dx, dy, 3.5, '#B9BEC3'); limb(dx - 2.5, dy, dx + 2.5, dy, '#6B7078', 1.4); T.poly([[0.18, 0.402, 0.1], [0.32, 0.402, 0.1], [0.32, 0.402, 0.2], [0.18, 0.402, 0.2]], '#2B2B30'); if (using) { const [gx, gy] = T.P(0.25, 0.403, 0.15 - ((t * 2) % 1) * 0.08); circle(gx, gy, 2, [CA.cherry, CA.mint, CA.lilac, CA.butter][Math.floor(t) % 4]); }
+          const [px, py] = T.P(0.25, 0.25, 0.78); circle(px, py, 15, 'rgba(225,240,250,.45)', 'rgba(255,255,255,.7)'); for (let k = 0; k < 22; k++) { const a = k * 2.4, r = 3 + (k * 0.618 % 1) * 9, jig = using ? Math.sin(t * 20 + k) * 0.8 : 0; circle(px + Math.cos(a) * r, py + Math.sin(a) * r * 0.9 + 2 + jig, 2.2, [CA.cherry, CA.mint, CA.lilac, CA.butter, CA.sky, CA.pinkDeep][k % 6]); } circle(px - 5, py - 6, 3, 'rgba(255,255,255,.5)');
+          const [tx, ty] = T.P(0.25, 0.25, 1.12); ell(tx, ty, 6, 3, '#B9BEC3'); ell(tx, ty - 3, 3, 2.5, c);
+        }, { onTop: true })]; } },
+    tikibar: {
+      // A tiki bar: a bamboo counter under a thatched roof on bamboo posts, bottles on the back shelf, a blender, and a torch at each end that
+      // flickers with the power on. Someone stands at the front to mix a drink.
+      parts: (o) => { const c = cl(o); return [B(0, 0, 0, 2.0, 0.8, 0.9, c), B(-0.1, -0.05, 1.7, 2.2, 0.9, 0.2, TR.rattan),
+        F(0, 0, 2.0, 0.8, (T, ob, t) => { const mixing = usingSlot(ob.id + ':t') || live(ob.id);
+          for (let x = 0.04; x < 2.0; x += 0.08) bambooPole(T, [x, 0.801, 0.03], [x, 0.801, 0.86], 2.4, shade(c, (Math.round(x * 25) % 3) * 0.04 - 0.04)); T.line([0, 0.802, 0.3], [2.0, 0.802, 0.3], TR.teak, 1.6); T.line([0, 0.802, 0.62], [2.0, 0.802, 0.62], TR.teak, 1.6);
+          T.box(-0.05, -0.04, 0.9, 2.1, 0.88, 0.06, TR.teak); bambooPole(T, [0.08, 0.08, 0.96], [0.08, 0.08, 1.7], 4); bambooPole(T, [1.92, 0.08, 0.96], [1.92, 0.08, 1.7], 4);
+          fringe(T, [-0.1, 0.851, 1.7], [2.1, 0.851, 1.7], 44, 0.14, TR.bambooDark); fringe(T, [2.101, -0.05, 1.7], [2.101, 0.85, 1.7], 18, 0.14, TR.bambooDark); for (let k = 0; k < 6; k++) T.line([-0.1, -0.05 + k * 0.17, 1.901], [2.1, -0.05 + k * 0.17, 1.901], 'rgba(90,60,30,.25)', 1);
+          [[0.3, TR.pink], [0.5, TR.leafLight], [0.7, CA.butter], [0.9, TR.coral], [1.1, TR.cream]].forEach(([x, col]) => { T.box(x, 0.06, 0.96, 0.1, 0.1, 0.26, col); T.box(x + 0.03, 0.09, 1.22, 0.04, 0.04, 0.08, '#2B2B30'); });
+          T.box(1.45, 0.35, 0.96, 0.22, 0.22, 0.12, '#2B2B30'); T.box(1.47, 0.37, 1.08, 0.18, 0.18, 0.3, 'rgba(225,240,250,.5)'); if (mixing) { const [jx, jy] = T.P(1.56, 0.46, 1.22); for (let k = 0; k < 6; k++) circle(jx + Math.cos(t * 30 + k) * 3, jy + Math.sin(t * 30 + k) * 2, 1.4, k % 2 ? TR.pink : CA.butter); }
+          const [px, py] = T.P(1.0, 0.4, 0.96); ell(px, py - 7, 5, 7, '#E3B23C'); [[-3, -0.4], [0, 0], [3, 0.4]].forEach(([dx, rot]) => ell(px + dx, py - 18, 1.6, 5, TR.leaf, null, rot));
+          [[-0.08, 0.9], [2.08, 0.9]].forEach(([x, y], k) => { bambooPole(T, [x, y, 0.0], [x, y, 1.4], 3); const [fx, fy] = T.P(x, y, 1.42); if (power) { const fl = Math.sin(t * 9 + k * 2) * 1.2; ell(fx, fy - 5, 3 + fl * 0.3, 7 + fl, 'rgba(255,170,60,.95)'); ell(fx, fy - 4, 1.5, 3.5, 'rgba(255,246,210,.95)'); ell(fx, fy - 4, 12, 12, 'rgba(255,190,90,.14)'); } else ell(fx, fy - 2, 2, 2.5, '#2B2B30'); });
+        }, { onTop: true })]; } },
     clawmachine: {
       // A claw machine: a cabinet in the piece's colour, a glass case full of plushies, a marquee on top with chasing bulbs,
       // and a claw that swings out and drops while someone plays (or the player pokes it).
@@ -3127,7 +3387,8 @@ export function createHouseArt(ctx0, opts = {}) {
     if (Array.isArray(s.owned)) { owned = new Set(s.owned); }
     if (Array.isArray(s.LOOKS)) s.LOOKS.forEach((lk, i) => { if (LOOKS[i] && lk) Object.assign(LOOKS[i], lk); });
     if (Array.isArray(s.ROOMLOOK)) ROOMLOOK.forEach((r, i) => { Object.keys(r).forEach(k => delete r[k]); Object.assign(r, s.ROOMLOOK[i] || {}); });
-    WALLOBJS.length = 0; (s.WALLOBJS || []).forEach(w => { if (w && WTYPES[w.type]) WALLOBJS.push(w); });
+    WALLOBJS.length = 0; (s.WALLOBJS || []).forEach(w => { if (w && WTYPES[w.type]) { if (!w.id) w.id = wallId(); WALLOBJS.push(w); } });
+    WALLSTORE.length = 0; (s.WALLSTORE || []).forEach(w => { if (w && WTYPES[w.type]) { if (!w.id) w.id = wallId(); WALLSTORE.push(w); } });
     if (s.yard && Array.isArray(s.yard.t)) { s.yard.t.forEach((a, k) => { const t = YARD.tiles[k]; if (t && Array.isArray(a)) [t.len, t.water, t.weed, t.burn, t.mowedAt] = a; }); YARD.rainAt = s.yard.rainAt || 0; YARD.rainUntil = s.yard.rainUntil || 0; YARD.rainCheck = s.yard.rainCheck ?? -1; }
     if (typeof s.dishes === 'number') dishes = s.dishes;
     if (typeof s.power === 'boolean') power = s.power;
@@ -4093,6 +4354,7 @@ export function createHouseArt(ctx0, opts = {}) {
     LOOKS: getLooks(),
     ROOMLOOK: ROOMLOOK.map(r => JSON.parse(JSON.stringify(r))),
     WALLOBJS: WALLOBJS.map(w => Object.assign({}, w)),
+    WALLSTORE: WALLSTORE.map(w => Object.assign({}, w)),
     yard: { t: YARD.tiles.map(t => [t.len, t.water, t.weed, t.burn, t.mowedAt]), rainAt: YARD.rainAt, rainUntil: YARD.rainUntil, rainCheck: YARD.rainCheck },
   });
   const lookInfo = (kind, key) => (kind === 'paper' ? PAPERS[key] : kind === 'floor' ? FLOORS[key] : null) || null;
@@ -4170,6 +4432,12 @@ export function createHouseArt(ctx0, opts = {}) {
       const hull = objHull(o), hot = o.id === a.hover;
       ctx.beginPath(); hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
       ctx.strokeStyle = hot ? 'rgba(214,74,122,.95)' : 'rgba(214,74,122,.35)'; ctx.lineWidth = hot ? 2 : 1; ctx.setLineDash(hot ? [] : [4, 4]); ctx.stroke();
+    });
+    WALLOBJS.forEach((w) => {
+      if (w.level !== level || !WTYPES[w.type] || !BACK[VR].includes(w.p)) return;
+      const q = wallQuad(w), mine = w.id === a.wall;
+      ctx.beginPath(); q.forEach((pt, i) => (i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]))); ctx.closePath();
+      ctx.strokeStyle = mine ? (a.wallValid === false ? 'rgba(220,70,60,.95)' : 'rgba(143,217,168,.95)') : 'rgba(214,74,122,.35)'; ctx.lineWidth = mine ? 2 : 1; ctx.setLineDash(mine ? [] : [4, 4]); ctx.stroke();
     });
     ctx.setLineDash([]);
     if (lampUi) LAMPS.forEach((L) => {
@@ -4257,6 +4525,12 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'records': return run(14, 'The needle drops. A record starts spinning.');
       case 'arcade': return run(6, 'The arcade lights up: INSERT COIN.');
       case 'clawmachine': return run(6, 'The claw swings out, drops, and comes up with a plush. Lucky.');
+      case 'pinball': return run(8, 'The ball rockets off the plunger. Bumpers everywhere.');
+      case 'cloudswing': return run(6, 'The swing rocks and the cloud bobs along.');
+      case 'vrpod': return run(8, 'The pod lights up and a world loads.');
+      case 'fortuneteller': return run(8, 'The crystal ball glows. A card drops: something good is coming.');
+      case 'gumball': return run(4, 'A gumball rattles down the chute.');
+      case 'tikibar': return run(8, 'The blender whirs and the torches flare.');
       case 'tread': return run(8, 'The treadmill belt whirs to life.');
       case 'shower': return run(8, 'The shower hisses on, then off.');
       case 'bathtub': return run(10, 'The tub fills with steaming water.');
@@ -4270,5 +4544,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, registerPictures, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }

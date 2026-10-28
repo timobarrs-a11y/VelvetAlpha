@@ -4,7 +4,9 @@ import { createGarmentPreview } from './garmentPreview';
  * Drawer UI — the sidebar/bottom-sheet with pages: Shop, Goals, Do, Partner, You, Home, Log.
  * Pure DOM manipulation, called from main.ts.
  */
-import { CATALOG, TABS, itemsForTab, visibleItems, lockOf, setQuote, isLockedPromo, type CatalogEntry } from '../state/catalog';
+import { CATALOG, TABS, itemsForTab, promoLocked, lockOf, setQuote, type CatalogEntry } from '../state/catalog';
+import { groupSets, groupsWithTag, PROMO_FILTER } from '../state/setGroups';
+import { STYLE_TAGS } from '../state/taste';
 import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals';
 import { careerTitle } from '../state/career';
 import { paperCss, floorCss, type LookInfo } from './swatch';
@@ -29,6 +31,7 @@ export interface DrawerCallbacks {
   onArrangeFloor?: (level: number) => void;
   onArrangeStore?: () => void;
   onArrangeUnstore?: (id: string) => void;
+  onArrangeTakeDown?: () => void;
   // Shop: which floor Paint, Wallpaper and Floors are going on.
   onPickFloor?: (level: number) => void;
   onBuy: (item: CatalogEntry, color?: string) => void;
@@ -83,6 +86,8 @@ export interface ArrangeState {
   // Put away: not in the house until placed.
   stored: Array<{ id: string; name: string; color?: string }>;
   selected: null | {
+    /** A wall piece: it slides along its wall, and Take it down puts it in storage; nothing else applies. */
+    wall?: boolean;
     /** Let go of but not set down yet; `fits` and `reason` say whether it can stay where it is. */
     loose: boolean;
     fits: boolean;
@@ -167,6 +172,8 @@ function readableOn(hex: string): string {
   return lum > 0.62 ? '#241B25' : '#FFFFFF';
 }
 
+const PROMO_LOCK_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+
 export const DOCK_TABS: Record<string, { color: string; label?: string; icon: string }> = {
   people: { color: '#4FC3C9', icon: svg('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-5.6 6-5.6s6 2.2 6 5.6"/><circle cx="17.2" cy="9" r="2.3"/><path d="M16.5 14.6c2.7-.3 4.6 1.3 4.8 4.2"/>') },
   shop: { color: '#F5A83B', icon: svg('<path d="M5 8.5h14l-1.2 11.5H6.2z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>') },
@@ -249,6 +256,8 @@ export function createDrawer(cb: DrawerCallbacks): {
   // The shop tab stays where the player left it across refreshes (a purchase
   // redraws the drawer, and shouldn't bounce them back to the first tab).
   let currentTab = '';
+  // The feel picked in the Sets tab's filter row; null shows every set.
+  let setsTag: string | null = null;
 
   function openPage(pg: DrawerPage): void {
     const changed = pg !== currentPage;
@@ -306,8 +315,8 @@ export function createDrawer(cb: DrawerCallbacks): {
           <div class="vh-arr-top">
           <div class="vh-arr-what"><strong>${esc(sel.name)}</strong><small>${esc(sel.where)}</small></div>
           <div class="vh-arr-acts">
-            <button data-arr="set" class="vh-arr-primary" title="Set it down (Enter)">${ARR_ICON.set}<span>Set it down</span></button>
-            <button data-arr="rotate" title="Turn it (R)">${ARR_ICON.rotate}<span>Rotate</span></button>
+            ${sel.wall ? `<button data-arr="takedown" title="Take it down: it goes to storage">${ARR_ICON.store}<span>Take it down</span></button>` : `<button data-arr="set" class="vh-arr-primary" title="Set it down (Enter)">${ARR_ICON.set}<span>Set it down</span></button>
+            <button data-arr="rotate" title="Turn it (R)">${ARR_ICON.rotate}<span>Rotate</span></button>`}
             ${sel.loose ? `<button data-arr="back" title="Put it back where it was (Esc)">${ARR_ICON.back}<span>Put it back</span></button>` : ''}
             ${sel.canColour ? `<button data-arr="colour" title="Change colour (C)">${ARR_ICON.colour}<span>Colour</span></button>` : ''}
             ${sel.canStore ? `<button data-arr="store" title="Put it in storage">${ARR_ICON.store}<span>Store</span></button>` : ''}
@@ -315,7 +324,7 @@ export function createDrawer(cb: DrawerCallbacks): {
           </div>
           ${sel.looks.length > 1 ? `<div class="vh-arr-looks"><span>${ARR_ICON.look}Look</span>${sel.looks.map(l => `<button data-arr-look="${esc(l.id)}" aria-pressed="${l.active}">${esc(l.name)}</button>`).join('')}</div>` : ''}
           ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
-          ${sel.loose && !sel.fits ? `<p class="vh-arr-why">${esc(sel.reason ?? "It doesn't fit there.")} Move it, or put it back.</p>` : sel.loose ? '<p class="vh-arr-why vh-arr-ok">Drag it, turn it, then tap Set it down.</p>' : ''}
+          ${sel.wall ? '<p class="vh-arr-why vh-arr-ok">Drag it along the wall, up or down.</p>' : sel.loose && !sel.fits ? `<p class="vh-arr-why">${esc(sel.reason ?? "It doesn't fit there.")} Move it, or put it back.</p>` : sel.loose ? '<p class="vh-arr-why vh-arr-ok">Drag it, turn it, then tap Set it down.</p>' : ''}
         </div>`
       : `<p class="vh-arr-hint">${ARR_ICON.hand}<span>Tap a piece below, or tap one in the house, then drag it where you want it.</span></p>`;
     const order = [a.level, ...a.order.filter(l => l !== a.level)];
@@ -351,6 +360,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     arrangeSelected = sel?.id ?? null;
     sec.querySelectorAll<HTMLElement>('[data-arr-pick]').forEach(b => b.addEventListener('click', () => cb.onArrangePick?.(b.dataset.arrPick!)));
     sec.querySelector('[data-arr="store"]')?.addEventListener('click', () => cb.onArrangeStore?.());
+    sec.querySelector('[data-arr="takedown"]')?.addEventListener('click', () => cb.onArrangeTakeDown?.());
     sec.querySelectorAll<HTMLElement>('[data-arr-unstore]').forEach(b => b.addEventListener('click', () => cb.onArrangeUnstore?.(b.dataset.arrUnstore!)));
     sec.querySelector('[data-arr="rotate"]')?.addEventListener('click', () => cb.onArrangeRotate?.());
     sec.querySelector('[data-arr="set"]')?.addEventListener('click', () => cb.onArrangeSet?.());
@@ -394,11 +404,24 @@ export function createDrawer(cb: DrawerCallbacks): {
       return;
     }
 
-    const items = visibleItems(itemsForTab(tab), state.owned);
-    const cards = items.map(item => {
+    const items = itemsForTab(tab);
+    const card = (item: CatalogEntry): string => {
+      // A promo item they don't have: its name and a lock, nothing to see or buy until a code gives it to them.
+      if (promoLocked(item, state.owned)) {
+        return `<div class="vh-shop-card vh-promo-locked" data-item="${item.id}">
+        <div class="vh-shop-icon vh-promo-icon" aria-hidden="true">${PROMO_LOCK_SVG}</div>
+        <div class="vh-shop-info">
+          <strong>${item.name}</strong>
+          <span class="vh-promo-tag">Promo</span>
+          <span class="vh-shop-desc">Free with a promo code. It isn't sold in the shop.</span>
+        </div>
+        <div class="vh-shop-actions">
+          <button data-buy="${item.id}" disabled>Code only</button>
+        </div>
+      </div>`;
+      }
       const lock = lockOf(item.id, state.day, state.bond);
       const quote = item.set ? setQuote(item, state.owned) : null;
-      const promoLocked = isLockedPromo(item, state.owned);
       const owned = quote ? quote.missing.length === 0 : state.owned.has(item.id) && !item.repeat;
       const locked = lock?.locked;
       const price = quote ? quote.cost : item.price;
@@ -408,18 +431,11 @@ export function createDrawer(cb: DrawerCallbacks): {
         ? `<div class="vh-swatches">${item.cols.map(c => `<span class="vh-swatch" style="background:${c}" data-color="${c}"></span>`).join('')}</div>`
         : '';
       const lockHint = locked ? `<span class="vh-lock">${lock!.hint}</span>` : '';
-      if (promoLocked) {
-        // The name and what it is are on show; the picture is not, and there is nothing to buy.
-        return `<div class="vh-shop-card vh-promo-locked" data-item="${item.id}">
-          <div class="vh-shop-icon vh-promo-lock" data-icon="${item.id}" aria-label="Locked picture"></div>
-          <div class="vh-shop-info"><strong>${item.name}</strong>${item.desc ? `<span class="vh-shop-desc">${item.desc}</span>` : ''}<span class="vh-promo-tag">Promo pack · unlock it with a code</span></div>
-          <div class="vh-shop-actions"><button data-buy="${item.id}" disabled>Code only</button></div>
-        </div>`;
-      }
       return `<div class="vh-shop-card ${cls}" data-item="${item.id}">
         <div class="vh-shop-icon" data-icon="${item.id}" style="${iconStyle(item, state)}"></div>
         <div class="vh-shop-info">
           <strong>${item.name}</strong>
+          ${item.promo ? '<span class="vh-promo-tag">Promo</span>' : ''}
           ${item.desc ? `<span class="vh-shop-desc">${item.desc}</span>` : ''}
           ${quote ? `<span class="vh-shop-desc vh-set-save">${quote.missing.length ? `${quote.missing.length} of ${quote.members.length} pieces to go. Save $${quote.full - quote.cost} against buying them apart.` : 'You have all of it. Tap Apply to put it all on; Arrange can switch single pieces.'}</span>` : ''}
           ${cols}
@@ -430,7 +446,14 @@ export function createDrawer(cb: DrawerCallbacks): {
           <button data-buy="${item.id}" ${locked || (owned && !quote ? 'disabled' : '')}>${quote ? (owned ? 'Apply' : 'Buy') : owned ? 'Owned' : 'Buy'}</button>
         </div>
       </div>`;
-    }).join('');
+    };
+    // Sets: one group per theme (the set, then its finishing touches), with a row of feels to filter by.
+    let cards: string;
+    if (tab === 'Sets') {
+      const groups = groupsWithTag(groupSets(items), setsTag);
+      const chips = `<div class="vh-set-filter"><button data-settag="" class="${setsTag ? '' : 'vh-active'}">All</button><button data-settag="${PROMO_FILTER}" class="vh-set-promo ${setsTag === PROMO_FILTER ? 'vh-active' : ''}">Promo</button>${STYLE_TAGS.map(t => `<button data-settag="${t}" class="${setsTag === t ? 'vh-active' : ''}">${t}</button>`).join('')}</div>`;
+      cards = chips + (groups.map(gp => `<div class="vh-set-group" data-theme="${esc(gp.theme)}"><h4 class="vh-set-theme">${esc(gp.name)}<small>${esc(gp.tags.join(' · '))}</small></h4>${[gp.set, ...gp.extras].map(card).join('')}</div>`).join('') || (setsTag === PROMO_FILTER ? '<p class="vh-empty">No promo packs right now.</p>' : '<p class="vh-empty">No sets with that feel yet.</p>'));
+    } else cards = items.map(card).join('');
 
     const styling = tab === 'Paint' || tab === 'Wallpaper' || tab === 'Floors';
     const floorPick = styling && state.levelNames
@@ -443,6 +466,9 @@ export function createDrawer(cb: DrawerCallbacks): {
 
     sec.querySelectorAll('[data-tab]').forEach(b => {
       b.addEventListener('click', () => { currentTab = (b as HTMLElement).dataset.tab!; render(state); });
+    });
+    sec.querySelectorAll<HTMLElement>('[data-settag]').forEach(b => {
+      b.addEventListener('click', () => { setsTag = b.dataset.settag || null; render(state); });
     });
     sec.querySelectorAll('[data-buy]').forEach(b => {
       b.addEventListener('click', (e) => {

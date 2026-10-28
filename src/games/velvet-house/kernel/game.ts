@@ -70,7 +70,7 @@ export interface GameState {
   hostReady: { profile: boolean; plot: boolean };
 }
 
-export interface ArrangeFrame { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null }
+export interface ArrangeFrame { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null; wall: string | null; wallValid: boolean }
 export interface Video { id: string; title: string; channelTitle: string; thumbnail: string }
 
 /**
@@ -177,6 +177,11 @@ export interface Game {
   arrangeFrame(): ArrangeFrame | null;
   arrangeState(): ArrangeState;
   movableAt(sx: number, sy: number): ObjectInstance | null;
+  /** Arrange: wall pieces. The one under a view point; pick one; take the picked one down; hang a stored one again. */
+  wallAt(sx: number, sy: number): string | null;
+  selectWall(id: string | null): void;
+  takeDownWall(): void;
+  rehangWall(id: string): void;
   worldAt(sx: number, sy: number): [number, number];
   peopleOnFloor(): Agent[];
   nameOf(o: ObjectInstance): string;

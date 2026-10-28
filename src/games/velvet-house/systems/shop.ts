@@ -5,7 +5,7 @@ import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, ATTIC } from '../state/house';
 import { isPaintable } from '../state/scenes';
 import { buildWorld } from '../state/agents';
-import { type CatalogEntry, setQuote } from '../state/catalog';
+import { type CatalogEntry, promoLocked, setQuote } from '../state/catalog';
 import { tasteOf } from '../state/taste';
 import { skinTarget, skinColour, wearSkin } from '../state/skins';
 import { displayName, TYPES } from '../state/objects';
@@ -60,7 +60,8 @@ export function createShop(g: Game): Partial<Game> {
   }
 
   function handleBuy(item: CatalogEntry, color?: string, fromSet = false): void {
-    if (item.promo && !owned.has(item.id)) { log(`${item.name} is a promo pack: it comes with a code, and cannot be bought.`); return; }
+    // Promo items come with a promo code and are never sold (a code gives them through fromSet, free).
+    if (!fromSet && promoLocked(item, owned)) { log(`${item.name} comes free with a promo code. It isn't sold in the shop.`); return; }
     if (item.set) { buySet(item); return; }
     if (item.wallLamp) {
       if (!g.spendOn(`Shop: ${item.name}`, item.price)) { log('Not enough money.'); return; }
@@ -71,7 +72,7 @@ export function createShop(g: Game): Partial<Game> {
     }
     const price = item.price;
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }
-    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor' || item.icon === 'drapes') && !isPaintable(view.level)) {
+    if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor' || item.icon === 'drapes' || item.icon === 'wobj') && !isPaintable(view.level)) {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): walls and floors go inside.');
       return;
     }
@@ -120,6 +121,11 @@ export function createShop(g: Game): Partial<Game> {
       roomReveal();
       flags.styled = true;
       if (!fromSet) log(`Hung the ${item.name.toLowerCase()} in the ${LEVEL_NAMES[view.level].toLowerCase()}.`);
+    }
+    // Wall decor: hung on a back wall of the floor you are looking at.
+    if (item.icon === 'wobj') {
+      const hung = art.hangWallObj(view.level, item.id.replace(/^wobj-/, ''), color || item.cols?.[0]);
+      log(hung ? `${item.name} is on the wall in the ${LEVEL_NAMES[view.level].toLowerCase()}.` : `The ${item.name.toLowerCase()} has nowhere to hang.`);
     }
     // Furniture: add to world
     if (target && item.skin) {

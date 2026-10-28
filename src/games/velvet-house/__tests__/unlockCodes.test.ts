@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { unlockFor, UNLOCK_CODES } from '../state/unlockCodes';
 import { createUnlocks } from '../systems/unlocks';
-import { CATALOG, catalogById, visibleItems, itemsForTab, setQuote, isLockedPromo } from '../state/catalog';
+import { CATALOG, catalogById, promoLocked, itemsForTab, setQuote, TABS } from '../state/catalog';
 import { readQueue, writeQueue, enqueue, QUEUE_MAX, type KeyValueStore } from '../state/codeQueue';
 import { createCodeQueue, CODE_QUEUE_KEY } from '../systems/codeQueue';
 import type { Game } from '../kernel/game';
@@ -9,50 +9,47 @@ import type { Game } from '../kernel/game';
 const memory = (): KeyValueStore & { data: Record<string, string> } => { const data: Record<string, string> = {}; return { data, getItem: (k) => data[k] ?? null, setItem: (k, v) => { data[k] = v; }, removeItem: (k) => { delete data[k]; } }; };
 
 describe('unlock codes', () => {
-  it('are exact phrases, in any case, and every one points at a secret set that exists', () => {
-    expect(unlockFor('rainbowhugs')?.setId).toBe('set-cuddle');
-    expect(unlockFor('  RainbowHugs ')?.setId).toBe('set-cuddle');
-    expect(unlockFor('Iluv2dance')?.setId).toBe('set-nana');
-    expect(unlockFor('  ILUV2DANCE ')?.setId).toBe('set-nana');
+  it('are exact phrases, in any case, and every one points at promo sets that exist', () => {
+    expect(unlockFor('rainbowhugs')?.setIds).toEqual(['set-cuddle', 'touches-cuddle']);
+    expect(unlockFor('  RainbowHugs ')?.packName).toBe('Cuddle Clouds');
+    expect(unlockFor('Iluv2dance')?.setIds).toEqual(['set-nana']);
+    expect(unlockFor('  ILUV2DANCE ')?.packName).toBe('Nana');
     expect(unlockFor('nana-promo')).toBeNull();
     for (const t of ['', 'hi', 'rainbow', 'rainbowhugs please', 'say rainbowhugs', 'cloud']) expect(unlockFor(t), t).toBeNull();
-    for (const c of Object.values(UNLOCK_CODES)) { const s = catalogById(c.setId); expect(s?.secret || s?.promo).toBe(true); expect(s?.set).toBeDefined(); }
-  });
-});
-
-describe('a secret pack', () => {
-  it('is not in the shop until the player has it, in any tab', () => {
-    const cloud = CATALOG.filter((c) => c.id.endsWith('-cuddle') || c.id === 'paper-clouds-sky' || c.id === 'floor-skycheck' || c.id === 'set-cuddle');
-    expect(cloud.length).toBe(9);
-    for (const c of cloud) expect(c.secret, c.id).toBe(true);
-    for (const tab of ['Today', 'Sets', 'Furniture', 'Wallpaper', 'Floors']) {
-      expect(visibleItems(itemsForTab(tab), new Set()).some((c) => cloud.includes(c)), tab).toBe(false);
-      expect(visibleItems(itemsForTab(tab), new Set(cloud.map((c) => c.id))).some((c) => cloud.includes(c)), tab).toBe(tab === 'Today' || cloud.some((c) => c.tab === tab));
-    }
-    // nothing else is secret, but the Nana pack's pieces
-    expect(CATALOG.filter((c) => c.secret && !cloud.includes(c) && !/-nana$|^paper-nana|^floor-nana|^lamp-cloud$|^nook-nana$/.test(c.id))).toEqual([]);
+    for (const c of Object.values(UNLOCK_CODES)) for (const id of c.setIds) { const s = catalogById(id); expect(s?.promo, id).toBe(true); expect(s?.set, id).toBeDefined(); }
   });
 });
 
 describe('a promo pack', () => {
-  const nana = () => catalogById('set-nana')!;
-  it('shows its name and description on the shelf before anyone has it, but is locked and its pieces stay hidden', () => {
-    expect(nana().promo).toBe(true);
-    expect(nana().secret).toBeFalsy();
-    const shown = visibleItems(itemsForTab('Sets'), new Set());
-    expect(shown).toContain(nana());
-    expect(nana().name).toBeTruthy();
-    expect(nana().desc).toMatch(/soft-girl|pastel/i);
-    expect(isLockedPromo(nana(), new Set())).toBe(true);
-    for (const id of nana().set!.items) expect(visibleItems(CATALOG.filter((c) => c.id === id), new Set()), id).toEqual([]);
+  // Both Cuddle Clouds packs and every piece in them.
+  const packs = ['set-cuddle', 'touches-cuddle'].map((id) => catalogById(id)!);
+  const cloud = [...packs, ...packs.flatMap((p) => p.set!.items.map((id) => catalogById(id)!))];
+
+  it('is promo, every piece of it', () => {
+    expect(cloud).toHaveLength(15);
+    for (const c of cloud) expect(c.promo, c.id).toBe(true);
   });
 
-  it('cannot be bought, only opened by its code, and is an ordinary set after that', () => {
-    expect(Object.values(UNLOCK_CODES).some((c) => c.setId === 'set-nana')).toBe(true);
-    expect(isLockedPromo(nana(), new Set(['set-nana']))).toBe(false);
-    const pieces = nana().set!.items;
-    expect(pieces).toHaveLength(10);
-    for (const id of pieces) expect(catalogById(id)!.secret, id).toBe(true);
+  it('every promo item comes with some code, whole packs and every piece in them', () => {
+    const given = new Set(Object.values(UNLOCK_CODES).flatMap((c) => [...c.setIds.flatMap((id) => [id, ...catalogById(id)!.set!.items]), ...(c.also ?? [])]));
+    for (const id of given) expect(catalogById(id)!.promo, id).toBe(true);
+    expect(CATALOG.filter((c) => c.promo && !given.has(c.id)).map((c) => c.id)).toEqual([]);
+  });
+
+  it('shows in the shop by name, locked, until the player has it', () => {
+    for (const tab of ['Today', 'Sets', 'Furniture', 'Wall', 'Decor', 'Hobbies', 'Wallpaper', 'Floors']) {
+      const here = itemsForTab(tab).filter((c) => cloud.includes(c));
+      expect(here.length > 0, tab).toBe(tab === 'Today' || cloud.some((c) => c.tab === tab));
+      for (const c of here) expect(promoLocked(c, new Set()), c.id).toBe(true);
+      for (const c of here) expect(promoLocked(c, new Set(cloud.map((x) => x.id))), c.id).toBe(false);
+    }
+    // An ordinary item is never locked this way.
+    expect(promoLocked(catalogById('set-arcade')!, new Set())).toBe(false);
+  });
+
+  it('has its own Promo tab, listing the packs (not every piece again)', () => {
+    expect(TABS).toContain('Promo');
+    expect(itemsForTab('Promo').map((c) => c.id)).toEqual(['set-cuddle', 'touches-cuddle', 'set-nana']);
   });
 });
 
@@ -73,12 +70,12 @@ describe('what a code does to the house', () => {
     } as unknown as Game;
     return { g, logs, applied, shown, own, stocked, unstored, tryUnlock: createUnlocks(g).tryUnlock! };
   };
-  const ids = () => catalogById('set-cuddle')!.set!.items;
+  const ids = () => [...catalogById('set-cuddle')!.set!.items, ...catalogById('touches-cuddle')!.set!.items];
 
   it('gives the whole set free, puts it on, and then pops up with a picture of it', () => {
     const { own, applied, shown, logs, tryUnlock } = game();
     expect(tryUnlock('rainbowhugs')).toBe(true);
-    for (const id of [...ids(), 'set-cuddle']) expect(own.has(id), id).toBe(true);
+    for (const id of [...ids(), 'set-cuddle', 'touches-cuddle']) expect(own.has(id), id).toBe(true);
     expect(applied).toEqual(ids().map((id) => id + ':free'));
     expect(shown).toEqual([]);
     vi.advanceTimersByTime(2000);
@@ -110,7 +107,7 @@ describe('what a code does to the house', () => {
   });
 
   it('the Nana code puts in its drapes and rug with the rest, and gives two cloud wall lamps to hang', () => {
-    const code = Object.keys(UNLOCK_CODES).find((k) => UNLOCK_CODES[k].setId === 'set-nana')!;
+    const code = Object.keys(UNLOCK_CODES).find((k) => UNLOCK_CODES[k].setIds.includes('set-nana'))!;
     const { g, own, applied, stocked, unstored, shown, tryUnlock } = game();
     expect(tryUnlock(code)).toBe(true);
     expect((g as unknown as { storage: Array<{ id: string; type: string }> }).storage).toEqual([{ id: 'cloudnook-gift', type: 'cloudnook', level: 1, x: 5, y: 5, rot: 0 }]);
@@ -124,7 +121,7 @@ describe('what a code does to the house', () => {
   });
 
   it('the second time it says so and changes nothing; ordinary talk is not a code', () => {
-    const { applied, shown, logs, tryUnlock } = game({ owned: ['set-cuddle'] });
+    const { applied, shown, logs, tryUnlock } = game({ owned: ['set-cuddle', 'touches-cuddle'] });
     expect(tryUnlock('rainbowhugs')).toBe(true);
     vi.advanceTimersByTime(3000);
     expect(applied).toEqual([]);
@@ -134,9 +131,52 @@ describe('what a code does to the house', () => {
   });
 
   it('shows in the Sets tab once owned, as an Apply, with nothing to pay', () => {
-    const quote = setQuote(catalogById('set-cuddle')!, new Set(ids()));
-    expect(quote.missing).toEqual([]);
-    expect(quote.cost).toBe(0);
+    for (const id of ['set-cuddle', 'touches-cuddle']) {
+      const quote = setQuote(catalogById(id)!, new Set(ids()));
+      expect(quote.missing).toEqual([]);
+      expect(quote.cost).toBe(0);
+    }
+  });
+});
+
+describe('a code is the account\'s, inside the app', () => {
+  afterEach(() => { vi.useRealTimers(); });
+  const inApp = (owned: string[] = []) => {
+    vi.useFakeTimers();
+    const logs: string[] = [], own = new Set<string>(owned), recorded: string[] = [], shown: string[] = [];
+    let send: (codes: string[]) => void = () => {};
+    const g = {
+      view: { level: 1 }, owned: own, flags: {}, s: { settleDone: true, scriptMode: null },
+      canvas: { toDataURL: () => 'data:image/jpeg;base64,AAAA' },
+      log: (m: string) => logs.push(m), refreshDrawer: () => {}, setLevel: () => {}, celebrate: (o: { title: string }) => shown.push(o.title),
+      handleBuy: (m: { id: string }) => { own.add(m.id); },
+    } as unknown as Game;
+    const { tryUnlock } = createUnlocks(g, { record: (c) => recorded.push(c), onAccountCodes: (cb) => { send = cb; } });
+    return { own, logs, recorded, shown, tryUnlock: tryUnlock!, fromAccount: (codes: string[]) => send(codes) };
+  };
+
+  it('typed here, it works at once and is recorded for the account', () => {
+    const { own, recorded, tryUnlock } = inApp();
+    expect(tryUnlock('RainbowHugs')).toBe(true);
+    expect(own.has('set-cuddle')).toBe(true);
+    expect(own.has('touches-cuddle')).toBe(true);
+    expect(recorded).toEqual(['rainbowhugs']);
+  });
+
+  it('redeemed in another house, this house has the packs too, waiting in Sets rather than put on', () => {
+    const { own, logs, shown, recorded, fromAccount } = inApp();
+    fromAccount(['rainbowhugs', 'not-a-code']);
+    for (const id of ['set-cuddle', 'touches-cuddle', ...catalogById('set-cuddle')!.set!.items, ...catalogById('touches-cuddle')!.set!.items]) expect(own.has(id), id).toBe(true);
+    expect(logs.join(' ')).toMatch(/Cuddle Clouds is on your account, so it is here too/);
+    vi.advanceTimersByTime(3000);
+    expect(shown).toEqual([]);
+    expect(recorded).toEqual([]);
+  });
+
+  it('says nothing when this house already has them', () => {
+    const { logs, fromAccount } = inApp(['set-cuddle', 'touches-cuddle']);
+    fromAccount(['rainbowhugs']);
+    expect(logs).toEqual([]);
   });
 });
 
