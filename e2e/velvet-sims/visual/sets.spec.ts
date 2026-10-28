@@ -5,6 +5,7 @@ import { inGame, openGame, setMoney, objects } from '../helpers';
 // Each set lists what it sells; the main floor then wears all of it, by day and by night.
 const SETS: Record<string, string[]> = {
   retro: ['look-fridge-retro', 'look-counter-retro', 'look-dining-retro', 'look-sofa-retro', 'look-lamp-retro', 'look-plant-retro', 'paper-starburst-mint', 'floor-linoleum'],
+  farmhouse: ['look-fridge-farmhouse', 'look-counter-farmhouse', 'look-dining-farmhouse', 'look-sofa-farmhouse', 'look-lamp-farmhouse', 'look-plant-farmhouse', 'paper-gingham-sage', 'floor-barnwood'],
 };
 
 for (const [set, ids] of Object.entries(SETS)) {

@@ -125,6 +125,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-scallop-peach', 'Peach scallop', 'scallop-peach', 100, ['soft', 'warm', 'playful']),
   wallpaper('paper-damask-plum', 'Plum damask', 'damask-plum', 120, ['luxe', 'bold', 'vintage']),
   wallpaper('paper-damask-cream', 'Cream damask', 'damask-cream', 120, ['luxe', 'soft', 'vintage']),
+  wallpaper('paper-gingham-sage', 'Sage gingham', 'gingham-sage', 90, ['cozy', 'natural', 'warm']),
   wallpaper('paper-starburst-mint', 'Atomic mint', 'starburst-mint', 100, ['vintage', 'playful', 'bold']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
@@ -137,6 +138,9 @@ export const CATALOG: CatalogEntry[] = [
   // Sets: a whole look at once, for less than the pieces apart
   bundle('set-retro', 'Retro kitchen and living room', 'The pastel icebox, diner counter, boomerang table set, davenport, atomic lamp and planter, with atomic mint walls and diner linoleum.',
     ['look-fridge-retro', 'look-counter-retro', 'look-dining-retro', 'look-sofa-retro', 'look-lamp-retro', 'look-plant-retro', 'paper-starburst-mint', 'floor-linoleum'], ['vintage', 'playful', 'bold']),
+
+  bundle('set-farmhouse', 'Farmhouse kitchen and living room', 'The cream enamel icebox, butcher-block counter, farm table set, slipcover sofa, tripod lamp and crate planter, with sage gingham walls and a barnwood floor.',
+    ['look-fridge-farmhouse', 'look-counter-farmhouse', 'look-dining-farmhouse', 'look-sofa-farmhouse', 'look-lamp-farmhouse', 'look-plant-farmhouse', 'paper-gingham-sage', 'floor-barnwood'], ['cozy', 'natural', 'warm']),
 
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
@@ -171,6 +175,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-hexsage', 'Sage hex', 'hexsage', 150, ['natural', 'cool', 'modern']),
   floor('floor-terracotta-tile', 'Terracotta tile', 'terracotta', 120, ['warm', 'natural', 'vintage']),
   floor('floor-slate', 'Slate stone', 'slate', 150, ['cool', 'industrial', 'modern']),
+  floor('floor-barnwood', 'Barnwood plank', 'barnwood', 140, ['cozy', 'natural', 'warm']),
   floor('floor-linoleum', 'Diner linoleum', 'linoleum', 160, ['vintage', 'playful', 'bold']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
@@ -219,6 +224,14 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-retro', 'sofa', 'retro', 'Davenport', 'Buttoned vinyl and a chrome trim. It squeaks a little when you sit.', 380, ['vintage', 'playful', 'bold'], ['#E5A33B', '#5FB3A6', '#E58F8F']),
   look('look-lamp-retro', 'lamp', 'retro', 'Atomic lamp', 'A chrome starburst with glowing bulbs on every arm.', 90, ['vintage', 'playful', 'bold'], ['#F08A6B', '#6FBFB0', '#F2C75C']),
   look('look-plant-retro', 'plant', 'retro', 'Atomic planter', 'Your plant on three wooden legs, in a glazed pot with a cream band.', 45, ['vintage', 'playful', 'bold'], ['#F08A6B', '#6FBFB0', '#F2C75C', '#E58F8F']),
+
+  // Farmhouse: shiplap, butcher block, cream enamel and wood.
+  look('look-fridge-farmhouse', 'fridge', 'farmhouse', 'Cream enamel icebox', 'Cream enamel, a butcher-block top and iron pulls. It hums like it means it.', 340, ['cozy', 'natural', 'warm'], ['#F1E8D2', '#B9CBB5', '#F2DFA0']),
+  look('look-counter-farmhouse', 'counter', 'farmhouse', 'Butcher-block counter', 'Shiplap cabinets, a thick butcher-block top and a deep apron-front sink.', 400, ['cozy', 'natural', 'warm'], ['#F1E8D2', '#B9CBB5', '#9DB3C6']),
+  look('look-dining-farmhouse', 'dining', 'farmhouse', 'Farm table set', 'A plank table with room for everyone, and spindle-back chairs.', 330, ['cozy', 'natural', 'warm'], ['#B98A6A', '#8A5E3B', '#E4DDD2']),
+  look('look-sofa-farmhouse', 'sofa', 'farmhouse', 'Slipcover sofa', 'A washable linen slipcover with a little skirt, and a gingham cushion.', 360, ['cozy', 'natural', 'warm'], ['#E8DCC8', '#D8C9AE', '#B7BFB2']),
+  look('look-lamp-farmhouse', 'lamp', 'farmhouse', 'Tripod lamp', 'Three wooden legs and a linen shade that glows like a porch light.', 80, ['cozy', 'natural', 'warm'], ['#B98A6A', '#8A5E3B', '#E4DDD2']),
+  look('look-plant-farmhouse', 'plant', 'farmhouse', 'Crate and pail planter', 'Your plant in a pail, in a crate, because why not.', 40, ['cozy', 'natural', 'warm'], ['#C9CED6', '#F1E8D2', '#9DB3C6', '#3A3340']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
