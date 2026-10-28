@@ -186,6 +186,7 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    marblecheck: { kind: 'check', a: '#F2EEE6', b: '#26262B', line: 'rgba(0,0,0,.08)' },
     teakdeck: { kind: 'plank', a: '#9C6B45', b: '#8E6040', line: 'rgba(40,25,10,.32)' },
     terrazzodark: { kind: 'speck', a: '#3B3C40', b: '#3B3C40', line: 'rgba(255,255,255,.04)', pal: ['#55575C', '#6E7076', '#4A4B50', '#8A8C90'] },
     arcadecarpet: { kind: 'speck', a: '#1E1740', b: '#1E1740', line: 'rgba(255,255,255,.03)', pal: ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF'] },
@@ -218,6 +219,7 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    'pinstripe-gold': { pat: 'pinstripe2', base: '#EFE6D2', ink: 'rgba(201,162,74,.6)' },
     limewash: { pat: 'limewash', base: '#E7E0D2', ink: 'rgba(160,145,120,.06)', ink2: 'rgba(255,255,255,.1)' },
     formwork: { pat: 'formwork', base: '#A9A7A2', ink: 'rgba(0,0,0,.14)', ink2: 'rgba(0,0,0,.3)' },
     'pixel-invaders': { pat: 'pixels', base: '#15121F', ink: 'rgba(25,230,240,.9)', pal: ['#19E6F0', '#FF2E9A', '#F4C430', '#39D353'] },
@@ -688,6 +690,73 @@ export function createHouseArt(ctx0, opts = {}) {
         T.box(1.0, 1.0, 0.06, 0.14, 0.14, 0.18, SP.stoneDark); [[1.05, 0.0], [1.09, 0.25], [1.12, 0.1]].forEach(([x, dz]) => { T.line([x, 1.07, 0.24], [x, 1.07, 1.5 + dz], '#7FA06A', 2.2); [0.7, 1.0, 1.3].forEach((z) => { const [lx, ly] = T.P(x, 1.07, z + dz); ell(lx - 4, ly - 1, 5, 1.6, '#8DB06E', null, -0.4); }); });
       }, { name: 'tray' }),
       F(0, 1.16, 1.18, 1.2, (T) => { const fog = usingSlot(T.o.id + ':s') || live(T.o.id); T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.08], [0, 1.18, 2.08]], fog ? 'rgba(235,240,240,.55)' : 'rgba(200,226,232,.2)', 'rgba(185,190,195,.8)', 1); T.line([0.2, 1.18, 1.9], [0.65, 1.18, 1.2], 'rgba(255,255,255,.55)', 2); })],
+  });
+
+  // Grand Hotel: walnut, veined marble, brass and velvet, with crisp white linen.
+  const HO = { walnut: '#4A3226', walnutLite: '#6B4A36', marble: '#EFEBE4', vein: 'rgba(120,110,100,.35)', brass: '#C9A24A', brassLite: '#E0C26E', black: '#1E1E22', cream: '#F4EEE2', white: '#FAF8F4' };
+  const veins = (T, pts) => pts.forEach(([a, b]) => T.line(a, b, HO.vein, 0.8));
+  const knob = (T, x, y, z) => { const [kx, ky] = T.P(x, y, z); circle(kx, ky, 1.6, HO.brass); };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A tall channel-tufted velvet headboard edged in brass, a walnut plinth, white hotel linen and a velvet runner at the foot.
+    hotel: (o) => { const c = cl(o); return [
+      B(0, 0, 0, 0.16, 1.6, 1.45, shade(c, -0.08)), B(0.16, 0.02, 0, 2.34, 1.56, 0.34, HO.walnut),
+      B(0.2, 0.06, 0.34, 0.75, 1.48, 0.2, HO.cream, { name: 'mattress' }),
+      B(0.24, 0.12, 0.54, 0.46, 0.6, 0.14, HO.white), B(0.24, 0.88, 0.54, 0.46, 0.6, 0.14, HO.white), B(0.62, 0.3, 0.54, 0.16, 1.0, 0.1, c),
+      B(0.95, 0.06, 0.34, 1.5, 1.48, 0.22, HO.white), B(0.95, 0.06, 0.56, 1.5, 1.48, 0.02, HO.white, { cover: true }),
+      F(0, 0, 0.17, 1.6, (T) => { for (let k = 1; k < 10; k++) T.line([0.161, 1.6 * k / 10, 0.2], [0.161, 1.6 * k / 10, 1.38], 'rgba(0,0,0,.25)', 1.2); T.line([0.165, 0, 1.45], [0.165, 1.6, 1.45], HO.brass, 2.2); }, { onTop: true }),
+      F(1.8, 0.04, 2.15, 1.56, (T) => { T.poly([[1.82, 0.04, 0.581], [2.12, 0.04, 0.581], [2.12, 1.56, 0.581], [1.82, 1.56, 0.581]], c); T.line([1.82, 0.04, 0.582], [1.82, 1.56, 0.582], HO.brass, 1); T.line([2.12, 0.04, 0.582], [2.12, 1.56, 0.582], HO.brass, 1); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A walnut bedside chest with a marble top and brass pulls, and a brass lamp with a pleated shade.
+    hotel: (T, o) => { const lit = isLit(o.id), c = cl(o);
+      [[0.04, 0.04], [0.37, 0.04], [0.04, 0.37], [0.37, 0.37]].forEach(([x, y]) => T.line([x, y, 0], [x, y, 0.1], HO.brass, 1.6));
+      T.box(0.02, 0.02, 0.1, 0.41, 0.41, 0.38, c); T.line([0.02, 0.431, 0.3], [0.43, 0.431, 0.3], 'rgba(0,0,0,.35)', 1); knob(T, 0.22, 0.432, 0.4); knob(T, 0.22, 0.432, 0.2);
+      T.box(0, 0, 0.48, 0.45, 0.45, 0.03, HO.marble); veins(T, [[[0.05, 0.1, 0.511], [0.3, 0.4, 0.511]]]);
+      T.box(0.12, 0.12, 0.51, 0.1, 0.1, 0.03, HO.brass); T.line([0.17, 0.17, 0.54], [0.17, 0.17, 0.74], HO.brass, 1.6);
+      const [sx, sy] = T.P(0.17, 0.17, 0.8); if (lit) ell(sx, sy + 6, 14, 8, 'rgba(255,226,168,.3)');
+      ctx.beginPath(); ctx.moveTo(sx - 6, sy - 5); ctx.lineTo(sx + 6, sy - 5); ctx.lineTo(sx + 9, sy + 5); ctx.lineTo(sx - 9, sy + 5); ctx.closePath(); ctx.fillStyle = lit ? '#FFF0D2' : HO.cream; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 0.8; ctx.stroke();
+      for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(sx + k * 2.4, sy - 5); ctx.lineTo(sx + k * 3.6, sy + 5); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A walnut lowboy on brass-capped legs: three rows of drawers with brass bails, a marble top and a vase of roses.
+    hotel: (T, o) => { const c = cl(o);
+      [[0.05, 0.05], [1.12, 0.05], [0.05, 0.42], [1.12, 0.42]].forEach(([x, y]) => { T.line([x, y, 0.03], [x, y, 0.14], HO.walnut, 3); T.line([x, y, 0], [x, y, 0.03], HO.brass, 3); });
+      T.box(0, 0, 0.14, 1.2, 0.5, 0.68, c); [0.37, 0.6].forEach((z) => T.line([0.02, 0.501, z], [1.18, 0.501, z], 'rgba(0,0,0,.35)', 1)); T.line([0.6, 0.501, 0.14], [0.6, 0.501, 0.37], 'rgba(0,0,0,.35)', 1);
+      [[0.3, 0.26], [0.9, 0.26], [0.3, 0.49], [0.9, 0.49], [0.3, 0.71], [0.9, 0.71]].forEach(([x, z]) => { const [px, py] = T.P(x, 0.502, z); ctx.strokeStyle = HO.brass; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(px, py - 1, 3, 0.1, Math.PI - 0.1); ctx.stroke(); });
+      T.box(-0.02, -0.02, 0.82, 1.24, 0.54, 0.04, HO.marble); veins(T, [[[0.1, 0.05, 0.861], [0.6, 0.45, 0.861]], [[0.7, 0.05, 0.861], [1.1, 0.3, 0.861]]]);
+      T.box(0.9, 0.18, 0.86, 0.12, 0.12, 0.2, HO.white); [['#B5243A', -4, -2], ['#C9384E', 0, -5], ['#9E1F33', 4, -1], ['#B5243A', 1, 1]].forEach(([col, dx, dy]) => { const [rx, ry] = T.P(0.96, 0.24, 1.12); circle(rx + dx, ry + dy, 2.6, col); });
+      T.box(0.15, 0.15, 0.86, 0.3, 0.2, 0.02, HO.brass); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A white pedestal toilet with a black seat and a brass lever, under a framed print on the wall.
+    hotel: (T, o) => {
+      T.box(0.04, 0, 0.36, 0.34, 0.16, 0.38, HO.white); T.box(0.02, -0.01, 0.74, 0.38, 0.18, 0.03, HO.white); T.line([0.06, 0.161, 0.68], [0.13, 0.161, 0.66], HO.brass, 1.8);
+      T.box(0.09, 0.16, 0, 0.24, 0.26, 0.32, HO.white); const [bx, by] = T.P(0.21, 0.42, 0.3); ell(bx, by, 7.5, 6, HO.white, 'rgba(0,0,0,.12)');
+      const [sx, sy] = T.P(0.21, 0.4, 0.385); ell(sx, sy, 7, 4, HO.black); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A walnut vanity with brass knobs under a veined marble top, a deep basin, a brass gooseneck tap and a monogrammed towel.
+    hotel: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0.08, 1.0, 0.5, 0.72, c); T.box(0.02, 0.02, 0, 0.96, 0.46, 0.08, HO.black);
+      T.line([0.5, 0.501, 0.1], [0.5, 0.501, 0.78], 'rgba(0,0,0,.35)', 1); [0.04, 0.54].forEach((x) => T.poly([[x + 0.03, 0.502, 0.16], [x + 0.39, 0.502, 0.16], [x + 0.39, 0.502, 0.72], [x + 0.03, 0.502, 0.72]], null, 'rgba(0,0,0,.25)', 1)); knob(T, 0.44, 0.503, 0.5); knob(T, 0.56, 0.503, 0.5);
+      T.box(-0.03, -0.01, 0.8, 1.06, 0.53, 0.05, HO.marble); veins(T, [[[0.0, 0.1, 0.851], [0.4, 0.45, 0.851]], [[0.6, 0.0, 0.851], [1.0, 0.35, 0.851]]]);
+      const [vx, vy] = T.P(0.5, 0.27, 0.851); ell(vx, vy, 10, 5, '#DCE6E8', 'rgba(0,0,0,.15)');
+      T.line([0.5, 0.04, 0.85], [0.5, 0.04, 1.05], HO.brass, 2.2); T.line([0.5, 0.04, 1.05], [0.5, 0.18, 1.0], HO.brass, 2.2);
+      T.box(0.82, 0.28, 0.85, 0.16, 0.2, 0.05, HO.white); T.line([0.82, 0.481, 0.875], [0.98, 0.481, 0.875], HO.brass, 1.2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // Marble walls, a black and white hex floor, a brass rain head and a brass-framed glass door, and a stack of white towels.
+    hotel: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, HO.white);
+        for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) if ((i * 7 + j * 3) % 5 === 0) { const [hx, hy] = T.P(0.08 + i * 0.13, 0.12 + j * 0.12, 0.061); ell(hx, hy, 2.6, 1.4, HO.black); }
+        T.box(0, 0, 0.06, 1.18, 0.08, 2.04, HO.marble); veins(T, [[[0.1, 0.081, 1.8], [0.5, 0.081, 0.9]], [[0.5, 0.081, 0.9], [0.4, 0.081, 0.3]], [[0.8, 0.081, 2.0], [1.1, 0.081, 1.2]]]);
+        T.line([0.6, 0.08, 2.08], [0.6, 0.45, 2.08], HO.brass, 2.4); const [hx, hy] = T.P(0.6, 0.5, 2.06); ell(hx, hy, 9, 4.5, HO.brass, shade(HO.brass, -0.3));
+        T.line([0.15, 0.081, 1.0], [0.45, 0.081, 1.0], HO.brass, 2);
+        if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [0, 1.18, 2.06]], 'rgba(200,226,232,.2)', HO.brass, 1.6); T.line([0.59, 1.18, 0.06], [0.59, 1.18, 2.06], HO.brass, 1.4); T.line([0.5, 1.18, 1.0], [0.5, 1.18, 1.3], HO.brass, 2.2); T.line([0.2, 1.18, 1.9], [0.45, 1.18, 1.4], 'rgba(255,255,255,.5)', 2); }),
+      F(1.16, 0, 1.2, 1.18, (T) => { T.poly([[1.18, 0, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.06], [1.18, 0, 2.06]], 'rgba(200,226,232,.18)', HO.brass, 1.6); })],
   });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
@@ -2159,6 +2228,17 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    servicebell: {
+      // A brass hotel desk bell on a walnut block; it jumps when rung. Small, so it sits on a table; on the floor it has a brass pedestal.
+      parts: (o) => [F(0, 0, 0.3, 0.3, (T, ob, t) => { const z0 = ob.on ? 0 : 0.85, ring = live(ob.id), hop = ring ? Math.abs(Math.sin(t * 22)) * 0.02 : 0;
+        if (!ob.on) { const [bx, by] = T.P(0.15, 0.15, 0); ell(bx, by, 9, 4.5, HO.black); T.line([0.15, 0.15, 0.02], [0.15, 0.15, z0 - 0.02], HO.brass, 3); T.box(0.03, 0.03, z0 - 0.03, 0.24, 0.24, 0.03, HO.brass); }
+        T.box(0.05, 0.05, z0, 0.2, 0.2, 0.04, HO.walnut);
+        const [dx, dy] = T.P(0.15, 0.15, z0 + 0.04 + hop); ctx.beginPath(); ctx.ellipse(dx, dy, 8, 4, 0, Math.PI, 0); ctx.lineTo(dx + 8, dy); ctx.closePath();
+        ctx.beginPath(); ctx.moveTo(dx - 8, dy); ctx.bezierCurveTo(dx - 8, dy - 11, dx + 8, dy - 11, dx + 8, dy); ctx.closePath(); ctx.fillStyle = HO.brass; ctx.fill(); ctx.strokeStyle = shade(HO.brass, -0.35); ctx.lineWidth = 0.8; ctx.stroke();
+        ell(dx - 2, dy - 5, 3, 1.6, HO.brassLite); circle(dx, dy - 9, 1.5, HO.brass);
+        if (ring) { ctx.strokeStyle = 'rgba(224,194,110,.8)'; ctx.lineWidth = 1.2; [10, 15].forEach((r) => { ctx.beginPath(); ctx.arc(dx, dy - 6, r + (t * 30) % 5, -2.4, -0.7); ctx.stroke(); }); }
+      })],
+    },
     diffuser: {
       // A stone cone on a teak base; it glows when on, and mist curls up from the top while it runs or someone breathes it in.
       // On a table it sits on the top; on the floor it stands on a slim teak stand of its own.
@@ -2320,6 +2400,8 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (pat === 'starburst') { for (let z = 0.55, r = 0; z < WH - 0.05; z += 0.55, r++) for (let u = 0.3 + (r % 2) * 0.3; u < len - 0.05; u += 0.6) { const [sx, sy] = iso(...P(u, z)); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, l = k % 2 ? 4 : 7; limb(sx - Math.cos(a) * 1.5, sy - Math.sin(a) * 1.5, sx + Math.cos(a) * l, sy + Math.sin(a) * l, ink, 1.1); } circle(sx, sy, 1.2, S.ink2 || ink); } }
     // Board-formed concrete: the seams of the formwork boards, and a grid of tie holes.
     // Limewash: soft clouds of darker and lighter wash, brushed across the wall.
+    // Hotel pinstripe: pairs of fine gold lines.
+    else if (pat === 'pinstripe2') { for (let u = 0.2; u < len; u += 0.45) { line3(P(u, 0.14), P(u, WH), ink, 0.9); if (u + 0.05 < len) line3(P(u + 0.05, 0.14), P(u + 0.05, WH), ink, 0.9); } }
     else if (pat === 'limewash') { for (let k = 0; k < len * 3; k++) { const u = (k * 0.618 * 3.7) % len, z = 0.2 + ((k * 0.414 * 2.9) % (WH - 0.6)), w = 0.5 + (k % 3) * 0.3; rect(u, Math.min(len, u + w), z, Math.min(WH, z + 0.35 + (k % 2) * 0.25), k % 3 ? ink : S.ink2); } }
     else if (pat === 'formwork') { for (let z = 0.34; z < WH; z += 0.26) line3(P(0, z), P(len, z), ink, 0.9); for (let z = 0.6; z < WH - 0.1; z += 0.78) for (let u = 0.3; u < len - 0.1; u += 0.6) { const [sx, sy] = iso(...P(u, z)); circle(sx, sy, 1.3, S.ink2); } }
     else if (pat === 'shiplap') { for (let z = 0.34; z < WH; z += 0.2) line3(P(0, z), P(len, z), ink, 1); }
@@ -3237,6 +3319,37 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     ctx.restore();
   }
+  // Room service: a breakfast cart that rolls along a path to the bed, waits there, and rolls back out.
+  let cart = null;
+  const CART_SPEED = 1.1, CART_WAIT = 25;
+  const pathLen = (pts) => pts.slice(1).reduce((s, p, k) => s + Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]), 0);
+  function along(pts, d) { for (let k = 1; k < pts.length; k++) { const [a, b] = [pts[k - 1], pts[k]], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d <= L || k === pts.length - 1) { const f = L ? Math.min(1, d / L) : 1; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, [b[0] - a[0], b[1] - a[1]]]; } d -= L; } return [pts[0][0], pts[0][1], [1, 0]]; }
+  function cartAt(t) {
+    if (!cart) return null;
+    const L = pathLen(cart.pts), go = L / CART_SPEED, e = t - cart.at;
+    if (e < 0) return null;
+    if (e > go * 2 + CART_WAIT) { cart = null; return null; }
+    const d = e < go ? e * CART_SPEED : e < go + CART_WAIT ? L : L - (e - go - CART_WAIT) * CART_SPEED;
+    const [x, y, dir] = along(cart.pts, d);
+    return { x, y, dir, parked: e >= go && e < go + CART_WAIT, lifted: e >= go + 2 };
+  }
+  // The cart: a white cloth over a trolley on brass casters, a silver cloche, coffee, juice and a rose.
+  function drawCart(c, t) {
+    const P3 = (dx, dy, z) => iso(c.x + dx, c.y + dy, z), [gx, gy] = P3(0, 0, 0);
+    ell(gx, gy, 18, 8, 'rgba(0,0,0,.18)');
+    [[-0.3, -0.18], [0.3, -0.18], [-0.3, 0.18], [0.3, 0.18]].forEach(([dx, dy]) => { const [wx, wy] = P3(dx, dy, 0.05); circle(wx, wy, 2, HO.brass); });
+    const top = [[-0.34, -0.22], [0.34, -0.22], [0.34, 0.22], [-0.34, 0.22]];
+    const poly2 = (pts, fill) => { ctx.beginPath(); pts.forEach(([px, py], k) => (k ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 0.8; ctx.stroke(); };
+    poly2([P3(-0.34, 0.22, 0.12), P3(0.34, 0.22, 0.12), P3(0.34, 0.22, 0.72), P3(-0.34, 0.22, 0.72)], '#F1EEE8');
+    poly2([P3(0.34, -0.22, 0.12), P3(0.34, 0.22, 0.12), P3(0.34, 0.22, 0.72), P3(0.34, -0.22, 0.72)], '#E4E0D8');
+    poly2(top.map(([dx, dy]) => P3(dx, dy, 0.72)), HO.white);
+    const [cx, cy] = P3(-0.08, 0, 0.72); ctx.beginPath(); ctx.moveTo(cx - 9, cy); ctx.bezierCurveTo(cx - 9, cy - (c.lifted ? 4 : 12), cx + 9, cy - (c.lifted ? 4 : 12), cx + 9, cy); ctx.closePath(); ctx.fillStyle = '#D5DAE0'; ctx.fill(); ctx.strokeStyle = '#9AA3A8'; ctx.stroke();
+    if (c.lifted) { ell(cx, cy - 1, 7, 3, '#F2C14E'); circle(cx - 2, cy - 2, 2, '#FFF6D8'); }
+    else circle(cx, cy - 12, 1.6, '#9AA3A8');
+    const [px, py] = P3(0.2, -0.1, 0.72); rr(px - 3, py - 9, 6, 9, 1.5, '#C9CED6'); const [jx, jy] = P3(0.22, 0.12, 0.72); rr(jx - 2, jy - 7, 4, 7, 1, '#F4A93B');
+    const [fx, fy] = P3(0.08, 0.16, 0.72); limb(fx, fy, fx, fy - 8, '#3F6B3A', 1); circle(fx, fy - 9, 2.2, '#B5243A');
+    if (c.parked) PFX.emit('cart:coffee', 'steam', c.level, c.x + 0.2, c.y - 0.1, 0.84, 0.4);
+  }
   // What the talking pieces are saying: their lines and when they started. One line at a time, each held for its length.
   const speech = new Map();
   const lineSecs = (s) => 1.6 + s.length * 0.055;
@@ -3835,6 +3948,7 @@ export function createHouseArt(ctx0, opts = {}) {
       const settled = c.z > 0.05 || c.pose === 'sleep', r = settled ? 0.05 : 0.12; if (c.walking && !settled && isOutdoor(lv)) { const ph = (t * 10 + c.seed); if (Math.sin(ph) > 0.96 || Math.sin(ph + Math.PI) > 0.96) { const [fx, fy] = c.face; PFX.emit(c.id + ':dust', 'dust', lv, c.x - fx * 0.18, c.y - fy * 0.18, 0.02, 0.6); } } items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + (settled ? 0.6 : 0.001), d: () => { if (gOn) G.billboard(iso(c.x, c.y, 0)[1], ZH, MATERIAL.body); if (pit) { const W = TYPES[pit.type].W, D = TYPES[pit.type].D, P = [iso(pit.x, pit.y, 0), iso(pit.x + W, pit.y, 0), iso(pit.x + W, pit.y + D, 0), iso(pit.x, pit.y + D, 0)], lo = P.slice().sort((a, b) => a[0] - b[0]), bot = P.reduce((m, q) => (q[1] > m[1] ? q : m)); ctx.save(); ctx.beginPath(); ctx.moveTo(lo[0][0], lo[0][1]); ctx.lineTo(bot[0], bot[1]); ctx.lineTo(lo[3][0], lo[3][1]); ctx.lineTo(lo[3][0], -2000); ctx.lineTo(lo[0][0], -2000); ctx.closePath(); ctx.clip(); }
         drawPerson(c, t); if (c.carrying) drawCarried(c); if (gOn) G.clearBase(); if (c.npc && c.name) drawNameTag(c); if (c.bubble) drawBubble(c, t);
         if (pit) ctx.restore(); } }); });
+    { const c = cartAt(t); if (c && cart.level === lv) { const r = 0.3; items.push({ x1: c.x - r, y1: c.y - r, x2: c.x + r, y2: c.y + r, key: vs(c.x, c.y) + 0.0004, d: () => drawCart(Object.assign(c, { level: cart.level }), t) }); } }
     (s.pets || []).forEach(p => {
       if (p.level !== lv || p.hidden) return;
       const r = p.z > 0.05 ? 0.04 : 0.14;
@@ -3988,6 +4102,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
       case 'overseer': return 'The eye turns toward you.';
+      case 'servicebell': return run(1.2, 'Ding!');
       case 'diffuser': return run(20, 'The diffuser hums and puffs out eucalyptus.');
       case 'tvunit': tvOn = !tvOn; return tvOn ? 'The TV flickers on.' : 'TV off.';
       case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
@@ -4008,5 +4123,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, roomService: (level, pts) => { cart = { level, pts, at: animT }; }, roomServiceBusy: () => cart != null, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

@@ -144,6 +144,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
   wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
+  wallpaper('paper-pinstripe-gold', 'Gold pinstripe', 'pinstripe-gold', 110, ['luxe', 'bold', 'vintage']),
   wallpaper('paper-limewash', 'Limewash', 'limewash', 100, ['soft', 'minimal', 'natural']),
   wallpaper('paper-formwork', 'Board-formed concrete', 'formwork', 110, ['industrial', 'minimal', 'bold']),
   wallpaper('paper-pixel-invaders', 'Pixel invaders', 'pixel-invaders', 110, ['playful', 'bold', 'vintage']),
@@ -222,6 +223,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-spa', 'Spa Retreat bedroom and bath', 'Oiled teak, honed limestone, sage linen and steam: the teak platform bed and floating nightstand, a slatted dresser, a rimless toilet, a vessel vanity, a rain shower on pebbles that fogs its glass, limewashed walls, a teak deck floor, and an aroma diffuser to breathe in.',
     ['look-bed-spa', 'look-nightstand-spa', 'look-dresser-spa', 'look-toilet-spa', 'look-vanity-spa', 'look-shower-spa', 'paper-limewash', 'floor-teakdeck', 'diffuser'], ['soft', 'minimal', 'natural']),
 
+  bundle('set-hotel', 'Grand Hotel bedroom and bath', 'Walnut, veined marble, brass and velvet: the tufted velvet bed, a marble-topped bedside chest and lowboy, a pedestal toilet, a walnut vanity, a marble shower with brass fittings, gold pinstripe walls, a marble check floor, and a service bell that brings breakfast to the bed.',
+    ['look-bed-hotel', 'look-nightstand-hotel', 'look-dresser-hotel', 'look-toilet-hotel', 'look-vanity-hotel', 'look-shower-hotel', 'paper-pinstripe-gold', 'floor-marblecheck', 'servicebell'], ['luxe', 'bold', 'vintage']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -274,6 +278,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
   floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
+  floor('floor-marblecheck', 'Marble check', 'marblecheck', 180, ['luxe', 'bold', 'vintage']),
   floor('floor-teakdeck', 'Teak deck', 'teakdeck', 160, ['soft', 'minimal', 'natural']),
   floor('floor-terrazzodark', 'Dark terrazzo', 'terrazzodark', 170, ['industrial', 'minimal', 'bold']),
   floor('floor-arcadecarpet', 'Arcade carpet', 'arcadecarpet', 170, ['playful', 'bold', 'vintage']),
@@ -478,6 +483,13 @@ export const CATALOG: CatalogEntry[] = [
   look('look-vanity-spa', 'vanity', 'spa', 'Teak vanity with a stone vessel', 'A floating slatted teak vanity, a limestone top with a stone vessel basin and a tall spout, rolled towels below.', 360, ['soft', 'minimal', 'natural'], ['#9C6B45', '#D8D0C2', '#9DB3A5']),
   look('look-shower-spa', 'shower', 'spa', 'Rain shower on pebbles', 'A rain head over a river-pebble floor, a limestone wall with a niche, a teak bench and bamboo; the glass fogs and the steam comes up thick.', 540, ['soft', 'minimal', 'natural'], ['#D8D0C2', '#9DB3A5', '#9C6B45']),
 
+  look('look-bed-hotel', 'bed', 'hotel', 'Tufted velvet hotel bed', 'A tall channel-tufted velvet headboard edged in brass on a walnut plinth, crisp white hotel linen, a bolster and a velvet runner across the foot.', 720, ['luxe', 'bold', 'vintage'], ['#1F3A5F', '#5E1F2A', '#2F4A3A']),
+  look('look-nightstand-hotel', 'nightstand', 'hotel', 'Walnut and marble bedside chest', 'A walnut chest on brass feet with a marble top, brass pulls and a brass lamp under a pleated shade.', 220, ['luxe', 'bold', 'vintage'], ['#4A3226', '#6B4A36', '#2A2224']),
+  look('look-dresser-hotel', 'dresser', 'hotel', 'Walnut lowboy with a marble top', 'Three rows of drawers with brass bails on brass-capped legs, a veined marble top, a brass tray and a vase of red roses.', 480, ['luxe', 'bold', 'vintage'], ['#4A3226', '#6B4A36', '#2A2224']),
+  look('look-toilet-hotel', 'toilet', 'hotel', 'Pedestal toilet with a brass lever', 'A white pedestal toilet with a black seat and a brass flush lever.', 240, ['luxe', 'bold', 'vintage'], ['#FAF8F4', '#1E1E22', '#C9A24A']),
+  look('look-vanity-hotel', 'vanity', 'hotel', 'Marble-top walnut vanity', 'Walnut doors with brass knobs under a veined marble top, a deep basin, a brass gooseneck tap and a monogrammed towel.', 420, ['luxe', 'bold', 'vintage'], ['#4A3226', '#EFEBE4', '#C9A24A']),
+  look('look-shower-hotel', 'shower', 'hotel', 'Marble shower with brass fittings', 'Marble walls, a black and white hex floor, a brass rain head and a brass-framed glass door.', 600, ['luxe', 'bold', 'vintage'], ['#EFEBE4', '#C9A24A', '#1E1E22']),
+
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
   wallItem('wobj-landscape', 'Landscape canvas', 80, ['natural', 'vintage'], ['#9EC1F5', '#F2B48A', '#C9B8E8', '#2B3A5E']),
@@ -538,6 +550,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('gym', 'gym', 'Weights and mat', 180, ['cool', 'bold', 'minimal']),
   hobby('yogamat', 'yogamat', 'Yoga mat', 30, ['natural', 'soft', 'minimal'], ['#8E5468', '#7FB069', '#4A88B8', '#E0A43A', '#2B2B30']),
   hobby('massage', 'massage', 'Massage chair', 350, ['luxe', 'modern', 'cozy'], ['#2B2B30', '#E8DCC8', '#6E3C50']),
+  hobby('servicebell', 'servicebell', 'Service bell', 150, ['luxe', 'bold', 'vintage'], ['#C9A24A', '#4A3226', '#1E1E22']),
   hobby('diffuser', 'diffuser', 'Aroma diffuser', 120, ['soft', 'minimal', 'natural'], ['#D8D0C2', '#9DB3A5', '#F6F4EE']),
   hobby('overseer', 'overseer', 'The Overseer', 450, ['industrial', 'minimal', 'bold'], ['#2B2B30', '#8E939A', '#E8EAEC']),
   hobby('jukebox', 'jukebox', 'Jukebox', 300, ['vintage', 'playful', 'bold'], ['#C2413A', '#4A5DA8', '#E0A43A']),

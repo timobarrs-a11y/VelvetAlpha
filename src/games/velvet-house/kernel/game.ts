@@ -242,6 +242,9 @@ export interface Game {
   /** The Overseer: one push of its actions is one monologue; the tick lets it react to the player nearby. */
   overseerAction(obj: ObjectInstance, act: string): void;
   overseerTick(): void;
+  /** The service bell: ring for room service, and a breakfast cart rolls to the bed. */
+  ringBell(obj: ObjectInstance): void;
+  roomServiceTick(): void;
   /** The player's order for a pet: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop'. */
   petOrder(act: string, petId: string): void;
   petFrames(): PetFrame[];

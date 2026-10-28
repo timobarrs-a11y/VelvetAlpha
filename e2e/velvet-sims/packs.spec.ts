@@ -5,6 +5,7 @@ import { openGame, objects, inGame, pageErrors } from './helpers';
 const PACKS = [
   { theme: 'brutalist', extra: 'overseer' },
   { theme: 'spa', extra: 'diffuser' },
+  { theme: 'hotel', extra: 'servicebell' },
 ];
 for (const P of PACKS) {
   test(`buying the ${P.theme} pack upstairs restyles the bedroom and bath`, async ({ page }) => {

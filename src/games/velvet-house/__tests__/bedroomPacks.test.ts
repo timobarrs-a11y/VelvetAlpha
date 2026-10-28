@@ -12,6 +12,7 @@ interface PackSpec { theme: Theme; tags: string[]; materials: Material[]; paper:
 const PACKS: PackSpec[] = [
   { theme: 'brutalist', tags: ['industrial', 'minimal', 'bold'], materials: ['stone', 'metal', 'glass'], paper: { id: 'paper-formwork', pattern: 'formwork' }, floor: { id: 'floor-terrazzodark', floor: 'terrazzodark' }, extra: 'overseer' },
   { theme: 'spa', tags: ['soft', 'minimal', 'natural'], materials: ['wood', 'stone', 'glass'], paper: { id: 'paper-limewash', pattern: 'limewash' }, floor: { id: 'floor-teakdeck', floor: 'teakdeck' }, extra: 'diffuser' },
+  { theme: 'hotel', tags: ['luxe', 'bold', 'vintage'], materials: ['fabric', 'wood', 'stone'], paper: { id: 'paper-pinstripe-gold', pattern: 'pinstripe-gold' }, floor: { id: 'floor-marblecheck', floor: 'marblecheck' }, extra: 'servicebell' },
 ];
 const PIECES = ['bed', 'nightstand', 'dresser', 'toilet', 'vanity', 'shower'];
 // What the household uses on each piece: a look must leave these where they are.
