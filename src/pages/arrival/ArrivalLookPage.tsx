@@ -123,7 +123,7 @@ export function ArrivalLookPage() {
           </button>
         </motion.div>
       ) : (
-        <div className="mx-auto mt-6 max-w-5xl">
+        <div className="-mx-4 sm:mx-auto mt-6 max-w-5xl">
           <AvatarCreatorV2
             initialConfig={loaded.start}
             favoritesNamespace="user"

@@ -199,3 +199,20 @@ describe('pants', () => {
     expect(resolveBottom(shown).id).toBe('trousers');
   });
 });
+
+describe('the signature voices\' own pieces', () => {
+  it('exist, are starter items, and come with pants that exist', () => {
+    for (const id of ['letterman', 'hero', 'cardigan', 'uniform', 'doublet', 'sundress'] as const) {
+      const o = OUTFITS.find(x => x.id === id);
+      expect(o, id).toBeTruthy();
+      expect(o!.tier).toBe('starter');
+      expect(BOTTOMS.map(b => b.id)).toContain(o!.matchBottom);
+    }
+    expect(BOTTOMS.find(b => b.id === 'plaid_skirt')?.tier).toBe('starter');
+    expect(FACE_ACCESSORIES.find(f => f.id === 'fox_mask')?.tier).toBe('starter');
+  });
+
+  it('a sundress comes with a skirt in the dress\'s own colour', () => {
+    expect(resolveBottom({ outfit: 'sundress', outfitColor: '#f3b6c8' })).toMatchObject({ id: 'skirt', color: '#f3b6c8' });
+  });
+});

@@ -6,6 +6,8 @@ export interface PronounSet {
   she: string;
   her: string;
   hers: string;
+  /** The possessive that goes before a noun: "her own world", "his own world". */
+  their: string;
   herself: string;
 }
 
@@ -42,6 +44,8 @@ export interface ScrubConfig {
   leftLabel: string;
   rightLabel: string;
   valueLabels: string[];
+  /** What is saved for each stop, when it should not be the label that is shown. */
+  values?: string[];
 }
 
 export interface PreviewBubble {
@@ -68,6 +72,12 @@ export interface BaseQuestion {
   required?: boolean;
   /** Skip this question when true, going forward and back (a cusp question off a cusp, a birthday we already have). */
   skipIf?: (ctx: QuestionContext) => boolean;
+  /**
+   * What the host might say after it is answered, before the next question: a line, or several to pick one from at
+   * random (null for nothing). Only a questionnaire with a host uses it, and only on a few of its questions
+   * (`reactionCount` on the shell); the context already holds the answer just given.
+   */
+  reaction?: (answer: string | string[], ctx: QuestionContext) => string | string[] | null;
   /** Its answer starts out filled in from the profile (the sign-up birthday), so it says nothing about how far they got. */
   prefilled?: boolean;
 }
@@ -132,6 +142,10 @@ export interface ScrubQuestion extends BaseQuestion {
 export interface PreviewQuestion extends BaseQuestion {
   archetype: 'preview';
   bubbles: PreviewBubble[];
+  /** Pick up to this many (the first one tapped is the main one); the answer is the list. Without it, one tap answers. */
+  pickUpTo?: number;
+  /** Said under the bubbles when more than one can be picked. */
+  pickHint?: string;
 }
 
 export interface BeatQuestion extends Omit<BaseQuestion, 'question'> {

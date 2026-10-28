@@ -2,6 +2,7 @@ import { supabase } from '../shared/supabase/client';
 import { userProfileService } from './userProfileService';
 import { createCompanionFromAnswers } from './companionFromAnswers';
 import { randomMatchAnswers } from '../utils/companionRandomizer';
+import { voiceAttire } from '../config/voiceAttire';
 import { coherentRandomize } from '../components/AvatarCreatorV2';
 import { sanitizeAvatarConfigForSave } from './avatarSaveService';
 import { advanceSetupStepIf } from './setupProgressService';
@@ -41,18 +42,19 @@ export interface RandomCandidate {
 
 /**
  * "Let us matchmake for you": all they chose was the gender and friend or companion. Personality, name,
- * signature voice (any of them) and look are picked at random. Nothing is saved here, so "someone else"
- * is just another roll and leaves nothing behind.
+ * signature voice (any of them) and look are picked at random, the look in the attire its voice comes dressed in.
+ * Nothing is saved here, so "someone else" is just another roll and leaves nothing behind.
  */
 export function rollRandomCandidate(gender: 'male' | 'female', connection: 'friend' | 'romantic'): RandomCandidate {
   const answers = randomMatchAnswers(gender, connection);
+  const voiceId = String(answers.signatureVoice ?? '');
   return {
     gender,
     connection,
     answers,
     name: String(answers.companionName),
-    voiceId: String(answers.signatureVoice),
-    avatar: coherentRandomize(gender),
+    voiceId,
+    avatar: { ...coherentRandomize(gender), ...voiceAttire(voiceId) },
   };
 }
 
@@ -65,7 +67,7 @@ export async function saveRandomCandidate(candidate: RandomCandidate): Promise<R
   const companion = await createCompanionFromAnswers(user.id, candidate.answers, profile);
   if (!companion) throw new Error('The companion could not be created');
 
-  const avatar = await sanitizeAvatarConfigForSave(candidate.avatar);
+  const avatar = await sanitizeAvatarConfigForSave(candidate.avatar, companion.id);
   const { error } = await supabase.from('companions').update({ avatar_config: avatar }).eq('id', companion.id);
   if (error) throw error;
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, User } from 'lucide-react';
@@ -167,9 +168,9 @@ export function CreateUserAvatarPage() {
         ))}
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 flex-1 flex flex-col">
+      <div className="relative z-10 max-w-7xl w-full mx-auto px-0 sm:px-6 py-6 sm:py-12 flex-1 flex flex-col">
         {authError && (
-          <div className="mb-6 p-4 rounded-xl border text-center" style={{ background: 'rgba(244,63,107,0.12)', borderColor: 'rgba(244,63,107,0.3)' }}>
+          <div className="mb-6 mx-6 sm:mx-0 p-4 rounded-xl border text-center" style={{ background: 'rgba(244,63,107,0.12)', borderColor: 'rgba(244,63,107,0.3)' }}>
             <p className="text-rose-300">{authError}</p>
           </div>
         )}
@@ -177,7 +178,7 @@ export function CreateUserAvatarPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-6 sm:mb-12 px-6 sm:px-0"
         >
           <div className="flex justify-center mb-6">
             <div
@@ -204,11 +205,8 @@ export function CreateUserAvatarPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-2xl p-8 mb-8"
-          style={{
-            background: VELVET_THEME.colors.glassCard,
-            border: `1px solid ${VELVET_THEME.colors.glassBorder}`,
-          }}
+          className="sm:bg-[var(--card-bg)] mb-8 sm:rounded-2xl sm:p-8 sm:border"
+          style={{ '--card-bg': VELVET_THEME.colors.glassCard, borderColor: VELVET_THEME.colors.glassBorder } as CSSProperties}
         >
           <AvatarCreatorV2
             initialConfig={avatarConfig}
@@ -221,7 +219,7 @@ export function CreateUserAvatarPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center"
+          className="flex flex-col sm:flex-row gap-4 justify-center px-6 sm:px-0"
         >
           <button
             onClick={handleSkip}

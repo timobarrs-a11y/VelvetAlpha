@@ -30,28 +30,42 @@ describe('a random companion', () => {
   });
 
   it('answers every question the companion questionnaire asks, with values it offers', () => {
-    const offered = (id: string) => (COMPANION_QUESTIONNAIRE.questions.find(q => q.id === id) as unknown as { bubbles?: { value: string }[]; options?: { value: string }[] });
+    const find = (id: string) => COMPANION_QUESTIONNAIRE.questions.find(q => q.id === id) as unknown as {
+      bubbles?: { value: string }[]; options?: { value: string }[]; config?: { values?: string[]; valueLabels: string[] };
+    };
+    const stops = (id: string) => find(id).config!.values ?? find(id).config!.valueLabels;
     for (let i = 0; i < RUNS; i++) {
-      const a = randomMatchAnswers(i % 2 ? 'male' : 'female', i % 3 ? 'romantic' : 'friend');
-      expect(offered('warmth').bubbles!.map(b => b.value)).toContain(a.warmth);
+      const g = i % 2 ? 'male' : 'female';
+      const a = randomMatchAnswers(g, i % 3 ? 'romantic' : 'friend');
+      for (const id of ['directness', 'openness', 'care']) expect(stops(id), id).toContain(a[id]);
+      expect(find('energy').config!.valueLabels.map(l => l.replace('{their}', g === 'male' ? 'his' : 'her'))).toContain(a.energy);
+      const humors = a.humor as string[];
+      expect(humors.length).toBeGreaterThanOrEqual(1);
+      expect(humors.length).toBeLessThanOrEqual(2);
+      expect(new Set(humors).size).toBe(humors.length);
+      for (const h of humors) expect(find('humor').bubbles!.map(b => b.value)).toContain(h);
+      // Only companions are asked how they flirt.
+      if (a.connectionType === 'romantic') expect(find('warmth').bubbles!.map(b => b.value)).toContain(a.warmth);
+      else expect(a.warmth).toBeUndefined();
       expect(a.interests).toHaveLength(2);
       expect(new Set(a.interests).size).toBe(2);
-      for (const v of a.interests as string[]) expect(offered('interests') ? (COMPANION_QUESTIONNAIRE.questions.find(q => q.id === 'interests') as unknown as { options: { value: string }[] }).options.map(o => o.value) : []).toContain(v);
+      const tabs = (find('interests') as unknown as { tabs: { answerKey: string; options: { value: string }[] }[] }).tabs;
+      for (const v of a.interests as string[]) expect(tabs.flatMap(t => t.options.map(o => o.value))).toContain(v);
+      // Each pick is also under its own tab's key, as the tabs screen saves it.
+      expect(tabs.filter(t => Array.isArray(a[t.answerKey])).flatMap(t => a[t.answerKey] as string[]).sort()).toEqual([...(a.interests as string[])].sort());
       expect(typeof a.companionName).toBe('string');
       expect(a.companionName).toBeTruthy();
     }
   });
 
-  it('really varies: care styles, energy, interests and names all come out different across a batch', () => {
-    const batch = Array.from({ length: 200 }, () => randomMatchAnswers('female', 'romantic'));
+  it('really varies: every dial, interests and names all come out different across a batch', () => {
+    const batch = Array.from({ length: 300 }, () => randomMatchAnswers('female', 'romantic'));
     expect(new Set(batch.map(a => a.warmth)).size).toBe(4);
-    expect(new Set(batch.map(a => a.energy)).size).toBe(3);
+    for (const id of ['energy', 'directness', 'openness', 'care']) expect(new Set(batch.map(a => a[id])).size, id).toBe(3);
+    expect(new Set(batch.map(a => String(a.humor))).size).toBeGreaterThan(5);
+    expect(batch.some(a => (a.humor as string[]).length === 2)).toBe(true);
     expect(new Set(batch.map(a => String(a.interests))).size).toBeGreaterThan(10);
     expect(new Set(batch.map(a => a.companionName)).size).toBeGreaterThan(30);
-  });
-
-  it('never gives a friend the flirty way of showing care', () => {
-    for (let i = 0; i < RUNS; i++) expect(randomMatchAnswers('female', 'friend').warmth).not.toBe('bold');
   });
 
   it('names a man from the men\'s list and a woman from the women\'s, and picks a voice for them', () => {
@@ -67,11 +81,13 @@ describe('a random companion', () => {
 });
 
 describe('a random voice', () => {
-  it('draws from every voice for the gender, including the ones that used to need a plan', () => {
+  it('draws from every voice a person can pick, never the professional (classic) one', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 3000; i++) { seen.add(randomVoice('male')); seen.add(randomVoice('female')); }
-    const expected = SIGNATURE_VOICES.filter(v => v.gender !== undefined).map(v => v.id);
+    const expected = SIGNATURE_VOICES.filter(v => v.category !== 'professional').map(v => v.id);
     for (const id of expected) expect(seen).toContain(id);
+    expect(seen).not.toContain('classic_male');
+    expect(seen).not.toContain('classic_female');
   });
 
   it('suits the gender, and any of them can come up (none is held back for a plan)', () => {

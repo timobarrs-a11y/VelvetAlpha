@@ -4,6 +4,7 @@ export const PRONOUNS_FEMALE: PronounSet = {
   she: 'she',
   her: 'her',
   hers: 'hers',
+  their: 'her',
   herself: 'herself',
 };
 
@@ -11,6 +12,7 @@ export const PRONOUNS_MALE: PronounSet = {
   she: 'he',
   her: 'him',
   hers: 'his',
+  their: 'his',
   herself: 'himself',
 };
 
@@ -41,6 +43,7 @@ export function tpl(template: string, ctx: QuestionContext): string {
     .replace(/\{she\}/g, ctx.pronouns.she)
     .replace(/\{her\}/g, ctx.pronouns.her)
     .replace(/\{hers\}/g, ctx.pronouns.hers)
+    .replace(/\{their\}/g, ctx.pronouns.their)
     .replace(/\{herself\}/g, ctx.pronouns.herself)
     .replace(/\{name\}/g, ctx.userName || '');
 }

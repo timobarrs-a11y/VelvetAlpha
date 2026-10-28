@@ -113,7 +113,7 @@ export function resolveZodiac(answers: Record<string, string | string[]>): strin
 
 // ─── Interests: what they already do and like ───────────────────────────
 
-const HOBBY_OPTIONS: GridOption[] = [
+export const HOBBY_OPTIONS: GridOption[] = [
   { label: 'Reading', value: 'Reading', icon: 'BookOpen' },
   { label: 'Gaming', value: 'Gaming', icon: 'Gamepad2' },
   { label: 'Cooking', value: 'Cooking', icon: 'Utensils' },
@@ -134,7 +134,7 @@ const HOBBY_OPTIONS: GridOption[] = [
   { label: 'Board Games', value: 'Board Games/Puzzles', icon: 'Puzzle' },
 ];
 
-const MUSIC_OPTIONS: GridOption[] = [
+export const MUSIC_OPTIONS: GridOption[] = [
   { label: 'R&B / Soul', value: 'R&B/Soul', icon: 'Music' },
   { label: 'Hip-Hop', value: 'Hip-Hop/Rap', icon: 'Music' },
   { label: 'Pop', value: 'Pop', icon: 'Music' },
@@ -149,7 +149,7 @@ const MUSIC_OPTIONS: GridOption[] = [
   { label: 'A bit of everything', value: 'A Little Bit Of Everything', icon: 'Music' },
 ];
 
-const ENTERTAINMENT_OPTIONS: GridOption[] = [
+export const ENTERTAINMENT_OPTIONS: GridOption[] = [
   { label: 'Movies', value: 'Movies', icon: 'Film' },
   { label: 'TV Shows', value: 'TV Shows', icon: 'Tv' },
   { label: 'Anime', value: 'Anime', icon: 'Sparkles' },
@@ -164,7 +164,7 @@ const ENTERTAINMENT_OPTIONS: GridOption[] = [
   { label: 'Manga', value: 'Manga', icon: 'BookOpen' },
 ];
 
-const TECH_OPTIONS: GridOption[] = [
+export const TECH_OPTIONS: GridOption[] = [
   { label: 'AI & ML', value: 'AI & Machine Learning', icon: 'Cpu' },
   { label: 'Gadgets', value: 'Gadgets/Hardware', icon: 'Cpu' },
   { label: 'Programming', value: 'Programming/Coding', icon: 'Code' },
@@ -176,7 +176,7 @@ const TECH_OPTIONS: GridOption[] = [
   { label: 'Tech News', value: 'Tech News', icon: 'Newspaper' },
 ];
 
-const LIFESTYLE_OPTIONS: GridOption[] = [
+export const LIFESTYLE_OPTIONS: GridOption[] = [
   { label: 'Food & Drink', value: 'Food & Drink', icon: 'Utensils' },
   { label: 'Wine & Spirits', value: 'Wine & Spirits', icon: 'Wine' },
   { label: 'Home Decor', value: 'Home Decor', icon: 'Home' },
@@ -191,7 +191,7 @@ const LIFESTYLE_OPTIONS: GridOption[] = [
   { label: 'Pets', value: 'Pets/Animals', icon: 'Cat' },
 ];
 
-const SPORTS_OPTIONS: GridOption[] = [
+export const SPORTS_OPTIONS: GridOption[] = [
   { label: 'Basketball', value: 'Basketball', icon: 'Dumbbell' },
   { label: 'Football', value: 'Football', icon: 'Dumbbell' },
   { label: 'Soccer', value: 'Soccer', icon: 'Dumbbell' },

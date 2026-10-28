@@ -100,6 +100,7 @@ export interface SignatureOutfit {
 }
 export const SIGNATURE_STYLES = new Set([
   'tee', 'linen', 'blazer', 'chef', 'labcoat', 'pirate', 'rockstar', 'cheer', 'cop', 'scrubs', 'streetwear', 'president',
+  'letterman', 'hero', 'cardigan', 'uniform', 'doublet', 'sundress',
 ]);
 // Every cut the game draws: the avatar's pants, and the plain pants it always sold.
 export const BOTTOM_STYLES = new Set([

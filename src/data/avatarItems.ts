@@ -48,6 +48,12 @@ export const OUTFITS: OutfitItem[] = [
   { id: 'scrubs', label: 'Scrubs', tier: 'starter', fallback: 'tee', color: '#4fa3a5', accent: '#e8f3f3', colorLabel: 'Scrubs', accentLabel: 'Trim', matchBottom: 'scrub_pants' },
   { id: 'rockstar', label: 'Rockstar jacket', tier: 'member', fallback: 'tee', color: '#17171b', accent: '#b8bcc4', colorLabel: 'Jacket', accentLabel: 'Studs', matchBottom: 'leather' },
   { id: 'streetwear', label: 'Streetwear hoodie', tier: 'member', fallback: 'tee', color: '#e0a43a', accent: '#17171b', colorLabel: 'Hoodie', accentLabel: 'Logo', matchBottom: 'baggy' },
+  { id: 'letterman', label: 'Letterman jacket', tier: 'starter', fallback: 'tee', color: '#1f2a44', accent: '#f4f1ea', colorLabel: 'Body', accentLabel: 'Sleeves', matchBottom: 'jeans', matchBottomColor: '#3D5B8A' },
+  { id: 'hero', label: 'Tee & scarf', tier: 'starter', fallback: 'tee', color: '#e0a43a', accent: '#c2262e', colorLabel: 'Tee', accentLabel: 'Scarf', matchBottom: 'jeans', matchBottomColor: '#3D5B8A' },
+  { id: 'cardigan', label: 'Cardigan & bow tie', tier: 'starter', fallback: 'tee', color: '#6b7a4a', accent: '#8a2d3b', colorLabel: 'Cardigan', accentLabel: 'Bow tie', matchBottom: 'trousers', matchBottomColor: '#3a3d46' },
+  { id: 'uniform', label: 'Sailor uniform', tier: 'starter', fallback: 'tee', color: '#27345f', accent: '#c2262e', colorLabel: 'Blouse', accentLabel: 'Ribbon', matchBottom: 'plaid_skirt', matchBottomColor: '#27345f' },
+  { id: 'doublet', label: 'Doublet & ruff', tier: 'starter', fallback: 'tee', color: '#5a1f2b', accent: '#c9a24a', colorLabel: 'Doublet', accentLabel: 'Gold trim', matchBottom: 'breeches', matchBottomColor: '#2b1d12' },
+  { id: 'sundress', label: 'Sundress', tier: 'starter', fallback: 'tee', color: '#f3b6c8', accent: '#f4f1ea', colorLabel: 'Dress', accentLabel: 'Lace', matchBottom: 'skirt', matchBottomColor: 'outfit' },
   { id: 'president', label: 'Presidential suit', tier: 'member', fallback: 'suit', color: '#14213d', accent: '#b3202f', colorLabel: 'Jacket', accentLabel: 'Tie', matchBottom: 'trousers', matchBottomColor: 'outfit' },
 ];
 
@@ -57,6 +63,7 @@ export const BOTTOMS: BottomItem[] = [
   { id: 'shorts', label: 'Shorts', tier: 'starter', fallback: 'shorts', color: '#c9b79c', accent: '#8a7a60', colorLabel: 'Shorts', accentLabel: 'Hem' },
   { id: 'skirt', label: 'Skirt', tier: 'starter', fallback: 'skirt', color: '#2b2b30', accent: '#8a7a60', colorLabel: 'Skirt', accentLabel: 'Hem' },
   { id: 'chef_pants', label: 'Chef pants', tier: 'starter', fallback: 'chef_pants', color: '#2B2B30', accent: '#f4f1ea', colorLabel: 'Pants', accentLabel: 'Check' },
+  { id: 'plaid_skirt', label: 'Plaid skirt', tier: 'starter', fallback: 'plaid_skirt', color: '#27345f', accent: '#c2262e', colorLabel: 'Skirt', accentLabel: 'Plaid' },
   { id: 'cheer_skirt', label: 'Cheer skirt', tier: 'starter', fallback: 'cheer_skirt', color: '#c2262e', accent: '#f4f1ea', colorLabel: 'Skirt', accentLabel: 'Trim' },
   { id: 'cop_pants', label: 'Uniform trousers', tier: 'starter', fallback: 'cop_pants', color: '#1f2f4f', accent: '#17171b', colorLabel: 'Trousers', accentLabel: 'Belt' },
   { id: 'scrub_pants', label: 'Scrub pants', tier: 'starter', fallback: 'scrub_pants', color: '#4fa3a5', accent: '#e8f3f3', colorLabel: 'Pants', accentLabel: 'Drawstring' },
@@ -89,6 +96,7 @@ export const HEADWEAR: HeadwearItem[] = [
 export const FACE_ACCESSORIES: FaceAccessoryItem[] = [
   { id: 'none', label: 'None', tier: 'starter', fallback: 'none' },
   { id: 'eyepatch', label: 'Eyepatch', tier: 'member', fallback: 'none' },
+  { id: 'fox_mask', label: 'Fox mask', tier: 'starter', fallback: 'none' },
 ];
 
 export const OUTFIT_COLORS: Array<{ name: string; value: string }> = [

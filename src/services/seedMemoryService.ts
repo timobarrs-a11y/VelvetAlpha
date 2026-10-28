@@ -8,7 +8,7 @@ export interface QuestionnaireData {
   relationshipType: 'Male' | 'Female';
   connectionType: 'friend' | 'romantic';
   hobbies: string;
-  sports: string;
+  sports?: string;
   dynamicPreference?: string;
   confrontationStyle?: string;
   availabilityLevel?: string;

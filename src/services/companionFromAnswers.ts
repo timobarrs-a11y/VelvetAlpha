@@ -8,20 +8,40 @@ import type { UserProfile } from './userProfileService';
  * and the ones picked for them at random (Velvet Rope) go through the same code, so the two can't drift apart.
  */
 
-/** How they text, worked out from how they show they care (the two used to be asked separately and said the same thing). */
-export const COMMUNICATION_FROM_WARMTH: Record<string, string> = {
-  bold: 'direct',
-  sweet: 'gentle',
-  banter: 'playful',
-  deep: 'mysterious',
+/** What each humor pick is saved as: the words the chat prompt and the house line banks match on. */
+export const HUMOR_TEXT: Record<string, string> = {
+  witty: 'Witty & Clever',
+  goofy: 'Goofy & Random',
+  dry: 'Sarcastic & Dry',
+  warm: 'Warm & Light',
 };
+export const FLIRTING_TEXT: Record<string, string> = {
+  bold: 'Direct & Bold',
+  sweet: 'Subtle & Sweet',
+  banter: 'Playful Teasing',
+  deep: 'Mysterious & Reserved',
+};
+/** How much she writes with her hands (emoji, actions) follows how big her energy is; it is not asked separately. */
+function expressivenessFor(energy: string | undefined): string | undefined {
+  if (!energy) return undefined;
+  const e = energy.toLowerCase();
+  return e.includes('life of the party') ? 'Very Animated' : e.includes('own world') ? 'Subtle & Minimal' : 'Balanced Expression';
+}
+/** One or two humor picks, the main one first: "Witty & Clever + Warm & Light". */
+function humorFor(picks: string | string[] | undefined): string | undefined {
+  const list = (Array.isArray(picks) ? picks : picks ? [picks] : []).map(v => HUMOR_TEXT[v]).filter(Boolean);
+  return list.length ? list.slice(0, 2).join(' + ') : undefined;
+}
 
 type Answers = Record<string, string | string[]>;
 
 export function matchDataFromAnswers(answers: Answers, profile: Partial<UserProfile> | null) {
   const a = answers as Record<string, string>;
   const connection: 'friend' | 'romantic' = a.connectionType?.includes('friend') ? 'friend' : 'romantic';
-  const interests = Array.isArray(answers.interests) ? (answers.interests as string[]) : [];
+  const interests = Array.isArray(answers.interests) ? [...new Set(answers.interests as string[])] : [];
+  // Only what was asked or worked out from it. Love language and "when it's hard" come in the first week of
+  // chat (companionWeekOne.ts); everything else stays empty rather than being filled with a made-up answer.
+  // Friends are not asked how they flirt, so they have no flirting style.
   return {
     userName: profile?.name || '',
     userBirthday: profile?.birthday || '',
@@ -29,24 +49,16 @@ export function matchDataFromAnswers(answers: Answers, profile: Partial<UserProf
     relationshipType: a.relationshipType as 'Male' | 'Female',
     connectionType: connection,
     energyPreference: a.energy,
-    flirtingStyle: a.warmth,
-    humorStyle: a.warmth,
-    communicationStyle: COMMUNICATION_FROM_WARMTH[a.warmth] ?? 'gentle',
-    emotionalOpenness: 'Opens Up Over Time',
-    conversationDepth: 'Perfect Mix Of Both',
-    expressiveness: 'Balanced Expression',
-    initiative: 'You Both Share',
+    flirtingStyle: connection === 'romantic' ? FLIRTING_TEXT[a.warmth] : undefined,
+    humorStyle: humorFor(answers.humor),
+    communicationStyle: a.directness,
+    emotionalOpenness: a.openness,
+    supportStyle: a.care,
+    expressiveness: expressivenessFor(a.energy),
     interestPreference: interests[0] ?? (typeof answers.interests === 'string' ? answers.interests : ''),
-    loveLanguage: a.loveLanguage,
-    supportStyle: 'Just Listens & Validates Feelings',
-    lifeContext: 'Doing Well',
-    confrontationStyle: a.whenItsHard,
-    availabilityLevel: 'Mostly Available',
-    dynamicPreference: 'You Both Share Control Equally',
     companionName: a.companionName || '',
     favoriteColor: profile?.favorite_color || '',
     hobbies: interests.join(', '),
-    sports: Array.isArray(answers.tasteDeck) ? (answers.tasteDeck as string[]).join(', ') : '',
     musicGenre: profile?.music_genre || '',
     newsTopics: profile?.news_categories || [],
   };
@@ -57,8 +69,7 @@ export async function createCompanionFromAnswers(userId: string, answers: Answer
   const a = answers as Record<string, string>;
   const gender: 'male' | 'female' = a.relationshipType === 'Male' ? 'male' : 'female';
   const matchData = matchDataFromAnswers(answers, profile);
-  const interests = Array.isArray(answers.interests) ? (answers.interests as string[]) : [];
-  const tasteDeck = Array.isArray(answers.tasteDeck) ? (answers.tasteDeck as string[]) : [];
+  const interests = Array.isArray(answers.interests) ? [...new Set(answers.interests as string[])] : [];
   const signatureVoice = typeof a.signatureVoice === 'string' && a.signatureVoice ? a.signatureVoice : undefined;
 
   sessionStorage.setItem('matchAnswers', JSON.stringify(matchData));
@@ -69,23 +80,15 @@ export async function createCompanionFromAnswers(userId: string, answers: Answer
     relationshipType: matchData.connectionType,
     customName: matchData.companionName,
     hobbies: interests,
-    sports: tasteDeck,
-    dynamicPreference: matchData.dynamicPreference,
-    confrontationStyle: matchData.confrontationStyle,
-    availabilityLevel: matchData.availabilityLevel,
     interestPreference: matchData.interestPreference,
     interestText: matchData.interestPreference,
-    loveLanguage: matchData.loveLanguage,
-    supportStyle: matchData.supportStyle,
-    lifeContext: matchData.lifeContext,
     energyPreference: matchData.energyPreference,
     flirtingStyle: matchData.flirtingStyle,
     humorStyle: matchData.humorStyle,
     communicationStyle: matchData.communicationStyle,
     emotionalOpenness: matchData.emotionalOpenness,
-    conversationDepth: matchData.conversationDepth,
+    supportStyle: matchData.supportStyle,
     expressiveness: matchData.expressiveness,
-    initiative: matchData.initiative,
     favoriteColor: matchData.favoriteColor,
     musicGenre: matchData.musicGenre,
     newsCategories: matchData.newsTopics,

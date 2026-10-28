@@ -878,6 +878,22 @@ function drawFabricPattern(c: CanvasRenderingContext2D, x: number, y: number, w:
   } else if (style === 'streetwear') {
     c.fillStyle = accent || '#17171B'; c.beginPath(); c.arc(w * 0.5, h * 0.62, 2.6, 0, 7); c.fill();
     c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(0, 1); c.lineTo(w, 1); c.stroke();
+  } else if (style === 'letterman') {
+    c.fillStyle = accent || '#F4F1EA'; c.fillRect(0, 0, 3, h); c.fillRect(w - 3, 0, 3, h);
+    c.fillRect(w * 0.42, h * 0.3, 2.2, h * 0.34);
+  } else if (style === 'hero') {
+    c.fillStyle = accent || '#C2262E'; c.fillRect(0, 0, w, 3.4); c.fillRect(w * 0.55, 0, 3.4, h * 0.6);
+  } else if (style === 'cardigan') {
+    c.fillStyle = '#F4F4F2'; c.beginPath(); c.moveTo(w * 0.32, 0); c.lineTo(w * 0.68, 0); c.lineTo(w * 0.5, h * 0.45); c.closePath(); c.fill();
+    c.fillStyle = accent || '#8A2D3B'; c.fillRect(w * 0.44, h * 0.06, w * 0.12, 2.4);
+  } else if (style === 'uniform') {
+    c.fillStyle = '#F4F1EA'; c.beginPath(); c.moveTo(0, 0); c.lineTo(w * 0.5, h * 0.4); c.lineTo(w, 0); c.lineTo(w, 3); c.lineTo(w * 0.5, h * 0.52); c.lineTo(0, 3); c.closePath(); c.fill();
+    c.fillStyle = accent || '#C2262E'; c.fillRect(w * 0.44, h * 0.38, w * 0.12, 3);
+  } else if (style === 'doublet') {
+    c.fillStyle = '#F4F1EA'; c.fillRect(0, 0, w, 3.6);
+    c.fillStyle = accent || '#C9A24A'; c.fillRect(w * 0.47, 3, 2, h);
+  } else if (style === 'sundress') {
+    c.fillStyle = accent || '#F4F1EA'; c.fillRect(0, h * 0.62, w, 2.6);
   } else if (style === 'president') {
     c.fillStyle = '#F2EFE8'; c.beginPath(); c.moveTo(w * 0.3, 0); c.lineTo(w * 0.7, 0); c.lineTo(w * 0.5, h * 0.55); c.closePath(); c.fill();
     c.fillStyle = accent || '#B3202F'; c.fillRect(w * 0.45, h * 0.12, w * 0.1, h * 0.4);

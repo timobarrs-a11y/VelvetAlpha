@@ -6,6 +6,7 @@ import { AvatarV2 } from '../../components/AvatarV2';
 import { handSvg, HAND_POSES } from '../../renderers/handRenderer';
 import { OUTFITS, BOTTOMS, HEADWEAR, PERSONAS, outfitItem, resolveBottom, type AvatarUnlocks } from '../../data/avatarItems';
 import type { Wardrobe, WardrobePiece } from '../../games/velvet-house/state/clothing';
+import { attireUnlocks } from '../../config/voiceAttire';
 import { resolveLookForDisplay, canUse, itemId, lookUnlock } from '../../data/avatarCatalog';
 
 // What Velvet Sims needs to know about the player and their companion: names,
@@ -93,7 +94,11 @@ export function buildBodySprites(config: AvatarConfigV2): Record<string, string>
 const SIGNATURE_STYLE: Record<string, string> = {
   tee: 'tee', linen: 'linen', suit: 'blazer', chef: 'chef', labcoat: 'labcoat', pirate: 'pirate',
   rockstar: 'rockstar', cheer: 'cheer', cop: 'cop', scrubs: 'scrubs', streetwear: 'streetwear', president: 'president',
+  letterman: 'letterman', hero: 'hero', cardigan: 'cardigan', uniform: 'uniform', doublet: 'doublet', sundress: 'sundress',
 };
+
+// The sim draws a plaid skirt as its plain skirt.
+const simBottom = (id: string): string => (id === 'plaid_skirt' ? 'skirt' : id);
 
 export function signatureOutfit(config: AvatarConfigV2) {
   const item = outfitItem(config.outfit);
@@ -106,8 +111,8 @@ export function signatureOutfit(config: AvatarConfigV2) {
   const style = SIGNATURE_STYLE[item.id] ?? 'tee';
   // The game draws the pants by their cut, in their colour and trim.
   return {
-    style, color: top, accent: second, bottom: pants.color, bottomStyle: pants.id, bottomAccent: pants.accent,
-    key: [style, top, second, pants.color, pants.id, pants.accent].join('|'),
+    style, color: top, accent: second, bottom: pants.color, bottomStyle: simBottom(pants.id), bottomAccent: pants.accent,
+    key: [style, top, second, pants.color, simBottom(pants.id), pants.accent].join('|'),
   };
 }
 
@@ -121,7 +126,7 @@ export function buildWardrobe(unlocks: AvatarUnlocks, hat: string = 'none'): War
     pieces.push({ id: `w-top-${o.id}`, slot: 'top', style: sig.style, col: sig.color, accent: sig.accent, name: o.label });
   }
   for (const b of BOTTOMS) {
-    if (canUse(itemId('bottom', b.id), unlocks).ok) pieces.push({ id: `w-bottom-${b.id}`, slot: 'bottom', style: b.id, col: b.color, accent: b.accent, name: b.label });
+    if (canUse(itemId('bottom', b.id), unlocks).ok) pieces.push({ id: `w-bottom-${b.id}`, slot: 'bottom', style: simBottom(b.id), col: b.color, accent: b.accent, name: b.label });
   }
   for (const h of HEADWEAR) {
     if (canUse(itemId('headwear', h.id), unlocks).ok) pieces.push({ id: `w-hat-${h.id}`, slot: 'hat', style: h.id, col: '#8E9C96', name: h.id === 'none' ? 'No hat' : h.label });
@@ -190,8 +195,9 @@ function simLook(raw: Record<string, unknown> | null | undefined, favoriteColor:
 
 // `avatar`: send the real avatar (heads and signature outfit), for the rebuilt game.
 export function buildProfile(player: PlayerProfile | null, companion: Companion, includeLooks: boolean, avatar?: AvatarUnlocks) {
-  const look = (raw: Record<string, unknown> | null | undefined, color: string | null | undefined) =>
-    avatar ? simLook(raw, color, avatar) : toGameLook(raw, color);
+  // A companion wears their signature voice's attire whatever the player's membership.
+  const look = (raw: Record<string, unknown> | null | undefined, color: string | null | undefined, voice?: string | null) =>
+    avatar ? simLook(raw, color, voice ? attireUnlocks(avatar, voice) : avatar) : toGameLook(raw, color);
   const personality = [companion.communication_style, companion.humor_style, companion.signature_voice]
     .filter(Boolean)
     .join('. ');
@@ -217,7 +223,7 @@ export function buildProfile(player: PlayerProfile | null, companion: Companion,
       communication: companion.communication_style ?? undefined,
       relationship: companion.relationship_type,
       look: includeLooks
-        ? look(companion.avatar_config as Record<string, unknown> | undefined, companion.favorite_color)
+        ? look(companion.avatar_config as Record<string, unknown> | undefined, companion.favorite_color, companion.signature_voice)
         : undefined,
       memories: [],
       likes,
