@@ -15,6 +15,8 @@ export interface CatalogEntry {
   tab: string;
   tags?: string[];
   type?: string;
+  /** A look of `type` (a key of TYPES[type].skins): buying it restyles the piece already on the main floor. */
+  skin?: string;
   color?: string;
   pattern?: string;
   floor?: string;
@@ -55,6 +57,11 @@ const furn = (id: string, type: string, name: string, price: number, tags: strin
 
 const decor = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
   id, name, price, icon: 'obj', tab: 'Decor', type, tags, cols, repeat: true,
+});
+
+/** A look of a piece the house already has: same footprint and spots, drawn and named differently. */
+export const look = (id: string, type: string, skin: string, name: string, desc: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
+  id, name, desc, price, icon: 'obj', tab: 'Furniture', type, skin, tags, cols, repeat: true,
 });
 
 const hobby = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({

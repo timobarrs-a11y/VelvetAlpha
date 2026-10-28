@@ -38,6 +38,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onArrangeSet: () => g.setDown(),
     onArrangeBack: () => g.putBack(),
     onArrangeColour: () => g.recolourHeld(),
+    onArrangeLook: (id) => g.useLook(id),
     onArrangeFloor: (lv) => g.carryTo(lv),
     onArrangeStore: () => g.storeSelected(),
     onArrangeUnstore: (id) => g.unstore(id),

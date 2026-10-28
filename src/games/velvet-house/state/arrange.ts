@@ -1,4 +1,4 @@
-import { TYPES, blocksOf, isRug, isFixed, footprint, type ObjectInstance } from './objects';
+import { TYPES, blocksOf, isRug, isFixed, footprint, colsOf, type ObjectInstance } from './objects';
 import { LEVELS, STAIRS, WX, WY } from './house';
 import { buildWorld } from './agents';
 import { cellOf, reachableSet, NY } from './pathfinding';
@@ -211,27 +211,25 @@ export function rotateAboutCentre(o: ObjectInstance): void {
 
 // The next colour the piece comes in, if it comes in several.
 export function nextColour(o: ObjectInstance): string | null {
-  const cols = TYPES[o.type]?.cols;
+  const cols = colsOf(o);
   if (!cols || cols.length < 2) return null;
   const i = cols.indexOf(o.col ?? cols[0]);
   return cols[(i + 1) % cols.length];
 }
 
-// Pieces too big (or too bolted down) to carry up and down the stairs.
-const INDOOR_LEVELS = [0, 1, 2, 4];
+const CARRY_LEVELS = [0, 1, 2, 3, 4];
 
 /**
- * The floors a piece can be carried to, other than the one it's on. Anything
- * you could reasonably lift (chairs, lamps, plants, a couch) can go between
- * the basement, main floor and upstairs; big furniture, appliances and
- * everything in the backyard stay on their own floor.
+ * The floors a piece can be carried to, other than the one it's on. Any piece
+ * can go to any floor, the backyard included (the carrying isn't shown, so
+ * nothing is "too heavy" and nothing "belongs" somewhere: the treadmill can live
+ * in the bedroom or on the lawn). Only the stairs stay put.
  */
 export function otherFloors(o: ObjectInstance): number[] {
-  // Nothing is fixed: the bed goes upstairs, the gym to the basement, the kitchen sink wherever they like. Only the
-  // stairs and floor openings stay, and yard pieces stay outside.
-  if (!isMovable(o) || TYPES[o.type].out) return [];
-  if (!INDOOR_LEVELS.includes(o.level)) return [];
-  return INDOOR_LEVELS.filter(lv => lv !== o.level);
+  // Nothing is fixed: the bed goes upstairs, the gym to the basement, the kitchen sink wherever they like, the treadmill onto
+  // the lawn. Only the stairs and floor openings stay put.
+  if (!isMovable(o) || !CARRY_LEVELS.includes(o.level)) return [];
+  return CARRY_LEVELS.filter(lv => lv !== o.level);
 }
 
 export function canChangeFloor(o: ObjectInstance): boolean {

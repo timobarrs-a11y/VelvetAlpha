@@ -69,3 +69,35 @@ test('build the attic, carry the desk up, and it is still there after a reload',
   expect((await piece(page, 'desk')).level).toBe(4);
   await expect(game.locator('[data-level="4"]')).toBeVisible();
 });
+
+test('the Arrange bar is never cut off: Set it down, Rotate and Store are fully on screen, and the house is not under the panel', async ({ page }) => {
+  const game = await openGame(page);
+  await game.locator('.vh-dock [data-open=arrange]').click();
+  for (const id of ['sofa', 'dining', 'lamp1']) {
+    await game.locator(`[data-arr-pick=${id}]`).click();
+    await page.waitForTimeout(600);
+    const panel = (await game.locator('.vh-drawer[data-open=arrange]').boundingBox())!;
+    for (const act of ['set', 'rotate']) {
+      const b = (await game.locator(`.vh-arr-bar [data-arr=${act}]`).boundingBox())!;
+      expect(b.y).toBeGreaterThanOrEqual(panel.y);
+      expect(b.y + b.height).toBeLessThanOrEqual(panel.y + panel.height);
+      expect(b.x + b.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    }
+    // Picking a piece scrolls the list, never the panel itself.
+    expect(await game.locator('.vh-drawer[data-open=arrange] .vh-drawer-body').evaluate((e) => e.scrollTop)).toBe(0);
+    // The house is framed in what the panel leaves free.
+    const canvas = (await game.locator('.vh-canvas').boundingBox())!;
+    const piece = await clientPosOf(page, id);
+    if (page.viewportSize()!.width <= 560) expect(piece[1]).toBeGreaterThan(Math.min(panel.y + panel.height, canvas.y + canvas.height));
+  }
+});
+
+test('nothing is too heavy or too indoors: the treadmill can go to the backyard and up to the bedroom', async ({ page }) => {
+  const game = await openGame(page);
+  await game.locator('.vh-dock [data-open=arrange]').click();
+  await game.locator('[data-arr-pick=tread]').click();
+  await game.locator('[data-arr-floor="3"]').click();
+  expect((await piece(page, 'tread')).level).toBe(3);
+  await game.locator('[data-arr-floor="2"]').click();
+  expect((await piece(page, 'tread')).level).toBe(2);
+});

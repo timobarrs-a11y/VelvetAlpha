@@ -25,6 +25,7 @@ export interface DrawerCallbacks {
   onArrangeSet?: () => void;
   onArrangeBack?: () => void;
   onArrangeColour?: () => void;
+  onArrangeLook?: (skin: string) => void;
   onArrangeFloor?: (level: number) => void;
   onArrangeStore?: () => void;
   onArrangeUnstore?: (id: string) => void;
@@ -91,6 +92,8 @@ export interface ArrangeState {
     name: string;
     where: string;
     canColour: boolean;
+    // The looks it can wear (the stock one and the ones bought); empty when there is nothing to choose.
+    looks: Array<{ id: string; name: string; active: boolean }>;
     // Floors it can be carried to.
     moveTo: number[];
   };
@@ -276,6 +279,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     const sel = a.selected;
     const bar = sel
       ? `<div class="vh-arr-bar">
+          <div class="vh-arr-top">
           <div class="vh-arr-what"><strong>${esc(sel.name)}</strong><small>${esc(sel.where)}</small></div>
           <div class="vh-arr-acts">
             <button data-arr="set" class="vh-arr-primary" title="Set it down (Enter)">Set it down</button>
@@ -284,6 +288,8 @@ export function createDrawer(cb: DrawerCallbacks): {
             ${sel.canColour ? '<button data-arr="colour" title="Change colour (C)">Colour</button>' : ''}
             ${sel.canStore ? '<button data-arr="store" title="Put it in storage">Store</button>' : ''}
           </div>
+          </div>
+          ${sel.looks.length > 1 ? `<div class="vh-arr-looks"><span>Look</span>${sel.looks.map(l => `<button data-arr-look="${esc(l.id)}" aria-pressed="${l.active}">${esc(l.name)}</button>`).join('')}</div>` : ''}
           ${sel.moveTo.length ? `<div class="vh-arr-floors"><span>Carry to</span>${sel.moveTo.map(l => `<button data-arr-floor="${l}">${esc(a.floors[l])}</button>`).join('')}</div>` : ''}
           ${sel.loose && !sel.fits ? `<p class="vh-arr-why">${esc(sel.reason ?? "It doesn't fit there.")} Move it, or put it back.</p>` : sel.loose ? '<p class="vh-arr-why vh-arr-ok">Drag it, turn it, then tap Set it down.</p>' : ''}
         </div>`
@@ -308,7 +314,16 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.innerHTML = `<div class="vh-arr">${bar}<div class="vh-arr-list">${groups}${stash}${groups || stash ? '' : '<p class="vh-empty">Nothing here can be moved.</p>'}</div></div>`;
     const list = sec.querySelector<HTMLElement>('.vh-arr-list')!;
     list.scrollLeft = scroll[0]; list.scrollTop = scroll[1];
-    if (sel && sel.id !== arrangeSelected) sec.querySelector('.vh-sel')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    // Bring the picked piece into view in the list by scrolling the list alone: scrollIntoView would also scroll the
+    // panel, and push the Set it down bar out of sight.
+    if (sel && sel.id !== arrangeSelected) {
+      const chip = sec.querySelector<HTMLElement>('.vh-sel');
+      if (chip) {
+        const lr = list.getBoundingClientRect(), cr = chip.getBoundingClientRect();
+        list.scrollLeft += cr.left - lr.left - (lr.width - cr.width) / 2;
+        list.scrollTop += cr.top - lr.top - (lr.height - cr.height) / 2;
+      }
+    }
     arrangeSelected = sel?.id ?? null;
     sec.querySelectorAll<HTMLElement>('[data-arr-pick]').forEach(b => b.addEventListener('click', () => cb.onArrangePick?.(b.dataset.arrPick!)));
     sec.querySelector('[data-arr="store"]')?.addEventListener('click', () => cb.onArrangeStore?.());
@@ -317,6 +332,7 @@ export function createDrawer(cb: DrawerCallbacks): {
     sec.querySelector('[data-arr="set"]')?.addEventListener('click', () => cb.onArrangeSet?.());
     sec.querySelector('[data-arr="back"]')?.addEventListener('click', () => cb.onArrangeBack?.());
     sec.querySelector('[data-arr="colour"]')?.addEventListener('click', () => cb.onArrangeColour?.());
+    sec.querySelectorAll<HTMLElement>('[data-arr-look]').forEach(b => b.addEventListener('click', () => cb.onArrangeLook?.(b.dataset.arrLook ?? '')));
     sec.querySelectorAll<HTMLElement>('[data-arr-floor]').forEach(b => b.addEventListener('click', () => cb.onArrangeFloor?.(Number(b.dataset.arrFloor))));
   }
 
