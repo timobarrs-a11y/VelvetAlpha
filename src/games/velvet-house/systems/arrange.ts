@@ -38,9 +38,6 @@ export function createArrange(g: Game): Partial<Game> {
     if (arranging) return;
     arranging = true;
     stage.classList.add('vh-arranging');
-    // On a phone the lesson card folds to its title bar so the house has room; its button stays.
-    const lesson = stage.querySelector<HTMLElement>('.vh-scard');
-    if (lesson && !lesson.hidden && !lesson.dataset.min && window.matchMedia('(max-width: 560px)').matches) lesson.querySelector<HTMLButtonElement>('.vh-scard-min')?.click();
     selectedObj = null;
     selectedWall = null;
     heldObj = null;
@@ -359,7 +356,7 @@ export function createArrange(g: Game): Partial<Game> {
     const o = movableAt(sx, sy);
     if (!o) {
       // Nothing on the floor there: maybe a wall piece, which slides along its wall.
-      const wid = g.s.scriptMode === 'guided' ? null : wallAt(sx, sy);
+      const wid = wallAt(sx, sy);
       if (!wid) return;
       selectWall(wid);
       const c = art.wallObjView(wid) ?? [sx, sy];
@@ -367,7 +364,6 @@ export function createArrange(g: Game): Partial<Game> {
       try { canvas.setPointerCapture(e.pointerId); } catch { /* not capturable: drag still works while over the canvas */ }
       return;
     }
-    if (g.s.scriptMode === 'guided' && !g.s.scriptAllow.some((a) => a === `obj:${o.id}` || a === `objType:${o.type}`)) return;
     selectObject(o);
     const [wx, wy] = worldAt(sx, sy), [fw, fd] = [TYPES[o.type].W, TYPES[o.type].D];
     const [cw, cd] = o.rot % 2 ? [fd, fw] : [fw, fd];

@@ -443,14 +443,24 @@ describe('rules that keep a scene honest', () => {
     expect(t.flags.in).toBe(1);
   });
 
-  it('a guided lesson is not interrupted by a delivery; a beat is, and comes back at its last mode step', () => {
-    const lesson = base('lesson', [{ do: 'mode', mode: 'guided', allow: ['obj:box'] }, { do: 'wait', until: { flag: 'opened' } }], { mode: 'beat', priority: 1 });
+  it('a lesson waiting on its objective lets a delivery through and comes back at its mode step; a cutscene does not', () => {
+    // The player is free while an objective is open, so what they buy meanwhile arrives meanwhile.
+    const lesson = base('lesson', [{ do: 'mode', mode: 'guided', allow: ['obj:box'] }, { do: 'wait', until: { flag: 'opened' } }, { do: 'set', flag: 'lessonDone', value: 1 }], { mode: 'beat', priority: 1 });
     const delivery = base('delivery', [{ do: 'set', flag: 'delivered', value: 1 }], { trigger: { on: 'cond', cond: { event: 'delivery.due' } }, mode: 'beat', once: false, priority: 5 });
     const t = make([lesson, delivery]);
     t.engine.startNewGame(); t.tick(2);
     t.engine.emit({ type: 'delivery.due' }); t.tick(3);
-    expect(t.flags.delivered).toBeUndefined();
-    expect(t.engine.state()?.id).toBe('lesson');
+    expect(t.flags.delivered).toBe(1);
+    expect(t.engine.state()).toMatchObject({ id: 'lesson', mode: 'guided' });
+    t.flags.opened = true; t.tick(2);
+    expect(t.flags.lessonDone).toBe(1);
+
+    const scene = base('scene', [{ do: 'mode', mode: 'cutscene' }, { do: 'wait', until: { flag: 'cue' } }], { mode: 'cutscene', priority: 1 });
+    const u = make([scene, delivery]);
+    u.engine.startNewGame(); u.tick(2);
+    u.engine.emit({ type: 'delivery.due' }); u.tick(3);
+    expect(u.flags.delivered).toBeUndefined();
+    expect(u.engine.state()?.id).toBe('scene');
   });
 
   it('the validator insists on a fallback beside an event, a wait after a button, and silence while walking', () => {

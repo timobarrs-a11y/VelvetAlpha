@@ -68,7 +68,7 @@ export function createWallLamps(g: Game): Partial<Game> {
 
   // ---- Dragging along the walls ----
   const SLOP = 6;
-  const arranging = (): boolean => g.isArranging() && !g.s.scriptMode;
+  const arranging = (): boolean => g.isArranging() && g.s.scriptMode !== 'cutscene';
   canvas.addEventListener('pointerdown', (e) => {
     if (!arranging() || !e.isPrimary || e.button > 0) return;
     const [sx, sy] = g.toView(e.clientX, e.clientY);

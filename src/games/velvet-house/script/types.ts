@@ -23,6 +23,12 @@ export type LineBank = Record<'humor' | 'communication', Record<string, Record<s
 /** Things on screen a script can spotlight or allow. */
 export type UiTarget = `tab:${string}` | 'floorbar' | 'camera' | 'wallet' | 'bill' | 'needs' | `obj:${string}` | `objType:${string}`;
 
+/**
+ * How a script plays. 'cutscene': the story is telling something, and while it moves people or speaks nothing else can
+ * be touched. 'guided': a lesson; its lines are tapped through, and while it waits on an objective the whole game is the
+ * player's. 'beat': part of the day; lines are speech bubbles and nothing is ever held. Whatever the mode, a wait on an
+ * objective never locks anything (script/gameHost.ts, applyLock).
+ */
 export type Mode = 'cutscene' | 'guided' | 'beat';
 
 export interface GameEvent { type: string; [key: string]: FlagValue | undefined }

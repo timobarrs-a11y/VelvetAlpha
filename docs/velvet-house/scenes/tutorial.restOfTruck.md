@@ -5,6 +5,11 @@ the questions that change what gets built, each with the working assumption the 
 mechanic and the companion's consequences are specified in `docs/velvet-house/food-and-consequences.md` and are not
 built yet.
 
+**2026-10-28:** the director got stuck at B2 ("Carry it upstairs") because the guided lesson had locked the dock, so
+Arrange could not be opened to use Carry to. Lessons no longer lock anything while they wait; see the move-in
+contract, §0 fifth round, for the director's words and the rule. Every card here is an overlay with **Got it**,
+then the objective bar; the beats and their world conditions are unchanged.
+
 ## 1. Purpose and intended player experience
 
 Director's words: "stop Dez from bringing in two lamps. Just one, then the plant, then the bed, which we then use to

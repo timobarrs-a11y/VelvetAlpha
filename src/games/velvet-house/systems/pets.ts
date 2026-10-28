@@ -274,7 +274,7 @@ export function createPets(g: Game): Partial<Game> {
     const ch = people[0], p = world.pets.find(q => q.id === petId);
     if (!p) return;
     if (ch.away) { log(`${ch.name} is out right now.`); return; }
-    if (g.s.scriptMode === 'cutscene' || g.s.scriptMode === 'guided') return;
+    if (g.s.scriptMode === 'cutscene') return;
     if (g.isArranging()) g.exitArrange();
     if (!orderFor(ch, act, p, true)) return;
     view.follow = 'jordan';

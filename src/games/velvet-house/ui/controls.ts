@@ -87,9 +87,8 @@ export function createControls(g: Game): Partial<Game> {
 
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    // A cutscene takes no keys; a guided lesson only the ones that help place the piece.
-    if (g.s.scriptMode === 'cutscene') return;
-    if (g.s.scriptMode === 'guided' && !['r', 'R', 'Enter', 'Escape'].includes(e.key)) return;
+    // While the story is telling something (a line, a choice, a card), keys wait; the rest of the time they all work.
+    if (g.s.scriptMode === 'cutscene' || g.s.storyCard) return;
     if (e.key >= '1' && Number(e.key) <= LEVEL_COUNT && (Number(e.key) - 1 !== ATTIC || hasAttic())) setLevel(Number(e.key) - 1);
     else if (e.key === 'r' || e.key === 'R') { if (g.isArranging()) { g.rotateSelected(); e.preventDefault(); } else rotate(); }
     else if (e.key === 'w' || e.key === 'W') cycleWalls();

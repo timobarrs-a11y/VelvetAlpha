@@ -608,39 +608,37 @@
 .vh-choices button:hover, .vh-choices button:active { background: #F6E6BF; }
 .vh-speech[data-choosing] { cursor: default; }
 .vh-speech[data-choosing] .vh-speech-next { display: none; }
-.vh-scard { bottom: auto; top: 54px; left: 50%; transform: translateX(-50%); background: rgba(23,21,29,.94); color: #F2EEE8; border: 1px solid rgba(255,255,255,.14); font-size: 13.5px; }
-.vh-scard strong { display: block; margin-bottom: 2px; color: #FFD666; }
+/* A card comes up over the game: nothing else can be tapped until Got it. Then it folds into the objective bar. */
+.vh-scard-veil { position: absolute; inset: 0; background: rgba(8,6,12,.45); pointer-events: auto; z-index: 1; }
+.vh-scard-veil[hidden], .vh-scard[hidden], .vh-objective[hidden] { display: none; }
+.vh-scard { bottom: auto; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(380px, calc(100% - 32px)); z-index: 2; background: rgba(23,21,29,.97); color: #F2EEE8; border: 1px solid rgba(255,214,102,.35); font-size: 14px; padding: 18px 20px; text-align: center; }
+.vh-scard strong { display: block; margin-bottom: 6px; color: #FFD666; font-size: 16px; }
 .vh-scard p { margin: 0; }
 .vh-scard p b { color: #FFD666; font-weight: 800; }
-.vh-scard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.vh-scard-head strong { margin: 0; }
-.vh-scard .vh-scard-min { margin: 0; padding: 4px 10px; background: rgba(255,255,255,.12); color: #F2EEE8; border-radius: 999px; font-size: 13px; line-height: 1; transition: transform .2s ease; }
-.vh-scard[data-min] .vh-scard-min { transform: rotate(180deg); }
-.vh-scard[data-min] p { display: none; }
-.vh-scard[data-min] .vh-scard-go { margin-top: 6px; }
-.vh-scard button { margin-top: 10px; border: 0; border-radius: 10px; padding: 8px 14px; background: #E0A43A; color: #241B25; font: 700 13px/1 Inter, system-ui, sans-serif; cursor: pointer; }
-/* While a script is running, only what it allows can be used. */
-.vh-stage[data-script="cutscene"] .vh-dock, .vh-stage[data-script="cutscene"] .vh-controls, .vh-stage[data-script="cutscene"] .vh-people,
-.vh-stage[data-script="guided"] .vh-dock, .vh-stage[data-script="guided"] .vh-controls, .vh-stage[data-script="guided"] .vh-people { pointer-events: none; opacity: .5; }
+.vh-scard button { margin-top: 14px; border: 0; border-radius: 12px; padding: 10px 22px; background: #E0A43A; color: #241B25; font: 700 14px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+/* The objective bar: what the story is waiting for, out of the way under the clock. A reminder, not a lock. */
+.vh-objective { position: absolute; top: 64px; left: 16px; max-width: min(360px, calc(100% - 32px)); display: flex; align-items: baseline; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(255,214,102,.35); background: rgba(23,21,29,.9); color: #F2EEE8; font: 400 13px/1.3 Inter, system-ui, sans-serif; text-align: left; cursor: pointer; pointer-events: auto; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.vh-objective span { font: 700 10px/1 Inter, system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #A9A1AE; flex-shrink: 0; }
+.vh-objective strong { color: #FFD666; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* While the story is telling something, only it can be used. */
+.vh-stage[data-script="cutscene"] .vh-dock, .vh-stage[data-script="cutscene"] .vh-controls, .vh-stage[data-script="cutscene"] .vh-people { pointer-events: none; opacity: .5; }
 .vh-stage[data-script] .vh-spot { pointer-events: auto !important; opacity: 1 !important; animation: vh-spot 1.2s ease-in-out infinite; position: relative; z-index: 3; }
 @keyframes vh-spot { 50% { box-shadow: 0 0 0 4px rgba(255,214,102,.75), 0 0 18px rgba(255,214,102,.6); } }
 .vh-stage[data-script="cutscene"] canvas.vh-canvas { pointer-events: none; }
 @media (max-width: 560px) {
   .vh-speech { bottom: auto; top: calc(7% + 10px); left: 8px; width: calc(100% - 16px); z-index: 3; }
-  /* The lesson card sits below the picture, just above the floor and speed buttons, so it never covers the house
-     (the camera frames the house in whatever the panels leave free). A short card keeps that gap small. */
-  .vh-scard { top: auto; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 114px); width: calc(100% - 16px); padding: 8px 12px; font-size: 12.5px; line-height: 1.35; }
-  .vh-scard button { margin-top: 6px; padding: 7px 14px; }
+  .vh-scard { width: calc(100% - 32px); }
+  .vh-objective { top: 54px; left: 8px; max-width: calc(100% - 16px); }
+  /* Arranging: the panel takes the top, so the objective waits just above the floor buttons. */
+  .vh-stage.vh-arranging .vh-objective { top: auto; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 114px); }
   /* Arranging: the day, season and money chips slide away, and the panel and any line of dialogue take their place. */
   .vh-hud { transition: transform .25s ease, opacity .2s ease; }
   .vh-stage.vh-arranging .vh-hud { transform: translateY(-140%); opacity: 0; }
   .vh-stage.vh-arranging .vh-drawer[data-open="arrange"] { top: 8px; }
   .vh-stage.vh-arranging .vh-speech { top: 184px; }
-  /* The Skip button sits on the card's lower right: keep the words clear of it. */
-  .vh-stage[data-script="cutscene"] .vh-scard, .vh-stage[data-script="guided"] .vh-scard { padding-right: 84px; }
   /* The town sign rides above the floor buttons, not over the dock; it steps aside while a panel or a lesson needs the room. */
   .vh-town-sign { bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 112px); left: 12px; }
-  .vh-stage.vh-arranging .vh-town-sign, .vh-stage[data-script="cutscene"] .vh-town-sign, .vh-stage[data-script="guided"] .vh-town-sign { display: none; }
+  .vh-stage.vh-arranging .vh-town-sign, .vh-stage[data-script="cutscene"] .vh-town-sign { display: none; }
 }
 
 /* The title screen: it sits over the living house, so the backdrop is only a soft vignette and the buttons are glass. */
@@ -690,7 +688,7 @@
 .vh-vital-value { font-variant-numeric: tabular-nums; color: #A9A1AE; min-width: 44px; text-align: right; white-space: nowrap; }
 .vh-vital[data-overdue="1"] .vh-vital-value { color: #F2A7A0; font-weight: 700; }
 .vh-log { bottom: 200px !important; }
-.vh-stage.vh-arranging .vh-vitals, .vh-stage[data-script="cutscene"] .vh-vitals, .vh-stage[data-script="guided"] .vh-vitals, .vh-stage.vh-attract .vh-vitals { display: none; }
+.vh-stage.vh-arranging .vh-vitals, .vh-stage[data-script="cutscene"] .vh-vitals, .vh-stage.vh-attract .vh-vitals { display: none; }
 @media (max-width: 760px) {
   .vh-vitals { left: 8px; right: auto; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 136px); width: 168px; padding: 8px 10px 6px; }
   .vh-vital { grid-template-columns: 44px 1fr; gap: 6px; margin: 4px 0; }

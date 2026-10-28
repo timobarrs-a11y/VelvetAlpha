@@ -40,7 +40,7 @@ export function createOverseer(g: Game): Partial<Game> {
 
   // What the player is doing near it: walking in, waking up, cooking.
   function overseerTick(): void {
-    if (g.s.scriptMode === 'cutscene' || g.s.scriptMode === 'guided') return;
+    if (g.s.scriptMode === 'cutscene') return;
     const me = people[0];
     const here = overseers().filter((o) => o.level === me.level && !me.away && distTo(o, me.x, me.y) < HEAR);
     const nowNear = new Set(here.map((o) => o.id));

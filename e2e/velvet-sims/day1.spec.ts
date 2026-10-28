@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame, objects, inGame, pageErrors, dragToMark, rotateTo } from './helpers';
+import { openGame, objects, inGame, pageErrors, dragToMark, rotateTo, storyTap } from './helpers';
 
 /**
  * The whole first day, played the way a new player would: tap through the cutscene, then do what each card asks (unpack and
@@ -11,23 +11,18 @@ test.setTimeout(900_000);
 test('the first day plays through from the move-in to free will', async ({ page }) => {
   const game = await openGame(page, { script: true });
   const story = async (): Promise<Record<string, unknown>> => JSON.parse(await inGame<string>(page, 'v.story()'));
-  const card = async (): Promise<string> => ((await game.locator('.vh-scard:visible strong').count()) ? (await game.locator('.vh-scard strong').innerText()) : '');
+  // The objective the story is waiting on: a card is read and closed with Got it, as a player would.
+  const card = (): Promise<string> => storyTap(game);
   const done: string[] = [];
   const once = (key: string): boolean => (done.includes(key) ? false : (done.push(key), true));
 
   // There is no Skip: the opening is tapped through like a player would, then the couch is unpacked and dragged into
   // the outline by the TV.
-  await expect.poll(async () => {
-    if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
-    return game.locator('.vh-scard:visible').count();
-  }, { timeout: 200_000, intervals: [300] }).toBeGreaterThan(0);
+  await expect.poll(() => storyTap(game), { timeout: 200_000, intervals: [300] }).toBe('Open the box');
   const couchPos = await inGame<[number, number] | null>(page, "v.clientPosOf('box.couch')");
   await page.mouse.click(couchPos![0], couchPos![1]);
   await expect.poll(async () => (await objects(page)).some((o) => o.id === 'box.couch' && o.type === 'sofa')).toBe(true);
-  await expect.poll(async () => {
-    if (await game.locator('.vh-speech:visible').count()) await game.locator('.vh-speech').click();
-    return (await game.locator('.vh-scard:visible').count()) && (await game.locator('.vh-scard strong').innerText()) === 'Put it where it goes';
-  }, { timeout: 30_000, intervals: [300] }).toBeTruthy();
+  await expect.poll(() => storyTap(game), { timeout: 30_000, intervals: [300] }).toBe('Put it where it goes');
   await dragToMark(page, 'box.couch', 'living.couchTv', 'sofa', 2);
   await rotateTo(page, 'box.couch', 2);
   await expect.poll(async () => JSON.parse(await inGame<string>(page, 'v.story()'))['opening.done'], { timeout: 15_000 }).toBe(true);

@@ -76,6 +76,20 @@ export class ScriptEngine {
     return next?.do === 'wait' && next.until ? next.until : null;
   }
 
+  /** The wait on the world that comes next, if the next step is one: what a card just shown is asking the player to do. */
+  upcomingWait(): Cond | null {
+    if (this.blocking?.k === 'until') return this.blocking.cond;
+    const f = this.frames[this.frames.length - 1];
+    if (!f) return null;
+    // Past what only changes the screen (a spotlight, an outline, the camera), to the wait the card is about.
+    for (let i = f.i; i < f.steps.length; i++) {
+      const next = this.sub(f.steps[i]) as Step;
+      if (next.do === 'highlight' || next.do === 'outline' || next.do === 'camera') continue;
+      return next.do === 'wait' && next.until ? next.until : null;
+    }
+    return null;
+  }
+
   /** What kind of thing the script is waiting for right now, or null. */
   blockedOn(): Blocking['k'] | null { return this.blocking?.k ?? null; }
 
@@ -213,13 +227,14 @@ export class ScriptEngine {
   }
 
   /**
-   * A story beat that is only waiting for the player to do something steps aside for a more urgent script (a delivery
-   * at the door) and picks up again afterwards, from its last mode step so its card and outline come back. A cutscene
-   * or a guided lesson (the live mode, not the script's declared one) is never interrupted.
+   * A story beat or a lesson that is only waiting for the player to do something steps aside for a more urgent script
+   * (a delivery at the door: the player is free to shop while an objective is open) and picks up again afterwards,
+   * from its last mode step so its card and outline come back. A cutscene (the live mode, not the script's declared
+   * one) is never interrupted.
    */
   private interruptIfUrgent(dt: number): void {
     const d = this.cur;
-    if (!d || this.mode !== 'beat' || this.blocking?.k !== 'until' || !this.rt.queue.length) return;
+    if (!d || this.mode === 'cutscene' || this.blocking?.k !== 'until' || !this.rt.queue.length) return;
     const urgent = this.rt.queue.some((q) => (this.defs.get(q.id)?.priority ?? 0) > (d.priority ?? 0) && this.needsMet(q, 0));
     if (!urgent) return;
     const at = this.mark ?? { path: this.pathNow(), redo: true };

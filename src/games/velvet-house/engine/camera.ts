@@ -48,9 +48,10 @@ export function createCamera(g: Game): Partial<Game> {
     const box = canvas.getBoundingClientRect();
     const was: [number, number] = [inset.ttop, inset.tbottom];
     inset.ttop = inset.tbottom = 0;
-    const covering = g.stage.classList.contains('vh-arranging') || visible(g.stage.querySelector('.vh-scard')) || visible(g.stage.querySelector('.vh-speech'));
+    // A story card sits over the middle for a moment and is read; only bands that stay (Arrange, a line) move the house.
+    const covering = g.stage.classList.contains('vh-arranging') || visible(g.stage.querySelector('.vh-speech'));
     if (covering && box.height > 0) {
-      const sel = ['.vh-drawer[data-open="arrange"]', '.vh-scard', '.vh-speech', '.vh-controls', '.vh-dock'];
+      const sel = ['.vh-drawer[data-open="arrange"]', '.vh-speech', '.vh-controls', '.vh-dock'];
       for (const el of sel.flatMap((q) => [...g.stage.querySelectorAll(q)])) {
         if (!visible(el)) continue;
         const r = el.getBoundingClientRect();

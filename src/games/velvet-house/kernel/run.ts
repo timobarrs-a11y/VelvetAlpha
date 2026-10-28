@@ -36,8 +36,9 @@ export function startGameLoop(g: Game): void {
       g.scriptUpdate(dt);
       if (view.paused) return;
       view.t += dt;
-      // In a cutscene or a guided step the day holds still; only the people a script is moving (and visitors) go on.
-      if (g.s.scriptMode === 'cutscene' || g.s.scriptMode === 'guided') {
+      // While the story is telling something (or a card is up to read) the day holds still; only the people a script is
+      // moving (and visitors) go on. An open objective does not stop the clock: the game is the player's.
+      if (g.s.scriptMode === 'cutscene' || g.s.storyCard) {
         for (const p of people) if (p.scripted || p.kind === 'npc') tickAgent(house, p, null, dt, 0, 1, world.minutes / 60, () => rng.next(), world.household);
         return;
       }
