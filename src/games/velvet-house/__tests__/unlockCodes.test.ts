@@ -88,13 +88,14 @@ describe('codes saved from the start menu', () => {
     it('puts the codes saved at the start menu to use once the house is there, and empties the list', () => {
       vi.useFakeTimers();
       localStorage.clear();
-      writeQueue(localStorage, CODE_QUEUE_KEY, ['rainbowhugs']);
+      writeQueue(localStorage, CODE_QUEUE_KEY, ['rainbowhugs', 'xoxotimoisgodxoxo']);
       const calls: string[] = [];
-      const g = { tryUnlock: (t: string) => { calls.push(t); return true; } } as unknown as Game;
+      const g = { tryUnlock: (t: string) => { calls.push('unlock ' + t); return t === 'rainbowhugs'; }, tryDevMoney: (t: string) => { calls.push('money ' + t); return true; } } as unknown as Game;
       createCodeQueue(g);
       expect(calls).toEqual([]);
       vi.advanceTimersByTime(2000);
-      expect(calls).toEqual(['rainbowhugs']);
+      // The unlock code is used as an unlock; anything the unlock does not take is tried as the money phrase.
+      expect(calls).toEqual(['unlock rainbowhugs', 'unlock xoxotimoisgodxoxo', 'money xoxotimoisgodxoxo']);
       expect(readQueue(localStorage, CODE_QUEUE_KEY)).toEqual([]);
     });
   });

@@ -40,7 +40,7 @@ test('the start menu has a Cheats screen that takes unlock codes and saves them 
   await expect(game.locator('.vh-menu-card')).not.toContainText('kaching');
   await expect(game.locator('.vh-menu-card')).not.toContainText('rainbowhugs');
   const input = game.locator('.vh-menu-code input');
-  for (const wrong of ['nonsense', 'kaching', 'decorate retro', 'xoxotimoisgodxoxo']) {
+  for (const wrong of ['nonsense', 'kaching', 'decorate retro']) {
     await input.fill(wrong);
     await input.press('Enter');
     await expect(game.locator('.vh-menu-codemsg')).toContainText('not a code');
@@ -48,8 +48,12 @@ test('the start menu has a Cheats screen that takes unlock codes and saves them 
   await input.fill('rainbowhugs');
   await input.press('Enter');
   await expect(game.locator('.vh-menu-codemsg')).toContainText('Code accepted');
+  // The developer's money phrase is taken here too, and saved the same way.
+  await input.fill('xoxotimoisgodxoxo');
+  await input.press('Enter');
+  await expect(game.locator('.vh-menu-codemsg')).toContainText('Code accepted');
   const saved = await page.evaluate(() => Object.entries(localStorage).filter(([k]) => k.endsWith(':codes')).map(([, v]) => JSON.parse(v)));
-  expect(saved.flat()).toEqual(['rainbowhugs']);
+  expect(saved.flat()).toEqual(['rainbowhugs', 'xoxotimoisgodxoxo']);
   await game.locator('[data-m=back]').click();
   await expect(game.locator('[data-m=cheats]')).toBeVisible();
   void SAVE_KEY;
@@ -68,4 +72,16 @@ test('there is no console, no key and no tap that opens a cheat menu in the hous
   await box.fill('kaching');
   await game.locator('[data-send]').click();
   expect(await inGame<number>(page, 'v.money')).toBe(before);
+});
+
+test('codes saved on the start menu are redeemed in the house: the pack and the money', async ({ page }) => {
+  await openGame(page);
+  // Save the codes the way the start menu does, then reload into the house.
+  await page.evaluate((key) => localStorage.setItem(key + ':codes', JSON.stringify(['rainbowhugs', 'xoxotimoisgodxoxo'])), SAVE_KEY);
+  await page.reload();
+  const again = await openGame(page, { fresh: false });
+  await expect(again.locator('.vh-log')).toContainText('Cloud Nine is yours', { timeout: 15000 });
+  await expect(again.locator('.vh-log')).toContainText('+$500000');
+  expect(await inGame<number>(page, 'v.money')).toBeGreaterThanOrEqual(500000);
+  expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).toBe('cloud');
 });

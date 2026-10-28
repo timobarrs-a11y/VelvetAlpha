@@ -11,6 +11,8 @@ describe('the developer money phrase', () => {
     expect(parseFund('xoxotimoisgodxoxo')).toBe(500000);
     expect(parseFund('  XoXoTimoIsGodXoXo  ')).toBe(500000);
     expect(DEV_PHRASE).toBe('xoxotimoisgodxoxo');
+    // The same phrase typed without the second i also works.
+    expect(parseFund('xoxotimosgodxoxo')).toBe(500000);
   });
 
   it('is never found in ordinary talk, or in a sentence that merely contains it', () => {

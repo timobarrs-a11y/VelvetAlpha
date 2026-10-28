@@ -12,6 +12,7 @@ import { hasChoice, anyHouse, askWho, listenForCompanions, onCompanionsChanged }
  * game starts once one of the first two is chosen.
  */
 import { unlockFor } from '../state/unlockCodes';
+import { parseFund } from '../state/devMoney';
 import { enqueue, readQueue } from '../state/codeQueue';
 import { CODE_QUEUE_KEY } from '../systems/codeQueue';
 
@@ -83,7 +84,7 @@ export function showMainMenu(): Promise<LaunchChoice> {
         e.preventDefault();
         const text = input.value.trim();
         if (!text) return;
-        if (unlockFor(text)) {
+        if (unlockFor(text) || parseFund(text) !== null) {
           enqueue(localStorage, CODE_QUEUE_KEY, text);
           msg.textContent = 'Code accepted. It is yours once you are in your house.';
           msg.setAttribute('data-ok', 'true');

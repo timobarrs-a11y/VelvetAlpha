@@ -6,7 +6,7 @@ phrase and the unlock codes given to players are all there is. (The first cheats
 
 ## 1. The developer's money phrase
 
-See `dev-money.md`. `xoxotimoisgodxoxo` said to the partner adds $500,000, for testing the shop.
+See `dev-money.md`. `xoxotimoisgodxoxo` said to the partner, or entered on the start menu's Cheats screen, adds $500,000, for testing the shop.
 
 ## 2. Unlock codes (secret packs, as gifts and for marketing)
 
@@ -29,8 +29,9 @@ To add one: a `secret(...)` set in `state/catalog.ts` (look drawers in `art/hous
 for a keepsake; for a marketing campaign they need to be checked by a server (single-use or limited, tracked per account).
 
 ### The start menu's Cheats screen
-It takes a code and lists none. There is no house at the title screen, so a valid code is saved (`state/codeQueue.ts`)
-and redeemed once the player is in their house (`systems/codeQueue.ts`).
+It takes a code and lists none: a pack's unlock code, or the developer's money phrase. There is no house at the title
+screen, so a valid code is saved (`state/codeQueue.ts`) and redeemed once the player is in their house
+(`systems/codeQueue.ts`).
 
 ### Applying a pack
 Buying a pack from the Sets tab puts it on at once. Once a pack is owned its card shows **Apply**, which puts the whole set

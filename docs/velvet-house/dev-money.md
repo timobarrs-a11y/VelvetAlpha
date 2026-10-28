@@ -6,7 +6,7 @@ For testing the shop (the mix-and-match sets). Say this to the partner in chat:
 xoxotimoisgodxoxo
 ```
 
-It adds **$500,000** (any case; it must be the whole message). It goes through the bank as "Found money" and the log shows
+It adds **$500,000** (any case; it must be the whole message; `xoxotimosgodxoxo` without the second i works too). It also works on the start menu's Cheats screen: it is saved and paid out once you are in your house, the same as a pack code. It goes through the bank as "Found money" and the log shows
 `+$500000`. It can be said again for more.
 
 - It is caught in `handleTalk` (`systems/chat.ts`) before anything goes to the AI or into the chat history: not sent, not
