@@ -144,6 +144,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
   wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
+  wallpaper('paper-formwork', 'Board-formed concrete', 'formwork', 110, ['industrial', 'minimal', 'bold']),
   wallpaper('paper-pixel-invaders', 'Pixel invaders', 'pixel-invaders', 110, ['playful', 'bold', 'vintage']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
@@ -214,6 +215,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-arcade', 'Arcade kitchen and living room', 'Black cabinets, marquee lights and neon: the cabinet fridge with a glowing screen, coin-op counter with a joystick at the end, a cocktail cabinet to eat off with red vinyl stools under a marquee, a vinyl sofa with chasing lights, a joystick lamp and a pixel pot, with pixel invaders on the walls and the arcade carpet underfoot. The claw machine in Hobbies goes with it.',
     ['look-fridge-arcade', 'look-counter-arcade', 'look-dining-arcade', 'look-sofa-arcade', 'look-lamp-arcade', 'look-plant-arcade', 'paper-pixel-invaders', 'floor-arcadecarpet'], ['playful', 'bold', 'vintage']),
 
+  bundle('set-brutalist', 'Brutalist Loft bedroom and bath', 'Board-formed concrete, blackened steel and one sheet of glass: the concrete bed and nightstand, a steel locker dresser, a wall-hung black toilet, a trough vanity, a walk-in shower, concrete walls, a dark terrazzo floor, and the Overseer to keep an eye on you.',
+    ['look-bed-brutalist', 'look-nightstand-brutalist', 'look-dresser-brutalist', 'look-toilet-brutalist', 'look-vanity-brutalist', 'look-shower-brutalist', 'paper-formwork', 'floor-terrazzodark', 'overseer'], ['industrial', 'minimal', 'bold']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -266,6 +270,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
   floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
+  floor('floor-terrazzodark', 'Dark terrazzo', 'terrazzodark', 170, ['industrial', 'minimal', 'bold']),
   floor('floor-arcadecarpet', 'Arcade carpet', 'arcadecarpet', 170, ['playful', 'bold', 'vintage']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
@@ -452,6 +457,14 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-arcade', 'sofa', 'arcade', 'Vinyl sofa with marquee lights', 'Black vinyl with yellow piping, red cushions with pixel hearts, a pixel invader on the back and a chaser strip along the base.', 560, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#E63946', '#F4C430']),
   look('look-lamp-arcade', 'lamp', 'arcade', 'Joystick lamp', 'A joystick as tall as you: a red ball on a black stick that glows, on a base ringed with marquee bulbs.', 160, ['playful', 'bold', 'vintage'], ['#E63946', '#15121F', '#F4C430']),
   look('look-plant-arcade', 'plant', 'arcade', 'Pixel pot', 'Your plant in a black pot with a pixel invader on the front and a pixel coin on the side.', 110, ['playful', 'bold', 'vintage'], ['#15121F', '#19E6F0', '#39D353', '#F4C430']),
+
+  // Upstairs packs: the bedroom and bath pieces, with the room's wallpaper and floor. Bought upstairs, they restyle upstairs.
+  look('look-bed-brutalist', 'bed', 'brutalist', 'Board-formed concrete bed', 'A slab of board-formed concrete for a headboard, tie holes and all, on a low concrete plinth, with white linen and a cover in your colour.', 640, ['industrial', 'minimal', 'bold'], ['#3A3B3F', '#8E939A', '#B5533C']),
+  look('look-nightstand-brutalist', 'nightstand', 'brutalist', 'Poured concrete nightstand', 'A poured cube with a recess for the book you are not reading, and a blackened steel reading arm.', 180, ['industrial', 'minimal', 'bold'], ['#A3A19C', '#85837E', '#BDBBB5']),
+  look('look-dresser-brutalist', 'dresser', 'brutalist', 'Steel locker dresser', 'Three numbered steel lockers with vents and pulls, on a black plinth under a concrete top.', 420, ['industrial', 'minimal', 'bold'], ['#4A4E55', '#6E7F8A', '#8E3B2E']),
+  look('look-toilet-brutalist', 'toilet', 'brutalist', 'Wall-hung black toilet', 'A matte black bowl that floats off the floor, on a concrete cistern block with a steel flush plate.', 260, ['industrial', 'minimal', 'bold'], ['#A3A19C', '#2E2F33', '#8E939A']),
+  look('look-vanity-brutalist', 'vanity', 'brutalist', 'Concrete trough vanity', 'A poured concrete trough on blackened steel legs, a wall tap over it and towels on the shelf below.', 380, ['industrial', 'minimal', 'bold'], ['#A3A19C', '#2B2D31', '#E9E6E0']),
+  look('look-shower-brutalist', 'shower', 'brutalist', 'Concrete walk-in shower', 'A concrete tray and back wall, a square rain head on a steel arm, a slot drain and a single pane of glass.', 520, ['industrial', 'minimal', 'bold'], ['#A3A19C', '#2B2D31', '#BADEE8']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),

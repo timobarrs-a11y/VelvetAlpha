@@ -9,9 +9,15 @@ import { CATALOG, type CatalogEntry } from './catalog';
 export const MAIN_FLOOR = 1;
 
 /** The piece on the main floor a skinned catalog entry restyles, or null if its type is not standing there (then it is placed as new). */
+/** The pieces the upstairs packs restyle: the bedroom's and the bathroom's. */
+export const UPSTAIRS_TYPES: ReadonlySet<string> = new Set(['bed', 'nightstand', 'dresser', 'wardrobe', 'toilet', 'vanity', 'shower', 'bathtub']);
+const UPSTAIRS = 2;
+
 export function skinTarget(objs: ObjectInstance[], item: Pick<CatalogEntry, 'type' | 'skin'>): ObjectInstance | null {
   if (!item.type || !item.skin) return null;
-  const here = objs.filter((o) => o.type === item.type && o.level === MAIN_FLOOR);
+  // The bedroom and bath pieces live upstairs, so their looks restyle the ones there; everything else, the main floor's.
+  const floor = UPSTAIRS_TYPES.has(item.type) ? UPSTAIRS : MAIN_FLOOR;
+  const here = objs.filter((o) => o.type === item.type && o.level === floor);
   // Prefer a piece that does not wear the look yet, so a second purchase restyles the next one rather than the same one.
   return here.find((o) => o.skin !== item.skin) ?? here[0] ?? null;
 }

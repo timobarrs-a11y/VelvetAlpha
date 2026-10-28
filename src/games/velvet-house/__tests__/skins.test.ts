@@ -36,7 +36,7 @@ describe('looks on the type', () => {
       for (const [id, s] of Object.entries(def.skins ?? {})) {
         expect(s.name, `${type}.${id}`).toBeTruthy();
         expect(['wood', 'metal', 'laminate', 'stone', 'fabric', 'glass']).toContain(s.material);
-        expect(['retro', 'farmhouse', 'modern', 'scandi', 'industrial', 'beach', 'deco', 'japandi', 'boho', 'space', 'gothic', 'riad', 'tropical', 'memphis', 'provence', 'adobe', 'neon', 'candy', 'cuddle', 'arcade']).toContain(s.theme);
+        expect(['retro', 'farmhouse', 'modern', 'scandi', 'industrial', 'beach', 'deco', 'japandi', 'boho', 'space', 'gothic', 'riad', 'tropical', 'memphis', 'provence', 'adobe', 'neon', 'candy', 'cuddle', 'arcade', 'brutalist']).toContain(s.theme);
       }
     }
   });
@@ -112,11 +112,12 @@ describe('buying a look', () => {
     for (const e of CATALOG.filter((c) => c.skin)) expect(skinExists(e.type, e.skin), e.id).toBe(true);
   });
 
-  it('finds the piece on the main floor to restyle, and nothing when the type is elsewhere', () => {
+  it('finds the piece on the main floor to restyle (upstairs for the bedroom and bath), and nothing when the type is elsewhere', () => {
     const objs = INITIAL_OBJS.map((o) => ({ ...o }));
     expect(skinTarget(objs, entry())!.id).toBe('fridge');
     expect(skinTarget(objs, { type: 'lamp', skin: 'x' })!.id).toBe('lamp1');
-    expect(skinTarget(objs, { type: 'bed', skin: 'x' })).toBeNull();
+    expect(skinTarget(objs, { type: 'bed', skin: 'x' })!.id).toBe('bed');
+    expect(skinTarget(objs, { type: 'desk', skin: 'x' })).toBeNull();
     expect(skinTarget(objs, { type: 'fridge' })).toBeNull();
   });
 
