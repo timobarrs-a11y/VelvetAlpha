@@ -2,21 +2,17 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createCrew } from '../../services/spacesService';
-import type { DirectorySpace, SpaceVisibility } from '../../types/spaces';
+import type { SpaceVisibility } from '../../types/spaces';
 import { SpaceIcon } from './SpaceIcon';
+import { DOOR_OPTIONS } from './doors';
 import { toast } from '../../shared/ui/Toast';
 
 const ICON_OPTIONS = ['Gamepad2', 'Coffee', 'Dumbbell', 'Film', 'Music', 'BookOpen', 'Palette', 'Trophy', 'Heart', 'Cpu'];
 const COLOR_OPTIONS = ['pink', 'rose', 'amber', 'blue', 'emerald', 'violet', 'teal', 'green'];
 
-const VISIBILITY_OPTIONS: { key: SpaceVisibility; label: string; desc: string }[] = [
-  { key: 'open', label: 'Open', desc: 'Anyone can join instantly' },
-  { key: 'request', label: 'Request', desc: 'You approve each request' },
-  { key: 'invite', label: 'Invite only', desc: 'People need a link' },
-];
 
 interface Props {
-  parentSpace: DirectorySpace;
+  parentSpace: { board_id: string; name: string; category: string; icon: string; color: string };
   onClose: () => void;
   onCreated: (boardId: string) => void;
 }
@@ -132,7 +128,7 @@ export function StartCrewModal({ parentSpace, onClose, onCreated }: Props) {
             <div>
               <label className="text-xs font-medium text-ink-muted mb-1.5 block">Door</label>
               <div className="space-y-2">
-                {VISIBILITY_OPTIONS.map(opt => (
+                {DOOR_OPTIONS.map(opt => (
                   <button
                     key={opt.key}
                     onClick={() => setVisibility(opt.key)}

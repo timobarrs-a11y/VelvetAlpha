@@ -1,10 +1,16 @@
 import React, { lazy, Suspense } from 'react';
-import { Route } from 'react-router-dom';
+import { Navigate, Route, useParams } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { RequireProfile } from '../components/auth/RequireProfile';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 import { ReportActivity } from '../features/objectives/ReportActivity';
 import type { ReportedKey } from '../services/dailyObjectivesService';
+
+// A space's posts live in the House now (its Posts tab); old links land there.
+function BoardRedirect() {
+  const { boardId } = useParams<{ boardId: string }>();
+  return <Navigate to={`/house/${boardId}?tab=posts`} replace />;
+}
 
 const App = lazy(() => import('../App'));
 const HomeSwitcher = lazy(() => import('../pages/HomeSwitcher').then(m => ({ default: m.HomeSwitcher })));
@@ -34,7 +40,6 @@ const MorningJournalPage = lazy(() => import('../pages/MorningJournalPage').then
 const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(m => ({ default: m.PersonProfilePage })));
 const RelationshipBriefPage = lazy(() => import('../pages/RelationshipBriefPage').then(m => ({ default: m.RelationshipBriefPage })));
 const CommunityPage = lazy(() => import('../pages/CommunityPage'));
-const BoardPage = lazy(() => import('../pages/BoardPage'));
 const PostDetailPage = lazy(() => import('../pages/PostDetailPage'));
 const CommunitySearchPage = lazy(() => import('../pages/CommunitySearchPage'));
 const MemberProfilePage = lazy(() => import('../pages/MemberProfilePage'));
@@ -90,7 +95,7 @@ export const appRoutes = [
   <Route key="memory-training" path="/memory-training" element={P(<MemoryTrainingPage />, 'memory_training')} />,
   <Route key="morning-journal" path="/morning-journal" element={P(<MorningJournalPage />)} />,
   <Route key="community" path="/community" element={P(<CommunityPage />, 'browse_spaces')} />,
-  <Route key="community-board" path="/community/board/:boardId" element={P(<BoardPage />)} />,
+  <Route key="community-board" path="/community/board/:boardId" element={P(<BoardRedirect />)} />,
   <Route key="community-post" path="/community/post/:postId" element={P(<PostDetailPage />)} />,
   <Route key="community-search" path="/community/search" element={P(<CommunitySearchPage />)} />,
   <Route key="member-profile" path="/member/:userId" element={P(<MemberProfilePage />, 'visit_neighbor')} />,

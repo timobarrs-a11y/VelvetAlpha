@@ -19,7 +19,8 @@ somebody to get in.
    private crews, invites, mentions, unread counts and "who's here now."
 2. A stranger can find a crew in under 30 seconds. Every space is listed
    and searchable, even locked ones. A crew can lock its door, but the door
-   is always on the map.
+   is always on the map. **One exception (Tim, 28 October): a Hidden door**,
+   see "After Phase 4" below.
 
 ## Phases (in order, each depends on the one before)
 
@@ -75,6 +76,34 @@ where table_name = 'user_profiles'
 -- 3. Are the bot accounts flagged? (Phase 2 fixes this if false.)
 select id, name, is_bot from user_profiles where id::text like 'b0b00000%';
 ```
+
+## After Phase 4: Hidden spaces, and spaces and crews as one view (built)
+
+Migration `supabase/migrations/20261109100000_hidden_spaces_and_space_cards.sql`.
+
+**Hidden door (Tim, 28 October).** A fifth door next to Open, Request, Invite only and Private,
+for private groups of friends. A hidden space or crew is never listed in Browse, search,
+suggestions or anyone's sidebar unless they're in it. The only ways in are an invite link or an
+owner/mod adding a friend. Everything inside it (its crews, rooms and posts) is hidden the same
+way. Making a door hidden needs social access (age verified). Admins still see every space, and
+reporting works inside hidden spaces as everywhere else. One rule, `can_see_board()`, decides
+visibility for the board policy, the directory, search, suggestions and `can_read_board()`.
+
+**One view.** Spaces and crews used to read as two UIs: crews were only on the Browse page,
+Posts left the House for the old forum page, and a space or crew you weren't in didn't open at
+all. Now:
+
+| Before | Now |
+|---|---|
+| Crews listed only on `/house/browse`, behind a drill-in | A **Crews** tab in every space (`?tab=crews`), with Join/Request and **Start a crew** |
+| Posts opened `/community/board/:id`, a different page | A **Posts** tab inside the House (`?tab=posts`); old board links redirect there |
+| A space you weren't in fell back to the overview | Open spaces show their rooms with Join; closed doors show a card with Request, "Use invite" or "Members only", plus their crews |
+| Sidebar showed crews only after a lookup that often never ran | Crews you're in nest under their space (unread rolls up when folded); unfolding also lists crews you can join |
+| Crews didn't say where they live | A breadcrumb (`Gaming Lounge › Crew`) on the header and door card |
+
+`get_my_spaces()` and `get_space_directory()` now return `parent_board_id`, `parent_name` and
+a `sub_space_count` of crews you can see; `get_space_card(id)` returns one space as the House
+shows it.
 
 ## Ideas for after Phase 4 (not scheduled)
 

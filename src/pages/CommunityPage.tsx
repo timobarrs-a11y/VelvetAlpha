@@ -257,7 +257,7 @@ export default function CommunityPage() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.05 }}
-                      onClick={() => navigate(`/community/board/${board.id}`)}
+                      onClick={() => navigate(`/house/${board.id}?tab=posts`)}
                       className="ds-tile group relative p-4 text-left overflow-hidden"
                       style={{
                         // @ts-expect-error CSS custom property
@@ -325,7 +325,7 @@ export default function CommunityPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: Math.min(i * 0.03, 0.4) }}
-                      onClick={() => navigate(`/community/board/${board.id}`)}
+                      onClick={() => navigate(`/house/${board.id}?tab=posts`)}
                       className="w-full flex items-center gap-3 px-4 py-3.5 text-left border-b border-white/[0.06] last:border-b-0 transition-all hover:bg-white/[0.03] group"
                     >
                       <div

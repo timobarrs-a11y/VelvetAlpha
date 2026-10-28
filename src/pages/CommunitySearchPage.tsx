@@ -169,7 +169,7 @@ export default function CommunitySearchPage() {
                 onClick={() =>
                   result.result_type === 'post'
                     ? navigate(`/community/post/${result.id}`)
-                    : navigate(`/community/board/${result.id}`)
+                    : navigate(`/house/${result.id}`)
                 }
                 className="w-full text-left rounded-xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/15 p-4 transition-all group"
               >

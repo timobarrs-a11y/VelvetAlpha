@@ -1,5 +1,5 @@
 import { supabase } from '../shared/supabase/client';
-import type { MySpace, SpaceSuggestion, SpaceRoom, SpaceMember, RoomMessage, DirectorySpace, JoinRequest, InvitePreview, InviteRow, RoleTag, SpaceVisibility } from '../types/spaces';
+import type { MySpace, SpaceSuggestion, SpaceRoom, SpaceMember, RoomMessage, DirectorySpace, JoinRequest, InvitePreview, InviteRow, RoleTag, SpaceView, SpaceVisibility } from '../types/spaces';
 
 const SEND_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/community-room-send`;
 
@@ -321,12 +321,10 @@ export async function reorderRoom(roomId: string, direction: 'up' | 'down'): Pro
   await supabase.from('community_rooms').update({ sort_order: room.sort_order }).eq('id', swap.id);
 }
 
-export async function getParentBoardIds(boardIds: string[]): Promise<Map<string, string | null>> {
-  if (boardIds.length === 0) return new Map();
-  const { data, error } = await supabase
-    .from('community_boards')
-    .select('id, parent_board_id')
-    .in('id', boardIds);
-  if (error || !data) return new Map();
-  return new Map(data.map(r => [r.id as string, r.parent_board_id as string | null]));
+/** One space or crew as the House shows it, member or not. Null when it doesn't exist or is hidden from me. */
+export async function getSpaceCard(boardId: string): Promise<SpaceView | null> {
+  const { data, error } = await supabase.rpc('get_space_card', { p_board_id: boardId });
+  if (error) throw new Error(error.message);
+  const row = (data ?? [])[0];
+  return row ? (row as SpaceView) : null;
 }

@@ -214,7 +214,7 @@ export default function PostDetailPage() {
     const ok = await deletePost(postId);
     if (ok) {
       toast.success('Post deleted.');
-      navigate(boardId ? `/community/board/${boardId}` : '/community');
+      navigate(boardId ? `/house/${boardId}?tab=posts` : '/community');
     } else {
       toast.error('Could not delete post.');
     }
@@ -315,7 +315,7 @@ export default function PostDetailPage() {
           boardName={boardName || undefined}
           boardId={boardId}
           accent={boardColor}
-          back={boardId ? `/community/board/${boardId}` : '/community'}
+          back={boardId ? `/house/${boardId}?tab=posts` : '/community'}
           backLabel={boardName || 'Board'}
         />
       }

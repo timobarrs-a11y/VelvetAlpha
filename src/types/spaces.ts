@@ -1,10 +1,18 @@
-export type SpaceVisibility = 'open' | 'request' | 'invite' | 'private';
+export type SpaceVisibility = 'open' | 'request' | 'invite' | 'private' | 'hidden';
 export type SpaceRole = 'owner' | 'mod' | 'member';
 
 export interface MySpace {
   board_id: string; name: string; description: string | null; icon: string; color: string;
   category: string; visibility: SpaceVisibility; member_count: number; role: SpaceRole;
   unread_count: number; last_message_at: string | null;
+  parent_board_id: string | null; parent_name: string | null; sub_space_count: number;
+}
+/** Any space or crew the House can show: one of mine, or a preview of one I'm not in. */
+export interface SpaceView {
+  board_id: string; name: string; description: string | null; icon: string; color: string;
+  category: string; visibility: SpaceVisibility; member_count: number; role: SpaceRole | null;
+  parent_board_id: string | null; parent_name: string | null; sub_space_count: number;
+  has_pending_request?: boolean;
 }
 export interface SpaceSuggestion {
   board_id: string; name: string; description: string | null; icon: string; color: string;
@@ -30,6 +38,7 @@ export interface DirectorySpace {
   board_id: string; parent_board_id: string | null; name: string; description: string | null;
   icon: string; color: string; category: string; visibility: SpaceVisibility;
   member_count: number; is_member: boolean; has_pending_request: boolean; sub_space_count: number;
+  parent_name: string | null;
 }
 export interface JoinRequest {
   id: string; user_id: string; display_name: string; avatar_config: unknown;

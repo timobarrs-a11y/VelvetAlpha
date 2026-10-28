@@ -11,6 +11,7 @@ import {
   getRoleTags, createRoleTag, deleteRoleTag, assignMemberTag, removeMemberTag,
   getRooms, createRoom, deleteRoom, reorderRoom,
 } from '../../services/spacesService';
+import { DOOR_OPTIONS } from './doors';
 import type { SpaceMember, JoinRequest, InviteRow, RoleTag, SpaceRoom, SpaceVisibility } from '../../types/spaces';
 import { SpaceIcon } from './SpaceIcon';
 import { toast } from '../../shared/ui/Toast';
@@ -210,11 +211,15 @@ function GeneralTab({ boardId, name, description, icon, color, visibility, canMo
           disabled={!canMod}
           className="w-full bg-white/5 rounded-xl px-3 py-2 text-sm text-ink outline-none focus:bg-white/8 transition-colors disabled:opacity-50"
         >
-          <option value="open">Open — anyone can join</option>
-          <option value="request">Request — you approve</option>
-          <option value="invite">Invite only — link required</option>
-          <option value="private">Private — owners add people</option>
+          {DOOR_OPTIONS.map(o => (
+            <option key={o.key} value={o.key}>{o.label} — {o.desc}</option>
+          ))}
         </select>
+        {formVis === 'hidden' && (
+          <p className="text-[11px] text-ink-muted mt-1.5">
+            Nobody outside sees it in Browse, search or suggestions. Add people from your friends or send an invite link.
+          </p>
+        )}
       </div>
       {canMod && (
         <button
