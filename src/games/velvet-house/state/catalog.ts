@@ -11,7 +11,7 @@ export interface CatalogEntry {
   name: string;
   desc?: string;
   price: number;
-  icon: 'paint' | 'paper' | 'floor' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
+  icon: 'paint' | 'paper' | 'floor' | 'set' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
   tab: string;
   tags?: string[];
   type?: string;
@@ -29,10 +29,12 @@ export interface CatalogEntry {
   pet?: 'cat' | 'dog';
   home?: string;
   buy?: string;
+  /** A themed set sold as one bundle: the catalog ids it holds and the share taken off what is not owned yet. */
+  set?: { items: string[]; off: number };
 }
 
 export const TABS = [
-  'Today', 'Groceries', 'Paint', 'Wallpaper', 'Floors',
+  'Today', 'Sets', 'Groceries', 'Paint', 'Wallpaper', 'Floors',
   'Furniture', 'Wall', 'Decor', 'Plants', 'Hobbies',
   'Outdoor', 'Clothes', 'Upgrades', 'Attic', 'Pets', 'Homes',
 ] as const;
@@ -62,6 +64,11 @@ const decor = (id: string, type: string, name: string, price: number, tags: stri
 /** A look of a piece the house already has: same footprint and spots, drawn and named differently. */
 export const look = (id: string, type: string, skin: string, name: string, desc: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
   id, name, desc, price, icon: 'obj', tab: 'Furniture', type, skin, tags, cols, repeat: true,
+});
+
+/** A themed set: its pieces, wallpaper and floor bought together for less. The price is worked out from the pieces (see `setQuote`). */
+const bundle = (id: string, name: string, desc: string, items: string[], tags: string[], off = 0.2): CatalogEntry => ({
+  id, name, desc, price: 0, icon: 'set', tab: 'Sets', tags, set: { items, off },
 });
 
 const hobby = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
@@ -126,6 +133,10 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-blossom', 'Blossom', 'blossom', 100, ['soft', 'natural', 'playful']),
   wallpaper('paper-palms', 'Palms', 'palms', 100, ['natural', 'playful', 'cool']),
   wallpaper('paper-jungle-night', 'Jungle night', 'jungle-night', 120, ['bold', 'natural', 'cool']),
+
+  // Sets: a whole look at once, for less than the pieces apart
+  bundle('set-retro', 'Retro kitchen and living room', 'The pastel icebox, diner counter, boomerang table set, davenport, atomic lamp and planter, with atomic mint walls and diner linoleum.',
+    ['look-fridge-retro', 'look-counter-retro', 'look-dining-retro', 'look-sofa-retro', 'look-lamp-retro', 'look-plant-retro', 'paper-starburst-mint', 'floor-linoleum'], ['vintage', 'playful', 'bold']),
 
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
@@ -292,6 +303,17 @@ export const CATALOG: CatalogEntry[] = [
   // Clothes (driven by the clothing catalog so ids and styles stay in sync)
   ...CLOTHES.map(c => clothItem(c.key)),
 ];
+
+/** What a set costs: the pieces you do not own yet, less the set's share off. `full` is what they cost apart. */
+export function setQuote(set: CatalogEntry, owned: ReadonlySet<string>): { full: number; cost: number; missing: CatalogEntry[]; members: CatalogEntry[] } {
+  const members = (set.set?.items ?? []).map((id) => CATALOG.find((c) => c.id === id)).filter((c): c is CatalogEntry => !!c);
+  const missing = members.filter((m) => !owned.has(m.id));
+  const full = missing.reduce((t, m) => t + m.price, 0);
+  return { full, cost: Math.round(full * (1 - (set.set?.off ?? 0))), missing, members };
+}
+
+// A set's list price is every piece bought separately, less its share.
+for (const e of CATALOG) if (e.set) e.price = setQuote(e, new Set()).cost;
 
 // Tags for items that have them, used by companion taste system
 export const ITAGS: Record<string, string> = Object.fromEntries(

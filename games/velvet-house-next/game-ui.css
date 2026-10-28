@@ -651,3 +651,7 @@
   .vh-vital-value { display: none; }
   .vh-vitals-title { display: none; }
 }
+
+/* A set in the shop: the price apart, struck through, beside the set's price. */
+.vh-was { display: block; font-size: 11px; color: #A9A1AE; text-decoration: line-through; }
+.vh-set-save { color: #8FD9A8; }

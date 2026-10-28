@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { createHouseArt } from '../art/houseArt.js';
 import { TYPES, INITIAL_OBJS, type ObjectInstance } from '../state/objects';
-import { CATALOG, catalogById } from '../state/catalog';
+import { CATALOG, TABS, catalogById, setQuote } from '../state/catalog';
 import { STYLE_TAGS, tasteOf, computeTasteNorm } from '../state/taste';
 import { createShop } from '../systems/shop';
 import type { Game } from '../kernel/game';
@@ -97,5 +97,73 @@ describe('the Retro set', () => {
 
   it('every look in the catalog is unique and nothing else in it changed shape', () => {
     expect(new Set(CATALOG.map((c) => c.id)).size).toBe(CATALOG.length);
+  });
+});
+
+describe('the Sets tab', () => {
+  const set = () => catalogById('set-retro')!;
+  const shopWith = (money: number, owned: string[] = [], level = 1) => {
+    const objs = INITIAL_OBJS.map((o) => ({ ...o }));
+    const logs: string[] = [], emitted: unknown[] = [], paid: number[] = [], applied: string[] = [], ownedSet = new Set(owned);
+    const g = {
+      world: { objs }, partnerName: 'Maya', house: {}, view: { level }, owned: ownedSet, closet: [], flags: { styledSet: [] }, style: {}, tasteNorm: { key: '', mean: 0, sd: 1 },
+      log: (m: string) => logs.push(m), art: { burst: () => {}, objectPlaced: () => {}, applyWallpaper: (_l: number, p: string) => applied.push('paper:' + p), applyFloor: (_l: number, f: string) => applied.push('floor:' + f) },
+      hasAttic: () => false, storage: [], s: { bond: 50 }, cameraBeat: () => {}, scriptEmit: (e: unknown) => emitted.push(e), refreshDrawer: () => {}, dezDeliveries: () => false,
+      spendOn: (_: string, n: number) => { if (n > money) return false; money -= n; paid.push(n); return true; }, peopleOnFloor: () => [], relearnLayout: () => {},
+    } as unknown as Game;
+    return { objs, logs, emitted, paid, applied, owned: ownedSet, buy: createShop(g).handleBuy! };
+  };
+
+  it('is a tab, and the Retro set lists every look, the wallpaper and the floor', () => {
+    expect(TABS).toContain('Sets');
+    expect(set().tab).toBe('Sets');
+    expect(set().set!.items).toEqual([...RETRO_ITEMS, 'paper-starburst-mint', 'floor-linoleum']);
+    for (const id of set().set!.items) expect(catalogById(id), id).toBeDefined();
+  });
+
+  it('costs less than the pieces apart: 20% off what is not owned yet', () => {
+    const apart = set().set!.items.reduce((t, id) => t + catalogById(id)!.price, 0);
+    expect(apart).toBe(1895);
+    expect(setQuote(set(), new Set()).full).toBe(apart);
+    expect(set().price).toBe(Math.round(apart * 0.8));
+    expect(set().price).toBeLessThan(apart);
+    const some = setQuote(set(), new Set(['look-fridge-retro', 'floor-linoleum']));
+    expect(some.full).toBe(apart - 360 - 160);
+    expect(some.cost).toBe(Math.round((apart - 520) * 0.8));
+    expect(setQuote(set(), new Set(set().set!.items)).cost).toBe(0);
+  });
+
+  it('buying it puts every piece, the wallpaper and the floor in place, in one payment, with one reaction', () => {
+    const { objs, paid, applied, emitted, logs, owned, buy } = shopWith(5000);
+    const before = objs.filter((o) => o.level === 1).map((o) => [o.id, o.x, o.y, o.rot]);
+    buy(set());
+    expect(paid).toEqual([set().price]);
+    for (const id of ['fridge', 'counter', 'dining', 'sofa', 'lamp1', 'plant1']) expect(objs.find((o) => o.id === id)!.skin, id).toBe('retro');
+    expect(applied).toEqual(['paper:starburst-mint', 'floor:linoleum']);
+    expect(emitted.filter((e) => (e as { type: string }).type === 'room.styled')).toHaveLength(1);
+    expect(logs.filter((l) => /^Bought /.test(l))).toHaveLength(1);
+    for (const id of set().set!.items) expect(owned.has(id), id).toBe(true);
+    // Nothing moved.
+    expect(objs.filter((o) => o.level === 1).map((o) => [o.id, o.x, o.y, o.rot])).toEqual(before);
+  });
+
+  it('charges only for what is not owned, and never twice', () => {
+    const { paid, buy, owned } = shopWith(5000, ['look-fridge-retro', 'look-counter-retro']);
+    buy(set());
+    expect(paid).toEqual([setQuote(set(), new Set(['look-fridge-retro', 'look-counter-retro'])).cost]);
+    buy(set());
+    expect(paid).toHaveLength(1);
+    expect(owned.has('set-retro')).toBe(true);
+  });
+
+  it('with too little money, or standing on the backyard, nothing is bought or changed', () => {
+    const poor = shopWith(100);
+    poor.buy(set());
+    expect(poor.paid).toEqual([]);
+    expect(poor.objs.find((o) => o.id === 'fridge')!.skin).toBeUndefined();
+    const yard = shopWith(5000, [], 3);
+    yard.buy(set());
+    expect(yard.paid).toEqual([]);
+    expect(yard.objs.find((o) => o.id === 'fridge')!.skin).toBeUndefined();
   });
 });

@@ -5,7 +5,7 @@ import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
 import { LEVEL_NAMES, ATTIC } from '../state/house';
 import { isPaintable } from '../state/scenes';
 import { buildWorld } from '../state/agents';
-import { type CatalogEntry } from '../state/catalog';
+import { type CatalogEntry, setQuote } from '../state/catalog';
 import { tasteOf } from '../state/taste';
 import { skinTarget, skinColour, wearSkin } from '../state/skins';
 import { displayName, TYPES } from '../state/objects';
@@ -31,7 +31,27 @@ export function createShop(g: Game): Partial<Game> {
     art.burst(view.level, 5, 4, 0.6);
   }
 
-  function handleBuy(item: CatalogEntry, color?: string): void {
+  // A set: every piece, the wallpaper and the floor, for the discounted price of what the player does not own yet.
+  function buySet(item: CatalogEntry): void {
+    const q = setQuote(item, owned);
+    if (!q.missing.length) { log(`You already own all of the ${item.name.toLowerCase()}.`); return; }
+    if (q.members.some((m) => (m.icon === 'paper' || m.icon === 'floor') && !isPaintable(view.level))) {
+      log('Pick a floor of the house first (Basement, Main floor or Upstairs): the set\'s walls and floor go inside.');
+      return;
+    }
+    if (!g.spendOn(`Shop: ${item.name}`, q.cost)) { log('Not enough money.'); return; }
+    owned.add(item.id);
+    log(`Bought the ${item.name.toLowerCase()} for $${q.cost}, $${q.full - q.cost} less than the pieces apart.`);
+    // Every piece goes on, including looks the player already owned (those cost nothing, so the set is always the whole picture).
+    for (const m of q.members) handleBuy(m, undefined, true);
+    const taste = tasteOf({ id: item.id, name: item.name, tags: item.tags }, style, tasteNorm);
+    if (taste > 0) { g.s.bond = Math.min(100, g.s.bond + taste); log(`${partnerName} ${taste > 1 ? 'loves' : 'likes'} the ${item.name.toLowerCase()}.`); }
+    g.scriptEmit({ type: 'room.styled', liked: taste > 0 });
+    g.refreshDrawer();
+  }
+
+  function handleBuy(item: CatalogEntry, color?: string, fromSet = false): void {
+    if (item.set) { buySet(item); return; }
     const price = item.price;
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }
     if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor') && !isPaintable(view.level)) {
@@ -41,12 +61,12 @@ export function createShop(g: Game): Partial<Game> {
     // A look restyles the piece already on the main floor, so its one good spot stays; buying what it already wears costs nothing.
     const target = item.icon === 'obj' ? skinTarget(world.objs, item) : null;
     const lookCol = item.skin ? skinColour(item, color) : undefined;
-    if (target && target.skin === item.skin && (target.col ?? undefined) === lookCol) { log(`The ${displayName(target).toLowerCase()} already looks like that.`); return; }
+    if (!fromSet && target && target.skin === item.skin && (target.col ?? undefined) === lookCol) { log(`The ${displayName(target).toLowerCase()} already looks like that.`); return; }
     // A look already bought is the player's: putting it on again is free.
-    const free = !!(target && item.skin && owned.has(item.id));
+    const free = fromSet || !!(target && item.skin && owned.has(item.id));
     if (!free && !g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
-    log(free ? `Put the ${item.name} back on.` : `Bought ${item.name} for $${price}.`);
+    if (!fromSet) log(free ? `Put the ${item.name} back on.` : `Bought ${item.name} for $${price}.`);
 
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic') {
       world.objs.push(...ATTIC_STAIR_OBJS.map(o => ({ ...o })));
@@ -119,7 +139,8 @@ export function createShop(g: Game): Partial<Game> {
         }
       }
     }
-    // Bond boost from buying liked items
+    // Bond boost from buying liked items (a set reacts once, for the whole set)
+    if (fromSet) { g.refreshDrawer(); return; }
     const styling = item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor';
     let liked = false;
     if (item.tags) {
