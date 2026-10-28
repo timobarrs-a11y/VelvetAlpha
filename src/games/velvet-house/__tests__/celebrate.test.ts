@@ -7,7 +7,8 @@ describe('the celebration pop-up', () => {
   const make = () => {
     const stage = document.createElement('div');
     document.body.appendChild(stage);
-    return { stage, celebrate: createCelebrate({ stage } as unknown as Game).celebrate! };
+    const view = { paused: false };
+    return { stage, view, celebrate: createCelebrate({ stage, view } as unknown as Game).celebrate! };
   };
 
   it('shows what they got, a picture of it, and closes on the button', () => {
@@ -34,5 +35,25 @@ describe('the celebration pop-up', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     vi.advanceTimersByTime(300);
     expect(stage.querySelector('h2')!.textContent).toBe('Second');
+  });
+
+  it('with two buttons, pauses the house while open; Apply it now and Not now each do their own thing', () => {
+    vi.useFakeTimers();
+    const { stage, view, celebrate } = make();
+    const chose: string[] = [];
+    celebrate({ kicker: 'You unlocked', title: 'Nana', detail: '10 pieces, free.', button: 'Apply it now', onButton: () => chose.push('apply'), secondary: 'Not now', onSecondary: () => chose.push('later') });
+    celebrate({ kicker: 'You unlocked', title: 'Cuddle Clouds', button: 'Apply it now', onButton: () => chose.push('apply2'), secondary: 'Not now', onSecondary: () => chose.push('later2') });
+    expect(view.paused).toBe(true);
+    expect(stage.querySelector('.vh-celebrate-detail')!.textContent).toBe('10 pieces, free.');
+    const buttons = () => [...stage.querySelectorAll<HTMLButtonElement>('.vh-celebrate-btn')];
+    expect(buttons().map((b) => b.textContent)).toEqual(['Apply it now', 'Not now']);
+    buttons()[1].click();
+    expect(chose).toEqual(['later']);
+    vi.advanceTimersByTime(300);
+    // Escape on the next one is Not now too.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(chose).toEqual(['later', 'later2']);
+    vi.advanceTimersByTime(300);
+    expect(view.paused).toBe(false);
   });
 });

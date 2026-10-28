@@ -1,10 +1,11 @@
 import React, { lazy, Suspense } from 'react';
 import { Navigate, Route } from 'react-router-dom';
-import { SplashPage } from '../pages/SplashPage';
-import LoginPage from '../pages/LoginPage';
-import SignUpPage from '../pages/SignUpPage';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 
+// The landing, sign-in and sign-up pages: a signed-in member never needs them, so they're their own downloads.
+const SplashPage = lazy(() => import('../pages/SplashPage').then(m => ({ default: m.SplashPage })));
+const LoginPage = lazy(() => import('../pages/LoginPage'));
+const SignUpPage = lazy(() => import('../pages/SignUpPage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 const TermsOfServicePage = lazy(() => import('../pages/TermsOfServicePage'));
 const PrivacyPolicyPage = lazy(() => import('../pages/PrivacyPolicyPage'));
@@ -20,12 +21,12 @@ function S(el: React.ReactNode) {
 }
 
 export const publicRoutes = [
-  <Route key="splash" path="/splash" element={<SplashPage />} />,
+  <Route key="splash" path="/splash" element={S(<SplashPage />)} />,
   // The old welcome page is gone: old links go home (the splash page if signed out).
   <Route key="welcome-public" path="/welcome" element={<Navigate to="/" replace />} />,
-  <Route key="login" path="/login" element={<LoginPage />} />,
+  <Route key="login" path="/login" element={S(<LoginPage />)} />,
   <Route key="add-friend" path="/add/:code" element={S(<AddFriendPage />)} />,
-  <Route key="signup" path="/signup" element={<SignUpPage />} />,
+  <Route key="signup" path="/signup" element={S(<SignUpPage />)} />,
   <Route key="forgot-password" path="/forgot-password" element={S(<ForgotPasswordPage />)} />,
   <Route key="reset-password" path="/reset-password" element={S(<ResetPasswordPage />)} />,
   <Route key="terms" path="/terms" element={S(<TermsOfServicePage />)} />,

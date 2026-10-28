@@ -70,7 +70,8 @@ window.accountPromos = window.accountPromos || [];
 addEventListener('message', (e) => {
   const d = e.data;
   if (!d) return;
-  if (d.type === 'velvet:promo') window.promoLog.push(d.code);
+  // Like the app: a code redeemed anywhere (the start menu included) is now the account's.
+  if (d.type === 'velvet:promo') { window.promoLog.push(d.code); if (!window.accountPromos.includes(d.code)) window.accountPromos.push(d.code); }
   if (d.type === 'velvet:ready' && window.accountPromos.length) e.source.postMessage({ type: 'velvet:promos', codes: window.accountPromos }, location.origin);
 });
 </script>

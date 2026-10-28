@@ -11,13 +11,21 @@ export interface CelebrateOptions {
   tagline?: string;
   /** The button's words. */
   button?: string;
+  /** What the button does, besides closing the pop-up. */
+  onButton?: () => void;
+  /** A second, quieter button ("Not now"), and what it does besides closing. Escape and a tap outside choose it. */
+  secondary?: string;
+  onSecondary?: () => void;
+  /** More words under the title (what the pack holds). */
+  detail?: string;
 }
 
 const CONFETTI = ['#F27C8D', '#F6B26B', '#F6E06B', '#8FD3A0', '#7FB7E8', '#C9A8F0'];
 
 /**
  * A pop-up over the game for a moment worth stopping for, such as redeeming a code: what they got, a picture of it,
- * and a button to carry on. More than one waits its turn. It is a plain overlay: it changes nothing in the house.
+ * and a button to carry on (or two: "Apply it now" and "Not now"). More than one waits its turn. The game is paused
+ * while it is open; the pop-up itself changes nothing in the house, its buttons' callbacks do.
  */
 export function createCelebrate(g: Game): Partial<Game> {
   const stage = g.stage as HTMLElement;
@@ -48,6 +56,7 @@ export function createCelebrate(g: Game): Partial<Game> {
     const kicker = Object.assign(document.createElement('p'), { className: 'vh-celebrate-kicker', textContent: o.kicker });
     const title = Object.assign(document.createElement('h2'), { className: 'vh-celebrate-title', textContent: o.title });
     card.append(confetti, kicker, title);
+    if (o.detail) card.appendChild(Object.assign(document.createElement('p'), { className: 'vh-celebrate-detail', textContent: o.detail }));
     if (o.image) {
       const pic = document.createElement('img');
       pic.className = 'vh-celebrate-pic';
@@ -57,17 +66,37 @@ export function createCelebrate(g: Game): Partial<Game> {
     }
     if (o.tagline) card.appendChild(Object.assign(document.createElement('p'), { className: 'vh-celebrate-tag', textContent: o.tagline }));
     const button = Object.assign(document.createElement('button'), { className: 'vh-celebrate-btn', type: 'button', textContent: o.button ?? 'Take a look' });
-    card.appendChild(button);
+    const second = o.secondary
+      ? Object.assign(document.createElement('button'), { className: 'vh-celebrate-btn vh-celebrate-btn2', type: 'button', textContent: o.secondary })
+      : null;
+    const row = document.createElement('div');
+    row.className = 'vh-celebrate-actions';
+    row.append(button, ...(second ? [second] : []));
+    card.appendChild(row);
     root.appendChild(card);
 
-    const close = (): void => {
+    // The house holds still while the pop-up is up.
+    const wasPaused = g.view.paused;
+    g.view.paused = true;
+    let done = false;
+    const close = (then?: () => void): void => {
+      if (done) return;
+      done = true;
       root.classList.add('vh-celebrate-out');
       document.removeEventListener('keydown', onKey, true);
+      g.view.paused = wasPaused;
+      then?.();
       setTimeout(() => { root.remove(); open = null; show(); }, 180);
     };
-    const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); close(); } };
-    button.addEventListener('click', close);
-    root.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === root) close(); });
+    const primary = (): void => close(o.onButton);
+    const dismiss = (): void => close(second ? o.onSecondary : o.onButton);
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); (document.activeElement === second ? dismiss : primary)(); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); dismiss(); }
+    };
+    button.addEventListener('click', primary);
+    second?.addEventListener('click', dismiss);
+    root.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === root) dismiss(); });
     document.addEventListener('keydown', onKey, true);
     stage.appendChild(root);
     open = root;

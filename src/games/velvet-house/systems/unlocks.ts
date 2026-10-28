@@ -10,8 +10,11 @@ import type { Game } from '../kernel/game';
 const SHOT_DELAY_MS = 1700;
 
 /**
- * Promo codes (state/unlockCodes.ts) applied to the house, with a pop-up showing what was unlocked. Inside the app a
- * code is the account's: the host records it, and every other house on the account gets the packs when it opens.
+ * Promo codes (state/unlockCodes.ts). However a pack is unlocked (said in chat, typed on the start menu's Cheats
+ * screen, or already on the account from another house), the game stops once the player is in the house with no story
+ * playing and a pop-up says what they unlocked: Apply it now (it goes on, then a picture of it) or Not now (it waits in
+ * the Sets tab with Apply). Inside the app a code is the account's: the host records it, and every house on the account
+ * gets the packs when it opens.
  */
 export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo()): Partial<Game> {
   const { owned, log, flags } = g;
@@ -20,6 +23,23 @@ export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo(
 
   const setsOf = (code: UnlockCode): CatalogEntry[] =>
     code.setIds.map((id) => catalogById(id)).filter((s): s is CatalogEntry => !!s?.set);
+
+  /** "You unlocked Nana": what they got, with Apply it now or Not now. */
+  function offer(code: UnlockCode): void {
+    const sets = setsOf(code);
+    if (!sets.length) return;
+    presenting = true;
+    const pieces = sets.reduce((n, s) => n + (s.set?.items.length ?? 0), 0) + (code.also?.length ?? 0);
+    g.celebrate({
+      kicker: 'You unlocked',
+      title: code.packName,
+      detail: `${sets.map((s) => s.name).join(' and ')}: ${pieces} pieces, free. It's in your shop now.`,
+      button: 'Apply it now',
+      onButton: () => { presenting = false; present(code); },
+      secondary: 'Not now',
+      onSecondary: () => { presenting = false; log(`${code.packName} is in your Sets tab, ready to Apply whenever you want it.`); },
+    });
+  }
 
   /** The packs go on the house, and once they have settled a picture of the room goes in the pop-up. */
   function present(code: UnlockCode): void {
@@ -33,7 +53,7 @@ export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo(
     setTimeout(() => {
       let image: string | undefined;
       try { image = g.canvas.toDataURL('image/jpeg', 0.88); } catch { /* no picture: the pop-up still says what they got */ }
-      g.celebrate({ kicker: 'Congrats, you just unlocked', title: code.packName, tagline: 'Try it out today!', image });
+      g.celebrate({ kicker: 'Here it is', title: code.packName, tagline: 'Arrange can switch any piece back.', image });
       log(code.welcome);
       presenting = false;
     }, SHOT_DELAY_MS);
@@ -61,7 +81,7 @@ export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo(
 
   function grant(code: UnlockCode, sets: CatalogEntry[]): void {
     own(code, sets);
-    if (ready()) present(code);
+    if (ready()) offer(code);
     else { pending().push(sets[0].id); log(`${code.packName} is yours. It will be waiting once you have moved in.`); }
     g.refreshDrawer();
   }
@@ -78,20 +98,18 @@ export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo(
     return true;
   }
 
-  // Codes redeemed on the account in another house: this house has those packs too. They wait in the Sets tab (Apply
-  // puts them on), rather than redecorating a house that has its own look.
+  // Codes on the account (typed on the start menu, or redeemed in another house): this house has those packs too, and
+  // says so with the same pop-up, so the player chooses whether to put them on.
   host?.onAccountCodes((words) => {
-    const got: string[] = [];
     for (const w of words) {
       const code = unlockFor(w);
       if (!code) continue;
       const sets = setsOf(code);
       if (!sets.length || sets.every((s) => owned.has(s.id))) continue;
       own(code, sets);
-      got.push(code.packName);
+      if (ready()) offer(code);
+      else pending().push(sets[0].id);
     }
-    if (!got.length) return;
-    log(`${got.join(' and ')} ${got.length > 1 ? 'are' : 'is'} on your account, so ${got.length > 1 ? 'they are' : 'it is'} here too: in your Sets tab, ready to Apply.`);
     g.refreshDrawer();
   });
 
@@ -100,7 +118,7 @@ export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo(
     setInterval(() => {
       if (!pending().length || !ready()) return;
       const code = codeForSet(pending().shift()!);
-      if (code) present(code);
+      if (code) offer(code);
     }, 1000);
   }
   return { tryUnlock };

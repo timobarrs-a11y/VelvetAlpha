@@ -753,6 +753,9 @@
 .vh-celebrate-btn:hover { filter: brightness(1.06); }
 .vh-celebrate-btn:active { transform: scale(.97); }
 .vh-celebrate-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.vh-celebrate-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.vh-celebrate-btn2 { color: #EDE6FF; background: rgba(255,255,255,.08); box-shadow: none; border: 1px solid rgba(255,255,255,.16); }
+.vh-celebrate-detail { margin: 4px 0 2px; font-size: 13px; line-height: 1.45; color: rgba(255,255,255,.75); text-align: center; }
 .vh-celebrate-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .vh-celebrate-confetti i { position: absolute; top: -12px; left: var(--x); width: 7px; height: 12px; border-radius: 2px; background: var(--c); opacity: 0; animation: vh-cel-fall 2.4s ease-in var(--d) 1 both; }
 @keyframes vh-cel-fall { 0% { opacity: 0; transform: translateY(0) rotate(0); } 12% { opacity: 1; } 100% { opacity: 0; transform: translateY(420px) rotate(540deg); } }

@@ -1,16 +1,23 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, UserPlus } from 'lucide-react';
 import { supabase } from '../../shared/supabase/client';
 import { useAuth } from '../../auth/AuthProvider';
-import { MessagingOverlay } from '../MessagingOverlay';
 import { getConversationList, getIncomingRequests } from '../../shared/supabase/queries/messaging';
-import { AiChatWindow } from './AiChatWindow';
-import { FriendChatWindow } from './FriendChatWindow';
 import { markCompanionRead } from '../../services/companionReadService';
 import { MESSAGES_KEY, aiKey, friendKey, markCoachDismissed, useDock, type DockWindow } from './DockContext';
 import { isHelper } from '../../utils/relationshipType';
+
+// The windows are only drawn once opened, and they bring the chat engine with them (about 200 KB): they load on
+// demand, and src/routes/prefetch.ts fetches them while the browser is idle so opening one is still instant.
+const MessagingOverlay = lazy(() => import('../MessagingOverlay').then(m => ({ default: m.MessagingOverlay })));
+const AiChatWindow = lazy(() => import('./AiChatWindow').then(m => ({ default: m.AiChatWindow })));
+const FriendChatWindow = lazy(() => import('./FriendChatWindow').then(m => ({ default: m.FriendChatWindow })));
+
+function WindowLoading() {
+  return <div className="flex h-full min-h-[200px] items-center justify-center text-xs text-[#8a6a7c]">Opening…</div>;
+}
 
 const HIDDEN_PATHS = ['/splash', '/signin', '/signup', '/onboarding'];
 /** How many people stay in the dock as tabs; the rest are a tap away in Friends HQ. */
@@ -241,6 +248,7 @@ export function Dock() {
               return (
                 <div key={w.key} className={`pointer-events-auto min-w-0 ${capacity === 1 ? 'w-full max-w-full' : ''}`}>
                   <WindowFrame fullWidth={capacity === 1} room={room}>
+                    <Suspense fallback={<WindowLoading />}>
                     <MessagingOverlay
                       embedded
                       initialView={dock.messagesView}
@@ -249,6 +257,7 @@ export function Dock() {
                       onMinimize={() => dock.minimize(MESSAGES_KEY)}
                       onOpenChat={(t, g) => dock.openFriend(t, g, true)}
                     />
+                    </Suspense>
                   </WindowFrame>
                 </div>
               );
@@ -257,7 +266,9 @@ export function Dock() {
               return (
                 <div key={w.key} className={`pointer-events-auto min-w-0 ${capacity === 1 ? 'w-full max-w-full' : ''}`}>
                   <WindowFrame fullWidth={capacity === 1} room={room}>
-                    <FriendChatWindow friend={w.friend} gameRequest={w.game} onMinimize={() => dock.minimize(w.key)} onClose={() => dock.close(w.key)} />
+                    <Suspense fallback={<WindowLoading />}>
+                      <FriendChatWindow friend={w.friend} gameRequest={w.game} onMinimize={() => dock.minimize(w.key)} onClose={() => dock.close(w.key)} />
+                    </Suspense>
                   </WindowFrame>
                 </div>
               );
@@ -268,6 +279,7 @@ export function Dock() {
             return (
               <div key={w.key} className={`pointer-events-auto min-w-0 ${capacity === 1 ? 'w-full max-w-full' : ''}`}>
                 <WindowFrame fullWidth={capacity === 1} room={room}>
+                  <Suspense fallback={<WindowLoading />}>
                   <AiChatWindow
                     companion={companion}
                     surface={isPageCoach ? dock.coachSurface!.surface : undefined}
@@ -278,6 +290,7 @@ export function Dock() {
                     onMinimize={() => dock.minimize(w.key)}
                     onClose={() => closeWindow(w)}
                   />
+                  </Suspense>
                 </WindowFrame>
               </div>
             );
