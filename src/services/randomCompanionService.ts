@@ -2,6 +2,7 @@ import { supabase } from '../shared/supabase/client';
 import { userProfileService } from './userProfileService';
 import { createCompanionFromAnswers } from './companionFromAnswers';
 import { randomMatchAnswers } from '../utils/companionRandomizer';
+import { voiceAttire } from '../config/voiceAttire';
 import { coherentRandomize } from '../components/AvatarCreatorV2';
 import { sanitizeAvatarConfigForSave } from './avatarSaveService';
 import { advanceSetupStepIf } from './setupProgressService';
@@ -44,7 +45,9 @@ export async function createRandomCompanion(gender: 'male' | 'female', connectio
   const companion = await createCompanionFromAnswers(user.id, answers, profile);
   if (!companion) throw new Error('The companion could not be created');
 
-  const avatar = await sanitizeAvatarConfigForSave(coherentRandomize(gender));
+  // Made in the attire its voice comes dressed in.
+  const dressed = { ...coherentRandomize(gender), ...voiceAttire(String(answers.signatureVoice ?? '')) };
+  const avatar = await sanitizeAvatarConfigForSave(dressed, companion.id);
   const { error } = await supabase.from('companions').update({ avatar_config: avatar }).eq('id', companion.id);
   if (error) throw error;
 

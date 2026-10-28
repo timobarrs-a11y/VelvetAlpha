@@ -6,6 +6,7 @@ import { AvatarV2 } from '../../components/AvatarV2';
 import { handSvg, HAND_POSES } from '../../renderers/handRenderer';
 import { OUTFITS, BOTTOMS, HEADWEAR, PERSONAS, outfitItem, resolveBottom, type AvatarUnlocks } from '../../data/avatarItems';
 import type { Wardrobe, WardrobePiece } from '../../games/velvet-house/state/clothing';
+import { attireUnlocks } from '../../config/voiceAttire';
 import { resolveLookForDisplay, canUse, itemId, lookUnlock } from '../../data/avatarCatalog';
 
 // What Velvet Sims needs to know about the player and their companion: names,
@@ -190,8 +191,9 @@ function simLook(raw: Record<string, unknown> | null | undefined, favoriteColor:
 
 // `avatar`: send the real avatar (heads and signature outfit), for the rebuilt game.
 export function buildProfile(player: PlayerProfile | null, companion: Companion, includeLooks: boolean, avatar?: AvatarUnlocks) {
-  const look = (raw: Record<string, unknown> | null | undefined, color: string | null | undefined) =>
-    avatar ? simLook(raw, color, avatar) : toGameLook(raw, color);
+  // A companion wears their signature voice's attire whatever the player's membership.
+  const look = (raw: Record<string, unknown> | null | undefined, color: string | null | undefined, voice?: string | null) =>
+    avatar ? simLook(raw, color, voice ? attireUnlocks(avatar, voice) : avatar) : toGameLook(raw, color);
   const personality = [companion.communication_style, companion.humor_style, companion.signature_voice]
     .filter(Boolean)
     .join('. ');
@@ -217,7 +219,7 @@ export function buildProfile(player: PlayerProfile | null, companion: Companion,
       communication: companion.communication_style ?? undefined,
       relationship: companion.relationship_type,
       look: includeLooks
-        ? look(companion.avatar_config as Record<string, unknown> | undefined, companion.favorite_color)
+        ? look(companion.avatar_config as Record<string, unknown> | undefined, companion.favorite_color, companion.signature_voice)
         : undefined,
       memories: [],
       likes,

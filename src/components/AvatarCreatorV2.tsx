@@ -39,6 +39,13 @@ const TAB_ZOOM: Record<Tab, { scale: number; origin: string }> = {
   presets: { scale: 1, origin: '50% 50%' },
 };
 
+const ATTIRE_KEYS = ['outfit', 'outfitColor', 'outfitAccent', 'bottom', 'bottomColor', 'bottomAccent', 'headwear', 'faceAccessory'] as const;
+function withAttire(config: AvatarConfigV2, look: Partial<AvatarConfigV2>): AvatarConfigV2 {
+  const next: AvatarConfigV2 = { ...config };
+  for (const k of ATTIRE_KEYS) (next as unknown as Record<string, unknown>)[k] = look[k];
+  return next;
+}
+
 interface AvatarCreatorV2Props {
   initialConfig?: AvatarConfigV2;
   onChange?: (config: AvatarConfigV2) => void;
@@ -55,6 +62,9 @@ interface AvatarCreatorV2Props {
   blink?: boolean;
   // The person this look is for already has a gender (a companion or coach being made): no Male/Female toggle.
   lockGender?: boolean;
+  // A free person's companion is dressed as its signature voice and stays that way (members can change anything).
+  // `look` holds the shirt, pants and hat; `label` is the voice's name for the note.
+  lockedAttire?: { label: string; look: Partial<AvatarConfigV2> };
 }
 
 function ColorSwatch({
@@ -221,6 +231,7 @@ export function AvatarCreatorV2({
   contained = false,
   blink = true,
   lockGender = false,
+  lockedAttire,
 }: AvatarCreatorV2Props) {
   const ownUnlocks = useAvatarUnlocks();
   const unlocks = unlocksProp ?? ownUnlocks;
@@ -247,7 +258,8 @@ export function AvatarCreatorV2({
   const push = useCallback((incoming: AvatarConfigV2) => {
     // Saved looks and presets can be older configs; read them the old way first.
     const migrated = migrateAvatarConfig(incoming);
-    const next = lockGender && migrated.gender !== lockedGender.current ? { ...migrated, gender: lockedGender.current } : migrated;
+    const genderKept = lockGender && migrated.gender !== lockedGender.current ? { ...migrated, gender: lockedGender.current } : migrated;
+    const next = lockedAttire ? withAttire(genderKept, lockedAttire.look) : genderKept;
     const slice = history.current.slice(0, historyIdx.current + 1);
     slice.push(next);
     if (slice.length > HISTORY_LIMIT) slice.shift();
@@ -259,7 +271,7 @@ export function AvatarCreatorV2({
     if (draftKey) {
       try { localStorage.setItem(draftKey, JSON.stringify(next)); } catch {}
     }
-  }, [draftKey, onChange, lockGender]);
+  }, [draftKey, onChange, lockGender, lockedAttire]);
 
   const update = useCallback((partial: Partial<AvatarConfigV2>) => {
     // Compute the next config from the current config without nesting a
@@ -640,7 +652,19 @@ export function AvatarCreatorV2({
     );
   };
 
-  const wardrobeTab = (
+  const wardrobeTab = lockedAttire ? (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3" data-testid="wearing">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Wearing</p>
+        <p className="text-sm font-semibold text-white">{lockedAttire.label}'s signature style</p>
+        <p className="text-xs text-gray-400">{currentOutfit.label} · {pantsItem.label} · {hat.id === 'none' ? 'No hat' : hat.label}</p>
+      </div>
+      <p className="flex items-start gap-2 text-sm text-gray-400" data-testid="attire-locked">
+        <Lock className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500/80" />
+        Every voice comes dressed to match. Changing the outfit is part of membership.
+      </p>
+    </div>
+  ) : (
     <div className="space-y-5">
       <Section label="Personas">
         <p className="text-xs text-gray-500">Tap one for the whole look: shirt, pants and hat. Then change any piece on its own below.</p>
