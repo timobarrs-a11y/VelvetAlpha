@@ -10,7 +10,7 @@ const PRODUCT_LINKS = [
 
 const COMPANY_LINKS = [
   { label: 'About', to: '/about', icon: Info },
-  { label: 'Changelog', to: '/changelog', icon: GitCommit },
+  { label: 'Updates', to: '/updates', icon: GitCommit },
   { label: 'Contact', href: 'mailto:hello@projectvelvet.com', icon: Mail },
 ];
 

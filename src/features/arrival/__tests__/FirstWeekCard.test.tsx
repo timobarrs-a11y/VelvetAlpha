@@ -31,7 +31,7 @@ describe('FirstWeekCard', () => {
   it('takes each one to the right place', async () => {
     render(<FirstWeekCard />);
     fireEvent.click(await screen.findByText('Say something in a space'));
-    expect(navigate).toHaveBeenCalledWith('/community');
+    expect(navigate).toHaveBeenCalledWith('/spaces');
     fireEvent.click(screen.getByText("Add your people's birthdays"));
     expect(screen.getByText('People form')).toBeTruthy();
     fireEvent.click(screen.getByText('Play a game'));

@@ -1,9 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, PenLine, ChevronRight, Shuffle, Lock, Star, Zap, Heart, Brain, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Sparkles, PenLine, ChevronRight, Shuffle, Lock, Zap, Heart, Brain, MessageCircle, Mic, ArrowLeft } from 'lucide-react';
+import { rollRandomCandidate, saveRandomCandidate, type RandomCandidate } from '../services/randomCompanionService';
+import { MatchFoundCard } from '../components/MatchFoundCard';
+import { SIGNATURE_VOICES } from '../config/signatureVoices';
+import { toast } from '../shared/ui/Toast';
 
-type Phase = 'choose' | 'gender' | 'scanning' | 'reveal';
+// The order is fixed: friend or companion (the screen before), then male or female, then create your own or random.
+type Phase = 'gender' | 'choose' | 'scanning' | 'reveal';
 type Gender = 'Female' | 'Male';
 
 const SCAN_NAMES_FEMALE = [
@@ -157,90 +162,71 @@ function ScanningScreen({ onReveal, gender }: { onReveal: () => void; gender: Ge
   );
 }
 
-function RevealScreen({ onContinue, isFriend }: { onContinue: () => void; isFriend: boolean }) {
-  const noun = isFriend ? 'friend' : 'companion';
-  return (
-    <motion.div
-      className="w-full max-w-lg mx-auto text-center"
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
-    >
-      <motion.div
-        className="relative inline-flex items-center justify-center w-28 h-28 mb-6"
-        initial={{ scale: 0.5 }}
-        animate={{ scale: 1 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-      >
-        <div className="absolute inset-0 rounded-full bg-amber-500/20 animate-ping" />
-        <div className="absolute inset-0 rounded-full bg-amber-500/10 border-2 border-amber-500/40" />
-        <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-amber-500/30 to-orange-500/30 border border-amber-500/50 flex items-center justify-center">
-          <Star className="w-10 h-10 text-amber-400" />
-        </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <h2 className="text-3xl font-black text-white mb-3">Match Found.</h2>
-        <p className="text-gray-400 mb-2 leading-relaxed max-w-sm mx-auto">
-          Your {noun} has been generated from inside the Velvet Rope — a one-of-a-kind personality crafted just for you.
-        </p>
-        <p className="text-gray-600 text-sm mb-8">
-          Now it's time to give them a face.
-        </p>
-
-        <motion.button
-          onClick={onContinue}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-base shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 transition-all"
-        >
-          <Sparkles className="w-5 h-5" />
-          Design Their Look
-          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </motion.button>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 export function CompanionPathSelectPage() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<Phase>('choose');
+  const [phase, setPhase] = useState<Phase>('gender');
   const [selectedGender, setSelectedGender] = useState<Gender>('Female');
   const [transitioning, setTransitioning] = useState(false);
+  // The match is picked while the search plays but only saved once the person approves it.
+  const [candidate, setCandidate] = useState<RandomCandidate | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const isFriend = sessionStorage.getItem('onboardingRelationshipType') === 'friend';
+  const kind = sessionStorage.getItem('onboardingRelationshipType');
+  const isFriend = kind === 'friend';
+  const connection: 'friend' | 'romantic' = isFriend ? 'friend' : 'romantic';
   const noun = isFriend ? 'Friend' : 'Companion';
   const nounLower = isFriend ? 'friend' : 'companion';
 
+  // Friend or companion is chosen on the screen before; without it, start there.
+  useEffect(() => {
+    if (kind !== 'friend' && kind !== 'romantic') navigate('/intent-select?people=1', { replace: true });
+  }, [kind, navigate]);
+
+  const handleGenderSelect = (g: Gender) => {
+    setSelectedGender(g);
+    setPhase('choose');
+  };
+
   const handleBuildOwn = () => {
     setTransitioning(true);
-    setTimeout(() => navigate('/questionnaire?mode=companion'), 700);
+    setTimeout(() => navigate(`/questionnaire?gender=${selectedGender}&type=${connection}`), 700);
+  };
+
+  const startSearch = () => {
+    setCandidate(rollRandomCandidate(selectedGender === 'Male' ? 'male' : 'female', connection));
+    setPhase('scanning');
   };
 
   const handleVelvet = () => {
     setTransitioning(true);
     setTimeout(() => {
       setTransitioning(false);
-      setPhase('gender');
+      startSearch();
     }, 700);
   };
 
-  const handleGenderSelect = (g: Gender) => {
-    setSelectedGender(g);
-    setPhase('scanning');
+  const handleScanDone = useCallback(() => setPhase('reveal'), []);
+
+  // Approved: now (and only now) the companion is saved, and the chat opens.
+  const handleApprove = async () => {
+    if (!candidate || saving) return;
+    setSaving(true);
+    try {
+      const saved = await saveRandomCandidate(candidate);
+      navigate(saved.to, { replace: true });
+    } catch (err) {
+      console.error('[companion] random match failed:', err);
+      toast.error('We couldn\'t save your match. Please try again.');
+      setSaving(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-gray-900 to-slate-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
-        {phase === 'choose' && (
+        {(phase === 'gender' || phase === 'choose') && (
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => (phase === 'choose' ? setPhase('gender') : navigate(-1))}
             className="mb-6 flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
           >
             <ArrowLeft size={18} />
@@ -335,7 +321,7 @@ export function CompanionPathSelectPage() {
                 >
                   <div className="absolute top-4 right-4">
                     <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-semibold">
-                      Random
+                      Matchmade
                     </span>
                   </div>
                   <div className="flex items-start gap-5">
@@ -343,15 +329,15 @@ export function CompanionPathSelectPage() {
                       <Shuffle className="w-6 h-6 text-amber-400" />
                     </div>
                     <div className="flex-1 min-w-0 pr-16">
-                      <h2 className="text-xl font-bold text-white mb-2">From Inside the Velvet Rope</h2>
+                      <h2 className="text-xl font-bold text-white mb-2">Let Us Matchmake for You</h2>
                       <p className="text-gray-400 text-sm leading-relaxed mb-4">
-                        Let the universe decide. We'll pull a fully-formed personality from deep inside the Velvet Roster — you won't know who you're getting until the reveal.
+                        We'll find someone who fits — personality, name, signature voice and look. You'll meet them first and say yes, or ask for someone else.
                       </p>
                       <div className="grid grid-cols-3 gap-2">
                         {[
                           { icon: Zap, label: 'Instant Match' },
-                          { icon: Star, label: 'Unique Name' },
-                          { icon: Sparkles, label: 'Surprise' },
+                          { icon: Mic, label: 'Own Voice' },
+                          { icon: Sparkles, label: 'Own Look' },
                         ].map(({ icon: Icon, label }) => (
                           <div key={label} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
                             <Icon className="w-3 h-3 text-amber-400 flex-shrink-0" />
@@ -359,7 +345,7 @@ export function CompanionPathSelectPage() {
                           </div>
                         ))}
                       </div>
-                      <p className="text-gray-600 text-xs mt-3">Instant &bull; You still design the look &bull; Always one-of-a-kind</p>
+                      <p className="text-gray-600 text-xs mt-3">Instant &bull; You approve the match &bull; Always one-of-a-kind</p>
                     </div>
                   </div>
                 </motion.button>
@@ -383,14 +369,14 @@ export function CompanionPathSelectPage() {
                   transition={{ delay: 0.1, duration: 0.4 }}
                   className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-semibold tracking-widest uppercase mb-5"
                 >
-                  <Zap className="w-3 h-3" />
-                  Velvet Rope
+                  <Heart className="w-3 h-3" />
+                  {noun}
                 </motion.div>
                 <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
                   Who Are You Looking For?
                 </h2>
                 <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
-                  We'll match the Velvet Roster to exactly who you have in mind.
+                  Pick who you have in mind. Next you choose how to make your {nounLower}.
                 </p>
               </div>
 
@@ -423,24 +409,23 @@ export function CompanionPathSelectPage() {
                 ))}
               </div>
 
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                onClick={() => setPhase('choose')}
-                className="mt-6 w-full text-center text-sm text-gray-600 hover:text-gray-400 transition-colors py-2"
-              >
-                Back
-              </motion.button>
             </motion.div>
           )}
 
           {phase === 'scanning' && (
-            <ScanningScreen onReveal={() => setPhase('reveal')} gender={selectedGender} />
+            <ScanningScreen onReveal={handleScanDone} gender={selectedGender} />
           )}
 
-          {phase === 'reveal' && (
-            <RevealScreen onContinue={() => navigate(`/questionnaire?mode=velvet&gender=${selectedGender}`)} isFriend={isFriend} />
+          {phase === 'reveal' && candidate && (
+            <MatchFoundCard
+              name={candidate.name}
+              avatar={candidate.avatar}
+              voice={SIGNATURE_VOICES.find(v => v.id === candidate.voiceId)}
+              isFriend={isFriend}
+              saving={saving}
+              onApprove={handleApprove}
+              onAnother={startSearch}
+            />
           )}
         </AnimatePresence>
       </div>

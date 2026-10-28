@@ -208,6 +208,10 @@ export interface TasteAxes {
 }
 
 export interface Flags {
+  /** Secret sets the player has unlocked but not yet seen: they are put on and celebrated once the move-in is over. */
+  pendingUnlocks?: string[];
+  /** Money from a cheat code has been found: the Salon (whose items stay with the account) no longer takes this house's money. */
+  cheated?: boolean;
   arranged?: boolean;
   stocked?: boolean;
   styled?: boolean;

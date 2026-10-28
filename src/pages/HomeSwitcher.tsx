@@ -1,3 +1,4 @@
+import { takeCoachDraft } from '../features/coaching/coachDraft';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useHomeLayout } from '../hooks/useHomeLayout';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -36,7 +37,10 @@ function ArrivalCoachPopup({ coachId }: { coachId: string }) {
   useEffect(() => {
     if (opened.current || !known) return;
     opened.current = true;
-    dock.openCompanion(coachId);
+    // They came from the plan screen by asking about a step: the question is waiting in the box.
+    const waiting = takeCoachDraft(coachId);
+    if (waiting) dock.draftToCompanion(coachId, waiting);
+    else dock.openCompanion(coachId);
     setParams(p => { const next = new URLSearchParams(p); next.delete('coach'); return next; }, { replace: true });
   }, [known, coachId, dock, setParams]);
   return null;

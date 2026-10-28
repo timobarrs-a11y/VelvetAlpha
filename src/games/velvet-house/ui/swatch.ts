@@ -24,6 +24,9 @@ export function paperCss(info: LookInfo | null, thumb?: string): string {
     case 'plaid': return `${stripes(info.ink2 ?? ink, '90deg', 18)}, ${stripes(ink, '0deg', 18)}, ${base}`;
     case 'chevron': case 'arches': case 'scallop': case 'damask': case 'hexes': case 'tuft':
       return `${stripes(ink, '45deg', 12)}, ${stripes(ink, '-45deg', 12)}, ${base}`;
+    case 'cloudnine': return `radial-gradient(circle, #FFFFFF 0 3px, transparent 3.5px) 0 0 / 14px 14px, radial-gradient(circle, #F6E06B 0 1.2px, transparent 1.6px) 7px 7px / 14px 14px, ${base}`;
+    case 'leaves': return `radial-gradient(circle, #C27A4A 0 2.5px, transparent 3px) 0 0 / 12px 12px, radial-gradient(circle, #D9A84A 0 2px, transparent 2.5px) 6px 6px / 12px 12px, ${base}`;
+    case 'snow': return `radial-gradient(circle, rgba(255,255,255,.95) 0 1.8px, transparent 2.2px) 0 0 / 11px 11px, radial-gradient(circle, rgba(255,255,255,.8) 0 1.2px, transparent 1.6px) 5px 5px / 11px 11px, ${base}`;
     case 'birch': return `${stripes(ink, '90deg', 16)}, ${base}`;
     case 'deco': return `${stripes(ink, '45deg', 10)}, ${stripes(ink, '-45deg', 10)}, ${base}`;
     case 'grid': return `${stripes(ink, '90deg', 16)}, ${stripes(ink, '0deg', 16)}, ${base}`;
@@ -32,6 +35,7 @@ export function paperCss(info: LookInfo | null, thumb?: string): string {
     case 'squiggle': return `${stripes(ink, '0deg', 10)}, ${base}`;
     case 'sprig': case 'sprinkles': return `radial-gradient(circle, ${ink} 0 1.6px, transparent 2px) 0 0 / 9px 9px, ${base}`;
     case 'serape': return `${stripes(ink, '0deg', 8)}, ${base}`;
+    case 'ditsy': return `repeating-linear-gradient(90deg, rgba(255,255,255,.45) 0 3px, transparent 3px 12px), radial-gradient(circle, #fff 0 2px, transparent 2.5px) 0 0 / 14px 14px, ${base}`;
     case 'clouds': return `radial-gradient(circle, ${ink} 0 4px, transparent 4.5px) 0 0 / 16px 14px, ${base}`;
     case 'pixels': return `linear-gradient(${ink}, ${ink}) 3px 3px / 4px 4px no-repeat, linear-gradient(${ink}, ${ink}) 9px 3px / 4px 4px no-repeat, linear-gradient(${ink}, ${ink}) 1px 7px / 14px 4px no-repeat, ${base}`;
     case 'circuit': return `${stripes(ink, '90deg', 14)}, ${stripes(ink, '0deg', 14)}, ${base}`;

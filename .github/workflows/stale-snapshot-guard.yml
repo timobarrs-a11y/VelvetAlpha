@@ -1,0 +1,27 @@
+name: Stale snapshot guard
+
+# Flags a commit that looks like a stale copy of the whole repo saved under a small message ("Updated index.css"
+# that rewrote 104 files and deleted the tests and CI). See scripts/stale-snapshot-guard.sh. Make this check
+# required on main (Settings > Rules) so a flagged change can't merge.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check the new commits
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            scripts/stale-snapshot-guard.sh "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
+          else
+            scripts/stale-snapshot-guard.sh "${{ github.event.before }}" "${{ github.sha }}"
+          fi

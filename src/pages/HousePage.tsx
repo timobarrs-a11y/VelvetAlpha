@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Lock } from 'lucide-react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, EyeOff } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
 import {
-  ensurePlaced, getMySpaces, getRooms, getSpaceSuggestions, joinSpace, leaveSpace,
+  ensurePlaced, getMySpaces, getRooms, getSpaceCard, getSpaceSuggestions, joinSpace, leaveSpace,
 } from '../services/spacesService';
 import { getFriends, type FriendPeer } from '../shared/supabase/queries/messaging';
-import type { MySpace, SpaceRoom, SpaceSuggestion } from '../types/spaces';
+import type { MySpace, SpaceRoom, SpaceSuggestion, SpaceView } from '../types/spaces';
 import { SpaceSidebar } from '../components/house/SpaceSidebar';
-import { SpaceHeader } from '../components/house/SpaceHeader';
+import { SpaceHeader, type SpaceTab } from '../components/house/SpaceHeader';
+import { SpaceCrews } from '../components/house/SpaceCrews';
+import { SpacePosts } from '../components/house/SpacePosts';
+import { SpaceDoorCard } from '../components/house/SpaceDoorCard';
+import { DoorIcon } from '../components/house/doors';
 import { RoomList } from '../components/house/RoomList';
 import { RoomChat } from '../components/house/RoomChat';
 import { HereNow } from '../components/house/HereNow';
@@ -21,14 +25,18 @@ import { SpaceIcon } from '../components/house/SpaceIcon';
 export default function HousePage() {
   const { boardId, roomName } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
 
   const [spaces, setSpaces] = useState<MySpace[]>([]);
   const [loadingSpaces, setLoadingSpaces] = useState(true);
-  const [activeSpace, setActiveSpace] = useState<MySpace | null>(null);
+  const [activeSpace, setActiveSpace] = useState<SpaceView | null>(null);
+  // A boardId in the URL that isn't one of mine and couldn't be found (or is hidden from me).
+  const [missing, setMissing] = useState(false);
   const [rooms, setRooms] = useState<SpaceRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<SpaceRoom | null>(null);
-  const [activeTab, setActiveTab] = useState<'rooms' | 'posts'>('rooms');
+  const tabParam = searchParams.get('tab');
+  const activeTab: SpaceTab = tabParam === 'posts' || tabParam === 'crews' ? tabParam : 'rooms';
   const [suggestions, setSuggestions] = useState<SpaceSuggestion[]>([]);
   const [friends, setFriends] = useState<FriendPeer[]>([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
@@ -86,31 +94,54 @@ export default function HousePage() {
       });
   }, [user?.id, loadSpaces, loadSuggestions, loadFriends]);
 
-  // Resolve active space from boardId param
+  // Resolve the active space from the boardId param: one of mine, or a preview card for one I'm not in.
   useEffect(() => {
     if (!boardId) {
       setActiveSpace(null);
+      setMissing(false);
       setActiveRoom(null);
       setMobileView('spaces');
       return;
     }
-    const space = spaces.find(s => s.board_id === boardId) ?? null;
-    setActiveSpace(space);
-    setActiveTab('rooms');
-    if (space) {
-      getRooms(boardId).then(r => {
+    if (loadingSpaces) return;
+    let cancelled = false;
+    const showRooms = (space: SpaceView) => {
+      if (space.role === null && space.visibility !== 'open') {
+        setRooms([]);
+        setActiveRoom(null);
+        setMobileView('rooms');
+        return;
+      }
+      getRooms(space.board_id).then(r => {
+        if (cancelled) return;
         setRooms(r);
         const targetRoom = roomName
           ? r.find(rm => rm.name === roomName) ?? r[0]
           : r[0];
         setActiveRoom(targetRoom ?? null);
-        if (targetRoom) setMobileView('chat');
+        setMobileView(targetRoom && activeTab === 'rooms' ? 'chat' : 'rooms');
       }).catch(() => setRooms([]));
+    };
+    const mine = spaces.find(s => s.board_id === boardId);
+    if (mine) {
+      setActiveSpace(mine);
+      setMissing(false);
+      showRooms(mine);
     } else {
-      setRooms([]);
-      setActiveRoom(null);
+      getSpaceCard(boardId)
+        .then(card => {
+          if (cancelled) return;
+          setActiveSpace(card);
+          setMissing(!card);
+          if (card) showRooms(card);
+          else { setRooms([]); setActiveRoom(null); setMobileView('rooms'); }
+        })
+        .catch(() => { if (!cancelled) { setActiveSpace(null); setMissing(true); setMobileView('rooms'); } });
     }
-  }, [boardId, roomName, spaces]);
+    return () => { cancelled = true; };
+    // activeTab only decides the first mobile view; switching tabs shouldn't refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId, roomName, spaces, loadingSpaces]);
 
   const refreshSpaces = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
@@ -132,12 +163,12 @@ export default function HousePage() {
   }, [spaces.length, activeRoom, refreshSpaces]);
 
   const handleSelectSpace = useCallback((id: string) => {
-    navigate(`/house/${id}`);
+    navigate(`/spaces/${id}`);
   }, [navigate]);
 
   const handleSelectRoom = useCallback((room: SpaceRoom) => {
     if (activeSpace) {
-      navigate(`/house/${activeSpace.board_id}/${room.name}`);
+      navigate(`/spaces/${activeSpace.board_id}/${room.name}`);
     }
     setActiveRoom(room);
     setMobileView('chat');
@@ -159,23 +190,26 @@ export default function HousePage() {
     if (!activeSpace) return;
     try {
       await leaveSpace(activeSpace.board_id);
-      navigate('/house');
+      navigate('/spaces');
       const updated = await getMySpaces();
       setSpaces(updated);
       loadSuggestions();
     } catch { /* non-critical */ }
   }, [activeSpace, navigate, loadSuggestions]);
 
-  const handleTabChange = useCallback((tab: 'rooms' | 'posts') => {
-    setActiveTab(tab);
-    if (tab === 'posts' && activeSpace) {
-      navigate(`/community/board/${activeSpace.board_id}`);
-    }
-  }, [activeSpace, navigate]);
+  const handleTabChange = useCallback((tab: SpaceTab) => {
+    setSearchParams(tab === 'rooms' ? {} : { tab }, { replace: true });
+    if (tab !== 'rooms') setMobileView('rooms');
+  }, [setSearchParams]);
 
-  const isMember = activeSpace?.role === 'member' || activeSpace?.role === 'mod' || activeSpace?.role === 'owner';
+  const reloadSpaces = useCallback(() => {
+    getMySpaces().then(setSpaces).catch(() => {});
+  }, []);
+
+  const isMember = !!activeSpace?.role;
   const canModerate = activeSpace?.role === 'owner' || activeSpace?.role === 'mod';
-  const isPrivate = activeSpace?.visibility === 'private';
+  // Rooms and posts are readable when I'm in, or the door is open.
+  const canRead = isMember || activeSpace?.visibility === 'open';
 
   // Overview content
   const Overview = () => (
@@ -201,9 +235,11 @@ export default function HousePage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm font-medium text-ink truncate">{space.name}</span>
-                    {space.visibility === 'private' && <Lock className="w-3 h-3 text-ink-muted flex-shrink-0" />}
+                    <DoorIcon visibility={space.visibility} />
                   </div>
-                  <span className="text-[10px] text-ink-muted">{space.member_count} members</span>
+                  <span className="text-[10px] text-ink-muted">
+                    {space.parent_name ? `Crew in ${space.parent_name} · ` : ''}{space.member_count} members
+                  </span>
                   {space.last_message_at && (
                     <span className="text-[10px] text-ink-muted/60 block">
                       Last activity {new Date(space.last_message_at).toLocaleDateString()}
@@ -261,7 +297,7 @@ export default function HousePage() {
           </button>
         )}
         <h1 className="text-sm font-bold flex-1">
-          {mobileView === 'spaces' && 'The House'}
+          {mobileView === 'spaces' && 'Spaces'}
           {mobileView === 'rooms' && activeSpace?.name}
           {mobileView === 'chat' && `#${activeRoom?.name ?? ''}`}
         </h1>
@@ -280,16 +316,32 @@ export default function HousePage() {
 
         {/* Middle — space content */}
         <div className={`${mobileView === 'rooms' || mobileView === 'chat' ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-h-0`}>
-          {!activeSpace ? (
+          {!boardId ? (
             <Overview />
-          ) : isPrivate && !isMember ? (
+          ) : missing ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <Lock className="w-8 h-8 text-ink-muted mb-3" />
-              <h2 className="text-lg font-bold text-ink mb-1">Private space</h2>
+              <EyeOff className="w-8 h-8 text-ink-muted mb-3" />
+              <h2 className="text-lg font-bold text-ink mb-1">Nothing here</h2>
               <p className="text-sm text-ink-muted mb-4 max-w-xs">
-                This space is for members only. Ask the owner for an invite.
+                This space doesn't exist, or it's hidden. Hidden spaces open with an invite link from a member.
               </p>
+              <button onClick={() => navigate('/spaces/browse')} className="text-xs text-pink-400 hover:text-pink-300 transition-colors">
+                Browse spaces →
+              </button>
             </div>
+          ) : !activeSpace ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-sm text-ink-muted">Loading...</p>
+            </div>
+          ) : !canRead ? (
+            <SpaceDoorCard
+              space={activeSpace}
+              onRequested={() => setActiveSpace({ ...activeSpace, has_pending_request: true })}
+            >
+              {activeSpace.sub_space_count > 0 && (
+                <SpaceCrews space={activeSpace} onChanged={reloadSpaces} embedded />
+              )}
+            </SpaceDoorCard>
           ) : (
             <>
               <SpaceHeader
@@ -301,38 +353,42 @@ export default function HousePage() {
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
               />
-              <div className="flex flex-1 min-h-0">
-                {/* Room list */}
-                <div className={`${mobileView === 'rooms' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-48 lg:w-56 flex-shrink-0 border-r border-white/8 min-h-0`}>
-                  <RoomList
-                    rooms={rooms}
-                    activeRoomId={activeRoom?.id ?? null}
-                    onSelect={(r) => handleSelectRoom(r)}
-                  />
-                </div>
-                {/* Chat */}
-                <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-h-0 relative`}>
-                  {activeRoom ? (
-                    <RoomChat
-                      room={activeRoom}
-                      boardId={activeSpace.board_id}
-                      isMember={isMember}
-                      canModerate={canModerate}
-                      onJoin={handleJoin}
+              {activeTab === 'posts' && <SpacePosts boardId={activeSpace.board_id} />}
+              {activeTab === 'crews' && <SpaceCrews space={activeSpace} onChanged={reloadSpaces} />}
+              {activeTab === 'rooms' && (
+                <div className="flex flex-1 min-h-0">
+                  {/* Room list */}
+                  <div className={`${mobileView === 'rooms' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-48 lg:w-56 flex-shrink-0 border-r border-white/8 min-h-0`}>
+                    <RoomList
+                      rooms={rooms}
+                      activeRoomId={activeRoom?.id ?? null}
+                      onSelect={(r) => handleSelectRoom(r)}
                     />
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center">
-                      <p className="text-sm text-ink-muted">Select a room</p>
-                    </div>
-                  )}
+                  </div>
+                  {/* Chat */}
+                  <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-h-0 relative`}>
+                    {activeRoom ? (
+                      <RoomChat
+                        room={activeRoom}
+                        boardId={activeSpace.board_id}
+                        isMember={isMember}
+                        canModerate={canModerate}
+                        onJoin={handleJoin}
+                      />
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center">
+                        <p className="text-sm text-ink-muted">Select a room</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </div>
 
         {/* Right sidebar — here now (desktop only) */}
-        {activeSpace && (!isPrivate || isMember) && (
+        {activeSpace && canRead && (
           <div className="hidden lg:flex w-64 flex-shrink-0 border-l border-white/8 min-h-0">
             <HereNow boardId={activeSpace.board_id} myDisplayName={myName} />
           </div>

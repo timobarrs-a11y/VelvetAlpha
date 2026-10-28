@@ -70,7 +70,7 @@ export interface GameState {
   hostReady: { profile: boolean; plot: boolean };
 }
 
-export interface ArrangeFrame { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null }
+export interface ArrangeFrame { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null; wall: string | null; wallValid: boolean }
 export interface Video { id: string; title: string; channelTitle: string; thumbnail: string }
 
 /**
@@ -147,6 +147,15 @@ export interface Game {
   selectObject(o: ObjectInstance | null): void;
   commitMove(o: ObjectInstance, verb?: string): void;
   rotateSelected(): void;
+  tryDevMoney(text: string): boolean;
+  tryUnlock(text: string): boolean;
+  /** Hang a bought wall lamp (or keep it in storage when no wall is free). */
+  addLamp(style: string): void;
+  /** Put wall lamps in storage (a promo pack's gift). */
+  stockLamps(styles: string[]): void;
+  /** The wall lamps and the arrange state for them, for the art. */
+  lampFrame(): { wallLamps: import('../state/wallLamps').WallLamp[]; lampUi: { id: string | null; held: boolean; valid: boolean } | null };
+  celebrate(options: import('../ui/celebrate').CelebrateOptions): void;
   recolourHeld(): void;
   useLook(skin: string): void;
   cancelHold(): void;
@@ -168,6 +177,11 @@ export interface Game {
   arrangeFrame(): ArrangeFrame | null;
   arrangeState(): ArrangeState;
   movableAt(sx: number, sy: number): ObjectInstance | null;
+  /** Arrange: wall pieces. The one under a view point; pick one; take the picked one down; hang a stored one again. */
+  wallAt(sx: number, sy: number): string | null;
+  selectWall(id: string | null): void;
+  takeDownWall(): void;
+  rehangWall(id: string): void;
   worldAt(sx: number, sy: number): [number, number];
   peopleOnFloor(): Agent[];
   nameOf(o: ObjectInstance): string;
@@ -203,7 +217,7 @@ export interface Game {
   handleOrder(chain: string, obj?: ObjectInstance): void;
   counterPartAt(obj: ObjectInstance, sx: number, sy: number): string;
   // shop, chat, save, drawer, goals
-  handleBuy(item: CatalogEntry, color?: string): void;
+  handleBuy(item: CatalogEntry, color?: string, fromSet?: boolean): void;
   handleBuyAvatarItem(id: string): void;
   openChat(): void;
   handleCloseChat(): void;

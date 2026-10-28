@@ -97,6 +97,7 @@ export function startGameLoop(g: Game): void {
         chars: people.map(g.toFrame),
         pets: g.petFrames(),
         arrange: g.arrangeFrame(),
+        ...g.lampFrame(),
         focus: conversationFocus(),
         house: { power: world.household.power, dishes: world.household.dishes, laundryPile: world.household.laundryPile, fridge: world.household.fridge, parcel: world.household.parcel && world.household.parcel.ready !== false ? world.household.parcel : null, owned },
       });

@@ -1,10 +1,23 @@
 import React, { lazy, Suspense } from 'react';
-import { Route } from 'react-router-dom';
+import { Navigate, Route, useLocation, useParams } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { RequireProfile } from '../components/auth/RequireProfile';
 import { RouteFallback } from '../shared/ui/RouteFallback';
 import { ReportActivity } from '../features/objectives/ReportActivity';
 import type { ReportedKey } from '../services/dailyObjectivesService';
+
+// A space's posts live in Spaces now (its Posts tab); old board links land there.
+// The old Community index became Browse (/community redirects there).
+function BoardRedirect() {
+  const { boardId } = useParams<{ boardId: string }>();
+  return <Navigate to={`/spaces/${boardId}?tab=posts`} replace />;
+}
+
+// Spaces used to live at /house; old links and bookmarks keep working.
+function HouseRedirect() {
+  const { pathname, search } = useLocation();
+  return <Navigate to={pathname.replace(/^\/house/, '/spaces') + search} replace />;
+}
 
 const App = lazy(() => import('../App'));
 const HomeSwitcher = lazy(() => import('../pages/HomeSwitcher').then(m => ({ default: m.HomeSwitcher })));
@@ -22,6 +35,7 @@ const BackgroundSettingsPage = lazy(() => import('../pages/BackgroundSettingsPag
 const BillingPage = lazy(() => import('../pages/BillingPage').then(m => ({ default: m.BillingPage })));
 const CoAuthorPage = lazy(() => import('../pages/CoAuthorPage').then(m => ({ default: m.CoAuthorPage })));
 const CoachingProgressPage = lazy(() => import('../pages/CoachingProgressPage').then(m => ({ default: m.CoachingProgressPage })));
+const GoalNotesPage = lazy(() => import('../pages/GoalNotesPage').then(m => ({ default: m.GoalNotesPage })));
 const CoachingCommitmentsPage = lazy(() => import('../pages/CoachingCommitmentsPage').then(m => ({ default: m.CoachingCommitmentsPage })));
 const CoachingLibraryPage = lazy(() => import('../pages/CoachingLibraryPage').then(m => ({ default: m.CoachingLibraryPage })));
 const GoalDetailPage = lazy(() => import('../pages/GoalDetailPage').then(m => ({ default: m.GoalDetailPage })));
@@ -33,8 +47,6 @@ const MemoryTrainingPage = lazy(() => import('../pages/MemoryTrainingPage'));
 const MorningJournalPage = lazy(() => import('../pages/MorningJournalPage').then(m => ({ default: m.MorningJournalPage })));
 const PersonProfilePage = lazy(() => import('../pages/PersonProfilePage').then(m => ({ default: m.PersonProfilePage })));
 const RelationshipBriefPage = lazy(() => import('../pages/RelationshipBriefPage').then(m => ({ default: m.RelationshipBriefPage })));
-const CommunityPage = lazy(() => import('../pages/CommunityPage'));
-const BoardPage = lazy(() => import('../pages/BoardPage'));
 const PostDetailPage = lazy(() => import('../pages/PostDetailPage'));
 const CommunitySearchPage = lazy(() => import('../pages/CommunitySearchPage'));
 const MemberProfilePage = lazy(() => import('../pages/MemberProfilePage'));
@@ -73,6 +85,7 @@ export const appRoutes = [
   <Route key="pricing" path="/pricing" element={P(<PricingPageRoute />)} />,
   <Route key="coaching-progress" path="/coaching-progress" element={P(<CoachingProgressPage />, 'view_progress')} />,
   <Route key="coaching-commitments" path="/coaching-commitments" element={P(<CoachingCommitmentsPage />)} />,
+  <Route key="notes" path="/notes" element={P(<GoalNotesPage />)} />,
   <Route key="coaching-library" path="/coaching-library" element={P(<CoachingLibraryPage />, 'coaching_library')} />,
   <Route key="goal-detail" path="/goal/:goalId" element={P(<GoalDetailPage />)} />,
   <Route key="co-author" path="/co-author" element={P(<CoAuthorPage />, 'use_co_author')} />,
@@ -89,8 +102,8 @@ export const appRoutes = [
   <Route key="invite" path="/invite" element={P(<InvitePage />)} />,
   <Route key="memory-training" path="/memory-training" element={P(<MemoryTrainingPage />, 'memory_training')} />,
   <Route key="morning-journal" path="/morning-journal" element={P(<MorningJournalPage />)} />,
-  <Route key="community" path="/community" element={P(<CommunityPage />, 'browse_spaces')} />,
-  <Route key="community-board" path="/community/board/:boardId" element={P(<BoardPage />)} />,
+  <Route key="community" path="/community" element={<Navigate to="/spaces/browse" replace />} />,
+  <Route key="community-board" path="/community/board/:boardId" element={P(<BoardRedirect />)} />,
   <Route key="community-post" path="/community/post/:postId" element={P(<PostDetailPage />)} />,
   <Route key="community-search" path="/community/search" element={P(<CommunitySearchPage />)} />,
   <Route key="member-profile" path="/member/:userId" element={P(<MemberProfilePage />, 'visit_neighbor')} />,
@@ -98,10 +111,11 @@ export const appRoutes = [
   <Route key="discover" path="/discover" element={P(<DiscoverPage />, 'discover_people')} />,
   <Route key="my-profile" path="/my-profile" element={P(<MyPublicProfilePage />)} />,
   <Route key="edit-public-profile" path="/my-profile/edit" element={P(<EditPublicProfilePage />, 'edit_profile')} />,
-  <Route key="house" path="/house" element={P(<HousePage />, 'browse_spaces')} />,
-  <Route key="house-space" path="/house/:boardId" element={P(<HousePage />)} />,
-  <Route key="house-room" path="/house/:boardId/:roomName" element={P(<HousePage />)} />,
-  <Route key="house-browse" path="/house/browse" element={P(<BrowseSpacesPage />, 'browse_spaces')} />,
+  <Route key="spaces" path="/spaces" element={P(<HousePage />, 'browse_spaces')} />,
+  <Route key="spaces-space" path="/spaces/:boardId" element={P(<HousePage />)} />,
+  <Route key="spaces-room" path="/spaces/:boardId/:roomName" element={P(<HousePage />)} />,
+  <Route key="spaces-browse" path="/spaces/browse" element={P(<BrowseSpacesPage />, 'browse_spaces')} />,
+  <Route key="house" path="/house/*" element={<HouseRedirect />} />,
   <Route key="world" path="/world" element={P(<WorldPage />)} />,
   <Route key="medals" path="/medals" element={P(<MedalsPage />, 'view_medals')} />,
   <Route key="leaderboard" path="/leaderboard" element={P(<ObjectivesLeaderboardPage />)} />,

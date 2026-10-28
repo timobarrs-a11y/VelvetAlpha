@@ -47,7 +47,7 @@ export function ArrivalHighlights({ onDone }: { onDone: () => void }) {
             ? `You're already in ${spaces.slice(0, 3).map(s => s.name).join(', ')}${spaces.length > 3 ? ` and ${spaces.length - 3} more` : ''}.`
             : 'Spaces for the things you love, with people who love them too.'}
         </p>
-        <button type="button" onClick={() => go('/community')} className="mt-3 text-sm font-semibold" style={{ color: 'var(--ds-accent-fg)' }}>
+        <button type="button" onClick={() => go('/spaces')} className="mt-3 text-sm font-semibold" style={{ color: 'var(--ds-accent-fg)' }}>
           Say hello
         </button>
       </div>

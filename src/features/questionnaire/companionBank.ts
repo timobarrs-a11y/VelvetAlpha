@@ -6,9 +6,10 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 20,
   chapters: [
     { id: 'connection', label: 'How you connect', questionIds: ['relationshipType', 'connectionType'] },
-    { id: 'energy', label: 'Who {she} is', questionIds: ['energy', 'voice', 'beat1'] },
+    { id: 'energy', label: 'Who {she} is', questionIds: ['energy', 'beat1'] },
     { id: 'warmth', label: 'How {she} loves', questionIds: ['warmth', 'interests'] },
-    // Love language and "when it's hard" are asked by the companion in its first week
+    // How {she} texts (direct, playful, gentle...) is not asked: it follows from how {she} shows {she} cares, and the
+    // signature voice page that comes after covers the rest. Love language and "when it's hard" are asked by the companion in its first week
     // (supabase/functions/_shared/companionWeekOne.ts), not here.
     { id: 'depth', label: 'The bond', questionIds: ['companionName', 'beat2'] },
   ],
@@ -59,47 +60,6 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
           'In {hers} own world',
         ],
       },
-    },
-    {
-      id: 'voice',
-      archetype: 'preview',
-      chapter: 'energy',
-      question: (ctx) => tpl(`Pick the voice that feels right. Which one sounds like {her}?`, ctx),
-      confidence: 'tapped',
-      bubbles: [
-        {
-          voice: 'Direct',
-          value: 'direct',
-          messages: [
-            'I meant what I said last night.',
-            "You're overthinking it. Just go.",
-          ],
-        },
-        {
-          voice: 'Playful',
-          value: 'playful',
-          messages: [
-            'Oh so you WERE paying attention 👀',
-            "You're cute when you pretend you know things.",
-          ],
-        },
-        {
-          voice: 'Gentle',
-          value: 'gentle',
-          messages: [
-            'Hey, take a breath. You don\'t have to figure it all out right now.',
-            "I'm here. Whatever it is, we'll handle it.",
-          ],
-        },
-        {
-          voice: 'Mysterious',
-          value: 'mysterious',
-          messages: [
-            'Maybe. Maybe not. You\'ll find out.',
-            "Some things are better left unsaid... for now.",
-          ],
-        },
-      ],
     },
     {
       id: 'beat1',

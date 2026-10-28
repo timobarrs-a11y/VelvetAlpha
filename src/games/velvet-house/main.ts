@@ -7,6 +7,7 @@ import { createControls } from './ui/controls';
 import { createHud } from './ui/hud';
 import { createVitals } from './ui/vitals';
 import { createArrange } from './systems/arrange';
+import { createWallLamps } from './systems/wallLamps';
 import { createInteract } from './systems/interact';
 import { createInput } from './systems/input';
 import { createShop } from './systems/shop';
@@ -22,6 +23,10 @@ import { createConcerns } from './systems/concerns';
 import { createPets } from './systems/pets';
 import { createOverseer } from './systems/overseer';
 import { createRoomService } from './systems/roomService';
+import { createDevMoney } from './systems/devMoney';
+import { createUnlocks } from './systems/unlocks';
+import { createCelebrate } from './ui/celebrate';
+import { createCodeQueue } from './systems/codeQueue';
 import { createScripts } from './script/gameHost';
 import { createFrame } from './view/frame';
 import { installDevHooks } from './dev/hooks';
@@ -46,6 +51,7 @@ function boot(attract: boolean): void {
   Object.assign(g, createOutfit(g));
   Object.assign(g, createControls(g));
   Object.assign(g, createArrange(g));
+  Object.assign(g, createWallLamps(g));
   Object.assign(g, createInteract(g));
   createInput(g);
   Object.assign(g, createShop(g));
@@ -54,6 +60,9 @@ function boot(attract: boolean): void {
   Object.assign(g, createHud(g));
   // Before the vitals: the HUD asks for the partner's mood the moment it is drawn.
   Object.assign(g, createConcerns(g));
+  Object.assign(g, createDevMoney(g));
+  Object.assign(g, createCelebrate(g));
+  Object.assign(g, createUnlocks(g));
   Object.assign(g, createVitals(g));
   Object.assign(g, createGoals(g));
   Object.assign(g, createAvatar(g));
@@ -65,6 +74,7 @@ function boot(attract: boolean): void {
   Object.assign(g, createOverseer(g));
   Object.assign(g, createRoomService(g));
   Object.assign(g, createScripts(g));
+  if (!attract) createCodeQueue(g);
   if (!attract) installDevHooks(g);
   startGameLoop(g);
   if (attract) { startAttract(g); return; }

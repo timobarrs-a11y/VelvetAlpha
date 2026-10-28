@@ -19,6 +19,7 @@ const AdminModerationPage = lazy(() => import('../pages/admin/AdminModerationPag
 const AdminFeedbackPage = lazy(() => import('../pages/admin/AdminFeedbackPage').then(m => ({ default: m.AdminFeedbackPage })));
 const AdminBotsPage = lazy(() => import('../pages/admin/AdminBotsPage').then(m => ({ default: m.AdminBotsPage })));
 const AdminSettingsPage = lazy(() => import('../pages/admin/AdminSettingsPage').then(m => ({ default: m.AdminSettingsPage })));
+const AdminPromoCodesPage = lazy(() => import('../pages/admin/AdminPromoCodesPage').then(m => ({ default: m.AdminPromoCodesPage })));
 const AdminAuditPage = lazy(() => import('../pages/admin/AdminAuditPage').then(m => ({ default: m.AdminAuditPage })));
 const MemoryProposalsPage = lazy(() => import('../pages/MemoryProposalsPage').then(m => ({ default: m.MemoryProposalsPage })));
 
@@ -60,6 +61,7 @@ export const adminRoutes = [
     <Route path="moderation" element={page('admin', <AdminModerationPage />)} />
     <Route path="feedback" element={page('admin', <AdminFeedbackPage />)} />
     <Route path="bots" element={page('admin', <AdminBotsPage />)} />
+    <Route path="promo-codes" element={page('admin', <AdminPromoCodesPage />)} />
     <Route path="settings" element={page('admin', <AdminSettingsPage />)} />
     <Route path="audit" element={page('admin', <AdminAuditPage />)} />
     <Route path="roles" element={page('admin', <UserManagementPage />)} />

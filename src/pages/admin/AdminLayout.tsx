@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, LayoutDashboard, Users, ShieldAlert, Inbox, Bot, SlidersHorizontal,
-  ScrollText, BarChart3, MonitorDot, MessageCircle, Brain, KeyRound,
+  ScrollText, BarChart3, MonitorDot, MessageCircle, Brain, KeyRound, Ticket,
 } from 'lucide-react';
 
 const SECTIONS: { title: string; items: { to: string; label: string; icon: typeof Users; end?: boolean }[] }[] = [
@@ -13,6 +13,7 @@ const SECTIONS: { title: string; items: { to: string; label: string; icon: typeo
       { to: '/admin/moderation', label: 'Moderation', icon: ShieldAlert },
       { to: '/admin/feedback', label: 'Feedback', icon: Inbox },
       { to: '/admin/bots', label: 'Community bots', icon: Bot },
+      { to: '/admin/promo-codes', label: 'Promo codes', icon: Ticket },
     ],
   },
   {

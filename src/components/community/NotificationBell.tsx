@@ -101,13 +101,13 @@ export function NotificationBell() {
       navigate('/medals');
     } else if (notif.type === 'mention') {
       const boardId = meta?.board_id as string | undefined;
-      if (boardId) navigate(`/house/${boardId}`);
+      if (boardId) navigate(`/spaces/${boardId}`);
     } else if (notif.type === 'join_approved') {
       const boardId = meta?.board_id as string | undefined;
-      if (boardId) navigate(`/house/${boardId}`);
+      if (boardId) navigate(`/spaces/${boardId}`);
     } else if (notif.type === 'join_request') {
       const boardId = meta?.board_id as string | undefined;
-      if (boardId) navigate(`/house/${boardId}`);
+      if (boardId) navigate(`/spaces/${boardId}`);
     } else if (notif.post_id) {
       navigate(`/community/post/${notif.post_id}`);
     }

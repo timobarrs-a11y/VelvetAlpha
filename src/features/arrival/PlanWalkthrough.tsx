@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarDays, CheckCircle2, Layers, TrendingUp } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Layers, MessageCircle, TrendingUp } from 'lucide-react';
 import type { ArrivalPlan } from '../../../supabase/functions/_shared/atlasArrival';
 import { formatDay } from './arrivalUtils';
 
@@ -15,6 +15,8 @@ interface Props {
   helper: { name: string; kind: 'coach' | 'assistant' };
   onChangeCommitmentDate: (index: number, date: string) => void;
   onConfirm: () => void;
+  /** Take one of the first steps to their coach or assistant: the plan is saved and the chat opens with the question typed in. */
+  onAsk?: (commitment: { description: string; dueDate: string }) => void;
   busy: boolean;
 }
 
@@ -30,7 +32,7 @@ const STEPS = [
  * the whole road, what they're signing up for, how they'll know it's working,
  * and last, the calendar summary.
  */
-export function PlanWalkthrough({ plan, summary, helper, onChangeCommitmentDate, onConfirm, busy }: Props) {
+export function PlanWalkthrough({ plan, summary, helper, onChangeCommitmentDate, onConfirm, onAsk, busy }: Props) {
   const [step, setStep] = useState(0);
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -86,19 +88,38 @@ export function PlanWalkthrough({ plan, summary, helper, onChangeCommitmentDate,
                 <li className="text-sm" style={{ color: 'var(--shell-text-muted)' }}>Nothing this week; the plan starts gently.</li>
               )}
               {plan.commitments.map((c, i) => (
-                <li key={c.description} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2" style={{ background: 'var(--shell-accent-soft)' }}>
-                  <span className="text-sm" style={{ color: 'var(--shell-text-primary)' }}>{c.description}</span>
-                  <input
-                    type="date"
-                    aria-label={`Date for ${c.description}`}
-                    value={c.dueDate}
-                    min={todayKey}
-                    onChange={e => e.target.value && onChangeCommitmentDate(i, e.target.value)}
-                    className="shrink-0 rounded-lg bg-transparent px-2 py-1 text-xs"
-                    style={{ border: '1px solid var(--shell-border)', color: 'var(--shell-text-primary)' }}
-                  />
+                <li key={c.description} className="rounded-xl px-3 py-2" style={{ background: 'var(--shell-accent-soft)' }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm" style={{ color: 'var(--shell-text-primary)' }}>{c.description}</span>
+                    <input
+                      type="date"
+                      aria-label={`Date for ${c.description}`}
+                      value={c.dueDate}
+                      min={todayKey}
+                      onChange={e => e.target.value && onChangeCommitmentDate(i, e.target.value)}
+                      className="shrink-0 rounded-lg bg-transparent px-2 py-1 text-xs"
+                      style={{ border: '1px solid var(--shell-border)', color: 'var(--shell-text-primary)' }}
+                    />
+                  </div>
+                  {onAsk && (
+                    <button
+                      type="button"
+                      onClick={() => onAsk(c)}
+                      disabled={busy}
+                      className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold disabled:opacity-50"
+                      style={{ border: '1px solid var(--shell-border-strong)', color: 'var(--shell-accent)' }}
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      Ask {helper.name} about this
+                    </button>
+                  )}
                 </li>
               ))}
+              {onAsk && plan.commitments.length > 0 && (
+                <li className="px-1 text-xs" style={{ color: 'var(--shell-text-muted)' }}>
+                  Asking {helper.name} puts this plan on your calendar and takes you to {helper.name}'s chat, with your question ready to send.
+                </li>
+              )}
             </ul>
           )}
 

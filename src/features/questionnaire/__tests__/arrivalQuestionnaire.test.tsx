@@ -391,3 +391,12 @@ describe('the wavelength questions (how you tick)', () => {
     expect(q('motivation')).toEqual(TRAITS.motivation.values);
   });
 });
+
+describe('tpl pronouns', () => {
+  it('fills a capitalised pronoun at the start of a sentence, for both genders', async () => {
+    const { tpl, makeContext: mk } = await import('../pronouns');
+    expect(tpl("{She}'s ready.", mk({}, 'Male', 'companion'))).toBe("He's ready.");
+    expect(tpl("Got it. {She}'s taking shape.", mk({}, 'Female', 'companion'))).toBe("Got it. She's taking shape.");
+    expect(tpl('Is {she} here? Tell {her}.', mk({}, 'Male', 'friend'))).toBe('Is he here? Tell him.');
+  });
+});

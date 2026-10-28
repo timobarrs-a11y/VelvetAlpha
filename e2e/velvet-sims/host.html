@@ -62,5 +62,16 @@ addEventListener('message', (e) => {
     default: return answer({ ok: false, error: 'unavailable' });
   }
 });
+
+// Promo codes are the account's: the game reports a code it redeemed (window.promoLog), and when a house opens the
+// host sends the codes already on the account. Tests set window.accountPromos before the game says ready.
+window.promoLog = [];
+window.accountPromos = window.accountPromos || [];
+addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d) return;
+  if (d.type === 'velvet:promo') window.promoLog.push(d.code);
+  if (d.type === 'velvet:ready' && window.accountPromos.length) e.source.postMessage({ type: 'velvet:promos', codes: window.accountPromos }, location.origin);
+});
 </script>
 </body></html>

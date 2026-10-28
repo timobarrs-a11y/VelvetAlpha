@@ -60,6 +60,7 @@ export interface SaveContext {
     LOOKS: unknown[];
     ROOMLOOK: unknown[];
     WALLOBJS: unknown[];
+    WALLSTORE?: unknown[];
     yard: { t: number[][]; rainAt: number; rainUntil: number; rainCheck: number };
   };
   /** Bills, the bank, side jobs and the routine (state/life.ts). */
@@ -134,6 +135,7 @@ export function snapshot(ctx: SaveContext, prev: Record<string, unknown> | null 
     LOOKS: ctx.looks.LOOKS,
     ROOMLOOK: ctx.looks.ROOMLOOK,
     WALLOBJS: ctx.looks.WALLOBJS,
+    WALLSTORE: ctx.looks.WALLSTORE,
     yard: ctx.looks.yard,
     objs: ctx.objs.map(o => ({
       id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot,

@@ -25,7 +25,9 @@ export type BridgeMessageType =
   | 'velvet:menuReady'
   | 'velvet:startRequested'
   | 'velvet:startGo'
-  | 'velvet:startCancel';
+  | 'velvet:startCancel'
+  | 'velvet:promo'
+  | 'velvet:promos';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -354,6 +356,32 @@ export function isRestartedMessage(data: unknown): data is RestartedMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;
   return m.type === 'velvet:restarted' && typeof m.day === 'number';
+}
+
+// A promo code the player redeemed in this house: the host records it for the account.
+export interface PromoRedeemedMessage extends BridgeMessage {
+  type: 'velvet:promo';
+  game: 'velvet-house';
+  code: string;
+}
+
+// The promo codes redeemed on the player's account (in any house): every house of theirs gets those packs.
+export interface AccountPromosMessage extends BridgeMessage {
+  type: 'velvet:promos';
+  codes: string[];
+}
+
+export function isPromoRedeemedMessage(data: unknown): data is PromoRedeemedMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:promo' && typeof m.code === 'string' && m.code.length > 0 && m.code.length <= 40;
+}
+
+export function isAccountPromosMessage(data: unknown): data is AccountPromosMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:promos' && Array.isArray(m.codes) && m.codes.length <= 100
+    && m.codes.every((c) => typeof c === 'string' && c.length <= 40);
 }
 
 /**
