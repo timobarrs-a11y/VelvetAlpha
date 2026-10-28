@@ -151,6 +151,8 @@ export interface Game {
   tryUnlock(text: string): boolean;
   /** Hang a bought wall lamp (or keep it in storage when no wall is free). */
   addLamp(style: string): void;
+  /** Put wall lamps in storage (a promo pack's gift). */
+  stockLamps(styles: string[]): void;
   /** The wall lamps and the arrange state for them, for the art. */
   lampFrame(): { wallLamps: import('../state/wallLamps').WallLamp[]; lampUi: { id: string | null; held: boolean; valid: boolean } | null };
   celebrate(options: import('../ui/celebrate').CelebrateOptions): void;

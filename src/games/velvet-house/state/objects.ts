@@ -154,7 +154,7 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   wardrobe: { wall: true, W: 1.2, D: 0.6, h: 2.05, name: 'Wardrobe', store: true, cols: ['#E4DDD2', '#9C6B45', '#3A2E2A', '#8E9C96'] },
   cubeshelf: { wall: true, W: 1.0, D: 0.35, h: 1.0, name: 'Cube shelf', store: true, cols: ['#F2EEE8', '#2B2B30', '#B98A6A'] },
   // The rugs the house comes with (they used to be painted on the floor): pieces like any other, so they can be moved, stored or carried upstairs.
-  rugwide: { W: 3.3, D: 1.9, h: 0.02, name: 'Living room rug', rug: true, blocks: [], cols: ['#B5476E', '#3D6B73', '#C9A24A', '#E8DCC8', '#2E3B57', '#7FB069'] },
+  rugwide: { W: 3.3, D: 1.9, h: 0.02, name: 'Living room rug', rug: true, blocks: [], skins: { nana: { name: 'Plush cloud rug', material: 'fabric', theme: 'nana', cols: ['#F8C8DC', '#FFF8F0', '#D9C8F2'] } }, cols: ['#B5476E', '#3D6B73', '#C9A24A', '#E8DCC8', '#2E3B57', '#7FB069'] },
   rugsquare: { W: 2.0, D: 2.1, h: 0.02, name: 'Bedroom rug', rug: true, blocks: [], cols: ['#C8B6C9', '#B5476E', '#3D6B73', '#E8DCC8'] },
   rugrect: { W: 2.4, D: 1.6, h: 0.02, name: 'Area rug', store: true, rug: true, blocks: [], cols: ['#B5476E', '#3D6B73', '#C9A24A', '#E8DCC8', '#2E3B57', '#7FB069'] },
   rugrunner: { W: 2.8, D: 0.8, h: 0.02, name: 'Runner rug', store: true, rug: true, blocks: [], cols: ['#A63A2C', '#4A5DA8', '#D8C9AE', '#3F5B4C'] },

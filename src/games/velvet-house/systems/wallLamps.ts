@@ -1,4 +1,4 @@
-import { defaultWallLamps, readWallLamps, checkLamp, snapLamp, freeLampSpot, lampRoom, LAMP_STYLES, LAMP_NAMES, isLampStyle, type WallLamp, type LampStyle } from '../state/wallLamps';
+import { defaultWallLamps, readWallLamps, checkLamp, snapLamp, freeLampSpot, lampRoom, lampReach, LAMP_STYLES, PROMO_LAMP_STYLES, LAMP_NAMES, isLampStyle, type WallLamp, type LampStyle } from '../state/wallLamps';
 import { LEVEL_NAMES } from '../state/house';
 import type { Game } from '../kernel/game';
 
@@ -29,7 +29,7 @@ export function createWallLamps(g: Game): Partial<Game> {
   function hang(style: LampStyle, level: number): WallLamp | null {
     const spot = freeLampSpot(lamps, level, world.objs);
     if (!spot) return null;
-    const lamp: WallLamp = { id: nextId(), level, ...spot, style, r: 130 };
+    const lamp: WallLamp = { id: nextId(), level, ...spot, style, r: lampReach(style) };
     lamps.push(lamp);
     return lamp;
   }
@@ -60,7 +60,9 @@ export function createWallLamps(g: Game): Partial<Game> {
   function nextStyle(): void {
     const l = find(selectedId);
     if (!l) return;
-    l.style = LAMP_STYLES[(LAMP_STYLES.indexOf(l.style) + 1) % LAMP_STYLES.length];
+    // The styles the player can use: the shop's, and a promo pack's once they have it.
+    const cycle: LampStyle[] = [...LAMP_STYLES, ...PROMO_LAMP_STYLES.filter((s) => g.owned.has(`lamp-${s}`))];
+    l.style = cycle[(cycle.indexOf(l.style) + 1) % cycle.length];
     log(`The lamp is now the ${LAMP_NAMES[l.style].toLowerCase()}.`);
   }
 
@@ -133,6 +135,8 @@ export function createWallLamps(g: Game): Partial<Game> {
 
   return {
     addLamp,
+    /** Wall lamps that come with a pack go into storage, to hang from Arrange. */
+    stockLamps: (styles: string[]) => setStock([...stockOf(), ...styles.filter(isLampStyle)]),
     /** What arrange mode tells the art about the lamps. */
     lampFrame: () => ({ wallLamps: lamps, lampUi: arranging() ? { id: selectedId, held: !!held, valid } : null }),
   };

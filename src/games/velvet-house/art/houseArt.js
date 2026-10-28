@@ -1371,6 +1371,21 @@ export function createHouseArt(ctx0, opts = {}) {
       T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.18], NA.gold, 2.2); T.line([0.65, 0.04, 1.18], [0.65, 0.24, 1.12], NA.gold, 2.2);
       const [vx, vy] = T.P(0.18, 0.22, 0.95); ell(vx, vy, 4, 3, NA.white, 'rgba(0,0,0,.1)'); limb(vx, vy - 2, vx - 1, vy - 11, '#6FA878', 1); limb(vx, vy - 2, vx + 3, vy - 10, '#6FA878', 1); daisy(vx - 1, vy - 12, 2.6); daisy(vx + 3, vy - 11, 2.2); },
   });
+  // Nana: a plush rug. A rounded blush rug with a cream cloud in the middle, a shag of little tufts in two tones, and pom-poms along the short ends.
+  LOOK_DRAWERS.rugwide = LOOK_DRAWERS.rugwide || {};
+  LOOK_DRAWERS.rugwide.nana = (T, o) => {
+    const c = cl(o), W = 3.3, D = 1.9, r = 0.34, rounded = (x0, y0, x1, y1, rad, z) => { const pts = []; [[x1 - rad, y0 + rad, -90], [x1 - rad, y1 - rad, 0], [x0 + rad, y1 - rad, 90], [x0 + rad, y0 + rad, 180]].forEach(([cx, cy, a0]) => { for (let k = 0; k <= 5; k++) { const a = (a0 + k * 18) * Math.PI / 180; pts.push([cx + Math.cos(a) * rad, cy + Math.sin(a) * rad, z]); } }); return pts; };
+    T.poly(rounded(0, 0, W, D, r, 0.01), shade(c, -0.08));
+    T.poly(rounded(0.07, 0.07, W - 0.07, D - 0.07, r - 0.05, 0.012), c);
+    T.poly(rounded(0.22, 0.22, W - 0.22, D - 0.22, r - 0.12, 0.013), shade(c, 0.1), 'rgba(255,255,255,.55)', 1.2);
+    // The shag: short slanting tufts in light and dark, scattered on a grid with a little jitter.
+    for (let i = 0; i < 20; i++) for (let j = 0; j < 11; j++) {
+      const x = 0.22 + i * 0.158 + ((j % 2) * 0.07), y = 0.18 + j * 0.15, k = (i * 7 + j * 13) % 5;
+      T.line([x, y, 0.014], [x + 0.045, y + 0.035, 0.014], k < 2 ? NA.cream : k === 2 ? shade(c, -0.14) : shade(c, 0.2), 1.5);
+    }
+    const [cx, cy] = T.P(W / 2, D / 2, 0.02); cloud(cx, cy + 3, 22, NA.cream); heart(cx - 8, cy - 9, 1.2, NA.pinkDeep); heart(cx + 9, cy - 7, 0.9, NA.lilacDeep); star5(cx + 1, cy - 14, 3, NA.butter);
+    for (let y = 0.22; y < D - 0.1; y += 0.24) [0.02, W - 0.02].forEach((x) => { const [px, py] = T.P(x, y, 0.02); circle(px, py, 2.6, NA.cream); circle(px - 0.6, py - 0.6, 1, '#FFFFFF'); });
+  };
   Object.assign(LOOK_DRAWERS.fridge, {
     // Nana: a pink fridge with a cream cloud-puff cap, cloud stickers and little frames on the upper door, a bow and a ruffle band on the lower one, lilac heart handles. Returns the open door's colour.
     nana: (T, o) => { const body = cl(o);
@@ -1997,7 +2012,7 @@ export function createHouseArt(ctx0, opts = {}) {
     // ---- rugs (you can walk on them) ----
     // The rugs the house comes with, drawn as they were when they were painted on: the living room's wine rug with its cream border and bars, the bedroom's lilac one.
     rugwide: {
-      parts: (o) => [F(0, 0, 3.3, 1.9, (T) => { const c = cl(o), q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1.2); q(0, 0, 3.3, 1.9, 0.01, c); q(0.18, 0.18, 3.12, 1.72, 0.012, null, '#E8C9A0'); for (let k = 0; k < 4; k++) { const yy = 0.45 + k * 0.38; q(0.4, yy, 2.9, yy + 0.12, 0.013, shade(c, -0.16)); } }, { decal: true })] },
+      parts: (o) => [F(0, 0, 3.3, 1.9, (T, ob, t) => { if (LOOK_DRAWERS.rugwide[skinId(o)]) { LOOK_DRAWERS.rugwide[skinId(o)](T, o, t); return; } const c = cl(o), q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1.2); q(0, 0, 3.3, 1.9, 0.01, c); q(0.18, 0.18, 3.12, 1.72, 0.012, null, '#E8C9A0'); for (let k = 0; k < 4; k++) { const yy = 0.45 + k * 0.38; q(0.4, yy, 2.9, yy + 0.12, 0.013, shade(c, -0.16)); } }, { decal: true })] },
     rugsquare: {
       parts: (o) => [F(0, 0, 2.0, 2.1, (T) => { const c = cl(o), q = (a, b, x, y, z, col, st) => T.poly([[a, b, z], [x, b, z], [x, y, z], [a, y, z]], col, st, 1); q(0, 0, 2.0, 2.1, 0.01, c); q(0.15, 0.15, 1.85, 1.95, 0.012, null, 'rgba(255,255,255,.5)'); }, { decal: true })] },
     rugrect: {        
@@ -2430,9 +2445,29 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     gMat = MATERIAL.matte;
   }
+  /** Breezy drapes at a window: sheer panels hung from a gold rod, pinched at a tie-back and swaying a little. */
+  function drawDrapes(level, f, style) {
+    const P = (u, z) => wallPoint(f.p, u, z);
+    const u0 = f.u[0] - 0.1, u1 = f.u[1] + 0.1, zt = f.z[1] + 0.14, zb = f.z[0] - 0.22, zm = (zt + zb) / 2 + 0.12, w = (u1 - u0) * 0.3;
+    const gold = '#E8C877', sheer = ['rgba(255,244,249,.84)', 'rgba(255,226,240,.74)', 'rgba(250,236,252,.8)', 'rgba(255,226,240,.74)'];
+    line3(P(u0 - 0.06, zt), P(u1 + 0.06, zt), gold, 2.4);
+    [u0 - 0.06, u1 + 0.06].forEach(u => { const [x, y] = iso(...P(u, zt)); circle(x, y, 2.2, gold); circle(x - 0.6, y - 0.6, 0.8, '#FFF3CF'); });
+    [-1, 1].forEach((side) => {
+      const edge = side < 0 ? u0 : u1, away = -side;            // the panel's outer edge, and the way toward the window's middle
+      for (let i = 0; i < 4; i++) {
+        const a = edge + away * (w * i) / 4, b = edge + away * (w * (i + 1)) / 4, sway = Math.sin(animT * 0.9 + i * 0.8 + side * 1.3) * 0.035 * (i + 1), pinch = away * w * 0.16;
+        poly([P(a, zt), P(b, zt), P(b + pinch * 0.8, zm), P(b + away * (0.02 + 0.015 * i) + sway, zb), P(a + away * 0.015 + sway * 0.6, zb), P(a + pinch * 0.8, zm)], sheer[i], 'rgba(205,150,185,.3)', 0.6);
+      }
+      // The tie-back: a lilac cord with a little bow at the panel's inner edge.
+      line3(P(edge, zm), P(edge + away * w * 0.78, zm), '#C9B2EC', 2.6);
+      const [bx, by] = iso(...P(edge + away * w * 0.82, zm)); bow(bx, by, 2, '#B9A2E0');
+    });
+    // A little frill along the top of the rod.
+    for (let u = u0; u < u1; u += 0.14) { const [x, y] = iso(...P(u + 0.07, zt - 0.05)); ell(x, y + 1.5, 4, 3.4, 'rgba(250,200,222,.8)'); }
+  }
   function drawFeature(level, f) {
     const P = (u, z) => wallPoint(f.p, u, z);
-    if (f.k === 'window') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.08), skyColor()); gMat = MATERIAL.matte; if (raining()) glassDrops(f, 0.08); const mu = (f.u[0] + f.u[1]) / 2, mz = (f.z[0] + f.z[1]) / 2; line3(P(mu, f.z[0] + 0.08), P(mu, f.z[1] - 0.08), '#F7F3EE', 2); line3(P(f.u[0] + 0.08, mz), P(f.u[1] - 0.08, mz), '#F7F3EE', 2); }
+    if (f.k === 'window') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.08), skyColor()); gMat = MATERIAL.matte; if (raining()) glassDrops(f, 0.08); const mu = (f.u[0] + f.u[1]) / 2, mz = (f.z[0] + f.z[1]) / 2; line3(P(mu, f.z[0] + 0.08), P(mu, f.z[1] - 0.08), '#F7F3EE', 2); line3(P(f.u[0] + 0.08, mz), P(f.u[1] - 0.08, mz), '#F7F3EE', 2); if (LOOKS[level] && LOOKS[level].drapes) drawDrapes(level, f, LOOKS[level].drapes); }
     else if (f.k === 'highwin') { poly(featPoly(f), '#E9E4DD', EDGE, 0.8); gMat = MATERIAL.window; poly(featPoly(f, 0.06), skyColor()); gMat = MATERIAL.matte; }
     else if (f.k === 'door') { poly([P(f.u[0] - 0.08, 0), P(f.u[1] + 0.08, 0), P(f.u[1] + 0.08, f.z[1] + 0.05), P(f.u[0] - 0.08, f.z[1] + 0.05)], '#EFE8DE', EDGE, 0.8); poly(featPoly(f), '#7A5236'); poly([P(f.u[0] + 0.1, 1.15), P(f.u[1] - 0.1, 1.15), P(f.u[1] - 0.1, 1.9), P(f.u[0] + 0.1, 1.9)], null, 'rgba(0,0,0,.25)', 1); poly([P(f.u[0] + 0.1, 0.2), P(f.u[1] - 0.1, 0.2), P(f.u[1] - 0.1, 0.95), P(f.u[0] + 0.1, 0.95)], null, 'rgba(0,0,0,.25)', 1); const [kx, ky] = iso(...P(f.u[0] + 0.15, 1.02)); circle(kx, ky, 2, '#E0B85A'); }
     else if (f.k === 'switch') { poly(featPoly(f), '#F7F3EE', EDGE, 0.8); const mid = (f.u[0] + f.u[1]) / 2; poly(party ? [P(mid - 0.03, 1.11), P(mid + 0.03, 1.11), P(mid + 0.03, 1.19), P(mid - 0.03, 1.19)] : [P(mid - 0.03, 1.03), P(mid + 0.03, 1.03), P(mid + 0.03, 1.11), P(mid - 0.03, 1.11)], party ? '#D24A7A' : '#9C9298'); }
@@ -2624,7 +2659,7 @@ export function createHouseArt(ctx0, opts = {}) {
     });
   }
   /** How far every light reaches, against its authored radius: more means pools of light that read more strongly. */
-  const LIGHT_GAIN = 1.3;
+  const LIGHT_GAIN = 1.1;
   function activeLights(level) {
     const out = [];
     WALL_LIGHTS.forEach((L, i) => { if (L.k === 'sconce' || L.level !== level || (L.need && !has(L.need)) || lightSkipped(L) || (L.onlyIn && flags.house !== L.onlyIn)) return; const manual = wallLightOverrides.get(i); const target = manual === true ? 1 : manual === false ? 0 : wantLight(level, roomFor(L.room), L.night, L.amb); const s = ease('w' + i, target); if (s < 0.02) return; const um = (L.u[0] + L.u[1]) / 2, off = L.k === 'under' ? 0.5 : 0.2; out.push({ src: L.p === 'B' ? [um, off, L.z] : [off, um, L.z], pool: L.p === 'B' ? [um, L.k === 'under' ? 1.1 : 1.4, 0] : [1.4, um, 0], r: L.r * LIGHT_GAIN, s, col: L.col, vis: BACK[VR].includes(L.p), room: roomFor(L.room) }); });
@@ -2687,7 +2722,7 @@ export function createHouseArt(ctx0, opts = {}) {
         h.wb(um - 0.03, 0.03, L.z - 0.03, 0.06, 0.07, 0.06, '#E9E4DD');
         const [gx, gy] = h.sp(um, 0.15, L.z - 0.02);
         if (on) { h.ell(gx, gy, 16, 13, 'rgba(255,230,170,.22)'); }
-        circle(gx, gy, 5, on ? '#FFF6D0' : '#D8D2C8'); h.ell(gx - 1.6, gy - 1.8, 1.8, 1.2, 'rgba(255,255,255,.7)');
+        circle(gx, gy, 5, on ? '#FFF6D0' : '#EADFC4'); ctx.beginPath(); ctx.arc(gx, gy, 5, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(70,45,40,.55)'; ctx.lineWidth = 0.9; ctx.stroke(); h.ell(gx - 1.6, gy - 1.8, 1.8, 1.2, 'rgba(255,255,255,.8)');
       }
       else if (L.k === 'under') {
         if (on) poly([[L.u[0], 0.002, 0.93], [L.u[1], 0.002, 0.93], [L.u[1], 0.002, 1.55], [L.u[0], 0.002, 1.55]], 'rgba(255,226,160,.45)');
@@ -2953,7 +2988,8 @@ export function createHouseArt(ctx0, opts = {}) {
         ctx.fillStyle = g; ctx.fillRect(cx - rx, cy - rx, rx * 2, rx * 2); ctx.restore();
       };
       if (dim >= 0.01) patch('10,8,28', Math.min(0.6, dim), 'source-over');
-      if (warm >= 0.01) patch('255,196,128', warm, 'lighter');
+      // Soft-light so a pale room is warmed rather than burnt out, plus a little plain light so a dark room still lifts.
+      if (warm >= 0.01) { patch('255,206,150', Math.min(0.4, warm * 1.3), 'soft-light'); patch('255,196,128', warm * 0.22, 'lighter'); }
     });
   }
   function lighting(level, lights, deferred) {
@@ -3984,6 +4020,8 @@ export function createHouseArt(ctx0, opts = {}) {
   function applyPaint(level, color) { if (LOOKS[level]) LOOKS[level].paint = color; }
   function applyWallpaper(level, pattern) { if (LOOKS[level]) LOOKS[level].paper = pattern; }
   function applyFloor(level, floor) { if (LOOKS[level]) LOOKS[level].floor = floor; }
+  /** Drapes on the windows of a floor ('' takes them down); kept with the house's looks, so they survive a reload. */
+  function applyDrapes(level, style) { if (LOOKS[level]) { if (style) LOOKS[level].drapes = style; else delete LOOKS[level].drapes; } }
   // Pictures that can hang as wallpaper: { id, base (a matching tone, used while loading), url | stops }.
   function registerPictures(list) { list.forEach(p => { if (p && p.id && !PAPERS[p.id]) PAPERS[p.id] = { pat: 'image', base: p.base, url: p.url, stops: p.stops }; }); }
   const getLooks = () => LOOKS.map(l => Object.assign({}, l));
@@ -4170,5 +4208,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, applyDrapes, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, hitWallLamp, wallPointAt, TYPES, WTYPES };
 }

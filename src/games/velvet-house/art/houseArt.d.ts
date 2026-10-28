@@ -132,6 +132,8 @@ export interface HouseArt {
   lookInfo(kind: 'paper' | 'floor', key: string): { pat?: string; kind?: string; base?: string; ink?: string; ink2?: string; a?: string; b?: string; line?: string; url?: string; stops?: Array<[number, string]> } | null;
   /** Sets the floor type for a floor level. */
   applyFloor(level: number, floor: string): void;
+  /** Drapes on the windows of a floor, by style; an empty style takes them down. */
+  applyDrapes(level: number, style: string): void;
   toggleObjectLight(id: string): boolean;
   /** Whether a lamp or other lit object is switched on. */
   objectLightOn(id: string): boolean;

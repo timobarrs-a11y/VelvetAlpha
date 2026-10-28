@@ -27,7 +27,7 @@ describe('a secret pack', () => {
       expect(visibleItems(itemsForTab(tab), new Set(cloud.map((c) => c.id))).some((c) => cloud.includes(c)), tab).toBe(tab === 'Today' || cloud.some((c) => c.tab === tab));
     }
     // nothing else is secret, but the Nana pack's pieces
-    expect(CATALOG.filter((c) => c.secret && !cloud.includes(c) && !/-nana$|^paper-nana|^floor-nana/.test(c.id))).toEqual([]);
+    expect(CATALOG.filter((c) => c.secret && !cloud.includes(c) && !/-nana$|^paper-nana|^floor-nana|^lamp-cloud$/.test(c.id))).toEqual([]);
   });
 });
 
@@ -48,7 +48,7 @@ describe('a promo pack', () => {
     expect(Object.values(UNLOCK_CODES).some((c) => c.setId === 'set-nana')).toBe(true);
     expect(isLockedPromo(nana(), new Set(['set-nana']))).toBe(false);
     const pieces = nana().set!.items;
-    expect(pieces).toHaveLength(8);
+    expect(pieces).toHaveLength(10);
     for (const id of pieces) expect(catalogById(id)!.secret, id).toBe(true);
   });
 });
@@ -57,16 +57,17 @@ describe('what a code does to the house', () => {
   afterEach(() => { vi.useRealTimers(); });
   const game = (opts: { level?: number; owned?: string[]; settled?: boolean; script?: boolean } = {}) => {
     vi.useFakeTimers();
-    const logs: string[] = [], applied: string[] = [], shown: Array<{ title: string; image?: string }> = [], own = new Set(opts.owned ?? []);
+    const stocked: string[] = [], logs: string[] = [], applied: string[] = [], shown: Array<{ title: string; image?: string }> = [], own = new Set(opts.owned ?? []);
     const g = {
       view: { level: opts.level ?? 1 }, owned: own, flags: {}, s: { settleDone: opts.settled ?? true, scriptMode: opts.script ? 'cutscene' : null },
       canvas: { toDataURL: () => 'data:image/jpeg;base64,AAAA' },
       log: (m: string) => logs.push(m), refreshDrawer: () => {},
       setLevel: (l: number) => { (g.view as { level: number }).level = l; },
       celebrate: (o: { title: string; image?: string }) => shown.push(o),
+      stockLamps: (l: string[]) => { stocked.push(...l); },
       handleBuy: (m: { id: string }, _c: unknown, free: boolean) => { applied.push(m.id + (free ? ':free' : '')); own.add(m.id); },
     } as unknown as Game;
-    return { g, logs, applied, shown, own, tryUnlock: createUnlocks(g).tryUnlock! };
+    return { g, logs, applied, shown, own, stocked, tryUnlock: createUnlocks(g).tryUnlock! };
   };
   const ids = () => catalogById('set-cuddle')!.set!.items;
 
@@ -102,6 +103,16 @@ describe('what a code does to the house', () => {
       expect(logs[0]).toMatch(/waiting once you have moved in/);
       expect((g.flags as { pendingUnlocks: string[] }).pendingUnlocks).toEqual(['set-cuddle']);
     }
+  });
+
+  it('the Nana code puts in its drapes and rug with the rest, and gives two cloud wall lamps to hang', () => {
+    const code = Object.keys(UNLOCK_CODES).find((k) => UNLOCK_CODES[k].setId === 'set-nana')!;
+    const { own, applied, stocked, tryUnlock } = game();
+    expect(tryUnlock(code)).toBe(true);
+    for (const id of [...catalogById('set-nana')!.set!.items, 'set-nana', 'lamp-cloud']) expect(own.has(id), id).toBe(true);
+    expect(applied).toContain('drapes-nana:free');
+    expect(applied).toContain('look-rug-nana:free');
+    expect(stocked).toEqual(['cloud', 'cloud']);
   });
 
   it('the second time it says so and changes nothing; ordinary talk is not a code', () => {

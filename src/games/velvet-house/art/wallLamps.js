@@ -10,7 +10,7 @@
 //   um, z               where the fixture is centred along the wall and how high
 //   ctx, ell, circle    the canvas and its two shape helpers; shade() lightens or darkens a colour
 
-export const WALL_LAMP_STYLES = ['classic', 'swing', 'cylinder', 'globe', 'candle', 'lantern', 'deco', 'cage'];
+export const WALL_LAMP_STYLES = ['classic', 'swing', 'cylinder', 'globe', 'candle', 'lantern', 'deco', 'cage', 'cloud'];
 
 const BRASS = '#B8893A', IRON = '#2B2B30', GLASS_ON = '#FFF0C4', GLASS_OFF = '#E7DCC8';
 
@@ -29,20 +29,41 @@ function wallDisc(h, u, z, r, inner, outer) {
 function halo(h, o, dz, r, strength = 1) {
   const { ctx, sp, um, z } = h, [x, y] = sp(um, o, z + dz);
   const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-  g.addColorStop(0, `rgba(255,240,200,${0.55 * strength})`); g.addColorStop(0.4, `rgba(255,226,160,${0.22 * strength})`); g.addColorStop(1, 'rgba(255,226,160,0)');
+  g.addColorStop(0, `rgba(255,240,200,${0.4 * strength})`); g.addColorStop(0.4, `rgba(255,226,160,${0.16 * strength})`); g.addColorStop(1, 'rgba(255,226,160,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
 }
 
 /** What a fixture does to the wall behind it: a shadow to the lower side, and a warm wash when it is lit. */
 function behind(h, r, on) {
   const { um, z } = h;
-  wallDisc(h, um + 0.05, z - 0.09, r * 0.8, 'rgba(30,15,10,.3)', 'rgba(30,15,10,0)');
-  if (on) wallDisc(h, um, z, r * 2.4, 'rgba(255,226,160,.36)', 'rgba(255,226,160,0)');
+  wallDisc(h, um + 0.04, z - 0.07, r * 0.55, 'rgba(60,35,30,.14)', 'rgba(60,35,30,0)');
+  if (on) wallDisc(h, um, z, r * 2.2, 'rgba(255,226,160,.2)', 'rgba(255,226,160,0)');
 }
+
+/** A thin dark outline round a round shape, so an unlit glass globe or bulb reads as an object and not a grey dot. */
+const ring = (h, x, y, r, col = 'rgba(70,45,40,.6)') => { const { ctx } = h; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.strokeStyle = col; ctx.lineWidth = 0.9; ctx.stroke(); };
 
 const glow = (h, o, dz, r, on) => { if (on) halo(h, o, dz, r); };
 
 const DRAW = {
+  // A fluffy cloud on a small gold plate that glows pink and gold, with a star and a heart for sparkle.
+  cloud(h, on) {
+    const { um, z, wb, sp, circle, ell } = h;
+    behind(h, 0.3, on);
+    wb(um - 0.05, 0, z - 0.05, 0.1, 0.025, 0.1, '#E8C877');
+    const [x, y] = sp(um, 0.12, z);
+    glow(h, 0.12, 0, 15, on);
+    const body = on ? '#FFF4F8' : '#E6DCF0', under = on ? '#FFD3E4' : '#C9BCDB', edge = on ? '#E58FB4' : '#6F5C8E';
+    ell(x, y + 3.4, 11.5, 4.6, under);
+    const puffs = [[-6.5, 0.5, 5.2], [0, -3, 6.6], [6.5, 0.2, 5], [-2.4, 1.6, 5.6], [3, 1.8, 5.4]];
+    puffs.forEach(([dx, dy, r]) => { circle(x + dx, y + dy, r + 1.2, edge); });
+    ell(x, y + 3.4, 12.7, 5.7, edge);
+    ell(x, y + 3.4, 11.5, 4.6, under);
+    puffs.forEach(([dx, dy, r]) => circle(x + dx, y + dy, r, body));
+    ell(x - 2, y - 5.5, 3.4, 1.6, 'rgba(255,255,255,.9)');
+    circle(x - 4.5, y + 5.6, 1.1, on ? '#EFA3C4' : '#BFA8C8'); circle(x + 4.5, y + 6.3, 1.1, on ? '#B9A2E0' : '#B0A2C4');
+    ctx_star(h, x + 8.5, y - 7, 2.6, on ? '#FFF1B8' : '#D9CFA8');
+  },
   // A drum shade on a short arm.
   classic(h, on) {
     const { um, z, wb, wl } = h;
@@ -89,10 +110,12 @@ const DRAW = {
     wb(um - 0.02, 0.025, z - 0.02, 0.04, 0.08, 0.04, '#8E939A');
     const [x, y] = sp(um, 0.2, z);
     glow(h, 0.2, 0, 19, on);
-    circle(x, y, 7, on ? '#FFF1C4' : '#BEB8AC');
-    ell(x + 1.2, y + 2, 5.4, 4.2, on ? 'rgba(255,214,140,.5)' : 'rgba(120,110,100,.18)');
-    ell(x - 2.4, y - 2.6, 2.4, 1.6, 'rgba(255,255,255,.85)');
-    ell(x, y - 6.6, 3.6, 1.2, '#8E939A');
+    circle(x, y, 7, on ? '#FFF1C4' : '#E9DCC0');
+    ell(x + 1.2, y + 2, 5.4, 4.2, on ? 'rgba(255,214,140,.5)' : 'rgba(190,150,110,.35)');
+    ring(h, x, y, 7);
+    ell(x - 2.4, y - 2.6, 2.4, 1.6, 'rgba(255,255,255,.9)');
+    ell(x, y - 6.8, 4, 1.5, '#C9A24A'); ring(h, x, y - 6.8, 0.1);
+    ell(x, y + 6.6, 3, 1, '#C9A24A');
   },
   // Iron scrollwork holding a candle-shaped bulb with a little flame.
   candle(h, on) {
@@ -144,8 +167,9 @@ const DRAW = {
     wb(um - 0.025, 0.03, z - 0.025, 0.05, 0.12, 0.05, '#4A4A52');
     const [x, y] = sp(um, 0.22, z);
     glow(h, 0.22, 0, 22, on);
-    circle(x, y, 5.6, on ? '#FFC060' : '#D9CFC0');
-    if (on) circle(x, y, 2.6, '#FFF3C8');
+    circle(x, y, 5.6, on ? '#FFC060' : '#E2C98F');
+    ring(h, x, y, 5.6, 'rgba(120,80,30,.6)');
+    circle(x, y + 0.4, 2.6, on ? '#FFF3C8' : '#F0DDAF');
     ctx.strokeStyle = IRON; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.ellipse(x, y, 7.4, 8.6, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.ellipse(x, y, 3.4, 8.6, 0, 0, Math.PI * 2); ctx.stroke();
@@ -155,6 +179,14 @@ const DRAW = {
 };
 
 const shadeOf = (h, c) => h.shade(c, -0.18);
+
+/** A tiny five-point star. */
+function ctx_star(h, x, y, r, col) {
+  const { ctx } = h;
+  ctx.beginPath();
+  for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 5, rr = k % 2 ? r * 0.45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+}
 
 /** Draw one fixture in the given style; an unknown style falls back to the classic drum. */
 export function drawWallLamp(h, style, on) { (DRAW[style] || DRAW.classic)(h, !!on); }

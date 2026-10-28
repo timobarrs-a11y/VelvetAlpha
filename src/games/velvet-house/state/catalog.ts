@@ -12,7 +12,7 @@ export interface CatalogEntry {
   name: string;
   desc?: string;
   price: number;
-  icon: 'paint' | 'paper' | 'floor' | 'set' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
+  icon: 'paint' | 'paper' | 'floor' | 'drapes' | 'set' | 'upgrade' | 'obj' | 'cloth' | 'wobj' | 'box' | 'bag' | 'pet' | 'home';
   tab: string;
   tags?: string[];
   type?: string;
@@ -34,6 +34,8 @@ export interface CatalogEntry {
   set?: { items: string[]; off: number };
   /** Not in the shop until the player has it: it comes from a code (state/unlockCodes.ts), never from the shelves. */
   secret?: boolean;
+  /** Drapes for the windows of a floor, in this style (art/houseArt.js `drawDrapes`); '' takes them down. */
+  drapes?: string;
   /** A wall lamp of this style (state/wallLamps.ts): buying it hangs one, and it can be moved along the walls. */
   wallLamp?: string;
   /**
@@ -560,9 +562,12 @@ export const CATALOG: CatalogEntry[] = [
   secret(look('look-dining-nana', 'dining', 'nana', 'Tea-party table and bow chairs', 'A lace-edged cloth over a gold-legged table set with a teapot and cups, chairs with cloud-and-bow backs in pink and lilac, and a cloud lamp overhead.', 350, ['soft', 'playful', 'cozy'], ['#FFF8F0', '#F8C8DC', '#D9C8F2'])),
   secret(look('look-sofa-nana', 'sofa', 'nana', 'Plush ruffle sofa', 'A plush lilac sofa with a ruffled skirt, pink pillows with a heart and a bow, and a butter throw over one arm.', 390, ['soft', 'playful', 'cozy'], ['#E4D6F7', '#F8C8DC', '#FFF1B8'])),
   secret(look('look-lamp-nana', 'lamp', 'nana', 'Cloud lamp', 'A fluffy cluster of clouds for a shade on a gold stem, a little star on top and a soft pink glow when it is on.', 100, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#F8C8DC', '#E8C877'])),
+  secret(look('look-rug-nana', 'rugwide', 'nana', 'Plush cloud rug', 'A plush blush rug with a cream cloud in the middle, a shag of little tufts and pom-poms along the ends.', 220, ['soft', 'playful', 'cozy'], ['#F8C8DC', '#FFF8F0', '#D9C8F2'])),
+  secret({ id: 'drapes-nana', name: 'Breezy drapes', desc: 'Sheer pink drapes on a gold rod, tied back with lilac bows, that stir in the breeze.', price: 140, icon: 'drapes', tab: 'Decor', drapes: 'nana', tags: ['soft', 'playful', 'cozy'] }),
+  secret({ id: 'lamp-cloud', name: 'Cloud wall lamp', desc: 'A fluffy cloud that glows pink and gold on the wall.', price: 75, icon: 'obj', tab: 'Decor', wallLamp: 'cloud', tags: ['soft', 'playful', 'cozy'], repeat: true }),
   secret(look('look-plant-nana', 'plant', 'nana', 'Ruffle pot', 'Your plant in a pink pot with a ruffled rim and a bow, daisies in its leaves.', 65, ['soft', 'playful', 'cozy'], ['#F8C8DC', '#FFF8F0', '#D9C8F2', '#FFF1B8'])),
-  promo(bundle('set-nana', 'Nana kitchen and living room', 'The soft-girl era: pastel pink, lilac and butter, a plush ruffle sofa, a tea-party table with bow chairs, cloud lights, ruffles, bows and daisies, with a pink sky of clouds on the walls and a plush blush carpet underfoot.',
-    ['look-fridge-nana', 'look-counter-nana', 'look-dining-nana', 'look-sofa-nana', 'look-lamp-nana', 'look-plant-nana', 'paper-nana-sky', 'floor-nanaplush'], ['soft', 'playful', 'cozy'])),
+  promo(bundle('set-nana', 'Nana kitchen and living room', 'The soft-girl era: pastel pink, lilac and butter, a plush ruffle sofa, a tea-party table with bow chairs, cloud lights, ruffles, bows and daisies, breezy drapes at the windows, a plush cloud rug, pink striped walls and a blush carpet underfoot.',
+    ['look-fridge-nana', 'look-counter-nana', 'look-dining-nana', 'look-sofa-nana', 'look-lamp-nana', 'look-plant-nana', 'paper-nana-sky', 'floor-nanaplush', 'look-rug-nana', 'drapes-nana'], ['soft', 'playful', 'cozy'])),
   // Wall lamps: hung where there is wall, and movable along the walls with Arrange.
   ...LAMP_STYLES.map((s): CatalogEntry => ({ id: `lamp-${s}`, name: LAMP_NAMES[s], desc: 'A wall lamp. Hang it, then slide it anywhere on the walls with Arrange.', price: LAMP_PRICES[s], icon: 'obj', tab: 'Decor', wallLamp: s, tags: ['cozy', 'warm'], repeat: true })),
   // Decor

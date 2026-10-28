@@ -45,6 +45,8 @@ export function createUnlocks(g: Game): Partial<Game> {
     // Everything in the set is theirs, free, from this moment.
     for (const m of setQuote(set, new Set()).members) owned.add(m.id);
     owned.add(set.id);
+    for (const id of code.also ?? []) owned.add(id);
+    if (code.lamps?.length) g.stockLamps(code.lamps);
     if (ready()) present(code);
     else { pending().push(set.id); log(`${code.packName} is yours. It will be waiting once you have moved in.`); }
     g.refreshDrawer();

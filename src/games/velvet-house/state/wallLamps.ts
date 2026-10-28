@@ -8,13 +8,18 @@ import { footprint, TYPES, type ObjectInstance } from './objects';
  */
 
 export const LAMP_STYLES = ['classic', 'swing', 'cylinder', 'globe', 'candle', 'lantern', 'deco', 'cage'] as const;
-export type LampStyle = typeof LAMP_STYLES[number];
+/** Styles that come with a promo pack: not sold until the player has them (see `lamp-cloud` in the catalog). */
+export const PROMO_LAMP_STYLES = ['cloud'] as const;
+export type LampStyle = typeof LAMP_STYLES[number] | typeof PROMO_LAMP_STYLES[number];
 
 export const LAMP_NAMES: Record<LampStyle, string> = {
   classic: 'Drum shade lamp', swing: 'Brass swing-arm lamp', cylinder: 'Cylinder lamp', globe: 'Globe lamp',
-  candle: 'Candle sconce', lantern: 'Lantern', deco: 'Deco fan lamp', cage: 'Cage bulb lamp',
+  candle: 'Candle sconce', lantern: 'Lantern', deco: 'Deco fan lamp', cage: 'Cage bulb lamp', cloud: 'Cloud wall lamp',
 };
-export const LAMP_PRICES: Record<LampStyle, number> = { classic: 45, swing: 70, cylinder: 55, globe: 50, candle: 60, lantern: 75, deco: 90, cage: 40 };
+export const LAMP_PRICES: Record<LampStyle, number> = { classic: 45, swing: 70, cylinder: 55, globe: 50, candle: 60, lantern: 75, deco: 90, cage: 40, cloud: 75 };
+
+/** How far a new lamp's light reaches; a soft style reaches less, so a pastel room is not washed out. */
+export const lampReach = (style: LampStyle): number => (style === 'cloud' ? 85 : 130);
 
 export interface WallLamp {
   id: string;
@@ -42,7 +47,7 @@ const LAMP_GAP = 0.5;
 const HALF = 0.17;
 const STRUCTURAL = new Set(['flightX', 'flightY', 'holeX', 'holeY']);
 
-export const isLampStyle = (s: unknown): s is LampStyle => typeof s === 'string' && (LAMP_STYLES as readonly string[]).includes(s);
+export const isLampStyle = (s: unknown): s is LampStyle => typeof s === 'string' && ((LAMP_STYLES as readonly string[]).includes(s) || (PROMO_LAMP_STYLES as readonly string[]).includes(s));
 
 /** The sconces the house is built with. */
 export function defaultWallLamps(): WallLamp[] {

@@ -75,6 +75,7 @@ export function installDevHooks(g: Game): void {
       lamps: () => JSON.parse(JSON.stringify(g.flags.wallLamps ?? [])) as Array<{ id: string; level: number; p: 'B' | 'L'; u: number; z: number; style: string }>,
       lampOk: (id: string, p: 'B' | 'L', u: number, z: number) => { const ls = (g.flags.wallLamps ?? []) as WallLamp[], l = ls.find((q) => q.id === id); return !!l && checkLamp(ls, { ...l, p, u, z }, world.objs).ok; },
       wallPointAtClient: (cx: number, cy: number) => { const [sx, sy] = g.toView(cx, cy); return art.wallPointAt(view.level, sx, sy); },
+      setLampStyle: (style: string) => { for (const l of (g.flags.wallLamps ?? []) as WallLamp[]) if (l.level === 0) l.style = style as WallLamp['style']; },
       lampStock: () => [...((g.flags.lampStock as string[] | undefined) ?? [])],
       wallClientPos: (p: 'B' | 'L', u: number, z: number, out = 0.12): [number, number] => {
         const [vx, vy] = art.project(p === 'B' ? u : out, p === 'B' ? out : u, z);
