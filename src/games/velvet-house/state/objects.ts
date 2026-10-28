@@ -153,6 +153,9 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   cabinet: { wall: true, W: 1.0, D: 0.45, h: 1.05, name: 'Cabinet', store: true, cols: ['#B98A6A', '#3F5B4C', '#2E3B57', '#F2EEE8', '#8E5468'] },
   wardrobe: { wall: true, W: 1.2, D: 0.6, h: 2.05, name: 'Wardrobe', store: true, cols: ['#E4DDD2', '#9C6B45', '#3A2E2A', '#8E9C96'] },
   cubeshelf: { wall: true, W: 1.0, D: 0.35, h: 1.0, name: 'Cube shelf', store: true, cols: ['#F2EEE8', '#2B2B30', '#B98A6A'] },
+  // The rugs the house comes with (they used to be painted on the floor): pieces like any other, so they can be moved, stored or carried upstairs.
+  rugwide: { W: 3.3, D: 1.9, h: 0.02, name: 'Living room rug', rug: true, blocks: [], cols: ['#B5476E', '#3D6B73', '#C9A24A', '#E8DCC8', '#2E3B57', '#7FB069'] },
+  rugsquare: { W: 2.0, D: 2.1, h: 0.02, name: 'Bedroom rug', rug: true, blocks: [], cols: ['#C8B6C9', '#B5476E', '#3D6B73', '#E8DCC8'] },
   rugrect: { W: 2.4, D: 1.6, h: 0.02, name: 'Area rug', store: true, rug: true, blocks: [], cols: ['#B5476E', '#3D6B73', '#C9A24A', '#E8DCC8', '#2E3B57', '#7FB069'] },
   rugrunner: { W: 2.8, D: 0.8, h: 0.02, name: 'Runner rug', store: true, rug: true, blocks: [], cols: ['#A63A2C', '#4A5DA8', '#D8C9AE', '#3F5B4C'] },
   ruground: { W: 1.8, D: 1.8, h: 0.02, name: 'Round rug', store: true, rug: true, blocks: [], cols: ['#E8DCC8', '#D24A7A', '#8E9C96', '#2B2B30', '#E0A43A'] },
@@ -265,6 +268,9 @@ export interface ObjectInstance {
   z?: number;
 }
 
+/** The house's own rugs. A house saved before they were pieces gets them once (see `kernel/config.ts`). */
+export const STARTER_RUG_IDS = ['rug1', 'rug2'];
+
 export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'stair01', type: 'flightY', level: 0, x: 9.0, y: 0, rot: 0 },
   { id: 'tread', type: 'tread', level: 0, x: 1.2, y: 1.2, rot: 0 },
@@ -289,6 +295,8 @@ export const INITIAL_OBJS: ObjectInstance[] = [
   { id: 'plant1', type: 'plant', level: 1, x: 4.95, y: 0.15, rot: 0 },
   { id: 'lamp1', type: 'lamp', level: 1, x: 5.1, y: 3.4, rot: 0 },
   { id: 'open12', type: 'holeX', level: 2, x: 1.2, y: 7.0, rot: 0 },
+  { id: 'rug1', type: 'rugwide', level: 1, x: 5.3, y: 1.0, rot: 0 },
+  { id: 'rug2', type: 'rugsquare', level: 2, x: 2.6, y: 0.9, rot: 0 },
   { id: 'bed', type: 'bed', level: 2, x: 0.12, y: 1.0, rot: 0 },
   { id: 'night', type: 'nightstand', level: 2, x: 0.15, y: 0.35, rot: 0 },
   { id: 'dresser', type: 'dresser', level: 2, x: 3.0, y: 0.12, rot: 0 },
