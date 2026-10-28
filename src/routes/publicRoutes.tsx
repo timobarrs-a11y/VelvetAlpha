@@ -33,5 +33,7 @@ export const publicRoutes = [
   <Route key="about" path="/about" element={S(<AboutPage />)} />,
   <Route key="person-survey" path="/survey/:token" element={S(<PersonSurveyPage />)} />,
   <Route key="support" path="/support" element={S(<DonationPage />)} />,
-  <Route key="changelog" path="/changelog" element={S(<ChangelogPage />)} />,
+  <Route key="updates" path="/updates" element={S(<ChangelogPage />)} />,
+  // It was called the changelog; old links land on Updates.
+  <Route key="changelog" path="/changelog" element={<Navigate to="/updates" replace />} />,
 ];

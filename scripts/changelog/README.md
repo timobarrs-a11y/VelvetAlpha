@@ -1,7 +1,7 @@
 # Changelog auto-publish
 
 When a pull request is merged into `main`, `.github/workflows/changelog.yml` posts the PR's
-**What's new** section to the in-app changelog (`/changelog`), and the existing database trigger
+**What's new** section to the in-app Updates page (`/updates`), and the existing database trigger
 cross-posts it to the community board.
 
 - **What gets published:** PRs with a `## What's new` section (plain words, for members). PRs without

@@ -193,7 +193,7 @@ export default function ChangelogPage() {
                 className="text-white"
                 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1.1 }}
               >
-                Changelog
+                Updates
               </h1>
               <p className="text-gray-400 text-sm mt-0.5">
                 Everything we ship, in the open.
