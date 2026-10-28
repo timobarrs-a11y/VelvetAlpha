@@ -67,11 +67,13 @@ describe('a random companion', () => {
 });
 
 describe('a random voice', () => {
-  it('draws from every voice for the gender, including the ones that used to need a plan', () => {
+  it('draws from every voice a person can pick, never the professional (classic) one', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 3000; i++) { seen.add(randomVoice('male')); seen.add(randomVoice('female')); }
-    const expected = SIGNATURE_VOICES.filter(v => v.gender !== undefined).map(v => v.id);
+    const expected = SIGNATURE_VOICES.filter(v => v.category !== 'professional').map(v => v.id);
     for (const id of expected) expect(seen).toContain(id);
+    expect(seen).not.toContain('classic_male');
+    expect(seen).not.toContain('classic_female');
   });
 
   it('suits the gender, and any of them can come up (none is held back for a plan)', () => {

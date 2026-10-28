@@ -26,7 +26,7 @@ export default function SignatureVoiceSelectionPage() {
     setCompanionGender(gender);
 
     const filtered = SIGNATURE_VOICES.filter(voice =>
-      voice.gender === gender || voice.gender === 'neutral'
+      (voice.gender === gender || voice.gender === 'neutral') && voice.category !== 'professional'
     );
     setAvailableVoices(filtered);
   };

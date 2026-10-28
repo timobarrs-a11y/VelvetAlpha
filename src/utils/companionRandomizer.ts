@@ -58,7 +58,7 @@ export function deriveUserInterests(interestPreference: string): { hobbies: stri
 
 /** Any signature voice that suits this gender (a neutral one too). All of them are open to everyone. */
 export function randomVoice(gender: 'male' | 'female'): string {
-  const pool = SIGNATURE_VOICES.filter(v => v.gender === gender || v.gender === 'neutral');
+  const pool = SIGNATURE_VOICES.filter(v => (v.gender === gender || v.gender === 'neutral') && v.category !== 'professional');
   return pick(pool.length ? pool : SIGNATURE_VOICES).id;
 }
 

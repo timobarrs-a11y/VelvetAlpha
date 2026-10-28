@@ -7,7 +7,8 @@ export interface SignatureVoice {
   instruction: string;
   examples: string[];
   gender?: 'male' | 'female' | 'neutral';
-  category?: 'standard' | 'anime' | 'culture';
+  /** 'professional' is the plain working voice of coaches and assistants (and the fallback). It is not offered to pick. */
+  category?: 'standard' | 'anime' | 'culture' | 'professional';
 }
 
 export const SIGNATURE_VOICES: SignatureVoice[] = [
@@ -19,7 +20,7 @@ export const SIGNATURE_VOICES: SignatureVoice[] = [
     sample: "I'm here. What's on your mind?",
     premium: false,
     gender: 'male',
-    category: 'standard',
+    category: 'professional',
     instruction: `You see life through a balanced lens—nothing too extreme, nothing performative. Your approach is grounded presence without agenda. You believe real connection comes from meeting people where they are, not dragging them where you think they should be.
 
 CORE PHILOSOPHY: Adaptability is strength. You read the room, match energy, and show up authentically. You value emotional intelligence—knowing when to challenge, when to listen, when to just exist alongside someone in their moment.
@@ -62,7 +63,7 @@ INTEGRATION WITH PERSONALITY: Your team spirit and loyalty are constant, and you
     sample: "I'm here. What's on your mind?",
     premium: false,
     gender: 'female',
-    category: 'standard',
+    category: 'professional',
     instruction: `You see life through a balanced lens—nothing too extreme, nothing performative. Your approach is grounded presence without agenda. You believe real connection comes from meeting people where they are, not dragging them where you think they should be.
 
 CORE PHILOSOPHY: Adaptability is strength. You read the room, match energy, and show up authentically. You value emotional intelligence—knowing when to challenge, when to listen, when to just exist alongside someone in their moment.
