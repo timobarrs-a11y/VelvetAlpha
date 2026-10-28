@@ -94,7 +94,11 @@ export function buildBodySprites(config: AvatarConfigV2): Record<string, string>
 const SIGNATURE_STYLE: Record<string, string> = {
   tee: 'tee', linen: 'linen', suit: 'blazer', chef: 'chef', labcoat: 'labcoat', pirate: 'pirate',
   rockstar: 'rockstar', cheer: 'cheer', cop: 'cop', scrubs: 'scrubs', streetwear: 'streetwear', president: 'president',
+  letterman: 'letterman', hero: 'hero', cardigan: 'cardigan', uniform: 'uniform', doublet: 'doublet', sundress: 'sundress',
 };
+
+// The sim draws a plaid skirt as its plain skirt.
+const simBottom = (id: string): string => (id === 'plaid_skirt' ? 'skirt' : id);
 
 export function signatureOutfit(config: AvatarConfigV2) {
   const item = outfitItem(config.outfit);
@@ -107,8 +111,8 @@ export function signatureOutfit(config: AvatarConfigV2) {
   const style = SIGNATURE_STYLE[item.id] ?? 'tee';
   // The game draws the pants by their cut, in their colour and trim.
   return {
-    style, color: top, accent: second, bottom: pants.color, bottomStyle: pants.id, bottomAccent: pants.accent,
-    key: [style, top, second, pants.color, pants.id, pants.accent].join('|'),
+    style, color: top, accent: second, bottom: pants.color, bottomStyle: simBottom(pants.id), bottomAccent: pants.accent,
+    key: [style, top, second, pants.color, simBottom(pants.id), pants.accent].join('|'),
   };
 }
 
@@ -122,7 +126,7 @@ export function buildWardrobe(unlocks: AvatarUnlocks, hat: string = 'none'): War
     pieces.push({ id: `w-top-${o.id}`, slot: 'top', style: sig.style, col: sig.color, accent: sig.accent, name: o.label });
   }
   for (const b of BOTTOMS) {
-    if (canUse(itemId('bottom', b.id), unlocks).ok) pieces.push({ id: `w-bottom-${b.id}`, slot: 'bottom', style: b.id, col: b.color, accent: b.accent, name: b.label });
+    if (canUse(itemId('bottom', b.id), unlocks).ok) pieces.push({ id: `w-bottom-${b.id}`, slot: 'bottom', style: simBottom(b.id), col: b.color, accent: b.accent, name: b.label });
   }
   for (const h of HEADWEAR) {
     if (canUse(itemId('headwear', h.id), unlocks).ok) pieces.push({ id: `w-hat-${h.id}`, slot: 'hat', style: h.id, col: '#8E9C96', name: h.id === 'none' ? 'No hat' : h.label });

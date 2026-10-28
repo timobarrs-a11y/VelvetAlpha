@@ -154,6 +154,73 @@ export function renderOutfitBody(p: OutfitRenderParams): React.ReactNode {
       );
     case 'president':
       return <g>{torso}</g>;
+    case 'letterman': {
+      // Wool body, leather sleeves: the sleeve colour runs down both sides, with a ribbed hem.
+      const edge = shade(main, -0.4);
+      const panel = (side: 1 | -1) => (
+        <polygon
+          points={pts([
+            [50 + side * (S - 6), N + 14], [50 + side * (S + 2), N + 17], [50 + side * (S + 10), N + 36],
+            [50 + side * (S + 14), N + 53], [50 + side * (S + 14), N + 73], [50 + side * (S + 1), N + 73],
+            [50 + side * (S - 3), N + 52], [50 + side * (S - 5), N + 32],
+          ])}
+          fill={accent} stroke={edge} strokeWidth="0.6" />
+      );
+      return (
+        <g>
+          {torso}
+          {panel(-1)}
+          {panel(1)}
+          <rect x={50 - S - 14} y={N + 69} width={(S + 14) * 2} height="4" fill={shade(main, -0.18)} />
+        </g>
+      );
+    }
+    case 'hero':
+      return (
+        <g>
+          {torso}
+          <path d={`M${50 - 14} ${N + 12} Q${50 - 6} ${N + 22} 50 ${N + 24} Q${50 + 6} ${N + 22} ${50 + 14} ${N + 12}`}
+            stroke={shade(main, -0.25)} strokeWidth="1.5" fill="none" />
+        </g>
+      );
+    case 'cardigan':
+      return (
+        <g>
+          {torso}
+          <rect x={50 - S - 14} y={N + 69} width={(S + 14) * 2} height="4" fill={shade(main, -0.2)} />
+          {[-1, 1].flatMap((side) => [N + 30, N + 42, N + 54, N + 64].map((y) => (
+            <path key={`${side}${y}`} d={`M${50 + side * (S - 8)} ${y} L${50 + side * (S - 8)} ${y + 6}`} stroke={shade(main, -0.12)} strokeWidth="1" opacity="0.7" />
+          )))}
+        </g>
+      );
+    case 'uniform':
+      return <g>{torso}</g>;
+    case 'doublet': {
+      // Padded shoulder rolls and a centre line of gold trim and buttons.
+      const roll = (side: 1 | -1) => (
+        <g key={side}>
+          <ellipse cx={50 + side * (S + 1)} cy={N + 22} rx="9" ry="7" fill={shade(main, 0.1)} stroke={accent} strokeWidth="0.9" />
+          <path d={`M${50 + side * (S - 6)} ${N + 22} L${50 + side * (S + 8)} ${N + 22}`} stroke={accent} strokeWidth="0.6" opacity="0.8" />
+        </g>
+      );
+      return (
+        <g>
+          {torso}
+          {roll(-1)}
+          {roll(1)}
+          <path d={`M50 ${N + 12} L50 ${N + 73}`} stroke={accent} strokeWidth="2" />
+          {[N + 30, N + 40, N + 50, N + 60].map((y) => <circle key={y} cx={50} cy={y} r="1.5" fill={shade(accent, 0.25)} stroke={shade(accent, -0.4)} strokeWidth="0.4" />)}
+          {[N + 35, N + 45, N + 55].map((y) => <path key={y} d={`M${50 - 9} ${y - 3} L50 ${y} L${50 + 9} ${y - 3}`} stroke={accent} strokeWidth="0.7" fill="none" opacity="0.8" />)}
+        </g>
+      );
+    }
+    case 'sundress':
+      return (
+        <g>
+          {torso}
+          <path d={`M${50 - S - 14} ${N + 62} Q50 ${N + 68} ${50 + S + 14} ${N + 62} L${50 + S + 14} ${N + 66} Q50 ${N + 72} ${50 - S - 14} ${N + 66} Z`} fill={accent} opacity="0.9" />
+        </g>
+      );
     default:
       return torso;
   }
@@ -297,6 +364,113 @@ export function renderOutfitFront(p: OutfitRenderParams): React.ReactNode {
           <circle cx={50 + 5} cy={N + 35} r="1.4" fill={accent} />
         </g>
       );
+
+    case 'letterman':
+      return (
+        <g>
+          {/* ribbed collar, the snap front and the letter on the chest */}
+          <path d={`M${50 - 13} ${N + 8} Q50 ${N + 26} ${50 + 13} ${N + 8}`} stroke={accent} strokeWidth="5" fill="none" strokeLinecap="round" />
+          <path d={`M${50 - 13} ${N + 8} Q50 ${N + 26} ${50 + 13} ${N + 8}`} stroke={shade(main, -0.35)} strokeWidth="5" fill="none" strokeLinecap="round" strokeDasharray="0.9 1.5" opacity="0.55" />
+          <path d={`M50 ${N + 23} L50 ${N + 73}`} stroke={shade(main, -0.35)} strokeWidth="0.9" />
+          {[N + 32, N + 42, N + 52, N + 62].map((y) => <circle key={y} cx="50" cy={y} r="1.4" fill={accent} stroke={shade(main, -0.4)} strokeWidth="0.4" />)}
+          <g transform={`translate(${50 + 12} ${N + 33})`}>
+            <polygon points="0,0 4,0 6,12 8,0 12,0 8,17 4,17" fill={accent} stroke={shade(main, -0.4)} strokeWidth="0.5" />
+          </g>
+        </g>
+      );
+
+    case 'hero': {
+      // A long scarf: wound once round the neck, one tail down the chest and a shorter one behind it.
+      const dark = shade(accent, -0.25);
+      return (
+        <g>
+          <path d={`M${50 - 17} ${N + 7} Q50 ${N + 27} ${50 + 17} ${N + 7}`} stroke={accent} strokeWidth="8" fill="none" strokeLinecap="round" />
+          <path d={`M${50 - 15} ${N + 9} Q50 ${N + 26} ${50 + 15} ${N + 9}`} stroke={dark} strokeWidth="1" fill="none" opacity="0.6" />
+          <polygon points={pts([[50 + 4, N + 20], [50 + 14, N + 22], [50 + 20, N + 60], [50 + 9, N + 62]])} fill={shade(accent, 0.06)} stroke={dark} strokeWidth="0.6" />
+          <polygon points={pts([[50 - 1, N + 22], [50 + 7, N + 22], [50 + 9, N + 50], [50 + 0, N + 52]])} fill={accent} stroke={dark} strokeWidth="0.6" />
+          {[N + 52, N + 56].map((y) => <path key={y} d={`M${50 + 9.5 + (y - N - 52) * 0.4} ${y + 4} L${50 + 19.5 + (y - N - 52) * 0.4} ${y + 6}`} stroke={dark} strokeWidth="0.8" />)}
+          <path d={`M${50 + 10} ${N + 32} L${50 + 17} ${N + 33.5} M${50 + 11} ${N + 42} L${50 + 18.4} ${N + 43.5}`} stroke={main} strokeWidth="1.4" opacity="0.7" />
+          {[0, 1, 2, 3].map((i) => <path key={i} d={`M${50 + 10.2 + i * 2.5} ${N + 61} L${50 + 10.2 + i * 2.5 + 0.3} ${N + 66}`} stroke={dark} strokeWidth="0.9" strokeLinecap="round" />)}
+          <circle cx={50 + 10} cy={N + 18} r="4.2" fill={shade(accent, 0.1)} stroke={dark} strokeWidth="0.6" />
+        </g>
+      );
+    }
+
+    case 'cardigan': {
+      // A shirt and bow tie under an open cardigan with a button front.
+      const knit = shade(main, -0.28);
+      return (
+        <g>
+          <polygon points={pts([[50 - 13, N + 9], [50 + 13, N + 9], [50, N + 50]])} fill="#f4f4f2" />
+          {shirtCollar(N, '#fafaf8', '#cfcfca')}
+          <polygon points={pts([[50 - 12, N + 8], [50 - 3, N + 50], [50 - 2, N + 73], [50 - 9, N + 73], [50 - 15, N + 40], [50 - 18, N + 20]])} fill={shade(main, 0.04)} stroke={knit} strokeWidth="0.7" />
+          <polygon points={pts([[50 + 12, N + 8], [50 + 3, N + 50], [50 + 2, N + 73], [50 + 9, N + 73], [50 + 15, N + 40], [50 + 18, N + 20]])} fill={shade(main, 0.04)} stroke={knit} strokeWidth="0.7" />
+          {[N + 52, N + 60, N + 68].map((y) => <circle key={y} cx="50" cy={y} r="1.5" fill={shade(main, -0.35)} stroke={shade(main, -0.55)} strokeWidth="0.4" />)}
+          {/* the bow tie */}
+          <polygon points={pts([[50 - 1.4, N + 15.5], [50 - 8, N + 11.5], [50 - 8, N + 19.5]])} fill={accent} stroke={shade(accent, -0.4)} strokeWidth="0.4" />
+          <polygon points={pts([[50 + 1.4, N + 15.5], [50 + 8, N + 11.5], [50 + 8, N + 19.5]])} fill={accent} stroke={shade(accent, -0.4)} strokeWidth="0.4" />
+          <rect x={50 - 1.7} y={N + 13.4} width="3.4" height="4.2" rx="1" fill={shade(accent, -0.2)} />
+        </g>
+      );
+    }
+
+    case 'uniform': {
+      // A sailor blouse: a V of skin, the big square collar with two stripes, and a ribbon tied at the chest.
+      const collar = '#f4f1ea';
+      const flap = (side: 1 | -1) => (
+        <g key={side}>
+          <polygon
+            points={pts([[50 + side * 9, N + 8], [50 + side * 24, N + 12], [50 + side * 29, N + 34], [50 + side * 11, N + 42], [50 + side * 2, N + 30]])}
+            fill={collar} stroke="#cfcfca" strokeWidth="0.6" />
+          <path d={`M${50 + side * 11} ${N + 11} L${50 + side * 25} ${N + 15} L${50 + side * 28.6} ${N + 31} L${50 + side * 12} ${N + 38.4}`} stroke={main} strokeWidth="1.2" fill="none" />
+          <path d={`M${50 + side * 10.4} ${N + 14.4} L${50 + side * 22.6} ${N + 18} L${50 + side * 25.8} ${N + 30} L${50 + side * 11.4} ${N + 35.6}`} stroke={main} strokeWidth="0.7" fill="none" />
+        </g>
+      );
+      return (
+        <g>
+          <polygon points={pts([[50 - 9, N + 9], [50, N + 36], [50 + 9, N + 9]])} fill={p.skin} />
+          {flap(-1)}
+          {flap(1)}
+          <polygon points={pts([[50 - 1, N + 37], [50 - 11, N + 32], [50 - 12, N + 44]])} fill={accent} stroke={shade(accent, -0.4)} strokeWidth="0.5" />
+          <polygon points={pts([[50 + 1, N + 37], [50 + 11, N + 32], [50 + 12, N + 44]])} fill={accent} stroke={shade(accent, -0.4)} strokeWidth="0.5" />
+          <polygon points={pts([[50 - 3, N + 40], [50 - 5, N + 56], [50 + 0, N + 52]])} fill={shade(accent, -0.1)} />
+          <polygon points={pts([[50 + 3, N + 40], [50 + 5, N + 56], [50 + 0, N + 52]])} fill={shade(accent, -0.1)} />
+          <rect x={50 - 3} y={N + 34.4} width="6" height="5" rx="1.4" fill={shade(accent, -0.2)} />
+        </g>
+      );
+    }
+
+    case 'doublet': {
+      // The ruff: a wide, stiff, layered lace collar standing round the neck.
+      const lace = '#f4f1ea', edge = '#cfc8b8';
+      const ring = (rx: number, ry: number, cy: number, r: number, n: number, fill: string) =>
+        Array.from({ length: n }, (_, i) => {
+          const a = Math.PI * (0.02 + (0.96 * i) / (n - 1));
+          return <circle key={`${rx}-${i}`} cx={+(50 - Math.cos(a) * rx).toFixed(2)} cy={+(cy + Math.sin(a) * ry).toFixed(2)} r={r} fill={fill} stroke={edge} strokeWidth="0.5" />;
+        });
+      return (
+        <g>
+          <ellipse cx="50" cy={N + 9} rx="22" ry="10" fill={shade(lace, -0.06)} />
+          {ring(24, 13, N + 8, 5.2, 13, shade(lace, -0.05))}
+          {ring(19, 10, N + 9, 4.6, 11, lace)}
+          <path d={`M${50 - 15} ${N + 7} Q50 ${N + 21} ${50 + 15} ${N + 7}`} stroke={edge} strokeWidth="0.5" fill="none" />
+          <path d={`M${50 - 11} ${N + 6} Q50 ${N + 16} ${50 + 11} ${N + 6}`} stroke={p.accent} strokeWidth="1.2" fill="none" opacity="0.8" />
+        </g>
+      );
+    }
+
+    case 'sundress': {
+      // A sweetheart neckline edged with lace, over a puffed sleeve.
+      const dip = `M${50 - 18} ${N + 11} Q${50 - 19} ${N + 24} ${50 - 8} ${N + 27} Q50 ${N + 21} ${50 + 8} ${N + 27} Q${50 + 19} ${N + 24} ${50 + 18} ${N + 11} Z`;
+      return (
+        <g>
+          <path d={dip} fill={p.skin} />
+          <path d={`M${50 - 18} ${N + 11} Q${50 - 19} ${N + 24} ${50 - 8} ${N + 27} Q50 ${N + 21} ${50 + 8} ${N + 27} Q${50 + 19} ${N + 24} ${50 + 18} ${N + 11}`} stroke={accent} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+          <path d={`M${50 - 18} ${N + 11} Q${50 - 19} ${N + 24} ${50 - 8} ${N + 27} Q50 ${N + 21} ${50 + 8} ${N + 27} Q${50 + 19} ${N + 24} ${50 + 18} ${N + 11}`} stroke={shade(accent, -0.25)} strokeWidth="1" fill="none" strokeDasharray="1 1.6" />
+          {[-1, 1].map((side) => <ellipse key={side} cx={50 + side * (p.shoulderRx + 3)} cy={N + 20} rx="7" ry="6.5" fill={shade(main, 0.06)} stroke={shade(main, -0.25)} strokeWidth="0.6" />)}
+        </g>
+      );
+    }
 
     case 'chef':
       return (
@@ -551,6 +725,23 @@ export function renderHeadwear(p: HeadwearRenderParams): React.ReactNode {
 }
 
 export function renderFaceAccessory(accessory: FaceAccessory | undefined): React.ReactNode {
+  if (accessory === 'fox_mask') {
+    // A fox half-mask pushed up onto the side of the head: white, with red markings and two ears.
+    const red = '#c0392b', white = '#f7f3ee', edge = '#cfc8bc';
+    return (
+      <g transform="translate(73 31) rotate(26) scale(0.82)">
+        <polygon points="-11,-6 -9,-21 -2,-8" fill={white} stroke={edge} strokeWidth="0.6" strokeLinejoin="round" />
+        <polygon points="2,-8 9,-21 11,-6" fill={white} stroke={edge} strokeWidth="0.6" strokeLinejoin="round" />
+        <polygon points="-8.6,-8 -8,-17 -4,-9" fill={red} opacity="0.85" />
+        <polygon points="4,-9 8,-17 8.6,-8" fill={red} opacity="0.85" />
+        <path d="M-12 -7 Q0 -11 12 -7 L11 4 Q9 12 0 17 Q-9 12 -11 4 Z" fill={white} stroke={edge} strokeWidth="0.7" strokeLinejoin="round" />
+        <path d="M-9 -3 Q-5 -6 -2 -2 Q-5 0 -9 -3 Z M9 -3 Q5 -6 2 -2 Q5 0 9 -3 Z" fill="#141414" />
+        <path d="M-11 3 Q-6 3 -3 8 M11 3 Q6 3 3 8" stroke={red} strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        <path d="M-2 -9 Q0 -4 2 -9" stroke={red} strokeWidth="1.3" fill="none" strokeLinecap="round" />
+        <ellipse cx="0" cy="14" rx="2.1" ry="1.5" fill="#141414" />
+      </g>
+    );
+  }
   if (accessory !== 'eyepatch') return null;
   return (
     <g>

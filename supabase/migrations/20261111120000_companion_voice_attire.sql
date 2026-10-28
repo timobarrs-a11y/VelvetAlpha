@@ -46,13 +46,13 @@ AS $function$
     ('valley_girl', 'tee', 'skirt', 'headband'),
     ('bookworm', 'linen', 'skirt', 'beret'),
     ('southern_gentleman', 'linen', 'trousers', 'cowboy_hat'),
-    ('jock', 'tee', 'shorts', 'baseball_cap'),
-    ('determined_hero', 'tee', 'jeans', 'headband'),
-    ('playful_trickster', 'streetwear', 'jeans', 'bucket_hat'),
-    ('nerd', 'tee', 'jeans', 'none'),
-    ('tsundere', 'tee', 'skirt', 'hair_bow'),
-    ('shakespearean', 'pirate', 'breeches', 'none'),
-    ('southern_belle', 'linen', 'skirt', 'hair_bow')
+    ('jock', 'letterman', 'jeans', 'baseball_cap'),
+    ('determined_hero', 'hero', 'jeans', 'headband'),
+    ('playful_trickster', 'streetwear', 'jeans', 'none'),
+    ('nerd', 'cardigan', 'trousers', 'none'),
+    ('tsundere', 'uniform', 'plaid_skirt', 'hair_bow'),
+    ('shakespearean', 'doublet', 'breeches', 'none'),
+    ('southern_belle', 'sundress', 'skirt', 'hair_bow')
     ) as t(voice, outfit, bottom, headwear)
    where voice = p_voice
 $function$;

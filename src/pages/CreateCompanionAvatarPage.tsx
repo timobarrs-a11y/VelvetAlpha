@@ -35,6 +35,11 @@ async function resolveCompanionId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
+/** "Bad Boy" for THE BAD BOY. */
+function signatureLabel(voiceId: string | null): string {
+  return getVoiceById(voiceId ?? '').name.replace(/^THE /, '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+}
+
 export function CreateCompanionAvatarPage() {
   const navigate = useNavigate();
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfigV2>(DEFAULT_FEMALE_AVATAR_V2);
@@ -75,9 +80,8 @@ export function CreateCompanionAvatarPage() {
       // Drafts are kept per companion: one left behind for an earlier companion must not show up here.
       const key = `companion-avatar-draft:${companionId ?? 'new'}`;
 
-      // A new companion opens already dressed as their voice (docs/onboarding/voice-attire.md).
-      const dressed = { ...(gender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2), ...voiceAttire(voice) };
-      const look = existingLook ?? dressed;
+      // A new companion starts in the plain default outfit; their voice's signature style is there to find on the Wardrobe tab.
+      const look = existingLook ?? (gender === 'male' ? DEFAULT_MALE_AVATAR_V2 : DEFAULT_FEMALE_AVATAR_V2);
       setVoiceId(voice);
       setCompanionName(name);
       setCompanionGender(gender);
@@ -181,7 +185,9 @@ export function CreateCompanionAvatarPage() {
               draftKey={companionKey ?? undefined}
               lockGender
               unlocks={attireUnlocks(ownUnlocks, voiceId)}
-              lockedAttire={!ownUnlocks.member && voiceAttire(voiceId) ? { label: getVoiceById(voiceId ?? '').name.replace(/^THE /, '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()), look: voiceAttire(voiceId)! } : undefined}
+              signatureStyle={voiceAttire(voiceId)
+                ? { label: signatureLabel(voiceId), look: voiceAttire(voiceId)!, lockOthers: !ownUnlocks.member }
+                : undefined}
             />
           )}
         </motion.div>

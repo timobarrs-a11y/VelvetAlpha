@@ -1894,7 +1894,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const thighLimb = (x1, y1, x2, y2) => { limb(x1, y1, x2, y2, thighCol, tw); if (BG) FAB.paint(ctx, [[x1, y1], [x2, y2]], tw, BG, { hem: 0 }); checks(x1, y1, x2, y2); };
     // Arms: shoulder, elbow and hand, worked out once per frame, then drawn
     // behind the torso (the far arm) or in front of it.
-    const SLEEVES = { tank: 0, tee: 0.55, jersey: 0.5, dress: 0.4, cheer: 0, cop: 0.55, scrubs: 0.55 };
+    const SLEEVES = { tank: 0, tee: 0.55, jersey: 0.5, dress: 0.4, cheer: 0, cop: 0.55, scrubs: 0.55, hero: 0.55, uniform: 0.55, sundress: 0.4 };
     const sleeve = L.topGarment ? (SLEEVE_BY_CUT[L.topGarment.cut] ?? 1) : L.topStyle ? (SLEEVES[L.topStyle] ?? 1) : 0.55;
     const NOT_HELD = new Set(['notes', 'water', 'splash']), OPEN_KINDS = new Set(['book', 'plate', 'parcel', 'cloth', 'paper']);
     // Props too wide to grip by a handle: no fingers drawn over them.
@@ -2048,7 +2048,7 @@ export function createHouseArt(ctx0, opts = {}) {
       ell(hd[0] + sway * 0.7 + hair[0], hd[1] + 3 + hair[1] * 0.5, 4.6, 3.6, L.hair);
     };
     if (f.front && !L.heads) hairBack();
-    if ((L.topStyle === 'dress' || skirty) && !c.sit) {
+    if ((L.topStyle === 'dress' || L.topStyle === 'sundress' || skirty) && !c.sit) {
       // A skirt that flares and swings at the hem: a dress's, or the skirt worn as pants (shorter, pleated for the cheer skirt).
       const kz = P3(0, 0, hipZ * (skirty ? 0.66 : 0.55)), fl = skirty ? 7.6 : 7;
       ctx.fillStyle = skirty ? L.bottom : L.top; ctx.beginPath();
@@ -2155,6 +2155,37 @@ export function createHouseArt(ctx0, opts = {}) {
           line([hl, -4.6], [hl, 4.6], shade(L.top, -0.28), 2.2);
           line([hl - 1.5, -1.3], [hl - 8.5, -1.5], A || '#17171b', 0.7); line([hl - 1.5, 1.3], [hl - 8.5, 1.5], A || '#17171b', 0.7);
           ctx.fillStyle = A || '#17171b'; ctx.beginPath(); ctx.arc(hl - 14, 0, 1.9, 0, 7); ctx.fill();
+        } else if (pat === 'letterman') {
+          // A ribbed collar, the snap front and a letter on the chest.
+          line([hl, -4.4], [hl, 4.4], A || '#f4f1ea', 2.2);
+          line([hl - 1.5, 0], [-hl, 0], 'rgba(0,0,0,.3)', 0.7);
+          [hl - 6, hl - 12, hl - 18].forEach(x => { ctx.fillStyle = A || '#f4f1ea'; ctx.beginPath(); ctx.arc(x, 0, 0.6, 0, 7); ctx.fill(); });
+          line([hl - 7.5, -4.8], [hl - 12.5, -3.4], A || '#f4f1ea', 1.3); line([hl - 12.5, -3.4], [hl - 7.5, -2], A || '#f4f1ea', 1.3);
+        } else if (pat === 'hero') {
+          // A long scarf wound round the neck, one tail down the chest.
+          line([hl, -4.6], [hl, 4.6], A || '#c2262e', 2.8);
+          line([hl - 1.5, 2.2], [hl - 13, 3], A || '#c2262e', 2.2);
+          line([hl - 13, 3], [hl - 15, 3.2], shade(A || '#c2262e', -0.3), 1.2);
+        } else if (pat === 'cardigan') {
+          // A shirt and bow tie under an open cardigan with buttons.
+          tri([[hl, -2.6], [hl, 2.6], [hl - 10, 0]], '#f4f4f2');
+          tri([[hl - 1, 0], [hl - 3.4, -1.9], [hl - 3.4, 1.9]], A || '#8a2d3b'); tri([[hl - 1, 0], [hl + 1.4, -1.9], [hl + 1.4, 1.9]], A || '#8a2d3b');
+          [hl - 12, hl - 16, hl - 20].forEach(x => { ctx.fillStyle = shade(L.top, -0.35); ctx.beginPath(); ctx.arc(x, 0, 0.6, 0, 7); ctx.fill(); });
+        } else if (pat === 'uniform') {
+          // A sailor blouse: a V of skin, the wide white collar and a ribbon.
+          tri([[hl, -3], [hl, 3], [hl - 8, 0]], L.skin);
+          tri([[hl, -3.4], [hl - 2.5, -5.5], [hl - 10, -2], [hl - 8, 0]], '#f4f1ea'); tri([[hl, 3.4], [hl - 2.5, 5.5], [hl - 10, 2], [hl - 8, 0]], '#f4f1ea');
+          tri([[hl - 8.6, 0], [hl - 11.4, -1.9], [hl - 11.4, 1.9]], A || '#c2262e');
+        } else if (pat === 'doublet') {
+          // A stiff lace ruff, a line of gold trim and buttons down the front.
+          line([hl, -4.8], [hl, 4.8], '#f4f1ea', 3.2);
+          line([hl - 3.5, 0], [-hl, 0], A || '#c9a24a', 1.1);
+          [hl - 8, hl - 13, hl - 18].forEach(x => { ctx.fillStyle = A || '#c9a24a'; ctx.beginPath(); ctx.arc(x, 0, 0.7, 0, 7); ctx.fill(); });
+        } else if (pat === 'sundress') {
+          // A sweetheart neckline edged with lace and a sash at the waist.
+          tri([[hl, -3.4], [hl, 3.4], [hl - 6, 0]], L.skin);
+          line([hl, -3.6], [hl - 6.4, 0], A || '#f4f1ea', 0.9); line([hl, 3.6], [hl - 6.4, 0], A || '#f4f1ea', 0.9);
+          line([-hl + 4, -5.5], [-hl + 4, 5.5], A || '#f4f1ea', 1.6);
         } else if (pat === 'president') {
           tri([[hl, -2.8], [hl, 2.8], [hl - 9, 0]], '#f2efe8');
           ctx.fillStyle = A || '#b3202f'; ctx.fillRect(hl - 11, -0.8, 10, 1.6);

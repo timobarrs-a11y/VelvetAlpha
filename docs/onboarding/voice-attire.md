@@ -5,26 +5,30 @@ a draft mapping from the pieces the avatar system has today (`src/data/avatarIte
 16 hats, glasses, earrings, necklaces, facial hair, eyeliner, eyepatch). Every cell is a first pass for the director
 to correct.
 
-## How it ties in
+## How it ties in (as built)
 
-- The voice is picked **before** the look page, so the look opens already dressed in the voice's attire. It is a
-  starting point; they can change anything.
-- A random match ("Surprise me") gets its voice's attire too.
-- The sim's signature outfit (`simProfile.tsx`) reads the saved look, so the house shows the same outfit.
-- A voice's attire is a *persona* (`PERSONAS` in `avatarItems.ts`): a shirt, pants and hat plus the odd extra.
+- A new companion starts in the plain default outfit. Their voice's **signature style** is the first thing on the
+  Wardrobe tab, so choosing it is a small moment of its own; a person who never opens the tab simply keeps the default
+  and finds it later.
+- Without a membership, the signature style and the plain default are the only outfits they can pick. Every other
+  outfit and persona is still on show, locked. Members can wear anything.
+- A **random match** ("Surprise me") has no wardrobe step, so it is made already dressed in its voice's style.
+- The sim reads the saved look, so the house shows the same outfit, whatever the player's membership. The sim has its
+  own drawings of the six new shirts.
+- Voices cannot be changed later, so attire only applies when a companion is made.
 
-## The catch: tiers
+## Tiers
 
-Six pieces used below are `member` or `earned` (Rockstar jacket, Streetwear hoodie, Leather pants, Breeches, Snapback,
-Top hat). Locked pieces are swapped for a plain fallback when shown, and `sanitize_avatar_config` in the database strips
-them on save. Every voice is open to everyone, so a voice whose attire is locked would arrive undressed. Needs a
-decision: make the pieces voices use `starter`, or let a voice's own attire bypass the tier. Changing a tier means
-changing the database function too.
+The six new shirts, the plaid skirt and the fox mask are starter items, so they need no database change. The
+member-only pieces some voices use (rockstar jacket, streetwear hoodie, leather pants, breeches, baggy jeans, snapback)
+stay member-only for everyone else. A companion may wear its own voice's pieces whatever its owner's plan
+(`sanitize_companion_avatar_config`, written as a migration and **not yet applied** to the live database). The lock on
+the other outfits is in the editor; the database only guards the member-only pieces.
 
 ## Per voice
 
-"Full" = existing pieces make the look. "Close" = existing pieces get most of the way. "New art" = the look needs a
-piece the renderer does not have yet.
+"Full" = existing pieces make the look. "Close" = existing pieces get most of the way. "New art" = the piece was drawn
+for this (done: see below).
 
 | Voice | Fit | Shirt | Bottom | Hat | Extras |
 |---|---|---|---|---|---|
@@ -55,11 +59,24 @@ piece the renderer does not have yet.
 | Shakespearean | New art | Pirate garb, lace colours | Breeches | none | wants a doublet or a gown |
 | Southern Belle | New art | Linen shirt | Skirt | Hair bow | pearls; wants a dress |
 
-Tally: 10 full, 9 close, 7 need new art. The 7 still get a stand-in from the table until the art exists.
+Tally: 10 full, 9 close, 7 with newly drawn pieces.
+
+## Drawn for this
+
+| Piece | For | Where |
+|---|---|---|
+| Letterman jacket (`letterman`, contrast sleeves, letter, snaps) | Jock | shirt |
+| Tee & scarf (`hero`) | Determined Hero | shirt |
+| Fox mask (`fox_mask`, worn on the side of the head) | Playful Trickster | face accessory |
+| Cardigan & bow tie (`cardigan`) | Nerd | shirt |
+| Sailor uniform (`uniform`) and plaid skirt (`plaid_skirt`) | Tsundere | shirt and pants |
+| Doublet & ruff (`doublet`) | Shakespearean | shirt |
+| Sundress (`sundress`, comes with a skirt in its own colour) | Southern Belle | shirt |
 
 ## Still open
 
-- Tiers (above).
-- Whether to draw the 7 missing pieces, and which first. Tsundere, Shakespearean and Southern Belle read worst without
-  them; the rest are acceptable as stand-ins.
-- Whether a voice's attire should apply to existing companions when they change voice, or only at creation.
+- Whether a random match should start in the default and have the wardrobe to find, like the built path. As built it
+  is dressed, because it has no wardrobe step.
+- The fox mask replaces the Trickster's hat slot; say if they should also keep a hat.
+- The migration (`20261111120000_companion_voice_attire.sql`) needs applying before free people keep a member-only
+  signature piece on save; until then the app saves the look unchecked, which still works.

@@ -38,13 +38,13 @@ const ATTIRE: Record<string, Pieces> = {
   valley_girl: { top: 'tee', bottom: 'skirt', hat: 'headband', colors: { top: '#f3b6c8', bottom: '#e8d9f0' }, extras: { earrings: 'hoops' } },
   bookworm: { top: 'linen', bottom: 'skirt', hat: 'beret', extras: { glasses: 'round' } },
   southern_gentleman: { top: 'linen', bottom: 'trousers', hat: 'cowboy_hat' },
-  jock: { top: 'tee', bottom: 'shorts', hat: 'baseball_cap', colors: { top: '#c2262e', bottom: '#2b2b30' } },
-  determined_hero: { top: 'tee', bottom: 'jeans', hat: 'headband', colors: { top: '#e0a43a' } },
-  playful_trickster: { top: 'streetwear', bottom: 'jeans', hat: 'bucket_hat', colors: { top: '#6e3c50', topAccent: '#17171b' }, extras: { earrings: 'dangles' } },
-  nerd: { top: 'tee', bottom: 'jeans', hat: 'none', colors: { top: '#4a5da8' }, extras: { glasses: 'square' } },
-  tsundere: { top: 'tee', bottom: 'skirt', hat: 'hair_bow', colors: { top: '#f4f1ea', bottom: '#2b2f3a' } },
-  shakespearean: { top: 'pirate', bottom: 'breeches', hat: 'none', colors: { top: '#5a1f2b', topAccent: '#efe6d2' } },
-  southern_belle: { top: 'linen', bottom: 'skirt', hat: 'hair_bow', extras: { necklace: 'pearls', necklaceColor: '#f4f1ea' } },
+  jock: { top: 'letterman', bottom: 'jeans', hat: 'baseball_cap', colors: { top: '#c2262e', topAccent: '#f4f1ea' } },
+  determined_hero: { top: 'hero', bottom: 'jeans', hat: 'headband' },
+  playful_trickster: { top: 'streetwear', bottom: 'jeans', hat: 'none', colors: { top: '#6e3c50', topAccent: '#17171b' }, extras: { earrings: 'dangles', faceAccessory: 'fox_mask' } },
+  nerd: { top: 'cardigan', bottom: 'trousers', hat: 'none', extras: { glasses: 'square' } },
+  tsundere: { top: 'uniform', bottom: 'plaid_skirt', hat: 'hair_bow' },
+  shakespearean: { top: 'doublet', bottom: 'breeches', hat: 'none' },
+  southern_belle: { top: 'sundress', bottom: 'skirt', hat: 'hair_bow', colors: { bottom: '#f3b6c8' }, extras: { necklace: 'pearls', necklaceColor: '#f4f1ea' } },
 };
 
 function build(p: Pieces): Partial<AvatarConfigV2> {

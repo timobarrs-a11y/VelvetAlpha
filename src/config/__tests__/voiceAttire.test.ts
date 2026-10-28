@@ -22,10 +22,10 @@ describe('signature attire', () => {
   });
 
   it('a free person is not stripped of their voice\'s attire, but is of anyone else\'s', () => {
-    const mine = { ...DEFAULT_FEMALE_AVATAR_V2, ...voiceAttire('shakespearean')! };
-    expect(resolveAvatarForDisplay(mine as never, STARTER_ONLY).outfit).toBe('linen');
-    expect(resolveAvatarForDisplay(mine as never, attireUnlocks(STARTER_ONLY, 'shakespearean')).outfit).toBe('pirate');
-    expect(resolveAvatarForDisplay(mine as never, attireUnlocks(STARTER_ONLY, 'cheerleader')).outfit).toBe('linen');
+    const mine = { ...DEFAULT_FEMALE_AVATAR_V2, ...voiceAttire('bad_boy')! };
+    expect(resolveAvatarForDisplay(mine as never, STARTER_ONLY).outfit).toBe('tee');
+    expect(resolveAvatarForDisplay(mine as never, attireUnlocks(STARTER_ONLY, 'bad_boy')).outfit).toBe('rockstar');
+    expect(resolveAvatarForDisplay(mine as never, attireUnlocks(STARTER_ONLY, 'cheerleader')).outfit).toBe('tee');
   });
 
   it('lists the shirt, pants and any hat as owned pieces', () => {
