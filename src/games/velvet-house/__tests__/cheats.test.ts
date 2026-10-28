@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runCheat, CHEATS, helpText, FOUND_MONEY, BOND_BOOST, type CheatHost } from '../state/cheats';
+import { runCheat, CHEATS, helpText, setNames, FOUND_MONEY, BOND_BOOST, type CheatHost } from '../state/cheats';
 import { createShop } from '../systems/shop';
 import { simsShopItems } from '../../../data/avatarCatalog';
 import type { Game } from '../kernel/game';
@@ -42,6 +42,13 @@ describe('cheat codes', () => {
     expect(h.calls).toEqual([]);
     expect(runCheat('help', h)).toBe(helpText());
     for (const c of CHEATS) expect(helpText()).toContain(c.code);
+  });
+});
+
+describe('decorate', () => {
+  it('knows every set in the shop by name', () => {
+    expect(setNames()).toEqual(expect.arrayContaining(['retro', 'farmhouse', 'modern', 'scandi', 'industrial', 'beach', 'spring', 'summer', 'fall', 'winter']));
+    for (const n of setNames()) expect(helpText()).toContain(n);
   });
 });
 

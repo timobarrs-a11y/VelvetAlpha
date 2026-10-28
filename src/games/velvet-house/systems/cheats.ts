@@ -1,7 +1,7 @@
-import { runCheat as run, type CheatHost } from '../state/cheats';
+import { runCheat as run, setNames, type CheatHost } from '../state/cheats';
 import { deposit } from '../state/finance';
 import { NEED_KEYS } from '../state/needs';
-import { CATALOG, catalogById, setQuote } from '../state/catalog';
+import { catalogById, setQuote } from '../state/catalog';
 import { isPaintable } from '../state/scenes';
 import type { Game } from '../kernel/game';
 
@@ -26,7 +26,7 @@ export function createCheats(g: Game): Partial<Game> {
     },
     decorate(theme) {
       const set = catalogById(`set-${theme}`);
-      if (!set?.set) return `There's no "${theme}" set. Try ${CATALOG.filter((c) => c.set).map((c) => c.id.slice(4)).join(', ')}.`;
+      if (!set?.set) return `There's no "${theme}" set. Try ${setNames().join(', ')}.`;
       if (!isPaintable(view.level)) return 'Pick a floor of the house first (Basement, Main floor or Upstairs): the set\'s walls and floor go inside.';
       for (const m of setQuote(set, new Set()).members) g.handleBuy(m, undefined, true);
       owned.add(set.id);

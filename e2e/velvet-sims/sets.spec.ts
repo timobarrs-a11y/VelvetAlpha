@@ -22,7 +22,7 @@ test('on day 1 every set is in the shop, priced, and the starting money does not
   const game = await openGame(page);
   await game.locator('.vh-dock [data-open=shop]').click();
   await game.locator('[data-tab=Sets]').click();
-  for (const id of ['retro', 'farmhouse', 'modern', 'spring', 'summer', 'fall', 'winter']) {
+  for (const id of ['retro', 'farmhouse', 'modern', 'scandi', 'industrial', 'beach', 'spring', 'summer', 'fall', 'winter']) {
     const card = game.locator(`[data-item=set-${id}]`);
     await expect(card).toBeVisible();
     await expect(card.locator('.vh-price')).toContainText('$');

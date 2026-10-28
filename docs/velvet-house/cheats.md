@@ -12,7 +12,7 @@ phone). Enter runs a code, Escape or the × closes it. Codes are not case sensit
 | `fillerup` | Everyone's needs are full. |
 | `lovebomb` | Bond with the partner +15 (to 100). |
 | `stockup` | The fridge has at least 8 basic and 8 fresh meals. |
-| `decorate <set>` | Puts a whole set (`retro`, `farmhouse`, `modern`, `spring`, `summer`, `fall`, `winter`) on the floor you are looking at, free. |
+| `decorate <set>` | Puts a whole set on the floor you are looking at, free. Every set in the shop is a name (`retro`, `farmhouse`, `modern`, `scandi`, `industrial`, `beach`, `spring`, `summer`, `fall`, `winter`); `help` lists them from the catalog. |
 | `help` | Lists them. |
 
 **Rules**

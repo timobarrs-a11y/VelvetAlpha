@@ -7,6 +7,8 @@
  * This file is the rules and the table; what a code does to the house is the host's (`systems/cheats.ts`).
  */
 
+import { CATALOG } from './catalog';
+
 export interface CheatHost {
   /** Why cheats can't be used right now, or null if they can. */
   blocked(): string | null;
@@ -34,12 +36,15 @@ export const CHEATS: Cheat[] = [
   { code: 'fillerup', help: 'Everyone is fed, rested, clean and happy.', run: (h) => { h.fillNeeds(); return 'Everyone feels great.'; } },
   { code: 'lovebomb', help: `Your bond with your partner goes up ${BOND_BOOST}.`, run: (h) => `Bond is ${h.addBond(BOND_BOOST)}.` },
   { code: 'stockup', help: 'The fridge is full.', run: (h) => { h.stockFridge(); return 'The fridge is full.'; } },
-  { code: 'decorate', arg: '<set>', help: 'Put a whole set on the floor you are looking at, free (retro, farmhouse, modern, spring, summer, fall, winter).', run: (h, a) => h.decorate(a) },
+  { code: 'decorate', arg: '<set>', help: 'Put a whole set on the floor you are looking at, free (see the Sets tab: every set is a name here).', run: (h, a) => h.decorate(a) },
   { code: 'help', help: 'This list.', run: () => helpText() },
 ];
 
+/** The sets `decorate` knows: every set in the shop, by its short name. */
+export const setNames = (): string[] => CATALOG.filter((c) => c.set).map((c) => c.id.slice(4));
+
 export function helpText(): string {
-  return CHEATS.map((c) => `${c.code}${c.arg ? ' ' + c.arg : ''} — ${c.help}`).join('\n');
+  return CHEATS.map((c) => `${c.code}${c.arg ? ' ' + c.arg : ''} — ${c.help}`).join('\n') + `\nsets: ${setNames().join(', ')}`;
 }
 
 /** Run what the player typed. Codes are not case sensitive. Returns what to show them. */
