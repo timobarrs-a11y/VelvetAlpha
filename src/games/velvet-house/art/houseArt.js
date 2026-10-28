@@ -3,7 +3,7 @@
 import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
-import { poseRig, idleRig, walkRig, seatLegs, legIK, gaitFoot, headTarget, turnHead, idleGlance, treeLeg, FOOT, GAIT } from './poseAnim.js';
+import { poseRig, idleRig, walkRig, seatLegs, legIK, gaitFoot, headTarget, turnHead, idleGlance, treeLeg, quadGait, limbIK, QUAD, FOOT, GAIT } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
 import { handImage, HAND_SPRITE } from '../state/bodySprites';
 import { TYPES as STATE_TYPES, skinOf, colsOf } from '../state/objects';
@@ -1531,6 +1531,17 @@ export function createHouseArt(ctx0, opts = {}) {
   }
 
   const walkStates = new Map();
+  // A pet's stride, like a person's: the phase comes from the ground covered, so planted feet hold the floor.
+  const petWalks = new Map();
+  function petWalkState(p) {
+    let ws = petWalks.get(p.id);
+    if (!ws) { ws = { px: p.x, py: p.y, ph: p.seed * 7, amp: 0 }; petWalks.set(p.id, ws); }
+    const q = QUAD[p.kind] || QUAD.dog, dd = Math.hypot(p.x - ws.px, p.y - ws.py), moving = p.pose === 'walk' || p.pose === 'run';
+    if (moving && dd < 0.6) ws.ph += dd / (2 * q.reach) * Math.PI;
+    ws.amp += ((moving ? 1 : 0) - ws.amp) * Math.min(1, (rdt || 0.016) * 8);
+    ws.px = p.x; ws.py = p.y;
+    return ws;
+  }
   const poseStates = new Map();
 
   function poseState(c) {
@@ -2306,11 +2317,24 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = Math.min(1, dofAmt); ctx.drawImage(dofBlur, 0, 0); ctx.restore();
   }
   // ---- Pets: a cat or a dog, drawn from a few shapes in their own screen frame (+x is the way they face) ----
-  function drawPetShape(kind, coat, pose, t, front, seed = 0) {
+  function drawPetShape(kind, coat, pose, t, front, seed = 0, gait = null) {
     const c = coat.c, d = coat.d, eye = '#1B1A1F';
+    const q = QUAD[kind] || QUAD.dog, ph = gait ? gait.ph : t * (pose === 'run' ? 18 : 11) + seed, amp = gait ? gait.amp : (pose === 'walk' || pose === 'run' ? 1 : 0);
+    // Four legs, each two bones: the hip (or shoulder) at (hx, hy), the foot where the stride puts it, the joint from the
+    // solver, bending back at a front elbow and forward at a hind knee. Lifted feet (a hop) stretch the leg out.
+    const feet = quadGait(ph, kind, pose === 'run', amp);
+    const legs = (hips, hy, baseY, cols, w) => {
+      hips.forEach(([hx, k], i) => {
+        const fi = hx > 0 ? (k ? 1 : 0) : (k ? 3 : 2), [fwd, lift] = feet[fi];
+        const foot = [hx + fwd * q.px, Math.min(baseY, baseY - lift * q.px)];
+        const j = limbIK([hx, hy], foot, q.upper, q.lower, hx > 0 ? -1 : 1);
+        limb(hx, hy, j[0], j[1], cols[k], w + 0.3); limb(j[0], j[1], foot[0], foot[1], cols[k], w);
+        ell(foot[0] + (hx > 0 ? 0.6 : 0.3), foot[1], w * 0.62, w * 0.36, cols[k]);
+      });
+    };
     const tri = (pts, col) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(pts[4], pts[5]); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); };
     const curve = (x0, y0, cx, cy, x1, y1, col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1); ctx.stroke(); };
-    const walk = pose === 'walk' || pose === 'run', ph = t * (pose === 'run' ? 18 : 11) + seed;
+    const walk = pose === 'walk' || pose === 'run';
     const sit = ['sit', 'happy', 'groom'].includes(pose);
     if (kind === 'cat') {
       const head = (hx, hy, closed) => {
@@ -2330,11 +2354,11 @@ export function createHouseArt(ctx0, opts = {}) {
         if (pose === 'groom') limb(6, -8, 7, hy + 4 + Math.sin(t * 9 + seed) * 1.5, c, 2.4);
         return;
       }
-      const by = pose === 'crouch' ? -5 : -8, eat = pose === 'eat';
+      const by = (pose === 'crouch' ? -5 : -8) - Math.abs(Math.sin(ph)) * 0.5 * amp, eat = pose === 'eat', nod = Math.sin(ph * 2) * 0.5 * amp;
       curve(-9, by - 1 + hop, -16, by - 4 + hop, -15 + tw * 6, by - 13 + hop, c, 3);
-      [[-6, 0], [-3, 1], [4, 0], [7, 1]].forEach(([lx, k]) => { const sw = walk ? Math.sin(ph + k * Math.PI + (lx > 0 ? 1.5 : 0)) * 2.6 : 0; limb(lx, by + 2 + hop, lx + sw, Math.min(0, hop * 0.4), k ? d : c, 2.4); });
+      legs([[-6, 0], [-3, 1], [4, 0], [7, 1]], by + 2 + hop, Math.min(0, hop * 0.4), [c, d], 2.4);
       ell(0, by + hop, 10, 5.5, c); for (let i = 0; i < 3; i++) curve(-6 + i * 4, by - 5 + hop, -5 + i * 4, by - 2 + hop, -6 + i * 4, by + 1 + hop, d, 1.1);
-      head(eat ? 11 : 10, (eat ? by + 3 : by - 6) + hop, false);
+      head(eat ? 11 : 10, (eat ? by + 3 : by - 6) + hop + nod, false);
       return;
     }
     const head = (hx, hy, closed, tongue) => {
@@ -2356,17 +2380,18 @@ export function createHouseArt(ctx0, opts = {}) {
       return;
     }
     // Crouching (a squat in the yard) brings the body low on bent legs.
-    const by = pose === 'crouch' ? -11 : -15 + (pose === 'eat' ? 1 : 0);
+    const by = (pose === 'crouch' ? -11 : -15 + (pose === 'eat' ? 1 : 0)) - Math.abs(Math.sin(ph)) * 0.6 * amp, nod = Math.sin(ph * 2) * 0.6 * amp;
     limb(-12, by - 2 + hop, -19, by - 9 + wag * 6 + hop, c, 3.2);
-    [[-8, 0], [-5, 1], [6, 0], [9, 1]].forEach(([lx, k]) => { const sw = walk ? Math.sin(ph + k * Math.PI + (lx > 0 ? 1.5 : 0)) * 3 : 0; limb(lx, by + 4 + hop, lx + sw, Math.min(0, hop * 0.4), k ? shade(c, -0.15) : c, 3); });
+    legs([[-8, 0], [-5, 1], [6, 0], [9, 1]], by + 4 + hop, Math.min(0, hop * 0.4), [c, shade(c, -0.15)], 3);
     ell(0, by + hop, 13, 7, c); ell(-4, by - 2 + hop, 5, 3.5, d);
-    if (pose === 'eat') head(15, by + 9, false, false); else head(14, by - 8 + hop, false, pose === 'play' || walk);
+    if (pose === 'eat') head(15, by + 9, false, false); else head(14, by - 8 + hop + nod, false, pose === 'play' || walk);
   }
   function drawPet(p, t) {
     const [fx, fy] = iso(p.x, p.y, p.z), f = facing(p.face || [0, 1]), sc = p.kind === 'dog' ? 1.05 : 0.95;
     ctx.save(); ctx.globalAlpha *= p.alpha == null ? 1 : p.alpha;
     if (p.pose !== 'sleep' && p.z <= 0.05) ell(fx, fy, p.kind === 'dog' ? 11 : 8, 3.2, 'rgba(30,15,30,.16)');
-    ctx.save(); ctx.translate(fx, fy); ctx.scale(f.flip * sc, sc); drawPetShape(p.kind, p.coat, p.pose, t, f.front, p.seed || 0);
+    const ws = petWalkState(p);
+    ctx.save(); ctx.translate(fx, fy); ctx.scale(f.flip * sc, sc); drawPetShape(p.kind, p.coat, p.pose, t, f.front, p.seed || 0, ws);
     if (p.pose === 'play' && p.kind === 'dog') { const k = Math.sin(t * 5 + (p.seed || 0)); circle(26 + k * 6, -4 - Math.abs(k) * 12, 2.8, '#C9D94A'); }
     ctx.restore();
     const top = fy - (p.kind === 'dog' ? 40 : 30);

@@ -80,8 +80,10 @@ export interface Agent {
   // The last few things they did, newest first: they avoid repeating them.
   recent?: string[];
   look: AgentLook;
-  // Out of the house (at work): hidden, and only their needs change.
-  away?: 'work' | null;
+  // Out of the house (at work, or walking the dog): hidden, and only their needs change.
+  away?: 'work' | 'walk' | null;
+  /** When a walk ends (game minutes since day 0); the pets system brings them back. */
+  awayUntil?: number;
 }
 
 /** When someone sleeps on their own: night starts at `nightStart` and they get up after `wakeAt`. */
@@ -443,6 +445,7 @@ export function isWalking(ch: Agent): boolean {
 
 export function statusText(ch: Agent): string {
   if (ch.away === 'work') return 'At work';
+  if (ch.away === 'walk') return 'Out walking the dog';
   const t = ch.task;
   if (!t) return 'Taking a breather';
   const verb = ACTIVITIES[t.act]?.verb ?? 'Busy';

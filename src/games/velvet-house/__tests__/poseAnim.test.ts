@@ -92,7 +92,53 @@ describe('poseRig', () => {
   });
 });
 
-import { idleRig, expressionFor, walkRig, seatLegs, legIK, gaitFoot, headTarget, turnHead, idleGlance, treeLeg, wrapAngle, LEG, ARM, GAIT, HEAD } from '../art/poseAnim.js';
+import { idleRig, expressionFor, walkRig, seatLegs, legIK, gaitFoot, headTarget, turnHead, idleGlance, treeLeg, wrapAngle, quadGait, limbIK, LEG, ARM, GAIT, HEAD, QUAD } from '../art/poseAnim.js';
+
+describe('four legs', () => {
+  it('walks in a lateral sequence: each foot a quarter cycle behind the last, and no two feet in the same place', () => {
+    for (let ph = 0; ph < Math.PI * 2; ph += 0.3) {
+      const feet = quadGait(ph, 'dog');
+      expect(feet.length).toBe(4);
+      // LF leads, RH a quarter later, RF half, LH three quarters: the foot a quarter cycle on repeats what LF did.
+      const later = quadGait(ph + Math.PI / 2, 'dog');
+      expect(later[0][0]).toBeCloseTo(feet[2][0], 6); // LH now is where LF ... was a quarter cycle ago
+      expect(feet[0][0]).not.toBeCloseTo(feet[1][0], 3);
+    }
+  });
+
+  it('runs as a trot: the diagonal pairs move together', () => {
+    for (let ph = 0; ph < Math.PI * 2; ph += 0.3) {
+      const f = quadGait(ph, 'dog', true);
+      expect(f[0]).toEqual(f[3]); // LF with RH
+      expect(f[1]).toEqual(f[2]); // RF with LH
+      expect(f[0]).not.toEqual(f[1]); // and the pairs are half a cycle apart
+    }
+  });
+
+  it('plants each foot and slides it back at the body\'s speed, scaled to the animal', () => {
+    for (const kind of ['cat', 'dog'] as const) {
+      const q = QUAD[kind], perRad = (2 * q.reach) / Math.PI;
+      for (let u = Math.PI + 0.1; u < 2 * Math.PI - 0.1; u += 0.1) {
+        const a = quadGait(u, kind)[0], b = quadGait(u + 0.05, kind)[0];
+        expect(a[1]).toBe(0);
+        expect((a[0] - b[0]) / 0.05).toBeCloseTo(perRad, 6);
+      }
+      expect(Math.max(...Array.from({ length: 40 }, (_, i) => quadGait(i / 6, kind)[0][1]))).toBeLessThanOrEqual(q.lift + 1e-9);
+    }
+  });
+
+  it('bends a front elbow back and a hind knee forward, keeping both bones their length', () => {
+    const hip = [0, -11], foot = [1.5, 0];
+    const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const front = limbIK(hip, foot, 6.2, 6.2, -1), hind = limbIK(hip, foot, 6.2, 6.2, 1);
+    expect(front[0]).toBeLessThan(0.75);  // behind the line from hip to foot
+    expect(hind[0]).toBeGreaterThan(0.75); // ahead of it
+    for (const j of [front, hind]) { expect(dist(hip, j)).toBeCloseTo(6.2, 3); expect(dist(j, foot)).toBeCloseTo(6.2, 3); }
+    // A foot out of reach (a hop) straightens the leg toward it.
+    const far = limbIK(hip, [0, 4], 6.2, 6.2, -1);
+    expect(far[1]).toBeCloseTo(-3.5, 3);
+  });
+});
 
 describe('the head', () => {
   it('looks at whoever it is with, as far as a neck turns, and no further', () => {

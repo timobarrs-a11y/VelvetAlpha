@@ -42,7 +42,7 @@ export function startGameLoop(g: Game): void {
         return;
       }
       // Like The Sims: the work day can be skipped, and the night runs fast when everyone's asleep.
-      const jordanAway = !!people[0].away;
+      const jordanAway = people[0].away === 'work';
       const allAsleep = !jordanAway && people.slice(0, 2).every((p) => isAsleep(p));
       if (!jordanAway) g.s.skipping = false;
       const speed = g.s.skipping ? SKIP_SPEED : allAsleep ? NIGHT_SPEED : SPEEDS[view.speedIdx];
@@ -109,7 +109,7 @@ export function startGameLoop(g: Game): void {
         el('clock').textContent = clockText(world.minutes);
         el('season').textContent = season(world.day);
         el('money').textContent = `$${world.household.money}`;
-        g.btn('skipwork').hidden = !people[0].away || g.s.skipping;
+        g.btn('skipwork').hidden = people[0].away !== 'work' || g.s.skipping;
         g.refreshVitals();
         g.refreshPeople();
         g.refreshDrawer();
