@@ -448,15 +448,11 @@
 @media (min-width: 561px) {
   .vh-drawer[data-open="arrange"] { right: 148px; }
   .vh-stage.vh-arranging { padding-right: 488px; box-sizing: border-box; }
-  .vh-stage.vh-arranging .vh-canvas { width: min(calc(100vw - 488px), calc(100dvh * 640 / 440)); }
-  .vh-stage.vh-arranging .vh-controls { left: calc(50% - 244px); }
 }
 @media (min-width: 561px) and (max-height: 500px) {
   .vh-drawer[data-open="arrange"] { width: 280px; }
   .vh-stage.vh-arranging { padding-right: 428px; }
-  .vh-stage.vh-arranging .vh-canvas { width: min(calc(100vw - 428px), calc(100dvh * 640 / 440)); }
   .vh-stage.vh-arranging .vh-tools { display: none; }
-  .vh-stage.vh-arranging .vh-controls { left: calc(50% - 214px); }
 }
 
 /* Responsive: drawer becomes bottom sheet on phone */
@@ -775,3 +771,31 @@
 /* A promo item on the shelf that the player doesn't have: a soft pink card (the lock and tag styles are with the shop cards above). */
 .vh-shop-card.vh-promo-locked { border-color: rgba(247, 198, 217, .35); background: linear-gradient(135deg, rgba(247, 198, 217, .08), rgba(201, 184, 240, .08)); }
 .vh-shop-card.vh-promo-locked button[data-buy] { opacity: .55; cursor: not-allowed; }
+
+/* ── Layout: the house has its own band ───────────────────────────────────────────────────────────────────────────
+   The stage is a column: a top band (clock, money, objective), the house in the middle, and a bottom band (floor and
+   tool buttons, vitals, the dock). The panels that are always on sit in those bands, so they never cover the house.
+   Only what the player opens covers it: the drawer, the People sheet, Arrange, and a line of speech. The house's
+   band is sized by what is left, and the canvas is fitted inside it (see .vh-view in index.html's base styles). */
+.vh-stage { flex-direction: column; align-items: stretch; justify-content: flex-start; }
+.vh-stage > .vh-hud { position: static; order: 0; flex-shrink: 0; margin: 16px 16px 0; }
+.vh-stage > .vh-view { order: 1; position: relative; flex: 1 1 0; min-height: 0; min-width: 0; container-type: size; display: flex; align-items: center; justify-content: center; }
+.vh-view > .vh-canvas { width: min(100cqw, calc(100cqh * 640 / 440)); height: auto; max-height: none; flex-shrink: 0; }
+.vh-view > .vh-town-sign { top: 12px; bottom: auto; left: 12px; }
+.vh-view > .vh-log { top: auto !important; bottom: 12px !important; left: 12px; }
+.vh-stage > .vh-controls { position: static; order: 3; flex-shrink: 0; transform: none; left: auto; bottom: auto; max-width: none; padding: 8px 8px 0; }
+.vh-stage > .vh-vitals { position: static; order: 4; flex-shrink: 0; align-self: flex-start; width: 228px; margin: 8px 0 0 16px; }
+.vh-stage > .vh-people { order: 2; }
+/* Desktop: the dock is a rail on the right; the house and bars keep clear of it. */
+@media (min-width: 561px) {
+  .vh-stage { padding-right: 172px; box-sizing: border-box; }
+}
+/* Phone: the dock is the bottom band; the People sheet opens above it, and vitals become a two-column block. */
+@media (max-width: 560px) {
+  .vh-stage > .vh-hud { margin: 8px 8px 0; }
+  .vh-stage > .vh-dock { position: static; order: 5; flex-shrink: 0; left: auto; right: auto; top: auto; bottom: auto; transform: none; }
+  .vh-stage > .vh-people { position: absolute; top: auto; right: 8px; left: 8px; width: auto; max-height: 45%; bottom: calc(var(--vh-dock-h, 68px) + max(0px, env(safe-area-inset-bottom)) + 8px); }
+  .vh-stage > .vh-vitals { align-self: stretch; width: auto; margin: 8px 8px 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; padding: 8px 12px 6px; }
+  .vh-stage > .vh-vitals .vh-vital { margin: 3px 0; }
+  .vh-stage > .vh-controls { padding: 6px 6px 0; }
+}

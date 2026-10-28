@@ -129,7 +129,8 @@ export function createGameDrawer(g: Game): Partial<Game> {
     peopleBtn.setAttribute('aria-pressed', 'false');
   });
   drawer.dock.prepend(peopleBtn);
-  stage.appendChild(townSign);
+  // The town name is a label on the picture, so it lives in the picture's band, not over the bars.
+  app.querySelector<HTMLElement>('.vh-view')!.appendChild(townSign);
 
   // UI: Dialogue
   const dialogue = createDialogue({
