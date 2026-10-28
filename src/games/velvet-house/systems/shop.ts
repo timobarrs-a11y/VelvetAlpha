@@ -61,6 +61,13 @@ export function createShop(g: Game): Partial<Game> {
 
   function handleBuy(item: CatalogEntry, color?: string, fromSet = false): void {
     if (item.set) { buySet(item); return; }
+    if (item.wallLamp) {
+      if (!g.spendOn(`Shop: ${item.name}`, item.price)) { log('Not enough money.'); return; }
+      log(`Bought ${item.name} for $${item.price}.`);
+      g.addLamp(item.wallLamp);
+      g.refreshDrawer();
+      return;
+    }
     const price = item.price;
     if (item.icon === 'upgrade' && item.id === 'upgrade-attic' && hasAttic()) { log('The attic is already built.'); return; }
     if ((item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor') && !isPaintable(view.level)) {

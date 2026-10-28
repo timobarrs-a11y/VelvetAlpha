@@ -5,6 +5,7 @@
 
 import { CLOTHES, clothId } from './clothing';
 import { PICTURE_WALLS } from './pictureWalls';
+import { LAMP_STYLES, LAMP_NAMES, LAMP_PRICES } from './wallLamps';
 
 export interface CatalogEntry {
   id: string;
@@ -33,6 +34,8 @@ export interface CatalogEntry {
   set?: { items: string[]; off: number };
   /** Not in the shop until the player has it: it comes from a code (state/unlockCodes.ts), never from the shelves. */
   secret?: boolean;
+  /** A wall lamp of this style (state/wallLamps.ts): buying it hangs one, and it can be moved along the walls. */
+  wallLamp?: string;
 }
 
 export const TABS = [
@@ -538,6 +541,8 @@ export const CATALOG: CatalogEntry[] = [
   wallItem('wobj-neon', 'Neon heart', 150, ['bold', 'playful', 'modern'], ['#FF5FA2', '#5FE3FF', '#FFD25F']),
   wallItem('wobj-aquarium', 'Aquarium', 200, ['modern', 'playful', 'cool'], ['#2B2B30', '#9C6B45', '#F2EEE8']),
 
+  // Wall lamps: hung where there is wall, and movable along the walls with Arrange.
+  ...LAMP_STYLES.map((s): CatalogEntry => ({ id: `lamp-${s}`, name: LAMP_NAMES[s], desc: 'A wall lamp. Hang it, then slide it anywhere on the walls with Arrange.', price: LAMP_PRICES[s], icon: 'obj', tab: 'Decor', wallLamp: s, tags: ['cozy', 'warm'], repeat: true })),
   // Decor
   decor('pampas', 'pampas', 'Pampas vase', 40, ['modern', 'minimal', 'natural'], ['#E8DCC8', '#2B2B30', '#C27A5A', '#9EC1C9']),
   decor('candles', 'candles', 'Pillar candles', 35, ['cozy', 'warm', 'soft'], ['#F2EEE8', '#C9A24A', '#B5476E', '#3F5B4C']),

@@ -1,4 +1,5 @@
 import type { ObjectInstance } from '../state/objects';
+import type { WallLamp } from '../state/wallLamps';
 import type { GpuLights } from '../engine/gpuLights';
 import type { GBuffer } from '../engine/gbuffer';
 import type { DeferredLights } from '../engine/deferredLights';
@@ -81,12 +82,19 @@ export interface HouseFrame {
   house?: { power: boolean; dishes: number; laundryPile: number; fridge: { basic: number; fresh: number }; parcel?: { kind: string } | null; owned?: Set<string> };
   /** Arrange mode: what can move, what's carried, whether it fits, what's under the pointer. */
   arrange?: { movable: string[]; held: string | null; selected: string | null; valid: boolean; hover: string | null } | null;
+  /** The wall lamps (they can be moved), and which is selected or held while arranging. */
+  wallLamps?: WallLamp[];
+  lampUi?: { id: string | null; held: boolean; valid: boolean } | null;
   /** A conversation: the point (in view coordinates) and reach that stay sharp while the rest of the frame softens. */
   focus?: { x: number; y: number; r: number } | null;
 }
 
 export interface HouseArt {
   render(frame: HouseFrame): void;
+  /** The wall lamp under a screen point, by id, or null. */
+  hitWallLamp(level: number, sx: number, sy: number): string | null;
+  /** Where a screen point lands on the visible walls: which wall, how far along it and how high; null off the walls. */
+  wallPointAt(level: number, sx: number, sy: number): { p: 'B' | 'L'; u: number; z: number } | null;
   /** Furniture was just set down: it lands with a bounce and a puff of dust. */
   objectPlaced(id: string): void;
   /** Pulsing outlines on the pieces a script wants tapped (by object id). */
