@@ -146,7 +146,7 @@ export default function SignatureVoiceSelectionPage() {
           </div>
 
           <h1 className="text-4xl font-bold mb-4">
-            You've given them personality, now give them a voice.
+            You've shown us how they should act, now give them a voice!
           </h1>
 
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">

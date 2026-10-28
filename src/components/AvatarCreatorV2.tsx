@@ -93,7 +93,7 @@ function OptionButton({
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 border ${
+      className={`min-w-0 px-2 sm:px-3 py-2 rounded-lg text-sm leading-tight break-words font-medium transition-all duration-150 border ${
         selected
           ? 'bg-sky-600 border-sky-500 text-white shadow-sm'
           : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
@@ -369,7 +369,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Eye Shape">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {EYE_SHAPES.map(v => (
             <OptionButton key={v.value} label={v.label}
               selected={config.eyeShape === v.value} onClick={() => update({ eyeShape: v.value })} />
@@ -387,7 +387,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Nose Shape">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {NOSE_SHAPES.map(v => (
             <OptionButton key={v.value} label={v.label}
               selected={config.noseShape === v.value} onClick={() => update({ noseShape: v.value })} />
@@ -443,7 +443,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Eyeliner">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {([
             { value: 'none', label: 'None' },
             { value: 'thin', label: 'Thin' },
@@ -458,7 +458,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Freckles">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {([
             { value: 'none', label: 'None' },
             { value: 'light', label: 'Light' },
@@ -481,7 +481,7 @@ export function AvatarCreatorV2({
       </Section>
 
       <Section label="Lip Shape">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {(['natural', 'full', 'thin', 'heart'] as LipShape[]).map(v => (
             <OptionButton key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
               selected={config.lipShape === v} onClick={() => update({ lipShape: v })} />
@@ -978,7 +978,7 @@ export function AvatarCreatorV2({
         {/* On phones the avatar rides along at the top while you scroll the options. */}
         <div className="sticky top-0 z-20 bg-[#080d14] flex-shrink-0">
           <div className="lg:hidden flex items-center justify-center gap-4 pt-4 pb-3 px-4">
-            {preview('w-32 h-32', 'w-[4.5rem] h-36')}
+            {preview('w-44 h-44 sm:w-52 sm:h-52', 'w-24 h-48 sm:w-28 sm:h-56')}
             <div className="flex flex-col gap-2">
               <button onClick={randomize} title="Randomize"
                 className="flex items-center justify-center w-10 h-9 rounded-lg bg-sky-600/20 border border-sky-500/30 text-sky-400">

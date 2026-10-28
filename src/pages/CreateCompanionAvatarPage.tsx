@@ -139,11 +139,11 @@ export function CreateCompanionAvatarPage() {
         />
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="max-w-7xl mx-auto px-0 sm:px-6 py-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-6 sm:mb-12 px-6 sm:px-0"
         >
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-rose-500 to-pink-500 mb-6">
             <Heart className="w-8 h-8" />
@@ -162,7 +162,7 @@ export function CreateCompanionAvatarPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gray-800/50 border border-gray-700 rounded-2xl p-8 mb-8"
+          className="sm:bg-gray-800/50 sm:border sm:border-gray-700 sm:rounded-2xl sm:p-8 mb-8"
         >
           {ready && (
             <AvatarCreatorV2
@@ -178,7 +178,7 @@ export function CreateCompanionAvatarPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="flex flex-col gap-4 justify-center items-center"
+          className="flex flex-col gap-4 justify-center items-center px-6 sm:px-0"
         >
           <div className="flex items-center gap-3 w-full max-w-md">
             <input
