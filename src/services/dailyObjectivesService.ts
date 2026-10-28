@@ -34,7 +34,7 @@ export const OBJECTIVE_DEFS: Record<ObjectiveKey, ObjectiveDef> = {
   // The core five
   visit_town: { label: 'Visit the Town', hint: 'Take a stroll down your street', to: '/world' },
   comment_in_space: { label: 'Leave a comment in a Space', hint: 'Chat in a room, or comment on a post', to: '/house' },
-  create_companion: { label: 'Create a companion', hint: 'Someone to talk to between goals', to: '/intent-select?people=1' },
+  create_companion: { label: 'Create a companion', hint: 'Someone to talk to between goals', to: '/companion-path' },
   play_velvet_sims: { label: 'Play Velvet Sims', hint: 'Step into your cozy mystery', to: '/velvet-house' },
   read_feed: { label: 'Check out your Daily Feed', hint: 'News and videos picked for you', to: '/daily-feed' },
   // Town, mail, profile

@@ -61,7 +61,7 @@ export function QuestionnairePageV2() {
   // the order is friend or companion, then male or female, then your own or random.
   const startOver = searchParams.get('mode') === 'velvet' || !hasChosen;
   useEffect(() => {
-    if (startOver) navigate('/intent-select?people=1', { replace: true });
+    if (startOver) navigate('/companion-path', { replace: true });
   }, [startOver, navigate]);
 
   useEffect(() => {

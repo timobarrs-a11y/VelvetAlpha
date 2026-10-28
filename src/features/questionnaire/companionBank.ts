@@ -161,6 +161,35 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
   ],
 };
 
+/**
+ * The first screens of making someone, in the same shell as the rest: who (gender), what kind (friend or companion,
+ * skipped when it was already chosen on the way in), and how (build them yourself or be surprised). Gender comes
+ * first on purpose. Build-your-own continues in COMPANION_QUESTIONNAIRE without these three; surprise-me makes
+ * everything else at random and never shows it.
+ */
+const byId = (id: string) => COMPANION_QUESTIONNAIRE.questions.find(q => q.id === id)!;
+
+export const COMPANION_START: QuestionnaireDefinition = {
+  startProgress: 0,
+  chapters: [{ id: 'start', label: 'Who you are looking for', questionIds: ['relationshipType', 'connectionType', 'path'] }],
+  questions: [
+    { ...byId('relationshipType'), chapter: 'start' },
+    { ...byId('connectionType'), chapter: 'start', skipIf: (ctx) => ctx.answers.kindPreset === '1' } as Question,
+    {
+      id: 'path',
+      archetype: 'tap',
+      chapter: 'start',
+      question: (ctx) => `Do you want to build your ${ctx.subject === 'friend' ? 'friend' : 'companion'}, or be surprised?`,
+      confidence: 'tapped',
+      autoAdvance: true,
+      options: [
+        { text: 'Build them myself', value: 'own' },
+        { text: 'Surprise me', value: 'random' },
+      ],
+    },
+  ],
+};
+
 export function resolveQuestionText(q: Question, ctx: QuestionContext): string {
   if (typeof q.question === 'function') return q.question(ctx);
   return tpl(q.question ?? '', ctx);

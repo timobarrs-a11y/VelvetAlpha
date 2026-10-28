@@ -27,6 +27,8 @@ export function IntentSelectPage() {
   const [searchParams] = useSearchParams();
   const peopleOnly = searchParams.get('people') === '1';
   const [transitioning, setTransitioning] = useState<string | null>(null);
+  // Adding a friend or companion is one pipeline now, and it starts with who (see CompanionPathSelectPage).
+  useEffect(() => { if (peopleOnly) navigate('/companion-path', { replace: true }); }, [peopleOnly, navigate]);
   const [hasActiveMentor, setHasActiveMentor] = useState(false);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ export function IntentSelectPage() {
       description: 'Friends who know you, remember your stories, and are always there for great conversation — no labels, just real connection.',
       intent: 'connection',
       relationshipType: 'friend',
-      nextPath: '/companion-path',
+      nextPath: '/companion-path?kind=friend',
     },
     {
       id: 'companions',
@@ -66,7 +68,7 @@ export function IntentSelectPage() {
       description: 'Deeper emotional connection with someone who remembers everything — your moods, your dreams, your sense of humor. Built to feel real.',
       intent: 'connection',
       relationshipType: 'romantic',
-      nextPath: '/companion-path',
+      nextPath: '/companion-path?kind=romantic',
     },
     {
       id: 'coaches',

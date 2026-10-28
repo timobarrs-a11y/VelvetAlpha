@@ -46,8 +46,8 @@ export const onboardingRoutes = [
   <Route key="questionnaire" path="/questionnaire" element={wrap(<QuestionnairePage />)} />,
   // Two older copies of the companion pipeline (their own questions, their own order) were removed: every way of making a
   // companion starts at the same place, friend or companion, then male or female, then your own or random.
-  <Route key="create-additional-companion" path="/create-additional-companion" element={<Navigate to="/intent-select?people=1" replace />} />,
-  <Route key="analyzing" path="/analyzing" element={<Navigate to="/intent-select?people=1" replace />} />,
+  <Route key="create-additional-companion" path="/create-additional-companion" element={<Navigate to="/companion-path" replace />} />,
+  <Route key="analyzing" path="/analyzing" element={<Navigate to="/companion-path" replace />} />,
   <Route key="voice-selection" path="/voice-selection" element={wrap(<SignatureVoiceSelectionPage />)} />,
   <Route key="create-companion-avatar" path="/create-companion-avatar" element={wrap(<CreateCompanionAvatarPage />)} />,
   <Route key="pricing-offer" path="/pricing-offer" element={wrap(<PricingOfferPage />)} />,

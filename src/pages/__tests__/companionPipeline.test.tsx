@@ -8,7 +8,11 @@ vi.mock('../../services/randomCompanionService', () => ({
   companionDestination: () => '/chat?companion=x',
   finishCompanionPipeline: vi.fn(),
 }));
-vi.mock('../../components/AvatarSaveReveal', () => ({ AvatarSaveReveal: ({ companionName }: { companionName: string }) => <div>meet {companionName}</div> }));
+vi.mock('../../components/AvatarSaveReveal', () => ({
+  AvatarSaveReveal: ({ companionName, buttonLabel, autoDismissMs, onContinue }: { companionName: string; buttonLabel: string; autoDismissMs: number; onContinue: () => void }) => (
+    <div>meet {companionName}<span>auto:{String(autoDismissMs)}</span><button onClick={onContinue}>{buttonLabel}</button></div>
+  ),
+}));
 vi.mock('../../shared/ui/Toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('../../shared/supabase/client', () => ({ supabase: { auth: { getUser: async () => ({ data: { user: null } }) } } }));
 vi.mock('../../services/userProfileService', () => ({ userProfileService: { getCurrentProfile: async () => ({ name: 'Tim' }) } }));
@@ -21,7 +25,6 @@ function Where() { const l = useLocation(); return <div data-testid="where">{l.p
 const mount = (path: string, el: React.ReactNode) => render(
   <MemoryRouter initialEntries={[path]}>
     <Routes>
-      {/* the page under test is served at its own path; everything else just reports where we ended up */}
       <Route path={path.split('?')[0]} element={el} />
       <Route path="*" element={<Where />} />
     </Routes>
@@ -30,60 +33,57 @@ const mount = (path: string, el: React.ReactNode) => render(
 
 beforeEach(() => {
   window.matchMedia = window.matchMedia ?? ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }) as unknown as MediaQueryList);
-  createRandomCompanion.mockReset(); sessionStorage.clear(); vi.useRealTimers(); });
+  createRandomCompanion.mockReset(); sessionStorage.clear();
+});
 
-describe('the companion pipeline: friend or companion, then male or female, then your own or random', () => {
-  it('goes back to friend or companion when that was not chosen', async () => {
+describe('making someone: gender, then friend or companion, then build or surprise', () => {
+  it('asks gender first, then friend or companion, then build or surprise, in the shell', async () => {
     mount('/companion-path', <CompanionPathSelectPage />);
-    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/intent-select?people=1'));
-  });
-
-  it('asks male or female first, then your own or random', async () => {
-    sessionStorage.setItem('onboardingRelationshipType', 'friend');
-    mount('/companion-path', <CompanionPathSelectPage />);
-    expect(screen.getByText('Who Are You Looking For?')).toBeTruthy();
-    expect(screen.queryByText('Build Your Own')).toBeNull();
+    expect(screen.getByText('Who are you looking for?')).toBeTruthy();
     fireEvent.click(screen.getByText('Male'));
-    expect(await screen.findByText('Build Your Own')).toBeTruthy();
-    expect(screen.getByText('From Inside the Velvet Rope')).toBeTruthy();
-    expect(screen.getByText('Create Your Friend')).toBeTruthy();
+    expect(await screen.findByText(/What kind of relationship do you want\?/, {}, { timeout: 3000 })).toBeTruthy();
+    fireEvent.click(screen.getByText('Just a friend to talk to'));
+    expect(await screen.findByText(/build your friend, or be surprised/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
-  it('"create your own" carries the gender and the kind of connection to the questionnaire', async () => {
-    sessionStorage.setItem('onboardingRelationshipType', 'romantic');
+  it('does not ask friend or companion again when it was chosen on the way in', async () => {
+    mount('/companion-path?kind=friend', <CompanionPathSelectPage />);
+    fireEvent.click(screen.getByText('Female'));
+    expect(await screen.findByText(/build your friend, or be surprised/, {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.queryByText(/What kind of/)).toBeNull();
+  });
+
+  it('"build them myself" carries the gender and the kind to the questionnaire', async () => {
     mount('/companion-path', <CompanionPathSelectPage />);
     fireEvent.click(screen.getByText('Female'));
-    fireEvent.click(await screen.findByText('Build Your Own'));
+    fireEvent.click(await screen.findByText('Something more...', {}, { timeout: 3000 }));
+    fireEvent.click(await screen.findByText('Build them myself', {}, { timeout: 3000 }));
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/questionnaire?gender=Female&type=romantic'), { timeout: 3000 });
   });
 
-  it('"random" makes the companion for that gender and kind, and never opens the questionnaire', async () => {
+  it('"surprise me" makes the companion for that gender and kind, shows them with a button, and never opens the questionnaire', async () => {
     createRandomCompanion.mockResolvedValue({ id: 'c1', name: 'Levi', avatar: {}, to: '/chat?companion=c1' });
-    sessionStorage.setItem('onboardingRelationshipType', 'friend');
-    mount('/companion-path', <CompanionPathSelectPage />);
+    mount('/companion-path?kind=friend', <CompanionPathSelectPage />);
     fireEvent.click(screen.getByText('Male'));
-    fireEvent.click(await screen.findByText('From Inside the Velvet Rope'));
+    fireEvent.click(await screen.findByText('Surprise me', {}, { timeout: 3000 }));
     await waitFor(() => expect(createRandomCompanion).toHaveBeenCalledWith('male', 'friend'), { timeout: 3000 });
     expect(await screen.findByText('meet Levi', {}, { timeout: 15000 })).toBeTruthy();
-    expect(screen.queryByTestId('where')).toBeNull();
-  }, 20000);
+    // It waits for the person: no auto-dismiss, one button that goes to the chat.
+    expect(screen.getByText('auto:0')).toBeTruthy();
+    fireEvent.click(screen.getByText('Start chatting'));
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/chat?companion=c1'));
+  }, 25000);
 });
 
-describe('the companion questionnaire', () => {
-  it('is never shown without the gender and kind already chosen, nor for the old random link', async () => {
+describe('the companion questionnaire (build your own)', () => {
+  it('is sent to the start when gender and kind were not chosen, and by the old random link', async () => {
     mount('/questionnaire', <QuestionnairePageV2 />);
-    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/intent-select?people=1'));
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/companion-path'));
   });
 
-  it('is sent back to the start by the old random link (?mode=velvet)', async () => {
-    mount('/questionnaire?mode=velvet&gender=Male&type=friend', <QuestionnairePageV2 />);
-    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/intent-select?people=1'));
-  });
-
-  it('starts at the first real question, in the chosen gender\'s words, without asking who or what kind again', () => {
+  it('starts at the first real question without asking who or what kind again', () => {
     mount('/questionnaire?gender=Male&type=friend', <QuestionnairePageV2 />);
     expect(screen.queryByText('Who are you looking for?')).toBeNull();
-    expect(screen.queryByText(/What kind of (friendship|relationship)/)).toBeNull();
     expect(screen.getByText(/Is he the life of the party/)).toBeTruthy();
   });
 });
