@@ -319,7 +319,7 @@ export default function LoginPage() {
         <nav aria-label="Site links" className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-gray-500">
           {[
             { label: 'About', to: '/about' },
-            { label: 'Changelog', to: '/changelog' },
+            { label: 'Updates', to: '/updates' },
             { label: 'Support us', to: '/support' },
             { label: 'Terms', to: '/terms' },
             { label: 'Privacy', to: '/privacy' },

@@ -84,7 +84,7 @@ export const OBJECTIVE_DEFS: Record<ObjectiveKey, ObjectiveDef> = {
   memory_training: { label: 'Train your memory', hint: 'A quick workout for your mind', to: '/memory-training' },
   // Around the site
   change_background: { label: 'Change your background', hint: 'Make it feel like yours', to: '/background-settings' },
-  see_whats_new: { label: 'See what\'s new', hint: 'Read the changelog', to: '/changelog' },
+  see_whats_new: { label: 'See what\'s new', hint: 'Read the latest updates', to: '/updates' },
 };
 
 /** One row of today's list, as the server sends it. */
