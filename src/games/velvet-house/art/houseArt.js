@@ -186,6 +186,7 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    teakdeck: { kind: 'plank', a: '#9C6B45', b: '#8E6040', line: 'rgba(40,25,10,.32)' },
     terrazzodark: { kind: 'speck', a: '#3B3C40', b: '#3B3C40', line: 'rgba(255,255,255,.04)', pal: ['#55575C', '#6E7076', '#4A4B50', '#8A8C90'] },
     arcadecarpet: { kind: 'speck', a: '#1E1740', b: '#1E1740', line: 'rgba(255,255,255,.03)', pal: ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF'] },
     rubber: { kind: 'speck', a: '#3A3A3F', b: '#3A3A3F', line: 'rgba(255,255,255,.04)', pal: ['#5A5A62', '#4C4C54', '#6E6E76', '#55555D'] }
@@ -217,6 +218,7 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    limewash: { pat: 'limewash', base: '#E7E0D2', ink: 'rgba(160,145,120,.06)', ink2: 'rgba(255,255,255,.1)' },
     formwork: { pat: 'formwork', base: '#A9A7A2', ink: 'rgba(0,0,0,.14)', ink2: 'rgba(0,0,0,.3)' },
     'pixel-invaders': { pat: 'pixels', base: '#15121F', ink: 'rgba(25,230,240,.9)', pal: ['#19E6F0', '#FF2E9A', '#F4C430', '#39D353'] },
     'gingham-sage': { pat: 'gingham', base: '#F4F1E8', ink: 'rgba(110,150,115,.3)' },
@@ -623,6 +625,69 @@ export function createHouseArt(ctx0, opts = {}) {
         if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.57, 0.48); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
       }, { name: 'tray' }),
       F(1.16, 0, 1.2, 0.8, (T) => { T.poly([[1.18, 0.1, 0.08], [1.18, 0.8, 0.08], [1.18, 0.8, 2.0], [1.18, 0.1, 2.0]], 'rgba(186,222,232,.2)', 'rgba(40,42,46,.85)', 1.4); T.line([1.18, 0.2, 1.85], [1.18, 0.6, 1.1], 'rgba(255,255,255,.5)', 2); })] },
+  });
+
+  // Spa Retreat: oiled teak, honed limestone, sage linen and steam.
+  const SP = { teak: '#9C6B45', teakDark: '#7A5236', teakLite: '#B98A62', stone: '#D8D0C2', stoneDark: '#BFB5A4', linen: '#EEEAE0', sage: '#9DB3A5', white: '#F6F4EE' };
+  const slats = (T, x0, x1, y, z0, z1, n, col) => { for (let k = 0; k <= n; k++) { const x = x0 + (x1 - x0) * k / n; T.line([x, y, z0], [x, y, z1], col, 1); } };
+  Object.assign(LOOK_DRAWERS.bed, {
+    // A low teak platform wider than the mattress, a slatted teak panel behind, sage linen and a folded throw.
+    spa: (o) => { const c = cl(o); return [
+      B(0, 0, 0, 0.1, 1.6, 0.85, SP.teak), B(0.1, 0, 0, 2.4, 1.6, 0.18, SP.teakDark), B(0.1, 0, 0.18, 2.4, 1.6, 0.04, SP.teak),
+      B(0.2, 0.1, 0.22, 0.75, 1.4, 0.24, SP.linen, { name: 'mattress' }),
+      B(0.26, 0.16, 0.46, 0.46, 0.54, 0.12, SP.white), B(0.26, 0.9, 0.46, 0.46, 0.54, 0.12, SP.white),
+      // The linen over the foot of the bed is its own block, so it shows with nobody in it (see the brutalist bed).
+      B(0.95, 0.08, 0.22, 1.45, 1.44, 0.24, c), B(0.95, 0.08, 0.46, 1.45, 1.44, 0.02, shade(c, 0.05), { cover: true }),
+      B(1.95, 0.05, 0.22, 0.32, 1.5, 0.28, shade(c, -0.2)),
+      F(0, 0, 0.11, 1.6, (T) => { for (let k = 1; k < 12; k++) T.line([0.101, 1.6 * k / 12, 0.05], [0.101, 1.6 * k / 12, 0.85], 'rgba(40,25,10,.3)', 1); }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.nightstand, {
+    // A floating teak box with a limestone top, a pebble dish and a paper globe that glows.
+    spa: (T, o) => { const lit = isLit(o.id);
+      T.box(0.04, 0.04, 0.18, 0.37, 0.37, 0.28, SP.teak); T.box(0.02, 0.02, 0.46, 0.41, 0.41, 0.04, SP.stone);
+      T.line([0.06, 0.411, 0.32], [0.39, 0.411, 0.32], 'rgba(40,25,10,.35)', 1);
+      const [dx, dy] = T.P(0.3, 0.3, 0.51); ell(dx, dy, 5, 2.5, SP.stoneDark); circle(dx - 1, dy - 1, 1.2, '#8E8A84'); circle(dx + 2, dy, 1, '#6E6A64');
+      const [gx, gy] = T.P(0.15, 0.15, 0.68); if (lit) circle(gx, gy, 13, 'rgba(255,236,200,.28)'); circle(gx, gy, 8, lit ? '#FFF2DA' : SP.white, 'rgba(0,0,0,.12)'); },
+  });
+  Object.assign(LOOK_DRAWERS.dresser, {
+    // A floating teak dresser with slatted fronts, a stone tray and a sprig of eucalyptus in a jar.
+    spa: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0.12, 1.2, 0.5, 0.72, c); slats(T, 0.03, 1.17, 0.501, 0.16, 0.8, 22, 'rgba(40,25,10,.28)'); T.line([0, 0.502, 0.48], [1.2, 0.502, 0.48], 'rgba(40,25,10,.45)', 1.2);
+      T.box(0.02, 0.02, 0.84, 1.16, 0.46, 0.03, SP.stone); T.box(0.15, 0.12, 0.87, 0.36, 0.22, 0.02, SP.stoneDark);
+      T.box(0.85, 0.18, 0.87, 0.1, 0.1, 0.16, 'rgba(220,235,230,.7)'); for (let k = 0; k < 4; k++) T.line([0.9, 0.23, 1.0], [0.84 + k * 0.05, 0.2 + (k % 2) * 0.06, 1.24 - (k % 2) * 0.05], SP.sage, 1.6); },
+  });
+  Object.assign(LOOK_DRAWERS.toilet, {
+    // A soft white rimless bowl with a teak seat, and a limestone ledge behind with a rolled towel.
+    spa: (T, o) => {
+      T.box(0, 0, 0.62, 0.42, 0.16, 0.06, SP.stone); T.box(0.06, 0.02, 0.68, 0.3, 0.1, 0.07, SP.sage);
+      T.box(0.06, 0, 0, 0.3, 0.16, 0.62, SP.white); T.box(0.09, 0.14, 0, 0.24, 0.3, 0.3, SP.white);
+      const [bx, by] = T.P(0.21, 0.4, 0.3); ell(bx, by, 7, 5.5, SP.white, 'rgba(0,0,0,.1)'); const [sx, sy] = T.P(0.21, 0.38, 0.385); ell(sx, sy, 7, 4, SP.teak); ell(sx, sy, 5, 2.8, '#E8EEF0');
+      if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
+  });
+  Object.assign(LOOK_DRAWERS.vanity, {
+    // A floating teak vanity with a stone vessel basin, a tall spout and a stack of rolled towels underneath.
+    spa: (T, o) => {
+      T.box(0, 0.02, 0.4, 1.0, 0.46, 0.38, SP.teak); slats(T, 0.03, 0.97, 0.481, 0.43, 0.75, 16, 'rgba(40,25,10,.28)');
+      T.box(-0.02, 0, 0.78, 1.04, 0.5, 0.04, SP.stone);
+      [[0.2, 0.25], [0.42, 0.25], [0.31, 0.25]].forEach(([x, y], k) => { const [tx, ty] = T.P(x, y, k === 2 ? 0.2 : 0.08); ell(tx, ty, 5, 4, k === 2 ? SP.sage : SP.white, 'rgba(0,0,0,.12)'); });
+      const [vx, vy] = T.P(0.5, 0.26, 0.86); ell(vx, vy + 2, 10, 6, SP.stoneDark); ell(vx, vy, 10, 5, SP.stone); ell(vx, vy, 7, 3.4, '#C7D9DC');
+      T.line([0.5, 0.03, 0.82], [0.5, 0.03, 1.02], SP.teakDark, 2.2); T.line([0.5, 0.03, 1.02], [0.5, 0.16, 1.02], SP.teakDark, 2.2); },
+  });
+  Object.assign(LOOK_DRAWERS.shower, {
+    // A rain shower behind glass on a pebble floor, a limestone back wall with a niche, a teak bench and a bamboo in the corner.
+    // Steam comes up thick while it runs.
+    spa: (o) => [F(0, 0, 1.18, 1.18, (T) => {
+        T.box(0, 0, 0, 1.18, 1.18, 0.06, SP.stoneDark);
+        for (let k = 0; k < 26; k++) { const [px, py] = T.P(0.08 + ((k * 0.61) % 1.02), 0.15 + ((k * 0.37) % 0.98), 0.061); ell(px, py, 1.6, 1, ['#CFC6B6', '#BDB3A2', '#E2DACB'][k % 3]); }
+        T.box(0, 0, 0.06, 1.18, 0.08, 2.04, SP.stone); T.poly([[0.75, 0.081, 1.0], [1.05, 0.081, 1.0], [1.05, 0.081, 1.3], [0.75, 0.081, 1.3]], SP.stoneDark);
+        T.box(0.8, 0.05, 1.0, 0.08, 0.04, 0.12, SP.sage); T.box(0.95, 0.05, 1.0, 0.06, 0.04, 0.09, SP.white);
+        T.box(0.1, 0.1, 0.06, 0.24, 0.9, 0.04, SP.teak); T.box(0.1, 0.1, 0.4, 0.24, 0.9, 0.04, SP.teak); [[0.12, 0.12], [0.12, 0.96]].forEach(([x, y]) => T.box(x, y, 0.1, 0.2, 0.04, 0.3, SP.teakDark));
+        T.line([0.6, 0.08, 2.08], [0.6, 0.45, 2.08], '#B9BEC3', 2); const [hx, hy] = T.P(0.6, 0.5, 2.06); ell(hx, hy, 9, 4.5, '#B9BEC3');
+        const on = usingSlot(T.o.id + ':s') || live(T.o.id);
+        if (on) { steamAt(T, 0.6, 0.6, 0.9, 0, 9, 1.3); steamAt(T, 0.4, 0.8, 1.5, 0, 6, 1.1); steamAt(T, 0.8, 0.4, 1.2, 0, 6, 1.1); const [wx, wy] = T.W(0.6, 0.5); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.95, 1); }
+        T.box(1.0, 1.0, 0.06, 0.14, 0.14, 0.18, SP.stoneDark); [[1.05, 0.0], [1.09, 0.25], [1.12, 0.1]].forEach(([x, dz]) => { T.line([x, 1.07, 0.24], [x, 1.07, 1.5 + dz], '#7FA06A', 2.2); [0.7, 1.0, 1.3].forEach((z) => { const [lx, ly] = T.P(x, 1.07, z + dz); ell(lx - 4, ly - 1, 5, 1.6, '#8DB06E', null, -0.4); }); });
+      }, { name: 'tray' }),
+      F(0, 1.16, 1.18, 1.2, (T) => { const fog = usingSlot(T.o.id + ':s') || live(T.o.id); T.poly([[0, 1.18, 0.06], [1.18, 1.18, 0.06], [1.18, 1.18, 2.08], [0, 1.18, 2.08]], fog ? 'rgba(235,240,240,.55)' : 'rgba(200,226,232,.2)', 'rgba(185,190,195,.8)', 1); T.line([0.2, 1.18, 1.9], [0.65, 1.18, 1.2], 'rgba(255,255,255,.55)', 2); })],
   });
   const diningLife = () => F(0, 0.74, 1.3, 1.74, (T, o) => {
     ['c1', 'c2'].forEach((s, i) => { const sid = o.id + ':' + s, who = reserved[sid]; if (who && who.task && who.task.slot === sid && (doing(who, 'eat') || doing(who, 'eatOut') || doing(who, 'sip'))) { const [px, py] = T.P(0.65, i ? 1.5 : 0.98, 0.775); if (doing(who, 'eatOut')) { rr(px - 5, py - 7, 10, 7, 1.5, '#F2EEE8'); } else if (doing(who, 'sip')) { rr(px - 3, py - 6, 6, 6, 1.2, '#F2EEE8'); } else { ell(px, py, 10, 5, '#F5F2EC', 'rgba(0,0,0,.15)'); ell(px, py - 1, 6, 2.8, who.mealFresh ? '#7FB069' : '#D9822B'); circle(px + 3, py - 2, 1.8, '#4F9460'); } } });
@@ -2094,6 +2159,17 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    diffuser: {
+      // A stone cone on a teak base; it glows when on, and mist curls up from the top while it runs or someone breathes it in.
+      parts: (o) => [F(0, 0, 0.35, 0.35, (T, ob, t) => { const c = cl(o), on = isLit(ob.id), busy = usingSlot(ob.id + ':d') || live(ob.id);
+        T.box(0.05, 0.05, 0, 0.25, 0.25, 0.06, '#9C6B45');
+        const [bx, by] = T.P(0.175, 0.175, 0.06), [tx, ty] = T.P(0.175, 0.175, 0.42);
+        ctx.beginPath(); ctx.moveTo(bx - 10, by); ctx.quadraticCurveTo(bx - 9, (by + ty) / 2, tx - 3, ty); ctx.lineTo(tx + 3, ty); ctx.quadraticCurveTo(bx + 9, (by + ty) / 2, bx + 10, by); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); ctx.strokeStyle = shade(c, -0.2); ctx.lineWidth = 0.8; ctx.stroke();
+        if (on) { ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 1.2); circle(bx, by - 6, 9, '#CFEBDD'); ctx.restore(); }
+        ell(tx, ty, 3, 1.4, '#6E6A64');
+        if (on || busy) steamAt(T, 0.175, 0.175, 0.44, t, busy ? 5 : 2, busy ? 0.9 : 0.5);
+      })],
+    },
     overseer: {
       // A concrete plinth, a jointed arm and a capsule head with one red lens that follows whoever is nearest, and glows
       // harder while it talks.
@@ -2241,6 +2317,8 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (pat === 'damask') { for (let z = 0.55, r = 0; z < WH - 0.1; z += 0.6, r++) for (let u = 0.3 + (r % 2) * 0.35; u < len - 0.1; u += 0.7) { poly([P(u, z - 0.22), P(u + 0.12, z), P(u, z + 0.22), P(u - 0.12, z)], ink); const [sx, sy] = iso(...P(u, z)); ell(sx - 6, sy, 2.5, 5, ink, null, 0.5); ell(sx + 6, sy, 2.5, 5, ink, null, -0.5); circle(sx, sy - 11, 1.6, ink); circle(sx, sy + 11, 1.6, ink); } }
     else if (pat === 'starburst') { for (let z = 0.55, r = 0; z < WH - 0.05; z += 0.55, r++) for (let u = 0.3 + (r % 2) * 0.3; u < len - 0.05; u += 0.6) { const [sx, sy] = iso(...P(u, z)); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, l = k % 2 ? 4 : 7; limb(sx - Math.cos(a) * 1.5, sy - Math.sin(a) * 1.5, sx + Math.cos(a) * l, sy + Math.sin(a) * l, ink, 1.1); } circle(sx, sy, 1.2, S.ink2 || ink); } }
     // Board-formed concrete: the seams of the formwork boards, and a grid of tie holes.
+    // Limewash: soft clouds of darker and lighter wash, brushed across the wall.
+    else if (pat === 'limewash') { for (let k = 0; k < len * 3; k++) { const u = (k * 0.618 * 3.7) % len, z = 0.2 + ((k * 0.414 * 2.9) % (WH - 0.6)), w = 0.5 + (k % 3) * 0.3; rect(u, Math.min(len, u + w), z, Math.min(WH, z + 0.35 + (k % 2) * 0.25), k % 3 ? ink : S.ink2); } }
     else if (pat === 'formwork') { for (let z = 0.34; z < WH; z += 0.26) line3(P(0, z), P(len, z), ink, 0.9); for (let z = 0.6; z < WH - 0.1; z += 0.78) for (let u = 0.3; u < len - 0.1; u += 0.6) { const [sx, sy] = iso(...P(u, z)); circle(sx, sy, 1.3, S.ink2); } }
     else if (pat === 'shiplap') { for (let z = 0.34; z < WH; z += 0.2) line3(P(0, z), P(len, z), ink, 1); }
     else if (pat === 'wainscot') { rect(0, len, 0.14, 1.0, ink); rect(0, len, 0.97, 1.04, shade(ink, -0.12)); for (let u = 0.12; u < len - 0.3; u += 0.6) rect(u, Math.min(len - 0.05, u + 0.48), 0.28, 0.86, null, 'rgba(0,0,0,.16)', 1); }
@@ -3908,6 +3986,7 @@ export function createHouseArt(ctx0, opts = {}) {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
       case 'overseer': return 'The eye turns toward you.';
+      case 'diffuser': return run(20, 'The diffuser hums and puffs out eucalyptus.');
       case 'tvunit': tvOn = !tvOn; return tvOn ? 'The TV flickers on.' : 'TV off.';
       case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
       case 'laundry': return run(12, 'The washer churns into a spin cycle.');

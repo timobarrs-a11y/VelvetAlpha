@@ -144,6 +144,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
   wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
+  wallpaper('paper-limewash', 'Limewash', 'limewash', 100, ['soft', 'minimal', 'natural']),
   wallpaper('paper-formwork', 'Board-formed concrete', 'formwork', 110, ['industrial', 'minimal', 'bold']),
   wallpaper('paper-pixel-invaders', 'Pixel invaders', 'pixel-invaders', 110, ['playful', 'bold', 'vintage']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
@@ -218,6 +219,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-brutalist', 'Brutalist Loft bedroom and bath', 'Board-formed concrete, blackened steel and one sheet of glass: the concrete bed and nightstand, a steel locker dresser, a wall-hung black toilet, a trough vanity, a walk-in shower, concrete walls, a dark terrazzo floor, and the Overseer to keep an eye on you.',
     ['look-bed-brutalist', 'look-nightstand-brutalist', 'look-dresser-brutalist', 'look-toilet-brutalist', 'look-vanity-brutalist', 'look-shower-brutalist', 'paper-formwork', 'floor-terrazzodark', 'overseer'], ['industrial', 'minimal', 'bold']),
 
+  bundle('set-spa', 'Spa Retreat bedroom and bath', 'Oiled teak, honed limestone, sage linen and steam: the teak platform bed and floating nightstand, a slatted dresser, a rimless toilet, a vessel vanity, a rain shower on pebbles that fogs its glass, limewashed walls, a teak deck floor, and an aroma diffuser to breathe in.',
+    ['look-bed-spa', 'look-nightstand-spa', 'look-dresser-spa', 'look-toilet-spa', 'look-vanity-spa', 'look-shower-spa', 'paper-limewash', 'floor-teakdeck', 'diffuser'], ['soft', 'minimal', 'natural']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -270,6 +274,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
   floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
+  floor('floor-teakdeck', 'Teak deck', 'teakdeck', 160, ['soft', 'minimal', 'natural']),
   floor('floor-terrazzodark', 'Dark terrazzo', 'terrazzodark', 170, ['industrial', 'minimal', 'bold']),
   floor('floor-arcadecarpet', 'Arcade carpet', 'arcadecarpet', 170, ['playful', 'bold', 'vintage']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
@@ -466,6 +471,13 @@ export const CATALOG: CatalogEntry[] = [
   look('look-vanity-brutalist', 'vanity', 'brutalist', 'Concrete trough vanity', 'A poured concrete trough on blackened steel legs, a wall tap over it and towels on the shelf below.', 380, ['industrial', 'minimal', 'bold'], ['#A3A19C', '#2B2D31', '#E9E6E0']),
   look('look-shower-brutalist', 'shower', 'brutalist', 'Concrete walk-in shower', 'A concrete tray and back wall, a square rain head on a steel arm, a slot drain and a single pane of glass.', 520, ['industrial', 'minimal', 'bold'], ['#A3A19C', '#2B2D31', '#BADEE8']),
 
+  look('look-bed-spa', 'bed', 'spa', 'Teak platform bed', 'A low oiled-teak platform wider than the mattress, a slatted teak panel behind, linen in your colour and a folded throw at the foot.', 560, ['soft', 'minimal', 'natural'], ['#9DB3A5', '#EEEAE0', '#C9B8A6']),
+  look('look-nightstand-spa', 'nightstand', 'spa', 'Floating teak nightstand', 'A floating teak box with a limestone top, a dish of river pebbles and a paper globe that glows.', 160, ['soft', 'minimal', 'natural'], ['#9C6B45', '#B98A62', '#7A5236']),
+  look('look-dresser-spa', 'dresser', 'spa', 'Slatted teak dresser', 'Floating teak with slatted fronts under a limestone top, a stone tray and eucalyptus in a jar.', 380, ['soft', 'minimal', 'natural'], ['#9C6B45', '#B98A62', '#C9B8A6']),
+  look('look-toilet-spa', 'toilet', 'spa', 'Rimless toilet with a teak seat', 'A soft white rimless bowl with a teak seat, under a limestone ledge with a rolled towel.', 220, ['soft', 'minimal', 'natural'], ['#F6F4EE', '#D8D0C2', '#9DB3A5']),
+  look('look-vanity-spa', 'vanity', 'spa', 'Teak vanity with a stone vessel', 'A floating slatted teak vanity, a limestone top with a stone vessel basin and a tall spout, rolled towels below.', 360, ['soft', 'minimal', 'natural'], ['#9C6B45', '#D8D0C2', '#9DB3A5']),
+  look('look-shower-spa', 'shower', 'spa', 'Rain shower on pebbles', 'A rain head over a river-pebble floor, a limestone wall with a niche, a teak bench and bamboo; the glass fogs and the steam comes up thick.', 540, ['soft', 'minimal', 'natural'], ['#D8D0C2', '#9DB3A5', '#9C6B45']),
+
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
   wallItem('wobj-landscape', 'Landscape canvas', 80, ['natural', 'vintage'], ['#9EC1F5', '#F2B48A', '#C9B8E8', '#2B3A5E']),
@@ -526,6 +538,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('gym', 'gym', 'Weights and mat', 180, ['cool', 'bold', 'minimal']),
   hobby('yogamat', 'yogamat', 'Yoga mat', 30, ['natural', 'soft', 'minimal'], ['#8E5468', '#7FB069', '#4A88B8', '#E0A43A', '#2B2B30']),
   hobby('massage', 'massage', 'Massage chair', 350, ['luxe', 'modern', 'cozy'], ['#2B2B30', '#E8DCC8', '#6E3C50']),
+  hobby('diffuser', 'diffuser', 'Aroma diffuser', 120, ['soft', 'minimal', 'natural'], ['#D8D0C2', '#9DB3A5', '#F6F4EE']),
   hobby('overseer', 'overseer', 'The Overseer', 450, ['industrial', 'minimal', 'bold'], ['#2B2B30', '#8E939A', '#E8EAEC']),
   hobby('jukebox', 'jukebox', 'Jukebox', 300, ['vintage', 'playful', 'bold'], ['#C2413A', '#4A5DA8', '#E0A43A']),
   hobby('clawmachine', 'clawmachine', 'Claw machine', 280, ['playful', 'bold', 'vintage'], ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF']),
