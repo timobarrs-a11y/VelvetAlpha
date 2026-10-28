@@ -208,6 +208,8 @@ export interface TasteAxes {
 }
 
 export interface Flags {
+  /** Money from a cheat code has been found: the Salon (whose items stay with the account) no longer takes this house's money. */
+  cheated?: boolean;
   arranged?: boolean;
   stocked?: boolean;
   styled?: boolean;
