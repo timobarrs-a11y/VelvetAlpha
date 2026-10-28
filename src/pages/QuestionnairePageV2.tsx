@@ -1,49 +1,68 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QuestionnaireShell, HonestBridge, PresenceOrb, COMPANION_QUESTIONNAIRE, makeContext } from '../features/questionnaire';
+import type { QuestionnaireDefinition } from '../features/questionnaire';
 import { supabase } from '../shared/supabase/client';
-import { createCompanion } from '../services/companionService';
 import { userProfileService } from '../services/userProfileService';
+import { createCompanionFromAnswers } from '../services/companionFromAnswers';
 import { toast } from '../shared/ui/Toast';
-import { ambientProfileService } from '../services/ambientProfileService';
 
 const HUE_MAP: Record<string, string> = {
   Female: '#ec4899',
   Male: '#3b82f6',
 };
 
+/**
+ * "Create your own": the companion questionnaire. Who they want (gender) and friend or companion are chosen on the
+ * screens before it, so they are not asked again. "From inside the Velvet Rope" never comes here at all: it makes
+ * the companion on the choice screen and goes straight to the chat.
+ */
+const WITHOUT_CHOSEN: QuestionnaireDefinition = {
+  ...COMPANION_QUESTIONNAIRE,
+  chapters: COMPANION_QUESTIONNAIRE.chapters.filter(c => c.id !== 'connection'),
+  questions: COMPANION_QUESTIONNAIRE.questions.filter(q => q.id !== 'relationshipType' && q.id !== 'connectionType'),
+};
+
 function buildCompanionBridgeLines(answers: Record<string, string | string[]>): { text: string }[] {
-  const lines: { text: string }[] = [];
   const name = answers.companionName as string;
-  const voice = answers.voice as string;
-  const gender = answers.relationshipType as string;
-  const pronoun = gender === 'Male' ? 'him' : 'her';
-
-  if (voice) {
-    const voiceMap: Record<string, string> = {
-      direct: `Teaching ${pronoun} to text straight up...`,
-      playful: `Teaching ${pronoun} to keep you on your toes...`,
-      gentle: `Teaching ${pronoun} to be gentle with you...`,
-      mysterious: `Teaching ${pronoun} to keep you guessing...`,
-    };
-    lines.push({ text: voiceMap[voice] || `Teaching ${pronoun} to text the way you liked...` });
-  }
-
-  if (name) {
-    lines.push({ text: `Setting up ${name}...` });
-  } else {
-    lines.push({ text: `Setting ${pronoun} up...` });
-  }
-
+  const pronoun = answers.relationshipType === 'Male' ? 'him' : 'her';
+  const warmthLines: Record<string, string> = {
+    bold: `Teaching ${pronoun} to say what ${pronoun === 'him' ? 'he' : 'she'} means...`,
+    sweet: `Teaching ${pronoun} to be gentle with you...`,
+    banter: `Teaching ${pronoun} to keep you on your toes...`,
+    deep: `Teaching ${pronoun} to notice everything...`,
+  };
+  const lines: { text: string }[] = [];
+  const warmth = answers.warmth as string;
+  if (warmth) lines.push({ text: warmthLines[warmth] ?? `Teaching ${pronoun} to text the way you liked...` });
+  lines.push({ text: name ? `Setting up ${name}...` : `Setting ${pronoun} up...` });
   return lines;
 }
 
 export function QuestionnairePageV2() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const genderParam = searchParams.get('gender');
+  const typeParam = searchParams.get('type');
+  const chosen = useMemo<Record<string, string>>(() => {
+    const out: Record<string, string> = {};
+    if (genderParam === 'Male' || genderParam === 'Female') out.relationshipType = genderParam;
+    if (typeParam === 'friend' || typeParam === 'romantic') out.connectionType = typeParam;
+    return out;
+  }, [genderParam, typeParam]);
+  const hasChosen = !!chosen.relationshipType && !!chosen.connectionType;
+
   const [showBridge, setShowBridge] = useState(false);
   const [bridgeAnswers, setBridgeAnswers] = useState<Record<string, string | string[]>>({});
-  const [liveAnswers, setLiveAnswers] = useState<Record<string, string | string[]>>({});
+  const [liveAnswers, setLiveAnswers] = useState<Record<string, string | string[]>>(chosen);
   const [profileName, setProfileName] = useState<string | undefined>(undefined);
+
+  // The old random link (?mode=velvet) and a visit with nothing chosen both start over at the choice screen:
+  // the order is friend or companion, then male or female, then your own or random.
+  const startOver = searchParams.get('mode') === 'velvet' || !hasChosen;
+  useEffect(() => {
+    if (startOver) navigate('/intent-select?people=1', { replace: true });
+  }, [startOver, navigate]);
 
   useEffect(() => {
     userProfileService.getCurrentProfile()
@@ -69,13 +88,8 @@ export function QuestionnairePageV2() {
   })();
 
   const traitChips = useMemo(() => {
-    const chips: string[] = [];
-    const voice = liveAnswers.voice as string;
     const warmth = liveAnswers.warmth as string;
-
-    if (voice) chips.push(voice);
-    if (warmth) chips.push(warmth);
-    return chips;
+    return warmth ? [warmth] : [];
   }, [liveAnswers]);
 
   const orbLabel = (liveAnswers.companionName as string) || undefined;
@@ -86,16 +100,15 @@ export function QuestionnairePageV2() {
   );
 
   const handleComplete = useCallback(async (answers: Record<string, string | string[]>) => {
-    setBridgeAnswers(answers);
+    setBridgeAnswers({ ...chosen, ...answers });
     setShowBridge(true);
-  }, []);
+  }, [chosen]);
 
   const handleAnswer = useCallback((_questionId: string, _answer: string | string[], allAnswers: Record<string, string | string[]>) => {
     setLiveAnswers(allAnswers);
   }, []);
 
   const handleBridgeComplete = useCallback(async () => {
-    const answers = bridgeAnswers;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -103,91 +116,18 @@ export function QuestionnairePageV2() {
         navigate('/login', { replace: true });
         return;
       }
-
-      let existingProfile: any = null;
-      try {
-        existingProfile = await userProfileService.getCurrentProfile();
-      } catch {}
-
-      const a = answers as Record<string, string>;
-      const companionGender: 'male' | 'female' = a.relationshipType === 'Male' ? 'male' : 'female';
-      const connection = a.connectionType?.includes('friend') ? 'friend' : 'romantic';
-      const customName = a.companionName || '';
-
-      const matchData = {
-        userName: existingProfile?.name || '',
-        userBirthday: existingProfile?.birthday || '',
-        userGender: existingProfile?.gender || '',
-        relationshipType: a.relationshipType as 'Male' | 'Female',
-        connectionType: connection as 'friend' | 'romantic',
-        energyPreference: a.energy,
-        flirtingStyle: a.warmth,
-        humorStyle: a.warmth,
-        communicationStyle: a.voice,
-        emotionalOpenness: 'Opens Up Over Time',
-        conversationDepth: 'Perfect Mix Of Both',
-        expressiveness: 'Balanced Expression',
-        initiative: 'You Both Share',
-        interestPreference: Array.isArray(a.interests) ? a.interests[0] : a.interests,
-        loveLanguage: a.loveLanguage,
-        supportStyle: 'Just Listens & Validates Feelings',
-        lifeContext: existingProfile?.lifeContext || 'Doing Well',
-        confrontationStyle: a.whenItsHard,
-        availabilityLevel: 'Mostly Available',
-        dynamicPreference: 'You Both Share Control Equally',
-        companionName: customName,
-        favoriteColor: existingProfile?.favorite_color || '',
-        hobbies: Array.isArray(a.interests) ? a.interests.join(', ') : '',
-        sports: Array.isArray(a.tasteDeck) ? a.tasteDeck.join(', ') : '',
-        musicGenre: existingProfile?.music_genre || '',
-        newsTopics: existingProfile?.news_categories || [],
-      };
-
-      sessionStorage.setItem('matchAnswers', JSON.stringify(matchData));
-
-      const companion = await createCompanion({
-        userId: user.id,
-        gender: companionGender,
-        relationshipType: connection as 'friend' | 'romantic',
-        customName,
-        hobbies: Array.isArray(a.interests) ? a.interests : [],
-        sports: Array.isArray(a.tasteDeck) ? a.tasteDeck : [],
-        dynamicPreference: matchData.dynamicPreference,
-        confrontationStyle: matchData.confrontationStyle,
-        availabilityLevel: matchData.availabilityLevel,
-        interestPreference: matchData.interestPreference,
-        interestText: matchData.interestPreference,
-        loveLanguage: matchData.loveLanguage,
-        supportStyle: matchData.supportStyle,
-        lifeContext: matchData.lifeContext,
-        energyPreference: matchData.energyPreference,
-        flirtingStyle: matchData.flirtingStyle,
-        humorStyle: matchData.humorStyle,
-        communicationStyle: matchData.communicationStyle,
-        emotionalOpenness: matchData.emotionalOpenness,
-        conversationDepth: matchData.conversationDepth,
-        expressiveness: matchData.expressiveness,
-        initiative: matchData.initiative,
-        favoriteColor: matchData.favoriteColor,
-        musicGenre: matchData.musicGenre,
-        newsCategories: matchData.newsTopics,
-        signatureExpert: sessionStorage.getItem('selectedExpertId') || undefined,
-        signatureExpertSource: (sessionStorage.getItem('selectedExpertSource') as 'curated' | 'user') || undefined,
-        questionnaireData: matchData,
-      });
-
-      if (companion && companion.id) {
-        sessionStorage.setItem('currentCompanionId', companion.id);
-        ambientProfileService.seedFromQuestionnaire(user.id, answers).catch(() => {});
-        navigate('/create-companion-avatar', { replace: true });
-      } else {
-        throw new Error('Failed to create companion');
-      }
+      const profile = await userProfileService.getCurrentProfile().catch(() => null);
+      const companion = await createCompanionFromAnswers(user.id, bridgeAnswers, profile);
+      if (!companion) throw new Error('Failed to create companion');
+      // Next: their signature voice (every one is open), then their look, then the chat.
+      navigate('/voice-selection', { replace: true });
     } catch {
       toast.error('There was an error creating your companion. Please try again.');
       setShowBridge(false);
     }
   }, [bridgeAnswers, navigate]);
+
+  if (startOver) return null;
 
   if (showBridge) {
     return (
@@ -201,8 +141,9 @@ export function QuestionnairePageV2() {
 
   return (
     <QuestionnaireShell
-      definition={COMPANION_QUESTIONNAIRE}
+      definition={WITHOUT_CHOSEN}
       context={ctx}
+      initialAnswers={chosen}
       onComplete={handleComplete}
       onAnswer={handleAnswer}
       onBack={() => navigate(-1)}
