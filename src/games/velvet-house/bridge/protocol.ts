@@ -27,7 +27,7 @@ export type BridgeMessageType =
   | 'velvet:startGo'
   | 'velvet:startCancel'
   | 'velvet:promo'
-  | 'velvet:promoResult';
+  | 'velvet:promos';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -358,32 +358,30 @@ export function isRestartedMessage(data: unknown): data is RestartedMessage {
   return m.type === 'velvet:restarted' && typeof m.day === 'number';
 }
 
-// A promo code the player typed: the host claims it for the account (once per account) and answers with the same seq.
-export interface PromoRequestMessage extends BridgeMessage {
+// A promo code the player redeemed in this house: the host records it for the account.
+export interface PromoRedeemedMessage extends BridgeMessage {
   type: 'velvet:promo';
   game: 'velvet-house';
-  seq: number;
   code: string;
 }
 
-export interface PromoResultMessage extends BridgeMessage {
-  type: 'velvet:promoResult';
-  seq: number;
-  // 'ok': first use, or again for the same house. 'used': already used in another house on this account.
-  status: 'ok' | 'used';
+// The promo codes redeemed on the player's account (in any house): every house of theirs gets those packs.
+export interface AccountPromosMessage extends BridgeMessage {
+  type: 'velvet:promos';
+  codes: string[];
 }
 
-export function isPromoRequestMessage(data: unknown): data is PromoRequestMessage {
+export function isPromoRedeemedMessage(data: unknown): data is PromoRedeemedMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;
-  return m.type === 'velvet:promo' && typeof m.seq === 'number' && typeof m.code === 'string'
-    && m.code.length > 0 && m.code.length <= 40;
+  return m.type === 'velvet:promo' && typeof m.code === 'string' && m.code.length > 0 && m.code.length <= 40;
 }
 
-export function isPromoResultMessage(data: unknown): data is PromoResultMessage {
+export function isAccountPromosMessage(data: unknown): data is AccountPromosMessage {
   if (!isBridgeMessage(data)) return false;
   const m = data as Record<string, unknown>;
-  return m.type === 'velvet:promoResult' && typeof m.seq === 'number' && (m.status === 'ok' || m.status === 'used');
+  return m.type === 'velvet:promos' && Array.isArray(m.codes) && m.codes.length <= 100
+    && m.codes.every((c) => typeof c === 'string' && c.length <= 40);
 }
 
 /**

@@ -1,9 +1,9 @@
 /**
  * Promo codes: a phrase said to the partner in chat (or typed on the start menu's Cheats screen) that gives the player
  * promo packs for free. Promo packs are in the shop by name, locked, and can't be bought: a code is the only way in.
- * During the alpha they are handed out to players to get them trying the game. A code works once per account (the app
- * records it; restarting the same house gets it back). A code is caught in `handleTalk` before anything is sent to the
- * AI or written to the chat history, so it is not remembered or answered.
+ * During the alpha they are handed out to players to get them trying the game. A code is the account's: redeemed in one
+ * house, the packs are in every house on the account (the app records it and tells each house). A code is caught in
+ * `handleTalk` before anything is sent to the AI or written to the chat history, so it is not remembered or answered.
  *
  * To add one: mark the pack and its pieces `promo(...)` in state/catalog.ts, and add a line here.
  */

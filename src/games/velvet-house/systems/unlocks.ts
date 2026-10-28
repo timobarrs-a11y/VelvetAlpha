@@ -2,7 +2,7 @@ import { unlockFor, codeWord, UNLOCK_CODES, type UnlockCode } from '../state/unl
 import { catalogById, setQuote, type CatalogEntry } from '../state/catalog';
 import { isPaintable } from '../state/scenes';
 import { run } from '../kernel/config';
-import { createHostPromo, type PromoClaim } from '../bridge/hostPromo';
+import { createHostPromo, type HostPromo } from '../bridge/hostPromo';
 import type { Game } from '../kernel/game';
 
 /** How long the new look gets to show (camera pull-back and sparkle) before the picture is taken. */
@@ -10,9 +10,9 @@ const SHOT_DELAY_MS = 1700;
 
 /**
  * Promo codes (state/unlockCodes.ts) applied to the house, with a pop-up showing what was unlocked. Inside the app a
- * code is claimed for the account first (once per account); standalone there is no account, so it just works.
+ * code is the account's: the host records it, and every other house on the account gets the packs when it opens.
  */
-export function createUnlocks(g: Game, claim: PromoClaim | null = createHostPromo()): Partial<Game> {
+export function createUnlocks(g: Game, host: HostPromo | null = createHostPromo()): Partial<Game> {
   const { owned, log, flags } = g;
   const pending = (): string[] => ((flags.pendingUnlocks as string[] | undefined) ??= []);
   let presenting = false;
@@ -60,13 +60,30 @@ export function createUnlocks(g: Game, claim: PromoClaim | null = createHostProm
     const sets = setsOf(code);
     if (!sets.length) return false;
     if (sets.every((s) => owned.has(s.id))) { log('You already have that one. It is in your Sets tab.'); return true; }
-    if (!claim) { grant(code, sets); return true; }
-    claim(codeWord(code)).then((answer) => {
-      if (answer === 'used') { log('That code has already been used on your account, in another house. Each code works once per account.'); return; }
-      grant(code, sets);
-    });
+    grant(code, sets);
+    host?.record(codeWord(code));
     return true;
   }
+
+  // Codes redeemed on the account in another house: this house has those packs too. They wait in the Sets tab (Apply
+  // puts them on), rather than redecorating a house that has its own look.
+  host?.onAccountCodes((words) => {
+    const got: string[] = [];
+    for (const w of words) {
+      const code = unlockFor(w);
+      if (!code) continue;
+      const sets = setsOf(code);
+      if (!sets.length || sets.every((s) => owned.has(s.id))) continue;
+      for (const set of sets) {
+        for (const m of setQuote(set, new Set()).members) owned.add(m.id);
+        owned.add(set.id);
+      }
+      got.push(code.packName);
+    }
+    if (!got.length) return;
+    log(`${got.join(' and ')} ${got.length > 1 ? 'are' : 'is'} on your account, so ${got.length > 1 ? 'they are' : 'it is'} here too: in your Sets tab, ready to Apply.`);
+    g.refreshDrawer();
+  });
 
   // Packs unlocked mid-story or before moving in wait for a quiet moment.
   if (!run.attract) {

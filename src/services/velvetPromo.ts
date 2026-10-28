@@ -1,11 +1,15 @@
 import { supabase } from '../shared/supabase/client';
 
-/**
- * Claim a Velvet Sims promo code for this account and house (companion). 'used' means it already went to another house
- * on this account. If the claim can't be checked (offline, not applied yet), the code still works during the alpha.
- */
-export async function claimVelvetPromo(code: string, companionId: string | null): Promise<'ok' | 'used'> {
-  const { data, error } = await supabase.rpc('claim_velvet_promo', { p_code: code, p_companion: companionId });
-  if (error) return 'ok';
-  return data === 'used' ? 'used' : 'ok';
+/** Record a Velvet Sims promo code as redeemed on this account (the house it was first used in is kept for the admin page). */
+export async function recordVelvetPromo(code: string, companionId: string | null): Promise<void> {
+  await supabase.rpc('claim_velvet_promo', { p_code: code, p_companion: companionId });
+}
+
+/** The promo codes this account has redeemed, in any house: every house of theirs gets those packs. */
+export async function myVelvetPromoCodes(): Promise<string[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase.from('velvet_promo_redemptions').select('code').eq('user_id', user.id);
+  if (error || !data) return [];
+  return data.map((r) => r.code as string);
 }

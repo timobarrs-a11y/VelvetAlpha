@@ -23,11 +23,13 @@ lock the codes per account, so one per account, that should be fine".
   usual tab (Sets, Furniture, Wallpaper...) and the packs are also listed in the **Promo** tab. Buying one is refused
   (`systems/shop.ts`). Once a code has given it, it is an ordinary owned item with a Promo tag; a pack's card shows
   **Apply**.
-- **Once per account:** inside the app the game asks the host to claim the code (`velvet:promo`, answered with
-  `velvet:promoResult`), which records it in `velvet_promo_redemptions` through `claim_velvet_promo()`. The first use
-  works; the same house (companion) again works (a restart gets it back); another house on the same account is told the
-  code has been used. No limit on how many accounts use a code. If the claim can't be checked (offline), the code works.
-  Standalone (no app around the game, as in the live tests) there is no account and the code just works.
+- **The account's, for every house:** a code redeemed in one house opens the packs in every house on that account,
+  including houses made later, without typing it again (Tim, 28 October: "the intent is open it up for every house they
+  want after"). The game tells the host it redeemed a code (`velvet:promo`), which records it in
+  `velvet_promo_redemptions` through `claim_velvet_promo()`. Whenever a house opens, the host sends the account's codes
+  (`velvet:promos`) and the game gives that house the packs quietly: they wait in the Sets tab with **Apply**, so a house
+  that already has its own look isn't redecorated. There's no limit on how many accounts use a code. Standalone (no app
+  around the game, as in the live tests) there is no account and a code just works in the house it was typed in.
 
 The codes (also on the admin **Promo codes** page, with a copy button and how many accounts have used each):
 
