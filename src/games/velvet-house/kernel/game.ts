@@ -41,6 +41,8 @@ export interface View {
   paused: boolean;
   t: number;
   follow: AgentId | null;
+  /** The room of this floor the shop's paint, wallpaper and floors go on; null is the whole floor. */
+  room: string | null;
 }
 
 /** Plain values that more than one module changes. Everything else on Game is set once. */
@@ -371,6 +373,7 @@ export function createGame(app: HTMLElement): Game | null {
     paused: false,
     t: 0,
     follow: null as AgentId | null,
+    room: null as string | null,
   };
 
   // The attic exists once its stairs have been built.

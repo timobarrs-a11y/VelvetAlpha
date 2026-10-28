@@ -44,6 +44,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onArrangeUnstore: (id) => { if (id.startsWith('wall-')) g.rehangWall(id); else g.unstore(id); },
     onArrangeTakeDown: () => g.takeDownWall(),
     onPickFloor: (lv) => g.setLevel(lv),
+    onPickRoom: (room) => { g.view.room = room; g.refreshDrawer(); },
     onBuy: (item, color) => g.handleBuy(item, color),
     onPetOrder: (act, id) => g.petOrder(act, id),
     onBuyAvatarItem: (id) => g.handleBuyAvatarItem(id),

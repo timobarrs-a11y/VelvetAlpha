@@ -2,7 +2,7 @@ import { ownsAvatarItem, buyAvatarItem } from '../bridge/avatarShop';
 import { simsShopItems, itemLabel } from '../../../data/avatarCatalog';
 import { relocate, modelFits, swapModel, setOnStand } from '../state/arrange';
 import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
-import { LEVEL_NAMES, ATTIC } from '../state/house';
+import { LEVEL_NAMES, LEVELS, ATTIC } from '../state/house';
 import { isPaintable } from '../state/scenes';
 import { buildWorld } from '../state/agents';
 import { type CatalogEntry, promoLocked, setQuote } from '../state/catalog';
@@ -80,11 +80,14 @@ export function createShop(g: Game): Partial<Game> {
       log(`The ${item.name.toLowerCase()} won't fit where the ${displayName(target!).toLowerCase()} is. Make some room beside it in Arrange.`);
       return;
     }
-    // A look already bought is the player's: putting it on again is free.
-    const free = fromSet || !!(target && owned.has(item.id));
+    // A look already bought is the player's: putting it on again is free. So are paint, wallpaper and floors bought
+    // before, on any floor or room.
+    const styling = item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor';
+    const free = fromSet || !!(target && owned.has(item.id)) || (styling && owned.has(item.id));
     if (!free && !g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
-    if (!fromSet) log(free ? `Put the ${item.name} back on.` : `Bought ${item.name} for $${price}.`);
+    // (Paint, wallpaper and floors put up again say where they went, below.)
+    if (!fromSet && !(styling && free)) log(free ? `Put the ${item.name} back on.` : `Bought ${item.name} for $${price}.`);
     // Pets: a new housemate, or food for the ones already here.
     if (item.icon === 'pet' && item.pet) { g.adoptPet(item.pet, item.id); return; }
     if (item.id === 'pet-food') { world.petFood += 14; log(`${world.petFood} portions of pet food in the cupboard.`); g.refreshDrawer(); return; }
@@ -97,23 +100,27 @@ export function createShop(g: Game): Partial<Game> {
       g.shake(1);
     }
 
-    // Apply paint/wallpaper/floor
+    // Apply paint/wallpaper/floor: to the room picked in the shop, or the whole floor.
+    const room = view.room && LEVELS[view.level].rooms.some((r) => r.n === view.room) ? view.room : null;
+    const where = room ?? LEVEL_NAMES[view.level];
     if (item.icon === 'paint' && (color || item.color)) {
-      art.applyPaint(view.level, color || item.color!);
+      art.applyPaint(view.level, color || item.color!, room);
       roomReveal();
       flags.styled = true;
       if (!(flags.styledSet as number[])?.includes(view.level)) (flags.styledSet as number[]).push(view.level);
-      log(`${LEVEL_NAMES[view.level]} painted ${(color || item.color)!}.`);
+      log(`${where} painted ${(color || item.color)!}.`);
     }
     if (item.icon === 'paper' && item.pattern) {
-      art.applyWallpaper(view.level, item.pattern);
+      art.applyWallpaper(view.level, item.pattern, room);
       roomReveal();
       flags.styled = true;
+      if (!fromSet) log(`${item.name} on the ${where.toLowerCase()} walls.`);
     }
     if (item.icon === 'floor' && item.floor) {
-      art.applyFloor(view.level, item.floor);
+      art.applyFloor(view.level, item.floor, room);
       roomReveal();
       flags.styled = true;
+      if (!fromSet) log(`${item.name} on the ${where.toLowerCase()} floor.`);
     }
     // Wall decor: hung on a back wall of the floor you are looking at.
     if (item.icon === 'wobj') {
@@ -181,9 +188,9 @@ export function createShop(g: Game): Partial<Game> {
     }
     // Bond boost from buying liked items (a set reacts once, for the whole set)
     if (fromSet) { g.refreshDrawer(); return; }
-    const styling = item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor';
     let liked = false;
-    if (item.tags) {
+    // Her taste reacts to something new, not to the same wallpaper put up again somewhere else.
+    if (item.tags && !(styling && free)) {
       const taste = tasteOf({ id: item.id, name: item.name, tags: item.tags }, style, tasteNorm);
       liked = taste > 0;
       if (taste > 0) { g.s.bond = Math.min(100, g.s.bond + taste); log(`${partnerName} ${taste > 1 ? 'loves' : 'likes'} the ${item.name}.`); }

@@ -4223,6 +4223,7 @@ export function createHouseArt(ctx0, opts = {}) {
     drawFrontWalls(lv); drawProjector(lv);
     if (arrState) drawArrangeOverlay(arrState, lv);
     drawGuides(lv, t);
+    drawRoomHint(lv, s.roomHint, t);
     drawPoofs(lv);
     drawSparkles(lv);
     } finally { gOn = false; ctx = ctx0; gMat = MATERIAL.matte; }
@@ -4237,9 +4238,26 @@ export function createHouseArt(ctx0, opts = {}) {
     ctx.fillStyle = 'rgba(34,26,35,.55)'; ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillText(LEVEL_NAMES[lv].toUpperCase(), W - 14, H - 12); ctx.textAlign = 'start';
   }
 
-  function applyPaint(level, color) { if (LOOKS[level]) LOOKS[level].paint = color; }
-  function applyWallpaper(level, pattern) { if (LOOKS[level]) LOOKS[level].paper = pattern; }
-  function applyFloor(level, floor) { if (LOOKS[level]) LOOKS[level].floor = floor; }
+  // Paint, wallpaper and floors go on one room of a floor, or on the whole floor (`room` left out), which then puts every
+  // room of it back to the one look. Paint goes over wallpaper, so painting takes the paper down where it goes.
+  function restyle(level, room, set) {
+    if (!LOOKS[level]) return;
+    const rooms = ROOMLOOK[level];
+    if (room && LEVELS[level].rooms.some((r) => r.n === room)) {
+      rooms[room] = Object.assign(rooms[room] || {}, set);
+      return;
+    }
+    Object.assign(LOOKS[level], set);
+    for (const rn of Object.keys(rooms)) {
+      for (const k of Object.keys(set)) delete rooms[rn][k];
+      if (!Object.keys(rooms[rn]).length) delete rooms[rn];
+    }
+  }
+  function applyPaint(level, color, room) { restyle(level, room, { paint: color, paper: null }); }
+  function applyWallpaper(level, pattern, room) { restyle(level, room, { paper: pattern }); }
+  function applyFloor(level, floor, room) { restyle(level, room, { floor }); }
+  /** What a room (or, with no room, the whole floor) looks like: its paint, wallpaper and floor. */
+  const roomLook = (level, room) => Object.assign({}, lookAt(level, room));
   // Pictures that can hang as wallpaper: { id, base (a matching tone, used while loading), url | stops }.
   function registerPictures(list) { list.forEach(p => { if (p && p.id && !PAPERS[p.id]) PAPERS[p.id] = { pat: 'image', base: p.base, url: p.url, stops: p.stops }; }); }
   const getLooks = () => LOOKS.map(l => Object.assign({}, l));
@@ -4271,6 +4289,16 @@ export function createHouseArt(ctx0, opts = {}) {
     lastToggled = best.kind === 'object' ? best.id : null;
     if (best.kind === 'wall') { const next = wallLightOverrides.get(best.index) !== true; wallLightOverrides.set(best.index, next); return next; }
     return toggleObjectLight(best.id);
+  }
+
+  // The room the shop's paint, wallpaper and floors will go on: a soft tint and a dashed line round its floor.
+  function drawRoomHint(level, name, t) {
+    const rm = name && LEVELS[level]?.rooms.find((r) => r.n === name);
+    if (!rm) return;
+    const [x1, y1, x2, y2] = rm.r, pulse = 0.5 + 0.5 * Math.sin(t * 3), pts = [[x1, y1, 0.01], [x2, y1, 0.01], [x2, y2, 0.01], [x1, y2, 0.01]].map((p) => iso(...p));
+    ctx.save(); ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+    ctx.fillStyle = `rgba(255,214,102,${0.08 + 0.06 * pulse})`; ctx.fill();
+    ctx.setLineDash([6, 4]); ctx.strokeStyle = `rgba(255,214,102,${0.6 + 0.3 * pulse})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
   }
 
   // Guides for scripts: a pulsing outline on the piece to tap, and a ghost of where a piece should go.
@@ -4420,5 +4448,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, roomLook, registerPictures, getLooks, exportLooks, hangWallObj, wallObjsOn, wallObjsAll, hitWallObj, wallObjView, moveWallObj, wallObjClear, takeDownWallObj, storedWallObjs, rehangWallObj, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

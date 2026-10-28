@@ -54,6 +54,8 @@ export function createControls(g: Game): Partial<Game> {
     g.dropSelectionIfOffFloor(lv);
     const changed = lv !== view.level;
     view.level = lv;
+    // A room picked for paint belongs to the floor it is on.
+    if (changed) view.room = null;
     if (changed) g.scriptEmit({ type: 'level.visited', level: lv });
     if (!keepFollow) view.follow = null;
     syncControls();
