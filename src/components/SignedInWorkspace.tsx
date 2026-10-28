@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -38,6 +38,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../shared/supabase/client';
 import { fetchChangelog } from '../services/changelogService';
 import { prefetchRoute, prefetchCommon } from '../routes/prefetch';
+const CustomizationPanel = lazy(() => import('./CustomizationPanel').then(m => ({ default: m.CustomizationPanel })));
 
 /** Start fetching a page's code as soon as a pointer or finger lands on the link to it. */
 const prefetchOn = (path: string) => ({ onPointerEnter: () => prefetchRoute(path), onTouchStart: () => prefetchRoute(path), onFocus: () => prefetchRoute(path) });
@@ -61,7 +62,6 @@ import { useAccess } from '../hooks/useAccess';
 import { LockScreen } from './LockScreen';
 import { SubscriptionBanner } from './SubscriptionBanner';
 import { useAudioScene } from '../hooks/useAudioScene';
-import { CustomizationPanel } from './CustomizationPanel';
 import { HomeLayoutSwitch } from '../shared/ui';
 import { isHelper, helperRole, HELPER_BADGE_COLOR } from '../utils/relationshipType';
 import { getGoals, type CoachingGoal } from '../services/coachingService';
@@ -581,6 +581,9 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
   } = useCustomization();
   const { showLockScreen } = useAccess();
   const [showRewards, setShowRewards] = useState(false);
+  // The panel's code loads the first time it's opened, then stays (so it can animate closed).
+  const [rewardsOpened, setRewardsOpened] = useState(false);
+  useEffect(() => { if (showRewards) setRewardsOpened(true); }, [showRewards]);
   const textColorKey: ToolbarTextColorKey = customization?.toolbar_text_color ?? 'light';
   const textColorDef = TOOLBAR_TEXT_COLOR_PRESETS.find(p => p.key === textColorKey) ?? TOOLBAR_TEXT_COLOR_PRESETS[0];
   const inkColor = textColorDef.color;
@@ -623,7 +626,8 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
         </div>
         <div className="relative z-20 flex-shrink-0"><Dock /></div>
         <MedalToastHost />
-        {customization && (
+        {customization && (rewardsOpened || showRewards) && (
+          <Suspense fallback={null}>
           <CustomizationPanel
             isOpen={showRewards}
             onClose={() => setShowRewards(false)}
@@ -644,6 +648,7 @@ function ActiveWorkspace({ children, user }: { children: ReactNode; user: { id: 
               );
             }}
           />
+          </Suspense>
         )}
         <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} lobby={lobby} wallpaperStyle={wpStyle} wallpaperClass={wpClass} inkColor={inkColor} inkMuted={inkMuted} inkSubtle={inkSubtle} />
       </div>

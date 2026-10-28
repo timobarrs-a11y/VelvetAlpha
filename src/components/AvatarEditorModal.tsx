@@ -6,17 +6,11 @@ import { AvatarConfigV2 } from '../types/avatar-v2';
 import { supabase } from '../shared/supabase/client';
 import { migrateAvatarConfig } from '../utils/avatarConfig';
 import { sanitizeAvatarConfigForSave } from '../services/avatarSaveService';
-import { useAvatarEditor, announceAvatarSaved, type AvatarEditTarget } from '../stores/avatarEditorStore';
+import { announceAvatarSaved, type AvatarEditTarget } from '../stores/avatarEditorStore';
 import { useAuth } from '../auth/AuthProvider';
 
-// Mounted once (in App). Opens whenever something calls useAvatarEditor().open:
-// a face in the sidebar, a chat, or your own avatar in the toolbar.
-export function AvatarEditorHost() {
-  const target = useAvatarEditor((s) => s.target);
-  const close = useAvatarEditor((s) => s.close);
-  if (!target) return null;
-  return <AvatarEditorModal key={target.kind === 'user' ? 'user' : target.id} target={target} onClose={close} />;
-}
+// The avatar editor itself; AvatarEditorHost (mounted once in the Router) opens it whenever something calls
+// useAvatarEditor().open: a face in the sidebar, a chat, or your own avatar in the toolbar.
 
 interface Loaded { name: string; config: AvatarConfigV2 | null }
 
@@ -51,7 +45,7 @@ function configsEqual(a: AvatarConfigV2 | null, b: AvatarConfigV2 | null): boole
   try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
 }
 
-function AvatarEditorModal({ target, onClose }: { target: AvatarEditTarget; onClose: () => void }) {
+export function AvatarEditorModal({ target, onClose }: { target: AvatarEditTarget; onClose: () => void }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [failed, setFailed] = useState(false);
   // The current draft. Initialized to the loaded config so an unchanged

@@ -6,7 +6,6 @@ import { affectionService } from './affectionService';
 import type { RelationshipIntent, RelationshipStatus } from './affectionService';
 import { getEligibleFonts } from './customizationService';
 import { getCurrentStatus } from '../utils/statusHelper';
-import { seedVoiceBaseline } from './voiceFidelityService';
 
 import type { RelationshipType } from '../utils/relationshipType';
 export type { RelationshipType } from '../utils/relationshipType';
@@ -233,7 +232,8 @@ export async function createCompanion(options: CreateCompanionOptions): Promise<
 
   if (data) {
     const voiceId = options.signatureVoice || (options.gender === 'male' ? 'classic_male' : 'classic_female');
-    seedVoiceBaseline(data.id, voiceId, options.gender).catch(console.error);
+    // Loaded here, not up front: it brings the full voice list, and only creating a companion needs it.
+    import('./voiceFidelityService').then(({ seedVoiceBaseline }) => seedVoiceBaseline(data.id, voiceId, options.gender)).catch(console.error);
   }
 
   if (data) {

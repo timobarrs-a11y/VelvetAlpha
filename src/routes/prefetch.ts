@@ -12,6 +12,8 @@ type Loader = () => Promise<unknown>;
 
 // Menu destinations and the page files behind them (the same imports as src/routes).
 const LOADERS: Record<string, Loader> = {
+  // Not a page: the dock's chat and Messages windows, which load on demand (components/dock/Dock.tsx).
+  '/_dock': () => Promise.all([import('../components/dock/AiChatWindow'), import('../components/MessagingOverlay'), import('../components/dock/FriendChatWindow')]),
   '/chat': () => import('../App'),
   '/spaces': () => import('../pages/HousePage'),
   '/atlas': () => import('../pages/AtlasPage'),
@@ -38,7 +40,7 @@ const LOADERS: Record<string, Loader> = {
 };
 
 // The ones nearly everyone opens, in the order to fetch them while idle.
-const COMMON = ['/chat', '/spaces', '/atlas', '/goal', '/coaching-commitments', '/calendar', '/feed', '/updates'];
+const COMMON = ['/_dock', '/chat', '/spaces', '/atlas', '/goal', '/coaching-commitments', '/calendar', '/feed', '/updates'];
 
 const started = new Set<string>();
 
