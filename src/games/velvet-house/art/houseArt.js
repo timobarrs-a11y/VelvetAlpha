@@ -3,7 +3,7 @@
 import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
-import { poseRig, idleRig, walkRig, seatLegs, legIK, FOOT } from './poseAnim.js';
+import { poseRig, idleRig, walkRig, seatLegs, legIK, gaitFoot, FOOT, GAIT } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
 import { handImage, HAND_SPRITE } from '../state/bodySprites';
 import { TYPES as STATE_TYPES } from '../state/objects';
@@ -1549,7 +1549,7 @@ export function createHouseArt(ctx0, opts = {}) {
     let ws = walkStates.get(c.seed);
     if (!ws) { ws = { px: c.x, py: c.y, ph: 0, amp: 0 }; walkStates.set(c.seed, ws); }
     const dd = Math.hypot(c.x - ws.px, c.y - ws.py);
-    if (c.walking && dd < 0.6) ws.ph += dd / 0.24 * Math.PI;
+    if (c.walking && dd < 0.6) ws.ph += dd / (GAIT.cycle / 2) * Math.PI;
     ws.amp += ((c.walking ? 1 : 0) - ws.amp) * Math.min(1, rdt * 7);
     ws.px = c.x; ws.py = c.y;
     return ws;
@@ -1860,8 +1860,9 @@ export function createHouseArt(ctx0, opts = {}) {
     const gaze = look ? Math.max(-2.6, Math.min(2.6, (look[0] - fx) / 14)) : idle ? Math.sin(t * 0.45 + c.seed * 5) * 2.2 + Math.sin(t * 0.13 + c.seed) * 1.2 : 0;
     const shift = idle ? Math.sin(t * 0.6 + c.seed * 4) * 1.1 : 0;
     const dance = pose === 'dance' && !rig;
-    // A walk rides up over the planted leg (feet together) and dips as the feet pass apart; the hips sit a touch lower than standing so the stride fits the legs.
-    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : (1 - Math.abs(Math.sin(ph))) * 0.03 * amp;
+    // A walk rides up over the planted leg (under the hip at |sin| = 1, the other foot mid-swing) and dips as the feet
+    // pass apart; the hips sit a touch lower than standing so the stride fits the legs.
+    const bob = dance ? Math.abs(Math.sin(t * 6 + c.seed)) * 0.06 : Math.abs(Math.sin(ph)) * 0.03 * amp;
     const clip = blendClip(c, rig, { drop: rig?.drop || 0, bob: rig?.bob || 0, lean: rig?.lean || 0, head: (rig?.nod || 0) - (rig?.headDown ? 0.05 : 0) + (rig?.lookUp ? 0.03 : 0) });
     // Seated: the hips, knees and feet come from the leg solver, so the shins keep their length on any seat.
     const seat = c.sit ? seatLegs(c.z) : null;
@@ -1997,9 +1998,13 @@ export function createHouseArt(ctx0, opts = {}) {
         return;
       }
       if (seat) { const knee = P3(dx * seat.knee[0], dy * seat.knee[0], seat.knee[1]), foot = P3(dx * seat.foot[0], dy * seat.foot[0], seat.foot[1]); thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy); return; }
-      if (dance) { const sw = Math.sin(t * 6 + side) * 0.05, foot = P3(dx * sw, dy * sw, 0); shin(hip[0] + ox, hip[1] + oy, foot[0] + ox, foot[1] + oy); return; }
+      if (dance) {
+        const sw = Math.sin(t * 6 + side) * 0.05, kn = legIK([0, hipZ], [sw, 0]);
+        const foot = P3(dx * sw, dy * sw, 0), knee = P3(dx * kn[0], dy * kn[0], kn[1]);
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy); return;
+      }
       if (rig && rig.legs === 'crouch') {
-        const knee = P3(dx * 0.24, dy * 0.24, hipZ * 0.75), foot = P3(dx * 0.06, dy * 0.06, 0);
+        const kn = legIK([0, hipZ], [0.06, 0]), knee = P3(dx * kn[0], dy * kn[0], kn[1]), foot = P3(dx * 0.06, dy * 0.06, 0);
         thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox * 1.2, knee[1] + oy);
         shin(knee[0] + ox * 1.2, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
@@ -2007,8 +2012,9 @@ export function createHouseArt(ctx0, opts = {}) {
       if (rig && rig.legs === 'swim') return; // underwater
       if (rig && rig.legs === 'jack') {
         // Jumping jacks: feet out to the sides and back together.
-        const out = (rig.spread || 0) * side, foot = P3(rx * out, ry * out, 0);
-        shin(hip[0] + ox, hip[1] + oy, foot[0] + ox, foot[1] + oy);
+        const out = (rig.spread || 0) * side, kn = legIK([0, hipZ], [Math.abs(out), 0]);
+        const foot = P3(rx * out, ry * out, 0), knee = P3(rx * side * kn[0], ry * side * kn[0], kn[1]); // knees bend outward
+        thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy); shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
       }
 
@@ -2020,7 +2026,7 @@ export function createHouseArt(ctx0, opts = {}) {
         return;
       }
       if (rig && rig.legs === 'lunge') {
-        const fw = side > 0 ? 0.3 : -0.26, knee = P3(dx * fw * (side > 0 ? 1 : 0.6), dy * fw * (side > 0 ? 1 : 0.6), hipZ * 0.5), foot = P3(dx * fw * 1.1, dy * fw * 1.1, 0);
+        const fw = side > 0 ? 0.33 : -0.29, kn = legIK([0, hipZ], [fw, 0]), knee = P3(dx * kn[0], dy * kn[0], kn[1]), foot = P3(dx * fw, dy * fw, 0);
         thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);
         shin(knee[0] + ox, knee[1] + oy, foot[0] + ox, foot[1] + oy);
         return;
@@ -2037,7 +2043,8 @@ export function createHouseArt(ctx0, opts = {}) {
       const off = side > 0 ? 0 : Math.PI;
       // Turning on the spot: small alternating steps, so the feet carry the body round.
       const tp = poseState(c), shuf = c.walking ? 0 : tp.turn || 0;
-      const sw = Math.sin(ph + off) * 0.17 * amp + Math.sin(tp.tph + off) * 0.06 * shuf, lift = c.z < 0.05 ? Math.max(0, Math.sin(ph + off)) * 0.075 * amp + Math.max(0, Math.sin(tp.tph + off)) * 0.045 * shuf : 0;
+      const gf = gaitFoot(ph + off, amp);
+      const sw = gf[0] + Math.sin(tp.tph + off) * 0.06 * shuf, lift = c.z < 0.05 ? gf[1] + Math.max(0, Math.sin(tp.tph + off)) * 0.045 * shuf : 0;
       const kn = legIK([0, hipZ], [sw, lift]);
       const foot = P3(dx * sw, dy * sw, lift), knee = P3(dx * kn[0], dy * kn[0], kn[1]);
       thighLimb(hip[0] + ox, hip[1] + oy, knee[0] + ox, knee[1] + oy);

@@ -92,7 +92,32 @@ describe('poseRig', () => {
   });
 });
 
-import { idleRig, expressionFor, walkRig, seatLegs, legIK, LEG, ARM } from '../art/poseAnim.js';
+import { idleRig, expressionFor, walkRig, seatLegs, legIK, gaitFoot, LEG, ARM, GAIT } from '../art/poseAnim.js';
+
+describe('the stride', () => {
+  it('plants the foot and slides it back at exactly the body\'s speed, so it never skates', () => {
+    // The phase advances PI per half cycle of travel; a planted foot must cover 2 * reach over that half.
+    const perRad = (2 * GAIT.reach) / Math.PI;
+    for (let u = Math.PI + 0.05; u < 2 * Math.PI - 0.1; u += 0.1) {
+      const a = gaitFoot(u), b = gaitFoot(u + 0.05);
+      expect(a[1], 'planted feet stay on the floor').toBe(0);
+      expect((a[0] - b[0]) / 0.05).toBeCloseTo(perRad, 6);
+    }
+  });
+
+  it('swings the foot forward through the air and lands it where the plant begins', () => {
+    const lifts = [];
+    for (let u = 0.05; u < Math.PI; u += 0.1) { const [f, z] = gaitFoot(u); lifts.push(z); expect(f).toBeGreaterThan(gaitFoot(u - 0.05)[0]); }
+    expect(Math.max(...lifts)).toBeCloseTo(GAIT.lift, 2);
+    expect(gaitFoot(Math.PI - 1e-6)[0]).toBeCloseTo(gaitFoot(Math.PI + 1e-6)[0], 3);
+    expect(gaitFoot(2 * Math.PI - 1e-6)[0]).toBeCloseTo(gaitFoot(1e-6)[0], 3);
+  });
+
+  it('fades to standing with the amplitude', () => {
+    expect(gaitFoot(1, 0)).toEqual([-0, 0]);
+    expect(Math.abs(gaitFoot(4, 0)[0])).toBeLessThan(1e-12);
+  });
+});
 
 describe('the knee', () => {
   const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -141,8 +166,9 @@ describe('the walk', () => {
   });
 
   it('swings the arms forward and back, opposite the leg on the same side, never out to the side', () => {
-    // The legs: side +1 is forward when sin(phase) > 0, side -1 when sin(phase + PI) > 0.
-    const r = walkRig(Math.PI / 2, 1);
+    // The legs: side +1 is furthest forward at phase PI, side -1 at phase 0 (gaitFoot).
+    const r = walkRig(Math.PI, 1);
+    expect(gaitFoot(Math.PI)[0]).toBeCloseTo(GAIT.reach, 6);
     expect(r.hands[1][0], 'right arm back while the right leg is forward').toBeLessThan(-0.1);
     expect(r.hands[-1][0], 'left arm forward while the left leg is back').toBeGreaterThan(0.1);
     for (let ph = 0; ph < Math.PI * 2; ph += 0.1) {
