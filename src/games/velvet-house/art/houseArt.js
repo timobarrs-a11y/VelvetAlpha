@@ -2038,6 +2038,38 @@ export function createHouseArt(ctx0, opts = {}) {
           T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
         }, { onTop: true })]; },
        },
+    overseer: {
+      // A concrete plinth, a jointed arm and a capsule head with one red lens that follows whoever is nearest, and glows
+      // harder while it talks.
+      parts: (o) => [F(0, 0, 0.6, 0.6, (T, ob, t) => { const c = cl(o); const talking = speechNow(ob.id, t) != null;
+        const [sx, sy] = T.P(0.3, 0.3, 0); ell(sx, sy, 20, 9, 'rgba(0,0,0,.22)');
+        T.box(0.08, 0.08, 0, 0.44, 0.44, 0.14, '#8E939A'); T.box(0.18, 0.18, 0.14, 0.24, 0.24, 0.06, '#6E737A');
+        const sway = Math.sin(t * 0.7) * 0.03, j1 = [0.3, 0.3, 1.1], hd = [0.3 + sway, 0.42, 1.6];
+        T.line([0.3, 0.3, 0.2], j1, c, 7); T.line([0.3, 0.3, 0.2], j1, shade(c, 0.25), 2);
+        T.line(j1, [0.3 + sway, 0.4, 1.5], c, 6);
+        const [jx, jy] = T.P(...j1); circle(jx, jy, 5, shade(c, -0.2)); circle(jx, jy, 2.2, '#C9CED6');
+        T.line([0.42, 0.3, 0.2], [0.4, 0.34, 1.05], '#1B1A1F', 1.2);
+        // The cage it is kept in, bolted to the top of the stand: the bars behind the head go first, the front ones last.
+        const k0 = 0, k1 = 0.6, z0 = 1.2, z1 = 2.02, bar = '#3A3D44', N = 3;
+        const ring = (z, col, w) => { T.line([k0, k0, z], [k1, k0, z], col, w); T.line([k0, k0, z], [k0, k1, z], col, w); T.line([k1, k0, z], [k1, k1, z], col, w); T.line([k0, k1, z], [k1, k1, z], col, w); };
+        T.poly([[k0, k0, z0], [k1, k0, z0], [k1, k1, z0], [k0, k1, z0]], '#5A5E66', '#2B2B30', 1);
+        for (let i = 0; i <= N; i++) { const u = k0 + (k1 - k0) * i / N; T.line([u, k0, z0], [u, k0, z1], bar, 1.6); T.line([k0, u, z0], [k0, u, z1], bar, 1.6); }
+        const [ex, ey] = T.P(...hd);
+        ell(ex, ey, 14, 11, '#E8EAEC', shade(c, -0.2)); ell(ex - 2, ey - 3, 8, 4.5, 'rgba(255,255,255,.55)');
+        ctx.strokeStyle = shade('#E8EAEC', -0.25); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ex - 13, ey + 2); ctx.lineTo(ex + 13, ey + 2); ctx.stroke();
+        ell(ex + 1, ey + 2, 8, 6.5, '#1B1A1F');
+        const [wx, wy] = T.W(...hd.slice(0, 2)); let best = null, bd = 1e9;
+        [jordan, maya].forEach(p => { if (!p || p.level !== ob.level || p.hidden) return; const d = Math.hypot(p.x - wx, p.y - wy); if (d < bd) { bd = d; best = p; } });
+        let dx = 0, dy = 0; if (best && bd < 8) { const [px, py] = iso(best.x, best.y, 1.2); const L = Math.hypot(px - ex, py - ey) || 1; dx = (px - ex) / L * 3.5; dy = (py - ey) / L * 2.5; }
+        const lx = ex + 1 + dx, ly = ey + 2 + dy, pulse = talking ? 0.6 + 0.4 * Math.abs(Math.sin(t * 9)) : 0.55 + 0.25 * Math.sin(t * 1.5);
+        ctx.save(); ctx.globalAlpha = pulse * 0.55; circle(lx, ly, 8, '#FF2A2A'); ctx.restore();
+        circle(lx, ly, 4.5, '#D01818'); circle(lx - 1, ly - 1, 1.8, `rgba(255,${talking ? 230 : 170},${talking ? 210 : 140},1)`);
+        for (let i = 0; i <= N; i++) { const u = k0 + (k1 - k0) * i / N; T.line([u, k1, z0], [u, k1, z1], bar, 1.5); T.line([k1, u, z0], [k1, u, z1], bar, 1.5); }
+        ring(z0 + 0.02, '#2B2B30', 2.4); ring(z1, '#2B2B30', 2.4);
+        T.poly([[k0, k0, z1], [k1, k0, z1], [k1, k1, z1], [k0, k1, z1]], 'rgba(58,61,68,.6)', '#2B2B30', 1);
+        const [hx, hy] = T.P(0.3, 0.3, z1); ctx.strokeStyle = '#2B2B30'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hx, hy - 5, 4, Math.PI * 0.15, Math.PI * 0.85, true); ctx.stroke();
+      }, { onTop: true })],
+    },
     jukebox: {      
       parts: (o) => [F(0, 0, 0.8, 0.5, (T, ob, t) => { const c = cl(o); T.box(0, 0, 0, 0.8, 0.5, 1.05, '#5A3E2E'); const pts = []; for (let k = 0; k <= 12; k++) { const a = Math.PI * k / 12; pts.push([0.4 - Math.cos(a) * 0.4, 0.501, 1.05 + Math.sin(a) * 0.38]); } T.poly([[0, 0.501, 1.05]].concat(pts, [[0.8, 0.501, 1.05]]), c); for (let k = 0; k < 5; k++) { const h2 = (t * 60 + k * 50) % 360; T.line([0.1 + k * 0.15, 0.502, 0.12], [0.1 + k * 0.15, 0.502, 1.0], power ? `hsl(${h2},80%,62%)` : '#4A4450', 2.2); } T.poly([[0.15, 0.503, 0.55], [0.65, 0.503, 0.55], [0.65, 0.503, 0.9], [0.15, 0.503, 0.9]], '#F2EEE8'); })],
         },
@@ -3067,6 +3099,31 @@ export function createHouseArt(ctx0, opts = {}) {
     }
     ctx.restore();
   }
+  // What the talking pieces are saying: their lines and when they started. One line at a time, each held for its length.
+  const speech = new Map();
+  const lineSecs = (s) => 1.6 + s.length * 0.055;
+  function speechNow(id, t) {
+    const sp = speech.get(id); if (!sp) return null;
+    let at = sp.at;
+    for (const line of sp.lines) { const d = lineSecs(line); if (t < at + d) return t >= at ? { line, age: t - at, d } : null; at += d; }
+    speech.delete(id); return null;
+  }
+  function drawObjectSpeech(level, t) {
+    for (const id of [...speech.keys()]) {
+      const o = OBJS.find(ob => ob.id === id); if (!o) { speech.delete(id); continue; }
+      const now = speechNow(id, t); if (!now || o.level !== level) continue;
+      const W2 = TYPES[o.type]?.W ?? 0.6, D2 = TYPES[o.type]?.D ?? 0.6, [fx, fy] = iso(o.x + W2 / 2, o.y + D2 / 2, 2.1);
+      ctx.save(); ctx.globalAlpha = Math.min(1, now.age * 6, (now.d - now.age) * 4); ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.textAlign = 'center';
+      const words = now.line.split(' '), lines = [''];
+      for (const w of words) { const cur = lines[lines.length - 1]; if (ctx.measureText(cur + ' ' + w).width > 150 && cur) lines.push(w); else lines[lines.length - 1] = (cur ? cur + ' ' : '') + w; }
+      const bw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 14, bh = lines.length * 11 + 8, bx = fx - bw / 2, by = fy - 14 - bh;
+      ctx.fillStyle = 'rgba(24,22,26,.94)'; ctx.strokeStyle = 'rgba(255,60,60,.8)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 4) : ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx - 3, by + bh); ctx.lineTo(fx, by + bh + 5); ctx.lineTo(fx + 3, by + bh); ctx.fill();
+      ctx.fillStyle = '#F2EEE8'; lines.forEach((l, i) => ctx.fillText(l, fx, by + 12 + i * 11));
+      ctx.restore();
+    }
+  }
   function drawBubble(c, t) {
     const age = t - c.bubble.at;
     if (c.bubble.text === '!') { drawAlert(c, age); return; }
@@ -3646,7 +3703,7 @@ export function createHouseArt(ctx0, opts = {}) {
       items.push({ x1: p.x - r, y1: p.y - r, x2: p.x + r, y2: p.y + r, key: vs(p.x, p.y) + 0.0005 + (p.z > 0.05 ? 0.3 : 0), d: () => { if (gOn) G.billboard(iso(p.x, p.y, 0)[1], ZH * 0.5, MATERIAL.body); drawPet(p, t); if (gOn) G.clearBase(); } });
     });
     depthSort(items).forEach(it => it.d());
-    drawFrontWalls(lv); drawProjector(lv);
+    drawFrontWalls(lv); drawProjector(lv); drawObjectSpeech(lv, t);
     if (arrState) drawArrangeOverlay(arrState, lv);
     drawGuides(lv, t);
     drawPoofs(lv);
@@ -3792,6 +3849,7 @@ export function createHouseArt(ctx0, opts = {}) {
   function poke(o, part = '') {
     const run = (secs, msg) => { liveUntil.set(o.id + ':' + part, animT + secs); return msg; };
     switch (o.type) {
+      case 'overseer': return 'The eye turns toward you.';
       case 'tvunit': tvOn = !tvOn; return tvOn ? 'The TV flickers on.' : 'TV off.';
       case 'fireplace': if (fireOut.has(o.id)) { fireOut.delete(o.id); return 'The fire crackles back to life.'; } fireOut.add(o.id); return 'The fire dies down.';
       case 'laundry': return run(12, 'The washer churns into a spin cycle.');
@@ -3811,5 +3869,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectSay: (id, lines) => { speech.set(id, { lines: lines.slice(), at: animT }); }, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }

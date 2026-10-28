@@ -513,6 +513,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('gym', 'gym', 'Weights and mat', 180, ['cool', 'bold', 'minimal']),
   hobby('yogamat', 'yogamat', 'Yoga mat', 30, ['natural', 'soft', 'minimal'], ['#8E5468', '#7FB069', '#4A88B8', '#E0A43A', '#2B2B30']),
   hobby('massage', 'massage', 'Massage chair', 350, ['luxe', 'modern', 'cozy'], ['#2B2B30', '#E8DCC8', '#6E3C50']),
+  hobby('overseer', 'overseer', 'The Overseer', 450, ['industrial', 'minimal', 'bold'], ['#2B2B30', '#8E939A', '#E8EAEC']),
   hobby('jukebox', 'jukebox', 'Jukebox', 300, ['vintage', 'playful', 'bold'], ['#C2413A', '#4A5DA8', '#E0A43A']),
   hobby('clawmachine', 'clawmachine', 'Claw machine', 280, ['playful', 'bold', 'vintage'], ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF']),
   hobby('eggchair', 'eggchair', 'Hanging egg chair', 280, ['modern', 'bold', 'luxe'], ['#E8DCC8', '#2B2B30', '#C27A5A']),

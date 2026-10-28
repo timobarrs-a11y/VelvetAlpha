@@ -229,6 +229,7 @@ export const TYPES: Record<string, ObjectTypeDef> = {
   blossomvase: { W: 0.45, D: 0.45, h: 1.6, name: 'Cherry blossom branches', store: true, cols: ['#F2EEE8', '#2B2B30', '#9EC1C9'] },
   clawmachine: { W: 0.7, D: 0.6, h: 1.7, name: 'Claw machine', store: true, cols: ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF'], light: { at: [0.35, 0.3, 1.2], r: 60, col: '255,46,154' },
     spots: { c: { stand: [0.35, 1.05], dir: [0, -1], tag: 'claw' } } },
+  overseer: { W: 0.6, D: 0.6, h: 2.05, name: 'The Overseer', store: true, cols: ['#2B2B30', '#8E939A', '#E8EAEC'] },
   jukebox: { W: 0.8, D: 0.5, h: 1.45, name: 'Jukebox', store: true, cols: ['#C2413A', '#4A5DA8', '#E0A43A'], light: { at: [0.4, 0.5, 1.0], r: 70, col: '255,140,200' },
     spots: { j: { stand: [0.4, 1.0], dir: [0, -1], tag: 'jukebox' } } },
   eggchair: { W: 1.0, D: 1.0, h: 2.0, name: 'Hanging egg chair', store: true, cols: ['#E8DCC8', '#2B2B30', '#C27A5A'],

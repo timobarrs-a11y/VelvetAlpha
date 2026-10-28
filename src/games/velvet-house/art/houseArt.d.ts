@@ -135,6 +135,8 @@ export interface HouseArt {
   poke(o: { id: string; type: string }, part?: string): string | null;
   /** Sets whether the partner's mouth animates (talking). */
   setTalking(v: boolean): void;
+  /** A piece that talks (the Overseer): its lines, one after another in a bubble over it. */
+  objectSay(id: string, lines: string[]): void;
   /** Sets the partner's mood, 0-1, for facial expression. */
   setMood(v: number): void;
   TYPES: Record<string, unknown>;

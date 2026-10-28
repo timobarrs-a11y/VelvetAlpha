@@ -31,6 +31,9 @@ export function createInteract(g: Game): Partial<Game> {
     if (obj.type === 'pbox' && obj.contents) acts.push({ act: 'unpack', label: 'Unpack', icon: '' });
     if (obj.type === 'bag' && obj.contents) acts.push({ act: 'unpack', label: 'Open', icon: '' });
     if (isLight) acts.push({ act: 'toggleLight', label: 'Turn light on/off', icon: '' });
+    if (obj.type === 'overseer') {
+      acts.push({ act: 'overseerTalk', label: 'Ask for encouragement', icon: '' }, { act: 'overseerCake', label: 'Request cake', icon: '' }, { act: 'overseerUnplug', label: 'Unplug', icon: '' });
+    }
     if (spots) {
       const tags = Object.values(spots).map(s => s.tag);
       const seen = new Set<string>();
@@ -94,6 +97,7 @@ export function createInteract(g: Game): Partial<Game> {
 
   function handleObjectAction(obj: ObjectInstance, tag: string): void {
     if (tag === 'unpack') { unpack(obj); return; }
+    if (tag.startsWith('overseer')) { g.overseerAction(obj, tag); return; }
     if (tag === 'toggleLight') {
       const on = art.toggleObjectLight(obj.id);
       log(`${TYPES[obj.type]?.name ?? 'Light'} turned ${on ? 'on' : 'off'}.`);

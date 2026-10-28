@@ -239,6 +239,9 @@ export interface Game {
   // pets (systems/pets.ts)
   adoptPet(kind: PetKind, itemId?: string): Pet;
   petsTick(dt: number, gameMin: number, walkMul: number, hourF: number): void;
+  /** The Overseer: one push of its actions is one monologue; the tick lets it react to the player nearby. */
+  overseerAction(obj: ObjectInstance, act: string): void;
+  overseerTick(): void;
   /** The player's order for a pet: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop'. */
   petOrder(act: string, petId: string): void;
   petFrames(): PetFrame[];

@@ -20,6 +20,7 @@ import { createLifeSim } from './systems/lifeSim';
 import { createDeliveries } from './systems/deliveries';
 import { createConcerns } from './systems/concerns';
 import { createPets } from './systems/pets';
+import { createOverseer } from './systems/overseer';
 import { createScripts } from './script/gameHost';
 import { createFrame } from './view/frame';
 import { installDevHooks } from './dev/hooks';
@@ -60,6 +61,7 @@ function boot(attract: boolean): void {
   Object.assign(g, createLifeSim(g));
   Object.assign(g, createDeliveries(g));
   Object.assign(g, createPets(g));
+  Object.assign(g, createOverseer(g));
   Object.assign(g, createScripts(g));
   if (!attract) installDevHooks(g);
   startGameLoop(g);
