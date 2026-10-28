@@ -12,6 +12,8 @@ test('an order from the tray is kept all the way to the piece', async ({ page })
   await inGame(page, 'v.resetCamera()');
   await page.waitForTimeout(900);
   const table = (await objects(page)).find((o) => o.type === 'glamtable')!;
+  // If Maya is already at the mirror the order is refused, rightly (orders.test.ts covers that): wait until she is not.
+  for (let k = 0; k < 60 && (await inGame<{ act: string | null }>(page, "v.agentState('maya')")).act === 'glam'; k++) await page.waitForTimeout(1000);
   const [x, y] = await clientPosOf(page, table.id);
   await page.mouse.click(x, y - 20);
   // The tray shuts itself after a few seconds, so press the button at once.

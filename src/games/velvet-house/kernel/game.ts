@@ -200,7 +200,7 @@ export interface Game {
   findObjectAt(sx: number, sy: number): ObjectInstance | null;
   showObjectActions(obj: ObjectInstance, x: number, y: number, poked?: boolean): void;
   handleObjectAction(obj: ObjectInstance, tag: string): void;
-  handleOrder(chain: string): void;
+  handleOrder(chain: string, obj?: ObjectInstance): void;
   counterPartAt(obj: ObjectInstance, sx: number, sy: number): string;
   // shop, chat, save, drawer, goals
   handleBuy(item: CatalogEntry, color?: string): void;

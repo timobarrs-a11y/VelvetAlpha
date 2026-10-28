@@ -571,7 +571,7 @@ export const CATALOG: CatalogEntry[] = [
   look('look-nightstand-celestial', 'nightstand', 'celestial', 'Moon lamp side table', 'A round pearl table on a gold stem, and a cratered moon lamp that glows.', 190, ['soft', 'playful', 'cool'], ['#F4F1F8', '#E2C46A', '#DCD6E8']),
   look('look-dresser-celestial', 'dresser', 'celestial', 'Moon-phase dresser', 'Gold knobs that wax from new moon to full across every drawer, an amethyst geode and a glowing star on top.', 440, ['soft', 'playful', 'cool'], ['#B9A9DE', '#F4F1F8', '#1F2550']),
   look('look-toilet-celestial', 'toilet', 'celestial', 'Pearl toilet with a lavender seat', 'A pearl toilet with a lavender seat and a little gold star on the tank.', 230, ['soft', 'playful', 'cool'], ['#F4F1F8', '#B9A9DE', '#E2C46A']),
-  look('look-vanity-celestial', 'vanity', 'celestial', 'Pearl vanity with an opal shell basin', 'Gold star knobs, a shell-shaped opal basin and a gold tap.', 380, ['soft', 'playful', 'cool'], ['#F4F1F8', '#B9A9DE', '#1F2550']),
+  look('look-vanity-celestial', 'vanity', 'celestial', 'Pearl vanity with an opal shell basin', 'A lavender, navy or blush vanity on a gold plinth with gold star knobs, a pearl top, a shell-shaped opal basin and a gold tap.', 380, ['soft', 'playful', 'cool'], ['#B9A9DE', '#1F2550', '#F2C4CE']),
   look('look-shower-celestial', 'shower', 'celestial', 'Opal glass shower', 'Opal glass tile shimmering in four tints, a gold star rain head and glass frosted with stars.', 560, ['soft', 'playful', 'cool'], ['#F4F1F8', '#E2C46A', '#B9A9DE']),
 
   // Wall decor

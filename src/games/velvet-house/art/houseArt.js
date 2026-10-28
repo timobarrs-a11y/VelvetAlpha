@@ -1257,10 +1257,12 @@ export function createHouseArt(ctx0, opts = {}) {
       if (live(T.o.id)) { ell(sx, sy, 4.5, 2.5, '#BFE2F0'); ctx.strokeStyle = 'rgba(90,150,200,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, sy, 3, 1.6, animT * 9, 0, Math.PI * 1.4); ctx.stroke(); } },
   });
   Object.assign(LOOK_DRAWERS.vanity, {
-    // A pearl vanity with gold star knobs, an opal shell basin and a gold tap.
+    // A lavender vanity on a gold plinth: two framed doors with gold star knobs, a pearl top with an opal shell basin and a gold tap.
     celestial: (T, o) => { const c = cl(o);
-      T.box(0, 0, 0.04, 1.0, 0.5, 0.76, c); T.box(0, 0, 0, 1.0, 0.5, 0.04, shade(c, -0.15)); T.line([0, 0.501, 0.05], [1.0, 0.501, 0.05], CE.gold, 1.4); T.line([0.5, 0.501, 0.08], [0.5, 0.501, 0.78], 'rgba(0,0,0,.18)', 1); [0.42, 0.58].forEach((x) => { const [kx, ky] = T.P(x, 0.502, 0.48); star4(kx, ky, 3, CE.gold); });
-      T.box(-0.02, -0.02, 0.8, 1.04, 0.54, 0.04, CE.pearl); const [vx, vy] = T.P(0.5, 0.27, 0.841);
+      T.box(0.02, 0.02, 0, 0.96, 0.46, 0.06, CE.gold); T.box(0, 0, 0.06, 1.0, 0.5, 0.74, c);
+      [0.03, 0.51].forEach((x) => T.poly([[x + 0.03, 0.501, 0.12], [x + 0.43, 0.501, 0.12], [x + 0.43, 0.501, 0.74], [x + 0.03, 0.501, 0.74]], shade(c, 0.08), CE.gold, 1.1));
+      [0.42, 0.58].forEach((x) => { const [kx, ky] = T.P(x, 0.502, 0.48); star4(kx, ky, 3, CE.gold); });
+      T.box(-0.02, -0.02, 0.8, 1.04, 0.54, 0.04, CE.pearl); T.line([-0.02, 0.521, 0.8], [1.02, 0.521, 0.8], CE.gold, 1); const [vx, vy] = T.P(0.5, 0.27, 0.841);
       ctx.beginPath(); ctx.moveTo(vx - 11, vy + 1); for (let k = 0; k <= 8; k++) { const a = Math.PI + Math.PI * k / 8; ctx.lineTo(vx + Math.cos(a) * 11, vy + Math.sin(a) * 6 - (k % 2 ? 1 : 0)); } ctx.closePath(); ctx.fillStyle = opalTint(1); ctx.fill(); ctx.strokeStyle = CE.pearlShade; ctx.lineWidth = 0.8; ctx.stroke(); ell(vx, vy, 8, 3.4, opalTint(0));
       T.line([0.5, 0.05, 0.84], [0.5, 0.05, 1.0], CE.gold, 2); T.line([0.5, 0.05, 1.0], [0.5, 0.17, 0.97], CE.gold, 2); },
   });
@@ -1269,6 +1271,8 @@ export function createHouseArt(ctx0, opts = {}) {
     celestial: (o) => [F(0, 0, 1.18, 1.18, (T) => {
         T.box(0, 0, 0, 1.18, 1.18, 0.06, CE.pearl); for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) T.poly([[i * 0.1475, j * 0.1475, 0.061], [(i + 1) * 0.1475, j * 0.1475, 0.061], [(i + 1) * 0.1475, (j + 1) * 0.1475, 0.061], [i * 0.1475, (j + 1) * 0.1475, 0.061]], opalTint(i + j * 3), 'rgba(255,255,255,.6)', 0.5);
         T.box(0, 0, 0.06, 1.18, 0.06, 2.04, CE.pearl); for (let i = 0; i < 8; i++) for (let k = 0; k < 14; k++) T.poly([[i * 0.1475, 0.061, 0.06 + k * 0.146], [(i + 1) * 0.1475, 0.061, 0.06 + k * 0.146], [(i + 1) * 0.1475, 0.061, 0.06 + (k + 1) * 0.146], [i * 0.1475, 0.061, 0.06 + (k + 1) * 0.146]], opalTint(i * 2 + k), 'rgba(255,255,255,.6)', 0.5);
+        T.box(0, 0.06, 0.06, 0.06, 1.12, 2.04, CE.pearl); for (let j = 0; j < 8; j++) for (let k = 0; k < 14; k++) T.poly([[0.061, 0.06 + j * 0.14, 0.06 + k * 0.146], [0.061, 0.06 + (j + 1) * 0.14, 0.06 + k * 0.146], [0.061, 0.06 + (j + 1) * 0.14, 0.06 + (k + 1) * 0.146], [0.061, 0.06 + j * 0.14, 0.06 + (k + 1) * 0.146]], opalTint(j * 3 + k + 1), 'rgba(255,255,255,.6)', 0.5);
+        T.line([0, 0.061, 2.1], [1.18, 0.061, 2.1], CE.gold, 1.6); T.line([0.061, 0, 2.1], [0.061, 1.18, 2.1], CE.gold, 1.6);
         T.line([0.6, 0.06, 2.06], [0.6, 0.4, 2.06], CE.gold, 2.2); const [hx, hy] = T.P(0.6, 0.45, 2.04); star4(hx, hy, 5, CE.gold); [[0.48, 1.05], [0.72, 1.05]].forEach(([x, z]) => { const [kx, ky] = T.P(x, 0.062, z); circle(kx, ky, 2.4, CE.gold); });
         if (usingSlot(T.o.id + ':s') || live(T.o.id)) { steamAt(T, 0.6, 0.6, 0.9, 0, 6, 1); steamAt(T, 0.5, 0.75, 1.5, 0, 3, 0.8); const [wx, wy] = T.W(0.6, 0.45); PFX.emit(T.o.id + ':splash', 'splash', T.o.level, wx, wy, 1.9, 1); }
       }, { name: 'tray' }),

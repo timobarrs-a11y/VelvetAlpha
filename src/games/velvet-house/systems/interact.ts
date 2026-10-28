@@ -1,5 +1,6 @@
 import { TYPES, type ObjectInstance } from '../state/objects';
 import { startChain } from '../state/agents';
+import { chainOf } from '../state/activities';
 import { relocate } from '../state/arrange';
 import { CORNER_MARKET } from '../state/routine';
 import { type TrayAction } from '../ui/dialogue';
@@ -128,14 +129,23 @@ export function createInteract(g: Game): Partial<Game> {
       return;
     }
     const chain = chainMap[tag];
-    if (chain) handleOrder(chain);
+    if (chain) handleOrder(chain, obj);
   }
 
-  function handleOrder(chain: string): void {
-    const jordan = people[0];
+  // An order for a piece the other person is only walking to takes it over: they find something else to do. One they
+  // are already using is said, not silently dropped.
+  function handleOrder(chain: string, obj?: ObjectInstance): void {
+    const jordan = people[0], other = people[1];
     if (jordan.away) { log(`${jordan.name} is at work until ${CORNER_MARKET.end - 12} PM.`); return; }
     world.life.working = null;
-    startChain(house, jordan, chain, people[1], () => rng.next());
+    const onPiece = (p: typeof other) => !!obj && !!p?.task?.slot?.id.startsWith(obj.id + ':');
+    if (!startChain(house, jordan, chain, other, () => rng.next())) {
+      if (onPiece(other) && other.task!.phase === 'walk' && !other.scripted) { other.task = null; other.idle = 0.5; startChain(house, jordan, chain, other, () => rng.next()); }
+      if (jordan.task?.act !== chainOf(chain)[0]) {
+        log(onPiece(other) ? `${other.name} is using the ${(TYPES[obj!.type]?.name ?? 'piece').toLowerCase()} right now.` : `${jordan.name} can't do that right now.`);
+        return;
+      }
+    }
     view.follow = 'jordan';
     if (jordan.level !== view.level) g.setLevel(jordan.level, true);
     g.syncControls();
