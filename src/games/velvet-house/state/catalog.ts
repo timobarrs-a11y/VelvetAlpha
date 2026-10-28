@@ -432,7 +432,7 @@ export const CATALOG: CatalogEntry[] = [
   model('model-chestfreezer', 'chestfreezer', 'Chest freezer', 'Low and wide, with a lid that swings up. The kitchen gets its wall back.', 300, ['minimal', 'cool']),
   look('look-chestfreezer-camp', 'chestfreezer', 'camp', 'Camp cooler chest', 'Ribbed steel in forest green under a white lid, with chrome corners, latches and a side handle.', 360, ['natural', 'vintage', 'playful'], ['#2F5D43', '#B5532F', '#3F6E8C']),
   model('model-mediaconsole', 'mediaconsole', 'Media console', 'Long and low in pale oak: two drawers either side and a shelf for the console. More wall for the screen.', 260, ['modern', 'minimal', 'natural']),
-  look('look-mediaconsole-midcentury', 'mediaconsole', 'midcentury', 'Walnut credenza', 'A walnut credenza on splayed legs, slatted doors between two coloured ones, and brass pulls.', 420, ['vintage', 'warm', 'natural'], ['#D9A84A', '#3D6B73', '#C2603A']),
+  look('look-mediaconsole-danish', 'mediaconsole', 'danish', 'Teak credenza', 'A teak credenza on splayed legs, slatted doors between two coloured ones, and brass pulls.', 420, ['vintage', 'warm', 'natural'], ['#D9A84A', '#3D6B73', '#C2603A']),
 
   // Looks: the same pieces, drawn differently. Buying one restyles the piece already on the main floor.
   // Retro: a 1950s-70s American kitchen and living room.

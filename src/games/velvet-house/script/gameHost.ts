@@ -303,7 +303,7 @@ export function createScripts(g: Game): Partial<Game> {
 
   // A new game opens with the story. A save from before scripts existed never sees the move-in. A save in the middle of
   // a script picks up where it was.
-  const noScript = run.attract || (import.meta.env.DEV && new URLSearchParams(location.search).has('noscript'));
+  const noScript = run.attract || run.visit || (import.meta.env.DEV && new URLSearchParams(location.search).has('noscript'));
   const isNew = world.save === null;
   if (isNew && !noScript) {
     // The first day's furniture arrives in boxes, so the house starts without it.

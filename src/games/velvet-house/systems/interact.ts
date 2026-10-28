@@ -143,7 +143,8 @@ export function createInteract(g: Game): Partial<Game> {
       if (chain === 'tv' && !house.screens.length) { log('There is no TV in the house. The shop has some (Furniture).'); return; }
       if (onPiece(other) && other.task!.phase === 'walk' && !other.scripted) { other.task = null; other.idle = 0.5; startChain(house, jordan, chain, other, () => rng.next()); }
       if (jordan.task?.act !== chainOf(chain)[0]) {
-        log(onPiece(other) ? `${other.name} is using the ${(TYPES[obj!.type]?.name ?? 'piece').toLowerCase()} right now.` : `${jordan.name} can't do that right now.`);
+        log(chain === 'tv' && !house.screens.length ? 'There is no TV in the house. The shop has some (Furniture).'
+          : onPiece(other) ? `${other.name} is using the ${(TYPES[obj!.type]?.name ?? 'piece').toLowerCase()} right now.` : `${jordan.name} can't do that right now.`);
         return;
       }
     }

@@ -6,7 +6,9 @@
 <script>
   // ?script plays the story; without it the story is switched off so the other tests start in a furnished house.
   // ?freeze starts the game paused, so a screenshot is the same every time.
-  document.getElementById('g').src = '/games/velvet-house-next/index.html?companion=e2e' + (location.search.includes('freeze') ? '&freeze=1' : '') + (location.search.includes('menu') ? '' : '&nomenu=1') + (location.search.includes('script') ? '' : '&noscript=1');
+  // ?visit opens a friend's house (the test puts it under velvet-sims:visit first), as the app's visit page does.
+  document.getElementById('g').src = location.search.includes('visit') ? '/games/velvet-house-next/index.html?visit=1'
+    : '/games/velvet-house-next/index.html?companion=e2e' + (location.search.includes('freeze') ? '&freeze=1' : '') + (location.search.includes('menu') ? '' : '&nomenu=1') + (location.search.includes('script') ? '' : '&noscript=1');
 </script>
 <script>
 window.sampleLog = [];
@@ -29,6 +31,22 @@ addEventListener('message', (e) => {
   if (!d || d.type !== 'velvet:sample') return;
   window.sampleLog.push(d.input);
   setTimeout(() => e.source.postMessage({ type: 'velvet:sampleResult', seq: d.seq, text: window.reply }, location.origin), 100);
+});
+
+// Friends' houses: tests set window.friendHouses and window.visitsOpen; a visit asked for lands in window.visitTo, and Go
+// home from a visit sets window.visitEnded.
+window.friendHouses = []; window.visitsOpen = true; window.visitTo = null; window.visitEnded = false; window.housesLog = [];
+addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d) return;
+  if (d.type === 'velvet:visit') { window.visitTo = d.owner; return; }
+  if (d.type === 'velvet:visitEnd') { window.visitEnded = true; return; }
+  if (d.type !== 'velvet:houses') return;
+  window.housesLog.push(d.op);
+  const answer = (body) => setTimeout(() => e.source.postMessage({ type: 'velvet:housesResult', seq: d.seq, ...body }, location.origin), 50);
+  if (d.op === 'friends') return answer({ ok: true, data: window.friendHouses });
+  if (d.op === 'open') return answer({ ok: true, data: window.visitsOpen });
+  if (d.op === 'setOpen') { window.visitsOpen = d.open; return answer({ ok: true, data: d.open }); }
 });
 
 // Sharing designs: a small in-memory stand-in for the database. Tests set window.friendDesigns, window.pendingDesigns and

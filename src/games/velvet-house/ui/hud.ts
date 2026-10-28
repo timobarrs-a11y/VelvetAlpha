@@ -23,7 +23,7 @@ export function createHud(g: Game): Partial<Game> {
     };
     const drawerState: DrawerState = {
       arrange: g.isArranging() ? g.arrangeState() : null,
-      level: view.level, levelNames: [...LEVEL_NAMES], shopRooms: LEVELS[view.level]?.rooms.length > 1 ? LEVELS[view.level].rooms.map((r) => r.n) : [], shopRoom: view.room, shopLevels: FLOOR_ORDER.filter(l => isPaintable(l) && (l !== ATTIC || hasAttic())), lookInfo: art.lookInfo, pictureThumbs,
+      level: view.level, levelNames: [...LEVEL_NAMES], shopRooms: LEVELS[view.level]?.rooms.length > 1 ? LEVELS[view.level].rooms.map((r) => r.n) : [], shopRoom: view.room, visits: g.visits, shopLevels: FLOOR_ORDER.filter(l => isPaintable(l) && (l !== ATTIC || hasAttic())), lookInfo: art.lookInfo, pictureThumbs,
       page: g.s.drawerPage, shopTab: 'Today',
       money: world.household.money, bond: g.s.bond, day: world.day,
       minutes: world.minutes, owned, careerLevel: 0, careerPerf: 0,

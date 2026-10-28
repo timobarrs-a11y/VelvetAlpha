@@ -12,13 +12,17 @@ import { BOTTOM_STYLES } from '../state/clothing';
 export const VIEW_W = 640;
 export const VIEW_H = 440;
 
-const VELVET_COMPANION_ID = (() => {
-  try { return new URLSearchParams(location.search).get('companion') || ''; } catch { return ''; }
+const PARAMS = (() => {
+  try { return new URLSearchParams(location.search); } catch { return new URLSearchParams(); }
 })();
+const VELVET_COMPANION_ID = PARAMS.get('companion') || '';
+/** A visit to a friend's house (`?visit`): the host page put their house under the visit slot, and nothing is saved. */
+const VISIT = PARAMS.has('visit');
 
 // The live game keeps its own save slot. The legacy game uses `velvet-house-v1:<id>`, and sharing it meant
-// each could overwrite the other's progress.
-export const SAVE_KEY = VELVET_COMPANION_ID ? `velvet-sims:${VELVET_COMPANION_ID}` : 'velvet-sims';
+// each could overwrite the other's progress. A visit reads the friend's house from its own slot.
+export const VISIT_KEY = 'velvet-sims:visit';
+export const SAVE_KEY = VISIT ? VISIT_KEY : VELVET_COMPANION_ID ? `velvet-sims:${VELVET_COMPANION_ID}` : 'velvet-sims';
 const LEGACY_SAVE_KEY = VELVET_COMPANION_ID ? `velvet-house-v1:${VELVET_COMPANION_ID}` : 'velvet-house-v1';
 export const SPEEDS = [1, 3, 10];
 export const WALL_MODES: { mode: WallMode; label: string }[] = [
@@ -72,8 +76,11 @@ export interface World {
   petSeq: number;
 }
 
-/** How this page is running. `attract` is the title screen's living backdrop: a throwaway house that never saves. */
-export const run = { attract: false };
+/**
+ * How this page is running. `attract` is the title screen's living backdrop: a throwaway house that never saves.
+ * `visit` is a friend's house: looked round, never saved, with nothing to buy, move or say.
+ */
+export const run = { attract: false, visit: VISIT };
 
 export function loadWorld(): World {
   let day = 1;
@@ -82,14 +89,15 @@ export function loadWorld(): World {
   let save: Record<string, unknown> | null = null;
   try {
     // First run on the new slot: carry the house over from the old one (migrated, so the old copy stays as it was).
-    if (!run.attract && localStorage.getItem(SAVE_KEY) === null) {
+    if (!run.attract && !run.visit && localStorage.getItem(SAVE_KEY) === null) {
       const old = migrateSave(JSON.parse(localStorage.getItem(LEGACY_SAVE_KEY) ?? 'null'));
       if (old) localStorage.setItem(SAVE_KEY, JSON.stringify(old));
     }
     const raw = run.attract ? null : localStorage.getItem(SAVE_KEY);
     const migrated = raw ? migrateSave(JSON.parse(raw)) : null;
     // A house from before the story is not carried over: everyone starts again with the move-in.
-    const s = isCurrentContent(migrated) ? migrated : null;
+    // A friend's house is shown as it is, never thrown away.
+    const s = run.visit ? migrated : isCurrentContent(migrated) ? migrated : null;
     if (migrated && !s) localStorage.removeItem(SAVE_KEY);
     if (s) {
       save = s as unknown as Record<string, unknown>;

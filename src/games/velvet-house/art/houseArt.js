@@ -2531,10 +2531,10 @@ export function createHouseArt(ctx0, opts = {}) {
   const CON = { W: 2.0, D: 0.5 }, CONF = CON.D + 0.004;
   function mediaConsole(T, o) {
     const { W, D } = CON;
-    if (skinId(o) === 'midcentury') {
-      // Mid-century: a walnut credenza floating on splayed, tapered legs. Two slatted walnut doors between two coloured
-      // ones, brass pulls, and a little ceramic vase at one end.
-      const wal = '#6B4A35', panel = cl(o), z0 = 0.18;
+    if (skinId(o) === 'danish') {
+      // Danish: a teak credenza floating on splayed, tapered legs. Two slatted teak doors between two coloured ones,
+      // brass pulls, and a little ceramic vase at one end.
+      const wal = '#9A5B34', panel = cl(o), z0 = 0.18;
       [[0.12, 0.08, -1, -1], [W - 0.12, 0.08, 1, -1], [0.12, D - 0.08, -1, 1], [W - 0.12, D - 0.08, 1, 1]].forEach(([x, y, sx, sy]) => {
         T.line([x, y, z0], [x + sx * 0.05, y + sy * 0.03, 0], '#3E2A1E', 3.2); T.line([x, y, z0], [x + sx * 0.05, y + sy * 0.03, 0], '#7A5640', 1.4);
       });

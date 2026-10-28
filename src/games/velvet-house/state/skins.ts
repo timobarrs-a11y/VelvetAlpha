@@ -31,7 +31,7 @@ export function skinTarget(objs: ObjectInstance[], item: Pick<CatalogEntry, 'typ
   const swaps = swapsInPlace(item.type);
   if (!item.skin && !swaps) return null;
   const kind = kindOf(item.type);
-  const floor = UPSTAIRS_TYPES.has(item.type) ? UPSTAIRS : MAIN_FLOOR;
+  const floor = UPSTAIRS_TYPES.has(kind) ? UPSTAIRS : MAIN_FLOOR;
   const here = objs.filter((o) => (swaps ? kindOf(o.type) === kind : o.type === item.type) && o.level === floor);
   // Prefer a piece that does not wear the look yet, so a second purchase restyles the next one rather than the same one.
   return here.find((o) => o.type !== item.type || o.skin !== item.skin) ?? here[0] ?? null;
