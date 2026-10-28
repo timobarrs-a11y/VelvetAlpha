@@ -49,14 +49,16 @@ test('a wall lamp can be dragged along the wall, and goes back from a bad spot',
   expect(await inGame<string[]>(page, 'v.lampStock()')).toHaveLength(0);
 });
 
-test('a bought wall lamp hangs on the floor you are looking at, and the shop sells all eight styles', async ({ page }) => {
+test('a bought wall lamp hangs on the floor you are looking at, and the shop sells all eight styles (and shows the promo cloud lamp locked)', async ({ page }) => {
   const game = await openGame(page);
   await inGame(page, 'v.settle()');
   await setMoney(page, 2000);
   const count = (await lamps(page)).length;
   await game.locator('.vh-dock [data-open=shop]').click();
   await game.locator('[data-tab=Decor]').click();
-  await expect(game.locator('[data-item^=lamp-]')).toHaveCount(8);
+  await expect(game.locator('[data-item^=lamp-]:not(.vh-promo-locked)')).toHaveCount(8);
+  // The cloud lamp comes with the Nana promo code: on the shelf by name, locked.
+  await expect(game.locator('[data-item=lamp-cloud]')).toHaveClass(/vh-promo-locked/);
   await game.locator('[data-item=lamp-cage] [data-buy]').click();
   await expect.poll(async () => (await lamps(page)).length).toBe(count + 1);
   const added = (await lamps(page)).at(-1)!;
