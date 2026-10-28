@@ -584,6 +584,8 @@ export function createHouseArt(ctx0, opts = {}) {
   // The seams the formwork boards leave in poured concrete, across a face that looks along +y.
   const boardSeams = (T, x0, x1, y, z0, z1, n) => { for (let k = 1; k < n; k++) { const z = z0 + (z1 - z0) * k / n; T.line([x0, y, z], [x1, y, z], 'rgba(0,0,0,.13)', 0.8); } };
   const tieHoles = (T, xs, y, zs) => xs.forEach((x) => zs.forEach((z) => { const [hx, hy] = T.P(x, y, z); circle(hx, hy, 1.1, 'rgba(0,0,0,.28)'); }));
+  // Pillows drawn as one part over the whole mattress, so the depth sort always puts them after (on top of) the mattress.
+  const pillowsOn = (mattress, boxes) => F(mattress[0], mattress[1], mattress[0] + mattress[3], mattress[1] + mattress[4], (T) => boxes.forEach(([x, y, z, w, d, h, c]) => T.box(x, y, z, w, d, h, c)), { onTop: true });
   Object.assign(LOOK_DRAWERS, {
     // A concrete slab for a headboard on a low concrete plinth, white linen and a cover in the piece's colour.
     bed: { brutalist: (o) => { const c = cl(o); return [
@@ -710,8 +712,7 @@ export function createHouseArt(ctx0, opts = {}) {
       B(0.16, 0.02, 0, 2.34, 1.56, 0.04, HO.brass), B(0.16, 0.02, 0.04, 2.34, 1.56, 0.3, c),
       B(0.18, 0.05, 0.34, 2.3, 1.5, 0.18, HO.cream, { name: 'mattress' }),
       // Euro shams upright against the headboard and pillows in front, each pair spanning the mattress edge to edge.
-      B(0.16, 0.05, 0.52, 0.16, 0.74, 0.32, HO.white), B(0.16, 0.81, 0.52, 0.16, 0.74, 0.32, HO.white),
-      B(0.32, 0.05, 0.52, 0.4, 0.74, 0.12, HO.white), B(0.32, 0.81, 0.52, 0.4, 0.74, 0.12, HO.white),
+      pillowsOn([0.18, 0.05, 0.34, 2.3, 1.5], [[0.16, 0.05, 0.52, 0.16, 0.74, 0.32, HO.white], [0.16, 0.81, 0.52, 0.16, 0.74, 0.32, HO.white], [0.32, 0.05, 0.52, 0.4, 0.74, 0.12, HO.white], [0.32, 0.81, 0.52, 0.4, 0.74, 0.12, HO.white]]),
       B(0.9, 0.05, 0.52, 1.58, 1.5, 0.06, HO.white), B(0.9, 0.05, 0.58, 1.58, 1.5, 0.01, HO.white, { cover: true }),
       // The brass frame round the headboard: a cap along the top and a post at each end, as boxes so the pillows sort in front.
       B(-0.01, -0.01, 1.45, 0.18, 1.62, 0.035, HO.brass), B(-0.01, -0.01, 0.04, 0.18, 0.035, 1.41, HO.brass), B(-0.01, 1.575, 0.04, 0.18, 0.035, 1.41, HO.brass),
@@ -778,23 +779,31 @@ export function createHouseArt(ctx0, opts = {}) {
   const PATCH = [CO.rose, CO.butter, CO.sage, CO.blue, CO.cream, '#D98C6A'];
   const ditsy = (T, x0, x1, y, z0, z1, n) => { for (let k = 0; k < n; k++) { const [fx, fy] = T.P(x0 + ((k * 0.618) % 1) * (x1 - x0), y, z0 + ((k * 0.382) % 1) * (z1 - z0)); circle(fx, fy, 1.2, PATCH[k % 4]); } };
   Object.assign(LOOK_DRAWERS.bed, {
-    // A white iron bed with brass knobs, a full mattress, ruffled pillows and a patchwork quilt in the piece's colours.
-    cottage: (o) => { const c = cl(o); return [
-      F(0, 0, 0.1, 1.6, (T) => { [0.03, 1.57].forEach((y) => { T.box(0.02, y - 0.03, 0, 0.06, 0.06, 1.25, CO.iron); const [kx, ky] = T.P(0.05, y, 1.29); circle(kx, ky, 2.6, '#C9A24A'); });
-        T.line([0.05, 0.03, 1.15], [0.05, 1.57, 1.15], CO.iron, 3); T.line([0.05, 0.03, 0.55], [0.05, 1.57, 0.55], CO.iron, 3);
-        // The arch springs from post to post: a curve of short iron segments, with the bars running up to meet it.
+    // A white iron bedstead (edged darker so it reads against pale walls) with an arched headboard and brass knobs, a
+    // ruffled white bed skirt to the floor, plump frilled pillows, and a patchwork quilt that drapes down the side and
+    // over the foot.
+    cottage: (o) => { const c = cl(o), iron = (T, a, b, w) => { T.line(a, b, '#9C978C', w + 1.2); T.line(a, b, CO.iron, w); }; return [
+      F(0, 0, 0.1, 1.6, (T) => { [0.03, 1.57].forEach((y) => { T.box(0.02, y - 0.03, 0, 0.06, 0.06, 1.25, CO.iron); const [kx, ky] = T.P(0.05, y, 1.29); circle(kx, ky, 2.8, '#C9A24A', '#8E6E2A'); });
         const arch = (y) => 1.15 + 0.16 * Math.sin(Math.PI * (y - 0.03) / 1.54);
-        for (let k = 0; k < 16; k++) { const y0 = 0.03 + 1.54 * k / 16, y1 = 0.03 + 1.54 * (k + 1) / 16; T.line([0.05, y0, arch(y0)], [0.05, y1, arch(y1)], CO.iron, 2.6); }
-        for (let k = 1; k < 9; k++) { const y = 1.6 * k / 9; T.line([0.05, y, 0.55], [0.05, y, arch(y)], CO.ironShade, 1.6); } }),
-      B(0.1, 0.04, 0.12, 2.36, 1.52, 0.22, CO.cream), B(0.1, 0.04, 0.34, 2.34, 1.52, 0.18, '#FBF7EE', { name: 'mattress' }),
-      // Pillowcases in a pale wash of the quilt's colour, with a frill, so they read against the white mattress.
-      B(0.14, 0.04, 0.52, 0.4, 0.74, 0.14, shade(c, 0.45)), B(0.14, 0.82, 0.52, 0.4, 0.74, 0.14, shade(c, 0.45)),
-      F(0.14, 0.04, 0.54, 1.56, (T) => [0.04, 0.82].forEach((y) => T.line([0.54, y, 0.6], [0.54, y + 0.74, 0.6], '#FFFFFF', 2.2)), { onTop: true }),
-      B(0.82, 0.02, 0.5, 1.62, 1.56, 0.06, c), B(0.82, 0.02, 0.56, 1.62, 1.56, 0.01, c, { cover: true }),
-      F(0.82, 0, 2.44, 1.6, (T) => { const cols = [c, ...PATCH.filter((p) => p !== c)];
-        for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) { const x = 0.84 + i * 0.265, y = 0.04 + j * 0.305; T.poly([[x, y, 0.571], [x + 0.25, y, 0.571], [x + 0.25, y + 0.29, 0.571], [x, y + 0.29, 0.571]], cols[(i * 2 + j * 3) % cols.length], 'rgba(255,255,255,.6)', 0.6); }
-        T.poly([[0.82, 1.58, 0.57], [2.44, 1.58, 0.57], [2.44, 1.58, 0.38], [0.82, 1.58, 0.38]], shade(c, -0.1)); }, { onTop: true }),
-      F(2.42, 0, 2.5, 1.6, (T) => { [0.03, 1.57].forEach((y) => { T.box(2.42, y - 0.03, 0, 0.06, 0.06, 0.82, CO.iron); const [kx, ky] = T.P(2.45, y, 0.86); circle(kx, ky, 2.4, '#C9A24A'); }); T.line([2.45, 0.03, 0.78], [2.45, 1.57, 0.78], CO.iron, 3); for (let k = 1; k < 9; k++) T.line([2.45, 1.6 * k / 9, 0.58], [2.45, 1.6 * k / 9, 0.78], CO.ironShade, 1.6); }, { onTop: true })]; },
+        for (let k = 0; k < 16; k++) { const y0 = 0.03 + 1.54 * k / 16, y1 = 0.03 + 1.54 * (k + 1) / 16; iron(T, [0.05, y0, arch(y0)], [0.05, y1, arch(y1)], 2.2); }
+        iron(T, [0.05, 0.03, 0.52], [0.05, 1.57, 0.52], 2.2);
+        for (let k = 1; k < 9; k++) { const y = 1.6 * k / 9; iron(T, [0.05, y, 0.52], [0.05, y, arch(y)], 1.2); } }),
+      // The bed skirt: white with gathered ruffle lines, from the floor to the mattress.
+      F(0.1, 0.02, 2.44, 1.58, (T) => { T.box(0.1, 0.02, 0, 2.34, 1.56, 0.3, '#FBF8F1');
+        for (let x = 0.14; x < 2.42; x += 0.07) T.line([x, 1.581, 0.02], [x, 1.581, 0.28], 'rgba(150,140,125,.35)', 0.8);
+        for (let y = 0.06; y < 1.56; y += 0.07) T.line([2.441, y, 0.02], [2.441, y, 0.28], 'rgba(150,140,125,.35)', 0.8); }),
+      B(0.1, 0.04, 0.3, 2.34, 1.52, 0.2, '#FBF7EE', { name: 'mattress' }),
+      // Plump pillows: a softer box, a rounded top, and a white frill round the front edge.
+      F(0.1, 0.04, 2.44, 1.56, (T) => [0.06, 0.82].forEach((y) => { T.box(0.14, y, 0.5, 0.38, 0.7, 0.1, shade(c, 0.45));
+        const [ax, ay] = T.P(0.33, y + 0.35, 0.62); ell(ax, ay, 15, 5, shade(c, 0.55)); T.line([0.52, y, 0.5], [0.52, y + 0.7, 0.5], '#FFFFFF', 2.4); T.line([0.52, y, 0.6], [0.52, y + 0.7, 0.6], '#FFFFFF', 1.6); }), { onTop: true }),
+      // The quilt: patches on top, the near side and the foot hanging down over the skirt, with a scalloped hem.
+      B(0.8, 0.02, 0.5, 1.66, 1.56, 0.05, c), B(0.8, 0.02, 0.55, 1.66, 1.56, 0.01, c, { cover: true }),
+      F(0.8, 0, 2.5, 1.6, (T) => { const cols = [c, ...PATCH.filter((p) => p !== c)], patch = (q, k) => T.poly(q, cols[k % cols.length], 'rgba(255,255,255,.65)', 0.6);
+        for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) { const x = 0.82 + i * 0.27, y = 0.04 + j * 0.305; patch([[x, y, 0.561], [x + 0.26, y, 0.561], [x + 0.26, y + 0.295, 0.561], [x, y + 0.295, 0.561]], i * 2 + j * 3); }
+        for (let i = 0; i < 6; i++) { const x = 0.82 + i * 0.27; patch([[x, 1.585, 0.56], [x + 0.26, 1.585, 0.56], [x + 0.26, 1.585, 0.24], [x, 1.585, 0.24]], i * 2 + 4 * 3 + 1); }
+        for (let j = 0; j < 5; j++) { const y = 0.04 + j * 0.305; patch([[2.465, y, 0.56], [2.465, y + 0.295, 0.56], [2.465, y + 0.295, 0.24], [2.465, y, 0.24]], 5 * 2 + j * 3 + 1); }
+        for (let x = 0.82; x < 2.44; x += 0.09) { const [hx, hy] = T.P(x + 0.045, 1.585, 0.24); ctx.beginPath(); ctx.arc(hx, hy, 2.2, 0, Math.PI); ctx.fillStyle = shade(c, -0.1); ctx.fill(); } }, { onTop: true }),
+      F(2.42, 0, 2.5, 1.6, (T) => { [0.03, 1.57].forEach((y) => { T.box(2.42, y - 0.03, 0, 0.06, 0.06, 0.82, CO.iron); const [kx, ky] = T.P(2.45, y, 0.86); circle(kx, ky, 2.6, '#C9A24A', '#8E6E2A'); }); iron(T, [2.47, 0.03, 0.78], [2.47, 1.57, 0.78], 2.2); for (let k = 1; k < 9; k++) iron(T, [2.47, 1.6 * k / 9, 0.6], [2.47, 1.6 * k / 9, 0.78], 1.2); }, { onTop: true })]; },
   });
   Object.assign(LOOK_DRAWERS.nightstand, {
     // A painted pine table with a drawer and a ceramic knob, a lamp with a floral shade and a jar of wildflowers.
@@ -865,7 +874,7 @@ export function createHouseArt(ctx0, opts = {}) {
       F(0, 0, 0.12, 1.6, (T) => { T.box(0, 0, 0.1, 0.12, 1.6, 1.0, MC.walnut); cane(T, 0.121, 0.12, 1.48, 0.42, 0.96); }),
       F(0.12, 0, 2.5, 1.6, (T) => taperLegs(T, [[0.2, 0.1, -0.03, -0.03], [2.4, 0.1, 0.03, -0.03], [0.2, 1.5, -0.03, 0.03], [2.4, 1.5, 0.03, 0.03]], 0.14, MC.walnutDark)),
       B(0.12, 0.02, 0.14, 2.36, 1.56, 0.16, MC.walnut), B(0.15, 0.05, 0.3, 2.32, 1.5, 0.18, '#F7F3EA', { name: 'mattress' }),
-      B(0.16, 0.05, 0.48, 0.4, 0.72, 0.13, shade(c, 0.5)), B(0.16, 0.83, 0.48, 0.4, 0.72, 0.13, shade(c, 0.5)),
+      pillowsOn([0.15, 0.05, 0.3, 2.32, 1.5], [[0.16, 0.05, 0.48, 0.4, 0.72, 0.13, shade(c, 0.5)], [0.16, 0.83, 0.48, 0.4, 0.72, 0.13, shade(c, 0.5)]]),
       B(0.86, 0.03, 0.48, 1.62, 1.54, 0.06, c), B(0.86, 0.03, 0.54, 1.62, 1.54, 0.01, c, { cover: true }),
       F(0.86, 0, 2.5, 1.6, (T) => { T.poly([[1.95, 0.03, 0.551], [2.3, 0.03, 0.551], [2.3, 1.57, 0.551], [1.95, 1.57, 0.551]], MC.orange); for (let k = 0; k < 6; k++) T.line([1.97 + k * 0.06, 0.03, 0.552], [1.97 + k * 0.06, 1.57, 0.552], 'rgba(255,255,255,.35)', 0.8); }, { onTop: true })]; },
   });
