@@ -4,6 +4,7 @@ import { MATERIAL } from '../engine/gbuffer';
 import { sunLight, gradeTint } from '../engine/deferredLights';
 import { createParticles } from '../engine/particles';
 import { drawWallLamp } from './wallLamps.js';
+import { drawFoliage, pot as plantPot, seedOf } from './plants.js';
 import { poseRig, idleRig, walkRig, seatLegs, legIK, gaitFoot, headTarget, turnHead, idleGlance, treeLeg, quadGait, limbIK, QUAD, FOOT, GAIT } from './poseAnim.js';
 import { headFrameFor } from '../state/headSprites';
 import { handImage, HAND_SPRITE } from '../state/bodySprites';
@@ -1440,6 +1441,8 @@ export function createHouseArt(ctx0, opts = {}) {
     if (sk === 'summer') { T.line([0.02, 0.511, 0.2], [0.48, 0.511, 0.2], '#3FA3A5', 3); T.line([0.02, 0.511, 0.12], [0.48, 0.511, 0.12], '#F6D56E', 2); }
     if (sk === 'fall') T.line([0.02, 0.501, 0.2], [0.48, 0.501, 0.2], 'rgba(255,255,255,.2)', 1.2); };
   // What goes on the leaves once they are drawn: blooms, palm tips, mums or a dusting of snow.
+  /** The drawing tools the plant kit (art/plants.js) draws with; the canvas can change under it, so it is read each time. */
+  const plantH = () => ({ ctx, ell, circle, limb, rr, shade });
   const SEASON_BLOOM = {
     spring: (T, o, sx, sy) => { [[-9, -24, '#F3A6BE'], [8, -30, '#FFF3B0'], [-2, -36, '#F3A6BE'], [11, -17, '#FFB3C7']].forEach(([dx, dy, c]) => { circle(sx + dx, sy + dy, 3.2, c); circle(sx + dx, sy + dy, 1.2, '#F6D56E'); }); },
     summer: (T, o, sx, sy) => { [[-6, -22], [7, -27], [0, -33]].forEach(([dx, dy]) => { ell(sx + dx, sy + dy, 2, 7, '#3F7D4E', null, dx * 0.1); }); },
@@ -1630,9 +1633,10 @@ export function createHouseArt(ctx0, opts = {}) {
           // Modern: a square matte planter with a pale gravel top.
           T.box(0.02, 0.02, 0, 0.46, 0.46, 0.4, cl(o)); T.box(0.02, 0.02, 0.4, 0.46, 0.46, 0.03, shade(cl(o), 0.18));
           T.line([0.02, 0.481, 0.2], [0.48, 0.481, 0.2], 'rgba(255,255,255,.12)', 1);
-        } else T.box(0, 0, 0, 0.5, 0.5, 0.42, o.pot || '#C26B4A');
-        T.poly([[0.05, 0.05, 0.421], [0.45, 0.05, 0.421], [0.45, 0.45, 0.421], [0.05, 0.45, 0.421]], skinId(o) === 'modern' ? '#B9B4AC' : '#4A3426'); const [sx, sy] = T.P(0.25, 0.25, 0.55), sway = Math.sin(t * 0.8 + o.x) * 0.04;
-        [[-10, -14, -0.7, '#3F7D4E'], [9, -16, 0.6, '#4F9460'], [-4, -26, -0.25, '#4F9460'], [5, -30, 0.3, '#3F7D4E'], [0, -20, 0, '#5BA36C']].forEach(([dx, dy, r, c]) => ell(sx + dx, sy + dy, 5, 13, c, null, r + sway));
+        } else plantPot(plantH(), T, o.pot || '#C26B4A', 0.44, 0.42, 0.03, 0.03);
+        if (skinId(o)) T.poly([[0.05, 0.05, 0.421], [0.45, 0.05, 0.421], [0.45, 0.45, 0.421], [0.05, 0.45, 0.421]], skinId(o) === 'modern' ? '#B9B4AC' : '#4A3426');
+        const [sx, sy] = T.P(0.25, 0.25, 0.55);
+        drawFoliage(plantH(), 'houseplant', ...T.P(0.25, 0.25, 0.43), t, seedOf(o.id));
         if (SEASON_BLOOM[skinId(o)]) SEASON_BLOOM[skinId(o)](T, o, sx, sy); })],
        },
     bookshelf: {    
@@ -2077,19 +2081,19 @@ export function createHouseArt(ctx0, opts = {}) {
       })] },
     // ---- plants (they all need watering) ----
     fern: {      
-      parts: (o) => [F(0, 0, 0.55, 0.55, (T, ob, t) => { T.box(0.08, 0.08, 0, 0.4, 0.4, 0.42, cl(o)); const [x, y] = T.P(0.27, 0.27, 0.45); for (let k = 0; k < 9; k++) { const a = -Math.PI + k / 8 * Math.PI, sw = Math.sin(t * 0.8 + k) * 0.05, ex = x + Math.cos(a + sw) * 22, ey = y - 6 + Math.sin(a + sw) * 12 + 6; ctx.strokeStyle = k % 2 ? '#3F7D4E' : '#4F9460'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo((x + ex) / 2, y - 20, ex, ey); ctx.stroke(); } })],
+      parts: (o) => [F(0, 0, 0.55, 0.55, (T, ob, t) => { const [x, y] = plantPot(plantH(), T, cl(o), 0.4, 0.38, 0.075, 0.075); drawFoliage(plantH(), 'fern', x, y, t, seedOf(ob.id)); })],
        },
     cactus: {      
-      parts: (o) => [F(0, 0, 0.45, 0.45, (T) => { T.box(0.06, 0.06, 0, 0.33, 0.33, 0.32, cl(o)); const [x, y] = T.P(0.22, 0.22, 0.33); rr(x - 5, y - 46, 10, 46, 5, '#4F8A5B'); rr(x - 15, y - 34, 7, 16, 3.5, '#4F8A5B'); rr(x - 15, y - 22, 12, 6, 3, '#4F8A5B'); rr(x + 7, y - 40, 7, 18, 3.5, '#5A9765'); rr(x + 3, y - 26, 11, 6, 3, '#5A9765'); limb(x, y - 44, x, y - 4, 'rgba(255,255,255,.25)', 1); circle(x, y - 47, 2.5, '#E07A9A'); })],
+      parts: (o) => [F(0, 0, 0.45, 0.45, (T, ob, t) => { const [x, y] = plantPot(plantH(), T, cl(o), 0.34, 0.3, 0.055, 0.055); drawFoliage(plantH(), 'cactus', x, y, t, seedOf(ob.id)); })],
        },
     fiddle: {      
-      parts: (o) => [F(0, 0, 0.6, 0.6, (T, ob, t) => { T.box(0.1, 0.1, 0, 0.4, 0.4, 0.45, cl(o)); const [x, y] = T.P(0.3, 0.3, 0.45); limb(x, y, x + 2, y - 50, '#6B4A35', 2.5); [[-10, -30, -0.6], [10, -36, 0.6], [-8, -44, -0.4], [9, -50, 0.5], [0, -58, 0], [-12, -52, -0.8], [12, -24, 0.9]].forEach(([dx, dy, r], k) => ell(x + dx + Math.sin(t * 0.6 + k) * 0.8, y + dy, 6, 9, k % 2 ? '#2F6B40' : '#3F7D4E', null, r)); })],
+      parts: (o) => [F(0, 0, 0.6, 0.6, (T, ob, t) => { const [x, y] = plantPot(plantH(), T, cl(o), 0.42, 0.44, 0.09, 0.09); drawFoliage(plantH(), 'fiddle', x, y, t, seedOf(ob.id)); })],
        },
     snake: {      
-      parts: (o) => [F(0, 0, 0.45, 0.45, (T) => { T.box(0.06, 0.06, 0, 0.33, 0.33, 0.36, cl(o)); const [x, y] = T.P(0.22, 0.22, 0.37); [[-7, 30, -0.15], [-2, 40, -0.05], [4, 36, 0.08], [8, 26, 0.2], [0, 22, 0]].forEach(([dx, hh, r], k) => { ell(x + dx + Math.sin(r) * hh * 0.5, y - hh / 2, 3.2, hh / 2, k % 2 ? '#4E7A3E' : '#5E8A48', null, r); ell(x + dx + Math.sin(r) * hh * 0.5, y - hh / 2, 1.4, hh / 2 - 2, 'rgba(220,210,120,.35)', null, r); }); })],
+      parts: (o) => [F(0, 0, 0.45, 0.45, (T, ob, t) => { const [x, y] = plantPot(plantH(), T, cl(o), 0.34, 0.36, 0.055, 0.055); drawFoliage(plantH(), 'snake', x, y, t, seedOf(ob.id)); })],
        },
     palm: {      
-      parts: (o) => [F(0, 0, 0.7, 0.7, (T, ob, t) => { T.box(0.12, 0.12, 0, 0.46, 0.46, 0.45, cl(o)); const [x, y] = T.P(0.35, 0.35, 0.45); for (let k = 0; k < 7; k++) { const a = -Math.PI * 0.9 + k / 6 * Math.PI * 0.8, sw = Math.sin(t * 0.7 + k) * 0.04, tx = x + Math.cos(a + sw) * 30, ty = y - 50 + Math.sin(a + sw) * 8 + 18; limb(x, y, (x + tx) / 2, ty - 10, '#5A7A3A', 1.5); for (let m = 0; m < 5; m++) { const f = 0.4 + m * 0.13, px = x + (tx - x) * f, py = y + (ty - 8 - y) * f; ell(px, py, 2, 6, '#4F9460', null, a + 1.2); } } })],
+      parts: (o) => [F(0, 0, 0.7, 0.7, (T, ob, t) => { const [x, y] = plantPot(plantH(), T, cl(o), 0.46, 0.45, 0.12, 0.12); drawFoliage(plantH(), 'palm', x, y, t, seedOf(ob.id)); })],
        },
     // ---- hobbies: each one is something they can do ----
     aquarium: {       
