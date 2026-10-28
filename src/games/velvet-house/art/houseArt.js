@@ -2885,12 +2885,14 @@ export function createHouseArt(ctx0, opts = {}) {
     return ps;
   }
 
-  function ease2(ps, side, tx, ty, dt, rate = 9) {
+  // A hand eases toward its target, but as an offset from the shoulder: eased on the screen, a walking body would
+  // pull its hands along behind it, trailing by its speed over the rate.
+  function ease2(ps, side, tx, ty, dt, rate = 9, ox = 0, oy = 0) {
     const k = Math.min(1, dt * rate);
     let a = ps.a[side];
-    if (!a) { a = ps.a[side] = [tx, ty]; }
-    a[0] += (tx - a[0]) * k; a[1] += (ty - a[1]) * k;
-    return a;
+    if (!a) { a = ps.a[side] = [tx - ox, ty - oy]; }
+    a[0] += (tx - ox - a[0]) * k; a[1] += (ty - oy - a[1]) * k;
+    return [a[0] + ox, a[1] + oy];
   }
 
   function walkState(c) {
@@ -3272,7 +3274,8 @@ export function createHouseArt(ctx0, opts = {}) {
     const rig = c.walking ? null : (poseRig(pose, t, c.seed, c.act, c.actMin || 0) || (standing && !c.lookAt ? idleRig(t, c.seed, c.expr) : null));
     const bl = pose === 'sleep' ? 1 : blinkAmt(t, c.seed), idle = (!rig || rig.idle) && !c.walking && !c.sit && pose !== 'sleep' && pose !== 'dance';
     const breathe = Math.sin(t * 1.9 + c.seed * 2) * (idle ? 0.012 : 0.005);
-    const sway = Math.sin(t * 2.2 + c.seed * 3) * (c.walking ? 2.6 : idle ? 0.9 : 0.4);
+    // Walking, the hair swings once a stride, with the feet, not on a clock of its own.
+    const sway = c.walking ? Math.sin(ph) * 2.2 * amp : Math.sin(t * 2.2 + c.seed * 3) * (idle ? 0.9 : 0.4);
     // Eyes follow whoever they're with; otherwise they wander while idle.
     const look = c.lookAt ? iso(c.lookAt[0], c.lookAt[1], 1.1) : null;
     const gaze = look ? Math.max(-2.6, Math.min(2.6, (look[0] - fx) / 14)) : idle ? Math.sin(t * 0.45 + c.seed * 5) * 2.2 + Math.sin(t * 0.13 + c.seed) * 1.2 : 0;
@@ -3348,9 +3351,9 @@ export function createHouseArt(ctx0, opts = {}) {
           tx = h[0]; ty = h[1]; el = local(w.elbows[side], side);
         }
       }
-      // Walking arms track the stride closely; a slow ease here leaves them trailing behind the body.
-      const armRate = rig && rig.hands ? (rig.snap ? 28 : 12) : c.walking ? 26 : 9;
-      const e = ease2(psA, side, tx, ty, rdt, clip.active ? Math.min(armRate, 4 + 9 * clip.e) : armRate);
+      // Walking arms are the stride itself (amp fades the swing in and out), so they are not eased: an ease would put them a step behind the legs.
+      const armRate = rig && rig.hands ? (rig.snap ? 28 : 12) : c.walking ? 1e4 : 9;
+      const e = ease2(psA, side, tx, ty, rdt, clip.active ? Math.min(armRate, 4 + 9 * clip.e) : armRate, sx0, sy0);
       if (!el) el = spec ? [(sx0 + e[0]) / 2 + sox * 0.55, (sy0 + e[1]) / 2 + 3] : [(sx0 + e[0]) / 2, (sy0 + e[1]) / 2];
       const held = rig && rig.props ? rig.props.find(q => !NOT_HELD.has(q.kind) && (q.side == null || q.side === side)) : null;
       const grip = (rig && rig.grip && rig.grip[side]) || (held ? (OPEN_KINDS.has(held.kind) ? 'open' : 'fist') : spec && spec[2] > 0.3 ? 'open' : 'relaxed');
