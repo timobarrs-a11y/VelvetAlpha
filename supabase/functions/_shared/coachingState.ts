@@ -53,6 +53,8 @@ export interface CoachingState {
     previous: number | null;
     direction: 'up' | 'down' | 'flat' | null;
   };
+  /** What they first told Atlas about their goals and dreams, word for word (user_own_words): the coach starts here. */
+  ownWords: string | null;
   /** Most recent user message to this coach that is older than the current burst of chat. */
   lastUserMessageBeforeSession: string | null;
   /** Recent coaching change log entries (coach or user edits). */
@@ -95,7 +97,7 @@ export async function loadCoachingState(
 ): Promise<CoachingState> {
   const burstCutoff = new Date(Date.now() - SESSION_BURST_MINUTES * 60 * 1000).toISOString();
 
-  const [goalRes, plansRes, commitmentsRes, tickRes, artifactRes, confidenceRes, lastMsgRes, changeLogRes] = await Promise.all([
+  const [goalRes, plansRes, commitmentsRes, tickRes, artifactRes, confidenceRes, lastMsgRes, changeLogRes, wordsRes] = await Promise.all([
     supabaseAdmin
       .from('user_goals')
       .select('title, goal_type, target_date, status')
@@ -164,6 +166,11 @@ export async function loadCoachingState(
       .or(`companion_id.eq.${companionId},companion_id.is.null`)
       .order('created_at', { ascending: false })
       .limit(10),
+    supabaseAdmin
+      .from('user_own_words')
+      .select('words')
+      .eq('user_id', userId)
+      .maybeSingle(),
   ]);
 
   const plans = (plansRes.data ?? []).map((p: Record<string, unknown>) => ({
@@ -195,6 +202,7 @@ export async function loadCoachingState(
     confidenceTrend: buildConfidenceTrend(confidenceRes.data ?? []),
     lastUserMessageBeforeSession: (lastMsgRes.data as { created_at: string } | null)?.created_at ?? null,
     changeLog: (changeLogRes.data ?? []) as CoachingState['changeLog'],
+    ownWords: (wordsRes.data as { words: string } | null)?.words ?? null,
   };
 }
 
@@ -257,6 +265,10 @@ export function computeSignals(state: CoachingState, now: Date = new Date()): Si
 
 export function formatCoachingStateBlock(state: CoachingState, signals: Signal[] = []): string {
   const parts: string[] = [];
+
+  if (state.ownWords) {
+    parts.push(`IN THEIR OWN WORDS (what they first told Atlas about their goals and dreams, word for word; start from this, never ask them to say it again): "${state.ownWords}"`);
+  }
 
   if (state.goal) {
     const goalLines = [`GOAL: "${state.goal.title}" (${state.goal.goal_type})`];

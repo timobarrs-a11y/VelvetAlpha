@@ -187,7 +187,7 @@ function state(over: Partial<CoachingState> = {}): CoachingState {
   return {
     goal: null, plans: [], commitments: [], tickEvents: [], artifacts: [],
     confidenceTrend: { latest: null, previous: null, direction: null },
-    lastUserMessageBeforeSession: null, ...over,
+    lastUserMessageBeforeSession: null, ownWords: null, ...over,
   };
 }
 

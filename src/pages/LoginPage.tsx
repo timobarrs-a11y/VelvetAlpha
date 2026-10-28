@@ -1,3 +1,4 @@
+import { markSignedIn } from '../features/resume/ResumeGate';
 import { useState, type ReactNode } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -210,6 +211,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await authService.signIn(email, password);
+      markSignedIn();
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Failed to log in. Please check your credentials.');

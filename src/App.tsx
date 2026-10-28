@@ -316,6 +316,13 @@ function AppInner() {
     return () => window.removeEventListener('hub:open-tab', handler);
   }, []);
 
+  // A link can open the Plan tab (`?tab=plan`): someone brought back to accept their plan lands on it.
+  useEffect(() => {
+    if (searchParams.get('tab') !== 'plan') return;
+    setOpenFeatures(prev => prev.includes('plan') ? prev : [...prev, 'plan']);
+    setActiveThread('plan');
+  }, [searchParams, companionId]);
+
   const checkAuthAndOnboarding = async () => {
     try {
       if (!companionId) { navigate('/lobby'); return; }
@@ -1162,6 +1169,7 @@ function AppInner() {
             <PlanTab
               userId={userId || ''}
               companionId={companionId}
+              walkthrough={searchParams.get('walkthrough') === '1'}
               highlightIds={coachingHighlightIds}
               onBack={() => { setOpenFeatures(p => p.filter(f => f !== 'plan')); setActiveThread('companion'); }}
             />
