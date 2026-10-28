@@ -3,7 +3,7 @@
  * systems/pets.ts moves them through the house, and art/houseArt.js draws them.
  */
 export type PetKind = 'cat' | 'dog';
-export type PetState = 'idle' | 'walk' | 'sleep' | 'eat' | 'sit' | 'beg' | 'door' | 'potty' | 'litter' | 'groom' | 'wait' | 'happy';
+export type PetState = 'idle' | 'walk' | 'sleep' | 'eat' | 'sit' | 'beg' | 'door' | 'potty' | 'litter' | 'groom' | 'wait' | 'happy' | 'romp' | 'cuddle';
 export type PetPose = 'stand' | 'walk' | 'run' | 'sit' | 'sleep' | 'eat' | 'crouch' | 'groom' | 'play' | 'happy';
 export type PetWant = 'feed' | 'play' | 'love' | null;
 
@@ -59,6 +59,8 @@ export interface Pet {
   litter?: unknown;
   /** Set while a person holding them has reached the doing part of their act, so the reward lands once. */
   heldDid?: string | null;
+  /** When a cat last bolted from a dog (game minutes), so it does not happen twice in a row. */
+  startleAt?: number;
 }
 
 export interface PetCoat {
@@ -114,12 +116,50 @@ export const PET_STATE_POSE: Record<string, PetPose> = {
   groom: 'groom',
   wait: 'sit',
   happy: 'happy',
+  romp: 'play',
+  cuddle: 'sleep',
 };
 
 export const PET_DECAY: Record<PetKind, PetNeeds> = {
   dog: { food: 5, play: 5.5, love: 3.5, bladder: 7 },
   cat: { food: 4, play: 4, love: 3 },
 };
+
+/** A walk round the block: how long the dog and the walker are out, in game minutes. */
+export const WALK = { min: 30, max: 50 };
+export const walkMinutes = (rng: () => number): number => Math.round(WALK.min + rng() * (WALK.max - WALK.min));
+
+/**
+ * A pet's day, in blocks: where they like to be (floors: 0 basement, 1 main, 2 upstairs), how likely a nap, a trip
+ * to the yard or a visit to someone is when nothing presses, and what to call it. Needs still come first
+ * (petDecide); the routine shapes the rest, so a dog has morning rounds, a midday nap and an afternoon in the yard.
+ */
+export interface RoutineBlock { name: string; from: number; to: number; floors: number[]; nap: number; yard: number; company: number; label: string }
+export const PET_ROUTINE: Record<PetKind, RoutineBlock[]> = {
+  dog: [
+    { name: 'night', from: 23, to: 6.5, floors: [1, 2], nap: 1, yard: 0, company: 0, label: 'Asleep' },
+    { name: 'morning', from: 6.5, to: 8.5, floors: [1], nap: 0.05, yard: 0.5, company: 0.6, label: 'Morning rounds' },
+    { name: 'patrol', from: 8.5, to: 11.5, floors: [1, 2], nap: 0.1, yard: 0.2, company: 0.3, label: 'Patrolling the house' },
+    { name: 'midday', from: 11.5, to: 14, floors: [1, 2], nap: 0.6, yard: 0.1, company: 0.2, label: 'Lazing about' },
+    { name: 'afternoon', from: 14, to: 17.5, floors: [1], nap: 0.1, yard: 0.55, company: 0.3, label: 'Afternoon rounds' },
+    { name: 'evening', from: 17.5, to: 21, floors: [1], nap: 0.1, yard: 0.15, company: 0.65, label: 'Hanging out with the family' },
+    { name: 'settle', from: 21, to: 23, floors: [1, 2], nap: 0.5, yard: 0.05, company: 0.4, label: 'Winding down' },
+  ],
+  cat: [
+    { name: 'prowl', from: 23, to: 2, floors: [0, 1, 2], nap: 0.6, yard: 0, company: 0, label: 'Prowling' },
+    { name: 'night', from: 2, to: 7, floors: [1, 2], nap: 1, yard: 0, company: 0, label: 'Asleep' },
+    { name: 'morning', from: 7, to: 9, floors: [1], nap: 0.1, yard: 0, company: 0.5, label: 'Morning rounds' },
+    { name: 'sun', from: 9, to: 12, floors: [2, 1], nap: 0.5, yard: 0, company: 0.2, label: 'Sunbathing upstairs' },
+    { name: 'nap', from: 12, to: 16, floors: [1, 2], nap: 0.7, yard: 0, company: 0.15, label: 'Napping' },
+    { name: 'prowlDay', from: 16, to: 19, floors: [0, 1, 2], nap: 0.2, yard: 0, company: 0.4, label: 'Prowling the house' },
+    { name: 'evening', from: 19, to: 23, floors: [1], nap: 0.3, yard: 0, company: 0.6, label: 'Hanging out with the family' },
+  ],
+};
+
+export function petRoutineBlock(kind: PetKind, hour: number): RoutineBlock {
+  const blocks = PET_ROUTINE[kind];
+  return blocks.find(b => (b.from < b.to ? hour >= b.from && hour < b.to : hour >= b.from || hour < b.to)) ?? blocks[0];
+}
 
 /** The litter box: a cat goes after this many game minutes, and stops using it after this many uses. */
 export const LITTER = { every: 280, tooDirty: 5, scoopAt: 3 };
@@ -146,7 +186,7 @@ export function petWantsNow(p: Pet): boolean {
 
 export function petDecayNeeds(p: Pet, gm: number): void {
   const D = PET_DECAY[p.kind];
-  const slow = p.away ? 0.4 : p.state === 'sleep' ? 0.35 : 1;
+  const slow = p.away ? 0.4 : p.state === 'sleep' || p.state === 'cuddle' ? 0.35 : 1;
   for (const k in p.needs) {
     const key = k as keyof PetNeeds;
     const d = D[key] || 0;
@@ -169,6 +209,10 @@ export function petEnd(p: Pet): void {
   if (p.state === 'potty') {
     p.needs.bladder = 100;
     p.doorLogged = false;
+  }
+  if (p.state === 'romp') {
+    p.needs.play = Math.min(100, p.needs.play + 25);
+    p.needs.love = Math.min(100, p.needs.love + 5);
   }
   if (p.z > 0) {
     if (p.offBed) [p.x, p.y] = p.offBed;
@@ -236,17 +280,21 @@ export function petActivityLabel(p: Pet, hour: number): string {
 }
 
 /** The label when a person holds them: what that person is doing with them. */
-export function petStatusText(p: Pet, hour: number, holder: { name: string; act: string | null; phase: string | null } | null): string {
-  if (p.away) return `Back around ${clockText(p.away.until % 1440)}`;
+export function petStatusText(p: Pet, hour: number, holder: { name: string; act: string | null; phase: string | null } | null, names: Record<string, string> = {}): string {
+  if (p.away) return `Out for a walk, back around ${clockText(p.away.until % 1440)}`;
   if (p.hold && holder) {
-    if (holder.act === 'walkDog') return holder.phase === 'do' ? `Out in the yard with ${holder.name}` : `Going for a walk with ${holder.name}`;
+    if (holder.act === 'walkDog') return `Off for a walk with ${holder.name}`;
     if (holder.phase === 'do') return holder.act === 'playPet' ? `Playing with ${holder.name}` : `Getting pets from ${holder.name}`;
     return `Waiting for ${holder.name}`;
   }
-  return stateLabel(p, hour);
+  return stateLabel(p, hour, names);
 }
 
-function stateLabel(p: Pet, hour: number): string {
+function stateLabel(p: Pet, hour: number, names: Record<string, string> = {}): string {
+  const other = typeof p.who === 'string' ? names[p.who] : undefined;
+  if (p.state === 'romp') return other ? `Playing with ${other}` : 'Playing';
+  if (p.state === 'cuddle') return other ? `Curled up with ${other}` : 'Curled up';
+  if (p.state === 'sit' && other) return `Hanging out with ${other}`;
   if (p.state === 'walk') {
     if (p.next?.state === 'door') return 'Heading to the door';
     if (p.next?.state === 'eat') return 'Heading to the bowl';
@@ -254,10 +302,10 @@ function stateLabel(p: Pet, hour: number): string {
     return 'Trotting around';
   }
   if (p.state === 'beg') return ({ feed: 'Begging for food', play: 'Wants to play', love: 'Wants attention' } as Record<string, string>)[p.want || ''] || 'Hanging out';
-  const night = hour >= 23 || hour < 6.5;
+  const blk = petRoutineBlock(p.kind, hour), night = blk.nap >= 1 || hour >= 23 || hour < 6.5;
   const labels: Record<string, string> = {
     potty: 'Doing their business', sleep: night ? 'Asleep' : 'Napping', eat: 'Eating', door: 'Waiting to go out',
-    litter: 'In the litter box', groom: 'Grooming', sit: p.who ? 'Hanging out' : 'Sitting', idle: 'Chilling', wait: 'Waiting', happy: 'Happy',
+    litter: 'In the litter box', groom: 'Grooming', sit: p.who ? 'Hanging out' : 'Sitting', idle: p.level === 3 ? 'Out in the yard' : night ? 'Up at night' : blk.label, wait: 'Waiting', happy: 'Happy',
   };
   return labels[p.state] || 'Chilling';
 }
@@ -340,6 +388,8 @@ export interface PetWorld {
   /** The indoor floors a pet wanders between. */
   floors: number[];
   rng: () => number;
+  /** The other pets in the house: where they are and whether they are asleep or spoken for (held, away, on the stairs). */
+  others?: Array<{ id: string; kind: PetKind; level: number; x: number; y: number; z: number; state: PetState; busy: boolean }>;
 }
 
 export type PetAction =
@@ -351,11 +401,12 @@ const inWindow = (h: number, a: number, b: number) => (a < b ? h >= a && h < b :
 
 /**
  * What to do next, in the order a pet cares: the litter box or an accident, the bowl when hungry and there is food,
- * the yard or the door for a dog that needs to go, bed at night or when the house is quiet, then company (begging
- * when something is wanted), a run for a dog, grooming for a cat, and otherwise a wander.
+ * the yard or the door for a dog that needs to go, then the day's routine (petRoutineBlock): bed at night or a nap
+ * when the block says so and the house is quiet, company (begging when something is wanted), a trip to the yard for
+ * a dog, grooming for a cat, and otherwise a wander over the floors that block likes.
  */
 export function petDecide(p: Pet, w: PetWorld): PetAction {
-  const night = inWindow(w.hour, 23, 6.5);
+  const blk = petRoutineBlock(p.kind, w.hour), night = inWindow(w.hour, 23, 6.5) || blk.nap >= 1;
   const people = w.people.filter(c => !c.away && !c.asleep);
   const r = w.rng;
   const pick = <T,>(a: T[]): T => a[Math.floor(r() * a.length) % a.length];
@@ -381,26 +432,48 @@ export function petDecide(p: Pet, w: PetWorld): PetAction {
   }
   if (p.kind === 'dog' && (p.needs.bladder ?? 100) < 30) return { kind: 'go', level: w.mainFloor, x: w.door[0] + 0.55, y: w.door[1] + 0.35, state: 'door', dur: 25 };
   const bed = w.thing(p.bed);
-  const sleepy = night || (!people.length && r() < 0.6) || (p.kind === 'cat' && r() < 0.28) || (p.kind === 'dog' && r() < 0.1);
+  const others = (w.others ?? []).filter(o => o.id !== p.id && !o.busy);
+  // The routine's nap chance, more when the house is empty; a full night when the block says so.
+  const sleepy = blk.nap >= 1 || r() < blk.nap + (!people.length ? 0.3 : 0);
+  // Sleepy, and another pet is already asleep: half the time, curl up with them instead of going to bed alone.
+  const sleeper = others.find(o => o.state === 'sleep' || o.state === 'cuddle');
+  if (sleepy && sleeper && r() < 0.5) {
+    const [x, y] = w.spotNear(sleeper, p);
+    return { kind: 'go', level: sleeper.level, x, y, state: 'cuddle', dur: night ? 120 : 35 + r() * 60, who: sleeper.id };
+  }
   if (sleepy && bed) {
     const [sx, sy] = bed.at(0.4, 1.05);
     return { kind: 'go', level: bed.level, x: sx, y: sy, state: 'sleep', dur: night ? 120 : 35 + r() * 60 };
   }
   const want: PetWant = p.needs.food < 35 && !(p.bowlFood > 0) ? 'feed' : p.needs.play < 40 ? 'play' : p.needs.love < 40 ? 'love' : null;
-  if (people.length && (want || r() < 0.4)) {
+  if (people.length && (want || r() < blk.company)) {
     const who = pick(people);
     const [x, y] = w.spotNear(who, p);
     p.want = want;
     return { kind: 'go', level: who.level, x, y, state: want ? 'beg' : 'sit', dur: want ? 25 : 10 + r() * 15, who: who.id, want };
   }
-  if (p.kind === 'dog' && r() < 0.12) {
-    const lv = w.yard !== null && (p.level === w.yard || r() < 0.4) ? w.yard : p.level;
-    const [x, y] = w.randomFree(lv);
-    return { kind: 'go', level: lv, x, y, state: 'idle', dur: 1, spd: 2.4 };
+  // The other pets: a romp when both could do with a play, and a dog tagging along after the cat.
+  const awake = others.filter(o => o.state !== 'sleep' && o.state !== 'cuddle');
+  if (awake.length && p.needs.play < 60 && r() < 0.3) {
+    const o = pick(awake);
+    const [x, y] = w.spotNear(o, p);
+    return { kind: 'go', level: o.level, x, y, state: 'romp', dur: 6, who: o.id };
+  }
+  const cat = p.kind === 'dog' ? awake.find(o => o.kind === 'cat') : undefined;
+  if (cat && r() < blk.company * 0.6) {
+    const [x, y] = w.spotNear(cat, p);
+    return { kind: 'go', level: cat.level, x, y, state: 'sit', dur: 8 + r() * 10, who: cat.id };
+  }
+  if (p.kind === 'dog' && w.yard !== null && r() < blk.yard) {
+    // Out the back: a run about or a sit in the grass.
+    const [x, y] = w.randomFree(w.yard);
+    return r() < 0.5 ? { kind: 'go', level: w.yard, x, y, state: 'idle', dur: 2 + r() * 4, spd: 2.4 } : { kind: 'go', level: w.yard, x, y, state: 'sit', dur: 6 + r() * 10 };
   }
   if (p.kind === 'cat' && r() < 0.3) return { kind: 'stay', state: 'groom', dur: 6 + r() * 6 };
-  const floors = w.floors.length ? w.floors : [p.level];
-  const lv = r() < 0.25 ? pick(p.kind === 'dog' && w.yard !== null ? [...floors, w.yard, w.yard] : floors) : p.level;
+  // A wander over the floors this part of the day likes, among those the house has.
+  const liked = blk.floors.filter(f => w.floors.includes(f));
+  const floors = liked.length ? liked : w.floors.length ? w.floors : [p.level];
+  const lv = r() < 0.35 || !floors.includes(p.level) ? pick(floors) : p.level;
   const [x, y] = w.randomFree(lv);
   return { kind: 'go', level: lv, x, y, state: 'idle', dur: 2 + r() * 6 };
 }

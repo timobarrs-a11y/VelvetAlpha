@@ -194,6 +194,36 @@ describe('pets', () => {
     }
   });
 
+  it('strides by the ground it covers, not the clock: still, it holds a pose; moving, the legs change', () => {
+    const rec = recordingCtx();
+    const art = createHouseArt(rec.ctx);
+    const frame = (x: number) => { rec.reset(); art.render(scene([pet({ kind: 'dog', pose: 'walk', x })], 1)); return rec.sig(); };
+    // Standing on the spot the stride amplitude eases off; once it has, frame after frame is the same picture.
+    for (let i = 0; i < 90; i++) frame(4.5);
+    const still = frame(4.5), again = frame(4.5);
+    expect(again).toBe(still);
+    const moved = frame(4.56);
+    expect(moved).not.toBe(still);
+  });
+
+  it('draws a cat and a dog in the same frame, each with its own stride', () => {
+    const cat = pet({ id: 'pet1', kind: 'cat', x: 4.5, y: 3.5, pose: 'walk' }), dog = pet({ id: 'pet2', kind: 'dog', x: 6.5, y: 4.5, pose: 'walk', face: [-1, 0] });
+    const settled = (pets: object[], frames = 90) => { const r = recordingCtx(), a = createHouseArt(r.ctx); for (let i = 0; i < frames; i++) { r.reset(); a.render(scene(pets)); } return { r, a }; };
+    const house = settled([]).r.vec().length, catOnly = settled([cat]), dogOnly = settled([dog]), both = settled([cat, dog]);
+    // Everything either one draws alone is drawn when both are there.
+    expect(both.r.vec().length).toBe(house + (catOnly.r.vec().length - house) + (dogOnly.r.vec().length - house));
+    // Move only the dog: the frame changes, but every stroke of the cat's own picture is still in it.
+    const before = both.r.sig();
+    both.r.reset(); both.a.render(scene([cat, { ...dog, x: 6.56 }]));
+    const after = both.r.sig();
+    expect(after).not.toBe(before);
+    const houseSig = settled([]).r.sig().split('|');
+    const catStrokes = catOnly.r.sig().split('|').filter(e => !houseSig.includes(e));
+    expect(catStrokes.length).toBeGreaterThan(10);
+    const afterSet = new Set(after.split('|'));
+    for (const e of catStrokes) expect(afterSet.has(e), e).toBe(true);
+  });
+
   it('leaves out a pet that is hidden or on another floor, and faces the way it is told', () => {
     const base = recordingCtx(); createHouseArt(base.ctx).render(scene([]));
     const hid = recordingCtx(); createHouseArt(hid.ctx).render(scene([pet({ hidden: true })]));

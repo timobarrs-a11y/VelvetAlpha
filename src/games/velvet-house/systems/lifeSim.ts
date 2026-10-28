@@ -40,7 +40,8 @@ export function createLifeSim(g: Game): Partial<Game> {
   // The day's routine: wake up, get ready, go to work, come home.
   function runRoutine(hourF: number): void {
     const jordan = people[0];
-    const step = routineStep(world.life, world.day, hourF, { asleep: isAsleep(jordan), away: !!jordan.away });
+    // A dog walk is not work: the routine still sends him on when it is time (he goes straight from the walk).
+    const step = routineStep(world.life, world.day, hourF, { asleep: isAsleep(jordan), away: jordan.away === 'work' });
     if (step === 'wake') {
       world.life.today.woke = true;
       jordan.task = null;

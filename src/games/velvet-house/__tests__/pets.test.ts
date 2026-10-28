@@ -5,7 +5,8 @@ import {
   weight, petScoreForActivity, petActivityLabel,
 } from '../state/pets';
 import type { Pet, PetNeeds, PetWorld } from '../state/pets';
-import { petDecide, createPet, revivePet, serializePet, pickName, pickCoat, petStatusText, LITTER } from '../state/pets';
+import { petDecide, createPet, revivePet, serializePet, pickName, pickCoat, petStatusText, petRoutineBlock, walkMinutes, LITTER, PET_ROUTINE, WALK } from '../state/pets';
+import { statusText, createAgent } from '../state/agents';
 
 function makePet(overrides: Partial<Pet> = {}): Pet {
   return {
@@ -237,7 +238,7 @@ describe('pets — petScoreForActivity', () => {
 
 describe('pets — petActivityLabel', () => {
   it('labels idle as Chilling', () => {
-    expect(petActivityLabel(makePet({ state: 'idle' }), 10)).toBe('Chilling');
+    expect(petActivityLabel(makePet({ state: 'idle' }), 10)).toBe('Sunbathing upstairs'); // a cat's mid-morning, by the routine
   });
 
   it('labels sleep at night as Asleep', () => {
@@ -297,12 +298,12 @@ describe('pets — deciding', () => {
   });
 
   it('sleeps in its bed at night', () => {
-    const a = petDecide(withThings({ needs: { food: 80, play: 80, love: 80 } }), world({ hour: 1 }));
+    const a = petDecide(withThings({ needs: { food: 80, play: 80, love: 80 } }), world({ hour: 3 }));
     expect(a).toMatchObject({ kind: 'go', state: 'sleep', dur: 120 });
   });
 
   it('with nothing pressing and nobody about, wanders to a free spot', () => {
-    const a = petDecide(withThings({ needs: { food: 80, play: 80, love: 80 } }), world({ people: [], rng: () => 0.95 }));
+    const a = petDecide(withThings({ needs: { food: 80, play: 80, love: 80 } }), world({ hour: 17, people: [], rng: () => 0.95 }));
     expect(a.kind).toBe('go');
     expect((a as { state: string }).state).toBe('idle');
   });
@@ -310,7 +311,7 @@ describe('pets — deciding', () => {
   it('a cat with time on its paws grooms', () => {
     // Not sleepy, not in the mood for company, then the grooming roll comes up.
     const rolls = [0.5, 0.5, 0.1];
-    const a = petDecide(withThings({ needs: { food: 80, play: 80, love: 80 } }), world({ rng: () => rolls.shift() ?? 0.9 }));
+    const a = petDecide(withThings({ needs: { food: 80, play: 80, love: 80 } }), world({ hour: 17, rng: () => rolls.shift() ?? 0.9 }));
     expect(a).toMatchObject({ kind: 'stay', state: 'groom' });
   });
 });
@@ -348,6 +349,113 @@ describe('pets — making and keeping', () => {
     expect(petStatusText(p, 12, null)).toBe('Wants to play');
     expect(petStatusText(withThings({ state: 'sleep' }), 2, null)).toBe('Asleep');
     expect(petStatusText(withThings({ hold: 'maya' }), 12, { name: 'Maya', act: 'playPet', phase: 'do' })).toBe('Playing with Maya');
-    expect(petStatusText(withThings({ hold: 'maya' }), 12, { name: 'Maya', act: 'walkDog', phase: 'walk' })).toBe('Going for a walk with Maya');
+    expect(petStatusText(withThings({ hold: 'maya' }), 12, { name: 'Maya', act: 'walkDog', phase: 'walk' })).toBe('Off for a walk with Maya');
+  });
+});
+
+
+describe('pets — the day\'s routine', () => {
+  const rested = (over: Partial<Pet> = {}) => withThings({ needs: { food: 80, play: 80, love: 80, ...(over.kind === 'dog' ? { bladder: 90 } : {}) }, ...over });
+
+  it('has a block for every hour of the day, for both kinds, wrapping midnight', () => {
+    for (const kind of ['cat', 'dog'] as const) {
+      for (let h = 0; h < 24; h += 0.25) expect(petRoutineBlock(kind, h), `${kind} ${h}`).toBeTruthy();
+      const covered = PET_ROUTINE[kind].reduce((n, b) => n + ((b.to - b.from + 24) % 24 || 24), 0);
+      expect(covered, `${kind} blocks cover the day once`).toBeCloseTo(24, 6);
+    }
+    expect(petRoutineBlock('dog', 23.5).name).toBe('night');
+    expect(petRoutineBlock('dog', 6).name).toBe('night');
+    expect(petRoutineBlock('dog', 15).name).toBe('afternoon');
+  });
+
+  it('a dog roams the main floor, upstairs and the yard, and never the basement', () => {
+    const levels = new Set<number>();
+    for (let h = 0; h < 24; h += 0.5) {
+      for (const seed of [0.05, 0.3, 0.6, 0.9]) {
+        const rolls = [0.99, seed, 0.2, seed]; // no nap; the yard roll; then a wander to a floor the block likes
+        const a = petDecide(rested({ kind: 'dog', level: 1 }), world({ hour: h, people: [], rng: () => rolls.shift() ?? seed }));
+        if (a.kind === 'go') levels.add(a.level);
+      }
+    }
+    expect(levels.has(0)).toBe(false);
+    expect(levels.has(1)).toBe(true);
+    expect(levels.has(2)).toBe(true);
+    expect(levels.has(3)).toBe(true);
+  });
+
+  it('a cat can prowl the basement in the late afternoon', () => {
+    const levels = new Set<number>();
+    for (const seed of [0.02, 0.2, 0.4, 0.6, 0.8]) {
+      const rolls = [0.99, 0.99, 0.0, seed]; // no nap, no groom; a wander, picking by the seed
+      const a = petDecide(rested({ level: 1 }), world({ hour: 17, people: [], rng: () => rolls.shift() ?? seed }));
+      if (a.kind === 'go') levels.add(a.level);
+    }
+    expect(levels.has(0)).toBe(true);
+  });
+
+  it('naps at midday when the roll says so, and heads for the yard in the afternoon', () => {
+    const nap = petDecide(rested({ kind: 'dog' }), world({ hour: 13, rng: () => 0.5 }));
+    expect(nap).toMatchObject({ kind: 'go', state: 'sleep' });
+    const rolls = [0.99, 0.99, 0.3, 0.7];
+    const yard = petDecide(rested({ kind: 'dog' }), world({ hour: 15, rng: () => rolls.shift() ?? 0.9 }));
+    expect(yard).toMatchObject({ kind: 'go', level: 3, state: 'sit' });
+  });
+
+  it('keeps the family company in the evening', () => {
+    const rolls = [0.99, 0.5];
+    const a = petDecide(rested({ kind: 'dog' }), world({ hour: 19, rng: () => rolls.shift() ?? 0.9 }));
+    expect(a).toMatchObject({ kind: 'go', state: 'sit', who: 'jordan' });
+  });
+
+  it('a walk round the block takes half an hour to fifty minutes, and the walker is out of the house', () => {
+    expect(walkMinutes(() => 0)).toBe(WALK.min);
+    expect(walkMinutes(() => 1)).toBe(WALK.max);
+    const ch = createAgent('jordan', 'Jordan', undefined, { skin: '#000', hair: '#000', top: '#000', topStyle: 'tee', bottom: '#000', longHair: false });
+    ch.away = 'walk';
+    expect(statusText(ch)).toBe('Out walking the dog');
+    expect(petStatusText(withThings({ kind: 'dog', away: { until: 9 * 60 + 5 } }), 8, null)).toBe('Out for a walk, back around 9:05 AM');
+  });
+});
+
+
+describe('pets — noticing each other', () => {
+  const rested = (over: Partial<Pet> = {}) => withThings({ needs: { food: 80, play: 80, love: 80, ...(over.kind === 'dog' ? { bladder: 90 } : {}) }, ...over });
+  const other = (over: Partial<NonNullable<PetWorld['others']>[number]> = {}) => ({ id: 'pet2', kind: 'dog' as const, level: 1, x: 6, y: 4, z: 0, state: 'idle' as const, busy: false, ...over });
+
+  it('sleepy with another pet already asleep, half the time curls up with them instead of going to bed', () => {
+    const rolls = [0.2, 0.2]; // sleepy; then the curl-up roll
+    const a = petDecide(rested(), world({ hour: 13, rng: () => rolls.shift() ?? 0.9, others: [other({ state: 'sleep', z: 0.1 })] }));
+    expect(a).toMatchObject({ kind: 'go', state: 'cuddle', who: 'pet2', level: 1 });
+    const rolls2 = [0.2, 0.9];
+    const alone = petDecide(rested(), world({ hour: 13, rng: () => rolls2.shift() ?? 0.9, others: [other({ state: 'sleep' })] }));
+    expect(alone).toMatchObject({ kind: 'go', state: 'sleep' }); // the other roll came up heads: its own bed
+  });
+
+  it('with a play need and another pet awake, goes to romp with them', () => {
+    const rolls = [0.99, 0.99, 0.1];
+    const a = petDecide(rested({ needs: { food: 80, play: 50, love: 80 } }), world({ hour: 17, rng: () => rolls.shift() ?? 0.9, others: [other()] }));
+    expect(a).toMatchObject({ kind: 'go', state: 'romp', who: 'pet2', dur: 6 });
+  });
+
+  it('a dog with nothing on tags along after the cat', () => {
+    const rolls = [0.99, 0.99, 0.1]; // not sleepy, not off to a person; the tag-along roll
+    const a = petDecide(rested({ kind: 'dog' }), world({ hour: 19, rng: () => rolls.shift() ?? 0.9, others: [other({ id: 'cat1', kind: 'cat' })] }));
+    expect(a).toMatchObject({ kind: 'go', state: 'sit', who: 'cat1' });
+  });
+
+  it('ignores a pet that is held, away or on the stairs, and never notices itself', () => {
+    const rolls = [0.2, 0.2];
+    const a = petDecide(rested({ id: 'pet1' }), world({ hour: 13, rng: () => rolls.shift() ?? 0.9, others: [other({ id: 'pet1', state: 'sleep' }), other({ state: 'sleep', busy: true })] }));
+    expect((a as { state: string }).state).toBe('sleep');
+  });
+
+  it('a romp is worth a play, and the labels name the friend', () => {
+    const p = rested({ state: 'romp', who: 'pet2', needs: { food: 80, play: 40, love: 50 } });
+    petEnd(p);
+    expect(p.needs.play).toBe(65);
+    expect(petStatusText(withThings({ state: 'romp', who: 'pet2' }), 12, null, { pet2: 'Waffles' })).toBe('Playing with Waffles');
+    expect(petStatusText(withThings({ state: 'cuddle', who: 'pet2' }), 12, null, { pet2: 'Waffles' })).toBe('Curled up with Waffles');
+    expect(petStatusText(withThings({ state: 'sit', who: 'pet2' }), 12, null, { pet2: 'Waffles' })).toBe('Hanging out with Waffles');
+    expect(petStatusText(withThings({ state: 'sit', who: 'jordan' }), 12, null, { pet2: 'Waffles' })).toBe('Hanging out');
   });
 });

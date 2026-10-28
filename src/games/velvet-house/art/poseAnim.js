@@ -492,10 +492,40 @@ export const GAIT = { cycle: 0.68, reach: 0.17, lift: 0.075 };
  * forward through the air on an arc; for the other half it is planted and slides straight
  * back at exactly the body's speed, so it holds its place on the floor instead of skating.
  */
-export function gaitFoot(phase, amp = 1) {
-  const u = ((phase % TAU) + TAU) % TAU, A = GAIT.reach * amp;
-  if (u < Math.PI) return [-A * Math.cos(u), Math.sin(u) * GAIT.lift * amp];
+export function gaitFoot(phase, amp = 1, reach = GAIT.reach, lift = GAIT.lift) {
+  const u = ((phase % TAU) + TAU) % TAU, A = reach * amp;
+  if (u < Math.PI) return [-A * Math.cos(u), Math.sin(u) * lift * amp];
   return [A * (1 - (2 * (u - Math.PI)) / Math.PI), 0];
+}
+
+// ---- Four legs: the pets ----
+
+/** A cat's and a dog's stride, in world units: how far a foot reaches and lifts, and the bones of a leg in pixels. */
+export const QUAD = {
+  cat: { reach: 0.1, lift: 0.045, upper: 3.6, lower: 3.6, px: 30 },
+  dog: { reach: 0.14, lift: 0.07, upper: 6.2, lower: 6.2, px: 30 },
+};
+
+/**
+ * Where four feet are in a stride, as [forward, lift] in world units, for legs in the order
+ * left front, right front, left hind, right hind. A walk is a lateral sequence, each foot a
+ * quarter cycle behind the last (LF, RH, RF, LH); a run is a trot, diagonal pairs together.
+ * Each foot follows gaitFoot: planted, it slides back at exactly the body's speed.
+ */
+export function quadGait(phase, kind = 'dog', run = false, amp = 1) {
+  const q = QUAD[kind] || QUAD.dog;
+  const offs = run ? [0, Math.PI, Math.PI, 0] : [0, Math.PI, Math.PI / 2, -Math.PI / 2];
+  return offs.map(o => gaitFoot(phase + o, amp, q.reach, run ? q.lift * 1.6 : q.lift));
+}
+
+/**
+ * A two-bone limb in screen space (y down): the joint for a hip and a foot, with bones `a` and `b`,
+ * bending toward +x when `bend` is 1 (a hind knee pointing forward) and toward -x when -1 (a
+ * front elbow pointing back). Out of reach, the limb straightens toward the foot.
+ */
+export function limbIK(hip, foot, a, b, bend = 1) {
+  const k = legIK([hip[0] * bend, -hip[1]], [foot[0] * bend, -foot[1]], a, b);
+  return [k[0] * bend, -k[1]];
 }
 
 /**
