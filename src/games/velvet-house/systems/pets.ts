@@ -1,5 +1,5 @@
 import { ACTIVITIES } from '../state/activities';
-import { buildWorld, isAsleep, startChain, type Agent, type AgentTask } from '../state/agents';
+import { buildWorld, isAsleep, placeAgent, startChain, type Agent, type AgentTask } from '../state/agents';
 import { relocate } from '../state/arrange';
 import { ATTIC, DOOR, LEVELS, LEVEL_NAMES, STAIRS, WX, WY } from '../state/house';
 import { addDirt } from '../state/household';
@@ -7,7 +7,7 @@ import { TYPES, type ObjectInstance } from '../state/objects';
 import { isFreeAt, planRoute, randomFree, spotNear, type RouteLeg } from '../state/pathfinding';
 import {
   PET_BEG, PET_STATE_POSE, createPet, petDecayNeeds, petDecide, petEnd, petFree, petMood, petScoreForActivity,
-  petStatusText, petWantsNow, pickCoat, pickName, serializePet, type Pet, type PetKind, type PetWorld,
+  petStatusText, petWantsNow, pickCoat, pickName, serializePet, walkMinutes, type Pet, type PetKind, type PetWorld,
 } from '../state/pets';
 import type { PetFrame } from '../art/houseArt.js';
 import type { TrayAction } from '../ui/dialogue';
@@ -176,25 +176,40 @@ export function createPets(g: Game): Partial<Game> {
     const did = p.heldDid;
     if (did === 'playPet') { p.needs.play = Math.min(100, p.needs.play + 60); p.needs.love = Math.min(100, p.needs.love + 15); p.hearts = 2; }
     if (did === 'petPet') { p.needs.love = Math.min(100, p.needs.love + 40); p.hearts = 3; }
-    if (did === 'walkDog') { p.needs.bladder = 100; p.needs.play = Math.min(100, p.needs.play + 40); p.needs.love = Math.min(100, p.needs.love + 10); p.doorLogged = false; p.cameIn = absMin(); p.hearts = 2; }
     p.hold = null; p.heldDid = null; p.route = []; p.state = 'idle'; p.pose = 'stand'; p.timer = 0.5;
+  }
+
+  /** Out the front door together, for a while; both come back the same way (see petsTick). */
+  function depart(h: Agent, p: Pet): void {
+    const until = absMin() + walkMinutes(r);
+    h.away = 'walk'; h.awayUntil = until; h.task = null; h.turning = false;
+    p.away = { until }; p.hold = null; p.heldDid = 'walkDog'; p.route = []; p.state = 'idle'; p.pose = 'stand'; p.z = 0;
+    log(`${h.name} and ${p.name} are off round the block.`);
+  }
+
+  function comeHome(h: Agent): void {
+    h.away = null; h.awayUntil = undefined;
+    placeAgent(h, { level: 1, x: DOOR[0] + 0.9, y: DOOR[1] + 0.2 }, [1, 0]);
+    h.needs.fun = Math.min(100, h.needs.fun + 20); h.needs.comfort = Math.min(100, h.needs.comfort + 8); h.needs.energy = Math.max(0, h.needs.energy - 6);
+    h.idle = 1;
+    log(`${h.name} is back from the walk.`);
   }
 
   function tickHeld(p: Pet, dt: number, walkMul: number): void {
     const h = personById(p.hold), t = h?.task;
     if (!h || h.away || !t || !HOLD_ACTS.has(t.act)) { release(p); return; }
-    if (t.phase === 'do') p.heldDid = t.act;
     if (t.act === 'walkDog') {
-      // Trotting after them to the yard, then off the leash: sniffing about, a squat, a run.
+      // Trotting after them to the front door; when they get there, the two go out.
+      if (t.phase === 'do') { depart(h, p); return; }
       p.followT = (p.followT ?? 0) - dt;
       const far = h.level !== p.level || Math.hypot(h.x - p.x, h.y - p.y) > 0.9;
       if (p.followT <= 0 && far && !onStairLeg(p)) { p.followT = 0.6; p.route = routeTo(p, h.level, h.x + 0.3, h.y + 0.35); }
       if ((p.route as RouteLeg[]).length) { p.pose = 'walk'; moveAlong(p, dt, walkMul * 1.3); return; }
-      const beat = Math.sin(view.t * 0.6 + p.seed);
-      p.pose = t.phase === 'do' ? (beat > 0.4 ? 'play' : beat < -0.6 ? 'crouch' : 'stand') : 'happy';
+      p.pose = 'happy';
       if (h.level === p.level) faceToward(p, h);
       return;
     }
+    if (t.phase === 'do') p.heldDid = t.act;
     p.pose = t.phase === 'do' ? (t.act === 'playPet' ? 'play' : 'happy') : 'sit';
     if (h.level === p.level && h.z === 0) faceToward(p, h);
   }
@@ -229,12 +244,11 @@ export function createPets(g: Game): Partial<Game> {
       return true;
     }
     if (act === 'walkDog') {
+      // To the front door together; from there the two of them are out round the block (depart).
       if (p.kind !== 'dog') return false;
-      if (YARD < 0) { if (player) log('There is no yard to walk in.'); return false; }
       if (!holdPet(ch, p)) { if (player) log(`${p.name} is busy right now.`); return false; }
-      const [x, y] = randomFree(house.grids[YARD], r, LEVELS[YARD].anchor);
       leaveSeat(ch);
-      ch.task = { act, slot: null, phase: 'walk', route: routeTo(ch, YARD, x, y), time: 0, dur: ACTIVITIES.walkDog?.dur ?? 12, next: [] };
+      ch.task = { act, slot: null, phase: 'walk', route: routeTo(ch, 1, DOOR[0] + 0.6, DOOR[1] + 0.3), time: 0, dur: ACTIVITIES.walkDog?.dur ?? 1, next: [] };
       log(`${ch.name} grabbed the leash. ${p.name} lost it.`);
       return true;
     }
@@ -292,7 +306,6 @@ export function createPets(g: Game): Partial<Game> {
       if (ch.task || ch.away || ch.scripted) continue;
       let best: { act: string; score: number } | null = null;
       for (const act of ['feedPet', 'scoop', 'playPet', 'petPet', 'walkDog']) {
-        if (act === 'walkDog' && YARD < 0) continue;
         const score = petScoreForActivity(world.pets, world.petFood, act, ch.id === 'maya', hourF);
         if (score > (best?.score ?? 0.3)) best = { act, score };
       }
@@ -329,6 +342,7 @@ export function createPets(g: Game): Partial<Game> {
     const pets = world.pets;
     if (!pets.length) return;
     for (const ch of people.slice(0, 2)) {
+      if (ch.away === 'walk' && ch.awayUntil != null && absMin() >= ch.awayUntil) comeHome(ch);
       const now = !!ch.away;
       if (wasAway.get(ch.id) && !now) greet(ch);
       wasAway.set(ch.id, now);
@@ -338,7 +352,9 @@ export function createPets(g: Game): Partial<Game> {
       if (p.hearts > 0) p.hearts -= dt;
       if (p.away) {
         if (absMin() < p.away.until) continue;
-        p.away = null; p.level = 1; p.x = DOOR[0] + 1; p.y = DOOR[1] + 0.4; p.cameIn = absMin();
+        // Back from the walk, through the front door, better for it.
+        p.away = null; p.level = 1; p.x = DOOR[0] + 1.2; p.y = DOOR[1] + 0.4; p.z = 0; p.face = [1, 0]; p.cameIn = absMin(); p.timer = 2;
+        if (p.heldDid === 'walkDog') { p.heldDid = null; p.needs.bladder = 100; p.needs.play = Math.min(100, p.needs.play + 40); p.needs.love = Math.min(100, p.needs.love + 10); p.doorLogged = false; p.hearts = 2; }
       }
       if (p.kind === 'cat') p.litterT = (p.litterT || 0) + gameMin;
       if (p.kind === 'dog' && (p.needs.bladder ?? 100) <= 0) { petEnd(p); accident(p, p); p.needs.bladder = 100; p.doorLogged = false; }

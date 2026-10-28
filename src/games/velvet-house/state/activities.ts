@@ -80,7 +80,7 @@ export const ACTIVITIES: Record<string, ActivityMeta> = {
   feedPet: { pose: 'reach', dur: 3, gives: { comfort: 4 }, verb: 'Filling the pet bowl' },
   petPet: { pose: 'pet', dur: 6, gives: { comfort: 14, social: 8, fun: 6 }, verb: 'Petting' },
   playPet: { pose: 'play', dur: 15, gives: { fun: 40, social: 6, energy: -3 }, verb: 'Playing with the pet' },
-  walkDog: { pose: 'stand', dur: 12, gives: { fun: 20, comfort: 8, energy: -6 }, verb: 'Walking the dog', level: 3, open: true },
+  walkDog: { pose: 'stand', dur: 1, gives: {}, verb: 'Walking the dog' },
   unpack: { pose: 'reach', dur: 6, gives: { comfort: 4 }, verb: 'Unpacking a box' },
   mow: { pose: 'mow', dur: Infinity, gives: { energy: -8, comfort: 6 }, verb: 'Mowing the lawn' },
   sprinkle: { pose: 'reach', dur: 2, gives: {}, verb: 'Turning on the sprinkler' },
