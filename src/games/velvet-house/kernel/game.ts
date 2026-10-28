@@ -3,7 +3,7 @@ import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
 import { RNG, setGlobalRNG } from '../state/rng';
 import { buildWorld, createAgent, type Agent, type AgentId } from '../state/agents';
 import { type CharacterNeeds } from '../state/types';
-import { createHouseArt, type PersonFrame } from '../art/houseArt.js';
+import { createHouseArt, type PersonFrame, type PetFrame } from '../art/houseArt.js';
 import { createGpuLights } from '../engine/gpuLights.js';
 import { createGBuffer } from '../engine/gbuffer';
 import { createDeferredLights } from '../engine/deferredLights';
@@ -28,6 +28,8 @@ import type { ScriptEngine } from '../script/engine';
 import type { GameEvent, Mode, UiTarget } from '../script/types';
 import type { ConcernContext } from '../systems/concerns';
 import type { ConcernKind, Mood } from '../state/concerns';
+import type { Pet, PetKind } from '../state/pets';
+import type { PetView } from '../systems/pets';
 
 
 /** What the camera, the controls and the modules read and change while the game runs. */
@@ -234,6 +236,18 @@ export interface Game {
   /** Sharing designs with friends and the gallery; null when the game is not inside the Velvet app. */
   designs: DesignsClient | null;
   toFrame(p: Agent): PersonFrame;
+  // pets (systems/pets.ts)
+  adoptPet(kind: PetKind, itemId?: string): Pet;
+  petsTick(dt: number, gameMin: number, walkMul: number, hourF: number): void;
+  /** The player's order for a pet: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop'. */
+  petOrder(act: string, petId: string): void;
+  petFrames(): PetFrame[];
+  petViews(): PetView[];
+  /** One line on every pet for the companion's context; empty with no pets. */
+  petsContext(): string;
+  petAt(sx: number, sy: number): Pet | null;
+  showPetActions(p: Pet, x: number, y: number): void;
+  petsForSave(): Record<string, unknown>[];
 }
 
 /** How the companion talks, as saved; defaults until the host has said. */

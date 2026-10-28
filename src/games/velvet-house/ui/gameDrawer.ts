@@ -44,6 +44,7 @@ export function createGameDrawer(g: Game): Partial<Game> {
     onArrangeUnstore: (id) => g.unstore(id),
     onPickFloor: (lv) => g.setLevel(lv),
     onBuy: (item, color) => g.handleBuy(item, color),
+    onPetOrder: (act, id) => g.petOrder(act, id),
     onBuyAvatarItem: (id) => g.handleBuyAvatarItem(id),
     onOrder: (chain) => g.handleOrder(chain),
     onPayBill: () => { payBill(world.household, absMin(world.day, world.minutes), log); },

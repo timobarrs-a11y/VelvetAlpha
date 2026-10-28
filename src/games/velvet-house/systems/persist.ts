@@ -21,6 +21,7 @@ export function createPersist(g: Game): Partial<Game> {
         wallMode: WALL_MODES[view.wallIdx].mode,
         looks: art.exportLooks(),
         life: world.life,
+        pets: g.petsForSave(), petFood: world.petFood, petSeq: world.petSeq,
       }, world.save);
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch { /* non-fatal */ }

@@ -92,7 +92,117 @@ describe('poseRig', () => {
   });
 });
 
-import { idleRig, expressionFor, walkRig, seatLegs, LEG, ARM } from '../art/poseAnim.js';
+import { idleRig, expressionFor, walkRig, seatLegs, legIK, gaitFoot, headTarget, turnHead, idleGlance, treeLeg, wrapAngle, LEG, ARM, GAIT, HEAD } from '../art/poseAnim.js';
+
+describe('the head', () => {
+  it('looks at whoever it is with, as far as a neck turns, and no further', () => {
+    expect(headTarget(0, 0, 0.6)).toBeCloseTo(0.6, 6);
+    expect(headTarget(0, 0, -0.6)).toBeCloseTo(-0.6, 6);
+    expect(wrapAngle(headTarget(0, 0, 2.8))).toBeCloseTo(HEAD.turn, 6);
+    expect(wrapAngle(headTarget(0, 0, -2.8))).toBeCloseTo(-HEAD.turn, 6);
+    // Someone right behind: the head turns as far as it can toward them, the short way.
+    expect(Math.abs(wrapAngle(headTarget(0, 0, Math.PI) - 0))).toBeCloseTo(HEAD.turn, 6);
+  });
+
+  it('leads a turn: with no one to look at it heads where the body is going', () => {
+    expect(headTarget(0, 0.8, null)).toBeCloseTo(0.8, 6);
+    expect(wrapAngle(headTarget(0, 3, null))).toBeCloseTo(HEAD.turn, 6);
+    expect(headTarget(1, 1, null, 0.3)).toBeCloseTo(1.3, 6);
+  });
+
+  it('turns at a human pace, the short way round, and settles', () => {
+    let ha = 0;
+    const target = -3.3; // past -PI, so the short way round is to turn positive
+    ha = turnHead(ha, target, 0.016);
+    expect(ha).toBeGreaterThan(0);
+    expect(ha).toBeCloseTo(HEAD.rate * 0.016, 6);
+    for (let i = 0; i < 200; i++) ha = turnHead(ha, target, 0.016);
+    expect(wrapAngle(ha - target)).toBeCloseTo(0, 6);
+  });
+
+  it('glances aside now and then while standing, never all the time, and never far', () => {
+    let on = 0, n = 0, worst = 0;
+    for (let t = 0; t < 60; t += 0.05) { const g = idleGlance(t, 0.7); n++; if (g !== 0) on++; worst = Math.max(worst, Math.abs(g)); }
+    expect(on / n).toBeGreaterThan(0.2);
+    expect(on / n).toBeLessThan(0.5);
+    expect(worst).toBeLessThanOrEqual(HEAD.glance + 1e-9);
+    expect(worst).toBeGreaterThan(HEAD.glance * 0.9);
+  });
+});
+
+describe('the tree pose', () => {
+  const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+
+  it('rests the raised foot at the standing knee with the thigh and shin their own lengths', () => {
+    const hipZ = 0.62, tl = treeLeg(hipZ);
+    expect(dist([0, 0], tl.knee)).toBeCloseTo(LEG.thigh, 3);
+    expect(dist(tl.knee, tl.foot)).toBeCloseTo(LEG.shin, 3);
+    expect(hipZ + tl.foot[1], 'the foot at knee height').toBeCloseTo(LEG.shin, 6);
+    expect(tl.foot[0], 'the foot across at the other leg').toBeLessThan(-0.1);
+    expect(tl.knee[0], 'the knee turned out').toBeGreaterThan(0.1);
+  });
+});
+
+describe('the stride', () => {
+  it('plants the foot and slides it back at exactly the body\'s speed, so it never skates', () => {
+    // The phase advances PI per half cycle of travel; a planted foot must cover 2 * reach over that half.
+    const perRad = (2 * GAIT.reach) / Math.PI;
+    for (let u = Math.PI + 0.05; u < 2 * Math.PI - 0.1; u += 0.1) {
+      const a = gaitFoot(u), b = gaitFoot(u + 0.05);
+      expect(a[1], 'planted feet stay on the floor').toBe(0);
+      expect((a[0] - b[0]) / 0.05).toBeCloseTo(perRad, 6);
+    }
+  });
+
+  it('swings the foot forward through the air and lands it where the plant begins', () => {
+    const lifts = [];
+    for (let u = 0.05; u < Math.PI; u += 0.1) { const [f, z] = gaitFoot(u); lifts.push(z); expect(f).toBeGreaterThan(gaitFoot(u - 0.05)[0]); }
+    expect(Math.max(...lifts)).toBeCloseTo(GAIT.lift, 2);
+    expect(gaitFoot(Math.PI - 1e-6)[0]).toBeCloseTo(gaitFoot(Math.PI + 1e-6)[0], 3);
+    expect(gaitFoot(2 * Math.PI - 1e-6)[0]).toBeCloseTo(gaitFoot(1e-6)[0], 3);
+  });
+
+  it('fades to standing with the amplitude', () => {
+    expect(gaitFoot(1, 0)).toEqual([-0, 0]);
+    expect(Math.abs(gaitFoot(4, 0)[0])).toBeLessThan(1e-12);
+  });
+});
+
+describe('the knee', () => {
+  const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const hip = [0, 0.62];
+
+  it('keeps the thigh and shin their own lengths wherever the foot lands in a stride', () => {
+    for (let ph = 0; ph < Math.PI * 2; ph += 0.05) {
+      const foot = [Math.sin(ph) * 0.17, Math.max(0, Math.sin(ph)) * 0.075];
+      const knee = legIK(hip, foot);
+      const d = dist(hip, foot);
+      if (d <= LEG.thigh + LEG.shin) {
+        expect(dist(hip, knee), `thigh at ${ph}`).toBeCloseTo(LEG.thigh, 3);
+        expect(dist(knee, foot), `shin at ${ph}`).toBeCloseTo(LEG.shin, 3);
+      } else {
+        // Out of reach: the leg straightens toward the foot, split at the knee.
+        expect(dist(hip, knee) / dist(knee, foot)).toBeCloseTo(LEG.thigh / LEG.shin, 3);
+      }
+    }
+  });
+
+  it('bends forward, never backward', () => {
+    for (const foot of [[0, 0], [0.15, 0], [-0.15, 0], [0.1, 0.2], [0.2, 0.3], [-0.1, 0.05]]) {
+      const knee = legIK(hip, foot);
+      const t = (knee[1] - hip[1]) / ((foot[1] - hip[1]) || -1e-6); // where along the hip-foot line the knee is
+      const onLine = hip[0] + (foot[0] - hip[0]) * t;
+      expect(knee[0], `foot ${foot}`).toBeGreaterThanOrEqual(onLine - 1e-9);
+    }
+  });
+
+  it('straightens a leg that hangs with the foot right below the hip', () => {
+    const knee = legIK(hip, [0, 0]);
+    expect(knee[1]).toBeCloseTo(0.31, 3);
+    expect(knee[0]).toBeGreaterThanOrEqual(0); // a 0.62 leg over a 0.62 drop: the knee sits dead on the line
+    expect(knee[0]).toBeLessThan(0.01);
+  });
+});
 
 describe('the walk', () => {
   const len = (v: number[]) => Math.hypot(v[0], v[2]);
@@ -105,8 +215,9 @@ describe('the walk', () => {
   });
 
   it('swings the arms forward and back, opposite the leg on the same side, never out to the side', () => {
-    // The legs: side +1 is forward when sin(phase) > 0, side -1 when sin(phase + PI) > 0.
-    const r = walkRig(Math.PI / 2, 1);
+    // The legs: side +1 is furthest forward at phase PI, side -1 at phase 0 (gaitFoot).
+    const r = walkRig(Math.PI, 1);
+    expect(gaitFoot(Math.PI)[0]).toBeCloseTo(GAIT.reach, 6);
     expect(r.hands[1][0], 'right arm back while the right leg is forward').toBeLessThan(-0.1);
     expect(r.hands[-1][0], 'left arm forward while the left leg is back').toBeGreaterThan(0.1);
     for (let ph = 0; ph < Math.PI * 2; ph += 0.1) {

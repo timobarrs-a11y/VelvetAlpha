@@ -135,6 +135,7 @@ const ACT_TAGS: Record<string, string[]> = {
   newspaper: ['seat'], snack: ['fridge'], wipeCounter: ['sink'], journal: ['desk'], freelance: ['desk'],
   mirror: ['mirror'], foldClothes: ['dresser'], makeBed: ['makebed'], laundry: ['washer'],
   rummage: ['rummage'], tend: ['garden'],
+  feedPet: ['bowl'], scoop: ['litter'],
   // Side jobs (sideJobs.ts): never chosen on their own, only when the player says.
   sideDesk: ['desk'], sideBake: ['stove'],
 };

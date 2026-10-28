@@ -107,6 +107,105 @@ describe('character motion', () => {
   });
 })
 
+describe('sleep and the drawn head', () => {
+  const look = { skin: '#C68E6A', hair: '#2B1D16', top: '#3E6E8E', bottom: '#2F3542', longHair: true };
+  const scene = (chars: object[], rot = 0) => ({ level: 1, rot, minutes: 1380, day: 1, t: 1, dt: 0.016, objs: INITIAL_OBJS.map((o) => ({ ...o })), wallMode: 'up', chars });
+
+  it('draws a sleeper from every camera angle, and rolls over smoothly rather than popping', () => {
+    const rec = recordingCtx();
+    const art = createHouseArt(rec.ctx);
+    for (let rot = 0; rot < 4; rot++) { rec.reset(); art.render(scene([{ ...PERSON, pose: 'sleep', z: 0.56, face: [1, 0], look }], rot)); expect(rec.vec().length).toBeGreaterThan(20); }
+    // Across the roll-over (every 24 s) no frame jumps far from the one before it.
+    let worst = 0, last: number[] | null = null;
+    for (let i = 0; i < 1800; i++) {
+      rec.reset(); art.render({ ...scene([{ ...PERSON, pose: 'sleep', z: 0.56, face: [1, 0], look }]), t: 1 + i / 30 });
+      const v = rec.vec();
+      if (last && last.length === v.length) worst = Math.max(worst, apart(v, last));
+      last = v;
+    }
+    expect(worst).toBeLessThan(60);
+  });
+
+  it('draws the head without sprites facing every way, differently in each', () => {
+    const sigs = new Set<string>();
+    for (const face of [[1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [1, -1]] as [number, number][]) {
+      const rec = recordingCtx();
+      const art = createHouseArt(rec.ctx);
+      for (let i = 0; i < 60; i++) { rec.reset(); art.render(scene([{ ...PERSON, face, look, z: 0 }])); }
+      sigs.add(rec.sig());
+    }
+    expect(sigs.size).toBe(6);
+  });
+});
+
+describe('the stairs', () => {
+  const look = { skin: '#C68E6A', hair: '#2B1D16', top: '#3E6E8E', bottom: '#2F3542', longHair: false };
+  // The flight from the ground floor to the first: bottom (9.5, 3.25), top (9.5, 1.25).
+  const climber = (s: number, up: boolean) => ({ ...PERSON, level: 0, x: 9.5, y: 3.25 - 2 * s, z: 0, look, walking: true,
+    stair: { s, up, bx: 9.5, by: 3.25, tx: 9.5, ty: 1.25, low: 0, high: 1 } });
+  const scene = (level: number, chars: object[], t: number, rot = 0) => ({ level, rot, minutes: 600, day: 1, t, dt: 0.016, objs: INITIAL_OBJS.map((o) => ({ ...o })), wallMode: 'up', chars });
+
+  it('draws a climber on the flight below and coming up out of the stairwell above, both ways, from every angle', () => {
+    for (const up of [true, false]) for (let rot = 0; rot < 4; rot++) {
+      const { ctx, calls } = stubCtx();
+      const art = createHouseArt(ctx);
+      for (let i = 0; i <= 20; i++) {
+        const s = i / 20;
+        for (const level of [0, 1]) { const before = calls.n; art.render(scene(level, [climber(s, up)], 1 + i * 0.1, rot)); expect(calls.n, `s=${s} level ${level}`).toBeGreaterThan(before); }
+      }
+    }
+  });
+
+  it('rises smoothly up the flight instead of hopping a step at a time', () => {
+    // The drawn head is placed with a translate; the house's own translates never move, so the one that
+    // changes from frame to frame is the climber's head.
+    const rec = recordingCtx();
+    const art = createHouseArt(rec.ctx);
+    const translates = () => rec.sig().split('|').filter(e => e.startsWith('translate'));
+    let prev = new Set<string>(translates());
+    const heads: number[] = [];
+    for (let i = 0; i <= 40; i++) {
+      rec.reset(); art.render(scene(0, [climber(i / 40, true)], 1 + i * 0.05));
+      const now = translates(), fresh = now.filter(e => !prev.has(e));
+      prev = new Set(now);
+      if (fresh.length) heads.push(Math.min(...fresh.map(e => Number(e.slice(9).split(',')[1]))));
+    }
+    expect(heads.length).toBeGreaterThan(30);
+    const jumps = heads.slice(1).map((y, i) => heads[i] - y);
+    expect(Math.max(...jumps), 'no single frame climbs more than a few pixels').toBeLessThan(6);
+    expect(heads[0] - heads[heads.length - 1], 'but over the flight the head rises most of a floor').toBeGreaterThan(50);
+  });
+});
+
+describe('pets', () => {
+  const pet = (over: object) => ({ id: 'pet1', kind: 'cat', coat: { c: '#D9822B', d: '#B5651D' }, name: 'Biscuit', level: 1, x: 4.5, y: 3.5, z: 0, face: [1, 0], pose: 'stand', seed: 0.4, alpha: 1, hidden: false, hearts: 0, want: null, door: false, bowl: null, litter: null, bowlFood: 0, litterUses: 0, ...over });
+  const scene = (pets: object[], t = 1) => ({ level: 1, rot: 0, minutes: 600, day: 1, t, dt: 0.016, objs: INITIAL_OBJS.map((o) => ({ ...o })), wallMode: 'up', chars: [], pets });
+
+  it('draws a cat and a dog in every pose, each one differently', () => {
+    for (const kind of ['cat', 'dog']) {
+      const sigs = new Set<string>();
+      for (const pose of ['stand', 'walk', 'run', 'sit', 'sleep', 'eat', 'crouch', 'groom', 'play', 'happy']) {
+        const rec = recordingCtx();
+        createHouseArt(rec.ctx).render(scene([pet({ kind, pose, hearts: 2, want: 'feed' })]));
+        expect(rec.vec().length, `${kind} ${pose}`).toBeGreaterThan(20);
+        sigs.add(rec.sig());
+      }
+      expect(sigs.size, `${kind} poses all look different`).toBe(10);
+    }
+  });
+
+  it('leaves out a pet that is hidden or on another floor, and faces the way it is told', () => {
+    const base = recordingCtx(); createHouseArt(base.ctx).render(scene([]));
+    const hid = recordingCtx(); createHouseArt(hid.ctx).render(scene([pet({ hidden: true })]));
+    const other = recordingCtx(); createHouseArt(other.ctx).render(scene([pet({ level: 2 })]));
+    expect(hid.sig()).toBe(base.sig());
+    expect(other.sig()).toBe(base.sig());
+    const east = recordingCtx(); createHouseArt(east.ctx).render(scene([pet({ face: [1, 0] })]));
+    const west = recordingCtx(); createHouseArt(west.ctx).render(scene([pet({ face: [-1, 0] })]));
+    expect(east.sig()).not.toBe(west.sig());
+  });
+});
+
 describe('house artwork', () => {
   it('draws every floor from every camera angle, day and night', () => {
     const { ctx, calls } = stubCtx();

@@ -69,6 +69,7 @@ export function createChat(g: Game): Partial<Game> {
       coreMem, memories, pastMem,
       concern: g.concernContext(),
       mood: g.concernMood(),
+      pets: g.petsContext(),
     };
 
     // Out of replies for today: don't ask the network again until tomorrow.

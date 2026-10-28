@@ -320,7 +320,7 @@ const ACT_CLIPS = {
     const step = Math.floor((t + ph) / 4) % 3;
     if (step === 0) return { hands: { 1: [0, 0.04, 0.66], [-1]: [0, 0.04, 0.66] }, elbows: { 1: [0, 0.1, 0.34], [-1]: [0, 0.1, 0.34] }, bob: 0.01 };
     if (step === 1) return { hands: { 1: [0.12, 0.02, -0.12], [-1]: [0.12, 0.02, -0.12] }, legs: 'tree', bob: 0.01 };
-    return { hands: { 1: [0.36, 0.06, -0.02], [-1]: [-0.36, 0.06, -0.02] }, elbows: { 1: [0.18, 0.06, -0.01], [-1]: [-0.18, 0.06, -0.01] }, legs: 'lunge' };
+    return { hands: { 1: [0.36, 0.06, -0.02], [-1]: [-0.36, 0.06, -0.02] }, elbows: { 1: [0.18, 0.06, -0.01], [-1]: [-0.18, 0.06, -0.01] }, legs: 'lunge', drop: 0.12 };
   },
   stargaze() {
     return { hands: { 1: [-0.04, 0.14, 0.12], [-1]: [-0.04, 0.14, 0.12] }, elbows: { 1: [0.02, 0.24, 0.06], [-1]: [0.02, 0.24, 0.06] }, lookUp: true };
@@ -483,18 +483,33 @@ export const LEG = { thigh: 0.31, shin: 0.31, hipRise: 0.03, sink: 0.08, stretch
 /** Arm reach from the shoulder, and the foot's length, in world units. */
 export const ARM = { length: 0.42 };
 export const FOOT = { length: 0.22, heel: 0.3 };
+/** The stride: half a stride of body travel per plant, and how far a foot reaches, in world units. */
+export const GAIT = { cycle: 0.68, reach: 0.17, lift: 0.075 };
+
+/**
+ * Where one foot is in the stride, as [forward, lift] from under the hip. The phase runs
+ * 2*PI per full cycle (GAIT.cycle of body travel). While sin(phase) > 0 the foot swings
+ * forward through the air on an arc; for the other half it is planted and slides straight
+ * back at exactly the body's speed, so it holds its place on the floor instead of skating.
+ */
+export function gaitFoot(phase, amp = 1) {
+  const u = ((phase % TAU) + TAU) % TAU, A = GAIT.reach * amp;
+  if (u < Math.PI) return [-A * Math.cos(u), Math.sin(u) * GAIT.lift * amp];
+  return [A * (1 - (2 * (u - Math.PI)) / Math.PI), 0];
+}
 
 /**
  * Walking arms, in the character's own frame (f forward, s outward, z from the shoulder).
- * Each arm swings opposite the leg on its side (the leg uses sin(phase) for side +1 and
- * sin(phase + PI) for side -1), pivoting at the shoulder so the hand stays an arm's length
+ * Each arm swings opposite the leg on its side (the leg follows gaitFoot(phase) for side +1
+ * and gaitFoot(phase + PI) for side -1), pivoting at the shoulder so the hand stays an arm's length
  * away, with the elbow bent a little forward. amp 0..1 fades the swing out as a walk ends,
  * leaving the arms hanging straight down.
  */
 export function walkRig(phase, amp = 1) {
   const L = ARM.length;
   const arm = (side) => {
-    const sw = -Math.sin(phase + (side > 0 ? 0 : Math.PI)) * amp;
+    // The leg on this side is furthest forward at phase PI (side +1) / 0 (side -1); the arm is furthest back there.
+    const sw = Math.cos(phase + (side > 0 ? 0 : Math.PI)) * amp;
     const ang = sw * 0.55; // up to ~32 degrees forward and back
     const hand = [Math.sin(ang) * L, 0.13, -Math.cos(ang) * L + 0.02];
     // The elbow sits halfway up, pushed forward as the arm swings back (the forearm folds), and a touch outward.
@@ -503,6 +518,69 @@ export function walkRig(phase, amp = 1) {
   };
   const r = arm(1), l = arm(-1);
   return { hands: { 1: r.hand, [-1]: l.hand }, elbows: { 1: r.elbow, [-1]: l.elbow } };
+}
+
+// ---- The head: it looks before the body turns, at whoever it is with, and around the room ----
+
+/** How far the head turns from the body (radians) and how fast (radians a second). */
+export const HEAD = { turn: 1.2, rate: 7, glance: 0.55 };
+export const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+
+/**
+ * Where the head wants to point: at a look target when there is one, else where the body is
+ * heading (so the head leads a turn), plus any idle glance; never more than HEAD.turn from the
+ * way the body faces, because necks only go so far.
+ */
+export function headTarget(bodyA, headingA, lookA = null, glance = 0) {
+  const want = lookA != null ? lookA : headingA + glance;
+  const d = Math.max(-HEAD.turn, Math.min(HEAD.turn, wrapAngle(want - bodyA)));
+  return bodyA + d;
+}
+
+/** Turns the head from `ha` toward `target` the short way, no faster than HEAD.rate. */
+export function turnHead(ha, target, dt) {
+  const d = wrapAngle(target - ha);
+  return ha + Math.max(-HEAD.rate * dt, Math.min(HEAD.rate * dt, d));
+}
+
+/** Standing around, a look to one side now and then: zero most of the time, a smooth turn and back otherwise. */
+export function idleGlance(t, seed = 0) {
+  const win = 7.5, n = Math.floor((t + seed * 11) / win), u = ((t + seed * 11) % win) / win;
+  if (u < 0.5 || u > 0.85) return 0;
+  const dir = Math.sin(n * 12.9898 + seed * 78.233) > 0 ? 1 : -1;
+  return dir * HEAD.glance * Math.sin(((u - 0.5) / 0.35) * Math.PI);
+}
+
+/**
+ * Tree pose: the raised foot rests against the standing leg's inner knee, its own knee turned
+ * out. Returns the knee and foot as [outward, z] from the raised leg's hip, for a standing
+ * leg whose hip is `hipGap` away and whose knee is at `kneeZ` above the floor.
+ */
+export function treeLeg(hipZ, hipGap = 0.2, kneeZ = LEG.shin) {
+  const foot = [-hipGap + 0.03, kneeZ - hipZ];
+  const knee = legIK([0, 0], foot); // bends toward +outward
+  return { knee, foot };
+}
+
+/**
+ * Two-bone leg: where the knee goes for a hip and a foot given as [forward, z], with the knee
+ * bending forward. A foot out of reach straightens the leg toward it (a slight stretch, never
+ * a gap), so a stride or a pedal never leaves a leg that grows and shrinks.
+ */
+export function legIK(hip, foot, thigh = LEG.thigh, shin = LEG.shin) {
+  const dx = foot[0] - hip[0], dz = foot[1] - hip[1];
+  const d = Math.hypot(dx, dz) || 1e-6;
+  if (d >= thigh + shin) {
+    const k = thigh / (thigh + shin);
+    return [hip[0] + dx * k, hip[1] + dz * k];
+  }
+  // Law of cosines: the knee sits a distance `a` along the hip-foot line and `h` off it.
+  const a = (thigh * thigh - shin * shin + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, thigh * thigh - a * a));
+  const ux = dx / d, uz = dz / d;
+  let px = -uz, pz = ux; // the perpendicular that points forward
+  if (px < 0) { px = -px; pz = -pz; }
+  return [hip[0] + ux * a + px * h, hip[1] + uz * a + pz * h];
 }
 
 /**
