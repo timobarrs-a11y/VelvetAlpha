@@ -26,7 +26,7 @@ export function installDevHooks(g: Game): void {
       setSample: (f: SampleFn) => { g.s.sample = f; },
       doVidSearch: g.doVidSearch,
       // For the end-to-end tests (e2e/velvet-sims): read what is in the house, and find a piece on screen.
-      objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, ...(o.on ? { on: o.on, z: o.z } : {}) })),
+      objects: () => world.objs.map(o => ({ id: o.id, type: o.type, level: o.level, x: o.x, y: o.y, rot: o.rot, ...(o.on ? { on: o.on, z: o.z } : {}), ...(o.skin ? { skin: o.skin } : {}) })),
       storedCount: () => storage.length,
       resetCamera: () => g.resetCamera(),
       personClientPos: (who: 'jordan' | 'maya'): [number, number] => {
