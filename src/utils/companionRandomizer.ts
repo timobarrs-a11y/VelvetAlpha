@@ -1,5 +1,7 @@
 import { getRandomName } from '../data/companionNames';
 import { SIGNATURE_VOICES } from '../config/signatureVoices';
+import { COMPANION_QUESTIONNAIRE } from '../features/questionnaire/companionBank';
+import type { TabsQuestion } from '../features/questionnaire/types';
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -120,10 +122,15 @@ export function generateRandomCompanionProfile(
  */
 export function randomMatchAnswers(gender: 'male' | 'female', connection: 'friend' | 'romantic'): Record<string, string | string[]> {
   const own = gender === 'male' ? 'In his own world' : 'In her own world';
-  const interests = ['pop', 'books', 'wellness', 'adventure', 'music', 'tech'];
-  const first = pick(interests);
-  const second = pick(interests.filter(i => i !== first));
+  // One pick from each of two different interest tabs, saved the way the tabs screen saves them.
+  const tabs = (COMPANION_QUESTIONNAIRE.questions.find(q => q.id === 'interests') as TabsQuestion).tabs;
+  const firstTab = pick(tabs);
+  const secondTab = pick(tabs.filter(t => t !== firstTab));
+  const first = pick(firstTab.options).value;
+  const second = pick(secondTab.options.filter(o => o.value !== first)).value;
   return {
+    [firstTab.answerKey]: [first],
+    [secondTab.answerKey]: [second],
     relationshipType: gender === 'male' ? 'Male' : 'Female',
     connectionType: connection,
     energy: pick(['Life of the party', 'Somewhere in between', own]),

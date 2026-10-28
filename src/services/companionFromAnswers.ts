@@ -21,7 +21,7 @@ type Answers = Record<string, string | string[]>;
 export function matchDataFromAnswers(answers: Answers, profile: Partial<UserProfile> | null) {
   const a = answers as Record<string, string>;
   const connection: 'friend' | 'romantic' = a.connectionType?.includes('friend') ? 'friend' : 'romantic';
-  const interests = Array.isArray(answers.interests) ? (answers.interests as string[]) : [];
+  const interests = Array.isArray(answers.interests) ? [...new Set(answers.interests as string[])] : [];
   return {
     userName: profile?.name || '',
     userBirthday: profile?.birthday || '',
@@ -57,7 +57,7 @@ export async function createCompanionFromAnswers(userId: string, answers: Answer
   const a = answers as Record<string, string>;
   const gender: 'male' | 'female' = a.relationshipType === 'Male' ? 'male' : 'female';
   const matchData = matchDataFromAnswers(answers, profile);
-  const interests = Array.isArray(answers.interests) ? (answers.interests as string[]) : [];
+  const interests = Array.isArray(answers.interests) ? [...new Set(answers.interests as string[])] : [];
   const tasteDeck = Array.isArray(answers.tasteDeck) ? (answers.tasteDeck as string[]) : [];
   const signatureVoice = typeof a.signatureVoice === 'string' && a.signatureVoice ? a.signatureVoice : undefined;
 

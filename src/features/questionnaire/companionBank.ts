@@ -1,6 +1,7 @@
 import type { Question, QuestionnaireDefinition } from './types';
 import { tpl } from './pronouns';
 import type { QuestionContext } from './types';
+import { HOBBY_OPTIONS, MUSIC_OPTIONS, ENTERTAINMENT_OPTIONS, TECH_OPTIONS, LIFESTYLE_OPTIONS, SPORTS_OPTIONS } from './personalBank';
 
 export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
   startProgress: 20,
@@ -116,21 +117,22 @@ export const COMPANION_QUESTIONNAIRE: QuestionnaireDefinition = {
       ],
     },
     {
+      // The same interests the user questionnaire offers, Sports included, each tab open to their own. Saved under
+      // companion keys (not the user's `hobbies` and so on) and merged into one `interests` list by the shell.
       id: 'interests',
-      archetype: 'grid',
+      archetype: 'tabs',
       chapter: 'warmth',
-      question: (ctx) => tpl(`What's {she} passionate about?`, ctx),
+      question: (ctx) => tpl(`What do you want {her} to be interested in or knowledgeable about?`, ctx),
+      subtitle: 'Tap as many as you like, across any tab, or add your own.',
       confidence: 'tapped',
-      multiSelect: true,
       minSelections: 1,
-      columns: 2,
-      options: [
-        { label: 'Pop culture & trends', value: 'pop', icon: 'TrendingUp' },
-        { label: 'Books & philosophy', value: 'books', icon: 'BookOpen' },
-        { label: 'Wellness & growth', value: 'wellness', icon: 'Heart' },
-        { label: 'Adventure & travel', value: 'adventure', icon: 'Compass' },
-        { label: 'Music & art', value: 'music', icon: 'Music' },
-        { label: 'Tech & gaming', value: 'tech', icon: 'Gamepad2' },
+      tabs: [
+        { id: 'hobbies', label: 'Hobbies', answerKey: 'companionHobbies', options: HOBBY_OPTIONS, allowCustom: true },
+        { id: 'music', label: 'Music', answerKey: 'companionMusic', options: MUSIC_OPTIONS, allowCustom: true },
+        { id: 'watch', label: 'Watch & read', answerKey: 'companionEntertainment', options: ENTERTAINMENT_OPTIONS, allowCustom: true },
+        { id: 'tech', label: 'Tech', answerKey: 'companionTech', options: TECH_OPTIONS, allowCustom: true },
+        { id: 'lifestyle', label: 'Lifestyle', answerKey: 'companionLifestyle', options: LIFESTYLE_OPTIONS, allowCustom: true },
+        { id: 'sports', label: 'Sports', answerKey: 'companionSports', options: SPORTS_OPTIONS, allowCustom: true },
       ],
     },
     {

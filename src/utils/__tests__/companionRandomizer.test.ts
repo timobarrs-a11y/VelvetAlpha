@@ -36,7 +36,10 @@ describe('a random companion', () => {
       expect(offered('warmth').bubbles!.map(b => b.value)).toContain(a.warmth);
       expect(a.interests).toHaveLength(2);
       expect(new Set(a.interests).size).toBe(2);
-      for (const v of a.interests as string[]) expect(offered('interests') ? (COMPANION_QUESTIONNAIRE.questions.find(q => q.id === 'interests') as unknown as { options: { value: string }[] }).options.map(o => o.value) : []).toContain(v);
+      const tabs = (COMPANION_QUESTIONNAIRE.questions.find(q => q.id === 'interests') as unknown as { tabs: { answerKey: string; options: { value: string }[] }[] }).tabs;
+      for (const v of a.interests as string[]) expect(tabs.flatMap(t => t.options.map(o => o.value))).toContain(v);
+      // Each pick is also under its own tab's key, as the tabs screen saves it.
+      expect(tabs.filter(t => Array.isArray(a[t.answerKey])).flatMap(t => a[t.answerKey] as string[]).sort()).toEqual([...(a.interests as string[])].sort());
       expect(typeof a.companionName).toBe('string');
       expect(a.companionName).toBeTruthy();
     }
