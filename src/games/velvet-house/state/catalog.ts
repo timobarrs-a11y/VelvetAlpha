@@ -77,6 +77,14 @@ export const look = (id: string, type: string, skin: string, name: string, desc:
   id, name, desc, price, icon: 'obj', tab: 'Furniture', type, skin, tags, cols, repeat: true,
 });
 
+/**
+ * Another model of a piece (a chest freezer for the fridge): its own size and shape, doing the same job. Buying it puts it
+ * in the place of the piece of that kind, if it fits there; its looks are sold with `look` under its own type.
+ */
+const model = (id: string, type: string, name: string, desc: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
+  id, name, desc, price, icon: 'obj', tab: 'Furniture', type, tags, cols, repeat: true,
+});
+
 /** A themed set: its pieces, wallpaper and floor bought together for less. The price is worked out from the pieces (see `setQuote`). */
 const bundle = (id: string, name: string, desc: string, items: string[], tags: string[], off = 0.2): CatalogEntry => ({
   id, name, desc, price: 0, icon: 'set', tab: 'Sets', tags, set: { items, off },
@@ -412,6 +420,19 @@ export const CATALOG: CatalogEntry[] = [
   furn('floormirror', 'floormirror', 'Floor mirror', 90, ['modern', 'minimal', 'luxe'], ['#C9A24A', '#2B2B30', '#F2EEE8', '#9C6B45']),
   furn('gclock', 'gclock', 'Grandfather clock', 300, ['vintage', 'luxe', 'bold'], ['#5A3E2E', '#2B2B30', '#E4DDD2']),
   furn('globe', 'globe', 'Antique globe', 120, ['vintage', 'luxe', 'natural'], ['#9C6B45', '#2B2B30']),
+  // TVs: one for the wall, the rest stand on a TV unit, a console, a desk or a dresser; and somewhere to put one.
+  furn('walltv', 'walltv', 'Wall-mounted TV', 380, ['modern', 'minimal', 'cool']),
+  furn('tvflat', 'tvflat', 'Flat-screen TV', 300, ['modern', 'minimal']),
+  furn('tvdesk', 'tvdesk', 'Desk TV', 120, ['playful', 'modern'], ['#2B2B30', '#F2EEE8', '#C2413A']),
+  furn('tvtube', 'tvtube', 'Tube TV', 90, ['vintage', 'playful', 'cozy'], ['#8A5E3B', '#E4DDD2', '#2B2B30']),
+  furn('entcenter', 'entcenter', 'Entertainment center', 450, ['cozy', 'natural', 'vintage'], ['#9C6B45', '#2B2B30', '#E4DDD2']),
+
+  // Models: other shapes of a piece the house has, each with looks drawn for its own shape. One takes the place of
+  // the piece it stands in for (the fridge stays in its corner of the kitchen), so mixing models changes the room.
+  model('model-chestfreezer', 'chestfreezer', 'Chest freezer', 'Low and wide, with a lid that swings up. The kitchen gets its wall back.', 300, ['minimal', 'cool']),
+  look('look-chestfreezer-camp', 'chestfreezer', 'camp', 'Camp cooler chest', 'Ribbed steel in forest green under a white lid, with chrome corners, latches and a side handle.', 360, ['natural', 'vintage', 'playful'], ['#2F5D43', '#B5532F', '#3F6E8C']),
+  model('model-mediaconsole', 'mediaconsole', 'Media console', 'Long and low in pale oak: two drawers either side and a shelf for the console. More wall for the screen.', 260, ['modern', 'minimal', 'natural']),
+  look('look-mediaconsole-midcentury', 'mediaconsole', 'midcentury', 'Walnut credenza', 'A walnut credenza on splayed legs, slatted doors between two coloured ones, and brass pulls.', 420, ['vintage', 'warm', 'natural'], ['#D9A84A', '#3D6B73', '#C2603A']),
 
   // Looks: the same pieces, drawn differently. Buying one restyles the piece already on the main floor.
   // Retro: a 1950s-70s American kitchen and living room.

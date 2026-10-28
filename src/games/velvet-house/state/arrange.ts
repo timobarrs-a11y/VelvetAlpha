@@ -1,4 +1,4 @@
-import { TYPES, blocksOf, isRug, isFixed, footprint, colsOf, type ObjectInstance } from './objects';
+import { TYPES, blocksOf, isRug, isMount, isFixed, footprint, colsOf, kindOf, type ObjectInstance } from './objects';
 import { LEVELS, STAIRS, WX, WY } from './house';
 import { buildWorld } from './agents';
 import { cellOf, reachableSet, NY } from './pathfinding';
@@ -56,10 +56,11 @@ export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, peo
     return { ok: false, reason: 'That would poke through the wall.' };
   }
   const mine = rectsOf(held);
-  // Rugs lie under everything; everything else needs its own floor space.
-  if (!isRug(held.type)) {
+  if (isMount(held.type) && !backToWall(held)) return { ok: false, reason: `The ${(TYPES[held.type].name ?? 'piece').toLowerCase()} hangs on a wall: put its back against one.` };
+  // Rugs lie under everything and hung pieces over it; everything else needs its own floor space.
+  if (!isRug(held.type) && !isMount(held.type)) {
     for (const o of objs) {
-      if (o === held || o.on || o.level !== held.level || isRug(o.type) || !TYPES[o.type]) continue;
+      if (o === held || o.on || o.level !== held.level || isRug(o.type) || isMount(o.type) || !TYPES[o.type]) continue;
       const other = TYPES[o.type].wall && TYPES[held.type].wall ? rectsOf(o) : TYPES[o.type].wall ? [] : rectsOf(o);
       if (mine.some(m => other.some(r => overlaps(m, r)))) return { ok: false, reason: `It bumps into the ${(TYPES[o.type].name ?? 'furniture').toLowerCase()}.` };
     }
@@ -104,6 +105,18 @@ export function checkPlacement(objs: ObjectInstance[], held: ObjectInstance, peo
     if (wasFree) return { ok: false, reason: 'Someone would be trapped behind it.' };
   }
   return { ok: true };
+}
+
+/** A hung piece's back is against a wall of its floor (the house's own, or one inside it), along its whole width. */
+export function backToWall(o: ObjectInstance): boolean {
+  const [w, d] = footprint(o), GAP = 0.18, SLACK = 0.05;
+  // The back edge: rot 0 faces into the room from low y, 1 from high x, 2 from high y, 3 from low x.
+  const along = o.rot % 2 === 0, at = o.rot === 0 ? o.y : o.rot === 1 ? o.x + w : o.rot === 2 ? o.y + d : o.x;
+  const from = along ? o.x : o.y, to = along ? o.x + w : o.y + d, out = o.rot === 0 || o.rot === 3 ? -1 : 1;
+  const near = (line: number) => (line - at) * out >= -0.01 && (line - at) * out <= GAP;
+  // The house's own wall behind it, or one inside the house.
+  if (near(o.rot === 1 ? WX : o.rot === 2 ? WY : 0)) return true;
+  return LEVELS[o.level].walls.some((wl) => (along ? wl.y !== undefined : wl.x !== undefined) && near((along ? wl.y : wl.x)!) && wl.a <= from + SLACK && wl.b >= to - SLACK);
 }
 
 // ---- small pieces on surfaces ------------------------------------------------------------------------------------------
@@ -217,6 +230,39 @@ export function nextColour(o: ObjectInstance): string | null {
   return cols[(i + 1) % cols.length];
 }
 
+/**
+ * Make `o` another model of its kind, where it stands: its back stays against the same wall and it slides along that wall
+ * to the nearest place the new size fits (left edge kept, right edge kept, centred, then a step at a time either way).
+ * False, with `o` as it was, when nothing near fits.
+ */
+export function swapModel(objs: ObjectInstance[], o: ObjectInstance, type: string, people: Array<{ level: number; x: number; y: number }> = []): boolean {
+  if (!TYPES[type] || kindOf(type) !== kindOf(o.type)) return false;
+  const was = { type: o.type, x: o.x, y: o.y };
+  const [ow, od] = footprint(o);
+  o.type = type;
+  const [nw, nd] = footprint(o);
+  // Which edge is the back: rot 0 keeps its low y, 1 its high x, 2 its high y, 3 its low x.
+  const bx = o.rot === 1 ? was.x + ow - nw : was.x, by = o.rot === 2 ? was.y + od - nd : was.y;
+  const alongX = o.rot % 2 === 0, span = alongX ? ow - nw : od - nd;
+  const steps = [0, span, span / 2];
+  for (let k = 1; k <= 6; k++) steps.push(-0.25 * k, span + 0.25 * k);
+  for (const d of steps) {
+    o.x = alongX ? bx + d : bx;
+    o.y = alongX ? by : by + d;
+    if (checkPlacement(objs, o, people).ok) return true;
+  }
+  Object.assign(o, was);
+  return false;
+}
+
+/** Whether `o` could become that model where it stands (see `swapModel`), without changing it. */
+export function modelFits(objs: ObjectInstance[], o: ObjectInstance, type: string, people: Array<{ level: number; x: number; y: number }> = []): boolean {
+  const was = { type: o.type, x: o.x, y: o.y };
+  const ok = swapModel(objs, o, type, people);
+  Object.assign(o, was);
+  return ok;
+}
+
 const CARRY_LEVELS = [0, 1, 2, 3, 4];
 
 /**
@@ -247,6 +293,7 @@ export function relocate(
   people: Array<{ level: number; x: number; y: number }> = [],
   near: [number, number] = [WX / 2, WY / 2],
 ): boolean {
+  if (isMount(o.type)) return hang(objs, o, level, people, near);
   const orig = { level: o.level, x: o.x, y: o.y, rot: o.rot };
   const spots: Array<[number, number]> = [];
   for (let x = 0; x <= WX; x += 0.5) for (let y = 0; y <= WY; y += 0.5) spots.push([x, y]);
@@ -263,6 +310,60 @@ export function relocate(
   return false;
 }
 
+/** Hang a piece on the nearest free stretch of wall on that floor, the house's own walls or one inside it. */
+function hang(objs: ObjectInstance[], o: ObjectInstance, level: number, people: Array<{ level: number; x: number; y: number }>, near: [number, number]): boolean {
+  const orig = { level: o.level, x: o.x, y: o.y, rot: o.rot };
+  const t = TYPES[o.type], OFF = 0.08, spots: Array<[number, number, number]> = [];
+  // A wall line and the side the piece hangs on: rot 0 hangs below a wall along x (facing +y), 2 above it; 3 right of a
+  // wall along y (facing +x), 1 left of it.
+  const along = (rot: number, line: number, a: number, b: number) => {
+    const [w, d] = rot % 2 ? [t.D, t.W] : [t.W, t.D], len = rot % 2 ? d : w;
+    for (let u = a + 0.1; u <= b - len - 0.1 + 1e-6; u += 0.25) {
+      if (rot === 0) spots.push([rot, u, line + OFF]);
+      else if (rot === 2) spots.push([rot, u, line - OFF - d]);
+      else if (rot === 3) spots.push([rot, line + OFF, u]);
+      else spots.push([rot, line - OFF - w, u]);
+    }
+  };
+  along(0, 0, 0, WX); along(2, WY, 0, WX); along(3, 0, 0, WY); along(1, WX, 0, WY);
+  for (const wl of LEVELS[level].walls) {
+    if (wl.y !== undefined) { along(0, wl.y, wl.a, wl.b); along(2, wl.y, wl.a, wl.b); } else { along(3, wl.x!, wl.a, wl.b); along(1, wl.x!, wl.a, wl.b); }
+  }
+  spots.sort((p, q) => Math.hypot(p[1] - near[0], p[2] - near[1]) - Math.hypot(q[1] - near[0], q[2] - near[1]));
+  o.level = level;
+  for (const [rot, x, y] of spots) {
+    Object.assign(o, { rot, x, y });
+    if (checkPlacement(objs, o, people).ok) return true;
+  }
+  Object.assign(o, orig);
+  return false;
+}
+
+/**
+ * Set a small piece (a TV) on a free surface on that floor, a TV stand first: the TV unit or its models, the
+ * entertainment center, then a dresser or a desk, then anything with a top. False, with nothing changed, if none has room.
+ */
+export function setOnStand(objs: ObjectInstance[], o: ObjectInstance, level: number): boolean {
+  if (!TYPES[o.type]?.small) return false;
+  const orig = { level: o.level, x: o.x, y: o.y, rot: o.rot, on: o.on, z: o.z };
+  const rank = (h: ObjectInstance) => ['tvunit', 'entcenter', 'dresser', 'desk'].indexOf(kindOf(h.type)) + 1 || 9;
+  const hosts = objs.filter((h) => h !== o && !h.on && h.level === level && TYPES[h.type]?.surface).sort((a, b) => rank(a) - rank(b));
+  o.level = level;
+  for (const host of hosts) {
+    const a = surfaceRect(host)!;
+    o.rot = host.rot;
+    const [w, d] = footprint(o);
+    for (const fx of [0.5, 0, 1]) {
+      o.x = a[0] + (a[2] - a[0] - w) * fx; o.y = a[1] + (a[3] - a[1] - d) * 0.5;
+      putOn(o, host);
+      if (checkPlacement(objs, o).ok) return true;
+    }
+  }
+  Object.assign(o, orig);
+  if (orig.on === undefined) takeOff(o);
+  return false;
+}
+
 /** Anything that isn't built into the house can be put away in storage (a toilet or a counter can move, not vanish). */
 export function canStore(o: ObjectInstance): boolean {
   return isMovable(o) && !isFixed(o.type);
@@ -274,7 +375,7 @@ export function fridgeUnder(objs: ObjectInstance[], food: ObjectInstance): Objec
   const [fw, fd] = footprint(food);
   const cx = food.x + fw / 2, cy = food.y + fd / 2;
   for (const o of objs) {
-    if (o.type !== 'fridge' || o.level !== food.level) continue;
+    if (kindOf(o.type) !== 'fridge' || o.level !== food.level) continue;
     const [w, d] = footprint(o);
     if (cx >= o.x - 0.3 && cx <= o.x + w + 0.3 && cy >= o.y - 0.3 && cy <= o.y + d + 0.3) return o;
   }

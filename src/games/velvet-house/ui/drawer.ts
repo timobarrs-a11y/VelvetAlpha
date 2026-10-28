@@ -34,6 +34,7 @@ export interface DrawerCallbacks {
   onArrangeTakeDown?: () => void;
   // Shop: which floor Paint, Wallpaper and Floors are going on.
   onPickFloor?: (level: number) => void;
+  onPickRoom?: (room: string | null) => void;
   onBuy: (item: CatalogEntry, color?: string) => void;
   onOrder: (chain: string) => void;
   // The Household page's pet buttons: 'feedPet', 'playPet', 'petPet', 'walkDog' or 'scoop' for a pet.
@@ -112,6 +113,9 @@ export interface DrawerState {
   levelNames?: string[];
   // The floors paint, wallpaper and floors can go on, in order.
   shopLevels?: number[];
+  /** The rooms of the floor being looked at, when it has more than one, and the one paint goes on (null: all of it). */
+  shopRooms?: string[];
+  shopRoom?: string | null;
   arrange?: ArrangeState | null;
   page: DrawerPage;
   shopTab: string;
@@ -214,6 +218,7 @@ export function createDrawer(cb: DrawerCallbacks): {
   dock: HTMLElement;
   open: (pg: DrawerPage) => void;
   close: () => void;
+  page: () => DrawerPage;
   render: (state: DrawerState) => void;
 } {
   const el = document.createElement('aside');
@@ -422,7 +427,9 @@ export function createDrawer(cb: DrawerCallbacks): {
       }
       const lock = lockOf(item.id, state.day, state.bond);
       const quote = item.set ? setQuote(item, state.owned) : null;
-      const owned = quote ? quote.missing.length === 0 : state.owned.has(item.id) && !item.repeat;
+      // Paint, wallpaper and floors bought once go on again, anywhere, for free: their button is Apply.
+      const restyle = (item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor') && state.owned.has(item.id);
+      const owned = quote ? quote.missing.length === 0 : state.owned.has(item.id) && !item.repeat && !restyle;
       const locked = lock?.locked;
       const price = quote ? quote.cost : item.price;
       const tooExpensive = price > state.money;
@@ -442,8 +449,8 @@ export function createDrawer(cb: DrawerCallbacks): {
           ${lockHint}
         </div>
         <div class="vh-shop-actions">
-          ${quote && quote.missing.length && quote.full > quote.cost ? `<span class="vh-was">$${quote.full}</span>` : ''}${quote && owned ? '' : `<span class="vh-price">$${price}</span>`}
-          <button data-buy="${item.id}" ${locked || (owned && !quote ? 'disabled' : '')}>${quote ? (owned ? 'Apply' : 'Buy') : owned ? 'Owned' : 'Buy'}</button>
+          ${quote && quote.missing.length && quote.full > quote.cost ? `<span class="vh-was">$${quote.full}</span>` : ''}${(quote && owned) || restyle ? '' : `<span class="vh-price">$${price}</span>`}
+          <button data-buy="${item.id}" ${locked || (owned && !quote ? 'disabled' : '')}>${quote ? (owned ? 'Apply' : 'Buy') : restyle ? 'Apply' : owned ? 'Owned' : 'Buy'}</button>
         </div>
       </div>`;
     };
@@ -459,10 +466,15 @@ export function createDrawer(cb: DrawerCallbacks): {
     const floorPick = styling && state.levelNames
       ? `<div class="vh-floorpick"><span>Goes on</span>${(state.shopLevels ?? [0, 1, 2]).map(l => `<button data-pickfloor="${l}" class="${state.level === l ? 'vh-active' : ''}">${esc(state.levelNames![l])}</button>`).join('')}</div>`
       : '';
-    const html = `<div class="vh-shop-tabs">${tabBtns}</div>${floorPick}<div class="vh-shop-list">${cards || '<p class="vh-empty">Nothing here yet.</p>'}</div>`;
+    // Which room of that floor: the whole floor, or one room of it. Sets use it too (their walls and floor).
+    const roomPick = (styling || tab === 'Sets') && state.shopRooms?.length
+      ? `<div class="vh-floorpick vh-roompick"><span>Room</span><button data-pickroom="" class="${state.shopRoom ? '' : 'vh-active'}">Whole floor</button>${state.shopRooms.map(r => `<button data-pickroom="${esc(r)}" class="${state.shopRoom === r ? 'vh-active' : ''}">${esc(r)}</button>`).join('')}</div>`
+      : '';
+    const html = `<div class="vh-shop-tabs">${tabBtns}</div>${floorPick}${roomPick}<div class="vh-shop-list">${cards || '<p class="vh-empty">Nothing here yet.</p>'}</div>`;
     // Unchanged since the last refresh: leave it alone, so picture previews aren't reloaded several times a second.
     if (!put(sec, html)) return;
     sec.querySelectorAll<HTMLElement>('[data-pickfloor]').forEach(b => b.addEventListener('click', () => cb.onPickFloor?.(Number(b.dataset.pickfloor))));
+    sec.querySelectorAll<HTMLElement>('[data-pickroom]').forEach(b => b.addEventListener('click', () => cb.onPickRoom?.(b.dataset.pickroom || null)));
 
     sec.querySelectorAll('[data-tab]').forEach(b => {
       b.addEventListener('click', () => { currentTab = (b as HTMLElement).dataset.tab!; render(state); });
@@ -747,6 +759,8 @@ export function createDrawer(cb: DrawerCallbacks): {
     dock,
     open: openPage,
     close: () => openPage(''),
+    /** The page that is open, '' when none. */
+    page: () => currentPage,
     render,
   };
 }

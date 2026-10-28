@@ -87,7 +87,7 @@ when every row is "ported" or "dropped".
 | Offline catch-up and welcome-back recap (`offlineCatchup`, `showRecap`) | Missing | Port |
 | Second house, The Craftsman on Elm (`moveHouse`, Homes tab) | Missing | **Dropped** (decided): replaced by a house-upgrade plan. The empty Homes shop tab stays until that plan is built |
 | Wall decor that hangs and slides along walls (17 types, `WALLOBJS`) | Art code exists, nothing in the shop places it | Port |
-| Per-room paint, wallpaper and floor (`setLookRoom`) | Per floor only | Port |
+| Per-room paint, wallpaper and floor (`setLookRoom`) | **Done:** the shop's Room row (Whole floor or one room of it) puts paint, wallpaper, floors and a set's walls and floor on that room, outlined while it is picked; the whole floor resets its rooms. Paint goes over wallpaper. What is already bought goes on again free (`applyPaint`/`applyWallpaper`/`applyFloor` with a room, `roomLook`) | Done |
 | Shop: Today's picks, deals, rotation, locks | Missing (Today tab is empty) | Port |
 | Shop: gameplay upgrades (string lights, espresso machine, 75-inch TV, chef's range, projector, memory-foam bed) | Only the attic | Port |
 | Shop: Groceries (3), Gifts (5), Homes (2) tabs | Empty | Port |

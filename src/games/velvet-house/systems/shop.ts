@@ -1,13 +1,13 @@
 import { ownsAvatarItem, buyAvatarItem } from '../bridge/avatarShop';
 import { simsShopItems, itemLabel } from '../../../data/avatarCatalog';
-import { relocate } from '../state/arrange';
+import { relocate, modelFits, swapModel, setOnStand } from '../state/arrange';
 import { ATTIC_STAIR_OBJS, type ObjectInstance } from '../state/objects';
-import { LEVEL_NAMES, ATTIC } from '../state/house';
+import { LEVEL_NAMES, LEVELS, ATTIC } from '../state/house';
 import { isPaintable } from '../state/scenes';
 import { buildWorld } from '../state/agents';
 import { type CatalogEntry, promoLocked, setQuote } from '../state/catalog';
 import { tasteOf } from '../state/taste';
-import { skinTarget, skinColour, wearSkin } from '../state/skins';
+import { skinTarget, skinColour, wearSkin, wearModel } from '../state/skins';
 import { displayName, TYPES } from '../state/objects';
 import { clothByKey } from '../state/clothing';
 import type { Game } from '../kernel/game';
@@ -78,14 +78,23 @@ export function createShop(g: Game): Partial<Game> {
     }
     if (item.id === 'pet-food' && !world.pets.length) { log('Adopt a pet first.'); return; }
     // A look restyles the piece already on the main floor, so its one good spot stays; buying what it already wears costs nothing.
+    // Another model of a fixed piece (a chest freezer for the fridge) takes that piece's place, if its size fits there.
     const target = item.icon === 'obj' ? skinTarget(world.objs, item) : null;
+    const remodel = !!(target && item.type && target.type !== item.type);
     const lookCol = item.skin ? skinColour(item, color) : undefined;
-    if (!fromSet && target && target.skin === item.skin && (target.col ?? undefined) === lookCol) { log(`The ${displayName(target).toLowerCase()} already looks like that.`); return; }
-    // A look already bought is the player's: putting it on again is free.
-    const free = fromSet || !!(target && item.skin && owned.has(item.id));
+    if (!fromSet && target && !remodel && target.skin === item.skin && (target.col ?? undefined) === lookCol) { log(`The ${displayName(target).toLowerCase()} already looks like that.`); return; }
+    if (remodel && !modelFits(world.objs, target!, item.type!, g.peopleOnFloor())) {
+      log(`The ${item.name.toLowerCase()} won't fit where the ${displayName(target!).toLowerCase()} is. Make some room beside it in Arrange.`);
+      return;
+    }
+    // A look already bought is the player's: putting it on again is free. So are paint, wallpaper and floors bought
+    // before, on any floor or room.
+    const styling = item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor';
+    const free = fromSet || !!(target && owned.has(item.id)) || (styling && owned.has(item.id));
     if (!free && !g.spendOn(`Shop: ${item.name}`, price)) { log('Not enough money.'); return; }
     owned.add(item.id);
-    if (!fromSet) log(free ? `Put the ${item.name} back on.` : `Bought ${item.name} for $${price}.`);
+    // (Paint, wallpaper and floors put up again say where they went, below.)
+    if (!fromSet && !(styling && free)) log(free ? `Put the ${item.name} back on.` : `Bought ${item.name} for $${price}.`);
     // Pets: a new housemate, or food for the ones already here.
     if (item.icon === 'pet' && item.pet) { g.adoptPet(item.pet, item.id); return; }
     if (item.id === 'pet-food') { world.petFood += 14; log(`${world.petFood} portions of pet food in the cupboard.`); g.refreshDrawer(); return; }
@@ -98,23 +107,27 @@ export function createShop(g: Game): Partial<Game> {
       g.shake(1);
     }
 
-    // Apply paint/wallpaper/floor
+    // Apply paint/wallpaper/floor: to the room picked in the shop, or the whole floor.
+    const room = view.room && LEVELS[view.level].rooms.some((r) => r.n === view.room) ? view.room : null;
+    const where = room ?? LEVEL_NAMES[view.level];
     if (item.icon === 'paint' && (color || item.color)) {
-      art.applyPaint(view.level, color || item.color!);
+      art.applyPaint(view.level, color || item.color!, room);
       roomReveal();
       flags.styled = true;
       if (!(flags.styledSet as number[])?.includes(view.level)) (flags.styledSet as number[]).push(view.level);
-      log(`${LEVEL_NAMES[view.level]} painted ${(color || item.color)!}.`);
+      log(`${where} painted ${(color || item.color)!}.`);
     }
     if (item.icon === 'paper' && item.pattern) {
-      art.applyWallpaper(view.level, item.pattern);
+      art.applyWallpaper(view.level, item.pattern, room);
       roomReveal();
       flags.styled = true;
+      if (!fromSet) log(`${item.name} on the ${where.toLowerCase()} walls.`);
     }
     if (item.icon === 'floor' && item.floor) {
-      art.applyFloor(view.level, item.floor);
+      art.applyFloor(view.level, item.floor, room);
       roomReveal();
       flags.styled = true;
+      if (!fromSet) log(`${item.name} on the ${where.toLowerCase()} floor.`);
     }
     if (item.icon === 'drapes' && item.drapes !== undefined) {
       art.applyDrapes(view.level, item.drapes);
@@ -128,7 +141,15 @@ export function createShop(g: Game): Partial<Game> {
       log(hung ? `${item.name} is on the wall in the ${LEVEL_NAMES[view.level].toLowerCase()}.` : `The ${item.name.toLowerCase()} has nowhere to hang.`);
     }
     // Furniture: add to world
-    if (target && item.skin) {
+    if (target && (remodel || !item.skin)) {
+      // Another model (or the stock look of the model standing there): it takes the piece's place, in its own look.
+      const was = TYPES[target.type]?.name?.toLowerCase() ?? 'piece';
+      if (remodel) swapModel(world.objs, target, item.type!, g.peopleOnFloor());
+      wearModel(target, item.skin, color || item.cols?.[0]);
+      if (remodel) g.relearnLayout(target);
+      roomReveal();
+      log(`The ${was} is now the ${item.name.toLowerCase()}.`);
+    } else if (target && item.skin) {
       wearSkin(target, item.skin, lookCol);
       roomReveal();
       log(`The ${TYPES[target.type]?.name?.toLowerCase() ?? 'piece'} is now the ${item.name.toLowerCase()}.`);
@@ -148,8 +169,14 @@ export function createShop(g: Game): Partial<Game> {
       };
       world.objs.push(newObj);
       flags.furniture = ((flags.furniture as number) ?? 0) + 1;
-      // Set it down on free floor; if the floor is full it waits in storage.
-      if (relocate(world.objs, newObj, level, g.peopleOnFloor())) {
+      // A TV goes on a free TV stand (or another top) on that floor.
+      const stand = TYPES[newObj.type]?.screen && setOnStand(world.objs, newObj, level) ? world.objs.find((h) => h.id === newObj.on) : null;
+      if (stand) {
+        g.relearnLayout(newObj);
+        art.objectPlaced(newObj.id);
+        log(`${item.name} is on the ${displayName(stand).toLowerCase()}. Use Arrange to move it.`);
+      } else if (relocate(world.objs, newObj, level, g.peopleOnFloor())) {
+        // Set it down on free floor; if the floor is full it waits in storage.
         g.relearnLayout(newObj);
         art.objectPlaced(newObj.id);
         log(`${item.name} is in the ${LEVEL_NAMES[level].toLowerCase()}. Use Arrange to move it.`);
@@ -174,9 +201,9 @@ export function createShop(g: Game): Partial<Game> {
     }
     // Bond boost from buying liked items (a set reacts once, for the whole set)
     if (fromSet) { g.refreshDrawer(); return; }
-    const styling = item.icon === 'paint' || item.icon === 'paper' || item.icon === 'floor';
     let liked = false;
-    if (item.tags) {
+    // Her taste reacts to something new, not to the same wallpaper put up again somewhere else.
+    if (item.tags && !(styling && free)) {
       const taste = tasteOf({ id: item.id, name: item.name, tags: item.tags }, style, tasteNorm);
       liked = taste > 0;
       if (taste > 0) { g.s.bond = Math.min(100, g.s.bond + taste); log(`${partnerName} ${taste > 1 ? 'loves' : 'likes'} the ${item.name}.`); }

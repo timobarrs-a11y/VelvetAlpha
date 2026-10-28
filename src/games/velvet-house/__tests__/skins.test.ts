@@ -36,7 +36,7 @@ describe('looks on the type', () => {
       for (const [id, s] of Object.entries(def.skins ?? {})) {
         expect(s.name, `${type}.${id}`).toBeTruthy();
         expect(['wood', 'metal', 'laminate', 'stone', 'fabric', 'glass']).toContain(s.material);
-        expect(['retro', 'farmhouse', 'modern', 'scandi', 'industrial', 'beach', 'deco', 'japandi', 'boho', 'space', 'gothic', 'riad', 'tropical', 'memphis', 'provence', 'adobe', 'neon', 'candy', 'nana', 'cuddle', 'arcade', 'spring', 'summer', 'fall', 'winter', 'cloud', 'brutalist', 'spa', 'hotel', 'cottage', 'midcentury', 'regency', 'chalet', 'victorian', 'ryokan', 'celestial']).toContain(s.theme);
+        expect(['retro', 'farmhouse', 'modern', 'scandi', 'industrial', 'beach', 'deco', 'japandi', 'boho', 'space', 'gothic', 'riad', 'tropical', 'memphis', 'provence', 'adobe', 'neon', 'candy', 'nana', 'cuddle', 'arcade', 'spring', 'summer', 'fall', 'winter', 'cloud', 'brutalist', 'spa', 'hotel', 'cottage', 'midcentury', 'regency', 'chalet', 'victorian', 'ryokan', 'celestial', 'camp']).toContain(s.theme);
       }
     }
   });
@@ -118,7 +118,9 @@ describe('buying a look', () => {
     expect(skinTarget(objs, { type: 'lamp', skin: 'x' })!.id).toBe('lamp1');
     expect(skinTarget(objs, { type: 'bed', skin: 'x' })!.id).toBe('bed');
     expect(skinTarget(objs, { type: 'desk', skin: 'x' })).toBeNull();
-    expect(skinTarget(objs, { type: 'fridge' })).toBeNull();
+    expect(skinTarget(objs, { type: 'counter' })).toBeNull();
+    // A fixed piece with more than one model swaps in place even in its stock look (see models.test.ts).
+    expect(skinTarget(objs, { type: 'chestfreezer' })!.id).toBe('fridge');
   });
 
   it('a look wears its own colour and drops the old look\'s', () => {
