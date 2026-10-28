@@ -214,6 +214,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-arcade', 'Arcade kitchen and living room', 'Black cabinets, marquee lights and neon: the cabinet fridge with a glowing screen, coin-op counter with a joystick at the end, a cocktail cabinet to eat off with red vinyl stools under a marquee, a vinyl sofa with chasing lights, a joystick lamp and a pixel pot, with pixel invaders on the walls and the arcade carpet underfoot. The claw machine in Hobbies goes with it.',
     ['look-fridge-arcade', 'look-counter-arcade', 'look-dining-arcade', 'look-sofa-arcade', 'look-lamp-arcade', 'look-plant-arcade', 'paper-pixel-invaders', 'floor-arcadecarpet'], ['playful', 'bold', 'vintage']),
 
+  bundle('touches-arcade', 'Arcade finishing touches', 'The rest of the arcade: the carpet as a rug, a marquee sign that says PLAY in chasing bulbs, a pixel art print, a stack of game cartridges and a pinball machine with a playfield that comes alive when someone plays.',
+    ['rug-arcade', 'wobj-marquee', 'wobj-pixelprint', 'cartridges', 'pinball'], ['playful', 'bold', 'vintage']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -298,6 +301,7 @@ export const CATALOG: CatalogEntry[] = [
   furn('rugrect', 'rugrect', 'Area rug', 100, ['cozy', 'warm', 'soft'], ['#B5476E', '#3D6B73', '#C9A24A', '#E8DCC8', '#2E3B57', '#7FB069']),
   furn('rugrunner', 'rugrunner', 'Runner rug', 60, ['cozy', 'natural'], ['#A63A2C', '#4A5DA8', '#D8C9AE', '#3F5B4C']),
   furn('ruground', 'ruground', 'Round rug', 80, ['soft', 'playful', 'warm'], ['#E8DCC8', '#D24A7A', '#8E9C96', '#2B2B30', '#E0A43A']),
+  furn('rug-arcade', 'rugarcade', 'Arcade rug', 110, ['playful', 'bold', 'vintage'], ['#2B2459', '#15121F', '#3A2E73']),
   furn('wardrobe', 'wardrobe', 'Wardrobe', 250, ['vintage', 'luxe', 'natural'], ['#E4DDD2', '#9C6B45', '#3A2E2A', '#8E9C96']),
   furn('console', 'console', 'Console table', 130, ['modern', 'minimal', 'luxe'], ['#3A2E2A', '#9C6B45', '#E4DDD2', '#C9A24A']),
   furn('cabinet', 'cabinet', 'Cabinet', 160, ['vintage', 'natural', 'cozy'], ['#B98A6A', '#3F5B4C', '#2E3B57', '#F2EEE8', '#8E5468']),
@@ -468,6 +472,8 @@ export const CATALOG: CatalogEntry[] = [
   wallItem('wobj-plates', 'Plate wall', 80, ['vintage', 'cozy'], ['#4A88B8', '#C2413A', '#4F9460']),
   wallItem('wobj-neon', 'Neon heart', 150, ['bold', 'playful', 'modern'], ['#FF5FA2', '#5FE3FF', '#FFD25F']),
   wallItem('wobj-aquarium', 'Aquarium', 200, ['modern', 'playful', 'cool'], ['#2B2B30', '#9C6B45', '#F2EEE8']),
+  wallItem('wobj-marquee', 'Marquee sign', 140, ['playful', 'bold', 'vintage'], ['#F4C430', '#FF2E9A', '#19E6F0']),
+  wallItem('wobj-pixelprint', 'Pixel art print', 60, ['playful', 'bold', 'vintage'], ['#19E6F0', '#FF2E9A', '#39D353']),
 
   // Decor
   decor('pampas', 'pampas', 'Pampas vase', 40, ['modern', 'minimal', 'natural'], ['#E8DCC8', '#2B2B30', '#C27A5A', '#9EC1C9']),
@@ -475,6 +481,7 @@ export const CATALOG: CatalogEntry[] = [
   decor('basket', 'basket', 'Blanket basket', 60, ['cozy', 'natural', 'soft'], ['#B98A6A', '#3A2E2A', '#E4DDD2']),
   decor('coatrack', 'coatrack', 'Coat rack', 70, ['natural', 'minimal', 'vintage'], ['#2B2B30', '#7A4E32', '#C9A24A']),
   decor('bookstack', 'bookstack', 'Stacked books', 25, ['cozy', 'vintage', 'creative'], ['#B5476E', '#3F5B4C', '#2E3B57', '#C9A24A']),
+  decor('cartridges', 'cartridges', 'Game cartridges', 30, ['playful', 'bold', 'vintage'], ['#F4C430', '#E63946', '#39D353', '#7A5CFF']),
   decor('eucalyptus', 'eucalyptus', 'Eucalyptus vase', 55, ['natural', 'modern', 'soft'], ['#F2EEE8', '#2B2B30', '#C27A5A', '#9EC1C9']),
   decor('bust', 'bust', 'Bust on a pedestal', 120, ['luxe', 'vintage', 'bold'], ['#E8DCC8', '#2B2B30', '#9C6B45']),
   decor('tablelamp', 'tablelamp', 'Lamp table', 90, ['cozy', 'warm', 'natural'], ['#9C6B45', '#2B2B30', '#E4DDD2', '#3F5B4C']),
@@ -515,6 +522,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('massage', 'massage', 'Massage chair', 350, ['luxe', 'modern', 'cozy'], ['#2B2B30', '#E8DCC8', '#6E3C50']),
   hobby('jukebox', 'jukebox', 'Jukebox', 300, ['vintage', 'playful', 'bold'], ['#C2413A', '#4A5DA8', '#E0A43A']),
   hobby('clawmachine', 'clawmachine', 'Claw machine', 280, ['playful', 'bold', 'vintage'], ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF']),
+  hobby('pinball', 'pinball', 'Pinball machine', 320, ['playful', 'bold', 'vintage'], ['#E63946', '#1E1A2E', '#2E6BD6', '#F4C430']),
   hobby('eggchair', 'eggchair', 'Hanging egg chair', 280, ['modern', 'bold', 'luxe'], ['#E8DCC8', '#2B2B30', '#C27A5A']),
 
   // Outdoor

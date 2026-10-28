@@ -266,6 +266,17 @@ export function createHouseArt(ctx0, opts = {}) {
       draw: (W) => { const pts = []; for (let k = 0; k <= 10; k++) { const u = k * 0.15; pts.push([u, 0.42 - Math.sin(k / 10 * Math.PI) * 0.12]); } W.pl(pts, '#3A3340', 1); [0.2, 0.5, 0.8, 1.1, 1.35].forEach((u, k) => { const z = 0.42 - Math.sin(u / 1.5 * Math.PI) * 0.12; W.r(u - 0.08, z - 0.24, u + 0.08, z - 0.02, '#FBF8F2'); W.r(u - 0.065, z - 0.17, u + 0.065, z - 0.04, ['#9EC1F5', '#F2B48A', '#7FB069', '#D24A7A', '#E0A43A'][k]); }); } },
     plates: { name: 'Plate wall', w: 1.0, h: 0.75, cols: ['#4A88B8', '#C2413A', '#4F9460'], tags: 'vintage cozy',
       draw: (W, o) => { const c = o.col || '#4A88B8'; [[0.22, 0.52, 0.2], [0.65, 0.55, 0.15], [0.45, 0.17, 0.16], [0.86, 0.2, 0.12]].forEach(([u, z, r]) => { W.e(u, z, r, r, '#F7F3EE', 'rgba(0,0,0,.15)'); W.e(u, z, r * 0.7, r * 0.7, null, c); W.e(u, z, r * 0.25, r * 0.25, c); }); } },
+    marquee: { name: 'Marquee sign', w: 1.2, h: 0.5, cols: ['#F4C430', '#FF2E9A', '#19E6F0'], tags: 'playful bold vintage',
+      // A lightbox that says PLAY in pixels, ringed with bulbs that chase while the power is on.
+      draw: (W, o, t) => { const c = o.col || '#F4C430', on = power; W.r(0, 0, 1.2, 0.5, '#15121F'); W.r(0.05, 0.05, 1.15, 0.45, on ? c : shade(c, -0.55));
+        const px = 0.05, letters = { P: ['111', '101', '111', '100', '100'], L: ['100', '100', '100', '100', '111'], A: ['111', '101', '111', '101', '101'], Y: ['101', '101', '111', '010', '010'] };
+        ['P', 'L', 'A', 'Y'].forEach((ch, i) => { const u0 = 0.22 + i * 0.22; letters[ch].forEach((row, r) => { for (let k = 0; k < 3; k++) if (row[k] === '1') W.r(u0 + k * px, 0.375 - (r + 1) * px, u0 + (k + 1) * px, 0.375 - r * px, on ? '#15121F' : '#2A2535'); }); });
+        const step = Math.floor(t * 6); for (let k = 0; k <= 12; k++) { const u = 0.05 + k * (1.1 / 12), lit = on && (k + step) % 3 === 0; [0.025, 0.475].forEach((z) => W.circ(u, z, 0.018, lit ? '#FFF6C8' : on ? '#F4C430' : '#4A4036')); } } },
+    pixelprint: { name: 'Pixel art print', w: 0.7, h: 0.7, cols: ['#19E6F0', '#FF2E9A', '#39D353'], tags: 'playful bold vintage',
+      // A framed pixel invader with a pixel heart in the corner.
+      draw: (W, o) => { const c = o.col || '#19E6F0'; W.r(0, 0, 0.7, 0.7, '#15121F', 'rgba(255,255,255,.45)'); W.r(0.05, 0.05, 0.65, 0.65, '#1E1A2E', 'rgba(255,255,255,.25)'); const px = 0.05;
+        INVADER.forEach((row, r) => { for (let k = 0; k < row.length; k++) if (row[k] === '1') W.r(0.175 + k * px, 0.55 - (r + 1) * px, 0.175 + (k + 1) * px, 0.55 - r * px, c); });
+        PIXHEART.forEach((row, r) => { for (let k = 0; k < row.length; k++) if (row[k] === '1') W.r(0.5 + k * 0.03, 0.2 - (r + 1) * 0.03, 0.5 + (k + 1) * 0.03, 0.2 - r * 0.03, '#FF2E9A'); }); } },
     // ---- rotation and seasonal pieces (only in the daily shop) ----
     neon: { name: 'Neon heart', w: 0.9, h: 0.7, cols: ['#FF5FA2', '#5FE3FF', '#FFD25F'], tags: 'bold playful modern', rot: 'rare',
       draw: (W, o, t) => { const c = o.col || '#FF5FA2', pts = []; for (let k = 0; k <= 30; k++) { const a = k / 30 * Math.PI * 2, x = 16 * Math.pow(Math.sin(a), 3), y = 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a); pts.push([0.45 + x * 0.025, 0.38 + y * 0.025]); } ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = 10 + Math.sin(t * 3) * 2; W.pl(pts, c, 3); ctx.restore(); W.pl(pts, '#FFFFFF', 1); } },
@@ -294,6 +305,22 @@ export function createHouseArt(ctx0, opts = {}) {
     return H;
   }
   function drawWallObj(w, t) { const T = WTYPES[w.type]; if (!T) return; ctx.save(); const sh = wallHelper(Object.assign({}, w, { u: w.u + 0.03, z: w.z - 0.04 })); sh.r(0, 0, T.w, T.h, 'rgba(0,0,0,.08)'); ctx.restore(); T.draw(wallHelper(w), w, t || animT); }
+  /** Hangs a bought wall piece on one of the level's back walls, at eye height, on the first free stretch nearest the middle. */
+  function hangWallObj(level, type, col) {
+    const T = WTYPES[type]; if (!T) return false;
+    const z = Math.max(0.9, Math.min(WH - T.h - 0.15, 1.55 - T.h / 2));
+    const taken = (pl, u) => WALLOBJS.some((w) => w.level === level && w.p === pl && !(u + T.w + 0.15 < w.u || u > w.u + (WTYPES[w.type] ? WTYPES[w.type].w : 1) + 0.15))
+      || (LEVELS[level].feats || []).some((f) => f.p === pl && Array.isArray(f.u) && !(u + T.w < f.u[0] - 0.1 || u > f.u[1] + 0.1));
+    // The long back wall first, from its middle outward; then the side wall from its far corner (the stairs take its near end).
+    for (const pl of ['B', 'L']) {
+      const len = planeLen(pl), mid = (len - T.w) / 2, cands = [];
+      if (pl === 'B') for (let d = 0; mid - d >= 0.3; d += 0.25) { cands.push(mid - d); if (d > 0 && mid + d <= len - T.w - 0.3) cands.push(mid + d); }
+      else for (let u = 0.4; u <= len - T.w - 0.3; u += 0.25) cands.push(u);
+      for (const u of cands) if (!taken(pl, u)) { WALLOBJS.push({ type, level, p: pl, u, z, col }); return true; }
+    }
+    WALLOBJS.push({ type, level, p: BACK[0][1], u: (planeLen(BACK[0][1]) - T.w) / 2, z, col });
+    return true;
+  }
   function drawWallDecor(level, back) { WALLOBJS.forEach(w => { if (w.level === level && back.includes(w.p) && !(arranging && arr.wHold === w)) drawWallObj(w); }); }
 
   const PARCEL = { stand: [1.5, 6.0], box: [0.55, 5.75] };
@@ -2017,6 +2044,49 @@ export function createHouseArt(ctx0, opts = {}) {
        },
     blossomvase: {      
       parts: (o) => [F(0, 0, 0.45, 0.45, (T, ob, t) => { T.box(0.08, 0.08, 0, 0.3, 0.3, 0.5, cl(o)); const [x, y] = T.P(0.22, 0.22, 0.5); [[-16, -52], [4, -62], [18, -46], [-6, -40]].forEach(([dx, dy], k) => { limb(x, y, x + dx, y + dy, '#5A3E2E', 1.6); for (let m = 0; m < 5; m++) { const f = 0.45 + m * 0.13; circle(x + dx * f + Math.sin(k + m) * 3, y + dy * f + Math.cos(k * m) * 2, 2.6, m % 2 ? '#F3B6C8' : '#F7D0DC'); } }); })] },
+    rugarcade: {
+      // The arcade carpet as a rug: ink with a yellow border, neon confetti and three invaders.
+      parts: (o) => [F(0, 0, 2.4, 1.6, (T) => { const c = cl(o); T.poly([[0, 0, 0.008], [2.4, 0, 0.008], [2.4, 1.6, 0.008], [0, 1.6, 0.008]], c); T.poly([[0.1, 0.1, 0.009], [2.3, 0.1, 0.009], [2.3, 1.5, 0.009], [0.1, 1.5, 0.009]], null, AR.yellow, 2.4); T.poly([[0.2, 0.2, 0.009], [2.2, 0.2, 0.009], [2.2, 1.4, 0.009], [0.2, 1.4, 0.009]], null, AR.cyan, 1);
+        for (let k = 0; k < 60; k++) { const x = 0.2 + ((k * 0.618 * 5.3) % 2.0), y = 0.2 + ((k * 0.414 * 3.1) % 1.2); const [sx, sy] = T.P(x, y, 0.01); circle(sx, sy, 1.4, [AR.magenta, AR.cyan, AR.yellow, AR.violet][k % 4]); }
+        [[0.6, 0.8, AR.cyan], [1.2, 0.5, AR.magenta], [1.8, 0.95, AR.green]].forEach(([x, y, col]) => { const [sx, sy] = T.P(x, y, 0.011); sprite(sx, sy, 1.8, INVADER, col); }); }, { decal: true })] },
+    cartridges: {
+      // Three game cartridges stacked, labels up, and one standing against them.
+      parts: (o) => { const c = cl(o), grey = '#B9BEC3', dark = '#8E939A'; return [B(0.02, 0.04, 0, 0.3, 0.28, 0.07, grey), B(0.04, 0.05, 0.07, 0.3, 0.27, 0.07, dark), B(0.01, 0.03, 0.14, 0.3, 0.28, 0.07, grey), B(0.36, 0.04, 0, 0.08, 0.28, 0.26, dark),
+        F(0, 0, 0.45, 0.35, (T) => { [[0.21, c], [0.14, AR.cyan], [0.07, AR.magenta]].forEach(([z, col]) => T.poly([[0.07, 0.1, z + 0.001], [0.26, 0.1, z + 0.001], [0.26, 0.26, z + 0.001], [0.07, 0.26, z + 0.001]], col)); T.poly([[0.441, 0.08, 0.06], [0.441, 0.24, 0.06], [0.441, 0.24, 0.2], [0.441, 0.08, 0.2]], AR.yellow); const [sx, sy] = T.P(0.165, 0.18, 0.212); sprite(sx, sy, 0.9, INVADER, '#15121F'); }, { onTop: true })]; } },
+    pinball: {
+      // A pinball machine: a dark base with chrome legs, a cabinet in its colour, a glass playfield with lane guides, slingshots, drop targets, a
+      // ramp, bumpers that flash, flippers that flip and a ball that flies about while someone plays, and a backbox with a glowing screen and a
+      // marquee of chasing bulbs. The player stands at the near end (high y). The F part shares the cabinet's footprint so it sorts after it.
+      parts: (o) => { const c = cl(o); return [
+        B(0.08, 0.1, 0, 0.59, 1.35, 0.62, '#2B2B30'), B(0, 0.05, 0.62, 0.75, 1.45, 0.3, c), B(0, 0, 0.92, 0.75, 0.22, 0.98, c),
+        F(0, 0.05, 0.75, 1.5, (T, ob, t) => { const playing = usingSlot(ob.id + ':p') || live(ob.id), hot = (k) => playing && Math.floor(t * 5 + k) % 3 === 0;
+          // Chrome legs on the base's faces, and the coin door on the front.
+          [0.14, 0.61].forEach((x) => { T.line([x, 1.451, 0.02], [x, 1.451, 0.6], AR.chrome, 2.4); }); [0.2, 1.3].forEach((y) => { T.line([0.671, y, 0.02], [0.671, y, 0.6], AR.chrome, 2.4); });
+          T.poly([[0.22, 1.501, 0.68], [0.53, 1.501, 0.68], [0.53, 1.501, 0.86], [0.22, 1.501, 0.86]], '#2B2B30', AR.chrome, 1); const [qx, qy] = T.P(0.3, 1.502, 0.77); circle(qx, qy, 1.6, AR.yellow); T.line([0.4, 1.502, 0.74], [0.4, 1.502, 0.8], AR.chrome, 1.4); const [rx, ry] = T.P(0.48, 1.502, 0.77); circle(rx, ry, 1.8, AR.red);
+          // The playfield under glass: a navy field with a cyan rim, lane guides down both sides and the shooter lane on the right.
+          T.poly([[0.04, 0.28, 0.921], [0.71, 0.28, 0.921], [0.71, 1.46, 0.921], [0.04, 1.46, 0.921]], '#141226', AR.cyan, 1);
+          T.line([0.64, 0.34, 0.923], [0.64, 1.44, 0.923], AR.chrome, 1); T.line([0.1, 0.34, 0.923], [0.1, 1.1, 0.923], AR.magenta, 1); T.line([0.58, 0.34, 0.923], [0.58, 1.1, 0.923], AR.magenta, 1);
+          // A ramp curling over the top, drop targets across it, and a spinner.
+          const ramp = []; for (let k = 0; k <= 10; k++) { const a = Math.PI * k / 10; ramp.push(T.P(0.34 + Math.cos(a) * 0.24, 0.62 - Math.sin(a) * 0.26, 0.93)); } ctx.beginPath(); ramp.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.strokeStyle = AR.cyan; ctx.lineWidth = 1.6; ctx.stroke();
+          [0.22, 0.3, 0.38, 0.46].forEach((x, k) => T.poly([[x, 0.4, 0.924], [x + 0.06, 0.4, 0.924], [x + 0.06, 0.46, 0.924], [x, 0.46, 0.924]], hot(k) ? '#FFF6C8' : AR.yellow));
+          T.line([0.46, 0.7, 0.924], [0.54, 0.7, 0.924], playing ? (Math.floor(t * 10) % 2 ? AR.chrome : AR.yellow) : AR.chrome, 1.6);
+          // Lane lights down the left, the three bumpers, and the slingshots either side of the flippers.
+          for (let y = 0.5; y < 1.1; y += 0.12) { const [lx, ly] = T.P(0.15, y, 0.923); circle(lx, ly, 1, hot(Math.round(y * 10)) ? '#FFF6C8' : AR.cyan); }
+          [[0.25, 0.68, AR.red], [0.47, 0.62, AR.cyan], [0.36, 0.86, AR.yellow]].forEach(([x, y, col], k) => { const [bx, by] = T.P(x, y, 0.925); if (hot(k)) circle(bx, by, 8, 'rgba(255,246,200,.25)'); circle(bx, by, 4.5, hot(k) ? '#FFF6C8' : col, 'rgba(255,255,255,.35)'); circle(bx, by, 2, hot(k) ? AR.yellow : '#15121F'); });
+          T.poly([[0.12, 1.08, 0.924], [0.22, 1.08, 0.924], [0.12, 1.26, 0.924]], AR.yellow, AR.chrome, 0.8); T.poly([[0.56, 1.08, 0.924], [0.46, 1.08, 0.924], [0.56, 1.26, 0.924]], AR.yellow, AR.chrome, 0.8);
+          const fl = playing ? Math.abs(Math.sin(t * 7)) * 0.12 : 0; T.line([0.2, 1.3, 0.926], [0.33, 1.4 - fl, 0.926], AR.yellow, 2.8); T.line([0.52, 1.3, 0.926], [0.39, 1.4 - fl, 0.926], AR.yellow, 2.8); T.line([0.2, 1.3, 0.927], [0.33, 1.4 - fl, 0.927], AR.red, 1);  T.line([0.52, 1.3, 0.927], [0.39, 1.4 - fl, 0.927], AR.red, 1);
+          if (playing) { const [sx, sy] = T.P(0.36 + Math.sin(t * 3.1) * 0.22, 0.85 + Math.sin(t * 2.3 + 1) * 0.4, 0.93); circle(sx, sy, 2.4, '#E8EAEC'); circle(sx - 0.8, sy - 0.8, 0.9, '#FFFFFF'); }
+          T.line([0.675, 1.47, 0.9], [0.675, 1.47 + (playing ? 0.05 : 0.1), 0.9], AR.red, 3); const [gx0, gy0] = T.P(0.675, 1.47 + (playing ? 0.05 : 0.1), 0.9); circle(gx0, gy0, 2, AR.red);
+          // Glass glint across the field.
+          T.line([0.1, 0.5, 0.95], [0.5, 1.3, 0.95], 'rgba(255,255,255,.14)', 1.2);
+          // The backbox: a glowing screen with an invader, the marquee and the bulbs round the top.
+          T.poly([[0.06, 0.221, 1.0], [0.69, 0.221, 1.0], [0.69, 0.221, 1.62], [0.06, 0.221, 1.62]], screenHue(t, playing), AR.chrome, 1); const [gx, gy] = T.P(0.375, 0.222, 1.36); sprite(gx, gy, 2.2, INVADER, 'rgba(0,0,0,.45)'); const [hx, hy] = T.P(0.375, 0.222, 1.1); sprite(hx, hy, 1.4, PIXHEART, 'rgba(255,255,255,.55)');
+          T.poly([[0.1, 0.222, 1.66], [0.65, 0.222, 1.66], [0.65, 0.222, 1.84], [0.1, 0.222, 1.84]], AR.yellow); const [ax, ay] = T.P(0.12, 0.223, 1.75), [bx, by] = T.P(0.63, 0.223, 1.75); chaser(ax, ay, bx, by, 8, ob.id, power);
+          const [cx, cy] = T.P(0.04, 0.223, 1.9), [dx, dy] = T.P(0.71, 0.223, 1.9); chaser(cx, cy, dx, dy, 9, ob.id, power); const [ex, ey] = T.P(0.751, 0.02, 1.9), [fx, fy] = T.P(0.751, 0.2, 1.9); chaser(ex, ey, fx, fy, 2, ob.id, power);
+          // Side art on the cabinet and the backbox.
+          T.poly([[0.751, 0.3, 0.66], [0.751, 1.4, 0.66], [0.751, 1.4, 0.88], [0.751, 0.3, 0.88]], AR.magenta); const [ix, iy] = T.P(0.752, 0.85, 0.77); sprite(ix, iy, 1.8, INVADER, AR.yellow); T.line([0.752, 0.35, 0.72], [0.752, 1.35, 0.72], AR.cyan, 1); T.line([0.752, 0.35, 0.82], [0.752, 1.35, 0.82], AR.cyan, 1);
+          T.poly([[0.751, 0.02, 1.0], [0.751, 0.2, 1.0], [0.751, 0.2, 1.7], [0.751, 0.02, 1.7]], AR.magenta); const [jx, jy] = T.P(0.752, 0.11, 1.35); sprite(jx, jy, 1.2, PIXHEART, AR.yellow);
+        }, { onTop: true })]; } },
     clawmachine: {
       // A claw machine: a cabinet in the piece's colour, a glass case full of plushies, a marquee on top with chasing bulbs,
       // and a claw that swings out and drops while someone plays (or the player pokes it).
@@ -3798,6 +3868,7 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'records': return run(14, 'The needle drops. A record starts spinning.');
       case 'arcade': return run(6, 'The arcade lights up: INSERT COIN.');
       case 'clawmachine': return run(6, 'The claw swings out, drops, and comes up with a plush. Lucky.');
+      case 'pinball': return run(8, 'The ball rockets off the plunger. Bumpers everywhere.');
       case 'tread': return run(8, 'The treadmill belt whirs to life.');
       case 'shower': return run(8, 'The shower hisses on, then off.');
       case 'bathtub': return run(10, 'The tub fills with steaming water.');
@@ -3811,5 +3882,5 @@ export function createHouseArt(ctx0, opts = {}) {
     }
   }
 
-  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
+  return { render, applySave, applyPaint, applyWallpaper, applyFloor, registerPictures, getLooks, exportLooks, hangWallObj, lookInfo, toggleObjectLight, objectLightOn: (id) => objectLights.get(id) === true, setObjectLight: (id, on) => { objectLights.set(id, !!on); }, toggleLightAt, setTalking, setMood, objectPlaced, poke, lastToggledLight: () => lastToggled, reveal: (id) => arrive(id, 'pop'), drop: (id) => arrive(id, 'drop'), poof: (level, x, y) => { poofs.push({ t: 0, level, x, y }); for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.05, level, pt: [x + (i % 3 - 1) * 0.35, y + (Math.floor(i / 3) - 0.5) * 0.35, 0.5 + (i % 2) * 0.3] }); }, setDim: (v) => { dimTarget = Math.max(0, Math.min(0.42, v || 0)); }, burst: (level, x, y, z = 0.5) => { for (let i = 0; i < 6; i++) sparkles.push({ t: i * -0.08, level, pt: [x + (i % 3 - 1) * 0.4, y + (Math.floor(i / 3) - 0.5) * 0.4, z + (i % 2) * 0.3] }); }, spotlight: (ids) => { spotIds = Array.isArray(ids) ? ids : []; }, setGhost: (g) => { ghost = g || null; }, project: (x, y, z = 0) => iso(x, y, z), unproject: (sx, sy) => unIso(sx, sy), hitObject, TYPES, WTYPES };
 }
