@@ -10,7 +10,7 @@
 export interface UnlockCode {
   /** The catalog id of the secret set it gives (the set's looks, wallpaper and floor come with it). */
   setId: string;
-  /** The pack's short name, for the celebration popup and the log: "Cloud Nine". */
+  /** The pack's short name, for the celebration popup and the log: "Cuddle Clouds". */
   packName: string;
   /** What the log says when it works. */
   welcome: string;
@@ -18,7 +18,7 @@ export interface UnlockCode {
 
 /** Codes are lower case; what the player types is compared in any case with the spaces around it ignored. */
 export const UNLOCK_CODES: Record<string, UnlockCode> = {
-  rainbowhugs: { setId: 'set-cloud', packName: 'Cloud Nine', welcome: 'Cloud Nine is yours, free: clouds, rainbows and stars. It is in your Sets tab, and Arrange can switch any piece to it.' },
+  rainbowhugs: { setId: 'set-cuddle', packName: 'Cuddle Clouds', welcome: 'Cuddle Clouds is yours, free: bears, clouds and rainbows. It is in your Sets tab, and Arrange can switch any piece to it.' },
 };
 
 /** The code the text is exactly, or null (so it goes on to the partner as an ordinary message). */
