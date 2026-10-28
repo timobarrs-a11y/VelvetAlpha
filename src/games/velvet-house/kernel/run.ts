@@ -5,6 +5,7 @@ import { sideJobsTick } from '../state/sideJobs';
 import { rollDay, nightStart, wakeHour } from '../state/routine';
 import { advanceClock } from '../engine/loop';
 import { startFixedLoop } from '../engine/fixedLoop';
+import { blendFrames } from '../view/interpolate';
 import { qualityManager } from '../engine/qualityTier';
 import { LayerCache } from '../engine/layerCache';
 import { deliveryTick, dirtTick, laundryTick, newDayReset } from '../state/household';
@@ -31,8 +32,11 @@ export function startGameLoop(g: Game): void {
     const [x, y] = art.project(people[1].x, people[1].y, 0.9);
     return { x, y, r: 95 };
   };
+  // Where everyone and everything was at the start of the latest simulation step, to blend toward the current state.
+  let stepStart = { chars: people.map(g.toFrame), pets: g.petFrames() };
   startFixedLoop(
     (dt) => {
+      stepStart = { chars: people.map(g.toFrame), pets: g.petFrames() };
       g.scriptUpdate(dt);
       if (view.paused) return;
       view.t += dt;
@@ -94,8 +98,8 @@ export function startGameLoop(g: Game): void {
       art.render({
         level: view.level, rot: view.rot, minutes: interpMinutes, day: world.day,
         t: view.t, dt: frameDt, objs: world.objs, wallMode: WALL_MODES[view.wallIdx].mode,
-        chars: people.map(g.toFrame),
-        pets: g.petFrames(),
+        chars: blendFrames(stepStart.chars, people.map(g.toFrame), alpha),
+        pets: blendFrames(stepStart.pets, g.petFrames(), alpha),
         arrange: g.arrangeFrame(),
         ...g.lampFrame(),
         focus: conversationFocus(),
