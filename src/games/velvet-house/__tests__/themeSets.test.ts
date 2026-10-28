@@ -27,6 +27,7 @@ const THEMES: ThemeSpec[] = [
   { theme: 'neon', tags: ['bold', 'modern', 'industrial'], materials: ['metal', 'glass', 'fabric'], paper: { id: 'paper-circuit', pattern: 'circuit' }, floor: { id: 'floor-grate', floor: 'grate' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
   { theme: 'candy', tags: ['soft', 'playful', 'warm'], materials: ['metal', 'laminate', 'fabric', 'stone'], paper: { id: 'paper-sprinkles', pattern: 'sprinkles' }, floor: { id: 'floor-checkpink', floor: 'checkpink' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'cuddle', tags: ['soft', 'playful', 'cozy'], materials: ['metal', 'laminate', 'fabric', 'stone'], paper: { id: 'paper-clouds-sky', pattern: 'clouds-sky' }, floor: { id: 'floor-skycheck', floor: 'skycheck' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'nana', tags: ['soft', 'playful', 'cozy'], materials: ['metal', 'laminate', 'fabric', 'stone', 'wood'], paper: { id: 'paper-nana-sky', pattern: 'nana-sky' }, floor: { id: 'floor-nanaplush', floor: 'nanaplush' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'arcade', tags: ['playful', 'bold', 'vintage'], materials: ['metal', 'laminate', 'fabric'], paper: { id: 'paper-pixel-invaders', pattern: 'pixel-invaders' }, floor: { id: 'floor-arcadecarpet', floor: 'arcadecarpet' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
   { theme: 'spring', tags: ['soft', 'natural', 'playful'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-blossom-mint', pattern: 'blossom-mint' }, floor: { id: 'floor-birch', floor: 'birchplank' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'summer', tags: ['playful', 'bold', 'warm'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-stripe-sun', pattern: 'stripe-sun' }, floor: { id: 'floor-honey', floor: 'honey' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
@@ -118,6 +119,12 @@ for (const T of THEMES) {
         s: { bond: 50 }, cameraBeat: () => {}, scriptEmit: (e: unknown) => emitted.push(e), refreshDrawer: () => {}, dezDeliveries: () => false, spendOn: () => true,
       } as unknown as Game;
       createShop(g).handleBuy!(item);
+      if (item.promo) {
+        // A promo wallpaper comes with a promo code: the shop won't sell it.
+        expect(logs.join(' ')).toMatch(/comes free with a promo code/);
+        expect(emitted).toEqual([]);
+        return;
+      }
       expect(logs.some((l) => new RegExp(`^Maya (likes|loves) the ${item.name}`).test(l))).toBe(true);
       expect(emitted).toContainEqual({ type: 'room.styled', liked: true });
     });
@@ -130,8 +137,16 @@ for (const T of THEMES) {
         s: { bond: 50 }, cameraBeat: () => {}, scriptEmit: () => {}, refreshDrawer: () => {}, dezDeliveries: () => false, spendOn: (_: string, n: number) => { paid.push(n); return true; }, peopleOnFloor: () => [], relearnLayout: () => {},
       } as unknown as Game;
       const before = objs.filter((o) => o.level === 1).map((o) => [o.id, o.x, o.y, o.rot]);
-      createShop(g).handleBuy!(catalogById(`set-${T.theme}`)!);
-      expect(paid).toEqual([setQuote(catalogById(`set-${T.theme}`)!, new Set()).cost]);
+      const set = catalogById(`set-${T.theme}`)!;
+      if (set.promo) {
+        // A promo set can't be bought; once a code has given it to them, Apply puts it all on for nothing.
+        createShop(g).handleBuy!(set);
+        expect(paid).toEqual([]);
+        expect(applied).toEqual([]);
+        for (const id of [set.id, ...set.set!.items]) (g.owned as Set<string>).add(id);
+      }
+      createShop(g).handleBuy!(set);
+      expect(paid).toEqual(set.promo ? [] : [setQuote(set, new Set()).cost]);
       for (const id of ['fridge', 'counter', 'dining', 'sofa', 'lamp1', 'plant1']) expect(objs.find((o) => o.id === id)!.skin, id).toBe(T.theme);
       expect(applied).toEqual([T.paper.pattern, T.floor.floor]);
       expect(objs.filter((o) => o.level === 1).map((o) => [o.id, o.x, o.y, o.rot])).toEqual(before);

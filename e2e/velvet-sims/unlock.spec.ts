@@ -1,15 +1,28 @@
 import { test, expect } from '@playwright/test';
 import { openGame, inGame, objects, savedGame, saveNow, SAVE_KEY } from './helpers';
 
-test('an unlock code said to Maya gives the secret pack, free, and is not a message', async ({ page }) => {
+test('a promo code said to Maya gives the promo pack, free, and is not a message', async ({ page }) => {
   const game = await openGame(page);
   await inGame(page, 'v.settle()');
   const money = await inGame<number>(page, 'v.money');
 
-  // Before the code the pack is nowhere in the shop.
+  // Before the code the pack is in the shop by name only: locked, no preview, no price, nothing to buy.
   await game.locator('.vh-dock [data-open=shop]').click();
   await game.locator('[data-tab=Sets]').click();
-  await expect(game.locator('[data-item=set-cuddle]')).toHaveCount(0);
+  for (const id of ['set-cuddle', 'touches-cuddle']) {
+    const card = game.locator(`[data-item=${id}]`);
+    await expect(card).toHaveClass(/vh-promo-locked/);
+    await expect(card).toContainText('Cuddle Clouds');
+    await expect(card).toContainText('Free with a promo code');
+    await expect(card.locator('[data-buy]')).toBeDisabled();
+    await expect(card.locator('[data-icon]')).toHaveCount(0);
+    await expect(card.locator('.vh-price')).toHaveCount(0);
+  }
+  // The Promo tab lists the promo packs.
+  await game.locator('[data-tab=Promo]').click();
+  await expect(game.locator('.vh-shop-list .vh-shop-card')).toHaveCount(3);
+  await expect(game.locator('[data-item=set-nana]')).toHaveClass(/vh-promo-locked/);
+  await expect(game.locator('[data-item=set-cuddle]')).toHaveClass(/vh-promo-locked/);
   await game.locator('.vh-drawer[data-open=shop] .vh-drawer-close').click();
 
   await inGame(page, 'v.openChat()');
@@ -35,10 +48,26 @@ test('an unlock code said to Maya gives the secret pack, free, and is not a mess
   await game.locator('.vh-dock [data-open=shop]').click();
   await game.locator('[data-tab=Sets]').click();
   await expect(game.locator('[data-item=set-cuddle]')).toContainText('Cuddle Clouds');
+  await expect(game.locator('[data-item=set-cuddle]')).not.toHaveClass(/vh-promo-locked/);
   await expect(game.locator('[data-item=set-cuddle] [data-buy]')).toHaveText('Apply');
+  await expect(game.locator('[data-item=touches-cuddle] [data-buy]')).toHaveText('Apply');
   // Not remembered as something said.
   await saveNow(page);
   expect(JSON.stringify((await savedGame(page)).turns ?? [])).not.toContain('rainbowhugs');
+});
+
+test('a promo code already used in another house on the account gives nothing here, and says why', async ({ page }) => {
+  const game = await openGame(page);
+  await inGame(page, 'v.settle()');
+  await page.evaluate(() => { (window as unknown as { promoUsed: Record<string, string> }).promoUsed.rainbowhugs = 'another-house'; });
+  await inGame(page, 'v.openChat()');
+  const input = game.locator('.vh-dialogue input');
+  await input.fill('rainbowhugs');
+  await input.press('Enter');
+  await expect(game.locator('.vh-log')).toContainText('already been used on your account', { timeout: 10000 });
+  expect(await page.evaluate(() => (window as unknown as { promoLog: string[] }).promoLog)).toEqual(['rainbowhugs']);
+  await expect(game.locator('.vh-celebrate')).toHaveCount(0);
+  expect((await objects(page)).find((o) => o.id === 'fridge')!.skin).not.toBe('cuddle');
 });
 
 test('the start menu has a Cheats screen that takes unlock codes and saves them for the house', async ({ page }) => {

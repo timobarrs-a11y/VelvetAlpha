@@ -1,25 +1,32 @@
-import { unlockFor, UNLOCK_CODES, type UnlockCode } from '../state/unlockCodes';
-import { catalogById, setQuote } from '../state/catalog';
+import { unlockFor, codeWord, UNLOCK_CODES, type UnlockCode } from '../state/unlockCodes';
+import { catalogById, setQuote, type CatalogEntry } from '../state/catalog';
 import { isPaintable } from '../state/scenes';
 import { run } from '../kernel/config';
+import { createHostPromo, type PromoClaim } from '../bridge/hostPromo';
 import type { Game } from '../kernel/game';
 
 /** How long the new look gets to show (camera pull-back and sparkle) before the picture is taken. */
 const SHOT_DELAY_MS = 1700;
 
-/** Unlock codes (state/unlockCodes.ts) applied to the house, with a pop-up showing what was unlocked. */
-export function createUnlocks(g: Game): Partial<Game> {
+/**
+ * Promo codes (state/unlockCodes.ts) applied to the house, with a pop-up showing what was unlocked. Inside the app a
+ * code is claimed for the account first (once per account); standalone there is no account, so it just works.
+ */
+export function createUnlocks(g: Game, claim: PromoClaim | null = createHostPromo()): Partial<Game> {
   const { owned, log, flags } = g;
   const pending = (): string[] => ((flags.pendingUnlocks as string[] | undefined) ??= []);
   let presenting = false;
 
-  /** The pack goes on the house, and once it has settled a picture of the room goes in the pop-up. */
+  const setsOf = (code: UnlockCode): CatalogEntry[] =>
+    code.setIds.map((id) => catalogById(id)).filter((s): s is CatalogEntry => !!s?.set);
+
+  /** The packs go on the house, and once they have settled a picture of the room goes in the pop-up. */
   function present(code: UnlockCode): void {
-    const set = catalogById(code.setId);
-    if (!set?.set) return;
+    const sets = setsOf(code);
+    if (!sets.length) return;
     presenting = true;
     if (!isPaintable(g.view.level)) g.setLevel(1);
-    for (const m of setQuote(set, new Set()).members) g.handleBuy(m, undefined, true);
+    for (const set of sets) for (const m of setQuote(set, new Set()).members) g.handleBuy(m, undefined, true);
     setTimeout(() => {
       let image: string | undefined;
       try { image = g.canvas.toDataURL('image/jpeg', 0.88); } catch { /* no picture: the pop-up still says what they got */ }
@@ -32,22 +39,32 @@ export function createUnlocks(g: Game): Partial<Game> {
   const ready = (): boolean => g.s.settleDone && !g.s.scriptMode && !presenting;
 
   function codeForSet(id: string): UnlockCode | undefined {
-    return Object.values(UNLOCK_CODES).find((c) => c.setId === id);
+    return Object.values(UNLOCK_CODES).find((c) => c.setIds.includes(id));
+  }
+
+  /** Everything in the packs is theirs, free, from this moment. */
+  function grant(code: UnlockCode, sets: CatalogEntry[]): void {
+    for (const set of sets) {
+      for (const m of setQuote(set, new Set()).members) owned.add(m.id);
+      owned.add(set.id);
+    }
+    if (ready()) present(code);
+    else { pending().push(sets[0].id); log(`${code.packName} is yours. It will be waiting once you have moved in.`); }
+    g.refreshDrawer();
   }
 
   /** True if `text` was a code (so chat should not handle it). */
   function tryUnlock(text: string): boolean {
     const code = unlockFor(text);
     if (!code) return false;
-    const set = catalogById(code.setId);
-    if (!set?.set) return false;
-    if (owned.has(set.id)) { log('You already have that one. It is in your Sets tab.'); return true; }
-    // Everything in the set is theirs, free, from this moment.
-    for (const m of setQuote(set, new Set()).members) owned.add(m.id);
-    owned.add(set.id);
-    if (ready()) present(code);
-    else { pending().push(set.id); log(`${code.packName} is yours. It will be waiting once you have moved in.`); }
-    g.refreshDrawer();
+    const sets = setsOf(code);
+    if (!sets.length) return false;
+    if (sets.every((s) => owned.has(s.id))) { log('You already have that one. It is in your Sets tab.'); return true; }
+    if (!claim) { grant(code, sets); return true; }
+    claim(codeWord(code)).then((answer) => {
+      if (answer === 'used') { log('That code has already been used on your account, in another house. Each code works once per account.'); return; }
+      grant(code, sets);
+    });
     return true;
   }
 

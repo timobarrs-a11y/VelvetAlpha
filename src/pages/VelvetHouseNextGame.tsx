@@ -11,10 +11,12 @@ import { lookUnlock, resolveLookForDisplay } from '../data/avatarCatalog';
 import {
   isReadyMessage, isAvatarItemBoughtMessage, isLookChangedMessage, isRestartedMessage,
   isSampleRequestMessage, isSampleCancelMessage, isDesignsRequestMessage, isStartRequestedMessage, isMenuReadyMessage,
+  isPromoRequestMessage,
 } from '../games/velvet-house/bridge/protocol';
 import { toGameTurnInput } from '../games/velvet-house/bridge/chatInput';
 import { sampleGameTurn } from '../services/velvetGameTurn';
 import { runDesignsOp } from '../services/velvetDesigns';
+import { claimVelvetPromo } from '../services/velvetPromo';
 import { useVelvetHouseCloudSave } from '../hooks/useVelvetHouseCloudSave';
 import { announceAvatarSaved, onAvatarSaved } from '../stores/avatarEditorStore';
 import { applyAvatarChange, migrateAvatarConfig } from '../utils/avatarConfig';
@@ -124,6 +126,13 @@ export function VelvetHouseNextGame() {
         const { seq, op, args } = e.data;
         const r = await runDesignsOp(op, args);
         win.postMessage({ type: 'velvet:designsResult', seq, ...r }, window.location.origin);
+        return;
+      }
+      // A promo code typed in the game: once per account, so it's claimed for this house first.
+      if (isPromoRequestMessage(e.data)) {
+        const { seq, code } = e.data;
+        const status = await claimVelvetPromo(code, companionId);
+        win.postMessage({ type: 'velvet:promoResult', seq, status }, window.location.origin);
         return;
       }
       if (isRestartedMessage(e.data)) { noteRestart(); return; }
