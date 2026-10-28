@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QuestionnaireShell, HonestBridge, PresenceOrb, COMPANION_QUESTIONNAIRE, makeContext } from '../features/questionnaire';
 import type { QuestionnaireDefinition } from '../features/questionnaire';
+import { DEZ } from '../features/questionnaire/dez';
 import { supabase } from '../shared/supabase/client';
 import { userProfileService } from '../services/userProfileService';
 import { createCompanionFromAnswers } from '../services/companionFromAnswers';
@@ -141,6 +142,7 @@ export function QuestionnairePageV2() {
 
   return (
     <QuestionnaireShell
+      host={DEZ}
       definition={WITHOUT_CHOSEN}
       context={ctx}
       initialAnswers={chosen}

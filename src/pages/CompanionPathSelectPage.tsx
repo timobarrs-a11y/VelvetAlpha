@@ -4,14 +4,15 @@ import { QuestionnaireShell, HonestBridge, COMPANION_START, makeContext } from '
 import { userProfileService } from '../services/userProfileService';
 import { createRandomCompanion, type RandomCompanion } from '../services/randomCompanionService';
 import { AvatarSaveReveal } from '../components/AvatarSaveReveal';
+import { DEZ } from '../features/questionnaire/dez';
 import { toast } from '../shared/ui/Toast';
 
 type Phase = 'ask' | 'searching' | 'reveal';
 
 const SEARCH_LINES = [
-  { text: 'Searching the Velvet Roster...' },
-  { text: 'Matching a personality...' },
-  { text: 'Almost there...' },
+  { text: 'Let me see who is on my list...' },
+  { text: 'Oh, I know just the one.' },
+  { text: 'Hang on, they are on their way.' },
 ];
 
 /**
@@ -99,6 +100,7 @@ export function CompanionPathSelectPage() {
 
   return (
     <QuestionnaireShell
+      host={DEZ}
       definition={COMPANION_START}
       context={ctx}
       initialAnswers={initialAnswers}

@@ -171,8 +171,17 @@ const byId = (id: string) => COMPANION_QUESTIONNAIRE.questions.find(q => q.id ==
 
 export const COMPANION_START: QuestionnaireDefinition = {
   startProgress: 0,
-  chapters: [{ id: 'start', label: 'Who you are looking for', questionIds: ['relationshipType', 'connectionType', 'path'] }],
+  chapters: [{ id: 'start', label: 'Who you are looking for', questionIds: ['dezIntro', 'relationshipType', 'connectionType', 'path'] }],
   questions: [
+    {
+      // Dez says this the same way to everyone. By now the person knows him from the arrival questions and the town.
+      id: 'dezIntro',
+      archetype: 'tap',
+      chapter: 'start',
+      question: "Well, hey there. You know me: Dez, mayor of Town, and I drive the delivery truck. Turns out I'm also the matchmaker. Let's find you somebody.",
+      autoAdvance: true,
+      options: [{ text: "Let's do it", value: 'ready' }],
+    },
     { ...byId('relationshipType'), chapter: 'start' },
     { ...byId('connectionType'), chapter: 'start', skipIf: (ctx) => ctx.answers.kindPreset === '1' } as Question,
     {
