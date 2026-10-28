@@ -10,6 +10,7 @@ import type { Game } from '../kernel/game';
 interface ThemeSpec { theme: Theme; tags: string[]; materials: Material[]; paper: { id: string; pattern: string }; floor: { id: string; floor: string }; paperRange: [number, number]; floorRange: [number, number]; ladder: [number, number] }
 const THEMES: ThemeSpec[] = [
   { theme: 'farmhouse', tags: ['cozy', 'natural', 'warm'], materials: ['wood', 'stone', 'metal', 'fabric'], paper: { id: 'paper-gingham-sage', pattern: 'gingham-sage' }, floor: { id: 'floor-barnwood', floor: 'barnwood' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'modern', tags: ['modern', 'minimal', 'cool'], materials: ['metal', 'glass', 'stone', 'fabric'], paper: { id: 'paper-pin-slate', pattern: 'pin-slate' }, floor: { id: 'floor-charcoal', floor: 'charcoal' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [450, 700] },
 ];
 const PIECES = ['fridge', 'counter', 'dining', 'sofa', 'lamp', 'plant'];
 // What the household uses on each piece: a look must leave these where they are.

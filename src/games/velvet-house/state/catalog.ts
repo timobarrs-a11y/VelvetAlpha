@@ -125,6 +125,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-scallop-peach', 'Peach scallop', 'scallop-peach', 100, ['soft', 'warm', 'playful']),
   wallpaper('paper-damask-plum', 'Plum damask', 'damask-plum', 120, ['luxe', 'bold', 'vintage']),
   wallpaper('paper-damask-cream', 'Cream damask', 'damask-cream', 120, ['luxe', 'soft', 'vintage']),
+  wallpaper('paper-pin-slate', 'Slate pinstripe', 'pin-slate', 100, ['modern', 'minimal', 'cool']),
   wallpaper('paper-gingham-sage', 'Sage gingham', 'gingham-sage', 90, ['cozy', 'natural', 'warm']),
   wallpaper('paper-starburst-mint', 'Atomic mint', 'starburst-mint', 100, ['vintage', 'playful', 'bold']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
@@ -141,6 +142,9 @@ export const CATALOG: CatalogEntry[] = [
 
   bundle('set-farmhouse', 'Farmhouse kitchen and living room', 'The cream enamel icebox, butcher-block counter, farm table set, slipcover sofa, tripod lamp and crate planter, with sage gingham walls and a barnwood floor.',
     ['look-fridge-farmhouse', 'look-counter-farmhouse', 'look-dining-farmhouse', 'look-sofa-farmhouse', 'look-lamp-farmhouse', 'look-plant-farmhouse', 'paper-gingham-sage', 'floor-barnwood'], ['cozy', 'natural', 'warm']),
+
+  bundle('set-modern', 'Modern kitchen and living room', 'The brushed steel fridge, slab counter, glass-top dining set, low-profile sofa, slim torchiere and slab planter, with slate pinstripe walls and a charcoal microcement floor.',
+    ['look-fridge-modern', 'look-counter-modern', 'look-dining-modern', 'look-sofa-modern', 'look-lamp-modern', 'look-plant-modern', 'paper-pin-slate', 'floor-charcoal'], ['modern', 'minimal', 'cool']),
 
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
@@ -175,6 +179,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-hexsage', 'Sage hex', 'hexsage', 150, ['natural', 'cool', 'modern']),
   floor('floor-terracotta-tile', 'Terracotta tile', 'terracotta', 120, ['warm', 'natural', 'vintage']),
   floor('floor-slate', 'Slate stone', 'slate', 150, ['cool', 'industrial', 'modern']),
+  floor('floor-charcoal', 'Charcoal microcement', 'charcoal', 170, ['modern', 'minimal', 'cool']),
   floor('floor-barnwood', 'Barnwood plank', 'barnwood', 140, ['cozy', 'natural', 'warm']),
   floor('floor-linoleum', 'Diner linoleum', 'linoleum', 160, ['vintage', 'playful', 'bold']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
@@ -232,6 +237,14 @@ export const CATALOG: CatalogEntry[] = [
   look('look-sofa-farmhouse', 'sofa', 'farmhouse', 'Slipcover sofa', 'A washable linen slipcover with a little skirt, and a gingham cushion.', 360, ['cozy', 'natural', 'warm'], ['#E8DCC8', '#D8C9AE', '#B7BFB2']),
   look('look-lamp-farmhouse', 'lamp', 'farmhouse', 'Tripod lamp', 'Three wooden legs and a linen shade that glows like a porch light.', 80, ['cozy', 'natural', 'warm'], ['#B98A6A', '#8A5E3B', '#E4DDD2']),
   look('look-plant-farmhouse', 'plant', 'farmhouse', 'Crate and pail planter', 'Your plant in a pail, in a crate, because why not.', 40, ['cozy', 'natural', 'warm'], ['#C9CED6', '#F1E8D2', '#9DB3C6', '#3A3340']),
+
+  // Modern: steel, glass, stone and nothing extra.
+  look('look-fridge-modern', 'fridge', 'modern', 'Brushed steel fridge', 'A flat slab of steel with one long handle and a quiet little display.', 480, ['modern', 'minimal', 'cool'], ['#B9BEC3', '#2B2B30', '#E8EAEC']),
+  look('look-counter-modern', 'counter', 'modern', 'Slab counter', 'Handleless fronts, a thin stone top and a squared steel sink.', 560, ['modern', 'minimal', 'cool'], ['#2B2B30', '#E8EAEC', '#5E646B']),
+  look('look-dining-modern', 'dining', 'modern', 'Glass-top dining set', 'A glass table on slim black legs, and shell chairs that tuck right in.', 520, ['modern', 'minimal', 'cool'], ['#2B2B30', '#E8EAEC', '#5E646B']),
+  look('look-sofa-modern', 'sofa', 'modern', 'Low-profile sofa', 'Tight cushions, square arms and a lot of floor showing underneath.', 520, ['modern', 'minimal', 'cool'], ['#5E646B', '#2B2B30', '#C9CED6']),
+  look('look-lamp-modern', 'lamp', 'modern', 'Slim torchiere', 'A thin pole and a round white head that washes the ceiling.', 110, ['modern', 'minimal', 'cool'], ['#2B2B30', '#C9CED6', '#E8EAEC']),
+  look('look-plant-modern', 'plant', 'modern', 'Slab planter', 'A square matte planter with pale gravel on top.', 70, ['modern', 'minimal', 'cool'], ['#2B2B30', '#E8EAEC', '#9AA0A6', '#C9B79C']),
 
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
