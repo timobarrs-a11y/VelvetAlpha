@@ -33,7 +33,7 @@ export default function JoinInvitePage() {
     try {
       const boardId = await redeemSpaceInvite(code);
       toast.success('You\'re in!');
-      navigate(`/house/${boardId}`);
+      navigate(`/spaces/${boardId}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to join');
     } finally {

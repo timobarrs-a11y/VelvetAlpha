@@ -1,9 +1,50 @@
 import { useState } from 'react';
 import { Bot as BotIcon } from 'lucide-react';
 import { adminConsole, ReportRow } from '../../services/adminConsoleService';
-import { PageHeader, ErrorBanner, Spinner, Empty, panel, btnNeutral, btnDanger, useLoad, act, ago } from './ui';
+import { approveBoard, fetchBoards, rejectBoard } from '../../services/communityService';
+import { PageHeader, ErrorBanner, Spinner, Empty, panel, btnNeutral, btnDanger, btnGood, useLoad, act, ago } from './ui';
 
 const STATUSES = ['pending', 'reviewed', 'resolved', 'all'];
+
+const must = (ok: boolean) => { if (!ok) throw new Error('That didn\'t work. Only super users can approve spaces.'); };
+
+/** Spaces members proposed (crews started by members of their space skip this). Moved here from the old Community page. */
+function ProposedSpaces() {
+  const { data, error, reload } = useLoad(async () => (await fetchBoards()).filter(b => !b.is_approved), []);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const decide = async (id: string, approve: boolean, name: string) => {
+    if (!approve && !window.confirm(`Reject and delete "${name}"?`)) return;
+    setBusy(id);
+    const ok = await act(approve ? 'Space approved' : 'Space rejected',
+      async () => must(approve ? await approveBoard(id) : await rejectBoard(id)));
+    if (ok) await reload();
+    setBusy(null);
+  };
+
+  if (error) return <ErrorBanner message={error} />;
+  if (!data || data.length === 0) return null;
+  return (
+    <div className={`${panel} p-5 mb-6`}>
+      <h2 className="text-sm font-semibold text-white mb-1">Proposed spaces</h2>
+      <p className="text-xs text-white/40 mb-4">New top-level spaces wait here until you approve them.</p>
+      <div className="space-y-3">
+        {data.map(b => (
+          <div key={b.id} className="flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-white font-medium truncate">{b.name}</p>
+              <p className="text-xs text-white/40 truncate">
+                {b.category || 'General'} · {ago(b.created_at)}{b.description ? ` · ${b.description}` : ''}
+              </p>
+            </div>
+            <button disabled={busy === b.id} className={btnGood} onClick={() => decide(b.id, true, b.name)}>Approve</button>
+            <button disabled={busy === b.id} className={btnDanger} onClick={() => decide(b.id, false, b.name)}>Reject</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function AdminModerationPage() {
   const [status, setStatus] = useState('pending');
@@ -19,7 +60,8 @@ export function AdminModerationPage() {
 
   return (
     <>
-      <PageHeader title="Moderation" subtitle="Reported posts and comments, with the content shown inline. Removing content is permanent." />
+      <PageHeader title="Moderation" subtitle="Proposed spaces, and reported posts and comments with the content shown inline. Removing content is permanent." />
+      <ProposedSpaces />
       <div className="flex gap-2 mb-5">
         {STATUSES.map(s => (
           <button key={s} onClick={() => setStatus(s)}
