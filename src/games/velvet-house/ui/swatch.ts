@@ -36,6 +36,7 @@ export function paperCss(info: LookInfo | null, thumb?: string): string {
     case 'pixels': return `linear-gradient(${ink}, ${ink}) 3px 3px / 4px 4px no-repeat, linear-gradient(${ink}, ${ink}) 9px 3px / 4px 4px no-repeat, linear-gradient(${ink}, ${ink}) 1px 7px / 14px 4px no-repeat, ${base}`;
     case 'circuit': return `${stripes(ink, '90deg', 14)}, ${stripes(ink, '0deg', 14)}, ${base}`;
     case 'starburst': return `radial-gradient(circle, ${ink} 0 1.5px, transparent 2px) 0 0 / 14px 14px, repeating-conic-gradient(from 0deg at 7px 7px, ${ink} 0 6deg, transparent 6deg 45deg) 0 0 / 14px 14px, ${base}`;
+    case 'ditsy': return `radial-gradient(circle, ${ink} 0 1.6px, transparent 2px) 0 0 / 10px 10px, ${base}`;
     case 'pinstripe2': return `${stripes(ink, '90deg', 14)}, ${base}`;
     case 'limewash': return `radial-gradient(ellipse 10px 6px, ${ink} 0 100%, transparent 100%) 0 0 / 22px 16px, ${base}`;
     case 'formwork': return `radial-gradient(circle, ${ink} 0 1.2px, transparent 1.6px) 6px 6px / 14px 14px, ${stripes(ink, '0deg', 10)}, ${base}`;
