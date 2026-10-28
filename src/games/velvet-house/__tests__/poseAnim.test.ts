@@ -92,7 +92,56 @@ describe('poseRig', () => {
   });
 });
 
-import { idleRig, expressionFor, walkRig, seatLegs, legIK, gaitFoot, LEG, ARM, GAIT } from '../art/poseAnim.js';
+import { idleRig, expressionFor, walkRig, seatLegs, legIK, gaitFoot, headTarget, turnHead, idleGlance, treeLeg, wrapAngle, LEG, ARM, GAIT, HEAD } from '../art/poseAnim.js';
+
+describe('the head', () => {
+  it('looks at whoever it is with, as far as a neck turns, and no further', () => {
+    expect(headTarget(0, 0, 0.6)).toBeCloseTo(0.6, 6);
+    expect(headTarget(0, 0, -0.6)).toBeCloseTo(-0.6, 6);
+    expect(wrapAngle(headTarget(0, 0, 2.8))).toBeCloseTo(HEAD.turn, 6);
+    expect(wrapAngle(headTarget(0, 0, -2.8))).toBeCloseTo(-HEAD.turn, 6);
+    // Someone right behind: the head turns as far as it can toward them, the short way.
+    expect(Math.abs(wrapAngle(headTarget(0, 0, Math.PI) - 0))).toBeCloseTo(HEAD.turn, 6);
+  });
+
+  it('leads a turn: with no one to look at it heads where the body is going', () => {
+    expect(headTarget(0, 0.8, null)).toBeCloseTo(0.8, 6);
+    expect(wrapAngle(headTarget(0, 3, null))).toBeCloseTo(HEAD.turn, 6);
+    expect(headTarget(1, 1, null, 0.3)).toBeCloseTo(1.3, 6);
+  });
+
+  it('turns at a human pace, the short way round, and settles', () => {
+    let ha = 0;
+    const target = -3.3; // past -PI, so the short way round is to turn positive
+    ha = turnHead(ha, target, 0.016);
+    expect(ha).toBeGreaterThan(0);
+    expect(ha).toBeCloseTo(HEAD.rate * 0.016, 6);
+    for (let i = 0; i < 200; i++) ha = turnHead(ha, target, 0.016);
+    expect(wrapAngle(ha - target)).toBeCloseTo(0, 6);
+  });
+
+  it('glances aside now and then while standing, never all the time, and never far', () => {
+    let on = 0, n = 0, worst = 0;
+    for (let t = 0; t < 60; t += 0.05) { const g = idleGlance(t, 0.7); n++; if (g !== 0) on++; worst = Math.max(worst, Math.abs(g)); }
+    expect(on / n).toBeGreaterThan(0.2);
+    expect(on / n).toBeLessThan(0.5);
+    expect(worst).toBeLessThanOrEqual(HEAD.glance + 1e-9);
+    expect(worst).toBeGreaterThan(HEAD.glance * 0.9);
+  });
+});
+
+describe('the tree pose', () => {
+  const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+
+  it('rests the raised foot at the standing knee with the thigh and shin their own lengths', () => {
+    const hipZ = 0.62, tl = treeLeg(hipZ);
+    expect(dist([0, 0], tl.knee)).toBeCloseTo(LEG.thigh, 3);
+    expect(dist(tl.knee, tl.foot)).toBeCloseTo(LEG.shin, 3);
+    expect(hipZ + tl.foot[1], 'the foot at knee height').toBeCloseTo(LEG.shin, 6);
+    expect(tl.foot[0], 'the foot across at the other leg').toBeLessThan(-0.1);
+    expect(tl.knee[0], 'the knee turned out').toBeGreaterThan(0.1);
+  });
+});
 
 describe('the stride', () => {
   it('plants the foot and slides it back at exactly the body\'s speed, so it never skates', () => {

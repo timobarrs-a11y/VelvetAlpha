@@ -520,6 +520,48 @@ export function walkRig(phase, amp = 1) {
   return { hands: { 1: r.hand, [-1]: l.hand }, elbows: { 1: r.elbow, [-1]: l.elbow } };
 }
 
+// ---- The head: it looks before the body turns, at whoever it is with, and around the room ----
+
+/** How far the head turns from the body (radians) and how fast (radians a second). */
+export const HEAD = { turn: 1.2, rate: 7, glance: 0.55 };
+export const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+
+/**
+ * Where the head wants to point: at a look target when there is one, else where the body is
+ * heading (so the head leads a turn), plus any idle glance; never more than HEAD.turn from the
+ * way the body faces, because necks only go so far.
+ */
+export function headTarget(bodyA, headingA, lookA = null, glance = 0) {
+  const want = lookA != null ? lookA : headingA + glance;
+  const d = Math.max(-HEAD.turn, Math.min(HEAD.turn, wrapAngle(want - bodyA)));
+  return bodyA + d;
+}
+
+/** Turns the head from `ha` toward `target` the short way, no faster than HEAD.rate. */
+export function turnHead(ha, target, dt) {
+  const d = wrapAngle(target - ha);
+  return ha + Math.max(-HEAD.rate * dt, Math.min(HEAD.rate * dt, d));
+}
+
+/** Standing around, a look to one side now and then: zero most of the time, a smooth turn and back otherwise. */
+export function idleGlance(t, seed = 0) {
+  const win = 7.5, n = Math.floor((t + seed * 11) / win), u = ((t + seed * 11) % win) / win;
+  if (u < 0.5 || u > 0.85) return 0;
+  const dir = Math.sin(n * 12.9898 + seed * 78.233) > 0 ? 1 : -1;
+  return dir * HEAD.glance * Math.sin(((u - 0.5) / 0.35) * Math.PI);
+}
+
+/**
+ * Tree pose: the raised foot rests against the standing leg's inner knee, its own knee turned
+ * out. Returns the knee and foot as [outward, z] from the raised leg's hip, for a standing
+ * leg whose hip is `hipGap` away and whose knee is at `kneeZ` above the floor.
+ */
+export function treeLeg(hipZ, hipGap = 0.2, kneeZ = LEG.shin) {
+  const foot = [-hipGap + 0.03, kneeZ - hipZ];
+  const knee = legIK([0, 0], foot); // bends toward +outward
+  return { knee, foot };
+}
+
 /**
  * Two-bone leg: where the knee goes for a hip and a foot given as [forward, z], with the knee
  * bending forward. A foot out of reach straightens the leg toward it (a slight stretch, never
