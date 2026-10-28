@@ -132,6 +132,15 @@ export const authService = {
     };
   },
 
+  /** Sends the browser to Google; they come back signed in at the app's front door. */
+  async signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/lobby` },
+    });
+    if (error) throw new Error('We could not reach Google. Please try again.');
+  },
+
   async signOut() {
     const { error } = await supabase.auth.signOut();
 

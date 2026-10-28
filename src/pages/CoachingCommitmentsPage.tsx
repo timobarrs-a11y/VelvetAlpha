@@ -23,6 +23,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useDock, useDockCoach } from '../components/dock/DockContext';
 import { buildIcs, downloadIcs, googleCalendarUrl, taskHelpPrompt } from '../features/coaching/taskTools';
 import { noteCountsByTask } from '../services/goalNotesService';
+import { CalendarReconnect, connectCalendar, disconnectCalendar, getCalendarStatus, pinTasks, unpinTasks, type CalendarStatus } from '../services/googleCalendarService';
 import { useCoachHighlight, useCoachingRealtime, HIGHLIGHT_CLASS } from '../components/coaching/coachingHooks';
 
 const COACHING_TABLES = ['user_goals', 'coach_plans', 'coach_plan_steps', 'coaching_commitments'];
@@ -39,6 +40,12 @@ interface TaskTools {
   /** How many notes this task has (what the coach turned up about it). */
   noteCount: (task: CoachingCommitment) => number;
   openNotes: (task: CoachingCommitment) => void;
+  /** Connected to Google Calendar, so a task can be pinned there directly. */
+  calendarConnected: boolean;
+  pinned: (task: CoachingCommitment) => boolean;
+  /** Pins the task, or takes it off the calendar when it's already there. */
+  togglePin: (task: CoachingCommitment) => void;
+  pinning: (task: CoachingCommitment) => boolean;
 }
 const TaskToolsContext = createContext<TaskTools | null>(null);
 
@@ -71,6 +78,11 @@ export function CoachingCommitmentsPage() {
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
 
+  // Google Calendar: tasks can be pinned straight to their calendar once they've connected it.
+  const [calendar, setCalendar] = useState<CalendarStatus>({ configured: false, connected: false, email: null });
+  const [pinningIds, setPinningIds] = useState<Set<string>>(new Set());
+  const [pinningAll, setPinningAll] = useState(false);
+
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -92,6 +104,72 @@ export function CoachingCommitmentsPage() {
   }, [loadData]);
 
   useCoachingRealtime(user?.id, COACHING_TABLES, () => { loadData(); });
+
+  useEffect(() => { getCalendarStatus().then(setCalendar); }, []);
+
+  // Back from Google's sign-in page.
+  useEffect(() => {
+    const result = searchParams.get('calendar');
+    if (!result) return;
+    if (result === 'connected') { toast.success('Google Calendar connected. You can pin tasks to it now.'); getCalendarStatus().then(setCalendar); }
+    else if (result === 'denied') toast.error('Google Calendar was not connected.');
+    else toast.error("We couldn't connect Google Calendar. Please try again.");
+    const params = new URLSearchParams(searchParams);
+    params.delete('calendar');
+    setSearchParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const reconnectNeeded = () => {
+    setCalendar(c => ({ ...c, connected: false, email: null }));
+    toast.error('Google Calendar needs you to connect again.');
+  };
+
+  const setPinned = (ids: string[], pinned: boolean) =>
+    setCommitments(cs => cs.map(c => (ids.includes(c.id) ? { ...c, google_event_id: pinned ? (c.google_event_id ?? 'pinned') : null } : c)));
+
+  const togglePin = async (task: CoachingCommitment) => {
+    setPinningIds(s => new Set(s).add(task.id));
+    try {
+      const unpin = !!task.google_event_id;
+      const results = await (unpin ? unpinTasks([task.id]) : pinTasks([task.id]));
+      if (results[task.id] === 'failed') toast.error("We couldn't update your calendar. Please try again.");
+      else { setPinned([task.id], !unpin); toast.success(unpin ? 'Taken off your calendar.' : 'Pinned to your Google Calendar.'); }
+    } catch (err) {
+      if (err instanceof CalendarReconnect) reconnectNeeded();
+      else toast.error("We couldn't reach Google Calendar. Please try again.");
+    } finally {
+      setPinningIds(s => { const n = new Set(s); n.delete(task.id); return n; });
+    }
+  };
+
+  const pinAll = async () => {
+    const ids = commitments.filter(c => (c.status === 'pending' || c.status === 'in_progress') && !c.google_event_id).map(c => c.id);
+    if (ids.length === 0) { toast.success('Everything open is already on your calendar.'); return; }
+    setPinningAll(true);
+    try {
+      let done = 0;
+      // 50 at a time is the most the server takes in one go.
+      for (let i = 0; i < ids.length; i += 50) {
+        const results = await pinTasks(ids.slice(i, i + 50));
+        const ok = Object.entries(results).filter(([, r]) => r !== 'failed').map(([id]) => id);
+        done += ok.length;
+        setPinned(ok, true);
+      }
+      toast.success(`Pinned ${done} ${done === 1 ? 'task' : 'tasks'} to your Google Calendar.`);
+    } catch (err) {
+      if (err instanceof CalendarReconnect) reconnectNeeded();
+      else toast.error("We couldn't reach Google Calendar. Please try again.");
+    } finally {
+      setPinningAll(false);
+    }
+  };
+
+  const connect = () => connectCalendar().catch(() => toast.error("We couldn't start the Google connection. Please try again."));
+  const disconnect = async () => {
+    try { await disconnectCalendar(); setCalendar(c => ({ ...c, connected: false, email: null })); toast.success('Google Calendar disconnected.'); }
+    catch { toast.error("We couldn't disconnect. Please try again."); }
+  };
 
   const handleCoachChanged = useCallback((ids: string[]) => {
     loadData();
@@ -378,8 +456,13 @@ export function CoachingCommitmentsPage() {
       calendarUrl: (task) => googleCalendarUrl(task, goalTitle(task), `${window.location.origin}/coaching-commitments`),
       noteCount: (task) => noteCounts[task.id] ?? 0,
       openNotes: (task) => navigate(`/notes?task=${task.id}`),
+      calendarConnected: calendar.connected,
+      pinned: (task) => !!task.google_event_id,
+      togglePin,
+      pinning: (task) => pinningIds.has(task.id),
     };
-  }, [goals, dock, coach, companionName, noteCounts, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goals, dock, coach, companionName, noteCounts, navigate, calendar.connected, pinningIds, commitments]);
 
   const downloadCalendar = () => {
     const open = activeCommitments.map(c => ({ ...c, goalTitle: goals.find(g => g.id === c.goal_id)?.title ?? goals[0]?.title ?? null }));
@@ -490,6 +573,27 @@ export function CoachingCommitmentsPage() {
           Add a commitment from your plan
         </button>
       </div>
+      {calendar.configured && (
+        <div className="mb-3 -mt-3 flex flex-wrap items-center justify-end gap-2 text-xs">
+          {calendar.connected ? (
+            <>
+              <span className="text-ink-muted">Google Calendar{calendar.email ? `: ${calendar.email}` : ' connected'}</span>
+              {activeCommitments.length > 0 && (
+                <button type="button" onClick={pinAll} disabled={pinningAll} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium text-ink hover:bg-white/5 transition-colors disabled:opacity-50">
+                  {pinningAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarPlus className="w-3.5 h-3.5" />}
+                  Pin all open tasks
+                </button>
+              )}
+              <button type="button" onClick={disconnect} className="rounded-lg px-2.5 py-1.5 text-ink-muted hover:text-ink hover:bg-white/5 transition-colors">Disconnect</button>
+            </>
+          ) : (
+            <button type="button" onClick={connect} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold text-white bg-white/10 hover:bg-white/15 transition-colors">
+              <CalendarPlus className="w-3.5 h-3.5" />
+              Connect Google Calendar
+            </button>
+          )}
+        </div>
+      )}
       {activeCommitments.length > 0 && (
         <div className="mb-6 -mt-3 flex justify-end">
           <button
@@ -884,15 +988,27 @@ function CommitmentRow({
                 <MessageCircle className="w-3.5 h-3.5" />
                 Get help from {tools.coachName(commitment)}
               </button>
-              <a
-                href={tools.calendarUrl(commitment)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
-              >
-                <CalendarPlus className="w-3.5 h-3.5" />
-                Add to Google Calendar
-              </a>
+              {tools.calendarConnected ? (
+                <button
+                  type="button"
+                  onClick={() => tools.togglePin(commitment)}
+                  disabled={tools.pinning(commitment)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-white/5 transition-colors disabled:opacity-50"
+                >
+                  {tools.pinning(commitment) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : tools.pinned(commitment) ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <CalendarPlus className="w-3.5 h-3.5" />}
+                  {tools.pinned(commitment) ? 'On your calendar (remove)' : 'Pin to Google Calendar'}
+                </button>
+              ) : (
+                <a
+                  href={tools.calendarUrl(commitment)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-white/5 transition-colors"
+                >
+                  <CalendarPlus className="w-3.5 h-3.5" />
+                  Add to Google Calendar
+                </a>
+              )}
               {tools.noteCount(commitment) > 0 && (
                 <button
                   type="button"

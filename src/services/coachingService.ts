@@ -22,6 +22,8 @@ export interface CoachingCommitment {
   /** mentor (a coach) or assistant, for showing lessons apart from goal steps. */
   companion_relationship_type?: string | null;
   show_on_profile?: boolean;
+  /** The Google Calendar event this task is pinned to, when it is. */
+  google_event_id?: string | null;
 }
 
 export interface CoachingGoal {
@@ -67,7 +69,8 @@ export async function getCommitments(userId: string, companionId?: string | null
       category,
       extracted_from_message,
       plan_step_id,
-      show_on_profile
+      show_on_profile,
+      google_event_id
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });

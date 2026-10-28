@@ -186,3 +186,7 @@ verify_jwt = false
 
 [functions.extractor-eval]
 verify_jwt = false
+
+# Google sends the browser back to this one after sign-in, so it can't need a login; the app's calls check the token themselves.
+[functions.google-calendar]
+verify_jwt = false
