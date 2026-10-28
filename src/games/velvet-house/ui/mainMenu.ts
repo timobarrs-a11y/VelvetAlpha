@@ -11,6 +11,11 @@ import { hasChoice, anyHouse, askWho, listenForCompanions, onCompanionsChanged }
  * move-in (after a warning when it would replace a house), Settings holds what is not part of the game itself. The
  * game starts once one of the first two is chosen.
  */
+import { CHEATS, isPublicCode, setNames } from '../state/cheats';
+import { unlockFor } from '../state/unlockCodes';
+import { enqueue, readQueue } from '../state/codeQueue';
+import { CODE_QUEUE_KEY } from '../systems/codeQueue';
+
 export type LaunchChoice = 'continue' | 'new';
 
 const QUALITY = [['Auto', null], ['High', 'high'], ['Medium', 'medium'], ['Low', 'low']] as const;
@@ -49,12 +54,50 @@ export function showMainMenu(): Promise<LaunchChoice> {
           <p class="vh-menu-sub">${canContinue ? 'Welcome home.' : 'A cozy life, together.'}</p>
           ${canContinue ? `<button class="vh-menu-btn vh-menu-primary" data-m="continue"><span>Continue</span><small>${summary ? `${esc(summary.names ? summary.names + ' · ' : '')}Day ${summary.day} · ${esc(summary.when)} · $${summary.money}` : 'Choose whose house'}</small></button>` : ''}
           <button class="vh-menu-btn ${canContinue ? '' : 'vh-menu-primary'}" data-m="new"><span>${canContinue ? 'New Game' : 'Start'}</span></button>
+          <button class="vh-menu-btn" data-m="cheats"><span>Cheats</span></button>
           <button class="vh-menu-btn" data-m="settings"><span>Settings</span></button>
           <p class="vh-menu-build">Build ${esc(typeof __VELVET_BUILD__ === 'string' ? __VELVET_BUILD__ : 'dev')} · story ${CONTENT_VERSION}</p>
         </div>`;
       root.querySelector('[data-m=continue]')?.addEventListener('click', () => { void beginContinue(); });
       root.querySelector('[data-m=new]')?.addEventListener('click', () => { void beginNew(); });
+      root.querySelector('[data-m=cheats]')?.addEventListener('click', cheats);
       root.querySelector('[data-m=settings]')?.addEventListener('click', settings);
+    };
+
+    // Codes: there is no house yet, so a code typed here is checked and saved, and redeemed once the player is in it.
+    const cheats = (): void => {
+      onHome = false;
+      const waiting = readQueue(localStorage, CODE_QUEUE_KEY).length;
+      root.innerHTML = `
+        <div class="vh-menu-card vh-menu-panel">
+          <h2 class="vh-menu-h">Cheats</h2>
+          <p class="vh-menu-sub">Type a code and it is saved. It happens when you are in your house (cheats wait until the move-in is over).</p>
+          <form class="vh-menu-code" autocomplete="off">
+            <input name="code" placeholder="Enter a code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Code" />
+            <button type="submit" class="vh-menu-btn vh-menu-primary"><span>Redeem</span></button>
+          </form>
+          <p class="vh-menu-codemsg" role="status" aria-live="polite">${waiting ? `${waiting} saved, waiting for your house.` : ''}</p>
+          <ul class="vh-menu-codes">${CHEATS.filter((c) => c.code !== 'help').map((c) => `<li><b>${esc(c.code)}${c.arg ? ' ' + esc(c.arg) : ''}</b><span>${esc(c.help.replace(/ \(see the Sets tab[^)]*\)/, ` (${setNames().join(', ')})`))}</span></li>`).join('')}</ul>
+          <button class="vh-menu-btn" data-m="back"><span>Back</span></button>
+        </div>`;
+      const msg = root.querySelector('.vh-menu-codemsg')!, input = root.querySelector<HTMLInputElement>('.vh-menu-code input')!;
+      root.querySelector('.vh-menu-code')!.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+        if (unlockFor(text) || isPublicCode(text)) {
+          enqueue(localStorage, CODE_QUEUE_KEY, text);
+          msg.textContent = unlockFor(text) ? 'Code accepted. It is yours once you are in your house.' : 'Saved. It happens once you are in your house.';
+          msg.setAttribute('data-ok', 'true');
+        } else {
+          msg.textContent = 'That is not a code.';
+          msg.removeAttribute('data-ok');
+        }
+        input.value = '';
+        input.focus();
+      });
+      root.querySelector('[data-m=back]')?.addEventListener('click', home);
+      input.focus();
     };
 
     // With more than one companion to choose from, the host asks who first: whose house to go back to, or who is moving in.

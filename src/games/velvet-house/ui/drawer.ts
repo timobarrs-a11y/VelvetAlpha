@@ -4,7 +4,7 @@ import { createGarmentPreview } from './garmentPreview';
  * Drawer UI — the sidebar/bottom-sheet with pages: Shop, Goals, Do, Partner, You, Home, Log.
  * Pure DOM manipulation, called from main.ts.
  */
-import { CATALOG, TABS, itemsForTab, lockOf, setQuote, type CatalogEntry } from '../state/catalog';
+import { CATALOG, TABS, itemsForTab, visibleItems, lockOf, setQuote, type CatalogEntry } from '../state/catalog';
 import { SETTLE, LIFE, lifeGoalProgress, type GoalContext } from '../state/goals';
 import { careerTitle } from '../state/career';
 import { paperCss, floorCss, type LookInfo } from './swatch';
@@ -393,7 +393,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       return;
     }
 
-    const items = itemsForTab(tab);
+    const items = visibleItems(itemsForTab(tab), state.owned);
     const cards = items.map(item => {
       const lock = lockOf(item.id, state.day, state.bond);
       const quote = item.set ? setQuote(item, state.owned) : null;
@@ -401,7 +401,7 @@ export function createDrawer(cb: DrawerCallbacks): {
       const locked = lock?.locked;
       const price = quote ? quote.cost : item.price;
       const tooExpensive = price > state.money;
-      const cls = locked ? 'vh-locked' : owned ? 'vh-owned' : tooExpensive ? 'vh-poor' : '';
+      const cls = locked ? 'vh-locked' : owned && !quote ? 'vh-owned' : tooExpensive && !owned ? 'vh-poor' : '';
       const cols = item.cols
         ? `<div class="vh-swatches">${item.cols.map(c => `<span class="vh-swatch" style="background:${c}" data-color="${c}"></span>`).join('')}</div>`
         : '';
@@ -411,13 +411,13 @@ export function createDrawer(cb: DrawerCallbacks): {
         <div class="vh-shop-info">
           <strong>${item.name}</strong>
           ${item.desc ? `<span class="vh-shop-desc">${item.desc}</span>` : ''}
-          ${quote ? `<span class="vh-shop-desc vh-set-save">${quote.missing.length ? `${quote.missing.length} of ${quote.members.length} pieces to go. Save $${quote.full - quote.cost} against buying them apart.` : 'You have all of it. Change any piece in Arrange.'}</span>` : ''}
+          ${quote ? `<span class="vh-shop-desc vh-set-save">${quote.missing.length ? `${quote.missing.length} of ${quote.members.length} pieces to go. Save $${quote.full - quote.cost} against buying them apart.` : 'You have all of it. Tap Apply to put it all on; Arrange can switch single pieces.'}</span>` : ''}
           ${cols}
           ${lockHint}
         </div>
         <div class="vh-shop-actions">
-          ${quote && quote.missing.length && quote.full > quote.cost ? `<span class="vh-was">$${quote.full}</span>` : ''}<span class="vh-price">$${price}</span>
-          <button data-buy="${item.id}" ${locked || (owned ? 'disabled' : '')}>${owned ? 'Owned' : 'Buy'}</button>
+          ${quote && quote.missing.length && quote.full > quote.cost ? `<span class="vh-was">$${quote.full}</span>` : ''}${quote && owned ? '' : `<span class="vh-price">$${price}</span>`}
+          <button data-buy="${item.id}" ${locked || (owned && !quote ? 'disabled' : '')}>${quote ? (owned ? 'Apply' : 'Buy') : owned ? 'Owned' : 'Buy'}</button>
         </div>
       </div>`;
     }).join('');

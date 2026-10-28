@@ -36,9 +36,16 @@ export function createShop(g: Game): Partial<Game> {
   // A set: every piece, the wallpaper and the floor, for the discounted price of what the player does not own yet.
   function buySet(item: CatalogEntry): void {
     const q = setQuote(item, owned);
-    if (!q.missing.length) { log(`You already own all of the ${item.name.toLowerCase()}.`); return; }
     if (q.members.some((m) => (m.icon === 'paper' || m.icon === 'floor') && !isPaintable(view.level))) {
       log('Pick a floor of the house first (Basement, Main floor or Upstairs): the set\'s walls and floor go inside.');
+      return;
+    }
+    // Owned already: the button is Apply, and it puts the whole set on again, free (the pieces on the main floor, the
+    // walls and floor on the floor being looked at). Nothing is charged and it is not a story moment.
+    if (!q.missing.length) {
+      for (const m of q.members) handleBuy(m, undefined, true);
+      log(`The ${item.name.toLowerCase()} is on.`);
+      g.refreshDrawer();
       return;
     }
     if (!g.spendOn(`Shop: ${item.name}`, q.cost)) { log('Not enough money.'); return; }

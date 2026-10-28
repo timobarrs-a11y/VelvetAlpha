@@ -149,6 +149,8 @@ export interface Game {
   rotateSelected(): void;
   runCheat(input: string): string;
   tryDevMoney(text: string): boolean;
+  tryUnlock(text: string): boolean;
+  cheatsBlocked(): string | null;
   recolourHeld(): void;
   useLook(skin: string): void;
   cancelHold(): void;

@@ -18,6 +18,7 @@ const THEMES: ThemeSpec[] = [
   { theme: 'summer', tags: ['playful', 'bold', 'warm'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-stripe-sun', pattern: 'stripe-sun' }, floor: { id: 'floor-honey', floor: 'honey' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'fall', tags: ['warm', 'cozy', 'natural'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-leaves', pattern: 'leaves' }, floor: { id: 'floor-chestnut', floor: 'chestnut' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
   { theme: 'winter', tags: ['cozy', 'cool', 'soft'], materials: ['wood', 'stone', 'metal', 'fabric', 'glass'], paper: { id: 'paper-snow', pattern: 'snow' }, floor: { id: 'floor-frostpine', floor: 'frostpine' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
+  { theme: 'cloud', tags: ['soft', 'playful', 'cozy'], materials: ['wood', 'metal', 'fabric', 'stone'], paper: { id: 'paper-clouds-sky', pattern: 'clouds-sky' }, floor: { id: 'floor-confetti', floor: 'confetti' }, paperRange: [80, 120], floorRange: [120, 180], ladder: [300, 450] },
 ];
 const PIECES = ['fridge', 'counter', 'dining', 'sofa', 'lamp', 'plant'];
 // What the household uses on each piece: a look must leave these where they are.

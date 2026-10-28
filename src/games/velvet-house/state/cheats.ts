@@ -40,11 +40,21 @@ export const CHEATS: Cheat[] = [
   { code: 'help', help: 'This list.', run: () => helpText() },
 ];
 
-/** The sets `decorate` knows: every set in the shop, by its short name. */
-export const setNames = (): string[] => CATALOG.filter((c) => c.set).map((c) => c.id.slice(4));
+/** The sets `decorate` knows: every set on the shop's shelves, by its short name. */
+/** Secret sets are not on the list: a public cheat must not give what only a code gives. */
+export const setNames = (): string[] => CATALOG.filter((c) => c.set && !c.secret).map((c) => c.id.slice(4));
 
 export function helpText(): string {
   return CHEATS.map((c) => `${c.code}${c.arg ? ' ' + c.arg : ''} — ${c.help}`).join('\n') + `\nsets: ${setNames().join(', ')}`;
+}
+
+/** Is this one of the public codes, typed fully (a code that takes a set needs a real set)? Used by the title screen. */
+export function isPublicCode(input: string): boolean {
+  const [word = '', ...rest] = input.trim().toLowerCase().split(/\s+/);
+  const c = CHEATS.find((x) => x.code === word);
+  if (!c || c.code === 'help') return false;
+  if (!c.arg) return rest.length === 0;
+  return c.code === 'decorate' ? setNames().includes(rest.join(' ')) : rest.length > 0;
 }
 
 /** Run what the player typed. Codes are not case sensitive. Returns what to show them. */

@@ -26,7 +26,8 @@ export function createCheats(g: Game): Partial<Game> {
     },
     decorate(theme) {
       const set = catalogById(`set-${theme}`);
-      if (!set?.set) return `There's no "${theme}" set. Try ${setNames().join(', ')}.`;
+      // A secret set is only ever given by its own code.
+      if (!set?.set || set.secret) return `There's no "${theme}" set. Try ${setNames().join(', ')}.`;
       if (!isPaintable(view.level)) return 'Pick a floor of the house first (Basement, Main floor or Upstairs): the set\'s walls and floor go inside.';
       for (const m of setQuote(set, new Set()).members) g.handleBuy(m, undefined, true);
       owned.add(set.id);
@@ -39,5 +40,5 @@ export function createCheats(g: Game): Partial<Game> {
     log(said.split('\n')[0]);
     return said;
   }
-  return { runCheat };
+  return { runCheat, cheatsBlocked: () => host.blocked() };
 }

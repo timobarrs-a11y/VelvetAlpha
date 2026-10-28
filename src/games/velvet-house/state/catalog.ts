@@ -31,6 +31,8 @@ export interface CatalogEntry {
   buy?: string;
   /** A themed set sold as one bundle: the catalog ids it holds and the share taken off what is not owned yet. */
   set?: { items: string[]; off: number };
+  /** Not in the shop until the player has it: it comes from a code (state/unlockCodes.ts), never from the shelves. */
+  secret?: boolean;
 }
 
 export const TABS = [
@@ -70,6 +72,9 @@ export const look = (id: string, type: string, skin: string, name: string, desc:
 const bundle = (id: string, name: string, desc: string, items: string[], tags: string[], off = 0.2): CatalogEntry => ({
   id, name, desc, price: 0, icon: 'set', tab: 'Sets', tags, set: { items, off },
 });
+
+/** A secret entry: out of the shop until the player owns it. */
+const secret = (e: CatalogEntry): CatalogEntry => ({ ...e, secret: true });
 
 const hobby = (id: string, type: string, name: string, price: number, tags: string[], cols?: string[]): CatalogEntry => ({
   id, name, price, icon: 'obj', tab: 'Hobbies', type, tags, cols, repeat: true,
@@ -337,6 +342,18 @@ export const CATALOG: CatalogEntry[] = [
   look('look-lamp-winter', 'lamp', 'winter', 'Candle-glow lamp', 'A frosted globe on a white stem that glows like a candle in a window.', 80, ['cozy', 'cool', 'soft'], ['#F2EEE8', '#8E1F2F', '#3F5B4C']),
   look('look-plant-winter', 'plant', 'winter', 'Frosted evergreen pot', 'Your plant with a dusting of snow and a few red berries.', 40, ['cozy', 'cool', 'soft'], ['#8E1F2F', '#F2EEE8', '#3F5B4C', '#2E3B57']),
 
+  // Cloud Nine: a secret pack. Not on the shelves; a code (state/unlockCodes.ts) gives it, free.
+  secret(look('look-fridge-cloud', 'fridge', 'cloud', 'Cloud-nine icebox', 'A pale sky-blue icebox with a rainbow on the door and a cloud at each end.', 340, ['soft', 'playful', 'cozy'], ['#BFE3F5', '#F9C6DA', '#C9F0DC'])),
+  secret(look('look-counter-cloud', 'counter', 'cloud', 'Candy-cloud counter', 'Pastel cabinets, a fluffy scalloped top, heart pulls and a jar of rainbow sweets.', 400, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#FFF2B8'])),
+  secret(look('look-dining-cloud', 'dining', 'cloud', 'Tea-party table set', 'A white table set for tea, with chairs that have a heart in the back.', 330, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#E2D3F7'])),
+  secret(look('look-sofa-cloud', 'sofa', 'cloud', 'Cloud sofa', 'A puffy, cloud-topped sofa with a heart cushion and a little yellow star.', 360, ['soft', 'playful', 'cozy'], ['#F6F1FA', '#F9C6DA', '#BFE3F5'])),
+  secret(look('look-lamp-cloud', 'lamp', 'cloud', 'Star lamp', 'A star on a stem that glows butter-yellow when you turn it on.', 80, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#E2D3F7'])),
+  secret(look('look-plant-cloud', 'plant', 'cloud', 'Rainbow pot', 'Your plant in a pot with a rainbow around it, and a few little flowers.', 40, ['soft', 'playful', 'cozy'], ['#F9C6DA', '#BFE3F5', '#FFF2B8', '#C9F0DC'])),
+  secret(wallpaper('paper-clouds-sky', 'Clouds and stars', 'clouds-sky', 100, ['soft', 'playful', 'cozy'])),
+  secret(floor('floor-confetti', 'Confetti carpet', 'confetti', 130, ['soft', 'playful', 'cozy'])),
+  secret(bundle('set-cloud', 'Cloud Nine kitchen and living room', 'The cloud-nine icebox, candy-cloud counter, tea-party table set, cloud sofa, star lamp and rainbow pot, with clouds-and-stars walls and a confetti carpet.',
+    ['look-fridge-cloud', 'look-counter-cloud', 'look-dining-cloud', 'look-sofa-cloud', 'look-lamp-cloud', 'look-plant-cloud', 'paper-clouds-sky', 'floor-confetti'], ['soft', 'playful', 'cozy'])),
+
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
   wallItem('wobj-landscape', 'Landscape canvas', 80, ['natural', 'vintage'], ['#9EC1F5', '#F2B48A', '#C9B8E8', '#2B3A5E']),
@@ -440,6 +457,11 @@ export const ITAGS: Record<string, string> = Object.fromEntries(
 
 export function catalogById(id: string): CatalogEntry | undefined {
   return CATALOG.find(c => c.id === id);
+}
+
+/** What the shop shows: secret entries only once the player has them. */
+export function visibleItems(items: CatalogEntry[], owned: ReadonlySet<string>): CatalogEntry[] {
+  return items.filter((i) => !i.secret || owned.has(i.id));
 }
 
 export function itemsForTab(tab: string): CatalogEntry[] {

@@ -723,3 +723,17 @@
 .vh-cheat-out:empty { display: none; }
 /* The money chip takes taps (five in a row open the cheat console); the rest of the HUD lets them through. */
 .vh-hud .vh-money { pointer-events: auto; }
+
+/* The start menu's Cheats screen. */
+.vh-menu-code { display: flex; gap: 8px; }
+.vh-menu-code input { flex: 1; min-width: 0; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.07); color: #F2EEE8; font: 600 15px/1.2 ui-monospace, Menlo, monospace; outline: none; }
+.vh-menu-code input:focus { border-color: #A582F0; }
+.vh-menu-code .vh-menu-btn { width: auto; flex: none; padding: 0 16px; }
+.vh-menu-codemsg { margin: 0; min-height: 1.4em; font-size: 13px; color: #F2A7A0; }
+.vh-menu-codemsg[data-ok] { color: #8FD9A8; }
+.vh-menu-codes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; text-align: left; font-size: 12.5px; color: #CFC6DA; }
+.vh-menu-codes li { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.05); }
+.vh-menu-codes b { font: 700 13px/1.3 ui-monospace, Menlo, monospace; color: #F2EEE8; }
+
+/* A menu screen with a form or a list sits on a solid panel, so the house moving behind the title does not show through. */
+.vh-menu-card.vh-menu-panel { margin-top: 6vh; padding: 18px 16px; border-radius: 20px; background: rgba(20,17,28,.94); border: 1px solid rgba(165,130,240,.28); box-shadow: 0 16px 48px rgba(0,0,0,.5); max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box; }

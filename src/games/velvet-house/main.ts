@@ -22,6 +22,8 @@ import { createConcerns } from './systems/concerns';
 import { createPets } from './systems/pets';
 import { createCheats } from './systems/cheats';
 import { createDevMoney } from './systems/devMoney';
+import { createUnlocks } from './systems/unlocks';
+import { createCodeQueue } from './systems/codeQueue';
 import { createCheatsUi } from './ui/cheats';
 import { createScripts } from './script/gameHost';
 import { createFrame } from './view/frame';
@@ -57,6 +59,7 @@ function boot(attract: boolean): void {
   Object.assign(g, createConcerns(g));
   Object.assign(g, createCheats(g));
   Object.assign(g, createDevMoney(g));
+  Object.assign(g, createUnlocks(g));
   Object.assign(g, createVitals(g));
   Object.assign(g, createGoals(g));
   Object.assign(g, createAvatar(g));
@@ -66,6 +69,7 @@ function boot(attract: boolean): void {
   Object.assign(g, createDeliveries(g));
   Object.assign(g, createPets(g));
   Object.assign(g, createScripts(g));
+  if (!attract) createCodeQueue(g);
   if (!attract) createCheatsUi(g);
   if (!attract) installDevHooks(g);
   startGameLoop(g);
