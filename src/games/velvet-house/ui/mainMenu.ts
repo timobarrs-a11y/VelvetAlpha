@@ -11,7 +11,7 @@ import { hasChoice, anyHouse, askWho, listenForCompanions, onCompanionsChanged }
  * move-in (after a warning when it would replace a house), Settings holds what is not part of the game itself. The
  * game starts once one of the first two is chosen.
  */
-import { unlockFor } from '../state/unlockCodes';
+import { unlockFor, codeWord } from '../state/unlockCodes';
 import { parseFund } from '../state/devMoney';
 import { enqueue, readQueue } from '../state/codeQueue';
 import { CODE_QUEUE_KEY } from '../systems/codeQueue';
@@ -84,8 +84,12 @@ export function showMainMenu(): Promise<LaunchChoice> {
         e.preventDefault();
         const text = input.value.trim();
         if (!text) return;
-        if (unlockFor(text) || parseFund(text) !== null) {
+        const promo = unlockFor(text);
+        if (promo || parseFund(text) !== null) {
           enqueue(localStorage, CODE_QUEUE_KEY, text);
+          // A promo code is the account's from now on (inside the app the host records it), so whichever house they
+          // go into has it, even if it isn't the one this menu opened with.
+          if (promo) postToParent({ type: 'velvet:promo', game: 'velvet-house', code: codeWord(promo) });
           msg.textContent = 'Code accepted. It is yours once you are in your house.';
           msg.setAttribute('data-ok', 'true');
         } else {
