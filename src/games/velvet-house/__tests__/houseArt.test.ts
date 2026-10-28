@@ -194,6 +194,18 @@ describe('pets', () => {
     }
   });
 
+  it('strides by the ground it covers, not the clock: still, it holds a pose; moving, the legs change', () => {
+    const rec = recordingCtx();
+    const art = createHouseArt(rec.ctx);
+    const frame = (x: number) => { rec.reset(); art.render(scene([pet({ kind: 'dog', pose: 'walk', x })], 1)); return rec.sig(); };
+    // Standing on the spot the stride amplitude eases off; once it has, frame after frame is the same picture.
+    for (let i = 0; i < 90; i++) frame(4.5);
+    const still = frame(4.5), again = frame(4.5);
+    expect(again).toBe(still);
+    const moved = frame(4.56);
+    expect(moved).not.toBe(still);
+  });
+
   it('leaves out a pet that is hidden or on another floor, and faces the way it is told', () => {
     const base = recordingCtx(); createHouseArt(base.ctx).render(scene([]));
     const hid = recordingCtx(); createHouseArt(hid.ctx).render(scene([pet({ hidden: true })]));
