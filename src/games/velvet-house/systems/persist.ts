@@ -6,7 +6,7 @@ export function createPersist(g: Game): Partial<Game> {
   const { world, simName, partnerName, townName, people, rngSeed, view, owned, closet, flags, style, companionCfg, art, storage, coreMem, memories, pastMem } = g;
   // Save: one serializer (state/save.ts). What the game models comes from live state; the rest is carried over from the loaded save.
   function doSave(): void {
-    if (run.attract) return;
+    if (run.attract || run.visit) return;
     try {
       const data = snapshot({
         rev: ++g.s.saveRev, day: world.day, minutes: world.minutes,
@@ -27,8 +27,8 @@ export function createPersist(g: Game): Partial<Game> {
     } catch { /* non-fatal */ }
   }
 
-  // Auto-save (the title screen's backdrop is a throwaway house and never saves)
-  if (!run.attract) {
+  // Auto-save (the title screen's backdrop is a throwaway house, and a friend's house is theirs: neither saves)
+  if (!run.attract && !run.visit) {
     setInterval(doSave, 15000);
     window.addEventListener('pagehide', doSave);
     document.addEventListener('visibilitychange', () => { if (document.hidden) doSave(); });

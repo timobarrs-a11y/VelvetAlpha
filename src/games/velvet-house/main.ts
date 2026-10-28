@@ -31,6 +31,8 @@ import { createHostBridge } from './bridge/hostBridge';
 import { showMainMenu } from './ui/mainMenu';
 import { startAttract } from './ui/attract';
 import { run, SAVE_KEY } from './kernel/config';
+import { startVisit } from './ui/visit';
+import { createVisits } from './systems/visits';
 import { postToParent } from './bridge/protocol';
 
 /**
@@ -68,11 +70,14 @@ function boot(attract: boolean): void {
   Object.assign(g, createDeliveries(g));
   Object.assign(g, createPets(g));
   Object.assign(g, createScripts(g));
-  if (!attract) createCodeQueue(g);
+  if (!attract && !run.visit) createCodeQueue(g);
   if (!attract) installDevHooks(g);
   startGameLoop(g);
   if (attract) { startAttract(g); return; }
+  // A friend's house: theirs to look round. The host's profile and the player's account stay out of it.
+  if (run.visit) { startVisit(g); return; }
   Object.assign(g, createHostBridge(g));
+  Object.assign(g, createVisits(g));
 
   // Open the page the player left the drawer on (every module exists by now).
   try { g.s.drawerPage = localStorage.getItem('velvet-drawer') as DrawerPage || ''; } catch { /* no storage */ }
@@ -85,6 +90,8 @@ function boot(attract: boolean): void {
  * directly with ?nomenu.
  */
 async function launch(): Promise<void> {
+  // A visit goes straight into the friend's house, with no title screen.
+  if (run.visit) { boot(false); return; }
   const skip = import.meta.env.DEV && new URLSearchParams(location.search).has('nomenu');
   const launched = location.hash === '#launch';
   if (launched) history.replaceState(null, '', location.pathname + location.search);

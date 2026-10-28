@@ -8,12 +8,12 @@ const HOST = readFileSync(join(process.cwd(), 'e2e/velvet-sims/host.html'), 'utf
 export interface Obj { id: string; type: string; level: number; x: number; y: number; rot: number; on?: string; z?: number; skin?: string }
 
 /** Opens the game inside the stand-in host page and waits for it to be ready. */
-export async function openGame(page: Page, opts: { fresh?: boolean; freeze?: boolean; script?: boolean; menu?: boolean; seed?: (save: Record<string, unknown>) => void } = {}): Promise<FrameLocator> {
+export async function openGame(page: Page, opts: { fresh?: boolean; freeze?: boolean; script?: boolean; menu?: boolean; visit?: boolean; seed?: (save: Record<string, unknown>) => void } = {}): Promise<FrameLocator> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   (page as unknown as { __errors: string[] }).__errors = errors;
   await page.route('**/__e2e/host.html*', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: HOST }));
-  const query = [opts.script && 'script', opts.menu && 'menu', opts.freeze && 'freeze'].filter(Boolean).join('&');
+  const query = [opts.script && 'script', opts.menu && 'menu', opts.freeze && 'freeze', opts.visit && 'visit'].filter(Boolean).join('&');
   const url = '/__e2e/host.html' + (query ? `?${query}` : '');
   await page.goto(url);
   if (opts.fresh !== false) await page.evaluate((k) => localStorage.removeItem(k), SAVE_KEY);

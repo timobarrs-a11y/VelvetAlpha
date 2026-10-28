@@ -27,7 +27,11 @@ export type BridgeMessageType =
   | 'velvet:startGo'
   | 'velvet:startCancel'
   | 'velvet:promo'
-  | 'velvet:promoResult';
+  | 'velvet:promoResult'
+  | 'velvet:houses'
+  | 'velvet:housesResult'
+  | 'velvet:visit'
+  | 'velvet:visitEnd';
 
 export interface BridgeMessage {
   type: BridgeMessageType;
@@ -446,4 +450,67 @@ export function sanitizeMessage(msg: Record<string, unknown>): Record<string, un
 export function isValidOrigin(eventOrigin: string, allowedOrigins: string[]): boolean {
   if (allowedOrigins.length === 0) return false;
   return allowedOrigins.includes(eventOrigin);
+}
+
+// Visiting friends' houses (see supabase/migrations/20261111100000_velvet_house_visits.sql). The game asks the host for
+// the friends whose houses are open, whether the player's own house is open, or to open or close it; the host runs it
+// with the player's account and answers with the same seq. To go on a visit the game asks the host to open the friend's
+// house; the visit's game asks to come home.
+export const HOUSE_OPS = ['friends', 'open', 'setOpen'] as const;
+export type HouseOp = typeof HOUSE_OPS[number];
+
+export interface HousesRequestMessage extends BridgeMessage {
+  type: 'velvet:houses';
+  game: 'velvet-house';
+  seq: number;
+  op: HouseOp;
+  /** setOpen only: whether friends can visit. */
+  open?: boolean;
+}
+
+/** A friend's house the player can visit. */
+export interface FriendHouse { ownerId: string; name: string; day: number | null }
+
+export interface HousesResultMessage extends BridgeMessage {
+  type: 'velvet:housesResult';
+  seq: number;
+  ok: boolean;
+  /** friends: FriendHouse[]; open and setOpen: boolean. */
+  data?: unknown;
+}
+
+export interface VisitMessage extends BridgeMessage {
+  type: 'velvet:visit';
+  game: 'velvet-house';
+  owner: string;
+}
+
+export interface VisitEndMessage extends BridgeMessage {
+  type: 'velvet:visitEnd';
+  game: 'velvet-house';
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isHousesRequestMessage(data: unknown): data is HousesRequestMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  if (m.type !== 'velvet:houses' || typeof m.seq !== 'number' || !(HOUSE_OPS as readonly string[]).includes(m.op as string)) return false;
+  return m.op === 'setOpen' ? typeof m.open === 'boolean' : m.open === undefined;
+}
+
+export function isHousesResultMessage(data: unknown): data is HousesResultMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:housesResult' && typeof m.seq === 'number' && typeof m.ok === 'boolean';
+}
+
+export function isVisitMessage(data: unknown): data is VisitMessage {
+  if (!isBridgeMessage(data)) return false;
+  const m = data as Record<string, unknown>;
+  return m.type === 'velvet:visit' && typeof m.owner === 'string' && UUID.test(m.owner);
+}
+
+export function isVisitEndMessage(data: unknown): data is VisitEndMessage {
+  return isBridgeMessage(data) && (data as BridgeMessage).type === 'velvet:visitEnd';
 }

@@ -69,7 +69,7 @@ export function createUnlocks(g: Game, claim: PromoClaim | null = createHostProm
   }
 
   // Packs unlocked mid-story or before moving in wait for a quiet moment.
-  if (!run.attract) {
+  if (!run.attract && !run.visit) {
     setInterval(() => {
       if (!pending().length || !ready()) return;
       const code = codeForSet(pending().shift()!);

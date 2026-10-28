@@ -11,12 +11,13 @@ import { lookUnlock, resolveLookForDisplay } from '../data/avatarCatalog';
 import {
   isReadyMessage, isAvatarItemBoughtMessage, isLookChangedMessage, isRestartedMessage,
   isSampleRequestMessage, isSampleCancelMessage, isDesignsRequestMessage, isStartRequestedMessage, isMenuReadyMessage,
-  isPromoRequestMessage,
+  isPromoRequestMessage, isHousesRequestMessage, isVisitMessage,
 } from '../games/velvet-house/bridge/protocol';
 import { toGameTurnInput } from '../games/velvet-house/bridge/chatInput';
 import { sampleGameTurn } from '../services/velvetGameTurn';
 import { runDesignsOp } from '../services/velvetDesigns';
 import { claimVelvetPromo } from '../services/velvetPromo';
+import { runHousesOp } from '../services/velvetHouseVisits';
 import { useVelvetHouseCloudSave } from '../hooks/useVelvetHouseCloudSave';
 import { announceAvatarSaved, onAvatarSaved } from '../stores/avatarEditorStore';
 import { applyAvatarChange, migrateAvatarConfig } from '../utils/avatarConfig';
@@ -33,6 +34,8 @@ export function VelvetHouseNextGame() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryCompanionId = searchParams.get('companion');
+  // Back from a friend's house: straight into this one, with no title screen.
+  const queryStart = searchParams.get('start') === 'continue' ? 'continue' : null;
   // Opened without a companion (from the lobby or hub), it's the one you last
   // talked to, preferring a companion over a coach.
   const [pickedId, setPickedId] = useState<string | null>(null);
@@ -135,6 +138,18 @@ export function VelvetHouseNextGame() {
         win.postMessage({ type: 'velvet:promoResult', seq, status }, window.location.origin);
         return;
       }
+      // Friends' houses: the list, and opening or closing this player's own, run as the player.
+      if (isHousesRequestMessage(e.data)) {
+        const { seq, op, open } = e.data;
+        const r = await runHousesOp(op, open);
+        win.postMessage({ type: 'velvet:housesResult', seq, ...r }, window.location.origin);
+        return;
+      }
+      // Off to a friend's house (the game saved this one first).
+      if (isVisitMessage(e.data)) {
+        navigate(`/velvet-house/visit/${e.data.owner}${companionId ? `?from=${encodeURIComponent(companionId)}` : ''}`);
+        return;
+      }
       if (isRestartedMessage(e.data)) { noteRestart(); return; }
       // Bought in the game: it's theirs everywhere now.
       if (isAvatarItemBoughtMessage(e.data)) {
@@ -213,7 +228,7 @@ export function VelvetHouseNextGame() {
     });
     window.addEventListener('message', onMessage);
     return () => { cancelled = true; offSaved(); window.removeEventListener('message', onMessage); turns.forEach(c => c.abort()); };
-  }, [companionId, noteRestart]);
+  }, [companionId, noteRestart, navigate]);
 
   const handleExit = () => {
     navigate(companionId ? `/chat?companion=${companionId}` : '/lobby');
@@ -288,7 +303,7 @@ export function VelvetHouseNextGame() {
       <iframe
         ref={iframeRef}
         key={chosen?.id ?? 'initial'}
-        src={`${GAME_PATH}${companionId ? `?companion=${encodeURIComponent(companionId)}${chosen ? `&start=${chosen.start}` : ''}` : ''}`}
+        src={`${GAME_PATH}${companionId ? `?companion=${encodeURIComponent(companionId)}${chosen ? `&start=${chosen.start}` : queryStart ? `&start=${queryStart}` : ''}` : ''}`}
         title="Velvet Sims (Preview)"
         className="flex-1 w-full border-0"
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
