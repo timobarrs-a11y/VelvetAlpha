@@ -23,6 +23,7 @@ const SETS: Record<string, string[]> = {
   neon: ['look-fridge-neon', 'look-counter-neon', 'look-dining-neon', 'look-sofa-neon', 'look-lamp-neon', 'look-plant-neon', 'paper-circuit', 'floor-grate'],
   candy: ['look-fridge-candy', 'look-counter-candy', 'look-dining-candy', 'look-sofa-candy', 'look-lamp-candy', 'look-plant-candy', 'paper-sprinkles', 'floor-checkpink'],
   cuddle: ['look-fridge-cuddle', 'look-counter-cuddle', 'look-dining-cuddle', 'look-sofa-cuddle', 'look-lamp-cuddle', 'look-plant-cuddle', 'paper-clouds-sky', 'floor-skycheck'],
+  arcade: ['look-fridge-arcade', 'look-counter-arcade', 'look-dining-arcade', 'look-sofa-arcade', 'look-lamp-arcade', 'look-plant-arcade', 'paper-pixel-invaders', 'floor-arcadecarpet', 'clawmachine'],
 };
 
 for (const [set, ids] of Object.entries(SETS)) {

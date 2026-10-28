@@ -144,6 +144,7 @@ export const CATALOG: CatalogEntry[] = [
   wallpaper('paper-circuit', 'Circuit', 'circuit', 110, ['bold', 'modern', 'industrial']),
   wallpaper('paper-sprinkles', 'Sprinkles', 'sprinkles', 90, ['soft', 'playful', 'warm']),
   wallpaper('paper-clouds-sky', 'Clouds and rainbows', 'clouds-sky', 90, ['soft', 'playful', 'cozy']),
+  wallpaper('paper-pixel-invaders', 'Pixel invaders', 'pixel-invaders', 110, ['playful', 'bold', 'vintage']),
   wallpaper('paper-shiplap', 'Shiplap', 'shiplap', 80, ['natural', 'minimal', 'cozy']),
   wallpaper('paper-subway', 'Subway tile', 'subway', 80, ['modern', 'minimal', 'industrial']),
   wallpaper('paper-stars-night', 'Starry night', 'stars-night', 120, ['playful', 'cool', 'bold']),
@@ -210,6 +211,9 @@ export const CATALOG: CatalogEntry[] = [
   bundle('set-cuddle', 'Cuddle Clouds kitchen and living room', 'Pastel bears, clouds and rainbows: the rainbow bear fridge, cloud counter with a heart basin and a bear plush, cloud table with bear-face chairs under a rainbow, a puffy cloud sofa, a cloud lamp with rainbow drops and a cloud pot, with clouds and rainbows on the walls and a sky check underfoot.',
     ['look-fridge-cuddle', 'look-counter-cuddle', 'look-dining-cuddle', 'look-sofa-cuddle', 'look-lamp-cuddle', 'look-plant-cuddle', 'paper-clouds-sky', 'floor-skycheck'], ['soft', 'playful', 'cozy']),
 
+  bundle('set-arcade', 'Arcade kitchen and living room', 'Black cabinets, marquee lights and neon: the cabinet fridge with a glowing screen, coin-op counter with a joystick at the end, a cocktail cabinet to eat off with red vinyl stools under a marquee, a vinyl sofa with chasing lights, a joystick lamp and a pixel pot, with pixel invaders on the walls and the arcade carpet underfoot. The claw machine in Hobbies goes with it.',
+    ['look-fridge-arcade', 'look-counter-arcade', 'look-dining-arcade', 'look-sofa-arcade', 'look-lamp-arcade', 'look-plant-arcade', 'paper-pixel-invaders', 'floor-arcadecarpet'], ['playful', 'bold', 'vintage']),
+
   // Upgrades
   { id: 'upgrade-attic', name: 'Attic loft', desc: 'A whole new floor above the bedroom: stairs, windows and room for more.', price: 1200, icon: 'upgrade', tab: 'Upgrades', tags: ['cozy', 'natural'] },
 
@@ -262,6 +266,7 @@ export const CATALOG: CatalogEntry[] = [
   floor('floor-grate', 'Lit grate', 'grate', 170, ['bold', 'modern', 'industrial']),
   floor('floor-checkpink', 'Pink check', 'checkpink', 140, ['soft', 'playful', 'warm']),
   floor('floor-skycheck', 'Sky check', 'skycheck', 140, ['soft', 'playful', 'cozy']),
+  floor('floor-arcadecarpet', 'Arcade carpet', 'arcadecarpet', 170, ['playful', 'bold', 'vintage']),
   floor('floor-checker', 'Checkerboard', 'checker', 180, ['bold', 'playful', 'vintage']),
   floor('floor-rose', 'Rose carpet', 'rose', 100, ['soft', 'warm', 'cozy']),
   floor('floor-navy-carpet', 'Navy carpet', 'navy', 100, ['cool', 'modern', 'cozy']),
@@ -441,6 +446,13 @@ export const CATALOG: CatalogEntry[] = [
   look('look-lamp-cuddle', 'lamp', 'cuddle', 'Cloud lamp', 'A cloud shade on a sky-blue pole with a star on top and rainbow drops hanging under it.', 90, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A']),
   look('look-plant-cuddle', 'plant', 'cuddle', 'Cloud pot', 'Your plant in a puffy white pot with cloud bumps round the rim, a rainbow on the front and a star on the side.', 60, ['soft', 'playful', 'cozy'], ['#FFFFFF', '#AEDDF7', '#F9E27A', '#F6B7CC']),
 
+  look('look-fridge-arcade', 'fridge', 'arcade', 'Cabinet fridge', 'A black cabinet with a marquee of chasing bulbs on top, a screen glowing in the upper door, a row of buttons on the lower one and a joystick-ball handle.', 520, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#F4C430', '#FF2E9A']),
+  look('look-counter-arcade', 'counter', 'arcade', 'Coin-op counter', 'Black cabinet fronts with yellow coin slots and neon trim, a chaser strip under a cyan-edged top, a steel basin, and a joystick and buttons at the end.', 600, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#F4C430', '#19E6F0']),
+  look('look-dining-arcade', 'dining', 'arcade', 'Cocktail cabinet table', 'A cocktail arcade cabinet to eat off, the screen glowing up through the top, two red vinyl stools and a marquee overhead.', 540, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#C2413A', '#19E6F0']),
+  look('look-sofa-arcade', 'sofa', 'arcade', 'Vinyl sofa with marquee lights', 'Black vinyl with yellow piping, red cushions with pixel hearts, a pixel invader on the back and a chaser strip along the base.', 560, ['playful', 'bold', 'vintage'], ['#1E1A2E', '#E63946', '#F4C430']),
+  look('look-lamp-arcade', 'lamp', 'arcade', 'Joystick lamp', 'A joystick as tall as you: a red ball on a black stick that glows, on a base ringed with marquee bulbs.', 160, ['playful', 'bold', 'vintage'], ['#E63946', '#15121F', '#F4C430']),
+  look('look-plant-arcade', 'plant', 'arcade', 'Pixel pot', 'Your plant in a black pot with a pixel invader on the front and a pixel coin on the side.', 110, ['playful', 'bold', 'vintage'], ['#15121F', '#19E6F0', '#39D353', '#F4C430']),
+
   // Wall decor
   wallItem('wobj-print', 'Framed print', 50, ['modern', 'bold'], ['#E0A43A', '#3D6B73', '#D24A7A', '#4F9460', '#4A5DA8']),
   wallItem('wobj-landscape', 'Landscape canvas', 80, ['natural', 'vintage'], ['#9EC1F5', '#F2B48A', '#C9B8E8', '#2B3A5E']),
@@ -502,6 +514,7 @@ export const CATALOG: CatalogEntry[] = [
   hobby('yogamat', 'yogamat', 'Yoga mat', 30, ['natural', 'soft', 'minimal'], ['#8E5468', '#7FB069', '#4A88B8', '#E0A43A', '#2B2B30']),
   hobby('massage', 'massage', 'Massage chair', 350, ['luxe', 'modern', 'cozy'], ['#2B2B30', '#E8DCC8', '#6E3C50']),
   hobby('jukebox', 'jukebox', 'Jukebox', 300, ['vintage', 'playful', 'bold'], ['#C2413A', '#4A5DA8', '#E0A43A']),
+  hobby('clawmachine', 'clawmachine', 'Claw machine', 280, ['playful', 'bold', 'vintage'], ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF']),
   hobby('eggchair', 'eggchair', 'Hanging egg chair', 280, ['modern', 'bold', 'luxe'], ['#E8DCC8', '#2B2B30', '#C27A5A']),
 
   // Outdoor

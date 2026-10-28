@@ -186,6 +186,7 @@ export function createHouseArt(ctx0, opts = {}) {
     grate: { kind: 'tile', a: '#1A1C24', b: '#171920', line: 'rgba(25,230,240,.35)' },
     checkpink: { kind: 'check', a: '#FFF8F0', b: '#F6B7CC', line: 'rgba(0,0,0,.05)' },
     skycheck: { kind: 'check', a: '#F7FAFE', b: '#DCEEFA', line: 'rgba(0,0,0,.04)' },
+    arcadecarpet: { kind: 'speck', a: '#1E1740', b: '#1E1740', line: 'rgba(255,255,255,.03)', pal: ['#FF2E9A', '#19E6F0', '#F4C430', '#7A5CFF'] },
     rubber: { kind: 'speck', a: '#3A3A3F', b: '#3A3A3F', line: 'rgba(255,255,255,.04)', pal: ['#5A5A62', '#4C4C54', '#6E6E76', '#55555D'] }
   };
   // wallpapers: a pattern drawn over the paint, or with its own base color
@@ -215,6 +216,7 @@ export function createHouseArt(ctx0, opts = {}) {
     circuit: { pat: 'circuit', base: '#111118', ink: 'rgba(25,230,240,.6)', ink2: 'rgba(255,46,154,.75)' },
     sprinkles: { pat: 'sprinkles', base: '#FFF8F0', ink: 'rgba(224,74,106,.9)', pal: ['#E04A6A', '#BFE0F5', '#FBE7A6', '#D6C4F0', '#BFE8D6'] },
     'clouds-sky': { pat: 'clouds', base: '#C9E6F8', ink: 'rgba(255,255,255,.95)' },
+    'pixel-invaders': { pat: 'pixels', base: '#15121F', ink: 'rgba(25,230,240,.9)', pal: ['#19E6F0', '#FF2E9A', '#F4C430', '#39D353'] },
     'gingham-sage': { pat: 'gingham', base: '#F4F1E8', ink: 'rgba(110,150,115,.3)' },
     'starburst-mint': { pat: 'starburst', base: '#CFEBDD', ink: 'rgba(224,122,92,.75)', ink2: 'rgba(224,122,92,.9)' },
     'wainscot-white': { pat: 'wainscot', ink: '#F4F1EA' }, 'wainscot-navy': { pat: 'wainscot', ink: '#2E3B57' }, subway: { pat: 'subway', base: '#F5F5F2', ink: 'rgba(0,0,0,.14)' },
@@ -589,6 +591,7 @@ export function createHouseArt(ctx0, opts = {}) {
     if (style === 'neonring') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.9], NE.steel, 1.4); if (on) ell(px, py, 16, 8, 'rgba(25,230,240,.16)'); ctx.beginPath(); ctx.ellipse(px, py, 13, 5.5, 0, 0, Math.PI * 2); ctx.strokeStyle = on ? NE.cyan : NE.steel; ctx.lineWidth = 2.4; ctx.stroke(); ctx.beginPath(); ctx.ellipse(px, py, 13, 5.5, 0, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 0.8; ctx.stroke(); circle(px, py - 4, 2, NE.steel); return; }
     if (style === 'lollipop') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.92], CA.cream, 1.6); if (on) circle(px, py, 15, 'rgba(255,226,210,.22)'); circle(px, py, 10, on ? '#FFD9E4' : CA.pink, 'rgba(0,0,0,.08)'); ctx.beginPath(); for (let a = 0; a < Math.PI * 4; a += 0.2) { const r = a * 0.72; const x = px + Math.cos(a) * r, y = py + Math.sin(a) * r * 0.9; a ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.4; ctx.stroke(); ell(px - 3, py - 4, 2.5, 1.5, 'rgba(255,255,255,.7)'); return; }
     if (style === 'rainbow') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.98], CC.sky, 1.4); cloud(px, py - 6, 12, on ? '#FFFDF6' : CC.cloud); rainbow(px, py + 2, 11, 1.8, 0, Math.PI); if (on) ell(px, py + 6, 16, 7, 'rgba(255,226,168,.18)'); circle(px, py - 10, 2.2, on ? CC.yellow : CC.cloudShade); return; }
+    if (style === 'marquee') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.96], AR.chrome, 1.4); const [ax, ay] = T.P(0.4, 1.24, 1.86), [bx, by] = T.P(0.9, 1.24, 1.86); ctx.beginPath(); ctx.moveTo(ax, ay - 7); ctx.lineTo(bx, by - 7); ctx.lineTo(bx, by + 5); ctx.lineTo(ax, ay + 5); ctx.closePath(); ctx.fillStyle = on && power ? AR.yellow : '#5A4A20'; ctx.fill(); ctx.strokeStyle = AR.ink; ctx.lineWidth = 1; ctx.stroke(); chaser(ax + 3, ay - 5, bx - 3, by - 5, 7, o.id, on && power); chaser(ax + 3, ay + 3, bx - 3, by + 3, 7, o.id, on && power); if (on) ell(px, py + 8, 16, 7, 'rgba(244,196,48,.16)'); return; }
     if (style === 'woven') { T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], BE.rope, 1.6); ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI, 0); ctx.fillStyle = BE.rattan; ctx.fill(); for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(px, py - 2, 11, 9, 0, Math.PI + k * 0.6, Math.PI + k * 0.6 + 0.3); ctx.strokeStyle = 'rgba(90,60,30,.35)'; ctx.lineWidth = 1; ctx.stroke(); } ell(px, py - 2, 11, 4, on ? '#FFF1C9' : '#B9A07A'); return; }
     T.line([0.65, 1.24, WH], [0.65, 1.24, 1.95], '#3A3340', 1.2); ctx.beginPath(); ctx.ellipse(px, py, 10, 9, 0, Math.PI, 0); ctx.fillStyle = '#2B2B30'; ctx.fill(); ell(px, py, 10, 3.8, on ? '#FFF1C9' : '#4A4450');
   }, { onTop: true });
@@ -1289,6 +1292,75 @@ export function createHouseArt(ctx0, opts = {}) {
       return body; },
   });
 
+  // ---- Arcade: black cabinets, marquee lights, neon piping and the carpet from every arcade you remember ----
+  const AR = { ink: '#15121F', cab: '#1E1A2E', magenta: '#FF2E9A', cyan: '#19E6F0', yellow: '#F4C430', red: '#E63946', violet: '#7A5CFF', green: '#39D353', chrome: '#9AA0A6', vinyl: '#C2413A', carpet: '#1E1740' };
+  /** Chasing marquee bulbs along a screen-space line: lit in sequence while on, dark while off. */
+  const chaser = (x0, y0, x1, y1, n, seed, on) => { const step = Math.floor(animT * 6 + (typeof seed === 'string' ? seed.length : 0)); for (let k = 0; k <= n; k++) { const u = k / n, lit = on && (k + step) % 3 === 0; circle(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, 1.3, lit ? '#FFF6C8' : on ? AR.yellow : '#4A4036'); if (lit) circle(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, 2.6, 'rgba(255,246,200,.3)'); } };
+  /** A pixel sprite in screen space: rows of 0/1 strings, each 1 a square of side px. */
+  const sprite = (sx, sy, px, rows, col) => { ctx.fillStyle = col; rows.forEach((row, r) => { for (let c = 0; c < row.length; c++) if (row[c] === '1') ctx.fillRect(sx + (c - row.length / 2) * px, sy + (r - rows.length / 2) * px, px, px); }); };
+  const INVADER = ['0100010', '0011100', '0111110', '1101011', '1111111', '0100010', '1000001'];
+  const PIXHEART = ['01010', '11111', '11111', '01110', '00100'];
+  /** The arcade screen colour: a slow hue cycle with the power on, a fast one while someone plays. */
+  const screenHue = (t, playing) => power ? `hsl(${(t * (playing ? 400 : 60)) % 360},90%,${playing ? 60 + Math.sin(t * 20) * 8 : 48}%)` : '#0E0C14';
+  Object.assign(LOOK_DRAWERS.sofa, {
+    // Arcade: black vinyl with yellow piping, red cushions with pixel hearts and a chaser strip along the base.
+    arcade: (o, s1, s2) => { const v = cl(o), vc = shade(v, 0.06); return [
+      B(0, 0, 0, 2.4, 1.0, 0.1, AR.ink), B(0, 0, 0.1, 2.4, 1.0, 0.28, v, { name: 'base' }), B(0, 0, 0.38, 2.4, 0.3, 0.54, v), B(0, 0, 0.38, 0.22, 1.0, 0.32, v), B(2.18, 0, 0.38, 0.22, 1.0, 0.32, v),
+      B(0.22, 0.3, 0.38 - s1 * 0.018, 0.98, 0.66, 0.1 - s1 * 0.035, AR.red), B(1.2, 0.3, 0.38 - s2 * 0.018, 0.98, 0.66, 0.1 - s2 * 0.035, AR.red),
+      B(0.3, 0.34, 0.48, 0.42, 0.14, 0.3, AR.cyan), B(1.7, 0.34, 0.48, 0.42, 0.14, 0.3, AR.magenta),
+      F(0, 0, 2.4, 1.0, (T, ob) => {
+        T.line([0, 1.002, 0.38], [2.4, 1.002, 0.38], AR.yellow, 1.4); T.line([0.22, 0.301, 0.9], [2.18, 0.301, 0.9], AR.yellow, 1.4); [[0.11, 0.7], [2.29, 0.7]].forEach(([x, z]) => T.line([x, 0.0, z], [x, 1.0, z], AR.yellow, 1.2));
+        const [ax, ay] = T.P(0.04, 1.003, 0.1), [bx, by] = T.P(2.36, 1.003, 0.1); chaser(ax, ay, bx, by, 18, ob.id, power);
+        [[0.5, AR.yellow], [1.9, AR.cyan]].forEach(([x, c]) => { const [hx, hy] = T.P(x, 0.481, 0.62); sprite(hx, hy, 1.6, PIXHEART, c); });
+        const [gx, gy] = T.P(1.2, 0.301, 0.66); sprite(gx, gy, 1.8, INVADER, AR.green);
+      }, { onTop: true })]; },
+  });
+  Object.assign(LOOK_DRAWERS.dining, {
+    // Arcade: a cocktail cabinet to eat off, the screen glowing up through the top, two red vinyl stools and a marquee overhead.
+    arcade: (o) => { const ps = [], cab = cl(o);
+      const stool = (y0) => { ps.push(B(0.55, y0 + 0.19, 0, 0.2, 0.2, 0.04, AR.chrome), B(0.62, y0 + 0.26, 0.04, 0.06, 0.06, 0.31, AR.chrome), B(0.4, y0 + 0.04, 0.35, 0.5, 0.5, 0.07, AR.vinyl), B(0.35, y0, 0.42, 0.6, 0.58, 0.07, AR.vinyl, { name: y0 === 0 ? 'seat1' : 'seat2' })); ps.push(F(0.35, y0, 0.95, y0 + 0.58, (T) => { T.line([0.36, y0 + 0.581, 0.45], [0.94, y0 + 0.581, 0.45], AR.chrome, 1.2); }, { onTop: true })); };
+      stool(0); stool(1.89);
+      ps.push(B(0.05, 0.79, 0, 1.2, 0.9, 0.7, cab));
+      ps.push(B(0, 0.74, 0.7, 1.3, 1.0, 0.07, AR.ink, { name: 'top' }));
+      ps.push(F(0, 0.74, 1.3, 1.74, (T, ob, t) => { T.poly([[0.18, 0.9, 0.772], [1.12, 0.9, 0.772], [1.12, 1.58, 0.772], [0.18, 1.58, 0.772]], screenHue(t, usingSlot(ob.id + ':c1') || usingSlot(ob.id + ':c2') || live(ob.id))); const [gx, gy] = T.P(0.65, 1.24, 0.773); sprite(gx, gy, 1.4, INVADER, 'rgba(0,0,0,.45)'); T.line([0, 0.74, 0.77], [1.3, 0.74, 0.77], AR.cyan, 1.2); T.line([1.3, 0.74, 0.77], [1.3, 1.74, 0.77], AR.cyan, 1.2); [[0.1, 1.7], [1.2, 0.78]].forEach(([x, y]) => { const [jx, jy] = T.P(x, y, 0.772); circle(jx, jy, 2, AR.red); circle(jx + 4, jy, 1.4, AR.yellow); }); for (let x = 0.1; x < 1.2; x += 0.12) { const [cx, cy] = T.P(x, 1.741, 0.2); circle(cx, cy, 1.2, AR.yellow); } }, { onTop: true }));
+      ps.push(diningLife(), diningLight('marquee'));
+      return ps; },
+  });
+  Object.assign(LOOK_DRAWERS.lamp, {
+    // Arcade: a joystick lamp, a red ball on a black stick that glows, on a base ringed with marquee bulbs.
+    arcade: (T, o) => { const lit = isLit(o.id), ball = cl(o);
+      T.box(0.02, 0.02, 0, 0.36, 0.36, 0.1, AR.ink); T.box(0.06, 0.06, 0.1, 0.28, 0.28, 0.04, AR.chrome); const [ax, ay] = T.P(0.04, 0.381, 0.06), [bx, by] = T.P(0.36, 0.381, 0.06); chaser(ax, ay, bx, by, 5, o.id, power); const [cx, cy] = T.P(0.381, 0.04, 0.06), [dx, dy] = T.P(0.381, 0.36, 0.06); chaser(cx, cy, dx, dy, 5, o.id, power);
+      [[0.1, 0.3, AR.yellow], [0.3, 0.3, AR.cyan]].forEach(([x, y, c]) => { const [px, py] = T.P(x, y, 0.14); circle(px, py, 2.6, c); });
+      T.line([0.2, 0.2, 0.14], [0.2, 0.2, 1.35], AR.ink, 4); const [kx, ky] = T.P(0.2, 0.2, 0.6); ell(kx, ky, 4, 2, AR.ink);
+      const [px, py] = T.P(0.2, 0.2, 1.45); if (lit) circle(px, py, 18, hexA(ball, 0.18)); circle(px, py, 11, lit ? shade(ball, 0.25) : ball, 'rgba(0,0,0,.2)'); circle(px - 4, py - 4, 3, 'rgba(255,255,255,.55)'); },
+  });
+  Object.assign(LOOK_DRAWERS.plant, {
+    // Arcade: a black pot with a pixel invader on the front and a pixel coin on the side.
+    arcade: (T, o) => { const g = cl(o); T.box(0.05, 0.05, 0, 0.4, 0.4, 0.42, g); T.line([0.05, 0.451, 0.4], [0.45, 0.451, 0.4], AR.cyan, 1.4); T.line([0.451, 0.05, 0.4], [0.451, 0.45, 0.4], AR.cyan, 1.4); const [ix, iy] = T.P(0.25, 0.452, 0.22); sprite(ix, iy, 1.5, INVADER, AR.green); const [cx, cy] = T.P(0.452, 0.25, 0.22); sprite(cx, cy, 1.4, ['0110', '1111', '1111', '0110'], AR.yellow); },
+  });
+  Object.assign(LOOK_DRAWERS.counter, {
+    // Arcade: black cabinet fronts with coin slots, a chaser strip under a cyan-edged top, a steel basin, and a joystick and buttons at the end.
+    arcade: (T, o) => { const c = cl(o);
+      T.box(0, 0, 0, 2.8, 0.8, 0.86, c); [0.7, 1.4, 2.1].forEach(x => T.line([x, 0.802, 0.04], [x, 0.802, 0.84], AR.chrome, 1.2));
+      [0.35, 1.05, 1.75, 2.45].forEach(x => { T.poly([[x - 0.12, 0.803, 0.44], [x + 0.12, 0.803, 0.44], [x + 0.12, 0.803, 0.56], [x - 0.12, 0.803, 0.56]], AR.yellow); T.line([x - 0.05, 0.804, 0.5], [x + 0.05, 0.804, 0.5], AR.ink, 1.6); T.line([x - 0.16, 0.803, 0.1], [x + 0.16, 0.803, 0.1], AR.magenta, 1.4); T.line([x - 0.16, 0.803, 0.78], [x + 0.16, 0.803, 0.78], AR.cyan, 1.4); });
+      const [ax, ay] = T.P(0, 0.803, 0.84), [bx, by] = T.P(2.8, 0.803, 0.84); chaser(ax, ay, bx, by, 24, o.id, power);
+      T.box(-0.05, -0.04, 0.86, 2.9, 0.88, 0.07, AR.ink); neon(T, [-0.05, 0.84, 0.93], [2.85, 0.84, 0.93], AR.cyan, power);
+      const [sx, sy] = T.P(0.65, 0.37, 0.931); ell(sx, sy, 12, 6.5, AR.chrome, 'rgba(255,255,255,.3)'); ell(sx, sy + 0.8, 9, 4.6, '#6B7078');
+      T.line([0.65, 0.04, 0.93], [0.65, 0.04, 1.2], AR.chrome, 2.4); T.line([0.65, 0.04, 1.2], [0.65, 0.26, 1.13], AR.chrome, 2.4);
+      T.box(0.06, 0.1, 0.93, 0.3, 0.26, 0.05, AR.cab); T.line([0.14, 0.2, 0.98], [0.14, 0.2, 1.12], AR.ink, 2.2); const [jx, jy] = T.P(0.14, 0.2, 1.13); circle(jx, jy, 3.2, AR.red); [[0.24, 0.16, AR.yellow], [0.3, 0.22, AR.cyan], [0.24, 0.28, AR.green]].forEach(([x, y, col]) => { const [px, py] = T.P(x, y, 0.985); circle(px, py, 1.8, col); }); },
+  });
+  Object.assign(LOOK_DRAWERS.fridge, {
+    // Arcade: a black cabinet with a marquee on top, a screen glowing in the upper door, a control panel on the lower one and a joystick-ball handle. Returns the open door's colour.
+    arcade: (T, o) => { const body = cl(o);
+      T.box(0, 0, 0, 0.9, 0.85, 1.75, body); T.box(0, 0, 1.75, 0.9, 0.85, 0.2, AR.yellow); T.line([0, 0.85, 1.3], [0.9, 0.85, 1.3], AR.chrome, 1.2);
+      const [mx, my] = T.P(0.05, 0.851, 1.92), [nx, ny] = T.P(0.85, 0.851, 1.92); chaser(mx, my, nx, ny, 8, o.id, power); const [px2, py2] = T.P(0.05, 0.851, 1.78), [qx, qy] = T.P(0.85, 0.851, 1.78); chaser(px2, py2, qx, qy, 8, o.id, power);
+      T.poly([[0.1, 0.851, 1.38], [0.8, 0.851, 1.38], [0.8, 0.851, 1.7], [0.1, 0.851, 1.7]], screenHue(animT, live(o.id))); const [ix, iy] = T.P(0.45, 0.852, 1.54); sprite(ix, iy, 1.6, INVADER, 'rgba(0,0,0,.4)');
+      T.poly([[0.08, 0.851, 0.14], [0.82, 0.851, 0.14], [0.82, 0.851, 0.34], [0.08, 0.851, 0.34]], AR.cab); [[0.22, AR.red], [0.34, AR.yellow], [0.46, AR.cyan], [0.58, AR.green]].forEach(([x, c]) => { const [bx, by] = T.P(x, 0.852, 0.24); circle(bx, by, 2.4, c); });
+      T.line([0.1, 0.851, 0.5], [0.8, 0.851, 0.5], AR.magenta, 1.4); T.line([0.1, 0.851, 1.2], [0.8, 0.851, 1.2], AR.magenta, 1.4);
+      T.line([0.78, 0.855, 0.62], [0.78, 0.855, 1.1], AR.ink, 3.4); const [hx, hy] = T.P(0.78, 0.856, 1.1); circle(hx, hy, 3, AR.red); T.line([0.78, 0.855, 1.42], [0.78, 0.855, 1.7], AR.ink, 3.4);
+      return body; },
+  });
+
   const DRAWN = {
     sofa: {    
       parts: (o) => { const s1 = usingSlot(o.id + ':s1') ? 1 : 0, s2 = usingSlot(o.id + ':s2') ? 1 : 0;
@@ -1945,6 +2017,27 @@ export function createHouseArt(ctx0, opts = {}) {
        },
     blossomvase: {      
       parts: (o) => [F(0, 0, 0.45, 0.45, (T, ob, t) => { T.box(0.08, 0.08, 0, 0.3, 0.3, 0.5, cl(o)); const [x, y] = T.P(0.22, 0.22, 0.5); [[-16, -52], [4, -62], [18, -46], [-6, -40]].forEach(([dx, dy], k) => { limb(x, y, x + dx, y + dy, '#5A3E2E', 1.6); for (let m = 0; m < 5; m++) { const f = 0.45 + m * 0.13; circle(x + dx * f + Math.sin(k + m) * 3, y + dy * f + Math.cos(k * m) * 2, 2.6, m % 2 ? '#F3B6C8' : '#F7D0DC'); } }); })] },
+    clawmachine: {
+      // A claw machine: a cabinet in the piece's colour, a glass case full of plushies, a marquee on top with chasing bulbs,
+      // and a claw that swings out and drops while someone plays (or the player pokes it).
+      parts: (o) => { const c = cl(o); return [B(0, 0, 0, 0.7, 0.6, 0.7, c), B(0.26, 0.5, 0.18, 0.2, 0.1, 0.16, AR.ink),
+        F(0, 0, 0.7, 0.6, (T, ob, t) => { const playing = usingSlot(ob.id + ':c') || live(ob.id);
+          T.box(0.02, 0.02, 0.7, 0.66, 0.56, 0.02, AR.chrome);
+          // The plushies, piled up behind the glass.
+          [[0.15, 0.2, '#F6B7CC'], [0.4, 0.15, '#9CCBF2'], [0.55, 0.35, '#F9E27A'], [0.25, 0.42, '#9FDB9A'], [0.45, 0.45, '#C7A8F0']].forEach(([x, y, col]) => { const [px, py] = T.P(x, y, 0.78); circle(px, py, 5, col); circle(px - 3.5, py - 4, 2, col); circle(px + 3.5, py - 4, 2, col); circle(px - 1.5, py - 1, 0.7, '#5A4A5E'); circle(px + 1.5, py - 1, 0.7, '#5A4A5E'); });
+          // The claw: a cable from the top, three prongs, swinging over the pile and dropping while it plays.
+          const sw = playing ? Math.sin(t * 3) * 0.14 : 0, drop = playing ? Math.max(0, Math.sin(t * 1.5)) * 0.3 : 0;
+          const top = [0.35 + sw, 0.3, 1.46], tip = [0.35 + sw, 0.3, 1.16 - drop]; T.line(top, tip, AR.chrome, 1.2); const [cx, cy] = T.P(...tip); circle(cx, cy, 2, AR.chrome); [[-5, 6], [0, 7], [5, 6]].forEach(([dx, dy]) => { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.quadraticCurveTo(cx + dx * 1.2, cy + dy * 0.4, cx + dx, cy + dy); ctx.strokeStyle = AR.chrome; ctx.lineWidth = 1.4; ctx.stroke(); });
+          // The glass: four translucent faces on chrome posts, then the marquee.
+          [[0.02, 0.02], [0.68, 0.02], [0.02, 0.58], [0.68, 0.58]].forEach(([x, y]) => T.line([x, y, 0.72], [x, y, 1.48], AR.chrome, 1.6));
+          T.poly([[0.02, 0.58, 0.72], [0.68, 0.58, 0.72], [0.68, 0.58, 1.48], [0.02, 0.58, 1.48]], 'rgba(180,230,255,.16)', 'rgba(255,255,255,.35)', 0.8); T.poly([[0.68, 0.02, 0.72], [0.68, 0.58, 0.72], [0.68, 0.58, 1.48], [0.68, 0.02, 1.48]], 'rgba(180,230,255,.1)', 'rgba(255,255,255,.3)', 0.8);
+          T.box(0, 0, 1.48, 0.7, 0.6, 0.22, power ? AR.magenta : shade(AR.magenta, -0.5)); const [ax, ay] = T.P(0.04, 0.601, 1.66), [bx, by] = T.P(0.66, 0.601, 1.66); chaser(ax, ay, bx, by, 8, ob.id, power); const [dx2, dy2] = T.P(0.04, 0.601, 1.52), [ex, ey] = T.P(0.66, 0.601, 1.52); chaser(dx2, dy2, ex, ey, 8, ob.id, power);
+          const [sx, sy] = T.P(0.35, 0.602, 1.59); sprite(sx, sy, 1.5, PIXHEART, '#FFF6C8');
+          // The control panel: a joystick and a button on the front ledge, and the prize chute below.
+          T.box(0.04, 0.6, 0.62, 0.62, 0.08, 0.08, AR.ink); T.line([0.2, 0.64, 0.7], [0.2, 0.64, 0.82], AR.ink, 2); const [jx, jy] = T.P(0.2, 0.64, 0.83); circle(jx, jy, 2.6, AR.red); const [kx, ky] = T.P(0.45, 0.64, 0.705); circle(kx, ky, 2.2, AR.yellow);
+          T.poly([[0.28, 0.601, 0.2], [0.44, 0.601, 0.2], [0.44, 0.601, 0.34], [0.28, 0.601, 0.34]], AR.ink, AR.chrome, 1);
+        }, { onTop: true })]; },
+       },
     jukebox: {      
       parts: (o) => [F(0, 0, 0.8, 0.5, (T, ob, t) => { const c = cl(o); T.box(0, 0, 0, 0.8, 0.5, 1.05, '#5A3E2E'); const pts = []; for (let k = 0; k <= 12; k++) { const a = Math.PI * k / 12; pts.push([0.4 - Math.cos(a) * 0.4, 0.501, 1.05 + Math.sin(a) * 0.38]); } T.poly([[0, 0.501, 1.05]].concat(pts, [[0.8, 0.501, 1.05]]), c); for (let k = 0; k < 5; k++) { const h2 = (t * 60 + k * 50) % 360; T.line([0.1 + k * 0.15, 0.502, 0.12], [0.1 + k * 0.15, 0.502, 1.0], power ? `hsl(${h2},80%,62%)` : '#4A4450', 2.2); } T.poly([[0.15, 0.503, 0.55], [0.65, 0.503, 0.55], [0.65, 0.503, 0.9], [0.15, 0.503, 0.9]], '#F2EEE8'); })],
         },
@@ -2081,6 +2174,7 @@ export function createHouseArt(ctx0, opts = {}) {
     else if (pat === 'circuit') { for (let u = 0.3; u < len; u += 0.6) line3(P(u, 0.14), P(u, WH), ink, 0.8); for (let z = 0.5; z < WH; z += 0.6) line3(P(0, z), P(len, z), ink, 0.8); for (let z = 0.5, r = 0; z < WH; z += 0.6, r++) for (let u = 0.3; u < len; u += 0.6) { const [sx, sy] = iso(...P(u, z)); if ((r + Math.round(u * 3)) % 3 === 0) circle(sx, sy, 2, S.ink2); else { ctx.fillStyle = ink; ctx.fillRect(sx - 1.5, sy - 1.5, 3, 3); } } for (let u = 0.6; u < len - 0.3; u += 1.2) line3(P(u, 0.8), P(u + 0.3, 1.1), S.ink2, 1); }
     else if (pat === 'sprinkles') { for (let k = 0; k < len * 22; k++) { const u = (k * 0.618 * 4.7) % len, z = 0.2 + ((k * 0.414 * 3.9) % (WH - 0.3)), [sx, sy] = iso(...P(u, z)), a = (k * 1.7) % Math.PI; limb(sx - Math.cos(a) * 2.6, sy - Math.sin(a) * 2.6, sx + Math.cos(a) * 2.6, sy + Math.sin(a) * 2.6, S.pal[k % 5], 1.8); } }
     else if (pat === 'clouds') { for (let z = 0.6, r = 0; z < WH; z += 0.7, r++) for (let u = 0.4 + (r % 2) * 0.45; u < len; u += 0.9) { const [sx, sy] = iso(...P(u, z)); cloud(sx, sy, 9, ink); const m = (r * 3 + Math.round(u * 2)) % 4; if (m === 0) heart(sx + 14, sy - 10, 0.9, '#EE8FAE'); else if (m === 1) star5(sx - 14, sy - 10, 3, '#F9E27A'); else if (m === 2) rainbow(sx + 16, sy - 2, 6, 1, Math.PI, Math.PI * 2); } }
+    else if (pat === 'pixels') { for (let z = 0.55, r = 0; z < WH - 0.1; z += 0.55, r++) for (let u = 0.3 + (r % 2) * 0.3; u < len - 0.1; u += 0.6) { const [sx, sy] = iso(...P(u, z)); const m = (r * 3 + Math.round(u * 2)) % 4; if (m === 3) sprite(sx, sy, 1.6, PIXHEART, S.pal[1]); else sprite(sx, sy, 1.5, INVADER, S.pal[m]); } }
     else if (pat === 'cork') { for (let k = 0; k < len * 40; k++) { const u = (k * 0.618 * 3.7) % len, z = 0.16 + ((k * 0.414 * 2.3) % (WH - 0.2)); const [sx, sy] = iso(...P(u, z)); circle(sx, sy, 0.6 + (k % 2) * 0.5, ink); } }
   }
   function featPoly(f, inset = 0, dz = 0) { const P = (u, z) => wallPoint(f.p, u, z); return [P(f.u[0] + inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[0] + inset + dz), P(f.u[1] - inset, f.z[1] - inset), P(f.u[0] + inset, f.z[1] - inset)]; }
@@ -3703,6 +3797,7 @@ export function createHouseArt(ctx0, opts = {}) {
       case 'laundry': return run(12, 'The washer churns into a spin cycle.');
       case 'records': return run(14, 'The needle drops. A record starts spinning.');
       case 'arcade': return run(6, 'The arcade lights up: INSERT COIN.');
+      case 'clawmachine': return run(6, 'The claw swings out, drops, and comes up with a plush. Lucky.');
       case 'tread': return run(8, 'The treadmill belt whirs to life.');
       case 'shower': return run(8, 'The shower hisses on, then off.');
       case 'bathtub': return run(10, 'The tub fills with steaming water.');
